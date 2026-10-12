@@ -1,0 +1,91 @@
+# Purpose: Exclude generated artifacts, private local state and editor/OS files.
+# Pattern: Repository Configuration.
+# Usage: Read by Git when inspecting this project.
+# Related: go.mod, README.md.
+
+# Go build and release output
+/bin/
+/dist/
+/v
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Test coverage and profiling output; keep fixture .out files trackable
+/coverage/
+/coverage*.out
+/coverage*.html
+/coverage*.txt
+/cover.out
+/cover.html
+/*.coverprofile
+/*.pprof
+/*.prof
+
+# Local Go workspace overrides and caches; commit go.mod and go.sum
+/go.work
+/go.work.sum
+/.cache/
+/.gocache/
+
+# Temporary directories and runtime diagnostics
+/tmp/
+/temp/
+/.tmp/
+/logs/
+/*.log
+/*.pid
+
+# Private application state and accidental copies of user credentials
+/.v/
+/v.db
+/v.db-*
+/credentials
+/credentials.key
+/.secrets/
+/config.local.toml
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+
+# IDE state; keep shared VS Code tasks, launch settings and recommendations
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.code-workspace
+.history/
+
+# Editor swap, backup and lock files
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# macOS filesystem metadata
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble/
+.LSOverride
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+
+# Windows filesystem metadata
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/

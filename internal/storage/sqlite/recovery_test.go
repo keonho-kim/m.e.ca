@@ -1,0 +1,64 @@
+// Purpose: Verify session listing, model settings and interrupted Tool Calls recover without replay.
+// Pattern: Repository behavior tests.
+// Usage: go test ./internal/storage/sqlite -run TestResume.
+// Related: internal/storage/sqlite/recovery.go, internal/storage/sqlite/selection.go.
+package sqlite
+
+import (
+	"context"
+	"encoding/json"
+	"path/filepath"
+	"testing"
+
+	"github.com/keonho-kim/v-code/internal/agent"
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+)
+
+func TestResumeSettingsAndInterruptedTool(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	ctx := context.Background()
+	root := t.TempDir()
+	session, err := s.RestoreSession(ctx, root, root, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range []agent.Message{{Role: "user", Content: "fix"}, {Role: "assistant", Calls: []agent.ToolCall{{ID: "pending", Name: "write_file", Arguments: json.RawMessage(`{"path":"file","content":"new"}`)}}}} {
+		if err := s.AppendMessage(ctx, session.ID, m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	connection, err := modelconn.New(modelconn.Ollama, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	on := true
+	if err = s.SaveSelection(ctx, session.ID, Selection{Connection: connection, Model: "qwen", Thinking: &on}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Recover(ctx, session.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Recover(ctx, session.ID); err != nil {
+		t.Fatal(err)
+	}
+	history, err := s.Messages(ctx, session.ID, 100)
+	if err != nil || len(history) != 3 || history[2].ToolCallID != "pending" {
+		t.Fatalf("recovery: %+v %v", history, err)
+	}
+	list, err := s.Conversations(ctx, 0, 100)
+	if err != nil || len(list) != 1 || list[0].Summary != "fix" {
+		t.Fatalf("list: %+v %v", list, err)
+	}
+	selected, err := s.Selection(ctx, session.ID)
+	if err != nil || selected.Thinking == nil || !*selected.Thinking {
+		t.Fatalf("Thinking lost: %+v %v", selected, err)
+	}
+}
