@@ -1,7 +1,7 @@
 // Purpose: Prepare policy-checked tools and bind execution to immutable approved targets.
 // Pattern: Adapter with a one-shot operation lifecycle.
 // Usage: Injected into the agent; file tests invoke Prepare and Execute.
-// Related: internal/agent/tools.go, internal/tools/local/paths.go, internal/tools/local/files.go.
+// Related: internal/agent/tools.go, internal/tools/local/paths.go, internal/tools/local/files.go, internal/tools/local/diff/diff.go.
 
 package local
 
@@ -18,6 +18,7 @@ import (
 
 	"github.com/keonho-kim/v-code/internal/agent"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/v-code/internal/tools/local/diff"
 )
 
 type Executor struct {
@@ -136,7 +137,8 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 			}
 			op.replacement = []byte(strings.Replace(string(before), input.OldText, input.NewText, 1))
 		}
-		op.approval.Preview = executor.redact("--- " + op.source.absolute + "\n" + string(before) + "\n+++ proposed\n" + string(op.replacement))
+		op.approval.Preview = executor.redact(diff.Preview(op.source.absolute, before, op.replacement, op.original.exists, true))
+		op.approval.Diff = true
 	case "move_file":
 		op.destination, err = executor.resolve(settings.Scope, input.Destination)
 		if err != nil {
@@ -152,6 +154,14 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		op.approval.Preview = "Move to " + op.destination.absolute
 	case "delete_file":
 		op.approval.Preview = "Delete " + op.source.absolute
+		if !op.original.info.IsDir() {
+			before, err := op.source.root.ReadFile(op.source.relative)
+			if err != nil {
+				return nil, err
+			}
+			op.approval.Preview = executor.redact(diff.Preview(op.source.absolute, before, nil, true, false))
+			op.approval.Diff = true
+		}
 	}
 	return op, nil
 }

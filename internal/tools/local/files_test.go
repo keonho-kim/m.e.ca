@@ -68,6 +68,35 @@ func TestWriteRequiresApprovalAndPreservesReject(t *testing.T) {
 		t.Fatal("replayed a prepared mutation")
 	}
 }
+func TestApprovalUsesLineDiff(t *testing.T) {
+	executor, project := testExecutor(t)
+	path := filepath.Join(project, "file.txt")
+	if err := os.WriteFile(path, []byte("unchanged\nold\nend\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
+	for _, invocation := range []agent.ToolCall{
+		call("write_file", `{"path":"file.txt","content":"unchanged\nnew\nend\n"}`),
+		call("edit_file", `{"path":"file.txt","old_text":"old","new_text":"new"}`),
+		call("delete_file", `{"path":"file.txt"}`),
+	} {
+		op, err := executor.Prepare(context.Background(), settings, false, invocation)
+		if err != nil {
+			t.Fatal(err)
+		}
+		preview := op.Approval().Preview
+		if !op.Approval().Diff || !strings.Contains(preview, "@@ -") || !strings.Contains(preview, "-old\n") {
+			t.Fatalf("missing diff for %s: %s", invocation.Name, preview)
+		}
+		if invocation.Name != "delete_file" && !strings.Contains(preview, "+new\n") {
+			t.Fatal("replacement omitted from approval")
+		}
+	}
+	content, err := os.ReadFile(path)
+	if err != nil || string(content) != "unchanged\nold\nend\n" {
+		t.Fatal("generating an approval preview changed the file")
+	}
+}
 
 func TestApprovedEditRejectsChangedOriginal(t *testing.T) {
 	executor, project := testExecutor(t)

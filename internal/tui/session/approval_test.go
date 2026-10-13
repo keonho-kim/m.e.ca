@@ -1,0 +1,68 @@
+// Purpose: Verify unified approval previews remain scrollable and human rejection controls execution.
+// Pattern: Terminal behavior tests.
+// Usage: go test ./internal/tui/session -run TestApprovalDiffNavigation.
+// Related: internal/tui/session/render.go, internal/tui/session/keys.go, internal/tools/local/diff/diff.go.
+package session
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/keonho-kim/v-code/internal/agent"
+	"github.com/keonho-kim/v-code/internal/tools/local/diff"
+)
+
+func TestApprovalDiffNavigation(t *testing.T) {
+	a := fixture(t)
+	a.page = "approval"
+	a.proposal = &agent.ApprovalRequest{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)}
+	a.choices = []string{"Approve", "Reject"}
+	a.decision = make(chan bool, 1)
+	a.render()
+	first := screenLine(a.screen, 2, 80)
+	if !strings.Contains(first, "--- file") || !strings.Contains(screenLine(a.screen, 4, 80), "@@ -") {
+		t.Fatal("approval did not render a unified diff")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, 0, 0))
+	a.render()
+	if a.previewOffset == 0 || screenLine(a.screen, 2, 80) == first {
+		t.Fatal("PageDown did not scroll the diff")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, 0, 0))
+	a.render()
+	if a.previewOffset != 0 || screenLine(a.screen, 2, 80) != first {
+		t.Fatal("PageUp did not restore the diff start")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	if <-a.decision || a.page != "chat" {
+		t.Fatal("dismissed diff became approval")
+	}
+}
+func TestApprovalChangedRowsHavePastelBackgrounds(t *testing.T) {
+	a := fixture(t)
+	a.page = "approval"
+	a.proposal = &agent.ApprovalRequest{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)}
+	a.choices = []string{"Approve", "Reject"}
+	a.render()
+	for _, y := range []int{6, 7, 8, 9} {
+		background := tcell.NewHexColor(0xdcfce7)
+		if y <= 7 {
+			background = tcell.NewHexColor(0xfee2e2)
+		}
+		for _, x := range []int{0, 79} {
+			_, _, style, _ := a.screen.GetContent(x, y)
+			fg, bg, _ := style.Decompose()
+			if bg != background || fg != tcell.NewHexColor(0x242424) {
+				t.Fatalf("changed cell %d,%d lacks the expected pastel addition/deletion background", x, y)
+			}
+		}
+	}
+	for _, y := range []int{2, 3, 4, 5, 11, 12} {
+		_, _, style, _ := a.screen.GetContent(0, y)
+		_, bg, _ := style.Decompose()
+		if bg != tcell.ColorDefault {
+			t.Fatalf("non-change row %d has a background", y)
+		}
+	}
+}

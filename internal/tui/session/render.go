@@ -1,7 +1,7 @@
 // Purpose: Coordinate session screens and bounded output projections from event-loop state.
 // Pattern: Presentation renderer.
 // Usage: Called by the terminal event loop after input or worker events.
-// Related: internal/tui/session/app.go, internal/tui/viewport/viewport.go, internal/tui/session/render_files.go, internal/tui/session/render_hints.go, internal/tui/view/styles.go.
+// Related: internal/tui/session/app.go, internal/tui/viewport/viewport.go, internal/tui/session/render_files.go, internal/tui/session/render_hints.go, internal/tui/view/preview.go.
 package session
 
 import (
@@ -92,13 +92,18 @@ func (a *app) renderMenu(w, h int) {
 	}
 	y := 2
 	if a.page == "approval" && a.proposal != nil {
-		lines := viewport.Wrap(a.proposal.Preview, w)
+		lines := view.PreviewLines(a.proposal.Preview, w, a.proposal.Diff)
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-(h-7)))
 		for _, line := range lines[a.previewOffset:] {
 			if y >= h-5 {
 				break
 			}
-			view.Text(a.screen, 0, y, w, line, tcell.StyleDefault)
+			style := tcell.StyleDefault
+			if line.Change != 0 {
+				style = view.ChangeStyle(line.Change)
+				view.Text(a.screen, 0, y, w, strings.Repeat(" ", w), style)
+			}
+			view.Text(a.screen, 0, y, w, line.Text, style)
 			y++
 		}
 	}

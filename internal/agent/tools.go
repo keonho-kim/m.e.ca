@@ -17,6 +17,7 @@ type ApprovalRequest struct {
 	Name     string
 	Target   string
 	Preview  string
+	Diff     bool
 	Required bool
 }
 
