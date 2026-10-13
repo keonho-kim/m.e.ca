@@ -10,17 +10,14 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	"github.com/rivo/uniseg"
 )
 
 func Resume(ctx context.Context, screen tcell.Screen, store *sqlite.Store) (sqlite.Session, bool, error) {
-	events := make(chan tcell.Event, 32)
-	quit, joined := make(chan struct{}), make(chan struct{})
-	go func() { defer close(joined); screen.ChannelEvents(events, quit) }()
-	defer func() { close(quit); <-joined }()
+	events := screen.EventQ()
 	offset, index := 0, 0
 	status, typed := "", ""
 	conversations, err := store.Conversations(ctx, offset, 100)
@@ -61,7 +58,7 @@ func Resume(ctx context.Context, screen tcell.Screen, store *sqlite.Store) (sqli
 				case tcell.KeyEscape, tcell.KeyCtrlC:
 					return sqlite.Session{}, false, nil
 				case tcell.KeyRune:
-					typed += string(e.Rune())
+					typed += e.Str()
 					if typed == ":q" {
 						return sqlite.Session{}, false, nil
 					}

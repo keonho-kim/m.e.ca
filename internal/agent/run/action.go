@@ -37,37 +37,8 @@ func (s *task) action(ctx context.Context, decision dialogue.Decision, approve A
 	}
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = map[string]json.RawMessage{}
-	for index, p := range definition.Parameters {
-		s.checkpoint.Phase = "argument"
-		s.checkpoint.Parameter = p.Name
-		if err := s.persist(ctx); err != nil {
-			return err
-		}
-		if err := s.emit(Event{Kind: "tool_argument", Text: fmt.Sprintf("Preparing %s: %s (%d/%d)", definition.Name, p.Name, index+1, len(definition.Parameters))}); err != nil {
-			return err
-		}
-		question := fmt.Sprintf("ARGUMENT %s.%s: %s\nThis is one value only, not a JSON object. Other arguments are owned by the runtime.", definition.Name, p.Name, p.Question)
-		// Previously accepted values are quoted as data for this tool only, not retained chat history.
-		accepted, err := json.Marshal(s.checkpoint.Arguments)
-		if err != nil {
-			return err
-		}
-		question += "\nAccepted argument values: " + string(accepted)
-		for attempt := 0; attempt < 2; attempt++ {
-			reply, err := s.ask(ctx, question, 8192, s.limits.MaxArgumentBytes)
-			if err != nil {
-				return err
-			}
-			value, parseErr := dialogue.ParseArgument(p, reply)
-			if parseErr == nil {
-				s.checkpoint.Arguments[p.Name] = value
-				break
-			}
-			if attempt == 1 {
-				return fmt.Errorf("tool argument collection stopped: %w", parseErr)
-			}
-			question += "\nCorrection required: " + parseErr.Error()
-		}
+	if err := s.collectArguments(ctx, *definition); err != nil {
+		return err
 	}
 	content, err := json.Marshal(s.checkpoint.Arguments)
 	if err != nil {

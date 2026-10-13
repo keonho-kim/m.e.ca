@@ -13,7 +13,7 @@ type wireMessage struct {
 	Role      string          `json:"role,omitempty"`
 	Content   string          `json:"content"`
 	Thinking  string          `json:"thinking,omitempty"`
-	Reasoning string          `json:"reasoning_content,omitempty"`
+	Reasoning string          `json:"reasoning,omitempty"`
 	Calls     json.RawMessage `json:"tool_calls,omitempty"`
 }
 
@@ -22,12 +22,17 @@ type ollamaOptions struct {
 }
 
 type wireRequest struct {
-	Think     *bool          `json:"think,omitempty"`
-	Model     string         `json:"model"`
-	Messages  []wireMessage  `json:"messages"`
-	Stream    bool           `json:"stream"`
-	MaxTokens int            `json:"max_tokens,omitempty"`
-	Options   *ollamaOptions `json:"options,omitempty"`
+	Think        *bool          `json:"think,omitempty"`
+	Model        string         `json:"model"`
+	Messages     []wireMessage  `json:"messages"`
+	Stream       bool           `json:"stream"`
+	MaxTokens    int            `json:"max_tokens,omitempty"`
+	Options      *ollamaOptions `json:"options,omitempty"`
+	ChatTemplate *chatTemplate  `json:"chat_template_kwargs,omitempty"`
+}
+
+type chatTemplate struct {
+	EnableThinking bool `json:"enable_thinking"`
 }
 
 type wireChunk struct {

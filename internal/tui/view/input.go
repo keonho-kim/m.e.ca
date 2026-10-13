@@ -5,7 +5,7 @@
 package view
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"github.com/rivo/uniseg"

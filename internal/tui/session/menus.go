@@ -8,8 +8,12 @@ import modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 
 func (a *app) openModel() {
 	a.page = "model"
-	a.choices = []string{"Connect provider", "Thinking ON", "Thinking OFF"}
+	a.choices = []string{"Connect provider", "Thinking"}
 	a.choice = 0
+	a.thinkingChoice = a.opts.Config.Thinking
+	if a.selection.Thinking != nil {
+		a.thinkingChoice = *a.selection.Thinking
+	}
 	a.menuInput.Set("")
 }
 func (a *app) choose() {
@@ -45,7 +49,7 @@ func (a *app) choose() {
 			}
 			a.changeField = "thinking"
 			a.changeValue = "OFF"
-			if a.choice == 1 {
+			if a.thinkingChoice {
 				a.changeValue = "ON"
 			}
 			a.globalMenu()

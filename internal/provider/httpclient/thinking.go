@@ -1,4 +1,4 @@
-// Purpose: Discover verified boolean Thinking controls without guessing provider parameters.
+// Purpose: Discover boolean Thinking metadata and documented vLLM GLM-4.5 controls.
 // Pattern: HTTP Adapter.
 // Usage: Called when selecting or restoring an Ollama model.
 // Related: internal/provider/httpclient/request.go, internal/provider/httpclient/thinking_test.go.
@@ -12,11 +12,19 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
+	"strings"
 
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
 func (c *Client) ThinkingControl(ctx context.Context, model string) (supported bool, err error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	if c.connection.Kind == modelconn.VLLM {
+		return glmThinking(model), nil
+	}
 	if c.connection.Kind != modelconn.Ollama {
 		return false, nil
 	}
@@ -54,4 +62,14 @@ func (c *Client) ThinkingControl(ctx context.Context, model string) (supported b
 		}
 	}
 	return on && off, nil
+}
+
+func glmThinking(model string) bool {
+	name := strings.ToLower(path.Base(model))
+	for _, prefix := range []string{"glm-4.5", "glm4.5"} {
+		if name == prefix || strings.HasPrefix(name, prefix+"-") {
+			return true
+		}
+	}
+	return false
 }

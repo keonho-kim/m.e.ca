@@ -49,7 +49,7 @@ type executor struct {
 }
 
 func (*executor) Definitions() []agent.ToolDefinition {
-	path := agent.ToolParameter{Name: "path", Question: "Path?", Kind: agent.Text, Required: true, MaxBytes: 4096}
+	path := agent.ToolParameter{Name: "path", Question: "Path?", Kind: agent.LiteralPath, Required: true, MaxBytes: 4096}
 	return []agent.ToolDefinition{{Name: "write_file", Description: "Write", Effect: policy.Change, Parameters: []agent.ToolParameter{path, {Name: "content", Question: "Content?", Kind: agent.Text, Required: true, AllowEmpty: true, MaxBytes: 4096}}}, {Name: "read_file", Description: "Read", Effect: policy.Read, Parameters: []agent.ToolParameter{path}}, {Name: "execute_command", Description: "Run", Effect: policy.Command, Parameters: []agent.ToolParameter{{Name: "command", Question: "Command?", Kind: agent.Text, Required: true, MaxBytes: 4096}}}}
 }
 func (e *executor) Prepare(_ context.Context, _ policy.Settings, _ bool, c agent.ToolCall) (agent.ToolExecution, error) {

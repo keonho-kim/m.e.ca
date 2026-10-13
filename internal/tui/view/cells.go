@@ -5,7 +5,7 @@
 package view
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 )
 
@@ -21,7 +21,7 @@ func Text(screen tcell.Screen, x, y, width int, value string, style tcell.Style)
 		if len(runes) == 0 {
 			continue
 		}
-		screen.SetContent(x, y, runes[0], runes[1:], style)
+		screen.Put(x, y, g.Str(), style)
 		x += cells
 	}
 }

@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"path/filepath"
+	"strings"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 )
 
 func (a *app) renderFiles(w, h int) {
@@ -51,8 +52,13 @@ func (a *app) renderFiles(w, h int) {
 	if a.status != "" {
 		view.Text(a.screen, 0, h-2, w, a.status, tcell.StyleDefault)
 	}
-	view.Input(a.screen, a.editor, h-1, w, 1)
-	if !a.browser.Input {
+	commandOpen := !a.browser.Input && strings.HasPrefix(a.menuInput.String(), ":")
+	if commandOpen {
+		view.Input(a.screen, a.menuInput, h-1, w, 1)
+	} else {
+		view.Input(a.screen, a.editor, h-1, w, 1)
+	}
+	if !a.browser.Input && !commandOpen {
 		a.screen.HideCursor()
 	}
 }

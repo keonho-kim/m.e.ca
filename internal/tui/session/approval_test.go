@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/agent"
 	"github.com/keonho-kim/v-code/internal/tools/local/diff"
 )
@@ -24,17 +24,17 @@ func TestApprovalDiffNavigation(t *testing.T) {
 	if !strings.Contains(first, "--- file") || !strings.Contains(screenLine(a.screen, 4, 80), "@@ -") {
 		t.Fatal("approval did not render a unified diff")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, "", 0))
 	a.render()
 	if a.previewOffset == 0 || screenLine(a.screen, 2, 80) == first {
 		t.Fatal("PageDown did not scroll the diff")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, "", 0))
 	a.render()
 	if a.previewOffset != 0 || screenLine(a.screen, 2, 80) != first {
 		t.Fatal("PageUp did not restore the diff start")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if <-a.decision || a.page != "chat" {
 		t.Fatal("dismissed diff became approval")
 	}
@@ -51,16 +51,16 @@ func TestApprovalChangedRowsHavePastelBackgrounds(t *testing.T) {
 			background = tcell.NewHexColor(0xfee2e2)
 		}
 		for _, x := range []int{0, 79} {
-			_, _, style, _ := a.screen.GetContent(x, y)
-			fg, bg, _ := style.Decompose()
+			_, style, _ := a.screen.Get(x, y)
+			fg, bg := style.GetForeground(), style.GetBackground()
 			if bg != background || fg != tcell.NewHexColor(0x242424) {
 				t.Fatalf("changed cell %d,%d lacks the expected pastel addition/deletion background", x, y)
 			}
 		}
 	}
 	for _, y := range []int{2, 3, 4, 5, 11, 12} {
-		_, _, style, _ := a.screen.GetContent(0, y)
-		_, bg, _ := style.Decompose()
+		_, style, _ := a.screen.Get(0, y)
+		bg := style.GetBackground()
 		if bg != tcell.ColorDefault {
 			t.Fatalf("non-change row %d has a background", y)
 		}

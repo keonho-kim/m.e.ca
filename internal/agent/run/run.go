@@ -104,7 +104,7 @@ func (r Runner) Run(ctx context.Context, history []agent.Message, input string, 
 		if err = s.refreshMemory(ctx); err != nil {
 			return s.result, err
 		}
-		text, askErr := s.ask(ctx, "DECISION: Choose one next action. A completion claim alone is not verification.", 2048, 16384)
+		text, askErr := s.ask(ctx, "DECISION: Choose one next action. Outside Plan mode, for a greeting or a question answerable without project evidence, use DONE followed by the answer; tools are optional and must serve the user goal. Use TOOL/CHECK only when necessary. A completion claim alone is not verification.", 2048, 16384)
 		if askErr != nil {
 			return s.result, askErr
 		}

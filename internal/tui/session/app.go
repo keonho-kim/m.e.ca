@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/agent"
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
@@ -52,6 +52,7 @@ type app struct {
 	client                          *httpclient.Client
 	plan                            *planning.Plan
 	planMode                        bool
+	thinkingChoice                  bool
 	page                            string
 	choices                         []string
 	choice                          int
@@ -86,11 +87,7 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (err error) {
 	if err = app.restore(); err != nil {
 		return err
 	}
-	inputEvents := make(chan tcell.Event, 32)
-	quit := make(chan struct{})
-	joined := make(chan struct{})
-	go func() { defer close(joined); screen.ChannelEvents(inputEvents, quit) }()
-	defer func() { close(quit); <-joined }()
+	inputEvents := screen.EventQ()
 	screen.EnableMouse(tcell.MouseButtonEvents)
 	screen.EnablePaste()
 	for !app.exit {

@@ -94,7 +94,18 @@ func (a *app) connect(connection modelconn.Connection, key, model string) {
 func (a *app) confirmField() {
 	switch a.page {
 	case "endpoint":
-		a.endpoint = strings.TrimSpace(a.menuInput.String())
+		endpoint := strings.TrimSpace(a.menuInput.String())
+		if endpoint == "" {
+			a.status = "Endpoint cannot be empty"
+			return
+		}
+		connection, err := modelconn.New(providerKinds()[a.connectionKind], endpoint)
+		if err != nil {
+			a.fail(err)
+			return
+		}
+		a.endpoint = connection.Endpoint
+		a.status = ""
 		a.page = "key"
 		a.menuInput.Set("")
 	case "key":

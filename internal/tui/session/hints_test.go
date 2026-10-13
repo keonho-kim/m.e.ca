@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tools/local"
 )
 
 func typeInput(a *app, value string) {
 	for _, r := range value {
-		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, r, 0))
+		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, string(r), 0))
 	}
 }
 func TestCommandHints(t *testing.T) {
@@ -24,12 +24,12 @@ func TestCommandHints(t *testing.T) {
 	if !strings.Contains(screenLine(a.screen, 2, 80), "!plan") || !strings.Contains(screenLine(a.screen, 6, 80), "!dir") {
 		t.Fatal("five commands missing below editor")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, 0, 0))
-	a.keyEvent(tcell.NewEventKey(tcell.KeyTAB, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 	if a.editor.String() != "!model" || a.page != "chat" {
 		t.Fatal("completion executed the command")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.page != "model" {
 		t.Fatalf("completed command did not execute: %s", a.page)
 	}
@@ -39,13 +39,13 @@ func TestCommandHints(t *testing.T) {
 	if !strings.Contains(screenLine(a.screen, 2, 80), "!scope") || strings.Contains(screenLine(a.screen, 3, 80), "!plan") {
 		t.Fatal("prefix did not filter commands")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.editor.String() != "!scope" || a.page != "chat" {
 		t.Fatal("Enter must insert without executing")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 	typeInput(a, "!")
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
 	if a.editor.String() != "!" || strings.Contains(screenLine(a.screen, 2, 80), "!plan") {
 		t.Fatal("Escape must preserve input and dismiss hints")
@@ -71,7 +71,7 @@ func TestCommandHintsIgnoreTextArgumentsAndPaste(t *testing.T) {
 func TestCommandHintsPreserveAltEnter(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModAlt))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModAlt))
 	a.render()
 	if a.editor.String() != "!\n" || strings.Contains(screenLine(a.screen, 3, 80), "!plan") {
 		t.Fatal("Alt+Enter completed a command instead of inserting a newline")
@@ -85,8 +85,8 @@ func TestForegroundOnlyViews(t *testing.T) {
 	a.page, a.choices = "model", []string{"first", "second"}
 	a.render()
 	assertForegroundOnly(t, a.screen)
-	_, _, style, _ := a.screen.GetContent(0, 2)
-	_, _, attrs := style.Decompose()
+	_, style, _ := a.screen.Get(0, 2)
+	attrs := style.GetAttributes()
 	if attrs&tcell.AttrBold == 0 {
 		t.Fatal("selected menu row lacks foreground emphasis")
 	}
@@ -104,8 +104,8 @@ func assertForegroundOnly(t *testing.T, screen tcell.Screen) {
 	w, h := screen.Size()
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			_, _, style, _ := screen.GetContent(x, y)
-			_, background, attrs := style.Decompose()
+			_, style, _ := screen.Get(x, y)
+			background, attrs := style.GetBackground(), style.GetAttributes()
 			if background != tcell.ColorDefault || attrs&tcell.AttrReverse != 0 {
 				t.Fatalf("background/reverse at %d,%d: %v", x, y, style)
 			}

@@ -4,7 +4,7 @@
 // Related: internal/tui/session/render_hints.go, internal/tui/session/render.go, internal/tui/session/render_files.go, internal/tui/startup/resume.go.
 package view
 
-import "github.com/gdamore/tcell/v2"
+import "github.com/gdamore/tcell/v3"
 
 func SelectionStyle(selected bool) tcell.Style {
 	if selected {

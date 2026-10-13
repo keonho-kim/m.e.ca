@@ -1,13 +1,14 @@
 // Purpose: Handle scoped column browsing, paged directories and persistent path selection.
 // Pattern: Presentation handler with explicit filesystem calls.
 // Usage: Called by local !dir and file-view key events.
-// Related: internal/tui/browser/browser.go, internal/tools/local/references.go.
+// Related: internal/tui/browser/browser.go, internal/tools/local/references.go, internal/tui/session/render_files.go, internal/tui/session/keys.go.
 package session
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 )
 
 func (a *app) openFiles(path string) {
@@ -29,11 +30,42 @@ func (a *app) openFiles(path string) {
 		return
 	}
 	a.browser.Open(ref.Path, entries, more)
+	a.menuInput.Set("")
 	a.page = "files"
 }
 func (a *app) fileKey(e *tcell.EventKey) {
+	if a.paste {
+		return
+	}
+	if strings.HasPrefix(a.menuInput.String(), ":") {
+		switch e.Key() {
+		case tcell.KeyEnter:
+			if a.menuInput.String() == ":q" {
+				a.page = "chat"
+				a.menuInput.Set("")
+			} else {
+				a.status = "Unknown file-view command; use :q"
+			}
+		case tcell.KeyEscape:
+			a.menuInput.Set("")
+		case tcell.KeyTab:
+			a.menuInput.Set("")
+			a.browser.Input = true
+		default:
+			editKey(&a.menuInput, e)
+			if !strings.HasPrefix(a.menuInput.String(), ":") {
+				a.menuInput.Set("")
+			}
+		}
+		return
+	}
+	if e.Key() == tcell.KeyRune && strings.HasPrefix(e.Str(), ":") {
+		a.menuInput.Set("")
+		a.menuInput.Insert(e.Str())
+		return
+	}
 	switch e.Key() {
-	case tcell.KeyTAB:
+	case tcell.KeyTab:
 		a.browser.Input = true
 	case tcell.KeyUp:
 		a.browser.Move(-1)
@@ -80,7 +112,7 @@ func (a *app) fileKey(e *tcell.EventKey) {
 		}
 		a.browser.Push(path, entries, more)
 	case tcell.KeyRune:
-		if e.Rune() == ' ' {
+		if e.Str() == " " {
 			path, _ := a.browser.Target()
 			if path == "" {
 				return
@@ -102,11 +134,6 @@ func (a *app) fileKey(e *tcell.EventKey) {
 			}
 			a.status = fmt.Sprintf("selected: %d", len(a.browser.Selected))
 			return
-		}
-		a.menuInput.Insert(string(e.Rune()))
-		if a.menuInput.String() == ":q" {
-			a.page = "chat"
-			a.menuInput.Set("")
 		}
 	}
 }

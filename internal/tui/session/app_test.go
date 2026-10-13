@@ -1,4 +1,4 @@
-// Purpose: Verify local UI input, approval, Plan gating and rendering through terminal simulation.
+// Purpose: Verify local UI input, approval, Plan gating and rendering through a virtual terminal.
 // Pattern: Terminal behavior tests.
 // Usage: go test ./internal/tui/session.
 // Related: internal/tui/session/keys.go, internal/tui/session/render.go, internal/tui/session/tasks.go.
@@ -11,7 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/vt"
 	"github.com/keonho-kim/v-code/internal/agent"
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/config/bootstrap"
@@ -53,7 +54,11 @@ func fixture(t *testing.T) *app {
 	if err != nil {
 		t.Fatal(err)
 	}
-	screen := tcell.NewSimulationScreen("UTF-8")
+	terminal := vt.NewMockTerm(vt.MockOptSize{X: 80, Y: 24})
+	screen, err := tcell.NewTerminfoScreenFromTty(terminal)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -67,9 +72,43 @@ func TestReferenceEnterInsertsInsteadOfSending(t *testing.T) {
 	a.refOpen = true
 	a.refStart = 5
 	a.refs = []local.Reference{{Path: "."}}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.refOpen || !strings.Contains(a.editor.String(), "](") || a.busy {
 		t.Fatalf("insertion: %+v", a.editor)
+	}
+}
+func TestKeyInputPreservesGraphemeStrings(t *testing.T) {
+	a := fixture(t)
+	value := "한글 a\u0301 👨‍👩‍👧‍👦"
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, value, 0))
+	if a.editor.String() != value {
+		t.Fatalf("key event lost Unicode text: %q", a.editor.String())
+	}
+}
+func TestRunConsumesNativeEventQueueAndExits(t *testing.T) {
+	a := fixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	finished := make(chan error, 1)
+	go func() { finished <- Run(ctx, a.screen, a.opts) }()
+	for _, event := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyRune, ":q", 0),
+		tcell.NewEventKey(tcell.KeyEnter, "", 0),
+	} {
+		select {
+		case a.screen.EventQ() <- event:
+		case <-ctx.Done():
+			if err := <-finished; err != nil {
+				t.Fatal(err)
+			}
+			t.Fatal("event queue did not accept input")
+		}
+	}
+	if err := <-finished; err != nil {
+		t.Fatal(err)
+	}
+	if ctx.Err() != nil {
+		t.Fatal("quit did not complete before cancellation")
 	}
 }
 func TestPlanAndApprovalCannotBeBypassed(t *testing.T) {
@@ -89,7 +128,7 @@ func TestPlanAndApprovalCannotBeBypassed(t *testing.T) {
 	a.page = "approval"
 	a.choices = []string{"Approve", "Reject"}
 	a.choice = 1
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if <-a.decision {
 		t.Fatal("reject became approval")
 	}
@@ -112,11 +151,11 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if a.editor.String() != "draft" {
 		t.Fatal("menu cleared draft")
 	}
-	a.screen.(tcell.SimulationScreen).SetSize(32, 10)
+	a.screen.SetSize(32, 10)
 	a.render()
 	if a.editor.String() != "draft" {
 		t.Fatal("resize cleared draft")
@@ -125,8 +164,8 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 func screenLine(screen tcell.Screen, y, width int) string {
 	var b strings.Builder
 	for x := 0; x < width; x++ {
-		r, _, _, cells := screen.GetContent(x, y)
-		b.WriteRune(r)
+		r, _, cells := screen.Get(x, y)
+		b.WriteString(r)
 		if cells > 1 {
 			x += cells - 1
 		}
@@ -203,7 +242,7 @@ func TestCancellingConnectionSelectionPreservesCurrentModel(t *testing.T) {
 	a.selection.Model = "current-model"
 	candidate := sqlite.Selection{Connection: modelconn.Connection{ID: "candidate"}}
 	a.receive(notice{Done: true, Selection: &candidate, Models: []string{"new-model"}})
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if a.selection.Model != "current-model" {
 		t.Fatal("connection menu cleared the current model")
 	}

@@ -8,9 +8,8 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
-	"github.com/rivo/uniseg"
 )
 
 func (a *app) render() {
@@ -79,12 +78,7 @@ func (a *app) renderMenu(w, h int) {
 	}
 	view.Text(a.screen, 0, 0, w, title, tcell.StyleDefault)
 	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
-		value := a.menuInput.String()
-		if a.page == "key" {
-			value = strings.Repeat("*", len(a.menuInput.Text))
-		}
-		view.Text(a.screen, 0, 2, w, "> "+value, tcell.StyleDefault)
-		a.screen.ShowCursor(min(w-1, 2+uniseg.StringWidth(value)), 2)
+		view.Field(a.screen, a.menuInput, 2, w, a.page == "key")
 		if a.status != "" {
 			view.Text(a.screen, 0, 4, w, a.status, tcell.StyleDefault)
 		}
@@ -119,7 +113,11 @@ func (a *app) renderMenu(w, h int) {
 	visible := max(1, h-y-2)
 	start := max(0, a.choice-visible+1)
 	for i := start; i < min(len(a.choices), start+visible); i++ {
-		view.Text(a.screen, 0, y, w, a.choices[i], view.SelectionStyle(i == a.choice))
+		if a.page == "model" && i == 1 {
+			view.Thinking(a.screen, y, w, a.thinkingChoice, a.selection.ThinkingSupported, i == a.choice)
+		} else {
+			view.Text(a.screen, 0, y, w, a.choices[i], view.SelectionStyle(i == a.choice))
+		}
 		y++
 	}
 	if a.status != "" && y < h {

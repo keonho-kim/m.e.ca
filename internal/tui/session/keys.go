@@ -8,7 +8,7 @@ import (
 	"crypto/rand"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/input"
@@ -30,7 +30,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.menuKey(e)
 		return
 	}
-	if a.page == "files" && e.Key() == tcell.KeyTAB {
+	if a.page == "files" && e.Key() == tcell.KeyTab {
 		a.browser.Input = false
 		return
 	}
@@ -69,7 +69,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 func editKey(editor *input.Editor, e *tcell.EventKey) {
 	switch e.Key() {
 	case tcell.KeyRune:
-		editor.Insert(string(e.Rune()))
+		editor.Insert(e.Str())
 	case tcell.KeyLeft:
 		editor.Move(-1)
 	case tcell.KeyRight:
@@ -78,7 +78,7 @@ func editKey(editor *input.Editor, e *tcell.EventKey) {
 		editor.Home()
 	case tcell.KeyEnd, tcell.KeyCtrlE:
 		editor.End()
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
+	case tcell.KeyBackspace:
 		editor.Backspace()
 	case tcell.KeyDelete:
 		editor.Delete()
@@ -88,7 +88,7 @@ func editKey(editor *input.Editor, e *tcell.EventKey) {
 		editor.Replace(0, editor.Cursor, "")
 	case tcell.KeyCtrlK:
 		editor.Replace(editor.Cursor, len(editor.Text), "")
-	case tcell.KeyTAB:
+	case tcell.KeyTab:
 		editor.Insert("\t")
 	}
 }
@@ -188,73 +188,4 @@ func (a *app) submit() {
 	a.editor.Set("")
 	a.closeReferences()
 	a.closeCommandHints()
-}
-func (a *app) menuKey(e *tcell.EventKey) {
-	if a.page == "approval" {
-		if e.Key() == tcell.KeyPgDn {
-			a.previewOffset += 8
-			return
-		}
-		if e.Key() == tcell.KeyPgUp {
-			a.previewOffset = max(0, a.previewOffset-8)
-			return
-		}
-	}
-	if a.paste {
-		if e.Key() == tcell.KeyRune {
-			a.menuInput.Insert(string(e.Rune()))
-		}
-		return
-	}
-	if e.Key() == tcell.KeyEscape {
-		if a.page == "approval" {
-			a.decide(false)
-		} else {
-			a.page = "chat"
-		}
-		a.menuInput.Set("")
-		return
-	}
-	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
-		if e.Key() == tcell.KeyEnter {
-			if a.menuInput.String() == ":q" {
-				a.page = "chat"
-				a.menuInput.Set("")
-				return
-			}
-			a.confirmField()
-			return
-		}
-		editKey(&a.menuInput, e)
-		return
-	}
-	switch e.Key() {
-	case tcell.KeyUp:
-		a.choice = max(0, a.choice-1)
-	case tcell.KeyDown:
-		a.choice = min(max(0, len(a.choices)-1), a.choice+1)
-	case tcell.KeyEnter:
-		if a.menuInput.String() == ":q" {
-			if a.page == "approval" {
-				a.decide(false)
-			} else {
-				a.page = "chat"
-			}
-			a.menuInput.Set("")
-			return
-		}
-		if len(a.choices) > 0 {
-			a.choose()
-		}
-	default:
-		editKey(&a.menuInput, e)
-	}
-}
-func (a *app) decide(approved bool) {
-	select {
-	case a.decision <- approved:
-	default:
-	}
-	a.proposal = nil
-	a.page = "chat"
 }

@@ -48,3 +48,12 @@ func TestPathCannotBeOneShotToolJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestPathAcceptsALineEndingWithoutChangingItsValue(t *testing.T) {
+	p := agent.ToolParameter{Name: "path", Kind: agent.LiteralPath, Required: true, MaxBytes: 4096}
+	for _, reply := range []string{"README.md\n", "README.md\r\n"} {
+		value, err := ParseArgument(p, reply)
+		if err != nil || string(value) != `"README.md"` {
+			t.Fatalf("path line ending: %s %v", value, err)
+		}
+	}
+}

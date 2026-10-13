@@ -75,8 +75,13 @@ func ParseArgument(p agent.ToolParameter, text string) (json.RawMessage, error) 
 		return json.Marshal(value)
 	}
 	if p.Kind == agent.LiteralPath {
+		// A text response may end its single path line with LF or CRLF.
+		text = strings.TrimRight(text, "\r\n")
 		trimmed := strings.TrimSpace(text)
-		if strings.ContainsAny(text, "\r\n") || json.Valid([]byte(trimmed)) && (strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") || strings.HasPrefix(trimmed, "\"")) {
+		if strings.ContainsAny(text, "\r\n") {
+			return nil, fmt.Errorf("%s requires one plain path line", p.Name)
+		}
+		if json.Valid([]byte(trimmed)) && (strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") || strings.HasPrefix(trimmed, "\"")) {
 			return nil, fmt.Errorf("%s requires one literal path, not a JSON wrapper", p.Name)
 		}
 	}

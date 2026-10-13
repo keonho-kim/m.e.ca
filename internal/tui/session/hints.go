@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 )
@@ -45,7 +45,7 @@ func (a *app) hintKey(e *tcell.EventKey) bool {
 			a.commandIndex = min(max(0, len(a.commandHints)-1), a.commandIndex+1)
 		case tcell.KeyEscape:
 			a.closeCommandHints()
-		case tcell.KeyEnter, tcell.KeyTAB:
+		case tcell.KeyEnter, tcell.KeyTab:
 			if len(a.commandHints) > 0 {
 				a.editor.Set(a.commandHints[a.commandIndex].Name)
 				a.closeCommandHints()
