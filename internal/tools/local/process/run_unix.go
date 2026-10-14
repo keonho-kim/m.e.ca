@@ -10,6 +10,7 @@ package process
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox"
 	"os"
 	"os/exec"
@@ -36,6 +37,15 @@ func Run(ctx context.Context, project, home, private, commandText string, confin
 		command.Env = launch.Environment
 	}
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if confined {
+		if launch.Name != "" {
+			command.Args[0] = launch.Name
+		}
+		if launch.Attributes != nil {
+			command.SysProcAttr = launch.Attributes
+		}
+		command.ExtraFiles = launch.Files
+	}
 	command.Cancel = func() error {
 		if command.Process == nil {
 			return nil
@@ -49,7 +59,21 @@ func Run(ctx context.Context, project, home, private, commandText string, confin
 	command.WaitDelay = 2 * time.Second
 	var stdout, stderr cappedOutput
 	command.Stdout, command.Stderr = &stdout, &stderr
-	runErr := command.Run()
+	runErr := command.Start()
+	started := runErr == nil
+	inputErr := launch.CloseInputs()
+	if started {
+		runErr = command.Wait()
+	}
+	runErr = errors.Join(runErr, inputErr)
+	var setupErr error
+	if confined {
+		if started {
+			setupErr = launch.SetupError()
+		} else {
+			setupErr = fmt.Errorf("project sandbox launch failed: %w", runErr)
+		}
+	}
 	if command.Process != nil {
 		if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
 			runErr = errors.Join(runErr, err)
@@ -62,6 +86,13 @@ func Run(ctx context.Context, project, home, private, commandText string, confin
 			output.Status = "timeout"
 		}
 		return output, ctx.Err()
+	}
+	if setupErr != nil {
+		output.Status = "scope_unavailable"
+		return output, errors.Join(setupErr, runErr)
+	}
+	if inputErr != nil {
+		return output, runErr
 	}
 	if runErr != nil {
 		var exitErr *exec.ExitError

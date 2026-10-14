@@ -1,49 +1,73 @@
 //go:build linux
 
-// Purpose: Build a project filesystem namespace using the bundled Bubblewrap helper.
-// Pattern: Linux process isolation adapter.
-// Usage: Process.Run uses Prepare before invoking an approved project command.
-// Related: internal/tools/local/process/sandbox/environment.go, internal/tools/local/process/sandbox/bundle/extract_linux.go.
+// Purpose: Prepare a self-executing Linux sandbox with immutable input and a separate setup error channel.
+// Pattern: Linux process launch adapter.
+// Usage: Process.Run executes the launch after Scope and user approval checks.
+// Related: internal/tools/local/process/sandbox/linux/child_linux.go, internal/tools/local/process/sandbox/environment.go.
 package sandbox
 
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox/bundle"
 	"os"
 	"path/filepath"
+	"syscall"
+
+	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox/linux"
 )
 
-func Prepare(project, private, command string) (Launch, error) {
-	binary, err := bundle.Executable(private)
-	if err != nil {
-		return Launch{}, fmt.Errorf("project sandbox unavailable: %w", err)
+func Prepare(project, private, command string) (launch Launch, err error) {
+	if err := linux.Probe(); err != nil {
+		return launch, fmt.Errorf("project sandbox unavailable: %w", err)
 	}
-	launch, err := scratch(project)
+	project, err = filepath.EvalSymlinks(project)
 	if err != nil {
-		return Launch{}, err
+		return launch, err
 	}
-	args := []string{"--die-with-parent", "--new-session", "--unshare-user", "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-net", "--cap-drop", "ALL"}
-	// The new root starts empty. Only runtimes, the project and private scratch
-	// are mounted; sibling projects, user state and inherited host sockets are absent.
+	private, err = filepath.EvalSymlinks(private)
+	if err != nil {
+		return launch, err
+	}
+	launch, err = scratch(project)
+	if err != nil {
+		return launch, err
+	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, launch.Close())
+			launch = Launch{}
+		}
+	}()
+	request := linux.Request{Project: project, Private: private, Scratch: launch.Scratch, Command: command}
 	for _, path := range append(runtimePaths(), "/lib", "/lib64") {
-		if _, err := os.Stat(path); err == nil {
-			args = append(args, "--ro-bind", path, path)
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return Launch{}, errors.Join(err, launch.Close())
+		if _, statErr := os.Stat(path); statErr == nil {
+			request.Runtime = append(request.Runtime, path)
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			return launch, statErr
 		}
 	}
-	args = append(args, "--proc", "/proc", "--dev", "/dev", "--bind", project, project, "--bind", launch.Scratch, launch.Scratch)
-	relative, err := filepath.Rel(project, private)
+	input, err := linux.Encode(request)
 	if err != nil {
-		return Launch{}, errors.Join(err, launch.Close())
+		return launch, err
 	}
-	if filepath.IsLocal(relative) {
-		// V state remains inaccessible even when the chosen project is its ancestor.
-		args = append(args, "--tmpfs", private, "--remount-ro", private)
+	launch.Files = append(launch.Files, input)
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return launch, err
 	}
-	args = append(args, "--chdir", project, "--", "/bin/sh", "-c", command)
-	launch.Program = binary
-	launch.Arguments = args
+	launch.setup = reader
+	launch.Files = append(launch.Files, writer)
+	// The executable pathname can be atomically replaced while V is running.
+	// Re-execute the current image, never a replacement supplied by the project.
+	launch.Program = "/proc/self/exe"
+	launch.Name = linux.ChildName
+	launch.Attributes = &syscall.SysProcAttr{
+		Setpgid:                    true,
+		Cloneflags:                 syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC | syscall.CLONE_NEWUTS | syscall.CLONE_NEWNET,
+		UidMappings:                []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Geteuid(), Size: 1}},
+		GidMappings:                []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Getegid(), Size: 1}},
+		GidMappingsEnableSetgroups: false,
+		Pdeathsig:                  syscall.SIGKILL,
+	}
 	return launch, nil
 }

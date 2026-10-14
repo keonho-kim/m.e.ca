@@ -62,7 +62,7 @@ internal/
       diff/                  실제 변경량·승인 미리보기
       process/               프로세스·출력·취소·그룹 정리
         sandbox/             OS별 프로젝트 격리
-          bundle/            Linux 내장 helper 검증·추출
+          linux/             내부 실행 프로토콜·마운트·Landlock·seccomp
   tui/
     session/                 이벤트 루프·화면 상태·worker 수명
     startup/                 이어하기 목록과 프로젝트 재검증
@@ -86,7 +86,7 @@ Provider는 전송(`transport`), 형식 변환(`protocol`), 메타데이터 조�
 
 ## 의존성과 검증 범위
 
-Linux에 필요한 Bubblewrap 준비 절차는 README의 [직접 빌드하기](../README.md#직접-빌드하기)를 따른다. 고정된 helper 소스·체크섬·라이선스는 `scripts/bubblewrap.Dockerfile`과 `scripts/notices/`에서 관리한다.
+빌드는 README의 [직접 빌드하기](../README.md#직접-빌드하기)를 따른다. Docker·C helper 빌드·내장 실행 파일은 필요하지 않다. Linux 셸 격리는 기존 x/sys를 통해 커널 API를 직접 호출한다. Landlock ABI 3 이상, seccomp와 user/mount/PID/network/IPC/UTS 네임스페이스 등이 필요하다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`는 격리를 실제로 실행하며 커널 기능이 없으면 실패한다. 일반 테스트는 지원하지 않는 호스트에서 사유와 함께 네이티브 검증을 생략한다. 네임스페이스가 차단된 호스트에서는 `V_SANDBOX_DENIED=1`로 명령이 실행되지 않고 scope_unavailable이 반환되는지 검증할 수 있다.
 
 직접 의존성은 `go.mod`에 정확한 버전으로 고정한다. 유지되는 공개 버전과 라이선스, 도입 목적을 확인했으며, 불필요한 웹·위젯 프레임워크는 사용하지 않는다. 2026-10-13에 직접 의존성과 빌드·테스트에 사용하는 간접 의존성을 최신 안정 버전으로 확인·갱신했다. 자동 업데이트는 아니며 이후 변경도 정확한 버전으로 고정하고 검증한다.
 
@@ -97,6 +97,7 @@ Linux에 필요한 Bubblewrap 준비 절차는 README의 [직접 빌드하기](.
 | `github.com/pelletier/go-toml/v2` | 2.4.3 | 설정 파싱, MIT |
 | `github.com/zalando/go-keyring` | 0.2.8 | Keychain·Secret Service, MIT; 일부 소스 Apache-2.0 |
 | `golang.org/x/term` | 0.47.0 | 대화형 TTY 확인, BSD-3-Clause |
+| `golang.org/x/sys` | 0.49.0 | Linux 커널 격리와 시스템 호출, BSD-3-Clause |
 | `modernc.org/sqlite` | 1.60.1 | CGO 없는 SQLite, BSD-3-Clause 및 포함 구성요소 라이선스 |
 | `mvdan.cc/sh/v3` | 3.14.1 | POSIX Shell AST 파서, BSD-3-Clause; 셸 실행기 대신 syntax 패키지만 사용 |
 
@@ -104,7 +105,7 @@ tcell v3의 `EventQ`, 문자열 키 입력, `Put`/`Get`, 스타일 getter를 직
 
 SQLite 공식 지침에 따라 `modernc.org/libc`는 드라이버 `v1.60.1`이 사용하는 **v1.77.1**과 정확히 맞춘다. 단독 최신 버전으로 올리지 않는다. [드라이버의 libc 호환성 지침](https://pkg.go.dev/modernc.org/sqlite@v1.60.1#hdr-Fragile_modernc_org_libc_dependency)을 따른다. `go list -m -u all`에는 upstream 자체의 개발 도구·테스트 모듈도 나타나므로 V의 실제 빌드·테스트 의존성과 구분한다. 이 모듈들을 최신으로 표시하기 위해 사용하지 않는 직접 의존성을 추가하지 않는다.
 
-SQLite는 Go 변환 런타임을 포함하므로 실행 파일 크기와 컴파일 비용이 있다. 현재 macOS arm64 기본 빌드의 실행 파일은 약 18.4 MiB다. 이번 변경 전 빌드 18,890,370바이트에서 19,330,466바이트로 증가했으며, 셸 파서와 줄 표식·격리 실행 코드가 함께 포함된 값이다. Linux 바이너리는 준비된 helper도 포함한다. CGO 없이 Linux amd64·arm64와 macOS amd64 교차 빌드를 확인했다. 빌드 성공을 실제 OS의 터미널·보안 동작 검증으로 간주하지 않는다. 자격 증명 저장소는 플랫폼 서비스와 시스템 도구에 의존한다.
+SQLite는 Go 변환 런타임을 포함하므로 실행 파일 크기와 컴파일 비용이 있다. 현재 macOS arm64 기본 빌드의 실행 파일은 약 18.4 MiB다. 이번 변경 전 빌드 18,890,370바이트에서 19,330,466바이트로 증가했으며, 셸 파서와 줄 표식·격리 실행 코드가 함께 포함된 값이다. 이 수치는 내장 helper 제거 전 측정이다. 현재 Linux 바이너리는 내부 커널 실행기를 사용하며 외부 helper를 포함하지 않는다. CGO 없이 Linux amd64·arm64와 macOS amd64 교차 빌드를 확인했다. 빌드 성공을 실제 OS의 터미널·보안 동작 검증으로 간주하지 않는다. 자격 증명 저장소는 플랫폼 서비스와 시스템 도구에 의존한다.
 
 공식 자료: [tcell 3.6.0](https://pkg.go.dev/github.com/gdamore/tcell/v3@v3.6.0), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking), [SQLite 드라이버](https://pkg.go.dev/modernc.org/sqlite@v1.60.1), [go-keyring 소스](https://github.com/zalando/go-keyring/tree/v0.2.8).
 
@@ -133,3 +134,9 @@ go mod verify
 | 할당 횟수/회 | 70,011 | 1,611 |
 
 남은 최적화 후보는 스트림 이벤트마다 전체 보관 기록을 다시 줄바꿈하는 비용과 누적 응답을 다시 검사·마스킹하는 비용이다. 캐시·렌더링 병합은 실제 긴 대화 프로파일링을 거쳐 검토한다. 24시간 연속 실행의 heap/RSS 추적과 모든 실제 Provider 조합 검증은 아직 수행하지 않았다.
+
+### Linux 내부 실행기 검증
+
+2026-10-14에 Linux 7.0.14 arm64의 Alpine 컨테이너에서 Bubblewrap 설치 없이 파일 격리, 외부 경로·심볼릭 링크·V 상태·메타데이터 접근 차단을 확인했다. 일반 사용자 UID 65534에서도 실행했다. TCP·Unix 소켓과 격리 변경 차단, 취소 시 분리된 자식 프로세스 정리, 실행 파일 경로가 교체된 뒤에도 기존 이미지로 재실행되는 동작을 검증했다. Landlock 호출 자체를 거부한 환경에서도 명령 실행 없이 실패를 반환했다. 호스트 네임스페이스 생성이 차단된 컨테이너에서는 프로젝트 명령이 실행되지 않고 실패를 반환하는 경로를 확인했다. 컨테이너는 개발 검증 환경이며 제품의 빌드·실행 의존성이 아니다. 배포판별 AppArmor·커널 설정과 Linux amd64 실기 검증은 남아 있다.
+
+내부 실행기의 경계는 [Landlock](https://docs.kernel.org/userspace-api/landlock.html)과 [seccomp](https://docs.kernel.org/userspace-api/seccomp_filter.html)의 커널 계약을 따른다. Landlock만으로 파일 존재 확인과 프로젝트 내부 V 상태 숨김을 대체하지 않으므로, 별도 마운트 뷰와 함께 적용한다. 설치 의존성을 없애는 대신 이 커널 경계의 구현과 회귀 검증을 저장소에서 소유한다.

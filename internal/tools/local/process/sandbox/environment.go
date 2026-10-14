@@ -1,4 +1,4 @@
-// Purpose: Describe an isolated shell launch and own its temporary working files.
+// Purpose: Describe an isolated shell launch and own its descriptors and temporary working files.
 // Pattern: Process launch adapter contract.
 // Usage: Process.Run executes the returned command and closes its scratch directory.
 // Related: internal/tools/local/process/sandbox/darwin.go, internal/tools/local/process/sandbox/linux.go.
@@ -8,19 +8,30 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 type Launch struct {
 	Program                string
 	Arguments, Environment []string
 	Directory, Scratch     string
+	Name                   string
+	Attributes             *syscall.SysProcAttr
+	Files                  []*os.File
+	setup                  *os.File
 }
 
 func (l Launch) Close() error {
-	if l.Scratch == "" {
-		return nil
+	err := l.CloseInputs()
+	if l.setup != nil {
+		if closeErr := l.setup.Close(); !errors.Is(closeErr, os.ErrClosed) {
+			err = errors.Join(err, closeErr)
+		}
 	}
-	return os.RemoveAll(l.Scratch)
+	if l.Scratch == "" {
+		return err
+	}
+	return errors.Join(err, os.RemoveAll(l.Scratch))
 }
 func scratch(project string) (Launch, error) {
 	directory, err := os.MkdirTemp("", "v-command-")

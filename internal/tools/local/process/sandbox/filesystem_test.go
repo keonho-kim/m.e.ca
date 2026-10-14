@@ -16,6 +16,7 @@ import (
 )
 
 func TestProjectFilesystemIsolation(t *testing.T) {
+	requireSandbox(t)
 	project, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -63,9 +64,25 @@ func TestProjectFilesystemIsolation(t *testing.T) {
 			cmd := exec.Command(launch.Program, launch.Arguments...)
 			cmd.Dir = launch.Directory
 			cmd.Env = launch.Environment
-			output, err := cmd.CombinedOutput()
-			if (err != nil) != tc.denied || strings.Contains(string(output), "outside-secret") {
-				t.Fatalf("output=%q err=%v", output, err)
+			cmd.ExtraFiles, cmd.SysProcAttr = launch.Files, launch.Attributes
+			if launch.Name != "" {
+				cmd.Args[0] = launch.Name
+			}
+			var output strings.Builder
+			cmd.Stdout, cmd.Stderr = &output, &output
+			err = cmd.Start()
+			if closeErr := launch.CloseInputs(); closeErr != nil {
+				t.Fatal(closeErr)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = cmd.Wait()
+			if setupErr := launch.SetupError(); setupErr != nil {
+				t.Fatal(setupErr)
+			}
+			if (err != nil) != tc.denied || strings.Contains(output.String(), "outside-secret") {
+				t.Fatalf("output=%q err=%v", output.String(), err)
 			}
 		})
 	}

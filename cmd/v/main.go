@@ -1,7 +1,7 @@
 // Purpose: Compose startup, private state, project adapters and terminal lifecycle.
 // Pattern: Composition Root.
 // Usage: go run ./cmd/v [path | resume]; go build -o bin/v ./cmd/v.
-// Related: internal/commands/startup/parse.go, internal/config/bootstrap/bootstrap.go, internal/tui/session/app.go.
+// Related: internal/commands/startup/parse.go, internal/config/bootstrap/bootstrap.go, internal/tui/session/app.go, cmd/v/sandbox_linux.go.
 package main
 
 import (
@@ -30,6 +30,12 @@ import (
 )
 
 func main() {
+	if handled, err := runSandboxChild(); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "v: sandbox:", err)
+		}
+		os.Exit(125)
+	}
 	if err := start(); err != nil {
 		fmt.Fprintln(os.Stderr, "v:", err)
 		os.Exit(1)
