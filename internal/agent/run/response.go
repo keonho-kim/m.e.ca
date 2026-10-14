@@ -40,7 +40,7 @@ func (s *task) responseBody(text string) string {
 			}
 			return decision.Text
 		}
-		if !s.checkpoint.PendingReview && (!s.worked && (s.runner.assignment == nil || s.runner.assignment.Kind == "answer") || s.checkpoint.Evidence != "") {
+		if !s.checkpoint.PendingReview && (!s.worked && (s.runner.assignment == nil || s.runner.assignment.Kind == "answer" || s.runner.assignment.Kind == "request") || s.checkpoint.Evidence != "") {
 			return decision.Text
 		}
 	}

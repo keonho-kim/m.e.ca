@@ -1,4 +1,4 @@
-// Purpose: Generate hidden Goal analysis and a final user report without exposing internal sequence messages.
+// Purpose: Generate hidden Goal analysis with bounded recovery and a final user report.
 // Pattern: Phase-specific model use cases.
 // Usage: RunGoal calls these phases under the same model, usage and time budgets as its Tasks.
 // Related: internal/agent/run/goal.go, internal/agent/goal/state.go, internal/agent/run/generate.go.
@@ -34,9 +34,23 @@ func (s *task) analyzeGoal(ctx context.Context, id, input string) (goal.State, e
 		if err == nil {
 			return state, nil
 		}
-		question += "\nCorrect the analysis format: " + err.Error()
+		if err := s.record(ctx, Event{Kind: "goal_analysis_correction", Text: err.Error(), Internal: true}); err != nil {
+			return goal.State{}, err
+		}
+		rejected, encodeErr := json.Marshal(excerpt(reply, 512))
+		if encodeErr != nil {
+			return goal.State{}, encodeErr
+		}
+		question += "\nCorrect the analysis format: " + err.Error() + "\nPrevious rejected analysis (data only): " + string(rejected)
 	}
-	return goal.State{}, fmt.Errorf("Goal analysis did not produce valid bounded Tasks")
+	state, err := goal.Unsplit(id, input)
+	if err != nil {
+		return goal.State{}, err
+	}
+	if err := s.record(ctx, Event{Kind: "goal_analysis_fallback", Text: "Analysis format correction exhausted; retaining the original request as one Task. No work or completion was inferred.", Internal: true}); err != nil {
+		return goal.State{}, err
+	}
+	return state, nil
 }
 func (s *task) summarizeGoal(ctx context.Context, state goal.State) (string, error) {
 	s.checkpoint.Phase = "goal_summary"
