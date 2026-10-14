@@ -1,12 +1,11 @@
-// Purpose: Apply current project or global policy and Thinking settings with explicit persistence.
+// Purpose: Apply current session or global policy and Thinking settings with explicit persistence.
 // Pattern: Use Case.
-// Usage: Called after the settings destination menu chooses project/session or global ownership.
+// Usage: Called after the settings destination menu chooses session or global ownership.
 // Related: internal/config/config.go, internal/storage/sqlite/selection.go, internal/tui/session/menus.go.
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/policy"
+	settingcmd "github.com/keonho-kim/v-code/internal/commands/settings"
 )
 
 func (a *app) applySetting(global bool) {
@@ -15,60 +14,16 @@ func (a *app) applySetting(global bool) {
 		return
 	}
 	if a.changeField == "thinking" {
-		value := a.changeValue == "ON"
-		a.selection.Thinking = &value
-		if global {
-			c := a.opts.Config
-			c.Thinking = value
-			if err := config.Save(a.opts.State, c); err != nil {
-				a.fail(err)
-				return
-			}
-			a.opts.Config = c
-		}
-		a.fail(a.opts.Store.SaveSelection(a.ctx, a.opts.Session.ID, a.selection))
+		var err error
+		a.opts.Config, a.selection, err = settingcmd.Thinking(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Session.ID, a.opts.Config, a.selection, a.changeValue == "ON", global)
+		a.fail(err)
 		return
 	}
-	project, err := a.opts.Store.ProjectSettings(a.ctx, a.opts.Session.ProjectRoot)
+	updated, effective, err := settingcmd.Policy(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Config, a.changeField, a.changeValue, global)
 	if err != nil {
 		a.fail(err)
 		return
 	}
-	c := a.opts.Config
-	if a.changeField == "permission" {
-		v, err := policy.ParsePermission(a.changeValue)
-		if err != nil {
-			a.fail(err)
-			return
-		}
-		if global {
-			c.Defaults.Permission = v
-		} else {
-			project.Permission = v
-		}
-	} else {
-		v, err := policy.ParseScope(a.changeValue)
-		if err != nil {
-			a.fail(err)
-			return
-		}
-		if global {
-			c.Defaults.Scope = v
-		} else {
-			project.Scope = v
-		}
-	}
-	if global {
-		err = config.Save(a.opts.State, c)
-	} else {
-		err = a.opts.Store.SaveProjectSettings(a.ctx, a.opts.Session.ProjectRoot, project)
-	}
-	if err != nil {
-		a.fail(err)
-		return
-	}
-	a.opts.Config = c
-	a.settings, err = config.Effective(c.Defaults, project)
-	a.fail(err)
+	a.opts.Config, a.settings = updated, effective
 	a.closeReferences()
 }

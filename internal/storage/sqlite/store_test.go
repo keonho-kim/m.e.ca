@@ -7,29 +7,29 @@ package sqlite
 
 import (
 	"context"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	planning "github.com/keonho-kim/v-code/internal/agent/plan"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "v.db")
+	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	project := t.TempDir()
-	store, err := Open(path)
+	store, err := catalog.Restore(ctx, project, project, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	session, err := store.RestoreSession(ctx, project, project, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.AppendMessage(ctx, session.ID, agent.Message{Role: "user", Content: "Fix auth"}); err != nil {
+	session := store.Session()
+	path := store.path
+	if err := store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "Fix auth"}); err != nil {
 		t.Fatal(err)
 	}
 	plan, err := planning.NewPlan("plan_1", session.ID, "Fix auth", []string{"Read", "Change"}, time.Now())
@@ -46,13 +46,13 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	if err := store.SavePlan(ctx, revised); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveProjectSettings(ctx, project, policy.Settings{Scope: policy.System}); err != nil {
+	if err := store.SaveSettings(ctx, policy.Settings{Scope: policy.System}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Close(); err != nil {
 		t.Fatal(err)
 	}
-	store, err = Open(path)
+	store, err = catalog.Restore(ctx, project, project, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	restored, err := store.RestoreSession(ctx, project, project, true)
+	restored := store.Session()
 	if err != nil || restored.ID != session.ID {
 		t.Fatalf("session: %+v, %v", restored, err)
 	}
@@ -77,7 +77,7 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	if err != nil || previous.Objective != "Fix auth" {
 		t.Fatalf("prior revision: %+v, %v", previous, err)
 	}
-	settings, err := store.ProjectSettings(ctx, project)
+	settings, err := store.Settings(ctx)
 	if err != nil || settings.Scope != policy.System || settings.Permission != "" {
 		t.Fatalf("settings: %+v, %v", settings, err)
 	}
@@ -85,15 +85,21 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("database permissions: %v, %v", info, err)
 	}
-	other, err := store.RestoreSession(ctx, t.TempDir(), "other", true)
-	if err != nil || other.ID == session.ID {
-		t.Fatalf("project isolation: %+v, %v", other, err)
+	other, err := catalog.Restore(ctx, t.TempDir(), "other", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Session().ID == session.ID {
+		t.Fatal("different projects shared one session")
+	}
+	if err := other.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestHistoryIsBoundedAndProjectOverridesAreValidated(t *testing.T) {
+func TestHistoryIsBoundedAndSessionOverridesAreValidated(t *testing.T) {
 	ctx := context.Background()
-	store, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	store, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,13 +108,9 @@ func TestHistoryIsBoundedAndProjectOverridesAreValidated(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	project := t.TempDir()
-	session, err := store.RestoreSession(ctx, project, project, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	session := store.Session()
 	for _, text := range []string{"one", "two", "three"} {
-		if err := store.AppendMessage(ctx, session.ID, agent.Message{Role: "user", Content: text}); err != nil {
+		if err := store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: text}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -116,14 +118,14 @@ func TestHistoryIsBoundedAndProjectOverridesAreValidated(t *testing.T) {
 	if err != nil || len(history) != 2 || history[0].Content != "two" || history[1].Content != "three" {
 		t.Fatalf("bounded history: %+v, %v", history, err)
 	}
-	if err := store.SaveProjectSettings(ctx, project, policy.Settings{Permission: "invalid"}); err == nil {
-		t.Fatal("stored invalid project policy")
+	if err := store.SaveSettings(ctx, policy.Settings{Permission: "invalid"}); err == nil {
+		t.Fatal("stored invalid session policy")
 	}
 }
 
 func TestStoredPlanRevisionCannotBeRewritten(t *testing.T) {
 	ctx := context.Background()
-	store, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	store, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,11 +134,7 @@ func TestStoredPlanRevisionCannotBeRewritten(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	project := t.TempDir()
-	session, err := store.RestoreSession(ctx, project, project, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	session := store.Session()
 	plan, err := planning.NewPlan("plan_1", session.ID, "approved objective", []string{"read"}, time.Now())
 	if err != nil {
 		t.Fatal(err)

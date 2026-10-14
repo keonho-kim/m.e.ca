@@ -8,15 +8,11 @@ package sqlite
 
 import (
 	"fmt"
-	"os"
 )
 
 type SessionLease struct{}
 
-func (*Store) LeaseSession(string) (*SessionLease, error) {
+func (*Store) LeaseSession() (*SessionLease, error) {
 	return nil, fmt.Errorf("session locking requires Linux or macOS")
 }
 func (*SessionLease) Close() error { return fmt.Errorf("session locking requires Linux or macOS") }
-func (*Store) schemaLock() (*os.File, error) {
-	return nil, fmt.Errorf("database initialization requires Linux or macOS")
-}

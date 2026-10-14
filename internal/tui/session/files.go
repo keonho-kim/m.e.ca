@@ -6,9 +6,9 @@ package session
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/input"
+	"strings"
 )
 
 func (a *app) openFiles(path string) {
@@ -37,14 +37,14 @@ func (a *app) fileKey(e *tcell.EventKey) {
 	if a.paste {
 		return
 	}
-	if strings.HasPrefix(a.menuInput.String(), ":") {
+	if fileCommand(a.menuInput.String()) {
 		switch e.Key() {
 		case tcell.KeyEnter:
 			if a.menuInput.String() == ":q" {
 				a.page = "chat"
 				a.menuInput.Set("")
 			} else {
-				a.status = "Unknown file-view command; use :q"
+				a.status = "Unknown file-view command; use :q or !quit"
 			}
 		case tcell.KeyEscape:
 			a.menuInput.Set("")
@@ -52,14 +52,14 @@ func (a *app) fileKey(e *tcell.EventKey) {
 			a.menuInput.Set("")
 			a.browser.Input = true
 		default:
-			editKey(&a.menuInput, e)
-			if !strings.HasPrefix(a.menuInput.String(), ":") {
+			input.EditKey(&a.menuInput, e)
+			if !fileCommand(a.menuInput.String()) {
 				a.menuInput.Set("")
 			}
 		}
 		return
 	}
-	if e.Key() == tcell.KeyRune && strings.HasPrefix(e.Str(), ":") {
+	if e.Key() == tcell.KeyRune && fileCommand(e.Str()) {
 		a.menuInput.Set("")
 		a.menuInput.Insert(e.Str())
 		return
@@ -136,4 +136,8 @@ func (a *app) fileKey(e *tcell.EventKey) {
 			return
 		}
 	}
+}
+
+func fileCommand(text string) bool {
+	return strings.HasPrefix(text, ":") || strings.HasPrefix(text, "!")
 }

@@ -1,36 +1,42 @@
 // Purpose: Restore session policy, model, Plan and selected paths without replaying effects.
 // Pattern: Session recovery use case.
 // Usage: Called before the terminal event loop starts.
-// Related: internal/storage/sqlite/recovery.go, internal/tui/session/app.go.
+// Related: internal/storage/recovery/recovery.go, internal/tui/session/app.go.
 package session
 
 import (
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
 
 func (a *app) restore() error {
 	var err error
 	ctx := a.ctx
-	project, err := a.opts.Store.ProjectSettings(ctx, a.opts.Session.ProjectRoot)
+	a.tokenTotal, err = a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err
 	}
-	a.settings, err = config.Effective(a.opts.Config.Defaults, project)
+	overrides, err := a.opts.Store.Settings(ctx)
 	if err != nil {
 		return err
 	}
-	a.history, err = a.opts.Store.Messages(ctx, a.opts.Session.ID, 1000)
+	a.settings, err = config.Effective(a.opts.Config.Defaults, overrides)
 	if err != nil {
 		return err
 	}
-	for _, m := range a.history {
+	recent, err := a.opts.Store.Messages(ctx, a.opts.Session.ID, 1000)
+	if err != nil {
+		return err
+	}
+	for _, m := range recent {
 		if m.Role == "user" {
 			a.inputs = append(a.inputs, m.Content)
 		}
 	}
 	if len(a.inputs) > 200 {
+		clear(a.inputs[:len(a.inputs)-200])
 		a.inputs = a.inputs[len(a.inputs)-200:]
 	}
 	if err := a.loadHistory(false); err != nil {
@@ -51,7 +57,7 @@ func (a *app) restore() error {
 	if a.plan != nil {
 		a.planMode = a.plan.Status == planning.Planning || a.plan.Status == planning.AwaitingApproval
 		if a.planMode {
-			a.output.Append(a.planText(), false)
+			a.output.Append(transcript.Plan(a.plan), false)
 		}
 	}
 	a.selection, err = a.opts.Store.Selection(ctx, a.opts.Session.ID)

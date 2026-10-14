@@ -89,3 +89,7 @@ ehthumbs.db
 ehthumbs_vista.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# Generated native helpers embedded during Linux release preparation
+/internal/tools/local/process/sandbox/bundle/assets/amd64/
+/internal/tools/local/process/sandbox/bundle/assets/arm64/

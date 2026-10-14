@@ -4,11 +4,14 @@
 // Related: internal/tui/session/keys.go, internal/tui/session/model.go, internal/tui/session/settings.go.
 package session
 
-import modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+import (
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/v-code/internal/tui/modelmenu"
+)
 
 func (a *app) openModel() {
 	a.page = "model"
-	a.choices = []string{"Connect provider", "Thinking"}
+	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection), "모델 정보"}
 	a.choice = 0
 	a.thinkingChoice = a.opts.Config.Thinking
 	if a.selection.Thinking != nil {
@@ -21,10 +24,7 @@ func (a *app) choose() {
 	switch a.page {
 	case "quit":
 		if a.choice == 1 {
-			if a.taskCancel != nil {
-				a.taskCancel()
-			}
-			a.exit = true
+			a.requestExit()
 		} else {
 			a.page = "chat"
 		}
@@ -39,10 +39,18 @@ func (a *app) choose() {
 		}
 	case "model":
 		if a.choice == 0 {
+			if a.busy {
+				a.status = "Stop the current task before changing providers"
+				return
+			}
+			a.key = ""
 			a.page = "providers"
-			a.choices = []string{"Ollama", "vLLM", "SGLang", "LM Studio", "OpenAI Compatible"}
+			a.choices = nil
+			for _, provider := range modelconn.Providers() {
+				a.choices = append(a.choices, provider.Label)
+			}
 			a.choice = 0
-		} else {
+		} else if a.choice == 1 {
 			if !a.selection.ThinkingSupported {
 				a.status = "Thinking ON/OFF control is unavailable or unverified for this model"
 				return
@@ -53,11 +61,19 @@ func (a *app) choose() {
 				a.changeValue = "ON"
 			}
 			a.globalMenu()
+		} else if a.choice == 2 {
+			a.openEffort()
+		} else {
+			a.page = "modelinfo"
+			a.previewOffset = 0
+			a.menuInput.Set("")
 		}
+	case "effort":
+		a.chooseEffort()
 	case "providers":
 		a.connectionKind = a.choice
 		a.page = "endpoint"
-		c, err := modelconn.New(providerKinds()[a.choice], "")
+		c, err := modelconn.New(modelconn.Providers()[a.choice].Kind, "")
 		a.fail(err)
 		a.menuInput.Set(c.Endpoint)
 	case "models":
@@ -66,7 +82,8 @@ func (a *app) choose() {
 			a.menuInput.Set("")
 			return
 		}
-		a.connect(a.pendingConnection, "", value)
+		a.connect(a.pendingConnection, a.key, value)
+		a.key = ""
 		a.page = "chat"
 	case "permission", "scope":
 		a.changeField = a.page
@@ -79,7 +96,7 @@ func (a *app) choose() {
 }
 func (a *app) globalMenu() {
 	a.page = "global"
-	a.choices = []string{"Current project", "Global override"}
+	a.choices = []string{"Current session", "Global override"}
 	if a.changeField == "thinking" {
 		a.choices[0] = "Current session"
 	}

@@ -1,82 +1,124 @@
-// Purpose: Execute one complete tool through existing policy, approval and durable event boundaries.
-// Pattern: Use Case.
-// Usage: Called only after every staged argument is parsed and the call is frozen.
-// Related: internal/agent/run/action.go, internal/agent/tools.go.
+// Purpose: Execute a grounded PFC call through policy, approval and durable observation boundaries.
+// Pattern: Tool execution use case.
+// Usage: action invokes execute after fields and self-grounding have been persisted.
+// Related: internal/agent/run/action.go, internal/agent/tool/execution.go, internal/agent/verification/state.go.
 package run
 
 import (
 	"context"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
+	"errors"
+	"fmt"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
-func (s *task) execute(ctx context.Context, planning bool, call agent.ToolCall, approve Approver, emit func(Event) error) (string, bool, error) {
+var errRuntimeRecord = errors.New("runtime observation could not be committed or delivered")
+
+func (s *task) execute(ctx context.Context, planning bool, call toolapi.Call, approve Approver, emit func(Event) error) (outcome toolapi.Result, err error) {
+	if s.checkpoint.Grounding == nil || !s.checkpoint.Grounding.Matches(call) {
+		return outcome, fmt.Errorf("missing self-grounding for exact tool call")
+	}
+	if err := s.checkTimeBudget(ctx); err != nil {
+		return outcome, err
+	}
+	if call.Name == "write_file" || call.Name == "edit_file" {
+		s.checkpoint.PendingReview = true
+	}
 	r := s.runner
 	op, err := r.Tools.Prepare(ctx, r.Settings, planning, call)
 	if err != nil {
-		event := Event{Kind: "tool_failed", Text: call.Name + ": " + r.Redact(err.Error()), CallID: call.ID}
-		if recordErr := r.Journal.RecordEvent(context.WithoutCancel(ctx), r.Session, event); recordErr != nil {
-			return "", false, recordErr
+		outcome.Failure = toolapi.FailureOf(err)
+		event := Event{Kind: "tool_failed", Text: call.Name + ": " + r.Redact(outcome.Failure.Error()), CallID: call.ID, Call: &call}
+		if recordErr := s.record(context.WithoutCancel(ctx), event); recordErr != nil {
+			return outcome, errors.Join(errRuntimeRecord, recordErr)
 		}
 		if emitErr := emit(event); emitErr != nil {
-			return "", false, emitErr
+			return outcome, errors.Join(errRuntimeRecord, emitErr)
 		}
-		return "", false, err
+		return outcome, err
 	}
 	proposal := op.Approval()
+	outcome.Target = proposal.Target
+	review, reviewErr := s.reviewCandidate(ctx, call, proposal)
+	if reviewErr != nil {
+		outcome.Failed = true
+		outcome.Failure = toolapi.FailureOf(reviewErr)
+		if outcome.Failure.Code != reviewRejected && outcome.Failure.Code != reviewFailed {
+			return outcome, errors.Join(errRuntimeRecord, reviewErr)
+		}
+		return outcome, reviewErr
+	}
+	proposal.ConclavePassed = review != nil && review.Passed
+	if err := s.checkTimeBudget(ctx); err != nil {
+		return outcome, err
+	}
+	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
+	defer cancel()
 	approved := !proposal.Required
 	if proposal.Required {
 		approved, err = approve(ctx, proposal)
 		if err != nil {
-			return "", false, err
+			return outcome, errors.Join(errRuntimeRecord, err)
 		}
 		decision := "denied"
 		if approved {
 			decision = "approved"
 		}
-		event := Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal}
-		if err = r.Journal.RecordEvent(ctx, r.Session, event); err != nil {
-			return "", false, err
+		event := Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal, Call: &call, Conclave: review}
+		if err := s.record(ctx, event); err != nil {
+			return outcome, errors.Join(errRuntimeRecord, err)
 		}
-		if err = emit(event); err != nil {
-			return "", false, err
+		if err := emit(event); err != nil {
+			return outcome, errors.Join(errRuntimeRecord, err)
 		}
 		if !approved {
-			return "", false, errApprovalDenied
+			return outcome, errApprovalDenied
 		}
 	}
 	s.checkpoint.Phase = "execution"
-	if err = s.persist(ctx); err != nil {
-		return "", false, err
+	if err := s.persist(ctx); err != nil {
+		return outcome, errors.Join(errRuntimeRecord, err)
 	}
-	event := Event{Kind: "tool_started", Text: proposal.Name + " " + proposal.Target, CallID: call.ID}
-	if err = r.Journal.RecordEvent(ctx, r.Session, event); err != nil {
-		return "", false, err
+	event := Event{Kind: "tool_started", Text: proposal.Name + " " + proposal.Target, CallID: call.ID, Call: &call, Conclave: review}
+	if err := s.record(ctx, event); err != nil {
+		return outcome, errors.Join(errRuntimeRecord, err)
 	}
-	if err = emit(event); err != nil {
-		return "", false, err
+	if err := emit(event); err != nil {
+		return outcome, errors.Join(errRuntimeRecord, err)
 	}
 	outcome, runErr := op.Execute(ctx, approved)
+	outcome.Started = true
+	outcome.ReviewSatisfied = proposal.Candidate != nil && (proposal.Candidate.Lines() == 0 || review != nil && review.Passed)
+	outcome.Target = proposal.Target
 	event.Kind, event.Text = "tool_succeeded", outcome.Summary
 	if outcome.Failed {
 		event.Kind = "tool_failed"
 	}
 	if runErr != nil {
-		event.Kind, event.Text = "tool_failed", r.Redact(runErr.Error())
+		outcome.Failure = toolapi.FailureOf(runErr)
+		outcome.Failed = true
+		event.Kind = "tool_failed"
 	}
-	opFact := compact.Operation{TaskID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Check: s.checkpoint.Checking, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text}
+	if outcome.Failure != nil {
+		// The local stale-version guard proves it rejected the operation before mutation.
+		if outcome.Failure.Code == toolapi.StaleTarget {
+			outcome.Started = false
+		}
+		outcome.Failure.Detail = r.Redact(outcome.Failure.Detail)
+		outcome.Failure.Next = r.Redact(outcome.Failure.Next)
+		event.Text = outcome.Failure.Error()
+	}
+	opFact := toolapi.Operation{TaskID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Check: s.checkpoint.Checking, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text, Failure: outcome.Failure, Process: outcome.Process}
 	if call.Name == "execute_command" {
 		opFact.Command = proposal.Target
 	}
 	event.Operation = &opFact
-	// Cancellation must still leave an interrupted event on disk.
+	event.Output = outcome.Content
 	recordCtx := context.WithoutCancel(ctx)
-	if err = r.Journal.RecordEvent(recordCtx, r.Session, event); err != nil {
-		return "", false, err
+	if err := s.record(recordCtx, event); err != nil {
+		return outcome, errors.Join(errRuntimeRecord, err)
 	}
-	if err = emit(event); err != nil {
-		return "", false, err
+	if err := emit(event); err != nil {
+		return outcome, errors.Join(errRuntimeRecord, err)
 	}
-	return string(outcome.Content), outcome.Failed, runErr
+	return outcome, runErr
 }

@@ -38,6 +38,7 @@ func (a *app) refreshReferences() {
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
+		defer cancel()
 		refs, err := a.opts.Tools.References(ctx, settings, token)
 		if ctx.Err() == nil {
 			a.post(ctx, notice{Revision: revision, References: refs, Err: err})

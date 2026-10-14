@@ -1,21 +1,22 @@
 // Purpose: Verify session listing, model settings and interrupted Tool Calls recover without replay.
 // Pattern: Repository behavior tests.
 // Usage: go test ./internal/storage/sqlite -run TestResume.
-// Related: internal/storage/sqlite/recovery.go, internal/storage/sqlite/selection.go.
+// Related: internal/storage/recovery/recovery.go, internal/storage/sqlite/selection.go.
 package sqlite
 
 import (
 	"context"
 	"encoding/json"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/v-code/internal/storage/recovery"
 	"path/filepath"
 	"testing"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
 func TestResumeSettingsAndInterruptedTool(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	s, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,12 +26,8 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 		}
 	})
 	ctx := context.Background()
-	root := t.TempDir()
-	session, err := s.RestoreSession(ctx, root, root, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, m := range []agent.Message{{Role: "user", Content: "fix"}, {Role: "assistant", Calls: []agent.ToolCall{{ID: "pending", Name: "write_file", Arguments: json.RawMessage(`{"path":"file","content":"new"}`)}}}} {
+	session := s.Session()
+	for _, m := range []modelapi.Message{{Role: "user", Content: "fix"}, {Role: "assistant", Calls: []toolapi.Call{{ID: "pending", Name: "write_file", Arguments: json.RawMessage(`{"path":"file","content":"new"}`)}}}} {
 		if err := s.AppendMessage(ctx, session.ID, m); err != nil {
 			t.Fatal(err)
 		}
@@ -40,20 +37,24 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	on := true
-	if err = s.SaveSelection(ctx, session.ID, Selection{Connection: connection, Model: "qwen", Thinking: &on}); err != nil {
+	if err = s.SaveSelection(ctx, session.ID, modelconn.Selection{Connection: connection, Model: "qwen", Thinking: &on}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.Recover(ctx, session.ID); err != nil {
+	if err = recovery.Restore(ctx, s, session.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.Recover(ctx, session.ID); err != nil {
+	if err = recovery.Restore(ctx, s, session.ID); err != nil {
 		t.Fatal(err)
 	}
 	history, err := s.Messages(ctx, session.ID, 100)
 	if err != nil || len(history) != 3 || history[2].ToolCallID != "pending" {
 		t.Fatalf("recovery: %+v %v", history, err)
 	}
-	list, err := s.Conversations(ctx, 0, 100)
+	catalog, err := OpenSessions(filepath.Dir(s.path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := catalog.Conversations(ctx, 0, 100)
 	if err != nil || len(list) != 1 || list[0].Summary != "fix" {
 		t.Fatalf("list: %+v %v", list, err)
 	}

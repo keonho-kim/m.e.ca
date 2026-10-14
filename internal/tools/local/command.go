@@ -7,18 +7,46 @@ package local
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tools/local/process"
+	resultfmt "github.com/keonho-kim/v-code/internal/tools/result"
+	"strings"
+	"unicode/utf8"
 )
 
-func (op *operation) command(ctx context.Context) (agent.ToolResult, error) {
-	output, err := process.Run(ctx, op.executor.project, op.executor.home, op.input.Command, op.input.Timeout)
-	if err != nil {
-		return agent.ToolResult{}, err
-	}
+func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
+	output, runErr := process.Run(ctx, op.executor.project, op.executor.home, op.executor.private, op.input.Command, op.settings.Scope == policy.Directory)
 	output.Stdout = op.executor.redact(output.Stdout)
 	output.Stderr = op.executor.redact(output.Stderr)
-	result, err := encodeResult(output, fmt.Sprintf("Process exited with code %d", output.ExitCode))
-	result.Failed = output.ExitCode != 0
-	return result, err
+	result, err := resultfmt.Encode(output, fmt.Sprintf("Process %s; exit code %d", output.Status, output.ExitCode))
+	if err != nil {
+		return result, err
+	}
+	result.Process = &toolapi.ProcessOutcome{Status: output.Status, ExitCode: output.ExitCode, Truncated: output.Truncated}
+	result.Failed = runErr != nil || output.ExitCode != 0 || output.Status != "exited"
+	if result.Failed {
+		result.Process.Diagnostic = commandDiagnostic(output.Stdout, output.Stderr)
+	}
+	if runErr != nil {
+		result.Failure = toolapi.FailureOf(runErr)
+	} else if result.Failed {
+		result.Failure = &toolapi.Failure{Code: toolapi.ProcessFailed, Detail: result.Summary, Next: "Inspect the exact check output, fix its cause and rerun this check."}
+	}
+	return result, runErr
+}
+
+func commandDiagnostic(stdout, stderr string) string {
+	text := strings.TrimSpace(stderr)
+	if text == "" {
+		text = strings.TrimSpace(stdout)
+	}
+	if len(text) <= 4096 {
+		return text
+	}
+	start := len(text) - 4000
+	for !utf8.RuneStart(text[start]) {
+		start++
+	}
+	return "[diagnostic tail; see original captured output]\n" + text[start:]
 }

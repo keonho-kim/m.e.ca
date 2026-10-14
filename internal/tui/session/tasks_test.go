@@ -1,13 +1,18 @@
 // Purpose: Verify approved Plan execution and file approvals through real HTTP and SQLite adapters.
 // Pattern: Integration behavior tests.
 // Usage: go test ./internal/tui/session -run TestPlanExecution.
-// Related: internal/tui/session/tasks.go, internal/provider/httpclient/request.go, internal/storage/sqlite/events.go.
+// Related: internal/tui/session/tasks.go, internal/provider/protocol/request.go, internal/storage/sqlite/events.go.
 package session
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	planning "github.com/keonho-kim/v-code/internal/agent/plan"
+	"github.com/keonho-kim/v-code/internal/policy"
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/v-code/internal/provider/httpclient"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,13 +20,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
-	"github.com/keonho-kim/v-code/internal/policy"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 )
 
 func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
@@ -36,8 +34,8 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 	a.settings.Scope = policy.System
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
-			Messages []agent.Message `json:"messages"`
-			Tools    json.RawMessage `json:"tools"`
+			Messages []modelapi.Message `json:"messages"`
+			Tools    json.RawMessage    `json:"tools"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			t.Error(err)
@@ -53,6 +51,10 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 		question := request.Messages[len(request.Messages)-1].Content
 		reply := ""
 		switch {
+		case strings.HasPrefix(question, "CONCLAVE REVIEW "):
+			reply = "1"
+		case strings.Contains(question, "\nSELF-GROUNDING:"):
+			reply = "- Evidence: Approved Plan and observed tool results; inspect any unknown state.\n- Action: Perform the exact approved step operation.\n- Verify: Run the file existence check after writing."
 		case strings.Contains(request.Messages[0].Content, "Planning only"):
 			reply = "DONE\n{\"objective\":\"create file\",\"steps\":[\"write output.txt and verify\"]}"
 		case strings.Contains(question, "ARGUMENT write_file.path"):
@@ -61,8 +63,6 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 			reply = "approved"
 		case strings.Contains(question, "ARGUMENT execute_command.command"):
 			reply = "test -f output.txt"
-		case strings.Contains(question, "ARGUMENT execute_command.timeout_seconds"):
-			reply = "0"
 		case strings.Contains(question, `"Evidence":"execute_command`):
 			reply = "DONE\nCreated and checked the file"
 		case strings.Contains(question, "write_file result:"):
@@ -83,11 +83,11 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "")
+	a.client, err = httpclient.NewClient(connection, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = sqlite.Selection{Connection: connection, Model: "mock"}
+	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
 	a.editor.Set("!plan")
 	a.submit()
 	a.startTask("create file", nil)
@@ -108,13 +108,13 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 	if a.plan.Status != planning.PlanSucceeded {
 		t.Fatalf("Plan status: %s", a.plan.Status)
 	}
-	events, _, err := a.opts.Store.Events(ctx, a.opts.Session.ID, 0, 100)
+	events, _, err := a.opts.Store.Timeline(ctx, a.opts.Session.ID, 0, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
 	found := false
 	for _, e := range events {
-		if e.Kind == "approved" {
+		if e.Event.Kind == "approved" {
 			found = true
 		}
 	}

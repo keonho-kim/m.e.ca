@@ -1,4 +1,4 @@
-// Purpose: Own the five local command names used by parsing and prefix suggestions.
+// Purpose: Own the six local command names used by parsing and prefix suggestions.
 // Pattern: Simple Module (fixed command catalog).
 // Usage: The parser recognizes names; the TUI queries Suggestions for the current prefix.
 // Related: internal/commands/parse.go, internal/tui/session/hints.go, internal/commands/catalog_test.go.
@@ -17,6 +17,7 @@ var catalog = []struct {
 	{"!permission", "승인 정책", Permission},
 	{"!scope", "접근 범위", Scope},
 	{"!dir", "파일 탐색", Directory},
+	{"!quit", "앱 종료", Exit},
 }
 
 func Suggestions(prefix string) []Suggestion {

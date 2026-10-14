@@ -1,32 +1,32 @@
-// Purpose: Validate runtime-built tool arguments against the same ordered catalog used by dialogue.
+// Purpose: Validate runtime-built tool arguments against the same ordered catalog used by pfc.
 // Pattern: Simple Module (execution trust boundary).
 // Usage: Called by Executor.Prepare after staged argument collection.
-// Related: internal/tools/local/catalog.go, internal/agent/dialogue/dialogue.go.
+// Related: internal/tools/local/catalog.go, internal/agent/pfc/pfc.go.
 package local
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/agent/dialogue"
+	"github.com/keonho-kim/v-code/internal/agent/pfc"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"io"
 )
 
 type arguments struct {
 	Path        string `json:"path"`
 	Content     string `json:"content"`
-	OldText     string `json:"old_text"`
+	StartAnchor string `json:"start_anchor"`
+	EndAnchor   string `json:"end_anchor"`
 	NewText     string `json:"new_text"`
 	Destination string `json:"destination"`
 	Pattern     string `json:"pattern"`
 	Command     string `json:"command"`
 	Offset      int    `json:"offset"`
 	Limit       int    `json:"limit"`
-	Timeout     int    `json:"timeout_seconds"`
 }
 
-func parseArguments(call agent.ToolCall) (specification, arguments, error) {
+func parseArguments(call toolapi.Call) (specification, arguments, error) {
 	if err := call.Check(); err != nil {
 		return specification{}, arguments{}, err
 	}
@@ -64,7 +64,7 @@ func parseArguments(call agent.ToolCall) (specification, arguments, error) {
 			}
 			continue
 		}
-		if err := dialogue.ValidateArgument(p, value); err != nil {
+		if err := pfc.ValidateArgument(p, value); err != nil {
 			return spec, arguments{}, err
 		}
 	}

@@ -1,14 +1,11 @@
 // Purpose: Load older ordered terminal records on demand while keeping model context separate.
 // Pattern: Presentation projection over paged repository data.
 // Usage: Called at restoration and when scrolling beyond the oldest loaded output.
-// Related: internal/storage/sqlite/timeline.go, internal/tui/viewport/viewport.go.
+// Related: internal/storage/sqlite/timeline.go, internal/tui/viewport/viewport.go, internal/tui/session/keys.go, internal/tui/session/events.go.
 package session
 
 import (
-	"fmt"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
+	"github.com/keonho-kim/v-code/internal/tui/transcript"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
@@ -22,8 +19,13 @@ func (a *app) loadHistory(older bool) error {
 	}
 	a.historyCursor = cursor
 	var blocks []viewport.Block
+	formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}
 	for _, record := range records {
-		blocks = append(blocks, a.recordBlocks(record)...)
+		if record.Kind == "message" {
+			blocks = append(blocks, formatter.Message(record.Message)...)
+		} else {
+			blocks = append(blocks, formatter.Event(record.Event)...)
+		}
 	}
 	if older {
 		a.output.Prepend(blocks)
@@ -31,43 +33,6 @@ func (a *app) loadHistory(older bool) error {
 		for _, block := range blocks {
 			a.output.Append(block.Text, block.Thinking)
 		}
-	}
-	return nil
-}
-func (a *app) recordBlocks(r sqlite.Record) []viewport.Block {
-	if r.Kind == "message" {
-		m := r.Message
-		if m.Role == "user" {
-			return []viewport.Block{{Text: "> " + a.opts.Vault.Redact(m.Content)}}
-		}
-		if m.Role == "assistant" && m.Planning {
-			proposal, err := planning.ParsePlanProposal(m.Content)
-			if err == nil {
-				value := proposal.Objective
-				for index, step := range proposal.Steps {
-					value += fmt.Sprintf("\n%d. %s", index+1, step)
-				}
-				return []viewport.Block{{Text: a.opts.Vault.Redact(value)}}
-			}
-		}
-		if m.Role == "assistant" && m.Content != "" {
-			return []viewport.Block{{Text: a.opts.Vault.Redact(m.Content)}}
-		}
-		return nil
-	}
-	if cp := r.Event.Checkpoint; cp != nil && cp.Phase == "finished" {
-		if cp.Status == run.Verified {
-			return []viewport.Block{{Text: "Verification evidence: " + a.opts.Vault.Redact(cp.Evidence)}}
-		}
-		if cp.Status == run.Answered {
-			return []viewport.Block{{Text: "Model answer; no tool execution."}}
-		}
-	}
-	if r.Event.Kind == "thinking" {
-		return []viewport.Block{{Text: a.opts.Vault.Redact(r.Event.Thinking), Thinking: true}}
-	}
-	if r.Event.Text != "" {
-		return []viewport.Block{{Text: a.opts.Vault.Redact(r.Event.Text)}}
 	}
 	return nil
 }

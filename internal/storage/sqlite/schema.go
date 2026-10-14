@@ -1,22 +1,22 @@
-// Purpose: Define the current SQLite schema for conversations, Plans and compaction evidence.
+// Purpose: Define the single-session SQLite schema for conversation, Plan and compaction evidence.
 // Pattern: Repository schema.
-// Usage: Applied atomically by Store.initializeSchema.
+// Usage: Applied to an unpublished database by Sessions.Create.
 // Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/plans.go.
 
 package sqlite
 
-const schemaVersion = 4
+const schemaVersion = 5
 
 const schema = `
 CREATE TABLE sessions (
- id TEXT PRIMARY KEY,
+ singleton INTEGER PRIMARY KEY DEFAULT 1 CHECK(singleton=1),
+ id TEXT NOT NULL UNIQUE,
  project_root TEXT NOT NULL,
  display_root TEXT NOT NULL,
  created_at TEXT NOT NULL,
  updated_at TEXT NOT NULL,
  selection BLOB
 );
-CREATE INDEX recent_sessions ON sessions(project_root, updated_at DESC);
 CREATE TABLE messages (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
  session_id TEXT NOT NULL REFERENCES sessions(id),
@@ -33,8 +33,8 @@ CREATE TABLE plans (
  PRIMARY KEY(session_id, id, revision)
 );
 CREATE INDEX latest_plans ON plans(session_id, updated_at DESC, revision DESC);
-CREATE TABLE project_settings (
- project_root TEXT PRIMARY KEY,
+CREATE TABLE settings (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1),
  permission TEXT NOT NULL DEFAULT '',
  scope TEXT NOT NULL DEFAULT ''
 );

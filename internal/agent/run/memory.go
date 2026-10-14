@@ -1,4 +1,4 @@
-// Purpose: Account for newly added conversation tokens and compact only at a safe decision boundary.
+// Purpose: Refresh complete conversation context at safe compaction boundaries and account new tokens.
 // Pattern: Compaction integration use case.
 // Usage: Called by the task loop; compaction shares the same model-call and time budget.
 // Related: internal/agent/compact/controller.go, internal/agent/run/generate.go, internal/agent/run/context.go.
@@ -7,9 +7,8 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent"
 	"github.com/keonho-kim/v-code/internal/agent/compact"
-	"time"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
 func (s *task) observe(ctx context.Context, count compact.TokenCount) error {
@@ -20,29 +19,35 @@ func (s *task) observe(ctx context.Context, count compact.TokenCount) error {
 }
 func (s *task) refreshMemory(ctx context.Context) error {
 	if s.runner.Memory == nil {
-		return nil
+		var err error
+		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
+		return err
 	}
-	changed, err := s.runner.Memory.Refresh(ctx, func(ctx context.Context, request agent.ModelRequest, emit func(agent.ModelEvent) error) error {
+	changed, err := s.runner.Memory.Refresh(ctx, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		if s.usage.ModelCalls >= s.limits.MaxModelCalls {
 			return fmt.Errorf("model-call budget exhausted during compaction")
 		}
 		s.usage.ModelCalls++
 		s.checkpoint.ModelCalls = s.usage.ModelCalls
-		ctx, cancel := context.WithTimeout(ctx, time.Duration(s.limits.MaxModelSeconds)*time.Second)
-		defer cancel()
 		request.Thinking = s.runner.Thinking
-		return s.runner.Generator.Generate(ctx, request, emit)
+		request.ReasoningEffort = s.runner.ReasoningEffort
+		return s.generate(ctx, request, emit)
 	})
 	if err != nil {
 		return err
 	}
-	s.memoryContext, err = s.runner.Memory.Context()
+	var through int64
+	s.memoryContext, through, err = s.runner.Memory.Context()
+	if err != nil {
+		return err
+	}
+	s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
 	if err != nil {
 		return err
 	}
 	if changed {
 		event := Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
-		if err = s.runner.Journal.RecordEvent(ctx, s.runner.Session, event); err != nil {
+		if err = s.record(ctx, event); err != nil {
 			return err
 		}
 		return s.emit(event)

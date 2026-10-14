@@ -6,22 +6,24 @@ package session
 
 import (
 	"context"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
-	"github.com/keonho-kim/v-code/internal/agent"
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
+	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/config"
 	"github.com/keonho-kim/v-code/internal/config/bootstrap"
 	"github.com/keonho-kim/v-code/internal/config/credentials"
+	"github.com/keonho-kim/v-code/internal/config/prompts"
 	"github.com/keonho-kim/v-code/internal/policy"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	"github.com/keonho-kim/v-code/internal/tools/local"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
 )
 
 func fixture(t *testing.T) *app {
@@ -31,7 +33,11 @@ func fixture(t *testing.T) *app {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := sqlite.Open(filepath.Join(home, ".v/v.db"))
+	sessions, err := sqlite.OpenSessions(filepath.Join(home, ".v", "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := sessions.Create(context.Background(), root, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,10 +56,7 @@ func fixture(t *testing.T) *app {
 			t.Error(err)
 		}
 	})
-	session, err := store.RestoreSession(context.Background(), root, root, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	session := store.Session()
 	terminal := vt.NewMockTerm(vt.MockOptSize{X: 80, Y: 24})
 	screen, err := tcell.NewTerminfoScreenFromTty(terminal)
 	if err != nil {
@@ -64,7 +67,7 @@ func fixture(t *testing.T) *app {
 	}
 	screen.SetSize(80, 24)
 	t.Cleanup(screen.Fini)
-	return &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault}, ctx: context.Background(), screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	return &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: context.Background(), screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
 }
 func TestReferenceEnterInsertsInsteadOfSending(t *testing.T) {
 	a := fixture(t)
@@ -124,7 +127,7 @@ func TestPlanAndApprovalCannotBeBypassed(t *testing.T) {
 		t.Fatal("quit bypassed Plan")
 	}
 	a.decision = make(chan bool, 1)
-	a.proposal = &agent.ApprovalRequest{Name: "Editing", Target: "auth.go", Preview: "old -> new"}
+	a.proposal = &toolapi.Approval{Name: "Editing", Target: "auth.go", Preview: "old -> new"}
 	a.page = "approval"
 	a.choices = []string{"Approve", "Reject"}
 	a.choice = 1
@@ -140,14 +143,14 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 	a.selection.Thinking = &on
 	a.editor.Set("draft")
 	a.render()
-	line := screenLine(a.screen, 0, 80)
+	line := screenLine(a.screen, 1, 80)
 	if !strings.Contains(line, "chosen Thinking") {
 		t.Fatal(line)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if strings.Contains(screenLine(a.screen, 0, 80), "Thinking") {
+	if strings.Contains(screenLine(a.screen, 1, 80), "Thinking") {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
@@ -193,7 +196,7 @@ func TestStatusPolicyLabels(t *testing.T) {
 			a.settings = policy.Settings{Permission: test.permission, Scope: test.scope}
 			a.planMode = test.plan
 			a.render()
-			if line := strings.TrimSpace(screenLine(a.screen, 0, 80)); line != test.want {
+			if line := strings.TrimSpace(screenLine(a.screen, 1, 80)); line != test.want {
 				t.Fatalf("status = %q, want %q", line, test.want)
 			}
 		})
@@ -240,10 +243,19 @@ func TestRestoredUnapprovedPlanRemainsGated(t *testing.T) {
 func TestCancellingConnectionSelectionPreservesCurrentModel(t *testing.T) {
 	a := fixture(t)
 	a.selection.Model = "current-model"
-	candidate := sqlite.Selection{Connection: modelconn.Connection{ID: "candidate"}}
+	candidate := modelconn.Selection{Connection: modelconn.Connection{ID: "candidate"}}
 	a.receive(notice{Done: true, Selection: &candidate, Models: []string{"new-model"}})
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if a.selection.Model != "current-model" {
 		t.Fatal("connection menu cleared the current model")
 	}
+}
+
+func closeTestStore(t *testing.T, store Store) error {
+	t.Helper()
+	closer, ok := store.(interface{ Close() error })
+	if !ok {
+		t.Fatal("fixture repository has no close boundary")
+	}
+	return closer.Close()
 }

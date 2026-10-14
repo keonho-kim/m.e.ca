@@ -6,15 +6,13 @@ package sqlite
 
 import (
 	"context"
-	"path/filepath"
-	"testing"
-
-	"github.com/keonho-kim/v-code/internal/agent"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/run"
+	"testing"
 )
 
 func TestTimeline(t *testing.T) {
-	s, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	s, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,18 +22,14 @@ func TestTimeline(t *testing.T) {
 		}
 	})
 	ctx := context.Background()
-	root := t.TempDir()
-	session, err := s.RestoreSession(ctx, root, root, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = s.AppendMessage(ctx, session.ID, agent.Message{Role: "user", Content: "fix"}); err != nil {
+	session := s.Session()
+	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "fix"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.RecordEvent(ctx, session.ID, run.Event{Kind: "tool_started", Text: "Reading file"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.AppendMessage(ctx, session.ID, agent.Message{Role: "assistant", Content: "done"}); err != nil {
+	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "assistant", Content: "done"}); err != nil {
 		t.Fatal(err)
 	}
 	rows, cursor, err := s.Timeline(ctx, session.ID, 0, 2)

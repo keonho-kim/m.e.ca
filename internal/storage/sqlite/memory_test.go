@@ -6,17 +6,18 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent"
 	"github.com/keonho-kim/v-code/internal/agent/compact"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
-	"path/filepath"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 	"testing"
 )
 
 func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 	ctx := context.Background()
-	store, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	store, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,12 +26,8 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	root := t.TempDir()
-	session, err := store.RestoreSession(ctx, root, root, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = store.AppendMessage(ctx, session.ID, agent.Message{Role: "user", Content: "goal"}); err != nil {
+	session := store.Session()
+	if err = store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "goal"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = store.AddContextTokens(ctx, session.ID, compact.TokenCount{Amount: 256000, Kind: "model"}); err != nil {
@@ -65,7 +62,7 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 }
 func TestMemoryProjectsStepChanges(t *testing.T) {
 	ctx := context.Background()
-	store, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	store, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,17 +71,13 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	root := t.TempDir()
-	session, err := store.RestoreSession(ctx, root, root, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	step := &compact.StepRef{PlanID: "plan", Revision: 2, Index: 1, Description: "edit auth"}
+	session := store.Session()
+	step := &planref.StepRef{PlanID: "plan", Revision: 2, Index: 1, Description: "edit auth"}
 	cp := run.Checkpoint{ID: "task", Objective: "goal", Status: run.Running, Phase: "execution", InstructionsDigest: strings.Repeat("a", 64), Step: step}
 	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "task_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}
-	op := compact.Operation{TaskID: "task", CallID: "call", Name: "move_file", Status: "tool_succeeded", Step: step, Changes: []agent.FileChange{{Action: "move_file", Path: "src/auth.go", Destination: "src/session.go"}}}
+	op := toolapi.Operation{TaskID: "task", CallID: "call", Name: "move_file", Status: "tool_succeeded", Step: step, Changes: []toolapi.FileChange{{Action: "move_file", Path: "src/auth.go", Destination: "src/session.go"}}}
 	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "tool_succeeded", Operation: &op}); err != nil {
 		t.Fatal(err)
 	}

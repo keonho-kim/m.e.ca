@@ -1,0 +1,46 @@
+// Purpose: Extract original roots from the selected OpenAI-compatible model card.
+// Pattern: HTTP Adapter.
+// Usage: vLLM and generic providers use Client.identifyModels.
+// Related: internal/provider/discovery/identify.go, internal/provider/identity/report.go.
+package discovery
+
+import (
+	"context"
+	"github.com/keonho-kim/v-code/internal/provider/identity"
+	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"net/http"
+)
+
+func (c *Client) identifyModels(ctx context.Context, model string) (identity.Report, error) {
+	var listing struct {
+		Data []struct {
+			ID, Root, Parent string
+			Owner            string `json:"owned_by"`
+		} `json:"data"`
+	}
+	var report identity.Report
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("models"), nil, 4*1024*1024, &listing); err != nil {
+		return report, err
+	}
+	if listing.Data == nil || len(listing.Data) > 10000 {
+		report.Unavailable = true
+		return report, nil
+	}
+	matched := false
+	for _, row := range listing.Data {
+		if row.ID != model {
+			continue
+		}
+		matched = true
+		if row.Root != row.ID {
+			report.Add("/v1/models.root", "original", row.Root)
+		}
+		report.Add("/v1/models.parent", "parent", row.Parent)
+		if row.Parent != "" {
+			report.Incomplete = true
+		} // An adapter's parent is not the adapted checkpoint.
+		report.Add("/v1/models.owned_by", "publisher", row.Owner)
+	}
+	report.Unavailable = !matched
+	return report, nil
+}

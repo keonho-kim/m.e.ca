@@ -6,11 +6,10 @@ package local
 
 import (
 	"context"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 func TestReferences(t *testing.T) {

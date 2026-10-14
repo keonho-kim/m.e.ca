@@ -5,11 +5,10 @@
 package view
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/rivo/uniseg"
+	"strings"
 )
 
 func Field(screen tcell.Screen, editor input.Editor, y, width int, masked bool) {

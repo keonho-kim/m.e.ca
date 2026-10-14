@@ -5,18 +5,17 @@
 package session
 
 import (
+	"github.com/gdamore/tcell/v3"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/tools/local/diff"
 	"strings"
 	"testing"
-
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/tools/local/diff"
 )
 
 func TestApprovalDiffNavigation(t *testing.T) {
 	a := fixture(t)
 	a.page = "approval"
-	a.proposal = &agent.ApprovalRequest{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)}
+	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)}
 	a.choices = []string{"Approve", "Reject"}
 	a.decision = make(chan bool, 1)
 	a.render()
@@ -42,7 +41,7 @@ func TestApprovalDiffNavigation(t *testing.T) {
 func TestApprovalChangedRowsHavePastelBackgrounds(t *testing.T) {
 	a := fixture(t)
 	a.page = "approval"
-	a.proposal = &agent.ApprovalRequest{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)}
+	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)}
 	a.choices = []string{"Approve", "Reject"}
 	a.render()
 	for _, y := range []int{6, 7, 8, 9} {

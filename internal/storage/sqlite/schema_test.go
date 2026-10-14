@@ -1,11 +1,13 @@
-// Purpose: Verify unsupported schemas are preserved and current initialization is serialized.
+// Purpose: Verify unsupported session databases are preserved and concurrent creation never publishes partial files.
 // Pattern: Repository lifecycle tests.
-// Usage: go test ./internal/storage/sqlite -run 'TestUnsupportedSchema|TestConcurrentOpen'.
-// Related: internal/storage/sqlite/schema.go, internal/storage/sqlite/store.go.
+// Usage: go test ./internal/storage/sqlite -run 'TestUnsupportedSchema|TestConcurrentSession'.
+// Related: internal/storage/sqlite/catalog.go, internal/storage/sqlite/store.go, internal/storage/sqlite/schema.go.
 package sqlite
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"os"
@@ -14,9 +16,14 @@ import (
 )
 
 func TestUnsupportedSchemaPreserved(t *testing.T) {
-	for _, version := range []int{0, 1, 2, 3, 5} {
+	for _, version := range []int{0, 1, 2, 3, 4, 6} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "v.db")
+			catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := "session_" + rand.Text()
+			path := filepath.Join(catalog.directory, id+".db")
 			db, err := sql.Open("sqlite", path)
 			if err != nil {
 				t.Fatal(err)
@@ -30,7 +37,7 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			store, openErr := Open(path)
+			store, openErr := catalog.Open(context.Background(), id)
 			if store != nil {
 				if err := store.Close(); err != nil {
 					t.Error(err)
@@ -38,6 +45,9 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			}
 			if openErr == nil {
 				t.Fatal("unsupported schema accepted")
+			}
+			if _, err := catalog.Conversations(context.Background(), 0, 100); err == nil {
+				t.Fatal("unsupported DB silently hidden from discovery")
 			}
 			after, err := os.ReadFile(path)
 			if err != nil {
@@ -49,21 +59,32 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 		})
 	}
 }
-func TestConcurrentOpen(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "v.db")
-	results := make(chan error, 4)
-	for n := 0; n < 4; n++ {
+func TestConcurrentSessionCreation(t *testing.T) {
+	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	results := make(chan error, 8)
+	for n := 0; n < 8; n++ {
 		go func() {
-			store, err := Open(path)
+			store, err := catalog.Create(context.Background(), root, root)
 			if err == nil {
 				err = store.Close()
+			}
+			if err == nil {
+				_, err = catalog.Conversations(context.Background(), 0, 100)
 			}
 			results <- err
 		}()
 	}
-	for n := 0; n < 4; n++ {
+	for n := 0; n < 8; n++ {
 		if err := <-results; err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
+	}
+	list, err := catalog.Conversations(context.Background(), 0, 100)
+	if err != nil || len(list) != 8 {
+		t.Fatalf("partial/duplicate session publication: %+v %v", list, err)
 	}
 }

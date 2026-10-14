@@ -23,7 +23,7 @@ func TestDecidePreservesScopeAndPlanning(t *testing.T) {
 		{Settings{AllowAll, Directory}, false, Change, false, false},
 		{Settings{AllowAll, Directory}, true, Change, false, true},
 		{Settings{Approve, Directory}, true, Read, false, false},
-		{Settings{AllowAll, Directory}, false, Command, false, true},
+		{Settings{AllowAll, Directory}, false, Command, false, false},
 		{Settings{Approve, System}, false, Command, true, false},
 		{Settings{AllowAll, System}, false, Command, false, false},
 		{Settings{"invalid", Directory}, false, Read, false, true},

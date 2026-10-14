@@ -1,7 +1,7 @@
 // Purpose: Persist validated model messages and load bounded session history.
 // Pattern: Repository.
 // Usage: Used by the agent generation loop and session restoration.
-// Related: internal/agent/model.go, internal/storage/sqlite/store.go, internal/storage/sqlite/store_test.go.
+// Related: internal/agent/model/model.go, internal/storage/sqlite/store.go, internal/storage/sqlite/store_test.go.
 
 package sqlite
 
@@ -11,31 +11,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"time"
-
-	"github.com/keonho-kim/v-code/internal/agent"
 )
 
-func checkMessage(message agent.Message) error {
-	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" && message.Role != "system" {
-		return fmt.Errorf("invalid message role")
-	}
-	if len(message.Content) > agent.MaxResponseBytes || len(message.Calls) > agent.MaxToolCalls {
-		return fmt.Errorf("message exceeds size limits")
-	}
-	for _, call := range message.Calls {
-		if err := call.Check(); err != nil {
-			return err
-		}
-	}
-	if message.Role == "tool" && (message.ToolCallID == "" || len(message.ToolCallID) > 128) {
-		return fmt.Errorf("invalid tool result ID")
-	}
-	return nil
-}
-
-func (store *Store) AppendMessage(ctx context.Context, session string, message agent.Message) error {
-	if err := checkMessage(message); err != nil {
+func (store *Store) AppendMessage(ctx context.Context, session string, message modelapi.Message) error {
+	if err := message.Check(); err != nil {
 		return err
 	}
 	if message.ID == "" {
@@ -67,7 +48,7 @@ func (store *Store) AppendMessage(ctx context.Context, session string, message a
 	return transaction.Commit()
 }
 
-func (store *Store) Messages(ctx context.Context, session string, limit int) (messages []agent.Message, err error) {
+func (store *Store) Messages(ctx context.Context, session string, limit int) (messages []modelapi.Message, err error) {
 	if limit < 1 || limit > 1000 {
 		return nil, fmt.Errorf("history limit must be between 1 and 1000")
 	}
@@ -86,11 +67,11 @@ func (store *Store) Messages(ctx context.Context, session string, limit int) (me
 		if bytes > 8*1024*1024 {
 			break
 		}
-		var message agent.Message
+		var message modelapi.Message
 		if err := json.Unmarshal(content, &message); err != nil {
 			return nil, fmt.Errorf("invalid stored message: %w", err)
 		}
-		if err := checkMessage(message); err != nil {
+		if err := message.Check(); err != nil {
 			return nil, err
 		}
 		messages = append(messages, message)

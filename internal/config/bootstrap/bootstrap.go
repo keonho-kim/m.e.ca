@@ -37,22 +37,24 @@ func Initialize(home string) (configuration config.Config, err error) {
 	if !info.Mode().IsRegular() {
 		return configuration, fmt.Errorf("configuration must be a regular file")
 	}
-	if err := root.Mkdir("logs", 0700); err != nil && !errors.Is(err, os.ErrExist) {
-		return configuration, err
-	}
-	info, err = root.Lstat("logs")
-	if err != nil {
-		return configuration, err
-	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return configuration, fmt.Errorf("logs must be a real directory")
-	}
-	logs, err := root.Open("logs")
-	if err != nil {
-		return configuration, err
-	}
-	if err = errors.Join(logs.Chmod(0700), logs.Close()); err != nil {
-		return configuration, err
+	for _, name := range []string{"logs", "sessions"} {
+		if err := root.Mkdir(name, 0700); err != nil && !errors.Is(err, os.ErrExist) {
+			return configuration, err
+		}
+		info, err := root.Lstat(name)
+		if err != nil {
+			return configuration, err
+		}
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return configuration, fmt.Errorf("%s must be a real directory", name)
+		}
+		directory, err := root.Open(name)
+		if err != nil {
+			return configuration, err
+		}
+		if err := errors.Join(directory.Chmod(0700), directory.Close()); err != nil {
+			return configuration, err
+		}
 	}
 	if err = prompts.Bootstrap(root); err != nil {
 		return configuration, err

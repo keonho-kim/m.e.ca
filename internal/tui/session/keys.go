@@ -5,22 +5,26 @@
 package session
 
 import (
-	"crypto/rand"
-	"time"
-
 	"github.com/gdamore/tcell/v3"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 )
 
 func (a *app) keyEvent(e *tcell.EventKey) {
-	if e.Key() == tcell.KeyCtrlC {
-		if a.taskCancel != nil {
-			a.taskCancel()
-			a.status = "Cancelling"
-		}
+	if input.ExitKey(e) {
+		a.requestExit()
 		return
+	}
+	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModAlt == 0 {
+		text := a.menuInput.String()
+		if a.page == "chat" || a.page == "files" && a.browser.Input {
+			text = a.editor.String()
+		}
+		command, err := commands.Parse(text)
+		if err == nil && command.Kind == commands.Exit {
+			a.requestExit()
+			return
+		}
 	}
 	if a.page == "files" && !a.browser.Input {
 		a.fileKey(e)
@@ -56,41 +60,15 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	case tcell.KeyPgUp:
 		w, h := a.screen.Size()
-		a.scroll(-max(1, h-3), w, h-3)
+		a.scroll(-max(1, a.chatHeight(w, a.bodyHeight(w, h))), w, a.chatHeight(w, a.bodyHeight(w, h)))
 		return
 	case tcell.KeyPgDn:
 		w, h := a.screen.Size()
-		a.scroll(max(1, h-3), w, h-3)
+		a.scroll(max(1, a.chatHeight(w, a.bodyHeight(w, h))), w, a.chatHeight(w, a.bodyHeight(w, h)))
 		return
 	}
-	editKey(&a.editor, e)
+	input.EditKey(&a.editor, e)
 	a.refreshHints()
-}
-func editKey(editor *input.Editor, e *tcell.EventKey) {
-	switch e.Key() {
-	case tcell.KeyRune:
-		editor.Insert(e.Str())
-	case tcell.KeyLeft:
-		editor.Move(-1)
-	case tcell.KeyRight:
-		editor.Move(1)
-	case tcell.KeyHome, tcell.KeyCtrlA:
-		editor.Home()
-	case tcell.KeyEnd, tcell.KeyCtrlE:
-		editor.End()
-	case tcell.KeyBackspace:
-		editor.Backspace()
-	case tcell.KeyDelete:
-		editor.Delete()
-	case tcell.KeyCtrlW:
-		editor.DeleteWord()
-	case tcell.KeyCtrlU:
-		editor.Replace(0, editor.Cursor, "")
-	case tcell.KeyCtrlK:
-		editor.Replace(editor.Cursor, len(editor.Text), "")
-	case tcell.KeyTab:
-		editor.Insert("\t")
-	}
 }
 func (a *app) recall(n int) {
 	if len(a.inputs) == 0 {
@@ -106,86 +84,22 @@ func (a *app) recall(n int) {
 		a.editor.Set(a.inputs[a.historyIndex])
 	}
 }
-func (a *app) submit() {
-	command, err := commands.Parse(a.editor.String())
-	if err != nil {
-		a.fail(err)
+
+func (a *app) mouse(e *tcell.EventMouse) {
+	n := 0
+	if e.Buttons()&tcell.WheelUp != 0 {
+		n = -3
+	}
+	if e.Buttons()&tcell.WheelDown != 0 {
+		n = 3
+	}
+	if n == 0 {
 		return
 	}
-	if command.Kind == commands.Empty {
-		if a.planMode && a.plan != nil && a.plan.Status == planning.AwaitingApproval {
-			a.page = "planapproval"
-			a.choices = []string{"Approve", "Request changes"}
-			a.choice = 0
-		}
+	if a.page == "files" {
+		a.browser.Move(n)
 		return
 	}
-	if command.Kind == commands.Quit {
-		if a.page == "files" {
-			a.page = "chat"
-			a.editor.Set("")
-			return
-		}
-		if a.planMode {
-			a.status = "Plan approval is required"
-			return
-		}
-		if a.busy {
-			a.page = "quit"
-			a.choices = []string{"Keep working", "Cancel task and exit"}
-			a.choice = 0
-			return
-		}
-		a.exit = true
-		return
-	}
-	if a.busy && command.Kind != commands.Directory {
-		a.status = "One task is already active; draft preserved"
-		return
-	}
-	switch command.Kind {
-	case commands.Model:
-		a.openModel()
-	case commands.Permission:
-		a.page = "permission"
-		a.choices = []string{"approve", "allow-all"}
-		a.choice = 0
-	case commands.Scope:
-		a.page = "scope"
-		a.choices = []string{"directory", "system"}
-		a.choice = 0
-	case commands.Directory:
-		a.openFiles(command.Argument)
-	case commands.Plan:
-		if !a.planMode {
-			p, err := planning.NewPlan("plan_"+rand.Text(), a.opts.Session.ID, "Awaiting objective", []string{"Define the task objective"}, time.Now())
-			if err != nil {
-				a.fail(err)
-				return
-			}
-			p.Status = planning.Planning
-			if err = a.opts.Store.SavePlan(a.ctx, p); err != nil {
-				a.fail(err)
-				return
-			}
-			a.plan = &p
-			a.planMode = true
-		}
-	case commands.Message:
-		if a.client == nil || a.selection.Model == "" {
-			a.status = "Select a model using !model"
-			return
-		}
-		a.inputs = append(a.inputs, command.Argument)
-		if len(a.inputs) > 200 {
-			a.inputs = a.inputs[len(a.inputs)-200:]
-		}
-		a.historyIndex = len(a.inputs)
-		a.output.Append("> "+a.opts.Vault.Redact(command.Argument), false)
-		a.page = "chat"
-		a.startTask(command.Argument, nil)
-	}
-	a.editor.Set("")
-	a.closeReferences()
-	a.closeCommandHints()
+	w, h := a.screen.Size()
+	a.scroll(n, w, a.chatHeight(w, a.bodyHeight(w, h)))
 }

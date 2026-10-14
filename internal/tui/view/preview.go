@@ -1,13 +1,12 @@
 // Purpose: Preserve added/removed line classification while wrapping unified approval previews.
 // Pattern: Pure presentation projection.
 // Usage: The approval renderer supplies frozen preview text and its explicit diff marker.
-// Related: internal/tui/session/render.go, internal/tui/viewport/viewport.go, internal/agent/tools.go.
+// Related: internal/tui/view/menu.go, internal/tui/viewport/viewport.go, internal/agent/tool/execution.go.
 package view
 
 import (
-	"strings"
-
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"strings"
 )
 
 type PreviewLine struct {

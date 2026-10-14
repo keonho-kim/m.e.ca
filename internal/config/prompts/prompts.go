@@ -33,8 +33,8 @@ func Bootstrap(root *os.Root) error {
 		return err
 	}
 	defaults := prompt.Defaults()
-	for name, text := range map[string]string{"system.md": defaults.System, "compaction.md": defaults.Compaction} {
-		if err := statefs.PublishMissing(root, filepath.Join("prompts", name), []byte(text)); err != nil {
+	for name, text := range defaults.Files() {
+		if err := statefs.PublishMissing(root, filepath.Join("prompts", name), []byte(*text)); err != nil {
 			return err
 		}
 	}
@@ -68,10 +68,12 @@ func Load(directory string) (templates prompt.Templates, err error) {
 		text = string(body)
 		return text, prompt.CheckTemplate(text)
 	}
-	templates.System, err = read("system.md")
-	if err != nil {
-		return templates, err
+	for name, destination := range templates.Files() {
+		text, err := read(name)
+		if err != nil {
+			return templates, err
+		}
+		*destination = text
 	}
-	templates.Compaction, err = read("compaction.md")
-	return templates, err
+	return templates, nil
 }

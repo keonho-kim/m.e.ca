@@ -11,7 +11,22 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// InputRows lets the session reserve exactly the visible editor height before drawing.
+func InputRows(editor input.Editor, width, maxRows int) int {
+	lines, _, _ := inputWindow(editor, width, maxRows)
+	return len(lines)
+}
+
 func Input(screen tcell.Screen, editor input.Editor, y, width, maxRows int) int {
+	lines, cursorX, cursorRow := inputWindow(editor, width, maxRows)
+	for row, line := range lines {
+		Text(screen, 0, y+row, width, line, tcell.StyleDefault)
+	}
+	screen.ShowCursor(cursorX, y+cursorRow)
+	return len(lines)
+}
+
+func inputWindow(editor input.Editor, width, maxRows int) ([]string, int, int) {
 	value := editor.String()
 	lines := viewport.Wrap("> "+value, width)
 	before := "> " + string(editor.Text[:editor.Cursor])
@@ -22,13 +37,11 @@ func Input(screen tcell.Screen, editor input.Editor, y, width, maxRows int) int 
 		cursorX = 0
 		cursorRow++
 	}
+	// A cursor exactly after a full-width line needs its own visible row.
+	if cursorRow >= len(lines) {
+		lines = append(lines, "")
+	}
 	offset := max(0, cursorRow-maxRows+1)
 	count := min(maxRows, max(1, len(lines)-offset))
-	for row := 0; row < count; row++ {
-		if offset+row < len(lines) {
-			Text(screen, 0, y+row, width, lines[offset+row], tcell.StyleDefault)
-		}
-	}
-	screen.ShowCursor(cursorX, y+min(count-1, max(0, cursorRow-offset)))
-	return count
+	return lines[offset : offset+count], cursorX, min(count-1, max(0, cursorRow-offset))
 }

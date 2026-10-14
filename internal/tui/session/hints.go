@@ -5,12 +5,11 @@
 package session
 
 import (
-	"strings"
-	"unicode"
-
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"strings"
+	"unicode"
 )
 
 func (a *app) closeCommandHints() {
@@ -49,6 +48,9 @@ func (a *app) hintKey(e *tcell.EventKey) bool {
 			if len(a.commandHints) > 0 {
 				a.editor.Set(a.commandHints[a.commandIndex].Name)
 				a.closeCommandHints()
+				if e.Key() == tcell.KeyEnter {
+					a.submit()
+				}
 			}
 		default:
 			return false

@@ -1,36 +1,30 @@
-// Purpose: Render fixed-width file columns with independent vertical and horizontal positions.
-// Pattern: Presentation renderer.
-// Usage: Called when the file browser owns terminal focus.
-// Related: internal/tui/browser/browser.go, internal/tui/session/render.go, internal/tui/view/styles.go.
+// Purpose: Project browser selection and sanitized file labels into a display snapshot.
+// Pattern: Presentation projection.
+// Usage: Session supplies view.Files without transferring browser state.
+// Related: internal/tui/browser/browser.go, internal/tui/view/files.go.
 package session
 
 import (
-	"fmt"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"path/filepath"
-	"strings"
-
-	"github.com/gdamore/tcell/v3"
 )
 
 func (a *app) renderFiles(w, h int) {
-	columns := a.browser.Columns
-	if len(columns) == 0 {
+	if len(a.browser.Columns) == 0 {
 		return
 	}
-	width := a.opts.Config.UI.ColumnWidth
-	visible := max(1, w/(width+1))
+	display := view.FilesDisplay{Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status, Editor: a.editor}
+	display.Path = a.opts.Vault.Redact(a.browser.Columns[a.browser.Active].Path)
+	visible := max(1, w/(display.ColumnWidth+1))
 	start := max(0, a.browser.Active-visible+1)
-	view.Text(a.screen, 0, 0, w, a.opts.Vault.Redact(columns[a.browser.Active].Path), tcell.StyleDefault)
-	for i := start; i < min(len(columns), start+visible); i++ {
-		c := columns[i]
-		x := (i - start) * (width + 1)
-		view.Text(a.screen, x, 2, width, filepath.Base(filepath.Clean(c.Path))+"/", tcell.StyleDefault)
-		offset := max(0, c.Index-(h-7)+1)
-		for index := offset; index < len(c.Entries) && index-offset < h-7; index++ {
-			entry := c.Entries[index]
+	for i := start; i < min(len(a.browser.Columns), start+visible); i++ {
+		column := a.browser.Columns[i]
+		offset := max(0, column.Index-(h-7)+1)
+		value := view.FileColumn{Title: a.opts.Vault.Redact(filepath.Base(filepath.Clean(column.Path)) + "/"), Selected: column.Index - offset, X: (i - start) * (display.ColumnWidth + 1), Active: i == a.browser.Active, Divider: i < start+visible-1}
+		for index := offset; index < len(column.Entries) && index-offset < h-7; index++ {
+			entry := column.Entries[index]
 			name := entry.Name
-			path := filepath.Join(c.Path, name)
+			path := filepath.Join(column.Path, name)
 			if entry.Directory {
 				name += "/"
 				path += "/"
@@ -39,26 +33,14 @@ func (a *app) renderFiles(w, h int) {
 			if a.browser.Selected[path] {
 				prefix = "[x] "
 			}
-			style := view.SelectionStyle(i == a.browser.Active && index == c.Index)
-			view.Text(a.screen, x, 3+index-offset, width, prefix+a.opts.Vault.Redact(name), style)
+			value.Labels = append(value.Labels, prefix+a.opts.Vault.Redact(name))
 		}
-		if i < start+visible-1 {
-			for y := 2; y < h-3; y++ {
-				view.Text(a.screen, x+width, y, 1, "│", tcell.StyleDefault)
-			}
-		}
+		display.Columns = append(display.Columns, value)
 	}
-	view.Text(a.screen, 0, h-3, w, fmt.Sprintf("selected: %d", len(a.browser.Selected)), tcell.StyleDefault)
-	if a.status != "" {
-		view.Text(a.screen, 0, h-2, w, a.status, tcell.StyleDefault)
-	}
-	commandOpen := !a.browser.Input && strings.HasPrefix(a.menuInput.String(), ":")
+	commandOpen := !a.browser.Input && fileCommand(a.menuInput.String())
 	if commandOpen {
-		view.Input(a.screen, a.menuInput, h-1, w, 1)
-	} else {
-		view.Input(a.screen, a.editor, h-1, w, 1)
+		display.Editor = a.menuInput
 	}
-	if !a.browser.Input && !commandOpen {
-		a.screen.HideCursor()
-	}
+	display.InputFocused = a.browser.Input || commandOpen
+	view.Files(a.screen, display, w, h)
 }

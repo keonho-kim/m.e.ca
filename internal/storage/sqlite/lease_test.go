@@ -5,12 +5,11 @@
 package sqlite
 
 import (
-	"path/filepath"
 	"testing"
 )
 
 func TestSessionLease(t *testing.T) {
-	store, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	store, err := newTestStore(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,11 +18,11 @@ func TestSessionLease(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	lease, err := store.LeaseSession("session")
+	lease, err := store.LeaseSession()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if second, err := store.LeaseSession("session"); err == nil {
+	if second, err := store.LeaseSession(); err == nil {
 		if closeErr := second.Close(); closeErr != nil {
 			t.Error(closeErr)
 		}
@@ -32,7 +31,7 @@ func TestSessionLease(t *testing.T) {
 	if err := lease.Close(); err != nil {
 		t.Fatal(err)
 	}
-	lease, err = store.LeaseSession("session")
+	lease, err = store.LeaseSession()
 	if err != nil {
 		t.Fatal(err)
 	}

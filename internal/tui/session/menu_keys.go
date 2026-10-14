@@ -4,10 +4,13 @@
 // Related: internal/tui/session/keys.go, internal/tui/session/menus.go, internal/tui/session/model.go.
 package session
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/input"
+)
 
 func (a *app) menuKey(e *tcell.EventKey) {
-	if a.page == "approval" {
+	if a.page == "approval" || a.page == "modelinfo" {
 		if e.Key() == tcell.KeyPgDn {
 			a.previewOffset += 8
 			return
@@ -26,8 +29,11 @@ func (a *app) menuKey(e *tcell.EventKey) {
 	if e.Key() == tcell.KeyEscape {
 		if a.page == "approval" {
 			a.decide(false)
+		} else if a.page == "modelinfo" {
+			a.openModel()
 		} else {
 			a.page = "chat"
+			a.key = ""
 		}
 		a.menuInput.Set("")
 		return
@@ -40,16 +46,17 @@ func (a *app) menuKey(e *tcell.EventKey) {
 		if e.Key() == tcell.KeyEnter {
 			if a.menuInput.String() == ":q" {
 				a.page = "chat"
+				a.key = ""
 				a.menuInput.Set("")
 				return
 			}
 			a.confirmField()
 			return
 		}
-		editKey(&a.menuInput, e)
+		input.EditKey(&a.menuInput, e)
 		return
 	}
-	if a.page == "model" && a.choice == 1 && (e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight) {
+	if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported && (e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight) {
 		a.thinkingChoice = e.Key() == tcell.KeyLeft
 		return
 	}
@@ -64,15 +71,20 @@ func (a *app) menuKey(e *tcell.EventKey) {
 				a.decide(false)
 			} else {
 				a.page = "chat"
+				a.key = ""
 			}
 			a.menuInput.Set("")
 			return
 		}
 		if len(a.choices) > 0 {
-			a.choose()
+			if a.page == "modelinfo" {
+				a.openModel()
+			} else {
+				a.choose()
+			}
 		}
 	default:
-		editKey(&a.menuInput, e)
+		input.EditKey(&a.menuInput, e)
 	}
 }
 func (a *app) decide(approved bool) {
@@ -82,4 +94,5 @@ func (a *app) decide(approved bool) {
 	}
 	a.proposal = nil
 	a.page = "chat"
+	a.key = ""
 }

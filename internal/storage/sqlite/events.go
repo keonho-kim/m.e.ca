@@ -1,4 +1,4 @@
-// Purpose: Persist ordered tool and approval events and recover interrupted operations.
+// Purpose: Persist ordered runtime events, including final per-call token usage.
 // Pattern: Repository.
 // Usage: Implements the agent task journal contract and feeds restored terminal history.
 // Related: internal/agent/run/run.go, internal/storage/sqlite/store.go.
@@ -9,16 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/keonho-kim/v-code/internal/agent/run"
+	"time"
 )
 
 func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event) error {
-	if event.Checkpoint != nil {
-		if err := event.Checkpoint.Check(); err != nil {
-			return err
-		}
+	if err := event.Check(); err != nil {
+		return err
 	}
 	body, err := json.Marshal(event)
 	if err != nil {

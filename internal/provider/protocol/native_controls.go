@@ -1,0 +1,59 @@
+// Purpose: Translate advertised native reasoning choices without expanding effort scales.
+// Pattern: Provider wire adapter.
+// Usage: Prepared clients call nativeControls while encoding generation requests.
+// Related: internal/provider/connection/reasoning.go, internal/provider/protocol/controls.go.
+package protocol
+
+import (
+	"fmt"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/provider/connection"
+)
+
+func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
+	controls := Controls{}
+	if err := r.CheckEffort(request.ReasoningEffort); err != nil {
+		return controls, err
+	}
+	if request.Thinking == nil {
+		if request.ReasoningEffort != "" {
+			return controls, fmt.Errorf("explicit Thinking is required for effort")
+		}
+		return controls, nil
+	}
+	if !*request.Thinking {
+		if !r.Off {
+			return controls, fmt.Errorf("this model does not advertise Thinking OFF")
+		}
+		if kind == connection.Ollama {
+			controls.Think = false
+		} else {
+			controls.ReasoningEffort = "none"
+		}
+		return controls, nil
+	}
+	if !r.Enabled() {
+		return controls, fmt.Errorf("this model does not advertise Thinking ON")
+	}
+	level := request.ReasoningEffort
+	if level == "" {
+		level = r.Default
+		if level == "" && !r.On {
+			level = r.Levels[0]
+		}
+	}
+	if kind == connection.Ollama {
+		controls.Think = true
+		if level != "" {
+			controls.Think = level
+		}
+	} else {
+		controls.ReasoningEffort = level
+		// Responses uses the OpenAI effort vocabulary. Binary ON is probed using
+		// medium; it does not expose additional strength choices in the menu.
+		if level == "" {
+			controls.ReasoningEffort = "medium"
+		}
+	}
+	return controls, nil
+}

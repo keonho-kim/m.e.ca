@@ -7,12 +7,11 @@ package local
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 type Reference struct {

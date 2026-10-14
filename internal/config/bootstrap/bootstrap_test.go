@@ -8,6 +8,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/config"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -43,6 +44,46 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 	for n := 0; n < 8; n++ {
 		if err := <-results; err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
+	home := t.TempDir()
+	if _, err := Initialize(home); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(home, ".v")
+	info, err := os.Lstat(filepath.Join(root, "sessions"))
+	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+		t.Fatalf("session directory: %v %v", info, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "v.db")); !os.IsNotExist(err) {
+		t.Fatalf("created central registry: %v", err)
+	}
+	if err := os.Remove(filepath.Join(root, "sessions")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(t.TempDir(), filepath.Join(root, "sessions")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Initialize(home); err == nil {
+		t.Fatal("accepted symlink session directory")
+	}
+}
+
+func TestBootstrapRecordsRoleDefaults(t *testing.T) {
+	home := t.TempDir()
+	if _, err := Initialize(home); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(filepath.Join(home, ".v", config.Filename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, role := range []string{"agent", "conclave", "compaction", "pfc_value", "pfc_content", "diagnostic"} {
+		if !strings.Contains(string(content), "[inference."+role+"]") {
+			t.Fatalf("missing role defaults: %s", role)
 		}
 	}
 }

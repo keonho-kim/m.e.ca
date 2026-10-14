@@ -1,7 +1,7 @@
 // Purpose: Load the latest validated loop checkpoint without replaying argument drafts or effects.
 // Pattern: Repository projection.
 // Usage: Used during session recovery and explicit task continuation.
-// Related: internal/storage/sqlite/tasks_test.go, internal/agent/run/types.go.
+// Related: internal/storage/sqlite/tasks_test.go, internal/agent/run/events.go.
 package sqlite
 
 import (
@@ -36,15 +36,4 @@ func (s *Store) LatestTask(ctx context.Context, session string) (*run.Checkpoint
 		return nil, err
 	}
 	return event.Checkpoint, nil
-}
-func (s *Store) recoverTask(ctx context.Context, session string) error {
-	cp, err := s.LatestTask(ctx, session)
-	if err != nil || cp == nil {
-		return err
-	}
-	if cp.Status != run.Running {
-		return nil
-	}
-	cp.Status = run.Interrupted
-	return s.RecordEvent(ctx, session, run.Event{Kind: "task_checkpoint", Text: "Task interrupted during " + cp.Phase + "; drafts and side effects were not replayed", Checkpoint: cp})
 }

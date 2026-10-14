@@ -1,7 +1,7 @@
-// Purpose: Collect one tool's arguments sequentially, freeze the call and update observed progress.
-// Pattern: State Machine (tool dialogue).
+// Purpose: Orchestrate PFC, self-grounding and observed progress for one tool decision.
+// Pattern: State Machine (PFC execution).
 // Usage: Invoked once per TOOL or CHECK decision, before the existing approval/execution boundary.
-// Related: internal/agent/dialogue/dialogue.go, internal/agent/run/execute.go.
+// Related: internal/agent/pfc/pfc.go, internal/agent/run/execute.go.
 package run
 
 import (
@@ -11,13 +11,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/agent/dialogue"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/agent/pfc"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 )
 
-func (s *task) action(ctx context.Context, decision dialogue.Decision, approve Approver) error {
-	var definition *agent.ToolDefinition
+func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approver) error {
+	var definition *toolapi.Definition
 	for i := range s.definitions {
 		if s.definitions[i].Name == decision.Name {
 			definition = &s.definitions[i]
@@ -32,26 +33,37 @@ func (s *task) action(ctx context.Context, decision dialogue.Decision, approve A
 	if _, err := policy.Decide(s.runner.Settings, s.planning, definition.Effect); err != nil {
 		return err
 	}
-	if decision.Kind == dialogue.Check && definition.Effect == policy.Change {
+	if decision.Kind == pfc.Check && definition.Effect == policy.Change {
 		return fmt.Errorf("CHECK cannot mutate files")
 	}
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = map[string]json.RawMessage{}
 	if err := s.collectArguments(ctx, *definition); err != nil {
-		return err
+		var failure *toolapi.Failure
+		if !errors.As(err, &failure) {
+			return err
+		}
+		s.checkpoint.Observation = failure.Error()
+		s.checkpoint.NoProgress++
+		return s.persist(ctx)
 	}
 	content, err := json.Marshal(s.checkpoint.Arguments)
 	if err != nil {
 		return err
 	}
-	call := agent.ToolCall{ID: "call_" + rand.Text(), Name: definition.Name, Arguments: content}
+	call := toolapi.Call{ID: "call_" + rand.Text(), Name: definition.Name, Arguments: content}
 	if err = call.Check(); err != nil {
 		return err
 	}
+	if err := s.ground(ctx, call); err != nil {
+		return err
+	}
 	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
-	mutating := definition.Effect != policy.Read && decision.Kind != dialogue.Check
+	mutating := definition.Effect != policy.Read && decision.Kind != pfc.Check
 	if mutating && s.mutations[signature] {
-		return fmt.Errorf("repeated identical side-effect proposal stopped; inspect state before retrying")
+		s.checkpoint.Observation = "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed."
+		s.checkpoint.NoProgress++
+		return s.persist(ctx)
 	}
 	s.checkpoint.Phase = "approval"
 	s.checkpoint.Parameter = ""
@@ -59,51 +71,47 @@ func (s *task) action(ctx context.Context, decision dialogue.Decision, approve A
 		return err
 	}
 	// The compiled call enters the audit transcript only after every argument is valid.
-	if err = s.save(ctx, agent.Message{Role: "assistant", Calls: []agent.ToolCall{call}}); err != nil {
+	if err = s.save(ctx, modelapi.Message{Role: "assistant", Calls: []toolapi.Call{call}}); err != nil {
 		return err
 	}
-	s.checkpoint.Checking = decision.Kind == dialogue.Check
-	result, failed, toolErr := s.execute(ctx, s.planning, call, approve, s.emit)
+	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded PFC candidate; not executed"}); err != nil {
+		return err
+	}
+	s.checkpoint.Checking = decision.Kind == pfc.Check
+	outcome, toolErr := s.execute(ctx, s.planning, call, approve, s.emit)
+	result, failed := string(outcome.Content), outcome.Failed
+	if errors.Is(toolErr, errRuntimeRecord) {
+		return toolErr
+	}
 	s.worked = true
 	s.result.HadToolFailure = s.result.HadToolFailure || failed || toolErr != nil
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	if toolErr != nil {
-		encoded, encodeErr := json.Marshal(map[string]string{"error": s.runner.Redact(toolErr.Error())})
+	if toolErr != nil || failed {
+		failure := outcome.Failure
+		if failure == nil {
+			failure = toolapi.FailureOf(toolErr)
+		}
+		if failure == nil {
+			failure = &toolapi.Failure{Code: toolapi.ExecutionFailed, Detail: "tool reported failure", Next: "Inspect its output before choosing another action."}
+		}
+		failure.Detail = s.runner.Redact(failure.Detail)
+		encoded, encodeErr := json.Marshal(struct {
+			Failure *toolapi.Failure
+			Output  json.RawMessage
+		}{failure, outcome.Content})
 		if encodeErr != nil {
 			return encodeErr
 		}
 		result = string(encoded)
 	}
-	if err = s.save(ctx, agent.Message{Role: "tool", Content: result, ToolCallID: call.ID, ToolName: call.Name}); err != nil {
+
+	if err = s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: call.ID, ToolName: call.Name}); err != nil {
 		return err
 	}
 	if errors.Is(toolErr, errApprovalDenied) {
 		return toolErr
 	}
-	s.checkpoint.Phase = "observation"
-	s.checkpoint.Arguments = nil
-	s.checkpoint.Observation = excerpt(call.Name+" result:\n"+s.runner.Redact(result), 8192)
-	if failed || toolErr != nil {
-		s.checkpoint.Evidence = ""
-		s.checkpoint.NoProgress++
-		return s.persist(ctx)
-	}
-	if mutating {
-		s.mutations[signature] = true
-		s.changed = true
-		s.checkpoint.Evidence = ""
-	}
-	fingerprint := sha256.Sum256(append(signature[:], []byte(result)...))
-	if s.seen[fingerprint] {
-		s.checkpoint.NoProgress++
-	} else {
-		s.seen[fingerprint] = true
-		s.checkpoint.NoProgress = 0
-	}
-	if decision.Kind == dialogue.Check && (!s.changed || definition.Effect == policy.Command) {
-		s.checkpoint.Evidence = excerpt(call.Name+" "+string(content)+" => successful result", 4000)
-	}
-	return s.persist(ctx)
+	return s.observeOutcome(ctx, decision, call, content, signature, mutating, definition.Effect, result, outcome, toolErr)
 }

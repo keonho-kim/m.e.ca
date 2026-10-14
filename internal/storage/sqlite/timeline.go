@@ -9,19 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/v-code/internal/storage/history"
 )
 
-type Record struct {
-	Sequence int64
-	Kind     string
-	Message  agent.Message
-	Event    run.Event
-}
-
-func (s *Store) Timeline(ctx context.Context, session string, before int64, limit int) (records []Record, cursor int64, err error) {
+func (s *Store) Timeline(ctx context.Context, session string, before int64, limit int) (records []history.Record, cursor int64, err error) {
 	if limit < 1 || limit > 200 {
 		return nil, 0, fmt.Errorf("invalid history page")
 	}
@@ -35,7 +26,7 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 	defer func() { err = errors.Join(err, rows.Close()) }()
 	bytes := 0
 	for rows.Next() {
-		var r Record
+		var r history.Record
 		var body []byte
 		if err = rows.Scan(&r.Sequence, &r.Kind, &body); err != nil {
 			return nil, 0, err
@@ -48,7 +39,7 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 		if r.Kind == "message" {
 			err = json.Unmarshal(body, &r.Message)
 			if err == nil {
-				err = checkMessage(r.Message)
+				err = r.Message.Check()
 			}
 		} else {
 			err = json.Unmarshal(body, &r.Event)

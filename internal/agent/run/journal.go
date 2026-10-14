@@ -1,19 +1,25 @@
-// Purpose: Persist task messages and checkpoint snapshots with provenance and bounded in-memory history.
+// Purpose: Persist task messages and checkpoint snapshots with provenance and the active uncompacted context.
 // Pattern: Simple Module (journal I/O boundary).
 // Usage: Called by task phases and the final cancellation-safe flush.
-// Related: internal/agent/run/types.go, internal/agent/run/run.go, internal/storage/sqlite/events.go.
+// Related: internal/agent/run/events.go, internal/agent/run/run.go, internal/storage/sqlite/events.go.
 package run
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent"
 	"github.com/keonho-kim/v-code/internal/agent/compact"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
-func (s *task) save(ctx context.Context, m agent.Message) error {
+func (s *task) save(ctx context.Context, m modelapi.Message) error {
+	if s.runner.internalTask && m.Role == "assistant" && len(m.Calls) == 0 {
+		m.Role = "system"
+	}
 	m.Content = s.runner.Redact(m.Content)
 	m.ModelID, m.ProviderID = s.runner.Model, s.runner.Provider
 	m.Thinking = s.runner.Thinking
+	if m.Thinking != nil && *m.Thinking {
+		m.ReasoningEffort = s.runner.ReasoningEffort
+	}
 	m.Planning = s.planning
 	if err := s.runner.Journal.AppendMessage(ctx, s.runner.Session, m); err != nil {
 		return err
@@ -23,10 +29,7 @@ func (s *task) save(ctx context.Context, m agent.Message) error {
 			return err
 		}
 	}
-	s.result.Messages = append(s.result.Messages, m)
-	if len(s.result.Messages) > 1000 {
-		s.result.Messages = append([]agent.Message(nil), s.result.Messages[len(s.result.Messages)-1000:]...)
-	}
+	s.messages = append(s.messages, m)
 	return nil
 }
 
@@ -35,5 +38,5 @@ func (s *task) persist(ctx context.Context) error {
 		return err
 	}
 	copy := s.checkpoint
-	return s.runner.Journal.RecordEvent(ctx, s.runner.Session, Event{Kind: "task_checkpoint", Checkpoint: &copy})
+	return s.record(ctx, Event{Kind: "task_checkpoint", Checkpoint: &copy})
 }

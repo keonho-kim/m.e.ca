@@ -5,10 +5,9 @@
 package session
 
 import (
+	"github.com/gdamore/tcell/v3"
 	"strings"
 	"testing"
-
-	"github.com/gdamore/tcell/v3"
 )
 
 func TestFileViewQuitFromBrowserPreservesDraft(t *testing.T) {
@@ -19,7 +18,7 @@ func TestFileViewQuitFromBrowserPreservesDraft(t *testing.T) {
 	typeInput(a, "ignored")
 	typeInput(a, ":q")
 	a.render()
-	if a.page != "files" || !strings.Contains(screenLine(a.screen, 23, 80), ":q") {
+	if a.page != "files" || !strings.Contains(screenLine(a.screen, 22, 80), ":q") {
 		t.Fatal("quit command was hidden or executed before Enter")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

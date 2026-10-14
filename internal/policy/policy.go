@@ -66,8 +66,5 @@ func Decide(settings Settings, planning bool, effect Effect) (bool, error) {
 	if planning && effect != Read {
 		return false, fmt.Errorf("Plan approval is required before changes")
 	}
-	if effect == Command && settings.Scope == Directory {
-		return false, fmt.Errorf("Shell execution denied: directory Scope cannot be enforced for arbitrary commands")
-	}
 	return effect != Read && settings.Permission == Approve, nil
 }

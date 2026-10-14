@@ -1,13 +1,12 @@
 // Purpose: Own column navigation and per-column selection positions for the file view.
 // Pattern: Simple Module (presentation state).
 // Usage: Owned by the terminal loop; directory I/O is supplied by the caller.
-// Related: internal/tui/session/files.go, internal/tools/local/files.go.
+// Related: internal/tui/session/files.go, internal/tools/local/file/read.go.
 package browser
 
 import (
-	"path/filepath"
-
 	"github.com/keonho-kim/v-code/internal/tools/local"
+	"path/filepath"
 )
 
 type Column struct {
@@ -41,6 +40,7 @@ func (b *Browser) Move(n int) {
 	c := b.Current()
 	if c != nil {
 		c.Index = max(0, min(len(c.Entries)-1, c.Index+n))
+		clear(b.Columns[b.Active+1:])
 		b.Columns = b.Columns[:b.Active+1]
 	}
 }
@@ -53,6 +53,7 @@ func (b *Browser) Target() (string, bool) {
 	return filepath.Join(c.Path, entry.Name), entry.Directory
 }
 func (b *Browser) Push(path string, entries []local.Entry, more bool) {
+	clear(b.Columns[b.Active+1:])
 	b.Columns = b.Columns[:b.Active+1]
 	b.Columns = append(b.Columns, Column{Path: path, Entries: entries, More: more})
 	b.Active++

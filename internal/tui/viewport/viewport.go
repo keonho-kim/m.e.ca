@@ -5,9 +5,8 @@
 package viewport
 
 import (
-	"strings"
-
 	"github.com/rivo/uniseg"
+	"strings"
 )
 
 type Block struct {
@@ -41,21 +40,27 @@ func Wrap(text string, width int) []string {
 	}
 	var out []string
 	for _, paragraph := range strings.Split(strings.ReplaceAll(text, "\t", "    "), "\n") {
-		line := ""
+		indent := paragraph[:len(paragraph)-len(strings.TrimLeft(paragraph, " "))]
+		// Leave room for a two-cell character on indented continuation rows.
+		indent = indent[:min(len(indent), max(0, width-2))]
+		var line strings.Builder
+		line.Grow(min(len(paragraph), width))
 		cells := 0
 		g := uniseg.NewGraphemes(paragraph)
 		for g.Next() {
 			part := g.Str()
 			n := uniseg.StringWidth(part)
-			if cells+n > width && line != "" {
-				out = append(out, line)
-				line = ""
-				cells = 0
+			if cells+n > width && line.Len() > 0 {
+				out = append(out, line.String())
+				line.Reset()
+				line.Grow(min(len(paragraph), width))
+				line.WriteString(indent)
+				cells = len(indent)
 			}
-			line += part
+			line.WriteString(part)
 			cells += n
 		}
-		out = append(out, line)
+		out = append(out, line.String())
 	}
 	return out
 }
@@ -117,6 +122,7 @@ func (v *View) bound(older bool) {
 		}
 		bytes -= len(v.Blocks[index].Text)
 		copy(v.Blocks[index:], v.Blocks[index+1:])
+		v.Blocks[len(v.Blocks)-1] = Block{}
 		v.Blocks = v.Blocks[:len(v.Blocks)-1]
 	}
 }

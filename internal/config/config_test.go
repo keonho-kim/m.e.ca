@@ -8,6 +8,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/keonho-kim/v-code/internal/policy"
@@ -27,7 +28,7 @@ func TestLoadSaveAndEffectiveSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	restored, err := Load(directory)
-	if err != nil || restored != configuration {
+	if err != nil || !reflect.DeepEqual(restored, configuration) {
 		t.Fatalf("restore: %+v, %v", restored, err)
 	}
 	actual, err := Effective(restored.Defaults, policy.Settings{Scope: policy.System})

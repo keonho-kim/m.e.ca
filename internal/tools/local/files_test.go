@@ -1,20 +1,19 @@
 // Purpose: Verify scoped file tools, approval binding and stale-change rejection.
 // Pattern: Filesystem behavior tests.
 // Usage: go test ./internal/tools/local.
-// Related: internal/tools/local/executor.go, internal/tools/local/files.go, internal/policy/policy.go.
+// Related: internal/tools/local/executor.go, internal/tools/local/file/read.go, internal/policy/policy.go.
 
 package local
 
 import (
 	"context"
 	"encoding/json"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/keonho-kim/v-code/internal/agent"
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 func testExecutor(t *testing.T) (*Executor, string) {
@@ -32,8 +31,8 @@ func testExecutor(t *testing.T) (*Executor, string) {
 	return executor, project
 }
 
-func call(name, arguments string) agent.ToolCall {
-	return agent.ToolCall{ID: "call_1", Name: name, Arguments: json.RawMessage(arguments)}
+func call(name, arguments string) toolapi.Call {
+	return toolapi.Call{ID: "call_1", Name: name, Arguments: json.RawMessage(arguments)}
 }
 
 func TestWriteRequiresApprovalAndPreservesReject(t *testing.T) {
@@ -75,9 +74,9 @@ func TestApprovalUsesLineDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
-	for _, invocation := range []agent.ToolCall{
+	for _, invocation := range []toolapi.Call{
 		call("write_file", `{"path":"file.txt","content":"unchanged\nnew\nend\n"}`),
-		call("edit_file", `{"path":"file.txt","old_text":"old","new_text":"new"}`),
+		anchoredEdit(t, executor, "file.txt", 2, 2, "new\n"),
 		call("delete_file", `{"path":"file.txt"}`),
 	} {
 		op, err := executor.Prepare(context.Background(), settings, false, invocation)
@@ -104,7 +103,7 @@ func TestApprovedEditRejectsChangedOriginal(t *testing.T) {
 	if err := os.WriteFile(path, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, false, call("edit_file", `{"path":"auth.go","old_text":"original","new_text":"fixed"}`))
+	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, false, anchoredEdit(t, executor, "auth.go", 1, 1, "fixed"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
-	for _, invocation := range []agent.ToolCall{
+	for _, invocation := range []toolapi.Call{
 		call("read_file", `{"path":"../outside"}`),
 		call("read_file", `{"path":"linked"}`),
 		call("read_file", `{"path":"auth.go","approved":true}`),
@@ -155,7 +154,7 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
-	for _, invocation := range []agent.ToolCall{
+	for _, invocation := range []toolapi.Call{
 		call("read_file", `{"path":"src/auth.go"}`),
 		call("list_directory", `{"path":"src"}`),
 		call("search_files", `{"path":".","pattern":"*.go"}`),
@@ -179,5 +178,31 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(project, "src/session.go")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestReadRangePreservesUTF8AndCursor(t *testing.T) {
+	executor, root := testExecutor(t)
+	if err := os.WriteFile(filepath.Join(root, "text"), []byte("가나다"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}, false, call("read_file", `{"path":"text","limit":5}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := op.Execute(context.Background(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output struct {
+		Content    string
+		NextOffset int
+		Truncated  bool
+	}
+	if err := json.Unmarshal(result.Content, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Content != "1 | 가\n" || output.NextOffset != 3 || !output.Truncated {
+		t.Fatalf("range=%+v", output)
 	}
 }

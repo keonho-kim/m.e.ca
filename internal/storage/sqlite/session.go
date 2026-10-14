@@ -1,86 +1,41 @@
-// Purpose: Restore project-scoped sessions and persist validated policy overrides.
-// Pattern: Repository.
-// Usage: Called during startup and project Permission/Scope changes.
-// Related: internal/storage/sqlite/store.go, internal/storage/sqlite/store_test.go, internal/policy/policy.go.
-
+// Purpose: Parse the single conversation identity and metadata inside a session database.
+// Pattern: Repository boundary parser.
+// Usage: File discovery and session opening verify metadata against the database filename.
+// Related: internal/storage/sqlite/catalog.go, internal/storage/sqlite/conversations.go, internal/storage/sqlite/schema.go.
 package sqlite
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"errors"
 	"fmt"
-	"path/filepath"
+	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"time"
-
-	"github.com/keonho-kim/v-code/internal/policy"
+	"unicode/utf8"
 )
 
-type Session struct {
-	ID          string
-	ProjectRoot string
-	DisplayRoot string
-}
-
-func (store *Store) RestoreSession(ctx context.Context, project, display string, restore bool) (Session, error) {
-	if !filepath.IsAbs(project) || len(project) > 4096 || display == "" {
-		return Session{}, fmt.Errorf("invalid project root")
+func readConversation(ctx context.Context, db *sql.DB, id string) (sessionstate.Conversation, error) {
+	var c sessionstate.Conversation
+	if err := checkSchema(ctx, db); err != nil {
+		return c, err
 	}
-	project = filepath.Clean(project)
-	session := Session{ProjectRoot: project, DisplayRoot: display}
-	if restore {
-		err := store.db.QueryRowContext(ctx, "SELECT id, display_root FROM sessions WHERE project_root=? ORDER BY updated_at DESC, rowid DESC LIMIT 1", project).Scan(&session.ID, &session.DisplayRoot)
-		if err == nil {
-			return session, nil
-		}
-		if !errors.Is(err, sql.ErrNoRows) {
-			return session, err
-		}
-	}
-	session.ID = "session_" + rand.Text()
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	_, err := store.db.ExecContext(ctx, "INSERT INTO sessions(id,project_root,display_root,created_at,updated_at) VALUES(?,?,?,?,?)", session.ID, project, display, now, now)
-	return session, err
-}
-
-func (store *Store) ProjectSettings(ctx context.Context, project string) (policy.Settings, error) {
-	var permission, scope string
-	err := store.db.QueryRowContext(ctx, "SELECT permission,scope FROM project_settings WHERE project_root=?", project).Scan(&permission, &scope)
-	if errors.Is(err, sql.ErrNoRows) {
-		return policy.Settings{}, nil
-	}
+	err := db.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,
+ COALESCE((SELECT substr(json_extract(body,'$.content'),1,200) FROM messages WHERE json_extract(body,'$.role')='user' ORDER BY sequence LIMIT 1),'New conversation')
+ FROM sessions WHERE singleton=1`).Scan(&c.ID, &c.ProjectRoot, &c.DisplayRoot, &c.Updated, &c.Summary)
 	if err != nil {
-		return policy.Settings{}, err
+		return c, err
 	}
-	settings := policy.Settings{}
-	if permission != "" {
-		settings.Permission, err = policy.ParsePermission(permission)
-		if err != nil {
-			return settings, err
-		}
+	if !sessionstate.ValidID(id) || c.ID != id {
+		return c, fmt.Errorf("session identity does not match database filename")
 	}
-	if scope != "" {
-		settings.Scope, err = policy.ParseScope(scope)
+	if err := sessionstate.CheckProject(c.ProjectRoot, c.DisplayRoot); err != nil {
+		return c, err
 	}
-	return settings, err
-}
-
-func (store *Store) SaveProjectSettings(ctx context.Context, project string, settings policy.Settings) error {
-	if !filepath.IsAbs(project) {
-		return fmt.Errorf("project root must be absolute")
+	if _, err := time.Parse(time.RFC3339Nano, c.Updated); err != nil {
+		return c, fmt.Errorf("invalid session timestamp: %w", err)
 	}
-	if settings.Permission != "" {
-		if _, err := policy.ParsePermission(string(settings.Permission)); err != nil {
-			return err
-		}
+	if !utf8.ValidString(c.Summary) {
+		return c, fmt.Errorf("invalid session summary")
 	}
-	if settings.Scope != "" {
-		if _, err := policy.ParseScope(string(settings.Scope)); err != nil {
-			return err
-		}
-	}
-	_, err := store.db.ExecContext(ctx, `INSERT INTO project_settings(project_root,permission,scope) VALUES(?,?,?)
-ON CONFLICT(project_root) DO UPDATE SET permission=excluded.permission,scope=excluded.scope`, project, settings.Permission, settings.Scope)
-	return err
+	c.Summary = string([]rune(c.Summary)[:min(80, len([]rune(c.Summary)))])
+	return c, nil
 }

@@ -8,21 +8,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"runtime"
-	"syscall"
-
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
+	"github.com/keonho-kim/v-code/internal/config"
 	"github.com/keonho-kim/v-code/internal/config/bootstrap"
 	"github.com/keonho-kim/v-code/internal/config/credentials"
+	"github.com/keonho-kim/v-code/internal/config/prompts"
+	"github.com/keonho-kim/v-code/internal/storage/recovery"
+	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	"github.com/keonho-kim/v-code/internal/tools/local"
 	tuisession "github.com/keonho-kim/v-code/internal/tui/session"
 	tuistartup "github.com/keonho-kim/v-code/internal/tui/startup"
 	"golang.org/x/term"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"syscall"
 )
 
 func main() {
@@ -59,12 +63,11 @@ func start() (err error) {
 		return fmt.Errorf("bootstrap configuration: %w", err)
 	}
 	state := filepath.Join(home, ".v")
-	store, err := sqlite.Open(filepath.Join(state, "v.db"))
+	sessions, err := sqlite.OpenSessions(filepath.Join(state, "sessions"))
 	if err != nil {
-		return fmt.Errorf("bootstrap database: %w", err)
+		return fmt.Errorf("open session directory: %w", err)
 	}
-	defer func() { err = errors.Join(err, store.Close()) }()
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGHUP)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -74,25 +77,35 @@ func start() (err error) {
 		return err
 	}
 	defer screen.Fini()
-	var session sqlite.Session
+	var store *sqlite.Store
+	var session sessionstate.Session
 	if mode.Resume {
 		var selected bool
-		session, selected, err = tuistartup.Resume(ctx, screen, store)
+		session, selected, err = tuistartup.Resume(ctx, screen, sessions)
 		if err != nil || !selected {
 			return err
 		}
-	} else {
-		session, err = store.RestoreSession(ctx, mode.Project, mode.Display, configuration.Session.RestoreLast)
+		store, err = sessions.Open(ctx, session.ID)
 		if err != nil {
 			return err
 		}
+		if store.Session() != session {
+			return errors.Join(fmt.Errorf("selected session metadata changed; select it again"), store.Close())
+		}
+	} else {
+		store, err = sessions.Restore(ctx, mode.Project, mode.Display, configuration.Session.RestoreLast)
+		if err != nil {
+			return err
+		}
+		session = store.Session()
 	}
-	lease, leaseErr := store.LeaseSession(session.ID)
+	defer func() { err = errors.Join(err, store.Close()) }()
+	lease, leaseErr := store.LeaseSession()
 	if leaseErr != nil {
 		return leaseErr
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
-	if err = store.Recover(ctx, session.ID); err != nil {
+	if err = recovery.Restore(ctx, store, session.ID); err != nil {
 		return err
 	}
 	vault := &credentials.Vault{}
@@ -101,5 +114,5 @@ func start() (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Vault: vault})
+	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, SaveConfig: func(c config.Config) error { return config.Save(state, c) }})
 }

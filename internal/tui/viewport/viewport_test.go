@@ -5,6 +5,7 @@
 package viewport
 
 import (
+	"github.com/rivo/uniseg"
 	"testing"
 )
 
@@ -24,5 +25,26 @@ func TestScrollAnchor(t *testing.T) {
 	v.Scroll(1000, 3, 5)
 	if !v.Follow {
 		t.Fatal("did not resume following")
+	}
+}
+
+func TestWrapKeepsIndent(t *testing.T) {
+	lines := Wrap("  abcdef\n    ghijkl", 6)
+	want := []string{"  abcd", "  ef", "    gh", "    ij", "    kl"}
+	if len(lines) != len(want) {
+		t.Fatalf("wrapped lines: %q", lines)
+	}
+	for i, line := range lines {
+		if line != want[i] {
+			t.Fatalf("line %d=%q; want %q", i, line, want[i])
+		}
+	}
+}
+
+func TestWrapIndentLeavesRoomForWideCharacters(t *testing.T) {
+	for _, line := range Wrap("    한글", 5) {
+		if uniseg.StringWidth(line) > 5 {
+			t.Fatalf("indented continuation exceeds width: %q", line)
+		}
 	}
 }

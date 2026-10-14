@@ -5,11 +5,10 @@
 package session
 
 import (
-	"strings"
-	"testing"
-
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+	"strings"
+	"testing"
 )
 
 func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
