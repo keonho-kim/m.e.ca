@@ -1578,14 +1578,12 @@ Provider는 전송(`transport`), 형식 변환(`protocol`), 메타데이터 조�
 
 패키지 배치는 [Go 공식 모듈 구성 가이드](https://go.dev/doc/modules/layout)를 참고한 프로젝트 결정이다. 의존성 기록과 도구 체인 해석은 [Go Modules Reference](https://go.dev/ref/mod), 취소 전파는 [context 문서](https://pkg.go.dev/context), 검증 명령은 [go 명령 문서](https://pkg.go.dev/cmd/go)를 기준으로 확인한다.
 
-#### 17.9 자동 빌드와 릴리스
+#### 17.9 수동 빌드
 
-- `.github/workflows/build.yml`이 main·PR·수동 실행·v 태그를 받아 Linux/macOS amd64·arm64를 네이티브 빌드한다. Go 버전은 go.mod, 액션 버전은 정확한 커밋 SHA로 고정한다.
-- 각 타깃에서 포맷·모듈 체크섬·테스트·race·vet를 확인한 뒤 CGO 없는 실행 파일을 만든다. Linux는 고정된 Bubblewrap helper를 먼저 빌드한다. 실행 격리 테스트를 생략하거나 호스트 보안 정책을 자동 완화하지 않는다.
-- `scripts/package-release.sh`는 준비된 실행 파일 하나의 아카이브·라이선스·커밋·빌드 정보·체크섬을 만든다. Linux 아카이브에는 Bubblewrap 대응 소스와 재빌드 입력도 들어간다.
-- 모든 타깃이 성공한 뒤 같은 workflow의 아티팩트만 내려받아 체크섬과 태그 커밋을 확인하고 릴리스를 게시한다. 공개 전 draft에 네 아카이브와 SHA256SUMS가 모두 있는지 확인한다. 기존 릴리스·다른 커밋의 태그는 덮어쓰지 않는다.
-- 첫 배포는 `v0.0.0-beta` 프리릴리스다. main·PR의 일반 빌드는 다운로드 가능한 Actions 아티팩트만 남긴다. 저장소 공개 범위를 자동 변경하지 않는다.
-- macOS 서명·공증, 실제 Provider 서버 및 배포판별 네임스페이스 정책은 별도 운영 검증 대상이다. 지원 러너와 설치 절차는 README에 기록한다.
+- CI 파이프라인과 자동 릴리스는 구성하지 않는다. 사용자가 직접 빌드·실행하는 절차는 README 앞부분에 안내한다.
+- Go 버전은 go.mod를 기준으로 하고, `go build`로 `cmd/v`를 빌드한다. Linux는 `scripts/build-bwrap.sh`로 대상 CPU의 Bubblewrap helper를 먼저 준비한다. 이 스크립트는 Linux 실행에 필요한 빌드 입력을 준비하는 도구다.
+- 테스트·race·vet는 필요에 따라 개발자가 직접 실행한다. 생성된 실행 파일과 helper는 Git에 넣지 않는다. 배포할 경우 의존성 라이선스와 Bubblewrap 대응 소스·재빌드 입력을 제공한다.
+- 기존 릴리스의 게시 상태와 태그는 CI 제거 때문에 변경하지 않는다.
 
 ### 18. 보안 및 권한 강제
 

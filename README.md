@@ -2,48 +2,67 @@
 
 Go로 구현하는 터미널 코딩 에이전트다. 제품 요구사항은 [SYSTEM.md](SYSTEM.md), 개발 규칙은 [AGENTS.md](AGENTS.md)를 따른다. 실행 파일은 `v` 하나이며, Linux·macOS용 흑백 TUI에서 모델 연결, 파일 도구, 승인, Plan과 대화 복구를 제공한다.
 
-## 빌드 다운로드와 릴리스
+## 직접 빌드하기
 
-[GitHub Releases](https://github.com/keonho-kim/v-code/releases)에서 OS·CPU에 맞는 압축 파일을 받는다. 첫 배포 태그는 `v0.0.0-beta`이며 프리릴리스다. 저장소가 비공개인 동안에는 저장소 접근 권한이 필요하다.
+지원 환경은 **Linux 또는 macOS의 amd64·arm64**다. Git과 **Go 1.27.2**를 준비한다. Linux 빌드에는 Bubblewrap을 실행 파일에 포함하기 위해 **실행 중인 Docker 엔진과 BuildKit**도 필요하다. macOS 빌드에는 Docker가 필요하지 않다.
 
-| 플랫폼 | 파일 이름 |
-| --- | --- |
-| Linux x86-64 | `v-code_v0.0.0-beta_linux_amd64.tar.gz` |
-| Linux ARM64 | `v-code_v0.0.0-beta_linux_arm64.tar.gz` |
-| macOS Intel | `v-code_v0.0.0-beta_darwin_amd64.tar.gz` |
-| macOS Apple Silicon | `v-code_v0.0.0-beta_darwin_arm64.tar.gz` |
-
-압축 파일의 SHA-256을 릴리스의 `SHA256SUMS`와 비교한 뒤 푼다. 실행에는 Go나 Docker가 필요하지 않다. 예를 들어 Apple Silicon에서는 다음처럼 설치한다.
+### 1. 소스 받기
 
 ```sh
-tar -xzf v-code_v0.0.0-beta_darwin_arm64.tar.gz
-mkdir -p ~/.local/bin
-install -m 755 v-code_v0.0.0-beta_darwin_arm64/v ~/.local/bin/v
-~/.local/bin/v
+git clone https://github.com/keonho-kim/v-code.git
+cd v-code
+go version
+go mod download
 ```
 
-`~/.local/bin`을 PATH에 넣으면 `v`로 실행할 수 있다. 대화형 TTY와 연결할 모델 서버가 필요하며, 자격 증명 저장에는 macOS Keychain 또는 Linux Secret Service가 사용된다. macOS 빌드는 Developer ID 서명·공증을 제공하지 않는다. Linux에는 Bubblewrap helper를 내장하지만 호스트가 사용자·마운트 네임스페이스를 허용해야 프로젝트 셸을 실행할 수 있다. 앱이 호스트 보안 설정을 바꾸지는 않는다.
+비공개 저장소라면 GitHub 접근 권한이 필요하다. 이후 명령은 모두 `go.mod`가 있는 저장소 루트에서 실행한다.
 
-`.github/workflows/build.yml`은 main push·Pull Request에서 네 플랫폼을 네이티브 검증·빌드하고 Actions artifact를 14일 보관한다. Go 버전은 `go.mod`를 읽으며, Actions는 검토한 커밋 SHA로 고정한다. Linux는 Ubuntu 22.04 계열, macOS는 macOS 15 계열 러너에서 테스트·race·vet를 실행한다. Linux 빌드 전에 고정된 Bubblewrap 소스를 준비한다. 모든 플랫폼이 성공해야 릴리스를 게시한다.
+### 2. 운영체제에 맞게 빌드
 
-`v*` 태그 push는 자동 릴리스하며, 수동 실행도 가능하다. 버전 중 하이픈이 있는 태그는 프리릴리스로 게시한다. 기존 릴리스나 다른 커밋에 묶인 태그를 덮어쓰지 않는다.
+**macOS — Apple Silicon·Intel**
 
 ```sh
-gh workflow run build.yml --ref main -f release_tag=v0.0.0-beta -F prerelease=true
+mkdir -p bin
+CGO_ENABLED=0 go build -trimpath -o bin/v ./cmd/v
 ```
 
-`scripts/package-release.sh`는 이미 빌드한 실행 파일 하나를 패키징한다. 압축 파일에는 `v`, README, 커밋·Go 빌드 정보, 사용한 모듈 목록과 라이선스가 들어간다. Linux에는 Bubblewrap 라이선스·대응 소스·Dockerfile·재빌드 스크립트도 포함한다. CI 패키징은 바이너리의 OS·CPU·CGO 비활성·커밋 일치·깨끗한 빌드 상태를 검사한다. 바이너리와 압축 파일은 Git에 넣지 않는다.
+현재 Mac의 CPU에 맞는 `bin/v`가 생성된다.
 
-## 시작하기
-
-Go **1.27.2**와 대화형 TTY가 필요하다.
+**Linux — amd64·arm64**
 
 ```sh
-go build -o bin/v ./cmd/v
+docker version
+sh scripts/build-bwrap.sh "$(go env GOHOSTARCH)"
+mkdir -p bin
+CGO_ENABLED=0 go build -trimpath -o bin/v ./cmd/v
+```
+
+첫 명령으로 Docker 엔진 연결을 확인하고, 다음 스크립트로 현재 CPU용 Bubblewrap을 준비한다. 이후 Go 빌드가 helper를 `v` 안에 포함한다. helper 준비 없이 Go 빌드만 하면 프로젝트 Scope의 셸 실행을 사용할 수 없다. 생성된 helper와 `bin/`은 Git에서 제외된다.
+
+### 3. 실행
+
+대화형 터미널에서 실행한다.
+
+```sh
 ./bin/v
 ./bin/v /path/to/project
 ./bin/v resume
 ```
+
+빌드한 바이너리 실행에는 Go나 Docker가 필요하지 않다. 모델 서버는 별도로 연결하며, Linux의 프로젝트 셸 실행에는 호스트의 사용자·마운트 네임스페이스 허용이 필요하다.
+
+### 4. PATH에 설치하기 — 선택 사항
+
+```sh
+mkdir -p ~/.local/bin
+install -m 755 bin/v ~/.local/bin/v
+export PATH="$HOME/.local/bin:$PATH"
+v
+```
+
+새 터미널에서도 `v`를 쓰려면 사용하는 셸의 설정 파일에 `~/.local/bin`을 PATH에 추가한다.
+
+## 처음 실행하기
 
 첫 실행에서 사용자 홈의 `~/.v`에 기본 TOML 설정, 세션 DB 디렉터리, 로그 디렉터리를 준비한다. 기존 설정과 대화는 보존한다. 기본 정책은 `directory + approve`이며, 일반 시작은 해당 프로젝트의 최근 세션을 복구한다. 새 세션을 만들려면 `config.toml`의 `[session] restore_last = false`를 설정한다. `v resume`은 프로젝트와 관계없이 저장된 대화를 명시적으로 선택한다.
 
@@ -404,18 +423,7 @@ Provider는 전송(`transport`), 형식 변환(`protocol`), 메타데이터 조�
 
 ## 의존성과 검증 범위
 
-Linux 배포판은 Bubblewrap 0.13.0 정적 실행 파일을 `v` 안에 포함한다. 배포 준비는 Docker가 있는 개발 환경에서 아래처럼 실행한다. 일반 `go build`가 C 실행 파일을 자동 빌드하지는 않는다. 생성된 helper·배포 산출물은 Git에서 제외하고 빌드 스크립트·고정 버전·체크섬·라이선스만 관리한다.
-
-```sh
-sh scripts/build-bwrap.sh amd64
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/v-linux-amd64 ./cmd/v
-sh scripts/build-bwrap.sh arm64
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o dist/v-linux-arm64 ./cmd/v
-```
-
-실행 시 내장 helper를 `~/.v/bin/bwrap-<SHA-256>/bwrap`에 풀고 원본 체크섬·일반 파일 여부·실행 권한을 검증한다. 사용자의 별도 설치나 실행 시 다운로드는 없다. helper가 빠진 개발 빌드는 프로젝트 셸 실행 시 명시적 오류를 반환한다. Bubblewrap은 LGPL-2.0-or-later이며 musl·libcap 고지도 포함한다. 배포 시 함께 준비된 `dist/bubblewrap-source/`의 대응 소스와 빌드 입력·라이선스를 제공한다. 근거: [Bubblewrap 빌드](https://github.com/containers/bubblewrap/tree/v0.13.0), [셸 파서](https://pkg.go.dev/mvdan.cc/sh/v3@v3.14.1/syntax).
-
-프로젝트 격리는 macOS arm64에서, Linux amd64·arm64에서는 네임스페이스 생성을 허용한 Docker 환경에서 실제 외부 읽기·쓰기·링크 탈출 차단을 검사한다. 기본 Docker 보안 정책에서는 proc/user namespace 구성이 거부될 수 있다. 내장 여부와 커널·AppArmor 등의 실행 허용 여부는 별개이며, V가 호스트 보안 설정을 자동으로 완화하지 않는다. macOS의 `sandbox-exec`는 시스템에서 deprecated로 표기되어 있으므로 해당 실행기가 없는 환경에서도 명시적으로 차단한다. Linux 일반 사용자 배포판별 네이티브 검증은 별도로 필요하다.
+Linux에 필요한 Bubblewrap 준비 절차는 위의 [직접 빌드하기](#직접-빌드하기)를 따른다. 고정된 helper 소스·체크섬·라이선스는 `scripts/bubblewrap.Dockerfile`과 `scripts/notices/`에서 관리한다.
 
 직접 의존성은 `go.mod`에 정확한 버전으로 고정한다. 유지되는 공개 버전과 라이선스, 도입 목적을 확인했으며, 불필요한 웹·위젯 프레임워크는 사용하지 않는다. 2026-10-13에 직접 의존성과 빌드·테스트에 사용하는 간접 의존성을 최신 안정 버전으로 확인·갱신했다. 자동 업데이트는 아니며 이후 변경도 정확한 버전으로 고정하고 검증한다.
 
@@ -447,7 +455,7 @@ go test -race ./...
 go mod verify
 ```
 
-현재 검증은 Go 1.27.2, macOS arm64에서 수행한다. 파일 정책·승인·Plan·HTTP·SQLite·입력·화면·단계별 도구·Ralph 예산·정체·체크포인트·Compaction 임계값과 문맥 연결은 자동 테스트를 사용하며, 실제 모델 서버 대신 `httptest`를 사용한다. 실 TTY 시작·파일 탐색·이어하기·프롬프트 bootstrap·종료 복원도 확인한다. 실제 모델의 요약 품질, Provider별 서버 버전, Linux 네이티브 TTY·Secret Service, 밝은·어두운 터미널별 시인성과 SSH는 별도 환경 검증이 남아 있다. Windows 네이티브 지원은 제공하지 않는다. 릴리스 자동화는 위의 GitHub Actions 워크플로가 담당한다.
+현재 검증은 Go 1.27.2, macOS arm64에서 수행한다. 파일 정책·승인·Plan·HTTP·SQLite·입력·화면·단계별 도구·Ralph 예산·정체·체크포인트·Compaction 임계값과 문맥 연결은 자동 테스트를 사용하며, 실제 모델 서버 대신 `httptest`를 사용한다. 실 TTY 시작·파일 탐색·이어하기·프롬프트 bootstrap·종료 복원도 확인한다. 실제 모델의 요약 품질, Provider별 서버 버전, Linux 네이티브 TTY·Secret Service, 밝은·어두운 터미널별 시인성과 SSH는 별도 환경 검증이 남아 있다. Windows 네이티브 지원은 제공하지 않는다.
 
 ## 메모리·할당 점검
 
