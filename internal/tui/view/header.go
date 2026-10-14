@@ -17,7 +17,7 @@ type Status struct {
 	Settings           policy.Settings
 }
 
-func statusLine(screen tcell.Screen, status Status, y, w int) int {
+func statusLine(screen tcell.Screen, status Status, y, w int) {
 	model, thinking, effort, settings, planning := status.Model, status.Thinking, status.Effort, status.Settings, status.Planning
 	if model == "" {
 		model = "no-model"
@@ -44,5 +44,4 @@ func statusLine(screen tcell.Screen, status Status, y, w int) int {
 	Text(screen, 0, y, maxModel, model, tcell.StyleDefault)
 	x := min(uniseg.StringWidth(model), maxModel)
 	Text(screen, x, y, w-x, suffix, tcell.StyleDefault.Dim(true))
-	return min(w, x+uniseg.StringWidth(suffix))
 }

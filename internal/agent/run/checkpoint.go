@@ -77,7 +77,7 @@ func (c Checkpoint) Check() error {
 		return fmt.Errorf("invalid task status")
 	}
 	switch c.Phase {
-	case "goal", "goal_summary", "conclave", "grounding", "decision", "argument", "approval", "execution", "observation", "finished":
+	case "goal", "goal_summary", "conclave", "grounding", "decision", "argument", "purpose", "approval", "execution", "observation", "finished":
 	default:
 		return fmt.Errorf("invalid task phase")
 	}

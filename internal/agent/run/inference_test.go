@@ -20,7 +20,7 @@ func checkInference(t *testing.T, request modelapi.Request, parameters inference
 	}
 }
 func TestInferenceToolPhasesAndConclave(t *testing.T) {
-	g := &generator{replies: []string{"TOOL write_file", "a", "new", "CHECK execute_command", "verify", "DONE\nVerified"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"write_file"}`, "a", "new", `{"tool":"execute_command"}`, "verify", "DONE\nVerified"}}
 	r := fixture(g, &executor{}, &journal{})
 	settings := inference.Defaults()
 	settings.PFCValue.Temperature = 0
@@ -41,6 +41,9 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 			t.Fatal(err)
 		}
 		checkInference(t, g.requests[i], p)
+	}
+	for _, request := range g.purposeRequests {
+		checkInference(t, request, settings.PFCValue)
 	}
 	for _, request := range g.groundingRequests {
 		checkInference(t, request, settings.Grounding)

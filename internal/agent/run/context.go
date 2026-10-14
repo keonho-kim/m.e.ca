@@ -57,6 +57,9 @@ func (s *task) request(question string, role inference.Role) (modelapi.Request, 
 			return modelapi.Request{}, fmt.Errorf("unknown argument phase")
 		}
 		catalog.WriteString("Selected tool: " + s.checkpoint.Tool + "; collect only " + s.checkpoint.Parameter + ".\n")
+	} else if s.checkpoint.Phase == "purpose" {
+		system += "\nCURRENT PHASE: PFC PURPOSE. Arguments are complete. Return only check for verification or work for an ordinary operation. Do not select another tool or return JSON. This intent never overrides Scope, approval or observed outcomes."
+		catalog.WriteString("Selected tool: " + s.checkpoint.Tool + "; classify only its purpose.\n")
 	} else if s.checkpoint.Phase == "goal" || s.checkpoint.Phase == "goal_summary" {
 		system += "\nCURRENT PHASE: " + s.checkpoint.Phase + ". Follow the requested Goal analysis or final-response format; no tool calls in this phase."
 	} else if s.checkpoint.Phase == "grounding" {
@@ -84,13 +87,14 @@ func (s *task) request(question string, role inference.Role) (modelapi.Request, 
 		PreviousGoal                     *goal.State
 		Review                           *conclave.Result
 		PendingReview                    bool
+		Checking                         bool
 		PreviousTask                     *Checkpoint
 		Checks                           []verification.Record
 		ChangeRevision                   int
 		Grounding                        *grounding.Record
 		Objective, Observation, Evidence string
 		Iteration, Calls                 int
-	}{s.runner.Settings, s.runner.assignment, s.runner.PreviousGoal, s.checkpoint.Conclave, s.checkpoint.PendingReview, previous, s.checkpoint.Checks, s.checkpoint.ChangeRevision, s.checkpoint.Grounding, s.checkpoint.Objective, s.checkpoint.Observation, s.checkpoint.Evidence, s.checkpoint.Iteration, s.checkpoint.ModelCalls}
+	}{s.runner.Settings, s.runner.assignment, s.runner.PreviousGoal, s.checkpoint.Conclave, s.checkpoint.PendingReview, s.checkpoint.Checking, previous, s.checkpoint.Checks, s.checkpoint.ChangeRevision, s.checkpoint.Grounding, s.checkpoint.Objective, s.checkpoint.Observation, s.checkpoint.Evidence, s.checkpoint.Iteration, s.checkpoint.ModelCalls}
 	body, err := json.Marshal(facts)
 	if err != nil {
 		return modelapi.Request{}, err

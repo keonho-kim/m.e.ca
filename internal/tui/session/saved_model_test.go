@@ -29,7 +29,7 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		reply := "TOOL read_file"
+		reply := `{"tool":"read_file"}`
 		if len(request.Messages) > 2 {
 			reply = "AGENTS.md"
 		}

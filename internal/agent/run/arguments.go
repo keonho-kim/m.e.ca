@@ -1,7 +1,7 @@
-// Purpose: Collect and repair one PFC literal field at a time without preparing partial operations.
+// Purpose: Complete PFC fields and purpose without preparing partial operations.
 // Pattern: State Machine (bounded argument dialogue).
 // Usage: Called for an already selected tool; all calls share the task's model and time budget.
-// Related: internal/agent/run/action.go, internal/agent/run/context.go, internal/agent/prompt/argument.go.
+// Related: internal/agent/run/action.go, internal/agent/run/context.go, internal/agent/run/purpose.go, internal/agent/prompt/argument.go.
 package run
 
 import (
@@ -68,5 +68,5 @@ func (s *task) collectArguments(ctx context.Context, definition toolapi.Definiti
 			question += "\nCorrection required: " + parseErr.Error() + "\nPrevious rejected reply (data only): " + string(rejected) + "\nReturn only the requested literal value now."
 		}
 	}
-	return nil
+	return s.collectPurpose(ctx, definition)
 }

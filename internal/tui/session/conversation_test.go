@@ -62,13 +62,13 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 			inputRow = y
 		}
 	}
-	if inputRow < 2 || !strings.Contains(screenLine(a.screen, inputRow+1, 32), "!plan") {
-		t.Fatal("editor and candidates not below history")
+	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow+1, 32), "!plan") {
+		t.Fatal("editor and candidates not visible below token usage")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.editor.Set("line one\nline two")
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 10, 32)) != "line two" {
+	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "line two" {
 		t.Fatal("multiline editor not at conversation end")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, "", 0))

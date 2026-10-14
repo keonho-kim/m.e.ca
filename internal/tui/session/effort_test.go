@@ -37,13 +37,13 @@ func TestEffortMenuAndOffHeader(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if got := screenLine(a.screen, 23, 80); !strings.Contains(got, "Thinking MEDIUM") {
+	if got := screenLine(a.screen, 22, 80); !strings.Contains(got, "Thinking MEDIUM") {
 		t.Fatalf("strength hidden: %q", got)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if got := screenLine(a.screen, 23, 80); strings.Contains(got, "Thinking") {
+	if got := screenLine(a.screen, 22, 80); strings.Contains(got, "Thinking") {
 		t.Fatalf("OFF still displays strength: %q", got)
 	}
 	if a.selection.Effort() != "medium" {

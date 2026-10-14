@@ -18,6 +18,8 @@ import (
 )
 
 type generator struct {
+	purposes          []string
+	purposeRequests   []modelapi.Request
 	review            func(context.Context, modelapi.Request, func(modelapi.Event) error) error
 	mu                sync.Mutex
 	reviewRequests    []modelapi.Request
@@ -30,6 +32,14 @@ type generator struct {
 }
 
 func (g *generator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	if strings.Contains(r.Messages[len(r.Messages)-1].Content, "\nPFC PURPOSE:") {
+		g.purposeRequests = append(g.purposeRequests, r)
+		reply := "work"
+		if len(g.purposes) > 0 {
+			reply, g.purposes = g.purposes[0], g.purposes[1:]
+		}
+		return emit(modelapi.Event{Delta: reply, Done: true})
+	}
 	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "CONCLAVE REVIEW ") {
 		g.mu.Lock()
 		g.reviewRequests = append(g.reviewRequests, r)
@@ -150,7 +160,7 @@ func fixture(g *generator, e *executor, j *journal) Runner {
 func emit(Event) error                                        { return nil }
 func approve(context.Context, toolapi.Approval) (bool, error) { return true, nil }
 func TestDeniedToolStopsAndPersistsStructuredResult(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL write_file", "file.txt", "new"}}, &executor{approval: true}, &journal{}
+	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`, "file.txt", "new"}}, &executor{approval: true}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "change", false, func(context.Context, toolapi.Approval) (bool, error) { return false, nil }, emit)
 	if !errors.Is(err, errApprovalDenied) || e.executed != 0 || e.prepared != 1 || result.Status != Stopped || !result.HadToolFailure {
@@ -170,7 +180,7 @@ func TestDeniedToolStopsAndPersistsStructuredResult(t *testing.T) {
 func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	g := &generator{replies: []string{"TOOL write_file", "file.txt", "unfinished"}, cancelAt: 3, cancel: cancel}
+	g := &generator{replies: []string{`{"tool":"write_file"}`, "file.txt", "unfinished"}, cancelAt: 3, cancel: cancel}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(ctx, "change", false, approve, emit)
@@ -188,7 +198,7 @@ func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 	}
 }
 func TestChangesRequireARealCheckAfterLatestMutation(t *testing.T) {
-	g := &generator{replies: []string{"TOOL write_file", "file.txt", "new", "DONE\nTests passed", "CHECK read_file", "file.txt", "DONE\nAll good", "WAIT\nAn approved test command or user review is needed"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"write_file"}`, "file.txt", "new", "DONE\nTests passed", `{"tool":"read_file"}`, "file.txt", "DONE\nAll good", "WAIT\nAn approved test command or user review is needed"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "change", false, approve, emit)
@@ -197,7 +207,7 @@ func TestChangesRequireARealCheckAfterLatestMutation(t *testing.T) {
 	}
 }
 func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
-	g := &generator{replies: []string{"TOOL write_file", "file.txt", "new", "CHECK execute_command", "go test ./...", "DONE\nThe check passed"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"write_file"}`, "file.txt", "new", `{"tool":"execute_command"}`, "go test ./...", "DONE\nThe check passed"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
@@ -214,10 +224,10 @@ func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
 func TestRalphLoopCanContinueBeyondThirtyTwoActions(t *testing.T) {
 	var replies []string
 	for i := 0; i < 40; i++ {
-		replies = append(replies, "TOOL read_file", fmt.Sprintf("file-%d", i))
+		replies = append(replies, `{"tool":"read_file"}`, fmt.Sprintf("file-%d", i))
 	}
-	replies = append(replies, "CHECK read_file", "final", "DONE\nInspected")
-	g, e, j := &generator{replies: replies}, &executor{}, &journal{}
+	replies = append(replies, `{"tool":"read_file"}`, "final", "DONE\nInspected")
+	g, e, j := &generator{purposes: strings.Split(strings.Repeat("work|", 40)+"check", "|"), replies: replies}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "inspect files", false, approve, emit)
 	if err != nil || result.Status != Verified || e.executed != 41 {
@@ -230,7 +240,7 @@ func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
 		native  bool
 		limit   int
 		want    string
-	}{{strings.Split(strings.Repeat("CONTINUE\ntry|", 8)+"CONTINUE\ntry", "|"), false, 128, "stalled"}, {[]string{"TOOL read_file", "file"}, false, 1, "budget"}, {nil, true, 128, "native JSON"}} {
+	}{{strings.Split(strings.Repeat("CONTINUE\ntry|", 8)+"CONTINUE\ntry", "|"), false, 128, "stalled"}, {[]string{`{"tool":"read_file"}`, "file"}, false, 1, "budget"}, {nil, true, 128, "native JSON"}} {
 		g, e, j := &generator{replies: tc.replies, native: tc.native}, &executor{}, &journal{}
 		r := fixture(g, e, j)
 		r.Limits = DefaultLimits()
@@ -242,7 +252,7 @@ func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
 	}
 }
 func TestPlanMutationRejectedBeforeArgumentCollection(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL write_file"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	_, err := r.Run(context.Background(), "plan", true, approve, emit)
 	if err == nil || e.prepared != 0 || len(g.requests) != 1 {
@@ -252,11 +262,11 @@ func TestPlanMutationRejectedBeforeArgumentCollection(t *testing.T) {
 
 func TestApprovedStepsShareOneCallBudget(t *testing.T) {
 	usage := &Usage{}
-	g, e, j := &generator{replies: []string{"CHECK read_file", "file", "DONE\nfirst", "DONE\nsecond"}}, &executor{}, &journal{}
+	g, e, j := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "file", "DONE\nfirst", "DONE\nsecond"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Usage = usage
 	r.Limits = DefaultLimits()
-	r.Limits.MaxModelCalls = 4
+	r.Limits.MaxModelCalls = 5
 	if _, err := r.Run(context.Background(), "step one", false, approve, emit); err != nil {
 		t.Fatal(err)
 	}

@@ -88,7 +88,7 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		state.usage = nil
 	}
 	if len(message.Calls) > 0 && string(message.Calls) != "null" && string(message.Calls) != "[]" {
-		return fmt.Errorf("native JSON tool calls are not supported; reply using the staged text dialogue")
+		return fmt.Errorf("native JSON tool calls are not supported; reply with a JSON tool-only entry in message content, followed by literal PFC fields")
 	}
 	if message.Content != "" || reason != "" || observed != nil {
 		return emit(modelapi.Event{Delta: message.Content, Thinking: reason, Streaming: state.streaming, Usage: observed})

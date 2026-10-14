@@ -37,7 +37,7 @@ func TestIdentityAutomaticProfileKeepsWireAlias(t *testing.T) {
 		if !present {
 			t.Error("identified profile not applied")
 		}
-		reply, reasoning := "TOOL read_file", ""
+		reply, reasoning := `{"tool":"read_file"}`, ""
 		if len(body.Messages) > 2 {
 			reply = "AGENTS.md"
 		}

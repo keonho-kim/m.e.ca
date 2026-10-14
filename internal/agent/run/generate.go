@@ -40,7 +40,7 @@ func (s *task) ask(ctx context.Context, question string, role inference.Role, ma
 			return s.emit(Event{Kind: "stream"})
 		}
 		if len(e.Calls) > 0 {
-			return fmt.Errorf("native JSON tool calls are not accepted; use the staged text dialogue")
+			return fmt.Errorf("native JSON tool calls are not accepted; use a JSON tool-only entry in message content, followed by literal PFC fields")
 		}
 		reply.WriteString(e.Delta)
 		thinking.WriteString(e.Thinking)

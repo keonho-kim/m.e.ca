@@ -1,4 +1,4 @@
-// Purpose: Choose keyboard help from the current screen and focus and reserve one fixed footer row.
+// Purpose: Choose keyboard help from the current screen and focus and reserve fixed footer rows.
 // Pattern: Presentation projection.
 // Usage: Rendering and scrolling share the same content-height calculation.
 // Related: internal/tui/session/render.go, internal/tui/session/keys.go, internal/tui/view/keymap.go.
@@ -100,5 +100,5 @@ func (a *app) shortcuts() []view.Shortcut {
 }
 
 func (a *app) bodyHeight(height int) int {
-	return max(0, height-1)
+	return max(0, height-view.FooterRows)
 }

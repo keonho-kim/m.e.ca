@@ -1,4 +1,4 @@
-// Purpose: Verify model and policy status stay on one bottom row with keyboard hints during scrolling and resizing.
+// Purpose: Verify status stays above the bottom keyboard hints during scrolling and resizing.
 // Pattern: Terminal layout contract test.
 // Usage: go test ./internal/tui/session -run TestFixedFooter.
 // Related: internal/tui/session/render.go, internal/tui/view/footer.go.
@@ -16,11 +16,15 @@ func TestFixedFooterContainsStatusAndKeys(t *testing.T) {
 	for _, size := range [][2]int{{80, 24}, {48, 12}, {32, 8}} {
 		a.screen.SetSize(size[0], size[1])
 		a.render()
-		line := screenLine(a.screen, size[1]-1, size[0])
-		if !strings.Contains(line, "프로젝트") || !strings.Contains(line, "^C") {
-			t.Fatalf("footer=%q", line)
+		status := screenLine(a.screen, size[1]-2, size[0])
+		keys := screenLine(a.screen, size[1]-1, size[0])
+		if !strings.Contains(status, "chosen") || !strings.Contains(status, "프로젝트") || strings.Contains(status, "^C") {
+			t.Fatalf("status=%q", status)
 		}
-		for row := 0; row < size[1]-1; row++ {
+		if !strings.Contains(keys, "^C") || strings.Contains(keys, "프로젝트") || strings.Contains(keys, "chosen") {
+			t.Fatalf("keys=%q", keys)
+		}
+		for row := 0; row < size[1]-2; row++ {
 			if strings.Contains(screenLine(a.screen, row, size[0]), "프로젝트") {
 				t.Fatal("status was rendered above the footer")
 			}

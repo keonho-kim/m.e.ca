@@ -143,14 +143,14 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 	a.selection.Thinking = &on
 	a.editor.Set("draft")
 	a.render()
-	line := screenLine(a.screen, 23, 80)
+	line := screenLine(a.screen, 22, 80)
 	if !strings.Contains(line, "chosen Thinking") {
 		t.Fatal(line)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if strings.Contains(screenLine(a.screen, 23, 80), "Thinking") {
+	if strings.Contains(screenLine(a.screen, 22, 80), "Thinking") {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
@@ -196,7 +196,7 @@ func TestStatusPolicyLabels(t *testing.T) {
 			a.settings = policy.Settings{Permission: test.permission, Scope: test.scope}
 			a.planMode = test.plan
 			a.render()
-			if line := strings.TrimSpace(screenLine(a.screen, 23, 80)); !strings.HasPrefix(line, test.want) {
+			if line := strings.TrimSpace(screenLine(a.screen, 22, 80)); !strings.HasPrefix(line, test.want) {
 				t.Fatalf("status = %q, want %q", line, test.want)
 			}
 		})

@@ -30,7 +30,7 @@ func TestReasoningToggleChecksOff(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		answer, reason := "TOOL read_file", ""
+		answer, reason := `{"tool":"read_file"}`, ""
 		if len(body.Messages) > 2 {
 			answer = "AGENTS.md"
 		}

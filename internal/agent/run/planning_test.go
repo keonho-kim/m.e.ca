@@ -52,7 +52,7 @@ func TestPlanConversationPublishesOnlyCompletePlan(t *testing.T) {
 }
 
 func TestPlanConversationCanAnswerAfterInspection(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL read_file", "README.md", "DONE\n이 프로젝트는 CLI 프로그램입니다."}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{`{"tool":"read_file"}`, "README.md", "DONE\n이 프로젝트는 CLI 프로그램입니다."}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "프로젝트를 설명해줘", true, approve, emit)
 	if err != nil || result.Status != Answered || e.executed != 1 {

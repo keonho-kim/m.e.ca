@@ -11,7 +11,7 @@ import (
 )
 
 func TestGoalRunsSequentialTasksAndPublishesOneReply(t *testing.T) {
-	g := &generator{replies: []string{"GOAL: inspect and explain\nTASK work: inspect parser\nTASK answer: explain result", "CHECK read_file", "parser.txt", "DONE\ninspection report", "DONE\nexplanation report", "DONE\nfinal user response"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{"GOAL: inspect and explain\nTASK work: inspect parser\nTASK answer: explain result", `{"tool":"read_file"}`, "parser.txt", "DONE\ninspection report", "DONE\nexplanation report", "DONE\nfinal user response"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	responses := 0

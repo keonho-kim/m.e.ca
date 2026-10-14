@@ -53,11 +53,9 @@ func (a *app) finishWorker(n notice) {
 	}
 	if n.Err != nil {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
-		a.output.Append(a.status, false)
 	}
 	if err := a.adoptConnection(n); err != nil {
 		a.status = a.opts.Vault.Redact(err.Error())
-		a.output.Append(a.status, false)
 	}
 	if n.Err == nil && n.Models != nil {
 		a.page = "models"

@@ -15,11 +15,11 @@ import (
 )
 
 func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
-	g, e, j := &generator{}, &executor{approval: true}, &journal{}
+	g, e, j := &generator{purposes: []string{"check"}}, &executor{approval: true}, &journal{}
 	for i := 0; i < 5; i++ {
-		g.replies = append(g.replies, "TOOL write_file", "file.txt", fmt.Sprintf("draft-%d", i))
+		g.replies = append(g.replies, `{"tool":"write_file"}`, "file.txt", fmt.Sprintf("draft-%d", i))
 	}
-	g.replies = append(g.replies, "CHECK execute_command", "test-command", "DONE\nfinished")
+	g.replies = append(g.replies, `{"tool":"execute_command"}`, "test-command", "DONE\nfinished")
 	g.review = func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		reply := "0\nmissing edge-case coverage"
 		if strings.Contains(r.Messages[1].Content, "draft-4") {
@@ -66,7 +66,7 @@ func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
 	}
 }
 func TestConclaveErrorsBlockExecutionAndCompletion(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL write_file", "file.txt", "new", "DONE\nunsafe completion"}}, &executor{approval: true}, &journal{}
+	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`, "file.txt", "new", "DONE\nunsafe completion"}}, &executor{approval: true}, &journal{}
 	g.review = func(_ context.Context, _ modelapi.Request, _ func(modelapi.Event) error) error {
 		return fmt.Errorf("review timeout")
 	}
@@ -89,7 +89,7 @@ func TestConclaveErrorsBlockExecutionAndCompletion(t *testing.T) {
 	}
 }
 func TestConclaveJournalFailureCannotProceed(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL write_file", "file.txt", "new"}}, &executor{}, &journal{failKind: "conclave"}
+	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`, "file.txt", "new"}}, &executor{}, &journal{failKind: "conclave"}
 	_, err := fixture(g, e, j).Run(context.Background(), "fix", false, approve, emit)
 	if err == nil || e.executed != 0 {
 		t.Fatalf("execution followed missing audit: %d %v", e.executed, err)

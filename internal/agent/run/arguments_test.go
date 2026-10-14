@@ -11,7 +11,7 @@ import (
 )
 
 func TestArgumentCorrectionsKeepLiteralPhase(t *testing.T) {
-	g := &generator{replies: []string{"TOOL read_file", `{"path":"file.txt"}`, `"file.txt"`, "file.txt", "CHECK read_file", "file.txt", "DONE\nInspected"}}
+	g := &generator{purposes: []string{"work", "check"}, replies: []string{`{"tool":"read_file"}`, `{"path":"file.txt"}`, `"file.txt"`, "file.txt", `{"tool":"read_file"}`, "file.txt", "DONE\nInspected"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "Read file.txt", false, approve, emit)
@@ -29,7 +29,7 @@ func TestArgumentCorrectionsKeepLiteralPhase(t *testing.T) {
 	}
 }
 func TestArgumentFailureNeverPreparesATool(t *testing.T) {
-	g := &generator{replies: []string{"TOOL read_file", `{"path":"file"}`, `{"path":"file"}`, `{"path":"file"}`, "WAIT\nNeed the correct path"}}
+	g := &generator{replies: []string{`{"tool":"read_file"}`, `{"path":"file"}`, `{"path":"file"}`, `{"path":"file"}`, "WAIT\nNeed the correct path"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "Read file", false, approve, emit)

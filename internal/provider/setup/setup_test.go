@@ -39,7 +39,7 @@ func TestPrepareAliasTransfersVerifiedProfileAndThinking(t *testing.T) {
 				if !declared {
 					t.Error("profile switch missing")
 				}
-				reply, reason := "TOOL read_file", ""
+				reply, reason := `{"tool":"read_file"}`, ""
 				if len(body.Messages) > 2 {
 					reply = "AGENTS.md"
 				}

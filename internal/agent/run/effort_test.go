@@ -10,7 +10,7 @@ import (
 )
 
 func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
-	g := &generator{replies: []string{"CHECK read_file", "AGENTS.md", "DONE\nChecked"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "AGENTS.md", "DONE\nChecked"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	on := true
@@ -22,7 +22,7 @@ func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
 	if len(g.requests) != 3 {
 		t.Fatalf("missing phases: %d", len(g.requests))
 	}
-	for _, request := range g.requests {
+	for _, request := range append(g.requests, g.purposeRequests...) {
 		if request.ReasoningEffort != "medium" {
 			t.Fatal("effort lost between phases")
 		}

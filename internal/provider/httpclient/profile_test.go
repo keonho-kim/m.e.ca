@@ -96,7 +96,7 @@ func TestProfileDiagnosticVerifiesBothThinkingStates(t *testing.T) {
 					t.Error(err)
 					return
 				}
-				reply := "TOOL read_file"
+				reply := `{"tool":"read_file"}`
 				reasoning := ""
 				if body.Template["enable_thinking"] {
 					reply = "391"
@@ -146,7 +146,7 @@ func TestProfileSGLangUsesItsDeclaredReasoningField(t *testing.T) {
 func TestProfileDiagnosticRejectsIgnoredThinkingOff(t *testing.T) {
 	client := mockClient(t, modelconn.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"choices":[{"message":{"reasoning":"unexpected","content":"TOOL read_file"},"finish_reason":"stop"}]}`)
+		fmt.Fprint(w, `{"choices":[{"message":{"reasoning":"unexpected","content":"{\"tool\":\"read_file\"}"},"finish_reason":"stop"}]}`)
 	})
 	if caps, err := diagnose(client, context.Background(), "Qwen/Qwen3.6-27B"); err == nil || caps.ToolDialogue {
 		t.Fatal("server ignoring Thinking OFF passed connection diagnostics")

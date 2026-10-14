@@ -13,7 +13,7 @@ func TestDecisionGrammar(t *testing.T) {
 	for _, tc := range []struct {
 		text  string
 		valid bool
-	}{{"TOOL read_file", true}, {"CHECK read_file", true}, {"DONE\nReviewed the file", true}, {"WAIT\nWhich file?", true}, {"CONTINUE\nInspect next file", true}, {`{"name":"read_file","arguments":{"path":"x"}}`, false}, {"TOOL read_file\npath=x", false}, {"TOOL read_file write_file", false}, {"DONE", false}} {
+	}{{`{"tool":"read_file"}`, true}, {"TOOL read_file", false}, {"CHECK read_file", false}, {"DONE\nReviewed the file", true}, {"WAIT\nWhich file?", true}, {"CONTINUE\nInspect next file", true}, {`{"name":"read_file","arguments":{"path":"x"}}`, false}, {"TOOL read_file\npath=x", false}, {"TOOL read_file write_file", false}, {"DONE", false}} {
 		_, err := ParseDecision(tc.text)
 		if (err == nil) != tc.valid {
 			t.Fatalf("%q: %v", tc.text, err)

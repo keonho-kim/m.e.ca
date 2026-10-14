@@ -21,7 +21,7 @@ func (g ungrounded) Generate(ctx context.Context, r modelapi.Request, emit func(
 }
 
 func TestGroundingMandatoryAndBound(t *testing.T) {
-	g := &generator{replies: []string{"TOOL read_file", "README.md"}}
+	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Generator = ungrounded{g}
@@ -31,7 +31,7 @@ func TestGroundingMandatoryAndBound(t *testing.T) {
 }
 
 func TestGroundingPersistenceFailureBlocksPreparation(t *testing.T) {
-	g := &generator{replies: []string{"TOOL read_file", "README.md"}}
+	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md"}}
 	e, j := &executor{}, &journal{failKind: "self_grounding"}
 	r := fixture(g, e, j)
 	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err == nil || e.prepared != 0 {
@@ -40,7 +40,7 @@ func TestGroundingPersistenceFailureBlocksPreparation(t *testing.T) {
 }
 
 func TestGroundingPersistsAndStaysInContext(t *testing.T) {
-	g := &generator{replies: []string{"TOOL read_file", "README.md", "WAIT\nreview"}}
+	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md", "WAIT\nreview"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {

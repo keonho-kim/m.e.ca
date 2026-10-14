@@ -26,7 +26,7 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 				a.openFiles(".")
 			}
 			a.render()
-			footer := screenLine(a.screen, 22, 80) + screenLine(a.screen, 23, 80)
+			footer := screenLine(a.screen, 23, 80)
 			if !strings.Contains(footer, test.want) || !strings.Contains(footer, "^C") {
 				t.Fatalf("footer=%q", footer)
 			}
@@ -36,7 +36,7 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!mo")
 	a.render()
-	footer := screenLine(a.screen, 22, 80) + screenLine(a.screen, 23, 80)
+	footer := screenLine(a.screen, 23, 80)
 	if !strings.Contains(footer, "실행") || !strings.Contains(footer, "Tab") {
 		t.Fatalf("command footer=%q", footer)
 	}
@@ -52,7 +52,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	a.editor.Set("first\nsecond")
 	a.screen.SetSize(32, 12)
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 10, 32)) != "second" {
+	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "second" {
 		t.Fatal("editor not above reserved footer")
 	}
 	if !strings.Contains(screenLine(a.screen, 11, 32), "^C") {
@@ -112,7 +112,7 @@ func TestKeymapShowsPendingPlanAction(t *testing.T) {
 	plan.Status = planning.AwaitingApproval
 	a.plan, a.planMode = &plan, true
 	a.render()
-	footer := screenLine(a.screen, 22, 80) + screenLine(a.screen, 23, 80)
+	footer := screenLine(a.screen, 23, 80)
 	if !strings.Contains(footer, "승인 메뉴") {
 		t.Fatalf("pending Plan footer=%q", footer)
 	}

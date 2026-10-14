@@ -1,6 +1,6 @@
 // Purpose: Orchestrate PFC, self-grounding and observed progress for one tool decision.
 // Pattern: State Machine (PFC execution).
-// Usage: Invoked once per TOOL or CHECK decision, before the existing approval/execution boundary.
+// Usage: Invoked once per JSON tool entry, before the existing approval/execution boundary.
 // Related: internal/agent/pfc/pfc.go, internal/agent/run/execute.go.
 package run
 
@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/pfc"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -32,9 +31,6 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 	}
 	if _, err := policy.Decide(s.runner.Settings, s.planning, definition.Effect); err != nil {
 		return err
-	}
-	if decision.Kind == pfc.Check && definition.Effect == policy.Change {
-		return fmt.Errorf("CHECK cannot mutate files")
 	}
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = map[string]json.RawMessage{}
@@ -59,7 +55,7 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 		return err
 	}
 	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
-	mutating := definition.Effect != policy.Read && decision.Kind != pfc.Check
+	mutating := definition.Effect != policy.Read && !s.checkpoint.Checking
 	if mutating && s.mutations[signature] {
 		s.checkpoint.Observation = "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed."
 		s.checkpoint.NoProgress++
@@ -77,7 +73,6 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded PFC candidate; not executed"}); err != nil {
 		return err
 	}
-	s.checkpoint.Checking = decision.Kind == pfc.Check
 	outcome, toolErr := s.execute(ctx, s.planning, call, approve, s.emit)
 	result, failed := string(outcome.Content), outcome.Failed
 	if errors.Is(toolErr, errRuntimeRecord) {
@@ -113,5 +108,5 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 	if errors.Is(toolErr, errApprovalDenied) {
 		return toolErr
 	}
-	return s.observeOutcome(ctx, decision, call, content, signature, mutating, definition.Effect, result, outcome, toolErr)
+	return s.observeOutcome(ctx, call, content, signature, mutating, definition.Effect, result, outcome, toolErr)
 }

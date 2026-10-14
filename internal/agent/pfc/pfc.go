@@ -1,6 +1,6 @@
-// Purpose: Parse Progressive Field Completion decisions and single literal fields.
+// Purpose: Parse and validate individual Progressive Field Completion literal fields.
 // Pattern: Pure Function (model trust boundary).
-// Usage: Used by the task loop, provider diagnostics and the local tool argument boundary.
+// Usage: Used by field collection, provider diagnostics and the local tool argument boundary.
 // Related: internal/agent/tool/execution.go, internal/agent/pfc/pfc_test.go.
 package pfc
 
@@ -14,51 +14,6 @@ import (
 	"unicode/utf8"
 )
 
-type Kind string
-
-const (
-	Tool     Kind = "TOOL"
-	Check    Kind = "CHECK"
-	Done     Kind = "DONE"
-	Wait     Kind = "WAIT"
-	Continue Kind = "CONTINUE"
-)
-
-type Decision struct {
-	Kind       Kind
-	Name, Text string
-}
-
-func ParseDecision(text string) (Decision, error) {
-	if len(text) > 16384 || !utf8.ValidString(text) {
-		return Decision{}, fmt.Errorf("invalid decision size or encoding")
-	}
-	head, body, _ := strings.Cut(strings.TrimSpace(text), "\n")
-	fields := strings.Fields(head)
-	if len(fields) == 0 {
-		return Decision{}, fmt.Errorf("empty decision")
-	}
-	kind := Kind(fields[0])
-	switch kind {
-	case Tool, Check:
-		if len(fields) != 2 || strings.TrimSpace(body) != "" {
-			return Decision{}, fmt.Errorf("reply with exactly %s <tool_name>; arguments are requested separately", kind)
-		}
-		for _, r := range fields[1] {
-			if !(r >= 'a' && r <= 'z' || r == '_') {
-				return Decision{}, fmt.Errorf("invalid tool name")
-			}
-		}
-		return Decision{Kind: kind, Name: fields[1]}, nil
-	case Done, Wait, Continue:
-		if len(fields) != 1 || strings.TrimSpace(body) == "" {
-			return Decision{}, fmt.Errorf("%s requires a summary on the next line", kind)
-		}
-		return Decision{Kind: kind, Text: strings.TrimSpace(body)}, nil
-	default:
-		return Decision{}, fmt.Errorf("reply with TOOL, CHECK, DONE, WAIT or CONTINUE")
-	}
-}
 func ParseArgument(p toolapi.Parameter, text string) (json.RawMessage, error) {
 	if !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
 		return nil, fmt.Errorf("%s has invalid encoding", p.Name)

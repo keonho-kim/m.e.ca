@@ -29,8 +29,8 @@ func TestInferenceDiagnostics(t *testing.T) {
 		}
 		text := "391"
 		question := r.Messages[len(r.Messages)-1].Content
-		if strings.Contains(question, "Reply exactly TOOL") {
-			text = "TOOL read_file"
+		if strings.Contains(question, "Reply exactly") {
+			text = `{"tool":"read_file"}`
 		} else if strings.Contains(question, "ARGUMENT") {
 			text = "AGENTS.md"
 		}

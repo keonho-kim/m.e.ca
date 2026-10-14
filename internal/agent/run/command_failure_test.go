@@ -27,7 +27,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	g := &generator{replies: []string{"TOOL execute_command", "printf progress; printf 'missing dependency' >&2; exit 7", "WAIT\nNeed to resolve the missing dependency"}}
+	g := &generator{replies: []string{`{"tool":"execute_command"}`, "printf progress; printf 'missing dependency' >&2; exit 7", "WAIT\nNeed to resolve the missing dependency"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
@@ -78,7 +78,7 @@ func TestProjectShellScopeFailureReachesModel(t *testing.T) {
 		}
 	})
 	target := filepath.Join(t.TempDir(), "outside")
-	g := &generator{replies: []string{"TOOL execute_command", "printf outside > '" + target + "'", "WAIT\nThe outside path is unavailable under current Scope"}}
+	g := &generator{replies: []string{`{"tool":"execute_command"}`, "printf outside > '" + target + "'", "WAIT\nThe outside path is unavailable under current Scope"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools

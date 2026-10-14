@@ -53,6 +53,8 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 		switch {
 		case strings.HasPrefix(question, "CONCLAVE REVIEW "):
 			reply = "1"
+		case strings.Contains(question, "\nPFC PURPOSE:"):
+			reply = "check"
 		case strings.Contains(question, "\nSELF-GROUNDING:"):
 			reply = "- Evidence: Approved Plan and observed tool results; inspect any unknown state.\n- Action: Perform the exact approved step operation.\n- Verify: Run the file existence check after writing."
 		case strings.Contains(request.Messages[0].Content, "Planning only"):
@@ -66,9 +68,9 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 		case strings.Contains(question, `"Evidence":"execute_command`):
 			reply = "DONE\nCreated and checked the file"
 		case strings.Contains(question, "write_file result:"):
-			reply = "CHECK execute_command"
+			reply = `{"tool":"execute_command"}`
 		default:
-			reply = "TOOL write_file"
+			reply = `{"tool":"write_file"}`
 		}
 		w.Header().Set("Content-Type", "application/json")
 		body, err := json.Marshal(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}})

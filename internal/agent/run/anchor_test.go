@@ -60,7 +60,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	script := &generator{replies: []string{"TOOL read_file", "a", "0", "0", "TOOL edit_file", "a", "second changed\n", "CHECK execute_command", "test -f a", "DONE\nUpdated a at line 2 and checked it"}}
+	script := &generator{purposes: []string{"work", "check"}, replies: []string{`{"tool":"read_file"}`, "a", "0", "0", `{"tool":"edit_file"}`, "a", "second changed\n", `{"tool":"execute_command"}`, "test -f a", "DONE\nUpdated a at line 2 and checked it"}}
 	journal := &journal{}
 	model := &anchorGenerator{script: script, journal: journal}
 	runner := fixture(script, &executor{}, journal)

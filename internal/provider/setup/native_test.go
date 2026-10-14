@@ -43,7 +43,7 @@ func TestNativeReasoningSelection(t *testing.T) {
 				if kind == connection.LMStudio {
 					messages = body.Input
 				}
-				answer, reason := "TOOL read_file", ""
+				answer, reason := `{"tool":"read_file"}`, ""
 				if len(messages) > 2 {
 					answer = "AGENTS.md"
 				}

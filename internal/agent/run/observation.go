@@ -8,13 +8,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/pfc"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/agent/verification"
 	"github.com/keonho-kim/v-code/internal/policy"
 )
 
-func (s *task) observeOutcome(ctx context.Context, decision pfc.Decision, call toolapi.Call, content []byte, signature [32]byte, mutating bool, effect policy.Effect, result string, outcome toolapi.Result, toolErr error) error {
+func (s *task) observeOutcome(ctx context.Context, call toolapi.Call, content []byte, signature [32]byte, mutating bool, effect policy.Effect, result string, outcome toolapi.Result, toolErr error) error {
 	s.checkpoint.Phase = "observation"
 	s.checkpoint.Arguments = nil
 	s.checkpoint.Observation = excerpt(call.Name+" result:\n"+s.runner.Redact(result), 8192)
@@ -26,7 +25,7 @@ func (s *task) observeOutcome(ctx context.Context, decision pfc.Decision, call t
 		s.checkpoint.ChangeRevision++
 		s.checkpoint.Evidence = ""
 	}
-	if decision.Kind == pfc.Check {
+	if s.checkpoint.Checking {
 		if toolErr != nil {
 			outcome.Failed = true
 		}
@@ -55,7 +54,7 @@ func (s *task) observeOutcome(ctx context.Context, decision pfc.Decision, call t
 		s.seen[fingerprint] = true
 		s.checkpoint.NoProgress = 0
 	}
-	if decision.Kind == pfc.Check && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 && (!s.changed || effect == policy.Command) {
+	if s.checkpoint.Checking && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 && (!s.changed || effect == policy.Command) {
 		s.checkpoint.Evidence = excerpt(call.Name+" "+string(content)+" => successful result", 4000)
 	}
 	return s.persist(ctx)

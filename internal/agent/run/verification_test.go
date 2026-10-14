@@ -13,7 +13,7 @@ import (
 )
 
 func TestCompletionKeepsFailedChecksPending(t *testing.T) {
-	g := &generator{replies: []string{"CHECK execute_command", "test-a", "CHECK execute_command", "test-b", "DONE\nEverything passed", "WAIT\nTest-a still needs repair"}}
+	g := &generator{purposes: []string{"check", "check"}, replies: []string{`{"tool":"execute_command"}`, "test-a", `{"tool":"execute_command"}`, "test-b", "DONE\nEverything passed", "WAIT\nTest-a still needs repair"}}
 	e := &executor{outcomes: []toolapi.Result{{Content: []byte(`{"ExitCode":1}`), Failed: true, Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 1}}, {Content: []byte(`{"ExitCode":0}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}}}
 	j := &journal{}
 	r := fixture(g, e, j)
@@ -29,7 +29,7 @@ func TestCompletionKeepsFailedChecksPending(t *testing.T) {
 }
 
 func TestStaleGuardAllowsFreshPreparationOfSameEdit(t *testing.T) {
-	g := &generator{replies: []string{"TOOL write_file", "a", "new", "TOOL write_file", "a", "new", "CHECK execute_command", "verify-a", "DONE\nVerified"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"write_file"}`, "a", "new", `{"tool":"write_file"}`, "a", "new", `{"tool":"execute_command"}`, "verify-a", "DONE\nVerified"}}
 	e := &executor{outcomes: []toolapi.Result{
 		{Failed: true, Failure: &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed before execution", Next: "Inspect latest version and prepare again."}},
 		{Content: []byte(`{"changed":true}`)},

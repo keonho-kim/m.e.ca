@@ -129,6 +129,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		s.checkpoint.Tool = ""
 		s.checkpoint.Parameter = ""
 		s.checkpoint.Arguments = nil
+		s.checkpoint.Checking = false
 		if err = s.persist(ctx); err != nil {
 			return s.result, err
 		}
@@ -139,7 +140,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		if planning {
 			role = inference.Plan
 		}
-		text, askErr := s.ask(ctx, "DECISION: Choose one next action. For a greeting or a question answerable without project evidence, use DONE followed by the answer in any mode; tools are optional and must serve the user goal. In Plan mode, ordinary discussion does not require a completed Plan. Use TOOL/CHECK only when necessary. A completion claim alone is not verification.", role, 16384)
+		text, askErr := s.ask(ctx, "DECISION: Choose one next action. For a greeting or a question answerable without project evidence, use DONE followed by the answer in any mode; tools are optional and must serve the user goal. In Plan mode, ordinary discussion does not require a completed Plan. To enter PFC, return only {\"tool\":\"tool_name\"} using the provided tool list, without arguments or other keys. A completion claim alone is not verification.", role, 16384)
 		if askErr != nil {
 			return s.result, askErr
 		}
@@ -185,7 +186,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 			case pfc.Continue:
 				s.checkpoint.Observation = "No tool observation was produced. Next intention: " + excerpt(decision.Text, 1024)
 				s.checkpoint.NoProgress++
-			case pfc.Tool, pfc.Check:
+			case pfc.Tool:
 				if err = s.action(ctx, decision, approve); err != nil {
 					return s.result, err
 				}

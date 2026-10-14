@@ -43,8 +43,8 @@ func TestLiteLLMProxyDialogueAndReasoning(t *testing.T) {
 		}
 		text := "DONE\nhello"
 		switch body.Messages[len(body.Messages)-1].Content {
-		case "Reply exactly TOOL read_file":
-			text = "TOOL read_file"
+		case `Reply exactly {"tool":"read_file"}`:
+			text = `{"tool":"read_file"}`
 		case "ARGUMENT read_file.path: Reply with only the literal path AGENTS.md, without quotes.":
 			text = "AGENTS.md"
 		}

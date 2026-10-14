@@ -114,9 +114,6 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	if err != nil {
 		return prepared, err
 	}
-	if !caps.Chat || !caps.ToolDialogue {
-		return prepared, fmt.Errorf("model did not follow the staged tool dialogue diagnostic")
-	}
 	if caps.Thinking {
 		selected.ThinkingSupported = true
 		value := defaults.Thinking

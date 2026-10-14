@@ -94,8 +94,8 @@ func TestStreamingHidesProtocolAndUnapprovedCompletion(t *testing.T) {
 		text, phase      string
 		planning, worked bool
 	}{
-		{"TOOL read_file", "decision", false, false},
-		{"CHECK execute_command", "decision", false, false},
+		{`{"tool":"read_file"}`, "decision", false, false},
+		{`{"tool":"execute_command"}`, "decision", false, false},
 		{"CONTINUE\nnext action", "decision", false, false},
 		{"DONE\nfile content draft", "argument", false, false},
 		{"DONE\n{\"objective\":\"inspect\",\"steps\":[\"read\"]}", "decision", true, false},

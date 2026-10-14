@@ -12,7 +12,7 @@ import (
 )
 
 func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
-	g := &generator{replies: []string{"CHECK execute_command", "verify", "TOOL write_file", "a", "new", "CHECK execute_command", "verify", "DONE\nVerified"}}
+	g := &generator{purposes: []string{"check", "check"}, replies: []string{`{"tool":"execute_command"}`, "verify", `{"tool":"write_file"}`, "a", "new", `{"tool":"execute_command"}`, "verify", "DONE\nVerified"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Settings.Scope = policy.System

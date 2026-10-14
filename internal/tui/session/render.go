@@ -27,6 +27,6 @@ func (a *app) render() {
 	default:
 		a.renderMenu(w, body)
 	}
-	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings, Planning: a.planMode}, a.shortcuts(), h-1, w)
+	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings, Planning: a.planMode}, a.shortcuts(), body, w)
 	a.screen.Show()
 }

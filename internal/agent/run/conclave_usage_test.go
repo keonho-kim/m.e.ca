@@ -13,7 +13,7 @@ import (
 )
 
 func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
-	g, e, j := &generator{replies: []string{"TOOL write_file", "a", "new"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`, "a", "new"}}, &executor{}, &journal{}
 	var completed atomic.Int32
 	g.review = func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		if err := emit(modelapi.Event{Delta: "0", Usage: &modelapi.TokenUsage{Input: 10, Output: 1}}); err != nil {

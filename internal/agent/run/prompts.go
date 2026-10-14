@@ -16,7 +16,7 @@ func (s *task) phaseSystem() (string, error) {
 	templates := s.runner.templates()
 	var base string
 	switch s.checkpoint.Phase {
-	case "argument":
+	case "argument", "purpose":
 		base = templates.PFC
 	case "grounding":
 		base = templates.Grounding
