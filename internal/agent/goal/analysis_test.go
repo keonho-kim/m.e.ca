@@ -20,25 +20,25 @@ func TestAnalysisAllowsBlankLinesAndIndentation(t *testing.T) {
 	}
 }
 
-func TestAnalysisFallbackPreservesFullRequestAndObservedKind(t *testing.T) {
+func TestAnalysisFallbackPreservesFullRequestAndWorkRequirement(t *testing.T) {
 	request := strings.Repeat("request ", 1000)
 	for _, status := range []string{"answered", "verified"} {
 		state, err := Unsplit("g", request)
-		if err != nil || state.Request != request || len(state.Tasks) != 1 || state.Tasks[0].Kind != "request" {
+		if err != nil || state.Request != request || len(state.Tasks) != 1 || state.Tasks[0].Kind != "work" {
 			t.Fatalf("state=%+v err=%v", state, err)
 		}
 		if err := state.Start(0); err != nil {
 			t.Fatal(err)
 		}
-		evidence, kind := "", "answer"
+		evidence, expected := "", "stopped"
 		if status == "verified" {
-			evidence, kind = "observed check", "work"
+			evidence, expected = "observed check", "completed"
 		}
-		if err := state.Finish(0, status, "response", evidence); err != nil || state.Status != "completed" || state.Tasks[0].Kind != kind {
+		if err := state.Finish(0, status, "response", evidence); err != nil || state.Status != expected || state.Tasks[0].Kind != "work" {
 			t.Fatalf("state=%+v err=%v", state, err)
 		}
 	}
 	if _, err := Parse("GOAL: shortcut\nTASK request: skip classification", "g", "work"); err == nil {
-		t.Fatal("model selected the runtime-only fallback kind")
+		t.Fatal("unsupported request kind accepted")
 	}
 }

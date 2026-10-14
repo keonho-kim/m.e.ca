@@ -45,3 +45,21 @@ func TestProjectInstructions(t *testing.T) {
 		t.Fatal("outside project instructions loaded")
 	}
 }
+
+func TestProjectInstructionsAcceptsLargeFileAndMissingFile(t *testing.T) {
+	e, root := testExecutor(t)
+	path := filepath.Join(root, "AGENTS.md")
+	content := strings.Repeat("Preserve project constraints.\n", 4096)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := e.ProjectInstructions(context.Background()); err != nil || got != content {
+		t.Fatalf("large instructions: bytes=%d err=%v", len(got), err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := e.ProjectInstructions(context.Background()); err != nil || got != "" {
+		t.Fatalf("missing instructions: %q %v", got, err)
+	}
+}

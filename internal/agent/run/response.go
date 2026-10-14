@@ -14,6 +14,19 @@ func (s *task) responseBody(text string) string {
 	if s.runner.suppressStream {
 		return ""
 	}
+	if s.checkpoint.Phase == "conversation" {
+		trimmed := strings.TrimSpace(text)
+		for _, reserved := range []string{"DONE", "WAIT", "CONTINUE", "GOAL:", "TASK", "TOOL", "CHECK"} {
+			if strings.HasPrefix(reserved, trimmed) {
+				return ""
+			}
+		}
+		decision, err := pfc.ParseConversation(text)
+		if err == nil && (decision.Kind == pfc.Done || decision.Kind == pfc.Wait) {
+			return decision.Text
+		}
+		return ""
+	}
 	if s.checkpoint.Phase == "goal_summary" {
 		decision, err := pfc.ParseDecision(text)
 		if err == nil && decision.Kind == pfc.Done {
@@ -40,7 +53,7 @@ func (s *task) responseBody(text string) string {
 			}
 			return decision.Text
 		}
-		if !s.checkpoint.PendingReview && (!s.worked && (s.runner.assignment == nil || s.runner.assignment.Kind == "answer" || s.runner.assignment.Kind == "request") || s.checkpoint.Evidence != "") {
+		if !s.checkpoint.PendingReview && (!s.worked && (s.runner.assignment == nil || s.runner.assignment.Kind == "answer") || s.checkpoint.Evidence != "") {
 			return decision.Text
 		}
 	}

@@ -108,7 +108,7 @@ func TestCompactionContext(t *testing.T) {
 	a.startTask("New goal after compaction", nil)
 	drainTask(t, a, false)
 	usage, err := a.opts.Store.MemoryWatermark(ctx, a.opts.Session.ID, memory.UsageThrough)
-	if err != nil || usage.Tokens != 14+int64(len("New goal after compaction"))+14 {
+	if err != nil || usage.Tokens != 7+int64(len("New goal after compaction"))+7 {
 		t.Fatalf("new model output not counted once: %+v %v", usage, err)
 	}
 	total, err := a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)

@@ -1,4 +1,4 @@
-// Purpose: Analyze one user request into hidden Goal Tasks and execute them serially to verified completion.
+// Purpose: Route conversation before decomposing and executing project work as hidden Goal Tasks.
 // Pattern: Goal orchestration use case.
 // Usage: Ordinary session submissions call RunGoal; explicit Plan execution keeps its approval workflow.
 // Related: internal/agent/goal/state.go, internal/agent/run/goal_model.go, internal/agent/run/run.go.
@@ -13,6 +13,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/goal"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
+	"github.com/keonho-kim/v-code/internal/agent/pfc"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	"strings"
 	"time"
@@ -61,12 +62,20 @@ func (r Runner) RunGoal(ctx context.Context, input string, approve Approver, emi
 		return result, err
 	}
 	id := "goal_" + rand.Text()
-	phase := &task{runner: r, limits: limits, system: system, usage: r.Usage, emit: emit}
-	phase.checkpoint = Checkpoint{ID: id + "_analysis", GoalID: id, Objective: r.Redact(input), Status: Running, Phase: "goal", InstructionsDigest: fmt.Sprintf("%x", sha256.Sum256([]byte(r.ProjectInstructions)))}
-	phase.runner.suppressStream = true
+	phase := &task{runner: r, limits: limits, system: system, usage: r.Usage, emit: emit, definitions: r.Tools.Definitions()}
+	phase.checkpoint = Checkpoint{ID: id + "_entry", Objective: r.Redact(input), Status: Running, Phase: "conversation", InstructionsDigest: fmt.Sprintf("%x", sha256.Sum256([]byte(r.ProjectInstructions)))}
 	if err := phase.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
 		return result, err
 	}
+	decision, err := phase.converse(ctx)
+	if err != nil {
+		return result, err
+	}
+	if decision.Kind != pfc.Tool {
+		return phase.finishConversation(ctx, decision)
+	}
+	phase.checkpoint.ID, phase.checkpoint.GoalID, phase.checkpoint.Phase = id+"_analysis", id, "goal"
+	phase.runner.suppressStream = true
 	if err := r.observer.Observe(ctx, monitor.Record{GoalID: id, Kind: "goal_requested", Detail: r.Redact(input)}); err != nil {
 		return result, err
 	}

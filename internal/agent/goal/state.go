@@ -55,7 +55,7 @@ func (s State) Check() error {
 	}
 	seen := make(map[string]bool)
 	for _, task := range s.Tasks {
-		if task.ID == "" || len(task.ID) > 128 || task.Objective == "" || len(task.Objective) > 4096 || task.Kind != "work" && task.Kind != "answer" && task.Kind != "request" || len(task.Result) > 16384 || len(task.Evidence) > 4096 {
+		if task.ID == "" || len(task.ID) > 128 || task.Objective == "" || len(task.Objective) > 4096 || task.Kind != "work" && task.Kind != "answer" || len(task.Result) > 16384 || len(task.Evidence) > 4096 {
 			return fmt.Errorf("invalid Task")
 		}
 		if seen[task.ID] || !utf8.ValidString(task.Objective+task.Result+task.Evidence) {
@@ -64,9 +64,6 @@ func (s State) Check() error {
 		seen[task.ID] = true
 		if task.Status == "completed" && task.Kind == "work" && strings.TrimSpace(task.Evidence) == "" {
 			return fmt.Errorf("completed work has no evidence")
-		}
-		if task.Status == "completed" && task.Kind == "request" {
-			return fmt.Errorf("completed request must have an observed outcome kind")
 		}
 		switch task.Status {
 		case "pending", "running", "completed", "blocked", "stopped", "interrupted":
@@ -103,13 +100,7 @@ func (s *State) Finish(index int, status, text, evidence string) error {
 	task := &s.Tasks[index]
 	task.Result, task.Evidence = text, evidence
 	switch {
-	case status == "verified" && evidence != "", (task.Kind == "answer" || task.Kind == "request") && status == "answered":
-		if task.Kind == "request" {
-			task.Kind = "answer"
-			if status == "verified" {
-				task.Kind = "work"
-			}
-		}
+	case status == "verified" && evidence != "", task.Kind == "answer" && status == "answered":
 		task.Status = "completed"
 	case status == "interrupted":
 		task.Status = "interrupted"

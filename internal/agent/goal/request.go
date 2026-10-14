@@ -1,4 +1,4 @@
-// Purpose: Preserve an undecomposed user request when model-generated Goal analysis is unavailable.
+// Purpose: Preserve an already routed work request when Goal decomposition is unavailable.
 // Pattern: Simple Module.
 // Usage: Goal orchestration uses Unsplit after bounded format correction fails.
 // Related: internal/agent/goal/state.go, internal/agent/run/goal_model.go.
@@ -11,7 +11,7 @@ func Unsplit(id, request string) (State, error) {
 	}
 	state := State{
 		ID: id, Request: request, Objective: objective, Status: "pending",
-		Tasks: []Task{{ID: id + "_task_1", Objective: objective, Kind: "request", Status: "pending"}},
+		Tasks: []Task{{ID: id + "_task_1", Objective: objective, Kind: "work", Status: "pending"}},
 	}
 	return state, state.Check()
 }

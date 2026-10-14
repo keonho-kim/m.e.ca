@@ -32,7 +32,12 @@ func (s *task) analyzeGoal(ctx context.Context, id, input string) (goal.State, e
 		}
 		state, err := goal.Parse(reply, id, input)
 		if err == nil {
-			return state, nil
+			for _, task := range state.Tasks {
+				if task.Kind == "work" {
+					return state, nil
+				}
+			}
+			err = fmt.Errorf("project work requires at least one work Task")
 		}
 		if err := s.record(ctx, Event{Kind: "goal_analysis_correction", Text: err.Error(), Internal: true}); err != nil {
 			return goal.State{}, err
@@ -47,7 +52,7 @@ func (s *task) analyzeGoal(ctx context.Context, id, input string) (goal.State, e
 	if err != nil {
 		return goal.State{}, err
 	}
-	if err := s.record(ctx, Event{Kind: "goal_analysis_fallback", Text: "Analysis format correction exhausted; retaining the original request as one Task. No work or completion was inferred.", Internal: true}); err != nil {
+	if err := s.record(ctx, Event{Kind: "goal_analysis_fallback", Text: "Analysis format correction exhausted; retaining the original request as one Task. Project work was selected before analysis; execution and verification are still required.", Internal: true}); err != nil {
 		return goal.State{}, err
 	}
 	return state, nil

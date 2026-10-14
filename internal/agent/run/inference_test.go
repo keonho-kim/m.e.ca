@@ -60,7 +60,7 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 	}
 }
 func TestInferenceGoalAndReport(t *testing.T) {
-	g := &generator{replies: []string{"GOAL: explain\nTASK answer: first\nTASK answer: second", "DONE\none", "DONE\ntwo", "DONE\nfinal"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "GOAL: inspect and explain\nTASK work: first\nTASK answer: second", `{"tool":"read_file"}`, "a", "DONE\none", "DONE\ntwo", "DONE\nfinal"}}
 	r := fixture(g, &executor{}, &journal{})
 	settings := inference.Defaults()
 	settings.Goal.Temperature = 0.3
@@ -69,8 +69,9 @@ func TestInferenceGoalAndReport(t *testing.T) {
 	if _, err := r.RunGoal(context.Background(), "explain", approve, emit); err != nil {
 		t.Fatal(err)
 	}
-	checkInference(t, g.requests[0], settings.Goal)
-	checkInference(t, g.requests[3], settings.Report)
+	checkInference(t, g.requests[0], settings.Agent)
+	checkInference(t, g.requests[1], settings.Goal)
+	checkInference(t, g.requests[6], settings.Report)
 	g = &generator{replies: []string{"DONE\nplan"}}
 	r = fixture(g, &executor{}, &journal{})
 	r.Inference = &settings

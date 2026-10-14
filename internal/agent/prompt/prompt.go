@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-const MaxInstructionsBytes = 32 * 1024
+const MaxInstructionsBytes = 1024 * 1024
 
 func Compose(base, instructions string, planning bool) (string, error) {
 	if err := checkInstructions(instructions); err != nil {

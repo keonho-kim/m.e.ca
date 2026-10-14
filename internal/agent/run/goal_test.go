@@ -11,7 +11,7 @@ import (
 )
 
 func TestGoalRunsSequentialTasksAndPublishesOneReply(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{"GOAL: inspect and explain\nTASK work: inspect parser\nTASK answer: explain result", `{"tool":"read_file"}`, "parser.txt", "DONE\ninspection report", "DONE\nexplanation report", "DONE\nfinal user response"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "GOAL: inspect and explain\nTASK work: inspect parser\nTASK answer: explain result", `{"tool":"read_file"}`, "parser.txt", "DONE\ninspection report", "DONE\nexplanation report", "DONE\nfinal user response"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	responses := 0
@@ -53,12 +53,12 @@ func TestGoalRunsSequentialTasksAndPublishesOneReply(t *testing.T) {
 	}
 }
 func TestGoalTasksShareIterationBudget(t *testing.T) {
-	g := &generator{replies: []string{"GOAL: two answers\nTASK answer: first\nTASK answer: second", "DONE\nfirst"}}
+	g := &generator{replies: []string{`{"tool":"read_file"}`, "GOAL: two answers\nTASK answer: first\nTASK work: second", "DONE\nfirst"}}
 	r := fixture(g, &executor{}, &journal{})
 	r.Limits = DefaultLimits()
 	r.Limits.MaxIterations = 1
 	_, err := r.RunGoal(context.Background(), "two answers", approve, emit)
-	if err == nil || !strings.Contains(err.Error(), "iteration budget") || len(g.requests) != 2 {
+	if err == nil || !strings.Contains(err.Error(), "iteration budget") || len(g.requests) != 3 {
 		t.Fatalf("budget reset between Tasks: %d %v", len(g.requests), err)
 	}
 }

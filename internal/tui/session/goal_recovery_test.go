@@ -1,4 +1,4 @@
-// Purpose: Verify a greeting survives malformed Goal analysis through HTTP and persistent session state.
+// Purpose: Verify a greeting skips Goal analysis through HTTP and persistent session state.
 // Pattern: HTTP-to-session integration test.
 // Usage: go test ./internal/tui/session -run TestGoalAnalysisGreetingRecovery.
 // Related: internal/tui/session/tasks.go, internal/agent/run/goal_model.go, internal/tui/session/tasks_test.go.
@@ -28,9 +28,9 @@ func TestGoalAnalysisGreetingRecovery(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		reply := "DONE\nHello! How can I help?"
+		reply := "Hello! How can I help?"
 		if strings.Contains(request.Messages[len(request.Messages)-1].Content, "\nGOAL ANALYSIS:") {
-			reply = "Hello from an incorrectly formatted analysis"
+			t.Error("greeting entered Goal analysis")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}}); err != nil {
@@ -55,7 +55,7 @@ func TestGoalAnalysisGreetingRecovery(t *testing.T) {
 	for _, block := range a.output.Blocks {
 		output.WriteString(block.Text)
 	}
-	if a.status != "" || strings.Count(output.String(), "Hello! How can I help?") != 1 || strings.Contains(output.String(), "incorrectly formatted analysis") {
+	if a.status != "" || strings.Count(output.String(), "Hello! How can I help?") != 1 {
 		t.Fatalf("status=%q output=%q", a.status, output.String())
 	}
 }
