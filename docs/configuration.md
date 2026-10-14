@@ -1,0 +1,104 @@
+# 설정과 대화 보존
+
+[← README](../README.md)
+
+`~/.v`의 역할별 추론 설정, 프롬프트, Compaction과 세션 저장을 설명합니다.
+
+## 역할별 추론 설정
+
+추론 인자는 Provider가 아니라 호출 역할이 결정한다. 새 `~/.v/config.toml`에는 아래 기본값이 모두 기록된다. 기존 파일의 사용자 값은 덮어쓰지 않으며, 생략한 항목은 현재 기본값을 사용한다. 설정을 저장할 때는 적용된 역할별 값도 기록한다. TOML 직접 수정은 앱을 다시 시작하면 적용된다.
+
+| 역할 키 | 용도 | temperature | max_output_tokens |
+| --- | --- | ---: | ---: |
+| `agent` | 메인 에이전트의 행동 선택·직접 응답 | 0.7 | 2048 |
+| `plan` | 승인받을 Plan 초안·수정 | 0.7 | 2048 |
+| `goal` | 내부 Goal·Task 분해 | 0.2 | 2048 |
+| `pfc_value` | 경로·줄 표식·숫자·검색 패턴 | 0.2 | 2048 |
+| `pfc_content` | 코드 본문·교체 본문·셸 명령 | 0.7 | 8192 |
+| `grounding` | Evidence·Action·Verify 기록 | 0.2 | 2048 |
+| `conclave` | 동의표 또는 거절표와 구체적인 사유 | 0.4 | 2048 |
+| `compaction` | 대화 압축·근거 보존 | 0.2 | 4096 |
+| `report` | 여러 Task의 최종 사용자 응답 요약 | 0.2 | 2048 |
+| `diagnostic` | 연결·PFC·Thinking·effort 진단 | 0.2 | 512 |
+
+예를 들어 다음 항목을 변경한다. Provider·서빙 별칭·모델 프로파일에 따라 이 값을 바꾸지 않는다.
+
+```toml
+[inference.agent]
+temperature = 0.7
+max_output_tokens = 2048
+
+[inference.conclave]
+temperature = 0.4
+max_output_tokens = 2048
+
+[inference.compaction]
+temperature = 0.2
+max_output_tokens = 4096
+```
+
+`temperature`는 유한한 0~2, `max_output_tokens`는 1~65536이다. 명시한 `temperature = 0`은 생략과 구분하여 전송한다. Thinking과 effort는 기존의 검증된 사용자 선택을 계승한다. 진단은 기능 확인을 위해 ON/OFF를 명시적으로 대조한다. 출력 토큰 한도는 모델의 reasoning 사용분도 고려해야 하며, 기존 바이트 한도·서빙 한도·전체 실행 예산을 늘리지 않는다. Provider는 확인된 출력·컨텍스트 용량 안에서 요청 한도를 제한할 수 있다.
+
+`top_p`, `top_k`, `min_p`, penalty, seed는 현재 임의로 설정하지 않는다. 재시도에서도 선택된 역할 인자를 그대로 사용한다. 서버가 인자를 거절하면 기존 제한된 재시도 이후 오류를 반환하며 조용히 삭제하거나 다른 값으로 바꾸지 않는다. 요청 수락만으로 서버 내부 적용까지 증명하지는 않는다.
+
+Conclave는 한 호출에서 `1` 또는 `0` 다음 줄의 영어 거절 사유를 반환한다. 이유 없는 `0`은 오류이며 실행을 차단한다. 거절 사유만을 위한 추가 호출은 만들지 않는다. Goal·Self-grounding의 설명은 영어로, PFC는 요청한 literal 값으로 반환한다. 사용자 요청·프로젝트 지침·경로·코드·인용한 근거는 번역하지 않는다. Plan은 사용자 승인 대상이므로 사용자 언어를 유지한다. Monitor·Scope·승인·검증 상태 전이는 코드가 처리하며 새 LLM 호출을 추가하지 않는다.
+
+역할 선택은 `agent/inference`, API 형식 변환은 `provider/protocol`이 담당한다. Ollama에는 `options.temperature`, 호환 Chat/LM Studio Responses에는 `temperature`를 전송한다. API 계약 근거: [Ollama Chat](https://docs.ollama.com/api/chat), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
+
+## 프롬프트 파일과 Compaction
+
+Bootstrap은 다음 Markdown 프롬프트를 누락된 경우에만 생성한다. 디렉터리는 `0700`, 파일은 `0600`이며 기존 수정본은 덮어쓰지 않는다. 다음 사용자 작업에서 다시 읽는다.
+
+```text
+~/.v/prompts/
+  system.md       기본 시스템 프롬프트 + 프로젝트 AGENTS.md 결합
+  compaction.md   항목 중심 대화 요약 프롬프트
+  goal.md         영어 Goal·Task 분해 지침
+  grounding.md    영어 Evidence·Action·Verify 지침
+  conclave.md     영어 심사·거절 사유 지침
+  pfc.md          literal 필드 수집 지침
+```
+
+원본은 저장소의 `internal/agent/prompt/defaults/`에 포함한다. 내부 역할은 각 전용 프롬프트와 프로젝트 제약을 결합하며, 메인 에이전트의 도구 선택·출력 프로토콜 전체를 심사 프롬프트에 넣지 않는다. 내부 응답 형식·언어 지침은 프로젝트의 응답 표현 선호보다 우선하지만 Scope·승인 제약을 대체하지 않는다. `system.md`를 수정해도 Scope·Permission·승인 검사는 코드에서 계속 적용한다.
+
+기본 프롬프트는 이 저장소 AGENTS.md의 언어 공통 원칙을 담는다. 수정 대상·호출자·계약·테스트를 먼저 검토하고, 배치와 디자인 패턴을 판단한 뒤 구현·검증·단순화한다. 대상 언어의 native 문법·기본 기능·표준 라이브러리·관용적 방식을 우선하며 언어별 예시는 넣지 않는다. 저장소 전용 Go 구조와 명령은 공통 프롬프트에 복사하지 않는다. 이미 생성된 `~/.v/prompts/system.md`는 업데이트 시에도 자동으로 덮어쓰지 않는다.
+
+기본 발동 조건은 마지막 성공한 압축 이후 **256,000 누적 토큰**이다. `~/.v/config.toml`에서 변경할 수 있다.
+
+```toml
+[compaction]
+threshold_tokens = 256000
+keep_recent_bytes = 16384
+max_summary_bytes = 16384
+max_input_bytes = 65536
+```
+
+누적량은 새 사용자 입력, 모델 출력(인자 응답·Thinking 포함), 도구 결과를 기준으로 한다. 반복 전송한 시스템 지침·AGENTS.md와 압축 모델의 응답은 다시 합산하지 않는다. 모델 출력은 Provider 사용량이 있으면 해당 output token 수를 사용하고, 그 밖의 부분은 UTF-8 바이트 수의 보수적인 추정치를 사용한다. 추정 여부를 기록한다. 이 누적량은 청구용 input+output 합계나 현재 문맥 토큰 수와 다르다.
+
+다음 결정 문맥을 구성하기 전에 임계값을 확인한다. 인자 수집·self-grounding·승인 대기·도구 실행 중에는 압축하지 않는다. 마지막 응답이 임계값을 넘기면 다음 문맥이 필요한 시점에 실행한다. `keep_recent_bytes`는 최근 원문 메시지의 보존 예산이며 토큰 추정값이 아니다. 메시지를 쪼개지 않으므로 마지막 메시지 하나만으로 예산을 넘을 수 있다. 기본 16KiB에 해당하는 최근 메시지를 남기고 오래된 prefix만 요약한다. 0이면 최근 구간 보존을 끈다. 요약할 오래된 구간이 없으면 기존 메모리를 유지한다. 작은 소스 조각을 순서대로 병합하며 압축 호출도 Ralph의 모델 호출·시간 예산에 포함한다.
+
+요약에는 다음 고정 섹션을 쓰며 본문은 글머리 항목으로 제한한다.
+
+요약 프롬프트는 대화를 **frontier tree**로 분석한다. 원래 목표를 루트로, 하위 작업·Plan revision·스텝을 가지로 두고 실행·변경 파일·검증 근거를 해당 노드에 연결한다. 각 가지의 가장 깊은 미완료 노드와 부모 자체의 남은 요구를 frontier로 보존한다. 차단·중단·불명·미승인 노드도 포함하며, 의존 관계는 노드 참조로 표현한다. 완료한 가지는 근거와 변경 내역을 남겨 짧게 정리하고 회귀가 발견되면 다시 연다. 매 소스 조각을 병합할 때 다른 가지의 frontier를 유지하며, 관계가 불명확한 사실은 추측하지 않고 미배정 항목으로 남긴다. 아래 섹션 안의 중첩 항목과 동일한 노드 참조로 트리·현재 진행 지점을 이어간다. 이는 모델 분석 지침이며 트리 관계의 의미적 정확성을 런타임에서 강제하는 기능은 아니다.
+
+- Goals: 원래 목표, 달성·부분 달성·미완료·불명 상태와 근거
+- Task history: 수행 내역, 결과, 관측과 원본 참조
+- Steps and changed files: Plan revision·스텝, 실제 변경 파일과 이동 대상, 미실행 의도 구분
+- Verification: 검사 명령, 성공·실패·중단·미실행, 남은 불확실성
+- Decisions and constraints: 사용자 결정·요구사항·거절한 접근·제약
+- Pending work and blockers: 미완료 작업, 차단 원인, 필요한 정보
+- Continuation: 현재 목표, 다음 작업, 미승인 계획과 중단 상태
+
+모델 요약과 별도로 실제 task status, Plan·스텝, 변경 파일·작업, 검증 여부와 원본 ID를 구조화된 ledger로 보존한다. 이 ledger와 요약은 다음 모델 문맥의 `ConversationMemory`에 제공한다. 현재 목표·AGENTS.md·Scope·Permission·승인 상태와 인자 초안은 요약으로 대체하지 않는다. 요약의 완료 주장은 런타임 완료 판정이 아니다.
+
+압축은 원본 메시지·도구 기록·파일 내용을 삭제하지 않는다. 성공 시에만 새 revision과 압축한 원본·사용량 범위를 원자적으로 확정한다. 취소, 잘못된 형식, 과대 요약, 호출 한도 또는 충돌이면 이전 요약과 원본을 유지한다. 원본 코드와 긴 출력은 기록에서 참조하고, 정보나 정확한 파일 목록을 버려야 한도에 들어가는 경우에는 조용히 생략하지 않고 오류로 중단한다. 모델 요약의 의미적 충실도는 실제 모델 평가가 추가로 필요하다.
+
+## 세션 저장
+
+SQLite는 `~/.v/sessions/<세션 ID>.db`에 **세션당 한 파일**로 저장한다. 메시지·도구 이벤트·Goal/Task·Conclave·Plan·Compaction·사용량·모델 선택·정책 설정은 모두 해당 DB에 들어간다. 세션 ID와 목록은 `sessions/`의 `session_*.db` 파일명에서 찾으며 별도 SQLite 인덱스나 중앙 DB를 만들지 않는다. 목록의 제목·프로젝트·갱신 시각은 각 DB에서 읽기 전용으로 조회하고 즉시 닫는다. `v resume`과 `restore_last` 모두 이 목록을 사용한다.
+
+세션 디렉터리는 `0700`, DB는 `0600`이다. 새 DB는 임시 파일에 스키마와 단일 세션 메타데이터를 완성하고 닫은 뒤 원자적으로 공개한다. 실행 중에는 같은 세션의 `.db-wal`·`.db-shm`, 소유권 잠금용 `.db.lock`이 생길 수 있으며 목록에서 제외한다. 파일 하나를 옮길 때는 해당 세션을 종료해 WAL 내용이 DB에 반영된 뒤 옮긴다. 파일명과 내부 ID 불일치·심볼릭 링크·손상 DB는 명시적 오류로 처리한다.
+
+`Current session` 정책 변경은 현재 세션에만 저장한다. 같은 프로젝트라도 새 세션은 전역 기본값을 사용하고, 기존 세션을 이어갈 때는 그 세션의 재정의가 복구된다. 전역 기본값은 계속 `config.toml`이 소유한다.
+
+하위호환은 유지하지 않는다. 세션 DB의 현재 스키마는 version 5이며 이전 버전·미버전 DB는 자동 변환·삭제·재생성하지 않는다. 기존 통합 `~/.v/v.db`는 그대로 보존하지만 새 목록에는 포함하거나 자동 분리하지 않는다.
