@@ -1,4 +1,4 @@
-// Purpose: Verify command suggestions and parsing share the same six-command catalog.
+// Purpose: Verify command suggestions and parsing share the same seven-command catalog.
 // Pattern: Behavioral tests.
 // Usage: go test ./internal/commands -run TestCommandSuggestions.
 // Related: internal/commands/catalog.go, internal/commands/parse.go.
@@ -8,7 +8,7 @@ import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!")
-	if len(all) != 6 {
+	if len(all) != 7 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {
@@ -23,5 +23,33 @@ func TestCommandSuggestions(t *testing.T) {
 	}
 	if len(Suggestions("!unknown")) != 0 {
 		t.Fatal("unknown prefix matched a command")
+	}
+}
+
+func TestCommandSearchMatchesNamesAndDescriptions(t *testing.T) {
+	for _, tc := range []struct {
+		query string
+		want  []string
+	}{
+		{"!mo", []string{"!model"}},
+		{"!odel", []string{"!model"}},
+		{"!모델", []string{"!model"}},
+		{"!THINKING", []string{"!model"}},
+		{"!새", []string{"!new"}},
+		{"!d", []string{"!dir", "!model"}},
+		{"!unknown", nil},
+		{"model", nil},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			got := Suggestions(tc.query)
+			if len(got) != len(tc.want) {
+				t.Fatalf("%q: %v", tc.query, got)
+			}
+			for i, name := range tc.want {
+				if got[i].Name != name {
+					t.Fatalf("%q: %v", tc.query, got)
+				}
+			}
+		})
 	}
 }

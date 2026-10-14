@@ -17,6 +17,11 @@ import (
 
 var devices = []string{"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
 
+type binding struct {
+	path                      string
+	readOnly, device, resolve bool
+}
+
 func enterRoot(r Request) error {
 	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return err
@@ -29,12 +34,18 @@ func enterRoot(r Request) error {
 		return err
 	}
 	for _, path := range r.Runtime {
-		if err := bind(root, path, true, false); err != nil {
+		if err := bind(root, binding{path: path, readOnly: true, resolve: true}); err != nil {
 			return err
 		}
 	}
 	for _, path := range []string{r.Project, r.Scratch} {
-		if err := bind(root, path, false, false); err != nil {
+		if err := bind(root, binding{path: path}); err != nil {
+			return err
+		}
+	}
+	// User directories must remain canonical at execution and read-only even within the project.
+	for _, path := range r.UserRuntime {
+		if err := bind(root, binding{path: path, readOnly: true}); err != nil {
 			return err
 		}
 	}
@@ -47,7 +58,7 @@ func enterRoot(r Request) error {
 		}
 	}
 	for _, path := range devices {
-		if err := bind(root, path, false, true); err != nil {
+		if err := bind(root, binding{path: path, device: true, resolve: true}); err != nil {
 			return err
 		}
 	}
@@ -85,12 +96,12 @@ func enterRoot(r Request) error {
 	return unix.Chdir(r.Project)
 }
 
-func bind(root, source string, readonly, device bool) (err error) {
+func bind(root string, mount binding) (err error) {
 	// Pin the source inode before constructing the new root. Do not recursively
 	// import nested mounts, which could expose host sockets or writable resources.
-	resolved := source
-	if readonly || device {
-		resolved, err = filepath.EvalSymlinks(source)
+	resolved := mount.path
+	if mount.resolve {
+		resolved, err = filepath.EvalSymlinks(mount.path)
 		if err != nil {
 			return err
 		}
@@ -104,7 +115,7 @@ func bind(root, source string, readonly, device bool) (err error) {
 	if err := unix.Fstat(fd, &stat); err != nil {
 		return err
 	}
-	target := filepath.Join(root, source)
+	target := filepath.Join(root, mount.path)
 	if stat.Mode&unix.S_IFMT == unix.S_IFDIR {
 		if err := os.MkdirAll(target, 0755); err != nil {
 			return err
@@ -125,10 +136,10 @@ func bind(root, source string, readonly, device bool) (err error) {
 		return err
 	}
 	flags := uint64(unix.MOUNT_ATTR_NOSUID)
-	if !device {
+	if !mount.device {
 		flags |= unix.MOUNT_ATTR_NODEV
 	}
-	if readonly {
+	if mount.readOnly {
 		flags |= unix.MOUNT_ATTR_RDONLY
 	}
 	return unix.MountSetattr(unix.AT_FDCWD, target, 0, &unix.MountAttr{Attr_set: flags})

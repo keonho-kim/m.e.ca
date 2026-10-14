@@ -18,7 +18,7 @@ func (a *app) render() {
 		a.screen.Show()
 		return
 	}
-	body := a.bodyHeight(w, h)
+	body := a.bodyHeight(h)
 	switch a.page {
 	case "files":
 		a.renderFiles(w, body)
@@ -27,6 +27,6 @@ func (a *app) render() {
 	default:
 		a.renderMenu(w, body)
 	}
-	view.Keymap(a.screen, a.shortcuts(), body, w, h-body)
+	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings, Planning: a.planMode}, a.shortcuts(), h-1, w)
 	a.screen.Show()
 }

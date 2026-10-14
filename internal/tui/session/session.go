@@ -64,13 +64,19 @@ func (a *app) restore() error {
 	if err != nil {
 		return err
 	}
+	if a.selection.Model == "" && a.opts.Config.Model != nil {
+		a.selection, err = a.opts.Config.Model.Selection()
+		if err != nil {
+			return err
+		}
+	}
 	if a.selection.Model != "" {
 		key, keyErr := a.opts.Vault.Get(a.selection.Connection.CredentialRef)
 		if keyErr != nil {
 			a.status = keyErr.Error()
 		} else {
 			// Connection validation runs before a generation client is installed.
-			a.connect(a.selection.Connection, key, a.selection.Model)
+			a.connect(a.selection.Connection, key, a.selection.Model, false)
 		}
 	}
 	paths, err := a.opts.Store.FileSelections(ctx, a.opts.Session.ID)

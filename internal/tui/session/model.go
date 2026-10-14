@@ -10,7 +10,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/provider/setup"
 )
 
-func (a *app) connect(connection modelconn.Connection, key, model string) {
+func (a *app) connect(connection modelconn.Connection, key, model string, remember bool) {
 	if a.busy {
 		return
 	}
@@ -33,7 +33,7 @@ func (a *app) connect(connection modelconn.Connection, key, model string) {
 			}
 		}
 		prepared, err := setup.Prepare(ctx, connection, key, model, defaults, previous, a.opts.Vault)
-		n := notice{Client: prepared.Client, Selection: prepared.Selection, Err: err}
+		n := notice{Client: prepared.Client, Selection: prepared.Selection, Err: err, RememberModel: remember}
 		if connection.CredentialRef == "" {
 			n.credential = key
 		}

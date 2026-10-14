@@ -44,7 +44,7 @@ func (a *app) fileKey(e *tcell.EventKey) {
 				a.page = "chat"
 				a.menuInput.Set("")
 			} else {
-				a.status = "Unknown file-view command; use :q or !quit"
+				a.status = "Unknown file-view command; use :q, !new or !quit"
 			}
 		case tcell.KeyEscape:
 			a.menuInput.Set("")

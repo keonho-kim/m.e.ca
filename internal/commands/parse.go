@@ -1,4 +1,4 @@
-// Purpose: Parse the six local commands without involving a model or shell.
+// Purpose: Parse local commands without involving a model or shell.
 // Pattern: Pure Function.
 // Usage: Imported by terminal input handling; tested with go test ./internal/commands.
 // Related: internal/commands/parse_test.go, internal/commands/catalog.go, internal/tui, SYSTEM.md.
@@ -24,6 +24,7 @@ const (
 	Directory
 	Quit
 	Exit
+	NewSession
 )
 
 const MaxInputBytes = 64 * 1024

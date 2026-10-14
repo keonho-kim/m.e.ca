@@ -24,10 +24,11 @@ const maxRequest = 2 << 20
 type Request struct {
 	Project, Private, Scratch, Command string
 	Runtime                            []string
+	UserRuntime                        []string
 }
 
 func (r Request) Validate() error {
-	for _, path := range append([]string{r.Project, r.Private, r.Scratch}, r.Runtime...) {
+	for _, path := range append(append([]string{r.Project, r.Private, r.Scratch}, r.Runtime...), r.UserRuntime...) {
 		if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.ContainsRune(path, 0) {
 			return fmt.Errorf("invalid sandbox path: %q", path)
 		}
@@ -41,6 +42,11 @@ func (r Request) Validate() error {
 	for _, path := range append(append([]string{}, r.Runtime...), "/proc", "/dev") {
 		if within(path, r.Project) || within(r.Project, path) {
 			return fmt.Errorf("project overlaps a system runtime path: %s", path)
+		}
+	}
+	for _, path := range r.UserRuntime {
+		if within(path, r.Project) || within(path, r.Private) || within(r.Private, path) || within(path, r.Scratch) || within(r.Scratch, path) {
+			return fmt.Errorf("user runtime overlaps protected or working paths: %s", path)
 		}
 	}
 	return nil

@@ -36,7 +36,7 @@ func (a *app) confirmField() {
 		}
 		a.menuInput.Set("")
 
-		a.connect(connection, a.key, "")
+		a.connect(connection, a.key, "", false)
 		a.key = ""
 		a.page = "chat"
 	case "manual":
@@ -44,7 +44,7 @@ func (a *app) confirmField() {
 		if model == "" {
 			return
 		}
-		a.connect(a.pendingConnection, a.key, model)
+		a.connect(a.pendingConnection, a.key, model, true)
 		a.key = ""
 		a.menuInput.Set("")
 		a.page = "chat"

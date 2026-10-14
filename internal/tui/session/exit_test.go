@@ -59,7 +59,7 @@ func TestRunExitEndsTerminalLoop(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	finished := make(chan error, 1)
-	go func() { finished <- Run(ctx, a.screen, a.opts) }()
+	go func() { _, err := Run(ctx, a.screen, a.opts); finished <- err }()
 	a.screen.EventQ() <- tcell.NewEventKey(tcell.KeyCtrlC, "", 0)
 	select {
 	case err := <-finished:

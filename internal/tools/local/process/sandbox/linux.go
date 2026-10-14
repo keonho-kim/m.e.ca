@@ -16,7 +16,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox/linux"
 )
 
-func Prepare(project, private, command string) (launch Launch, err error) {
+func Prepare(project, home, private, command string) (launch Launch, err error) {
 	if err := linux.Probe(); err != nil {
 		return launch, fmt.Errorf("project sandbox unavailable: %w", err)
 	}
@@ -39,6 +39,10 @@ func Prepare(project, private, command string) (launch Launch, err error) {
 		}
 	}()
 	request := linux.Request{Project: project, Private: private, Scratch: launch.Scratch, Command: command}
+	request.UserRuntime, err = userRuntime(&launch, home, private)
+	if err != nil {
+		return launch, err
+	}
 	for _, path := range append(runtimePaths(), "/lib", "/lib64") {
 		if _, statErr := os.Stat(path); statErr == nil {
 			request.Runtime = append(request.Runtime, path)

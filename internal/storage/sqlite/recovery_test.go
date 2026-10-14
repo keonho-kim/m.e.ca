@@ -50,7 +50,7 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 	if err != nil || len(history) != 3 || history[2].ToolCallID != "pending" {
 		t.Fatalf("recovery: %+v %v", history, err)
 	}
-	catalog, err := OpenSessions(filepath.Dir(s.path))
+	catalog, err := OpenSessions(filepath.Dir(filepath.Dir(s.path)))
 	if err != nil {
 		t.Fatal(err)
 	}

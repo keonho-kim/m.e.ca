@@ -52,10 +52,10 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	a.editor.Set("first\nsecond")
 	a.screen.SetSize(32, 12)
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "second" {
+	if strings.TrimSpace(screenLine(a.screen, 10, 32)) != "second" {
 		t.Fatal("editor not above reserved footer")
 	}
-	if !strings.Contains(screenLine(a.screen, 10, 32), "^C") {
+	if !strings.Contains(screenLine(a.screen, 11, 32), "^C") {
 		t.Fatal("footer not anchored at bottom")
 	}
 	a.screen.SetSize(12, 4)
@@ -67,7 +67,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 
 func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 	for _, test := range []struct{ name, page string }{
-		{"!plan", "chat"}, {"!model", "model"}, {"!permission", "permission"}, {"!scope", "scope"}, {"!dir", "files"}, {"!quit", "chat"},
+		{"!plan", "chat"}, {"!model", "model"}, {"!permission", "permission"}, {"!scope", "scope"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)
@@ -89,7 +89,7 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 			if test.name == "!plan" && !a.planMode {
 				t.Fatal("Plan did not start")
 			}
-			if test.name == "!quit" && !a.exit {
+			if (test.name == "!quit" || test.name == "!new") && !a.exit {
 				t.Fatal("quit did not exit")
 			}
 		})

@@ -62,6 +62,19 @@ func probeKernel() int {
 	if err := os.WriteFile("/bin/escaped", []byte("escape"), 0600); err == nil {
 		return 5
 	}
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return 6
+	}
+	nonblockingErr := unix.IoctlSetPointerInt(int(reader.Fd()), 0x5421, 1) // FIONBIO
+	deviceErr := unix.IoctlSetPointerInt(int(reader.Fd()), unix.TIOCSTI, 0)
+	closeErr := errors.Join(reader.Close(), writer.Close())
+	if nonblockingErr != nil || closeErr != nil {
+		return 7
+	}
+	if !errors.Is(deviceErr, unix.EPERM) {
+		return 8
+	}
 	return 0
 }
 

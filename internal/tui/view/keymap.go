@@ -17,15 +17,18 @@ func KeymapRows(shortcuts []Shortcut, width, maxRows int) int {
 
 func Keymap(screen tcell.Screen, shortcuts []Shortcut, y, width, maxRows int) {
 	for row, shortcuts := range keymapLines(shortcuts, width, maxRows) {
-		x := 0
-		for _, shortcut := range shortcuts {
-			Text(screen, x, y+row, width-x, shortcut.Key, tcell.StyleDefault.Bold(true))
-			x += uniseg.StringWidth(shortcut.Key) + 1
-			if x < width {
-				Text(screen, x, y+row, width-x, shortcut.Label, tcell.StyleDefault.Dim(true))
-			}
-			x += uniseg.StringWidth(shortcut.Label) + 2
+		drawShortcuts(screen, shortcuts, 0, y+row, width)
+	}
+}
+
+func drawShortcuts(screen tcell.Screen, shortcuts []Shortcut, x, y, end int) {
+	for _, shortcut := range shortcuts {
+		Text(screen, x, y, end-x, shortcut.Key, tcell.StyleDefault.Bold(true))
+		x += uniseg.StringWidth(shortcut.Key) + 1
+		if x < end {
+			Text(screen, x, y, end-x, shortcut.Label, tcell.StyleDefault.Dim(true))
 		}
+		x += uniseg.StringWidth(shortcut.Label) + 2
 	}
 }
 

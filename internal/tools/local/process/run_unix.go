@@ -21,7 +21,7 @@ import (
 func Run(ctx context.Context, project, home, private, commandText string, confined bool) (output Output, err error) {
 	var launch sandbox.Launch
 	if confined {
-		launch, err = sandbox.Prepare(project, private, commandText)
+		launch, err = sandbox.Prepare(project, home, private, commandText)
 		if err != nil {
 			return Output{Status: "scope_unavailable", ExitCode: -1}, err
 		}

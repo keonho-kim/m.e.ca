@@ -53,6 +53,7 @@ type app struct {
 	client                          *httpclient.Client
 	plan                            *planning.Plan
 	planMode                        bool
+	planStopping                    bool
 	thinkingChoice                  bool
 	page                            string
 	choices                         []string
@@ -66,6 +67,7 @@ type app struct {
 	busy                            bool
 	taskCancel                      context.CancelFunc
 	exit                            bool
+	newSession                      bool
 	paste                           bool
 	status, stream, thinking        string
 	refs                            []local.Reference

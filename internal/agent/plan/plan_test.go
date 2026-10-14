@@ -63,3 +63,31 @@ func TestPlanRejectsInvalidStructure(t *testing.T) {
 		t.Fatalf("proposal: %+v, %v", proposal, err)
 	}
 }
+
+func TestCancelledPlanCannotBeApprovedOrRevised(t *testing.T) {
+	now := time.Now()
+	draft, err := NewPlan("p", "s", "inspect", []string{"read"}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cancelled, err := CancelPlan(draft, now.Add(time.Second))
+	if err != nil || cancelled.Status != PlanCancelled || cancelled.ApprovedAt != nil {
+		t.Fatalf("%+v %v", cancelled, err)
+	}
+	if draft.Status != AwaitingApproval {
+		t.Fatal("cancellation mutated the prior draft")
+	}
+	if _, err := ApprovePlan(cancelled, cancelled.Revision, now); err == nil {
+		t.Fatal("cancelled draft was approved")
+	}
+	if _, err := RevisePlan(cancelled, "resume", []string{"write"}, now); err == nil {
+		t.Fatal("cancelled draft was revived")
+	}
+	approved, err := ApprovePlan(draft, draft.Revision, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CancelPlan(approved, now); err == nil {
+		t.Fatal("mode toggle cancelled approved execution")
+	}
+}

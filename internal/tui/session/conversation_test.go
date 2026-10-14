@@ -31,7 +31,7 @@ func TestConversationEditorFollowsTurns(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		rows = append(rows, strings.TrimSpace(screenLine(a.screen, y, 80)))
 	}
-	want := []string{"INPUT 0 OUTPUT 0", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", "", "chosen │ 프로젝트", "> next draft"}
+	want := []string{"INPUT 0 OUTPUT 0", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", "", "> next draft"}
 	for y, text := range want {
 		if rows[y] != text {
 			t.Fatalf("row %d = %q; want %q\n%s", y, rows[y], text, strings.Join(rows, "\n"))
@@ -68,7 +68,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.editor.Set("line one\nline two")
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "line two" {
+	if strings.TrimSpace(screenLine(a.screen, 10, 32)) != "line two" {
 		t.Fatal("multiline editor not at conversation end")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, "", 0))
@@ -104,7 +104,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"INPUT 0 OUTPUT 0", "> inspect file", "", "Agent", "", "read_file", "", "path: README.md", "", "Output", "content: file inspected", "", "file inspected", "", "", "no-model │ 프로젝트", ">"} {
+	for y, text := range []string{"INPUT 0 OUTPUT 0", "> inspect file", "", "Agent", "", "read_file", "", "path: README.md", "", "Output", "content: file inspected", "", "file inspected", "", "", ">"} {
 		if got := strings.TrimSpace(screenLine(a.screen, y, 80)); got != text {
 			t.Fatalf("restored row %d=%q; want %q", y, got, text)
 		}

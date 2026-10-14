@@ -22,8 +22,12 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			group, project, err := catalog.projectDirectory(t.TempDir(), true)
+			if err != nil {
+				t.Fatal(err)
+			}
 			id := "session_" + rand.Text()
-			path := filepath.Join(catalog.directory, id+".db")
+			path := filepath.Join(group, id+".db")
 			db, err := sql.Open("sqlite", path)
 			if err != nil {
 				t.Fatal(err)
@@ -37,7 +41,7 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			store, openErr := catalog.Open(context.Background(), id)
+			store, openErr := catalog.Open(context.Background(), project, id)
 			if store != nil {
 				if err := store.Close(); err != nil {
 					t.Error(err)

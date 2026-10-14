@@ -61,9 +61,6 @@ func (a *app) receiveRuntime(e *run.Event) {
 	}
 	if e.Kind == "stream" {
 		a.stream, a.thinking = e.Text, e.Thinking
-		if a.planMode {
-			a.stream = ""
-		}
 	} else if e.Kind == "response" {
 		a.stream, a.thinking = "", ""
 		a.output.Append(e.Thinking, true)

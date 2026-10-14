@@ -98,7 +98,7 @@ func TestStreamingHidesProtocolAndUnapprovedCompletion(t *testing.T) {
 		{"CHECK execute_command", "decision", false, false},
 		{"CONTINUE\nnext action", "decision", false, false},
 		{"DONE\nfile content draft", "argument", false, false},
-		{"DONE\nplan JSON", "decision", true, false},
+		{"DONE\n{\"objective\":\"inspect\",\"steps\":[\"read\"]}", "decision", true, false},
 		{"DONE\nclaim without verification", "decision", false, true},
 		{"DONE extra\ninvalid head", "decision", false, false},
 	} {
@@ -106,5 +106,26 @@ func TestStreamingHidesProtocolAndUnapprovedCompletion(t *testing.T) {
 		if got := s.responseBody(test.text); got != "" {
 			t.Fatalf("protocol/unsafe completion exposed: %q", got)
 		}
+	}
+}
+
+func TestStreamingPlanConversationArrivesBeforeDone(t *testing.T) {
+	r := fixture(&generator{}, &executor{}, &journal{})
+	partial := ""
+	g := &chunkGenerator{chunks: []string{"DONE\nHel", "lo!"}}
+	g.after = func(i int) {
+		if i == 0 && partial != "Hel" {
+			t.Fatalf("Plan reply did not stream: %q", partial)
+		}
+	}
+	r.Generator = g
+	result, err := r.Run(context.Background(), "hello", true, approve, func(event Event) error {
+		if event.Kind == "stream" {
+			partial = event.Text
+		}
+		return nil
+	})
+	if err != nil || result.Status != Answered || partial != "Hello!" {
+		t.Fatalf("%+v partial=%q %v", result, partial, err)
 	}
 }

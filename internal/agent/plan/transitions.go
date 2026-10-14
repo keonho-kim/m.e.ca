@@ -1,4 +1,4 @@
-// Purpose: Apply immutable Plan revision, approval and step transitions.
+// Purpose: Apply immutable Plan revision, cancellation, approval and step transitions.
 // Pattern: State Machine.
 // Usage: Called by Plan creation, approval and execution use cases.
 // Related: internal/agent/plan/plan.go, internal/agent/run/plan.go.
@@ -47,6 +47,14 @@ func ApprovePlan(plan Plan, revision int, now time.Time) (Plan, error) {
 	plan.Steps = append([]PlanStep(nil), plan.Steps...)
 	plan.Status, plan.ApprovedAt, plan.UpdatedAt = Approved, &now, now
 	return plan, nil
+}
+
+func CancelPlan(plan Plan, now time.Time) (Plan, error) {
+	if plan.Status != Planning && plan.Status != AwaitingApproval {
+		return Plan{}, fmt.Errorf("only unapproved active Plans can be cancelled")
+	}
+	plan.Status, plan.UpdatedAt = PlanCancelled, now
+	return plan, plan.Check()
 }
 
 func AdvanceStep(plan Plan, index int, status string, now time.Time) (Plan, error) {

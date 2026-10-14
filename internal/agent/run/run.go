@@ -13,6 +13,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/pfc"
+	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/progress"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -138,7 +139,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		if planning {
 			role = inference.Plan
 		}
-		text, askErr := s.ask(ctx, "DECISION: Choose one next action. Outside Plan mode, for a greeting or a question answerable without project evidence, use DONE followed by the answer; tools are optional and must serve the user goal. Use TOOL/CHECK only when necessary. A completion claim alone is not verification.", role, 16384)
+		text, askErr := s.ask(ctx, "DECISION: Choose one next action. For a greeting or a question answerable without project evidence, use DONE followed by the answer in any mode; tools are optional and must serve the user goal. In Plan mode, ordinary discussion does not require a completed Plan. Use TOOL/CHECK only when necessary. A completion claim alone is not verification.", role, 16384)
 		if askErr != nil {
 			return s.result, askErr
 		}
@@ -150,7 +151,10 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 			switch decision.Kind {
 			case pfc.Done:
 				if planning {
-					s.checkpoint.Status = PlanReady
+					s.checkpoint.Status = Answered
+					if _, err := planref.ParsePlanProposal(decision.Text); err == nil {
+						s.checkpoint.Status = PlanReady
+					}
 				} else if s.checkpoint.PendingReview || !s.worked && r.assignment != nil && r.assignment.Kind == "work" {
 					s.checkpoint.Observation = "DONE rejected: this work Task still needs execution and verification; a rejected Conclave candidate cannot be treated as completed."
 					s.checkpoint.NoProgress++

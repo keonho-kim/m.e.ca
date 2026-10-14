@@ -1,6 +1,6 @@
-// Purpose: Own the six local command names used by parsing and prefix suggestions.
+// Purpose: Own local command names and ranked search over names and descriptions.
 // Pattern: Simple Module (fixed command catalog).
-// Usage: The parser recognizes names; the TUI queries Suggestions for the current prefix.
+// Usage: The parser recognizes canonical names; the TUI queries Suggestions as the user types.
 // Related: internal/commands/parse.go, internal/tui/session/hints.go, internal/commands/catalog_test.go.
 package commands
 
@@ -12,19 +12,33 @@ var catalog = []struct {
 	name, description string
 	kind              Kind
 }{
-	{"!plan", "계획 모드", Plan},
+	{"!plan", "계획 모드 켜기 · 끄기", Plan},
 	{"!model", "모델 선택 · Thinking 설정", Model},
 	{"!permission", "승인 정책", Permission},
 	{"!scope", "접근 범위", Scope},
 	{"!dir", "파일 탐색", Directory},
+	{"!new", "새 세션", NewSession},
 	{"!quit", "앱 종료", Exit},
 }
 
-func Suggestions(prefix string) []Suggestion {
+func Suggestions(input string) []Suggestion {
+	if !strings.HasPrefix(input, "!") {
+		return nil
+	}
+	query := strings.ToLower(strings.TrimPrefix(input, "!"))
 	var matches []Suggestion
-	for _, command := range catalog {
-		if strings.HasPrefix(command.name, prefix) {
-			matches = append(matches, Suggestion{command.name, command.description})
+	// Preserve short command prefixes as the first Enter choice, then include
+	// substring and description matches in the fixed catalog order.
+	for _, prefixPass := range []bool{true, false} {
+		for _, command := range catalog {
+			name := strings.TrimPrefix(command.name, "!")
+			prefix := strings.HasPrefix(name, query)
+			if prefix != prefixPass {
+				continue
+			}
+			if prefix || strings.Contains(name, query) || strings.Contains(strings.ToLower(command.description), query) {
+				matches = append(matches, Suggestion{command.name, command.description})
+			}
 		}
 	}
 	return matches

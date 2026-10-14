@@ -1,4 +1,4 @@
-// Purpose: Persist Plan mode entry and the exact revision explicitly approved by the user.
+// Purpose: Persist explicit user decisions to begin, cancel or approve a Plan.
 // Pattern: Plan use case.
 // Usage: Terminal Plan commands invoke these use cases before executing work.
 // Related: internal/agent/run/planning.go, internal/agent/plan/transitions.go.
@@ -29,4 +29,15 @@ func ApprovePlan(ctx context.Context, store PlanStore, p planning.Plan) (plannin
 		return p, err
 	}
 	return approved, nil
+}
+
+func CancelPlan(ctx context.Context, store PlanStore, p planning.Plan) (planning.Plan, error) {
+	cancelled, err := planning.CancelPlan(p, time.Now())
+	if err != nil {
+		return p, err
+	}
+	if err := store.SavePlan(ctx, cancelled); err != nil {
+		return p, err
+	}
+	return cancelled, nil
 }

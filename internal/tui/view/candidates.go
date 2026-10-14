@@ -6,6 +6,8 @@ package view
 
 import "github.com/gdamore/tcell/v3"
 
+const MaxCandidateRows = 7
+
 type Candidates struct {
 	Open     bool
 	Labels   []string
@@ -16,7 +18,7 @@ func candidates(screen tcell.Screen, display Candidates, y, width, height int) {
 	if !display.Open {
 		return
 	}
-	count := min(6, max(0, height-y))
+	count := min(MaxCandidateRows, max(0, height-y))
 	if count == 0 {
 		return
 	}

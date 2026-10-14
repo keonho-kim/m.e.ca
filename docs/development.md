@@ -27,7 +27,7 @@ internal/
     plan/                    Plan 상태 전이·승인 단계 식별
     prompt/                  프로젝트 지침과 단계별 프롬프트
       defaults/              bootstrap용 Markdown 프롬프트
-  commands/                  여섯 내부 명령 파서와 후보 카탈로그
+  commands/                  일곱 내부 명령 파서와 후보 카탈로그
     startup/                 실행 인수·프로젝트 경로 해석
     settings/                정책·Thinking 저장과 실패 보상
   config/                    TOML 기본값·저장·우선순위
@@ -140,3 +140,5 @@ go mod verify
 2026-10-14에 Linux 7.0.14 arm64의 Alpine 컨테이너에서 Bubblewrap 설치 없이 파일 격리, 외부 경로·심볼릭 링크·V 상태·메타데이터 접근 차단을 확인했다. 일반 사용자 UID 65534에서도 실행했다. TCP·Unix 소켓과 격리 변경 차단, 취소 시 분리된 자식 프로세스 정리, 실행 파일 경로가 교체된 뒤에도 기존 이미지로 재실행되는 동작을 검증했다. Landlock 호출 자체를 거부한 환경에서도 명령 실행 없이 실패를 반환했다. 호스트 네임스페이스 생성이 차단된 컨테이너에서는 프로젝트 명령이 실행되지 않고 실패를 반환하는 경로를 확인했다. 컨테이너는 개발 검증 환경이며 제품의 빌드·실행 의존성이 아니다. 배포판별 AppArmor·커널 설정과 Linux amd64 실기 검증은 남아 있다.
 
 내부 실행기의 경계는 [Landlock](https://docs.kernel.org/userspace-api/landlock.html)과 [seccomp](https://docs.kernel.org/userspace-api/seccomp_filter.html)의 커널 계약을 따른다. Landlock만으로 파일 존재 확인과 프로젝트 내부 V 상태 숨김을 대체하지 않으므로, 별도 마운트 뷰와 함께 적용한다. 설치 의존성을 없애는 대신 이 커널 경계의 구현과 회귀 검증을 저장소에서 소유한다.
+
+사용자 설치 uv 회귀 검증은 `V_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVPackageProject -v`로 실행한다. 관리 Python을 사용하는 환경은 `V_TEST_UV_PYTHON_ROOT`에 한 설치 트리를 지정하면 임시 홈에 복사하여 검증한다. 네트워크 없이 실제 uv 0.13.0의 `uv init --package --offline --vcs none example`을 Linux arm64(시스템 Python 3.12.15)와 macOS arm64(관리 Python 3.13.9)에서 확인했다. WSL 실기와 Linux amd64 런타임 검증은 별도다.

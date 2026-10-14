@@ -11,12 +11,19 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
-func Run(ctx context.Context, screen tcell.Screen, opts Options) (err error) {
+type Action uint8
+
+const (
+	Exit Action = iota
+	NewSession
+)
+
+func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action, err error) {
 	app := &app{opts: opts, screen: screen, events: make(chan notice, 64), page: "chat", output: viewport.View{Follow: true}}
 	app.ctx, app.cancel = context.WithCancel(ctx)
 	defer app.shutdown()
 	if err = app.restore(); err != nil {
-		return err
+		return Exit, err
 	}
 	inputEvents := screen.EventQ()
 	screen.EnableMouse(tcell.MouseButtonEvents)
@@ -25,7 +32,7 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (err error) {
 		app.render()
 		select {
 		case <-app.ctx.Done():
-			return nil
+			app.exit = true
 		case event := <-inputEvents:
 			switch e := event.(type) {
 			case *tcell.EventKey:
@@ -38,13 +45,16 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (err error) {
 				app.paste = e.Start()
 				app.refreshHints()
 			case *tcell.EventError:
-				return e
+				return Exit, e
 			}
 		case n := <-app.events:
 			app.receive(n)
 		}
 	}
-	return nil
+	if app.newSession && ctx.Err() == nil {
+		return NewSession, nil
+	}
+	return Exit, nil
 }
 func (a *app) fail(err error) {
 	if err != nil && !errors.Is(err, context.Canceled) {

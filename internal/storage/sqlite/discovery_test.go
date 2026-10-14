@@ -50,7 +50,11 @@ func TestDiscoveryOrderRestoreAndRemoval(t *testing.T) {
 	if err := restored.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(catalog.directory, ids[2]+".db")); err != nil {
+	group, _, err := catalog.projectDirectory(root, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(group, ids[2]+".db")); err != nil {
 		t.Fatal(err)
 	}
 	list, err := catalog.Conversations(ctx, 0, 100)
@@ -58,7 +62,7 @@ func TestDiscoveryOrderRestoreAndRemoval(t *testing.T) {
 		t.Fatalf("deleted file retained in registry: %+v %v", list, err)
 	}
 	for _, name := range []string{".pending-abandoned.db", ids[2] + ".db-wal", ids[2] + ".db-shm", ids[2] + ".db.lock", "v.db"} {
-		if err := os.WriteFile(filepath.Join(catalog.directory, name), []byte("not a session"), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(group, name), []byte("not a session"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -75,14 +79,14 @@ func TestDiscoveryRejectsRenamedAndSymlinkedDatabase(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := store.path
-			catalog, err := OpenSessions(filepath.Dir(path))
+			catalog, err := OpenSessions(filepath.Dir(filepath.Dir(path)))
 			if err != nil {
 				t.Fatal(err)
 			}
 			if err := store.Close(); err != nil {
 				t.Fatal(err)
 			}
-			target := filepath.Join(catalog.directory, "session_"+rand.Text()+".db")
+			target := filepath.Join(filepath.Dir(path), "session_"+rand.Text()+".db")
 			if link {
 				err = os.Symlink(path, target)
 			} else {
@@ -103,10 +107,10 @@ func TestMissingSessionNeverCreatesDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := "session_" + rand.Text()
-	if _, err := catalog.Open(context.Background(), id); err == nil {
+	if _, err := catalog.Open(context.Background(), t.TempDir(), id); err == nil {
 		t.Fatal("missing session opened")
 	}
-	if _, err := catalog.Open(context.Background(), "../other"); err == nil {
+	if _, err := catalog.Open(context.Background(), t.TempDir(), "../other"); err == nil {
 		t.Fatal("traversal accepted")
 	}
 	entries, err := os.ReadDir(catalog.directory)

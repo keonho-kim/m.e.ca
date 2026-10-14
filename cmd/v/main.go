@@ -1,7 +1,7 @@
-// Purpose: Compose startup, private state, project adapters and terminal lifecycle.
+// Purpose: Compose terminal startup and explicit transitions between independently owned sessions.
 // Pattern: Composition Root.
 // Usage: go run ./cmd/v [path | resume]; go build -o bin/v ./cmd/v.
-// Related: internal/commands/startup/parse.go, internal/config/bootstrap/bootstrap.go, internal/tui/session/app.go, cmd/v/sandbox_linux.go.
+// Related: internal/commands/startup/parse.go, internal/config/bootstrap/bootstrap.go, internal/tui/session/app.go, cmd/v/sandbox_linux.go, cmd/v/conversation.go.
 package main
 
 import (
@@ -9,16 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
 	"github.com/keonho-kim/v-code/internal/config"
 	"github.com/keonho-kim/v-code/internal/config/bootstrap"
-	"github.com/keonho-kim/v-code/internal/config/credentials"
-	"github.com/keonho-kim/v-code/internal/config/prompts"
-	"github.com/keonho-kim/v-code/internal/storage/recovery"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
-	"github.com/keonho-kim/v-code/internal/tools/local"
 	tuisession "github.com/keonho-kim/v-code/internal/tui/session"
 	tuistartup "github.com/keonho-kim/v-code/internal/tui/startup"
 	"golang.org/x/term"
@@ -91,7 +86,7 @@ func start() (err error) {
 		if err != nil || !selected {
 			return err
 		}
-		store, err = sessions.Open(ctx, session.ID)
+		store, err = sessions.Open(ctx, session.ProjectRoot, session.ID)
 		if err != nil {
 			return err
 		}
@@ -105,20 +100,22 @@ func start() (err error) {
 		}
 		session = store.Session()
 	}
-	defer func() { err = errors.Join(err, store.Close()) }()
-	lease, leaseErr := store.LeaseSession()
-	if leaseErr != nil {
-		return leaseErr
+	for {
+		session = store.Session()
+		action, runErr := runConversation(ctx, screen, configuration, home, state, store)
+		if runErr != nil {
+			return runErr
+		}
+		if action != tuisession.NewSession || ctx.Err() != nil {
+			return nil
+		}
+		configuration, err = config.Load(state)
+		if err != nil {
+			return err
+		}
+		store, err = sessions.Create(ctx, session.ProjectRoot, session.DisplayRoot)
+		if err != nil {
+			return err
+		}
 	}
-	defer func() { err = errors.Join(err, lease.Close()) }()
-	if err = recovery.Restore(ctx, store, session.ID); err != nil {
-		return err
-	}
-	vault := &credentials.Vault{}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact)
-	if err != nil {
-		return err
-	}
-	defer func() { err = errors.Join(err, executor.Close()) }()
-	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, SaveConfig: func(c config.Config) error { return config.Save(state, c) }})
 }

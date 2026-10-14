@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func requireSandbox(t *testing.T) {
 	t.Helper()
-	launch, err := Prepare(t.TempDir(), t.TempDir(), "true")
+	launch, err := Prepare(t.TempDir(), t.TempDir(), t.TempDir(), "true")
 	if err == nil {
 		defer func() {
 			if err := launch.Close(); err != nil {
@@ -59,7 +59,7 @@ func TestKernelUnavailableDoesNotRunCommand(t *testing.T) {
 	if os.Getenv("V_SANDBOX_DENIED") != "1" {
 		t.Skip("requires a host policy denying namespaces")
 	}
-	launch, err := Prepare(t.TempDir(), t.TempDir(), "echo unsafe")
+	launch, err := Prepare(t.TempDir(), t.TempDir(), t.TempDir(), "echo unsafe")
 	if err != nil {
 		return
 	}

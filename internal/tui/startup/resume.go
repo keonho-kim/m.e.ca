@@ -33,7 +33,7 @@ func Resume(ctx context.Context, screen tcell.Screen, sessions Conversations) (s
 		screen.Clear()
 		w, totalHeight := screen.Size()
 		shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "이어하기"}, {Key: "Esc", Label: "취소"}}
-		footer := view.KeymapRows(shortcuts, w, min(2, max(0, totalHeight-4)))
+		footer := view.KeymapRows(shortcuts, w, min(1, max(0, totalHeight-4)))
 		h := totalHeight - footer
 		view.Text(screen, 0, 0, w, "Resume conversation", tcell.StyleDefault)
 		if len(conversations) == 0 {

@@ -6,7 +6,6 @@ package session
 
 import (
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
-	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
@@ -29,6 +28,11 @@ func (a *app) submit() {
 		a.requestExit()
 		return
 	}
+	if command.Kind == commands.NewSession {
+		a.newSession = true
+		a.requestExit()
+		return
+	}
 	if command.Kind == commands.Quit {
 		if a.page == "files" {
 			a.page = "chat"
@@ -48,7 +52,7 @@ func (a *app) submit() {
 		a.exit = true
 		return
 	}
-	if a.busy && command.Kind != commands.Directory {
+	if a.busy && command.Kind != commands.Directory && !(command.Kind == commands.Plan && a.planMode && a.taskCancel != nil) {
 		a.status = "One task is already active; draft preserved"
 		return
 	}
@@ -66,14 +70,9 @@ func (a *app) submit() {
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Plan:
-		if !a.planMode {
-			p, err := run.BeginPlan(a.ctx, a.opts.Store, a.opts.Session.ID)
-			if err != nil {
-				a.fail(err)
-				return
-			}
-			a.plan = &p
-			a.planMode = true
+		if err := a.togglePlan(); err != nil {
+			a.fail(err)
+			return
 		}
 	case commands.Message:
 		if a.client == nil || a.selection.Model == "" {

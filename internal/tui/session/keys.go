@@ -21,7 +21,8 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			text = a.editor.String()
 		}
 		command, err := commands.Parse(text)
-		if err == nil && command.Kind == commands.Exit {
+		if err == nil && (command.Kind == commands.Exit || command.Kind == commands.NewSession) {
+			a.newSession = command.Kind == commands.NewSession
 			a.requestExit()
 			return
 		}
@@ -60,11 +61,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	case tcell.KeyPgUp:
 		w, h := a.screen.Size()
-		a.scroll(-max(1, a.chatHeight(w, a.bodyHeight(w, h))), w, a.chatHeight(w, a.bodyHeight(w, h)))
+		a.scroll(-max(1, a.chatHeight(w, a.bodyHeight(h))), w, a.chatHeight(w, a.bodyHeight(h)))
 		return
 	case tcell.KeyPgDn:
 		w, h := a.screen.Size()
-		a.scroll(max(1, a.chatHeight(w, a.bodyHeight(w, h))), w, a.chatHeight(w, a.bodyHeight(w, h)))
+		a.scroll(max(1, a.chatHeight(w, a.bodyHeight(h))), w, a.chatHeight(w, a.bodyHeight(h)))
 		return
 	}
 	input.EditKey(&a.editor, e)
@@ -101,5 +102,5 @@ func (a *app) mouse(e *tcell.EventMouse) {
 		return
 	}
 	w, h := a.screen.Size()
-	a.scroll(n, w, a.chatHeight(w, a.bodyHeight(w, h)))
+	a.scroll(n, w, a.chatHeight(w, a.bodyHeight(h)))
 }

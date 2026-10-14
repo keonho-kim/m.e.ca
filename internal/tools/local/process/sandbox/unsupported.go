@@ -8,6 +8,6 @@ package sandbox
 
 import "fmt"
 
-func Prepare(string, string, string) (Launch, error) {
+func Prepare(string, string, string, string) (Launch, error) {
 	return Launch{}, fmt.Errorf("project filesystem isolation is unsupported on this platform")
 }

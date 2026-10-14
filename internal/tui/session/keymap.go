@@ -1,4 +1,4 @@
-// Purpose: Choose keyboard help from the current screen and focus and reserve its bottom rows.
+// Purpose: Choose keyboard help from the current screen and focus and reserve one fixed footer row.
 // Pattern: Presentation projection.
 // Usage: Rendering and scrolling share the same content-height calculation.
 // Related: internal/tui/session/render.go, internal/tui/session/keys.go, internal/tui/view/keymap.go.
@@ -31,6 +31,7 @@ func (a *app) shortcuts() []view.Shortcut {
 		default:
 			controls = []view.Shortcut{
 				{Key: "Enter", Label: "전송"},
+				{Key: "!new", Label: "새 세션"},
 				{Key: "Alt+Enter", Label: "줄바꿈"},
 				{Key: "↑↓", Label: "기록"},
 				{Key: "PgUp/Dn", Label: "스크롤"},
@@ -98,10 +99,6 @@ func (a *app) shortcuts() []view.Shortcut {
 	return append(shortcuts, controls...)
 }
 
-func (a *app) bodyHeight(width, height int) int {
-	minimum := 4
-	if a.page == "files" || a.page == "approval" || a.page == "planapproval" || a.page == "modelinfo" {
-		minimum = 8
-	}
-	return height - view.KeymapRows(a.shortcuts(), width, min(2, max(0, height-minimum)))
+func (a *app) bodyHeight(height int) int {
+	return max(0, height-1)
 }

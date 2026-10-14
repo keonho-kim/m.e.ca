@@ -33,7 +33,7 @@ func restrictSyscalls() error {
 		{Code: unix.BPF_JMP | unix.BPF_JSET | unix.BPF_K, K: 0x40000000, Jf: 1}, ret(unix.SECCOMP_RET_KILL_PROCESS),
 	}
 	for _, number := range []uint32{
-		unix.SYS_SOCKET, unix.SYS_CONNECT, unix.SYS_BIND, unix.SYS_IOCTL,
+		unix.SYS_SOCKET, unix.SYS_CONNECT, unix.SYS_BIND,
 		unix.SYS_IO_URING_SETUP, unix.SYS_BPF, unix.SYS_PERF_EVENT_OPEN,
 		unix.SYS_PTRACE, unix.SYS_PROCESS_VM_READV, unix.SYS_PROCESS_VM_WRITEV,
 		unix.SYS_MOUNT, unix.SYS_UMOUNT2, unix.SYS_PIVOT_ROOT, unix.SYS_CHROOT,
@@ -43,6 +43,10 @@ func restrictSyscalls() error {
 	} {
 		filter = append(filter, equal(number, 0, 1), deny)
 	}
+	// FIONBIO (asm-generic/ioctls.h) only changes nonblocking mode on an already
+	// open descriptor. Rust uses it to drain child pipes; all device ioctls stay denied.
+	filter = append(filter, equal(unix.SYS_IOCTL, 0, 4), load(24),
+		equal(0x5421, 0, 1), ret(unix.SECCOMP_RET_ALLOW), deny)
 	// clone3 hides flags behind a pointer. ENOSYS lets libc use inspectable clone.
 	filter = append(filter, equal(unix.SYS_CLONE3, 0, 1), ret(unix.SECCOMP_RET_ERRNO|uint32(unix.ENOSYS)))
 	filter = append(filter, equal(unix.SYS_CLONE, 0, 3), load(16),

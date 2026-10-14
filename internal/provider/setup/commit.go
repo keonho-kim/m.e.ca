@@ -1,4 +1,4 @@
-// Purpose: Commit a selected connection and compensate newly created credentials on failure.
+// Purpose: Commit a session connection, optionally remember it for new sessions, and compensate failed credential writes.
 // Pattern: Connection persistence use case.
 // Usage: The terminal adopts the prepared client only after Commit succeeds.
 // Related: internal/provider/setup/setup.go, internal/provider/connection/models.go.
@@ -17,12 +17,17 @@ type SelectionStore interface {
 }
 type CredentialWriter interface{ Set(string, string) error }
 
-func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, session string, next connection.Selection, credential string) (connection.Selection, error) {
+type Committed struct {
+	Selection    connection.Selection
+	DefaultError error
+}
+
+func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, session string, next connection.Selection, credential string, remember func(connection.Selection) error) (Committed, error) {
 	createdRef := ""
 	if credential != "" {
 		createdRef = "credential_" + rand.Text()
 		if err := vault.Set(createdRef, credential); err != nil {
-			return next, err
+			return Committed{}, err
 		}
 		next.Connection.CredentialRef = createdRef
 	}
@@ -30,7 +35,15 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 		if createdRef != "" {
 			err = errors.Join(err, vault.Set(createdRef, ""))
 		}
-		return next, fmt.Errorf("save model connection: %w", err)
+		return Committed{}, fmt.Errorf("save model connection: %w", err)
 	}
-	return next, nil
+	result := Committed{Selection: next}
+	if remember != nil {
+		if err := remember(next); err != nil {
+			// The session and credential are already durable. Keep them usable even
+			// if the independent default cannot be written; never delete their key.
+			result.DefaultError = fmt.Errorf("connection saved for this session, but saving the default for new sessions failed: %w", err)
+		}
+	}
+	return result, nil
 }

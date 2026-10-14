@@ -24,7 +24,7 @@ func Compose(base, instructions string, planning bool) (string, error) {
 		text += "(No project-root AGENTS.md was found.)"
 	}
 	if planning {
-		text += "\nPlanning only: scoped reads and searches are permitted. Never change files or execute commands. For DONE, put the final Plan as JSON on the following lines: {\"objective\":\"...\",\"steps\":[\"...\"]}."
+		text += "\nPlanning only: scoped reads and searches are permitted. Never change files or execute commands. Plan mode is read-only conversation, not a requirement to produce a plan on every turn. For greetings, explanations, progress updates or other ordinary replies, use DONE followed by normal user-facing text. Use WAIT followed by a question when you need user input. Do not invent a plan for a greeting. Read-only discussion can finish without execution or verification of changes. Only when an actionable plan is complete and ready for user approval, use DONE followed by the entire final Plan as JSON: {\"objective\":\"...\",\"steps\":[\"...\"]}. Ordinary replies do not complete, replace or approve an existing plan."
 	}
 	return text, nil
 }

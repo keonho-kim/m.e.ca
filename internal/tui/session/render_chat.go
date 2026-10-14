@@ -10,16 +10,16 @@ import (
 )
 
 func (a *app) chatHeight(width, height int) int {
-	rows := view.InputRows(a.editor, max(1, width), min(a.opts.Config.UI.InputMaxLines, max(1, height-3)))
+	rows := view.InputRows(a.editor, max(1, width), min(a.opts.Config.UI.InputMaxLines, max(1, height-2)))
 	hints := 0
 	if a.commandOpen {
 		hints = max(1, len(a.commandHints))
 	} else if a.refOpen {
 		hints = max(1, len(a.refs))
 	}
-	hints = min(hints, 6, max(0, height-rows-3))
-	// Reserve the fixed token row, model status and the gap before the composer.
-	return max(0, height-rows-hints-3)
+	hints = min(hints, view.MaxCandidateRows, max(0, height-rows-2))
+	// Reserve the fixed token row and the gap before the composer.
+	return max(0, height-rows-hints-2)
 }
 
 func (a *app) renderChat(width, height int) {
@@ -37,5 +37,5 @@ func (a *app) renderChat(width, height int) {
 	appendTemporary(a.status, false)
 	available := a.chatHeight(width, height)
 	start := a.output.Start(lines, available)
-	view.Chat(a.screen, view.ChatDisplay{Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Planning: a.planMode, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
+	view.Chat(a.screen, view.ChatDisplay{Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
 }

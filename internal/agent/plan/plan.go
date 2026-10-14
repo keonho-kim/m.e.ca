@@ -14,6 +14,7 @@ type PlanStatus string
 const (
 	Planning         PlanStatus = "planning"
 	AwaitingApproval PlanStatus = "awaiting_approval"
+	PlanCancelled    PlanStatus = "cancelled"
 	Approved         PlanStatus = "approved"
 	PlanRunning      PlanStatus = "running"
 	PlanSucceeded    PlanStatus = "succeeded"
@@ -61,7 +62,7 @@ func (plan Plan) Check() error {
 		return err
 	}
 	switch plan.Status {
-	case Planning, AwaitingApproval:
+	case Planning, AwaitingApproval, PlanCancelled:
 		if plan.ApprovedAt != nil {
 			return fmt.Errorf("unapproved Plan contains approval")
 		}

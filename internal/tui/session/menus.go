@@ -82,7 +82,7 @@ func (a *app) choose() {
 			a.menuInput.Set("")
 			return
 		}
-		a.connect(a.pendingConnection, a.key, value)
+		a.connect(a.pendingConnection, a.key, value, true)
 		a.key = ""
 		a.page = "chat"
 	case "permission", "scope":

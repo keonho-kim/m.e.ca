@@ -1,4 +1,4 @@
-// Purpose: Render model, enabled Thinking, automatic approval, Scope and Plan in the status line.
+// Purpose: Render bounded model and policy values inside the fixed footer.
 // Pattern: Presentation renderer.
 // Usage: The session renderer supplies current values without sharing mutable task state.
 // Related: internal/tui/session/render.go, internal/policy/policy.go, internal/tui/view/cells.go.
@@ -11,7 +11,14 @@ import (
 	"strings"
 )
 
-func Header(screen tcell.Screen, model string, thinking bool, effort string, settings policy.Settings, planning bool, y, w int) {
+type Status struct {
+	Model, Effort      string
+	Thinking, Planning bool
+	Settings           policy.Settings
+}
+
+func statusLine(screen tcell.Screen, status Status, y, w int) int {
+	model, thinking, effort, settings, planning := status.Model, status.Thinking, status.Effort, status.Settings, status.Planning
 	if model == "" {
 		model = "no-model"
 	}
@@ -33,7 +40,9 @@ func Header(screen tcell.Screen, model string, thinking bool, effort string, set
 	if planning {
 		suffix += " │ PLAN"
 	}
-	maxModel := max(1, w-uniseg.StringWidth(suffix))
+	maxModel := max(0, w-uniseg.StringWidth(suffix))
 	Text(screen, 0, y, maxModel, model, tcell.StyleDefault)
-	Text(screen, min(uniseg.StringWidth(model), maxModel), y, w, suffix, tcell.StyleDefault)
+	x := min(uniseg.StringWidth(model), maxModel)
+	Text(screen, x, y, w-x, suffix, tcell.StyleDefault.Dim(true))
+	return min(w, x+uniseg.StringWidth(suffix))
 }

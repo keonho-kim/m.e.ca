@@ -106,7 +106,7 @@ func TestResumeSelectsDiscoveredSessionFile(t *testing.T) {
 	if err != nil || !ok || selected != expected {
 		t.Fatalf("selection=%+v ok=%t err=%v", selected, ok, err)
 	}
-	reopened, err := sessions.Open(ctx, selected.ID)
+	reopened, err := sessions.Open(ctx, selected.ProjectRoot, selected.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

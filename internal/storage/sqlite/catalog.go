@@ -32,11 +32,15 @@ func OpenSessions(directory string) (*Sessions, error) {
 	}
 	return &Sessions{directory: absolute}, nil
 }
-func (s *Sessions) Open(ctx context.Context, id string) (*Store, error) {
+func (s *Sessions) Open(ctx context.Context, project, id string) (*Store, error) {
 	if !sessionstate.ValidID(id) {
 		return nil, fmt.Errorf("invalid session ID")
 	}
-	path := filepath.Join(s.directory, id+".db")
+	directory, canonical, err := s.projectDirectory(project, false)
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(directory, id+".db")
 	db, err := connect(ctx, path, false)
 	if err != nil {
 		return nil, err
@@ -44,6 +48,9 @@ func (s *Sessions) Open(ctx context.Context, id string) (*Store, error) {
 	c, err := readConversation(ctx, db, id)
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
+	}
+	if c.ProjectRoot != canonical {
+		return nil, errors.Join(fmt.Errorf("session project does not match its storage directory"), db.Close())
 	}
 	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
 		return nil, errors.Join(err, db.Close())
@@ -57,10 +64,14 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	directory, project, err := s.projectDirectory(project, true)
+	if err != nil {
+		return nil, err
+	}
 	id := "session_" + rand.Text()
 	// Publish a complete, closed database atomically. Directory scans never see a
 	// half-initialized session; no central catalogue or bootstrap lock is needed.
-	temporary, err := os.CreateTemp(s.directory, ".pending-*.db")
+	temporary, err := os.CreateTemp(directory, ".pending-*.db")
 	if err != nil {
 		return nil, err
 	}
@@ -98,17 +109,17 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 	if err := errors.Join(tx.Commit(), db.Close()); err != nil {
 		return nil, err
 	}
-	if err := os.Link(path, filepath.Join(s.directory, id+".db")); err != nil {
+	if err := os.Link(path, filepath.Join(directory, id+".db")); err != nil {
 		return nil, err
 	}
-	directory, err := os.Open(s.directory)
+	directoryFile, err := os.Open(directory)
 	if err != nil {
 		return nil, err
 	}
-	if err := errors.Join(directory.Sync(), directory.Close()); err != nil {
+	if err := errors.Join(directoryFile.Sync(), directoryFile.Close()); err != nil {
 		return nil, err
 	}
-	return s.Open(ctx, id)
+	return s.Open(ctx, project, id)
 }
 func (s *Sessions) Restore(ctx context.Context, project, display string, restore bool) (*Store, error) {
 	if err := sessionstate.CheckProject(project, display); err != nil {
@@ -120,11 +131,15 @@ func (s *Sessions) Restore(ctx context.Context, project, display string, restore
 			return nil, err
 		}
 		if len(entries) > 0 {
-			store, err := s.Open(ctx, entries[0].ID)
+			store, err := s.Open(ctx, entries[0].ProjectRoot, entries[0].ID)
 			if err != nil {
 				return nil, err
 			}
-			if store.Session().ProjectRoot != project {
+			canonical, resolveErr := filepath.EvalSymlinks(project)
+			if resolveErr != nil {
+				return nil, errors.Join(resolveErr, store.Close())
+			}
+			if store.Session().ProjectRoot != canonical {
 				return nil, errors.Join(fmt.Errorf("session project changed during selection"), store.Close())
 			}
 			return store, nil

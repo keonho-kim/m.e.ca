@@ -15,18 +15,19 @@ import (
 )
 
 type notice struct {
-	credential string
-	Effort     *string
-	Event      *run.Event
-	Approval   *toolapi.Approval
-	Done       bool
-	Err        error
-	Plan       *planning.Plan
-	Client     *httpclient.Client
-	Models     []string
-	Selection  *modelconn.Selection
-	References []local.Reference
-	Revision   int
+	RememberModel bool
+	credential    string
+	Effort        *string
+	Event         *run.Event
+	Approval      *toolapi.Approval
+	Done          bool
+	Err           error
+	Plan          *planning.Plan
+	Client        *httpclient.Client
+	Models        []string
+	Selection     *modelconn.Selection
+	References    []local.Reference
+	Revision      int
 }
 
 func (a *app) post(ctx context.Context, n notice) error {

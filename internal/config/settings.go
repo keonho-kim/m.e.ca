@@ -14,6 +14,7 @@ import (
 )
 
 type Config struct {
+	Model         *SavedModel        `toml:"model,omitempty"`
 	Inference     inference.Settings `toml:"inference"`
 	ModelProfiles []ModelProfile     `toml:"model_profiles,omitempty"`
 	Defaults      policy.Settings    `toml:"defaults"`
@@ -56,6 +57,11 @@ func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
 }
 
 func check(configuration Config) error {
+	if configuration.Model != nil {
+		if _, err := configuration.Model.Selection(); err != nil {
+			return fmt.Errorf("saved model: %w", err)
+		}
+	}
 	if err := configuration.Inference.Check(); err != nil {
 		return err
 	}

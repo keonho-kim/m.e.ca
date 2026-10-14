@@ -44,7 +44,7 @@ func restrictFiles(request Request) (err error) {
 		return errno
 	}
 	defer func() { err = errors.Join(err, unix.Close(int(fd))) }()
-	for _, path := range append(request.Runtime, "/proc") {
+	for _, path := range append(append(append([]string{}, request.Runtime...), request.UserRuntime...), "/proc") {
 		if err := allowPath(int(fd), path, readAccess); err != nil {
 			return err
 		}

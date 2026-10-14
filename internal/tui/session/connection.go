@@ -6,6 +6,8 @@ package session
 
 import (
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/config"
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/setup"
 )
 
@@ -42,16 +44,28 @@ func (a *app) adoptConnection(n notice) (err error) {
 	if next.Identity != nil {
 		next.Identity.Redact(a.opts.Vault.Redact)
 	}
-	next, err = setup.Commit(a.ctx, a.opts.Store, a.opts.Vault, a.opts.Session.ID, next, n.credential)
+	var remember func(modelconn.Selection) error
+	if n.RememberModel {
+		remember = func(selected modelconn.Selection) error {
+			updated := a.opts.Config
+			updated.Model = config.RememberModel(selected)
+			if err := a.opts.SaveConfig(updated); err != nil {
+				return err
+			}
+			a.opts.Config = updated
+			return nil
+		}
+	}
+	committed, err := setup.Commit(a.ctx, a.opts.Store, a.opts.Vault, a.opts.Session.ID, next, n.credential, remember)
 	if err != nil {
 		return err
 	}
 	previous := a.client
-	a.client, a.selection = n.Client, next
+	a.client, a.selection = n.Client, committed.Selection
 	a.key = ""
 	adopted = true
 	if previous != nil && previous != a.client {
 		previous.Close()
 	}
-	return nil
+	return committed.DefaultError
 }
