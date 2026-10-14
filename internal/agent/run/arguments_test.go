@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -44,4 +45,23 @@ func TestGreetingDoesNotRequireATool(t *testing.T) {
 	if err != nil || result.Status != Answered || e.prepared != 0 || !strings.Contains(g.requests[0].Messages[len(g.requests[0].Messages)-1].Content, "greeting") {
 		t.Fatalf("greeting forced a tool: %+v %v", result, err)
 	}
+}
+
+func TestArgumentPathNormalizedBeforeGroundingAndPreparation(t *testing.T) {
+	g := &generator{replies: []string{`{"tool":"read_file"}`, "\n\nfile.txt\r\n", "WAIT\nReview"}}
+	e, j := &executor{}, &journal{}
+	result, err := fixture(g, e, j).Run(context.Background(), "inspect", false, approve, emit)
+	if err != nil || result.Status != NeedsInput || e.prepared != 1 {
+		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
+	}
+	var args struct{ Path string }
+	if err := json.Unmarshal(e.calls[0].Arguments, &args); err != nil || args.Path != "file.txt" {
+		t.Fatalf("unnormalized call: %+v %v", args, err)
+	}
+	for _, event := range j.events {
+		if event.Grounding != nil && event.Grounding.Matches(e.calls[0]) {
+			return
+		}
+	}
+	t.Fatal("normalized call was not bound to grounding")
 }

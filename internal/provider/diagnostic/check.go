@@ -1,7 +1,7 @@
-// Purpose: Verify staged text dialogue and paired Thinking behavior through a model generator.
+// Purpose: Verify ordinary response completion and paired Thinking behavior through a model generator.
 // Pattern: Diagnostic use case.
 // Usage: Setup calls Check without executing any local tool.
-// Related: internal/provider/diagnostic/dialogue.go, internal/provider/diagnostic/control.go, internal/provider/diagnostic/effort.go.
+// Related: internal/provider/diagnostic/chat.go, internal/provider/diagnostic/control.go, internal/provider/diagnostic/effort.go.
 package diagnostic
 
 import (
@@ -23,7 +23,7 @@ func Check(ctx context.Context, client modelapi.Generator, model string, support
 		off := false
 		thinking = &off
 	}
-	caps, err = checkDialogue(ctx, client, parameters, model, thinking)
+	caps, err = checkChat(ctx, client, parameters, model, thinking)
 	if err != nil {
 		return caps, err
 	}

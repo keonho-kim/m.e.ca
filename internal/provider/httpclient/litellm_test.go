@@ -41,13 +41,7 @@ func TestLiteLLMProxyDialogueAndReasoning(t *testing.T) {
 		if body.Model != "team-coder" || !body.Stream || len(body.Tools) > 0 || len(body.Template) > 0 {
 			t.Errorf("incorrect proxy request: %+v", body)
 		}
-		text := "DONE\nhello"
-		switch body.Messages[len(body.Messages)-1].Content {
-		case `Reply exactly {"tool":"read_file"}`:
-			text = `{"tool":"read_file"}`
-		case "ARGUMENT read_file.path: Reply with only the literal path AGENTS.md, without quotes.":
-			text = "AGENTS.md"
-		}
+		text := "Hello!"
 		w.Header().Set("Content-Type", "text/event-stream")
 		encoded, err := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]string{"content": text, "reasoning_content": "inspect"}}}})
 		if err != nil {
@@ -61,7 +55,7 @@ func TestLiteLLMProxyDialogueAndReasoning(t *testing.T) {
 		t.Fatalf("models: %+v %v", models, err)
 	}
 	caps, err := diagnose(client, context.Background(), "team-coder")
-	if err != nil || !caps.ToolDialogue || !caps.Streaming {
+	if err != nil || !caps.Streaming {
 		t.Fatalf("diagnostics: %+v %v", caps, err)
 	}
 	var thinking string

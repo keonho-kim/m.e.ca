@@ -1,6 +1,6 @@
 // Purpose: Parse and validate individual Progressive Field Completion literal fields.
 // Pattern: Pure Function (model trust boundary).
-// Usage: Used by field collection, provider diagnostics and the local tool argument boundary.
+// Usage: Used by field collection and the local tool argument boundary.
 // Related: internal/agent/tool/execution.go, internal/agent/pfc/pfc_test.go.
 package pfc
 
@@ -30,8 +30,7 @@ func ParseArgument(p toolapi.Parameter, text string) (json.RawMessage, error) {
 		return json.Marshal(value)
 	}
 	if p.Kind == toolapi.LiteralPath {
-		// A text response may end its single path line with LF or CRLF.
-		text = strings.TrimRight(text, "\r\n")
+		text = trimPathLines(text)
 		trimmed := strings.TrimSpace(text)
 		if strings.ContainsAny(text, "\r\n") {
 			return nil, fmt.Errorf("%s requires one plain path line", p.Name)
@@ -70,6 +69,37 @@ func ValidateArgument(p toolapi.Parameter, value json.RawMessage) error {
 			return err
 		}
 	}
-	_, err := ParseArgument(p, text)
-	return err
+	normalized, err := ParseArgument(p, text)
+	if err != nil {
+		return err
+	}
+	if p.Kind == toolapi.LiteralPath {
+		var path string
+		if err := json.Unmarshal(normalized, &path); err != nil {
+			return err
+		}
+		if path != text {
+			return fmt.Errorf("%s must be normalized before the tool call is frozen", p.Name)
+		}
+	}
+	return nil
+}
+
+// Remove framing lines, preserving every space on the path line itself.
+func trimPathLines(text string) string {
+	for {
+		index := strings.IndexAny(text, "\r\n")
+		if index < 0 || strings.TrimSpace(text[:index]) != "" {
+			break
+		}
+		text = text[index+1:]
+	}
+	for {
+		index := strings.LastIndexAny(text, "\r\n")
+		if index < 0 || strings.TrimSpace(text[index+1:]) != "" {
+			break
+		}
+		text = text[:index]
+	}
+	return text
 }

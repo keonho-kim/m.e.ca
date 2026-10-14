@@ -164,8 +164,8 @@ Provider별 HTTP 계약은 로컬 모의 서버로 검증했다. 실제 서버 �
 공식 프로토콜 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_outputs/), [SGLang reasoning](https://docs.sglang.io/docs/advanced_features/separate_reasoning), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking).
 
 1. 명시한 프로파일과 실제 wire model ID의 충돌을 검사한다.
-2. 가능한 제어가 있으면 OFF로 JSON 진입 `{"tool":"read_file"}`과 리터럴 경로 `AGENTS.md` 진단을 수행한다. 로컬 도구를 실행하지 않는다.
-3. OFF에서 별도 reasoning이 나오면 서버 설정 오류로 연결을 거부한다. 응답에 reasoning 태그가 섞여 정확한 리터럴 형식을 지키지 못하는 경우도 대화 진단에 실패한다.
+2. 일반 인사 요청으로 비어 있지 않은 응답과 완료를 확인한다. 가능한 제어가 있으면 OFF를 사용한다. 특정 정답이나 PFC 응답 형식은 요구하지 않으며 로컬 도구를 실행하지 않는다.
+3. OFF에서 별도 reasoning이 나오면 서버 설정 오류로 연결을 거부한다.
 4. ON으로 짧은 계산 요청을 보내 별도 reasoning·답변·완료 이벤트를 확인하고, 같은 질문을 OFF로 보내 추론 출력 억제까지 확인해야 토글을 활성화한다. OFF 미지원 모델은 ON만 검증하며 토글을 제공하지 않는다. 별도 reasoning이 관측되지 않으면 제어는 unavailable이며 Provider 기본 생성 모드를 사용한다.
 5. HTTP 오류·미완료·출력 한도 초과는 진단 실패로 보고하고 클라이언트를 설치하지 않는다. 성공한 클라이언트의 정리 책임만 세션에 이전한다.
 

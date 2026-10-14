@@ -1,7 +1,7 @@
 // Purpose: Parse a JSON PFC entry or an explicitly framed user-facing decision.
 // Pattern: Pure Function at the model trust boundary.
-// Usage: The agent loop and connection diagnostic call ParseDecision on a complete reply.
-// Related: internal/agent/pfc/decision_test.go, internal/agent/run/run.go, internal/provider/diagnostic/dialogue.go.
+// Usage: The agent loop calls ParseDecision on a complete model reply.
+// Related: internal/agent/pfc/decision_test.go, internal/agent/run/run.go.
 package pfc
 
 import (

@@ -1,4 +1,4 @@
-// Purpose: Reject servers that ignore OFF on reasoning tasks despite obeying literal dialogue prompts.
+// Purpose: Reject servers that ignore OFF on reasoning tasks despite answering the ordinary chat probe.
 // Pattern: Capability diagnostic contract test.
 // Usage: go test ./internal/provider/httpclient -run TestReasoningToggleChecksOff.
 // Related: internal/provider/diagnostic/check.go, internal/provider/diagnostic/effort.go.
@@ -30,10 +30,7 @@ func TestReasoningToggleChecksOff(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		answer, reason := `{"tool":"read_file"}`, ""
-		if len(body.Messages) > 2 {
-			answer = "AGENTS.md"
-		}
+		answer, reason := "Hello!", ""
 		if strings.Contains(body.Messages[len(body.Messages)-1].Content, "17 times 23") {
 			answer, reason = "391", "always thinking"
 		}

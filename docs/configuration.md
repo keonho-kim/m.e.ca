@@ -31,7 +31,7 @@
 | `conclave` | 동의표 또는 거절표와 구체적인 사유 | 0.4 | 2048 |
 | `compaction` | 대화 압축·근거 보존 | 0.2 | 4096 |
 | `report` | 여러 Task의 최종 사용자 응답 요약 | 0.2 | 2048 |
-| `diagnostic` | 연결·PFC·Thinking·effort 진단 | 0.2 | 512 |
+| `diagnostic` | 연결·Thinking·effort 진단 | 0.2 | 512 |
 
 예를 들어 다음 항목을 변경한다. Provider·서빙 별칭·모델 프로파일에 따라 이 값을 바꾸지 않는다.
 

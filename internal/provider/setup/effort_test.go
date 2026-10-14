@@ -30,10 +30,7 @@ func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		reply, reason := `{"tool":"read_file"}`, ""
-		if len(body.Messages) > 2 {
-			reply = "AGENTS.md"
-		}
+		reply, reason := "Hello!", ""
 		if body.Template["enable_thinking"] == true {
 			reply = "391"
 			reason = "17 times 23 is 391"

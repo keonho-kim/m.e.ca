@@ -1,6 +1,6 @@
 // Purpose: Define the single literal response contract for the current staged tool parameter.
 // Pattern: Pure Function (phase-specific prompt).
-// Usage: Runtime argument requests and provider diagnostics share the same typed instructions.
+// Usage: Runtime argument requests use these typed instructions.
 // Related: internal/agent/run/arguments.go, internal/provider/protocol/request.go, internal/agent/pfc/pfc.go.
 package prompt
 

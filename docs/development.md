@@ -43,7 +43,7 @@ internal/
     identity/                원본 식별 근거와 저장소 ID 해석
     selection/               모델 선택·Thinking 조합 검증
     discovery/               모델 목록·원본·기능·서빙 한도 조회
-    diagnostic/              생성기를 통한 PFC·Thinking 진단
+    diagnostic/              생성기를 통한 일반 응답·Thinking 진단
     protocol/                요청·SSE·NDJSON·응답 형식 변환
     transport/               HTTP·인증·idle 감시·재시도
     httpclient/              선택 모델의 생성 요청 조율

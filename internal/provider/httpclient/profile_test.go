@@ -96,15 +96,13 @@ func TestProfileDiagnosticVerifiesBothThinkingStates(t *testing.T) {
 					t.Error(err)
 					return
 				}
-				reply := `{"tool":"read_file"}`
+				reply := "Hello!"
 				reasoning := ""
 				if body.Template["enable_thinking"] {
 					reply = "391"
 					if onProducesReasoning {
 						reasoning = "17 times 23 is 391"
 					}
-				} else if len(body.Messages) > 2 {
-					reply = "AGENTS.md"
 				}
 				w.Header().Set("Content-Type", "application/json")
 				response := map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply, "reasoning": reasoning}, "finish_reason": "stop"}}}
@@ -113,7 +111,7 @@ func TestProfileDiagnosticVerifiesBothThinkingStates(t *testing.T) {
 				}
 			})
 			caps, err := diagnose(client, context.Background(), "Qwen/Qwen3.6-27B")
-			if err != nil || !caps.ToolDialogue || caps.Thinking != onProducesReasoning {
+			if err != nil || caps.Thinking != onProducesReasoning {
 				t.Fatalf("capabilities=%+v err=%v", caps, err)
 			}
 		})
@@ -146,9 +144,9 @@ func TestProfileSGLangUsesItsDeclaredReasoningField(t *testing.T) {
 func TestProfileDiagnosticRejectsIgnoredThinkingOff(t *testing.T) {
 	client := mockClient(t, modelconn.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"choices":[{"message":{"reasoning":"unexpected","content":"{\"tool\":\"read_file\"}"},"finish_reason":"stop"}]}`)
+		fmt.Fprint(w, `{"choices":[{"message":{"reasoning":"unexpected","content":"Hello!"},"finish_reason":"stop"}]}`)
 	})
-	if caps, err := diagnose(client, context.Background(), "Qwen/Qwen3.6-27B"); err == nil || caps.ToolDialogue {
+	if _, err := diagnose(client, context.Background(), "Qwen/Qwen3.6-27B"); err == nil {
 		t.Fatal("server ignoring Thinking OFF passed connection diagnostics")
 	}
 }

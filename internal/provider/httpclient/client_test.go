@@ -106,10 +106,7 @@ func TestOllamaStreamAndSequentialCapabilityProbe(t *testing.T) {
 		if len(body.Tools) != 0 {
 			t.Error("native schemas were sent")
 		}
-		reply := `{"tool":"read_file"}`
-		if strings.Contains(body.Messages[len(body.Messages)-1].Content, "ARGUMENT") {
-			reply = "AGENTS.md"
-		}
+		reply := "Hello!"
 		w.Header().Set("Content-Type", "application/x-ndjson")
 		encoded, err := json.Marshal(map[string]any{"message": map[string]string{"content": reply}, "done": false})
 		if err != nil {
@@ -120,7 +117,7 @@ func TestOllamaStreamAndSequentialCapabilityProbe(t *testing.T) {
 		fmt.Fprintln(w, `{"message":{"content":""},"done":true,"prompt_eval_count":12,"eval_count":5}`)
 	})
 	caps, err := diagnose(client, context.Background(), "model")
-	if err != nil || !caps.Chat || !caps.ToolDialogue || !caps.Streaming {
+	if err != nil || !caps.Chat || !caps.Streaming {
 		t.Fatalf("capabilities = %+v %v", caps, err)
 	}
 }
@@ -165,7 +162,7 @@ func TestSingleJSONResponseDoesNotClaimStreamingOrTools(t *testing.T) {
 		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"hello"},"finish_reason":"stop"}]}`)
 	})
 	capabilities, err := diagnose(client, context.Background(), "model")
-	if err == nil || !strings.Contains(err.Error(), "PFC diagnostic decision") || !capabilities.Chat || capabilities.Streaming || capabilities.ToolDialogue {
+	if err != nil || !capabilities.Chat || capabilities.Streaming {
 		t.Fatalf("capabilities = %+v, %v", capabilities, err)
 	}
 }

@@ -8,11 +8,10 @@ package connection
 import "github.com/keonho-kim/v-code/internal/provider/identity"
 
 type Capabilities struct {
-	Reasoning    bool `json:"reasoning"`
-	Thinking     bool `json:"thinking"`
-	Chat         bool `json:"chat"`
-	ToolDialogue bool `json:"tool_dialogue"`
-	Streaming    bool `json:"streaming"`
+	Reasoning bool `json:"reasoning"`
+	Thinking  bool `json:"thinking"`
+	Chat      bool `json:"chat"`
+	Streaming bool `json:"streaming"`
 }
 
 type ModelInfo struct {

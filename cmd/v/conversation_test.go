@@ -36,10 +36,7 @@ func TestNewConversationReleasesLeaseAndRetainsGlobalModel(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		reply := `{"tool":"read_file"}`
-		if len(body.Messages) > 2 {
-			reply = "AGENTS.md"
-		}
+		reply := "Hello!"
 		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}}); err != nil {
 			t.Error(err)
 		}
