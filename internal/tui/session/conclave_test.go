@@ -16,7 +16,7 @@ import (
 
 func TestConclaveTerminalOutcomeAndApproval(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file"}, Conclave: &conclave.Result{Votes: []conclave.Vote{{Reason: "hidden reviewer reason"}}}}
+	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file"}, Conclave: &conclave.Result{Verdict: conclave.Verdict{Decision: "reject", Findings: []conclave.Finding{{Path: "a", Side: "request", Reason: "hidden reviewer reason"}}}}}
 	a.receive(notice{Event: &event})
 	if len(a.output.Blocks) != 1 || !strings.Contains(a.output.Blocks[0].Text, transcript.ReviewRejectedMessage) {
 		t.Fatal("rejection notice missing")

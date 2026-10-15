@@ -29,6 +29,9 @@ func bounded(text string, limit int) string {
 }
 
 func Observe(previous []Record, call tool.Call, outcome tool.Result, revision int) ([]Record, error) {
+	if !outcome.Started {
+		return slices.Clone(previous), nil
+	}
 	target := outcome.Target
 	if call.Name == "execute_command" {
 		var args struct{ Command string }

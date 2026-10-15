@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/v-code/internal/agent/inference"
 )
 
 func TestInferenceDefaultsAndOverrides(t *testing.T) {
@@ -20,9 +22,23 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"agent", "plan", "goal", "pfc_value", "pfc_content", "grounding", "conclave", "compaction", "report", "diagnostic"} {
+	for _, role := range []string{"agent", "plan", "conclave", "compaction", "diagnostic"} {
 		if !strings.Contains(string(body), "[inference."+role+"]") {
 			t.Fatalf("missing persisted role %s", role)
+		}
+	}
+	loaded, err := Load(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, role := range []inference.Role{inference.Agent, inference.Plan, inference.Conclave, inference.Compaction, inference.Diagnostic} {
+		parameters, err := inference.Resolve(&loaded.Inference, role)
+		want := 12800
+		if role == inference.Agent {
+			want = 25600
+		}
+		if err != nil || parameters.MaxOutputTokens != want {
+			t.Fatalf("persisted %s default=%+v, want %d: %v", role, parameters, want, err)
 		}
 	}
 	if err := os.WriteFile(filepath.Join(directory, Filename), []byte("[inference.conclave]\ntemperature=0.0\nmax_output_tokens=1536\n"), 0600); err != nil {

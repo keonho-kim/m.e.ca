@@ -19,7 +19,7 @@ type recoveryGenerator struct{ slow bool }
 
 func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 	if g.slow {
-		if err := emit(modelapi.Event{Delta: "DONE\n", Streaming: true}); err != nil {
+		if err := emit(modelapi.Event{Delta: "", Streaming: true}); err != nil {
 			return err
 		}
 		for range 5 {
@@ -33,7 +33,7 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 		}
 	} else {
 		for _, event := range []modelapi.Event{
-			{Delta: "DONE\nwrong partial", Thinking: "old thought", Streaming: true},
+			{Delta: "wrong partial", Thinking: "old thought", Streaming: true},
 			{Usage: &modelapi.TokenUsage{Input: 10, Output: 2}},
 			{Retry: &modelapi.Retry{Attempt: 2, MaxAttempts: 3, Reason: "stream disconnected"}},
 		} {
@@ -42,7 +42,7 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 			}
 		}
 	}
-	answer := "DONE\nrecovered"
+	answer := "recovered"
 	if g.slow {
 		answer = "recovered"
 	}
@@ -53,9 +53,9 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 }
 
 func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
-	g := &generator{replies: []string{"WAIT\nInspect current state before continuing"}}
+	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousTask = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Checks: []verification.Record{{Key: strings.Repeat("a", 64), Tool: "execute_command", Target: "parser-check", Status: "failed"}}, Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Checks: []verification.Record{{Key: strings.Repeat("a", 64), Tool: "execute_command", Target: "parser-check", Status: "failed"}}, Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
 	if _, err := r.Run(context.Background(), "continue", false, approve, emit); err != nil {
 		t.Fatal(err)
 	}

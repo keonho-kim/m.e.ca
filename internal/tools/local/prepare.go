@@ -34,10 +34,15 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	op := &operation{executor: executor, settings: settings, planning: planning, spec: spec, input: input}
 	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label, Required: required}
 	if spec.effect == policy.Command {
+		if input.Purpose == "check" {
+			if err := shell.CheckVerification(input.Command); err != nil {
+				return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Use one direct verification command whose exit status represents the check. Nothing executed."}
+			}
+		}
 		if err := shell.Check(input.Command); err != nil {
 			var dedicated *shell.Dedicated
 			if errors.As(err, &dedicated) {
-				return nil, &toolapi.Failure{Code: "use_dedicated_tool", Detail: err.Error(), Next: "Use the existing file/search tool through PFC. Shell is for work those tools cannot perform."}
+				return nil, &toolapi.Failure{Code: "use_dedicated_tool", Detail: err.Error(), Next: "Use the existing file/search tool through native calls. Shell is for work those tools cannot perform."}
 			}
 			return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Return a valid bounded POSIX shell command. No command was executed."}
 		}

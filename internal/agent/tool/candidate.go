@@ -1,4 +1,4 @@
-// Purpose: Describe an immutable prepared file-change candidate bound to one PFC call.
+// Purpose: Describe an immutable prepared file-change candidate bound to one native call.
 // Pattern: Tool trust-boundary value.
 // Usage: Preparation supplies Candidate through Approval; Conclave reviews it before approval.
 // Related: internal/tools/local/review.go, internal/agent/conclave/review.go.
@@ -11,12 +11,19 @@ import (
 )
 
 type FileDelta struct {
-	Path         string `json:"path"`
-	BeforeDigest string `json:"before_digest"`
-	AfterDigest  string `json:"after_digest"`
-	Added        int    `json:"added"`
-	Deleted      int    `json:"deleted"`
-	Diff         string `json:"diff"`
+	BeforeLineEndings  string `json:"before_line_endings,omitempty"`
+	AfterLineEndings   string `json:"after_line_endings,omitempty"`
+	FormatPolicy       string `json:"format_policy,omitempty"`
+	BeforeLines        int    `json:"before_lines"`
+	AfterLines         int    `json:"after_lines"`
+	BeforeFinalNewline bool   `json:"before_final_newline"`
+	AfterFinalNewline  bool   `json:"after_final_newline"`
+	Path               string `json:"path"`
+	BeforeDigest       string `json:"before_digest"`
+	AfterDigest        string `json:"after_digest"`
+	Added              int    `json:"added"`
+	Deleted            int    `json:"deleted"`
+	Diff               string `json:"diff"`
 }
 type Candidate struct {
 	CallID  string      `json:"call_id"`
@@ -33,7 +40,7 @@ func (c Candidate) Check(call Call) error {
 	}
 	expected := BindCandidate(call, nil)
 	if c.CallID != expected.CallID || c.Binding != expected.Binding || len(c.Files) > 64 {
-		return fmt.Errorf("candidate does not match the frozen PFC call")
+		return fmt.Errorf("candidate does not match the frozen native call")
 	}
 	for _, file := range c.Files {
 		if file.Path == "" || file.Added < 0 || file.Deleted < 0 || file.Added > 10000000 || file.Deleted > 10000000 || len(file.Diff) > 8*1024*1024 {

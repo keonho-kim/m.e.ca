@@ -11,11 +11,6 @@ import (
 )
 
 func (event Event) Check() error {
-	if event.Goal != nil {
-		if err := event.Goal.Check(); err != nil {
-			return err
-		}
-	}
 	if event.Monitor != nil {
 		if err := event.Monitor.Check(); err != nil {
 			return err

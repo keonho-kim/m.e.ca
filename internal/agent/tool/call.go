@@ -43,9 +43,8 @@ func (call Call) Check() error {
 	if len(call.Arguments) > MaxArgumentsBytes || !json.Valid(call.Arguments) {
 		return fmt.Errorf("invalid or oversized Tool Call arguments")
 	}
-	var arguments map[string]json.RawMessage
-	if err := json.Unmarshal(call.Arguments, &arguments); err != nil || arguments == nil {
-		return fmt.Errorf("Tool Call arguments must be a JSON object")
+	if _, err := argumentObject(call.Arguments); err != nil {
+		return err
 	}
 	return nil
 }

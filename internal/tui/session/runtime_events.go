@@ -12,7 +12,7 @@ import (
 )
 
 func (a *app) receiveRuntime(e *run.Event) {
-	if e.Internal || e.Kind == "monitor" || e.Kind == "goal_state" || e.Kind == "tool_proposed" {
+	if e.Internal || e.Kind == "monitor" || e.Kind == "tool_proposed" {
 		return
 	}
 	if e.Kind == "conclave" {
@@ -50,8 +50,9 @@ func (a *app) receiveRuntime(e *run.Event) {
 	case "approved":
 		return
 	}
-	if e.Kind == "tool_argument" {
-		a.status = e.Text
+	if e.Kind == "progress" {
+		a.stream, a.thinking = "", ""
+		a.output.Append(transcript.Reply(e.Text), false)
 		return
 	}
 	if e.Kind == "thinking" {

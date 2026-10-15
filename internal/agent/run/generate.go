@@ -1,7 +1,7 @@
 // Purpose: Own one bounded model reply and preserve interrupted output without exposing argument drafts.
 // Pattern: Model I/O boundary.
-// Usage: Called by decision and argument phases under a shared call and time budget.
-// Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/pfc/pfc.go.
+// Usage: Called by decision and internal model phases under a shared call and time budget.
+// Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/tool/arguments.go.
 package run
 
 import (
@@ -10,42 +10,58 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 )
 
-func (s *task) ask(ctx context.Context, question string, role inference.Role, maxBytes int) (string, error) {
+func (s *execution) askResponse(ctx context.Context, question string, role inference.Role, maxBytes int) (modelapi.Response, error) {
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return modelapi.Response{}, err
 	}
 	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-		return "", fmt.Errorf("model call budget exhausted")
+		return modelapi.Response{}, fmt.Errorf("model call budget exhausted")
 	}
 	request, err := s.request(question, role)
 	if err != nil {
-		return "", err
+		return modelapi.Response{}, err
 	}
 	s.usage.ModelCalls++
 	s.checkpoint.ModelCalls = s.usage.ModelCalls
 	if err := s.emit(Event{Kind: "stream"}); err != nil {
-		return "", err
+		return modelapi.Response{}, err
 	}
 	var reply, thinking strings.Builder
+	var calls []toolapi.Call
 	done := false
 	outputTokens := 0
 	err = s.generate(ctx, request, func(e modelapi.Event) error {
 		if e.Retry != nil {
 			reply.Reset()
+			calls = nil
 			thinking.Reset()
 			done, outputTokens = false, 0
 			return s.emit(Event{Kind: "stream"})
 		}
 		if len(e.Calls) > 0 {
-			return fmt.Errorf("native JSON tool calls are not accepted; use a JSON tool-only entry in message content, followed by literal PFC fields")
+			if len(request.Tools) == 0 || !e.Done || len(calls) != 0 || len(e.Calls) > toolapi.MaxCalls {
+				return &modelapi.ToolCallError{Detail: "unexpected or incomplete tool calls in this phase"}
+			}
+			calls = append(calls, e.Calls...)
 		}
 		reply.WriteString(e.Delta)
 		thinking.WriteString(e.Thinking)
-		if reply.Len() > maxBytes || reply.Len()+thinking.Len() > modelapi.MaxResponseBytes {
+		size := reply.Len() + thinking.Len()
+		for _, call := range calls {
+			size += len(call.Arguments) + len(call.ID) + len(call.Name)
+		}
+		if reply.Len() > maxBytes || size > modelapi.MaxResponseBytes {
 			return &modelapi.OutputLimitError{Reason: "current phase byte limit"}
+		}
+		if e.Usage != nil {
+			s.checkpoint.InputTokens = e.Usage.Input
+			if s.runner.Memory != nil {
+				s.runner.Memory.InputTokens = e.Usage.Input
+			}
 		}
 		if e.Done {
 			done = true
@@ -64,35 +80,43 @@ func (s *task) ask(ctx context.Context, question string, role inference.Role, ma
 		err = fmt.Errorf("model reply did not complete")
 	}
 	count := compact.Estimate(reply.String()+thinking.String(), "model")
+	for _, call := range calls {
+		count.Amount += compact.Estimate(string(call.Arguments), "model").Amount
+	}
 	if outputTokens > 0 {
 		count = compact.TokenCount{Amount: int64(outputTokens), Kind: "model"}
 	}
 	if countErr := s.observe(context.WithoutCancel(ctx), count); countErr != nil {
-		return "", countErr
+		return modelapi.Response{}, countErr
 	}
 	if thinking.Len() > 0 {
 		event := Event{Kind: "thinking", Internal: s.runner.suppressStream, Thinking: maskedPartial(s.runner, thinking.String())}
 		if saveErr := s.record(context.WithoutCancel(ctx), event); saveErr != nil {
-			return "", saveErr
+			return modelapi.Response{}, saveErr
 		}
 		if err == nil && !s.runner.suppressStream {
 			if emitErr := s.emit(event); emitErr != nil {
-				return "", emitErr
+				return modelapi.Response{}, emitErr
 			}
 		}
 	}
 	if err != nil {
 		if body := s.responseBody(reply.String()); body != "" {
 			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body)}); saveErr != nil {
-				return "", saveErr
+				return modelapi.Response{}, saveErr
 			}
 		}
-		return "", err
+		return modelapi.Response{}, err
 	}
 	if s.runner.Redact(reply.String()) != reply.String() {
-		return "", fmt.Errorf("model reply contains a protected credential or terminal control")
+		return modelapi.Response{}, fmt.Errorf("model reply contains a protected credential or terminal control")
 	}
-	return reply.String(), nil
+	for _, call := range calls {
+		if s.runner.Redact(string(call.Arguments)) != string(call.Arguments) {
+			return modelapi.Response{}, fmt.Errorf("tool arguments contain a protected credential or terminal control")
+		}
+	}
+	return modelapi.Response{Text: reply.String(), Reasoning: maskedPartial(s.runner, thinking.String()), Calls: calls}, nil
 }
 
 func maskedPartial(r Runner, text string) string {

@@ -8,11 +8,12 @@ import (
 	"crypto/sha256"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 	"strings"
 	"unicode/utf8"
 )
 
-func (s *Store) Replace(path string, current []byte, start, end, replacement string) ([]byte, toolapi.LineChange, error) {
+func (s *Store) Replace(path string, current []byte, start, end, replacement, formatPolicy string) ([]byte, toolapi.LineChange, error) {
 	beginAnchor, err := toolapi.ParseAnchor(start)
 	if err != nil {
 		return nil, toolapi.LineChange{}, err
@@ -47,7 +48,7 @@ func (s *Store) Replace(path string, current []byte, start, end, replacement str
 		matches++
 	}
 	if matches != 1 {
-		return nil, toolapi.LineChange{}, &toolapi.Failure{Code: toolapi.AnchorUnavailable, Detail: "anchors are expired, ambiguous, from different reads, or bound to another file", Next: "Read one range containing both endpoints and copy its new anchors. No edit was applied."}
+		return nil, toolapi.LineChange{}, &toolapi.Failure{Code: toolapi.AnchorUnavailable, Detail: "line/hash pairs do not match one saved read, or that snapshot expired", Next: "Read one range containing both endpoints and copy each complete line#hash pair. An unchanged read keeps the same valid anchors. No edit was applied."}
 	}
 	lines := split(string(current))
 	if last > len(lines) {
@@ -65,7 +66,7 @@ func (s *Store) Replace(path string, current []byte, start, end, replacement str
 	if last < len(lines) && replacement != "" && !strings.HasSuffix(replacement, "\n") {
 		return nil, toolapi.LineChange{}, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: "replacement must end with a newline before the following untouched line", Next: "Preserve the intended line ending, or include the following line in the edit range."}
 	}
-	if strings.Contains(original, "\r\n") && !strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n") {
+	if formatPolicy != "literal" && strings.Contains(original, "\r\n") && !strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n") {
 		replacement = strings.ReplaceAll(strings.ReplaceAll(replacement, "\r\n", "\n"), "\n", "\r\n")
 	}
 	span := toolapi.LineChange{OldStartLine: first, OldEndLine: last, NewStartLine: first, NewEndLine: first + len(split(replacement)) - 1, Removed: replacement == ""}
@@ -74,7 +75,8 @@ func (s *Store) Replace(path string, current []byte, start, end, replacement str
 		span.NewEndLine = 0
 	}
 	after := strings.Join(lines[:first-1], "") + replacement + strings.Join(lines[last:], "")
-	return []byte(after), span, nil
+	normalized, err := textformat.Preserve(current, []byte(after), formatPolicy)
+	return normalized, span, err
 }
 func stale() error {
 	return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "the selected range moved or changed since read_file", Next: "Read the current lines again and regenerate the edit anchors; no change was applied."}

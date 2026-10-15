@@ -42,7 +42,7 @@ func scratch(project string) (Launch, error) {
 	if err != nil {
 		return Launch{}, errors.Join(err, os.RemoveAll(directory))
 	}
-	return Launch{Directory: project, Scratch: resolved, Environment: []string{"PATH=" + os.Getenv("PATH"), "HOME=" + project, "TMPDIR=" + resolved, "TMP=" + resolved, "TEMP=" + resolved, "XDG_CACHE_HOME=" + resolved, "GOCACHE=" + filepath.Join(resolved, "go-cache"), "LANG=C.UTF-8"}}, nil
+	return Launch{Directory: project, Scratch: resolved, Environment: []string{"PATH=" + os.Getenv("PATH"), "HOME=" + project, "TMPDIR=" + resolved, "TMP=" + resolved, "TEMP=" + resolved, "XDG_CACHE_HOME=" + resolved, "GOCACHE=" + filepath.Join(resolved, "go-cache"), "LANG=C.UTF-8", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "XDG_CONFIG_HOME=" + filepath.Join(resolved, "config")}}, nil
 }
 
 // Installed runtime resources are explicit read-only exceptions to project data scope.

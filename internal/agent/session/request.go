@@ -35,15 +35,11 @@ type Request struct {
 func Execute(ctx context.Context, request Request, approve run.Approver, emit func(run.Event) error) (*planning.Plan, error) {
 	runner := request.Runner
 	var err error
-	runner.PreviousTask, err = request.Store.LatestTask(ctx, runner.Session)
+	runner.PreviousRun, err = request.Store.LatestRun(ctx, runner.Session)
 	if err != nil {
 		return nil, err
 	}
 	runner.MonitorSeed, err = request.Store.MonitorHistory(ctx, runner.Session)
-	if err != nil {
-		return nil, err
-	}
-	runner.PreviousGoal, err = request.Store.LatestGoal(ctx, runner.Session)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +52,9 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	}
 	runner.Prompts = &templates
 	runner.Memory = &compact.Controller{Inference: runner.Inference, Repository: request.Store, Session: runner.Session, Model: runner.Model, Prompt: templates.Compaction, Settings: request.Compaction, Redact: runner.Redact}
+	if runner.PreviousRun != nil {
+		runner.Memory.InputTokens = runner.PreviousRun.InputTokens
+	}
 	runner.ProjectInstructions, err = request.ProjectInstructions(ctx)
 	if err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	} else if request.Planning {
 		updated, err = runner.DraftPlan(ctx, request.Text, request.Previous, request.Store, approve, emit)
 	} else {
-		_, err = runner.RunGoal(ctx, request.Text, approve, emit)
+		_, err = runner.Run(ctx, request.Text, false, approve, emit)
 	}
 	if err != nil {
 		err = errors.Join(err, recovery.Restore(context.WithoutCancel(ctx), request.Store, runner.Session))

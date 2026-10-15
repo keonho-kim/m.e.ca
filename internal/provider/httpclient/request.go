@@ -44,18 +44,11 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if err != nil {
 		return err
 	}
-	messages := make([]protocol.Message, 0, len(request.Messages))
-	for _, message := range request.Messages {
-		if message.Role != "system" && message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
-			return fmt.Errorf("invalid message role")
-		}
-
-		if len(message.Calls) > 0 || message.Role == "tool" {
-			return fmt.Errorf("model context must project tool audit records as text observations")
-		}
-		messages = append(messages, protocol.Message{Role: message.Role, Content: message.Content})
+	messages, err := protocol.Messages(client.connection.Kind, request.Messages)
+	if err != nil {
+		return err
 	}
-	request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput)
+	request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools)
 	if err != nil {
 		return err
 	}

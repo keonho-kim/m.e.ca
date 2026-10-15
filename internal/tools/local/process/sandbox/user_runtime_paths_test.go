@@ -42,3 +42,20 @@ func TestUserRuntimePathsManagedPython(t *testing.T) {
 		t.Fatalf("%v %v %v", paths, launch.Environment, err)
 	}
 }
+
+func TestIsolatedGitConfiguration(t *testing.T) {
+	launch, err := scratch(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := launch.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	for _, want := range []string{"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"} {
+		if !slices.Contains(launch.Environment, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+}

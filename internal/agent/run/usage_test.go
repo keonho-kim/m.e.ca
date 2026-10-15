@@ -14,7 +14,7 @@ import (
 type usageGenerator struct{ interrupt bool }
 
 func (g usageGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	for _, e := range []modelapi.Event{{Delta: "DONE\nhi", Streaming: true}, {Usage: &modelapi.TokenUsage{Input: 20, Output: 2}}, {Usage: &modelapi.TokenUsage{Input: 20, Output: 4}}} {
+	for _, e := range []modelapi.Event{{Delta: "hi", Streaming: true}, {Usage: &modelapi.TokenUsage{Input: 20, Output: 2}}, {Usage: &modelapi.TokenUsage{Input: 20, Output: 4}}} {
 		if err := emit(e); err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func TestTokenUsageAbsentDoesNotEmitOrPersistCounts(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		j := &journal{}
 		r := fixture(&generator{}, &executor{}, j)
-		g := &chunkGenerator{chunks: []string{"DONE\nhello"}}
+		g := &chunkGenerator{chunks: []string{"hello"}}
 		if interrupted {
 			g.cancel = cancel
 		}

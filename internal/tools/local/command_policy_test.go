@@ -15,7 +15,7 @@ import (
 func TestCommandContractRetainsPolicyWithoutTimeArgument(t *testing.T) {
 	executor, root := testExecutor(t)
 	for _, definition := range executor.Definitions() {
-		if definition.Name == "execute_command" && (len(definition.Parameters) != 1 || definition.Parameters[0].Name != "command") {
+		if definition.Name == "execute_command" && (len(definition.Parameters) != 2 || definition.Parameters[0].Name != "command") {
 			t.Fatalf("unexpected command fields: %+v", definition.Parameters)
 		}
 	}

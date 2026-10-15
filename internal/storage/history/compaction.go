@@ -13,22 +13,21 @@ import (
 
 func Compaction(page []Record) ([]compact.Record, error) {
 	var records []compact.Record
-	tasks := map[string]compact.Record{}
+	runs := map[string]compact.Record{}
 	for _, record := range page {
 		sequence := record.Sequence
 		if record.Kind == "message" {
-			if (record.Message.Role == "user" || record.Message.Role == "assistant") && record.Message.Content != "" {
-				records = append(records, compact.Record{Sequence: sequence, Role: record.Message.Role, Text: record.Message.Content})
+			m := record.Message
+			if m.Content != "" || len(m.Calls) > 0 {
+				body, err := json.Marshal(m)
+				if err != nil {
+					return nil, err
+				}
+				records = append(records, compact.Record{Sequence: sequence, Role: m.Role, Text: string(body)})
 			}
 			continue
 		}
 		event := record.Event
-		if event.Goal != nil {
-			if err := event.Goal.Check(); err != nil {
-				return nil, err
-			}
-			records = append(records, compact.Record{Sequence: sequence, Role: "goal", Goal: event.Goal})
-		}
 		if event.Kind == "conclave" && event.Conclave != nil {
 			if err := event.Conclave.Check(); err != nil {
 				return nil, err
@@ -52,8 +51,8 @@ func Compaction(page []Record) ([]compact.Record, error) {
 			records = append(records, compact.Record{Sequence: sequence, Role: "self_grounding", Grounding: event.Grounding})
 		}
 		if cp := event.Checkpoint; cp != nil {
-			fact := compact.TaskFact{Checks: cp.Checks, ChangeRevision: cp.ChangeRevision, ID: cp.ID, Objective: cp.Objective, Status: string(cp.Status), Phase: cp.Phase, Evidence: cp.Evidence, Observation: cp.Observation, Step: cp.Step, Source: sequence}
-			tasks[cp.ID] = compact.Record{Sequence: sequence, Role: "task", Text: cp.Objective, Task: &fact}
+			fact := compact.RunFact{Checks: cp.Checks, ChangeRevision: cp.ChangeRevision, ID: cp.ID, Objective: cp.Objective, Status: string(cp.Status), Phase: cp.Phase, Evidence: cp.Evidence, Observation: cp.Observation, Step: cp.Step, Source: sequence}
+			runs[cp.ID] = compact.Record{Sequence: sequence, Role: "run", Text: cp.Objective, Run: &fact}
 		}
 		if event.Operation == nil && event.Text != "" && event.Kind != "thinking" && event.Kind != "compaction" {
 			records = append(records, compact.Record{Sequence: sequence, Role: "runtime_event", Text: fmt.Sprintf("%s; operation=%s; %s", event.Kind, event.CallID, event.Text)})
@@ -65,7 +64,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 		}
 	}
 
-	for _, record := range tasks {
+	for _, record := range runs {
 		records = append(records, record)
 	}
 	sort.Slice(records, func(i, j int) bool { return records[i].Sequence < records[j].Sequence })

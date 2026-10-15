@@ -1,26 +1,29 @@
-// Purpose: Gate prepared file changes on a durable Conclave decision before user approval.
-// Pattern: Review use case.
-// Usage: execute invokes reviewCandidate against the exact prepared candidate and current Monitor snapshot.
-// Related: internal/agent/conclave/review.go, internal/agent/run/execute.go, internal/agent/run/conclave_usage.go.
+// Purpose: Gate a frozen file candidate on a single semantic review before user approval.
+// Pattern: Review orchestration with run-local rejection reuse.
+// Usage: execute calls reviewCandidate after scope and snapshot preparation.
+// Related: internal/agent/conclave/review.go, internal/agent/run/review_context.go.
 package run
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/agent/verification"
 )
 
 const reviewRejected = "conclave_rejected"
 const reviewFailed = "conclave_error"
 
-func (s *task) reviewCandidate(ctx context.Context, call toolapi.Call, proposal toolapi.Approval) (*conclave.Result, error) {
+func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, proposal toolapi.Approval) (*conclave.Result, error) {
 	if proposal.Candidate == nil {
 		if call.Name == "write_file" || call.Name == "edit_file" {
-			return nil, fmt.Errorf("content-changing tool has no frozen review candidate")
+			return nil, fmt.Errorf("content change has no frozen candidate")
 		}
 		return nil, nil
 	}
@@ -28,55 +31,53 @@ func (s *task) reviewCandidate(ctx context.Context, call toolapi.Call, proposal 
 	if err := candidate.Check(call); err != nil {
 		return nil, err
 	}
-	n, required := conclave.Allocation(candidate.Lines())
-	if n == 0 {
+	if candidate.Lines() == 0 {
 		return nil, nil
 	}
 	s.checkpoint.Phase = "conclave"
 	if err := s.persist(ctx); err != nil {
 		return nil, err
 	}
-	history, err := s.runner.observer.Snapshot(ctx)
+	parameters, err := inference.Resolve(s.runner.Inference, inference.Conclave)
 	if err != nil {
 		return nil, err
 	}
-	digest, err := candidate.Digest()
+	instructions, err := prompt.Internal(s.runner.templates().Conclave, s.runner.ProjectInstructions)
 	if err != nil {
 		return nil, err
 	}
-	unavailable := func(cause error) conclave.Result {
-		result := conclave.Result{CallID: call.ID, CandidateDigest: digest, Lines: candidate.Lines(), Reviews: n, Required: required, Votes: make([]conclave.Vote, n)}
-		for i := range result.Votes {
-			result.Votes[i] = conclave.Vote{Index: i + 1, Error: "Review could not complete: " + excerpt(s.runner.Redact(cause.Error()), 1000)}
+	keyBody, err := json.Marshal(struct {
+		Files                        []toolapi.FileDelta
+		Request, Instructions, Model string
+		Evidence                     int
+		Checks                       []verification.Record
+	}{candidate.Files, s.checkpoint.Objective, instructions, s.runner.Model, s.evidenceRevision, s.checkpoint.Checks})
+	if err != nil {
+		return nil, err
+	}
+	key := sha256.Sum256(keyBody)
+	result, cached := s.reviews[key]
+	if cached {
+		result.CallID = call.ID
+		result.CandidateDigest, err = candidate.Digest()
+		if err != nil {
+			return nil, err
 		}
-		return result
-	}
-	var result conclave.Result
-	if s.usage.ModelCalls+n > s.limits.MaxModelCalls {
-		result = unavailable(fmt.Errorf("insufficient remaining model calls for %d reviewers", n))
+		result.Cached = true
 	} else {
-		s.usage.ModelCalls += n
-		account := &reviewerUsage{task: s, remaining: int64(s.limits.MaxModelCalls - s.usage.ModelCalls), active: make([]modelapi.TokenUsage, n)}
-		input := conclave.Input{TaskObjective: s.checkpoint.Objective, Monitor: history, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate}
-		if s.runner.assignment != nil {
-			input.GoalObjective = s.runner.assignment.GoalObjective
-		}
-		parameters, err := inference.Resolve(s.runner.Inference, inference.Conclave)
+		request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Messages: []modelapi.Message{{Role: "system", Content: instructions}}})
+		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
+		result, err = conclave.Review(ctx, conclave.Input{Checks: s.checkpoint.Checks, Request: s.checkpoint.Objective, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate}, request, s.limits.MaxContextBytes, s.reviewGenerate, s.reviewContext, s.runner.Redact)
 		if err != nil {
 			return nil, err
 		}
-		reviewSystem, err := prompt.Internal(s.runner.templates().Conclave, s.runner.ProjectInstructions)
-		if err != nil {
-			return nil, err
-		}
-		request := modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Messages: []modelapi.Message{{Role: "system", Content: reviewSystem}}}
-		result, err = conclave.Review(ctx, input, parameters.Apply(request), s.limits.MaxContextBytes, account.generate, s.runner.Redact)
-		s.usage.ModelCalls += int(account.extra.Load()) - (n - int(account.started.Load()))
-		if err != nil && ctx.Err() == nil {
-			result = unavailable(err)
+		if result.Complete && result.Verdict.Decision == "reject" {
+			if s.reviews == nil || len(s.reviews) >= 32 {
+				s.reviews = map[[32]byte]conclave.Result{}
+			}
+			s.reviews[key] = result
 		}
 	}
-	s.checkpoint.ModelCalls = s.usage.ModelCalls
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -100,7 +101,7 @@ func (s *task) reviewCandidate(ctx context.Context, call toolapi.Call, proposal 
 		if !result.Complete {
 			code = reviewFailed
 		}
-		return &result, &toolapi.Failure{Code: code, Detail: result.Feedback(), Next: "Generate a new grounded PFC candidate within the existing Goal budget. No separate rejection-count limit applies."}
+		return &result, &toolapi.Failure{Code: code, Detail: result.Feedback(), Next: "Correct the specific defect or provide new evidence; the unchanged candidate will not be reviewed again."}
 	}
 	return &result, nil
 }

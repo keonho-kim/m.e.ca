@@ -42,7 +42,7 @@ func (a *app) restore() error {
 	if err := a.loadHistory(false); err != nil {
 		return err
 	}
-	cp, taskErr := a.opts.Store.LatestTask(ctx, a.opts.Session.ID)
+	cp, taskErr := a.opts.Store.LatestRun(ctx, a.opts.Session.ID)
 	if taskErr != nil {
 		return taskErr
 	}

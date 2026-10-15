@@ -8,6 +8,7 @@ import (
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/tools/local/diff"
+	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 )
 
 func (op *operation) prepareChange(call toolapi.Call) error {
@@ -39,14 +40,27 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 				return err
 			}
 		}
+		supplied := op.input.Content
+		if op.spec.name == "edit_file" {
+			supplied = op.input.NewText
+		}
+		if err := textformat.CheckAnnotations(before, []byte(supplied), op.input.FormatPolicy); err != nil {
+			return err
+		}
 		op.replacement = []byte(op.input.Content)
 		if op.spec.name == "edit_file" {
-			replacement, span, err := op.executor.reads.Replace(op.source.absolute, before, op.input.StartAnchor, op.input.EndAnchor, op.input.NewText)
+			replacement, span, err := op.executor.reads.Replace(op.source.absolute, before, op.input.StartAnchor, op.input.EndAnchor, op.input.NewText, op.input.FormatPolicy)
 			if err != nil {
 				return err
 			}
 			op.replacement = replacement
 			op.editSpan = &span
+		}
+		if op.spec.name == "write_file" {
+			op.replacement, err = textformat.Preserve(before, op.replacement, op.input.FormatPolicy)
+			if err != nil {
+				return err
+			}
 		}
 		op.approval.Preview = op.executor.redact(diff.Preview(op.source.absolute, before, op.replacement, op.original.exists, true))
 		op.approval.Diff = true

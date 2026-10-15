@@ -15,6 +15,8 @@ import (
 )
 
 type streamState struct {
+	calls     map[int]*callDraft
+	lmItems   map[string]int
 	provider  modelconn.ProviderKind
 	usage     *modelapi.TokenUsage
 	finished  bool
@@ -88,7 +90,9 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		state.usage = nil
 	}
 	if len(message.Calls) > 0 && string(message.Calls) != "null" && string(message.Calls) != "[]" {
-		return fmt.Errorf("native JSON tool calls are not supported; reply with a JSON tool-only entry in message content, followed by literal PFC fields")
+		if err := state.addCalls(message.Calls, native, single); err != nil {
+			return err
+		}
 	}
 	if message.Content != "" || reason != "" || observed != nil {
 		return emit(modelapi.Event{Delta: message.Content, Thinking: reason, Streaming: state.streaming, Usage: observed})
@@ -110,5 +114,9 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 	if !state.finished || !state.received {
 		return fmt.Errorf("Model stream ended before completion")
 	}
-	return emit(modelapi.Event{Done: true, Streaming: state.streaming, Usage: state.usage})
+	calls, err := state.completedCalls()
+	if err != nil {
+		return state.emitFailedUsage(err, emit)
+	}
+	return emit(modelapi.Event{Done: true, Streaming: state.streaming, Usage: state.usage, Calls: calls})
 }

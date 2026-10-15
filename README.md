@@ -40,7 +40,7 @@ CGO_ENABLED=0 go build -trimpath -o bin/v ./cmd/v
 
 ### 실행
 
-대화형 터미널에서 실행합니다. 빌드한 바이너리 실행에는 Go나 Docker가 필요하지 않습니다.
+대화형 터미널에서 실행합니다. 빌드한 바이너리는 독립 실행 파일입니다.
 
 ```sh
 ./bin/v                   # 현재 프로젝트에서 시작
@@ -63,6 +63,8 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## 사용법
 
+모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-profiles.md#native-tool-calling)
+
 1. `!model`에서 Provider·주소·모델을 선택합니다. 인증이 필요한 서버는 API Key도 입력합니다.
 2. 자연어로 작업을 요청합니다. `@파일명` 또는 `@경로`로 파일을 참조할 수 있습니다.
 3. 제안된 변경을 diff로 확인하고 승인합니다. 먼저 계획을 검토하려면 `!plan`을 사용합니다.
@@ -79,15 +81,15 @@ export PATH="$HOME/.local/bin:$PATH"
 
 `!`를 입력하면 명령 후보가, `@`를 입력하면 파일 후보가 나타납니다. `↑`·`↓`로 이동하고 `Enter`로 선택합니다. `Ctrl+C`로도 종료할 수 있으며, 모델·Scope 상태는 하단 키맵 바로 윗줄에, 주요 키는 맨 아랫줄에 고정됩니다.
 
-Linux 셸 격리는 바이너리에 포함된 커널 실행기를 사용합니다. Bubblewrap·sudo·추가 설치는 필요하지 않습니다. 커널 기능이나 호스트 정책 때문에 격리할 수 없으면 프로젝트 셸만 차단하며, 대화와 파일 도구는 계속 사용할 수 있습니다. [Linux 실행 조건 →](docs/usage.md#linux의-프로젝트-셸)
+Linux 셸 격리는 별도 설치 과정 없이 바이너리에 포함된 커널 실행기를 사용합니다. 커널 기능이나 호스트 정책 때문에 격리할 수 없으면 프로젝트 셸만 차단하며, 대화와 파일 도구는 계속 사용할 수 있습니다. [Linux 실행 조건 →](docs/usage.md#linux의-프로젝트-셸)
 
-기본값은 **프로젝트 범위 · 승인 필요 · Thinking OFF**입니다. 자동 승인을 선택해도 접근 범위가 넓어지지는 않습니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장합니다. 마지막으로 선택한 모델 연결은 새 세션에서도 재사용하며, 기존 세션의 선택을 우선합니다.
+기본값은 **프로젝트 범위 · 승인 필요 · Thinking OFF**입니다. 자동 승인에서도 선택한 접근 범위가 그대로 적용됩니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장합니다. 마지막으로 선택한 모델 연결은 새 세션에서도 재사용하며, 기존 세션의 선택을 우선합니다.
 
 [자세한 사용법과 키맵 →](docs/usage.md) · [모델 식별·프로파일 →](docs/model-profiles.md)
 
 ## 설정
 
-첫 실행에서 `~/.v`와 기본 파일을 자동 생성합니다. 기존 파일은 덮어쓰지 않습니다.
+첫 실행에서 `~/.v`와 기본 파일을 자동 생성합니다. 기존 파일은 보존합니다.
 
 ```text
 ~/.v/
@@ -97,12 +99,12 @@ Linux 셸 격리는 바이너리에 포함된 커널 실행기를 사용합니�
 └── logs/
 ```
 
-추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 작업·코드 생성 `0.7`, Conclave 심사 `0.4`, 요약·단순 필드 수집 `0.2`입니다.
+추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 작업·코드 생성 `0.7`, Conclave 심사 `0.4`, 요약·내부 분석 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트 `25,600`, 나머지 역할 `12,800`입니다.
 
 ```toml
 [inference.agent]
 temperature = 0.7
-max_output_tokens = 2048
+max_output_tokens = 25600
 ```
 
 [전체 역할별 설정·프롬프트·Compaction →](docs/configuration.md)
@@ -122,7 +124,7 @@ go mod verify
 
 Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스페이스 생성 권한이 필요합니다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`로 격리 테스트가 생략되지 않도록 검증합니다. 지원 도구 체인은 Go 1.27.2이며, 변경 시 [개발 규칙](AGENTS.md)을 따릅니다.
 
-실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 격리 정책, SSH·터미널별 표현은 추가 검증 대상입니다. Windows는 지원하지 않습니다.
+실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 격리 정책, SSH·터미널별 표현은 추가 검증 대상입니다. 지원 운영체제는 Linux와 macOS입니다.
 
 ## 문서
 
@@ -130,7 +132,7 @@ Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스�
 | --- | --- |
 | [사용 가이드](docs/usage.md) | 모델 연결, 키맵, 승인, 스트림과 오류 복구 |
 | [설정과 대화 보존](docs/configuration.md) | 역할별 인자, 프롬프트, Compaction, 세션 저장 |
-| [에이전트 작동 방식](docs/runtime.md) | Goal·Task, PFC, self-grounding, Conclave, 검증 루프 |
+| [에이전트 작동 방식](docs/runtime.md) | 단일 실행 루프, native tool calling, self-grounding, Conclave, 검증 |
 | [모델 프로파일](docs/model-profiles.md) | 모델 식별, 서빙 별칭, 모델별 Thinking 제어 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |

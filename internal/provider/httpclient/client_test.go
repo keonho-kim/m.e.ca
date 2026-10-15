@@ -65,7 +65,7 @@ func TestListModelsProviderContracts(t *testing.T) {
 	}
 }
 
-func TestNativeJSONToolCallsAreRejected(t *testing.T) {
+func TestMalformedNativeCallsAreRejected(t *testing.T) {
 	client := mockClient(t, modelconn.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -78,7 +78,7 @@ func TestNativeJSONToolCallsAreRejected(t *testing.T) {
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"name\":\"read_file\",\"arguments\":\"{}\"}}]}}]}\n\n")
 	})
 	err := client.Generate(context.Background(), modelapi.Request{ModelID: "chosen-model", MaxOutput: 128, Messages: []modelapi.Message{{Role: "user", Content: "inspect"}}}, func(modelapi.Event) error { return nil })
-	if err == nil || !strings.Contains(err.Error(), "native JSON") {
+	if err == nil || !strings.Contains(err.Error(), "invalid tool call") {
 		t.Fatalf("unexpected native call: %v", err)
 	}
 }

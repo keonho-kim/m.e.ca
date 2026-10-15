@@ -1,4 +1,4 @@
-// Purpose: Run a bounded Ralph task with full uncompacted context, sequential tool dialogue and evidence-gated completion.
+// Purpose: Run a bounded Ralph execution with full uncompacted context, native tool calls and evidence-gated completion.
 // Pattern: State Machine / Use Case.
 // Usage: Invoked for one user objective or approved Plan step; cancellation never replays effects.
 // Related: internal/agent/run/action.go, internal/agent/run/generate.go, internal/agent/run/events.go.
@@ -10,41 +10,43 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/pfc"
-	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/progress"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 	"time"
 )
 
-type task struct {
-	files           progress.Files
-	runner          Runner
-	limits          Limits
-	system          string
-	planning        bool
-	result          Result
-	checkpoint      Checkpoint
-	emit            func(Event) error
-	definitions     []toolapi.Definition
-	seen            map[[32]byte]bool
-	mutations       map[[32]byte]bool
-	worked, changed bool
-	usage           *Usage
-	messages        []modelapi.Message
-	memoryContext   string
+type execution struct {
+	files            progress.Files
+	runner           Runner
+	limits           Limits
+	system           string
+	planning         bool
+	result           Result
+	checkpoint       Checkpoint
+	emit             func(Event) error
+	definitions      []toolapi.Definition
+	seen             map[[32]byte]bool
+	mutations        map[[32]byte]bool
+	changed          bool
+	usage            *Usage
+	messages         []modelapi.Message
+	memoryContext    string
+	finishCorrection bool
+	capacityRecovery bool
+	reviews          map[[32]byte]conclave.Result
+	evidenceRevision int
 }
 
 func (r Runner) Run(ctx context.Context, input string, planning bool, approve Approver, emit func(Event) error) (result Result, err error) {
 	if r.Generator == nil || r.Tools == nil || r.Journal == nil || r.Redact == nil || approve == nil || emit == nil {
-		return result, fmt.Errorf("task dependencies are required")
+		return result, fmt.Errorf("execution dependencies are required")
 	}
-	if r.PreviousTask != nil {
-		if err := r.PreviousTask.Check(); err != nil {
+	if r.PreviousRun != nil {
+		if err := r.PreviousRun.Check(); err != nil {
 			return result, err
 		}
 	}
@@ -80,7 +82,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		defer observer.Close()
 		r.observer = observer
 	}
-	s := &task{runner: r, limits: limits, system: system, planning: planning, emit: emit, definitions: r.Tools.Definitions(), seen: map[[32]byte]bool{}, mutations: map[[32]byte]bool{}}
+	s := &execution{runner: r, limits: limits, system: system, planning: planning, emit: emit, definitions: r.Tools.Definitions(), seen: map[[32]byte]bool{}, mutations: map[[32]byte]bool{}}
 	s.usage = r.Usage
 	if s.usage == nil {
 		s.usage = &Usage{}
@@ -90,11 +92,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 	}
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
-	s.checkpoint = Checkpoint{ID: "task_" + rand.Text(), Objective: r.Redact(input), Status: Running, Phase: "decision", Step: r.Step, InstructionsDigest: fmt.Sprintf("%x", digest)}
-	if r.assignment != nil {
-		s.checkpoint.GoalID = r.assignment.GoalID
-		s.checkpoint.ID = r.assignment.TaskID
-	}
+	s.checkpoint = Checkpoint{ID: "run_" + rand.Text(), Objective: r.Redact(input), Status: Running, Phase: "decision", Step: r.Step, InstructionsDigest: fmt.Sprintf("%x", digest)}
 	defer func() {
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -113,7 +111,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		err = errors.Join(err, s.persist(flushCtx))
 		result = s.result
 	}()
-	if !r.internalTask {
+	if r.Step == nil {
 		if err = s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
 			return s.result, err
 		}
@@ -127,71 +125,56 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		s.checkpoint.ModelCalls = s.usage.ModelCalls
 		s.checkpoint.Phase = "decision"
 		s.checkpoint.Tool = ""
-		s.checkpoint.Parameter = ""
 		s.checkpoint.Arguments = nil
 		s.checkpoint.Checking = false
 		if err = s.persist(ctx); err != nil {
 			return s.result, err
 		}
-		if err = s.refreshMemory(ctx); err != nil {
+		if err = s.refreshMemory(ctx, false); err != nil {
 			return s.result, err
 		}
 		role := inference.Agent
 		if planning {
 			role = inference.Plan
 		}
-		text, askErr := s.ask(ctx, "DECISION: Choose one next action. For a greeting or a question answerable without project evidence, use DONE followed by the answer in any mode; tools are optional and must serve the user goal. In Plan mode, ordinary discussion does not require a completed Plan. To enter PFC, return only {\"tool\":\"tool_name\"} using the provided tool list, without arguments or other keys. A completion claim alone is not verification.", role, 16384)
+		reply, askErr := s.askResponse(ctx, "Choose the next necessary native tool or answer the user. Use observed results; report incomplete work honestly.", role, modelapi.MaxResponseBytes)
 		if askErr != nil {
-			return s.result, askErr
-		}
-		decision, parseErr := pfc.ParseDecision(text)
-		if parseErr != nil {
-			s.checkpoint.Observation = "Invalid decision: " + parseErr.Error()
+			var capacity interface{ ContextLimit() bool }
+			if !s.capacityRecovery && errors.As(askErr, &capacity) && capacity.ContextLimit() {
+				s.capacityRecovery = true
+				if err = s.refreshMemory(ctx, true); err != nil {
+					return s.result, errors.Join(askErr, err)
+				}
+				continue
+			}
+			var malformed *modelapi.ToolCallError
+			var truncated *modelapi.OutputLimitError
+			if !errors.As(askErr, &malformed) && !errors.As(askErr, &truncated) {
+				return s.result, askErr
+			}
+			s.checkpoint.Observation = "Correct the native tool call or narrow the change to fit the output limit; nothing executed: " + s.runner.Redact(askErr.Error())
 			s.checkpoint.NoProgress++
+		} else if len(reply.Calls) > 0 {
+			if len(reply.Calls) != 1 {
+				if err = s.returnToolFeedback(ctx, reply, "Choose exactly one tool call per turn; no call in this batch was executed."); err != nil {
+					return s.result, err
+				}
+			} else if err = s.action(ctx, reply, approve); err != nil {
+				return s.result, err
+			}
+			if s.checkpoint.Status == PlanReady {
+				return s.result, nil
+			}
 		} else {
-			switch decision.Kind {
-			case pfc.Done:
-				if planning {
-					s.checkpoint.Status = Answered
-					if _, err := planref.ParsePlanProposal(decision.Text); err == nil {
-						s.checkpoint.Status = PlanReady
-					}
-				} else if s.checkpoint.PendingReview || !s.worked && r.assignment != nil && r.assignment.Kind == "work" {
-					s.checkpoint.Observation = "DONE rejected: this work Task still needs execution and verification; a rejected Conclave candidate cannot be treated as completed."
-					s.checkpoint.NoProgress++
-					break
-				} else if !s.worked {
-					s.checkpoint.Status = Answered
-				} else if s.checkpoint.Evidence != "" && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 {
-					s.checkpoint.Status = Verified
-				} else {
-					s.checkpoint.Observation = "DONE rejected: satisfy every pending or stale verification in Current task facts after the latest change. Read-back alone does not verify a change; use an approved check command or WAIT for review."
-					s.checkpoint.NoProgress++
-					break
-				}
-				s.result.Text = decision.Text
-				if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: decision.Text}); err != nil {
-					return s.result, err
-				}
-				err = s.emit(Event{Kind: "response", Text: decision.Text})
-				return s.result, err
-			case pfc.Wait:
-				s.checkpoint.Status = NeedsInput
-				s.result.Text = decision.Text
-				if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: decision.Text}); err != nil {
-					return s.result, err
-				}
-				err = s.emit(Event{Kind: "response", Text: decision.Text})
-				return s.result, err
-			case pfc.Continue:
-				s.checkpoint.Observation = "No tool observation was produced. Next intention: " + excerpt(decision.Text, 1024)
-				s.checkpoint.NoProgress++
-			case pfc.Tool:
-				if err = s.action(ctx, decision, approve); err != nil {
-					return s.result, err
-				}
+			finished, finishErr := s.finish(ctx, reply.Text)
+			if finishErr != nil {
+				return s.result, finishErr
+			}
+			if finished {
+				return s.result, nil
 			}
 		}
+
 		if s.checkpoint.NoProgress >= limits.StallIterations {
 			if err := s.recoverProgress(ctx); err != nil {
 				return s.result, err

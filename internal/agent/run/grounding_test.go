@@ -1,75 +1,57 @@
-// Purpose: Verify missing self-grounding blocks preparation and valid records remain in subsequent context.
-// Pattern: Task state-machine contract tests.
+// Purpose: Verify bound intent is durable before execution and survives in native history.
+// Pattern: Runtime trust-boundary tests.
 // Usage: go test ./internal/agent/run -run TestGrounding.
-// Related: internal/agent/run/grounding.go, internal/agent/run/execute.go.
+// Related: internal/agent/run/grounding.go, internal/agent/tool/intent.go.
 package run
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"strings"
 	"testing"
 )
 
-type ungrounded struct{ base *generator }
-
-func (g ungrounded) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if strings.Contains(r.Messages[len(r.Messages)-1].Content, "\nSELF-GROUNDING:") {
-		return emit(modelapi.Event{Delta: "I know the answer", Done: true})
-	}
-	return g.base.Generate(ctx, r, emit)
-}
-
-func TestGroundingMandatoryAndBound(t *testing.T) {
-	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md"}}
-	e, j := &executor{}, &journal{}
-	r := fixture(g, e, j)
-	r.Generator = ungrounded{g}
-	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err == nil || e.prepared != 0 {
-		t.Fatalf("ungrounded call prepared: %d %v", e.prepared, err)
+func TestGroundingMissingReasonNeverPrepares(t *testing.T) {
+	g := &generator{replies: []string{`native:{"id":"c","name":"read_file","arguments":{"path":"a"}}`, "Need a reason."}}
+	e := &executor{}
+	result, err := fixture(g, e, &journal{}).Run(context.Background(), "inspect", false, approve, emit)
+	if err != nil || e.prepared != 0 || !result.HadToolFailure {
+		t.Fatalf("%+v prepared=%d: %v", result, e.prepared, err)
 	}
 }
-
 func TestGroundingPersistenceFailureBlocksPreparation(t *testing.T) {
-	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md"}}
-	e, j := &executor{}, &journal{failKind: "self_grounding"}
-	r := fixture(g, e, j)
-	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err == nil || e.prepared != 0 {
-		t.Fatalf("uncommitted grounding executed: %d %v", e.prepared, err)
+	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"})}}
+	e := &executor{}
+	_, err := fixture(g, e, &journal{failKind: "self_grounding"}).Run(context.Background(), "inspect", false, approve, emit)
+	if err == nil || e.prepared != 0 {
+		t.Fatalf("prepared=%d err=%v", e.prepared, err)
 	}
 }
-
 func TestGroundingPersistsAndStaysInContext(t *testing.T) {
-	g := &generator{replies: []string{`{"tool":"read_file"}`, "README.md", "WAIT\nreview"}}
+	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Observed a."}}
 	e, j := &executor{}, &journal{}
-	r := fixture(g, e, j)
-	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {
+	_, err := fixture(g, e, j).Run(context.Background(), "inspect", false, approve, emit)
+	if err != nil {
 		t.Fatal(err)
 	}
-	groundIndex, startIndex := -1, -1
-	for i, event := range j.events {
+	grounded := false
+	for _, event := range j.events {
 		if event.Grounding != nil {
-			groundIndex = i
-			if !event.Grounding.Matches(e.calls[0]) {
-				t.Fatal("wrong binding")
-			}
+			grounded = event.Grounding.Matches(e.calls[0])
 		}
-		if event.Kind == "tool_started" {
-			startIndex = i
+		if event.Kind == "tool_started" && !grounded {
+			t.Fatal("execution before grounding")
 		}
 	}
-	if groundIndex < 0 || startIndex <= groundIndex {
-		t.Fatal("grounding not durable before execution")
+	if !grounded || len(g.groundingRequests) != 0 {
+		t.Fatal("intent missing or extra model call")
 	}
-	if len(g.groundingRequests) != 1 {
-		t.Fatal("one grounding per call required")
-	}
-	last := g.requests[len(g.requests)-1]
 	found := false
-	for _, message := range last.Messages {
-		found = found || strings.Contains(message.Content, "Self-grounding for")
+	for _, m := range g.requests[1].Messages {
+		for _, c := range m.Calls {
+			found = found || strings.Contains(string(c.Arguments), `"reason"`)
+		}
 	}
 	if !found {
-		t.Fatal("grounding disappeared from context")
+		t.Fatal("native intent lost from history")
 	}
 }

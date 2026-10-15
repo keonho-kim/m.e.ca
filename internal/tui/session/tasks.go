@@ -25,7 +25,7 @@ func (a *app) startTask(text string, approved *planning.Plan) {
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)
 	inferenceSettings := a.opts.Config.Inference
-	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop, Usage: &run.Usage{}}
+	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop, Usage: &run.Usage{}}
 	planningMode := a.planMode
 	previous := a.plan
 	var references []string

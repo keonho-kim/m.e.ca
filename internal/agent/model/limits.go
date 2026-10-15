@@ -1,7 +1,7 @@
-// Purpose: Distinguish incomplete model output from transport failures for safe PFC correction.
+// Purpose: Distinguish incomplete model output from transport failures for safe native call correction.
 // Pattern: Typed model boundary error.
 // Usage: Provider finish reasons and phase collectors return OutputLimitError.
-// Related: internal/provider/diagnostic/check.go, internal/agent/run/arguments.go.
+// Related: internal/provider/diagnostic/check.go, internal/agent/run/generate.go.
 package model
 
 type OutputLimitError struct{ Reason string }

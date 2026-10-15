@@ -7,7 +7,6 @@ package compact
 import (
 	"context"
 	"github.com/keonho-kim/v-code/internal/agent/conclave"
-	"github.com/keonho-kim/v-code/internal/agent/goal"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/plan"
@@ -15,7 +14,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/verification"
 )
 
-type TaskFact struct {
+type RunFact struct {
 	Checks                                 []verification.Record
 	ChangeRevision                         int
 	ID, Objective, Status, Phase, Evidence string
@@ -28,29 +27,23 @@ type GroundingFact struct {
 	Source int64
 }
 
-type GoalFact struct {
-	State  goal.State
-	Source int64
-}
 type ReviewFact struct {
 	Result conclave.Result
 	Source int64
 }
 
 type Record struct {
-	Goal       *goal.State
 	Review     *conclave.Result
 	Grounding  *grounding.Record
 	Sequence   int64
 	Role, Text string
-	Task       *TaskFact
+	Run        *RunFact
 	Operation  *toolapi.Operation
 }
 type Ledger struct {
-	Goals      []GoalFact
 	Reviews    []ReviewFact
 	Groundings []GroundingFact
-	Tasks      []TaskFact
+	Runs       []RunFact
 	Operations []toolapi.Operation
 }
 type Memory struct {

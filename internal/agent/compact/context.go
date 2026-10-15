@@ -20,13 +20,6 @@ func (m Memory) Context() (string, error) {
 	b.WriteString(m.Markdown)
 	b.WriteString("\n\n## Runtime evidence ledger\n")
 	quote := func(text string) string { value, _ := json.Marshal(text); return string(value) }
-	for _, fact := range m.Ledger.Goals {
-		body, err := json.Marshal(fact.State)
-		if err != nil {
-			return "", err
-		}
-		fmt.Fprintf(&b, "- Goal state source=#%d: %s\n", fact.Source, body)
-	}
 	for _, fact := range m.Ledger.Reviews {
 		body, err := json.Marshal(fact.Result)
 		if err != nil {
@@ -35,8 +28,8 @@ func (m Memory) Context() (string, error) {
 		fmt.Fprintf(&b, "- Conclave ballot source=#%d (review only; not execution): %s\n", fact.Source, body)
 	}
 	seenPlans := map[string]bool{}
-	for _, task := range m.Ledger.Tasks {
-		fmt.Fprintf(&b, "- Task %s: status=%s; phase=%s; goal source=#%d\n", quote(task.ID), quote(task.Status), quote(task.Phase), task.Source)
+	for _, task := range m.Ledger.Runs {
+		fmt.Fprintf(&b, "- Run %s: status=%s; phase=%s; goal source=#%d\n", quote(task.ID), quote(task.Status), quote(task.Phase), task.Source)
 		for _, check := range task.Checks {
 			fmt.Fprintf(&b, "  - Check %s: status=%s; revision=%d/current=%d; call=%s; detail=%s\n", quote(check.Target), quote(check.Status), check.Revision, task.ChangeRevision, quote(check.CallID), quote(check.Detail))
 		}
@@ -54,7 +47,7 @@ func (m Memory) Context() (string, error) {
 		}
 	}
 	for _, op := range m.Ledger.Operations {
-		fmt.Fprintf(&b, "- Operation %s: task=%s; tool=%s; status=%s; check=%t; source=#%d\n", quote(op.CallID), quote(op.TaskID), quote(op.Name), quote(op.Status), op.Check, op.Source)
+		fmt.Fprintf(&b, "- Operation %s: task=%s; tool=%s; status=%s; check=%t; source=#%d\n", quote(op.CallID), quote(op.RunID), quote(op.Name), quote(op.Status), op.Check, op.Source)
 		if op.Process != nil && op.Process.Diagnostic != "" {
 			fmt.Fprintf(&b, "  - Check diagnostic: %s; capture_truncated=%t\n", quote(op.Process.Diagnostic), op.Process.Truncated)
 		}
@@ -81,11 +74,6 @@ func (m Memory) Check(maxSummary int) error {
 	if m.Revision < 0 || m.Through < 0 || m.UsageThrough < 0 || len(m.Markdown) > maxSummary || !utf8.ValidString(m.Markdown) {
 		return fmt.Errorf("invalid compaction memory")
 	}
-	for _, fact := range m.Ledger.Goals {
-		if err := fact.State.Check(); err != nil {
-			return err
-		}
-	}
 	for _, fact := range m.Ledger.Reviews {
 		if err := fact.Result.Check(); err != nil {
 			return err
@@ -96,7 +84,7 @@ func (m Memory) Check(maxSummary int) error {
 			return err
 		}
 	}
-	for _, task := range m.Ledger.Tasks {
+	for _, task := range m.Ledger.Runs {
 		if err := verification.Check(task.Checks); err != nil {
 			return err
 		}

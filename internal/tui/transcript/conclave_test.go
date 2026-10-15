@@ -14,7 +14,7 @@ import (
 
 func TestConclaveDisplayHidesInternalRecords(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file", Arguments: []byte(`{"path":"a"}`)}, Conclave: &conclave.Result{Votes: []conclave.Vote{{Reason: "private reviewer detail"}}}}
+	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file", Arguments: []byte(`{"path":"a"}`)}, Conclave: &conclave.Result{Verdict: conclave.Verdict{Decision: "reject", Findings: []conclave.Finding{{Path: "a", Side: "request", Reason: "private reviewer detail"}}}}}
 	blocks := f.Event(event)
 	if len(blocks) != 1 || !strings.Contains(blocks[0].Text, "edit_file · Conclave Fail") || !strings.Contains(blocks[0].Text, ReviewRejectedMessage) || strings.Contains(blocks[0].Text, "private") {
 		t.Fatalf("bad transcript: %+v", blocks)
@@ -28,7 +28,7 @@ func TestConclaveDisplayHidesInternalRecords(t *testing.T) {
 	if text := f.Tool(event); !strings.Contains(text, "edit_file · Conclave Pass") || strings.Contains(text, "private") {
 		t.Fatal(text)
 	}
-	for _, kind := range []string{"goal_state", "monitor", "tool_proposed"} {
+	for _, kind := range []string{"monitor", "tool_proposed"} {
 		if len(f.Event(run.Event{Kind: kind, Text: "internal work"})) != 0 {
 			t.Fatalf("%s leaked", kind)
 		}

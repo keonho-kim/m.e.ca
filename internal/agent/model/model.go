@@ -14,6 +14,7 @@ import (
 const MaxResponseBytes = 4 * 1024 * 1024
 
 type Message struct {
+	Reasoning       string         `json:"reasoning,omitempty"`
 	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
 	ID              string         `json:"id,omitempty"`
 	Role            string         `json:"role"`
@@ -28,6 +29,7 @@ type Message struct {
 }
 
 type Request struct {
+	Tools           []toolapi.Definition
 	Temperature     *float64
 	IdleTimeout     time.Duration
 	ReasoningEffort string
@@ -36,6 +38,17 @@ type Request struct {
 	MaxOutput       int
 	Thinking        *bool
 }
+
+type Response struct {
+	Reasoning string
+	Text      string
+	Calls     []toolapi.Call
+}
+
+// ToolCallError reports unusable model tool syntax before any operation exists.
+type ToolCallError struct{ Detail string }
+
+func (e *ToolCallError) Error() string { return "invalid tool call: " + e.Detail }
 
 type Event struct {
 	Retry     *Retry

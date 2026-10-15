@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/protocol"
 	"github.com/keonho-kim/v-code/internal/provider/transport"
@@ -17,7 +18,7 @@ import (
 	"strings"
 )
 
-func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int) (int, error) {
+func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition) (int, error) {
 	if c.connection.Kind != connection.VLLM || c.modelInfo == nil || c.modelInfo.ContextWindow == 0 {
 		return output, nil
 	}
@@ -31,11 +32,12 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 		kwargs["reasoning_effort"] = controls.ReasoningEffort
 	}
 	body, err := json.Marshal(struct {
+		Tools      []protocol.Tool    `json:"tools,omitempty"`
 		Model      string             `json:"model"`
 		Messages   []protocol.Message `json:"messages"`
 		Template   map[string]any     `json:"chat_template_kwargs"`
 		Generation bool               `json:"add_generation_prompt"`
-	}{model, messages, kwargs, true})
+	}{protocol.Tools(definitions), model, messages, kwargs, true})
 	if err != nil {
 		return 0, err
 	}

@@ -13,6 +13,9 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 	if event.Internal {
 		return nil
 	}
+	if event.Kind == "progress" {
+		return []viewport.Block{{Text: Reply(f.Redact(event.Text))}}
+	}
 	if event.Kind == "conclave" {
 		if text := f.Conclave(event); text != "" {
 			return []viewport.Block{{Text: text}}
@@ -20,7 +23,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		return nil
 	}
 	switch event.Kind {
-	case "monitor", "goal_state", "tool_proposed", "tool_started", "approved", "self_grounding", "grounding_correction", "pfc_correction":
+	case "monitor", "tool_proposed", "tool_started", "approved", "self_grounding":
 		return nil
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		if text := f.Tool(event); text != "" {

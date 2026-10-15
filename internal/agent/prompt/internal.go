@@ -1,6 +1,6 @@
 // Purpose: Compose internal role instructions without the main agent dialogue protocol.
 // Pattern: Pure prompt composition.
-// Usage: Goal analysis, grounding, PFC and Conclave use Internal.
+// Usage: Conclave uses Internal with project constraints.
 // Related: internal/agent/prompt/prompt.go, internal/agent/prompt/defaults.go.
 package prompt
 

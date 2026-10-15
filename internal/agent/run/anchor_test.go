@@ -1,7 +1,7 @@
-// Purpose: Verify the model reads short line references and completes an anchored edit through PFC and approval.
+// Purpose: Verify the model reads short line references and completes an anchored edit through native calls and approval.
 // Pattern: Agent and filesystem integration test.
 // Usage: go test ./internal/agent/run -run TestAnchoredEditDialogue.
-// Related: internal/agent/pfc/pfc.go, internal/tools/local/anchors/edit.go, internal/agent/run/action.go.
+// Related: internal/agent/tool/arguments.go, internal/tools/local/anchors/edit.go, internal/agent/run/action.go.
 package run
 
 import (
@@ -24,27 +24,43 @@ type anchorGenerator struct {
 }
 
 func (g *anchorGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	question := r.Messages[len(r.Messages)-1].Content
-	if strings.Contains(question, "ARGUMENT edit_file.start_anchor:") || strings.Contains(question, "ARGUMENT edit_file.end_anchor:") {
-		for _, message := range g.journal.messages {
-			if message.Role != "tool" || message.ToolName != "read_file" {
+	return g.script.Generate(ctx, r, func(event modelapi.Event) error {
+		for i := range event.Calls {
+			call := &event.Calls[i]
+			if call.Name != "edit_file" {
 				continue
 			}
-			var read struct{ Content string }
-			if err := json.Unmarshal([]byte(message.Content), &read); err != nil {
+			var args map[string]any
+			if err := json.Unmarshal(call.Arguments, &args); err != nil {
 				return err
 			}
-			for _, line := range strings.Split(read.Content, "\n") {
-				if strings.HasPrefix(line, "2#") {
-					anchor, _, _ := strings.Cut(line, " | ")
-					g.anchorFields++
-					return emit(modelapi.Event{Delta: anchor + "\n", Done: true})
+			for _, message := range g.journal.messages {
+				if message.Role != "tool" || message.ToolName != "read_file" {
+					continue
+				}
+				var read struct{ Content string }
+				if err := json.Unmarshal([]byte(message.Content), &read); err != nil {
+					return err
+				}
+				for _, line := range strings.Split(read.Content, "\n") {
+					if strings.HasPrefix(line, "2#") {
+						anchor, _, _ := strings.Cut(line, " | ")
+						args["start_anchor"], args["end_anchor"] = anchor, anchor
+						g.anchorFields += 2
+					}
 				}
 			}
+			if args["start_anchor"] == nil {
+				return fmt.Errorf("read anchors missing")
+			}
+			body, err := json.Marshal(args)
+			if err != nil {
+				return err
+			}
+			call.Arguments = body
 		}
-		return fmt.Errorf("read anchors missing from model observations")
-	}
-	return g.script.Generate(ctx, r, emit)
+		return emit(event)
+	})
 }
 func TestAnchoredEditDialogue(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
@@ -60,7 +76,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	script := &generator{purposes: []string{"work", "check"}, replies: []string{`{"tool":"read_file"}`, "a", "0", "0", `{"tool":"edit_file"}`, "a", "second changed\n", `{"tool":"execute_command"}`, "test -f a", "DONE\nUpdated a at line 2 and checked it"}}
+	script := &generator{purposes: []string{"work", "check"}, replies: []string{nativeCall("read_file", map[string]any{"path": "a", "offset": 0, "limit": 0}), nativeCall("edit_file", map[string]any{"path": "a", "new_text": "second changed\n"}), nativeCall("execute_command", map[string]any{"command": "test -f a"}), "Updated a at line 2 and checked it"}}
 	journal := &journal{}
 	model := &anchorGenerator{script: script, journal: journal}
 	runner := fixture(script, &executor{}, journal)
@@ -68,7 +84,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 	runner.Tools = tools
 	runner.Settings.Scope = policy.System
 	result, err := runner.Run(context.Background(), "change the second line", false, approve, emit)
-	if err != nil || result.Status != Verified || model.anchorFields != 2 || len(script.reviewRequests) != 3 {
+	if err != nil || result.Status != Verified || model.anchorFields != 2 || len(script.reviewRequests) != 1 {
 		t.Fatalf("result=%+v fields=%d err=%v", result, model.anchorFields, err)
 	}
 	content, err := os.ReadFile(filepath.Join(project, "a"))

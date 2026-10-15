@@ -12,6 +12,11 @@ import (
 
 func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
 	payload := wireRequest{Model: request.ModelID, Messages: messages, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
+	payload.Tools = Tools(request.Tools)
+	if len(payload.Tools) > 0 && kind != modelconn.Ollama {
+		parallel := false
+		payload.ToolChoice, payload.ParallelCalls = "auto", &parallel
+	}
 	endpoint := baseURL + "/chat/completions"
 	if kind == modelconn.Ollama {
 		endpoint = baseURL + "/chat"
@@ -27,7 +32,7 @@ func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelIn
 	content, err := json.Marshal(payload)
 	if kind == modelconn.LMStudio {
 		endpoint = baseURL + "/responses"
-		content, err = lmPayload(request.ModelID, messages, request.MaxOutput, controls.ReasoningEffort, request.Temperature)
+		content, err = lmPayload(request.ModelID, messages, request.MaxOutput, controls.ReasoningEffort, request.Temperature, request.Tools)
 	}
 	if err != nil {
 		return "", nil, err

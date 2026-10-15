@@ -17,7 +17,7 @@ func TestWorkerErrorDisplayedOnce(t *testing.T) {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
 			a.page, a.busy = page, true
-			a.receive(notice{Done: true, Err: errors.New("PFC diagnostic failed")})
+			a.receive(notice{Done: true, Err: errors.New("Connection diagnostic failed")})
 			check := func() {
 				t.Helper()
 				a.render()
@@ -25,7 +25,7 @@ func TestWorkerErrorDisplayedOnce(t *testing.T) {
 				for row := 0; row < 24; row++ {
 					rows.WriteString(screenLine(a.screen, row, 80))
 				}
-				if count := strings.Count(rows.String(), "PFC diagnostic failed"); count != 1 {
+				if count := strings.Count(rows.String(), "Connection diagnostic failed"); count != 1 {
 					t.Fatalf("error displayed %d times", count)
 				}
 			}

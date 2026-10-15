@@ -1,7 +1,7 @@
 // Purpose: Parse the shared line-number and short-hash literal used by read and edit tools.
 // Pattern: Tool boundary value parser.
-// Usage: PFC validates anchor fields and the local snapshot store resolves them.
-// Related: internal/agent/pfc/pfc.go, internal/tools/local/anchors/edit.go.
+// Usage: Native argument validation checks anchors and the local snapshot store resolves them.
+// Related: internal/agent/tool/arguments.go, internal/tools/local/anchors/edit.go.
 package tool
 
 import (

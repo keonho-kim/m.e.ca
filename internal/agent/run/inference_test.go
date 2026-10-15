@@ -1,4 +1,4 @@
-// Purpose: Verify task phases select role settings without inheriting the previous call's sampling.
+// Purpose: Verify execution phases select role settings without inheriting the previous call's sampling.
 // Pattern: Runtime behavior tests with captured generation requests.
 // Usage: go test ./internal/agent/run -run TestInference.
 // Related: internal/agent/run/context.go, internal/agent/inference/settings.go.
@@ -20,10 +20,10 @@ func checkInference(t *testing.T, request modelapi.Request, parameters inference
 	}
 }
 func TestInferenceToolPhasesAndConclave(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"write_file"}`, "a", "new", `{"tool":"execute_command"}`, "verify", "DONE\nVerified"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
 	r := fixture(g, &executor{}, &journal{})
 	settings := inference.Defaults()
-	settings.PFCValue.Temperature = 0
+	settings.Agent.Temperature = 0
 	settings.Conclave.MaxOutputTokens = 1234
 	r.Inference = &settings
 	r.ProjectInstructions = "Project rule: do not remove tests."
@@ -35,20 +35,14 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 	if err != nil || result.Status != Verified {
 		t.Fatalf("%+v %v", result, err)
 	}
-	for i, role := range []inference.Role{inference.Agent, inference.PFCValue, inference.PFCContent, inference.Agent, inference.PFCContent, inference.Agent} {
+	for i, role := range []inference.Role{inference.Agent, inference.Agent, inference.Agent} {
 		p, err := inference.Resolve(&settings, role)
 		if err != nil {
 			t.Fatal(err)
 		}
 		checkInference(t, g.requests[i], p)
 	}
-	for _, request := range g.purposeRequests {
-		checkInference(t, request, settings.PFCValue)
-	}
-	for _, request := range g.groundingRequests {
-		checkInference(t, request, settings.Grounding)
-	}
-	if len(g.reviewRequests) != 3 {
+	if len(g.reviewRequests) != 1 {
 		t.Fatalf("reviews=%d", len(g.reviewRequests))
 	}
 	for _, request := range g.reviewRequests {
@@ -58,25 +52,4 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 			t.Fatalf("mixed review prompt: %s", system)
 		}
 	}
-}
-func TestInferenceGoalAndReport(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "GOAL: inspect and explain\nTASK work: first\nTASK answer: second", `{"tool":"read_file"}`, "a", "DONE\none", "DONE\ntwo", "DONE\nfinal"}}
-	r := fixture(g, &executor{}, &journal{})
-	settings := inference.Defaults()
-	settings.Goal.Temperature = 0.3
-	settings.Report.Temperature = 0.1
-	r.Inference = &settings
-	if _, err := r.RunGoal(context.Background(), "explain", approve, emit); err != nil {
-		t.Fatal(err)
-	}
-	checkInference(t, g.requests[0], settings.Agent)
-	checkInference(t, g.requests[1], settings.Goal)
-	checkInference(t, g.requests[6], settings.Report)
-	g = &generator{replies: []string{"DONE\nplan"}}
-	r = fixture(g, &executor{}, &journal{})
-	r.Inference = &settings
-	if _, err := r.Run(context.Background(), "plan", true, approve, emit); err != nil {
-		t.Fatal(err)
-	}
-	checkInference(t, g.requests[0], settings.Plan)
 }

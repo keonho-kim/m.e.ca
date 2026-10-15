@@ -10,6 +10,8 @@ import (
 )
 
 type Message struct {
+	ToolCallID       string          `json:"tool_call_id,omitempty"`
+	ToolName         string          `json:"tool_name,omitempty"`
 	Role             string          `json:"role,omitempty"`
 	Content          string          `json:"content"`
 	Thinking         string          `json:"thinking,omitempty"`
@@ -25,6 +27,9 @@ type ollamaOptions struct {
 }
 
 type wireRequest struct {
+	Tools           []Tool         `json:"tools,omitempty"`
+	ToolChoice      string         `json:"tool_choice,omitempty"`
+	ParallelCalls   *bool          `json:"parallel_tool_calls,omitempty"`
 	Temperature     *float64       `json:"temperature,omitempty"`
 	StreamOptions   *streamOptions `json:"stream_options,omitempty"`
 	ReasoningEffort string         `json:"reasoning_effort,omitempty"`

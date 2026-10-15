@@ -13,7 +13,11 @@ func (message Message) Check() error {
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" && message.Role != "system" {
 		return fmt.Errorf("invalid message role")
 	}
-	if len(message.Content) > MaxResponseBytes || len(message.Calls) > toolapi.MaxCalls {
+	size := len(message.Content) + len(message.Reasoning)
+	for _, call := range message.Calls {
+		size += len(call.Arguments) + len(call.ID) + len(call.Name)
+	}
+	if size > MaxResponseBytes || len(message.Calls) > toolapi.MaxCalls {
 		return fmt.Errorf("message exceeds size limits")
 	}
 	for _, call := range message.Calls {

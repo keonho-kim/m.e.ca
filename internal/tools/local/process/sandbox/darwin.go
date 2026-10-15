@@ -7,6 +7,7 @@
 package sandbox
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,7 +16,11 @@ import (
 	"strings"
 )
 
-func Prepare(project, home, private, command string) (Launch, error) {
+func Prepare(ctx context.Context, project, home, private, command string) (Launch, error) {
+	if err := ctx.Err(); err != nil {
+		return Launch{}, err
+	}
+
 	project, err := filepath.EvalSymlinks(project)
 	if err != nil {
 		return Launch{}, err
@@ -34,6 +39,14 @@ func Prepare(project, home, private, command string) (Launch, error) {
 	userPaths, err := userRuntime(&launch, home, private)
 	if err != nil {
 		return Launch{}, errors.Join(err, launch.Close())
+	}
+	developer, err := developerRuntime(ctx, project, home, private)
+	if err != nil {
+		return Launch{}, errors.Join(err, launch.Close())
+	}
+	if developer != "" {
+		userPaths = append(userPaths, developer)
+		launch.Environment = append(launch.Environment, "DEVELOPER_DIR="+developer)
 	}
 	profile := `(version 1)
 (deny default)

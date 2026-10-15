@@ -27,14 +27,14 @@ func TestCommandFailureReachesModel(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	g := &generator{replies: []string{`{"tool":"execute_command"}`, "printf progress; printf 'missing dependency' >&2; exit 7", "WAIT\nNeed to resolve the missing dependency"}}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "printf progress; printf 'missing dependency' >&2; exit 7"}), "Need to resolve the missing dependency", "Cannot verify until the dependency is available"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
 	r.Settings.Scope = policy.System
 	approvals := 0
 	result, err := r.Run(context.Background(), "run check", false, func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err != nil || result.Status != NeedsInput || approvals != 1 || len(g.requests) != 3 {
+	if err != nil || result.Status != Unverified || approvals != 1 || len(g.requests) != 3 {
 		t.Fatalf("result=%+v err=%v approvals=%d requests=%d", result, err, approvals, len(g.requests))
 	}
 	found := false
@@ -58,7 +58,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 		found = true
 	}
 	var contextText strings.Builder
-	for _, message := range g.requests[2].Messages {
+	for _, message := range g.requests[1].Messages {
 		contextText.WriteString(message.Content)
 	}
 	if !found || !strings.Contains(contextText.String(), "missing dependency") || !strings.Contains(contextText.String(), toolapi.ProcessFailed) {
@@ -66,7 +66,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	}
 }
 
-func TestProjectShellScopeFailureReachesModel(t *testing.T) {
+func TestSandboxSetupFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
 	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
 	if err != nil {
@@ -78,23 +78,23 @@ func TestProjectShellScopeFailureReachesModel(t *testing.T) {
 		}
 	})
 	target := filepath.Join(t.TempDir(), "outside")
-	g := &generator{replies: []string{`{"tool":"execute_command"}`, "printf outside > '" + target + "'", "WAIT\nThe outside path is unavailable under current Scope"}}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "printf outside > '" + target + "'"}), "The outside path is unavailable under current Scope", "Cannot execute outside Scope"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
 	r.Settings.Permission = policy.AllowAll
 	result, err := r.Run(context.Background(), "inspect execution limits", false, approve, emit)
-	if err != nil || result.Status != NeedsInput || !result.HadToolFailure {
+	if err != nil || result.Status != Answered || !result.HadToolFailure {
 		t.Fatalf("result=%+v %v", result, err)
 	}
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		t.Fatalf("scope escape: %v", err)
 	}
 	var body strings.Builder
-	for _, message := range g.requests[2].Messages {
+	for _, message := range g.requests[1].Messages {
 		body.WriteString(message.Content)
 	}
-	if !strings.Contains(body.String(), "directory") || !strings.Contains(body.String(), "Failure") || !strings.Contains(body.String(), "Output") {
+	if !strings.Contains(body.String(), "scope_unavailable") || !strings.Contains(body.String(), "Failure") || !strings.Contains(body.String(), "Output") {
 		t.Fatal("policy or execution error missing from model context")
 	}
 }

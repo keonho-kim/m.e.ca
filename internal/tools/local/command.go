@@ -28,7 +28,12 @@ func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
 	if result.Failed {
 		result.Process.Diagnostic = commandDiagnostic(output.Stdout, output.Stderr)
 	}
-	if runErr != nil {
+	if output.Status == "scope_unavailable" {
+		result.Failure = &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: output.Status, Next: "The command did not run. Resolve the host sandbox or runtime setup; do not widen Scope or retry outside containment.", Cause: runErr}
+		if runErr != nil {
+			result.Failure.Detail = op.executor.redact(runErr.Error())
+		}
+	} else if runErr != nil {
 		result.Failure = toolapi.FailureOf(runErr)
 	} else if result.Failed {
 		result.Failure = &toolapi.Failure{Code: toolapi.ProcessFailed, Detail: result.Summary, Next: "Inspect the exact check output, fix its cause and rerun this check."}

@@ -18,7 +18,7 @@ internal/
     context/                 전체 대화·현재 사실·요약의 모델 문맥 조립
     progress/                파일 상태 순환 감지
     compact/                 누적량 기반 요약과 근거 보존
-    pfc/                     Progressive Field Completion 파싱
+    response/                일반 응답·질문·중간 의도 해석
     goal/                    Goal·순차 Task 상태 전이
     monitor/                 실행 사실 관측 worker
     conclave/                병렬 심사·정족수·피드백
@@ -74,21 +74,21 @@ internal/
     viewport/                출력 투영·읽기 위치
 ```
 
-저장 기능은 SQLite와 분리한다. `storage/session`은 세션 값과 식별 규칙, `storage/history`는 순서 있는 기록과 압축 자료 변환, `storage/recovery`는 중단 복구를 소유한다. SQLite는 이 계약을 구현하는 저장 어댑터로서 DB 파일·SQL·트랜잭션·잠금만 담당한다. TUI와 작업 유스케이스는 필요한 저장 인터페이스에 의존하며, `cmd/v`에서 SQLite를 연결한다. 현재 DB 스키마와 JSON 기록 형식은 이 책임 분리로 변경하지 않는다.
+저장 기능은 SQLite와 분리한다. `storage/session`은 세션 값과 식별 규칙, `storage/history`는 순서 있는 기록과 압축 자료 변환, `storage/recovery`는 중단 복구를 소유한다. SQLite는 이 계약을 구현하는 저장 어댑터로서 DB 파일·SQL·트랜잭션·잠금만 담당한다. TUI와 작업 유스케이스는 필요한 저장 인터페이스에 의존하며, `cmd/v`에서 SQLite를 연결한다. 이 책임 분리에서도 현재 DB 스키마와 JSON 기록 형식을 유지한다.
 
 `tui/session`은 활성 화면 상태와 worker의 시작·취소·합류를 소유한다. 작업 준비는 `agent/session`, 정책·Thinking 저장과 실패 보상은 `commands/settings`, 연결 저장과 자격 증명 보상은 `provider/setup`이 담당한다. 모델 선택 검증은 `provider/selection`, 메뉴 표시값은 `tui/modelmenu`가 맡는다. 화면 입력·승인·출력 상태는 이벤트 루프에서만 변경한다.
 
 Provider는 전송(`transport`), 형식 변환(`protocol`), 메타데이터 조회(`discovery`), 실제 생성 진단(`diagnostic`), 생성 요청 조율(`httpclient`)로 나눈다. HTTP 본문·재시도·idle 감시의 수명은 전송 계층이, 연결 준비와 생성 클라이언트 이전은 `setup`이 소유한다. 모델별 특화는 `profile`에 유지한다. 모델 목록·출처·제어 범위는 [모델 프로파일 문서](model-profiles.md)에 기록한다.
 
-`agent/run`은 PFC → self-grounding → 후보 준비 → Conclave → 사용자 승인 → 실행 순서와 공유 예산을 유지한다. 컨텍스트 조립은 `agent/context`, 파일 상태 순환 감지는 `agent/progress`, 실행 사실은 `agent/tool`, 승인 단계 식별은 `agent/plan`이 소유한다. Compaction은 이 사실을 소비하며 실행 기록의 타입을 대신 소유하지 않는다. `tools/local`의 Scope·승인·버전 재검사를 통과한 작업만 `file`, `search`, `process` 어댑터로 전달한다.
+`agent/run`은 native 호출 → self-grounding → 후보 준비 → Conclave → 사용자 승인 → 실행 순서와 공유 예산을 유지한다. 컨텍스트 조립은 `agent/context`, 파일 상태 순환 감지는 `agent/progress`, 실행 사실은 `agent/tool`, 승인 단계 식별은 `agent/plan`이 소유한다. Compaction은 `agent/tool`이 소유한 실행 사실을 소비한다. `tools/local`의 Scope·승인·버전 재검사를 통과한 작업만 `file`, `search`, `process` 어댑터로 전달한다.
 
-각 패키지는 한 기능을, 하위 패키지는 독립적인 하위 기능을, 파일은 그 안의 한 책임을 맡는다. 작은 함수와 명시적인 상태 전이를 우선하며, 순환 의존·이전 위치의 전달 패키지·호환 별칭·사용되지 않는 추상화는 두지 않는다. 단일 Go 모듈과 `cmd/v` 실행 파일을 유지한다.
+각 패키지는 한 기능을, 하위 패키지는 독립적인 하위 기능을, 파일은 그 안의 한 책임을 맡는다. 작은 함수와 명시적인 상태 전이를 우선하고, 실제 소유 패키지로 향하는 단방향 의존을 유지한다. 사용되지 않는 추상화는 제거한다. 단일 Go 모듈과 `cmd/v` 실행 파일을 유지한다.
 
 ## 의존성과 검증 범위
 
-빌드는 README의 [직접 빌드하기](../README.md#직접-빌드하기)를 따른다. Docker·C helper 빌드·내장 실행 파일은 필요하지 않다. Linux 셸 격리는 기존 x/sys를 통해 커널 API를 직접 호출한다. Landlock ABI 3 이상, seccomp와 user/mount/PID/network/IPC/UTS 네임스페이스 등이 필요하다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`는 격리를 실제로 실행하며 커널 기능이 없으면 실패한다. 일반 테스트는 지원하지 않는 호스트에서 사유와 함께 네이티브 검증을 생략한다. 네임스페이스가 차단된 호스트에서는 `V_SANDBOX_DENIED=1`로 명령이 실행되지 않고 scope_unavailable이 반환되는지 검증할 수 있다.
+빌드는 README의 [직접 빌드하기](../README.md#직접-빌드하기)를 따른다. Go 빌드만으로 V와 내부 커널 실행기를 함께 만든다. Linux 셸 격리는 기존 x/sys를 통해 커널 API를 직접 호출한다. Landlock ABI 3 이상, seccomp와 user/mount/PID/network/IPC/UTS 네임스페이스 등이 필요하다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`는 격리를 실제로 실행하며 커널 기능이 없으면 실패한다. 일반 테스트는 지원하지 않는 호스트에서 사유와 함께 네이티브 검증을 생략한다. 네임스페이스가 차단된 호스트에서는 `V_SANDBOX_DENIED=1`로 명령이 실행되지 않고 scope_unavailable이 반환되는지 검증할 수 있다.
 
-직접 의존성은 `go.mod`에 정확한 버전으로 고정한다. 유지되는 공개 버전과 라이선스, 도입 목적을 확인했으며, 불필요한 웹·위젯 프레임워크는 사용하지 않는다. 2026-10-13에 직접 의존성과 빌드·테스트에 사용하는 간접 의존성을 최신 안정 버전으로 확인·갱신했다. 자동 업데이트는 아니며 이후 변경도 정확한 버전으로 고정하고 검증한다.
+직접 의존성은 `go.mod`에 정확한 버전으로 고정한다. 공개 버전·라이선스·도입 목적을 검토한 의존성만 사용한다. 2026-10-13에 직접 의존성과 빌드·테스트에 사용하는 간접 의존성을 최신 안정 버전으로 확인·갱신했다. 자동 업데이트는 아니며 이후 변경도 정확한 버전으로 고정하고 검증한다.
 
 | 모듈 | 버전 | 목적·라이선스 |
 | --- | --- | --- |
@@ -101,11 +101,11 @@ Provider는 전송(`transport`), 형식 변환(`protocol`), 메타데이터 조�
 | `modernc.org/sqlite` | 1.60.1 | CGO 없는 SQLite, BSD-3-Clause 및 포함 구성요소 라이선스 |
 | `mvdan.cc/sh/v3` | 3.14.1 | POSIX Shell AST 파서, BSD-3-Clause; 셸 실행기 대신 syntax 패키지만 사용 |
 
-tcell v3의 `EventQ`, 문자열 키 입력, `Put`/`Get`, 스타일 getter를 직접 사용한다. 가상 터미널 테스트는 v3의 `vt.MockTerm`을 사용하며, 이 테스트 API는 upstream에서 안정성을 보장하지 않으므로 버전 갱신 시 함께 검증한다. 이벤트 전달용 별도 goroutine과 v2 호환 래퍼는 두지 않는다. v3가 추가한 간접 의존성은 `clipperhouse/displaywidth`·`uax29/v2`로 Unicode 셀 폭·문자 경계를 처리하며 MIT 라이선스다.
+tcell v3의 `EventQ`, 문자열 키 입력, `Put`/`Get`, 스타일 getter를 직접 사용한다. 가상 터미널 테스트는 v3의 `vt.MockTerm`을 사용하며, 이 테스트 API는 upstream에서 안정성을 보장하지 않으므로 버전 갱신 시 함께 검증한다. 이벤트 전달은 v3의 공개 API를 직접 사용한다. v3가 추가한 간접 의존성은 `clipperhouse/displaywidth`·`uax29/v2`로 Unicode 셀 폭·문자 경계를 처리하며 MIT 라이선스다.
 
-SQLite 공식 지침에 따라 `modernc.org/libc`는 드라이버 `v1.60.1`이 사용하는 **v1.77.1**과 정확히 맞춘다. 단독 최신 버전으로 올리지 않는다. [드라이버의 libc 호환성 지침](https://pkg.go.dev/modernc.org/sqlite@v1.60.1#hdr-Fragile_modernc_org_libc_dependency)을 따른다. `go list -m -u all`에는 upstream 자체의 개발 도구·테스트 모듈도 나타나므로 V의 실제 빌드·테스트 의존성과 구분한다. 이 모듈들을 최신으로 표시하기 위해 사용하지 않는 직접 의존성을 추가하지 않는다.
+SQLite 공식 지침에 따라 `modernc.org/libc`는 드라이버 `v1.60.1`이 사용하는 **v1.77.1**과 정확히 맞춘다. 드라이버와 일치하는 버전으로 함께 관리한다. [드라이버의 libc 호환성 지침](https://pkg.go.dev/modernc.org/sqlite@v1.60.1#hdr-Fragile_modernc_org_libc_dependency)을 따른다. `go list -m -u all`에는 upstream 자체의 개발 도구·테스트 모듈도 나타나므로 V의 실제 빌드·테스트 의존성과 구분한다. 직접 의존성에는 V가 실제로 사용하는 모듈만 기록한다.
 
-SQLite는 Go 변환 런타임을 포함하므로 실행 파일 크기와 컴파일 비용이 있다. 현재 macOS arm64 기본 빌드의 실행 파일은 약 18.4 MiB다. 이번 변경 전 빌드 18,890,370바이트에서 19,330,466바이트로 증가했으며, 셸 파서와 줄 표식·격리 실행 코드가 함께 포함된 값이다. 이 수치는 내장 helper 제거 전 측정이다. 현재 Linux 바이너리는 내부 커널 실행기를 사용하며 외부 helper를 포함하지 않는다. CGO 없이 Linux amd64·arm64와 macOS amd64 교차 빌드를 확인했다. 빌드 성공을 실제 OS의 터미널·보안 동작 검증으로 간주하지 않는다. 자격 증명 저장소는 플랫폼 서비스와 시스템 도구에 의존한다.
+SQLite는 Go 변환 런타임을 포함하므로 실행 파일 크기와 컴파일 비용이 있다. 현재 macOS arm64 기본 빌드의 실행 파일은 약 18.4 MiB다. 이번 변경 전 빌드 18,890,370바이트에서 19,330,466바이트로 증가했으며, 셸 파서와 줄 표식·격리 실행 코드가 함께 포함된 값이다. 이 수치는 내장 helper 제거 전 측정이다. 현재 Linux 바이너리는 자체 커널 실행기를 사용한다. CGO 없이 Linux amd64·arm64와 macOS amd64 교차 빌드를 확인했다. 실제 OS의 터미널·보안 동작은 빌드와 별도로 검증한다. 자격 증명 저장소는 플랫폼 서비스와 시스템 도구에 의존한다.
 
 공식 자료: [tcell 3.6.0](https://pkg.go.dev/github.com/gdamore/tcell/v3@v3.6.0), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking), [SQLite 드라이버](https://pkg.go.dev/modernc.org/sqlite@v1.60.1), [go-keyring 소스](https://github.com/zalando/go-keyring/tree/v0.2.8).
 
@@ -119,7 +119,7 @@ go test -race ./...
 go mod verify
 ```
 
-현재 검증은 Go 1.27.2, macOS arm64에서 수행한다. 파일 정책·승인·Plan·HTTP·SQLite·입력·화면·단계별 도구·Ralph 예산·정체·체크포인트·Compaction 임계값과 문맥 연결은 자동 테스트를 사용하며, 실제 모델 서버 대신 `httptest`를 사용한다. 실 TTY 시작·파일 탐색·이어하기·프롬프트 bootstrap·종료 복원도 확인한다. 실제 모델의 요약 품질, Provider별 서버 버전, Linux 네이티브 TTY·Secret Service, 밝은·어두운 터미널별 시인성과 SSH는 별도 환경 검증이 남아 있다. Windows 네이티브 지원은 제공하지 않는다.
+현재 검증은 Go 1.27.2, macOS arm64에서 수행한다. 파일 정책·승인·Plan·HTTP·SQLite·입력·화면·단계별 도구·Ralph 예산·정체·체크포인트·Compaction 임계값과 문맥 연결은 자동 테스트를 사용하며, 실제 모델 서버 대신 `httptest`를 사용한다. 실 TTY 시작·파일 탐색·이어하기·프롬프트 bootstrap·종료 복원도 확인한다. 실제 모델의 요약 품질, Provider별 서버 버전, Linux 네이티브 TTY·Secret Service, 밝은·어두운 터미널별 시인성과 SSH는 별도 환경 검증이 남아 있다. 네이티브 지원 운영체제는 Linux와 macOS다.
 
 ## 메모리·할당 점검
 
@@ -142,3 +142,12 @@ go mod verify
 내부 실행기의 경계는 [Landlock](https://docs.kernel.org/userspace-api/landlock.html)과 [seccomp](https://docs.kernel.org/userspace-api/seccomp_filter.html)의 커널 계약을 따른다. Landlock만으로 파일 존재 확인과 프로젝트 내부 V 상태 숨김을 대체하지 않으므로, 별도 마운트 뷰와 함께 적용한다. 설치 의존성을 없애는 대신 이 커널 경계의 구현과 회귀 검증을 저장소에서 소유한다.
 
 사용자 설치 uv 회귀 검증은 `V_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVPackageProject -v`로 실행한다. 관리 Python을 사용하는 환경은 `V_TEST_UV_PYTHON_ROOT`에 한 설치 트리를 지정하면 임시 홈에 복사하여 검증한다. 네트워크 없이 실제 uv 0.13.0의 `uv init --package --offline --vcs none example`을 Linux arm64(시스템 Python 3.12.15)와 macOS arm64(관리 Python 3.13.9)에서 확인했다. WSL 실기와 Linux amd64 런타임 검증은 별도다.
+
+
+### 파일 형식·실행 환경 재검증
+
+2026-10-14 보강 후 macOS arm64에서 실제 Apple Python·Git·xcrun·Clang을 프로젝트 격리 안에서 실행했다. 별도 실모델 사례 t28에서는 EOF 개행을 보존한 한 줄 수정 후 python3 -m unittest -v의 두 검사가 통과했고 기존 테스트 파일은 유지됐다. 잘못된 앵커의 재조회 복구와 표시용 해시의 소스 혼입 차단을 추가했다.
+
+실제 uv 0.13.0을 임시 HOME의 ~/.local/bin에만 놓고 오프라인 패키지 프로젝트 생성도 재검증했다. Linux arm64 교차 빌드 테스트는 Linux 7.0.14의 기존 Alpine 3.22.2 검증 컨테이너에서 실행했다. 일반 UID 65534로 파일·사용자 도구 격리, 네트워크 및 커널 제한, 취소 시 분리 자식 정리가 통과했다. 이 검증 환경은 중첩 네임스페이스와 private proc 마운트를 허용하도록 구성했다. 기본 컨테이너의 proc 마스킹에서는 private proc 마운트가 거부됐으며, 오류에 해당 단계를 명시하도록 보강했다. 네임스페이스 거부 환경의 무실행 실패 반환도 별도로 통과했다. 컨테이너는 검증에만 사용하며 제품 의존성은 아니다.
+
+WSL·Linux amd64의 실제 커널 실행과 모든 배포판 설정은 이번 시험에 포함되지 않았다. Linux amd64·arm64 빌드와 커널 요청 계약 테스트를 실제 환경 실행과 구분한다.

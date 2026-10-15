@@ -30,14 +30,20 @@ func TestPlanConversationGreetsBeforeProposing(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		reply := "DONE\nHello! 어떤 작업을 계획할까요?"
+		reply := "Hello! 어떤 작업을 계획할까요?"
 		for _, message := range request.Messages {
 			if message.Role == "user" && message.Content == "plan now" {
-				reply = "DONE\n{\"objective\":\"inspect project\",\"steps\":[\"Read the entry point\",\"Propose changes\"]}"
+				reply = "{\"objective\":\"inspect project\",\"steps\":[\"Read the entry point\",\"Propose changes\"]}"
 			}
 		}
+		message := map[string]any{"content": reply}
+		if strings.HasPrefix(reply, "{") {
+			args := map[string]any{"objective": "inspect project", "steps": []string{"Read the entry point", "Propose changes"}, "reason": "Present the requested plan for approval."}
+			encoded, _ := json.Marshal(args)
+			message = map[string]any{"tool_calls": []any{map[string]any{"id": "plan_1", "type": "function", "function": map[string]any{"name": "submit_plan", "arguments": string(encoded)}}}}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}}); err != nil {
 			t.Error(err)
 		}
 	}))

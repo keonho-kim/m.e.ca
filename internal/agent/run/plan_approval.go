@@ -12,7 +12,7 @@ import (
 )
 
 func BeginPlan(ctx context.Context, store PlanStore, session string) (planning.Plan, error) {
-	p, err := planning.NewPlan("plan_"+rand.Text(), session, "Awaiting objective", []string{"Define the task objective"}, time.Now())
+	p, err := planning.NewPlan("plan_"+rand.Text(), session, "Awaiting objective", []string{"Define the execution objective"}, time.Now())
 	if err != nil {
 		return p, err
 	}

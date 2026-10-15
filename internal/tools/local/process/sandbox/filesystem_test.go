@@ -7,6 +7,7 @@
 package sandbox
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,7 +53,7 @@ func TestProjectFilesystemIsolation(t *testing.T) {
 		{"test -f " + strconv.Quote(secret), true},
 	} {
 		t.Run(tc.command, func(t *testing.T) {
-			launch, err := Prepare(project, outside, private, tc.command)
+			launch, err := Prepare(context.Background(), project, outside, private, tc.command)
 			if err != nil {
 				t.Fatal(err)
 			}

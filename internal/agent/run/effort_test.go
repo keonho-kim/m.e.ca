@@ -1,4 +1,4 @@
-// Purpose: Verify all task phases retain the selected effort and record active generation settings.
+// Purpose: Verify all execution phases retain the selected effort and record active generation settings.
 // Pattern: Task behavior tests.
 // Usage: go test ./internal/agent/run -run TestEffort.
 // Related: internal/agent/run/context.go, internal/agent/run/journal.go.
@@ -10,7 +10,7 @@ import (
 )
 
 func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{`{"tool":"read_file"}`, "AGENTS.md", "DONE\nChecked"}}
+	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("read_file", map[string]any{"path": "AGENTS.md"}), "Checked"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	on := true
@@ -19,10 +19,10 @@ func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
 	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {
 		t.Fatal(err)
 	}
-	if len(g.requests) != 3 {
+	if len(g.requests) != 2 {
 		t.Fatalf("missing phases: %d", len(g.requests))
 	}
-	for _, request := range append(g.requests, g.purposeRequests...) {
+	for _, request := range g.requests {
 		if request.ReasoningEffort != "medium" {
 			t.Fatal("effort lost between phases")
 		}

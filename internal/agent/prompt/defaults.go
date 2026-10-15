@@ -19,27 +19,18 @@ var systemDefault string
 //go:embed defaults/compaction.md
 var compactionDefault string
 
-//go:embed defaults/goal.md
-var goalDefault string
-
-//go:embed defaults/grounding.md
-var groundingDefault string
-
 //go:embed defaults/conclave.md
 var conclaveDefault string
 
-//go:embed defaults/pfc.md
-var pfcDefault string
-
-type Templates struct{ System, Compaction, Goal, Grounding, Conclave, PFC string }
+type Templates struct{ System, Compaction, Conclave string }
 
 func Defaults() Templates {
-	return Templates{System: systemDefault, Compaction: compactionDefault, Goal: goalDefault, Grounding: groundingDefault, Conclave: conclaveDefault, PFC: pfcDefault}
+	return Templates{System: systemDefault, Compaction: compactionDefault, Conclave: conclaveDefault}
 }
 
 // Files exposes the fixed prompt fields for bootstrap publication and explicit loading.
 func (t *Templates) Files() map[string]*string {
-	return map[string]*string{"system.md": &t.System, "compaction.md": &t.Compaction, "goal.md": &t.Goal, "grounding.md": &t.Grounding, "conclave.md": &t.Conclave, "pfc.md": &t.PFC}
+	return map[string]*string{"system.md": &t.System, "compaction.md": &t.Compaction, "conclave.md": &t.Conclave}
 }
 
 func CheckTemplate(text string) error {

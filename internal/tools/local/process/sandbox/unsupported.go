@@ -6,8 +6,11 @@
 // Related: internal/tools/local/process/sandbox/environment.go.
 package sandbox
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func Prepare(string, string, string, string) (Launch, error) {
+func Prepare(context.Context, string, string, string, string) (Launch, error) {
 	return Launch{}, fmt.Errorf("project filesystem isolation is unsupported on this platform")
 }

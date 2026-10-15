@@ -19,6 +19,7 @@ const (
 	Timeout           = "timeout"
 	Interrupted       = "interrupted"
 	ProcessFailed     = "process_failed"
+	ScopeUnavailable  = "scope_unavailable"
 	ExecutionFailed   = "execution_failed"
 )
 

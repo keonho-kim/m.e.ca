@@ -11,7 +11,7 @@ import (
 )
 
 func TestToolEventsCarryCallAndOutput(t *testing.T) {
-	g, e, j := &generator{replies: []string{`{"tool":"read_file"}`, "README.md", "WAIT\nreview"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "README.md"}), "review"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {
 		t.Fatal(err)

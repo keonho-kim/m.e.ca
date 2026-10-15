@@ -32,11 +32,8 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if respondGoalAnalysis(t, w, request.Messages) {
-			return
-		}
 		w.Header().Set("Content-Type", "text/event-stream")
-		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"DONE\\nfirst\",\"reasoning\":\"inspect \"}}]}\n\n")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"first\",\"reasoning\":\"inspect \"}}]}\n\n")
 		if err := http.NewResponseController(w).Flush(); err != nil {
 			t.Error(err)
 			return

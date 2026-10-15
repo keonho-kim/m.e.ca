@@ -1,7 +1,7 @@
-// Purpose: Define durable task status and validate resumable loop checkpoints.
+// Purpose: Define durable execution status and validate resumable loop checkpoints.
 // Pattern: State Machine contracts.
 // Usage: Task runtime emits checkpoints and SQLite validates stored state.
-// Related: internal/agent/run/journal.go, internal/storage/sqlite/tasks.go.
+// Related: internal/agent/run/journal.go, internal/storage/sqlite/runs.go.
 package run
 
 import (
@@ -20,14 +20,13 @@ const (
 	Running     Status = "running"
 	Verified    Status = "verified"
 	Answered    Status = "answered"
-	NeedsInput  Status = "needs_input"
 	Stopped     Status = "stopped"
+	Unverified  Status = "unverified"
 	Interrupted Status = "interrupted"
 	PlanReady   Status = "plan_ready"
 )
 
 type Checkpoint struct {
-	GoalID             string                     `json:"goal_id,omitempty"`
 	PendingReview      bool                       `json:"pending_review"`
 	Conclave           *conclave.Result           `json:"conclave,omitempty"`
 	Recoveries         int                        `json:"recoveries"`
@@ -41,11 +40,11 @@ type Checkpoint struct {
 	Status             Status                     `json:"status"`
 	Phase              string                     `json:"phase"`
 	Iteration          int                        `json:"iteration"`
+	InputTokens        int64                      `json:"input_tokens,omitempty"`
 	ModelCalls         int                        `json:"model_calls"`
 	NoProgress         int                        `json:"no_progress"`
 	InstructionsDigest string                     `json:"instructions_digest"`
 	Tool               string                     `json:"tool,omitempty"`
-	Parameter          string                     `json:"parameter,omitempty"`
 	Arguments          map[string]json.RawMessage `json:"arguments,omitempty"`
 	Observation        string                     `json:"observation,omitempty"`
 	Evidence           string                     `json:"evidence,omitempty"`
@@ -68,18 +67,18 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.Evidence) > 4096 || len(c.InstructionsDigest) != 64 {
-		return fmt.Errorf("invalid task checkpoint")
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.InputTokens < 0 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.Evidence) > 4096 || len(c.InstructionsDigest) != 64 {
+		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {
-	case Running, Verified, Answered, NeedsInput, Stopped, Interrupted, PlanReady:
+	case Running, Verified, Answered, Stopped, Interrupted, PlanReady, Unverified:
 	default:
-		return fmt.Errorf("invalid task status")
+		return fmt.Errorf("invalid execution status")
 	}
 	switch c.Phase {
-	case "conversation", "goal", "goal_summary", "conclave", "grounding", "decision", "argument", "purpose", "approval", "execution", "observation", "finished":
+	case "conclave", "grounding", "decision", "approval", "execution", "observation", "finished":
 	default:
-		return fmt.Errorf("invalid task phase")
+		return fmt.Errorf("invalid execution phase")
 	}
 	body, err := json.Marshal(c.Arguments)
 	if err != nil || len(body) > toolapi.MaxArgumentsBytes {

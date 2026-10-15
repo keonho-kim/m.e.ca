@@ -15,10 +15,7 @@ import (
 )
 
 func Restore(ctx context.Context, s Store, session string) error {
-	if err := recoverTask(ctx, s, session); err != nil {
-		return err
-	}
-	if err := recoverGoal(ctx, s, session); err != nil {
+	if err := recoverRun(ctx, s, session); err != nil {
 		return err
 	}
 	messages, err := s.Messages(ctx, session, 1000)

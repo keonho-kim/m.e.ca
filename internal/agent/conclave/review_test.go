@@ -1,82 +1,56 @@
-// Purpose: Verify parallel ballots use the same model and fail closed on reviewer errors.
-// Pattern: Concurrent use-case contract tests.
-// Usage: go test -race ./internal/agent/conclave.
-// Related: internal/agent/conclave/review.go, internal/agent/conclave/vote.go.
+// Purpose: Verify single reviews, bounded corrections, referenced findings and cancellation.
+// Pattern: Review use-case contract tests.
+// Usage: go test ./internal/agent/conclave.
+// Related: internal/agent/conclave/review.go.
 package conclave
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
-	"sync/atomic"
 	"testing"
-	"time"
 )
 
 func reviewInput(t *testing.T) Input {
 	t.Helper()
 	call := tool.Call{ID: "c", Name: "write_file", Arguments: []byte(`{"path":"a","content":"new"}`)}
-	record, err := grounding.Parse("- Evidence: Read a.\n- Action: Replace old content.\n- Verify: Run tests.", call)
+	reason, err := grounding.Bind(call, "Implement requested value.", "r")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Input{GoalObjective: "fix a", TaskObjective: "update a", Monitor: "read completed", Grounding: record, Call: call, Candidate: tool.BindCandidate(call, []tool.FileDelta{{Path: "a", Added: 40, Deleted: 40, Diff: "-old\n+new"}})}
+	return Input{Request: "replace old with new", Call: call, Grounding: reason, Candidate: tool.BindCandidate(call, []tool.FileDelta{{Path: "a", BeforeLines: 1, AfterLines: 1, Added: 1, Deleted: 1, Diff: "-old\n+new"}})}
 }
-func TestParallelReviewQuorumAndFailure(t *testing.T) {
-	for _, broken := range []bool{false, true} {
-		t.Run(fmt.Sprint(broken), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			var entered atomic.Int32
-			ready := make(chan struct{})
-			on := true
-			result, err := Review(ctx, reviewInput(t), modelapi.Request{ModelID: "serving-alias", Thinking: &on, ReasoningEffort: "high"}, 100000, func(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-				if r.ModelID != "serving-alias" || r.Thinking == nil || !*r.Thinking || r.ReasoningEffort != "high" {
-					t.Errorf("model controls lost: %+v", r)
-				}
-				index := entered.Add(1)
-				if index == 6 {
-					close(ready)
-				}
-				select {
-				case <-ready:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-				if broken && index == 6 {
-					return fmt.Errorf("idle timeout")
-				}
-				reply := "1"
-				if index > 4 {
-					reply = "0\nneeds a focused test"
-				}
-				return emit(modelapi.Event{Delta: reply, Done: true})
-			}, func(s string) string { return s })
-			if err != nil || result.Reviews != 6 || result.Approvals != 4 || result.Required != 4 || result.Passed == broken || result.Complete == broken {
-				t.Fatalf("ballot=%+v err=%v", result, err)
+func TestSingleReviewAndCorrectionBound(t *testing.T) {
+	for _, replies := range [][]string{{`{"decision":"pass"}`}, {"bad", `{"decision":"pass"}`}, {"bad", "bad"}} {
+		calls := 0
+		result, err := Review(context.Background(), reviewInput(t), modelapi.Request{ModelID: "m"}, 65536, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+			if len(r.Tools) != 0 {
+				t.Fatal("review has executable tools")
 			}
-			if !result.Passed && !strings.Contains(result.Feedback(), "idle timeout") {
-				t.Fatal("failure reason missing")
+			if strings.Contains(r.Messages[len(r.Messages)-1].Content, `"Arguments"`) {
+				t.Fatal("candidate duplicated or missing")
 			}
-		})
+			text := replies[calls]
+			calls++
+			return emit(modelapi.Event{Delta: text, Done: true})
+		}, nil, func(s string) string { return s })
+		wantPass := replies[len(replies)-1] != "bad"
+		if err != nil || result.Passed != wantPass || calls != len(replies) {
+			t.Fatalf("calls=%d result=%+v err=%v", calls, result, err)
+		}
 	}
 }
-func TestReviewCancellationJoinsWorkers(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	var entered, exited atomic.Int32
-	result, err := Review(ctx, reviewInput(t), modelapi.Request{ModelID: "m"}, 100000, func(ctx context.Context, _ modelapi.Request, _ func(modelapi.Event) error) error {
-		defer exited.Add(1)
-		if entered.Add(1) == 6 {
-			cancel()
+func TestReviewRejectsInventedReferenceAndReadFailure(t *testing.T) {
+	for _, reply := range []string{`{"decision":"reject","findings":[{"path":"other","side":"after","line":1,"reason":"wrong"}]}`, `{"decision":"needs_context","context_requests":[{"path":"outside","offset":0,"limit":100,"reason":"inspect"}]}`} {
+		result, err := Review(context.Background(), reviewInput(t), modelapi.Request{}, 65536, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+			return emit(modelapi.Event{Delta: reply, Done: true})
+		}, func(context.Context, ContextRequest) (json.RawMessage, error) { return nil, fmt.Errorf("scope denied") }, func(s string) string { return s })
+		if err != nil || result.Passed || result.Error == "" {
+			t.Fatalf("%+v %v", result, err)
 		}
-		<-ctx.Done()
-		return ctx.Err()
-	}, func(s string) string { return s })
-	if err == nil || result.Passed || exited.Load() != 6 {
-		t.Fatalf("not joined: %d %+v %v", exited.Load(), result, err)
 	}
 }

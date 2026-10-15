@@ -21,24 +21,19 @@ type lmResponse struct {
 		Input  *int64 `json:"input_tokens"`
 		Output *int64 `json:"output_tokens"`
 	} `json:"usage"`
-	Output []struct {
-		Type    string `json:"type"`
-		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"content"`
-	} `json:"output"`
+	Output []lmItem `json:"output"`
 }
 
 func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.Event) error) error {
 	var frame struct {
-		Error    json.RawMessage `json:"error"`
-		Type     string          `json:"type"`
-		Delta    string          `json:"delta"`
-		Response lmResponse      `json:"response"`
-		Item     struct {
-			Type string `json:"type"`
-		} `json:"item"`
+		Error       json.RawMessage `json:"error"`
+		Type        string          `json:"type"`
+		Delta       string          `json:"delta"`
+		Response    lmResponse      `json:"response"`
+		Item        lmItem          `json:"item"`
+		OutputIndex *int            `json:"output_index"`
+		ItemID      string          `json:"item_id"`
+		Arguments   string          `json:"arguments"`
 	}
 	if err := json.Unmarshal(content, &frame); err != nil {
 		return fmt.Errorf("invalid Responses event: %w", err)
@@ -53,9 +48,18 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 		if err := json.Unmarshal(content, &frame.Response); err != nil {
 			return err
 		}
-		for _, item := range frame.Response.Output {
+		for index, item := range frame.Response.Output {
+			if item.Type == "function_call" {
+				if frame.Response.Status != "completed" {
+					continue
+				}
+				if err := s.lmCall(index, item, true); err != nil {
+					return err
+				}
+				continue
+			}
 			if item.Type != "message" && item.Type != "reasoning" {
-				return fmt.Errorf("native tool execution is not supported")
+				return fmt.Errorf("unsupported Responses output type")
 			}
 			for _, part := range item.Content {
 				event := modelapi.Event{}
@@ -83,9 +87,28 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 		s.usage = nil
 		return emit(event)
 	case "response.output_item.added", "response.output_item.done":
-		if frame.Item.Type != "message" && frame.Item.Type != "reasoning" {
-			return fmt.Errorf("native tool execution is not supported")
+		if frame.Item.Type == "function_call" {
+			if frame.OutputIndex == nil {
+				return fmt.Errorf("function output has no index")
+			}
+			return s.lmCall(*frame.OutputIndex, frame.Item, frame.Type == "response.output_item.done")
 		}
+		if frame.Item.Type != "message" && frame.Item.Type != "reasoning" {
+			return fmt.Errorf("unsupported Responses output type")
+		}
+	case "response.function_call_arguments.delta", "response.function_call_arguments.done":
+		index, ok := s.lmItems[frame.ItemID]
+		if !ok {
+			return fmt.Errorf("arguments refer to an unknown function item")
+		}
+		draft, err := s.callAt(index)
+		if err != nil {
+			return err
+		}
+		if frame.Type == "response.function_call_arguments.delta" {
+			return draft.appendArguments(frame.Delta)
+		}
+		return draft.finalArguments(frame.Arguments)
 	case "error":
 		return transport.ParseError(0, content, "")
 	case "response.completed", "response.failed", "response.incomplete":
@@ -100,23 +123,32 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 			}
 		}
 		s.received = true
-		for _, item := range response.Output {
-			if item.Type != "message" && item.Type != "reasoning" {
-				return s.emitFailedUsage(fmt.Errorf("native tool execution is not supported"), emit)
-			}
-		}
 		if response.Status != "completed" || frame.Type != "response.completed" {
 			detail := "response did not complete"
 			if response.Incomplete.Reason != "" {
 				detail = response.Incomplete.Reason
 			}
+			var cause error
 			if len(response.Error) > 0 && string(response.Error) != "null" {
-				detail = transport.ParseError(0, append(append([]byte(`{"error":`), response.Error...), '}'), "").Error()
+				cause = transport.ParseError(0, append(append([]byte(`{"error":`), response.Error...), '}'), "")
+				detail = cause.Error()
 			}
 			if response.Incomplete.Reason == "max_output_tokens" {
 				return s.emitFailedUsage(&modelapi.OutputLimitError{Reason: detail}, emit)
 			}
+			if cause != nil {
+				return s.emitFailedUsage(fmt.Errorf("LM Studio: %w", cause), emit)
+			}
 			return s.emitFailedUsage(fmt.Errorf("LM Studio: %s", detail), emit)
+		}
+		for index, item := range response.Output {
+			if item.Type == "function_call" {
+				if err := s.lmCall(index, item, true); err != nil {
+					return s.emitFailedUsage(err, emit)
+				}
+			} else if item.Type != "message" && item.Type != "reasoning" {
+				return s.emitFailedUsage(fmt.Errorf("unsupported Responses output type"), emit)
+			}
 		}
 		s.finished = true
 	}

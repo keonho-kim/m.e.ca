@@ -5,6 +5,7 @@
 package transport
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -18,6 +19,24 @@ func TestProviderErrorMessages(t *testing.T) {
 	} {
 		if err := ParseError(400, []byte(body), ""); !strings.Contains(err.Error(), "context too large") {
 			t.Fatalf("message lost: %v", err)
+		}
+	}
+}
+
+func TestContextCapacitySignalRequiresExplicitCode(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		want bool
+	}{
+		{`{"error":{"code":"context_length_exceeded","message":"too long"}}`, true},
+		{`{"error":{"code":"authentication_error","message":"context_length_exceeded"}}`, false},
+		{`{"error":"context might be large"}`, false},
+	} {
+		var capacity interface{ ContextLimit() bool }
+		err := ParseError(400, []byte(tc.body), "")
+		got := errors.As(err, &capacity) && capacity.ContextLimit()
+		if got != tc.want {
+			t.Fatalf("%s: %v", tc.body, err)
 		}
 	}
 }

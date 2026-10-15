@@ -1,6 +1,6 @@
 // Purpose: Refresh complete conversation context at safe compaction boundaries and account new tokens.
 // Pattern: Compaction integration use case.
-// Usage: Called by the task loop; compaction shares the same model-call and time budget.
+// Usage: Called by the execution loop; compaction shares the same model-call and time budget.
 // Related: internal/agent/compact/controller.go, internal/agent/run/generate.go, internal/agent/run/context.go.
 package run
 
@@ -8,22 +8,30 @@ import (
 	"context"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/compact"
+	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
-func (s *task) observe(ctx context.Context, count compact.TokenCount) error {
+func (s *execution) observe(ctx context.Context, count compact.TokenCount) error {
 	if s.runner.Memory == nil {
 		return nil
 	}
 	return s.runner.Memory.Observe(ctx, count)
 }
-func (s *task) refreshMemory(ctx context.Context) error {
+func (s *execution) refreshMemory(ctx context.Context, force bool) error {
 	if s.runner.Memory == nil {
+		if force {
+			return fmt.Errorf("context limit reached without an available compaction store")
+		}
 		var err error
 		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
 		return err
 	}
-	changed, err := s.runner.Memory.Refresh(ctx, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+	refresh := s.runner.Memory.Refresh
+	if force {
+		refresh = s.runner.Memory.Compact
+	}
+	changed, err := refresh(ctx, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		if s.usage.ModelCalls >= s.limits.MaxModelCalls {
 			return fmt.Errorf("model-call budget exhausted during compaction")
 		}
@@ -31,10 +39,18 @@ func (s *task) refreshMemory(ctx context.Context) error {
 		s.checkpoint.ModelCalls = s.usage.ModelCalls
 		request.Thinking = s.runner.Thinking
 		request.ReasoningEffort = s.runner.ReasoningEffort
+		parameters, err := inference.Resolve(s.runner.Inference, inference.Compaction)
+		if err != nil {
+			return err
+		}
+		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
 		return s.generate(ctx, request, emit)
 	})
 	if err != nil {
 		return err
+	}
+	if force && !changed {
+		return fmt.Errorf("context limit reached but no older history can be compacted; reduce fixed instructions or increase model context")
 	}
 	var through int64
 	s.memoryContext, through, err = s.runner.Memory.Context()
@@ -46,6 +62,7 @@ func (s *task) refreshMemory(ctx context.Context) error {
 		return err
 	}
 	if changed {
+		s.checkpoint.InputTokens = 0
 		event := Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
 		if err = s.record(ctx, event); err != nil {
 			return err

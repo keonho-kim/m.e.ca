@@ -34,3 +34,10 @@ func TestMissingProcessStatusNeverPasses(t *testing.T) {
 		t.Fatalf("missing status passed: %+v %v", records, err)
 	}
 }
+
+func TestPreparationFailureDoesNotCreateRequiredCheck(t *testing.T) {
+	records, err := Observe(nil, tool.Call{ID: "c", Name: "execute_command", Arguments: []byte(`{"command":"missing"}`)}, tool.Result{Failed: true}, 0)
+	if err != nil || len(records) != 0 {
+		t.Fatalf("unstarted check became obligation: %+v %v", records, err)
+	}
+}

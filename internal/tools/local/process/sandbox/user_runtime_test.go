@@ -7,6 +7,7 @@
 package sandbox
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,7 +54,7 @@ func TestUserRuntimeExecutionAndContainment(t *testing.T) {
 		{"cat " + strconv.Quote(filepath.Join(bin, "escape")), "", true},
 		{"cat " + strconv.Quote(filepath.Join(private, "secret")), "", true},
 	} {
-		launch, err := Prepare(project, home, private, tc.command)
+		launch, err := Prepare(context.Background(), project, home, private, tc.command)
 		if err != nil {
 			t.Fatal(err)
 		}

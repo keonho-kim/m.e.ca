@@ -10,6 +10,7 @@ import (
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/tools/local/anchors"
+	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 	resultfmt "github.com/keonho-kim/v-code/internal/tools/result"
 	"io"
 	"os"
@@ -66,6 +67,18 @@ func (r Read) Execute(ctx context.Context) (result toolapi.Result, err error) {
 	next := r.Offset + len(content)
 	truncated := info.Size() > int64(next)
 	endPartial := truncated && len(content) > 0 && content[len(content)-1] != '\n'
+	finalNewline := false
+	if info.Size() > 0 {
+		var ending [1]byte
+		if _, err := file.ReadAt(ending[:], info.Size()-1); err != nil {
+			return result, err
+		}
+		finalNewline = ending[0] == '\n'
+	}
+	rangeFormat := textformat.LineEndings(content)
+	if startPartial || endPartial {
+		rangeFormat = "unknown"
+	}
 	after, err := file.Stat()
 	if err != nil {
 		return result, err
@@ -83,10 +96,12 @@ func (r Read) Execute(ctx context.Context) (result toolapi.Result, err error) {
 		first = 0
 	}
 	return resultfmt.Encode(struct {
+		FinalNewline                                  bool
+		RangeLineEndings                              string
 		Path, Content                                 string
 		Offset, NextOffset, StartLine, EndLine        int
 		SizeBytes                                     int64
 		Truncated, StartPartial, EndPartial, Editable bool
 		Note                                          string
-	}{r.Absolute, numbered, r.Offset, next, first, last, info.Size(), truncated, startPartial, endPartial, editable, "Copy line#8hex anchors from one read for edit_file. Unanchored lines are partial or redacted. Re-read after restart or anchor expiry."}, fmt.Sprintf("Read lines %d-%d (%d bytes)", first, last, len(content)))
+	}{finalNewline, rangeFormat, r.Absolute, numbered, r.Offset, next, first, last, info.Size(), truncated, startPartial, endPartial, editable, "Copy line#8hex anchors from one read for edit_file. Unanchored lines are partial or redacted. Re-read after restart or anchor expiry."}, fmt.Sprintf("Read lines %d-%d (%d bytes)", first, last, len(content)))
 }

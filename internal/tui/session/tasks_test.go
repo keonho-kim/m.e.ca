@@ -42,38 +42,45 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 			http.Error(w, "invalid", 400)
 			return
 		}
-		if len(request.Tools) > 0 {
-			t.Error("native tool schemas sent")
-		}
 		if !strings.Contains(request.Messages[0].Content, "Project rule: use an actual verification command") {
 			t.Error("project AGENTS.md missing from system prompt")
 		}
 		question := request.Messages[len(request.Messages)-1].Content
 		reply := ""
 		switch {
-		case strings.HasPrefix(question, "CONCLAVE REVIEW "):
-			reply = "1"
-		case strings.Contains(question, "\nPFC PURPOSE:"):
-			reply = "check"
-		case strings.Contains(question, "\nSELF-GROUNDING:"):
-			reply = "- Evidence: Approved Plan and observed tool results; inspect any unknown state.\n- Action: Perform the exact approved step operation.\n- Verify: Run the file existence check after writing."
-		case strings.Contains(request.Messages[0].Content, "Planning only"):
-			reply = "DONE\n{\"objective\":\"create file\",\"steps\":[\"write output.txt and verify\"]}"
-		case strings.Contains(question, "ARGUMENT write_file.path"):
-			reply = "output.txt"
-		case strings.Contains(question, "ARGUMENT write_file.content"):
-			reply = "approved"
-		case strings.Contains(question, "ARGUMENT execute_command.command"):
-			reply = "test -f output.txt"
-		case strings.Contains(question, `"Evidence":"execute_command`):
-			reply = "DONE\nCreated and checked the file"
+		case strings.HasPrefix(question, "REVIEW CANDIDATE "):
+			reply = `{"decision":"pass"}`
+		case strings.Contains(request.Messages[0].Content, "Plan mode:"):
+			reply = `{"tool":"submit_plan"}`
+		case strings.Contains(question, "execute_command result:"):
+			reply = "Created and checked the file"
 		case strings.Contains(question, "write_file result:"):
 			reply = `{"tool":"execute_command"}`
 		default:
 			reply = `{"tool":"write_file"}`
 		}
+		message := map[string]any{"content": reply}
+		if strings.HasPrefix(reply, `{"tool":`) {
+			toolName := "write_file"
+			arguments := map[string]any{"path": "output.txt", "content": "approved"}
+			if reply == `{"tool":"execute_command"}` {
+				toolName = "execute_command"
+				arguments = map[string]any{"command": "test -f output.txt", "purpose": "check"}
+			}
+			if reply == `{"tool":"submit_plan"}` {
+				toolName = "submit_plan"
+				arguments = map[string]any{"objective": "create file", "steps": []string{"write output.txt and verify"}}
+			}
+			arguments["reason"] = "Perform the requested operation using the current observations."
+			encoded, err := json.Marshal(arguments)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			message = map[string]any{"tool_calls": []any{map[string]any{"id": fmt.Sprintf("call_%d", len(request.Messages)), "type": "function", "function": map[string]any{"name": toolName, "arguments": string(encoded)}}}}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		body, err := json.Marshal(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}})
+		body, err := json.Marshal(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}})
 		if err != nil {
 			t.Error(err)
 			return

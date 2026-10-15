@@ -1,5 +1,5 @@
-// Purpose: Verify concurrent review retries share the call budget and only received usage reaches totals.
-// Pattern: Parallel accounting integration tests.
+// Purpose: Verify review retries share the call budget and only received usage reaches totals.
+// Pattern: Shared budget accounting integration tests.
 // Usage: go test -race ./internal/agent/run -run TestConclaveRetry.
 // Related: internal/agent/run/conclave_usage.go, internal/agent/run/conclave_test.go.
 package run
@@ -13,7 +13,7 @@ import (
 )
 
 func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
-	g, e, j := &generator{replies: []string{`{"tool":"write_file"}`, "a", "new"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"})}}, &executor{}, &journal{}
 	var completed atomic.Int32
 	g.review = func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		if err := emit(modelapi.Event{Delta: "0", Usage: &modelapi.TokenUsage{Input: 10, Output: 1}}); err != nil {
@@ -27,7 +27,7 @@ func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
 	}
 	r := fixture(g, e, j)
 	r.Limits = DefaultLimits()
-	r.Limits.MaxModelCalls = 8
+	r.Limits.MaxModelCalls = 2
 	r.Usage = &Usage{}
 	total, current := modelapi.TokenUsage{}, modelapi.TokenUsage{}
 	_, err := r.Run(context.Background(), "fix", false, approve, func(event Event) error {
@@ -41,12 +41,11 @@ func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
 		}
 		return nil
 	})
-	// Decision + two fields + grounding + three ballots consume seven calls.
-	// Only one of the three simultaneous retries fits the remaining call budget.
-	if err == nil || !strings.Contains(err.Error(), "budget") || completed.Load() != 1 || r.Usage.ModelCalls != 8 || e.executed != 0 {
+	// The main call and review consume the shared budget before retry.
+	if err == nil || !strings.Contains(err.Error(), "budget") || completed.Load() != 0 || r.Usage.ModelCalls != 2 || e.executed != 0 {
 		t.Fatalf("retries=%d calls=%d exec=%d err=%v", completed.Load(), r.Usage.ModelCalls, e.executed, err)
 	}
-	if total.Input != 50 || total.Output != 5 || current != (modelapi.TokenUsage{}) {
+	if total.Input != 10 || total.Output != 1 || current != (modelapi.TokenUsage{}) {
 		t.Fatalf("usage total=%+v current=%+v", total, current)
 	}
 	var persisted modelapi.TokenUsage

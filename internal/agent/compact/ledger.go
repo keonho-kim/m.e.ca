@@ -5,36 +5,22 @@
 package compact
 
 func (l *Ledger) merge(record Record) {
-	if record.Goal != nil {
-		fact := GoalFact{State: *record.Goal, Source: record.Sequence}
-		found := false
-		for i := range l.Goals {
-			if l.Goals[i].State.ID == fact.State.ID {
-				l.Goals[i] = fact
-				found = true
-				break
-			}
-		}
-		if !found {
-			l.Goals = append(l.Goals, fact)
-		}
-	}
 	if record.Review != nil {
 		l.Reviews = append(l.Reviews, ReviewFact{Result: *record.Review, Source: record.Sequence})
 	}
 	if record.Grounding != nil {
 		l.Groundings = append(l.Groundings, GroundingFact{Record: *record.Grounding, Source: record.Sequence})
 	}
-	if record.Task != nil {
-		fact := *record.Task
+	if record.Run != nil {
+		fact := *record.Run
 		fact.Source = record.Sequence
-		for i := range l.Tasks {
-			if l.Tasks[i].ID == fact.ID {
-				l.Tasks[i] = fact
+		for i := range l.Runs {
+			if l.Runs[i].ID == fact.ID {
+				l.Runs[i] = fact
 				return
 			}
 		}
-		l.Tasks = append(l.Tasks, fact)
+		l.Runs = append(l.Runs, fact)
 	}
 	if record.Operation != nil {
 		op := *record.Operation

@@ -1,4 +1,4 @@
-// Purpose: Define ordered task events and the runtime persistence contract.
+// Purpose: Define ordered execution events and the runtime persistence contract.
 // Pattern: Consumer-owned event contracts.
 // Usage: Runtime, SQLite and terminal projections exchange Event values.
 // Related: internal/agent/run/journal.go, internal/storage/sqlite/events.go, internal/tui/transcript/events.go.
@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/keonho-kim/v-code/internal/agent/conclave"
-	"github.com/keonho-kim/v-code/internal/agent/goal"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
@@ -17,7 +16,6 @@ import (
 
 type Event struct {
 	Internal   bool                 `json:"internal,omitempty"`
-	Goal       *goal.State          `json:"goal,omitempty"`
 	Monitor    *monitor.Record      `json:"monitor,omitempty"`
 	Conclave   *conclave.Result     `json:"conclave,omitempty"`
 	Grounding  *grounding.Record    `json:"grounding,omitempty"`

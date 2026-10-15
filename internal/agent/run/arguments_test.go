@@ -1,67 +1,67 @@
-// Purpose: Verify staged argument corrections never execute wrappers or lose the current tool phase.
-// Pattern: Task contract tests.
-// Usage: go test ./internal/agent/run -run 'TestArgument|TestGreeting'.
-// Related: internal/agent/run/arguments.go, internal/agent/run/context.go, internal/agent/prompt/argument.go.
+// Purpose: Verify complete native arguments are corrected through paired results before any preparation.
+// Pattern: Runtime trust-boundary tests.
+// Usage: go test ./internal/agent/run -run 'TestNativeArgument|TestGreeting'.
+// Related: internal/agent/run/action.go, internal/agent/run/tool_reply.go, internal/agent/tool/arguments.go.
 package run
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"testing"
 )
 
-func TestArgumentCorrectionsKeepLiteralPhase(t *testing.T) {
-	g := &generator{purposes: []string{"work", "check"}, replies: []string{`{"tool":"read_file"}`, `{"path":"file.txt"}`, `"file.txt"`, "file.txt", `{"tool":"read_file"}`, "file.txt", "DONE\nInspected"}}
+func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
+	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": 12}), nativeCall("read_file", map[string]any{"path": "file.txt", "purpose": "check"}), "Inspected"}}
 	e, j := &executor{}, &journal{}
-	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "Read file.txt", false, approve, emit)
-	if err != nil || result.Status != Verified || e.executed != 2 {
-		t.Fatalf("literal correction: %+v %v", result, err)
+	result, err := fixture(g, e, j).Run(context.Background(), "Read file.txt", false, approve, emit)
+	if err != nil || result.Status != Answered || e.prepared != 1 || len(g.requests) != 3 {
+		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
-	for _, index := range []int{1, 2, 3} {
-		req := g.requests[index]
-		if !strings.Contains(req.Messages[0].Content, "ARGUMENT") || strings.Contains(req.Messages[len(req.Messages)-1].Content, "Available tools:") {
-			t.Fatal("argument reply was prompted like a new tool decision")
+	found := false
+	for _, message := range g.requests[1].Messages {
+		if message.Role == "tool" && message.ToolCallID == "call_1" && strings.Contains(message.Content, "Argument validation failed") {
+			found = true
 		}
 	}
-	if !strings.Contains(g.requests[2].Messages[len(g.requests[2].Messages)-1].Content, "Previous rejected reply") {
-		t.Fatal("correction omitted the rejected response")
-	}
-}
-func TestArgumentFailureNeverPreparesATool(t *testing.T) {
-	g := &generator{replies: []string{`{"tool":"read_file"}`, `{"path":"file"}`, `{"path":"file"}`, `{"path":"file"}`, "WAIT\nNeed the correct path"}}
-	e, j := &executor{}, &journal{}
-	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "Read file", false, approve, emit)
-	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != NeedsInput || len(g.requests) != 5 {
-		t.Fatalf("invalid arguments escaped the boundary: %+v %v", result, err)
-	}
-}
-func TestGreetingDoesNotRequireATool(t *testing.T) {
-	g, e, j := &generator{replies: []string{"DONE\nHello"}}, &executor{}, &journal{}
-	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "Hello", false, approve, emit)
-	if err != nil || result.Status != Answered || e.prepared != 0 || !strings.Contains(g.requests[0].Messages[len(g.requests[0].Messages)-1].Content, "greeting") {
-		t.Fatalf("greeting forced a tool: %+v %v", result, err)
+	if !found {
+		t.Fatal("native failure result missing from corrective request")
 	}
 }
 
-func TestArgumentPathNormalizedBeforeGroundingAndPreparation(t *testing.T) {
-	g := &generator{replies: []string{`{"tool":"read_file"}`, "\n\nfile.txt\r\n", "WAIT\nReview"}}
+func TestNativeArgumentFailureNeverPreparesATool(t *testing.T) {
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file"}), "Need the file content", "Need the file content"}}
 	e, j := &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "inspect", false, approve, emit)
-	if err != nil || result.Status != NeedsInput || e.prepared != 1 {
+	result, err := fixture(g, e, j).Run(context.Background(), "Create file", false, approve, emit)
+	if err != nil || e.prepared != 0 || result.Status != Unverified {
 		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
-	var args struct{ Path string }
-	if err := json.Unmarshal(e.calls[0].Arguments, &args); err != nil || args.Path != "file.txt" {
-		t.Fatalf("unnormalized call: %+v %v", args, err)
+}
+
+func TestGreetingDoesNotRequireATool(t *testing.T) {
+	g, e, j := &generator{replies: []string{"Hello"}}, &executor{}, &journal{}
+	result, err := fixture(g, e, j).Run(context.Background(), "Hello", false, approve, emit)
+	if err != nil || result.Status != Answered || e.prepared != 0 {
+		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	for _, event := range j.events {
-		if event.Grounding != nil && event.Grounding.Matches(e.calls[0]) {
-			return
-		}
+}
+
+func TestLongConversationAnswer(t *testing.T) {
+	answer := strings.Repeat("Detailed answer. ", 2048) + "End."
+	g := &generator{replies: []string{answer}}
+	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "Explain in detail", false, approve, emit)
+	if err != nil || result.Status != Answered || result.Text != answer {
+		t.Fatalf("long answer bytes=%d status=%s: %v", len(result.Text), result.Status, err)
 	}
-	t.Fatal("normalized call was not bound to grounding")
+}
+
+func TestNativeArgumentsHonorConfiguredBudget(t *testing.T) {
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": strings.Repeat("x", 2000)}), "Need a smaller change", "Need a smaller change"}}
+	e := &executor{}
+	r := fixture(g, e, &journal{})
+	r.Limits = DefaultLimits()
+	r.Limits.MaxArgumentBytes = 1024
+	result, err := r.Run(context.Background(), "create a", false, approve, emit)
+	if err != nil || e.prepared != 0 || result.Status != Unverified {
+		t.Fatalf("prepared=%d result=%+v: %v", e.prepared, result, err)
+	}
 }

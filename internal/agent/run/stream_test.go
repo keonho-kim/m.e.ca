@@ -1,7 +1,7 @@
-// Purpose: Verify response bodies reach the UI before generation finishes without leaking tool pfc.
+// Purpose: Verify response bodies reach the UI before generation finishes without leaking native tool arguments.
 // Pattern: Task streaming contract tests.
 // Usage: go test ./internal/agent/run -run TestStreaming.
-// Related: internal/agent/run/generate.go, internal/agent/pfc/pfc.go.
+// Related: internal/agent/run/generate.go, internal/agent/tool/arguments.go.
 package run
 
 import (
@@ -37,9 +37,9 @@ func (g *chunkGenerator) Generate(ctx context.Context, _ modelapi.Request, emit 
 func TestStreamingAnswerArrivesBeforeDone(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, &journal{})
 	var partial string
-	g := &chunkGenerator{chunks: []string{"DO", "NE\nHel", "lo", " world"}}
+	g := &chunkGenerator{chunks: []string{"H", "el", "lo", " world"}}
 	g.after = func(i int) {
-		if i == 0 && partial != "" {
+		if i == 0 && partial != "H" {
 			t.Fatalf("protocol head exposed: %q", partial)
 		}
 		if i == 1 && partial != "Hel" {
@@ -69,7 +69,7 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	vault := &credentials.Vault{}
 	vault.Remember("provider-secret")
 	r.Redact, r.MaskStream = vault.Redact, vault.Stream
-	r.Generator = &chunkGenerator{chunks: []string{"DONE\nhello provider-", "secret"}, cancel: cancel}
+	r.Generator = &chunkGenerator{chunks: []string{"hello provider-", "secret"}, cancel: cancel}
 	var partial string
 	_, err := r.Run(ctx, "hello", false, approve, func(event Event) error {
 		if event.Kind == "stream" {
@@ -89,30 +89,21 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	}
 }
 
-func TestStreamingHidesProtocolAndUnapprovedCompletion(t *testing.T) {
-	for _, test := range []struct {
-		text, phase      string
-		planning, worked bool
-	}{
-		{`{"tool":"read_file"}`, "decision", false, false},
-		{`{"tool":"execute_command"}`, "decision", false, false},
-		{"CONTINUE\nnext action", "decision", false, false},
-		{"DONE\nfile content draft", "argument", false, false},
-		{"DONE\n{\"objective\":\"inspect\",\"steps\":[\"read\"]}", "decision", true, false},
-		{"DONE\nclaim without verification", "decision", false, true},
-		{"DONE extra\ninvalid head", "decision", false, false},
-	} {
-		s := task{checkpoint: Checkpoint{Phase: test.phase}, planning: test.planning, worked: test.worked}
-		if got := s.responseBody(test.text); got != "" {
-			t.Fatalf("protocol/unsafe completion exposed: %q", got)
-		}
+func TestStreamingWithholdsUnverifiedCompletion(t *testing.T) {
+	s := execution{changed: true}
+	if s.responseBody("claim without verification") != "" {
+		t.Fatal("unverified claim streamed")
+	}
+	s.changed = false
+	if s.responseBody("DONE is a normal word") != "DONE is a normal word" {
+		t.Fatal("ordinary text parsed as control")
 	}
 }
 
 func TestStreamingPlanConversationArrivesBeforeDone(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, &journal{})
 	partial := ""
-	g := &chunkGenerator{chunks: []string{"DONE\nHel", "lo!"}}
+	g := &chunkGenerator{chunks: []string{"Hel", "lo!"}}
 	g.after = func(i int) {
 		if i == 0 && partial != "Hel" {
 			t.Fatalf("Plan reply did not stream: %q", partial)

@@ -24,7 +24,7 @@ type binding struct {
 
 func enterRoot(r Request) error {
 	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
-		return err
+		return fmt.Errorf("isolate mount propagation: %w", err)
 	}
 	root := filepath.Join(r.Scratch, "root")
 	if err := os.Mkdir(root, 0700); err != nil {
@@ -35,18 +35,18 @@ func enterRoot(r Request) error {
 	}
 	for _, path := range r.Runtime {
 		if err := bind(root, binding{path: path, readOnly: true, resolve: true}); err != nil {
-			return err
+			return fmt.Errorf("mount runtime %s: %w", path, err)
 		}
 	}
 	for _, path := range []string{r.Project, r.Scratch} {
 		if err := bind(root, binding{path: path}); err != nil {
-			return err
+			return fmt.Errorf("mount working directory %s: %w", path, err)
 		}
 	}
 	// User directories must remain canonical at execution and read-only even within the project.
 	for _, path := range r.UserRuntime {
 		if err := bind(root, binding{path: path, readOnly: true}); err != nil {
-			return err
+			return fmt.Errorf("mount user runtime %s: %w", path, err)
 		}
 	}
 	for _, visible := range append(append([]string{}, r.Runtime...), r.Project) {
@@ -67,7 +67,7 @@ func enterRoot(r Request) error {
 		return err
 	}
 	if err := unix.Mount("proc", proc, "proc", unix.MS_RDONLY|unix.MS_NOSUID|unix.MS_NODEV|unix.MS_NOEXEC, ""); err != nil {
-		return err
+		return fmt.Errorf("mount private proc filesystem (host proc masking may prohibit this): %w", err)
 	}
 	for name, target := range map[string]string{"fd": "/proc/self/fd", "stdin": "/proc/self/fd/0", "stdout": "/proc/self/fd/1", "stderr": "/proc/self/fd/2"} {
 		if err := os.Symlink(target, filepath.Join(root, "dev", name)); err != nil {
@@ -79,7 +79,7 @@ func enterRoot(r Request) error {
 		return err
 	}
 	if err := unix.PivotRoot(root, old); err != nil {
-		return err
+		return fmt.Errorf("enter isolated root: %w", err)
 	}
 	if err := unix.Chdir("/"); err != nil {
 		return err

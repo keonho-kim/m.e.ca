@@ -6,15 +6,13 @@ package recovery
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/goal"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 )
 
 type Store interface {
-	LatestTask(context.Context, string) (*run.Checkpoint, error)
-	LatestGoal(context.Context, string) (*goal.State, error)
+	LatestRun(context.Context, string) (*run.Checkpoint, error)
 	RecordEvent(context.Context, string, run.Event) error
 	Messages(context.Context, string, int) ([]modelapi.Message, error)
 	AppendMessage(context.Context, string, modelapi.Message) error

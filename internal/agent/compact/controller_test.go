@@ -55,7 +55,7 @@ func summary() string {
 	return b.String()
 }
 func TestThresholdAndFileLedger(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 255999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Task: &TaskFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{TaskID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
+	repo := &repository{mark: Watermark{Tokens: 255999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Run: &RunFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{RunID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	generate := func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
@@ -110,5 +110,21 @@ func TestCancellationDoesNotAdvanceMemoryWatermark(t *testing.T) {
 	})
 	if err == nil || repo.installed != 0 || repo.memory.UsageThrough != 0 || repo.memory.Through != 0 {
 		t.Fatal("cancelled compaction advanced source or token watermark")
+	}
+}
+
+func TestActualInputPressureBatchesSourceRecords(t *testing.T) {
+	repo := &repository{mark: Watermark{Tokens: 12, Usage: 2, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "first instruction"}, {Sequence: 2, Role: "assistant", Text: "second observation"}}}
+	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }, InputTokens: 16384}
+	calls := 0
+	changed, err := c.Refresh(context.Background(), func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+		calls++
+		if !strings.Contains(r.Messages[1].Content, "first instruction") || !strings.Contains(r.Messages[1].Content, "second observation") {
+			t.Fatal("source missing from batch")
+		}
+		return emit(modelapi.Event{Delta: summary(), Done: true})
+	})
+	if err != nil || !changed || calls != 1 || c.InputTokens != 0 {
+		t.Fatalf("changed=%v calls=%d pressure=%d err=%v", changed, calls, c.InputTokens, err)
 	}
 }

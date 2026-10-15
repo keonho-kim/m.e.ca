@@ -1,28 +1,28 @@
-// Purpose: Verify concise self-grounding records bind evidence to one exact PFC call.
+// Purpose: Verify intent remains bound to one exact operation without generated bullet parsing.
 // Pattern: Trust-boundary tests.
 // Usage: go test ./internal/agent/grounding.
-// Related: internal/agent/grounding/record.go, internal/agent/run/grounding.go.
+// Related: internal/agent/grounding/record.go.
 package grounding
 
 import (
-	"encoding/json"
 	"github.com/keonho-kim/v-code/internal/agent/tool"
+	"strings"
 	"testing"
 )
 
 func TestRecordBindsExactCall(t *testing.T) {
-	call := tool.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}
-	record, err := Parse("- Evidence: User named README.md; contents are unknown.\n- Action: Inspect the requested file.\n- Verify: Confirm the relevant documented behavior.", call)
+	call := tool.Call{ID: "c", Name: "read_file", Arguments: []byte(`{"path":"a"}`)}
+	record, err := Bind(call, "Inspect requested file.", "run_1")
 	if err != nil || !record.Matches(call) {
-		t.Fatalf("record=%+v err=%v", record, err)
+		t.Fatalf("%+v %v", record, err)
 	}
-	call.Arguments = json.RawMessage(`{"path":"secret"}`)
+	call.Arguments = []byte(`{"path":"b"}`)
 	if record.Matches(call) {
-		t.Fatal("grounding reused for different arguments")
+		t.Fatal("intent reused for another operation")
 	}
-	for _, invalid := range []string{"", `{"evidence":"guessed"}`, "- Evidence: x\n- Action: x", "- Evidence: x\n- Action: x\n- Verify: "} {
-		if _, err := Parse(invalid, call); err == nil {
-			t.Fatalf("invalid grounding accepted: %q", invalid)
+	for _, reason := range []string{"", "line\nbreak", strings.Repeat("x", 257)} {
+		if _, err := Bind(call, reason, "run_1"); err == nil {
+			t.Fatalf("accepted %q", reason)
 		}
 	}
 }

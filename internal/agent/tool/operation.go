@@ -7,11 +7,11 @@ package tool
 import "github.com/keonho-kim/v-code/internal/agent/plan"
 
 type Operation struct {
-	Failure                                       *Failure
-	Process                                       *ProcessOutcome
-	TaskID, CallID, Name, Status, Command, Result string
-	Check                                         bool
-	Step                                          *plan.StepRef
-	Changes                                       []FileChange
-	Source                                        int64
+	Failure                                      *Failure
+	Process                                      *ProcessOutcome
+	RunID, CallID, Name, Status, Command, Result string
+	Check                                        bool
+	Step                                         *plan.StepRef
+	Changes                                      []FileChange
+	Source                                       int64
 }

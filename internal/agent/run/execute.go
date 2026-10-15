@@ -1,6 +1,6 @@
-// Purpose: Execute a grounded PFC call through policy, approval and durable observation boundaries.
+// Purpose: Execute a grounded native call through policy, approval and durable observation boundaries.
 // Pattern: Tool execution use case.
-// Usage: action invokes execute after fields and self-grounding have been persisted.
+// Usage: action invokes execute after native arguments and self-grounding have been persisted.
 // Related: internal/agent/run/action.go, internal/agent/tool/execution.go, internal/agent/verification/state.go.
 package run
 
@@ -13,7 +13,7 @@ import (
 
 var errRuntimeRecord = errors.New("runtime observation could not be committed or delivered")
 
-func (s *task) execute(ctx context.Context, planning bool, call toolapi.Call, approve Approver, emit func(Event) error) (outcome toolapi.Result, err error) {
+func (s *execution) execute(ctx context.Context, planning bool, call toolapi.Call, approve Approver, emit func(Event) error) (outcome toolapi.Result, err error) {
 	if s.checkpoint.Grounding == nil || !s.checkpoint.Grounding.Matches(call) {
 		return outcome, fmt.Errorf("missing self-grounding for exact tool call")
 	}
@@ -87,6 +87,9 @@ func (s *task) execute(ctx context.Context, planning bool, call toolapi.Call, ap
 	}
 	outcome, runErr := op.Execute(ctx, approved)
 	outcome.Started = true
+	if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
+		outcome.Started = false
+	}
 	outcome.ReviewSatisfied = proposal.Candidate != nil && (proposal.Candidate.Lines() == 0 || review != nil && review.Passed)
 	outcome.Target = proposal.Target
 	event.Kind, event.Text = "tool_succeeded", outcome.Summary
@@ -94,7 +97,9 @@ func (s *task) execute(ctx context.Context, planning bool, call toolapi.Call, ap
 		event.Kind = "tool_failed"
 	}
 	if runErr != nil {
-		outcome.Failure = toolapi.FailureOf(runErr)
+		if outcome.Failure == nil {
+			outcome.Failure = toolapi.FailureOf(runErr)
+		}
 		outcome.Failed = true
 		event.Kind = "tool_failed"
 	}
@@ -107,7 +112,7 @@ func (s *task) execute(ctx context.Context, planning bool, call toolapi.Call, ap
 		outcome.Failure.Next = r.Redact(outcome.Failure.Next)
 		event.Text = outcome.Failure.Error()
 	}
-	opFact := toolapi.Operation{TaskID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Check: s.checkpoint.Checking, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text, Failure: outcome.Failure, Process: outcome.Process}
+	opFact := toolapi.Operation{RunID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Check: s.checkpoint.Checking, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text, Failure: outcome.Failure, Process: outcome.Process}
 	if call.Name == "execute_command" {
 		opFact.Command = proposal.Target
 	}

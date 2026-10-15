@@ -1,76 +1,87 @@
-// Purpose: Orchestrate PFC, self-grounding and observed progress for one tool decision.
-// Pattern: State Machine (PFC execution).
-// Usage: Invoked once per JSON tool entry, before the existing approval/execution boundary.
-// Related: internal/agent/pfc/pfc.go, internal/agent/run/execute.go.
+// Purpose: Validate one native tool call and orchestrate grounding, approval and execution.
+// Pattern: Native tool execution use case.
+// Usage: Invoked once per complete native tool call, before the existing approval/execution boundary.
+// Related: internal/agent/tool/arguments.go, internal/agent/run/execute.go.
 package run
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/pfc"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 )
 
-func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approver) error {
+func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
+	if reply.Calls[0].Name == "submit_plan" {
+		return s.submitPlan(ctx, reply)
+	}
+	call, reason, intentErr := toolapi.ExtractIntent(reply.Calls[0])
+	if intentErr != nil {
+		return s.returnToolFeedback(ctx, reply, intentErr.Error())
+	}
 	var definition *toolapi.Definition
 	for i := range s.definitions {
-		if s.definitions[i].Name == decision.Name {
+		if s.definitions[i].Name == call.Name {
 			definition = &s.definitions[i]
 			break
 		}
 	}
-	if definition == nil {
-		s.checkpoint.Observation = "Unknown tool: " + decision.Name
-		s.checkpoint.NoProgress++
-		return nil
-	}
-	if _, err := policy.Decide(s.runner.Settings, s.planning, definition.Effect); err != nil {
+	if err := call.Check(); err != nil {
 		return err
+	}
+	if definition == nil {
+		return s.returnToolFeedback(ctx, reply, "Unknown tool; select a declared native function.")
+	}
+	if err := s.allowTool(definition.Effect); err != nil {
+		return s.returnToolFeedback(ctx, reply, err.Error())
+	}
+	if call.Name == "write_file" || call.Name == "edit_file" {
+		s.checkpoint.PendingReview = true
+	}
+	if len(call.Arguments) > s.limits.MaxArgumentBytes {
+		return s.returnToolFeedback(ctx, reply, fmt.Sprintf("Arguments exceed the configured %d-byte limit; narrow the operation. Nothing executed.", s.limits.MaxArgumentBytes))
+	}
+	arguments, err := toolapi.ValidateArguments(*definition, call.Arguments)
+	if err != nil {
+		return s.returnToolFeedback(ctx, reply, "Argument validation failed: "+err.Error()+". Correct the arguments; no operation was executed.")
 	}
 	s.checkpoint.Tool = definition.Name
-	s.checkpoint.Arguments = map[string]json.RawMessage{}
-	if err := s.collectArguments(ctx, *definition); err != nil {
-		var failure *toolapi.Failure
-		if !errors.As(err, &failure) {
+	s.checkpoint.Arguments = arguments
+	s.checkpoint.Checking = false
+	if value, ok := arguments["purpose"]; ok {
+		var purpose string
+		if err := json.Unmarshal(value, &purpose); err != nil {
 			return err
 		}
-		s.checkpoint.Observation = failure.Error()
-		s.checkpoint.NoProgress++
-		return s.persist(ctx)
+		s.checkpoint.Checking = purpose == "check" && definition.Effect == policy.Command
 	}
-	content, err := json.Marshal(s.checkpoint.Arguments)
-	if err != nil {
-		return err
-	}
-	call := toolapi.Call{ID: "call_" + rand.Text(), Name: definition.Name, Arguments: content}
-	if err = call.Check(); err != nil {
-		return err
-	}
-	if err := s.ground(ctx, call); err != nil {
+	content := call.Arguments
+	if err := s.ground(ctx, call, reason); err != nil {
 		return err
 	}
 	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
 	mutating := definition.Effect != policy.Read && !s.checkpoint.Checking
 	if mutating && s.mutations[signature] {
-		s.checkpoint.Observation = "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed."
-		s.checkpoint.NoProgress++
-		return s.persist(ctx)
+		return s.returnToolFeedback(ctx, reply, "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed.")
 	}
 	s.checkpoint.Phase = "approval"
-	s.checkpoint.Parameter = ""
 	if err = s.persist(ctx); err != nil {
 		return err
 	}
 	// The compiled call enters the audit transcript only after every argument is valid.
-	if err = s.save(ctx, modelapi.Message{Role: "assistant", Calls: []toolapi.Call{call}}); err != nil {
+	if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: reply.Calls}); err != nil {
 		return err
 	}
-	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded PFC candidate; not executed"}); err != nil {
+	if reply.Text != "" {
+		if err := s.emit(Event{Kind: "progress", Text: reply.Text}); err != nil {
+			return err
+		}
+	}
+	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded native candidate; not executed"}); err != nil {
 		return err
 	}
 	outcome, toolErr := s.execute(ctx, s.planning, call, approve, s.emit)
@@ -78,7 +89,6 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 	if errors.Is(toolErr, errRuntimeRecord) {
 		return toolErr
 	}
-	s.worked = true
 	s.result.HadToolFailure = s.result.HadToolFailure || failed || toolErr != nil
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -102,7 +112,7 @@ func (s *task) action(ctx context.Context, decision pfc.Decision, approve Approv
 		result = string(encoded)
 	}
 
-	if err = s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: call.ID, ToolName: call.Name}); err != nil {
+	if err = s.save(ctx, modelapi.Message{Role: "tool", Content: s.contextResult(call, result, !failed && toolErr == nil), ToolCallID: call.ID, ToolName: call.Name}); err != nil {
 		return err
 	}
 	if errors.Is(toolErr, errApprovalDenied) {

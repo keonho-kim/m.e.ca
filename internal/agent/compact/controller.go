@@ -1,6 +1,6 @@
 // Purpose: Compact archived dialogue in bounded chronological chunks and atomically publish a validated memory revision.
 // Pattern: Use Case.
-// Usage: Refreshed only at a task decision boundary, never during argument collection or approval.
+// Usage: Refreshed only at a task decision boundary, never during native call assembly or approval.
 // Related: internal/agent/compact/types.go, internal/agent/compact/ledger.go, internal/storage/sqlite/memory.go.
 package compact
 
@@ -15,6 +15,7 @@ import (
 
 type Controller struct {
 	Inference              *inference.Settings
+	InputTokens            int64
 	Repository             Repository
 	Session, Model, Prompt string
 	Settings               Settings
@@ -27,6 +28,15 @@ func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 	return c.Repository.AddContextTokens(ctx, c.Session, count)
 }
 func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, error) {
+	return c.refresh(ctx, generate, false)
+}
+
+// Compact responds to a confirmed context-capacity failure at a safe boundary.
+func (c *Controller) Compact(ctx context.Context, generate Generate) (bool, error) {
+	return c.refresh(ctx, generate, true)
+}
+
+func (c *Controller) refresh(ctx context.Context, generate Generate, force bool) (bool, error) {
 	if err := c.Settings.Check(); err != nil {
 		return false, err
 	}
@@ -51,7 +61,7 @@ func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	if mark.Tokens < c.Settings.ThresholdTokens {
+	if !force && mark.Tokens < c.Settings.ThresholdTokens && (c.Settings.TargetInputTokens == 0 || c.InputTokens < c.Settings.TargetInputTokens) {
 		return false, nil
 	}
 	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, c.Settings.KeepRecentBytes)
@@ -65,13 +75,30 @@ func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, erro
 		return false, nil
 	}
 	next := c.memory
-	next.Ledger.Goals = append([]GoalFact(nil), next.Ledger.Goals...)
 	next.Ledger.Reviews = append([]ReviewFact(nil), next.Ledger.Reviews...)
 	next.Ledger.Groundings = append([]GroundingFact(nil), next.Ledger.Groundings...)
-	next.Ledger.Tasks = append([]TaskFact(nil), next.Ledger.Tasks...)
+	next.Ledger.Runs = append([]RunFact(nil), next.Ledger.Runs...)
 	next.Ledger.Operations = append([]toolrecord.Operation(nil), next.Ledger.Operations...)
 	cursor := next.Through
 	processed := false
+	var batch []json.RawMessage
+	flush := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+		body, err := json.Marshal(batch)
+		if err != nil {
+			return err
+		}
+		summary, err := c.summarize(ctx, generate, next.Markdown, string(body))
+		if err != nil {
+			return err
+		}
+		next.Markdown = summary
+		batch = nil
+		processed = true
+		return nil
+	}
 	for cursor < boundary {
 		records, through, err := c.Repository.MemoryRecords(ctx, c.Session, cursor, boundary)
 		if err != nil {
@@ -88,7 +115,7 @@ func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, erro
 			if err != nil {
 				return false, err
 			}
-			parts := segments(string(payload), 4096)
+			parts := segments(string(payload), 1024)
 			for index, part := range parts {
 				source := struct {
 					Sequence       int64
@@ -99,15 +126,34 @@ func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, erro
 				if err != nil {
 					return false, err
 				}
-				summary, err := c.summarize(ctx, generate, next.Markdown, string(encoded))
+				trial := append(append([]json.RawMessage(nil), batch...), encoded)
+				body, err := json.Marshal(trial)
 				if err != nil {
 					return false, err
 				}
-				next.Markdown = summary
-				processed = true
+				if _, err := c.summaryMessages(next.Markdown, string(body)); err != nil {
+					if len(batch) == 0 {
+						return false, err
+					}
+					if err := flush(); err != nil {
+						return false, err
+					}
+					trial = []json.RawMessage{encoded}
+					body, err = json.Marshal(trial)
+					if err != nil {
+						return false, err
+					}
+					if _, err := c.summaryMessages(next.Markdown, string(body)); err != nil {
+						return false, err
+					}
+				}
+				batch = trial
 			}
 		}
 		cursor = through
+	}
+	if err := flush(); err != nil {
+		return false, err
 	}
 	if !processed {
 		return false, fmt.Errorf("token threshold reached without new source records; previous memory retained")
@@ -122,6 +168,7 @@ func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, erro
 		return false, err
 	}
 	c.memory = next
+	c.InputTokens = 0
 	return true, nil
 }
 func (c *Controller) Context() (string, int64, error) {

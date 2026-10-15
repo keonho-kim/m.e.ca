@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,27 +38,35 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		question := request.Messages[len(request.Messages)-1].Content
 		reply := `{"tool":"write_file"}`
 		switch {
-		case strings.HasPrefix(question, "CONCLAVE REVIEW "):
-			reply = "1"
-		case strings.Contains(question, "\nGOAL ANALYSIS:"):
-			reply = "Unable to format analysis"
-		case strings.Contains(question, "\nSELF-GROUNDING:"):
-			reply = "- Evidence: User requested README.md; observations are recorded.\n- Action: Perform the requested candidate.\n- Verify: Check the file after creation."
-		case strings.Contains(question, "\nPFC PURPOSE:"):
-			reply = "check"
-		case strings.Contains(question, "ARGUMENT write_file.path"):
-			reply = "\n\nREADME.md\n"
-		case strings.Contains(question, "ARGUMENT write_file.content"):
-			reply = "# Project\n"
-		case strings.Contains(question, "ARGUMENT execute_command.command"):
-			reply = "test -s README.md"
-		case strings.Contains(question, `"Evidence":"execute_command`):
-			reply = "DONE\nCreated README.md"
+		case strings.HasPrefix(question, "REVIEW CANDIDATE "):
+			reply = `{"decision":"pass"}`
+		case strings.Contains(question, "execute_command result:"):
+			reply = "Created README.md"
 		case strings.Contains(question, "write_file result:"):
 			reply = `{"tool":"execute_command"}`
 		}
+		message := map[string]any{"content": reply}
+		if strings.HasPrefix(reply, `{"tool":`) {
+			toolName := "write_file"
+			arguments := map[string]any{"path": "README.md", "content": "# Project\n"}
+			if reply == `{"tool":"execute_command"}` {
+				toolName = "execute_command"
+				arguments = map[string]any{"command": "test -s README.md", "purpose": "check"}
+			}
+			if reply == `{"tool":"submit_plan"}` {
+				toolName = "submit_plan"
+				arguments = map[string]any{"objective": "create file", "steps": []string{"write output.txt and verify"}}
+			}
+			arguments["reason"] = "Perform the requested operation using the current observations."
+			encoded, err := json.Marshal(arguments)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			message = map[string]any{"tool_calls": []any{map[string]any{"id": fmt.Sprintf("call_%d", len(request.Messages)), "type": "function", "function": map[string]any{"name": toolName, "arguments": string(encoded)}}}}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}}); err != nil {
 			t.Error(err)
 		}
 	}))

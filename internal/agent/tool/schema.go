@@ -1,27 +1,30 @@
-// Purpose: Declare staged tool parameter types and fixed tool definitions.
+// Purpose: Declare native tool parameter types and fixed tool definitions.
 // Pattern: Tool schema.
-// Usage: Dialogue and prompt code use the same parameters as the local tool catalog.
-// Related: internal/agent/pfc/pfc.go, internal/tools/local/catalog.go.
+// Usage: Provider adapters use the same parameters as the local tool catalog.
+// Related: internal/agent/tool/arguments.go, internal/tools/local/catalog.go.
 
 package tool
 
 import "github.com/keonho-kim/v-code/internal/policy"
 
-// ParameterKind is the literal value type requested in one model reply.
+// ParameterKind is the accepted type of one field in a complete argument object.
 type ParameterKind string
 
 const (
 	Text        ParameterKind = "text"
+	TextList    ParameterKind = "text_list"
 	LiteralPath ParameterKind = "literal_path"
 	Integer     ParameterKind = "integer"
 	LineAnchor  ParameterKind = "line_anchor"
 )
 
 type Parameter struct {
-	Name, Question       string
+	Values               []string
+	Name, Description    string
 	Kind                 ParameterKind
 	Required, AllowEmpty bool
 	Min, Max, MaxBytes   int
+	MaxChars             int
 }
 type Definition struct {
 	Name, Description string

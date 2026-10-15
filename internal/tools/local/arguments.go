@@ -1,29 +1,30 @@
-// Purpose: Validate runtime-built tool arguments against the same ordered catalog used by pfc.
+// Purpose: Validate runtime-built tool arguments against the native tool catalog.
 // Pattern: Simple Module (execution trust boundary).
-// Usage: Called by Executor.Prepare after staged argument collection.
-// Related: internal/tools/local/catalog.go, internal/agent/pfc/pfc.go.
+// Usage: Called by Executor.Prepare after complete native argument validation.
+// Related: internal/tools/local/catalog.go, internal/agent/tool/arguments.go.
 package local
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/pfc"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"io"
 )
 
 type arguments struct {
-	Path        string `json:"path"`
-	Content     string `json:"content"`
-	StartAnchor string `json:"start_anchor"`
-	EndAnchor   string `json:"end_anchor"`
-	NewText     string `json:"new_text"`
-	Destination string `json:"destination"`
-	Pattern     string `json:"pattern"`
-	Command     string `json:"command"`
-	Offset      int    `json:"offset"`
-	Limit       int    `json:"limit"`
+	FormatPolicy string `json:"format_policy,omitempty"`
+	Purpose      string `json:"purpose,omitempty"`
+	Path         string `json:"path"`
+	Content      string `json:"content"`
+	StartAnchor  string `json:"start_anchor"`
+	EndAnchor    string `json:"end_anchor"`
+	NewText      string `json:"new_text"`
+	Destination  string `json:"destination"`
+	Pattern      string `json:"pattern"`
+	Command      string `json:"command"`
+	Offset       int    `json:"offset"`
+	Limit        int    `json:"limit"`
 }
 
 func parseArguments(call toolapi.Call) (specification, arguments, error) {
@@ -40,33 +41,8 @@ func parseArguments(call toolapi.Call) (specification, arguments, error) {
 	if spec.name == "" {
 		return spec, arguments{}, fmt.Errorf("unknown tool: %s", call.Name)
 	}
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(call.Arguments, &fields); err != nil {
+	if _, err := toolapi.ValidateArguments(toolapi.Definition{Name: spec.name, Parameters: spec.fields}, call.Arguments); err != nil {
 		return spec, arguments{}, err
-	}
-	for name := range fields {
-		found := false
-		for _, p := range spec.fields {
-			if p.Name == name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return spec, arguments{}, fmt.Errorf("unexpected %s argument: %s", call.Name, name)
-		}
-	}
-	for _, p := range spec.fields {
-		value, ok := fields[p.Name]
-		if !ok {
-			if p.Required {
-				return spec, arguments{}, fmt.Errorf("missing %s argument", p.Name)
-			}
-			continue
-		}
-		if err := pfc.ValidateArgument(p, value); err != nil {
-			return spec, arguments{}, err
-		}
 	}
 	var input arguments
 	decoder := json.NewDecoder(bytes.NewReader(call.Arguments))

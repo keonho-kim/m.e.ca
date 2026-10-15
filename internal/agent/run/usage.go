@@ -1,6 +1,6 @@
 // Purpose: Record measured usage per attempt and apply retry budgets before restarting generation.
 // Pattern: Model I/O boundary.
-// Usage: Normal task generation and compaction both call task.generate.
+// Usage: Normal execution generation and compaction both call execution.generate.
 // Related: internal/agent/run/generate.go, internal/agent/run/memory.go, internal/storage/sqlite/usage.go.
 package run
 
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func (s *task) generate(ctx context.Context, request modelapi.Request, consume func(modelapi.Event) error) error {
+func (s *execution) generate(ctx context.Context, request modelapi.Request, consume func(modelapi.Event) error) error {
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (s *task) generate(ctx context.Context, request modelapi.Request, consume f
 	return errors.Join(err, s.recordUsage(ctx, usage))
 }
 
-func (s *task) recordUsage(ctx context.Context, usage *modelapi.TokenUsage) error {
+func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage) error {
 	if usage == nil {
 		return nil
 	}

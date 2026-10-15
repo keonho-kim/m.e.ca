@@ -59,9 +59,6 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if respondGoalAnalysis(t, w, request.Messages) {
-			return
-		}
 		call := calls.Add(1)
 		newest := "new question"
 		if call == 2 {
@@ -69,10 +66,8 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 		}
 		oldFound, newFound, previousAnswer, toolOutput := false, false, false, false
 		for _, message := range request.Messages {
-			if len(message.Calls) > 0 || message.Role == "tool" {
-				t.Error("native tool protocol leaked into text dialogue")
-			}
-			if strings.Contains(message.Content, "exact runtime output") && strings.Contains(message.Content, "earlier-call") {
+
+			if strings.Contains(message.Content, "exact runtime output") && message.ToolCallID == "earlier-call" {
 				toolOutput = true
 			}
 			if message.Role == "user" && message.Content == long {
@@ -91,9 +86,9 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 		if call == 2 && !previousAnswer {
 			t.Error("previous response missing from next request")
 		}
-		reply := "DONE\nnew answer"
+		reply := "new answer"
 		if call == 2 {
-			reply = "DONE\ndifferent answer"
+			reply = "different answer"
 		}
 		w.Header().Set("Content-Type", "application/json")
 		encoded, err := json.Marshal(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply}, "finish_reason": "stop"}}})

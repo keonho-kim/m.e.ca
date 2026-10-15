@@ -95,3 +95,13 @@ func (c *Client) Redact(text string) string {
 	}
 	return text
 }
+
+// ContextLimit identifies explicit capacity failures without guessing from prose.
+func (e *responseError) ContextLimit() bool {
+	switch e.code {
+	case "context_length_exceeded", "context_window_exceeded", "max_context_length_exceeded":
+		return true
+	default:
+		return false
+	}
+}

@@ -10,37 +10,31 @@ import (
 )
 
 type Parameters struct {
+	Thinking        string  `toml:"thinking"`
 	Temperature     float64 `toml:"temperature"`
 	MaxOutputTokens int     `toml:"max_output_tokens"`
 }
 type Settings struct {
 	Agent      Parameters `toml:"agent"`
 	Plan       Parameters `toml:"plan"`
-	Goal       Parameters `toml:"goal"`
-	PFCValue   Parameters `toml:"pfc_value"`
-	PFCContent Parameters `toml:"pfc_content"`
-	Grounding  Parameters `toml:"grounding"`
 	Conclave   Parameters `toml:"conclave"`
 	Compaction Parameters `toml:"compaction"`
-	Report     Parameters `toml:"report"`
 	Diagnostic Parameters `toml:"diagnostic"`
 }
 
 func Defaults() Settings {
 	return Settings{
-		Agent:      Parameters{Temperature: 0.7, MaxOutputTokens: 2048},
-		Plan:       Parameters{Temperature: 0.7, MaxOutputTokens: 2048},
-		Goal:       Parameters{Temperature: 0.2, MaxOutputTokens: 2048},
-		PFCValue:   Parameters{Temperature: 0.2, MaxOutputTokens: 2048},
-		PFCContent: Parameters{Temperature: 0.7, MaxOutputTokens: 8192},
-		Grounding:  Parameters{Temperature: 0.2, MaxOutputTokens: 2048},
-		Conclave:   Parameters{Temperature: 0.4, MaxOutputTokens: 2048},
-		Compaction: Parameters{Temperature: 0.2, MaxOutputTokens: 4096},
-		Report:     Parameters{Temperature: 0.2, MaxOutputTokens: 2048},
-		Diagnostic: Parameters{Temperature: 0.2, MaxOutputTokens: 512},
+		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 25600},
+		Plan:       Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 12800},
+		Conclave:   Parameters{Thinking: "off_if_supported", Temperature: 0.4, MaxOutputTokens: 12800},
+		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 12800},
+		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
 	}
 }
 func (p Parameters) Check() error {
+	if p.Thinking != "" && p.Thinking != "inherit" && p.Thinking != "off_if_supported" {
+		return fmt.Errorf("thinking must be inherit or off_if_supported")
+	}
 	if err := modelapi.CheckTemperature(&p.Temperature); err != nil {
 		return err
 	}
@@ -50,7 +44,7 @@ func (p Parameters) Check() error {
 	return nil
 }
 func (s Settings) Check() error {
-	for _, role := range []Role{Agent, Plan, Goal, PFCValue, PFCContent, Grounding, Conclave, Compaction, Report, Diagnostic} {
+	for _, role := range []Role{Agent, Plan, Conclave, Compaction, Diagnostic} {
 		if _, err := Resolve(&s, role); err != nil {
 			return err
 		}
@@ -68,20 +62,10 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 		p = s.Agent
 	case Plan:
 		p = s.Plan
-	case Goal:
-		p = s.Goal
-	case PFCValue:
-		p = s.PFCValue
-	case PFCContent:
-		p = s.PFCContent
-	case Grounding:
-		p = s.Grounding
 	case Conclave:
 		p = s.Conclave
 	case Compaction:
 		p = s.Compaction
-	case Report:
-		p = s.Report
 	case Diagnostic:
 		p = s.Diagnostic
 	default:
@@ -97,5 +81,15 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 func (p Parameters) Apply(request modelapi.Request) modelapi.Request {
 	request.Temperature = &p.Temperature
 	request.MaxOutput = p.MaxOutputTokens
+	return request
+}
+
+// ApplyThinking preserves the selected model's supported controls.
+func (p Parameters) ApplyThinking(request modelapi.Request, supportsOff bool) modelapi.Request {
+	if p.Thinking == "off_if_supported" && supportsOff {
+		off := false
+		request.Thinking = &off
+		request.ReasoningEffort = ""
+	}
 	return request
 }

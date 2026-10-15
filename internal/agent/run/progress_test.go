@@ -12,7 +12,7 @@ import (
 )
 
 func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
-	g := &generator{purposes: []string{"check", "check"}, replies: []string{`{"tool":"execute_command"}`, "verify", `{"tool":"write_file"}`, "a", "new", `{"tool":"execute_command"}`, "verify", "DONE\nVerified"}}
+	g := &generator{purposes: []string{"check", "check"}, replies: []string{nativeCall("execute_command", map[string]any{"command": "verify"}), nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Settings.Scope = policy.System
@@ -30,11 +30,11 @@ func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
 }
 
 func TestProgressRecoveryOffersSpecificNextAction(t *testing.T) {
-	g := &generator{replies: []string{"CONTINUE\ntry", "CONTINUE\ntry", "CONTINUE\ntry", "WAIT\nNeed another approach"}}
+	g := &generator{replies: []string{"", "", "", "Need another approach"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	result, err := r.Run(context.Background(), "inspect", false, approve, emit)
-	if err != nil || result.Status != NeedsInput {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("recovery=%+v %v", result, err)
 	}
 	last := g.requests[len(g.requests)-1]

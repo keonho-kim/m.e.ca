@@ -20,7 +20,7 @@ func (s *planRecorder) SavePlan(_ context.Context, p planning.Plan) error {
 }
 
 func TestPlanConversationDoesNotRequireProposal(t *testing.T) {
-	for _, reply := range []string{"DONE\nHello!", "DONE\n현재 요구사항부터 확인하겠습니다.", "WAIT\n어떤 기능을 계획할까요?", "DONE\n{\"example\":true}"} {
+	for _, reply := range []string{"Hello!", "현재 요구사항부터 확인하겠습니다.", "어떤 기능을 계획할까요?", "{\"example\":true}"} {
 		t.Run(reply, func(t *testing.T) {
 			g, e, j := &generator{replies: []string{reply}}, &executor{}, &journal{}
 			r := fixture(g, e, j)
@@ -41,8 +41,7 @@ func TestPlanConversationDoesNotRequireProposal(t *testing.T) {
 }
 
 func TestPlanConversationPublishesOnlyCompletePlan(t *testing.T) {
-	g, e, j := &generator{replies: []string{`DONE
-{"objective":"inspect project","steps":["Read the entry point","Propose a change"]}`}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("submit_plan", map[string]any{"objective": "inspect project", "steps": []string{"Read the entry point", "Propose a change"}})}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	store := &planRecorder{}
 	updated, err := r.DraftPlan(context.Background(), "make a plan", nil, store, approve, emit)
@@ -52,10 +51,36 @@ func TestPlanConversationPublishesOnlyCompletePlan(t *testing.T) {
 }
 
 func TestPlanConversationCanAnswerAfterInspection(t *testing.T) {
-	g, e, j := &generator{replies: []string{`{"tool":"read_file"}`, "README.md", "DONE\n이 프로젝트는 CLI 프로그램입니다."}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "README.md"}), "이 프로젝트는 CLI 프로그램입니다."}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "프로젝트를 설명해줘", true, approve, emit)
 	if err != nil || result.Status != Answered || e.executed != 1 {
 		t.Fatalf("read-only discussion: %+v %v", result, err)
+	}
+}
+
+func TestApprovedPlanKeepsOneCopyOfEachStepAnswer(t *testing.T) {
+	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Read complete"}}, &executor{}, &journal{}
+	r := fixture(g, e, j)
+	p, err := planning.NewPlan("p", "s", "Inspect", []string{"Read a"}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = planning.ApprovePlan(p, 1, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := r.ExecutePlan(context.Background(), p, &planRecorder{}, approve, emit)
+	if err != nil || result.Status != planning.PlanSucceeded {
+		t.Fatalf("%+v %v", result, err)
+	}
+	count := 0
+	for _, m := range j.messages {
+		if m.Role == "assistant" && m.Content == "Read complete" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("answer persisted %d times", count)
 	}
 }

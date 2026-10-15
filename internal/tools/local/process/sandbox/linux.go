@@ -7,6 +7,7 @@
 package sandbox
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -16,7 +17,11 @@ import (
 	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox/linux"
 )
 
-func Prepare(project, home, private, command string) (launch Launch, err error) {
+func Prepare(ctx context.Context, project, home, private, command string) (launch Launch, err error) {
+	if err := ctx.Err(); err != nil {
+		return Launch{}, err
+	}
+
 	if err := linux.Probe(); err != nil {
 		return launch, fmt.Errorf("project sandbox unavailable: %w", err)
 	}

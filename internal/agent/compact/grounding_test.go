@@ -15,7 +15,7 @@ import (
 )
 
 func TestGroundingSurvivesCompaction(t *testing.T) {
-	record, err := grounding.Parse("- Evidence: README.md is unknown.\n- Action: Read the requested section.\n- Verify: Compare documented behavior.", tool.Call{ID: "c", Name: "read_file", Arguments: []byte(`{"path":"README.md"}`)})
+	record, err := grounding.Bind(tool.Call{ID: "c", Name: "read_file", Arguments: []byte(`{"path":"README.md"}`)}, "README.md is unknown.", "run_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,13 +28,13 @@ func TestGroundingSurvivesCompaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	text, _, err := c.Context()
-	if err != nil || !strings.Contains(text, "README.md is unknown.") || !strings.Contains(text, record.ArgumentsDigest) {
+	if err != nil || !strings.Contains(text, "README.md is unknown.") || !strings.Contains(text, record.Reason) {
 		t.Fatalf("grounding lost: %s %v", text, err)
 	}
 }
 
 func TestFailedDiagnosticSurvivesSummaryOmission(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Operation: &tool.Operation{CallID: "c", TaskID: "task", Name: "execute_command", Status: "tool_failed", Check: true, Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "src/a:4 expected ready, got missing"}}}}}
+	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Operation: &tool.Operation{CallID: "c", RunID: "task", Name: "execute_command", Status: "tool_failed", Check: true, Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "src/a:4 expected ready, got missing"}}}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	if _, err := c.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		return emit(modelapi.Event{Delta: summary(), Done: true})

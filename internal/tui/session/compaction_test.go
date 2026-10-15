@@ -52,13 +52,10 @@ func TestCompactionContext(t *testing.T) {
 		if body.Effort != "medium" {
 			t.Errorf("effort lost in generation/compaction: %q", body.Effort)
 		}
-		if respondGoalAnalysis(t, w, body.Messages) {
-			return
-		}
-		reply := "DONE\nRemembered the earlier goal"
-		if strings.Contains(body.Messages[0].Content, "conversation compaction prompt") {
+		reply := "Remembered the earlier goal"
+		if strings.Contains(body.Messages[0].Content, "# Conversation memory") {
 			var b strings.Builder
-			for _, name := range []string{"Goals", "Task history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
+			for _, name := range []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
 				b.WriteString("## " + name + "\n- Earlier goal: update src/auth.go; pending until verified.\n")
 			}
 			reply = b.String()
