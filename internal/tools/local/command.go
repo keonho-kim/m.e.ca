@@ -16,6 +16,9 @@ import (
 )
 
 func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
+	if op.query != nil {
+		return op.queryResult(ctx)
+	}
 	output, runErr := process.Run(ctx, op.executor.project, op.executor.home, op.executor.private, op.input.Command, op.settings.Scope == policy.Directory)
 	output.Stdout = op.executor.redact(output.Stdout)
 	output.Stderr = op.executor.redact(output.Stderr)

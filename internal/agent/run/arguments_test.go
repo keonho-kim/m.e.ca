@@ -11,7 +11,7 @@ import (
 )
 
 func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": 12}), nativeCall("read_file", map[string]any{"path": "file.txt", "purpose": "check"}), "Inspected"}}
+	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": 12}), nativeCall("read_file", map[string]any{"path": "file.txt"}), "Inspected"}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "Read file.txt", false, approve, emit)
 	if err != nil || result.Status != Answered || e.prepared != 1 || len(g.requests) != 3 {
@@ -32,7 +32,7 @@ func TestNativeArgumentFailureNeverPreparesATool(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file"}), "Need the file content", "Need the file content"}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "Create file", false, approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != Unverified {
+	if err != nil || e.prepared != 0 || result.Status != Stopped {
 		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
 }
@@ -61,7 +61,7 @@ func TestNativeArgumentsHonorConfiguredBudget(t *testing.T) {
 	r.Limits = DefaultLimits()
 	r.Limits.MaxArgumentBytes = 1024
 	result, err := r.Run(context.Background(), "create a", false, approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != Unverified {
+	if err != nil || e.prepared != 0 || result.Status != Stopped {
 		t.Fatalf("prepared=%d result=%+v: %v", e.prepared, result, err)
 	}
 }

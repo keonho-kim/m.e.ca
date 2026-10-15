@@ -14,14 +14,12 @@ import (
 
 type arguments struct {
 	FormatPolicy string `json:"format_policy,omitempty"`
-	Purpose      string `json:"purpose,omitempty"`
 	Path         string `json:"path"`
 	Content      string `json:"content"`
 	StartAnchor  string `json:"start_anchor"`
 	EndAnchor    string `json:"end_anchor"`
 	NewText      string `json:"new_text"`
 	Destination  string `json:"destination"`
-	Pattern      string `json:"pattern"`
 	Command      string `json:"command"`
 	Offset       int    `json:"offset"`
 	Limit        int    `json:"limit"`

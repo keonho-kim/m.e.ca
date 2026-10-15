@@ -9,11 +9,13 @@ import (
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/v-code/internal/policy/shell"
 	"sync/atomic"
 )
 
 type operation struct {
 	executor                     *Executor
+	query                        *shell.Query
 	settings                     policy.Settings
 	planning                     bool
 	spec                         specification

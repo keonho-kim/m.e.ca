@@ -15,9 +15,12 @@ import (
 func TestCommandContractRetainsPolicyWithoutTimeArgument(t *testing.T) {
 	executor, root := testExecutor(t)
 	for _, definition := range executor.Definitions() {
-		if definition.Name == "execute_command" && (len(definition.Parameters) != 2 || definition.Parameters[0].Name != "command") {
+		if definition.Name == "execute_command" && (len(definition.Parameters) != 1 || definition.Parameters[0].Name != "command") {
 			t.Fatalf("unexpected command fields: %+v", definition.Parameters)
 		}
+	}
+	if _, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, false, call("execute_command", `{"command":"true","purpose":"check"}`)); err == nil {
+		t.Fatal("removed purpose field accepted")
 	}
 	ctx := context.Background()
 	command := call("execute_command", `{"command":"printf approved > marker"}`)

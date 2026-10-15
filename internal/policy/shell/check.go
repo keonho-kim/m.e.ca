@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mvdan.cc/sh/v3/syntax"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -58,13 +59,35 @@ func check(text string, depth int) error {
 		case "rm", "rmdir", "unlink":
 			target = "delete_file"
 		case "cat", "head", "tail":
-			target = "read_file"
-		case "ls":
-			target = "list_directory"
-		case "grep", "egrep", "fgrep", "rg":
-			target = "grep"
+			if !stdinOnly(name, args[index+1:]) {
+				target = "read_file"
+			}
 		case "find":
-			target = "search_files (or delete_file for deletion)"
+			for _, word := range call.Args[index+1:] {
+				if _, ok := literal(word.Parts); !ok {
+					err = fmt.Errorf("find requires literal arguments for action inspection")
+					return false
+				}
+			}
+			for _, arg := range args[index+1:] {
+				if arg == "-delete" {
+					target = "delete_file"
+				}
+				if strings.HasPrefix(arg, "-fprint") || arg == "-fls" {
+					target = "write_file"
+				}
+				if strings.HasPrefix(arg, "-exec") || strings.HasPrefix(arg, "-ok") {
+					err = fmt.Errorf("find executable actions are unsupported; run a separately reviewed command or dedicated file tool")
+					return false
+				}
+			}
+		case "rg":
+			for _, arg := range args[index+1:] {
+				if arg == "--pre" || strings.HasPrefix(arg, "--pre=") {
+					err = fmt.Errorf("rg preprocessing executes external commands; run a separate reviewed command")
+					return false
+				}
+			}
 		case "mkdir":
 			target = "create_directory"
 		case "mv":
@@ -73,7 +96,7 @@ func check(text string, depth int) error {
 			target = "write_file"
 		case "sed":
 			for _, arg := range args[index+1:] {
-				if arg == "--in-place" || strings.HasPrefix(arg, "-i") {
+				if arg == "--in-place" || strings.HasPrefix(arg, "--in-place=") || strings.HasPrefix(arg, "-i") {
 					target = "edit_file"
 				}
 			}
@@ -122,4 +145,38 @@ func literal(parts []syntax.WordPart) (string, bool) {
 		}
 	}
 	return out.String(), true
+}
+
+// Permit stdin filters in search pipelines without routing them to file reads.
+func stdinOnly(name string, args []string) bool {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "-" {
+			continue
+		}
+		if name == "cat" {
+			if arg == "-n" || arg == "-b" || arg == "-s" {
+				continue
+			}
+			return false
+		}
+		if arg == "-n" || arg == "-c" || arg == "--lines" || arg == "--bytes" {
+			i++
+			if i >= len(args) {
+				return false
+			}
+			if _, err := strconv.Atoi(args[i]); err != nil {
+				return false
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			value := strings.TrimPrefix(arg, "-")
+			if _, err := strconv.Atoi(value); err == nil {
+				continue
+			}
+		}
+		return false
+	}
+	return true
 }

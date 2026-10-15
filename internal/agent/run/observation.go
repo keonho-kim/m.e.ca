@@ -1,4 +1,4 @@
-// Purpose: Apply one tool outcome to change revisions, verification and progress state.
+// Purpose: Apply actual tool outcomes to change revisions and progress state.
 // Pattern: Observed state transition.
 // Usage: action calls observeOutcome after durable result recording.
 // Related: internal/agent/run/action.go, internal/agent/progress/files.go.
@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 	"github.com/keonho-kim/v-code/internal/policy"
 )
 
@@ -19,40 +18,25 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	s.checkpoint.Arguments = nil
 	s.checkpoint.Observation = call.Name + " result: " + excerpt(s.runner.Redact(outcome.Summary), 512)
 	if mutating && (outcome.Started || outcome.Failure != nil && outcome.Failure.Code == toolapi.StaleTarget) {
-		if outcome.Started {
+		if outcome.Started && effect == policy.Change {
 			s.mutations[signature] = true
 		}
 		s.changed = true
 		s.checkpoint.ChangeRevision++
-		s.checkpoint.Evidence = ""
-	}
-	if s.checkpoint.Checking && effect == policy.Command {
-		if toolErr != nil {
-			outcome.Failed = true
+		if outcome.Started && effect == policy.Command {
+			s.commands[signature] = s.checkpoint.ChangeRevision
 		}
-		checks, err := verification.Observe(s.checkpoint.Checks, call, outcome, s.checkpoint.ChangeRevision)
-		if err != nil {
-			return err
-		}
-		s.checkpoint.Checks = checks
-		if outcome.Started && outcome.Process != nil && outcome.Process.Status == "exited" {
-			s.revisions.Checked()
-		}
-	}
-	if outcome.Started {
-		s.revisions.Observe(outcome.Changes)
 	}
 	if outcome.Failed || toolErr != nil {
 		if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
 			s.checkpoint.Blocker = excerpt(s.runner.Redact(outcome.Failure.Detail), 3500)
 			s.checkpoint.Observation = "Command was not started: " + s.checkpoint.Blocker + ". Resolve the runtime setup; do not widen Scope or claim verification passed."
 		}
-		s.checkpoint.Evidence = ""
 		s.checkpoint.NoProgress++
 		return s.persist(ctx)
 	}
-	if effect == policy.Read && outcome.Started && !s.changed {
-		s.checkpoint.Evidence = excerpt(call.Name+" => observed read", 4000)
+	if effect == policy.Command && outcome.Started {
+		s.checkpoint.Blocker = ""
 	}
 	if mutating && outcome.Started && outcome.ReviewSatisfied {
 		s.checkpoint.PendingReview = false
@@ -74,12 +58,6 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		s.seen[fingerprint] = true
 		s.evidenceRevision++
 		s.checkpoint.NoProgress = 0
-	}
-	if s.checkpoint.Checking {
-		s.checkpoint.Blocker = ""
-	}
-	if s.checkpoint.Checking && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 && (!s.changed || effect == policy.Command) {
-		s.checkpoint.Evidence = excerpt(call.Name+" "+string(content)+" => successful result", 4000)
 	}
 	if cycle {
 		s.checkpoint.Observation += "\nFile contents returned to a previously observed state. Stop rewriting the same result; inspect the concrete failed requirement and verify before another edit."

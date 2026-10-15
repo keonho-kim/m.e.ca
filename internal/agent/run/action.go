@@ -13,6 +13,7 @@ import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/v-code/internal/policy/shell"
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
@@ -39,7 +40,6 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err := s.allowTool(definition.Effect); err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
-	previousReview := s.checkpoint.PendingReview
 	if call.Name == "write_file" || call.Name == "edit_file" {
 		s.checkpoint.PendingReview = true
 	}
@@ -50,27 +50,27 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err != nil {
 		return s.returnToolFeedback(ctx, reply, "Argument validation failed: "+err.Error()+". Correct the arguments; no operation was executed.")
 	}
-	s.checkpoint.Tool = definition.Name
-	s.checkpoint.Arguments = arguments
-	s.checkpoint.Checking = false
-	if value, ok := arguments["purpose"]; ok {
-		var purpose string
-		if err := json.Unmarshal(value, &purpose); err != nil {
+	if s.planning && definition.Effect == policy.Command {
+		var command string
+		if err := json.Unmarshal(arguments["command"], &command); err != nil {
 			return err
 		}
-		s.checkpoint.Checking = purpose == "check" && definition.Effect == policy.Command
+		if _, err := shell.PlanQuery(command); err != nil {
+			return s.returnToolFeedback(ctx, reply, err.Error())
+		}
 	}
+	s.checkpoint.Tool = definition.Name
+	s.checkpoint.Arguments = arguments
 	content := call.Arguments
 	if err := s.ground(ctx, call, reason); err != nil {
 		return err
 	}
-	if path := s.revisions.Due(); path != "" && definition.Effect != policy.Read && !s.checkpoint.Checking {
-		s.checkpoint.PendingReview = previousReview
-		return s.returnToolFeedback(ctx, reply, fmt.Sprintf("Verification checkpoint required after repeated edits to %q. Nothing executed. Run a relevant command with purpose=check before making further changes. Use the observed failure to guide a correction; if checking is blocked, report the blocker instead of continuing edits.", path))
-	}
 	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
-	mutating := definition.Effect != policy.Read && !s.checkpoint.Checking
-	if mutating && s.mutations[signature] {
+	if revision, exists := s.commands[signature]; definition.Effect == policy.Command && exists && revision == s.checkpoint.ChangeRevision {
+		return s.returnToolFeedback(ctx, reply, "Repeated identical command blocked without an intervening operation. Reuse its recorded output or choose a different action.")
+	}
+	mutating := definition.Effect != policy.Read && !s.planning
+	if definition.Effect == policy.Change && s.mutations[signature] {
 		return s.returnToolFeedback(ctx, reply, "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed.")
 	}
 	s.checkpoint.Phase = "approval"

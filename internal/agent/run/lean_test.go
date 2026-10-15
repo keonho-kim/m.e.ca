@@ -27,9 +27,4 @@ func TestLeanReadFailureCanRecoverWithoutRequiredCheck(t *testing.T) {
 	if err != nil || result.Status != Answered || e.executed != 2 {
 		t.Fatalf("%+v %v", result, err)
 	}
-	for _, event := range j.events {
-		if event.Checkpoint != nil && len(event.Checkpoint.Checks) > 0 {
-			t.Fatal("read failure became a required check")
-		}
-	}
 }

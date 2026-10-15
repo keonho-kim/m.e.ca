@@ -9,6 +9,11 @@ import (
 )
 
 func (s *execution) allowTool(effect policy.Effect) error {
+	// Command eligibility advertises the Plan query entry; action and local
+	// preparation parse its exact arguments before any execution.
+	if s.planning && effect == policy.Command {
+		return s.runner.Settings.Check()
+	}
 	_, err := policy.Decide(s.runner.Settings, s.planning, effect)
 	return err
 }

@@ -49,7 +49,6 @@ type Runner struct {
 type Result struct {
 	Text           string
 	Status         Status
-	Evidence       string
 	HadToolFailure bool
 }
 type Approver func(context.Context, toolapi.Approval) (bool, error)

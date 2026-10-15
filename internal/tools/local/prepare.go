@@ -22,27 +22,32 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	if err != nil {
 		return nil, err
 	}
+	var query *shell.Query
+	if planning && spec.effect == policy.Command {
+		parsed, err := shell.PlanQuery(input.Command)
+		if err != nil {
+			return nil, err
+		}
+		query = &parsed
+		spec.effect = policy.Read
+		input.Path = parsed.Path
+	}
 	required, err := policy.Decide(settings, planning, spec.effect)
 	if err != nil {
 		return nil, err
 	}
-	for _, text := range []string{input.Content, input.NewText, input.Command, input.Pattern} {
+	for _, text := range []string{input.Content, input.NewText, input.Command} {
 		if executor.redact(text) != text {
 			return nil, fmt.Errorf("tool arguments contain a protected credential")
 		}
 	}
-	op := &operation{executor: executor, settings: settings, planning: planning, spec: spec, input: input}
+	op := &operation{executor: executor, settings: settings, planning: planning, spec: spec, input: input, query: query}
 	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label, Required: required}
 	if spec.effect == policy.Command {
-		if input.Purpose == "check" {
-			if err := shell.CheckVerification(input.Command); err != nil {
-				return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Use one direct verification command whose exit status represents the check. Nothing executed."}
-			}
-		}
 		if err := shell.Check(input.Command); err != nil {
 			var dedicated *shell.Dedicated
 			if errors.As(err, &dedicated) {
-				return nil, &toolapi.Failure{Code: "use_dedicated_tool", Detail: err.Error(), Next: "Use the existing file/search tool through native calls. Shell is for work those tools cannot perform."}
+				return nil, &toolapi.Failure{Code: "use_dedicated_tool", Detail: err.Error(), Next: "Use the dedicated file tool through native calls. Shell is for work those tools cannot perform."}
 			}
 			return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Return a valid bounded POSIX shell command. No command was executed."}
 		}
@@ -55,6 +60,9 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		return nil, err
 	}
 	op.approval.Target = op.source.absolute
+	if query != nil {
+		op.approval.Target = input.Command
+	}
 	if spec.effect == policy.Read {
 		if _, err := op.source.root.Stat(op.source.relative); err != nil {
 			return nil, err

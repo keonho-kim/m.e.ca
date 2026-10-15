@@ -11,7 +11,6 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 )
 
 type Status string
@@ -31,11 +30,9 @@ type Checkpoint struct {
 	PendingReview      bool                       `json:"pending_review"`
 	Conclave           *conclave.Result           `json:"conclave,omitempty"`
 	Recoveries         int                        `json:"recoveries"`
-	Checks             []verification.Record      `json:"checks,omitempty"`
 	ChangeRevision     int                        `json:"change_revision"`
 	Grounding          *grounding.Record          `json:"grounding,omitempty"`
 	Step               *planref.StepRef           `json:"step,omitempty"`
-	Checking           bool                       `json:"checking,omitempty"`
 	ID                 string                     `json:"id"`
 	Objective          string                     `json:"objective"`
 	Status             Status                     `json:"status"`
@@ -47,7 +44,6 @@ type Checkpoint struct {
 	Tool               string                     `json:"tool,omitempty"`
 	Arguments          map[string]json.RawMessage `json:"arguments,omitempty"`
 	Observation        string                     `json:"observation,omitempty"`
-	Evidence           string                     `json:"evidence,omitempty"`
 }
 
 func (c Checkpoint) Check() error {
@@ -55,9 +51,6 @@ func (c Checkpoint) Check() error {
 		if err := c.Conclave.Check(); err != nil {
 			return err
 		}
-	}
-	if err := verification.Check(c.Checks); err != nil {
-		return err
 	}
 	if len(c.Blocker) > 4096 {
 		return fmt.Errorf("invalid blocker detail")
@@ -70,7 +63,7 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.Evidence) > 4096 || len(c.InstructionsDigest) != 64 {
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.InstructionsDigest) != 64 {
 		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {

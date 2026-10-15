@@ -14,9 +14,6 @@ func nativeCall(name string, arguments map[string]any) string {
 		arguments = map[string]any{}
 	}
 	arguments["reason"] = "Perform the requested operation using observed evidence."
-	if name != "execute_command" {
-		delete(arguments, "purpose")
-	}
 	body, err := json.Marshal(arguments)
 	if err != nil {
 		panic(err)

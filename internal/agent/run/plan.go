@@ -1,4 +1,4 @@
-// Purpose: Execute approved Plan steps serially and persist their verified terminal states.
+// Purpose: Execute approved Plan steps serially and persist their terminal states.
 // Pattern: Approved Plan use case.
 // Usage: Session workers call Runner.ExecutePlan with the approved revision.
 // Related: internal/agent/plan/transitions.go, internal/agent/run/run.go, internal/agent/run/planning.go.
@@ -51,8 +51,8 @@ func (r Runner) ExecutePlan(ctx context.Context, p planning.Plan, store PlanStor
 			}
 			return emit(event)
 		})
-		if err == nil && result.Status != Verified && !(result.Status == Answered && result.Evidence != "") {
-			err = fmt.Errorf("approved Plan step requires successful verification evidence")
+		if err == nil && result.Status != Answered {
+			err = fmt.Errorf("approved Plan step stopped before its final report")
 		}
 		reports = append(reports, result.Text)
 		state := "succeeded"

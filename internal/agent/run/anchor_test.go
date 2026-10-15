@@ -76,7 +76,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	script := &generator{purposes: []string{"work", "check"}, replies: []string{nativeCall("read_file", map[string]any{"path": "a", "offset": 0, "limit": 0}), nativeCall("edit_file", map[string]any{"path": "a", "new_text": "second changed\n"}), nativeCall("execute_command", map[string]any{"command": "test -f a"}), "Updated a at line 2 and checked it"}}
+	script := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a", "offset": 0, "limit": 0}), nativeCall("edit_file", map[string]any{"path": "a", "new_text": "second changed\n"}), nativeCall("execute_command", map[string]any{"command": "test -f a"}), "Updated a at line 2 and checked it"}}
 	journal := &journal{}
 	model := &anchorGenerator{script: script, journal: journal}
 	runner := fixture(script, &executor{}, journal)
@@ -84,7 +84,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 	runner.Tools = tools
 	runner.Settings.Scope = policy.System
 	result, err := runner.Run(context.Background(), "change the second line", false, approve, emit)
-	if err != nil || result.Status != Verified || model.anchorFields != 2 || len(script.reviewRequests) != 1 {
+	if err != nil || result.Status != Answered || model.anchorFields != 2 || len(script.reviewRequests) != 1 {
 		t.Fatalf("result=%+v fields=%d err=%v", result, model.anchorFields, err)
 	}
 	content, err := os.ReadFile(filepath.Join(project, "a"))

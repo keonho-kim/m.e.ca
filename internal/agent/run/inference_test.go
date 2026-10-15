@@ -20,7 +20,7 @@ func checkInference(t *testing.T, request modelapi.Request, parameters inference
 	}
 }
 func TestInferenceToolPhasesAndConclave(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
 	r := fixture(g, &executor{}, &journal{})
 	settings := inference.Defaults()
 	settings.Agent.Temperature = 0
@@ -32,7 +32,7 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 	templates.Conclave += "\nCUSTOM-REVIEW-GUIDANCE"
 	r.Prompts = &templates
 	result, err := r.Run(context.Background(), "change and verify", false, approve, emit)
-	if err != nil || result.Status != Verified {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 	for i, role := range []inference.Role{inference.Agent, inference.Agent, inference.Agent} {

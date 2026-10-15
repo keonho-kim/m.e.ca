@@ -12,14 +12,14 @@ import (
 )
 
 func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
-	g := &generator{purposes: []string{"check", "check"}, replies: []string{nativeCall("execute_command", map[string]any{"command": "verify"}), nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "verify"}), nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Verified"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Settings.Scope = policy.System
 	r.Limits = DefaultLimits()
 	r.Limits.StallIterations = 1
 	result, err := r.Run(context.Background(), "change and verify", false, approve, emit)
-	if err != nil || result.Status != Verified {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	for _, event := range j.events {

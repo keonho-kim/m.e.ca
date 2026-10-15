@@ -91,10 +91,3 @@ func TestFormatLiteralChangeRequiresExplicitArgument(t *testing.T) {
 		t.Fatalf("%q %v", got, err)
 	}
 }
-func TestVerificationMasksRejectedBeforeApproval(t *testing.T) {
-	executor, _ := testExecutor(t)
-	_, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, false, call("execute_command", `{"command":"false; echo ok","purpose":"check"}`))
-	if err == nil {
-		t.Fatal("masked check prepared")
-	}
-}

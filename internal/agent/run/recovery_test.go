@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -55,7 +54,7 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
 	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Checks: []verification.Record{{Key: strings.Repeat("a", 64), Tool: "execute_command", Target: "parser-check", Status: "failed"}}, Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
 	if _, err := r.Run(context.Background(), "continue", false, approve, emit); err != nil {
 		t.Fatal(err)
 	}

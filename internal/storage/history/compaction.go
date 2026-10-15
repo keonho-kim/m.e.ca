@@ -51,7 +51,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 			records = append(records, compact.Record{Sequence: sequence, Role: "self_grounding", Grounding: event.Grounding})
 		}
 		if cp := event.Checkpoint; cp != nil {
-			fact := compact.RunFact{Checks: cp.Checks, ChangeRevision: cp.ChangeRevision, ID: cp.ID, Objective: cp.Objective, Status: string(cp.Status), Phase: cp.Phase, Evidence: cp.Evidence, Observation: cp.Observation, Step: cp.Step, Source: sequence}
+			fact := compact.RunFact{ChangeRevision: cp.ChangeRevision, ID: cp.ID, Objective: cp.Objective, Status: string(cp.Status), Phase: cp.Phase, Observation: cp.Observation, Step: cp.Step, Source: sequence}
 			runs[cp.ID] = compact.Record{Sequence: sequence, Role: "run", Text: cp.Objective, Run: &fact}
 		}
 		if event.Operation == nil && event.Text != "" && event.Kind != "thinking" && event.Kind != "compaction" {

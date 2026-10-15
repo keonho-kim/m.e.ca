@@ -37,7 +37,7 @@ func TestGroundingIsSourceOnly(t *testing.T) {
 }
 
 func TestFailedDiagnosticIsSourceOnly(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Operation: &tool.Operation{CallID: "c", RunID: "task", Name: "execute_command", Status: "tool_failed", Check: true, Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "src/a:4 expected ready, got missing"}}}}}
+	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Operation: &tool.Operation{CallID: "c", RunID: "task", Name: "execute_command", Status: "tool_failed", Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "src/a:4 expected ready, got missing"}}}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	if _, err := c.Refresh(context.Background(), func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		if !strings.Contains(request.Messages[1].Content, repoSourceMarker(repo)) {

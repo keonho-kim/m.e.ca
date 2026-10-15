@@ -32,7 +32,7 @@ func (e *previewExecutor) Approval() toolapi.Approval {
 }
 
 func TestChangePreviewUsesExecutedCandidate(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify", "purpose": "check"}), "Done"}}
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify"}), "Done"}}
 	e := &previewExecutor{preview: "--- a\n+++ a\n@@ -1,1 +1,1 @@\n-old\\r\n+new\\r\n"}
 	j := &journal{}
 	r := fixture(g, &e.executor, j)

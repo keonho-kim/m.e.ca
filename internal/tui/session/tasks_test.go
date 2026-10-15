@@ -66,7 +66,7 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 			arguments := map[string]any{"path": "output.txt", "content": "approved"}
 			if reply == `{"tool":"execute_command"}` {
 				toolName = "execute_command"
-				arguments = map[string]any{"command": "test -f output.txt", "purpose": "check"}
+				arguments = map[string]any{"command": "test -f output.txt"}
 			}
 			if reply == `{"tool":"submit_plan"}` {
 				toolName = "submit_plan"

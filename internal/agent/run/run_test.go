@@ -1,4 +1,4 @@
-// Purpose: Verify staged tool execution, bounded Ralph progress and evidence-gated completion.
+// Purpose: Verify native tool execution, bounded Ralph progress and final reporting.
 // Pattern: Task behavior tests with scripted model replies.
 // Usage: go test ./internal/agent/run.
 // Related: internal/agent/run/run.go, internal/agent/run/action.go.
@@ -18,7 +18,6 @@ import (
 )
 
 type generator struct {
-	purposes          []string
 	review            func(context.Context, modelapi.Request, func(modelapi.Event) error) error
 	mu                sync.Mutex
 	reviewRequests    []modelapi.Request
@@ -58,21 +57,6 @@ func (g *generator) Generate(ctx context.Context, r modelapi.Request, emit func(
 			return err
 		}
 		call.ID = fmt.Sprintf("call_%d", len(g.requests))
-		var args map[string]any
-		if err := json.Unmarshal(call.Arguments, &args); err != nil {
-			return err
-		}
-		if len(args) > 0 && (call.Name == "read_file" || call.Name == "execute_command") && len(g.purposes) > 0 {
-			if call.Name == "execute_command" {
-				args["purpose"] = g.purposes[0]
-			}
-			g.purposes = g.purposes[1:]
-			var err error
-			call.Arguments, err = json.Marshal(args)
-			if err != nil {
-				return err
-			}
-		}
 		if g.cancelAt == len(g.requests) {
 			g.cancel()
 			return ctx.Err()
@@ -99,11 +83,6 @@ type executor struct {
 func (*executor) Definitions() []toolapi.Definition {
 	path := toolapi.Parameter{Name: "path", Description: "Path?", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}
 	definitions := []toolapi.Definition{{Name: "write_file", Description: "Write", Effect: policy.Change, Parameters: []toolapi.Parameter{path, {Name: "content", Description: "Content?", Kind: toolapi.Text, Required: true, AllowEmpty: true, MaxBytes: 4096}}}, {Name: "read_file", Description: "Read", Effect: policy.Read, Parameters: []toolapi.Parameter{path}}, {Name: "execute_command", Description: "Run", Effect: policy.Command, Parameters: []toolapi.Parameter{{Name: "command", Description: "Command?", Kind: toolapi.Text, Required: true, MaxBytes: 4096}}}}
-	for i := range definitions {
-		if definitions[i].Effect == policy.Command {
-			definitions[i].Parameters = append(definitions[i].Parameters, toolapi.Parameter{Name: "purpose", Kind: toolapi.Text, MaxBytes: 5, Values: []string{"work", "check"}})
-		}
-	}
 	return definitions
 }
 func (e *executor) Prepare(_ context.Context, _ policy.Settings, _ bool, c toolapi.Call) (toolapi.Execution, error) {
@@ -221,22 +200,22 @@ func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 		t.Fatalf("checkpoint: %+v", last)
 	}
 }
-func TestChangesRequireARealCheckAfterLatestMutation(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"}), "Tests passed", nativeCall("read_file", map[string]any{"path": "file.txt"}), "All good", "An approved test command or user review is needed"}}
+func TestChangesAllowFinalReportWithoutCheck(t *testing.T) {
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"}), "File changed; tests were not run"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "change", false, approve, emit)
-	if err != nil || result.Status != Unverified || result.Evidence != "" {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("unchecked completion: %+v %v", result, err)
 	}
 }
 func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
-	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "go test ./..."}), "The check passed"}}
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "go test ./..."}), "The check passed"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
 	result, err := r.Run(context.Background(), "change", false, approve, emit)
-	if err != nil || result.Status != Verified || !strings.Contains(result.Evidence, "go test") {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("completion: %+v %v", result, err)
 	}
 	for _, request := range g.requests {
@@ -251,7 +230,7 @@ func TestRalphLoopCanContinueBeyondThirtyTwoActions(t *testing.T) {
 		replies = append(replies, nativeCall("read_file", map[string]any{"path": fmt.Sprintf("file-%d", i)}))
 	}
 	replies = append(replies, nativeCall("read_file", map[string]any{"path": "final"}), "Inspected")
-	g, e, j := &generator{purposes: strings.Split(strings.Repeat("work|", 40)+"check", "|"), replies: replies}, &executor{}, &journal{}
+	g, e, j := &generator{replies: replies}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "inspect files", false, approve, emit)
 	if err != nil || result.Status != Answered || e.executed != 41 {
@@ -286,7 +265,7 @@ func TestPlanMutationRejectedBeforeArgumentCollection(t *testing.T) {
 
 func TestApprovedStepsShareOneCallBudget(t *testing.T) {
 	usage := &Usage{}
-	g, e, j := &generator{purposes: []string{"check"}, replies: []string{nativeCall("read_file", map[string]any{"path": "file"}), "first", "second"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "file"}), "first", "second"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Usage = usage
 	r.Limits = DefaultLimits()

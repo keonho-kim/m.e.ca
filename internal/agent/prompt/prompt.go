@@ -24,7 +24,7 @@ func Compose(base, instructions string, planning bool) (string, error) {
 		text += "(No project-root AGENTS.md was found.)"
 	}
 	if planning {
-		text += "\nPlan mode: scoped reads/searches only. Discuss normally; use submit_plan when a complete draft is ready for user approval. Steps remain unexecuted until explicit approval."
+		text += "\nPlan mode: scoped reads/searches only. execute_command accepts only the documented built-in read-only query subset, never shell execution. Use read_file for anchored source reads. Discuss normally; use submit_plan when a complete draft is ready for user approval. Steps remain unexecuted until explicit approval."
 	}
 
 	return text, nil

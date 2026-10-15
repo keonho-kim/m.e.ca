@@ -89,14 +89,10 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	}
 }
 
-func TestStreamingWithholdsUnverifiedCompletion(t *testing.T) {
-	s := execution{changed: true}
-	if s.responseBody("claim without verification") != "" {
-		t.Fatal("unverified claim streamed")
-	}
-	s.changed = false
-	if s.responseBody("DONE is a normal word") != "DONE is a normal word" {
-		t.Fatal("ordinary text parsed as control")
+func TestStreamingPreservesReportAfterChanges(t *testing.T) {
+	s := &execution{changed: true}
+	if got := s.responseBody("Changed file; tests not run"); got != "Changed file; tests not run" {
+		t.Fatalf("report withheld: %q", got)
 	}
 }
 

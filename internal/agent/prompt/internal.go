@@ -12,6 +12,6 @@ func Internal(base, instructions string) (string, error) {
 		return "", err
 	}
 	text := base + "\n\nProject constraints from project-root AGENTS.md:\n" + instructions
-	text += "\n\nInternal role contract: follow the current role's response format over project response-language or presentation preferences. Use English for internal descriptive fields. Preserve original paths, code, literals and quoted evidence exactly. Do not execute tools in this internal generation call. Runtime Scope, approval and verification remain mandatory."
+	text += "\n\nInternal role contract: follow the current role's response format over project response-language or presentation preferences. Use English for internal descriptive fields. Preserve original paths, code, literals and quoted evidence exactly. Do not execute tools in this internal generation call. Runtime Scope, Plan restrictions and user approval remain mandatory."
 	return text, nil
 }

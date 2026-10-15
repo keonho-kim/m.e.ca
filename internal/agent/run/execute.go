@@ -1,7 +1,7 @@
 // Purpose: Execute a grounded native call through policy, approval and durable observation boundaries.
 // Pattern: Tool execution use case.
 // Usage: action invokes execute after native arguments and self-grounding have been persisted.
-// Related: internal/agent/run/action.go, internal/agent/tool/execution.go, internal/agent/verification/state.go.
+// Related: internal/agent/run/action.go, internal/agent/tool/execution.go, internal/agent/run/observation.go.
 package run
 
 import (
@@ -112,7 +112,7 @@ func (s *execution) execute(ctx context.Context, planning bool, call toolapi.Cal
 		outcome.Failure.Next = r.Redact(outcome.Failure.Next)
 		event.Text = outcome.Failure.Error()
 	}
-	opFact := toolapi.Operation{RunID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Check: s.checkpoint.Checking, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text, Failure: outcome.Failure, Process: outcome.Process}
+	opFact := toolapi.Operation{RunID: s.checkpoint.ID, CallID: call.ID, Name: call.Name, Status: event.Kind, Step: s.runner.Step, Changes: outcome.Changes, Result: event.Text, Failure: outcome.Failure, Process: outcome.Process}
 	if call.Name == "execute_command" {
 		opFact.Command = proposal.Target
 	}

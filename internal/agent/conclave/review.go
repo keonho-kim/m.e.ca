@@ -11,12 +11,10 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 	"strings"
 )
 
 type Input struct {
-	Checks    []verification.Record
 	Request   string
 	Grounding grounding.Record
 	Call      tool.Call
@@ -44,9 +42,8 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 	packet := struct {
 		Request, Intent string
 		Files           []tool.FileDelta
-		Checks          []verification.Record
 		Context         []json.RawMessage
-	}{input.Request, input.Grounding.Reason, input.Candidate.Files, input.Checks, nil}
+	}{input.Request, input.Grounding.Reason, input.Candidate.Files, nil}
 	correction := ""
 	fail := func(err error) (Result, error) {
 		result.Error = redact(err.Error())

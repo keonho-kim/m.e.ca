@@ -11,16 +11,14 @@ import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/plan"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 )
 
 type RunFact struct {
-	Checks                                 []verification.Record
-	ChangeRevision                         int
-	ID, Objective, Status, Phase, Evidence string
-	Observation                            string
-	Step                                   *plan.StepRef
-	Source                                 int64
+	ChangeRevision               int
+	ID, Objective, Status, Phase string
+	Observation                  string
+	Step                         *plan.StepRef
+	Source                       int64
 }
 type Record struct {
 	Review     *conclave.Result

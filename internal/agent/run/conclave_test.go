@@ -15,7 +15,7 @@ import (
 )
 
 func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
-	g, e, j := &generator{purposes: []string{"check"}}, &executor{approval: true}, &journal{}
+	g, e, j := &generator{}, &executor{approval: true}, &journal{}
 	for i := 0; i < 5; i++ {
 		g.replies = append(g.replies, nativeCall("write_file", map[string]any{"path": "file.txt", "content": fmt.Sprintf("draft-%d", i)}))
 	}
@@ -37,7 +37,7 @@ func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
 		}
 		return true, nil
 	}, emit)
-	if err != nil || result.Status != Verified || e.executed != 2 || approvals != 2 || len(g.reviewRequests) != 5 {
+	if err != nil || result.Status != Answered || e.executed != 2 || approvals != 2 || len(g.reviewRequests) != 5 {
 		t.Fatalf("result=%+v err=%v executed=%d approvals=%d reviewers=%d", result, err, e.executed, approvals, len(g.reviewRequests))
 	}
 	var feedback strings.Builder
@@ -79,7 +79,7 @@ func TestConclaveErrorsBlockExecutionAndCompletion(t *testing.T) {
 	r.Limits.MaxIterations = 2
 	approvals := 0
 	result, err := r.Run(context.Background(), "fix", false, func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err == nil || result.Status != Stopped || e.executed != 0 || approvals != 0 {
+	if err != nil || result.Status != Stopped || e.executed != 0 || approvals != 0 {
 		t.Fatalf("result=%+v err=%v exec=%d approval=%d", result, err, e.executed, approvals)
 	}
 	var cp *Checkpoint
@@ -107,7 +107,7 @@ func TestConclaveReusesUnchangedRejectedCandidate(t *testing.T) {
 		return emit(modelapi.Event{Delta: `{"decision":"reject","findings":[{"path":"file.txt","side":"request","line":0,"reason":"Incorrect requested content"}]}`, Done: true})
 	}
 	result, err := fixture(g, e, j).Run(context.Background(), "fix", false, approve, emit)
-	if err != nil || result.Status != Unverified || len(g.reviewRequests) != 1 || e.executed != 0 {
+	if err != nil || result.Status != Stopped || len(g.reviewRequests) != 1 || e.executed != 0 {
 		t.Fatalf("%+v reviews=%d executed=%d %v", result, len(g.reviewRequests), e.executed, err)
 	}
 	cached := false

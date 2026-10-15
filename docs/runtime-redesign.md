@@ -1,5 +1,8 @@
 # 경량 실행 루프와 Conclave 재설계
 
+이 문서의 실측·구현 경과는 당시 동작을 기록한다. 현재는 purpose 인자와 강제 검증 완료 게이트를 제거했으며, 최신 실행·보고 계약은 [runtime.md](runtime.md)를 따른다.
+
+
 2026-10-14 · 사용자 승인 후 핵심 구조 구현
 
 사용자 승인에 따라 단일 실행·reason 통합·단일 Conclave·문맥 축소·조기 압축을 구현했다. 현행 계약은 [runtime.md](runtime.md), 설정은 [configuration.md](configuration.md)가 설명한다. 아래에는 설계 근거와 목표를 보존한다. 서버 문법 강제 자동 협상, Provider 공통 tokenizer, 사용자 승인형 검사 대체 UI는 후속 과제로 남으며 구현됐다고 간주하지 않는다.

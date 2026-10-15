@@ -14,7 +14,6 @@ import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/verification"
 )
 
 const reviewRejected = "conclave_rejected"
@@ -50,8 +49,7 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 		Files                        []toolapi.FileDelta
 		Request, Instructions, Model string
 		Evidence                     int
-		Checks                       []verification.Record
-	}{candidate.Files, s.checkpoint.Objective, instructions, s.runner.Model, s.evidenceRevision, s.checkpoint.Checks})
+	}{candidate.Files, s.checkpoint.Objective, instructions, s.runner.Model, s.evidenceRevision})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +65,7 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 	} else {
 		request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Messages: []modelapi.Message{{Role: "system", Content: instructions}}})
 		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
-		result, err = conclave.Review(ctx, conclave.Input{Checks: s.checkpoint.Checks, Request: s.checkpoint.Objective, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate}, request, s.limits.MaxContextBytes, s.reviewGenerate, s.reviewContext, s.runner.Redact)
+		result, err = conclave.Review(ctx, conclave.Input{Request: s.checkpoint.Objective, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate}, request, s.limits.MaxContextBytes, s.reviewGenerate, s.reviewContext, s.runner.Redact)
 		if err != nil {
 			return nil, err
 		}

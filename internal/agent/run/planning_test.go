@@ -84,3 +84,20 @@ func TestApprovedPlanKeepsOneCopyOfEachStepAnswer(t *testing.T) {
 		t.Fatalf("answer persisted %d times", count)
 	}
 }
+
+func TestApprovedPlanChangeNeedsNoCheckCommand(t *testing.T) {
+	g, e := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), "Changed a; tests not run"}}, &executor{}
+	r := fixture(g, e, &journal{})
+	p, err := planning.NewPlan("p", "s", "Create a", []string{"Write a"}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = planning.ApprovePlan(p, 1, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := r.ExecutePlan(context.Background(), p, &planRecorder{}, approve, emit)
+	if err != nil || result.Status != planning.PlanSucceeded || e.executed != 1 || len(g.requests) != 2 {
+		t.Fatalf("%+v executed=%d calls=%d %v", result, e.executed, len(g.requests), err)
+	}
+}

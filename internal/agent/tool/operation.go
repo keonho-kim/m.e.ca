@@ -10,7 +10,6 @@ type Operation struct {
 	Failure                                      *Failure
 	Process                                      *ProcessOutcome
 	RunID, CallID, Name, Status, Command, Result string
-	Check                                        bool
 	Step                                         *plan.StepRef
 	Changes                                      []FileChange
 	Source                                       int64

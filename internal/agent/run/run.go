@@ -21,7 +21,6 @@ import (
 
 type execution struct {
 	files            progress.Files
-	revisions        progress.Revisions
 	runner           Runner
 	limits           Limits
 	system           string
@@ -32,11 +31,11 @@ type execution struct {
 	definitions      []toolapi.Definition
 	seen             map[[32]byte]bool
 	mutations        map[[32]byte]bool
+	commands         map[[32]byte]int
 	changed          bool
 	usage            *Usage
 	messages         []modelapi.Message
 	memoryContext    string
-	finishCorrection bool
 	capacityRecovery bool
 	reviews          map[[32]byte]conclave.Result
 	evidenceRevision int
@@ -83,7 +82,7 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		defer observer.Close()
 		r.observer = observer
 	}
-	s := &execution{runner: r, limits: limits, system: system, planning: planning, emit: emit, definitions: r.Tools.Definitions(), seen: map[[32]byte]bool{}, mutations: map[[32]byte]bool{}}
+	s := &execution{runner: r, limits: limits, system: system, planning: planning, emit: emit, definitions: r.Tools.Definitions(), seen: map[[32]byte]bool{}, mutations: map[[32]byte]bool{}, commands: map[[32]byte]int{}}
 	s.usage = r.Usage
 	if s.usage == nil {
 		s.usage = &Usage{}
@@ -106,7 +105,6 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 			s.checkpoint.Phase = "finished"
 		}
 		s.result.Status = s.checkpoint.Status
-		s.result.Evidence = s.checkpoint.Evidence
 		flushCtx, flushCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer flushCancel()
 		err = errors.Join(err, s.persist(flushCtx))
@@ -127,7 +125,6 @@ func (r Runner) Run(ctx context.Context, input string, planning bool, approve Ap
 		s.checkpoint.Phase = "decision"
 		s.checkpoint.Tool = ""
 		s.checkpoint.Arguments = nil
-		s.checkpoint.Checking = false
 		if err = s.persist(ctx); err != nil {
 			return s.result, err
 		}

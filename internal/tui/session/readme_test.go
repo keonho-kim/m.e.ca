@@ -51,7 +51,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 			arguments := map[string]any{"path": "README.md", "content": "# Project\n"}
 			if reply == `{"tool":"execute_command"}` {
 				toolName = "execute_command"
-				arguments = map[string]any{"command": "test -s README.md", "purpose": "check"}
+				arguments = map[string]any{"command": "test -s README.md"}
 			}
 			if reply == `{"tool":"submit_plan"}` {
 				toolName = "submit_plan"

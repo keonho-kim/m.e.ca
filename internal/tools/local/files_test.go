@@ -156,11 +156,11 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
 	for _, invocation := range []toolapi.Call{
 		call("read_file", `{"path":"src/auth.go"}`),
-		call("list_directory", `{"path":"src"}`),
-		call("search_files", `{"path":".","pattern":"*.go"}`),
-		call("grep", `{"path":"src","pattern":"authenticate"}`),
+		call("execute_command", `{"command":"ls src"}`),
+		call("execute_command", `{"command":"find . -name '*.go'"}`),
+		call("execute_command", `{"command":"rg -n authenticate src"}`),
 	} {
-		operation, err := executor.Prepare(context.Background(), settings, false, invocation)
+		operation, err := executor.Prepare(context.Background(), settings, true, invocation)
 		if err != nil {
 			t.Fatal(err)
 		}
