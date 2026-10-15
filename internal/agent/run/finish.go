@@ -31,6 +31,9 @@ func (s *execution) finish(ctx context.Context, text string) (bool, error) {
 			return false, err
 		}
 		text = "작업을 검증 완료로 처리하지 못했습니다."
+		if s.checkpoint.Blocker != "" {
+			text += "\n- 검증 명령의 실행 환경을 준비하지 못했습니다: " + s.checkpoint.Blocker
+		}
 		if s.checkpoint.PendingReview && s.checkpoint.Conclave != nil {
 			text += "\n- 심사: " + s.checkpoint.Conclave.Feedback()
 		}

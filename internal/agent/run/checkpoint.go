@@ -27,6 +27,7 @@ const (
 )
 
 type Checkpoint struct {
+	Blocker            string                     `json:"blocker,omitempty"`
 	PendingReview      bool                       `json:"pending_review"`
 	Conclave           *conclave.Result           `json:"conclave,omitempty"`
 	Recoveries         int                        `json:"recoveries"`
@@ -58,6 +59,9 @@ func (c Checkpoint) Check() error {
 	}
 	if err := verification.Check(c.Checks); err != nil {
 		return err
+	}
+	if len(c.Blocker) > 4096 {
+		return fmt.Errorf("invalid blocker detail")
 	}
 	if c.Recoveries < 0 || c.Recoveries > 2 || c.ChangeRevision < 0 {
 		return fmt.Errorf("invalid change revision")

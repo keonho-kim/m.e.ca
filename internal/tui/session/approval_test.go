@@ -38,22 +38,22 @@ func TestApprovalDiffNavigation(t *testing.T) {
 		t.Fatal("dismissed diff became approval")
 	}
 }
-func TestApprovalChangedRowsHavePastelBackgrounds(t *testing.T) {
+func TestApprovalChangedRowsHaveMutedBackgrounds(t *testing.T) {
 	a := fixture(t)
 	a.page = "approval"
 	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)}
 	a.choices = []string{"Approve", "Reject"}
 	a.render()
 	for _, y := range []int{6, 7, 8, 9} {
-		background := tcell.NewHexColor(0xdcfce7)
+		background := tcell.NewHexColor(0x20372c)
 		if y <= 7 {
-			background = tcell.NewHexColor(0xfee2e2)
+			background = tcell.NewHexColor(0x422a2d)
 		}
 		for _, x := range []int{0, 79} {
 			_, style, _ := a.screen.Get(x, y)
 			fg, bg := style.GetForeground(), style.GetBackground()
-			if bg != background || fg != tcell.NewHexColor(0x242424) {
-				t.Fatalf("changed cell %d,%d lacks the expected pastel addition/deletion background", x, y)
+			if bg != background || fg != tcell.NewHexColor(0xd8d8d2) {
+				t.Fatalf("changed cell %d,%d lacks the expected muted addition/deletion background", x, y)
 			}
 		}
 	}

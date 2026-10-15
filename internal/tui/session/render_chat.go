@@ -33,7 +33,10 @@ func (a *app) renderChat(width, height int) {
 		}
 	}
 	appendTemporary(a.thinking, true)
-	appendTemporary(a.stream, false)
+	stream := viewport.Block{Text: a.stream, Markdown: true}
+	if a.stream != "" {
+		lines = append(lines, stream.Lines(width)...)
+	}
 	appendTemporary(a.status, false)
 	available := a.chatHeight(width, height)
 	start := a.output.Start(lines, available)

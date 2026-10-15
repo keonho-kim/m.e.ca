@@ -26,13 +26,13 @@ func (f Formatter) Tool(event run.Event) string {
 		}
 	}
 	text.WriteString("\n  " + label + "\n\n")
-	text.WriteString(f.toolValues(event.Call.Arguments))
+	text.WriteString(f.toolValues(displayArguments(*event.Call)))
 	if event.Kind == "tool_started" {
 		text.WriteString("\n    Running…\n")
 	} else {
 		text.WriteString("\n    Output\n")
 		if len(event.Output) > 0 {
-			text.WriteString(f.toolValues(event.Output))
+			text.WriteString(f.toolValues(displayOutput(event.Call.Name, event.Output)))
 		} else {
 			text.WriteString(indentTool(f.Redact(event.Text)))
 		}

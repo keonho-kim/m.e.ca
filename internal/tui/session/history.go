@@ -31,7 +31,7 @@ func (a *app) loadHistory(older bool) error {
 		a.output.Prepend(blocks)
 	} else {
 		for _, block := range blocks {
-			a.output.Append(block.Text, block.Thinking)
+			a.output.AppendBlock(block)
 		}
 	}
 	return nil

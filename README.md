@@ -111,7 +111,7 @@ max_output_tokens = 25600
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term, mvdan/sh입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term, mvdan/sh입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
 
 ```sh
 gofmt -l cmd internal
@@ -136,3 +136,5 @@ Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스�
 | [모델 프로파일](docs/model-profiles.md) | 모델 식별, 서빙 별칭, 모델별 Thinking 제어 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
+
+에이전트 응답은 흑백 Markdown으로 표시하며 물결표 취소선은 사용하지 않습니다. 상세 표시 규칙은 [사용법](docs/usage.md), 재배포 시 포함할 라이선스는 [외부 소프트웨어 고지](THIRD_PARTY_NOTICES.md)를 참고하세요.

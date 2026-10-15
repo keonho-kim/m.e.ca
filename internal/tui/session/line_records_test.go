@@ -1,4 +1,4 @@
-// Purpose: Verify terminal tool output displays the same short line references supplied to the agent.
+// Purpose: Verify terminal tool output shows line numbers while agent records retain full anchors.
 // Pattern: Terminal projection contract test.
 // Usage: go test ./internal/tui/session -run TestReadLineReferencesVisible.
 // Related: internal/tui/transcript/tools.go, internal/tools/local/file/read.go.
@@ -20,9 +20,16 @@ func TestReadLineReferencesVisible(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		visible.WriteString(screenLine(a.screen, y, 80))
 	}
-	for _, line := range []string{"41#9a72d30f | first", "42#b6e108ca | second"} {
+	for _, line := range []string{"41 | first", "42 | second"} {
 		if !strings.Contains(visible.String(), line) {
 			t.Fatalf("missing line reference: %s", visible.String())
 		}
 	}
+	if strings.Contains(visible.String(), "9a72d30f") || strings.Contains(visible.String(), "b6e108ca") {
+		t.Fatal("internal hash visible")
+	}
+	if !strings.Contains(string(event.Output), "41#9a72d30f") {
+		t.Fatal("agent anchor changed")
+	}
+
 }

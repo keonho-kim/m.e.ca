@@ -48,3 +48,19 @@ func TestWrapIndentLeavesRoomForWideCharacters(t *testing.T) {
 		}
 	}
 }
+
+func TestMarkdownCacheReflowsAndRefreshes(t *testing.T) {
+	v := View{Follow: true}
+	v.AppendBlock(Block{Text: "**한글 😀 내용**\n\n", Markdown: true})
+	wide := v.Lines(80)
+	narrow := v.Lines(6)
+	if len(narrow) <= len(wide) {
+		t.Fatal("Markdown did not reflow")
+	}
+	id := v.Blocks[0].ID
+	v.Blocks[0].Text = "**바뀐 내용**"
+	updated := v.Lines(80)
+	if len(updated) != 1 || updated[0].Text != "바뀐 내용" || updated[0].ID != id {
+		t.Fatalf("%+v", updated)
+	}
+}

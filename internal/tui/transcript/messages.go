@@ -25,11 +25,11 @@ func (f Formatter) Message(m modelapi.Message) []viewport.Block {
 			for index, step := range proposal.Steps {
 				value += fmt.Sprintf("\n%d. %s", index+1, step)
 			}
-			return []viewport.Block{{Text: Reply(f.Redact(value))}}
+			return []viewport.Block{Answer(f.Redact(value))}
 		}
 	}
 	if m.Role == "assistant" && m.Content != "" {
-		return []viewport.Block{{Text: Reply(f.Redact(m.Content))}}
+		return []viewport.Block{Answer(f.Redact(m.Content))}
 	}
 	return nil
 }
@@ -52,3 +52,5 @@ func Plan(p *planning.Plan) string {
 	}
 	return text + string(p.Status)
 }
+
+func Answer(text string) viewport.Block { return viewport.Block{Text: Reply(text), Markdown: true} }

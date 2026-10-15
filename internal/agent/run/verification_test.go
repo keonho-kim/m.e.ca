@@ -58,3 +58,13 @@ func TestUnavailableSandboxDoesNotCreateVerificationObligation(t *testing.T) {
 		}
 	}
 }
+
+func TestUnverifiedCompletionShowsSandboxCause(t *testing.T) {
+	g := &generator{purposes: []string{"check"}, replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "wc -l a"}), "Finished", "Cannot run check"}}
+	e := &executor{outcomes: []toolapi.Result{{Content: []byte(`{"changed":true}`)}, {Failed: true, Failure: &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: "mount runtime /usr/lib: invalid argument"}, Process: &toolapi.ProcessOutcome{Status: "scope_unavailable", ExitCode: -1}}}}
+	r := fixture(g, e, &journal{})
+	result, err := r.Run(context.Background(), "write and check", false, approve, emit)
+	if err != nil || result.Status != Unverified || !strings.Contains(result.Text, "mount runtime /usr/lib") {
+		t.Fatalf("%+v %v", result, err)
+	}
+}

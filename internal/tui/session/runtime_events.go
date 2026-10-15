@@ -52,7 +52,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 	}
 	if e.Kind == "progress" {
 		a.stream, a.thinking = "", ""
-		a.output.Append(transcript.Reply(e.Text), false)
+		a.output.AppendBlock(transcript.Answer(e.Text))
 		return
 	}
 	if e.Kind == "thinking" {
@@ -67,7 +67,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 		a.output.Append(e.Thinking, true)
 		_, proposalErr := planning.ParsePlanProposal(e.Text)
 		if !a.planMode || proposalErr != nil {
-			a.output.Append(transcript.Reply(e.Text), false)
+			a.output.AppendBlock(transcript.Answer(e.Text))
 		}
 	} else {
 		a.output.Append(e.Text, false)

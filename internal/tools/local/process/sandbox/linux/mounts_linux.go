@@ -18,7 +18,7 @@ import (
 var devices = []string{"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
 
 type binding struct {
-	path                      string
+	path, source              string
 	readOnly, device, resolve bool
 }
 
@@ -26,6 +26,15 @@ func enterRoot(r Request) error {
 	if err := unix.Mount("", "/", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("isolate mount propagation: %w", err)
 	}
+	mountTable, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return err
+	}
+	points, readErr := mountPoints(mountTable)
+	if err := errors.Join(readErr, mountTable.Close()); err != nil {
+		return err
+	}
+	budget := 8192
 	root := filepath.Join(r.Scratch, "root")
 	if err := os.Mkdir(root, 0700); err != nil {
 		return err
@@ -34,7 +43,7 @@ func enterRoot(r Request) error {
 		return err
 	}
 	for _, path := range r.Runtime {
-		if err := bind(root, binding{path: path, readOnly: true, resolve: true}); err != nil {
+		if err := bindRuntime(root, path, points, &budget); err != nil {
 			return fmt.Errorf("mount runtime %s: %w", path, err)
 		}
 	}
@@ -100,6 +109,9 @@ func bind(root string, mount binding) (err error) {
 	// Pin the source inode before constructing the new root. Do not recursively
 	// import nested mounts, which could expose host sockets or writable resources.
 	resolved := mount.path
+	if mount.source != "" {
+		resolved = mount.source
+	}
 	if mount.resolve {
 		resolved, err = filepath.EvalSymlinks(mount.path)
 		if err != nil {
@@ -133,7 +145,7 @@ func bind(root string, mount binding) (err error) {
 		}
 	}
 	if err := unix.Mount(fmt.Sprintf("/proc/self/fd/%d", fd), target, "", unix.MS_BIND, ""); err != nil {
-		return err
+		return fmt.Errorf("bind %s: %w", mount.path, err)
 	}
 	flags := uint64(unix.MOUNT_ATTR_NOSUID)
 	if !mount.device {
@@ -142,7 +154,10 @@ func bind(root string, mount binding) (err error) {
 	if mount.readOnly {
 		flags |= unix.MOUNT_ATTR_RDONLY
 	}
-	return unix.MountSetattr(unix.AT_FDCWD, target, 0, &unix.MountAttr{Attr_set: flags})
+	if err := unix.MountSetattr(unix.AT_FDCWD, target, 0, &unix.MountAttr{Attr_set: flags}); err != nil {
+		return fmt.Errorf("restrict mount %s: %w", mount.path, err)
+	}
+	return nil
 }
 
 func hidePrivate(root, private string) (err error) {

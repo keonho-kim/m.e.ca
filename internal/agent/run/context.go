@@ -39,11 +39,12 @@ func (s *execution) request(question string, role inference.Role) (modelapi.Requ
 		defs = append(defs, planDefinition())
 	}
 	facts := struct {
+		Blocker              string                `json:"blocker,omitempty"`
 		VerificationRequired bool                  `json:"verification_required,omitempty"`
 		PendingReview        bool                  `json:"pending_review,omitempty"`
 		Checks               []verification.Record `json:"pending_checks,omitempty"`
 		Observation          string                `json:"observation,omitempty"`
-	}{s.changed && s.checkpoint.Evidence == "", s.checkpoint.PendingReview, verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision), s.checkpoint.Observation}
+	}{s.checkpoint.Blocker, s.changed && s.checkpoint.Evidence == "", s.checkpoint.PendingReview, verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision), s.checkpoint.Observation}
 	body, err := json.Marshal(facts)
 	if err != nil {
 		return modelapi.Request{}, err

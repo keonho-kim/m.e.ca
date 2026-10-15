@@ -6,6 +6,7 @@ require (
 	github.com/gdamore/tcell/v3 v3.6.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/rivo/uniseg v0.4.7
+	github.com/yuin/goldmark/v2 v2.1.6
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/sys v0.49.0
 	golang.org/x/term v0.47.0

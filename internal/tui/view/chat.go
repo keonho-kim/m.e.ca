@@ -28,7 +28,11 @@ func Chat(screen tcell.Screen, display ChatDisplay, width, height int) {
 		if display.Lines[i].Thinking {
 			style = style.Dim(true)
 		}
-		Text(screen, 0, y, width, display.Lines[i].Text, style)
+		if len(display.Lines[i].Spans) > 0 {
+			styledText(screen, y, width, display.Lines[i].Spans, style)
+		} else {
+			Text(screen, 0, y, width, display.Lines[i].Text, style)
+		}
 		y++
 	}
 	if y > 1 && display.Lines[display.Start+y-2].Text != "" {

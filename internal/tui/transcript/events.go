@@ -14,7 +14,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		return nil
 	}
 	if event.Kind == "progress" {
-		return []viewport.Block{{Text: Reply(f.Redact(event.Text))}}
+		return []viewport.Block{Answer(f.Redact(event.Text))}
 	}
 	if event.Kind == "conclave" {
 		if text := f.Conclave(event); text != "" {

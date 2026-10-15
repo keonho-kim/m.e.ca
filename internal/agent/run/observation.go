@@ -37,6 +37,10 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		s.checkpoint.Checks = checks
 	}
 	if outcome.Failed || toolErr != nil {
+		if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
+			s.checkpoint.Blocker = excerpt(s.runner.Redact(outcome.Failure.Detail), 3500)
+			s.checkpoint.Observation = "Command was not started: " + s.checkpoint.Blocker + ". Resolve the runtime setup; do not widen Scope or claim verification passed."
+		}
 		s.checkpoint.Evidence = ""
 		s.checkpoint.NoProgress++
 		return s.persist(ctx)
@@ -63,6 +67,9 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		s.seen[fingerprint] = true
 		s.evidenceRevision++
 		s.checkpoint.NoProgress = 0
+	}
+	if s.checkpoint.Checking {
+		s.checkpoint.Blocker = ""
 	}
 	if s.checkpoint.Checking && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 && (!s.changed || effect == policy.Command) {
 		s.checkpoint.Evidence = excerpt(call.Name+" "+string(content)+" => successful result", 4000)

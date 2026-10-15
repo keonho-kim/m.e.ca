@@ -5,16 +5,21 @@
 package viewport
 
 import (
+	"github.com/keonho-kim/v-code/internal/tui/markdown"
 	"github.com/rivo/uniseg"
 	"strings"
 )
 
 type Block struct {
-	ID       int
-	Text     string
-	Thinking bool
+	parsedText string
+	parsed     []markdown.Line
+	Markdown   bool
+	ID         int
+	Text       string
+	Thinking   bool
 }
 type Line struct {
+	Spans    []markdown.Span
 	ID, Row  int
 	Text     string
 	Thinking bool
@@ -27,12 +32,35 @@ type View struct {
 }
 
 func (v *View) Append(text string, thinking bool) {
-	if text == "" {
+	v.AppendBlock(Block{Text: text, Thinking: thinking})
+}
+func (v *View) AppendBlock(block Block) {
+	if block.Text == "" {
 		return
 	}
 	v.Next++
-	v.Blocks = append(v.Blocks, Block{ID: v.Next, Text: text, Thinking: thinking})
+	block.ID = v.Next
+	v.Blocks = append(v.Blocks, block)
 	v.bound(false)
+}
+func (b *Block) Lines(width int) []Line {
+	var out []Line
+	if b.Markdown {
+		if b.parsed == nil || b.parsedText != b.Text {
+			b.parsed = markdown.Render(b.Text)
+			b.parsedText = b.Text
+		}
+		for _, line := range b.parsed {
+			for _, wrapped := range markdown.Wrap(line.Spans, width) {
+				out = append(out, Line{ID: b.ID, Row: len(out), Text: wrapped.Text, Spans: wrapped.Spans, Thinking: b.Thinking})
+			}
+		}
+	} else {
+		for row, text := range Wrap(b.Text, width) {
+			out = append(out, Line{ID: b.ID, Row: row, Text: text, Thinking: b.Thinking})
+		}
+	}
+	return out
 }
 func Wrap(text string, width int) []string {
 	if width < 1 {
@@ -66,10 +94,8 @@ func Wrap(text string, width int) []string {
 }
 func (v *View) Lines(width int) []Line {
 	var lines []Line
-	for _, block := range v.Blocks {
-		for row, text := range Wrap(block.Text, width) {
-			lines = append(lines, Line{ID: block.ID, Row: row, Text: text, Thinking: block.Thinking})
-		}
+	for i := range v.Blocks {
+		lines = append(lines, v.Blocks[i].Lines(width)...)
 	}
 	return lines
 }
