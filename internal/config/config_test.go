@@ -50,6 +50,9 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 		"[ui]\ninput_max_lines=20\n",
 		"[defaults]\nscope='outside'\n",
 		"unexpected=true\n",
+		"[session]\nrestore_last=true\n",
+		"[ui]\ntheme='classic'\n",
+		"[compaction]\ntarget_input_tokens=16384\n",
 	} {
 		directory := t.TempDir()
 		if err := os.WriteFile(filepath.Join(directory, "config.toml"), []byte(content), 0o600); err != nil {
@@ -64,7 +67,7 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 func TestCompactionThresholdIsConfigurable(t *testing.T) {
 	directory := t.TempDir()
 	configuration := Defaults()
-	if configuration.Compaction.ThresholdTokens != 256000 {
+	if configuration.Compaction.ThresholdTokens != 200000 {
 		t.Fatal("wrong default token threshold")
 	}
 	configuration.Compaction.ThresholdTokens = 128000

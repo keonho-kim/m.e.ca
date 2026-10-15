@@ -1,0 +1,40 @@
+// Purpose: Verify real throughput appears after OUTPUT and resets for a new generation.
+// Pattern: Terminal event projection tests.
+// Usage: go test ./internal/tui/session -run TestThroughput.
+// Related: internal/tui/session/runtime_events.go, internal/tui/view/tokens.go.
+package session
+
+import (
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/agent/run"
+	"strings"
+	"testing"
+)
+
+func TestThroughputHeaderAndLifecycle(t *testing.T) {
+	a := fixture(t)
+	rate := 25.5
+	a.receive(notice{Event: &run.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 100, Output: 51}, TokensPerSecond: &rate}})
+	a.render()
+	if got := screenLine(a.screen, 0, 80); !strings.HasPrefix(got, "STATUS IDLE") || !strings.HasSuffix(got, "INPUT 100 · OUTPUT 51 · TPS 25.5") {
+		t.Fatal(got)
+	}
+	a.receive(notice{Event: &run.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 100, Output: 51}, TokensPerSecond: &rate}})
+	a.receive(notice{Done: true})
+	a.openModel()
+	a.render()
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "TPS 25.5") {
+		t.Fatal(got)
+	}
+	a.receive(notice{Event: &run.Event{Kind: "generation_started"}})
+	a.receive(notice{Event: &run.Event{Kind: "stream", Text: "no reported tokens"}})
+	a.render()
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "INPUT 100 · OUTPUT 51 · TPS —") {
+		t.Fatal(got)
+	}
+	a.screen.SetSize(24, 12)
+	a.render()
+	if got := screenLine(a.screen, 0, 24); !strings.HasSuffix(got, "INPUT 100 · OUTPUT 51") {
+		t.Fatal("narrow header lost token counts: " + got)
+	}
+}

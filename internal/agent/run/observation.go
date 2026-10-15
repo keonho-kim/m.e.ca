@@ -35,6 +35,12 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 			return err
 		}
 		s.checkpoint.Checks = checks
+		if outcome.Started && outcome.Process != nil && outcome.Process.Status == "exited" {
+			s.revisions.Checked()
+		}
+	}
+	if outcome.Started {
+		s.revisions.Observe(outcome.Changes)
 	}
 	if outcome.Failed || toolErr != nil {
 		if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
@@ -60,7 +66,8 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		target = string(fields["path"])
 	}
 	fingerprint := sha256.Sum256([]byte(fmt.Sprintf("%d:%s\n%s", s.checkpoint.ChangeRevision, call.Name+target, result)))
-	if s.files.Repeated(outcome.Changes) || s.seen[fingerprint] {
+	cycle := s.files.Repeated(outcome.Changes)
+	if cycle || s.seen[fingerprint] {
 		s.checkpoint.NoProgress++
 		s.checkpoint.Observation += "\nThis call returned an already observed state without new evidence. Reuse the result and advance the user request; do not repeat the same unchanged query."
 	} else {
@@ -73,6 +80,10 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	}
 	if s.checkpoint.Checking && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 && (!s.changed || effect == policy.Command) {
 		s.checkpoint.Evidence = excerpt(call.Name+" "+string(content)+" => successful result", 4000)
+	}
+	if cycle {
+		s.checkpoint.Observation += "\nFile contents returned to a previously observed state. Stop rewriting the same result; inspect the concrete failed requirement and verify before another edit."
+		return s.recoverProgress(ctx)
 	}
 	return s.persist(ctx)
 }

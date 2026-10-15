@@ -27,7 +27,7 @@ func TestIdentityInfoMenuAndScroll(t *testing.T) {
 		t.Fatalf("page=%s", a.page)
 	}
 	a.render()
-	if got := screenLine(a.screen, 3, 80); !strings.Contains(got, "복수") {
+	if got := screenLine(a.screen, 5, 80); !strings.Contains(got, "복수") {
 		t.Fatalf("identity state=%s", got)
 	}
 	a.screen.SetSize(36, 10)

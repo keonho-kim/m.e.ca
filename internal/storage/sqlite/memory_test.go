@@ -30,7 +30,7 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 	if err = store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "goal"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = store.AddContextTokens(ctx, session.ID, compact.TokenCount{Amount: 256000, Kind: "model"}); err != nil {
+	if err = store.AddContextTokens(ctx, session.ID, compact.TokenCount{Amount: 256000, Kind: "request"}); err != nil {
 		t.Fatal(err)
 	}
 	mark, err := store.MemoryWatermark(ctx, session.ID, 0)
@@ -52,11 +52,11 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 	if err != nil || len(history) != 1 || history[0].Content != "goal" {
 		t.Fatal("original history lost")
 	}
-	if err = store.AddContextTokens(ctx, session.ID, compact.Estimate("new", "user")); err != nil {
+	if err = store.AddContextTokens(ctx, session.ID, compact.EstimateBytes(3)); err != nil {
 		t.Fatal(err)
 	}
 	mark, err = store.MemoryWatermark(ctx, session.ID, memory.UsageThrough)
-	if err != nil || mark.Tokens != 3 || !mark.Estimated {
+	if err != nil || mark.Tokens != 1 || !mark.Estimated {
 		t.Fatalf("new usage: %+v %v", mark, err)
 	}
 }
@@ -91,5 +91,32 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 	}
 	if records[1].Operation.Changes[0].Destination != "src/session.go" || records[0].Run.Step.Index != 1 {
 		t.Fatal("step changed-file facts lost")
+	}
+}
+
+func TestMemoryCountsOnlyRequestUsage(t *testing.T) {
+	ctx := context.Background()
+	store, err := newTestStore(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	id := store.Session().ID
+	// Old counter facts remain stored, but are not input+output request usage.
+	if _, err = store.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind) VALUES(?,900000,1,'model')", id); err != nil {
+		t.Fatal(err)
+	}
+	for _, count := range []compact.TokenCount{{Amount: 199999, Kind: "request"}, {Amount: 1, Kind: "request"}} {
+		if err = store.AddContextTokens(ctx, id, count); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mark, err := store.MemoryWatermark(ctx, id, 0)
+	if err != nil || mark.Tokens != 200000 || mark.Estimated {
+		t.Fatalf("%+v %v", mark, err)
+	}
+	next, err := store.MemoryWatermark(ctx, id, mark.Usage)
+	if err != nil || next.Tokens != 0 {
+		t.Fatalf("%+v %v", next, err)
 	}
 }

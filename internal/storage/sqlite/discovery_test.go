@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestDiscoveryOrderRestoreAndRemoval(t *testing.T) {
+func TestDiscoveryOrderOpenAndRemoval(t *testing.T) {
 	ctx := context.Background()
 	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
 	if err != nil {
@@ -40,7 +40,7 @@ func TestDiscoveryOrderRestoreAndRemoval(t *testing.T) {
 	if err != nil || len(page) != 1 || page[0].ID != ids[1] {
 		t.Fatalf("page=%+v %v", page, err)
 	}
-	restored, err := catalog.Restore(ctx, root, root, true)
+	restored, err := catalog.Open(ctx, root, ids[2])
 	if err != nil {
 		t.Fatal(err)
 	}

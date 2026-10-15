@@ -12,6 +12,17 @@ import (
 )
 
 func (a *app) receiveRuntime(e *run.Event) {
+	switch e.Kind {
+	case "generation_started":
+		a.tokensPerSecond = nil
+		return
+	case "compaction_started":
+		a.startCompression()
+		return
+	case "compaction_finished", "compaction":
+		a.stopCompression()
+		return
+	}
 	if e.Internal || e.Kind == "monitor" || e.Kind == "tool_proposed" {
 		return
 	}
@@ -32,6 +43,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 	if e.Kind == "usage_progress" || e.Kind == "usage" {
 		if e.Usage != nil {
 			a.tokenCurrent = *e.Usage
+			a.tokensPerSecond = e.TokensPerSecond
 			if e.Kind == "usage" {
 				a.tokenTotal = a.displayTokens()
 				a.tokenCurrent = modelapi.TokenUsage{}

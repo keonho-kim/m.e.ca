@@ -31,8 +31,14 @@ func TestConversationEditorFollowsTurns(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		rows = append(rows, strings.TrimSpace(screenLine(a.screen, y, 80)))
 	}
-	want := []string{"INPUT 0 OUTPUT 0", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", "", "> next draft"}
+	want := []string{"INPUT 0 · OUTPUT 0 · TPS —", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", "", "> next draft"}
 	for y, text := range want {
+		if y == 0 {
+			if !strings.HasPrefix(rows[y], "STATUS IDLE") || !strings.HasSuffix(rows[y], text) {
+				t.Fatal("header not split across row")
+			}
+			continue
+		}
 		if rows[y] != text {
 			t.Fatalf("row %d = %q; want %q\n%s", y, rows[y], text, strings.Join(rows, "\n"))
 		}
@@ -94,7 +100,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "inspect file"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}, Output: json.RawMessage(`{"content":"file inspected"}`)}); err != nil {
+	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}, Output: json.RawMessage(`{"Content":"file inspected"}`)}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "assistant", Content: "file inspected"}); err != nil {
@@ -104,7 +110,14 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"INPUT 0 OUTPUT 0", "> inspect file", "", "Agent", "", "read_file", "", "path: README.md", "", "Output", "content: file inspected", "", "file inspected", "", "", ">"} {
+	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "read_file", "", "경로: README.md", "", "Output", "file inspected", "", "file inspected", "", "", ">"} {
+		if y == 0 {
+			got := screenLine(a.screen, 0, 80)
+			if !strings.HasPrefix(got, "STATUS IDLE") || !strings.HasSuffix(got, text) {
+				t.Fatal(got)
+			}
+			continue
+		}
 		if got := strings.TrimSpace(screenLine(a.screen, y, 80)); got != text {
 			t.Fatalf("restored row %d=%q; want %q", y, got, text)
 		}

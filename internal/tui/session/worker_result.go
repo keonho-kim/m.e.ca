@@ -13,15 +13,25 @@ import (
 )
 
 func (a *app) finishWorker(n notice) {
+	active, cancelled := a.agentActive, a.stopRequested || a.planStopping
+	defer func() {
+		if active {
+			a.finishPending(n.Err == nil && !cancelled)
+		}
+	}()
 	a.tokenCurrent = modelapi.TokenUsage{}
 	if !a.planStopping && n.Err == nil && n.Effort != nil {
 		n.Err = a.applyEffort(*n.Effort)
 	}
+	stopped := a.stopRequested
+	a.stopRequested = false
+	a.agentActive = false
+	a.stopCompression()
 	a.busy = false
 	a.taskCancel = nil
 	if n.Err != nil {
 		a.output.Append(a.thinking, true)
-		a.output.Append(transcript.Reply(a.stream), false)
+		a.output.AppendBlock(transcript.Answer(a.stream))
 	}
 	a.stream, a.thinking = "", ""
 	a.status = ""
@@ -51,16 +61,21 @@ func (a *app) finishWorker(n notice) {
 			a.choice = 0
 		}
 	}
-	if n.Err != nil {
+	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
 	}
+	if stopped && errors.Is(n.Err, context.Canceled) {
+		a.status = "중지했습니다. 다음 입력으로 이어갈 수 있습니다"
+	}
 	if err := a.adoptConnection(n); err != nil {
+		n.Err = err
 		a.status = a.opts.Vault.Redact(err.Error())
 	}
-	if n.Err == nil && n.Models != nil {
-		a.page = "models"
-		a.choices = n.Models
-		a.choice = 0
+	if n.Models != nil && !errors.Is(n.Err, context.Canceled) && !errors.Is(n.Err, context.DeadlineExceeded) {
+		a.openModelInput(n.Models)
+		if n.Err != nil {
+			a.status = "목록 조회 실패 · 모델 ID를 직접 입력하세요: " + a.opts.Vault.Redact(n.Err.Error())
+		}
 	}
 	if a.proposal != nil {
 		a.proposal = nil

@@ -5,10 +5,7 @@
 package transcript
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/keonho-kim/v-code/internal/agent/run"
-	"sort"
 	"strings"
 )
 
@@ -26,47 +23,19 @@ func (f Formatter) Tool(event run.Event) string {
 		}
 	}
 	text.WriteString("\n  " + label + "\n\n")
-	text.WriteString(f.toolValues(displayArguments(*event.Call)))
+	text.WriteString(f.arguments(*event.Call))
 	if event.Kind == "tool_started" {
 		text.WriteString("\n    Running…\n")
 	} else {
 		text.WriteString("\n    Output\n")
 		if len(event.Output) > 0 {
-			text.WriteString(f.toolValues(displayOutput(event.Call.Name, event.Output)))
+			text.WriteString(f.output(event))
 		} else {
 			text.WriteString(indentTool(f.Redact(event.Text)))
 		}
 		if event.Kind == "tool_failed" && len(event.Output) > 0 {
 			text.WriteString(indentTool("Failed: " + f.Redact(event.Text)))
 		}
-	}
-	return text.String()
-}
-
-func (f Formatter) toolValues(body json.RawMessage) string {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(body, &fields); err != nil || fields == nil {
-		return indentTool(f.Redact(string(body)))
-	}
-	keys := make([]string, 0, len(fields))
-	for key := range fields {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	var text strings.Builder
-	for _, key := range keys {
-		raw := fields[key]
-		var value string
-		if err := json.Unmarshal(raw, &value); err != nil {
-			var pretty bytes.Buffer
-			if err := json.Indent(&pretty, raw, "", "  "); err == nil {
-				value = pretty.String()
-			} else {
-				value = string(raw)
-			}
-		}
-		value = f.Redact(value)
-		text.WriteString(indentTool(key + ": " + value))
 	}
 	return text.String()
 }

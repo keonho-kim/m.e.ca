@@ -1,4 +1,4 @@
-// Purpose: Verify review outcomes remain minimal in terminal rendering and never replace human approval.
+// Purpose: Verify review rejection reasons appear in the terminal while human approval remains independent.
 // Pattern: Terminal event and key workflow tests.
 // Usage: go test ./internal/tui/session -run TestConclave.
 // Related: internal/tui/session/events.go, internal/tui/session/render.go, internal/tui/transcript/conclave.go.
@@ -16,7 +16,7 @@ import (
 
 func TestConclaveTerminalOutcomeAndApproval(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file"}, Conclave: &conclave.Result{Verdict: conclave.Verdict{Decision: "reject", Findings: []conclave.Finding{{Path: "a", Side: "request", Reason: "hidden reviewer reason"}}}}}
+	event := run.Event{Kind: "conclave", Call: &tool.Call{ID: "c", Name: "edit_file"}, Conclave: &conclave.Result{Verdict: conclave.Verdict{Decision: "reject", Findings: []conclave.Finding{{Path: "a", Side: "request", Reason: "specific reviewer reason"}}}}}
 	a.receive(notice{Event: &event})
 	if len(a.output.Blocks) != 1 || !strings.Contains(a.output.Blocks[0].Text, transcript.ReviewRejectedMessage) {
 		t.Fatal("rejection notice missing")
@@ -26,7 +26,7 @@ func TestConclaveTerminalOutcomeAndApproval(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		visible.WriteString(screenLine(a.screen, y, 80))
 	}
-	if !strings.Contains(visible.String(), "edit_file · Conclave Fail") || strings.Contains(visible.String(), "hidden reviewer") {
+	if !strings.Contains(visible.String(), "edit_file · Conclave Fail") || !strings.Contains(visible.String(), "specific reviewer reason") {
 		t.Fatal(visible.String())
 	}
 	event.Conclave.Passed = true

@@ -18,6 +18,7 @@ type FileColumn struct {
 	Active, Divider bool
 }
 type FilesDisplay struct {
+	Activity                   Activity
 	Usage                      modelapi.TokenUsage
 	Columns                    []FileColumn
 	Path, Status               string
@@ -28,7 +29,7 @@ type FilesDisplay struct {
 
 func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 	width := display.ColumnWidth
-	topLine(screen, display.Path, display.Usage, w)
+	topLine(screen, display.Path, display.Usage, w, display.Activity)
 	for _, column := range display.Columns {
 		x := column.X
 		Text(screen, x, 2, width, column.Title, tcell.StyleDefault)

@@ -11,6 +11,9 @@ import (
 )
 
 func (event Event) Check() error {
+	if event.TokensPerSecond != nil {
+		return fmt.Errorf("transient throughput cannot be persisted")
+	}
 	if event.Monitor != nil {
 		if err := event.Monitor.Check(); err != nil {
 			return err

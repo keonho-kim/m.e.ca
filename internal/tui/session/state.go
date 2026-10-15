@@ -23,6 +23,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"sync"
+	"time"
 )
 
 type Options struct {
@@ -36,6 +37,15 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	tokensPerSecond                 *float64
+	modelNames, modelHints          []string
+	modelHintsOpen                  bool
+	modelHintIndex                  int
+	pending                         string
+	agentActive, stopRequested      bool
+	compressionTimer                *time.Ticker
+	compressionTicks                <-chan time.Time
+	compressionDots                 int
 	tokenTotal, tokenCurrent        modelapi.TokenUsage
 	opts                            Options
 	screen                          tcell.Screen

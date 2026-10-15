@@ -15,20 +15,21 @@ import (
 )
 
 type Event struct {
-	Internal   bool                 `json:"internal,omitempty"`
-	Monitor    *monitor.Record      `json:"monitor,omitempty"`
-	Conclave   *conclave.Result     `json:"conclave,omitempty"`
-	Grounding  *grounding.Record    `json:"grounding,omitempty"`
-	Usage      *modelapi.TokenUsage `json:"usage,omitempty"`
-	Call       *toolapi.Call        `json:"call,omitempty"`
-	Output     json.RawMessage      `json:"output,omitempty"`
-	Operation  *toolapi.Operation   `json:"operation,omitempty"`
-	Kind       string               `json:"kind"`
-	Text       string               `json:"text"`
-	Thinking   string               `json:"thinking,omitempty"`
-	CallID     string               `json:"call_id,omitempty"`
-	Approval   *toolapi.Approval    `json:"approval,omitempty"`
-	Checkpoint *Checkpoint          `json:"checkpoint,omitempty"`
+	TokensPerSecond *float64             `json:"-"`
+	Internal        bool                 `json:"internal,omitempty"`
+	Monitor         *monitor.Record      `json:"monitor,omitempty"`
+	Conclave        *conclave.Result     `json:"conclave,omitempty"`
+	Grounding       *grounding.Record    `json:"grounding,omitempty"`
+	Usage           *modelapi.TokenUsage `json:"usage,omitempty"`
+	Call            *toolapi.Call        `json:"call,omitempty"`
+	Output          json.RawMessage      `json:"output,omitempty"`
+	Operation       *toolapi.Operation   `json:"operation,omitempty"`
+	Kind            string               `json:"kind"`
+	Text            string               `json:"text"`
+	Thinking        string               `json:"thinking,omitempty"`
+	CallID          string               `json:"call_id,omitempty"`
+	Approval        *toolapi.Approval    `json:"approval,omitempty"`
+	Checkpoint      *Checkpoint          `json:"checkpoint,omitempty"`
 }
 type Journal interface {
 	ContextMessages(context.Context, string, int64, int) ([]modelapi.Message, error)

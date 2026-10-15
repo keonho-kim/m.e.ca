@@ -14,11 +14,11 @@ import (
 )
 
 func (a *app) renderMenu(w, h int) {
-	display := view.MenuDisplay{Usage: a.displayTokens(), Title: a.page, Choices: a.choices, Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
+	display := view.MenuDisplay{Activity: a.activity(), Usage: a.displayTokens(), Title: a.page, Choices: a.choices, Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
 	switch a.page {
 	case "modelinfo":
 		display.Title = "모델 정보 · 최근 연결의 서버 선언"
-		lines := viewport.Wrap(strings.Join(modelmenu.IdentityLines(a.selection, a.opts.Vault.Redact), "\n"), w)
+		lines := viewport.Wrap(strings.Join(modelmenu.IdentityLines(a.selection, a.opts.Config.ContextLength, a.opts.Vault.Redact), "\n"), w)
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-max(1, h-2)))
 		display.Details = lines[a.previewOffset:]
 	case "model":
@@ -36,7 +36,8 @@ func (a *app) renderMenu(w, h int) {
 	case "key":
 		display.Title = "API Key (OS credential store)"
 	case "manual":
-		display.Title = "Model ID"
+		display.Title = "Model ID · 검색 또는 직접 입력"
+		display.Candidates = a.modelCandidates()
 	case "planapproval":
 		display.Title = "Awaiting approval"
 		display.Plan = viewport.Wrap(transcript.Plan(a.plan), w)

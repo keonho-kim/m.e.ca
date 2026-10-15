@@ -21,6 +21,7 @@ import (
 
 type execution struct {
 	files            progress.Files
+	revisions        progress.Revisions
 	runner           Runner
 	limits           Limits
 	system           string

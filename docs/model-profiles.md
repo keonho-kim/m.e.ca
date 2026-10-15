@@ -186,3 +186,9 @@ LM Studio는 Responses에 매번 전체 역할별 메시지를 보내며 `store:
 V는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio Responses의 `function_call`·`function_call_output`을 사용한다. 일반 답변의 JSON은 실행하지 않는다. 서버가 도구를 지원하지 않거나 파서 설정이 틀리면 native 호출을 생성할 수 없다. 모델 연결 진단은 일반 응답·Thinking 제어를 확인하며 도구 실행 능력을 보증하지 않는다.
 
 vLLM은 자동 도구 선택에 `--enable-auto-tool-choice`와 모델에 맞는 `--tool-call-parser`가 필요하다. Reasoning parser는 별도 설정이며 서빙 모델의 공식 권장 구성을 따른다. 서빙 별칭만으로 파서를 추측하지 않는다. [vLLM Tool Calling](https://docs.vllm.ai/en/latest/features/tool_calling/), [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
+
+## Qwen3.8-Flash-Next 추가 검토 (2026-10-15)
+
+`qwen3.8-flash-next` 프로파일은 원본과 FP8에 공통 적용한다. 공식 공개일은 2026-08-26이며, 모델 카드는 본체 125B + n-gram 51B + MTP 4B를 명시한다. 출처: [공개 기록](https://github.com/QwenLM/Qwen3.8-Flash-Next), [원본 카드](https://huggingface.co/Qwen/Qwen3.8-Flash-Next), [FP8 카드](https://huggingface.co/Qwen/Qwen3.8-Flash-Next-FP8).
+
+두 카드 모두 `enable_thinking` 및 `reasoning_effort`의 `low`, `medium`, `xhigh`를 문서화한다. 역할별 추론 예산은 그대로이며, FP8 요청 ID를 원본 ID로 바꾸지 않는다. 공식 ID의 `Qwen/` 포함·미포함 이름 외에 사용자가 지정한 `Qwen3.8-Flash-Next 180B`, `Qwen3.8-Flash-Next-180B`, `Qwen-3.8-180B` 및 등록된 FP8 표기를 명시적 별칭으로 처리한다. 임의 경로·유사 이름은 추정하지 않으며 서버 원본 메타데이터나 정확한 TOML 매핑을 사용한다. 명시적 별칭은 가중치 검증을 뜻하지 않는다.

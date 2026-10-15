@@ -18,12 +18,12 @@ func TestBootstrap(t *testing.T) {
 	if _, err := Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	content := []byte("[session]\nrestore_last=false\n")
+	content := []byte("[ui]\ncolumn_width=32\n")
 	if err := os.WriteFile(filepath.Join(directory, config.Filename), content, 0600); err != nil {
 		t.Fatal(err)
 	}
 	c, err := Initialize(home)
-	if err != nil || c.Session.RestoreLast {
+	if err != nil || c.UI.ColumnWidth != 32 {
 		t.Fatalf("overwrote configuration: %+v %v", c, err)
 	}
 	other := t.TempDir()

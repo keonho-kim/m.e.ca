@@ -55,7 +55,7 @@ func summary() string {
 	return b.String()
 }
 func TestThresholdAndFileLedger(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 255999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Run: &RunFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{RunID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
+	repo := &repository{mark: Watermark{Tokens: 199999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Run: &RunFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{RunID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	generate := func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
@@ -72,7 +72,7 @@ func TestThresholdAndFileLedger(t *testing.T) {
 	if err != nil || changed || calls != 0 {
 		t.Fatalf("early trigger: %v %v", changed, err)
 	}
-	repo.mark.Tokens = 256000
+	repo.mark.Tokens = 200000
 	changed, err = controller.Refresh(context.Background(), generate)
 	if err != nil || !changed || repo.installed != 1 {
 		t.Fatalf("trigger: %v %v", changed, err)
@@ -86,7 +86,7 @@ func TestThresholdAndFileLedger(t *testing.T) {
 	}
 }
 func TestInvalidSummaryPreservesPreviousMemory(t *testing.T) {
-	repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 256000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
+	repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	_, err := controller.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		if err := emit(modelapi.Event{Delta: "I think everything is done."}); err != nil {
@@ -100,7 +100,7 @@ func TestInvalidSummaryPreservesPreviousMemory(t *testing.T) {
 }
 
 func TestCancellationDoesNotAdvanceMemoryWatermark(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
+	repo := &repository{mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -113,9 +113,9 @@ func TestCancellationDoesNotAdvanceMemoryWatermark(t *testing.T) {
 	}
 }
 
-func TestActualInputPressureBatchesSourceRecords(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 12, Usage: 2, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "first instruction"}, {Sequence: 2, Role: "assistant", Text: "second observation"}}}
-	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }, InputTokens: 16384}
+func TestThresholdBatchesSourceRecords(t *testing.T) {
+	repo := &repository{mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "first instruction"}, {Sequence: 2, Role: "assistant", Text: "second observation"}}}
+	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	changed, err := c.Refresh(context.Background(), func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
@@ -124,7 +124,7 @@ func TestActualInputPressureBatchesSourceRecords(t *testing.T) {
 		}
 		return emit(modelapi.Event{Delta: summary(), Done: true})
 	})
-	if err != nil || !changed || calls != 1 || c.InputTokens != 0 {
-		t.Fatalf("changed=%v calls=%d pressure=%d err=%v", changed, calls, c.InputTokens, err)
+	if err != nil || !changed || calls != 1 {
+		t.Fatalf("changed=%v calls=%d err=%v", changed, calls, err)
 	}
 }

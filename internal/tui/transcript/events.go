@@ -23,7 +23,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		return nil
 	}
 	switch event.Kind {
-	case "monitor", "tool_proposed", "tool_started", "approved", "self_grounding":
+	case "generation_started", "compaction", "compaction_started", "compaction_finished", "monitor", "tool_proposed", "tool_started", "approved", "self_grounding":
 		return nil
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		if text := f.Tool(event); text != "" {

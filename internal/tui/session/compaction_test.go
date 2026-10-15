@@ -35,7 +35,7 @@ func TestCompactionContext(t *testing.T) {
 	if err := a.opts.Store.AppendMessage(ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 256000, Kind: "model"}); err != nil {
+	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 200000, Kind: "request"}); err != nil {
 		t.Fatal(err)
 	}
 	var calls atomic.Int64
@@ -105,8 +105,8 @@ func TestCompactionContext(t *testing.T) {
 	a.startTask("New goal after compaction", nil)
 	drainTask(t, a, false)
 	usage, err := a.opts.Store.MemoryWatermark(ctx, a.opts.Session.ID, memory.UsageThrough)
-	if err != nil || usage.Tokens != 7+int64(len("New goal after compaction"))+7 {
-		t.Fatalf("new model output not counted once: %+v %v", usage, err)
+	if err != nil || usage.Tokens != 2*(20+7) {
+		t.Fatalf("request input and output not counted once: %+v %v", usage, err)
 	}
 	total, err := a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
 	if err != nil || calls.Load() <= 2 || total.Input != 20*calls.Load() || total.Output != 7*calls.Load() || a.displayTokens() != total {

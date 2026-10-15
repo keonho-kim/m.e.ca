@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
@@ -18,7 +19,13 @@ func (s *execution) observe(ctx context.Context, count compact.TokenCount) error
 	}
 	return s.runner.Memory.Observe(ctx, count)
 }
-func (s *execution) refreshMemory(ctx context.Context, force bool) error {
+func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr error) {
+	compressing := false
+	defer func() {
+		if compressing {
+			resultErr = errors.Join(resultErr, s.emit(Event{Kind: "compaction_finished"}))
+		}
+	}()
 	if s.runner.Memory == nil {
 		if force {
 			return fmt.Errorf("context limit reached without an available compaction store")
@@ -35,6 +42,12 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) error {
 		if s.usage.ModelCalls >= s.limits.MaxModelCalls {
 			return fmt.Errorf("model-call budget exhausted during compaction")
 		}
+		if !compressing {
+			if err := s.emit(Event{Kind: "compaction_started"}); err != nil {
+				return err
+			}
+			compressing = true
+		}
 		s.usage.ModelCalls++
 		s.checkpoint.ModelCalls = s.usage.ModelCalls
 		request.Thinking = s.runner.Thinking
@@ -44,7 +57,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) error {
 			return err
 		}
 		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
-		return s.generate(ctx, request, emit)
+		return s.generate(ctx, request, false, emit)
 	})
 	if err != nil {
 		return err
@@ -62,7 +75,6 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) error {
 		return err
 	}
 	if changed {
-		s.checkpoint.InputTokens = 0
 		event := Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
 		if err = s.record(ctx, event); err != nil {
 			return err

@@ -71,20 +71,13 @@ func (a *app) choose() {
 	case "effort":
 		a.chooseEffort()
 	case "providers":
+		a.modelNames = nil
+		a.closeModelHints()
 		a.connectionKind = a.choice
 		a.page = "endpoint"
 		c, err := modelconn.New(modelconn.Providers()[a.choice].Kind, "")
 		a.fail(err)
 		a.menuInput.Set(c.Endpoint)
-	case "models":
-		if value == "Enter Model ID manually" {
-			a.page = "manual"
-			a.menuInput.Set("")
-			return
-		}
-		a.connect(a.pendingConnection, a.key, value, true)
-		a.key = ""
-		a.page = "chat"
 	case "permission", "scope":
 		a.changeField = a.page
 		a.changeValue = value

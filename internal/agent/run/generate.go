@@ -7,7 +7,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -33,13 +32,12 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 	var reply, thinking strings.Builder
 	var calls []toolapi.Call
 	done := false
-	outputTokens := 0
-	err = s.generate(ctx, request, func(e modelapi.Event) error {
+	err = s.generate(ctx, request, true, func(e modelapi.Event) error {
 		if e.Retry != nil {
 			reply.Reset()
 			calls = nil
 			thinking.Reset()
-			done, outputTokens = false, 0
+			done = false
 			return s.emit(Event{Kind: "stream"})
 		}
 		if len(e.Calls) > 0 {
@@ -57,17 +55,8 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 		if reply.Len() > maxBytes || size > modelapi.MaxResponseBytes {
 			return &modelapi.OutputLimitError{Reason: "current phase byte limit"}
 		}
-		if e.Usage != nil {
-			s.checkpoint.InputTokens = e.Usage.Input
-			if s.runner.Memory != nil {
-				s.runner.Memory.InputTokens = e.Usage.Input
-			}
-		}
 		if e.Done {
 			done = true
-			if e.Usage != nil {
-				outputTokens = int(e.Usage.Output)
-			}
 		}
 		if !s.runner.suppressStream && e.Streaming && (e.Delta != "" || e.Thinking != "") {
 			if err := s.emit(Event{Kind: "stream", Text: maskedPartial(s.runner, s.responseBody(reply.String())), Thinking: maskedPartial(s.runner, thinking.String())}); err != nil {
@@ -78,16 +67,6 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 	})
 	if err == nil && !done {
 		err = fmt.Errorf("model reply did not complete")
-	}
-	count := compact.Estimate(reply.String()+thinking.String(), "model")
-	for _, call := range calls {
-		count.Amount += compact.Estimate(string(call.Arguments), "model").Amount
-	}
-	if outputTokens > 0 {
-		count = compact.TokenCount{Amount: int64(outputTokens), Kind: "model"}
-	}
-	if countErr := s.observe(context.WithoutCancel(ctx), count); countErr != nil {
-		return modelapi.Response{}, countErr
 	}
 	if thinking.Len() > 0 {
 		event := Event{Kind: "thinking", Internal: s.runner.suppressStream, Thinking: maskedPartial(s.runner, thinking.String())}
@@ -101,6 +80,12 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 		}
 	}
 	if err != nil {
+		if thinking.Len() > 0 && !s.runner.suppressStream {
+			archived := modelapi.Message{Role: "system", Content: "Interrupted assistant thinking (unfinished, unverified historical reasoning):", Reasoning: maskedPartial(s.runner, thinking.String())}
+			if saveErr := s.save(context.WithoutCancel(ctx), archived); saveErr != nil {
+				return modelapi.Response{}, saveErr
+			}
+		}
 		if body := s.responseBody(reply.String()); body != "" {
 			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body)}); saveErr != nil {
 				return modelapi.Response{}, saveErr

@@ -21,7 +21,7 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 	previous := a.selection
 	binding := a.opts.Config.ModelPreference(connection, model)
 	inferenceSettings := a.opts.Config.Inference
-	defaults := setup.Defaults{Inference: &inferenceSettings, Thinking: a.opts.Config.Thinking, Profile: binding.Profile, ReasoningEffort: binding.ReasoningEffort}
+	defaults := setup.Defaults{ContextLength: a.opts.Config.ContextLength, Inference: &inferenceSettings, Thinking: a.opts.Config.Thinking, Profile: binding.Profile, ReasoningEffort: binding.ReasoningEffort}
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -38,10 +38,10 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 			n.credential = key
 		}
 		if model == "" && prepared.Selection != nil {
+			n.Models = make([]string, 0, len(prepared.Models))
 			for _, model := range prepared.Models {
 				n.Models = append(n.Models, model.ID)
 			}
-			n.Models = append(n.Models, "Enter Model ID manually")
 		}
 		finish(n)
 	}()

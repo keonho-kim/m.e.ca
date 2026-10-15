@@ -13,7 +13,7 @@ func (a *app) renderFiles(w, h int) {
 	if len(a.browser.Columns) == 0 {
 		return
 	}
-	display := view.FilesDisplay{Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status, Editor: a.editor}
+	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status, Editor: a.editor}
 	display.Path = a.opts.Vault.Redact(a.browser.Columns[a.browser.Active].Path)
 	visible := max(1, w/(display.ColumnWidth+1))
 	start := max(0, a.browser.Active-visible+1)

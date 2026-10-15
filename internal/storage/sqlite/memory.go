@@ -19,7 +19,7 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 		return fmt.Errorf("invalid conversation token count")
 	}
 	switch count.Kind {
-	case "user", "model", "tool":
+	case "request":
 	default:
 		return fmt.Errorf("invalid conversation token source")
 	}
@@ -48,7 +48,7 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 func (s *Store) MemoryWatermark(ctx context.Context, session string, after int64) (compact.Watermark, error) {
 	var mark compact.Watermark
 	var estimated bool
-	err := s.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount),0),COALESCE(MAX(sequence),?),COALESCE(MAX(estimated),0) FROM conversation_tokens WHERE session_id=? AND sequence>?", after, session, after).Scan(&mark.Tokens, &mark.Usage, &estimated)
+	err := s.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount),0),COALESCE(MAX(sequence),?),COALESCE(MAX(estimated),0) FROM conversation_tokens WHERE session_id=? AND sequence>? AND kind='request'", after, session, after).Scan(&mark.Tokens, &mark.Usage, &estimated)
 	if err != nil {
 		return mark, err
 	}

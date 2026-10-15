@@ -11,9 +11,11 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
 type Config struct {
+	ContextLength int                `toml:"context_length"`
 	Model         *SavedModel        `toml:"model,omitempty"`
 	Inference     inference.Settings `toml:"inference"`
 	ModelProfiles []ModelProfile     `toml:"model_profiles,omitempty"`
@@ -22,27 +24,21 @@ type Config struct {
 	Loop          run.Limits         `toml:"loop"`
 	Compaction    compact.Settings   `toml:"compaction"`
 	UI            UI                 `toml:"ui"`
-	Session       Session            `toml:"session"`
 }
 
 type UI struct {
-	Theme         string `toml:"theme"`
-	ColumnWidth   int    `toml:"column_width"`
-	InputMaxLines int    `toml:"input_max_lines"`
-}
-
-type Session struct {
-	RestoreLast bool `toml:"restore_last"`
+	ColumnWidth   int `toml:"column_width"`
+	InputMaxLines int `toml:"input_max_lines"`
 }
 
 func Defaults() Config {
 	return Config{
-		Inference:  inference.Defaults(),
-		Defaults:   policy.Settings{Permission: policy.Approve, Scope: policy.Directory},
-		UI:         UI{Theme: "classic", ColumnWidth: 24, InputMaxLines: 5},
-		Session:    Session{RestoreLast: true},
-		Loop:       run.DefaultLimits(),
-		Compaction: compact.Defaults(),
+		ContextLength: connection.DefaultContextLength,
+		Inference:     inference.Defaults(),
+		Defaults:      policy.Settings{Permission: policy.Approve, Scope: policy.Directory},
+		UI:            UI{ColumnWidth: 24, InputMaxLines: 5},
+		Loop:          run.DefaultLimits(),
+		Compaction:    compact.Defaults(),
 	}
 }
 
@@ -57,6 +53,9 @@ func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
 }
 
 func check(configuration Config) error {
+	if err := connection.CheckContextLength(configuration.ContextLength); err != nil {
+		return err
+	}
 	if configuration.Model != nil {
 		if _, err := configuration.Model.Selection(); err != nil {
 			return fmt.Errorf("saved model: %w", err)
@@ -76,9 +75,6 @@ func check(configuration Config) error {
 	}
 	if err := configuration.Defaults.Check(); err != nil {
 		return err
-	}
-	if configuration.UI.Theme != "classic" {
-		return fmt.Errorf("only the classic theme is supported")
 	}
 	if configuration.UI.ColumnWidth < 8 || configuration.UI.ColumnWidth > 80 {
 		return fmt.Errorf("column_width must be between 8 and 80")

@@ -68,12 +68,21 @@ func (a *app) shortcuts() []view.Shortcut {
 				{Key: ":q", Label: "돌아가기"},
 			}
 		}
-	case "endpoint", "key", "manual":
+	case "endpoint", "key":
 		controls = []view.Shortcut{
 			{Key: "Enter", Label: "다음"},
 			{Key: "^U", Label: "전체 삭제"},
 			{Key: "←→", Label: "커서"},
 			{Key: "Esc", Label: "돌아가기"},
+		}
+	case "manual":
+		controls = []view.Shortcut{{Key: "Enter", Label: "연결"}, {Key: "↑↓", Label: "후보 선택"}, {Key: "^U", Label: "전체 삭제"}, {Key: "Esc", Label: "돌아가기"}}
+		if a.modelHintsOpen && len(a.modelHints) > 0 {
+			controls[0].Label = "모델명 입력"
+			controls = append(controls, view.Shortcut{Key: "Tab", Label: "모델명 입력"})
+		}
+		if a.modelHintsOpen {
+			controls[3].Label = "목록 닫기"
 		}
 	case "effort":
 		controls = []view.Shortcut{{Key: "↑↓", Label: "강도 선택"}, {Key: "Enter", Label: "검증 후 적용"}, {Key: "Esc", Label: "돌아가기"}}
@@ -95,6 +104,19 @@ func (a *app) shortcuts() []view.Shortcut {
 		if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported {
 			controls = append(controls, view.Shortcut{Key: "←→", Label: "Thinking"})
 		}
+	}
+	if a.agentActive && a.busy {
+		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: "작업 중지"})
+		if a.page == "chat" || a.page == "files" && a.browser.Input {
+			shortcuts = append(shortcuts, view.Shortcut{Key: "Tab", Label: "다음 요청 예약"})
+		}
+		filtered := controls[:0]
+		for _, control := range controls {
+			if control.Key != "Esc" && !(control.Key == "Tab" && (a.page == "chat" || a.page == "files" && a.browser.Input)) {
+				filtered = append(filtered, control)
+			}
+		}
+		controls = filtered
 	}
 	return append(shortcuts, controls...)
 }

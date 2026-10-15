@@ -15,6 +15,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
+	if e.Key() == tcell.KeyEscape && a.agentActive && a.busy {
+		a.interruptTask()
+		return
+	}
 	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModAlt == 0 {
 		text := a.menuInput.String()
 		if a.page == "chat" || a.page == "files" && a.browser.Input {
@@ -33,6 +37,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	}
 	if a.page != "chat" && a.page != "files" {
 		a.menuKey(e)
+		return
+	}
+	if e.Key() == tcell.KeyTab && a.agentActive && a.busy && !a.paste {
+		a.reserveInput()
 		return
 	}
 	if a.page == "files" && e.Key() == tcell.KeyTab {

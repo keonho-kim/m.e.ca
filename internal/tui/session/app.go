@@ -47,6 +47,8 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 			case *tcell.EventError:
 				return Exit, e
 			}
+		case <-app.compressionTicks:
+			app.advanceCompression()
 		case n := <-app.events:
 			app.receive(n)
 		}
@@ -63,6 +65,7 @@ func (a *app) fail(err error) {
 }
 
 func (a *app) requestExit() {
+	a.stopCompression()
 	a.exit = true
 	if a.taskCancel != nil {
 		a.taskCancel()

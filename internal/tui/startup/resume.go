@@ -1,6 +1,6 @@
-// Purpose: Select a persisted conversation and revalidate its original project directory.
+// Purpose: Select a new or persisted conversation and revalidate existing project directories.
 // Pattern: Startup presentation flow.
-// Usage: Called by cmd/v for v resume before creating project-scoped tool adapters.
+// Usage: Called by cmd/v with a project-filtered or global conversation query.
 // Related: internal/storage/sqlite/conversations.go, internal/commands/startup/parse.go, internal/tui/view/styles.go, internal/tui/view/keymap.go.
 package startup
 
@@ -17,30 +17,34 @@ import (
 	"strings"
 )
 
-type Conversations interface {
-	Conversations(context.Context, int, int) ([]sessionstate.Conversation, error)
-}
+type Conversations func(context.Context, int, int) ([]sessionstate.Conversation, error)
 
-func Resume(ctx context.Context, screen tcell.Screen, sessions Conversations) (sessionstate.Session, bool, error) {
+// Select returns newConversation with an empty ID when the first entry is chosen.
+func Select(ctx context.Context, screen tcell.Screen, load Conversations, newConversation sessionstate.Session) (sessionstate.Session, bool, error) {
 	events := screen.EventQ()
-	offset, index := 0, 0
+	offset, index := 0, -1
 	status, typed := "", ""
-	conversations, err := sessions.Conversations(ctx, offset, 100)
+	conversations, err := load(ctx, offset, 100)
 	if err != nil {
 		return sessionstate.Session{}, false, err
 	}
 	for {
 		screen.Clear()
 		w, totalHeight := screen.Size()
-		shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "이어하기"}, {Key: "Esc", Label: "취소"}}
+		shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "선택"}, {Key: "Esc", Label: "취소"}}
 		footer := view.KeymapRows(shortcuts, w, min(1, max(0, totalHeight-4)))
 		h := totalHeight - footer
-		view.Text(screen, 0, 0, w, "Resume conversation", tcell.StyleDefault)
-		if len(conversations) == 0 {
-			view.Text(screen, 0, 2, w, "No conversations available", tcell.StyleDefault)
+		view.Text(screen, 0, 0, w, "대화 선택", tcell.StyleDefault)
+		first := 0
+		if offset == 0 {
+			first = -1
 		}
-		start := max(0, index-max(1, h-5)+1)
+		start := max(first, index-max(1, h-5)+1)
 		for i := start; i < len(conversations) && i-start < h-4; i++ {
+			if i == -1 {
+				view.Text(screen, 0, 2+i-start, w, "새 대화", view.SelectionStyle(i == index))
+				continue
+			}
 			c := conversations[i]
 			style := view.SelectionStyle(i == index)
 			title := strings.ReplaceAll(c.Summary, "\n", " ")
@@ -78,11 +82,11 @@ func Resume(ctx context.Context, screen tcell.Screen, sessions Conversations) (s
 						typed = ""
 					}
 				case tcell.KeyUp:
-					if index > 0 {
+					if index > first {
 						index--
 					} else if offset > 0 {
 						offset = max(0, offset-100)
-						conversations, err = sessions.Conversations(ctx, offset, 100)
+						conversations, err = load(ctx, offset, 100)
 						if err != nil {
 							return sessionstate.Session{}, false, err
 						}
@@ -92,7 +96,7 @@ func Resume(ctx context.Context, screen tcell.Screen, sessions Conversations) (s
 					if index < len(conversations)-1 {
 						index++
 					} else if len(conversations) == 100 {
-						next, queryErr := sessions.Conversations(ctx, offset+100, 100)
+						next, queryErr := load(ctx, offset+100, 100)
 						if queryErr != nil {
 							return sessionstate.Session{}, false, queryErr
 						}
@@ -109,6 +113,9 @@ func Resume(ctx context.Context, screen tcell.Screen, sessions Conversations) (s
 					}
 					if typed == ":q" {
 						return sessionstate.Session{}, false, nil
+					}
+					if index == -1 {
+						return newConversation, true, nil
 					}
 					if len(conversations) == 0 {
 						continue

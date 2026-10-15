@@ -13,6 +13,8 @@ import (
 )
 
 type MenuDisplay struct {
+	Candidates             Candidates
+	Activity               Activity
 	Usage                  modelapi.TokenUsage
 	Model, IdentifiedModel string
 	Title, Status, Command string
@@ -27,7 +29,7 @@ type MenuDisplay struct {
 }
 
 func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
-	topLine(screen, display.Title, display.Usage, w)
+	topLine(screen, display.Title, display.Usage, w, display.Activity)
 	if display.Model != "" {
 		Text(screen, 0, 1, w, display.Model, tcell.StyleDefault)
 		x := uniseg.StringWidth(display.Model) + 2
@@ -46,8 +48,17 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 	}
 	if display.Field != nil {
 		Field(screen, *display.Field, 2, w, display.Secret)
+		bottom := h
 		if display.Status != "" {
-			Text(screen, 0, min(4, h-1), w, display.Status, tcell.StyleDefault)
+			bottom = max(3, h-1)
+		}
+		candidates(screen, display.Candidates, 3, w, bottom)
+		if display.Status != "" {
+			y := min(4, h-1)
+			if display.Candidates.Open {
+				y = h - 1
+			}
+			Text(screen, 0, y, w, display.Status, tcell.StyleDefault)
 		}
 		return
 	}

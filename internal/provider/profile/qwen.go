@@ -7,6 +7,20 @@ package profile
 func qwen() []Profile {
 	return []Profile{
 		{
+			ID: "qwen3.8-flash-next", Family: "Qwen",
+			Models: []string{
+				"Qwen/Qwen3.8-Flash-Next", "Qwen3.8-Flash-Next",
+				"Qwen/Qwen3.8-Flash-Next-FP8", "Qwen3.8-Flash-Next-FP8",
+				"Qwen3.8-Flash-Next 180B", "Qwen3.8-Flash-Next-180B",
+				"Qwen3.8-Flash-Next-180B-FP8", "Qwen3.8-Flash-Next 180B FP8",
+				"Qwen-3.8-180B", "Qwen-3.8-180B-FP8",
+			},
+			Released: "2026-08-26", TotalB: 180,
+			TemplateKeys: []string{"enable_thinking"},
+			Source:       "https://huggingface.co/Qwen/Qwen3.8-Flash-Next",
+			Effort:       EffortControl{Kind: ReasoningEffort, Values: []string{"low", "medium", "xhigh"}},
+		},
+		{
 			ID:       "qwen3.5-0.8b",
 			Family:   "Qwen",
 			Models:   []string{"Qwen/Qwen3.5-0.8B", "Qwen3.5-0.8B"},

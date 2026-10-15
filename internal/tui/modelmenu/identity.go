@@ -22,11 +22,16 @@ func IdentifiedName(selected connection.Selection, redact func(string) string) s
 	return redact(name)
 }
 
-func IdentityLines(selected connection.Selection, redact func(string) string) []string {
+func IdentityLines(selected connection.Selection, contextLength int, redact func(string) string) []string {
 	if selected.Model == "" {
 		return []string{"연결된 모델이 없습니다."}
 	}
-	lines := []string{"요청 모델: " + redact(selected.Model)}
+	lines := []string{"요청 모델: " + redact(selected.Model), fmt.Sprintf("설정 컨텍스트 예산: %d 토큰", contextLength)}
+	reported := 0
+	if selected.Details != nil {
+		reported = selected.Details.ContextWindow
+	}
+	lines = append(lines, fmt.Sprintf("적용 컨텍스트 예산: %d 토큰", connection.EffectiveContextLength(contextLength, reported)))
 	if info := selected.Details; info != nil {
 		if info.ContextWindow > 0 {
 			lines = append(lines, fmt.Sprintf("서빙 컨텍스트 한도: %d 토큰", info.ContextWindow))

@@ -21,12 +21,12 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	if len(a.output.Blocks) != 0 || !strings.Contains(a.status, "read_file") {
 		t.Fatal("start should only show pending call")
 	}
-	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"content":"one\ntwo","path":"README.md"}`)
+	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"Content":"one\ntwo","Path":"README.md"}`)
 	a.receive(notice{Event: &event})
 	if a.status != "" || len(a.output.Blocks) != 1 {
 		t.Fatal("pending call was not replaced by one completion record")
 	}
-	want := "\n  read_file\n\n    path: README.md\n\n    Output\n    content: one\n    two\n    path: README.md\n"
+	want := "\n  read_file\n\n    경로: README.md\n\n    Output\n    one\n    two\n"
 	if got := a.output.Blocks[0].Text; got != want {
 		t.Fatalf("tool record=%q; want %q", got, want)
 	}
@@ -42,7 +42,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	if got := screenLine(a.screen, 2, 80); !strings.HasPrefix(got, "  read_file") {
 		t.Fatalf("name not indented: %q", got)
 	}
-	if got := screenLine(a.screen, 4, 80); !strings.HasPrefix(got, "    path:") {
+	if got := screenLine(a.screen, 4, 80); !strings.HasPrefix(got, "    경로:") {
 		t.Fatalf("parameters not indented: %q", got)
 	}
 }
@@ -58,9 +58,32 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 		}
 	}
 	a.opts.Vault.Remember("provider-secret")
-	event := run.Event{Kind: "tool_failed", Text: "exit 1", Call: &toolapi.Call{Name: "execute_command", Arguments: json.RawMessage(`{}`)}, Output: json.RawMessage(`{"stdout":"provider-secret\nkeep","stderr":"error"}`)}
+	event := run.Event{Kind: "tool_failed", Text: "exit 1", Call: &toolapi.Call{Name: "execute_command", Arguments: json.RawMessage(`{}`)}, Output: json.RawMessage(`{"Stdout":"provider-secret\nkeep","Stderr":"error","ExitCode":1,"Status":"exited"}`)}
 	text := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(event)
 	if strings.Contains(text, "provider-secret") || !strings.Contains(text, "[redacted]") || !strings.Contains(text, "stderr: error") || !strings.Contains(text, "Failed: exit 1") {
 		t.Fatalf("output/failure missing or unsafe: %q", text)
+	}
+}
+
+func TestToolReadLineNumbersAlignOnScreen(t *testing.T) {
+	a := fixture(t)
+	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "read_file", Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"Content":"1#12345678 | first\n10#12345678 | tenth\n100#12345678 | hundredth"}`)}})
+	for _, width := range []int{80, 32} {
+		a.screen.SetSize(width, 24)
+		a.render()
+		column, found := -1, 0
+		for row := 0; row < 22; row++ {
+			line := screenLine(a.screen, row, width)
+			if at := strings.Index(line, " | "); at >= 0 {
+				found++
+				if column >= 0 && column != at {
+					t.Fatalf("misaligned row: %q", line)
+				}
+				column = at
+			}
+		}
+		if found != 3 {
+			t.Fatalf("width %d: expected 3 numbered rows, got %d", width, found)
+		}
 	}
 }

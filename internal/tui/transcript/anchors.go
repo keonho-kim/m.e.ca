@@ -6,9 +6,11 @@ package transcript
 
 import (
 	"encoding/json"
+	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 var numberedAnchor = regexp.MustCompile(`(?m)^([1-9][0-9]*)#[0-9a-f]{8}( \| )`)
@@ -58,6 +60,7 @@ func displayOutput(name string, body json.RawMessage) json.RawMessage {
 	}
 	// Only the leading tool-generated prefix is removed. Hash-like source text after it stays literal.
 	content = numberedAnchor.ReplaceAllString(content, "${1}${2}")
+	content = alignLineNumbers(content)
 	encoded, err := json.Marshal(content)
 	if err != nil {
 		return body
@@ -69,4 +72,22 @@ func displayOutput(name string, body json.RawMessage) json.RawMessage {
 		return body
 	}
 	return encoded
+}
+
+var numberedLine = regexp.MustCompile(`^([1-9][0-9]*) \| (.*)$`)
+
+func alignLineNumbers(content string) string {
+	lines := strings.Split(content, "\n")
+	width := 3
+	for _, line := range lines {
+		if parts := numberedLine.FindStringSubmatch(line); parts != nil {
+			width = max(width, len(parts[1]))
+		}
+	}
+	for i, line := range lines {
+		if parts := numberedLine.FindStringSubmatch(line); parts != nil {
+			lines[i] = fmt.Sprintf("%*s | %s", width, parts[1], parts[2])
+		}
+	}
+	return strings.Join(lines, "\n")
 }

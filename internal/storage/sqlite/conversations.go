@@ -1,6 +1,6 @@
 // Purpose: Discover and page session summaries directly from database files.
 // Pattern: Filesystem discovery with bounded metadata projection.
-// Usage: Resume and restore-last query Sessions; each read-only database handle closes immediately.
+// Usage: Startup conversation lists query Sessions; each read-only database handle closes immediately.
 // Related: internal/storage/sqlite/catalog.go, internal/storage/sqlite/session.go, internal/tui/startup/resume.go.
 package sqlite
 
@@ -16,6 +16,12 @@ import (
 
 func (s *Sessions) Conversations(ctx context.Context, offset, limit int) ([]sessionstate.Conversation, error) {
 	return s.conversations(ctx, "", offset, limit)
+}
+func (s *Sessions) ProjectConversations(ctx context.Context, project string, offset, limit int) ([]sessionstate.Conversation, error) {
+	if project == "" {
+		return nil, fmt.Errorf("project path required")
+	}
+	return s.conversations(ctx, project, offset, limit)
 }
 func (s *Sessions) conversations(ctx context.Context, project string, offset, limit int) (out []sessionstate.Conversation, err error) {
 	if offset < 0 || offset > 100000 || limit < 1 || limit > 100 {

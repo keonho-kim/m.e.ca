@@ -12,6 +12,7 @@ import (
 )
 
 type ChatDisplay struct {
+	Activity         Activity
 	Usage            modelapi.TokenUsage
 	Lines            []viewport.Line
 	Start, Available int
@@ -21,7 +22,7 @@ type ChatDisplay struct {
 }
 
 func Chat(screen tcell.Screen, display ChatDisplay, width, height int) {
-	topLine(screen, "", display.Usage, width)
+	topLine(screen, "", display.Usage, width, display.Activity)
 	y := 1
 	for i := display.Start; i < len(display.Lines) && y-1 < display.Available; i++ {
 		style := tcell.StyleDefault

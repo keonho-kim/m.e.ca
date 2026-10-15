@@ -1,6 +1,6 @@
 // Purpose: Create and select session database files without a separate session registry.
 // Pattern: Filesystem-backed session lifecycle.
-// Usage: Startup opens ~/.v/sessions, then calls Create, Open or Restore.
+// Usage: Startup opens ~/.v/sessions, then calls Create or Open.
 // Related: internal/storage/sqlite/store.go, internal/storage/sqlite/conversations.go, internal/config/statefs/root.go.
 package sqlite
 
@@ -120,30 +120,4 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 		return nil, err
 	}
 	return s.Open(ctx, project, id)
-}
-func (s *Sessions) Restore(ctx context.Context, project, display string, restore bool) (*Store, error) {
-	if err := sessionstate.CheckProject(project, display); err != nil {
-		return nil, err
-	}
-	if restore {
-		entries, err := s.conversations(ctx, project, 0, 1)
-		if err != nil {
-			return nil, err
-		}
-		if len(entries) > 0 {
-			store, err := s.Open(ctx, entries[0].ProjectRoot, entries[0].ID)
-			if err != nil {
-				return nil, err
-			}
-			canonical, resolveErr := filepath.EvalSymlinks(project)
-			if resolveErr != nil {
-				return nil, errors.Join(resolveErr, store.Close())
-			}
-			if store.Session().ProjectRoot != canonical {
-				return nil, errors.Join(fmt.Errorf("session project changed during selection"), store.Close())
-			}
-			return store, nil
-		}
-	}
-	return s.Create(ctx, project, display)
 }

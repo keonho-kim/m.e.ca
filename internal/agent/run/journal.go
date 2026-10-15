@@ -6,7 +6,6 @@ package run
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
@@ -21,11 +20,6 @@ func (s *execution) save(ctx context.Context, m modelapi.Message) error {
 	m.Planning = s.planning
 	if err := s.runner.Journal.AppendMessage(ctx, s.runner.Session, m); err != nil {
 		return err
-	}
-	if m.Role == "user" || m.Role == "tool" {
-		if err := s.observe(ctx, compact.Estimate(m.Content, m.Role)); err != nil {
-			return err
-		}
 	}
 	s.messages = append(s.messages, m)
 	return nil

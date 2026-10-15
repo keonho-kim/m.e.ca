@@ -14,10 +14,11 @@ import (
 )
 
 type Client struct {
-	modelInfo  *modelconn.ModelInfo
-	profileID  string
-	connection modelconn.Connection
-	transport  *transport.Client
+	contextLength int
+	modelInfo     *modelconn.ModelInfo
+	profileID     string
+	connection    modelconn.Connection
+	transport     *transport.Client
 }
 
 func NewClient(connection modelconn.Connection, key, profileID string) (*Client, error) {
@@ -32,7 +33,7 @@ func NewClient(connection modelconn.Connection, key, profileID string) (*Client,
 		return nil, fmt.Errorf("invalid API Key")
 	}
 	parsed.CredentialRef = connection.CredentialRef
-	return &Client{connection: parsed, profileID: profileID, transport: transport.New(key)}, nil
+	return &Client{contextLength: modelconn.DefaultContextLength, connection: parsed, profileID: profileID, transport: transport.New(key)}, nil
 }
 
 // Close releases this adapter's idle HTTP connections after its task owner has joined.

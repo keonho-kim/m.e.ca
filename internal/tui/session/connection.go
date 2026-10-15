@@ -5,6 +5,8 @@
 package session
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/config"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
@@ -18,7 +20,8 @@ func (a *app) adoptConnection(n notice) (err error) {
 			n.Client.Close()
 		}
 	}()
-	if n.Err != nil {
+	listing := n.Selection != nil && n.Selection.Model == "" && n.Models != nil
+	if n.Err != nil && (!listing || errors.Is(n.Err, context.Canceled) || errors.Is(n.Err, context.DeadlineExceeded)) {
 		return nil
 	}
 	if n.Selection == nil {

@@ -42,16 +42,20 @@ func TestProjectDirectoryIsolation(t *testing.T) {
 	if err != nil || len(all) != 2 {
 		t.Fatalf("all projects: %v %v", all, err)
 	}
-	// A corrupt database in another project must not be read during local restore.
+	// A corrupt database in another project must not be read during local listing.
 	if err := os.WriteFile(paths[1], []byte("invalid database"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	restored, err := catalog.Restore(ctx, projects[0], projects[0], true)
+	local, err := catalog.ProjectConversations(ctx, projects[0], 0, 100)
+	if err != nil || len(local) != 1 {
+		t.Fatalf("project list: %v %v", local, err)
+	}
+	restored, err := catalog.Open(ctx, projects[0], local[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if restored.path != paths[0] {
-		t.Fatal("restored another project")
+		t.Fatal("opened another project")
 	}
 	if err := restored.Close(); err != nil {
 		t.Fatal(err)
@@ -60,7 +64,7 @@ func TestProjectDirectoryIsolation(t *testing.T) {
 	if err := os.Symlink(projects[0], alias); err != nil {
 		t.Fatal(err)
 	}
-	linked, err := catalog.Restore(ctx, alias, alias, true)
+	linked, err := catalog.Open(ctx, alias, local[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}

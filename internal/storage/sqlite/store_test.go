@@ -23,7 +23,7 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	project := t.TempDir()
-	store, err := catalog.Restore(ctx, project, project, true)
+	store, err := catalog.Create(ctx, project, project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	if err := store.Close(); err != nil {
 		t.Fatal(err)
 	}
-	store, err = catalog.Restore(ctx, project, project, true)
+	store, err = catalog.Open(ctx, project, session.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("database permissions: %v, %v", info, err)
 	}
-	other, err := catalog.Restore(ctx, t.TempDir(), "other", true)
+	other, err := catalog.Create(ctx, t.TempDir(), "other")
 	if err != nil {
 		t.Fatal(err)
 	}

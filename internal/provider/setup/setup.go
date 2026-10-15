@@ -20,6 +20,7 @@ type Credentials interface {
 }
 
 type Defaults struct {
+	ContextLength            int
 	Inference                *inference.Settings
 	Profile, ReasoningEffort string
 	Thinking                 bool
@@ -84,6 +85,11 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 			return prepared, fmt.Errorf("model capability discovery: %w", discoveryErr)
 		}
 		info = connection.ModelInfo{ID: model, Notice: "Serving limits unavailable: " + discoveryErr.Error()}
+	}
+	if defaults.ContextLength != 0 {
+		if err := client.SetContextLength(defaults.ContextLength); err != nil {
+			return prepared, err
+		}
 	}
 	if err := client.BindModel(info); err != nil {
 		return prepared, err

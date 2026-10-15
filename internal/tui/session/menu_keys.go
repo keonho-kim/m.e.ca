@@ -23,7 +23,11 @@ func (a *app) menuKey(e *tcell.EventKey) {
 	if a.paste {
 		if e.Key() == tcell.KeyRune {
 			a.menuInput.Insert(e.Str())
+			a.refreshModelHints()
 		}
+		return
+	}
+	if a.modelHintKey(e) {
 		return
 	}
 	if e.Key() == tcell.KeyEscape {
@@ -36,11 +40,13 @@ func (a *app) menuKey(e *tcell.EventKey) {
 			a.key = ""
 		}
 		a.menuInput.Set("")
+		a.closeModelHints()
 		return
 	}
 	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
 		if e.Key() == tcell.KeyCtrlU {
 			a.menuInput.Set("")
+			a.refreshModelHints()
 			return
 		}
 		if e.Key() == tcell.KeyEnter {
@@ -53,7 +59,11 @@ func (a *app) menuKey(e *tcell.EventKey) {
 			a.confirmField()
 			return
 		}
+		before := a.menuInput.String()
 		input.EditKey(&a.menuInput, e)
+		if a.menuInput.String() != before {
+			a.refreshModelHints()
+		}
 		return
 	}
 	if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported && (e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight) {

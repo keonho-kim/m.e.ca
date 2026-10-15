@@ -39,6 +39,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err := s.allowTool(definition.Effect); err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
+	previousReview := s.checkpoint.PendingReview
 	if call.Name == "write_file" || call.Name == "edit_file" {
 		s.checkpoint.PendingReview = true
 	}
@@ -62,6 +63,10 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	content := call.Arguments
 	if err := s.ground(ctx, call, reason); err != nil {
 		return err
+	}
+	if path := s.revisions.Due(); path != "" && definition.Effect != policy.Read && !s.checkpoint.Checking {
+		s.checkpoint.PendingReview = previousReview
+		return s.returnToolFeedback(ctx, reply, fmt.Sprintf("Verification checkpoint required after repeated edits to %q. Nothing executed. Run a relevant command with purpose=check before making further changes. Use the observed failure to guide a correction; if checking is blocked, report the blocker instead of continuing edits.", path))
 	}
 	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
 	mutating := definition.Effect != policy.Read && !s.checkpoint.Checking

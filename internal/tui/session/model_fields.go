@@ -44,6 +44,8 @@ func (a *app) confirmField() {
 		if model == "" {
 			return
 		}
+		a.closeModelHints()
+		a.modelNames = nil
 		a.connect(a.pendingConnection, a.key, model, true)
 		a.key = ""
 		a.menuInput.Set("")

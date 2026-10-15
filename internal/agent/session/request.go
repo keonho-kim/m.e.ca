@@ -52,9 +52,6 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	}
 	runner.Prompts = &templates
 	runner.Memory = &compact.Controller{Inference: runner.Inference, Repository: request.Store, Session: runner.Session, Model: runner.Model, Prompt: templates.Compaction, Settings: request.Compaction, Redact: runner.Redact}
-	if runner.PreviousRun != nil {
-		runner.Memory.InputTokens = runner.PreviousRun.InputTokens
-	}
 	runner.ProjectInstructions, err = request.ProjectInstructions(ctx)
 	if err != nil {
 		return nil, err

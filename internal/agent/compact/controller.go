@@ -15,7 +15,6 @@ import (
 
 type Controller struct {
 	Inference              *inference.Settings
-	InputTokens            int64
 	Repository             Repository
 	Session, Model, Prompt string
 	Settings               Settings
@@ -61,7 +60,7 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 	if err != nil {
 		return false, err
 	}
-	if !force && mark.Tokens < c.Settings.ThresholdTokens && (c.Settings.TargetInputTokens == 0 || c.InputTokens < c.Settings.TargetInputTokens) {
+	if !force && mark.Tokens < c.Settings.ThresholdTokens {
 		return false, nil
 	}
 	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, c.Settings.KeepRecentBytes)
@@ -168,7 +167,6 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 		return false, err
 	}
 	c.memory = next
-	c.InputTokens = 0
 	return true, nil
 }
 func (c *Controller) Context() (string, int64, error) {

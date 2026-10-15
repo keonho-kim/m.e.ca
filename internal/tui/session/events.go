@@ -51,6 +51,9 @@ func (a *app) receive(n notice) {
 		return
 	}
 	if n.Approval != nil {
+		if a.stopRequested {
+			return
+		}
 		a.proposal = n.Approval
 		a.page = "approval"
 		a.choices = []string{"Approve", "Reject"}

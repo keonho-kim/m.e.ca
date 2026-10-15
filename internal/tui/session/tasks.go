@@ -19,8 +19,11 @@ func (a *app) startTask(text string, approved *planning.Plan) {
 		return
 	}
 	a.stream, a.thinking = "", ""
+	a.tokensPerSecond = nil
 	a.busy = true
-	a.status = "Working"
+	a.agentActive = true
+	a.stopRequested = false
+	a.status = ""
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)

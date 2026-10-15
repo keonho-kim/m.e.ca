@@ -86,3 +86,12 @@ func TestIdentityResolutionSafety(t *testing.T) {
 		})
 	}
 }
+
+func TestIdentityFlashNextAliasAndFP8Agree(t *testing.T) {
+	report := identity.Report{}
+	report.Add("server", "original", "Qwen/Qwen3.8-Flash-Next-FP8")
+	selected, err := resolveIdentity("Qwen-3.8-180B", "", &report)
+	if err != nil || selected.ID != "qwen3.8-flash-next" || report.ProfileSource != "server" {
+		t.Fatalf("%+v %v", selected, err)
+	}
+}

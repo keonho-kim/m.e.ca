@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
@@ -15,7 +14,6 @@ import (
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	tuisession "github.com/keonho-kim/v-code/internal/tui/session"
-	tuistartup "github.com/keonho-kim/v-code/internal/tui/startup"
 	"golang.org/x/term"
 	"os"
 	"os/signal"
@@ -78,28 +76,11 @@ func start() (err error) {
 		return err
 	}
 	defer screen.Fini()
-	var store *sqlite.Store
-	var session sessionstate.Session
-	if mode.Resume {
-		var selected bool
-		session, selected, err = tuistartup.Resume(ctx, screen, sessions)
-		if err != nil || !selected {
-			return err
-		}
-		store, err = sessions.Open(ctx, session.ProjectRoot, session.ID)
-		if err != nil {
-			return err
-		}
-		if store.Session() != session {
-			return errors.Join(fmt.Errorf("selected session metadata changed; select it again"), store.Close())
-		}
-	} else {
-		store, err = sessions.Restore(ctx, mode.Project, mode.Display, configuration.Session.RestoreLast)
-		if err != nil {
-			return err
-		}
-		session = store.Session()
+	store, selected, err := selectConversation(ctx, screen, sessions, mode, cwd)
+	if err != nil || !selected {
+		return err
 	}
+	var session sessionstate.Session
 	for {
 		session = store.Session()
 		action, runErr := runConversation(ctx, screen, configuration, home, state, store)

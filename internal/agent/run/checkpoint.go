@@ -41,7 +41,6 @@ type Checkpoint struct {
 	Status             Status                     `json:"status"`
 	Phase              string                     `json:"phase"`
 	Iteration          int                        `json:"iteration"`
-	InputTokens        int64                      `json:"input_tokens,omitempty"`
 	ModelCalls         int                        `json:"model_calls"`
 	NoProgress         int                        `json:"no_progress"`
 	InstructionsDigest string                     `json:"instructions_digest"`
@@ -71,7 +70,7 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.InputTokens < 0 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.Evidence) > 4096 || len(c.InstructionsDigest) != 64 {
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.Evidence) > 4096 || len(c.InstructionsDigest) != 64 {
 		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {

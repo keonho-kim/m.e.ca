@@ -38,7 +38,7 @@ func TestAnchorDisplayEditArgumentsKeepRuntimeBinding(t *testing.T) {
 	raw := []byte(`{"path":"a","start_anchor":"7#1234abcd","end_anchor":"9#8765abcd","new_text":"replacement"}`)
 	original := bytes.Clone(raw)
 	shown := (Formatter{Redact: func(s string) string { return s }}).Tool(run.Event{Kind: "tool_started", Call: &tool.Call{Name: "edit_file", Arguments: raw}})
-	if !strings.Contains(shown, "start_line: 7") || !strings.Contains(shown, "end_line: 9") || strings.Contains(shown, "1234abcd") {
+	if !strings.Contains(shown, "대상 줄: 7–9") || strings.Contains(shown, "1234abcd") {
 		t.Fatal(shown)
 	}
 	if !bytes.Equal(raw, original) {

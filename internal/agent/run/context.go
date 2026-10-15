@@ -38,6 +38,12 @@ func (s *execution) request(question string, role inference.Role) (modelapi.Requ
 	if s.planning {
 		defs = append(defs, planDefinition())
 	}
+	if path := s.revisions.Due(); path != "" {
+		question += "\nVerification checkpoint due for " + path + ": inspect missing evidence or run purpose=check; further changes are blocked until a check completes."
+	}
+	if s.changed && s.checkpoint.Evidence != "" && !s.checkpoint.PendingReview && len(verification.Pending(s.checkpoint.Checks, s.checkpoint.ChangeRevision)) == 0 {
+		question += "\nThe current change revision has passed all recorded checks. Compare the result with the original request: if satisfied, answer now. Further changes require a specific unmet request or newly observed defect; avoid speculative polishing and rerunning unchanged checks. Passing checks alone does not prove the whole request is complete."
+	}
 	facts := struct {
 		Blocker              string                `json:"blocker,omitempty"`
 		VerificationRequired bool                  `json:"verification_required,omitempty"`

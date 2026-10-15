@@ -29,12 +29,13 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if len(request.Messages) == 0 {
 		return fmt.Errorf("invalid message or tool count")
 	}
-	if client.modelInfo != nil {
-		if client.modelInfo.MaxOutput > 0 {
-			request.MaxOutput = min(request.MaxOutput, client.modelInfo.MaxOutput)
+	info := client.effectiveModel()
+	if info != nil {
+		if info.MaxOutput > 0 {
+			request.MaxOutput = min(request.MaxOutput, info.MaxOutput)
 		}
-		if client.modelInfo.ContextWindow > 0 {
-			request.MaxOutput = min(request.MaxOutput, client.modelInfo.ContextWindow-1)
+		if info.ContextWindow > 0 {
+			request.MaxOutput = min(request.MaxOutput, info.ContextWindow-1)
 		}
 		if request.MaxOutput < 1 {
 			return fmt.Errorf("model context has no output capacity")
@@ -52,7 +53,7 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if err != nil {
 		return err
 	}
-	endpoint, content, err := protocol.Encode(client.connection.Kind, client.connection.APIBase(), client.modelInfo, request, messages, controls)
+	endpoint, content, err := protocol.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
 	if err != nil {
 		return err
 	}

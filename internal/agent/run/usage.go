@@ -12,18 +12,37 @@ import (
 	"time"
 )
 
-func (s *execution) generate(ctx context.Context, request modelapi.Request, consume func(modelapi.Event) error) error {
+func (s *execution) generate(ctx context.Context, request modelapi.Request, account bool, consume func(modelapi.Event) error) error {
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return err
 	}
 	request.IdleTimeout = time.Duration(s.limits.MaxModelSeconds) * time.Second
 	var usage *modelapi.TokenUsage
+	var rate *float64
+	started := time.Now()
+	if err := s.emit(Event{Kind: "generation_started"}); err != nil {
+		return err
+	}
+	var outputBytes int64
+	received := false
+	flush := func() error {
+		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		err := s.recordUsage(flushCtx, usage, rate)
+		if account && (usage != nil || received) {
+			err = errors.Join(err, s.countRequest(flushCtx, request, usage, outputBytes))
+		}
+		usage = nil
+		rate = nil
+		outputBytes = 0
+		received = false
+		return err
+	}
 	err := s.runner.Generator.Generate(ctx, request, func(event modelapi.Event) error {
 		if event.Retry != nil {
-			if err := s.recordUsage(ctx, usage); err != nil {
+			if err := flush(); err != nil {
 				return err
 			}
-			usage = nil
 			if s.usage.ModelCalls >= s.limits.MaxModelCalls {
 				return fmt.Errorf("model call budget exhausted before provider retry: %s", s.runner.Redact(event.Retry.Reason))
 			}
@@ -33,7 +52,18 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, cons
 			if err := s.emit(Event{Kind: "retry", Text: message}); err != nil {
 				return err
 			}
+			started = time.Now()
+			if err := s.emit(Event{Kind: "generation_started"}); err != nil {
+				return err
+			}
 			return consume(event)
+		}
+		if event.Delta != "" || event.Thinking != "" || len(event.Calls) > 0 || event.Done {
+			received = true
+		}
+		outputBytes += int64(len(event.Delta) + len(event.Thinking))
+		for _, call := range event.Calls {
+			outputBytes += int64(len(call.ID) + len(call.Name) + len(call.Arguments))
 		}
 		if event.Usage != nil {
 			if err := event.Usage.Check(); err != nil {
@@ -41,16 +71,17 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, cons
 			}
 			snapshot := *event.Usage
 			usage = &snapshot
-			if err := s.emit(Event{Kind: "usage_progress", Usage: usage}); err != nil {
+			rate = outputRate(snapshot.Output, time.Since(started))
+			if err := s.emit(Event{Kind: "usage_progress", Usage: usage, TokensPerSecond: rate}); err != nil {
 				return err
 			}
 		}
 		return consume(event)
 	})
-	return errors.Join(err, s.recordUsage(ctx, usage))
+	return errors.Join(err, flush())
 }
 
-func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage) error {
+func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, rate *float64) error {
 	if usage == nil {
 		return nil
 	}
@@ -61,5 +92,6 @@ func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage)
 	if saveErr := s.runner.Journal.RecordEvent(flushCtx, s.runner.Session, final); saveErr != nil {
 		return saveErr
 	}
+	final.TokensPerSecond = rate
 	return s.emit(final)
 }

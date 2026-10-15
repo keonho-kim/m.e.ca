@@ -54,7 +54,7 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if count.Count == nil || *count.Count < 0 || count.Limit <= 0 || count.Limit > 1<<40 {
 		return 0, fmt.Errorf("invalid tokenizer context limits")
 	}
-	limit := min(c.modelInfo.ContextWindow, count.Limit)
+	limit := min(c.effectiveModel().ContextWindow, count.Limit)
 	if *count.Count >= limit {
 		return 0, fmt.Errorf("model context exhausted: input %d tokens, capacity %d; history was preserved", *count.Count, limit)
 	}

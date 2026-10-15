@@ -38,7 +38,10 @@ func (a *app) renderChat(width, height int) {
 		lines = append(lines, stream.Lines(width)...)
 	}
 	appendTemporary(a.status, false)
+	if a.pending != "" {
+		appendTemporary("예약 > "+a.opts.Vault.Redact(a.pending), true)
+	}
 	available := a.chatHeight(width, height)
 	start := a.output.Start(lines, available)
-	view.Chat(a.screen, view.ChatDisplay{Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
+	view.Chat(a.screen, view.ChatDisplay{Activity: a.activity(), Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
 }
