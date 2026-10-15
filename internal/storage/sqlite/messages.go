@@ -64,7 +64,7 @@ func (store *Store) Messages(ctx context.Context, session string, limit int) (me
 			return nil, err
 		}
 		bytes += len(content)
-		if bytes > 8*1024*1024 {
+		if bytes > maxEventBytes {
 			break
 		}
 		var message modelapi.Message

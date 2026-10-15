@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
 )
@@ -23,7 +24,12 @@ func (r Runner) startMonitor(ctx context.Context) (*monitor.Observer, error) {
 	}), nil
 }
 
-func (s *execution) record(ctx context.Context, event Event) error {
+func (s *execution) record(ctx context.Context, event Event) (resultErr error) {
+	defer func() {
+		if resultErr != nil {
+			resultErr = errors.Join(errRuntimeRecord, resultErr)
+		}
+	}()
 	if err := s.runner.Journal.RecordEvent(ctx, s.runner.Session, event); err != nil {
 		return err
 	}

@@ -1,12 +1,11 @@
 // Purpose: Own task worker lifecycle and exchange runtime results and approval decisions.
 // Pattern: Cancellable worker lifecycle.
-// Usage: Started by local chat submission or Plan approval; joined by Run.
-// Related: internal/agent/run/planning.go, internal/agent/run/plan.go, internal/tui/session/events.go.
+// Usage: Started by local chat submission or chat input; joined by Run.
+// Related: internal/agent/session/request.go, internal/agent/run/run.go, internal/tui/session/events.go.
 package session
 
 import (
 	"context"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	tasksession "github.com/keonho-kim/v-code/internal/agent/session"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -14,7 +13,7 @@ import (
 	"strings"
 )
 
-func (a *app) startTask(text string, approved *planning.Plan) {
+func (a *app) startTask(text string) {
 	if a.busy {
 		return
 	}
@@ -31,8 +30,6 @@ func (a *app) startTask(text string, approved *planning.Plan) {
 	a.decision = make(chan bool, 1)
 	inferenceSettings := a.opts.Config.Inference
 	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop, Usage: &run.Usage{}}
-	planningMode := a.planMode
-	previous := a.plan
 	var references []string
 	for path := range a.browser.Selected {
 		if _, err := a.opts.Tools.Reference(a.settings, path); err == nil {
@@ -67,26 +64,7 @@ func (a *app) startTask(text string, approved *planning.Plan) {
 				return false, ctx.Err()
 			}
 		}
-		updated, err := tasksession.Execute(ctx, tasksession.Request{Runner: runner, Store: store, LoadPrompts: loadPrompts, Compaction: compaction, ProjectInstructions: instructions, Text: text, Planning: planningMode, Previous: previous, Approved: approved}, approve, emit)
-		a.post(a.ctx, notice{Done: true, Err: err, Plan: updated})
+		result, err := tasksession.Execute(ctx, tasksession.Request{Runner: runner, Store: store, LoadPrompts: loadPrompts, Compaction: compaction, ProjectInstructions: instructions, Text: text}, approve, emit)
+		a.post(a.ctx, notice{Done: true, Err: err, RunStatus: result.Status})
 	}()
-}
-func (a *app) approvePlan() {
-	if a.plan == nil || a.busy {
-		return
-	}
-	if a.client == nil {
-		a.status = "Select a model using !model"
-		a.page = "chat"
-		return
-	}
-	approved, err := run.ApprovePlan(a.ctx, a.opts.Store, *a.plan)
-	if err != nil {
-		a.fail(err)
-		return
-	}
-	a.plan = &approved
-	a.planMode = false
-	a.page = "chat"
-	a.startTask("", &approved)
 }

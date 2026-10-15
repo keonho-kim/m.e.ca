@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 )
@@ -23,6 +22,11 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		}
 		s.changed = true
 		s.checkpoint.ChangeRevision++
+		// Real file changes make earlier reads/checks stale. Merely running another
+		// command must not erase the evidence that an observation already repeated.
+		if effect == policy.Change {
+			clear(s.seen)
+		}
 		if outcome.Started && effect == policy.Command {
 			s.commands[signature] = s.checkpoint.ChangeRevision
 		}
@@ -34,6 +38,9 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		}
 		s.checkpoint.NoProgress++
 		return s.persist(ctx)
+	}
+	if effect == policy.Change && outcome.Started {
+		s.checkpoint.LastChange = excerpt(call.Name+": "+s.runner.Redact(outcome.Summary), 768)
 	}
 	if effect == policy.Command && outcome.Started {
 		s.checkpoint.Blocker = ""
@@ -48,8 +55,11 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 			return err
 		}
 		target = string(fields["path"])
+		if target == "" {
+			target = string(fields["command"])
+		}
 	}
-	fingerprint := sha256.Sum256([]byte(fmt.Sprintf("%d:%s\n%s", s.checkpoint.ChangeRevision, call.Name+target, result)))
+	fingerprint := sha256.Sum256([]byte(call.Name + "\n" + target + "\n" + result))
 	cycle := s.files.Repeated(outcome.Changes)
 	if cycle || s.seen[fingerprint] {
 		s.checkpoint.NoProgress++
@@ -61,7 +71,8 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	}
 	if cycle {
 		s.checkpoint.Observation += "\nFile contents returned to a previously observed state. Stop rewriting the same result; inspect the concrete failed requirement and verify before another edit."
-		return s.recoverProgress(ctx)
+		s.checkpoint.NoProgress = max(s.checkpoint.NoProgress, s.limits.StallIterations)
+		return s.persist(ctx)
 	}
 	return s.persist(ctx)
 }

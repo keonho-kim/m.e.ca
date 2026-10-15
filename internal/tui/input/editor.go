@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-const MaxBytes = 64 * 1024
+const MaxBytes = 16 * 1024 * 1024
 
 type Editor struct {
 	Text   []rune

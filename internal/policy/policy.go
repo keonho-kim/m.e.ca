@@ -56,15 +56,12 @@ const (
 	Command
 )
 
-func Decide(settings Settings, planning bool, effect Effect) (bool, error) {
+func Decide(settings Settings, effect Effect) (bool, error) {
 	if err := settings.Check(); err != nil {
 		return false, err
 	}
 	if effect != Read && effect != Change && effect != Command {
 		return false, fmt.Errorf("unknown operation effect")
-	}
-	if planning && effect != Read {
-		return false, fmt.Errorf("Plan approval is required before changes")
 	}
 	return effect != Read && settings.Permission == Approve, nil
 }

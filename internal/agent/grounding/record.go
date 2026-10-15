@@ -1,4 +1,4 @@
-// Purpose: Bind a model's short intent and runtime source reference to exact execution arguments.
+// Purpose: Bind a model's intent and runtime source reference to exact execution arguments.
 // Pattern: Immutable execution evidence record.
 // Usage: Runtime persists Bind before tool preparation; this record is a claim, not authorization.
 // Related: internal/agent/tool/intent.go, internal/agent/run/grounding.go.
@@ -9,12 +9,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/tool"
-	"strings"
-	"unicode"
 	"unicode/utf8"
 )
-
-const MaxBytes = 2048
 
 type Record struct {
 	CallID          string `json:"call_id"`
@@ -43,8 +39,8 @@ func (r Record) Check() error {
 	if err != nil || len(hash) != 32 {
 		return fmt.Errorf("invalid grounding binding")
 	}
-	if strings.TrimSpace(r.Reason) == "" || len(r.Reason) > 1024 || utf8.RuneCountInString(r.Reason) > 256 || !utf8.ValidString(r.Reason) || strings.ContainsFunc(r.Reason, unicode.IsControl) {
-		return fmt.Errorf("invalid grounding reason")
+	if err := tool.CheckReason(r.Reason); err != nil {
+		return err
 	}
 	if r.Source == "" || len(r.Source) > 512 || !utf8.ValidString(r.Source) {
 		return fmt.Errorf("invalid grounding source")

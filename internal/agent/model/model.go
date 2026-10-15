@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const MaxResponseBytes = 4 * 1024 * 1024
+const MaxResponseBytes = 256 * 1024 * 1024
 
 type Message struct {
 	Reasoning       string         `json:"reasoning,omitempty"`
@@ -25,7 +25,6 @@ type Message struct {
 	ProviderID      string         `json:"provider_id,omitempty"`
 	ModelID         string         `json:"model_id,omitempty"`
 	Thinking        *bool          `json:"thinking,omitempty"`
-	Planning        bool           `json:"planning,omitempty"`
 }
 
 type Request struct {

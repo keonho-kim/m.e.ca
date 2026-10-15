@@ -110,7 +110,7 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 	a.selection = modelconn.Selection{Connection: connection, Model: "context-model"}
 	for _, question := range []string{"new question", "different question"} {
 		a.stream, a.thinking = "stale answer", "stale thinking"
-		a.startTask(question, nil)
+		a.startTask(question)
 		if a.stream != "" || a.thinking != "" {
 			t.Fatal("previous response retained on new task")
 		}

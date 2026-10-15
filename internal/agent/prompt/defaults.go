@@ -11,7 +11,7 @@ import (
 	"unicode/utf8"
 )
 
-const MaxTemplateBytes = 16 * 1024
+const MaxTemplateBytes = 16 * 1024 * 1024
 
 //go:embed defaults/system.md
 var systemDefault string
@@ -22,15 +22,18 @@ var compactionDefault string
 //go:embed defaults/conclave.md
 var conclaveDefault string
 
-type Templates struct{ System, Compaction, Conclave string }
+//go:embed defaults/completion.md
+var completionDefault string
+
+type Templates struct{ System, Compaction, Conclave, Completion string }
 
 func Defaults() Templates {
-	return Templates{System: systemDefault, Compaction: compactionDefault, Conclave: conclaveDefault}
+	return Templates{System: systemDefault, Compaction: compactionDefault, Conclave: conclaveDefault, Completion: completionDefault}
 }
 
 // Files exposes the fixed prompt fields for bootstrap publication and explicit loading.
 func (t *Templates) Files() map[string]*string {
-	return map[string]*string{"system.md": &t.System, "compaction.md": &t.Compaction, "conclave.md": &t.Conclave}
+	return map[string]*string{"system.md": &t.System, "compaction.md": &t.Compaction, "conclave.md": &t.Conclave, "completion.md": &t.Completion}
 }
 
 func CheckTemplate(text string) error {

@@ -1,4 +1,4 @@
-// Purpose: Verify shell calls accept only command text and retain Scope, Plan and approval guards.
+// Purpose: Verify shell calls accept only command text and retain Scope and Permission approval guards.
 // Pattern: Tool boundary behavior tests.
 // Usage: go test ./internal/tools/local -run TestCommandContract.
 // Related: internal/tools/local/catalog.go, internal/tools/local/prepare.go, internal/tools/local/operation.go.
@@ -19,19 +19,16 @@ func TestCommandContractRetainsPolicyWithoutTimeArgument(t *testing.T) {
 			t.Fatalf("unexpected command fields: %+v", definition.Parameters)
 		}
 	}
-	if _, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, false, call("execute_command", `{"command":"true","purpose":"check"}`)); err == nil {
+	if _, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"true","purpose":"check"}`)); err == nil {
 		t.Fatal("removed purpose field accepted")
 	}
 	ctx := context.Background()
 	command := call("execute_command", `{"command":"printf approved > marker"}`)
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.System}
-	if _, err := executor.Prepare(ctx, settings, true, command); err == nil {
-		t.Fatal("Plan allowed command before approval")
-	}
-	if _, err := executor.Prepare(ctx, settings, false, call("execute_command", `{"command":"true","timeout_seconds":1}`)); err == nil {
+	if _, err := executor.Prepare(ctx, settings, call("execute_command", `{"command":"true","timeout_seconds":1}`)); err == nil {
 		t.Fatal("obsolete time field accepted")
 	}
-	op, err := executor.Prepare(ctx, settings, false, command)
+	op, err := executor.Prepare(ctx, settings, command)
 	if err != nil {
 		t.Fatal(err)
 	}

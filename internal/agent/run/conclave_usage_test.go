@@ -30,7 +30,7 @@ func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
 	r.Limits.MaxModelCalls = 2
 	r.Usage = &Usage{}
 	total, current := modelapi.TokenUsage{}, modelapi.TokenUsage{}
-	_, err := r.Run(context.Background(), "fix", false, approve, func(event Event) error {
+	result, err := r.Run(context.Background(), "fix", approve, func(event Event) error {
 		if event.Kind == "usage_progress" {
 			current = *event.Usage
 		}
@@ -42,7 +42,7 @@ func TestConclaveRetryBudgetAndMeasuredUsage(t *testing.T) {
 		return nil
 	})
 	// The main call and review consume the shared budget before retry.
-	if err == nil || !strings.Contains(err.Error(), "budget") || completed.Load() != 0 || r.Usage.ModelCalls != 2 || e.executed != 0 {
+	if err != nil || result.Status != Stopped || !strings.Contains(result.Text, "budget") || completed.Load() != 0 || r.Usage.ModelCalls != 2 || e.executed != 0 {
 		t.Fatalf("retries=%d calls=%d exec=%d err=%v", completed.Load(), r.Usage.ModelCalls, e.executed, err)
 	}
 	if total.Input != 10 || total.Output != 1 || current != (modelapi.TokenUsage{}) {

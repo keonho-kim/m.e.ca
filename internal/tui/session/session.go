@@ -1,14 +1,12 @@
-// Purpose: Restore session policy, model, Plan and selected paths without replaying effects.
+// Purpose: Restore session policy, model, completion and selected paths without replaying effects.
 // Pattern: Session recovery use case.
 // Usage: Called before the terminal event loop starts.
 // Related: internal/storage/recovery/recovery.go, internal/tui/session/app.go.
 package session
 
 import (
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
 
 func (a *app) restore() error {
@@ -50,16 +48,6 @@ func (a *app) restore() error {
 		a.output.Append("Interrupted task: "+a.opts.Vault.Redact(cp.Objective)+"\nPrevious phase: "+cp.Phase+". Send a new request to continue after inspecting current state.", false)
 	}
 	a.historyIndex = len(a.inputs)
-	a.plan, err = a.opts.Store.LatestPlan(ctx, a.opts.Session.ID)
-	if err != nil {
-		return err
-	}
-	if a.plan != nil {
-		a.planMode = a.plan.Status == planning.Planning || a.plan.Status == planning.AwaitingApproval
-		if a.planMode {
-			a.output.Append(transcript.Plan(a.plan), false)
-		}
-	}
 	a.selection, err = a.opts.Store.Selection(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err

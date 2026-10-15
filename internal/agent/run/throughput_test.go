@@ -47,7 +47,7 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 			r.Generator = throughputGenerator{retry: retry}
 			var progress, final []float64
 			starts := 0
-			_, err := r.Run(context.Background(), "hello", false, approve, func(e Event) error {
+			_, err := r.Run(context.Background(), "hello", approve, func(e Event) error {
 				if e.Kind == "generation_started" {
 					starts++
 				}

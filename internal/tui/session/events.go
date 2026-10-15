@@ -6,7 +6,6 @@ package session
 
 import (
 	"context"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
@@ -15,6 +14,8 @@ import (
 )
 
 type notice struct {
+	Clipboard       bool
+	RunStatus       run.Status
 	FilePreview     *local.FilePreview
 	PreviewRevision int
 	RememberModel   bool
@@ -24,7 +25,6 @@ type notice struct {
 	Approval        *toolapi.Approval
 	Done            bool
 	Err             error
-	Plan            *planning.Plan
 	Client          *httpclient.Client
 	Models          []string
 	Selection       *modelconn.Selection
@@ -39,6 +39,15 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.Clipboard {
+		a.clipboardBusy = false
+		if n.Err != nil {
+			a.stopNotice = "클립보드 복사 실패: " + a.opts.Vault.Redact(n.Err.Error())
+		} else {
+			a.stopNotice = "복사했습니다"
+		}
+		return
+	}
 	if n.PreviewRevision > 0 {
 		a.receiveFilePreview(n)
 		return

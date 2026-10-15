@@ -29,6 +29,7 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 	if err := s.emit(Event{Kind: "stream"}); err != nil {
 		return modelapi.Response{}, err
 	}
+	holdDraft := len(s.checkpoint.Work.Receipts) > 0 && s.checkpoint.Phase == "decision" || s.checkpoint.Phase == "reporting"
 	var reply, thinking strings.Builder
 	var calls []toolapi.Call
 	done := false
@@ -59,7 +60,11 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 			done = true
 		}
 		if !s.runner.suppressStream && e.Streaming && (e.Delta != "" || e.Thinking != "") {
-			if err := s.emit(Event{Kind: "stream", Text: maskedPartial(s.runner, s.responseBody(reply.String())), Thinking: maskedPartial(s.runner, thinking.String())}); err != nil {
+			visible := maskedPartial(s.runner, s.responseBody(reply.String()))
+			if holdDraft {
+				visible = ""
+			}
+			if err := s.emit(Event{Kind: "stream", Text: visible, Thinking: maskedPartial(s.runner, thinking.String())}); err != nil {
 				return err
 			}
 		}
@@ -96,7 +101,12 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 	if s.runner.Redact(reply.String()) != reply.String() {
 		return modelapi.Response{}, fmt.Errorf("model reply contains a protected credential or terminal control")
 	}
+	ids := map[string]bool{}
 	for _, call := range calls {
+		if ids[call.ID] {
+			return modelapi.Response{}, &modelapi.ToolCallError{Detail: "duplicate call IDs in one response"}
+		}
+		ids[call.ID] = true
 		if s.runner.Redact(string(call.Arguments)) != string(call.Arguments) {
 			return modelapi.Response{}, fmt.Errorf("tool arguments contain a protected credential or terminal control")
 		}

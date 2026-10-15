@@ -20,14 +20,21 @@ func (capacityFailure) Error() string      { return "context capacity exceeded" 
 func (capacityFailure) ContextLimit() bool { return true }
 
 type capacityGenerator struct {
-	base      *generator
-	failed    bool
-	summaries int
+	base          *generator
+	failed        bool
+	summaries     int
+	activeRequest string
 }
 
 func (g *capacityGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	if handled, err := completionFixture(r, emit); handled {
+		return err
+	}
 	if strings.HasPrefix(r.Messages[0].Content, "# Conversation memory") {
 		g.summaries++
+		if strings.Contains(r.Messages[1].Content, `"ActiveRequest":"Read a"`) {
+			g.activeRequest = "Read a"
+		}
 		var text strings.Builder
 		for _, section := range []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
 			text.WriteString("## " + section + "\n- The requested file was read; report the observation.\n")
@@ -77,14 +84,21 @@ func TestCapacityCompactionDoesNotReplayRead(t *testing.T) {
 	base := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Observed the file"}}
 	g := &capacityGenerator{base: base}
 	e := &executor{}
-	store := &capacityStore{}
+	store := &capacityStore{journal: journal{messages: []modelapi.Message{{Role: "user", Content: "Old request: implement a different project"}}}}
 	r := fixture(base, e, &store.journal)
 	r.Generator = g
 	r.Journal = store
 	r.Usage = &Usage{}
 	r.Memory = &compact.Controller{Repository: store, Session: r.Session, Model: r.Model, Prompt: prompt.Defaults().Compaction, Settings: compact.Defaults(), Redact: r.Redact}
-	result, err := r.Run(context.Background(), "Read a", false, approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 1 || g.summaries != 1 || r.Usage.ModelCalls != 4 {
+	result, err := r.Run(context.Background(), "Read a", approve, emit)
+	if g.activeRequest != "Read a" {
+		t.Fatal("active request missing from compaction input")
+	}
+	last := base.requests[len(base.requests)-1].Messages
+	if !strings.HasSuffix(last[len(last)-1].Content, "Read a") {
+		t.Fatal("current request missing after compaction")
+	}
+	if err != nil || result.Status != Answered || e.executed != 1 || g.summaries != 1 || r.Usage.ModelCalls != 5 {
 		t.Fatalf("result=%+v executions=%d summaries=%d calls=%d err=%v", result, e.executed, g.summaries, r.Usage.ModelCalls, err)
 	}
 }

@@ -21,7 +21,7 @@ type MenuDisplay struct {
 	Field                  *input.Editor
 	Secret                 bool
 	Preview                []PreviewLine
-	Plan, Choices, Details []string
+	Choices, Details       []string
 	Selected               int
 	Thinking               *bool
 	ThinkingSupported      bool
@@ -73,13 +73,6 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 			Text(screen, 0, y, w, strings.Repeat(" ", w), style)
 		}
 		Text(screen, 0, y, w, line.Text, style)
-		y++
-	}
-	for _, line := range display.Plan {
-		if y >= h-5 {
-			break
-		}
-		Text(screen, 0, y, w, line, tcell.StyleDefault)
 		y++
 	}
 	visible := max(1, h-y-2)

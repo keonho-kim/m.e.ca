@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MaxArgumentsBytes = 256 * 1024
+	MaxArgumentsBytes = 256 * 1024 * 1024
 	MaxCalls          = 32
 )
 

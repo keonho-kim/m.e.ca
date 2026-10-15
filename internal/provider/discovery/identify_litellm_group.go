@@ -22,7 +22,7 @@ func (c *Client) identifyLiteLLMGroup(ctx context.Context, model string) (identi
 	}
 	report := identity.Report{Unavailable: true}
 	endpoint := c.serverRoot() + "/model_group/info?model_group=" + url.QueryEscape(model)
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, endpoint, nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, endpoint, nil, 16*1024*1024, &listing); err != nil {
 		return report, err
 	}
 	if len(listing.Data) > 10000 {

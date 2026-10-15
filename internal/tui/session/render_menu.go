@@ -7,7 +7,6 @@ package session
 import (
 	"github.com/keonho-kim/v-code/internal/provider/profile"
 	"github.com/keonho-kim/v-code/internal/tui/modelmenu"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"strings"
@@ -38,9 +37,6 @@ func (a *app) renderMenu(w, h int) {
 	case "manual":
 		display.Title = "Model ID · 검색 또는 직접 입력"
 		display.Candidates = a.modelCandidates()
-	case "planapproval":
-		display.Title = "Awaiting approval"
-		display.Plan = viewport.Wrap(transcript.Plan(a.plan), w)
 	case "approval":
 		display.Title = a.proposal.Name + " " + a.proposal.Target
 		if a.proposal.ConclavePassed {

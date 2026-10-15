@@ -10,11 +10,11 @@ import (
 )
 
 func TestProjectRulesAndBounds(t *testing.T) {
-	text, err := Compose(Defaults().System, "Use focused Go tests.", false)
+	text, err := Compose(Defaults().System, "Use focused Go tests.")
 	if err != nil || !strings.Contains(text, "project-root AGENTS.md") || !strings.Contains(text, "Use focused Go tests.") {
 		t.Fatalf("instructions: %s %v", text, err)
 	}
-	if _, err := Compose(Defaults().System, strings.Repeat("a", MaxInstructionsBytes+1), false); err == nil {
+	if _, err := Compose(Defaults().System, strings.Repeat("a", MaxInstructionsBytes+1)); err == nil {
 		t.Fatal("silently truncated project instructions")
 	}
 }

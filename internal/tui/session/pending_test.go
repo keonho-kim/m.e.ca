@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/agent/run"
 	"testing"
 )
 
@@ -50,5 +51,15 @@ func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 	a.receive(notice{Done: true, Err: context.DeadlineExceeded})
 	if a.busy || a.pending != "" || a.editor.String() != "next request\n\nunsent draft" {
 		t.Fatal("failed worker started or lost pending request")
+	}
+}
+
+func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
+	a := fixture(t)
+	a.busy, a.agentActive = true, true
+	a.pending = "next request"
+	a.receive(notice{Done: true, RunStatus: run.Stopped})
+	if a.pending != "" || a.editor.String() != "next request" || a.busy {
+		t.Fatal("blocked completion consumed the reserved request")
 	}
 }

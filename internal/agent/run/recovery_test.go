@@ -54,12 +54,12 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
 	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Criteria: []string{"Preserve parser cancellation"}, Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
-	if _, err := r.Run(context.Background(), "continue", false, approve, emit); err != nil {
+	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser; preserve parser cancellation", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	if _, err := r.Run(context.Background(), "continue", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	last := g.requests[0].Messages[len(g.requests[0].Messages)-1].Content
-	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "Preserve parser cancellation") || strings.Contains(last, "UNEXECUTED_DRAFT") {
+	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "preserve parser cancellation") || strings.Contains(last, "UNEXECUTED_DRAFT") {
 		t.Fatalf("unsafe recovery context: %s", last)
 	}
 }
@@ -69,7 +69,7 @@ func TestRecoveryDiscardsPartialAndAccountsEveryAttempt(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, j)
 	r.Generator = recoveryGenerator{}
 	r.Usage = &Usage{}
-	result, err := r.Run(context.Background(), "hello", false, approve, emit)
+	result, err := r.Run(context.Background(), "hello", approve, emit)
 	if err != nil || result.Text != "recovered" || r.Usage.ModelCalls != 2 {
 		t.Fatalf("result=%+v calls=%d err=%v", result, r.Usage.ModelCalls, err)
 	}
@@ -94,7 +94,7 @@ func TestRecoveryActiveCallSurvivesElapsedTaskBudget(t *testing.T) {
 		r.Generator = recoveryGenerator{slow: true}
 		r.Limits = DefaultLimits()
 		r.Limits.MaxSeconds, r.Limits.MaxModelSeconds = 1, 1
-		result, err := r.Run(context.Background(), "hello", false, approve, emit)
+		result, err := r.Run(context.Background(), "hello", approve, emit)
 		if err != nil || result.Text != "recovered" {
 			t.Fatalf("active call interrupted: %+v %v", result, err)
 		}
@@ -106,7 +106,7 @@ func TestRecoveryRespectsCallBudget(t *testing.T) {
 	r.Generator = recoveryGenerator{}
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 1
-	_, err := r.Run(context.Background(), "hello", false, approve, emit)
+	_, err := r.Run(context.Background(), "hello", approve, emit)
 	if err == nil || !strings.Contains(err.Error(), "budget exhausted before provider retry") {
 		t.Fatalf("budget error=%v", err)
 	}

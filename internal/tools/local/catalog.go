@@ -7,7 +7,6 @@ package local
 import (
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/policy/shell"
 )
 
 type specification struct {
@@ -26,15 +25,15 @@ func numberField(name, description string, max int) toolapi.Parameter {
 	return toolapi.Parameter{Name: name, Description: description + " Omit or use zero for the default.", Kind: toolapi.Integer, Max: max}
 }
 func specifications() []specification {
-	page := []toolapi.Parameter{filePath(), numberField("offset", "Starting byte offset.", 100000000), numberField("limit", "Maximum bytes to read.", 256*1024)}
+	page := []toolapi.Parameter{filePath(), numberField("offset", "Starting byte offset.", 100000000), numberField("limit", "Maximum bytes to read.", 16*1024*1024)}
 	specs := []specification{
-		{"read_file", "Reading", "Read numbered UTF-8 lines with short edit anchors", page, policy.Read},
-		{"create_directory", "Creating", "Create one empty directory; parent must exist", []toolapi.Parameter{filePath()}, policy.Change},
-		{"write_file", "Writing", "Create a new UTF-8 file or replace an existing file with the supplied complete content. Parent directory must exist. Use edit_file for anchored partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
-		{"edit_file", "Editing", "Replace a previously read line range using its start/end anchors", []toolapi.Parameter{filePath(), {Name: "start_anchor", Description: "Copy the first line#8hex anchor from read_file. Use the literal anchor string.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, {Name: "end_anchor", Description: "Copy the last line#8hex anchor from the same read. For one line, repeat start_anchor.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, textField("new_text", "Exact replacement lines. Exclude anchor labels; preserve whitespace and line endings. Empty means delete the selected lines.", true)}, policy.Change},
+		{"read_file", "Reading", "Read source lines with line#hash anchors. Finish this call before composing dependent edit_file arguments; a first read and its dependent edit cannot share a batch.", page, policy.Read},
+		{"create_directory", "Creating", "Use for directory creation instead of mkdir: creates all paths and missing parents (mkdir -p), accepting existing directories.", []toolapi.Parameter{{Name: "paths", Description: "Directory paths relative to the project root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
+		{"write_file", "Writing", "Create a new UTF-8 file or replace an existing file with the supplied complete content. Use content=empty string for a requested empty file; missing parents are created. Use edit_file for anchored partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
+		{"edit_file", "Editing", "Replace a range using anchors from a completed read_file call. Copy only source into new_text. Default preserve retains the line boundary and newline style.", []toolapi.Parameter{filePath(), {Name: "start_anchor", Description: "Copy the first line#8hex anchor from read_file. Use the literal anchor string.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, {Name: "end_anchor", Description: "Copy the last line#8hex anchor from the same read. For one line, repeat start_anchor.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, textField("new_text", "Exact replacement lines. Exclude anchor labels; preserve whitespace and line endings. Empty means delete the selected lines.", true)}, policy.Change},
 		{"delete_file", "Deleting", "Delete a file or empty directory", []toolapi.Parameter{filePath()}, policy.Change},
 		{"move_file", "Moving", "Move without overwriting the destination", []toolapi.Parameter{filePath(), {Name: "destination", Description: "Destination path relative to the project root.", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}, policy.Change},
-		{"execute_command", "Running", "Run search/listing commands (find, ls, rg, grep), builds, tests or package tools with policy and cancellation. Use read_file before anchored edits and dedicated tools for file changes. Plan queries use built-in reads, basename globs and no gitignore filtering; they never execute a shell. " + shell.PlanQueryHelp, []toolapi.Parameter{textField("command", "Exact shell command to run.", false)}, policy.Command},
+		{"execute_command", "Running", "Run search/listing commands (find, ls, rg, grep), builds, tests or package tools with policy and cancellation. Use read_file for source reads; mkdir uses create_directory, touch/truncate uses write_file, rm uses delete_file, mv uses move_file, and content edits use edit_file. Do not resubmit rejected direct file operations as shell wrappers. Shell syntax, pipelines and redirects follow the host shell under the same Permission policy.", []toolapi.Parameter{textField("command", "Exact shell command to run.", false)}, policy.Command},
 	}
 	for index := range specs {
 		if specs[index].name == "edit_file" || specs[index].name == "write_file" {

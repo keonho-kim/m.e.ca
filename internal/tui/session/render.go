@@ -10,10 +10,14 @@ import (
 )
 
 func (a *app) render() {
+	if a.selectionPage != a.page {
+		a.textSelection.Clear()
+	}
 	a.screen.Clear()
 	a.screen.HideCursor()
 	w, h := a.screen.Size()
 	if w < 12 || h < 4 {
+		a.textSelection.Clear()
 		view.Text(a.screen, 0, 0, w, "Resize terminal", tcell.StyleDefault)
 		a.screen.Show()
 		return
@@ -27,6 +31,7 @@ func (a *app) render() {
 	default:
 		a.renderMenu(w, body)
 	}
-	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings, Planning: a.planMode}, a.shortcuts(), body, w)
+	a.textSelection.Draw(a.screen)
+	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings}, a.shortcuts(), body, w)
 	a.screen.Show()
 }

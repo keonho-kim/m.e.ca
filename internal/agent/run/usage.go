@@ -90,7 +90,7 @@ func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage,
 	defer cancel()
 	final := Event{Kind: "usage", Usage: usage}
 	if saveErr := s.runner.Journal.RecordEvent(flushCtx, s.runner.Session, final); saveErr != nil {
-		return saveErr
+		return errors.Join(errRuntimeRecord, saveErr)
 	}
 	final.TokensPerSecond = rate
 	return s.emit(final)

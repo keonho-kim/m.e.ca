@@ -16,7 +16,7 @@ func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
 	on := true
 	r.Thinking = &on
 	r.ReasoningEffort = "medium"
-	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {
+	if _, err := r.Run(context.Background(), "inspect", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	if len(g.requests) != 2 {

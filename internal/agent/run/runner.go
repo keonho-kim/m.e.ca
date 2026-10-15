@@ -1,6 +1,6 @@
 // Purpose: Define one serial execution worker dependencies, budget usage and result.
 // Pattern: Run use case contracts.
-// Usage: Session composition supplies Runner dependencies before Run, DraftPlan or ExecutePlan.
+// Usage: Session composition supplies Runner dependencies before Run, Draftread-only or ExecutePlan.
 // Related: internal/agent/run/run.go, internal/agent/run/limits.go.
 package run
 
@@ -11,14 +11,13 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
-	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"time"
 )
 
-// Usage is owned by one serial worker and shared across approved Plan steps.
+// Usage is owned by one serial worker and shared across user requests.
 type Usage struct {
 	Iterations, ModelCalls int
 	deadline               time.Time
@@ -37,14 +36,14 @@ type Runner struct {
 	ProjectInstructions      string
 	Prompts                  *prompt.Templates
 	Memory                   *compact.Controller
-	Step                     *planref.StepRef
-	Thinking                 *bool
-	ThinkingSupported        bool
-	Settings                 policy.Settings
-	Limits                   Limits
-	Redact                   func(string) string
-	MaskStream               func(string) string
-	Usage                    *Usage
+
+	Thinking          *bool
+	ThinkingSupported bool
+	Settings          policy.Settings
+	Limits            Limits
+	Redact            func(string) string
+	MaskStream        func(string) string
+	Usage             *Usage
 }
 type Result struct {
 	Text           string

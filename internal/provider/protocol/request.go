@@ -14,7 +14,7 @@ func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelIn
 	payload := wireRequest{Model: request.ModelID, Messages: messages, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
 	payload.Tools = Tools(request.Tools)
 	if len(payload.Tools) > 0 && kind != modelconn.Ollama {
-		parallel := false
+		parallel := true
 		payload.ToolChoice, payload.ParallelCalls = "auto", &parallel
 	}
 	endpoint := baseURL + "/chat/completions"

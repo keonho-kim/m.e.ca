@@ -8,7 +8,6 @@ import (
 	"context"
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/commands"
@@ -21,6 +20,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/tools/local"
 	"github.com/keonho-kim/v-code/internal/tui/browser"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/v-code/internal/tui/selection"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"sync"
 	"time"
@@ -37,6 +37,9 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	clipboardBusy              bool
+	selectionPage              string
+	textSelection              selection.Selection
 	filePreview                *browser.Preview
 	previewCancel              context.CancelFunc
 	previewRevision            int
@@ -69,9 +72,6 @@ type app struct {
 	settings                   policy.Settings
 	selection                  modelconn.Selection
 	client                     *httpclient.Client
-	plan                       *planning.Plan
-	planMode                   bool
-	planStopping               bool
 	thinkingChoice             bool
 	page                       string
 	choices                    []string

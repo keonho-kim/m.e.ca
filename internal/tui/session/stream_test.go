@@ -57,7 +57,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = modelconn.Selection{Connection: connection, Model: "streaming-model"}
 	a.output.Append(transcript.User("hello"), false)
-	a.startTask("hello", nil)
+	a.startTask("hello")
 	for a.stream != "first" {
 		select {
 		case n := <-a.events:

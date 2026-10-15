@@ -5,12 +5,14 @@
 package session
 
 import (
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 )
 
 func (a *app) shortcuts() []view.Shortcut {
+	if a.textSelection.Active() {
+		return []view.Shortcut{{Key: "^C / Cmd+C", Label: "복사"}, {Key: "Esc", Label: "선택 해제"}}
+	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}
 	if a.filePreview != nil {
 		controls := []view.Shortcut{{Key: "Esc", Label: "닫기"}}
@@ -127,9 +129,6 @@ func (a *app) inputShortcuts() []view.Shortcut {
 	}
 	if err == nil && command.Kind != commands.Message && command.Kind != commands.Empty {
 		label = "실행"
-	}
-	if !a.busy && a.planMode && a.plan != nil && a.plan.Status == planning.AwaitingApproval && a.editor.String() == "" {
-		label = "승인 메뉴"
 	}
 	return append(controls, view.Shortcut{Key: "Enter", Label: label})
 }

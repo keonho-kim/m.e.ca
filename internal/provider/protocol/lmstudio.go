@@ -31,7 +31,7 @@ func lmPayload(model string, messages []Message, maxOutput int, effort string, t
 		body.Tools = append(body.Tools, map[string]any{"type": "function", "name": tool.Function.Name, "description": tool.Function.Description, "parameters": tool.Function.Parameters})
 	}
 	if len(body.Tools) > 0 {
-		parallel := false
+		parallel := true
 		body.Parallel, body.ToolChoice = &parallel, "auto"
 	}
 	if effort != "" {

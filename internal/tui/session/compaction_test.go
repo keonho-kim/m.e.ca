@@ -39,6 +39,7 @@ func TestCompactionContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls atomic.Int64
+	var decisions atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		var body struct {
@@ -54,6 +55,9 @@ func TestCompactionContext(t *testing.T) {
 		}
 		reply := "Remembered the earlier goal"
 		if strings.Contains(body.Messages[0].Content, "# Conversation memory") {
+			if !strings.Contains(body.Messages[1].Content, `"ActiveRequest":"Continue the earlier goal"`) {
+				t.Error("active request missing from summary input")
+			}
 			var b strings.Builder
 			for _, name := range []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
 				b.WriteString("## " + name + "\n- Earlier goal: update src/auth.go; pending until verified.\n")
@@ -63,16 +67,17 @@ func TestCompactionContext(t *testing.T) {
 			if !strings.Contains(body.Messages[1].Content, "Earlier goal: update src/auth.go") {
 				t.Error("committed memory missing")
 			}
-			found := false
+			want := "Continue the earlier goal"
+			if decisions.Add(1) > 1 {
+				want = "New goal after compaction"
+			}
 			for _, message := range body.Messages {
 				if message.Role == "user" && message.Content == "Earlier goal: update src/auth.go" {
 					t.Error("summarized source replayed as raw history")
 				}
-				if message.Role == "user" && (message.Content == "Continue the earlier goal" || message.Content == "New goal after compaction") {
-					found = true
-				}
+
 			}
-			if !found {
+			if last := body.Messages[len(body.Messages)-1]; last.Role != "user" || !strings.HasSuffix(last.Content, want) {
 				t.Error("current question lost inside compaction")
 			}
 		}
@@ -96,13 +101,13 @@ func TestCompactionContext(t *testing.T) {
 	on := true
 	effort := "medium"
 	a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Profile: "qwen3.8-27b", Thinking: &on, ReasoningEffort: &effort}
-	a.startTask("Continue the earlier goal", nil)
+	a.startTask("Continue the earlier goal")
 	drainTask(t, a, false)
 	memory, err := a.opts.Store.Memory(ctx, a.opts.Session.ID)
 	if err != nil || memory.Revision != 1 || !strings.Contains(memory.Markdown, "src/auth.go") {
 		t.Fatalf("memory: %+v %v", memory, err)
 	}
-	a.startTask("New goal after compaction", nil)
+	a.startTask("New goal after compaction")
 	drainTask(t, a, false)
 	usage, err := a.opts.Store.MemoryWatermark(ctx, a.opts.Session.ID, memory.UsageThrough)
 	if err != nil || usage.Tokens != 2*(20+7) {

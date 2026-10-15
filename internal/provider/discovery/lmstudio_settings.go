@@ -17,7 +17,7 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 	info := connection.ModelInfo{ID: model}
 
 	var listing lmModelListing
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/api/v1/models", nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/api/v1/models", nil, 16*1024*1024, &listing); err != nil {
 		return info, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {

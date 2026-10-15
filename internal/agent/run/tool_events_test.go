@@ -13,7 +13,7 @@ import (
 func TestToolEventsCarryCallAndOutput(t *testing.T) {
 	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "README.md"}), "review"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
-	if _, err := r.Run(context.Background(), "inspect", false, approve, emit); err != nil {
+	if _, err := r.Run(context.Background(), "inspect", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	found := false

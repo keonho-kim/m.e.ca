@@ -1,22 +1,20 @@
-// Purpose: Verify private SQLite session, history and Plan recovery without models.
+// Purpose: Verify private SQLite session, history and read-only recovery without models.
 // Pattern: Integration tests using temporary storage.
 // Usage: go test ./internal/storage/sqlite.
-// Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/plans.go.
+// Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/runs.go.
 
 package sqlite
 
 import (
 	"context"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
-func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
+func TestSessionHistorySurvivesRestart(t *testing.T) {
 	ctx := context.Background()
 	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
 	if err != nil {
@@ -30,20 +28,6 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	session := store.Session()
 	path := store.path
 	if err := store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "Fix auth"}); err != nil {
-		t.Fatal(err)
-	}
-	plan, err := planning.NewPlan("plan_1", session.ID, "Fix auth", []string{"Read", "Change"}, time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.SavePlan(ctx, plan); err != nil {
-		t.Fatal(err)
-	}
-	revised, err := planning.RevisePlan(plan, "Fix auth safely", []string{"Read", "Test", "Change"}, time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.SavePlan(ctx, revised); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.SaveSettings(ctx, policy.Settings{Scope: policy.System}); err != nil {
@@ -68,14 +52,6 @@ func TestSessionHistoryAndPlanSurviveRestart(t *testing.T) {
 	history, err := store.Messages(ctx, session.ID, 100)
 	if err != nil || len(history) != 1 || history[0].Content != "Fix auth" {
 		t.Fatalf("history: %+v, %v", history, err)
-	}
-	recovered, err := store.LatestPlan(ctx, session.ID)
-	if err != nil || recovered == nil || recovered.Revision != 2 || recovered.Status != planning.AwaitingApproval {
-		t.Fatalf("plan: %+v, %v", recovered, err)
-	}
-	previous, err := store.PlanRevision(ctx, session.ID, "plan_1", 1)
-	if err != nil || previous.Objective != "Fix auth" {
-		t.Fatalf("prior revision: %+v, %v", previous, err)
 	}
 	settings, err := store.Settings(ctx)
 	if err != nil || settings.Scope != policy.System || settings.Permission != "" {
@@ -120,30 +96,5 @@ func TestHistoryIsBoundedAndSessionOverridesAreValidated(t *testing.T) {
 	}
 	if err := store.SaveSettings(ctx, policy.Settings{Permission: "invalid"}); err == nil {
 		t.Fatal("stored invalid session policy")
-	}
-}
-
-func TestStoredPlanRevisionCannotBeRewritten(t *testing.T) {
-	ctx := context.Background()
-	store, err := newTestStore(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := store.Close(); err != nil {
-			t.Error(err)
-		}
-	})
-	session := store.Session()
-	plan, err := planning.NewPlan("plan_1", session.ID, "approved objective", []string{"read"}, time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.SavePlan(ctx, plan); err != nil {
-		t.Fatal(err)
-	}
-	plan.Objective = "different operation"
-	if err := store.SavePlan(ctx, plan); err == nil {
-		t.Fatal("rewrote an existing Plan revision")
 	}
 }

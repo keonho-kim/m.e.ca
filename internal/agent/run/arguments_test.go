@@ -13,7 +13,7 @@ import (
 func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": 12}), nativeCall("read_file", map[string]any{"path": "file.txt"}), "Inspected"}}
 	e, j := &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "Read file.txt", false, approve, emit)
+	result, err := fixture(g, e, j).Run(context.Background(), "Read file.txt", approve, emit)
 	if err != nil || result.Status != Answered || e.prepared != 1 || len(g.requests) != 3 {
 		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
@@ -31,15 +31,15 @@ func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
 func TestNativeArgumentFailureNeverPreparesATool(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file"}), "Need the file content", "Need the file content"}}
 	e, j := &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "Create file", false, approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != Stopped {
+	result, err := fixture(g, e, j).Run(context.Background(), "Create file", approve, emit)
+	if err != nil || e.prepared != 0 || result.Status != Stopped || !result.HadToolFailure {
 		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
 }
 
 func TestGreetingDoesNotRequireATool(t *testing.T) {
 	g, e, j := &generator{replies: []string{"Hello"}}, &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "Hello", false, approve, emit)
+	result, err := fixture(g, e, j).Run(context.Background(), "Hello", approve, emit)
 	if err != nil || result.Status != Answered || e.prepared != 0 {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -48,7 +48,7 @@ func TestGreetingDoesNotRequireATool(t *testing.T) {
 func TestLongConversationAnswer(t *testing.T) {
 	answer := strings.Repeat("Detailed answer. ", 2048) + "End."
 	g := &generator{replies: []string{answer}}
-	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "Explain in detail", false, approve, emit)
+	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "Explain in detail", approve, emit)
 	if err != nil || result.Status != Answered || result.Text != answer {
 		t.Fatalf("long answer bytes=%d status=%s: %v", len(result.Text), result.Status, err)
 	}
@@ -60,8 +60,8 @@ func TestNativeArgumentsHonorConfiguredBudget(t *testing.T) {
 	r := fixture(g, e, &journal{})
 	r.Limits = DefaultLimits()
 	r.Limits.MaxArgumentBytes = 1024
-	result, err := r.Run(context.Background(), "create a", false, approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != Stopped {
+	result, err := r.Run(context.Background(), "create a", approve, emit)
+	if err != nil || e.prepared != 0 || result.Status != Stopped || !result.HadToolFailure {
 		t.Fatalf("prepared=%d result=%+v: %v", e.prepared, result, err)
 	}
 }

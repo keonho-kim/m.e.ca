@@ -20,7 +20,7 @@ func TestRecordBindsExactCall(t *testing.T) {
 	if record.Matches(call) {
 		t.Fatal("intent reused for another operation")
 	}
-	for _, reason := range []string{"", "line\nbreak", strings.Repeat("x", 257)} {
+	for _, reason := range []string{"", strings.Repeat("x", tool.MaxReasonBytes+1)} {
 		if _, err := Bind(call, reason, "run_1"); err == nil {
 			t.Fatalf("accepted %q", reason)
 		}

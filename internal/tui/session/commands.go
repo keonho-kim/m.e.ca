@@ -5,7 +5,6 @@
 package session
 
 import (
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
@@ -18,11 +17,6 @@ func (a *app) submit() {
 		return
 	}
 	if command.Kind == commands.Empty {
-		if a.planMode && a.plan != nil && a.plan.Status == planning.AwaitingApproval {
-			a.page = "planapproval"
-			a.choices = []string{"Approve", "Request changes"}
-			a.choice = 0
-		}
 		return
 	}
 	if command.Kind == commands.Exit {
@@ -38,10 +32,6 @@ func (a *app) submit() {
 		if a.page == "files" {
 			a.page = "chat"
 			a.editor.Set("")
-			return
-		}
-		if a.planMode {
-			a.status = "Plan approval is required"
 			return
 		}
 		if a.busy {
@@ -69,11 +59,6 @@ func (a *app) submit() {
 		}
 	case commands.Directory:
 		a.openFiles(command.Argument)
-	case commands.Plan:
-		if err := a.togglePlan(); err != nil {
-			a.fail(err)
-			return
-		}
 	case commands.Message:
 		if a.client == nil || a.selection.Model == "" {
 			a.status = "Select a model using !model"
@@ -87,12 +72,12 @@ func (a *app) submit() {
 		a.historyIndex = len(a.inputs)
 		a.output.Append(transcript.User(a.opts.Vault.Redact(command.Argument)), false)
 		a.page = "chat"
-		a.startTask(command.Argument, nil)
+		a.startTask(command.Argument)
 	}
 	a.editor.Set("")
 	a.closeCommandHints()
 }
 
 func (a *app) canSubmit(kind commands.Kind) bool {
-	return !a.busy || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession || kind == commands.Plan && a.planMode && a.taskCancel != nil
+	return !a.busy || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
 }

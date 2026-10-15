@@ -14,7 +14,6 @@ func TestParse(t *testing.T) {
 		argument string
 	}{
 		{"   ", Empty, ""},
-		{"  !plan  ", Plan, ""},
 		{"!model", Model, ""},
 		{"!new", NewSession, ""},
 		{"!permission", Permission, ""},
@@ -35,7 +34,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseRejectsUnknownOrAmbiguousCommands(t *testing.T) {
-	for _, input := range []string{"!scope", "!directory", "!unknown", "!model extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
+	for _, input := range []string{"!plan", "!scope", "!directory", "!unknown", "!model extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
 		if _, err := Parse(input); err == nil {
 			t.Errorf("accepted invalid command %q", input)
 		}

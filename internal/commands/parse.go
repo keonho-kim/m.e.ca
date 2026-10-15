@@ -17,7 +17,6 @@ type Kind uint8
 const (
 	Empty Kind = iota
 	Message
-	Plan
 	Model
 	Permission
 	Directory
@@ -26,7 +25,7 @@ const (
 	NewSession
 )
 
-const MaxInputBytes = 64 * 1024
+const MaxInputBytes = 16 * 1024 * 1024
 
 type Command struct {
 	Kind     Kind

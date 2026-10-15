@@ -22,6 +22,12 @@ func (f Formatter) arguments(call tool.Call) string {
 			text.WriteString(indentTool(field.label + ": " + f.Redact(value)))
 		}
 	}
+	var paths []string
+	if json.Unmarshal(fields["paths"], &paths) == nil {
+		for _, path := range paths {
+			text.WriteString(indentTool("경로: " + f.Redact(path)))
+		}
+	}
 	if call.Name == "edit_file" {
 		var first, last int
 		if json.Unmarshal(fields["start_line"], &first) == nil && json.Unmarshal(fields["end_line"], &last) == nil {

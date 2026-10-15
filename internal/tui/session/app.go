@@ -27,7 +27,7 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 		return Exit, err
 	}
 	inputEvents := screen.EventQ()
-	screen.EnableMouse(tcell.MouseButtonEvents)
+	screen.EnableMouse(tcell.MouseDragEvents)
 	screen.EnablePaste()
 	for !app.exit {
 		app.render()
@@ -39,6 +39,7 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 			case *tcell.EventKey:
 				app.keyEvent(e)
 			case *tcell.EventResize:
+				app.textSelection.Clear()
 				screen.Sync()
 			case *tcell.EventMouse:
 				app.mouse(e)

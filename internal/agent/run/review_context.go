@@ -30,7 +30,7 @@ func (s *execution) reviewContext(ctx context.Context, needed conclave.ContextRe
 	if err := s.record(ctx, Event{Kind: "self_grounding", Grounding: &record, Internal: true}); err != nil {
 		return nil, err
 	}
-	op, err := s.runner.Tools.Prepare(ctx, s.runner.Settings, true, call)
+	op, err := s.runner.Tools.Prepare(ctx, s.runner.Settings, call)
 	if err != nil {
 		return nil, err
 	}

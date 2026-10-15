@@ -20,7 +20,7 @@ func anchoredEdit(t *testing.T, e *Executor, path string, first, last int, repla
 	if err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, false, call("read_file", string(args)))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call("read_file", string(args)))
 	if err != nil {
 		t.Fatal(err)
 	}

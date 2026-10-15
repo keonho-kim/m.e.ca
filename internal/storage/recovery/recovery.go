@@ -6,12 +6,9 @@ package recovery
 
 import (
 	"context"
-	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"time"
 )
 
 func Restore(ctx context.Context, s Store, session string) error {
@@ -42,21 +39,6 @@ func Restore(ctx context.Context, s Store, session string) error {
 			delete(pending, call.ID)
 			if err = s.RecordEvent(ctx, session, run.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}); err != nil {
 				return err
-			}
-		}
-	}
-	p, err := s.LatestPlan(ctx, session)
-	if err != nil || p == nil {
-		return err
-	}
-	if p.Status == planning.PlanRunning {
-		for i, step := range p.Steps {
-			if step.Status == "running" {
-				next, err := planning.AdvanceStep(*p, i, "interrupted", time.Now())
-				if err != nil {
-					return fmt.Errorf("recover Plan: %w", err)
-				}
-				return s.SavePlan(ctx, next)
 			}
 		}
 	}

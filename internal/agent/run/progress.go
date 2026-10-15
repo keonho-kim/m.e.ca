@@ -6,18 +6,15 @@ package run
 
 import (
 	"context"
-	"fmt"
 )
 
 func (s *execution) recoverProgress(ctx context.Context) error {
-	if s.checkpoint.Recoveries >= 2 {
-		return fmt.Errorf("execution stalled after two recovery rounds without sufficient new evidence; last observation: %s", excerpt(s.checkpoint.Observation, 512))
-	}
-	s.checkpoint.Recoveries++
-	s.checkpoint.NoProgress = 0
-	s.checkpoint.Observation = fmt.Sprintf("Recovery %d/2: reuse observed results and choose a different action. Read only a missing range or changed state. Identify one unmet request or actual failure; avoid restarting the full request analysis. If blocked, explain the blocker in your answer. Previous observation: %s", s.checkpoint.Recoveries, excerpt(s.checkpoint.Observation, 1024))
-	if err := s.record(ctx, Event{Kind: "recovery", Text: s.checkpoint.Observation}); err != nil {
+	finished, err := s.judgeCompletion(ctx, "", "repeated actions or file-state cycle")
+	if err != nil {
 		return err
 	}
-	return s.persist(ctx)
+	if finished {
+		s.terminal = true
+	}
+	return nil
 }

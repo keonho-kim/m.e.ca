@@ -6,6 +6,7 @@ package run
 
 import (
 	"encoding/json"
+	"github.com/keonho-kim/v-code/internal/agent/completion"
 	contextbuild "github.com/keonho-kim/v-code/internal/agent/context"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
@@ -30,22 +31,24 @@ func (s *execution) request(question string, role inference.Role) (modelapi.Requ
 	}
 	var defs []toolapi.Definition
 	for _, d := range s.definitions {
-		if s.allowTool(d.Effect) == nil {
-			defs = append(defs, withCriteria(toolapi.WithIntent(d)))
-		}
+		defs = append(defs, toolapi.WithIntent(d))
 	}
-	if s.planning {
-		defs = append(defs, planDefinition())
+
+	if s.checkpoint.Phase == "reporting" {
+		defs = nil
 	}
 	if s.changed {
-		question += "\nReport completed changes, actual checks and observations, and anything unverified. Use recorded outcomes; do not infer overall correctness from a successful command. If the request is satisfied, answer rather than polishing speculatively."
+		question += "\nUse the original user request and recorded outcomes to identify only remaining work. Decide after observing results. A final answer is a completion proposal checked against the fixed request. Do not add scope or repeat unchanged checks. When none remain, report without further tools. Report completed changes, actual checks and observations, and anything unverified. Use recorded outcomes; do not infer overall correctness from a successful command. If the request is satisfied, answer rather than polishing speculatively."
 	}
 	facts := struct {
-		Criteria      []string `json:"completion_criteria_model_claims,omitempty"`
-		Blocker       string   `json:"blocker,omitempty"`
-		PendingReview bool     `json:"pending_review,omitempty"`
-		Observation   string   `json:"observation,omitempty"`
-	}{s.checkpoint.Criteria, s.checkpoint.Blocker, s.checkpoint.PendingReview, s.checkpoint.Observation}
+		JudgementCurrent bool             `json:"judgement_current"`
+		Work             completion.State `json:"work"`
+		ReportReason     string           `json:"report_reason,omitempty"`
+		LastChange       string           `json:"last_successful_file_change,omitempty"`
+		Blocker          string           `json:"blocker,omitempty"`
+		PendingReview    bool             `json:"pending_review,omitempty"`
+		Observation      string           `json:"observation,omitempty"`
+	}{s.checkpoint.Work.Verdict != nil && s.checkpoint.Work.Reviewed == s.checkpoint.Work.Fingerprint(s.checkpoint.Objective), s.checkpoint.Work, s.checkpoint.ReportReason, s.checkpoint.LastChange, s.checkpoint.Blocker, s.checkpoint.PendingReview, s.checkpoint.Observation}
 	body, err := json.Marshal(facts)
 	if err != nil {
 		return modelapi.Request{}, err

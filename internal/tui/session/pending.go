@@ -51,7 +51,7 @@ func (a *app) finishPending(success bool) {
 	if a.pending == "" {
 		return
 	}
-	if !success || a.exit || a.planMode || a.ctx.Err() != nil {
+	if !success || a.exit || a.ctx.Err() != nil {
 		a.restorePending()
 		return
 	}

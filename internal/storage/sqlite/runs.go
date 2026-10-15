@@ -22,7 +22,7 @@ func (s *Store) LatestRun(ctx context.Context, session string) (*run.Checkpoint,
 	if err != nil {
 		return nil, err
 	}
-	if len(body) > 512*1024 {
+	if len(body) > maxEventBytes {
 		return nil, fmt.Errorf("run checkpoint exceeds limit")
 	}
 	var event run.Event

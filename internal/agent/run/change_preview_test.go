@@ -18,8 +18,8 @@ type previewExecutor struct {
 	preview string
 }
 
-func (e *previewExecutor) Prepare(ctx context.Context, settings policy.Settings, planning bool, c toolapi.Call) (toolapi.Execution, error) {
-	_, err := e.executor.Prepare(ctx, settings, planning, c)
+func (e *previewExecutor) Prepare(ctx context.Context, settings policy.Settings, c toolapi.Call) (toolapi.Execution, error) {
+	_, err := e.executor.Prepare(ctx, settings, c)
 	return e, err
 }
 func (e *previewExecutor) Approval() toolapi.Approval {
@@ -38,7 +38,7 @@ func TestChangePreviewUsesExecutedCandidate(t *testing.T) {
 	r := fixture(g, &e.executor, j)
 	r.Tools = e
 	r.Settings.Permission = policy.AllowAll
-	_, err := r.Run(context.Background(), "replace text", false, approve, emit)
+	_, err := r.Run(context.Background(), "replace text", approve, emit)
 	if err != nil {
 		t.Fatal(err)
 	}

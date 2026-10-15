@@ -15,8 +15,9 @@ type Parameters struct {
 	MaxOutputTokens int     `toml:"max_output_tokens"`
 }
 type Settings struct {
+	Completion Parameters `toml:"completion"`
 	Agent      Parameters `toml:"agent"`
-	Plan       Parameters `toml:"plan"`
+
 	Conclave   Parameters `toml:"conclave"`
 	Compaction Parameters `toml:"compaction"`
 	Diagnostic Parameters `toml:"diagnostic"`
@@ -24,8 +25,9 @@ type Settings struct {
 
 func Defaults() Settings {
 	return Settings{
+		Completion: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 2048},
 		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 0},
-		Plan:       Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 12800},
+
 		Conclave:   Parameters{Thinking: "off_if_supported", Temperature: 0.4, MaxOutputTokens: 12800},
 		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
 		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
@@ -44,7 +46,7 @@ func (p Parameters) Check() error {
 	return nil
 }
 func (s Settings) Check() error {
-	for _, role := range []Role{Agent, Plan, Conclave, Compaction, Diagnostic} {
+	for _, role := range []Role{Agent, Completion, Conclave, Compaction, Diagnostic} {
 		if _, err := Resolve(&s, role); err != nil {
 			return err
 		}
@@ -60,8 +62,8 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 	switch role {
 	case Agent:
 		p = s.Agent
-	case Plan:
-		p = s.Plan
+	case Completion:
+		p = s.Completion
 	case Conclave:
 		p = s.Conclave
 	case Compaction:

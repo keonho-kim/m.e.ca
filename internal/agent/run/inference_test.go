@@ -31,7 +31,7 @@ func TestInferenceToolPhasesAndConclave(t *testing.T) {
 	templates.System += "\nMAIN-AGENT-ONLY"
 	templates.Conclave += "\nCUSTOM-REVIEW-GUIDANCE"
 	r.Prompts = &templates
-	result, err := r.Run(context.Background(), "change and verify", false, approve, emit)
+	result, err := r.Run(context.Background(), "change and verify", approve, emit)
 	if err != nil || result.Status != Answered {
 		t.Fatalf("%+v %v", result, err)
 	}

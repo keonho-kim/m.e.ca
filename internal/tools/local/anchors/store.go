@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 )
 
-const maxBytes = 4 * 1024 * 1024
+const maxBytes = 32 * 1024 * 1024
 const maxReads = 64
 
 type snapshot struct {

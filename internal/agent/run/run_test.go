@@ -18,18 +18,29 @@ import (
 )
 
 type generator struct {
-	review            func(context.Context, modelapi.Request, func(modelapi.Event) error) error
-	mu                sync.Mutex
-	reviewRequests    []modelapi.Request
-	replies           []string
-	requests          []modelapi.Request
-	groundingRequests []modelapi.Request
-	cancelAt          int
-	cancel            context.CancelFunc
-	native            bool
+	completion         func(context.Context, modelapi.Request, func(modelapi.Event) error) error
+	completionRequests []modelapi.Request
+	review             func(context.Context, modelapi.Request, func(modelapi.Event) error) error
+	mu                 sync.Mutex
+	reviewRequests     []modelapi.Request
+	replies            []string
+	requests           []modelapi.Request
+	groundingRequests  []modelapi.Request
+	cancelAt           int
+	cancel             context.CancelFunc
+	native             bool
 }
 
 func (g *generator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "REVIEW COMPLETION.") {
+		g.completionRequests = append(g.completionRequests, r)
+		if g.completion != nil {
+			return g.completion(ctx, r, emit)
+		}
+	}
+	if handled, err := completionFixture(r, emit); handled {
+		return err
+	}
 	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "REVIEW CANDIDATE ") {
 		g.mu.Lock()
 		g.reviewRequests = append(g.reviewRequests, r)
@@ -85,7 +96,7 @@ func (*executor) Definitions() []toolapi.Definition {
 	definitions := []toolapi.Definition{{Name: "write_file", Description: "Write", Effect: policy.Change, Parameters: []toolapi.Parameter{path, {Name: "content", Description: "Content?", Kind: toolapi.Text, Required: true, AllowEmpty: true, MaxBytes: 4096}}}, {Name: "read_file", Description: "Read", Effect: policy.Read, Parameters: []toolapi.Parameter{path}}, {Name: "execute_command", Description: "Run", Effect: policy.Command, Parameters: []toolapi.Parameter{{Name: "command", Description: "Command?", Kind: toolapi.Text, Required: true, MaxBytes: 4096}}}}
 	return definitions
 }
-func (e *executor) Prepare(_ context.Context, _ policy.Settings, _ bool, c toolapi.Call) (toolapi.Execution, error) {
+func (e *executor) Prepare(_ context.Context, _ policy.Settings, c toolapi.Call) (toolapi.Execution, error) {
 	e.prepared++
 	e.calls = append(e.calls, c)
 	return e, nil
@@ -165,7 +176,7 @@ func approve(context.Context, toolapi.Approval) (bool, error) { return true, nil
 func TestDeniedToolStopsAndPersistsStructuredResult(t *testing.T) {
 	g, e, j := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"})}}, &executor{approval: true}, &journal{}
 	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "change", false, func(context.Context, toolapi.Approval) (bool, error) { return false, nil }, emit)
+	result, err := r.Run(context.Background(), "change", func(context.Context, toolapi.Approval) (bool, error) { return false, nil }, emit)
 	if !errors.Is(err, errApprovalDenied) || e.executed != 0 || e.prepared != 1 || result.Status != Stopped || !result.HadToolFailure {
 		t.Fatalf("denial: %+v %v", result, err)
 	}
@@ -186,7 +197,7 @@ func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "unfinished"})}, cancelAt: 1, cancel: cancel}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
-	result, err := r.Run(ctx, "change", false, approve, emit)
+	result, err := r.Run(ctx, "change", approve, emit)
 	if !errors.Is(err, context.Canceled) || e.prepared != 0 || e.executed != 0 || result.Status != Interrupted {
 		t.Fatalf("partial argument: %+v %v", result, err)
 	}
@@ -204,7 +215,7 @@ func TestChangesAllowFinalReportWithoutCheck(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"}), "File changed; tests were not run"}}
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "change", false, approve, emit)
+	result, err := r.Run(context.Background(), "change", approve, emit)
 	if err != nil || result.Status != Answered {
 		t.Fatalf("unchecked completion: %+v %v", result, err)
 	}
@@ -214,7 +225,7 @@ func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
-	result, err := r.Run(context.Background(), "change", false, approve, emit)
+	result, err := r.Run(context.Background(), "change", approve, emit)
 	if err != nil || result.Status != Answered {
 		t.Fatalf("completion: %+v %v", result, err)
 	}
@@ -232,7 +243,7 @@ func TestRalphLoopCanContinueBeyondThirtyTwoActions(t *testing.T) {
 	replies = append(replies, nativeCall("read_file", map[string]any{"path": "final"}), "Inspected")
 	g, e, j := &generator{replies: replies}, &executor{}, &journal{}
 	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "inspect files", false, approve, emit)
+	result, err := r.Run(context.Background(), "inspect files", approve, emit)
 	if err != nil || result.Status != Answered || e.executed != 41 {
 		t.Fatalf("long run: %s %d %v", result.Status, e.executed, err)
 	}
@@ -243,26 +254,17 @@ func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
 		native  bool
 		limit   int
 		want    string
-	}{{strings.Split(strings.Repeat("|", 8), "|"), false, 128, "stalled"}, {[]string{nativeCall("read_file", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 128, "stalled"}} {
+	}{{strings.Split(strings.Repeat("|", 8), "|"), false, 128, "No successful operation was observed"}, {[]string{nativeCall("read_file", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 128, "No successful operation was observed"}} {
 		g, e, j := &generator{replies: tc.replies, native: tc.native}, &executor{}, &journal{}
 		r := fixture(g, e, j)
 		r.Limits = DefaultLimits()
 		r.Limits.MaxIterations = tc.limit
-		result, err := r.Run(context.Background(), "work", false, approve, emit)
-		if err == nil || !strings.Contains(err.Error(), tc.want) || result.Status != Stopped {
+		result, err := r.Run(context.Background(), "work", approve, emit)
+		if err != nil || !strings.Contains(result.Text, tc.want) || result.Status != Stopped {
 			t.Fatalf("stop: %+v %v", result, err)
 		}
 	}
 }
-func TestPlanMutationRejectedBeforeArgumentCollection(t *testing.T) {
-	g, e, j := &generator{replies: []string{nativeCall("write_file", nil), "Read-only planning"}}, &executor{}, &journal{}
-	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "plan", true, approve, emit)
-	if err != nil || result.Status != Answered || e.prepared != 0 || len(g.requests) != 2 {
-		t.Fatalf("planning mutation: %v", err)
-	}
-}
-
 func TestApprovedStepsShareOneCallBudget(t *testing.T) {
 	usage := &Usage{}
 	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "file"}), "first", "second"}}, &executor{}, &journal{}
@@ -270,11 +272,11 @@ func TestApprovedStepsShareOneCallBudget(t *testing.T) {
 	r.Usage = usage
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 2
-	if _, err := r.Run(context.Background(), "step one", false, approve, emit); err != nil {
+	if _, err := r.Run(context.Background(), "step one", approve, emit); err != nil {
 		t.Fatal(err)
 	}
-	result, err := r.Run(context.Background(), "step two", false, approve, emit)
-	if err == nil || result.Status != Stopped || len(g.requests) != 2 {
+	result, err := r.Run(context.Background(), "step two", approve, emit)
+	if err != nil || result.Status != Stopped || len(g.requests) != 2 || result.Text == "" {
 		t.Fatalf("budget reset between steps: %+v %v", result, err)
 	}
 }

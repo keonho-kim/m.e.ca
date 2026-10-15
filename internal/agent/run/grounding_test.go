@@ -13,7 +13,7 @@ import (
 func TestGroundingMissingReasonNeverPrepares(t *testing.T) {
 	g := &generator{replies: []string{`native:{"id":"c","name":"read_file","arguments":{"path":"a"}}`, "Need a reason."}}
 	e := &executor{}
-	result, err := fixture(g, e, &journal{}).Run(context.Background(), "inspect", false, approve, emit)
+	result, err := fixture(g, e, &journal{}).Run(context.Background(), "inspect", approve, emit)
 	if err != nil || e.prepared != 0 || !result.HadToolFailure {
 		t.Fatalf("%+v prepared=%d: %v", result, e.prepared, err)
 	}
@@ -21,7 +21,7 @@ func TestGroundingMissingReasonNeverPrepares(t *testing.T) {
 func TestGroundingPersistenceFailureBlocksPreparation(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"})}}
 	e := &executor{}
-	_, err := fixture(g, e, &journal{failKind: "self_grounding"}).Run(context.Background(), "inspect", false, approve, emit)
+	_, err := fixture(g, e, &journal{failKind: "self_grounding"}).Run(context.Background(), "inspect", approve, emit)
 	if err == nil || e.prepared != 0 {
 		t.Fatalf("prepared=%d err=%v", e.prepared, err)
 	}
@@ -29,7 +29,7 @@ func TestGroundingPersistenceFailureBlocksPreparation(t *testing.T) {
 func TestGroundingPersistsAndStaysInContext(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Observed a."}}
 	e, j := &executor{}, &journal{}
-	_, err := fixture(g, e, j).Run(context.Background(), "inspect", false, approve, emit)
+	_, err := fixture(g, e, j).Run(context.Background(), "inspect", approve, emit)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,8 +33,8 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	r.Tools = tools
 	r.Settings.Scope = policy.System
 	approvals := 0
-	result, err := r.Run(context.Background(), "run check", false, func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err != nil || result.Status != Answered || approvals != 1 || len(g.requests) != 2 {
+	result, err := r.Run(context.Background(), "run check", func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
+	if err != nil || result.Status != Stopped || approvals != 1 || len(g.requests) != 2 {
 		t.Fatalf("result=%+v err=%v approvals=%d requests=%d", result, err, approvals, len(g.requests))
 	}
 	found := false
@@ -83,8 +83,8 @@ func TestSandboxSetupFailureReachesModel(t *testing.T) {
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
 	r.Settings.Permission = policy.AllowAll
-	result, err := r.Run(context.Background(), "inspect execution limits", false, approve, emit)
-	if err != nil || result.Status != Answered || !result.HadToolFailure {
+	result, err := r.Run(context.Background(), "inspect execution limits", approve, emit)
+	if err != nil || result.Status != Stopped || !result.HadToolFailure {
 		t.Fatalf("result=%+v %v", result, err)
 	}
 	if _, err := os.Stat(target); !os.IsNotExist(err) {

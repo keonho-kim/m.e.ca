@@ -7,9 +7,9 @@ package run
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/agent/completion"
 	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
-	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
@@ -22,18 +22,19 @@ const (
 	Stopped     Status = "stopped"
 	Unverified  Status = "unverified"
 	Interrupted Status = "interrupted"
-	PlanReady   Status = "plan_ready"
 )
 
 type Checkpoint struct {
-	Criteria           []string                   `json:"completion_criteria,omitempty"`
-	Blocker            string                     `json:"blocker,omitempty"`
-	PendingReview      bool                       `json:"pending_review"`
-	Conclave           *conclave.Result           `json:"conclave,omitempty"`
-	Recoveries         int                        `json:"recoveries"`
-	ChangeRevision     int                        `json:"change_revision"`
-	Grounding          *grounding.Record          `json:"grounding,omitempty"`
-	Step               *planref.StepRef           `json:"step,omitempty"`
+	Work          completion.State `json:"work"`
+	ReportReason  string           `json:"report_reason,omitempty"`
+	LastChange    string           `json:"last_change,omitempty"`
+	Blocker       string           `json:"blocker,omitempty"`
+	PendingReview bool             `json:"pending_review"`
+	Conclave      *conclave.Result `json:"conclave,omitempty"`
+
+	ChangeRevision int               `json:"change_revision"`
+	Grounding      *grounding.Record `json:"grounding,omitempty"`
+
 	ID                 string                     `json:"id"`
 	Objective          string                     `json:"objective"`
 	Status             Status                     `json:"status"`
@@ -48,7 +49,7 @@ type Checkpoint struct {
 }
 
 func (c Checkpoint) Check() error {
-	if err := checkCriteria(c.Criteria); err != nil {
+	if err := checkCompletion(c); err != nil {
 		return err
 	}
 	if c.Conclave != nil {
@@ -56,27 +57,30 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if len(c.Blocker) > 4096 {
+	if len(c.Blocker) > 4096 || len(c.LastChange) > 1024 {
 		return fmt.Errorf("invalid blocker detail")
 	}
-	if c.Recoveries < 0 || c.Recoveries > 2 || c.ChangeRevision < 0 {
+	if c.ChangeRevision < 0 {
 		return fmt.Errorf("invalid change revision")
+	}
+	if c.ChangeRevision < 0 || c.NoProgress < 0 {
+		return fmt.Errorf("invalid progress state")
 	}
 	if c.Grounding != nil {
 		if err := c.Grounding.Check(); err != nil {
 			return err
 		}
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 16*1024 || len(c.InstructionsDigest) != 64 {
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 16*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || len(c.InstructionsDigest) != 64 {
 		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {
-	case Running, Verified, Answered, Stopped, Interrupted, PlanReady, Unverified:
+	case Running, Verified, Answered, Stopped, Interrupted, Unverified:
 	default:
 		return fmt.Errorf("invalid execution status")
 	}
 	switch c.Phase {
-	case "conclave", "grounding", "decision", "approval", "execution", "observation", "finished":
+	case "conclave", "grounding", "decision", "approval", "execution", "observation", "reporting", "completion_review", "finished":
 	default:
 		return fmt.Errorf("invalid execution phase")
 	}

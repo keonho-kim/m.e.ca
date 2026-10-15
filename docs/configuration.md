@@ -23,7 +23,7 @@
 | 역할 키 | 용도 | temperature | max_output_tokens |
 | --- | --- | ---: | ---: |
 | `agent` | 메인 에이전트의 행동 선택·직접 응답 | 0.7 | 0 (context의 75%) |
-| `plan` | 승인받을 Plan 초안·수정 | 0.7 | 12800 |
+| `completion` | 요청 결과와 실행 근거의 종료 심사 | 0.2 | 2048 |
 | `conclave` | 후보 판정과 참조가 있는 거절 사유 | 0.4 | 12800 |
 | `compaction` | 단일 호출 대화 요약 | 0.2 | 8192 |
 | `diagnostic` | 연결·Thinking·effort 진단 | 0.2 | 12800 |
@@ -46,11 +46,11 @@ temperature = 0.2
 max_output_tokens = 8192
 ```
 
-`temperature`는 유한한 0~2, `max_output_tokens`는 0~1073741824이며, 0은 유효 context length의 75%를 내림 계산하는 자동 모드이고 양수는 수동 상한이다. 명시한 `temperature = 0`은 생략과 구분하여 전송한다. 메인 Thinking/effort는 사용자 선택을 계승한다. Conclave·Compaction의 thinking 기본값은 `off_if_supported`이며 OFF가 검증된 조합에서만 끈다. `inherit`는 사용자 선택을 유지한다. 진단은 기능 확인을 위해 ON/OFF를 명시적으로 대조한다. 출력 토큰 한도는 모델의 reasoning 사용분도 고려해야 하며, 서빙 한도·전체 실행 예산과 별도로 적용된다. 일반 응답은 기존 16KiB 제한 대신 모델 응답 공통 한도인 4MiB 안에서 수신하며, 내부 구조화 결과·도구 인자의 검증 한도는 유지한다. Provider는 확인된 출력·컨텍스트 용량 안에서 요청 한도를 제한할 수 있다.
+`temperature`는 유한한 0~2, `max_output_tokens`는 0~1073741824이며, 0은 유효 context length의 75%를 내림 계산하는 자동 모드이고 양수는 수동 상한이다. 명시한 `temperature = 0`은 생략과 구분하여 전송한다. 메인 Thinking/effort는 사용자 선택을 계승한다. Conclave·Compaction의 thinking 기본값은 `off_if_supported`이며 OFF가 검증된 조합에서만 끈다. `inherit`는 사용자 선택을 유지한다. 진단은 기능 확인을 위해 ON/OFF를 명시적으로 대조한다. 출력 토큰 한도는 모델의 reasoning 사용분도 고려해야 하며, 서빙 한도·전체 실행 예산과 별도로 적용된다. 일반 응답은 기존 16KiB 제한 대신 모델 응답 공통 한도인 256MiB 안에서 수신하며, 내부 구조화 결과·도구 인자의 검증 한도는 유지한다. Provider는 확인된 출력·컨텍스트 용량 안에서 요청 한도를 제한할 수 있다.
 
 `top_p`, `top_k`, `min_p`, penalty, seed는 서버 기본값을 사용한다. 재시도에서도 선택된 역할 인자를 그대로 사용한다. 서버가 인자를 거절하면 요청 인자를 유지한 채 제한된 재시도를 수행하고, 실패 원인을 오류로 반환한다. 서버 내부 적용 여부는 요청 수락과 별도의 검증 대상이다.
 
-Conclave는 pass/reject/needs_context JSON을 반환한다. 거절에는 후보 경로·줄 또는 요청 참조와 구체적인 사유가 필요하다. 정상 심사는 1회이며 형식 교정·문맥 보강은 합쳐 1회 추가할 수 있다. 사용자 요청·프로젝트 지침·경로·코드의 원문은 보존한다. Plan은 native submit_plan을 통해 사용자 승인 대상으로 제출한다.
+Conclave는 pass/reject/needs_context JSON을 반환한다. 거절에는 후보 경로·줄 또는 요청 참조와 구체적인 사유가 필요하다. 정상 심사는 1회이며 형식 교정·문맥 보강은 합쳐 1회 추가할 수 있다. 사용자 요청·프로젝트 지침·경로·코드의 원문은 보존한다. 종료 Conclave는 별도 completion.md에서 complete/continue/blocked를 반환한다.
 
 역할 선택은 `agent/inference`, API 형식 변환은 `provider/protocol`이 담당한다. Ollama에는 `options.temperature`, 호환 Chat/LM Studio Responses에는 `temperature`를 전송한다. API 계약 근거: [Ollama Chat](https://docs.ollama.com/api/chat), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
 
@@ -81,7 +81,7 @@ max_input_bytes = 65536
 
 단일 요청 INPUT에 따른 조기 압축 조건은 제거했다. 다만 명시적인 context_length_exceeded 계열 오류에는 안전한 경계에서 압축하고 모델 요청만 한 번 재시도한다. 요약할 prefix가 없거나 고정 지침이 한도를 넘으면 원인을 반환한다.
 
-누적량은 일반 에이전트·Plan·Conclave의 각 요청 시도에서 마지막으로 수신한 실제 INPUT+OUTPUT 합이다. 중간 usage는 교체하고, 재시도·중단 시 마지막 값을 한 번 확정한다. 같은 문맥을 다시 전송한 입력도 해당 호출의 사용량이므로 포함한다. 압축 자체의 호출과 연결 진단은 발동 누적량에서 제외한다. 사용량을 전혀 받지 않은 호출은 메시지·도구 정의를 포함한 요청과 수신 응답·Thinking·도구 인자의 UTF-8 바이트 합을 3바이트당 1토큰으로 환산하여 올림한다. 200,000 기준은 약 600,000바이트(586KiB)이며 토크나이저 실측이 아닌 혼합 언어용 근삿값이다. 응답을 전혀 받지 못한 실패에는 추정 사용량을 더하지 않는다. UI는 이 추정을 사용하지 않고 실제 usage만 표시한다.
+누적량은 일반 에이전트·Conclave의 각 요청 시도에서 마지막으로 수신한 실제 INPUT+OUTPUT 합이다. 중간 usage는 교체하고, 재시도·중단 시 마지막 값을 한 번 확정한다. 같은 문맥을 다시 전송한 입력도 해당 호출의 사용량이므로 포함한다. 압축 자체의 호출과 연결 진단은 발동 누적량에서 제외한다. 사용량을 전혀 받지 않은 호출은 메시지·도구 정의를 포함한 요청과 수신 응답·Thinking·도구 인자의 UTF-8 바이트 합을 3바이트당 1토큰으로 환산하여 올림한다. 200,000 기준은 약 600,000바이트(586KiB)이며 토크나이저 실측이 아닌 혼합 언어용 근삿값이다. 응답을 전혀 받지 못한 실패에는 추정 사용량을 더하지 않는다. UI는 이 추정을 사용하지 않고 실제 usage만 표시한다.
 
 압축 임계값은 다음 결정 문맥을 구성하는 안전한 경계에서 확인한다. native 호출 수신·self-grounding·승인 대기·도구 실행 중에는 현재 문맥을 유지한다. 마지막 응답이 임계값을 넘기면 다음 문맥이 필요한 시점에 실행한다. `keep_recent_bytes`는 최근 원문 메시지의 보존 예산이며 토큰 추정값이 아니다. 메시지를 쪼개지 않으므로 마지막 메시지 하나만으로 예산을 넘을 수 있다. 기본 16KiB에 해당하는 최근 메시지를 남기고 오래된 prefix만 요약한다. 0이면 최근 구간 보존을 끈다. 요약할 오래된 구간이 없으면 기존 메모리를 유지한다. 원본 페이지를 읽어 하나의 제한된 입력으로 정리한 뒤 요약 요청을 한 번 수행한다. 압축 호출도 Ralph의 모델 호출·시간 예산에 포함한다.
 
@@ -93,7 +93,7 @@ max_input_bytes = 65536
 
 ## 세션 저장
 
-SQLite는 `~/.v/sessions/<프로젝트 키>/<세션 ID>.db`에 **세션당 한 파일**로 저장한다. 메시지·도구 이벤트·실행 상태·Conclave·Plan·Compaction·사용량·모델 선택·정책 설정은 모두 해당 DB에 들어간다. 프로젝트 키는 정규화된 실제 프로젝트 경로의 SHA-256 앞 32자리와 읽을 수 있는 폴더명으로 만든다. 같은 이름의 다른 경로는 분리하고 심볼릭 링크 별칭은 같은 폴더를 사용한다. 세션 ID와 목록은 프로젝트 폴더 안의 `session_*.db` 파일명에서 찾으며 별도 SQLite 인덱스나 중앙 DB를 만들지 않는다. 목록의 제목·프로젝트·갱신 시각은 각 DB에서 읽기 전용으로 조회하고 즉시 닫는다. `v resume`는 모든 프로젝트 폴더의 대화를 합쳐 표시한다. 일반 시작 목록은 현재 프로젝트 폴더만 조회하며 다른 프로젝트의 DB를 열지 않는다. 파일 내부 프로젝트 경로가 저장 폴더와 맞지 않으면 거부한다. 기존 평면 `sessions/session_*.db`는 자동 이동·삭제하지 않으며 전체 목록 조회 시 미지원 배치 오류를 표시한다.
+SQLite는 `~/.v/sessions/<프로젝트 키>/<세션 ID>.db`에 **세션당 한 파일**로 저장한다. 메시지·도구 이벤트·실행 상태·Conclave·Compaction·사용량·모델 선택·정책 설정은 모두 해당 DB에 들어간다. 프로젝트 키는 정규화된 실제 프로젝트 경로의 SHA-256 앞 32자리와 읽을 수 있는 폴더명으로 만든다. 같은 이름의 다른 경로는 분리하고 심볼릭 링크 별칭은 같은 폴더를 사용한다. 세션 ID와 목록은 프로젝트 폴더 안의 `session_*.db` 파일명에서 찾으며 별도 SQLite 인덱스나 중앙 DB를 만들지 않는다. 목록의 제목·프로젝트·갱신 시각은 각 DB에서 읽기 전용으로 조회하고 즉시 닫는다. `v resume`는 모든 프로젝트 폴더의 대화를 합쳐 표시한다. 일반 시작 목록은 현재 프로젝트 폴더만 조회하며 다른 프로젝트의 DB를 열지 않는다. 파일 내부 프로젝트 경로가 저장 폴더와 맞지 않으면 거부한다. 기존 평면 `sessions/session_*.db`는 자동 이동·삭제하지 않으며 전체 목록 조회 시 미지원 배치 오류를 표시한다.
 
 세션 디렉터리는 `0700`, DB는 `0600`이다. 새 DB는 임시 파일에 스키마와 단일 세션 메타데이터를 완성하고 닫은 뒤 원자적으로 공개한다. 실행 중에는 같은 세션의 `.db-wal`·`.db-shm`, 소유권 잠금용 `.db.lock`이 생길 수 있으며 목록에서 제외한다. 파일 하나를 옮길 때는 해당 세션을 종료해 WAL 내용이 DB에 반영된 뒤 옮긴다. 파일명과 내부 ID 불일치·심볼릭 링크·손상 DB는 명시적 오류로 처리한다.
 
@@ -109,7 +109,7 @@ SQLite는 `~/.v/sessions/<프로젝트 키>/<세션 ID>.db`에 **세션당 한 �
 
 기존 프롬프트도 자동 덮어쓰지 않는다. 저장소의 `internal/agent/prompt/defaults/`와 비교해 system.md·conclave.md·compaction.md를 현재 계약으로 갱신한다. 과거 goal.md·grounding.md·pfc.md는 읽거나 새로 생성하지 않는다. 이전 프롬프트의 Goal 분해·PFC·3행 grounding·0/1 투표·DONE/WAIT/CONTINUE 지시는 현재 규약에서 제거했다.
 
-reason은 256문자·1024바이트 이내의 한 줄이며 Conclave JSON은 8KiB 이내다. 프롬프트의 의미적 정확성은 모델 평가 대상이고 Scope·승인·snapshot은 코드가 강제한다.
+reason은 UTF-8 32MiB 이내이며 정상 개행·탭을 허용한다. 변경·종료 심사는 동일한 사유 규칙과 JSON 포장 정규화를 사용한다. 심사 응답 자원 상한은 256MiB이며 진단 원문은 최대 16MiB를 보존하고 초과를 표시한다. 프롬프트의 의미적 정확성은 모델 평가 대상이고 Scope·승인·snapshot은 코드가 강제한다.
 
 ### 제거된 설정
 
@@ -128,7 +128,7 @@ context_length = 262144
 
 Scope는 system으로 고정한다. config.toml의 `[defaults] scope` 키는 제거하며, 기존 파일에 있으면 직접 삭제한다. 기존 세션의 범위는 현재 실행 범위를 변경하지 않는다. `[defaults] permission`과 세션별 승인 정책은 그대로 유지한다.
 
-전역 기본 Permission은 `allow-all`이다. 새 config.toml의 `[defaults] permission = "allow-all"`로 기록하며 세션 재정의가 없으면 이 값을 상속한다. `!permission`으로 명시한 세션별 `approve`는 전역값보다 우선하고 Plan 모드의 별도 승인은 그대로 유지한다.
+전역 기본 Permission은 `allow-all`이다. 새 config.toml의 `[defaults] permission = "allow-all"`로 기록하며 세션 재정의가 없으면 이 값을 상속한다. `!permission`으로 명시한 세션별 `approve`는 전역값보다 우선한다.
 
 Compaction 출력 형식은 프롬프트 지침이다. 문단, 다른 제목, 다른 섹션 순서도 완료된 비어 있지 않은 요약이면 받아들이며 형식 교정용 재시도를 수행하지 않는다. 입력·출력 용량, UTF-8 유효성, 응답 완료, 취소, 원자적 저장 검사는 유지한다.
 
@@ -139,4 +139,21 @@ Compaction 출력 형식은 프롬프트 지침이다. 문단, 다른 제목, �
 
 vLLM의 사전 토큰 계산 경로는 현재 메시지·도구를 포함한 실제 입력 토큰을 차감하고, tokenizer가 반환한 더 작은 context에도 75%를 다시 적용한다. 사전 계산이 없는 Provider 경로는 입력량을 추정하지 않는다. 서버의 명시적인 context 한도 오류에는 기존 압축 복구 경로를 적용하며, 그 밖의 오류는 명시적으로 반환한다. 출력 상한은 전체 분량 생성 의무가 아니며 Thinking·전체 실행 예산·응답 바이트 한도는 그대로다.
 
-기존 설정에 명시된 양수는 유지한다. 자동 모드를 사용하려면 `[inference.agent]`의 `max_output_tokens`를 0으로 설정한다. Compaction 기본값은 8192이고 Plan·Conclave·Diagnostic은 12800이다.
+기존 설정에 명시된 양수는 유지한다. 자동 모드를 사용하려면 `[inference.agent]`의 `max_output_tokens`를 0으로 설정한다. Compaction 기본값은 8192이고 Conclave·Diagnostic은 12800이다.
+
+현재 세션 형식은 schema 8이며 이전 DB는 보존하고 미지원 오류로 거절합니다. [inference.plan] 설정은 제거하고 [inference.completion]을 사용합니다. 종료 심사 기본값은 temperature=0.2, max_output_tokens=2048, thinking="off_if_supported"입니다.
+
+### 본문 용량 경계
+
+사유는 32MiB(33,554,432 UTF-8 바이트)까지 원문을 보존한다. 일반 본문 수용 상한은 최소 16MiB를 기준으로 하며, 중첩 JSON과 이스케이프가 포함되는 봉투는 별도로 더 크게 잡는다.
+
+| 경계 | 기본 상한 |
+| --- | --- |
+| native·grounding·Conclave·종료 심사 사유 | 32MiB |
+| 사용자 입력·프로젝트 지침·프롬프트 파일·설정 파일·대상 파일 | 16MiB |
+| Provider 모델 조회 메타데이터 | 16MiB |
+| 도구 인자 객체·실행 문맥·Provider 요청/응답·심사 응답 | 256MiB |
+| 변경 diff | 64MiB |
+| SQLite 이벤트·체크포인트 JSON 봉투 | 512MiB |
+
+이는 수용 상한이며 해당 크기를 미리 할당하거나 모델에 매번 채워 보내는 설정이 아니다. 경로·ID·열거값·배열 개수 등 의미적 제약, 화면 미리보기·로그·요약·추가 문맥 발췌의 작은 출력 예산은 별도다. 진단 원문은 16MiB까지 보존하고 생략을 표시한다. Compaction의 작은 입력 투영과 8192 출력 토큰 기본값은 유지한다. 실제 모델 context와 출력 토큰 한도는 바이트 상한 확대와 독립적이다. 기존 config.toml에 명시한 실행 바이트 한도는 자동으로 덮어쓰지 않는다.

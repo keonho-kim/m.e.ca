@@ -34,6 +34,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
 		return err
 	}
+	s.runner.Memory.ActiveRequest = s.checkpoint.Objective
 	refresh := s.runner.Memory.Refresh
 	if force {
 		refresh = s.runner.Memory.Compact

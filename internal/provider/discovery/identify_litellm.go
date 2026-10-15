@@ -21,7 +21,7 @@ func (c *Client) identifyLiteLLM(ctx context.Context, model string) (identity.Re
 		} `json:"data"`
 	}
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model/info", nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model/info", nil, 16*1024*1024, &listing); err != nil {
 		return c.identifyLiteLLMGroup(ctx, model)
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {

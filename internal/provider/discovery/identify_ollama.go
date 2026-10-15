@@ -40,7 +40,7 @@ func (c *Client) identifyOllama(ctx context.Context, model string) (identity.Rep
 	if err != nil {
 		return report, err
 	}
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(body), 4*1024*1024, &info); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(body), 16*1024*1024, &info); err != nil {
 		return report, err
 	}
 	report.Add("/api/show.details.family", "family", info.Details.Family)

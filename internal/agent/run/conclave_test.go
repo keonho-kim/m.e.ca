@@ -30,7 +30,7 @@ func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
 	approvals := 0
-	result, err := r.Run(context.Background(), "fix", false, func(_ context.Context, p toolapi.Approval) (bool, error) {
+	result, err := r.Run(context.Background(), "fix", func(_ context.Context, p toolapi.Approval) (bool, error) {
 		approvals++
 		if p.Candidate != nil && !p.ConclavePassed {
 			t.Error("approval requested before review pass")
@@ -78,7 +78,7 @@ func TestConclaveErrorsBlockExecutionAndCompletion(t *testing.T) {
 	r.Limits = DefaultLimits()
 	r.Limits.MaxIterations = 2
 	approvals := 0
-	result, err := r.Run(context.Background(), "fix", false, func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
+	result, err := r.Run(context.Background(), "fix", func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
 	if err != nil || result.Status != Stopped || e.executed != 0 || approvals != 0 {
 		t.Fatalf("result=%+v err=%v exec=%d approval=%d", result, err, e.executed, approvals)
 	}
@@ -94,7 +94,7 @@ func TestConclaveErrorsBlockExecutionAndCompletion(t *testing.T) {
 }
 func TestConclaveJournalFailureCannotProceed(t *testing.T) {
 	g, e, j := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"})}}, &executor{}, &journal{failKind: "conclave"}
-	_, err := fixture(g, e, j).Run(context.Background(), "fix", false, approve, emit)
+	_, err := fixture(g, e, j).Run(context.Background(), "fix", approve, emit)
 	if err == nil || e.executed != 0 {
 		t.Fatalf("execution followed missing audit: %d %v", e.executed, err)
 	}
@@ -106,7 +106,7 @@ func TestConclaveReusesUnchangedRejectedCandidate(t *testing.T) {
 	g.review = func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		return emit(modelapi.Event{Delta: `{"decision":"reject","findings":[{"path":"file.txt","side":"request","line":0,"reason":"Incorrect requested content"}]}`, Done: true})
 	}
-	result, err := fixture(g, e, j).Run(context.Background(), "fix", false, approve, emit)
+	result, err := fixture(g, e, j).Run(context.Background(), "fix", approve, emit)
 	if err != nil || result.Status != Stopped || len(g.reviewRequests) != 1 || e.executed != 0 {
 		t.Fatalf("%+v reviews=%d executed=%d %v", result, len(g.reviewRequests), e.executed, err)
 	}

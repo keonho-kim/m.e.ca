@@ -19,7 +19,7 @@ func (c *Client) ollamaContext(ctx context.Context, model string) (int, error) {
 			Context     int `json:"context_length"`
 		} `json:"models"`
 	}
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("ps"), nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("ps"), nil, 16*1024*1024, &listing); err != nil {
 		return 0, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {
@@ -52,7 +52,7 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 			} `json:"model_info"`
 		} `json:"data"`
 	}
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model/info", nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model/info", nil, 16*1024*1024, &listing); err != nil {
 		return info, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {

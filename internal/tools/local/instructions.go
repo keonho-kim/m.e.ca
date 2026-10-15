@@ -39,16 +39,16 @@ func (e *Executor) ProjectInstructions(ctx context.Context) (text string, err er
 		return "", fmt.Errorf("project AGENTS.md must be a regular file")
 	}
 	if info.Size() > prompt.MaxInstructionsBytes {
-		return "", fmt.Errorf("project AGENTS.md is %d bytes; maximum is %d bytes (1 MiB)", info.Size(), prompt.MaxInstructionsBytes)
+		return "", fmt.Errorf("project AGENTS.md is %d bytes; maximum is %d bytes (16 MiB)", info.Size(), prompt.MaxInstructionsBytes)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, prompt.MaxInstructionsBytes+1))
 	if err != nil {
 		return "", err
 	}
 	if len(body) > prompt.MaxInstructionsBytes {
-		return "", fmt.Errorf("project AGENTS.md grew beyond the %d-byte limit (1 MiB) while reading", prompt.MaxInstructionsBytes)
+		return "", fmt.Errorf("project AGENTS.md grew beyond the %d-byte limit (16 MiB) while reading", prompt.MaxInstructionsBytes)
 	}
-	if _, err = prompt.Compose(prompt.Defaults().System, string(body), false); err != nil {
+	if _, err = prompt.Compose(prompt.Defaults().System, string(body)); err != nil {
 		return "", err
 	}
 	if err = ctx.Err(); err != nil {

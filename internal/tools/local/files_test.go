@@ -42,7 +42,7 @@ func TestWriteRequiresApprovalAndPreservesReject(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
-	operation, err := executor.Prepare(context.Background(), settings, false, call("write_file", `{"path":"auth.go","content":"new"}`))
+	operation, err := executor.Prepare(context.Background(), settings, call("write_file", `{"path":"auth.go","content":"new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestApprovalUsesLineDiff(t *testing.T) {
 		anchoredEdit(t, executor, "file.txt", 2, 2, "new\n"),
 		call("delete_file", `{"path":"file.txt"}`),
 	} {
-		op, err := executor.Prepare(context.Background(), settings, false, invocation)
+		op, err := executor.Prepare(context.Background(), settings, invocation)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +103,7 @@ func TestApprovedEditRejectsChangedOriginal(t *testing.T) {
 	if err := os.WriteFile(path, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, false, anchoredEdit(t, executor, "auth.go", 1, 1, "fixed"))
+	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, anchoredEdit(t, executor, "auth.go", 1, 1, "fixed"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,13 +136,11 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 		call("write_file", `{"path":"auth.go","content":"provider-secret"}`),
 		call("execute_command", `{"command":"touch outside"}`),
 	} {
-		if _, err := executor.Prepare(context.Background(), settings, false, invocation); err == nil {
+		if _, err := executor.Prepare(context.Background(), settings, invocation); err == nil {
 			t.Errorf("accepted unsafe call: %+v", invocation)
 		}
 	}
-	if _, err := executor.Prepare(context.Background(), settings, true, call("write_file", `{"path":"new","content":"blocked"}`)); err == nil {
-		t.Fatal("planning changed a file")
-	}
+
 }
 
 func TestReadDirectorySearchAndMove(t *testing.T) {
@@ -153,14 +151,14 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(project, "src/auth.go"), []byte("func authenticate() {}\nprovider-secret"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
+	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.System}
 	for _, invocation := range []toolapi.Call{
 		call("read_file", `{"path":"src/auth.go"}`),
 		call("execute_command", `{"command":"ls src"}`),
 		call("execute_command", `{"command":"find . -name '*.go'"}`),
-		call("execute_command", `{"command":"rg -n authenticate src"}`),
+		call("execute_command", `{"command":"grep -rn authenticate src"}`),
 	} {
-		operation, err := executor.Prepare(context.Background(), settings, true, invocation)
+		operation, err := executor.Prepare(context.Background(), settings, invocation)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,7 +167,7 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 			t.Fatalf("tool result: %s, %v", result.Content, err)
 		}
 	}
-	operation, err := executor.Prepare(context.Background(), settings, false, call("move_file", `{"path":"src/auth.go","destination":"src/session.go"}`))
+	operation, err := executor.Prepare(context.Background(), settings, call("move_file", `{"path":"src/auth.go","destination":"src/session.go"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +184,7 @@ func TestReadRangePreservesUTF8AndCursor(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "text"), []byte("가나다"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}, false, call("read_file", `{"path":"text","limit":5}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}, call("read_file", `{"path":"text","limit":5}`))
 	if err != nil {
 		t.Fatal(err)
 	}

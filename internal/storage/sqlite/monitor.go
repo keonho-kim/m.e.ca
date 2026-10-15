@@ -24,7 +24,7 @@ func (s *Store) MonitorHistory(ctx context.Context, session string) (records []m
 		if err := rows.Scan(&body); err != nil {
 			return nil, err
 		}
-		if len(body) > 16*1024 {
+		if len(body) > maxEventBytes {
 			return nil, fmt.Errorf("Monitor record exceeds limit")
 		}
 		var event run.Event

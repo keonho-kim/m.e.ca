@@ -43,7 +43,7 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if err != nil {
 		return 0, err
 	}
-	if len(body) > 4*1024*1024 {
+	if len(body) > modelapi.MaxResponseBytes {
 		return 0, fmt.Errorf("tokenizer request exceeds context size limit")
 	}
 	var count struct {

@@ -12,13 +12,13 @@ import (
 )
 
 type Status struct {
-	Model, Effort      string
-	Thinking, Planning bool
-	Settings           policy.Settings
+	Model, Effort string
+	Thinking      bool
+	Settings      policy.Settings
 }
 
 func statusLine(screen tcell.Screen, status Status, y, w int) {
-	model, thinking, effort, settings, planning := status.Model, status.Thinking, status.Effort, status.Settings, status.Planning
+	model, thinking, effort, settings := status.Model, status.Thinking, status.Effort, status.Settings
 	if model == "" {
 		model = "no-model"
 	}
@@ -31,9 +31,6 @@ func statusLine(screen tcell.Screen, status Status, y, w int) {
 	}
 	if settings.Permission == policy.AllowAll {
 		suffix += " │ 자동 승인"
-	}
-	if planning {
-		suffix += " │ PLAN"
 	}
 	maxModel := max(0, w-uniseg.StringWidth(suffix))
 	Text(screen, 0, y, maxModel, model, tcell.StyleDefault)

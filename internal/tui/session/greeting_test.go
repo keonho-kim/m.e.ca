@@ -49,7 +49,7 @@ func TestGreetingNeedsOneCall(t *testing.T) {
 	t.Cleanup(a.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startTask("Hello", nil)
+	a.startTask("Hello")
 	drainTask(t, a, false)
 	var output strings.Builder
 	for _, block := range a.output.Blocks {

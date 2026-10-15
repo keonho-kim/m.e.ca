@@ -20,10 +20,9 @@ func TestCommandHints(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 15, 80), "!plan") || !strings.Contains(screenLine(a.screen, 18, 80), "!dir") || !strings.Contains(screenLine(a.screen, 20, 80), "!quit") {
-		t.Fatal("six commands missing above editor")
+	if !strings.Contains(screenLine(a.screen, 16, 80), "!model") || !strings.Contains(screenLine(a.screen, 18, 80), "!dir") || !strings.Contains(screenLine(a.screen, 20, 80), "!quit") {
+		t.Fatal("five commands missing above editor")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 	if a.editor.String() != "!model" || a.page != "chat" {
 		t.Fatal("completion executed the command")
@@ -35,7 +34,7 @@ func TestCommandHints(t *testing.T) {
 	a.page = "chat"
 	typeInput(a, "!per")
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 20, 80), "!permission") || strings.Contains(screenLine(a.screen, 4, 80), "!plan") {
+	if !strings.Contains(screenLine(a.screen, 20, 80), "!permission") || strings.Contains(screenLine(a.screen, 4, 80), "!model") {
 		t.Fatal("prefix did not filter commands")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -47,7 +46,7 @@ func TestCommandHints(t *testing.T) {
 	typeInput(a, "!")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if a.editor.String() != "!" || strings.Contains(screenLine(a.screen, 15, 80), "!plan") {
+	if a.editor.String() != "!" || strings.Contains(screenLine(a.screen, 16, 80), "!model") {
 		t.Fatal("Escape must preserve input and dismiss hints")
 	}
 }
@@ -56,7 +55,7 @@ func TestCommandHintsIgnoreTextArgumentsAndPaste(t *testing.T) {
 		a := fixture(t)
 		typeInput(a, value)
 		a.render()
-		if strings.Contains(screenLine(a.screen, 15, 80), "!plan") {
+		if strings.Contains(screenLine(a.screen, 16, 80), "!model") {
 			t.Fatalf("hints opened in message or argument: %q", value)
 		}
 	}
@@ -64,7 +63,7 @@ func TestCommandHintsIgnoreTextArgumentsAndPaste(t *testing.T) {
 	a.paste = true
 	typeInput(a, "!")
 	a.render()
-	if strings.Contains(screenLine(a.screen, 15, 80), "!plan") {
+	if strings.Contains(screenLine(a.screen, 16, 80), "!model") {
 		t.Fatal("paste opened interactive hints")
 	}
 }
@@ -73,7 +72,7 @@ func TestCommandHintsPreserveShiftEnter(t *testing.T) {
 	typeInput(a, "!")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModShift))
 	a.render()
-	if a.editor.String() != "!\n" || strings.Contains(screenLine(a.screen, 4, 80), "!plan") {
+	if a.editor.String() != "!\n" || strings.Contains(screenLine(a.screen, 4, 80), "!model") {
 		t.Fatal("Shift+Enter completed a command instead of inserting a newline")
 	}
 }

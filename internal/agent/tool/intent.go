@@ -7,13 +7,10 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 func WithIntent(d Definition) Definition {
-	d.Parameters = append(append([]Parameter(nil), d.Parameters...), Parameter{Name: "reason", Description: "Brief reason for this operation in English; cite observed sources or the user request. One line, at most 256 characters.", Kind: Text, Required: true, MaxBytes: 1024, MaxChars: 256})
+	d.Parameters = append(append([]Parameter(nil), d.Parameters...), Parameter{Name: "reason", Description: "Brief reason in English: name the remaining requested outcome or concrete failure this action addresses, grounded in observed results. Reuse completed findings. Prefer concise prose; line breaks are allowed.", Kind: Text, Required: true, MaxBytes: MaxReasonBytes})
 	return d
 }
 func ExtractIntent(call Call) (Call, string, error) {
@@ -28,9 +25,8 @@ func ExtractIntent(call Call) (Call, string, error) {
 	if err := json.Unmarshal(fields["reason"], &reason); err != nil {
 		return Call{}, "", fmt.Errorf("reason is required as one short string")
 	}
-	reason = strings.TrimSpace(reason)
-	if reason == "" || len(reason) > 1024 || utf8.RuneCountInString(reason) > 256 || strings.ContainsFunc(reason, unicode.IsControl) {
-		return Call{}, "", fmt.Errorf("reason must be one line within 256 characters")
+	if err := CheckReason(reason); err != nil {
+		return Call{}, "", err
 	}
 	delete(fields, "reason")
 	call.Arguments, err = json.Marshal(fields)

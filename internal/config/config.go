@@ -33,12 +33,12 @@ func Load(directory string) (configuration Config, err error) {
 		return configuration, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
-	content, err := io.ReadAll(io.LimitReader(file, 64*1024+1))
+	content, err := io.ReadAll(io.LimitReader(file, 16*1024*1024+1))
 	if err != nil {
 		return configuration, err
 	}
-	if len(content) > 64*1024 {
-		return configuration, fmt.Errorf("configuration exceeds 64 KiB")
+	if len(content) > 16*1024*1024 {
+		return configuration, fmt.Errorf("configuration exceeds 16 MiB")
 	}
 	if err = toml.NewDecoder(bytes.NewReader(content)).DisallowUnknownFields().Decode(&configuration); err != nil {
 		return configuration, fmt.Errorf("parse configuration: %w", err)

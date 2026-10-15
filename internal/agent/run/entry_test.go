@@ -16,7 +16,7 @@ func TestNativeEntryRejectsUnknownToolAndExtraArguments(t *testing.T) {
 		nativeCall("read_file", map[string]any{"path": "a"}), "Review the file",
 	}}
 	e, j := &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "inspect", false, approve, emit)
+	result, err := fixture(g, e, j).Run(context.Background(), "inspect", approve, emit)
 	if err != nil || result.Status != Answered || e.prepared != 1 || e.calls[0].Name != "read_file" {
 		t.Fatalf("result=%+v calls=%+v err=%v", result, e.calls, err)
 	}

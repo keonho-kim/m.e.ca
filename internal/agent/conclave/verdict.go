@@ -8,9 +8,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/agent/reviewjson"
+	"github.com/keonho-kim/v-code/internal/agent/tool"
 	"io"
 	"strings"
-	"unicode/utf8"
 )
 
 type Finding struct {
@@ -39,13 +40,11 @@ type Result struct {
 }
 
 func Parse(text string) (Verdict, error) {
-	text = strings.TrimSpace(text)
-	if strings.HasPrefix(text, "```json\n") && strings.HasSuffix(text, "\n```") {
-		text = strings.TrimSuffix(strings.TrimPrefix(text, "```json\n"), "\n```")
+	normalized, err := reviewjson.Object(text)
+	if err != nil {
+		return Verdict{}, err
 	}
-	if len(text) > 8192 || !utf8.ValidString(text) {
-		return Verdict{}, fmt.Errorf("review exceeds JSON response limit")
-	}
+	text = normalized
 	d := json.NewDecoder(strings.NewReader(text))
 	d.DisallowUnknownFields()
 	first, err := d.Token()
@@ -91,12 +90,12 @@ func (v Verdict) Check() error {
 		return fmt.Errorf("review requests exceed bounds")
 	}
 	for _, f := range v.Findings {
-		if f.Reason == "" || len(f.Reason) > 1024 || !utf8.ValidString(f.Reason) || f.Path == "" || len(f.Path) > 4096 || f.Line < 0 || f.Side != "before" && f.Side != "after" && f.Side != "request" {
+		if tool.CheckReason(f.Reason) != nil || f.Path == "" || len(f.Path) > 4096 || f.Line < 0 || f.Side != "before" && f.Side != "after" && f.Side != "request" {
 			return fmt.Errorf("finding requires a bounded reason and evidence reference")
 		}
 	}
 	for _, r := range v.ContextRequests {
-		if r.Path == "" || len(r.Path) > 4096 || r.Offset < 0 || r.Limit < 1 || r.Limit > 8192 || r.Reason == "" || len(r.Reason) > 1024 {
+		if r.Path == "" || len(r.Path) > 4096 || r.Offset < 0 || r.Limit < 1 || r.Limit > 8192 || tool.CheckReason(r.Reason) != nil {
 			return fmt.Errorf("invalid review context request")
 		}
 	}
@@ -120,7 +119,7 @@ func (v Verdict) Check() error {
 }
 func (r Result) Check() error {
 	digest, err := hex.DecodeString(r.CandidateDigest)
-	if err != nil || len(digest) != 32 || r.CallID == "" || len(r.CallID) > 128 || r.Lines < 1 || r.Attempts < 0 || r.Attempts > 2 || len(r.Error) > 2048 {
+	if err != nil || len(digest) != 32 || r.CallID == "" || len(r.CallID) > 128 || r.Lines < 1 || r.Attempts < 0 || r.Attempts > 2 || len(r.Error) > tool.MaxReasonBytes {
 		return fmt.Errorf("invalid review binding or attempts")
 	}
 	if r.Error != "" {

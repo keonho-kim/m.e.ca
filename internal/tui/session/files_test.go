@@ -14,7 +14,7 @@ func TestFileViewQuitFromBrowserPreservesDraft(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
 	a.editor.Set("existing draft")
-	a.busy, a.planMode = true, true
+	a.busy = true
 	typeInput(a, "ignored")
 	typeInput(a, ":q")
 	a.render()
@@ -22,7 +22,7 @@ func TestFileViewQuitFromBrowserPreservesDraft(t *testing.T) {
 		t.Fatal("quit command was hidden or executed before Enter")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "chat" || a.exit || !a.busy || !a.planMode || a.editor.String() != "existing draft" {
+	if a.page != "chat" || a.exit || !a.busy || a.editor.String() != "existing draft" {
 		t.Fatal("quit did not preserve the active session and draft")
 	}
 }

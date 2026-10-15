@@ -22,7 +22,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"agent", "plan", "conclave", "compaction", "diagnostic"} {
+	for _, role := range []string{"agent", "completion", "conclave", "compaction", "diagnostic"} {
 		if !strings.Contains(string(body), "[inference."+role+"]") {
 			t.Fatalf("missing persisted role %s", role)
 		}
@@ -31,12 +31,13 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []inference.Role{inference.Agent, inference.Plan, inference.Conclave, inference.Compaction, inference.Diagnostic} {
+	for _, role := range []inference.Role{inference.Agent, inference.Completion, inference.Conclave, inference.Compaction, inference.Diagnostic} {
 		parameters, err := inference.Resolve(&loaded.Inference, role)
 		want := 12800
 		if role == inference.Agent {
 			want = 0
 		}
+		if role == inference.Completion {want=2048}
 		if role == inference.Compaction {
 			want = 8192
 		}

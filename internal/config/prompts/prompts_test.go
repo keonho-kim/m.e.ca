@@ -19,7 +19,7 @@ func TestPromptBootstrap(t *testing.T) {
 		t.Fatal(err)
 	}
 	directory := filepath.Join(home, ".v")
-	for _, name := range []string{"system.md", "compaction.md", "conclave.md"} {
+	for _, name := range []string{"system.md", "compaction.md", "conclave.md", "completion.md"} {
 		path := filepath.Join(directory, "prompts", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {

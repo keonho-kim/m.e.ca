@@ -43,7 +43,7 @@ func (c Candidate) Check(call Call) error {
 		return fmt.Errorf("candidate does not match the frozen native call")
 	}
 	for _, file := range c.Files {
-		if file.Path == "" || file.Added < 0 || file.Deleted < 0 || file.Added > 10000000 || file.Deleted > 10000000 || len(file.Diff) > 8*1024*1024 {
+		if file.Path == "" || file.Added < 0 || file.Deleted < 0 || file.Added > 10000000 || file.Deleted > 10000000 || len(file.Diff) > 64*1024*1024 {
 			return fmt.Errorf("invalid prepared file delta")
 		}
 	}

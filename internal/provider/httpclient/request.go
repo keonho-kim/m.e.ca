@@ -49,7 +49,7 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if err != nil {
 		return err
 	}
-	if len(content) > 4*1024*1024 {
+	if len(content) > modelapi.MaxResponseBytes {
 		return fmt.Errorf("model context exceeds request size limit")
 	}
 	idle := request.IdleTimeout

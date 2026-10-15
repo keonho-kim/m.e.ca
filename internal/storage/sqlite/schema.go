@@ -1,11 +1,11 @@
-// Purpose: Define the single-session SQLite schema for conversation, Plan and compaction evidence.
+// Purpose: Define the single-session SQLite schema for conversation, completion and compaction evidence.
 // Pattern: Repository schema.
 // Usage: Applied to an unpublished database by Sessions.Create.
-// Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/plans.go.
+// Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/runs.go.
 
 package sqlite
 
-const schemaVersion = 6
+const schemaVersion = 8
 
 const schema = `
 CREATE TABLE sessions (
@@ -24,15 +24,6 @@ CREATE TABLE messages (
  created_at TEXT NOT NULL
 );
 CREATE INDEX session_messages ON messages(session_id, sequence);
-CREATE TABLE plans (
- id TEXT NOT NULL,
- session_id TEXT NOT NULL REFERENCES sessions(id),
- revision INTEGER NOT NULL CHECK(revision > 0),
- body TEXT NOT NULL,
- updated_at TEXT NOT NULL,
- PRIMARY KEY(session_id, id, revision)
-);
-CREATE INDEX latest_plans ON plans(session_id, updated_at DESC, revision DESC);
 CREATE TABLE settings (
  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
  permission TEXT NOT NULL DEFAULT '',

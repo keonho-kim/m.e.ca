@@ -24,7 +24,7 @@ func (executor *Executor) Directory(ctx context.Context, settings policy.Setting
 	if err != nil {
 		return nil, false, err
 	}
-	if _, err := policy.Decide(settings, false, policy.Read); err != nil {
+	if _, err := policy.Decide(settings, policy.Read); err != nil {
 		return nil, false, err
 	}
 	entries, more, err := readDirectory(ctx, resolved, offset, limit)

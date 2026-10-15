@@ -13,13 +13,14 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	"github.com/keonho-kim/v-code/internal/agent/reviewjson"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 const reviewRejected = "conclave_rejected"
 const reviewFailed = "conclave_error"
 
-func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, proposal toolapi.Approval) (*conclave.Result, error) {
+func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, proposal toolapi.Approval, pending []toolapi.FileDelta) (*conclave.Result, error) {
 	if proposal.Candidate == nil {
 		if call.Name == "write_file" || call.Name == "edit_file" {
 			return nil, fmt.Errorf("content change has no frozen candidate")
@@ -47,9 +48,10 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 	}
 	keyBody, err := json.Marshal(struct {
 		Files                        []toolapi.FileDelta
+		Pending                      []toolapi.FileDelta
 		Request, Instructions, Model string
 		Evidence                     int
-	}{candidate.Files, s.checkpoint.Objective, instructions, s.runner.Model, s.evidenceRevision})
+	}{candidate.Files, pending, s.checkpoint.Objective, instructions, s.runner.Model, s.evidenceRevision})
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 	} else {
 		request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Messages: []modelapi.Message{{Role: "system", Content: instructions}}})
 		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
-		result, err = conclave.Review(ctx, conclave.Input{Request: s.checkpoint.Objective, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate}, request, s.limits.MaxContextBytes, s.reviewGenerate, s.reviewContext, s.runner.Redact)
+		result, err = conclave.Review(ctx, conclave.Input{Request: s.checkpoint.Objective, Grounding: *s.checkpoint.Grounding, Call: call, Candidate: candidate, Pending: pending}, request, s.limits.MaxContextBytes, s.reviewGenerate, s.reviewContext, s.runner.Redact, func(a reviewjson.Attempt) error { return s.recordReviewAttempt(ctx, a) })
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +101,12 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 		if !result.Complete {
 			code = reviewFailed
 		}
-		return &result, &toolapi.Failure{Code: code, Detail: result.Feedback(), Next: "Correct the specific defect or provide new evidence; the unchanged candidate will not be reviewed again."}
+		next := "Correct only the concrete candidate defect or supply missing evidence. Do not repeat the unchanged proposal."
+		if code == reviewFailed {
+			next = "The review could not finish after its bounded recovery. Do not rewrite code to repair a review failure; execution is blocked."
+			s.checkpoint.ReportReason = result.Feedback()
+		}
+		return &result, &toolapi.Failure{Code: code, Detail: result.Feedback(), Next: next}
 	}
 	return &result, nil
 }

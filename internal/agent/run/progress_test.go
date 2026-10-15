@@ -18,27 +18,43 @@ func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
 	r.Settings.Scope = policy.System
 	r.Limits = DefaultLimits()
 	r.Limits.StallIterations = 1
-	result, err := r.Run(context.Background(), "change and verify", false, approve, emit)
+	result, err := r.Run(context.Background(), "change and verify", approve, emit)
 	if err != nil || result.Status != Answered {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	for _, event := range j.events {
-		if event.Kind == "recovery" {
+		if event.Kind == "completion_review" && strings.Contains(event.Text, `"continue"`) {
 			t.Fatal("fresh verification was treated as no progress")
 		}
 	}
 }
 
-func TestProgressRecoveryOffersSpecificNextAction(t *testing.T) {
-	g := &generator{replies: []string{"", "", "", "Need another approach"}}
-	j := &journal{}
-	r := fixture(g, &executor{}, j)
-	result, err := r.Run(context.Background(), "inspect", false, approve, emit)
-	if err != nil || result.Status != Answered {
-		t.Fatalf("recovery=%+v %v", result, err)
+func TestProgressEmptyRepliesEndWithStoppedReport(t *testing.T) {
+	g := &generator{replies: []string{"", "", "", "Cannot determine a useful action."}}
+	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "inspect", approve, emit)
+	if err != nil || result.Status != Stopped || result.Text == "" {
+		t.Fatalf("%+v %v", result, err)
 	}
-	last := g.requests[len(g.requests)-1]
-	if !strings.Contains(last.Messages[len(last.Messages)-1].Content, "Recovery 1/2") {
-		t.Fatal("recovery choices missing from context")
+}
+
+func TestProgressAlternatingCommandChecksAreNotNewChanges(t *testing.T) {
+	var replies []string
+	for _, command := range []string{"ls", "find .", "ls", "find .", "ls"} {
+		replies = append(replies, nativeCall("execute_command", map[string]any{"command": command}))
+	}
+	replies = append(replies, "The requested files already exist; reporting the result.")
+	g, j := &generator{replies: replies}, &journal{}
+	result, err := fixture(g, &executor{}, j).Run(context.Background(), "create only empty files", approve, emit)
+	if err != nil || result.Status != Stopped {
+		t.Fatalf("%+v %v", result, err)
+	}
+	found := false
+	for _, event := range j.events {
+		if event.Kind == "completion_review" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("alternating unchanged command results counted as fresh progress")
 	}
 }

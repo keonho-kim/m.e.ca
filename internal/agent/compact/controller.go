@@ -17,6 +17,7 @@ type Controller struct {
 	Session, Model, Prompt string
 	Settings               Settings
 	Redact                 func(string) string
+	ActiveRequest          string
 	memory                 Memory
 	loaded                 bool
 }

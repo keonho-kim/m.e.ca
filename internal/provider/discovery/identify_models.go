@@ -19,7 +19,7 @@ func (c *Client) identifyModels(ctx context.Context, model string) (identity.Rep
 		} `json:"data"`
 	}
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("models"), nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("models"), nil, 16*1024*1024, &listing); err != nil {
 		return report, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {

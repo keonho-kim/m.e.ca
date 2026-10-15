@@ -41,9 +41,6 @@ func Compaction(page []Record) ([]compact.Record, error) {
 						text += " -> " + change.Destination
 					}
 				}
-				if op.Step != nil {
-					text += fmt.Sprintf("\nPlan step %d: %s", op.Step.Index+1, op.Step.Description)
-				}
 				if op.Failure != nil {
 					text += "\nFailure: " + op.Failure.Code + ": " + op.Failure.Detail
 					if op.Failure.Next != "" {

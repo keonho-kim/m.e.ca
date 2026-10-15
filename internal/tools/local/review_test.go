@@ -26,9 +26,9 @@ func TestReviewCandidateCountsActualChanges(t *testing.T) {
 		{"write_file", `{"path":"a","content":""}`, 3},
 		{"write_file", `{"path":"empty","content":""}`, 0},
 		{"delete_file", `{"path":"a"}`, 3},
-		{"create_directory", `{"path":"folder"}`, 0},
+		{"create_directory", `{"paths":["folder"]}`, 0},
 	} {
-		op, err := executor.Prepare(context.Background(), settings, false, call(tc.name, tc.args))
+		op, err := executor.Prepare(context.Background(), settings, call(tc.name, tc.args))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,7 +43,7 @@ func TestReviewCandidateCountsActualChanges(t *testing.T) {
 }
 func TestReviewCandidateEmptyDirectoryStillNeedsApproval(t *testing.T) {
 	executor, root := testExecutor(t)
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, false, call("create_directory", `{"path":"folder"}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, call("create_directory", `{"paths":["folder"]}`))
 	if err != nil {
 		t.Fatal(err)
 	}

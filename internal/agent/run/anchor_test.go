@@ -24,6 +24,9 @@ type anchorGenerator struct {
 }
 
 func (g *anchorGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	if handled, err := completionFixture(r, emit); handled {
+		return err
+	}
 	return g.script.Generate(ctx, r, func(event modelapi.Event) error {
 		for i := range event.Calls {
 			call := &event.Calls[i]
@@ -83,7 +86,7 @@ func TestAnchoredEditDialogue(t *testing.T) {
 	runner.Generator = model
 	runner.Tools = tools
 	runner.Settings.Scope = policy.System
-	result, err := runner.Run(context.Background(), "change the second line", false, approve, emit)
+	result, err := runner.Run(context.Background(), "change the second line", approve, emit)
 	if err != nil || result.Status != Answered || model.anchorFields != 2 || len(script.reviewRequests) != 1 {
 		t.Fatalf("result=%+v fields=%d err=%v", result, model.anchorFields, err)
 	}

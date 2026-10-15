@@ -71,7 +71,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
-	a.startTask("first request", nil)
+	a.startTask("first request")
 	select {
 	case <-started:
 	case <-ctx.Done():

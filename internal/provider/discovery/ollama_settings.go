@@ -22,7 +22,7 @@ func (c *Client) prepareOllama(ctx context.Context, model string) (connection.Mo
 		return info, err
 	}
 	var row ollamaModel
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(payload), 4*1024*1024, &row); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(payload), 16*1024*1024, &row); err != nil {
 		return info, err
 	}
 	if row.Thinking.Values != nil {

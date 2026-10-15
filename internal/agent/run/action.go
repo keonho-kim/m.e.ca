@@ -6,79 +6,25 @@ package run
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
-	"errors"
-	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/policy/shell"
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	if reply.Calls[0].Name == "submit_plan" {
-		return s.submitPlan(ctx, reply)
-	}
-	call, reason, intentErr := toolapi.ExtractIntent(reply.Calls[0])
-	if intentErr != nil {
-		return s.returnToolFeedback(ctx, reply, intentErr.Error())
-	}
-	call, criteria, criteriaErr := extractCriteria(call)
-	if criteriaErr != nil {
-		return s.returnToolFeedback(ctx, reply, criteriaErr.Error())
-	}
-	var definition *toolapi.Definition
-	for i := range s.definitions {
-		if s.definitions[i].Name == call.Name {
-			definition = &s.definitions[i]
-			break
-		}
-	}
-	if err := call.Check(); err != nil {
-		return err
-	}
-	if definition == nil {
-		return s.returnToolFeedback(ctx, reply, "Unknown tool; select a declared native function.")
-	}
-	if err := s.allowTool(definition.Effect); err != nil {
-		return s.returnToolFeedback(ctx, reply, err.Error())
-	}
-	if call.Name == "write_file" || call.Name == "edit_file" {
+	if reply.Calls[0].Name == "write_file" || reply.Calls[0].Name == "edit_file" {
 		s.checkpoint.PendingReview = true
 	}
-	if len(call.Arguments) > s.limits.MaxArgumentBytes {
-		return s.returnToolFeedback(ctx, reply, fmt.Sprintf("Arguments exceed the configured %d-byte limit; narrow the operation. Nothing executed.", s.limits.MaxArgumentBytes))
-	}
-	arguments, err := toolapi.ValidateArguments(*definition, call.Arguments)
+	v, err := s.validateCall(reply.Calls[0])
 	if err != nil {
-		return s.returnToolFeedback(ctx, reply, "Argument validation failed: "+err.Error()+". Correct the arguments; no operation was executed.")
+		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
-	if s.planning && definition.Effect == policy.Command {
-		var command string
-		if err := json.Unmarshal(arguments["command"], &command); err != nil {
-			return err
-		}
-		if _, err := shell.PlanQuery(command); err != nil {
-			return s.returnToolFeedback(ctx, reply, err.Error())
-		}
-	}
-	if criteria != nil {
-		s.checkpoint.Criteria = append([]string(nil), criteria...)
-	}
+	call, reason, definition, arguments := v.call, v.reason, v.definition, v.arguments
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = arguments
-	content := call.Arguments
 	if err := s.ground(ctx, call, reason); err != nil {
 		return err
 	}
-	signature := sha256.Sum256(append([]byte(call.Name+"\n"), content...))
-	if revision, exists := s.commands[signature]; definition.Effect == policy.Command && exists && revision == s.checkpoint.ChangeRevision {
-		return s.returnToolFeedback(ctx, reply, "Repeated identical command blocked without an intervening operation. Reuse its recorded output or choose a different action.")
-	}
-	mutating := definition.Effect != policy.Read && !s.planning
-	if definition.Effect == policy.Change && s.mutations[signature] {
-		return s.returnToolFeedback(ctx, reply, "Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed.")
+	if err := s.checkRepeated(v); err != nil {
+		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
 	s.checkpoint.Phase = "approval"
 	if err = s.persist(ctx); err != nil {
@@ -96,39 +42,6 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded native candidate; not executed"}); err != nil {
 		return err
 	}
-	outcome, toolErr := s.execute(ctx, s.planning, call, approve, s.emit)
-	result, failed := string(outcome.Content), outcome.Failed
-	if errors.Is(toolErr, errRuntimeRecord) {
-		return toolErr
-	}
-	s.result.HadToolFailure = s.result.HadToolFailure || failed || toolErr != nil
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	if toolErr != nil || failed {
-		failure := outcome.Failure
-		if failure == nil {
-			failure = toolapi.FailureOf(toolErr)
-		}
-		if failure == nil {
-			failure = &toolapi.Failure{Code: toolapi.ExecutionFailed, Detail: "tool reported failure", Next: "Inspect its output before choosing another action."}
-		}
-		failure.Detail = s.runner.Redact(failure.Detail)
-		encoded, encodeErr := json.Marshal(struct {
-			Failure *toolapi.Failure
-			Output  json.RawMessage
-		}{failure, outcome.Content})
-		if encodeErr != nil {
-			return encodeErr
-		}
-		result = string(encoded)
-	}
-
-	if err = s.save(ctx, modelapi.Message{Role: "tool", Content: s.contextResult(call, result, !failed && toolErr == nil), ToolCallID: call.ID, ToolName: call.Name}); err != nil {
-		return err
-	}
-	if errors.Is(toolErr, errApprovalDenied) {
-		return toolErr
-	}
-	return s.observeOutcome(ctx, call, content, signature, mutating, definition.Effect, result, outcome, toolErr)
+	outcome, toolErr := s.execute(ctx, call, approve, s.emit)
+	return s.acceptResult(ctx, v, outcome, toolErr)
 }

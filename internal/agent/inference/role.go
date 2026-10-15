@@ -7,8 +7,9 @@ package inference
 type Role string
 
 const (
-	Agent      Role = "agent"
-	Plan       Role = "plan"
+	Agent Role = "agent"
+
+	Completion Role = "completion"
 	Conclave   Role = "conclave"
 	Compaction Role = "compaction"
 	Diagnostic Role = "diagnostic"

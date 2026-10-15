@@ -124,3 +124,23 @@ func TestIdenticalReadsKeepStableEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPreserveCompletesLineBoundary(t *testing.T) {
+	for _, newline := range []string{"\n", "\r\n"} {
+		before := "name: demo" + newline + "status: pending" + newline + "count: 3" + newline
+		var store Store
+		rendered, err := store.Record("/a", 1, sha256.Sum256(nil), before)
+		if err != nil {
+			t.Fatal(err)
+		}
+		anchor := strings.Split(strings.Split(rendered, "\n")[1], " | ")[0]
+		after, _, err := store.Replace("/a", []byte(before), anchor, anchor, "status: done", "preserve")
+		if err != nil || string(after) != "name: demo"+newline+"status: done"+newline+"count: 3"+newline {
+			t.Fatalf("%q %v", after, err)
+		}
+		literal, _, err := store.Replace("/a", []byte(before), anchor, anchor, "status: done", "literal")
+		if err != nil || string(literal) != "name: demo"+newline+"status: donecount: 3"+newline {
+			t.Fatalf("explicit joining failed: %q %v", literal, err)
+		}
+	}
+}

@@ -15,10 +15,6 @@ import (
 
 func (op *operation) mutate() (toolapi.Result, error) {
 	switch op.spec.name {
-	case "create_directory":
-		if err := op.source.root.Mkdir(op.source.relative, 0o755); err != nil {
-			return toolapi.Result{}, err
-		}
 	case "write_file", "edit_file":
 		mode := os.FileMode(0o644)
 		if op.original.exists {
@@ -49,11 +45,29 @@ func (op *operation) mutate() (toolapi.Result, error) {
 	default:
 		return toolapi.Result{}, fmt.Errorf("unknown file mutation")
 	}
+	var size *int
+	summary := ""
+	switch op.spec.name {
+	case "write_file", "edit_file":
+		bytes := len(op.replacement)
+		size = &bytes
+		action := "Updated file"
+		if !op.original.exists {
+			action = "Created file"
+		}
+		summary = fmt.Sprintf("%s %s (%d bytes)", action, op.source.absolute, bytes)
+	case "delete_file":
+		summary = "Deleted " + op.source.absolute
+	case "move_file":
+		summary = "Moved " + op.source.absolute + " to " + op.destination.absolute
+	}
 	result, err := resultfmt.Encode(struct {
-		Path    string              `json:"path"`
-		Changed bool                `json:"changed"`
-		Lines   *toolapi.LineChange `json:"lines,omitempty"`
-	}{op.source.absolute, true, op.editSpan}, "Completed")
+		Action    string              `json:"action"`
+		Path      string              `json:"path"`
+		Changed   bool                `json:"changed"`
+		SizeBytes *int                `json:"size_bytes,omitempty"`
+		Lines     *toolapi.LineChange `json:"lines,omitempty"`
+	}{op.spec.name, op.source.absolute, true, size, op.editSpan}, summary)
 	if err != nil {
 		return result, err
 	}
@@ -71,9 +85,6 @@ func (op *operation) mutate() (toolapi.Result, error) {
 		if op.spec.name == "write_file" || op.spec.name == "edit_file" {
 			change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
 		}
-	}
-	if op.spec.name == "create_directory" {
-		change.AfterDigest = "directory"
 	}
 	result.Changes = []toolapi.FileChange{change}
 	return result, nil

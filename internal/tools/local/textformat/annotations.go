@@ -5,7 +5,7 @@
 package textformat
 
 import (
-	"fmt"
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"regexp"
 )
 
@@ -15,5 +15,5 @@ func CheckAnnotations(before, after []byte, policy string) error {
 	if policy == "literal" || !readLabel.Match(after) || readLabel.Match(before) {
 		return nil
 	}
-	return fmt.Errorf("read_display_annotation: replacement contains line/hash display labels; copy only source text after the separator, or use format_policy=literal when these labels are intentionally part of the requested file")
+	return &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: "read_display_annotation: replacement contains read_file display labels", Next: "Keep line#hash labels only in start_anchor/end_anchor. In new_text copy only the source text after the separator; keep format_policy=preserve. Existing valid anchors can be reused."}
 }

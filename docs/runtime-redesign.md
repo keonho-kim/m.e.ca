@@ -1,6 +1,6 @@
 # 경량 실행 루프와 Conclave 재설계
 
-이 문서의 실측·구현 경과는 당시 동작을 기록한다. 현재는 purpose 인자와 강제 검증 완료 게이트를 제거했으며, 최신 실행·보고 계약은 [runtime.md](runtime.md)를 따른다.
+이 문서의 실측·구현 경과는 당시 동작을 기록한다. 현재는 purpose·access·completion_criteria 인자, !plan·읽기 전용 모드와 강제 검증 완료 게이트를 제거했으며, 최신 실행·보고 계약은 [runtime.md](runtime.md)를 따른다.
 
 
 2026-10-14 · 사용자 승인 후 핵심 구조 구현
@@ -11,7 +11,7 @@
 
 ## 1. 설계 근거
 
-로컬 Ornith 1.5 Q4_K_M, LM Studio Responses, context 65,536, 서버 parallel=1에서 관측했다. 원본은 로컬 [실측 보고서](/Users/example/test-space/v/t0/REPORT.md)와 [측정값](/Users/example/test-space/v/t0/metrics.json)에 있다. 이 링크는 해당 실험 환경의 기록이며 배포 문서의 외부 의존성은 아니다.
+로컬 Ornith 1.5 Q4_K_M, LM Studio Responses, context 65,536, 서버 parallel=1에서 관측했다.
 
 | 사례 | 관측 | 설계에 반영할 점 |
 | --- | --- | --- |
@@ -237,7 +237,7 @@ LM Studio의 공식 구조화 출력 설명은 `/v1/chat/completions`에 대한 
 
 ## 10. 2026-10-14 구현 후 로컬 재시험
 
-동일 Ornith 1.5 Q4_K_M, LM Studio Responses, context 65,536, parallel=1, Thinking OFF로 실행했다. 실제 실행 파일은 `~/test-space/v/t20/`부터 `t26/`에 있으며, 시험 전용 설정·schema 6 DB는 `t0/lean-home/.v/`에 분리했다. 사용자 `~/.v`의 기존 설정과 프롬프트를 이번 시험으로 덮어쓰지 않았다.
+동일 Ornith 1.5 Q4_K_M, LM Studio Responses, context 65,536, parallel=1, Thinking OFF로 실행했다. 실험용 프로젝트와 시험 전용 설정·schema 6 DB를 분리해 실행했다. 사용자 `~/.v`의 기존 설정과 프롬프트를 이번 시험으로 덮어쓰지 않았다.
 
 각 사례 1회 결과이며 5회 반복 평가·cold/warm 통제는 아직 수행하지 않았다. 아래 생성 시간은 모델 호출 시간 합계이고, 승인 대기를 포함한 전체 시간과 구분한다. INPUT/OUTPUT은 수신된 usage만 합산했다.
 

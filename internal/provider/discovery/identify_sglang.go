@@ -20,7 +20,7 @@ func (c *Client) identifySGLang(ctx context.Context, model string) (identity.Rep
 		Architectures []string `json:"architectures"`
 	}
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model_info", nil, 4*1024*1024, &info); err != nil {
+	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model_info", nil, 16*1024*1024, &info); err != nil {
 		return report, err
 	}
 	if info.Served != model && (info.Served != "" || info.Path != model) {

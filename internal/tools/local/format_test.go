@@ -21,7 +21,7 @@ func TestFormatLastLineIsPreservedBeforeApproval(t *testing.T) {
 		t.Fatal(err)
 	}
 	edit := anchoredEdit(t, executor, "a", 1, 1, "new")
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, false, edit)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, edit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestFormatReadShowsTrueEOF(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(root, "a"), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
-		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, false, call("read_file", `{"path":"a"}`))
+		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call("read_file", `{"path":"a"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,10 +70,10 @@ func TestFormatLiteralChangeRequiresExplicitArgument(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Scope: policy.Directory, Permission: policy.Approve}
-	if _, err := executor.Prepare(context.Background(), settings, false, call("write_file", `{"path":"a","content":"new\n"}`)); err == nil {
+	if _, err := executor.Prepare(context.Background(), settings, call("write_file", `{"path":"a","content":"new\n"}`)); err == nil {
 		t.Fatal("implicit format change accepted")
 	}
-	op, err := executor.Prepare(context.Background(), settings, false, call("write_file", `{"path":"a","content":"new\n","format_policy":"literal"}`))
+	op, err := executor.Prepare(context.Background(), settings, call("write_file", `{"path":"a","content":"new\n","format_policy":"literal"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

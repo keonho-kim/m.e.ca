@@ -22,7 +22,7 @@ func (s *Store) SaveSelection(ctx context.Context, session string, selection mod
 	if err != nil {
 		return err
 	}
-	if len(body) > 256*1024 {
+	if len(body) > 16*1024*1024 {
 		return fmt.Errorf("model selection exceeds limit")
 	}
 	result, err := s.db.ExecContext(ctx, "UPDATE sessions SET selection=? WHERE id=?", body, session)
@@ -47,7 +47,7 @@ func (s *Store) Selection(ctx context.Context, session string) (modelconn.Select
 	if len(body) == 0 {
 		return modelconn.Selection{}, nil
 	}
-	if len(body) > 256*1024 {
+	if len(body) > 16*1024*1024 {
 		return modelconn.Selection{}, fmt.Errorf("model selection exceeds limit")
 	}
 	var selected modelconn.Selection

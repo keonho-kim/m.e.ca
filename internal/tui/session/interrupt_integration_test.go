@@ -83,7 +83,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 		t.Fatal(err)
 	}
 	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
-	a.startTask("first request", nil)
+	a.startTask("first request")
 	for !strings.Contains(a.thinking, "partial thinking") {
 		select {
 		case n := <-a.events:
@@ -107,7 +107,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 	if a.exit || a.ctx.Err() != nil {
 		t.Fatal("Esc closed session")
 	}
-	a.startTask("continue now", nil)
+	a.startTask("continue now")
 	drainTask(t, a, false)
 	if !continued.Load() || requests.Load() != 2 {
 		t.Fatalf("context lost or request replayed: %d requests", requests.Load())

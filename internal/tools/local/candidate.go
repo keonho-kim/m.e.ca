@@ -17,18 +17,10 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 	if err != nil {
 		return err
 	}
-	if op.spec.name != "write_file" && op.spec.name != "create_directory" && !op.original.exists {
+	if op.spec.name != "write_file" && !op.original.exists {
 		return fmt.Errorf("Path not found")
 	}
 	switch op.spec.name {
-	case "create_directory":
-		if op.original.exists {
-			return fmt.Errorf("directory target already exists")
-		}
-		op.approval.Preview = "Create empty directory " + op.source.absolute
-		if err := op.freezeCandidate(call, nil, nil); err != nil {
-			return err
-		}
 	case "write_file", "edit_file":
 		if op.original.exists && op.original.info.IsDir() {
 			return fmt.Errorf("target is a directory")

@@ -24,18 +24,18 @@ func TestEditFailureReasons(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
-	_, err := executor.Prepare(context.Background(), settings, false, edit)
+	_, err := executor.Prepare(context.Background(), settings, edit)
 	failure := tool.FailureOf(err)
 	if failure == nil || failure.Code != tool.StaleTarget || failure.Next == "" {
 		t.Fatalf("middle change accepted: %+v", failure)
 	}
 	executor.reads.Clear()
-	_, err = executor.Prepare(context.Background(), settings, false, edit)
+	_, err = executor.Prepare(context.Background(), settings, edit)
 	failure = tool.FailureOf(err)
 	if failure == nil || failure.Code != tool.AnchorUnavailable {
 		t.Fatalf("expired read accepted: %+v", failure)
 	}
-	if _, err := executor.Prepare(context.Background(), settings, false, call("edit_file", `{"path":"a","old_text":"first","new_text":"fixed"}`)); err == nil {
+	if _, err := executor.Prepare(context.Background(), settings, call("edit_file", `{"path":"a","old_text":"first","new_text":"fixed"}`)); err == nil {
 		t.Fatal("obsolete edit format accepted")
 	}
 }

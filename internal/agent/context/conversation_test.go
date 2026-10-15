@@ -44,7 +44,7 @@ func TestActivePlanStepFollowsOlderUserMessages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if request.Messages[len(request.Messages)-2].Content != "Execute approved step two" {
+	if !strings.HasSuffix(request.Messages[len(request.Messages)-1].Content, "Execute approved step two") {
 		t.Fatalf("active request preceded history: %+v", request.Messages)
 	}
 }

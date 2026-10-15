@@ -31,13 +31,6 @@ func (a *app) choose() {
 		}
 	case "approval":
 		a.decide(a.choice == 0)
-	case "planapproval":
-		if a.choice == 0 {
-			a.approvePlan()
-		} else {
-			a.page = "chat"
-			a.status = "Enter requested changes"
-		}
 	case "model":
 		if a.choice == 0 {
 			if a.busy {

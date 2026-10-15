@@ -63,8 +63,10 @@ func (s *Store) Replace(path string, current []byte, start, end, replacement, fo
 	if sha256.Sum256([]byte(actual)) != sha256.Sum256([]byte(original)) || actual != original {
 		return nil, toolapi.LineChange{}, stale()
 	}
-	if last < len(lines) && replacement != "" && !strings.HasSuffix(replacement, "\n") {
-		return nil, toolapi.LineChange{}, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: "replacement must end with a newline before the following untouched line", Next: "Preserve the intended line ending, or include the following line in the edit range."}
+	if formatPolicy != "literal" && last < len(lines) && replacement != "" && !strings.HasSuffix(replacement, "\n") {
+		// The saved range proves a following line exists. Preserve that boundary
+		// without asking the model to reproduce a display-invisible terminator.
+		replacement += "\n"
 	}
 	if formatPolicy != "literal" && strings.Contains(original, "\r\n") && !strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n") {
 		replacement = strings.ReplaceAll(strings.ReplaceAll(replacement, "\r\n", "\n"), "\n", "\r\n")

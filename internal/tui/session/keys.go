@@ -11,6 +11,9 @@ import (
 )
 
 func (a *app) keyEvent(e *tcell.EventKey) {
+	if a.selectionKey(e) {
+		return
+	}
 	a.stopNotice = ""
 	if input.ExitKey(e) {
 		a.requestExit()
@@ -104,6 +107,9 @@ func (a *app) recall(n int) {
 }
 
 func (a *app) mouse(e *tcell.EventMouse) {
+	if a.selectionMouse(e) {
+		return
+	}
 	n := 0
 	if e.Buttons()&tcell.WheelUp != 0 {
 		n = -3

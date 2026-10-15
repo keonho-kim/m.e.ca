@@ -20,10 +20,30 @@ func lineRange(first, last int) string {
 
 func (f Formatter) fileOutput(event run.Event, body []byte) string {
 	var result struct {
+		Created []string
 		Changed *bool
 		Lines   *tool.LineChange
 	}
-	if json.Unmarshal(body, &result) != nil || result.Changed == nil || event.Kind != "tool_succeeded" {
+	if json.Unmarshal(body, &result) != nil || result.Changed == nil {
+		return ""
+	}
+	if event.Call.Name == "create_directory" {
+		if len(result.Created) == 0 {
+			if event.Kind != "tool_succeeded" {
+				return ""
+			}
+			return indentTool("요청한 폴더가 이미 존재합니다")
+		}
+		text := indentTool(fmt.Sprintf("폴더 생성 완료 · %d개 (상위 폴더 포함)", len(result.Created)))
+		if event.Kind != "tool_succeeded" {
+			text = f.resultSummary(event) + indentTool(fmt.Sprintf("중단 전 생성한 폴더 · %d개", len(result.Created)))
+		}
+		for _, path := range result.Created {
+			text += indentTool(f.Redact(path))
+		}
+		return text
+	}
+	if event.Kind != "tool_succeeded" {
 		return ""
 	}
 	if !*result.Changed {

@@ -12,15 +12,15 @@ import (
 )
 
 func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
-	for _, page := range []string{"chat", "files", "model", "approval", "planapproval"} {
+	for _, page := range []string{"chat", "files", "model", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
-			a.page, a.busy, a.planMode = page, true, true
+			a.page, a.busy = page, true
 			taskCtx, cancel := context.WithCancel(a.ctx)
 			defer cancel()
 			a.taskCancel = cancel
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlC, "", 0))
-			if !a.exit || taskCtx.Err() == nil || !a.planMode {
+			if !a.exit || taskCtx.Err() == nil {
 				t.Fatal("exit did not cancel work or changed unapproved Plan")
 			}
 		})
@@ -28,10 +28,10 @@ func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 }
 
 func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
-	for _, page := range []string{"chat", "files", "model", "endpoint", "approval", "planapproval"} {
+	for _, page := range []string{"chat", "files", "model", "endpoint", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
-			a.page, a.busy, a.planMode = page, true, true
+			a.page, a.busy = page, true
 			if page == "chat" {
 				a.editor.Set("!quit")
 			} else {

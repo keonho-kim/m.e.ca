@@ -51,5 +51,5 @@ type Execution interface {
 
 type Executor interface {
 	Definitions() []Definition
-	Prepare(context.Context, policy.Settings, bool, Call) (Execution, error)
+	Prepare(context.Context, policy.Settings, Call) (Execution, error)
 }

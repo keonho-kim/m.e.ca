@@ -9,15 +9,14 @@ import (
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/policy/shell"
 	"sync/atomic"
 )
 
 type operation struct {
+	directories                  []directoryTarget
+	directoryPaths               []string
 	executor                     *Executor
-	query                        *shell.Query
 	settings                     policy.Settings
-	planning                     bool
 	spec                         specification
 	input                        arguments
 	source, destination          target
@@ -34,7 +33,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	if err := ctx.Err(); err != nil {
 		return toolapi.Result{}, err
 	}
-	required, err := policy.Decide(op.settings, op.planning, op.spec.effect)
+	required, err := policy.Decide(op.settings, op.spec.effect)
 	if err != nil {
 		return toolapi.Result{}, err
 	}
@@ -43,6 +42,9 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	}
 	if !op.executed.CompareAndSwap(false, true) {
 		return toolapi.Result{}, fmt.Errorf("prepared operation has already executed")
+	}
+	if op.spec.name == "create_directory" {
+		return op.createDirectories(ctx)
 	}
 	if op.spec.effect != policy.Command {
 		current, err := op.executor.resolve(op.settings.Scope, op.input.Path)

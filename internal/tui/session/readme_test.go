@@ -53,10 +53,6 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 				toolName = "execute_command"
 				arguments = map[string]any{"command": "test -s README.md"}
 			}
-			if reply == `{"tool":"submit_plan"}` {
-				toolName = "submit_plan"
-				arguments = map[string]any{"objective": "create file", "steps": []string{"write output.txt and verify"}}
-			}
 			arguments["reason"] = "Perform the requested operation using the current observations."
 			encoded, err := json.Marshal(arguments)
 			if err != nil {
@@ -82,7 +78,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	t.Cleanup(a.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startTask("Create README.md in the current directory", nil)
+	a.startTask("Create README.md in the current directory")
 	drainTask(t, a, true)
 	content, err := os.ReadFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"))
 	if err != nil || string(content) != "# Project\n" || a.status != "" {

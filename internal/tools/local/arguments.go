@@ -13,16 +13,17 @@ import (
 )
 
 type arguments struct {
-	FormatPolicy string `json:"format_policy,omitempty"`
-	Path         string `json:"path"`
-	Content      string `json:"content"`
-	StartAnchor  string `json:"start_anchor"`
-	EndAnchor    string `json:"end_anchor"`
-	NewText      string `json:"new_text"`
-	Destination  string `json:"destination"`
-	Command      string `json:"command"`
-	Offset       int    `json:"offset"`
-	Limit        int    `json:"limit"`
+	Paths        []string `json:"paths"`
+	FormatPolicy string   `json:"format_policy,omitempty"`
+	Path         string   `json:"path"`
+	Content      string   `json:"content"`
+	StartAnchor  string   `json:"start_anchor"`
+	EndAnchor    string   `json:"end_anchor"`
+	NewText      string   `json:"new_text"`
+	Destination  string   `json:"destination"`
+	Command      string   `json:"command"`
+	Offset       int      `json:"offset"`
+	Limit        int      `json:"limit"`
 }
 
 func parseArguments(call toolapi.Call) (specification, arguments, error) {

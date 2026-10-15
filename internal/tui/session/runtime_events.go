@@ -6,7 +6,6 @@ package session
 
 import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
@@ -77,10 +76,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 	} else if e.Kind == "response" {
 		a.stream, a.thinking = "", ""
 		a.output.Append(e.Thinking, true)
-		_, proposalErr := planning.ParsePlanProposal(e.Text)
-		if !a.planMode || proposalErr != nil {
-			a.output.AppendBlock(transcript.Answer(e.Text))
-		}
+		a.output.AppendBlock(transcript.Answer(e.Text))
 	} else {
 		a.output.Append(e.Text, false)
 	}

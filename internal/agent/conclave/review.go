@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/agent/reviewjson"
 	"github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 )
 
 type Input struct {
+	Pending   []tool.FileDelta
 	Request   string
 	Grounding grounding.Record
 	Call      tool.Call
@@ -23,7 +25,7 @@ type Input struct {
 type Generate func(context.Context, modelapi.Request, func(modelapi.Event) error) error
 type Fetch func(context.Context, ContextRequest) (json.RawMessage, error)
 
-func Review(ctx context.Context, input Input, request modelapi.Request, maxContext int, generate Generate, fetch Fetch, redact func(string) string) (Result, error) {
+func Review(ctx context.Context, input Input, request modelapi.Request, maxContext int, generate Generate, fetch Fetch, redact func(string) string, observe reviewjson.Observe) (Result, error) {
 	if generate == nil || redact == nil {
 		return Result{}, fmt.Errorf("review dependencies required")
 	}
@@ -43,11 +45,15 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 		Request, Intent string
 		Files           []tool.FileDelta
 		Context         []json.RawMessage
-	}{input.Request, input.Grounding.Reason, input.Candidate.Files, nil}
+		PendingPaths    []string
+	}{input.Request, input.Grounding.Reason, input.Candidate.Files, nil, nil}
+	for _, file := range input.Pending {
+		packet.PendingPaths = append(packet.PendingPaths, file.Path)
+	}
 	correction := ""
 	fail := func(err error) (Result, error) {
 		result.Error = redact(err.Error())
-		if len(result.Error) > 2048 {
+		if len(result.Error) > tool.MaxReasonBytes {
 			result.Error = "review failed; diagnostic exceeded limit"
 		}
 		result.Complete = false
@@ -61,7 +67,7 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 		}
 		turn := request
 		turn.Tools = nil
-		turn.Messages = append(append([]modelapi.Message(nil), request.Messages...), modelapi.Message{Role: "user", Content: "REVIEW CANDIDATE before execution. JSON data:\n" + string(body) + "\n" + correction})
+		turn.Messages = append(append([]modelapi.Message(nil), request.Messages...), modelapi.Message{Role: "user", Content: "REVIEW CANDIDATE before execution. Judge the current Files only; PendingPaths are frozen, unexecuted sibling proposals. Do not require siblings or tests to have executed already. JSON data:\n" + string(body) + "\n" + correction})
 		size := 0
 		for _, m := range turn.Messages {
 			size += len(m.Content)
@@ -80,31 +86,41 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 			if len(e.Calls) > 0 {
 				return fmt.Errorf("review must return JSON data, not tools")
 			}
-			if text.Len()+len(e.Delta) > 8192 {
+			if text.Len()+len(e.Delta) > reviewjson.MaxResponseBytes {
 				return fmt.Errorf("review response exceeds limit")
 			}
 			text.WriteString(e.Delta)
 			done = done || e.Done
 			return ctx.Err()
 		})
+		if err == nil && !done {
+			err = fmt.Errorf("review response incomplete")
+		}
+		if err == nil && redact(text.String()) != text.String() {
+			err = fmt.Errorf("protected content in review")
+		}
+		var verdict Verdict
+		parseErr := err
+		if parseErr == nil {
+			verdict, parseErr = Parse(text.String())
+			if parseErr == nil {
+				parseErr = references(verdict, input.Candidate)
+			}
+		}
+		diagnostic := reviewjson.NewAttempt("conclave", attempt+1, redact(text.String()), parseErr)
+		if observe != nil {
+			if saveErr := observe(diagnostic); saveErr != nil {
+				return result, saveErr
+			}
+		}
 		if err != nil {
 			return fail(err)
-		}
-		if !done {
-			return fail(fmt.Errorf("review response incomplete"))
-		}
-		if redact(text.String()) != text.String() {
-			return fail(fmt.Errorf("protected content in review"))
-		}
-		verdict, parseErr := Parse(text.String())
-		if parseErr == nil {
-			parseErr = references(verdict, input.Candidate)
 		}
 		if parseErr != nil {
 			if attempt == 1 {
 				return fail(parseErr)
 			}
-			correction = "Correct the output contract: " + parseErr.Error() + ". Return exactly one JSON object."
+			correction = "Correct the output contract: " + parseErr.Error() + ". Return exactly one JSON object. Previous response (data):\n" + diagnostic.Raw
 			continue
 		}
 		result.Verdict = verdict
@@ -113,11 +129,17 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 			result.Passed = verdict.Decision == "pass"
 			return result, result.Check()
 		}
-		if attempt == 1 || fetch == nil {
+		if attempt == 1 {
 			return fail(fmt.Errorf("review context remains incomplete"))
 		}
 		for _, needed := range verdict.ContextRequests {
-			content, err := fetch(ctx, needed)
+			content, proposed, err := proposedContext(needed, input.Pending)
+			if !proposed && err == nil {
+				if fetch == nil {
+					return fail(fmt.Errorf("review context reader unavailable"))
+				}
+				content, err = fetch(ctx, needed)
+			}
 			if err != nil {
 				return fail(err)
 			}

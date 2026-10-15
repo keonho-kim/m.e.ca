@@ -19,15 +19,11 @@ func TestToolPresentationResults(t *testing.T) {
 		name, body string
 		want       []string
 	}{
-		{"search_files", `{"matches":[{"path":"src/a.go"},{"path":"src/b.go"}],"truncated":true}`, []string{"파일 2개", "src/a.go", "src/b.go", "일부"}},
-		{"grep", `{"matches":[{"path":"src/a.go","line":1,"text":"first"},{"path":"src/a.go","line":10,"text":"second"},{"path":"src/a.go","line":100,"text":"secret"}],"truncated":false}`, []string{"일치 3건", "  1 | first", " 10 | second", "100 | [redacted]"}},
-		{"search_files", `{"matches":null,"truncated":false}`, []string{"검색 결과 없음"}},
-		{"list_directory", `{"entries":[{"name":"src","directory":true},{"name":"a.go","directory":false}],"more":false,"next_offset":200}`, []string{"항목 2개", "src/", "a.go"}},
 		{"write_file", `{"path":"a","changed":true}`, []string{"파일 저장 완료"}},
 		{"edit_file", `{"path":"a","changed":true,"lines":{"OldStartLine":10,"OldEndLine":12,"NewStartLine":10,"NewEndLine":11}}`, []string{"수정 완료", "기존 10–12줄 → 10–11줄"}},
 		{"edit_file", `{"path":"a","changed":true,"lines":{"OldStartLine":10,"OldEndLine":12,"Removed":true}}`, []string{"삭제한 줄: 10–12"}},
 		{"delete_file", `{"path":"a","changed":true}`, []string{"삭제 완료"}},
-		{"create_directory", `{"path":"a","changed":true}`, []string{"폴더 생성 완료"}},
+		{"create_directory", `{"created":["a","a/b"],"changed":true}`, []string{"폴더 생성 완료", "2개", "a/b"}},
 		{"move_file", `{"path":"a","changed":true}`, []string{"이동 완료"}},
 		{"execute_command", `{"Stdout":"hello","Stderr":"warning","ExitCode":0,"Status":"exited","Truncated":false}`, []string{"hello", "stderr: warning", "exit: 0"}},
 	} {
@@ -76,10 +72,20 @@ func TestToolPresentationReadAlignsNumbers(t *testing.T) {
 
 func TestToolPresentationMalformedAndFailedResults(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	for _, tc := range []struct{ name, body, kind string }{{"search_files", `{"matches":{"private":"raw"}}`, "tool_succeeded"}, {"edit_file", `{"changed":true}`, "tool_failed"}} {
+	for _, tc := range []struct{ name, body, kind string }{{"read_file", `{"Content":{"private":"raw"}}`, "tool_succeeded"}, {"edit_file", `{"changed":true}`, "tool_failed"}} {
 		shown := f.Tool(run.Event{Kind: tc.kind, Text: "operation could not complete", Call: &tool.Call{Name: tc.name}, Output: []byte(tc.body)})
 		if !strings.Contains(shown, "operation could not complete") || strings.Contains(shown, "private") || strings.Contains(shown, "수정 완료") {
 			t.Fatal(shown)
+		}
+	}
+}
+
+func TestToolPresentationDirectoryPartialResult(t *testing.T) {
+	f := Formatter{Redact: func(s string) string { return s }}
+	shown := f.Tool(run.Event{Kind: "tool_failed", Text: "creation interrupted", Call: &tool.Call{Name: "create_directory", Arguments: []byte(`{"paths":["src/app","tests"]}`)}, Output: []byte(`{"changed":true,"created":["src"]}`)})
+	for _, want := range []string{"경로: src/app", "경로: tests", "creation interrupted", "중단 전 생성한 폴더", "src"} {
+		if !strings.Contains(shown, want) {
+			t.Fatalf("missing %q: %s", want, shown)
 		}
 	}
 }

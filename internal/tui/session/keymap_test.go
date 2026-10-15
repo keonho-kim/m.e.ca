@@ -6,16 +6,14 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestKeymapMatchesFocusedScreen(t *testing.T) {
 	for _, test := range []struct{ page, want string }{
-		{"chat", "전송"}, {"model", "선택"}, {"endpoint", "^U"}, {"approval", "PgUp/Dn"}, {"planapproval", "선택"}, {"files", "입력"},
+		{"chat", "전송"}, {"model", "선택"}, {"endpoint", "^U"}, {"approval", "PgUp/Dn"}, {"files", "입력"},
 	} {
 		t.Run(test.page, func(t *testing.T) {
 			a := fixture(t)
@@ -67,7 +65,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 
 func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 	for _, test := range []struct{ name, page string }{
-		{"!plan", "chat"}, {"!model", "model"}, {"!permission", "permission"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
+		{"!model", "model"}, {"!permission", "permission"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)
@@ -86,9 +84,6 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 			if a.page != test.page || a.commandOpen {
 				t.Fatalf("command not executed: page=%s", a.page)
 			}
-			if test.name == "!plan" && !a.planMode {
-				t.Fatal("Plan did not start")
-			}
 			if (test.name == "!quit" || test.name == "!new") && !a.exit {
 				t.Fatal("quit did not exit")
 			}
@@ -100,24 +95,5 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.page != "chat" || !a.busy || a.editor.String() != "!model" {
 		t.Fatal("command selection bypassed active-task guard")
-	}
-}
-
-func TestKeymapShowsPendingPlanAction(t *testing.T) {
-	a := fixture(t)
-	plan, err := planning.NewPlan("plan", a.opts.Session.ID, "objective", []string{"step"}, time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	plan.Status = planning.AwaitingApproval
-	a.plan, a.planMode = &plan, true
-	a.render()
-	footer := screenLine(a.screen, 23, 80)
-	if !strings.Contains(footer, "승인 메뉴") {
-		t.Fatalf("pending Plan footer=%q", footer)
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "planapproval" || a.plan.Status != planning.AwaitingApproval {
-		t.Fatal("keymap action approved instead of opening menu")
 	}
 }

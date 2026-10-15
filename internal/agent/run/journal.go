@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
@@ -17,9 +18,8 @@ func (s *execution) save(ctx context.Context, m modelapi.Message) error {
 	if m.Thinking != nil && *m.Thinking {
 		m.ReasoningEffort = s.runner.ReasoningEffort
 	}
-	m.Planning = s.planning
 	if err := s.runner.Journal.AppendMessage(ctx, s.runner.Session, m); err != nil {
-		return err
+		return errors.Join(errRuntimeRecord, err)
 	}
 	s.messages = append(s.messages, m)
 	return nil

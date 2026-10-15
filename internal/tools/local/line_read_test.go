@@ -22,7 +22,7 @@ func TestLineReadAndEditReportsPositions(t *testing.T) {
 		t.Fatal(err)
 	}
 	call := anchoredEdit(t, executor, "a", 2, 2, "new\nextra\n")
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, false, call)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestLineReadPartialAndCRLF(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "a"), []byte("first\r\nsecond\r\nlast"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, false, call("read_file", `{"path":"a","offset":2,"limit":16}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call("read_file", `{"path":"a","offset":2,"limit":16}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestLineReadPartialAndCRLF(t *testing.T) {
 		t.Fatalf("read=%+v", read)
 	}
 	edit := anchoredEdit(t, executor, "a", 2, 2, "new\n")
-	op, err = executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}, false, edit)
+	op, err = executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}, edit)
 	if err != nil {
 		t.Fatal(err)
 	}

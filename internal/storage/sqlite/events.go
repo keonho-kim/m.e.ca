@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// Allow JSON escaping and nested runtime records above the 32 MiB reason bound.
+const maxEventBytes = 512 * 1024 * 1024
+
 func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event) error {
 	if err := event.Check(); err != nil {
 		return err
@@ -21,7 +24,7 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event
 	if err != nil {
 		return err
 	}
-	if len(body) > 8*1024*1024 {
+	if len(body) > maxEventBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -58,7 +61,7 @@ func (s *Store) Events(ctx context.Context, session string, before int64, limit 
 		if err = rows.Scan(&cursor, &body); err != nil {
 			return nil, 0, err
 		}
-		if len(body) > 8*1024*1024 {
+		if len(body) > maxEventBytes {
 			return nil, 0, fmt.Errorf("stored event exceeds limit")
 		}
 		var event run.Event

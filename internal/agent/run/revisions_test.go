@@ -25,7 +25,7 @@ func TestRepeatedEditsDoNotRequireCheck(t *testing.T) {
 	}
 	replies = append(replies, "Changed a; no tests run")
 	g, e := &generator{replies: replies}, &executor{outcomes: outcomes}
-	result, err := fixture(g, e, &journal{}).Run(context.Background(), "repair a", false, approve, emit)
+	result, err := fixture(g, e, &journal{}).Run(context.Background(), "repair a", approve, emit)
 	if err != nil || result.Status != Answered || e.executed != 4 || len(g.requests) != 5 {
 		t.Fatalf("%+v executions=%d requests=%d %v", result, e.executed, len(g.requests), err)
 	}
@@ -39,12 +39,12 @@ func TestFileCycleRequestsRecoveryAcrossReads(t *testing.T) {
 	e := &executor{outcomes: []toolapi.Result{changedFile("first", "second"), {Content: json.RawMessage(`{"content":"second"}`)}, changedFile("second", "first"), {Content: json.RawMessage(`{"ok":true}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}}}
 	j := &journal{}
 	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "repair a", false, approve, emit)
+	result, err := r.Run(context.Background(), "repair a", approve, emit)
 	if err != nil || result.Status != Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 	for _, event := range j.events {
-		if event.Kind == "recovery" && strings.Contains(event.Text, "previously observed state") {
+		if event.Kind == "completion_review" && strings.Contains(event.Text, "continue") {
 			return
 		}
 	}

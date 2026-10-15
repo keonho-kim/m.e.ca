@@ -34,7 +34,7 @@ func (client *Client) ListModels(ctx context.Context) (models []modelconn.ModelI
 			ContextWindow int    `json:"max_model_len"`
 		} `json:"data"`
 	}
-	if err := transport.ReadMetadata(ctx, client.HTTP, http.MethodGet, endpoint, nil, 4*1024*1024, &listing); err != nil {
+	if err := transport.ReadMetadata(ctx, client.HTTP, http.MethodGet, endpoint, nil, 16*1024*1024, &listing); err != nil {
 		return nil, err
 	}
 	if listing.Models == nil && listing.Data == nil {

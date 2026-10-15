@@ -1,7 +1,7 @@
 // Purpose: Dispatch tool result presentation without exposing raw protocol objects.
 // Pattern: Tool-specific presentation projection.
 // Usage: Formatter.Tool uses the same projection for live and restored records.
-// Related: internal/tui/transcript/search_results.go, internal/tui/transcript/file_results.go, internal/tui/transcript/process_result.go.
+// Related: internal/tui/transcript/file_results.go, internal/tui/transcript/process_result.go.
 package transcript
 
 import (
@@ -17,10 +17,6 @@ func (f Formatter) output(event run.Event) string {
 	}
 	text := ""
 	switch event.Call.Name {
-	case "search_files", "grep":
-		text = f.searchOutput(body, event.Call.Name)
-	case "list_directory":
-		text = f.directoryOutput(body)
 	case "read_file":
 		var content string
 		if json.Unmarshal(fields["Content"], &content) == nil {
