@@ -10,6 +10,7 @@ import (
 )
 
 func (a *app) openModel() {
+	a.stopNotice = ""
 	a.page = "model"
 	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection), "모델 정보"}
 	a.choice = 0
@@ -78,7 +79,7 @@ func (a *app) choose() {
 		c, err := modelconn.New(modelconn.Providers()[a.choice].Kind, "")
 		a.fail(err)
 		a.menuInput.Set(c.Endpoint)
-	case "permission", "scope":
+	case "permission":
 		a.changeField = a.page
 		a.changeValue = value
 		a.globalMenu()

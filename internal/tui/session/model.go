@@ -15,6 +15,7 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 		return
 	}
 	a.busy = true
+	a.startElapsed()
 	a.status = "Connecting"
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel

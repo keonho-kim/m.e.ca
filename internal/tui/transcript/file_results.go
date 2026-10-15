@@ -1,4 +1,4 @@
-// Purpose: Describe completed file operations and before/after line ranges without raw metadata.
+// Purpose: Describe applied file operations, line ranges and actual changed content.
 // Pattern: Pure presentation projection.
 // Usage: Tool result dispatch supplies the event and immutable result bytes.
 // Related: internal/tui/transcript/details.go, internal/agent/tool/execution.go.
@@ -48,6 +48,9 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 		} else if lines.NewStartLine > 0 {
 			text += indentTool("기존 " + old + "줄 → " + lineRange(lines.NewStartLine, lines.NewEndLine) + "줄")
 		}
+	}
+	if event.ChangePreview != "" {
+		text += "\n" + indentTool("변경 내용") + renderChangePreview(f.Redact(event.ChangePreview))
 	}
 	return text
 }

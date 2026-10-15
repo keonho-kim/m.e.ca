@@ -37,58 +37,62 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
-	tokensPerSecond                 *float64
-	modelNames, modelHints          []string
-	modelHintsOpen                  bool
-	modelHintIndex                  int
-	pending                         string
-	agentActive, stopRequested      bool
-	compressionTimer                *time.Ticker
-	compressionTicks                <-chan time.Time
-	compressionDots                 int
-	tokenTotal, tokenCurrent        modelapi.TokenUsage
-	opts                            Options
-	screen                          tcell.Screen
-	ctx                             context.Context
-	cancel                          context.CancelFunc
-	workers                         sync.WaitGroup
-	events                          chan notice
-	editor                          input.Editor
-	output                          viewport.View
-	inputs                          []string
-	historyIndex                    int
-	draft                           string
-	settings                        policy.Settings
-	selection                       modelconn.Selection
-	client                          *httpclient.Client
-	plan                            *planning.Plan
-	planMode                        bool
-	planStopping                    bool
-	thinkingChoice                  bool
-	page                            string
-	choices                         []string
-	choice                          int
-	menuInput                       input.Editor
-	connectionKind                  int
-	endpoint, key                   string
-	browser                         browser.Browser
-	proposal                        *toolapi.Approval
-	decision                        chan bool
-	busy                            bool
-	taskCancel                      context.CancelFunc
-	exit                            bool
-	newSession                      bool
-	paste                           bool
-	status, stream, thinking        string
-	refs                            []local.Reference
-	refOpen                         bool
-	refStart, refIndex, refRevision int
-	refCancel                       context.CancelFunc
-	commandHints                    []commands.Suggestion
-	commandOpen                     bool
-	commandIndex                    int
-	changeField, changeValue        string
-	historyCursor                   int64
-	previewOffset                   int
-	pendingConnection               modelconn.Connection
+	filePreview                *browser.Preview
+	previewCancel              context.CancelFunc
+	previewRevision            int
+	elapsedStarted             time.Time
+	elapsed                    time.Duration
+	elapsedTimer               *time.Ticker
+	elapsedTicks               <-chan time.Time
+	stopNotice                 string
+	tokensPerSecond            *float64
+	modelNames, modelHints     []string
+	modelHintsOpen             bool
+	modelHintIndex             int
+	pending                    string
+	agentActive, stopRequested bool
+	compressionTimer           *time.Ticker
+	compressionTicks           <-chan time.Time
+	compressionDots            int
+	tokenTotal, tokenCurrent   modelapi.TokenUsage
+	opts                       Options
+	screen                     tcell.Screen
+	ctx                        context.Context
+	cancel                     context.CancelFunc
+	workers                    sync.WaitGroup
+	events                     chan notice
+	editor                     input.Editor
+	output                     viewport.View
+	inputs                     []string
+	historyIndex               int
+	draft                      string
+	settings                   policy.Settings
+	selection                  modelconn.Selection
+	client                     *httpclient.Client
+	plan                       *planning.Plan
+	planMode                   bool
+	planStopping               bool
+	thinkingChoice             bool
+	page                       string
+	choices                    []string
+	choice                     int
+	menuInput                  input.Editor
+	connectionKind             int
+	endpoint, key              string
+	browser                    browser.Browser
+	proposal                   *toolapi.Approval
+	decision                   chan bool
+	busy                       bool
+	taskCancel                 context.CancelFunc
+	exit                       bool
+	newSession                 bool
+	paste                      bool
+	status, stream, thinking   string
+	commandHints               []commands.Suggestion
+	commandOpen                bool
+	commandIndex               int
+	changeField, changeValue   string
+	historyCursor              int64
+	previewOffset              int
+	pendingConnection          modelconn.Connection
 }

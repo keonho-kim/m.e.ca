@@ -15,19 +15,19 @@ import (
 )
 
 type notice struct {
-	RememberModel bool
-	credential    string
-	Effort        *string
-	Event         *run.Event
-	Approval      *toolapi.Approval
-	Done          bool
-	Err           error
-	Plan          *planning.Plan
-	Client        *httpclient.Client
-	Models        []string
-	Selection     *modelconn.Selection
-	References    []local.Reference
-	Revision      int
+	FilePreview     *local.FilePreview
+	PreviewRevision int
+	RememberModel   bool
+	credential      string
+	Effort          *string
+	Event           *run.Event
+	Approval        *toolapi.Approval
+	Done            bool
+	Err             error
+	Plan            *planning.Plan
+	Client          *httpclient.Client
+	Models          []string
+	Selection       *modelconn.Selection
 }
 
 func (a *app) post(ctx context.Context, n notice) error {
@@ -39,15 +39,8 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
-	if n.Revision > 0 {
-		if n.Revision != a.refRevision {
-			return
-		}
-		a.refs = n.References
-		a.refIndex = 0
-		if n.Err != nil {
-			a.status = n.Err.Error()
-		}
+	if n.PreviewRevision > 0 {
+		a.receiveFilePreview(n)
 		return
 	}
 	if n.Approval != nil {

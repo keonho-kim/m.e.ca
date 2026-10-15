@@ -17,7 +17,7 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 	if activity.TokensPerSecond != nil {
 		rate = fmt.Sprintf(" · TPS %.1f", *activity.TokensPerSecond)
 	}
-	if uniseg.StringWidth(tokens+rate+" STATUS "+activity.Status())+1 <= width {
+	if uniseg.StringWidth(tokens+rate+activity.Label())+1 <= width {
 		tokens += rate
 	}
 	label := activity.Label()

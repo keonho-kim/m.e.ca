@@ -14,7 +14,7 @@ import (
 func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
-	if len(a.commandHints) != 7 {
+	if len(a.commandHints) != 6 {
 		t.Fatal("initial command list missing")
 	}
 	typeInput(a, "odel")
@@ -22,7 +22,7 @@ func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	if len(a.commandHints) != 1 || a.commandHints[0].Name != "!model" {
 		t.Fatalf("search=%v", a.commandHints)
 	}
-	line := screenLine(a.screen, 2, 80)
+	line := screenLine(a.screen, 20, 80)
 	if !strings.Contains(line, "!model") || strings.Contains(line, "!plan") {
 		t.Fatalf("candidate row=%q", line)
 	}
@@ -38,7 +38,7 @@ func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	for range "unknown" {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace2, "", 0))
 	}
-	if a.editor.String() != "!" || len(a.commandHints) != 7 {
+	if a.editor.String() != "!" || len(a.commandHints) != 6 {
 		t.Fatal("deletion did not restore candidates")
 	}
 	typeInput(a, "모델")

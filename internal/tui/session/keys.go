@@ -11,15 +11,20 @@ import (
 )
 
 func (a *app) keyEvent(e *tcell.EventKey) {
+	a.stopNotice = ""
 	if input.ExitKey(e) {
 		a.requestExit()
+		return
+	}
+	if a.filePreview != nil && e.Key() == tcell.KeyEscape {
+		a.previewKey(e)
 		return
 	}
 	if e.Key() == tcell.KeyEscape && a.agentActive && a.busy {
 		a.interruptTask()
 		return
 	}
-	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModAlt == 0 {
+	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModShift == 0 {
 		text := a.menuInput.String()
 		if a.page == "chat" || a.page == "files" && a.browser.Input {
 			text = a.editor.String()
@@ -31,6 +36,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			return
 		}
 	}
+	if a.page == "files" && a.filePreview != nil {
+		a.previewKey(e)
+		return
+	}
 	if a.page == "files" && !a.browser.Input {
 		a.fileKey(e)
 		return
@@ -39,11 +48,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.menuKey(e)
 		return
 	}
-	if e.Key() == tcell.KeyTab && a.agentActive && a.busy && !a.paste {
+	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.agentActive && a.busy && !a.paste {
 		a.reserveInput()
 		return
 	}
-	if a.page == "files" && e.Key() == tcell.KeyTab {
+	if a.page == "files" && (e.Key() == tcell.KeyBacktab || e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift != 0) {
 		a.browser.Input = false
 		return
 	}
@@ -52,7 +61,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	}
 	switch e.Key() {
 	case tcell.KeyEnter:
-		if a.paste || e.Modifiers()&tcell.ModAlt != 0 {
+		if a.paste || e.Modifiers()&tcell.ModShift != 0 {
 			a.editor.Insert("\n")
 			a.refreshHints()
 		} else {
@@ -103,6 +112,10 @@ func (a *app) mouse(e *tcell.EventMouse) {
 		n = 3
 	}
 	if n == 0 {
+		return
+	}
+	if a.page == "files" && a.filePreview != nil {
+		a.filePreview.Offset = max(0, a.filePreview.Offset+n)
 		return
 	}
 	if a.page == "files" {

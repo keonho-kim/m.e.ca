@@ -26,8 +26,8 @@ func TestCompactToolRead(t *testing.T) {
 }
 func TestCompactToolWrite(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	shown := f.Tool(run.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: "write_file", Arguments: []byte(`{"path":"a","content":"large source body","format_policy":"preserve"}`)}, Output: []byte(`{"path":"a","changed":true}`)})
-	if strings.Contains(shown, "large source body") || strings.Contains(shown, "format_policy") || !strings.Contains(shown, "파일 저장 완료") {
+	shown := f.Tool(run.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: "write_file", Arguments: []byte(`{"path":"a","content":"large source body","format_policy":"preserve"}`)}, Output: []byte(`{"path":"a","changed":true}`), ChangePreview: "--- /dev/null\n+++ a\n@@ -0,0 +1,1 @@\n+large source body\n"})
+	if strings.Count(shown, "large source body") != 1 || strings.Contains(shown, "format_policy") || !strings.Contains(shown, "파일 저장 완료") {
 		t.Fatal(shown)
 	}
 }

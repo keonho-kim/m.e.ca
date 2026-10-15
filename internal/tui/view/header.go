@@ -32,11 +32,7 @@ func statusLine(screen tcell.Screen, status Status, y, w int) {
 	if settings.Permission == policy.AllowAll {
 		suffix += " │ 자동 승인"
 	}
-	scope := "프로젝트"
-	if settings.Scope == policy.System {
-		scope = "전체 시스템"
-	}
-	suffix += " │ " + scope
+	suffix += " │ 전체 시스템"
 	if planning {
 		suffix += " │ PLAN"
 	}

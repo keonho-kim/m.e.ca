@@ -1,4 +1,4 @@
-// Purpose: Verify command suggestions and parsing share the same seven-command catalog.
+// Purpose: Verify command suggestions and parsing share the same six-command catalog.
 // Pattern: Behavioral tests.
 // Usage: go test ./internal/commands -run TestCommandSuggestions.
 // Related: internal/commands/catalog.go, internal/commands/parse.go.
@@ -8,7 +8,7 @@ import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!")
-	if len(all) != 7 {
+	if len(all) != 6 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {

@@ -35,7 +35,7 @@ func Defaults() Config {
 	return Config{
 		ContextLength: connection.DefaultContextLength,
 		Inference:     inference.Defaults(),
-		Defaults:      policy.Settings{Permission: policy.Approve, Scope: policy.Directory},
+		Defaults:      policy.Settings{Permission: policy.AllowAll, Scope: policy.System},
 		UI:            UI{ColumnWidth: 24, InputMaxLines: 5},
 		Loop:          run.DefaultLimits(),
 		Compaction:    compact.Defaults(),
@@ -46,9 +46,7 @@ func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
 	if overrides.Permission != "" {
 		defaults.Permission = overrides.Permission
 	}
-	if overrides.Scope != "" {
-		defaults.Scope = overrides.Scope
-	}
+	defaults.Scope = policy.System
 	return defaults, defaults.Check()
 }
 

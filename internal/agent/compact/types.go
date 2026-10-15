@@ -1,4 +1,4 @@
-// Purpose: Define accumulated conversation usage, evidence ledgers and atomic compaction storage contracts.
+// Purpose: Define conversation source records, summary memory and atomic compaction storage contracts.
 // Pattern: Consumer-owned persistence contracts.
 // Usage: Used by the compaction controller, task runtime and SQLite adapter.
 // Related: internal/agent/compact/controller.go, internal/storage/sqlite/memory.go.
@@ -22,16 +22,6 @@ type RunFact struct {
 	Step                                   *plan.StepRef
 	Source                                 int64
 }
-type GroundingFact struct {
-	Record grounding.Record
-	Source int64
-}
-
-type ReviewFact struct {
-	Result conclave.Result
-	Source int64
-}
-
 type Record struct {
 	Review     *conclave.Result
 	Grounding  *grounding.Record
@@ -40,17 +30,10 @@ type Record struct {
 	Run        *RunFact
 	Operation  *toolapi.Operation
 }
-type Ledger struct {
-	Reviews    []ReviewFact
-	Groundings []GroundingFact
-	Runs       []RunFact
-	Operations []toolapi.Operation
-}
 type Memory struct {
 	Revision              int
 	Through, UsageThrough int64
 	Markdown              string
-	Ledger                Ledger
 }
 type Watermark struct {
 	Tokens, Usage, Timeline int64

@@ -12,6 +12,8 @@ import (
 )
 
 func (a *app) openFiles(path string) {
+	a.closeFilePreview()
+	a.status = ""
 	if path == "" {
 		path = "."
 	}
@@ -48,9 +50,14 @@ func (a *app) fileKey(e *tcell.EventKey) {
 			}
 		case tcell.KeyEscape:
 			a.menuInput.Set("")
-		case tcell.KeyTab:
+		case tcell.KeyBacktab:
 			a.menuInput.Set("")
 			a.browser.Input = true
+		case tcell.KeyTab:
+			if e.Modifiers()&tcell.ModShift != 0 {
+				a.menuInput.Set("")
+				a.browser.Input = true
+			}
 		default:
 			input.EditKey(&a.menuInput, e)
 			if !fileCommand(a.menuInput.String()) {
@@ -65,8 +72,16 @@ func (a *app) fileKey(e *tcell.EventKey) {
 		return
 	}
 	switch e.Key() {
-	case tcell.KeyTab:
+	case tcell.KeyBacktab:
 		a.browser.Input = true
+	case tcell.KeyTab:
+		if e.Modifiers()&tcell.ModShift != 0 {
+			a.browser.Input = true
+		} else {
+			a.openFilePreview(false)
+		}
+	case tcell.KeyEnter:
+		a.openFilePreview(true)
 	case tcell.KeyUp:
 		a.browser.Move(-1)
 	case tcell.KeyDown:
@@ -100,7 +115,7 @@ func (a *app) fileKey(e *tcell.EventKey) {
 		}
 	case tcell.KeyLeft:
 		a.browser.Left()
-	case tcell.KeyRight, tcell.KeyEnter:
+	case tcell.KeyRight:
 		path, dir := a.browser.Target()
 		if path == "" || !dir {
 			return

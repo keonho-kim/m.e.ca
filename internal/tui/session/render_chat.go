@@ -10,16 +10,7 @@ import (
 )
 
 func (a *app) chatHeight(width, height int) int {
-	rows := view.InputRows(a.editor, max(1, width), min(a.opts.Config.UI.InputMaxLines, max(1, height-2)))
-	hints := 0
-	if a.commandOpen {
-		hints = max(1, len(a.commandHints))
-	} else if a.refOpen {
-		hints = max(1, len(a.refs))
-	}
-	hints = min(hints, view.MaxCandidateRows, max(0, height-rows-2))
-	// Reserve the fixed token row and the gap before the composer.
-	return max(0, height-rows-hints-2)
+	return view.Composer(a.editor, width, height, a.opts.Config.UI.InputMaxLines, a.candidates(), a.stopNotice).TranscriptRows
 }
 
 func (a *app) renderChat(width, height int) {
@@ -43,5 +34,5 @@ func (a *app) renderChat(width, height int) {
 	}
 	available := a.chatHeight(width, height)
 	start := a.output.Start(lines, available)
-	view.Chat(a.screen, view.ChatDisplay{Activity: a.activity(), Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
+	view.Chat(a.screen, view.ChatDisplay{Notice: a.stopNotice, Activity: a.activity(), Usage: a.displayTokens(), Lines: lines, Start: start, Available: available, Editor: a.editor, InputMaxLines: a.opts.Config.UI.InputMaxLines, Candidates: a.candidates()}, width, height)
 }

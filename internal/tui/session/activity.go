@@ -10,7 +10,7 @@ import (
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{TokensPerSecond: a.tokensPerSecond, Running: a.busy, Compressing: a.compressionTicks != nil, Dots: a.compressionDots}
+	return view.Activity{Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.busy, Compressing: a.compressionTicks != nil, Dots: a.compressionDots}
 }
 func (a *app) interruptTask() {
 	if !a.agentActive || !a.busy || a.taskCancel == nil {
@@ -18,14 +18,15 @@ func (a *app) interruptTask() {
 	}
 	a.restorePending()
 	a.stopRequested = true
+	a.stopElapsed()
 	a.taskCancel()
 	a.stopCompression()
 	a.proposal = nil
 	a.page = "chat"
 	a.choices = nil
-	a.closeReferences()
 	a.closeCommandHints()
-	a.status = "작업을 중지하고 정리하고 있습니다"
+	a.status = ""
+	a.stopNotice = "작업을 중지하고 정리하고 있습니다"
 }
 func (a *app) startCompression() {
 	if a.stopRequested || a.compressionTimer != nil {

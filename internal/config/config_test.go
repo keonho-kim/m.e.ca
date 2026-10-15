@@ -20,7 +20,7 @@ func TestLoadSaveAndEffectiveSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if configuration.Defaults != (policy.Settings{Permission: policy.Approve, Scope: policy.Directory}) {
+	if configuration.Defaults != (policy.Settings{Permission: policy.AllowAll, Scope: policy.System}) {
 		t.Fatalf("unsafe defaults: %+v", configuration.Defaults)
 	}
 	configuration.Defaults.Permission = policy.AllowAll
@@ -31,7 +31,7 @@ func TestLoadSaveAndEffectiveSettings(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(restored, configuration) {
 		t.Fatalf("restore: %+v, %v", restored, err)
 	}
-	actual, err := Effective(restored.Defaults, policy.Settings{Scope: policy.System})
+	actual, err := Effective(restored.Defaults, policy.Settings{Scope: policy.Directory})
 	if err != nil || actual.Permission != policy.AllowAll || actual.Scope != policy.System {
 		t.Fatalf("effective settings: %+v, %v", actual, err)
 	}
@@ -49,6 +49,7 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 		"[defaults]\npermission='anything'\n",
 		"[ui]\ninput_max_lines=20\n",
 		"[defaults]\nscope='outside'\n",
+		"[defaults]\nscope='directory'\n",
 		"unexpected=true\n",
 		"[session]\nrestore_last=true\n",
 		"[ui]\ntheme='classic'\n",

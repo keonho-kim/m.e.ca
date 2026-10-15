@@ -7,6 +7,7 @@ package view
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
+	"slices"
 )
 
 type Shortcut struct{ Key, Label string }
@@ -38,17 +39,33 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	}
 	rows := [][]Shortcut{{}}
 	cells := 0
-	for _, shortcut := range shortcuts {
+	ordered := slices.Clone(shortcuts)
+	ranks := []string{"^C", "Esc", "Enter", "Tab", "^U", "Shift+Enter", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
+	rank := func(key string) int {
+		n := slices.Index(ranks, key)
+		if n < 0 {
+			return len(ranks)
+		}
+		return n
+	}
+	slices.SortStableFunc(ordered, func(a, b Shortcut) int { return rank(a.Key) - rank(b.Key) })
+	for _, shortcut := range ordered {
 		count := uniseg.StringWidth(shortcut.Key) + 1 + uniseg.StringWidth(shortcut.Label)
+		if count > width {
+			continue
+		}
 		if cells > 0 && cells+count > width {
 			if len(rows) == maxRows {
-				break
+				continue
 			}
 			rows = append(rows, []Shortcut{})
 			cells = 0
 		}
 		rows[len(rows)-1] = append(rows[len(rows)-1], shortcut)
 		cells += count + 2
+	}
+	if len(rows[0]) == 0 {
+		return nil
 	}
 	return rows
 }

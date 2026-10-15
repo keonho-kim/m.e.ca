@@ -1,11 +1,10 @@
-// Purpose: Own Unicode input editing and literal Markdown path references.
+// Purpose: Own deterministic Unicode input editing.
 // Pattern: Simple Module (deterministic input state).
 // Usage: The terminal event loop owns and mutates one editor per input field.
 // Related: internal/tui/input/editor_test.go, internal/tui/session/keys.go.
 package input
 
 import (
-	"net/url"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -30,9 +29,9 @@ func (e *Editor) Insert(s string) {
 		}
 		return r
 	}, s)
-	e.Replace(e.Cursor, e.Cursor, s)
+	e.replace(e.Cursor, e.Cursor, s)
 }
-func (e *Editor) Replace(start, end int, s string) {
+func (e *Editor) replace(start, end int, s string) {
 	r := []rune(s)
 	next := append([]rune(nil), e.Text[:start]...)
 	next = append(next, r...)
@@ -53,12 +52,12 @@ func (e *Editor) End() {
 }
 func (e *Editor) Backspace() {
 	if e.Cursor > 0 {
-		e.Replace(e.Cursor-1, e.Cursor, "")
+		e.replace(e.Cursor-1, e.Cursor, "")
 	}
 }
 func (e *Editor) Delete() {
 	if e.Cursor < len(e.Text) {
-		e.Replace(e.Cursor, e.Cursor+1, "")
+		e.replace(e.Cursor, e.Cursor+1, "")
 	}
 }
 func (e *Editor) DeleteWord() {
@@ -69,24 +68,5 @@ func (e *Editor) DeleteWord() {
 	for e.Cursor > 0 && !unicode.IsSpace(e.Text[e.Cursor-1]) {
 		e.Cursor--
 	}
-	e.Replace(e.Cursor, end, "")
-}
-func (e *Editor) Reference() (token string, start int, ok bool) {
-	start = e.Cursor
-	for start > 0 && !unicode.IsSpace(e.Text[start-1]) {
-		start--
-	}
-	if start < e.Cursor && e.Text[start] == '@' {
-		return string(e.Text[start+1 : e.Cursor]), start, true
-	}
-	return "", 0, false
-}
-func Link(label, path string) string {
-	label = strings.NewReplacer("\\", "\\\\", "[", "\\[", "]", "\\]").Replace(label)
-	parts := strings.Split(path, "/")
-	for i := range parts {
-		parts[i] = url.PathEscape(parts[i])
-		parts[i] = strings.NewReplacer("(", "%28", ")", "%29").Replace(parts[i])
-	}
-	return "[" + label + "](" + strings.Join(parts, "/") + ")"
+	e.replace(e.Cursor, end, "")
 }

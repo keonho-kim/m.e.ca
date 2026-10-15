@@ -69,15 +69,11 @@ func fixture(t *testing.T) *app {
 	t.Cleanup(screen.Fini)
 	return &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: context.Background(), screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
 }
-func TestReferenceEnterInsertsInsteadOfSending(t *testing.T) {
+func TestAtInputRemainsLiteral(t *testing.T) {
 	a := fixture(t)
-	a.editor.Set("read @src")
-	a.refOpen = true
-	a.refStart = 5
-	a.refs = []local.Reference{{Path: "."}}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.refOpen || !strings.Contains(a.editor.String(), "](") || a.busy {
-		t.Fatalf("insertion: %+v", a.editor)
+	typeInput(a, "read @src/main.go")
+	if a.editor.String() != "read @src/main.go" || a.commandOpen || a.busy {
+		t.Fatal("@ triggered completion")
 	}
 }
 func TestKeyInputPreservesGraphemeStrings(t *testing.T) {
@@ -184,9 +180,9 @@ func TestStatusPolicyLabels(t *testing.T) {
 		plan       bool
 		want       string
 	}{
-		{"default", policy.Approve, policy.Directory, false, false, "chosen │ 프로젝트"},
+		{"default", policy.Approve, policy.Directory, false, false, "chosen │ 전체 시스템"},
 		{"system", policy.Approve, policy.System, false, false, "chosen │ 전체 시스템"},
-		{"automatic", policy.AllowAll, policy.Directory, false, false, "chosen │ 자동 승인 │ 프로젝트"},
+		{"automatic", policy.AllowAll, policy.Directory, false, false, "chosen │ 자동 승인 │ 전체 시스템"},
 		{"thinking and plan", policy.AllowAll, policy.System, true, true, "chosen Thinking │ 자동 승인 │ 전체 시스템 │ PLAN"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -204,23 +200,23 @@ func TestStatusPolicyLabels(t *testing.T) {
 }
 func TestPolicyChoiceAlwaysAsksGlobalAndPreservesOverrides(t *testing.T) {
 	a := fixture(t)
-	a.page = "scope"
-	a.choices = []string{"directory", "system"}
-	a.choice = 1
+	a.page = "permission"
+	a.choices = []string{"approve", "allow-all"}
+	a.choice = 0
 	a.choose()
-	if a.page != "global" || a.settings.Scope != policy.Directory {
-		t.Fatal("scope applied before destination choice")
+	if a.page != "global" || a.settings.Permission != policy.AllowAll {
+		t.Fatal("permission applied before destination choice")
 	}
 	a.choice = 0
 	a.choose()
-	if a.settings.Scope != policy.System {
-		t.Fatal("project override missing")
+	if a.settings.Permission != policy.Approve || a.settings.Scope != policy.System {
+		t.Fatal("session permission missing or scope changed")
 	}
-	a.changeField = "scope"
-	a.changeValue = "directory"
+	a.changeField = "permission"
+	a.changeValue = "allow-all"
 	a.applySetting(true)
-	if a.settings.Scope != policy.System {
-		t.Fatal("global overrode project")
+	if a.settings.Permission != policy.Approve {
+		t.Fatal("global replaced session override")
 	}
 }
 func TestRestoredUnapprovedPlanRemainsGated(t *testing.T) {

@@ -40,7 +40,7 @@ func TestFileViewQuitCanCorrectAnIncorrectCommand(t *testing.T) {
 func TestFileViewQuitFromInputFocus(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
-	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
 	typeInput(a, ":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.page != "chat" || a.exit {

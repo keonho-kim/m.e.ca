@@ -1,5 +1,5 @@
-// Purpose: Verify compaction preserves exact self-grounding even if the generated summary omits it.
-// Pattern: Compaction evidence contract test.
+// Purpose: Verify archived evidence is available to summarization without being appended to memory.
+// Pattern: Compaction source and context contract test.
 // Usage: go test ./internal/agent/compact -run TestGrounding.
 // Related: internal/agent/compact/controller.go, internal/agent/compact/context.go.
 package compact
@@ -14,35 +14,48 @@ import (
 	"testing"
 )
 
-func TestGroundingSurvivesCompaction(t *testing.T) {
+func TestGroundingIsSourceOnly(t *testing.T) {
 	record, err := grounding.Bind(tool.Call{ID: "c", Name: "read_file", Arguments: []byte(`{"path":"README.md"}`)}, "README.md is unknown.", "run_1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Grounding: &record}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-	_, err = c.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+	_, err = c.Refresh(context.Background(), func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+		if !strings.Contains(request.Messages[1].Content, repoSourceMarker(repo)) {
+			t.Fatal("execution evidence missing from summary source")
+		}
 		return emit(modelapi.Event{Delta: summary(), Done: true})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	text, _, err := c.Context()
-	if err != nil || !strings.Contains(text, "README.md is unknown.") || !strings.Contains(text, record.Reason) {
-		t.Fatalf("grounding lost: %s %v", text, err)
+	if err != nil || text != summary() {
+		t.Fatalf("unexpected grounding appendix: %s %v", text, err)
 	}
 }
 
-func TestFailedDiagnosticSurvivesSummaryOmission(t *testing.T) {
+func TestFailedDiagnosticIsSourceOnly(t *testing.T) {
 	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Operation: &tool.Operation{CallID: "c", RunID: "task", Name: "execute_command", Status: "tool_failed", Check: true, Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "src/a:4 expected ready, got missing"}}}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-	if _, err := c.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+	if _, err := c.Refresh(context.Background(), func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+		if !strings.Contains(request.Messages[1].Content, repoSourceMarker(repo)) {
+			t.Fatal("execution evidence missing from summary source")
+		}
 		return emit(modelapi.Event{Delta: summary(), Done: true})
 	}); err != nil {
 		t.Fatal(err)
 	}
 	text, _, err := c.Context()
-	if err != nil || !strings.Contains(text, "src/a:4 expected ready, got missing") {
-		t.Fatalf("diagnostic lost: %s %v", text, err)
+	if err != nil || text != summary() {
+		t.Fatalf("unexpected diagnostic appendix: %s %v", text, err)
 	}
+}
+
+func repoSourceMarker(repo *repository) string {
+	if repo.records[0].Grounding != nil {
+		return repo.records[0].Grounding.Reason
+	}
+	return repo.records[0].Operation.Process.Diagnostic
 }

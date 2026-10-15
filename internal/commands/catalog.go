@@ -15,7 +15,6 @@ var catalog = []struct {
 	{"!plan", "계획 모드 켜기 · 끄기", Plan},
 	{"!model", "모델 선택 · Thinking 설정", Model},
 	{"!permission", "승인 정책", Permission},
-	{"!scope", "접근 범위", Scope},
 	{"!dir", "파일 탐색", Directory},
 	{"!new", "새 세션", NewSession},
 	{"!quit", "앱 종료", Exit},

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"time"
 )
 
 type Action uint8
@@ -47,6 +48,8 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 			case *tcell.EventError:
 				return Exit, e
 			}
+		case <-app.elapsedTicks:
+			app.updateElapsed(time.Now())
 		case <-app.compressionTicks:
 			app.advanceCompression()
 		case n := <-app.events:
@@ -65,6 +68,8 @@ func (a *app) fail(err error) {
 }
 
 func (a *app) requestExit() {
+	a.closeFilePreview()
+	a.stopElapsed()
 	a.stopCompression()
 	a.exit = true
 	if a.taskCancel != nil {

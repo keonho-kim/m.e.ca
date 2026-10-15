@@ -32,6 +32,7 @@ func TestPlanExecutionWaitsForBothApprovals(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.settings.Scope = policy.System
+	a.settings.Permission = policy.Approve
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Messages []modelapi.Message `json:"messages"`

@@ -20,7 +20,9 @@ func (a *app) startTask(text string, approved *planning.Plan) {
 	}
 	a.stream, a.thinking = "", ""
 	a.tokensPerSecond = nil
+	a.stopNotice = ""
 	a.busy = true
+	a.startElapsed()
 	a.agentActive = true
 	a.stopRequested = false
 	a.status = ""

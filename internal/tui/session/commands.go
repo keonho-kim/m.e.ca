@@ -7,6 +7,7 @@ package session
 import (
 	planning "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/commands"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
 
@@ -52,7 +53,7 @@ func (a *app) submit() {
 		a.exit = true
 		return
 	}
-	if a.busy && command.Kind != commands.Directory && !(command.Kind == commands.Plan && a.planMode && a.taskCancel != nil) {
+	if !a.canSubmit(command.Kind) {
 		a.status = "One task is already active; draft preserved"
 		return
 	}
@@ -63,10 +64,9 @@ func (a *app) submit() {
 		a.page = "permission"
 		a.choices = []string{"approve", "allow-all"}
 		a.choice = 0
-	case commands.Scope:
-		a.page = "scope"
-		a.choices = []string{"directory", "system"}
-		a.choice = 0
+		if a.settings.Permission == policy.AllowAll {
+			a.choice = 1
+		}
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Plan:
@@ -90,6 +90,9 @@ func (a *app) submit() {
 		a.startTask(command.Argument, nil)
 	}
 	a.editor.Set("")
-	a.closeReferences()
 	a.closeCommandHints()
+}
+
+func (a *app) canSubmit(kind commands.Kind) bool {
+	return !a.busy || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession || kind == commands.Plan && a.planMode && a.taskCancel != nil
 }

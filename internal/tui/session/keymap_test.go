@@ -15,7 +15,7 @@ import (
 
 func TestKeymapMatchesFocusedScreen(t *testing.T) {
 	for _, test := range []struct{ page, want string }{
-		{"chat", "전송"}, {"model", "선택"}, {"endpoint", "^U"}, {"approval", "PgUp/Dn"}, {"planapproval", "선택"}, {"files", "Space"},
+		{"chat", "전송"}, {"model", "선택"}, {"endpoint", "^U"}, {"approval", "PgUp/Dn"}, {"planapproval", "선택"}, {"files", "입력"},
 	} {
 		t.Run(test.page, func(t *testing.T) {
 			a := fixture(t)
@@ -67,7 +67,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 
 func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 	for _, test := range []struct{ name, page string }{
-		{"!plan", "chat"}, {"!model", "model"}, {"!permission", "permission"}, {"!scope", "scope"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
+		{"!plan", "chat"}, {"!model", "model"}, {"!permission", "permission"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

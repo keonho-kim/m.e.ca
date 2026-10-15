@@ -118,6 +118,9 @@ func (s *execution) execute(ctx context.Context, planning bool, call toolapi.Cal
 	}
 	event.Operation = &opFact
 	event.Output = outcome.Content
+	if event.Kind == "tool_succeeded" && proposal.Diff {
+		event.ChangePreview = boundedChangePreview(r.Redact(proposal.Preview))
+	}
 	recordCtx := context.WithoutCancel(ctx)
 	if err := s.record(recordCtx, event); err != nil {
 		return outcome, errors.Join(errRuntimeRecord, err)

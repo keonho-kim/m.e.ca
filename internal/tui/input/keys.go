@@ -25,9 +25,9 @@ func EditKey(editor *Editor, e *tcell.EventKey) {
 	case tcell.KeyCtrlW:
 		editor.DeleteWord()
 	case tcell.KeyCtrlU:
-		editor.Replace(0, editor.Cursor, "")
+		editor.replace(0, editor.Cursor, "")
 	case tcell.KeyCtrlK:
-		editor.Replace(editor.Cursor, len(editor.Text), "")
+		editor.replace(editor.Cursor, len(editor.Text), "")
 	case tcell.KeyTab:
 		editor.Insert("\t")
 	}

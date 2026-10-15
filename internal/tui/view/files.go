@@ -25,9 +25,16 @@ type FilesDisplay struct {
 	ColumnWidth, SelectedCount int
 	Editor                     input.Editor
 	InputFocused               bool
+	BrowserWidth               int
+	Preview                    *FilePreviewDisplay
 }
 
 func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
+	if display.Preview != nil && display.Preview.Full {
+		topLine(screen, display.Path, display.Usage, w, display.Activity)
+		FilePreview(screen, *display.Preview, w, h)
+		return
+	}
 	width := display.ColumnWidth
 	topLine(screen, display.Path, display.Usage, w, display.Activity)
 	for _, column := range display.Columns {
@@ -42,11 +49,14 @@ func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 			}
 		}
 	}
-	Text(screen, 0, h-3, w, fmt.Sprintf("selected: %d", display.SelectedCount), tcell.StyleDefault)
+	Text(screen, 0, h-3, display.BrowserWidth, fmt.Sprintf("selected: %d", display.SelectedCount), tcell.StyleDefault)
 	if display.Status != "" {
-		Text(screen, 0, h-2, w, display.Status, tcell.StyleDefault)
+		Text(screen, 0, h-2, display.BrowserWidth, display.Status, tcell.StyleDefault)
 	}
-	Input(screen, display.Editor, h-1, w, 1)
+	Input(screen, display.Editor, h-1, display.BrowserWidth, 1)
+	if display.Preview != nil {
+		FilePreview(screen, *display.Preview, w, h)
+	}
 	if !display.InputFocused {
 		screen.HideCursor()
 	}

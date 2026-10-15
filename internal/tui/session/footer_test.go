@@ -18,14 +18,14 @@ func TestFixedFooterContainsStatusAndKeys(t *testing.T) {
 		a.render()
 		status := screenLine(a.screen, size[1]-2, size[0])
 		keys := screenLine(a.screen, size[1]-1, size[0])
-		if !strings.Contains(status, "chosen") || !strings.Contains(status, "프로젝트") || strings.Contains(status, "^C") {
+		if !strings.Contains(status, "chosen") || !strings.Contains(status, "전체 시스템") || strings.Contains(status, "^C") {
 			t.Fatalf("status=%q", status)
 		}
-		if !strings.Contains(keys, "^C") || strings.Contains(keys, "프로젝트") || strings.Contains(keys, "chosen") {
+		if !strings.Contains(keys, "^C") || strings.Contains(keys, "전체 시스템") || strings.Contains(keys, "chosen") {
 			t.Fatalf("keys=%q", keys)
 		}
 		for row := 0; row < size[1]-2; row++ {
-			if strings.Contains(screenLine(a.screen, row, size[0]), "프로젝트") {
+			if strings.Contains(screenLine(a.screen, row, size[0]), "전체 시스템") {
 				t.Fatal("status was rendered above the footer")
 			}
 		}

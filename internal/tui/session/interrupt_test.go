@@ -45,10 +45,10 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	a.editor.Set("draft")
 	a.render()
 	header := screenLine(a.screen, 0, 80)
-	if !strings.HasPrefix(header, "STATUS RUNNING [*]") || !strings.Contains(header, "Compress Memory .") || !strings.HasSuffix(header, "INPUT 0 · OUTPUT 0 · TPS —") {
+	if !strings.HasPrefix(header, "STATUS RUNNING 00 : 00 : 00") || !strings.Contains(header, "Compress Memory .") || !strings.HasSuffix(header, "INPUT 0 · OUTPUT 0 · TPS —") {
 		t.Fatalf("header alignment: %q", header)
 	}
-	if strings.TrimSpace(screenLine(a.screen, 1, 80)) != "> draft" {
+	if strings.TrimSpace(screenLine(a.screen, 21, 80)) != "> draft" {
 		t.Fatal("status moved into composer")
 	}
 	if a.compressionTicks == nil {

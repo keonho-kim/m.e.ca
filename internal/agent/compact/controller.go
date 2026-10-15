@@ -1,7 +1,7 @@
 // Purpose: Compact archived dialogue in bounded chronological chunks and atomically publish a validated memory revision.
 // Pattern: Use Case.
 // Usage: Refreshed only at a task decision boundary, never during native call assembly or approval.
-// Related: internal/agent/compact/types.go, internal/agent/compact/ledger.go, internal/storage/sqlite/memory.go.
+// Related: internal/agent/compact/types.go, internal/agent/compact/context.go, internal/storage/sqlite/memory.go.
 package compact
 
 import (
@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	toolrecord "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 type Controller struct {
@@ -74,10 +73,6 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 		return false, nil
 	}
 	next := c.memory
-	next.Ledger.Reviews = append([]ReviewFact(nil), next.Ledger.Reviews...)
-	next.Ledger.Groundings = append([]GroundingFact(nil), next.Ledger.Groundings...)
-	next.Ledger.Runs = append([]RunFact(nil), next.Ledger.Runs...)
-	next.Ledger.Operations = append([]toolrecord.Operation(nil), next.Ledger.Operations...)
 	cursor := next.Through
 	processed := false
 	var batch []json.RawMessage
@@ -107,7 +102,6 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 			return false, fmt.Errorf("compaction source cursor did not advance")
 		}
 		for _, record := range records {
-			next.Ledger.merge(record)
 
 			// Segment the complete source representation, including large metadata fields.
 			payload, err := json.Marshal(record)

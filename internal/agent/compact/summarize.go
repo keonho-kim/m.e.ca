@@ -1,4 +1,4 @@
-// Purpose: Generate bounded summaries from complete source fragments and enforce bullet grammar.
+// Purpose: Receive bounded summaries from complete source fragments without enforcing an output format.
 // Pattern: Model Adapter use case.
 // Usage: Compaction controller calls summarize before installing a memory revision.
 // Related: internal/agent/compact/controller.go, internal/agent/prompt/defaults/compaction.md.
@@ -50,9 +50,13 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, previous,
 		return "", fmt.Errorf("compaction model response incomplete")
 	}
 	text := c.Redact(reply.String())
-	if err = checkSummary(text, c.Settings.MaxSummaryBytes); err != nil {
-		return "", err
+	if strings.TrimSpace(text) == "" {
+		return "", fmt.Errorf("compaction response is empty")
 	}
+	if len(text) > c.Settings.MaxSummaryBytes || !utf8.ValidString(text) {
+		return "", fmt.Errorf("compaction response exceeds size limit or is not valid UTF-8")
+	}
+
 	return text, nil
 }
 func segments(text string, limit int) []string {
@@ -66,41 +70,6 @@ func segments(text string, limit int) []string {
 		text = text[n:]
 	}
 	return parts
-}
-
-var sections = []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"}
-
-func checkSummary(text string, maxBytes int) error {
-	if len(text) > maxBytes || !utf8.ValidString(text) {
-		return fmt.Errorf("compaction summary exceeds its limit")
-	}
-	index := -1
-	bullets := 0
-	for _, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		if strings.HasPrefix(line, "## ") {
-			if index >= 0 && bullets == 0 {
-				return fmt.Errorf("summary section has no items")
-			}
-			index++
-			bullets = 0
-			if index >= len(sections) || line != "## "+sections[index] {
-				return fmt.Errorf("unexpected compaction section")
-			}
-			continue
-		}
-		if index < 0 || !strings.HasPrefix(line, "- ") {
-			return fmt.Errorf("compaction summary must contain headings and bullet items only")
-		}
-		bullets++
-	}
-	if index != len(sections)-1 || bullets == 0 {
-		return fmt.Errorf("compaction summary is missing required sections")
-	}
-	return nil
 }
 
 func (c *Controller) summaryMessages(previous, source string) ([]modelapi.Message, error) {

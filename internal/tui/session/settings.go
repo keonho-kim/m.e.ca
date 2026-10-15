@@ -19,11 +19,10 @@ func (a *app) applySetting(global bool) {
 		a.fail(err)
 		return
 	}
-	updated, effective, err := settingcmd.Policy(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Config, a.changeField, a.changeValue, global)
+	updated, effective, err := settingcmd.Policy(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Config, a.changeValue, global)
 	if err != nil {
 		a.fail(err)
 		return
 	}
 	a.opts.Config, a.settings = updated, effective
-	a.closeReferences()
 }

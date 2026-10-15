@@ -15,6 +15,7 @@ import (
 )
 
 type Event struct {
+	ChangePreview   string               `json:"change_preview,omitempty"`
 	TokensPerSecond *float64             `json:"-"`
 	Internal        bool                 `json:"internal,omitempty"`
 	Monitor         *monitor.Record      `json:"monitor,omitempty"`

@@ -27,6 +27,7 @@ func (a *app) finishWorker(n notice) {
 	a.stopRequested = false
 	a.agentActive = false
 	a.stopCompression()
+	a.stopElapsed()
 	a.busy = false
 	a.taskCancel = nil
 	if n.Err != nil {
@@ -64,8 +65,8 @@ func (a *app) finishWorker(n notice) {
 	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
 	}
-	if stopped && errors.Is(n.Err, context.Canceled) {
-		a.status = "중지했습니다. 다음 입력으로 이어갈 수 있습니다"
+	if stopped && errors.Is(n.Err, context.Canceled) && a.page == "chat" {
+		a.stopNotice = "중지했습니다. 다음 입력으로 이어갈 수 있습니다"
 	}
 	if err := a.adoptConnection(n); err != nil {
 		n.Err = err

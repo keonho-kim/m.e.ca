@@ -88,4 +88,27 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	if err != nil || string(content) != "# Project\n" || a.status != "" {
 		t.Fatalf("content=%q status=%q err=%v", content, a.status, err)
 	}
+	visible := false
+	for _, block := range a.output.Blocks {
+		if strings.Contains(block.Text, "+   1 | # Project") {
+			visible = true
+		}
+	}
+	if !visible {
+		t.Fatal("created file body missing from transcript")
+	}
+	records, _, err := a.opts.Store.Timeline(ctx, a.opts.Session.ID, 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted := false
+	for _, record := range records {
+		if record.Event.Kind == "tool_succeeded" && record.Event.Call != nil && record.Event.Call.Name == "write_file" {
+			persisted = strings.Contains(record.Event.ChangePreview, "+# Project")
+		}
+	}
+	if !persisted {
+		t.Fatal("applied body not retained for resume")
+	}
+
 }

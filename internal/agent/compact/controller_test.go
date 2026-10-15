@@ -1,11 +1,12 @@
-// Purpose: Verify token-triggered compaction preserves runtime facts and never replaces valid memory on failure.
+// Purpose: Verify token-triggered compaction publishes summary-only memory and never replaces valid memory on failure.
 // Pattern: Compaction behavior tests.
 // Usage: go test ./internal/agent/compact.
-// Related: internal/agent/compact/controller.go, internal/agent/compact/ledger.go.
+// Related: internal/agent/compact/controller.go, internal/agent/compact/context.go.
 package compact
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	planref "github.com/keonho-kim/v-code/internal/agent/plan"
@@ -47,14 +48,8 @@ func (r *repository) InstallMemory(_ context.Context, _ string, expected int, ne
 	r.installed++
 	return nil
 }
-func summary() string {
-	var b strings.Builder
-	for _, section := range sections {
-		b.WriteString("## " + section + "\n- Preserve task state and source references.\n")
-	}
-	return b.String()
-}
-func TestThresholdAndFileLedger(t *testing.T) {
+func summary() string { return "Preserve task state and source references." }
+func TestThresholdPublishesSummaryOnly(t *testing.T) {
 	repo := &repository{mark: Watermark{Tokens: 199999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Run: &RunFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{RunID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
@@ -77,25 +72,29 @@ func TestThresholdAndFileLedger(t *testing.T) {
 	if err != nil || !changed || repo.installed != 1 {
 		t.Fatalf("trigger: %v %v", changed, err)
 	}
+	body, marshalErr := json.Marshal(repo.memory)
+	if marshalErr != nil || strings.Contains(string(body), "Ledger") || strings.Contains(string(body), "src/auth.go") {
+		t.Fatalf("execution ledger persisted in memory: %s %v", body, marshalErr)
+	}
 	memory, through, err := controller.Context()
 	if through != repo.memory.Through {
 		t.Fatal("compaction boundary lost")
 	}
-	if err != nil || !strings.Contains(memory, "src/auth.go") || !strings.Contains(memory, "revision 2 step 1") {
-		t.Fatalf("lost facts: %s %v", memory, err)
+	if err != nil || memory != summary() {
+		t.Fatalf("unexpected compacted context: %s %v", memory, err)
 	}
 }
-func TestInvalidSummaryPreservesPreviousMemory(t *testing.T) {
+func TestEmptySummaryPreservesPreviousMemory(t *testing.T) {
 	repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	_, err := controller.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
-		if err := emit(modelapi.Event{Delta: "I think everything is done."}); err != nil {
+		if err := emit(modelapi.Event{Delta: "   \n"}); err != nil {
 			return err
 		}
 		return emit(modelapi.Event{Done: true})
 	})
 	if err == nil || repo.installed != 0 || repo.memory.Revision != 1 {
-		t.Fatal("invalid prose replaced the evidence memory")
+		t.Fatal("empty summary replaced the evidence memory")
 	}
 }
 
@@ -126,5 +125,26 @@ func TestThresholdBatchesSourceRecords(t *testing.T) {
 	})
 	if err != nil || !changed || calls != 1 {
 		t.Fatalf("changed=%v calls=%d err=%v", changed, calls, err)
+	}
+}
+
+func TestSummaryFormattingIsGuidanceOnly(t *testing.T) {
+	for _, text := range []string{
+		"The requested change is implemented. Tests are pending.",
+		"## Continuation\nRun tests.\n## Requests\nFix the parser.",
+		"- Changed a.go\n- Pending: verify behavior",
+		"### 작업 내역\n1. a.go 수정\n2. 검증 필요",
+		"```markdown\nSummary in a fence.\n```",
+	} {
+		t.Run(text, func(t *testing.T) {
+			repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "fix parser"}}}
+			c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
+			changed, err := c.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+				return emit(modelapi.Event{Delta: text, Done: true})
+			})
+			if err != nil || !changed || repo.installed != 1 || repo.memory.Markdown != text {
+				t.Fatalf("format rejected or rewritten: changed=%t err=%v", changed, err)
+			}
+		})
 	}
 }

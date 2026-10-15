@@ -31,7 +31,6 @@ func (a *app) reserveInput() {
 	}
 	a.pending = command.Argument
 	a.editor.Set("")
-	a.closeReferences()
 	a.closeCommandHints()
 	a.status = "현재 작업이 끝나면 예약한 요청을 실행합니다"
 }

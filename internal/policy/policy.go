@@ -19,7 +19,7 @@ const (
 
 type Settings struct {
 	Permission Permission `toml:"permission" json:"permission"`
-	Scope      Scope      `toml:"scope" json:"scope"`
+	Scope      Scope      `toml:"-" json:"scope"`
 }
 
 func ParsePermission(value string) (Permission, error) {

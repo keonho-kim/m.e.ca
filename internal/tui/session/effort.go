@@ -51,6 +51,7 @@ func (a *app) chooseEffort() {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.busy = true
+	a.startElapsed()
 	a.status = "Checking Thinking effort"
 	a.page = "chat"
 	client, model := a.client, a.selection.Model

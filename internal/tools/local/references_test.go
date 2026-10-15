@@ -1,11 +1,10 @@
-// Purpose: Verify filename/path completion respects scope and finds directories.
+// Purpose: Verify selected paths respect scope and distinguish files from directories.
 // Pattern: Filesystem behavior tests.
 // Usage: go test ./internal/tools/local -run TestReferences.
 // Related: internal/tools/local/references.go.
 package local
 
 import (
-	"context"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
@@ -21,13 +20,13 @@ func TestReferences(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
-	for _, token := range []string{"auth", "src/au", "src"} {
-		out, err := e.References(context.Background(), settings, token)
-		if err != nil || len(out) == 0 {
-			t.Fatalf("%q: %+v %v", token, out, err)
+	for _, path := range []string{"src/auth.go", "src"} {
+		ref, err := e.Reference(settings, path)
+		if err != nil || ref.Directory != (path == "src") {
+			t.Fatalf("%q: %+v %v", path, ref, err)
 		}
 	}
-	if _, err := e.References(context.Background(), settings, "../"); err == nil {
+	if _, err := e.Reference(settings, "../"); err == nil {
 		t.Fatal("scope escape")
 	}
 }

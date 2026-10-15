@@ -20,7 +20,6 @@ const (
 	Plan
 	Model
 	Permission
-	Scope
 	Directory
 	Quit
 	Exit

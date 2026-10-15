@@ -1,4 +1,4 @@
-// Purpose: Verify conversational turn ordering and the editor below transcript output.
+// Purpose: Verify conversation ordering with an independently fixed bottom editor.
 // Pattern: Terminal behavior tests.
 // Usage: go test ./internal/tui/session -run 'TestConversation|TestTranscript'.
 // Related: internal/tui/session/render.go, internal/tui/session/history.go, internal/tui/session/events.go.
@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-func TestConversationEditorFollowsTurns(t *testing.T) {
+func TestConversationEditorStaysAtBottom(t *testing.T) {
 	a := fixture(t)
 	for _, text := range []string{"first question", "second question"} {
 		for _, block := range (transcript.Formatter{Redact: a.opts.Vault.Redact}).Message(modelapi.Message{Role: "user", Content: text}) {
@@ -31,7 +31,7 @@ func TestConversationEditorFollowsTurns(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		rows = append(rows, strings.TrimSpace(screenLine(a.screen, y, 80)))
 	}
-	want := []string{"INPUT 0 · OUTPUT 0 · TPS —", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", "", "> next draft"}
+	want := []string{"INPUT 0 · OUTPUT 0 · TPS —", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", ""}
 	for y, text := range want {
 		if y == 0 {
 			if !strings.HasPrefix(rows[y], "STATUS IDLE") || !strings.HasSuffix(rows[y], text) {
@@ -42,6 +42,9 @@ func TestConversationEditorFollowsTurns(t *testing.T) {
 		if rows[y] != text {
 			t.Fatalf("row %d = %q; want %q\n%s", y, rows[y], text, strings.Join(rows, "\n"))
 		}
+	}
+	if rows[21] != "> next draft" {
+		t.Fatal("composer not above model footer")
 	}
 	if strings.Contains(strings.Join(rows, "\n"), "Model answer") {
 		t.Fatal("completion boilerplate displayed")
@@ -68,7 +71,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 			inputRow = y
 		}
 	}
-	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow+1, 32), "!plan") {
+	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-6, 32), "!plan") {
 		t.Fatal("editor and candidates not visible below token usage")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -110,7 +113,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "read_file", "", "경로: README.md", "", "Output", "file inspected", "", "file inspected", "", "", ">"} {
+	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "read_file", "", "경로: README.md", "", "Output", "file inspected", "", "file inspected", "", ""} {
 		if y == 0 {
 			got := screenLine(a.screen, 0, 80)
 			if !strings.HasPrefix(got, "STATUS IDLE") || !strings.HasSuffix(got, text) {
@@ -121,5 +124,8 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		if got := strings.TrimSpace(screenLine(a.screen, y, 80)); got != text {
 			t.Fatalf("restored row %d=%q; want %q", y, got, text)
 		}
+	}
+	if strings.TrimSpace(screenLine(a.screen, 21, 80)) != ">" {
+		t.Fatal("restored composer not fixed")
 	}
 }
