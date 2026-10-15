@@ -54,7 +54,7 @@ func TestCompactionContext(t *testing.T) {
 			t.Errorf("effort lost in generation/compaction: %q", body.Effort)
 		}
 		reply := "Remembered the earlier goal"
-		if strings.Contains(body.Messages[0].Content, "# Conversation memory") {
+		if strings.Contains(body.Messages[0].Content, "# Summarize work for continuation") {
 			if !strings.Contains(body.Messages[1].Content, `"ActiveRequest":"Continue the earlier goal"`) {
 				t.Error("active request missing from summary input")
 			}

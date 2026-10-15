@@ -20,7 +20,6 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 		if outcome.Started && effect == policy.Change {
 			s.mutations[signature] = true
 		}
-		s.changed = true
 		s.checkpoint.ChangeRevision++
 		// Real file changes make earlier reads/checks stale. Merely running another
 		// command must not erase the evidence that an observation already repeated.

@@ -5,19 +5,27 @@
 package run
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/completion"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"maps"
+	"strings"
 )
 
-func (s *execution) observeCompletion(v validatedCall, outcome toolapi.Result, toolErr error) {
+func (s *execution) observeCompletion(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error) error {
 	var targets, changed []string
-	versions := map[string]string{}
+	versions := maps.Clone(outcome.Versions)
+	if versions == nil {
+		versions = map[string]string{}
+	}
 	for _, c := range outcome.Changes {
 		targets = append(targets, c.Path)
-		versions[c.Path] = c.AfterDigest
+		if c.AfterDigest != "" {
+			versions[c.Path] = c.AfterDigest
+		}
 		if c.BeforeDigest != c.AfterDigest || c.Destination != "" {
 			changed = append(changed, c.Path)
 		}
@@ -70,10 +78,19 @@ func (s *execution) observeCompletion(v validatedCall, outcome toolapi.Result, t
 		var dirs struct{ Paths []string }
 		if json.Unmarshal(outcome.Content, &dirs) == nil && len(dirs.Paths) > 0 {
 			targets = dirs.Paths
+			for _, path := range dirs.Paths {
+				versions[path] = "directory"
+			}
 		}
 	}
-	receipt := completion.Receipt{Kind: kind, Versions: versions, Command: excerpt(commandText, 4000), ID: v.call.ID, Tool: v.call.Name, Targets: targets, Success: success, UnknownScope: command, Output: excerpt(s.runner.Redact(text), 2048)}
+	receipt := completion.Receipt{Kind: kind, Versions: versions, Command: commandText, ID: v.call.ID, Tool: v.call.Name, Targets: targets, Success: success, Output: s.runner.Redact(strings.TrimLeft(text, "\r\n"))}
 	s.checkpoint.Work.Observe(receipt, changed, command)
+	if command {
+		if err := s.refreshFileFacts(ctx); err != nil {
+			return err
+		}
+	}
+	return s.checkpoint.Work.Check()
 }
 func checkCompletion(c Checkpoint) error {
 	if len(c.ReportReason) > 256*1024*1024 {

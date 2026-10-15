@@ -8,13 +8,12 @@ import (
 	"context"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	fileops "github.com/keonho-kim/v-code/internal/tools/local/file"
 )
 
 func (op *operation) run(ctx context.Context) (toolapi.Result, error) {
 	switch op.spec.name {
 	case "read_file":
-		return (fileops.Read{Root: op.source.root, Path: op.source.relative, Absolute: op.source.absolute, Offset: op.input.Offset, Limit: op.input.Limit, Anchors: &op.executor.reads, Redact: op.executor.redact}).Execute(ctx)
+		return op.readFile(ctx)
 	case "write_file", "edit_file", "delete_file", "move_file":
 		return op.mutate()
 	case "execute_command":

@@ -33,6 +33,7 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
+	Versions        map[string]string
 	ReviewSatisfied bool
 	Target          string
 	Started         bool

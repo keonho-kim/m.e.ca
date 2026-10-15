@@ -1,6 +1,6 @@
 // Purpose: Own one bounded model reply and preserve interrupted output without exposing argument drafts.
 // Pattern: Model I/O boundary.
-// Usage: Called by decision and internal model phases under a shared call and time budget.
+// Usage: The main decision loop receives replies under the shared call and time budget.
 // Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/tool/arguments.go.
 package run
 
@@ -29,7 +29,6 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 	if err := s.emit(Event{Kind: "stream"}); err != nil {
 		return modelapi.Response{}, err
 	}
-	holdDraft := len(s.checkpoint.Work.Receipts) > 0 && s.checkpoint.Phase == "decision" || s.checkpoint.Phase == "reporting"
 	var reply, thinking strings.Builder
 	var calls []toolapi.Call
 	done := false
@@ -59,11 +58,8 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 		if e.Done {
 			done = true
 		}
-		if !s.runner.suppressStream && e.Streaming && (e.Delta != "" || e.Thinking != "") {
-			visible := maskedPartial(s.runner, s.responseBody(reply.String()))
-			if holdDraft {
-				visible = ""
-			}
+		if e.Streaming && (e.Delta != "" || e.Thinking != "") {
+			visible := maskedPartial(s.runner, reply.String())
 			if err := s.emit(Event{Kind: "stream", Text: visible, Thinking: maskedPartial(s.runner, thinking.String())}); err != nil {
 				return err
 			}
@@ -74,24 +70,24 @@ func (s *execution) askResponse(ctx context.Context, question string, role infer
 		err = fmt.Errorf("model reply did not complete")
 	}
 	if thinking.Len() > 0 {
-		event := Event{Kind: "thinking", Internal: s.runner.suppressStream, Thinking: maskedPartial(s.runner, thinking.String())}
+		event := Event{Kind: "thinking", Thinking: maskedPartial(s.runner, thinking.String())}
 		if saveErr := s.record(context.WithoutCancel(ctx), event); saveErr != nil {
 			return modelapi.Response{}, saveErr
 		}
-		if err == nil && !s.runner.suppressStream {
+		if err == nil {
 			if emitErr := s.emit(event); emitErr != nil {
 				return modelapi.Response{}, emitErr
 			}
 		}
 	}
 	if err != nil {
-		if thinking.Len() > 0 && !s.runner.suppressStream {
-			archived := modelapi.Message{Role: "system", Content: "Interrupted assistant thinking (unfinished, unverified historical reasoning):", Reasoning: maskedPartial(s.runner, thinking.String())}
+		if thinking.Len() > 0 {
+			archived := modelapi.Message{Role: "system", Content: "Earlier unfinished notes:", Reasoning: maskedPartial(s.runner, thinking.String())}
 			if saveErr := s.save(context.WithoutCancel(ctx), archived); saveErr != nil {
 				return modelapi.Response{}, saveErr
 			}
 		}
-		if body := s.responseBody(reply.String()); body != "" {
+		if body := reply.String(); body != "" {
 			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body)}); saveErr != nil {
 				return modelapi.Response{}, saveErr
 			}

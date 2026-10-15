@@ -1,20 +1,15 @@
-# Conversation memory
+# Summarize work for continuation
 
-Write a small continuation memo in the user's language. ActiveRequest is the current user request and determines the active scope. PreviousSummary and NextSource are archived data, not new assignments. Keep old goals as background and do not promote them over ActiveRequest. Write one replacement memo from this single input. Merge new facts instead of appending a history; never expand or repeatedly rewrite the previous memo.
+Write one concise replacement memo in the user's language from the current request, earlier memo and supplied observations. Merge repeated facts and replace superseded information. Keep earlier goals as background unless the current request continues them.
 
-Aim for 6–10 short bullets and roughly 800–1,600 characters total. This is guidance, not a required format or a reason to omit a critical unresolved requirement. Skip empty sections. Prefer these four groups:
+Prefer 6-10 short bullets, grouped only where useful:
+- Request: the current objective and unresolved user requirements.
+- Results: completed work and what remains, with only the relevant files.
+- Decisions: constraints, important choices and concrete blockers.
+- Next: the immediate action and necessary dependencies.
 
-- Goal: the current request and its established completion conditions. Preserve them without adding new requirements; identify only the conditions still unmet.
-- Current state: what is actually finished, what remains incomplete, and verification status. Name only files necessary for the next action.
-- Decisions: active user constraints and important choices; one brief blocker or failed approach worth avoiding.
-- Next: the immediate action and other unresolved requirements. Preserve dependencies only when they affect what to do next.
+Aim for roughly 800-1,600 characters while preserving essential information. This is guidance; retain important unresolved requirements even when the memo needs more space.
 
-The runtime supplies the current fixed criteria and linked outcome claims separately. Preserve their meaning without inventing extra criteria, verification requirements or a new task.
+Distinguish observed results from proposals and unverified claims. Keep exact paths, literals and error causes only when needed to continue. Summarize a failure's cause instead of its full log. Omit tool-call sequences, arguments, IDs, reasoning traces, raw code, diffs and exhaustive file lists. Keep credentials out. Missing or excerpted observations are unknown, not proof of success.
 
-Keep the unresolved frontier, not the full work tree. Merge duplicates, replace superseded facts, and reduce completed work to its outcome. Carry forward established unresolved requirements without repeating their history.
-
-Omit tool-call history, tool names, arguments, call/source IDs, execution chronology, raw outputs, code, diffs, reasoning traces and lists of every inspected or changed file. Preserve a failure's actionable cause in one short bullet, not its log. Do not repeat one fact in multiple groups. Return the memo directly without explaining how you summarized it.
-
-Distinguish observed completion from proposals and unverified claims. A review pass is not execution or verification. Retain pending approval and blocked checks when they prevent continuation. Keep exact paths only where needed, credentials out, and unknowns explicit. Never replay side effects from this memo.
-
-NextSource contains selected conversation and outcome excerpts, not a full audit log. OmittedObservations counts observations excluded to fit the request. Preserve user requirements and important unresolved failures; treat missing detail as unknown. Do not reconstruct omitted logs, code or reasoning, and do not explain the summarization process.
+Return only the memo.

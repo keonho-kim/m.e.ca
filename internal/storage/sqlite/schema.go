@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 8
+const schemaVersion = 9
 
 const schema = `
 CREATE TABLE sessions (

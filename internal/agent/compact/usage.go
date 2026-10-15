@@ -6,6 +6,8 @@ package compact
 
 import "fmt"
 
+const MaxBodyBytes = 16 * 1024 * 1024
+
 type Settings struct {
 	KeepRecentBytes int   `toml:"keep_recent_bytes"`
 	ThresholdTokens int64 `toml:"threshold_tokens"`
@@ -14,10 +16,10 @@ type Settings struct {
 }
 
 func Defaults() Settings {
-	return Settings{KeepRecentBytes: 16 * 1024, ThresholdTokens: 200000, MaxSummaryBytes: 16 * 1024, MaxInputBytes: 64 * 1024}
+	return Settings{KeepRecentBytes: 16 * 1024, ThresholdTokens: 200000, MaxSummaryBytes: MaxBodyBytes, MaxInputBytes: MaxBodyBytes}
 }
 func (s Settings) Check() error {
-	if s.KeepRecentBytes < 0 || s.KeepRecentBytes > 1024*1024 || s.ThresholdTokens < 1 || s.ThresholdTokens > 1000000000 || s.MaxSummaryBytes < 1024 || s.MaxSummaryBytes > 64*1024 || s.MaxInputBytes < 8192 || s.MaxInputBytes > 256*1024 || s.MaxSummaryBytes > s.MaxInputBytes/2 {
+	if s.KeepRecentBytes < 0 || s.KeepRecentBytes > MaxBodyBytes || s.ThresholdTokens < 1 || s.ThresholdTokens > 1000000000 || s.MaxSummaryBytes < 1024 || s.MaxSummaryBytes > MaxBodyBytes || s.MaxInputBytes < 8192 || s.MaxInputBytes > MaxBodyBytes {
 		return fmt.Errorf("invalid compaction settings")
 	}
 	return nil

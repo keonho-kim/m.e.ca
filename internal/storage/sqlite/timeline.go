@@ -32,7 +32,7 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 			return nil, 0, err
 		}
 		bytes += len(body)
-		if bytes > 8*1024*1024 && len(records) > 0 {
+		if bytes > 16*1024*1024 && len(records) > 0 {
 			break
 		}
 		cursor = r.Sequence

@@ -57,7 +57,7 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if len(c.Blocker) > 4096 || len(c.LastChange) > 1024 {
+	if len(c.Blocker) > 16*1024*1024 || len(c.LastChange) > 16*1024*1024 {
 		return fmt.Errorf("invalid blocker detail")
 	}
 	if c.ChangeRevision < 0 {

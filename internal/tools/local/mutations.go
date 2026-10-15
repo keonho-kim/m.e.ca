@@ -75,16 +75,14 @@ func (op *operation) mutate() (toolapi.Result, error) {
 	if op.spec.name == "move_file" {
 		change.Destination = op.destination.absolute
 	}
-	if !op.original.exists {
-		change.BeforeDigest = "missing"
-	} else if !op.original.info.IsDir() {
-		change.BeforeDigest = fmt.Sprintf("%x", op.original.digest)
+	change.BeforeDigest = versionValue(op.original)
+	change.AfterDigest = "missing"
+	if op.spec.name == "write_file" || op.spec.name == "edit_file" {
+		change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
 	}
-	if change.BeforeDigest != "" {
-		change.AfterDigest = "missing"
-		if op.spec.name == "write_file" || op.spec.name == "edit_file" {
-			change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
-		}
+	result.Versions = map[string]string{change.Path: change.AfterDigest}
+	if op.spec.name == "move_file" {
+		result.Versions[op.destination.absolute] = versionValue(op.original)
 	}
 	result.Changes = []toolapi.FileChange{change}
 	return result, nil

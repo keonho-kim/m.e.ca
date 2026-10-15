@@ -6,6 +6,7 @@ package completion
 
 import (
 	"context"
+	"encoding/json"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/reviewjson"
 	"strings"
@@ -39,5 +40,23 @@ func TestReviewCorrectionPreservesFailureAndDoesNotInventEvidence(t *testing.T) 
 		if success && (err != nil || verdict.Decision != "complete") || !success && err == nil {
 			t.Fatalf("%+v %v", verdict, err)
 		}
+	}
+}
+
+func TestReviewProjectsOnlyTaskObservations(t *testing.T) {
+	state := State{Reviewed: "INTERNAL_HASH", Verdict: &Verdict{Reason: "INTERNAL_JUDGEMENT"}, Receipts: []Receipt{{ID: "observation", SourceCallID: "INTERNAL_SOURCE", Tool: "read_file", Kind: "content", Targets: []string{"a"}, Versions: map[string]string{"a": "INTERNAL_VERSION"}, Success: true, Output: "Read a"}}}
+	view := reviewFacts(state)
+	body, err := json.Marshal(view)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "INTERNAL_") {
+		t.Fatal("review received bookkeeping rather than task observations")
+	}
+	if len(view.Receipts) != 1 || view.Receipts[0].ID != "observation" || view.Receipts[0].Output != "Read a" {
+		t.Fatal("lost review evidence")
+	}
+	if state.Receipts[0].Versions["a"] != "INTERNAL_VERSION" {
+		t.Fatal("projection changed durable facts")
 	}
 }

@@ -75,8 +75,8 @@ Bootstrap은 다음 Markdown 프롬프트를 누락된 경우에만 생성한다
 [compaction]
 threshold_tokens = 200000
 keep_recent_bytes = 16384
-max_summary_bytes = 16384
-max_input_bytes = 65536
+max_summary_bytes = 16777216
+max_input_bytes = 16777216
 ```
 
 단일 요청 INPUT에 따른 조기 압축 조건은 제거했다. 다만 명시적인 context_length_exceeded 계열 오류에는 안전한 경계에서 압축하고 모델 요청만 한 번 재시도한다. 요약할 prefix가 없거나 고정 지침이 한도를 넘으면 원인을 반환한다.
@@ -141,7 +141,7 @@ vLLM의 사전 토큰 계산 경로는 현재 메시지·도구를 포함한 실
 
 기존 설정에 명시된 양수는 유지한다. 자동 모드를 사용하려면 `[inference.agent]`의 `max_output_tokens`를 0으로 설정한다. Compaction 기본값은 8192이고 Conclave·Diagnostic은 12800이다.
 
-현재 세션 형식은 schema 8이며 이전 DB는 보존하고 미지원 오류로 거절합니다. [inference.plan] 설정은 제거하고 [inference.completion]을 사용합니다. 종료 심사 기본값은 temperature=0.2, max_output_tokens=2048, thinking="off_if_supported"입니다.
+현재 세션 형식은 schema 9이며 이전 DB는 보존하고 미지원 오류로 거절합니다. [inference.plan] 설정은 제거하고 [inference.completion]을 사용합니다. 종료 심사 기본값은 temperature=0.2, max_output_tokens=2048, thinking="off_if_supported"입니다.
 
 ### 본문 용량 경계
 
@@ -156,4 +156,4 @@ vLLM의 사전 토큰 계산 경로는 현재 메시지·도구를 포함한 실
 | 변경 diff | 64MiB |
 | SQLite 이벤트·체크포인트 JSON 봉투 | 512MiB |
 
-이는 수용 상한이며 해당 크기를 미리 할당하거나 모델에 매번 채워 보내는 설정이 아니다. 경로·ID·열거값·배열 개수 등 의미적 제약, 화면 미리보기·로그·요약·추가 문맥 발췌의 작은 출력 예산은 별도다. 진단 원문은 16MiB까지 보존하고 생략을 표시한다. Compaction의 작은 입력 투영과 8192 출력 토큰 기본값은 유지한다. 실제 모델 context와 출력 토큰 한도는 바이트 상한 확대와 독립적이다. 기존 config.toml에 명시한 실행 바이트 한도는 자동으로 덮어쓰지 않는다.
+이는 수용 상한이며 해당 크기를 미리 할당하거나 모델에 매번 채워 보내는 설정이 아니다. 경로·ID·열거값·배열 개수 등 의미적 제약, 화면 미리보기·로그·요약·추가 문맥 발췌의 작은 출력 예산은 별도다. 진단 원문은 16MiB까지 보존하고 생략을 표시한다. Compaction 입력·요약의 바이트 상한은 각각 16MiB이며 8192 출력 토큰 기본값은 유지한다. 실제 모델 context와 출력 토큰 한도는 바이트 상한 확대와 독립적이다. 기존 config.toml에 명시한 실행 바이트 한도는 자동으로 덮어쓰지 않는다.

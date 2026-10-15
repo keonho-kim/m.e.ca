@@ -29,7 +29,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	mandatory := record.Role == "user"
 	text := record.Text
 	if !mandatory {
-		text = sourceExcerpt(text, 2048)
+		text = sourceExcerpt(text, MaxBodyBytes)
 	}
 	encoded, err := json.Marshal(struct{ Role, Text string }{record.Role, redact(text)})
 	if err != nil {

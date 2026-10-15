@@ -28,7 +28,7 @@ func completionFixture(r modelapi.Request, emit func(modelapi.Event) error) (boo
 			break
 		}
 	}
-	if input.Trigger != "final answer proposal" && len(input.State.Receipts) > 0 {
+	if input.Draft == "" && verdict.Decision == "complete" {
 		verdict = completion.Verdict{Decision: "continue", Reason: "Inspect the remaining original request using a different approach", Unmet: []string{input.Request}, Evidence: []string{"request"}}
 	}
 	body, err := json.Marshal(verdict)

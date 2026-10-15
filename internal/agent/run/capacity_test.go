@@ -30,7 +30,7 @@ func (g *capacityGenerator) Generate(ctx context.Context, r modelapi.Request, em
 	if handled, err := completionFixture(r, emit); handled {
 		return err
 	}
-	if strings.HasPrefix(r.Messages[0].Content, "# Conversation memory") {
+	if strings.HasPrefix(r.Messages[0].Content, "# Summarize work for continuation") {
 		g.summaries++
 		if strings.Contains(r.Messages[1].Content, `"ActiveRequest":"Read a"`) {
 			g.activeRequest = "Read a"

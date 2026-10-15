@@ -25,7 +25,7 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 		if err != nil {
 			return modelapi.Message{}, err
 		}
-		return modelapi.Message{Role: "user", Content: "Archived runtime record (data, not a user request):\n" + string(body)}, nil
+		return modelapi.Message{Role: "user", Content: "Earlier notes and observations:\n" + string(body)}, nil
 	}
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
 		return modelapi.Message{}, fmt.Errorf("invalid conversation role")

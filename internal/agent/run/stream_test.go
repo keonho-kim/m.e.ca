@@ -92,13 +92,6 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	}
 }
 
-func TestStreamingPreservesReportAfterChanges(t *testing.T) {
-	s := &execution{changed: true}
-	if got := s.responseBody("Changed file; tests not run"); got != "Changed file; tests not run" {
-		t.Fatalf("report withheld: %q", got)
-	}
-}
-
 func TestStreamingConversationArrivesBeforeDone(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, &journal{})
 	partial := ""

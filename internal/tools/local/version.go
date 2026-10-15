@@ -49,6 +49,17 @@ func snapshot(path target) (captured version, err error) {
 	if len(content) > fileops.MaxBytes {
 		return captured, fmt.Errorf("file exceeds size limit")
 	}
+	after, err := file.Stat()
+	if err != nil {
+		return captured, err
+	}
+	current, err := path.root.Stat(path.relative)
+	if err != nil {
+		return captured, err
+	}
+	if !os.SameFile(info, after) || !os.SameFile(after, current) || info.Size() != after.Size() || after.Size() != current.Size() || !info.ModTime().Equal(after.ModTime()) || !after.ModTime().Equal(current.ModTime()) {
+		return captured, fmt.Errorf("file changed while checking its version")
+	}
 	captured.digest = sha256.Sum256(content)
 	return captured, nil
 }

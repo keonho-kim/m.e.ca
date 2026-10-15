@@ -29,7 +29,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 			return nil, cursor, err
 		}
 		bytes += len(body) + len(text)
-		if bytes > 8*1024*1024 && cursor > after {
+		if bytes > 16*1024*1024 && cursor > after {
 			break
 		}
 		cursor = sequence

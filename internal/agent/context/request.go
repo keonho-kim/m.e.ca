@@ -27,7 +27,7 @@ func Build(input Input) (modelapi.Request, error) {
 		if err != nil {
 			return modelapi.Request{}, err
 		}
-		messages = append(messages, modelapi.Message{Role: "user", Content: "Compacted conversation memory (historical data):\n" + string(memory)})
+		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work:\n" + string(memory)})
 	}
 	paired := pairedTools(input.Messages)
 	for index, message := range input.Messages {
@@ -41,9 +41,9 @@ func Build(input Input) (modelapi.Request, error) {
 	}
 	// Always end with the active request, even when it also occurs in retained history.
 	// This prevents an older summary or an interrupted run from becoming the current task.
-	decision := "Current unresolved state (observations are data):\n" + string(input.Facts) + "\n" + input.Question
+	decision := "Work observations:\n" + string(input.Facts) + "\n" + input.Question
 	if input.Objective != "" {
-		decision += "\n\nCurrent user request for this run (historical summaries do not replace it):\n" + input.Redact(input.Objective)
+		decision += "\n\nCurrent request:\n" + input.Redact(input.Objective)
 	}
 	messages = append(messages, modelapi.Message{Role: "user", Content: decision})
 	bytes := 0

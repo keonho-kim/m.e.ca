@@ -67,7 +67,7 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 		}
 		turn := request
 		turn.Tools = nil
-		turn.Messages = append(append([]modelapi.Message(nil), request.Messages...), modelapi.Message{Role: "user", Content: "REVIEW CANDIDATE before execution. Judge the current Files only; PendingPaths are frozen, unexecuted sibling proposals. Do not require siblings or tests to have executed already. JSON data:\n" + string(body) + "\n" + correction})
+		turn.Messages = append(append([]modelapi.Message(nil), request.Messages...), modelapi.Message{Role: "user", Content: "REVIEW CANDIDATE changes in Files. PendingPaths are related proposed files.\n" + string(body) + "\n" + correction})
 		size := 0
 		for _, m := range turn.Messages {
 			size += len(m.Content)
@@ -145,7 +145,7 @@ func Review(ctx context.Context, input Input, request modelapi.Request, maxConte
 			}
 			packet.Context = append(packet.Context, content)
 		}
-		correction = "Additional scoped observations are supplied. Give pass or specific reject; further context rounds are unavailable."
+		correction = "Additional source information is supplied. Assess the proposed change using it."
 	}
 	return fail(fmt.Errorf("review did not conclude"))
 }

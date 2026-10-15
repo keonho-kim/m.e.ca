@@ -95,7 +95,7 @@ func (v Verdict) Check() error {
 		}
 	}
 	for _, r := range v.ContextRequests {
-		if r.Path == "" || len(r.Path) > 4096 || r.Offset < 0 || r.Limit < 1 || r.Limit > 8192 || tool.CheckReason(r.Reason) != nil {
+		if r.Path == "" || len(r.Path) > 4096 || r.Offset < 0 || r.Limit < 1 || r.Limit > 16*1024*1024 || tool.CheckReason(r.Reason) != nil {
 			return fmt.Errorf("invalid review context request")
 		}
 	}
@@ -138,8 +138,15 @@ func (r Result) Check() error {
 }
 func (r Result) Feedback() string {
 	if r.Error != "" {
-		return "Review unavailable; nothing executed: " + r.Error
+		return "Change not applied: " + r.Error
 	}
-	body, _ := json.Marshal(r.Verdict)
-	return "Pre-execution review; nothing executed: " + string(body) + ". Correct the specific defect or provide new observed evidence; do not repeat the unchanged candidate."
+	var text strings.Builder
+	text.WriteString("Change not applied. Required corrections:")
+	for _, finding := range r.Verdict.Findings {
+		fmt.Fprintf(&text, "\n- %s:%d (%s): %s", finding.Path, finding.Line, finding.Side, finding.Reason)
+	}
+	for _, needed := range r.Verdict.ContextRequests {
+		fmt.Fprintf(&text, "\n- Read %s: %s", needed.Path, needed.Reason)
+	}
+	return text.String()
 }

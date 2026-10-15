@@ -9,7 +9,7 @@ import (
 )
 
 func (s *execution) recoverProgress(ctx context.Context) error {
-	finished, err := s.judgeCompletion(ctx, "", "repeated actions or file-state cycle")
+	finished, err := s.judgeCompletion(ctx, "")
 	if err != nil {
 		return err
 	}

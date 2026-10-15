@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/keonho-kim/v-code/internal/agent/completion"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
@@ -34,6 +35,7 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 		if err := s.save(ctx, modelapi.Message{Role: "tool", Content: string(body), ToolCallID: call.ID, ToolName: call.Name}); err != nil {
 			return err
 		}
+		s.checkpoint.Work.Observe(completion.Receipt{ID: call.ID, Tool: call.Name, Success: false, Output: s.runner.Redact(detail)}, nil, false)
 		event := Event{Kind: "tool_failed", Text: "Not executed: " + s.runner.Redact(detail), CallID: call.ID, Call: &call, Output: body}
 		if err := s.record(ctx, event); err != nil {
 			return err

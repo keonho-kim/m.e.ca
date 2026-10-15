@@ -29,7 +29,7 @@ func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {
 				if message.Role != history[i].Role || message.ToolCallID != history[i].ToolCallID || message.Reasoning != history[i].Reasoning {
 					t.Fatalf("native history lost: %+v", projected)
 				}
-			} else if message.Role != "user" || len(message.Calls) != 0 || !strings.Contains(message.Content, "Archived runtime record") {
+			} else if message.Role != "user" || len(message.Calls) != 0 || !strings.Contains(message.Content, "Earlier notes and observations") {
 				t.Fatalf("orphan replayed: %+v", message)
 			}
 		}

@@ -50,7 +50,7 @@ func TestCompletionReviewContinuesOnlyMissingWork(t *testing.T) {
 			t.Fatal("unapproved draft committed as final")
 		}
 	}
-	if !strings.Contains(g.requests[2].Messages[len(g.requests[2].Messages)-1].Content, "b has not been created") {
+	if !strings.Contains(g.requests[2].Messages[len(g.requests[2].Messages)-1].Content, "Create b") {
 		t.Fatal("missing bounded continuation feedback")
 	}
 }

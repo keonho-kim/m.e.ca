@@ -43,7 +43,7 @@ func (e *Executor) Preview(ctx context.Context, settings policy.Settings, path s
 	if !info.Mode().IsRegular() {
 		return result, fmt.Errorf("일반 파일만 미리볼 수 있습니다")
 	}
-	const limit = 1024 * 1024
+	const limit = 16 * 1024 * 1024
 	body, err := io.ReadAll(io.LimitReader(file, limit+1))
 	if err != nil {
 		return result, err

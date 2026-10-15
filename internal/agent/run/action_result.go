@@ -49,7 +49,9 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	if toolErr == nil && !outcome.Failed && outcome.Started {
 		s.textCorrection = false
 	}
-	s.observeCompletion(v, outcome, toolErr)
+	if err := s.observeCompletion(ctx, v, outcome, toolErr); err != nil {
+		return err
+	}
 	if errors.Is(toolErr, errApprovalDenied) {
 		return toolErr
 	}

@@ -32,12 +32,15 @@ func (s *execution) finishOrReview(ctx context.Context, text string) (bool, erro
 		s.checkpoint.NoProgress++
 		return false, s.persist(ctx)
 	}
-	if len(s.checkpoint.Work.Receipts) == 0 || strings.TrimSpace(text) == "" {
+	if len(s.checkpoint.Work.Receipts) == 0 && !s.result.HadToolFailure || strings.TrimSpace(text) == "" {
 		return s.finish(ctx, text)
 	}
-	return s.judgeCompletion(ctx, text, "final answer proposal")
+	return s.judgeCompletion(ctx, text)
 }
-func (s *execution) judgeCompletion(ctx context.Context, draft, trigger string) (bool, error) {
+func (s *execution) judgeCompletion(ctx context.Context, draft string) (bool, error) {
+	if err := s.refreshFileFacts(ctx); err != nil {
+		return false, err
+	}
 	fingerprint := s.checkpoint.Work.Fingerprint(s.checkpoint.Objective)
 	if fingerprint == s.checkpoint.Work.Reviewed {
 		_, err := s.report(ctx, "No new evidence since the last completion review; stopping repeated work.", true)
@@ -68,7 +71,7 @@ func (s *execution) judgeCompletion(ctx context.Context, draft, trigger string) 
 	if err := s.persist(ctx); err != nil {
 		return false, err
 	}
-	input := completion.Input{PendingReview: s.checkpoint.PendingReview, Request: s.checkpoint.Objective, State: s.checkpoint.Work, Draft: excerpt(draft, 8192), Trigger: trigger}
+	input := completion.Input{PendingReview: s.checkpoint.PendingReview, Request: s.checkpoint.Objective, State: s.checkpoint.Work, Draft: strings.TrimSpace(draft)}
 	// Prior judgement is historical, not an instruction to the independent reviewer.
 	input.State.Verdict = nil
 	input.State.Reviewed = ""
@@ -76,6 +79,11 @@ func (s *execution) judgeCompletion(ctx context.Context, draft, trigger string) 
 		return s.reviewGenerate(ctx, r, consume)
 	}, s.runner.Redact, func(a reviewjson.Attempt) error { return s.recordReviewAttempt(ctx, a) })
 	if ctx.Err() != nil {
+		if draft != "" {
+			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "system", Content: "Unfinished answer:\n" + draft}); saveErr != nil {
+				return false, saveErr
+			}
+		}
 		return false, ctx.Err()
 	}
 	if errors.Is(err, errRuntimeRecord) {
@@ -111,8 +119,11 @@ func (s *execution) judgeCompletion(ctx context.Context, draft, trigger string) 
 		return true, err
 	default:
 		s.checkpoint.NoProgress = 0
-		s.checkpoint.Observation = fmt.Sprintf("Completion review: only these original requested outcomes remain unmet: %v. %s. Reuse existing results; do not restart or expand the request.", verdict.Unmet, verdict.Reason)
+		s.checkpoint.Observation = "Remaining requested work:\n- " + strings.Join(verdict.Unmet, "\n- ")
 		// Keep rejected drafts out of assistant history; retain the review feedback.
+		if err := s.emit(Event{Kind: "stream"}); err != nil {
+			return false, err
+		}
 		return false, s.persist(ctx)
 	}
 }

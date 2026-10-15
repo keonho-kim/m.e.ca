@@ -11,7 +11,7 @@ import (
 
 func TestLargeOutputPreservesHeadAndFailureTail(t *testing.T) {
 	var output cappedOutput
-	first := "start\n" + strings.Repeat("progress\n", 12000)
+	first := "start\n" + strings.Repeat("progress\n", (captureHalf*2)/9+100)
 	if n, err := output.Write([]byte(first)); err != nil || n != len(first) {
 		t.Fatalf("write=%d %v", n, err)
 	}
@@ -19,7 +19,7 @@ func TestLargeOutputPreservesHeadAndFailureTail(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := output.String()
-	if !output.truncated || !strings.HasPrefix(text, "start\n") || !strings.HasSuffix(text, "file:42 expected ready, got missing\n") || len(text) > 64*1024+100 {
+	if !output.truncated || !strings.HasPrefix(text, "start\n") || !strings.HasSuffix(text, "file:42 expected ready, got missing\n") || len(text) > captureHalf*2+100 {
 		t.Fatalf("invalid capture length=%d truncated=%v", len(text), output.truncated)
 	}
 }

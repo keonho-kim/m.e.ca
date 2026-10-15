@@ -6,13 +6,13 @@ package run
 
 import "unicode/utf8"
 
-const maxChangePreviewBytes = 128 * 1024
+const maxChangePreviewBytes = 16 * 1024 * 1024
 
 func boundedChangePreview(text string) string {
 	if len(text) <= maxChangePreviewBytes {
 		return text
 	}
-	const notice = "\n[변경 내용 일부 생략: 표시 한도 128KiB]\n"
+	const notice = "\n[변경 내용 일부 생략: 표시 한도 16MiB]\n"
 	end := maxChangePreviewBytes - len(notice)
 	for end > 0 && !utf8.RuneStart(text[end]) {
 		end--

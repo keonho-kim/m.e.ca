@@ -1,6 +1,6 @@
 // Purpose: Define one serial execution worker dependencies, budget usage and result.
 // Pattern: Run use case contracts.
-// Usage: Session composition supplies Runner dependencies before Run, Draftread-only or ExecutePlan.
+// Usage: Session composition supplies Runner dependencies before Run.
 // Related: internal/agent/run/run.go, internal/agent/run/limits.go.
 package run
 
@@ -24,7 +24,6 @@ type Usage struct {
 }
 type Runner struct {
 	Inference                *inference.Settings
-	suppressStream           bool
 	observer                 *monitor.Observer
 	MonitorSeed              []monitor.Record
 	PreviousRun              *Checkpoint

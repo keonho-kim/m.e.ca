@@ -27,6 +27,12 @@ func TestConclaveRegeneratesWithoutSeparateRejectionLimit(t *testing.T) {
 		}
 		return emit(modelapi.Event{Delta: reply, Done: true, Usage: &modelapi.TokenUsage{Input: 10, Output: 2}})
 	}
+	g.completion = func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+		if !strings.Contains(request.Messages[len(request.Messages)-1].Content, `"draft":""`) {
+			return emit(modelapi.Event{Delta: `{"decision":"complete","reason":"The change and requested command completed","evidence":["call_6"]}`, Done: true})
+		}
+		return emit(modelapi.Event{Delta: `{"decision":"continue","reason":"The requested edge-case coverage is still missing","unmet":["Fix the requested edge-case coverage"],"evidence":["request"]}`, Done: true})
+	}
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
 	approvals := 0

@@ -145,7 +145,7 @@ func (v *View) bound(older bool) {
 	for _, b := range v.Blocks {
 		bytes += len(b.Text)
 	}
-	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || bytes > 8*1024*1024) {
+	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || bytes > 16*1024*1024) {
 		index := 0
 		if older {
 			index = len(v.Blocks) - 1

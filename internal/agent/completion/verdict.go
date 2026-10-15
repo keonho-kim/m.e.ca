@@ -70,7 +70,7 @@ func Parse(text string, input Input) (Verdict, error) {
 	if len(v.Evidence) == 0 {
 		return v, fmt.Errorf("missing evidence: include exact receipt IDs, or request for an unmet requirement; complete also requires evidence")
 	}
-	if len(v.Evidence) > MaxReceipts {
+	if len(v.Evidence) > len(input.State.Receipts)+1 {
 		return v, fmt.Errorf("too many evidence references")
 	}
 	if v.Decision != "complete" && v.Decision != "continue" && v.Decision != "blocked" {
@@ -83,7 +83,7 @@ func Parse(text string, input Input) (Verdict, error) {
 		return v, err
 	}
 	if input.PendingReview && v.Decision == "complete" {
-		return v, fmt.Errorf("unresolved change review prevents completion")
+		return v, fmt.Errorf("requested changes remain unapplied")
 	}
 	usable := false
 	for _, id := range v.Evidence {

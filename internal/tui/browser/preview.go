@@ -46,7 +46,7 @@ func (p Preview) Rows(width int) []string {
 		}
 	}
 	if p.Truncated {
-		rows = append(rows, "[미리보기는 처음 1MiB까지만 표시]")
+		rows = append(rows, "[미리보기는 처음 16MiB까지만 표시]")
 	}
 	return rows
 }

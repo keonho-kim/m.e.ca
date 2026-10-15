@@ -35,7 +35,7 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	if err != nil {
 		return compact.Memory{}, err
 	}
-	if len(body) > 5*1024*1024 {
+	if len(body) > maxEventBytes {
 		return compact.Memory{}, fmt.Errorf("stored memory exceeds limit")
 	}
 	var memory compact.Memory
@@ -43,7 +43,7 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	if err != nil {
 		return memory, err
 	}
-	return memory, memory.Check(64 * 1024)
+	return memory, memory.Check(compact.MaxBodyBytes)
 }
 func (s *Store) MemoryWatermark(ctx context.Context, session string, after int64) (compact.Watermark, error) {
 	var mark compact.Watermark
@@ -60,7 +60,7 @@ func (s *Store) InstallMemory(ctx context.Context, session string, expected int,
 	if next.Revision != expected+1 {
 		return fmt.Errorf("invalid compaction revision")
 	}
-	if err := next.Check(64 * 1024); err != nil {
+	if err := next.Check(compact.MaxBodyBytes); err != nil {
 		return err
 	}
 	body, err := json.Marshal(next)

@@ -21,7 +21,7 @@ type renderer struct {
 
 // Render keeps oversized replies readable as literal text rather than building an unbounded AST.
 func Render(text string) []Line {
-	if len(text) > 256*1024 {
+	if len(text) > 16*1024*1024 {
 		return literal(text)
 	}
 	r := renderer{source: []byte(text)}

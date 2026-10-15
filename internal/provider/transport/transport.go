@@ -39,8 +39,9 @@ func (c *Client) SendOnce(request *http.Request, idle time.Duration) (*http.Resp
 	}
 	response.Body = &idleBody{ReadCloser: response.Body, watch: watch}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		body, readErr := io.ReadAll(io.LimitReader(response.Body, 4097))
-		if len(body) > 4096 {
+		body, readErr := io.ReadAll(io.LimitReader(response.Body, 16*1024*1024+1))
+		if len(body) > 16*1024*1024 {
+			readErr = errors.Join(readErr, fmt.Errorf("provider error body exceeds 16 MiB"))
 			body = nil
 		}
 		err := ParseError(response.StatusCode, body, response.Header.Get("Retry-After"))

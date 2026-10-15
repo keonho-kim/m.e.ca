@@ -32,7 +32,7 @@ func New(seed []Record, persist Persist) *Observer {
 	return o
 }
 func (r Record) Check() error {
-	if r.Sequence < 0 || r.Kind == "" || len(r.Kind) > 64 || len(r.RunID) > 128 || len(r.CallID) > 128 || len(r.Tool) > 128 || len(r.Detail) > 1200 || !utf8.ValidString(r.Detail) {
+	if r.Sequence < 0 || r.Kind == "" || len(r.Kind) > 64 || len(r.RunID) > 128 || len(r.CallID) > 128 || len(r.Tool) > 128 || len(r.Detail) > 16*1024*1024 || !utf8.ValidString(r.Detail) {
 		return fmt.Errorf("invalid Monitor record")
 	}
 	return nil

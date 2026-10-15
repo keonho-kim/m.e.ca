@@ -17,8 +17,8 @@ import (
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
-const reviewRejected = "conclave_rejected"
-const reviewFailed = "conclave_error"
+const reviewRejected = "change_rejected"
+const reviewFailed = "change_check_failed"
 
 func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, proposal toolapi.Approval, pending []toolapi.FileDelta) (*conclave.Result, error) {
 	if proposal.Candidate == nil {
@@ -101,9 +101,9 @@ func (s *execution) reviewCandidate(ctx context.Context, call toolapi.Call, prop
 		if !result.Complete {
 			code = reviewFailed
 		}
-		next := "Correct only the concrete candidate defect or supply missing evidence. Do not repeat the unchanged proposal."
+		next := "Correct the reported source issue or obtain the missing information before retrying."
 		if code == reviewFailed {
-			next = "The review could not finish after its bounded recovery. Do not rewrite code to repair a review failure; execution is blocked."
+			next = "This change was not applied. Resolve the reported check failure before continuing."
 			s.checkpoint.ReportReason = result.Feedback()
 		}
 		return &result, &toolapi.Failure{Code: code, Detail: result.Feedback(), Next: next}

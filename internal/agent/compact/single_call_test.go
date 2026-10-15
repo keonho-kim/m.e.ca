@@ -43,7 +43,7 @@ func TestSingleCallAfterPreviousSummary(t *testing.T) {
 
 func TestSingleCallPreservesMemoryWhenInstructionsCannotFit(t *testing.T) {
 	prior := Memory{Revision: 2, Through: 4, UsageThrough: 10, Markdown: "Keep previous constraints"}
-	repo := &repository{memory: prior, mark: Watermark{Tokens: 200000, Usage: 30, Timeline: 5}, records: []Record{{Sequence: 5, Role: "user", Text: strings.Repeat("required instruction ", 10000)}}}
+	repo := &repository{memory: prior, mark: Watermark{Tokens: 200000, Usage: 30, Timeline: 5}, records: []Record{{Sequence: 5, Role: "user", Text: strings.Repeat("x", MaxBodyBytes+1)}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	_, err := c.Refresh(context.Background(), func(context.Context, modelapi.Request, func(modelapi.Event) error) error { calls++; return nil })

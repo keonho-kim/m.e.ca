@@ -17,7 +17,8 @@ import (
 )
 
 const maxUnmet = 16
-const MaxReceipts = 32
+const MaxTextBytes = 16 * 1024 * 1024
+const MaxStateBytes = 256 * 1024 * 1024
 
 type Receipt struct {
 	Kind         string            `json:"kind,omitempty"`
@@ -29,12 +30,10 @@ type Receipt struct {
 	Targets      []string          `json:"targets,omitempty"`
 	Success      bool              `json:"success"`
 	Stale        bool              `json:"stale"`
-	UnknownScope bool              `json:"unknown_scope,omitempty"`
 	Output       string            `json:"output"`
 }
 type State struct {
 	Receipts []Receipt `json:"receipts,omitempty"`
-	Omitted  int       `json:"omitted,omitempty"`
 	Reviewed string    `json:"reviewed,omitempty"`
 	Verdict  *Verdict  `json:"verdict,omitempty"`
 }
@@ -42,11 +41,10 @@ type State struct {
 func (s *State) Observe(receipt Receipt, changed []string, unknown bool) {
 	receipts := slices.Clone(s.Receipts)
 	for i := range receipts {
-		if unknown {
-			receipts[i].Stale = true
+		if receipts[i].Kind == "command" {
 			continue
 		}
-		if len(changed) > 0 && receipts[i].UnknownScope {
+		if unknown {
 			receipts[i].Stale = true
 			continue
 		}
@@ -75,10 +73,6 @@ func (s *State) Observe(receipt Receipt, changed []string, unknown bool) {
 		s.Receipts = receipts
 	} else {
 		s.Receipts = append(receipts, receipt)
-	}
-	if len(s.Receipts) > MaxReceipts {
-		s.Omitted += len(s.Receipts) - MaxReceipts
-		s.Receipts = slices.Clone(s.Receipts[len(s.Receipts)-MaxReceipts:])
 	}
 	// A previous judgement is historical after any new observation. The digest
 	// still prevents another review of identical facts despite new call IDs.
@@ -112,11 +106,15 @@ func (s State) Fingerprint(request string) string {
 	return fmt.Sprintf("%x", sha256.Sum256(body))
 }
 func (s State) Check() error {
-	if len(s.Receipts) > MaxReceipts || s.Omitted < 0 || len(s.Reviewed) > 64 {
+	body, err := json.Marshal(s)
+	if err != nil || len(body) > MaxStateBytes {
+		return fmt.Errorf("completion facts exceed the resource budget; execution records are retained")
+	}
+	if len(s.Reviewed) > 64 {
 		return fmt.Errorf("invalid completion memory")
 	}
 	if v := s.Verdict; v != nil {
-		if v.Decision != "complete" && v.Decision != "continue" && v.Decision != "blocked" || tool.CheckReason(v.Reason) != nil || len(v.Evidence) > MaxReceipts || checkUnmet(v.Unmet) != nil {
+		if v.Decision != "complete" && v.Decision != "continue" && v.Decision != "blocked" || tool.CheckReason(v.Reason) != nil || len(v.Evidence) > len(s.Receipts)+1 || checkUnmet(v.Unmet) != nil {
 			return fmt.Errorf("invalid persisted completion verdict")
 		}
 	}
@@ -134,7 +132,7 @@ func (s State) Check() error {
 				return fmt.Errorf("invalid completion version")
 			}
 		}
-		if r.ID == "" || len(r.ID) > 256 || r.Tool == "" || len(r.Tool) > 128 || len(r.Command) > 4096 || len(r.Output) > 2300 || !utf8.ValidString(r.Output) || len(r.Targets) > 64 || len(r.Versions) > 64 {
+		if r.ID == "" || len(r.ID) > 256 || r.Tool == "" || len(r.Tool) > 128 || len(r.Command) > MaxTextBytes || len(r.Output) > MaxStateBytes || !utf8.ValidString(r.Output) || len(r.Targets) > 64 || len(r.Versions) > 64 {
 			return fmt.Errorf("invalid completion receipt")
 		}
 		for _, p := range r.Targets {

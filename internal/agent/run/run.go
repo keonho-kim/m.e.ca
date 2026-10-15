@@ -33,7 +33,6 @@ type execution struct {
 	seen             map[[32]byte]bool
 	mutations        map[[32]byte]bool
 	commands         map[[32]byte]int
-	changed          bool
 	usage            *Usage
 	messages         []modelapi.Message
 	memoryContext    string
@@ -145,7 +144,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 		role := inference.Agent
 
-		reply, askErr := s.askResponse(ctx, "Choose the next necessary native tool or answer the user. Use observed results; report incomplete work honestly.", role, modelapi.MaxResponseBytes)
+		reply, askErr := s.askResponse(ctx, "Continue the requested work using the available results, or answer with the outcome. Explain any remaining work honestly.", role, modelapi.MaxResponseBytes)
 		if askErr != nil {
 			var capacity interface{ ContextLimit() bool }
 			if !s.capacityRecovery && errors.As(askErr, &capacity) && capacity.ContextLimit() {
@@ -160,6 +159,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			if !errors.As(askErr, &malformed) && !errors.As(askErr, &truncated) {
 				return s.result, askErr
 			}
+			s.result.HadToolFailure = true
 			s.checkpoint.Observation = "Correct the native tool call or narrow the change to fit the output limit; nothing executed: " + s.runner.Redact(askErr.Error())
 			s.checkpoint.NoProgress++
 		} else if len(reply.Calls) > 0 {

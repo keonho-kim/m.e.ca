@@ -38,11 +38,11 @@ func TestFilePreviewRead(t *testing.T) {
 	if _, err = e.Preview(context.Background(), settings, file); err == nil {
 		t.Fatal("binary shown as text")
 	}
-	if err = os.WriteFile(file, []byte(strings.Repeat("가", 400000)), 0600); err != nil {
+	if err = os.WriteFile(file, []byte(strings.Repeat("가", (16*1024*1024)/3+100)), 0600); err != nil {
 		t.Fatal(err)
 	}
 	got, err = e.Preview(context.Background(), settings, file)
-	if err != nil || !got.Truncated || len(got.Content) > 1024*1024 || !utf8.ValidString(got.Content) {
+	if err != nil || !got.Truncated || len(got.Content) > 16*1024*1024 || !utf8.ValidString(got.Content) {
 		t.Fatalf("bounded preview: %d %v", len(got.Content), err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())

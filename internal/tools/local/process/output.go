@@ -19,7 +19,7 @@ type cappedOutput struct {
 	truncated bool
 }
 
-const captureHalf = 32 * 1024
+const captureHalf = 8 * 1024 * 1024
 
 func (output *cappedOutput) Write(content []byte) (int, error) {
 	count := len(content)

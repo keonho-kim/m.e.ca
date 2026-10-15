@@ -50,7 +50,7 @@ func TestLatestSuccessfulChangeSurvivesSubsequentRead(t *testing.T) {
 	}
 	request := g.requests[len(g.requests)-1]
 	text := request.Messages[len(request.Messages)-1].Content
-	if !strings.Contains(text, "last_successful_file_change") || !strings.Contains(text, "Created file /project/empty (0 bytes)") {
+	if !strings.Contains(text, "last_change") || !strings.Contains(text, "Created file /project/empty (0 bytes)") {
 		t.Fatalf("latest successful change was lost: %s", text)
 	}
 }
@@ -61,7 +61,7 @@ func TestToolMetadataCannotChangeRequestState(t *testing.T) {
 			g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a", name: "unexpected"}), "Invalid arguments; no operation executed."}}
 			e := &executor{}
 			result, err := fixture(g, e, &journal{}).Run(context.Background(), "inspect a", approve, emit)
-			if err != nil || e.prepared != 0 || result.Status != Answered {
+			if err != nil || e.prepared != 0 || result.Status != Stopped {
 				t.Fatalf("unexpected metadata reached execution: %+v %v", result, err)
 			}
 		})

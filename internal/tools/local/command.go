@@ -46,10 +46,10 @@ func commandDiagnostic(stdout, stderr string) string {
 	if text == "" {
 		text = strings.TrimSpace(stdout)
 	}
-	if len(text) <= 4096 {
+	if len(text) <= 16*1024*1024 {
 		return text
 	}
-	start := len(text) - 4000
+	start := len(text) - 16*1024*1024
 	for !utf8.RuneStart(text[start]) {
 		start++
 	}
