@@ -180,10 +180,10 @@ func TestStatusPolicyLabels(t *testing.T) {
 		plan       bool
 		want       string
 	}{
-		{"default", policy.Approve, policy.Directory, false, false, "chosen │ 전체 시스템"},
-		{"system", policy.Approve, policy.System, false, false, "chosen │ 전체 시스템"},
-		{"automatic", policy.AllowAll, policy.Directory, false, false, "chosen │ 자동 승인 │ 전체 시스템"},
-		{"thinking and plan", policy.AllowAll, policy.System, true, true, "chosen Thinking │ 자동 승인 │ 전체 시스템 │ PLAN"},
+		{"default", policy.Approve, policy.Directory, false, false, "chosen"},
+		{"system", policy.Approve, policy.System, false, false, "chosen"},
+		{"automatic", policy.AllowAll, policy.Directory, false, false, "chosen │ 자동 승인"},
+		{"thinking and plan", policy.AllowAll, policy.System, true, true, "chosen Thinking │ 자동 승인 │ PLAN"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)
@@ -192,7 +192,7 @@ func TestStatusPolicyLabels(t *testing.T) {
 			a.settings = policy.Settings{Permission: test.permission, Scope: test.scope}
 			a.planMode = test.plan
 			a.render()
-			if line := strings.TrimSpace(screenLine(a.screen, 22, 80)); !strings.HasPrefix(line, test.want) {
+			if line := strings.TrimSpace(screenLine(a.screen, 22, 80)); line != test.want {
 				t.Fatalf("status = %q, want %q", line, test.want)
 			}
 		})

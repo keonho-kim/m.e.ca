@@ -35,7 +35,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 		parameters, err := inference.Resolve(&loaded.Inference, role)
 		want := 12800
 		if role == inference.Agent {
-			want = 25600
+			want = 0
 		}
 		if err != nil || parameters.MaxOutputTokens != want {
 			t.Fatalf("persisted %s default=%+v, want %d: %v", role, parameters, want, err)
@@ -53,7 +53,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	}
 }
 func TestInferenceRejectsInvalidSettings(t *testing.T) {
-	for _, value := range []string{"temperature=-1", "temperature=nan", "temperature=inf", "max_output_tokens=0", "max_output_tokens=65537"} {
+	for _, value := range []string{"temperature=-1", "temperature=nan", "temperature=inf", "max_output_tokens=-1", "max_output_tokens=1073741825"} {
 		t.Run(value, func(t *testing.T) {
 			directory := t.TempDir()
 			if err := os.WriteFile(filepath.Join(directory, Filename), []byte("[inference.agent]\n"+value+"\n"), 0600); err != nil {
@@ -63,5 +63,18 @@ func TestInferenceRejectsInvalidSettings(t *testing.T) {
 				t.Fatal("invalid inference setting accepted")
 			}
 		})
+	}
+}
+
+func TestInferenceAcceptsLargeExplicitOutput(t *testing.T) {
+	directory := t.TempDir()
+	c := Defaults()
+	c.Inference.Agent.MaxOutputTokens = 196608
+	if err := Save(directory, c); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(directory)
+	if err != nil || loaded.Inference.Agent.MaxOutputTokens != 196608 {
+		t.Fatalf("explicit output lost: %+v %v", loaded.Inference.Agent, err)
 	}
 }

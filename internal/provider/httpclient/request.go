@@ -23,24 +23,16 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if emit == nil {
 		return fmt.Errorf("a model event consumer is required")
 	}
-	if request.ModelID == "" || len(request.ModelID) > 512 || request.MaxOutput < 1 || request.MaxOutput > 65536 || request.IdleTimeout < 0 {
+	if request.ModelID == "" || len(request.ModelID) > 512 || request.IdleTimeout < 0 {
 		return fmt.Errorf("invalid model request limits")
 	}
 	if len(request.Messages) == 0 {
 		return fmt.Errorf("invalid message or tool count")
 	}
-	info := client.effectiveModel()
-	if info != nil {
-		if info.MaxOutput > 0 {
-			request.MaxOutput = min(request.MaxOutput, info.MaxOutput)
-		}
-		if info.ContextWindow > 0 {
-			request.MaxOutput = min(request.MaxOutput, info.ContextWindow-1)
-		}
-		if request.MaxOutput < 1 {
-			return fmt.Errorf("model context has no output capacity")
-		}
+	if err := modelapi.CheckOutputBudget(request.MaxOutput); err != nil {
+		return err
 	}
+	info := client.effectiveModel()
 	controls, err := protocol.ControlsFor(client.connection.Kind, client.profileID, client.modelInfo, request)
 	if err != nil {
 		return err

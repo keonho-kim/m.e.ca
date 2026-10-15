@@ -24,7 +24,7 @@ type Settings struct {
 
 func Defaults() Settings {
 	return Settings{
-		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 25600},
+		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 0},
 		Plan:       Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 12800},
 		Conclave:   Parameters{Thinking: "off_if_supported", Temperature: 0.4, MaxOutputTokens: 12800},
 		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 12800},
@@ -38,8 +38,8 @@ func (p Parameters) Check() error {
 	if err := modelapi.CheckTemperature(&p.Temperature); err != nil {
 		return err
 	}
-	if p.MaxOutputTokens < 1 || p.MaxOutputTokens > 65536 {
-		return fmt.Errorf("max_output_tokens must be between 1 and 65536")
+	if err := modelapi.CheckOutputBudget(p.MaxOutputTokens); err != nil {
+		return err
 	}
 	return nil
 }

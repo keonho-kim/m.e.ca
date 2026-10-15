@@ -22,7 +22,7 @@
 
 | 역할 키 | 용도 | temperature | max_output_tokens |
 | --- | --- | ---: | ---: |
-| `agent` | 메인 에이전트의 행동 선택·직접 응답 | 0.7 | 25600 |
+| `agent` | 메인 에이전트의 행동 선택·직접 응답 | 0.7 | 0 (context의 75%) |
 | `plan` | 승인받을 Plan 초안·수정 | 0.7 | 12800 |
 | `conclave` | 후보 판정과 참조가 있는 거절 사유 | 0.4 | 12800 |
 | `compaction` | 대화 압축·근거 보존 | 0.2 | 12800 |
@@ -33,7 +33,7 @@
 ```toml
 [inference.agent]
 temperature = 0.7
-max_output_tokens = 25600
+max_output_tokens = 0 # 유효 context length의 75% 자동 계산
 
 [inference.conclave]
 thinking = "off_if_supported"
@@ -46,7 +46,7 @@ temperature = 0.2
 max_output_tokens = 12800
 ```
 
-`temperature`는 유한한 0~2, `max_output_tokens`는 1~65536이다. 명시한 `temperature = 0`은 생략과 구분하여 전송한다. 메인 Thinking/effort는 사용자 선택을 계승한다. Conclave·Compaction의 thinking 기본값은 `off_if_supported`이며 OFF가 검증된 조합에서만 끈다. `inherit`는 사용자 선택을 유지한다. 진단은 기능 확인을 위해 ON/OFF를 명시적으로 대조한다. 출력 토큰 한도는 모델의 reasoning 사용분도 고려해야 하며, 서빙 한도·전체 실행 예산과 별도로 적용된다. 일반 응답은 기존 16KiB 제한 대신 모델 응답 공통 한도인 4MiB 안에서 수신하며, 내부 구조화 결과·도구 인자의 검증 한도는 유지한다. Provider는 확인된 출력·컨텍스트 용량 안에서 요청 한도를 제한할 수 있다.
+`temperature`는 유한한 0~2, `max_output_tokens`는 0~1073741824이며, 0은 유효 context length의 75%를 내림 계산하는 자동 모드이고 양수는 수동 상한이다. 명시한 `temperature = 0`은 생략과 구분하여 전송한다. 메인 Thinking/effort는 사용자 선택을 계승한다. Conclave·Compaction의 thinking 기본값은 `off_if_supported`이며 OFF가 검증된 조합에서만 끈다. `inherit`는 사용자 선택을 유지한다. 진단은 기능 확인을 위해 ON/OFF를 명시적으로 대조한다. 출력 토큰 한도는 모델의 reasoning 사용분도 고려해야 하며, 서빙 한도·전체 실행 예산과 별도로 적용된다. 일반 응답은 기존 16KiB 제한 대신 모델 응답 공통 한도인 4MiB 안에서 수신하며, 내부 구조화 결과·도구 인자의 검증 한도는 유지한다. Provider는 확인된 출력·컨텍스트 용량 안에서 요청 한도를 제한할 수 있다.
 
 `top_p`, `top_k`, `min_p`, penalty, seed는 서버 기본값을 사용한다. 재시도에서도 선택된 역할 인자를 그대로 사용한다. 서버가 인자를 거절하면 요청 인자를 유지한 채 제한된 재시도를 수행하고, 실패 원인을 오류로 반환한다. 서버 내부 적용 여부는 요청 수락과 별도의 검증 대상이다.
 
@@ -105,7 +105,7 @@ SQLite는 `~/.v/sessions/<프로젝트 키>/<세션 ID>.db`에 **세션당 한 �
 
 현재 DB 스키마는 version 6이며 기존 DB 파일은 보존하고 미지원 오류를 반환한다. 자동 변환은 제공하지 않는다.
 
-이전 config.toml의 `inference.goal`, `inference.grounding`, `inference.report`, `inference.pfc_value`, `inference.pfc_content` 섹션은 수동으로 제거한다. 모델 연결·credential_ref와 나머지 사용자 설정은 유지한다. 역할 기본값은 Agent 25600, 나머지 12800이며 명시한 사용자 값은 유지한다.
+이전 config.toml의 `inference.goal`, `inference.grounding`, `inference.report`, `inference.pfc_value`, `inference.pfc_content` 섹션은 수동으로 제거한다. 모델 연결·credential_ref와 나머지 사용자 설정은 유지한다. 역할 기본값은 Agent 자동(context의 75%), 나머지 12800이며 명시한 사용자 값은 유지한다.
 
 기존 프롬프트도 자동 덮어쓰지 않는다. 저장소의 `internal/agent/prompt/defaults/`와 비교해 system.md·conclave.md·compaction.md를 현재 계약으로 갱신한다. 과거 goal.md·grounding.md·pfc.md는 읽거나 새로 생성하지 않는다. 이전 프롬프트의 Goal 분해·PFC·3행 grounding·0/1 투표·DONE/WAIT/CONTINUE 지시는 현재 규약에서 제거했다.
 
@@ -131,3 +131,12 @@ Scope는 system으로 고정한다. config.toml의 `[defaults] scope` 키는 제
 전역 기본 Permission은 `allow-all`이다. 새 config.toml의 `[defaults] permission = "allow-all"`로 기록하며 세션 재정의가 없으면 이 값을 상속한다. `!permission`으로 명시한 세션별 `approve`는 전역값보다 우선하고 Plan 모드의 별도 승인은 그대로 유지한다.
 
 Compaction 출력 형식은 프롬프트 지침이다. 문단, 다른 제목, 다른 섹션 순서도 완료된 비어 있지 않은 요약이면 받아들이며 형식 교정용 재시도를 수행하지 않는다. 입력·출력 용량, UTF-8 유효성, 응답 완료, 취소, 원자적 저장 검사는 유지한다.
+
+
+### 자동 출력 토큰 예산
+
+메인 에이전트 기본값은 `max_output_tokens = 0`이다. 유효 context length는 전역 `context_length`와 서버가 보고한 context 중 작은 값이며, 서버가 알리지 않으면 전역 설정을 사용한다. 기본 262144에서는 출력 상한이 196608이다. 서버가 별도 출력 한도를 알려주면 더 작은 값을 적용한다.
+
+vLLM의 사전 토큰 계산 경로는 현재 메시지·도구를 포함한 실제 입력 토큰을 차감하고, tokenizer가 반환한 더 작은 context에도 75%를 다시 적용한다. 사전 계산이 없는 Provider 경로는 입력량을 추정하지 않는다. 서버의 명시적인 context 한도 오류에는 기존 압축 복구 경로를 적용하며, 그 밖의 오류는 명시적으로 반환한다. 출력 상한은 전체 분량 생성 의무가 아니며 Thinking·전체 실행 예산·응답 바이트 한도는 그대로다.
+
+기존 설정에 명시된 양수는 유지한다. 자동 모드를 사용하려면 `[inference.agent]`의 `max_output_tokens`를 0으로 설정한다. Plan·Conclave·Compaction·Diagnostic 기본값은 12800이다.

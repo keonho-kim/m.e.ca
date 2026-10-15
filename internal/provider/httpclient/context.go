@@ -1,7 +1,7 @@
-// Purpose: Reserve model output using exact vLLM chat tokenization without discarding history.
+// Purpose: Resolve output budgets from serving limits and exact vLLM chat tokenization.
 // Pattern: HTTP preflight adapter.
 // Usage: Prepared vLLM generation calls contextOutput before encoding the generation request.
-// Related: internal/provider/protocol/request.go, internal/provider/discovery/model_settings.go.
+// Related: internal/agent/model/output.go, internal/provider/httpclient/request.go.
 package httpclient
 
 import (
@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/protocol"
@@ -19,8 +20,9 @@ import (
 )
 
 func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition) (int, error) {
+	info := c.effectiveModel()
 	if c.connection.Kind != connection.VLLM || c.modelInfo == nil || c.modelInfo.ContextWindow == 0 {
-		return output, nil
+		return modelapi.OutputBudget(output, info.ContextWindow, info.MaxOutput, 0)
 	}
 	kwargs := maps.Clone(controls.Template)
 	if kwargs == nil {
@@ -54,9 +56,6 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if count.Count == nil || *count.Count < 0 || count.Limit <= 0 || count.Limit > 1<<40 {
 		return 0, fmt.Errorf("invalid tokenizer context limits")
 	}
-	limit := min(c.effectiveModel().ContextWindow, count.Limit)
-	if *count.Count >= limit {
-		return 0, fmt.Errorf("model context exhausted: input %d tokens, capacity %d; history was preserved", *count.Count, limit)
-	}
-	return min(output, limit-*count.Count), nil
+	limit := min(info.ContextWindow, count.Limit)
+	return modelapi.OutputBudget(output, limit, info.MaxOutput, *count.Count)
 }

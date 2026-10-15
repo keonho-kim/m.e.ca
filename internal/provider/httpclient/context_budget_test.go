@@ -79,7 +79,7 @@ func TestConfiguredContextVLLMReservation(t *testing.T) {
 	if err := c.BindModel(connection.ModelInfo{ID: "alias", ContextWindow: 2048}); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Generate(context.Background(), modelapi.Request{ModelID: "alias", MaxOutput: 100, Messages: []modelapi.Message{{Role: "user", Content: "hello"}}}, func(modelapi.Event) error { return nil }); err != nil {
+	if err := c.Generate(context.Background(), modelapi.Request{ModelID: "alias", MaxOutput: 0, Messages: []modelapi.Message{{Role: "user", Content: "hello"}}}, func(modelapi.Event) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 }
