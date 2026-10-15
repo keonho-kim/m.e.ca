@@ -1,4 +1,4 @@
-// Purpose: Compact archived dialogue in bounded chronological chunks and atomically publish a validated memory revision.
+// Purpose: Compact a bounded projection of archived dialogue in one model call and atomically publish a validated memory revision.
 // Pattern: Use Case.
 // Usage: Refreshed only at a task decision boundary, never during native call assembly or approval.
 // Related: internal/agent/compact/types.go, internal/agent/compact/context.go, internal/storage/sqlite/memory.go.
@@ -6,7 +6,6 @@ package compact
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
@@ -73,83 +72,40 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 		return false, nil
 	}
 	next := c.memory
-	cursor := next.Through
-	processed := false
-	var batch []json.RawMessage
-	flush := func() error {
-		if len(batch) == 0 {
-			return nil
-		}
-		body, err := json.Marshal(batch)
-		if err != nil {
-			return err
-		}
-		summary, err := c.summarize(ctx, generate, next.Markdown, string(body))
-		if err != nil {
-			return err
-		}
-		next.Markdown = summary
-		batch = nil
-		processed = true
-		return nil
+	base, err := c.summaryMessages(c.Redact(next.Markdown), nil, 0)
+	if err != nil {
+		return false, err
 	}
+	remaining := c.Settings.MaxInputBytes - 256
+	for _, message := range base {
+		remaining -= len(message.Content)
+	}
+	sources := sourceBuffer{limit: remaining}
+	cursor := next.Through
 	for cursor < boundary {
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
 		records, through, err := c.Repository.MemoryRecords(ctx, c.Session, cursor, boundary)
 		if err != nil {
 			return false, err
 		}
-		if through <= cursor {
-			return false, fmt.Errorf("compaction source cursor did not advance")
+		if through <= cursor || through > boundary {
+			return false, fmt.Errorf("invalid compaction source cursor")
 		}
 		for _, record := range records {
-
-			// Segment the complete source representation, including large metadata fields.
-			payload, err := json.Marshal(record)
-			if err != nil {
+			if err := sources.add(record, c.Redact); err != nil {
 				return false, err
-			}
-			parts := segments(string(payload), 1024)
-			for index, part := range parts {
-				source := struct {
-					Sequence       int64
-					Role, Fragment string
-					Part, Parts    int
-				}{record.Sequence, record.Role, part, index + 1, len(parts)}
-				encoded, err := json.Marshal(source)
-				if err != nil {
-					return false, err
-				}
-				trial := append(append([]json.RawMessage(nil), batch...), encoded)
-				body, err := json.Marshal(trial)
-				if err != nil {
-					return false, err
-				}
-				if _, err := c.summaryMessages(next.Markdown, string(body)); err != nil {
-					if len(batch) == 0 {
-						return false, err
-					}
-					if err := flush(); err != nil {
-						return false, err
-					}
-					trial = []json.RawMessage{encoded}
-					body, err = json.Marshal(trial)
-					if err != nil {
-						return false, err
-					}
-					if _, err := c.summaryMessages(next.Markdown, string(body)); err != nil {
-						return false, err
-					}
-				}
-				batch = trial
 			}
 		}
 		cursor = through
 	}
-	if err := flush(); err != nil {
-		return false, err
+	if len(sources.entries) == 0 {
+		return false, nil
 	}
-	if !processed {
-		return false, fmt.Errorf("token threshold reached without new source records; previous memory retained")
+	next.Markdown, err = c.summarize(ctx, generate, c.Redact(next.Markdown), sources.packet(), sources.omitted)
+	if err != nil {
+		return false, err
 	}
 	next.Revision++
 	next.Through = boundary

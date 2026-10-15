@@ -26,6 +26,7 @@ const (
 )
 
 type Checkpoint struct {
+	Criteria           []string                   `json:"completion_criteria,omitempty"`
 	Blocker            string                     `json:"blocker,omitempty"`
 	PendingReview      bool                       `json:"pending_review"`
 	Conclave           *conclave.Result           `json:"conclave,omitempty"`
@@ -47,6 +48,9 @@ type Checkpoint struct {
 }
 
 func (c Checkpoint) Check() error {
+	if err := checkCriteria(c.Criteria); err != nil {
+		return err
+	}
 	if c.Conclave != nil {
 		if err := c.Conclave.Check(); err != nil {
 			return err

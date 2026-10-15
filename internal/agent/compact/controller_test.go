@@ -9,9 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	planref "github.com/keonho-kim/v-code/internal/agent/plan"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 	"testing"
 )
@@ -50,7 +48,7 @@ func (r *repository) InstallMemory(_ context.Context, _ string, expected int, ne
 }
 func summary() string { return "Preserve task state and source references." }
 func TestThresholdPublishesSummaryOnly(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 199999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "task", Text: "goal", Run: &RunFact{ID: "task", Objective: "goal", Status: "running", Step: &planref.StepRef{PlanID: "plan", Revision: 2, Index: 0, Description: "edit"}}}, {Sequence: 2, Role: "operation", Operation: &toolapi.Operation{RunID: "task", CallID: "call", Name: "edit_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "edit_file", Path: "src/auth.go"}}}}}}
+	repo := &repository{mark: Watermark{Tokens: 199999, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}, {Sequence: 2, Role: "outcome", Text: "edit_file tool_succeeded src/auth.go"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	generate := func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
@@ -112,7 +110,7 @@ func TestCancellationDoesNotAdvanceMemoryWatermark(t *testing.T) {
 	}
 }
 
-func TestThresholdBatchesSourceRecords(t *testing.T) {
+func TestThresholdCollectsSourceRecordsOnce(t *testing.T) {
 	repo := &repository{mark: Watermark{Tokens: 200000, Usage: 2, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "first instruction"}, {Sequence: 2, Role: "assistant", Text: "second observation"}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0

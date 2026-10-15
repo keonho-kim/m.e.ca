@@ -27,7 +27,7 @@ func Defaults() Settings {
 		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 0},
 		Plan:       Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 12800},
 		Conclave:   Parameters{Thinking: "off_if_supported", Temperature: 0.4, MaxOutputTokens: 12800},
-		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 12800},
+		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
 		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
 	}
 }

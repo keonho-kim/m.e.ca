@@ -51,19 +51,7 @@ func TestRunRecoveryPreservesReviewAndMonitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	goals, reviews, observations := 0, 0, 0
-	for _, record := range records {
-		if record.Run != nil {
-			goals++
-		}
-		if record.Review != nil {
-			reviews++
-		}
-		if record.Role == "monitor" {
-			observations++
-		}
-	}
-	if goals != 1 || reviews != 1 || observations != 1 {
-		t.Fatalf("lost or duplicated source facts: %d/%d/%d", goals, reviews, observations)
+	if len(records) != 1 || records[0].Role != "failure" || !strings.Contains(records[0].Text, "interrupted") {
+		t.Fatalf("compaction retained duplicate audit records: %+v", records)
 	}
 }

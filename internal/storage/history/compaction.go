@@ -1,72 +1,91 @@
-// Purpose: Project persisted history into ordered compaction evidence without database access.
-// Pattern: Pure projection.
-// Usage: SQLite passes one decoded page; compaction consumes the resulting records.
-// Related: internal/storage/history/record.go, internal/agent/compact/types.go.
+// Purpose: Project conversation and actual outcomes into concise compaction inputs without duplicate audit events.
+// Pattern: Pure history projection.
+// Usage: SQLite passes ordered pages; originals remain untouched in session storage.
+// Related: internal/agent/compact/types.go, internal/storage/sqlite/memory_sources.go.
 package history
 
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/keonho-kim/v-code/internal/agent/compact"
-	"sort"
 )
 
 func Compaction(page []Record) ([]compact.Record, error) {
 	var records []compact.Record
-	runs := map[string]compact.Record{}
 	for _, record := range page {
-		sequence := record.Sequence
+		role, text := "", ""
 		if record.Kind == "message" {
 			m := record.Message
-			if m.Content != "" || len(m.Calls) > 0 {
-				body, err := json.Marshal(m)
-				if err != nil {
-					return nil, err
+			switch m.Role {
+			case "user", "assistant":
+				role, text = m.Role, m.Content
+			case "tool":
+				role, text = "observation", toolExcerpt(m.Content)
+			}
+		} else {
+			event := record.Event
+			if op := event.Operation; op != nil {
+				role = "outcome"
+				text = op.Name + " " + op.Status
+				if op.Process != nil {
+					text += fmt.Sprintf("; process=%s exit=%d", op.Process.Status, op.Process.ExitCode)
 				}
-				records = append(records, compact.Record{Sequence: sequence, Role: m.Role, Text: string(body)})
+				if op.Command != "" {
+					text += "\nCommand: " + op.Command
+				}
+				for _, change := range op.Changes {
+					text += "\n" + change.Action + " " + change.Path
+					if change.Destination != "" {
+						text += " -> " + change.Destination
+					}
+				}
+				if op.Step != nil {
+					text += fmt.Sprintf("\nPlan step %d: %s", op.Step.Index+1, op.Step.Description)
+				}
+				if op.Failure != nil {
+					text += "\nFailure: " + op.Failure.Code + ": " + op.Failure.Detail
+					if op.Failure.Next != "" {
+						text += "\nNext: " + op.Failure.Next
+					}
+				}
+				if op.Process != nil && op.Process.Diagnostic != "" {
+					text += "\nDiagnostic: " + op.Process.Diagnostic
+				}
+				if op.Result != "" {
+					text += "\nResult: " + op.Result
+				}
+			} else if event.Kind == "tool_failed" || event.Kind == "denied" || event.Kind == "tool_interrupted" {
+				role, text = "failure", event.Text
+			} else if cp := event.Checkpoint; cp != nil && (cp.Status == "stopped" || cp.Status == "interrupted") {
+				role, text = "failure", string(cp.Status)+": "+cp.Blocker+" "+cp.Observation
 			}
-			continue
 		}
-		event := record.Event
-		if event.Kind == "conclave" && event.Conclave != nil {
-			if err := event.Conclave.Check(); err != nil {
-				return nil, err
-			}
-			records = append(records, compact.Record{Sequence: sequence, Role: "conclave", Review: event.Conclave})
-		}
-		if event.Monitor != nil {
-			if err := event.Monitor.Check(); err != nil {
-				return nil, err
-			}
-			encoded, err := json.Marshal(event.Monitor)
-			if err != nil {
-				return nil, err
-			}
-			records = append(records, compact.Record{Sequence: sequence, Role: "monitor", Text: string(encoded)})
-		}
-		if event.Grounding != nil {
-			if err := event.Grounding.Check(); err != nil {
-				return nil, err
-			}
-			records = append(records, compact.Record{Sequence: sequence, Role: "self_grounding", Grounding: event.Grounding})
-		}
-		if cp := event.Checkpoint; cp != nil {
-			fact := compact.RunFact{ChangeRevision: cp.ChangeRevision, ID: cp.ID, Objective: cp.Objective, Status: string(cp.Status), Phase: cp.Phase, Observation: cp.Observation, Step: cp.Step, Source: sequence}
-			runs[cp.ID] = compact.Record{Sequence: sequence, Role: "run", Text: cp.Objective, Run: &fact}
-		}
-		if event.Operation == nil && event.Text != "" && event.Kind != "thinking" && event.Kind != "compaction" {
-			records = append(records, compact.Record{Sequence: sequence, Role: "runtime_event", Text: fmt.Sprintf("%s; operation=%s; %s", event.Kind, event.CallID, event.Text)})
-		}
-		if event.Operation != nil {
-			op := *event.Operation
-			op.Source = sequence
-			records = append(records, compact.Record{Sequence: sequence, Role: "operation", Text: fmt.Sprintf("%s: %s; %s", op.Name, op.Status, op.Result), Operation: &op})
+		if strings.TrimSpace(text) != "" {
+			records = append(records, compact.Record{Sequence: record.Sequence, Role: role, Text: text})
 		}
 	}
-
-	for _, record := range runs {
-		records = append(records, record)
-	}
-	sort.Slice(records, func(i, j int) bool { return records[i].Sequence < records[j].Sequence })
 	return records, nil
+}
+
+// Keep useful read/command observations, not JSON envelopes, anchors metadata or write arguments.
+func toolExcerpt(text string) string {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal([]byte(text), &fields) != nil {
+		return text
+	}
+	if nested := fields["Output"]; len(nested) > 0 {
+		if json.Unmarshal(nested, &fields) != nil {
+			return ""
+		}
+	}
+	var parts []string
+	for _, key := range []string{"Content", "Stdout", "Stderr"} {
+		var value string
+		if json.Unmarshal(fields[key], &value) == nil && strings.TrimSpace(value) != "" {
+			parts = append(parts, key+": "+value)
+		}
+	}
+	return strings.Join(parts, "\n")
 }

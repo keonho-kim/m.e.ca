@@ -1,4 +1,4 @@
-// Purpose: Run a bounded Ralph execution with full uncompacted context, native tool calls and evidence-gated completion.
+// Purpose: Run a bounded Ralph execution with full uncompacted context, native tool calls and persisted decision state.
 // Pattern: State Machine / Use Case.
 // Usage: Invoked for one user objective or approved Plan step; cancellation never replays effects.
 // Related: internal/agent/run/action.go, internal/agent/run/generate.go, internal/agent/run/events.go.

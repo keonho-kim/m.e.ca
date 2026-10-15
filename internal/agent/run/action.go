@@ -24,6 +24,10 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if intentErr != nil {
 		return s.returnToolFeedback(ctx, reply, intentErr.Error())
 	}
+	call, criteria, criteriaErr := extractCriteria(call)
+	if criteriaErr != nil {
+		return s.returnToolFeedback(ctx, reply, criteriaErr.Error())
+	}
 	var definition *toolapi.Definition
 	for i := range s.definitions {
 		if s.definitions[i].Name == call.Name {
@@ -58,6 +62,9 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 		if _, err := shell.PlanQuery(command); err != nil {
 			return s.returnToolFeedback(ctx, reply, err.Error())
 		}
+	}
+	if criteria != nil {
+		s.checkpoint.Criteria = append([]string(nil), criteria...)
 	}
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = arguments

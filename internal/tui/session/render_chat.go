@@ -16,17 +16,13 @@ func (a *app) chatHeight(width, height int) int {
 func (a *app) renderChat(width, height int) {
 	lines := a.output.Lines(width)
 	appendTemporary := func(value string, thinking bool) {
-		if value == "" {
-			return
-		}
-		for _, line := range viewport.Wrap(value, width) {
-			lines = append(lines, viewport.Line{Text: line, Thinking: thinking})
-		}
+		block := viewport.Block{Text: value, Thinking: thinking}
+		lines = viewport.AppendLines(lines, block.Lines(width))
 	}
 	appendTemporary(a.thinking, true)
 	stream := viewport.Block{Text: a.stream, Markdown: true}
 	if a.stream != "" {
-		lines = append(lines, stream.Lines(width)...)
+		lines = viewport.AppendLines(lines, stream.Lines(width))
 	}
 	appendTemporary(a.status, false)
 	if a.pending != "" {

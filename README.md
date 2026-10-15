@@ -98,7 +98,7 @@ Linux 셸 격리는 별도 설치 과정 없이 바이너리에 포함된 커널
 └── logs/
 ```
 
-추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 작업·코드 생성 `0.7`, Conclave 심사 `0.4`, 요약·내부 분석 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트가 유효 context length의 `75%`, 나머지 역할이 `12,800`입니다.
+추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 작업·코드 생성 `0.7`, Conclave 심사 `0.4`, 요약·내부 분석 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트가 유효 context length의 `75%`, Compaction이 `8,192`, 나머지 역할이 `12,800`입니다.
 
 ```toml
 [inference.agent]

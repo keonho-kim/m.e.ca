@@ -36,7 +36,7 @@ func (f Formatter) Message(m modelapi.Message) []viewport.Block {
 
 func User(text string) string { return "> " + text + "\n\nAgent" }
 func Reply(text string) string {
-	if text == "" {
+	if strings.TrimSpace(text) == "" {
 		return ""
 	}
 	return strings.TrimRight(text, "\n") + "\n\n"

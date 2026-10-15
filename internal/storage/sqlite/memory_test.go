@@ -86,10 +86,10 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	records, _, err := store.MemoryRecords(ctx, session.ID, 0, mark.Timeline)
-	if err != nil || len(records) != 2 {
+	if err != nil || len(records) != 1 {
 		t.Fatalf("projection: %+v %v", records, err)
 	}
-	if records[1].Operation.Changes[0].Destination != "src/session.go" || records[0].Run.Step.Index != 1 {
+	if !strings.Contains(records[0].Text, "src/session.go") || !strings.Contains(records[0].Text, "Plan step 2: edit auth") {
 		t.Fatal("step changed-file facts lost")
 	}
 }

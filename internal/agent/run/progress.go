@@ -15,7 +15,7 @@ func (s *execution) recoverProgress(ctx context.Context) error {
 	}
 	s.checkpoint.Recoveries++
 	s.checkpoint.NoProgress = 0
-	s.checkpoint.Observation = fmt.Sprintf("Recovery %d/2: reuse observed results and choose a different action. Read only a missing range or changed state. Inspect pending checks and actual failures. If blocked, explain the blocker in your answer. Previous observation: %s", s.checkpoint.Recoveries, excerpt(s.checkpoint.Observation, 1024))
+	s.checkpoint.Observation = fmt.Sprintf("Recovery %d/2: reuse observed results and choose a different action. Read only a missing range or changed state. Identify one unmet request or actual failure; avoid restarting the full request analysis. If blocked, explain the blocker in your answer. Previous observation: %s", s.checkpoint.Recoveries, excerpt(s.checkpoint.Observation, 1024))
 	if err := s.record(ctx, Event{Kind: "recovery", Text: s.checkpoint.Observation}); err != nil {
 		return err
 	}

@@ -54,12 +54,12 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
 	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Criteria: []string{"Preserve parser cancellation"}, Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
 	if _, err := r.Run(context.Background(), "continue", false, approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	last := g.requests[0].Messages[len(g.requests[0].Messages)-1].Content
-	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || strings.Contains(last, "UNEXECUTED_DRAFT") {
+	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "Preserve parser cancellation") || strings.Contains(last, "UNEXECUTED_DRAFT") {
 		t.Fatalf("unsafe recovery context: %s", last)
 	}
 }

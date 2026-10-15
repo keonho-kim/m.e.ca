@@ -37,6 +37,9 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 		if role == inference.Agent {
 			want = 0
 		}
+		if role == inference.Compaction {
+			want = 8192
+		}
 		if err != nil || parameters.MaxOutputTokens != want {
 			t.Fatalf("persisted %s default=%+v, want %d: %v", role, parameters, want, err)
 		}

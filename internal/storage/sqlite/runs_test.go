@@ -25,7 +25,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	})
 	ctx := context.Background()
 	session := s.Session()
-	cp := run.Checkpoint{ID: "task", Objective: "edit", Status: run.Running, Phase: "grounding", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
+	cp := run.Checkpoint{Criteria: []string{"Preserve existing file contents"}, ID: "task", Objective: "edit", Status: run.Running, Phase: "grounding", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
 	if err = s.RecordEvent(ctx, session.ID, run.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, err := s.LatestRun(ctx, session.ID)
-	if err != nil || recovered == nil || recovered.Status != run.Interrupted || recovered.Tool != "write_file" {
+	if err != nil || recovered == nil || recovered.Status != run.Interrupted || recovered.Tool != "write_file" || len(recovered.Criteria) != 1 || recovered.Criteria[0] != "Preserve existing file contents" {
 		t.Fatalf("recovery: %+v %v", recovered, err)
 	}
 	history, err := s.Messages(ctx, session.ID, 100)

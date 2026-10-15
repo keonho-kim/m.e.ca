@@ -31,7 +31,7 @@ func (s *execution) request(question string, role inference.Role) (modelapi.Requ
 	var defs []toolapi.Definition
 	for _, d := range s.definitions {
 		if s.allowTool(d.Effect) == nil {
-			defs = append(defs, toolapi.WithIntent(d))
+			defs = append(defs, withCriteria(toolapi.WithIntent(d)))
 		}
 	}
 	if s.planning {
@@ -41,10 +41,11 @@ func (s *execution) request(question string, role inference.Role) (modelapi.Requ
 		question += "\nReport completed changes, actual checks and observations, and anything unverified. Use recorded outcomes; do not infer overall correctness from a successful command. If the request is satisfied, answer rather than polishing speculatively."
 	}
 	facts := struct {
-		Blocker       string `json:"blocker,omitempty"`
-		PendingReview bool   `json:"pending_review,omitempty"`
-		Observation   string `json:"observation,omitempty"`
-	}{s.checkpoint.Blocker, s.checkpoint.PendingReview, s.checkpoint.Observation}
+		Criteria      []string `json:"completion_criteria_model_claims,omitempty"`
+		Blocker       string   `json:"blocker,omitempty"`
+		PendingReview bool     `json:"pending_review,omitempty"`
+		Observation   string   `json:"observation,omitempty"`
+	}{s.checkpoint.Criteria, s.checkpoint.Blocker, s.checkpoint.PendingReview, s.checkpoint.Observation}
 	body, err := json.Marshal(facts)
 	if err != nil {
 		return modelapi.Request{}, err

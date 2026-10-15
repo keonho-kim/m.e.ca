@@ -6,27 +6,12 @@ package compact
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/conclave"
-	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/plan"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
-type RunFact struct {
-	ChangeRevision               int
-	ID, Objective, Status, Phase string
-	Observation                  string
-	Step                         *plan.StepRef
-	Source                       int64
-}
 type Record struct {
-	Review     *conclave.Result
-	Grounding  *grounding.Record
 	Sequence   int64
 	Role, Text string
-	Run        *RunFact
-	Operation  *toolapi.Operation
 }
 type Memory struct {
 	Revision              int

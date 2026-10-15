@@ -1,7 +1,7 @@
 // Purpose: Keep bounded output blocks and preserve an event-relative reading anchor on resize.
 // Pattern: Simple Module (presentation projection).
 // Usage: Mutated only by the terminal event loop and rendered at the current width.
-// Related: internal/tui/session/render.go, internal/tui/session/tasks.go.
+// Related: internal/tui/viewport/spacing.go, internal/tui/session/render_chat.go.
 package viewport
 
 import (
@@ -35,7 +35,7 @@ func (v *View) Append(text string, thinking bool) {
 	v.AppendBlock(Block{Text: text, Thinking: thinking})
 }
 func (v *View) AppendBlock(block Block) {
-	if block.Text == "" {
+	if strings.TrimSpace(block.Text) == "" {
 		return
 	}
 	v.Next++
@@ -44,6 +44,9 @@ func (v *View) AppendBlock(block Block) {
 	v.bound(false)
 }
 func (b *Block) Lines(width int) []Line {
+	if strings.TrimSpace(b.Text) == "" {
+		return nil
+	}
 	var out []Line
 	if b.Markdown {
 		if b.parsed == nil || b.parsedText != b.Text {
@@ -59,6 +62,9 @@ func (b *Block) Lines(width int) []Line {
 		for row, text := range Wrap(b.Text, width) {
 			out = append(out, Line{ID: b.ID, Row: row, Text: text, Thinking: b.Thinking})
 		}
+	}
+	if b.Markdown || b.Thinking {
+		return modelEdges(out)
 	}
 	return out
 }
@@ -95,7 +101,7 @@ func Wrap(text string, width int) []string {
 func (v *View) Lines(width int) []Line {
 	var lines []Line
 	for i := range v.Blocks {
-		lines = append(lines, v.Blocks[i].Lines(width)...)
+		lines = AppendLines(lines, v.Blocks[i].Lines(width))
 	}
 	return lines
 }
