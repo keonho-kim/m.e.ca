@@ -1,4 +1,4 @@
-// Purpose: Verify a real shell failure reaches the next model request with its diagnostics.
+// Purpose: Verify real command outcomes reach model context and observation reports without losing failure facts.
 // Pattern: Runtime and process integration test.
 // Usage: go test ./internal/agent/run -run TestCommandFailureReachesModel.
 // Related: internal/agent/run/action.go, internal/tools/local/command.go, internal/agent/tool/failure.go.
@@ -18,7 +18,7 @@ import (
 
 func TestCommandFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	r.Settings.Scope = policy.System
 	approvals := 0
 	result, err := r.Run(context.Background(), "run check", func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err != nil || result.Status != Stopped || approvals != 1 || len(g.requests) != 2 {
+	if err != nil || result.Status != Answered || approvals != 1 || len(g.requests) != 2 {
 		t.Fatalf("result=%+v err=%v approvals=%d requests=%d", result, err, approvals, len(g.requests))
 	}
 	found := false
@@ -66,9 +66,25 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	}
 }
 
+func TestNoMatchSearchFinishesWithoutCorrectionOrRetry(t *testing.T) {
+	r, _, root, _, _ := realBatchRunner(t, nil)
+	if err := os.WriteFile(filepath.Join(root, "app.txt"), []byte("done\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "grep TODO app.txt"}), "No TODO matches were found; grep exited with code 1."}}
+	r.Generator = g
+	result, err := r.Run(context.Background(), "Search app.txt for TODO and report whether it occurs", approve, emit)
+	if err != nil || result.Status != Answered || len(g.requests) != 2 {
+		t.Fatalf("unnecessary recovery: %+v %v calls=%d", result, err, len(g.requests))
+	}
+	if len(result.Facts.Commands) != 1 || result.Facts.Commands[0].ExitCode == nil || *result.Facts.Commands[0].ExitCode != 1 || !result.HadToolFailure {
+		t.Fatalf("observation overwrote command failure facts: %+v", result)
+	}
+}
+
 func TestSandboxSetupFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,17 +94,23 @@ func TestSandboxSetupFailureReachesModel(t *testing.T) {
 		}
 	})
 	target := filepath.Join(t.TempDir(), "outside")
-	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "printf outside > '" + target + "'"}), "The outside path is unavailable under current Scope", "Cannot execute outside Scope"}}
+	if err := os.WriteFile(target, []byte("shared"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(target, filepath.Join(project, "alias")); err != nil {
+		t.Fatal(err)
+	}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "cat '" + target + "'"}), "The outside path is unavailable under current Scope", "Cannot execute outside Scope"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
 	r.Settings.Permission = policy.AllowAll
 	result, err := r.Run(context.Background(), "inspect execution limits", approve, emit)
-	if err != nil || result.Status != Stopped || !result.HadToolFailure {
+	if err != nil || result.Status != Answered || !result.HadToolFailure {
 		t.Fatalf("result=%+v %v", result, err)
 	}
-	if _, err := os.Stat(target); !os.IsNotExist(err) {
-		t.Fatalf("scope escape: %v", err)
+	if data, err := os.ReadFile(target); err != nil || string(data) != "shared" {
+		t.Fatal("protected fixture changed")
 	}
 	var body strings.Builder
 	for _, message := range g.requests[1].Messages {

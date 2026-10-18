@@ -19,6 +19,7 @@ var devices = []string{"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
 
 type binding struct {
 	path, source              string
+	identity                  *[2]uint64
 	readOnly, device, resolve bool
 }
 
@@ -47,23 +48,25 @@ func enterRoot(r Request) error {
 			return fmt.Errorf("mount runtime %s: %w", path, err)
 		}
 	}
-	for _, path := range []string{r.Project, r.Scratch} {
-		if err := bind(root, binding{path: path}); err != nil {
-			return fmt.Errorf("mount working directory %s: %w", path, err)
-		}
-	}
-	// User directories must remain canonical at execution and read-only even within the project.
-	for _, path := range r.UserRuntime {
-		if err := bind(root, binding{path: path, readOnly: true}); err != nil {
-			return fmt.Errorf("mount user runtime %s: %w", path, err)
-		}
-	}
-	for _, visible := range append(append([]string{}, r.Runtime...), r.Project) {
-		if within(visible, r.Private) {
-			if err := hidePrivate(root, r.Private); err != nil {
-				return err
+	writes := append(append([]string{}, r.Writable...), r.Scratch)
+	for _, path := range writes {
+		for _, point := range points {
+			if point != path && within(path, point) {
+				return fmt.Errorf("nested mount in write root: %s", point)
 			}
-			break
+		}
+		id := r.Identities[path]
+		var identity *[2]uint64
+		if path != r.Scratch {
+			identity = &id
+		}
+		if err := bind(root, binding{path: path, identity: identity}); err != nil {
+			return fmt.Errorf("mount write root %s: %w", path, err)
+		}
+	}
+	for _, path := range r.Protected {
+		if err := hideProtected(root, path, r.Scratch); err != nil {
+			return err
 		}
 	}
 	for _, path := range devices {
@@ -126,6 +129,9 @@ func bind(root string, mount binding) (err error) {
 	var stat unix.Stat_t
 	if err := unix.Fstat(fd, &stat); err != nil {
 		return err
+	}
+	if mount.identity != nil && (uint64(stat.Dev) != mount.identity[0] || stat.Ino != mount.identity[1]) {
+		return fmt.Errorf("write root changed: %s", mount.path)
 	}
 	target := filepath.Join(root, mount.path)
 	if stat.Mode&unix.S_IFMT == unix.S_IFDIR {

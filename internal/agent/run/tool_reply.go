@@ -1,7 +1,7 @@
 // Purpose: Return rejected native candidates as paired tool results without performing side effects.
 // Pattern: Native tool dialogue recovery.
 // Usage: Decision and action handlers reject invalid schemas, multi-call batches and deferred candidates here.
-// Related: internal/agent/run/action.go, internal/agent/run/conversation.go, internal/agent/context/conversation.go.
+// Related: internal/agent/run/action.go, internal/agent/run/journal.go, internal/agent/context/conversation.go.
 package run
 
 import (
@@ -35,7 +35,7 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 		if err := s.save(ctx, modelapi.Message{Role: "tool", Content: string(body), ToolCallID: call.ID, ToolName: call.Name}); err != nil {
 			return err
 		}
-		s.checkpoint.Work.Observe(completion.Receipt{ID: call.ID, Tool: call.Name, Success: false, Output: s.runner.Redact(detail)}, nil, false)
+		s.checkpoint.Work.Observe(completion.Receipt{Failure: &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: s.runner.Redact(detail), Next: "Correct the rejected native arguments; nothing executed."}, ID: call.ID, Tool: call.Name, Success: false, Output: s.runner.Redact(detail)}, nil, false)
 		event := Event{Kind: "tool_failed", Text: "Not executed: " + s.runner.Redact(detail), CallID: call.ID, Call: &call, Output: body}
 		if err := s.record(ctx, event); err != nil {
 			return err
@@ -46,6 +46,5 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 	}
 	s.result.HadToolFailure = true
 	s.checkpoint.Observation = s.runner.Redact(detail)
-	s.checkpoint.NoProgress++
 	return s.persist(ctx)
 }

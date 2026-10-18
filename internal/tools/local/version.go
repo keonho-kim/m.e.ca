@@ -1,4 +1,4 @@
-// Purpose: Capture and compare the full file version bound to review and approval.
+// Purpose: Capture and compare the full file version bound to user approval and execution.
 // Pattern: Filesystem version adapter.
 // Usage: Preparation and execution guards call snapshot and sameVersion.
 // Related: internal/tools/local/paths.go, internal/tools/local/operation.go.

@@ -12,18 +12,18 @@ import (
 )
 
 func TestFinalReportDoesNotSpendAnotherCallAtBudget(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Read a; the remaining work was not performed."}}
+	g := &generator{replies: []string{nativeCall("inspect_fixture", map[string]any{"path": "a"}), "Read a; the remaining work was not performed."}}
 	r := fixture(g, &executor{}, &journal{})
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 2
 	result, err := r.Run(context.Background(), "inspect a and b", approve, emit)
-	if err != nil || result.Status != Stopped || len(g.requests) != 2 || len(g.completionRequests) != 0 {
+	if err != nil || result.Status != Answered || len(g.requests) != 2 {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
 
 func TestFinalReportFallbackAtExhaustedBudget(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"})}}
+	g := &generator{replies: []string{nativeCall("inspect_fixture", map[string]any{"path": "a"})}}
 	r := fixture(g, &executor{}, &journal{})
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 1

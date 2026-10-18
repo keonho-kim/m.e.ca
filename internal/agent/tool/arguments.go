@@ -78,6 +78,18 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	if string(value) == "null" {
 		return fmt.Errorf("%s cannot be null", p.Name)
 	}
+	if p.Kind == ObjectList {
+		var entries []json.RawMessage
+		if err := json.Unmarshal(value, &entries); err != nil || len(entries) == 0 || len(entries) > p.Max {
+			return fmt.Errorf("%s requires 1 to %d objects", p.Name, p.Max)
+		}
+		for i, entry := range entries {
+			if _, err := ValidateArguments(Definition{Name: p.Name, Parameters: p.Fields}, entry); err != nil {
+				return fmt.Errorf("%s[%d]: %w", p.Name, i, err)
+			}
+		}
+		return nil
+	}
 	if p.Kind == TextList {
 		var values []string
 		if err := json.Unmarshal(value, &values); err != nil || len(values) < 1 || len(values) > p.Max {
@@ -115,10 +127,6 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	case LiteralPath:
 		if strings.ContainsAny(text, "\r\n") {
 			return fmt.Errorf("%s requires one literal path without line breaks", p.Name)
-		}
-	case LineAnchor:
-		if _, err := ParseAnchor(text); err != nil {
-			return err
 		}
 	default:
 		return fmt.Errorf("unsupported parameter kind")

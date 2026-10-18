@@ -17,6 +17,7 @@ func (a *app) interruptTask() {
 		return
 	}
 	a.restorePending()
+	a.cancelDirectory()
 	a.stopRequested = true
 	a.stopElapsed()
 	a.taskCancel()
@@ -36,6 +37,7 @@ func (a *app) startCompression() {
 	a.compressionTimer = time.NewTicker(400 * time.Millisecond)
 	a.compressionTicks = a.compressionTimer.C
 }
+
 func (a *app) advanceCompression() {
 	if a.compressionTicks != nil {
 		a.compressionDots = a.compressionDots%3 + 1

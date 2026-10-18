@@ -24,7 +24,7 @@ func TestFailedDiagnosticIsSourceOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	text, _, err := c.Context()
-	if err != nil || text != summary() {
+	if err != nil || !strings.HasSuffix(text, summary()) || text != summary() {
 		t.Fatalf("unexpected diagnostic appendix: %s %v", text, err)
 	}
 }

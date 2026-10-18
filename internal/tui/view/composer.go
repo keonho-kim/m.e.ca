@@ -4,12 +4,9 @@
 // Related: internal/tui/view/chat.go, internal/tui/session/render_chat.go.
 package view
 
-import "github.com/keonho-kim/v-code/internal/tui/input"
-
 type ComposerLayout struct{ InputY, InputRows, CandidateY, CandidateEnd, TranscriptRows int }
 
-func Composer(editor input.Editor, width, height, maxRows int, choices Candidates, notice string) ComposerLayout {
-	rows := InputRows(editor, max(1, width), min(maxRows, max(1, height-1)))
+func Composer(rows, height int, choices Candidates, notice string) ComposerLayout {
 	inputY := height - rows
 	noticeRows := 0
 	if notice != "" && inputY > 1 {

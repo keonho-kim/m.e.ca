@@ -63,5 +63,5 @@ func Decide(settings Settings, effect Effect) (bool, error) {
 	if effect != Read && effect != Change && effect != Command {
 		return false, fmt.Errorf("unknown operation effect")
 	}
-	return effect != Read && settings.Permission == Approve, nil
+	return (effect == Change || effect == Command) && settings.Permission == Approve, nil
 }

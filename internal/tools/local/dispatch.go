@@ -1,7 +1,7 @@
 // Purpose: Dispatch prepared operations to file and command adapters.
 // Pattern: Tool execution dispatcher.
 // Usage: Operation.Execute dispatches after all policy and version rechecks.
-// Related: internal/tools/local/operation.go, internal/tools/local/file/read.go, internal/tools/local/mutations.go.
+// Related: internal/tools/local/operation.go, internal/tools/local/textedit/edit.go, internal/tools/local/mutations.go.
 package local
 
 import (
@@ -12,9 +12,7 @@ import (
 
 func (op *operation) run(ctx context.Context) (toolapi.Result, error) {
 	switch op.spec.name {
-	case "read_file":
-		return op.readFile(ctx)
-	case "write_file", "edit_file", "delete_file", "move_file":
+	case "write_file", "edit_file", "move_file":
 		return op.mutate()
 	case "execute_command":
 		return op.command(ctx)

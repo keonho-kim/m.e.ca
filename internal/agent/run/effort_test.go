@@ -10,7 +10,7 @@ import (
 )
 
 func TestEffortPropagatesThroughDecisionArgumentAndVerification(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "AGENTS.md"}), "Checked"}}
+	g := &generator{replies: []string{nativeCall("inspect_fixture", map[string]any{"path": "AGENTS.md"}), "Checked"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	on := true

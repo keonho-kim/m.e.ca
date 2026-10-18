@@ -31,22 +31,16 @@ func TestRepeatedEditsDoNotRequireCheck(t *testing.T) {
 	}
 }
 
-func TestFileCycleRequestsRecoveryAcrossReads(t *testing.T) {
+func TestFileCycleStopsRequestAcrossReads(t *testing.T) {
 	write := func(value string) string {
 		return nativeCall("write_file", map[string]any{"path": "a", "content": value})
 	}
-	g := &generator{replies: []string{write("second"), nativeCall("read_file", map[string]any{"path": "a"}), write("first"), nativeCall("execute_command", map[string]any{"command": "verify"}), "Done"}}
+	g := &generator{replies: []string{write("second"), nativeCall("inspect_fixture", map[string]any{"path": "a"}), write("first"), nativeCall("execute_command", map[string]any{"command": "verify"}), "Done"}}
 	e := &executor{outcomes: []toolapi.Result{changedFile("first", "second"), {Content: json.RawMessage(`{"content":"second"}`)}, changedFile("second", "first"), {Content: json.RawMessage(`{"ok":true}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}}}
 	j := &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "repair a", approve, emit)
-	if err != nil || result.Status != Answered {
-		t.Fatalf("%+v %v", result, err)
+	if err != nil || result.Status != Stopped || e.executed != 3 || len(g.requests) != 3 || !strings.Contains(result.Text, "File contents returned") {
+		t.Fatalf("cycle was lost: %+v %v", result, err)
 	}
-	for _, event := range j.events {
-		if event.Kind == "completion_review" && strings.Contains(event.Text, "continue") {
-			return
-		}
-	}
-	t.Fatal("read erased file cycle")
 }

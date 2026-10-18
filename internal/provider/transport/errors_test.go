@@ -1,6 +1,6 @@
 // Purpose: Verify explicit error messages across native and compatible provider error envelopes.
 // Pattern: Error contract tests.
-// Usage: go test ./internal/provider/httpclient -run TestProviderError.
+// Usage: go test ./internal/provider/transport -run TestProviderError.
 // Related: internal/provider/transport/errors.go.
 package transport
 

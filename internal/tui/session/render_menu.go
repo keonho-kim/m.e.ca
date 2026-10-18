@@ -39,16 +39,16 @@ func (a *app) renderMenu(w, h int) {
 		display.Candidates = a.modelCandidates()
 	case "approval":
 		display.Title = a.proposal.Name + " " + a.proposal.Target
-		if a.proposal.ConclavePassed {
-			display.Title += " · Conclave Pass"
-		}
 		lines := view.PreviewLines(a.proposal.Preview, w, a.proposal.Diff)
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-max(0, h-7)))
 		display.Preview = lines[a.previewOffset:]
 	}
 	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
-		display.Field = &a.menuInput
-		display.Secret = a.page == "key"
+		window := a.menuInput.FieldWindow(w, a.page == "key")
+		display.Field = &window
+		if a.page != "key" {
+			a.inputRegion = inputRegion{editor: &a.menuInput, window: window, y: 2, width: w, revision: a.menuInput.Revision()}
+		}
 	}
 	if a.page == "model" {
 		display.Thinking = &a.thinkingChoice

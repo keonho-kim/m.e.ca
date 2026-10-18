@@ -17,7 +17,7 @@ func TestLargeReason(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	call, got, err := tool.ExtractIntent(tool.Call{ID: "large", Name: "read_file", Arguments: body})
+	call, got, err := tool.ExtractIntent(tool.Call{ID: "large", Name: "inspect_fixture", Arguments: body})
 	if err != nil {
 		t.Fatal(err)
 	}

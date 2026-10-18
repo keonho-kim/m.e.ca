@@ -44,12 +44,11 @@ func restrictFiles(request Request) (err error) {
 		return errno
 	}
 	defer func() { err = errors.Join(err, unix.Close(int(fd))) }()
-	for _, path := range append(append(append([]string{}, request.Runtime...), request.UserRuntime...), "/proc") {
-		if err := allowPath(int(fd), path, readAccess); err != nil {
-			return err
-		}
+	if err := allowPath(int(fd), "/", readAccess); err != nil {
+		return err
 	}
-	for _, path := range []string{request.Project, request.Scratch} {
+	writes := append(append([]string{}, request.Writable...), request.Scratch)
+	for _, path := range writes {
 		if err := allowPath(int(fd), path, fileAccess); err != nil {
 			return err
 		}

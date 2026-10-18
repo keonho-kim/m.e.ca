@@ -1,9 +1,9 @@
 //go:build darwin
 
-// Purpose: Confine project shell filesystem access with the system Seatbelt launcher.
-// Pattern: macOS process isolation adapter.
-// Usage: Process.Run requests a launch; unsupported isolation fails without an unconfined retry.
-// Related: internal/tools/local/process/sandbox/environment.go, internal/tools/local/process/sandbox/user_runtime.go.
+// Purpose: Apply the shared read, write and secret policy to a macOS shell and its descendants.
+// Pattern: macOS Seatbelt Adapter.
+// Usage: Process.Run requests a launch after Permission approval; failures never fall back.
+// Related: internal/tools/local/filesystem/boundary.go, internal/tools/local/process/sandbox/environment.go.
 package sandbox
 
 import (
@@ -13,71 +13,65 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
+
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 )
 
-func Prepare(ctx context.Context, project, home, private, command string) (Launch, error) {
-	if err := ctx.Err(); err != nil {
-		return Launch{}, err
+func Prepare(ctx context.Context, b *filesystem.Boundary, command string) (launch Launch, err error) {
+	if err = b.CheckTrees(ctx); err != nil {
+		return launch, err
 	}
-
-	project, err := filepath.EvalSymlinks(project)
+	if _, err = os.Stat("/usr/bin/sandbox-exec"); err != nil {
+		return launch, fmt.Errorf("filesystem sandbox unavailable: %w", err)
+	}
+	launch, err = scratch(b.Project())
 	if err != nil {
-		return Launch{}, err
+		return launch, err
 	}
-	private, err = filepath.EvalSymlinks(private)
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, launch.Close())
+			launch = Launch{}
+		}
+	}()
+	developer, err := developerRuntime(ctx, b.Project(), b.Home(), b.Private())
 	if err != nil {
-		return Launch{}, err
-	}
-	if _, err := os.Stat("/usr/bin/sandbox-exec"); err != nil {
-		return Launch{}, fmt.Errorf("project sandbox unavailable: %w", err)
-	}
-	launch, err := scratch(project)
-	if err != nil {
-		return Launch{}, err
-	}
-	userPaths, err := userRuntime(&launch, home, private)
-	if err != nil {
-		return Launch{}, errors.Join(err, launch.Close())
-	}
-	developer, err := developerRuntime(ctx, project, home, private)
-	if err != nil {
-		return Launch{}, errors.Join(err, launch.Close())
+		return launch, err
 	}
 	if developer != "" {
-		userPaths = append(userPaths, developer)
 		launch.Environment = append(launch.Environment, "DEVELOPER_DIR="+developer)
 	}
 	profile := `(version 1)
 (deny default)
 (allow process-fork sysctl-read)
 (allow signal (target same-sandbox))
-(allow file-read-data (literal "/") (literal "/dev/null") (literal "/dev/random") (literal "/dev/urandom"))
-(allow file-write-data (literal "/dev/null"))
-(allow file-read* (literal "/private/var/select/sh"))
-(allow file-read-metadata (literal "/private/var/select"))
+(allow file-read* process-exec file-map-executable)
+(allow file-write-data (literal "/dev/null") (literal "/dev/zero"))
+(allow network-outbound (remote tcp) (remote udp) (literal "/private/var/run/mDNSResponder"))
+(allow network-bind network-inbound (local ip))
+(deny file-link)
 `
-	// Runtime and toolchain resources are read-only exceptions, not writable scope.
-	for _, path := range append(append(runtimePaths(), userPaths...), "/opt/homebrew/bin", "/opt/homebrew/lib", "/opt/homebrew/opt", "/opt/homebrew/Cellar", "/opt/homebrew/include", "/opt/homebrew/share", "/System/Library", "/Library/Apple", "/private/var/db/dyld", project, launch.Scratch) {
-		profile += "(allow file-read* process-exec file-map-executable (subpath " + strconv.Quote(path) + "))\n"
-		for parent := filepath.Dir(path); ; parent = filepath.Dir(parent) {
-			profile += "(allow file-read-metadata (literal " + strconv.Quote(parent) + "))\n"
-			if parent == "/" {
-				break
+	for _, path := range append(b.Writes(), launch.Scratch) {
+		profile += "(allow file-write* (subpath " + strconv.Quote(path) + "))\n"
+		profile += "(deny file-write-unlink (literal " + strconv.Quote(path) + "))\n"
+	}
+	for _, path := range b.Protected() {
+		for parent := filepath.Dir(path); parent != "/"; parent = filepath.Dir(parent) {
+			for _, root := range b.Writes() {
+				if filesystem.Within(root, parent) {
+					profile += "(deny file-write-unlink (literal " + strconv.Quote(parent) + "))\n"
+				}
 			}
 		}
-	}
-	for _, path := range []string{project, launch.Scratch} {
-		profile += "(allow file-write* (subpath " + strconv.Quote(path) + "))\n"
-	}
-	for _, path := range userPaths {
-		profile += "(deny file-write* (subpath " + strconv.Quote(path) + "))\n"
-	}
-	profile += "(deny file-read* file-write* (subpath " + strconv.Quote(private) + "))\n"
-	if strings.ContainsRune(profile, 0) {
-		return Launch{}, errors.Join(fmt.Errorf("invalid sandbox path"), launch.Close())
+		profile += "(deny file-read* file-write* process-exec file-map-executable (subpath " + strconv.Quote(path) + "))\n"
 	}
 	launch.Program = "/usr/bin/sandbox-exec"
-	launch.Arguments = []string{"-p", profile, "/bin/sh", "-c", command}
+	reader, writer, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return launch, pipeErr
+	}
+	launch.setup = reader
+	launch.Files = append(launch.Files, writer)
+	launch.Arguments = []string{"-p", profile, "/bin/sh", "-c", `printf 'ready\n' >&3 || exit 125; exec 3>&-; exec /bin/sh -c "$1"`, "v-shell", command}
 	return launch, nil
 }

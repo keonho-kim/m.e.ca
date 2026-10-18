@@ -1,7 +1,7 @@
 // Purpose: Verify review size counts actual added and deleted lines independently of preview fallback.
 // Pattern: Diff contract tests.
 // Usage: go test ./internal/tools/local/diff -run TestCount.
-// Related: internal/tools/local/diff/count.go, internal/agent/conclave/verdict.go.
+// Related: internal/tools/local/diff/count.go, internal/agent/tool/execution.go.
 package diff
 
 import (

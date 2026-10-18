@@ -36,14 +36,14 @@ func TestContextMessagesAfterTimelineAndBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	through := records[len(records)-1].Sequence
-	call := toolapi.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}
-	for _, m := range []modelapi.Message{{Role: "user", Content: "new goal"}, {Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolCallID: "call", ToolName: "read_file", Content: `{"content":"exact output"}`}} {
+	call := toolapi.Call{ID: "call", Name: "inspect_fixture", Arguments: json.RawMessage(`{"path":"README.md"}`)}
+	for _, m := range []modelapi.Message{{Role: "user", Content: "new goal"}, {Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolCallID: "call", ToolName: "inspect_fixture", Content: `{"content":"exact output"}`}} {
 		if err := s.AppendMessage(ctx, session.ID, m); err != nil {
 			t.Fatal(err)
 		}
 	}
 	messages, err := s.ContextMessages(ctx, session.ID, through, 4096)
-	if err != nil || len(messages) != 3 || messages[0].Content != "new goal" || messages[1].Calls[0].Name != "read_file" || messages[2].Content != `{"content":"exact output"}` {
+	if err != nil || len(messages) != 3 || messages[0].Content != "new goal" || messages[1].Calls[0].Name != "inspect_fixture" || messages[2].Content != `{"content":"exact output"}` {
 		t.Fatalf("tail: %+v %v", messages, err)
 	}
 	all, err := s.ContextMessages(ctx, session.ID, 0, 4096)

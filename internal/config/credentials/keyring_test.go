@@ -5,6 +5,9 @@
 package credentials
 
 import (
+	"github.com/zalando/go-keyring"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,5 +23,29 @@ func TestRedactionAndStreaming(t *testing.T) {
 	}
 	if strings.Contains(v.Stream("start provider-sec"), "provider-sec") {
 		t.Fatal("streamed secret prefix")
+	}
+}
+
+func TestClearDeletesOnlyVServiceAndMarksSavedCredentials(t *testing.T) {
+	keyring.MockInit()
+	v := &Vault{State: t.TempDir()}
+	if err := v.Set("provider", "provider-secret"); err != nil {
+		t.Fatal(err)
+	}
+	if err := keyring.Set("other-app", "provider", "other-secret"); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(filepath.Join(v.State, "credentials.used"))
+	if err != nil || strings.Contains(string(body), "provider-secret") {
+		t.Fatal("credential cleanup marker missing or contains a secret")
+	}
+	if err := Clear(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := keyring.Get(service, "provider"); err == nil {
+		t.Fatal("V credential remains")
+	}
+	if value, err := keyring.Get("other-app", "provider"); err != nil || value != "other-secret" {
+		t.Fatal("other service was modified")
 	}
 }

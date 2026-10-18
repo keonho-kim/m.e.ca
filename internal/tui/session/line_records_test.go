@@ -1,7 +1,7 @@
-// Purpose: Verify terminal tool output shows line numbers while agent records retain full anchors.
+// Purpose: Verify terminal tool output shows line numbers while shell observations retain their original source.
 // Pattern: Terminal projection contract test.
 // Usage: go test ./internal/tui/session -run TestReadLineReferencesVisible.
-// Related: internal/tui/transcript/tools.go, internal/tools/local/file/read.go.
+// Related: internal/tui/transcript/tools.go, internal/tools/local/textedit/edit.go.
 package session
 
 import (
@@ -13,7 +13,7 @@ import (
 
 func TestReadLineReferencesVisible(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "read_file", Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"Content":"41#9a72d30f | first\n42#b6e108ca | second\n"}`)}
+	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":" 41 | first\n 42 | second\n","ExitCode":0,"Status":"exited"}`)}
 	a.receive(notice{Event: &event})
 	a.render()
 	var visible strings.Builder
@@ -27,9 +27,6 @@ func TestReadLineReferencesVisible(t *testing.T) {
 	}
 	if strings.Contains(visible.String(), "9a72d30f") || strings.Contains(visible.String(), "b6e108ca") {
 		t.Fatal("internal hash visible")
-	}
-	if !strings.Contains(string(event.Output), "41#9a72d30f") {
-		t.Fatal("agent anchor changed")
 	}
 
 }

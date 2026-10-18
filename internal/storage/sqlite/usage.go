@@ -1,4 +1,4 @@
-// Purpose: Restore reported token counts and reject unsupported stored usage formats.
+// Purpose: Restore reported token counts and validate persisted usage.
 // Pattern: Repository projection.
 // Usage: Session restoration reads TokenUsage once before starting a worker.
 // Related: internal/storage/sqlite/events.go, internal/agent/run/usage.go.
@@ -28,7 +28,7 @@ func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenU
 		return total, err
 	}
 	if invalid != 0 {
-		return modelapi.TokenUsage{}, fmt.Errorf("unsupported stored token usage: expected only provider-reported input/output counts; records were not modified")
+		return modelapi.TokenUsage{}, fmt.Errorf("invalid stored token usage: expected only provider-reported input/output counts; records were not modified")
 	}
 	return total, nil
 }

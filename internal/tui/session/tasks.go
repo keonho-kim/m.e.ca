@@ -28,8 +28,9 @@ func (a *app) startTask(text string) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)
-	inferenceSettings := a.opts.Config.Inference
-	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop, Usage: &run.Usage{}}
+	inferenceSettings := a.opts.Config.InferenceSettings()
+	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop}
+	runner.ProjectRoot = a.opts.Session.ProjectRoot
 	var references []string
 	for path := range a.browser.Selected {
 		if _, err := a.opts.Tools.Reference(a.settings, path); err == nil {
@@ -40,7 +41,7 @@ func (a *app) startTask(text string) {
 	if len(references) > 0 {
 		text += "\nSelected path references (read only as needed):\n" + strings.Join(references, "\n")
 	}
-	store, loadPrompts, compaction := a.opts.Store, a.opts.LoadPrompts, a.opts.Config.Compaction
+	store, loadPrompts, compaction := a.opts.Store, a.opts.LoadPrompts, a.opts.Config.Compaction.Settings
 	instructions := a.opts.Tools.ProjectInstructions
 	decisions := a.decision
 	a.workers.Add(1)

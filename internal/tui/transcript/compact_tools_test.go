@@ -11,16 +11,16 @@ import (
 	"testing"
 )
 
-func TestCompactToolRead(t *testing.T) {
+func TestCompactToolShellRead(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "read_file", Arguments: []byte(`{"path":"a","offset":0,"limit":4096,"reason":"internal reason"}`)}, Output: []byte(`{"Content":"1#1234abcd | hello","Path":"a","Editable":true,"FinalNewline":true,"SizeBytes":6,"Truncated":true,"NextOffset":6}`)}
+	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat a","reason":"internal reason"}`)}, Output: []byte(`{"Stdout":"hello","ExitCode":0,"Status":"exited","Truncated":true}`)}
 	shown := f.Tool(event)
 	for _, hidden := range []string{"Editable", "FinalNewline", "SizeBytes", "NextOffset", "internal reason", "limit:", "offset:"} {
 		if strings.Contains(shown, hidden) {
 			t.Fatal(shown)
 		}
 	}
-	if !strings.Contains(shown, "1 | hello") || !strings.Contains(shown, "일부") {
+	if !strings.Contains(shown, "hello") || !strings.Contains(shown, "일부") {
 		t.Fatal(shown)
 	}
 }

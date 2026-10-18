@@ -22,6 +22,12 @@ func (s *Files) Repeated(changes []toolapi.FileChange) bool {
 	reset := false
 	observed := false
 	for _, change := range changes {
+		if change.AfterDigest == "missing" && change.Destination == "" && change.BeforeDigest != "missing" {
+			s.current[change.Path] = "missing"
+			s.seen = nil
+			reset = true
+			continue
+		}
 		if change.BeforeDigest == "" || change.AfterDigest == "" {
 			continue
 		}
@@ -47,7 +53,7 @@ func (s *Files) Repeated(changes []toolapi.FileChange) bool {
 	before, _ := json.Marshal(s.current)
 	s.seen[sha256.Sum256(before)] = true
 	for _, change := range changes {
-		if change.BeforeDigest == "" || change.AfterDigest == "" {
+		if change.BeforeDigest == "" || change.AfterDigest == "" || change.AfterDigest == "missing" && change.Destination == "" {
 			continue
 		}
 		s.current[change.Path] = change.AfterDigest

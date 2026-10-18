@@ -1,7 +1,7 @@
 // Purpose: Project actual tool results into bounded completion memory.
 // Pattern: Completion state adapter.
 // Usage: acceptResult observes executed facts after each tool result.
-// Related: internal/agent/completion/state.go, internal/agent/run/completion_review.go.
+// Related: internal/agent/completion/state.go, internal/agent/run/finish_response.go.
 package run
 
 import (
@@ -55,10 +55,6 @@ func (s *execution) observeCompletion(ctx context.Context, v validatedCall, outc
 	if len(outcome.Content) > 0 {
 		text += "\n" + string(outcome.Content)
 	}
-	if outcome.Process != nil {
-		body, _ := json.Marshal(outcome.Process)
-		text += "\n" + string(body)
-	}
 	success := outcome.Started && !outcome.Failed && toolErr == nil
 	if p := outcome.Process; p != nil && (p.Status != "exited" || p.ExitCode != 0) {
 		success = false
@@ -67,9 +63,6 @@ func (s *execution) observeCompletion(ctx context.Context, v validatedCall, outc
 	kind := "content"
 	if v.call.Name == "create_directory" {
 		kind = "directory_exists"
-	}
-	if v.call.Name == "delete_file" {
-		kind = "path_missing"
 	}
 	if v.definition.Effect == policy.Command {
 		kind = "command"
@@ -83,10 +76,30 @@ func (s *execution) observeCompletion(ctx context.Context, v validatedCall, outc
 			}
 		}
 	}
-	receipt := completion.Receipt{Kind: kind, Versions: versions, Command: commandText, ID: v.call.ID, Tool: v.call.Name, Targets: targets, Success: success, Output: s.runner.Redact(strings.TrimLeft(text, "\r\n"))}
+	failure := outcome.Failure
+	if failure == nil {
+		failure = toolapi.FailureOf(toolErr)
+	}
+	receipt := completion.Receipt{Failure: failure, Changed: len(changed) > 0, Kind: kind, Versions: versions, Command: commandText, ID: v.call.ID, Tool: v.call.Name, Targets: targets, Success: success, Output: s.runner.Redact(strings.TrimLeft(text, "\r\n"))}
+	receipt.ObservedRun, receipt.Revision = s.checkpoint.ID, s.checkpoint.ChangeRevision
+	if commandText != "" {
+		receipt.ProcessStatus = "not_started"
+		if outcome.Started {
+			receipt.ProcessStatus = "unknown"
+		}
+		if p := outcome.Process; p != nil {
+			receipt.ProcessStatus = p.Status
+			receipt.ExitCode = &p.ExitCode
+		}
+	}
 	s.checkpoint.Work.Observe(receipt, changed, command)
+	if command && changedFiles(outcome) {
+		s.checkpoint.LastChange = excerpt(s.runner.Redact(commandChangeNote(outcome.Changes)), 768)
+	}
 	if command {
-		if err := s.refreshFileFacts(ctx); err != nil {
+		if outcome.Versions != nil {
+			s.checkpoint.Work.ReconcileFiles(outcome.Versions)
+		} else if err := s.refreshFileFacts(ctx); err != nil {
 			return err
 		}
 	}

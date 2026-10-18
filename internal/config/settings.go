@@ -7,6 +7,8 @@ package config
 import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
+	"path/filepath"
+	"strings"
 
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/run"
@@ -14,16 +16,33 @@ import (
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
+type Execution struct {
+	WritablePaths []string `toml:"writable_paths"`
+}
+
 type Config struct {
-	ContextLength int                `toml:"context_length"`
-	Model         *SavedModel        `toml:"model,omitempty"`
-	Inference     inference.Settings `toml:"inference"`
-	ModelProfiles []ModelProfile     `toml:"model_profiles,omitempty"`
-	Defaults      policy.Settings    `toml:"defaults"`
-	Thinking      bool               `toml:"thinking"`
-	Loop          run.Limits         `toml:"loop"`
-	Compaction    compact.Settings   `toml:"compaction"`
-	UI            UI                 `toml:"ui"`
+	Execution     Execution            `toml:"execution"`
+	ContextLength int                  `toml:"context_length"`
+	Model         *SavedModel          `toml:"model,omitempty"`
+	Agent         inference.Parameters `toml:"agent"`
+	Diagnostics   inference.Parameters `toml:"diagnotics"`
+	ModelProfiles []ModelProfile       `toml:"model_profiles,omitempty"`
+	Defaults      policy.Settings      `toml:"defaults"`
+	Thinking      bool                 `toml:"thinking"`
+	Loop          run.Limits           `toml:"loop"`
+	Compaction    Compaction           `toml:"compaction"`
+	UI            UI                   `toml:"ui"`
+}
+
+// Compaction stores trigger policy and generation parameters in one TOML table.
+type Compaction struct {
+	compact.Settings
+	inference.Parameters
+}
+
+// InferenceSettings resolves the configuration tables into runtime role parameters.
+func (c Config) InferenceSettings() inference.Settings {
+	return inference.Settings{Agent: c.Agent, Compaction: c.Compaction.Parameters, Diagnostic: c.Diagnostics}
 }
 
 type UI struct {
@@ -32,13 +51,16 @@ type UI struct {
 }
 
 func Defaults() Config {
+	parameters := inference.Defaults()
 	return Config{
+		Execution:     Execution{WritablePaths: []string{}},
 		ContextLength: connection.DefaultContextLength,
-		Inference:     inference.Defaults(),
+		Agent:         parameters.Agent,
+		Diagnostics:   parameters.Diagnostic,
 		Defaults:      policy.Settings{Permission: policy.AllowAll, Scope: policy.System},
 		UI:            UI{ColumnWidth: 24, InputMaxLines: 5},
 		Loop:          run.DefaultLimits(),
-		Compaction:    compact.Defaults(),
+		Compaction:    Compaction{Settings: compact.Defaults(), Parameters: parameters.Compaction},
 	}
 }
 
@@ -51,6 +73,11 @@ func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
 }
 
 func check(configuration Config) error {
+	for _, path := range configuration.Execution.WritablePaths {
+		if !filepath.IsAbs(path) || strings.ContainsRune(path, 0) {
+			return fmt.Errorf("execution.writable_paths requires absolute paths")
+		}
+	}
 	if err := connection.CheckContextLength(configuration.ContextLength); err != nil {
 		return err
 	}
@@ -59,13 +86,13 @@ func check(configuration Config) error {
 			return fmt.Errorf("saved model: %w", err)
 		}
 	}
-	if err := configuration.Inference.Check(); err != nil {
+	if err := configuration.InferenceSettings().Check(); err != nil {
 		return err
 	}
 	if err := checkProfiles(configuration.ModelProfiles); err != nil {
 		return err
 	}
-	if err := configuration.Compaction.Check(); err != nil {
+	if err := configuration.Compaction.Settings.Check(); err != nil {
 		return err
 	}
 	if err := configuration.Loop.Check(); err != nil {

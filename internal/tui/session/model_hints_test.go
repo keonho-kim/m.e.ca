@@ -52,13 +52,13 @@ func TestModelHintsNoMatchPasteAndResize(t *testing.T) {
 	if !strings.Contains(visible, "eight") {
 		t.Fatal("selected candidate hidden in small terminal")
 	}
-	a.paste = true
+	a.pasteBoundary(true)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "custom/model", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	a.pasteBoundary(false)
 	if a.busy || a.menuInput.String() != "custom/model" || len(a.modelHints) != 0 {
 		t.Fatal("paste executed or failed to filter")
 	}
-	a.paste = false
 	a.render()
 	if !strings.Contains(screenLine(a.screen, 3, 24), "No matches") {
 		t.Fatal("missing no-match indication")

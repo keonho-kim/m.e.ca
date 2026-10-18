@@ -7,6 +7,7 @@ package local
 import (
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"strings"
 )
 
 type specification struct {
@@ -16,24 +17,19 @@ type specification struct {
 }
 
 func filePath() toolapi.Parameter {
-	return toolapi.Parameter{Name: "path", Description: "File or directory path relative to the project root; use . for the root.", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}
+	return toolapi.Parameter{Name: "path", Description: "Absolute path or path relative to project_root. Shell cd does not change this base.", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}
 }
 func textField(name, description string, empty bool) toolapi.Parameter {
 	return toolapi.Parameter{Name: name, Description: description, Kind: toolapi.Text, Required: true, AllowEmpty: empty, MaxBytes: toolapi.MaxArgumentsBytes}
 }
-func numberField(name, description string, max int) toolapi.Parameter {
-	return toolapi.Parameter{Name: name, Description: description + " Omit or use zero for the default.", Kind: toolapi.Integer, Max: max}
-}
 func specifications() []specification {
-	page := []toolapi.Parameter{filePath(), numberField("offset", "Starting byte offset.", 100000000), numberField("limit", "Maximum bytes to read.", 16*1024*1024)}
 	specs := []specification{
-		{"read_file", "Reading", "Read source lines with line#hash anchors. Finish this call before composing dependent edit_file arguments; a first read and its dependent edit cannot share a batch.", page, policy.Read},
-		{"create_directory", "Creating", "Use for directory creation instead of mkdir: creates all paths and missing parents (mkdir -p), accepting existing directories.", []toolapi.Parameter{{Name: "paths", Description: "Directory paths relative to the project root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
-		{"write_file", "Writing", "Create a new UTF-8 file or replace an existing file with the supplied complete content. Use content=empty string for a requested empty file; missing parents are created. Use edit_file for anchored partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
-		{"edit_file", "Editing", "Replace a range using anchors from a completed read_file call. Copy only source into new_text. Default preserve retains the line boundary and newline style.", []toolapi.Parameter{filePath(), {Name: "start_anchor", Description: "Copy the first line#8hex anchor from read_file. Use the literal anchor string.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, {Name: "end_anchor", Description: "Copy the last line#8hex anchor from the same read. For one line, repeat start_anchor.", Kind: toolapi.LineAnchor, Required: true, MaxBytes: 32}, textField("new_text", "Exact replacement lines. Exclude anchor labels; preserve whitespace and line endings. Empty means delete the selected lines.", true)}, policy.Change},
-		{"delete_file", "Deleting", "Delete a file or empty directory", []toolapi.Parameter{filePath()}, policy.Change},
-		{"move_file", "Moving", "Move without overwriting the destination", []toolapi.Parameter{filePath(), {Name: "destination", Description: "Destination path relative to the project root.", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}, policy.Change},
-		{"execute_command", "Running", "Run search/listing commands (find, ls, rg, grep), builds, tests or package tools. Use read_file for source reads; mkdir uses create_directory, touch/truncate uses write_file, rm uses delete_file, mv uses move_file, and content edits use edit_file. Do not resubmit rejected direct file operations as shell wrappers. Shell syntax, pipelines and redirects follow the host shell.", []toolapi.Parameter{textField("command", "Exact shell command to run.", false)}, policy.Command},
+
+		{"create_directory", "Creating", "Create one or more directories and missing parents within allowed write paths (mkdir -p). Existing directories succeed without changes. File collisions are rejected. Returns created paths and preserves partial results if interrupted. Use instead of mkdir.", []toolapi.Parameter{{Name: "paths", Description: "Absolute directory paths or paths relative to project_root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
+		{"write_file", "Writing", "Create a UTF-8 file or replace its entire content in an allowed write path; missing parents are created. Inspect an existing file before replacing it. Returns the applied change and file size; a successful write does not verify the resulting program. Use content=empty string for a requested empty file. Use edit_file for partial changes; use this tool instead of touch, shell redirection or heredocs that write source files.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
+		editSpecification(),
+		{"move_file", "Moving", "Move one file or directory within allowed write paths to a nonexistent destination. Existing destinations are rejected. Returns the old and new paths. Use instead of mv.", []toolapi.Parameter{filePath(), {Name: "destination", Description: "Absolute destination or path relative to project_root; shell cd does not change this base.", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}, policy.Change},
+		{"execute_command", "Running", "Run a POSIX shell command for file inspection (cat/head/tail, sed -n, nl), search/listing, builds, tests, package tools (uv init/add/run), and deletion (rm/rmdir/unlink/find -delete/git rm), including binary or recursive deletion. Commands start in project_root with the inherited development environment; cd applies only to this call. Use dedicated create_directory/write_file/edit_file/move_file for their direct operations. The entire command is checked before execution; a rejected command means nothing runs. Wait for prerequisites such as project initialization before reading or modifying their outputs. Returns whether execution started, stdout, stderr, exit code and status; observed file changes cover known targets only. Preserve failing exit codes when combining checks; grep/rg exit 1 means no matches. A running command may apply partial changes before failure or cancellation; inspect those effects before retrying. Permission approval and allowed write paths apply to all child programs.", []toolapi.Parameter{textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
 	}
 	for index := range specs {
 		if specs[index].name == "edit_file" || specs[index].name == "write_file" {
@@ -43,9 +39,12 @@ func specifications() []specification {
 	}
 	return specs
 }
-func (*Executor) Definitions() []toolapi.Definition {
+func (executor *Executor) Definitions() []toolapi.Definition {
 	var out []toolapi.Definition
 	for _, spec := range specifications() {
+		if spec.name == "execute_command" {
+			spec.description += " Writable roots for all tools: " + executor.redact(strings.Join(executor.boundary.Writes(), ", ")) + "."
+		}
 		out = append(out, toolapi.Definition{Name: spec.name, Description: spec.description, Parameters: spec.fields, Effect: spec.effect})
 	}
 	return out

@@ -6,10 +6,9 @@ package run
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"maps"
 )
 
 func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, content []byte, signature [32]byte, mutating bool, effect policy.Effect, result string, outcome toolapi.Result, toolErr error) error {
@@ -18,14 +17,12 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	s.checkpoint.Observation = call.Name + " result: " + excerpt(s.runner.Redact(outcome.Summary), 512)
 	if mutating && (outcome.Started || outcome.Failure != nil && outcome.Failure.Code == toolapi.StaleTarget) {
 		if outcome.Started && effect == policy.Change {
-			s.mutations[signature] = true
+			if s.mutations == nil {
+				s.mutations = map[[32]byte]mutationReceipt{}
+			}
+			s.mutations[signature] = mutationReceipt{call.ID, maps.Clone(outcome.Versions), !outcome.Failed && toolErr == nil}
 		}
 		s.checkpoint.ChangeRevision++
-		// Real file changes make earlier reads/checks stale. Merely running another
-		// command must not erase the evidence that an observation already repeated.
-		if effect == policy.Change {
-			clear(s.seen)
-		}
 		if outcome.Started && effect == policy.Command {
 			s.commands[signature] = s.checkpoint.ChangeRevision
 		}
@@ -33,9 +30,14 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	if outcome.Failed || toolErr != nil {
 		if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
 			s.checkpoint.Blocker = excerpt(s.runner.Redact(outcome.Failure.Detail), 3500)
-			s.checkpoint.Observation = "Command was not started: " + s.checkpoint.Blocker + ". Resolve the runtime setup; do not widen Scope or claim verification passed."
+			s.checkpoint.Observation = "Command was not started: " + s.checkpoint.Blocker
 		}
-		s.checkpoint.NoProgress++
+		if outcome.Failure == nil {
+			outcome.Failure = toolapi.FailureOf(toolErr)
+		}
+		if s.toolAdvanced(call, outcome, effect, result) {
+			s.round.advanced = true
+		}
 		return s.persist(ctx)
 	}
 	if effect == policy.Change && outcome.Started {
@@ -44,34 +46,29 @@ func (s *execution) observeOutcome(ctx context.Context, call toolapi.Call, conte
 	if effect == policy.Command && outcome.Started {
 		s.checkpoint.Blocker = ""
 	}
-	if mutating && outcome.Started && outcome.ReviewSatisfied {
-		s.checkpoint.PendingReview = false
+	if effect == policy.Change && !changedFiles(outcome) {
+		return s.persist(ctx)
 	}
-	target := outcome.Target
-	if target == "" {
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(content, &fields); err != nil {
-			return err
-		}
-		target = string(fields["path"])
-		if target == "" {
-			target = string(fields["command"])
-		}
-	}
-	fingerprint := sha256.Sum256([]byte(call.Name + "\n" + target + "\n" + result))
 	cycle := s.files.Repeated(outcome.Changes)
-	if cycle || s.seen[fingerprint] {
-		s.checkpoint.NoProgress++
-		s.checkpoint.Observation += "\nThis call returned an already observed state without new evidence. Reuse the result and advance the user request; do not repeat the same unchanged query."
+	if !cycle && s.toolAdvanced(call, outcome, effect, result) {
+		s.round.advanced = true
 	} else {
-		s.seen[fingerprint] = true
-		s.evidenceRevision++
-		s.checkpoint.NoProgress = 0
+		s.checkpoint.Observation += "\nThis call returned an already observed state. Reuse it and address one concrete remaining outcome."
 	}
+
 	if cycle {
 		s.checkpoint.Observation += "\nFile contents returned to a previously observed state. Stop rewriting the same result; inspect the concrete failed requirement and verify before another edit."
-		s.checkpoint.NoProgress = max(s.checkpoint.NoProgress, s.limits.StallIterations)
+		s.round.cycle = true
 		return s.persist(ctx)
 	}
 	return s.persist(ctx)
+}
+
+func changedFiles(outcome toolapi.Result) bool {
+	for _, c := range outcome.Changes {
+		if c.BeforeDigest != c.AfterDigest || c.Destination != "" {
+			return true
+		}
+	}
+	return false
 }

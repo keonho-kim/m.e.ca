@@ -1,11 +1,12 @@
 // Purpose: Schedule validated native calls in bounded independent waves and preserve paired results.
-// Pattern: Serial coordinator with bounded parallel execution.
+// Pattern: Serial owner with bounded parallel execution.
 // Usage: Run dispatches multi-call responses here; one owner mutates runtime and journal state.
 // Related: internal/agent/run/batch_wave.go, internal/agent/run/call_validation.go.
 package run
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -21,7 +22,7 @@ type parallelExecutor interface {
 }
 
 func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	if s.usage.Iterations+len(reply.Calls)-1 > s.limits.MaxIterations {
+	if !s.usage.actions(len(reply.Calls), s.limits.MaxIterations) {
 		return s.returnToolFeedback(ctx, reply, "Batch exceeds the remaining action budget; submit fewer calls. Nothing executed.")
 	}
 	calls := make([]validatedCall, len(reply.Calls))
@@ -33,8 +34,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		}
 		calls[i] = value
 	}
-	s.usage.Iterations += len(calls) - 1
-	s.checkpoint.Iteration = s.usage.Iterations
+	s.checkpoint.Iteration = s.usage.snapshot().Iterations
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: reply.Calls}); err != nil {
 		return err
 	}
@@ -94,8 +94,12 @@ func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail
 	defer cancel()
 	var result error
 	for _, v := range calls {
-		failure := &toolapi.Failure{Code: "batch_not_executed", Detail: detail, Next: "Inspect completed calls; submit only work that remains necessary."}
-		outcome := toolapi.Result{Failed: true, Failure: failure, Content: []byte(`{"executed":false}`)}
+		failure := &toolapi.Failure{Code: "batch_not_executed", Detail: detail, Next: "This call did not execute. Preserve completed sibling results. Correct the named failed call, then submit only the still-needed failed or skipped work; do not replay successful changes."}
+		body, err := json.Marshal(map[string]any{"executed": false, "call_id": v.call.ID, "tool": v.call.Name, "status": "skipped", "cause": detail})
+		if err != nil {
+			return err
+		}
+		outcome := toolapi.Result{Failed: true, Failure: failure, Content: body}
 		event := Event{Kind: "tool_failed", CallID: v.call.ID, Call: &v.call, Text: failure.Error(), Output: outcome.Content}
 		if err := s.record(recordCtx, event); err != nil {
 			return errors.Join(result, err)
@@ -110,16 +114,20 @@ func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail
 	return result
 }
 
-func (s *execution) activateCall(ctx context.Context, v validatedCall) error {
+func (s *execution) activateCall(ctx context.Context, v validatedCall) (bool, error) {
 	s.checkpoint.Tool, s.checkpoint.Arguments = v.call.Name, v.arguments
 	if err := s.ground(ctx, v.call, v.reason); err != nil {
-		return errors.Join(errRuntimeRecord, err)
+		return false, errors.Join(errRuntimeRecord, err)
 	}
-	if err := s.checkRepeated(v); err != nil {
-		return err
+	prior, err := s.repeated(ctx, v)
+	if err != nil {
+		return false, err
+	}
+	if prior != nil {
+		return true, s.reuseMutation(ctx, v, *prior)
 	}
 	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Grounded native candidate; not executed"}); err != nil {
-		return errors.Join(errRuntimeRecord, err)
+		return false, errors.Join(errRuntimeRecord, err)
 	}
-	return nil
+	return false, nil
 }

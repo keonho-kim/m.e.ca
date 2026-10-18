@@ -1,6 +1,6 @@
 // Purpose: Select the session's immutable prompt snapshot.
 // Pattern: Simple Module.
-// Usage: Execution and review use templates before generation.
+// Usage: The main agent loads system and development guidance before generation.
 // Related: internal/agent/prompt/defaults.go.
 package run
 

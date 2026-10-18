@@ -15,25 +15,19 @@ func (f Formatter) Tool(event run.Event) string {
 	}
 	var text strings.Builder
 	label := event.Call.Name
-	if event.Conclave != nil {
-		if event.Conclave.Passed {
-			label += " · Conclave Pass"
-		} else {
-			label += " · Conclave Fail"
-		}
-	}
 	text.WriteString("\n  " + label + "\n\n")
 	text.WriteString(f.arguments(*event.Call))
 	if event.Kind == "tool_started" {
 		text.WriteString("\n    Running…\n")
 	} else {
 		text.WriteString("\n    Output\n")
+		rendered := f.output(event)
 		if len(event.Output) > 0 {
-			text.WriteString(f.output(event))
+			text.WriteString(rendered)
 		} else {
 			text.WriteString(indentTool(f.Redact(event.Text)))
 		}
-		if event.Kind == "tool_failed" && len(event.Output) > 0 {
+		if event.Kind == "tool_failed" && len(event.Output) > 0 && rendered != f.resultSummary(event) {
 			text.WriteString(indentTool("Failed: " + f.Redact(event.Text)))
 		}
 	}

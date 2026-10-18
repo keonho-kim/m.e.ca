@@ -9,8 +9,8 @@ import "testing"
 func TestFreshnessReconcilesOnlyMatchingKnownFiles(t *testing.T) {
 	s := State{Receipts: []Receipt{
 		{ID: "unchanged", Tool: "write_file", Kind: "content", Success: true, Stale: true, Versions: map[string]string{"/p/a": "v1"}},
-		{ID: "changed", Tool: "read_file", Kind: "content", Success: true, Stale: true, Versions: map[string]string{"/p/b": "v1"}},
-		{ID: "unknown", Tool: "read_file", Kind: "content", Success: true, Stale: true, Versions: map[string]string{"/p/c": "v1"}},
+		{ID: "changed", Tool: "inspect_fixture", Kind: "content", Success: true, Stale: true, Versions: map[string]string{"/p/b": "v1"}},
+		{ID: "unknown", Tool: "inspect_fixture", Kind: "content", Success: true, Stale: true, Versions: map[string]string{"/p/c": "v1"}},
 		{ID: "command", Tool: "execute_command", Kind: "command", Success: true, Stale: true},
 	}}
 	s.ReconcileFiles(map[string]string{"/p/a": "v1", "/p/b": "v2"})

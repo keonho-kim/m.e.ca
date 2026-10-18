@@ -53,7 +53,7 @@ func TestMarkdownUserRemainsLiteral(t *testing.T) {
 
 func TestMarkdownToolOutputRemainsLiteral(t *testing.T) {
 	a := fixture(t)
-	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "read_file", Arguments: []byte(`{"path":"a"}`)}, Text: "**literal tool output**"}})
+	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Text: "**literal tool output**"}})
 	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Markdown || !strings.Contains(a.output.Blocks[0].Text, "**literal tool output**") {
 		t.Fatal("tool output was interpreted as Markdown")
 	}

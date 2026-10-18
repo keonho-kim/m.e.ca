@@ -1,6 +1,6 @@
-// Purpose: Assemble one main-agent context with current unresolved execution facts.
+// Purpose: Assemble the main agent's context from its request, constraints and observed facts.
 // Pattern: Context preparation use case.
-// Usage: The single run loop requests native tools and complete uncompacted history.
+// Usage: The main loop supplies its direct tools and single conversation.
 // Related: internal/agent/context/request.go, internal/agent/run/run.go.
 package run
 
@@ -22,8 +22,8 @@ func excerpt(text string, limit int) string {
 	}
 	return text[:end] + "\n[excerpt; full record retained]"
 }
-func (s *execution) request(question string, role inference.Role) (modelapi.Request, error) {
-	parameters, err := inference.Resolve(s.runner.Inference, role)
+func (s *execution) request(question string) (modelapi.Request, error) {
+	parameters, err := inference.Resolve(s.runner.Inference, inference.Agent)
 	if err != nil {
 		return modelapi.Request{}, err
 	}

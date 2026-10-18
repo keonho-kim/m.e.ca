@@ -6,23 +6,32 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 )
 
 func (a *app) render() {
 	if a.selectionPage != a.page {
-		a.textSelection.Clear()
+		a.clearSelection()
 	}
+	a.inputRegion = inputRegion{}
+	a.selectionSources = make(map[int]textlayout.Fragment)
 	a.screen.Clear()
 	a.screen.HideCursor()
 	w, h := a.screen.Size()
 	if w < 12 || h < 4 {
-		a.textSelection.Clear()
+		a.clearSelection()
 		view.Text(a.screen, 0, 0, w, "Resize terminal", tcell.StyleDefault)
 		a.screen.Show()
 		return
 	}
 	body := a.bodyHeight(h)
+	if a.helpOpen {
+		view.KeyboardHelp(a.screen, a.shortcuts(), w, body, a.helpOffset)
+		view.Footer(a.screen, view.Status{Model: a.selection.Model, Settings: a.settings}, []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "Esc", Label: "닫기"}, {Key: "F1", Label: "닫기"}, {Key: "↑↓", Label: "스크롤"}}, body, w)
+		a.screen.Show()
+		return
+	}
 	switch a.page {
 	case "files":
 		a.renderFiles(w, body)
@@ -31,6 +40,7 @@ func (a *app) render() {
 	default:
 		a.renderMenu(w, body)
 	}
+	a.captureInputSources()
 	a.textSelection.Draw(a.screen)
 	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings}, a.shortcuts(), body, w)
 	a.screen.Show()

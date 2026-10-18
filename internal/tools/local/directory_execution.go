@@ -43,6 +43,12 @@ func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, err
 			fmt.Sprintf("Created directories: %d; requested paths: %d", len(created), len(op.input.Paths)))
 		result.Changes = changes
 		result.Failed = cause != nil
+		if cause == nil {
+			result.Versions = map[string]string{}
+			for _, path := range op.directoryPaths {
+				result.Versions[path] = "directory"
+			}
+		}
 		return result, errors.Join(cause, encodeErr)
 	}
 	for _, dir := range current {
@@ -56,7 +62,7 @@ func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, err
 		// Open the parent itself so a concurrent path substitution cannot redirect
 		// Mkdir through a newly introduced symlink.
 		parentPath := filepath.Dir(dir.target.absolute)
-		parentTarget, err := op.executor.resolve(op.settings.Scope, parentPath)
+		parentTarget, err := op.executor.writeTarget(op.settings.Scope, parentPath)
 		if err != nil {
 			return finish(err)
 		}

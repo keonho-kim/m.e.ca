@@ -1,4 +1,4 @@
-// Purpose: Verify explicit app exit cancels work from every screen without approving a Plan.
+// Purpose: Verify explicit app exit cancels work from every screen.
 // Pattern: Terminal lifecycle tests.
 // Usage: go test ./internal/tui/session -run 'TestExit|TestRunExit'.
 // Related: internal/tui/session/keys.go, internal/tui/session/app.go, internal/commands/catalog.go.
@@ -21,7 +21,7 @@ func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 			a.taskCancel = cancel
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlC, "", 0))
 			if !a.exit || taskCtx.Err() == nil {
-				t.Fatal("exit did not cancel work or changed unapproved Plan")
+				t.Fatal("exit did not cancel work")
 			}
 		})
 	}

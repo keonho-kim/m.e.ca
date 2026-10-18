@@ -17,8 +17,8 @@ type ChatDisplay struct {
 	Usage            modelapi.TokenUsage
 	Lines            []viewport.Line
 	Start, Available int
-	Editor           input.Editor
-	InputMaxLines    int
+	Input            input.Window
+	Layout           ComposerLayout
 	Candidates       Candidates
 }
 
@@ -37,10 +37,10 @@ func Chat(screen tcell.Screen, display ChatDisplay, width, height int) {
 		}
 		y++
 	}
-	layout := Composer(display.Editor, width, height, display.InputMaxLines, display.Candidates, display.Notice)
+	layout := display.Layout
 	candidates(screen, display.Candidates, layout.CandidateY, width, layout.CandidateEnd)
 	if display.Notice != "" && layout.InputY > 1 {
 		Text(screen, 0, layout.InputY-1, width, display.Notice, tcell.StyleDefault.Dim(true))
 	}
-	Input(screen, display.Editor, layout.InputY, width, layout.InputRows)
+	Input(screen, display.Input, layout.InputY, width)
 }

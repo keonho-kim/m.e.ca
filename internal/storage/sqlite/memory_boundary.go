@@ -6,8 +6,11 @@ package sqlite
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/storage/history"
 )
 
 func (s *Store) CompactionBoundary(ctx context.Context, session string, through int64, keepBytes int) (boundary int64, err error) {
@@ -17,21 +20,24 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 	if keepBytes == 0 {
 		return through, nil
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,length(CAST(m.body AS BLOB)) FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence<=? ORDER BY t.sequence DESC`, session, through)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,m.body FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence<=? ORDER BY t.sequence DESC`, session, through)
 	if err != nil {
 		return 0, err
 	}
 	defer func() { err = errors.Join(err, rows.Close()) }()
-	used := 0
+	selection := history.TailSelection{Target: keepBytes}
 	for rows.Next() {
 		var sequence int64
-		var size int
-		if err := rows.Scan(&sequence, &size); err != nil {
+		var body []byte
+		if err := rows.Scan(&sequence, &body); err != nil {
 			return 0, err
 		}
-		used += size
-		if used >= keepBytes {
-			return sequence - 1, nil
+		var message modelapi.Message
+		if err := json.Unmarshal(body, &message); err != nil {
+			return 0, err
+		}
+		if boundary, ready := selection.Keep(sequence, len(body), message); ready {
+			return boundary, nil
 		}
 	}
 	return 0, rows.Err()

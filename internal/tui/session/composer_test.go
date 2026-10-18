@@ -72,11 +72,6 @@ func TestFixedSystemScopeOnSessionRestore(t *testing.T) {
 	if a.settings.Scope != policy.System || a.settings.Permission != policy.Approve {
 		t.Fatal("saved scope changed fixed policy or approval")
 	}
-	typeInput(a, "!scope")
-	a.submit()
-	if a.page == "scope" || a.settings.Scope != policy.System {
-		t.Fatal("scope selection still available")
-	}
 }
 
 func TestGlobalDefaultPermissionIsAutomatic(t *testing.T) {

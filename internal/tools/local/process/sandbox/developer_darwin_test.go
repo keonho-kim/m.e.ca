@@ -24,13 +24,14 @@ func TestAppleToolsInSandbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, command := range []string{"python3 -c 'import sys,sysconfig,tempfile; print(sys.version); print(sysconfig.get_paths())'", "git --version", "xcrun --find python3", "printf 'int main(void) {return 0;}' | clang -x c -fsyntax-only -"} {
-		launch, err := Prepare(context.Background(), project, home, private, command)
+		launch, err := prepareTest(context.Background(), project, home, private, command)
 		if err != nil {
 			t.Fatal(err)
 		}
 		cmd := exec.Command(launch.Program, launch.Arguments...)
 		cmd.Dir = launch.Directory
 		cmd.Env = launch.Environment
+		cmd.ExtraFiles = launch.Files
 		output, runErr := cmd.CombinedOutput()
 		if err := launch.Close(); err != nil {
 			t.Fatal(err)

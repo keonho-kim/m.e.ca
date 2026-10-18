@@ -7,39 +7,28 @@ package local
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tools/local/anchors"
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 	"os"
 	"path/filepath"
 )
 
 type Executor struct {
-	reads                   anchors.Store
-	project, home, private  string
+	project, home           string
 	projectRoot, systemRoot *os.Root
 	redact                  func(string) string
+	boundary                *filesystem.Boundary
+	writeRoots              map[string]*os.Root
 }
 
-func NewExecutor(project, home, private string, redact func(string) string) (*Executor, error) {
+func NewExecutor(project, home, private string, writable []string, redact func(string) string) (*Executor, error) {
 	if redact == nil {
 		return nil, fmt.Errorf("a secret redactor is required")
 	}
-	for _, path := range []string{project, home, private} {
-		if !filepath.IsAbs(path) {
-			return nil, fmt.Errorf("filesystem roots must be absolute")
-		}
-	}
-	project, err := realPath(project)
+	boundary, err := filesystem.New(project, home, private, writable)
 	if err != nil {
 		return nil, err
 	}
-	home, err = realPath(home)
-	if err != nil {
-		return nil, err
-	}
-	private, err = realPath(private)
-	if err != nil {
-		return nil, err
-	}
+	project, home = boundary.Project(), boundary.Home()
 	root, err := os.OpenRoot(project)
 	if err != nil {
 		return nil, err
@@ -48,10 +37,24 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 	if err != nil {
 		return nil, errors.Join(err, root.Close())
 	}
-	return &Executor{project: project, home: home, private: private, projectRoot: root, systemRoot: system, redact: redact}, nil
+	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, writeRoots: map[string]*os.Root{project: root}}
+	for _, path := range boundary.Writes() {
+		if path == project {
+			continue
+		}
+		handle, err := os.OpenRoot(path)
+		if err != nil {
+			return nil, errors.Join(err, executor.Close())
+		}
+		executor.writeRoots[path] = handle
+	}
+	return executor, nil
 }
 
 func (executor *Executor) Close() error {
-	executor.reads.Clear()
-	return errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())
+	var err error
+	for _, root := range executor.writeRoots {
+		err = errors.Join(err, root.Close())
+	}
+	return errors.Join(err, executor.systemRoot.Close())
 }

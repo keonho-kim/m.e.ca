@@ -1,12 +1,11 @@
 // Purpose: Verify format metadata and frozen approval content match the bytes written.
 // Pattern: File tool integration contract tests.
 // Usage: go test ./internal/tools/local -run TestFormat.
-// Related: internal/tools/local/candidate.go, internal/tools/local/file/read.go.
+// Related: internal/tools/local/candidate.go, internal/tools/local/textedit/edit.go.
 package local
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
@@ -20,7 +19,7 @@ func TestFormatLastLineIsPreservedBeforeApproval(t *testing.T) {
 	if err := os.WriteFile(path, []byte("old\r\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	edit := anchoredEdit(t, executor, "a", 1, 1, "new")
+	edit := observedEdit(t, executor, "a", 1, 1, "new")
 	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, edit)
 	if err != nil {
 		t.Fatal(err)
@@ -35,32 +34,6 @@ func TestFormatLastLineIsPreservedBeforeApproval(t *testing.T) {
 	got, err := os.ReadFile(path)
 	if err != nil || string(got) != "new\r\n" {
 		t.Fatalf("%q %v", got, err)
-	}
-}
-func TestFormatReadShowsTrueEOF(t *testing.T) {
-	for _, body := range []string{"a\r\n", "a", ""} {
-		executor, root := testExecutor(t)
-		if err := os.WriteFile(filepath.Join(root, "a"), []byte(body), 0600); err != nil {
-			t.Fatal(err)
-		}
-		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call("read_file", `{"path":"a"}`))
-		if err != nil {
-			t.Fatal(err)
-		}
-		result, err := op.Execute(context.Background(), false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var read struct {
-			FinalNewline     bool
-			RangeLineEndings string
-		}
-		if err := json.Unmarshal(result.Content, &read); err != nil {
-			t.Fatal(err)
-		}
-		if read.FinalNewline != (body == "a\r\n") {
-			t.Fatalf("%q: %+v", body, read)
-		}
 	}
 }
 func TestFormatLiteralChangeRequiresExplicitArgument(t *testing.T) {

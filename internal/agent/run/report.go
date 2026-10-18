@@ -1,4 +1,4 @@
-// Purpose: Render final execution facts without generating unreviewed replacement answers.
+// Purpose: Render terminal execution facts without another model request.
 // Pattern: Terminal run state transition.
 // Usage: Run enters reporting after fulfilling the request, exhausted budgets or persistent no progress.
 // Related: internal/agent/run/finish.go, internal/agent/run/completion_state.go, internal/agent/run/context.go.
@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/response"
+	"github.com/keonho-kim/v-code/internal/agent/work"
 	"strings"
 )
 
@@ -15,12 +16,14 @@ func (s *execution) report(ctx context.Context, reason string, stopped bool) (Re
 	if err := ctx.Err(); err != nil {
 		return s.result, err
 	}
+	if end := s.checkpoint.End; end != nil && end.Status == work.Denied {
+		reason = end.Reason
+	}
 	s.checkpoint.Phase = "reporting"
 	s.checkpoint.ReportReason = s.runner.Redact(reason)
 	if len(s.checkpoint.ReportReason) > 256*1024*1024 {
 		return s.result, fmt.Errorf("report reason exceeds resource bound")
 	}
-	stopped = stopped || s.checkpoint.PendingReview
 	if err := s.persist(ctx); err != nil {
 		return s.result, err
 	}
@@ -48,26 +51,15 @@ func (s *execution) reportFacts(stopped bool) string {
 	if s.checkpoint.LastChange != "" {
 		out.WriteString("- 마지막 성공한 변경: " + s.checkpoint.LastChange + "\n")
 	}
-	for _, e := range s.checkpoint.Work.Receipts {
-		label := "성공한 실행"
-		if !e.Success {
-			label = "실패 또는 미실행"
-		} else if e.Stale {
-			label = "이전 성공(현재 상태 미확인)"
-		}
-		fmt.Fprintf(&out, "- %s: %s (%s)\n", label, strings.SplitN(e.Output, "\n", 2)[0], e.Tool)
-	}
+	out.WriteString(s.checkpoint.Work.Facts().Describe())
 	if s.checkpoint.Observation != "" {
 		out.WriteString("- 마지막 관찰: " + excerpt(s.checkpoint.Observation, 768) + "\n")
 	}
 	reason := s.checkpoint.ReportReason
 	if response.ToolMarkup(reason) {
-		reason = "심사 응답에 실행되지 않은 도구 형식이 포함됐습니다"
+		reason = "응답에 실행되지 않은 도구 형식이 포함됐습니다"
 	}
-	out.WriteString("- 종료 사유: " + reason + "\n")
-	if s.checkpoint.Objective != "" {
-		out.WriteString("- 요청 기준(전체 충족을 보증하지 않음): " + excerpt(s.checkpoint.Objective, 2048) + "\n")
-	}
+	out.WriteString("- 종료 사유: " + excerpt(reason, 2048) + "\n")
 	out.WriteString("- 미검증 사항: 기록된 실행 결과 외의 정확성·검증 통과 여부는 확인하지 않았습니다.")
 	return out.String()
 }

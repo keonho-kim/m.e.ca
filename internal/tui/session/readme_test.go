@@ -1,7 +1,7 @@
-// Purpose: Verify a file request without AGENTS.md survives malformed decomposition and reaches approved execution.
+// Purpose: Verify a file request receives its project root and reaches approved execution without AGENTS.md.
 // Pattern: HTTP, filesystem and session integration test.
 // Usage: go test ./internal/tui/session -run TestReadmeRequest.
-// Related: internal/tui/session/tasks.go, internal/agent/run/conversation.go, internal/tools/local/instructions.go.
+// Related: internal/tui/session/tasks.go, internal/agent/run/task_context.go, internal/tools/local/instructions.go.
 package session
 
 import (
@@ -30,29 +30,30 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		t.Fatalf("expected no project instructions: %v", err)
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var request struct{ Messages []modelapi.Message }
+		var request struct {
+			Messages []modelapi.Message
+			Tools    []struct{ Function struct{ Name string } }
+		}
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			t.Error(err)
 			return
 		}
 		question := request.Messages[len(request.Messages)-1].Content
-		reply := `{"tool":"write_file"}`
+		if strings.HasPrefix(question, "Work observations:") && !strings.Contains(question, fmt.Sprintf(`"project_root":%q`, a.opts.Session.ProjectRoot)) {
+			t.Error("tool path base missing from model context")
+		}
+		usedTool := false
+		for _, message := range request.Messages {
+			usedTool = usedTool || message.Role == "tool"
+		}
+		reply, toolName := "Created README.md", ""
 		switch {
-		case strings.HasPrefix(question, "REVIEW CANDIDATE "):
-			reply = `{"decision":"pass"}`
-		case strings.Contains(question, "execute_command result:"):
-			reply = "Created README.md"
-		case strings.Contains(question, "write_file result:"):
-			reply = `{"tool":"execute_command"}`
+		case !usedTool:
+			toolName = "write_file"
 		}
 		message := map[string]any{"content": reply}
-		if strings.HasPrefix(reply, `{"tool":`) {
-			toolName := "write_file"
+		if toolName != "" {
 			arguments := map[string]any{"path": "README.md", "content": "# Project\n"}
-			if reply == `{"tool":"execute_command"}` {
-				toolName = "execute_command"
-				arguments = map[string]any{"command": "test -s README.md"}
-			}
 			arguments["reason"] = "Perform the requested operation using the current observations."
 			encoded, err := json.Marshal(arguments)
 			if err != nil {

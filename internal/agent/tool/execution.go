@@ -12,14 +12,13 @@ import (
 )
 
 type Approval struct {
-	ConclavePassed bool
-	Candidate      *Candidate
-	ID             string
-	Name           string
-	Target         string
-	Preview        string
-	Diff           bool
-	Required       bool
+	Candidate *Candidate
+	ID        string
+	Name      string
+	Target    string
+	Preview   string
+	Diff      bool
+	Required  bool
 }
 
 type LineChange struct {
@@ -28,21 +27,20 @@ type LineChange struct {
 }
 
 type FileChange struct {
-	Lines                     *LineChange `json:",omitempty"`
+	Lines                     []LineChange `json:",omitempty"`
 	Action, Path, Destination string
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
-	Versions        map[string]string
-	ReviewSatisfied bool
-	Target          string
-	Started         bool
-	Failure         *Failure
-	Process         *ProcessOutcome
-	Content         json.RawMessage
-	Summary         string
-	Failed          bool
-	Changes         []FileChange
+	Versions map[string]string
+	Target   string
+	Started  bool
+	Failure  *Failure
+	Process  *ProcessOutcome
+	Content  json.RawMessage
+	Summary  string
+	Failed   bool
+	Changes  []FileChange
 }
 
 type Execution interface {

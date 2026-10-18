@@ -19,9 +19,11 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 	a.status = "Connecting"
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
+	a.setupRevision++
+	revision := a.setupRevision
 	previous := a.selection
 	binding := a.opts.Config.ModelPreference(connection, model)
-	inferenceSettings := a.opts.Config.Inference
+	inferenceSettings := a.opts.Config.InferenceSettings()
 	defaults := setup.Defaults{ContextLength: a.opts.Config.ContextLength, Inference: &inferenceSettings, Thinking: a.opts.Config.Thinking, Profile: binding.Profile, ReasoningEffort: binding.ReasoningEffort}
 	a.workers.Add(1)
 	go func() {
@@ -34,7 +36,7 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 			}
 		}
 		prepared, err := setup.Prepare(ctx, connection, key, model, defaults, previous, a.opts.Vault)
-		n := notice{Client: prepared.Client, Selection: prepared.Selection, Err: err, RememberModel: remember}
+		n := notice{SetupRevision: revision, Client: prepared.Client, Selection: prepared.Selection, Err: err, RememberModel: remember}
 		if connection.CredentialRef == "" {
 			n.credential = key
 		}

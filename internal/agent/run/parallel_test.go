@@ -27,12 +27,6 @@ type parallelModel struct {
 }
 
 func (g *parallelModel) Generate(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if handled, err := completionFixture(r, emit); handled {
-		return err
-	}
-	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "REVIEW CANDIDATE ") {
-		return emit(modelapi.Event{Delta: `{"decision":"pass"}`, Done: true})
-	}
 	g.requests = append(g.requests, r)
 	if len(g.requests) == 1 {
 		return emit(modelapi.Event{Calls: g.calls, Done: true})
@@ -86,7 +80,7 @@ func (op heldOperation) Execute(ctx context.Context, approved bool) (toolapi.Res
 func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executor, string, *journal, *parallelModel) {
 	t.Helper()
 	root, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,9 +252,9 @@ func TestParallelRechecksAliasesAfterApproval(t *testing.T) {
 	}
 }
 
-func TestParallelWritesKeepIndividualReviewsAndApprovals(t *testing.T) {
+func TestParallelWritesKeepIndividualApprovals(t *testing.T) {
 	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": "a", "content": "first"}), batchCall("b", "write_file", map[string]any{"path": "b", "content": "second"})}
-	r, tools, root, j, _ := realBatchRunner(t, calls)
+	r, tools, root, _, _ := realBatchRunner(t, calls)
 	r.Settings.Permission = policy.Approve
 	held := &heldTools{Executor: tools, entered: make(chan string, 2), release: make(chan struct{})}
 	r.Tools = held
@@ -283,14 +277,8 @@ func TestParallelWritesKeepIndividualReviewsAndApprovals(t *testing.T) {
 	}
 	close(held.release)
 	<-done
-	reviews := 0
-	for _, event := range j.events {
-		if event.Kind == "conclave" && event.Conclave.Passed {
-			reviews++
-		}
-	}
-	if runErr != nil || result.Status != Answered || decisions != 2 || reviews != 2 || held.maximum.Load() != 2 {
-		t.Fatalf("%+v approvals=%d reviews=%d concurrent=%d %v", result, decisions, reviews, held.maximum.Load(), runErr)
+	if runErr != nil || result.Status != Answered || decisions != 2 || held.maximum.Load() != 2 {
+		t.Fatalf("%+v approvals=%d concurrent=%d %v", result, decisions, held.maximum.Load(), runErr)
 	}
 	for _, name := range []string{"a", "b"} {
 		if _, err := os.Stat(filepath.Join(root, name)); err != nil {

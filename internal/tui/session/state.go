@@ -21,6 +21,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/browser"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/keonho-kim/v-code/internal/tui/selection"
+	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"sync"
 	"time"
@@ -37,62 +38,75 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
-	clipboardBusy              bool
-	selectionPage              string
-	textSelection              selection.Selection
-	filePreview                *browser.Preview
-	previewCancel              context.CancelFunc
-	previewRevision            int
-	elapsedStarted             time.Time
-	elapsed                    time.Duration
-	elapsedTimer               *time.Ticker
-	elapsedTicks               <-chan time.Time
-	stopNotice                 string
-	tokensPerSecond            *float64
-	modelNames, modelHints     []string
-	modelHintsOpen             bool
-	modelHintIndex             int
-	pending                    string
-	agentActive, stopRequested bool
-	compressionTimer           *time.Ticker
-	compressionTicks           <-chan time.Time
-	compressionDots            int
-	tokenTotal, tokenCurrent   modelapi.TokenUsage
-	opts                       Options
-	screen                     tcell.Screen
-	ctx                        context.Context
-	cancel                     context.CancelFunc
-	workers                    sync.WaitGroup
-	events                     chan notice
-	editor                     input.Editor
-	output                     viewport.View
-	inputs                     []string
-	historyIndex               int
-	draft                      string
-	settings                   policy.Settings
-	selection                  modelconn.Selection
-	client                     *httpclient.Client
-	thinkingChoice             bool
-	page                       string
-	choices                    []string
-	choice                     int
-	menuInput                  input.Editor
-	connectionKind             int
-	endpoint, key              string
-	browser                    browser.Browser
-	proposal                   *toolapi.Approval
-	decision                   chan bool
-	busy                       bool
-	taskCancel                 context.CancelFunc
-	exit                       bool
-	newSession                 bool
-	paste                      bool
-	status, stream, thinking   string
-	commandHints               []commands.Suggestion
-	commandOpen                bool
-	commandIndex               int
-	changeField, changeValue   string
-	historyCursor              int64
-	previewOffset              int
-	pendingConnection          modelconn.Connection
+	chatVisible, selectedTranscript     []viewport.Line
+	historyLoading, historyEnd          bool
+	directoryCancel                     context.CancelFunc
+	directoryRevision                   int
+	directoryLoading, fileSelectionBusy bool
+	helpOpen                            bool
+	helpOffset                          int
+	pasted                              pasteInput
+	setupRevision                       int
+	chatProjection                      chatProjection
+	inputRegion, selectionInput         inputRegion
+	selectionSources                    map[int]textlayout.Fragment
+	clipboardBusy                       bool
+	selectionPage                       string
+	textSelection                       selection.Selection
+	filePreview                         *browser.Preview
+	previewCancel                       context.CancelFunc
+	previewRevision                     int
+	elapsedStarted                      time.Time
+	elapsed                             time.Duration
+	elapsedTimer                        *time.Ticker
+	elapsedTicks                        <-chan time.Time
+	stopNotice                          string
+	tokensPerSecond                     *float64
+	modelNames, modelHints              []string
+	modelHintsOpen                      bool
+	modelHintIndex                      int
+	pending                             string
+	agentActive, stopRequested          bool
+	compressionTimer                    *time.Ticker
+	compressionTicks                    <-chan time.Time
+	compressionDots                     int
+	tokenTotal                          modelapi.TokenUsage
+	tokenCurrent                        modelapi.TokenUsage
+	opts                                Options
+	screen                              tcell.Screen
+	ctx                                 context.Context
+	cancel                              context.CancelFunc
+	workers                             sync.WaitGroup
+	events                              chan notice
+	editor                              input.Editor
+	output                              viewport.View
+	inputs                              []string
+	historyIndex                        int
+	draft                               string
+	settings                            policy.Settings
+	selection                           modelconn.Selection
+	client                              *httpclient.Client
+	thinkingChoice                      bool
+	page                                string
+	choices                             []string
+	choice                              int
+	menuInput                           input.Editor
+	connectionKind                      int
+	endpoint, key                       string
+	browser                             browser.Browser
+	proposal                            *toolapi.Approval
+	decision                            chan bool
+	busy                                bool
+	taskCancel                          context.CancelFunc
+	exit                                bool
+	newSession                          bool
+	paste                               bool
+	status, stream, thinking            string
+	commandHints                        []commands.Suggestion
+	commandOpen                         bool
+	commandIndex                        int
+	changeField, changeValue            string
+	historyCursor                       int64
+	previewOffset                       int
+	pendingConnection                   modelconn.Connection
 }

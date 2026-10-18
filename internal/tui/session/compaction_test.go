@@ -38,6 +38,11 @@ func TestCompactionContext(t *testing.T) {
 	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 200000, Kind: "request"}); err != nil {
 		t.Fatal(err)
 	}
+	const summaryMemo = "- Request: Update src/auth.go.\n- Result: No code changes yet.\n- Next: Continue the requested implementation."
+	quotedMemo, err := json.Marshal(summaryMemo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var calls atomic.Int64
 	var decisions atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,13 +63,9 @@ func TestCompactionContext(t *testing.T) {
 			if !strings.Contains(body.Messages[1].Content, `"ActiveRequest":"Continue the earlier goal"`) {
 				t.Error("active request missing from summary input")
 			}
-			var b strings.Builder
-			for _, name := range []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
-				b.WriteString("## " + name + "\n- Earlier goal: update src/auth.go; pending until verified.\n")
-			}
-			reply = b.String()
+			reply = summaryMemo
 		} else {
-			if !strings.Contains(body.Messages[1].Content, "Earlier goal: update src/auth.go") {
+			if !strings.Contains(body.Messages[1].Content, string(quotedMemo)) {
 				t.Error("committed memory missing")
 			}
 			want := "Continue the earlier goal"

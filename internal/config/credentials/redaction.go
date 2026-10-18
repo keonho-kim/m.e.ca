@@ -11,8 +11,9 @@ import (
 )
 
 type Vault struct {
-	mu   sync.RWMutex
-	keys []string
+	State string
+	mu    sync.RWMutex
+	keys  []string
 }
 
 func (v *Vault) Remember(key string) {

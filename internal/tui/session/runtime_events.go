@@ -13,6 +13,7 @@ import (
 func (a *app) receiveRuntime(e *run.Event) {
 	switch e.Kind {
 	case "generation_started":
+		a.tokenCurrent = modelapi.TokenUsage{}
 		a.tokensPerSecond = nil
 		return
 	case "compaction_started":
@@ -25,29 +26,12 @@ func (a *app) receiveRuntime(e *run.Event) {
 	if e.Internal || e.Kind == "monitor" || e.Kind == "tool_proposed" {
 		return
 	}
-	if e.Kind == "conclave" {
-		formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}
-		if e.Conclave != nil && e.Conclave.Passed && e.Call != nil {
-			a.status = e.Call.Name + " · Conclave Pass"
-		} else {
-			a.status = ""
-			a.output.Append(formatter.Conclave(*e), false)
-		}
-		return
-	}
 	if e.Kind == "retry" {
 		a.status = e.Text
 		return
 	}
 	if e.Kind == "usage_progress" || e.Kind == "usage" {
-		if e.Usage != nil {
-			a.tokenCurrent = *e.Usage
-			a.tokensPerSecond = e.TokensPerSecond
-			if e.Kind == "usage" {
-				a.tokenTotal = a.displayTokens()
-				a.tokenCurrent = modelapi.TokenUsage{}
-			}
-		}
+		a.receiveTokens(*e)
 		return
 	}
 	switch e.Kind {

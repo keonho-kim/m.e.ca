@@ -22,7 +22,7 @@ func TestParse(t *testing.T) {
 		{`!dir '~/Downloads/my files'`, Directory, "~/Downloads/my files"},
 		{`:q`, Quit, ""},
 		{"!quit", Exit, ""},
-		{"explain !plan in this sentence", Message, "explain !plan in this sentence"},
+		{"explain !model in this sentence", Message, "explain !model in this sentence"},
 	} {
 		t.Run(test.input, func(t *testing.T) {
 			command, err := Parse(test.input)
@@ -34,7 +34,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseRejectsUnknownOrAmbiguousCommands(t *testing.T) {
-	for _, input := range []string{"!plan", "!scope", "!directory", "!unknown", "!model extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
+	for _, input := range []string{"!unknown", "!model extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
 		if _, err := Parse(input); err == nil {
 			t.Errorf("accepted invalid command %q", input)
 		}

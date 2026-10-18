@@ -18,6 +18,7 @@ type Controller struct {
 	Settings               Settings
 	Redact                 func(string) string
 	ActiveRequest          string
+	ActiveApproach         []string
 	memory                 Memory
 	loaded                 bool
 }

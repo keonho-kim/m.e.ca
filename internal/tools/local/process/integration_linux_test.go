@@ -1,6 +1,6 @@
 //go:build linux
 
-// Purpose: Verify confined process output, kernel failure reporting, network isolation and cancellation cleanup.
+// Purpose: Verify confined process output, kernel failure reporting, network and kernel restrictions and cancellation cleanup.
 // Pattern: Self-executing Linux integration test.
 // Usage: V_SANDBOX_REQUIRED=1 requires kernel support; V_SANDBOX_DENIED=1 verifies host denial.
 // Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/sandbox/linux/child_linux.go.
@@ -40,18 +40,20 @@ func TestMain(m *testing.M) {
 }
 
 func probeKernel() int {
-	for _, address := range []struct{ network, address string }{{"tcp", "127.0.0.1:0"}, {"unix", "host.sock"}} {
-		listener, err := net.Listen(address.network, address.address)
-		if err == nil {
-			if err := listener.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
-			return 1
-		}
-		if !errors.Is(err, syscall.EPERM) {
-			fmt.Fprintln(os.Stderr, err)
-			return 2
-		}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 1
+	}
+	if err := listener.Close(); err != nil {
+		return 2
+	}
+	listener, err = net.Listen("unix", "host.sock")
+	if err == nil {
+		listener.Close()
+		return 3
+	}
+	if !errors.Is(err, syscall.EPERM) {
+		return 4
 	}
 	if !errors.Is(unix.Unshare(unix.CLONE_NEWUSER), unix.EPERM) {
 		return 3
@@ -80,7 +82,7 @@ func probeKernel() int {
 
 func requireKernel(t *testing.T, project, private string) {
 	t.Helper()
-	output, err := Run(context.Background(), project, project, private, "true", true)
+	output, err := runTest(context.Background(), project, project, private, "true")
 	if err != nil {
 		if output.Status != "scope_unavailable" || os.Getenv("V_SANDBOX_REQUIRED") == "1" {
 			t.Fatalf("%+v %v", output, err)
@@ -95,7 +97,7 @@ func requireKernel(t *testing.T, project, private string) {
 func TestConfinedOutputAndKernelRestrictions(t *testing.T) {
 	project, private := t.TempDir(), t.TempDir()
 	requireKernel(t, project, private)
-	output, err := Run(context.Background(), project, project, private, "printf partial; exit 7", true)
+	output, err := runTest(context.Background(), project, project, private, "printf partial; exit 7")
 	if err != nil || output.Stdout != "partial" || output.ExitCode != 7 || output.Status != "exited" {
 		t.Fatalf("%+v %v", output, err)
 	}
@@ -115,7 +117,7 @@ func TestConfinedOutputAndKernelRestrictions(t *testing.T) {
 	if err := errors.Join(copyErr, source.Close(), target.Close()); err != nil {
 		t.Fatal(err)
 	}
-	output, err = Run(context.Background(), project, project, private, "./probe probe-kernel", true)
+	output, err = runTest(context.Background(), project, project, private, "./probe probe-kernel")
 	if err != nil || output.ExitCode != 0 {
 		t.Fatalf("kernel restrictions: %+v %v", output, err)
 	}
@@ -139,7 +141,7 @@ func probeReplacedImage(private string) int {
 	if err := os.WriteFile(self, []byte("#!/bin/sh\necho replacement-executed\n"), 0700); err != nil {
 		return 3
 	}
-	output, err := Run(context.Background(), project, project, private, "printf original", true)
+	output, err := runTest(context.Background(), project, project, private, "printf original")
 	if err != nil || output.Stdout != "original" || output.ExitCode != 0 {
 		fmt.Fprintln(os.Stderr, output, err)
 		return 4
@@ -160,7 +162,7 @@ func TestConfinedCancellationReapsDetachedChildren(t *testing.T) {
 	marker := "v-orphan-" + filepath.Base(project) + "-" + strconv.Itoa(os.Getpid())
 	// setsid escapes the process group, but cannot escape the private PID namespace.
 	go func() {
-		output, err := Run(ctx, project, project, private, "setsid sh -c 'echo ready; echo ready > ready; sleep 60' "+marker+" & wait", true)
+		output, err := runTest(ctx, project, project, private, "setsid sh -c 'echo ready; echo ready > ready; sleep 60' "+marker+" & wait")
 		done <- result{output, err}
 	}()
 	deadline := time.NewTimer(5 * time.Second)
@@ -221,7 +223,7 @@ func TestNamespaceDenialReportsScopeFailure(t *testing.T) {
 		t.Skip("requires host namespace denial")
 	}
 	project, private := t.TempDir(), t.TempDir()
-	output, err := Run(context.Background(), project, project, private, "printf unsafe > "+strconv.Quote(filepath.Join(project, "unsafe")), true)
+	output, err := runTest(context.Background(), project, project, private, "printf unsafe > "+strconv.Quote(filepath.Join(project, "unsafe")))
 	if err == nil || output.Status != "scope_unavailable" {
 		t.Fatalf("%+v %v", output, err)
 	}

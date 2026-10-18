@@ -29,8 +29,8 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 	if err = recovery.Restore(ctx, store, session.ID); err != nil {
 		return tuisession.Exit, err
 	}
-	vault := &credentials.Vault{}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact)
+	vault := &credentials.Vault{State: state}
+	executor, err := local.NewExecutor(session.ProjectRoot, home, state, configuration.Execution.WritablePaths, vault.Redact)
 	if err != nil {
 		return tuisession.Exit, err
 	}

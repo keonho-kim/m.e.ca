@@ -24,7 +24,7 @@ func TestLargeGroundingReason(t *testing.T) {
 		}
 	})
 	reason := strings.Repeat("<", 17*1024*1024)
-	record, err := grounding.Bind(tool.Call{ID: "large", Name: "read_file", Arguments: []byte(`{"path":"file.txt"}`)}, reason, "run")
+	record, err := grounding.Bind(tool.Call{ID: "large", Name: "inspect_fixture", Arguments: []byte(`{"path":"file.txt"}`)}, reason, "run")
 	if err != nil {
 		t.Fatal(err)
 	}

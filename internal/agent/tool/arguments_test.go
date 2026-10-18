@@ -28,7 +28,7 @@ func TestNativeArgumentsValidateAndPreserveLiterals(t *testing.T) {
 		`{"path":1,"content":""}`,
 		`{"path":"a","content":null}`,
 		`{"path":"a"}`,
-		`{"path":"a","content":"","purpose":"check"}`,
+		`{"path":"a","content":"","unexpected":"value"}`,
 		`{"path":"a\nb","content":""}`,
 		`{"path":"a","content":""} {}`,
 	} {

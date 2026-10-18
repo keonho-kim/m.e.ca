@@ -6,11 +6,13 @@ package viewport
 
 import (
 	"github.com/keonho-kim/v-code/internal/tui/markdown"
-	"github.com/rivo/uniseg"
+	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"strings"
 )
 
 type Block struct {
+	key        blockKey
+	lines      []Line
 	parsedText string
 	parsed     []markdown.Line
 	Markdown   bool
@@ -19,16 +21,25 @@ type Block struct {
 	Thinking   bool
 }
 type Line struct {
+	Copy     textlayout.Fragment
 	Spans    []markdown.Span
 	ID, Row  int
 	Text     string
 	Thinking bool
 }
 type View struct {
+	keys                []blockKey
+	lines               []Line
 	Blocks              []Block
 	Next                int
 	Follow              bool
 	AnchorID, AnchorRow int
+}
+
+type blockKey struct {
+	text               string
+	width, id          int
+	markdown, thinking bool
 }
 
 func (v *View) Append(text string, thinking bool) {
@@ -44,7 +55,14 @@ func (v *View) AppendBlock(block Block) {
 	v.bound(false)
 }
 func (b *Block) Lines(width int) []Line {
+	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking}
+	if b.lines != nil && b.key == key {
+		return b.lines
+	}
+	b.key = key
 	if strings.TrimSpace(b.Text) == "" {
+		b.lines = nil
+		b.parsed, b.parsedText = nil, ""
 		return nil
 	}
 	var out []Line
@@ -55,55 +73,49 @@ func (b *Block) Lines(width int) []Line {
 		}
 		for _, line := range b.parsed {
 			for _, wrapped := range markdown.Wrap(line.Spans, width) {
-				out = append(out, Line{ID: b.ID, Row: len(out), Text: wrapped.Text, Spans: wrapped.Spans, Thinking: b.Thinking})
+				value := Line{ID: b.ID, Row: len(out), Text: wrapped.Text, Spans: wrapped.Spans, Thinking: b.Thinking, Copy: wrapped.Copy}
+				out = append(out, value)
 			}
 		}
 	} else {
-		for row, text := range Wrap(b.Text, width) {
-			out = append(out, Line{ID: b.ID, Row: row, Text: text, Thinking: b.Thinking})
+		for row, text := range textlayout.Wrap(b.Text, width) {
+			out = append(out, Line{ID: b.ID, Row: row, Text: text.Text, Thinking: b.Thinking, Copy: textlayout.Fragment{Source: b.Text, Row: text}})
 		}
 	}
 	if b.Markdown || b.Thinking {
-		return modelEdges(out)
+		out = modelEdges(out)
 	}
-	return out
+	b.lines = out
+	return b.lines
 }
 func Wrap(text string, width int) []string {
-	if width < 1 {
-		return nil
-	}
 	var out []string
-	for _, paragraph := range strings.Split(strings.ReplaceAll(text, "\t", "    "), "\n") {
-		indent := paragraph[:len(paragraph)-len(strings.TrimLeft(paragraph, " "))]
-		// Leave room for a two-cell character on indented continuation rows.
-		indent = indent[:min(len(indent), max(0, width-2))]
-		var line strings.Builder
-		line.Grow(min(len(paragraph), width))
-		cells := 0
-		g := uniseg.NewGraphemes(paragraph)
-		for g.Next() {
-			part := g.Str()
-			n := uniseg.StringWidth(part)
-			if cells+n > width && line.Len() > 0 {
-				out = append(out, line.String())
-				line.Reset()
-				line.Grow(min(len(paragraph), width))
-				line.WriteString(indent)
-				cells = len(indent)
-			}
-			line.WriteString(part)
-			cells += n
-		}
-		out = append(out, line.String())
+	for _, row := range textlayout.Wrap(text, width) {
+		out = append(out, row.Text)
 	}
 	return out
 }
 func (v *View) Lines(width int) []Line {
+	changed := len(v.keys) != len(v.Blocks)
+	if !changed {
+		for i, b := range v.Blocks {
+			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking}) {
+				changed = true
+				break
+			}
+		}
+	}
+	if !changed {
+		return v.lines
+	}
 	var lines []Line
+	v.keys = make([]blockKey, len(v.Blocks))
 	for i := range v.Blocks {
 		lines = AppendLines(lines, v.Blocks[i].Lines(width))
+		v.keys[i] = v.Blocks[i].key
 	}
-	return lines
+	v.lines = lines
+	return v.lines
 }
 func (v *View) Start(lines []Line, height int) int {
 	if v.Follow {

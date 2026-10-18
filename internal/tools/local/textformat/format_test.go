@@ -28,14 +28,3 @@ func TestPreserve(t *testing.T) {
 		}
 	}
 }
-
-func TestReadLabelsAreNotSourceByDefault(t *testing.T) {
-	for _, s := range []string{"7#123456ab | return 1", "#123456ab | return 1"} {
-		if err := CheckAnnotations([]byte("return 0"), []byte(s), ""); err == nil {
-			t.Fatal("display label accepted")
-		}
-		if err := CheckAnnotations(nil, []byte(s), "literal"); err != nil {
-			t.Fatal(err)
-		}
-	}
-}

@@ -18,3 +18,16 @@ func TestProjectRulesAndBounds(t *testing.T) {
 		t.Fatal("silently truncated project instructions")
 	}
 }
+
+func TestAbsentProjectInstructionsAddNoPromptBlock(t *testing.T) {
+	for _, instructions := range []string{"", " \n\t"} {
+		text, err := Compose("Task rules", instructions)
+		if err != nil || text != "Task rules" {
+			t.Fatalf("empty instructions produced metadata: %q %v", text, err)
+		}
+		text, err = Work("Common rules", "Worker rules", instructions)
+		if err != nil || text != "Common rules\n\nWorker rules" {
+			t.Fatalf("empty instructions changed role composition: %q %v", text, err)
+		}
+	}
+}

@@ -16,9 +16,6 @@ import (
 type batchGenerator struct{ requests []modelapi.Request }
 
 func (g *batchGenerator) Generate(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	if handled, err := completionFixture(request, emit); handled {
-		return err
-	}
 	g.requests = append(g.requests, request)
 	if len(g.requests) > 1 {
 		return emit(modelapi.Event{Delta: "Correct the invalid operation", Done: true})
@@ -33,7 +30,7 @@ func TestNativeBatchRejectsInvalidArgumentsBeforeAnyPreparation(t *testing.T) {
 	r := fixture(&generator{}, e, j)
 	r.Generator = g
 	result, err := r.Run(context.Background(), "create two files", approve, emit)
-	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != Stopped {
+	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != Answered {
 		t.Fatalf("result=%+v prepared=%d executed=%d: %v", result, e.prepared, e.executed, err)
 	}
 	results := map[string]bool{}

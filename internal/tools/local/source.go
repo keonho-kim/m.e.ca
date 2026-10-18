@@ -1,7 +1,7 @@
 // Purpose: Read a bounded modification source and verify it matches the prepared file version.
 // Pattern: Filesystem version guard.
-// Usage: File mutation preparation reads the exact bytes used for review and replacement.
-// Related: internal/tools/local/prepare.go, internal/tools/local/paths.go, internal/tools/local/review.go.
+// Usage: File mutation preparation reads the exact bytes used for approval and replacement.
+// Related: internal/tools/local/prepare.go, internal/tools/local/paths.go, internal/tools/local/approval_candidate.go.
 package local
 
 import (
@@ -23,7 +23,7 @@ func (op *operation) readSource() (content []byte, err error) {
 		return nil, err
 	}
 	if len(content) > fileops.MaxBytes || sha256.Sum256(content) != op.original.digest {
-		return nil, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed while preparing its exact review contents", Next: "Read current lines again and prepare a fresh change."}
+		return nil, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed while preparing its exact candidate contents", Next: "Read current lines again and prepare a fresh change."}
 	}
 	return content, nil
 }

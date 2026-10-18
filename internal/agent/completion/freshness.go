@@ -8,8 +8,11 @@ import "slices"
 
 func (s State) FileTargets() []string {
 	paths := map[string]bool{}
+	for _, f := range s.CurrentFiles {
+		paths[f.Path] = true
+	}
 	for _, r := range s.Receipts {
-		if !r.Success || r.Kind == "command" {
+		if r.Kind == "command" {
 			continue
 		}
 		for path, version := range r.Versions {
@@ -28,8 +31,9 @@ func (s State) FileTargets() []string {
 
 func (s *State) ReconcileFiles(current map[string]string) {
 	receipts := slices.Clone(s.Receipts)
+	changed := false
 	for i, r := range receipts {
-		if !r.Success || r.Kind == "command" || len(r.Versions) == 0 {
+		if r.Kind == "command" || len(r.Versions) == 0 {
 			continue
 		}
 		matches := true
@@ -40,6 +44,15 @@ func (s *State) ReconcileFiles(current map[string]string) {
 			}
 		}
 		receipts[i].Stale = !matches
+		changed = changed || !matches && !r.Stale
+	}
+	if changed {
+		for i := range receipts {
+			if receipts[i].Kind == "command" {
+				receipts[i].BeforeLaterChanges = true
+			}
+		}
 	}
 	s.Receipts = receipts
+	s.reconcileCurrent(current)
 }

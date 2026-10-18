@@ -15,7 +15,8 @@ import (
 )
 
 func TestRequestBoundaries(t *testing.T) {
-	valid := Request{Project: "/home/user/project", Private: "/home/user/.v", Scratch: "/tmp/v-command", Runtime: []string{"/bin", "/usr/bin"}, Command: "printf '%s' '$(literal)'"}
+	valid := Request{Project: "/home/user/project", Private: "/home/user/.v", Scratch: "/tmp/v-command", Runtime: []string{"/bin", "/usr/bin"}, Writable: []string{"/home/user/project"}, Protected: []string{"/home/user/.v"}, Command: "printf '%s' '$(literal)'"}
+	valid.Identities = map[string][2]uint64{valid.Project: {1, 2}}
 	for _, project := range []string{".", "/", "/usr/bin/work", "/home/user/.v/work", "/tmp", "/tmp/v-command/nested"} {
 		request := valid
 		request.Project = project
@@ -24,6 +25,8 @@ func TestRequestBoundaries(t *testing.T) {
 		}
 	}
 	valid.Private = valid.Project + "/.v"
+	valid.Protected = []string{valid.Private}
+	valid.Identities = map[string][2]uint64{valid.Project: {1, 2}}
 	file, err := Encode(valid)
 	if err != nil {
 		t.Fatal(err)

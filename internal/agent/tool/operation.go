@@ -5,6 +5,10 @@
 package tool
 
 type Operation struct {
+	Revision                                     int
+	Target                                       string
+	Versions                                     map[string]string
+	Started                                      bool
 	Failure                                      *Failure
 	Process                                      *ProcessOutcome
 	RunID, CallID, Name, Status, Command, Result string

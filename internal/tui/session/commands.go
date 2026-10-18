@@ -30,6 +30,7 @@ func (a *app) submit() {
 	}
 	if command.Kind == commands.Quit {
 		if a.page == "files" {
+			a.cancelDirectory()
 			a.page = "chat"
 			a.editor.Set("")
 			return
@@ -71,6 +72,7 @@ func (a *app) submit() {
 		}
 		a.historyIndex = len(a.inputs)
 		a.output.Append(transcript.User(a.opts.Vault.Redact(command.Argument)), false)
+		a.cancelDirectory()
 		a.page = "chat"
 		a.startTask(command.Argument)
 	}

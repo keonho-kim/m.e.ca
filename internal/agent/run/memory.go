@@ -35,13 +35,14 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		return err
 	}
 	s.runner.Memory.ActiveRequest = s.checkpoint.Objective
+	s.runner.Memory.ActiveApproach = s.workBackground().ProposedApproach
 	refresh := s.runner.Memory.Refresh
 	if force {
 		refresh = s.runner.Memory.Compact
 	}
 	changed, err := refresh(ctx, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-		if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-			return fmt.Errorf("model-call budget exhausted during compaction")
+		if !s.modelCall() {
+			return fmt.Errorf("compaction: %w", errModelBudget)
 		}
 		if !compressing {
 			if err := s.emit(Event{Kind: "compaction_started"}); err != nil {
@@ -49,8 +50,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 			}
 			compressing = true
 		}
-		s.usage.ModelCalls++
-		s.checkpoint.ModelCalls = s.usage.ModelCalls
+		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 		request.Thinking = s.runner.Thinking
 		request.ReasoningEffort = s.runner.ReasoningEffort
 		parameters, err := inference.Resolve(s.runner.Inference, inference.Compaction)

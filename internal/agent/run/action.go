@@ -6,24 +6,28 @@ package run
 
 import (
 	"context"
+	"errors"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"time"
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	if reply.Calls[0].Name == "write_file" || reply.Calls[0].Name == "edit_file" {
-		s.checkpoint.PendingReview = true
+	if !s.usage.actions(1, s.limits.MaxIterations) {
+		return s.returnToolFeedback(ctx, reply, "Action budget exhausted; no tool executed. Report the observed outcomes and unfinished work.")
 	}
 	v, err := s.validateCall(reply.Calls[0])
 	if err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
 	call, reason, definition, arguments := v.call, v.reason, v.definition, v.arguments
+	s.checkpoint.Iteration = s.usage.snapshot().Iterations
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = arguments
 	if err := s.ground(ctx, call, reason); err != nil {
 		return err
 	}
-	if err := s.checkRepeated(v); err != nil {
+	prior, err := s.repeated(ctx, v)
+	if err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
 	s.checkpoint.Phase = "approval"
@@ -39,9 +43,14 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 			return err
 		}
 	}
+	if prior != nil {
+		return s.reuseMutation(ctx, v, *prior)
+	}
 	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded native candidate; not executed"}); err != nil {
 		return err
 	}
 	outcome, toolErr := s.execute(ctx, call, approve, s.emit)
-	return s.acceptResult(ctx, v, outcome, toolErr)
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	return errors.Join(s.acceptResult(recordCtx, v, outcome, toolErr), ctx.Err())
 }

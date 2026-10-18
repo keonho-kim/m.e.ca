@@ -1,4 +1,4 @@
-// Purpose: Parse the three executable start modes and resolve a real project directory.
+// Purpose: Parse maintenance commands and conversation startup with a real project directory.
 // Pattern: Simple Module (startup boundary).
 // Usage: Called by cmd/v before bootstrap or terminal initialization.
 // Related: internal/commands/startup/parse_test.go, cmd/v/main.go.
@@ -12,13 +12,24 @@ import (
 )
 
 type Mode struct {
+	Action           Action
 	Resume           bool
 	Project, Display string
 }
 
+type Action string
+
+const (
+	Install   Action = "install"
+	Uninstall Action = "uninstall"
+)
+
 func Parse(args []string, cwd string) (Mode, error) {
 	if len(args) > 1 {
-		return Mode{}, fmt.Errorf("usage: v [path | resume]")
+		return Mode{}, fmt.Errorf("usage: v [path | resume | install | uninstall]")
+	}
+	if len(args) == 1 && (args[0] == string(Install) || args[0] == string(Uninstall)) {
+		return Mode{Action: Action(args[0])}, nil
 	}
 	if len(args) == 1 && args[0] == "resume" {
 		return Mode{Resume: true}, nil
@@ -27,7 +38,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 	if len(args) == 1 {
 		path = args[0]
 		if path == "" || strings.HasPrefix(path, "-") {
-			return Mode{}, fmt.Errorf("usage: v [path | resume]")
+			return Mode{}, fmt.Errorf("usage: v [path | resume | install | uninstall]")
 		}
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(cwd, path)

@@ -39,6 +39,6 @@ func (a *app) loadHistory(older bool) error {
 func (a *app) scroll(n, w, h int) {
 	a.output.Scroll(n, w, h)
 	if n < 0 && !a.output.Follow && a.output.Start(a.output.Lines(w), h) == 0 {
-		a.fail(a.loadHistory(true))
+		a.loadOlderHistory()
 	}
 }

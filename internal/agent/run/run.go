@@ -10,19 +10,18 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/conclave"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/progress"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"time"
 )
 
 type execution struct {
+	round            roundProgress
 	textCorrection   bool
 	terminal         bool
 	files            progress.Files
+	progress         progress.Request
 	runner           Runner
 	limits           Limits
 	system           string
@@ -30,15 +29,12 @@ type execution struct {
 	checkpoint       Checkpoint
 	emit             func(Event) error
 	definitions      []toolapi.Definition
-	seen             map[[32]byte]bool
-	mutations        map[[32]byte]bool
+	mutations        map[[32]byte]mutationReceipt
 	commands         map[[32]byte]int
-	usage            *Usage
+	usage            *requestBudget
 	messages         []modelapi.Message
 	memoryContext    string
 	capacityRecovery bool
-	reviews          map[[32]byte]conclave.Result
-	evidenceRevision int
 }
 
 func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(Event) error) (result Result, err error) {
@@ -66,13 +62,12 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		return result, err
 	}
 	templates := r.templates()
-	base := templates.System
-	system, err := prompt.Compose(base, r.ProjectInstructions)
+	system, err := prompt.Work(templates.System, templates.Development, r.ProjectInstructions)
 	if err != nil {
 		return result, err
 	}
-	if len(input) > 16*1024*1024 {
-		return result, fmt.Errorf("objective exceeds 16 MiB")
+	if len(input) > 64*1024*1024 {
+		return result, fmt.Errorf("objective exceeds 64 MiB")
 	}
 	if r.observer == nil {
 		observer, err := r.startMonitor(ctx)
@@ -89,50 +84,33 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 		return nil
 	}
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions(), seen: map[[32]byte]bool{}, mutations: map[[32]byte]bool{}, commands: map[[32]byte]int{}}
-	s.usage = r.Usage
-	if s.usage == nil {
-		s.usage = &Usage{}
-	}
-	if s.usage.deadline.IsZero() {
-		s.usage.deadline = time.Now().Add(time.Duration(limits.MaxSeconds) * time.Second)
-	}
+	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions(), mutations: map[[32]byte]mutationReceipt{}, commands: map[[32]byte]int{}}
+	s.usage = &requestBudget{}
+	s.usage.begin(limits)
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
-	s.checkpoint = Checkpoint{ID: "run_" + rand.Text(), Objective: r.Redact(input), Status: Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
+	id := "run_" + rand.Text()
+	s.checkpoint = Checkpoint{ID: id, Objective: r.Redact(input), Status: Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
+	if r.PreviousRun != nil {
+		for _, file := range r.PreviousRun.Work.Facts().Files {
+			file.Changed = false
+			s.checkpoint.Work.CurrentFiles = append(s.checkpoint.Work.CurrentFiles, file)
+		}
+	}
 	defer func() {
-		if err != nil {
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				s.checkpoint.Status = Interrupted
-			} else {
-				s.checkpoint.Status = Stopped
-			}
-		}
-		if err == nil {
-			s.checkpoint.Phase = "finished"
-		}
-		s.result.Status = s.checkpoint.Status
-		flushCtx, flushCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer flushCancel()
-		err = errors.Join(err, s.persist(flushCtx))
+		err = s.settle(ctx, err)
 		result = s.result
 	}()
 	if err = s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
 		return s.result, err
 	}
-	for s.usage.Iterations < limits.MaxIterations {
-		if err = s.checkTimeBudget(ctx); err != nil {
-			if ctx.Err() != nil {
-				return s.result, ctx.Err()
-			}
-			return s.report(ctx, "execution time budget exhausted", true)
+	for {
+		s.round = roundProgress{}
+		if finished, decisionErr := s.prepareDecision(ctx); finished || decisionErr != nil {
+			return s.result, decisionErr
 		}
-		if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-			return s.report(ctx, "model call budget reserved for final reporting", true)
-		}
-		s.usage.Iterations++
-		s.checkpoint.Iteration = s.usage.Iterations
-		s.checkpoint.ModelCalls = s.usage.ModelCalls
+		s.checkpoint.Iteration = s.usage.snapshot().Iterations
+		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 		s.checkpoint.Phase = "decision"
 		s.checkpoint.Tool = ""
 		s.checkpoint.Arguments = nil
@@ -142,9 +120,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		if err = s.refreshMemory(ctx, false); err != nil {
 			return s.result, err
 		}
-		role := inference.Agent
-
-		reply, askErr := s.askResponse(ctx, "Continue the requested work using the available results, or answer with the outcome. Explain any remaining work honestly.", role, modelapi.MaxResponseBytes)
+		reply, askErr := s.askResponse(ctx, "", modelapi.MaxResponseBytes)
 		if askErr != nil {
 			var capacity interface{ ContextLimit() bool }
 			if !s.capacityRecovery && errors.As(askErr, &capacity) && capacity.ContextLimit() {
@@ -161,7 +137,6 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			}
 			s.result.HadToolFailure = true
 			s.checkpoint.Observation = "Correct the native tool call or narrow the change to fit the output limit; nothing executed: " + s.runner.Redact(askErr.Error())
-			s.checkpoint.NoProgress++
 		} else if len(reply.Calls) > 0 {
 			if len(reply.Calls) > 1 {
 				err = s.batch(ctx, reply, approve)
@@ -173,7 +148,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			}
 
 		} else {
-			finished, finishErr := s.finishOrReview(ctx, reply.Text)
+			finished, finishErr := s.finishResponse(ctx, reply.Text)
 			if finishErr != nil {
 				return s.result, finishErr
 			}
@@ -184,6 +159,9 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 
 		if s.terminal {
 			return s.result, nil
+		}
+		if err = s.completeRound(ctx); err != nil {
+			return s.result, err
 		}
 		if s.checkpoint.ReportReason != "" {
 			return s.report(ctx, s.checkpoint.ReportReason, true)
@@ -200,5 +178,4 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			}
 		}
 	}
-	return s.report(ctx, fmt.Sprintf("iteration budget exhausted after %d actions", limits.MaxIterations), true)
 }

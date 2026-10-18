@@ -9,21 +9,18 @@ import (
 	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/tools/local/textedit"
 	"io"
 )
 
 type arguments struct {
-	Paths        []string `json:"paths"`
-	FormatPolicy string   `json:"format_policy,omitempty"`
-	Path         string   `json:"path"`
-	Content      string   `json:"content"`
-	StartAnchor  string   `json:"start_anchor"`
-	EndAnchor    string   `json:"end_anchor"`
-	NewText      string   `json:"new_text"`
-	Destination  string   `json:"destination"`
-	Command      string   `json:"command"`
-	Offset       int      `json:"offset"`
-	Limit        int      `json:"limit"`
+	Paths        []string        `json:"paths"`
+	FormatPolicy string          `json:"format_policy,omitempty"`
+	Path         string          `json:"path"`
+	Content      string          `json:"content"`
+	Edits        []textedit.Edit `json:"edits"`
+	Destination  string          `json:"destination"`
+	Command      string          `json:"command"`
 }
 
 func parseArguments(call toolapi.Call) (specification, arguments, error) {

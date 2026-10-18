@@ -12,12 +12,12 @@ import (
 func TestNativeEntryRejectsUnknownToolAndExtraArguments(t *testing.T) {
 	g := &generator{replies: []string{
 		nativeCall("missing_tool", nil),
-		nativeCall("read_file", map[string]any{"path": "a", "unexpected": true}),
-		nativeCall("read_file", map[string]any{"path": "a"}), "Review the file",
+		nativeCall("inspect_fixture", map[string]any{"path": "a", "unexpected": true}),
+		nativeCall("inspect_fixture", map[string]any{"path": "a"}), "Review the file",
 	}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "inspect", approve, emit)
-	if err != nil || result.Status != Answered || e.prepared != 1 || e.calls[0].Name != "read_file" {
+	if err != nil || result.Status != Answered || e.prepared != 1 || e.calls[0].Name != "inspect_fixture" {
 		t.Fatalf("result=%+v calls=%+v err=%v", result, e.calls, err)
 	}
 	for _, index := range []int{0, 1, 2, 3} {
@@ -25,7 +25,7 @@ func TestNativeEntryRejectsUnknownToolAndExtraArguments(t *testing.T) {
 			t.Fatal("native definitions missing from request")
 		}
 	}
-	if len(g.groundingRequests) != 0 {
+	if len(g.requests) != 4 {
 		t.Fatal("unexpected separate grounding generation")
 	}
 }

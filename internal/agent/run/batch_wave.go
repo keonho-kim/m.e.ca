@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,31 +15,43 @@ import (
 )
 
 func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approve Approver) (bool, error) {
-	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
+	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 	defer cancel()
 	ready := make([]*readyExecution, len(calls))
-	for i, v := range calls {
-		if err := s.activateCall(ctx, v); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), fatalBatchError(ctx, err))
+	reused := make([]bool, len(calls))
+	remaining := func() []validatedCall {
+		var out []validatedCall
+		for i, v := range calls {
+			if !reused[i] {
+				out = append(out, v)
+			}
 		}
-		prepared, _, err := s.freezeExecution(ctx, v.call, s.emit)
+		return out
+	}
+	for i, v := range calls {
+		done, err := s.activateCall(ctx, v)
 		if err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), fatalBatchError(ctx, err))
+			return true, errors.Join(s.skipCalls(ctx, remaining(), fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
+		}
+		reused[i] = done
+		if done {
+			continue
+		}
+		prepared, outcome, err := s.freezeExecution(ctx, v.call)
+		if err != nil {
+			return true, errors.Join(s.rejectWave(ctx, calls, reused, i, outcome, err), fatalBatchError(ctx, err))
 		}
 		ready[i] = prepared
 	}
-	// Every candidate is frozen before any review. Review dependencies can inspect
-	// sibling proposals without pretending their files have already been written.
+	// Every candidate is frozen before approval; all workers start only after
+	// the owner has approved and rechecked the complete wave.
 	for i, prepared := range ready {
-		var pending []toolapi.FileDelta
-		for j, sibling := range ready {
-			if i != j && sibling.proposal.Candidate != nil {
-				pending = append(pending, sibling.proposal.Candidate.Files...)
-			}
+		if prepared == nil {
+			continue
 		}
-		approved, _, err := s.approveExecution(ctx, prepared, pending, approve, s.emit)
+		approved, outcome, err := s.approveExecution(ctx, prepared, approve, s.emit)
 		if err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), fatalBatchError(ctx, err))
+			return true, errors.Join(s.rejectWave(ctx, calls, reused, i, outcome, err), fatalBatchError(ctx, err))
 		}
 		ready[i] = approved
 	}
@@ -48,21 +61,27 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 		if err != nil {
 			detail += " " + err.Error()
 		}
-		return true, errors.Join(s.skipCalls(ctx, calls, detail), fatalBatchError(ctx, err))
+		return true, errors.Join(s.skipCalls(ctx, remaining(), detail), fatalBatchError(ctx, err))
 	}
 	// Persist start intent before allowing any effects. A crash never replays it automatically.
 	for _, prepared := range ready {
+		if prepared == nil {
+			continue
+		}
 		if err := s.checkTimeBudget(ctx); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), err)
+			return true, errors.Join(s.skipCalls(ctx, remaining(), err.Error()), err)
 		}
 		if err := s.startExecution(ctx, prepared, s.emit); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), errRuntimeRecord, err)
+			return true, errors.Join(s.skipCalls(ctx, remaining(), err.Error()), errRuntimeRecord, err)
 		}
 	}
 	outcomes := make([]toolapi.Result, len(calls))
 	failures := make([]error, len(calls))
 	var workers sync.WaitGroup
 	for i, prepared := range ready {
+		if prepared == nil {
+			continue
+		}
 		workers.Go(func() { outcomes[i], failures[i] = prepared.operation.Execute(ctx, prepared.approved) })
 	}
 	workers.Wait()
@@ -78,8 +97,10 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	}
 	failed := false
 	var terminal error
-	pendingReview := s.checkpoint.PendingReview
 	for i, v := range calls {
+		if ready[i] == nil {
+			continue
+		}
 		outcome, runErr := s.recordExecution(recordCtx, ready[i], outcomes[i], failures[i], completedEmit)
 		if errors.Is(runErr, errRuntimeRecord) {
 			terminal = errors.Join(terminal, runErr)
@@ -89,8 +110,6 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 			terminal = errors.Join(terminal, err)
 		}
 	}
-	// A successful sibling cannot erase an unresolved review from another operation.
-	s.checkpoint.PendingReview = s.checkpoint.PendingReview || pendingReview
 	if ctx.Err() != nil {
 		terminal = errors.Join(terminal, ctx.Err())
 		failed = true

@@ -22,6 +22,7 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 			a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Preview: "change"}
 			if test.page == "files" {
 				a.openFiles(".")
+				finishBrowserIO(t, a)
 			}
 			a.render()
 			footer := screenLine(a.screen, 23, 80)

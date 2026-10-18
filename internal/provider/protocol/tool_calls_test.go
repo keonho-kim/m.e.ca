@@ -35,7 +35,7 @@ func TestNativeChatCallsAssembleAfterCompletion(t *testing.T) {
 }
 
 func TestNativeToolsAreEncoded(t *testing.T) {
-	request := modelapi.Request{ModelID: "m", Tools: []toolapi.Definition{{Name: "read_file", Description: "Read a file", Parameters: []toolapi.Parameter{{Name: "path", Description: "File path", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}}}}
+	request := modelapi.Request{ModelID: "m", Tools: []toolapi.Definition{{Name: "inspect_fixture", Description: "Read a file", Parameters: []toolapi.Parameter{{Name: "path", Description: "File path", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}}}}
 	_, body, err := Encode(connection.VLLM, "http://server/v1", nil, request, nil, Controls{})
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestNativeToolsAreEncoded(t *testing.T) {
 			}
 		}
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || len(payload.Tools) != 1 || payload.Tools[0].Function.Name != "read_file" || payload.Tools[0].Function.Parameters["additionalProperties"] != false {
+	if err := json.Unmarshal(body, &payload); err != nil || len(payload.Tools) != 1 || payload.Tools[0].Function.Name != "inspect_fixture" || payload.Tools[0].Function.Parameters["additionalProperties"] != false {
 		t.Fatalf("body=%s err=%v", body, err)
 	}
 }

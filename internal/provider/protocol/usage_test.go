@@ -1,6 +1,6 @@
 // Purpose: Verify provider usage requests and cumulative stream snapshots, including exact zero counts.
 // Pattern: HTTP contract tests.
-// Usage: go test ./internal/provider/httpclient -run TestTokenUsage.
+// Usage: go test ./internal/provider/protocol -run TestTokenUsage.
 // Related: internal/provider/protocol/chunk.go, internal/provider/protocol/request.go.
 package protocol
 

@@ -27,7 +27,7 @@ func TestReportRetainsFailedCommandFacts(t *testing.T) {
 	e := &executor{outcomes: []toolapi.Result{{Content: []byte(`{"changed":true}`)}, {Failed: true, Content: []byte(`{"stderr":"assertion failed","exit_code":7}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 7}}}}
 	j := &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "edit and test", approve, emit)
-	if err != nil || !strings.Contains(result.Text, "test") || result.Status != Stopped || !result.HadToolFailure {
+	if err != nil || !strings.Contains(result.Text, "test") || result.Status != Answered || !result.HadToolFailure {
 		t.Fatalf("%+v %v", result, err)
 	}
 	found := false

@@ -1,7 +1,7 @@
 // Purpose: Own column navigation and per-column selection positions for the file view.
 // Pattern: Simple Module (presentation state).
 // Usage: Owned by the terminal loop; directory I/O is supplied by the caller.
-// Related: internal/tui/session/files.go, internal/tools/local/file/read.go.
+// Related: internal/tui/session/files.go, internal/tools/local/textedit/edit.go.
 package browser
 
 import (

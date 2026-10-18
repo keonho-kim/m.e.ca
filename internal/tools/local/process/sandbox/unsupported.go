@@ -9,8 +9,9 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 )
 
-func Prepare(context.Context, string, string, string, string) (Launch, error) {
+func Prepare(context.Context, *filesystem.Boundary, string) (Launch, error) {
 	return Launch{}, fmt.Errorf("project filesystem isolation is unsupported on this platform")
 }

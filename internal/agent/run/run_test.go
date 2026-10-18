@@ -13,47 +13,18 @@ import (
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"strings"
-	"sync"
 	"testing"
 )
 
 type generator struct {
-	completion         func(context.Context, modelapi.Request, func(modelapi.Event) error) error
-	completionRequests []modelapi.Request
-	review             func(context.Context, modelapi.Request, func(modelapi.Event) error) error
-	mu                 sync.Mutex
-	reviewRequests     []modelapi.Request
-	replies            []string
-	requests           []modelapi.Request
-	groundingRequests  []modelapi.Request
-	cancelAt           int
-	cancel             context.CancelFunc
-	native             bool
+	replies  []string
+	requests []modelapi.Request
+	cancelAt int
+	cancel   context.CancelFunc
+	native   bool
 }
 
 func (g *generator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "REVIEW COMPLETION.") {
-		g.completionRequests = append(g.completionRequests, r)
-		if g.completion != nil {
-			return g.completion(ctx, r, emit)
-		}
-	}
-	if handled, err := completionFixture(r, emit); handled {
-		return err
-	}
-	if strings.HasPrefix(r.Messages[len(r.Messages)-1].Content, "REVIEW CANDIDATE ") {
-		g.mu.Lock()
-		g.reviewRequests = append(g.reviewRequests, r)
-		g.mu.Unlock()
-		if g.review != nil {
-			return g.review(ctx, r, emit)
-		}
-		return emit(modelapi.Event{Delta: `{"decision":"pass"}`, Done: true})
-	}
-	if strings.Contains(r.Messages[len(r.Messages)-1].Content, "\nSELF-GROUNDING:") {
-		g.groundingRequests = append(g.groundingRequests, r)
-		return emit(modelapi.Event{Delta: "- Evidence: User request and recorded observations; file contents may be unknown.\n- Action: Perform this requested operation.\n- Verify: Inspect the result and run the relevant check.", Done: true})
-	}
 	g.requests = append(g.requests, r)
 	if g.native {
 		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "native", Name: "write_file", Arguments: json.RawMessage(`{}`)}}})
@@ -93,7 +64,7 @@ type executor struct {
 
 func (*executor) Definitions() []toolapi.Definition {
 	path := toolapi.Parameter{Name: "path", Description: "Path?", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}
-	definitions := []toolapi.Definition{{Name: "write_file", Description: "Write", Effect: policy.Change, Parameters: []toolapi.Parameter{path, {Name: "content", Description: "Content?", Kind: toolapi.Text, Required: true, AllowEmpty: true, MaxBytes: 4096}}}, {Name: "read_file", Description: "Read", Effect: policy.Read, Parameters: []toolapi.Parameter{path}}, {Name: "execute_command", Description: "Run", Effect: policy.Command, Parameters: []toolapi.Parameter{{Name: "command", Description: "Command?", Kind: toolapi.Text, Required: true, MaxBytes: 4096}}}}
+	definitions := []toolapi.Definition{{Name: "write_file", Description: "Write", Effect: policy.Change, Parameters: []toolapi.Parameter{path, {Name: "content", Description: "Content?", Kind: toolapi.Text, Required: true, AllowEmpty: true, MaxBytes: 4096}}}, {Name: "inspect_fixture", Description: "Read", Effect: policy.Read, Parameters: []toolapi.Parameter{path}}, {Name: "execute_command", Description: "Run", Effect: policy.Command, Parameters: []toolapi.Parameter{{Name: "command", Description: "Command?", Kind: toolapi.Text, Required: true, MaxBytes: 4096}}}}
 	return definitions
 }
 func (e *executor) Prepare(_ context.Context, _ policy.Settings, c toolapi.Call) (toolapi.Execution, error) {
@@ -124,10 +95,18 @@ func (e *executor) Execute(context.Context, bool) (toolapi.Result, error) {
 	e.executed++
 	if len(e.outcomes) > 0 {
 		result := e.outcomes[0]
+		result.Started = true
 		e.outcomes = e.outcomes[1:]
 		return result, nil
 	}
-	return toolapi.Result{Content: json.RawMessage(`{"ok":true}`), Summary: "ok", Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}, nil
+	if len(e.calls) > 0 && e.calls[len(e.calls)-1].Name == "write_file" {
+		var fields struct{ Path, Content string }
+		if err := json.Unmarshal(e.calls[len(e.calls)-1].Arguments, &fields); err != nil {
+			return toolapi.Result{}, err
+		}
+		return toolapi.Result{Content: json.RawMessage(`{"changed":true}`), Summary: "ok", Target: fields.Path, Versions: map[string]string{fields.Path: fields.Content}, Changes: []toolapi.FileChange{{Path: fields.Path, BeforeDigest: "missing", AfterDigest: fields.Content}}}, nil
+	}
+	return toolapi.Result{Started: true, Content: json.RawMessage(`{"ok":true}`), Summary: "ok", Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}, nil
 }
 
 type journal struct {
@@ -235,12 +214,12 @@ func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
 		}
 	}
 }
-func TestRalphLoopCanContinueBeyondThirtyTwoActions(t *testing.T) {
+func TestLongRequestRetainsActionsAndHistory(t *testing.T) {
 	var replies []string
 	for i := 0; i < 40; i++ {
-		replies = append(replies, nativeCall("read_file", map[string]any{"path": fmt.Sprintf("file-%d", i)}))
+		replies = append(replies, nativeCall("inspect_fixture", map[string]any{"path": fmt.Sprintf("file-%d", i)}))
 	}
-	replies = append(replies, nativeCall("read_file", map[string]any{"path": "final"}), "Inspected")
+	replies = append(replies, nativeCall("inspect_fixture", map[string]any{"path": "final"}), "Inspected")
 	g, e, j := &generator{replies: replies}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "inspect files", approve, emit)
@@ -254,7 +233,7 @@ func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
 		native  bool
 		limit   int
 		want    string
-	}{{strings.Split(strings.Repeat("|", 8), "|"), false, 128, "No successful operation was observed"}, {[]string{nativeCall("read_file", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 128, "No successful operation was observed"}} {
+	}{{strings.Split(strings.Repeat("|", 8), "|"), false, 128, "progress"}, {[]string{nativeCall("inspect_fixture", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 128, "progress"}} {
 		g, e, j := &generator{replies: tc.replies, native: tc.native}, &executor{}, &journal{}
 		r := fixture(g, e, j)
 		r.Limits = DefaultLimits()
@@ -265,18 +244,27 @@ func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
 		}
 	}
 }
-func TestApprovedStepsShareOneCallBudget(t *testing.T) {
-	usage := &Usage{}
-	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "file"}), "first", "second"}}, &executor{}, &journal{}
+func TestRequestsHaveIndependentCallBudgets(t *testing.T) {
+	g, e, j := &generator{replies: []string{"first", "second"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
-	r.Usage = usage
 	r.Limits = DefaultLimits()
-	r.Limits.MaxModelCalls = 2
-	if _, err := r.Run(context.Background(), "step one", approve, emit); err != nil {
-		t.Fatal(err)
+	r.Limits.MaxModelCalls = 1
+	for _, input := range []string{"first request", "second request"} {
+		result, err := r.Run(context.Background(), input, approve, emit)
+		if err != nil || result.Status != Answered || recordedModelCalls(j) != 1 {
+			t.Fatalf("request inherited another budget: %+v %v", result, err)
+		}
 	}
-	result, err := r.Run(context.Background(), "step two", approve, emit)
-	if err != nil || result.Status != Stopped || len(g.requests) != 2 || result.Text == "" {
-		t.Fatalf("budget reset between steps: %+v %v", result, err)
+	if len(g.requests) != 2 {
+		t.Fatalf("requests=%d", len(g.requests))
 	}
+}
+
+func recordedModelCalls(j *journal) int {
+	for i := len(j.events) - 1; i >= 0; i-- {
+		if cp := j.events[i].Checkpoint; cp != nil {
+			return cp.ModelCalls
+		}
+	}
+	return 0
 }

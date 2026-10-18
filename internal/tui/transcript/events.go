@@ -16,12 +16,6 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 	if event.Kind == "progress" {
 		return []viewport.Block{Answer(f.Redact(event.Text))}
 	}
-	if event.Kind == "conclave" {
-		if text := f.Conclave(event); text != "" {
-			return []viewport.Block{{Text: text}}
-		}
-		return nil
-	}
 	switch event.Kind {
 	case "generation_started", "compaction", "compaction_started", "compaction_finished", "monitor", "tool_proposed", "tool_started", "approved", "self_grounding":
 		return nil
@@ -31,7 +25,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		}
 		return nil
 	}
-	if cp := event.Checkpoint; cp != nil && cp.Phase == "finished" && (cp.Status == run.Answered || cp.Status == run.Verified) {
+	if cp := event.Checkpoint; cp != nil && cp.Phase == "finished" && cp.Status == run.Answered {
 		return nil
 	}
 	if event.Kind == "thinking" {

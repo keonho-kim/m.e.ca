@@ -5,6 +5,7 @@
 package markdown
 
 import (
+	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"github.com/rivo/uniseg"
 	"strings"
 	"unicode"
@@ -24,6 +25,7 @@ type Span struct {
 	Style Style
 }
 type Line struct {
+	Copy  textlayout.Fragment
 	Text  string
 	Spans []Span
 }
@@ -57,46 +59,36 @@ func Wrap(spans []Span, width int) []Line {
 	if width < 1 {
 		return nil
 	}
-	// Segment the combined text so style boundaries cannot split a joined emoji.
 	var body strings.Builder
 	var ends []int
 	for _, span := range spans {
-		body.WriteString(strings.ReplaceAll(span.Text, "\t", "    "))
+		body.WriteString(span.Text)
 		ends = append(ends, body.Len())
 	}
 	text := body.String()
-	indent := text[:len(text)-len(strings.TrimLeft(text, " "))]
-	indent = indent[:min(len(indent), max(0, width-2))]
 	var rows []Line
-	var current []Span
-	cells, styleIndex := 0, 0
-	g := uniseg.NewGraphemes(text)
-	for g.Next() {
-		start, _ := g.Positions()
-		for styleIndex+1 < len(ends) && start >= ends[styleIndex] {
-			styleIndex++
+	styleIndex := 0
+	for _, wrapped := range textlayout.Wrap(text, width) {
+		var current []Span
+		current = add(current, wrapped.Prefix, 0)
+		cells := len(wrapped.Prefix)
+		g := uniseg.NewGraphemes(text[wrapped.Start:wrapped.End])
+		for g.Next() {
+			start, _ := g.Positions()
+			for styleIndex+1 < len(ends) && wrapped.Start+start >= ends[styleIndex] {
+				styleIndex++
+			}
+			part := strings.ReplaceAll(g.Str(), "\t", "    ")
+			size := uniseg.StringWidth(part)
+			if size > width-cells {
+				part, size = "�", 1
+			}
+			current = add(current, part, spans[styleIndex].Style)
+			cells += size
 		}
-		part := g.Str()
-		if part == "\n" {
-			rows = append(rows, line(current))
-			current = nil
-			cells = 0
-			continue
-		}
-		size := uniseg.StringWidth(part)
-		if cells+size > width && len(current) > 0 {
-			rows = append(rows, line(current))
-			current = nil
-			current = add(current, indent, 0)
-			cells = len(indent)
-		}
-		if size > width {
-			part = "�"
-			size = 1
-		}
-		current = add(current, part, spans[styleIndex].Style)
-		cells += size
+		row := line(current)
+		row.Copy = textlayout.Fragment{Source: text, Row: wrapped}
+		rows = append(rows, row)
 	}
-	rows = append(rows, line(current))
 	return rows
 }

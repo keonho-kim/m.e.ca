@@ -32,6 +32,7 @@
 /.gocache/
 
 # Temporary directories and runtime diagnostics
+/real-world-test/
 /tmp/
 /temp/
 /.tmp/

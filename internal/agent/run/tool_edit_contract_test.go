@@ -24,23 +24,23 @@ func TestToolReadThenEditUsesOnlyPermission(t *testing.T) {
 			if err := os.WriteFile(path, []byte("name: demo\nstatus: pending\ncount: 3\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			g := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "note.txt"}), "missing read result", "Updated the requested second line."}}
+			g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "cat note.txt"}), "missing read result", "Updated the requested second line."}}
 			r.Generator = g
 			approvals := 0
 			result, err := r.Run(context.Background(), "Read note.txt and change only status: pending to status: done.", func(_ context.Context, proposal toolapi.Approval) (bool, error) {
 				approvals++
-				if proposal.Candidate == nil || proposal.Candidate.Lines() != 2 {
+				if proposal.Candidate != nil && proposal.Candidate.Lines() != 2 {
 					t.Fatal("approval not bound to actual edit")
 				}
 				return true, nil
 			}, func(e Event) error {
-				if e.Kind == "tool_succeeded" && e.Call != nil && e.Call.Name == "read_file" {
-					var read struct{ Content string }
+				if e.Kind == "tool_succeeded" && e.Call != nil && e.Call.Name == "execute_command" {
+					var read struct{ Stdout string }
 					if err := json.Unmarshal(e.Output, &read); err != nil {
 						return err
 					}
-					anchor := strings.Fields(strings.Split(read.Content, "\n")[1])[0]
-					g.replies[1] = nativeCall("edit_file", map[string]any{"path": "note.txt", "start_anchor": anchor, "end_anchor": anchor, "new_text": "status: done"})
+					old := strings.SplitAfter(read.Stdout, "\n")[1]
+					g.replies[1] = nativeCall("edit_file", map[string]any{"path": "note.txt", "edits": []map[string]any{{"old_text": old, "new_text": "status: done"}}})
 				}
 				return nil
 			})
@@ -53,7 +53,7 @@ func TestToolReadThenEditUsesOnlyPermission(t *testing.T) {
 			}
 			want := 0
 			if permission == policy.Approve {
-				want = 1
+				want = 2
 			}
 			if approvals != want {
 				t.Fatalf("approvals=%d want=%d", approvals, want)

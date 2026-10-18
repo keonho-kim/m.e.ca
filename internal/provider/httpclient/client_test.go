@@ -75,7 +75,7 @@ func TestMalformedNativeCallsAreRejected(t *testing.T) {
 			t.Error("native tool schema sent")
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
-		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"name\":\"read_file\",\"arguments\":\"{}\"}}]}}]}\n\n")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"name\":\"inspect_fixture\",\"arguments\":\"{}\"}}]}}]}\n\n")
 	})
 	err := client.Generate(context.Background(), modelapi.Request{ModelID: "chosen-model", MaxOutput: 128, Messages: []modelapi.Message{{Role: "user", Content: "inspect"}}}, func(modelapi.Event) error { return nil })
 	if err == nil || !strings.Contains(err.Error(), "invalid tool call") {

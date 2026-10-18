@@ -6,10 +6,6 @@ package run
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/completion"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"strings"
 	"testing"
 )
 
@@ -17,26 +13,25 @@ func TestFileFactsCompareActualVersionsAfterCommands(t *testing.T) {
 	for _, tc := range []struct {
 		command string
 		stale   bool
-	}{{"ls", false}, {"printf changed > a", true}} {
+	}{{"ls", false}, {"perl -e 'open(my $f, q(>), q(a)) or die $!; print $f q(changed)'", true}} {
 		t.Run(tc.command, func(t *testing.T) {
-			r, _, _, _, _ := realBatchRunner(t, nil)
+			r, _, _, j, _ := realBatchRunner(t, nil)
 			g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "initial"}), nativeCall("execute_command", map[string]any{"command": tc.command}), "Observed the files and command output."}}
-			g.completion = func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-				text := request.Messages[len(request.Messages)-1].Content
-				var input completion.Input
-				if err := json.Unmarshal([]byte(text[strings.IndexByte(text, '\n')+1:]), &input); err != nil {
-					return err
-				}
-				if len(input.State.Receipts) != 2 || input.State.Receipts[0].Stale != tc.stale {
-					t.Fatalf("file freshness=%+v", input.State.Receipts)
-				}
-				return emit(modelapi.Event{Delta: `{"decision":"complete","reason":"The requested operation and observation finished","evidence":["call_2"]}`, Done: true})
-			}
 			r.Generator = g
 			result, err := r.Run(context.Background(), "Create a, then perform the specified command", approve, emit)
 			if err != nil || result.Status != Answered {
 				t.Fatalf("%+v %v", result, err)
 			}
+			var latest *Checkpoint
+			for _, event := range j.events {
+				if event.Checkpoint != nil {
+					latest = event.Checkpoint
+				}
+			}
+			if latest == nil || len(latest.Work.Receipts) != 2 || latest.Work.Receipts[0].Stale != tc.stale {
+				t.Fatalf("lost file freshness: %+v", latest)
+			}
+
 		})
 	}
 }

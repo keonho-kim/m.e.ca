@@ -11,6 +11,13 @@ import (
 )
 
 func (a *app) keyEvent(e *tcell.EventKey) {
+	if !e.Pressed() {
+		return
+	}
+	if a.paste {
+		a.pasteKey(e)
+		return
+	}
 	if a.selectionKey(e) {
 		return
 	}
@@ -19,13 +26,57 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
+	if e.Key() == tcell.KeyF1 {
+		a.helpOpen = !a.helpOpen
+		a.helpOffset = 0
+		return
+	}
+	if a.helpOpen {
+		switch e.Key() {
+		case tcell.KeyEscape:
+			a.helpOpen = false
+		case tcell.KeyUp:
+			a.helpOffset = max(0, a.helpOffset-1)
+		case tcell.KeyDown:
+			a.helpOffset = min(max(0, len(a.shortcuts())-1), a.helpOffset+1)
+		}
+		return
+	}
 	if a.filePreview != nil && e.Key() == tcell.KeyEscape {
 		a.previewKey(e)
 		return
 	}
-	if e.Key() == tcell.KeyEscape && a.agentActive && a.busy {
-		a.interruptTask()
-		return
+	if e.Key() == tcell.KeyEscape {
+		if a.page == "files" && !a.browser.Input && fileCommand(a.menuInput.String()) {
+			a.menuInput.Set("")
+			return
+		}
+		if a.directoryLoading {
+			a.cancelDirectory()
+			return
+		}
+		if a.commandOpen {
+			a.closeCommandHints()
+			return
+		}
+		if a.modelHintsOpen && a.page == "manual" {
+			a.closeModelHints()
+			return
+		}
+		if a.page == "approval" {
+			a.decide(false)
+			return
+		}
+		if a.busy && !a.agentActive {
+			a.interruptSetup()
+			return
+		}
+		if a.page == "chat" || a.page == "files" {
+			if a.agentActive && a.busy {
+				a.interruptTask()
+				return
+			}
+		}
 	}
 	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModShift == 0 {
 		text := a.menuInput.String()
@@ -51,6 +102,15 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.menuKey(e)
 		return
 	}
+	if (e.Key() == tcell.KeyUp || e.Key() == tcell.KeyDown) && (e.Modifiers() == tcell.ModCtrl || e.Modifiers() == tcell.ModMeta) {
+		delta := -1
+		if e.Key() == tcell.KeyDown {
+			delta = 1
+		}
+		a.recall(delta)
+		a.refreshHints()
+		return
+	}
 	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.agentActive && a.busy && !a.paste {
 		a.reserveInput()
 		return
@@ -72,12 +132,12 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		}
 		return
 	case tcell.KeyUp:
-		a.recall(-1)
-		a.refreshHints()
+		w, _ := a.screen.Size()
+		a.editor.MoveVertical(-1, w)
 		return
 	case tcell.KeyDown:
-		a.recall(1)
-		a.refreshHints()
+		w, _ := a.screen.Size()
+		a.editor.MoveVertical(1, w)
 		return
 	case tcell.KeyPgUp:
 		w, h := a.screen.Size()
@@ -107,6 +167,9 @@ func (a *app) recall(n int) {
 }
 
 func (a *app) mouse(e *tcell.EventMouse) {
+	if a.helpOpen {
+		return
+	}
 	if a.selectionMouse(e) {
 		return
 	}

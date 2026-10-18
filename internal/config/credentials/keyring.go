@@ -1,12 +1,13 @@
-// Purpose: Store and retrieve provider credentials through the OS keyring.
+// Purpose: Store, retrieve and remove V-owned keyring credentials with a non-secret cleanup marker.
 // Pattern: Credential Adapter.
 // Usage: Connection setup and model selection call Vault.Get and Set.
-// Related: internal/config/credentials/redaction.go, internal/provider/setup/setup.go.
+// Related: internal/config/credentials/redaction.go, internal/provider/setup/setup.go, internal/commands/install/uninstall.go.
 package credentials
 
 import (
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/config/statefs"
 	"strings"
 
 	"github.com/zalando/go-keyring"
@@ -26,10 +27,25 @@ func (v *Vault) Set(ref, key string) error {
 		}
 		return err
 	}
+	if v.State == "" {
+		return fmt.Errorf("credential state directory is required")
+	}
+	if err := statefs.Write(v.State, "credentials.used", []byte("v-code\n")); err != nil {
+		return err
+	}
 	if err := keyring.Set(service, ref, key); err != nil {
 		return fmt.Errorf("OS credential store unavailable; key was not saved")
 	}
 	return nil
+}
+
+// Clear removes only credentials belonging to V's fixed keyring service.
+func Clear() error {
+	err := keyring.DeleteAll(service)
+	if errors.Is(err, keyring.ErrNotFound) {
+		return nil
+	}
+	return err
 }
 func (v *Vault) Get(ref string) (string, error) {
 	if ref == "" {

@@ -12,12 +12,16 @@ import (
 )
 
 type Preview struct {
+	cachedTruncated          bool
+	rows                     []string
+	width                    int
+	content                  string
 	Path, Content, Error     string
 	Full, Loading, Truncated bool
 	Offset                   int
 }
 
-func (p Preview) Rows(width int) []string {
+func (p *Preview) Rows(width int) []string {
 	if p.Loading {
 		return []string{"파일 읽는 중…"}
 	}
@@ -26,6 +30,9 @@ func (p Preview) Rows(width int) []string {
 	}
 	if p.Content == "" {
 		return []string{"(빈 파일)"}
+	}
+	if p.width == width && p.content == p.Content && p.cachedTruncated == p.Truncated && p.rows != nil {
+		return p.rows
 	}
 	lines := strings.Split(strings.TrimSuffix(p.Content, "\n"), "\n")
 	digits := max(3, len(strconv.Itoa(len(lines))))
@@ -48,5 +55,7 @@ func (p Preview) Rows(width int) []string {
 	if p.Truncated {
 		rows = append(rows, "[미리보기는 처음 16MiB까지만 표시]")
 	}
-	return rows
+	p.rows, p.width, p.content = rows, width, p.Content
+	p.cachedTruncated = p.Truncated
+	return p.rows
 }

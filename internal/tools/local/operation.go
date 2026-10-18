@@ -1,7 +1,7 @@
 // Purpose: Recheck approval, Scope and file versions before one-shot execution.
 // Pattern: One-shot operation lifecycle.
 // Usage: Prepared tool executions expose Approval and Execute to the runtime.
-// Related: internal/tools/local/prepare.go, internal/tools/local/file/read.go.
+// Related: internal/tools/local/prepare.go, internal/tools/local/textedit/edit.go.
 package local
 
 import (
@@ -22,7 +22,7 @@ type operation struct {
 	source, destination          target
 	original, destinationVersion version
 	replacement                  []byte
-	editSpan                     *toolapi.LineChange
+	editSpans                    []toolapi.LineChange
 	approval                     toolapi.Approval
 	executed                     atomic.Bool
 }
@@ -47,7 +47,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 		return op.createDirectories(ctx)
 	}
 	if op.spec.effect != policy.Command {
-		current, err := op.executor.resolve(op.settings.Scope, op.input.Path)
+		current, err := op.executor.writeTarget(op.settings.Scope, op.input.Path)
 		if err != nil {
 			return toolapi.Result{}, err
 		}

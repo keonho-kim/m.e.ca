@@ -29,6 +29,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.openFiles(".")
+	finishBrowserIO(t, a)
 	a.status = ""
 	a.render()
 	if !strings.Contains(screenLine(a.screen, 3, 80), "[ ] Ⓓ") || !strings.Contains(screenLine(a.screen, 4, 80), "[ ] Ⓕ") {
@@ -42,6 +43,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
+	finishBrowserIO(t, a)
 	a.render()
 	if !strings.Contains(screenLine(a.screen, 4, 80), "[x] Ⓕ") {
 		t.Fatal("selection checkbox missing")

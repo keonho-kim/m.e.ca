@@ -26,7 +26,7 @@ func TestFilePreviewRead(t *testing.T) {
 	if err != nil || got.Content != "[redacted]\n" || got.Truncated {
 		t.Fatalf("%+v %v", got, err)
 	}
-	if _, err = e.Preview(context.Background(), settings, e.private); err == nil {
+	if _, err = e.Preview(context.Background(), settings, e.boundary.Private()); err == nil {
 		t.Fatal("private state accessible")
 	}
 	if _, err = e.Preview(context.Background(), settings, root); err == nil {

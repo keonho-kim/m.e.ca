@@ -23,7 +23,7 @@ func TestCommandSearchFiltersAsYouType(t *testing.T) {
 		t.Fatalf("search=%v", a.commandHints)
 	}
 	line := screenLine(a.screen, 20, 80)
-	if !strings.Contains(line, "!model") || strings.Contains(line, "!plan") {
+	if !strings.Contains(line, "!model") {
 		t.Fatalf("candidate row=%q", line)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

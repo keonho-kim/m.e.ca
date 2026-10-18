@@ -12,15 +12,14 @@ import (
 )
 
 const (
-	AnchorUnavailable = "anchor_unavailable"
-	StaleTarget       = "file_changed"
-	InvalidArgument   = "invalid_argument"
-	OutputTruncated   = "output_truncated"
-	Timeout           = "timeout"
-	Interrupted       = "interrupted"
-	ProcessFailed     = "process_failed"
-	ScopeUnavailable  = "scope_unavailable"
-	ExecutionFailed   = "execution_failed"
+	StaleTarget      = "file_changed"
+	InvalidArgument  = "invalid_argument"
+	OutputTruncated  = "output_truncated"
+	Timeout          = "timeout"
+	Interrupted      = "interrupted"
+	ProcessFailed    = "process_failed"
+	ScopeUnavailable = "scope_unavailable"
+	ExecutionFailed  = "execution_failed"
 )
 
 type Failure struct {
@@ -40,6 +39,9 @@ func FailureOf(err error) *Failure {
 	var failure *Failure
 	if errors.As(err, &failure) {
 		copy := *failure
+		if err.Error() != failure.Error() {
+			copy.Detail = err.Error()
+		}
 		return &copy
 	}
 	code, next := ExecutionFailed, "Inspect current state and choose a narrower or different approach; do not blindly replay side effects."

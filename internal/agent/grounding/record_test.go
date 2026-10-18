@@ -1,4 +1,4 @@
-// Purpose: Verify intent remains bound to one exact operation without generated bullet parsing.
+// Purpose: Verify native reason remains bound to one exact operation.
 // Pattern: Trust-boundary tests.
 // Usage: go test ./internal/agent/grounding.
 // Related: internal/agent/grounding/record.go.
@@ -11,7 +11,7 @@ import (
 )
 
 func TestRecordBindsExactCall(t *testing.T) {
-	call := tool.Call{ID: "c", Name: "read_file", Arguments: []byte(`{"path":"a"}`)}
+	call := tool.Call{ID: "c", Name: "inspect_fixture", Arguments: []byte(`{"path":"a"}`)}
 	record, err := Bind(call, "Inspect requested file.", "run_1")
 	if err != nil || !record.Matches(call) {
 		t.Fatalf("%+v %v", record, err)

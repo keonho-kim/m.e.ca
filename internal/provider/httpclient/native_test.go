@@ -23,10 +23,10 @@ func TestNativeRetryDiscardsPartialArguments(t *testing.T) {
 	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		if attempts.Add(1) == 1 {
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"old\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\"}}]}}]}\n\n")
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"old\",\"function\":{\"name\":\"inspect_fixture\",\"arguments\":\"{\\\"path\\\":\"}}]}}]}\n\n")
 			return
 		}
-		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"new\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"a\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"new\",\"function\":{\"name\":\"inspect_fixture\",\"arguments\":\"{\\\"path\\\":\\\"a\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
 	})
 	var calls []toolapi.Call
 	retries := 0
@@ -44,7 +44,7 @@ func TestNativeRetryDiscardsPartialArguments(t *testing.T) {
 
 func TestNativeTokenizationUsesGenerationSchemas(t *testing.T) {
 	request := recoveryRequest()
-	request.Tools = []toolapi.Definition{{Name: "read_file", Description: "Read", Parameters: []toolapi.Parameter{{Name: "path", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}}}
+	request.Tools = []toolapi.Definition{{Name: "inspect_fixture", Description: "Read", Parameters: []toolapi.Parameter{{Name: "path", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}}}
 	expected := protocol.Tools(request.Tools)
 	var tokenized, generated atomic.Bool
 	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {

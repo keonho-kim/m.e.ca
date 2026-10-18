@@ -1,13 +1,15 @@
-// Purpose: Freeze file-specific change content and approval previews before review.
+// Purpose: Freeze file-specific change content and approval previews before user approval.
 // Pattern: Change candidate preparation.
 // Usage: Prepare calls prepareChange only after Scope and Permission classification.
-// Related: internal/tools/local/prepare.go, internal/tools/local/review.go.
+// Related: internal/tools/local/prepare.go, internal/tools/local/approval_candidate.go.
 package local
 
 import (
+	"crypto/sha256"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/tools/local/diff"
+	"github.com/keonho-kim/v-code/internal/tools/local/textedit"
 	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 )
 
@@ -32,21 +34,17 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 				return err
 			}
 		}
-		supplied := op.input.Content
-		if op.spec.name == "edit_file" {
-			supplied = op.input.NewText
-		}
-		if err := textformat.CheckAnnotations(before, []byte(supplied), op.input.FormatPolicy); err != nil {
-			return err
+		if op.original.exists && sha256.Sum256(before) != op.original.digest {
+			return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "source changed during candidate preparation", Next: "Inspect the current source and prepare a fresh change."}
 		}
 		op.replacement = []byte(op.input.Content)
 		if op.spec.name == "edit_file" {
-			replacement, span, err := op.executor.reads.Replace(op.source.absolute, before, op.input.StartAnchor, op.input.EndAnchor, op.input.NewText, op.input.FormatPolicy)
+			replacement, spans, err := textedit.ReplaceMany(op.source.absolute, before, op.input.Edits, op.input.FormatPolicy)
 			if err != nil {
 				return err
 			}
 			op.replacement = replacement
-			op.editSpan = &span
+			op.editSpans = spans
 		}
 		if op.spec.name == "write_file" {
 			op.replacement, err = textformat.Preserve(before, op.replacement, op.input.FormatPolicy)
@@ -60,7 +58,10 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 			return err
 		}
 	case "move_file":
-		op.destination, err = op.executor.resolve(op.settings.Scope, op.input.Destination)
+		if err := op.executor.boundary.Movable(op.source.absolute); err != nil {
+			return err
+		}
+		op.destination, err = op.executor.writeTarget(op.settings.Scope, op.input.Destination)
 		if err != nil {
 			return err
 		}
@@ -72,19 +73,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 			return fmt.Errorf("destination already exists")
 		}
 		op.approval.Preview = "Move to " + op.destination.absolute
-	case "delete_file":
-		op.approval.Preview = "Delete " + op.source.absolute
-		if !op.original.info.IsDir() {
-			before, err := op.readSource()
-			if err != nil {
-				return err
-			}
-			op.approval.Preview = op.executor.redact(diff.Preview(op.source.absolute, before, nil, true, false))
-			op.approval.Diff = true
-			if err := op.freezeCandidate(call, before, nil); err != nil {
-				return err
-			}
-		}
+
 	}
 	return nil
 }

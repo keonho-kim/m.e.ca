@@ -1,7 +1,7 @@
 // Purpose: Verify all tool families show readable results and aligned source positions.
 // Pattern: Presentation contract tests.
 // Usage: go test ./internal/tui/transcript -run TestToolPresentation.
-// Related: internal/tui/transcript/details.go, internal/tui/transcript/anchors.go.
+// Related: internal/tui/transcript/details.go, internal/tui/transcript/process_result.go.
 package transcript
 
 import (
@@ -20,9 +20,8 @@ func TestToolPresentationResults(t *testing.T) {
 		want       []string
 	}{
 		{"write_file", `{"path":"a","changed":true}`, []string{"파일 저장 완료"}},
-		{"edit_file", `{"path":"a","changed":true,"lines":{"OldStartLine":10,"OldEndLine":12,"NewStartLine":10,"NewEndLine":11}}`, []string{"수정 완료", "기존 10–12줄 → 10–11줄"}},
-		{"edit_file", `{"path":"a","changed":true,"lines":{"OldStartLine":10,"OldEndLine":12,"Removed":true}}`, []string{"삭제한 줄: 10–12"}},
-		{"delete_file", `{"path":"a","changed":true}`, []string{"삭제 완료"}},
+		{"edit_file", `{"path":"a","changed":true,"lines":[{"OldStartLine":10,"OldEndLine":12,"NewStartLine":10,"NewEndLine":11}]}`, []string{"수정 완료", "기존 10–12줄 → 10–11줄"}},
+		{"edit_file", `{"path":"a","changed":true,"lines":[{"OldStartLine":10,"OldEndLine":12,"Removed":true}]}`, []string{"삭제한 줄: 10–12"}},
 		{"create_directory", `{"created":["a","a/b"],"changed":true}`, []string{"폴더 생성 완료", "2개", "a/b"}},
 		{"move_file", `{"path":"a","changed":true}`, []string{"이동 완료"}},
 		{"execute_command", `{"Stdout":"hello","Stderr":"warning","ExitCode":0,"Status":"exited","Truncated":false}`, []string{"hello", "stderr: warning", "exit: 0"}},
@@ -55,7 +54,7 @@ func TestToolPresentationResults(t *testing.T) {
 
 func TestToolPresentationReadAlignsNumbers(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	shown := f.Tool(run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "read_file", Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"Content":"1#12345678 | one\n10#12345678 | ten\n100#12345678 | hundred"}`)})
+	shown := f.Tool(run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | one\n 10 | ten\n100 | hundred\n","ExitCode":0,"Status":"exited"}`)})
 	position := -1
 	for _, line := range strings.Split(shown, "\n") {
 		if at := strings.Index(line, " | "); at >= 0 {
@@ -72,7 +71,7 @@ func TestToolPresentationReadAlignsNumbers(t *testing.T) {
 
 func TestToolPresentationMalformedAndFailedResults(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	for _, tc := range []struct{ name, body, kind string }{{"read_file", `{"Content":{"private":"raw"}}`, "tool_succeeded"}, {"edit_file", `{"changed":true}`, "tool_failed"}} {
+	for _, tc := range []struct{ name, body, kind string }{{"execute_command", `{"Stdout":{"private":"raw"}}`, "tool_succeeded"}, {"edit_file", `{"changed":true}`, "tool_failed"}} {
 		shown := f.Tool(run.Event{Kind: tc.kind, Text: "operation could not complete", Call: &tool.Call{Name: tc.name}, Output: []byte(tc.body)})
 		if !strings.Contains(shown, "operation could not complete") || strings.Contains(shown, "private") || strings.Contains(shown, "수정 완료") {
 			t.Fatal(shown)

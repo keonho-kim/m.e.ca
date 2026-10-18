@@ -12,6 +12,8 @@ import (
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/policy/shell"
+	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
+	"strings"
 )
 
 func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
@@ -26,8 +28,12 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	if err != nil {
 		return nil, err
 	}
-	for _, text := range []string{input.Content, input.NewText, input.Command} {
-		if executor.redact(text) != text {
+	texts := []string{input.Content, input.Command}
+	for _, edit := range input.Edits {
+		texts = append(texts, edit.OldText, edit.NewText)
+	}
+	for _, text := range texts {
+		if textformat.RedactSource(text, executor.redact) != text {
 			return nil, fmt.Errorf("tool arguments contain a protected credential")
 		}
 	}
@@ -42,23 +48,17 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 			return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Return a valid bounded POSIX shell command. No command was executed."}
 		}
 		op.approval.Target = input.Command
-		op.approval.Preview = input.Command
+		op.approval.Preview = executor.redact("Working directory: " + executor.project + "\nWritable roots: " + strings.Join(executor.boundary.Writes(), ", ") + "\n\n" + input.Command)
 		return op, nil
 	}
 	if spec.name == "create_directory" {
 		return op, op.prepareDirectories(call)
 	}
-	op.source, err = executor.resolve(settings.Scope, input.Path)
+	op.source, err = executor.writeTarget(settings.Scope, input.Path)
 	if err != nil {
 		return nil, err
 	}
 	op.approval.Target = op.source.absolute
-	if spec.effect == policy.Read {
-		if _, err := op.source.root.Stat(op.source.relative); err != nil {
-			return nil, err
-		}
-		return op, nil
-	}
 	if err := op.prepareChange(call); err != nil {
 		return nil, err
 	}

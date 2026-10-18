@@ -7,6 +7,7 @@ package process
 import "bytes"
 
 type Output struct {
+	Started        bool
 	Status         string
 	Stdout, Stderr string
 	ExitCode       int

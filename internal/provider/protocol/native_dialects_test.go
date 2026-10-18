@@ -23,8 +23,8 @@ func TestNativeProviderCallsAndResults(t *testing.T) {
 		kind connection.ProviderKind
 		body string
 	}{
-		{connection.Ollama, `{"message":{"tool_calls":[{"function":{"name":"read_file","arguments":{"path":"a"}}}]},"done":true}`},
-		{connection.LMStudio, `{"status":"completed","output":[{"type":"function_call","id":"item_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"a\"}"}]}`},
+		{connection.Ollama, `{"message":{"tool_calls":[{"function":{"name":"inspect_fixture","arguments":{"path":"a"}}}]},"done":true}`},
+		{connection.LMStudio, `{"status":"completed","output":[{"type":"function_call","id":"item_1","call_id":"call_1","name":"inspect_fixture","arguments":"{\"path\":\"a\"}"}]}`},
 	} {
 		t.Run(string(test.kind), func(t *testing.T) {
 			var calls []toolapi.Call
@@ -32,7 +32,7 @@ func TestNativeProviderCallsAndResults(t *testing.T) {
 			if err := ReadResponse(context.Background(), response, test.kind, func(e modelapi.Event) error { calls = append(calls, e.Calls...); return nil }); err != nil || len(calls) != 1 {
 				t.Fatalf("calls=%+v err=%v", calls, err)
 			}
-			messages, err := Messages(test.kind, []modelapi.Message{{Role: "assistant", Calls: calls}, {Role: "tool", ToolCallID: calls[0].ID, ToolName: "read_file", Content: "result"}})
+			messages, err := Messages(test.kind, []modelapi.Message{{Role: "assistant", Calls: calls}, {Role: "tool", ToolCallID: calls[0].ID, ToolName: "inspect_fixture", Content: "result"}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -45,7 +45,7 @@ func TestNativeProviderCallsAndResults(t *testing.T) {
 					t.Fatal(string(body))
 				}
 			} else {
-				if !strings.Contains(string(body), `"arguments":{"path":"a"}`) || !strings.Contains(string(body), `"tool_name":"read_file"`) {
+				if !strings.Contains(string(body), `"arguments":{"path":"a"}`) || !strings.Contains(string(body), `"tool_name":"inspect_fixture"`) {
 					t.Fatal(string(body))
 				}
 			}
@@ -55,12 +55,12 @@ func TestNativeProviderCallsAndResults(t *testing.T) {
 
 func TestNativeResponsesStreamDoesNotDuplicateCalls(t *testing.T) {
 	frames := []string{
-		`{"type":"response.output_item.added","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":""}}`,
+		`{"type":"response.output_item.added","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"inspect_fixture","arguments":""}}`,
 		`{"type":"response.function_call_arguments.delta","item_id":"fc_1","delta":"{\"path\":"}`,
 		`{"type":"response.function_call_arguments.delta","item_id":"fc_1","delta":"\"a\"}"}`,
 		`{"type":"response.function_call_arguments.done","item_id":"fc_1","arguments":"{\"path\":\"a\"}"}`,
-		`{"type":"response.output_item.done","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"a\"}"}}`,
-		`{"type":"response.completed","response":{"status":"completed","output":[{"type":"reasoning"},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"a\"}"}]}}`,
+		`{"type":"response.output_item.done","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"inspect_fixture","arguments":"{\"path\":\"a\"}"}}`,
+		`{"type":"response.completed","response":{"status":"completed","output":[{"type":"reasoning"},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"inspect_fixture","arguments":"{\"path\":\"a\"}"}]}}`,
 	}
 	var body strings.Builder
 	for _, frame := range frames {

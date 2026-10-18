@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/rivo/uniseg"
 	"slices"
+	"strings"
 )
 
 type Shortcut struct{ Key, Label string }
@@ -40,8 +41,11 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	rows := [][]Shortcut{{}}
 	cells := 0
 	ordered := slices.Clone(shortcuts)
-	ranks := []string{"^C", "Esc", "Enter", "Tab", "^U", "Shift+Enter", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
+	ranks := []string{"^C", "Esc", "Enter", "Tab", "Backspace", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
 	rank := func(key string) int {
+		if strings.HasPrefix(key, "^C") {
+			return 0
+		}
 		n := slices.Index(ranks, key)
 		if n < 0 {
 			return len(ranks)
@@ -49,7 +53,12 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 		return n
 	}
 	slices.SortStableFunc(ordered, func(a, b Shortcut) int { return rank(a.Key) - rank(b.Key) })
+	help := Shortcut{}
 	for _, shortcut := range ordered {
+		if shortcut.Key == "F1" {
+			help = shortcut
+			continue
+		}
 		count := uniseg.StringWidth(shortcut.Key) + 1 + uniseg.StringWidth(shortcut.Label)
 		if count > width {
 			continue
@@ -66,6 +75,33 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	}
 	if len(rows[0]) == 0 {
 		return nil
+	}
+	count := 0
+	for _, row := range rows {
+		count += len(row)
+	}
+	if count < len(shortcuts) {
+		last := len(rows) - 1
+		line := rows[last]
+		measure := func(values []Shortcut) int {
+			n := 0
+			for i, s := range values {
+				if i > 0 {
+					n += 2
+				}
+				n += uniseg.StringWidth(s.Key + " " + s.Label)
+			}
+			return n
+		}
+		for help.Key != "" && len(line) > 0 && measure(append(slices.Clone(line), help)) > width && rank(line[len(line)-1].Key) > 1 {
+			line = line[:len(line)-1]
+		}
+		if help.Key != "" && measure(append(slices.Clone(line), help)) <= width {
+			line = append(line, help)
+		} else if measure(line)+3 <= width {
+			line = append(line, Shortcut{Key: "…"})
+		}
+		rows[last] = line
 	}
 	return rows
 }

@@ -9,6 +9,7 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,7 +52,7 @@ func developerRuntime(ctx context.Context, project, home, private string) (strin
 	if err != nil {
 		return "", fmt.Errorf("developer installation unavailable: %w", err)
 	}
-	if resolved == "/" || containsPath(resolved, home) || containsPath(resolved, private) || containsPath(private, resolved) || containsPath(resolved, project) || containsPath(project, resolved) {
+	if resolved == "/" || filesystem.Within(resolved, home) || filesystem.Within(resolved, private) || filesystem.Within(private, resolved) || filesystem.Within(resolved, project) || filesystem.Within(project, resolved) {
 		return "", fmt.Errorf("developer installation overlaps protected or project paths")
 	}
 	directory := func(name string) bool {

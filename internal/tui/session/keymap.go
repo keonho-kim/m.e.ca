@@ -11,9 +11,16 @@ import (
 
 func (a *app) shortcuts() []view.Shortcut {
 	if a.textSelection.Active() {
-		return []view.Shortcut{{Key: "^C / Cmd+C", Label: "복사"}, {Key: "Esc", Label: "선택 해제"}}
+		keys := []view.Shortcut{{Key: "^C / Cmd+C", Label: "복사"}, {Key: "Esc", Label: "선택 해제"}}
+		if a.selectionInput.editor != nil {
+			keys = append(keys, view.Shortcut{Key: "Backspace", Label: "선택 삭제"})
+		}
+		return keys
 	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}
+	if a.directoryLoading {
+		return append(shortcuts, view.Shortcut{Key: "Esc", Label: "조회 취소"}, view.Shortcut{Key: ":q", Label: "복귀"})
+	}
 	if a.filePreview != nil {
 		controls := []view.Shortcut{{Key: "Esc", Label: "닫기"}}
 		if fileCommand(a.menuInput.String()) {
@@ -45,7 +52,7 @@ func (a *app) shortcuts() []view.Shortcut {
 			}
 		} else {
 			controls = a.inputShortcuts()
-			controls = append(controls, view.Shortcut{Key: "↑↓", Label: "기록"}, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"}, view.Shortcut{Key: "!", Label: "명령"})
+			controls = append(controls, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"}, view.Shortcut{Key: "!", Label: "명령"})
 		}
 	case "files":
 		if !a.browser.Input && fileCommand(a.menuInput.String()) {
@@ -101,9 +108,13 @@ func (a *app) shortcuts() []view.Shortcut {
 			controls = append(controls, view.Shortcut{Key: "←→", Label: "Thinking"})
 		}
 	}
-	if a.agentActive && a.busy {
-		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: "중지"})
-		if !a.stopRequested && (a.page == "chat" && !a.commandOpen || a.page == "files" && a.browser.Input) {
+	if a.busy && (a.page == "chat" && !a.commandOpen || a.page == "files" && !fileCommand(a.menuInput.String())) {
+		label := "중지"
+		if !a.agentActive {
+			label = "연결 취소"
+		}
+		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: label})
+		if a.agentActive && !a.stopRequested && (a.page == "chat" && !a.commandOpen || a.page == "files" && a.browser.Input) {
 			shortcuts = append(shortcuts, view.Shortcut{Key: "Tab", Label: "예약"})
 		}
 		filtered := controls[:0]
@@ -118,7 +129,7 @@ func (a *app) shortcuts() []view.Shortcut {
 }
 
 func (a *app) inputShortcuts() []view.Shortcut {
-	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}}
+	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "↑↓", Label: "줄 이동"}, {Key: "Ctrl/Cmd+↑↓", Label: "기록"}}
 	label := "전송"
 	command, err := commands.Parse(a.editor.String())
 	if err == nil && command.Kind == commands.Quit && a.page == "files" {

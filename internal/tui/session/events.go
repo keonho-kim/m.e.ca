@@ -14,6 +14,10 @@ import (
 )
 
 type notice struct {
+	History         *historyPage
+	Directory       *directoryPage
+	FileSelection   *fileSelectionResult
+	SetupRevision   int
 	Clipboard       bool
 	RunStatus       run.Status
 	FilePreview     *local.FilePreview
@@ -39,6 +43,21 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.History != nil {
+		a.receiveHistory(n.History)
+		return
+	}
+	if n.Directory != nil {
+		a.receiveDirectory(n.Directory)
+		return
+	}
+	if n.FileSelection != nil {
+		a.receiveFileSelection(n.FileSelection)
+		return
+	}
+	if !a.setupResult(&n) {
+		return
+	}
 	if n.Clipboard {
 		a.clipboardBusy = false
 		if n.Err != nil {

@@ -1,6 +1,6 @@
 // Purpose: Refresh known file observations after commands using actual scoped filesystem versions.
 // Pattern: Consumer-owned filesystem observation boundary.
-// Usage: Result recording refreshes facts before the next decision or completion review.
+// Usage: Result recording refreshes facts before the next main-agent decision.
 // Related: internal/agent/completion/freshness.go, internal/tools/local/versions.go.
 package run
 

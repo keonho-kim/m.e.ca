@@ -1,7 +1,7 @@
 // Purpose: Count the shortest line edit delta without substituting whole-file preview fallbacks.
 // Pattern: Bounded Myers distance calculation.
-// Usage: Tool preparation computes Conclave size from frozen before and after bytes.
-// Related: internal/tools/local/diff/diff.go, internal/tools/local/review.go.
+// Usage: Tool preparation counts actual added and deleted lines for frozen approval candidates.
+// Related: internal/tools/local/diff/diff.go, internal/tools/local/approval_candidate.go.
 package diff
 
 import (

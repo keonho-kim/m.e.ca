@@ -30,9 +30,6 @@ func (e *Executor) CanParallel(ctx context.Context, settings policy.Settings, le
 	if a == policy.Command || b == policy.Command {
 		return false, nil
 	}
-	if a == policy.Read && b == policy.Read {
-		return true, nil
-	}
 	for _, x := range pa {
 		for _, y := range pb {
 			if pathContains(x.absolute, y.absolute) || pathContains(y.absolute, x.absolute) {

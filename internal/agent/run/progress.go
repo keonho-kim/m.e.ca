@@ -1,5 +1,5 @@
-// Purpose: Detect repeated file states and offer bounded recovery before stopping a stalled execution.
-// Pattern: Progress state transitions with durable recovery notices.
+// Purpose: Stop stalled work with the recorded outcomes and remaining uncertainty.
+// Pattern: Progress state transition.
 // Usage: action observes content changes; Run handles the configured no-progress threshold.
 // Related: internal/agent/run/run.go, internal/agent/run/action.go, internal/tools/local/mutations.go.
 package run
@@ -9,12 +9,7 @@ import (
 )
 
 func (s *execution) recoverProgress(ctx context.Context) error {
-	finished, err := s.judgeCompletion(ctx, "")
-	if err != nil {
-		return err
-	}
-	if finished {
-		s.terminal = true
-	}
-	return nil
+	_, err := s.report(ctx, "Work stopped making progress; inspect the recorded outcomes before continuing the remaining work.", true)
+	s.terminal = err == nil
+	return err
 }

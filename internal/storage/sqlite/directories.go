@@ -63,9 +63,6 @@ func (s *Sessions) walkDatabases(ctx context.Context, project string, visit func
 	}
 	return walkDirectory(ctx, s.directory, func(entry os.DirEntry) error {
 		name := entry.Name()
-		if strings.HasPrefix(name, "session_") && strings.HasSuffix(name, ".db") {
-			return fmt.Errorf("unsupported flat session layout: %s; files are preserved, project directories are required", name)
-		}
 		index := strings.LastIndexByte(name, '-')
 		if index < 1 || len(name)-index-1 != 32 {
 			return nil

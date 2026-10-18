@@ -1,4 +1,4 @@
-// Purpose: Verify local UI input, approval, read-only gating and rendering through a virtual terminal.
+// Purpose: Verify local UI input, approval and rendering through a virtual terminal.
 // Pattern: Terminal behavior tests.
 // Usage: go test ./internal/tui/session.
 // Related: internal/tui/session/keys.go, internal/tui/session/render.go, internal/tui/session/tasks.go.
@@ -44,8 +44,8 @@ func fixture(t *testing.T) *app {
 			t.Error(err)
 		}
 	})
-	vault := &credentials.Vault{}
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), vault.Redact)
+	vault := &credentials.Vault{State: filepath.Join(home, ".v")}
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), nil, vault.Redact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,10 @@ func fixture(t *testing.T) *app {
 	}
 	screen.SetSize(80, 24)
 	t.Cleanup(screen.Fini)
-	return &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: context.Background(), screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	ctx, cancel := context.WithCancel(context.Background())
+	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	t.Cleanup(a.shutdown)
+	return a
 }
 func TestAtInputRemainsLiteral(t *testing.T) {
 	a := fixture(t)
@@ -154,13 +157,12 @@ func TestStatusPolicyLabels(t *testing.T) {
 		permission policy.Permission
 		scope      policy.Scope
 		thinking   bool
-		plan       bool
 		want       string
 	}{
-		{"default", policy.Approve, policy.Directory, false, false, "chosen"},
-		{"system", policy.Approve, policy.System, false, false, "chosen"},
-		{"automatic", policy.AllowAll, policy.Directory, false, false, "chosen │ 자동 승인"},
-		{"thinking and plan", policy.AllowAll, policy.System, true, true, "chosen Thinking │ 자동 승인"},
+		{"default", policy.Approve, policy.Directory, false, "chosen"},
+		{"system", policy.Approve, policy.System, false, "chosen"},
+		{"automatic", policy.AllowAll, policy.Directory, false, "chosen │ 자동 승인"},
+		{"thinking", policy.AllowAll, policy.System, true, "chosen Thinking │ 자동 승인"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

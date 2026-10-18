@@ -14,7 +14,11 @@ func (f Formatter) processOutput(fields map[string]json.RawMessage) string {
 	for _, key := range []string{"Stdout", "Stderr"} {
 		var value string
 		if json.Unmarshal(fields[key], &value) == nil && value != "" {
-			text += indentTool(strings.ToLower(key) + ": " + f.Redact(value))
+			if strings.Contains(value, "\n") {
+				text += indentTool(strings.ToLower(key)) + indentTool(f.Redact(value))
+			} else {
+				text += indentTool(strings.ToLower(key) + ": " + f.Redact(value))
+			}
 		}
 	}
 	var code int

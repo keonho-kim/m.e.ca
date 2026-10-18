@@ -5,7 +5,7 @@
 package compact
 
 import (
-	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -13,6 +13,7 @@ import (
 )
 
 type sourceEntry struct {
+	key       [32]byte
 	encoded   json.RawMessage
 	mandatory bool
 	important bool
@@ -31,15 +32,17 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	if !mandatory {
 		text = sourceExcerpt(text, MaxBodyBytes)
 	}
-	encoded, err := json.Marshal(struct{ Role, Text string }{record.Role, redact(text)})
+	key, err := json.Marshal(struct{ Role, Text string }{record.Role, redact(text)})
 	if err != nil {
 		return err
 	}
+	digest := sha256.Sum256(key)
+	encoded := key
 	important := record.Role == "outcome" || record.Role == "failure"
 	size := len(encoded) + 1
 	if !mandatory && len(b.entries) > 0 {
 		last := b.entries[len(b.entries)-1]
-		if !last.mandatory && bytes.Equal(last.encoded, encoded) {
+		if !last.mandatory && last.key == digest {
 			return nil
 		}
 	}
@@ -76,7 +79,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	if mandatory {
 		b.required += size
 	}
-	b.entries = append(b.entries, sourceEntry{encoded, mandatory, important})
+	b.entries = append(b.entries, sourceEntry{digest, encoded, mandatory, important})
 	b.bytes += size
 	return nil
 }

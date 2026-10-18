@@ -1,7 +1,7 @@
 // Purpose: Verify scoped file tools, approval binding and stale-change rejection.
 // Pattern: Filesystem behavior tests.
 // Usage: go test ./internal/tools/local.
-// Related: internal/tools/local/executor.go, internal/tools/local/file/read.go, internal/policy/policy.go.
+// Related: internal/tools/local/executor.go, internal/tools/local/textedit/edit.go, internal/policy/policy.go.
 
 package local
 
@@ -19,7 +19,7 @@ import (
 func testExecutor(t *testing.T) (*Executor, string) {
 	t.Helper()
 	project, home := t.TempDir(), t.TempDir()
-	executor, err := NewExecutor(project, home, filepath.Join(home, ".v"), func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") })
+	executor, err := NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,8 +76,7 @@ func TestApprovalUsesLineDiff(t *testing.T) {
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
 	for _, invocation := range []toolapi.Call{
 		call("write_file", `{"path":"file.txt","content":"unchanged\nnew\nend\n"}`),
-		anchoredEdit(t, executor, "file.txt", 2, 2, "new\n"),
-		call("delete_file", `{"path":"file.txt"}`),
+		observedEdit(t, executor, "file.txt", 2, 2, "new\n"),
 	} {
 		op, err := executor.Prepare(context.Background(), settings, invocation)
 		if err != nil {
@@ -87,7 +86,7 @@ func TestApprovalUsesLineDiff(t *testing.T) {
 		if !op.Approval().Diff || !strings.Contains(preview, "@@ -") || !strings.Contains(preview, "-old\n") {
 			t.Fatalf("missing diff for %s: %s", invocation.Name, preview)
 		}
-		if invocation.Name != "delete_file" && !strings.Contains(preview, "+new\n") {
+		if !strings.Contains(preview, "+new\n") {
 			t.Fatal("replacement omitted from approval")
 		}
 	}
@@ -103,7 +102,7 @@ func TestApprovedEditRejectsChangedOriginal(t *testing.T) {
 	if err := os.WriteFile(path, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, anchoredEdit(t, executor, "auth.go", 1, 1, "fixed"))
+	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, observedEdit(t, executor, "auth.go", 1, 1, "fixed"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,9 +129,9 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 	}
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
 	for _, invocation := range []toolapi.Call{
-		call("read_file", `{"path":"../outside"}`),
-		call("read_file", `{"path":"linked"}`),
-		call("read_file", `{"path":"auth.go","approved":true}`),
+		call("write_file", `{"path":"../outside","content":"unsafe"}`),
+		call("write_file", `{"path":"linked","content":"unsafe"}`),
+		call("write_file", `{"path":"auth.go","content":"new","approved":true}`),
 		call("write_file", `{"path":"auth.go","content":"provider-secret"}`),
 		call("execute_command", `{"command":"touch outside"}`),
 	} {
@@ -153,7 +152,7 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	}
 	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.System}
 	for _, invocation := range []toolapi.Call{
-		call("read_file", `{"path":"src/auth.go"}`),
+		call("execute_command", `{"command":"cat src/auth.go"}`),
 		call("execute_command", `{"command":"ls src"}`),
 		call("execute_command", `{"command":"find . -name '*.go'"}`),
 		call("execute_command", `{"command":"grep -rn authenticate src"}`),
@@ -176,31 +175,5 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(project, "src/session.go")); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestReadRangePreservesUTF8AndCursor(t *testing.T) {
-	executor, root := testExecutor(t)
-	if err := os.WriteFile(filepath.Join(root, "text"), []byte("가나다"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}, call("read_file", `{"path":"text","limit":5}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := op.Execute(context.Background(), true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var output struct {
-		Content    string
-		NextOffset int
-		Truncated  bool
-	}
-	if err := json.Unmarshal(result.Content, &output); err != nil {
-		t.Fatal(err)
-	}
-	if output.Content != "1 | 가\n" || output.NextOffset != 3 || !output.Truncated {
-		t.Fatalf("range=%+v", output)
 	}
 }

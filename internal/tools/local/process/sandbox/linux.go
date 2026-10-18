@@ -12,28 +12,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 	"github.com/keonho-kim/v-code/internal/tools/local/process/sandbox/linux"
 )
 
-func Prepare(ctx context.Context, project, home, private, command string) (launch Launch, err error) {
-	if err := ctx.Err(); err != nil {
-		return Launch{}, err
+func Prepare(ctx context.Context, b *filesystem.Boundary, command string) (launch Launch, err error) {
+	if err := b.CheckTrees(ctx); err != nil {
+		return launch, err
 	}
-
 	if err := linux.Probe(); err != nil {
 		return launch, fmt.Errorf("project sandbox unavailable: %w", err)
 	}
-	project, err = filepath.EvalSymlinks(project)
-	if err != nil {
-		return launch, err
-	}
-	private, err = filepath.EvalSymlinks(private)
-	if err != nil {
-		return launch, err
-	}
-	launch, err = scratch(project)
+	launch, err = scratch(b.Project())
 	if err != nil {
 		return launch, err
 	}
@@ -43,17 +36,34 @@ func Prepare(ctx context.Context, project, home, private, command string) (launc
 			launch = Launch{}
 		}
 	}()
-	request := linux.Request{Project: project, Private: private, Scratch: launch.Scratch, Command: command}
-	request.UserRuntime, err = userRuntime(&launch, home, private)
+	request := linux.Request{Project: b.Project(), Private: b.Private(), Scratch: launch.Scratch, Command: command, Writable: b.Writes(), Protected: b.Protected()}
+	request.Identities, err = b.RootIdentities()
 	if err != nil {
 		return launch, err
 	}
-	for _, path := range append(runtimePaths(), "/lib", "/lib64") {
-		if _, statErr := os.Stat(path); statErr == nil {
-			request.Runtime = append(request.Runtime, path)
-		} else if !errors.Is(statErr, os.ErrNotExist) {
-			return launch, statErr
+	entries, err := os.ReadDir("/")
+	if err != nil {
+		return launch, err
+	}
+	for _, entry := range entries {
+		switch entry.Name() {
+		case "dev", "proc", "sys", "run":
+			continue
 		}
+		request.Runtime = append(request.Runtime, filepath.Join("/", entry.Name()))
+	}
+	additional, err := linux.ReadRuntimeRoots(b.Home())
+	if err != nil {
+		return launch, err
+	}
+	for _, path := range additional {
+		if !slices.Contains(request.Runtime, path) {
+			request.Runtime = append(request.Runtime, path)
+		}
+	}
+	// DNS symlinks may point into /run, whose host control sockets remain hidden.
+	if path, e := filepath.EvalSymlinks("/etc/resolv.conf"); e == nil && filesystem.Within("/run", path) {
+		request.Runtime = append(request.Runtime, path)
 	}
 	input, err := linux.Encode(request)
 	if err != nil {
@@ -72,7 +82,7 @@ func Prepare(ctx context.Context, project, home, private, command string) (launc
 	launch.Name = linux.ChildName
 	launch.Attributes = &syscall.SysProcAttr{
 		Setpgid:                    true,
-		Cloneflags:                 syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC | syscall.CLONE_NEWUTS | syscall.CLONE_NEWNET,
+		Cloneflags:                 syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWIPC | syscall.CLONE_NEWUTS,
 		UidMappings:                []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Geteuid(), Size: 1}},
 		GidMappings:                []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Getegid(), Size: 1}},
 		GidMappingsEnableSetgroups: false,

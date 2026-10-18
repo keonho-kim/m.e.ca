@@ -13,10 +13,10 @@ import (
 )
 
 func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {
-	call := toolapi.Call{ID: "c", Name: "read_file", Arguments: json.RawMessage(`{"path":"a"}`)}
+	call := toolapi.Call{ID: "c", Name: "inspect_fixture", Arguments: json.RawMessage(`{"path":"a"}`)}
 	messages := []modelapi.Message{
 		{Role: "assistant", Reasoning: "inspect a", Calls: []toolapi.Call{call}},
-		{Role: "tool", ToolCallID: "c", ToolName: "read_file", Content: "observed"},
+		{Role: "tool", ToolCallID: "c", ToolName: "inspect_fixture", Content: "observed"},
 	}
 	for _, history := range [][]modelapi.Message{messages, messages[:1], messages[1:]} {
 		request, err := Build(Input{Messages: history, Redact: func(s string) string { return s }, MaxBytes: 10000})
@@ -39,12 +39,12 @@ func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {
 	}
 }
 
-func TestActivePlanStepFollowsOlderUserMessages(t *testing.T) {
-	request, err := Build(Input{Objective: "Execute approved step two", Messages: []modelapi.Message{{Role: "user", Content: "Original plan request"}}, Redact: func(s string) string { return s }, MaxBytes: 10000})
+func TestActiveFollowupFollowsOlderUserMessages(t *testing.T) {
+	request, err := Build(Input{Objective: "Implement the remaining endpoint", Messages: []modelapi.Message{{Role: "user", Content: "Original implementation request"}}, Redact: func(s string) string { return s }, MaxBytes: 10000})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasSuffix(request.Messages[len(request.Messages)-1].Content, "Execute approved step two") {
+	if !strings.HasSuffix(request.Messages[len(request.Messages)-1].Content, "Implement the remaining endpoint") {
 		t.Fatalf("active request preceded history: %+v", request.Messages)
 	}
 }

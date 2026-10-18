@@ -13,22 +13,27 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/sys/unix"
 )
 
 const ChildName = "v-internal-project-shell"
-const maxRequest = 2 << 20
+const maxRequest = 64 << 20
 
 type Request struct {
 	Project, Private, Scratch, Command string
 	Runtime                            []string
-	UserRuntime                        []string
+	Writable, Protected                []string
+	Identities                         map[string][2]uint64
 }
 
 func (r Request) Validate() error {
-	for _, path := range append(append([]string{r.Project, r.Private, r.Scratch}, r.Runtime...), r.UserRuntime...) {
+	paths := append([]string{r.Project, r.Private, r.Scratch}, r.Runtime...)
+	paths = append(paths, r.Writable...)
+	paths = append(paths, r.Protected...)
+	for _, path := range paths {
 		if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.ContainsRune(path, 0) {
 			return fmt.Errorf("invalid sandbox path: %q", path)
 		}
@@ -39,14 +44,23 @@ func (r Request) Validate() error {
 	if within(r.Private, r.Project) || within(r.Project, r.Scratch) || within(r.Scratch, r.Project) {
 		return fmt.Errorf("project, V state and temporary sandbox paths overlap unsafely")
 	}
-	for _, path := range append(append([]string{}, r.Runtime...), "/proc", "/dev") {
-		if within(path, r.Project) || within(r.Project, path) {
-			return fmt.Errorf("project overlaps a system runtime path: %s", path)
+	for _, path := range []string{"/bin", "/usr", "/lib", "/lib64", "/proc", "/dev", "/sys", "/run", "/etc"} {
+		if within(path, r.Project) {
+			return fmt.Errorf("project overlaps system path: %s", path)
 		}
 	}
-	for _, path := range r.UserRuntime {
-		if within(path, r.Project) || within(path, r.Private) || within(r.Private, path) || within(path, r.Scratch) || within(r.Scratch, path) {
-			return fmt.Errorf("user runtime overlaps protected or working paths: %s", path)
+	if r.Project == "/" {
+		return fmt.Errorf("unsafe project root")
+	}
+	if len(r.Writable) == 0 || !slices.Contains(r.Writable, r.Project) || !slices.Contains(r.Protected, r.Private) {
+		return fmt.Errorf("missing write roots")
+	}
+	for _, path := range r.Writable {
+		if _, ok := r.Identities[path]; !ok {
+			return fmt.Errorf("missing write root identity: %s", path)
+		}
+		if path == "/" || within(path, r.Private) && path != r.Project || within(r.Private, path) || within(path, r.Scratch) {
+			return fmt.Errorf("unsafe write root: %s", path)
 		}
 	}
 	return nil

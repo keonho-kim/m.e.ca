@@ -8,35 +8,36 @@ import (
 	"context"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tools/local/process"
+	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 	resultfmt "github.com/keonho-kim/v-code/internal/tools/result"
 	"strings"
 	"unicode/utf8"
 )
 
 func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
-	output, runErr := process.Run(ctx, op.executor.project, op.executor.home, op.executor.private, op.input.Command, op.settings.Scope == policy.Directory)
-	output.Stdout = op.executor.redact(output.Stdout)
-	output.Stderr = op.executor.redact(output.Stderr)
+	output, runErr := process.Run(ctx, op.executor.boundary, op.input.Command)
+	output.Stdout = textformat.RedactSource(output.Stdout, op.executor.redact)
+	output.Stderr = textformat.RedactSource(output.Stderr, op.executor.redact)
 	result, err := resultfmt.Encode(output, fmt.Sprintf("Process %s; exit code %d", output.Status, output.ExitCode))
 	if err != nil {
 		return result, err
 	}
+	result.Started = output.Started
 	result.Process = &toolapi.ProcessOutcome{Status: output.Status, ExitCode: output.ExitCode, Truncated: output.Truncated}
 	result.Failed = runErr != nil || output.ExitCode != 0 || output.Status != "exited"
 	if result.Failed {
 		result.Process.Diagnostic = commandDiagnostic(output.Stdout, output.Stderr)
 	}
 	if output.Status == "scope_unavailable" {
-		result.Failure = &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: output.Status, Next: "The command did not run. Resolve the host sandbox or runtime setup; do not widen Scope or retry outside containment.", Cause: runErr}
+		result.Failure = &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: output.Status, Next: "The command did not start. Report the concrete setup blocker; do not retry without the required file protection.", Cause: runErr}
 		if runErr != nil {
 			result.Failure.Detail = op.executor.redact(runErr.Error())
 		}
 	} else if runErr != nil {
 		result.Failure = toolapi.FailureOf(runErr)
 	} else if result.Failed {
-		result.Failure = &toolapi.Failure{Code: toolapi.ProcessFailed, Detail: result.Summary, Next: "Inspect the exact check output, fix its cause and rerun this check."}
+		result.Failure = &toolapi.Failure{Code: toolapi.ProcessFailed, Detail: result.Summary, Next: "Interpret stdout, stderr and the exit code for this command. grep/rg exit 1 means no matches. If this is the requested observation, report it; otherwise correct the cause and retry only the needed work."}
 	}
 	return result, runErr
 }

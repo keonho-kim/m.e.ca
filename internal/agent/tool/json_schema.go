@@ -9,7 +9,10 @@ func (d Definition) JSONSchema() map[string]any {
 	required := []string{}
 	for _, p := range d.Parameters {
 		value := map[string]any{"type": "string", "description": p.Description}
-		if p.Kind == TextList {
+		if p.Kind == ObjectList {
+			value["type"], value["minItems"], value["maxItems"] = "array", 1, p.Max
+			value["items"] = (Definition{Parameters: p.Fields}).JSONSchema()
+		} else if p.Kind == TextList {
 			value["type"] = "array"
 			value["minItems"] = 1
 			value["maxItems"] = p.Max
@@ -25,9 +28,6 @@ func (d Definition) JSONSchema() map[string]any {
 				value["minLength"] = 1
 			}
 		}
-		if p.Kind == LineAnchor {
-			value["pattern"] = "^[1-9][0-9]*#[0-9a-f]{8}$"
-		}
 		if len(p.Values) > 0 {
 			value["enum"] = p.Values
 		}
@@ -36,5 +36,6 @@ func (d Definition) JSONSchema() map[string]any {
 			required = append(required, p.Name)
 		}
 	}
-	return map[string]any{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
+	schema := map[string]any{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
+	return schema
 }

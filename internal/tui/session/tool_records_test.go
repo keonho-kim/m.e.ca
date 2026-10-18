@@ -15,18 +15,18 @@ import (
 
 func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	a := fixture(t)
-	call := toolapi.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}
+	call := toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	event := run.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
 	a.receive(notice{Event: &event})
-	if len(a.output.Blocks) != 0 || !strings.Contains(a.status, "read_file") {
+	if len(a.output.Blocks) != 0 || !strings.Contains(a.status, "execute_command") {
 		t.Fatal("start should only show pending call")
 	}
-	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"Content":"one\ntwo","Path":"README.md"}`)
+	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"Stdout":"one\ntwo","ExitCode":0,"Status":"exited"}`)
 	a.receive(notice{Event: &event})
 	if a.status != "" || len(a.output.Blocks) != 1 {
 		t.Fatal("pending call was not replaced by one completion record")
 	}
-	want := "\n  read_file\n\n    경로: README.md\n\n    Output\n    one\n    two\n"
+	want := "\n  execute_command\n\n    명령: cat README.md\n\n    Output\n    stdout\n    one\n    two\n    exit: 0\n"
 	if got := a.output.Blocks[0].Text; got != want {
 		t.Fatalf("tool record=%q; want %q", got, want)
 	}
@@ -39,10 +39,10 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 		t.Fatal("completion state added transcript boilerplate")
 	}
 	a.render()
-	if got := screenLine(a.screen, 2, 80); !strings.HasPrefix(got, "  read_file") {
+	if got := screenLine(a.screen, 2, 80); !strings.HasPrefix(got, "  execute_command") {
 		t.Fatalf("name not indented: %q", got)
 	}
-	if got := screenLine(a.screen, 4, 80); !strings.HasPrefix(got, "    경로:") {
+	if got := screenLine(a.screen, 4, 80); !strings.HasPrefix(got, "    명령:") {
 		t.Fatalf("parameters not indented: %q", got)
 	}
 }
@@ -67,7 +67,7 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 
 func TestToolReadLineNumbersAlignOnScreen(t *testing.T) {
 	a := fixture(t)
-	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "read_file", Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"Content":"1#12345678 | first\n10#12345678 | tenth\n100#12345678 | hundredth"}`)}})
+	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | first\n 10 | tenth\n100 | hundredth\n","ExitCode":0,"Status":"exited"}`)}})
 	for _, width := range []int{80, 32} {
 		a.screen.SetSize(width, 24)
 		a.render()

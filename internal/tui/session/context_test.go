@@ -41,7 +41,7 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	call := toolapi.Call{ID: "earlier-call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}
+	call := toolapi.Call{ID: "earlier-call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	for _, message := range []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"content":"exact runtime output"}`}} {
 		if err := a.opts.Store.AppendMessage(ctx, a.opts.Session.ID, message); err != nil {
 			t.Fatal(err)

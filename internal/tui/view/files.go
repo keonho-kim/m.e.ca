@@ -23,7 +23,7 @@ type FilesDisplay struct {
 	Columns                    []FileColumn
 	Path, Status               string
 	ColumnWidth, SelectedCount int
-	Editor                     input.Editor
+	Input                      input.Window
 	InputFocused               bool
 	BrowserWidth               int
 	Preview                    *FilePreviewDisplay
@@ -53,7 +53,7 @@ func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 	if display.Status != "" {
 		Text(screen, 0, h-2, display.BrowserWidth, display.Status, tcell.StyleDefault)
 	}
-	Input(screen, display.Editor, h-1, display.BrowserWidth, 1)
+	Input(screen, display.Input, h-1, display.BrowserWidth)
 	if display.Preview != nil {
 		FilePreview(screen, *display.Preview, w, h)
 	}

@@ -1,4 +1,4 @@
-// Purpose: Select a frozen visible terminal region without splitting grapheme cells.
+// Purpose: Select visible graphemes and preserve original line boundaries when copying.
 // Pattern: Presentation state with immutable screen snapshot.
 // Usage: Session mouse handlers begin/move/release; rendering overlays and copy reads Text.
 // Related: internal/tui/session/text_selection.go, internal/tui/view/cells.go.
@@ -6,6 +6,7 @@ package selection
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"strings"
 )
 
@@ -16,10 +17,26 @@ type cell struct {
 }
 type point struct{ x, y int }
 type Selection struct {
+	sources                    map[int]textlayout.Fragment
 	cells                      [][]cell
 	width, height, top, bottom int
 	start, end                 point
 	dragging, selected         bool
+}
+
+func (s *Selection) Sources(sources map[int]textlayout.Fragment) {
+	s.sources = make(map[int]textlayout.Fragment, len(sources))
+	for row, source := range sources {
+		s.sources[row] = source
+	}
+}
+
+func (s *Selection) Bounds() (int, int, int, int, bool) {
+	if !s.selected {
+		return 0, 0, 0, 0, false
+	}
+	a, b := s.bounds()
+	return a.x, a.y, b.x, b.y, true
 }
 
 func (s *Selection) Clear()         { *s = Selection{} }
@@ -85,7 +102,7 @@ func (s *Selection) Text() string {
 		return ""
 	}
 	a, b := s.bounds()
-	var lines []string
+	var result strings.Builder
 	for row := a.y; row <= b.y; row++ {
 		left, right := 0, s.width-1
 		if row == a.y {
@@ -94,16 +111,27 @@ func (s *Selection) Text() string {
 		if row == b.y {
 			right = b.x
 		}
-		var line strings.Builder
-		for x := left; x <= right; x++ {
-			line.WriteString(s.cells[row-s.top][x].text)
+		if source, ok := s.sources[row]; ok {
+			start, end := source.Row.Offset(source.Source, left, false), source.Row.Offset(source.Source, right, true)
+			result.WriteString(source.Source[start:end])
+		} else {
+			var line strings.Builder
+			for x := left; x <= right; x++ {
+				line.WriteString(s.cells[row-s.top][x].text)
+			}
+			result.WriteString(strings.TrimRight(line.String(), " "))
 		}
-		lines = append(lines, strings.TrimRight(line.String(), " "))
+		current, currentOK := s.sources[row]
+		next, nextOK := s.sources[row+1]
+		soft := currentOK && nextOK && current.Row.Soft && current.Source == next.Source && current.Row.End == next.Row.Start
+		if row < b.y && !soft {
+			result.WriteByte('\n')
+		}
 	}
-	return strings.Join(lines, "\n")
+	return result.String()
 }
 func (s *Selection) Draw(screen tcell.Screen) {
-	if len(s.cells) == 0 {
+	if !s.selected {
 		return
 	}
 	w, h := screen.Size()
@@ -118,11 +146,9 @@ func (s *Selection) Draw(screen tcell.Screen) {
 				continue
 			}
 			selected := s.selected && (row > a.y || row == a.y && x >= a.x) && (row < b.y || row == b.y && x <= b.x)
-			style := c.style
 			if selected {
-				style = style.Reverse(true)
+				screen.Put(x, row, c.text, c.style.Reverse(true))
 			}
-			screen.Put(x, row, c.text, style)
 		}
 	}
 	screen.HideCursor()

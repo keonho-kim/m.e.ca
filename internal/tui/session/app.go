@@ -9,7 +9,6 @@ import (
 	"errors"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
-	"time"
 )
 
 type Action uint8
@@ -26,36 +25,10 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 	if err = app.restore(); err != nil {
 		return Exit, err
 	}
-	inputEvents := screen.EventQ()
 	screen.EnableMouse(tcell.MouseDragEvents)
 	screen.EnablePaste()
-	for !app.exit {
-		app.render()
-		select {
-		case <-app.ctx.Done():
-			app.exit = true
-		case event := <-inputEvents:
-			switch e := event.(type) {
-			case *tcell.EventKey:
-				app.keyEvent(e)
-			case *tcell.EventResize:
-				app.textSelection.Clear()
-				screen.Sync()
-			case *tcell.EventMouse:
-				app.mouse(e)
-			case *tcell.EventPaste:
-				app.paste = e.Start()
-				app.refreshHints()
-			case *tcell.EventError:
-				return Exit, e
-			}
-		case <-app.elapsedTicks:
-			app.updateElapsed(time.Now())
-		case <-app.compressionTicks:
-			app.advanceCompression()
-		case n := <-app.events:
-			app.receive(n)
-		}
+	if err = app.loop(); err != nil {
+		return Exit, err
 	}
 	if app.newSession && ctx.Err() == nil {
 		return NewSession, nil
@@ -69,6 +42,7 @@ func (a *app) fail(err error) {
 }
 
 func (a *app) requestExit() {
+	a.cancelDirectory()
 	a.closeFilePreview()
 	a.stopElapsed()
 	a.stopCompression()

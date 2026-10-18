@@ -78,7 +78,7 @@ func TestThresholdPublishesSummaryOnly(t *testing.T) {
 	if through != repo.memory.Through {
 		t.Fatal("compaction boundary lost")
 	}
-	if err != nil || memory != summary() {
+	if err != nil || !strings.HasSuffix(memory, summary()) || memory != summary() {
 		t.Fatalf("unexpected compacted context: %s %v", memory, err)
 	}
 }

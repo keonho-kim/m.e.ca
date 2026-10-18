@@ -1,6 +1,6 @@
 // Purpose: Persist cumulative conversation tokens and immutable compaction revisions without deleting original history.
 // Pattern: Repository.
-// Usage: Implements the compaction repository used by the single session worker.
+// Usage: Each session owns its compaction revisions and token boundaries.
 // Related: internal/agent/compact/types.go, internal/storage/sqlite/memory_sources.go, internal/storage/sqlite/schema.go.
 package sqlite
 

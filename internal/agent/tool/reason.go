@@ -1,7 +1,7 @@
 // Purpose: Own the shared free-form reason contract for native intent and internal review requests.
 // Pattern: Pure boundary policy.
 // Usage: Tool parsing, grounding and review parsers call CheckReason without truncating source values.
-// Related: internal/agent/tool/intent.go, internal/agent/grounding/record.go, internal/agent/conclave/verdict.go.
+// Related: internal/agent/tool/intent.go, internal/agent/grounding/record.go, internal/agent/tool/execution.go.
 package tool
 
 import (

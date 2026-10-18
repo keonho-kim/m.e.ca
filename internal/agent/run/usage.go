@@ -6,8 +6,10 @@ package run
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"time"
 )
@@ -20,6 +22,11 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	var usage *modelapi.TokenUsage
 	var rate *float64
 	started := time.Now()
+	role := inference.Agent
+	if !account {
+		role = inference.Compaction
+	}
+	generation := Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
 	if err := s.emit(Event{Kind: "generation_started"}); err != nil {
 		return err
 	}
@@ -28,7 +35,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	flush := func() error {
 		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		err := s.recordUsage(flushCtx, usage, rate)
+		generation.ElapsedMillis = time.Since(started).Milliseconds()
+		err := s.recordUsage(flushCtx, usage, rate, generation)
 		if account && (usage != nil || received) {
 			err = errors.Join(err, s.countRequest(flushCtx, request, usage, outputBytes))
 		}
@@ -43,16 +51,16 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 			if err := flush(); err != nil {
 				return err
 			}
-			if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-				return fmt.Errorf("model call budget exhausted before provider retry: %s", s.runner.Redact(event.Retry.Reason))
+			if !s.modelCall() {
+				return fmt.Errorf("%w before provider retry: %s", errModelBudget, s.runner.Redact(event.Retry.Reason))
 			}
-			s.usage.ModelCalls++
-			s.checkpoint.ModelCalls = s.usage.ModelCalls
+			s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 			message := fmt.Sprintf("Provider retry %d/%d: %s", event.Retry.Attempt, event.Retry.MaxAttempts, s.runner.Redact(event.Retry.Reason))
 			if err := s.emit(Event{Kind: "retry", Text: message}); err != nil {
 				return err
 			}
 			started = time.Now()
+			generation.Attempt++
 			if err := s.emit(Event{Kind: "generation_started"}); err != nil {
 				return err
 			}
@@ -81,14 +89,15 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	return errors.Join(err, flush())
 }
 
-func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, rate *float64) error {
-	if usage == nil {
-		return nil
-	}
+func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, rate *float64, generation Generation) error {
 	// Preserve the last received count even if the call ends without another report.
 	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	final := Event{Kind: "usage", Usage: usage}
+	final := Event{Kind: "generation_finished", Generation: &generation}
+	if usage != nil {
+		final.Kind = "usage"
+		final.Usage = usage
+	}
 	if saveErr := s.runner.Journal.RecordEvent(flushCtx, s.runner.Session, final); saveErr != nil {
 		return errors.Join(errRuntimeRecord, saveErr)
 	}

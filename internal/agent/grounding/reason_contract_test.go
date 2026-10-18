@@ -14,7 +14,7 @@ import (
 func TestLongReasonPreservesMultilineSource(t *testing.T) {
 	reason := strings.Repeat("문맥을 확인합니다. ", 500) + "\n다음 작업의 근거입니다."
 	body, _ := json.Marshal(map[string]string{"path": "a", "reason": reason})
-	call, text, err := tool.ExtractIntent(tool.Call{ID: "c", Name: "read_file", Arguments: body})
+	call, text, err := tool.ExtractIntent(tool.Call{ID: "c", Name: "inspect_fixture", Arguments: body})
 	if err != nil {
 		t.Fatal(err)
 	}

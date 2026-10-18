@@ -53,7 +53,7 @@ func TestUnavailableSandboxDoesNotCreateVerificationObligation(t *testing.T) {
 	j := &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "check", approve, emit)
-	if err != nil || result.Status != Stopped {
+	if err != nil || result.Status != Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 

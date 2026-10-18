@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-// Purpose: Verify native sandbox execution allows project work and denies outside reads and writes.
+// Purpose: Verify native sandbox execution allows project work and permits ordinary reads and denies outside writes and protected reads.
 // Pattern: Native process isolation integration test.
 // Usage: go test ./internal/tools/local/process/sandbox on supported Linux or macOS hosts.
 // Related: internal/tools/local/process/sandbox/darwin.go.
@@ -45,15 +45,15 @@ func TestProjectFilesystemIsolation(t *testing.T) {
 		denied  bool
 	}{
 		{"printf inside > result; test -f result", false},
-		{"/bin/cat " + strconv.Quote(secret), true},
+		{"/bin/cat " + strconv.Quote(secret), false},
 		{"printf escaped > " + strconv.Quote(filepath.Join(outside, "escape")), true},
-		{"/bin/cat linked/secret", true},
+		{"/bin/cat linked/secret", false},
 		{"/bin/cat .v/secret", true},
 		{"printf change > .v/secret", true},
-		{"test -f " + strconv.Quote(secret), true},
+		{"test -f " + strconv.Quote(secret), false},
 	} {
 		t.Run(tc.command, func(t *testing.T) {
-			launch, err := Prepare(context.Background(), project, outside, private, tc.command)
+			launch, err := prepareTest(context.Background(), project, outside, private, tc.command)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +82,7 @@ func TestProjectFilesystemIsolation(t *testing.T) {
 			if setupErr := launch.SetupError(); setupErr != nil {
 				t.Fatal(setupErr)
 			}
-			if (err != nil) != tc.denied || strings.Contains(output.String(), "outside-secret") {
+			if (err != nil) != tc.denied || tc.denied && strings.Contains(output.String(), "outside-secret") {
 				t.Fatalf("output=%q err=%v", output.String(), err)
 			}
 		})

@@ -60,7 +60,7 @@ func TestCommandHintsIgnoreTextArgumentsAndPaste(t *testing.T) {
 		}
 	}
 	a := fixture(t)
-	a.paste = true
+	a.pasteBoundary(true)
 	typeInput(a, "!")
 	a.render()
 	if strings.Contains(screenLine(a.screen, 16, 80), "!model") {

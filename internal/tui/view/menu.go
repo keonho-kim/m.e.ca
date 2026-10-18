@@ -1,7 +1,7 @@
 // Purpose: Render menu snapshots with inline model identity, connection fields and previews.
 // Pattern: Terminal renderer.
 // Usage: Session supplies MenuDisplay without transferring mutable session state.
-// Related: internal/tui/session/render_menu.go, internal/tui/view/preview.go, internal/tui/view/field.go.
+// Related: internal/tui/session/render_menu.go, internal/tui/view/preview.go, internal/tui/view/input.go.
 package view
 
 import (
@@ -18,8 +18,7 @@ type MenuDisplay struct {
 	Usage                  modelapi.TokenUsage
 	Model, IdentifiedModel string
 	Title, Status, Command string
-	Field                  *input.Editor
-	Secret                 bool
+	Field                  *input.Window
 	Preview                []PreviewLine
 	Choices, Details       []string
 	Selected               int
@@ -47,7 +46,7 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 		return
 	}
 	if display.Field != nil {
-		Field(screen, *display.Field, 2, w, display.Secret)
+		Input(screen, *display.Field, 2, w)
 		bottom := h
 		if display.Status != "" {
 			bottom = max(3, h-1)
@@ -94,7 +93,7 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 	if display.Status != "" && y < h {
 		Text(screen, 0, y, w, display.Status, tcell.StyleDefault)
 	}
-	if strings.HasPrefix(display.Command, "!") {
+	if strings.HasPrefix(display.Command, "!") || strings.HasPrefix(display.Command, ":") {
 		Text(screen, 0, h-1, w, "> "+display.Command, tcell.StyleDefault)
 	}
 }

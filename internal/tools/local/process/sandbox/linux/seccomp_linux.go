@@ -33,7 +33,7 @@ func restrictSyscalls() error {
 		{Code: unix.BPF_JMP | unix.BPF_JSET | unix.BPF_K, K: 0x40000000, Jf: 1}, ret(unix.SECCOMP_RET_KILL_PROCESS),
 	}
 	for _, number := range []uint32{
-		unix.SYS_SOCKET, unix.SYS_CONNECT, unix.SYS_BIND,
+		unix.SYS_LINKAT,
 		unix.SYS_IO_URING_SETUP, unix.SYS_BPF, unix.SYS_PERF_EVENT_OPEN,
 		unix.SYS_PTRACE, unix.SYS_PROCESS_VM_READV, unix.SYS_PROCESS_VM_WRITEV,
 		unix.SYS_MOUNT, unix.SYS_UMOUNT2, unix.SYS_PIVOT_ROOT, unix.SYS_CHROOT,
@@ -43,6 +43,12 @@ func restrictSyscalls() error {
 	} {
 		filter = append(filter, equal(number, 0, 1), deny)
 	}
+	// x86-64 also has the legacy link syscall (arm64 exposes linkat only).
+	if runtime.GOARCH == "amd64" {
+		filter = append(filter, equal(86, 0, 1), deny)
+	}
+	// Internet sockets retain host DNS/downloads. Host control sockets stay unavailable.
+	filter = append(filter, equal(unix.SYS_SOCKET, 0, 5), load(16), equal(unix.AF_INET, 2, 0), equal(unix.AF_INET6, 1, 0), deny, ret(unix.SECCOMP_RET_ALLOW))
 	// FIONBIO (asm-generic/ioctls.h) only changes nonblocking mode on an already
 	// open descriptor. Rust uses it to drain child pipes; all device ioctls stay denied.
 	filter = append(filter, equal(unix.SYS_IOCTL, 0, 4), load(24),

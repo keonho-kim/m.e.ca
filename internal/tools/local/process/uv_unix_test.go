@@ -3,12 +3,13 @@
 // Purpose: Exercise an explicitly supplied real uv binary installed only in a temporary user's local bin.
 // Pattern: Opt-in native tool integration test.
 // Usage: Set V_TEST_UV_BINARY and optionally V_TEST_UV_PYTHON_ROOT to an installed managed Python tree.
-// Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/sandbox/user_runtime.go.
+// Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/sandbox/host_environment.go.
 package process
 
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 	"io"
 	"os"
 	"path/filepath"
@@ -48,11 +49,22 @@ func TestUVPackageProject(t *testing.T) {
 	if err := errors.Join(copyErr, source.Close(), target.Close()); err != nil {
 		t.Fatal(err)
 	}
+	// The fixture supplies an explicit user environment and trusted cache exception.
+	cache := filepath.Join(home, ".cache", "uv")
+	if err := os.MkdirAll(cache, 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	boundary, err := filesystem.New(project, home, private, []string{cache})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requireTestBoundary(t, boundary)
 	// Ensure the test does not accidentally use a globally installed uv.
 	t.Setenv("PATH", bin+":/usr/bin:/bin")
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	output, err := Run(ctx, project, home, private, "command -v uv && uv --version && uv init --package --offline --vcs none example", true)
+	output, err := Run(ctx, boundary, "command -v uv && uv --version && uv init --package --offline --vcs none example")
 	if err != nil || output.ExitCode != 0 {
 		t.Fatalf("%+v %v", output, err)
 	}

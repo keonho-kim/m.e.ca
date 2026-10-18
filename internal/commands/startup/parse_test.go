@@ -29,3 +29,12 @@ func TestStartModes(t *testing.T) {
 		}
 	}
 }
+
+func TestMaintenanceDoesNotRequireProjectDirectory(t *testing.T) {
+	for _, command := range []Action{Install, Uninstall} {
+		mode, err := Parse([]string{string(command)}, "/missing/project")
+		if err != nil || mode.Action != command || mode.Resume || mode.Project != "" {
+			t.Fatalf("%s: %+v %v", command, mode, err)
+		}
+	}
+}

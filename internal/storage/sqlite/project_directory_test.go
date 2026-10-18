@@ -11,6 +11,35 @@ import (
 	"testing"
 )
 
+func TestProjectDirectoryIgnoresUnrelatedRootFiles(t *testing.T) {
+	ctx := context.Background()
+	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	store, err := catalog.Create(ctx, project, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := store.Session().ID
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	sidecar := filepath.Join(catalog.directory, "session_notes.db")
+	if err := os.WriteFile(sidecar, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	conversations, err := catalog.Conversations(ctx, 0, 100)
+	if err != nil || len(conversations) != 1 || conversations[0].ID != id {
+		t.Fatalf("unrelated file blocked project discovery: %+v %v", conversations, err)
+	}
+	content, err := os.ReadFile(sidecar)
+	if err != nil || string(content) != "keep" {
+		t.Fatalf("unrelated file was changed: %q %v", content, err)
+	}
+}
+
 func TestProjectDirectoryIsolation(t *testing.T) {
 	ctx := context.Background()
 	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
@@ -76,51 +105,43 @@ func TestProjectDirectoryIsolation(t *testing.T) {
 	}
 }
 
-func TestProjectDirectoryRejectsMisplacedAndFlatFiles(t *testing.T) {
-	for _, flat := range []bool{false, true} {
-		t.Run(map[bool]string{false: "wrong-project", true: "flat"}[flat], func(t *testing.T) {
-			ctx := context.Background()
-			catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			first, err := catalog.Create(ctx, t.TempDir(), "first")
-			if err != nil {
-				t.Fatal(err)
-			}
-			id, path := first.Session().ID, first.path
-			if err := first.Close(); err != nil {
-				t.Fatal(err)
-			}
-			target := catalog.directory
-			project := t.TempDir()
-			if !flat {
-				target, _, err = catalog.projectDirectory(project, true)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			content, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(filepath.Join(target, id+".db"), content, 0600); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := catalog.Conversations(ctx, 0, 100); err == nil {
-				t.Fatal("misplaced database was listed")
-			}
-			if !flat {
-				if store, err := catalog.Open(ctx, project, id); err == nil {
-					if err := store.Close(); err != nil {
-						t.Error(err)
-					}
-					t.Fatal("opened another project's database")
-				}
-			}
-			if _, err := os.Stat(filepath.Join(target, id+".db")); err != nil {
-				t.Fatal("unsupported file was removed")
-			}
-		})
+func TestProjectDirectoryRejectsMisplacedDatabase(t *testing.T) {
+	ctx := context.Background()
+	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := catalog.Create(ctx, t.TempDir(), "first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, path := first.Session().ID, first.path
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	target, _, err := catalog.projectDirectory(project, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	destination := filepath.Join(target, id+".db")
+	if err := os.WriteFile(destination, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := catalog.Conversations(ctx, 0, 100); err == nil {
+		t.Fatal("misplaced database was listed")
+	}
+	if store, err := catalog.Open(ctx, project, id); err == nil {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+		t.Fatal("opened another project's database")
+	}
+	if _, err := os.Stat(destination); err != nil {
+		t.Fatal("misplaced file was changed")
 	}
 }

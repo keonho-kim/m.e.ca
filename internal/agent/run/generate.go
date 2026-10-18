@@ -1,31 +1,29 @@
 // Purpose: Own one bounded model reply and preserve interrupted output without exposing argument drafts.
 // Pattern: Model I/O boundary.
-// Usage: The main decision loop receives replies under the shared call and time budget.
+// Usage: The main decision loop receives replies under the request call and time budget.
 // Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/tool/arguments.go.
 package run
 
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
 )
 
-func (s *execution) askResponse(ctx context.Context, question string, role inference.Role, maxBytes int) (modelapi.Response, error) {
+func (s *execution) askResponse(ctx context.Context, question string, maxBytes int) (modelapi.Response, error) {
 	if err := ctx.Err(); err != nil {
 		return modelapi.Response{}, err
 	}
-	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-		return modelapi.Response{}, fmt.Errorf("model call budget exhausted")
+	if !s.modelCall() {
+		return modelapi.Response{}, errModelBudget
 	}
-	request, err := s.request(question, role)
+	request, err := s.request(question)
 	if err != nil {
 		return modelapi.Response{}, err
 	}
-	s.usage.ModelCalls++
-	s.checkpoint.ModelCalls = s.usage.ModelCalls
+	s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 	if err := s.emit(Event{Kind: "stream"}); err != nil {
 		return modelapi.Response{}, err
 	}

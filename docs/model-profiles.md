@@ -1,6 +1,6 @@
 # 모델 프로파일
 
-검토 기준일: **2026-10-13**. 모델 특화는 [`internal/provider/profile`](../internal/provider/profile)에서 관리한다. HTTP 어댑터는 이 패키지의 결정만 요청 형식으로 옮긴다. 새 모델은 출시·규모·제어 근거를 검토한 뒤 지원 목록에 추가한다.
+검토 기준일: **2026-10-15**. 모델 특화는 [`internal/provider/profile`](../internal/provider/profile)에서 관리한다. HTTP 어댑터는 이 패키지의 결정만 요청 형식으로 옮긴다. 새 모델은 출시·규모·제어 근거를 검토한 뒤 지원 목록에 추가한다.
 
 ## 대상과 책임
 
@@ -26,6 +26,7 @@
 | `qwen3.6-35b-a3b` | 2026-04-16 | 35B | `enable_thinking` | [카드](https://huggingface.co/Qwen/Qwen3.6-35B-A3B) |
 | `qwen3.6-27b` | 2026-04-22 | 27B | `enable_thinking` | [카드](https://huggingface.co/Qwen/Qwen3.6-27B) |
 | `qwen3.8-27b` | 2026-08-14 | 27B | `enable_thinking` | [카드](https://huggingface.co/Qwen/Qwen3.8-27B) |
+| `qwen3.8-flash-next` | 2026-08-26 | 180B | `enable_thinking` | [원본](https://huggingface.co/Qwen/Qwen3.8-Flash-Next), [FP8](https://huggingface.co/Qwen/Qwen3.8-Flash-Next-FP8) |
 | `ornith-1.0-9b` | 2026-06 | 9B | 미확인 | [카드](https://huggingface.co/ornith-ai/Ornith-1.0-9B) |
 | `ornith-1.0-35b` | 2026-06 | 35B | 미확인 | [카드](https://huggingface.co/ornith-ai/Ornith-1.0-35B) |
 | `ornith-1.5-9b` | 2026-08 | 9B | `enable_thinking` | [카드](https://huggingface.co/ornith-ai/Ornith-1.5-9B), [템플릿](https://huggingface.co/ornith-ai/Ornith-1.5-9B/blob/main/chat_template.jinja) |
@@ -57,6 +58,7 @@ ON/OFF와 강도를 별도로 다룬다. 같은 API 필드가 수락된다고 �
 | 프로파일 | UI·TOML 값 | vLLM 요청 | SGLang 요청 | 근거 |
 | --- | --- | --- | --- | --- |
 | `qwen3.8-27b` | `low`, `medium`, `xhigh` | 최상위 `reasoning_effort` 문자열 | `chat_template_kwargs.reasoning_effort` 문자열 | [카드](https://huggingface.co/Qwen/Qwen3.8-27B), [템플릿](https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/chat_template.jinja) |
+| `qwen3.8-flash-next` | `low`, `medium`, `xhigh` | 최상위 `reasoning_effort` 문자열 | `chat_template_kwargs.reasoning_effort` 문자열 | [원본](https://huggingface.co/Qwen/Qwen3.8-Flash-Next), [FP8](https://huggingface.co/Qwen/Qwen3.8-Flash-Next-FP8) |
 | `nemotron-3-super-120b-a12b` | `low`, `full` | `chat_template_kwargs.low_effort`를 true/false로 지정 | 동일한 문서화된 템플릿 boolean | [카드](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16), [템플릿](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16/blob/main/chat_template.jinja) |
 | `deepseek-v4-flash` | `high`, `max` | 최상위 `reasoning_effort` 문자열 | 미확인 | [카드](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash), [tokenizer](https://github.com/vllm-project/vllm/blob/main/vllm/tokenizers/deepseek_v4.py) |
 | 나머지 등록 모델 | `DEFAULT` | 명시적 강도 없음 | 명시적 강도 없음 | 강도별 의미 미확인: ON/OFF 지원과 구분 |
@@ -86,7 +88,7 @@ profile = "qwen3.8-27b"
 reasoning_effort = "medium"
 ```
 
-- 모든 일반 생성·native 호출 생성·검증·Compaction 요청에 선택한 강도를 전달한다. OFF에서는 `reasoning_effort`와 `low_effort`를 생략해 강도 필드가 Thinking을 다시 켜지 않도록 한다.
+- 일반 생성·native 호출과 보조 역할은 [역할별 Thinking 설정](configuration.md#메인-에이전트와-보조-역할의-추론-설정)에 따라 강도를 전달한다. OFF에서는 `reasoning_effort`와 `low_effort`를 생략해 강도 필드가 Thinking을 다시 켜지 않도록 한다.
 - 모델 출력의 품질·길이·지연만으로 강도의 의미가 적용됐다고 판정하지 않는다. 진단에 성공해도 서버가 옵션을 무시할 수 있으므로 실제 강도별 계산량·수렴은 환경 검증 대상이다.
 - 모든 강도에 동일한 모델 호출·문맥·출력·시간·반복 예산을 적용한다.
 
@@ -94,7 +96,7 @@ reasoning_effort = "medium"
 
 | 모델 | 처리·근거 |
 | --- | --- |
-| GLM-4.5-Air | 2025-07 모델: 출시 범위 밖. 이전 vLLM 자동 특화 제거. [카드](https://huggingface.co/zai-org/GLM-4.5-Air) |
+| GLM-4.5-Air | 2025-07 모델: 출시 범위 밖. [카드](https://huggingface.co/zai-org/GLM-4.5-Air) |
 | GLM-4.7-Flash | 2026-01 모델: 출시 범위 밖. [카드](https://huggingface.co/zai-org/GLM-4.7-Flash) |
 | GLM-5.3-Flash | 전체 320B: 규모 범위 밖. GLM군 파일에 제외 기록을 보존한다. [카드](https://huggingface.co/zai-org/GLM-5.3-Flash-BF16) |
 | Qwen3.5-122B-A10B | 2026-02-24 모델: 크기가 작아도 출시 범위 밖. [이력](https://github.com/QwenLM/Qwen3.8) |
@@ -124,6 +126,8 @@ profile = "ornith-1.5-35b-a3b"
 - 재시작 때 저장된 프로파일·식별 기록을 지원 증거로 재사용하지 않는다. 현재 설정과 서버 메타데이터로 다시 판별하고 연결 진단을 반복한다.
 - 모델의 자기소개나 한 번의 응답은 실제 checkpoint의 증명이 아니다. 진단은 제어 동작만 확인한다. 서버가 같은 별칭을 다른 가중치로 바꿨다면 운영자가 매핑도 다시 검토해야 한다.
 
+Qwen3.8-Flash-Next 원본과 FP8은 qwen3.8-flash-next 프로파일을 공유한다. 등록된 `Qwen3.8-Flash-Next 180B`, `Qwen3.8-Flash-Next-180B`, `Qwen-3.8-180B`와 각 FP8 표기도 명시적 별칭이다. 실제 요청 ID는 선택한 값을 유지한다. 유사한 이름·임의 경로는 원본 근거나 TOML 매핑으로 식별한다. 카드의 규모 표기는 본체 125B + n-gram 51B + MTP 4B이며 [공개 기록](https://github.com/QwenLM/Qwen3.8-Flash-Next)을 근거로 관리한다.
+
 ## Provider별 원본 식별
 
 `!model` 상단은 서빙 별칭 오른쪽에 단일 원본 식별명을 흐린 글씨로 표시한다. 원본 저장소 URL·캐시 경로는 기존 저장소 ID 해석을 사용하고, 복수 대상·미식별·불완전한 결과나 별칭과 동일한 이름은 생략한다.
@@ -143,7 +147,7 @@ profile = "ornith-1.5-35b-a3b"
 - 공식 저장소 ID, 정확한 `https://huggingface.co/<publisher>/<model>` URL, `models--<publisher>--<model>/snapshots/<revision>` 캐시 경로를 카탈로그와 비교한다. 일반 로컬 경로의 basename·GGUF 양자화 접미사·tokenizer·부모 모델만으로 정확한 checkpoint를 추측하지 않는다.
 - LiteLLM의 문서화된 transport 접두어만 분리한다. 여러 upstream이나 auto-router가 확인되면 대상을 모호한 상태로 표시한다. 복수 대상·불완전한 근거에서는 일반 프로파일을 사용하고 특화 매핑은 거부한다. `generic` 명시 또는 단일 모델로 직접 연결하여 해결한다. 원본 근거와 매핑의 충돌도 거부한다.
 - Thinking 광고 정보와 실제 ON/OFF·강도 제어 지원은 별개다. 제어 계약은 식별 후 별도의 지원 검증을 거쳐 활성화한다. Ollama·LM Studio의 native 선택지도 실제 reasoning 분리와 ON/OFF 대조 진단을 거친다. 날짜·전체 300B 제한도 유지한다.
-- 메타데이터는 전체 경과시간 대신 무수신 3분 제한과 최대 3회 시도를 적용한다. 응답은 4MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 미지원·권한 거부·유효하지 않은 응답·무수신은 복구 시도 후 정보 조회 불가로 처리하고 안전하게 정리한 원인을 정보 화면에 표시하며 일반 대화 진단은 계속한다. 사용자 취소는 즉시 전파한다.
+- 메타데이터는 무수신 3분 제한과 최대 3회 시도를 적용한다. 응답은 16MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 미지원·권한 거부·유효하지 않은 응답·무수신은 복구 시도 후 정보 조회 불가로 처리하고 원인을 정보 화면에 표시하며 일반 대화 진단은 계속한다. 사용자 취소는 즉시 전파한다.
 - 조회는 구성한 서버와 같은 origin에서 수행한다. 반환된 URL·파일 경로를 따라가지 않고 `/server_info`·프롬프트·template·Modelfile·인증 필드·upstream API 주소는 수집하지 않는다. 알려진 API 키와 터미널 제어 문자를 포함한 근거는 제외한다. 식별 기록은 SQLite의 모델 선택 메타데이터로만 저장한다.
 
 API 근거: [vLLM 모델 카드](https://docs.vllm.ai/en/stable/api/vllm/entrypoints/openai/models/serving/), [SGLang 모델 정보 구현](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/entrypoints/http_server.py), [Ollama 모델 상세](https://docs.ollama.com/api-reference/show-model-details), [GGUF 출처 메타데이터](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md), [LM Studio 모델 목록](https://lmstudio.ai/docs/developer/rest/list), [LiteLLM 모델 관리](https://docs.litellm.ai/docs/proxy/model_management), [LiteLLM 모델 그룹 구현](https://github.com/BerriAI/litellm/blob/main/litellm/proxy/proxy_server.py).
@@ -169,9 +173,19 @@ Provider별 HTTP 계약은 로컬 모의 서버로 검증했다. 실제 서버 �
 4. ON으로 짧은 계산 요청을 보내 별도 reasoning·답변·완료 이벤트를 확인하고, 같은 질문을 OFF로 보내 추론 출력 억제까지 확인해야 토글을 활성화한다. OFF 미지원 모델은 ON만 검증하며 토글을 제공하지 않는다. 별도 reasoning이 관측되지 않으면 제어는 unavailable이며 Provider 기본 생성 모드를 사용한다.
 5. HTTP 오류·미완료·출력 한도 초과는 진단 실패로 반환한다. 클라이언트는 진단 성공 후에 설치한다. 성공한 클라이언트의 정리 책임만 세션에 이전한다.
 
-LM Studio는 Responses에 매번 전체 역할별 메시지를 보내며 `store: false`와 `truncation: disabled`를 사용한다. 재시도·Compaction에서 원격 이전 응답 ID를 재사용하지 않는다. reasoning 선택지는 native 모델 목록에서 확인한다. native 제어 메타데이터의 조회·검증 실패는 연결 실패로 표시한다. 이는 선택적인 원본 식별 조회와 별개다. 서버 한도·기본 강도·미지원 OFF 처리와 보장 범위는 README의 연결 계약을 따른다. 실제 서버·모델별 호환성은 추가 실기 검증 대상이다.
+LM Studio는 Responses에 매번 전체 역할별 메시지를 보내며 `store: false`와 `truncation: disabled`를 사용한다. 원격 이전 응답 ID를 재사용하지 않는다. reasoning 선택지는 native 모델 목록에서 확인하고 binary OFF/ON은 none/medium 후보를 대조 진단한다. OFF 미지원 모델은 ON과 지원 강도만 제공한다. native 제어 조회·검증 실패는 연결 실패로 표시하며, 선택적인 원본 식별 조회 실패와 구분한다.
 
 연결 진단은 해당 서버에서의 짧은 동작 확인이다. 모든 모델군의 장시간 수렴·속도·정확도·문맥 길이·실제 서버 버전 조합을 검증했다는 의미로 사용하지 않는다. V의 문맥·출력·실행 예산을 모델 카드의 최대값으로 자동 늘리지 않는다.
+
+## 서빙 한도
+
+!model 선택 시 실제 서버 한도를 조회해 저장하고 모델 정보에 표시한다. vLLM·SGLang은 max_model_len, Ollama는 /api/ps의 로드된 컨텍스트, LM Studio는 선택 인스턴스의 config.context_length를 사용한다. LiteLLM은 같은 별칭의 모든 배포가 공개한 입력·출력 한도 각각의 최솟값을 사용한다. 모델의 이론상 최대값과 현재 로드된 길이를 구분한다.
+
+출력은 설정과 확인된 서버 상한을 함께 적용한다. vLLM은 현재 context를 알면 /tokenize에 같은 템플릿·전체 메시지를 보내 남은 공간을 계산한다. 이 값은 용량 확인에만 쓰며 UI usage가 아니다. 다른 Provider의 입력 토큰을 추정하지 않는다.
+
+LM Studio에는 truncation: disabled를 요청한다. Ollama에는 확인된 context를 num_ctx로 지정하지만 공개 Chat API만으로 서버 내부 이력 잘림을 검출·방지할 수는 없다. 미공개 한도·실행 중 서버 설정 변경·라우팅 변경은 서버의 최종 검증 대상이다.
+
+근거: [Ollama 실행 모델](https://docs.ollama.com/api/ps), [LM Studio 모델 정보](https://lmstudio.ai/docs/developer/rest/list), [Responses](https://lmstudio.ai/docs/developer/openai-compat/responses), [vLLM 토큰 계산](https://github.com/vllm-project/vllm/blob/main/vllm/entrypoints/serve/tokenize/protocol.py).
 
 ## 유지보수
 
@@ -186,9 +200,3 @@ LM Studio는 Responses에 매번 전체 역할별 메시지를 보내며 `store:
 V는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio Responses의 `function_call`·`function_call_output`을 사용한다. 일반 답변의 JSON은 실행하지 않는다. 서버가 도구를 지원하지 않거나 파서 설정이 틀리면 native 호출을 생성할 수 없다. 모델 연결 진단은 일반 응답·Thinking 제어를 확인하며 도구 실행 능력을 보증하지 않는다.
 
 vLLM은 자동 도구 선택에 `--enable-auto-tool-choice`와 모델에 맞는 `--tool-call-parser`가 필요하다. Reasoning parser는 별도 설정이며 서빙 모델의 공식 권장 구성을 따른다. 서빙 별칭만으로 파서를 추측하지 않는다. [vLLM Tool Calling](https://docs.vllm.ai/en/latest/features/tool_calling/), [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
-
-## Qwen3.8-Flash-Next 추가 검토 (2026-10-15)
-
-`qwen3.8-flash-next` 프로파일은 원본과 FP8에 공통 적용한다. 공식 공개일은 2026-08-26이며, 모델 카드는 본체 125B + n-gram 51B + MTP 4B를 명시한다. 출처: [공개 기록](https://github.com/QwenLM/Qwen3.8-Flash-Next), [원본 카드](https://huggingface.co/Qwen/Qwen3.8-Flash-Next), [FP8 카드](https://huggingface.co/Qwen/Qwen3.8-Flash-Next-FP8).
-
-두 카드 모두 `enable_thinking` 및 `reasoning_effort`의 `low`, `medium`, `xhigh`를 문서화한다. 역할별 추론 예산은 그대로이며, FP8 요청 ID를 원본 ID로 바꾸지 않는다. 공식 ID의 `Qwen/` 포함·미포함 이름 외에 사용자가 지정한 `Qwen3.8-Flash-Next 180B`, `Qwen3.8-Flash-Next-180B`, `Qwen-3.8-180B` 및 등록된 FP8 표기를 명시적 별칭으로 처리한다. 임의 경로·유사 이름은 추정하지 않으며 서버 원본 메타데이터나 정확한 TOML 매핑을 사용한다. 명시적 별칭은 가중치 검증을 뜻하지 않는다.

@@ -10,6 +10,7 @@ import (
 )
 
 type Limits struct {
+	// MaxIterations limits native call attempts, including rejected arguments.
 	MaxIterations    int `toml:"max_iterations"`
 	MaxModelCalls    int `toml:"max_model_calls"`
 	MaxSeconds       int `toml:"max_seconds"`

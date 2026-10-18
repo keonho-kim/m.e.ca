@@ -50,18 +50,20 @@ func (a *app) chooseEffort() {
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
+	a.setupRevision++
+	revision := a.setupRevision
 	a.busy = true
 	a.startElapsed()
 	a.status = "Checking Thinking effort"
 	a.page = "chat"
 	client, model := a.client, a.selection.Model
-	inferenceSettings := a.opts.Config.Inference
+	inferenceSettings := a.opts.Config.InferenceSettings()
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
 		err := diagnostic.Effort(ctx, client, model, value, &inferenceSettings)
-		a.post(a.ctx, notice{Done: true, Err: err, Effort: &value})
+		a.post(a.ctx, notice{SetupRevision: revision, Done: true, Err: err, Effort: &value})
 	}()
 }
 

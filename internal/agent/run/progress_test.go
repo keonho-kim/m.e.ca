@@ -1,4 +1,4 @@
-// Purpose: Verify file reversals and repeated observations trigger bounded recovery without replaying mutations.
+// Purpose: Verify file reversals and repeated observations trigger bounded termination without replaying mutations.
 // Pattern: Runtime progress state tests.
 // Usage: go test ./internal/agent/run -run TestProgress.
 // Related: internal/agent/run/progress.go, internal/agent/run/action.go.
@@ -22,11 +22,7 @@ func TestProgressFreshVerificationIsNotARepeat(t *testing.T) {
 	if err != nil || result.Status != Answered {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	for _, event := range j.events {
-		if event.Kind == "completion_review" && strings.Contains(event.Text, `"continue"`) {
-			t.Fatal("fresh verification was treated as no progress")
-		}
-	}
+
 }
 
 func TestProgressEmptyRepliesEndWithStoppedReport(t *testing.T) {
@@ -48,13 +44,8 @@ func TestProgressAlternatingCommandChecksAreNotNewChanges(t *testing.T) {
 	if err != nil || result.Status != Stopped {
 		t.Fatalf("%+v %v", result, err)
 	}
-	found := false
-	for _, event := range j.events {
-		if event.Kind == "completion_review" {
-			found = true
-		}
+	if len(g.requests) > 5 || !strings.Contains(result.Text, "progress") {
+		t.Fatal("alternating unchanged commands did not stop")
 	}
-	if !found {
-		t.Fatal("alternating unchanged command results counted as fresh progress")
-	}
+
 }

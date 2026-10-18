@@ -11,7 +11,7 @@ import (
 )
 
 func TestToolEventsCarryCallAndOutput(t *testing.T) {
-	g, e, j := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "README.md"}), "review"}}, &executor{}, &journal{}
+	g, e, j := &generator{replies: []string{nativeCall("inspect_fixture", map[string]any{"path": "README.md"}), "review"}}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	if _, err := r.Run(context.Background(), "inspect", approve, emit); err != nil {
 		t.Fatal(err)
@@ -35,7 +35,7 @@ func TestToolEventsCarryCallAndOutput(t *testing.T) {
 		if err := json.Unmarshal(body, &fields); err != nil {
 			t.Fatal(err)
 		}
-		if fields.Call.Name != "read_file" || fields.Call.Arguments["path"] != "README.md" || string(fields.Output) != `{"ok":true}` {
+		if fields.Call.Name != "inspect_fixture" || fields.Call.Arguments["path"] != "README.md" || string(fields.Output) != `{"ok":true}` {
 			t.Fatalf("tool details missing: %s", body)
 		}
 		found = true

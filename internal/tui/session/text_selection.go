@@ -7,16 +7,17 @@ package session
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"slices"
 	"strings"
 )
 
 func (a *app) selectionMouse(e *tcell.EventMouse) bool {
-	if a.page != "chat" && a.page != "files" {
-		a.textSelection.Clear()
+	if a.page != "chat" && a.page != "files" && a.page != "endpoint" && a.page != "manual" {
+		a.clearSelection()
 		return false
 	}
 	if e.Buttons()&(tcell.WheelUp|tcell.WheelDown) != 0 {
-		a.textSelection.Clear()
+		a.clearSelection()
 		return false
 	}
 	x, y := e.Position()
@@ -24,15 +25,26 @@ func (a *app) selectionMouse(e *tcell.EventMouse) bool {
 		if a.textSelection.Dragging() {
 			a.textSelection.Move(x, y)
 		} else {
+			a.clearSelection()
 			a.selectionPage = a.page
 			_, h := a.screen.Size()
 			a.textSelection.Begin(a.screen, x, y, 1, a.bodyHeight(h)-1)
+			a.textSelection.Sources(a.selectionSources)
+			if a.inputRegion.contains(x, y) {
+				a.selectionInput = a.inputRegion
+			} else if a.page == "chat" {
+				a.selectedTranscript = slices.Clone(a.chatVisible)
+			}
 		}
 		return true
 	}
 	if a.textSelection.Dragging() {
 		a.textSelection.Move(x, y)
 		a.textSelection.Release()
+		if !a.textSelection.Active() && a.selectionInput.contains(x, y) && a.selectionInput.editor.Revision() == a.selectionInput.revision {
+			r := a.selectionInput
+			r.editor.MoveTo(r.window.Offset(x, y-r.y, false))
+		}
 		return true
 	}
 	return false
@@ -52,11 +64,18 @@ func (a *app) selectionKey(e *tcell.EventKey) bool {
 			return true
 		}
 		if e.Key() == tcell.KeyEscape {
-			a.textSelection.Clear()
+			a.clearSelection()
+			a.stopNotice = ""
+			return true
+		}
+		if e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyDelete {
+			a.deleteSelection()
+			a.clearSelection()
+			a.stopNotice = ""
 			return true
 		}
 	}
 	// Editing, navigation or a view switch invalidates screen coordinates.
-	a.textSelection.Clear()
+	a.clearSelection()
 	return false
 }

@@ -26,7 +26,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	})
 	ctx := context.Background()
 	session := s.Session()
-	cp := run.Checkpoint{Work: completion.State{Receipts: []completion.Receipt{{ID: "call_1", Tool: "read_file", Success: true, Output: "Read existing contents"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: run.Running, Phase: "grounding", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
+	cp := run.Checkpoint{Work: completion.State{Receipts: []completion.Receipt{{ID: "call_1", Tool: "inspect_fixture", Success: true, Output: "Read existing contents"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: run.Running, Phase: "grounding", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
 	if err = s.RecordEvent(ctx, session.ID, run.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}

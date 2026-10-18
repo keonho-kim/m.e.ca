@@ -27,7 +27,7 @@ func TestRuntimeNestedMountIsolation(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(project, "input"), []byte("one\ntwo\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	launch, err := Prepare(context.Background(), project, home, private, "wc -l input && if test -r /usr/lib/v-wsl-test/secret || test -r /usr/lib/v-wsl-test/nested/secret; then echo exposed; exit 9; fi")
+	launch, err := prepareTest(context.Background(), project, home, private, "wc -l input && if test -r /usr/lib/v-wsl-test/secret || test -r /usr/lib/v-wsl-test/nested/secret; then echo exposed; exit 9; fi")
 	if err != nil {
 		t.Fatal(err)
 	}

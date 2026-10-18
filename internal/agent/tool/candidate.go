@@ -1,12 +1,11 @@
 // Purpose: Describe an immutable prepared file-change candidate bound to one native call.
 // Pattern: Tool trust-boundary value.
-// Usage: Preparation supplies Candidate through Approval; Conclave reviews it before approval.
-// Related: internal/tools/local/review.go, internal/agent/conclave/review.go.
+// Usage: Preparation supplies Candidate through Approval; runtime validates it before user approval.
+// Related: internal/tools/local/approval_candidate.go, internal/agent/run/prepare_execution.go.
 package tool
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 )
 
@@ -55,11 +54,4 @@ func (c Candidate) Lines() int {
 		total += file.Added + file.Deleted
 	}
 	return total
-}
-func (c Candidate) Digest() (string, error) {
-	body, err := json.Marshal(c)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", sha256.Sum256(body)), nil
 }

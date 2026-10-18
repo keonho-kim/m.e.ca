@@ -1,4 +1,4 @@
-// Purpose: Define one serial execution worker dependencies, budget usage and result.
+// Purpose: Define one main-agent request, its dependencies, budget usage and result.
 // Pattern: Run use case contracts.
 // Usage: Session composition supplies Runner dependencies before Run.
 // Related: internal/agent/run/run.go, internal/agent/run/limits.go.
@@ -13,15 +13,10 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/agent/work"
 	"github.com/keonho-kim/v-code/internal/policy"
-	"time"
 )
 
-// Usage is owned by one serial worker and shared across user requests.
-type Usage struct {
-	Iterations, ModelCalls int
-	deadline               time.Time
-}
 type Runner struct {
 	Inference                *inference.Settings
 	observer                 *monitor.Observer
@@ -33,6 +28,7 @@ type Runner struct {
 	Journal                  Journal
 	Session, Model, Provider string
 	ProjectInstructions      string
+	ProjectRoot              string
 	Prompts                  *prompt.Templates
 	Memory                   *compact.Controller
 
@@ -42,9 +38,10 @@ type Runner struct {
 	Limits            Limits
 	Redact            func(string) string
 	MaskStream        func(string) string
-	Usage             *Usage
 }
 type Result struct {
+	End            work.End
+	Facts          toolapi.Facts
 	Text           string
 	Status         Status
 	HadToolFailure bool

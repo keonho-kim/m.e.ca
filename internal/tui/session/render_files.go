@@ -10,10 +10,10 @@ import (
 )
 
 func (a *app) renderFiles(w, h int) {
-	if len(a.browser.Columns) == 0 {
-		return
+	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status}
+	if a.directoryLoading {
+		display.Status = "폴더 읽는 중…"
 	}
-	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status, Editor: a.editor}
 	display.BrowserWidth = w
 	if p := a.filePreview; p != nil {
 		x := 0
@@ -26,7 +26,9 @@ func (a *app) renderFiles(w, h int) {
 		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Rows: rows[p.Offset:], Full: p.Full, X: x, Command: a.menuInput.String()}
 		display.ColumnWidth = min(display.ColumnWidth, max(1, display.BrowserWidth-1))
 	}
-	display.Path = a.opts.Vault.Redact(a.browser.Columns[a.browser.Active].Path)
+	if column := a.browser.Current(); column != nil {
+		display.Path = a.opts.Vault.Redact(column.Path)
+	}
 	visible := max(1, display.BrowserWidth/(display.ColumnWidth+1))
 	start := max(0, a.browser.Active-visible+1)
 	for i := start; i < min(len(a.browser.Columns), start+visible); i++ {
@@ -52,9 +54,14 @@ func (a *app) renderFiles(w, h int) {
 		display.Columns = append(display.Columns, value)
 	}
 	commandOpen := !a.browser.Input && fileCommand(a.menuInput.String())
+	editor := &a.editor
 	if commandOpen {
-		display.Editor = a.menuInput
+		editor = &a.menuInput
 	}
+	display.Input = editor.Window(display.BrowserWidth, 1)
 	display.InputFocused = a.browser.Input || commandOpen
+	if a.filePreview == nil {
+		a.inputRegion = inputRegion{editor: editor, window: display.Input, y: h - 1, width: display.BrowserWidth, revision: editor.Revision()}
+	}
 	view.Files(a.screen, display, w, h)
 }

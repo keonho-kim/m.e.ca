@@ -1,7 +1,7 @@
 // Purpose: Distinguish textual tool invocation attempts from user-facing work reports.
 // Pattern: Pure response boundary.
 // Usage: The run owner rejects protocol markup as a final report; it is never executed.
-// Related: internal/agent/run/completion_review.go, internal/agent/run/report.go.
+// Related: internal/agent/run/finish_response.go, internal/agent/run/report.go.
 package response
 
 import (

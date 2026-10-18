@@ -25,6 +25,7 @@ func (r Runner) startMonitor(ctx context.Context) (*monitor.Observer, error) {
 }
 
 func (s *execution) record(ctx context.Context, event Event) (resultErr error) {
+	event.RunID = s.checkpoint.ID
 	defer func() {
 		if resultErr != nil {
 			resultErr = errors.Join(errRuntimeRecord, resultErr)
@@ -49,16 +50,6 @@ func (s *execution) record(ctx context.Context, event Event) (resultErr error) {
 	}
 	switch event.Kind {
 	case "tool_proposed", "approved", "denied", "tool_started", "tool_succeeded", "tool_failed", "tool_interrupted":
-	case "conclave":
-		if event.Conclave == nil {
-			return fmt.Errorf("missing Conclave observation")
-		}
-		record.Kind = "review_rejected"
-		record.Detail = event.Conclave.Feedback()
-		if event.Conclave.Passed {
-			record.Kind = "review_passed"
-			record.Detail = "Candidate passed pre-execution review: " + event.Conclave.CandidateDigest
-		}
 	case "run_checkpoint":
 		if event.Checkpoint == nil {
 			return nil

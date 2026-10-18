@@ -20,14 +20,14 @@ type Input struct {
 }
 
 func Build(input Input) (modelapi.Request, error) {
-	system := input.System
+	system := input.Redact(input.System)
 	messages := []modelapi.Message{{Role: "system", Content: system}}
 	if input.Memory != "" {
-		memory, err := json.Marshal(input.Memory)
+		memory, err := json.Marshal(input.Redact(input.Memory))
 		if err != nil {
 			return modelapi.Request{}, err
 		}
-		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work:\n" + string(memory)})
+		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work (later observations below supersede this summary):\n" + string(memory)})
 	}
 	paired := pairedTools(input.Messages)
 	for index, message := range input.Messages {
@@ -41,7 +41,10 @@ func Build(input Input) (modelapi.Request, error) {
 	}
 	// Always end with the active request, even when it also occurs in retained history.
 	// This prevents an older summary or an interrupted run from becoming the current task.
-	decision := "Work observations:\n" + string(input.Facts) + "\n" + input.Question
+	decision := "Work observations:\n" + input.Redact(string(input.Facts))
+	if input.Question != "" {
+		decision += "\n" + input.Redact(input.Question)
+	}
 	if input.Objective != "" {
 		decision += "\n\nCurrent request:\n" + input.Redact(input.Objective)
 	}

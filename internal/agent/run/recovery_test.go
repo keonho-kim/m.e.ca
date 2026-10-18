@@ -68,10 +68,9 @@ func TestRecoveryDiscardsPartialAndAccountsEveryAttempt(t *testing.T) {
 	j := &journal{}
 	r := fixture(&generator{}, &executor{}, j)
 	r.Generator = recoveryGenerator{}
-	r.Usage = &Usage{}
 	result, err := r.Run(context.Background(), "hello", approve, emit)
-	if err != nil || result.Text != "recovered" || r.Usage.ModelCalls != 2 {
-		t.Fatalf("result=%+v calls=%d err=%v", result, r.Usage.ModelCalls, err)
+	if err != nil || result.Text != "recovered" || recordedModelCalls(j) != 2 {
+		t.Fatalf("result=%+v calls=%d err=%v", result, recordedModelCalls(j), err)
 	}
 	var input, output int64
 	for _, event := range j.events {

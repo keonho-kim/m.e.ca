@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 type validatedCall struct {
@@ -44,7 +43,7 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 	if err != nil {
 		hint := "Correct only the invalid argument; no operation was executed."
 		if call.Name == "edit_file" {
-			hint = "Use anchors from an already completed read_file; a read in this batch cannot supply them. Put source text only in new_text, without line/hash display labels."
+			hint = "Use edits:[{old_text,new_text}] from completed reads of the unchanged original. old_text must match once; a read in this batch cannot supply source for its dependent edit."
 		}
 		return validatedCall{}, fmt.Errorf("Argument validation failed: %s. %s", err, hint)
 	}
@@ -54,14 +53,4 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 
 func callSignature(call toolapi.Call) [32]byte {
 	return sha256.Sum256(append([]byte(call.Name+"\n"), call.Arguments...))
-}
-func (s *execution) checkRepeated(v validatedCall) error {
-	signature := callSignature(v.call)
-	if revision, exists := s.commands[signature]; v.definition.Effect == policy.Command && exists && revision == s.checkpoint.ChangeRevision {
-		return fmt.Errorf("Repeated identical command blocked without an intervening operation. Reuse its recorded output or choose a different action.")
-	}
-	if v.definition.Effect == policy.Change && s.mutations[signature] {
-		return fmt.Errorf("Repeated identical side-effect proposal blocked. Inspect current state and narrow or change the operation; previous execution must not be replayed.")
-	}
-	return nil
 }

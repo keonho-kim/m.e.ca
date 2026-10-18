@@ -15,10 +15,11 @@ const (
 	TextList    ParameterKind = "text_list"
 	LiteralPath ParameterKind = "literal_path"
 	Integer     ParameterKind = "integer"
-	LineAnchor  ParameterKind = "line_anchor"
+	ObjectList  ParameterKind = "object_list"
 )
 
 type Parameter struct {
+	Fields               []Parameter
 	Values               []string
 	Name, Description    string
 	Kind                 ParameterKind

@@ -27,19 +27,12 @@ type capacityGenerator struct {
 }
 
 func (g *capacityGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if handled, err := completionFixture(r, emit); handled {
-		return err
-	}
 	if strings.HasPrefix(r.Messages[0].Content, "# Summarize work for continuation") {
 		g.summaries++
 		if strings.Contains(r.Messages[1].Content, `"ActiveRequest":"Read a"`) {
 			g.activeRequest = "Read a"
 		}
-		var text strings.Builder
-		for _, section := range []string{"Requests", "Run history", "Steps and changed files", "Verification", "Decisions and constraints", "Pending work and blockers", "Continuation"} {
-			text.WriteString("## " + section + "\n- The requested file was read; report the observation.\n")
-		}
-		return emit(modelapi.Event{Delta: text.String(), Done: true})
+		return emit(modelapi.Event{Delta: "- Request: Read a.\n- Result: The file was observed.\n- Next: Report the observation.", Done: true})
 	}
 	if len(g.base.requests) == 1 && !g.failed {
 		g.failed = true
@@ -81,14 +74,13 @@ func (s *capacityStore) ContextMessages(_ context.Context, _ string, after int64
 }
 
 func TestCapacityCompactionDoesNotReplayRead(t *testing.T) {
-	base := &generator{replies: []string{nativeCall("read_file", map[string]any{"path": "a"}), "Observed the file"}}
+	base := &generator{replies: []string{nativeCall("inspect_fixture", map[string]any{"path": "a"}), "Observed the file"}}
 	g := &capacityGenerator{base: base}
 	e := &executor{}
 	store := &capacityStore{journal: journal{messages: []modelapi.Message{{Role: "user", Content: "Old request: implement a different project"}}}}
 	r := fixture(base, e, &store.journal)
 	r.Generator = g
 	r.Journal = store
-	r.Usage = &Usage{}
 	r.Memory = &compact.Controller{Repository: store, Session: r.Session, Model: r.Model, Prompt: prompt.Defaults().Compaction, Settings: compact.Defaults(), Redact: r.Redact}
 	result, err := r.Run(context.Background(), "Read a", approve, emit)
 	if g.activeRequest != "Read a" {
@@ -98,7 +90,7 @@ func TestCapacityCompactionDoesNotReplayRead(t *testing.T) {
 	if !strings.HasSuffix(last[len(last)-1].Content, "Read a") {
 		t.Fatal("current request missing after compaction")
 	}
-	if err != nil || result.Status != Answered || e.executed != 1 || g.summaries != 1 || r.Usage.ModelCalls != 5 {
-		t.Fatalf("result=%+v executions=%d summaries=%d calls=%d err=%v", result, e.executed, g.summaries, r.Usage.ModelCalls, err)
+	if err != nil || result.Status != Answered || e.executed != 1 || g.summaries != 1 || recordedModelCalls(&store.journal) != 4 {
+		t.Fatalf("result=%+v executions=%d summaries=%d calls=%d err=%v", result, e.executed, g.summaries, recordedModelCalls(&store.journal), err)
 	}
 }

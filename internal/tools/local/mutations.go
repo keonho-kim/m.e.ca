@@ -1,6 +1,6 @@
 // Purpose: Apply prepared file mutations and return their exact changed-file metadata.
 // Pattern: Filesystem mutation Adapter.
-// Usage: Prepared create, write, edit, move and delete operations call mutate.
+// Usage: Prepared write, edit and move operations call mutate.
 // Related: internal/tools/local/prepare.go, internal/tools/local/dispatch.go.
 package local
 
@@ -23,12 +23,8 @@ func (op *operation) mutate() (toolapi.Result, error) {
 		if err := fileops.Write(op.source.root, op.source.relative, op.replacement, mode); err != nil {
 			return toolapi.Result{}, err
 		}
-	case "delete_file":
-		if err := op.source.root.Remove(op.source.relative); err != nil {
-			return toolapi.Result{}, err
-		}
 	case "move_file":
-		current, err := op.executor.resolve(op.settings.Scope, op.input.Destination)
+		current, err := op.executor.writeTarget(op.settings.Scope, op.input.Destination)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
@@ -39,7 +35,7 @@ func (op *operation) mutate() (toolapi.Result, error) {
 		if current.absolute != op.destination.absolute || !sameVersion(op.destinationVersion, version) {
 			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "destination changed after preparation", Next: "Inspect the destination and prepare a new move."}
 		}
-		if err := op.source.root.Rename(op.source.relative, op.destination.relative); err != nil {
+		if err := moveTargets(op.source, op.destination); err != nil {
 			return toolapi.Result{}, err
 		}
 	default:
@@ -56,22 +52,20 @@ func (op *operation) mutate() (toolapi.Result, error) {
 			action = "Created file"
 		}
 		summary = fmt.Sprintf("%s %s (%d bytes)", action, op.source.absolute, bytes)
-	case "delete_file":
-		summary = "Deleted " + op.source.absolute
 	case "move_file":
 		summary = "Moved " + op.source.absolute + " to " + op.destination.absolute
 	}
 	result, err := resultfmt.Encode(struct {
-		Action    string              `json:"action"`
-		Path      string              `json:"path"`
-		Changed   bool                `json:"changed"`
-		SizeBytes *int                `json:"size_bytes,omitempty"`
-		Lines     *toolapi.LineChange `json:"lines,omitempty"`
-	}{op.spec.name, op.source.absolute, true, size, op.editSpan}, summary)
+		Action    string               `json:"action"`
+		Path      string               `json:"path"`
+		Changed   bool                 `json:"changed"`
+		SizeBytes *int                 `json:"size_bytes,omitempty"`
+		Lines     []toolapi.LineChange `json:"lines,omitempty"`
+	}{op.spec.name, op.source.absolute, true, size, op.editSpans}, summary)
 	if err != nil {
 		return result, err
 	}
-	change := toolapi.FileChange{Action: op.spec.name, Path: op.source.absolute, Lines: op.editSpan}
+	change := toolapi.FileChange{Action: op.spec.name, Path: op.source.absolute, Lines: op.editSpans}
 	if op.spec.name == "move_file" {
 		change.Destination = op.destination.absolute
 	}

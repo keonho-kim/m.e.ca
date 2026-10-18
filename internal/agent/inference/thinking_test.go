@@ -12,11 +12,11 @@ import (
 func TestRoleThinkingHonorsConfirmedSupport(t *testing.T) {
 	on := true
 	original := modelapi.Request{Thinking: &on, ReasoningEffort: "high"}
-	p := Defaults().Conclave
+	p := Defaults().Compaction
 	for _, supported := range []bool{false, true} {
 		got := p.ApplyThinking(original, supported)
 		if supported && (*got.Thinking || got.ReasoningEffort != "") {
-			t.Fatal("review did not disable supported Thinking")
+			t.Fatal("compaction did not disable supported Thinking")
 		}
 		if !supported && (!*got.Thinking || got.ReasoningEffort != "high") {
 			t.Fatal("unsupported OFF changed selection")

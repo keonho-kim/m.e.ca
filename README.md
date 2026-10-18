@@ -13,10 +13,10 @@ Go · Linux / macOS · amd64 / arm64
 V는 터미널에서 코드를 읽고, 수정하고, 검증하는 에이전트입니다. 실행 파일은 `v` 하나이며, 변경 내용을 확인하고 승인하면서 작업할 수 있습니다.
 
 - **모델 선택** — Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenAI 호환 서버 연결.
-- **변경 검토** — 줄 단위 diff와 사용자 승인, 별도로 설정하는 파일 접근 범위.
-- **작업 종료** — 별도 종료 Conclave가 요청 명세와 실제 결과를 대조해 종료 판단. 정체·예산 중단 시에도 수행 결과와 미완료 사항을 보고.
+- **변경 검토** — 줄 단위 diff 표시와 Permission에 따른 사용자 승인.
+- **직접 작업과 종료** — 메인 에이전트가 파일·셸 도구로 직접 수행하고 실제 결과를 확인. 정체·예산 중단 시에도 수행 결과와 미완료 사항을 보고.
 - **작업 이어가기** — 로컬 세션 저장과 대화 압축, `v resume`으로 이전 작업 재개.
-- **키보드 중심 UI** — 스트리밍 응답, `@` 파일 참조, `!` 명령 검색과 문맥별 키 안내.
+- **키보드 중심 UI** — 스트리밍 응답, `!dir` 파일 참조, `!` 명령 검색과 문맥별 키 안내.
 
 ## 직접 빌드하기
 
@@ -25,50 +25,51 @@ V는 터미널에서 코드를 읽고, 수정하고, 검증하는 에이전트�
 ```sh
 git clone https://github.com/keonho-kim/v-code.git
 cd v-code
-go mod download
 ```
 
-이후 명령은 저장소 루트에서 실행합니다. 비공개 저장소라면 GitHub 접근 권한이 필요합니다.
+이후 명령은 저장소 루트에서 실행합니다.
 
-### 빌드 — Linux / macOS
+### 설치 — Linux / macOS
 
 ```sh
-mkdir -p bin
-CGO_ENABLED=0 go build -trimpath -o bin/v ./cmd/v
+./install.sh
 ```
 
-현재 OS·CPU에 맞는 `bin/v`가 생성됩니다.
+현재 OS·CPU에 맞춰 빌드하고 `~/.local/bin/v`에 설치합니다. `~/.v`와 기본 설정·프롬프트를 생성하고, 필요한 PATH 등록을 zsh·bash·sh 설정에 추가합니다. 기존 설정은 유지합니다. 새 터미널에서 `v`를 사용할 수 있으며, 현재 터미널에는 설치 완료 메시지의 명령으로 반영합니다.
+
+### 빌드만 하기
+
+```sh
+go build -trimpath -o bin/v ./cmd/v
+```
+
+`go build`는 컴파일만 합니다. 초기화·설치·PATH 등록은 `./install.sh` 또는 빌드한 바이너리의 `./bin/v install`로 실행합니다.
 
 ### 실행
 
-대화형 터미널에서 실행합니다. 빌드한 바이너리는 독립 실행 파일입니다.
-
 ```sh
-./bin/v                   # 현재 프로젝트에서 시작
-./bin/v /path/to/project  # 지정한 프로젝트에서 시작
-./bin/v resume            # 이전 대화를 선택해 이어가기
+v                   # 현재 프로젝트에서 시작
+v /path/to/project  # 지정한 프로젝트에서 시작
+v resume            # 이전 대화를 선택해 이어가기
 ```
 
-<details>
-<summary><strong>어디서든 v로 실행하기</strong></summary>
+### 완전히 삭제하기
 
 ```sh
-mkdir -p ~/.local/bin
-install -m 755 bin/v ~/.local/bin/v
-export PATH="$HOME/.local/bin:$PATH"
+v uninstall
 ```
 
-새 터미널에서도 사용하려면 셸 설정 파일에 `~/.local/bin`을 PATH로 추가합니다.
-
-</details>
+설치된 `~/.local/bin/v`, V가 추가한 PATH 블록, `~/.v` 전체(설정·프롬프트·대화·로그)와 V가 저장한 OS 인증정보를 삭제합니다. 실행 중인 V를 모두 종료한 뒤 수행합니다. 기존 셸 설정과 사용자 프로젝트는 유지하며, 삭제에 실패하면 원인을 반환합니다. 소스 저장소와 공용 Go·패키지 관리자 캐시는 삭제하지 않습니다.
 
 ## 사용법
+
+파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 생성·본문 수정·이동은 Permission·파일 버전 검사를 거치는 전용 파일 도구를 사용합니다.
 
 모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-profiles.md#native-tool-calling)
 
 1. `!model`에서 Provider·주소·모델을 선택합니다. 인증이 필요한 서버는 API Key도 입력합니다.
-2. 자연어로 작업을 요청합니다. `@파일명` 또는 `@경로`로 파일을 참조할 수 있습니다.
-3. 제안된 변경을 diff로 확인하고 승인합니다. 분석만 원하면 쓰지 말고 분석만 해 달라고 요청합니다.
+2. 자연어로 작업을 요청합니다. 참조할 파일은 `!dir`에서 선택할 수 있습니다.
+3. 변경을 diff로 확인합니다. 기본값은 자동 승인이며, `!permission`에서 `approve`를 선택하면 실행 전에 승인합니다. 분석만 원하면 파일을 바꾸지 말고 분석해 달라고 요청합니다.
 
 | 명령 | 기능 |
 | --- | --- |
@@ -80,9 +81,9 @@ export PATH="$HOME/.local/bin:$PATH"
 
 `!`를 입력하면 명령 후보가 나타납니다. 파일 탐색·선택·미리보기는 `!dir`을 사용합니다. `↑`·`↓`로 이동하고 `Enter`로 선택합니다. `Ctrl+C`로도 종료할 수 있으며, 모델·Thinking·승인 상태는 하단 키맵 바로 윗줄에, 주요 키는 맨 아랫줄에 고정됩니다.
 
-Linux 셸 격리는 별도 설치 과정 없이 바이너리에 포함된 커널 실행기를 사용합니다. 커널 기능이나 호스트 정책 때문에 격리할 수 없으면 프로젝트 셸만 차단하며, 대화와 파일 도구는 계속 사용할 수 있습니다. [Linux 실행 조건 →](docs/usage.md#linux의-프로젝트-셸)
+기본값은 **자동 승인 · Thinking OFF**입니다. 파일 쓰기·삭제는 프로젝트와 명시한 추가 쓰기 경로 안에서만 허용합니다. 셸은 기존 HOME·PATH·개발 도구를 재사용하고 Linux·macOS의 OS 파일 경계를 적용합니다. 외부 캐시에 쓰기가 필요하면 [추가 경로 설정](docs/configuration.md#추가-쓰기-경로)을 사용합니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장하며 마지막 모델 연결은 새 세션에서 재사용합니다.
 
-기본값은 **전체 시스템 범위 · 자동 승인 · Thinking OFF**입니다. 실행은 현재 OS 계정의 권한과 Permission 설정을 따릅니다. 도구 호출에 별도 접근 모드나 승인 인자를 넣지 않습니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장합니다. 마지막으로 선택한 모델 연결은 새 세션에서도 재사용하며, 기존 세션의 선택을 우선합니다.
+입력창의 `↑↓`는 줄 이동, `Ctrl/Cmd+↑↓`는 이전 입력 탐색입니다. 드래그 선택 후 `Ctrl/Cmd+C`로 복사하고, 입력창 선택은 Backspace로 삭제합니다. `F1`에서 현재 화면의 전체 키 안내를 확인합니다.
 
 [자세한 사용법과 키맵 →](docs/usage.md) · [모델 식별·프로파일 →](docs/model-profiles.md)
 
@@ -98,15 +99,26 @@ Linux 셸 격리는 별도 설치 과정 없이 바이너리에 포함된 커널
 └── logs/
 ```
 
-추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 작업·코드 생성 `0.7`, Conclave 심사 `0.4`, 요약·내부 분석 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트가 유효 context length의 `75%`, Compaction이 `8,192`, 나머지 역할이 `12,800`입니다.
+추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 메인 에이전트 `1.0`, 요약·연결 진단 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트가 유효 context length의 `75%`, Compaction이 `8,192`, 연결 진단이 `12,800`입니다.
 
 ```toml
-[inference.agent]
-temperature = 0.7
+[agent]
+temperature = 1.0
 max_output_tokens = 0 # 유효 context length의 75% 자동 계산
+
+[compaction]
+temperature = 0.2
+max_output_tokens = 8192
+threshold_tokens = 200000
+
+[diagnotics]
+temperature = 0.2
+max_output_tokens = 12800
 ```
 
 [전체 역할별 설정·프롬프트·Compaction →](docs/configuration.md)
+
+세션 저장 형식은 schema 17입니다. 미지원 DB는 원본을 보존하고 오류를 안내합니다. 사용자 프롬프트는 자동으로 덮어쓰지 않습니다. [설정과 프롬프트](docs/configuration.md)를 참고하세요.
 
 ## 개발
 
@@ -123,7 +135,7 @@ go mod verify
 
 Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스페이스 생성 권한이 필요합니다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`로 격리 테스트가 생략되지 않도록 검증합니다. 지원 도구 체인은 Go 1.27.2이며, 변경 시 [개발 규칙](AGENTS.md)을 따릅니다.
 
-실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 격리 정책, SSH·터미널별 표현은 추가 검증 대상입니다. 지원 운영체제는 Linux와 macOS입니다.
+실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 격리 정책, WSL·SSH·터미널별 키 전달과 실제 입력 지연은 추가 검증 대상입니다. 지원 운영체제는 Linux와 macOS입니다.
 
 ## 문서
 
@@ -131,13 +143,10 @@ Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스�
 | --- | --- |
 | [사용 가이드](docs/usage.md) | 모델 연결, 키맵, 승인, 스트림과 오류 복구 |
 | [설정과 대화 보존](docs/configuration.md) | 역할별 인자, 프롬프트, Compaction, 세션 저장 |
-| [에이전트 작동 방식](docs/runtime.md) | 단일 실행 루프, native tool calling, self-grounding, Conclave, 검증 |
+| [에이전트 작동 방식](docs/runtime.md) | 단일 에이전트, native tools, 결과 확인, 종료 |
 | [모델 프로파일](docs/model-profiles.md) | 모델 식별, 서빙 별칭, 모델별 Thinking 제어 |
+| [실행 경계](docs/execution-boundary.md) | 파일 보호, 개발 환경 재사용과 추가 쓰기 경로 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
 
 에이전트 응답은 흑백 Markdown으로 표시하며 물결표 취소선은 사용하지 않습니다. 상세 표시 규칙은 [사용법](docs/usage.md), 재배포 시 포함할 라이선스는 [외부 소프트웨어 고지](THIRD_PARTY_NOTICES.md)를 참고하세요.
-
-일반 시작은 현재 프로젝트의 대화 목록을 표시합니다. 맨 위의 **새 대화** 또는 기존 대화를 ↑/↓로 선택하고 Enter로 엽니다. `v resume`은 모든 프로젝트를 조회합니다. 메모리 압축은 INPUT+OUTPUT 누적 200,000 기준이며 상세한 집계·설정 변경은 [설정 문서](docs/configuration.md)를 참고하세요.
-
-종료 판단과 변경 심사는 별도 책임입니다. [요청 명세·종료 Conclave와 저장 형식 변경](docs/runtime.md#요청-명세작업-기억종료-conclave)을 참고하세요.

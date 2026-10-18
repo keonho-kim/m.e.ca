@@ -16,7 +16,7 @@ import (
 )
 
 func TestUnsupportedSchemaPreserved(t *testing.T) {
-	for _, version := range []int{0, 1, 2, 3, 4, 5, 6, 7, 8} {
+	for _, version := range []int{0, schemaVersion - 1, schemaVersion + 1} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
 			if err != nil {
@@ -63,6 +63,7 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 		})
 	}
 }
+
 func TestConcurrentSessionCreation(t *testing.T) {
 	catalog, err := OpenSessions(filepath.Join(t.TempDir(), "sessions"))
 	if err != nil {

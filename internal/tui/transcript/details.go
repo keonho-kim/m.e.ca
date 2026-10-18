@@ -10,34 +10,16 @@ import (
 )
 
 func (f Formatter) output(event run.Event) string {
-	body := displayOutput(event.Call.Name, event.Output)
+	body := event.Output
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(body, &fields) != nil || fields == nil {
 		return f.resultSummary(event)
 	}
 	text := ""
 	switch event.Call.Name {
-	case "read_file":
-		var content string
-		if json.Unmarshal(fields["Content"], &content) == nil {
-			if content == "" {
-				content = "읽은 내용 없음"
-			}
-			text = indentTool(f.Redact(content))
-			var partial bool
-			for _, key := range []string{"StartPartial", "EndPartial"} {
-				var value bool
-				if json.Unmarshal(fields[key], &value) == nil && value {
-					partial = true
-				}
-			}
-			if partial {
-				text += indentTool("[일부 줄은 부분 읽기 결과]")
-			}
-		}
 	case "execute_command":
-		text = f.processOutput(fields)
-	case "write_file", "edit_file", "delete_file", "create_directory", "move_file":
+		text = f.processOutput(fields) + f.processChanges(event)
+	case "write_file", "edit_file", "create_directory", "move_file":
 		text = f.fileOutput(event, body)
 	}
 	if text == "" {

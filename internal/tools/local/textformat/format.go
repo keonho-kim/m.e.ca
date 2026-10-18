@@ -1,7 +1,7 @@
 // Purpose: Preserve existing EOF and newline conventions before a change candidate is frozen.
 // Pattern: Pure byte transformation with explicit literal override.
-// Usage: File writes and anchored edits call Preserve; reads expose LineEndings metadata.
-// Related: internal/tools/local/candidate.go, internal/tools/local/anchors/edit.go.
+// Usage: File writes and exact-text edits call Preserve; reads expose LineEndings metadata.
+// Related: internal/tools/local/candidate.go, internal/tools/local/textedit/edit.go.
 package textformat
 
 import (

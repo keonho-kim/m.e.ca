@@ -8,29 +8,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/completion"
-	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/agent/work"
 )
 
 type Status string
 
 const (
 	Running     Status = "running"
-	Verified    Status = "verified"
 	Answered    Status = "answered"
 	Stopped     Status = "stopped"
-	Unverified  Status = "unverified"
 	Interrupted Status = "interrupted"
 )
 
 type Checkpoint struct {
-	Work          completion.State `json:"work"`
-	ReportReason  string           `json:"report_reason,omitempty"`
-	LastChange    string           `json:"last_change,omitempty"`
-	Blocker       string           `json:"blocker,omitempty"`
-	PendingReview bool             `json:"pending_review"`
-	Conclave      *conclave.Result `json:"conclave,omitempty"`
+	End          *work.End        `json:"end,omitempty"`
+	Work         completion.State `json:"work"`
+	ReportReason string           `json:"report_reason,omitempty"`
+	LastChange   string           `json:"last_change,omitempty"`
+	Blocker      string           `json:"blocker,omitempty"`
 
 	ChangeRevision int               `json:"change_revision"`
 	Grounding      *grounding.Record `json:"grounding,omitempty"`
@@ -49,13 +46,13 @@ type Checkpoint struct {
 }
 
 func (c Checkpoint) Check() error {
-	if err := checkCompletion(c); err != nil {
-		return err
-	}
-	if c.Conclave != nil {
-		if err := c.Conclave.Check(); err != nil {
+	if c.End != nil {
+		if err := c.End.Check(); err != nil {
 			return err
 		}
+	}
+	if err := checkCompletion(c); err != nil {
+		return err
 	}
 	if len(c.Blocker) > 16*1024*1024 || len(c.LastChange) > 16*1024*1024 {
 		return fmt.Errorf("invalid blocker detail")
@@ -71,16 +68,16 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 16*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || len(c.InstructionsDigest) != 64 {
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || len(c.InstructionsDigest) != 64 {
 		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {
-	case Running, Verified, Answered, Stopped, Interrupted, Unverified:
+	case Running, Answered, Stopped, Interrupted:
 	default:
 		return fmt.Errorf("invalid execution status")
 	}
 	switch c.Phase {
-	case "conclave", "grounding", "decision", "approval", "execution", "observation", "reporting", "completion_review", "finished":
+	case "grounding", "decision", "approval", "execution", "observation", "reporting", "finished":
 	default:
 		return fmt.Errorf("invalid execution phase")
 	}

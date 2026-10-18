@@ -66,7 +66,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 	return records, nil
 }
 
-// Keep useful read/command observations, not JSON envelopes, anchors metadata or write arguments.
+// Keep useful read/command observations, not JSON envelopes or write arguments.
 func toolExcerpt(text string) string {
 	var fields map[string]json.RawMessage
 	if json.Unmarshal([]byte(text), &fields) != nil {

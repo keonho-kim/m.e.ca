@@ -1,4 +1,4 @@
-// Purpose: Verify connection checks accept ordinary answers without invoking the PFC protocol.
+// Purpose: Verify connection checks request ordinary conversation and accept complete answers.
 // Pattern: Generator contract tests.
 // Usage: go test ./internal/provider/diagnostic -run TestChat.
 // Related: internal/provider/diagnostic/check.go, internal/provider/diagnostic/chat.go.
@@ -16,12 +16,8 @@ func TestChatConnectionAcceptsOrdinaryResponse(t *testing.T) {
 	calls := 0
 	generate := generatorFunc(func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
-		for _, message := range request.Messages {
-			for _, forbidden := range []string{"read_file", "AGENTS.md", "ARGUMENT", "PFC"} {
-				if strings.Contains(message.Content, forbidden) {
-					t.Errorf("connection requested tool dialogue: %q", message.Content)
-				}
-			}
+		if len(request.Tools) != 0 || len(request.Messages) != 1 || request.Messages[0].Role != "user" || strings.TrimSpace(request.Messages[0].Content) == "" {
+			t.Errorf("connection must request a plain conversation: %+v", request)
 		}
 		return emit(modelapi.Event{Delta: "\n\n안녕하세요. 무엇을 도와드릴까요?", Done: true, Streaming: true})
 	})

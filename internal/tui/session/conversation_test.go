@@ -103,7 +103,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "inspect file"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "read_file", Arguments: json.RawMessage(`{"path":"README.md"}`)}, Output: json.RawMessage(`{"Content":"file inspected"}`)}); err != nil {
+	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}, Output: json.RawMessage(`{"Stdout":"file inspected","ExitCode":0,"Status":"exited"}`)}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "assistant", Content: "file inspected"}); err != nil {
@@ -113,7 +113,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "read_file", "", "경로: README.md", "", "Output", "file inspected", "", "file inspected", "", ""} {
+	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "execute_command", "", "명령: cat README.md", "", "Output", "stdout: file inspected", "exit: 0", "", "file inspected", "", ""} {
 		if y == 0 {
 			got := screenLine(a.screen, 0, 80)
 			if !strings.HasPrefix(got, "STATUS IDLE") || !strings.HasSuffix(got, text) {

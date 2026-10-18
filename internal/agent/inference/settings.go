@@ -15,20 +15,14 @@ type Parameters struct {
 	MaxOutputTokens int     `toml:"max_output_tokens"`
 }
 type Settings struct {
-	Completion Parameters `toml:"completion"`
-	Agent      Parameters `toml:"agent"`
-
-	Conclave   Parameters `toml:"conclave"`
-	Compaction Parameters `toml:"compaction"`
-	Diagnostic Parameters `toml:"diagnostic"`
+	Agent      Parameters
+	Compaction Parameters
+	Diagnostic Parameters
 }
 
 func Defaults() Settings {
 	return Settings{
-		Completion: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 2048},
-		Agent:      Parameters{Thinking: "inherit", Temperature: 0.7, MaxOutputTokens: 0},
-
-		Conclave:   Parameters{Thinking: "off_if_supported", Temperature: 0.4, MaxOutputTokens: 12800},
+		Agent:      Parameters{Thinking: "inherit", Temperature: 1.0, MaxOutputTokens: 0},
 		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
 		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
 	}
@@ -46,7 +40,7 @@ func (p Parameters) Check() error {
 	return nil
 }
 func (s Settings) Check() error {
-	for _, role := range []Role{Agent, Completion, Conclave, Compaction, Diagnostic} {
+	for _, role := range []Role{Agent, Compaction, Diagnostic} {
 		if _, err := Resolve(&s, role); err != nil {
 			return err
 		}
@@ -62,10 +56,6 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 	switch role {
 	case Agent:
 		p = s.Agent
-	case Completion:
-		p = s.Completion
-	case Conclave:
-		p = s.Conclave
 	case Compaction:
 		p = s.Compaction
 	case Diagnostic:
@@ -74,7 +64,7 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 		return p, fmt.Errorf("unknown inference role %q", role)
 	}
 	if err := p.Check(); err != nil {
-		return p, fmt.Errorf("inference.%s: %w", role, err)
+		return p, fmt.Errorf("%s inference parameters: %w", role, err)
 	}
 	return p, nil
 }

@@ -7,17 +7,32 @@ package run
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/agent/work"
 	"unicode/utf8"
 )
 
 func (event Event) Check() error {
+	if g := event.Generation; g != nil {
+		if event.Kind != "usage" && event.Kind != "generation_finished" || !work.ValidID(g.ID) || g.Attempt < 1 || g.ElapsedMillis < 0 {
+			return fmt.Errorf("invalid generation provenance")
+		}
+		switch g.Role {
+		case inference.Agent, inference.Compaction, inference.Diagnostic:
+		default:
+			return fmt.Errorf("invalid generation role")
+		}
+	}
+	if event.RunID != "" && !work.ValidID(event.RunID) {
+		return fmt.Errorf("invalid run event identity")
+	}
 	if event.ChangePreview != "" {
 		if event.Kind != "tool_succeeded" || event.Call == nil || len(event.ChangePreview) > maxChangePreviewBytes || !utf8.ValidString(event.ChangePreview) {
 			return fmt.Errorf("invalid applied change preview")
 		}
 		switch event.Call.Name {
-		case "write_file", "edit_file", "delete_file":
+		case "write_file", "edit_file":
 		default:
 			return fmt.Errorf("unexpected change preview tool")
 		}
@@ -28,11 +43,6 @@ func (event Event) Check() error {
 	}
 	if event.Monitor != nil {
 		if err := event.Monitor.Check(); err != nil {
-			return err
-		}
-	}
-	if event.Conclave != nil {
-		if err := event.Conclave.Check(); err != nil {
 			return err
 		}
 	}

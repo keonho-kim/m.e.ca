@@ -7,19 +7,20 @@ package run
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
+	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 type Event struct {
+	RunID           string               `json:"run_id,omitempty"`
+	Generation      *Generation          `json:"generation,omitempty"`
 	ChangePreview   string               `json:"change_preview,omitempty"`
 	TokensPerSecond *float64             `json:"-"`
 	Internal        bool                 `json:"internal,omitempty"`
 	Monitor         *monitor.Record      `json:"monitor,omitempty"`
-	Conclave        *conclave.Result     `json:"conclave,omitempty"`
 	Grounding       *grounding.Record    `json:"grounding,omitempty"`
 	Usage           *modelapi.TokenUsage `json:"usage,omitempty"`
 	Call            *toolapi.Call        `json:"call,omitempty"`
@@ -31,6 +32,13 @@ type Event struct {
 	CallID          string               `json:"call_id,omitempty"`
 	Approval        *toolapi.Approval    `json:"approval,omitempty"`
 	Checkpoint      *Checkpoint          `json:"checkpoint,omitempty"`
+}
+
+type Generation struct {
+	ID            string         `json:"id"`
+	Role          inference.Role `json:"role"`
+	Attempt       int            `json:"attempt"`
+	ElapsedMillis int64          `json:"elapsed_millis"`
 }
 type Journal interface {
 	ContextMessages(context.Context, string, int64, int) ([]modelapi.Message, error)

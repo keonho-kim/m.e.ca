@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/conclave"
 	"github.com/keonho-kim/v-code/internal/agent/grounding"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/monitor"
@@ -21,7 +20,7 @@ func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {
 	page := []Record{
 		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "user", Content: "Preserve this exact request"}},
 		{Sequence: 2, Kind: "event", Event: run.Event{Kind: "monitor", Monitor: &monitor.Record{Detail: "duplicate audit"}}},
-		{Sequence: 3, Kind: "event", Event: run.Event{Kind: "conclave", Conclave: &conclave.Result{}}},
+		{Sequence: 3, Kind: "event", Event: run.Event{Kind: "tool_proposed"}},
 		{Sequence: 4, Kind: "event", Event: run.Event{Kind: "self_grounding", Grounding: &grounding.Record{}}},
 		{Sequence: 5, Kind: "event", Event: run.Event{Kind: "tool_failed", Operation: &tool.Operation{Name: "execute_command", Command: "go test ./...", Status: "tool_failed", Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "parser failed"}, Changes: []tool.FileChange{{Action: "edit_file", Path: "a.go"}}}, Output: json.RawMessage(`{"stdout":"raw large log"}`)}},
 		{Sequence: 6, Kind: "message", Message: modelapi.Message{Role: "tool", Content: `{"Content":"important source excerpt","Digest":"irrelevant hash","anchors":["metadata"]}`}},

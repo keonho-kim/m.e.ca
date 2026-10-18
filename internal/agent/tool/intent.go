@@ -10,7 +10,7 @@ import (
 )
 
 func WithIntent(d Definition) Definition {
-	d.Parameters = append(append([]Parameter(nil), d.Parameters...), Parameter{Name: "reason", Description: "Brief reason in English: name the remaining requested outcome or concrete failure this action addresses, grounded in observed results. Reuse completed findings. Prefer concise prose; line breaks are allowed.", Kind: Text, Required: true, MaxBytes: MaxReasonBytes})
+	d.Parameters = append(append([]Parameter(nil), d.Parameters...), Parameter{Name: "reason", Description: "Briefly explain why this action is needed, using the request or an observed result.", Kind: Text, Required: true, MaxBytes: MaxReasonBytes})
 	return d
 }
 func ExtractIntent(call Call) (Call, string, error) {
@@ -23,7 +23,7 @@ func ExtractIntent(call Call) (Call, string, error) {
 	}
 	var reason string
 	if err := json.Unmarshal(fields["reason"], &reason); err != nil {
-		return Call{}, "", fmt.Errorf("reason is required as one short string")
+		return Call{}, "", fmt.Errorf("reason is required as a string")
 	}
 	if err := CheckReason(reason); err != nil {
 		return Call{}, "", err

@@ -19,9 +19,6 @@ type chunkGenerator struct {
 }
 
 func (g *chunkGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if handled, err := completionFixture(r, emit); handled {
-		return err
-	}
 	for i, chunk := range g.chunks {
 		if err := emit(modelapi.Event{Delta: chunk, Streaming: true}); err != nil {
 			return err
