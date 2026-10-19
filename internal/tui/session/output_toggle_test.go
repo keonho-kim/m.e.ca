@@ -39,19 +39,19 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 			a.keyEvent(key)
 			a.render()
 			visible := strings.Join(screenRows(a, 22), "\n")
-			if !a.output.Expanded || !strings.Contains(visible, "detail row") || a.editor.String() != "draft" {
-				t.Fatalf("enhanced=%t restored=%t expanded=%t draft=%q: %s", enhanced, restored, a.output.Expanded, a.editor.String(), visible)
+			if !a.output.Collapsed || strings.Contains(visible, "detail row") || a.editor.String() != "draft" {
+				t.Fatalf("enhanced=%t restored=%t collapsed=%t draft=%q: %s", enhanced, restored, a.output.Collapsed, a.editor.String(), visible)
 			}
-			if keymapLabels(t, a)["^O"] != "출력 접기" {
-				t.Fatal("expanded output advertised the wrong key action")
+			if keymapLabels(t, a)["^O"] != "도구 펴기" {
+				t.Fatal("output advertised the wrong key action")
 			}
 			a.keyEvent(key)
 			a.render()
-			if a.output.Expanded || strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
-				t.Fatal("output did not collapse on the second keypress")
+			if a.output.Collapsed || !strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
+				t.Fatal("output did not expand on the second keypress")
 			}
-			if keymapLabels(t, a)["^O"] != "출력 펴기" {
-				t.Fatal("collapsed output advertised the wrong key action")
+			if keymapLabels(t, a)["^O"] != "도구 접기" {
+				t.Fatal("output advertised the wrong key action")
 			}
 		}
 	}
@@ -61,7 +61,7 @@ func TestOutputToggleDoesNotInterpretPastedText(t *testing.T) {
 	a := fixture(t)
 	a.paste = true
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "o", tcell.ModCtrl, true, tcell.KeyO, 1))
-	if a.output.Expanded || a.stopNotice != "" {
+	if a.output.Collapsed || a.stopNotice != "" {
 		t.Fatal("pasted content executed an output shortcut")
 	}
 }
@@ -81,7 +81,7 @@ func TestOutputToggleHintRequiresOutput(t *testing.T) {
 		t.Fatal("fold hint advertised without any foldable output")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
-	if a.output.Expanded {
+	if a.output.Collapsed {
 		t.Fatal("empty transcript changed the default for future outputs")
 	}
 }

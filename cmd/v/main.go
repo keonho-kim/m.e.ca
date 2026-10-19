@@ -25,12 +25,6 @@ import (
 )
 
 func main() {
-	if handled, err := runSandboxChild(); handled {
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "v: sandbox:", err)
-		}
-		os.Exit(125)
-	}
 	if err := start(); err != nil {
 		fmt.Fprintln(os.Stderr, "v:", err)
 		os.Exit(1)
@@ -64,6 +58,9 @@ func start() (err error) {
 	defer cancel()
 	if mode.Action != "" {
 		return maintenance(ctx, mode.Action, home)
+	}
+	if err := startup.CheckAgentUser(os.Geteuid()); err != nil {
+		return err
 	}
 	root, err := statefs.Open(filepath.Join(home, ".v"))
 	if err != nil {

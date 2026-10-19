@@ -1,4 +1,4 @@
-// Purpose: Own validated filesystem roots and their cleanup for local tools.
+// Purpose: Own project and host filesystem handles and captured-output cleanup for local tools.
 // Pattern: Filesystem Adapter lifecycle.
 // Usage: Composition root creates and closes Executor.
 // Related: internal/tools/local/prepare.go, internal/tools/local/paths.go.
@@ -18,14 +18,13 @@ type Executor struct {
 	projectRoot, systemRoot *os.Root
 	redact                  func(string) string
 	boundary                *filesystem.Boundary
-	writeRoots              map[string]*os.Root
 }
 
-func NewExecutor(project, home, private string, writable []string, redact func(string) string) (*Executor, error) {
+func NewExecutor(project, home, private string, redact func(string) string) (*Executor, error) {
 	if redact == nil {
 		return nil, fmt.Errorf("a secret redactor is required")
 	}
-	boundary, err := filesystem.New(project, home, private, writable)
+	boundary, err := filesystem.New(project, home, private)
 	if err != nil {
 		return nil, err
 	}
@@ -38,17 +37,7 @@ func NewExecutor(project, home, private string, writable []string, redact func(s
 	if err != nil {
 		return nil, errors.Join(err, root.Close())
 	}
-	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, writeRoots: map[string]*os.Root{project: root}}
-	for _, path := range boundary.Writes() {
-		if path == project {
-			continue
-		}
-		handle, err := os.OpenRoot(path)
-		if err != nil {
-			return nil, errors.Join(err, executor.Close())
-		}
-		executor.writeRoots[path] = handle
-	}
+	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary}
 	executor.artifacts, err = os.MkdirTemp("", "v-output-*")
 	if err != nil {
 		return nil, errors.Join(err, executor.Close())
@@ -57,12 +46,9 @@ func NewExecutor(project, home, private string, writable []string, redact func(s
 }
 
 func (executor *Executor) Close() error {
-	var err error
-	for _, root := range executor.writeRoots {
-		err = errors.Join(err, root.Close())
-	}
+	err := errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))
 	}
-	return errors.Join(err, executor.systemRoot.Close())
+	return err
 }

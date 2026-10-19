@@ -24,7 +24,7 @@ func TestToolPresentationResults(t *testing.T) {
 		{"edit_file", `{"path":"a","changed":true,"lines":[{"OldStartLine":10,"OldEndLine":12,"Removed":true}]}`, []string{"삭제한 줄: 10–12"}},
 		{"create_directory", `{"created":["a","a/b"],"changed":true}`, []string{"폴더 생성 완료", "2개", "a/b"}},
 		{"move_file", `{"path":"a","changed":true}`, []string{"이동 완료"}},
-		{"execute_command", `{"Stdout":"hello","Stderr":"warning","ExitCode":0,"Status":"exited","Truncated":false}`, []string{"hello", "stderr: warning", "exit: 0"}},
+		{"execute_command", `{"Stdout":"hello","Stderr":"warning","ExitCode":0,"Status":"exited","Truncated":false}`, []string{"hello", "표준 오류: warning", "종료 코드: 0"}},
 	} {
 		t.Run(tc.name+tc.body, func(t *testing.T) {
 			raw := json.RawMessage(tc.body)

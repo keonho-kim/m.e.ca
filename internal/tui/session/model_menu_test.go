@@ -72,19 +72,19 @@ func TestInlineThinkingShowsCurrentAndChoosesWithArrows(t *testing.T) {
 	a.selection.Thinking, a.selection.ThinkingSupported = &off, true
 	a.openModel()
 	a.render()
-	if line := screenLine(a.screen, 3, 80); !strings.Contains(line, "Thinking ON / OFF") {
+	if line := screenLine(a.screen, 3, 80); !strings.Contains(line, "추론 켜짐 / 꺼짐") {
 		t.Fatalf("inline control missing: %q", line)
 	}
-	_, onStyle, _ := a.screen.Get(9, 3)
-	_, offStyle, _ := a.screen.Get(14, 3)
+	_, onStyle, _ := a.screen.Get(5, 3)
+	_, offStyle, _ := a.screen.Get(12, 3)
 	if !offStyle.HasBold() || !onStyle.HasDim() {
 		t.Fatal("current OFF is not distinguished from ON")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
 	a.render()
-	_, onStyle, _ = a.screen.Get(9, 3)
-	_, offStyle, _ = a.screen.Get(14, 3)
+	_, onStyle, _ = a.screen.Get(5, 3)
+	_, offStyle, _ = a.screen.Get(12, 3)
 	if !onStyle.HasBold() || !offStyle.HasDim() {
 		t.Fatal("arrow selection did not emphasize ON")
 	}

@@ -97,7 +97,7 @@ func shortcutRank(key string) int {
 	if strings.HasPrefix(key, "^C") {
 		return 0
 	}
-	ranks := []string{"^C", "Esc", "Enter", "Tab", "Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
+	ranks := []string{"^C", "Esc", "Enter", "Tab", "^O", "Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
 	if n := slices.Index(ranks, key); n >= 0 {
 		return n
 	}

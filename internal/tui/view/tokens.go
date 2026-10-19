@@ -12,10 +12,10 @@ import (
 )
 
 func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width int, activity Activity) {
-	tokens := fmt.Sprintf("INPUT %d · OUTPUT %d", usage.Input, usage.Output)
-	rate := " · TPS —"
+	tokens := fmt.Sprintf("%s %d · %s %d", activity.Language.Text("INPUT"), usage.Input, activity.Language.Text("OUTPUT"), usage.Output)
+	rate := " · " + activity.Language.Text("TPS") + " —"
 	if activity.TokensPerSecond != nil {
-		rate = fmt.Sprintf(" · TPS %.1f", *activity.TokensPerSecond)
+		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
 	}
 	if uniseg.StringWidth(tokens+rate+activity.Label())+1 <= width {
 		tokens += rate

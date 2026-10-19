@@ -4,11 +4,15 @@
 // Related: internal/tui/session/render_hints.go, internal/tui/view/chat.go.
 package view
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
+)
 
 const MaxCandidateRows = 7
 
 type Candidates struct {
+	Language locale.Language
 	Open     bool
 	Labels   []string
 	Selected int
@@ -23,7 +27,7 @@ func candidates(screen tcell.Screen, display Candidates, y, width, height int) {
 		return
 	}
 	if len(display.Labels) == 0 {
-		Text(screen, 0, y, width, "No matches", tcell.StyleDefault.Dim(true))
+		Text(screen, 0, y, width, display.Language.Text("No matches"), tcell.StyleDefault.Dim(true))
 		return
 	}
 	start := max(0, display.Selected-count+1)

@@ -13,7 +13,7 @@ import (
 
 func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 	a := fixture(t)
-	a.output.Append(transcript.User("create file"), false)
+	a.output.Append((transcript.Formatter{}).User("create file"), false)
 	snapshot := func() string {
 		a.render()
 		var result strings.Builder

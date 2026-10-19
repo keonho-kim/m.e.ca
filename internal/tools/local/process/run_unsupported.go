@@ -10,9 +10,8 @@ package process
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 )
 
-func Run(context.Context, *filesystem.Boundary, string) (Output, error) {
+func Run(context.Context, string, string, []string) (Output, error) {
 	return Output{}, fmt.Errorf("command execution is unsupported on this platform")
 }

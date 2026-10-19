@@ -22,9 +22,9 @@ func (a *app) steerInput() {
 	case a.steering <- command.Argument:
 		a.steeringDrafts = append(a.steeringDrafts, command.Argument)
 		a.editor.Set("")
-		a.status = "현재 작업의 다음 판단에 반영합니다"
+		a.status = a.language.Text("현재 작업의 다음 판단에 반영합니다")
 	default:
-		a.status = "전달 대기 중입니다. 초안을 유지합니다"
+		a.status = a.language.Text("전달 대기 중입니다. 초안을 유지합니다")
 	}
 }
 

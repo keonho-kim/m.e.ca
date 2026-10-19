@@ -13,7 +13,7 @@ import (
 func (a *app) openEffort() {
 	values := selectionpolicy.EffortValues(a.selection)
 	if len(values) == 0 {
-		a.status = "Thinking effort is unavailable or undocumented for this model and provider"
+		a.status = a.language.Text("Thinking effort is unavailable or undocumented for this model and provider")
 		return
 	}
 	a.page = "effort"
@@ -33,17 +33,17 @@ func (a *app) chooseEffort() {
 	if a.choice > 0 {
 		values := selectionpolicy.EffortValues(a.selection)
 		if a.choice > len(values) {
-			a.status = "Reasoning choices changed; reopen the menu"
+			a.status = a.language.Text("Reasoning choices changed; reopen the menu")
 			return
 		}
 		value = values[a.choice-1]
 	}
 	if a.busy {
-		a.status = "Stop the current task before changing Thinking effort"
+		a.status = a.language.Text("Stop the current task before changing Thinking effort")
 		return
 	}
 	if a.client == nil {
-		a.status = "Select a model using !model"
+		a.status = a.language.Text("Select a model using !model")
 		return
 	}
 	if err := a.applyEffort(value); err != nil {
@@ -57,7 +57,7 @@ func (a *app) chooseEffort() {
 
 func (a *app) applyEffort(value string) error {
 	if a.selection.Thinking == nil && !a.selection.ThinkingSupported && value != "" {
-		return fmt.Errorf("Thinking ON/OFF control is unverified")
+		return fmt.Errorf("%s", a.language.Text("Thinking ON/OFF control is unverified"))
 	}
 	next := a.selection
 	next.ReasoningEffort = &value

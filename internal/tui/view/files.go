@@ -5,7 +5,6 @@
 package view
 
 import (
-	"fmt"
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/tui/input"
@@ -49,7 +48,7 @@ func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 			}
 		}
 	}
-	Text(screen, 0, h-3, display.BrowserWidth, fmt.Sprintf("selected: %d", display.SelectedCount), tcell.StyleDefault)
+	Text(screen, 0, h-3, display.BrowserWidth, display.Activity.Language.Format("selected: %d", display.SelectedCount), tcell.StyleDefault)
 	if display.Status != "" {
 		Text(screen, 0, h-2, display.BrowserWidth, display.Status, tcell.StyleDefault)
 	}

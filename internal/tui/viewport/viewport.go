@@ -29,7 +29,7 @@ type Line struct {
 	Thinking bool
 }
 type View struct {
-	Expanded            bool
+	Collapsed           bool
 	keys                []blockKey
 	lines               []Line
 	Blocks              []Block
@@ -48,14 +48,9 @@ func (v *View) Append(text string, thinking bool) {
 	v.AppendBlock(Block{Text: text, Thinking: thinking})
 }
 func (v *View) AppendBlock(block Block) {
+	v.showDetails(&block)
 	if strings.TrimSpace(block.Text) == "" {
 		return
-	}
-	if block.Details != "" {
-		block.Summary = block.Text
-		if v.Expanded {
-			block.Text = block.Details
-		}
 	}
 	v.Next++
 	block.ID = v.Next
@@ -156,12 +151,7 @@ func (v *View) Prepend(blocks []Block) {
 	}
 	for i := range blocks {
 		blocks[i].ID = first - len(blocks) + i
-		if blocks[i].Details != "" {
-			blocks[i].Summary = blocks[i].Text
-			if v.Expanded {
-				blocks[i].Text = blocks[i].Details
-			}
-		}
+		v.showDetails(&blocks[i])
 	}
 	v.Blocks = append(blocks, v.Blocks...)
 	v.bound(true)
@@ -183,35 +173,6 @@ func (v *View) bound(older bool) {
 		v.Blocks[len(v.Blocks)-1] = Block{}
 		v.Blocks = v.Blocks[:len(v.Blocks)-1]
 	}
-}
-
-func (v *View) HasDetails() bool {
-	for _, block := range v.Blocks {
-		if block.Details != "" {
-			return true
-		}
-	}
-	return false
-}
-
-func (v *View) ToggleDetails() bool {
-	if !v.HasDetails() {
-		return false
-	}
-	v.Expanded = !v.Expanded
-	for i := range v.Blocks {
-		b := &v.Blocks[i]
-		if b.Details != "" {
-			b.Text = b.Summary
-			if v.Expanded {
-				b.Text = b.Details
-			}
-			if b.ID == v.AnchorID {
-				v.AnchorRow = 0
-			}
-		}
-	}
-	return true
 }
 
 func (b Block) bytes() int {

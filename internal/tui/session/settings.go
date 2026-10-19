@@ -10,7 +10,7 @@ import (
 
 func (a *app) applySetting(global bool) {
 	if a.busy {
-		a.status = "Stop the current task before changing settings"
+		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}
 	if a.changeField == "thinking" {

@@ -13,11 +13,14 @@ import (
 )
 
 func (a *app) renderMenu(w, h int) {
-	display := view.MenuDisplay{Activity: a.activity(), Usage: a.displayTokens(), Title: a.page, Choices: a.choices, Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
+	display := view.MenuDisplay{Language: a.language, Activity: a.activity(), Usage: a.displayTokens(), Title: a.language.Text(a.page), Choices: append([]string(nil), a.choices...), Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
+	for i, label := range display.Choices {
+		display.Choices[i] = a.language.Text(label)
+	}
 	switch a.page {
 	case "modelinfo":
-		display.Title = "모델 정보 · 최근 연결의 서버 선언"
-		lines := viewport.Wrap(strings.Join(modelmenu.IdentityLines(a.selection, a.opts.Config.ContextLength, a.opts.Vault.Redact), "\n"), w)
+		display.Title = a.language.Text("Model information · latest server declarations")
+		lines := viewport.Wrap(strings.Join(modelmenu.IdentityLines(a.selection, a.opts.Config.ContextLength, a.opts.Vault.Redact, a.language), "\n"), w)
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-max(1, h-2)))
 		display.Details = lines[a.previewOffset:]
 	case "model":
@@ -26,20 +29,20 @@ func (a *app) renderMenu(w, h int) {
 			display.IdentifiedModel = modelmenu.IdentifiedName(a.selection, a.opts.Vault.Redact)
 			identity := a.selection.Profile
 			if identity == "" || identity == profile.Generic {
-				identity = "unidentified / generic"
+				identity = a.language.Text("unidentified / generic")
 			}
-			display.Title = "model · Profile: " + identity
+			display.Title = a.language.Text("model") + " · " + a.language.Text("Profile") + ": " + identity
 		}
 	case "global":
-		display.Title = a.changeField + ": " + a.changeValue
+		display.Title = a.language.Text(a.changeField) + ": " + a.language.Text(a.changeValue)
 	case "key":
-		display.Title = "API Key (OS credential store)"
+		display.Title = a.language.Text("API Key (OS credential store)")
 	case "manual":
-		display.Title = "Model ID · 검색 또는 직접 입력"
+		display.Title = a.language.Text("Model ID · search or type")
 		display.Candidates = a.modelCandidates()
 	case "approval":
-		display.Title = a.proposal.Name + " " + a.proposal.Target
-		lines := view.PreviewLines(a.proposal.Preview, w, a.proposal.Diff)
+		display.Title = a.language.Text(a.proposal.Name) + " " + a.proposal.Target
+		lines := view.PreviewLines(view.ApprovalPreview(*a.proposal, a.language), w, a.proposal.Diff)
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-max(0, h-7)))
 		display.Preview = lines[a.previewOffset:]
 	}

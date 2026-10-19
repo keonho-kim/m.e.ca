@@ -6,15 +6,19 @@ package transcript
 
 import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"strings"
 )
 
-type Formatter struct{ Redact func(string) string }
+type Formatter struct {
+	Language locale.Language
+	Redact   func(string) string
+}
 
 func (f Formatter) Message(m modelapi.Message) []viewport.Block {
 	if m.Role == "user" {
-		return []viewport.Block{{Text: User(f.Redact(m.Content))}}
+		return []viewport.Block{{Text: f.User(f.Redact(m.Content))}}
 	}
 	if m.Role == "assistant" && m.Content != "" {
 		return []viewport.Block{Answer(f.Redact(m.Content))}
@@ -22,7 +26,7 @@ func (f Formatter) Message(m modelapi.Message) []viewport.Block {
 	return nil
 }
 
-func User(text string) string { return "> " + text + "\n\nAgent" }
+func (f Formatter) User(text string) string { return "> " + text + "\n\n" + f.Language.Text("Agent") }
 func Reply(text string) string {
 	if strings.TrimSpace(text) == "" {
 		return ""

@@ -29,11 +29,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	}
 	if e.Key() == tcell.KeyCtrlO && !a.helpOpen && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
 		if !a.output.ToggleDetails() {
-			a.stopNotice = "접거나 펼칠 명령 출력이 없습니다"
-		} else if a.output.Expanded {
-			a.stopNotice = "명령 출력 펼침 · PgUp/Dn으로 스크롤"
+			a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
+		} else if a.output.Collapsed {
+			a.stopNotice = a.language.Text("도구 결과 접음 · Ctrl+O로 펼치기")
 		} else {
-			a.stopNotice = "명령 출력 접음"
+			a.stopNotice = a.language.Text("도구 결과 펼침 · PgUp/Dn으로 스크롤")
 		}
 		return
 	}

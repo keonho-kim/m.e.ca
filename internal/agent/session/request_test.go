@@ -45,7 +45,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), nil, func(s string) string { return s })
+	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}

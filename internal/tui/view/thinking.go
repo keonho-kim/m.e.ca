@@ -4,14 +4,27 @@
 // Related: internal/tui/session/menus.go, internal/tui/session/render.go, internal/tui/view/styles.go.
 package view
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/rivo/uniseg"
+)
 
-func Thinking(screen tcell.Screen, y, width int, on, supported, focused bool) {
-	Text(screen, 0, y, width, "Thinking ", SelectionStyle(focused))
-	Text(screen, 9, y, max(0, width-9), "ON", SelectionStyle(supported && on))
-	Text(screen, 11, y, max(0, width-11), " / ", tcell.StyleDefault.Dim(true))
-	Text(screen, 14, y, max(0, width-14), "OFF", SelectionStyle(supported && !on))
+func Thinking(screen tcell.Screen, y, width int, on, supported, focused, onOnly bool, lang locale.Language) {
+	x := 0
+	part := func(text string, style tcell.Style) {
+		Text(screen, x, y, max(0, width-x), text, style)
+		x += uniseg.StringWidth(text)
+	}
+	part(lang.Text("Thinking")+" ", SelectionStyle(focused))
+	part(lang.Text("ON"), SelectionStyle(on && supported || onOnly))
+	if onOnly {
+		part(" ("+lang.Text("OFF unavailable")+")", tcell.StyleDefault.Dim(true))
+		return
+	}
+	part(" / ", tcell.StyleDefault.Dim(true))
+	part(lang.Text("OFF"), SelectionStyle(supported && !on))
 	if !supported {
-		Text(screen, 17, y, max(0, width-17), " (unavailable)", tcell.StyleDefault.Dim(true))
+		part(" ("+lang.Text("unavailable")+")", tcell.StyleDefault.Dim(true))
 	}
 }

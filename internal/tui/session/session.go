@@ -45,7 +45,7 @@ func (a *app) restore() error {
 		return taskErr
 	}
 	if cp != nil && cp.Status == run.Interrupted {
-		a.output.Append("중지된 작업: "+a.opts.Vault.Redact(cp.Objective)+"\n새 메시지를 보내면 현재 상태를 확인하고 이어갈 수 있습니다.", false)
+		a.output.Append(a.language.Format("Interrupted work: %s\nSend a message to inspect the current state and continue.", a.opts.Vault.Redact(cp.Objective)), false)
 	}
 	a.historyIndex = len(a.inputs)
 	a.selection, err = a.opts.Store.Selection(ctx, a.opts.Session.ID)

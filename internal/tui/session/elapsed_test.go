@@ -14,14 +14,14 @@ func TestElapsedTimerLifecycle(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		a := &app{busy: true}
 		a.startElapsed()
-		if a.activity().Label() != "STATUS RUNNING 00 : 00 : 00" {
+		if a.activity().Label() != "상태 작업 중 00 : 00 : 00" {
 			t.Fatal(a.activity().Label())
 		}
 		first := a.elapsedTimer
 		time.Sleep(time.Hour + time.Minute + time.Second)
 		<-a.elapsedTicks
 		a.updateElapsed(time.Now())
-		if a.activity().Label() != "STATUS RUNNING 01 : 01 : 01" {
+		if a.activity().Label() != "상태 작업 중 01 : 01 : 01" {
 			t.Fatal(a.activity().Label())
 		}
 		a.stopElapsed()
@@ -47,7 +47,7 @@ func TestElapsedWorkerCompletion(t *testing.T) {
 	a.busy = true
 	a.startElapsed()
 	a.receive(notice{Done: true})
-	if a.busy || a.elapsedTicks != nil || a.activity().Label() != "STATUS IDLE" {
+	if a.busy || a.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
 		t.Fatal("worker completion retained elapsed timer")
 	}
 }

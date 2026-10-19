@@ -7,8 +7,6 @@ package config
 import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
-	"path/filepath"
-	"strings"
 
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/run"
@@ -16,12 +14,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
-type Execution struct {
-	WritablePaths []string `toml:"writable_paths"`
-}
-
 type Config struct {
-	Execution     Execution            `toml:"execution"`
 	ContextLength int                  `toml:"context_length"`
 	Model         *SavedModel          `toml:"model,omitempty"`
 	Agent         inference.Parameters `toml:"agent"`
@@ -53,7 +46,6 @@ type UI struct {
 func Defaults() Config {
 	parameters := inference.Defaults()
 	return Config{
-		Execution:     Execution{WritablePaths: []string{}},
 		ContextLength: connection.DefaultContextLength,
 		Agent:         parameters.Agent,
 		Diagnostics:   parameters.Diagnostic,
@@ -73,11 +65,6 @@ func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
 }
 
 func check(configuration Config) error {
-	for _, path := range configuration.Execution.WritablePaths {
-		if !filepath.IsAbs(path) || strings.ContainsRune(path, 0) {
-			return fmt.Errorf("execution.writable_paths requires absolute paths")
-		}
-	}
 	if err := connection.CheckContextLength(configuration.ContextLength); err != nil {
 		return err
 	}

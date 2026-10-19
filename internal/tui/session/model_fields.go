@@ -14,7 +14,7 @@ func (a *app) confirmField() {
 	case "endpoint":
 		endpoint := strings.TrimSpace(a.menuInput.String())
 		if endpoint == "" {
-			a.status = "Endpoint cannot be empty"
+			a.status = a.language.Text("Endpoint cannot be empty")
 			return
 		}
 		connection, err := modelconn.New(modelconn.Providers()[a.connectionKind].Kind, endpoint)

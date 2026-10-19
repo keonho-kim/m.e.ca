@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-// Purpose: Move entries across allowed roots using pinned parents and exclusive destination creation.
+// Purpose: Move entries using pinned parent handles and exclusive destination creation.
 // Pattern: Filesystem Adapter.
 // Usage: Approved move_file operations call moveTargets after version checks.
 // Related: internal/tools/local/mutations.go, internal/tools/local/move_darwin.go, internal/tools/local/move_linux.go.

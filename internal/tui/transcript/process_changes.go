@@ -5,7 +5,6 @@
 package transcript
 
 import (
-	"fmt"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 )
 
@@ -17,14 +16,14 @@ func (f Formatter) processChanges(event run.Event) string {
 	text := ""
 	for i, change := range changes {
 		if i >= 12 {
-			text += indentTool(fmt.Sprintf("그 외 관측된 변경 %d개 · 원본 기록에 보존", len(changes)-i))
+			text += indentTool(f.Language.Format("그 외 관측된 변경 %d개 · 원본 기록에 보존", len(changes)-i))
 			break
 		}
 		label := "변경 확인: "
 		if change.AfterDigest == "missing" {
 			label = "삭제 확인: "
 		}
-		text += indentTool(label + f.Redact(change.Path))
+		text += indentTool(f.Language.Text(label) + f.Redact(change.Path))
 	}
 	return text
 }

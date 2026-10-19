@@ -12,14 +12,13 @@ import (
 )
 
 const (
-	StaleTarget      = "file_changed"
-	InvalidArgument  = "invalid_argument"
-	OutputTruncated  = "output_truncated"
-	Timeout          = "timeout"
-	Interrupted      = "interrupted"
-	ProcessFailed    = "process_failed"
-	ScopeUnavailable = "scope_unavailable"
-	ExecutionFailed  = "execution_failed"
+	StaleTarget     = "file_changed"
+	InvalidArgument = "invalid_argument"
+	OutputTruncated = "output_truncated"
+	Timeout         = "timeout"
+	Interrupted     = "interrupted"
+	ProcessFailed   = "process_failed"
+	ExecutionFailed = "execution_failed"
 )
 
 type Failure struct {

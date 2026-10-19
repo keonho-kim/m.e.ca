@@ -15,25 +15,25 @@ func (f Formatter) processOutput(fields map[string]json.RawMessage) string {
 		var value string
 		if json.Unmarshal(fields[key], &value) == nil && value != "" {
 			if strings.Contains(value, "\n") {
-				text += indentTool(strings.ToLower(key)) + indentTool(f.Redact(value))
+				text += indentTool(f.Language.Text(strings.ToLower(key))) + indentTool(f.Redact(value))
 			} else {
-				text += indentTool(strings.ToLower(key) + ": " + f.Redact(value))
+				text += indentTool(f.Language.Text(strings.ToLower(key)) + ": " + f.Redact(value))
 			}
 		}
 	}
 	for _, key := range []string{"StdoutPath", "StderrPath"} {
 		var path string
 		if json.Unmarshal(fields[key], &path) == nil && path != "" {
-			text += indentTool("captured log: " + f.Redact(path))
+			text += indentTool(f.Language.Text("captured log: ") + f.Redact(path))
 		}
 	}
 	var code int
 	if json.Unmarshal(fields["ExitCode"], &code) == nil {
-		text += indentTool("exit: " + string(fields["ExitCode"]))
+		text += indentTool(f.Language.Text("exit: ") + string(fields["ExitCode"]))
 	}
 	var status string
 	if json.Unmarshal(fields["Status"], &status) == nil && status != "exited" && status != "" {
-		text += indentTool("status: " + f.Redact(status))
+		text += indentTool(f.Language.Text("status: ") + f.Language.Text(f.Redact(status)))
 	}
 	return text
 }

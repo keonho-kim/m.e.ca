@@ -32,8 +32,7 @@ func TestScrollAnchor(t *testing.T) {
 func TestCollapseKeepsAnchorOnItsOutput(t *testing.T) {
 	v := View{Follow: true}
 	v.Append("earlier conversation", false)
-	v.AppendBlock(Block{Text: "command summary", Details: strings.Repeat("detail\n", 100)})
-	v.ToggleDetails()
+	v.AppendBlock(Block{Summary: "command summary", Details: strings.Repeat("detail\n", 100)})
 	v.Scroll(-20, 80, 8)
 	id := v.AnchorID
 	v.ToggleDetails()

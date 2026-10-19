@@ -62,7 +62,7 @@ func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, err
 		// Open the parent itself so a concurrent path substitution cannot redirect
 		// Mkdir through a newly introduced symlink.
 		parentPath := filepath.Dir(dir.target.absolute)
-		parentTarget, err := op.executor.writeTarget(op.settings.Scope, parentPath)
+		parentTarget, err := op.executor.resolve(op.settings.Scope, parentPath)
 		if err != nil {
 			return finish(err)
 		}

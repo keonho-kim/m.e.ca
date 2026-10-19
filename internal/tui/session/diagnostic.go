@@ -11,7 +11,7 @@ import (
 
 func (a *app) diagnoseModel() {
 	if a.busy || a.client == nil {
-		a.status = "모델을 선택하고 현재 작업을 마친 뒤 진단하세요"
+		a.status = a.language.Text("모델을 선택하고 현재 작업을 마친 뒤 진단하세요")
 		return
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
@@ -19,7 +19,7 @@ func (a *app) diagnoseModel() {
 	a.busy = true
 	a.startElapsed()
 	a.page = "chat"
-	a.status = "모델 연결 진단 중"
+	a.status = a.language.Text("모델 연결 진단 중")
 	a.setupRevision++
 	revision := a.setupRevision
 	client, selection, settings := a.client, a.selection, a.opts.Config.InferenceSettings()

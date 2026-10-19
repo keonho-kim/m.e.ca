@@ -61,7 +61,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 		if err := op.executor.boundary.Movable(op.source.absolute); err != nil {
 			return err
 		}
-		op.destination, err = op.executor.writeTarget(op.settings.Scope, op.input.Destination)
+		op.destination, err = op.executor.resolve(op.settings.Scope, op.input.Destination)
 		if err != nil {
 			return err
 		}

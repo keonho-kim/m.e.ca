@@ -6,6 +6,7 @@ package transcript
 
 import (
 	"fmt"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,7 +20,7 @@ type changeRow struct {
 	text   string
 }
 
-func renderChangePreview(preview string) string {
+func renderChangePreview(preview string, lang locale.Language) string {
 	var rows []changeRow
 	oldLine, newLine, width := 0, 0, 3
 	inHunk := false
@@ -55,10 +56,10 @@ func renderChangePreview(preview string) string {
 			}
 		}
 		if line == `\ No newline at end of file` {
-			row = changeRow{text: "(마지막 줄바꿈 없음)"}
+			row = changeRow{text: lang.Text("(마지막 줄바꿈 없음)")}
 		}
 		if line == "No content changes." {
-			row = changeRow{text: "(내용 변경 없음 / 빈 파일)"}
+			row = changeRow{text: lang.Text("(내용 변경 없음 / 빈 파일)")}
 		}
 		if row.number > 0 {
 			width = max(width, len(strconv.Itoa(row.number)))

@@ -54,7 +54,7 @@ func (a *app) modelHintKey(e *tcell.EventKey) bool {
 		}
 		a.menuInput.Set(a.modelHints[a.modelHintIndex])
 		a.closeModelHints()
-		a.status = "모델명 입력됨 · Enter로 연결"
+		a.status = a.language.Text("모델명 입력됨 · Enter로 연결")
 	default:
 		return false
 	}
@@ -65,5 +65,5 @@ func (a *app) modelCandidates() view.Candidates {
 	for i, name := range a.modelHints {
 		labels[i] = a.opts.Vault.Redact(name)
 	}
-	return view.Candidates{Open: a.modelHintsOpen, Labels: labels, Selected: a.modelHintIndex}
+	return view.Candidates{Language: a.language, Open: a.modelHintsOpen, Labels: labels, Selected: a.modelHintIndex}
 }

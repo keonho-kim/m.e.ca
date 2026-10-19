@@ -17,7 +17,7 @@ func (a *app) interruptSetup() {
 	a.closeModelHints()
 	a.page = "chat"
 	a.status = ""
-	a.stopNotice = "연결 작업을 취소하고 정리하고 있습니다"
+	a.stopNotice = a.language.Text("연결 작업을 취소하고 정리하고 있습니다")
 }
 
 func (a *app) setupResult(n *notice) bool {

@@ -20,6 +20,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/tools/local"
 	"github.com/keonho-kim/v-code/internal/tui/browser"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/keonho-kim/v-code/internal/tui/selection"
 	"github.com/keonho-kim/v-code/internal/tui/textlayout"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
@@ -38,6 +39,7 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	language                            locale.Language
 	steering                            chan string
 	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line

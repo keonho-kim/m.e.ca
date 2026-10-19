@@ -24,7 +24,7 @@ func (a *app) refreshHints() {
 	prefix := strings.TrimLeftFunc(a.editor.String(), unicode.IsSpace)
 	if a.page == "chat" && a.editor.Cursor == a.editor.Len() && strings.HasPrefix(prefix, "!") && strings.IndexFunc(prefix, unicode.IsSpace) < 0 {
 		a.commandOpen = true
-		a.commandHints = commands.Suggestions(prefix)
+		a.commandHints = commands.Suggestions(prefix, a.language.Text)
 		return
 	}
 }

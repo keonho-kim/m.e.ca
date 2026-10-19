@@ -46,25 +46,3 @@ func TestStaleGuardAllowsFreshPreparationOfSameEdit(t *testing.T) {
 		t.Fatalf("safe reprepare blocked: %+v executions=%d err=%v", result, e.executed, err)
 	}
 }
-
-func TestUnavailableSandboxDoesNotCreateVerificationObligation(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "test-a"}), "Sandbox setup is unavailable", "Sandbox setup is unavailable"}}
-	e := &executor{outcomes: []toolapi.Result{{Failed: true, Failure: &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: "kernel denied setup"}, Process: &toolapi.ProcessOutcome{Status: "scope_unavailable", ExitCode: -1}}}}
-	j := &journal{}
-	r := fixture(g, e, j)
-	result, err := r.Run(context.Background(), "check", approve, emit)
-	if err != nil || result.Status != Answered {
-		t.Fatalf("%+v %v", result, err)
-	}
-
-}
-
-func TestFinalReportCanExplainSandboxCause(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "wc -l a"}), "Changed a; unable to check: mount runtime /usr/lib: invalid argument"}}
-	e := &executor{outcomes: []toolapi.Result{{Content: []byte(`{"changed":true}`)}, {Failed: true, Failure: &toolapi.Failure{Code: toolapi.ScopeUnavailable, Detail: "mount runtime /usr/lib: invalid argument"}, Process: &toolapi.ProcessOutcome{Status: "scope_unavailable", ExitCode: -1}}}}
-	r := fixture(g, e, &journal{})
-	result, err := r.Run(context.Background(), "write and check", approve, emit)
-	if err != nil || result.Status != Answered || !strings.Contains(result.Text, "mount runtime /usr/lib") {
-		t.Fatalf("%+v %v", result, err)
-	}
-}

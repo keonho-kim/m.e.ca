@@ -36,7 +36,7 @@ func (a *app) pasteBoundary(start bool) {
 	}
 	if a.paste && a.pasted.editor != nil {
 		if a.pasted.overflow {
-			a.stopNotice = "붙여넣기 취소: 입력은 최대 16MiB입니다"
+			a.stopNotice = a.language.Text("붙여넣기 취소: 입력은 최대 16MiB입니다")
 		} else {
 			a.pasted.editor.Insert(a.pasted.text.String())
 		}

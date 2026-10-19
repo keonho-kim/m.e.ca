@@ -1,6 +1,6 @@
-// Purpose: Resolve filesystem targets and select a trusted write root without lexical prefix checks.
+// Purpose: Canonicalize file paths and reject direct file-tool access to protected state.
 // Pattern: Filesystem boundary parser.
-// Usage: File adapters select os.Root handles; OS adapters consume the same canonical paths.
+// Usage: Local file adapters resolve targets before approval and version checks.
 // Related: internal/tools/local/filesystem/boundary.go.
 package filesystem
 
@@ -59,37 +59,4 @@ func (b *Boundary) ReadTarget(path string) (string, error) {
 		}
 	}
 	return absolute, nil
-}
-func (b *Boundary) WriteTarget(path string) (absolute, root string, err error) {
-	absolute, err = b.ReadTarget(path)
-	if err != nil {
-		return "", "", err
-	}
-	for _, d := range b.writes {
-		if Within(d.path, absolute) && len(d.path) > len(root) {
-			root = d.path
-		}
-	}
-	if root == "" {
-		return "", "", fmt.Errorf("write outside allowed roots: %s", absolute)
-	}
-	if err := checkTarget(root, absolute); err != nil {
-		return "", "", err
-	}
-	return absolute, root, nil
-}
-
-// Movable rejects renaming a root or an ancestor of protected state.
-func (b *Boundary) Movable(path string) error {
-	for _, root := range b.writes {
-		if path == root.path {
-			return fmt.Errorf("cannot move a write root: %s", path)
-		}
-	}
-	for _, secret := range b.protected {
-		if Within(path, secret) {
-			return fmt.Errorf("cannot move protected path ancestor: %s", path)
-		}
-	}
-	return nil
 }

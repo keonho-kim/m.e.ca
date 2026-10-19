@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
@@ -19,7 +20,7 @@ const (
 )
 
 func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action, err error) {
-	app := &app{opts: opts, screen: screen, events: make(chan notice, 64), page: "chat", output: viewport.View{Follow: true}}
+	app := &app{opts: opts, language: locale.System(ctx), screen: screen, events: make(chan notice, 64), page: "chat", output: viewport.View{Follow: true}}
 	app.ctx, app.cancel = context.WithCancel(ctx)
 	defer app.shutdown()
 	if err = app.restore(); err != nil {

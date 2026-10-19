@@ -6,13 +6,14 @@ package modelmenu
 
 import (
 	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"strings"
 	"testing"
 )
 
 func TestIdentityContextBudgets(t *testing.T) {
 	selected := connection.Selection{Model: "alias", Details: &connection.ModelInfo{ID: "alias", ContextWindow: 8192}}
-	text := strings.Join(IdentityLines(selected, 262144, func(s string) string { return s }), "\n")
+	text := strings.Join(IdentityLines(selected, 262144, func(s string) string { return s }, locale.Korean), "\n")
 	for _, want := range []string{"설정 컨텍스트 예산: 262144", "적용 컨텍스트 예산: 8192", "서빙 컨텍스트 한도: 8192"} {
 		if !strings.Contains(text, want) {
 			t.Fatal(text)

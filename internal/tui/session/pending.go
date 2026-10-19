@@ -10,7 +10,7 @@ import (
 
 func (a *app) reserveInput() {
 	if a.stopRequested {
-		a.status = "중지 처리 중입니다. 초안을 유지합니다"
+		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
 	command, err := commands.Parse(a.editor.String())
@@ -22,17 +22,17 @@ func (a *app) reserveInput() {
 		return
 	}
 	if command.Kind != commands.Message {
-		a.status = "일반 메시지만 예약할 수 있습니다"
+		a.status = a.language.Text("일반 메시지만 예약할 수 있습니다")
 		return
 	}
 	if a.pending != "" {
-		a.status = "이미 예약된 요청이 있습니다. 새 초안을 유지합니다"
+		a.status = a.language.Text("이미 예약된 요청이 있습니다. 새 초안을 유지합니다")
 		return
 	}
 	a.pending = command.Argument
 	a.editor.Set("")
 	a.closeCommandHints()
-	a.status = "현재 작업이 끝나면 예약한 요청을 실행합니다"
+	a.status = a.language.Text("현재 작업이 끝나면 예약한 요청을 실행합니다")
 }
 
 func (a *app) restorePending() {

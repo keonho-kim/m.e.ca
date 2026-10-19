@@ -7,7 +7,7 @@ package commands
 import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
-	all := Suggestions("!")
+	all := Suggestions("!", describeCommand)
 	if len(all) != 5 {
 		t.Fatalf("commands = %v", all)
 	}
@@ -17,11 +17,11 @@ func TestCommandSuggestions(t *testing.T) {
 			t.Fatalf("unusable suggestion: %+v, %v", suggestion, err)
 		}
 	}
-	filtered := Suggestions("!mo")
+	filtered := Suggestions("!mo", describeCommand)
 	if len(filtered) != 1 || filtered[0].Name != "!model" {
 		t.Fatalf("prefix filter: %v", filtered)
 	}
-	if len(Suggestions("!unknown")) != 0 {
+	if len(Suggestions("!unknown", describeCommand)) != 0 {
 		t.Fatal("unknown prefix matched a command")
 	}
 }
@@ -34,14 +34,14 @@ func TestCommandSearchMatchesNamesAndDescriptions(t *testing.T) {
 		{"!mo", []string{"!model"}},
 		{"!odel", []string{"!model"}},
 		{"!모델", []string{"!model"}},
-		{"!THINKING", []string{"!model"}},
+		{"!추론", []string{"!model"}},
 		{"!새", []string{"!new"}},
 		{"!d", []string{"!dir", "!model"}},
 		{"!unknown", nil},
 		{"model", nil},
 	} {
 		t.Run(tc.query, func(t *testing.T) {
-			got := Suggestions(tc.query)
+			got := Suggestions(tc.query, describeCommand)
 			if len(got) != len(tc.want) {
 				t.Fatalf("%q: %v", tc.query, got)
 			}
@@ -53,3 +53,5 @@ func TestCommandSearchMatchesNamesAndDescriptions(t *testing.T) {
 		})
 	}
 }
+
+func describeCommand(description string) string { return description }

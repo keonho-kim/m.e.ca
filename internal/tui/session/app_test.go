@@ -45,7 +45,7 @@ func fixture(t *testing.T) *app {
 		}
 	})
 	vault := &credentials.Vault{State: filepath.Join(home, ".v")}
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), nil, vault.Redact)
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), vault.Redact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,13 +120,13 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 	a.editor.Set("draft")
 	a.render()
 	line := screenLine(a.screen, 22, 80)
-	if !strings.Contains(line, "chosen Thinking") {
+	if !strings.Contains(line, "chosen 추론") {
 		t.Fatal(line)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if strings.Contains(screenLine(a.screen, 22, 80), "Thinking") {
+	if strings.Contains(screenLine(a.screen, 22, 80), "추론") {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
@@ -162,7 +162,7 @@ func TestStatusPolicyLabels(t *testing.T) {
 		{"default", policy.Approve, policy.Directory, false, "chosen"},
 		{"system", policy.Approve, policy.System, false, "chosen"},
 		{"automatic", policy.AllowAll, policy.Directory, false, "chosen │ 자동 승인"},
-		{"thinking", policy.AllowAll, policy.System, true, "chosen Thinking │ 자동 승인"},
+		{"thinking", policy.AllowAll, policy.System, true, "chosen 추론 │ 자동 승인"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

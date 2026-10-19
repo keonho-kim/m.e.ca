@@ -60,7 +60,7 @@ func TestModelHintsNoMatchPasteAndResize(t *testing.T) {
 		t.Fatal("paste executed or failed to filter")
 	}
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 3, 24), "No matches") {
+	if !strings.Contains(screenLine(a.screen, 3, 24), "검색 결과 없음") {
 		t.Fatal("missing no-match indication")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))

@@ -19,10 +19,10 @@ func TestNativeReasoningMenu(t *testing.T) {
 	a.openModel()
 	a.render()
 	line := screenLine(a.screen, 3, 80)
-	if !strings.Contains(line, "ON") || !strings.Contains(line, "OFF unavailable") {
+	if !strings.Contains(line, "켜짐") || !strings.Contains(line, "끄기 불가") {
 		t.Fatalf("mandatory reasoning unclear: %s", line)
 	}
-	_, style, _ := a.screen.Get(9, 3)
+	_, style, _ := a.screen.Get(5, 3)
 	if !style.HasBold() {
 		t.Fatal("active mandatory ON not emphasized")
 	}

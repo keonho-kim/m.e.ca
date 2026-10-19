@@ -1,4 +1,4 @@
-// Purpose: Atomically publish prepared file bytes through a confined filesystem root.
+// Purpose: Atomically publish prepared file bytes using a temporary sibling file.
 // Pattern: Filesystem write adapter.
 // Usage: Approved local mutations call Write with the original permission mode.
 // Related: internal/tools/local/mutations.go.

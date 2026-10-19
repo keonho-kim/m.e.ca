@@ -1,9 +1,9 @@
 //go:build linux || darwin
 
-// Purpose: Exercise installed language tools, child execution and HTTP through one generic boundary.
-// Pattern: Native process contract tests.
+// Purpose: Exercise installed language tools, child execution and HTTP through the host shell.
+// Pattern: Native host-process contract tests.
 // Usage: go test ./internal/tools/local/process -run TestHostTools.
-// Related: internal/tools/local/process/run_unix.go, internal/tools/local/filesystem/boundary.go.
+// Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/host_unix_test.go.
 package process
 
 import (
@@ -17,26 +17,19 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
 )
 
 func TestHostTools(t *testing.T) {
-	project, home := t.TempDir(), t.TempDir()
+	project := t.TempDir()
 	cache := t.TempDir()
 	t.Setenv("GOCACHE", cache)
 	t.Setenv("HOST_BOUNDARY_TEST", "preserved")
-	boundary, err := filesystem.New(project, home, filepath.Join(home, ".v"), []string{cache})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := os.WriteFile(filepath.Join(project, "go.mod"), []byte("module local.test/example\n\ngo 1.27\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(project, "main_test.go"), []byte("package example\nimport \"testing\"\nfunc TestValue(t *testing.T){if 1+1!=2{t.Fatal(\"value\")}}\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	requireTestBoundary(t, boundary)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "network-ok") }))
 	defer server.Close()
 	for _, tc := range []struct{ binary, command, expected string }{
@@ -51,7 +44,7 @@ func TestHostTools(t *testing.T) {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
-			output, err := Run(ctx, boundary, tc.command)
+			output, err := Run(ctx, project, tc.command, os.Environ())
 			if err != nil || output.ExitCode != 0 || !strings.Contains(output.Stdout, tc.expected) {
 				t.Fatalf("%+v %v", output, err)
 			}

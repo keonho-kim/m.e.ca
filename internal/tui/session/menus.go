@@ -12,7 +12,7 @@ import (
 func (a *app) openModel() {
 	a.stopNotice = ""
 	a.page = "model"
-	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection), "모델 정보", "연결 진단"}
+	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection, a.language), "모델 정보", "연결 진단"}
 	a.choice = 0
 	a.thinkingChoice = a.opts.Config.Thinking
 	if a.selection.Thinking != nil {
@@ -34,7 +34,7 @@ func (a *app) choose() {
 	case "model":
 		if a.choice == 0 {
 			if a.busy {
-				a.status = "Stop the current task before changing providers"
+				a.status = a.language.Text("Stop the current task before changing providers")
 				return
 			}
 			a.key = ""
@@ -46,7 +46,7 @@ func (a *app) choose() {
 			a.choice = 0
 		} else if a.choice == 1 {
 			if !a.selection.ThinkingSupported {
-				a.status = "Thinking ON/OFF control is unavailable or unverified for this model"
+				a.status = a.language.Text("Thinking ON/OFF control is unavailable or unverified for this model")
 				return
 			}
 			a.changeField = "thinking"

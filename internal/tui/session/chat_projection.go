@@ -33,7 +33,7 @@ func (a *app) chatLines(width int) []viewport.Line {
 		lines = viewport.AppendLines(lines, block.Lines(width))
 	}
 	if a.pending != "" {
-		block := viewport.Block{Text: "예약 > " + a.opts.Vault.Redact(a.pending), Thinking: true}
+		block := viewport.Block{Text: a.language.Text("예약 > ") + a.opts.Vault.Redact(a.pending), Thinking: true}
 		lines = viewport.AppendLines(lines, block.Lines(width))
 	}
 	p.lines = lines

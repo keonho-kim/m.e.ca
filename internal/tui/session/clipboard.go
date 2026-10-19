@@ -15,7 +15,7 @@ import (
 
 func (a *app) copySelection(text string) {
 	a.screen.SetClipboard([]byte(text))
-	a.stopNotice = "클립보드에 복사를 요청했습니다"
+	a.stopNotice = a.language.Text("클립보드에 복사를 요청했습니다")
 	// OSC 52 targets the user's terminal even over SSH. Do not modify a remote
 	// Mac's desktop clipboard when the terminal is on another machine.
 	if a.screen.HasClipboard() || runtime.GOOS != "darwin" || os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {

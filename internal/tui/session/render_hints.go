@@ -14,5 +14,5 @@ func (a *app) candidates() view.Candidates {
 	for i, suggestion := range a.commandHints {
 		labels[i] = suggestion.Name + "  " + suggestion.Description
 	}
-	return view.Candidates{Open: true, Labels: labels, Selected: a.commandIndex}
+	return view.Candidates{Language: a.language, Open: true, Labels: labels, Selected: a.commandIndex}
 }

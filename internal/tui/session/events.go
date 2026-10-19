@@ -61,9 +61,9 @@ func (a *app) receive(n notice) {
 	if n.Clipboard {
 		a.clipboardBusy = false
 		if n.Err != nil {
-			a.stopNotice = "클립보드 복사 실패: " + a.opts.Vault.Redact(n.Err.Error())
+			a.stopNotice = a.language.Text("클립보드 복사 실패: ") + a.opts.Vault.Redact(n.Err.Error())
 		} else {
-			a.stopNotice = "복사했습니다"
+			a.stopNotice = a.language.Text("복사했습니다")
 		}
 		return
 	}

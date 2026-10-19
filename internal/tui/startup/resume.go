@@ -12,6 +12,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/commands/startup"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/rivo/uniseg"
 	"strings"
@@ -21,6 +22,7 @@ type Conversations func(context.Context, int, int) ([]sessionstate.Conversation,
 
 // Select returns newConversation with an empty ID when the first entry is chosen.
 func Select(ctx context.Context, screen tcell.Screen, load Conversations, newConversation sessionstate.Session) (sessionstate.Session, bool, error) {
+	lang := locale.System(ctx)
 	events := screen.EventQ()
 	offset, index := 0, -1
 	status, typed := "", ""
@@ -32,9 +34,12 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 		screen.Clear()
 		w, totalHeight := screen.Size()
 		shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "선택"}, {Key: "Esc", Label: "취소"}}
+		for i := range shortcuts {
+			shortcuts[i].Label = lang.Text(shortcuts[i].Label)
+		}
 		footer := view.KeymapRows(shortcuts, w, min(1, max(0, totalHeight-4)))
 		h := totalHeight - footer
-		view.Text(screen, 0, 0, w, "대화 선택", tcell.StyleDefault)
+		view.Text(screen, 0, 0, w, lang.Text("대화 선택"), tcell.StyleDefault)
 		first := 0
 		if offset == 0 {
 			first = -1
@@ -42,7 +47,7 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 		start := max(first, index-max(1, h-5)+1)
 		for i := start; i < len(conversations) && i-start < h-4; i++ {
 			if i == -1 {
-				view.Text(screen, 0, 2+i-start, w, "새 대화", view.SelectionStyle(i == index))
+				view.Text(screen, 0, 2+i-start, w, lang.Text("새 대화"), view.SelectionStyle(i == index))
 				continue
 			}
 			c := conversations[i]
@@ -78,7 +83,7 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 					if typed == ":q" {
 						return sessionstate.Session{}, false, nil
 					}
-					if !strings.HasPrefix(":q", typed) && len(commands.Suggestions(typed)) == 0 {
+					if !strings.HasPrefix(":q", typed) && len(commands.Suggestions(typed, lang.Text)) == 0 {
 						typed = ""
 					}
 				case tcell.KeyUp:
@@ -127,7 +132,7 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 						continue
 					}
 					if mode.Project != selected.ProjectRoot {
-						status = "Project location changed; refusing to replace the original root"
+						status = lang.Text("Project location changed; refusing to replace the original root")
 						continue
 					}
 					return selected, true, nil

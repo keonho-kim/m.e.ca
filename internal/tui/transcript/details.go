@@ -28,7 +28,7 @@ func (f Formatter) output(event run.Event) string {
 	for _, key := range []string{"Truncated", "truncated", "more"} {
 		var more bool
 		if json.Unmarshal(fields[key], &more) == nil && more {
-			text += indentTool("[일부 결과만 표시됨]")
+			text += indentTool(f.Language.Text("[일부 결과만 표시됨]"))
 			break
 		}
 	}
@@ -39,5 +39,5 @@ func (f Formatter) resultSummary(event run.Event) string {
 	if event.Text != "" {
 		return indentTool(f.Redact(event.Text))
 	}
-	return indentTool("표시할 요약 없음 · 원본 결과는 대화 기록에 보존됨")
+	return indentTool(f.Language.Text("표시할 요약 없음 · 원본 결과는 대화 기록에 보존됨"))
 }

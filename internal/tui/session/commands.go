@@ -49,7 +49,7 @@ func (a *app) submit() {
 		return
 	}
 	if !a.canSubmit(command.Kind) {
-		a.status = "One task is already active; draft preserved"
+		a.status = a.language.Text("One task is already active; draft preserved")
 		return
 	}
 	switch command.Kind {
@@ -66,7 +66,7 @@ func (a *app) submit() {
 		a.openFiles(command.Argument)
 	case commands.Message:
 		if a.client == nil || a.selection.Model == "" {
-			a.status = "Select a model using !model"
+			a.status = a.language.Text("Select a model using !model")
 			return
 		}
 		a.inputs = append(a.inputs, command.Argument)
@@ -75,7 +75,7 @@ func (a *app) submit() {
 			a.inputs = a.inputs[len(a.inputs)-200:]
 		}
 		a.historyIndex = len(a.inputs)
-		a.output.Append(transcript.User(a.opts.Vault.Redact(command.Argument)), false)
+		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(command.Argument)), false)
 		a.cancelDirectory()
 		a.page = "chat"
 		a.startTask(command.Argument)

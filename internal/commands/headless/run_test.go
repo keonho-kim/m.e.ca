@@ -57,7 +57,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { store.Close() })
-			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
+			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
 			if err != nil {
 				t.Fatal(err)
 			}

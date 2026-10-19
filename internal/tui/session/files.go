@@ -32,7 +32,7 @@ func (a *app) fileKey(e *tcell.EventKey) {
 				a.cancelDirectory()
 				a.menuInput.Set("")
 			} else {
-				a.status = "Unknown file-view command; use :q, !new or !quit"
+				a.status = a.language.Text("Unknown file-view command; use :q, !new or !quit")
 			}
 		case tcell.KeyEscape:
 			a.menuInput.Set("")

@@ -10,6 +10,14 @@ import (
 )
 
 func (a *app) shortcuts() []view.Shortcut {
+	keys := a.screenShortcuts()
+	for i := range keys {
+		keys[i].Label = a.language.Text(keys[i].Label)
+	}
+	return keys
+}
+
+func (a *app) screenShortcuts() []view.Shortcut {
 	if a.textSelection.Active() {
 		keys := []view.Shortcut{{Key: "^C / Cmd+C", Label: "복사"}, {Key: "Esc", Label: "선택 해제"}}
 		if _, _, ok := a.selectedInputRange(); ok {
@@ -133,9 +141,9 @@ func (a *app) shortcuts() []view.Shortcut {
 		controls = filtered
 	}
 	if a.output.HasDetails() && (a.page == "chat" && !a.commandOpen || a.page == "files" && a.browser.Input) {
-		label := "출력 펴기"
-		if a.output.Expanded {
-			label = "출력 접기"
+		label := "도구 접기"
+		if a.output.Collapsed {
+			label = "도구 펴기"
 		}
 		controls = append(controls, view.Shortcut{Key: "^O", Label: label})
 	}

@@ -1,4 +1,4 @@
-// Purpose: Resolve real filesystem targets within the selected Scope and protected-state boundary.
+// Purpose: Resolve canonical file-tool targets against project or host roots and private-path guards.
 // Pattern: Filesystem boundary.
 // Usage: Preparation, execution and reference selection resolve paths here.
 // Related: internal/tools/local/executor.go, internal/tools/local/version.go, internal/policy/path.go.
@@ -7,7 +7,6 @@ package local
 import (
 	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
-	"path/filepath"
 )
 
 type target struct {
@@ -16,6 +15,9 @@ type target struct {
 }
 
 func (executor *Executor) resolve(scope policy.Scope, path string) (target, error) {
+	if err := executor.boundary.Check(); err != nil {
+		return target{}, err
+	}
 	absolute, _, err := policy.Resolve(executor.project, executor.home, scope, path)
 	if err != nil {
 		return target{}, err
@@ -33,23 +35,4 @@ func (executor *Executor) resolve(scope policy.Scope, path string) (target, erro
 		root = executor.systemRoot
 	}
 	return target{absolute: absolute, relative: relative, root: root}, nil
-}
-
-func (executor *Executor) writeTarget(scope policy.Scope, path string) (target, error) {
-	if err := executor.boundary.Check(); err != nil {
-		return target{}, err
-	}
-	absolute, _, err := policy.Resolve(executor.project, executor.home, scope, path)
-	if err != nil {
-		return target{}, err
-	}
-	absolute, root, err := executor.boundary.WriteTarget(absolute)
-	if err != nil {
-		return target{}, err
-	}
-	relative, err := filepath.Rel(root, absolute)
-	if err != nil {
-		return target{}, err
-	}
-	return target{absolute: absolute, relative: relative, root: executor.writeRoots[root]}, nil
 }

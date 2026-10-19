@@ -32,11 +32,11 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 			if event.Kind != "tool_succeeded" {
 				return ""
 			}
-			return indentTool("요청한 폴더가 이미 존재합니다")
+			return indentTool(f.Language.Text("요청한 폴더가 이미 존재합니다"))
 		}
-		text := indentTool(fmt.Sprintf("폴더 생성 완료 · %d개 (상위 폴더 포함)", len(result.Created)))
+		text := indentTool(f.Language.Format("폴더 생성 완료 · %d개 (상위 폴더 포함)", len(result.Created)))
 		if event.Kind != "tool_succeeded" {
-			text = f.resultSummary(event) + indentTool(fmt.Sprintf("중단 전 생성한 폴더 · %d개", len(result.Created)))
+			text = f.resultSummary(event) + indentTool(f.Language.Format("중단 전 생성한 폴더 · %d개", len(result.Created)))
 		}
 		for _, path := range result.Created {
 			text += indentTool(f.Redact(path))
@@ -47,7 +47,7 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 		return ""
 	}
 	if !*result.Changed {
-		return indentTool("변경 없음")
+		return indentTool(f.Language.Text("변경 없음"))
 	}
 	label := map[string]string{"write_file": "파일 저장 완료", "edit_file": "수정 완료", "create_directory": "폴더 생성 완료", "move_file": "이동 완료"}[event.Call.Name]
 	if event.Operation != nil {
@@ -60,19 +60,19 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 			}
 		}
 	}
-	text := indentTool(label)
+	text := indentTool(f.Language.Text(label))
 	for _, lines := range result.Lines {
 		if lines.OldStartLine > 0 {
 			old := lineRange(lines.OldStartLine, lines.OldEndLine)
 			if lines.Removed {
-				text += indentTool("삭제한 줄: " + old)
+				text += indentTool(f.Language.Text("삭제한 줄: ") + old)
 			} else if lines.NewStartLine > 0 {
-				text += indentTool("기존 " + old + "줄 → " + lineRange(lines.NewStartLine, lines.NewEndLine) + "줄")
+				text += indentTool(f.Language.Format("기존 %s줄 → %s줄", old, lineRange(lines.NewStartLine, lines.NewEndLine)))
 			}
 		}
 	}
 	if event.ChangePreview != "" {
-		text += "\n" + indentTool("변경 내용") + renderChangePreview(f.Redact(event.ChangePreview))
+		text += "\n" + indentTool(f.Language.Text("Changes")) + renderChangePreview(f.Redact(event.ChangePreview), f.Language)
 	}
 	return text
 }

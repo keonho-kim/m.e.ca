@@ -14,13 +14,13 @@ func (f Formatter) Tool(event run.Event) string {
 		return ""
 	}
 	var text strings.Builder
-	label := event.Call.Name
+	label := f.Language.Text(event.Call.Name)
 	text.WriteString("\n  " + label + "\n\n")
 	text.WriteString(f.arguments(*event.Call))
 	if event.Kind == "tool_started" {
-		text.WriteString("\n    Running…\n")
+		text.WriteString("\n    " + f.Language.Text("Running") + "…\n")
 	} else {
-		text.WriteString("\n    Output\n")
+		text.WriteString("\n    " + f.Language.Text("Output") + "\n")
 		rendered := f.output(event)
 		if len(event.Output) > 0 {
 			text.WriteString(rendered)
@@ -28,7 +28,7 @@ func (f Formatter) Tool(event run.Event) string {
 			text.WriteString(indentTool(f.Redact(event.Text)))
 		}
 		if event.Kind == "tool_failed" && len(event.Output) > 0 && rendered != f.resultSummary(event) {
-			text.WriteString(indentTool("Failed: " + f.Redact(event.Text)))
+			text.WriteString(indentTool(f.Language.Text("Failed: ") + f.Redact(event.Text)))
 		}
 	}
 	return text.String()

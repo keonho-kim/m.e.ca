@@ -19,7 +19,7 @@ import (
 func testExecutor(t *testing.T) (*Executor, string) {
 	t.Helper()
 	project, home := t.TempDir(), t.TempDir()
-	executor, err := NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") })
+	executor, err := NewExecutor(project, home, filepath.Join(home, ".v"), func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := operation.Execute(context.Background(), false); err != nil {
+	if _, err := operation.Execute(context.Background(), true); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(project, "src/session.go")); err != nil {

@@ -7,17 +7,18 @@ package modelmenu
 import (
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 	selectionpolicy "github.com/keonho-kim/v-code/internal/provider/selection"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"strings"
 )
 
-func EffortLabel(selected connection.Selection) string {
+func EffortLabel(selected connection.Selection, lang locale.Language) string {
 	value := strings.ToUpper(selected.Effort())
 	if value == "" {
 		value = "DEFAULT"
 	}
-	label := "Thinking effort: " + value
+	label := lang.Text("Thinking effort: ") + lang.Text(value)
 	if len(selectionpolicy.EffortValues(selected)) == 0 {
-		label += " (unavailable)"
+		label += " (" + lang.Text("unavailable") + ")"
 	}
 	return label
 }

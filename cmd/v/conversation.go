@@ -30,7 +30,7 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 		return tuisession.Exit, err
 	}
 	vault := &credentials.Vault{State: state}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, configuration.Execution.WritablePaths, vault.Redact)
+	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact)
 	if err != nil {
 		return tuisession.Exit, err
 	}

@@ -20,13 +20,13 @@ func (a *app) loadOlderHistory() {
 		return
 	}
 	a.historyLoading = true
-	ctx, store, id, cursor, redact := a.ctx, a.opts.Store, a.opts.Session.ID, a.historyCursor, a.opts.Vault.Redact
+	ctx, store, id, cursor, redact, language := a.ctx, a.opts.Store, a.opts.Session.ID, a.historyCursor, a.opts.Vault.Redact, a.language
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		records, next, err := store.Timeline(ctx, id, cursor, 100)
 		page := historyPage{cursor: next, err: err}
-		formatter := transcript.Formatter{Redact: redact}
+		formatter := transcript.Formatter{Language: language, Redact: redact}
 		for _, record := range records {
 			if record.Kind == "message" {
 				page.blocks = append(page.blocks, formatter.Message(record.Message)...)

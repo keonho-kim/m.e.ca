@@ -18,7 +18,7 @@ import (
 
 func TestCommandFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
+	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,44 +79,5 @@ func TestNoMatchSearchFinishesWithoutCorrectionOrRetry(t *testing.T) {
 	}
 	if len(result.Facts.Commands) != 1 || result.Facts.Commands[0].ExitCode == nil || *result.Facts.Commands[0].ExitCode != 1 || !result.HadToolFailure {
 		t.Fatalf("observation overwrote command failure facts: %+v", result)
-	}
-}
-
-func TestSandboxSetupFailureReachesModel(t *testing.T) {
-	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), nil, func(s string) string { return s })
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := tools.Close(); err != nil {
-			t.Error(err)
-		}
-	})
-	target := filepath.Join(t.TempDir(), "outside")
-	if err := os.WriteFile(target, []byte("shared"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Link(target, filepath.Join(project, "alias")); err != nil {
-		t.Fatal(err)
-	}
-	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "cat '" + target + "'"}), "The outside path is unavailable under current Scope", "Cannot execute outside Scope"}}
-	j := &journal{}
-	r := fixture(g, &executor{}, j)
-	r.Tools = tools
-	r.Settings.Permission = policy.AllowAll
-	result, err := r.Run(context.Background(), "inspect execution limits", approve, emit)
-	if err != nil || result.Status != Answered || !result.HadToolFailure {
-		t.Fatalf("result=%+v %v", result, err)
-	}
-	if data, err := os.ReadFile(target); err != nil || string(data) != "shared" {
-		t.Fatal("protected fixture changed")
-	}
-	var body strings.Builder
-	for _, message := range g.requests[1].Messages {
-		body.WriteString(message.Content)
-	}
-	if !strings.Contains(body.String(), "scope_unavailable") || !strings.Contains(body.String(), "Failure") || !strings.Contains(body.String(), "Output") {
-		t.Fatal("policy or execution error missing from model context")
 	}
 }

@@ -27,7 +27,7 @@ func (e *Executor) directoryTargets(settings policy.Settings, paths []string) ([
 	seen := map[string]bool{}
 	var visit func(string) error
 	visit = func(path string) error {
-		t, err := e.writeTarget(settings.Scope, path)
+		t, err := e.resolve(settings.Scope, path)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func (op *operation) prepareDirectories(call toolapi.Call) error {
 	}
 	op.directories = dirs
 	for _, path := range op.input.Paths {
-		target, err := op.executor.writeTarget(op.settings.Scope, path)
+		target, err := op.executor.resolve(op.settings.Scope, path)
 		if err != nil {
 			return err
 		}

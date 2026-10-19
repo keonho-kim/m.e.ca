@@ -24,7 +24,7 @@ func (op *operation) mutate() (toolapi.Result, error) {
 			return toolapi.Result{}, err
 		}
 	case "move_file":
-		current, err := op.executor.writeTarget(op.settings.Scope, op.input.Destination)
+		current, err := op.executor.resolve(op.settings.Scope, op.input.Destination)
 		if err != nil {
 			return toolapi.Result{}, err
 		}

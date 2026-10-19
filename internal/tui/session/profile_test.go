@@ -15,12 +15,12 @@ func TestModelProfileDisplay(t *testing.T) {
 	a.selection.Profile = "ornith-1.5-9b"
 	a.openModel()
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.Contains(got, "Profile: ornith-1.5-9b") {
+	if got := screenLine(a.screen, 0, 80); !strings.Contains(got, "프로파일: ornith-1.5-9b") {
 		t.Fatalf("profile missing: %q", got)
 	}
 	a.selection.Profile = "generic"
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.Contains(got, "generic") {
+	if got := screenLine(a.screen, 0, 80); !strings.Contains(got, "미식별 / 일반") {
 		t.Fatalf("generic profile missing: %q", got)
 	}
 }

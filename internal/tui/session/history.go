@@ -19,7 +19,7 @@ func (a *app) loadHistory(older bool) error {
 	}
 	a.historyCursor = cursor
 	var blocks []viewport.Block
-	formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}
+	formatter := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
 	for _, record := range records {
 		if record.Kind == "message" {
 			blocks = append(blocks, formatter.Message(record.Message)...)

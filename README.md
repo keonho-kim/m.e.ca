@@ -76,7 +76,7 @@ v uninstall
 
 ## 사용법
 
-파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 소스 생성·본문 수정·이동에는 diff와 원본 버전 검사를 제공하는 전용 파일 도구를 권장합니다. 셸의 생성·수정·이동에도 같은 파일 경계와 Permission이 적용됩니다.
+파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 소스 생성·본문 수정·이동에는 diff와 원본 버전 검사를 제공하는 전용 파일 도구를 권장합니다. 셸의 생성·수정·이동은 호스트 사용자 권한과 Permission을 따릅니다.
 
 모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-profiles.md#native-tool-calling)
 
@@ -86,17 +86,19 @@ v uninstall
 
 | 명령 | 기능 |
 | --- | --- |
-| `!model` | 모델 연결, Thinking ON/OFF와 지원되는 추론 강도 선택 |
+| `!model` | 모델 연결, 추론 켜기·끄기와 지원되는 추론 강도 선택 |
 | `!dir [path]` | 파일·디렉터리 탐색 |
 | `!permission` | 변경·명령 실행의 승인 정책 설정 |
 | `!new` | 같은 프로젝트에서 새 세션 시작 · 전역 모델 연결 유지 |
 | `!quit` | 현재 작업을 취소·정리하고 종료 |
 
-`!`를 입력하면 명령 후보가 나타납니다. 파일 탐색·선택·미리보기는 `!dir`을 사용합니다. `↑`·`↓`로 이동하고 `Enter`로 선택합니다. `Ctrl+C`로도 종료할 수 있으며, 모델·Thinking·승인 상태는 하단 키맵 바로 윗줄에, 주요 키는 맨 아랫줄에 고정됩니다.
+`!`를 입력하면 명령 후보가 나타납니다. 파일 탐색·선택·미리보기는 `!dir`을 사용합니다. `↑`·`↓`로 이동하고 `Enter`로 선택합니다. `Ctrl+C`로도 종료할 수 있으며, 모델·추론·승인 상태는 하단 키맵 바로 윗줄에, 주요 키는 맨 아랫줄에 고정됩니다.
 
-기본값은 **자동 승인 · Thinking OFF**입니다. 파일 쓰기·삭제는 프로젝트와 명시한 추가 쓰기 경로 안에서만 허용합니다. 셸은 기존 HOME·PATH·개발 도구를 재사용하고 Linux·macOS의 OS 파일 경계를 적용합니다. 외부 캐시에 쓰기가 필요하면 [추가 경로 설정](docs/configuration.md#추가-쓰기-경로)을 사용합니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장하며 마지막 모델 연결은 새 세션에서 재사용합니다.
+기본값은 **자동 승인 · 추론 꺼짐**입니다. 삭제·이동·파괴적인 Git 작업과 프로젝트 밖의 직접 변경은 별도 승인을 받으며, 보호 경로 변경과 권한 상승은 차단합니다. 셸은 기존 HOME·PATH·DNS·개발 도구·캐시를 호스트 사용자 권한으로 사용합니다. 프로젝트는 기본 작업 디렉터리이며 파일 접근을 격리하지 않습니다. 실행 범위와 승인 정책은 [실행 경계](docs/execution-boundary.md)를 참고하세요. API Key는 macOS Keychain 또는 Linux Secret Service에 저장하며 마지막 모델 연결은 새 세션에서 재사용합니다.
 
-입력창의 `↑↓`는 줄 이동, `Ctrl/Cmd+↑↓`는 이전 입력 탐색입니다. 작업 중 Enter는 다음 판단에 방향 수정을 전달하고 Tab은 후속 요청을 예약합니다. 큰 명령 출력은 Ctrl+O로 펼칩니다. 드래그 선택 후 `Ctrl/Cmd+C`로 복사하고, 입력창 선택은 Backspace로 삭제합니다. `F1`에서 현재 화면의 전체 키 안내를 확인합니다.
+입력창의 `↑↓`는 줄 이동, `Ctrl/Cmd+↑↓`는 이전 입력 탐색입니다. 작업 중 Enter는 다음 판단에 방향 수정을 전달하고 Tab은 후속 요청을 예약합니다. 도구 결과는 기본으로 펼쳐 보이며 Ctrl+O로 전체를 접거나 펼칩니다. 접으면 도구·대상·실행 결과 요약을 남깁니다. 드래그 선택 후 `Ctrl/Cmd+C`로 복사하고, 입력창 선택은 Backspace로 삭제합니다. `F1`에서 현재 화면의 전체 키 안내를 확인합니다.
+
+화면 언어는 시스템 로캘에 따라 한국어·영어로 표시합니다. 예를 들어 `allow-all`은 `자동 승인`, Thinking은 `추론`으로 보이며 설정값·모델 ID·명령·출력 원문은 유지합니다. 한국어로 실행하려면 `LC_MESSAGES=ko_KR.UTF-8 v`를 사용할 수 있습니다. [언어 선택 기준](docs/usage.md#화면-언어)을 참고하세요.
 
 [자세한 사용법과 키맵 →](docs/usage.md) · [모델 식별·프로파일 →](docs/model-profiles.md)
 
@@ -136,7 +138,7 @@ max_output_tokens = 12800
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
 
 ```sh
 gofmt -l cmd internal
@@ -147,7 +149,7 @@ go build ./...
 go mod verify
 ```
 
-Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스페이스 생성 권한이 필요합니다. `V_SANDBOX_REQUIRED=1 go test ./internal/tools/local/process/...`로 격리 테스트가 생략되지 않도록 검증합니다. 지원 도구 체인은 Go 1.27.2이며, 변경 시 [개발 규칙](AGENTS.md)을 따릅니다.
+지원 도구 체인은 Go 1.27.2입니다. Linux·WSL·macOS의 호스트 셸·네트워크 검증은 [개발 가이드](docs/development.md#플랫폼-실행-검증)를 따르며, 변경 시 [개발 규칙](AGENTS.md)을 적용합니다.
 
 실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 격리 정책, WSL·SSH·터미널별 키 전달과 실제 입력 지연은 추가 검증 대상입니다. 지원 운영체제는 Linux와 macOS입니다.
 
@@ -159,7 +161,7 @@ Linux의 실제 셸 격리 테스트에는 필요한 커널 기능과 네임스�
 | [설정과 대화 보존](docs/configuration.md) | 역할별 인자, 프롬프트, Compaction, 세션 저장 |
 | [에이전트 작동 방식](docs/runtime.md) | 단일 에이전트, native tools, 결과 확인, 종료 |
 | [모델 프로파일](docs/model-profiles.md) | 모델 식별, 서빙 별칭, 모델별 Thinking 제어 |
-| [실행 경계](docs/execution-boundary.md) | 파일 보호, 개발 환경 재사용과 추가 쓰기 경로 |
+| [실행 경계](docs/execution-boundary.md) | 호스트 개발 환경, 승인·파일 검사와 실행 권한 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
 

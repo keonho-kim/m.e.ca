@@ -31,10 +31,10 @@ func TestConversationEditorStaysAtBottom(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		rows = append(rows, strings.TrimSpace(screenLine(a.screen, y, 80)))
 	}
-	want := []string{"INPUT 0 · OUTPUT 0 · TPS —", "> first question", "", "Agent", "answer to first question", "", "", "> second question", "", "Agent", "answer to second question", "", ""}
+	want := []string{"입력 0 · 출력 0 · 초당 토큰 —", "> first question", "", "에이전트", "answer to first question", "", "", "> second question", "", "에이전트", "answer to second question", "", ""}
 	for y, text := range want {
 		if y == 0 {
-			if !strings.HasPrefix(rows[y], "STATUS IDLE") || !strings.HasSuffix(rows[y], text) {
+			if !strings.HasPrefix(rows[y], "상태 대기") || !strings.HasSuffix(rows[y], text) {
 				t.Fatal("header not split across row")
 			}
 			continue
@@ -113,10 +113,10 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"INPUT 0 · OUTPUT 0 · TPS —", "> inspect file", "", "Agent", "", "execute_command", "", "명령: cat README.md", "", "Output", "stdout: file inspected", "exit: 0", "", "file inspected", "", ""} {
+	for y, text := range []string{"입력 0 · 출력 0 · 초당 토큰 —", "> inspect file", "", "에이전트", "", "명령 실행", "", "명령: cat README.md", "", "결과", "표준 출력: file inspected", "종료 코드: 0", "", "file inspected", "", ""} {
 		if y == 0 {
 			got := screenLine(a.screen, 0, 80)
-			if !strings.HasPrefix(got, "STATUS IDLE") || !strings.HasSuffix(got, text) {
+			if !strings.HasPrefix(got, "상태 대기") || !strings.HasSuffix(got, text) {
 				t.Fatal(got)
 			}
 			continue

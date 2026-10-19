@@ -16,9 +16,6 @@ func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, 
 	if call.Name != "execute_command" || outcome.Process == nil {
 		outcome.Started = true
 	}
-	if outcome.Failure != nil && outcome.Failure.Code == toolapi.ScopeUnavailable {
-		outcome.Started = false
-	}
 	outcome.Target = proposal.Target
 	event.Kind, event.Text = "tool_succeeded", outcome.Summary
 	if outcome.Failed {

@@ -38,9 +38,9 @@ func (a *app) finishWorker(n notice) {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
 	}
 	if stopped && errors.Is(n.Err, context.Canceled) && a.page == "chat" {
-		a.stopNotice = "중지했습니다. 다음 입력으로 이어갈 수 있습니다"
+		a.stopNotice = a.language.Text("중지했습니다. 다음 입력으로 이어갈 수 있습니다")
 		if n.SetupRevision > 0 {
-			a.stopNotice = "연결 작업을 취소했습니다"
+			a.stopNotice = a.language.Text("연결 작업을 취소했습니다")
 		}
 	}
 	if err := a.adoptConnection(n); err != nil {
@@ -50,11 +50,11 @@ func (a *app) finishWorker(n notice) {
 	if n.Models != nil && !errors.Is(n.Err, context.Canceled) && !errors.Is(n.Err, context.DeadlineExceeded) {
 		a.openModelInput(n.Models)
 		if n.Err != nil {
-			a.status = "목록 조회 실패 · 모델 ID를 직접 입력하세요: " + a.opts.Vault.Redact(n.Err.Error())
+			a.status = a.language.Text("목록 조회 실패 · 모델 ID를 직접 입력하세요: ") + a.opts.Vault.Redact(n.Err.Error())
 		}
 	}
 	if n.Diagnostic && n.Err == nil {
-		a.status = "모델 연결 진단을 통과했습니다"
+		a.status = a.language.Text("모델 연결 진단을 통과했습니다")
 	}
 	if a.proposal != nil {
 		a.proposal = nil

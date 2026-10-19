@@ -7,11 +7,13 @@ package view
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/rivo/uniseg"
 	"strings"
 )
 
 type Status struct {
+	Language      locale.Language
 	Model, Effort string
 	Thinking      bool
 	Settings      policy.Settings
@@ -20,17 +22,17 @@ type Status struct {
 func statusLine(screen tcell.Screen, status Status, y, w int) {
 	model, thinking, effort, settings := status.Model, status.Thinking, status.Effort, status.Settings
 	if model == "" {
-		model = "no-model"
+		model = status.Language.Text("no-model")
 	}
 	suffix := ""
 	if thinking {
-		suffix = " Thinking"
+		suffix = " " + status.Language.Text("Thinking")
 		if effort != "" {
 			suffix += " " + strings.ToUpper(effort)
 		}
 	}
 	if settings.Permission == policy.AllowAll {
-		suffix += " │ 자동 승인"
+		suffix += " │ " + status.Language.Text("allow-all")
 	}
 	maxModel := max(0, w-uniseg.StringWidth(suffix))
 	Text(screen, 0, y, maxModel, model, tcell.StyleDefault)

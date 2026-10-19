@@ -1,0 +1,47 @@
+// Purpose: Declare bilingual session notices and locally generated UI errors.
+// Pattern: Declarative presentation data.
+// Usage: Session state transitions select these labels without translating diagnostic payloads.
+// Related: internal/tui/locale/locale.go, internal/tui/session/events.go.
+package locale
+
+var messages = []translation{
+	{"", "Connecting", "연결 중"},
+	{"", "Stop the current task before changing providers", "현재 작업을 중지한 뒤 모델 공급자를 변경하세요"},
+	{"", "Stop the current task before changing settings", "현재 작업을 중지한 뒤 설정을 변경하세요"},
+	{"", "Stop the current task before changing Thinking effort", "현재 작업을 중지한 뒤 추론 강도를 변경하세요"},
+	{"", "Thinking ON/OFF control is unavailable or unverified for this model", "이 모델의 추론 켜기·끄기는 지원하지 않거나 확인되지 않았습니다"},
+	{"", "Thinking ON/OFF control is unverified", "추론 켜기·끄기 제어가 확인되지 않았습니다"},
+	{"", "Thinking effort is unavailable or undocumented for this model and provider", "이 모델과 공급자의 추론 강도는 지원하지 않거나 확인되지 않았습니다"},
+	{"", "Reasoning choices changed; reopen the menu", "추론 선택지가 바뀌었습니다. 메뉴를 다시 여세요"},
+	{"", "One task is already active; draft preserved", "이미 작업 중입니다. 입력한 초안을 유지합니다"},
+	{"", "Select a model using !model", "!model에서 모델을 선택하세요"},
+	{"", "Endpoint cannot be empty", "서버 주소를 입력하세요"},
+	{"", "Unknown file-view command; use :q, !new or !quit", "알 수 없는 명령입니다. :q, !new 또는 !quit을 사용하세요"},
+	{"", "Project location changed; refusing to replace the original root", "프로젝트 위치가 바뀌었습니다. 원래 루트 경로를 확인하세요"},
+	{"", "Stopping and cleaning up", "작업을 중지하고 정리하고 있습니다"},
+	{"", "Cancelling connection and cleaning up", "연결 작업을 취소하고 정리하고 있습니다"},
+	{"", "Stopped. Send a message to continue", "중지했습니다. 다음 입력으로 이어갈 수 있습니다"},
+	{"", "Connection cancelled", "연결 작업을 취소했습니다"},
+	{"", "Clipboard copy failed: ", "클립보드 복사 실패: "},
+	{"", "Copied", "복사했습니다"},
+	{"", "Select a model and finish the current task before diagnostics", "모델을 선택하고 현재 작업을 마친 뒤 진단하세요"},
+	{"", "Checking model connection", "모델 연결 진단 중"},
+	{"", "Model connection diagnostics passed", "모델 연결 진단을 통과했습니다"},
+	{"", "Model lookup failed · enter a model ID: ", "목록 조회 실패 · 모델 ID를 직접 입력하세요: "},
+	{"", "The next decision will include your message", "현재 작업의 다음 판단에 반영합니다"},
+	{"", "Waiting to send; draft preserved", "전달 대기 중입니다. 초안을 유지합니다"},
+	{"", "Stopping; draft preserved", "중지 처리 중입니다. 초안을 유지합니다"},
+	{"", "Only regular messages can be queued", "일반 메시지만 예약할 수 있습니다"},
+	{"", "A request is already queued; new draft preserved", "이미 예약된 요청이 있습니다. 새 초안을 유지합니다"},
+	{"", "The queued request will run after the current task", "현재 작업이 끝나면 예약한 요청을 실행합니다"},
+	{"", "Model name filled · Enter to connect", "모델명 입력됨 · Enter로 연결"},
+	{"", "Reading directory…", "폴더 읽는 중…"},
+	{"", "Queued > ", "예약 > "},
+	{"", "Interrupted work: %s\nSend a message to inspect the current state and continue.", "중지된 작업: %s\n새 메시지를 보내면 현재 상태를 확인하고 이어갈 수 있습니다."},
+	{"", "Error", "오류"},
+	{"", "Tool results folded · Ctrl+O to expand", "도구 결과 접음 · Ctrl+O로 펼치기"},
+	{"", "Tool results expanded · PgUp/Dn to scroll", "도구 결과 펼침 · PgUp/Dn으로 스크롤"},
+	{"", "No tool results to fold or expand", "접거나 펼칠 도구 결과가 없습니다"},
+	{"", "Clipboard copy requested", "클립보드에 복사를 요청했습니다"},
+	{"", "Paste cancelled: input is limited to 16 MiB", "붙여넣기 취소: 입력은 최대 16MiB입니다"},
+}

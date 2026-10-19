@@ -1,84 +1,51 @@
-// Purpose: Verify write roots, protected paths and pinned directory identities.
+// Purpose: Verify dedicated file tools canonicalize host paths, guard private state and pin the project.
 // Pattern: Filesystem policy contract tests.
 // Usage: go test ./internal/tools/local/filesystem.
-// Related: internal/tools/local/filesystem/boundary.go.
+// Related: internal/tools/local/filesystem/boundary.go, internal/tools/local/filesystem/paths.go.
 package filesystem
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestBoundary(t *testing.T) {
-	base := t.TempDir()
-	project, home, cache := filepath.Join(base, "project"), filepath.Join(base, "home"), filepath.Join(base, "cache")
-	for _, p := range []string{project, home, cache} {
-		if err := os.Mkdir(p, 0700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	b, err := New(project, home, filepath.Join(home, ".v"), []string{cache})
+	project, home := t.TempDir(), t.TempDir()
+	b, err := New(project, home, filepath.Join(home, ".v"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range []string{filepath.Join(project, "new"), filepath.Join(cache, "new")} {
-		if _, _, err := b.WriteTarget(p); err != nil {
+	for _, path := range []string{filepath.Join(project, "new"), filepath.Join(home, "ordinary-file")} {
+		if _, err := b.ReadTarget(path); err != nil {
 			t.Fatal(err)
-		}
-	}
-	for _, p := range []string{filepath.Join(home, "new"), filepath.Join(home, ".v/config.toml"), filepath.Join(home, ".ssh/key")} {
-		if _, _, err := b.WriteTarget(p); err == nil {
-			t.Fatalf("accepted write: %s", p)
 		}
 	}
 	if _, err := b.ReadTarget(filepath.Join(home, ".ssh/key")); err == nil {
-		t.Fatal("secret exposed")
+		t.Fatal("dedicated file tool exposed a protected path")
 	}
-	if err := os.Symlink(home, filepath.Join(project, "linked")); err != nil {
+	alias := filepath.Join(project, "linked-home")
+	if err := os.Symlink(home, alias); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := b.WriteTarget(filepath.Join(project, "linked/new")); err == nil {
-		t.Fatal("symlink escape")
+	if _, err := b.ReadTarget(filepath.Join(alias, ".v/config.toml")); err == nil {
+		t.Fatal("symlink bypassed private-path guard")
 	}
-	for _, p := range []string{"/", home, "/usr", filepath.Join(home, ".v")} {
-		if _, err := New(project, home, filepath.Join(home, ".v"), []string{p}); err == nil {
-			t.Fatalf("broad exception accepted: %s", p)
+	if err := b.Movable(b.Project()); err == nil {
+		t.Fatal("project root was movable")
+	}
+	if err := os.Rename(project, project+".old"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(project + ".old"); err != nil {
+			t.Error(err)
 		}
-	}
-	if err := os.Rename(cache, cache+".old"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(cache, 0700); err != nil {
+	})
+	if err := os.Mkdir(project, 0700); err != nil {
 		t.Fatal(err)
 	}
 	if err := b.Check(); err == nil {
-		t.Fatal("replaced root accepted")
-	}
-}
-
-func TestHardlinkBlocksShellPreparation(t *testing.T) {
-	base := t.TempDir()
-	project := filepath.Join(base, "project")
-	home := filepath.Join(base, "home")
-	for _, p := range []string{project, home} {
-		if err := os.Mkdir(p, 0700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	original := filepath.Join(base, "outside")
-	if err := os.WriteFile(original, []byte("safe"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Link(original, filepath.Join(project, "alias")); err != nil {
-		t.Fatal(err)
-	}
-	b, err := New(project, home, filepath.Join(home, ".v"), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := b.CheckTrees(context.Background()); err == nil {
-		t.Fatal("shared inode accepted")
+		t.Fatal("replaced project identity accepted")
 	}
 }

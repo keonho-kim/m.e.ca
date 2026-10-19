@@ -13,12 +13,18 @@ import (
 
 type Approval struct {
 	Candidate *Candidate
+	Command   *CommandApproval
 	ID        string
 	Name      string
 	Target    string
 	Preview   string
 	Diff      bool
 	Required  bool
+}
+
+type CommandApproval struct {
+	Directory        string
+	Reasons, Targets []string
 }
 
 type LineChange struct {

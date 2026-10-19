@@ -22,7 +22,7 @@ func TestProtectedCaseAlias(t *testing.T) {
 	if _, err := os.Stat(alias); os.IsNotExist(err) {
 		t.Skip("case-sensitive volume")
 	}
-	b, err := New(project, home, alias, nil)
+	b, err := New(project, home, alias)
 	if err != nil {
 		t.Fatal(err)
 	}

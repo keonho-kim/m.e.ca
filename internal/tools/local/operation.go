@@ -25,6 +25,8 @@ type operation struct {
 	editSpans                    []toolapi.LineChange
 	approval                     toolapi.Approval
 	executed                     atomic.Bool
+	environment                  []string
+	shell                        shellSafety
 }
 
 func (op *operation) Approval() toolapi.Approval { return op.approval }
@@ -37,17 +39,28 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	if err != nil {
 		return toolapi.Result{}, err
 	}
-	if required && !approved {
+	if (required || op.approval.Required) && !approved {
 		return toolapi.Result{}, fmt.Errorf("operation denied: approval required")
 	}
 	if !op.executed.CompareAndSwap(false, true) {
 		return toolapi.Result{}, fmt.Errorf("prepared operation has already executed")
 	}
+	if op.spec.effect == policy.Command {
+		current, err := op.executor.analyzeCommand(ctx, op.input.Command, op.environment)
+		if err != nil {
+			return toolapi.Result{}, err
+		}
+		if !op.shell.same(current) {
+			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and prepare the command again with fresh approval."}
+		}
+	} else if err := op.checkMutationSafety(); err != nil {
+		return toolapi.Result{}, err
+	}
 	if op.spec.name == "create_directory" {
 		return op.createDirectories(ctx)
 	}
 	if op.spec.effect != policy.Command {
-		current, err := op.executor.writeTarget(op.settings.Scope, op.input.Path)
+		current, err := op.executor.resolve(op.settings.Scope, op.input.Path)
 		if err != nil {
 			return toolapi.Result{}, err
 		}

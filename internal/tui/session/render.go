@@ -21,14 +21,14 @@ func (a *app) render() {
 	w, h := a.screen.Size()
 	if w < 12 || h < 4 {
 		a.clearSelection()
-		view.Text(a.screen, 0, 0, w, "Resize terminal", tcell.StyleDefault)
+		view.Text(a.screen, 0, 0, w, a.language.Text("Resize terminal"), tcell.StyleDefault)
 		a.screen.Show()
 		return
 	}
 	body := a.bodyHeight(h)
 	if a.helpOpen {
-		view.KeyboardHelp(a.screen, a.shortcuts(), w, body, a.helpOffset)
-		view.Footer(a.screen, view.Status{Model: a.selection.Model, Settings: a.settings}, []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "Esc", Label: "닫기"}, {Key: "F1", Label: "닫기"}, {Key: "↑↓", Label: "스크롤"}}, body, w)
+		view.KeyboardHelp(a.screen, a.shortcuts(), w, body, a.helpOffset, a.language)
+		view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model, Settings: a.settings}, []view.Shortcut{{Key: "^C", Label: a.language.Text("종료")}, {Key: "Esc", Label: a.language.Text("닫기")}, {Key: "F1", Label: a.language.Text("닫기")}, {Key: "↑↓", Label: a.language.Text("스크롤")}}, body, w)
 		a.screen.Show()
 		return
 	}
@@ -42,6 +42,6 @@ func (a *app) render() {
 	}
 	a.captureInputSources()
 	a.textSelection.Draw(a.screen)
-	view.Footer(a.screen, view.Status{Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings}, a.shortcuts(), body, w)
+	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort(), Settings: a.settings}, a.shortcuts(), body, w)
 	a.screen.Show()
 }

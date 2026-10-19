@@ -17,7 +17,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 			a.steeringDrafts[0] = ""
 			a.steeringDrafts = a.steeringDrafts[1:]
 		}
-		a.output.Append(transcript.User(e.Text), false)
+		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(e.Text), false)
 		a.inputs = append(a.inputs, e.Text)
 		a.historyIndex = len(a.inputs)
 		return
@@ -46,11 +46,11 @@ func (a *app) receiveRuntime(e *run.Event) {
 	}
 	switch e.Kind {
 	case "tool_started":
-		a.status = (transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(*e)
+		a.status = (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Tool(*e)
 		return
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		a.status = ""
-		for _, block := range (transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(*e) {
+		for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e) {
 			a.output.AppendBlock(block)
 		}
 		return

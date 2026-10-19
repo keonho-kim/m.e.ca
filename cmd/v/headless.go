@@ -115,7 +115,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		}
 		return err
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, cfg.Execution.WritablePaths, vault.Redact)
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact)
 	if err != nil {
 		return err
 	}

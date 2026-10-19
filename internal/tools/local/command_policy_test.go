@@ -22,6 +22,9 @@ func TestCommandContractRequiresPermission(t *testing.T) {
 	}
 	ctx := context.Background()
 	command := call("execute_command", `{"command":"git init"}`)
+	if _, err := executor.Prepare(ctx, policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}, command); err == nil {
+		t.Fatal("host shell accepted a directory-confinement contract")
+	}
 	settings := policy.Settings{Permission: policy.Approve, Scope: policy.System}
 	op, err := executor.Prepare(ctx, settings, command)
 	if err != nil {

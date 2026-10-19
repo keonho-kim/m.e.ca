@@ -8,11 +8,13 @@ import (
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"github.com/rivo/uniseg"
 	"strings"
 )
 
 type MenuDisplay struct {
+	Language               locale.Language
 	Candidates             Candidates
 	Activity               Activity
 	Usage                  modelapi.TokenUsage
@@ -78,13 +80,7 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 	start := max(0, display.Selected-visible+1)
 	for i := start; i < min(len(display.Choices), start+visible); i++ {
 		if display.Thinking != nil && i == 1 {
-			if display.ThinkingOnOnly {
-				Text(screen, 0, y, w, "Thinking ", SelectionStyle(i == display.Selected))
-				Text(screen, 9, y, max(0, w-9), "ON", tcell.StyleDefault.Bold(true))
-				Text(screen, 11, y, max(0, w-11), " (OFF unavailable)", tcell.StyleDefault.Dim(true))
-			} else {
-				Thinking(screen, y, w, *display.Thinking, display.ThinkingSupported, i == display.Selected)
-			}
+			Thinking(screen, y, w, *display.Thinking, display.ThinkingSupported, i == display.Selected, display.ThinkingOnOnly, display.Language)
 		} else {
 			Text(screen, 0, y, w, display.Choices[i], SelectionStyle(i == display.Selected))
 		}
