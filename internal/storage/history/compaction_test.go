@@ -41,3 +41,22 @@ func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {
 		t.Fatal("projection changed original records")
 	}
 }
+
+func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
+	records, err := Compaction([]Record{
+		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "assistant", Content: "All files have been created", Incomplete: true, Reasoning: "unfinished thinking"}},
+		{Sequence: 2, Kind: "event", Event: run.Event{Kind: "thinking", Thinking: "unfinished thinking"}},
+		{Sequence: 3, Kind: "event", Event: run.Event{Kind: "tool_failed", Text: "write failed: permission denied"}},
+		{Sequence: 4, Kind: "message", Message: modelapi.Message{Role: "user", Content: "Create only README.md now"}},
+	})
+	if err != nil || len(records) != 3 {
+		t.Fatalf("records=%+v err=%v", records, err)
+	}
+	if records[0].Role != "unfinished_assistant_draft" || records[0].Text != "All files have been created" || records[1].Role != "failure" || records[2].Role != "user" {
+		t.Fatalf("draft promoted to outcome or evidence lost: %+v", records)
+	}
+	body, _ := json.Marshal(records)
+	if strings.Contains(string(body), "unfinished thinking") {
+		t.Fatal("unfinished thinking reached compaction")
+	}
+}

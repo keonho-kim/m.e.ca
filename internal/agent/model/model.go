@@ -19,6 +19,7 @@ type Message struct {
 	ID              string         `json:"id,omitempty"`
 	Role            string         `json:"role"`
 	Content         string         `json:"content"`
+	Incomplete      bool           `json:"incomplete,omitempty"`
 	Calls           []toolapi.Call `json:"calls,omitempty"`
 	ToolCallID      string         `json:"tool_call_id,omitempty"`
 	ToolName        string         `json:"tool_name,omitempty"`

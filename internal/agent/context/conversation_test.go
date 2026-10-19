@@ -48,3 +48,34 @@ func TestActiveFollowupFollowsOlderUserMessages(t *testing.T) {
 		t.Fatalf("active request preceded history: %+v", request.Messages)
 	}
 }
+
+func TestUnfinishedDraftIsQuotedWithoutReasoning(t *testing.T) {
+	history := []modelapi.Message{
+		{Role: "user", Content: "Create the endpoint"},
+		{Role: "assistant", Content: "The endpoint is implemented", Reasoning: "unfinished-thought", Incomplete: true},
+		{Role: "system", Content: "Request interrupted", Reasoning: "runtime-thought"},
+		{Role: "user", Content: "Continue with authentication"},
+	}
+	before, _ := json.Marshal(history)
+	request, err := Build(Input{Messages: history, Objective: "Continue with authentication", Redact: func(s string) string { return s }, MaxBytes: 10000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := request.Messages[2]
+	if draft.Role != "user" || draft.Incomplete || draft.Reasoning != "" || !strings.Contains(draft.Content, "Unfinished assistant draft") || !strings.Contains(draft.Content, "The endpoint is implemented") {
+		t.Fatalf("unsafe draft projection: %+v", draft)
+	}
+	body, _ := json.Marshal(request.Messages)
+	for _, thought := range []string{"unfinished-thought", "runtime-thought"} {
+		if strings.Contains(string(body), thought) {
+			t.Fatalf("replayed %s", thought)
+		}
+	}
+	if request.Messages[len(request.Messages)-1].Content != "Continue with authentication" {
+		t.Fatal("newest instruction no longer last")
+	}
+	after, _ := json.Marshal(history)
+	if string(before) != string(after) {
+		t.Fatal("projection changed archived history")
+	}
+}

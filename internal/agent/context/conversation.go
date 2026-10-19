@@ -1,4 +1,4 @@
-// Purpose: Preserve native tool history and quote internal runtime records as observations.
+// Purpose: Preserve completed native history and distinguish unfinished drafts from observed work.
 // Pattern: Pure projection.
 // Usage: Context assembly converts each persisted message through conversationMessage.
 // Related: internal/agent/context/request.go.
@@ -12,7 +12,22 @@ import (
 )
 
 func conversationMessage(message modelapi.Message, paired bool) (modelapi.Message, error) {
+	if message.Incomplete {
+		if err := message.Check(); err != nil {
+			return modelapi.Message{}, err
+		}
+		body, err := json.Marshal(message.Content)
+		if err != nil {
+			return modelapi.Message{}, err
+		}
+		return modelapi.Message{Role: "user", Content: "Unfinished assistant draft (interrupted; not evidence of completed work):\n" + string(body)}, nil
+	}
 	if message.Role == "system" || !paired && (len(message.Calls) > 0 || message.Role == "tool") {
+		// Runtime observations have content, but only assistant replies own
+		// reasoning that can be replayed under a provider's message contract.
+		if message.Role != "assistant" {
+			message.Reasoning = ""
+		}
 		record := struct {
 			Role       string         `json:"role"`
 			Content    string         `json:"content,omitempty"`
@@ -38,7 +53,7 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 func pairedTools(messages []modelapi.Message) map[int]bool {
 	paired := make(map[int]bool)
 	for index, message := range messages {
-		if message.Role != "assistant" || len(message.Calls) == 0 || index+len(message.Calls) >= len(messages) {
+		if message.Role != "assistant" || message.Incomplete || len(message.Calls) == 0 || index+len(message.Calls) >= len(messages) {
 			continue
 		}
 		pending := make(map[string]string)

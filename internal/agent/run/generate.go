@@ -79,14 +79,10 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		}
 	}
 	if err != nil {
-		if thinking.Len() > 0 {
-			archived := modelapi.Message{Role: "system", Content: "Earlier unfinished notes:", Reasoning: maskedPartial(s.runner, thinking.String())}
-			if saveErr := s.save(context.WithoutCancel(ctx), archived); saveErr != nil {
-				return modelapi.Response{}, saveErr
-			}
-		}
+		// The thinking event preserves the visible trace without replaying an
+		// unfinished reasoning chain as input to the next generation.
 		if body := reply.String(); body != "" {
-			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body)}); saveErr != nil {
+			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body), Incomplete: true}); saveErr != nil {
 				return modelapi.Response{}, saveErr
 			}
 		}

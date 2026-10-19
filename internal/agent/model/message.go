@@ -13,6 +13,9 @@ func (message Message) Check() error {
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" && message.Role != "system" {
 		return fmt.Errorf("invalid message role")
 	}
+	if message.Incomplete && (message.Role != "assistant" || len(message.Calls) != 0 || message.ToolCallID != "" || message.ToolName != "") {
+		return fmt.Errorf("unfinished drafts must be assistant messages without native tool calls or results")
+	}
 	size := len(message.Content) + len(message.Reasoning)
 	for _, call := range message.Calls {
 		size += len(call.Arguments) + len(call.ID) + len(call.Name)

@@ -21,6 +21,9 @@ func Compaction(page []Record) ([]compact.Record, error) {
 			switch m.Role {
 			case "user", "assistant":
 				role, text = m.Role, m.Content
+				if m.Incomplete {
+					role = "unfinished_assistant_draft"
+				}
 			case "tool":
 				role, text = "observation", toolExcerpt(m.Content)
 			}

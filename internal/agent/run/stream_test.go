@@ -84,7 +84,7 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 		t.Fatalf("partial=%q err=%v", partial, err)
 	}
 	last := j.messages[len(j.messages)-1]
-	if last.Role != "assistant" || last.Content != partial {
+	if last.Role != "assistant" || last.Content != partial || !last.Incomplete {
 		t.Fatalf("interrupted body not preserved: %+v", last)
 	}
 }
