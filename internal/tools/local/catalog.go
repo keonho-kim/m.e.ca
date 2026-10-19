@@ -43,7 +43,7 @@ func (executor *Executor) Definitions() []toolapi.Definition {
 	var out []toolapi.Definition
 	for _, spec := range specifications() {
 		if spec.name == "execute_command" {
-			spec.description += " Writable roots for all tools: " + executor.redact(strings.Join(executor.boundary.Writes(), ", ")) + "."
+			spec.description += " Writable roots for all tools: " + executor.redact(strings.Join(executor.boundary.Writes(), ", ")) + ". Writes outside these roots are denied."
 		}
 		out = append(out, toolapi.Definition{Name: spec.name, Description: spec.description, Parameters: spec.fields, Effect: spec.effect})
 	}

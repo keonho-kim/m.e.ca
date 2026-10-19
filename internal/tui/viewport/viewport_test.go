@@ -6,6 +6,7 @@ package viewport
 
 import (
 	"github.com/rivo/uniseg"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,20 @@ func TestScrollAnchor(t *testing.T) {
 	v.Scroll(1000, 3, 5)
 	if !v.Follow {
 		t.Fatal("did not resume following")
+	}
+}
+
+func TestCollapseKeepsAnchorOnItsOutput(t *testing.T) {
+	v := View{Follow: true}
+	v.Append("earlier conversation", false)
+	v.AppendBlock(Block{Text: "command summary", Details: strings.Repeat("detail\n", 100)})
+	v.ToggleDetails()
+	v.Scroll(-20, 80, 8)
+	id := v.AnchorID
+	v.ToggleDetails()
+	lines := v.Lines(80)
+	if start := v.Start(lines, 1); lines[start].ID != id {
+		t.Fatalf("folding jumped to unrelated output: %+v", lines[start])
 	}
 }
 

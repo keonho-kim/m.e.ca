@@ -38,8 +38,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		question := request.Messages[len(request.Messages)-1].Content
-		if strings.HasPrefix(question, "Work observations:") && !strings.Contains(question, fmt.Sprintf(`"project_root":%q`, a.opts.Session.ProjectRoot)) {
+		if !strings.Contains(request.Messages[0].Content, fmt.Sprintf("Project directory (project_root): %q", a.opts.Session.ProjectRoot)) {
 			t.Error("tool path base missing from model context")
 		}
 		usedTool := false

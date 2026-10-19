@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -18,10 +19,14 @@ func TestMainAgentPrompt(t *testing.T) {
 	templates.System = "COMMON_RULE"
 	templates.Development = "DEVELOPMENT_RULE"
 	r.Prompts, r.ProjectInstructions = &templates, "PROJECT_RULE"
+	r.ProjectRoot = "/projects/selected directory"
 	if _, err := r.Run(context.Background(), "hello", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	request := g.requests[0]
+	if !strings.Contains(request.Messages[0].Content, "Project directory (project_root): "+strconv.Quote(r.ProjectRoot)) {
+		t.Fatal("model was not told its actual project directory")
+	}
 	for _, rule := range []string{"COMMON_RULE", "DEVELOPMENT_RULE", "PROJECT_RULE"} {
 		if strings.Count(request.Messages[0].Content, rule) != 1 {
 			t.Fatalf("missing or repeated %s", rule)
@@ -38,5 +43,16 @@ func TestMainAgentPrompt(t *testing.T) {
 		if strings.Contains(last, term) {
 			t.Fatalf("decision repeated system instructions: %s", term)
 		}
+	}
+}
+
+func TestProjectDirectorySurvivesCompaction(t *testing.T) {
+	s := execution{runner: Runner{ProjectRoot: "/projects/new\nquoted\"path", Redact: func(s string) string { return s }}, limits: DefaultLimits(), system: "rules", memoryContext: "Earlier work used /projects/old", checkpoint: Checkpoint{Objective: "Continue here"}}
+	request, err := s.request()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(request.Messages[0].Content, "Project directory (project_root): "+strconv.Quote(s.runner.ProjectRoot)) {
+		t.Fatal("compacted history lost or corrupted the active project directory")
 	}
 }

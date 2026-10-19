@@ -27,5 +27,5 @@ func (s *execution) request() (modelapi.Request, error) {
 	if err != nil {
 		return modelapi.Request{}, err
 	}
-	return contextbuild.Build(contextbuild.Input{Request: parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions}), System: s.system, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes})
+	return contextbuild.Build(contextbuild.Input{Request: parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions}), System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes})
 }

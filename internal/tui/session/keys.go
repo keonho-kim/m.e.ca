@@ -18,6 +18,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.pasteKey(e)
 		return
 	}
+	e = input.NormalizeKey(e)
 	if a.selectionKey(e) {
 		return
 	}
@@ -27,7 +28,13 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	}
 	if e.Key() == tcell.KeyCtrlO && !a.helpOpen && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
-		a.output.ToggleDetails()
+		if !a.output.ToggleDetails() {
+			a.stopNotice = "접거나 펼칠 명령 출력이 없습니다"
+		} else if a.output.Expanded {
+			a.stopNotice = "명령 출력 펼침 · PgUp/Dn으로 스크롤"
+		} else {
+			a.stopNotice = "명령 출력 접음"
+		}
 		return
 	}
 	if e.Key() == tcell.KeyF1 {

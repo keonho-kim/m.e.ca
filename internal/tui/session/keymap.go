@@ -52,7 +52,7 @@ func (a *app) shortcuts() []view.Shortcut {
 			}
 		} else {
 			controls = a.inputShortcuts()
-			controls = append(controls, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"}, view.Shortcut{Key: "!", Label: "명령"}, view.Shortcut{Key: "^O", Label: "출력 접기/펴기"})
+			controls = append(controls, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"}, view.Shortcut{Key: "!", Label: "명령"})
 		}
 	case "files":
 		if !a.browser.Input && fileCommand(a.menuInput.String()) {
@@ -131,6 +131,13 @@ func (a *app) shortcuts() []view.Shortcut {
 			}
 		}
 		controls = filtered
+	}
+	if a.output.HasDetails() && (a.page == "chat" && !a.commandOpen || a.page == "files" && a.browser.Input) {
+		label := "출력 펴기"
+		if a.output.Expanded {
+			label = "출력 접기"
+		}
+		controls = append(controls, view.Shortcut{Key: "^O", Label: label})
 	}
 	return append(shortcuts, controls...)
 }

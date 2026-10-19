@@ -185,7 +185,19 @@ func (v *View) bound(older bool) {
 	}
 }
 
-func (v *View) ToggleDetails() {
+func (v *View) HasDetails() bool {
+	for _, block := range v.Blocks {
+		if block.Details != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *View) ToggleDetails() bool {
+	if !v.HasDetails() {
+		return false
+	}
 	v.Expanded = !v.Expanded
 	for i := range v.Blocks {
 		b := &v.Blocks[i]
@@ -194,8 +206,12 @@ func (v *View) ToggleDetails() {
 			if v.Expanded {
 				b.Text = b.Details
 			}
+			if b.ID == v.AnchorID {
+				v.AnchorRow = 0
+			}
 		}
 	}
+	return true
 }
 
 func (b Block) bytes() int {

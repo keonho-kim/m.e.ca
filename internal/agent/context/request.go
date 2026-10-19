@@ -7,11 +7,13 @@ package context
 import (
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"strconv"
 )
 
 type Input struct {
 	Request                   modelapi.Request
 	System, Memory, Objective string
+	ProjectRoot               string
 	Messages                  []modelapi.Message
 	Redact                    func(string) string
 	MaxBytes                  int
@@ -19,6 +21,9 @@ type Input struct {
 
 func Build(input Input) (modelapi.Request, error) {
 	system := input.Redact(input.System)
+	if input.ProjectRoot != "" {
+		system += "\n\nProject directory (project_root): " + strconv.Quote(input.Redact(input.ProjectRoot))
+	}
 	messages := []modelapi.Message{{Role: "system", Content: system}}
 	if input.Memory != "" {
 		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work summary (historical observations):\n" + input.Redact(input.Memory)})
