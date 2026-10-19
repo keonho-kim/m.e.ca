@@ -81,7 +81,7 @@ func TestBootstrapRecordsRoleDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"agent", "compaction", "diagnotics"} {
+	for _, role := range []string{"agent", "compaction", "diagnostics"} {
 		if !strings.Contains(string(content), "["+role+"]") {
 			t.Fatalf("missing role defaults: %s", role)
 		}

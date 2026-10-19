@@ -1,4 +1,4 @@
-// Purpose: Prepare an identified and diagnosed model connection and transfer client ownership.
+// Purpose: Prepare a model connection from metadata and transfer client ownership.
 // Pattern: Connection setup use case.
 // Usage: Session workers call Prepare, then adopt or close the returned client.
 // Related: internal/provider/setup/identity.go, internal/provider/discovery/client.go, internal/tui/session/model.go.
@@ -7,7 +7,6 @@ package setup
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
 	"github.com/keonho-kim/v-code/internal/provider/discovery"
@@ -21,7 +20,6 @@ type Credentials interface {
 
 type Defaults struct {
 	ContextLength            int
-	Inference                *inference.Settings
 	Profile, ReasoningEffort string
 	Thinking                 bool
 }
@@ -62,7 +60,10 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	}
 	report, err := catalog.Identify(ctx, model)
 	if err != nil {
-		return prepared, err
+		if ctx.Err() != nil {
+			return prepared, ctx.Err()
+		}
+		report.Incomplete = true
 	}
 	resolved, err := resolveIdentity(model, defaults.Profile, &report)
 	if err != nil {
@@ -80,9 +81,6 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	if discoveryErr != nil {
 		if ctx.Err() != nil {
 			return prepared, ctx.Err()
-		}
-		if connectionValue.Kind == connection.Ollama || connectionValue.Kind == connection.LMStudio {
-			return prepared, fmt.Errorf("model capability discovery: %w", discoveryErr)
 		}
 		info = connection.ModelInfo{ID: model, Notice: "Serving limits unavailable: " + discoveryErr.Error()}
 	}
@@ -115,30 +113,17 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	if err != nil {
 		return prepared, err
 	}
-	nativeOn := info.Reasoning != nil && info.Reasoning.Enabled()
-	caps, err := diagnostic.Check(ctx, client, model, supported, nativeOn, defaults.Inference)
-	if err != nil {
-		return prepared, err
-	}
-	if caps.Thinking {
-		selected.ThinkingSupported = true
+	selected.ThinkingSupported = supported
+	if supported {
 		value := defaults.Thinking
 		if previous.Connection.ID == connectionValue.ID && previous.Model == model && previous.Thinking != nil {
 			value = *previous.Thinking
 		}
 		selected.Thinking = &value
 	}
-	if caps.Reasoning && !caps.Thinking {
+	if !supported && info.Reasoning != nil && info.Reasoning.Enabled() {
 		value := true
 		selected.Thinking = &value
-	}
-	if selected.Effort() != "" {
-		if !caps.Reasoning {
-			return prepared, fmt.Errorf("Thinking effort requires verified separate reasoning")
-		}
-		if err = diagnostic.Effort(ctx, client, model, selected.Effort(), defaults.Inference); err != nil {
-			return prepared, fmt.Errorf("Thinking effort diagnostic failed: %w", err)
-		}
 	}
 	prepared.Client, prepared.Selection = client, &selected
 	return prepared, nil

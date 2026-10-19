@@ -1,7 +1,7 @@
 // Purpose: Pair one actual outcome with its native call and update execution observations.
 // Pattern: Ordered result application.
 // Usage: Single and batch dispatch commit outcomes in model call order.
-// Related: internal/agent/run/action.go, internal/agent/run/observation.go.
+// Related: internal/agent/run/action.go, internal/agent/run/observations.go.
 package run
 
 import (
@@ -10,25 +10,19 @@ import (
 	"errors"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"time"
 )
 
 func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error) error {
-	signature := callSignature(v.call)
-	mutating := v.definition.Effect == policy.Change || v.definition.Effect == policy.Command
 	result, failed := string(outcome.Content), outcome.Failed
 	if errors.Is(toolErr, errRuntimeRecord) {
 		if outcome.Started {
-			return errors.Join(toolErr, s.observeCompletion(ctx, v, outcome, toolErr))
+			return errors.Join(toolErr, s.observeResult(v, outcome))
 		}
 		return toolErr
 	}
 	s.result.HadToolFailure = s.result.HadToolFailure || failed || toolErr != nil
 	if ctx.Err() != nil {
-		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		return errors.Join(ctx.Err(), s.observeCompletion(recordCtx, v, outcome, toolErr))
+		return errors.Join(ctx.Err(), s.observeResult(v, outcome))
 	}
 	if toolErr != nil || failed {
 		failure := outcome.Failure
@@ -52,14 +46,22 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	if err := s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: v.call.ID, ToolName: v.call.Name}); err != nil {
 		return err
 	}
-	if toolErr == nil && !outcome.Failed && outcome.Started {
-		s.textCorrection = false
-	}
-	if err := s.observeCompletion(ctx, v, outcome, toolErr); err != nil {
+	if err := s.observeResult(v, outcome); err != nil {
 		return err
 	}
 	if errors.Is(toolErr, errApprovalDenied) {
 		return toolErr
 	}
-	return s.observeOutcome(ctx, v.call, v.call.Arguments, signature, mutating, v.definition.Effect, result, outcome, toolErr)
+	s.checkpoint.Phase = "observation"
+	s.checkpoint.Arguments = nil
+	s.checkpoint.Observation = s.runner.Redact(outcome.Summary)
+	if outcome.Started {
+		s.checkpoint.ChangeRevision++
+	}
+	if outcome.Failure != nil {
+		s.checkpoint.Blocker = s.runner.Redact(outcome.Failure.Detail)
+	} else {
+		s.checkpoint.Blocker = ""
+	}
+	return s.persist(ctx)
 }

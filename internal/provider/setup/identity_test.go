@@ -87,6 +87,31 @@ func TestIdentityResolutionSafety(t *testing.T) {
 	}
 }
 
+func TestIdentityIncompleteMetadataKeepsConflictChecks(t *testing.T) {
+	for _, tc := range []struct {
+		name, served, original, override, want string
+		wantError                              bool
+	}{
+		{"automatic fallback", "Qwen/Qwen3.8-27B", "", "", "generic", false},
+		{"manual without original", "alias", "", "qwen3.8-27b", "qwen3.8-27b", false},
+		{"matching original", "alias", "Qwen/Qwen3.8-27B", "qwen3.8-27b", "qwen3.8-27b", false},
+		{"conflicting original", "alias", "Qwen/Qwen3.8-27B", "ornith-1.5-9b", "", true},
+		{"conflicting served ID", "Qwen/Qwen3.8-27B", "", "ornith-1.5-9b", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			report := identity.Report{Incomplete: true}
+			report.Add("server", "original", tc.original)
+			selected, err := resolveIdentity(tc.served, tc.override, &report)
+			if (err != nil) != tc.wantError || err == nil && selected.ID != tc.want {
+				t.Fatalf("profile=%s err=%v", selected.ID, err)
+			}
+			if err == nil && tc.override != "" && report.ProfileSource != "manual" {
+				t.Fatalf("profile source=%s", report.ProfileSource)
+			}
+		})
+	}
+}
+
 func TestIdentityFlashNextAliasAndFP8Agree(t *testing.T) {
 	report := identity.Report{}
 	report.Add("server", "original", "Qwen/Qwen3.8-Flash-Next-FP8")

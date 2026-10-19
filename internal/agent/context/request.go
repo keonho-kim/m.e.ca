@@ -1,33 +1,38 @@
-// Purpose: Assemble complete ordered model context from current facts, history and memory.
+// Purpose: Assemble ordered model context from instructions, history and memory.
 // Pattern: Pure context projection.
-// Usage: Runtime supplies already selected facts and phase-specific instructions.
+// Usage: Runtime supplies retained history and the active request for projection.
 // Related: internal/agent/context/conversation.go, internal/agent/run/context.go.
 package context
 
 import (
-	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 )
 
 type Input struct {
-	Request                             modelapi.Request
-	System, Memory, Objective, Question string
-	Messages                            []modelapi.Message
-	Facts                               json.RawMessage
-	Redact                              func(string) string
-	MaxBytes                            int
+	Request                   modelapi.Request
+	System, Memory, Objective string
+	Messages                  []modelapi.Message
+	Redact                    func(string) string
+	MaxBytes                  int
 }
 
 func Build(input Input) (modelapi.Request, error) {
 	system := input.Redact(input.System)
 	messages := []modelapi.Message{{Role: "system", Content: system}}
 	if input.Memory != "" {
-		memory, err := json.Marshal(input.Redact(input.Memory))
-		if err != nil {
-			return modelapi.Request{}, err
+		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work summary (historical observations):\n" + input.Redact(input.Memory)})
+	}
+	present := input.Objective == ""
+	for _, m := range input.Messages {
+		if m.Role == "user" && m.Content == input.Objective {
+			present = true
+			break
 		}
-		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work (later observations below supersede this summary):\n" + string(memory)})
+	}
+	if !present && input.Memory != "" {
+		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
+		present = true
 	}
 	paired := pairedTools(input.Messages)
 	for index, message := range input.Messages {
@@ -39,16 +44,9 @@ func Build(input Input) (modelapi.Request, error) {
 		projected.Reasoning = input.Redact(projected.Reasoning)
 		messages = append(messages, projected)
 	}
-	// Always end with the active request, even when it also occurs in retained history.
-	// This prevents an older summary or an interrupted run from becoming the current task.
-	decision := "Work observations:\n" + input.Redact(string(input.Facts))
-	if input.Question != "" {
-		decision += "\n" + input.Redact(input.Question)
+	if !present {
+		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
 	}
-	if input.Objective != "" {
-		decision += "\n\nCurrent request:\n" + input.Redact(input.Objective)
-	}
-	messages = append(messages, modelapi.Message{Role: "user", Content: decision})
 	bytes := 0
 	for _, m := range messages {
 		bytes += len(m.Content) + len(m.Reasoning) + len(m.ToolCallID) + len(m.ToolName)

@@ -37,7 +37,7 @@ func (s *execution) settle(ctx context.Context, runErr error) error {
 	}
 	s.checkpoint.Phase = "finished"
 	s.result.Status, s.result.End = s.checkpoint.Status, *s.checkpoint.End
-	s.result.Facts = s.checkpoint.Work.Facts()
+	s.result.Facts = s.checkpoint.Work
 	if runErr != nil {
 		s.result.Text = "작업을 중단했습니다.\n" + s.result.Facts.Describe() + "- 종료 사유: " + s.checkpoint.End.Reason
 	}
@@ -49,7 +49,7 @@ func (s *execution) settle(ctx context.Context, runErr error) error {
 	return errors.Join(runErr, s.persist(flush))
 }
 
-func (s *execution) budgetReport(ctx context.Context, reason string) (Result, error) {
+func (s *execution) stopBudget(ctx context.Context, reason string) error {
 	s.checkpoint.End = &work.End{Status: work.Exhausted, Reason: reason}
-	return s.report(ctx, reason, true)
+	return s.stopReport(ctx, reason)
 }

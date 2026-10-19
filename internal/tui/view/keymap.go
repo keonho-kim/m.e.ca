@@ -40,21 +40,8 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	}
 	rows := [][]Shortcut{{}}
 	cells := 0
-	ordered := slices.Clone(shortcuts)
-	ranks := []string{"^C", "Esc", "Enter", "Tab", "Backspace", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
-	rank := func(key string) int {
-		if strings.HasPrefix(key, "^C") {
-			return 0
-		}
-		n := slices.Index(ranks, key)
-		if n < 0 {
-			return len(ranks)
-		}
-		return n
-	}
-	slices.SortStableFunc(ordered, func(a, b Shortcut) int { return rank(a.Key) - rank(b.Key) })
 	help := Shortcut{}
-	for _, shortcut := range ordered {
+	for _, shortcut := range orderedShortcuts(shortcuts) {
 		if shortcut.Key == "F1" {
 			help = shortcut
 			continue
@@ -93,7 +80,7 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 			}
 			return n
 		}
-		for help.Key != "" && len(line) > 0 && measure(append(slices.Clone(line), help)) > width && rank(line[len(line)-1].Key) > 1 {
+		for help.Key != "" && len(line) > 0 && measure(append(slices.Clone(line), help)) > width && shortcutRank(line[len(line)-1].Key) > 1 {
 			line = line[:len(line)-1]
 		}
 		if help.Key != "" && measure(append(slices.Clone(line), help)) <= width {
@@ -104,4 +91,21 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 		rows[last] = line
 	}
 	return rows
+}
+
+func shortcutRank(key string) int {
+	if strings.HasPrefix(key, "^C") {
+		return 0
+	}
+	ranks := []string{"^C", "Esc", "Enter", "Tab", "Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
+	if n := slices.Index(ranks, key); n >= 0 {
+		return n
+	}
+	return len(ranks)
+}
+
+func orderedShortcuts(shortcuts []Shortcut) []Shortcut {
+	ordered := slices.Clone(shortcuts)
+	slices.SortStableFunc(ordered, func(a, b Shortcut) int { return shortcutRank(a.Key) - shortcutRank(b.Key) })
+	return ordered
 }

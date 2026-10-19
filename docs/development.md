@@ -12,8 +12,8 @@
 | agent/model·tool | 모델 메시지·스트림·호출·승인·실제 실행 사실 |
 | agent/session·run·work | 요청 준비·실행 순서·공유 예산·중단 원인 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
-| agent/progress·completion | 상태 순환 감지와 현재 파일·명령 결과 |
-| agent/grounding·monitor | 정확한 인자에 연결된 reason과 실행 worker의 순서 있는 관측 |
+| commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
+| agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference·response | 작업 지침·역할별 추론 설정·모델 응답 해석 |
 | commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·정책/Thinking 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
@@ -33,7 +33,7 @@
 
 TUI는 저장·연결 설정·요청 준비를 직접 소유하지 않는다. worker는 결과 이벤트를 반환하고 화면 상태는 이벤트 루프에서만 바꾼다. 연결 클라이언트·HTTP body·goroutine·timer·DB·자식 프로세스에는 취소와 정리 소유자가 있어야 한다.
 
-실행 사실은 agent/tool, 현재 상태는 agent/completion, 문맥 조립은 agent/context가 소유한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
+실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
 
 ## 의존성과 배포
 
@@ -47,7 +47,6 @@ TUI는 저장·연결 설정·요청 준비를 직접 소유하지 않는다. wo
 | go-keyring | Keychain·Secret Service |
 | modernc.org/sqlite | CGO 없는 SQLite |
 | x/sys·x/term | OS 격리와 터미널 확인 |
-| mvdan.cc/sh/v3/syntax | POSIX 명령 분석. 실행은 OS 셸 사용 |
 
 Go 빌드만으로 V와 Linux 내부 실행기를 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#직접-빌드하기)를 따른다. CI·자동 릴리스 파이프라인은 구성하지 않는다.
 
@@ -100,3 +99,9 @@ go test ./internal/tui/viewport -run '^$' -bench . -benchmem
 ```
 
 벤치마크에는 Go·OS·CPU·데이터 크기·창 너비·명령과 소스 식별값을 함께 기록한다. 합성 줄 배치 수치를 모델 TPS나 전체 작업 시간으로 해석하지 않는다. 장시간 heap/RSS·취소 후 자원·실제 스트림의 프로파일링은 별도 확인한다.
+
+## 기본 루프의 책임
+
+[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. V의 Go 단일 바이너리·OS 파일 보호·Permission·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
+
+원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/v의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.

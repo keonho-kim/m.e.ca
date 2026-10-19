@@ -5,7 +5,6 @@
 package run
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -13,16 +12,12 @@ import (
 
 type validatedCall struct {
 	call       toolapi.Call
-	reason     string
 	definition toolapi.Definition
 	arguments  map[string]json.RawMessage
 }
 
 func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
-	call, reason, intentErr := toolapi.ExtractIntent(original)
-	if intentErr != nil {
-		return validatedCall{}, intentErr
-	}
+	call := original
 	var definition *toolapi.Definition
 	for i := range s.definitions {
 		if s.definitions[i].Name == call.Name {
@@ -48,9 +43,5 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		return validatedCall{}, fmt.Errorf("Argument validation failed: %s. %s", err, hint)
 	}
 
-	return validatedCall{call, reason, *definition, arguments}, nil
-}
-
-func callSignature(call toolapi.Call) [32]byte {
-	return sha256.Sum256(append([]byte(call.Name+"\n"), call.Arguments...))
+	return validatedCall{call, *definition, arguments}, nil
 }

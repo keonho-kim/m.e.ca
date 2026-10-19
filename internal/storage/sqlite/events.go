@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Allow JSON escaping and nested runtime records above the 32 MiB reason bound.
+// Bound original captures and nested execution records independently of context projections.
 const maxEventBytes = 512 * 1024 * 1024
 
 func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event) error {
@@ -43,35 +43,4 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event
 		return errors.Join(err, tx.Rollback())
 	}
 	return tx.Commit()
-}
-func (s *Store) Events(ctx context.Context, session string, before int64, limit int) (events []run.Event, cursor int64, err error) {
-	if limit < 1 || limit > 1000 {
-		return nil, 0, fmt.Errorf("invalid event page")
-	}
-	if before == 0 {
-		before = 1 << 62
-	}
-	rows, err := s.db.QueryContext(ctx, "SELECT sequence,body FROM tool_events WHERE session_id=? AND sequence<? ORDER BY sequence DESC LIMIT ?", session, before, limit)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer func() { err = errors.Join(err, rows.Close()) }()
-	for rows.Next() {
-		var body []byte
-		if err = rows.Scan(&cursor, &body); err != nil {
-			return nil, 0, err
-		}
-		if len(body) > maxEventBytes {
-			return nil, 0, fmt.Errorf("stored event exceeds limit")
-		}
-		var event run.Event
-		if err = json.Unmarshal(body, &event); err != nil {
-			return nil, 0, err
-		}
-		events = append(events, event)
-	}
-	for l, r := 0, len(events)-1; l < r; l, r = l+1, r-1 {
-		events[l], events[r] = events[r], events[l]
-	}
-	return events, cursor, rows.Err()
 }

@@ -1,4 +1,4 @@
-// Purpose: Verify aliased profiles and measured Thinking capabilities transfer into selected clients.
+// Purpose: Verify aliased profiles and declared Thinking controls transfer into selected clients.
 // Pattern: Provider setup integration tests.
 // Usage: go test ./internal/provider/setup.
 // Related: internal/provider/setup/setup.go, internal/provider/diagnostic/check.go.
@@ -65,10 +65,10 @@ func TestPrepareAliasTransfersVerifiedProfileAndThinking(t *testing.T) {
 			}
 			t.Cleanup(prepared.Client.Close)
 			selection := prepared.Selection
-			if selection.Profile != "ornith-1.5-9b" || selection.Model != "team-coder" || selection.ThinkingSupported != reasoningAvailable {
+			if selection.Profile != "ornith-1.5-9b" || selection.Model != "team-coder" || !selection.ThinkingSupported {
 				t.Fatalf("selection=%+v", selection)
 			}
-			if reasoningAvailable && (selection.Thinking == nil || !*selection.Thinking) || !reasoningAvailable && selection.Thinking != nil {
+			if selection.Thinking == nil || !*selection.Thinking {
 				t.Fatalf("unverified/default Thinking=%+v", selection)
 			}
 		})

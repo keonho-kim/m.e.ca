@@ -34,7 +34,6 @@ func (g *parallelModel) Generate(_ context.Context, r modelapi.Request, emit fun
 	return emit(modelapi.Event{Delta: "Completed requested operations", Done: true})
 }
 func batchCall(id, name string, args map[string]any) toolapi.Call {
-	args["reason"] = "Perform the requested independent operation."
 	body, err := json.Marshal(args)
 	if err != nil {
 		panic(err)

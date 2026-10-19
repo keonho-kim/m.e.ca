@@ -31,7 +31,7 @@ func TestMainAgentPrompt(t *testing.T) {
 		t.Fatal("main agent temperature was not sent as 1")
 	}
 	last := request.Messages[len(request.Messages)-1].Content
-	if !strings.Contains(last, "Work observations:") || !strings.HasSuffix(last, "Current request:\nhello") {
+	if last != "hello" {
 		t.Fatal("current work context was lost")
 	}
 	for _, term := range []string{"COMMON_RULE", "DEVELOPMENT_RULE"} {

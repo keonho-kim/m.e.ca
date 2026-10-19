@@ -1,4 +1,4 @@
-// Purpose: Validate one native tool call and orchestrate grounding, approval and execution.
+// Purpose: Validate one native tool call and orchestrate approval and execution.
 // Pattern: Native tool execution use case.
 // Usage: Invoked once per complete native tool call, before the existing approval/execution boundary.
 // Related: internal/agent/tool/arguments.go, internal/agent/run/execute.go.
@@ -12,26 +12,17 @@ import (
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	if !s.usage.actions(1, s.limits.MaxIterations) {
-		return s.returnToolFeedback(ctx, reply, "Action budget exhausted; no tool executed. Report the observed outcomes and unfinished work.")
-	}
+	s.usage.recordTools(1)
 	v, err := s.validateCall(reply.Calls[0])
 	if err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
-	call, reason, definition, arguments := v.call, v.reason, v.definition, v.arguments
-	s.checkpoint.Iteration = s.usage.snapshot().Iterations
+	call, definition, arguments := v.call, v.definition, v.arguments
+	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Arguments = arguments
-	if err := s.ground(ctx, call, reason); err != nil {
-		return err
-	}
-	prior, err := s.repeated(ctx, v)
-	if err != nil {
-		return s.returnToolFeedback(ctx, reply, err.Error())
-	}
 	s.checkpoint.Phase = "approval"
-	if err = s.persist(ctx); err != nil {
+	if err := s.persist(ctx); err != nil {
 		return err
 	}
 	// The compiled call enters the audit transcript only after every argument is valid.
@@ -43,10 +34,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 			return err
 		}
 	}
-	if prior != nil {
-		return s.reuseMutation(ctx, v, *prior)
-	}
-	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Grounded native candidate; not executed"}); err != nil {
+	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
 		return err
 	}
 	outcome, toolErr := s.execute(ctx, call, approve, s.emit)

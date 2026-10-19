@@ -1,4 +1,4 @@
-// Purpose: Verify native tool execution, bounded Ralph progress and final reporting.
+// Purpose: Verify native tool execution, model-call budgets and final reporting.
 // Pattern: Task behavior tests with scripted model replies.
 // Usage: go test ./internal/agent/run.
 // Related: internal/agent/run/run.go, internal/agent/run/action.go.
@@ -209,7 +209,7 @@ func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
 		t.Fatalf("completion: %+v %v", result, err)
 	}
 	for _, request := range g.requests {
-		if len(request.Messages) < 3 || !strings.Contains(request.Messages[0].Content, r.ProjectInstructions) {
+		if len(request.Messages) < 2 || !strings.Contains(request.Messages[0].Content, r.ProjectInstructions) {
 			t.Fatal("rules or full context lost")
 		}
 	}
@@ -227,17 +227,17 @@ func TestLongRequestRetainsActionsAndHistory(t *testing.T) {
 		t.Fatalf("long run: %s %d %v", result.Status, e.executed, err)
 	}
 }
-func TestBudgetStallAndNativeCallsNeverReportSuccess(t *testing.T) {
+func TestModelBudgetStopsWithoutReportingSuccess(t *testing.T) {
 	for _, tc := range []struct {
 		replies []string
 		native  bool
 		limit   int
 		want    string
-	}{{strings.Split(strings.Repeat("|", 8), "|"), false, 128, "progress"}, {[]string{nativeCall("inspect_fixture", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 128, "progress"}} {
+	}{{[]string{nativeCall("inspect_fixture", map[string]any{"path": "file"})}, false, 1, "budget"}, {nil, true, 2, "budget"}} {
 		g, e, j := &generator{replies: tc.replies, native: tc.native}, &executor{}, &journal{}
 		r := fixture(g, e, j)
 		r.Limits = DefaultLimits()
-		r.Limits.MaxIterations = tc.limit
+		r.Limits.MaxModelCalls = tc.limit
 		result, err := r.Run(context.Background(), "work", approve, emit)
 		if err != nil || !strings.Contains(result.Text, tc.want) || result.Status != Stopped {
 			t.Fatalf("stop: %+v %v", result, err)

@@ -14,7 +14,7 @@ V는 터미널에서 코드를 읽고, 수정하고, 검증하는 에이전트�
 
 - **모델 선택** — Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenAI 호환 서버 연결.
 - **변경 검토** — 줄 단위 diff 표시와 Permission에 따른 사용자 승인.
-- **직접 작업과 종료** — 메인 에이전트가 파일·셸 도구로 직접 수행하고 실제 결과를 확인. 정체·예산 중단 시에도 수행 결과와 미완료 사항을 보고.
+- **직접 작업과 종료** — 메인 에이전트가 파일·셸 도구로 직접 수행하고 실제 결과를 확인. 예산·오류 중단 시에도 수행 결과와 미완료 사항을 보고.
 - **작업 이어가기** — 로컬 세션 저장과 대화 압축, `v resume`으로 이전 작업 재개.
 - **키보드 중심 UI** — 스트리밍 응답, `!dir` 파일 참조, `!` 명령 검색과 문맥별 키 안내.
 
@@ -53,6 +53,19 @@ v /path/to/project  # 지정한 프로젝트에서 시작
 v resume            # 이전 대화를 선택해 이어가기
 ```
 
+### 터미널 없이 실행하기
+
+```sh
+v --print "README를 검토해줘"
+v /path/to/project --mode json "요청한 파일을 만들어줘"
+git diff | v --print "이 변경을 검토해줘"
+v --session SESSION_ID --print "이어서 진행해줘"
+v --session SESSION_ID --export > session.jsonl
+v --diagnose
+```
+
+먼저 `!model`에서 기본 연결을 저장합니다. print는 최종 답변, JSON 모드는 순서 있는 이벤트를 stdout에 기록하며 같은 에이전트 루프·세션·파일 보호 정책을 사용합니다. 비대화형 실행의 `approve` 요청은 명시적으로 차단합니다. 세션 ID는 첫 JSON `session` 이벤트의 `session_id` 또는 `~/.v/sessions/<project-key>/`의 DB 파일명으로 확인합니다. Export는 원본 세션 이력을 JSONL로 출력합니다.
+
 ### 완전히 삭제하기
 
 ```sh
@@ -63,7 +76,7 @@ v uninstall
 
 ## 사용법
 
-파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 생성·본문 수정·이동은 Permission·파일 버전 검사를 거치는 전용 파일 도구를 사용합니다.
+파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 소스 생성·본문 수정·이동에는 diff와 원본 버전 검사를 제공하는 전용 파일 도구를 권장합니다. 셸의 생성·수정·이동에도 같은 파일 경계와 Permission이 적용됩니다.
 
 모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-profiles.md#native-tool-calling)
 
@@ -83,7 +96,7 @@ v uninstall
 
 기본값은 **자동 승인 · Thinking OFF**입니다. 파일 쓰기·삭제는 프로젝트와 명시한 추가 쓰기 경로 안에서만 허용합니다. 셸은 기존 HOME·PATH·개발 도구를 재사용하고 Linux·macOS의 OS 파일 경계를 적용합니다. 외부 캐시에 쓰기가 필요하면 [추가 경로 설정](docs/configuration.md#추가-쓰기-경로)을 사용합니다. API Key는 macOS Keychain 또는 Linux Secret Service에 저장하며 마지막 모델 연결은 새 세션에서 재사용합니다.
 
-입력창의 `↑↓`는 줄 이동, `Ctrl/Cmd+↑↓`는 이전 입력 탐색입니다. 드래그 선택 후 `Ctrl/Cmd+C`로 복사하고, 입력창 선택은 Backspace로 삭제합니다. `F1`에서 현재 화면의 전체 키 안내를 확인합니다.
+입력창의 `↑↓`는 줄 이동, `Ctrl/Cmd+↑↓`는 이전 입력 탐색입니다. 작업 중 Enter는 다음 판단에 방향 수정을 전달하고 Tab은 후속 요청을 예약합니다. 큰 명령 출력은 Ctrl+O로 펼칩니다. 드래그 선택 후 `Ctrl/Cmd+C`로 복사하고, 입력창 선택은 Backspace로 삭제합니다. `F1`에서 현재 화면의 전체 키 안내를 확인합니다.
 
 [자세한 사용법과 키맵 →](docs/usage.md) · [모델 식별·프로파일 →](docs/model-profiles.md)
 
@@ -109,20 +122,21 @@ max_output_tokens = 0 # 유효 context length의 75% 자동 계산
 [compaction]
 temperature = 0.2
 max_output_tokens = 8192
-threshold_tokens = 200000
+reserve_tokens = 16384
+keep_recent_tokens = 20000
 
-[diagnotics]
+[diagnostics]
 temperature = 0.2
 max_output_tokens = 12800
 ```
 
 [전체 역할별 설정·프롬프트·Compaction →](docs/configuration.md)
 
-세션 저장 형식은 schema 17입니다. 미지원 DB는 원본을 보존하고 오류를 안내합니다. 사용자 프롬프트는 자동으로 덮어쓰지 않습니다. [설정과 프롬프트](docs/configuration.md)를 참고하세요.
+세션 저장 형식은 schema 18입니다. 미지원 DB는 원본을 보존하고 오류를 안내합니다. 사용자 프롬프트는 자동으로 덮어쓰지 않습니다. [설정과 프롬프트](docs/configuration.md)를 참고하세요.
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term, mvdan/sh입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/v`](cmd/v)입니다. 주요 의존성은 goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
 
 ```sh
 gofmt -l cmd internal

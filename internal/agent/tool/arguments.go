@@ -1,6 +1,6 @@
 // Purpose: Validate complete native tool argument objects against the declared parameter contract.
 // Pattern: Pure parsing at the tool trust boundary.
-// Usage: Runtime candidates and local execution validate the same schema before grounding or I/O.
+// Usage: Runtime candidates and local execution validate the same schema before I/O.
 // Related: internal/agent/tool/schema.go, internal/agent/tool/call.go, internal/tools/local/arguments.go.
 package tool
 
@@ -102,19 +102,9 @@ func validateValue(p Parameter, value json.RawMessage) error {
 		}
 		return nil
 	}
-	if p.Kind == Integer {
-		var number int
-		if err := json.Unmarshal(value, &number); err != nil || number < p.Min || number > p.Max {
-			return fmt.Errorf("%s requires an integer from %d to %d", p.Name, p.Min, p.Max)
-		}
-		return nil
-	}
 	var text string
 	if err := json.Unmarshal(value, &text); err != nil || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
 		return fmt.Errorf("%s requires a valid string", p.Name)
-	}
-	if p.MaxChars > 0 && utf8.RuneCountInString(text) > p.MaxChars {
-		return fmt.Errorf("%s exceeds character limit", p.Name)
 	}
 	if len(text) > p.MaxBytes || !p.AllowEmpty && strings.TrimSpace(text) == "" {
 		return fmt.Errorf("%s requires text within %d bytes", p.Name, p.MaxBytes)

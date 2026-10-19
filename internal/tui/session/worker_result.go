@@ -13,6 +13,7 @@ import (
 )
 
 func (a *app) finishWorker(n notice) {
+	a.restoreSteering()
 	active, cancelled := a.agentActive, a.stopRequested
 	defer func() {
 		if active {
@@ -20,9 +21,6 @@ func (a *app) finishWorker(n notice) {
 		}
 	}()
 	a.tokenCurrent = modelapi.TokenUsage{}
-	if n.Err == nil && n.Effort != nil {
-		n.Err = a.applyEffort(*n.Effort)
-	}
 	stopped := a.stopRequested
 	a.stopRequested = false
 	a.agentActive = false
@@ -54,6 +52,9 @@ func (a *app) finishWorker(n notice) {
 		if n.Err != nil {
 			a.status = "목록 조회 실패 · 모델 ID를 직접 입력하세요: " + a.opts.Vault.Redact(n.Err.Error())
 		}
+	}
+	if n.Diagnostic && n.Err == nil {
+		a.status = "모델 연결 진단을 통과했습니다"
 	}
 	if a.proposal != nil {
 		a.proposal = nil

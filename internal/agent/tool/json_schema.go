@@ -17,13 +17,8 @@ func (d Definition) JSONSchema() map[string]any {
 			value["minItems"] = 1
 			value["maxItems"] = p.Max
 			value["items"] = map[string]any{"type": "string", "minLength": 1, "maxLength": p.MaxBytes}
-		} else if p.Kind == Integer {
-			value["type"], value["minimum"], value["maximum"] = "integer", p.Min, p.Max
 		} else {
 			value["maxLength"] = p.MaxBytes
-			if p.MaxChars > 0 {
-				value["maxLength"] = p.MaxChars
-			}
 			if !p.AllowEmpty {
 				value["minLength"] = 1
 			}

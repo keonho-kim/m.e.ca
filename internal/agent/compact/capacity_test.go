@@ -13,7 +13,7 @@ import (
 )
 
 func TestCapacityLargeInstructionsAndSummary(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 200000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: strings.Repeat("x", 70*1024)}}}
+	repo := &repository{mark: Watermark{Tokens: 245760, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: strings.Repeat("x", 70*1024)}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	output := strings.Repeat("detail ", 4000)
 	calls := 0

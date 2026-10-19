@@ -1,30 +1,24 @@
-// Purpose: Prepare and approve a grounded operation on the owning runtime worker.
+// Purpose: Prepare and approve an operation on the owning runtime worker.
 // Pattern: Approval use case.
 // Usage: Single and batch execution call prepareExecution before any concurrent execution.
-// Related: internal/agent/run/grounding.go, internal/agent/run/execute.go.
+// Related: internal/agent/run/call_validation.go, internal/agent/run/execute.go.
 package run
 
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/grounding"
+
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 type readyExecution struct {
-	beforeVersions map[string]string
-	grounding      grounding.Record
-	call           toolapi.Call
-	operation      toolapi.Execution
-	proposal       toolapi.Approval
-	approved       bool
+	call      toolapi.Call
+	operation toolapi.Execution
+	proposal  toolapi.Approval
+	approved  bool
 }
 
 func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (ready *readyExecution, outcome toolapi.Result, err error) {
-	if s.checkpoint.Grounding == nil || !s.checkpoint.Grounding.Matches(call) {
-		return nil, outcome, fmt.Errorf("missing self-grounding for exact tool call")
-	}
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err
 	}
@@ -42,7 +36,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 		}
 	}
 	outcome.Target = proposal.Target
-	return &readyExecution{call: call, operation: op, proposal: proposal, grounding: *s.checkpoint.Grounding}, outcome, nil
+	return &readyExecution{call: call, operation: op, proposal: proposal}, outcome, nil
 }
 
 func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, approve Approver, emit func(Event) error) (*readyExecution, toolapi.Result, error) {
@@ -56,7 +50,6 @@ func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, app
 func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(Event) error) (*readyExecution, toolapi.Result, error) {
 	call, proposal := ready.call, ready.proposal
 	outcome := toolapi.Result{Target: proposal.Target}
-	s.checkpoint.Grounding = &ready.grounding
 	var err error
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err

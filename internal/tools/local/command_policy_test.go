@@ -6,8 +6,6 @@ package local
 
 import (
 	"context"
-	"errors"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
@@ -43,22 +41,5 @@ func TestCommandContractRequiresPermission(t *testing.T) {
 	}
 	if info, err := os.Stat(filepath.Join(root, ".git")); err != nil || !info.IsDir() {
 		t.Fatalf("approved package operation did not run: %v", err)
-	}
-}
-
-func TestMixedCommandRejectsEverythingWithSplitAdvice(t *testing.T) {
-	executor, root := testExecutor(t)
-	_, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"printf started > marker && cat pyproject.toml"}`))
-	var failure *toolapi.Failure
-	if !errors.As(err, &failure) || failure.Code != "use_dedicated_tool" {
-		t.Fatalf("missing routing failure: %v", err)
-	}
-	for _, expected := range []string{"Nothing from the rejected shell command ran", "separate", "write_file"} {
-		if !strings.Contains(failure.Next, expected) {
-			t.Fatalf("missing %q in recovery advice: %s", expected, failure.Next)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(root, ".git")); !os.IsNotExist(err) {
-		t.Fatalf("rejected command partially executed: %v", err)
 	}
 }

@@ -1,7 +1,7 @@
 // Purpose: Carry compact observed files and command outcomes for run reports.
 // Pattern: Runtime fact values.
 // Usage: Run results carry Facts independently of conversation history.
-// Related: internal/agent/completion/facts.go, internal/agent/run/report.go.
+// Related: internal/agent/run/observations.go, internal/agent/run/report.go.
 package tool
 
 import (
@@ -29,13 +29,12 @@ type CommandFact struct {
 	Command            string `json:"command"`
 	Status             string `json:"status"`
 	ExitCode           *int   `json:"exit_code,omitempty"`
-	Output             string `json:"output,omitempty"`
 	Excerpt            bool   `json:"excerpt,omitempty"`
 }
 
 type Facts struct {
 	Files    []FileFact    `json:"files,omitempty"`
-	Commands []CommandFact `json:"commands,omitempty"`
+	Commands []CommandFact `json:"-"`
 }
 
 func (f Facts) Check() error {
@@ -55,7 +54,7 @@ func (f Facts) Check() error {
 		if v.Revision < 0 || len(v.ObservedRun) > 256 || !utf8.ValidString(v.ObservedRun) || len(v.CallID) > 128 || !utf8.ValidString(v.CallID) {
 			return fmt.Errorf("invalid reported command ordering")
 		}
-		if v.Command == "" || !utf8.ValidString(v.Command) || !utf8.ValidString(v.Output) {
+		if v.Command == "" || !utf8.ValidString(v.Command) {
 			return fmt.Errorf("invalid reported command observation")
 		}
 	}

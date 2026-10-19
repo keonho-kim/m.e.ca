@@ -1,7 +1,7 @@
 // Purpose: Verify a file request receives its project root and reaches approved execution without AGENTS.md.
 // Pattern: HTTP, filesystem and session integration test.
 // Usage: go test ./internal/tui/session -run TestReadmeRequest.
-// Related: internal/tui/session/tasks.go, internal/agent/run/task_context.go, internal/tools/local/instructions.go.
+// Related: internal/tui/session/tasks.go, internal/agent/context/request.go, internal/tools/local/instructions.go.
 package session
 
 import (
@@ -54,7 +54,6 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		message := map[string]any{"content": reply}
 		if toolName != "" {
 			arguments := map[string]any{"path": "README.md", "content": "# Project\n"}
-			arguments["reason"] = "Perform the requested operation using the current observations."
 			encoded, err := json.Marshal(arguments)
 			if err != nil {
 				t.Error(err)

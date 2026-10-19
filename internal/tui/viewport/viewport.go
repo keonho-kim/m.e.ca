@@ -11,14 +11,15 @@ import (
 )
 
 type Block struct {
-	key        blockKey
-	lines      []Line
-	parsedText string
-	parsed     []markdown.Line
-	Markdown   bool
-	ID         int
-	Text       string
-	Thinking   bool
+	Summary, Details string
+	key              blockKey
+	lines            []Line
+	parsedText       string
+	parsed           []markdown.Line
+	Markdown         bool
+	ID               int
+	Text             string
+	Thinking         bool
 }
 type Line struct {
 	Copy     textlayout.Fragment
@@ -28,6 +29,7 @@ type Line struct {
 	Thinking bool
 }
 type View struct {
+	Expanded            bool
 	keys                []blockKey
 	lines               []Line
 	Blocks              []Block
@@ -48,6 +50,12 @@ func (v *View) Append(text string, thinking bool) {
 func (v *View) AppendBlock(block Block) {
 	if strings.TrimSpace(block.Text) == "" {
 		return
+	}
+	if block.Details != "" {
+		block.Summary = block.Text
+		if v.Expanded {
+			block.Text = block.Details
+		}
 	}
 	v.Next++
 	block.ID = v.Next
@@ -148,6 +156,12 @@ func (v *View) Prepend(blocks []Block) {
 	}
 	for i := range blocks {
 		blocks[i].ID = first - len(blocks) + i
+		if blocks[i].Details != "" {
+			blocks[i].Summary = blocks[i].Text
+			if v.Expanded {
+				blocks[i].Text = blocks[i].Details
+			}
+		}
 	}
 	v.Blocks = append(blocks, v.Blocks...)
 	v.bound(true)
@@ -155,7 +169,7 @@ func (v *View) Prepend(blocks []Block) {
 func (v *View) bound(older bool) {
 	bytes := 0
 	for _, b := range v.Blocks {
-		bytes += len(b.Text)
+		bytes += b.bytes()
 	}
 	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || bytes > 16*1024*1024) {
 		index := 0
@@ -164,9 +178,29 @@ func (v *View) bound(older bool) {
 		} else if !v.Follow {
 			index = len(v.Blocks) - 2
 		}
-		bytes -= len(v.Blocks[index].Text)
+		bytes -= v.Blocks[index].bytes()
 		copy(v.Blocks[index:], v.Blocks[index+1:])
 		v.Blocks[len(v.Blocks)-1] = Block{}
 		v.Blocks = v.Blocks[:len(v.Blocks)-1]
 	}
+}
+
+func (v *View) ToggleDetails() {
+	v.Expanded = !v.Expanded
+	for i := range v.Blocks {
+		b := &v.Blocks[i]
+		if b.Details != "" {
+			b.Text = b.Summary
+			if v.Expanded {
+				b.Text = b.Details
+			}
+		}
+	}
+}
+
+func (b Block) bytes() int {
+	if b.Details != "" {
+		return len(b.Summary) + len(b.Details)
+	}
+	return len(b.Text)
 }

@@ -13,7 +13,6 @@ func nativeCall(name string, arguments map[string]any) string {
 	if arguments == nil {
 		arguments = map[string]any{}
 	}
-	arguments["reason"] = "Perform the requested operation using observed evidence."
 	body, err := json.Marshal(arguments)
 	if err != nil {
 		panic(err)

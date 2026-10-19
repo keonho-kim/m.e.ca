@@ -1,14 +1,13 @@
 // Purpose: Verify repeated edits need no check gate and file cycles survive interleaved reads.
 // Pattern: Scripted runtime behavior tests.
 // Usage: go test ./internal/agent/run -run 'TestRepeatedEdits|TestFileCycle'.
-// Related: internal/agent/run/observation.go, internal/agent/run/action.go.
+// Related: internal/agent/run/observations.go, internal/agent/run/action.go.
 package run
 
 import (
 	"context"
 	"encoding/json"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"strings"
 	"testing"
 )
 
@@ -31,7 +30,7 @@ func TestRepeatedEditsDoNotRequireCheck(t *testing.T) {
 	}
 }
 
-func TestFileCycleStopsRequestAcrossReads(t *testing.T) {
+func TestIntentionalContentReversalDoesNotForceStop(t *testing.T) {
 	write := func(value string) string {
 		return nativeCall("write_file", map[string]any{"path": "a", "content": value})
 	}
@@ -40,7 +39,7 @@ func TestFileCycleStopsRequestAcrossReads(t *testing.T) {
 	j := &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "repair a", approve, emit)
-	if err != nil || result.Status != Stopped || e.executed != 3 || len(g.requests) != 3 || !strings.Contains(result.Text, "File contents returned") {
+	if err != nil || result.Status != Answered || e.executed != 4 || len(g.requests) != 5 || result.Text != "Done" {
 		t.Fatalf("cycle was lost: %+v %v", result, err)
 	}
 }

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"strings"
 	"testing"
@@ -58,7 +59,7 @@ func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
 	if _, err := r.Run(context.Background(), "continue", approve, emit); err != nil {
 		t.Fatal(err)
 	}
-	last := g.requests[0].Messages[len(g.requests[0].Messages)-1].Content
+	last := fmt.Sprint(g.requests[0].Messages)
 	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "preserve parser cancellation") || strings.Contains(last, "UNEXECUTED_DRAFT") {
 		t.Fatalf("unsafe recovery context: %s", last)
 	}

@@ -1,4 +1,4 @@
-// Purpose: Persist and parse session Permission and Scope overrides.
+// Purpose: Persist and parse session Permission overrides.
 // Pattern: Repository.
 // Usage: Session restoration and settings changes call Settings and SaveSettings.
 // Related: internal/policy/policy.go, internal/tui/session/settings.go, internal/storage/sqlite/store_test.go.
@@ -12,8 +12,8 @@ import (
 )
 
 func (store *Store) Settings(ctx context.Context) (policy.Settings, error) {
-	var permission, scope string
-	err := store.db.QueryRowContext(ctx, "SELECT permission,scope FROM settings WHERE singleton=1").Scan(&permission, &scope)
+	var permission string
+	err := store.db.QueryRowContext(ctx, "SELECT permission FROM settings WHERE singleton=1").Scan(&permission)
 	if errors.Is(err, sql.ErrNoRows) {
 		return policy.Settings{}, nil
 	}
@@ -27,9 +27,6 @@ func (store *Store) Settings(ctx context.Context) (policy.Settings, error) {
 			return settings, err
 		}
 	}
-	if scope != "" {
-		settings.Scope, err = policy.ParseScope(scope)
-	}
 	return settings, err
 }
 
@@ -39,12 +36,7 @@ func (store *Store) SaveSettings(ctx context.Context, settings policy.Settings) 
 			return err
 		}
 	}
-	if settings.Scope != "" {
-		if _, err := policy.ParseScope(string(settings.Scope)); err != nil {
-			return err
-		}
-	}
-	_, err := store.db.ExecContext(ctx, `INSERT INTO settings(singleton,permission,scope) VALUES(1,?,?)
-ON CONFLICT(singleton) DO UPDATE SET permission=excluded.permission,scope=excluded.scope`, settings.Permission, settings.Scope)
+	_, err := store.db.ExecContext(ctx, `INSERT INTO settings(singleton,permission) VALUES(1,?)
+ON CONFLICT(singleton) DO UPDATE SET permission=excluded.permission`, settings.Permission)
 	return err
 }

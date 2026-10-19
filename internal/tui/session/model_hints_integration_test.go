@@ -91,7 +91,7 @@ func TestModelHintsConnection(t *testing.T) {
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 			drainTask(t, a, false)
-			if a.selection.Model != expected || a.client == nil || posts.Load() != 1 {
+			if a.selection.Model != expected || a.client == nil || posts.Load() != 0 {
 				t.Fatalf("selected=%q posts=%d", a.selection.Model, posts.Load())
 			}
 		})

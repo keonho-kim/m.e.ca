@@ -18,40 +18,23 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 	defer cancel()
 	ready := make([]*readyExecution, len(calls))
-	reused := make([]bool, len(calls))
-	remaining := func() []validatedCall {
-		var out []validatedCall
-		for i, v := range calls {
-			if !reused[i] {
-				out = append(out, v)
-			}
-		}
-		return out
-	}
 	for i, v := range calls {
-		done, err := s.activateCall(ctx, v)
-		if err != nil {
-			return true, errors.Join(s.skipCalls(ctx, remaining(), fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
-		}
-		reused[i] = done
-		if done {
-			continue
+		s.checkpoint.Tool, s.checkpoint.Arguments = v.call.Name, v.arguments
+		if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
+			return true, errors.Join(s.skipCalls(ctx, calls, fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
 		}
 		prepared, outcome, err := s.freezeExecution(ctx, v.call)
 		if err != nil {
-			return true, errors.Join(s.rejectWave(ctx, calls, reused, i, outcome, err), fatalBatchError(ctx, err))
+			return true, errors.Join(s.rejectWave(ctx, calls, i, outcome, err), fatalBatchError(ctx, err))
 		}
 		ready[i] = prepared
 	}
 	// Every candidate is frozen before approval; all workers start only after
 	// the owner has approved and rechecked the complete wave.
 	for i, prepared := range ready {
-		if prepared == nil {
-			continue
-		}
 		approved, outcome, err := s.approveExecution(ctx, prepared, approve, s.emit)
 		if err != nil {
-			return true, errors.Join(s.rejectWave(ctx, calls, reused, i, outcome, err), fatalBatchError(ctx, err))
+			return true, errors.Join(s.rejectWave(ctx, calls, i, outcome, err), fatalBatchError(ctx, err))
 		}
 		ready[i] = approved
 	}
@@ -61,27 +44,21 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 		if err != nil {
 			detail += " " + err.Error()
 		}
-		return true, errors.Join(s.skipCalls(ctx, remaining(), detail), fatalBatchError(ctx, err))
+		return true, errors.Join(s.skipCalls(ctx, calls, detail), fatalBatchError(ctx, err))
 	}
 	// Persist start intent before allowing any effects. A crash never replays it automatically.
 	for _, prepared := range ready {
-		if prepared == nil {
-			continue
-		}
 		if err := s.checkTimeBudget(ctx); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, remaining(), err.Error()), err)
+			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), err)
 		}
 		if err := s.startExecution(ctx, prepared, s.emit); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, remaining(), err.Error()), errRuntimeRecord, err)
+			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), errRuntimeRecord, err)
 		}
 	}
 	outcomes := make([]toolapi.Result, len(calls))
 	failures := make([]error, len(calls))
 	var workers sync.WaitGroup
 	for i, prepared := range ready {
-		if prepared == nil {
-			continue
-		}
 		workers.Go(func() { outcomes[i], failures[i] = prepared.operation.Execute(ctx, prepared.approved) })
 	}
 	workers.Wait()
@@ -98,9 +75,6 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	failed := false
 	var terminal error
 	for i, v := range calls {
-		if ready[i] == nil {
-			continue
-		}
 		outcome, runErr := s.recordExecution(recordCtx, ready[i], outcomes[i], failures[i], completedEmit)
 		if errors.Is(runErr, errRuntimeRecord) {
 			terminal = errors.Join(terminal, runErr)

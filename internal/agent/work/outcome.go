@@ -1,15 +1,13 @@
 // Purpose: Define terminal work outcomes and validate their persisted identities.
 // Pattern: Typed result contract.
 // Usage: Run checkpoints and recovery preserve the terminal cause.
-// Related: internal/agent/run/checkpoint.go, internal/agent/tool/reason.go.
+// Related: internal/agent/run/checkpoint.go, internal/agent/run/settle.go.
 package work
 
 import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 type Status string
@@ -33,7 +31,7 @@ func (e End) Check() error {
 	default:
 		return fmt.Errorf("invalid work terminal status")
 	}
-	if e.Reason != "" && tool.CheckReason(e.Reason) != nil {
+	if len(e.Reason) > 32*1024*1024 || !utf8.ValidString(e.Reason) || strings.ContainsRune(e.Reason, 0) {
 		return fmt.Errorf("invalid terminal reason")
 	}
 	return nil

@@ -80,7 +80,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		if step == 2 || step == 4 {
 			return emit(modelapi.Event{Delta: "변경했습니다.", Done: true})
 		}
-		name, args := "write_file", map[string]any{"path": "note.txt", "content": "one\n", "reason": "Create the requested note."}
+		name, args := "write_file", map[string]any{"path": "note.txt", "content": "one\n"}
 		if step == 3 {
 			var history strings.Builder
 			for _, message := range request.Messages {
@@ -89,11 +89,11 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 			if !strings.Contains(history.String(), "Create note.txt") || !strings.Contains(history.String(), "Update note.txt") {
 				t.Fatal("follow-up lost prior or current user request")
 			}
-			if !strings.Contains(request.Messages[len(request.Messages)-1].Content, `"state":"present"`) {
+			if !strings.Contains(history.String(), "one") {
 				t.Fatal("follow-up lost the current file observation")
 			}
 			name = "edit_file"
-			args = map[string]any{"path": "note.txt", "edits": []any{map[string]any{"old_text": "one", "new_text": "two"}}, "reason": "Apply the requested follow-up to the existing note."}
+			args = map[string]any{"path": "note.txt", "edits": []any{map[string]any{"old_text": "one", "new_text": "two"}}}
 		}
 		body, err := json.Marshal(args)
 		if err != nil {

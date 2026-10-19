@@ -12,7 +12,7 @@ import (
 func (a *app) openModel() {
 	a.stopNotice = ""
 	a.page = "model"
-	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection), "모델 정보"}
+	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection), "모델 정보", "연결 진단"}
 	a.choice = 0
 	a.thinkingChoice = a.opts.Config.Thinking
 	if a.selection.Thinking != nil {
@@ -57,6 +57,8 @@ func (a *app) choose() {
 			a.globalMenu()
 		} else if a.choice == 2 {
 			a.openEffort()
+		} else if a.choice == 4 {
+			a.diagnoseModel()
 		} else {
 			a.page = "modelinfo"
 			a.previewOffset = 0

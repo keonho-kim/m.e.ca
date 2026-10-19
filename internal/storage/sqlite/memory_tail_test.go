@@ -27,7 +27,7 @@ func TestMemoryTailSkipsOlderLargeResult(t *testing.T) {
 	})
 	ctx, id := context.Background(), store.Session().ID
 	for _, pair := range []struct{ id, output string }{{"old", strings.Repeat("large listing\n", 3000)}, {"recent", "current observation"}} {
-		call := toolapi.Call{ID: pair.id, Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat source","reason":"Inspect source"}`)}
+		call := toolapi.Call{ID: pair.id, Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat source"}`)}
 		for _, message := range []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolName: call.Name, ToolCallID: call.ID, Content: pair.output}} {
 			if err := store.AppendMessage(ctx, id, message); err != nil {
 				t.Fatal(err)

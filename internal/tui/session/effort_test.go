@@ -6,17 +6,12 @@ package session
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/gdamore/tcell/v3"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestEffortMenuAndOffHeader(t *testing.T) {
@@ -79,89 +74,34 @@ func TestEffortPersistenceFailurePreservesPreference(t *testing.T) {
 		t.Fatal(err)
 	}
 	next := "medium"
-	a.receive(notice{Done: true, Effort: &next})
-	if a.selection.Effort() != "low" || a.status == "" {
+	err = a.applyEffort(next)
+	if a.selection.Effort() != "low" || err == nil {
 		t.Fatal("save failure silently changed preference")
 	}
 }
 
-func TestEffortAsyncApplicationAndCancellation(t *testing.T) {
-	for _, cancelProbe := range []bool{false, true} {
-		t.Run(map[bool]string{false: "apply", true: "cancel"}[cancelProbe], func(t *testing.T) {
-			a := fixture(t)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			a.ctx = ctx
-			t.Cleanup(func() {
-				cancel()
-				a.workers.Wait()
-				if a.client != nil {
-					a.client.Close()
-				}
-			})
-			started := make(chan struct{}, 1)
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var body struct {
-					Effort string `json:"reasoning_effort"`
-				}
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					t.Error(err)
-					return
-				}
-				if body.Effort != "medium" {
-					t.Errorf("effort=%s", body.Effort)
-				}
-				started <- struct{}{}
-				if cancelProbe {
-					<-r.Context().Done()
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				fmt.Fprint(w, `{"choices":[{"message":{"content":"391","reasoning":"17 times 23 is 391"},"finish_reason":"stop"}]}`)
-			}))
-			t.Cleanup(server.Close)
-			connection, err := modelconn.New(modelconn.VLLM, server.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
-			a.client, err = httpclient.NewClient(connection, "", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			low := "low"
-			off := false
-			a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Profile: "qwen3.8-27b", Thinking: &off, ThinkingSupported: true, ReasoningEffort: &low}
-			a.openEffort()
-			a.choice = 2
-			a.chooseEffort()
-			select {
-			case <-started:
-			case <-ctx.Done():
-				t.Fatal(ctx.Err())
-			}
-			if cancelProbe {
-				a.taskCancel()
-			}
-			select {
-			case n := <-a.events:
-				a.receive(n)
-			case <-ctx.Done():
-				t.Fatal(ctx.Err())
-			}
-			want := "medium"
-			if cancelProbe {
-				want = "low"
-			}
-			if a.selection.Effort() != want || *a.selection.Thinking || a.busy {
-				t.Fatalf("preference changed incorrectly: %+v busy=%t", a.selection, a.busy)
-			}
-			if !cancelProbe {
-				stored, err := a.opts.Store.Selection(ctx, a.opts.Session.ID)
-				if err != nil || stored.Effort() != want {
-					t.Fatalf("effort not saved: %+v %v", stored, err)
-				}
-			} else if a.status == "" {
-				t.Fatal("cancelled probe reported success")
-			}
-		})
+func TestEffortSelectionPersistsWithoutGeneratingDiagnostic(t *testing.T) {
+	a := fixture(t)
+	conn, err := modelconn.New(modelconn.VLLM, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.client, err = httpclient.NewClient(conn, "", "qwen3.8-27b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(a.client.Close)
+	low := "low"
+	off := false
+	a.selection = modelconn.Selection{Connection: conn, Model: "Qwen/Qwen3.8-27B", Profile: "qwen3.8-27b", Thinking: &off, ThinkingSupported: true, ReasoningEffort: &low}
+	a.openEffort()
+	a.choice = 2
+	a.chooseEffort()
+	if a.busy || a.selection.Effort() != "medium" || *a.selection.Thinking {
+		t.Fatalf("unexpected selection %+v", a.selection)
+	}
+	stored, err := a.opts.Store.Selection(context.Background(), a.opts.Session.ID)
+	if err != nil || stored.Effort() != "medium" {
+		t.Fatalf("%+v %v", stored, err)
 	}
 }

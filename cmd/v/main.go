@@ -1,7 +1,7 @@
-// Purpose: Compose installation or terminal startup and independently owned session transitions.
+// Purpose: Compose maintenance, headless and terminal startup with owned session transitions.
 // Pattern: Composition Root.
-// Usage: go run ./cmd/v install; v [path | resume | install | uninstall].
-// Related: cmd/v/install.go, internal/commands/startup/parse.go, internal/config/statefs/lease_unix.go, internal/tui/session/app.go, cmd/v/conversation.go.
+// Usage: v --help lists maintenance, interactive and headless invocations.
+// Related: cmd/v/install.go, cmd/v/headless.go, internal/commands/startup/parse.go, internal/tui/session/app.go, cmd/v/conversation.go.
 package main
 
 import (
@@ -48,6 +48,10 @@ func start() (err error) {
 	if err != nil {
 		return err
 	}
+	if mode.Action == startup.Help {
+		fmt.Fprintln(os.Stdout, "Usage: v [path] [--print|--mode json] [--session ID] [prompt]\n       v --session ID --export\n       v --diagnose\n       v resume | install | uninstall")
+		return nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -60,9 +64,6 @@ func start() (err error) {
 	defer cancel()
 	if mode.Action != "" {
 		return maintenance(ctx, mode.Action, home)
-	}
-	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
-		return fmt.Errorf("an interactive TTY is required")
 	}
 	root, err := statefs.Open(filepath.Join(home, ".v"))
 	if err != nil {
@@ -82,6 +83,12 @@ func start() (err error) {
 	sessions, err := sqlite.OpenSessions(filepath.Join(state, "sessions"))
 	if err != nil {
 		return fmt.Errorf("open session directory: %w", err)
+	}
+	if mode.Print {
+		return runHeadless(ctx, mode, configuration, home, state, sessions)
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
+		return fmt.Errorf("use --print or --mode json without an interactive TTY")
 	}
 	screen, err := tcell.NewScreen()
 	if err != nil {

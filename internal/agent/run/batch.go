@@ -22,9 +22,7 @@ type parallelExecutor interface {
 }
 
 func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	if !s.usage.actions(len(reply.Calls), s.limits.MaxIterations) {
-		return s.returnToolFeedback(ctx, reply, "Batch exceeds the remaining action budget; submit fewer calls. Nothing executed.")
-	}
+	s.usage.recordTools(len(reply.Calls))
 	calls := make([]validatedCall, len(reply.Calls))
 	for i, call := range reply.Calls {
 
@@ -34,7 +32,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		}
 		calls[i] = value
 	}
-	s.checkpoint.Iteration = s.usage.snapshot().Iterations
+	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: reply.Calls}); err != nil {
 		return err
 	}
@@ -112,22 +110,4 @@ func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail
 		}
 	}
 	return result
-}
-
-func (s *execution) activateCall(ctx context.Context, v validatedCall) (bool, error) {
-	s.checkpoint.Tool, s.checkpoint.Arguments = v.call.Name, v.arguments
-	if err := s.ground(ctx, v.call, v.reason); err != nil {
-		return false, errors.Join(errRuntimeRecord, err)
-	}
-	prior, err := s.repeated(ctx, v)
-	if err != nil {
-		return false, err
-	}
-	if prior != nil {
-		return true, s.reuseMutation(ctx, v, *prior)
-	}
-	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Grounded native candidate; not executed"}); err != nil {
-		return false, errors.Join(errRuntimeRecord, err)
-	}
-	return false, nil
 }

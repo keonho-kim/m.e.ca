@@ -41,16 +41,6 @@ func (event Event) Check() error {
 	if event.TokensPerSecond != nil {
 		return fmt.Errorf("transient throughput cannot be persisted")
 	}
-	if event.Monitor != nil {
-		if err := event.Monitor.Check(); err != nil {
-			return err
-		}
-	}
-	if event.Grounding != nil {
-		if err := event.Grounding.Check(); err != nil {
-			return err
-		}
-	}
 	if event.Kind == "usage" {
 		if event.Usage == nil {
 			return fmt.Errorf("missing model token usage")
@@ -68,6 +58,9 @@ func (event Event) Check() error {
 		if event.Call.ID != event.CallID {
 			return fmt.Errorf("tool event call ID mismatch")
 		}
+	}
+	if len(event.Capture) > modelapi.MaxResponseBytes || len(event.Capture) > 0 && !json.Valid(event.Capture) {
+		return fmt.Errorf("invalid captured output")
 	}
 	if len(event.Output) > modelapi.MaxResponseBytes || len(event.Output) > 0 && !json.Valid(event.Output) {
 		return fmt.Errorf("invalid tool event output")

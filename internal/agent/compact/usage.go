@@ -1,6 +1,6 @@
-// Purpose: Define cumulative request usage limits and byte-based fallback estimates.
+// Purpose: Define current-context compaction budgets and byte-based fallback estimates.
 // Pattern: Simple Module.
-// Usage: Configuration and task runtime use Settings and TokenCount.
+// Usage: Configuration and request runtime use Settings and TokenCount.
 // Related: internal/config/settings.go, internal/agent/compact/controller.go.
 package compact
 
@@ -9,17 +9,17 @@ import "fmt"
 const MaxBodyBytes = 16 * 1024 * 1024
 
 type Settings struct {
-	KeepRecentBytes int   `toml:"keep_recent_bytes"`
-	ThresholdTokens int64 `toml:"threshold_tokens"`
-	MaxSummaryBytes int   `toml:"max_summary_bytes"`
-	MaxInputBytes   int   `toml:"max_input_bytes"`
+	KeepRecentTokens int   `toml:"keep_recent_tokens"`
+	ReserveTokens    int64 `toml:"reserve_tokens"`
+	MaxSummaryBytes  int   `toml:"max_summary_bytes"`
+	MaxInputBytes    int   `toml:"max_input_bytes"`
 }
 
 func Defaults() Settings {
-	return Settings{KeepRecentBytes: 16 * 1024, ThresholdTokens: 200000, MaxSummaryBytes: MaxBodyBytes, MaxInputBytes: MaxBodyBytes}
+	return Settings{KeepRecentTokens: 20000, ReserveTokens: 16384, MaxSummaryBytes: MaxBodyBytes, MaxInputBytes: MaxBodyBytes}
 }
 func (s Settings) Check() error {
-	if s.KeepRecentBytes < 0 || s.KeepRecentBytes > MaxBodyBytes || s.ThresholdTokens < 1 || s.ThresholdTokens > 1000000000 || s.MaxSummaryBytes < 1024 || s.MaxSummaryBytes > MaxBodyBytes || s.MaxInputBytes < 8192 || s.MaxInputBytes > MaxBodyBytes {
+	if s.KeepRecentTokens < 0 || s.KeepRecentTokens > MaxBodyBytes || s.ReserveTokens < 1 || s.ReserveTokens > 1000000000 || s.MaxSummaryBytes < 1024 || s.MaxSummaryBytes > MaxBodyBytes || s.MaxInputBytes < 8192 || s.MaxInputBytes > MaxBodyBytes {
 		return fmt.Errorf("invalid compaction settings")
 	}
 	return nil

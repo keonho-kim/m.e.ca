@@ -26,13 +26,6 @@ func (s *execution) execute(ctx context.Context, call toolapi.Call, approve Appr
 	return s.recordExecution(ctx, ready, outcome, err, emit)
 }
 func (s *execution) startExecution(ctx context.Context, ready *readyExecution, emit func(Event) error) error {
-	if ready.call.Name == "execute_command" {
-		before, err := s.commandVersions(ctx, s.checkpoint.Work.FileTargets())
-		if err != nil {
-			return err
-		}
-		ready.beforeVersions = before
-	}
 	s.checkpoint.Phase = "execution"
 	if err := s.persist(ctx); err != nil {
 		return err

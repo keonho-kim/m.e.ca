@@ -44,6 +44,10 @@ func (a *app) submit() {
 		a.exit = true
 		return
 	}
+	if a.agentActive && a.busy && command.Kind == commands.Message {
+		a.steerInput()
+		return
+	}
 	if !a.canSubmit(command.Kind) {
 		a.status = "One task is already active; draft preserved"
 		return

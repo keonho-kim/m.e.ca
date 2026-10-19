@@ -73,11 +73,11 @@ ON/OFF와 강도를 별도로 다룬다. 같은 API 필드가 수락된다고 �
 ### 선택·저장·복구
 
 1. `!model`의 `Thinking effort` 행을 선택한다. 지원 모델에서 `DEFAULT`와 그 모델의 허용 값만 목록에 보인다.
-2. `↑`/`↓`로 고르고 Enter로 진단·적용한다. OFF 상태에서도 선호 강도는 설정할 수 있으며 설정만으로 Thinking을 켜지 않는다.
-3. 현재 서버에 선택한 강도로 짧은 ON 진단 요청을 보낸다. HTTP 수락·별도 추론·완료를 확인한 뒤 SQLite에 저장한다. 실패·취소·저장 실패에서는 기존 값이 남는다. DEFAULT는 명시적 강도 미지정 상태이며 추가 강도 진단이 생략된다.
+2. `↑`/`↓`로 고르고 Enter로 저장·적용한다. OFF 상태에서도 선호 강도는 설정할 수 있으며 설정만으로 Thinking을 켜지 않는다.
+3. 문서화되거나 서버가 선언한 선택지인지 확인한 뒤 SQLite에 저장한다. 생성 진단은 !model → 연결 진단에서 별도로 실행한다. 저장 실패에서는 기존 값이 남는다.
 4. 상태줄은 ON에서 `Thinking MEDIUM`처럼 명시한 강도를 표시한다. OFF는 Thinking·강도를 모두 생략한다.
 5. 모델별 TOML 기본값보다 같은 Provider·주소·모델·프로파일에 저장된 세션 선택이 우선한다. 값이 없는 세션은 TOML 기본값을 상속하며, 명시적인 DEFAULT는 빈 문자열로 보존해 재시작 시에도 Provider 기본값을 유지한다.
-6. 재시작 때 허용 값과 현재 서버의 진단을 다시 확인한다. 모델·프로파일 변경 시 새 모델의 검증된 강도 설정을 적용한다.
+6. 재시작 때 허용 값과 현재 서버의 메타데이터를 다시 확인한다. 모델·프로파일 변경 시 새 모델의 검증된 강도 설정을 적용한다.
 
 ```toml
 [[model_profiles]]
@@ -123,7 +123,7 @@ profile = "ornith-1.5-35b-a3b"
 - 정확한 공식 이름과 매핑이 서로 다른 체크포인트를 가리키면 오류다. 중복 매핑·범위 밖 프로파일·오탈자도 시작 시 거부한다.
 - `profile = "generic"`은 자동 특화를 명시적으로 끈다. 사용자 정의 template로 원본과 제어 방식이 달라진 경우에 사용할 수 있다.
 - 일반 별칭, 제3자 namespace, 확인되지 않은 파일명만으로 특화를 적용하지 않는다. 정확한 원본 근거나 명시적 매핑이 없으면 일반 프로파일을 사용한다.
-- 재시작 때 저장된 프로파일·식별 기록을 지원 증거로 재사용하지 않는다. 현재 설정과 서버 메타데이터로 다시 판별하고 연결 진단을 반복한다.
+- 재시작 때 저장된 프로파일·식별 기록을 지원 증거로 재사용하지 않는다. 현재 설정과 서버 메타데이터로 다시 판별한다. 생성 진단은 사용자가 실행한다.
 - 모델의 자기소개나 한 번의 응답은 실제 checkpoint의 증명이 아니다. 진단은 제어 동작만 확인한다. 서버가 같은 별칭을 다른 가중치로 바꿨다면 운영자가 매핑도 다시 검토해야 한다.
 
 Qwen3.8-Flash-Next 원본과 FP8은 qwen3.8-flash-next 프로파일을 공유한다. 등록된 `Qwen3.8-Flash-Next 180B`, `Qwen3.8-Flash-Next-180B`, `Qwen-3.8-180B`와 각 FP8 표기도 명시적 별칭이다. 실제 요청 ID는 선택한 값을 유지한다. 유사한 이름·임의 경로는 원본 근거나 TOML 매핑으로 식별한다. 카드의 규모 표기는 본체 125B + n-gram 51B + MTP 4B이며 [공개 기록](https://github.com/QwenLM/Qwen3.8-Flash-Next)을 근거로 관리한다.
@@ -145,9 +145,9 @@ Qwen3.8-Flash-Next 원본과 FP8은 qwen3.8-flash-next 프로파일을 공유한
 
 - 조회 결과는 **서버 원본 선언**, **모델군·아키텍처 정보만 확인**, **복수 모델/동적 라우팅**, **원본 식별 불가**로 표시한다. 프로파일 근거는 서버 원본·서빙 이름의 카탈로그 일치, 사용자 TOML 매핑, 특화 없음으로 별도 표시한다. 서버 선언은 실제 가중치 동일성의 보증이 아니다.
 - 공식 저장소 ID, 정확한 `https://huggingface.co/<publisher>/<model>` URL, `models--<publisher>--<model>/snapshots/<revision>` 캐시 경로를 카탈로그와 비교한다. 일반 로컬 경로의 basename·GGUF 양자화 접미사·tokenizer·부모 모델만으로 정확한 checkpoint를 추측하지 않는다.
-- LiteLLM의 문서화된 transport 접두어만 분리한다. 여러 upstream이나 auto-router가 확인되면 대상을 모호한 상태로 표시한다. 복수 대상·불완전한 근거에서는 일반 프로파일을 사용하고 특화 매핑은 거부한다. `generic` 명시 또는 단일 모델로 직접 연결하여 해결한다. 원본 근거와 매핑의 충돌도 거부한다.
-- Thinking 광고 정보와 실제 ON/OFF·강도 제어 지원은 별개다. 제어 계약은 식별 후 별도의 지원 검증을 거쳐 활성화한다. Ollama·LM Studio의 native 선택지도 실제 reasoning 분리와 ON/OFF 대조 진단을 거친다. 날짜·전체 300B 제한도 유지한다.
-- 메타데이터는 무수신 3분 제한과 최대 3회 시도를 적용한다. 응답은 16MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 미지원·권한 거부·유효하지 않은 응답·무수신은 복구 시도 후 정보 조회 불가로 처리하고 원인을 정보 화면에 표시하며 일반 대화 진단은 계속한다. 사용자 취소는 즉시 전파한다.
+- LiteLLM의 문서화된 transport 접두어만 분리한다. 여러 upstream이나 auto-router가 확인되면 일반 프로파일을 사용하고 특화 매핑은 거부한다. `generic` 명시 또는 단일 모델로 직접 연결하여 해결한다. 메타데이터 조회만 불완전하고 복수 대상 근거가 없으면 기본은 일반 프로파일이며, 정확한 Provider·주소·서빙 이름에 대한 사용자 매핑을 적용할 수 있다. 확인된 원본 근거와 매핑의 충돌은 거부한다.
+- Thinking 광고 정보와 실제 ON/OFF·강도 제어 지원은 별개다. 제어 선택지는 검토된 프로파일과 서버 메타데이터에서 결정한다. 실제 reasoning 분리와 ON/OFF 효과는 별도 연결 진단으로 확인한다. 날짜·전체 300B 제한도 유지한다.
+- 메타데이터는 무수신 3분 제한과 최대 3회 시도를 적용한다. 응답은 16MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 미지원·권한 거부·유효하지 않은 응답·무수신은 복구 시도 후 정보 조회 불가로 처리하고 원인을 정보 화면에 표시하며 일반 연결을 준비한다. 사용자 취소는 즉시 전파한다.
 - 조회는 구성한 서버와 같은 origin에서 수행한다. 반환된 URL·파일 경로를 따라가지 않고 `/server_info`·프롬프트·template·Modelfile·인증 필드·upstream API 주소는 수집하지 않는다. 알려진 API 키와 터미널 제어 문자를 포함한 근거는 제외한다. 식별 기록은 SQLite의 모델 선택 메타데이터로만 저장한다.
 
 API 근거: [vLLM 모델 카드](https://docs.vllm.ai/en/stable/api/vllm/entrypoints/openai/models/serving/), [SGLang 모델 정보 구현](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/entrypoints/http_server.py), [Ollama 모델 상세](https://docs.ollama.com/api-reference/show-model-details), [GGUF 출처 메타데이터](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md), [LM Studio 모델 목록](https://lmstudio.ai/docs/developer/rest/list), [LiteLLM 모델 관리](https://docs.litellm.ai/docs/proxy/model_management), [LiteLLM 모델 그룹 구현](https://github.com/BerriAI/litellm/blob/main/litellm/proxy/proxy_server.py).
@@ -162,20 +162,16 @@ Provider별 HTTP 계약은 로컬 모의 서버로 검증했다. 실제 서버 �
 | vLLM | 검토된 프로파일의 `chat_template_kwargs` | 현재 `reasoning` |
 | SGLang | 검토된 프로파일의 `chat_template_kwargs`; vLLM 전용 기록 제외 | 현재 `reasoning_content` |
 | LiteLLM | upstream 제어·전달 계약 미검증: 토글 비활성 | 현재 `reasoning_content` |
-| LM Studio | native 지원값을 Responses `reasoning.effort`로 전달; binary none/medium 후보의 대조 진단 | Responses reasoning text 이벤트 |
+| LM Studio | native 지원값을 Responses `reasoning.effort`로 전달; binary none/medium 선언값 | Responses reasoning text 이벤트 |
 | 일반 OpenAI-compatible | boolean 제어 계약 미검증: 토글 비활성 | 기존 일반 응답 계약 |
 
 공식 프로토콜 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_outputs/), [SGLang reasoning](https://docs.sglang.io/docs/advanced_features/separate_reasoning), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking).
 
-1. 명시한 프로파일과 실제 wire model ID의 충돌을 검사한다.
-2. 일반 인사 요청으로 비어 있지 않은 응답과 완료를 확인한다. 가능한 제어가 있으면 OFF를 사용한다. 특정 정답이나 도구 응답 형식은 요구하지 않으며 로컬 도구를 실행하지 않는다.
-3. OFF에서 별도 reasoning이 나오면 서버 설정 오류로 연결을 거부한다.
-4. ON으로 짧은 계산 요청을 보내 별도 reasoning·답변·완료 이벤트를 확인하고, 같은 질문을 OFF로 보내 추론 출력 억제까지 확인해야 토글을 활성화한다. OFF 미지원 모델은 ON만 검증하며 토글을 제공하지 않는다. 별도 reasoning이 관측되지 않으면 제어는 unavailable이며 Provider 기본 생성 모드를 사용한다.
-5. HTTP 오류·미완료·출력 한도 초과는 진단 실패로 반환한다. 클라이언트는 진단 성공 후에 설치한다. 성공한 클라이언트의 정리 책임만 세션에 이전한다.
+연결 준비는 메타데이터·프로파일·설정의 값과 실제 서빙 ID를 확인하고 클라이언트를 설치한다. 모델 응답 생성은 요구하지 않는다. 메타데이터 조회가 불가능하면 일반 한도·제어 미확인 상태로 준비하고 Notice에 원인을 남긴다. 미식별 모델도 일반 native 도구를 사용할 수 있다. 모호한 복수 대상에는 모델 특화를 적용하지 않는다.
 
-LM Studio는 Responses에 매번 전체 역할별 메시지를 보내며 `store: false`와 `truncation: disabled`를 사용한다. 원격 이전 응답 ID를 재사용하지 않는다. reasoning 선택지는 native 모델 목록에서 확인하고 binary OFF/ON은 none/medium 후보를 대조 진단한다. OFF 미지원 모델은 ON과 지원 강도만 제공한다. native 제어 조회·검증 실패는 연결 실패로 표시하며, 선택적인 원본 식별 조회 실패와 구분한다.
+!model → 연결 진단 또는 v --diagnose를 사용하면 일반 응답·완료와 가능한 ON/OFF·별도 추론을 대조한다. 오류·미완료·출력 한도 초과는 진단 실패다. 진단 성공은 native 도구 실행 능력·장시간 수렴·실제 체크포인트 식별의 증명이 아니다. 진단은 기존 선택을 자동으로 바꾸지 않는다.
 
-연결 진단은 해당 서버에서의 짧은 동작 확인이다. 모든 모델군의 장시간 수렴·속도·정확도·문맥 길이·실제 서버 버전 조합을 검증했다는 의미로 사용하지 않는다. V의 문맥·출력·실행 예산을 모델 카드의 최대값으로 자동 늘리지 않는다.
+LM Studio는 Responses에 전체 역할별 메시지를 보내며 store:false·truncation:disabled를 사용한다. 원격 이전 응답 ID를 재사용하지 않는다. OFF 미지원 모델은 ON과 서버가 선언한 강도만 제공한다. 사용자 취소는 즉시 전파한다.
 
 ## 서빙 한도
 

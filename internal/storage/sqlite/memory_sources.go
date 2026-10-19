@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Store) MemoryRecords(ctx context.Context, session string, after, through int64) (records []compact.Record, cursor int64, err error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,COALESCE(json_extract(m.body,'$.role'),''),COALESCE(json_extract(m.body,'$.content'),''),e.body FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? ORDER BY t.sequence LIMIT 64`, session, after, through)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,COALESCE(json_extract(m.body,'$.role'),''),COALESCE(json_extract(m.body,'$.content'),''),json_remove(e.body,'$.capture') FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? ORDER BY t.sequence LIMIT 64`, session, after, through)
 	if err != nil {
 		return nil, after, err
 	}

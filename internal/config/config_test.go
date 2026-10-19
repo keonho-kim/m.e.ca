@@ -68,15 +68,15 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 func TestCompactionThresholdIsConfigurable(t *testing.T) {
 	directory := t.TempDir()
 	configuration := Defaults()
-	if configuration.Compaction.ThresholdTokens != 200000 {
+	if configuration.Compaction.ReserveTokens != 16384 {
 		t.Fatal("wrong default token threshold")
 	}
-	configuration.Compaction.ThresholdTokens = 128000
+	configuration.Compaction.ReserveTokens = 128000
 	if err := Save(directory, configuration); err != nil {
 		t.Fatal(err)
 	}
 	loaded, err := Load(directory)
-	if err != nil || loaded.Compaction.ThresholdTokens != 128000 {
+	if err != nil || loaded.Compaction.ReserveTokens != 128000 {
 		t.Fatalf("threshold override: %+v %v", loaded, err)
 	}
 }

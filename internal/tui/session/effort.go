@@ -5,9 +5,7 @@
 package session
 
 import (
-	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
 	selectionpolicy "github.com/keonho-kim/v-code/internal/provider/selection"
 	"strings"
 )
@@ -48,23 +46,13 @@ func (a *app) chooseEffort() {
 		a.status = "Select a model using !model"
 		return
 	}
-	ctx, cancel := context.WithCancel(a.ctx)
-	a.taskCancel = cancel
-	a.setupRevision++
-	revision := a.setupRevision
-	a.busy = true
-	a.startElapsed()
-	a.status = "Checking Thinking effort"
-	a.page = "chat"
-	client, model := a.client, a.selection.Model
-	inferenceSettings := a.opts.Config.InferenceSettings()
-	a.workers.Add(1)
-	go func() {
-		defer a.workers.Done()
-		defer cancel()
-		err := diagnostic.Effort(ctx, client, model, value, &inferenceSettings)
-		a.post(a.ctx, notice{SetupRevision: revision, Done: true, Err: err, Effort: &value})
-	}()
+	if err := a.applyEffort(value); err != nil {
+		a.fail(err)
+		return
+	}
+	a.page = "model"
+	a.openModel()
+
 }
 
 func (a *app) applyEffort(value string) error {

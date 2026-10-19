@@ -1,6 +1,6 @@
-// Purpose: Present tool targets, search terms and edit ranges without executable metadata.
+// Purpose: Present tool targets and commands without repeating file bodies.
 // Pattern: Pure presentation projection.
-// Usage: Formatter.Tool renders parameters without source bodies or internal intent metadata.
+// Usage: Formatter.Tool renders parameters without repeating source bodies.
 // Related: internal/tui/transcript/tools.go, internal/tui/transcript/file_results.go.
 package transcript
 
@@ -16,7 +16,7 @@ func (f Formatter) arguments(call tool.Call) string {
 		return indentTool("인자 형식 확인 필요")
 	}
 	var text strings.Builder
-	for _, field := range []struct{ key, label string }{{"path", "경로"}, {"destination", "이동할 경로"}, {"pattern", "검색"}, {"command", "명령"}} {
+	for _, field := range []struct{ key, label string }{{"path", "경로"}, {"destination", "이동할 경로"}, {"command", "명령"}} {
 		var value string
 		if json.Unmarshal(fields[field.key], &value) == nil {
 			text.WriteString(indentTool(field.label + ": " + f.Redact(value)))

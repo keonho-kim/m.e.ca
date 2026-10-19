@@ -23,7 +23,7 @@ func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		projected := request.Messages[1 : len(request.Messages)-1]
+		projected := request.Messages[1:]
 		for i, message := range projected {
 			if len(history) == 2 {
 				if message.Role != history[i].Role || message.ToolCallID != history[i].ToolCallID || message.Reasoning != history[i].Reasoning {

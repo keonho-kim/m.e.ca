@@ -14,6 +14,7 @@ import (
 
 type Executor struct {
 	project, home           string
+	artifacts               string
 	projectRoot, systemRoot *os.Root
 	redact                  func(string) string
 	boundary                *filesystem.Boundary
@@ -48,6 +49,10 @@ func NewExecutor(project, home, private string, writable []string, redact func(s
 		}
 		executor.writeRoots[path] = handle
 	}
+	executor.artifacts, err = os.MkdirTemp("", "v-output-*")
+	if err != nil {
+		return nil, errors.Join(err, executor.Close())
+	}
 	return executor, nil
 }
 
@@ -55,6 +60,9 @@ func (executor *Executor) Close() error {
 	var err error
 	for _, root := range executor.writeRoots {
 		err = errors.Join(err, root.Close())
+	}
+	if executor.artifacts != "" {
+		err = errors.Join(err, os.RemoveAll(executor.artifacts))
 	}
 	return errors.Join(err, executor.systemRoot.Close())
 }

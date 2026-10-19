@@ -12,14 +12,14 @@ import (
 	"strings"
 )
 
-func (s *execution) askResponse(ctx context.Context, question string, maxBytes int) (modelapi.Response, error) {
+func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) {
 	if err := ctx.Err(); err != nil {
 		return modelapi.Response{}, err
 	}
 	if !s.modelCall() {
 		return modelapi.Response{}, errModelBudget
 	}
-	request, err := s.request(question)
+	request, err := s.request()
 	if err != nil {
 		return modelapi.Response{}, err
 	}
@@ -40,7 +40,7 @@ func (s *execution) askResponse(ctx context.Context, question string, maxBytes i
 		}
 		if len(e.Calls) > 0 {
 			if len(request.Tools) == 0 || !e.Done || len(calls) != 0 || len(e.Calls) > toolapi.MaxCalls {
-				return &modelapi.ToolCallError{Detail: "unexpected or incomplete tool calls in this phase"}
+				return &modelapi.ToolCallError{Detail: "unavailable, incomplete or excessive native tool calls"}
 			}
 			calls = append(calls, e.Calls...)
 		}
@@ -50,8 +50,8 @@ func (s *execution) askResponse(ctx context.Context, question string, maxBytes i
 		for _, call := range calls {
 			size += len(call.Arguments) + len(call.ID) + len(call.Name)
 		}
-		if reply.Len() > maxBytes || size > modelapi.MaxResponseBytes {
-			return &modelapi.OutputLimitError{Reason: "current phase byte limit"}
+		if size > modelapi.MaxResponseBytes {
+			return &modelapi.OutputLimitError{Reason: "model response byte limit"}
 		}
 		if e.Done {
 			done = true

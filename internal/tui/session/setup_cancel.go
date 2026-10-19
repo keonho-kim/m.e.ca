@@ -28,7 +28,7 @@ func (a *app) setupResult(n *notice) bool {
 		if n.Client != nil && n.Client != a.client {
 			n.Client.Close()
 		}
-		n.Client, n.Selection, n.Models, n.Effort, n.credential = nil, nil, nil, nil, ""
+		n.Client, n.Selection, n.Models, n.credential = nil, nil, nil, ""
 		if n.SetupRevision != a.setupRevision {
 			return false
 		}

@@ -32,6 +32,7 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
+	Capture  json.RawMessage
 	Versions map[string]string
 	Target   string
 	Started  bool

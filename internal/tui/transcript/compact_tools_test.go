@@ -13,7 +13,7 @@ import (
 
 func TestCompactToolShellRead(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat a","reason":"internal reason"}`)}, Output: []byte(`{"Stdout":"hello","ExitCode":0,"Status":"exited","Truncated":true}`)}
+	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Output: []byte(`{"Stdout":"hello","ExitCode":0,"Status":"exited","Truncated":true}`)}
 	shown := f.Tool(event)
 	for _, hidden := range []string{"Editable", "FinalNewline", "SizeBytes", "NextOffset", "internal reason", "limit:", "offset:"} {
 		if strings.Contains(shown, hidden) {

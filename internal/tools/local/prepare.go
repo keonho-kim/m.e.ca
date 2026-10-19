@@ -7,11 +7,11 @@ package local
 import (
 	"context"
 	"crypto/rand"
-	"errors"
+
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/policy/shell"
+
 	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
 	"strings"
 )
@@ -40,13 +40,6 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	op := &operation{executor: executor, settings: settings, spec: spec, input: input}
 	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label, Required: required}
 	if spec.effect == policy.Command {
-		if err := shell.Check(input.Command); err != nil {
-			var dedicated *shell.Dedicated
-			if errors.As(err, &dedicated) {
-				return nil, &toolapi.Failure{Code: "use_dedicated_tool", Detail: err.Error(), Next: dedicatedAdvice(dedicated.Tool)}
-			}
-			return nil, &toolapi.Failure{Code: toolapi.InvalidArgument, Detail: err.Error(), Next: "Return a valid bounded POSIX shell command. No command was executed."}
-		}
 		op.approval.Target = input.Command
 		op.approval.Preview = executor.redact("Working directory: " + executor.project + "\nWritable roots: " + strings.Join(executor.boundary.Writes(), ", ") + "\n\n" + input.Command)
 		return op, nil

@@ -38,7 +38,7 @@ func (s *execution) recordRejected(ctx context.Context, call toolapi.Call, outco
 	return emit(e)
 }
 
-func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, reused []bool, index int, outcome toolapi.Result, cause error) error {
+func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, index int, outcome toolapi.Result, cause error) error {
 	v := calls[index]
 	outcome.Failed = true
 	if outcome.Failure == nil {
@@ -46,9 +46,6 @@ func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, reuse
 	}
 	var result error
 	for i, call := range calls {
-		if reused[i] {
-			continue
-		}
 		if i == index {
 			result = errors.Join(result, s.recordRejected(ctx, v.call, outcome, cause, s.emit), s.acceptResult(context.WithoutCancel(ctx), v, outcome, cause))
 		} else {

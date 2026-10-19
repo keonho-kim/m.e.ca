@@ -7,11 +7,13 @@ package process
 import "bytes"
 
 type Output struct {
-	Started        bool
-	Status         string
-	Stdout, Stderr string
-	ExitCode       int
-	Truncated      bool
+	StdoutPath, StderrPath                   string
+	StdoutCapturedBytes, StderrCapturedBytes int
+	Started                                  bool
+	Status                                   string
+	Stdout, Stderr                           string
+	ExitCode                                 int
+	Truncated                                bool
 }
 
 type cappedOutput struct {

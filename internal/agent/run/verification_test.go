@@ -1,7 +1,7 @@
 // Purpose: Verify command failures remain observations and stale changes can be retried.
 // Pattern: Task completion integration tests.
 // Usage: go test ./internal/agent/run -run TestCompletion.
-// Related: internal/agent/run/action.go, internal/agent/run/observation.go.
+// Related: internal/agent/run/action.go, internal/agent/run/observations.go.
 package run
 
 import (

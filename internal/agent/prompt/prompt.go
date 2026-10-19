@@ -34,9 +34,6 @@ func checkInstructions(instructions string) error {
 
 // Work combines system and development guidance with project constraints.
 func Work(common, development, instructions string) (string, error) {
-	if err := CheckTemplate(common); err != nil {
-		return "", err
-	}
 	if err := CheckTemplate(development); err != nil {
 		return "", err
 	}

@@ -1,4 +1,4 @@
-// Purpose: Persist cumulative conversation tokens and immutable compaction revisions without deleting original history.
+// Purpose: Persist context occupancy samples and compaction revisions without deleting original history.
 // Pattern: Repository.
 // Usage: Each session owns its compaction revisions and token boundaries.
 // Related: internal/agent/compact/types.go, internal/storage/sqlite/memory_sources.go, internal/storage/sqlite/schema.go.
@@ -23,7 +23,7 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 	default:
 		return fmt.Errorf("invalid conversation token source")
 	}
-	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind) VALUES(?,?,?,?)", session, count.Amount, count.Estimated, count.Kind)
+	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind,through_timeline) SELECT ?,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=?", session, count.Amount, count.Estimated, count.Kind, session)
 	return err
 }
 func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, error) {
@@ -48,11 +48,25 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 func (s *Store) MemoryWatermark(ctx context.Context, session string, after int64) (compact.Watermark, error) {
 	var mark compact.Watermark
 	var estimated bool
-	err := s.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount),0),COALESCE(MAX(sequence),?),COALESCE(MAX(estimated),0) FROM conversation_tokens WHERE session_id=? AND sequence>? AND kind='request'", after, session, after).Scan(&mark.Tokens, &mark.Usage, &estimated)
+	var sourceThrough int64
+	err := s.db.QueryRowContext(ctx, "SELECT amount,sequence,estimated,through_timeline FROM conversation_tokens WHERE session_id=? AND sequence>? AND kind='request' ORDER BY sequence DESC LIMIT 1", session, after).Scan(&mark.Tokens, &mark.Usage, &estimated, &sourceThrough)
+	if errors.Is(err, sql.ErrNoRows) {
+		mark.Usage = after
+	} else if err != nil {
+		return mark, err
+	}
+	var memoryThrough int64
+	if err = s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(through_timeline),0) FROM memories WHERE session_id=?", session).Scan(&memoryThrough); err != nil {
+		return mark, err
+	}
+	sourceThrough = max(sourceThrough, memoryThrough)
+	var trailingBytes int64
+	err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(length(CAST(json_extract(m.body,'$.content') AS BLOB))),0) FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND json_extract(m.body,'$.role') IN ('user','tool','system')`, session, sourceThrough).Scan(&trailingBytes)
 	if err != nil {
 		return mark, err
 	}
-	mark.Estimated = estimated
+	mark.Tokens += compact.EstimateBytes(trailingBytes).Amount
+	mark.Estimated = estimated || trailingBytes > 0
 	err = s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=?", session).Scan(&mark.Timeline)
 	return mark, err
 }

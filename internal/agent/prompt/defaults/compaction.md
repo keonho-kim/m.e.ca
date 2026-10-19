@@ -1,6 +1,6 @@
 # Summarize work for continuation
 
-Write one concise continuation memo in the language of ActiveRequest. Preserve the latest requested outcome, enduring constraints and established project choices. Merge repeated facts and replace superseded information.
+Write one concise continuation memo in the language of the latest user request. Preserve the latest requested outcome, enduring constraints and established project choices. Merge repeated facts and replace superseded information.
 
 Read observations in their supplied order. They cover earlier work; later conversation takes precedence. An omitted observation does not prove that a file or implementation is absent. Mark an earlier failed check as historical when subsequent changes supersede it, retaining only the remaining consequence or uncertainty.
 

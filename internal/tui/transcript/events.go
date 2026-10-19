@@ -7,6 +7,7 @@ package transcript
 import (
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"strings"
 )
 
 func (f Formatter) Event(event run.Event) []viewport.Block {
@@ -17,11 +18,16 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		return []viewport.Block{Answer(f.Redact(event.Text))}
 	}
 	switch event.Kind {
-	case "generation_started", "compaction", "compaction_started", "compaction_finished", "monitor", "tool_proposed", "tool_started", "approved", "self_grounding":
+	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved":
 		return nil
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		if text := f.Tool(event); text != "" {
-			return []viewport.Block{{Text: text}}
+			block := viewport.Block{Text: text}
+			if event.Call != nil && event.Call.Name == "execute_command" && (len(text) > 4096 || strings.Count(text, "\n") > 30) {
+				block.Text = "\n  execute_command\n" + f.arguments(*event.Call) + indentTool(f.Redact(event.Text)) + "    [Ctrl+O: output]\n"
+				block.Details = text
+			}
+			return []viewport.Block{block}
 		}
 		return nil
 	}

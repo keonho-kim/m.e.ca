@@ -29,7 +29,7 @@ func TestToolPresentationResults(t *testing.T) {
 		t.Run(tc.name+tc.body, func(t *testing.T) {
 			raw := json.RawMessage(tc.body)
 			original := bytes.Clone(raw)
-			event := run.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: tc.name, Arguments: []byte(`{"path":"a","reason":"hidden intent"}`)}, Output: raw}
+			event := run.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: tc.name, Arguments: []byte(`{"path":"a"}`)}, Output: raw}
 			shown := f.Tool(event)
 			for _, want := range tc.want {
 				if !strings.Contains(shown, want) {

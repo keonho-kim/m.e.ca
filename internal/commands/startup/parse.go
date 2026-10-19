@@ -5,44 +5,76 @@
 package startup
 
 import (
+	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 type Mode struct {
-	Action           Action
-	Resume           bool
-	Project, Display string
+	Print, Export, Diagnose bool
+	Output, Prompt, Session string
+	Action                  Action
+	Resume                  bool
+	Project, Display        string
 }
 
 type Action string
 
 const (
+	Help      Action = "help"
 	Install   Action = "install"
 	Uninstall Action = "uninstall"
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
-	if len(args) > 1 {
-		return Mode{}, fmt.Errorf("usage: v [path | resume | install | uninstall]")
-	}
 	if len(args) == 1 && (args[0] == string(Install) || args[0] == string(Uninstall)) {
 		return Mode{Action: Action(args[0])}, nil
 	}
 	if len(args) == 1 && args[0] == "resume" {
 		return Mode{Resume: true}, nil
 	}
+	mode := Mode{Output: "text"}
 	path := cwd
-	if len(args) == 1 {
-		path = args[0]
-		if path == "" || strings.HasPrefix(path, "-") {
-			return Mode{}, fmt.Errorf("usage: v [path | resume | install | uninstall]")
+	if len(args) > 1 && !strings.HasPrefix(args[0], "-") && strings.HasPrefix(args[1], "-") {
+		path, args = args[0], args[1:]
+	}
+	flags := flag.NewFlagSet("v", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.BoolVar(&mode.Print, "print", false, "run once and print the final response")
+	flags.StringVar(&mode.Output, "mode", "text", "text or json")
+	flags.StringVar(&mode.Session, "session", "", "resume a session ID in this project")
+	flags.BoolVar(&mode.Export, "export", false, "export the selected session as JSONL")
+	flags.BoolVar(&mode.Diagnose, "diagnose", false, "explicitly diagnose the selected model")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return Mode{Action: Help}, nil
 		}
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(cwd, path)
-		}
+		return Mode{}, fmt.Errorf("%w; usage: v [path] [--print|--mode json] [--session ID] [prompt]", err)
+	}
+	if mode.Output != "text" && mode.Output != "json" {
+		return Mode{}, fmt.Errorf("mode must be text or json")
+	}
+	mode.Print = mode.Print || mode.Output == "json" || mode.Diagnose || mode.Export
+	rest := flags.Args()
+	if mode.Print {
+		mode.Prompt = strings.Join(rest, " ")
+	} else if len(rest) == 1 && rest[0] != "" {
+		path = rest[0]
+	} else if len(rest) > 0 {
+		return Mode{}, fmt.Errorf("expected one project path")
+	}
+	if mode.Export && (mode.Session == "" || mode.Prompt != "" || mode.Diagnose) {
+		return Mode{}, fmt.Errorf("--export requires --session ID and no prompt or diagnostic")
+	}
+	if mode.Diagnose && mode.Prompt != "" {
+		return Mode{}, fmt.Errorf("--diagnose does not accept a prompt")
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cwd, path)
 	}
 	absolute, err := filepath.Abs(path)
 	if err != nil {
@@ -67,5 +99,6 @@ func Parse(args []string, cwd string) (Mode, error) {
 	if !info.IsDir() {
 		return Mode{}, fmt.Errorf("project path must be a directory")
 	}
-	return Mode{Project: real, Display: absolute}, nil
+	mode.Project, mode.Display = real, absolute
+	return mode, nil
 }

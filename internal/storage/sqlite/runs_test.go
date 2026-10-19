@@ -7,8 +7,8 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/completion"
 	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/storage/recovery"
 	"strings"
 	"testing"
@@ -26,7 +26,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	})
 	ctx := context.Background()
 	session := s.Session()
-	cp := run.Checkpoint{Work: completion.State{Receipts: []completion.Receipt{{ID: "call_1", Tool: "inspect_fixture", Success: true, Output: "Read existing contents"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: run.Running, Phase: "grounding", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
+	cp := run.Checkpoint{Work: tool.Facts{Files: []tool.FileFact{{Path: "file.txt", Version: "v1"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: run.Running, Phase: "decision", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
 	if err = s.RecordEvent(ctx, session.ID, run.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, err := s.LatestRun(ctx, session.ID)
-	if err != nil || recovered == nil || recovered.Status != run.Interrupted || recovered.Tool != "write_file" || recovered.Objective != cp.Objective || recovered.LastChange != cp.LastChange || len(recovered.Work.Receipts) != 1 || recovered.Work.Receipts[0].ID != "call_1" || recovered.ReportReason != cp.ReportReason {
+	if err != nil || recovered == nil || recovered.Status != run.Interrupted || recovered.Tool != "write_file" || recovered.Objective != cp.Objective || recovered.LastChange != cp.LastChange || len(recovered.Work.Files) != 1 || recovered.Work.Files[0].Path != "file.txt" || recovered.ReportReason != cp.ReportReason {
 		t.Fatalf("recovery: %+v %v", recovered, err)
 	}
 	history, err := s.Messages(ctx, session.ID, 100)

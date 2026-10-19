@@ -12,13 +12,13 @@ import (
 )
 
 type Controller struct {
+	ContextWindow          int
 	Inference              *inference.Settings
 	Repository             Repository
 	Session, Model, Prompt string
 	Settings               Settings
 	Redact                 func(string) string
 	ActiveRequest          string
-	ActiveApproach         []string
 	memory                 Memory
 	loaded                 bool
 }
@@ -60,10 +60,16 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 	if err != nil {
 		return false, err
 	}
-	if !force && mark.Tokens < c.Settings.ThresholdTokens {
+	window := c.ContextWindow
+	if window == 0 {
+		window = 262144
+	}
+	reserve := min(int(c.Settings.ReserveTokens), max(1, window/4))
+	threshold := max(1, window-reserve)
+	if !force && mark.Tokens < int64(threshold) {
 		return false, nil
 	}
-	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, c.Settings.KeepRecentBytes)
+	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, min(c.Settings.KeepRecentTokens, window/4)*3)
 	if err != nil {
 		return false, err
 	}

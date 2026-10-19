@@ -73,3 +73,13 @@ func sameVersion(left, right version) bool {
 	}
 	return os.SameFile(left.info, right.info) && left.info.Size() == right.info.Size() && left.info.ModTime().Equal(right.info.ModTime()) && left.digest == right.digest
 }
+
+func versionValue(v version) string {
+	if !v.exists {
+		return "missing"
+	}
+	if v.info.IsDir() {
+		return "directory"
+	}
+	return fmt.Sprintf("%x", v.digest)
+}

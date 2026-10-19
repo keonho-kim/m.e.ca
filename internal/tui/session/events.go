@@ -14,6 +14,7 @@ import (
 )
 
 type notice struct {
+	Diagnostic      bool
 	History         *historyPage
 	Directory       *directoryPage
 	FileSelection   *fileSelectionResult
@@ -24,7 +25,6 @@ type notice struct {
 	PreviewRevision int
 	RememberModel   bool
 	credential      string
-	Effort          *string
 	Event           *run.Event
 	Approval        *toolapi.Approval
 	Done            bool

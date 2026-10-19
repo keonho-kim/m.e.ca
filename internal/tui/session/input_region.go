@@ -1,7 +1,7 @@
 // Purpose: Bind rendered input rows to their editable source and clipboard projection.
 // Pattern: Session-owned presentation mapping.
 // Usage: Renderers publish regions; mouse selection snapshots them before any edit.
-// Related: internal/tui/session/text_selection.go, internal/tui/input/layout.go, internal/tui/viewport/viewport.go.
+// Related: internal/tui/session/text_selection.go, internal/tui/session/keymap.go, internal/tui/input/layout.go, internal/tui/viewport/viewport.go.
 package session
 
 import (
@@ -48,16 +48,24 @@ func (a *app) clearSelection() {
 	a.selectedTranscript = nil
 }
 
-func (a *app) deleteSelection() bool {
+func (a *app) selectedInputRange() (int, int, bool) {
 	x1, y1, x2, y2, ok := a.textSelection.Bounds()
 	r := a.selectionInput
 	if !ok || !r.contains(x1, y1) || !r.contains(x2, y2) || r.editor.Revision() != r.revision {
-		return false
+		return 0, 0, false
 	}
 	start, end := r.window.Offset(x1, y1-r.y, false), r.window.Offset(x2, y2-r.y, true)
-	r.editor.DeleteRange(start, end)
+	return start, end, start < end
+}
+
+func (a *app) deleteSelection() bool {
+	start, end, ok := a.selectedInputRange()
+	if !ok {
+		return false
+	}
+	a.selectionInput.editor.DeleteRange(start, end)
 	a.refreshHints()
-	if r.editor == &a.menuInput {
+	if a.selectionInput.editor == &a.menuInput {
 		a.refreshModelHints()
 	}
 	return true

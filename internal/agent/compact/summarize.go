@@ -60,17 +60,12 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, previous 
 	return text, nil
 }
 func (c *Controller) summaryMessages(previous string, source []json.RawMessage, omitted int) ([]modelapi.Message, error) {
-	approach := make([]string, len(c.ActiveApproach))
-	for i, text := range c.ActiveApproach {
-		approach[i] = c.Redact(text)
-	}
 	quoted, err := json.Marshal(struct {
-		ProposedApproach    []string
 		ActiveRequest       string
 		PreviousSummary     string
 		NextSource          []json.RawMessage
 		OmittedObservations int
-	}{approach, c.Redact(c.ActiveRequest), previous, source, omitted})
+	}{c.Redact(c.ActiveRequest), previous, source, omitted})
 	if err != nil {
 		return nil, err
 	}

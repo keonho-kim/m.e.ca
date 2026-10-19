@@ -14,7 +14,6 @@ const (
 	Text        ParameterKind = "text"
 	TextList    ParameterKind = "text_list"
 	LiteralPath ParameterKind = "literal_path"
-	Integer     ParameterKind = "integer"
 	ObjectList  ParameterKind = "object_list"
 )
 
@@ -24,8 +23,7 @@ type Parameter struct {
 	Name, Description    string
 	Kind                 ParameterKind
 	Required, AllowEmpty bool
-	Min, Max, MaxBytes   int
-	MaxChars             int
+	Max, MaxBytes        int
 }
 type Definition struct {
 	Name, Description string

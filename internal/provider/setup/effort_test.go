@@ -7,7 +7,6 @@ package setup
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
@@ -71,7 +70,7 @@ func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
 	for len(efforts) > 0 {
 		observed = append(observed, <-efforts)
 	}
-	if fmt.Sprint(observed) != "[medium low]" {
+	if len(observed) != 0 {
 		t.Fatalf("effort probes=%v", observed)
 	}
 }

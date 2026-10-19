@@ -21,6 +21,12 @@ func (f Formatter) processOutput(fields map[string]json.RawMessage) string {
 			}
 		}
 	}
+	for _, key := range []string{"StdoutPath", "StderrPath"} {
+		var path string
+		if json.Unmarshal(fields[key], &path) == nil && path != "" {
+			text += indentTool("captured log: " + f.Redact(path))
+		}
+	}
 	var code int
 	if json.Unmarshal(fields["ExitCode"], &code) == nil {
 		text += indentTool("exit: " + string(fields["ExitCode"]))

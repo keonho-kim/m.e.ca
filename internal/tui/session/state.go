@@ -38,6 +38,8 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	steering                            chan string
+	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line
 	historyLoading, historyEnd          bool
 	directoryCancel                     context.CancelFunc

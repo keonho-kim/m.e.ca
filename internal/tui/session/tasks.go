@@ -9,6 +9,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	tasksession "github.com/keonho-kim/v-code/internal/agent/session"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/provider/connection"
 	"sort"
 	"strings"
 )
@@ -28,8 +29,21 @@ func (a *app) startTask(text string) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)
+	steering := make(chan string, 16)
+	a.steering = steering
 	inferenceSettings := a.opts.Config.InferenceSettings()
 	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop}
+	runner.PollSteering = func() []string {
+		var out []string
+		for {
+			select {
+			case text := <-steering:
+				out = append(out, text)
+			default:
+				return out
+			}
+		}
+	}
 	runner.ProjectRoot = a.opts.Session.ProjectRoot
 	var references []string
 	for path := range a.browser.Selected {
@@ -40,6 +54,10 @@ func (a *app) startTask(text string) {
 	sort.Strings(references)
 	if len(references) > 0 {
 		text += "\nSelected path references (read only as needed):\n" + strings.Join(references, "\n")
+	}
+	contextWindow := a.opts.Config.ContextLength
+	if d := a.selection.Details; d != nil && d.ContextWindow > 0 {
+		contextWindow = connection.EffectiveContextLength(contextWindow, d.ContextWindow)
 	}
 	store, loadPrompts, compaction := a.opts.Store, a.opts.LoadPrompts, a.opts.Config.Compaction.Settings
 	instructions := a.opts.Tools.ProjectInstructions
@@ -65,7 +83,7 @@ func (a *app) startTask(text string) {
 				return false, ctx.Err()
 			}
 		}
-		result, err := tasksession.Execute(ctx, tasksession.Request{Runner: runner, Store: store, LoadPrompts: loadPrompts, Compaction: compaction, ProjectInstructions: instructions, Text: text}, approve, emit)
+		result, err := tasksession.Execute(ctx, tasksession.Request{Runner: runner, Store: store, LoadPrompts: loadPrompts, ContextWindow: contextWindow, Compaction: compaction, ProjectInstructions: instructions, Text: text}, approve, emit)
 		a.post(a.ctx, notice{Done: true, Err: err, RunStatus: result.Status})
 	}()
 }

@@ -93,7 +93,7 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 	}
 }
 
-func TestMemoryCountsOnlyRequestUsage(t *testing.T) {
+func TestMemoryUsesLatestRequestContextInsteadOfCumulativeCost(t *testing.T) {
 	ctx := context.Background()
 	store, err := newTestStore(t)
 	if err != nil {
@@ -111,7 +111,7 @@ func TestMemoryCountsOnlyRequestUsage(t *testing.T) {
 		}
 	}
 	mark, err := store.MemoryWatermark(ctx, id, 0)
-	if err != nil || mark.Tokens != 200000 || mark.Estimated {
+	if err != nil || mark.Tokens != 1 || mark.Estimated {
 		t.Fatalf("%+v %v", mark, err)
 	}
 	next, err := store.MemoryWatermark(ctx, id, mark.Usage)

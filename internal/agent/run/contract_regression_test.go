@@ -1,12 +1,11 @@
 // Purpose: Verify failed calls, exact final drafts and response streaming obey completion contracts.
 // Pattern: Scripted runtime regression tests.
 // Usage: go test ./internal/agent/run -run TestContract.
-// Related: internal/agent/run/finish_response.go, internal/agent/run/generate.go.
+// Related: internal/agent/run/finish.go, internal/agent/run/generate.go.
 package run
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/completion"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"strings"
@@ -39,13 +38,13 @@ func TestContractPostToolResponseStreams(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, &journal{})
 	r.Generator = &chunkGenerator{chunks: []string{"Hello", " world"}}
 	visible := 0
-	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, system: "rules", checkpoint: Checkpoint{Phase: "decision", Work: completion.State{Receipts: []completion.Receipt{{ID: "r", Tool: "inspect_fixture", Success: true}}}}, emit: func(e Event) error {
+	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, system: "rules", checkpoint: Checkpoint{Phase: "decision", Work: toolapi.Facts{}}, emit: func(e Event) error {
 		if e.Kind == "stream" && e.Text != "" {
 			visible++
 		}
 		return nil
 	}}
-	reply, err := s.askResponse(context.Background(), "Answer now", modelapi.MaxResponseBytes)
+	reply, err := s.askResponse(context.Background())
 	if err != nil || reply.Text != "Hello world" || visible != 2 {
 		t.Fatalf("stream events=%d error=%v", visible, err)
 	}

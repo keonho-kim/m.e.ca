@@ -1,7 +1,7 @@
 // Purpose: Verify read-then-edit works through native calls with Permission as the approval authority.
 // Pattern: Scripted filesystem integration test.
 // Usage: go test ./internal/agent/run -run TestToolReadThenEdit.
-// Related: internal/tools/local/prepare.go, internal/agent/run/tool_contract_test.go.
+// Related: internal/tools/local/prepare.go, internal/agent/run/action_result.go.
 package run
 
 import (

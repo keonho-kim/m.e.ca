@@ -133,7 +133,6 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 		call("write_file", `{"path":"linked","content":"unsafe"}`),
 		call("write_file", `{"path":"auth.go","content":"new","approved":true}`),
 		call("write_file", `{"path":"auth.go","content":"provider-secret"}`),
-		call("execute_command", `{"command":"touch outside"}`),
 	} {
 		if _, err := executor.Prepare(context.Background(), settings, invocation); err == nil {
 			t.Errorf("accepted unsafe call: %+v", invocation)

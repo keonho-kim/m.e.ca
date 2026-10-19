@@ -31,11 +31,13 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 			return fmt.Errorf("context limit reached without an available compaction store")
 		}
 		var err error
-		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
+		if !s.historyLoaded {
+			s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
+			s.historyLoaded = err == nil
+		}
 		return err
 	}
 	s.runner.Memory.ActiveRequest = s.checkpoint.Objective
-	s.runner.Memory.ActiveApproach = s.workBackground().ProposedApproach
 	refresh := s.runner.Memory.Refresh
 	if force {
 		refresh = s.runner.Memory.Compact
@@ -71,9 +73,12 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	if err != nil {
 		return err
 	}
-	s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
-	if err != nil {
-		return err
+	if changed || !s.historyLoaded {
+		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
+		if err != nil {
+			return err
+		}
+		s.historyLoaded = true
 	}
 	if changed {
 		event := Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}

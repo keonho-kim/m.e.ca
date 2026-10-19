@@ -19,7 +19,7 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 	if before == 0 {
 		before = 1 << 62
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,CASE t.kind WHEN 'message' THEN m.body ELSE e.body END FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence WHERE t.session_id=? AND t.sequence<? ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,CASE t.kind WHEN 'message' THEN m.body ELSE json_remove(e.body,'$.capture') END FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence WHERE t.session_id=? AND t.sequence<? ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
 	if err != nil {
 		return nil, 0, err
 	}

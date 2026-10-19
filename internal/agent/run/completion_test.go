@@ -1,7 +1,7 @@
 // Purpose: Verify final reports survive without a runtime verification gate.
 // Pattern: Scripted execution contract tests.
 // Usage: go test ./internal/agent/run -run TestReport.
-// Related: internal/agent/run/finish.go, internal/agent/run/observation.go.
+// Related: internal/agent/run/finish.go, internal/agent/run/observations.go.
 package run
 
 import (
@@ -41,12 +41,12 @@ func TestReportRetainsFailedCommandFacts(t *testing.T) {
 	}
 }
 
-func TestRepeatedCommandUsesRecordedOutcome(t *testing.T) {
+func TestRepeatedCommandIsADeliberateNewExecution(t *testing.T) {
 	command := nativeCall("execute_command", map[string]any{"command": "test-a"})
 	g, e := &generator{replies: []string{command, command, "The command already ran"}}, &executor{}
 	j := &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "run once", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 1 {
+	if err != nil || result.Status != Answered || e.executed != 2 {
 		t.Fatalf("%+v executions=%d %v", result, e.executed, err)
 	}
 	found := false
@@ -55,7 +55,7 @@ func TestRepeatedCommandUsesRecordedOutcome(t *testing.T) {
 			found = true
 		}
 	}
-	if !found {
-		t.Fatal("missing duplicate feedback")
+	if found {
+		t.Fatal("normal repeated command was blocked")
 	}
 }

@@ -6,6 +6,8 @@ package local
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/tools/local/process"
@@ -19,9 +21,22 @@ func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
 	output, runErr := process.Run(ctx, op.executor.boundary, op.input.Command)
 	output.Stdout = textformat.RedactSource(output.Stdout, op.executor.redact)
 	output.Stderr = textformat.RedactSource(output.Stderr, op.executor.redact)
+	originalOutput := output
+	output.StdoutCapturedBytes, output.StderrCapturedBytes = len(output.Stdout), len(output.Stderr)
+	var archiveErr error
+	output.Stdout, output.StdoutPath, archiveErr = op.executor.commandOutput(output.Stdout, "stdout")
+	runErr = errors.Join(runErr, archiveErr)
+	output.Stderr, output.StderrPath, archiveErr = op.executor.commandOutput(output.Stderr, "stderr")
+	runErr = errors.Join(runErr, archiveErr)
 	result, err := resultfmt.Encode(output, fmt.Sprintf("Process %s; exit code %d", output.Status, output.ExitCode))
 	if err != nil {
 		return result, err
+	}
+	if output.StdoutPath != "" || output.StderrPath != "" {
+		result.Capture, err = json.Marshal(originalOutput)
+		if err != nil {
+			return result, errors.Join(runErr, err)
+		}
 	}
 	result.Started = output.Started
 	result.Process = &toolapi.ProcessOutcome{Status: output.Status, ExitCode: output.ExitCode, Truncated: output.Truncated}

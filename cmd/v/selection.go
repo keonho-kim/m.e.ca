@@ -16,6 +16,10 @@ import (
 )
 
 func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqlite.Sessions, mode startup.Mode, cwd string) (*sqlite.Store, bool, error) {
+	if mode.Session != "" {
+		store, err := sessions.Open(ctx, mode.Project, mode.Session)
+		return store, err == nil, err
+	}
 	all := mode.Resume
 	if all {
 		var err error

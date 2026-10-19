@@ -40,12 +40,12 @@ func TestSupportingRolesUseTopLevelTables(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, section := range []string{"[agent]", "[compaction]", "[diagnotics]"} {
+	for _, section := range []string{"[agent]", "[compaction]", "[diagnostics]"} {
 		if strings.Count(string(body), section) != 1 {
 			t.Fatalf("expected one %s section: %s", section, body)
 		}
 	}
-	content := "[compaction]\ntemperature=0.0\nmax_output_tokens=4321\nthreshold_tokens=123456\nkeep_recent_bytes=2048\nmax_input_bytes=1048576\nmax_summary_bytes=1048576\n\n[diagnotics]\ntemperature=0.0\nmax_output_tokens=2345\n"
+	content := "[compaction]\ntemperature=0.0\nmax_output_tokens=4321\nreserve_tokens=123456\nkeep_recent_tokens=2048\nmax_input_bytes=1048576\nmax_summary_bytes=1048576\n\n[diagnostics]\ntemperature=0.0\nmax_output_tokens=2345\n"
 	if err := os.WriteFile(filepath.Join(directory, Filename), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestSupportingRolesUseTopLevelTables(t *testing.T) {
 	if parameters.Compaction.Temperature != 0 || parameters.Compaction.MaxOutputTokens != 4321 || parameters.Compaction.Thinking != "off_if_supported" || parameters.Diagnostic.Temperature != 0 || parameters.Diagnostic.MaxOutputTokens != 2345 {
 		t.Fatalf("top-level role overrides lost: %+v", parameters)
 	}
-	if loaded.Compaction.ThresholdTokens != 123456 || loaded.Compaction.KeepRecentBytes != 2048 || loaded.Compaction.MaxInputBytes != 1048576 || loaded.Compaction.MaxSummaryBytes != 1048576 {
+	if loaded.Compaction.ReserveTokens != 123456 || loaded.Compaction.KeepRecentTokens != 2048 || loaded.Compaction.MaxInputBytes != 1048576 || loaded.Compaction.MaxSummaryBytes != 1048576 {
 		t.Fatalf("compaction policy lost: %+v", loaded.Compaction)
 	}
 	if err := Save(directory, loaded); err != nil {
@@ -78,7 +78,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"agent", "compaction", "diagnotics"} {
+	for _, role := range []string{"agent", "compaction", "diagnostics"} {
 		if !strings.Contains(string(body), "["+role+"]") {
 			t.Fatalf("missing persisted role %s", role)
 		}

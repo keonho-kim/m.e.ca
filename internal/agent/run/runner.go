@@ -10,7 +10,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/inference"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/monitor"
+
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/agent/work"
@@ -18,9 +18,8 @@ import (
 )
 
 type Runner struct {
+	PollSteering             func() []string
 	Inference                *inference.Settings
-	observer                 *monitor.Observer
-	MonitorSeed              []monitor.Record
 	PreviousRun              *Checkpoint
 	ReasoningEffort          string
 	Generator                modelapi.Generator

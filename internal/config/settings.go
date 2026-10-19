@@ -25,7 +25,7 @@ type Config struct {
 	ContextLength int                  `toml:"context_length"`
 	Model         *SavedModel          `toml:"model,omitempty"`
 	Agent         inference.Parameters `toml:"agent"`
-	Diagnostics   inference.Parameters `toml:"diagnotics"`
+	Diagnostics   inference.Parameters `toml:"diagnostics"`
 	ModelProfiles []ModelProfile       `toml:"model_profiles,omitempty"`
 	Defaults      policy.Settings      `toml:"defaults"`
 	Thinking      bool                 `toml:"thinking"`

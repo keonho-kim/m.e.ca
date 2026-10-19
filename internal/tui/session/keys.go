@@ -26,6 +26,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
+	if e.Key() == tcell.KeyCtrlO && !a.helpOpen && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
+		a.output.ToggleDetails()
+		return
+	}
 	if e.Key() == tcell.KeyF1 {
 		a.helpOpen = !a.helpOpen
 		a.helpOffset = 0

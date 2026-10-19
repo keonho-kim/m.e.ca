@@ -1,4 +1,4 @@
-// Purpose: Run a bounded Ralph execution with full uncompacted context, native tool calls and persisted decision state.
+// Purpose: Run a bounded native-tool conversation with full uncompacted context, native tool calls and persisted decision state.
 // Pattern: State Machine / Use Case.
 // Usage: Invoked for one user objective or user request; cancellation never replays effects.
 // Related: internal/agent/run/action.go, internal/agent/run/generate.go, internal/agent/run/events.go.
@@ -11,17 +11,13 @@ import (
 	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/progress"
+
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 )
 
 type execution struct {
-	round            roundProgress
-	textCorrection   bool
-	terminal         bool
-	files            progress.Files
-	progress         progress.Request
+	historyLoaded    bool
 	runner           Runner
 	limits           Limits
 	system           string
@@ -29,8 +25,6 @@ type execution struct {
 	checkpoint       Checkpoint
 	emit             func(Event) error
 	definitions      []toolapi.Definition
-	mutations        map[[32]byte]mutationReceipt
-	commands         map[[32]byte]int
 	usage            *requestBudget
 	messages         []modelapi.Message
 	memoryContext    string
@@ -61,21 +55,16 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	if err = limits.Check(); err != nil {
 		return result, err
 	}
-	templates := r.templates()
+	templates := prompt.Defaults()
+	if r.Prompts != nil {
+		templates = *r.Prompts
+	}
 	system, err := prompt.Work(templates.System, templates.Development, r.ProjectInstructions)
 	if err != nil {
 		return result, err
 	}
 	if len(input) > 64*1024*1024 {
 		return result, fmt.Errorf("objective exceeds 64 MiB")
-	}
-	if r.observer == nil {
-		observer, err := r.startMonitor(ctx)
-		if err != nil {
-			return result, err
-		}
-		defer observer.Close()
-		r.observer = observer
 	}
 	originalEmit := emit
 	emit = func(event Event) error {
@@ -84,7 +73,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 		return nil
 	}
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions(), mutations: map[[32]byte]mutationReceipt{}, commands: map[[32]byte]int{}}
+	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions()}
 	s.usage = &requestBudget{}
 	s.usage.begin(limits)
 
@@ -92,24 +81,35 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	id := "run_" + rand.Text()
 	s.checkpoint = Checkpoint{ID: id, Objective: r.Redact(input), Status: Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
 	if r.PreviousRun != nil {
-		for _, file := range r.PreviousRun.Work.Facts().Files {
+		for _, file := range r.PreviousRun.Work.Files {
 			file.Changed = false
-			s.checkpoint.Work.CurrentFiles = append(s.checkpoint.Work.CurrentFiles, file)
+			s.checkpoint.Work.Files = append(s.checkpoint.Work.Files, file)
 		}
 	}
 	defer func() {
 		err = s.settle(ctx, err)
 		result = s.result
 	}()
+	if previous := r.PreviousRun; previous != nil && (previous.Status == Interrupted || previous.Status == Stopped) {
+		note := "Previous request: " + previous.Objective + "\nLast observed outcome: " + previous.Observation
+		if previous.Blocker != "" {
+			note += "\nObserved blocker: " + previous.Blocker
+		}
+		if err = s.save(ctx, modelapi.Message{Role: "system", Content: note}); err != nil {
+			return s.result, err
+		}
+	}
 	if err = s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
 		return s.result, err
 	}
 	for {
-		s.round = roundProgress{}
+		if _, err = s.steer(ctx); err != nil {
+			return s.result, err
+		}
 		if finished, decisionErr := s.prepareDecision(ctx); finished || decisionErr != nil {
 			return s.result, decisionErr
 		}
-		s.checkpoint.Iteration = s.usage.snapshot().Iterations
+		s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
 		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 		s.checkpoint.Phase = "decision"
 		s.checkpoint.Tool = ""
@@ -120,7 +120,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		if err = s.refreshMemory(ctx, false); err != nil {
 			return s.result, err
 		}
-		reply, askErr := s.askResponse(ctx, "", modelapi.MaxResponseBytes)
+		reply, askErr := s.askResponse(ctx)
 		if askErr != nil {
 			var capacity interface{ ContextLimit() bool }
 			if !s.capacityRecovery && errors.As(askErr, &capacity) && capacity.ContextLimit() {
@@ -136,7 +136,10 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 				return s.result, askErr
 			}
 			s.result.HadToolFailure = true
-			s.checkpoint.Observation = "Correct the native tool call or narrow the change to fit the output limit; nothing executed: " + s.runner.Redact(askErr.Error())
+			s.checkpoint.Observation = "Model response failed before execution: " + s.runner.Redact(askErr.Error())
+			if err := s.save(ctx, modelapi.Message{Role: "system", Content: s.checkpoint.Observation}); err != nil {
+				return s.result, err
+			}
 		} else if len(reply.Calls) > 0 {
 			if len(reply.Calls) > 1 {
 				err = s.batch(ctx, reply, approve)
@@ -148,34 +151,12 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			}
 
 		} else {
-			finished, finishErr := s.finishResponse(ctx, reply.Text)
-			if finishErr != nil {
-				return s.result, finishErr
-			}
-			if finished {
-				return s.result, nil
-			}
-		}
-
-		if s.terminal {
-			return s.result, nil
-		}
-		if err = s.completeRound(ctx); err != nil {
-			return s.result, err
-		}
-		if s.checkpoint.ReportReason != "" {
-			return s.report(ctx, s.checkpoint.ReportReason, true)
-		}
-		if s.checkpoint.NoProgress >= limits.StallIterations {
-			if err := s.recoverProgress(ctx); err != nil {
+			if queued, err := s.continueSteered(ctx, reply); err != nil {
 				return s.result, err
+			} else if queued {
+				continue
 			}
-			if s.terminal {
-				return s.result, nil
-			}
-			if s.checkpoint.ReportReason != "" {
-				return s.report(ctx, s.checkpoint.ReportReason, true)
-			}
+			return s.result, s.finish(ctx, reply.Text)
 		}
 	}
 }

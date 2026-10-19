@@ -15,10 +15,13 @@ func resolveIdentity(model, override string, report *identity.Report) (profile.P
 	if override == profile.Generic {
 		return profile.Resolve(model, override)
 	}
-	if report.State() == "ambiguous" || report.Incomplete {
+	if report.State() == "ambiguous" {
 		if override != "" {
-			return profile.Profile{}, fmt.Errorf("model identity is routed or incomplete; use generic until a single target is identified")
+			return profile.Profile{}, fmt.Errorf("model identity is ambiguous or routed; use generic until a single target is identified")
 		}
+		return profile.Resolve("", profile.Generic)
+	}
+	if report.Incomplete && override == "" {
 		return profile.Resolve("", profile.Generic)
 	}
 	selected, err := profile.Resolve(model, override)

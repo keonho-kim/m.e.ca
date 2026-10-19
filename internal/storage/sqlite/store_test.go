@@ -54,7 +54,7 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 		t.Fatalf("history: %+v, %v", history, err)
 	}
 	settings, err := store.Settings(ctx)
-	if err != nil || settings.Scope != policy.System || settings.Permission != "" {
+	if err != nil || settings.Scope != "" || settings.Permission != "" {
 		t.Fatalf("settings: %+v, %v", settings, err)
 	}
 	info, err := os.Stat(path)

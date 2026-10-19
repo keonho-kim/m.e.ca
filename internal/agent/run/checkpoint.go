@@ -7,8 +7,7 @@ package run
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/completion"
-	"github.com/keonho-kim/v-code/internal/agent/grounding"
+
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/agent/work"
 )
@@ -23,14 +22,13 @@ const (
 )
 
 type Checkpoint struct {
-	End          *work.End        `json:"end,omitempty"`
-	Work         completion.State `json:"work"`
-	ReportReason string           `json:"report_reason,omitempty"`
-	LastChange   string           `json:"last_change,omitempty"`
-	Blocker      string           `json:"blocker,omitempty"`
+	End          *work.End     `json:"end,omitempty"`
+	Work         toolapi.Facts `json:"work"`
+	ReportReason string        `json:"report_reason,omitempty"`
+	LastChange   string        `json:"last_change,omitempty"`
+	Blocker      string        `json:"blocker,omitempty"`
 
-	ChangeRevision int               `json:"change_revision"`
-	Grounding      *grounding.Record `json:"grounding,omitempty"`
+	ChangeRevision int `json:"change_revision"`
 
 	ID                 string                     `json:"id"`
 	Objective          string                     `json:"objective"`
@@ -38,7 +36,6 @@ type Checkpoint struct {
 	Phase              string                     `json:"phase"`
 	Iteration          int                        `json:"iteration"`
 	ModelCalls         int                        `json:"model_calls"`
-	NoProgress         int                        `json:"no_progress"`
 	InstructionsDigest string                     `json:"instructions_digest"`
 	Tool               string                     `json:"tool,omitempty"`
 	Arguments          map[string]json.RawMessage `json:"arguments,omitempty"`
@@ -51,22 +48,17 @@ func (c Checkpoint) Check() error {
 			return err
 		}
 	}
-	if err := checkCompletion(c); err != nil {
+	if err := c.Work.Check(); err != nil {
 		return err
+	}
+	if len(c.ReportReason) > 256*1024*1024 {
+		return fmt.Errorf("invalid report reason")
 	}
 	if len(c.Blocker) > 16*1024*1024 || len(c.LastChange) > 16*1024*1024 {
 		return fmt.Errorf("invalid blocker detail")
 	}
 	if c.ChangeRevision < 0 {
 		return fmt.Errorf("invalid change revision")
-	}
-	if c.ChangeRevision < 0 || c.NoProgress < 0 {
-		return fmt.Errorf("invalid progress state")
-	}
-	if c.Grounding != nil {
-		if err := c.Grounding.Check(); err != nil {
-			return err
-		}
 	}
 	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || len(c.InstructionsDigest) != 64 {
 		return fmt.Errorf("invalid execution checkpoint")
@@ -77,7 +69,7 @@ func (c Checkpoint) Check() error {
 		return fmt.Errorf("invalid execution status")
 	}
 	switch c.Phase {
-	case "grounding", "decision", "approval", "execution", "observation", "reporting", "finished":
+	case "decision", "approval", "execution", "observation", "reporting", "finished":
 	default:
 		return fmt.Errorf("invalid execution phase")
 	}

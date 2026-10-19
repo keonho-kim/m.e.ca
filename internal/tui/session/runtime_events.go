@@ -12,6 +12,16 @@ import (
 
 func (a *app) receiveRuntime(e *run.Event) {
 	switch e.Kind {
+	case "user_message":
+		if len(a.steeringDrafts) > 0 {
+			a.steeringDrafts[0] = ""
+			a.steeringDrafts = a.steeringDrafts[1:]
+		}
+		a.output.Append(transcript.User(e.Text), false)
+		a.inputs = append(a.inputs, e.Text)
+		a.historyIndex = len(a.inputs)
+		return
+
 	case "generation_started":
 		a.tokenCurrent = modelapi.TokenUsage{}
 		a.tokensPerSecond = nil
@@ -23,7 +33,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 		a.stopCompression()
 		return
 	}
-	if e.Internal || e.Kind == "monitor" || e.Kind == "tool_proposed" {
+	if e.Internal || e.Kind == "tool_proposed" {
 		return
 	}
 	if e.Kind == "retry" {
@@ -40,7 +50,9 @@ func (a *app) receiveRuntime(e *run.Event) {
 		return
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		a.status = ""
-		a.output.Append((transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(*e), false)
+		for _, block := range (transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(*e) {
+			a.output.AppendBlock(block)
+		}
 		return
 	case "approved":
 		return

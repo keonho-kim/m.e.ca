@@ -6,19 +6,18 @@ package tool
 
 import (
 	"sort"
-	"strings"
 	"unicode/utf8"
 )
 
 // Observe preserves known partial mutations even when an operation ended with an error.
-func (f *Facts) Observe(op Operation, output string) {
+func (f *Facts) Observe(op Operation) {
 	files := map[string]FileFact{}
 	for _, file := range f.Files {
 		files[file.Path] = file
 	}
 	for path, version := range op.Versions {
 		prior := files[path]
-		files[path] = FileFact{Path: path, Version: version, Changed: prior.Changed}
+		files[path] = observedFile(op, path, version, prior.Changed)
 	}
 	for _, change := range op.Changes {
 		if change.BeforeDigest == change.AfterDigest && change.Destination == "" {
@@ -34,9 +33,9 @@ func (f *Facts) Observe(op Operation, output string) {
 		if version == "" && op.Name == "create_directory" {
 			version = "directory"
 		}
-		files[change.Path] = FileFact{Path: change.Path, Version: version, Changed: true, Stale: version == ""}
+		files[change.Path] = observedFile(op, change.Path, version, true)
 		if change.Destination != "" {
-			files[change.Destination] = FileFact{Path: change.Destination, Version: change.AfterDigest, Changed: true, Stale: change.AfterDigest == ""}
+			files[change.Destination] = observedFile(op, change.Destination, change.AfterDigest, true)
 		}
 	}
 	if op.Name == "execute_command" {
@@ -54,9 +53,8 @@ func (f *Facts) Observe(op Operation, output string) {
 			n := op.Process.ExitCode
 			exit = &n
 		}
-		command, c := ReportExcerpt(op.Command)
-		text, o := ReportExcerpt(strings.TrimSpace(op.Result + "\n" + output))
-		f.Commands = append(f.Commands, CommandFact{CallID: op.CallID, Command: command, Status: status, ExitCode: exit, Output: text, Excerpt: c || o, ObservedRun: op.RunID, Revision: op.Revision})
+		command, c := reportExcerpt(op.Command)
+		f.Commands = append(f.Commands, CommandFact{CallID: op.CallID, Command: command, Status: status, ExitCode: exit, Excerpt: c, ObservedRun: op.RunID, Revision: op.Revision})
 	}
 	f.Files = nil
 	for _, v := range files {
@@ -65,8 +63,8 @@ func (f *Facts) Observe(op Operation, output string) {
 	sort.Slice(f.Files, func(i, j int) bool { return f.Files[i].Path < f.Files[j].Path })
 }
 
-// ReportExcerpt bounds model-facing quotations; full source records remain in session storage.
-func ReportExcerpt(value string) (string, bool) {
+// reportExcerpt bounds model-facing quotations; full source records remain in session storage.
+func reportExcerpt(value string) (string, bool) {
 	const limit = 2048
 	if len(value) <= limit {
 		return value, false
@@ -76,4 +74,14 @@ func ReportExcerpt(value string) (string, bool) {
 		end--
 	}
 	return value[:end], true
+}
+
+func observedFile(op Operation, path, version string, changed bool) FileFact {
+	observation := "present"
+	if version == "missing" {
+		observation = "missing"
+	} else if version == "" {
+		observation = "unavailable"
+	}
+	return FileFact{Path: path, Version: version, Changed: changed, Stale: version == "", SourceID: op.CallID, ObservedRun: op.RunID, Revision: op.Revision, Observation: observation}
 }

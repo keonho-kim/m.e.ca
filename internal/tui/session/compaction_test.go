@@ -22,7 +22,7 @@ import (
 
 func TestCompactionContext(t *testing.T) {
 	a := fixture(t)
-	a.opts.Config.Compaction.KeepRecentBytes = 0
+	a.opts.Config.Compaction.KeepRecentTokens = 0
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	a.ctx = ctx
 	t.Cleanup(func() {
@@ -35,14 +35,10 @@ func TestCompactionContext(t *testing.T) {
 	if err := a.opts.Store.AppendMessage(ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 200000, Kind: "request"}); err != nil {
+	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 245760, Kind: "request"}); err != nil {
 		t.Fatal(err)
 	}
 	const summaryMemo = "- Request: Update src/auth.go.\n- Result: No code changes yet.\n- Next: Continue the requested implementation."
-	quotedMemo, err := json.Marshal(summaryMemo)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var calls atomic.Int64
 	var decisions atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +61,7 @@ func TestCompactionContext(t *testing.T) {
 			}
 			reply = summaryMemo
 		} else {
-			if !strings.Contains(body.Messages[1].Content, string(quotedMemo)) {
+			if !strings.Contains(body.Messages[1].Content, summaryMemo) {
 				t.Error("committed memory missing")
 			}
 			want := "Continue the earlier goal"
@@ -111,7 +107,7 @@ func TestCompactionContext(t *testing.T) {
 	a.startTask("New goal after compaction")
 	drainTask(t, a, false)
 	usage, err := a.opts.Store.MemoryWatermark(ctx, a.opts.Session.ID, memory.UsageThrough)
-	if err != nil || usage.Tokens != 2*(20+7) {
+	if err != nil || usage.Tokens != (20+7) {
 		t.Fatalf("request input and output not counted once: %+v %v", usage, err)
 	}
 	total, err := a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)

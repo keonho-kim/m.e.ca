@@ -11,7 +11,7 @@ func TestArgumentIdentityPreservesValuesAcrossJSONFormatting(t *testing.T) {
 		streamed, final string
 		ok              bool
 	}{
-		{`{"steps":["생성", "확인"], "reason":"inspect"}`, `{"reason":"inspect","steps":["생성","확인"]}`, true},
+		{`{"steps":["생성", "확인"],"path":"src"}`, `{"path":"src","steps":["생성","확인"]}`, true},
 		{`{"path":"가"}`, `{"path":"\uac00"}`, true},
 		{`{"content":" line\n"}`, `{"content":"line\n"}`, false},
 		{`{"steps":["one","two"]}`, `{"steps":["two","one"]}`, false},

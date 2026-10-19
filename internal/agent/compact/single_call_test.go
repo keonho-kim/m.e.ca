@@ -14,7 +14,7 @@ import (
 )
 
 func TestSingleCallAfterPreviousSummary(t *testing.T) {
-	repo := &repository{memory: Memory{Revision: 1, Through: 1, Markdown: "Existing requirement: preserve API."}, mark: Watermark{Tokens: 200000, Usage: 20, Timeline: 5}, records: []Record{
+	repo := &repository{memory: Memory{Revision: 1, Through: 1, Markdown: "Existing requirement: preserve API."}, mark: Watermark{Tokens: 245760, Usage: 20, Timeline: 5}, records: []Record{
 		{Sequence: 2, Role: "user", Text: "Keep Korean output and fix the parser."},
 		{Sequence: 3, Role: "assistant", Text: strings.Repeat("large diagnostic observation\n", 10000)},
 		{Sequence: 4, Role: "assistant", Text: strings.Repeat("another large observation\n", 10000)},
@@ -43,7 +43,7 @@ func TestSingleCallAfterPreviousSummary(t *testing.T) {
 
 func TestSingleCallPreservesMemoryWhenInstructionsCannotFit(t *testing.T) {
 	prior := Memory{Revision: 2, Through: 4, UsageThrough: 10, Markdown: "Keep previous constraints"}
-	repo := &repository{memory: prior, mark: Watermark{Tokens: 200000, Usage: 30, Timeline: 5}, records: []Record{{Sequence: 5, Role: "user", Text: strings.Repeat("x", MaxBodyBytes+1)}}}
+	repo := &repository{memory: prior, mark: Watermark{Tokens: 245760, Usage: 30, Timeline: 5}, records: []Record{{Sequence: 5, Role: "user", Text: strings.Repeat("x", MaxBodyBytes+1)}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	_, err := c.Refresh(context.Background(), func(context.Context, modelapi.Request, func(modelapi.Event) error) error { calls++; return nil })
@@ -97,7 +97,7 @@ func (r *pagedRepository) MemoryRecords(ctx context.Context, session string, aft
 	return records, cursor, err
 }
 func TestSingleGenerationAcrossStoragePages(t *testing.T) {
-	repo := &pagedRepository{repository: &repository{mark: Watermark{Tokens: 200000, Usage: 5, Timeline: 5}}}
+	repo := &pagedRepository{repository: &repository{mark: Watermark{Tokens: 245760, Usage: 5, Timeline: 5}}}
 	for i := 1; i <= 5; i++ {
 		repo.records = append(repo.records, Record{Sequence: int64(i), Role: "user", Text: strings.Repeat("x", i)})
 	}

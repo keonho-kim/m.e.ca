@@ -12,11 +12,6 @@ import (
 
 func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
-	if call.Name == "execute_command" && outcome.Started {
-		if err := s.observeCommandFiles(ctx, ready, &outcome); err != nil {
-			runErr = errors.Join(runErr, err)
-		}
-	}
 	event := Event{CallID: call.ID, Call: &call}
 	if call.Name != "execute_command" || outcome.Process == nil {
 		outcome.Started = true
@@ -52,6 +47,7 @@ func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, 
 	}
 	event.Operation = &opFact
 	event.Output = outcome.Content
+	event.Capture = outcome.Capture
 	if event.Kind == "tool_succeeded" && proposal.Diff {
 		event.ChangePreview = boundedChangePreview(r.Redact(proposal.Preview))
 	}
@@ -59,6 +55,7 @@ func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, 
 	if err := s.record(recordCtx, event); err != nil {
 		return outcome, errors.Join(errRuntimeRecord, err)
 	}
+	event.Capture = nil // Original captures are durable, never copied into live presentation events.
 	if err := emit(event); err != nil && !(ctx.Err() != nil && errors.Is(err, ctx.Err())) {
 		return outcome, errors.Join(errRuntimeRecord, err)
 	}

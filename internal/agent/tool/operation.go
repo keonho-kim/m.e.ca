@@ -14,5 +14,4 @@ type Operation struct {
 	RunID, CallID, Name, Status, Command, Result string
 
 	Changes []FileChange
-	Source  int64
 }
