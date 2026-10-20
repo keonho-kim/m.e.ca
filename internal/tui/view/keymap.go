@@ -40,12 +40,7 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	}
 	rows := [][]Shortcut{{}}
 	cells := 0
-	help := Shortcut{}
 	for _, shortcut := range orderedShortcuts(shortcuts) {
-		if shortcut.Key == "F1" {
-			help = shortcut
-			continue
-		}
 		count := uniseg.StringWidth(shortcut.Key) + 1 + uniseg.StringWidth(shortcut.Label)
 		if count > width {
 			continue
@@ -69,26 +64,13 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	}
 	if count < len(shortcuts) {
 		last := len(rows) - 1
-		line := rows[last]
-		measure := func(values []Shortcut) int {
-			n := 0
-			for i, s := range values {
-				if i > 0 {
-					n += 2
-				}
-				n += uniseg.StringWidth(s.Key + " " + s.Label)
-			}
-			return n
+		used := 0
+		for _, shortcut := range rows[last] {
+			used += uniseg.StringWidth(shortcut.Key+" "+shortcut.Label) + 2
 		}
-		for help.Key != "" && len(line) > 0 && measure(append(slices.Clone(line), help)) > width && shortcutRank(line[len(line)-1].Key) > 1 {
-			line = line[:len(line)-1]
+		if used+1 <= width {
+			rows[last] = append(rows[last], Shortcut{Key: "…"})
 		}
-		if help.Key != "" && measure(append(slices.Clone(line), help)) <= width {
-			line = append(line, help)
-		} else if measure(line)+3 <= width {
-			line = append(line, Shortcut{Key: "…"})
-		}
-		rows[last] = line
 	}
 	return rows
 }

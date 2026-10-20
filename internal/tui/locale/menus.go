@@ -46,5 +46,4 @@ var menus = []translation{
 	{"", "Choose conversation", "대화 선택"},
 	{"", "New conversation", "새 대화"},
 	{"", "Resize terminal", "터미널 크기를 늘려주세요"},
-	{"", "Keyboard shortcuts for this screen", "현재 화면의 키 안내"},
 }

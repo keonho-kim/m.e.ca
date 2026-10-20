@@ -14,12 +14,24 @@ import (
 func ApprovalPreview(proposal tool.Approval, lang locale.Language) string {
 	if command := proposal.Command; command != nil {
 		lines := []string{lang.Text("Working directory: ") + command.Directory}
-		for _, reason := range command.Reasons {
-			lines = append(lines, lang.Text(reason))
-		}
-		if len(command.Targets) > 0 {
-			lines = append(lines, lang.Text("Targets:"))
-			lines = append(lines, command.Targets...)
+		for _, finding := range command.Findings {
+			name := finding.Command
+			if name == "" {
+				name = lang.Text("Executable decided at runtime")
+			}
+			if name == "redirection" {
+				name = lang.Text("Output redirection")
+			}
+			lines = append(lines, lang.Text("Command: ")+name)
+			for _, reason := range finding.Reasons {
+				lines = append(lines, "  "+lang.Text(reason))
+			}
+			if len(finding.Targets) > 0 {
+				lines = append(lines, "  "+lang.Text("Targets:"))
+				for _, path := range finding.Targets {
+					lines = append(lines, "  "+path)
+				}
+			}
 		}
 		return strings.Join(lines, "\n") + "\n\n" + proposal.Target
 	}

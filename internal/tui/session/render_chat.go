@@ -15,7 +15,7 @@ func (a *app) chatHeight(width, height int) int {
 }
 
 func (a *app) renderChat(width, height int) {
-	lines := a.chatLines(max(1, width-1))
+	lines := a.chatLines(view.TranscriptWidth(width))
 	window := a.editor.Window(width, min(a.opts.Config.UI.InputMaxLines, max(1, height-1)))
 	layout := view.Composer(len(window.Rows), height, a.candidates(), a.stopNotice)
 	a.inputRegion = inputRegion{editor: &a.editor, window: window, y: layout.InputY, width: width, revision: a.editor.Revision()}

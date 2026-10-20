@@ -28,29 +28,13 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
-	if e.Key() == tcell.KeyCtrlO && !a.helpOpen && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
+	if e.Key() == tcell.KeyCtrlO && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
 		if !a.output.ToggleDetails() {
 			a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
 		} else if a.output.Collapsed {
 			a.stopNotice = a.language.Text("도구 결과 접음 · Ctrl+O로 펼치기")
 		} else {
 			a.stopNotice = a.language.Text("도구 결과 펼침 · PgUp/Dn으로 스크롤")
-		}
-		return
-	}
-	if e.Key() == tcell.KeyF1 {
-		a.helpOpen = !a.helpOpen
-		a.helpOffset = 0
-		return
-	}
-	if a.helpOpen {
-		switch e.Key() {
-		case tcell.KeyEscape:
-			a.helpOpen = false
-		case tcell.KeyUp:
-			a.helpOffset = max(0, a.helpOffset-1)
-		case tcell.KeyDown:
-			a.helpOffset = min(max(0, len(a.shortcuts())-1), a.helpOffset+1)
 		}
 		return
 	}
@@ -179,9 +163,6 @@ func (a *app) recall(n int) {
 }
 
 func (a *app) mouse(e *tcell.EventMouse) {
-	if a.helpOpen {
-		return
-	}
 	if a.scrollbarMouse(e) {
 		return
 	}

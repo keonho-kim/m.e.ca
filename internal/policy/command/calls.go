@@ -13,14 +13,27 @@ import (
 )
 
 func (a *analyzer) call(c *syntax.CallExpr, redirs []*syntax.Redirect, s *state) *state {
-	before := s.clone()
 	if len(c.Args) == 0 {
 		for _, v := range c.Assigns {
 			a.assign(v, s)
 		}
 		return s.clone()
 	}
-	args := a.words(c.Args, s)
+	args := a.word(c.Args[0], s, false)
+	inspect := len(args) == 0 || !args[0].known
+	if len(args) > 0 && args[0].known {
+		name := filepath.Base(args[0].text)
+		_, function := s.functions[name]
+		inspect = inspectionRequired(name) || function
+	}
+	for _, arg := range c.Args[1:] {
+		if inspect {
+			args = append(args, a.word(arg, s, false)...)
+		} else {
+			a.substitutions(arg, s)
+		}
+	}
+	failure := s.clone()
 	work := s
 	if len(c.Assigns) > 0 {
 		work = s.clone()
@@ -28,50 +41,71 @@ func (a *analyzer) call(c *syntax.CallExpr, redirs []*syntax.Redirect, s *state)
 			a.assign(v, work)
 		}
 	}
-	a.invoke(args, redirs, work)
+	a.invoke(args, redirs, work, true)
 	if work != s {
-		s.join(before)
+		if len(args) == 0 || !args[0].known || !specialBuiltin(args[0].text) {
+			for _, assignment := range c.Assigns {
+				if assignment.Name == nil {
+					continue
+				}
+				name := assignment.Name.Value
+				delete(work.vars, name)
+				delete(work.unknown, name)
+				if value, ok := failure.vars[name]; ok {
+					work.vars[name] = value
+				}
+				if failure.unknown[name] {
+					work.unknown[name] = true
+				}
+			}
+		}
+		*s = *work
 	}
 	if len(args) > 0 && args[0].known && (args[0].text == "export" || args[0].text == "readonly" || args[0].text == "unset" || args[0].text == "set") {
 		return s.clone()
 	}
-	return before
+	return failure
 }
 
-func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state) {
+func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state, functions bool) {
 	if len(args) == 0 || !a.enter() {
 		return
 	}
 	defer func() { a.depth-- }()
 	a.executableEnvironment(s)
 	if !args[0].known {
-		a.result.Ask("Unresolved command name requires approval")
+		defer a.finding("")()
+		a.ask("Unresolved command name requires approval")
 		s.forget()
 		return
 	}
 	called := args[0].text
 	name := filepath.Base(called)
 	args = args[1:]
-	if body, ok := s.functions[name]; ok && !strings.Contains(called, "/") {
+	if body, ok := s.functions[name]; ok && functions && !strings.Contains(called, "/") {
 		work := s.clone()
 		work.parameters(args, 1)
 		a.statements([]*syntax.Stmt{body}, work)
 		*s = *work
 		return
 	}
+	if !inspectionRequired(name) {
+		return
+	}
+	defer a.finding(name)()
 	if a.wrapper(name, args, redirs, s) {
 		return
 	}
 	switch name {
 	case "sudo", "su", "doas", "pkexec":
-		a.err = fmt.Errorf("operation blocked: privilege escalation via %s", name)
+		a.err = &BlockedError{Cause: fmt.Errorf("operation blocked: privilege escalation via %s", name)}
 	case "cd":
 		a.cd(args, s)
 	case "eval":
 		var text []string
 		for _, arg := range args {
 			if !arg.known {
-				a.result.Ask("Dynamic eval requires approval")
+				a.ask("Dynamic eval requires approval")
 				s.forget()
 				return
 			}
@@ -79,7 +113,7 @@ func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state) {
 		}
 		a.parse(strings.Join(text, " "), syntax.LangPOSIX, s)
 	case ".", "source":
-		a.result.Ask("External shell script sourcing requires approval")
+		a.ask("External shell script sourcing requires approval")
 		s.forget()
 	case "unset":
 		for _, arg := range args {
@@ -88,7 +122,7 @@ func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state) {
 				delete(s.unknown, arg.text)
 				delete(s.functions, arg.text)
 			} else {
-				s.forget()
+				s.invalidateVariables()
 			}
 		}
 	case "export", "readonly", "local":
@@ -97,84 +131,37 @@ func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state) {
 			if arg.known && ok {
 				s.set(key, value)
 			} else if !arg.known {
-				s.forget()
-				a.result.Ask("Dynamic environment change requires approval")
+				if syntax.ValidName(key) {
+					s.invalidate(key)
+				} else {
+					s.invalidateVariables()
+				}
 			}
 		}
 	case "set":
 		a.set(args, s)
-	case "read", "getopts", "shift", "alias", "unalias":
-		a.result.Ask("Runtime shell state changes require approval")
+	case "read":
+		a.read(args, s)
+	case "getopts":
+		if len(args) > 1 && args[1].known {
+			s.invalidate(args[1].text)
+		} else {
+			s.invalidateVariables()
+		}
+		s.invalidate("OPTARG")
+		s.invalidate("OPTIND")
+	case "shift":
+		s.invalidateParameters()
+	case "alias", "unalias":
+		a.ask("Command alias changes require approval")
 		s.forget()
 	case "trap":
 		if len(args) > 0 && args[0].known {
 			a.parse(args[0].text, syntax.LangPOSIX, s.clone())
 		} else {
-			a.result.Ask("Dynamic shell trap requires approval")
+			a.ask("Dynamic shell trap requires approval")
 		}
 	default:
 		a.effects(name, args, s)
 	}
-}
-
-func (a *analyzer) set(args []word, s *state) {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if !arg.known {
-			a.result.Ask("Dynamic shell options require approval")
-			s.forget()
-			return
-		}
-		if arg.text == "--" {
-			s.parameters(args[i+1:], 1)
-			return
-		}
-		if arg.text == "-o" || arg.text == "+o" {
-			if i+1 < len(args) && args[i+1].known && (args[i+1].text == "errexit" || args[i+1].text == "nounset" || args[i+1].text == "pipefail" || args[i+1].text == "xtrace" || args[i+1].text == "noglob") {
-				i++
-				continue
-			}
-		}
-		if len(arg.text) > 1 && (arg.text[0] == '-' || arg.text[0] == '+') && strings.Trim(arg.text[1:], "euxfnvC") == "" {
-			continue
-		}
-		a.result.Ask("Unsupported shell options require approval")
-		s.forget()
-		return
-	}
-}
-
-func (a *analyzer) cd(args []word, s *state) {
-	var path word
-	if len(args) == 0 {
-		path = word{text: s.vars["HOME"].Str, known: !s.unknown["HOME"] && s.vars["HOME"].IsSet()}
-	} else {
-		for _, arg := range args {
-			if arg.known && (arg.text == "--" || arg.text == "-P" || arg.text == "-L") {
-				continue
-			}
-			if path.known || path.text != "" {
-				s.dir = ""
-				return
-			}
-			path = arg
-		}
-	}
-	if path.text == "-" {
-		path = word{text: s.vars["OLDPWD"].Str, known: !s.unknown["OLDPWD"] && s.vars["OLDPWD"].IsSet()}
-	}
-	if !path.known || !filepath.IsAbs(path.text) && (s.dir == "" || s.vars["CDPATH"].Str != "" || s.unknown["CDPATH"]) {
-		s.dir = ""
-		s.unknown["PWD"] = true
-		return
-	}
-	resolved, err := a.input.Resolve(s.dir, path.text, false)
-	if err != nil {
-		s.dir = ""
-		s.unknown["PWD"] = true
-		return
-	}
-	s.set("OLDPWD", s.dir)
-	s.dir = resolved
-	s.set("PWD", resolved)
 }

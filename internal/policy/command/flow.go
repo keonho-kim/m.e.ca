@@ -64,11 +64,11 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 	case *syntax.ForClause:
 		loop, ok := c.Loop.(*syntax.WordIter)
 		if !ok {
-			a.result.Ask("Dynamic shell loop requires approval")
-			s.forget()
+			a.invalidateLoop(c.Do, s)
 			a.statements(c.Do, s)
 			break
 		}
+		a.invalidateLoop(c.Do, s)
 		values := a.words(loop.Items, s)
 		if len(values) == 0 {
 			values = []word{{}}
@@ -86,9 +86,8 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 		*s = *before
 		failure = s.clone()
 	case *syntax.WhileClause:
-		a.result.Ask("Shell loop with runtime-dependent iterations requires approval")
+		a.invalidateLoop(append(append([]*syntax.Stmt(nil), c.Cond...), c.Do...), s)
 		a.statements(c.Cond, s)
-		s.forget()
 		a.statements(c.Do, s)
 		failure = s.clone()
 	case *syntax.CaseClause:
@@ -103,7 +102,7 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 		failure = s.clone()
 	case *syntax.FuncDecl:
 		if c.Name == nil {
-			a.result.Ask("Anonymous or multi-name shell function requires inspection")
+			a.ask("Anonymous or multi-name shell function requires inspection")
 			a.statement(c.Body, s.clone())
 		} else {
 			s.functions[c.Name.Value] = c.Body
@@ -118,7 +117,7 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 		failure = s.clone()
 	case nil:
 	default:
-		a.result.Ask("Unsupported shell state changes require approval")
+		a.ask("Unsupported shell state changes require approval")
 		s.forget()
 	}
 	if st.Negated {

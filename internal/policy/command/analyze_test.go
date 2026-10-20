@@ -22,10 +22,10 @@ func testContext() Context {
 func TestAnalyzeDecisions(t *testing.T) {
 	for _, test := range []struct{ text, want string }{
 		{"ls -la && find . -type f && rg TODO .", "normal"},
-		{"set -eu; uv run pytest -q", "normal"},
+		{"set -eu; unregistered-command run checks -q", "normal"},
 		{"set -- /etc; rm -rf \"$1\"", "block"},
 		{"export TARGET=/etc; rm -rf \"$TARGET\"", "block"},
-		{"command -v uv; env; git status --short; git diff; uv init --package app", "normal"},
+		{"command -v unregistered-command; env; git status --short; git diff; unregistered-command init app", "normal"},
 		{"echo 'rm -rf /etc'; printf '%s' 'sudo true' # rm /\ncat file", "normal"},
 		{"printf hello > file; cat file 2>/dev/null", "normal"},
 		{"cat <<'EOF' > source\nrm -rf /etc\nEOF", "normal"},
@@ -98,7 +98,7 @@ func TestAnalyzeDecisions(t *testing.T) {
 			got := "normal"
 			if err != nil {
 				got = "block"
-			} else if len(result.Reasons) > 0 {
+			} else if len(result.Safety.Reasons) > 0 {
 				got = "ask"
 			}
 			if got != test.want {
@@ -133,7 +133,7 @@ func FuzzAnalyze(f *testing.F) {
 
 func BenchmarkAnalyze(b *testing.B) {
 	for b.Loop() {
-		_, err := Analyze(context.Background(), "cd app && uv run pytest -q && git diff --stat", testContext())
+		_, err := Analyze(context.Background(), "cd app && unregistered-command run checks -q && git diff --stat", testContext())
 		if err != nil {
 			b.Fatal(err)
 		}

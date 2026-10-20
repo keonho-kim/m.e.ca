@@ -33,3 +33,26 @@ func TestMutationSafety(t *testing.T) {
 		}
 	}
 }
+
+func TestMutationWithinDirectory(t *testing.T) {
+	for _, test := range []struct {
+		path              string
+		blocked, approval bool
+	}{
+		{"/work/project", false, true},
+		{"/work/project/src", false, true},
+		{"/tmp/specific-directory", false, true},
+		{"/work", true, false},
+		{"/", true, false},
+		{"/home/user", true, false},
+		{"/etc", true, false},
+	} {
+		result, err := MutationWithin("/work/project", "/home/user", test.path, true)
+		if (err != nil) != test.blocked || (len(result.Reasons) > 0) != test.approval {
+			t.Errorf("%+v: %+v %v", test, result, err)
+		}
+		if err == nil && (len(result.Targets) != 1 || result.Targets[0] != test.path) {
+			t.Errorf("directory scope was replaced: %+v", result)
+		}
+	}
+}

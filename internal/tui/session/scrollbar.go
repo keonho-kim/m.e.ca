@@ -1,11 +1,12 @@
 // Purpose: Route transcript scrollbar clicks and captured thumb drags before text selection.
 // Pattern: Event-loop interaction controller.
 // Usage: mouse dispatches scrollbarMouse; renderChat supplies the visible geometry.
-// Related: internal/tui/session/keys.go, internal/tui/session/render_chat.go, internal/tui/viewport/scrollbar.go.
+// Related: internal/tui/session/keys.go, internal/tui/session/render_chat.go, internal/tui/view/chat.go, internal/tui/viewport/scrollbar.go.
 package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
@@ -31,7 +32,7 @@ func (a *app) scrollbarMouse(e *tcell.EventMouse) bool {
 	if state.dragging {
 		a.clearSelection()
 		w, _ := a.screen.Size()
-		lines := a.chatLines(max(1, w-1))
+		lines := a.chatLines(view.TranscriptWidth(w))
 		bar := viewport.NewScrollbar(len(lines), state.bar.Height, 0)
 		a.output.Seek(lines, bar.Index(y-state.y, state.grab), state.bar.Height)
 		state.dragging = e.Buttons()&tcell.Button1 != 0

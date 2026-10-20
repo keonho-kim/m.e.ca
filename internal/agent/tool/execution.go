@@ -23,7 +23,12 @@ type Approval struct {
 }
 
 type CommandApproval struct {
-	Directory        string
+	Directory string
+	Findings  []CommandFinding
+}
+
+type CommandFinding struct {
+	Command          string
 	Reasons, Targets []string
 }
 

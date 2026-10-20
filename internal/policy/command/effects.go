@@ -4,51 +4,12 @@
 // Related: internal/policy/command/find.go, internal/policy/command/redirects.go, internal/policy/safety.go.
 package command
 
-import (
-	"path/filepath"
-	"strings"
-
-	"github.com/keonho-kim/v-code/internal/policy"
-)
-
-func (a *analyzer) target(value word, s *state, removal bool) {
-	if !value.known {
-		a.result.Ask("Mutation target cannot be resolved statically")
-		if value.glob {
-			// Check a known directory prefix without expanding or scanning it.
-			prefix := value.text
-			if i := strings.IndexAny(prefix, "*?["); i >= 0 {
-				prefix = prefix[:i]
-			}
-			prefix = filepath.Dir(prefix + "__glob_target__")
-			a.target(word{text: filepath.Join(prefix, "__glob_target__"), known: true}, s, removal)
-		}
-		return
-	}
-	if value.text == "" {
-		return
-	}
-	if !filepath.IsAbs(value.text) && s.dir == "" {
-		a.result.Ask("Mutation working directory is unresolved")
-		return
-	}
-	path, err := a.input.Resolve(s.dir, value.text, removal)
-	if err != nil {
-		a.result.Ask("Mutation target could not be canonicalized")
-		return
-	}
-	decision, err := policy.Mutation(a.input.Project, a.input.Home, path, removal)
-	if err != nil {
-		a.err = err
-		return
-	}
-	a.result.Merge(decision)
-}
+import "strings"
 
 func (a *analyzer) effects(name string, args []word, s *state) {
 	switch name {
 	case "rm", "rmdir", "unlink":
-		a.result.Ask("Deletion requires approval")
+		a.ask("Deletion requires approval")
 		for _, arg := range a.operands(args, nil) {
 			a.target(arg, s, true)
 		}
@@ -66,7 +27,7 @@ func (a *analyzer) effects(name string, args []word, s *state) {
 			a.target(values[len(values)-1], s, false)
 		}
 		if name == "mv" {
-			a.result.Ask("Move requires approval")
+			a.ask("Move requires approval")
 			for _, arg := range values {
 				a.target(arg, s, true)
 			}
@@ -76,7 +37,10 @@ func (a *analyzer) effects(name string, args []word, s *state) {
 			a.target(arg, s, false)
 		}
 	case "chmod", "chown", "chgrp":
-		a.result.Ask("Permission or ownership changes require approval")
+		simpleExecute := name == "chmod" && len(args) > 1 && args[0].known && (args[0].text == "+x" || args[0].text == "u+x" || args[0].text == "a+x")
+		if !simpleExecute {
+			a.ask("Permission or ownership changes require approval")
+		}
 		values := a.operands(args, []string{"--reference"})
 		reference := false
 		for _, arg := range args {
@@ -94,10 +58,10 @@ func (a *analyzer) effects(name string, args []word, s *state) {
 		a.find(args, s)
 	case "git":
 		a.git(args, s)
-	case "sed":
+	case "sed", "gsed":
 		a.sed(args, s)
 	case "dd", "mkfs", "mke2fs", "fdisk", "sfdisk", "parted", "wipefs", "mount", "umount", "chroot":
-		a.result.Ask("System-level command requires explicit inspection")
+		a.ask("System-level command requires explicit inspection")
 		for _, arg := range args {
 			if arg.known && strings.HasPrefix(arg.text, "of=") {
 				a.target(word{text: strings.TrimPrefix(arg.text, "of="), known: true}, s, false)

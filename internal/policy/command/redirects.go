@@ -7,6 +7,7 @@ package command
 import "mvdan.cc/sh/v3/syntax"
 
 func (a *analyzer) redirect(r *syntax.Redirect, s *state) {
+	defer a.finding("redirection")()
 	value := a.word(r.Word, s, true)
 	if r.Hdoc != nil {
 		a.substitutions(r.Hdoc, s)

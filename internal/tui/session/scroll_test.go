@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/v-code/internal/tui/view"
 )
 
 func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
@@ -19,7 +20,7 @@ func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
 	a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking\n", 40), Text: strings.Repeat("answer\n", 40) + "latest"})
 	a.render()
 	height := a.chatHeight(80, a.bodyHeight(24))
-	lines := a.chatLines(79)
+	lines := a.chatLines(view.TranscriptWidth(80))
 	before := a.output.Start(lines, height)
 	a.scroll(-3, 80, height)
 	if a.output.Follow || a.output.Start(lines, height) != before-3 {
@@ -44,7 +45,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			if paused {
 				a.scroll(-4, 80, height)
 			}
-			before := a.output.Start(a.chatLines(79), height)
+			before := a.output.Start(a.chatLines(view.TranscriptWidth(80)), height)
 			a.receiveRuntime(&run.Event{Kind: "thinking", Thinking: a.thinking})
 			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
 			a.receiveRuntime(&run.Event{Kind: "compaction_finished"})
@@ -53,7 +54,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			if a.output.Follow == paused {
 				t.Fatal("compaction changed follow preference")
 			}
-			if paused && a.output.Start(a.chatLines(79), height) != before {
+			if paused && a.output.Start(a.chatLines(view.TranscriptWidth(80)), height) != before {
 				t.Fatal("thinking commit or compaction moved the reading position")
 			}
 			if !paused && !strings.Contains(screenLine(a.screen, height-1, 79)+screenLine(a.screen, height, 79), "latest answer") {
@@ -72,16 +73,12 @@ func TestTranscriptScrollbarClickAndDrag(t *testing.T) {
 	if !strings.Contains(screenLine(a.screen, 1, 80), "│") {
 		t.Fatal("scrollbar track missing")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyF1, "", 0))
+	a.screen.SetSize(240, 24)
 	a.render()
-	var help strings.Builder
-	for y := 0; y < 24; y++ {
-		help.WriteString(screenLine(a.screen, y, 80))
+	if !strings.Contains(screenLine(a.screen, 23, 240), "스크롤바 클릭·드래그") {
+		t.Fatal("scrollbar interaction missing from the footer")
 	}
-	if !strings.Contains(help.String(), "스크롤바 클릭·드래그") {
-		t.Fatal("scrollbar interaction missing from keyboard and mouse help")
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
+	a.screen.SetSize(80, 24)
 	a.render()
 	a.mouse(tcell.NewEventMouse(79, 1, tcell.Button1, 0))
 	a.mouse(tcell.NewEventMouse(79, 1, tcell.ButtonNone, 0))

@@ -22,9 +22,6 @@ func (a *app) render() {
 	if a.page != "chat" || w < 12 || h < 4 {
 		a.scrollbar = scrollbarState{}
 	}
-	if a.helpOpen {
-		a.scrollbar.dragging = false
-	}
 	if w < 12 || h < 4 {
 		a.clearSelection()
 		view.Text(a.screen, 0, 0, w, a.language.Text("Resize terminal"), tcell.StyleDefault)
@@ -32,12 +29,6 @@ func (a *app) render() {
 		return
 	}
 	body := a.bodyHeight(h)
-	if a.helpOpen {
-		view.KeyboardHelp(a.screen, a.shortcuts(), w, body, a.helpOffset, a.language)
-		view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model}, []view.Shortcut{{Key: "^C", Label: a.language.Text("종료")}, {Key: "Esc", Label: a.language.Text("닫기")}, {Key: "F1", Label: a.language.Text("닫기")}, {Key: "↑↓", Label: a.language.Text("스크롤")}}, body, w)
-		a.screen.Show()
-		return
-	}
 	switch a.page {
 	case "files":
 		a.renderFiles(w, body)
@@ -48,6 +39,6 @@ func (a *app) render() {
 	}
 	a.captureInputSources()
 	a.textSelection.Draw(a.screen)
-	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model, Thinking: a.selection.Thinking != nil && *a.selection.Thinking, Effort: a.selection.Effort()}, a.shortcuts(), body, w)
+	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model}, a.shortcuts(), body, w)
 	a.screen.Show()
 }

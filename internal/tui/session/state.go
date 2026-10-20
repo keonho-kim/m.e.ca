@@ -47,8 +47,6 @@ type app struct {
 	directoryCancel                     context.CancelFunc
 	directoryRevision                   int
 	directoryLoading, fileSelectionBusy bool
-	helpOpen                            bool
-	helpOffset                          int
 	pasted                              pasteInput
 	setupRevision                       int
 	chatProjection                      chatProjection

@@ -141,7 +141,7 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 	}
 }
 
-func TestKeymapActionsHelpMatchesFooterOrder(t *testing.T) {
+func TestKeymapActionsFooterOrder(t *testing.T) {
 	a := fixture(t)
 	a.screen.SetSize(160, 24)
 	a.busy, a.agentActive = true, true
@@ -156,12 +156,5 @@ func TestKeymapActionsHelpMatchesFooterOrder(t *testing.T) {
 			t.Fatalf("footer order: %q", footer)
 		}
 		last = at
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyF1, "", 0))
-	a.render()
-	for index, key := range keys {
-		if line := screenLine(a.screen, index+2, 160); !strings.HasPrefix(line, key+" ") {
-			t.Fatalf("help order: row %d: %q", index, line)
-		}
 	}
 }

@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestEffortMenuAndOffHeader(t *testing.T) {
+func TestEffortMenuAndModelFooter(t *testing.T) {
 	a := fixture(t)
 	connection, err := modelconn.New(modelconn.VLLM, "")
 	if err != nil {
@@ -32,13 +32,13 @@ func TestEffortMenuAndOffHeader(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if got := screenLine(a.screen, 22, 80); !strings.Contains(got, "추론 MEDIUM") {
-		t.Fatalf("strength hidden: %q", got)
+	if got := strings.TrimSpace(screenLine(a.screen, 22, 80)); got != a.selection.Model {
+		t.Fatalf("unexpected model footer: %q", got)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if got := screenLine(a.screen, 22, 80); strings.Contains(got, "Thinking") {
+	if got := strings.TrimSpace(screenLine(a.screen, 22, 80)); got != a.selection.Model {
 		t.Fatalf("OFF still displays strength: %q", got)
 	}
 	if a.selection.Effort() != "medium" {

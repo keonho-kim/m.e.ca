@@ -5,7 +5,6 @@
 package command
 
 import (
-	"path/filepath"
 	"strings"
 
 	"mvdan.cc/sh/v3/expand"
@@ -22,7 +21,12 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 		for len(args) > 0 {
 			arg := args[0]
 			if !arg.known {
-				a.result.Ask("Unresolved env wrapper requires approval")
+				if key, _, ok := strings.Cut(arg.text, "="); ok && arg.single && syntax.ValidName(key) {
+					work.invalidate(key)
+					args = args[1:]
+					continue
+				}
+				a.ask("Unresolved env wrapper requires approval")
 				return true
 			}
 			if arg.text == "--" {
@@ -37,17 +41,22 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 				continue
 			}
 			if arg.text == "-u" || arg.text == "--unset" {
-				if len(args) < 2 || !args[1].known {
-					a.result.Ask("Unresolved env unset requires approval")
+				if len(args) < 2 || !args[1].known && !args[1].single {
+					a.ask("Unresolved env unset requires approval")
 					return true
 				}
-				delete(work.vars, args[1].text)
+				if args[1].known {
+					delete(work.vars, args[1].text)
+					delete(work.unknown, args[1].text)
+				} else {
+					work.invalidateVariables()
+				}
 				args = args[2:]
 				continue
 			}
 			if arg.text == "-C" || arg.text == "--chdir" {
 				if len(args) < 2 {
-					a.result.Ask("Incomplete env directory option requires inspection")
+					a.ask("Incomplete env directory option requires inspection")
 					return true
 				}
 				a.cd(args[1:2], work)
@@ -70,12 +79,12 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 				continue
 			}
 			if strings.HasPrefix(arg.text, "-") {
-				a.result.Ask("Unsupported env option requires approval")
+				a.ask("Unsupported env option requires approval")
 				return true
 			}
 			break
 		}
-		a.invoke(args, redirs, work)
+		a.invoke(args, redirs, work, true)
 		return true
 	case "command":
 		if len(args) > 0 && args[0].known && (args[0].text == "-v" || args[0].text == "-V") {
@@ -84,9 +93,7 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 		for len(args) > 0 && args[0].known && (args[0].text == "-p" || args[0].text == "--") {
 			args = args[1:]
 		}
-		work := s.clone()
-		work.functions = map[string]*syntax.Stmt{}
-		a.invoke(args, redirs, work)
+		a.invoke(args, redirs, s, false)
 		return true
 	case "exec", "builtin", "nohup", "setsid", "nice", "timeout", "stdbuf", "time":
 		for len(args) > 0 && args[0].known && strings.HasPrefix(args[0].text, "-") {
@@ -97,21 +104,27 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 			}
 			takes := name == "nice" && (option == "-n" || option == "--adjustment") || name == "timeout" && (option == "-k" || option == "--kill-after" || option == "-s" || option == "--signal") || name == "time" && (option == "-o" || option == "-f") || name == "exec" && option == "-a" || name == "stdbuf" && (option == "-o" || option == "-i" || option == "-e")
 			if takes && len(args) > 0 {
+				if !args[0].known && !args[0].single {
+					a.ask("Runtime wrapper operands may change the executed command")
+				}
 				args = args[1:]
 				continue
 			}
 			if strings.Contains(option, "=") || name == "nice" && len(option) > 1 && option[1] >= '0' && option[1] <= '9' || name == "time" && option == "-p" || name == "nohup" || name == "setsid" {
 				continue
 			}
-			a.result.Ask("Wrapper option requires inspection")
+			a.ask("Wrapper option requires inspection")
 		}
 		if name == "timeout" && len(args) > 0 {
+			if !args[0].known && !args[0].single {
+				a.ask("Runtime wrapper operands may change the executed command")
+			}
 			args = args[1:]
 		}
-		a.invoke(args, redirs, s)
+		a.invoke(args, redirs, s, name != "builtin")
 		return true
 	case "busybox", "toybox":
-		a.invoke(args, redirs, s)
+		a.invoke(args, redirs, s, name != "builtin")
 		return true
 	case "xargs":
 		a.xargs(args, s)
@@ -132,12 +145,12 @@ func (a *analyzer) shell(name string, args []word, redirs []*syntax.Redirect, s 
 	work := s.clone()
 	for i, arg := range args {
 		if !arg.known {
-			a.result.Ask("Dynamic nested shell requires approval")
+			a.ask("Dynamic nested shell requires approval")
 			return
 		}
 		if strings.HasPrefix(arg.text, "-") && !strings.HasPrefix(arg.text, "--") && strings.Contains(arg.text, "c") {
 			if i+1 >= len(args) || !args[i+1].known {
-				a.result.Ask("Dynamic shell program requires approval")
+				a.ask("Dynamic shell program requires approval")
 				return
 			}
 			work.parameters(args[i+2:], 0)
@@ -145,7 +158,7 @@ func (a *analyzer) shell(name string, args []word, redirs []*syntax.Redirect, s 
 			return
 		}
 		if !strings.HasPrefix(arg.text, "-") {
-			a.result.Ask("External shell script requires approval")
+			a.ask("External shell script requires approval")
 			return
 		}
 	}
@@ -155,36 +168,10 @@ func (a *analyzer) shell(name string, args []word, redirs []*syntax.Redirect, s 
 			if body.known {
 				a.parse(body.text, lang, work)
 			} else {
-				a.result.Ask("Dynamic shell input requires approval")
+				a.ask("Dynamic shell input requires approval")
 			}
 			return
 		}
 	}
-	a.result.Ask("Shell program supplied at runtime requires approval")
-}
-
-func (a *analyzer) xargs(args []word, s *state) {
-	for len(args) > 0 && args[0].known && strings.HasPrefix(args[0].text, "-") {
-		flag := args[0].text
-		args = args[1:]
-		if flag == "--" {
-			break
-		}
-		if flag == "-I" || flag == "-n" || flag == "-P" || flag == "-L" || flag == "-d" || flag == "-a" || flag == "--arg-file" {
-			if len(args) > 0 {
-				args = args[1:]
-			}
-		} else if flag != "-0" && flag != "-r" && flag != "-t" {
-			a.result.Ask("xargs option requires inspection")
-		}
-	}
-	if len(args) == 0 {
-		return
-	}
-	// Literal arguments still reveal forbidden targets; stdin contributes
-	// unknown additional arguments, so effects cannot be automatically approved.
-	a.invoke(append(args, word{}), nil, s.clone())
-	if args[0].known && filepath.Base(args[0].text) != "echo" && filepath.Base(args[0].text) != "printf" {
-		a.result.Ask("xargs receives runtime arguments; inspect before execution")
-	}
+	a.ask("Shell program supplied at runtime requires approval")
 }

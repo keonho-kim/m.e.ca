@@ -1,4 +1,4 @@
-// Purpose: Declare bilingual keyboard help and command descriptions.
+// Purpose: Declare bilingual keyboard hints and command descriptions.
 // Pattern: Declarative presentation data.
 // Usage: The session localizes labels before measuring keymap layout.
 // Related: internal/tui/locale/locale.go, internal/tui/session/keymap.go.
@@ -52,7 +52,6 @@ var controls = []translation{
 	{"", "Delete selection", "선택 삭제"},
 	{"", "Clear selection", "선택 해제"},
 	{"", "Send", "전송"},
-	{"", "Keyboard help", "키 안내"},
 	{"", "Browse files", "파일 탐색"},
 	{"", "Select model · Thinking settings", "모델 선택 · 추론 설정"},
 	{"", "Interface language", "언어 설정"},

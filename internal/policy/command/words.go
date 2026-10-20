@@ -16,10 +16,12 @@ import (
 type word struct {
 	text        string
 	known, glob bool
+	single      bool
 }
 type environment struct {
 	state      *state
 	unresolved bool
+	literal    bool
 }
 
 func (e *environment) Get(name string) expand.Variable {
@@ -28,7 +30,7 @@ func (e *environment) Get(name string) expand.Variable {
 		return expand.Variable{Set: true, Kind: expand.String}
 	}
 	value, found := e.state.vars[name]
-	if e.state.unknown[name] || e.state.dynamic && !found {
+	if (name != "IFS" || !e.literal) && (e.state.unknown[name] || e.state.dynamic && !found) {
 		e.unresolved = true
 	}
 	return value
@@ -54,16 +56,14 @@ func (a *analyzer) substitutions(w *syntax.Word, s *state) bool {
 			unknown = true
 			return false
 		case *syntax.ArithmExp:
-			a.result.Ask("Arithmetic expansion with runtime state requires approval")
-			s.forget()
-			unknown = true
-			return false
+			a.arithmeticWrites(n.X, s)
+			// Continue into nested executable substitutions even if its numeric result is unknown.
 		case *syntax.ParamExp:
-			if n.Excl || n.NestedParam != nil || n.Index != nil || n.Exp != nil && (n.Exp.Op == syntax.AssignUnset || n.Exp.Op == syntax.AssignUnsetOrNull) {
-				unknown = true
-				a.result.Ask("Indirect or state-changing parameter expansion requires approval")
-				s.forget()
+			if n.Exp != nil && (n.Exp.Op == syntax.AssignUnset || n.Exp.Op == syntax.AssignUnsetOrNull) {
+				a.parameterAssignment(n, s)
+				return false
 			}
+
 		}
 		return true
 	})
@@ -76,7 +76,7 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 	}
 	unknown := a.substitutions(w, s)
 	if unknown {
-		return []word{{}}
+		return []word{{text: assignmentPrefix(w), single: oneField(w, literal)}}
 	}
 	// Named-user tilde expansion may invoke os/user.Lookup in the expansion
 	// library. Leave it unresolved rather than introduce implicit host I/O.
@@ -85,12 +85,17 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 			return []word{{}}
 		}
 	}
-	env := &environment{state: s}
+	env := &environment{state: s, literal: literalWord(w)}
 	glob := false
 	cfg := &expand.Config{Env: env, ReadDir2: func(string) ([]fs.DirEntry, error) { glob = true; return nil, errors.New("glob expansion deferred") }}
 	if literal {
 		value, err := expand.Literal(cfg, w)
-		return []word{{text: value, known: err == nil && !unknown && !env.unresolved}}
+		return []word{{text: value, known: err == nil && !unknown && !env.unresolved, single: true}}
+	}
+	if env.literal {
+		if value, err := expand.Literal(cfg, w); err == nil && strings.Contains(value, "{}") && !strings.ContainsAny(strings.ReplaceAll(value, "{}", ""), "{}*?[~") {
+			return []word{{text: value, known: !env.unresolved}}
+		}
 	}
 	copy := *w
 	if syntax.SplitBraces(&copy) {
@@ -101,7 +106,7 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 	fields, err := expand.Fields(cfg, w)
 	if err != nil || unknown || env.unresolved {
 		value, _ := expand.Literal(&expand.Config{Env: env}, w)
-		return []word{{text: value, glob: glob}}
+		return []word{{text: value, glob: glob, single: !glob && oneField(w, literal)}}
 	}
 	out := make([]word, 0, len(fields))
 	for _, field := range fields {
@@ -120,8 +125,14 @@ func (a *analyzer) words(words []*syntax.Word, s *state) []word {
 
 func (a *analyzer) assign(v *syntax.Assign, s *state) {
 	if v.Name == nil || v.Naked || v.Index != nil || v.Array != nil || v.Append {
-		a.result.Ask("Dynamic shell assignment requires approval")
-		s.forget()
+		if v.Value != nil {
+			a.substitutions(v.Value, s)
+		}
+		if v.Name != nil {
+			s.invalidate(v.Name.Value)
+		} else {
+			s.invalidateVariables()
+		}
 		return
 	}
 	value := word{known: true}
@@ -131,6 +142,6 @@ func (a *analyzer) assign(v *syntax.Assign, s *state) {
 	if value.known {
 		s.set(v.Name.Value, value.text)
 	} else {
-		s.unknown[v.Name.Value] = true
+		s.invalidate(v.Name.Value)
 	}
 }

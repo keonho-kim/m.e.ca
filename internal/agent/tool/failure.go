@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	CommandBlocked  = "command_blocked"
+	InvalidCommand  = "invalid_command"
 	StaleTarget     = "file_changed"
 	InvalidArgument = "invalid_argument"
 	OutputTruncated = "output_truncated"

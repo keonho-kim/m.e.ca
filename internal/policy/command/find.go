@@ -26,17 +26,18 @@ func (a *analyzer) find(args []word, s *state) {
 	for ; i < len(args); i++ {
 		arg := args[i]
 		if !arg.known {
-			a.result.Ask("Dynamic find action requires inspection")
+			a.ask("Dynamic find action requires inspection")
 			continue
 		}
 		switch arg.text {
 		case "-delete":
-			a.result.Ask("find deletion requires approval")
+			a.ask("find deletion requires approval")
 			for _, root := range roots {
 				if filtered && root.known {
-					root.text += "/__selected_entry__"
+					a.directoryTarget(root, s, true)
+				} else {
+					a.target(root, s, true)
 				}
-				a.target(root, s, true)
 			}
 		case "-exec", "-execdir", "-ok", "-okdir":
 			start := i + 1
@@ -49,9 +50,8 @@ func (a *analyzer) find(args []word, s *state) {
 				nested := append([]word(nil), args[start:i]...)
 				for j, value := range nested {
 					if strings.Contains(value.text, "{}") {
-						a.result.Ask("find supplies runtime-selected arguments")
 						if root.known && j > 0 {
-							nested[j] = word{text: strings.ReplaceAll(value.text, "{}", root.text+"/__selected_entry__"), known: true}
+							nested[j] = word{text: strings.ReplaceAll(value.text, "{}", root.text+"/*"), glob: true}
 						} else {
 							nested[j] = word{}
 						}
@@ -61,12 +61,19 @@ func (a *analyzer) find(args []word, s *state) {
 				if arg.text == "-execdir" || arg.text == "-okdir" {
 					work.dir = ""
 				}
-				a.invoke(nested, nil, work)
+				a.invoke(nested, nil, work, true)
 			}
 		case "-fprint", "-fprint0", "-fprintf":
 			if i+1 < len(args) {
 				i++
 				a.target(args[i], s, false)
+			}
+			if arg.text == "-fprintf" && i+1 < len(args) {
+				i++
+			}
+		case "-printf":
+			if i+1 < len(args) {
+				i++
 			}
 		case "-name", "-path", "-iname", "-ipath", "-regex", "-type", "-mindepth", "-maxdepth", "-mtime", "-size", "-user", "-group":
 			filtered = true

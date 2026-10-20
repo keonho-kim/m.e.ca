@@ -1,4 +1,4 @@
-// Purpose: Render projected transcript lines and the bottom-anchored composer without changing viewport state.
+// Purpose: Render a spaced transcript and bottom-anchored composer without changing viewport state.
 // Pattern: Terminal renderer.
 // Usage: Session supplies ChatDisplay after calculating its read position.
 // Related: internal/tui/session/render_chat.go, internal/tui/view/candidates.go, internal/tui/view/header.go.
@@ -23,8 +23,13 @@ type ChatDisplay struct {
 	Candidates Candidates
 }
 
+// TranscriptWidth reserves a scrollbar cell and five blank cells before it.
+// Keeping this width before overflow avoids rewrapping when the scrollbar appears.
+func TranscriptWidth(width int) int { return max(1, width-1-5) }
+
 func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 	topLine(screen, "", display.Usage, width, display.Activity)
+	contentWidth := TranscriptWidth(width)
 	y := 1
 	for i := display.Start; i < len(display.Lines) && y-1 < display.Layout.TranscriptRows; i++ {
 		style := tcell.StyleDefault
@@ -32,9 +37,9 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 			style = style.Dim(true)
 		}
 		if len(display.Lines[i].Spans) > 0 {
-			styledText(screen, y, max(1, width-1), display.Lines[i].Spans, style)
+			styledText(screen, y, contentWidth, display.Lines[i].Spans, style)
 		} else {
-			Text(screen, 0, y, max(1, width-1), display.Lines[i].Text, style)
+			Text(screen, 0, y, contentWidth, display.Lines[i].Text, style)
 		}
 		y++
 	}

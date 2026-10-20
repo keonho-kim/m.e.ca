@@ -112,7 +112,7 @@ func TestRunConsumesNativeEventQueueAndExits(t *testing.T) {
 	}
 }
 
-func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
+func TestInputSurvivesResizeAndModelMenu(t *testing.T) {
 	a := fixture(t)
 	a.selection.Model = "chosen"
 	on := true
@@ -120,7 +120,7 @@ func TestThinkingOffAndInputSurviveResizeAndMenu(t *testing.T) {
 	a.editor.Set("draft")
 	a.render()
 	line := screenLine(a.screen, 22, 80)
-	if !strings.Contains(line, "chosen 추론") {
+	if strings.TrimSpace(line) != "chosen" {
 		t.Fatal(line)
 	}
 	off := false
@@ -158,7 +158,7 @@ func TestStatusModelLabels(t *testing.T) {
 		want     string
 	}{
 		{"model", false, "chosen"},
-		{"thinking", true, "chosen 추론"},
+		{"thinking", true, "chosen"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

@@ -13,6 +13,7 @@ import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/rivo/uniseg"
 )
 
@@ -34,12 +35,12 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	for _, width := range []int{100, 36, 120} {
 		a.screen.SetSize(width, 24)
 		a.render()
-		for _, line := range a.output.Lines(width - 1) {
+		for _, line := range a.output.Lines(view.TranscriptWidth(width)) {
 			if line.ID != a.output.Blocks[1].ID || strings.TrimSpace(line.Text) == "" {
 				continue
 			}
 			text := line.Copy.Row.Text
-			padding := (width - 1 - uniseg.StringWidth(text)) / 2
+			padding := (view.TranscriptWidth(width) - uniseg.StringWidth(text)) / 2
 			if line.Text != strings.Repeat(" ", padding)+text {
 				t.Fatalf("width %d: summary is not centered: %q", width, line.Text)
 			}
@@ -52,7 +53,7 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 			break
 		}
 	}
-	x := (119 - len(want)) / 2
+	x := (view.TranscriptWidth(120) - len(want)) / 2
 	if y <= 1 {
 		t.Fatal("completion line not below the response")
 	}

@@ -1,11 +1,12 @@
 // Purpose: Reload localized terminal history and route scrolling to the older-history worker.
 // Pattern: Presentation projection over paged repository data.
 // Usage: Restoration and language changes reload history; scrolling requests older pages separately.
-// Related: internal/storage/sqlite/timeline.go, internal/tui/viewport/viewport.go, internal/tui/session/keys.go, internal/tui/session/events.go.
+// Related: internal/storage/sqlite/timeline.go, internal/tui/viewport/viewport.go, internal/tui/view/chat.go, internal/tui/session/keys.go, internal/tui/session/events.go.
 package session
 
 import (
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
+	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
@@ -27,7 +28,7 @@ func (a *app) loadHistory() error {
 	return nil
 }
 func (a *app) scroll(n, w, h int) {
-	lines := a.chatLines(max(1, w-1))
+	lines := a.chatLines(view.TranscriptWidth(w))
 	a.output.Scroll(lines, n, h)
 	if n < 0 && !a.output.Follow && a.output.Start(lines, h) == 0 {
 		a.loadOlderHistory()

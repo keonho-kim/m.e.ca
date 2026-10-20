@@ -50,11 +50,15 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		}
 		op.approval.Required = len(op.shell.decision.Reasons) > 0
 		op.approval.Command = &toolapi.CommandApproval{Directory: executor.redact(executor.project)}
-		for _, reason := range op.shell.decision.Reasons {
-			op.approval.Command.Reasons = append(op.approval.Command.Reasons, executor.redact(reason))
-		}
-		for _, path := range op.shell.decision.Targets {
-			op.approval.Command.Targets = append(op.approval.Command.Targets, executor.redact(path))
+		for _, finding := range op.shell.findings {
+			entry := toolapi.CommandFinding{Command: executor.redact(finding.Command)}
+			for _, reason := range finding.Reasons {
+				entry.Reasons = append(entry.Reasons, executor.redact(reason))
+			}
+			for _, path := range finding.Targets {
+				entry.Targets = append(entry.Targets, executor.redact(path))
+			}
+			op.approval.Command.Findings = append(op.approval.Command.Findings, entry)
 		}
 		op.approval.Preview = executor.redact("Working directory: " + executor.project + "\n" + op.shell.decision.Description() + "\n\n" + input.Command)
 		return op, nil

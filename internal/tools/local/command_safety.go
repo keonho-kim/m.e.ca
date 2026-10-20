@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 
+	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
 	"github.com/keonho-kim/v-code/internal/policy"
 	commandpolicy "github.com/keonho-kim/v-code/internal/policy/command"
 )
@@ -21,6 +22,7 @@ type shellTarget struct {
 }
 type shellSafety struct {
 	decision policy.Safety
+	findings []commandpolicy.Finding
 	targets  []shellTarget
 }
 
@@ -29,7 +31,7 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 	if err := e.boundary.Check(); err != nil {
 		return result, err
 	}
-	decision, err := commandpolicy.Analyze(ctx, text, commandpolicy.Context{
+	report, err := commandpolicy.Analyze(ctx, text, commandpolicy.Context{
 		Project: e.project, Home: e.home, Environment: env,
 		Resolve: func(directory, path string, removal bool) (string, error) {
 			if !filepath.IsAbs(path) {
@@ -49,12 +51,20 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 			return resolved, nil
 		},
 	})
-	result.decision = decision
+	result.decision, result.findings = report.Safety, report.Findings
+	var invalid *commandpolicy.SyntaxError
+	var blocked *commandpolicy.BlockedError
+	if errors.As(err, &invalid) {
+		err = &toolapi.Failure{Code: toolapi.InvalidCommand, Detail: err.Error(), Next: "Correct the command syntax before retrying.", Cause: err}
+	}
+	if errors.As(err, &blocked) {
+		err = &toolapi.Failure{Code: toolapi.CommandBlocked, Detail: err.Error(), Next: "Respect the protected target or privilege restriction; do not retry the same effect through another command.", Cause: err}
+	}
 	return result, err
 }
 
 func (s shellSafety) same(other shellSafety) bool {
-	if !reflect.DeepEqual(s.decision, other.decision) || len(s.targets) != len(other.targets) {
+	if !reflect.DeepEqual(s.decision, other.decision) || !reflect.DeepEqual(s.findings, other.findings) || len(s.targets) != len(other.targets) {
 		return false
 	}
 	for i, target := range s.targets {

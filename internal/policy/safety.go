@@ -41,6 +41,16 @@ func contains(parent, path string) bool {
 // Mutation receives already canonical paths. Resolution and symlink semantics
 // belong to the filesystem adapter, not this deterministic rule.
 func Mutation(project, home, path string, removal bool) (Safety, error) {
+	return mutation(project, home, path, removal, false)
+}
+
+// MutationWithin checks a known directory bound for runtime-selected descendants.
+// It does not claim that any individual child has been resolved or observed.
+func MutationWithin(project, home, directory string, removal bool) (Safety, error) {
+	return mutation(project, home, directory, removal, true)
+}
+
+func mutation(project, home, path string, removal, contents bool) (Safety, error) {
 	var result Safety
 	if !filepath.IsAbs(path) {
 		return result, fmt.Errorf("mutation target is not absolute")
@@ -58,7 +68,7 @@ func Mutation(project, home, path string, removal bool) (Safety, error) {
 			return result, fmt.Errorf("operation blocked: protected system target %s", path)
 		}
 	}
-	if path == "/" || path == home || path == project || removal && contains(path, project) {
+	if path == "/" || path == home || !contents && path == project || removal && path != project && contains(path, project) {
 		return result, fmt.Errorf("operation blocked: protected root %s", path)
 	}
 	for _, root := range []string{"/Users", "/home", "/tmp", "/var", "/private", "/private/var", "/private/tmp", "/opt"} {
