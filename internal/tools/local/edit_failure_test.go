@@ -23,7 +23,7 @@ func TestEditFailureReasons(t *testing.T) {
 	if err := os.WriteFile(path, []byte("first\nCHANGED\nlast\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
+	settings := policy.Settings{Scope: policy.Directory}
 	_, err := executor.Prepare(context.Background(), settings, edit)
 	failure := tool.FailureOf(err)
 	if failure == nil || failure.Code != "text_not_found" || failure.Next == "" {

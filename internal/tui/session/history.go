@@ -37,8 +37,9 @@ func (a *app) loadHistory(older bool) error {
 	return nil
 }
 func (a *app) scroll(n, w, h int) {
-	a.output.Scroll(n, w, h)
-	if n < 0 && !a.output.Follow && a.output.Start(a.output.Lines(w), h) == 0 {
+	lines := a.chatLines(max(1, w-1))
+	a.output.Scroll(lines, n, h)
+	if n < 0 && !a.output.Follow && a.output.Start(lines, h) == 0 {
 		a.loadOlderHistory()
 	}
 }

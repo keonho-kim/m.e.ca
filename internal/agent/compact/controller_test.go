@@ -74,12 +74,12 @@ func TestThresholdPublishesSummaryOnly(t *testing.T) {
 	if marshalErr != nil || strings.Contains(string(body), "Ledger") || strings.Contains(string(body), "src/auth.go") {
 		t.Fatalf("execution ledger persisted in memory: %s %v", body, marshalErr)
 	}
-	memory, through, err := controller.Context()
+	memory, through := controller.Context()
 	if through != repo.memory.Through {
 		t.Fatal("compaction boundary lost")
 	}
-	if err != nil || !strings.HasSuffix(memory, summary()) || memory != summary() {
-		t.Fatalf("unexpected compacted context: %s %v", memory, err)
+	if memory != summary() {
+		t.Fatalf("unexpected compacted context: %s", memory)
 	}
 }
 func TestEmptySummaryPreservesPreviousMemory(t *testing.T) {

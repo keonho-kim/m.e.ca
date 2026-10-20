@@ -18,8 +18,10 @@ func (a *app) startTask(text string) {
 	if a.busy {
 		return
 	}
+	a.output.Follow = true
 	a.stream, a.thinking = "", ""
 	a.tokensPerSecond = nil
+	a.runSummary = nil
 	a.stopNotice = ""
 	a.busy = true
 	a.startElapsed()
@@ -67,7 +69,7 @@ func (a *app) startTask(text string) {
 		defer a.workers.Done()
 		defer cancel()
 		emit := func(event run.Event) error {
-			if event.Kind == "usage" {
+			if event.Kind == "usage" || event.Statistics != nil {
 				return a.post(a.ctx, notice{Event: &event})
 			}
 			return a.post(ctx, notice{Event: &event})

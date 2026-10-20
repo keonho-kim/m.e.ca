@@ -4,7 +4,7 @@
 // Related: internal/tui/view/chat.go, internal/tui/session/render_chat.go.
 package view
 
-type ComposerLayout struct{ InputY, InputRows, CandidateY, CandidateEnd, TranscriptRows int }
+type ComposerLayout struct{ InputY, CandidateY, CandidateEnd, TranscriptRows int }
 
 func Composer(rows, height int, choices Candidates, notice string) ComposerLayout {
 	inputY := height - rows
@@ -18,5 +18,5 @@ func Composer(rows, height int, choices Candidates, notice string) ComposerLayou
 	}
 	end := inputY - noticeRows
 	candidateY := end - count
-	return ComposerLayout{InputY: inputY, InputRows: rows, CandidateY: candidateY, CandidateEnd: end, TranscriptRows: max(0, candidateY-2)}
+	return ComposerLayout{InputY: inputY, CandidateY: candidateY, CandidateEnd: end, TranscriptRows: max(0, candidateY-2)}
 }

@@ -12,9 +12,9 @@ import (
 )
 
 type Boundary struct {
-	project, home, private string
-	projectInfo            os.FileInfo
-	protected              []string
+	project, home string
+	projectInfo   os.FileInfo
+	protected     []string
 }
 
 func New(project, home, private string) (*Boundary, error) {
@@ -38,7 +38,7 @@ func New(project, home, private string) (*Boundary, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("project root must be a directory")
 	}
-	b := &Boundary{project: project, home: home, private: private, projectInfo: info, protected: []string{private}}
+	b := &Boundary{project: project, home: home, projectInfo: info, protected: []string{private}}
 	for _, name := range []string{".v", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".colima", ".orbstack", ".config/gcloud", ".config/gh", ".config/op", ".netrc", "Library/Keychains"} {
 		path, err := Canonical(filepath.Join(home, name))
 		if err != nil {
@@ -53,7 +53,6 @@ func New(project, home, private string) (*Boundary, error) {
 
 func (b *Boundary) Project() string { return b.project }
 func (b *Boundary) Home() string    { return b.home }
-func (b *Boundary) Private() string { return b.private }
 
 func (b *Boundary) Check() error {
 	path, err := Canonical(b.project)

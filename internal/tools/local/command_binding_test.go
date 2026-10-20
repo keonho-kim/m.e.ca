@@ -18,7 +18,7 @@ import (
 func TestCommandBindingFreezesEnvironment(t *testing.T) {
 	e, project := testExecutor(t)
 	t.Setenv("V_TEST_VALUE", "before")
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"printf '%s' \"$V_TEST_VALUE\" > value"}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf '%s' \"$V_TEST_VALUE\" > value"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestCommandBindingRejectsChangedAlias(t *testing.T) {
 	if err := os.Symlink(inside, alias); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"printf changed > alias/file"}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf changed > alias/file"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestShellPathUnlinksAliasWithoutFollowingFinalLink(t *testing.T) {
 	if err := os.Symlink("/etc", alias); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"rm system-link"}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"rm system-link"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestMutationSafetyOutsideProject(t *testing.T) {
 		{"write_file", fmt.Sprintf(`{"path":%q,"content":"value"}`, outside)},
 		{"create_directory", fmt.Sprintf(`{"paths":[%q]}`, outside)},
 	} {
-		op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call(invocation.name, invocation.args))
+		op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call(invocation.name, invocation.args))
 		if err != nil {
 			t.Fatal(err)
 		}

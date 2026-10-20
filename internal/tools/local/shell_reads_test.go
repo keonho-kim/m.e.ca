@@ -17,7 +17,7 @@ func TestExactEditUsesCurrentSource(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "a"), []byte("first\nsecond\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("edit_file", `{"path":"a","edits":[{"old_text":"second","new_text":"changed"}]}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("edit_file", `{"path":"a","edits":[{"old_text":"second","new_text":"changed"}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}

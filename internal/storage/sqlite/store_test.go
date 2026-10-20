@@ -1,4 +1,4 @@
-// Purpose: Verify private SQLite session, history and read-only recovery without models.
+// Purpose: Verify private session history survives database restart and supports bounded reads.
 // Pattern: Integration tests using temporary storage.
 // Usage: go test ./internal/storage/sqlite.
 // Related: internal/storage/sqlite/store.go, internal/storage/sqlite/session.go, internal/storage/sqlite/runs.go.
@@ -8,7 +8,6 @@ package sqlite
 import (
 	"context"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,9 +27,6 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	session := store.Session()
 	path := store.path
 	if err := store.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "Fix auth"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.SaveSettings(ctx, policy.Settings{Scope: policy.System}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Close(); err != nil {
@@ -53,10 +49,6 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	if err != nil || len(history) != 1 || history[0].Content != "Fix auth" {
 		t.Fatalf("history: %+v, %v", history, err)
 	}
-	settings, err := store.Settings(ctx)
-	if err != nil || settings.Scope != "" || settings.Permission != "" {
-		t.Fatalf("settings: %+v, %v", settings, err)
-	}
 	info, err := os.Stat(path)
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("database permissions: %v, %v", info, err)
@@ -73,7 +65,7 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestHistoryIsBoundedAndSessionOverridesAreValidated(t *testing.T) {
+func TestHistoryIsBounded(t *testing.T) {
 	ctx := context.Background()
 	store, err := newTestStore(t)
 	if err != nil {
@@ -93,8 +85,5 @@ func TestHistoryIsBoundedAndSessionOverridesAreValidated(t *testing.T) {
 	history, err := store.Messages(ctx, session.ID, 2)
 	if err != nil || len(history) != 2 || history[0].Content != "two" || history[1].Content != "three" {
 		t.Fatalf("bounded history: %+v, %v", history, err)
-	}
-	if err := store.SaveSettings(ctx, policy.Settings{Permission: "invalid"}); err == nil {
-		t.Fatal("stored invalid session policy")
 	}
 }

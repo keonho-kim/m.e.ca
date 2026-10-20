@@ -28,7 +28,7 @@ func TestHostFileOperationsDeletionRequiresApproval(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := fmt.Sprintf("rm -rf binary.db nested; rm %q", outside)
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.Approve}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,14 +65,14 @@ func TestHostFileOperationsAbsoluteFileAndShellPaths(t *testing.T) {
 		}
 	}()
 	path := filepath.Join(cache, "file")
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("write_file", fmt.Sprintf(`{"path":%q,"content":"test"}`, path)))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("write_file", fmt.Sprintf(`{"path":%q,"content":"test"}`, path)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := op.Execute(context.Background(), true); err != nil {
 		t.Fatal(err)
 	}
-	op, err = e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", fmt.Sprintf(`{"command":%q}`, "rm "+fmt.Sprintf("%q", path))))
+	op, err = e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, "rm "+fmt.Sprintf("%q", path))))
 	if err != nil {
 		t.Fatal(err)
 	}

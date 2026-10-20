@@ -1,4 +1,4 @@
-// Purpose: Classify explicit mutations independently of the ordinary Permission setting.
+// Purpose: Classify mandatory approvals and blocked targets for explicit mutations.
 // Pattern: Pure policy functions.
 // Usage: Shell analysis and dedicated file operations assess canonical targets here.
 // Related: internal/policy/policy.go, internal/policy/command/analyze.go.

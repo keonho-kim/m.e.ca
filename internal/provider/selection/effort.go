@@ -1,4 +1,4 @@
-// Purpose: Resolve selectable effort values from verified native or reviewed profile controls.
+// Purpose: Resolve selectable effort values from declared native or reviewed profile controls.
 // Pattern: Simple Module.
 // Usage: Model menus use EffortValues without interpreting profile rules themselves.
 // Related: internal/provider/selection/validate.go, internal/provider/profile/effort.go.

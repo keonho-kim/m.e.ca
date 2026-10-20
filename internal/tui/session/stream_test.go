@@ -12,6 +12,7 @@ import (
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/httpclient"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
+	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,7 +41,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 		}
 		select {
 		case <-resume:
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\" reply\",\"reasoning\":\"more\"}}]}\n\ndata: [DONE]\n\n")
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\" reply\",\"reasoning\":\"more\"}}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":123,\"completion_tokens\":6}}\n\ndata: [DONE]\n\n")
 		case <-r.Context().Done():
 		}
 	}))
@@ -56,8 +57,17 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	t.Cleanup(a.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = modelconn.Selection{Connection: connection, Model: "streaming-model"}
+	a.historyEnd = true
+	a.output.Append(strings.Repeat("earlier history\n", 40), false)
+	a.scroll(-5, 80, a.chatHeight(80, a.bodyHeight(24)))
+	if a.output.Follow {
+		t.Fatal("history inspection did not pause following")
+	}
 	a.output.Append((transcript.Formatter{}).User("hello"), false)
 	a.startTask("hello")
+	if !a.output.Follow {
+		t.Fatal("a new request did not resume following")
+	}
 	for a.stream != "first" {
 		select {
 		case n := <-a.events:
@@ -88,5 +98,30 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	}
 	if a.stream != "" || a.thinking != "" || strings.Count(transcript.String(), "first reply") != 1 || strings.Count(transcript.String(), "inspect more") != 1 {
 		t.Fatalf("duplicated/unfinished stream: %q", transcript.String())
+	}
+	summary := a.output.Blocks[len(a.output.Blocks)-1]
+	if !summary.Centered || !summary.Thinking || !strings.Contains(summary.Text, "입력 123 | 출력 6 | 초당 토큰 ") {
+		t.Fatalf("final request summary missing: %+v", summary)
+	}
+	messages, err := a.opts.Store.ContextMessages(ctx, a.opts.Session.ID, 0, 16*1024*1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, message := range messages {
+		if strings.Contains(message.Content, "작업 시간") || strings.Contains(message.Content, "Worked for") {
+			t.Fatal("UI measurements leaked into model context")
+		}
+	}
+	a.output = viewport.View{Follow: true}
+	a.historyCursor = 0
+	if err := a.loadHistory(false); err != nil {
+		t.Fatal(err)
+	}
+	restored := a.output.Blocks[len(a.output.Blocks)-1]
+	if restored.Text != summary.Text || !restored.Centered || !restored.Thinking {
+		t.Fatalf("restored measurements changed: %+v", restored)
+	}
+	if tokens, err := a.opts.Store.TokenUsage(ctx, a.opts.Session.ID); err != nil || tokens.Input != 123 || tokens.Output != 6 {
+		t.Fatalf("request summary duplicated usage: %+v, %v", tokens, err)
 	}
 }

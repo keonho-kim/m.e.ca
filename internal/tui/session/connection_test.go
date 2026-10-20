@@ -87,7 +87,7 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			off := false
 			a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true}
 			a.opts.Session.ID = "missing-session"
-			a.changeField, a.changeValue = "thinking", "ON"
+			a.changeValue = "ON"
 			a.applySetting(global)
 			if *a.selection.Thinking || a.status == "" {
 				t.Fatalf("failed save applied: %+v", a.selection)

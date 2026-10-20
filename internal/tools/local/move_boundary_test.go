@@ -29,7 +29,7 @@ func TestMoveAcrossRoots(t *testing.T) {
 		t.Fatal(err)
 	}
 	dest := filepath.Join(extra, "destination")
-	settings := policy.Settings{Scope: policy.System, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.System}
 	op, err := e.Prepare(context.Background(), settings, call("move_file", fmt.Sprintf(`{"path":"source","destination":%q}`, dest)))
 	if err != nil {
 		t.Fatal(err)

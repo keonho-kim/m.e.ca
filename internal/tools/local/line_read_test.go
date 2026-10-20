@@ -19,12 +19,12 @@ func TestLineReadAndEditReportsPositions(t *testing.T) {
 		t.Fatal(err)
 	}
 	call := observedEdit(t, executor, "a", 2, 2, "new\nextra\n")
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, call)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !op.Approval().Required || op.Approval().Candidate.Lines() != 3 {
-		t.Fatal("edit bypassed review or approval")
+	if op.Approval().Required || op.Approval().Candidate.Lines() != 3 {
+		t.Fatal("ordinary edit requires approval or lost its exact candidate")
 	}
 	result, err := op.Execute(context.Background(), true)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestExactEditPreservesCRLF(t *testing.T) {
 		t.Fatal(err)
 	}
 	edit := observedEdit(t, executor, "a", 2, 2, "new\n")
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}, edit)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, edit)
 	if err != nil {
 		t.Fatal(err)
 	}

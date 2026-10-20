@@ -101,7 +101,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		}
 		return emit(modelapi.Event{Calls: []toolapi.Call{{ID: name + "-call", Name: name, Arguments: body}}, Done: true})
 	})
-	runner := run.Runner{Generator: g, Tools: tools, Journal: store, Session: store.Session().ID, ProjectRoot: project, Settings: policy.Settings{Permission: policy.Approve, Scope: policy.System}, Redact: func(s string) string { return s }}
+	runner := run.Runner{Generator: g, Tools: tools, Journal: store, Session: store.Session().ID, ProjectRoot: project, Settings: policy.Settings{Scope: policy.System}, Redact: func(s string) string { return s }}
 	for _, text := range []string{"Create note.txt", "Update note.txt from one to two"} {
 		result, err := session.Execute(ctx, session.Request{Runner: runner, Store: store, Text: text, LoadPrompts: func() (prompt.Templates, error) { return templates, nil }, Compaction: compact.Defaults(), ProjectInstructions: func(context.Context) (string, error) { return "PROJECT_INSTRUCTION", nil }}, func(context.Context, toolapi.Approval) (bool, error) {
 			approvals++
@@ -112,7 +112,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		}
 	}
 	content, err := os.ReadFile(filepath.Join(project, "note.txt"))
-	if err != nil || string(content) != "two\n" || approvals != 2 || step != 4 {
+	if err != nil || string(content) != "two\n" || approvals != 0 || step != 4 {
 		t.Fatalf("content=%q approvals=%d calls=%d error=%v", content, approvals, step, err)
 	}
 	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024)

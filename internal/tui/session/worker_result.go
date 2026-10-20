@@ -32,6 +32,10 @@ func (a *app) finishWorker(n notice) {
 		a.output.Append(a.thinking, true)
 		a.output.AppendBlock(transcript.Answer(a.stream))
 	}
+	if active && a.runSummary != nil {
+		a.output.AppendBlock(*a.runSummary)
+	}
+	a.runSummary = nil
 	a.stream, a.thinking = "", ""
 	a.status = ""
 	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {

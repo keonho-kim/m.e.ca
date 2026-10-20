@@ -37,7 +37,7 @@ func TestChangePreviewUsesExecutedCandidate(t *testing.T) {
 	j := &journal{}
 	r := fixture(g, &e.executor, j)
 	r.Tools = e
-	r.Settings.Permission = policy.AllowAll
+
 	_, err := r.Run(context.Background(), "replace text", approve, emit)
 	if err != nil {
 		t.Fatal(err)

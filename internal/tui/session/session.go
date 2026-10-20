@@ -1,4 +1,4 @@
-// Purpose: Restore session policy, model, completion and selected paths without replaying effects.
+// Purpose: Restore the model, conversation and selected paths with fixed application access policy.
 // Pattern: Session recovery use case.
 // Usage: Called before the terminal event loop starts.
 // Related: internal/storage/recovery/recovery.go, internal/tui/session/app.go.
@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/v-code/internal/policy"
 )
 
 func (a *app) restore() error {
@@ -16,14 +16,7 @@ func (a *app) restore() error {
 	if err != nil {
 		return err
 	}
-	overrides, err := a.opts.Store.Settings(ctx)
-	if err != nil {
-		return err
-	}
-	a.settings, err = config.Effective(a.opts.Config.Defaults, overrides)
-	if err != nil {
-		return err
-	}
+	a.settings = policy.Settings{Scope: policy.System}
 	recent, err := a.opts.Store.Messages(ctx, a.opts.Session.ID, 1000)
 	if err != nil {
 		return err
@@ -63,7 +56,7 @@ func (a *app) restore() error {
 		if keyErr != nil {
 			a.status = keyErr.Error()
 		} else {
-			// Connection validation runs before a generation client is installed.
+			// Resolve current server metadata and configured controls before adopting the client.
 			a.connect(a.selection.Connection, key, a.selection.Model, false)
 		}
 	}

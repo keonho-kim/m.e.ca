@@ -120,3 +120,28 @@ func TestIdentityFlashNextAliasAndFP8Agree(t *testing.T) {
 		t.Fatalf("%+v %v", selected, err)
 	}
 }
+
+func TestIdentityKnownServedNameWithUnrecognizedRoot(t *testing.T) {
+	for _, tc := range []struct {
+		name, served, original, want string
+		wantError                    bool
+	}{
+		{"Ornith local root", "ornith-1.5-35B-A3B", "/models/ornith-local", "ornith-1.5-35b-a3b", false},
+		{"Qwen local root", "Qwen/Qwen3.8-27B", "/models/modelX", "qwen3.8-27b", false},
+		{"opaque alias", "modelX", "/models/Ornith-1.5-35B-A3B", "generic", false},
+		{"recognized conflict", "Ornith-1.5-35B-A3B", "Qwen/Qwen3.8-27B", "", true},
+		{"excluded checkpoint conflict", "Ornith-1.5-35B-A3B", "ornith-ai/Ornith-1.5-397B", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			report := identity.Report{}
+			report.Add("/v1/models.root", "original", tc.original)
+			selected, err := resolveIdentity(tc.served, "", &report)
+			if (err != nil) != tc.wantError || err == nil && selected.ID != tc.want {
+				t.Fatalf("profile=%s err=%v", selected.ID, err)
+			}
+			if err == nil && tc.want != "generic" && report.ProfileSource != "catalogue" {
+				t.Fatalf("incorrect identity basis: %s", report.ProfileSource)
+			}
+		})
+	}
+}

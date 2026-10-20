@@ -16,7 +16,7 @@ import (
 
 func TestFilePreviewRead(t *testing.T) {
 	e, root := testExecutor(t)
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.System}
+	settings := policy.Settings{Scope: policy.System}
 	e.redact = func(s string) string { return strings.ReplaceAll(s, "secret", "[redacted]") }
 	file := filepath.Join(root, "a")
 	if err := os.WriteFile(file, []byte("secret\n"), 0600); err != nil {
@@ -26,7 +26,15 @@ func TestFilePreviewRead(t *testing.T) {
 	if err != nil || got.Content != "[redacted]\n" || got.Truncated {
 		t.Fatalf("%+v %v", got, err)
 	}
-	if _, err = e.Preview(context.Background(), settings, e.boundary.Private()); err == nil {
+	private := filepath.Join(e.home, ".v")
+	if err := os.Mkdir(private, 0700); err != nil {
+		t.Fatal(err)
+	}
+	privateFile := filepath.Join(private, "config.toml")
+	if err := os.WriteFile(privateFile, []byte("private configuration"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.Preview(context.Background(), settings, privateFile); err == nil {
 		t.Fatal("private state accessible")
 	}
 	if _, err = e.Preview(context.Background(), settings, root); err == nil {

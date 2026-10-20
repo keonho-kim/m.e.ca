@@ -1,12 +1,11 @@
 // Purpose: Verify effort defaults and explicit session preferences are revalidated during connection setup.
 // Pattern: Provider setup integration tests.
 // Usage: go test ./internal/provider/setup -run TestEffort.
-// Related: internal/provider/setup/setup.go, internal/provider/diagnostic/effort.go.
+// Related: internal/provider/setup/setup.go, internal/provider/profile/effort.go.
 package setup
 
 import (
 	"context"
-	"encoding/json"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
@@ -14,33 +13,11 @@ import (
 )
 
 func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
-	efforts := make(chan string, 16)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusNotFound)
-			return
+		if r.Method != http.MethodGet {
+			t.Errorf("setup unexpectedly generated a response: %s %s", r.Method, r.URL.Path)
 		}
-		var body struct {
-			Effort   string         `json:"reasoning_effort"`
-			Template map[string]any `json:"chat_template_kwargs"`
-			Messages []any          `json:"messages"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Error(err)
-			return
-		}
-		reply, reason := "Hello!", ""
-		if body.Template["enable_thinking"] == true {
-			reply = "391"
-			reason = "17 times 23 is 391"
-		}
-		if body.Effort != "" {
-			efforts <- body.Effort
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": reply, "reasoning": reason}, "finish_reason": "stop"}}}); err != nil {
-			t.Error(err)
-		}
+		w.WriteHeader(http.StatusNotFound)
 	}))
 	t.Cleanup(server.Close)
 	connection, err := modelconn.New(modelconn.VLLM, server.URL)
@@ -65,13 +42,6 @@ func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
 		if prepared.Selection.Thinking == nil || *prepared.Selection.Thinking {
 			t.Fatal("effort implicitly enabled Thinking")
 		}
-	}
-	var observed []string
-	for len(efforts) > 0 {
-		observed = append(observed, <-efforts)
-	}
-	if len(observed) != 0 {
-		t.Fatalf("effort probes=%v", observed)
 	}
 }
 

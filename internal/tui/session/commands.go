@@ -6,7 +6,6 @@ package session
 
 import (
 	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tui/transcript"
 )
 
@@ -55,13 +54,6 @@ func (a *app) submit() {
 	switch command.Kind {
 	case commands.Model:
 		a.openModel()
-	case commands.Permission:
-		a.page = "permission"
-		a.choices = []string{"approve", "allow-all"}
-		a.choice = 0
-		if a.settings.Permission == policy.AllowAll {
-			a.choice = 1
-		}
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Message:

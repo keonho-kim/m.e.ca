@@ -39,7 +39,7 @@ func TestCommandOutputArchiveAndCleanup(t *testing.T) {
 
 func TestCommandCaptureIsSanitizedAndReReadable(t *testing.T) {
 	e, _ := testExecutor(t)
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.System}
+	settings := policy.Settings{Scope: policy.System}
 	op, err := e.Prepare(context.Background(), settings, call("execute_command", `{"command":"i=0; while [ \"$i\" -lt 10000 ]; do printf '%s%s row\\n' provider- secret; i=$((i+1)); done"}`))
 	if err != nil {
 		t.Fatal(err)

@@ -1,4 +1,4 @@
-// Purpose: Verify approval and path-containment policy at the tool boundary.
+// Purpose: Verify file Scope validation and project-relative path containment.
 // Pattern: Behavioral tests.
 // Usage: go test ./internal/policy.
 // Related: internal/policy/policy.go, internal/policy/path.go.
@@ -10,26 +10,14 @@ import (
 	"testing"
 )
 
-func TestDecidePreservesScopeAndPermission(t *testing.T) {
-	for _, test := range []struct {
-		settings Settings
-		effect   Effect
-		approval bool
-		denied   bool
-	}{
-		{Settings{Approve, Directory}, Read, false, false},
-		{Settings{Approve, Directory}, Change, true, false},
-		{Settings{AllowAll, Directory}, Change, false, false},
-		{Settings{AllowAll, Directory}, Command, false, false},
-		{Settings{Approve, System}, Command, true, false},
-		{Settings{AllowAll, System}, Command, false, false},
-		{Settings{"invalid", Directory}, Read, false, true},
-		{Settings{Approve, Directory}, Effect(99), false, true},
-	} {
-		approval, err := Decide(test.settings, test.effect)
-		if (err != nil) != test.denied || approval != test.approval {
-			t.Errorf("Decide(%+v, %v) = %v, %v", test.settings, test.effect, approval, err)
+func TestScopeSettings(t *testing.T) {
+	for _, scope := range []Scope{Directory, System} {
+		if err := (Settings{Scope: scope}).Check(); err != nil {
+			t.Fatal(err)
 		}
+	}
+	if err := (Settings{Scope: "invalid"}).Check(); err == nil {
+		t.Fatal("invalid Scope accepted")
 	}
 }
 

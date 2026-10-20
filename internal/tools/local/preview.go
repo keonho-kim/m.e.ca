@@ -24,7 +24,7 @@ func (e *Executor) Preview(ctx context.Context, settings policy.Settings, path s
 	if err = ctx.Err(); err != nil {
 		return result, err
 	}
-	if _, err = policy.Decide(settings, policy.Read); err != nil {
+	if err = settings.Check(); err != nil {
 		return result, err
 	}
 	target, err := e.resolve(settings.Scope, path)

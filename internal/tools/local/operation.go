@@ -35,11 +35,10 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	if err := ctx.Err(); err != nil {
 		return toolapi.Result{}, err
 	}
-	required, err := policy.Decide(op.settings, op.spec.effect)
-	if err != nil {
+	if err := op.settings.Check(); err != nil {
 		return toolapi.Result{}, err
 	}
-	if (required || op.approval.Required) && !approved {
+	if op.approval.Required && !approved {
 		return toolapi.Result{}, fmt.Errorf("operation denied: approval required")
 	}
 	if !op.executed.CompareAndSwap(false, true) {

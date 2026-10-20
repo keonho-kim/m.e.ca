@@ -1,6 +1,6 @@
 // Purpose: Determine advertised native or reviewed profile Thinking toggle eligibility.
 // Pattern: Pure Function.
-// Usage: Setup supplies discovered model metadata before running generation probes.
+// Usage: Setup supplies discovered metadata to select controls without generating a response.
 // Related: internal/provider/connection/reasoning.go, internal/provider/profile/effort.go.
 package diagnostic
 

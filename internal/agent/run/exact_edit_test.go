@@ -6,7 +6,6 @@ package run
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +23,7 @@ func TestExactEditDialogue(t *testing.T) {
 		nativeCall("execute_command", map[string]any{"command": "test -f a"}), "Updated a at line 2 and checked it",
 	}}
 	r.Generator = script
-	r.Settings.Permission = policy.Approve
+
 	result, err := r.Run(context.Background(), "change the second line", approve, emit)
 	if err != nil || result.Status != Answered || len(script.requests) != 4 {
 		t.Fatalf("%+v %v", result, err)

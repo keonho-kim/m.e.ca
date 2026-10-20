@@ -39,7 +39,7 @@ func TestHostShellCacheAndHardlinks(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.Approve}, call("execute_command", `{"command":"mkdir -p \"$HOME/.cache/tool\" && printf ready > \"$HOME/.cache/tool/lock\" && ls . && cat \"$HOME/.cache/tool/lock\""}`))
+		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"mkdir -p \"$HOME/.cache/tool\" && printf ready > \"$HOME/.cache/tool/lock\" && ls . && cat \"$HOME/.cache/tool/lock\""}`))
 		if err != nil {
 			t.Fatal(err)
 		}

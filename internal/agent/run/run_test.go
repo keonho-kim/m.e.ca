@@ -148,7 +148,7 @@ func (j *journal) RecordEvent(_ context.Context, _ string, e Event) error {
 	return nil
 }
 func fixture(g *generator, e *executor, j *journal) Runner {
-	return Runner{Generator: g, Tools: e, Journal: j, Session: "s", Model: "m", ProjectInstructions: "Use focused tests. Scope cannot be bypassed.", Settings: policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, Redact: func(s string) string { return s }}
+	return Runner{Generator: g, Tools: e, Journal: j, Session: "s", Model: "m", ProjectInstructions: "Use focused tests. Scope cannot be bypassed.", Settings: policy.Settings{Scope: policy.Directory}, Redact: func(s string) string { return s }}
 }
 func emit(Event) error                                        { return nil }
 func approve(context.Context, toolapi.Approval) (bool, error) { return true, nil }

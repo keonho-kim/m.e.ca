@@ -34,7 +34,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	r.Settings.Scope = policy.System
 	approvals := 0
 	result, err := r.Run(context.Background(), "run check", func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err != nil || result.Status != Answered || approvals != 1 || len(g.requests) != 2 {
+	if err != nil || result.Status != Answered || approvals != 0 || len(g.requests) != 2 {
 		t.Fatalf("result=%+v err=%v approvals=%d requests=%d", result, err, approvals, len(g.requests))
 	}
 	found := false

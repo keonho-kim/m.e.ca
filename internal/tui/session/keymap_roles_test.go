@@ -8,8 +8,34 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/tools/local"
 	"github.com/keonho-kim/v-code/internal/tui/browser"
+	"strings"
 	"testing"
 )
+
+func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
+	for _, page := range []string{"chat", "files"} {
+		t.Run(page, func(t *testing.T) {
+			a := fixture(t)
+			a.page, a.browser.Input = page, true
+			a.screen.SetSize(240, 24)
+			a.editor.Set("first\nsecond")
+			a.render()
+			labels := keymapLabels(t, a)
+			if labels["↑↓"] != "" || labels["Ctrl/Cmd+↑↓"] != "기록" {
+				t.Fatal(labels)
+			}
+			footer := screenLine(a.screen, 23, 240)
+			if strings.Contains(footer, "줄 이동") || !strings.Contains(footer, "Ctrl/Cmd+↑↓") {
+				t.Fatalf("input footer: %q", footer)
+			}
+		})
+	}
+	a := fixture(t)
+	typeInput(a, "!")
+	if labels := keymapLabels(t, a); labels["↑↓"] != "선택" {
+		t.Fatal(labels)
+	}
+}
 
 func TestKeymapRolesFolderAndPreview(t *testing.T) {
 	a := fixture(t)

@@ -20,6 +20,7 @@ func (a *app) steerInput() {
 	}
 	select {
 	case a.steering <- command.Argument:
+		a.output.Follow = true
 		a.steeringDrafts = append(a.steeringDrafts, command.Argument)
 		a.editor.Set("")
 		a.status = a.language.Text("현재 작업의 다음 판단에 반영합니다")

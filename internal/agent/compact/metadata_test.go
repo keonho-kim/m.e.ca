@@ -11,11 +11,11 @@ import (
 
 func TestMemoryContextHasNoStorageBoundary(t *testing.T) {
 	m := Memory{Revision: 7, Through: 23456, Markdown: "- Implement the remaining route."}
-	got, err := m.Context()
-	if err != nil || got != m.Markdown {
-		t.Fatalf("memo contains storage metadata: %q %v", got, err)
+	c := Controller{memory: m, Prompt: "Summarize work", Settings: Defaults(), ActiveRequest: "Finish the route", Redact: func(s string) string { return s }}
+	got, _ := c.Context()
+	if got != m.Markdown {
+		t.Fatalf("memo contains storage metadata: %q", got)
 	}
-	c := Controller{Prompt: "Summarize work", Settings: Defaults(), ActiveRequest: "Finish the route", Redact: func(s string) string { return s }}
 	sources := sourceBuffer{limit: 10000}
 	if err := sources.add(Record{Sequence: 23456, Role: "user", Text: "Finish the route"}, c.Redact); err != nil {
 		t.Fatal(err)

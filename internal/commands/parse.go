@@ -18,7 +18,6 @@ const (
 	Empty Kind = iota
 	Message
 	Model
-	Permission
 	Directory
 	Quit
 	Exit

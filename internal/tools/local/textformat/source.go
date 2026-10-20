@@ -1,7 +1,7 @@
 // Purpose: Preserve source CRLF when redaction removes only carriage returns, never masked content.
 // Pattern: Pure source transformation.
-// Usage: Shell observations, internal reads and mutation argument checks share RedactSource.
-// Related: internal/tools/local/prepare.go, internal/tools/local/command.go, internal/tools/local/textedit/edit.go.
+// Usage: Command output and mutation arguments call RedactSource before further use.
+// Related: internal/tools/local/command.go, internal/tools/local/prepare.go, internal/tools/local/textformat/source_test.go.
 package textformat
 
 import "strings"

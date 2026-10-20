@@ -66,7 +66,7 @@ func fixture(t *testing.T) *app {
 	screen.SetSize(80, 24)
 	t.Cleanup(screen.Fini)
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: configuration.Defaults, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
 	t.Cleanup(a.shutdown)
 	return a
 }
@@ -151,24 +151,19 @@ func screenLine(screen tcell.Screen, y, width int) string {
 	}
 	return b.String()
 }
-func TestStatusPolicyLabels(t *testing.T) {
+func TestStatusModelLabels(t *testing.T) {
 	for _, test := range []struct {
-		name       string
-		permission policy.Permission
-		scope      policy.Scope
-		thinking   bool
-		want       string
+		name     string
+		thinking bool
+		want     string
 	}{
-		{"default", policy.Approve, policy.Directory, false, "chosen"},
-		{"system", policy.Approve, policy.System, false, "chosen"},
-		{"automatic", policy.AllowAll, policy.Directory, false, "chosen │ 자동 승인"},
-		{"thinking", policy.AllowAll, policy.System, true, "chosen 추론 │ 자동 승인"},
+		{"model", false, "chosen"},
+		{"thinking", true, "chosen 추론"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)
 			a.selection.Model = "chosen"
 			a.selection.Thinking = &test.thinking
-			a.settings = policy.Settings{Permission: test.permission, Scope: test.scope}
 			a.render()
 			if line := strings.TrimSpace(screenLine(a.screen, 22, 80)); line != test.want {
 				t.Fatalf("status = %q, want %q", line, test.want)
@@ -176,28 +171,6 @@ func TestStatusPolicyLabels(t *testing.T) {
 		})
 	}
 }
-func TestPolicyChoiceAlwaysAsksGlobalAndPreservesOverrides(t *testing.T) {
-	a := fixture(t)
-	a.page = "permission"
-	a.choices = []string{"approve", "allow-all"}
-	a.choice = 0
-	a.choose()
-	if a.page != "global" || a.settings.Permission != policy.AllowAll {
-		t.Fatal("permission applied before destination choice")
-	}
-	a.choice = 0
-	a.choose()
-	if a.settings.Permission != policy.Approve || a.settings.Scope != policy.System {
-		t.Fatal("session permission missing or scope changed")
-	}
-	a.changeField = "permission"
-	a.changeValue = "allow-all"
-	a.applySetting(true)
-	if a.settings.Permission != policy.Approve {
-		t.Fatal("global replaced session override")
-	}
-}
-
 func TestCancellingConnectionSelectionPreservesCurrentModel(t *testing.T) {
 	a := fixture(t)
 	a.selection.Model = "current-model"

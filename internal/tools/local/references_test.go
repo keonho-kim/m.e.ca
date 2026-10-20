@@ -19,7 +19,7 @@ func TestReferences(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "src/auth.go"), nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
+	settings := policy.Settings{Scope: policy.Directory}
 	for _, path := range []string{"src/auth.go", "src"} {
 		ref, err := e.Reference(settings, path)
 		if err != nil || ref.Directory != (path == "src") {

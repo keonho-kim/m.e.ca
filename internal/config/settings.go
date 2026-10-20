@@ -1,7 +1,7 @@
-// Purpose: Define global configuration defaults and effective session policy validation.
+// Purpose: Define and validate global model, execution and presentation defaults.
 // Pattern: Simple Module.
-// Usage: Startup and settings commands use Config, Defaults and Effective.
-// Related: internal/config/config.go, internal/policy/policy.go.
+// Usage: Startup and model settings commands use Config and Defaults.
+// Related: internal/config/config.go, internal/agent/inference/settings.go.
 package config
 
 import (
@@ -10,7 +10,6 @@ import (
 
 	"github.com/keonho-kim/v-code/internal/agent/compact"
 	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
@@ -20,7 +19,6 @@ type Config struct {
 	Agent         inference.Parameters `toml:"agent"`
 	Diagnostics   inference.Parameters `toml:"diagnostics"`
 	ModelProfiles []ModelProfile       `toml:"model_profiles,omitempty"`
-	Defaults      policy.Settings      `toml:"defaults"`
 	Thinking      bool                 `toml:"thinking"`
 	Loop          run.Limits           `toml:"loop"`
 	Compaction    Compaction           `toml:"compaction"`
@@ -49,19 +47,10 @@ func Defaults() Config {
 		ContextLength: connection.DefaultContextLength,
 		Agent:         parameters.Agent,
 		Diagnostics:   parameters.Diagnostic,
-		Defaults:      policy.Settings{Permission: policy.AllowAll, Scope: policy.System},
 		UI:            UI{ColumnWidth: 24, InputMaxLines: 5},
 		Loop:          run.DefaultLimits(),
 		Compaction:    Compaction{Settings: compact.Defaults(), Parameters: parameters.Compaction},
 	}
-}
-
-func Effective(defaults, overrides policy.Settings) (policy.Settings, error) {
-	if overrides.Permission != "" {
-		defaults.Permission = overrides.Permission
-	}
-	defaults.Scope = policy.System
-	return defaults, defaults.Check()
 }
 
 func check(configuration Config) error {
@@ -83,9 +72,6 @@ func check(configuration Config) error {
 		return err
 	}
 	if err := configuration.Loop.Check(); err != nil {
-		return err
-	}
-	if err := configuration.Defaults.Check(); err != nil {
 		return err
 	}
 	if configuration.UI.ColumnWidth < 8 || configuration.UI.ColumnWidth > 80 {

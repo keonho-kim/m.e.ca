@@ -1,6 +1,6 @@
 // Purpose: Translate an approved shell operation into bounded process output and a sanitized tool result.
 // Pattern: Tool Adapter.
-// Usage: Called by the one-shot operation after Permission approval.
+// Usage: Called by the one-shot operation after required safety approval.
 // Related: internal/tools/local/executor.go, internal/tools/local/process/run_unix.go, internal/tools/local/process_test.go.
 package local
 

@@ -1,7 +1,7 @@
-// Purpose: Verify private TOML configuration and project-setting precedence.
+// Purpose: Verify private TOML configuration and reject unsupported settings.
 // Pattern: Behavioral persistence tests.
 // Usage: go test ./internal/config.
-// Related: internal/config/config.go, internal/policy/policy.go.
+// Related: internal/config/config.go, internal/config/settings.go.
 
 package config
 
@@ -9,21 +9,16 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/keonho-kim/v-code/internal/policy"
 )
 
-func TestLoadSaveAndEffectiveSettings(t *testing.T) {
+func TestLoadSaveWithoutApprovalMode(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), ".v")
 	configuration, err := Load(directory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if configuration.Defaults != (policy.Settings{Permission: policy.AllowAll, Scope: policy.System}) {
-		t.Fatalf("unsafe defaults: %+v", configuration.Defaults)
-	}
-	configuration.Defaults.Permission = policy.AllowAll
 	if err := Save(directory, configuration); err != nil {
 		t.Fatal(err)
 	}
@@ -31,9 +26,9 @@ func TestLoadSaveAndEffectiveSettings(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(restored, configuration) {
 		t.Fatalf("restore: %+v, %v", restored, err)
 	}
-	actual, err := Effective(restored.Defaults, policy.Settings{Scope: policy.Directory})
-	if err != nil || actual.Permission != policy.AllowAll || actual.Scope != policy.System {
-		t.Fatalf("effective settings: %+v, %v", actual, err)
+	body, err := os.ReadFile(filepath.Join(directory, "config.toml"))
+	if err != nil || strings.Contains(string(body), "permission") || strings.Contains(string(body), "[defaults]") {
+		t.Fatalf("approval mode persisted: %s %v", body, err)
 	}
 	info, err := os.Stat(filepath.Join(directory, "config.toml"))
 	if err != nil {
@@ -46,10 +41,8 @@ func TestLoadSaveAndEffectiveSettings(t *testing.T) {
 
 func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 	for _, content := range []string{
-		"[defaults]\npermission='anything'\n",
+		"[defaults]\npermission='allow-all'\n",
 		"[ui]\ninput_max_lines=20\n",
-		"[defaults]\nscope='outside'\n",
-		"[defaults]\nscope='directory'\n",
 		"unexpected=true\n",
 		"[session]\nrestore_last=true\n",
 		"[ui]\ntheme='classic'\n",

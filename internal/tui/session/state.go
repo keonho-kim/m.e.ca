@@ -52,6 +52,7 @@ type app struct {
 	pasted                              pasteInput
 	setupRevision                       int
 	chatProjection                      chatProjection
+	scrollbar                           scrollbarState
 	inputRegion, selectionInput         inputRegion
 	selectionSources                    map[int]textlayout.Fragment
 	clipboardBusy                       bool
@@ -76,6 +77,7 @@ type app struct {
 	compressionDots                     int
 	tokenTotal                          modelapi.TokenUsage
 	tokenCurrent                        modelapi.TokenUsage
+	runSummary                          *viewport.Block
 	opts                                Options
 	screen                              tcell.Screen
 	ctx                                 context.Context
@@ -109,7 +111,7 @@ type app struct {
 	commandHints                        []commands.Suggestion
 	commandOpen                         bool
 	commandIndex                        int
-	changeField, changeValue            string
+	changeValue                         string
 	historyCursor                       int64
 	previewOffset                       int
 	pendingConnection                   modelconn.Connection

@@ -14,6 +14,14 @@ import (
 )
 
 func (event Event) Check() error {
+	if event.Statistics != nil {
+		if event.Kind != "run_checkpoint" || event.Checkpoint == nil || event.Checkpoint.Phase != "finished" || event.Checkpoint.Status == Running || event.RunID != event.Checkpoint.ID {
+			return fmt.Errorf("request statistics require their finished checkpoint")
+		}
+		if err := event.Statistics.check(); err != nil {
+			return err
+		}
+	}
 	if g := event.Generation; g != nil {
 		if event.Kind != "usage" && event.Kind != "generation_finished" || !work.ValidID(g.ID) || g.Attempt < 1 || g.ElapsedMillis < 0 {
 			return fmt.Errorf("invalid generation provenance")

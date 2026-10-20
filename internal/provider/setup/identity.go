@@ -38,9 +38,16 @@ func resolveIdentity(model, override string, report *identity.Report) (profile.P
 		if selected.ID != profile.Generic && fromServer.ID != profile.Generic && selected.ID != fromServer.ID {
 			return profile.Profile{}, fmt.Errorf("served model ID conflicts with server model identity")
 		}
-		selected = fromServer
-		if selected.ID != profile.Generic {
+		if fromServer.ID != profile.Generic {
+			selected = fromServer
 			report.ProfileSource = "server"
+		} else if selected.ID != profile.Generic {
+			// An opaque root does not contradict an exact catalogued serving ID.
+			// Still reject known conflicting checkpoints, including excluded ones.
+			if _, err := profile.Resolve(original, selected.ID); err != nil {
+				return profile.Profile{}, err
+			}
+			report.ProfileSource = "catalogue"
 		}
 	} else if selected.ID != profile.Generic {
 		report.ProfileSource = "catalogue"

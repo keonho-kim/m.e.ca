@@ -5,9 +5,6 @@
 package locale
 
 var menus = []translation{
-	{"allow-all", "Automatic approval", "자동 승인"},
-	{"approve", "Approval required", "승인 필요"},
-	{"permission", "Permission", "승인 설정"},
 	{"model", "Model", "모델"},
 	{"providers", "Providers", "모델 공급자"},
 	{"endpoint", "Server address", "서버 주소"},
@@ -34,6 +31,7 @@ var menus = []translation{
 	{"", "ON", "켜짐"},
 	{"", "OFF", "꺼짐"},
 	{"", "unavailable", "사용 불가"},
+	{"", "ON/OFF control unavailable", "켜기·끄기 설정 불가"},
 	{"", "OFF unavailable", "끄기 불가"},
 	{"", "no-model", "모델 미선택"},
 	{"", "STATUS", "상태"},

@@ -1,7 +1,7 @@
 // Purpose: Keep bounded output blocks and preserve an event-relative reading anchor on resize.
 // Pattern: Simple Module (presentation projection).
 // Usage: Mutated only by the terminal event loop and rendered at the current width.
-// Related: internal/tui/viewport/spacing.go, internal/tui/session/render_chat.go.
+// Related: internal/tui/viewport/spacing.go, internal/tui/viewport/alignment.go, internal/tui/session/render_chat.go.
 package viewport
 
 import (
@@ -17,6 +17,7 @@ type Block struct {
 	parsedText       string
 	parsed           []markdown.Line
 	Markdown         bool
+	Centered         bool
 	ID               int
 	Text             string
 	Thinking         bool
@@ -39,9 +40,9 @@ type View struct {
 }
 
 type blockKey struct {
-	text               string
-	width, id          int
-	markdown, thinking bool
+	text                         string
+	width, id                    int
+	markdown, thinking, centered bool
 }
 
 func (v *View) Append(text string, thinking bool) {
@@ -58,7 +59,7 @@ func (v *View) AppendBlock(block Block) {
 	v.bound(false)
 }
 func (b *Block) Lines(width int) []Line {
-	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking}
+	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered}
 	if b.lines != nil && b.key == key {
 		return b.lines
 	}
@@ -88,6 +89,9 @@ func (b *Block) Lines(width int) []Line {
 	if b.Markdown || b.Thinking {
 		out = modelEdges(out)
 	}
+	if b.Centered {
+		centerLines(out, width)
+	}
 	b.lines = out
 	return b.lines
 }
@@ -102,7 +106,7 @@ func (v *View) Lines(width int) []Line {
 	changed := len(v.keys) != len(v.Blocks)
 	if !changed {
 		for i, b := range v.Blocks {
-			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking}) {
+			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered}) {
 				changed = true
 				break
 			}
@@ -120,27 +124,6 @@ func (v *View) Lines(width int) []Line {
 	v.lines = lines
 	return v.lines
 }
-func (v *View) Start(lines []Line, height int) int {
-	if v.Follow {
-		return max(0, len(lines)-height)
-	}
-	for i, line := range lines {
-		if line.ID == v.AnchorID && line.Row >= v.AnchorRow {
-			return min(i, max(0, len(lines)-height))
-		}
-	}
-	return 0
-}
-func (v *View) Scroll(n, width, height int) {
-	lines := v.Lines(width)
-	if len(lines) == 0 {
-		return
-	}
-	index := max(0, min(max(0, len(lines)-height), v.Start(lines, height)+n))
-	v.Follow = index >= max(0, len(lines)-height)
-	v.AnchorID, v.AnchorRow = lines[index].ID, lines[index].Row
-}
-
 func (v *View) Prepend(blocks []Block) {
 	if len(blocks) == 0 {
 		return

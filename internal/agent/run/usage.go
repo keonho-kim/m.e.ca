@@ -1,7 +1,7 @@
 // Purpose: Record measured usage per attempt and apply retry budgets before restarting generation.
 // Pattern: Model I/O boundary.
 // Usage: Normal execution generation and compaction both call execution.generate.
-// Related: internal/agent/run/generate.go, internal/agent/run/memory.go, internal/storage/sqlite/usage.go.
+// Related: internal/agent/run/generate.go, internal/agent/run/memory.go, internal/agent/run/statistics.go, internal/storage/sqlite/usage.go.
 package run
 
 import (
@@ -21,6 +21,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	request.IdleTimeout = time.Duration(s.limits.MaxModelSeconds) * time.Second
 	var usage *modelapi.TokenUsage
 	var rate *float64
+	var measured time.Duration
 	started := time.Now()
 	role := inference.Agent
 	if !account {
@@ -36,12 +37,14 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		generation.ElapsedMillis = time.Since(started).Milliseconds()
+		s.statistics.add(usage, measured)
 		err := s.recordUsage(flushCtx, usage, rate, generation)
 		if account && (usage != nil || received) {
 			err = errors.Join(err, s.countRequest(flushCtx, request, usage, outputBytes))
 		}
 		usage = nil
 		rate = nil
+		measured = 0
 		outputBytes = 0
 		received = false
 		return err
@@ -79,7 +82,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 			}
 			snapshot := *event.Usage
 			usage = &snapshot
-			rate = outputRate(snapshot.Output, time.Since(started))
+			measured = time.Since(started)
+			rate = outputRate(snapshot.Output, measured)
 			if err := s.emit(Event{Kind: "usage_progress", Usage: usage, TokensPerSecond: rate}); err != nil {
 				return err
 			}

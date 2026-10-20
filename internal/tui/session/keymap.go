@@ -147,11 +147,14 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		}
 		controls = append(controls, view.Shortcut{Key: "^O", Label: label})
 	}
+	if a.page == "chat" && a.scrollbar.bar.Visible() {
+		controls = append(controls, view.Shortcut{Key: a.language.Text("Mouse"), Label: "스크롤바 클릭·드래그"})
+	}
 	return append(shortcuts, controls...)
 }
 
 func (a *app) inputShortcuts() []view.Shortcut {
-	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "↑↓", Label: "줄 이동"}, {Key: "Ctrl/Cmd+↑↓", Label: "기록"}}
+	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "Ctrl/Cmd+↑↓", Label: "기록"}}
 	label := "전송"
 	command, err := commands.Parse(a.editor.String())
 	if err != nil {

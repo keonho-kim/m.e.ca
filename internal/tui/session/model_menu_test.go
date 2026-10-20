@@ -7,6 +7,7 @@ package session
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"strings"
 	"testing"
 )
@@ -91,5 +92,17 @@ func TestInlineThinkingShowsCurrentAndChoosesWithArrows(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if a.page != "global" || a.changeValue != "ON" || *a.selection.Thinking {
 		t.Fatal("Thinking changed before choosing the settings destination")
+	}
+}
+
+func TestInlineThinkingUnavailableRefersToToggle(t *testing.T) {
+	for _, lang := range []locale.Language{locale.Korean, locale.English} {
+		a := fixture(t)
+		a.language = lang
+		a.openModel()
+		a.render()
+		if line := screenLine(a.screen, 3, 80); !strings.Contains(line, lang.Text("ON/OFF control unavailable")) {
+			t.Fatalf("ambiguous Thinking availability: %q", line)
+		}
 	}
 }

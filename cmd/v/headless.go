@@ -17,6 +17,7 @@ import (
 	"github.com/keonho-kim/v-code/internal/config"
 	"github.com/keonho-kim/v-code/internal/config/credentials"
 	"github.com/keonho-kim/v-code/internal/config/prompts"
+	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
 	"github.com/keonho-kim/v-code/internal/provider/setup"
@@ -120,19 +121,11 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		return err
 	}
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	overrides, err := store.Settings(ctx)
-	if err != nil {
-		return err
-	}
-	policy, err := config.Effective(cfg.Defaults, overrides)
-	if err != nil {
-		return err
-	}
 	window := cfg.ContextLength
 	if selected.Details != nil && selected.Details.ContextWindow > 0 {
 		window = connection.EffectiveContextLength(window, selected.Details.ContextWindow)
 	}
-	runner := run.Runner{Generator: prepared.Client, Tools: executor, Journal: store, Session: id, Model: selected.Model, Provider: selected.Connection.ID, ProjectRoot: mode.Project, Thinking: selected.Thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(), Settings: policy, Limits: cfg.Loop, Inference: &inference, Redact: vault.Redact, MaskStream: vault.Stream}
+	runner := run.Runner{Generator: prepared.Client, Tools: executor, Journal: store, Session: id, Model: selected.Model, Provider: selected.Connection.ID, ProjectRoot: mode.Project, Thinking: selected.Thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(), Settings: policy.Settings{Scope: policy.System}, Limits: cfg.Loop, Inference: &inference, Redact: vault.Redact, MaskStream: vault.Stream}
 	request := agentsession.Request{Runner: runner, Store: store, Text: text, Compaction: cfg.Compaction.Settings, ContextWindow: window, ProjectInstructions: executor.ProjectInstructions, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}
 	return headless.Run(ctx, request, os.Stdout, mode.Output == "json")
 }

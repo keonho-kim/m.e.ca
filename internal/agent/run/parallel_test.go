@@ -91,7 +91,7 @@ func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executo
 	j, g := &journal{}, &parallelModel{calls: calls}
 	r := fixture(&generator{}, &executor{}, j)
 	r.Tools, r.Generator = tools, g
-	r.Settings = policy.Settings{Scope: policy.System, Permission: policy.AllowAll}
+	r.Settings = policy.Settings{Scope: policy.System}
 	return r, tools, root, j, g
 }
 func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
@@ -196,9 +196,10 @@ func TestParallelCancellationJoinsWorkersAndPairsResults(t *testing.T) {
 }
 
 func TestParallelApprovalDenialPreventsWaveEffects(t *testing.T) {
-	calls := []toolapi.Call{batchCall("a", "create_directory", map[string]any{"paths": []string{"a"}}), batchCall("b", "create_directory", map[string]any{"paths": []string{"b"}})}
-	r, _, root, j, _ := realBatchRunner(t, calls)
-	r.Settings.Permission = policy.Approve
+	root := t.TempDir()
+	calls := []toolapi.Call{batchCall("a", "create_directory", map[string]any{"paths": []string{filepath.Join(root, "a")}}), batchCall("b", "create_directory", map[string]any{"paths": []string{filepath.Join(root, "b")}})}
+	r, _, _, j, _ := realBatchRunner(t, calls)
+
 	decisions := 0
 	result, err := r.Run(context.Background(), "create both", func(context.Context, toolapi.Approval) (bool, error) { decisions++; return decisions == 1, nil }, emit)
 	if err == nil || result.Status != Stopped || decisions != 2 {
@@ -221,14 +222,15 @@ func TestParallelApprovalDenialPreventsWaveEffects(t *testing.T) {
 }
 
 func TestParallelRechecksAliasesAfterApproval(t *testing.T) {
-	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": "a", "content": "changed"}), batchCall("b", "write_file", map[string]any{"path": "b", "content": "changed"})}
-	r, _, root, _, _ := realBatchRunner(t, calls)
+	root := t.TempDir()
+	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": filepath.Join(root, "a"), "content": "changed"}), batchCall("b", "write_file", map[string]any{"path": filepath.Join(root, "b"), "content": "changed"})}
+	r, _, _, _, _ := realBatchRunner(t, calls)
 	for _, name := range []string{"a", "b"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("original"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	r.Settings.Permission = policy.Approve
+
 	decisions := 0
 	result, err := r.Run(context.Background(), "update both", func(context.Context, toolapi.Approval) (bool, error) {
 		decisions++
@@ -252,9 +254,10 @@ func TestParallelRechecksAliasesAfterApproval(t *testing.T) {
 }
 
 func TestParallelWritesKeepIndividualApprovals(t *testing.T) {
-	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": "a", "content": "first"}), batchCall("b", "write_file", map[string]any{"path": "b", "content": "second"})}
-	r, tools, root, _, _ := realBatchRunner(t, calls)
-	r.Settings.Permission = policy.Approve
+	root := t.TempDir()
+	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": filepath.Join(root, "a"), "content": "first"}), batchCall("b", "write_file", map[string]any{"path": filepath.Join(root, "b"), "content": "second"})}
+	r, tools, _, _, _ := realBatchRunner(t, calls)
+
 	held := &heldTools{Executor: tools, entered: make(chan string, 2), release: make(chan struct{})}
 	r.Tools = held
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

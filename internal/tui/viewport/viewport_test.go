@@ -15,7 +15,7 @@ func TestScrollAnchor(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		v.Append("abcdef", false)
 	}
-	v.Scroll(-8, 20, 5)
+	v.Scroll(v.Lines(20), -8, 5)
 	id := v.AnchorID
 	v.Append("new", false)
 	lines := v.Lines(3)
@@ -23,7 +23,7 @@ func TestScrollAnchor(t *testing.T) {
 	if lines[start].ID != id || v.Follow {
 		t.Fatal("reading position moved")
 	}
-	v.Scroll(1000, 3, 5)
+	v.Scroll(v.Lines(3), 1000, 5)
 	if !v.Follow {
 		t.Fatal("did not resume following")
 	}
@@ -33,7 +33,7 @@ func TestCollapseKeepsAnchorOnItsOutput(t *testing.T) {
 	v := View{Follow: true}
 	v.Append("earlier conversation", false)
 	v.AppendBlock(Block{Summary: "command summary", Details: strings.Repeat("detail\n", 100)})
-	v.Scroll(-20, 80, 8)
+	v.Scroll(v.Lines(80), -20, 8)
 	id := v.AnchorID
 	v.ToggleDetails()
 	lines := v.Lines(80)

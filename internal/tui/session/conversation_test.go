@@ -71,7 +71,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 			inputRow = y
 		}
 	}
-	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-5, 32), "!model") {
+	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-4, 32), "!model") {
 		t.Fatal("editor and candidates not visible below token usage")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))

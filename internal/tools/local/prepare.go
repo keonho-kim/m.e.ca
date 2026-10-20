@@ -24,8 +24,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	if err != nil {
 		return nil, err
 	}
-	required, err := policy.Decide(settings, spec.effect)
-	if err != nil {
+	if err := settings.Check(); err != nil {
 		return nil, err
 	}
 	texts := []string{input.Content, input.Command}
@@ -38,7 +37,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		}
 	}
 	op := &operation{executor: executor, settings: settings, spec: spec, input: input}
-	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label, Required: required}
+	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label}
 	if spec.effect == policy.Command {
 		if settings.Scope != policy.System {
 			return nil, fmt.Errorf("host shell execution requires system Scope; directory confinement is unavailable")
@@ -49,7 +48,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		if err != nil {
 			return nil, err
 		}
-		op.approval.Required = required || len(op.shell.decision.Reasons) > 0
+		op.approval.Required = len(op.shell.decision.Reasons) > 0
 		op.approval.Command = &toolapi.CommandApproval{Directory: executor.redact(executor.project)}
 		for _, reason := range op.shell.decision.Reasons {
 			op.approval.Command.Reasons = append(op.approval.Command.Reasons, executor.redact(reason))

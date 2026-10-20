@@ -9,18 +9,18 @@
 | 위치 | 책임 |
 | --- | --- |
 | cmd/v | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
-| agent/model·tool | 모델 메시지·스트림·호출·승인·실제 실행 사실 |
-| agent/session·run·work | 요청 준비·실행 순서·공유 예산·중단 원인 |
+| agent/model | 모델 메시지·스트림·출력 예산 계약 |
+| agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·요청별 실측 통계 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 작업 지침·역할별 추론 설정 |
-| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·정책/Thinking 저장 |
+| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·Thinking 설정 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
 | provider/connection·identity·profile·selection | 연결 값·원본 식별·검토된 모델 제어·선택 검증 |
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
 | provider/protocol·transport·httpclient | wire 변환·HTTP/스트림/재시도·생성 요청 조율 |
-| policy | Permission, 공통 보호 대상, 셸 AST 기반 사고 방지와 하위 파일 Scope 판단 |
+| policy | 필수 승인, 공통 보호 대상, 셸 AST 기반 사고 방지와 하위 파일 Scope 판단 |
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
 | tools/local/file·textedit·textformat·diff | 파일 I/O·정확한 부분 수정·바이트 형식·변경 미리보기 |
 | tools/local/process | 호스트 셸·프로세스 그룹·출력·취소 |
@@ -71,7 +71,7 @@ go mod verify
 
 ## 플랫폼 실행 검증
 
-Linux·WSL·macOS에서 호스트 셸의 작업 디렉터리·환경·프로세스 정리와 Permission 거절을 검증한다. 임시 HOME에서 캐시 생성, 기존 하드링크, 호스트 DNS 설정 파일, 자식 프로세스·로컬 HTTP, 시작 실패·비정상 종료·취소 후 부분 출력을 확인한다.
+Linux·WSL·macOS에서 호스트 셸의 작업 디렉터리·환경·프로세스 정리와 필수 승인 거절을 검증한다. 임시 HOME에서 캐시 생성, 기존 하드링크, 호스트 DNS 설정 파일, 자식 프로세스·로컬 HTTP, 시작 실패·비정상 종료·취소 후 부분 출력을 확인한다.
 
 ```sh
 go test ./internal/tools/local/... ./internal/agent/run ./internal/commands/headless
@@ -97,6 +97,6 @@ go test ./internal/tui/viewport -run '^$' -bench . -benchmem
 
 ## 기본 루프의 책임
 
-[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. V의 Go 단일 바이너리·호스트 실행·파일 검사·Permission·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
+[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. V의 Go 단일 바이너리·호스트 실행·파일 검사·필수 승인·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
 
 원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/v의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.

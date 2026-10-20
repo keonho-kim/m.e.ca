@@ -8,33 +8,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/policy"
 	"github.com/keonho-kim/v-code/internal/tui/locale"
 )
 
-func TestLocalizedPermissionMenuPreservesValues(t *testing.T) {
+func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		a := fixture(t)
 		a.language = lang
-		a.page = "permission"
-		a.choices = []string{"approve", "allow-all"}
-		a.choice = 1
+		a.selection.Model = "chosen-model"
 		a.render()
-		var rows []string
-		for y := 0; y < 24; y++ {
-			rows = append(rows, screenLine(a.screen, y, 80))
-		}
-		text := strings.Join(rows, "\n")
-		if !strings.Contains(text, lang.Text("allow-all")) || strings.Contains(text, "allow-all") {
+		text := screenLine(a.screen, 22, 80)
+		if strings.TrimSpace(text) != "chosen-model" {
 			t.Fatal(text)
-		}
-		a.choose()
-		if a.changeValue != "allow-all" {
-			t.Fatal("display translation changed persisted value")
-		}
-		a.choose()
-		if a.settings.Permission != policy.AllowAll {
-			t.Fatal("translated choice changed policy")
 		}
 	}
 }
@@ -63,8 +48,8 @@ func TestLocalizedCommandSearch(t *testing.T) {
 	}{
 		{locale.Korean, "!추론", "!model"},
 		{locale.English, "!thinking", "!model"},
-		{locale.Korean, "!승인", "!permission"},
-		{locale.English, "!permission", "!permission"},
+		{locale.Korean, "!파일", "!dir"},
+		{locale.English, "!browse", "!dir"},
 	} {
 		a := fixture(t)
 		a.language = test.lang

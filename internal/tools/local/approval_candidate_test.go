@@ -1,4 +1,4 @@
-// Purpose: Verify bound approval candidates preserve actual line counts and require consent.
+// Purpose: Verify automatic file operations retain exact change candidates without routine approval.
 // Pattern: Filesystem contract tests.
 // Usage: go test ./internal/tools/local -run TestApprovalCandidate.
 // Related: internal/tools/local/approval_candidate.go, internal/tools/local/prepare.go, internal/tools/local/mutations.go.
@@ -17,7 +17,7 @@ func TestApprovalCandidateCountsActualChanges(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "a"), []byte("same\nold\ntail\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
+	settings := policy.Settings{Scope: policy.Directory}
 	for _, tc := range []struct {
 		name, args string
 		lines      int
@@ -32,7 +32,7 @@ func TestApprovalCandidateCountsActualChanges(t *testing.T) {
 			t.Fatal(err)
 		}
 		candidate := op.Approval().Candidate
-		if candidate == nil || candidate.Lines() != tc.lines || !op.Approval().Required {
+		if candidate == nil || candidate.Lines() != tc.lines || op.Approval().Required {
 			t.Fatalf("%s: %+v", tc.name, op.Approval())
 		}
 		if err := candidate.Check(call(tc.name, tc.args)); err != nil {
@@ -40,16 +40,16 @@ func TestApprovalCandidateCountsActualChanges(t *testing.T) {
 		}
 	}
 }
-func TestApprovalCandidateEmptyDirectoryStillNeedsApproval(t *testing.T) {
+func TestApprovalCandidateEmptyDirectoryIsAutomatic(t *testing.T) {
 	executor, root := testExecutor(t)
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, call("create_directory", `{"paths":["folder"]}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call("create_directory", `{"paths":["folder"]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := op.Execute(context.Background(), false); err == nil {
-		t.Fatal("unapproved directory created")
+	if op.Approval().Required {
+		t.Fatal("ordinary directory creation requires approval")
 	}
-	if _, err := op.Execute(context.Background(), true); err != nil {
+	if _, err := op.Execute(context.Background(), false); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(filepath.Join(root, "folder"))

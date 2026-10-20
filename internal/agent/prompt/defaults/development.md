@@ -23,6 +23,7 @@
 
 ## Implement the smallest complete change
 - Prefer the target language's native features, standard library and established project conventions, including its import and module conventions.
+- Use package- or module-qualified absolute imports, or project-configured aliases. Do not use file-relative or parent-relative imports.
 - Reuse existing components before adding new ones. Every abstraction, option, state and dependency must serve a current requirement.
 - Give each stable rule and configuration value one owner. Share common behavior when real consumers need the same domain meaning.
 - Use precise domain names and export only what callers need. Prefer explicit control flow, early returns and visible failure paths.

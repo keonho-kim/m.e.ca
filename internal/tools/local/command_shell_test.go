@@ -21,7 +21,7 @@ func TestCommandSearchPipeline(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "app.json"), []byte("{}"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"find . -name 'app.json' -type f 2>/dev/null | head -20"}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"find . -name 'app.json' -type f 2>/dev/null | head -20"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

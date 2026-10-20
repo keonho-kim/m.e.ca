@@ -15,7 +15,7 @@ import (
 func TestDirectories(t *testing.T) {
 	e, root := testExecutor(t)
 	ctx := context.Background()
-	settings := policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.Directory}
 	c := call("create_directory", `{"paths":["a/b/c","a/d","a/b/c"]}`)
 	for round := 0; round < 2; round++ {
 		op, err := e.Prepare(ctx, settings, c)
@@ -58,7 +58,7 @@ func TestDirectories(t *testing.T) {
 func TestDirectoriesStaleParent(t *testing.T) {
 	e, root := testExecutor(t)
 	ctx := context.Background()
-	settings := policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.Directory}
 	op, err := e.Prepare(ctx, settings, call("create_directory", `{"paths":["a/b"]}`))
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestDirectoriesStaleParent(t *testing.T) {
 func TestDirectoriesRejectWholeInvalidRequest(t *testing.T) {
 	e, root := testExecutor(t)
 	ctx := context.Background()
-	settings := policy.Settings{Scope: policy.Directory, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.Directory}
 	for _, args := range []string{
 		`{"paths":["valid","../outside"]}`,
 		`{"paths":["valid","bad\npath"]}`,

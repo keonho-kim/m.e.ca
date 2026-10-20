@@ -14,7 +14,7 @@ import (
 
 func TestCreationReceipt(t *testing.T) {
 	e, _ := testExecutor(t)
-	settings := policy.Settings{Scope: policy.System, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.System}
 	for _, tc := range []struct {
 		name, args, want string
 		size             bool

@@ -46,7 +46,7 @@ func checkEffort(selected modelconn.Selection, resolved profile.Profile) error {
 				return fmt.Errorf("invalid native ON/OFF capability")
 			}
 			if selected.Effort() != "" && selected.Thinking == nil {
-				return fmt.Errorf("native effort has no verified Thinking setting")
+				return fmt.Errorf("native effort requires an explicit Thinking setting")
 			}
 			if selected.Connection.Kind != modelconn.Ollama && selected.Connection.Kind != modelconn.LMStudio {
 				return fmt.Errorf("native reasoning metadata on incompatible provider")

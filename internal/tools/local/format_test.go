@@ -20,7 +20,7 @@ func TestFormatLastLineIsPreservedBeforeApproval(t *testing.T) {
 		t.Fatal(err)
 	}
 	edit := observedEdit(t, executor, "a", 1, 1, "new")
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory, Permission: policy.Approve}, edit)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, edit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestFormatLiteralChangeRequiresExplicitArgument(t *testing.T) {
 	if err := os.WriteFile(path, []byte("old"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Scope: policy.Directory, Permission: policy.Approve}
+	settings := policy.Settings{Scope: policy.Directory}
 	if _, err := executor.Prepare(context.Background(), settings, call("write_file", `{"path":"a","content":"new\n"}`)); err == nil {
 		t.Fatal("implicit format change accepted")
 	}

@@ -7,7 +7,6 @@ package sqlite
 import (
 	"context"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,9 +29,6 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 	if err := first.AppendMessage(ctx, firstID, modelapi.Message{Role: "user", Content: "first conversation"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := first.SaveSettings(ctx, policy.Settings{Scope: policy.System}); err != nil {
-		t.Fatal(err)
-	}
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -43,9 +39,6 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 	secondID := second.Session().ID
 	if firstID == secondID {
 		t.Fatal("reused session ID")
-	}
-	if settings, err := second.Settings(ctx); err != nil || settings.Scope != "" {
-		t.Fatalf("settings leaked: %+v %v", settings, err)
 	}
 	if err := second.Close(); err != nil {
 		t.Fatal(err)

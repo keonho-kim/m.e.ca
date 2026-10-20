@@ -5,6 +5,7 @@
 package locale
 
 var messages = []translation{
+	{"", "Worked for", "작업 시간"},
 	{"", "Connecting", "연결 중"},
 	{"", "Stop the current task before changing providers", "현재 작업을 중지한 뒤 모델 공급자를 변경하세요"},
 	{"", "Stop the current task before changing settings", "현재 작업을 중지한 뒤 설정을 변경하세요"},
@@ -38,7 +39,6 @@ var messages = []translation{
 	{"", "Reading directory…", "폴더 읽는 중…"},
 	{"", "Queued > ", "예약 > "},
 	{"", "Interrupted work: %s\nSend a message to inspect the current state and continue.", "중지된 작업: %s\n새 메시지를 보내면 현재 상태를 확인하고 이어갈 수 있습니다."},
-	{"", "Error", "오류"},
 	{"", "Tool results folded · Ctrl+O to expand", "도구 결과 접음 · Ctrl+O로 펼치기"},
 	{"", "Tool results expanded · PgUp/Dn to scroll", "도구 결과 펼침 · PgUp/Dn으로 스크롤"},
 	{"", "No tool results to fold or expand", "접거나 펼칠 도구 결과가 없습니다"},

@@ -13,6 +13,9 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 	if event.Internal {
 		return nil
 	}
+	if event.Statistics != nil {
+		return []viewport.Block{f.runSummary(*event.Statistics)}
+	}
 	if event.Kind == "progress" {
 		return []viewport.Block{Answer(f.Redact(event.Text))}
 	}

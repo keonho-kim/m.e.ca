@@ -8,15 +8,12 @@ import (
 	"context"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	tasksession "github.com/keonho-kim/v-code/internal/agent/session"
-	"github.com/keonho-kim/v-code/internal/policy"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/storage/history"
 )
 
 type Store interface {
 	tasksession.Store
-	Settings(context.Context) (policy.Settings, error)
-	SaveSettings(context.Context, policy.Settings) error
 	Selection(context.Context, string) (modelconn.Selection, error)
 	SaveSelection(context.Context, string, modelconn.Selection) error
 	FileSelections(context.Context, string) ([]string, error)

@@ -1,4 +1,4 @@
-// Purpose: Route local menu choices to model, approval and settings use cases.
+// Purpose: Route local menu choices to model controls and mandatory approval decisions.
 // Pattern: Presentation command routing.
 // Usage: Invoked by the terminal input handler after a local menu selection.
 // Related: internal/tui/session/keys.go, internal/tui/session/model.go, internal/tui/session/settings.go.
@@ -21,7 +21,6 @@ func (a *app) openModel() {
 	a.menuInput.Set("")
 }
 func (a *app) choose() {
-	value := a.choices[a.choice]
 	switch a.page {
 	case "quit":
 		if a.choice == 1 {
@@ -49,7 +48,6 @@ func (a *app) choose() {
 				a.status = a.language.Text("Thinking ON/OFF control is unavailable or unverified for this model")
 				return
 			}
-			a.changeField = "thinking"
 			a.changeValue = "OFF"
 			if a.thinkingChoice {
 				a.changeValue = "ON"
@@ -74,10 +72,6 @@ func (a *app) choose() {
 		c, err := modelconn.New(modelconn.Providers()[a.choice].Kind, "")
 		a.fail(err)
 		a.menuInput.Set(c.Endpoint)
-	case "permission":
-		a.changeField = a.page
-		a.changeValue = value
-		a.globalMenu()
 	case "global":
 		a.applySetting(a.choice == 1)
 		a.page = "chat"
@@ -86,9 +80,6 @@ func (a *app) choose() {
 func (a *app) globalMenu() {
 	a.page = "global"
 	a.choices = []string{"Current session", "Global override"}
-	if a.changeField == "thinking" {
-		a.choices[0] = "Current session"
-	}
 	a.choice = 0
 	a.menuInput.Set("")
 }

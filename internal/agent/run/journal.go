@@ -1,13 +1,14 @@
 // Purpose: Persist execution messages and checkpoint snapshots with provenance and the active uncompacted context.
 // Pattern: Simple Module (journal I/O boundary).
 // Usage: Called by execution phases and the final cancellation-safe flush.
-// Related: internal/agent/run/events.go, internal/agent/run/run.go, internal/storage/sqlite/events.go.
+// Related: internal/agent/run/events.go, internal/agent/run/run.go, internal/agent/run/statistics.go, internal/storage/sqlite/events.go.
 package run
 
 import (
 	"context"
 	"errors"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"time"
 )
 
 func (s *execution) save(ctx context.Context, m modelapi.Message) error {
@@ -30,5 +31,16 @@ func (s *execution) persist(ctx context.Context) error {
 		return err
 	}
 	copy := s.checkpoint
-	return s.record(ctx, Event{Kind: "run_checkpoint", Checkpoint: &copy})
+	event := Event{Kind: "run_checkpoint", RunID: copy.ID, Checkpoint: &copy}
+	if copy.Phase == "finished" {
+		statistics := s.statistics.snapshot(time.Now())
+		event.Statistics = &statistics
+	}
+	if err := s.record(ctx, event); err != nil {
+		return err
+	}
+	if event.Statistics != nil {
+		return s.emit(event)
+	}
+	return nil
 }

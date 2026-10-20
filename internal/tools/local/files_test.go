@@ -35,14 +35,18 @@ func call(name, arguments string) toolapi.Call {
 	return toolapi.Call{ID: "call_1", Name: name, Arguments: json.RawMessage(arguments)}
 }
 
-func TestWriteRequiresApprovalAndPreservesReject(t *testing.T) {
-	executor, project := testExecutor(t)
-	path := filepath.Join(project, "auth.go")
+func TestExternalWriteRequiresApprovalAndPreservesReject(t *testing.T) {
+	executor, _ := testExecutor(t)
+	path := filepath.Join(t.TempDir(), "auth.go")
 	if err := os.WriteFile(path, []byte("old"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
-	operation, err := executor.Prepare(context.Background(), settings, call("write_file", `{"path":"auth.go","content":"new"}`))
+	settings := policy.Settings{Scope: policy.System}
+	body, err := json.Marshal(map[string]string{"path": path, "content": "new"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	operation, err := executor.Prepare(context.Background(), settings, call("write_file", string(body)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +77,7 @@ func TestApprovalUsesLineDiff(t *testing.T) {
 	if err := os.WriteFile(path, []byte("unchanged\nold\nend\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.Approve, Scope: policy.Directory}
+	settings := policy.Settings{Scope: policy.Directory}
 	for _, invocation := range []toolapi.Call{
 		call("write_file", `{"path":"file.txt","content":"unchanged\nnew\nend\n"}`),
 		observedEdit(t, executor, "file.txt", 2, 2, "new\n"),
@@ -102,7 +106,7 @@ func TestApprovedEditRejectsChangedOriginal(t *testing.T) {
 	if err := os.WriteFile(path, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	operation, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.Approve, Scope: policy.Directory}, observedEdit(t, executor, "auth.go", 1, 1, "fixed"))
+	operation, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, observedEdit(t, executor, "auth.go", 1, 1, "fixed"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +131,7 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(project, "linked")); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.Directory}
+	settings := policy.Settings{Scope: policy.Directory}
 	for _, invocation := range []toolapi.Call{
 		call("write_file", `{"path":"../outside","content":"unsafe"}`),
 		call("write_file", `{"path":"linked","content":"unsafe"}`),
@@ -149,7 +153,7 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(project, "src/auth.go"), []byte("func authenticate() {}\nprovider-secret"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Permission: policy.AllowAll, Scope: policy.System}
+	settings := policy.Settings{Scope: policy.System}
 	for _, invocation := range []toolapi.Call{
 		call("execute_command", `{"command":"cat src/auth.go"}`),
 		call("execute_command", `{"command":"ls src"}`),

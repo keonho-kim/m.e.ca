@@ -1,6 +1,6 @@
 // Purpose: Declare bilingual model identity and capability information labels.
 // Pattern: Declarative presentation data.
-// Usage: Model information projects verified provider facts beside localized labels.
+// Usage: Model information projects server declarations and profile rules beside localized labels.
 // Related: internal/tui/locale/locale.go, internal/tui/modelmenu/identity.go.
 package locale
 
@@ -29,7 +29,7 @@ var model = []translation{
 	{"", "Metadata unavailable (support, authorization, response or timeout).", "메타데이터를 조회할 수 없습니다 (미지원·권한·응답·시간 제한)."},
 	{"", "Incomplete metadata; automatic specialization deferred.", "메타데이터가 불완전하여 자동 특화를 보류했습니다."},
 	{"", "Unsupported / unverified", "미지원 / 미검증"},
-	{"", "Verified by connection diagnostics", "연결 진단에서 검증됨"},
+	{"", "Available through model metadata / profile", "모델 메타데이터·프로파일에 등록됨"},
 	{"", "Thinking ON/OFF: ", "추론 켜기·끄기: "},
 	{"", "Advertised Thinking options and verified controls are separate.", "서버가 광고한 추론 옵션과 실제 제어 검증은 별개입니다."},
 	{"", "Server declarations do not guarantee weight identity.", "서버 선언은 실제 가중치의 동일성을 보증하지 않습니다."},

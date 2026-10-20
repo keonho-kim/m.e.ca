@@ -34,7 +34,7 @@ func (a *app) renderMenu(w, h int) {
 			display.Title = a.language.Text("model") + " · " + a.language.Text("Profile") + ": " + identity
 		}
 	case "global":
-		display.Title = a.language.Text(a.changeField) + ": " + a.language.Text(a.changeValue)
+		display.Title = a.language.Text("thinking") + ": " + a.language.Text(a.changeValue)
 	case "key":
 		display.Title = a.language.Text("API Key (OS credential store)")
 	case "manual":

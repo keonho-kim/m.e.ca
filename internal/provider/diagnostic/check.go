@@ -1,6 +1,6 @@
 // Purpose: Verify ordinary response completion and paired Thinking behavior through a model generator.
 // Pattern: Diagnostic use case.
-// Usage: Setup calls Check without executing any local tool.
+// Usage: Explicit TUI and headless diagnostics call Check without executing local tools.
 // Related: internal/provider/diagnostic/chat.go, internal/provider/diagnostic/control.go, internal/provider/diagnostic/effort.go.
 package diagnostic
 

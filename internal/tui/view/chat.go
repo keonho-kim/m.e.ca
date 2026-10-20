@@ -12,31 +12,33 @@ import (
 )
 
 type ChatDisplay struct {
-	Notice           string
-	Activity         Activity
-	Usage            modelapi.TokenUsage
-	Lines            []viewport.Line
-	Start, Available int
-	Input            input.Window
-	Layout           ComposerLayout
-	Candidates       Candidates
+	Notice     string
+	Activity   Activity
+	Usage      modelapi.TokenUsage
+	Lines      []viewport.Line
+	Start      int
+	Scrollbar  viewport.Scrollbar
+	Input      input.Window
+	Layout     ComposerLayout
+	Candidates Candidates
 }
 
-func Chat(screen tcell.Screen, display ChatDisplay, width, height int) {
+func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 	topLine(screen, "", display.Usage, width, display.Activity)
 	y := 1
-	for i := display.Start; i < len(display.Lines) && y-1 < display.Available; i++ {
+	for i := display.Start; i < len(display.Lines) && y-1 < display.Layout.TranscriptRows; i++ {
 		style := tcell.StyleDefault
 		if display.Lines[i].Thinking {
 			style = style.Dim(true)
 		}
 		if len(display.Lines[i].Spans) > 0 {
-			styledText(screen, y, width, display.Lines[i].Spans, style)
+			styledText(screen, y, max(1, width-1), display.Lines[i].Spans, style)
 		} else {
-			Text(screen, 0, y, width, display.Lines[i].Text, style)
+			Text(screen, 0, y, max(1, width-1), display.Lines[i].Text, style)
 		}
 		y++
 	}
+	Scrollbar(screen, width-1, 1, display.Scrollbar)
 	layout := display.Layout
 	candidates(screen, display.Candidates, layout.CandidateY, width, layout.CandidateEnd)
 	if display.Notice != "" && layout.InputY > 1 {

@@ -16,7 +16,6 @@ func TestParse(t *testing.T) {
 		{"   ", Empty, ""},
 		{"!model", Model, ""},
 		{"!new", NewSession, ""},
-		{"!permission", Permission, ""},
 		{"!dir", Directory, ""},
 		{`!dir "src/my components/"`, Directory, "src/my components/"},
 		{`!dir '~/Downloads/my files'`, Directory, "~/Downloads/my files"},

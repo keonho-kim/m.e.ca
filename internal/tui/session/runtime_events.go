@@ -36,6 +36,11 @@ func (a *app) receiveRuntime(e *run.Event) {
 	if e.Internal || e.Kind == "tool_proposed" {
 		return
 	}
+	if e.Statistics != nil {
+		blocks := (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e)
+		a.runSummary = &blocks[0]
+		return
+	}
 	if e.Kind == "retry" {
 		a.status = e.Text
 		return

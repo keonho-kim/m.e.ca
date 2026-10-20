@@ -1,6 +1,6 @@
 # 모델 프로파일
 
-검토 기준일: **2026-10-15**. 모델 특화는 [`internal/provider/profile`](../internal/provider/profile)에서 관리한다. HTTP 어댑터는 이 패키지의 결정만 요청 형식으로 옮긴다. 새 모델은 출시·규모·제어 근거를 검토한 뒤 지원 목록에 추가한다.
+카탈로그 검토 기준일: **2026-10-13** (`profile.go`의 reviewed). 모델 특화는 [`internal/provider/profile`](../internal/provider/profile)에서 관리한다. HTTP 어댑터는 이 패키지의 결정만 요청 형식으로 옮긴다. 새 모델은 출시·규모·제어 근거를 검토한 뒤 지원 목록에 추가한다.
 
 ## 대상과 책임
 
@@ -46,7 +46,7 @@
 출시 근거: [Qwen 공식 이력](https://github.com/QwenLM/Qwen3.8), [Ornith 공식 발표](https://ornith.ai/), [DeepSeek V4 발표](https://api-docs.deepseek.com/news/news260424), [EXAONE 공식 이력](https://github.com/LG-AI-EXAONE/EXAONE-4.5), [Gemma 4 발표](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/), [Gemma 4 12B 발표](https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemma-4-12b/). Nemotron은 각 카드의 Release Date를 사용한다.
 
 - Gemma E2B/E4B는 effective 규모 대신 임베딩을 포함한 전체 수치를 사용한다.
-- Qwen 0.8B/2B의 공식 카드는 Thinking 반복 위험을 설명한다. 모델 크기와 관계없이 V의 유한 호출·시간·반복 예산을 적용한다.
+- Qwen 0.8B/2B의 공식 카드는 Thinking 반복 위험을 설명한다. 모델 크기와 관계없이 [모델 요청·시간 예산](configuration.md#자동-승인과-실행-예산)을 적용한다. 별도 반복 횟수 제한은 두지 않는다.
 - Nemotron Super의 공식 BF16·FP8·NVFP4, Lightning의 BF16·NVFP4 이름은 동일 프로파일에 명시적으로 등록했다. 양자화 모델도 전체 식별자를 기준으로 개별 검토한다.
 - Ornith 1.0의 ON/OFF는 문서상 확인되지 않아 템플릿 제어를 보내지 않는다. Qwen 파생형이라는 이유로 Ornith 1.5의 스위치를 복사하지 않는다.
 - DeepSeek V4 Flash의 현재 vLLM tokenizer는 두 boolean 값을 OR한다. OFF 요청은 둘 다 false로 지정한다. SGLang의 동일한 제어 계약은 이번 검토에서 확정하지 않았다.
@@ -90,7 +90,7 @@ reasoning_effort = "medium"
 
 - 일반 생성·native 호출과 보조 역할은 [역할별 Thinking 설정](configuration.md#메인-에이전트와-보조-역할의-추론-설정)에 따라 강도를 전달한다. OFF에서는 `reasoning_effort`와 `low_effort`를 생략해 강도 필드가 Thinking을 다시 켜지 않도록 한다.
 - 모델 출력의 품질·길이·지연만으로 강도의 의미가 적용됐다고 판정하지 않는다. 진단에 성공해도 서버가 옵션을 무시할 수 있으므로 실제 강도별 계산량·수렴은 환경 검증 대상이다.
-- 모든 강도에 동일한 모델 호출·문맥·출력·시간·반복 예산을 적용한다.
+- 모든 강도에 동일한 모델 요청·문맥·출력·시간 예산을 적용한다.
 
 ## 제외와 미확인
 
@@ -144,6 +144,7 @@ Qwen3.8-Flash-Next 원본과 FP8은 qwen3.8-flash-next 프로파일을 공유한
 | 일반 OpenAI-compatible | `/v1/models` | 해당 서버가 제공하는 선택 모델의 `root`, `parent`, `owned_by` |
 
 - 조회 결과는 **서버 원본 선언**, **모델군·아키텍처 정보만 확인**, **복수 모델/동적 라우팅**, **원본 식별 불가**로 표시한다. 프로파일 근거는 서버 원본·서빙 이름의 카탈로그 일치, 사용자 TOML 매핑, 특화 없음으로 별도 표시한다. 서버 선언은 실제 가중치 동일성의 보증이 아니다.
+- 서버 원본이 카탈로그에서 식별되면 이를 우선한다. `root`가 식별되지 않는 로컬 경로여도 서빙 이름이 등록된 정확한 이름이면 해당 카탈로그 프로파일을 유지하고 근거를 서빙 이름으로 표시한다. 확인된 다른 체크포인트와의 충돌은 거부하며, 임의 경로의 파일명으로 모델을 추측하지 않는다. 복수 대상·불완전한 메타데이터에는 기존 자동 특화 보류 정책을 적용한다.
 - 공식 저장소 ID, 정확한 `https://huggingface.co/<publisher>/<model>` URL, `models--<publisher>--<model>/snapshots/<revision>` 캐시 경로를 카탈로그와 비교한다. 일반 로컬 경로의 basename·GGUF 양자화 접미사·tokenizer·부모 모델만으로 정확한 checkpoint를 추측하지 않는다.
 - LiteLLM의 문서화된 transport 접두어만 분리한다. 여러 upstream이나 auto-router가 확인되면 일반 프로파일을 사용하고 특화 매핑은 거부한다. `generic` 명시 또는 단일 모델로 직접 연결하여 해결한다. 메타데이터 조회만 불완전하고 복수 대상 근거가 없으면 기본은 일반 프로파일이며, 정확한 Provider·주소·서빙 이름에 대한 사용자 매핑을 적용할 수 있다. 확인된 원본 근거와 매핑의 충돌은 거부한다.
 - Thinking 광고 정보와 실제 ON/OFF·강도 제어 지원은 별개다. 제어 선택지는 검토된 프로파일과 서버 메타데이터에서 결정한다. 실제 reasoning 분리와 ON/OFF 효과는 별도 연결 진단으로 확인한다. 날짜·전체 300B 제한도 유지한다.
@@ -166,6 +167,8 @@ Provider별 HTTP 계약은 로컬 모의 서버로 검증했다. 실제 서버 �
 | 일반 OpenAI-compatible | boolean 제어 계약 미검증: 토글 비활성 | 기존 일반 응답 계약 |
 
 공식 프로토콜 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_outputs/), [SGLang reasoning](https://docs.sglang.io/docs/advanced_features/separate_reasoning), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking).
+
+추론 출력 수신과 ON/OFF·강도 제어는 구분한다. `!model`의 켜기·끄기 설정 불가는 V가 해당 연결에 적용할 전환 규약을 확인하지 못했다는 뜻이며, 모델이 추론을 출력하지 않는다는 뜻이 아니다. 프로파일·메타데이터의 제어 등록과 사용자가 실행하는 실제 연결 진단 결과도 구분하여 표시한다.
 
 연결 준비는 메타데이터·프로파일·설정의 값과 실제 서빙 ID를 확인하고 클라이언트를 설치한다. 모델 응답 생성은 요구하지 않는다. 메타데이터 조회가 불가능하면 일반 한도·제어 미확인 상태로 준비하고 Notice에 원인을 남긴다. 미식별 모델도 일반 native 도구를 사용할 수 있다. 모호한 복수 대상에는 모델 특화를 적용하지 않는다.
 

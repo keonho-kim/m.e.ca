@@ -18,7 +18,7 @@ func (f Formatter) output(event run.Event) string {
 	text := ""
 	switch event.Call.Name {
 	case "execute_command":
-		text = f.processOutput(fields) + f.processChanges(event)
+		text = f.processOutput(fields)
 	case "write_file", "edit_file", "create_directory", "move_file":
 		text = f.fileOutput(event, body)
 	}

@@ -1,6 +1,6 @@
-// Purpose: Validate stored summary bounds and expose the continuation memo as context.
+// Purpose: Validate stored continuation memory bounds and text encoding.
 // Pattern: Simple Module.
-// Usage: Runtime requests context and persistence validates memory revisions.
+// Usage: The compaction controller and persistence check memory revisions before use.
 // Related: internal/agent/compact/types.go, internal/agent/compact/controller.go.
 package compact
 
@@ -8,13 +8,6 @@ import (
 	"fmt"
 	"unicode/utf8"
 )
-
-func (m Memory) Context() (string, error) {
-	if m.Revision == 0 {
-		return "", nil
-	}
-	return m.Markdown, nil
-}
 
 func (m Memory) Check(maxSummary int) error {
 	if m.Revision < 0 || m.Through < 0 || m.UsageThrough < 0 || len(m.Markdown) > maxSummary || !utf8.ValidString(m.Markdown) {

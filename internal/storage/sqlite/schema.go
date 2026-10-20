@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 18
+const schemaVersion = 19
 
 const schema = `
 CREATE TABLE sessions (
@@ -24,10 +24,6 @@ CREATE TABLE messages (
  created_at TEXT NOT NULL
 );
 CREATE INDEX session_messages ON messages(session_id, sequence);
-CREATE TABLE settings (
- singleton INTEGER PRIMARY KEY CHECK(singleton=1),
- permission TEXT NOT NULL DEFAULT ''
-);
 CREATE TABLE tool_events (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
  session_id TEXT NOT NULL REFERENCES sessions(id),

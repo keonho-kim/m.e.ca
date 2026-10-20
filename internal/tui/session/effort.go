@@ -1,7 +1,7 @@
-// Purpose: Present model-specific effort values and apply only successfully probed and persisted choices.
-// Pattern: Settings use case with cancellable worker lifecycle.
-// Usage: The model menu opens effort choices; notices apply confirmed preferences in the event loop.
-// Related: internal/provider/profile/effort.go, internal/provider/diagnostic/effort.go, internal/tui/session/events.go.
+// Purpose: Select and persist effort choices advertised by model metadata or reviewed profiles.
+// Pattern: Event-loop settings use case.
+// Usage: The model menu saves an effort choice; explicit connection diagnostics probe it separately.
+// Related: internal/provider/selection/effort.go, internal/tui/session/diagnostic.go, internal/storage/sqlite/selection.go.
 package session
 
 import (
@@ -50,9 +50,7 @@ func (a *app) chooseEffort() {
 		a.fail(err)
 		return
 	}
-	a.page = "model"
 	a.openModel()
-
 }
 
 func (a *app) applyEffort(value string) error {

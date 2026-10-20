@@ -16,6 +16,7 @@ type Event struct {
 	Capture         json.RawMessage      `json:"capture,omitempty"`
 	RunID           string               `json:"run_id,omitempty"`
 	Generation      *Generation          `json:"generation,omitempty"`
+	Statistics      *Statistics          `json:"statistics,omitempty"`
 	ChangePreview   string               `json:"change_preview,omitempty"`
 	TokensPerSecond *float64             `json:"-"`
 	Internal        bool                 `json:"internal,omitempty"`

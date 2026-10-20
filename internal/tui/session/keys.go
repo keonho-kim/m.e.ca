@@ -14,6 +14,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	if !e.Pressed() {
 		return
 	}
+	a.scrollbar.dragging = false
 	if a.paste {
 		a.pasteKey(e)
 		return
@@ -181,6 +182,9 @@ func (a *app) mouse(e *tcell.EventMouse) {
 	if a.helpOpen {
 		return
 	}
+	if a.scrollbarMouse(e) {
+		return
+	}
 	if a.selectionMouse(e) {
 		return
 	}
@@ -200,6 +204,9 @@ func (a *app) mouse(e *tcell.EventMouse) {
 	}
 	if a.page == "files" {
 		a.browser.Move(n)
+		return
+	}
+	if a.page != "chat" {
 		return
 	}
 	w, h := a.screen.Size()

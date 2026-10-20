@@ -1,6 +1,6 @@
 // Purpose: Freeze file-specific change content and approval previews before user approval.
 // Pattern: Change candidate preparation.
-// Usage: Prepare calls prepareChange only after Scope and Permission classification.
+// Usage: Prepare calls prepareChange after Scope and mandatory approval classification.
 // Related: internal/tools/local/prepare.go, internal/tools/local/approval_candidate.go.
 package local
 

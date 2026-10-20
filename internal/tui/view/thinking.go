@@ -1,6 +1,6 @@
 // Purpose: Render one inline Thinking ON/OFF choice with the selected value emphasized.
 // Pattern: Presentation renderer.
-// Usage: The model menu supplies its current candidate and verified control support.
+// Usage: The model menu supplies its current candidate and registered ON/OFF controls.
 // Related: internal/tui/session/menus.go, internal/tui/session/render.go, internal/tui/view/styles.go.
 package view
 
@@ -25,6 +25,6 @@ func Thinking(screen tcell.Screen, y, width int, on, supported, focused, onOnly 
 	part(" / ", tcell.StyleDefault.Dim(true))
 	part(lang.Text("OFF"), SelectionStyle(supported && !on))
 	if !supported {
-		part(" ("+lang.Text("unavailable")+")", tcell.StyleDefault.Dim(true))
+		part(" ("+lang.Text("ON/OFF control unavailable")+")", tcell.StyleDefault.Dim(true))
 	}
 }

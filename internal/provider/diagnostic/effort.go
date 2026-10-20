@@ -1,6 +1,6 @@
 // Purpose: Probe selected Thinking effort for complete answers and separate reasoning.
 // Pattern: Diagnostic use case.
-// Usage: Setup and terminal effort selection invoke Effort through the generator contract.
+// Usage: Explicit TUI and headless connection diagnostics invoke Effort through the generator contract.
 // Related: internal/provider/diagnostic/check.go, internal/agent/model/model.go.
 package diagnostic
 

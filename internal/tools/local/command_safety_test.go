@@ -29,7 +29,7 @@ func TestCommandSafetyBlocksProtectedTargets(t *testing.T) {
 		t.Run(command, func(t *testing.T) {
 			e, _ := testExecutor(t)
 			t.Setenv("HOME", e.home)
-			_, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
+			_, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
 			if err == nil {
 				t.Fatal("protected command was prepared")
 			}
@@ -37,13 +37,13 @@ func TestCommandSafetyBlocksProtectedTargets(t *testing.T) {
 	}
 }
 
-func TestCommandSafetyRequiresApprovalUnderAllowAll(t *testing.T) {
+func TestCommandSafetyRequiresApprovalUnderAutomaticPolicy(t *testing.T) {
 	e, project := testExecutor(t)
 	path := filepath.Join(project, "remove-me")
 	if err := os.WriteFile(path, []byte("preserve until approved"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.AllowAll}, call("execute_command", `{"command":"rm -f remove-me"}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"rm -f remove-me"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

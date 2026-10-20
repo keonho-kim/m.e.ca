@@ -63,25 +63,20 @@ func TestFixedComposerShiftEnter(t *testing.T) {
 
 func TestFixedSystemScopeOnSessionRestore(t *testing.T) {
 	a := fixture(t)
-	if err := a.opts.Store.SaveSettings(a.ctx, policy.Settings{Scope: policy.Directory, Permission: policy.Approve}); err != nil {
-		t.Fatal(err)
-	}
+	a.settings.Scope = policy.Directory
 	if err := a.restore(); err != nil {
 		t.Fatal(err)
 	}
-	if a.settings.Scope != policy.System || a.settings.Permission != policy.Approve {
-		t.Fatal("saved scope changed fixed policy or approval")
+	if a.settings.Scope != policy.System {
+		t.Fatal("restoration changed fixed application scope")
 	}
 }
 
-func TestGlobalDefaultPermissionIsAutomatic(t *testing.T) {
+func TestPermissionCommandIsUnavailable(t *testing.T) {
 	a := fixture(t)
-	if a.settings.Permission != policy.AllowAll || a.opts.Config.Defaults.Permission != policy.AllowAll {
-		t.Fatal("global default not inherited")
-	}
 	typeInput(a, "!permission")
 	a.submit()
-	if a.page != "permission" || a.choices[a.choice] != "allow-all" {
-		t.Fatal("menu did not select current permission")
+	if a.page != "chat" || a.status == "" || len(a.commandHints) != 0 {
+		t.Fatal("removed permission command remains available")
 	}
 }

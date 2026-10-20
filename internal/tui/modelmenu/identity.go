@@ -1,4 +1,4 @@
-// Purpose: Project selected model identity and verified controls into menu labels.
+// Purpose: Project selected model identity and declared controls into menu labels.
 // Pattern: Presentation projection.
 // Usage: Terminal menus pass an immutable selection snapshot and redactor.
 // Related: internal/provider/identity/report.go, internal/tui/session/render_menu.go.
@@ -70,7 +70,7 @@ func IdentityLines(selected connection.Selection, contextLength int, redact func
 	}
 	control := lang.Text("미지원 / 미검증")
 	if selected.ThinkingSupported {
-		control = lang.Text("연결 진단에서 검증됨")
+		control = lang.Text("Available through model metadata / profile")
 	}
 	lines = append(lines, lang.Text("Thinking ON/OFF: ")+control, lang.Text("Advertised Thinking options and verified controls are separate."), lang.Text("서버 선언은 실제 가중치의 동일성을 보증하지 않습니다."), "")
 	for _, fact := range report.Facts {

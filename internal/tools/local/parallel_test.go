@@ -21,7 +21,7 @@ func TestParallelTargets(t *testing.T) {
 	if err := os.Link(filepath.Join(root, "a"), filepath.Join(root, "alias")); err != nil {
 		t.Fatal(err)
 	}
-	settings := policy.Settings{Scope: policy.System, Permission: policy.AllowAll}
+	settings := policy.Settings{Scope: policy.System}
 	for _, tc := range []struct {
 		a, b string
 		want bool

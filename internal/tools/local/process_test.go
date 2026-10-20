@@ -18,7 +18,7 @@ import (
 
 func TestCommandFailurePreservesOutput(t *testing.T) {
 	executor, _ := testExecutor(t)
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.System}, call("execute_command", `{"command":"printf output; exit 3"}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf output; exit 3"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestCommandFailurePreservesOutput(t *testing.T) {
 
 func TestCommandTaskDeadlinePreservesPartialOutput(t *testing.T) {
 	executor, _ := testExecutor(t)
-	op, err := executor.Prepare(context.Background(), policy.Settings{Permission: policy.AllowAll, Scope: policy.System}, call("execute_command", `{"command":"printf partial; sleep 30"}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf partial; sleep 30"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

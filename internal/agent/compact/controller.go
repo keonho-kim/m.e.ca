@@ -127,7 +127,9 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 	c.memory = next
 	return true, nil
 }
-func (c *Controller) Context() (string, int64, error) {
-	text, err := c.memory.Context()
-	return text, c.memory.Through, err
+func (c *Controller) Context() (string, int64) {
+	if c.memory.Revision == 0 {
+		return "", c.memory.Through
+	}
+	return c.memory.Markdown, c.memory.Through
 }

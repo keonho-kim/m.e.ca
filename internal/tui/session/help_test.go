@@ -22,8 +22,11 @@ func TestKeyboardHelpAndHistoryHints(t *testing.T) {
 	for y := 0; y < 24; y++ {
 		text.WriteString(screenLine(a.screen, y, 80))
 	}
-	if !strings.Contains(text.String(), "Ctrl/Cmd+↑↓") || !strings.Contains(text.String(), "줄 이동") {
-		t.Fatal("history and navigation help missing")
+	if !strings.Contains(text.String(), "Ctrl/Cmd+↑↓") {
+		t.Fatal("history help missing")
+	}
+	if strings.Contains(text.String(), "줄 이동") {
+		t.Fatal("basic cursor movement should not be advertised")
 	}
 	a.busy, a.agentActive = true, true
 	cancelled := false

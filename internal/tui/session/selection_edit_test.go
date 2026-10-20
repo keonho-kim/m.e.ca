@@ -78,7 +78,7 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 	a.output.Append(want, false)
 	a.editor.Set("keep draft")
 	a.render()
-	lines := a.output.Lines(16)
+	lines := a.chatVisible
 	drag(a, 0, 1, 15, len(lines))
 	if got := a.textSelection.Text(); got != want {
 		t.Fatalf("copy %q, want %q", got, want)

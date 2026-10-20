@@ -69,10 +69,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		return fmt.Errorf("context limit reached but no older history can be compacted; reduce fixed instructions or increase model context")
 	}
 	var through int64
-	s.memoryContext, through, err = s.runner.Memory.Context()
-	if err != nil {
-		return err
-	}
+	s.memoryContext, through = s.runner.Memory.Context()
 	if changed || !s.historyLoaded {
 		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
 		if err != nil {

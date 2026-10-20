@@ -23,12 +23,19 @@ import (
 	"testing"
 )
 
-type script struct{ calls int }
+type script struct {
+	calls int
+	path  string
+}
 
 func (g *script) Generate(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 	g.calls++
 	if g.calls == 1 {
-		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"hello.txt","content":"hello\n"}`)}}})
+		body, err := json.Marshal(map[string]string{"path": g.path, "content": "hello\n"})
+		if err != nil {
+			return err
+		}
+		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "write", Name: "write_file", Arguments: body}}})
 	}
 	if err := emit(modelapi.Event{Streaming: true, Delta: "Created "}); err != nil {
 		return err
@@ -62,12 +69,13 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { executor.Close() })
-			settings := policy.Settings{Scope: policy.System, Permission: policy.AllowAll}
-			if tc.approve {
-				settings.Permission = policy.Approve
-			}
+			settings := policy.Settings{Scope: policy.System}
 			cfg := config.Defaults()
-			g := &script{}
+			path := filepath.Join(project, "hello.txt")
+			if tc.approve {
+				path = filepath.Join(home, "hello.txt")
+			}
+			g := &script{path: path}
 			runner := run.Runner{Generator: g, Journal: store, Tools: executor, Session: store.Session().ID, Model: "fixture", Settings: settings, Redact: func(s string) string { return s }}
 			var output bytes.Buffer
 			err = Run(ctx, sessionrun.Request{Runner: runner, Store: store, Text: "Create hello.txt", Compaction: cfg.Compaction.Settings, ProjectInstructions: executor.ProjectInstructions, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, &output, tc.json)
@@ -75,7 +83,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				if err == nil {
 					t.Fatal("noninteractive approval was bypassed")
 				}
-				if _, statErr := os.Stat(filepath.Join(project, "hello.txt")); !os.IsNotExist(statErr) {
+				if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
 					t.Fatal("unapproved file exists")
 				}
 			} else {

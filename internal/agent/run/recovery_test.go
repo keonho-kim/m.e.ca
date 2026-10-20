@@ -17,7 +17,7 @@ import (
 
 type recoveryGenerator struct{ slow bool }
 
-func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+func (g recoveryGenerator) Generate(ctx context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 	if g.slow {
 		if err := emit(modelapi.Event{Delta: "", Streaming: true}); err != nil {
 			return err
@@ -42,11 +42,7 @@ func (g recoveryGenerator) Generate(ctx context.Context, r modelapi.Request, emi
 			}
 		}
 	}
-	answer := "recovered"
-	if g.slow {
-		answer = "recovered"
-	}
-	if err := emit(modelapi.Event{Delta: answer, Streaming: true}); err != nil {
+	if err := emit(modelapi.Event{Delta: "recovered", Streaming: true}); err != nil {
 		return err
 	}
 	return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 10, Output: 3}})

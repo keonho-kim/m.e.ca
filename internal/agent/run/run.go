@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"time"
 
 	"github.com/keonho-kim/v-code/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
@@ -26,12 +27,14 @@ type execution struct {
 	emit             func(Event) error
 	definitions      []toolapi.Definition
 	usage            *requestBudget
+	statistics       runStatistics
 	messages         []modelapi.Message
 	memoryContext    string
 	capacityRecovery bool
 }
 
 func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(Event) error) (result Result, err error) {
+	started := time.Now()
 	if r.Generator == nil || r.Tools == nil || r.Journal == nil || r.Redact == nil || approve == nil || emit == nil {
 		return result, fmt.Errorf("execution dependencies are required")
 	}
@@ -73,7 +76,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 		return nil
 	}
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions()}
+	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions(), statistics: runStatistics{started: started}}
 	s.usage = &requestBudget{}
 	s.usage.begin(limits)
 
