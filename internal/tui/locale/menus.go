@@ -6,6 +6,8 @@ package locale
 
 var menus = []translation{
 	{"model", "Model", "모델"},
+	{"language", "Language", "언어"},
+	{"", "System default", "시스템 기본값"},
 	{"providers", "Providers", "모델 공급자"},
 	{"endpoint", "Server address", "서버 주소"},
 	{"thinking", "Thinking", "추론"},
@@ -25,8 +27,6 @@ var menus = []translation{
 	{"", "Model information · latest server declarations", "모델 정보 · 최근 연결의 서버 선언"},
 	{"", "Model information", "모델 정보"},
 	{"", "Connection diagnostics", "연결 진단"},
-	{"", "Profile", "프로파일"},
-	{"", "unidentified / generic", "미식별 / 일반"},
 	{"", "DEFAULT", "기본값"},
 	{"", "ON", "켜짐"},
 	{"", "OFF", "꺼짐"},

@@ -54,7 +54,7 @@ func TestIdleLongStreamAndRecovery(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			client, err := NewClient(conn, "", "")
+			client, err := NewClient(conn, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -95,7 +95,7 @@ func TestIdleRetryAfterWaitIsCancellable(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		client, err := NewClient(conn, "", "")
+		client, err := NewClient(conn, "")
 		if err != nil {
 			t.Fatal(err)
 		}

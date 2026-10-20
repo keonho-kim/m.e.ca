@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
+	"github.com/keonho-kim/v-code/internal/config"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/keonho-kim/v-code/internal/tui/locale"
@@ -21,8 +22,8 @@ import (
 type Conversations func(context.Context, int, int) ([]sessionstate.Conversation, error)
 
 // Select returns newConversation with an empty ID when the first entry is chosen.
-func Select(ctx context.Context, screen tcell.Screen, load Conversations, newConversation sessionstate.Session) (sessionstate.Session, bool, error) {
-	lang := locale.System(ctx)
+func Select(ctx context.Context, screen tcell.Screen, load Conversations, newConversation sessionstate.Session, preference config.Language) (sessionstate.Session, bool, error) {
+	lang := locale.Resolve(ctx, preference)
 	events := screen.EventQ()
 	offset, index := 0, -1
 	status, typed := "", ""

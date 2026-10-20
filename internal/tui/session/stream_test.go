@@ -50,7 +50,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "", "")
+	a.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	}
 	a.output = viewport.View{Follow: true}
 	a.historyCursor = 0
-	if err := a.loadHistory(false); err != nil {
+	if err := a.loadHistory(); err != nil {
 		t.Fatal(err)
 	}
 	restored := a.output.Blocks[len(a.output.Blocks)-1]

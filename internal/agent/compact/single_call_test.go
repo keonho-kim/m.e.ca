@@ -22,7 +22,7 @@ func TestSingleCallAfterPreviousSummary(t *testing.T) {
 	}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls, bytes := 0, 0
-	changed, err := c.Refresh(context.Background(), func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		for _, m := range r.Messages {
 			bytes += len(m.Content)
@@ -46,7 +46,7 @@ func TestSingleCallPreservesMemoryWhenInstructionsCannotFit(t *testing.T) {
 	repo := &repository{memory: prior, mark: Watermark{Tokens: 245760, Usage: 30, Timeline: 5}, records: []Record{{Sequence: 5, Role: "user", Text: strings.Repeat("x", MaxBodyBytes+1)}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
-	_, err := c.Refresh(context.Background(), func(context.Context, modelapi.Request, func(modelapi.Event) error) error { calls++; return nil })
+	_, err := c.Refresh(context.Background(), nil, func(context.Context, modelapi.Request, func(modelapi.Event) error) error { calls++; return nil })
 	if err == nil || calls != 0 || repo.memory != prior || repo.installed != 0 {
 		t.Fatalf("error=%v calls=%d memory=%+v", err, calls, repo.memory)
 	}
@@ -103,7 +103,7 @@ func TestSingleGenerationAcrossStoragePages(t *testing.T) {
 	}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
-	changed, err := c.Refresh(context.Background(), func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		return emit(modelapi.Event{Delta: "memo", Done: true})
 	})

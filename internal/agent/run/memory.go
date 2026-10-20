@@ -42,15 +42,16 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	if force {
 		refresh = s.runner.Memory.Compact
 	}
-	changed, err := refresh(ctx, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+	started := func() error {
+		if err := s.emit(Event{Kind: "compaction_started"}); err != nil {
+			return err
+		}
+		compressing = true
+		return nil
+	}
+	changed, err := refresh(ctx, started, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		if !s.modelCall() {
 			return fmt.Errorf("compaction: %w", errModelBudget)
-		}
-		if !compressing {
-			if err := s.emit(Event{Kind: "compaction_started"}); err != nil {
-				return err
-			}
-			compressing = true
 		}
 		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 		request.Thinking = s.runner.Thinking

@@ -1,7 +1,7 @@
-// Purpose: Verify exact Ornith serving names retain ON/OFF controls with opaque vLLM model roots.
+// Purpose: Verify opaque serving aliases retain ON/OFF controls with opaque vLLM model roots.
 // Pattern: Provider connection and generation integration test.
-// Usage: go test ./internal/provider/setup -run TestThinkingOrnithLocalRoot.
-// Related: internal/provider/setup/identity.go, internal/provider/protocol/controls.go.
+// Usage: go test ./internal/provider/setup -run TestThinkingOpaqueLocalRoot.
+// Related: internal/provider/setup/setup.go, internal/provider/protocol/controls.go.
 package setup
 
 import (
@@ -16,14 +16,14 @@ import (
 	"github.com/keonho-kim/v-code/internal/provider/connection"
 )
 
-func TestThinkingOrnithLocalRoot(t *testing.T) {
+func TestThinkingOpaqueLocalRoot(t *testing.T) {
 	for _, on := range []bool{false, true} {
 		t.Run(fmt.Sprintf("on=%t", on), func(t *testing.T) {
 			var generated bool
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				if r.URL.Path == "/v1/models" {
-					fmt.Fprint(w, `{"data":[{"id":"ornith-1.5-35B-A3B","root":"/models/checkpoint","owned_by":"vllm"}]}`)
+					fmt.Fprint(w, `{"data":[{"id":"models/bin/model114","root":"/models/checkpoint","owned_by":"vllm"}]}`)
 					return
 				}
 				if r.URL.Path != "/v1/chat/completions" {
@@ -40,7 +40,7 @@ func TestThinkingOrnithLocalRoot(t *testing.T) {
 					return
 				}
 				value, present := body.Template["enable_thinking"]
-				if body.Model != "ornith-1.5-35B-A3B" || !present || value != on {
+				if body.Model != "models/bin/model114" || !present || value != on {
 					t.Errorf("incorrect model or Thinking request: %+v", body)
 				}
 				generated = true
@@ -57,13 +57,13 @@ func TestThinkingOrnithLocalRoot(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			prepared, err := Prepare(context.Background(), conn, "", "ornith-1.5-35B-A3B", Defaults{Thinking: on}, connection.Selection{}, nil)
+			prepared, err := Prepare(context.Background(), conn, "", "models/bin/model114", Defaults{Thinking: &on}, connection.Selection{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer prepared.Client.Close()
 			selected := prepared.Selection
-			if generated || selected.Profile != "ornith-1.5-35b-a3b" || !selected.ThinkingSupported || selected.Thinking == nil || *selected.Thinking != on || selected.Identity.ProfileSource != "catalogue" {
+			if generated || !selected.ThinkingSupported || selected.Thinking == nil || *selected.Thinking != on {
 				t.Fatalf("unexpected setup: generated=%t selection=%+v", generated, selected)
 			}
 			var answer, thinking string

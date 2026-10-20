@@ -33,7 +33,7 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 		return err
 	}
 	info := client.effectiveModel()
-	controls, err := protocol.ControlsFor(client.connection.Kind, client.profileID, client.modelInfo, request)
+	controls, err := protocol.ControlsFor(client.connection.Kind, client.modelInfo, request)
 	if err != nil {
 		return err
 	}

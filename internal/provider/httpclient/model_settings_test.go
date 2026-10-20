@@ -65,7 +65,7 @@ func TestNativeModelSettings(t *testing.T) {
 func TestNativeReasoningDefaultUsesAdvertisedLevel(t *testing.T) {
 	c := &Client{connection: connection.Connection{Kind: connection.LMStudio}, modelInfo: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{On: true, Off: true, Levels: []string{"low", "high"}, Default: "low"}}}
 	on := true
-	controls, err := protocol.ControlsFor(c.connection.Kind, c.profileID, c.modelInfo, modelapi.Request{ModelID: "alias", Thinking: &on})
+	controls, err := protocol.ControlsFor(c.connection.Kind, c.modelInfo, modelapi.Request{ModelID: "alias", Thinking: &on})
 	if err != nil || controls.ReasoningEffort != "low" {
 		t.Fatalf("default=%+v err=%v", controls, err)
 	}

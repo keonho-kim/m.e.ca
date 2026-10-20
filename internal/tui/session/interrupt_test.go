@@ -1,6 +1,6 @@
-// Purpose: Verify Esc interrupts only active work and retains the session draft and partial answer.
+// Purpose: Verify interruption preserves work and compression activity stays visible across terminal widths.
 // Pattern: Terminal lifecycle regression tests.
-// Usage: go test ./internal/tui/session -run TestEscape.
+// Usage: go test ./internal/tui/session -run 'TestEscape|TestCompressionIndicator'.
 // Related: internal/tui/session/keys.go, internal/tui/session/worker_result.go.
 package session
 
@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/agent/run"
 	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/v-code/internal/tui/locale"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,26 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 	}
 	if len(a.output.Blocks) != 1 || !strings.Contains(a.output.Blocks[0].Text, "부분 응답") || !a.output.Blocks[0].Markdown {
 		t.Fatal("partial answer lost")
+	}
+}
+
+func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
+	for _, lang := range []locale.Language{locale.Korean, locale.English} {
+		for _, width := range []int{80, 60, 40} {
+			a := fixture(t)
+			a.language = lang
+			a.screen.SetSize(width, 24)
+			a.busy, a.agentActive = true, true
+			a.tokenTotal.Input, a.tokenTotal.Output = 1234567890, 9876543210
+			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
+			a.advanceCompression()
+			a.render()
+			header := screenLine(a.screen, 0, width)
+			if !strings.Contains(header, lang.Text("Compress Memory")+" ..") {
+				t.Fatalf("language=%v width=%d: %q", lang, width, header)
+			}
+			a.stopCompression()
+		}
 	}
 }
 func TestCompressionIndicatorLifecycle(t *testing.T) {

@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/v-code/internal/commands/startup"
+	"github.com/keonho-kim/v-code/internal/config"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	tuistartup "github.com/keonho-kim/v-code/internal/tui/startup"
 )
 
-func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqlite.Sessions, mode startup.Mode, cwd string) (*sqlite.Store, bool, error) {
+func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqlite.Sessions, mode startup.Mode, cwd string, language config.Language) (*sqlite.Store, bool, error) {
 	if mode.Session != "" {
 		store, err := sessions.Open(ctx, mode.Project, mode.Session)
 		return store, err == nil, err
@@ -34,7 +35,7 @@ func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqli
 			return sessions.ProjectConversations(ctx, mode.Project, offset, limit)
 		}
 	}
-	selected, ok, err := tuistartup.Select(ctx, screen, load, sessionstate.Session{ProjectRoot: mode.Project, DisplayRoot: mode.Display})
+	selected, ok, err := tuistartup.Select(ctx, screen, load, sessionstate.Session{ProjectRoot: mode.Project, DisplayRoot: mode.Display}, language)
 	if err != nil || !ok {
 		return nil, false, err
 	}

@@ -1,7 +1,7 @@
 // Purpose: Normalize provider API roots without changing stored connection identities.
 // Pattern: Simple Module.
-// Usage: HTTP resource routing and model-profile binding use Connection.APIBase.
-// Related: internal/provider/discovery/client.go, internal/config/profiles.go.
+// Usage: Provider discovery and generation use Connection.APIBase.
+// Related: internal/provider/discovery/client.go, internal/provider/httpclient/request.go.
 package connection
 
 import "strings"

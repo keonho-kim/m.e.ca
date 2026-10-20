@@ -26,7 +26,7 @@ func mockClient(t *testing.T, kind modelconn.ProviderKind, handler http.HandlerF
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := NewClient(connection, "test-secret", "")
+	client, err := NewClient(connection, "test-secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,6 +99,7 @@ func TestOllamaStreamAndSequentialCapabilityProbe(t *testing.T) {
 		var body struct {
 			Messages []modelapi.Message `json:"messages"`
 			Tools    json.RawMessage    `json:"tools"`
+			Think    *bool              `json:"think"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
@@ -108,7 +109,11 @@ func TestOllamaStreamAndSequentialCapabilityProbe(t *testing.T) {
 		}
 		reply := "Hello!"
 		w.Header().Set("Content-Type", "application/x-ndjson")
-		encoded, err := json.Marshal(map[string]any{"message": map[string]string{"content": reply}, "done": false})
+		thinking := ""
+		if body.Think != nil && *body.Think {
+			thinking = "brief"
+		}
+		encoded, err := json.Marshal(map[string]any{"message": map[string]string{"content": reply, "thinking": thinking}, "done": false})
 		if err != nil {
 			t.Error(err)
 			return

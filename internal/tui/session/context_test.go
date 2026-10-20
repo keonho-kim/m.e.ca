@@ -103,7 +103,7 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "", "")
+	a.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}

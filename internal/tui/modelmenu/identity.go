@@ -57,8 +57,6 @@ func IdentityLines(selected connection.Selection, contextLength int, redact func
 	}
 	states := map[string]string{"reported": lang.Text("서버 원본 선언"), "ambiguous": lang.Text("복수 모델 / 동적 라우팅"), "family": lang.Text("모델군·아키텍처 정보만 확인"), "unknown": lang.Text("원본 식별 불가")}
 	lines = append(lines, lang.Text("식별 상태: ")+states[report.State()])
-	sources := map[string]string{"server": lang.Text("서버 원본 ID와 카탈로그 일치"), "catalogue": lang.Text("서빙 이름과 카탈로그 일치"), "manual": lang.Text("사용자 TOML 매핑"), "generic": lang.Text("특화 적용 없음")}
-	lines = append(lines, lang.Text("적용 프로파일: ")+selected.Profile, lang.Text("프로파일 근거: ")+sources[report.ProfileSource])
 	if report.Unavailable {
 		lines = append(lines, lang.Text("메타데이터를 조회할 수 없습니다 (미지원·권한·응답·시간 제한)."))
 		if report.Failure != "" {
@@ -66,11 +64,11 @@ func IdentityLines(selected connection.Selection, contextLength int, redact func
 		}
 	}
 	if report.Incomplete {
-		lines = append(lines, lang.Text("메타데이터가 불완전하여 자동 특화를 보류했습니다."))
+		lines = append(lines, lang.Text("일부 메타데이터를 확인하지 못했습니다."))
 	}
 	control := lang.Text("미지원 / 미검증")
 	if selected.ThinkingSupported {
-		control = lang.Text("Available through model metadata / profile")
+		control = lang.Text("Available through server metadata / provider API")
 	}
 	lines = append(lines, lang.Text("Thinking ON/OFF: ")+control, lang.Text("Advertised Thinking options and verified controls are separate."), lang.Text("서버 선언은 실제 가중치의 동일성을 보증하지 않습니다."), "")
 	for _, fact := range report.Facts {

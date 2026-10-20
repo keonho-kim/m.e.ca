@@ -1,4 +1,4 @@
-// Purpose: Verify explicit alias profiles and Thinking preferences transfer without response generation.
+// Purpose: Verify opaque serving aliases and explicit Thinking preferences transfer without response generation.
 // Pattern: Provider setup integration tests.
 // Usage: go test ./internal/provider/setup.
 // Related: internal/provider/setup/setup.go, internal/provider/diagnostic/control.go.
@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestPrepareAliasTransfersDeclaredProfileAndThinking(t *testing.T) {
+func TestPrepareAliasTransfersThinkingWithoutGenerating(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("setup unexpectedly generated a response: %s %s", r.Method, r.URL.Path)
@@ -24,7 +24,8 @@ func TestPrepareAliasTransfersDeclaredProfileAndThinking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prepared, err := Prepare(context.Background(), connection, "", "team-coder", Defaults{Profile: "ornith-1.5-9b", Thinking: true}, modelconn.Selection{}, nil)
+	on := true
+	prepared, err := Prepare(context.Background(), connection, "", "team-coder", Defaults{Thinking: &on}, modelconn.Selection{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,10 +34,32 @@ func TestPrepareAliasTransfersDeclaredProfileAndThinking(t *testing.T) {
 	}
 	t.Cleanup(prepared.Client.Close)
 	selection := prepared.Selection
-	if selection.Profile != "ornith-1.5-9b" || selection.Model != "team-coder" || !selection.ThinkingSupported {
+	if selection.Model != "team-coder" || !selection.ThinkingSupported {
 		t.Fatalf("selection=%+v", selection)
 	}
 	if selection.Thinking == nil || !*selection.Thinking {
 		t.Fatalf("declared/default Thinking=%+v", selection)
+	}
+}
+
+func TestPrepareDefaultLeavesReasoningToServer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected generation: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+	conn, err := modelconn.New(modelconn.VLLM, server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := Prepare(context.Background(), conn, "", "models/bin/model114", Defaults{}, modelconn.Selection{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer prepared.Client.Close()
+	if prepared.Selection.Thinking != nil || prepared.Selection.Effort() != "" || !prepared.Selection.ThinkingSupported {
+		t.Fatalf("selection=%+v", prepared.Selection)
 	}
 }

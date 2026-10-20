@@ -4,19 +4,24 @@
 
 전역 설정은 ~/.v/config.toml, 대화와 세션별 선택은 프로젝트별 세션 DB, API Key는 OS 자격 증명 저장소에 보관한다.
 
+## 화면 언어
+
+최상위 `language`의 기본값은 `"auto"`다. `"ko"`·`"en"`은 시스템 로캘보다 우선하는 한국어·영어 설정이며 다른 값은 거절한다. !language에서 선택하면 전역 파일에 저장하고 현재 TUI에 즉시 적용한다. 직접 파일을 수정하면 재시작 후 적용한다. 새 대화·이전 대화 선택 화면에도 이 값을 사용하며 모델 응답 언어는 사용자 요청을 따른다. 자동 선택 기준과 메뉴 조작은 [사용 가이드](usage.md#화면-언어)를 따른다.
+
 ## 모델 연결 재사용
 
 !model의 연결 설정과 선택을 저장하면 세션 DB에 선택을 저장하고 마지막으로 직접 선택한 연결을 config.toml의 [model]에 기록한다. 저장 값은 provider·endpoint·name(서빙 ID)·credential_ref다. API Key 본문은 macOS Keychain 또는 Linux Secret Service에만 저장한다.
 
-기존 세션의 선택이 우선이며 선택이 없는 새 세션은 전역 [model]을 사용한다. 복원 시 모델 식별·기능을 다시 확인한다. 전역 기본 연결 저장에 실패해도 이미 저장된 현재 세션 연결은 유지하고 오류를 알린다. Thinking은 세션 선택 또는 전역 기본값을 따르고, 별칭 식별은 정확한 provider/endpoint/model 바인딩을 사용한다. [모델 프로파일](model-profiles.md)을 참고한다.
+기존 세션의 선택이 우선이며 선택이 없는 새 세션은 전역 [model]을 사용한다. 복원 시 모델 식별·기능을 다시 확인한다. 전역 기본 연결 저장에 실패해도 이미 저장된 현재 세션 연결은 유지하고 오류를 알린다. Thinking은 세션 선택 또는 전역 기본값을 따르며 생략하면 서버 설정을 사용한다. 원본 식별은 서버가 제공한 정보를 표시한다. [모델 연결](model-connections.md)을 참고한다.
 
 ## 메인 에이전트와 보조 역할의 추론 설정
 
 메인 에이전트는 최상위 **[agent]**, 요약과 연결 진단은 [compaction]·[diagnostics]에서 설정한다. Provider별 기본값을 따로 선택하지 않는다. Bootstrap은 기본값을 기록하며 생략한 필드는 현재 기본값을 사용한다. 명시한 값은 자동 덮어쓰지 않으며 직접 수정은 재시작 후 적용한다.
 
 ```toml
+language = "auto"
 context_length = 262144
-thinking = false
+# thinking = true 또는 false를 지정하면 전역 기본값을 덮어쓴다. 생략 시 서버 기본값.
 
 [agent]
 thinking = "inherit"
@@ -46,7 +51,7 @@ max_output_tokens = 12800
 
 temperature는 유한한 0~2이며 명시한 0도 전송한다. max_output_tokens는 0~1073741824다. 0은 유효 context length의 75%를 내림 계산하는 자동 모드이며 양수는 수동 상한이다. 서버가 공개한 context·출력 한도와 남은 입력 공간도 적용한다. 서버가 제시한 한도와 설정한 상한을 함께 지키며 모델 출력 한도 초과를 명시적으로 보고한다.
 
-메인 에이전트는 사용자의 Thinking/effort를 계승한다. Compaction은 OFF 제어가 모델 메타데이터나 검토된 프로파일에 등록된 조합에서만 Thinking을 끄며, 제어를 확인할 수 없으면 사용자 선택을 유지한다. 연결 진단은 사용자가 !model의 연결 진단 또는 v --diagnose를 선택했을 때 ON/OFF·effort를 대조한다. 출력 상한과 전체 실행 예산은 별도다. Ollama에는 options.temperature, 호환 Chat·LM Studio Responses에는 temperature를 전송한다.
+메인 에이전트는 사용자의 Thinking/effort를 계승한다. Compaction은 서버 메타데이터 또는 Provider API에 OFF 요청 규약이 있는 연결에서 Thinking을 끄며, 제어 규약이 없으면 사용자 선택을 유지한다. 실제 OFF 동작은 명시적 연결 진단으로 확인한다. 연결 진단은 사용자가 !model의 연결 진단 또는 v --diagnose를 선택했을 때 ON/OFF·effort를 대조한다. 출력 상한과 전체 실행 예산은 별도다. Ollama에는 options.temperature, 호환 Chat·LM Studio Responses에는 temperature를 전송한다.
 
 ## 자동 승인과 실행 예산
 

@@ -31,7 +31,7 @@ func thinkingControl(c *Client, ctx context.Context, model string) (bool, error)
 			return false, err
 		}
 	}
-	return diagnostic.ThinkingControl(c.connection.Kind, model, c.profileID, c.modelInfo)
+	return diagnostic.ThinkingControl(c.connection.Kind, c.modelInfo), nil
 }
 func diagnose(c *Client, ctx context.Context, model string) (connection.Capabilities, error) {
 	supported, err := thinkingControl(c, ctx, model)

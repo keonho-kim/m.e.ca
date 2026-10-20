@@ -19,7 +19,7 @@ func TestInferenceCompaction(t *testing.T) {
 	repo := &repository{mark: Watermark{Tokens: 256000, Usage: 1, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "preserve this objective"}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Inference: &roles, Redact: func(s string) string { return s }}
 	calls := 0
-	changed, err := c.Refresh(context.Background(), func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		if r.Temperature == nil || *r.Temperature != 0.15 || r.MaxOutput != 5000 {
 			t.Fatalf("wrong summary settings: %+v", r)

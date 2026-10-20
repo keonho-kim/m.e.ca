@@ -5,6 +5,7 @@
 package sqlite
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"fmt"
 	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	selectioncheck "github.com/keonho-kim/v-code/internal/provider/selection"
+	"io"
 )
 
 func (s *Store) SaveSelection(ctx context.Context, session string, selection modelconn.Selection) error {
@@ -51,9 +53,14 @@ func (s *Store) Selection(ctx context.Context, session string) (modelconn.Select
 		return modelconn.Selection{}, fmt.Errorf("model selection exceeds limit")
 	}
 	var selected modelconn.Selection
-	err = json.Unmarshal(body, &selected)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&selected)
 	if err != nil {
 		return selected, err
+	}
+	if decoder.Decode(new(any)) != io.EOF {
+		return selected, fmt.Errorf("invalid trailing model selection content")
 	}
 	return selected, selectioncheck.Validate(selected)
 }

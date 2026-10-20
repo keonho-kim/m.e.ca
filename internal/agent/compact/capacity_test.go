@@ -17,7 +17,7 @@ func TestCapacityLargeInstructionsAndSummary(t *testing.T) {
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	output := strings.Repeat("detail ", 4000)
 	calls := 0
-	changed, err := c.Refresh(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		return emit(modelapi.Event{Delta: output, Done: true})
 	})

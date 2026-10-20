@@ -78,7 +78,7 @@ v uninstall
 
 파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용하고, 삭제는 같은 셸에서 `rm` 등으로 수행하며, 소스 생성·본문 수정·이동에는 diff와 원본 버전 검사를 제공하는 전용 파일 도구를 권장합니다. 셸의 생성·수정·이동은 호스트 사용자 권한과 위험 작업의 필수 승인 정책을 따릅니다.
 
-모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-profiles.md#native-tool-calling)
+모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-connections.md#native-tool-calling)
 
 1. `!model`에서 Provider·주소·모델을 선택합니다. 인증이 필요한 서버는 API Key도 입력합니다.
 2. 자연어로 작업을 요청합니다. 참조할 파일은 `!dir`에서 선택할 수 있습니다.
@@ -87,6 +87,7 @@ v uninstall
 | 명령 | 기능 |
 | --- | --- |
 | `!model` | 모델 연결, 추론 켜기·끄기와 지원되는 추론 강도 선택 |
+| `!language` | 화면 언어 선택 · 시스템 기본값 / 한국어 / English |
 | `!dir [path]` | 파일·디렉터리 탐색 |
 | `!new` | 같은 프로젝트에서 새 세션 시작 · 전역 모델 연결 유지 |
 | `!quit` | 현재 작업을 취소·정리하고 종료 |
@@ -101,9 +102,9 @@ v uninstall
 
 작업이 끝나면 마지막 응답 아래에 소요 시간·이번 작업의 실제 INPUT/OUTPUT·평균 TPS를 흐린 글씨로 가운데 표시합니다. 이 요약은 대화를 다시 열어도 보존됩니다.
 
-화면 언어는 시스템 로캘에 따라 한국어·영어로 표시합니다. 예를 들어 Thinking은 `추론`으로 보이며 설정값·모델 ID·명령·출력 원문은 유지합니다. 한국어로 실행하려면 `LC_MESSAGES=ko_KR.UTF-8 v`를 사용할 수 있습니다. [언어 선택 기준](docs/usage.md#화면-언어)을 참고하세요.
+화면 언어는 `!language`에서 선택하거나 `~/.v/config.toml`의 `language`에 `auto`·`ko`·`en`을 지정합니다. 기본값 `auto`는 시스템 로캘을 따릅니다. 메뉴 선택은 저장 후 즉시 적용하며 직접 파일을 수정하면 재시작 후 반영합니다. 설정값·모델 ID·명령·출력 원문과 사용자·모델의 대화 본문은 유지합니다. [언어 선택 기준](docs/usage.md#화면-언어)을 참고하세요.
 
-[자세한 사용법과 키맵 →](docs/usage.md) · [모델 식별·프로파일 →](docs/model-profiles.md)
+[자세한 사용법과 키맵 →](docs/usage.md) · [모델 연결·추론 설정 →](docs/model-connections.md)
 
 ## 설정
 
@@ -120,6 +121,8 @@ v uninstall
 추론 설정은 Provider가 아닌 **역할별**로 적용합니다. 기본 temperature는 메인 에이전트 `1.0`, 요약·연결 진단 `0.2`입니다. 출력 토큰 기본 상한은 메인 에이전트가 유효 context length의 `75%`, Compaction이 `8,192`, 연결 진단이 `12,800`입니다.
 
 ```toml
+language = "auto" # auto: 시스템 기본값, ko: 한국어, en: English
+
 [agent]
 temperature = 1.0
 max_output_tokens = 0 # 유효 context length의 75% 자동 계산
@@ -163,7 +166,7 @@ go mod verify
 | [사용 가이드](docs/usage.md) | 모델 연결, 키맵, 승인, 스트림과 오류 복구 |
 | [설정과 대화 보존](docs/configuration.md) | 역할별 인자, 프롬프트, Compaction, 세션 저장 |
 | [에이전트 작동 방식](docs/runtime.md) | 단일 에이전트, native tools, 결과 확인, 종료 |
-| [모델 프로파일](docs/model-profiles.md) | 모델 식별, 서빙 별칭, 모델별 Thinking 제어 |
+| [모델 연결](docs/model-connections.md) | 서버 원본 표시, 서빙 한도, Thinking 설정과 진단 |
 | [실행 경계](docs/execution-boundary.md) | 호스트 개발 환경, 승인·파일 검사와 실행 권한 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |

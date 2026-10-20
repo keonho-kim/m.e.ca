@@ -55,6 +55,7 @@ var controls = []translation{
 	{"", "Keyboard help", "키 안내"},
 	{"", "Browse files", "파일 탐색"},
 	{"", "Select model · Thinking settings", "모델 선택 · 추론 설정"},
+	{"", "Interface language", "언어 설정"},
 	{"", "New session", "새 세션"},
 	{"", "Exit application", "앱 종료"},
 	{"", "Fold tools", "도구 접기"},

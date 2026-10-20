@@ -1,4 +1,4 @@
-// Purpose: Select and persist effort choices advertised by model metadata or reviewed profiles.
+// Purpose: Select and persist effort choices advertised by server metadata or the serving API.
 // Pattern: Event-loop settings use case.
 // Usage: The model menu saves an effort choice; explicit connection diagnostics probe it separately.
 // Related: internal/provider/selection/effort.go, internal/tui/session/diagnostic.go, internal/storage/sqlite/selection.go.
@@ -13,7 +13,7 @@ import (
 func (a *app) openEffort() {
 	values := selectionpolicy.EffortValues(a.selection)
 	if len(values) == 0 {
-		a.status = a.language.Text("Thinking effort is unavailable or undocumented for this model and provider")
+		a.status = a.language.Text("Thinking effort is unavailable for this connection")
 		return
 	}
 	a.page = "effort"
@@ -54,10 +54,15 @@ func (a *app) chooseEffort() {
 }
 
 func (a *app) applyEffort(value string) error {
-	if a.selection.Thinking == nil && !a.selection.ThinkingSupported && value != "" {
-		return fmt.Errorf("%s", a.language.Text("Thinking ON/OFF control is unverified"))
-	}
 	next := a.selection
+	if next.Thinking == nil && value != "" {
+		info := next.Details
+		if info == nil || info.Reasoning == nil || !info.Reasoning.Enabled() || info.Reasoning.Off {
+			return fmt.Errorf("%s", a.language.Text("Select Thinking ON or OFF before choosing effort"))
+		}
+		on := true
+		next.Thinking = &on
+	}
 	next.ReasoningEffort = &value
 	if err := a.opts.Store.SaveSelection(a.ctx, a.opts.Session.ID, next); err != nil {
 		return err

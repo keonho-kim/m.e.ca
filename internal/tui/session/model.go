@@ -22,8 +22,7 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 	a.setupRevision++
 	revision := a.setupRevision
 	previous := a.selection
-	binding := a.opts.Config.ModelPreference(connection, model)
-	defaults := setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking, Profile: binding.Profile, ReasoningEffort: binding.ReasoningEffort}
+	defaults := setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking}
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()

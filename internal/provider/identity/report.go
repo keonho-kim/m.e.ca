@@ -1,7 +1,7 @@
 // Purpose: Represent bounded server identity evidence without transport or model-control policy.
 // Pattern: Simple Module.
 // Usage: Provider adapters collect facts; setup, SQLite and the TUI consume reports.
-// Related: internal/provider/discovery/identify.go, internal/provider/setup/identity.go.
+// Related: internal/provider/discovery/identify.go, internal/provider/setup/setup.go.
 package identity
 
 import (
@@ -21,12 +21,11 @@ type Fact struct {
 
 // Reports describe server declarations, never prove the actual loaded weights.
 type Report struct {
-	Failure       string `json:"failure,omitempty"`
-	ProfileSource string `json:"profile_source,omitempty"`
-	Facts         []Fact `json:"facts,omitempty"`
-	Unavailable   bool   `json:"unavailable,omitempty"`
-	Incomplete    bool   `json:"incomplete,omitempty"`
-	Routed        bool   `json:"routed,omitempty"`
+	Failure     string `json:"failure,omitempty"`
+	Facts       []Fact `json:"facts,omitempty"`
+	Unavailable bool   `json:"unavailable,omitempty"`
+	Incomplete  bool   `json:"incomplete,omitempty"`
+	Routed      bool   `json:"routed,omitempty"`
 }
 
 func safe(value string) bool {
@@ -95,11 +94,6 @@ func (r Report) State() string {
 func (r Report) Validate() error {
 	if r.Failure != "" && !safe(r.Failure) {
 		return fmt.Errorf("invalid model identity failure detail")
-	}
-	switch r.ProfileSource {
-	case "", "server", "catalogue", "manual", "generic":
-	default:
-		return fmt.Errorf("invalid model profile source")
 	}
 	if len(r.Facts) > 64 {
 		return fmt.Errorf("too many model identity facts")

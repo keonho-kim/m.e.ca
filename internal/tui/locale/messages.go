@@ -5,14 +5,15 @@
 package locale
 
 var messages = []translation{
+	{"", "API options; run connection diagnostics to verify this model", "공급자 API의 요청 옵션입니다. 실제 지원은 연결 진단으로 확인하세요"},
 	{"", "Worked for", "작업 시간"},
 	{"", "Connecting", "연결 중"},
 	{"", "Stop the current task before changing providers", "현재 작업을 중지한 뒤 모델 공급자를 변경하세요"},
 	{"", "Stop the current task before changing settings", "현재 작업을 중지한 뒤 설정을 변경하세요"},
 	{"", "Stop the current task before changing Thinking effort", "현재 작업을 중지한 뒤 추론 강도를 변경하세요"},
 	{"", "Thinking ON/OFF control is unavailable or unverified for this model", "이 모델의 추론 켜기·끄기는 지원하지 않거나 확인되지 않았습니다"},
-	{"", "Thinking ON/OFF control is unverified", "추론 켜기·끄기 제어가 확인되지 않았습니다"},
-	{"", "Thinking effort is unavailable or undocumented for this model and provider", "이 모델과 공급자의 추론 강도는 지원하지 않거나 확인되지 않았습니다"},
+	{"", "Select Thinking ON or OFF before choosing effort", "강도를 선택하려면 추론 켜짐 또는 꺼짐을 먼저 선택하세요"},
+	{"", "Thinking effort is unavailable for this connection", "이 연결에서 추론 강도를 설정할 수 없습니다"},
 	{"", "Reasoning choices changed; reopen the menu", "추론 선택지가 바뀌었습니다. 메뉴를 다시 여세요"},
 	{"", "One task is already active; draft preserved", "이미 작업 중입니다. 입력한 초안을 유지합니다"},
 	{"", "Select a model using !model", "!model에서 모델을 선택하세요"},

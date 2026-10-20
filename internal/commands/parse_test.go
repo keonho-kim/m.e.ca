@@ -15,6 +15,7 @@ func TestParse(t *testing.T) {
 	}{
 		{"   ", Empty, ""},
 		{"!model", Model, ""},
+		{"!language", Language, ""},
 		{"!new", NewSession, ""},
 		{"!dir", Directory, ""},
 		{`!dir "src/my components/"`, Directory, "src/my components/"},
@@ -33,7 +34,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseRejectsUnknownOrAmbiguousCommands(t *testing.T) {
-	for _, input := range []string{"!unknown", "!model extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
+	for _, input := range []string{"!unknown", "!model extra", "!language extra", "!new extra", "!quit extra", "!dir a b", `!dir "unterminated`, "!dir a\\", "!dir\x00secret"} {
 		if _, err := Parse(input); err == nil {
 			t.Errorf("accepted invalid command %q", input)
 		}

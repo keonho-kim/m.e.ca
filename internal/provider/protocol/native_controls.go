@@ -1,4 +1,4 @@
-// Purpose: Translate advertised native reasoning choices without expanding effort scales.
+// Purpose: Encode reasoning choices using provider request fields and literal server levels.
 // Pattern: Provider wire adapter.
 // Usage: Prepared clients call nativeControls while encoding generation requests.
 // Related: internal/provider/connection/reasoning.go, internal/provider/protocol/controls.go.
@@ -20,6 +20,9 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 			return controls, fmt.Errorf("explicit Thinking is required for effort")
 		}
 		return controls, nil
+	}
+	if kind == connection.VLLM || kind == connection.SGLang {
+		return templateControls(kind, r, request)
 	}
 	if !*request.Thinking {
 		if !r.Off {
@@ -53,6 +56,22 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 		// medium; it does not expose additional strength choices in the menu.
 		if level == "" {
 			controls.ReasoningEffort = "medium"
+		}
+	}
+	return controls, nil
+}
+
+func templateControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
+	on := *request.Thinking
+	if on && !r.Enabled() || !on && !r.Off {
+		return Controls{}, fmt.Errorf("Thinking choice is unavailable for this connection")
+	}
+	controls := Controls{Template: map[string]any{"enable_thinking": on, "thinking": on}}
+	if on && request.ReasoningEffort != "" {
+		if kind == connection.SGLang {
+			controls.Template["reasoning_effort"] = request.ReasoningEffort
+		} else {
+			controls.ReasoningEffort = request.ReasoningEffort
 		}
 	}
 	return controls, nil

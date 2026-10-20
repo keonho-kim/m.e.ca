@@ -82,8 +82,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		return fmt.Errorf("select a model with !model before using noninteractive mode")
 	}
 	vault := &credentials.Vault{State: state}
-	binding := cfg.ModelPreference(selected.Connection, selected.Model)
-	prepared, err := setup.Prepare(ctx, selected.Connection, "", selected.Model, setup.Defaults{ContextLength: cfg.ContextLength, Thinking: cfg.Thinking, Profile: binding.Profile, ReasoningEffort: binding.ReasoningEffort}, selected, vault)
+	prepared, err := setup.Prepare(ctx, selected.Connection, "", selected.Model, setup.Defaults{ContextLength: cfg.ContextLength, Thinking: cfg.Thinking}, selected, vault)
 	if err != nil {
 		return err
 	}

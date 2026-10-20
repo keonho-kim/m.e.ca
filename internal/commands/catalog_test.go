@@ -1,4 +1,4 @@
-// Purpose: Verify command suggestions and parsing share the same four-command catalog.
+// Purpose: Verify command suggestions and parsing share the same local command catalog.
 // Pattern: Behavioral tests.
 // Usage: go test ./internal/commands -run TestCommandSuggestions.
 // Related: internal/commands/catalog.go, internal/commands/parse.go.
@@ -8,7 +8,7 @@ import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!", describeCommand)
-	if len(all) != 4 {
+	if len(all) != 5 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {
@@ -38,6 +38,8 @@ func TestCommandSearchMatchesNamesAndDescriptions(t *testing.T) {
 		{"!odel", []string{"!model"}},
 		{"!모델", []string{"!model"}},
 		{"!추론", []string{"!model"}},
+		{"!lang", []string{"!language"}},
+		{"!언어", []string{"!language"}},
 		{"!새", []string{"!new"}},
 		{"!d", []string{"!dir", "!model"}},
 		{"!unknown", nil},

@@ -15,13 +15,15 @@ func (a *app) openModel() {
 	a.choices = []string{"Connect provider", "Thinking", modelmenu.EffortLabel(a.selection, a.language), "모델 정보", "연결 진단"}
 	a.choice = 0
 	a.thinkingChoice = a.opts.Config.Thinking
-	if a.selection.Thinking != nil {
-		a.thinkingChoice = *a.selection.Thinking
+	if a.selection.Model != "" || a.selection.Thinking != nil {
+		a.thinkingChoice = a.selection.Thinking
 	}
 	a.menuInput.Set("")
 }
 func (a *app) choose() {
 	switch a.page {
+	case "language":
+		a.chooseLanguage()
 	case "quit":
 		if a.choice == 1 {
 			a.requestExit()
@@ -48,9 +50,12 @@ func (a *app) choose() {
 				a.status = a.language.Text("Thinking ON/OFF control is unavailable or unverified for this model")
 				return
 			}
-			a.changeValue = "OFF"
-			if a.thinkingChoice {
-				a.changeValue = "ON"
+			a.changeValue = "DEFAULT"
+			if a.thinkingChoice != nil {
+				a.changeValue = "OFF"
+				if *a.thinkingChoice {
+					a.changeValue = "ON"
+				}
 			}
 			a.globalMenu()
 		} else if a.choice == 2 {

@@ -46,7 +46,7 @@ func TestIdentifyProviderMetadata(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			client, err := NewClient(conn, "secret", "")
+			client, err := NewClient(conn, "secret")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -73,7 +73,7 @@ func TestIdentifyFailureAndCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := NewClient(conn, "", "")
+	client, err := NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}

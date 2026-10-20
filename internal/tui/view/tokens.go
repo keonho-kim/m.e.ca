@@ -1,4 +1,4 @@
-// Purpose: Render right-aligned token counts and measured throughput beside the run status.
+// Purpose: Fit token counts beside run activity while keeping compaction visible in narrow headers.
 // Pattern: Terminal renderer.
 // Usage: Chat, menu and file views share topLine while retaining their own content layout.
 // Related: internal/tui/view/chat.go, internal/tui/view/menu.go, internal/tui/view/files.go.
@@ -17,10 +17,17 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 	if activity.TokensPerSecond != nil {
 		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
 	}
-	if uniseg.StringWidth(tokens+rate+activity.Label())+1 <= width {
+	label := activity.Label()
+	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
+		label = activity.compressionLabel()
+	}
+	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
+		Text(screen, 0, 0, width, label, tcell.StyleDefault.Bold(true))
+		return
+	}
+	if uniseg.StringWidth(tokens+rate+label)+1 <= width {
 		tokens += rate
 	}
-	label := activity.Label()
 	if title != "" && !activity.Compressing {
 		label += " · " + title
 	}

@@ -51,3 +51,18 @@ func TestChatConnectionRetryDiscardsPreviousAnswer(t *testing.T) {
 		t.Fatal("failed attempt's answer satisfied the retry")
 	}
 }
+
+func TestThinkingDiagnosticRejectsIgnoredControls(t *testing.T) {
+	for _, ignoresOn := range []bool{true, false} {
+		generate := generatorFunc(func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+			thinking := ""
+			if !ignoresOn {
+				thinking = "always thinking"
+			}
+			return emit(modelapi.Event{Delta: "391", Thinking: thinking, Done: true})
+		})
+		if _, err := Check(context.Background(), generate, "models/bin/model114", true, false, nil); err == nil {
+			t.Fatalf("ignored controls accepted: ignoresOn=%t", ignoresOn)
+		}
+	}
+}

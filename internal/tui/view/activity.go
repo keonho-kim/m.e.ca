@@ -32,8 +32,12 @@ func (a Activity) Label() string {
 		label += fmt.Sprintf(" %02d : %02d : %02d", seconds/3600, seconds/60%60, seconds%60)
 	}
 	if a.Compressing {
-		dots := strings.Repeat(".", max(1, min(3, a.Dots)))
-		label += fmt.Sprintf(" · %s %-3s", a.Language.Text("Compress Memory"), dots)
+		label += " · " + a.compressionLabel()
 	}
 	return label
+}
+
+func (a Activity) compressionLabel() string {
+	dots := strings.Repeat(".", max(1, min(3, a.Dots)))
+	return fmt.Sprintf("%s %-3s", a.Language.Text("Compress Memory"), dots)
 }

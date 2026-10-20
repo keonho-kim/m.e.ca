@@ -66,7 +66,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 
 func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 	for _, test := range []struct{ name, page string }{
-		{"!model", "model"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
+		{"!model", "model"}, {"!language", "language"}, {"!dir", "files"}, {"!quit", "chat"}, {"!new", "chat"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

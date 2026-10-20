@@ -1,7 +1,7 @@
-// Purpose: Verify effort defaults and explicit session preferences are revalidated during connection setup.
+// Purpose: Verify server defaults and explicit session preferences are revalidated during connection setup.
 // Pattern: Provider setup integration tests.
 // Usage: go test ./internal/provider/setup -run TestEffort.
-// Related: internal/provider/setup/setup.go, internal/provider/profile/effort.go.
+// Related: internal/provider/setup/setup.go, internal/provider/connection/reasoning_options.go.
 package setup
 
 import (
@@ -24,15 +24,16 @@ func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defaults := Defaults{Profile: "qwen3.8-27b", ReasoningEffort: "medium"}
+	defaults := Defaults{}
 	for _, choice := range []*string{nil, ptr("low"), ptr("")} {
-		previous := modelconn.Selection{Connection: connection, Model: "team-coder", Profile: defaults.Profile, ReasoningEffort: choice}
+		off := false
+		previous := modelconn.Selection{Connection: connection, Model: "team-coder", Thinking: &off, ReasoningEffort: choice, Details: &modelconn.ModelInfo{ID: "team-coder"}}
 		prepared, err := Prepare(context.Background(), connection, "", "team-coder", defaults, previous, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(prepared.Client.Close)
-		want := "medium"
+		want := ""
 		if choice != nil {
 			want = *choice
 		}

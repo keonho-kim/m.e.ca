@@ -104,7 +104,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 				controls = append(controls[:1], controls[2:]...)
 			}
 		}
-	case "effort":
+	case "effort", "language":
 		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "적용"}, {Key: "Esc", Label: "닫기"}}
 	case "modelinfo":
 		controls = []view.Shortcut{{Key: "PgUp/Dn", Label: "스크롤"}, {Key: "Enter", Label: "모델 메뉴"}, {Key: "Esc", Label: "모델 메뉴"}}

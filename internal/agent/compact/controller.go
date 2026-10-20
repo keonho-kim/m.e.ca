@@ -1,6 +1,6 @@
 // Purpose: Compact a bounded projection of archived dialogue in one model call and atomically publish a validated memory revision.
 // Pattern: Use Case.
-// Usage: Refreshed only at a task decision boundary, never during native call assembly or approval.
+// Usage: The runtime refreshes at decision boundaries and receives a start notification before preparation.
 // Related: internal/agent/compact/types.go, internal/agent/compact/context.go, internal/storage/sqlite/memory.go.
 package compact
 
@@ -26,16 +26,16 @@ type Controller struct {
 func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 	return c.Repository.AddContextTokens(ctx, c.Session, count)
 }
-func (c *Controller) Refresh(ctx context.Context, generate Generate) (bool, error) {
-	return c.refresh(ctx, generate, false)
+func (c *Controller) Refresh(ctx context.Context, started func() error, generate Generate) (bool, error) {
+	return c.refresh(ctx, started, generate, false)
 }
 
 // Compact responds to a confirmed context-capacity failure at a safe boundary.
-func (c *Controller) Compact(ctx context.Context, generate Generate) (bool, error) {
-	return c.refresh(ctx, generate, true)
+func (c *Controller) Compact(ctx context.Context, started func() error, generate Generate) (bool, error) {
+	return c.refresh(ctx, started, generate, true)
 }
 
-func (c *Controller) refresh(ctx context.Context, generate Generate, force bool) (bool, error) {
+func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, force bool) (bool, error) {
 	if err := c.Settings.Check(); err != nil {
 		return false, err
 	}
@@ -68,6 +68,11 @@ func (c *Controller) refresh(ctx context.Context, generate Generate, force bool)
 	threshold := max(1, window-reserve)
 	if !force && mark.Tokens < int64(threshold) {
 		return false, nil
+	}
+	if started != nil {
+		if err := started(); err != nil {
+			return false, err
+		}
 	}
 	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, min(c.Settings.KeepRecentTokens, window/4)*3)
 	if err != nil {

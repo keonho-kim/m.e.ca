@@ -16,12 +16,15 @@ type SelectionStore interface {
 	SaveSelection(context.Context, string, modelconn.Selection) error
 }
 
-func Thinking(ctx context.Context, store SelectionStore, saveConfig func(config.Config) error, session string, current config.Config, selection modelconn.Selection, value, global bool) (config.Config, modelconn.Selection, error) {
-	if !selection.ThinkingSupported {
+func Thinking(ctx context.Context, store SelectionStore, saveConfig func(config.Config) error, session string, current config.Config, selection modelconn.Selection, value *bool, global bool) (config.Config, modelconn.Selection, error) {
+	if value != nil && !selection.ThinkingSupported {
 		return current, selection, fmt.Errorf("Thinking ON/OFF control is unavailable or unverified")
 	}
 	next := selection
-	next.Thinking = &value
+	next.Thinking = value
+	if value == nil {
+		next.ReasoningEffort = nil
+	}
 	previous := current
 	updated := previous
 	if global {

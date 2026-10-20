@@ -25,6 +25,7 @@ type MenuDisplay struct {
 	Choices, Details       []string
 	Selected               int
 	Thinking               *bool
+	ThinkingChoice         bool
 	ThinkingSupported      bool
 	ThinkingOnOnly         bool
 }
@@ -79,8 +80,8 @@ func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
 	visible := max(1, h-y-2)
 	start := max(0, display.Selected-visible+1)
 	for i := start; i < min(len(display.Choices), start+visible); i++ {
-		if display.Thinking != nil && i == 1 {
-			Thinking(screen, y, w, *display.Thinking, display.ThinkingSupported, i == display.Selected, display.ThinkingOnOnly, display.Language)
+		if display.ThinkingChoice && i == 1 {
+			Thinking(screen, y, w, display.Thinking, display.ThinkingSupported, i == display.Selected, display.ThinkingOnOnly, display.Language)
 		} else {
 			Text(screen, 0, y, w, display.Choices[i], SelectionStyle(i == display.Selected))
 		}

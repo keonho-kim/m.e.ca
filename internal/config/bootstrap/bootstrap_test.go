@@ -81,6 +81,13 @@ func TestBootstrapRecordsRoleDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !strings.Contains(string(content), "language = 'auto'") {
+		t.Fatal("default interface language missing from bootstrap configuration")
+	}
+	if strings.Contains(string(content), "model_profiles") || strings.Contains(strings.Split(string(content), "[agent]")[0], "thinking =") {
+		t.Fatal("bootstrap did not preserve server reasoning defaults")
+	}
+
 	for _, role := range []string{"agent", "compaction", "diagnostics"} {
 		if !strings.Contains(string(content), "["+role+"]") {
 			t.Fatalf("missing role defaults: %s", role)

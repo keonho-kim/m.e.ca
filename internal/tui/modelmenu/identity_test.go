@@ -23,10 +23,10 @@ func TestIdentityContextBudgets(t *testing.T) {
 }
 
 func TestIdentityControlRegistrationDoesNotClaimDiagnosticSuccess(t *testing.T) {
-	selected := connection.Selection{Model: "Ornith-1.5-35B-A3B", Profile: "ornith-1.5-35b-a3b", ThinkingSupported: true, Identity: &identity.Report{ProfileSource: "catalogue"}}
+	selected := connection.Selection{Model: "Ornith-1.5-35B-A3B", ThinkingSupported: true, Identity: &identity.Report{}}
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		text := strings.Join(IdentityLines(selected, 262144, func(s string) string { return s }, lang), "\n")
-		if !strings.Contains(text, lang.Text("Available through model metadata / profile")) || strings.Contains(text, "연결 진단에서 검증됨") || strings.Contains(text, "Verified by connection diagnostics") {
+		if !strings.Contains(text, lang.Text("Available through server metadata / provider API")) || strings.Contains(text, "연결 진단에서 검증됨") || strings.Contains(text, "Verified by connection diagnostics") {
 			t.Fatal(text)
 		}
 	}

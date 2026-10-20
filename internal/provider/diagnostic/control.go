@@ -1,26 +1,12 @@
-// Purpose: Determine advertised native or reviewed profile Thinking toggle eligibility.
-// Pattern: Pure Function.
-// Usage: Setup supplies discovered metadata to select controls without generating a response.
-// Related: internal/provider/connection/reasoning.go, internal/provider/profile/effort.go.
+// Purpose: Determine whether the serving API offers both Thinking ON and OFF requests.
+// Pattern: Pure function.
+// Usage: Setup exposes request choices; explicit diagnostics verify actual model behavior.
+// Related: internal/provider/connection/reasoning_options.go, internal/provider/diagnostic/check.go.
 package diagnostic
 
-import (
-	"fmt"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/profile"
-)
+import "github.com/keonho-kim/v-code/internal/provider/connection"
 
-func ThinkingControl(kind modelconn.ProviderKind, model, profileID string, info *modelconn.ModelInfo) (bool, error) {
-	if kind == modelconn.Ollama || kind == modelconn.LMStudio {
-		if info == nil {
-			return false, fmt.Errorf("native model metadata is required")
-		}
-		r := info.Reasoning
-		return r != nil && r.Enabled() && r.Off, nil
-	}
-	selected, err := profile.Resolve(model, profileID)
-	if err != nil {
-		return false, err
-	}
-	return len(selected.ThinkingKeys(kind)) > 0, nil
+func ThinkingControl(kind connection.ProviderKind, info *connection.ModelInfo) bool {
+	options := connection.ReasoningOptions(kind, info)
+	return options.Enabled() && options.Off
 }

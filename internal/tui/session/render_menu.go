@@ -5,7 +5,6 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/provider/profile"
 	"github.com/keonho-kim/v-code/internal/tui/modelmenu"
 	"github.com/keonho-kim/v-code/internal/tui/view"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
@@ -27,11 +26,10 @@ func (a *app) renderMenu(w, h int) {
 		if a.selection.Model != "" {
 			display.Model = a.opts.Vault.Redact(a.selection.Model)
 			display.IdentifiedModel = modelmenu.IdentifiedName(a.selection, a.opts.Vault.Redact)
-			identity := a.selection.Profile
-			if identity == "" || identity == profile.Generic {
-				identity = a.language.Text("unidentified / generic")
+			if display.Status == "" && a.selection.ThinkingSupported && (a.selection.Details == nil || a.selection.Details.Reasoning == nil) {
+				display.Status = a.language.Text("API options; run connection diagnostics to verify this model")
 			}
-			display.Title = a.language.Text("model") + " · " + a.language.Text("Profile") + ": " + identity
+
 		}
 	case "global":
 		display.Title = a.language.Text("thinking") + ": " + a.language.Text(a.changeValue)
@@ -54,10 +52,11 @@ func (a *app) renderMenu(w, h int) {
 		}
 	}
 	if a.page == "model" {
-		display.Thinking = &a.thinkingChoice
+		display.ThinkingChoice = true
+		display.Thinking = a.thinkingChoice
 		display.ThinkingSupported = a.selection.ThinkingSupported
 		if info := a.selection.Details; info != nil && info.Reasoning != nil {
-			display.ThinkingOnOnly = a.selection.Thinking != nil && *a.selection.Thinking && info.Reasoning.Enabled() && !info.Reasoning.Off
+			display.ThinkingOnOnly = info.Reasoning.Enabled() && !info.Reasoning.Off
 		}
 	}
 	view.Menu(a.screen, display, w, h)

@@ -37,7 +37,7 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	on := true
-	if err = s.SaveSelection(ctx, session.ID, modelconn.Selection{Connection: connection, Model: "qwen", Thinking: &on}); err != nil {
+	if err = s.SaveSelection(ctx, session.ID, modelconn.Selection{Connection: connection, Model: "qwen", Thinking: &on, Details: &modelconn.ModelInfo{ID: "qwen", Reasoning: &modelconn.Reasoning{On: true, Off: true}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err = recovery.Restore(ctx, s, session.ID); err != nil {

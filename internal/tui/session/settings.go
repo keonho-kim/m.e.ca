@@ -14,6 +14,6 @@ func (a *app) applySetting(global bool) {
 		return
 	}
 	var err error
-	a.opts.Config, a.selection, err = settingcmd.Thinking(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Session.ID, a.opts.Config, a.selection, a.changeValue == "ON", global)
+	a.opts.Config, a.selection, err = settingcmd.Thinking(a.ctx, a.opts.Store, a.opts.SaveConfig, a.opts.Session.ID, a.opts.Config, a.selection, a.thinkingChoice, global)
 	a.fail(err)
 }

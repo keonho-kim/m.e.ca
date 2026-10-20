@@ -91,13 +91,13 @@ func TestCompactionContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "", "")
+	a.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	on := true
 	effort := "medium"
-	a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Profile: "qwen3.8-27b", Thinking: &on, ReasoningEffort: &effort}
+	a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Thinking: &on, ReasoningEffort: &effort}
 	a.startTask("Continue the earlier goal")
 	drainTask(t, a, false)
 	memory, err := a.opts.Store.Memory(ctx, a.opts.Session.ID)

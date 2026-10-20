@@ -44,6 +44,7 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 		"[defaults]\npermission='allow-all'\n",
 		"[ui]\ninput_max_lines=20\n",
 		"unexpected=true\n",
+		"[[model_profiles]]\nprovider=\"vllm\"\nmodel=\"alias\"\nprofile=\"generic\"\n",
 		"[session]\nrestore_last=true\n",
 		"[ui]\ntheme='classic'\n",
 		"[compaction]\ntarget_input_tokens=16384\n",

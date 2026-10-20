@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+	"github.com/keonho-kim/v-code/internal/config"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"path/filepath"
 	"testing"
@@ -71,7 +72,7 @@ func TestSelectionNewAndPagedConversations(t *testing.T) {
 					}
 				}
 			}()
-			selected, ok, err := Select(ctx, screen, load, sessionstate.Session{ProjectRoot: project, DisplayRoot: project})
+			selected, ok, err := Select(ctx, screen, load, sessionstate.Session{ProjectRoot: project, DisplayRoot: project}, config.LanguageAuto)
 			cancel()
 			<-done
 			if err != nil || !ok || selected.ID != tc.want || selected.ProjectRoot != project {

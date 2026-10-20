@@ -1,61 +1,45 @@
-// Purpose: Validate model selection, identity binding and reasoning choices independently of storage.
+// Purpose: Validate model-bound connection settings independently of storage and model names.
 // Pattern: Simple Module.
 // Usage: Storage adapters validate selections on both write and read.
-// Related: internal/provider/connection/models.go, internal/provider/profile/effort.go.
+// Related: internal/provider/connection/models.go, internal/provider/connection/reasoning_options.go.
 package selection
 
 import (
 	"fmt"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/profile"
+	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"strings"
 )
 
-func Validate(selection modelconn.Selection) error {
-	parsed, err := modelconn.New(selection.Connection.Kind, selection.Connection.Endpoint)
+func Validate(selected connection.Selection) error {
+	parsed, err := connection.New(selected.Connection.Kind, selected.Connection.Endpoint)
 	if err != nil {
 		return err
 	}
-	if parsed.ID != selection.Connection.ID || selection.Model == "" || len(selection.Model) > 512 {
+	if parsed.ID != selected.Connection.ID || strings.TrimSpace(selected.Model) == "" || len(selected.Model) > 512 || strings.ContainsAny(selected.Model, "\r\n\x00") {
 		return fmt.Errorf("invalid model selection")
 	}
-	if selection.Identity != nil {
-		if err := selection.Identity.Validate(); err != nil {
+	if selected.Identity != nil {
+		if err := selected.Identity.Validate(); err != nil {
 			return err
 		}
 	}
-	selected, err := profile.Resolve(selection.Model, selection.Profile)
-	if err != nil {
-		return err
-	}
-	if err = checkEffort(selection, selected); err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkEffort(selected modelconn.Selection, resolved profile.Profile) error {
-	if selected.Details != nil {
-		if selected.Details.ID != selected.Model {
+	if info := selected.Details; info != nil {
+		if info.ID != selected.Model {
 			return fmt.Errorf("model metadata binding mismatch")
 		}
-		if err := selected.Details.Check(); err != nil {
+		if err := info.Check(); err != nil {
 			return err
 		}
-		if control := selected.Details.Reasoning; control != nil {
-			if selected.ThinkingSupported && (!control.Enabled() || !control.Off || selected.Thinking == nil) {
-				return fmt.Errorf("invalid native ON/OFF capability")
-			}
-			if selected.Effort() != "" && selected.Thinking == nil {
-				return fmt.Errorf("native effort requires an explicit Thinking setting")
-			}
-			if selected.Connection.Kind != modelconn.Ollama && selected.Connection.Kind != modelconn.LMStudio {
-				return fmt.Errorf("native reasoning metadata on incompatible provider")
-			}
-			if selected.Thinking != nil && ((!*selected.Thinking && !control.Off) || (*selected.Thinking && !control.Enabled())) {
-				return fmt.Errorf("unsupported native Thinking choice")
-			}
-			return control.CheckEffort(selected.Effort())
-		}
 	}
-	return resolved.CheckEffort(selected.Connection.Kind, selected.Effort())
+	options := connection.ReasoningOptions(selected.Connection.Kind, selected.Details)
+	if selected.ThinkingSupported && (!options.Enabled() || !options.Off) {
+		return fmt.Errorf("invalid ON/OFF request capability")
+	}
+	if selected.Thinking != nil && (*selected.Thinking && !options.Enabled() || !*selected.Thinking && !options.Off) {
+		return fmt.Errorf("unsupported Thinking choice")
+	}
+	if selected.Effort() != "" && selected.Thinking == nil {
+		return fmt.Errorf("effort requires an explicit Thinking setting")
+	}
+	return options.CheckEffort(selected.Effort())
 }

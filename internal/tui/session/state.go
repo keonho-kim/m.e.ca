@@ -92,7 +92,7 @@ type app struct {
 	settings                            policy.Settings
 	selection                           modelconn.Selection
 	client                              *httpclient.Client
-	thinkingChoice                      bool
+	thinkingChoice                      *bool
 	page                                string
 	choices                             []string
 	choice                              int
@@ -113,6 +113,7 @@ type app struct {
 	commandIndex                        int
 	changeValue                         string
 	historyCursor                       int64
+	historyRevision                     int
 	previewOffset                       int
 	pendingConnection                   modelconn.Connection
 }

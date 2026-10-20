@@ -21,11 +21,11 @@ func TestLocalizedThinkingChoicePositions(t *testing.T) {
 		a.selection.ThinkingSupported = true
 		a.openModel()
 		a.render()
-		label := lang.Text("Thinking") + " " + lang.Text("ON") + " / " + lang.Text("OFF")
+		label := lang.Text("Thinking") + " " + lang.Text("DEFAULT") + " / " + lang.Text("ON") + " / " + lang.Text("OFF")
 		if shown := screenLine(a.screen, 3, 80); !strings.Contains(shown, label) {
 			t.Fatal(shown)
 		}
-		x := uniseg.StringWidth(lang.Text("Thinking") + " ")
+		x := uniseg.StringWidth(lang.Text("Thinking") + " " + lang.Text("DEFAULT") + " / ")
 		_, selected, _ := a.screen.Get(x, 3)
 		x += uniseg.StringWidth(lang.Text("ON") + " / ")
 		_, other, _ := a.screen.Get(x, 3)

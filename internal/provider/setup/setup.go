@@ -1,7 +1,7 @@
 // Purpose: Prepare a model connection from metadata and transfer client ownership.
 // Pattern: Connection setup use case.
 // Usage: Session workers call Prepare, then adopt or close the returned client.
-// Related: internal/provider/setup/identity.go, internal/provider/discovery/client.go, internal/tui/session/model.go.
+// Related: internal/provider/connection/reasoning_options.go, internal/provider/discovery/client.go, internal/tui/session/model.go.
 package setup
 
 import (
@@ -19,9 +19,8 @@ type Credentials interface {
 }
 
 type Defaults struct {
-	ContextLength            int
-	Profile, ReasoningEffort string
-	Thinking                 bool
+	ContextLength int
+	Thinking      *bool
 }
 
 type Prepared struct {
@@ -40,7 +39,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 			return prepared, err
 		}
 	}
-	client, err := httpclient.NewClient(connectionValue, key, defaults.Profile)
+	client, err := httpclient.NewClient(connectionValue, key)
 	if err != nil {
 		return prepared, err
 	}
@@ -65,18 +64,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 		}
 		report.Incomplete = true
 	}
-	resolved, err := resolveIdentity(model, defaults.Profile, &report)
-	if err != nil {
-		return prepared, err
-	}
 	selected.Identity = &report
-	selected.Profile = resolved.ID
-	// The generation adapter owns one immutable effective profile. The served alias is unchanged.
-	client.Close()
-	client, err = httpclient.NewClient(connectionValue, key, resolved.ID)
-	if err != nil {
-		return prepared, err
-	}
 	info, discoveryErr := catalog.PrepareModel(ctx, model)
 	if discoveryErr != nil {
 		if ctx.Err() != nil {
@@ -93,37 +81,18 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 		return prepared, err
 	}
 	selected.Details = &info
-	if defaults.ReasoningEffort != "" {
-		value := defaults.ReasoningEffort
-		selected.ReasoningEffort = &value
+	options := connection.ReasoningOptions(connectionValue.Kind, &info)
+	selected.ThinkingSupported = diagnostic.ThinkingControl(connectionValue.Kind, &info)
+	selected.Thinking = defaults.Thinking
+	if previous.Connection.ID == connectionValue.ID && previous.Model == model && previous.Details != nil {
+		selected.Thinking = previous.Thinking
+		selected.ReasoningEffort = previous.ReasoningEffort
 	}
-	if previous.Connection.ID == connectionValue.ID && previous.Model == model && previous.Profile == resolved.ID && previous.ReasoningEffort != nil {
-		value := *previous.ReasoningEffort
-		selected.ReasoningEffort = &value
+	if selected.Thinking != nil && (*selected.Thinking && !options.Enabled() || !*selected.Thinking && !options.Off) {
+		return prepared, fmt.Errorf("saved Thinking choice is unavailable; connect using the server default")
 	}
-	if info.Reasoning != nil {
-		err = info.Reasoning.CheckEffort(selected.Effort())
-	} else {
-		err = resolved.CheckEffort(connectionValue.Kind, selected.Effort())
-	}
-	if err != nil {
+	if err := options.CheckEffort(selected.Effort()); err != nil {
 		return prepared, err
-	}
-	supported, err := diagnostic.ThinkingControl(connectionValue.Kind, model, resolved.ID, &info)
-	if err != nil {
-		return prepared, err
-	}
-	selected.ThinkingSupported = supported
-	if supported {
-		value := defaults.Thinking
-		if previous.Connection.ID == connectionValue.ID && previous.Model == model && previous.Thinking != nil {
-			value = *previous.Thinking
-		}
-		selected.Thinking = &value
-	}
-	if !supported && info.Reasoning != nil && info.Reasoning.Enabled() {
-		value := true
-		selected.Thinking = &value
 	}
 	prepared.Client, prepared.Selection = client, &selected
 	return prepared, nil

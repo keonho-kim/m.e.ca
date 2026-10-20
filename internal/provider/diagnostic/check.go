@@ -33,6 +33,9 @@ func Check(ctx context.Context, client modelapi.Generator, model string, support
 			return caps, fmt.Errorf("Thinking ON diagnostic failed: %w", err)
 		}
 	}
+	if supported && !caps.Reasoning {
+		return caps, fmt.Errorf("Thinking ON diagnostic did not produce separate reasoning; the server may ignore the requested option")
+	}
 	if supported && caps.Reasoning {
 		reasoning, err := probeThinking(ctx, client, model, "", false, settings)
 		if err != nil {

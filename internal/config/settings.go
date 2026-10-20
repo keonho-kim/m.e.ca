@@ -1,7 +1,7 @@
 // Purpose: Define and validate global model, execution and presentation defaults.
 // Pattern: Simple Module.
-// Usage: Startup and model settings commands use Config and Defaults.
-// Related: internal/config/config.go, internal/agent/inference/settings.go.
+// Usage: Startup and local settings commands use Config and Defaults.
+// Related: internal/config/config.go, internal/config/language.go, internal/agent/inference/settings.go.
 package config
 
 import (
@@ -14,12 +14,12 @@ import (
 )
 
 type Config struct {
+	Language      Language             `toml:"language"`
 	ContextLength int                  `toml:"context_length"`
 	Model         *SavedModel          `toml:"model,omitempty"`
 	Agent         inference.Parameters `toml:"agent"`
 	Diagnostics   inference.Parameters `toml:"diagnostics"`
-	ModelProfiles []ModelProfile       `toml:"model_profiles,omitempty"`
-	Thinking      bool                 `toml:"thinking"`
+	Thinking      *bool                `toml:"thinking,omitempty"`
 	Loop          run.Limits           `toml:"loop"`
 	Compaction    Compaction           `toml:"compaction"`
 	UI            UI                   `toml:"ui"`
@@ -44,6 +44,7 @@ type UI struct {
 func Defaults() Config {
 	parameters := inference.Defaults()
 	return Config{
+		Language:      LanguageAuto,
 		ContextLength: connection.DefaultContextLength,
 		Agent:         parameters.Agent,
 		Diagnostics:   parameters.Diagnostic,
@@ -54,6 +55,9 @@ func Defaults() Config {
 }
 
 func check(configuration Config) error {
+	if err := configuration.Language.Check(); err != nil {
+		return err
+	}
 	if err := connection.CheckContextLength(configuration.ContextLength); err != nil {
 		return err
 	}
@@ -63,9 +67,6 @@ func check(configuration Config) error {
 		}
 	}
 	if err := configuration.InferenceSettings().Check(); err != nil {
-		return err
-	}
-	if err := checkProfiles(configuration.ModelProfiles); err != nil {
 		return err
 	}
 	if err := configuration.Compaction.Settings.Check(); err != nil {

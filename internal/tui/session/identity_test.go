@@ -15,8 +15,7 @@ import (
 func TestIdentityInfoMenuAndScroll(t *testing.T) {
 	a := fixture(t)
 	a.selection.Model = "models/bin/modelX"
-	a.selection.Profile = "generic"
-	report := &identity.Report{ProfileSource: "generic", Routed: true}
+	report := &identity.Report{Routed: true}
 	report.Add("/model/info", "original", "Qwen/Qwen3.8-27B")
 	report.Add("/model/info", "original", "ollama/gemma4")
 	a.selection.Identity = report
@@ -47,7 +46,7 @@ func TestIdentityNameBesideServingAlias(t *testing.T) {
 		t.Run(alias, func(t *testing.T) {
 			a := fixture(t)
 			a.selection.Model = alias
-			report := &identity.Report{ProfileSource: "server"}
+			report := &identity.Report{}
 			report.Add("server", "original", "/cache/models--Qwen--Qwen3.8-27B/snapshots/abc")
 			a.selection.Identity = report
 			a.openModel()

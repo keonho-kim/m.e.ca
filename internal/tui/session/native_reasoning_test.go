@@ -37,3 +37,18 @@ func TestNativeReasoningMenu(t *testing.T) {
 		t.Fatal("native strength choices lost")
 	}
 }
+
+func TestNativeOnOnlyEffortFromServerDefault(t *testing.T) {
+	a := fixture(t)
+	conn, err := connection.New(connection.Ollama, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{Levels: []string{"Light", "Deep"}, Default: "Light"}}}
+	if err := a.applyEffort("Deep"); err != nil {
+		t.Fatal(err)
+	}
+	if a.selection.Thinking == nil || !*a.selection.Thinking || a.selection.Effort() != "Deep" {
+		t.Fatalf("selection=%+v", a.selection)
+	}
+}

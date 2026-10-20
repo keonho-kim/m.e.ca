@@ -65,7 +65,17 @@ func TestNativeReasoningSelection(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			prepared, err := Prepare(context.Background(), conn, "", "alias", Defaults{ReasoningEffort: "high"}, connection.Selection{}, nil)
+			defaults, err := Prepare(context.Background(), conn, "", "alias", Defaults{}, connection.Selection{}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if defaults.Selection.Thinking != nil || defaults.Selection.Effort() != "" {
+				t.Fatalf("server default overridden: %+v", defaults.Selection)
+			}
+			defaults.Client.Close()
+			on, level := true, "high"
+			previous := connection.Selection{Connection: conn, Model: "alias", Thinking: &on, ReasoningEffort: &level, Details: &connection.ModelInfo{ID: "alias"}}
+			prepared, err := Prepare(context.Background(), conn, "", "alias", Defaults{}, previous, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -8,6 +8,7 @@ import (
 	"context"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+	"github.com/keonho-kim/v-code/internal/config"
 	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
 	"github.com/keonho-kim/v-code/internal/storage/sqlite"
 	"path/filepath"
@@ -37,7 +38,7 @@ func TestResumeExit(t *testing.T) {
 			errors := make(chan error, 1)
 			go func() {
 				defer close(finished)
-				_, selected, err := Select(ctx, screen, store.Conversations, sessionstate.Session{})
+				_, selected, err := Select(ctx, screen, store.Conversations, sessionstate.Session{}, config.LanguageAuto)
 				if selected {
 					t.Error("exit selected a conversation")
 				}
@@ -107,7 +108,7 @@ func TestResumeSelectsDiscoveredSessionFile(t *testing.T) {
 		case <-ctx.Done():
 		}
 	}()
-	selected, ok, err := Select(ctx, screen, sessions.Conversations, sessionstate.Session{ProjectRoot: project, DisplayRoot: project})
+	selected, ok, err := Select(ctx, screen, sessions.Conversations, sessionstate.Session{ProjectRoot: project, DisplayRoot: project}, config.LanguageAuto)
 	<-finished
 	if err != nil || !ok || selected != expected {
 		t.Fatalf("selection=%+v ok=%t err=%v", selected, ok, err)

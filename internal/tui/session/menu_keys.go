@@ -67,7 +67,23 @@ func (a *app) menuKey(e *tcell.EventKey) {
 		return
 	}
 	if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported && (e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight) {
-		a.thinkingChoice = e.Key() == tcell.KeyLeft
+		index := 0
+		if a.thinkingChoice != nil {
+			index = 2
+			if *a.thinkingChoice {
+				index = 1
+			}
+		}
+		if e.Key() == tcell.KeyLeft {
+			index = max(0, index-1)
+		} else {
+			index = min(2, index+1)
+		}
+		a.thinkingChoice = nil
+		if index > 0 {
+			value := index == 1
+			a.thinkingChoice = &value
+		}
 		return
 	}
 	switch e.Key() {

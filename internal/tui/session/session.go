@@ -30,7 +30,7 @@ func (a *app) restore() error {
 		clear(a.inputs[:len(a.inputs)-200])
 		a.inputs = a.inputs[len(a.inputs)-200:]
 	}
-	if err := a.loadHistory(false); err != nil {
+	if err := a.loadHistory(); err != nil {
 		return err
 	}
 	cp, taskErr := a.opts.Store.LatestRun(ctx, a.opts.Session.ID)

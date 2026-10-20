@@ -20,8 +20,10 @@ func TestCommandHints(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 17, 80), "!model") || !strings.Contains(screenLine(a.screen, 18, 80), "!dir") || !strings.Contains(screenLine(a.screen, 20, 80), "!quit") {
-		t.Fatal("four commands missing above editor")
+	for i, command := range []string{"!model", "!language", "!dir", "!new", "!quit"} {
+		if !strings.Contains(screenLine(a.screen, 16+i, 80), command) {
+			t.Fatalf("command missing above editor: %s", command)
+		}
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 	if a.editor.String() != "!model" || a.page != "chat" {

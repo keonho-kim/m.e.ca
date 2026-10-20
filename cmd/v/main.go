@@ -95,7 +95,7 @@ func start() (err error) {
 		return err
 	}
 	defer screen.Fini()
-	store, selected, err := selectConversation(ctx, screen, sessions, mode, cwd)
+	store, selected, err := selectConversation(ctx, screen, sessions, mode, cwd, configuration.Language)
 	if err != nil || !selected {
 		return err
 	}

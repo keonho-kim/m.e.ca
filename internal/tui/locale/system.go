@@ -1,6 +1,6 @@
 // Purpose: Resolve terminal language from locale environment with native OS fallback.
 // Pattern: Startup environment adapter with pure locale parsing.
-// Usage: Session and conversation selection resolve their language once before rendering.
+// Usage: Resolve consults the host locale when the configured preference is auto.
 // Related: internal/tui/locale/system_darwin.go, internal/tui/locale/system_other.go.
 package locale
 

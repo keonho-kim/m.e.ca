@@ -10,9 +10,10 @@ import (
 )
 
 type historyPage struct {
-	blocks []viewport.Block
-	cursor int64
-	err    error
+	revision int
+	blocks   []viewport.Block
+	cursor   int64
+	err      error
 }
 
 func (a *app) loadOlderHistory() {
@@ -21,24 +22,22 @@ func (a *app) loadOlderHistory() {
 	}
 	a.historyLoading = true
 	ctx, store, id, cursor, redact, language := a.ctx, a.opts.Store, a.opts.Session.ID, a.historyCursor, a.opts.Vault.Redact, a.language
+	revision := a.historyRevision
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		records, next, err := store.Timeline(ctx, id, cursor, 100)
-		page := historyPage{cursor: next, err: err}
+		page := historyPage{revision: revision, cursor: next, err: err}
 		formatter := transcript.Formatter{Language: language, Redact: redact}
-		for _, record := range records {
-			if record.Kind == "message" {
-				page.blocks = append(page.blocks, formatter.Message(record.Message)...)
-			} else {
-				page.blocks = append(page.blocks, formatter.Event(record.Event)...)
-			}
-		}
+		page.blocks = formatter.History(records)
 		a.post(ctx, notice{History: &page})
 	}()
 }
 
 func (a *app) receiveHistory(page *historyPage) {
+	if page.revision != a.historyRevision {
+		return
+	}
 	a.historyLoading = false
 	if page.err != nil {
 		a.fail(page.err)

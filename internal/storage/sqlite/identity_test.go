@@ -27,9 +27,9 @@ func TestIdentitySelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report := &identity.Report{ProfileSource: "server"}
+	report := &identity.Report{}
 	report.Add("/v1/models.root", "original", "Qwen/Qwen3.8-27B")
-	selection := connection.Selection{Connection: conn, Model: "alias", Profile: "qwen3.8-27b", Identity: report}
+	selection := connection.Selection{Connection: conn, Model: "alias", Identity: report}
 	if err := store.SaveSelection(ctx, session.ID, selection); err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestIdentitySelection(t *testing.T) {
 		t.Fatal("unsafe metadata persisted")
 	}
 	got, err := store.Selection(ctx, session.ID)
-	if err != nil || got.Identity == nil || got.Identity.ProfileSource != "server" || got.Identity.Originals()[0] != "Qwen/Qwen3.8-27B" {
+	if err != nil || got.Identity == nil || got.Identity.Originals()[0] != "Qwen/Qwen3.8-27B" {
 		t.Fatalf("selection=%+v err=%v", got, err)
 	}
 }

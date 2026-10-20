@@ -27,7 +27,6 @@ type Selection struct {
 	Details           *ModelInfo       `json:"details,omitempty"`
 	Identity          *identity.Report `json:"identity,omitempty"`
 	ReasoningEffort   *string          `json:"reasoning_effort,omitempty"`
-	Profile           string           `json:"profile,omitempty"`
 	Connection        Connection       `json:"connection"`
 	Model             string           `json:"model"`
 	Thinking          *bool            `json:"thinking,omitempty"`

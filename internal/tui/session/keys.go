@@ -63,12 +63,12 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			a.menuInput.Set("")
 			return
 		}
-		if a.directoryLoading {
-			a.cancelDirectory()
-			return
-		}
 		if a.commandOpen {
 			a.closeCommandHints()
+			return
+		}
+		if a.directoryLoading {
+			a.cancelDirectory()
 			return
 		}
 		if a.modelHintsOpen && a.page == "manual" {

@@ -15,9 +15,9 @@
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 작업 지침·역할별 추론 설정 |
-| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·Thinking 설정 저장 |
+| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·Thinking·언어 설정 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
-| provider/connection·identity·profile·selection | 연결 값·원본 식별·검토된 모델 제어·선택 검증 |
+| provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
 | provider/protocol·transport·httpclient | wire 변환·HTTP/스트림/재시도·생성 요청 조율 |
 | policy | 필수 승인, 공통 보호 대상, 셸 AST 기반 사고 방지와 하위 파일 Scope 판단 |
@@ -27,7 +27,7 @@
 | storage/session·history·recovery | 세션 식별·순서 있는 이력·중단 복구의 저장 계약 |
 | storage/sqlite | DB 파일·SQL·트랜잭션·잠금 어댑터 |
 | tui/session | 이벤트 루프·활성 화면·worker 수명 |
-| tui/locale | 불변 번역 목록·시스템 언어 선택·표시 문구 |
+| tui/locale | 불변 번역 목록·설정 우선 언어 선택·시스템 로캘 해석 |
 | tui/modelmenu·transcript·view | 모델 표시값·메시지/도구 투영·화면 렌더링 |
 | tui/input·textlayout·selection | 편집 revision·grapheme 배치·원문에 연결된 선택 |
 | tui/startup·browser·viewport·markdown | 대화 선택·파일 탐색·출력 위치·응답 Markdown 표시 |

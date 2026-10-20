@@ -13,6 +13,7 @@ var catalog = []struct {
 	kind              Kind
 }{
 	{"!model", "모델 선택 · 추론 설정", Model},
+	{"!language", "언어 설정", Language},
 	{"!dir", "파일 탐색", Directory},
 	{"!new", "새 세션", NewSession},
 	{"!quit", "앱 종료", Exit},

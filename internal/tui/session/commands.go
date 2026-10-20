@@ -54,6 +54,8 @@ func (a *app) submit() {
 	switch command.Kind {
 	case commands.Model:
 		a.openModel()
+	case commands.Language:
+		a.openLanguage()
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Message:

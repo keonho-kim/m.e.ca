@@ -7,7 +7,9 @@ package session
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
 	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/rivo/uniseg"
 	"strings"
 	"testing"
 )
@@ -73,19 +75,21 @@ func TestInlineThinkingShowsCurrentAndChoosesWithArrows(t *testing.T) {
 	a.selection.Thinking, a.selection.ThinkingSupported = &off, true
 	a.openModel()
 	a.render()
-	if line := screenLine(a.screen, 3, 80); !strings.Contains(line, "추론 켜짐 / 꺼짐") {
+	if line := screenLine(a.screen, 3, 80); !strings.Contains(line, "추론 기본값 / 켜짐 / 꺼짐") {
 		t.Fatalf("inline control missing: %q", line)
 	}
-	_, onStyle, _ := a.screen.Get(5, 3)
-	_, offStyle, _ := a.screen.Get(12, 3)
+	onX := uniseg.StringWidth("추론 기본값 / ")
+	offX := onX + uniseg.StringWidth("켜짐 / ")
+	_, onStyle, _ := a.screen.Get(onX, 3)
+	_, offStyle, _ := a.screen.Get(offX, 3)
 	if !offStyle.HasBold() || !onStyle.HasDim() {
 		t.Fatal("current OFF is not distinguished from ON")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
 	a.render()
-	_, onStyle, _ = a.screen.Get(5, 3)
-	_, offStyle, _ = a.screen.Get(12, 3)
+	_, onStyle, _ = a.screen.Get(onX, 3)
+	_, offStyle, _ = a.screen.Get(offX, 3)
 	if !onStyle.HasBold() || !offStyle.HasDim() {
 		t.Fatal("arrow selection did not emphasize ON")
 	}
@@ -104,5 +108,35 @@ func TestInlineThinkingUnavailableRefersToToggle(t *testing.T) {
 		if line := screenLine(a.screen, 3, 80); !strings.Contains(line, lang.Text("ON/OFF control unavailable")) {
 			t.Fatalf("ambiguous Thinking availability: %q", line)
 		}
+	}
+}
+
+func TestInlineThinkingReturnsToServerDefault(t *testing.T) {
+	a := fixture(t)
+	conn, err := modelconn.New(modelconn.VLLM, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	on, effort := true, "high"
+	a.selection = modelconn.Selection{Connection: conn, Model: "models/bin/model114", Thinking: &on, ThinkingSupported: true, ReasoningEffort: &effort}
+	a.opts.Config.Thinking = &on
+	a.openModel()
+	a.choice = 1
+	a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	if a.page != "global" || a.changeValue != "DEFAULT" {
+		t.Fatalf("page=%s value=%s", a.page, a.changeValue)
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	if a.status != "" || a.selection.Thinking != nil || a.selection.Effort() != "" || a.opts.Config.Thinking == nil {
+		t.Fatalf("reset failed: selection=%+v status=%s", a.selection, a.status)
+	}
+	a.openModel()
+	if a.thinkingChoice != nil {
+		t.Fatal("global preference replaced the session's explicit server default")
+	}
+	stored, err := a.opts.Store.Selection(a.ctx, a.opts.Session.ID)
+	if err != nil || stored.Thinking != nil || stored.Effort() != "" {
+		t.Fatalf("stored=%+v err=%v", stored, err)
 	}
 }

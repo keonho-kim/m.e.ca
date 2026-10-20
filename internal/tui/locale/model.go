@@ -1,6 +1,6 @@
 // Purpose: Declare bilingual model identity and capability information labels.
 // Pattern: Declarative presentation data.
-// Usage: Model information projects server declarations and profile rules beside localized labels.
+// Usage: Model information projects server declarations and request controls beside localized labels.
 // Related: internal/tui/locale/locale.go, internal/tui/modelmenu/identity.go.
 package locale
 
@@ -20,16 +20,10 @@ var model = []translation{
 	{"", "Family / architecture information only", "모델군·아키텍처 정보만 확인"},
 	{"", "Original model unidentified", "원본 식별 불가"},
 	{"", "Identity: ", "식별 상태: "},
-	{"", "Server original ID matches catalog", "서버 원본 ID와 카탈로그 일치"},
-	{"", "Serving name matches catalog", "서빙 이름과 카탈로그 일치"},
-	{"", "User TOML mapping", "사용자 TOML 매핑"},
-	{"", "No specialization", "특화 적용 없음"},
-	{"", "Profile: ", "적용 프로파일: "},
-	{"", "Profile basis: ", "프로파일 근거: "},
 	{"", "Metadata unavailable (support, authorization, response or timeout).", "메타데이터를 조회할 수 없습니다 (미지원·권한·응답·시간 제한)."},
-	{"", "Incomplete metadata; automatic specialization deferred.", "메타데이터가 불완전하여 자동 특화를 보류했습니다."},
+	{"", "Some metadata could not be confirmed.", "일부 메타데이터를 확인하지 못했습니다."},
 	{"", "Unsupported / unverified", "미지원 / 미검증"},
-	{"", "Available through model metadata / profile", "모델 메타데이터·프로파일에 등록됨"},
+	{"", "Available through server metadata / provider API", "서버 메타데이터·공급자 API의 요청 옵션"},
 	{"", "Thinking ON/OFF: ", "추론 켜기·끄기: "},
 	{"", "Advertised Thinking options and verified controls are separate.", "서버가 광고한 추론 옵션과 실제 제어 검증은 별개입니다."},
 	{"", "Server declarations do not guarantee weight identity.", "서버 선언은 실제 가중치의 동일성을 보증하지 않습니다."},

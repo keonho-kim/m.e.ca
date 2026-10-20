@@ -18,12 +18,12 @@ func TestConnectionSaveFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	old, err := httpclient.NewClient(conn, "", "")
+	old, err := httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer old.Close()
-	candidate, err := httpclient.NewClient(conn, "", "")
+	candidate, err := httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	if err := a.opts.Vault.Set(conn.CredentialRef, "old-key"); err != nil {
 		t.Fatal(err)
 	}
-	candidate, err := httpclient.NewClient(conn, "new-key", "")
+	candidate, err := httpclient.NewClient(conn, "new-key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,6 +88,8 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true}
 			a.opts.Session.ID = "missing-session"
 			a.changeValue = "ON"
+			on := true
+			a.thinkingChoice = &on
 			a.applySetting(global)
 			if *a.selection.Thinking || a.status == "" {
 				t.Fatalf("failed save applied: %+v", a.selection)
@@ -96,7 +98,7 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if saved.Thinking || a.opts.Config.Thinking {
+			if saved.Thinking != nil || a.opts.Config.Thinking != nil {
 				t.Fatal("failed session save retained global change")
 			}
 		})
