@@ -122,3 +122,29 @@ func TestSelectiveCommandReviewRedactsEnvironment(t *testing.T) {
 		t.Fatal("expanded environment target leaked into approval")
 	}
 }
+
+func TestSelectiveCommandPipelineStatusNeedsNoApproval(t *testing.T) {
+	executor, project := testExecutor(t)
+	if err := os.Mkdir(filepath.Join(project, "child"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	command := `cd child && printf 'test output\n' 2>&1 | tail -n 40; echo "EXIT: $?"`
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.Approval().Required {
+		t.Fatalf("fixed pipeline commands required approval: %+v", op.Approval())
+	}
+	result, err := op.Execute(context.Background(), false)
+	if err != nil || result.Failed {
+		t.Fatalf("pipeline did not execute: %+v %v", result, err)
+	}
+	var output struct{ Stdout string }
+	if err := json.Unmarshal(result.Content, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Stdout != "test output\nEXIT: 0\n" {
+		t.Fatalf("unexpected output: %+v", output)
+	}
+}

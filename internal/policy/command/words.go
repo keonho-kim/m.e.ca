@@ -1,4 +1,4 @@
-// Purpose: Expand statically knowable shell words while inspecting executable substitutions separately.
+// Purpose: Expand shell words without confusing setup metadata reads with unresolved semantic values.
 // Pattern: Static expansion adapter.
 // Usage: Command and redirect analysis consume known words or explicit unknowns.
 // Related: internal/policy/command/calls.go, internal/policy/command/flow.go.
@@ -29,11 +29,15 @@ func (e *environment) Get(name string) expand.Variable {
 		e.unresolved = true
 		return expand.Variable{Set: true, Kind: expand.String}
 	}
-	value, found := e.state.vars[name]
-	if (name != "IFS" || !e.literal) && (e.state.unknown[name] || e.state.dynamic && !found) {
+	value := e.state.vars[name]
+	if (name != "IFS" || !e.literal) && e.unknown(name) {
 		e.unresolved = true
 	}
 	return value
+}
+func (e *environment) unknown(name string) bool {
+	_, found := e.state.vars[name]
+	return e.state.unknown[name] || e.state.dynamic && !found
 }
 func (e *environment) Each(fn func(string, expand.Variable) bool) {
 	for name, value := range e.state.vars {
@@ -103,7 +107,21 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 		// large ranges/products must never allocate proportional expansions.
 		return []word{{}}
 	}
-	fields, err := expand.Fields(cfg, w)
+	// FieldsSeq reads IFS and PWD during setup, before expanding any word.
+	// PWD only supplies globbing's base directory, and globbing is deferred here.
+	// Track explicit variable reads during iteration, preserving IFS uncertainty
+	// for words whose field splitting may depend on it.
+	sequence := expand.FieldsSeq(cfg, w)
+	env.unresolved = !env.literal && env.unknown("IFS")
+	var fields []string
+	var err error
+	for field, fieldErr := range sequence {
+		if fieldErr != nil {
+			err = fieldErr
+			break
+		}
+		fields = append(fields, field)
+	}
 	if err != nil || unknown || env.unresolved {
 		value, _ := expand.Literal(&expand.Config{Env: env}, w)
 		return []word{{text: value, glob: glob, single: !glob && oneField(w, literal)}}
