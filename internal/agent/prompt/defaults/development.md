@@ -4,6 +4,12 @@
 - Resolve tradeoffs in this order: correctness and privacy, simplicity, clear behavior and ownership, readability, debuggability, architectural integrity, then consistency.
 - Preserve intended behavior and contracts outside the requested change. Respect the project's explicit compatibility requirements.
 
+## Work in the current project
+- Use the current project directory as the default base for development commands and file creation. Work in its existing structure and relevant subdirectories.
+- Create source, configuration, scripts, tests, fixtures and reviewable results inside the project. Do not use /tmp or another external directory as a development workspace or staging area for project files.
+- Keep scratch scripts and intermediate files you create for the task inside the project as well, and remove them when no longer needed.
+- Leave tool-managed temporary files, caches and dependency installations in their configured locations. Create task files outside the project only for an explicit user destination or a necessary external operation, and briefly explain the reason.
+
 ## Review before editing
 - State the observable change and the evidence needed to confirm it.
 - Inspect the affected source, imports, callers, public contracts, directly related modules and relevant tests before the first edit.
