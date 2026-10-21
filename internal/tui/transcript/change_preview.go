@@ -1,12 +1,13 @@
-// Purpose: Render frozen unified changes as literal source rows with aligned old/new line positions.
+// Purpose: Project frozen unified changes into aligned literal rows and explicit change ranges.
 // Pattern: Pure presentation projection.
 // Usage: Successful file results display the persisted preview without reading files again.
-// Related: internal/tui/transcript/file_results.go, internal/agent/run/change_preview.go.
+// Related: internal/tui/transcript/file_results.go, internal/tui/viewport/changes.go, internal/agent/run/change_preview.go.
 package transcript
 
 import (
 	"fmt"
 	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/v-code/internal/tui/viewport"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ type changeRow struct {
 	text   string
 }
 
-func renderChangePreview(preview string, lang locale.Language) string {
+func renderChangePreview(preview string, lang locale.Language) toolOutput {
 	var rows []changeRow
 	oldLine, newLine, width := 0, 0, 3
 	inHunk := false
@@ -29,7 +30,7 @@ func renderChangePreview(preview string, lang locale.Language) string {
 			old, oldErr := strconv.Atoi(match[1])
 			next, nextErr := strconv.Atoi(match[2])
 			if oldErr != nil || nextErr != nil {
-				return indentTool(preview)
+				return toolOutput{text: indentTool(preview)}
 			}
 			if inHunk {
 				rows = append(rows, changeRow{text: "…"})
@@ -67,12 +68,17 @@ func renderChangePreview(preview string, lang locale.Language) string {
 		rows = append(rows, row)
 	}
 	var out strings.Builder
+	var changes []viewport.ChangeRange
 	for _, row := range rows {
+		start := out.Len()
 		if row.number > 0 {
 			out.WriteString(indentTool(fmt.Sprintf("%c %*d | %s", row.kind, width, row.number, row.text)))
 		} else {
 			out.WriteString(indentTool(row.text))
 		}
+		if row.kind == '+' || row.kind == '-' {
+			changes = append(changes, viewport.ChangeRange{Start: start, End: out.Len() - 1, Kind: row.kind})
+		}
 	}
-	return out.String()
+	return toolOutput{text: out.String(), changes: changes}
 }

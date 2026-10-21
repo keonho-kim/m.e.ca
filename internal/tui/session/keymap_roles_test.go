@@ -21,7 +21,7 @@ func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
 			a.editor.Set("first\nsecond")
 			a.render()
 			labels := keymapLabels(t, a)
-			if labels["↑↓"] != "" || labels["Ctrl/Cmd+↑↓"] != "기록" {
+			if labels["↑↓"] != "" || labels["Ctrl/Cmd+↑↓"] != "입력 기록" {
 				t.Fatal(labels)
 			}
 			footer := screenLine(a.screen, 23, 240)

@@ -25,10 +25,14 @@ func (a *app) selectionMouse(e *tcell.EventMouse) bool {
 		if a.textSelection.Dragging() {
 			a.textSelection.Move(x, y)
 		} else {
+			_, h := a.screen.Size()
+			body := a.bodyHeight(h)
+			if a.footerRows > 0 {
+				body = max(0, h-a.footerRows)
+			}
 			a.clearSelection()
 			a.selectionPage = a.page
-			_, h := a.screen.Size()
-			a.textSelection.Begin(a.screen, x, y, 1, a.bodyHeight(h)-1)
+			a.textSelection.Begin(a.screen, x, y, 1, body-1)
 			a.textSelection.Sources(a.selectionSources)
 			if a.inputRegion.contains(x, y) {
 				a.selectionInput = a.inputRegion

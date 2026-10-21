@@ -75,8 +75,8 @@ func TestTranscriptScrollbarClickAndDrag(t *testing.T) {
 	}
 	a.screen.SetSize(240, 24)
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 23, 240), "스크롤바 클릭·드래그") {
-		t.Fatal("scrollbar interaction missing from the footer")
+	if strings.Contains(footerKeyText(a), "마우스") || strings.Contains(footerKeyText(a), "드래그") {
+		t.Fatal("mouse instructions crowded the keyboard hints")
 	}
 	a.screen.SetSize(80, 24)
 	a.render()

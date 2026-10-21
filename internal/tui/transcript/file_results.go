@@ -18,21 +18,21 @@ func lineRange(first, last int) string {
 	return fmt.Sprintf("%d–%d", first, last)
 }
 
-func (f Formatter) fileOutput(event run.Event, body []byte) string {
+func (f Formatter) fileOutput(event run.Event, body []byte) toolOutput {
 	var result struct {
 		Created []string
 		Changed *bool
 		Lines   []tool.LineChange
 	}
 	if json.Unmarshal(body, &result) != nil || result.Changed == nil {
-		return ""
+		return toolOutput{}
 	}
 	if event.Call.Name == "create_directory" {
 		if len(result.Created) == 0 {
 			if event.Kind != "tool_succeeded" {
-				return ""
+				return toolOutput{}
 			}
-			return indentTool(f.Language.Text("요청한 폴더가 이미 존재합니다"))
+			return toolOutput{text: indentTool(f.Language.Text("요청한 폴더가 이미 존재합니다"))}
 		}
 		text := indentTool(f.Language.Format("폴더 생성 완료 · %d개 (상위 폴더 포함)", len(result.Created)))
 		if event.Kind != "tool_succeeded" {
@@ -41,13 +41,13 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 		for _, path := range result.Created {
 			text += indentTool(f.Redact(path))
 		}
-		return text
+		return toolOutput{text: text}
 	}
 	if event.Kind != "tool_succeeded" {
-		return ""
+		return toolOutput{}
 	}
 	if !*result.Changed {
-		return indentTool(f.Language.Text("변경 없음"))
+		return toolOutput{text: indentTool(f.Language.Text("변경 없음"))}
 	}
 	label := map[string]string{"write_file": "파일 저장 완료", "edit_file": "수정 완료", "create_directory": "폴더 생성 완료", "move_file": "이동 완료"}[event.Call.Name]
 	if event.Operation != nil {
@@ -71,8 +71,16 @@ func (f Formatter) fileOutput(event run.Event, body []byte) string {
 			}
 		}
 	}
+	output := toolOutput{text: text}
 	if event.ChangePreview != "" {
-		text += "\n" + indentTool(f.Language.Text("Changes")) + renderChangePreview(f.Redact(event.ChangePreview), f.Language)
+		preview := renderChangePreview(f.Redact(event.ChangePreview), f.Language)
+		output.text += "\n" + indentTool(f.Language.Text("Changes"))
+		for _, change := range preview.changes {
+			change.Start += len(output.text)
+			change.End += len(output.text)
+			output.changes = append(output.changes, change)
+		}
+		output.text += preview.text
 	}
-	return text
+	return output
 }

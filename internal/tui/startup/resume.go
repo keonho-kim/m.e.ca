@@ -38,7 +38,7 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 		for i := range shortcuts {
 			shortcuts[i].Label = lang.Text(shortcuts[i].Label)
 		}
-		footer := view.KeymapRows(shortcuts, w, min(1, max(0, totalHeight-4)))
+		footer := view.KeymapRows(shortcuts, w, min(view.MaxKeymapRows, max(0, totalHeight-5)))
 		h := totalHeight - footer
 		view.Text(screen, 0, 0, w, lang.Text("대화 선택"), tcell.StyleDefault)
 		first := 0

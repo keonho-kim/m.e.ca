@@ -1,7 +1,7 @@
-// Purpose: Own classic selection weight and muted addition/deletion emphasis in approval previews.
+// Purpose: Own classic selection weight and dark-text blue/red emphasis for file changes.
 // Pattern: Pure Function.
-// Usage: Used by candidate lists, menus, file columns, conversation selection and diff approval.
-// Related: internal/tui/session/render_hints.go, internal/tui/session/render.go, internal/tui/session/render_files.go, internal/tui/startup/resume.go.
+// Usage: Candidate lists and menus share selection weights; approvals and tool results share diff colors.
+// Related: internal/tui/view/chat.go, internal/tui/view/menu.go, internal/tui/startup/resume.go.
 package view
 
 import "github.com/gdamore/tcell/v3"
@@ -14,12 +14,11 @@ func SelectionStyle(selected bool) tcell.Style {
 }
 
 func ChangeStyle(change byte) tcell.Style {
-	style := tcell.StyleDefault.Foreground(tcell.NewHexColor(0xd8d8d2))
 	switch change {
 	case '+':
-		return style.Background(tcell.NewHexColor(0x20372c))
+		return tcell.StyleDefault.Foreground(tcell.NewHexColor(0x24476b)).Background(tcell.NewHexColor(0xdbe5f0))
 	case '-':
-		return style.Background(tcell.NewHexColor(0x422a2d))
+		return tcell.StyleDefault.Foreground(tcell.NewHexColor(0x702c35)).Background(tcell.NewHexColor(0xf0dadd))
 	default:
 		return tcell.StyleDefault
 	}

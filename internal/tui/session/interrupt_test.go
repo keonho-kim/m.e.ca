@@ -69,7 +69,7 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	if !strings.HasPrefix(header, "상태 작업 중 00 : 00 : 00") || !strings.Contains(header, "메모리 압축 중 .") || !strings.HasSuffix(header, "입력 0 · 출력 0 · 초당 토큰 —") {
 		t.Fatalf("header alignment: %q", header)
 	}
-	if strings.TrimSpace(screenLine(a.screen, 21, 80)) != "> draft" {
+	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != "> draft" {
 		t.Fatal("status moved into composer")
 	}
 	if a.compressionTicks == nil {

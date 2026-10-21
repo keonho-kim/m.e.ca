@@ -25,7 +25,7 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 				finishBrowserIO(t, a)
 			}
 			a.render()
-			footer := screenLine(a.screen, 23, 80)
+			footer := footerKeyText(a)
 			if !strings.Contains(footer, test.want) || !strings.Contains(footer, "^C") {
 				t.Fatalf("footer=%q", footer)
 			}
@@ -35,7 +35,7 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!mo")
 	a.render()
-	footer := screenLine(a.screen, 23, 80)
+	footer := footerKeyText(a)
 	if !strings.Contains(footer, "실행") || !strings.Contains(footer, "Tab") {
 		t.Fatalf("command footer=%q", footer)
 	}
@@ -51,10 +51,10 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	a.editor.Set("first\nsecond")
 	a.screen.SetSize(32, 12)
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "second" {
+	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y+len(a.inputRegion.window.Rows)-1, 32)) != "second" {
 		t.Fatal("editor not above reserved footer")
 	}
-	if !strings.Contains(screenLine(a.screen, 11, 32), "^C") {
+	if !strings.Contains(footerKeyText(a), "^C") {
 		t.Fatal("footer not anchored at bottom")
 	}
 	a.screen.SetSize(12, 4)
@@ -62,6 +62,16 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	if a.editor.String() != "first\nsecond" {
 		t.Fatal("small terminal changed editor")
 	}
+}
+
+func footerKeyText(a *app) string {
+	w, h := a.screen.Size()
+	var text strings.Builder
+	for y := h - a.footerRows + 1; y < h; y++ {
+		text.WriteString(screenLine(a.screen, y, w))
+		text.WriteByte('\n')
+	}
+	return text.String()
 }
 
 func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {

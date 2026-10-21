@@ -119,14 +119,14 @@ func TestInputSurvivesResizeAndModelMenu(t *testing.T) {
 	a.selection.Thinking = &on
 	a.editor.Set("draft")
 	a.render()
-	line := screenLine(a.screen, 22, 80)
+	line := screenLine(a.screen, 24-a.footerRows, 80)
 	if strings.TrimSpace(line) != "chosen" {
 		t.Fatal(line)
 	}
 	off := false
 	a.selection.Thinking = &off
 	a.render()
-	if strings.Contains(screenLine(a.screen, 22, 80), "추론") {
+	if strings.Contains(screenLine(a.screen, 24-a.footerRows, 80), "추론") {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
@@ -165,7 +165,7 @@ func TestStatusModelLabels(t *testing.T) {
 			a.selection.Model = "chosen"
 			a.selection.Thinking = &test.thinking
 			a.render()
-			if line := strings.TrimSpace(screenLine(a.screen, 22, 80)); line != test.want {
+			if line := strings.TrimSpace(screenLine(a.screen, 24-a.footerRows, 80)); line != test.want {
 				t.Fatalf("status = %q, want %q", line, test.want)
 			}
 		})

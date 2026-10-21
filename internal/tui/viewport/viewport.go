@@ -1,7 +1,7 @@
-// Purpose: Keep bounded output blocks and preserve an event-relative reading anchor on resize.
+// Purpose: Keep bounded output blocks with source-bound formatting and event-relative reading anchors.
 // Pattern: Simple Module (presentation projection).
 // Usage: Mutated only by the terminal event loop and rendered at the current width.
-// Related: internal/tui/viewport/spacing.go, internal/tui/viewport/alignment.go, internal/tui/session/render_chat.go.
+// Related: internal/tui/viewport/changes.go, internal/tui/viewport/spacing.go, internal/tui/session/render_chat.go.
 package viewport
 
 import (
@@ -12,6 +12,7 @@ import (
 
 type Block struct {
 	Summary, Details string
+	Changes          *Changes
 	key              blockKey
 	lines            []Line
 	parsedText       string
@@ -28,6 +29,7 @@ type Line struct {
 	ID, Row  int
 	Text     string
 	Thinking bool
+	Change   byte
 }
 type View struct {
 	Collapsed           bool
@@ -43,6 +45,7 @@ type blockKey struct {
 	text                         string
 	width, id                    int
 	markdown, thinking, centered bool
+	changes                      *Changes
 }
 
 func (v *View) Append(text string, thinking bool) {
@@ -59,7 +62,7 @@ func (v *View) AppendBlock(block Block) {
 	v.bound(false)
 }
 func (b *Block) Lines(width int) []Line {
-	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered}
+	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered, b.Changes}
 	if b.lines != nil && b.key == key {
 		return b.lines
 	}
@@ -85,6 +88,7 @@ func (b *Block) Lines(width int) []Line {
 		for row, text := range textlayout.Wrap(b.Text, width) {
 			out = append(out, Line{ID: b.ID, Row: row, Text: text.Text, Thinking: b.Thinking, Copy: textlayout.Fragment{Source: b.Text, Row: text}})
 		}
+		b.classifyChanges(out)
 	}
 	if b.Markdown || b.Thinking {
 		out = modelEdges(out)
@@ -106,7 +110,7 @@ func (v *View) Lines(width int) []Line {
 	changed := len(v.keys) != len(v.Blocks)
 	if !changed {
 		for i, b := range v.Blocks {
-			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered}) {
+			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered, b.Changes}) {
 				changed = true
 				break
 			}

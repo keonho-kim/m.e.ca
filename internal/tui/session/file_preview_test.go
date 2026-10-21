@@ -1,4 +1,4 @@
-// Purpose: Verify preview keys, literal @ input and distinct file/directory markers.
+// Purpose: Verify preview keys, literal @ input and plain file/directory labels.
 // Pattern: Terminal workflow tests.
 // Usage: go test ./internal/tui/session -run TestFilePreview.
 // Related: internal/tui/session/file_preview.go, internal/tui/session/files.go.
@@ -32,7 +32,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	finishBrowserIO(t, a)
 	a.status = ""
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 3, 80), "[ ] Ⓓ") || !strings.Contains(screenLine(a.screen, 4, 80), "[ ] Ⓕ") {
+	if !strings.Contains(screenLine(a.screen, 3, 80), "[ ] sub/") || !strings.Contains(screenLine(a.screen, 4, 80), "[ ] a.txt") {
 		t.Fatal("file types not visible")
 	}
 	for _, key := range []tcell.Key{tcell.KeyEnter, tcell.KeyTab} {
@@ -45,7 +45,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 	finishBrowserIO(t, a)
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 4, 80), "[x] Ⓕ") {
+	if !strings.Contains(screenLine(a.screen, 4, 80), "[x] a.txt") {
 		t.Fatal("selection checkbox missing")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))

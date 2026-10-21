@@ -1,4 +1,4 @@
-// Purpose: Project browser selection and sanitized file labels into a display snapshot.
+// Purpose: Project browser positions, selected references and sanitized file entries into a snapshot.
 // Pattern: Presentation projection.
 // Usage: Session supplies view.Files without transferring browser state.
 // Related: internal/tui/browser/browser.go, internal/tui/view/files.go.
@@ -37,19 +37,11 @@ func (a *app) renderFiles(w, h int) {
 		value := view.FileColumn{Title: a.opts.Vault.Redact(filepath.Base(filepath.Clean(column.Path)) + "/"), Selected: column.Index - offset, X: (i - start) * (display.ColumnWidth + 1), Active: i == a.browser.Active, Divider: i < start+visible-1}
 		for index := offset; index < len(column.Entries) && index-offset < h-7; index++ {
 			entry := column.Entries[index]
-			name := entry.Name
-			path := filepath.Join(column.Path, name)
-			marker := "Ⓕ "
+			path := filepath.Join(column.Path, entry.Name)
 			if entry.Directory {
-				name += "/"
 				path += "/"
-				marker = "Ⓓ "
 			}
-			prefix := "[ ] "
-			if a.browser.Selected[path] {
-				prefix = "[x] "
-			}
-			value.Labels = append(value.Labels, prefix+marker+a.opts.Vault.Redact(name))
+			value.Entries = append(value.Entries, view.FileEntry{Name: a.opts.Vault.Redact(entry.Name), Directory: entry.Directory, Marked: a.browser.Selected[path]})
 		}
 		display.Columns = append(display.Columns, value)
 	}

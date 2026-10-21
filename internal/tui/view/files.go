@@ -1,6 +1,6 @@
-// Purpose: Render file-column snapshots and the focused browser composer.
+// Purpose: Render plain file columns with underlined directory names and the focused composer.
 // Pattern: Terminal renderer.
-// Usage: Session supplies sanitized labels and presentation positions.
+// Usage: Session supplies sanitized names, file types, selection state and presentation positions.
 // Related: internal/tui/session/render_files.go, internal/tui/view/input.go.
 package view
 
@@ -10,9 +10,14 @@ import (
 	"github.com/keonho-kim/v-code/internal/tui/input"
 )
 
+type FileEntry struct {
+	Name              string
+	Directory, Marked bool
+}
+
 type FileColumn struct {
 	Title           string
-	Labels          []string
+	Entries         []FileEntry
 	Selected, X     int
 	Active, Divider bool
 }
@@ -38,9 +43,20 @@ func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 	topLine(screen, display.Path, display.Usage, w, display.Activity)
 	for _, column := range display.Columns {
 		x := column.X
-		Text(screen, x, 2, width, column.Title, tcell.StyleDefault)
-		for index := 0; index < len(column.Labels); index++ {
-			Text(screen, x, 3+index, width, column.Labels[index], SelectionStyle(column.Active && index == column.Selected))
+		Text(screen, x, 2, width, column.Title, tcell.StyleDefault.Underline(tcell.UnderlineStyleDotted))
+		for index, entry := range column.Entries {
+			style := SelectionStyle(column.Active && index == column.Selected)
+			prefix := "[ ] "
+			if entry.Marked {
+				prefix = "[x] "
+			}
+			Text(screen, x, 3+index, min(4, width), prefix, style)
+			name := entry.Name
+			if entry.Directory {
+				name += "/"
+				style = style.Underline(tcell.UnderlineStyleDotted)
+			}
+			Text(screen, x+4, 3+index, max(0, width-4), name, style)
 		}
 		if column.Divider {
 			for y := 2; y < h-3; y++ {

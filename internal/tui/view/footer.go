@@ -1,14 +1,23 @@
-// Purpose: Render session status above context-sensitive keyboard hints in two fixed bottom rows.
+// Purpose: Measure and render model status above one or two bottom keyboard-hint rows.
 // Pattern: Stateless terminal renderer.
-// Usage: The session reserves FooterRows and supplies current display values to Footer.
+// Usage: The session measures FooterRows and renders Footer inside that reserved region.
 // Related: internal/tui/view/header.go, internal/tui/view/keymap.go, internal/tui/session/render.go.
 package view
 
 import "github.com/gdamore/tcell/v3"
 
-const FooterRows = 2
+// FooterRows includes model status and only the keyboard rows that are needed.
+func FooterRows(shortcuts []Shortcut, width, height int) int {
+	if height <= 0 {
+		return 0
+	}
+	// Keep two body rows available for the activity line and composer.
+	keyRows := min(MaxKeymapRows, max(0, height-3))
+	return 1 + KeymapRows(shortcuts, width, keyRows)
+}
 
 func Footer(screen tcell.Screen, status Status, shortcuts []Shortcut, y, width int) {
 	statusLine(screen, status, y, width)
-	Keymap(screen, shortcuts, y+1, width, FooterRows-1)
+	_, height := screen.Size()
+	Keymap(screen, shortcuts, y+1, width, min(MaxKeymapRows, max(0, height-y-1)))
 }

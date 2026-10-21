@@ -17,7 +17,7 @@ func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 		a.language = lang
 		a.selection.Model = "chosen-model"
 		a.render()
-		text := screenLine(a.screen, 22, 80)
+		text := screenLine(a.screen, 24-a.footerRows, 80)
 		if strings.TrimSpace(text) != "chosen-model" {
 			t.Fatal(text)
 		}
@@ -30,7 +30,7 @@ func TestLocalizedLabelsPreserveLiteralModelAndDraft(t *testing.T) {
 	a.selection.Model = "allow-all"
 	a.editor.Set("Thinking ON / OFF allow-all")
 	a.render()
-	if got := screenLine(a.screen, 22, 80); !strings.Contains(got, "allow-all") {
+	if got := screenLine(a.screen, 24-a.footerRows, 80); !strings.Contains(got, "allow-all") {
 		t.Fatal(got)
 	}
 	if a.editor.String() != "Thinking ON / OFF allow-all" {

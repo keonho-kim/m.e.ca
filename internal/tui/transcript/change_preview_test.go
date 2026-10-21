@@ -37,7 +37,7 @@ func TestAppliedFileContentsAreVisible(t *testing.T) {
 
 func TestAppliedFilePreservesNoNewlineAndLiteralHeaders(t *testing.T) {
 	preview := "--- /dev/null\n+++ a\n@@ -0,0 +1,2 @@\n+# Heading\n+++literal\n\\ No newline at end of file\n"
-	shown := renderChangePreview(preview, locale.Korean)
+	shown := renderChangePreview(preview, locale.Korean).text
 	if !strings.Contains(shown, "+   1 | # Heading") || !strings.Contains(shown, "+   2 | ++literal") || !strings.Contains(shown, "마지막 줄바꿈 없음") {
 		t.Fatal(shown)
 	}

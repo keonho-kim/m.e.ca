@@ -9,6 +9,7 @@ import (
 	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
 	"github.com/keonho-kim/v-code/internal/tui/input"
 	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"strings"
 )
 
 type ChatDisplay struct {
@@ -36,7 +37,12 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 		if display.Lines[i].Thinking {
 			style = style.Dim(true)
 		}
-		if len(display.Lines[i].Spans) > 0 {
+		if display.Lines[i].Change != 0 {
+			style = ChangeStyle(display.Lines[i].Change)
+			// Keep the tool indentation and the scrollbar gutter outside the diff.
+			Text(screen, 4, y, contentWidth-4, strings.Repeat(" ", max(0, contentWidth-4)), style)
+			Text(screen, 4, y, contentWidth-4, strings.TrimPrefix(display.Lines[i].Text, "    "), style)
+		} else if len(display.Lines[i].Spans) > 0 {
 			styledText(screen, y, contentWidth, display.Lines[i].Spans, style)
 		} else {
 			Text(screen, 0, y, contentWidth, display.Lines[i].Text, style)

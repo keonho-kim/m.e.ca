@@ -23,8 +23,8 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved":
 		return nil
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
-		if text := f.Tool(event); text != "" {
-			block := viewport.Block{Text: text, Summary: f.toolSummary(event), Details: text}
+		if block := f.toolBlock(event); block.Text != "" {
+			block.Summary, block.Details = f.toolSummary(event), block.Text
 			return []viewport.Block{block}
 		}
 		return nil

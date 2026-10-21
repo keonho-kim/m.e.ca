@@ -52,6 +52,7 @@ type app struct {
 	chatProjection                      chatProjection
 	scrollbar                           scrollbarState
 	inputRegion, selectionInput         inputRegion
+	footerRows                          int
 	selectionSources                    map[int]textlayout.Fragment
 	clipboardBusy                       bool
 	selectionPage                       string

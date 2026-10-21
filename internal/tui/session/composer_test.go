@@ -16,10 +16,14 @@ import (
 func TestFixedComposerAndStopNotice(t *testing.T) {
 	a := fixture(t)
 	a.editor.Set("draft")
+	inputRow := -1
 	for _, response := range []string{"", "working", strings.Repeat("response\n", 40)} {
 		a.receive(notice{Event: &run.Event{Kind: "stream", Text: response}})
 		a.render()
-		if strings.TrimSpace(screenLine(a.screen, 21, 80)) != "> draft" {
+		if inputRow < 0 {
+			inputRow = a.inputRegion.y
+		}
+		if a.inputRegion.y != inputRow || strings.TrimSpace(screenLine(a.screen, inputRow, 80)) != "> draft" {
 			t.Fatal("composer moved with transcript")
 		}
 	}
@@ -29,7 +33,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.receive(notice{Done: true, Err: context.Canceled})
 	a.render()
-	if !strings.Contains(screenLine(a.screen, 20, 80), "중지했습니다") {
+	if !strings.Contains(screenLine(a.screen, a.inputRegion.y-1, 80), "중지했습니다") {
 		t.Fatal("stop notice not above input")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
@@ -43,7 +47,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if strings.Contains(screenLine(a.screen, 20, 80), "중지했습니다") {
+	if strings.Contains(screenLine(a.screen, a.inputRegion.y-1, 80), "중지했습니다") {
 		t.Fatal("stop notice reappeared")
 	}
 }
@@ -56,7 +60,7 @@ func TestFixedComposerShiftEnter(t *testing.T) {
 		t.Fatal("Shift+Enter executed command")
 	}
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 20, 80)) != "> !quit" {
+	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != "> !quit" {
 		t.Fatal("multiline composer did not grow upward")
 	}
 }

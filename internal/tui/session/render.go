@@ -23,12 +23,14 @@ func (a *app) render() {
 		a.scrollbar = scrollbarState{}
 	}
 	if w < 12 || h < 4 {
+		a.footerRows = 0
 		a.clearSelection()
 		view.Text(a.screen, 0, 0, w, a.language.Text("Resize terminal"), tcell.StyleDefault)
 		a.screen.Show()
 		return
 	}
-	body := a.bodyHeight(h)
+	body, shortcuts := a.footerLayout(w, h)
+	a.footerRows = h - body
 	switch a.page {
 	case "files":
 		a.renderFiles(w, body)
@@ -38,7 +40,8 @@ func (a *app) render() {
 		a.renderMenu(w, body)
 	}
 	a.captureInputSources()
+	a.reanchorInputSelection(body)
 	a.textSelection.Draw(a.screen)
-	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model}, a.shortcuts(), body, w)
+	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model}, shortcuts, body, w)
 	a.screen.Show()
 }

@@ -43,7 +43,7 @@ func TestConversationEditorStaysAtBottom(t *testing.T) {
 			t.Fatalf("row %d = %q; want %q\n%s", y, rows[y], text, strings.Join(rows, "\n"))
 		}
 	}
-	if rows[21] != "> next draft" {
+	if rows[a.inputRegion.y] != "> next draft" {
 		t.Fatal("composer not above model footer")
 	}
 	if strings.Contains(strings.Join(rows, "\n"), "Model answer") {
@@ -77,7 +77,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.editor.Set("line one\nline two")
 	a.render()
-	if strings.TrimSpace(screenLine(a.screen, 9, 32)) != "line two" {
+	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y+len(a.inputRegion.window.Rows)-1, 32)) != "line two" {
 		t.Fatal("multiline editor not at conversation end")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, "", 0))
@@ -125,7 +125,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 			t.Fatalf("restored row %d=%q; want %q", y, got, text)
 		}
 	}
-	if strings.TrimSpace(screenLine(a.screen, 21, 80)) != ">" {
+	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != ">" {
 		t.Fatal("restored composer not fixed")
 	}
 }

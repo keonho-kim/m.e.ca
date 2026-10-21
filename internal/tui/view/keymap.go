@@ -1,4 +1,4 @@
-// Purpose: Measure and render bounded nano-style keyboard hints without owning screen state.
+// Purpose: Place primary actions before supporting hints in one or two bounded footer rows.
 // Pattern: Presentation renderer with pure row layout.
 // Usage: Session and startup supply key-label pairs and a reserved bottom row range.
 // Related: internal/tui/session/keymap.go, internal/tui/startup/resume.go, internal/tui/view/cells.go.
@@ -12,6 +12,12 @@ import (
 )
 
 type Shortcut struct{ Key, Label string }
+
+// MaxKeymapRows applies to both session screens and the conversation picker.
+const MaxKeymapRows = 2
+
+var primaryKeys = []string{"^C", "Esc", "Enter", "Tab", "↑↓", "←→", "←", "→", "Space", "Shift+Tab", "!", ":q"}
+var supportingKeys = []string{"Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "^O", "PgUp/Dn", "PgUp", "Home/End"}
 
 func KeymapRows(shortcuts []Shortcut, width, maxRows int) int {
 	return len(keymapLines(shortcuts, width, maxRows))
@@ -38,14 +44,21 @@ func keymapLines(shortcuts []Shortcut, width, maxRows int) [][]Shortcut {
 	if width < 1 || maxRows < 1 || len(shortcuts) == 0 {
 		return nil
 	}
+	maxRows = min(maxRows, MaxKeymapRows)
+	ordered := orderedShortcuts(shortcuts)
+	needed := -2
+	for _, shortcut := range ordered {
+		needed += uniseg.StringWidth(shortcut.Key) + 1 + uniseg.StringWidth(shortcut.Label) + 2
+	}
+	separate := maxRows > 1 && needed > width
 	rows := [][]Shortcut{{}}
 	cells := 0
-	for _, shortcut := range orderedShortcuts(shortcuts) {
+	for _, shortcut := range ordered {
 		count := uniseg.StringWidth(shortcut.Key) + 1 + uniseg.StringWidth(shortcut.Label)
 		if count > width {
 			continue
 		}
-		if cells > 0 && cells+count > width {
+		if cells > 0 && (cells+count > width || separate && len(rows) == 1 && supportingShortcut(shortcut.Key)) {
 			if len(rows) == maxRows {
 				continue
 			}
@@ -79,11 +92,17 @@ func shortcutRank(key string) int {
 	if strings.HasPrefix(key, "^C") {
 		return 0
 	}
-	ranks := []string{"^C", "Esc", "Enter", "Tab", "^O", "Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "Shift+Tab", "Space", "←→", "→", "←", "↑↓", "PgUp/Dn", "PgUp", "Home/End"}
-	if n := slices.Index(ranks, key); n >= 0 {
+	if n := slices.Index(primaryKeys, key); n >= 0 {
 		return n
 	}
-	return len(ranks)
+	if n := slices.Index(supportingKeys, key); n >= 0 {
+		return len(primaryKeys) + n
+	}
+	return len(primaryKeys) + len(supportingKeys)
+}
+
+func supportingShortcut(key string) bool {
+	return slices.Contains(supportingKeys, key)
 }
 
 func orderedShortcuts(shortcuts []Shortcut) []Shortcut {

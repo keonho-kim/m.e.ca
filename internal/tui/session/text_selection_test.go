@@ -50,8 +50,7 @@ func TestTextSelectionCopiesInputAndFreezesStreaming(t *testing.T) {
 	a := fixture(t)
 	a.editor.Set("copy my input")
 	a.render()
-	_, h := a.screen.Size()
-	row := h - 3
+	row := a.inputRegion.y
 	a.mouse(tcell.NewEventMouse(2, row, tcell.Button1, 0))
 	a.mouse(tcell.NewEventMouse(14, row, tcell.Button1, 0))
 	a.mouse(tcell.NewEventMouse(14, row, tcell.ButtonNone, 0))

@@ -7,32 +7,38 @@ package transcript
 import (
 	"encoding/json"
 	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/v-code/internal/tui/viewport"
 )
 
-func (f Formatter) output(event run.Event) string {
+type toolOutput struct {
+	text    string
+	changes []viewport.ChangeRange
+}
+
+func (f Formatter) output(event run.Event) toolOutput {
 	body := event.Output
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(body, &fields) != nil || fields == nil {
-		return f.resultSummary(event)
+		return toolOutput{text: f.resultSummary(event)}
 	}
-	text := ""
+	var output toolOutput
 	switch event.Call.Name {
 	case "execute_command":
-		text = f.processOutput(fields)
+		output.text = f.processOutput(fields)
 	case "write_file", "edit_file", "create_directory", "move_file":
-		text = f.fileOutput(event, body)
+		output = f.fileOutput(event, body)
 	}
-	if text == "" {
-		text = f.resultSummary(event)
+	if output.text == "" {
+		output.text = f.resultSummary(event)
 	}
 	for _, key := range []string{"Truncated", "truncated", "more"} {
 		var more bool
 		if json.Unmarshal(fields[key], &more) == nil && more {
-			text += indentTool(f.Language.Text("[일부 결과만 표시됨]"))
+			output.text += indentTool(f.Language.Text("[일부 결과만 표시됨]"))
 			break
 		}
 	}
-	return text
+	return output
 }
 
 func (f Formatter) resultSummary(event run.Event) string {

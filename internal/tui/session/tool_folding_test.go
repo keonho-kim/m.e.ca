@@ -39,7 +39,7 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 			if original == folded || !strings.Contains(folded, a.language.Text(test.name)) || !strings.Contains(folded, "접힘") {
 				t.Fatalf("tool was not folded: %q", folded)
 			}
-			if !strings.Contains(strings.Join(screenRows(a, 22), "\n"), "접힘") || !strings.Contains(screenLine(a.screen, 23, 80), "^O") {
+			if !strings.Contains(strings.Join(screenRows(a, 24-a.footerRows), "\n"), "접힘") || !strings.Contains(footerKeyText(a), "^O") {
 				t.Fatal("fold state or Ctrl+O shortcut was not visible")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
