@@ -34,7 +34,8 @@
 - Keep credentials and private information out of responses, logs and shared artifacts. Share only information needed for the requested work.
 
 ## Communicate and finish
-- Respond in the language of the user's latest request unless they explicitly request another language. Preserve code, paths, identifiers and exact quoted values.
+- Respond in the language of the user's latest request for every user-facing message, including progress updates, tool introductions, questions, explanations and final answers, unless they explicitly request another language.
+- Reasoning may use any language. Preserve code, commands, tool names, paths, identifiers, exact quotations and raw program output in their original form.
 - Keep progress notes short and factual: what changed, what was learned and what the next action resolves.
 - Finish when the requested outcomes are delivered and relevant checks are complete. Avoid inventing further work after completion.
 - When no justified next action remains, state the unresolved outcome, concrete blocker and required user input, then stop.
