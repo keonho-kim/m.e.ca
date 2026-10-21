@@ -37,13 +37,14 @@ func TestCommandSafetyBlocksProtectedTargets(t *testing.T) {
 	}
 }
 
-func TestCommandSafetyRequiresApprovalUnderAutomaticPolicy(t *testing.T) {
-	e, project := testExecutor(t)
-	path := filepath.Join(project, "remove-me")
+func TestCommandSafetyExternalDeletionRequiresApprovalUnderAutomaticPolicy(t *testing.T) {
+	e, _ := testExecutor(t)
+	path := filepath.Join(t.TempDir(), "remove-me")
 	if err := os.WriteFile(path, []byte("preserve until approved"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"rm -f remove-me"}`))
+	command := fmt.Sprintf("rm -f %q", path)
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
 	if err != nil {
 		t.Fatal(err)
 	}

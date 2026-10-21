@@ -73,10 +73,10 @@ func TestShellPathUnlinksAliasWithoutFollowingFinalLink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !op.Approval().Required {
-		t.Fatal("unlink needs approval")
+	if op.Approval().Required {
+		t.Fatal("removing a project-local link followed its external destination")
 	}
-	if result, err := op.Execute(context.Background(), true); err != nil || result.Failed {
+	if result, err := op.Execute(context.Background(), false); err != nil || result.Failed {
 		t.Fatalf("%+v %v", result, err)
 	}
 	if _, err := os.Lstat(alias); !os.IsNotExist(err) {

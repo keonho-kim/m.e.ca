@@ -1,7 +1,7 @@
 // Purpose: Recognize explicit filesystem and destructive Git effects of common shell commands.
 // Pattern: Command effect classification.
 // Usage: Resolved calls feed operands into the shared mutation policy.
-// Related: internal/policy/command/find.go, internal/policy/command/redirects.go, internal/policy/safety.go.
+// Related: internal/policy/command/find.go, internal/policy/command/removal.go, internal/policy/command/redirects.go, internal/policy/safety.go.
 package command
 
 import "strings"
@@ -9,9 +9,12 @@ import "strings"
 func (a *analyzer) effects(name string, args []word, s *state) {
 	switch name {
 	case "rm", "rmdir", "unlink":
-		a.ask("Deletion requires approval")
+		parents := name == "rmdir" && removalParents(args)
 		for _, arg := range a.operands(args, nil) {
 			a.target(arg, s, true)
+			if parents {
+				a.removalParents(arg, s)
+			}
 		}
 	case "mv", "cp", "install", "ln":
 		values := a.operands(args, []string{"-t", "--target-directory", "-S", "--suffix", "-m", "--mode", "-o", "--owner", "-g", "--group"})

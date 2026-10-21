@@ -50,7 +50,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 			return toolapi.Result{}, err
 		}
 		if !op.shell.same(current) {
-			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and prepare the command again with fresh approval."}
+			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and retry with the intended paths."}
 		}
 	} else if err := op.checkMutationSafety(); err != nil {
 		return toolapi.Result{}, err
@@ -64,7 +64,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 			return toolapi.Result{}, err
 		}
 		if current.absolute != op.source.absolute {
-			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "target changed after preparation", Next: "Resolve and inspect the target again; request fresh approval."}
+			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "target changed after preparation", Next: "Inspect the intended path and its current contents before submitting the change again."}
 		}
 		if op.spec.effect == policy.Change {
 			version, err := snapshot(current)
@@ -72,7 +72,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 				return toolapi.Result{}, err
 			}
 			if !sameVersion(op.original, version) {
-				return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed after approval", Next: "Read the latest file and prepare a new change with fresh approval."}
+				return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed after preparation", Next: "Read the latest file and submit a change against its current contents."}
 			}
 		}
 	}

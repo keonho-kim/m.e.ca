@@ -54,11 +54,12 @@ func TestSelectiveCommandEditingPipeline(t *testing.T) {
 
 func TestSelectiveCommandDenialPreventsEveryStage(t *testing.T) {
 	executor, project := testExecutor(t)
-	path := filepath.Join(project, "keep.txt")
+	path := filepath.Join(t.TempDir(), "keep.txt")
 	if err := os.WriteFile(path, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf changed > marker && rm -f keep.txt"}`))
+	command := fmt.Sprintf("printf changed > marker && rm -f %q", path)
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, command)))
 	if err != nil {
 		t.Fatal(err)
 	}

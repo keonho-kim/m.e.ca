@@ -18,8 +18,6 @@ var approval = []translation{
 	{"", "Move to ", "이동할 경로: "},
 	{"", "Create directories (including missing parents):\n", "생성할 폴더 (없는 상위 폴더 포함):\n"},
 	{"", "All requested directories already exist.", "요청한 폴더가 모두 존재합니다."},
-	{"", "Deletion requires approval", "삭제 작업은 승인이 필요합니다"},
-	{"", "Deletion or move requires approval", "삭제·이동 작업은 승인이 필요합니다"},
 	{"", "Move requires approval", "이동 작업은 승인이 필요합니다"},
 	{"", "Mutation outside the project requires approval", "프로젝트 밖 변경은 승인이 필요합니다"},
 	{"", "Destructive Git operation requires approval", "파괴적인 Git 작업은 승인이 필요합니다"},
@@ -52,5 +50,4 @@ var approval = []translation{
 	{"", "Shell program supplied at runtime requires approval", "실행 중 전달되는 셸 프로그램은 승인이 필요합니다"},
 	{"", "xargs option requires inspection", "xargs 옵션은 검토가 필요합니다"},
 	{"", "Dynamic find action requires inspection", "동적 find 동작은 검토가 필요합니다"},
-	{"", "find deletion requires approval", "find 삭제 작업은 승인이 필요합니다"},
 }

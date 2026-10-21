@@ -1,7 +1,7 @@
-// Purpose: Classify mandatory approvals and blocked targets for explicit mutations.
+// Purpose: Allow project-child mutations while requiring external approval and blocking protected roots.
 // Pattern: Pure policy functions.
 // Usage: Shell analysis and dedicated file operations assess canonical targets here.
-// Related: internal/policy/policy.go, internal/policy/command/analyze.go.
+// Related: internal/policy/command/targets.go, internal/tools/local/mutation_safety.go.
 package policy
 
 import (
@@ -77,9 +77,6 @@ func mutation(project, home, path string, removal, contents bool) (Safety, error
 		}
 	}
 	result.Targets = []string{path}
-	if removal {
-		result.Ask("Deletion or move requires approval")
-	}
 	if !contains(project, path) {
 		result.Ask("Mutation outside the project requires approval")
 	}

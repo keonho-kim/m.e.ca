@@ -13,12 +13,12 @@ import (
 )
 
 func TestApprovalLanguagePreservesCommandAndPaths(t *testing.T) {
-	command := `printf '%s' 'Working directory: allow-all Deletion requires approval'`
+	command := `printf '%s' 'Working directory: allow-all Mutation outside the project requires approval'`
 	proposal := tool.Approval{Target: command, Preview: "original record", Command: &tool.CommandApproval{
-		Directory: "/project/allow-all\nTargets:", Findings: []tool.CommandFinding{{Command: "rm", Reasons: []string{"Deletion requires approval"}, Targets: []string{"/project/Working directory: "}}},
+		Directory: "/project/allow-all\nTargets:", Findings: []tool.CommandFinding{{Command: "rm", Reasons: []string{"Mutation outside the project requires approval"}, Targets: []string{"/project/Working directory: "}}},
 	}}
 	shown := ApprovalPreview(proposal, locale.Korean)
-	if !strings.Contains(shown, "삭제 작업은 승인이 필요합니다") || !strings.HasSuffix(shown, "\n\n"+command) {
+	if !strings.Contains(shown, "프로젝트 밖 변경은 승인이 필요합니다") || !strings.HasSuffix(shown, "\n\n"+command) {
 		t.Fatal(shown)
 	}
 	if !strings.Contains(shown, proposal.Command.Directory) || !strings.Contains(shown, proposal.Command.Findings[0].Targets[0]) || proposal.Preview != "original record" {
@@ -38,12 +38,12 @@ func TestApprovalLanguagePreservesDiff(t *testing.T) {
 
 func TestApprovalLanguageGroupsRiskySteps(t *testing.T) {
 	proposal := tool.Approval{Target: "printf x > file && rm old && sed edit", Command: &tool.CommandApproval{Directory: "/project", Findings: []tool.CommandFinding{
-		{Command: "rm", Reasons: []string{"Deletion requires approval"}, Targets: []string{"/project/old"}},
+		{Command: "rm", Reasons: []string{"Mutation outside the project requires approval"}, Targets: []string{"/outside/old"}},
 		{Command: "sed", Reasons: []string{"Mutation outside the project requires approval"}, Targets: []string{"/outside/file"}},
 		{Reasons: []string{"Unresolved command name requires approval"}},
 	}}}
 	shown := ApprovalPreview(proposal, locale.Korean)
-	for _, text := range []string{"검토할 명령: rm\n  삭제 작업은 승인이 필요합니다", "검토할 명령: sed\n  프로젝트 밖 변경은 승인이 필요합니다", "검토할 명령: 실행 중 결정되는 명령", "/project/old", "/outside/file"} {
+	for _, text := range []string{"검토할 명령: rm\n  프로젝트 밖 변경은 승인이 필요합니다", "검토할 명령: sed\n  프로젝트 밖 변경은 승인이 필요합니다", "검토할 명령: 실행 중 결정되는 명령", "/outside/old", "/outside/file"} {
 		if !strings.Contains(shown, text) {
 			t.Fatal(shown)
 		}

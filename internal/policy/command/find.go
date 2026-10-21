@@ -1,17 +1,23 @@
-// Purpose: Inspect find actions and nested commands while preserving runtime-selected target uncertainty.
+// Purpose: Inspect find actions and root participation while preserving runtime-selected target uncertainty.
 // Pattern: Structured command argument analysis.
 // Usage: The command effect classifier dispatches find here.
 // Related: internal/policy/command/effects.go, internal/policy/command/wrappers.go.
 package command
 
-import "strings"
+import (
+	"path/filepath"
+	"strconv"
+	"strings"
+)
 
 func (a *analyzer) find(args []word, s *state) {
 	var roots []word
+	follows := false
 	i := 0
 	for ; i < len(args); i++ {
 		arg := args[i]
 		if arg.known && (arg.text == "-L" || arg.text == "-P" || arg.text == "-H") {
+			follows = arg.text != "-P"
 			continue
 		}
 		if arg.known && (strings.HasPrefix(arg.text, "-") || arg.text == "!" || arg.text == "(") {
@@ -22,7 +28,9 @@ func (a *analyzer) find(args []word, s *state) {
 	if len(roots) == 0 {
 		roots = []word{{text: ".", known: true}}
 	}
-	filtered := false
+	filtered, deletion, descendants, conjunctive := false, false, false, true
+	excludesRoot := make([]bool, len(roots))
+	deletesRoot := make([]bool, len(roots))
 	for ; i < len(args); i++ {
 		arg := args[i]
 		if !arg.known {
@@ -31,14 +39,14 @@ func (a *analyzer) find(args []word, s *state) {
 		}
 		switch arg.text {
 		case "-delete":
-			a.ask("find deletion requires approval")
-			for _, root := range roots {
-				if filtered && root.known {
-					a.directoryTarget(root, s, true)
-				} else {
-					a.target(root, s, true)
-				}
+			deletion = true
+			for j := range roots {
+				deletesRoot[j] = deletesRoot[j] || !excludesRoot[j]
 			}
+		case "!", "-not", "-o", "-or", ",":
+			conjunctive = false
+		case "-follow":
+			follows = true
 		case "-exec", "-execdir", "-ok", "-okdir":
 			start := i + 1
 			for i++; i < len(args); i++ {
@@ -79,7 +87,46 @@ func (a *analyzer) find(args []word, s *state) {
 			filtered = true
 			if i+1 < len(args) {
 				i++
+				value := args[i]
+				if arg.text == "-mindepth" {
+					descendants = false
+				}
+				if !value.known {
+					continue
+				}
+				if arg.text == "-mindepth" {
+					depth, err := strconv.Atoi(value.text)
+					descendants = err == nil && depth > 0
+				}
+				for j, root := range roots {
+					if arg.text == "-type" && len(value.text) == 1 && strings.Contains("flbcps", value.text) {
+						excludesRoot[j] = true // A session project root is a directory.
+					}
+					if (arg.text == "-name" || arg.text == "-iname") && root.known && !strings.ContainsAny(value.text, "[]\\") {
+						name, pattern := filepath.Base(strings.TrimRight(root.text, "/")), value.text
+						if arg.text == "-iname" {
+							name, pattern = strings.ToLower(name), strings.ToLower(pattern)
+						}
+						matches, err := filepath.Match(pattern, name)
+						excludesRoot[j] = excludesRoot[j] || err == nil && !matches
+					}
+				}
 			}
+		}
+	}
+	if deletion {
+		for i, root := range roots {
+			if descendants || conjunctive && !deletesRoot[i] {
+				a.directoryTarget(root, s, true)
+			} else {
+				a.target(root, s, true)
+				if follows {
+					a.directoryTarget(root, s, true)
+				}
+			}
+		}
+		if filtered || follows {
+			a.ask("Mutation target cannot be resolved statically")
 		}
 	}
 }

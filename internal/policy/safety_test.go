@@ -12,7 +12,8 @@ func TestMutationSafety(t *testing.T) {
 		removal, blocked, approval bool
 	}{
 		{"/work/project/src/file", false, false, false},
-		{"/work/project/src/file", true, false, true},
+		{"/work/project/src/file", true, false, false},
+		{"/work/project/src", true, false, false},
 		{"/work/project", true, true, false},
 		{"/work", true, true, false},
 		{"/", true, true, false},
@@ -25,6 +26,7 @@ func TestMutationSafety(t *testing.T) {
 		{"/dev/null", false, false, false},
 		{"/dev/null", true, true, false},
 		{"/tmp/specific-file", true, false, true},
+		{"/work/project-other/file", true, false, true},
 		{"/work/project-other/file", false, false, true},
 	} {
 		result, err := Mutation("/work/project", "/home/user", test.path, test.removal)
@@ -39,8 +41,8 @@ func TestMutationWithinDirectory(t *testing.T) {
 		path              string
 		blocked, approval bool
 	}{
-		{"/work/project", false, true},
-		{"/work/project/src", false, true},
+		{"/work/project", false, false},
+		{"/work/project/src", false, false},
 		{"/tmp/specific-directory", false, true},
 		{"/work", true, false},
 		{"/", true, false},

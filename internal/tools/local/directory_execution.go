@@ -92,5 +92,5 @@ func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, err
 	return finish(nil)
 }
 func directoryStale() error {
-	return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "directory targets changed after preparation", Next: "Prepare the current paths again with fresh approval."}
+	return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "directory targets changed after preparation", Next: "Inspect the current directory paths and retry with the intended paths."}
 }
