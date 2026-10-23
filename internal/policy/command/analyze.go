@@ -15,10 +15,16 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+// ResolvedPath describes the entry observed after the requested path resolution.
+type ResolvedPath struct {
+	Path               string
+	Directory, Symlink bool
+}
+
 type Context struct {
 	Project, Home string
 	Environment   []string
-	Resolve       func(directory, path string, removal bool) (string, error)
+	Resolve       func(directory, path string, removal bool) (ResolvedPath, error)
 }
 
 type analyzer struct {

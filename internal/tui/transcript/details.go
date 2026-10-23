@@ -11,8 +11,9 @@ import (
 )
 
 type toolOutput struct {
-	text    string
-	changes []viewport.ChangeRange
+	text           string
+	changes        []viewport.ChangeRange
+	failureHandled bool
 }
 
 func (f Formatter) output(event run.Event) toolOutput {
@@ -24,7 +25,7 @@ func (f Formatter) output(event run.Event) toolOutput {
 	var output toolOutput
 	switch event.Call.Name {
 	case "execute_command":
-		output.text = f.processOutput(fields)
+		output = f.processOutput(event, fields)
 	case "write_file", "edit_file", "create_directory", "move_file":
 		output = f.fileOutput(event, body)
 	}

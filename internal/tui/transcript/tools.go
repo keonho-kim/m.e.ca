@@ -38,7 +38,7 @@ func (f Formatter) toolBlock(event run.Event) viewport.Block {
 		} else {
 			text.WriteString(indentTool(f.Redact(event.Text)))
 		}
-		if event.Kind == "tool_failed" && len(event.Output) > 0 && rendered.text != f.resultSummary(event) {
+		if event.Kind == "tool_failed" && len(event.Output) > 0 && !rendered.failureHandled && rendered.text != f.resultSummary(event) {
 			text.WriteString(indentTool(f.Language.Text("Failed: ") + f.Redact(event.Text)))
 		}
 	}

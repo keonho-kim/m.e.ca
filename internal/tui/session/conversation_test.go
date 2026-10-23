@@ -113,7 +113,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.render()
-	for y, text := range []string{"입력 0 · 출력 0 · 초당 토큰 —", "> inspect file", "", "에이전트", "", "명령 실행", "", "명령: cat README.md", "", "결과", "표준 출력: file inspected", "종료 코드: 0", "", "file inspected", "", ""} {
+	for y, text := range []string{"입력 0 · 출력 0 · 초당 토큰 —", "> inspect file", "", "에이전트", "", "명령 실행", "", "명령: cat README.md", "", "결과", "표준 출력: file inspected", "실행 성공", "", "file inspected", "", ""} {
 		if y == 0 {
 			got := screenLine(a.screen, 0, 80)
 			if !strings.HasPrefix(got, "상태 대기") || !strings.HasSuffix(got, text) {

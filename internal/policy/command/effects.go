@@ -1,7 +1,7 @@
 // Purpose: Recognize explicit filesystem and destructive Git effects of common shell commands.
 // Pattern: Command effect classification.
 // Usage: Resolved calls feed operands into the shared mutation policy.
-// Related: internal/policy/command/find.go, internal/policy/command/removal.go, internal/policy/command/redirects.go, internal/policy/safety.go.
+// Related: internal/policy/command/find.go, internal/policy/command/move.go, internal/policy/command/removal.go, internal/policy/command/redirects.go, internal/policy/safety.go.
 package command
 
 import "strings"
@@ -16,7 +16,9 @@ func (a *analyzer) effects(name string, args []word, s *state) {
 				a.removalParents(arg, s)
 			}
 		}
-	case "mv", "cp", "install", "ln":
+	case "mv":
+		a.move(args, s)
+	case "cp", "install", "ln":
 		values := a.operands(args, []string{"-t", "--target-directory", "-S", "--suffix", "-m", "--mode", "-o", "--owner", "-g", "--group"})
 		for i, arg := range args {
 			if arg.known && (arg.text == "-t" || arg.text == "--target-directory") && i+1 < len(args) {
@@ -28,12 +30,6 @@ func (a *analyzer) effects(name string, args []word, s *state) {
 		}
 		if len(values) > 0 {
 			a.target(values[len(values)-1], s, false)
-		}
-		if name == "mv" {
-			a.ask("Move requires approval")
-			for _, arg := range values {
-				a.target(arg, s, true)
-			}
 		}
 	case "mkdir", "touch", "truncate", "tee":
 		for _, arg := range a.operands(args, []string{"-m", "--mode", "-t", "-d", "--date", "-r", "--reference", "-s", "--size"}) {

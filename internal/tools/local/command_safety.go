@@ -33,7 +33,7 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 	}
 	report, err := commandpolicy.Analyze(ctx, text, commandpolicy.Context{
 		Project: e.project, Home: e.home, Environment: env,
-		Resolve: func(directory, path string, removal bool) (string, error) {
+		Resolve: func(directory, path string, removal bool) (commandpolicy.ResolvedPath, error) {
 			if !filepath.IsAbs(path) {
 				path = directory + "/" + path
 			}
@@ -41,14 +41,14 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 			// or an intermediate symlink refers to its destination directory.
 			resolved, err := shellPath(path, removal)
 			if err != nil {
-				return "", err
+				return commandpolicy.ResolvedPath{}, err
 			}
 			info, err := os.Lstat(resolved)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return "", err
+				return commandpolicy.ResolvedPath{}, err
 			}
 			result.targets = append(result.targets, shellTarget{resolved, info})
-			return resolved, nil
+			return commandpolicy.ResolvedPath{Path: resolved, Directory: info != nil && info.IsDir(), Symlink: info != nil && info.Mode()&os.ModeSymlink != 0}, nil
 		},
 	})
 	result.decision, result.findings = report.Safety, report.Findings

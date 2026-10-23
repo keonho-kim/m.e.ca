@@ -76,8 +76,8 @@ func (a *analyzer) cd(args []word, s *state) {
 			s.changeDirectories(nil)
 			return
 		}
-		if !slices.Contains(next, resolved) {
-			next = append(next, resolved)
+		if !slices.Contains(next, resolved.Path) {
+			next = append(next, resolved.Path)
 		}
 	}
 	s.changeDirectories(next)

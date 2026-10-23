@@ -11,11 +11,13 @@ import (
 )
 
 func testContext() Context {
-	return Context{Project: "/work/project", Home: "/home/user", Environment: []string{"HOME=/home/user", "PATH=/usr/bin:/bin"}, Resolve: func(dir, path string, _ bool) (string, error) {
+	return Context{Project: "/work/project", Home: "/home/user", Environment: []string{"HOME=/home/user", "PATH=/usr/bin:/bin"}, Resolve: func(dir, path string, _ bool) (ResolvedPath, error) {
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(dir, path)
 		}
-		return filepath.Clean(path), nil
+		path = filepath.Clean(path)
+		directory := path == "/work" || path == "/work/project" || path == "/work/project/out" || path == "/etc"
+		return ResolvedPath{Path: path, Directory: directory}, nil
 	}}
 }
 
@@ -63,7 +65,7 @@ func TestAnalyzeDecisions(t *testing.T) {
 		{"rm -rf .", "block"},
 		{"rm -rf ..", "block"},
 		{"rm -- file", "normal"},
-		{"mv old new", "ask"},
+		{"mv old new", "normal"},
 		{"printf hi > /etc/config", "block"},
 		{"cp file /etc/file", "block"},
 		{"mkdir -p /etc/new", "block"},

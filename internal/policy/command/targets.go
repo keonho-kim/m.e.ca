@@ -84,8 +84,8 @@ func (a *analyzer) resolveTargets(value string, s *state, removal bool) []string
 			a.ask("Mutation target could not be canonicalized")
 			continue
 		}
-		if !slices.Contains(paths, path) {
-			paths = append(paths, path)
+		if !slices.Contains(paths, path.Path) {
+			paths = append(paths, path.Path)
 		}
 	}
 	return paths

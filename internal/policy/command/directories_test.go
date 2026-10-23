@@ -41,7 +41,7 @@ func TestDirectoryResolutionPreservesCancellation(t *testing.T) {
 	defer cancel()
 	input := testContext()
 	resolve := input.Resolve
-	input.Resolve = func(directory, path string, removal bool) (string, error) {
+	input.Resolve = func(directory, path string, removal bool) (ResolvedPath, error) {
 		if path == "result.txt" {
 			cancel()
 		}

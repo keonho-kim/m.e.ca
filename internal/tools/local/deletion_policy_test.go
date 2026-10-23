@@ -109,7 +109,7 @@ func TestDeletionPolicyChangedAliasRequiresPreparation(t *testing.T) {
 	}
 }
 
-func TestDeletionPolicyDoesNotRelaxFileMoves(t *testing.T) {
+func TestDeletionPolicyInternalFileMovesRunAutomatically(t *testing.T) {
 	e, project := testExecutor(t)
 	path := filepath.Join(project, "before")
 	if err := os.WriteFile(path, []byte("keep"), 0600); err != nil {
@@ -119,14 +119,17 @@ func TestDeletionPolicyDoesNotRelaxFileMoves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !op.Approval().Required {
-		t.Fatal("file move lost its separate approval")
+	if op.Approval().Required {
+		t.Fatal("resolved internal file move required approval")
 	}
-	if _, err := op.Execute(context.Background(), false); err == nil {
-		t.Fatal("unapproved file move executed")
+	if _, err := op.Execute(context.Background(), false); err != nil {
+		t.Fatalf("automatic file move failed: %v", err)
 	}
-	if _, err := os.Stat(path); err != nil {
-		t.Fatal("unapproved move changed its source:", err)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("move source remains:", err)
+	}
+	if body, err := os.ReadFile(filepath.Join(project, "after")); err != nil || string(body) != "keep" {
+		t.Fatalf("move destination changed: %q %v", body, err)
 	}
 }
 

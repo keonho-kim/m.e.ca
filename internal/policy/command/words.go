@@ -128,7 +128,8 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 	}
 	out := make([]word, 0, len(fields))
 	for _, field := range fields {
-		out = append(out, word{text: field, known: true})
+		// A deferred glob can fall back to its original field without an error.
+		out = append(out, word{text: field, known: true, glob: glob})
 	}
 	return out
 }

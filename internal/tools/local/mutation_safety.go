@@ -1,4 +1,4 @@
-// Purpose: Apply shared path protection and separate move approval to dedicated file changes.
+// Purpose: Apply shared project-boundary and protected-path rules to dedicated file changes.
 // Pattern: Tool policy adapter.
 // Usage: Prepared write, edit, move and directory operations call checkMutationSafety.
 // Related: internal/policy/safety.go, internal/tools/local/candidate.go, internal/tools/local/directories.go.
@@ -22,9 +22,6 @@ func (op *operation) checkMutationSafety() error {
 			}
 		}
 	} else if op.spec.effect == policy.Change {
-		if op.spec.name == "move_file" {
-			decision.Ask("Move requires approval")
-		}
 		if err := check(op.source.absolute, op.spec.name == "move_file"); err != nil {
 			return err
 		}

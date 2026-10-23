@@ -26,7 +26,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	if a.status != "" || len(a.output.Blocks) != 1 {
 		t.Fatal("pending call was not replaced by one completion record")
 	}
-	want := "\n  명령 실행\n\n    명령: cat README.md\n\n    결과\n    표준 출력\n    one\n    two\n    종료 코드: 0\n"
+	want := "\n  명령 실행\n\n    명령: cat README.md\n\n    결과\n    표준 출력\n    one\n    two\n    실행 성공\n"
 	if got := a.output.Blocks[0].Text; got != want {
 		t.Fatalf("tool record=%q; want %q", got, want)
 	}
@@ -60,7 +60,7 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 	a.opts.Vault.Remember("provider-secret")
 	event := run.Event{Kind: "tool_failed", Text: "exit 1", Call: &toolapi.Call{Name: "execute_command", Arguments: json.RawMessage(`{}`)}, Output: json.RawMessage(`{"Stdout":"provider-secret\nkeep","Stderr":"error","ExitCode":1,"Status":"exited"}`)}
 	text := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(event)
-	if strings.Contains(text, "provider-secret") || !strings.Contains(text, "[redacted]") || !strings.Contains(text, "표준 오류: error") || !strings.Contains(text, "실패: exit 1") {
+	if strings.Contains(text, "provider-secret") || !strings.Contains(text, "[redacted]") || !strings.Contains(text, "표준 오류: error") || !strings.Contains(text, "실행 실패") || strings.Contains(text, "exit 1") {
 		t.Fatalf("output/failure missing or unsafe: %q", text)
 	}
 }
