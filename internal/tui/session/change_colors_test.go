@@ -58,10 +58,10 @@ func assertDiffRows(t *testing.T, a *app) {
 		fg, bg := tcell.ColorDefault, tcell.ColorDefault
 		switch change {
 		case '-':
-			fg, bg = tcell.NewHexColor(0x702c35), tcell.NewHexColor(0xf0dadd)
+			fg, bg = tcell.NewHexColor(0xe6edf3), tcell.NewHexColor(0x6b2230)
 			removed++
 		case '+':
-			fg, bg = tcell.NewHexColor(0x24476b), tcell.NewHexColor(0xdbe5f0)
+			fg, bg = tcell.NewHexColor(0xe6edf3), tcell.NewHexColor(0x123b63)
 			added++
 		}
 		for _, x := range []int{4, view.TranscriptWidth(w) - 1} {

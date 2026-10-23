@@ -45,15 +45,15 @@ func TestApprovalChangedRowsHaveContrastingBackgrounds(t *testing.T) {
 	a.choices = []string{"Approve", "Reject"}
 	a.render()
 	for _, y := range []int{6, 7, 8, 9} {
-		foreground, background := tcell.NewHexColor(0x24476b), tcell.NewHexColor(0xdbe5f0)
+		foreground, background := tcell.NewHexColor(0xe6edf3), tcell.NewHexColor(0x123b63)
 		if y <= 7 {
-			foreground, background = tcell.NewHexColor(0x702c35), tcell.NewHexColor(0xf0dadd)
+			background = tcell.NewHexColor(0x6b2230)
 		}
 		for _, x := range []int{0, 79} {
 			_, style, _ := a.screen.Get(x, y)
 			fg, bg := style.GetForeground(), style.GetBackground()
 			if bg != background || fg != foreground {
-				t.Fatalf("changed cell %d,%d lacks the expected dark text and blue/red background", x, y)
+				t.Fatalf("changed cell %d,%d lacks the expected bright text and dark blue/red background", x, y)
 			}
 		}
 	}

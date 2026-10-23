@@ -1,4 +1,4 @@
-// Purpose: Own classic selection weight and dark-text blue/red emphasis for file changes.
+// Purpose: Own classic selection weight and dark blue/red backgrounds with bright text for file changes.
 // Pattern: Pure Function.
 // Usage: Candidate lists and menus share selection weights; approvals and tool results share diff colors.
 // Related: internal/tui/view/chat.go, internal/tui/view/menu.go, internal/tui/startup/resume.go.
@@ -14,11 +14,12 @@ func SelectionStyle(selected bool) tcell.Style {
 }
 
 func ChangeStyle(change byte) tcell.Style {
+	style := tcell.StyleDefault.Foreground(tcell.NewHexColor(0xe6edf3))
 	switch change {
 	case '+':
-		return tcell.StyleDefault.Foreground(tcell.NewHexColor(0x24476b)).Background(tcell.NewHexColor(0xdbe5f0))
+		return style.Background(tcell.NewHexColor(0x123b63))
 	case '-':
-		return tcell.StyleDefault.Foreground(tcell.NewHexColor(0x702c35)).Background(tcell.NewHexColor(0xf0dadd))
+		return style.Background(tcell.NewHexColor(0x6b2230))
 	default:
 		return tcell.StyleDefault
 	}
