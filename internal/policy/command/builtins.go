@@ -6,6 +6,7 @@ package command
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
@@ -46,7 +47,7 @@ func (a *analyzer) cd(args []word, s *state) {
 				continue
 			}
 			if path.known || path.text != "" {
-				s.dir = ""
+				s.changeDirectories(nil)
 				return
 			}
 			path = arg
@@ -55,20 +56,31 @@ func (a *analyzer) cd(args []word, s *state) {
 	if path.text == "-" {
 		path = word{text: s.vars["OLDPWD"].Str, known: !s.unknown["OLDPWD"] && s.vars["OLDPWD"].IsSet()}
 	}
-	if !path.known || !filepath.IsAbs(path.text) && (s.dir == "" || s.vars["CDPATH"].Str != "" || s.unknown["CDPATH"]) {
-		s.dir = ""
-		s.unknown["PWD"] = true
+	if !path.known || !filepath.IsAbs(path.text) && (len(s.directories) == 0 || s.vars["CDPATH"].Str != "" || s.unknown["CDPATH"]) {
+		s.changeDirectories(nil)
 		return
 	}
-	resolved, err := a.input.Resolve(s.dir, path.text, false)
-	if err != nil {
-		s.dir = ""
-		s.unknown["PWD"] = true
-		return
+	bases := s.directories
+	if filepath.IsAbs(path.text) {
+		bases = []string{""}
 	}
-	s.set("OLDPWD", s.dir)
-	s.dir = resolved
-	s.set("PWD", resolved)
+	var next []string
+	for _, base := range bases {
+		if !a.enter() {
+			s.changeDirectories(nil)
+			return
+		}
+		resolved, err := a.input.Resolve(base, path.text, false)
+		a.depth--
+		if err != nil {
+			s.changeDirectories(nil)
+			return
+		}
+		if !slices.Contains(next, resolved) {
+			next = append(next, resolved)
+		}
+	}
+	s.changeDirectories(next)
 }
 
 func (a *analyzer) read(args []word, s *state) {

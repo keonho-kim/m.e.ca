@@ -31,8 +31,7 @@ func (a *analyzer) invalidateLoop(stmts []*syntax.Stmt, s *state) {
 				name := n.Args[0].Lit()
 				switch name {
 				case "cd":
-					s.dir = ""
-					s.invalidate("PWD")
+					s.forgetDirectory()
 				case ".", "source", "eval":
 					s.forget()
 				case "read":

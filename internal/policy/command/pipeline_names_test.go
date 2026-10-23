@@ -40,7 +40,7 @@ func TestPipelineLiteralNames(t *testing.T) {
 func TestPipelineNamesPreserveActualUncertainty(t *testing.T) {
 	for _, test := range []struct{ command, want string }{
 		{`cd src; "$PWD"`, "ask"},
-		{`cd src; rm child`, "ask"},
+		{`cd src; rm child`, "normal"},
 		{`cd src && rm child`, "normal"},
 		{`cd src; rm -rf /etc`, "block"},
 		{`cd src; sudo true`, "block"},

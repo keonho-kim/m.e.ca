@@ -67,7 +67,7 @@ func (a *analyzer) find(args []word, s *state) {
 				}
 				work := s.clone()
 				if arg.text == "-execdir" || arg.text == "-okdir" {
-					work.dir = ""
+					work.forgetDirectory()
 				}
 				a.invoke(nested, nil, work, true)
 			}

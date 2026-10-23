@@ -39,7 +39,7 @@ func TestAnalyzeDecisions(t *testing.T) {
 		{"TARGET='/etc /tmp'; rm -rf \"$TARGET\"", "ask"},
 		{"rm -rf ${TARGET:-/etc}", "block"},
 		{"cd /etc && rm -rf .", "block"},
-		{"cd /etc; rm -rf .", "ask"},
+		{"cd /etc; rm -rf .", "block"},
 		{"echo \"$(rm -rf /etc)\"", "block"},
 		{"bash -c 'cat <(rm -rf /etc)'", "block"},
 		{"bash -c 'cat <(ls)'", "normal"},

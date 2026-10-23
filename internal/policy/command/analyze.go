@@ -36,7 +36,7 @@ func Analyze(ctx context.Context, text string, input Context) (Report, error) {
 		return Report{}, fmt.Errorf("shell analysis requires a project and target resolver")
 	}
 	a := &analyzer{ctx: ctx, input: input}
-	s := &state{dir: input.Project, vars: map[string]expand.Variable{}, unknown: map[string]bool{}, functions: map[string]*syntax.Stmt{}}
+	s := &state{directories: []string{input.Project}, vars: map[string]expand.Variable{}, unknown: map[string]bool{}, functions: map[string]*syntax.Stmt{}}
 	expand.ListEnviron(input.Environment...).Each(func(name string, value expand.Variable) bool {
 		s.vars[name] = value
 		return true

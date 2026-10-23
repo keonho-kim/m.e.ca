@@ -1,11 +1,12 @@
-// Purpose: Track independently known shell values, directories and function definitions.
+// Purpose: Track independently known shell values, directory candidates and function definitions.
 // Pattern: Abstract shell state.
 // Usage: Command flow and word analysis copy and merge state without executing code.
-// Related: internal/policy/command/analyze.go, internal/policy/command/calls.go, internal/policy/command/words.go.
+// Related: internal/policy/command/directories.go, internal/policy/command/calls.go, internal/policy/command/words.go.
 package command
 
 import (
 	"reflect"
+	"slices"
 	"strconv"
 
 	"mvdan.cc/sh/v3/expand"
@@ -13,15 +14,15 @@ import (
 )
 
 type state struct {
-	dir       string
-	vars      map[string]expand.Variable
-	unknown   map[string]bool
-	functions map[string]*syntax.Stmt
-	dynamic   bool
+	directories []string
+	vars        map[string]expand.Variable
+	unknown     map[string]bool
+	functions   map[string]*syntax.Stmt
+	dynamic     bool
 }
 
 func (s *state) clone() *state {
-	n := &state{dir: s.dir, dynamic: s.dynamic, vars: map[string]expand.Variable{}, unknown: map[string]bool{}, functions: map[string]*syntax.Stmt{}}
+	n := &state{directories: slices.Clone(s.directories), dynamic: s.dynamic, vars: map[string]expand.Variable{}, unknown: map[string]bool{}, functions: map[string]*syntax.Stmt{}}
 	for k, v := range s.vars {
 		n.vars[k] = v
 	}
@@ -41,15 +42,13 @@ func (s *state) set(name, value string) {
 
 func (s *state) forget() {
 	s.dynamic = true
-	s.dir = ""
+	s.directories = nil
 	s.vars = map[string]expand.Variable{}
 	s.functions = map[string]*syntax.Stmt{}
 }
 
 func (s *state) join(other *state) {
-	if s.dir != other.dir {
-		s.dir = ""
-	}
+	s.directories = mergeDirectories(s.directories, other.directories)
 	if s.dynamic != other.dynamic {
 		s.dynamic = true
 	}
