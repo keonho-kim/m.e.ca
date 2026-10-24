@@ -91,13 +91,14 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 
 func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 	a := fixture(t)
-	a.page = "endpoint"
-	a.menuInput.Set("localhost")
+	a.openModel()
+	a.modelForm.row, a.modelForm.editing = modelEndpoint, true
+	a.modelForm.endpoint.Set("localhost")
 	a.render()
-	drag(a, 2, 2, 6, 2)
+	drag(a, 2, a.inputRegion.y, 6, a.inputRegion.y)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.menuInput.String() != "host" {
-		t.Fatal(a.menuInput.String())
+	if a.modelForm.endpoint.String() != "host" {
+		t.Fatal(a.modelForm.endpoint.String())
 	}
 }
 

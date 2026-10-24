@@ -7,8 +7,8 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/tools/local/process"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"strings"
 	"testing"

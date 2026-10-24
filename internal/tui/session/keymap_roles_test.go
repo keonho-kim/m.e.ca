@@ -6,8 +6,8 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tools/local"
-	"github.com/keonho-kim/v-code/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tui/browser"
 	"strings"
 	"testing"
 )
@@ -75,7 +75,7 @@ func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 	for _, s := range a.shortcuts() {
 		labels[s.Key] = s.Label
 	}
-	if labels["Enter"] != "방향 수정" || labels["Tab"] != "후속 예약" || labels["Shift+Enter"] != "줄바꿈" {
+	if labels["Enter"] != "전송 확인" || labels["Tab"] != "예약 확인" || labels["Shift+Enter"] != "줄바꿈" {
 		t.Fatal(labels)
 	}
 	a.page = "chat"
@@ -93,7 +93,7 @@ func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 	}
 }
 
-func TestKeymapRolesNoMatchesAndBusyReturn(t *testing.T) {
+func TestKeymapRolesNoMatchesAndBusyClose(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!unknown")
 	for _, s := range a.shortcuts() {
@@ -105,17 +105,10 @@ func TestKeymapRolesNoMatchesAndBusyReturn(t *testing.T) {
 	a.page = "files"
 	a.browser.Input = true
 	a.busy = true
-	a.editor.Set(":q")
-	found := false
-	for _, s := range a.shortcuts() {
-		if s.Key == "Enter" && s.Label == "복귀" {
-			found = true
-		}
+	if labels := keymapLabels(t, a); labels["Esc"] != "닫기" || labels[":q"] != "" {
+		t.Fatal(labels)
 	}
-	if !found {
-		t.Fatal("busy browser return missing")
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if a.page != "chat" || !a.busy {
 		t.Fatal("return hint did not match action")
 	}

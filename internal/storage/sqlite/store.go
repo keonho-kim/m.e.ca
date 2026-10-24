@@ -9,7 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	_ "modernc.org/sqlite"
 	"net/url"
 	"os"

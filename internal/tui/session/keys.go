@@ -6,8 +6,8 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/commands"
+	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 func (a *app) keyEvent(e *tcell.EventKey) {
@@ -28,6 +28,30 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
+	if a.page == "files" && a.fileSendConfirm {
+		a.fileSendKey(e)
+		return
+	}
+	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModShift == 0 {
+		text := a.menuInput.String()
+		if a.page == "chat" || a.page == "files" && a.browser.Input {
+			text = a.editor.String()
+		}
+		command, err := commands.Parse(text)
+		if err == nil && (command.Kind == commands.Exit || command.Kind == commands.NewSession) {
+			a.newSession = command.Kind == commands.NewSession
+			a.requestExit()
+			return
+		}
+	}
+	if a.page == "model" {
+		a.modelSettingsKey(e)
+		return
+	}
+	if a.page == "language" {
+		a.languageKey(e)
+		return
+	}
 	if e.Key() == tcell.KeyCtrlO && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
 		if !a.output.ToggleDetails() {
 			a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
@@ -43,8 +67,8 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	}
 	if e.Key() == tcell.KeyEscape {
-		if a.page == "files" && !a.browser.Input && fileCommand(a.menuInput.String()) {
-			a.menuInput.Set("")
+		if a.page == "files" {
+			a.closeFiles()
 			return
 		}
 		if a.commandOpen {
@@ -55,8 +79,9 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			a.cancelDirectory()
 			return
 		}
-		if a.modelHintsOpen && a.page == "manual" {
-			a.closeModelHints()
+		if a.fileSubmission != nil {
+			a.fileSubmission = nil
+			a.status = ""
 			return
 		}
 		if a.page == "approval" {
@@ -67,23 +92,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			a.interruptSetup()
 			return
 		}
-		if a.page == "chat" || a.page == "files" {
+		if a.page == "chat" {
 			if a.agentActive && a.busy {
 				a.interruptTask()
 				return
 			}
-		}
-	}
-	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModShift == 0 {
-		text := a.menuInput.String()
-		if a.page == "chat" || a.page == "files" && a.browser.Input {
-			text = a.editor.String()
-		}
-		command, err := commands.Parse(text)
-		if err == nil && (command.Kind == commands.Exit || command.Kind == commands.NewSession) {
-			a.newSession = command.Kind == commands.NewSession
-			a.requestExit()
-			return
 		}
 	}
 	if a.page == "files" && a.filePreview != nil {
@@ -108,7 +121,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	}
 	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.agentActive && a.busy && !a.paste {
-		a.reserveInput()
+		if a.page == "files" {
+			a.confirmFileInput(true)
+		} else {
+			a.reserveInput()
+		}
 		return
 	}
 	if a.page == "files" && (e.Key() == tcell.KeyBacktab || e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift != 0) {
@@ -124,7 +141,11 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			a.editor.Insert("\n")
 			a.refreshHints()
 		} else {
-			a.submit()
+			if a.page == "files" {
+				a.confirmFileInput(false)
+			} else {
+				a.submit()
+			}
 		}
 		return
 	case tcell.KeyUp:

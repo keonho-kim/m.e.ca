@@ -14,6 +14,7 @@ type fileSelectionResult struct {
 
 func (a *app) selectFile(path string) {
 	if a.fileSelectionBusy {
+		a.fileSelectionQueue = append(a.fileSelectionQueue, path)
 		return
 	}
 	a.fileSelectionBusy = true
@@ -34,15 +35,26 @@ func (a *app) selectFile(path string) {
 func (a *app) receiveFileSelection(result *fileSelectionResult) {
 	a.fileSelectionBusy = false
 	if result.err != nil {
+		a.fileSubmission = nil
 		a.fail(result.err)
+	} else {
+		a.referenceRevision++
+		if a.browser.Selected == nil {
+			a.browser.Selected = map[string]bool{}
+		}
+		if result.selected {
+			a.browser.Selected[result.path] = true
+		} else {
+			delete(a.browser.Selected, result.path)
+		}
+	}
+	if len(a.fileSelectionQueue) > 0 {
+		path := a.fileSelectionQueue[0]
+		a.fileSelectionQueue[0] = ""
+		a.fileSelectionQueue = a.fileSelectionQueue[1:]
+		a.selectFile(path)
 		return
 	}
-	if a.browser.Selected == nil {
-		a.browser.Selected = map[string]bool{}
-	}
-	if result.selected {
-		a.browser.Selected[result.path] = true
-	} else {
-		delete(a.browser.Selected, result.path)
-	}
+	a.fileSelectionQueue = nil
+	a.finishFileSubmission()
 }

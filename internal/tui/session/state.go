@@ -7,23 +7,23 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/config/credentials"
-	"github.com/keonho-kim/v-code/internal/policy"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
-	"github.com/keonho-kim/v-code/internal/tools/local"
-	"github.com/keonho-kim/v-code/internal/tui/browser"
-	"github.com/keonho-kim/v-code/internal/tui/input"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/selection"
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/commands"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/policy"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/selection"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"sync"
 	"time"
 )
@@ -40,6 +40,7 @@ type Options struct {
 }
 type app struct {
 	language                            locale.Language
+	languageConfirm                     bool
 	steering                            chan string
 	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line
@@ -47,6 +48,12 @@ type app struct {
 	directoryCancel                     context.CancelFunc
 	directoryRevision                   int
 	directoryLoading, fileSelectionBusy bool
+	fileSelectionQueue                  []string
+	fileSubmission                      *fileSubmission
+	fileSendConfirm                     bool
+	fileReserve                         bool
+	referenceRevision                   uint64
+	references                          referenceProjection
 	pasted                              pasteInput
 	setupRevision                       int
 	chatProjection                      chatProjection
@@ -66,9 +73,6 @@ type app struct {
 	elapsedTicks                        <-chan time.Time
 	stopNotice                          string
 	tokensPerSecond                     *float64
-	modelNames, modelHints              []string
-	modelHintsOpen                      bool
-	modelHintIndex                      int
 	pending                             string
 	agentActive, stopRequested          bool
 	compressionTimer                    *time.Ticker
@@ -76,6 +80,7 @@ type app struct {
 	compressionDots                     int
 	tokenTotal                          modelapi.TokenUsage
 	tokenCurrent                        modelapi.TokenUsage
+	modelForm                           *modelForm
 	runSummary                          *viewport.Block
 	opts                                Options
 	screen                              tcell.Screen
@@ -91,13 +96,10 @@ type app struct {
 	settings                            policy.Settings
 	selection                           modelconn.Selection
 	client                              *httpclient.Client
-	thinkingChoice                      *bool
 	page                                string
 	choices                             []string
 	choice                              int
 	menuInput                           input.Editor
-	connectionKind                      int
-	endpoint, key                       string
 	browser                             browser.Browser
 	proposal                            *toolapi.Approval
 	decision                            chan bool
@@ -110,9 +112,7 @@ type app struct {
 	commandHints                        []commands.Suggestion
 	commandOpen                         bool
 	commandIndex                        int
-	changeValue                         string
 	historyCursor                       int64
 	historyRevision                     int
 	previewOffset                       int
-	pendingConnection                   modelconn.Connection
 }

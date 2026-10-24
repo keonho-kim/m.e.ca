@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	selectioncheck "github.com/keonho-kim/v-code/internal/provider/selection"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	selectioncheck "github.com/keonho-kim/meca/internal/provider/selection"
 	"io"
 )
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestSavedModelRoundTrip(t *testing.T) {
@@ -20,7 +20,8 @@ func TestSavedModelRoundTrip(t *testing.T) {
 	}
 	conn.CredentialRef = "credential_saved"
 	cfg := Defaults()
-	cfg.Model = RememberModel(connection.Selection{Connection: conn, Model: "models/bin/modelX"})
+	on, effort := true, "high"
+	cfg.Model = RememberModel(connection.Selection{Connection: conn, Model: "models/bin/modelX", Thinking: &on, ReasoningEffort: &effort})
 	dir := t.TempDir()
 	if err := Save(dir, cfg); err != nil {
 		t.Fatal(err)
@@ -32,6 +33,9 @@ func TestSavedModelRoundTrip(t *testing.T) {
 	selected, err := restored.Model.Selection()
 	if err != nil || selected.Connection != conn || selected.Model != "models/bin/modelX" {
 		t.Fatalf("%+v %v", selected, err)
+	}
+	if selected.Thinking == nil || !*selected.Thinking || selected.Effort() != effort {
+		t.Fatalf("model preferences lost: %+v", selected)
 	}
 	content, err := os.ReadFile(filepath.Join(dir, Filename))
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type SelectionStore interface {

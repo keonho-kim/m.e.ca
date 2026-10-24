@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/config/statefs"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func (s *Sessions) projectDirectory(project string, create bool) (directory, canonical string, err error) {

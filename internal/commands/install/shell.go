@@ -1,4 +1,4 @@
-// Purpose: Add or remove only V-owned PATH blocks in shell configuration.
+// Purpose: Add or remove only MECA-owned PATH blocks in shell configuration.
 // Pattern: Shell configuration adapter.
 // Usage: Install plans registrations; Uninstall removes exact recorded blocks.
 // Related: internal/commands/install/state.go, internal/commands/install/install.go.
@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const pathBlock = "# >>> v-code PATH >>>\ncase \":$PATH:\" in\n  *\":$HOME/.local/bin:\"*) ;;\n  *) export PATH=\"$HOME/.local/bin:$PATH\" ;;\nesac\n# <<< v-code PATH <<<\n"
+const pathBlock = "# >>> meca PATH >>>\ncase \":$PATH:\" in\n  *\":$HOME/.local/bin:\"*) ;;\n  *) export PATH=\"$HOME/.local/bin:$PATH\" ;;\nesac\n# <<< meca PATH <<<\n"
 
 type profileChange struct {
 	registration
@@ -69,8 +69,8 @@ func planProfiles(root *os.Root, names []string, previous []registration, remove
 		}
 		text := string(body)
 		count := strings.Count(text, pathBlock)
-		if count > 1 || strings.Contains(text, "# >>> v-code PATH >>>") && count == 0 {
-			return nil, fmt.Errorf("%s contains an edited V PATH block; restore or remove that block first", name)
+		if count > 1 || strings.Contains(text, "# >>> meca PATH >>>") && count == 0 {
+			return nil, fmt.Errorf("%s contains an edited MECA PATH block; restore or remove that block first", name)
 		}
 		block := pathBlock
 		if r.Separator {
@@ -103,7 +103,7 @@ func writeProfile(root *os.Root, change profileChange, remove bool) (err error) 
 	if remove && change.Created && len(change.body) == 0 {
 		return root.Remove(change.Name)
 	}
-	name := ".v-profile-" + rand.Text()
+	name := ".meca-profile-" + rand.Text()
 	file, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, change.mode)
 	if err != nil {
 		return err

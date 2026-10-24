@@ -6,7 +6,7 @@ package selection
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"strings"
 )
 

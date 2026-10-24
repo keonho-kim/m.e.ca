@@ -6,7 +6,7 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"

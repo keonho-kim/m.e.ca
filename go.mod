@@ -1,4 +1,4 @@
-module github.com/keonho-kim/v-code
+module github.com/keonho-kim/meca
 
 go 1.27.2
 

@@ -2,7 +2,7 @@
 
 // Purpose: Exercise an explicitly supplied real uv binary installed only in a temporary user's local bin.
 // Pattern: Opt-in native tool integration test.
-// Usage: Set V_TEST_UV_BINARY and optionally V_TEST_UV_PYTHON_ROOT to an installed managed Python tree.
+// Usage: Set MECA_TEST_UV_BINARY and optionally MECA_TEST_UV_PYTHON_ROOT to an installed managed Python tree.
 // Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/host_tools_test.go.
 package process
 
@@ -18,19 +18,19 @@ import (
 )
 
 func TestUVPackageProject(t *testing.T) {
-	binary := os.Getenv("V_TEST_UV_BINARY")
+	binary := os.Getenv("MECA_TEST_UV_BINARY")
 	if binary == "" {
-		t.Skip("set V_TEST_UV_BINARY to run against an installed uv")
+		t.Skip("set MECA_TEST_UV_BINARY to run against an installed uv")
 	}
 	home, project := t.TempDir(), t.TempDir()
 	bin := filepath.Join(home, ".local", "bin")
-	private := filepath.Join(home, ".v")
+	private := filepath.Join(home, ".meca")
 	for _, directory := range []string{bin, private} {
 		if err := os.MkdirAll(directory, 0700); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if python := os.Getenv("V_TEST_UV_PYTHON_ROOT"); python != "" {
+	if python := os.Getenv("MECA_TEST_UV_PYTHON_ROOT"); python != "" {
 		destination := filepath.Join(home, ".local", "share", "uv", "python", filepath.Base(python))
 		if err := os.CopyFS(destination, os.DirFS(python)); err != nil {
 			t.Fatal(err)

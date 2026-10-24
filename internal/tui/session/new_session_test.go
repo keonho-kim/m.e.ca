@@ -1,7 +1,7 @@
 // Purpose: Verify !new requests a clean session transition and joins active workers before returning.
 // Pattern: Terminal lifecycle regression test.
 // Usage: go test ./internal/tui/session -run TestNewSession.
-// Related: internal/tui/session/app.go, cmd/v/conversation.go.
+// Related: internal/tui/session/app.go, cmd/meca/conversation.go.
 package session
 
 import (

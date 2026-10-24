@@ -5,8 +5,8 @@
 package transcript
 
 import (
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
 )
 

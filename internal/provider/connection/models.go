@@ -5,7 +5,7 @@
 
 package connection
 
-import "github.com/keonho-kim/v-code/internal/provider/identity"
+import "github.com/keonho-kim/meca/internal/provider/identity"
 
 type Capabilities struct {
 	Reasoning bool `json:"reasoning"`

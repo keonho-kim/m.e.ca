@@ -50,7 +50,7 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			if openErr == nil {
 				t.Fatal("unsupported schema accepted")
 			}
-			if _, err := catalog.Conversations(context.Background(), 0, 100); err == nil {
+			if _, err := catalog.Conversations(context.Background(), ""); err == nil {
 				t.Fatal("unsupported DB silently hidden from discovery")
 			}
 			after, err := os.ReadFile(path)
@@ -78,7 +78,7 @@ func TestConcurrentSessionCreation(t *testing.T) {
 				err = store.Close()
 			}
 			if err == nil {
-				_, err = catalog.Conversations(context.Background(), 0, 100)
+				_, err = catalog.Conversations(context.Background(), "")
 			}
 			results <- err
 		}()
@@ -88,7 +88,7 @@ func TestConcurrentSessionCreation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	list, err := catalog.Conversations(context.Background(), 0, 100)
+	list, err := catalog.Conversations(context.Background(), "")
 	if err != nil || len(list) != 8 {
 		t.Fatalf("partial/duplicate session publication: %+v %v", list, err)
 	}

@@ -6,12 +6,13 @@ package protocol
 
 import (
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
 	payload := wireRequest{Model: request.ModelID, Messages: messages, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
+	payload.Reasoning = controls.Reasoning
 	payload.Tools = Tools(request.Tools)
 	if len(payload.Tools) > 0 && kind != modelconn.Ollama {
 		parallel := true

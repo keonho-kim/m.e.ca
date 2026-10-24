@@ -4,7 +4,7 @@
 // Related: internal/policy/safety.go, internal/tools/local/candidate.go, internal/tools/local/directories.go.
 package local
 
-import "github.com/keonho-kim/v-code/internal/policy"
+import "github.com/keonho-kim/meca/internal/policy"
 
 func (op *operation) checkMutationSafety() error {
 	var decision policy.Safety

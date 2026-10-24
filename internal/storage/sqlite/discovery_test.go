@@ -36,8 +36,8 @@ func TestDiscoveryOrderOpenAndRemoval(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	page, err := catalog.Conversations(ctx, 1, 1)
-	if err != nil || len(page) != 1 || page[0].ID != ids[1] {
+	page, err := catalog.Conversations(ctx, "")
+	if err != nil || len(page) != 3 || page[1].ID != ids[1] {
 		t.Fatalf("page=%+v %v", page, err)
 	}
 	restored, err := catalog.Open(ctx, root, ids[2])
@@ -57,16 +57,16 @@ func TestDiscoveryOrderOpenAndRemoval(t *testing.T) {
 	if err := os.Remove(filepath.Join(group, ids[2]+".db")); err != nil {
 		t.Fatal(err)
 	}
-	list, err := catalog.Conversations(ctx, 0, 100)
+	list, err := catalog.Conversations(ctx, "")
 	if err != nil || len(list) != 2 || list[0].ID != ids[1] {
 		t.Fatalf("deleted file retained in registry: %+v %v", list, err)
 	}
-	for _, name := range []string{".pending-abandoned.db", ids[2] + ".db-wal", ids[2] + ".db-shm", ids[2] + ".db.lock", "v.db"} {
+	for _, name := range []string{".pending-abandoned.db", ids[2] + ".db-wal", ids[2] + ".db-shm", ids[2] + ".db.lock", "meca.db"} {
 		if err := os.WriteFile(filepath.Join(group, name), []byte("not a session"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	list, err = catalog.Conversations(ctx, 0, 100)
+	list, err = catalog.Conversations(ctx, "")
 	if err != nil || len(list) != 2 {
 		t.Fatalf("sidecar listed: %+v %v", list, err)
 	}
@@ -95,7 +95,7 @@ func TestDiscoveryRejectsRenamedAndSymlinkedDatabase(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := catalog.Conversations(context.Background(), 0, 100); err == nil {
+			if _, err := catalog.Conversations(context.Background(), ""); err == nil {
 				t.Fatal("untrusted session accepted")
 			}
 		})

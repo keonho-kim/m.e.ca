@@ -6,7 +6,7 @@ package recovery
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/run"
 )
 
 func recoverRun(ctx context.Context, s Store, session string) error {

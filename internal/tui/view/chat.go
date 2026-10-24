@@ -6,9 +6,9 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/tui/input"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
 )
 
@@ -17,9 +17,9 @@ type ChatDisplay struct {
 	Activity   Activity
 	Usage      modelapi.TokenUsage
 	Lines      []viewport.Line
-	Start      int
 	Scrollbar  viewport.Scrollbar
 	Input      input.Window
+	References []string
 	Layout     ComposerLayout
 	Candidates Candidates
 }
@@ -32,7 +32,7 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 	topLine(screen, "", display.Usage, width, display.Activity)
 	contentWidth := TranscriptWidth(width)
 	y := 1
-	for i := display.Start; i < len(display.Lines) && y-1 < display.Layout.TranscriptRows; i++ {
+	for i := 0; i < len(display.Lines) && y-1 < display.Layout.TranscriptRows; i++ {
 		style := tcell.StyleDefault
 		if display.Lines[i].Thinking {
 			style = style.Dim(true)
@@ -52,6 +52,7 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 	Scrollbar(screen, width-1, 1, display.Scrollbar)
 	layout := display.Layout
 	candidates(screen, display.Candidates, layout.CandidateY, width, layout.CandidateEnd)
+	drawReferences(screen, display.References, layout.ReferenceY, width, layout.ReferenceRows)
 	if display.Notice != "" && layout.InputY > 1 {
 		Text(screen, 0, layout.InputY-1, width, display.Notice, tcell.StyleDefault.Dim(true))
 	}

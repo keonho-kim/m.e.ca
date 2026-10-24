@@ -6,8 +6,8 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 type FileEntry struct {
@@ -22,15 +22,17 @@ type FileColumn struct {
 	Active, Divider bool
 }
 type FilesDisplay struct {
-	Activity                   Activity
-	Usage                      modelapi.TokenUsage
-	Columns                    []FileColumn
-	Path, Status               string
-	ColumnWidth, SelectedCount int
-	Input                      input.Window
-	InputFocused               bool
-	BrowserWidth               int
-	Preview                    *FilePreviewDisplay
+	Activity     Activity
+	Usage        modelapi.TokenUsage
+	Columns      []FileColumn
+	Path, Status string
+	ColumnWidth  int
+	References   []string
+	Layout       ComposerLayout
+	Input        input.Window
+	InputFocused bool
+	BrowserWidth int
+	Preview      *FilePreviewDisplay
 }
 
 func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
@@ -59,16 +61,16 @@ func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 			Text(screen, x+4, 3+index, max(0, width-4), name, style)
 		}
 		if column.Divider {
-			for y := 2; y < h-3; y++ {
+			for y := 2; y < display.Layout.ReferenceY-1; y++ {
 				Text(screen, x+width, y, 1, "│", tcell.StyleDefault)
 			}
 		}
 	}
-	Text(screen, 0, h-3, display.BrowserWidth, display.Activity.Language.Format("selected: %d", display.SelectedCount), tcell.StyleDefault)
+	drawReferences(screen, display.References, display.Layout.ReferenceY, display.BrowserWidth, display.Layout.ReferenceRows)
 	if display.Status != "" {
-		Text(screen, 0, h-2, display.BrowserWidth, display.Status, tcell.StyleDefault)
+		Text(screen, 0, display.Layout.InputY-1, display.BrowserWidth, display.Status, tcell.StyleDefault)
 	}
-	Input(screen, display.Input, h-1, display.BrowserWidth)
+	Input(screen, display.Input, display.Layout.InputY, display.BrowserWidth)
 	if display.Preview != nil {
 		FilePreview(screen, *display.Preview, w, h)
 	}

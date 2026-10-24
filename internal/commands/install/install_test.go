@@ -7,7 +7,7 @@ package install
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +17,7 @@ import (
 func options(t *testing.T, shell string) Options {
 	t.Helper()
 	home := t.TempDir()
-	executable := filepath.Join(t.TempDir(), "v")
+	executable := filepath.Join(t.TempDir(), "meca")
 	if err := os.WriteFile(executable, []byte("test executable"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -29,13 +29,13 @@ func TestCredentialFailurePreservesInstallationForRetry(t *testing.T) {
 	if _, err := Install(context.Background(), o); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(o.Home, ".v/credentials.used"), []byte("used"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(o.Home, ".meca/credentials.used"), []byte("used"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := Uninstall(context.Background(), o.Home, func() error { return errors.New("keyring locked") }); err == nil {
 		t.Fatal("ignored credential cleanup failure")
 	}
-	for _, name := range []string{binaryName, ".v/installation.json", ".zshrc"} {
+	for _, name := range []string{binaryName, ".meca/installation.json", ".zshrc"} {
 		if _, err := os.Stat(filepath.Join(o.Home, name)); err != nil {
 			t.Fatalf("cleanup failure destroyed %s: %v", name, err)
 		}
@@ -80,17 +80,23 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 		if err != nil || !result.RestartShell {
 			t.Fatalf("%+v %v", result, err)
 		}
+		if result.Binary != filepath.Join(o.Home, ".local/bin/meca") {
+			t.Fatalf("unexpected installed command: %s", result.Binary)
+		}
 	}
 	body, err := os.ReadFile(profile)
 	if err != nil || strings.Count(string(body), pathBlock) != 1 {
 		t.Fatalf("duplicated registration: %q %v", body, err)
 	}
+	if !strings.Contains(string(body), "# >>> meca PATH >>>") {
+		t.Fatalf("MECA shell registration missing: %s", body)
+	}
 	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
-		if _, err := os.Stat(filepath.Join(o.Home, ".v/prompts", name)); err != nil {
+		if _, err := os.Stat(filepath.Join(o.Home, ".meca/prompts", name)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(o.Home, ".v/credentials.used"), []byte("used"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(o.Home, ".meca/credentials.used"), []byte("used"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	calls := 0
@@ -100,7 +106,7 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 	if calls != 1 {
 		t.Fatal("credential cleanup omitted")
 	}
-	for _, path := range []string{".v", binaryName} {
+	for _, path := range []string{".meca", binaryName} {
 		if _, err := os.Lstat(filepath.Join(o.Home, path)); !os.IsNotExist(err) {
 			t.Fatalf("leftover %s: %v", path, err)
 		}
@@ -119,7 +125,7 @@ func TestUninstallRefusesActiveState(t *testing.T) {
 	if _, err := Install(context.Background(), o); err != nil {
 		t.Fatal(err)
 	}
-	root, err := statefs.Open(filepath.Join(o.Home, ".v"))
+	root, err := statefs.Open(filepath.Join(o.Home, ".meca"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +163,7 @@ func TestUninstallProtectsReplacedBinaryAndSymlinkState(t *testing.T) {
 	}
 	target := t.TempDir()
 	home := t.TempDir()
-	if err := os.Symlink(target, filepath.Join(home, ".v")); err != nil {
+	if err := os.Symlink(target, filepath.Join(home, ".meca")); err != nil {
 		t.Fatal(err)
 	}
 	if err := Uninstall(context.Background(), home, nil); err == nil {

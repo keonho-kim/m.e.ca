@@ -5,7 +5,7 @@
 package view
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
 )
 

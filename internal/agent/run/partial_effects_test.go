@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/work"
+	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 func TestAppliedEffectSurvivesResultDeliveryFailure(t *testing.T) {

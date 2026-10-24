@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/compact"
 	"time"
 )
 
@@ -61,7 +61,7 @@ func (s *Store) MemoryWatermark(ctx context.Context, session string, after int64
 	}
 	sourceThrough = max(sourceThrough, memoryThrough)
 	var trailingBytes int64
-	err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(length(CAST(json_extract(m.body,'$.content') AS BLOB))),0) FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND json_extract(m.body,'$.role') IN ('user','tool','system')`, session, sourceThrough).Scan(&trailingBytes)
+	err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(m.content_bytes),0) FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND m.role IN ('user','tool','system')`, session, sourceThrough).Scan(&trailingBytes)
 	if err != nil {
 		return mark, err
 	}

@@ -1,49 +1,34 @@
-// Purpose: Reuse transcript and active-response layouts while only input or status cursors change.
-// Pattern: Cached presentation projection.
-// Usage: renderChat requests lines; worker events continue to own source values.
-// Related: internal/tui/session/render_chat.go, internal/tui/viewport/viewport.go.
+// Purpose: Compose history and live blocks into one sparse, event-loop-owned transcript index.
+// Pattern: Presentation projection.
+// Usage: Chat rendering, scrolling and text selection share chatLayout.
+// Related: internal/tui/session/render_chat.go, internal/tui/viewport/window.go.
 package session
 
-import "github.com/keonho-kim/v-code/internal/tui/viewport"
+import "github.com/keonho-kim/meca/internal/tui/viewport"
 
 type chatProjection struct {
-	base                     *viewport.Line
-	count, width, next       int
-	thinking, stream, status viewport.Block
-	pending                  string
-	lines                    []viewport.Line
+	thinking, stream, status, pending viewport.Block
+	layout                            viewport.Transcript
 }
 
-func (a *app) chatLines(width int) []viewport.Line {
-	base := a.output.Lines(width)
-	var first *viewport.Line
-	if len(base) > 0 {
-		first = &base[0]
-	}
+func (a *app) chatLayout(width int) *viewport.Transcript {
 	p := &a.chatProjection
-	if p.width == width && p.base == first && p.count == len(base) && p.next == a.output.Next && p.thinking.Text == a.thinking && p.stream.Text == a.stream && p.status.Text == a.status && p.pending == a.pending {
-		return p.lines
-	}
-	p.width, p.base, p.count = width, first, len(base)
-	p.next = a.output.Next
 	p.thinking.Text, p.thinking.Thinking = a.thinking, true
 	p.stream.Text, p.stream.Markdown = a.stream, true
 	p.status.Text = a.status
-	p.pending = a.pending
-	lines := base[:len(base):len(base)]
+	pending := ""
+	if a.pending != "" {
+		pending = a.language.Text("예약 > ") + a.opts.Vault.Redact(a.pending)
+	}
+	p.pending.Text, p.pending.Thinking = pending, true
 	next := a.output.Next + 1
-	for _, block := range []*viewport.Block{&p.thinking, &p.stream, &p.status} {
+	live := []*viewport.Block{&p.thinking, &p.stream, &p.status, &p.pending}
+	for _, block := range live {
 		block.ID = next
-		projected := block.Lines(width)
-		if len(projected) > 0 {
-			lines = viewport.AppendLines(lines, projected)
+		if block.Count(width) > 0 {
 			next++
 		}
 	}
-	if a.pending != "" {
-		block := viewport.Block{ID: next, Text: a.language.Text("예약 > ") + a.opts.Vault.Redact(a.pending), Thinking: true}
-		lines = viewport.AppendLines(lines, block.Lines(width))
-	}
-	p.lines = lines
-	return lines
+	p.layout.Prepare(width, a.output.Blocks, live)
+	return &p.layout
 }

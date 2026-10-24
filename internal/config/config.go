@@ -12,7 +12,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"github.com/pelletier/go-toml/v2"
 )
 

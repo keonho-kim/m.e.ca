@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/tools/local/diff"
-	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tools/local/diff"
+	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 	"unicode/utf8"
 )
 

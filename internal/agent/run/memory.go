@@ -8,9 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func (s *execution) observe(ctx context.Context, count compact.TokenCount) error {
@@ -72,6 +73,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	var through int64
 	s.memoryContext, through = s.runner.Memory.Context()
 	if changed || !s.historyLoaded {
+		s.projection = contextbuild.Projection{}
 		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
 		if err != nil {
 			return err

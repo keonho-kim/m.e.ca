@@ -1,6 +1,6 @@
 // Purpose: Select a new or persisted conversation and revalidate existing project directories.
 // Pattern: Startup presentation flow.
-// Usage: Called by cmd/v with a project-filtered or global conversation query.
+// Usage: Called by cmd/meca with a project-filtered or global conversation query.
 // Related: internal/storage/sqlite/conversations.go, internal/commands/startup/parse.go, internal/tui/view/styles.go, internal/tui/view/keymap.go.
 package startup
 
@@ -8,18 +8,32 @@ import (
 	"context"
 	"fmt"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/commands/startup"
-	"github.com/keonho-kim/v-code/internal/config"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
-	"github.com/keonho-kim/v-code/internal/tui/input"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/commands"
+	"github.com/keonho-kim/meca/internal/commands/startup"
+	"github.com/keonho-kim/meca/internal/config"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/rivo/uniseg"
 	"strings"
 )
 
 type Conversations func(context.Context, int, int) ([]sessionstate.Conversation, error)
+
+// Pages retains one picker-owned snapshot and serves pages without further I/O.
+func Pages(snapshot []sessionstate.Conversation) Conversations {
+	return func(ctx context.Context, offset, limit int) ([]sessionstate.Conversation, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if offset < 0 || limit < 1 || limit > 100 {
+			return nil, fmt.Errorf("invalid conversation page")
+		}
+		start := min(offset, len(snapshot))
+		return snapshot[start : start+min(limit, len(snapshot)-start)], nil
+	}
+}
 
 // Select returns newConversation with an empty ID when the first entry is chosen.
 func Select(ctx context.Context, screen tcell.Screen, load Conversations, newConversation sessionstate.Session, preference config.Language) (sessionstate.Session, bool, error) {

@@ -1,0 +1,57 @@
+// Purpose: Compose project-scoped startup selection and open only the chosen conversation.
+// Pattern: Composition Root.
+// Usage: start calls selectConversation before wiring a session's tools and model.
+// Related: cmd/meca/main.go, internal/tui/startup/resume.go, internal/storage/sqlite/catalog.go.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/commands/startup"
+	"github.com/keonho-kim/meca/internal/config"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	tuistartup "github.com/keonho-kim/meca/internal/tui/startup"
+)
+
+func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqlite.Sessions, mode startup.Mode, cwd string, language config.Language) (*sqlite.Store, bool, error) {
+	if mode.Session != "" {
+		store, err := sessions.Open(ctx, mode.Project, mode.Session)
+		return store, err == nil, err
+	}
+	all := mode.Resume
+	if all {
+		var err error
+		mode, err = startup.Parse(nil, cwd)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+	project := ""
+	if !all {
+		project = mode.Project
+	}
+	snapshot, err := sessions.Conversations(ctx, project)
+	if err != nil {
+		return nil, false, err
+	}
+	load := tuistartup.Pages(snapshot)
+	selected, ok, err := tuistartup.Select(ctx, screen, load, sessionstate.Session{ProjectRoot: mode.Project, DisplayRoot: mode.Display}, language)
+	if err != nil || !ok {
+		return nil, false, err
+	}
+	if selected.ID == "" {
+		store, err := sessions.Create(ctx, selected.ProjectRoot, selected.DisplayRoot)
+		return store, err == nil, err
+	}
+	store, err := sessions.Open(ctx, selected.ProjectRoot, selected.ID)
+	if err != nil {
+		return nil, false, err
+	}
+	if store.Session() != selected {
+		return nil, false, errors.Join(fmt.Errorf("selected session metadata changed; select it again"), store.Close())
+	}
+	return store, true, nil
+}

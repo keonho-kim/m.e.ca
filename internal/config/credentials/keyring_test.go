@@ -21,29 +21,32 @@ func TestRedactionAndStreaming(t *testing.T) {
 	if v.Redact("provide") != "provide" {
 		t.Fatal("ordinary text was redacted")
 	}
-	if strings.Contains(v.Stream("start provider-sec"), "provider-sec") {
+	if strings.Contains(v.NewStreamMask()("start provider-sec", true), "provider-sec") {
 		t.Fatal("streamed secret prefix")
 	}
 }
 
-func TestClearDeletesOnlyVServiceAndMarksSavedCredentials(t *testing.T) {
+func TestClearDeletesOnlyMECAServiceAndMarksSavedCredentials(t *testing.T) {
 	keyring.MockInit()
 	v := &Vault{State: t.TempDir()}
 	if err := v.Set("provider", "provider-secret"); err != nil {
 		t.Fatal(err)
 	}
+	if value, err := keyring.Get("meca", "provider"); err != nil || value != "provider-secret" {
+		t.Fatal("MECA credential service was not used", err)
+	}
 	if err := keyring.Set("other-app", "provider", "other-secret"); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(filepath.Join(v.State, "credentials.used"))
-	if err != nil || strings.Contains(string(body), "provider-secret") {
+	if err != nil || string(body) != "meca\n" || strings.Contains(string(body), "provider-secret") {
 		t.Fatal("credential cleanup marker missing or contains a secret")
 	}
 	if err := Clear(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := keyring.Get(service, "provider"); err == nil {
-		t.Fatal("V credential remains")
+		t.Fatal("MECA credential remains")
 	}
 	if value, err := keyring.Get("other-app", "provider"); err != nil || value != "other-secret" {
 		t.Fatal("other service was modified")

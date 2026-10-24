@@ -1,12 +1,12 @@
 // Purpose: Verify model identity labels and evidence through terminal menu workflows.
 // Pattern: Terminal workflow tests.
 // Usage: go test ./internal/tui/session -run TestIdentity.
-// Related: internal/tui/modelmenu/identity.go, internal/tui/session/render_menu.go.
+// Related: internal/tui/modelmenu/identity.go, internal/tui/session/render_model.go.
 package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/provider/identity"
+	"github.com/keonho-kim/meca/internal/provider/identity"
 	"github.com/rivo/uniseg"
 	"strings"
 	"testing"
@@ -20,19 +20,19 @@ func TestIdentityInfoMenuAndScroll(t *testing.T) {
 	report.Add("/model/info", "original", "ollama/gemma4")
 	a.selection.Identity = report
 	a.openModel()
-	a.choice = 3
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "modelinfo" {
+	a.modelForm.row = modelInformation
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
+	if a.page != "model" || !a.modelForm.details {
 		t.Fatalf("page=%s", a.page)
 	}
 	a.render()
-	if got := screenLine(a.screen, 5, 80); !strings.Contains(got, "복수") {
+	if got := modelScreen(a); !strings.Contains(got, "복수") {
 		t.Fatalf("identity state=%s", got)
 	}
 	a.screen.SetSize(36, 10)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, "", 0))
 	a.render()
-	if a.previewOffset == 0 {
+	if a.modelForm.detailsOffset == 0 {
 		t.Fatal("identity evidence did not scroll")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))

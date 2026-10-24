@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 )
 
@@ -66,6 +66,9 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 			}
 			if value := row.Capabilities.Reasoning.Default; value != "on" && value != "off" {
 				control.Default = value
+			} else {
+				on := value == "on"
+				control.DefaultOn = &on
 			}
 			info.Reasoning = control
 		}

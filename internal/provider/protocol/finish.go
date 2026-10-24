@@ -6,7 +6,7 @@ package protocol
 
 import (
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 )
 

@@ -1,6 +1,6 @@
-// Purpose: Remember active secrets and mask complete and partial streamed values and terminal controls.
+// Purpose: Remember active secrets and sanitize complete text values and terminal controls.
 // Pattern: Secret sanitization boundary.
-// Usage: Provider selection remembers keys and runtime output calls Vault.Redact or Stream.
+// Usage: Provider selection remembers keys; complete values use Redact and streamed values use NewStreamMask.
 // Related: internal/config/credentials/keyring.go, internal/agent/run/generate.go.
 package credentials
 
@@ -14,6 +14,12 @@ type Vault struct {
 	State string
 	mu    sync.RWMutex
 	keys  []string
+}
+
+func (v *Vault) RedactionVersion() int {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return len(v.keys)
 }
 
 func (v *Vault) Remember(key string) {
@@ -42,20 +48,4 @@ func (v *Vault) Redact(text string) string {
 		}
 		return r
 	}, text)
-}
-
-// Stream receives the accumulated response, not isolated transport chunks.
-func (v *Vault) Stream(text string) string {
-	v.mu.RLock()
-	for _, key := range v.keys {
-		// Hide incomplete key prefixes at a streaming boundary as well.
-		for n := min(len(key)-1, len(text)); n > 0; n-- {
-			if strings.HasSuffix(text, key[:n]) {
-				text = text[:len(text)-n] + "[redacted]"
-				break
-			}
-		}
-	}
-	v.mu.RUnlock()
-	return v.Redact(text)
 }

@@ -7,8 +7,8 @@ package local
 import (
 	"crypto/sha256"
 	"errors"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	fileops "github.com/keonho-kim/v-code/internal/tools/local/file"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
 	"io"
 )
 

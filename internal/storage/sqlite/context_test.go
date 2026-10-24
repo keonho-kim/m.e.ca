@@ -7,9 +7,9 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
 )
 

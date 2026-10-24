@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strings"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func equivalentArguments(left, right string) bool {

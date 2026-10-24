@@ -1,6 +1,6 @@
 // Purpose: Create and select session database files without a separate session registry.
 // Pattern: Filesystem-backed session lifecycle.
-// Usage: Startup opens ~/.v/sessions, then calls Create or Open.
+// Usage: Startup opens ~/.meca/sessions, then calls Create or Open.
 // Related: internal/storage/sqlite/store.go, internal/storage/sqlite/conversations.go, internal/config/statefs/root.go.
 package sqlite
 
@@ -9,8 +9,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"os"
 	"path/filepath"
 	"time"

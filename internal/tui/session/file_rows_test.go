@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/rivo/uniseg"
 )
 

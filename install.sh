@@ -1,8 +1,8 @@
 #!/bin/sh
-# Purpose: Start V installation from its source checkout.
+# Purpose: Start MECA installation from its source checkout.
 # Pattern: Thin command entry point.
 # Usage: ./install.sh
-# Related: cmd/v/install.go, internal/commands/install/install.go, README.md.
+# Related: cmd/meca/install.go, internal/commands/install/install.go, README.md.
 
 set -eu
 
@@ -16,6 +16,6 @@ if ! command -v go >/dev/null 2>&1; then
     exit 1
 fi
 
-v_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-cd "$v_install_root"
-exec go run ./cmd/v install
+meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+cd "$meca_install_root"
+exec go run ./cmd/meca install

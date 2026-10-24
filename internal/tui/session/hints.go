@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/commands"
+	"github.com/keonho-kim/meca/internal/commands"
 	"strings"
 	"unicode"
 )

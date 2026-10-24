@@ -5,7 +5,7 @@
 package bootstrap
 
 import (
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/meca/internal/config"
 	"path/filepath"
 	"testing"
 )
@@ -15,7 +15,7 @@ func TestCompactionCapacityDefaultsPersist(t *testing.T) {
 	if _, err := Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	settings, err := config.Load(filepath.Join(home, ".v"))
+	settings, err := config.Load(filepath.Join(home, ".meca"))
 	if err != nil {
 		t.Fatal(err)
 	}

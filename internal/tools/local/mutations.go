@@ -7,9 +7,9 @@ package local
 import (
 	"crypto/sha256"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	fileops "github.com/keonho-kim/v-code/internal/tools/local/file"
-	resultfmt "github.com/keonho-kim/v-code/internal/tools/result"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
+	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 	"os"
 )
 

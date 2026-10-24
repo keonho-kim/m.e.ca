@@ -6,7 +6,7 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"os"
 	"path/filepath"
 	"strings"

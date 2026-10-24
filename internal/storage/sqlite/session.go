@@ -8,7 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"time"
 	"unicode/utf8"
 )
@@ -18,9 +18,14 @@ func readConversation(ctx context.Context, db *sql.DB, id string) (sessionstate.
 	if err := checkSchema(ctx, db); err != nil {
 		return c, err
 	}
-	err := db.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,
- COALESCE((SELECT substr(json_extract(body,'$.content'),1,200) FROM messages WHERE json_extract(body,'$.role')='user' ORDER BY sequence LIMIT 1),'New conversation')
- FROM sessions WHERE singleton=1`).Scan(&c.ID, &c.ProjectRoot, &c.DisplayRoot, &c.Updated, &c.Summary)
+	return parseConversation(db.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,
+ COALESCE(summary,'New conversation')
+ FROM sessions WHERE singleton=1`), id)
+}
+
+func parseConversation(row *sql.Row, id string) (sessionstate.Conversation, error) {
+	var c sessionstate.Conversation
+	err := row.Scan(&c.ID, &c.ProjectRoot, &c.DisplayRoot, &c.Updated, &c.Summary)
 	if err != nil {
 		return c, err
 	}
@@ -36,6 +41,17 @@ func readConversation(ctx context.Context, db *sql.DB, id string) (sessionstate.
 	if !utf8.ValidString(c.Summary) {
 		return c, fmt.Errorf("invalid session summary")
 	}
-	c.Summary = string([]rune(c.Summary)[:min(80, len([]rune(c.Summary)))])
+	c.Summary = conversationSummary(c.Summary)
 	return c, nil
+}
+
+func conversationSummary(text string) string {
+	count := 0
+	for at := range text {
+		if count == 80 {
+			return text[:at]
+		}
+		count++
+	}
+	return text
 }

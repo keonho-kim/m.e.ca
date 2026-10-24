@@ -6,8 +6,8 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/tools/local/diff"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tools/local/diff"
 	"strings"
 	"testing"
 )

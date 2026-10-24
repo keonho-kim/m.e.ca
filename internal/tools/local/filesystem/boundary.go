@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 type Boundary struct {
@@ -39,7 +41,7 @@ func New(project, home, private string) (*Boundary, error) {
 		return nil, fmt.Errorf("project root must be a directory")
 	}
 	b := &Boundary{project: project, home: home, projectInfo: info, protected: []string{private}}
-	for _, name := range []string{".v", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".colima", ".orbstack", ".config/gcloud", ".config/gh", ".config/op", ".netrc", "Library/Keychains"} {
+	for _, name := range []string{statefs.DirectoryName, ".v", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".colima", ".orbstack", ".config/gcloud", ".config/gh", ".config/op", ".netrc", "Library/Keychains"} {
 		path, err := Canonical(filepath.Join(home, name))
 		if err != nil {
 			return nil, err

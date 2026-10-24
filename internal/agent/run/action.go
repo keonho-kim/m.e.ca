@@ -7,7 +7,7 @@ package run
 import (
 	"context"
 	"errors"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"time"
 )
 
@@ -26,7 +26,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 		return err
 	}
 	// The compiled call enters the audit transcript only after every argument is valid.
-	if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: reply.Calls}); err != nil {
+	if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
 		return err
 	}
 	if reply.Text != "" {

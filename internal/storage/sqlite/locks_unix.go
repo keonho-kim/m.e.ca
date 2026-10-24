@@ -2,8 +2,8 @@
 
 // Purpose: Hold one process owner per session database using Unix file locks.
 // Pattern: Resource lifecycle boundary.
-// Usage: cmd/v closes the session lease after task workers stop.
-// Related: internal/storage/sqlite/lease_test.go, internal/storage/sqlite/schema_test.go, cmd/v/main.go.
+// Usage: cmd/meca closes the session lease after task workers stop.
+// Related: internal/storage/sqlite/lease_test.go, internal/storage/sqlite/schema_test.go, cmd/meca/main.go.
 package sqlite
 
 import (
@@ -18,7 +18,7 @@ type SessionLease struct{ file *os.File }
 func (s *Store) LeaseSession() (*SessionLease, error) {
 	file, err := openLock(s.path+".lock", syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		return nil, fmt.Errorf("conversation lock unavailable; another V process may own this session: %w", err)
+		return nil, fmt.Errorf("conversation lock unavailable; another MECA process may own this session: %w", err)
 	}
 	return &SessionLease{file: file}, nil
 }

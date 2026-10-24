@@ -1,7 +1,7 @@
 // Purpose: Verify terminal-free invocation, exact session selection and export parsing.
 // Pattern: CLI boundary tests.
 // Usage: go test ./internal/commands/startup.
-// Related: internal/commands/startup/parse.go, cmd/v/headless.go.
+// Related: internal/commands/startup/parse.go, cmd/meca/headless.go.
 package startup
 
 import "testing"

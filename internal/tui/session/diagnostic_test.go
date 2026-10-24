@@ -6,8 +6,8 @@ package session
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -23,7 +23,7 @@ func TestExplicitDiagnostic(t *testing.T) {
 		fmt.Fprint(w, `{"choices":[{"message":{"content":"Hello"},"finish_reason":"stop"}]}`)
 	}))
 	defer server.Close()
-	conn, err := connection.New(connection.OpenAICompatible, server.URL)
+	conn, err := connection.New(connection.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,20 +9,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 type streamState struct {
-	calls     map[int]*callDraft
-	lmItems   map[string]int
-	provider  modelconn.ProviderKind
-	usage     *modelapi.TokenUsage
-	finished  bool
-	streaming bool
-	received  bool
-	failure   error
+	reasoningDetails []json.RawMessage
+	reasoningBytes   int
+	reasoningStream  bool
+	calls            map[int]*callDraft
+	lmItems          map[string]int
+	provider         modelconn.ProviderKind
+	usage            *modelapi.TokenUsage
+	finished         bool
+	streaming        bool
+	received         bool
+	failure          error
 }
 
 func (state *streamState) consume(content []byte, single bool, emit func(modelapi.Event) error) error {
@@ -86,6 +89,15 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		reasoning = message.ReasoningContent
 	}
 	reason := message.Thinking + reasoning
+	if state.provider == modelconn.OpenRouter {
+		text, err := state.routerDetails(message.ReasoningDetails, !single)
+		if err != nil {
+			return err
+		}
+		if text != "" || reason == "" {
+			reason = text
+		}
+	}
 	if observed == nil && (message.Content != "" || reason != "") {
 		state.usage = nil
 	}
@@ -118,5 +130,12 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 	if err != nil {
 		return state.emitFailedUsage(err, emit)
 	}
-	return emit(modelapi.Event{Done: true, Streaming: state.streaming, Usage: state.usage, Calls: calls})
+	var continuation []byte
+	if len(state.reasoningDetails) > 0 {
+		continuation, err = routerContinuation(state.reasoningDetails, state.reasoningStream)
+		if err != nil {
+			return err
+		}
+	}
+	return emit(modelapi.Event{Done: true, Streaming: state.streaming, Usage: state.usage, Calls: calls, ReasoningState: continuation})
 }

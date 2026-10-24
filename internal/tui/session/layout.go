@@ -4,7 +4,7 @@
 // Related: internal/tui/session/render.go, internal/tui/session/keymap.go, internal/tui/view/footer.go.
 package session
 
-import "github.com/keonho-kim/v-code/internal/tui/view"
+import "github.com/keonho-kim/meca/internal/tui/view"
 
 func (a *app) footerLayout(width, height int) (int, []view.Shortcut) {
 	if a.textSelection.Dragging() && a.footerRows > 0 {

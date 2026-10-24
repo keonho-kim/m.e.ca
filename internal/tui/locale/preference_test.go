@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/meca/internal/config"
 )
 
 func TestLanguagePreference(t *testing.T) {

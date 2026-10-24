@@ -6,7 +6,7 @@ package view
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
 	"time"
 )

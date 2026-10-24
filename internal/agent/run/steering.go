@@ -7,7 +7,7 @@ package run
 import (
 	"context"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func (s *execution) steer(ctx context.Context) (bool, error) {
@@ -43,7 +43,7 @@ func (s *execution) continueSteered(ctx context.Context, reply modelapi.Response
 		return false, nil
 	}
 	if reply.Text != "" {
-		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning}); err != nil {
+		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {
 			return false, err
 		}
 		if err := s.emit(Event{Kind: "progress", Text: reply.Text}); err != nil {

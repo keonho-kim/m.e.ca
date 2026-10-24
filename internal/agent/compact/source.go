@@ -5,6 +5,7 @@
 package compact
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -19,7 +20,8 @@ type sourceEntry struct {
 	important bool
 }
 type sourceBuffer struct {
-	entries                         []sourceEntry
+	entries                         list.List
+	normal, important               []*list.Element
 	bytes, required, limit, omitted int
 }
 
@@ -40,8 +42,8 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	encoded := key
 	important := record.Role == "outcome" || record.Role == "failure"
 	size := len(encoded) + 1
-	if !mandatory && len(b.entries) > 0 {
-		last := b.entries[len(b.entries)-1]
+	if !mandatory && b.entries.Len() > 0 {
+		last := b.entries.Back().Value.(sourceEntry)
 		if !last.mandatory && last.key == digest {
 			return nil
 		}
@@ -54,40 +56,47 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 		return nil
 	}
 	for b.bytes+size > b.limit {
-		remove := -1
-		for i, entry := range b.entries {
-			if entry.mandatory {
-				continue
-			}
-			if remove < 0 || b.entries[remove].important && !entry.important {
-				remove = i
-			}
+		queue := &b.normal
+		if len(*queue) == 0 {
+			queue = &b.important
 		}
-		if remove < 0 {
+		if len(*queue) == 0 {
 			return fmt.Errorf("compaction source budget exhausted")
 		}
-		if !mandatory && !important && b.entries[remove].important {
+		remove := (*queue)[0]
+		entry := remove.Value.(sourceEntry)
+		if !mandatory && !important && entry.important {
 			b.omitted++
 			return nil
 		}
-		b.bytes -= len(b.entries[remove].encoded) + 1
-		copy(b.entries[remove:], b.entries[remove+1:])
-		b.entries[len(b.entries)-1] = sourceEntry{}
-		b.entries = b.entries[:len(b.entries)-1]
+		b.bytes -= len(entry.encoded) + 1
+		(*queue)[0] = nil
+		*queue = (*queue)[1:]
+		if len(*queue) == 0 {
+			*queue = nil
+		}
+		b.entries.Remove(remove)
 		b.omitted++
 	}
 	if mandatory {
 		b.required += size
 	}
-	b.entries = append(b.entries, sourceEntry{digest, encoded, mandatory, important})
+	entry := b.entries.PushBack(sourceEntry{digest, encoded, mandatory, important})
+	if !mandatory {
+		if important {
+			b.important = append(b.important, entry)
+		} else {
+			b.normal = append(b.normal, entry)
+		}
+	}
 	b.bytes += size
 	return nil
 }
 
 func (b *sourceBuffer) packet() []json.RawMessage {
-	out := make([]json.RawMessage, len(b.entries))
-	for i, entry := range b.entries {
-		out[i] = entry.encoded
+	out := make([]json.RawMessage, 0, b.entries.Len())
+	for entry := b.entries.Front(); entry != nil; entry = entry.Next() {
+		out = append(out, entry.Value.(sourceEntry).encoded)
 	}
 	return out
 }

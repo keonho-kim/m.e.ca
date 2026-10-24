@@ -1,6 +1,6 @@
-// Purpose: Remove V-owned installation artifacts, credentials and private state.
+// Purpose: Remove MECA-owned installation artifacts, credentials and private state.
 // Pattern: Uninstallation use case.
-// Usage: cmd/v invokes Uninstall before bootstrap, SQLite or terminal setup.
+// Usage: cmd/meca invokes Uninstall before bootstrap, SQLite or terminal setup.
 // Related: internal/commands/install/state.go, internal/commands/install/shell.go, internal/config/credentials/keyring.go.
 package install
 
@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 )
@@ -22,10 +22,10 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 		return err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
-	info, err := root.Lstat(".v")
+	info, err := root.Lstat(statefs.DirectoryName)
 	if errors.Is(err, os.ErrNotExist) {
 		if _, binaryErr := root.Lstat(binaryName); binaryErr == nil {
-			return fmt.Errorf("installation state is missing; run v install before v uninstall")
+			return fmt.Errorf("installation state is missing; run meca install before meca uninstall")
 		} else if !errors.Is(binaryErr, os.ErrNotExist) {
 			return binaryErr
 		}
@@ -37,7 +37,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("application state must be a real directory")
 	}
-	state, err := statefs.Open(filepath.Join(home, ".v"))
+	state, err := statefs.Open(filepath.Join(home, statefs.DirectoryName))
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 			return fmt.Errorf("credential cleanup is required")
 		}
 		if err := clearCredentials(); err != nil {
-			return fmt.Errorf("remove V credentials before deleting state: %w", err)
+			return fmt.Errorf("remove MECA credentials before deleting state: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -86,5 +86,5 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 	if err := root.Remove(binaryName); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	return root.RemoveAll(".v")
+	return root.RemoveAll(statefs.DirectoryName)
 }

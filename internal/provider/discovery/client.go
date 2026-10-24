@@ -5,8 +5,8 @@
 package discovery
 
 import (
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 type Client struct {

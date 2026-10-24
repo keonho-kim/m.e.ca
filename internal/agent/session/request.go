@@ -7,11 +7,11 @@ package session
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/compact"
 
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/storage/recovery"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/storage/recovery"
 )
 
 type Store interface {

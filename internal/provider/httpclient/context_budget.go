@@ -4,7 +4,7 @@
 // Related: internal/provider/httpclient/client.go, internal/provider/connection/context.go.
 package httpclient
 
-import "github.com/keonho-kim/v-code/internal/provider/connection"
+import "github.com/keonho-kim/meca/internal/provider/connection"
 
 // SetContextLength is called before generation or transfer to a worker.
 func (c *Client) SetContextLength(tokens int) error {

@@ -5,8 +5,8 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 type historyPage struct {

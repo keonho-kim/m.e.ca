@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type Function struct {
@@ -38,12 +38,22 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 			return nil, fmt.Errorf("invalid message role")
 		}
 		message := Message{Role: m.Role, Content: m.Content}
+		if kind == connection.OpenRouter && m.Role == "assistant" && !m.Incomplete && len(m.ReasoningState) > 0 {
+			var err error
+			message.ReasoningDetails, err = routerHistory(m.ReasoningState)
+			if err != nil {
+				return nil, err
+			}
+		}
 		if kind == connection.Ollama {
 			message.Thinking = m.Reasoning
 		} else if kind == connection.SGLang || kind == connection.LiteLLM {
 			message.ReasoningContent = m.Reasoning
 		} else {
 			message.Reasoning = m.Reasoning
+		}
+		if len(message.ReasoningDetails) > 0 {
+			message.Reasoning = ""
 		}
 		if m.Role == "tool" {
 			if m.ToolCallID == "" || m.ToolName == "" {

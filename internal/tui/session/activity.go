@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/tui/view"
 	"time"
 )
 

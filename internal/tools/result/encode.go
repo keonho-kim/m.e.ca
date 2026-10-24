@@ -7,7 +7,7 @@ package result
 import (
 	"encoding/json"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func Encode(value any, summary string) (toolapi.Result, error) {

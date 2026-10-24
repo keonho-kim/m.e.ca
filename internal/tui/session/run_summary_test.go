@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/rivo/uniseg"
 )
 
@@ -35,7 +35,8 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	for _, width := range []int{100, 36, 120} {
 		a.screen.SetSize(width, 24)
 		a.render()
-		for _, line := range a.output.Lines(view.TranscriptWidth(width)) {
+		layout := a.chatLayout(view.TranscriptWidth(width))
+		for _, line := range layout.Window(0, layout.Count()) {
 			if line.ID != a.output.Blocks[1].ID || strings.TrimSpace(line.Text) == "" {
 				continue
 			}

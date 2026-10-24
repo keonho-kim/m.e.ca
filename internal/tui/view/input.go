@@ -6,7 +6,7 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 func Input(screen tcell.Screen, window input.Window, y, width int) {

@@ -7,8 +7,7 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/browser"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/browser"
 )
 
 func (a *app) openFilePreview(full bool) {
@@ -65,24 +64,13 @@ func (a *app) previewKey(e *tcell.EventKey) {
 		a.menuInput.Set("")
 		return
 	}
-	if fileCommand(a.menuInput.String()) || e.Key() == tcell.KeyRune && fileCommand(e.Str()) {
-		if e.Key() == tcell.KeyEnter {
-			if a.menuInput.String() == ":q" {
-				a.closeFilePreview()
-			}
-			a.menuInput.Set("")
-		} else {
-			input.EditKey(&a.menuInput, e)
-		}
-		return
-	}
 	p := a.filePreview
 	w, h := a.screen.Size()
 	h = a.bodyHeight(h)
 	if !p.Full {
 		w -= w/2 + 1
 	}
-	maxOffset := max(0, len(p.Rows(w))-max(1, h-2))
+	maxOffset := max(0, p.Count(w)-max(1, h-2))
 	switch e.Key() {
 	case tcell.KeyTab:
 		p.Full = false

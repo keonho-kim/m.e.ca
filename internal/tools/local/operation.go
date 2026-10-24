@@ -7,8 +7,8 @@ package local
 import (
 	"context"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"sync/atomic"
 )
 

@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
 )
 
@@ -22,7 +22,7 @@ func TestCancelledSetupDiscardsSuccessfulLateResult(t *testing.T) {
 		t.Fatal("connection not cancelled")
 	}
 	a.receive(notice{SetupRevision: 2, Done: true, Models: []string{"late"}, Selection: &connection.Selection{}})
-	if a.busy || a.page != "chat" || a.selection.Model != "current" || a.modelHintsOpen {
+	if a.busy || a.page != "chat" || a.selection.Model != "current" || a.modelForm != nil {
 		t.Fatal("late result changed cancelled screen")
 	}
 	a.busy = true

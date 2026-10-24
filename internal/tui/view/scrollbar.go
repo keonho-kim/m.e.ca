@@ -6,7 +6,7 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func Scrollbar(screen tcell.Screen, x, y int, bar viewport.Scrollbar) {

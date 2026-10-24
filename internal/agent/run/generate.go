@@ -1,14 +1,14 @@
 // Purpose: Own one bounded model reply and preserve interrupted output without exposing argument drafts.
 // Pattern: Model I/O boundary.
 // Usage: The main decision loop receives replies under the request call and time budget.
-// Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/tool/arguments.go.
+// Related: internal/agent/run/context.go, internal/agent/run/run.go, internal/agent/model/model.go.
 package run
 
 import (
 	"context"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 )
 
@@ -28,13 +28,19 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		return modelapi.Response{}, err
 	}
 	var reply, thinking strings.Builder
+	maskReply, maskThinking := s.streamMask(), s.streamMask()
+	var visibleReply, visibleThinking string
 	var calls []toolapi.Call
+	var continuation []byte
 	done := false
 	err = s.generate(ctx, request, true, func(e modelapi.Event) error {
 		if e.Retry != nil {
 			reply.Reset()
 			calls = nil
+			continuation = nil
 			thinking.Reset()
+			maskReply, maskThinking = s.streamMask(), s.streamMask()
+			visibleReply, visibleThinking = "", ""
 			done = false
 			return s.emit(Event{Kind: "stream"})
 		}
@@ -46,7 +52,15 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		}
 		reply.WriteString(e.Delta)
 		thinking.WriteString(e.Thinking)
-		size := reply.Len() + thinking.Len()
+		visibleReply = maskReply(reply.String(), false)
+		visibleThinking = maskThinking(thinking.String(), false)
+		if len(e.ReasoningState) > 0 {
+			if !e.Done {
+				return fmt.Errorf("provider continuation state arrived before completion")
+			}
+			continuation = e.ReasoningState
+		}
+		size := reply.Len() + thinking.Len() + len(continuation)
 		for _, call := range calls {
 			size += len(call.Arguments) + len(call.ID) + len(call.Name)
 		}
@@ -57,18 +71,18 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			done = true
 		}
 		if e.Streaming && (e.Delta != "" || e.Thinking != "") {
-			visible := maskedPartial(s.runner, reply.String())
-			if err := s.emit(Event{Kind: "stream", Text: visible, Thinking: maskedPartial(s.runner, thinking.String())}); err != nil {
+			if err := s.emit(Event{Kind: "stream", Text: visibleReply, Thinking: visibleThinking}); err != nil {
 				return err
 			}
 		}
 		return ctx.Err()
 	})
+	visibleReply, visibleThinking = maskReply(reply.String(), true), maskThinking(thinking.String(), true)
 	if err == nil && !done {
 		err = fmt.Errorf("model reply did not complete")
 	}
 	if thinking.Len() > 0 {
-		event := Event{Kind: "thinking", Thinking: maskedPartial(s.runner, thinking.String())}
+		event := Event{Kind: "thinking", Thinking: visibleThinking}
 		if saveErr := s.record(context.WithoutCancel(ctx), event); saveErr != nil {
 			return modelapi.Response{}, saveErr
 		}
@@ -82,7 +96,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		// The thinking event preserves the visible trace without replaying an
 		// unfinished reasoning chain as input to the next generation.
 		if body := reply.String(); body != "" {
-			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: maskedPartial(s.runner, body), Incomplete: true}); saveErr != nil {
+			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: visibleReply, Incomplete: true}); saveErr != nil {
 				return modelapi.Response{}, saveErr
 			}
 		}
@@ -90,6 +104,9 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	}
 	if s.runner.Redact(reply.String()) != reply.String() {
 		return modelapi.Response{}, fmt.Errorf("model reply contains a protected credential or terminal control")
+	}
+	if s.runner.Redact(string(continuation)) != string(continuation) {
+		return modelapi.Response{}, fmt.Errorf("provider continuation state contains protected content")
 	}
 	ids := map[string]bool{}
 	for _, call := range calls {
@@ -101,12 +118,14 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			return modelapi.Response{}, fmt.Errorf("tool arguments contain a protected credential or terminal control")
 		}
 	}
-	return modelapi.Response{Text: reply.String(), Reasoning: maskedPartial(s.runner, thinking.String()), Calls: calls}, nil
+	return modelapi.Response{Text: reply.String(), Reasoning: visibleThinking, ReasoningState: continuation, Calls: calls}, nil
 }
 
-func maskedPartial(r Runner, text string) string {
-	if r.MaskStream != nil {
-		return r.MaskStream(text)
+func (s *execution) streamMask() func(string, bool) string {
+	if s.runner.NewStreamMask != nil {
+		return s.runner.NewStreamMask()
 	}
-	return r.Redact(text)
+	return func(text string, _ bool) string {
+		return s.runner.Redact(text)
+	}
 }

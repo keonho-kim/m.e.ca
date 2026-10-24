@@ -6,7 +6,7 @@ package selection
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"strings"
 )
 

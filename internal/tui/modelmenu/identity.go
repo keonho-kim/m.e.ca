@@ -5,9 +5,9 @@
 package modelmenu
 
 import (
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/identity"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/identity"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
 func IdentifiedName(selected connection.Selection, redact func(string) string) string {

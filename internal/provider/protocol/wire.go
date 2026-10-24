@@ -10,14 +10,15 @@ import (
 )
 
 type Message struct {
-	ToolCallID       string          `json:"tool_call_id,omitempty"`
-	ToolName         string          `json:"tool_name,omitempty"`
-	Role             string          `json:"role,omitempty"`
-	Content          string          `json:"content"`
-	Thinking         string          `json:"thinking,omitempty"`
-	Reasoning        string          `json:"reasoning,omitempty"`
-	ReasoningContent string          `json:"reasoning_content,omitempty"`
-	Calls            json.RawMessage `json:"tool_calls,omitempty"`
+	ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`
+	ToolCallID       string            `json:"tool_call_id,omitempty"`
+	ToolName         string            `json:"tool_name,omitempty"`
+	Role             string            `json:"role,omitempty"`
+	Content          string            `json:"content"`
+	Thinking         string            `json:"thinking,omitempty"`
+	Reasoning        string            `json:"reasoning,omitempty"`
+	ReasoningContent string            `json:"reasoning_content,omitempty"`
+	Calls            json.RawMessage   `json:"tool_calls,omitempty"`
 }
 
 type ollamaOptions struct {
@@ -27,19 +28,25 @@ type ollamaOptions struct {
 }
 
 type wireRequest struct {
-	Tools           []Tool         `json:"tools,omitempty"`
-	ToolChoice      string         `json:"tool_choice,omitempty"`
-	ParallelCalls   *bool          `json:"parallel_tool_calls,omitempty"`
-	Temperature     *float64       `json:"temperature,omitempty"`
-	StreamOptions   *streamOptions `json:"stream_options,omitempty"`
-	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
-	Think           any            `json:"think,omitempty"`
-	Model           string         `json:"model"`
-	Messages        []Message      `json:"messages"`
-	Stream          bool           `json:"stream"`
-	MaxTokens       int            `json:"max_tokens,omitempty"`
-	Options         *ollamaOptions `json:"options,omitempty"`
-	ChatTemplate    map[string]any `json:"chat_template_kwargs,omitempty"`
+	Reasoning       *routerReasoning `json:"reasoning,omitempty"`
+	Tools           []Tool           `json:"tools,omitempty"`
+	ToolChoice      string           `json:"tool_choice,omitempty"`
+	ParallelCalls   *bool            `json:"parallel_tool_calls,omitempty"`
+	Temperature     *float64         `json:"temperature,omitempty"`
+	StreamOptions   *streamOptions   `json:"stream_options,omitempty"`
+	ReasoningEffort string           `json:"reasoning_effort,omitempty"`
+	Think           any              `json:"think,omitempty"`
+	Model           string           `json:"model"`
+	Messages        []Message        `json:"messages"`
+	Stream          bool             `json:"stream"`
+	MaxTokens       int              `json:"max_tokens,omitempty"`
+	Options         *ollamaOptions   `json:"options,omitempty"`
+	ChatTemplate    map[string]any   `json:"chat_template_kwargs,omitempty"`
+}
+
+type routerReasoning struct {
+	Enabled bool   `json:"enabled"`
+	Effort  string `json:"effort,omitempty"`
 }
 
 type streamOptions struct {

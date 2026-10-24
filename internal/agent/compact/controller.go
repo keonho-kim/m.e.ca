@@ -7,8 +7,8 @@ package compact
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
 )
 
 type Controller struct {
@@ -113,7 +113,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 		}
 		cursor = through
 	}
-	if len(sources.entries) == 0 {
+	if sources.entries.Len() == 0 {
 		return false, nil
 	}
 	next.Markdown, err = c.summarize(ctx, generate, c.Redact(next.Markdown), sources.packet(), sources.omitted)

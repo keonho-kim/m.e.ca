@@ -5,7 +5,7 @@
 package bootstrap
 
 import (
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/meca/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +14,7 @@ import (
 
 func TestBootstrap(t *testing.T) {
 	home := t.TempDir()
-	directory := filepath.Join(home, ".v")
+	directory := filepath.Join(home, ".meca")
 	if _, err := Initialize(home); err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestBootstrap(t *testing.T) {
 		t.Fatalf("overwrote configuration: %+v %v", c, err)
 	}
 	other := t.TempDir()
-	if err := os.Symlink(directory, filepath.Join(other, ".v")); err != nil {
+	if err := os.Symlink(directory, filepath.Join(other, ".meca")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Initialize(other); err == nil {
@@ -53,12 +53,12 @@ func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
 	if _, err := Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Join(home, ".v")
+	root := filepath.Join(home, ".meca")
 	info, err := os.Lstat(filepath.Join(root, "sessions"))
 	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
 		t.Fatalf("session directory: %v %v", info, err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "v.db")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "meca.db")); !os.IsNotExist(err) {
 		t.Fatalf("created central registry: %v", err)
 	}
 	if err := os.Remove(filepath.Join(root, "sessions")); err != nil {
@@ -77,7 +77,7 @@ func TestBootstrapRecordsRoleDefaults(t *testing.T) {
 	if _, err := Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	content, err := os.ReadFile(filepath.Join(home, ".v", config.Filename))
+	content, err := os.ReadFile(filepath.Join(home, ".meca", config.Filename))
 	if err != nil {
 		t.Fatal(err)
 	}

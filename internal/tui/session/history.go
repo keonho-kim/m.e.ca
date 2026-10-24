@@ -5,9 +5,9 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
-	"github.com/keonho-kim/v-code/internal/tui/view"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
+	"github.com/keonho-kim/meca/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func (a *app) loadHistory() error {
@@ -28,9 +28,9 @@ func (a *app) loadHistory() error {
 	return nil
 }
 func (a *app) scroll(n, w, h int) {
-	lines := a.chatLines(view.TranscriptWidth(w))
-	a.output.Scroll(lines, n, h)
-	if n < 0 && !a.output.Follow && a.output.Start(lines, h) == 0 {
+	transcript := a.chatLayout(view.TranscriptWidth(w))
+	transcript.Scroll(&a.output, n, h)
+	if n < 0 && !a.output.Follow && transcript.Start(&a.output, h) == 0 {
 		a.loadOlderHistory()
 	}
 }

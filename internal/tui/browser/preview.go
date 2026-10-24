@@ -1,27 +1,32 @@
-// Purpose: Own preview scroll state and align numbered source rows at the current pane width.
-// Pattern: Pure presentation state.
-// Usage: File preview events set the snapshot; renderers and keys use Rows to bound scrolling.
-// Related: internal/tui/session/file_preview.go, internal/tui/viewport/viewport.go.
+// Purpose: Index preview text sparsely and format only its visible numbered rows.
+// Pattern: Pure presentation state with a bounded display window.
+// Usage: File preview uses Count for scrolling and Window for its current pane.
+// Related: internal/tui/session/file_preview.go, internal/tui/session/render_files.go, internal/tui/textlayout/wrap.go.
 package browser
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
+	"sort"
 	"strconv"
 	"strings"
 )
 
+const previewStride = 256
+const previewTruncated = "[미리보기는 처음 16MiB까지만 표시]"
+
+type previewPoint struct{ offset, line, row int }
 type Preview struct {
-	cachedTruncated          bool
-	rows                     []string
-	width                    int
+	index                    []previewPoint
+	width, total, digits     int
 	content                  string
 	Path, Content, Error     string
 	Full, Loading, Truncated bool
 	Offset                   int
 }
 
-func (p *Preview) Rows(width int) []string {
+func (p *Preview) special(width int) []string {
 	if p.Loading {
 		return []string{"파일 읽는 중…"}
 	}
@@ -31,31 +36,104 @@ func (p *Preview) Rows(width int) []string {
 	if p.Content == "" {
 		return []string{"(빈 파일)"}
 	}
-	if p.width == width && p.content == p.Content && p.cachedTruncated == p.Truncated && p.rows != nil {
-		return p.rows
+	return nil
+}
+func (p *Preview) prepare(width int) {
+	width = max(1, width)
+	if p.width == width && p.content == p.Content && p.index != nil {
+		return
 	}
-	lines := strings.Split(strings.TrimSuffix(p.Content, "\n"), "\n")
-	digits := max(3, len(strconv.Itoa(len(lines))))
-	gutter := digits + 3
-	var rows []string
-	for i, line := range lines {
-		line = strings.TrimSuffix(line, "\r")
-		if width <= gutter {
-			rows = append(rows, viewport.Wrap(fmt.Sprintf("%*d | %s", digits, i+1, line), max(1, width))...)
-			continue
+	p.width, p.content, p.total = width, p.Content, 0
+	text := strings.TrimSuffix(p.Content, "\n")
+	count := strings.Count(text, "\n") + 1
+	p.digits = max(3, len(strconv.Itoa(count)))
+	p.index = make([]previewPoint, 0, (count+previewStride-1)/previewStride)
+	offset, line := 0, 0
+	for {
+		value, rest, more := strings.Cut(text[offset:], "\n")
+		if line%previewStride == 0 {
+			p.index = append(p.index, previewPoint{offset, line, p.total})
 		}
-		for j, part := range viewport.Wrap(line, width-gutter) {
-			prefix := strings.Repeat(" ", gutter)
-			if j == 0 {
-				prefix = fmt.Sprintf("%*d | ", digits, i+1)
-			}
-			rows = append(rows, prefix+part)
+		for range textlayout.Rows(p.sourceLine(value, line), p.bodyWidth()) {
+			p.total++
 		}
+		if !more {
+			break
+		}
+		offset = len(text) - len(rest)
+		line++
 	}
+}
+func (p *Preview) bodyWidth() int {
+	if p.width <= p.digits+3 {
+		return p.width
+	}
+	return p.width - p.digits - 3
+}
+func (p *Preview) sourceLine(text string, line int) string {
+	text = strings.TrimSuffix(text, "\r")
+	if p.width <= p.digits+3 {
+		return fmt.Sprintf("%*d | %s", p.digits, line+1, text)
+	}
+	return text
+}
+func (p *Preview) Count(width int) int {
+	if rows := p.special(width); rows != nil {
+		return len(rows)
+	}
+	p.prepare(width)
 	if p.Truncated {
-		rows = append(rows, "[미리보기는 처음 16MiB까지만 표시]")
+		return p.total + 1
 	}
-	p.rows, p.width, p.content = rows, width, p.Content
-	p.cachedTruncated = p.Truncated
-	return p.rows
+	return p.total
+}
+func (p *Preview) Window(width, start, count int) []string {
+	if count < 1 {
+		return nil
+	}
+	start = max(0, start)
+	if start >= p.Count(width) {
+		return nil
+	}
+	if rows := p.special(width); rows != nil {
+		return rows[min(start, len(rows)):min(start+count, len(rows))]
+	}
+	p.prepare(width)
+	rows := make([]string, 0, count)
+	if start < p.total {
+		at := sort.Search(len(p.index), func(i int) bool { return p.index[i].row > start }) - 1
+		point := p.index[max(0, at)]
+		text := strings.TrimSuffix(p.content, "\n")
+		offset, line, row := point.offset, point.line, point.row
+		for len(rows) < count {
+			value, rest, more := strings.Cut(text[offset:], "\n")
+			part := 0
+			for wrapped := range textlayout.Rows(p.sourceLine(value, line), p.bodyWidth()) {
+				if row >= start {
+					prefix := ""
+					if p.width > p.digits+3 {
+						prefix = strings.Repeat(" ", p.digits+3)
+						if part == 0 {
+							prefix = fmt.Sprintf("%*d | ", p.digits, line+1)
+						}
+					}
+					rows = append(rows, prefix+wrapped.Text)
+					if len(rows) == count {
+						break
+					}
+				}
+				row++
+				part++
+			}
+			if !more {
+				break
+			}
+			offset = len(text) - len(rest)
+			line++
+		}
+	}
+	if p.Truncated && len(rows) < count && start+len(rows) >= p.total {
+		rows = append(rows, previewTruncated)
+	}
+	return rows
 }

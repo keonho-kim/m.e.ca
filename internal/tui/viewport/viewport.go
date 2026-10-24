@@ -1,22 +1,21 @@
 // Purpose: Keep bounded output blocks with source-bound formatting and event-relative reading anchors.
 // Pattern: Simple Module (presentation projection).
 // Usage: Mutated only by the terminal event loop and rendered at the current width.
-// Related: internal/tui/viewport/changes.go, internal/tui/viewport/spacing.go, internal/tui/session/render_chat.go.
+// Related: internal/tui/viewport/changes.go, internal/tui/viewport/block_layout.go, internal/tui/session/render_chat.go.
 package viewport
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/markdown"
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/markdown"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"strings"
 )
 
 type Block struct {
 	Summary, Details string
 	Changes          *Changes
-	key              blockKey
-	lines            []Line
-	parsedText       string
-	parsed           []markdown.Line
+	stream           markdown.Stream
+	layout           blockLayout
+	visible          bool
 	Markdown         bool
 	Centered         bool
 	ID               int
@@ -33,8 +32,6 @@ type Line struct {
 }
 type View struct {
 	Collapsed           bool
-	keys                []blockKey
-	lines               []Line
 	Blocks              []Block
 	Next                int
 	Follow              bool
@@ -61,72 +58,12 @@ func (v *View) AppendBlock(block Block) {
 	v.Blocks = append(v.Blocks, block)
 	v.bound(false)
 }
-func (b *Block) Lines(width int) []Line {
-	key := blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered, b.Changes}
-	if b.lines != nil && b.key == key {
-		return b.lines
-	}
-	b.key = key
-	if strings.TrimSpace(b.Text) == "" {
-		b.lines = nil
-		b.parsed, b.parsedText = nil, ""
-		return nil
-	}
-	var out []Line
-	if b.Markdown {
-		if b.parsed == nil || b.parsedText != b.Text {
-			b.parsed = markdown.Render(b.Text)
-			b.parsedText = b.Text
-		}
-		for _, line := range b.parsed {
-			for _, wrapped := range markdown.Wrap(line.Spans, width) {
-				value := Line{ID: b.ID, Row: len(out), Text: wrapped.Text, Spans: wrapped.Spans, Thinking: b.Thinking, Copy: wrapped.Copy}
-				out = append(out, value)
-			}
-		}
-	} else {
-		for row, text := range textlayout.Wrap(b.Text, width) {
-			out = append(out, Line{ID: b.ID, Row: row, Text: text.Text, Thinking: b.Thinking, Copy: textlayout.Fragment{Source: b.Text, Row: text}})
-		}
-		b.classifyChanges(out)
-	}
-	if b.Markdown || b.Thinking {
-		out = modelEdges(out)
-	}
-	if b.Centered {
-		centerLines(out, width)
-	}
-	b.lines = out
-	return b.lines
-}
 func Wrap(text string, width int) []string {
 	var out []string
 	for _, row := range textlayout.Wrap(text, width) {
 		out = append(out, row.Text)
 	}
 	return out
-}
-func (v *View) Lines(width int) []Line {
-	changed := len(v.keys) != len(v.Blocks)
-	if !changed {
-		for i, b := range v.Blocks {
-			if v.keys[i] != (blockKey{b.Text, width, b.ID, b.Markdown, b.Thinking, b.Centered, b.Changes}) {
-				changed = true
-				break
-			}
-		}
-	}
-	if !changed {
-		return v.lines
-	}
-	var lines []Line
-	v.keys = make([]blockKey, len(v.Blocks))
-	for i := range v.Blocks {
-		lines = AppendLines(lines, v.Blocks[i].Lines(width))
-		v.keys[i] = v.Blocks[i].key
-	}
-	v.lines = lines
-	return v.lines
 }
 func (v *View) Prepend(blocks []Block) {
 	if len(blocks) == 0 {

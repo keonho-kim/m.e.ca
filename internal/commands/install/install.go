@@ -1,14 +1,14 @@
-// Purpose: Install V's binary, initialize state and register the user's shell PATH.
+// Purpose: Install MECA's binary, initialize state and register the user's shell PATH.
 // Pattern: Installation use case.
-// Usage: cmd/v invokes Install before terminal startup.
+// Usage: cmd/meca invokes Install before terminal startup.
 // Related: internal/commands/install/binary.go, internal/commands/install/shell.go, internal/config/bootstrap/bootstrap.go.
 package install
 
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/v-code/internal/config/bootstrap"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -29,7 +29,7 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 		return result, err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
-	state, err := statefs.Open(filepath.Join(options.Home, ".v"))
+	state, err := statefs.Open(filepath.Join(options.Home, statefs.DirectoryName))
 	if err != nil {
 		return result, err
 	}

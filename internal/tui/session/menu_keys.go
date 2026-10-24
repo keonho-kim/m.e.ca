@@ -1,4 +1,4 @@
-// Purpose: Route menu and connection-field keys without submitting incomplete input or bypassing approvals.
+// Purpose: Route exit and approval menu keys without bypassing approval decisions.
 // Pattern: Presentation input handler.
 // Usage: Called by the session key router when a menu owns focus.
 // Related: internal/tui/session/keys.go, internal/tui/session/menus.go, internal/tui/session/model.go.
@@ -6,11 +6,11 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 func (a *app) menuKey(e *tcell.EventKey) {
-	if a.page == "approval" || a.page == "modelinfo" {
+	if a.page == "approval" {
 		if e.Key() == tcell.KeyPgDn {
 			a.previewOffset += 8
 			return
@@ -23,67 +23,17 @@ func (a *app) menuKey(e *tcell.EventKey) {
 	if a.paste {
 		if e.Key() == tcell.KeyRune {
 			a.menuInput.Insert(e.Str())
-			a.refreshModelHints()
 		}
-		return
-	}
-	if a.modelHintKey(e) {
 		return
 	}
 	if e.Key() == tcell.KeyEscape {
 		if a.page == "approval" {
 			a.decide(false)
-		} else if a.page == "modelinfo" {
-			a.openModel()
+
 		} else {
 			a.page = "chat"
-			a.key = ""
 		}
 		a.menuInput.Set("")
-		a.closeModelHints()
-		return
-	}
-	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
-		if e.Key() == tcell.KeyCtrlU {
-			a.menuInput.Set("")
-			a.refreshModelHints()
-			return
-		}
-		if e.Key() == tcell.KeyEnter {
-			if a.menuInput.String() == ":q" {
-				a.page = "chat"
-				a.key = ""
-				a.menuInput.Set("")
-				return
-			}
-			a.confirmField()
-			return
-		}
-		before := a.menuInput.String()
-		input.EditKey(&a.menuInput, e)
-		if a.menuInput.String() != before {
-			a.refreshModelHints()
-		}
-		return
-	}
-	if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported && (e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight) {
-		index := 0
-		if a.thinkingChoice != nil {
-			index = 2
-			if *a.thinkingChoice {
-				index = 1
-			}
-		}
-		if e.Key() == tcell.KeyLeft {
-			index = max(0, index-1)
-		} else {
-			index = min(2, index+1)
-		}
-		a.thinkingChoice = nil
-		if index > 0 {
-			value := index == 1
-			a.thinkingChoice = &value
-		}
 		return
 	}
 	switch e.Key() {
@@ -97,17 +47,12 @@ func (a *app) menuKey(e *tcell.EventKey) {
 				a.decide(false)
 			} else {
 				a.page = "chat"
-				a.key = ""
 			}
 			a.menuInput.Set("")
 			return
 		}
 		if len(a.choices) > 0 {
-			if a.page == "modelinfo" {
-				a.openModel()
-			} else {
-				a.choose()
-			}
+			a.choose()
 		}
 	default:
 		input.EditKey(&a.menuInput, e)
@@ -120,5 +65,4 @@ func (a *app) decide(approved bool) {
 	}
 	a.proposal = nil
 	a.page = "chat"
-	a.key = ""
 }

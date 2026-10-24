@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/work"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 type Status string

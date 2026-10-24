@@ -6,8 +6,8 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"

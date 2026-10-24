@@ -7,7 +7,7 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
 )
 

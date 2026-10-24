@@ -10,14 +10,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"io"
 	"os"
 	"path/filepath"
 )
 
 const receiptName = "installation.json"
-const binaryName = ".local/bin/v"
+const binaryName = ".local/bin/meca"
 const maxFileBytes = 16 * 1024 * 1024
 
 type registration struct {
@@ -31,7 +31,7 @@ type receipt struct {
 }
 
 func loadReceipt(root *os.Root) (r receipt, err error) {
-	body, exists, _, err := readFile(root, ".v/"+receiptName)
+	body, exists, _, err := readFile(root, statefs.DirectoryName+"/"+receiptName)
 	if err != nil || !exists {
 		return r, err
 	}
@@ -62,7 +62,7 @@ func saveReceipt(home string, r receipt) error {
 	if err != nil {
 		return err
 	}
-	return statefs.Write(filepath.Join(home, ".v"), receiptName, body)
+	return statefs.Write(filepath.Join(home, statefs.DirectoryName), receiptName, body)
 }
 
 func readFile(root *os.Root, name string) ([]byte, bool, os.FileMode, error) {

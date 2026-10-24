@@ -7,9 +7,9 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/storage/recovery"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"strings"
 	"testing"
 )

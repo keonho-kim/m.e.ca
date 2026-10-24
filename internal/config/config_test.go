@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadSaveWithoutApprovalMode(t *testing.T) {
-	directory := filepath.Join(t.TempDir(), ".v")
+	directory := filepath.Join(t.TempDir(), ".meca")
 	configuration, err := Load(directory)
 	if err != nil {
 		t.Fatal(err)

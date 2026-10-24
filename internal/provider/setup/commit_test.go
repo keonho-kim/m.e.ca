@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type commitStore struct {

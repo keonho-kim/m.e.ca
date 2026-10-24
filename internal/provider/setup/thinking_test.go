@@ -12,8 +12,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestThinkingOpaqueLocalRoot(t *testing.T) {

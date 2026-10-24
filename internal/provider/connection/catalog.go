@@ -8,12 +8,12 @@ package connection
 type ProviderKind string
 
 const (
-	Ollama           ProviderKind = "ollama"
-	VLLM             ProviderKind = "vllm"
-	SGLang           ProviderKind = "sglang"
-	LMStudio         ProviderKind = "lm-studio"
-	LiteLLM          ProviderKind = "litellm"
-	OpenAICompatible ProviderKind = "openai-compatible"
+	Ollama     ProviderKind = "ollama"
+	VLLM       ProviderKind = "vllm"
+	SGLang     ProviderKind = "sglang"
+	LMStudio   ProviderKind = "lm-studio"
+	LiteLLM    ProviderKind = "litellm"
+	OpenRouter ProviderKind = "openrouter"
 )
 
 type Provider struct {
@@ -29,6 +29,6 @@ func Providers() []Provider {
 		{"SGLang", SGLang, "http://localhost:8000/v1"},
 		{"LM Studio", LMStudio, "http://localhost:1234"},
 		{"LiteLLM", LiteLLM, "http://localhost:4000/v1"},
-		{"OpenAI Compatible", OpenAICompatible, "http://localhost:8000/v1"},
+		{"OpenRouter", OpenRouter, "https://openrouter.ai/api/v1"},
 	}
 }

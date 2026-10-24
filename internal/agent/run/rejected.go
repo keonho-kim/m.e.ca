@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) recordRejected(ctx context.Context, call toolapi.Call, outcome toolapi.Result, cause error, emit func(Event) error) error {

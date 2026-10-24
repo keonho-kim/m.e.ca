@@ -5,14 +5,20 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/tui/view"
 	"path/filepath"
 )
 
 func (a *app) renderFiles(w, h int) {
-	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, SelectedCount: len(a.browser.Selected), Status: a.status}
+	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, Status: a.status}
 	if a.directoryLoading {
-		display.Status = "폴더 읽는 중…"
+		display.Status = a.language.Text("Reading directory…")
+	}
+	if a.fileSendConfirm {
+		display.Status = a.language.Text("Send this request? (y/n)")
+		if a.fileReserve {
+			display.Status = a.language.Text("Queue this request? (y/n)")
+		}
 	}
 	display.BrowserWidth = w
 	if p := a.filePreview; p != nil {
@@ -21,11 +27,15 @@ func (a *app) renderFiles(w, h int) {
 			display.BrowserWidth = max(1, w/2)
 			x = display.BrowserWidth + 1
 		}
-		rows := p.Rows(max(1, w-x))
-		p.Offset = min(p.Offset, max(0, len(rows)-max(1, h-2)))
-		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Rows: rows[p.Offset:], Full: p.Full, X: x, Command: a.menuInput.String()}
+		p.Offset = min(p.Offset, max(0, p.Count(max(1, w-x))-max(1, h-2)))
+		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Rows: p.Window(max(1, w-x), p.Offset, max(1, h-2)), Full: p.Full, X: x}
 		display.ColumnWidth = min(display.ColumnWidth, max(1, display.BrowserWidth-1))
 	}
+	display.Input = a.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
+	display.References = a.selectedReferenceLines(display.BrowserWidth, h-len(display.Input.Rows)-4)
+	display.Layout = view.Composer(len(display.Input.Rows), h, view.Candidates{}, display.Status, len(display.References))
+	display.InputFocused = a.browser.Input && !a.fileSendConfirm
+	entryRows := max(0, display.Layout.ReferenceY-4)
 	if column := a.browser.Current(); column != nil {
 		display.Path = a.opts.Vault.Redact(column.Path)
 	}
@@ -33,9 +43,9 @@ func (a *app) renderFiles(w, h int) {
 	start := max(0, a.browser.Active-visible+1)
 	for i := start; i < min(len(a.browser.Columns), start+visible); i++ {
 		column := a.browser.Columns[i]
-		offset := max(0, column.Index-(h-7)+1)
+		offset := max(0, column.Index-entryRows+1)
 		value := view.FileColumn{Title: a.opts.Vault.Redact(filepath.Base(filepath.Clean(column.Path)) + "/"), Selected: column.Index - offset, X: (i - start) * (display.ColumnWidth + 1), Active: i == a.browser.Active, Divider: i < start+visible-1}
-		for index := offset; index < len(column.Entries) && index-offset < h-7; index++ {
+		for index := offset; index < len(column.Entries) && index-offset < entryRows; index++ {
 			entry := column.Entries[index]
 			path := filepath.Join(column.Path, entry.Name)
 			if entry.Directory {
@@ -45,15 +55,8 @@ func (a *app) renderFiles(w, h int) {
 		}
 		display.Columns = append(display.Columns, value)
 	}
-	commandOpen := !a.browser.Input && fileCommand(a.menuInput.String())
-	editor := &a.editor
-	if commandOpen {
-		editor = &a.menuInput
-	}
-	display.Input = editor.Window(display.BrowserWidth, 1)
-	display.InputFocused = a.browser.Input || commandOpen
-	if a.filePreview == nil {
-		a.inputRegion = inputRegion{editor: editor, window: display.Input, y: h - 1, width: display.BrowserWidth, revision: editor.Revision()}
+	if a.filePreview == nil && !a.fileSendConfirm {
+		a.inputRegion = inputRegion{editor: &a.editor, window: display.Input, y: display.Layout.InputY, width: display.BrowserWidth, revision: a.editor.Revision()}
 	}
 	view.Files(a.screen, display, w, h)
 }

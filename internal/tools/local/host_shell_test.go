@@ -14,14 +14,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestHostShellCacheAndHardlinks(t *testing.T) {
 	for _, linked := range []bool{false, true} {
 		project, home := t.TempDir(), t.TempDir()
 		t.Setenv("HOME", home)
-		executor, err := NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+		executor, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
 		if err != nil {
 			t.Fatal(err)
 		}

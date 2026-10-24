@@ -6,8 +6,8 @@ package local
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
 )

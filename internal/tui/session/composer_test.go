@@ -7,8 +7,8 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
 )

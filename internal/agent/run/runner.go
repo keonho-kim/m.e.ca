@@ -7,14 +7,14 @@ package run
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/agent/work"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/work"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Runner struct {
@@ -36,7 +36,8 @@ type Runner struct {
 	Settings          policy.Settings
 	Limits            Limits
 	Redact            func(string) string
-	MaskStream        func(string) string
+	RedactionVersion  func() int
+	NewStreamMask     func() func(string, bool) string
 }
 type Result struct {
 	End            work.End

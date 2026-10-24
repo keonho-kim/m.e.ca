@@ -7,7 +7,7 @@ package httpclient
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"strings"

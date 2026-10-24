@@ -7,7 +7,7 @@ package session
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type directoryPage struct {

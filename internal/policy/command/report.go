@@ -7,7 +7,7 @@ package command
 import (
 	"slices"
 
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Finding struct {

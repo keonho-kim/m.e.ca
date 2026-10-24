@@ -4,7 +4,7 @@
 // Related: internal/provider/protocol/lmstudio_stream.go, internal/provider/protocol/tool_calls.go.
 package protocol
 
-import modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+import modelapi "github.com/keonho-kim/meca/internal/agent/model"
 
 type lmItem struct {
 	Type      string `json:"type"`

@@ -8,9 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"time"
 )
 
@@ -33,7 +33,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		calls[i] = value
 	}
 	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
-	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: reply.Calls}); err != nil {
+	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
 		return err
 	}
 	if reply.Text != "" {

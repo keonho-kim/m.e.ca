@@ -7,9 +7,9 @@ package run
 import (
 	"context"
 	"encoding/json"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +18,7 @@ import (
 
 func TestCommandFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}

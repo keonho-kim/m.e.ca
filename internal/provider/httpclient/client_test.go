@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -45,7 +45,7 @@ func TestListModelsProviderContracts(t *testing.T) {
 		{modelconn.LiteLLM, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
 		{modelconn.SGLang, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
 		{modelconn.LMStudio, "/api/v1/models", `{"models":[{"type":"llm","key":"z-model"},{"type":"embedding","key":"embedding"},{"type":"llm","key":"a-model"}]}`},
-		{modelconn.OpenAICompatible, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
+		{modelconn.OpenRouter, "/api/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
 	} {
 		t.Run(string(test.kind), func(t *testing.T) {
 			client := mockClient(t, test.kind, func(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +128,7 @@ func TestOllamaStreamAndSequentialCapabilityProbe(t *testing.T) {
 }
 
 func TestGenerateStopsOnConsumerErrorAndRejectsTruncatedStreams(t *testing.T) {
-	client := mockClient(t, modelconn.OpenAICompatible, func(w http.ResponseWriter, r *http.Request) {
+	client := mockClient(t, modelconn.OpenRouter, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintln(w, `data: {"choices":[{"delta":{"content":"hello"}}]}`)
 		fmt.Fprintln(w)
@@ -162,7 +162,7 @@ func TestProviderErrorsDoNotExposeAuthentication(t *testing.T) {
 }
 
 func TestSingleJSONResponseDoesNotClaimStreamingOrTools(t *testing.T) {
-	client := mockClient(t, modelconn.OpenAICompatible, func(w http.ResponseWriter, r *http.Request) {
+	client := mockClient(t, modelconn.OpenRouter, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"hello"},"finish_reason":"stop"}]}`)
 	})

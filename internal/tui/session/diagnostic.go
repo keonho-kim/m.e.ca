@@ -6,7 +6,7 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
+	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 )
 
 func (a *app) diagnoseModel() {
@@ -18,7 +18,9 @@ func (a *app) diagnoseModel() {
 	a.taskCancel = cancel
 	a.busy = true
 	a.startElapsed()
-	a.page = "chat"
+	if a.modelForm == nil {
+		a.page = "chat"
+	}
 	a.status = a.language.Text("모델 연결 진단 중")
 	a.setupRevision++
 	revision := a.setupRevision

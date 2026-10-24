@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"unicode/utf8"
 )

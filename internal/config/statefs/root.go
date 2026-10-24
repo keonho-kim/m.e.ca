@@ -1,6 +1,6 @@
 // Purpose: Open and verify the private application directory owned by the current user.
 // Pattern: Filesystem trust boundary.
-// Usage: Used by config, prompts, bootstrap and SQLite session-directory discovery under ~/.v.
+// Usage: Used by config, prompts, bootstrap and SQLite session-directory discovery under ~/.meca.
 // Related: internal/config/statefs/files.go, internal/config/statefs/owner_unix.go, internal/config/config.go.
 package statefs
 
@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"os"
 )
+
+// DirectoryName is the private application directory under the user's home.
+const DirectoryName = ".meca"
 
 func Open(directory string) (*os.Root, error) {
 	if err := os.MkdirAll(directory, 0o700); err != nil {

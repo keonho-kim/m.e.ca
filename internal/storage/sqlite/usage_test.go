@@ -6,8 +6,8 @@ package sqlite
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
 	"testing"
 )
 
@@ -36,7 +36,7 @@ func TestTokenUsagePersistsAndRejectsInvalidCounts(t *testing.T) {
 		t.Fatalf("total=%+v err=%v", total, err)
 	}
 	unsupported := `{"kind":"usage","usage":{"input":100,"output":50,"estimated":true}}`
-	if _, err := store.db.ExecContext(ctx, "INSERT INTO tool_events(session_id,body,created_at) VALUES(?,?,?)", session.ID, unsupported, "2026-10-13T00:00:00Z"); err != nil {
+	if _, err := store.db.ExecContext(ctx, "INSERT INTO tool_events(session_id,kind,body,raw_bytes,created_at) VALUES(?,'usage',?,?,?)", session.ID, unsupported, len(unsupported), "2026-10-13T00:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.TokenUsage(ctx, session.ID); err == nil {

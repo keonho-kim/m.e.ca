@@ -7,8 +7,8 @@ package httpclient
 
 import (
 	"fmt"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"strings"
 )
 

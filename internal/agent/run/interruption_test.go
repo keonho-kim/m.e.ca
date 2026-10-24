@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type interruptedGenerator struct {

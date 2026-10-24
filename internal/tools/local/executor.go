@@ -7,7 +7,7 @@ package local
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 	"os"
 	"path/filepath"
 )
@@ -15,6 +15,7 @@ import (
 type Executor struct {
 	project, home           string
 	artifacts               string
+	artifactLease           *os.File
 	projectRoot, systemRoot *os.Root
 	redact                  func(string) string
 	boundary                *filesystem.Boundary
@@ -38,7 +39,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 		return nil, errors.Join(err, root.Close())
 	}
 	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary}
-	executor.artifacts, err = os.MkdirTemp("", "v-output-*")
+	executor.artifacts, executor.artifactLease, err = newArtifacts()
 	if err != nil {
 		return nil, errors.Join(err, executor.Close())
 	}
@@ -49,6 +50,10 @@ func (executor *Executor) Close() error {
 	err := errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))
+	}
+	if executor.artifactLease != nil {
+		err = errors.Join(err, executor.artifactLease.Close())
+		executor.artifactLease = nil
 	}
 	return err
 }

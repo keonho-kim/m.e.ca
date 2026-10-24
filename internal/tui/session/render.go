@@ -6,11 +6,21 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func (a *app) render() {
+	if a.page != "chat" {
+		a.chatVisible = nil
+		if a.chatProjection.layout.Count() > 0 {
+			a.output.ReleaseDisplay()
+		}
+		a.chatProjection = chatProjection{}
+	}
+	if a.page == "model" && a.modelForm == nil {
+		a.initializeModelForm()
+	}
 	if a.selectionPage != a.page {
 		a.clearSelection()
 	}
@@ -36,6 +46,10 @@ func (a *app) render() {
 		a.renderFiles(w, body)
 	case "chat":
 		a.renderChat(w, body)
+	case "model":
+		a.renderModel(w, body)
+	case "language":
+		a.renderLanguage(w, body)
 	default:
 		a.renderMenu(w, body)
 	}

@@ -5,7 +5,7 @@
 
 package tool
 
-import "github.com/keonho-kim/v-code/internal/policy"
+import "github.com/keonho-kim/meca/internal/policy"
 
 // ParameterKind is the accepted type of one field in a complete argument object.
 type ParameterKind string

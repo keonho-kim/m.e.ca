@@ -7,9 +7,9 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
 	"testing"
 )

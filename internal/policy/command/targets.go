@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func (a *analyzer) target(value word, s *state, removal bool) {

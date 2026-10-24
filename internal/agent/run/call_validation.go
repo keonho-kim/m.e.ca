@@ -7,7 +7,7 @@ package run
 import (
 	"encoding/json"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type validatedCall struct {

@@ -6,11 +6,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
+	"github.com/keonho-kim/meca/internal/agent/inference"
 
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type Config struct {

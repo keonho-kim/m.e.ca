@@ -5,8 +5,8 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/commands"
+	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func (a *app) shortcuts() []view.Shortcut {
@@ -25,13 +25,22 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		}
 		return keys
 	}
+	if a.page == "model" {
+		return a.modelSettingsShortcuts()
+	}
+	if a.page == "language" {
+		return a.languageShortcuts()
+	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}
+	if a.page == "files" && a.fileSendConfirm {
+		label := "전송"
+		if a.fileReserve {
+			label = "후속 예약"
+		}
+		return append(shortcuts, view.Shortcut{Key: "y", Label: label}, view.Shortcut{Key: "n", Label: "취소"}, view.Shortcut{Key: "Esc", Label: "Keep writing"})
+	}
 	if a.filePreview != nil {
 		controls := []view.Shortcut{{Key: "Esc", Label: "닫기"}}
-		if fileCommand(a.menuInput.String()) {
-			controls = append(controls, view.Shortcut{Key: "Enter", Label: a.fileCommandLabel()}, view.Shortcut{Key: "^U", Label: "앞부분 지우기"})
-			return append(shortcuts, controls...)
-		}
 		if a.filePreview.Full {
 			controls = append(controls, view.Shortcut{Key: "Tab", Label: "분할 보기"})
 		} else {
@@ -39,9 +48,6 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		}
 		controls = append(controls, view.Shortcut{Key: "↑↓", Label: "스크롤"}, view.Shortcut{Key: "PgUp/Dn", Label: "페이지"}, view.Shortcut{Key: "Home/End", Label: "처음/끝"})
 		return append(shortcuts, controls...)
-	}
-	if a.directoryLoading && (a.page != "files" || a.browser.Input || !fileCommand(a.menuInput.String())) {
-		return append(shortcuts, view.Shortcut{Key: "Esc", Label: "조회 취소"}, view.Shortcut{Key: ":q", Label: "복귀"})
 	}
 	var controls []view.Shortcut
 	switch a.page {
@@ -63,13 +69,14 @@ func (a *app) screenShortcuts() []view.Shortcut {
 			controls = append(controls, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"}, view.Shortcut{Key: "!", Label: "명령"})
 		}
 	case "files":
-		if !a.browser.Input && fileCommand(a.menuInput.String()) {
-			controls = []view.Shortcut{{Key: "Enter", Label: a.fileCommandLabel()}, {Key: "Esc", Label: "취소"}, {Key: "Shift+Tab", Label: "입력"}, {Key: "^U", Label: "앞부분 지우기"}}
-		} else if a.browser.Input {
+		if a.browser.Input {
 			controls = a.inputShortcuts()
-			controls = append(controls, view.Shortcut{Key: "Shift+Tab", Label: "탐색"}, view.Shortcut{Key: ":q", Label: "복귀"})
+			controls = append(controls, view.Shortcut{Key: "Esc", Label: "닫기"}, view.Shortcut{Key: "Shift+Tab", Label: "탐색"})
 		} else {
-			controls = []view.Shortcut{{Key: "Shift+Tab", Label: "입력"}, {Key: ":q", Label: "복귀"}}
+			controls = []view.Shortcut{{Key: "Esc", Label: "닫기"}, {Key: "Shift+Tab", Label: "입력"}}
+			if a.directoryLoading {
+				break
+			}
 			path, directory := a.browser.Target()
 			if path != "" {
 				controls = append(controls, view.Shortcut{Key: "↑↓", Label: "이동"}, view.Shortcut{Key: "Space", Label: "선택 표시"})
@@ -86,47 +93,14 @@ func (a *app) screenShortcuts() []view.Shortcut {
 				controls = append(controls, view.Shortcut{Key: "PgUp", Label: "이전 목록"})
 			}
 		}
-	case "endpoint", "key":
-		label := "다음"
-		if a.page == "key" {
-			label = "모델 조회"
-		}
-		controls = []view.Shortcut{{Key: "Enter", Label: label}, {Key: "^U", Label: "앞부분 지우기"}, {Key: "Esc", Label: "취소"}}
-	case "manual":
-		controls = []view.Shortcut{{Key: "Enter", Label: "연결"}, {Key: "↑↓", Label: "후보 열기"}, {Key: "^U", Label: "앞부분 지우기"}, {Key: "Esc", Label: "취소"}}
-		if a.modelHintsOpen {
-			controls[3].Label = "목록 닫기"
-			if len(a.modelHints) > 0 {
-				controls[0].Label = "입력"
-				controls[1].Label = "선택"
-				controls = append(controls, view.Shortcut{Key: "Tab", Label: "입력"})
-			} else {
-				controls = append(controls[:1], controls[2:]...)
-			}
-		}
-	case "effort", "language":
-		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "적용"}, {Key: "Esc", Label: "닫기"}}
-	case "modelinfo":
-		controls = []view.Shortcut{{Key: "PgUp/Dn", Label: "스크롤"}, {Key: "Enter", Label: "모델 메뉴"}, {Key: "Esc", Label: "모델 메뉴"}}
 	case "approval":
 		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "확정"}, {Key: "PgUp/Dn", Label: "변경 내용"}, {Key: "Esc", Label: "거부"}}
 	default:
 		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "확정"}, {Key: "Esc", Label: "닫기"}}
-		if a.page == "model" && a.choice == 1 && a.selection.ThinkingSupported {
-			controls = append(controls, view.Shortcut{Key: "←→", Label: "Thinking"})
-		}
 	}
-	if a.page == "endpoint" || a.page == "key" || a.page == "manual" {
-		command, err := commands.Parse(a.menuInput.String())
-		if err == nil && (command.Kind == commands.Quit || command.Kind == commands.Exit || command.Kind == commands.NewSession) {
-			escape := "취소"
-			if a.page == "manual" && a.modelHintsOpen {
-				escape = "목록 닫기"
-			}
-			controls = []view.Shortcut{{Key: "Enter", Label: a.commandEnterLabel(command.Kind)}, {Key: "^U", Label: "앞부분 지우기"}, {Key: "Esc", Label: escape}}
-		}
-	}
-	if a.busy && !a.stopRequested && (a.page == "chat" && !a.commandOpen || a.page == "files" && !fileCommand(a.menuInput.String())) {
+	if a.page == "chat" && !a.commandOpen && a.fileSubmission != nil {
+		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: "Cancel send"})
+	} else if a.busy && !a.stopRequested && a.page == "chat" && !a.commandOpen {
 		label := "중지"
 		if !a.agentActive {
 			label = "연결 취소"
@@ -153,17 +127,27 @@ func (a *app) screenShortcuts() []view.Shortcut {
 func (a *app) inputShortcuts() []view.Shortcut {
 	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "Ctrl/Cmd+↑↓", Label: "입력 기록"}}
 	label := "전송"
-	command, err := commands.Parse(a.editor.String())
+	command, err := a.inputCommand()
 	if err != nil {
 		return controls
 	}
 	if command.Kind == commands.Quit {
 		return append(controls, view.Shortcut{Key: "Enter", Label: a.commandEnterLabel(command.Kind)})
 	}
+	if a.page == "files" && (command.Kind == commands.Message || command.Kind == commands.Empty) {
+		label = "Review send"
+	}
 	if a.agentActive && a.busy && !a.stopRequested && (command.Kind == commands.Message || command.Kind == commands.Empty) {
-		controls = append(controls, view.Shortcut{Key: "Enter", Label: "방향 수정"})
+		if a.page != "files" {
+			label = "방향 수정"
+		}
+		controls = append(controls, view.Shortcut{Key: "Enter", Label: label})
 		if a.pending == "" {
-			controls = append(controls, view.Shortcut{Key: "Tab", Label: "후속 예약"})
+			label := "후속 예약"
+			if a.page == "files" {
+				label = "Review queue"
+			}
+			controls = append(controls, view.Shortcut{Key: "Tab", Label: label})
 		}
 		return controls
 	}
@@ -196,12 +180,4 @@ func (a *app) commandEnterLabel(kind commands.Kind) string {
 	default:
 		return "실행"
 	}
-}
-
-func (a *app) fileCommandLabel() string {
-	command, err := commands.Parse(a.menuInput.String())
-	if err == nil && (command.Kind == commands.Quit || command.Kind == commands.Exit || command.Kind == commands.NewSession) {
-		return a.commandEnterLabel(command.Kind)
-	}
-	return "확인"
 }

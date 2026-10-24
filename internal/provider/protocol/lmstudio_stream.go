@@ -7,8 +7,8 @@ package protocol
 import (
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 type lmResponse struct {

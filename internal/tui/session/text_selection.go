@@ -6,13 +6,13 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/input"
 	"slices"
 	"strings"
 )
 
 func (a *app) selectionMouse(e *tcell.EventMouse) bool {
-	if a.page != "chat" && a.page != "files" && a.page != "endpoint" && a.page != "manual" {
+	if a.page != "chat" && a.page != "files" && a.page != "model" {
 		a.clearSelection()
 		return false
 	}

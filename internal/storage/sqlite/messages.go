@@ -8,14 +8,18 @@ package sqlite
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"time"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
 )
 
 func (store *Store) AppendMessage(ctx context.Context, session string, message modelapi.Message) error {
+	return store.Commit(ctx, session, []run.JournalRecord{{Message: &message}})
+}
+
+func writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string) error {
 	if err := message.Check(); err != nil {
 		return err
 	}
@@ -26,41 +30,44 @@ func (store *Store) AppendMessage(ctx context.Context, session string, message m
 	if err != nil {
 		return err
 	}
-	transaction, err := store.db.BeginTx(ctx, nil)
+	packed, refs, err := packRecord(ctx, transaction, content)
 	if err != nil {
 		return err
 	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	inserted, err := transaction.ExecContext(ctx, "INSERT INTO messages(session_id,body,created_at) VALUES(?,?,?)", session, content, now)
+	inserted, err := transaction.ExecContext(ctx, "INSERT INTO messages(session_id,body,refs,raw_bytes,role,content_bytes,created_at) VALUES(?,?,?,?,?,?,?)", session, packed, refs, len(content), message.Role, len(message.Content), now)
 	if err != nil {
-		return errors.Join(err, transaction.Rollback())
+		return err
 	}
 	sequence, err := inserted.LastInsertId()
 	if err != nil {
-		return errors.Join(err, transaction.Rollback())
+		return err
 	}
 	if _, err = transaction.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'message',?)", session, sequence); err != nil {
-		return errors.Join(err, transaction.Rollback())
+		return err
 	}
 	if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET updated_at=? WHERE id=?", now, session); err != nil {
-		return errors.Join(err, transaction.Rollback())
+		return err
 	}
-	return transaction.Commit()
+	if message.Role == "user" {
+		if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET summary=? WHERE id=? AND summary IS NULL", conversationSummary(message.Content), session); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (store *Store) Messages(ctx context.Context, session string, limit int) (messages []modelapi.Message, err error) {
 	if limit < 1 || limit > 1000 {
 		return nil, fmt.Errorf("history limit must be between 1 and 1000")
 	}
-	rows, err := store.db.QueryContext(ctx, "SELECT body FROM messages WHERE session_id=? ORDER BY sequence DESC LIMIT ?", session, limit)
+	page, err := store.recordPage(ctx, "SELECT sequence,'message',body,refs,raw_bytes FROM messages WHERE session_id=? ORDER BY sequence DESC LIMIT ?", session, limit)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { err = errors.Join(err, rows.Close()) }()
 	bytes := 0
-	for rows.Next() {
-		var content []byte
-		if err := rows.Scan(&content); err != nil {
+	for _, record := range page {
+		content, err := store.unpackRecord(ctx, record, nil)
+		if err != nil {
 			return nil, err
 		}
 		bytes += len(content)
@@ -75,9 +82,6 @@ func (store *Store) Messages(ctx context.Context, session string, limit int) (me
 			return nil, err
 		}
 		messages = append(messages, message)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
 		messages[left], messages[right] = messages[right], messages[left]

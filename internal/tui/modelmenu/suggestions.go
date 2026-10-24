@@ -1,7 +1,7 @@
 // Purpose: Filter discovered model IDs by case-insensitive substring without changing their spelling.
 // Pattern: Pure function.
 // Usage: Model input refreshes suggestions from the current connection's discovered IDs.
-// Related: internal/tui/session/model_hints.go.
+// Related: internal/tui/session/model_form_keys.go.
 package modelmenu
 
 import "strings"

@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func checkChat(ctx context.Context, client modelapi.Generator, parameters inference.Parameters, model string, thinking *bool) (modelconn.Capabilities, error) {

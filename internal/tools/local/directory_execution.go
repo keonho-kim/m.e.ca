@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	resultfmt "github.com/keonho-kim/v-code/internal/tools/result"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
 func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, error) {

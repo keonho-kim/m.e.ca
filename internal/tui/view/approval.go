@@ -7,8 +7,8 @@ package view
 import (
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
 func ApprovalPreview(proposal tool.Approval, lang locale.Language) string {

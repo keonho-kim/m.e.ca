@@ -8,7 +8,7 @@ package tool
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Approval struct {

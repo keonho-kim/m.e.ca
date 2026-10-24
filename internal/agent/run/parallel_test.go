@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type parallelModel struct {
@@ -79,7 +79,7 @@ func (op heldOperation) Execute(ctx context.Context, approved bool) (toolapi.Res
 func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executor, string, *journal, *parallelModel) {
 	t.Helper()
 	root, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}

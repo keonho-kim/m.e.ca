@@ -6,14 +6,16 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type notice struct {
+	FormRevision    int
+	ModelForm       bool
 	Diagnostic      bool
 	History         *historyPage
 	Directory       *directoryPage

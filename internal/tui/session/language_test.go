@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func TestLanguageMenuAppliesAndPersists(t *testing.T) {
@@ -44,14 +44,15 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	typeInput(a, "!language")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.render()
-	if a.page != "language" || !strings.Contains(screenLine(a.screen, 2, 80), "시스템 기본값") || keymapLabels(t, a)["Enter"] != "적용" {
+	if a.page != "language" || !strings.Contains(screenLine(a.screen, 2, 80), "시스템 기본값") || keymapLabels(t, a)["Enter"] != "저장 확인" {
 		t.Fatal("language menu or keymap missing")
 	}
 	a.editor.Set("preserved draft")
 	for range 2 {
-		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+		a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 	if a.page != "chat" || a.language != locale.English || a.opts.Config.Language != config.LanguageEnglish || a.editor.String() != "preserved draft" || !a.output.Collapsed {
 		t.Fatal("language did not apply without changing unrelated state")
 	}
@@ -110,8 +111,9 @@ func TestLanguageFailureAndCancelPreserveSelection(t *testing.T) {
 	a.output.Append("preserved output", false)
 	a.opts.SaveConfig = func(config.Config) error { return errors.New("config write failed") }
 	a.openLanguage()
-	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 	if a.page != "language" || a.language != locale.English || a.opts.Config.Language != config.LanguageAuto || !strings.Contains(a.status, "config write failed") || a.output.Blocks[0].Text != "preserved output" {
 		t.Fatal("failed save changed the active language or history")
 	}

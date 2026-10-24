@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
@@ -40,7 +40,7 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 	a := fixture(t)
 	a.ctx = ctx
 	t.Cleanup(a.shutdown)
-	conn, err := connection.New(connection.OpenAICompatible, server.URL)
+	conn, err := connection.New(connection.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

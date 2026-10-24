@@ -1,15 +1,15 @@
 // Purpose: Declare persistence capabilities used by the terminal session.
 // Pattern: Consumer-owned repository contract.
-// Usage: Options receives a repository wired by cmd/v; the session does not own its database.
+// Usage: Options receives a repository wired by cmd/meca; the session does not own its database.
 // Related: internal/storage/history/record.go, internal/agent/session/request.go.
 package session
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	tasksession "github.com/keonho-kim/v-code/internal/agent/session"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/storage/history"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	tasksession "github.com/keonho-kim/meca/internal/agent/session"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
 type Store interface {

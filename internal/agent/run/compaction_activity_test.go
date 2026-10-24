@@ -9,9 +9,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
 )
 
 type activityRepository struct {

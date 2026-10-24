@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"reflect"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	commandpolicy "github.com/keonho-kim/v-code/internal/policy/command"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	commandpolicy "github.com/keonho-kim/meca/internal/policy/command"
 )
 
 type shellTarget struct {

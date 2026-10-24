@@ -9,8 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 )
 
@@ -45,6 +45,9 @@ func (c *Client) prepareOllama(ctx context.Context, model string) (connection.Mo
 			if err := json.Unmarshal(row.Thinking.Default, &control.Default); err != nil {
 				return info, err
 			}
+		} else if string(row.Thinking.Default) == "true" || string(row.Thinking.Default) == "false" {
+			on := string(row.Thinking.Default) == "true"
+			control.DefaultOn = &on
 		}
 		info.Reasoning = control
 	}

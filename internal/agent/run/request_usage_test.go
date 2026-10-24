@@ -7,8 +7,8 @@ package run
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"testing"
 	"time"
 )

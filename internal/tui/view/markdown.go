@@ -6,7 +6,7 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/markdown"
+	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/rivo/uniseg"
 )
 

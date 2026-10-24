@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Response, detail string) error {
@@ -23,7 +23,7 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 			return err
 		}
 	}
-	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, Calls: calls}); err != nil {
+	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: calls}); err != nil {
 		return err
 	}
 	for _, call := range calls {

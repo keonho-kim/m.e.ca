@@ -5,9 +5,9 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/zalando/go-keyring"
 	"testing"
 )
@@ -87,10 +87,14 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			off := false
 			a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true}
 			a.opts.Session.ID = "missing-session"
-			a.changeValue = "ON"
+			a.client, err = httpclient.NewClient(conn, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			a.openModel()
 			on := true
-			a.thinkingChoice = &on
-			a.applySetting(global)
+			a.modelForm.thinking, a.modelForm.global = &on, global
+			a.saveModelForm()
 			if *a.selection.Thinking || a.status == "" {
 				t.Fatalf("failed save applied: %+v", a.selection)
 			}

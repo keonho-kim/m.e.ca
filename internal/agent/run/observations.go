@@ -6,7 +6,7 @@ package run
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) observeResult(v validatedCall, outcome toolapi.Result) error {

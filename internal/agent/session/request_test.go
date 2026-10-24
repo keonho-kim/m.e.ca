@@ -12,15 +12,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/agent/session"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/session"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type generation func(context.Context, modelapi.Request, func(modelapi.Event) error) error

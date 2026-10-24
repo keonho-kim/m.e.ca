@@ -1,70 +1,50 @@
-// Purpose: Verify model-ID completion filters below the field and fills without connecting.
-// Pattern: Terminal input workflow tests.
+// Purpose: Verify model-field partial search, candidate filling and literal paste within the settings page.
+// Pattern: Virtual terminal editing tests.
 // Usage: go test ./internal/tui/session -run TestModelHints.
-// Related: internal/tui/session/model_hints.go, internal/tui/view/menu.go.
+// Related: internal/tui/session/model_form_keys.go, internal/tui/session/paste.go.
 package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"strings"
 	"testing"
 )
 
 func TestModelHintsFilterSelectAndClose(t *testing.T) {
 	a := fixture(t)
-	a.openModelInput([]string{"Qwen3.8-27B", "Qwen-3.8-180B", "Gemma-4-31B"})
-	a.render()
-	if !strings.Contains(screenLine(a.screen, 3, 80), "Qwen3.8-27B") {
-		t.Fatal("candidates not below field")
-	}
+	a.openModel()
+	f := a.modelForm
+	f.row, f.editing = modelName, true
+	f.models = []string{"Qwen3.8-27B", "Qwen-3.8-180B", "Gemma-4-31B"}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "3.8", 0))
-	if len(a.modelHints) != 2 {
-		t.Fatal(a.modelHints)
+	if len(f.hints) != 2 {
+		t.Fatal(f.hints)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
+	if f.name.String() != "Qwen-3.8-180B" || f.editing || a.busy || a.selection.Model != "" {
+		t.Fatal("Tab did not only fill the model field")
+	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.menuInput.String() != "Qwen-3.8-180B" || a.modelHintsOpen || a.busy || a.page != "manual" {
-		t.Fatal("Enter did not fill without connecting")
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
-	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "GEMMA", 0))
-	if len(a.modelHints) != 1 || a.modelHints[0] != "Gemma-4-31B" {
-		t.Fatal("case-insensitive matching failed")
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "manual" || a.menuInput.String() != "GEMMA" || a.modelHintsOpen {
-		t.Fatal("Esc lost input")
+	if !f.confirm || a.busy {
+		t.Fatal("Enter should ask to save rather than connect")
 	}
 }
 
-func TestModelHintsNoMatchPasteAndResize(t *testing.T) {
+func TestModelHintsPasteDoesNotSave(t *testing.T) {
 	a := fixture(t)
-	a.openModelInput([]string{"one", "two", "three", "four", "five", "six", "seven", "eight"})
-	a.screen.SetSize(24, 10)
-	for i := 0; i < 7; i++ {
-		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-	}
-	a.render()
-	visible := ""
-	for row := 3; row < 8; row++ {
-		visible += screenLine(a.screen, row, 24)
-	}
-	if !strings.Contains(visible, "eight") {
-		t.Fatal("selected candidate hidden in small terminal")
-	}
+	a.openModel()
+	f := a.modelForm
+	f.row, f.editing = modelName, true
+	f.models = []string{"one", "two"}
 	a.pasteBoundary(true)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "custom/model", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.pasteBoundary(false)
-	if a.busy || a.menuInput.String() != "custom/model" || len(a.modelHints) != 0 {
-		t.Fatal("paste executed or failed to filter")
+	if a.busy || f.confirm || f.name.String() != "custom/model" || len(f.hints) != 0 {
+		t.Fatal("paste submitted settings")
 	}
-	a.render()
-	if !strings.Contains(screenLine(a.screen, 3, 24), "검색 결과 없음") {
-		t.Fatal("missing no-match indication")
-	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.menuInput.String() != "custom/model" {
-		t.Fatal("Tab changed unmatched ID")
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
+	if a.page != "model" || f.editing || f.name.String() != "custom/model" {
+		t.Fatal("Esc lost draft model")
 	}
 }

@@ -6,12 +6,10 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	tasksession "github.com/keonho-kim/v-code/internal/agent/session"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"sort"
-	"strings"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	tasksession "github.com/keonho-kim/meca/internal/agent/session"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func (a *app) startTask(text string) {
@@ -34,7 +32,7 @@ func (a *app) startTask(text string) {
 	steering := make(chan string, 16)
 	a.steering = steering
 	inferenceSettings := a.opts.Config.InferenceSettings()
-	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, MaskStream: a.opts.Vault.Stream, Limits: a.opts.Config.Loop}
+	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion, NewStreamMask: a.opts.Vault.NewStreamMask, Limits: a.opts.Config.Loop}
 	runner.PollSteering = func() []string {
 		var out []string
 		for {
@@ -47,16 +45,7 @@ func (a *app) startTask(text string) {
 		}
 	}
 	runner.ProjectRoot = a.opts.Session.ProjectRoot
-	var references []string
-	for path := range a.browser.Selected {
-		if _, err := a.opts.Tools.Reference(a.settings, path); err == nil {
-			references = append(references, path)
-		}
-	}
-	sort.Strings(references)
-	if len(references) > 0 {
-		text += "\nSelected path references (read only as needed):\n" + strings.Join(references, "\n")
-	}
+	text = a.withSelectedPaths(text)
 	contextWindow := a.opts.Config.ContextLength
 	if d := a.selection.Details; d != nil && d.ContextWindow > 0 {
 		contextWindow = connection.EffectiveContextLength(contextWindow, d.ContextWindow)

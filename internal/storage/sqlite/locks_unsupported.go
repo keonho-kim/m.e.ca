@@ -3,7 +3,7 @@
 // Purpose: Reject state locking outside the supported Unix platforms.
 // Pattern: Platform boundary.
 // Usage: Used by database or session startup on unsupported targets.
-// Related: internal/storage/sqlite/locks_unix.go, cmd/v/main.go.
+// Related: internal/storage/sqlite/locks_unix.go, cmd/meca/main.go.
 package sqlite
 
 import (

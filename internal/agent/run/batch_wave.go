@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approve Approver) (bool, error) {

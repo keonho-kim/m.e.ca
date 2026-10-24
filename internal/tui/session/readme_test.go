@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 )
 
 func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
@@ -66,7 +66,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	conn, err := connection.New(connection.OpenAICompatible, server.URL)
+	conn, err := connection.New(connection.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

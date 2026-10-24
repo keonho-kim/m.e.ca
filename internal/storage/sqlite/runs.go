@@ -10,20 +10,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/run"
 )
 
 func (s *Store) LatestRun(ctx context.Context, session string) (*run.Checkpoint, error) {
-	var body []byte
-	err := s.db.QueryRowContext(ctx, "SELECT body FROM tool_events WHERE session_id=? AND json_extract(body,'$.kind')='run_checkpoint' ORDER BY sequence DESC LIMIT 1", session).Scan(&body)
+	var record storedRecord
+	err := s.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes FROM tool_events WHERE session_id=? AND kind='run_checkpoint' ORDER BY sequence DESC LIMIT 1", session).Scan(&record.body, &record.refs, &record.size)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	if len(body) > maxEventBytes {
+	if record.size > maxEventBytes {
 		return nil, fmt.Errorf("run checkpoint exceeds limit")
+	}
+	body, err := s.unpackRecord(ctx, record, nil)
+	if err != nil {
+		return nil, err
 	}
 	var event run.Event
 	if err = json.Unmarshal(body, &event); err != nil {

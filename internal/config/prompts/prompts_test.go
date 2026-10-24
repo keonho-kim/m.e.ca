@@ -1,12 +1,13 @@
-// Purpose: Verify bootstrap creates separate private Markdown prompts without overwriting user edits.
+// Purpose: Verify bootstrap publishes current private Markdown defaults and preserves user edits.
 // Pattern: Filesystem behavior tests.
 // Usage: go test ./internal/config/prompts -run TestPromptBootstrap.
 // Related: internal/config/prompts/prompts.go, internal/agent/prompt/defaults.go.
 package prompts_test
 
 import (
-	"github.com/keonho-kim/v-code/internal/config/bootstrap"
-	"github.com/keonho-kim/v-code/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/prompts"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,12 +19,17 @@ func TestPromptBootstrap(t *testing.T) {
 	if _, err := bootstrap.Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	directory := filepath.Join(home, ".v")
+	directory := filepath.Join(home, ".meca")
+	defaults := prompt.Defaults()
+	files := defaults.Files()
 	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
 		path := filepath.Join(directory, "prompts", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {
 			t.Fatalf("%s: %v", name, err)
+		}
+		if string(body) != *files[name] {
+			t.Fatalf("%s did not publish the current embedded default", name)
 		}
 		info, err := os.Stat(path)
 		if err != nil || info.Mode().Perm() != 0600 {
@@ -48,7 +54,7 @@ func TestDevelopmentPromptEditsSurviveLoad(t *testing.T) {
 	if _, err := bootstrap.Initialize(home); err != nil {
 		t.Fatal(err)
 	}
-	directory := filepath.Join(home, ".v")
+	directory := filepath.Join(home, ".meca")
 	for _, name := range []string{"development.md"} {
 		if err := os.WriteFile(filepath.Join(directory, "prompts", name), []byte("Custom "+name), 0600); err != nil {
 			t.Fatal(err)

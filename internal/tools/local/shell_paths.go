@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 )
 
 func shellPath(path string, removal bool) (string, error) {

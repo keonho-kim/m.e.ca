@@ -8,13 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/setup"
+	"github.com/keonho-kim/meca/internal/config"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/setup"
 )
 
-func (a *app) adoptConnection(n notice) (err error) {
-	adopted := false
+func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 	defer func() {
 		if !adopted && n.Client != nil && n.Client != a.client {
 			n.Client.Close()
@@ -22,21 +21,19 @@ func (a *app) adoptConnection(n notice) (err error) {
 	}()
 	listing := n.Selection != nil && n.Selection.Model == "" && n.Models != nil
 	if n.Err != nil && (!listing || errors.Is(n.Err, context.Canceled) || errors.Is(n.Err, context.DeadlineExceeded)) {
-		return nil
+		return false, nil
 	}
 	if n.Selection == nil {
 		if n.Client != nil {
-			return fmt.Errorf("prepared client has no selection")
+			return false, fmt.Errorf("prepared client has no selection")
 		}
-		return nil
+		return false, nil
 	}
 	if n.Selection.Model == "" {
-		a.pendingConnection = n.Selection.Connection
-		a.key = n.credential
-		return nil
+		return false, nil
 	}
 	if n.Client == nil {
-		return fmt.Errorf("prepared selection has no client")
+		return false, fmt.Errorf("prepared selection has no client")
 	}
 	next := *n.Selection
 	if next.Details != nil {
@@ -52,6 +49,7 @@ func (a *app) adoptConnection(n notice) (err error) {
 		remember = func(selected modelconn.Selection) error {
 			updated := a.opts.Config
 			updated.Model = config.RememberModel(selected)
+			updated.Thinking = selected.Thinking
 			if err := a.opts.SaveConfig(updated); err != nil {
 				return err
 			}
@@ -61,14 +59,13 @@ func (a *app) adoptConnection(n notice) (err error) {
 	}
 	committed, err := setup.Commit(a.ctx, a.opts.Store, a.opts.Vault, a.opts.Session.ID, next, n.credential, remember)
 	if err != nil {
-		return err
+		return false, err
 	}
 	previous := a.client
 	a.client, a.selection = n.Client, committed.Selection
-	a.key = ""
 	adopted = true
 	if previous != nil && previous != a.client {
 		previous.Close()
 	}
-	return committed.DefaultError
+	return true, committed.DefaultError
 }

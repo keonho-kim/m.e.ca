@@ -7,11 +7,11 @@ package setup
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
-	"github.com/keonho-kim/v-code/internal/provider/discovery"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/diagnostic"
+	"github.com/keonho-kim/meca/internal/provider/discovery"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 type Credentials interface {
@@ -84,7 +84,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	options := connection.ReasoningOptions(connectionValue.Kind, &info)
 	selected.ThinkingSupported = diagnostic.ThinkingControl(connectionValue.Kind, &info)
 	selected.Thinking = defaults.Thinking
-	if previous.Connection.ID == connectionValue.ID && previous.Model == model && previous.Details != nil {
+	if previous.Connection.ID == connectionValue.ID && previous.Model == model {
 		selected.Thinking = previous.Thinking
 		selected.ReasoningEffort = previous.ReasoningEffort
 	}

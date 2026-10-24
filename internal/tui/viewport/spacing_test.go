@@ -1,7 +1,7 @@
 // Purpose: Verify display spacing ignores empty model blocks without changing literal tool content.
 // Pattern: Presentation contract tests.
 // Usage: go test ./internal/tui/viewport -run TestDisplay.
-// Related: internal/tui/viewport/viewport.go, internal/tui/viewport/spacing.go.
+// Related: internal/tui/viewport/viewport.go, internal/tui/viewport/block_layout.go.
 package viewport
 
 import "testing"
@@ -10,7 +10,7 @@ func TestDisplayIgnoresWhitespaceBlocks(t *testing.T) {
 	v := View{}
 	for _, b := range []Block{{Text: " \n\t", Markdown: true}, {Text: "\n\n", Thinking: true}, {Text: " \n"}} {
 		v.AppendBlock(b)
-		if lines := b.Lines(80); len(lines) != 0 {
+		if lines := b.Window(80, 0, b.Count(80)); len(lines) != 0 {
 			t.Fatalf("empty block rendered: %+v", lines)
 		}
 	}
@@ -25,7 +25,8 @@ func TestDisplayBoundsModelEdgesAndBlockGap(t *testing.T) {
 	v.Append(raw, true)
 	v.AppendBlock(Block{Text: "Answer\n\n", Markdown: true})
 	v.Append("\n  write_file\n\n    content\n\n\n\n    end\n", false)
-	lines := v.Lines(80)
+	var layout Transcript
+	lines := layout.all(&v, 80)
 	if lines[0].Text != "Reason" {
 		t.Fatalf("leading model blank rows: %+v", lines)
 	}

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/view"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
@@ -20,14 +20,14 @@ func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
 	a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking\n", 40), Text: strings.Repeat("answer\n", 40) + "latest"})
 	a.render()
 	height := a.chatHeight(80, a.bodyHeight(24))
-	lines := a.chatLines(view.TranscriptWidth(80))
-	before := a.output.Start(lines, height)
+	transcript := a.chatLayout(view.TranscriptWidth(80))
+	before := transcript.Start(&a.output, height)
 	a.scroll(-3, 80, height)
-	if a.output.Follow || a.output.Start(lines, height) != before-3 {
-		t.Fatalf("live output ignored: before=%d after=%d follow=%t", before, a.output.Start(lines, height), a.output.Follow)
+	if a.output.Follow || transcript.Start(&a.output, height) != before-3 {
+		t.Fatalf("live output ignored: before=%d after=%d follow=%t", before, transcript.Start(&a.output, height), a.output.Follow)
 	}
 	a.scroll(3, 80, height)
-	if !a.output.Follow || a.output.Start(lines, height) != before {
+	if !a.output.Follow || transcript.Start(&a.output, height) != before {
 		t.Fatal("did not resume following the actual displayed bottom")
 	}
 }
@@ -45,7 +45,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			if paused {
 				a.scroll(-4, 80, height)
 			}
-			before := a.output.Start(a.chatLines(view.TranscriptWidth(80)), height)
+			before := a.chatLayout(view.TranscriptWidth(80)).Start(&a.output, height)
 			a.receiveRuntime(&run.Event{Kind: "thinking", Thinking: a.thinking})
 			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
 			a.receiveRuntime(&run.Event{Kind: "compaction_finished"})
@@ -54,7 +54,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			if a.output.Follow == paused {
 				t.Fatal("compaction changed follow preference")
 			}
-			if paused && a.output.Start(a.chatLines(view.TranscriptWidth(80)), height) != before {
+			if paused && a.chatLayout(view.TranscriptWidth(80)).Start(&a.output, height) != before {
 				t.Fatal("thinking commit or compaction moved the reading position")
 			}
 			if !paused && !strings.Contains(screenLine(a.screen, height-1, 79)+screenLine(a.screen, height, 79), "latest answer") {
@@ -114,7 +114,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 	a.busy, a.agentActive = true, true
 	a.steering = make(chan string, 1)
 	a.editor.Set("Use the existing API")
-	a.steerInput()
+	a.steerInput(a.editor.String())
 	if !a.output.Follow {
 		t.Fatal("sending a direction change did not return to the bottom")
 	}

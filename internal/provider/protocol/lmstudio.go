@@ -6,7 +6,7 @@ package protocol
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func lmPayload(model string, messages []Message, maxOutput int, effort string, temperature *float64, definitions []toolapi.Definition) ([]byte, error) {

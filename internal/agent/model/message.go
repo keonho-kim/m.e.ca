@@ -6,7 +6,7 @@ package model
 
 import (
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (message Message) Check() error {
@@ -16,7 +16,10 @@ func (message Message) Check() error {
 	if message.Incomplete && (message.Role != "assistant" || len(message.Calls) != 0 || message.ToolCallID != "" || message.ToolName != "") {
 		return fmt.Errorf("unfinished drafts must be assistant messages without native tool calls or results")
 	}
-	size := len(message.Content) + len(message.Reasoning)
+	if len(message.ReasoningState) > 0 && (message.Role != "assistant" || message.Incomplete) {
+		return fmt.Errorf("continuation state requires a completed assistant message")
+	}
+	size := len(message.Content) + len(message.Reasoning) + len(message.ReasoningState)
 	for _, call := range message.Calls {
 		size += len(call.Arguments) + len(call.ID) + len(call.Name)
 	}

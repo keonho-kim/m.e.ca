@@ -7,8 +7,8 @@ package prompts
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"io"
 	"os"
 	"path/filepath"

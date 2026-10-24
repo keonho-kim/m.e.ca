@@ -5,23 +5,17 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/commands"
 	"strings"
 )
 
-func (a *app) steerInput() {
-	command, err := commands.Parse(a.editor.String())
-	if err != nil {
-		a.fail(err)
-		return
-	}
-	if command.Kind != commands.Message || a.stopRequested {
+func (a *app) steerInput(text string) {
+	if a.stopRequested {
 		return
 	}
 	select {
-	case a.steering <- command.Argument:
+	case a.steering <- a.withSelectedPaths(text):
 		a.output.Follow = true
-		a.steeringDrafts = append(a.steeringDrafts, command.Argument)
+		a.steeringDrafts = append(a.steeringDrafts, text)
 		a.editor.Set("")
 		a.status = a.language.Text("현재 작업의 다음 판단에 반영합니다")
 	default:

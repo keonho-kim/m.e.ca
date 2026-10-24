@@ -6,8 +6,8 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/identity"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/identity"
 	"testing"
 )
 

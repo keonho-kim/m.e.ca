@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestAllToolResultsStartExpandedAndFold(t *testing.T) {

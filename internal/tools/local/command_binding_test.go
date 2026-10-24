@@ -12,17 +12,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestCommandBindingFreezesEnvironment(t *testing.T) {
 	e, project := testExecutor(t)
-	t.Setenv("V_TEST_VALUE", "before")
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf '%s' \"$V_TEST_VALUE\" > value"}`))
+	t.Setenv("MECA_TEST_VALUE", "before")
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"printf '%s' \"$MECA_TEST_VALUE\" > value"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("V_TEST_VALUE", "after")
+	t.Setenv("MECA_TEST_VALUE", "after")
 	if result, err := op.Execute(context.Background(), false); err != nil || result.Failed {
 		t.Fatalf("%+v %v", result, err)
 	}

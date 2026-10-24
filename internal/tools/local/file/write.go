@@ -16,7 +16,7 @@ func Write(root *os.Root, path string, content []byte, mode os.FileMode) (err er
 	if err := root.MkdirAll(parent, 0o755); err != nil {
 		return err
 	}
-	temporary := filepath.Join(parent, ".v-write-"+rand.Text())
+	temporary := filepath.Join(parent, ".meca-write-"+rand.Text())
 	file, err := root.OpenFile(temporary, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
 		return err

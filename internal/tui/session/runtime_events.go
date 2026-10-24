@@ -5,9 +5,9 @@
 package session
 
 import (
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
 func (a *app) receiveRuntime(e *run.Event) {
@@ -18,8 +18,7 @@ func (a *app) receiveRuntime(e *run.Event) {
 			a.steeringDrafts = a.steeringDrafts[1:]
 		}
 		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(e.Text), false)
-		a.inputs = append(a.inputs, e.Text)
-		a.historyIndex = len(a.inputs)
+		a.rememberInput(e.Text)
 		return
 
 	case "generation_started":

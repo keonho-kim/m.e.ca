@@ -7,10 +7,10 @@ package view
 import "github.com/gdamore/tcell/v3"
 
 type FilePreviewDisplay struct {
-	Path, Command string
-	Rows          []string
-	Full          bool
-	X             int
+	Path string
+	Rows []string
+	Full bool
+	X    int
 }
 
 func FilePreview(screen tcell.Screen, p FilePreviewDisplay, width, height int) {
@@ -20,13 +20,8 @@ func FilePreview(screen tcell.Screen, p FilePreviewDisplay, width, height int) {
 		}
 	}
 	Text(screen, p.X, 1, width-p.X, p.Path, tcell.StyleDefault.Bold(true))
-	end := height
-	if p.Command != "" {
-		end--
-		Text(screen, p.X, end, width-p.X, "> "+p.Command, tcell.StyleDefault)
-	}
 	for i, line := range p.Rows {
-		if i+2 >= end {
+		if i+2 >= height {
 			break
 		}
 		Text(screen, p.X, i+2, width-p.X, line, tcell.StyleDefault)

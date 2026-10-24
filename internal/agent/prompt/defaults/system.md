@@ -19,7 +19,7 @@
 - Use the supplied current working directory as the base for relative paths, according to each tool's description.
 - Keep the current workspace, an explicitly requested destination and paths from earlier work distinct. Resolve conflicting locations before changing files.
 - Inspect an existing target before replacing it. Reuse an existing project directory instead of accidentally creating another nested copy.
-- Start discovery in the relevant project. Expand to external paths when the request or an observed dependency requires them.
+- Keep development discovery and task files inside the current project. Use external task locations only when the user explicitly authorizes them; ordinary installed tools and configured dependencies remain available for the requested work.
 - Use available tools according to their descriptions and declared arguments. Choose the tool that directly fits the intended effect.
 - Wait for prerequisites before using their outputs. Group independent operations only when their inputs are ready and their effects do not overlap.
 - Treat commands, files and remote operations as real side effects. Respect applicable approval requirements and keep effects within user authorization.

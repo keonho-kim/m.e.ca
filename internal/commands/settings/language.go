@@ -4,7 +4,7 @@
 // Related: internal/config/language.go, internal/config/config.go, internal/tui/session/language.go.
 package settings
 
-import "github.com/keonho-kim/v-code/internal/config"
+import "github.com/keonho-kim/meca/internal/config"
 
 func Language(current config.Config, value config.Language, saveConfig func(config.Config) error) (config.Config, error) {
 	if err := value.Check(); err != nil {

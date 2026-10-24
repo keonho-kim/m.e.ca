@@ -7,7 +7,7 @@ package locale
 import (
 	"context"
 
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/meca/internal/config"
 )
 
 func Resolve(ctx context.Context, preference config.Language) Language {

@@ -7,29 +7,27 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int) (messages []modelapi.Message, err error) {
 	if after < 0 || maxBytes < 1 {
 		return nil, fmt.Errorf("invalid conversation context bounds")
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT m.body FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? ORDER BY t.sequence`, session, after)
+	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? ORDER BY t.sequence`, session, after)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { err = errors.Join(err, rows.Close()) }()
 	bytes := 0
-	for rows.Next() {
-		var body []byte
-		if err := rows.Scan(&body); err != nil {
-			return nil, err
-		}
-		bytes += len(body)
+	for _, record := range page {
+		bytes += record.size
 		if bytes > maxBytes {
 			return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes; no messages were omitted", maxBytes)
+		}
+		body, err := s.unpackRecord(ctx, record, nil)
+		if err != nil {
+			return nil, err
 		}
 		var message modelapi.Message
 		if err := json.Unmarshal(body, &message); err != nil {
@@ -40,5 +38,5 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 		}
 		messages = append(messages, message)
 	}
-	return messages, rows.Err()
+	return messages, nil
 }

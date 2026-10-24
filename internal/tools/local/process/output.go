@@ -4,7 +4,10 @@
 // Related: internal/tools/local/process/run_unix.go, internal/tools/local/command.go.
 package process
 
-import "bytes"
+import (
+	"bytes"
+	"strings"
+)
 
 type Output struct {
 	StdoutPath, StderrPath                   string
@@ -19,6 +22,7 @@ type Output struct {
 type cappedOutput struct {
 	head      bytes.Buffer
 	tail      []byte
+	tailStart int
 	truncated bool
 }
 
@@ -34,20 +38,32 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 	if len(content) >= captureHalf {
 		output.truncated = output.truncated || len(content) > captureHalf || len(output.tail) > 0
 		output.tail = append(output.tail[:0], content[len(content)-captureHalf:]...)
+		output.tailStart = 0
 	} else {
-		if excess := len(output.tail) + len(content) - captureHalf; excess > 0 {
-			copy(output.tail, output.tail[excess:])
-			output.tail = output.tail[:len(output.tail)-excess]
-			output.truncated = true
+		space := captureHalf - len(output.tail)
+		if space > 0 {
+			n := min(space, len(content))
+			output.tail = append(output.tail, content[:n]...)
+			content = content[n:]
 		}
-		output.tail = append(output.tail, content...)
+		if len(content) > 0 {
+			output.truncated = true
+			n := copy(output.tail[output.tailStart:], content)
+			copy(output.tail, content[n:])
+			output.tailStart = (output.tailStart + len(content)) % captureHalf
+		}
 	}
 	return count, nil
 }
 
 func (output *cappedOutput) String() string {
+	var text strings.Builder
+	text.Grow(output.head.Len() + len(output.tail) + 32)
+	text.Write(output.head.Bytes())
 	if output.truncated {
-		return output.head.String() + "\n[... output omitted ...]\n" + string(output.tail)
+		text.WriteString("\n[... output omitted ...]\n")
 	}
-	return output.head.String() + string(output.tail)
+	text.Write(output.tail[output.tailStart:])
+	text.Write(output.tail[:output.tailStart])
+	return text.String()
 }

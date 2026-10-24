@@ -6,7 +6,7 @@ package sqlite
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"os"
 	"path/filepath"
 	"testing"
@@ -49,7 +49,7 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 			t.Fatalf("session DB: %v %v", info, err)
 		}
 	}
-	list, err := sessions.Conversations(ctx, 0, 100)
+	list, err := sessions.Conversations(ctx, "")
 	if err != nil || len(list) != 2 {
 		t.Fatalf("list=%+v %v", list, err)
 	}
@@ -69,7 +69,7 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(copyGroup, firstID+".db"), body, 0600); err != nil {
 		t.Fatal(err)
 	}
-	list, err = copied.Conversations(ctx, 0, 100)
+	list, err = copied.Conversations(ctx, "")
 	if err != nil || len(list) != 1 || list[0].ID != firstID || list[0].Summary != "first conversation" {
 		t.Fatalf("file-only resume: %+v %v", list, err)
 	}

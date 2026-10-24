@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/rivo/uniseg"
 )
 

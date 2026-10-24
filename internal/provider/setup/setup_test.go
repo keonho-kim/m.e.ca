@@ -6,7 +6,7 @@ package setup
 
 import (
 	"context"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"testing"

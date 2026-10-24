@@ -8,9 +8,9 @@ import (
 	"context"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
-	"github.com/keonho-kim/v-code/internal/config"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/config"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"path/filepath"
 	"testing"
 	"time"
@@ -36,9 +36,10 @@ func TestResumeExit(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			finished := make(chan struct{})
 			errors := make(chan error, 1)
+			load := snapshotPages(t, store)
 			go func() {
 				defer close(finished)
-				_, selected, err := Select(ctx, screen, store.Conversations, sessionstate.Session{}, config.LanguageAuto)
+				_, selected, err := Select(ctx, screen, load, sessionstate.Session{}, config.LanguageAuto)
 				if selected {
 					t.Error("exit selected a conversation")
 				}
@@ -108,7 +109,7 @@ func TestResumeSelectsDiscoveredSessionFile(t *testing.T) {
 		case <-ctx.Done():
 		}
 	}()
-	selected, ok, err := Select(ctx, screen, sessions.Conversations, sessionstate.Session{ProjectRoot: project, DisplayRoot: project}, config.LanguageAuto)
+	selected, ok, err := Select(ctx, screen, snapshotPages(t, sessions), sessionstate.Session{ProjectRoot: project, DisplayRoot: project}, config.LanguageAuto)
 	<-finished
 	if err != nil || !ok || selected != expected {
 		t.Fatalf("selection=%+v ok=%t err=%v", selected, ok, err)
@@ -120,4 +121,13 @@ func TestResumeSelectsDiscoveredSessionFile(t *testing.T) {
 	if err := reopened.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func snapshotPages(t *testing.T, sessions *sqlite.Sessions) Conversations {
+	t.Helper()
+	snapshot, err := sessions.Conversations(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return Pages(snapshot)
 }

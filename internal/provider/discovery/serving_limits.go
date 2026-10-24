@@ -7,8 +7,8 @@ package discovery
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 )
 

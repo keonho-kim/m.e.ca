@@ -6,11 +6,24 @@ package session
 
 import (
 	"context"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/setup"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/setup"
 )
 
 func (a *app) connect(connection modelconn.Connection, key, model string, remember bool) {
+	a.startModelSetup(modelSetupRequest{connection: connection, key: key, model: model, remember: remember, defaults: setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking}, previous: a.selection})
+}
+
+type modelSetupRequest struct {
+	formRevision   int
+	connection     modelconn.Connection
+	key, model     string
+	remember, form bool
+	defaults       setup.Defaults
+	previous       modelconn.Selection
+}
+
+func (a *app) startModelSetup(request modelSetupRequest) {
 	if a.busy {
 		return
 	}
@@ -21,8 +34,6 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 	a.taskCancel = cancel
 	a.setupRevision++
 	revision := a.setupRevision
-	previous := a.selection
-	defaults := setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking}
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -33,12 +44,12 @@ func (a *app) connect(connection modelconn.Connection, key, model string, rememb
 				n.Client.Close()
 			}
 		}
-		prepared, err := setup.Prepare(ctx, connection, key, model, defaults, previous, a.opts.Vault)
-		n := notice{SetupRevision: revision, Client: prepared.Client, Selection: prepared.Selection, Err: err, RememberModel: remember}
-		if connection.CredentialRef == "" {
-			n.credential = key
+		prepared, err := setup.Prepare(ctx, request.connection, request.key, request.model, request.defaults, request.previous, a.opts.Vault)
+		n := notice{SetupRevision: revision, Client: prepared.Client, Selection: prepared.Selection, Err: err, RememberModel: request.remember, ModelForm: request.form, FormRevision: request.formRevision}
+		if request.connection.CredentialRef == "" {
+			n.credential = request.key
 		}
-		if model == "" && prepared.Selection != nil {
+		if request.model == "" && prepared.Selection != nil {
 			n.Models = make([]string, 0, len(prepared.Models))
 			for _, model := range prepared.Models {
 				n.Models = append(n.Models, model.ID)

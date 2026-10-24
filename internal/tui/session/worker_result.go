@@ -7,9 +7,9 @@ package session
 import (
 	"context"
 	"errors"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
 func (a *app) finishWorker(n notice) {
@@ -47,18 +47,23 @@ func (a *app) finishWorker(n notice) {
 			a.stopNotice = a.language.Text("연결 작업을 취소했습니다")
 		}
 	}
-	if err := a.adoptConnection(n); err != nil {
+	if n.ModelForm {
+		a.finishModelFormSetup(n)
+		return
+	}
+	if _, err := a.adoptConnection(n); err != nil {
 		n.Err = err
 		a.status = a.opts.Vault.Redact(err.Error())
 	}
-	if n.Models != nil && !errors.Is(n.Err, context.Canceled) && !errors.Is(n.Err, context.DeadlineExceeded) {
-		a.openModelInput(n.Models)
-		if n.Err != nil {
-			a.status = a.language.Text("목록 조회 실패 · 모델 ID를 직접 입력하세요: ") + a.opts.Vault.Redact(n.Err.Error())
-		}
-	}
 	if n.Diagnostic && n.Err == nil {
 		a.status = a.language.Text("모델 연결 진단을 통과했습니다")
+	}
+	if n.Diagnostic && a.modelForm != nil && a.modelForm.saving {
+		if n.Err != nil {
+			a.modelForm.saving, a.page = false, "model"
+		} else {
+			a.saveModelForm()
+		}
 	}
 	if a.proposal != nil {
 		a.proposal = nil

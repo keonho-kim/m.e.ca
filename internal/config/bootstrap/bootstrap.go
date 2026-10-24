@@ -1,15 +1,15 @@
 // Purpose: Initialize missing private local configuration without replacing existing state.
 // Pattern: Simple Module (startup I/O boundary).
-// Usage: Called before database and terminal startup by cmd/v.
+// Usage: Called before database and terminal startup by cmd/meca.
 // Related: internal/config/statefs/files.go, internal/config/bootstrap/bootstrap_test.go.
 package bootstrap
 
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/config/prompts"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 
@@ -17,7 +17,7 @@ import (
 )
 
 func Initialize(home string) (configuration config.Config, err error) {
-	directory := filepath.Join(home, ".v")
+	directory := filepath.Join(home, statefs.DirectoryName)
 	root, err := statefs.Open(directory)
 	if err != nil {
 		return configuration, err

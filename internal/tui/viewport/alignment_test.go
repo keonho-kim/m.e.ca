@@ -15,9 +15,10 @@ func TestCenteredRowsReflowAndCopy(t *testing.T) {
 	source := "Worked for 01:02:03 | INPUT 120 | OUTPUT 20 | TPS 5.0"
 	v := View{Follow: true}
 	v.AppendBlock(Block{Text: source, Centered: true, Thinking: true})
+	var layout Transcript
 	for _, width := range []int{100, 18, 80} {
 		var copied strings.Builder
-		for _, line := range v.Lines(width) {
+		for _, line := range layout.all(&v, width) {
 			text := strings.TrimLeft(line.Text, " ")
 			padding := (width - uniseg.StringWidth(text)) / 2
 			if line.Text != strings.Repeat(" ", padding)+text || !line.Thinking {
@@ -32,14 +33,14 @@ func TestCenteredRowsReflowAndCopy(t *testing.T) {
 		}
 	}
 	v.Blocks[0].Centered = false
-	if v.Lines(100)[0].Text != source {
+	if layout.all(&v, 100)[0].Text != source {
 		t.Fatal("alignment change reused stale layout")
 	}
 }
 
 func TestCenteredRowsUseUnicodeCellWidth(t *testing.T) {
 	block := Block{Text: "작업 시간 00:01:02", Centered: true}
-	line := block.Lines(80)[0]
+	line := block.Window(80, 0, block.Count(80))[0]
 	padding := (80 - uniseg.StringWidth(block.Text)) / 2
 	if line.Text != strings.Repeat(" ", padding)+block.Text {
 		t.Fatal(line.Text)

@@ -6,9 +6,9 @@ package httpclient
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/diagnostic"
-	"github.com/keonho-kim/v-code/internal/provider/discovery"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/diagnostic"
+	"github.com/keonho-kim/meca/internal/provider/discovery"
 )
 
 func catalogFor(c *Client) *discovery.Client {

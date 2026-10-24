@@ -6,8 +6,8 @@ package transcript
 
 import (
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"regexp"
 	"strconv"
 	"strings"

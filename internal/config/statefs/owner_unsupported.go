@@ -3,7 +3,7 @@
 // Purpose: Reject private state initialization on unverified platforms.
 // Pattern: Platform boundary.
 // Usage: Used by configuration code outside Linux and macOS.
-// Related: internal/config/statefs/owner_unix.go, cmd/v/main.go.
+// Related: internal/config/statefs/owner_unix.go, cmd/meca/main.go.
 package statefs
 
 import (

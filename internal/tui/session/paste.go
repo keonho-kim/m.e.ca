@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/input"
 	"strings"
 )
 
@@ -23,10 +23,10 @@ func (a *app) pasteBoundary(start bool) {
 		a.paste = true
 		a.pasted = pasteInput{}
 		switch {
-		case a.page == "chat" || a.page == "files" && a.browser.Input && a.filePreview == nil:
+		case a.page == "chat" || a.page == "files" && a.browser.Input && a.filePreview == nil && !a.fileSendConfirm:
 			a.pasted.editor = &a.editor
-		case a.page == "endpoint" || a.page == "key" || a.page == "manual":
-			a.pasted.editor, a.pasted.singleLine = &a.menuInput, true
+		case a.page == "model" && a.modelForm != nil && a.modelForm.editing && !a.modelForm.confirm:
+			a.pasted.editor, a.pasted.singleLine = a.modelForm.editor(), true
 		}
 		if a.pasted.editor != nil {
 			a.pasted.limit = input.MaxBytes - len(a.pasted.editor.String())
@@ -39,6 +39,13 @@ func (a *app) pasteBoundary(start bool) {
 			a.stopNotice = a.language.Text("붙여넣기 취소: 입력은 최대 16MiB입니다")
 		} else {
 			a.pasted.editor.Insert(a.pasted.text.String())
+			if a.page == "model" && a.modelForm != nil {
+				f := a.modelForm
+				if f.row == modelCredential {
+					f.keyChanged = true
+				}
+				f.invalidate(f.row != modelName)
+			}
 		}
 	}
 	a.paste = false

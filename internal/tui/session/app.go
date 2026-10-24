@@ -1,6 +1,6 @@
 // Purpose: Run the terminal event loop and join workers and clients during shutdown.
 // Pattern: Event Loop.
-// Usage: cmd/v supplies initialized adapters and calls Run on a tcell screen.
+// Usage: cmd/meca supplies initialized adapters and calls Run on a tcell screen.
 // Related: internal/tui/session/keys.go, internal/tui/session/tasks.go, internal/tui/session/render.go, internal/tui/session/events.go.
 package session
 
@@ -8,8 +8,8 @@ import (
 	"context"
 	"errors"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 type Action uint8
@@ -43,6 +43,9 @@ func (a *app) fail(err error) {
 }
 
 func (a *app) requestExit() {
+	a.fileSubmission = nil
+	a.fileSelectionQueue = nil
+	a.closeModelForm()
 	a.cancelDirectory()
 	a.closeFilePreview()
 	a.stopElapsed()

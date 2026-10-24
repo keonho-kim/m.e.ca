@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
 )
@@ -147,6 +147,24 @@ func (j *journal) RecordEvent(_ context.Context, _ string, e Event) error {
 	j.events = append(j.events, copy)
 	return nil
 }
+func (j *journal) Commit(ctx context.Context, session string, records []JournalRecord) error {
+	copy := &journal{failKind: j.failKind, messages: append([]modelapi.Message(nil), j.messages...), events: append([]Event(nil), j.events...)}
+	for _, r := range records {
+		if r.Message != nil {
+			if err := copy.AppendMessage(ctx, session, *r.Message); err != nil {
+				return err
+			}
+		}
+		if r.Event != nil {
+			if err := copy.RecordEvent(ctx, session, *r.Event); err != nil {
+				return err
+			}
+		}
+	}
+	j.messages, j.events = copy.messages, copy.events
+	return nil
+}
+
 func fixture(g *generator, e *executor, j *journal) Runner {
 	return Runner{Generator: g, Tools: e, Journal: j, Session: "s", Model: "m", ProjectInstructions: "Use focused tests. Scope cannot be bypassed.", Settings: policy.Settings{Scope: policy.Directory}, Redact: func(s string) string { return s }}
 }

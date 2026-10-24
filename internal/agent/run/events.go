@@ -7,9 +7,9 @@ package run
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type Event struct {
@@ -40,6 +40,12 @@ type Generation struct {
 }
 type Journal interface {
 	ContextMessages(context.Context, string, int64, int) ([]modelapi.Message, error)
-	AppendMessage(context.Context, string, modelapi.Message) error
 	RecordEvent(context.Context, string, Event) error
+	Commit(context.Context, string, []JournalRecord) error
+}
+
+// JournalRecord belongs to one durability boundary; exactly one payload must be set.
+type JournalRecord struct {
+	Message *modelapi.Message
+	Event   *Event
 }

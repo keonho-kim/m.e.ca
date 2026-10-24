@@ -6,7 +6,7 @@ package history
 
 import (
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 // TailSelection treats the byte target as a selection budget, not a message limit.

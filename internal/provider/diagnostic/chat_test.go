@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestChatConnectionAcceptsOrdinaryResponse(t *testing.T) {

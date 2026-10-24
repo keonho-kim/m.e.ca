@@ -1,15 +1,14 @@
-// Purpose: Verify discovered candidates and custom IDs connect only after field confirmation.
-// Pattern: HTTP and terminal workflow integration tests.
+// Purpose: Verify catalog discovery and model saving share one screen and never generate a diagnostic implicitly.
+// Pattern: Local HTTP and terminal integration tests.
 // Usage: go test ./internal/tui/session -run TestModelHintsConnection.
-// Related: internal/tui/session/model.go, internal/tui/session/model_fields.go.
+// Related: internal/tui/session/model_form_setup.go, internal/provider/setup/setup.go.
 package session
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -20,79 +19,65 @@ import (
 func TestModelHintsConnection(t *testing.T) {
 	for _, mode := range []string{"candidate", "custom", "unavailable"} {
 		t.Run(mode, func(t *testing.T) {
-			custom := mode != "candidate"
 			var posts atomic.Int32
-			expected := "new-model"
-			if custom {
-				expected = "custom/model"
-			}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					posts.Add(1)
+					t.Error("settings generated a model response")
+				}
 				w.Header().Set("Content-Type", "application/json")
-				if r.Method == http.MethodGet {
-					if mode == "unavailable" {
-						http.Error(w, "model catalog unsupported", http.StatusNotFound)
-						return
-					}
-					if custom {
-						fmt.Fprint(w, `{"data":[]}`)
-					} else {
-						fmt.Fprint(w, `{"data":[{"id":"alpha"},{"id":"new-model"}]}`)
-					}
+				if mode == "unavailable" {
+					http.Error(w, "catalog unavailable", http.StatusNotFound)
 					return
 				}
-				posts.Add(1)
-				var body struct{ Model string }
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					t.Error(err)
-					return
-				}
-				if body.Model != expected {
-					t.Errorf("wire model=%q", body.Model)
-				}
-				fmt.Fprint(w, `{"choices":[{"message":{"content":"Hello"},"finish_reason":"stop"}]}`)
+				fmt.Fprint(w, `{"data":[{"id":"alpha"},{"id":"new-model"}]}`)
 			}))
 			defer server.Close()
 			a := fixture(t)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			a.ctx = ctx
 			defer func() { cancel(); a.shutdown() }()
-			conn, err := connection.New(connection.OpenAICompatible, server.URL)
-			if err != nil {
-				t.Fatal(err)
+			a.openModel()
+			f := a.modelForm
+			for i, p := range connection.Providers() {
+				if p.Kind == connection.OpenRouter {
+					f.provider = i
+				}
 			}
-			a.connect(conn, "", "", false)
+			f.endpoint.Set(server.URL)
+			f.row = modelName
+			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 			for a.busy {
 				select {
 				case n := <-a.events:
 					a.receive(n)
-					if n.Err != nil && mode != "unavailable" {
-						t.Fatal(n.Err)
-					}
-				case <-ctx.Done():
-					t.Fatal(ctx.Err())
+				case <-a.ctx.Done():
+					t.Fatal(a.ctx.Err())
 				}
 			}
-			if a.page != "manual" || !a.modelHintsOpen || posts.Load() != 0 {
-				t.Fatal("discovery did not open model field")
+			if a.page != "model" || !f.editing || posts.Load() != 0 {
+				t.Fatal("catalog changed screens or generated a response")
 			}
-			if mode == "unavailable" && a.status == "" {
-				t.Fatal("discovery error hidden")
+			expected := "new-model"
+			if mode != "candidate" {
+				expected = "custom/model"
 			}
-			query := "NEW"
-			if custom {
-				query = expected
+			query := expected
+			if mode == "candidate" {
+				query = "NEW"
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, query, 0))
-			if !custom {
-				a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-				if a.busy || posts.Load() != 0 || a.menuInput.String() != expected {
-					t.Fatal("candidate selection connected or lost ID")
-				}
+			if mode == "candidate" {
+				a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+			if !f.confirm || a.selection.Model != "" {
+				t.Fatal("confirmation was bypassed")
+			}
+			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 			drainTask(t, a, false)
-			if a.selection.Model != expected || a.client == nil || posts.Load() != 0 {
-				t.Fatalf("selected=%q posts=%d", a.selection.Model, posts.Load())
+			if a.selection.Model != expected || a.client == nil || a.page != "chat" || posts.Load() != 0 {
+				t.Fatalf("selection=%+v status=%s", a.selection, a.status)
 			}
 		})
 	}

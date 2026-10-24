@@ -7,13 +7,15 @@ package model
 
 import (
 	"context"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
 
 const MaxResponseBytes = 256 * 1024 * 1024
 
 type Message struct {
+	// ReasoningState is opaque continuation data owned by the source provider and model.
+	ReasoningState  []byte         `json:"reasoning_state,omitempty"`
 	Reasoning       string         `json:"reasoning,omitempty"`
 	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
 	ID              string         `json:"id,omitempty"`
@@ -40,9 +42,10 @@ type Request struct {
 }
 
 type Response struct {
-	Reasoning string
-	Text      string
-	Calls     []toolapi.Call
+	ReasoningState []byte
+	Reasoning      string
+	Text           string
+	Calls          []toolapi.Call
 }
 
 // ToolCallError reports unusable model tool syntax before any operation exists.
@@ -51,13 +54,14 @@ type ToolCallError struct{ Detail string }
 func (e *ToolCallError) Error() string { return "invalid tool call: " + e.Detail }
 
 type Event struct {
-	Retry     *Retry
-	Delta     string
-	Thinking  string
-	Calls     []toolapi.Call
-	Done      bool
-	Streaming bool
-	Usage     *TokenUsage
+	ReasoningState []byte
+	Retry          *Retry
+	Delta          string
+	Thinking       string
+	Calls          []toolapi.Call
+	Done           bool
+	Streaming      bool
+	Usage          *TokenUsage
 }
 
 // Retry begins a fresh generation attempt; consumers discard its previous partial answer.

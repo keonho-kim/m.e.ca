@@ -10,14 +10,16 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"time"
 
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type execution struct {
+	projection       contextbuild.Projection
 	historyLoaded    bool
 	runner           Runner
 	limits           Limits
@@ -159,7 +161,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			} else if queued {
 				continue
 			}
-			return s.result, s.finish(ctx, reply.Text)
+			return s.result, s.finish(ctx, reply)
 		}
 	}
 }

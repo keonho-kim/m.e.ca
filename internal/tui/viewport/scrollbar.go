@@ -1,7 +1,7 @@
 // Purpose: Map transcript positions to scrollbar geometry and drag positions back to transcript rows.
 // Pattern: Pure layout calculation.
 // Usage: Session interaction and the view renderer share NewScrollbar geometry.
-// Related: internal/tui/viewport/scroll.go, internal/tui/view/scrollbar.go, internal/tui/session/scrollbar.go.
+// Related: internal/tui/viewport/window.go, internal/tui/view/scrollbar.go, internal/tui/session/scrollbar.go.
 package viewport
 
 type Scrollbar struct {

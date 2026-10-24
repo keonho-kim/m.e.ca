@@ -6,8 +6,8 @@ package run
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/config/credentials"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/config/credentials"
 	"strings"
 	"testing"
 )
@@ -68,7 +68,7 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, j)
 	vault := &credentials.Vault{}
 	vault.Remember("provider-secret")
-	r.Redact, r.MaskStream = vault.Redact, vault.Stream
+	r.Redact, r.NewStreamMask = vault.Redact, vault.NewStreamMask
 	r.Generator = &chunkGenerator{chunks: []string{"hello provider-", "secret"}, cancel: cancel}
 	var partial string
 	_, err := r.Run(ctx, "hello", approve, func(event Event) error {

@@ -7,7 +7,7 @@ package local
 import (
 	"context"
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (op *operation) run(ctx context.Context) (toolapi.Result, error) {

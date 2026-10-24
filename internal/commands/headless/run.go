@@ -1,7 +1,7 @@
 // Purpose: Execute one normal agent request with text or JSONL presentation and no terminal.
 // Pattern: Command use case with an output adapter.
-// Usage: cmd/v supplies the same request dependencies used by the TUI.
-// Related: internal/agent/session/request.go, cmd/v/headless.go.
+// Usage: cmd/meca supplies the same request dependencies used by the TUI.
+// Related: internal/agent/session/request.go, cmd/meca/headless.go.
 package headless
 
 import (
@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	sessionrun "github.com/keonho-kim/v-code/internal/agent/session"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"io"
 	"strings"
 )

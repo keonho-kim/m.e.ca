@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/tui/browser"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
@@ -42,10 +42,12 @@ func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 func TestKeymapLayoutClearAndPreviewLabels(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		a := fixture(t)
-		a.language, a.page = lang, "endpoint"
+		a.language = lang
+		a.openModel()
+		a.modelForm.row, a.modelForm.editing = modelEndpoint, true
 		a.screen.SetSize(48, 24)
 		a.render()
-		if keys := footerKeyText(a); !strings.Contains(keys, lang.Text("앞부분 지우기")) || strings.Contains(keys, "←→") {
+		if keys := footerKeyText(a); !strings.Contains(keys, lang.Text("Clear field")) || strings.Contains(keys, "←→") {
 			t.Fatalf("field hints are ambiguous or redundant: %q", keys)
 		}
 		a.page = "files"

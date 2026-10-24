@@ -12,8 +12,8 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
-	"github.com/keonho-kim/v-code/internal/config"
-	sessionstate "github.com/keonho-kim/v-code/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/config"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func TestLanguageConversationPicker(t *testing.T) {

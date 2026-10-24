@@ -6,12 +6,12 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tui/input"
-	"strings"
 )
 
 func (a *app) openFiles(path string) {
 	a.closeFilePreview()
+	a.fileSendConfirm = false
+	a.fileReserve = false
 	a.status = ""
 	if path == "" {
 		path = "."
@@ -20,41 +20,21 @@ func (a *app) openFiles(path string) {
 	a.page = "files"
 	a.requestDirectory("open", path, 0)
 }
+
+func (a *app) closeFiles() {
+	a.fileSendConfirm = false
+	a.fileReserve = false
+	a.closeFilePreview()
+	a.cancelDirectory()
+	a.menuInput.Set("")
+	a.browser.Input = false
+	a.browser.Columns = nil
+	a.browser.Active = 0
+	a.page = "chat"
+}
+
 func (a *app) fileKey(e *tcell.EventKey) {
 	if a.paste {
-		return
-	}
-	if fileCommand(a.menuInput.String()) {
-		switch e.Key() {
-		case tcell.KeyEnter:
-			if a.menuInput.String() == ":q" {
-				a.page = "chat"
-				a.cancelDirectory()
-				a.menuInput.Set("")
-			} else {
-				a.status = a.language.Text("Unknown file-view command; use :q, !new or !quit")
-			}
-		case tcell.KeyEscape:
-			a.menuInput.Set("")
-		case tcell.KeyBacktab:
-			a.menuInput.Set("")
-			a.browser.Input = true
-		case tcell.KeyTab:
-			if e.Modifiers()&tcell.ModShift != 0 {
-				a.menuInput.Set("")
-				a.browser.Input = true
-			}
-		default:
-			input.EditKey(&a.menuInput, e)
-			if !fileCommand(a.menuInput.String()) {
-				a.menuInput.Set("")
-			}
-		}
-		return
-	}
-	if e.Key() == tcell.KeyRune && fileCommand(e.Str()) {
-		a.menuInput.Set("")
-		a.menuInput.Insert(e.Str())
 		return
 	}
 	if a.directoryLoading {
@@ -107,8 +87,4 @@ func (a *app) fileKey(e *tcell.EventKey) {
 			return
 		}
 	}
-}
-
-func fileCommand(text string) bool {
-	return strings.HasPrefix(text, ":") || strings.HasPrefix(text, "!")
 }

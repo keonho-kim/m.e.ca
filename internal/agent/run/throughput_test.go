@@ -7,7 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
 	"testing/synctest"

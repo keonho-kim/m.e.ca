@@ -1,4 +1,4 @@
-// Purpose: Store, retrieve and remove V-owned keyring credentials with a non-secret cleanup marker.
+// Purpose: Store, retrieve and remove MECA-owned keyring credentials with a non-secret cleanup marker.
 // Pattern: Credential Adapter.
 // Usage: Connection setup and model selection call Vault.Get and Set.
 // Related: internal/config/credentials/redaction.go, internal/provider/setup/setup.go, internal/commands/install/uninstall.go.
@@ -7,13 +7,13 @@ package credentials
 import (
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 	"strings"
 
 	"github.com/zalando/go-keyring"
 )
 
-const service = "v-code"
+const service = "meca"
 
 func (v *Vault) Set(ref, key string) error {
 	if ref == "" || len(key) > 2048 || strings.ContainsAny(key, "\r\n\x00") {
@@ -30,7 +30,7 @@ func (v *Vault) Set(ref, key string) error {
 	if v.State == "" {
 		return fmt.Errorf("credential state directory is required")
 	}
-	if err := statefs.Write(v.State, "credentials.used", []byte("v-code\n")); err != nil {
+	if err := statefs.Write(v.State, "credentials.used", []byte(service+"\n")); err != nil {
 		return err
 	}
 	if err := keyring.Set(service, ref, key); err != nil {
@@ -39,7 +39,7 @@ func (v *Vault) Set(ref, key string) error {
 	return nil
 }
 
-// Clear removes only credentials belonging to V's fixed keyring service.
+// Clear removes only credentials belonging to MECA's fixed keyring service.
 func Clear() error {
 	err := keyring.DeleteAll(service)
 	if errors.Is(err, keyring.ErrNotFound) {

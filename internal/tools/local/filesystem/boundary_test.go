@@ -12,7 +12,7 @@ import (
 
 func TestBoundary(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	b, err := New(project, home, filepath.Join(home, ".v"))
+	b, err := New(project, home, filepath.Join(home, ".meca"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestBoundary(t *testing.T) {
 	if err := os.Symlink(home, alias); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.ReadTarget(filepath.Join(alias, ".v/config.toml")); err == nil {
+	if _, err := b.ReadTarget(filepath.Join(alias, ".meca/config.toml")); err == nil {
 		t.Fatal("symlink bypassed private-path guard")
 	}
 	if err := b.Movable(b.Project()); err == nil {

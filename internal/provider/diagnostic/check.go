@@ -7,9 +7,9 @@ package diagnostic
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func Check(ctx context.Context, client modelapi.Generator, model string, supported, nativeOn bool, settings *inference.Settings) (modelconn.Capabilities, error) {

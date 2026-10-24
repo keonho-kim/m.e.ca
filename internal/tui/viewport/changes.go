@@ -1,8 +1,10 @@
 // Purpose: Preserve explicitly classified source changes while reflowing literal tool details.
 // Pattern: Pure presentation projection.
-// Usage: Transcript formatters attach immutable changes; Block.Lines projects them onto wrapped rows.
+// Usage: Transcript formatters attach immutable changes; Block.Window classifies visible wrapped rows.
 // Related: internal/tui/transcript/change_preview.go, internal/tui/viewport/viewport.go.
 package viewport
+
+import "sort"
 
 // ChangeRange marks one added or removed line by byte offsets in the displayed source.
 type ChangeRange struct {
@@ -21,6 +23,10 @@ func (b *Block) classifyChanges(lines []Line) {
 		return
 	}
 	ranges := b.Changes.Ranges
+	if len(lines) > 0 {
+		start := lines[0].Copy.Row.Start
+		ranges = ranges[sort.Search(len(ranges), func(i int) bool { return ranges[i].End > start }):]
+	}
 	for i := range lines {
 		row := lines[i].Copy.Row
 		for len(ranges) > 0 && ranges[0].End <= row.Start {

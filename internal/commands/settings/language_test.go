@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/config"
+	"github.com/keonho-kim/meca/internal/config"
 )
 
 func TestLanguageSaveFailureAndInvalidValue(t *testing.T) {

@@ -4,18 +4,18 @@
 
 ## 책임과 의존성
 
-단일 Go 모듈과 cmd/v 합성 루트를 사용한다. 기능은 internal 아래에 두고 실제 소유 패키지를 직접 참조한다. 소비자 소유의 작은 I/O 계약과 함수·struct를 우선하며 패키지는 한 기능, 파일은 그 안의 한 책임을 담당한다.
+단일 Go 모듈과 cmd/meca 합성 루트를 사용한다. 기능은 internal 아래에 두고 실제 소유 패키지를 직접 참조한다. 소비자 소유의 작은 I/O 계약과 함수·struct를 우선하며 패키지는 한 기능, 파일은 그 안의 한 책임을 담당한다.
 
 | 위치 | 책임 |
 | --- | --- |
-| cmd/v | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
+| cmd/meca | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
 | agent/model | 모델 메시지·스트림·출력 예산 계약 |
 | agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·요청별 실측 통계 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 작업 지침·역할별 추론 설정 |
-| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·Thinking·언어 설정 저장 |
+| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·언어 설정 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
 | provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
@@ -26,9 +26,9 @@
 | tools/local/process | 호스트 셸·프로세스 그룹·출력·취소 |
 | storage/session·history·recovery | 세션 식별·순서 있는 이력·중단 복구의 저장 계약 |
 | storage/sqlite | DB 파일·SQL·트랜잭션·잠금 어댑터 |
-| tui/session | 이벤트 루프·활성 화면·worker 수명 |
+| tui/session | 이벤트 루프·활성 화면·모델 및 언어 설정 초안·worker 수명 |
 | tui/locale | 불변 번역 목록·설정 우선 언어 선택·시스템 로캘 해석 |
-| tui/modelmenu·transcript·view | 모델 표시값·메시지/도구 투영·화면 렌더링 |
+| tui/modelmenu·transcript·view | 모델 표시값·메시지/도구 투영·공통 설정 화면 및 대화 렌더링 |
 | tui/input·textlayout·selection | 편집 revision·grapheme 배치·원문에 연결된 선택 |
 | tui/startup·browser·viewport·markdown | 대화 선택·파일 탐색·출력 위치·응답 Markdown 표시 |
 
@@ -50,7 +50,7 @@ TUI는 저장·연결 설정·요청 준비를 직접 소유하지 않는다. wo
 | x/sys·x/term | OS 파일 어댑터와 터미널 확인 |
 | mvdan.cc/sh/v3 | 실행 없는 셸 AST 분석과 정적 단어 확장 |
 
-Go 빌드만으로 V 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#직접-빌드하기)를 따른다. CI·자동 릴리스 파이프라인은 구성하지 않는다.
+Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#직접-빌드하기)를 따른다. CI·자동 릴리스 파이프라인은 구성하지 않는다.
 
 ## 변경 검증
 
@@ -77,10 +77,10 @@ Linux·WSL·macOS에서 호스트 셸의 작업 디렉터리·환경·프로세�
 go test ./internal/tools/local/... ./internal/agent/run ./internal/commands/headless
 ```
 
-실제 uv 설치 경로 검사는 다음의 opt-in 진입점을 사용한다. V_TEST_UV_PYTHON_ROOT로 관리 Python 트리를 지정할 수 있다. 이는 시험 fixture의 입력이며 제품의 언어별 실행 분기가 아니다. fixture는 사용자 캐시 쓰기 예외나 링크 모드 변경 없이 임시 HOME을 사용한다.
+실제 uv 설치 경로 검사는 다음의 opt-in 진입점을 사용한다. MECA_TEST_UV_PYTHON_ROOT로 관리 Python 트리를 지정할 수 있다. 이는 시험 fixture의 입력이며 제품의 언어별 실행 분기가 아니다. fixture는 사용자 캐시 쓰기 예외나 링크 모드 변경 없이 임시 HOME을 사용한다.
 
 ```sh
-V_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVPackageProject -v
+MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVPackageProject -v
 ```
 
 실제 WSL에서는 일반 터미널과 execute_command에서 같은 도메인 조회·HTTPS 다운로드·패키지 설치를 대조한다. DNS 설정 파일 읽기와 숫자 IP의 로컬 HTTP 통과만으로 외부 DNS 성공을 판단하지 않는다. Linux Secret Service·실제 Provider·터미널 키 전달도 수행한 환경과 결과를 구분해 기록한다. 교차 빌드는 네이티브 실행 검증을 대신하지 않는다. [실행 경계](execution-boundary.md)의 호스트 권한 계약을 함께 확인한다.
@@ -89,14 +89,32 @@ V_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVP
 
 입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
 
+응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 참조 정의 가능성이 있는 `]:` 포함 문서는 전체 파싱을 유지한다. 화면 밖 과거 응답은 파싱 결과·span을 해제하고 위치 인덱스만 남기며 현재 응답은 증분 처리 수명 동안 보유한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
+
+SQLite의 큰 JSON 값은 `payloads`에서 해시·원본 길이·압축 형식을 소유한다. 작은 레코드는 별도 참조 목록을 갖고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `run.JournalRecord` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과는 취소와 무관하게 별도 확정하며 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
+
+컨텍스트 투영 캐시는 요청 실행이 소유하고 변경되지 않은 불변 메시지만 재사용한다. native 도구 결과 짝이 완성되거나 메시지·모델·비밀키 revision이 바뀌면 다시 투영한다. Compaction이 이력을 교체하면 캐시를 해제한다. 전체 미압축 대화와 Provider 전송 본문은 유지하며 API 요청 직렬화·전송을 위한 실제 바이트 복사는 필요하다.
+
+대화 선택은 디렉터리의 DB 파일이 식별 근거다. 최초 조회는 private 메모리 SQLite 연결 하나에 파일을 읽기 전용으로 하나씩 attach/detach하고 요약 배열 하나와 정렬 시각만 보유한다. 별도 레지스트리·sidecar·상시 worker를 만들지 않으며 정상·오류·취소 시 연결을 닫는다. 페이지 이동은 선택 화면이 소유하는 스냅샷을 사용한다. 전체 정렬을 위해 최초 조회는 파일 수에 비례한다.
+
+추가 성능·수명 검사는 다음을 사용한다. 수치는 실행한 환경·입력·측정 종류를 함께 기록하고 힙 할당량을 RSS와 혼동하지 않는다.
+
 ```sh
-go test ./internal/tui/viewport -run '^$' -bench . -benchmem
+go test ./internal/agent/context -run '^$' -bench BenchmarkProjection -benchmem
+go test ./internal/tui/markdown -run '^$' -bench BenchmarkStreamTail -benchmem
+go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(Conversations|Journal)' -benchmem
+go test ./internal/tui/viewport -run TestDisplayResources -v
+go test ./internal/tui/markdown -run '^$' -fuzz '^FuzzStream$' -fuzztime=10s
+```
+
+```sh
+go test ./internal/config/credentials ./internal/tui/viewport ./internal/tui/view ./internal/tui/browser ./internal/storage/sqlite ./internal/tools/local/process -run '^$' -bench . -benchmem
 ```
 
 벤치마크에는 Go·OS·CPU·데이터 크기·창 너비·명령과 소스 식별값을 함께 기록한다. 합성 줄 배치 수치를 모델 TPS나 전체 작업 시간으로 해석하지 않는다. 장시간 heap/RSS·취소 후 자원·실제 스트림의 프로파일링은 별도 확인한다.
 
 ## 기본 루프의 책임
 
-[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. V의 Go 단일 바이너리·호스트 실행·파일 검사·필수 승인·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
+[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. MECA의 Go 단일 바이너리·호스트 실행·파일 검사·필수 승인·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
 
-원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/v의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.
+원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.

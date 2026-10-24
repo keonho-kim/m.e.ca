@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,7 +25,7 @@ func TestIdentifyProviderMetadata(t *testing.T) {
 		{connection.Ollama, "/api/show", `{"details":{"family":"gemma4","parameter_size":"26B","quantization_level":"Q4_K_M"},"thinking":{"values":[false,true]},"system":"secret","modelfile":"secret"}`, "family", "Q4_K_M"},
 		{connection.LMStudio, "/api/v1/models", `{"models":[{"type":"llm","key":"publisher/model-file","architecture":"qwen3","loaded_instances":[{"id":"alias"}],"capabilities":{"reasoning":{"allowed_options":["off","low","high"]}}}]}`, "reported", "publisher/model-file"},
 		{connection.LiteLLM, "/model/info", `{"data":[{"model_name":"alias","litellm_params":{"model":"huggingface/Qwen/Qwen3.8-27B","api_key":"secret","api_base":"secret"}},{"model_name":"alias","litellm_params":{"model":"ollama/gemma4"}}]}`, "ambiguous", "gemma4"},
-		{connection.OpenAICompatible, "/v1/models", `{"data":[{"id":"alias","owned_by":"team"}]}`, "unknown", "team"},
+		{connection.OpenRouter, "/api/v1/models", `{"data":[{"id":"alias","canonical_slug":"team/model"}]}`, "reported", "team/model"},
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.kind), func(t *testing.T) {

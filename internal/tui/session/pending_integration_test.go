@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 )
 
 func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
@@ -62,7 +62,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		}
 		server.Close()
 	})
-	connection, err := modelconn.New(modelconn.OpenAICompatible, server.URL)
+	connection, err := modelconn.New(modelconn.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/inference"
+	"github.com/keonho-kim/meca/internal/agent/inference"
 )
 
 func TestAgentConfigurationUsesTopLevelTable(t *testing.T) {

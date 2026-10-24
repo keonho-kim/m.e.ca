@@ -5,9 +5,9 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/input"
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/tui/input"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 type inputRegion struct {
@@ -21,10 +21,10 @@ func (r inputRegion) contains(x, y int) bool {
 	return r.editor != nil && x >= 0 && x < r.width && y >= r.y && y < r.y+len(r.window.Rows)
 }
 
-func (a *app) captureChatSources(lines []viewport.Line, start, count int) {
-	a.chatVisible = lines[start:min(len(lines), start+count)]
-	for i := start; i < len(lines) && i-start < count; i++ {
-		a.selectionSources[1+i-start] = lines[i].Copy
+func (a *app) captureChatSources(lines []viewport.Line, count int) {
+	a.chatVisible = lines[:min(len(lines), count)]
+	for i := 0; i < len(lines) && i < count; i++ {
+		a.selectionSources[1+i] = lines[i].Copy
 	}
 }
 
@@ -105,7 +105,8 @@ func (a *app) deleteSelection() bool {
 	}
 	a.selectionInput.editor.DeleteRange(start, end)
 	a.refreshHints()
-	if a.selectionInput.editor == &a.menuInput {
+	if a.page == "model" && a.modelForm != nil {
+		a.modelForm.invalidate(a.modelForm.row != modelName)
 		a.refreshModelHints()
 	}
 	return true

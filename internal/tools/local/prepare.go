@@ -10,10 +10,10 @@ import (
 	"os"
 
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 
-	"github.com/keonho-kim/v-code/internal/tools/local/textformat"
+	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
 
 func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {

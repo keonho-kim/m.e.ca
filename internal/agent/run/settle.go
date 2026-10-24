@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/keonho-kim/v-code/internal/agent/work"
+	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 func (s *execution) settle(ctx context.Context, runErr error) error {

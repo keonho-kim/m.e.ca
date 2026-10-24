@@ -30,7 +30,7 @@ func TestProjectDirectoryIgnoresUnrelatedRootFiles(t *testing.T) {
 	if err := os.WriteFile(sidecar, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	conversations, err := catalog.Conversations(ctx, 0, 100)
+	conversations, err := catalog.Conversations(ctx, "")
 	if err != nil || len(conversations) != 1 || conversations[0].ID != id {
 		t.Fatalf("unrelated file blocked project discovery: %+v %v", conversations, err)
 	}
@@ -67,7 +67,7 @@ func TestProjectDirectoryIsolation(t *testing.T) {
 	if filepath.Dir(paths[0]) == filepath.Dir(paths[1]) {
 		t.Fatal("same-named projects share a directory")
 	}
-	all, err := catalog.Conversations(ctx, 0, 100)
+	all, err := catalog.Conversations(ctx, "")
 	if err != nil || len(all) != 2 {
 		t.Fatalf("all projects: %v %v", all, err)
 	}
@@ -75,7 +75,7 @@ func TestProjectDirectoryIsolation(t *testing.T) {
 	if err := os.WriteFile(paths[1], []byte("invalid database"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	local, err := catalog.ProjectConversations(ctx, projects[0], 0, 100)
+	local, err := catalog.Conversations(ctx, projects[0])
 	if err != nil || len(local) != 1 {
 		t.Fatalf("project list: %v %v", local, err)
 	}
@@ -132,7 +132,7 @@ func TestProjectDirectoryRejectsMisplacedDatabase(t *testing.T) {
 	if err := os.WriteFile(destination, content, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := catalog.Conversations(ctx, 0, 100); err == nil {
+	if _, err := catalog.Conversations(ctx, ""); err == nil {
 		t.Fatal("misplaced database was listed")
 	}
 	if store, err := catalog.Open(ctx, project, id); err == nil {

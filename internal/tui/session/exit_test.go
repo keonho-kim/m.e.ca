@@ -12,7 +12,7 @@ import (
 )
 
 func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
-	for _, page := range []string{"chat", "files", "model", "approval"} {
+	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
 			a.page, a.busy = page, true
@@ -28,7 +28,7 @@ func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 }
 
 func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
-	for _, page := range []string{"chat", "files", "model", "endpoint", "approval"} {
+	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
 			a.page, a.busy = page, true
@@ -45,12 +45,13 @@ func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
 	}
 	a := fixture(t)
 	a.page = "files"
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
 	for _, r := range "!quit" {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, string(r), 0))
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	if !a.exit {
-		t.Fatal("browser focus could not type !quit")
+		t.Fatal("file input focus could not type !quit")
 	}
 }
 

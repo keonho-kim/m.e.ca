@@ -8,16 +8,16 @@ import (
 	"context"
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/config/bootstrap"
-	"github.com/keonho-kim/v-code/internal/config/credentials"
-	"github.com/keonho-kim/v-code/internal/config/prompts"
-	"github.com/keonho-kim/v-code/internal/policy"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
-	"github.com/keonho-kim/v-code/internal/tools/local"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/policy"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,7 +31,7 @@ func fixture(t *testing.T) *app {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sessions, err := sqlite.OpenSessions(filepath.Join(home, ".v", "sessions"))
+	sessions, err := sqlite.OpenSessions(filepath.Join(home, ".meca", "sessions"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,8 +44,8 @@ func fixture(t *testing.T) *app {
 			t.Error(err)
 		}
 	})
-	vault := &credentials.Vault{State: filepath.Join(home, ".v")}
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".v"), vault.Redact)
+	vault := &credentials.Vault{State: filepath.Join(home, ".meca")}
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), vault.Redact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func fixture(t *testing.T) *app {
 	screen.SetSize(80, 24)
 	t.Cleanup(screen.Fini)
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".v"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".v")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".v"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".meca"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".meca")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".meca"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
 	t.Cleanup(a.shutdown)
 	return a
 }

@@ -6,8 +6,8 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/agent/compact"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
 )

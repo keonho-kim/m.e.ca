@@ -10,10 +10,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/provider/protocol"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/protocol"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
+	"slices"
 )
 
 func (client *Client) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) (err error) {
@@ -37,7 +38,13 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if err != nil {
 		return err
 	}
-	messages, err := protocol.Messages(client.connection.Kind, request.Messages)
+	history := slices.Clone(request.Messages)
+	for i := range history {
+		if history[i].ProviderID != client.connection.ID || history[i].ModelID != request.ModelID {
+			history[i].ReasoningState = nil
+		}
+	}
+	messages, err := protocol.Messages(client.connection.Kind, history)
 	if err != nil {
 		return err
 	}

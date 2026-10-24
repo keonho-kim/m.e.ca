@@ -8,15 +8,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/prompt"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	sessionrun "github.com/keonho-kim/v-code/internal/agent/session"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/config"
-	"github.com/keonho-kim/v-code/internal/policy"
-	"github.com/keonho-kim/v-code/internal/storage/sqlite"
-	"github.com/keonho-kim/v-code/internal/tools/local"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/local"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +55,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 			if err := os.Mkdir(project, 0700); err != nil {
 				t.Fatal(err)
 			}
-			sessions, err := sqlite.OpenSessions(filepath.Join(home, ".v", "sessions"))
+			sessions, err := sqlite.OpenSessions(filepath.Join(home, ".meca", "sessions"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -64,7 +64,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { store.Close() })
-			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
 			if err != nil {
 				t.Fatal(err)
 			}

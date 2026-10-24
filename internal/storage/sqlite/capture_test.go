@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/run"
 	"strings"
 	"testing"
 )

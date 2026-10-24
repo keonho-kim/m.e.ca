@@ -5,7 +5,7 @@
 package input
 
 import (
-	"github.com/keonho-kim/v-code/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/rivo/uniseg"
 	"strings"
 )

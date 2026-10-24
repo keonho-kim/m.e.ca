@@ -19,13 +19,16 @@ type renderer struct {
 	failed bool
 }
 
+// MaxParseBytes bounds AST construction, not accepted or displayed source text.
+const MaxParseBytes = 16 * 1024 * 1024
+
 // Render keeps oversized replies readable as literal text rather than building an unbounded AST.
 func Render(text string) []Line {
-	if len(text) > 16*1024*1024 {
+	if len(text) > MaxParseBytes {
 		return literal(text)
 	}
 	r := renderer{source: []byte(text)}
-	document := parser.New(parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser)).Parse(r.source)
+	document := newParser().Parse(r.source)
 	r.blocks(document, "", 0)
 	if r.failed {
 		return literal(text)
@@ -40,7 +43,7 @@ func Render(text string) []Line {
 }
 func literal(text string) []Line {
 	var rows []Line
-	for _, part := range strings.Split(safe(text), "\n") {
+	for _, part := range strings.Split(SafeText(text), "\n") {
 		rows = append(rows, line([]Span{{Text: part}}))
 	}
 	return rows
@@ -67,81 +70,89 @@ func (r *renderer) emit(prefix string, spans []Span) {
 	}
 	r.rows = append(r.rows, line(current))
 }
+func newParser() parser.Parser {
+	return parser.New(parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser))
+}
+
 func (r *renderer) blocks(parent ast.Node, indent string, depth int) {
 	if depth > 128 {
 		r.failed = true
 		return
 	}
 	for n := parent.FirstChild(); n != nil; n = n.NextSibling() {
-		switch v := n.(type) {
-		case *ast.Heading:
-			r.blank()
-			r.emit(indent, r.inline(v, Bold, 0))
-			r.blank()
-		case *ast.Paragraph:
-			r.emit(indent, r.inline(n, 0, 0))
-			r.blank()
-		case *ast.List:
-			index := v.Start
-			for item := v.FirstChild(); item != nil; item = item.NextSibling() {
-				marker := "• "
-				if v.IsOrdered() {
-					marker = fmt.Sprintf("%d. ", index)
-					index++
-				}
-				if status, ok := extension.TaskStatusOf(item); ok {
-					marker = "[ ] "
-					if status == extension.TaskStatusCompleted {
-						marker = "[x] "
-					}
-				}
-				start := len(r.rows)
-				r.blocks(item, indent+"  ", depth+1)
-				if len(r.rows) > start {
-					first := r.rows[start]
-					prefix := indent + marker
-					// Replace only the structural indentation; keep content span styles.
-					spans := first.Spans
-					if len(spans) > 0 && strings.HasPrefix(spans[0].Text, indent+"  ") {
-						spans[0].Text = strings.TrimPrefix(spans[0].Text, indent+"  ")
-					}
-					r.rows[start] = line(append([]Span{{Text: prefix, Style: Dim}}, spans...))
-				}
-				if v.IsTight {
-					for len(r.rows) > start && r.rows[len(r.rows)-1].Text == "" {
-						r.rows = r.rows[:len(r.rows)-1]
-					}
+		r.block(n, indent, depth)
+	}
+}
+
+func (r *renderer) block(n ast.Node, indent string, depth int) {
+	switch v := n.(type) {
+	case *ast.Heading:
+		r.blank()
+		r.emit(indent, r.inline(v, Bold, 0))
+		r.blank()
+	case *ast.Paragraph:
+		r.emit(indent, r.inline(n, 0, 0))
+		r.blank()
+	case *ast.List:
+		index := v.Start
+		for item := v.FirstChild(); item != nil; item = item.NextSibling() {
+			marker := "• "
+			if v.IsOrdered() {
+				marker = fmt.Sprintf("%d. ", index)
+				index++
+			}
+			if status, ok := extension.TaskStatusOf(item); ok {
+				marker = "[ ] "
+				if status == extension.TaskStatusCompleted {
+					marker = "[x] "
 				}
 			}
-			r.blank()
-		case *ast.Blockquote:
-			r.blocks(v, indent+"│ ", depth+1)
-			r.blank()
-		case *ast.CodeBlock:
-			r.blank()
-			if language, ok := v.Language(r.source); ok {
-				r.emit(indent, []Span{{Text: safe(language), Style: Dim}})
+			start := len(r.rows)
+			r.blocks(item, indent+"  ", depth+1)
+			if len(r.rows) > start {
+				first := r.rows[start]
+				prefix := indent + marker
+				// Replace only the structural indentation; keep content span styles.
+				spans := first.Spans
+				if len(spans) > 0 && strings.HasPrefix(spans[0].Text, indent+"  ") {
+					spans[0].Text = strings.TrimPrefix(spans[0].Text, indent+"  ")
+				}
+				r.rows[start] = line(append([]Span{{Text: prefix, Style: Dim}}, spans...))
 			}
-			body := strings.TrimSuffix(v.Value.Str(r.source), "\n")
-			for _, part := range strings.Split(body, "\n") {
-				r.emit(indent+"│ ", []Span{{Text: safe(part)}})
+			if v.IsTight {
+				for len(r.rows) > start && r.rows[len(r.rows)-1].Text == "" {
+					r.rows = r.rows[:len(r.rows)-1]
+				}
 			}
-			r.blank()
-		case *ast.ThematicBreak:
-			r.emit(indent, []Span{{Text: "────────", Style: Dim}})
-			r.blank()
-		case *extast.Table:
-			r.table(v, indent)
-			r.blank()
-		case *ast.HTMLBlock:
-			for _, part := range strings.Split(strings.TrimSuffix(v.Value.Str(r.source), "\n"), "\n") {
-				r.emit(indent, []Span{{Text: safe(part)}})
-			}
-			r.blank()
-		case *ast.LinkReferenceDefinition:
-		// Its destination is displayed at the reference's actual use.
-		default:
-			r.blocks(n, indent, depth+1)
 		}
+		r.blank()
+	case *ast.Blockquote:
+		r.blocks(v, indent+"│ ", depth+1)
+		r.blank()
+	case *ast.CodeBlock:
+		r.blank()
+		if language, ok := v.Language(r.source); ok {
+			r.emit(indent, []Span{{Text: SafeText(language), Style: Dim}})
+		}
+		body := strings.TrimSuffix(v.Value.Str(r.source), "\n")
+		for _, part := range strings.Split(body, "\n") {
+			r.emit(indent+"│ ", []Span{{Text: SafeText(part)}})
+		}
+		r.blank()
+	case *ast.ThematicBreak:
+		r.emit(indent, []Span{{Text: "────────", Style: Dim}})
+		r.blank()
+	case *extast.Table:
+		r.table(v, indent)
+		r.blank()
+	case *ast.HTMLBlock:
+		for _, part := range strings.Split(strings.TrimSuffix(v.Value.Str(r.source), "\n"), "\n") {
+			r.emit(indent, []Span{{Text: SafeText(part)}})
+		}
+		r.blank()
+	case *ast.LinkReferenceDefinition:
+	// Its destination is displayed at the reference's actual use.
+	default:
+		r.blocks(n, indent, depth+1)
 	}
 }

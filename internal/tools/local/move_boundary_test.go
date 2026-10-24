@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestMoveAcrossRoots(t *testing.T) {
 	project, home, extra := t.TempDir(), t.TempDir(), t.TempDir()
-	e, err := NewExecutor(project, home, filepath.Join(home, ".v"), func(s string) string { return s })
+	e, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
 	if err != nil {
 		t.Fatal(err)
 	}

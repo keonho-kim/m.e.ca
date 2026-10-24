@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/rivo/uniseg"
 )
 
@@ -29,7 +29,7 @@ func TestRunSummaryFromHistory(t *testing.T) {
 	if strings.TrimSpace(blocks[0].Text) != want || !blocks[0].Thinking {
 		t.Fatalf("summary: %+v", blocks[0])
 	}
-	lines := blocks[0].Lines(100)
+	lines := blocks[0].Window(100, 0, blocks[0].Count(100))
 	if lines[0].Text != strings.Repeat(" ", (100-uniseg.StringWidth(want))/2)+want {
 		t.Fatalf("summary is not centered: %q", lines[0].Text)
 	}

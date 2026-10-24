@@ -7,8 +7,8 @@ package context
 import (
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func conversationMessage(message modelapi.Message, paired bool) (modelapi.Message, error) {
@@ -45,7 +45,7 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
 		return modelapi.Message{}, fmt.Errorf("invalid conversation role")
 	}
-	return modelapi.Message{Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
+	return modelapi.Message{Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, ReasoningState: message.ReasoningState, ProviderID: message.ProviderID, ModelID: message.ModelID, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
 }
 
 // Compaction and interrupted work can leave partial groups. Keep those records

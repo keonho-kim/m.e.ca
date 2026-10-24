@@ -1,7 +1,7 @@
 // Purpose: Parse maintenance commands and conversation startup with a real project directory.
 // Pattern: Simple Module (startup boundary).
-// Usage: Called by cmd/v before bootstrap or terminal initialization.
-// Related: internal/commands/startup/parse_test.go, cmd/v/main.go.
+// Usage: Called by cmd/meca before bootstrap or terminal initialization.
+// Related: internal/commands/startup/parse_test.go, cmd/meca/main.go.
 package startup
 
 import (
@@ -42,7 +42,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 	if len(args) > 1 && !strings.HasPrefix(args[0], "-") && strings.HasPrefix(args[1], "-") {
 		path, args = args[0], args[1:]
 	}
-	flags := flag.NewFlagSet("v", flag.ContinueOnError)
+	flags := flag.NewFlagSet("meca", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.BoolVar(&mode.Print, "print", false, "run once and print the final response")
 	flags.StringVar(&mode.Output, "mode", "text", "text or json")
@@ -53,7 +53,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			return Mode{Action: Help}, nil
 		}
-		return Mode{}, fmt.Errorf("%w; usage: v [path] [--print|--mode json] [--session ID] [prompt]", err)
+		return Mode{}, fmt.Errorf("%w; usage: meca [path] [--print|--mode json] [--session ID] [prompt]", err)
 	}
 	if mode.Output != "text" && mode.Output != "json" {
 		return Mode{}, fmt.Errorf("mode must be text or json")

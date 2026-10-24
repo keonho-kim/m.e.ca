@@ -6,11 +6,12 @@ package protocol
 
 import (
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type Controls struct {
+	Reasoning       *routerReasoning
 	Think           any
 	Template        map[string]any
 	ReasoningEffort string

@@ -7,8 +7,8 @@ package diagnostic
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/v-code/internal/agent/inference"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func probeThinking(ctx context.Context, c modelapi.Generator, model, effort string, on bool, settings *inference.Settings) (bool, error) {

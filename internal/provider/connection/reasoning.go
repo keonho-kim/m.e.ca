@@ -11,10 +11,28 @@ import (
 )
 
 type Reasoning struct {
-	On      bool     `json:"on"`
-	Off     bool     `json:"off"`
-	Levels  []string `json:"levels,omitempty"`
-	Default string   `json:"default,omitempty"`
+	DefaultOn *bool    `json:"default_on,omitempty"`
+	On        bool     `json:"on"`
+	Off       bool     `json:"off"`
+	Levels    []string `json:"levels,omitempty"`
+	Default   string   `json:"default,omitempty"`
+}
+
+// KnownDefault returns only a server declaration or an unambiguous mandatory state.
+func (r Reasoning) KnownDefault() *bool {
+	if r.DefaultOn != nil {
+		value := *r.DefaultOn
+		return &value
+	}
+	if r.Default != "" || r.Enabled() && !r.Off {
+		value := true
+		return &value
+	}
+	if r.Off && !r.Enabled() {
+		value := false
+		return &value
+	}
+	return nil
 }
 
 func CheckEffortName(value string) error {
@@ -30,6 +48,9 @@ func CheckEffortName(value string) error {
 }
 
 func (r Reasoning) Check() error {
+	if r.DefaultOn != nil && (*r.DefaultOn && !r.Enabled() || !*r.DefaultOn && !r.Off) {
+		return fmt.Errorf("reasoning default is not an advertised state")
+	}
 	if len(r.Levels) > 32 {
 		return fmt.Errorf("too many reasoning levels")
 	}

@@ -8,10 +8,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,7 +99,7 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 		fmt.Fprint(w, string(encoded))
 	}))
 	t.Cleanup(server.Close)
-	connection, err := modelconn.New(modelconn.OpenAICompatible, server.URL)
+	connection, err := modelconn.New(modelconn.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,7 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +26,7 @@ func TestFilePreviewRead(t *testing.T) {
 	if err != nil || got.Content != "[redacted]\n" || got.Truncated {
 		t.Fatalf("%+v %v", got, err)
 	}
-	private := filepath.Join(e.home, ".v")
+	private := filepath.Join(e.home, ".meca")
 	if err := os.Mkdir(private, 0700); err != nil {
 		t.Fatal(err)
 	}

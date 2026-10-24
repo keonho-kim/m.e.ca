@@ -1,36 +1,37 @@
-// Purpose: Verify translated Thinking choices retain emphasis and cell positions in both UI languages.
-// Pattern: Bilingual terminal interaction tests.
+// Purpose: Verify localized labels retain bold concrete ON/OFF selection on the settings screen.
+// Pattern: Bilingual virtual terminal test.
 // Usage: go test ./internal/tui/session -run TestLocalizedThinking.
-// Related: internal/tui/view/thinking.go, internal/tui/session/model_menu_test.go.
+// Related: internal/tui/session/render_model.go, internal/tui/view/settings.go.
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
 	"testing"
-
-	"github.com/keonho-kim/v-code/internal/tui/locale"
-	"github.com/rivo/uniseg"
 )
 
 func TestLocalizedThinkingChoicePositions(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		a := fixture(t)
 		a.language = lang
+		conn, err := connection.New(connection.VLLM, "")
+		if err != nil {
+			t.Fatal(err)
+		}
 		on := true
-		a.selection.Thinking = &on
-		a.selection.ThinkingSupported = true
+		a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &on, ThinkingSupported: true}
 		a.openModel()
 		a.render()
-		label := lang.Text("Thinking") + " " + lang.Text("DEFAULT") + " / " + lang.Text("ON") + " / " + lang.Text("OFF")
-		if shown := screenLine(a.screen, 3, 80); !strings.Contains(shown, label) {
+		y := 2 + modelThinking
+		shown := screenLine(a.screen, y, 80)
+		if !strings.Contains(shown, lang.Text("Thinking")) || !strings.Contains(shown, "ON / OFF") || strings.Contains(shown, "DEFAULT") {
 			t.Fatal(shown)
 		}
-		x := uniseg.StringWidth(lang.Text("Thinking") + " " + lang.Text("DEFAULT") + " / ")
-		_, selected, _ := a.screen.Get(x, 3)
-		x += uniseg.StringWidth(lang.Text("ON") + " / ")
-		_, other, _ := a.screen.Get(x, 3)
+		_, selected, _ := a.screen.Get(25, y)
+		_, other, _ := a.screen.Get(30, y)
 		if !selected.HasBold() || !other.HasDim() {
-			t.Fatal("translated selection emphasis lost")
+			t.Fatal("concrete selection emphasis lost")
 		}
 	}
 }

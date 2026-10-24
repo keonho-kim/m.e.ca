@@ -14,11 +14,11 @@ import (
 
 func TestProtectedCaseAlias(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
-	private := filepath.Join(home, ".V")
+	private := filepath.Join(home, ".MECA")
 	if err := os.Mkdir(private, 0700); err != nil {
 		t.Fatal(err)
 	}
-	alias := filepath.Join(home, ".v")
+	alias := filepath.Join(home, ".meca")
 	if _, err := os.Stat(alias); os.IsNotExist(err) {
 		t.Skip("case-sensitive volume")
 	}

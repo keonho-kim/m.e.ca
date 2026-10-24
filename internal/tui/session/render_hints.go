@@ -4,7 +4,7 @@
 // Related: internal/tui/session/hints.go, internal/tui/session/keys.go, internal/tui/view/candidates.go.
 package session
 
-import "github.com/keonho-kim/v-code/internal/tui/view"
+import "github.com/keonho-kim/meca/internal/tui/view"
 
 func (a *app) candidates() view.Candidates {
 	if !a.commandOpen {

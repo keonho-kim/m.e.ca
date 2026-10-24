@@ -31,19 +31,32 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			a.steering = make(chan string, 1)
 			a.editor.Set("Run this after finishing")
 			labels := keymapLabels(t, a)
-			if labels["Enter"] != "방향 수정" || labels["Tab"] != "후속 예약" {
+			enter := "방향 수정"
+			tab := "후속 예약"
+			if page == "files" {
+				enter = "전송 확인"
+				tab = "예약 확인"
+			}
+			if labels["Enter"] != enter || labels["Tab"] != tab {
 				t.Fatal(labels)
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
+			if page == "files" {
+				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+				a.page, a.browser.Input = "files", true
+			}
 			if a.pending != "Run this after finishing" {
 				t.Fatal("follow-up hint did not match action")
 			}
 			a.editor.Set("Change direction now")
 			labels = keymapLabels(t, a)
-			if labels["Tab"] != "" || labels["Enter"] != "방향 수정" {
+			if labels["Tab"] != "" || labels["Enter"] != enter {
 				t.Fatal(labels)
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+			if page == "files" {
+				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+			}
 			select {
 			case text := <-a.steering:
 				if text != "Change direction now" {
@@ -70,11 +83,11 @@ func TestKeymapActionsStopAndBlockedCommands(t *testing.T) {
 }
 
 func TestKeymapActionsFieldReturn(t *testing.T) {
-	for _, page := range []string{"endpoint", "key", "manual"} {
+	for _, page := range []string{"model"} {
 		a := fixture(t)
 		a.page = page
+		a.openModel()
 		a.menuInput.Set(":q")
-		a.modelHintsOpen = page == "manual"
 		labels := keymapLabels(t, a)
 		if labels["Enter"] != "복귀" || labels["Tab"] != "" || labels["↑↓"] != "" {
 			t.Fatalf("%s: %v", page, labels)
@@ -99,17 +112,16 @@ func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
 	}
 }
 
-func TestKeymapActionsFileCommandOverridesLoading(t *testing.T) {
+func TestKeymapActionsCloseFileWhileLoading(t *testing.T) {
 	a := fixture(t)
 	a.page, a.directoryLoading = "files", true
-	a.menuInput.Set(":q")
 	labels := keymapLabels(t, a)
-	if labels["Esc"] != "취소" || labels["Enter"] != "복귀" {
+	if labels["Esc"] != "닫기" || labels["Enter"] != "" || labels[":q"] != "" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.menuInput.String() != "" || !a.directoryLoading {
-		t.Fatal("Esc should dismiss the typed command before cancelling the load")
+	if a.page != "chat" || a.directoryLoading {
+		t.Fatal("Esc should cancel lookup and close the browser")
 	}
 }
 

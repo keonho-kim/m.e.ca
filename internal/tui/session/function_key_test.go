@@ -14,7 +14,7 @@ import (
 
 func TestUnassignedFunctionKey(t *testing.T) {
 	for _, width := range []int{32, 160} {
-		for _, page := range []string{"chat", "model", "endpoint"} {
+		for _, page := range []string{"chat", "model"} {
 			t.Run(fmt.Sprintf("width=%d/page=%s", width, page), func(t *testing.T) {
 				a := fixture(t)
 				a.screen.SetSize(width, 24)

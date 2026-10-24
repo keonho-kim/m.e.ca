@@ -4,7 +4,7 @@
 // Related: internal/provider/connection/models.go, internal/provider/setup/setup.go.
 package httpclient
 
-import "github.com/keonho-kim/v-code/internal/provider/connection"
+import "github.com/keonho-kim/meca/internal/provider/connection"
 
 func (c *Client) BindModel(info connection.ModelInfo) error {
 	if err := info.Check(); err != nil {

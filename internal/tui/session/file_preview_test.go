@@ -7,8 +7,8 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/v-code/internal/tools/local"
-	"github.com/keonho-kim/v-code/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tui/browser"
 	"os"
 	"path/filepath"
 	"strings"

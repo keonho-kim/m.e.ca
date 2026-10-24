@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	fileops "github.com/keonho-kim/v-code/internal/tools/local/file"
+	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
 	"io"
 	"os"
 )

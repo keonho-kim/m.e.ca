@@ -1,13 +1,14 @@
 // Purpose: Extract original roots from the selected OpenAI-compatible model card.
 // Pattern: HTTP Adapter.
-// Usage: vLLM and generic providers use Client.identifyModels.
+// Usage: vLLM and OpenRouter use Client.identifyModels.
 // Related: internal/provider/discovery/identify.go, internal/provider/identity/report.go.
 package discovery
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/provider/identity"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/identity"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 )
 
@@ -16,6 +17,8 @@ func (c *Client) identifyModels(ctx context.Context, model string) (identity.Rep
 		Data []struct {
 			ID, Root, Parent string
 			Owner            string `json:"owned_by"`
+			Canonical        string `json:"canonical_slug"`
+			Name             string `json:"name"`
 		} `json:"data"`
 	}
 	var report identity.Report
@@ -32,6 +35,11 @@ func (c *Client) identifyModels(ctx context.Context, model string) (identity.Rep
 			continue
 		}
 		matched = true
+		if c.Connection.Kind == connection.OpenRouter {
+			report.Add("/api/v1/models.canonical_slug", "original", row.Canonical)
+			report.Add("/api/v1/models.name", "label", row.Name)
+			continue
+		}
 		if row.Root != row.ID {
 			report.Add("/v1/models.root", "original", row.Root)
 		}

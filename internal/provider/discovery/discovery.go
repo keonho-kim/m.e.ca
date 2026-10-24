@@ -8,14 +8,17 @@ package discovery
 import (
 	"context"
 	"fmt"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 	"sort"
 	"strings"
 )
 
 func (client *Client) ListModels(ctx context.Context) (models []modelconn.ModelInfo, err error) {
+	if client.Connection.Kind == modelconn.OpenRouter {
+		return client.openRouterModels(ctx)
+	}
 	endpoint := client.url("models")
 	if client.Connection.Kind == modelconn.Ollama {
 		endpoint = client.url("tags")

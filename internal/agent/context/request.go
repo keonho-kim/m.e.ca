@@ -6,7 +6,7 @@ package context
 
 import (
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strconv"
 )
 
@@ -17,6 +17,8 @@ type Input struct {
 	Messages                  []modelapi.Message
 	Redact                    func(string) string
 	MaxBytes                  int
+	Projection                *Projection
+	RedactionVersion          func() int
 }
 
 func Build(input Input) (modelapi.Request, error) {
@@ -39,25 +41,32 @@ func Build(input Input) (modelapi.Request, error) {
 		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
 		present = true
 	}
-	paired := pairedTools(input.Messages)
-	for index, message := range input.Messages {
-		projected, err := conversationMessage(message, paired[index])
+	var projected []modelapi.Message
+	var historyBytes int
+	if input.Projection != nil && input.RedactionVersion != nil {
+		var err error
+		projected, historyBytes, err = input.Projection.project(input)
 		if err != nil {
 			return modelapi.Request{}, err
 		}
-		projected.Content = input.Redact(projected.Content)
-		projected.Reasoning = input.Redact(projected.Reasoning)
-		messages = append(messages, projected)
-	}
-	if !present {
-		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
-	}
-	bytes := 0
-	for _, m := range messages {
-		bytes += len(m.Content) + len(m.Reasoning) + len(m.ToolCallID) + len(m.ToolName)
-		for _, call := range m.Calls {
-			bytes += len(call.ID) + len(call.Name) + len(call.Arguments)
+	} else {
+		var uncached Projection
+		input.RedactionVersion = func() int { return 0 }
+		var err error
+		projected, historyBytes, err = uncached.project(input)
+		if err != nil {
+			return modelapi.Request{}, err
 		}
+	}
+	bytes := historyBytes
+	for _, m := range messages {
+		bytes += messageBytes(m)
+	}
+	messages = append(messages, projected...)
+	if !present {
+		message := modelapi.Message{Role: "user", Content: input.Redact(input.Objective)}
+		messages = append(messages, message)
+		bytes += messageBytes(message)
 	}
 	if bytes > input.MaxBytes {
 		return modelapi.Request{}, fmt.Errorf("full conversation context exceeds %d bytes; no messages were omitted", input.MaxBytes)

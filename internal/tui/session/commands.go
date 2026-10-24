@@ -5,16 +5,33 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/commands"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
+	"github.com/keonho-kim/meca/internal/commands"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
 func (a *app) submit() {
-	command, err := commands.Parse(a.editor.String())
+	command, err := a.inputCommand()
 	if err != nil {
 		a.fail(err)
 		return
 	}
+	if a.page == "files" && a.browser.Input {
+		if command.Kind == commands.Message || command.Kind == commands.Empty {
+			a.closeFiles()
+		}
+	}
+	a.submitCommand(command)
+}
+
+func (a *app) inputCommand() (commands.Command, error) {
+	command, err := commands.Parse(a.editor.String())
+	if err == nil && a.page == "files" && a.browser.Input && command.Kind == commands.Quit {
+		command = commands.Command{Kind: commands.Message, Argument: a.editor.String()}
+	}
+	return command, err
+}
+
+func (a *app) submitCommand(command commands.Command) {
 	if command.Kind == commands.Empty {
 		return
 	}
@@ -28,12 +45,6 @@ func (a *app) submit() {
 		return
 	}
 	if command.Kind == commands.Quit {
-		if a.page == "files" {
-			a.cancelDirectory()
-			a.page = "chat"
-			a.editor.Set("")
-			return
-		}
 		if a.busy {
 			a.page = "quit"
 			a.choices = []string{"Keep working", "Cancel task and exit"}
@@ -43,8 +54,14 @@ func (a *app) submit() {
 		a.exit = true
 		return
 	}
+	if command.Kind == commands.Message && a.fileSelectionBusy {
+		a.fileSubmission = &fileSubmission{command: command, revision: a.editor.Revision()}
+		a.status = a.language.Text("Saving selected paths before sending")
+		return
+	}
+	a.fileSubmission = nil
 	if a.agentActive && a.busy && command.Kind == commands.Message {
-		a.steerInput()
+		a.steerInput(command.Argument)
 		return
 	}
 	if !a.canSubmit(command.Kind) {
@@ -63,12 +80,7 @@ func (a *app) submit() {
 			a.status = a.language.Text("Select a model using !model")
 			return
 		}
-		a.inputs = append(a.inputs, command.Argument)
-		if len(a.inputs) > 200 {
-			clear(a.inputs[:len(a.inputs)-200])
-			a.inputs = a.inputs[len(a.inputs)-200:]
-		}
-		a.historyIndex = len(a.inputs)
+		a.rememberInput(command.Argument)
 		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(command.Argument)), false)
 		a.cancelDirectory()
 		a.page = "chat"

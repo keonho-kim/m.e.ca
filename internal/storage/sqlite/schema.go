@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 19
+const schemaVersion = 20
 
 const schema = `
 CREATE TABLE sessions (
@@ -15,12 +15,23 @@ CREATE TABLE sessions (
  display_root TEXT NOT NULL,
  created_at TEXT NOT NULL,
  updated_at TEXT NOT NULL,
- selection BLOB
+ selection BLOB,
+ summary TEXT
+);
+CREATE TABLE payloads (
+ id TEXT PRIMARY KEY,
+ codec INTEGER NOT NULL,
+ raw_bytes INTEGER NOT NULL,
+ body BLOB NOT NULL
 );
 CREATE TABLE messages (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
  session_id TEXT NOT NULL REFERENCES sessions(id),
- body TEXT NOT NULL,
+ body BLOB NOT NULL,
+ refs BLOB NOT NULL DEFAULT '{}',
+ raw_bytes INTEGER NOT NULL,
+ role TEXT NOT NULL,
+ content_bytes INTEGER NOT NULL,
  created_at TEXT NOT NULL
 );
 CREATE INDEX session_messages ON messages(session_id, sequence);
@@ -28,9 +39,15 @@ CREATE TABLE tool_events (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
  session_id TEXT NOT NULL REFERENCES sessions(id),
  body BLOB NOT NULL,
+ refs BLOB NOT NULL DEFAULT '{}',
+ raw_bytes INTEGER NOT NULL,
+ kind TEXT NOT NULL,
+ memory_role TEXT NOT NULL DEFAULT '',
+ memory_text TEXT NOT NULL DEFAULT '',
  created_at TEXT NOT NULL
 );
 CREATE INDEX session_tool_events ON tool_events(session_id,sequence);
+CREATE INDEX event_kind ON tool_events(session_id,kind,sequence);
 CREATE TABLE file_selections (
  session_id TEXT NOT NULL REFERENCES sessions(id),
  path TEXT NOT NULL,

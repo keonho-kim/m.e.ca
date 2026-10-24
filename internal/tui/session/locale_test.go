@@ -1,14 +1,14 @@
 // Purpose: Verify menus use localized labels while keeping settings, identifiers and text literal.
 // Pattern: Simulated terminal integration tests.
 // Usage: go test ./internal/tui/session -run TestLocalized.
-// Related: internal/tui/session/render_menu.go, internal/tui/session/settings.go, internal/tui/locale/locale.go.
+// Related: internal/tui/session/render_menu.go, internal/tui/session/model_form_setup.go, internal/tui/locale/locale.go.
 package session
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
 func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func (e *Executor) CanParallel(ctx context.Context, settings policy.Settings, left, right toolapi.Call) (bool, error) {

@@ -8,11 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/provider/httpclient"
-	"github.com/keonho-kim/v-code/internal/tui/transcript"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,7 +46,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	connection, err := modelconn.New(modelconn.OpenAICompatible, server.URL)
+	connection, err := modelconn.New(modelconn.OpenRouter, server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

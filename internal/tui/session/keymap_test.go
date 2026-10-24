@@ -6,14 +6,14 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
 )
 
 func TestKeymapMatchesFocusedScreen(t *testing.T) {
 	for _, test := range []struct{ page, want string }{
-		{"chat", "전송"}, {"model", "선택"}, {"endpoint", "^U"}, {"approval", "PgUp/Dn"}, {"files", "입력"},
+		{"chat", "전송"}, {"model", "다음 값"}, {"language", "다음 값"}, {"approval", "PgUp/Dn"}, {"files", "입력"},
 	} {
 		t.Run(test.page, func(t *testing.T) {
 			a := fixture(t)

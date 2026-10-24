@@ -11,7 +11,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 type statisticsModel func(context.Context, modelapi.Request, func(modelapi.Event) error) error

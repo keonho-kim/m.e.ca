@@ -7,10 +7,10 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
-	"github.com/keonho-kim/v-code/internal/storage/recovery"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"path/filepath"
 	"testing"
 )
@@ -54,7 +54,7 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	list, err := catalog.Conversations(ctx, 0, 100)
+	list, err := catalog.Conversations(ctx, "")
 	if err != nil || len(list) != 1 || list[0].Summary != "fix" {
 		t.Fatalf("list: %+v %v", list, err)
 	}

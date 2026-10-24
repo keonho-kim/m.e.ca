@@ -5,8 +5,8 @@
 package transcript
 
 import (
-	"github.com/keonho-kim/v-code/internal/storage/history"
-	"github.com/keonho-kim/v-code/internal/tui/viewport"
+	"github.com/keonho-kim/meca/internal/storage/history"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func (f Formatter) History(records []history.Record) []viewport.Block {

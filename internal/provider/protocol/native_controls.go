@@ -6,8 +6,8 @@ package protocol
 
 import (
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
@@ -23,6 +23,17 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 	}
 	if kind == connection.VLLM || kind == connection.SGLang {
 		return templateControls(kind, r, request)
+	}
+	if kind == connection.OpenRouter {
+		on := *request.Thinking
+		if on && !r.Enabled() || !on && !r.Off {
+			return controls, fmt.Errorf("Thinking choice is unavailable for this OpenRouter model")
+		}
+		controls.Reasoning = &routerReasoning{Enabled: on}
+		if on {
+			controls.Reasoning.Effort = request.ReasoningEffort
+		}
+		return controls, nil
 	}
 	if !*request.Thinking {
 		if !r.Off {

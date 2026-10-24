@@ -6,7 +6,7 @@ package discovery
 
 import (
 	"context"
-	"github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func (c *Client) PrepareModel(ctx context.Context, model string) (connection.ModelInfo, error) {

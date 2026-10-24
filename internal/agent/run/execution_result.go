@@ -7,7 +7,7 @@ package run
 import (
 	"context"
 	"errors"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(Event) error) (toolapi.Result, error) {

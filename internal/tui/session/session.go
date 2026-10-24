@@ -5,8 +5,8 @@
 package session
 
 import (
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/policy"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func (a *app) restore() error {

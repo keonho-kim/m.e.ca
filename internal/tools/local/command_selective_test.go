@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
-	"github.com/keonho-kim/v-code/internal/policy"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestSelectiveCommandEditingPipeline(t *testing.T) {

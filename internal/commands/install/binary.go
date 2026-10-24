@@ -1,4 +1,4 @@
-// Purpose: Publish V's executable and verify ownership before replacement or removal.
+// Purpose: Publish MECA's executable and verify ownership before replacement or removal.
 // Pattern: Filesystem adapter.
 // Usage: Installation copies one binary into the user's local bin directory.
 // Related: internal/commands/install/install.go, internal/commands/install/state.go.
@@ -47,7 +47,7 @@ func checkInstalledBinary(root *os.Root, expected string) error {
 		return err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("installed v must be a regular file, not a symlink")
+		return fmt.Errorf("installed meca must be a regular file, not a symlink")
 	}
 	path := filepath.Join(root.Name(), binaryName)
 	digest, err := binaryDigest(path)
@@ -57,9 +57,9 @@ func checkInstalledBinary(root *os.Root, expected string) error {
 	if expected != "" && digest == expected {
 		return nil
 	}
-	// Interrupted updates may leave a different V build than the recorded one.
+	// Interrupted updates may leave a different MECA build than the recorded one.
 	build, err := buildinfo.ReadFile(path)
-	if err == nil && build.Path == "github.com/keonho-kim/v-code/cmd/v" && build.Main.Path == "github.com/keonho-kim/v-code" {
+	if err == nil && build.Path == "github.com/keonho-kim/meca/cmd/meca" && build.Main.Path == "github.com/keonho-kim/meca" {
 		return nil
 	}
 	return fmt.Errorf("%s belongs to another program or was replaced; refusing to modify it", path)
@@ -69,7 +69,7 @@ func copyBinary(root *os.Root, source, expected string) (err error) {
 	if err := root.MkdirAll(".local/bin", 0755); err != nil {
 		return err
 	}
-	name := ".local/bin/.v-install-" + rand.Text()
+	name := ".local/bin/.meca-install-" + rand.Text()
 	file, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0755)
 	if err != nil {
 		return err

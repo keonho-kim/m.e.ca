@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/run"
-	"github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestToolSummaryFailures(t *testing.T) {

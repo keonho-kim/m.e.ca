@@ -1,32 +1,28 @@
-// Purpose: Verify the LiteLLM picker uses the same provider definition for its label and connection.
-// Pattern: Terminal model-selection test.
-// Usage: go test ./internal/tui/session -run TestLiteLLMProviderMenu.
-// Related: internal/tui/session/model.go, internal/tui/session/menus.go, internal/provider/connection/connection.go.
+// Purpose: Verify inline provider selection sets the matching default URL and clears stale credentials.
+// Pattern: Terminal model-settings test.
+// Usage: go test ./internal/tui/session -run TestProviderSettings.
+// Related: internal/tui/session/model_form_keys.go, internal/provider/connection/catalog.go.
 package session
 
 import (
-	modelconn "github.com/keonho-kim/v-code/internal/provider/connection"
+	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
 )
 
-func TestLiteLLMProviderMenu(t *testing.T) {
-	a := fixture(t)
-	a.openModel()
-	a.choose()
-	found := false
-	for index, label := range a.choices {
-		if label != "LiteLLM" {
-			continue
+func TestProviderSettingsUseDeclaredDefaults(t *testing.T) {
+	for target, provider := range connection.Providers() {
+		a := fixture(t)
+		a.openModel()
+		a.modelForm.credential.Set("private-key")
+		for a.modelForm.provider != target {
+			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 		}
-		found = true
-		a.choice = index
-		a.choose()
-		if a.page != "endpoint" || a.menuInput.String() != "http://localhost:4000/v1" || modelconn.Providers()[a.connectionKind].Kind != modelconn.LiteLLM {
-			t.Fatalf("incorrect LiteLLM selection: %s %q", a.page, a.menuInput.String())
+		if a.page != "model" || a.modelForm.endpoint.String() != provider.Endpoint {
+			t.Fatalf("provider=%s url=%s", provider.Label, a.modelForm.endpoint.String())
 		}
-		break
-	}
-	if !found {
-		t.Fatal("LiteLLM not available in provider picker")
+		if target > 0 && a.modelForm.credential.String() != "" {
+			t.Fatal("provider change retained a typed credential")
+		}
 	}
 }

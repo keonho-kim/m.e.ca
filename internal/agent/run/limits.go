@@ -6,7 +6,7 @@ package run
 
 import (
 	"fmt"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type Limits struct {

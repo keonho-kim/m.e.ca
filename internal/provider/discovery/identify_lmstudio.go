@@ -7,8 +7,8 @@ package discovery
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/v-code/internal/provider/identity"
-	"github.com/keonho-kim/v-code/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/identity"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 )
 

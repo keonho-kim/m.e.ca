@@ -7,7 +7,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	modelapi "github.com/keonho-kim/v-code/internal/agent/model"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenUsage, error) {
@@ -23,7 +23,7 @@ func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenU
 	  json_extract(body,'$.usage.input') NOT BETWEEN 0 AND ? OR
 	  json_extract(body,'$.usage.output') NOT BETWEEN 0 AND ?
 	 THEN 1 ELSE 0 END),0)
-	 FROM tool_events WHERE session_id=? AND json_extract(body,'$.kind')='usage'`, modelapi.MaxCallTokens, modelapi.MaxCallTokens, session).Scan(&total.Input, &total.Output, &invalid)
+	 FROM tool_events WHERE session_id=? AND kind='usage'`, modelapi.MaxCallTokens, modelapi.MaxCallTokens, session).Scan(&total.Input, &total.Output, &invalid)
 	if err != nil {
 		return total, err
 	}

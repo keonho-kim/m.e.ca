@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/keonho-kim/v-code/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestIncompleteMessage(t *testing.T) {
@@ -18,6 +18,7 @@ func TestIncompleteMessage(t *testing.T) {
 		{Role: "tool", Incomplete: true, ToolCallID: "call"},
 		{Role: "assistant", Incomplete: true, ToolName: "write_file"},
 		{Role: "assistant", Incomplete: true, Calls: []tool.Call{{ID: "call", Name: "write_file", Arguments: json.RawMessage(`{}`)}}},
+		{Role: "assistant", Incomplete: true, ReasoningState: []byte("unfinished")},
 	} {
 		if err := message.Check(); err == nil {
 			t.Fatalf("accepted invalid draft: %+v", message)

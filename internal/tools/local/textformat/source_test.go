@@ -5,7 +5,7 @@
 package textformat
 
 import (
-	"github.com/keonho-kim/v-code/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/config/credentials"
 	"strings"
 	"testing"
 )

@@ -7,7 +7,7 @@ package run
 import (
 	"context"
 	"errors"
-	toolapi "github.com/keonho-kim/v-code/internal/agent/tool"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 var errRuntimeRecord = errors.New("runtime observation could not be committed or delivered")
@@ -27,11 +27,8 @@ func (s *execution) execute(ctx context.Context, call toolapi.Call, approve Appr
 }
 func (s *execution) startExecution(ctx context.Context, ready *readyExecution, emit func(Event) error) error {
 	s.checkpoint.Phase = "execution"
-	if err := s.persist(ctx); err != nil {
-		return err
-	}
 	event := Event{Kind: "tool_started", Text: ready.proposal.Name + " " + ready.proposal.Target, CallID: ready.call.ID, Call: &ready.call}
-	if err := s.record(ctx, event); err != nil {
+	if err := s.persist(ctx, event); err != nil {
 		return err
 	}
 	return emit(event)

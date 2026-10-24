@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 )
 
@@ -18,7 +19,7 @@ func (s *execution) stopReport(ctx context.Context, reason string) error {
 	if err := s.persist(ctx); err != nil {
 		return err
 	}
-	if err := s.finish(ctx, s.stopFacts()); err != nil {
+	if err := s.finish(ctx, modelapi.Response{Text: s.stopFacts()}); err != nil {
 		return err
 	}
 	s.checkpoint.Status = Stopped

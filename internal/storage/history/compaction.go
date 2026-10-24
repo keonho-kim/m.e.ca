@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/keonho-kim/v-code/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/compact"
 )
 
 func Compaction(page []Record) ([]compact.Record, error) {
