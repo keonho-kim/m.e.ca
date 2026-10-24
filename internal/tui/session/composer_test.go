@@ -29,7 +29,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 	}
 	_, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.busy, a.agentActive, a.taskCancel = true, true, cancel
+	a.worker, a.taskCancel = workerAgent, cancel
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.receive(notice{Done: true, Err: context.Canceled})
 	a.render()

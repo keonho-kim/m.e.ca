@@ -68,7 +68,7 @@ func TestKeymapRolesFolderAndPreview(t *testing.T) {
 
 func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.page = "files"
 	a.browser.Input = true
 	labels := map[string]string{}
@@ -104,12 +104,12 @@ func TestKeymapRolesNoMatchesAndBusyClose(t *testing.T) {
 	a.closeCommandHints()
 	a.page = "files"
 	a.browser.Input = true
-	a.busy = true
+	a.worker = workerSetup
 	if labels := keymapLabels(t, a); labels["Esc"] != "닫기" || labels[":q"] != "" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "chat" || !a.busy {
+	if a.page != "chat" || !a.worker.active() {
 		t.Fatal("return hint did not match action")
 	}
 }

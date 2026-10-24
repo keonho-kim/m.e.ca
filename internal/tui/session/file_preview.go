@@ -1,5 +1,5 @@
-// Purpose: Own cancellable file-preview reads and half/fullscreen viewer navigation.
-// Pattern: Event-loop worker lifecycle.
+// Purpose: Own one active preview read, its latest replacement and half/fullscreen viewer navigation.
+// Pattern: Single-reader bulkhead with revision-bound completion.
 // Usage: File Tab/Enter opens a preview; Esc cancels it and returns to the existing browser.
 // Related: internal/tui/browser/preview.go, internal/tools/local/preview.go, internal/tui/session/files.go.
 package session
@@ -7,8 +7,14 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tui/browser"
 )
+
+type previewRequest struct {
+	path     string
+	revision int
+}
 
 func (a *app) openFilePreview(full bool) {
 	path, directory := a.browser.Target()
@@ -18,29 +24,37 @@ func (a *app) openFilePreview(full bool) {
 	a.closeFilePreview()
 	a.menuInput.Set("")
 	a.filePreview = &browser.Preview{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
+	request := previewRequest{path: path, revision: a.previewRevision}
+	if a.previewReads.submit(request) {
+		a.startPreviewRead(request)
+	}
+}
+
+func (a *app) startPreviewRead(request previewRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.previewCancel = cancel
-	revision := a.previewRevision
+	a.previewReads.running, a.previewReads.revision = cancel, request.revision
 	settings := a.settings
+	executor := a.opts.Tools
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
-		result, err := a.opts.Tools.Preview(ctx, settings, path)
-		if ctx.Err() == nil {
-			a.post(ctx, notice{PreviewRevision: revision, FilePreview: &result, Err: err})
+		result, err := executor.Preview(ctx, settings, request.path)
+		if ctx.Err() != nil {
+			result, err = local.FilePreview{}, ctx.Err()
 		}
+		a.post(a.ctx, notice{PreviewRevision: request.revision, FilePreview: &result, Err: err})
 	}()
 }
 func (a *app) closeFilePreview() {
-	if a.previewCancel != nil {
-		a.previewCancel()
-		a.previewCancel = nil
-	}
+	a.previewReads.stop()
 	a.previewRevision++
 	a.filePreview = nil
 }
 func (a *app) receiveFilePreview(n notice) {
+	if next := a.previewReads.complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
+		a.startPreviewRead(*next)
+	}
 	if a.filePreview == nil || n.PreviewRevision != a.previewRevision {
 		return
 	}

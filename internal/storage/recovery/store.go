@@ -14,5 +14,5 @@ type Store interface {
 	LatestRun(context.Context, string) (*run.Checkpoint, error)
 	RecordEvent(context.Context, string, run.Event) error
 	Messages(context.Context, string, int) ([]modelapi.Message, error)
-	AppendMessage(context.Context, string, modelapi.Message) error
+	Commit(context.Context, string, []run.JournalRecord) error
 }

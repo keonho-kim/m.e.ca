@@ -24,10 +24,10 @@ type modelSetupRequest struct {
 }
 
 func (a *app) startModelSetup(request modelSetupRequest) {
-	if a.busy {
+	if a.worker.active() {
 		return
 	}
-	a.busy = true
+	a.worker = workerSetup
 	a.startElapsed()
 	a.status = a.language.Text("Connecting")
 	ctx, cancel := context.WithCancel(a.ctx)

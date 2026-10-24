@@ -79,7 +79,7 @@ func TestRecoveryPartialStreamRestartsWithoutConcatenating(t *testing.T) {
 	}
 }
 
-func TestRecoveryExhaustionReturnsSanitizedCause(t *testing.T) {
+func TestRecoveryPermanentFailureReturnsSanitizedCause(t *testing.T) {
 	var calls atomic.Int32
 	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
@@ -87,12 +87,12 @@ func TestRecoveryExhaustionReturnsSanitizedCause(t *testing.T) {
 		fmt.Fprint(w, `{"error":{"code":"invalid_api_key","message":"bad credential test-secret"}}`)
 	})
 	err := client.Generate(context.Background(), recoveryRequest(), func(modelapi.Event) error { return nil })
-	if err == nil || calls.Load() != 3 || !strings.Contains(err.Error(), "3 attempts") || !strings.Contains(err.Error(), "401") || !strings.Contains(err.Error(), "invalid_api_key") || strings.Contains(err.Error(), "test-secret") {
+	if err == nil || calls.Load() != 1 || !strings.Contains(err.Error(), "1 attempts") || !strings.Contains(err.Error(), "401") || !strings.Contains(err.Error(), "invalid_api_key") || strings.Contains(err.Error(), "test-secret") {
 		t.Fatalf("calls=%d err=%v", calls.Load(), err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := client.Generate(ctx, recoveryRequest(), func(modelapi.Event) error { return nil }); !errors.Is(err, context.Canceled) || calls.Load() != 3 {
+	if err := client.Generate(ctx, recoveryRequest(), func(modelapi.Event) error { return nil }); !errors.Is(err, context.Canceled) || calls.Load() != 1 {
 		t.Fatalf("cancel retried: calls=%d err=%v", calls.Load(), err)
 	}
 }
@@ -117,7 +117,7 @@ func TestRecoveryReadsUsageAfterOutputLimit(t *testing.T) {
 		}
 		return nil
 	})
-	if err == nil || retries != 2 || latest == nil || latest.Output != 32 || !strings.Contains(err.Error(), "output token limit") {
+	if err == nil || retries != 0 || latest == nil || latest.Output != 32 || !strings.Contains(err.Error(), "output token limit") {
 		t.Fatalf("usage=%+v retries=%d err=%v", latest, retries, err)
 	}
 }

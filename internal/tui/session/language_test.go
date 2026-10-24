@@ -24,7 +24,7 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	a := fixture(t)
 	id := a.opts.Session.ID
 	for _, message := range []modelapi.Message{{Role: "user", Content: "Keep 한글 INPUT literal"}, {Role: "assistant", Content: "Original 한국어 answer"}} {
-		if err := a.opts.Store.AppendMessage(a.ctx, id, message); err != nil {
+		if err := a.opts.Store.Commit(a.ctx, id, []run.JournalRecord{{Message: &message}}); err != nil {
 			t.Fatal(err)
 		}
 	}

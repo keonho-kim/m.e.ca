@@ -20,7 +20,7 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 		for _, restored := range []bool{false, true} {
 			a := fixture(t)
 			a.editor.Set("draft")
-			a.busy, a.agentActive = true, true
+			a.worker = workerAgent
 			body, err := json.Marshal(map[string]any{"Stdout": strings.Repeat("detail row\n", 40), "ExitCode": 0, "Status": "exited"})
 			if err != nil {
 				t.Fatal(err)

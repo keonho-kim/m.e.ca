@@ -49,7 +49,7 @@ func (f Formatter) fileOutput(event run.Event, body []byte) toolOutput {
 	if !*result.Changed {
 		return toolOutput{text: indentTool(f.Language.Text("변경 없음"))}
 	}
-	label := map[string]string{"write_file": "파일 저장 완료", "edit_file": "수정 완료", "create_directory": "폴더 생성 완료", "move_file": "이동 완료"}[event.Call.Name]
+	label := map[string]string{"write_file": "파일 저장 완료", "edit_file": "수정 완료"}[event.Call.Name]
 	if event.Operation != nil {
 		for _, change := range event.Operation.Changes {
 			if change.BeforeDigest != "" && change.BeforeDigest == change.AfterDigest {

@@ -15,7 +15,7 @@ func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
-			a.page, a.busy = page, true
+			a.page, a.worker = page, workerSetup
 			taskCtx, cancel := context.WithCancel(a.ctx)
 			defer cancel()
 			a.taskCancel = cancel
@@ -31,7 +31,7 @@ func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
-			a.page, a.busy = page, true
+			a.page, a.worker = page, workerSetup
 			if page == "chat" {
 				a.editor.Set("!quit")
 			} else {

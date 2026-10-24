@@ -125,11 +125,26 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		if err = s.refreshMemory(ctx, false); err != nil {
 			return s.result, err
 		}
+		// Compaction can take time; admit instructions received during it before
+		// generating another answer or proposing effects from the earlier request.
+		if changed, steerErr := s.steer(ctx); steerErr != nil {
+			return s.result, steerErr
+		} else if changed {
+			if err = s.persist(ctx); err != nil {
+				return s.result, err
+			}
+		}
 		reply, askErr := s.askResponse(ctx)
+		if askErr == nil {
+			s.capacityRecovery = false
+		}
 		if askErr != nil {
-			var capacity interface{ ContextLimit() bool }
-			if !s.capacityRecovery && errors.As(askErr, &capacity) && capacity.ContextLimit() {
+			var capacity *modelapi.ContextLimitError
+			if !s.capacityRecovery && errors.As(askErr, &capacity) {
 				s.capacityRecovery = true
+				if m := s.runner.Memory; m != nil && capacity.Capacity > 0 && (m.ContextWindow == 0 || capacity.Capacity < m.ContextWindow) {
+					m.ContextWindow = capacity.Capacity
+				}
 				if err = s.refreshMemory(ctx, true); err != nil {
 					return s.result, errors.Join(askErr, err)
 				}

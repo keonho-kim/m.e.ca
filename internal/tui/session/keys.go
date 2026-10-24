@@ -88,12 +88,12 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			a.decide(false)
 			return
 		}
-		if a.busy && !a.agentActive {
+		if a.worker.active() && !a.worker.agent() {
 			a.interruptSetup()
 			return
 		}
 		if a.page == "chat" {
-			if a.agentActive && a.busy {
+			if a.worker.agent() && a.worker.active() {
 				a.interruptTask()
 				return
 			}
@@ -120,7 +120,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.refreshHints()
 		return
 	}
-	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.agentActive && a.busy && !a.paste {
+	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.worker.agent() && a.worker.active() && !a.paste {
 		if a.page == "files" {
 			a.confirmFileInput(true)
 		} else {

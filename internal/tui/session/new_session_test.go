@@ -16,7 +16,7 @@ func TestNewSessionCommandCancelsActiveWork(t *testing.T) {
 	a := fixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.busy, a.taskCancel = true, cancel
+	a.worker, a.taskCancel = workerSetup, cancel
 	a.editor.Set("!new")
 	a.submit()
 	if !a.newSession || !a.exit || ctx.Err() == nil {

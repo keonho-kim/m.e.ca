@@ -14,11 +14,11 @@ import (
 	"time"
 )
 
-const maxParallelTools = 4
+const maxParallelTools = 16
 
 // An executor opts in only when it can resolve aliases and reason about actual accesses.
 type parallelExecutor interface {
-	CanParallel(context.Context, policy.Settings, toolapi.Call, toolapi.Call) (bool, error)
+	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (int, error)
 }
 
 func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve Approver) error {
@@ -61,20 +61,19 @@ func (s *execution) waveEnd(ctx context.Context, calls []validatedCall, start in
 	if !ok {
 		return start + 1, nil
 	}
-	end := start + 1
-	for end < len(calls) && end-start < maxParallelTools {
-		for i := start; i < end; i++ {
-			independent, err := planner.CanParallel(ctx, s.runner.Settings, calls[i].call, calls[end].call)
-			if err != nil {
-				return end, err
-			}
-			if !independent {
-				return end, nil
-			}
-		}
-		end++
+	var batch [maxParallelTools]toolapi.Call
+	count := min(len(calls)-start, len(batch))
+	for i := range count {
+		batch[i] = calls[start+i].call
 	}
-	return end, nil
+	end, err := planner.ParallelBatch(ctx, s.runner.Settings, batch[:count], maxParallelTools)
+	if err != nil {
+		return start + end, err
+	}
+	if end < 1 || end > count {
+		return start, errors.New("invalid parallel batch boundary")
+	}
+	return start + end, nil
 }
 
 func fatalBatchError(ctx context.Context, err error) error {
@@ -99,13 +98,10 @@ func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail
 		}
 		outcome := toolapi.Result{Failed: true, Failure: failure, Content: body}
 		event := Event{Kind: "tool_failed", CallID: v.call.ID, Call: &v.call, Text: failure.Error(), Output: outcome.Content}
-		if err := s.record(recordCtx, event); err != nil {
-			return errors.Join(result, err)
+		if err := s.acceptResult(recordCtx, v, outcome, failure, event); err != nil {
+			return errors.Join(result, errRuntimeRecord, err)
 		}
 		if err := s.emit(event); err != nil {
-			result = errors.Join(result, err)
-		}
-		if err := s.acceptResult(recordCtx, v, outcome, failure); err != nil {
 			result = errors.Join(result, err)
 		}
 	}

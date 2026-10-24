@@ -1,7 +1,7 @@
 // Purpose: Verify automatic internal moves preserve boundary approval, symlink semantics and stale-target rejection.
 // Pattern: Temporary-filesystem integration tests.
 // Usage: go test ./internal/tools/local -run TestMovePolicy.
-// Related: internal/tools/local/command_safety.go, internal/tools/local/mutation_safety.go, internal/policy/command/move.go.
+// Related: internal/tools/local/command_safety.go, internal/tools/local/operation.go, internal/policy/command/move.go.
 package local
 
 import (
@@ -68,33 +68,28 @@ func TestMovePolicyInternalShellMoves(t *testing.T) {
 }
 
 func TestMovePolicyExternalEndpointsNeedApproval(t *testing.T) {
-	for _, name := range []string{"execute_command", "move_file"} {
-		for _, inbound := range []bool{false, true} {
-			e, project := testExecutor(t)
-			source, destination := filepath.Join(project, "source"), filepath.Join(t.TempDir(), "destination")
-			if inbound {
-				source, destination = destination, source
-			}
-			if err := os.WriteFile(source, []byte("keep"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			args := fmt.Sprintf(`{"path":%q,"destination":%q}`, source, destination)
-			if name == "execute_command" {
-				args = fmt.Sprintf(`{"command":%q}`, fmt.Sprintf("mv %q %q", source, destination))
-			}
-			op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call(name, args))
-			if err != nil || !op.Approval().Required {
-				t.Fatalf("%s inbound=%v: external move was not reviewed: %v", name, inbound, err)
-			}
-			if _, err := op.Execute(context.Background(), false); err == nil {
-				t.Fatal("unapproved move executed")
-			}
-			if body, err := os.ReadFile(source); err != nil || string(body) != "keep" {
-				t.Fatalf("denied move changed source: %q %v", body, err)
-			}
-			if _, err := os.Lstat(destination); !os.IsNotExist(err) {
-				t.Fatalf("denied move created destination: %v", err)
-			}
+	for _, inbound := range []bool{false, true} {
+		e, project := testExecutor(t)
+		source, destination := filepath.Join(project, "source"), filepath.Join(t.TempDir(), "destination")
+		if inbound {
+			source, destination = destination, source
+		}
+		if err := os.WriteFile(source, []byte("keep"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		args := fmt.Sprintf(`{"command":%q}`, fmt.Sprintf("mv %q %q", source, destination))
+		op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", args))
+		if err != nil || !op.Approval().Required {
+			t.Fatalf("inbound=%v: external move was not reviewed: %v", inbound, err)
+		}
+		if _, err := op.Execute(context.Background(), false); err == nil {
+			t.Fatal("unapproved move executed")
+		}
+		if body, err := os.ReadFile(source); err != nil || string(body) != "keep" {
+			t.Fatalf("denied move changed source: %q %v", body, err)
+		}
+		if _, err := os.Lstat(destination); !os.IsNotExist(err) {
+			t.Fatalf("denied move created destination: %v", err)
 		}
 	}
 }
@@ -220,27 +215,5 @@ func TestMovePolicyBlocksProtectedDirectoryAlias(t *testing.T) {
 	}
 	if body, err := os.ReadFile(filepath.Join(project, "source")); err != nil || string(body) != "keep" {
 		t.Fatalf("blocked move changed source: %q %v", body, err)
-	}
-}
-
-func TestMovePolicyFileToolRejectsNewDestination(t *testing.T) {
-	e, project := testExecutor(t)
-	if err := os.WriteFile(filepath.Join(project, "source"), []byte("keep"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("move_file", `{"path":"source","destination":"destination"}`))
-	if err != nil || op.Approval().Required {
-		t.Fatalf("internal file move required approval: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(project, "destination"), []byte("new"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := op.Execute(context.Background(), false); err == nil {
-		t.Fatal("stale file move overwrote its destination")
-	}
-	for name, want := range map[string]string{"source": "keep", "destination": "new"} {
-		if body, err := os.ReadFile(filepath.Join(project, name)); err != nil || string(body) != want {
-			t.Fatalf("%s changed: %q %v", name, body, err)
-		}
 	}
 }

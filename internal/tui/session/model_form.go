@@ -78,8 +78,8 @@ func (a *app) initializeModelForm() {
 
 func (a *app) closeModelForm() {
 	if f := a.modelForm; f != nil {
-		if a.busy && !a.agentActive && a.taskCancel != nil {
-			a.stopRequested = true
+		if a.worker.active() && !a.worker.agent() && a.taskCancel != nil {
+			a.worker.stop()
 			a.taskCancel()
 		}
 		if f.client != nil && f.client != a.client {

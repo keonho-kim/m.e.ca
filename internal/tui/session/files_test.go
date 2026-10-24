@@ -13,9 +13,9 @@ func TestFileViewEscapePreservesDraft(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
 	a.editor.Set("existing draft")
-	a.busy = true
+	a.worker = workerSetup
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "chat" || a.exit || !a.busy || a.editor.String() != "existing draft" {
+	if a.page != "chat" || a.exit || !a.worker.active() || a.editor.String() != "existing draft" {
 		t.Fatal("closing the browser did not preserve the active session and draft")
 	}
 }

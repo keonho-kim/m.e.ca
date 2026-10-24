@@ -15,7 +15,7 @@ import (
 
 func (a *app) queryModelForm(model string) {
 	f := a.modelForm
-	if f == nil || a.busy {
+	if f == nil || a.worker.active() {
 		return
 	}
 	c, err := f.connection()
@@ -106,8 +106,8 @@ func (a *app) saveModelForm() {
 		a.status = a.language.Text("Enter a model ID before saving")
 		return
 	}
-	if a.busy {
-		if !a.agentActive {
+	if a.worker.active() {
+		if !a.worker.agent() {
 			f.confirm, f.editing, f.saving = false, false, true
 			a.page = "chat"
 		}
@@ -122,7 +122,7 @@ func (a *app) saveModelForm() {
 		return
 	}
 	a.queryModelForm(model)
-	if a.busy {
+	if a.worker.active() {
 		a.page = "chat"
 	} else {
 		f.saving = false

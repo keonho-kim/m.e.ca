@@ -31,7 +31,7 @@ func TestHistoryModifiers(t *testing.T) {
 
 func TestCandidateEscapeLeavesTaskRunning(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }
 	typeInput(a, "!mo")

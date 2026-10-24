@@ -45,7 +45,7 @@ func (a *app) submitCommand(command commands.Command) {
 		return
 	}
 	if command.Kind == commands.Quit {
-		if a.busy {
+		if a.worker.active() {
 			a.page = "quit"
 			a.choices = []string{"Keep working", "Cancel task and exit"}
 			a.choice = 0
@@ -60,7 +60,7 @@ func (a *app) submitCommand(command commands.Command) {
 		return
 	}
 	a.fileSubmission = nil
-	if a.agentActive && a.busy && command.Kind == commands.Message {
+	if a.worker.agent() && a.worker.active() && command.Kind == commands.Message {
 		a.steerInput(command.Argument)
 		return
 	}
@@ -91,5 +91,5 @@ func (a *app) submitCommand(command commands.Command) {
 }
 
 func (a *app) canSubmit(kind commands.Kind) bool {
-	return !a.busy || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
+	return !a.worker.active() || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
 }

@@ -22,8 +22,8 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 	if f != nil && f.confirm {
 		return settingsConfirmationShortcuts()
 	}
-	if a.busy && (f == nil || !f.catalog || !f.editing || f.row != modelName) {
-		if !a.agentActive && !a.stopRequested {
+	if a.worker.active() && (f == nil || !f.catalog || !f.editing || f.row != modelName) {
+		if !a.worker.agent() && !a.worker.stopping() {
 			keys = append(keys, view.Shortcut{Key: "Enter", Label: "Review save"})
 		}
 		return append(keys, view.Shortcut{Key: "Esc", Label: "연결 취소"})
@@ -31,7 +31,7 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 	if f != nil && f.editing {
 		move, tab := "이동", "Next setting"
 		escape := "Finish editing"
-		if a.busy {
+		if a.worker.active() {
 			escape = "조회 취소"
 		}
 		if f.row == modelName && len(f.hints) > 0 {

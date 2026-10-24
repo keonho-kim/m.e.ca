@@ -9,11 +9,11 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/run"
 	tasksession "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 )
 
 func (a *app) startTask(text string) {
-	if a.busy {
+	if a.worker.active() {
 		return
 	}
 	a.output.Follow = true
@@ -21,50 +21,48 @@ func (a *app) startTask(text string) {
 	a.tokensPerSecond = nil
 	a.runSummary = nil
 	a.stopNotice = ""
-	a.busy = true
+	a.worker = workerAgent
 	a.startElapsed()
-	a.agentActive = true
-	a.stopRequested = false
 	a.status = ""
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)
 	steering := make(chan string, 16)
 	a.steering = steering
-	inferenceSettings := a.opts.Config.InferenceSettings()
-	runner := run.Runner{Inference: &inferenceSettings, Generator: a.client, Tools: a.opts.Tools, Journal: a.opts.Store, Session: a.opts.Session.ID, Model: a.selection.Model, Provider: a.selection.Connection.ID, Thinking: a.selection.Thinking, ThinkingSupported: a.selection.ThinkingSupported, ReasoningEffort: a.selection.Effort(), Settings: a.settings, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion, NewStreamMask: a.opts.Vault.NewStreamMask, Limits: a.opts.Config.Loop}
-	runner.PollSteering = func() []string {
-		var out []string
-		for {
-			select {
-			case text := <-steering:
-				out = append(out, text)
-			default:
-				return out
+	request := agentrequest.New(agentrequest.Options{
+		Config: a.opts.Config, Selection: a.selection, Session: a.opts.Session,
+		Generator: a.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
+		LoadPrompts: a.opts.LoadPrompts, Text: a.withSelectedPaths(text),
+		PollSteering: func() []string {
+			var out []string
+			for {
+				select {
+				case text := <-steering:
+					out = append(out, text)
+				default:
+					return out
+				}
 			}
-		}
-	}
-	runner.ProjectRoot = a.opts.Session.ProjectRoot
-	text = a.withSelectedPaths(text)
-	contextWindow := a.opts.Config.ContextLength
-	if d := a.selection.Details; d != nil && d.ContextWindow > 0 {
-		contextWindow = connection.EffectiveContextLength(contextWindow, d.ContextWindow)
-	}
-	store, loadPrompts, compaction := a.opts.Store, a.opts.LoadPrompts, a.opts.Config.Compaction.Settings
-	instructions := a.opts.Tools.ProjectInstructions
+		},
+	})
 	decisions := a.decision
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
+		delivery := runtimeDelivery{}
 		emit := func(event run.Event) error {
-			if event.Kind == "usage" || event.Statistics != nil {
-				return a.post(a.ctx, notice{Event: &event})
+			if event.Kind == "stream" {
+				return delivery.stream(ctx, a.events, event)
 			}
-			return a.post(ctx, notice{Event: &event})
+			copy := event
+			if event.Kind == "usage" || event.Statistics != nil {
+				return delivery.post(a.ctx, a.events, notice{Event: &copy})
+			}
+			return delivery.post(ctx, a.events, notice{Event: &copy})
 		}
 		approve := func(ctx context.Context, request toolapi.Approval) (bool, error) {
-			if err := a.post(ctx, notice{Approval: &request}); err != nil {
+			if err := delivery.post(ctx, a.events, notice{Approval: &request}); err != nil {
 				return false, err
 			}
 			select {
@@ -74,7 +72,7 @@ func (a *app) startTask(text string) {
 				return false, ctx.Err()
 			}
 		}
-		result, err := tasksession.Execute(ctx, tasksession.Request{Runner: runner, Store: store, LoadPrompts: loadPrompts, ContextWindow: contextWindow, Compaction: compaction, ProjectInstructions: instructions, Text: text}, approve, emit)
-		a.post(a.ctx, notice{Done: true, Err: err, RunStatus: result.Status})
+		result, err := tasksession.Execute(ctx, request, approve, emit)
+		delivery.post(a.ctx, a.events, notice{Done: true, Err: err, RunStatus: result.Status})
 	}()
 }

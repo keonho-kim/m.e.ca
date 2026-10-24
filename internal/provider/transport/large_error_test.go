@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,8 +31,8 @@ func TestLargeErrorPreservesCapacityClassification(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = client.SendOnce(request, time.Second)
-	var capacity interface{ ContextLimit() bool }
-	if !errors.As(err, &capacity) || !capacity.ContextLimit() {
+	var capacity *modelapi.ContextLimitError
+	if !errors.As(err, &capacity) {
 		t.Fatalf("large error lost its type: %v", err)
 	}
 }

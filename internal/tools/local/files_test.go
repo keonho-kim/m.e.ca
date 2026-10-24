@@ -145,7 +145,7 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 
 }
 
-func TestReadDirectorySearchAndMove(t *testing.T) {
+func TestShellReadDirectorySearchAndMove(t *testing.T) {
 	executor, project := testExecutor(t)
 	if err := os.Mkdir(filepath.Join(project, "src"), 0o755); err != nil {
 		t.Fatal(err)
@@ -169,11 +169,11 @@ func TestReadDirectorySearchAndMove(t *testing.T) {
 			t.Fatalf("tool result: %s, %v", result.Content, err)
 		}
 	}
-	operation, err := executor.Prepare(context.Background(), settings, call("move_file", `{"path":"src/auth.go","destination":"src/session.go"}`))
+	operation, err := executor.Prepare(context.Background(), settings, call("execute_command", `{"command":"mv src/auth.go src/session.go"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := operation.Execute(context.Background(), true); err != nil {
+	if _, err := operation.Execute(context.Background(), false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(project, "src/session.go")); err != nil {

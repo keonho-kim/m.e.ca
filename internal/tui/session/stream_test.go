@@ -79,7 +79,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	if !a.busy {
+	if !a.worker.active() {
 		t.Fatal("partial answer arrived only after completion")
 	}
 	a.render()

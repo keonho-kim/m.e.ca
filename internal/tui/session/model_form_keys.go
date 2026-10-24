@@ -31,7 +31,7 @@ func (a *app) modelSettingsKey(e *tcell.EventKey) {
 		}
 		return
 	}
-	if e.Key() == tcell.KeyEnter && !a.agentActive && !a.stopRequested {
+	if e.Key() == tcell.KeyEnter && !a.worker.agent() && !a.worker.stopping() {
 		if a.menuInput.String() == ":q" {
 			a.closeModelForm()
 			a.page = "chat"
@@ -41,9 +41,9 @@ func (a *app) modelSettingsKey(e *tcell.EventKey) {
 		a.menuInput.Set("")
 		return
 	}
-	if a.busy {
-		if e.Key() == tcell.KeyEscape && !a.agentActive && a.taskCancel != nil {
-			a.stopRequested = true
+	if a.worker.active() {
+		if e.Key() == tcell.KeyEscape && !a.worker.agent() && a.taskCancel != nil {
+			a.worker.stop()
 			a.taskCancel()
 			return
 		}

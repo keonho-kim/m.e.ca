@@ -100,8 +100,8 @@ func TestNativeContextLimitSignalSurvivesResponseFailure(t *testing.T) {
 	body := `data: {"type":"response.failed","response":{"status":"failed","error":{"code":"context_length_exceeded","message":"capacity"}}}` + "\n\n"
 	response := &http.Response{Header: http.Header{"Content-Type": {"text/event-stream"}}, Body: io.NopCloser(strings.NewReader(body))}
 	err := ReadResponse(context.Background(), response, connection.LMStudio, func(modelapi.Event) error { return nil })
-	var capacity interface{ ContextLimit() bool }
-	if !errors.As(err, &capacity) || !capacity.ContextLimit() {
+	var capacity *modelapi.ContextLimitError
+	if !errors.As(err, &capacity) {
 		t.Fatalf("capacity signal lost: %v", err)
 	}
 }

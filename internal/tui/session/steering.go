@@ -9,7 +9,7 @@ import (
 )
 
 func (a *app) steerInput(text string) {
-	if a.stopRequested {
+	if a.worker.stopping() {
 		return
 	}
 	select {

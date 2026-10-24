@@ -54,7 +54,7 @@ func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
 	a.browser.Selected = map[string]bool{"README.md": true}
 	a.editor.Set("keep draft")
 	a.filePreview = &browser.Preview{Full: true}
-	a.agentActive, a.busy = true, true
+	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -78,7 +78,7 @@ func TestFileScreenEscCancelsLookupAndCloses(t *testing.T) {
 	a := fixture(t)
 	a.page, a.directoryLoading = "files", true
 	cancelled := false
-	a.directoryCancel = func() { cancelled = true }
+	a.directoryReads.running = func() { cancelled = true }
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if !cancelled || a.directoryLoading || a.page != "chat" {
 		t.Fatal("Esc did not cancel lookup and return to chat in one step")

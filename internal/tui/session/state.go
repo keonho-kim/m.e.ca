@@ -17,7 +17,6 @@ import (
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
-	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tui/browser"
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
@@ -35,7 +34,7 @@ type Options struct {
 	SaveConfig  func(config.Config) error
 	Store       Store
 	Session     sessionstate.Session
-	Tools       *local.Executor
+	Tools       Tools
 	Vault       *credentials.Vault
 }
 type app struct {
@@ -45,7 +44,7 @@ type app struct {
 	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line
 	historyLoading, historyEnd          bool
-	directoryCancel                     context.CancelFunc
+	directoryReads                      readSlot[directoryPage]
 	directoryRevision                   int
 	directoryLoading, fileSelectionBusy bool
 	fileSelectionQueue                  []string
@@ -65,7 +64,7 @@ type app struct {
 	selectionPage                       string
 	textSelection                       selection.Selection
 	filePreview                         *browser.Preview
-	previewCancel                       context.CancelFunc
+	previewReads                        readSlot[previewRequest]
 	previewRevision                     int
 	elapsedStarted                      time.Time
 	elapsed                             time.Duration
@@ -74,7 +73,7 @@ type app struct {
 	stopNotice                          string
 	tokensPerSecond                     *float64
 	pending                             string
-	agentActive, stopRequested          bool
+	worker                              workerState
 	compressionTimer                    *time.Ticker
 	compressionTicks                    <-chan time.Time
 	compressionDots                     int
@@ -103,7 +102,6 @@ type app struct {
 	browser                             browser.Browser
 	proposal                            *toolapi.Approval
 	decision                            chan bool
-	busy                                bool
 	taskCancel                          context.CancelFunc
 	exit                                bool
 	newSession                          bool

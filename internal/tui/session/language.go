@@ -95,7 +95,7 @@ func (a *app) languageShortcuts() []view.Shortcut {
 }
 
 func (a *app) saveLanguage() {
-	if a.busy {
+	if a.worker.active() {
 		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}

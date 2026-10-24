@@ -18,12 +18,12 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 	a := fixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.taskCancel = cancel
 	a.editor.Set("다음 지시")
 	a.receive(notice{Event: &run.Event{Kind: "stream", Text: "부분 응답"}})
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.exit || ctx.Err() != context.Canceled || !a.busy || a.editor.String() != "다음 지시" {
+	if a.exit || ctx.Err() != context.Canceled || !a.worker.active() || a.editor.String() != "다음 지시" {
 		t.Fatal("Esc lost state or failed to cancel")
 	}
 	a.receive(notice{Approval: &toolapi.Approval{Name: "Editing"}})
@@ -31,7 +31,7 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 		t.Fatal("late approval reopened after cancellation")
 	}
 	a.receive(notice{Done: true, Err: context.Canceled})
-	if a.busy || a.agentActive || strings.Contains(a.status, "context canceled") || a.ctx.Err() != nil {
+	if a.worker.active() || a.worker.agent() || strings.Contains(a.status, "context canceled") || a.ctx.Err() != nil {
 		t.Fatal("session did not return to idle")
 	}
 	if len(a.output.Blocks) != 1 || !strings.Contains(a.output.Blocks[0].Text, "부분 응답") || !a.output.Blocks[0].Markdown {
@@ -45,7 +45,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 			a := fixture(t)
 			a.language = lang
 			a.screen.SetSize(width, 24)
-			a.busy, a.agentActive = true, true
+			a.worker = workerAgent
 			a.tokenTotal.Input, a.tokenTotal.Output = 1234567890, 9876543210
 			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
 			a.advanceCompression()
@@ -60,7 +60,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 }
 func TestCompressionIndicatorLifecycle(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.receive(notice{Event: &run.Event{Kind: "compaction_started"}})
 	defer a.stopCompression()
 	a.editor.Set("draft")

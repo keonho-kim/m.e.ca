@@ -6,6 +6,7 @@ package transport
 
 import (
 	"errors"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
 )
@@ -29,12 +30,13 @@ func TestContextCapacitySignalRequiresExplicitCode(t *testing.T) {
 		want bool
 	}{
 		{`{"error":{"code":"context_length_exceeded","message":"too long"}}`, true},
+		{`{"code":"context_window_exceeded","message":"too long"}`, true},
 		{`{"error":{"code":"authentication_error","message":"context_length_exceeded"}}`, false},
 		{`{"error":"context might be large"}`, false},
 	} {
-		var capacity interface{ ContextLimit() bool }
+		var capacity *modelapi.ContextLimitError
 		err := ParseError(400, []byte(tc.body), "")
-		got := errors.As(err, &capacity) && capacity.ContextLimit()
+		got := errors.As(err, &capacity)
 		if got != tc.want {
 			t.Fatalf("%s: %v", tc.body, err)
 		}

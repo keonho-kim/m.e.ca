@@ -1,5 +1,5 @@
-// Purpose: Normalize and record completed operation outcomes on the owning runtime worker.
-// Pattern: Result projection and persistence.
+// Purpose: Commit actual outcomes, native replies and checkpoints before publishing them.
+// Pattern: Unit of Work on the serial runtime owner.
 // Usage: Workers return outcomes; single and batch owners call recordExecution serially.
 // Related: internal/agent/run/execute.go, internal/agent/run/batch.go.
 package run
@@ -8,9 +8,10 @@ import (
 	"context"
 	"errors"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"time"
 )
 
-func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(Event) error) (toolapi.Result, error) {
+func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
 	event := Event{CallID: call.ID, Call: &call}
 	if call.Name != "execute_command" || outcome.Process == nil {
@@ -48,8 +49,9 @@ func (s *execution) recordExecution(ctx context.Context, ready *readyExecution, 
 	if event.Kind == "tool_succeeded" && proposal.Diff {
 		event.ChangePreview = boundedChangePreview(r.Redact(proposal.Preview))
 	}
-	recordCtx := context.WithoutCancel(ctx)
-	if err := s.record(recordCtx, event); err != nil {
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := s.acceptResult(recordCtx, v, outcome, runErr, event); err != nil {
 		return outcome, errors.Join(errRuntimeRecord, err)
 	}
 	event.Capture = nil // Original captures are durable, never copied into live presentation events.

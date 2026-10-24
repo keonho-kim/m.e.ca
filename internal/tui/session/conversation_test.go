@@ -100,13 +100,13 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 
 func TestConversationResumesToolTurns(t *testing.T) {
 	a := fixture(t)
-	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "inspect file"}); err != nil {
+	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &modelapi.Message{Role: "user", Content: "inspect file"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}, Output: json.RawMessage(`{"Stdout":"file inspected","ExitCode":0,"Status":"exited"}`)}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.AppendMessage(a.ctx, a.opts.Session.ID, modelapi.Message{Role: "assistant", Content: "file inspected"}); err != nil {
+	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &modelapi.Message{Role: "assistant", Content: "file inspected"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.loadHistory(); err != nil {

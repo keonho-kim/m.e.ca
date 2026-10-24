@@ -8,6 +8,8 @@ import "fmt"
 
 const MaxBodyBytes = 16 * 1024 * 1024
 
+const bytesPerToken int64 = 3
+
 type Settings struct {
 	KeepRecentTokens int   `toml:"keep_recent_tokens"`
 	ReserveTokens    int64 `toml:"reserve_tokens"`
@@ -34,5 +36,5 @@ type TokenCount struct {
 // EstimateBytes approximates mixed code and multilingual requests at three UTF-8
 // bytes per token. It is only a compaction trigger, never displayed provider usage.
 func EstimateBytes(bytes int64) TokenCount {
-	return TokenCount{Amount: (bytes + 2) / 3, Estimated: true, Kind: "request"}
+	return TokenCount{Amount: (bytes + bytesPerToken - 1) / bytesPerToken, Estimated: true, Kind: "request"}
 }

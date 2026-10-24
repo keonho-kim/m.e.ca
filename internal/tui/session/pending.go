@@ -25,7 +25,7 @@ func (a *app) reserveInput() {
 }
 
 func (a *app) reserveMessage(text string) {
-	if a.stopRequested {
+	if a.worker.stopping() {
 		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
@@ -63,7 +63,7 @@ func (a *app) finishPending(success bool) {
 	a.pending = ""
 	a.editor.Set(text)
 	a.submit()
-	if !a.busy {
+	if !a.worker.active() {
 		a.pending = text
 		a.editor.Set(draft)
 		a.restorePending()

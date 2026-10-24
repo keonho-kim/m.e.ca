@@ -90,11 +90,11 @@ func TestFilePreviewEscapeLeavesAgentRunning(t *testing.T) {
 	a.previewRevision = 4
 	a.page = "files"
 	a.filePreview = &browser.Preview{Content: "hello", Full: true}
-	a.agentActive, a.busy = true, true
+	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.filePreview != nil || cancelled || !a.busy {
+	if a.filePreview != nil || cancelled || !a.worker.active() {
 		t.Fatal("preview Esc interrupted agent")
 	}
 	a.receive(notice{PreviewRevision: a.previewRevision - 1, FilePreview: &local.FilePreview{Content: "stale"}})

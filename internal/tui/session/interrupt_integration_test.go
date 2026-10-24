@@ -106,7 +106,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 			}
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-		for a.busy {
+		for a.worker.active() {
 			select {
 			case n := <-a.events:
 				a.receive(n)

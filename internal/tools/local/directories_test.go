@@ -6,6 +6,7 @@ package local
 
 import (
 	"context"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
@@ -49,9 +50,9 @@ func TestDirectories(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "uncreated")); !os.IsNotExist(err) {
 		t.Fatal("preflight mutated filesystem")
 	}
-	ok, err := e.CanParallel(ctx, settings, call("create_directory", `{"paths":["shared/a"]}`), call("create_directory", `{"paths":["shared/b"]}`))
-	if err != nil || ok {
-		t.Fatalf("shared missing parent: %v %v", ok, err)
+	end, err := e.ParallelBatch(ctx, settings, []toolapi.Call{call("create_directory", `{"paths":["shared/a"]}`), call("create_directory", `{"paths":["shared/b"]}`)}, 16)
+	if err != nil || end != 1 {
+		t.Fatalf("shared missing parent: %v %v", end, err)
 	}
 }
 

@@ -45,31 +45,6 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	}
 	return memory, memory.Check(compact.MaxBodyBytes)
 }
-func (s *Store) MemoryWatermark(ctx context.Context, session string, after int64) (compact.Watermark, error) {
-	var mark compact.Watermark
-	var estimated bool
-	var sourceThrough int64
-	err := s.db.QueryRowContext(ctx, "SELECT amount,sequence,estimated,through_timeline FROM conversation_tokens WHERE session_id=? AND sequence>? AND kind='request' ORDER BY sequence DESC LIMIT 1", session, after).Scan(&mark.Tokens, &mark.Usage, &estimated, &sourceThrough)
-	if errors.Is(err, sql.ErrNoRows) {
-		mark.Usage = after
-	} else if err != nil {
-		return mark, err
-	}
-	var memoryThrough int64
-	if err = s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(through_timeline),0) FROM memories WHERE session_id=?", session).Scan(&memoryThrough); err != nil {
-		return mark, err
-	}
-	sourceThrough = max(sourceThrough, memoryThrough)
-	var trailingBytes int64
-	err = s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(m.content_bytes),0) FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND m.role IN ('user','tool','system')`, session, sourceThrough).Scan(&trailingBytes)
-	if err != nil {
-		return mark, err
-	}
-	mark.Tokens += compact.EstimateBytes(trailingBytes).Amount
-	mark.Estimated = estimated || trailingBytes > 0
-	err = s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=?", session).Scan(&mark.Timeline)
-	return mark, err
-}
 func (s *Store) InstallMemory(ctx context.Context, session string, expected int, next compact.Memory) error {
 	if next.Revision != expected+1 {
 		return fmt.Errorf("invalid compaction revision")

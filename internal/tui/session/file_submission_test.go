@@ -35,7 +35,7 @@ func TestFileSendRequiresExplicitConfirmation(t *testing.T) {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 		a.pasteBoundary(false)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-		if !a.fileSendConfirm || a.editor.String() != "review the selected files" || a.busy {
+		if !a.fileSendConfirm || a.editor.String() != "review the selected files" || a.worker.active() {
 			t.Fatal("paste or Enter bypassed explicit confirmation")
 		}
 		a.keyEvent(tcell.NewEventKey(cancel, "n", 0))
@@ -66,7 +66,7 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			t.Cleanup(release)
 			a.openFiles(".")
 			finishBrowserIO(t, a)
-			a.agentActive, a.busy = true, true
+			a.worker = workerAgent
 			a.steering = make(chan string, 1)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 			<-blocked.started
@@ -84,7 +84,7 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			}
 			release()
 			finishBrowserIO(t, a)
-			if a.fileSubmission != nil || len(a.steering) != 0 || !strings.HasPrefix(a.editor.String(), "review src") || a.stopRequested {
+			if a.fileSubmission != nil || len(a.steering) != 0 || !strings.HasPrefix(a.editor.String(), "review src") || a.worker.stopping() {
 				t.Fatal("cancelled, edited or failed selection unexpectedly sent or lost the draft")
 			}
 			if action == "save-error" && !strings.Contains(a.status, "selection save failed") {
@@ -100,7 +100,7 @@ func TestFileSendWithoutModelKeepsDraft(t *testing.T) {
 	a.editor.Set("review files")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.editor.String() != "review files" || a.busy || a.status == "" {
+	if a.page != "chat" || a.editor.String() != "review files" || a.worker.active() || a.status == "" {
 		t.Fatal("unavailable connection lost the confirmed draft")
 	}
 }

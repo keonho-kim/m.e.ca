@@ -26,7 +26,7 @@ func (f Formatter) output(event run.Event) toolOutput {
 	switch event.Call.Name {
 	case "execute_command":
 		output = f.processOutput(event, fields)
-	case "write_file", "edit_file", "create_directory", "move_file":
+	case "write_file", "edit_file", "create_directory":
 		output = f.fileOutput(event, body)
 	}
 	if output.text == "" {

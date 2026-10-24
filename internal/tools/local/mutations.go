@@ -1,6 +1,6 @@
-// Purpose: Apply prepared file mutations and return their exact changed-file metadata.
+// Purpose: Apply prepared file writes and edits with exact changed-file metadata.
 // Pattern: Filesystem mutation Adapter.
-// Usage: Prepared write, edit and move operations call mutate.
+// Usage: Prepared write and edit operations call mutate after policy and version checks.
 // Related: internal/tools/local/prepare.go, internal/tools/local/dispatch.go.
 package local
 
@@ -14,70 +14,33 @@ import (
 )
 
 func (op *operation) mutate() (toolapi.Result, error) {
-	switch op.spec.name {
-	case "write_file", "edit_file":
-		mode := os.FileMode(0o644)
-		if op.original.exists {
-			mode = op.original.info.Mode().Perm()
-		}
-		if err := fileops.Write(op.source.root, op.source.relative, op.replacement, mode); err != nil {
-			return toolapi.Result{}, err
-		}
-	case "move_file":
-		current, err := op.executor.resolve(op.settings.Scope, op.input.Destination)
-		if err != nil {
-			return toolapi.Result{}, err
-		}
-		version, err := snapshot(current)
-		if err != nil {
-			return toolapi.Result{}, err
-		}
-		if current.absolute != op.destination.absolute || !sameVersion(op.destinationVersion, version) {
-			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "destination changed after preparation", Next: "Inspect the destination and prepare a new move."}
-		}
-		if err := moveTargets(op.source, op.destination); err != nil {
-			return toolapi.Result{}, err
-		}
-	default:
-		return toolapi.Result{}, fmt.Errorf("unknown file mutation")
+	mode := os.FileMode(0o644)
+	if op.original.exists {
+		mode = op.original.info.Mode().Perm()
 	}
-	var size *int
-	summary := ""
-	switch op.spec.name {
-	case "write_file", "edit_file":
-		bytes := len(op.replacement)
-		size = &bytes
-		action := "Updated file"
-		if !op.original.exists {
-			action = "Created file"
-		}
-		summary = fmt.Sprintf("%s %s (%d bytes)", action, op.source.absolute, bytes)
-	case "move_file":
-		summary = "Moved " + op.source.absolute + " to " + op.destination.absolute
+	if err := fileops.Write(op.source.root, op.source.relative, op.replacement, mode); err != nil {
+		return toolapi.Result{}, err
 	}
+	action := "Updated file"
+	if !op.original.exists {
+		action = "Created file"
+	}
+	size := len(op.replacement)
+	summary := fmt.Sprintf("%s %s (%d bytes)", action, op.source.absolute, size)
 	result, err := resultfmt.Encode(struct {
 		Action    string               `json:"action"`
 		Path      string               `json:"path"`
 		Changed   bool                 `json:"changed"`
-		SizeBytes *int                 `json:"size_bytes,omitempty"`
+		SizeBytes int                  `json:"size_bytes"`
 		Lines     []toolapi.LineChange `json:"lines,omitempty"`
 	}{op.spec.name, op.source.absolute, true, size, op.editSpans}, summary)
 	if err != nil {
 		return result, err
 	}
 	change := toolapi.FileChange{Action: op.spec.name, Path: op.source.absolute, Lines: op.editSpans}
-	if op.spec.name == "move_file" {
-		change.Destination = op.destination.absolute
-	}
 	change.BeforeDigest = versionValue(op.original)
-	change.AfterDigest = "missing"
-	if op.spec.name == "write_file" || op.spec.name == "edit_file" {
-		change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
-	}
+	change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
 	result.Versions = map[string]string{change.Path: change.AfterDigest}
-	if op.spec.name == "move_file" {
-		result.Versions[op.destination.absolute] = versionValue(op.original)
-	}
 	result.Changes = []toolapi.FileChange{change}
 	return result, nil
 }

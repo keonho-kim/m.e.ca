@@ -14,6 +14,7 @@ import (
 )
 
 type notice struct {
+	Stream          *streamNotice
 	FormRevision    int
 	ModelForm       bool
 	Diagnostic      bool
@@ -45,6 +46,12 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.Stream != nil {
+		if event := n.Stream.take(); event != nil {
+			a.receiveRuntime(event)
+		}
+		return
+	}
 	if n.History != nil {
 		a.receiveHistory(n.History)
 		return
@@ -74,7 +81,7 @@ func (a *app) receive(n notice) {
 		return
 	}
 	if n.Approval != nil {
-		if a.stopRequested {
+		if a.worker.stopping() {
 			return
 		}
 		a.proposal = n.Approval

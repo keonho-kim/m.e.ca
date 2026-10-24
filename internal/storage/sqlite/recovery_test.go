@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/storage/recovery"
@@ -61,5 +62,48 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 	selected, err := s.Selection(ctx, session.ID)
 	if err != nil || selected.Thinking == nil || !*selected.Thinking {
 		t.Fatalf("Thinking lost: %+v %v", selected, err)
+	}
+}
+
+type interruptedCommit struct {
+	*Store
+	fail bool
+}
+
+func (s *interruptedCommit) Commit(ctx context.Context, session string, records []run.JournalRecord) error {
+	if s.fail {
+		invalid := run.Event{Kind: "usage"}
+		records = append(records, run.JournalRecord{Event: &invalid})
+	}
+	return s.Store.Commit(ctx, session, records)
+}
+
+func TestRecoveryCommitsRepliesAndEventsTogether(t *testing.T) {
+	s, err := newTestStore(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	ctx, id := context.Background(), s.Session().ID
+	call := toolapi.Call{ID: "pending", Name: "write_file", Arguments: json.RawMessage(`{"path":"file","content":"new"}`)}
+	if err := s.AppendMessage(ctx, id, modelapi.Message{Role: "assistant", Calls: []toolapi.Call{call}}); err != nil {
+		t.Fatal(err)
+	}
+	fault := &interruptedCommit{Store: s, fail: true}
+	if err := recovery.Restore(ctx, fault, id); err == nil {
+		t.Fatal("invalid recovery transaction committed")
+	}
+	if history, err := s.Messages(ctx, id, 100); err != nil || len(history) != 1 {
+		t.Fatalf("partial recovery reply remained: %+v %v", history, err)
+	}
+	fault.fail = false
+	for range 2 {
+		if err := recovery.Restore(ctx, fault, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, _, err := s.Timeline(ctx, id, 0, 100)
+	if err != nil || len(rows) != 3 || rows[1].Kind != "message" || rows[2].Event.Kind != "tool_interrupted" {
+		t.Fatalf("recovery duplicated or split outcomes: %+v %v", rows, err)
 	}
 }

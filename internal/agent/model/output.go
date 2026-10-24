@@ -24,7 +24,7 @@ func OutputBudget(requested, capacity, serverOutput, input int) (int, error) {
 		return 0, fmt.Errorf("invalid model capacity")
 	}
 	if input >= capacity {
-		return 0, fmt.Errorf("model context exhausted: input %d tokens, capacity %d; history was preserved", input, capacity)
+		return 0, &ContextLimitError{Input: input, Capacity: capacity}
 	}
 	output := requested
 	if output == 0 {

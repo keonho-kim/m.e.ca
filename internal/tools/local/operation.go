@@ -13,20 +13,20 @@ import (
 )
 
 type operation struct {
-	directories                  []directoryTarget
-	directoryPaths               []string
-	executor                     *Executor
-	settings                     policy.Settings
-	spec                         specification
-	input                        arguments
-	source, destination          target
-	original, destinationVersion version
-	replacement                  []byte
-	editSpans                    []toolapi.LineChange
-	approval                     toolapi.Approval
-	executed                     atomic.Bool
-	environment                  []string
-	shell                        shellSafety
+	directories    []directoryTarget
+	directoryPaths []string
+	executor       *Executor
+	settings       policy.Settings
+	spec           specification
+	input          arguments
+	source         target
+	original       version
+	replacement    []byte
+	editSpans      []toolapi.LineChange
+	approval       toolapi.Approval
+	executed       atomic.Bool
+	environment    []string
+	shell          shellSafety
 }
 
 func (op *operation) Approval() toolapi.Approval { return op.approval }

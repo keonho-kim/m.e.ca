@@ -12,7 +12,7 @@ import (
 
 func TestElapsedTimerLifecycle(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		a := &app{busy: true}
+		a := &app{worker: workerSetup}
 		a.startElapsed()
 		if a.activity().Label() != "상태 작업 중 00 : 00 : 00" {
 			t.Fatal(a.activity().Label())
@@ -44,10 +44,10 @@ func TestElapsedTimerLifecycle(t *testing.T) {
 
 func TestElapsedWorkerCompletion(t *testing.T) {
 	a := fixture(t)
-	a.busy = true
+	a.worker = workerSetup
 	a.startElapsed()
 	a.receive(notice{Done: true})
-	if a.busy || a.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
+	if a.worker.active() || a.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
 		t.Fatal("worker completion retained elapsed timer")
 	}
 }

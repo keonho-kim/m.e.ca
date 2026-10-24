@@ -1,6 +1,6 @@
 // Purpose: Prepare a wave on its owner, execute independent operations concurrently, then commit in order.
 // Pattern: Fork/join with isolated result slots.
-// Usage: batch schedules at most four operations; workers touch only their prepared operation.
+// Usage: batch schedules at most sixteen operations; workers touch only their prepared operation.
 // Related: internal/agent/run/batch.go, internal/agent/run/prepare_execution.go, internal/agent/run/execution_result.go.
 package run
 
@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -63,8 +62,6 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	}
 	workers.Wait()
 	// Workers are joined even after cancellation; completed effects keep their actual results.
-	recordCtx, recordCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer recordCancel()
 	completedEmit := func(event Event) error {
 		err := s.emit(event)
 		if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
@@ -75,14 +72,12 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	failed := false
 	var terminal error
 	for i, v := range calls {
-		outcome, runErr := s.recordExecution(recordCtx, ready[i], outcomes[i], failures[i], completedEmit)
+		outcome, runErr := s.recordExecution(ctx, v, ready[i], outcomes[i], failures[i], completedEmit)
 		if errors.Is(runErr, errRuntimeRecord) {
 			terminal = errors.Join(terminal, runErr)
 		}
 		failed = failed || outcome.Failed || runErr != nil
-		if err := s.acceptResult(recordCtx, v, outcome, runErr); err != nil {
-			terminal = errors.Join(terminal, err)
-		}
+		ready[i], outcomes[i], failures[i] = nil, toolapi.Result{}, nil
 	}
 	if ctx.Err() != nil {
 		terminal = errors.Join(terminal, ctx.Err())

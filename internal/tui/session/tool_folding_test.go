@@ -20,7 +20,6 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 		{"write_file", `{"path":"hello.txt","content":"file-detail"}`, `{"changed":true}`, "file-detail"},
 		{"edit_file", `{"path":"hello.txt","edits":[{"old_text":"old-detail","new_text":"edit-detail"}]}`, `{"changed":true}`, "edit-detail"},
 		{"create_directory", `{"paths":["src","tests"]}`, `{"changed":true,"created":["src","tests"]}`, "폴더 생성 완료"},
-		{"move_file", `{"path":"hello.txt","destination":"renamed.txt"}`, `{"changed":true}`, "이동 완료"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)

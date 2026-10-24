@@ -10,15 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/agent/run"
-	agentsession "github.com/keonho-kim/meca/internal/agent/session"
+	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/headless"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/prompts"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/storage/recovery"
@@ -97,8 +94,8 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 	if err = store.SaveSelection(ctx, id, selected); err != nil {
 		return err
 	}
-	inference := cfg.InferenceSettings()
 	if mode.Diagnose {
+		inference := cfg.InferenceSettings()
 		_, err := diagnostic.Check(ctx, prepared.Client, selected.Model, selected.ThinkingSupported, selected.Details != nil && selected.Details.Reasoning != nil && selected.Details.Reasoning.Enabled(), &inference)
 		if mode.Output == "json" {
 			report := struct {
@@ -120,11 +117,10 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		return err
 	}
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	window := cfg.ContextLength
-	if selected.Details != nil && selected.Details.ContextWindow > 0 {
-		window = connection.EffectiveContextLength(window, selected.Details.ContextWindow)
-	}
-	runner := run.Runner{Generator: prepared.Client, Tools: executor, Journal: store, Session: id, Model: selected.Model, Provider: selected.Connection.ID, ProjectRoot: mode.Project, Thinking: selected.Thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(), Settings: policy.Settings{Scope: policy.System}, Limits: cfg.Loop, Inference: &inference, Redact: vault.Redact, RedactionVersion: vault.RedactionVersion, NewStreamMask: vault.NewStreamMask}
-	request := agentsession.Request{Runner: runner, Store: store, Text: text, Compaction: cfg.Compaction.Settings, ContextWindow: window, ProjectInstructions: executor.ProjectInstructions, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}
+	request := agentrequest.New(agentrequest.Options{
+		Config: cfg, Selection: selected, Session: store.Session(), Generator: prepared.Client,
+		Tools: executor, Store: store, Vault: vault, Text: text,
+		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
+	})
 	return headless.Run(ctx, request, os.Stdout, mode.Output == "json")
 }

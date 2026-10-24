@@ -12,13 +12,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 )
@@ -32,6 +34,15 @@ func (g generation) Generate(ctx context.Context, request modelapi.Request, emit
 func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 	ctx := context.Background()
 	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "AGENTS.md"), []byte("PROJECT_INSTRUCTION"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Defaults()
+	cfg.Agent.Temperature, cfg.Agent.MaxOutputTokens = 0.73, 1234
+	on, thinking := true, false
+	cfg.Thinking = &on
+	selected := connection.Selection{Model: "selected-model", Connection: connection.Connection{ID: "selected-provider"}, Thinking: &thinking, ThinkingSupported: true, Details: &connection.ModelInfo{ContextWindow: 131072}}
+	vault := &credentials.Vault{State: t.TempDir()}
 	sessions, err := sqlite.OpenSessions(filepath.Join(t.TempDir(), "sessions"))
 	if err != nil {
 		t.Fatal(err)
@@ -73,8 +84,11 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		if !strings.Contains(request.Messages[0].Content, "PROJECT_DEVELOPMENT_RULE") || !strings.Contains(request.Messages[0].Content, "PROJECT_INSTRUCTION") {
 			t.Fatal("main agent lost development or project instructions")
 		}
-		if request.Temperature == nil || *request.Temperature != 1 {
-			t.Fatal("main agent temperature changed")
+		if request.Temperature == nil || *request.Temperature != 0.73 {
+			t.Fatal("shared request factory lost configured temperature")
+		}
+		if request.ModelID != "selected-model" || request.MaxOutput != 1234 || request.Thinking == nil || *request.Thinking {
+			t.Fatal("shared request factory lost selected model, output budget or Thinking OFF")
 		}
 		step++
 		if step == 2 || step == 4 {
@@ -101,9 +115,14 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		}
 		return emit(modelapi.Event{Calls: []toolapi.Call{{ID: name + "-call", Name: name, Arguments: body}}, Done: true})
 	})
-	runner := run.Runner{Generator: g, Tools: tools, Journal: store, Session: store.Session().ID, ProjectRoot: project, Settings: policy.Settings{Scope: policy.System}, Redact: func(s string) string { return s }}
 	for _, text := range []string{"Create note.txt", "Update note.txt from one to two"} {
-		result, err := session.Execute(ctx, session.Request{Runner: runner, Store: store, Text: text, LoadPrompts: func() (prompt.Templates, error) { return templates, nil }, Compaction: compact.Defaults(), ProjectInstructions: func(context.Context) (string, error) { return "PROJECT_INSTRUCTION", nil }}, func(context.Context, toolapi.Approval) (bool, error) {
+		thinking = false
+		request := agentrequest.New(agentrequest.Options{Config: cfg, Selection: selected, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault, Text: text, LoadPrompts: func() (prompt.Templates, error) { return templates, nil }})
+		thinking = true // Mutating the selection after submission must not alter the running request.
+		if request.ContextWindow != 131072 || request.Runner.ProjectRoot != store.Session().ProjectRoot {
+			t.Fatal("shared request factory lost serving limits or the selected session root")
+		}
+		result, err := session.Execute(ctx, request, func(context.Context, toolapi.Approval) (bool, error) {
 			approvals++
 			return true, nil
 		}, func(run.Event) error { return nil })

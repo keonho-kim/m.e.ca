@@ -30,7 +30,7 @@ func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.pasteBoundary(false)
 	body := modelScreen(a)
-	if a.exit || f.confirm || a.busy || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
+	if a.exit || f.confirm || a.worker.active() || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
 		t.Fatal("credential exposed or paste submitted")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -64,7 +64,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	for a.busy {
+	for a.worker.active() {
 		select {
 		case n := <-a.events:
 			a.receive(n)
@@ -161,7 +161,7 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 				t.Fatal("save decision did not return to chat")
 			}
 			close(release)
-			for a.busy {
+			for a.worker.active() {
 				select {
 				case n := <-a.events:
 					a.receive(n)

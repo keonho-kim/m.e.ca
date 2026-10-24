@@ -13,10 +13,10 @@ import (
 
 func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.editor.Set("next request")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.pending != "next request" || a.editor.String() != "" || !a.busy {
+	if a.pending != "next request" || a.editor.String() != "" || !a.worker.active() {
 		t.Fatal("Tab did not reserve input")
 	}
 	a.editor.Set("later draft")
@@ -35,7 +35,7 @@ func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
 
 func TestPendingRejectsLocalCommands(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.editor.Set("!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 	if a.pending != "" || a.exit || a.editor.String() != "!quit" {
@@ -45,21 +45,21 @@ func TestPendingRejectsLocalCommands(t *testing.T) {
 
 func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.pending = "next request"
 	a.editor.Set("unsent draft")
 	a.receive(notice{Done: true, Err: context.DeadlineExceeded})
-	if a.busy || a.pending != "" || a.editor.String() != "next request\n\nunsent draft" {
+	if a.worker.active() || a.pending != "" || a.editor.String() != "next request\n\nunsent draft" {
 		t.Fatal("failed worker started or lost pending request")
 	}
 }
 
 func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.pending = "next request"
 	a.receive(notice{Done: true, RunStatus: run.Stopped})
-	if a.pending != "" || a.editor.String() != "next request" || a.busy {
+	if a.pending != "" || a.editor.String() != "next request" || a.worker.active() {
 		t.Fatal("blocked completion consumed the reserved request")
 	}
 }

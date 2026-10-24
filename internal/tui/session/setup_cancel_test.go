@@ -12,7 +12,7 @@ import (
 
 func TestCancelledSetupDiscardsSuccessfulLateResult(t *testing.T) {
 	a := fixture(t)
-	a.busy = true
+	a.worker = workerSetup
 	a.setupRevision = 2
 	a.selection.Model = "current"
 	cancelled := false
@@ -22,13 +22,13 @@ func TestCancelledSetupDiscardsSuccessfulLateResult(t *testing.T) {
 		t.Fatal("connection not cancelled")
 	}
 	a.receive(notice{SetupRevision: 2, Done: true, Models: []string{"late"}, Selection: &connection.Selection{}})
-	if a.busy || a.page != "chat" || a.selection.Model != "current" || a.modelForm != nil {
+	if a.worker.active() || a.page != "chat" || a.selection.Model != "current" || a.modelForm != nil {
 		t.Fatal("late result changed cancelled screen")
 	}
-	a.busy = true
+	a.worker = workerSetup
 	a.setupRevision = 3
 	a.receive(notice{SetupRevision: 2, Done: true, Models: []string{"old"}})
-	if !a.busy || a.page != "chat" {
+	if !a.worker.active() || a.page != "chat" {
 		t.Fatal("old completion stopped newer request")
 	}
 }

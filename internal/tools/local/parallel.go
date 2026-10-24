@@ -1,6 +1,6 @@
-// Purpose: Determine whether two local operations have independent resolved filesystem targets.
+// Purpose: Plan independent file waves with one access snapshot per call and bounded preparation memory.
 // Pattern: Filesystem scheduling adapter; execution still rechecks policy and versions.
-// Usage: The runtime asks CanParallel before grouping prepared operations.
+// Usage: The runtime asks ParallelBatch before preparation and rechecks it after approval.
 // Related: internal/tools/local/paths.go, internal/agent/run/batch.go.
 package local
 
@@ -15,41 +15,57 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
-func (e *Executor) CanParallel(ctx context.Context, settings policy.Settings, left, right toolapi.Call) (bool, error) {
-	if err := ctx.Err(); err != nil {
-		return false, err
-	}
-	a, pa, err := e.parallelPaths(settings, left)
-	if err != nil {
-		return false, err
-	}
-	b, pb, err := e.parallelPaths(settings, right)
-	if err != nil {
-		return false, err
-	}
-	if a == policy.Command || b == policy.Command {
-		return false, nil
-	}
-	for _, x := range pa {
-		for _, y := range pb {
-			if pathContains(x.absolute, y.absolute) || pathContains(y.absolute, x.absolute) {
-				return false, nil
-			}
-			xi, xe := x.root.Stat(x.relative)
-			yi, ye := y.root.Stat(y.relative)
-			if xe != nil && !errors.Is(xe, os.ErrNotExist) {
-				return false, xe
-			}
-			if ye != nil && !errors.Is(ye, os.ErrNotExist) {
-				return false, ye
-			}
-			if xe == nil && ye == nil && os.SameFile(xi, yi) {
-				return false, nil
-			}
-		}
-	}
-	return true, nil
+// This bounds estimated prepared bodies, not accepted input sizes. Large calls
+// still execute alone; increasing concurrency must not multiply large snapshots.
+const maxParallelBytes int64 = 64 * 1024 * 1024
+
+type parallelTarget struct {
+	target
+	info os.FileInfo
 }
+
+func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (int, error) {
+	var prior []parallelTarget
+	var retained int64
+	end := min(len(calls), maximum)
+	for i, call := range calls[:end] {
+		if err := ctx.Err(); err != nil {
+			return i, err
+		}
+		effect, paths, err := e.parallelPaths(settings, call)
+		if err != nil {
+			return i, err
+		}
+		if effect == policy.Command {
+			return max(1, i), nil
+		}
+		current := make([]parallelTarget, 0, len(paths))
+		cost := int64(len(call.Arguments)) * 4
+		for _, path := range paths {
+			info, err := path.root.Stat(path.relative)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return i, err
+			}
+			if info != nil && info.Mode().IsRegular() {
+				cost += info.Size() * 4
+			}
+			for _, previous := range prior {
+				if pathContains(path.absolute, previous.absolute) || pathContains(previous.absolute, path.absolute) ||
+					info != nil && previous.info != nil && os.SameFile(info, previous.info) {
+					return i, nil
+				}
+			}
+			current = append(current, parallelTarget{path, info})
+		}
+		if i > 0 && retained+cost > maxParallelBytes {
+			return i, nil
+		}
+		retained += cost
+		prior = append(prior, current...)
+	}
+	return end, nil
+}
+
 func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (policy.Effect, []target, error) {
 	spec, input, err := parseArguments(call)
 	if err != nil {
@@ -75,19 +91,11 @@ func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (p
 		}
 		return spec.effect, targets, err
 	}
-	paths := []string{input.Path}
-	if spec.name == "move_file" {
-		paths = append(paths, input.Destination)
+	resolved, err := e.resolve(settings.Scope, input.Path)
+	if err != nil {
+		return 0, nil, err
 	}
-	var targets []target
-	for _, path := range paths {
-		resolved, err := e.resolve(settings.Scope, path)
-		if err != nil {
-			return 0, nil, err
-		}
-		targets = append(targets, resolved)
-	}
-	return spec.effect, targets, nil
+	return spec.effect, []target{resolved}, nil
 }
 func pathContains(parent, child string) bool {
 	relative, err := filepath.Rel(parent, child)

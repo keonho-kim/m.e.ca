@@ -96,28 +96,28 @@ func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executo
 }
 func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
 	var calls []toolapi.Call
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 18; i++ {
 		calls = append(calls, batchCall(fmt.Sprint(i), "create_directory", map[string]any{"paths": []string{fmt.Sprintf("dir%d", i)}}))
 	}
 	r, tools, root, j, model := realBatchRunner(t, calls)
-	held := &heldTools{Executor: tools, entered: make(chan string, 6), release: make(chan struct{})}
+	held := &heldTools{Executor: tools, entered: make(chan string, 18), release: make(chan struct{})}
 	r.Tools = held
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	done := make(chan struct{})
 	var result Result
 	var runErr error
-	go func() { defer close(done); result, runErr = r.Run(ctx, "create six directories", approve, emit) }()
+	go func() { defer close(done); result, runErr = r.Run(ctx, "create eighteen directories", approve, emit) }()
 	t.Cleanup(func() { cancel(); <-done })
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 16; i++ {
 		select {
 		case <-held.entered:
 		case <-ctx.Done():
-			t.Fatal("four operations did not overlap")
+			t.Fatal("sixteen operations did not overlap")
 		}
 	}
 	close(held.release)
 	<-done
-	if runErr != nil || result.Status != Answered || held.maximum.Load() != 4 {
+	if runErr != nil || result.Status != Answered || held.maximum.Load() != 16 {
 		t.Fatalf("%+v active max=%d err=%v", result, held.maximum.Load(), runErr)
 	}
 	index := 0
@@ -132,11 +132,11 @@ func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
 	if len(model.requests) != 2 {
 		t.Fatalf("unexpected main model calls: %d", len(model.requests))
 	}
-	t.Logf("operations=6, peak concurrency=%d, main model calls=%d", held.maximum.Load(), len(model.requests))
-	if index != 6 {
+	t.Logf("operations=18, peak concurrency=%d, main model calls=%d", held.maximum.Load(), len(model.requests))
+	if index != 18 {
 		t.Fatalf("paired results=%d", index)
 	}
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 18; i++ {
 		if _, err := os.Stat(filepath.Join(root, fmt.Sprintf("dir%d", i))); err != nil {
 			t.Fatal(err)
 		}

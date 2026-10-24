@@ -100,9 +100,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 	}
 	if a.page == "chat" && !a.commandOpen && a.fileSubmission != nil {
 		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: "Cancel send"})
-	} else if a.busy && !a.stopRequested && a.page == "chat" && !a.commandOpen {
+	} else if a.worker.active() && !a.worker.stopping() && a.page == "chat" && !a.commandOpen {
 		label := "중지"
-		if !a.agentActive {
+		if !a.worker.agent() {
 			label = "연결 취소"
 		}
 		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: label})
@@ -137,7 +137,7 @@ func (a *app) inputShortcuts() []view.Shortcut {
 	if a.page == "files" && (command.Kind == commands.Message || command.Kind == commands.Empty) {
 		label = "Review send"
 	}
-	if a.agentActive && a.busy && !a.stopRequested && (command.Kind == commands.Message || command.Kind == commands.Empty) {
+	if a.worker.agent() && a.worker.active() && !a.worker.stopping() && (command.Kind == commands.Message || command.Kind == commands.Empty) {
 		if a.page != "files" {
 			label = "방향 수정"
 		}
@@ -151,7 +151,7 @@ func (a *app) inputShortcuts() []view.Shortcut {
 		}
 		return controls
 	}
-	if a.busy && !a.canSubmit(command.Kind) {
+	if a.worker.active() && !a.canSubmit(command.Kind) {
 		return controls
 	}
 	if command.Kind != commands.Message && command.Kind != commands.Empty {
@@ -169,7 +169,7 @@ func (a *app) commandEnterLabel(kind commands.Kind) string {
 		if a.page != "chat" {
 			return "복귀"
 		}
-		if a.busy {
+		if a.worker.active() {
 			return "종료 확인"
 		}
 		return "종료"

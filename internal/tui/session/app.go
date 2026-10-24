@@ -62,11 +62,16 @@ func (a *app) requestExit() {
 func (a *app) shutdown() {
 	a.requestExit()
 	a.workers.Wait()
+	a.directoryReads = readSlot[directoryPage]{}
+	a.previewReads = readSlot[previewRequest]{}
 	// A connection worker may have transferred a client to a notice just before
 	// cancellation. The stopped event loop must release that queued ownership.
 	for {
 		select {
 		case notice := <-a.events:
+			if notice.Stream != nil {
+				notice.Stream.take()
+			}
 			if notice.Client != nil && notice.Client != a.client {
 				notice.Client.Close()
 			}

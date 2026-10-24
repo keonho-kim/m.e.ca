@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"time"
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
@@ -37,8 +36,6 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
 		return err
 	}
-	outcome, toolErr := s.execute(ctx, call, approve, s.emit)
-	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer cancel()
-	return errors.Join(s.acceptResult(recordCtx, v, outcome, toolErr), ctx.Err())
+	_, toolErr := s.execute(ctx, v, approve, s.emit)
+	return errors.Join(fatalBatchError(ctx, toolErr), ctx.Err())
 }

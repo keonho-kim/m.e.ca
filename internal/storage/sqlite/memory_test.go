@@ -76,7 +76,7 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}
-	op := toolapi.Operation{RunID: "task", CallID: "call", Name: "move_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "move_file", Path: "src/auth.go", Destination: "src/session.go"}}}
+	op := toolapi.Operation{RunID: "task", CallID: "call", Name: "write_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "write_file", Path: "src/session.go"}}}
 	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "tool_succeeded", Operation: &op}); err != nil {
 		t.Fatal(err)
 	}

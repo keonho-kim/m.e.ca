@@ -14,19 +14,17 @@ import (
 
 func (a *app) finishWorker(n notice) {
 	a.restoreSteering()
-	active, cancelled := a.agentActive, a.stopRequested
+	active, cancelled := a.worker.agent(), a.worker.stopping()
 	defer func() {
 		if active {
 			a.finishPending(n.Err == nil && !cancelled && n.RunStatus == run.Answered)
 		}
 	}()
 	a.tokenCurrent = modelapi.TokenUsage{}
-	stopped := a.stopRequested
-	a.stopRequested = false
-	a.agentActive = false
+	stopped := a.worker.stopping()
+	a.worker = workerIdle
 	a.stopCompression()
 	a.stopElapsed()
-	a.busy = false
 	a.taskCancel = nil
 	if n.Err != nil {
 		a.output.Append(a.thinking, true)

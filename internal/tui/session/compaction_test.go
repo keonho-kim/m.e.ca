@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/run"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"net/http"
@@ -32,7 +33,7 @@ func TestCompactionContext(t *testing.T) {
 			a.client.Close()
 		}
 	})
-	if err := a.opts.Store.AppendMessage(ctx, a.opts.Session.ID, modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}); err != nil {
+	if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 245760, Kind: "request"}); err != nil {

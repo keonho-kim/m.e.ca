@@ -31,9 +31,6 @@ func TestBoundary(t *testing.T) {
 	if _, err := b.ReadTarget(filepath.Join(alias, ".meca/config.toml")); err == nil {
 		t.Fatal("symlink bypassed private-path guard")
 	}
-	if err := b.Movable(b.Project()); err == nil {
-		t.Fatal("project root was movable")
-	}
 	if err := os.Rename(project, project+".old"); err != nil {
 		t.Fatal(err)
 	}

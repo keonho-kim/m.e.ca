@@ -10,7 +10,7 @@ func (a *app) interruptSetup() {
 	if a.taskCancel == nil {
 		return
 	}
-	a.stopRequested = true
+	a.worker.stop()
 	a.taskCancel()
 	a.stopElapsed()
 	a.page = "chat"
@@ -22,7 +22,7 @@ func (a *app) setupResult(n *notice) bool {
 	if n.SetupRevision == 0 {
 		return true
 	}
-	if n.SetupRevision != a.setupRevision || a.stopRequested {
+	if n.SetupRevision != a.setupRevision || a.worker.stopping() {
 		if n.Client != nil && n.Client != a.client {
 			n.Client.Close()
 		}

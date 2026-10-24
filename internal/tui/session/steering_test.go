@@ -11,7 +11,7 @@ import (
 
 func TestSteeringKeepsLocalCommands(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.steering = make(chan string, 1)
 	a.editor.Set("Use the alternate approach")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

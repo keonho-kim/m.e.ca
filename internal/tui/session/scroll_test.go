@@ -111,7 +111,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 	a.output.Append(strings.Repeat("earlier history\n", 60), false)
 	height := a.chatHeight(80, a.bodyHeight(24))
 	a.scroll(-3, 80, height)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.steering = make(chan string, 1)
 	a.editor.Set("Use the existing API")
 	a.steerInput(a.editor.String())

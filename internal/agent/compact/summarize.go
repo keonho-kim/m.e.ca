@@ -14,10 +14,13 @@ import (
 	"unicode/utf8"
 )
 
-func (c *Controller) summarize(ctx context.Context, generate Generate, previous string, source []json.RawMessage, omitted int) (string, error) {
-	messages, err := c.summaryMessages(previous, source, omitted)
-	if err != nil {
-		return "", err
+func (c *Controller) summarize(ctx context.Context, generate Generate, messages []modelapi.Message, budget summaryBudget) (string, error) {
+	size := 0
+	for _, message := range messages {
+		size += len(message.Content)
+	}
+	if size > budget.inputBytes {
+		return "", fmt.Errorf("compaction packet exceeds model-context input budget; original history retained")
 	}
 	parameters, err := inference.Resolve(c.Inference, inference.Compaction)
 	if err != nil {
@@ -25,7 +28,9 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, previous 
 	}
 	var reply strings.Builder
 	done := false
-	err = generate(ctx, parameters.Apply(modelapi.Request{ModelID: c.Model, Messages: messages}), func(event modelapi.Event) error {
+	request := parameters.Apply(modelapi.Request{ModelID: c.Model, Messages: messages})
+	request.MaxOutput = budget.outputTokens
+	err = generate(ctx, request, func(event modelapi.Event) error {
 		if event.Retry != nil {
 			reply.Reset()
 			done = false

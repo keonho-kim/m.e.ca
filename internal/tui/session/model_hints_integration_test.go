@@ -47,7 +47,7 @@ func TestModelHintsConnection(t *testing.T) {
 			f.endpoint.Set(server.URL)
 			f.row = modelName
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-			for a.busy {
+			for a.worker.active() {
 				select {
 				case n := <-a.events:
 					a.receive(n)

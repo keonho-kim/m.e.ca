@@ -47,7 +47,7 @@ func (a *app) fileSendKey(e *tcell.EventKey) {
 }
 
 func (a *app) dispatchFileInput(command commands.Command, reserve bool) {
-	if !reserve || !a.agentActive || !a.busy {
+	if !reserve || !a.worker.agent() || !a.worker.active() {
 		a.submitCommand(command)
 		return
 	}

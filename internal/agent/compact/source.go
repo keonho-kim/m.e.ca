@@ -31,12 +31,30 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	}
 	mandatory := record.Role == "user"
 	text := record.Text
+	available := b.limit - b.required
 	if !mandatory {
-		text = sourceExcerpt(text, MaxBodyBytes)
+		limit := MaxBodyBytes
+		if available >= 512 {
+			limit = min(limit, available)
+		} else if len(text) > available {
+			b.omitted++
+			return nil
+		}
+		text = sourceExcerpt(text, limit)
 	}
-	key, err := json.Marshal(struct{ Role, Text string }{record.Role, redact(text)})
+	payload := struct{ Role, Text string }{record.Role, redact(text)}
+	key, err := json.Marshal(payload)
 	if err != nil {
 		return err
+	}
+	if !mandatory && len(key)+1 > available && available >= 512 {
+		// JSON can encode one byte as six ASCII bytes (\uXXXX). Keep both
+		// ends of an oversized observation and reserve its envelope overhead.
+		payload.Text = sourceExcerpt(payload.Text, (available-64)/6)
+		key, err = json.Marshal(payload)
+		if err != nil {
+			return err
+		}
 	}
 	digest := sha256.Sum256(key)
 	encoded := key
@@ -49,7 +67,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 		}
 	}
 	if mandatory && b.required+size > b.limit {
-		return fmt.Errorf("compaction user instructions exceed max_input_bytes; previous memory and original history retained; increase compaction.max_input_bytes")
+		return fmt.Errorf("compaction user instructions exceed the available summary input budget; previous memory and original history retained; increase model context or adjust compaction input/output limits")
 	}
 	if !mandatory && size > b.limit-b.required {
 		b.omitted++
@@ -99,6 +117,20 @@ func (b *sourceBuffer) packet() []json.RawMessage {
 		out = append(out, entry.Value.(sourceEntry).encoded)
 	}
 	return out
+}
+
+func (b *sourceBuffer) refit(limit int, redact func(string) string) (*sourceBuffer, error) {
+	next := &sourceBuffer{limit: limit, omitted: b.omitted}
+	for entry := b.entries.Front(); entry != nil; entry = entry.Next() {
+		var record Record
+		if err := json.Unmarshal(entry.Value.(sourceEntry).encoded, &record); err != nil {
+			return nil, err
+		}
+		if err := next.add(record, redact); err != nil {
+			return nil, err
+		}
+	}
+	return next, nil
 }
 
 func sourceExcerpt(text string, limit int) string {

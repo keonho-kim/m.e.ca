@@ -60,10 +60,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	if err != nil {
 		return false, err
 	}
-	window := c.ContextWindow
-	if window == 0 {
-		window = 262144
-	}
+	window := c.contextWindow()
 	reserve := min(int(c.Settings.ReserveTokens), max(1, window/4))
 	threshold := max(1, window-reserve)
 	if !force && mark.Tokens < int64(threshold) {
@@ -74,7 +71,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 			return false, err
 		}
 	}
-	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, min(c.Settings.KeepRecentTokens, window/4)*3)
+	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, min(c.Settings.KeepRecentTokens, window/4)*int(bytesPerToken))
 	if err != nil {
 		return false, err
 	}
@@ -85,15 +82,12 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 		return false, nil
 	}
 	next := c.memory
-	base, err := c.summaryMessages(c.Redact(next.Markdown), nil, 0)
+	previous := c.Redact(next.Markdown)
+	budget, err := c.budget(previous)
 	if err != nil {
 		return false, err
 	}
-	remaining := c.Settings.MaxInputBytes - 256
-	for _, message := range base {
-		remaining -= len(message.Content)
-	}
-	sources := sourceBuffer{limit: remaining}
+	sources := sourceBuffer{limit: budget.sourceBytes}
 	cursor := next.Through
 	for cursor < boundary {
 		if err := ctx.Err(); err != nil {
@@ -116,7 +110,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	if sources.entries.Len() == 0 {
 		return false, nil
 	}
-	next.Markdown, err = c.summarize(ctx, generate, c.Redact(next.Markdown), sources.packet(), sources.omitted)
+	next.Markdown, err = c.summarizeSources(ctx, generate, previous, &sources, budget)
 	if err != nil {
 		return false, err
 	}

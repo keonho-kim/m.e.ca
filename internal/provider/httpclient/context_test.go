@@ -7,6 +7,7 @@ package httpclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -54,6 +55,10 @@ func TestContextCapacity(t *testing.T) {
 			if count == 100 {
 				if err == nil || calls != 0 || !strings.Contains(err.Error(), "context") {
 					t.Fatalf("overflow calls=%d err=%v", calls, err)
+				}
+				var capacity *modelapi.ContextLimitError
+				if !errors.As(err, &capacity) || capacity.Input != count || capacity.Capacity != 100 {
+					t.Fatal("tokenizer overflow cannot enter runtime compaction recovery:", err)
 				}
 			} else if err != nil || calls != 1 {
 				t.Fatalf("calls=%d err=%v", calls, err)

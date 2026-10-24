@@ -38,11 +38,10 @@ func ApprovalPreview(proposal tool.Approval, lang locale.Language) string {
 	if proposal.Diff {
 		return proposal.Preview
 	}
-	// File previews have a fixed authored prefix followed by literal paths.
-	for _, prefix := range []string{"Move to ", "Create directories (including missing parents):\n"} {
-		if tail, ok := strings.CutPrefix(proposal.Preview, prefix); ok {
-			return lang.Text(prefix) + tail
-		}
+	// Directory previews have a fixed authored prefix followed by literal paths.
+	const prefix = "Create directories (including missing parents):\n"
+	if tail, ok := strings.CutPrefix(proposal.Preview, prefix); ok {
+		return lang.Text(prefix) + tail
 	}
 	if proposal.Preview == "All requested directories already exist." {
 		return lang.Text(proposal.Preview)

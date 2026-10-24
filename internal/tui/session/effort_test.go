@@ -32,7 +32,7 @@ func TestEffortSelectionPersistsOnlyAfterConfirmation(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.busy || a.selection.Effort() != "medium" || *a.selection.Thinking {
+	if a.page != "chat" || a.worker.active() || a.selection.Effort() != "medium" || *a.selection.Thinking {
 		t.Fatalf("saved=%+v status=%s", a.selection, a.status)
 	}
 	stored, err := a.opts.Store.Selection(a.ctx, a.opts.Session.ID)

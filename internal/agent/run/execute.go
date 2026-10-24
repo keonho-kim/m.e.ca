@@ -12,10 +12,10 @@ import (
 
 var errRuntimeRecord = errors.New("runtime observation could not be committed or delivered")
 
-func (s *execution) execute(ctx context.Context, call toolapi.Call, approve Approver, emit func(Event) error) (toolapi.Result, error) {
-	ready, outcome, err := s.prepareExecution(ctx, call, approve, emit)
+func (s *execution) execute(ctx context.Context, v validatedCall, approve Approver, emit func(Event) error) (toolapi.Result, error) {
+	ready, outcome, err := s.prepareExecution(ctx, v.call, approve, emit)
 	if err != nil {
-		return outcome, errors.Join(err, s.recordRejected(ctx, call, outcome, err, emit))
+		return outcome, errors.Join(err, s.recordRejected(ctx, v, outcome, err, emit))
 	}
 	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 	defer cancel()
@@ -23,7 +23,7 @@ func (s *execution) execute(ctx context.Context, call toolapi.Call, approve Appr
 		return outcome, errors.Join(errRuntimeRecord, err)
 	}
 	outcome, err = ready.operation.Execute(ctx, ready.approved)
-	return s.recordExecution(ctx, ready, outcome, err, emit)
+	return s.recordExecution(ctx, v, ready, outcome, err, emit)
 }
 func (s *execution) startExecution(ctx context.Context, ready *readyExecution, emit func(Event) error) error {
 	s.checkpoint.Phase = "execution"

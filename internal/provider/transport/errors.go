@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 type responseError struct {
@@ -40,6 +42,7 @@ func ParseError(status int, body []byte, after string) error {
 		Error   json.RawMessage `json:"error"`
 		Message string          `json:"message"`
 		Detail  json.RawMessage `json:"detail"`
+		Code    json.RawMessage `json:"code"`
 	}
 	if json.Unmarshal(body, &envelope) == nil {
 		if len(envelope.Error) == 0 {
@@ -63,10 +66,17 @@ func ParseError(status int, body []byte, after string) error {
 			}
 		}
 	}
+	if e.code == "" {
+		_ = json.Unmarshal(envelope.Code, &e.code)
+	}
 	if seconds, err := strconv.Atoi(after); err == nil && seconds > 0 {
 		e.retryAfter = time.Duration(min(seconds, 30)) * time.Second
 	} else if date, err := http.ParseTime(after); err == nil {
 		e.retryAfter = min(30*time.Second, max(0, time.Until(date)))
+	}
+	switch e.code {
+	case "context_length_exceeded", "context_window_exceeded", "max_context_length_exceeded":
+		return &modelapi.ContextLimitError{Cause: e}
 	}
 	return e
 }
@@ -94,14 +104,4 @@ func (c *Client) Redact(text string) string {
 		return strings.ReplaceAll(text, c.key, "[REDACTED]")
 	}
 	return text
-}
-
-// ContextLimit identifies explicit capacity failures without guessing from prose.
-func (e *responseError) ContextLimit() bool {
-	switch e.code {
-	case "context_length_exceeded", "context_window_exceeded", "max_context_length_exceeded":
-		return true
-	default:
-		return false
-	}
 }

@@ -15,7 +15,6 @@ var approval = []translation{
 	{"", "Runtime wrapper operands may change the executed command", "실행 중 인자 개수가 달라져 실행할 명령이 바뀔 수 있습니다"},
 	{"", "Working directory: ", "작업 경로: "},
 	{"", "Targets:", "대상 경로:"},
-	{"", "Move to ", "이동할 경로: "},
 	{"", "Create directories (including missing parents):\n", "생성할 폴더 (없는 상위 폴더 포함):\n"},
 	{"", "All requested directories already exist.", "요청한 폴더가 모두 존재합니다."},
 	{"", "Move options require inspection", "이동 옵션의 동작을 확인할 수 없어 검토가 필요합니다"},

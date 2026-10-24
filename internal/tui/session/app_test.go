@@ -73,7 +73,7 @@ func fixture(t *testing.T) *app {
 func TestAtInputRemainsLiteral(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "read @src/main.go")
-	if a.editor.String() != "read @src/main.go" || a.commandOpen || a.busy {
+	if a.editor.String() != "read @src/main.go" || a.commandOpen || a.worker.active() {
 		t.Fatal("@ triggered completion")
 	}
 }

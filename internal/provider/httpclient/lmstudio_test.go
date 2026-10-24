@@ -65,7 +65,7 @@ func TestLMStudioResponses(t *testing.T) {
 	}
 }
 
-func TestLMStudioIncompleteRetriesWithUsage(t *testing.T) {
+func TestLMStudioIncompleteReturnsUsageForCorrection(t *testing.T) {
 	calls := 0
 	c := mockClient(t, connection.LMStudio, func(w http.ResponseWriter, r *http.Request) {
 		calls++
@@ -91,7 +91,7 @@ func TestLMStudioIncompleteRetriesWithUsage(t *testing.T) {
 		}
 		return nil
 	})
-	if err == nil || calls != 3 || usages != 3 || !strings.Contains(err.Error(), "max_output_tokens") {
+	if err == nil || calls != 1 || usages != 1 || retries != 0 || !strings.Contains(err.Error(), "max_output_tokens") {
 		t.Fatalf("calls=%d usages=%d err=%v", calls, usages, err)
 	}
 }

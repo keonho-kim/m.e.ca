@@ -98,11 +98,11 @@ func TestFileComposerEnterSendsAfterPendingSelections(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
 	a.editor.Set("review selected folders")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "files" || a.busy || !a.fileSendConfirm {
+	if a.page != "files" || a.worker.active() || !a.fileSendConfirm {
 		t.Fatal("Enter did not ask for confirmation before sending")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.busy {
+	if a.page != "chat" || a.worker.active() {
 		t.Fatal("Enter did not return to chat and wait for selection persistence")
 	}
 	release()
@@ -123,7 +123,7 @@ func TestFileComposerEnterSendsAfterPendingSelections(t *testing.T) {
 func TestFileComposerQuitTextIsAMessage(t *testing.T) {
 	a := fixture(t)
 	a.page, a.browser.Input = "files", true
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.steering = make(chan string, 1)
 	a.editor.Set(":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

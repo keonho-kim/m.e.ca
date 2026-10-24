@@ -20,7 +20,7 @@ import (
 func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	a := fixture(t)
 	a.language = locale.English
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.tokenTotal = modelapi.TokenUsage{Input: 9999, Output: 8888}
 	a.receiveRuntime(&run.Event{Kind: "response", Text: "Finished the requested work."})
 	a.receiveRuntime(&run.Event{Statistics: &run.Statistics{ElapsedMillis: 3723000, GenerationMillis: 4000, Usage: &modelapi.TokenUsage{Input: 120, Output: 20}}})
@@ -73,7 +73,7 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 
 func TestRunSummaryFollowsInterruptedDraft(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive, a.stopRequested = true, true, true
+	a.worker = workerAgentStopping
 	a.receiveRuntime(&run.Event{Kind: "stream", Text: "partial answer", Thinking: "partial reasoning"})
 	a.receiveRuntime(&run.Event{Statistics: &run.Statistics{ElapsedMillis: 1000}})
 	a.receive(notice{Done: true, RunStatus: run.Interrupted, Err: context.Canceled})

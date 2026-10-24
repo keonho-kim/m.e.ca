@@ -14,11 +14,6 @@ import (
 	"testing"
 )
 
-type capacityFailure struct{}
-
-func (capacityFailure) Error() string      { return "context capacity exceeded" }
-func (capacityFailure) ContextLimit() bool { return true }
-
 type capacityGenerator struct {
 	base          *generator
 	failed        bool
@@ -36,7 +31,7 @@ func (g *capacityGenerator) Generate(ctx context.Context, r modelapi.Request, em
 	}
 	if len(g.base.requests) == 1 && !g.failed {
 		g.failed = true
-		return capacityFailure{}
+		return &modelapi.ContextLimitError{}
 	}
 	return g.base.Generate(ctx, r, emit)
 }

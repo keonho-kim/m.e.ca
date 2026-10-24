@@ -8,7 +8,7 @@ import "testing"
 
 func drainTask(t *testing.T, a *app, approve bool) {
 	t.Helper()
-	for a.busy {
+	for a.worker.active() {
 		select {
 		case n := <-a.events:
 			a.receive(n)

@@ -16,7 +16,7 @@ func (f Formatter) arguments(call tool.Call) string {
 		return indentTool(f.Language.Text("인자 형식 확인 필요"))
 	}
 	var text strings.Builder
-	for _, field := range []struct{ key, label string }{{"path", "경로"}, {"destination", "이동할 경로"}, {"command", "명령"}} {
+	for _, field := range []struct{ key, label string }{{"path", "경로"}, {"command", "명령"}} {
 		var value string
 		if json.Unmarshal(fields[field.key], &value) == nil {
 			text.WriteString(indentTool(f.Language.Text(field.label) + ": " + f.Redact(value)))

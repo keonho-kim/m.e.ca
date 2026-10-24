@@ -21,11 +21,11 @@ func TestModelHintsFilterSelectAndClose(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if f.name.String() != "Qwen-3.8-180B" || f.editing || a.busy || a.selection.Model != "" {
+	if f.name.String() != "Qwen-3.8-180B" || f.editing || a.worker.active() || a.selection.Model != "" {
 		t.Fatal("Tab did not only fill the model field")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if !f.confirm || a.busy {
+	if !f.confirm || a.worker.active() {
 		t.Fatal("Enter should ask to save rather than connect")
 	}
 }
@@ -40,7 +40,7 @@ func TestModelHintsPasteDoesNotSave(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "custom/model", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.pasteBoundary(false)
-	if a.busy || f.confirm || f.name.String() != "custom/model" || len(f.hints) != 0 {
+	if a.worker.active() || f.confirm || f.name.String() != "custom/model" || len(f.hints) != 0 {
 		t.Fatal("paste submitted settings")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))

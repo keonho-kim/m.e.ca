@@ -101,10 +101,10 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 		})
 	}
 	a := fixture(t)
-	a.busy = true
+	a.worker = workerSetup
 	typeInput(a, "!mo")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "chat" || !a.busy || a.editor.String() != "!model" {
+	if a.page != "chat" || !a.worker.active() || a.editor.String() != "!model" {
 		t.Fatal("command selection bypassed active-task guard")
 	}
 }

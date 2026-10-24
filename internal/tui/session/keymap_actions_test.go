@@ -27,7 +27,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 		t.Run(page, func(t *testing.T) {
 			a := fixture(t)
 			a.page, a.browser.Input = page, true
-			a.busy, a.agentActive = true, true
+			a.worker = workerAgent
 			a.steering = make(chan string, 1)
 			a.editor.Set("Run this after finishing")
 			labels := keymapLabels(t, a)
@@ -72,11 +72,13 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 func TestKeymapActionsStopAndBlockedCommands(t *testing.T) {
 	for _, text := range []string{"continue", "!model", "!unknown", "!model extra"} {
 		a := fixture(t)
-		a.busy, a.agentActive = true, true
-		a.stopRequested = text == "continue"
+		a.worker = workerAgent
+		if text == "continue" {
+			a.worker.stop()
+		}
 		a.editor.Set(text)
 		labels := keymapLabels(t, a)
-		if labels["Enter"] != "" || labels["Tab"] != "" || a.stopRequested && labels["Esc"] != "" {
+		if labels["Enter"] != "" || labels["Tab"] != "" || a.worker.stopping() && labels["Esc"] != "" {
 			t.Fatalf("%s: %v", text, labels)
 		}
 	}
@@ -101,7 +103,7 @@ func TestKeymapActionsFieldReturn(t *testing.T) {
 
 func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
 	a := fixture(t)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.editor.Set(":q")
 	if labels := keymapLabels(t, a); labels["Enter"] != "종료 확인" || labels["Tab"] != "" {
 		t.Fatal(labels)
@@ -156,7 +158,7 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 func TestKeymapActionsFooterOrder(t *testing.T) {
 	a := fixture(t)
 	a.screen.SetSize(160, 24)
-	a.busy, a.agentActive = true, true
+	a.worker = workerAgent
 	a.editor.Set("direction")
 	a.render()
 	footer := screenLine(a.screen, 23, 160)

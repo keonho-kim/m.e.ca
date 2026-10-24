@@ -39,16 +39,13 @@ func (f Formatter) toolSummary(event run.Event) string {
 	}
 	text := "\n  " + f.Language.Text(event.Call.Name) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
 	var args struct {
-		Path, Destination, Command string
-		Paths                      []string
+		Path, Command string
+		Paths         []string
 	}
 	if json.Unmarshal(event.Call.Arguments, &args) == nil {
 		target := args.Path
 		if args.Command != "" {
 			target = args.Command
-		}
-		if args.Destination != "" {
-			target += " → " + args.Destination
 		}
 		if len(args.Paths) > 0 {
 			target = args.Paths[0]

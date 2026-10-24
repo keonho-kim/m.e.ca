@@ -18,7 +18,7 @@ func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 		a := fixture(t)
 		a.language = lang
 		a.screen.SetSize(80, 24)
-		a.busy, a.agentActive = true, true
+		a.worker = workerAgent
 		a.output.AppendBlock(viewport.Block{Summary: "summary", Details: "details"})
 		a.render()
 		if a.footerRows != 3 {

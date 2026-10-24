@@ -10,9 +10,11 @@ import (
 	"errors"
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"time"
 )
 
-func (s *execution) recordRejected(ctx context.Context, call toolapi.Call, outcome toolapi.Result, cause error, emit func(Event) error) error {
+func (s *execution) recordRejected(ctx context.Context, v validatedCall, outcome toolapi.Result, cause error, emit func(Event) error) error {
+	call := v.call
 	failure := outcome.Failure
 	if failure == nil {
 		failure = toolapi.FailureOf(cause)
@@ -32,8 +34,11 @@ func (s *execution) recordRejected(ctx context.Context, call toolapi.Call, outco
 		return err
 	}
 	e := Event{Kind: "tool_failed", CallID: call.ID, Call: &call, Text: s.runner.Redact(failure.Error()), Output: body}
-	if err := s.record(context.WithoutCancel(ctx), e); err != nil {
-		return err
+	outcome.Failed, outcome.Failure = true, failure
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := s.acceptResult(recordCtx, v, outcome, cause, e); err != nil {
+		return errors.Join(errRuntimeRecord, err)
 	}
 	return emit(e)
 }
@@ -47,7 +52,7 @@ func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, index
 	var result error
 	for i, call := range calls {
 		if i == index {
-			result = errors.Join(result, s.recordRejected(ctx, v.call, outcome, cause, s.emit), s.acceptResult(context.WithoutCancel(ctx), v, outcome, cause))
+			result = errors.Join(result, s.recordRejected(ctx, v, outcome, cause, s.emit))
 		} else {
 			result = errors.Join(result, s.skipCalls(ctx, []validatedCall{call}, "Blocked by "+v.call.ID+" ("+v.call.Name+"); this call did not execute."))
 		}

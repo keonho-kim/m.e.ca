@@ -31,11 +31,8 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 		if err != nil {
 			return err
 		}
-		if err := s.save(ctx, modelapi.Message{Role: "tool", Content: string(body), ToolCallID: call.ID, ToolName: call.Name}); err != nil {
-			return err
-		}
 		event := Event{Kind: "tool_failed", Text: "Not executed: " + s.runner.Redact(detail), CallID: call.ID, Call: &call, Output: body}
-		if err := s.record(ctx, event); err != nil {
+		if err := s.save(ctx, modelapi.Message{Role: "tool", Content: string(body), ToolCallID: call.ID, ToolName: call.Name}, event); err != nil {
 			return err
 		}
 		if err := s.emit(event); err != nil {

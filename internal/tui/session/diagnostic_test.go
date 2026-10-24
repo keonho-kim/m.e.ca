@@ -35,7 +35,7 @@ func TestExplicitDiagnostic(t *testing.T) {
 	a.selection = connection.Selection{Connection: conn, Model: "arbitrary-alias"}
 	a.diagnoseModel()
 	drainTask(t, a, false)
-	if posts.Load() != 1 || a.busy || a.selection.Model != "arbitrary-alias" || a.status != "모델 연결 진단을 통과했습니다" {
+	if posts.Load() != 1 || a.worker.active() || a.selection.Model != "arbitrary-alias" || a.status != "모델 연결 진단을 통과했습니다" {
 		t.Fatalf("posts=%d selection=%+v status=%s", posts.Load(), a.selection, a.status)
 	}
 }

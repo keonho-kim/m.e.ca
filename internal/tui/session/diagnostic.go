@@ -10,13 +10,13 @@ import (
 )
 
 func (a *app) diagnoseModel() {
-	if a.busy || a.client == nil {
+	if a.worker.active() || a.client == nil {
 		a.status = a.language.Text("모델을 선택하고 현재 작업을 마친 뒤 진단하세요")
 		return
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
-	a.busy = true
+	a.worker = workerSetup
 	a.startElapsed()
 	if a.modelForm == nil {
 		a.page = "chat"

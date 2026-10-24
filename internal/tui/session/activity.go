@@ -10,15 +10,15 @@ import (
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.busy, Compressing: a.compressionTicks != nil, Dots: a.compressionDots}
+	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressionTicks != nil, Dots: a.compressionDots}
 }
 func (a *app) interruptTask() {
-	if !a.agentActive || !a.busy || a.taskCancel == nil {
+	if !a.worker.agent() || !a.worker.active() || a.taskCancel == nil {
 		return
 	}
 	a.restorePending()
 	a.cancelDirectory()
-	a.stopRequested = true
+	a.worker.stop()
 	a.stopElapsed()
 	a.taskCancel()
 	a.stopCompression()
@@ -30,7 +30,7 @@ func (a *app) interruptTask() {
 	a.stopNotice = a.language.Text("작업을 중지하고 정리하고 있습니다")
 }
 func (a *app) startCompression() {
-	if a.stopRequested || a.compressionTimer != nil {
+	if a.worker.stopping() || a.compressionTimer != nil {
 		return
 	}
 	a.compressionDots = 1

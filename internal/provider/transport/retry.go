@@ -1,5 +1,5 @@
-// Purpose: Recover failed provider attempts with bounded backoff and explicit final errors.
-// Pattern: Sequential retry policy.
+// Purpose: Retry transient provider failures and return permanent failures for request correction.
+// Pattern: Pure retry classification with sequential I/O recovery.
 // Usage: Generation and metadata transport share attempts without nesting retries.
 // Related: internal/provider/protocol/request.go, internal/provider/transport/transport.go.
 package transport
@@ -46,7 +46,7 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 		if errors.As(err, &consumer) {
 			return consumer.Cause
 		}
-		if attempt == maxAttempts {
+		if attempt == maxAttempts || !retryable(err) {
 			return &recoveryError{attempt, err, c.FailureReason(err)}
 		}
 		// Release potentially stale connections before issuing the next request.
@@ -70,4 +70,18 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 		}
 	}
 	return nil
+}
+
+func retryable(err error) bool {
+	var capacity *modelapi.ContextLimitError
+	if errors.As(err, &capacity) {
+		return false
+	}
+	var response *responseError
+	if errors.As(err, &response) {
+		return response.status == 0 || response.status == 408 || response.status == 425 || response.status == 429 || response.status >= 500
+	}
+	var malformed *modelapi.ToolCallError
+	var truncated *modelapi.OutputLimitError
+	return !errors.As(err, &malformed) && !errors.As(err, &truncated)
 }

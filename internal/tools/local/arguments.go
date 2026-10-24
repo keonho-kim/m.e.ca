@@ -19,7 +19,6 @@ type arguments struct {
 	Path         string          `json:"path"`
 	Content      string          `json:"content"`
 	Edits        []textedit.Edit `json:"edits"`
-	Destination  string          `json:"destination"`
 	Command      string          `json:"command"`
 }
 
@@ -28,7 +27,7 @@ func parseArguments(call toolapi.Call) (specification, arguments, error) {
 		return specification{}, arguments{}, err
 	}
 	var spec specification
-	for _, candidate := range specifications() {
+	for _, candidate := range catalog {
 		if candidate.name == call.Name {
 			spec = candidate
 			break

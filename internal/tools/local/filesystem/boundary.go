@@ -70,15 +70,3 @@ func (b *Boundary) Check() error {
 	}
 	return nil
 }
-
-func (b *Boundary) Movable(path string) error {
-	if Within(path, b.project) {
-		return fmt.Errorf("cannot move the project root or its ancestor: %s", path)
-	}
-	for _, secret := range b.protected {
-		if Within(path, secret) {
-			return fmt.Errorf("cannot move protected path ancestor: %s", path)
-		}
-	}
-	return nil
-}

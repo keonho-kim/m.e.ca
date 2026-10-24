@@ -12,7 +12,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error) error {
+func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error, events ...Event) error {
 	result, failed := string(outcome.Content), outcome.Failed
 	if errors.Is(toolErr, errRuntimeRecord) {
 		if outcome.Started {
@@ -47,7 +47,7 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		return err
 	}
 	if errors.Is(toolErr, errApprovalDenied) {
-		return errors.Join(toolErr, s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: v.call.ID, ToolName: v.call.Name}))
+		return s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 	}
 	s.checkpoint.Phase = "observation"
 	s.checkpoint.Arguments = nil
@@ -64,5 +64,6 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	if err != nil {
 		return err
 	}
-	return s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: v.call.ID, ToolName: v.call.Name}, event)
+	events = append(events, event)
+	return s.save(ctx, modelapi.Message{Role: "tool", Content: result, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 }

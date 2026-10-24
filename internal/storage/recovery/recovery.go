@@ -33,13 +33,12 @@ func Restore(ctx context.Context, s Store, session string) error {
 			if _, ok := pending[call.ID]; !ok {
 				continue
 			}
-			if err = s.AppendMessage(ctx, session, modelapi.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"error":"operation interrupted; effects were not replayed; inspect current state before retrying"}`}); err != nil {
+			message := modelapi.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"error":"operation interrupted; effects were not replayed; inspect current state before retrying"}`}
+			event := run.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}
+			if err = s.Commit(ctx, session, []run.JournalRecord{{Message: &message}, {Event: &event}}); err != nil {
 				return err
 			}
 			delete(pending, call.ID)
-			if err = s.RecordEvent(ctx, session, run.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
