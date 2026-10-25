@@ -4,7 +4,7 @@
 
 ## 제품과 실행
 
-- MECA는 Minimal, Essential, Coding Agent를 뜻하는 터미널 코딩 에이전트다. Go 단일 모듈과 실행 파일 `meca`를 사용하며 로컬 상태 경로는 `~/.meca`다. Go 모듈 경로는 실제 저장소인 `github.com/keonho-kim/meca`를 따른다.
+- M.E.CA(MECA)는 Minimal Essentials Coding Agent를 뜻하는 터미널 코딩 에이전트다. Go 단일 모듈과 실행 파일 `meca`를 사용하며 로컬 상태 경로는 `~/.meca`다. 소스 저장소는 `github.com/keonho-kim/m.e.ca`이며 Go 모듈 경로는 go.mod에 선언한 `github.com/keonho-kim/meca`다.
 - Linux와 macOS를 대상으로 한다. Go 도구 체인과 빌드·설치 명령은 [README](README.md#직접-빌드하기)를 따른다.
 - `meca`는 현재 폴더, `meca <path>`는 지정 폴더를 프로젝트로 사용한다. 시작 목록은 현재 프로젝트의 대화와 맨 위의 새 대화를 표시한다.
 - `meca resume`은 모든 프로젝트의 대화를 보여준다. 기존 대화는 저장된 프로젝트 경로로 복원한다.
@@ -114,7 +114,7 @@ Go 빌드는 컴파일만 한다. ./install.sh 또는 meca install이 ~/.local/b
 
 ## 구현과 검증
 
-단일 Go 모듈의 cmd/meca가 합성 루트이며 제품 기능은 internal 아래에 배치한다. 상세 패키지 책임·의존성·검증 절차는 [개발 가이드](docs/development.md), 개발 원칙과 큰 소스 구조는 [AGENTS.md](AGENTS.md)가 소유한다.
+단일 Go 모듈의 cmd/meca가 합성 루트이며 제품 기능은 internal 아래에 배치한다. 패키지 책임·의존성·개발 지침·검증 절차는 [개발 가이드](docs/development.md)를 따른다.
 
 자동 검사·모의 서버·네이티브 OS 실행·실모델 E2E는 서로 다른 근거다. 빌드 성공이나 연결 진단을 작업 완수·모델 품질·모든 플랫폼 지원으로 해석하지 않는다. 실제 실행한 명령과 결과만 보고하며 미검증 환경을 구분한다.
 

@@ -10,6 +10,16 @@
 
 연결 준비는 메타데이터를 조회하고 클라이언트를 구성한다. 모델 응답 생성은 !model → 연결 진단 또는 meca --diagnose에서 사용자가 요청할 때 수행한다. 메타데이터 조회 실패는 원인을 남기고 일반 연결을 준비하며 사용자 취소는 즉시 전파한다.
 
+## OpenRouter 연결
+
+별도 로컬 모델 서버 없이 OpenRouter API를 연결할 수 있다. [OpenRouter API 안내](https://openrouter.ai/docs/quickstart)에 따라 발급한 API Key를 준비한다.
+
+1. !model에서 Provider를 OpenRouter로 선택한다. Base URL 기본값은 `https://openrouter.ai/api/v1`이며 `/chat/completions`를 덧붙이지 않는다. API Key 행에서 OpenRouter 키를 입력한다.
+2. 모델명 행의 →로 서버 모델 목록을 연다. 글자를 입력해 대소문자 구분 없이 부분 검색하고 ↑↓로 선택한 뒤 Tab으로 ID를 채운다. 코딩 작업에는 [native 도구 호출](#native-tool-calling)을 지원하는 모델을 선택한다. 모델 ID를 알고 있으면 직접 입력할 수도 있다.
+3. 필요한 Thinking·추론 강도와 저장 범위를 선택한다. 모든 대화의 기본값으로 저장하면 새 세션에서도 연결을 재사용한다. Enter로 전체 설정의 저장 확인을 열고 y로 확정한다. 키는 OS 자격 증명 저장소에 보관하며 설정·DB에는 참조만 남긴다.
+
+요청은 API Key를 Bearer 인증으로 전송한다. OpenRouter를 통한 요청은 해당 서비스와 실제 추론 공급자의 데이터 처리 정책을 따른다. [공급자별 보관 정책](https://openrouter.ai/docs/guides/privacy/provider-logging)을 확인한다. 비용 집계는 [OpenRouter 실제 비용](#openrouter-실제-비용)을 따른다.
+
 ## Thinking과 추론 강도
 
 !model은 연결·추론 설정과 적용 범위를 같은 화면에서 편집한다. ↑↓로 행 이동, →로 입력 또는 다음 값 선택, ←로 이전 값 선택을 한다. Enter의 저장 확인에서 y는 저장 후 채팅, n은 취소 후 채팅, Esc는 편집 화면으로 복귀한다. 세션·전역 설정과 인증정보는 y 전까지 저장하지 않는다. 전역 저장은 config.toml의 model 연결과 Thinking·강도 선택을 함께 보관한다.
@@ -29,7 +39,7 @@ vLLM·SGLang의 강도 후보는 minimal·low·medium·high·xhigh·max이다. �
 
 Ollama·LM Studio에서는 서버가 공개한 선택지를 우선한다. OFF를 제공하지 않으면 ON 전용으로 표시한다. 추론 출력 수신 자체는 ON/OFF 제어 지원의 증거가 아니다.
 
-OpenRouter는 API Key를 Bearer 인증으로 보내며 기본 주소는 https://openrouter.ai/api/v1이다. 모델이 공개한 추론 선택지를 사용하고 mandatory=true이면 OFF를 차단한다. supported_efforts가 null이면 게이트웨이의 강도를 제공하고 필드가 생략되면 강도 선택을 제공하지 않는다. 모델 응답의 reasoning_details는 서명·암호화 데이터를 포함해 순서대로 보존하고 동일 연결·모델의 후속 도구 대화에 재전송한다. 중단된 응답의 상태는 재사용하지 않는다. 표시 가능한 추론만 Thinking으로 보여주며 동일한 reasoning 문자열을 중복 표시하지 않는다. 사용량은 서버가 실제 반환한 prompt_tokens·completion_tokens를 사용한다. [OpenRouter 추론 API](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [모델 API](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties), [스트리밍 API](https://openrouter.ai/docs/api_reference/streaming).
+OpenRouter는 모델이 공개한 추론 선택지를 사용하고 mandatory=true이면 OFF를 차단한다. supported_efforts가 null이면 게이트웨이의 강도를 제공하고 필드가 생략되면 강도 선택을 제공하지 않는다. 모델 응답의 reasoning_details는 서명·암호화 데이터를 포함해 순서대로 보존하고 동일 연결·모델의 후속 도구 대화에 재전송한다. 중단된 응답의 상태는 재사용하지 않는다. 표시 가능한 추론만 Thinking으로 보여주며 동일한 reasoning 문자열을 중복 표시하지 않는다. 사용량은 서버가 실제 반환한 prompt_tokens·completion_tokens를 사용한다. [OpenRouter 추론 API](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [모델 API](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties), [스트리밍 API](https://openrouter.ai/docs/api_reference/streaming).
 
 API 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_outputs/), [vLLM 요청 형식](https://github.com/vllm-project/vllm/blob/main/vllm/entrypoints/openai/chat_completion/protocol.py), [SGLang 요청 형식](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/entrypoints/openai/protocol.py), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
 

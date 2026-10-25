@@ -3,6 +3,9 @@
 # Usage: Read by Git when inspecting this project.
 # Related: go.mod, README.md.
 
+# Local agent instructions
+AGENTS.md
+
 # Go build and release output
 /bin/
 /dist/
