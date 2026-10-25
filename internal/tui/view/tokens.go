@@ -1,4 +1,4 @@
-// Purpose: Fit token counts beside run activity while keeping compaction visible in narrow headers.
+// Purpose: Fit tokens, optional OpenRouter cost and throughput beside activity without hiding compression.
 // Pattern: Terminal renderer.
 // Usage: Chat, menu and file views share topLine while retaining their own content layout.
 // Related: internal/tui/view/chat.go, internal/tui/view/menu.go, internal/tui/view/files.go.
@@ -24,6 +24,12 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
 		Text(screen, 0, 0, width, label, tcell.StyleDefault.Bold(true))
 		return
+	}
+	if activity.ShowCost {
+		cost := " · " + activity.Language.Cost(usage.Cost)
+		if uniseg.StringWidth(tokens+cost+label)+1 <= width {
+			tokens += cost
+		}
 	}
 	if uniseg.StringWidth(tokens+rate+label)+1 <= width {
 		tokens += rate

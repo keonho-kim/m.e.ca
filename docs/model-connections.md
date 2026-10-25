@@ -33,6 +33,10 @@ OpenRouter는 API Key를 Bearer 인증으로 보내며 기본 주소는 https://
 
 API 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_outputs/), [vLLM 요청 형식](https://github.com/vllm-project/vllm/blob/main/vllm/entrypoints/openai/chat_completion/protocol.py), [SGLang 요청 형식](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/entrypoints/openai/protocol.py), [Ollama Thinking](https://docs.ollama.com/capabilities/thinking), [LM Studio Responses](https://lmstudio.ai/docs/developer/openai-compat/responses).
 
+## OpenRouter 실제 비용
+
+OpenRouter 응답의 usage.cost를 USD 비용으로 수집한다. 스트리밍에서는 마지막 SSE usage, 비스트리밍에서는 전체 응답의 usage를 사용한다. 0과 미제공을 구분하고 음수·유한하지 않은 금액은 거절한다. 다른 Provider가 같은 이름의 필드를 보내더라도 비용으로 수집하지 않는다. 호출 중에는 최신 스냅샷으로 교체하고 종료·재시도·취소 경계에서 마지막 보고값을 한 번 저장한다. 상단 세션 합계와 작업 종료 합계는 재시도·압축의 수신 비용을 포함하고 진단을 제외한다. 미제공 비용을 단가로 계산하거나 generation API로 보충하지 않는다. [OpenRouter Usage Accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting), [화면 표시](usage.md#화면과-사용량).
+
 ## 연결 진단
 
 진단은 일반 응답의 내용·완료와 가능한 ON/OFF 제어를 검사한다. ON에서는 분리된 추론과 완료된 답변이 필요하며, 같은 추론 문제의 OFF 요청에서는 추론이 없어야 한다. 서버가 제어를 무시하거나 요청이 실패하면 구체적인 오류를 반환한다. 명시적으로 선택한 강도도 별도 요청으로 확인한다.

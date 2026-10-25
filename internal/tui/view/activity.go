@@ -16,6 +16,7 @@ type Activity struct {
 	Elapsed              time.Duration
 	TokensPerSecond      *float64
 	Running, Compressing bool
+	ShowCost             bool
 	Dots                 int
 }
 

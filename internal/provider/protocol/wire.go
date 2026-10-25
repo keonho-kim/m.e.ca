@@ -55,8 +55,9 @@ type streamOptions struct {
 }
 
 type wireUsage struct {
-	Input  *int64 `json:"prompt_tokens"`
-	Output *int64 `json:"completion_tokens"`
+	Input  *int64   `json:"prompt_tokens"`
+	Output *int64   `json:"completion_tokens"`
+	Cost   *float64 `json:"cost"`
 }
 
 type wireChunk struct {

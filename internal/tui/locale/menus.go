@@ -53,6 +53,7 @@ var menus = []translation{
 	{"", "Compress Memory", "메모리 압축 중"},
 	{"", "INPUT", "입력"},
 	{"", "OUTPUT", "출력"},
+	{"", "TOTAL COST", "총 비용"},
 	{"", "TPS", "초당 토큰"},
 	{"", "No matches", "검색 결과 없음"},
 	{"", "Choose conversation", "대화 선택"},

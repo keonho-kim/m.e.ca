@@ -5,12 +5,13 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"time"
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressionTicks != nil, Dots: a.compressionDots}
+	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressionTicks != nil, Dots: a.compressionDots, ShowCost: a.selection.Connection.Kind == connection.OpenRouter}
 }
 func (a *app) interruptTask() {
 	if !a.worker.agent() || !a.worker.active() || a.taskCancel == nil {

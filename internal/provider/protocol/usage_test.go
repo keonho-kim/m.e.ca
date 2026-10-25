@@ -49,3 +49,14 @@ func TestTokenUsageOnErrorIsDeliveredBeforeRetry(t *testing.T) {
 		t.Fatalf("error usage=%+v err=%v", usage, err)
 	}
 }
+
+func TestOpenRouterRejectsNegativeCost(t *testing.T) {
+	state := streamState{provider: connection.OpenRouter, streaming: true}
+	err := state.consume([]byte(`{"choices":[],"usage":{"prompt_tokens":12,"completion_tokens":3,"cost":-0.1}}`), false, func(modelapi.Event) error {
+		t.Fatal("invalid charge was emitted")
+		return nil
+	})
+	if err == nil {
+		t.Fatal("negative charge was accepted")
+	}
+}

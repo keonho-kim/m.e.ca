@@ -47,6 +47,12 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 	var observed *modelapi.TokenUsage
 	if input != nil && output != nil {
 		state.usage = &modelapi.TokenUsage{Input: *input, Output: *output}
+		if state.provider == modelconn.OpenRouter && chunk.Usage != nil {
+			state.usage.Cost = chunk.Usage.Cost
+		}
+		if err := state.usage.Check(); err != nil {
+			return err
+		}
 		observed = state.usage
 	}
 	if len(chunk.Error) > 0 && string(chunk.Error) != "null" && string(chunk.Error) != `""` {

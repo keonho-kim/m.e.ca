@@ -80,7 +80,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 			if err := event.Usage.Check(); err != nil {
 				return err
 			}
-			snapshot := *event.Usage
+			snapshot := event.Usage.Clone()
 			usage = &snapshot
 			measured = time.Since(started)
 			rate = outputRate(snapshot.Output, measured)

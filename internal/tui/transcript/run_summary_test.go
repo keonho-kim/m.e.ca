@@ -49,3 +49,15 @@ func TestRunSummaryUnavailableAndZeroUsage(t *testing.T) {
 		t.Fatal(text)
 	}
 }
+
+func TestRunSummaryReportedCostOrder(t *testing.T) {
+	f := Formatter{Language: locale.English}
+	s := run.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{Input: 20, Output: 5, Cost: new(0.001)}}
+	if text := f.runSummary(s).Text; !strings.Contains(text, "INPUT 20 | OUTPUT 5 | TOTAL COST $0.001 | TPS 5.0") {
+		t.Fatal(text)
+	}
+	f.Language = locale.Korean
+	if text := f.runSummary(s).Text; !strings.Contains(text, "입력 20 | 출력 5 | 총 비용 $0.001 | 초당 토큰 5.0") {
+		t.Fatal(text)
+	}
+}

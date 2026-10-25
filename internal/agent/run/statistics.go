@@ -25,8 +25,8 @@ func (s Statistics) check() error {
 		if s.GenerationMillis != 0 {
 			return fmt.Errorf("generation measurement requires reported token usage")
 		}
-	} else if s.Usage.Input < 0 || s.Usage.Output < 0 {
-		return fmt.Errorf("invalid request token totals")
+	} else if err := s.Usage.CheckTotals(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -44,15 +44,14 @@ func (s *runStatistics) add(usage *modelapi.TokenUsage, elapsed time.Duration) {
 	if s.usage == nil {
 		s.usage = &modelapi.TokenUsage{}
 	}
-	s.usage.Input += usage.Input
-	s.usage.Output += usage.Output
+	*s.usage = s.usage.Add(*usage)
 	s.generation += max(0, elapsed)
 }
 
 func (s runStatistics) snapshot(now time.Time) Statistics {
 	result := Statistics{ElapsedMillis: max(0, now.Sub(s.started).Milliseconds()), GenerationMillis: s.generation.Milliseconds()}
 	if s.usage != nil {
-		usage := *s.usage
+		usage := s.usage.Clone()
 		result.Usage = &usage
 	}
 	return result

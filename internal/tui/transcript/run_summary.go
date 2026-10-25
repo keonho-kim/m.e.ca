@@ -24,7 +24,10 @@ func (f Formatter) runSummary(s run.Statistics) viewport.Block {
 	}
 	text := f.Language.Text("Worked for") + " " + duration +
 		" | " + f.Language.Text("INPUT") + " " + input +
-		" | " + f.Language.Text("OUTPUT") + " " + output +
-		" | " + f.Language.Text("TPS") + " " + rate
+		" | " + f.Language.Text("OUTPUT") + " " + output
+	if s.Usage != nil && s.Usage.Cost != nil {
+		text += " | " + f.Language.Cost(s.Usage.Cost)
+	}
+	text += " | " + f.Language.Text("TPS") + " " + rate
 	return viewport.Block{Text: text + "\n\n", Thinking: true, Centered: true}
 }

@@ -1,4 +1,4 @@
-// Purpose: Project measured usage from the current generation and committed call totals.
+// Purpose: Project current measurements and committed token and charge totals without duplication.
 // Pattern: Presentation projection.
 // Usage: Runtime notices update counters on the terminal event loop.
 // Related: internal/tui/session/runtime_events.go, internal/tui/view/tokens.go.
@@ -10,18 +10,17 @@ import (
 )
 
 func (a *app) displayTokens() modelapi.TokenUsage {
-	return modelapi.TokenUsage{Input: a.tokenTotal.Input + a.tokenCurrent.Input, Output: a.tokenTotal.Output + a.tokenCurrent.Output}
+	return a.tokenTotal.Add(a.tokenCurrent)
 }
 func (a *app) receiveTokens(e run.Event) {
 	if e.Usage == nil {
 		return
 	}
 	if e.Kind == "usage" {
-		a.tokenTotal.Input += e.Usage.Input
-		a.tokenTotal.Output += e.Usage.Output
+		a.tokenTotal = a.tokenTotal.Add(*e.Usage)
 		a.tokenCurrent = modelapi.TokenUsage{}
 	} else {
-		a.tokenCurrent = *e.Usage
+		a.tokenCurrent = e.Usage.Clone()
 	}
 	a.tokensPerSecond = e.TokensPerSecond
 }
