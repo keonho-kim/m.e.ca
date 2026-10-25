@@ -7,8 +7,6 @@ package discovery
 import (
 	"context"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 	"net/url"
 	"slices"
 )
@@ -22,7 +20,7 @@ func (c *Client) identifyLiteLLMGroup(ctx context.Context, model string) (identi
 	}
 	report := identity.Report{Unavailable: true}
 	endpoint := c.serverRoot() + "/model_group/info?model_group=" + url.QueryEscape(model)
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, endpoint, nil, 16*1024*1024, &listing); err != nil {
+	if err := readMetadata(ctx, c, endpoint, &listing); err != nil {
 		return report, err
 	}
 	if len(listing.Data) > 10000 {

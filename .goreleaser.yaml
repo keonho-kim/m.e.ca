@@ -1,0 +1,56 @@
+# Purpose: Build macOS and Linux MECA archives and publish versioned GitHub assets.
+# Pattern: Release configuration.
+# Usage: go tool -modfile=devtools/go.mod goreleaser release --clean.
+# Related: devtools/go.mod, docs/releases.md, cmd/meca/main.go.
+version: 2
+project_name: meca
+
+builds:
+  - id: meca
+    main: ./cmd/meca
+    binary: meca
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+archives:
+  - ids:
+      - meca
+    formats:
+      - tar.gz
+    name_template: 'meca_{{ .Version }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}'
+    files:
+      - THIRD_PARTY_NOTICES.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: '0.0.{{ .Now.Format "20060102" }}-snapshot'
+
+changelog:
+  disable: true
+
+release:
+  github:
+    owner: keonho-kim
+    name: m.e.ca
+  prerelease: auto
+  mode: keep-existing
+  header: |
+    M.E.CA {{ .Tag }}
+
+    macOS / Linux · amd64 / arm64
+
+    Download the archive for your OS and CPU, verify it against checksums.txt,
+    extract it, and run ./meca install. Go is not required for these binaries.
+    Third-party license notices are included in each archive.

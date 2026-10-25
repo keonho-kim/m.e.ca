@@ -8,8 +8,6 @@ import (
 	"context"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 func (c *Client) identifyModels(ctx context.Context, model string) (identity.Report, error) {
@@ -22,7 +20,7 @@ func (c *Client) identifyModels(ctx context.Context, model string) (identity.Rep
 		} `json:"data"`
 	}
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("models"), nil, 16*1024*1024, &listing); err != nil {
+	if err := readMetadata(ctx, c, c.url("models"), &listing); err != nil {
 		return report, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {

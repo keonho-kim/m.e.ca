@@ -20,7 +20,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 		return err
 	}
 	if op.spec.name != "write_file" && !op.original.exists {
-		return fmt.Errorf("Path not found")
+		return fmt.Errorf("path not found")
 	}
 
 	if op.original.exists && op.original.info.IsDir() {

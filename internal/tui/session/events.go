@@ -14,6 +14,7 @@ import (
 )
 
 type notice struct {
+	FileWatch       *watchResult
 	Stream          *streamNotice
 	FormRevision    int
 	ModelForm       bool
@@ -46,6 +47,10 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.FileWatch != nil {
+		a.receiveFileWatch(n.FileWatch)
+		return
+	}
 	if n.Stream != nil {
 		if event := n.Stream.take(); event != nil {
 			a.receiveRuntime(event)

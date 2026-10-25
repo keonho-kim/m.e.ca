@@ -5,6 +5,7 @@
 package locale
 
 var messages = []translation{
+	{"", "Live file updates unavailable: %s", "파일 자동 갱신을 사용할 수 없습니다: %s"},
 	{"", "API options; run connection diagnostics to verify this model", "공급자 API의 요청 옵션입니다. 실제 지원은 연결 진단으로 확인하세요"},
 	{"", "Worked for", "작업 시간"},
 	{"", "Connecting", "연결 중"},
@@ -15,7 +16,7 @@ var messages = []translation{
 	{"", "Thinking effort is unavailable for this connection", "이 연결에서 추론 강도를 설정할 수 없습니다"},
 	{"", "One task is already active; draft preserved", "이미 작업 중입니다. 입력한 초안을 유지합니다"},
 	{"", "Select a model using !model", "!model에서 모델을 선택하세요"},
-	{"", "Endpoint cannot be empty", "서버 주소를 입력하세요"},
+	{"", "endpoint cannot be empty", "서버 주소를 입력하세요"},
 	{"", "Saving selected paths before sending", "파일 선택 저장 후 요청을 전송합니다"},
 	{"", "Send this request? (y/n)", "요청을 전송할까요? (y/n)"},
 	{"", "Queue this request? (y/n)", "요청을 예약할까요? (y/n)"},

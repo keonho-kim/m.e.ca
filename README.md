@@ -23,7 +23,7 @@
 
 ## 직접 빌드하기
 
-**Git과 Go 1.27.2**가 필요합니다. Linux와 macOS 모두 Go 명령만으로 빌드합니다.
+소스 설치에는 **Git**이 필요합니다. `install.sh`는 설치된 Go를 사용하며, Go가 없으면 공식 Go 1.27.2 배포본을 SHA-256으로 검증해 빌드용으로 임시 설치합니다. 자동 다운로드에는 curl·tar와 sha256sum 또는 shasum이 필요합니다. Linux와 macOS의 amd64·arm64를 지원합니다.
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
@@ -40,7 +40,21 @@ cd m.e.ca
 
 현재 OS·CPU에 맞춰 빌드하고 `~/.local/bin/meca`에 설치합니다. `~/.meca`와 기본 설정·프롬프트를 생성하고, 필요한 PATH 등록을 zsh·bash·sh 설정에 추가합니다. 기존 설정은 유지합니다. 새 터미널에서 `meca`를 사용할 수 있으며, 현재 터미널에는 설치 완료 메시지의 명령으로 반영합니다.
 
+자동으로 받은 Go는 저장소의 `.cache` 아래에서 이번 빌드에만 사용하고 완료·실패 시 정리합니다. Go의 모듈·빌드 캐시는 일반 Go 설정을 따릅니다. 시스템 Go 설치와 PATH는 유지합니다.
+
+### 릴리스 바이너리로 설치하기
+
+[GitHub Releases](https://github.com/keonho-kim/m.e.ca/releases)에서 운영체제와 CPU에 맞는 `meca_<version>_<macos|linux>_<amd64|arm64>.tar.gz`와 `checksums.txt`를 받습니다. 압축을 풀기 전에 해당 파일의 SHA-256을 확인한 뒤 다음을 실행합니다.
+
+```sh
+./meca install
+```
+
+릴리스 바이너리는 Go 설치 없이 동작합니다. macOS arm64는 Apple Silicon, macOS amd64는 Intel Mac용입니다. Linux/WSL은 `uname -m`이 `x86_64`이면 amd64, `aarch64`이면 arm64를 선택합니다. [검증·배포 절차](docs/releases.md)를 참고하세요.
+
 ### 빌드만 하기
+
+Go 1.27.2 이상을 설치한 환경에서 실행합니다.
 
 ```sh
 go build -trimpath -o bin/meca ./cmd/meca
@@ -108,7 +122,7 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 | `!new` | 같은 프로젝트에서 새 세션 시작 · 전역 모델 연결 유지 |
 | `!quit` | 현재 작업을 취소·정리하고 종료 |
 
-`!`를 입력하면 명령 후보가 나타나며 입력한 글자로 검색하고 `↑↓`·`Enter`로 실행합니다. 키맵은 화면 하단에 최대 두 줄로 표시하고, 모델명은 그 바로 위에 둡니다.
+`!`를 입력하면 명령 후보가 나타나며 입력한 글자로 검색하고 `↑↓`·`Enter`로 실행합니다. 명령·모델 검색은 부분일치를 우선하고 결과가 없으면 `mdl` → `model` 같은 축약 검색을 사용합니다. 키맵은 화면 하단에 최대 두 줄로 표시하고, 모델명은 그 바로 위에 둡니다.
 
 파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용합니다. 삭제·이동은 같은 셸의 `rm`·`mv`로 수행합니다. 생성·본문 수정에는 원본 검사와 diff를 제공하는 `write_file`·`edit_file`, 폴더 생성에는 누락된 부모도 함께 만드는 `create_directory`를 사용합니다.
 
@@ -130,6 +144,8 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 작업이 끝나면 마지막 응답 아래에 소요 시간·이번 작업의 실제 INPUT/OUTPUT·평균 TPS를 흐린 글씨로 가운데 표시합니다. OpenRouter 비용을 수신한 작업에는 OUTPUT과 TPS 사이에 해당 작업의 비용도 표시합니다. 세션 사용량과 작업 요약은 대화를 다시 열어도 복원됩니다. [집계 범위와 표시 기준 →](docs/usage.md#화면과-사용량)
 
 ### 파일 참조와 화면 설정
+
+`!dir`에서 현재 보고 있는 폴더의 파일이 바뀌면 목록과 열린 미리보기를 자동으로 갱신합니다. 작성 중인 요청과 선택은 유지하며 화면을 닫으면 감시도 종료합니다.
 
 `!model`과 `!language`는 한 화면에서 값을 편집하고 `Enter`로 저장을 확인합니다. 확인 중 `y`는 저장 후 채팅 복귀, `n`은 변경을 버리고 복귀, `Esc`는 설정 편집을 계속합니다. `!new`와 `!quit`는 즉시 실행합니다.
 
@@ -196,7 +212,7 @@ max_output_tokens = 12800
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, go-keyring, uniseg, x/sys, x/term입니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, go-keyring, fsnotify(파일 변경 알림), uniseg, x/sys, x/term입니다. 테스트에는 goleak·go-cmp·creack/pty를 사용합니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
 
 ```sh
 gofmt -l cmd internal
@@ -221,6 +237,7 @@ go mod verify
 | [모델 연결](docs/model-connections.md) | OpenRouter 연결·실제 비용, 서버 원본 표시, 서빙 한도, Thinking 설정과 진단 |
 | [실행 경계](docs/execution-boundary.md) | 호스트 개발 환경, 승인·파일 검사와 실행 권한 |
 | [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
+| [릴리스 가이드](docs/releases.md) | macOS·Linux 배포 파일, 체크섬, 날짜 버전과 게시 절차 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
 
 에이전트 응답은 흑백 Markdown으로 표시하며 물결표 취소선은 사용하지 않습니다. 상세 표시 규칙은 [사용법](docs/usage.md), 재배포 시 포함할 라이선스는 [외부 소프트웨어 고지](THIRD_PARTY_NOTICES.md)를 참고하세요.

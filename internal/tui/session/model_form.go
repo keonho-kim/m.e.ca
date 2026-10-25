@@ -106,7 +106,7 @@ func (f *modelForm) editor() *input.Editor {
 
 func (f *modelForm) connection() (connection.Connection, error) {
 	if strings.TrimSpace(f.endpoint.String()) == "" {
-		return connection.Connection{}, fmt.Errorf("Endpoint cannot be empty")
+		return connection.Connection{}, fmt.Errorf("endpoint cannot be empty")
 	}
 	c, err := connection.New(connection.Providers()[f.provider].Kind, f.endpoint.String())
 	if err == nil && c.ID == f.credentialOwner && !f.keyChanged {

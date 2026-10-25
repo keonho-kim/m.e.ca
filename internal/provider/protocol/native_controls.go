@@ -27,7 +27,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 	if kind == connection.OpenRouter {
 		on := *request.Thinking
 		if on && !r.Enabled() || !on && !r.Off {
-			return controls, fmt.Errorf("Thinking choice is unavailable for this OpenRouter model")
+			return controls, fmt.Errorf("thinking choice is unavailable for this OpenRouter model")
 		}
 		controls.Reasoning = &routerReasoning{Enabled: on}
 		if on {
@@ -75,7 +75,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 func templateControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
 	on := *request.Thinking
 	if on && !r.Enabled() || !on && !r.Off {
-		return Controls{}, fmt.Errorf("Thinking choice is unavailable for this connection")
+		return Controls{}, fmt.Errorf("thinking choice is unavailable for this connection")
 	}
 	controls := Controls{Template: map[string]any{"enable_thinking": on, "thinking": on}}
 	if on && request.ReasoningEffort != "" {

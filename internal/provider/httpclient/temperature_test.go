@@ -41,7 +41,7 @@ func TestTemperatureProviderRequestsAndRetries(t *testing.T) {
 						t.Errorf("temperature lost: %+v", body)
 					}
 					if calls.Add(1) == 1 {
-						http.Error(w, "temporary", 503)
+						http.Error(w, "temporary", http.StatusServiceUnavailable)
 						return
 					}
 					w.Header().Set("Content-Type", "application/json")

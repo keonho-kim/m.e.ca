@@ -60,3 +60,12 @@ func TestCommandSearchMatchesNamesAndDescriptions(t *testing.T) {
 }
 
 func describeCommand(description string) string { return description }
+
+func TestCommandAbbreviationFallback(t *testing.T) {
+	for _, tc := range []struct{ query, want string }{{"!mdl", "!model"}, {"!lng", "!language"}, {"!qt", "!quit"}} {
+		got := Suggestions(tc.query, describeCommand)
+		if len(got) != 1 || got[0].Name != tc.want {
+			t.Fatalf("%s: %+v", tc.query, got)
+		}
+	}
+}

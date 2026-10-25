@@ -7,8 +7,6 @@ package discovery
 import (
 	"context"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 func (c *Client) identifySGLang(ctx context.Context, model string) (identity.Report, error) {
@@ -20,7 +18,7 @@ func (c *Client) identifySGLang(ctx context.Context, model string) (identity.Rep
 		Architectures []string `json:"architectures"`
 	}
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/model_info", nil, 16*1024*1024, &info); err != nil {
+	if err := readMetadata(ctx, c, c.serverRoot()+"/model_info", &info); err != nil {
 		return report, err
 	}
 	if info.Served != model && (info.Served != "" || info.Path != model) {

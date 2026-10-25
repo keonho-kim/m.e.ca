@@ -15,7 +15,7 @@ func sanitizeReason(reason string) error {
 		return &modelapi.OutputLimitError{Reason: "output token limit"}
 	}
 	if reason == "content_filter" || reason == "error" || reason == "abort" {
-		return fmt.Errorf("Model response stopped: %s", strings.ReplaceAll(reason, "\n", ""))
+		return fmt.Errorf("model response stopped: %s", strings.ReplaceAll(reason, "\n", ""))
 	}
 	return nil
 }

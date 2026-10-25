@@ -9,15 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.ModelInfo, error) {
 	info := connection.ModelInfo{ID: model}
 
 	var listing lmModelListing
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/api/v1/models", nil, 16*1024*1024, &listing); err != nil {
+	if err := readMetadata(ctx, c, c.serverRoot()+"/api/v1/models", &listing); err != nil {
 		return info, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {

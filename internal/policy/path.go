@@ -38,7 +38,7 @@ func Resolve(project, home string, scope Scope, path string) (string, string, er
 	}
 	relative, err := filepath.Rel(root, path)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("Access denied by scope: %s", path)
+		return "", "", fmt.Errorf("access denied by scope: %s", path)
 	}
 	return path, relative, nil
 }

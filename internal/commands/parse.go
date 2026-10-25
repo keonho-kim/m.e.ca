@@ -58,7 +58,7 @@ func Parse(input string) (Command, error) {
 		}
 	}
 	if kind == Empty {
-		return Command{}, fmt.Errorf("Unknown command: %s", words[0])
+		return Command{}, fmt.Errorf("unknown command: %s", words[0])
 	}
 	if len(words) > 1 && kind != Directory || len(words) > 2 {
 		return Command{}, fmt.Errorf("invalid arguments for %s", words[0])

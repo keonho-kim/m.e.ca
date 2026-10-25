@@ -8,8 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 type lmModelListing struct {
@@ -37,7 +35,7 @@ type lmModelListing struct {
 func (c *Client) identifyLMStudio(ctx context.Context, model string) (identity.Report, error) {
 	var listing lmModelListing
 	var report identity.Report
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.serverRoot()+"/api/v1/models", nil, 16*1024*1024, &listing); err != nil {
+	if err := readMetadata(ctx, c, c.serverRoot()+"/api/v1/models", &listing); err != nil {
 		return report, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {

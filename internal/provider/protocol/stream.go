@@ -44,7 +44,7 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 		content := bytes.TrimSpace(frame.Bytes())
 		if bytes.Equal(content, []byte("[DONE]")) {
 			if provider == modelconn.LMStudio && !state.finished {
-				return fmt.Errorf("Responses stream ended without a completed response")
+				return fmt.Errorf("model Responses stream ended without a completed response")
 			}
 			state.finished = true
 			frame.Reset()

@@ -29,10 +29,10 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		return validatedCall{}, err
 	}
 	if definition == nil {
-		return validatedCall{}, fmt.Errorf("Unknown tool; select a declared native function.")
+		return validatedCall{}, fmt.Errorf("unknown tool; select a declared native function")
 	}
 	if len(call.Arguments) > s.limits.MaxArgumentBytes {
-		return validatedCall{}, fmt.Errorf("Arguments exceed the configured %d-byte limit; narrow the operation. Nothing executed.", s.limits.MaxArgumentBytes)
+		return validatedCall{}, fmt.Errorf("arguments exceed the configured %d-byte limit; narrow the operation; nothing executed", s.limits.MaxArgumentBytes)
 	}
 	arguments, err := toolapi.ValidateArguments(*definition, call.Arguments)
 	if err != nil {
@@ -40,7 +40,7 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		if call.Name == "edit_file" {
 			hint = "Use edits:[{old_text,new_text}] from completed reads of the unchanged original. old_text must match once; a read in this batch cannot supply source for its dependent edit."
 		}
-		return validatedCall{}, fmt.Errorf("Argument validation failed: %s. %s", err, hint)
+		return validatedCall{}, fmt.Errorf("argument validation failed: %s. %s", err, hint)
 	}
 
 	return validatedCall{call, *definition, arguments}, nil

@@ -43,6 +43,7 @@ func (a *app) fail(err error) {
 }
 
 func (a *app) requestExit() {
+	a.stopFileWatch()
 	a.fileSubmission = nil
 	a.fileSelectionQueue = nil
 	a.closeModelForm()
@@ -64,11 +65,15 @@ func (a *app) shutdown() {
 	a.workers.Wait()
 	a.directoryReads = readSlot[directoryPage]{}
 	a.previewReads = readSlot[previewRequest]{}
+	a.watchReads = readSlot[watchRequest]{}
 	// A connection worker may have transferred a client to a notice just before
 	// cancellation. The stopped event loop must release that queued ownership.
 	for {
 		select {
 		case notice := <-a.events:
+			if notice.FileWatch != nil && notice.FileWatch.watcher != nil {
+				_ = notice.FileWatch.watcher.Close()
+			}
 			if notice.Stream != nil {
 				notice.Stream.take()
 			}

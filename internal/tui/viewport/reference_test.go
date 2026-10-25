@@ -17,7 +17,7 @@ func (b *Block) Lines(width int) []Line {
 	var out []Line
 	if b.Markdown {
 		for _, line := range markdown.Render(b.Text) {
-			for _, wrapped := range markdown.Wrap(line.Spans, width) {
+			for wrapped := range markdown.Rows(line.Spans, width) {
 				value := Line{ID: b.ID, Row: len(out), Text: wrapped.Text, Spans: wrapped.Spans, Thinking: b.Thinking, Copy: wrapped.Copy}
 				out = append(out, value)
 			}

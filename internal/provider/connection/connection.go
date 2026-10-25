@@ -35,11 +35,11 @@ func New(kind ProviderKind, endpoint string) (Connection, error) {
 		endpoint = defaultEndpoint
 	}
 	if len(endpoint) > 4096 {
-		return Connection{}, fmt.Errorf("Endpoint is too long")
+		return Connection{}, fmt.Errorf("endpoint is too long")
 	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil || parsed.Hostname() == "" || parsed.Scheme != "http" && parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return Connection{}, fmt.Errorf("Endpoint must be an HTTP(S) URL without credentials, query or fragment")
+		return Connection{}, fmt.Errorf("endpoint must be an HTTP(S) URL without credentials, query or fragment")
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/")
 	endpoint = parsed.String()

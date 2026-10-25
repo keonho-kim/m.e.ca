@@ -19,7 +19,7 @@ func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
 	}
 	found := false
 	for _, message := range g.requests[1].Messages {
-		if message.Role == "tool" && message.ToolCallID == "call_1" && strings.Contains(message.Content, "Argument validation failed") {
+		if message.Role == "tool" && message.ToolCallID == "call_1" && strings.Contains(message.Content, "argument validation failed") {
 			found = true
 		}
 	}

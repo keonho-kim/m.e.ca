@@ -48,8 +48,12 @@ func sedProgram(text string) sedEffects {
 			}
 			delimiter := p.text[p.index]
 			p.index++
-			if !p.delimited(delimiter) || !p.delimited(delimiter) {
-				p.effects.unknown = true
+			// Consume the source and destination alphabets in order.
+			for range 2 {
+				if !p.delimited(delimiter) {
+					p.effects.unknown = true
+					break
+				}
 			}
 		case 'w', 'W':
 			if target := strings.TrimSpace(p.restLine()); target != "" {

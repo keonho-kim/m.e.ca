@@ -6,6 +6,7 @@ package markdown
 
 import (
 	"github.com/rivo/uniseg"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -35,7 +36,7 @@ func TestMarkdownRendering(t *testing.T) {
 }
 func TestWrapKeepsGraphemesAndStyles(t *testing.T) {
 	source := []Span{{Text: "한글👨‍👩‍👧‍👦 **", Style: Bold}, {Text: "끝", Style: Italic}}
-	rows := Wrap(source, 6)
+	rows := slices.Collect(Rows(source, 6))
 	var joined strings.Builder
 	for _, row := range rows {
 		if uniseg.StringWidth(row.Text) > 6 {

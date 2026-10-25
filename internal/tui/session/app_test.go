@@ -181,12 +181,3 @@ func TestCancellingConnectionSelectionPreservesCurrentModel(t *testing.T) {
 		t.Fatal("connection menu cleared the current model")
 	}
 }
-
-func closeTestStore(t *testing.T, store Store) error {
-	t.Helper()
-	closer, ok := store.(interface{ Close() error })
-	if !ok {
-		t.Fatal("fixture repository has no close boundary")
-	}
-	return closer.Close()
-}

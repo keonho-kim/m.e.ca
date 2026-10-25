@@ -9,6 +9,7 @@ import (
 )
 
 func (a *app) openFiles(path string) {
+	a.stopFileWatch()
 	a.closeFilePreview()
 	a.fileSendConfirm = false
 	a.fileReserve = false
@@ -22,6 +23,7 @@ func (a *app) openFiles(path string) {
 }
 
 func (a *app) closeFiles() {
+	a.stopFileWatch()
 	a.fileSendConfirm = false
 	a.fileReserve = false
 	a.closeFilePreview()

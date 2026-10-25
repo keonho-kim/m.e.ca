@@ -130,7 +130,7 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 		return state.emitFailedUsage(state.failure, emit)
 	}
 	if !state.finished || !state.received {
-		return fmt.Errorf("Model stream ended before completion")
+		return fmt.Errorf("model stream ended before completion")
 	}
 	calls, err := state.completedCalls()
 	if err != nil {

@@ -26,7 +26,7 @@ func (a *app) cancelDirectory() {
 
 func (a *app) requestDirectory(mode, path string, offset int) {
 	a.cancelDirectory()
-	a.directoryLoading = true
+	a.directoryLoading = mode != "refresh"
 	page := directoryPage{revision: a.directoryRevision, mode: mode, path: path, offset: offset}
 	if a.directoryReads.submit(page) {
 		a.startDirectoryRead(page)
@@ -73,7 +73,9 @@ func (a *app) receiveDirectory(page *directoryPage) {
 		a.fail(page.err)
 		return
 	}
-	a.clearSelection()
+	if page.mode != "refresh" {
+		a.clearSelection()
+	}
 	switch page.mode {
 	case "open":
 		a.browser.Open(page.path, page.entries, page.more)
@@ -82,6 +84,21 @@ func (a *app) receiveDirectory(page *directoryPage) {
 	case "page":
 		if column := a.browser.Current(); column != nil && column.Path == page.path {
 			column.Entries, column.More, column.Offset, column.Index = page.entries, page.more, page.offset, 0
+		}
+	case "refresh":
+		if column := a.browser.Current(); column != nil && column.Path == page.path {
+			selected := ""
+			if column.Index >= 0 && column.Index < len(column.Entries) {
+				selected = column.Entries[column.Index].Name
+			}
+			column.Entries, column.More = page.entries, page.more
+			column.Index = max(0, min(column.Index, len(page.entries)-1))
+			for i, entry := range page.entries {
+				if entry.Name == selected {
+					column.Index = i
+					break
+				}
+			}
 		}
 	}
 }

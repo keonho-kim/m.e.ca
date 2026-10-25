@@ -4,7 +4,10 @@
 // Related: internal/commands/parse.go, internal/tui/session/hints.go, internal/commands/catalog_test.go.
 package commands
 
-import "strings"
+import (
+	"github.com/keonho-kim/meca/internal/searchmatch"
+	"strings"
+)
 
 type Suggestion struct{ Name, Description string }
 
@@ -37,6 +40,13 @@ func Suggestions(input string, describe func(string) string) []Suggestion {
 			}
 			if prefix || strings.Contains(name, query) || strings.Contains(strings.ToLower(description), query) {
 				matches = append(matches, Suggestion{command.name, description})
+			}
+		}
+	}
+	if len(matches) == 0 && query != "" {
+		for _, command := range catalog {
+			if searchmatch.Subsequence(query, strings.TrimPrefix(command.name, "!")) {
+				matches = append(matches, Suggestion{command.name, describe(command.description)})
 			}
 		}
 	}

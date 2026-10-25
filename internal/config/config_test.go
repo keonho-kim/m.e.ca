@@ -6,9 +6,9 @@
 package config
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -23,8 +23,11 @@ func TestLoadSaveWithoutApprovalMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	restored, err := Load(directory)
-	if err != nil || !reflect.DeepEqual(restored, configuration) {
-		t.Fatalf("restore: %+v, %v", restored, err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(configuration, restored); diff != "" {
+		t.Fatalf("configuration round trip (-want +got):\n%s", diff)
 	}
 	body, err := os.ReadFile(filepath.Join(directory, "config.toml"))
 	if err != nil || strings.Contains(string(body), "permission") || strings.Contains(string(body), "[defaults]") {

@@ -6,6 +6,7 @@ package context
 
 import (
 	"encoding/json"
+	"github.com/google/go-cmp/cmp"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
@@ -26,8 +27,8 @@ func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {
 		projected := request.Messages[1:]
 		for i, message := range projected {
 			if len(history) == 2 {
-				if message.Role != history[i].Role || message.ToolCallID != history[i].ToolCallID || message.Reasoning != history[i].Reasoning {
-					t.Fatalf("native history lost: %+v", projected)
+				if diff := cmp.Diff(history[i], message); diff != "" {
+					t.Fatalf("native history (-want +got):\n%s", diff)
 				}
 			} else if message.Role != "user" || len(message.Calls) != 0 || !strings.Contains(message.Content, "Earlier notes and observations") {
 				t.Fatalf("orphan replayed: %+v", message)

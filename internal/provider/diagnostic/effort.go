@@ -28,7 +28,7 @@ func probeThinking(ctx context.Context, c modelapi.Generator, model, effort stri
 		return ctx.Err()
 	})
 	if err == nil && (!answer || !done) {
-		err = fmt.Errorf("Thinking diagnostic did not produce a complete answer")
+		err = fmt.Errorf("thinking diagnostic did not produce a complete answer")
 	}
 	return reasoning, err
 }
@@ -42,7 +42,7 @@ func Effort(ctx context.Context, c modelapi.Generator, model, effort string, set
 		return err
 	}
 	if !supported {
-		return fmt.Errorf("Thinking effort diagnostic did not produce a complete answer with separate reasoning")
+		return fmt.Errorf("thinking effort diagnostic did not produce a complete answer with separate reasoning")
 	}
 	return nil
 }

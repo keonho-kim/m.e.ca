@@ -17,6 +17,7 @@ func (a *app) loop() error {
 	timer.Stop()
 	defer timer.Stop()
 	var frame <-chan time.Time
+	a.syncFileWatch()
 	a.render()
 	last := time.Now()
 	for !a.exit {
@@ -33,9 +34,24 @@ func (a *app) loop() error {
 			a.advanceCompression()
 		case n := <-a.events:
 			a.receive(n)
+		case event, ok := <-a.fileWatch.events:
+			if ok {
+				a.observeFileChange(event)
+			} else {
+				a.fileWatchFailed(nil)
+			}
+		case err, ok := <-a.fileWatch.errors:
+			if ok {
+				a.fileWatchFailed(err)
+			} else {
+				a.fileWatchFailed(nil)
+			}
+		case <-a.fileWatch.ticks:
+			a.refreshWatchedFiles()
 		case <-frame:
 			frame = nil
 		}
+		a.syncFileWatch()
 		if a.exit || a.paste {
 			continue
 		}

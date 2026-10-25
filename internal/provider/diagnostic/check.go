@@ -30,16 +30,16 @@ func Check(ctx context.Context, client modelapi.Generator, model string, support
 	if supported || nativeOn {
 		caps.Reasoning, err = probeThinking(ctx, client, model, "", true, settings)
 		if err != nil {
-			return caps, fmt.Errorf("Thinking ON diagnostic failed: %w", err)
+			return caps, fmt.Errorf("thinking ON diagnostic failed: %w", err)
 		}
 	}
 	if supported && !caps.Reasoning {
-		return caps, fmt.Errorf("Thinking ON diagnostic did not produce separate reasoning; the server may ignore the requested option")
+		return caps, fmt.Errorf("thinking ON diagnostic did not produce separate reasoning; the server may ignore the requested option")
 	}
 	if supported && caps.Reasoning {
 		reasoning, err := probeThinking(ctx, client, model, "", false, settings)
 		if err != nil {
-			return caps, fmt.Errorf("Thinking OFF diagnostic failed: %w", err)
+			return caps, fmt.Errorf("thinking OFF diagnostic failed: %w", err)
 		}
 		if reasoning {
 			return caps, fmt.Errorf("server emitted reasoning with Thinking OFF on the paired reasoning diagnostic")

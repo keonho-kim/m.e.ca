@@ -24,7 +24,21 @@ func (a *app) openFilePreview(full bool) {
 	a.closeFilePreview()
 	a.menuInput.Set("")
 	a.filePreview = &browser.Preview{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
+	a.filePreviewPath = path
 	request := previewRequest{path: path, revision: a.previewRevision}
+	if a.previewReads.submit(request) {
+		a.startPreviewRead(request)
+	}
+}
+
+func (a *app) refreshFilePreview() {
+	if a.filePreview == nil || a.filePreviewPath == "" {
+		return
+	}
+	a.previewReads.stop()
+	a.previewRevision++
+	a.filePreview.Loading, a.filePreview.Error = true, ""
+	request := previewRequest{path: a.filePreviewPath, revision: a.previewRevision}
 	if a.previewReads.submit(request) {
 		a.startPreviewRead(request)
 	}
@@ -50,6 +64,7 @@ func (a *app) closeFilePreview() {
 	a.previewReads.stop()
 	a.previewRevision++
 	a.filePreview = nil
+	a.filePreviewPath = ""
 }
 func (a *app) receiveFilePreview(n notice) {
 	if next := a.previewReads.complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {

@@ -45,6 +45,9 @@ type app struct {
 	chatVisible, selectedTranscript     []viewport.Line
 	historyLoading, historyEnd          bool
 	directoryReads                      readSlot[directoryPage]
+	fileWatch                           fileWatch
+	watchReads                          readSlot[watchRequest]
+	watchRevision                       int
 	directoryRevision                   int
 	directoryLoading, fileSelectionBusy bool
 	fileSelectionQueue                  []string
@@ -64,6 +67,7 @@ type app struct {
 	selectionPage                       string
 	textSelection                       selection.Selection
 	filePreview                         *browser.Preview
+	filePreviewPath                     string
 	previewReads                        readSlot[previewRequest]
 	previewRevision                     int
 	elapsedStarted                      time.Time

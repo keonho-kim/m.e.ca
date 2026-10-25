@@ -8,12 +8,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, error) {
@@ -33,7 +31,7 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 			} `json:"reasoning"`
 		} `json:"data"`
 	}
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodGet, c.url("models"), nil, 16*1024*1024, &listing); err != nil {
+	if err := readMetadata(ctx, c, c.url("models"), &listing); err != nil {
 		return nil, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {

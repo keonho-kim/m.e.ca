@@ -1,6 +1,6 @@
 // Purpose: Represent styled terminal text and wrap it without splitting grapheme clusters.
 // Pattern: Pure presentation layout.
-// Usage: Viewport and streaming projection consume Line and Wrap.
+// Usage: Viewport and streaming projection consume Line and Rows.
 // Related: internal/tui/markdown/render.go, internal/tui/view/chat.go.
 package markdown
 
@@ -8,7 +8,6 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/rivo/uniseg"
 	"iter"
-	"slices"
 	"strings"
 	"unicode"
 )
@@ -58,8 +57,6 @@ func add(spans []Span, text string, style Style) []Span {
 	}
 	return append(spans, Span{Text: text, Style: style})
 }
-func Wrap(spans []Span, width int) []Line { return slices.Collect(Rows(spans, width)) }
-
 func Rows(spans []Span, width int) iter.Seq[Line] {
 	return func(yield func(Line) bool) {
 		if width < 1 {
