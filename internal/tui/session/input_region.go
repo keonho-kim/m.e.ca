@@ -8,17 +8,18 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
+	"strings"
 )
 
 type inputRegion struct {
-	editor   *input.Editor
-	window   input.Window
-	y, width int
-	revision uint64
+	editor      *input.Editor
+	window      input.Window
+	x, y, width int
+	revision    uint64
 }
 
 func (r inputRegion) contains(x, y int) bool {
-	return r.editor != nil && x >= 0 && x < r.width && y >= r.y && y < r.y+len(r.window.Rows)
+	return r.editor != nil && x >= r.x && x < r.x+r.width && y >= r.y && y < r.y+len(r.window.Rows)
 }
 
 func (a *app) captureChatSources(lines []viewport.Line, count int) {
@@ -38,6 +39,7 @@ func (a *app) captureInputSources() {
 			row.Start = min(2, row.End)
 			row.Prefix = "> "
 		}
+		row.Prefix = strings.Repeat(" ", r.x) + row.Prefix
 		a.selectionSources[r.y+i] = textlayout.Fragment{Source: r.window.Source, Row: row}
 	}
 }
@@ -52,11 +54,11 @@ func (a *app) reanchorInputSelection(body int) {
 		current.revision != old.revision || current.width != old.width || current.window.Source != old.window.Source {
 		return
 	}
-	if current.y == old.y && len(current.window.Rows) == len(old.window.Rows) && current.window.Rows[0].Start == old.window.Rows[0].Start {
+	if current.x == old.x && current.y == old.y && len(current.window.Rows) == len(old.window.Rows) && current.window.Rows[0].Start == old.window.Rows[0].Start {
 		return
 	}
-	start := old.window.Rows[y1-old.y].Offset(old.window.Source, x1, false)
-	end := old.window.Rows[y2-old.y].Offset(old.window.Source, x2, false)
+	start := old.window.Rows[y1-old.y].Offset(old.window.Source, x1-old.x, false)
+	end := old.window.Rows[y2-old.y].Offset(old.window.Source, x2-old.x, false)
 	x1, y1, first := current.position(start)
 	x2, y2, last := current.position(end)
 	if !first || !last {
@@ -76,7 +78,7 @@ func (a *app) reanchorInputSelection(body int) {
 func (r inputRegion) position(offset int) (int, int, bool) {
 	for i, row := range r.window.Rows {
 		if offset >= row.Start && offset <= row.End && !(offset == row.End && row.Soft) {
-			return row.Column(r.window.Source, offset), r.y + i, true
+			return r.x + row.Column(r.window.Source, offset), r.y + i, true
 		}
 	}
 	return 0, 0, false
@@ -94,7 +96,7 @@ func (a *app) selectedInputRange() (int, int, bool) {
 	if !ok || !r.contains(x1, y1) || !r.contains(x2, y2) || r.editor.Revision() != r.revision {
 		return 0, 0, false
 	}
-	start, end := r.window.Offset(x1, y1-r.y, false), r.window.Offset(x2, y2-r.y, true)
+	start, end := r.window.Offset(x1-r.x, y1-r.y, false), r.window.Offset(x2-r.x, y2-r.y, true)
 	return start, end, start < end
 }
 

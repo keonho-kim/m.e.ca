@@ -1,4 +1,4 @@
-// Purpose: Render menu snapshots with inline model identity, connection fields and previews.
+// Purpose: Render remaining menu choices and execution approval previews.
 // Pattern: Terminal renderer.
 // Usage: Session supplies MenuDisplay without transferring mutable session state.
 // Related: internal/tui/session/render_menu.go, internal/tui/view/preview.go, internal/tui/view/input.go.

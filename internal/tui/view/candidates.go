@@ -1,7 +1,7 @@
-// Purpose: Render bounded completion candidates below the composer.
+// Purpose: Render bounded completion candidates beneath their input field.
 // Pattern: Terminal renderer.
-// Usage: Chat renders the candidate labels and selected position.
-// Related: internal/tui/session/render_hints.go, internal/tui/view/chat.go.
+// Usage: Chat and settings render candidate labels at their input column.
+// Related: internal/tui/session/render_hints.go, internal/tui/view/chat.go, internal/tui/view/settings.go.
 package view
 
 import (
@@ -19,20 +19,25 @@ type Candidates struct {
 }
 
 func candidates(screen tcell.Screen, display Candidates, y, width, height int) {
+	candidatesAt(screen, display, 0, y, width, height)
+}
+
+func candidatesAt(screen tcell.Screen, display Candidates, x, y, width, height int) int {
 	if !display.Open {
-		return
+		return 0
 	}
 	count := min(MaxCandidateRows, max(0, height-y))
 	if count == 0 {
-		return
+		return 0
 	}
 	if len(display.Labels) == 0 {
-		Text(screen, 0, y, width, display.Language.Text("No matches"), tcell.StyleDefault.Dim(true))
-		return
+		Text(screen, x, y, width, display.Language.Text("No matches"), tcell.StyleDefault.Dim(true))
+		return 1
 	}
 	start := max(0, display.Selected-count+1)
 	for i := start; i < min(len(display.Labels), start+count); i++ {
-		Text(screen, 0, y, width, display.Labels[i], SelectionStyle(i == display.Selected))
+		Text(screen, x, y, width, display.Labels[i], SelectionStyle(i == display.Selected))
 		y++
 	}
+	return max(0, min(len(display.Labels)-start, count))
 }

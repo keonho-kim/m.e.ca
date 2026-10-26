@@ -95,7 +95,11 @@ func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 	a.modelForm.row, a.modelForm.editing = modelEndpoint, true
 	a.modelForm.endpoint.Set("localhost")
 	a.render()
-	drag(a, 2, a.inputRegion.y, 6, a.inputRegion.y)
+	r := a.inputRegion
+	drag(a, r.x, r.y, r.x+4, r.y)
+	if a.textSelection.Text() != "local" {
+		t.Fatal("field selection copied its label or padding")
+	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
 	if a.modelForm.endpoint.String() != "host" {
 		t.Fatal(a.modelForm.endpoint.String())

@@ -54,7 +54,7 @@ func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
 	if err := terminal.Drain(); err != nil {
 		t.Fatal(err)
 	}
-	if int(terminal.Pos().X) != 2+f.endpoint.Cursor {
+	if int(terminal.Pos().X) != a.inputRegion.x+f.endpoint.Cursor {
 		t.Fatal("cursor differs from field")
 	}
 	a.screen.SetSize(20, 10)

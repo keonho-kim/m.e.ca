@@ -97,7 +97,7 @@ meca uninstall
 
 모델 서버는 native tool calling을 지원해야 합니다. vLLM 등에서는 모델에 맞는 Tool Parser 설정도 필요합니다. [서버 설정 안내 →](docs/model-connections.md#native-tool-calling)
 
-1. `!model`의 한 화면에서 Provider·Base URL·API Key·모델·추론 설정을 편집합니다. `↑↓`로 항목 이동, `→`로 입력·값 변경, `Enter`로 저장 확인을 열고 `y`로 저장합니다. `n`은 취소 후 채팅, `Esc`는 설정 편집을 계속합니다.
+1. `!model`의 한 화면에서 Provider·Base URL·API Key·모델·추론 설정을 편집합니다. `↑↓`로 항목 이동, `→`로 값이 표시된 자리에서 입력·값 변경, `Enter`로 저장 확인을 열고 `y`로 저장합니다. `n`은 취소 후 채팅, `Esc`는 설정 편집을 계속합니다.
 2. 자연어로 작업을 요청합니다. 참조할 파일은 `!dir`에서 선택할 수 있습니다.
 3. 변경을 diff로 확인합니다. 일반 작업은 자동 승인하며, 위험 작업은 실행 전에 별도 승인을 받습니다. 분석만 원하면 파일을 바꾸지 말고 분석해 달라고 요청합니다.
 

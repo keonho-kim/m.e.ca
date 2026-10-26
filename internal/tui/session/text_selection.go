@@ -47,7 +47,7 @@ func (a *app) selectionMouse(e *tcell.EventMouse) bool {
 		a.textSelection.Release()
 		if !a.textSelection.Active() && a.selectionInput.contains(x, y) && a.selectionInput.editor.Revision() == a.selectionInput.revision {
 			r := a.selectionInput
-			r.editor.MoveTo(r.window.Offset(x, y-r.y, false))
+			r.editor.MoveTo(r.window.Offset(x-r.x, y-r.y, false))
 		}
 		return true
 	}

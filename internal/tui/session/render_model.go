@@ -79,8 +79,9 @@ func (a *app) renderModel(w, h int) {
 		rows[i].Label = a.language.Text(rows[i].Label)
 	}
 	display := view.SettingsDisplay{Title: a.language.Text("Model settings"), Language: a.language, Activity: a.activity(), Usage: a.displayTokens(), Rows: rows, Selected: f.row, Status: a.status, Confirm: f.confirm, Command: a.menuInput.String(), Subject: a.opts.Vault.Redact(f.name.String()), Annotation: modelmenu.IdentifiedName(f.selection(), a.opts.Vault.Redact)}
+	fieldX := view.SettingsValueColumn(w)
 	if f.editing && !f.confirm {
-		window := f.editor().FieldWindow(w, f.row == modelCredential)
+		window := f.editor().FieldWindow(w-fieldX, f.row == modelCredential)
 		display.Field = &window
 	}
 	if f.editing && f.row == modelName && len(f.hints) > 0 {
@@ -96,6 +97,6 @@ func (a *app) renderModel(w, h int) {
 	}
 	y := view.Settings(a.screen, display, w, h)
 	if display.Field != nil && f.row != modelCredential && y >= 0 {
-		a.inputRegion = inputRegion{editor: f.editor(), window: *display.Field, y: y, width: w, revision: f.editor().Revision()}
+		a.inputRegion = inputRegion{editor: f.editor(), window: *display.Field, x: fieldX, y: y, width: w - fieldX, revision: f.editor().Revision()}
 	}
 }

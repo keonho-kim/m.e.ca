@@ -32,7 +32,12 @@ type SettingsDisplay struct {
 	Confirm                    bool
 }
 
-// Settings returns the full-width editor row for clipboard source mapping.
+// SettingsValueColumn owns the shared origin of displayed and editable values.
+func SettingsValueColumn(width int) int {
+	return min(24, max(8, width/3)) + 1
+}
+
+// Settings returns the inline editor row for clipboard source mapping.
 func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
 	if h < 4 {
 		Text(screen, 0, 0, w, d.Language.Text("Resize terminal"), tcell.StyleDefault)
@@ -45,9 +50,6 @@ func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
 		Text(screen, x, 1, w-x, d.Annotation, tcell.StyleDefault.Dim(true))
 	}
 	space := max(1, h-3)
-	if d.Field != nil {
-		space--
-	}
 	reserved := 0
 	if d.Candidates.Open {
 		reserved = min(5, max(0, space-1))
@@ -60,7 +62,7 @@ func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
 	visible := max(1, space-reserved)
 	first := max(0, d.Selected-visible+1)
 	y, fieldY := 2, -1
-	labelWidth := min(24, max(8, w/3))
+	labelWidth := SettingsValueColumn(w) - 1
 	for index := first; index < min(len(d.Rows), first+visible); index++ {
 		row := d.Rows[index]
 		prefix := "  "
@@ -69,7 +71,10 @@ func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
 		}
 		Text(screen, 0, y, labelWidth, prefix+row.Label, SelectionStyle(index == d.Selected))
 		x := labelWidth + 1
-		if row.Values == nil {
+		if d.Field != nil && index == d.Selected {
+			fieldY = y
+			InputAt(screen, *d.Field, x, y, max(0, w-x))
+		} else if row.Values == nil {
 			Text(screen, x, y, max(0, w-x), row.Value, SelectionStyle(index == d.Selected))
 		} else {
 			start := 0
@@ -91,26 +96,17 @@ func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
 			}
 		}
 		y++
-		if d.Field != nil && index == d.Selected {
-			fieldY = y
-			Input(screen, *d.Field, y, w)
-			y++
+		if index == d.Selected && !d.Confirm && d.Candidates.Open {
+			y += candidatesAt(screen, d.Candidates, labelWidth+1, y, max(0, w-labelWidth-1), min(h-1, y+reserved))
 		}
 	}
-	if !d.Confirm {
-		if d.Candidates.Open {
-			if y+reserved+1 < h-1 {
-				y++
+	if !d.Confirm && !d.Candidates.Open {
+		for _, line := range d.Details {
+			if y >= h-2 {
+				break
 			}
-			candidates(screen, d.Candidates, y, w, h-1)
-		} else {
-			for _, line := range d.Details {
-				if y >= h-2 {
-					break
-				}
-				Text(screen, 0, y, w, line, tcell.StyleDefault.Dim(true))
-				y++
-			}
+			Text(screen, 0, y, w, line, tcell.StyleDefault.Dim(true))
+			y++
 		}
 	}
 	if d.Confirm {
