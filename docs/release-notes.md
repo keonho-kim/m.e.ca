@@ -6,4 +6,4 @@ macOS · Linux / amd64 · arm64
 
 프로젝트는 개인이 단독 개발·관리하며 외부 코드 기여는 받지 않습니다. 버그 제보는 환영합니다. 라이선스 조건을 준수한 사용·수정·재배포는 허용됩니다.
 
-[사용법과 설치](https://github.com/keonho-kim/m.e.ca#readme)
+[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest) · [설치 방법](https://github.com/keonho-kim/m.e.ca#설치) · [사용법](https://github.com/keonho-kim/m.e.ca#사용법)

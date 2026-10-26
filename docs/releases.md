@@ -37,7 +37,7 @@
 
 ## 다운로드와 설치
 
-[GitHub Releases](https://github.com/keonho-kim/m.e.ca/releases)에서 대상 아카이브와 `checksums.txt`를 같은 폴더에 받는다. 저장소가 비공개이면 접근 권한이 있는 GitHub 계정으로 로그인한다.
+[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 대상 아카이브와 `checksums.txt`를 같은 폴더에 받는다. 저장소가 비공개이면 접근 권한이 있는 GitHub 계정으로 로그인한다. OS·CPU를 감지해 최신 릴리스를 다운로드·검증·설치하는 명령은 [README의 설치 안내](../README.md#최신-릴리스로-설치하기)를 따른다.
 
 ```sh
 # macOS: 받은 파일의 결과가 checksums.txt의 동일 파일 항목과 같은지 확인

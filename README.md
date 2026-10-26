@@ -4,7 +4,7 @@
 
 *A coding agent with just the essentials.*
 
-[시작하기](#직접-빌드하기) · [사용법](#사용법) · [Program Philosophy](#program-philosophy) · [설정](#설정) · [문서](#문서)
+[설치](#설치) · [사용법](#사용법) · [Program Philosophy](#program-philosophy) · [설정](#설정) · [문서](#문서)
 
 </div>
 
@@ -21,7 +21,61 @@
 - **터미널 UI** — 스트리밍 응답, `!dir` 파일 참조, `!` 명령 검색, 마우스 스크롤과 문맥별 키 안내.
 - **사용량 확인** — 실제 입력·출력 토큰과 TPS, OpenRouter의 실제 보고 비용 표시.
 
-## 직접 빌드하기
+## 설치
+
+### 최신 릴리스로 설치하기
+
+[최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 설치할 수 있습니다. Linux·WSL과 macOS의 amd64·arm64를 지원하며, 릴리스 바이너리는 Go 설치 없이 동작합니다.
+
+터미널에서 설치하려면 [GitHub CLI](https://cli.github.com/)를 준비합니다. 비공개 저장소에 접근할 수 있는 계정으로 `gh auth login`을 한 번 실행한 뒤 아래 명령을 사용하세요. OS·CPU에 맞는 **최신 릴리스**를 받아 SHA-256을 검증하고 설치합니다. 버전 번호는 입력하지 않습니다.
+
+```sh
+(
+  set -eu
+
+  case "$(uname -s)" in
+    Darwin) meca_os=macos ;;
+    Linux) meca_os=linux ;;
+    *) printf '지원 OS: Linux, macOS\n' >&2; exit 1 ;;
+  esac
+  case "$(uname -m)" in
+    x86_64) meca_arch=amd64 ;;
+    arm64|aarch64) meca_arch=arm64 ;;
+    *) printf '지원 CPU: amd64, arm64\n' >&2; exit 1 ;;
+  esac
+
+  meca_stage=$(mktemp -d)
+  trap 'rm -rf -- "$meca_stage"' 0
+  gh release download --repo keonho-kim/m.e.ca \
+    --pattern "meca_*_${meca_os}_${meca_arch}.tar.gz" \
+    --pattern checksums.txt --dir "$meca_stage"
+
+  cd "$meca_stage"
+  set -- meca_*_"${meca_os}_${meca_arch}".tar.gz
+  grep -F "  $1" checksums.txt > checksums-selected.txt
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum --check checksums-selected.txt
+  else
+    shasum -a 256 --check checksums-selected.txt
+  fi
+  tar -xzf "$1"
+  ./meca install
+)
+```
+
+설치가 끝나면 다운로드용 임시 폴더는 정리됩니다. 한 번 설치하면 `~/.local/bin/meca`, `~/.meca`의 기본 설정·프롬프트와 필요한 셸 PATH 등록이 준비됩니다. 새 터미널과 재부팅 후에도 `meca` 명령을 사용할 수 있으며, 현재 터미널에는 다음 명령으로 반영합니다.
+
+```sh
+exec "$SHELL" -l
+```
+
+브라우저로 직접 받으려면 최신 릴리스의 아카이브와 `checksums.txt`를 내려받습니다. Apple Silicon은 `macos_arm64`, Intel Mac은 `macos_amd64`, Linux·WSL은 `uname -m`이 `x86_64`이면 `linux_amd64`, `aarch64`이면 `linux_arm64`를 선택합니다. SHA-256 확인 후 빈 폴더에 압축을 풀고 그 안에서 `./meca install`을 실행합니다. 검증 명령은 [릴리스 가이드](docs/releases.md#다운로드와-설치)를 참고하세요.
+
+**업데이트도 위 설치 명령을 다시 실행하면 됩니다.** 실행 중인 MECA를 모두 종료한 뒤 설치하면 최신 바이너리로 교체되며 기존 설정·프롬프트·대화는 유지됩니다. 새 릴리스가 나왔을 때의 업데이트는 이 명령으로 직접 실행합니다.
+
+`main`에 푸시하면 검사·빌드 후 릴리스를 자동으로 갱신합니다. major·minor는 [.release-version](.release-version)에 직접 지정하며, 날짜만 한국 시간 기준으로 바뀝니다. 같은 날짜의 추가 푸시는 그날의 태그와 배포 파일을 갱신합니다.
+
+### 소스에서 설치하기
 
 소스 설치에는 **Git**이 필요합니다. `install.sh`는 설치된 Go를 사용하며, Go가 없으면 공식 Go 1.27.2 배포본을 SHA-256으로 검증해 빌드용으로 임시 설치합니다. 자동 다운로드에는 curl·tar와 sha256sum 또는 shasum이 필요합니다. Linux와 macOS의 amd64·arm64를 지원합니다.
 
@@ -32,8 +86,6 @@ cd m.e.ca
 
 이후 명령은 저장소 루트에서 실행합니다.
 
-### 설치 — Linux / macOS
-
 ```sh
 ./install.sh
 ```
@@ -41,18 +93,6 @@ cd m.e.ca
 현재 OS·CPU에 맞춰 빌드하고 `~/.local/bin/meca`에 설치합니다. `~/.meca`와 기본 설정·프롬프트를 생성하고, 필요한 PATH 등록을 zsh·bash·sh 설정에 추가합니다. 기존 설정은 유지합니다. 새 터미널에서 `meca`를 사용할 수 있으며, 현재 터미널에는 설치 완료 메시지의 명령으로 반영합니다.
 
 자동으로 받은 Go는 저장소의 `.cache` 아래에서 이번 빌드에만 사용하고 완료·실패 시 정리합니다. Go의 모듈·빌드 캐시는 일반 Go 설정을 따릅니다. 시스템 Go 설치와 PATH는 유지합니다.
-
-### 릴리스 바이너리로 설치하기
-
-[GitHub Releases](https://github.com/keonho-kim/m.e.ca/releases)에서 운영체제와 CPU에 맞는 `meca_<version>_<macos|linux>_<amd64|arm64>.tar.gz`와 `checksums.txt`를 받습니다. 압축을 풀기 전에 해당 파일의 SHA-256을 확인한 뒤 다음을 실행합니다.
-
-```sh
-./meca install
-```
-
-릴리스 바이너리는 Go 설치 없이 동작합니다. macOS arm64는 Apple Silicon, macOS amd64는 Intel Mac용입니다. Linux/WSL은 `uname -m`이 `x86_64`이면 amd64, `aarch64`이면 arm64를 선택합니다. [검증·배포 절차](docs/releases.md)를 참고하세요.
-
-`main`에 푸시하면 검사·빌드 후 릴리스를 자동으로 갱신합니다. major·minor는 [.release-version](.release-version)에 직접 지정하며, 날짜만 한국 시간 기준으로 바뀝니다. 같은 날짜의 추가 푸시는 그날의 태그와 배포 파일을 갱신합니다.
 
 ### 빌드만 하기
 

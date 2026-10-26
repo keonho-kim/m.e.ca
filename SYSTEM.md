@@ -5,7 +5,7 @@
 ## 제품과 실행
 
 - M.E.CA(MECA)는 Minimal Essentials Coding Agent를 뜻하는 터미널 코딩 에이전트다. Go 단일 모듈과 실행 파일 `meca`를 사용하며 로컬 상태 경로는 `~/.meca`다. 소스 저장소는 `github.com/keonho-kim/m.e.ca`이며 Go 모듈 경로는 go.mod에 선언한 `github.com/keonho-kim/meca`다.
-- Linux와 macOS를 대상으로 한다. Go 도구 체인과 빌드·설치 명령은 [README](README.md#직접-빌드하기)를 따른다.
+- Linux와 macOS를 대상으로 한다. Go 도구 체인과 빌드·설치 명령은 [README](README.md#설치)를 따른다.
 - `meca`는 현재 폴더, `meca <path>`는 지정 폴더를 프로젝트로 사용한다. 시작 목록은 현재 프로젝트의 대화와 맨 위의 새 대화를 표시한다.
 - `meca resume`은 모든 프로젝트의 대화를 보여준다. 기존 대화는 저장된 프로젝트 경로로 복원한다.
 - 내부 명령은 `!model`, `!language`, `!dir`, `!new`, `!quit` 다섯 개다. `!` 후보는 접두사·부분일치를 우선하고 결과가 없으면 문자 순서를 유지하는 축약 검색을 지원하며 Enter로 실행한다. 모델 ID 후보에도 같은 축약 검색을 적용한다.
