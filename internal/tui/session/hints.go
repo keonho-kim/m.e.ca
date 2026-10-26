@@ -18,7 +18,7 @@ func (a *app) closeCommandHints() {
 }
 func (a *app) refreshHints() {
 	a.closeCommandHints()
-	if a.paste {
+	if a.paste || a.pendingEdit != nil {
 		return
 	}
 	prefix := strings.TrimLeftFunc(a.editor.String(), unicode.IsSpace)

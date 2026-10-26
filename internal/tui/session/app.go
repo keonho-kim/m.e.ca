@@ -52,6 +52,7 @@ func (a *app) requestExit() {
 	a.stopElapsed()
 	a.stopCompression()
 	a.exit = true
+	a.closePendingEdit()
 	if a.taskCancel != nil {
 		a.taskCancel()
 	}

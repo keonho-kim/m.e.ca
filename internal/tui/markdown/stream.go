@@ -16,6 +16,7 @@ type Stream struct {
 	rows           []Line
 	result         []Line
 	reused         int
+	width          int
 }
 
 // ReusedRows describes the immutable prefix retained by the most recent Render.
@@ -24,25 +25,29 @@ func (s *Stream) ReusedRows() int { return s.reused }
 // Render accepts snapshots. The last two top-level blocks remain mutable for
 // list continuation, tables and setext headings. References can affect earlier
 // blocks, so a possible reference definition (]:) triggers complete parsing.
-func (s *Stream) Render(text string) []Line {
+// A width change invalidates retained table layouts as well as the mutable tail.
+func (s *Stream) Render(text string, width int) []Line {
+	if s.width != width {
+		*s = Stream{width: width}
+	}
 	if s.source == text && s.result != nil {
 		s.reused = len(s.result)
 		return s.result
 	}
-	if text == "" {
+	if text == "" || width < 1 {
 		*s = Stream{}
 		return nil
 	}
 	if len(text) > MaxParseBytes || strings.Contains(text, "]:") {
 		*s = Stream{}
-		return Render(text)
+		return Render(text, width)
 	}
 	if s.cut > len(text) || s.cut > len(s.source) || text[:s.cut] != s.source[:s.cut] {
-		*s = Stream{}
+		*s = Stream{width: width}
 	}
 	start := s.cut
 	s.reused = s.committed
-	r := renderer{source: []byte(text[start:])}
+	r := renderer{source: []byte(text[start:]), width: width}
 	if s.committed > 0 {
 		r.rows = append(r.rows, s.rows[s.committed-1])
 	}

@@ -76,7 +76,8 @@ type app struct {
 	elapsedTicks                        <-chan time.Time
 	stopNotice                          string
 	tokensPerSecond                     *float64
-	pending                             string
+	pending                             []string
+	pendingEdit                         *pendingEdit
 	worker                              workerState
 	compressionTimer                    *time.Ticker
 	compressionTicks                    <-chan time.Time

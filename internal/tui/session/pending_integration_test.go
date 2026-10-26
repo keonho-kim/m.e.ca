@@ -1,4 +1,4 @@
-// Purpose: Verify deferred messages start only after the preceding HTTP generation completes.
+// Purpose: Verify queued requests execute sequentially with complete conversation history and released references.
 // Pattern: HTTP and session integration test.
 // Usage: go test ./internal/tui/session -run TestPendingRunsAfterCurrentAnswer.
 // Related: internal/tui/session/pending.go, internal/tui/session/tasks.go.
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -26,8 +27,8 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	a.ctx = ctx
 	started, release := make(chan struct{}), make(chan struct{})
+	sequence := []string{"first request", "next request", ":q", "fourth request"}
 	var requests atomic.Int32
-	var continued atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Messages []modelapi.Message `json:"messages"`
@@ -36,23 +37,45 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		if requests.Add(1) == 1 {
+		attempt := int(requests.Add(1))
+		if attempt > len(sequence) {
+			t.Error("unexpected generation beyond the queued requests")
+			http.Error(w, "unexpected request", http.StatusBadRequest)
+			return
+		}
+		var received []string
+		for _, m := range request.Messages {
+			if m.Role == "user" {
+				for _, text := range sequence {
+					if strings.Contains(m.Content, text) {
+						received = append(received, text)
+						break
+					}
+				}
+			}
+		}
+		if !slices.Equal(received, sequence[:attempt]) {
+			t.Errorf("request %d history=%v; want %v", attempt, received, sequence[:attempt])
+		}
+		for previous := 1; previous < attempt; previous++ {
+			found := false
+			for _, m := range request.Messages {
+				found = found || m.Role == "assistant" && m.Content == fmt.Sprintf("answer %d", previous)
+			}
+			if !found {
+				t.Errorf("request %d lost answer %d", attempt, previous)
+			}
+		}
+		if attempt == 1 {
 			close(started)
 			select {
 			case <-release:
 			case <-ctx.Done():
 				return
 			}
-		} else {
-			answer, next := false, false
-			for _, m := range request.Messages {
-				answer = answer || m.Role == "assistant" && strings.Contains(m.Content, "first answer")
-				next = next || m.Role == "user" && strings.Contains(m.Content, "next request")
-			}
-			continued.Store(answer && next)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"first answer"},"finish_reason":"stop"}]}`)
+		fmt.Fprintf(w, `{"choices":[{"message":{"content":"answer %d"},"finish_reason":"stop"}]}`, attempt)
 	}))
 	t.Cleanup(func() {
 		cancel()
@@ -71,21 +94,48 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
-	a.startTask("first request")
+	a.startTask(sequence[0])
 	select {
 	case <-started:
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
-	a.editor.Set("next request")
-	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if requests.Load() != 1 || a.pending != "next request" {
+	for _, text := range sequence[1:] {
+		if text == ":q" {
+			a.page, a.browser.Input = "files", true
+		}
+		a.editor.Set(text)
+		a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
+		if a.fileSendConfirm {
+			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+		}
+	}
+	if requests.Load() != 1 || !slices.Equal(a.pending, sequence[1:]) {
 		t.Fatal("request started before completion")
 	}
+	retained := a.pending
 	a.editor.Set("unsent draft")
 	close(release)
 	drainTask(t, a, false)
-	if requests.Load() != 2 || !continued.Load() || a.pending != "" || a.editor.String() != "unsent draft" {
+	if requests.Load() != int32(len(sequence)) || a.pending != nil || a.editor.String() != "unsent draft" {
 		t.Fatal("deferred input order or draft lost")
+	}
+	for _, text := range retained {
+		if text != "" {
+			t.Fatal("completed queue retained request references")
+		}
+	}
+	history, err := a.opts.Store.Messages(a.ctx, a.opts.Session.ID, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recorded []string
+	for _, message := range history {
+		if message.Role == "user" {
+			recorded = append(recorded, message.Content)
+		}
+	}
+	if !slices.Equal(recorded, sequence) {
+		t.Fatalf("stored request order=%v; want %v", recorded, sequence)
 	}
 }

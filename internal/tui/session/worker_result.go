@@ -27,7 +27,7 @@ func (a *app) finishWorker(n notice) {
 	a.stopElapsed()
 	a.taskCancel = nil
 	if n.Err != nil {
-		a.output.Append(a.thinking, true)
+		a.output.AppendBlock(transcript.Thought(a.thinking))
 		a.output.AppendBlock(transcript.Answer(a.stream))
 	}
 	if active && a.runSummary != nil {

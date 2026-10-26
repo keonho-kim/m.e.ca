@@ -31,6 +31,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 	if a.page == "language" {
 		return a.languageShortcuts()
 	}
+	if a.page == "chat" && a.pendingEdit != nil {
+		return a.pendingEditShortcuts()
+	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}
 	if a.page == "files" && a.fileSendConfirm {
 		label := "전송"
@@ -121,6 +124,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		}
 		controls = append(controls, view.Shortcut{Key: "^O", Label: label})
 	}
+	if a.canEditPending() {
+		controls = append(controls, view.Shortcut{Key: "Shift+←", Label: "Edit queue"})
+	}
 	return append(shortcuts, controls...)
 }
 
@@ -142,13 +148,11 @@ func (a *app) inputShortcuts() []view.Shortcut {
 			label = "방향 수정"
 		}
 		controls = append(controls, view.Shortcut{Key: "Enter", Label: label})
-		if a.pending == "" {
-			label := "후속 예약"
-			if a.page == "files" {
-				label = "Review queue"
-			}
-			controls = append(controls, view.Shortcut{Key: "Tab", Label: label})
+		label := "후속 예약"
+		if a.page == "files" {
+			label = "Review queue"
 		}
+		controls = append(controls, view.Shortcut{Key: "Tab", Label: label})
 		return controls
 	}
 	if a.worker.active() && !a.canSubmit(command.Kind) {

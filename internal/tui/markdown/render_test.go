@@ -13,7 +13,7 @@ import (
 
 func TestMarkdownRendering(t *testing.T) {
 	input := "# 제목 😀\n\n**굵게** *강조* 및 `x_y`\n\n- 항목\n\n> 인용\n\n```go\n  a := \"**literal**\"\n```\n\n[문서](https://example.com)\n"
-	rows := Render(input)
+	rows := Render(input, 80)
 	var text strings.Builder
 	bold, italic, code := false, false, false
 	for _, row := range rows {
@@ -52,7 +52,7 @@ func TestWrapKeepsGraphemesAndStyles(t *testing.T) {
 }
 func TestTableAndUnfinishedFence(t *testing.T) {
 	for _, input := range []string{"| 이름 | 값 |\n|---|---|\n| A | 2 |", "~~~\n**raw**"} {
-		rows := Render(input)
+		rows := Render(input, 80)
 		var text strings.Builder
 		for _, row := range rows {
 			text.WriteString(row.Text)
@@ -69,7 +69,7 @@ func TestTableAndUnfinishedFence(t *testing.T) {
 func TestTildesRemainLiteral(t *testing.T) {
 	input := "3~5일, 10~20개, ~문장~ 그리고 ~~문장~~"
 	var body strings.Builder
-	for _, row := range Render(input) {
+	for _, row := range Render(input, 80) {
 		body.WriteString(row.Text)
 	}
 	if body.String() != input {
@@ -78,7 +78,7 @@ func TestTildesRemainLiteral(t *testing.T) {
 }
 
 func TestDecodedControlsStaySafeAndEmojiStayWhole(t *testing.T) {
-	rows := Render("&#27;[31m **👨‍👩‍👧‍👦** ~3~5~")
+	rows := Render("&#27;[31m **👨‍👩‍👧‍👦** ~3~5~", 80)
 	var body strings.Builder
 	for _, row := range rows {
 		body.WriteString(row.Text)

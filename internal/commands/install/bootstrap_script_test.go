@@ -74,7 +74,18 @@ func TestSourceInstaller(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			goScript := []byte("#!/bin/sh\nprintf '%s\\n' \"$PWD|$*|${GOROOT-unset}\" > \"$MECA_TEST_GO_CALL\"\nif [ -n \"${MECA_TEST_GO_EXIT:-}\" ]; then\n echo 'fixture build failed' >&2\n exit \"$MECA_TEST_GO_EXIT\"\nfi\n")
+			goScript := []byte("#!/bin/sh\nprintf '%s\\n' \"$PWD|$*|${GOROOT-unset}\" > \"$MECA_TEST_GO_CALL\"\nif [ -n \"${MECA_TEST_GO_EXIT:-}\" ]; then\n echo 'fixture build failed' >&2\n exit \"$MECA_TEST_GO_EXIT\"\nfi\ncp \"$MECA_TEST_INSTALLER\" bin/meca\n")
+			installer := filepath.Join(root, "fixture-installer")
+			writeScriptFixture(t, installer, []byte(`#!/bin/sh
+set -eu
+printf '%s\n' "$PWD|$*|${GOROOT-unset}" > "$MECA_TEST_INSTALL_CALL"
+for sdk in "$MECA_TEST_SOURCE"/.cache/go-install.*; do
+    if [ -e "$sdk" ]; then
+        echo 'temporary Go remains at installation' >&2
+        exit 1
+    fi
+done
+`))
 			if tc.existing {
 				writeScriptFixture(t, filepath.Join(commands, "go"), goScript)
 			}
@@ -105,9 +116,14 @@ func TestSourceInstaller(t *testing.T) {
 			}
 			writeScriptFixture(t, filepath.Join(commands, "curl"), []byte(curl))
 			call := filepath.Join(root, "go-call")
+			installCall := filepath.Join(root, "install-call")
 			command := exec.Command("/bin/sh", filepath.Join(source, "install.sh"))
 			command.Dir = root
-			command.Env = []string{"HOME=" + root, "PATH=" + commands, "GOROOT=unrelated-go", "MECA_TEST_GO_CALL=" + call, "MECA_TEST_ARCHIVE=" + archivePath, "MECA_TEST_GO_EXIT=" + tc.buildExit}
+			command.Env = []string{
+				"HOME=" + root, "PATH=" + commands, "GOROOT=unrelated-go",
+				"MECA_TEST_GO_CALL=" + call, "MECA_TEST_ARCHIVE=" + archivePath, "MECA_TEST_GO_EXIT=" + tc.buildExit,
+				"MECA_TEST_INSTALLER=" + installer, "MECA_TEST_INSTALL_CALL=" + installCall, "MECA_TEST_SOURCE=" + source,
+			}
 			output, err := command.CombinedOutput()
 			if tc.wantError == "" && err != nil || tc.wantError != "" && (err == nil || !strings.Contains(string(output), tc.wantError)) {
 				t.Fatalf("installer: %v\n%s", err, output)
@@ -118,11 +134,19 @@ func TestSourceInstaller(t *testing.T) {
 				if tc.existing {
 					goroot = "unrelated-go"
 				}
-				if readErr != nil || string(invocation) != source+"|run ./cmd/meca install|"+goroot+"\n" {
+				if readErr != nil || string(invocation) != source+"|build -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
 					t.Fatalf("Go invocation = %q, %v", invocation, readErr)
 				}
 			} else if !os.IsNotExist(readErr) {
 				t.Fatalf("unverified Go was run: %q, %v", invocation, readErr)
+			}
+			installed, readErr := os.ReadFile(installCall)
+			if tc.wantError == "" {
+				if readErr != nil || string(installed) != root+"|install|unrelated-go\n" {
+					t.Fatalf("installer invocation = %q, %v", installed, readErr)
+				}
+			} else if !os.IsNotExist(readErr) {
+				t.Fatalf("installer ran after failed build: %q, %v", installed, readErr)
 			}
 			remaining, err := filepath.Glob(filepath.Join(source, ".cache/go-install.*"))
 			if err != nil || len(remaining) != 0 {

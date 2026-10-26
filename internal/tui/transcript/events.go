@@ -33,7 +33,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		return nil
 	}
 	if event.Kind == "thinking" {
-		return []viewport.Block{{Text: f.Redact(event.Thinking), Thinking: true}}
+		return []viewport.Block{Thought(f.Redact(event.Thinking))}
 	}
 	if event.Text != "" {
 		return []viewport.Block{{Text: f.Redact(event.Text)}}

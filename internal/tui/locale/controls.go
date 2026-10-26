@@ -6,6 +6,11 @@ package locale
 
 var controls = []translation{
 	{"", "Cancel lookup", "조회 취소"},
+	{"", "Edit queue", "예약 편집"},
+	{"", "Browse queue", "큐 이동"},
+	{"", "Save edit", "수정 저장"},
+	{"", "Cancel edit", "편집 취소"},
+	{"", "Cancel reservation", "예약 삭제"},
 	{"", "Copy", "복사"},
 	{"", "Input history", "입력 기록"},
 	{"", "Steer", "방향 수정"},

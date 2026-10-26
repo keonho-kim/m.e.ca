@@ -47,7 +47,7 @@ shasum -a 256 meca_<version>_macos_arm64.tar.gz
 sha256sum meca_<version>_linux_amd64.tar.gz
 ```
 
-`<version>`과 플랫폼 부분은 실제 파일명으로 바꾼다. 확인한 아카이브를 빈 폴더에 풀고 `./meca install`을 실행하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
+`<version>`과 플랫폼 부분은 실제 파일명으로 바꾼다. 확인한 아카이브를 빈 폴더에 풀고 `./meca install`을 실행하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 로그인 셸로 전환하며, 이 셸을 종료하면 기존 셸로 돌아간다. PATH가 이미 반영되어 있거나 비대화형 실행이면 전환하지 않는다. 자동화에서는 `./meca install --no-shell`로 전환을 명시적으로 끌 수 있다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
 
 ## 로컬 검증
 

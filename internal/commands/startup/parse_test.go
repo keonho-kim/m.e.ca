@@ -38,3 +38,15 @@ func TestMaintenanceDoesNotRequireProjectDirectory(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallNoShell(t *testing.T) {
+	mode, err := Parse([]string{"install", "--no-shell"}, "/missing/project")
+	if err != nil || mode.Action != Install || !mode.NoShell {
+		t.Fatalf("mode=%+v err=%v", mode, err)
+	}
+	for _, args := range [][]string{{"install", "extra"}, {"install", "--unknown"}, {"--no-shell"}} {
+		if _, err := Parse(args, t.TempDir()); err == nil {
+			t.Fatalf("unsupported install arguments accepted: %v", args)
+		}
+	}
+}

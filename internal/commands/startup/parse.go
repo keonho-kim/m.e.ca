@@ -16,6 +16,7 @@ import (
 
 type Mode struct {
 	Print, Export, Diagnose bool
+	NoShell                 bool
 	Output, Prompt, Session string
 	Action                  Action
 	Resume                  bool
@@ -31,8 +32,24 @@ const (
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
-	if len(args) == 1 && (args[0] == string(Install) || args[0] == string(Uninstall)) {
-		return Mode{Action: Action(args[0])}, nil
+	if len(args) > 0 && args[0] == string(Install) {
+		mode := Mode{Action: Install}
+		flags := flag.NewFlagSet("meca install", flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		flags.BoolVar(&mode.NoShell, "no-shell", false, "install without activating a login shell")
+		if err := flags.Parse(args[1:]); err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return Mode{Action: Help}, nil
+			}
+			return Mode{}, err
+		}
+		if flags.NArg() != 0 {
+			return Mode{}, fmt.Errorf("usage: meca install [--no-shell]")
+		}
+		return mode, nil
+	}
+	if len(args) == 1 && args[0] == string(Uninstall) {
+		return Mode{Action: Uninstall}, nil
 	}
 	if len(args) == 1 && args[0] == "resume" {
 		return Mode{Resume: true}, nil

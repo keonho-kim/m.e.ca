@@ -1,4 +1,4 @@
-// Purpose: Verify one deferred input stays ordered and returns to the draft on interruption.
+// Purpose: Verify unrestricted FIFO admission and ordered draft recovery after interruption or dispatch failure.
 // Pattern: Terminal state transition tests.
 // Usage: go test ./internal/tui/session -run TestPending.
 // Related: internal/tui/session/pending.go, internal/tui/session/keys.go.
@@ -6,29 +6,55 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"strings"
 	"testing"
 )
+
+func TestPendingAcceptsManyRequests(t *testing.T) {
+	a := fixture(t)
+	a.worker = workerAgent
+	var requests []string
+	for i := range 1024 {
+		text := fmt.Sprintf("request %d", i)
+		requests = append(requests, text)
+		a.editor.Set(text)
+		a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
+		if a.editor.String() != "" || !a.worker.agent() {
+			t.Fatalf("request %d was not reserved", i)
+		}
+		if keymapLabels(t, a)["Tab"] != "후속 예약" {
+			t.Fatal("Tab hint disappeared while requests were queued")
+		}
+	}
+	a.restorePending()
+	if a.editor.String() != strings.Join(requests, "\n\n") {
+		t.Fatal("restoration lost or reordered queued requests")
+	}
+}
 
 func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
 	a.editor.Set("next request")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.pending != "next request" || a.editor.String() != "" || !a.worker.active() {
+	if len(a.pending) != 1 || a.pending[0] != "next request" || a.editor.String() != "" || !a.worker.active() {
 		t.Fatal("Tab did not reserve input")
 	}
 	a.editor.Set("later draft")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.pending != "next request" || a.editor.String() != "later draft" {
-		t.Fatal("second Tab overwrote input")
+	if len(a.pending) != 2 || a.pending[0] != "next request" || a.pending[1] != "later draft" || a.editor.String() != "" {
+		t.Fatal("second Tab did not append the request")
 	}
+	a.editor.Set("unsent draft")
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
 	a.taskCancel = cancel
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if ctx.Err() != context.Canceled || a.pending != "" || a.editor.String() != "next request\n\nlater draft" {
+	if ctx.Err() != context.Canceled || len(a.pending) != 0 || a.editor.String() != "next request\n\nlater draft\n\nunsent draft" {
 		t.Fatal("Esc lost pending input")
 	}
 }
@@ -38,7 +64,7 @@ func TestPendingRejectsLocalCommands(t *testing.T) {
 	a.worker = workerAgent
 	a.editor.Set("!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.pending != "" || a.exit || a.editor.String() != "!quit" {
+	if len(a.pending) != 0 || a.exit || a.editor.String() != "!quit" {
 		t.Fatal("local command was queued or executed")
 	}
 }
@@ -46,10 +72,10 @@ func TestPendingRejectsLocalCommands(t *testing.T) {
 func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.pending = "next request"
+	a.pending = []string{"next request", "later request"}
 	a.editor.Set("unsent draft")
 	a.receive(notice{Done: true, Err: context.DeadlineExceeded})
-	if a.worker.active() || a.pending != "" || a.editor.String() != "next request\n\nunsent draft" {
+	if a.worker.active() || len(a.pending) != 0 || a.editor.String() != "next request\n\nlater request\n\nunsent draft" {
 		t.Fatal("failed worker started or lost pending request")
 	}
 }
@@ -57,9 +83,42 @@ func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.pending = "next request"
+	a.pending = []string{"next request", "later request"}
 	a.receive(notice{Done: true, RunStatus: run.Stopped})
-	if a.pending != "" || a.editor.String() != "next request" || a.worker.active() {
+	if len(a.pending) != 0 || a.editor.String() != "next request\n\nlater request" || a.worker.active() {
 		t.Fatal("blocked completion consumed the reserved request")
+	}
+}
+
+func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
+	a := fixture(t)
+	a.pending = []string{"first", "second", "third"}
+	retained := a.pending
+	a.editor.Set("unsent draft")
+	a.finishPending(true)
+	if a.worker.active() || a.pending != nil || a.editor.String() != "first\n\nsecond\n\nthird\n\nunsent draft" {
+		t.Fatal("failed dispatch lost or started queued requests")
+	}
+	for _, text := range retained {
+		if text != "" {
+			t.Fatal("restored queue retained request references")
+		}
+	}
+}
+
+func TestPendingProjectionShowsCountAndNextRequest(t *testing.T) {
+	for _, language := range []locale.Language{locale.Korean, locale.English} {
+		a := fixture(t)
+		a.language = language
+		a.pending = []string{"first", "second", "third"}
+		a.chatLayout(80)
+		if got := a.chatProjection.pending.Text; got != language.Format("Queued (%d) > ", 3)+"first" {
+			t.Fatalf("queue projection=%q", got)
+		}
+		a.restorePending()
+		a.chatLayout(80)
+		if a.chatProjection.pending.Text != "" {
+			t.Fatal("restored queue remained visible")
+		}
 	}
 }

@@ -43,7 +43,7 @@ func start() (err error) {
 		return err
 	}
 	if mode.Action == startup.Help {
-		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca resume | install | uninstall")
+		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca install [--no-shell]\n       meca resume | uninstall")
 		return nil
 	}
 	home, err := os.UserHomeDir()
@@ -57,7 +57,7 @@ func start() (err error) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 	if mode.Action != "" {
-		return maintenance(ctx, mode.Action, home)
+		return maintenance(ctx, mode, home)
 	}
 	if err := startup.CheckAgentUser(os.Geteuid()); err != nil {
 		return err

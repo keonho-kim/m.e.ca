@@ -45,12 +45,12 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 				a.page, a.browser.Input = "files", true
 			}
-			if a.pending != "Run this after finishing" {
+			if len(a.pending) != 1 || a.pending[0] != "Run this after finishing" {
 				t.Fatal("follow-up hint did not match action")
 			}
 			a.editor.Set("Change direction now")
 			labels = keymapLabels(t, a)
-			if labels["Tab"] != "" || labels["Enter"] != enter {
+			if labels["Tab"] != tab || labels["Enter"] != enter {
 				t.Fatal(labels)
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

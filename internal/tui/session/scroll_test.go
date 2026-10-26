@@ -17,7 +17,7 @@ func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
 	a := fixture(t)
 	a.historyEnd = true
 	a.output.Append("earlier conversation", false)
-	a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking\n", 40), Text: strings.Repeat("answer\n", 40) + "latest"})
+	a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40), Text: strings.Repeat("answer  \n", 40) + "latest"})
 	a.render()
 	height := a.chatHeight(80, a.bodyHeight(24))
 	transcript := a.chatLayout(view.TranscriptWidth(80))
@@ -39,7 +39,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			a.historyEnd = true
 			defer a.stopCompression()
 			a.output.Append(strings.Repeat("earlier\n", 50), false)
-			a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking\n", 40)})
+			a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40)})
 			a.render()
 			height := a.chatHeight(80, a.bodyHeight(24))
 			if paused {
@@ -49,7 +49,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			a.receiveRuntime(&run.Event{Kind: "thinking", Thinking: a.thinking})
 			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
 			a.receiveRuntime(&run.Event{Kind: "compaction_finished"})
-			a.receiveRuntime(&run.Event{Kind: "stream", Text: strings.Repeat("continued\n", 30) + "latest answer"})
+			a.receiveRuntime(&run.Event{Kind: "stream", Text: strings.Repeat("continued  \n", 30) + "latest answer"})
 			a.render()
 			if a.output.Follow == paused {
 				t.Fatal("compaction changed follow preference")

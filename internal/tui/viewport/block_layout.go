@@ -48,7 +48,7 @@ func (b *Block) prepare(width int) {
 		return
 	}
 	if l.markdown {
-		l.parsed = b.stream.Render(b.Text)
+		l.parsed = b.stream.Render(b.Text, width)
 		l.metrics = previous.metrics[:0]
 	}
 	lastContent, firstContent := -1, -1
@@ -117,7 +117,7 @@ func (b *Block) Window(width, start, count int) []Line {
 	}
 	l := &b.layout
 	if l.markdown && l.parsed == nil {
-		l.parsed = b.stream.Render(b.Text)
+		l.parsed = b.stream.Render(b.Text, width)
 	}
 	start = max(0, start) + l.trim
 	end := min(l.total, start+count)

@@ -13,12 +13,12 @@ type chatProjection struct {
 
 func (a *app) chatLayout(width int) *viewport.Transcript {
 	p := &a.chatProjection
-	p.thinking.Text, p.thinking.Thinking = a.thinking, true
+	p.thinking.Text, p.thinking.Thinking, p.thinking.Markdown = a.thinking, true, true
 	p.stream.Text, p.stream.Markdown = a.stream, true
 	p.status.Text = a.status
 	pending := ""
-	if a.pending != "" {
-		pending = a.language.Text("예약 > ") + a.opts.Vault.Redact(a.pending)
+	if len(a.pending) > 0 {
+		pending = a.language.Format("Queued (%d) > ", len(a.pending)) + a.opts.Vault.Redact(a.pending[0])
 	}
 	p.pending.Text, p.pending.Thinking = pending, true
 	next := a.output.Next + 1

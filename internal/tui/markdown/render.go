@@ -1,11 +1,12 @@
 // Purpose: Parse agent Markdown into safe styled lines without HTML or terminal escape execution.
 // Pattern: AST-to-terminal presentation adapter.
-// Usage: Completed responses and streamed snapshots call Render; file/tool bodies remain plain.
+// Usage: Answers and Thinking share Render for completed blocks and streamed snapshots; file/tool bodies remain plain.
 // Related: internal/tui/markdown/inline.go, internal/tui/markdown/table.go.
 package markdown
 
 import (
 	"fmt"
+	"github.com/rivo/uniseg"
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/extension"
 	extast "github.com/yuin/goldmark/v2/extension/ast"
@@ -16,18 +17,23 @@ import (
 type renderer struct {
 	source []byte
 	rows   []Line
+	width  int
 	failed bool
 }
 
 // MaxParseBytes bounds AST construction, not accepted or displayed source text.
 const MaxParseBytes = 16 * 1024 * 1024
 
-// Render keeps oversized replies readable as literal text rather than building an unbounded AST.
-func Render(text string) []Line {
+// Render fits tables to width and leaves other blocks for viewport wrapping.
+// Oversized replies remain literal text instead of building an unbounded AST.
+func Render(text string, width int) []Line {
+	if width < 1 {
+		return nil
+	}
 	if len(text) > MaxParseBytes {
 		return literal(text)
 	}
-	r := renderer{source: []byte(text)}
+	r := renderer{source: []byte(text), width: width}
 	document := newParser().Parse(r.source)
 	r.blocks(document, "", 0)
 	if r.failed {
@@ -108,14 +114,15 @@ func (r *renderer) block(n ast.Node, indent string, depth int) {
 				}
 			}
 			start := len(r.rows)
-			r.blocks(item, indent+"  ", depth+1)
+			continuation := indent + strings.Repeat(" ", uniseg.StringWidth(marker))
+			r.blocks(item, continuation, depth+1)
 			if len(r.rows) > start {
 				first := r.rows[start]
 				prefix := indent + marker
 				// Replace only the structural indentation; keep content span styles.
 				spans := first.Spans
-				if len(spans) > 0 && strings.HasPrefix(spans[0].Text, indent+"  ") {
-					spans[0].Text = strings.TrimPrefix(spans[0].Text, indent+"  ")
+				if len(spans) > 0 && strings.HasPrefix(spans[0].Text, continuation) {
+					spans[0].Text = strings.TrimPrefix(spans[0].Text, continuation)
 				}
 				r.rows[start] = line(append([]Span{{Text: prefix, Style: Dim}}, spans...))
 			}

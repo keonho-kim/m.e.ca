@@ -17,23 +17,34 @@ func TestStreamMatchesCompleteRendering(t *testing.T) {
 		"- one\n\n- two\n  continued\n\n  paragraph\n\nend\n",
 		"before\n\n```go\nx := 1\n\n```\n\nafter\n\nlast",
 		"title\n=====\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nnext",
+		"before\n\n| Name | Description | State |\n|---|---|---:|\n| 파일 | **한글 👨‍👩‍👧‍👦 " + strings.Repeat("long text ", 12) + "** | OK |\n\nnext\n\nlast",
 		"[later][id]\n\nother\n\n[id]: https://example.com\n",
 		"> quote\n>\n> more\n\n---\n\nlast\n\n",
 	} {
 		var stream Stream
 		for at := range source {
 			text := source[:at]
-			if got, want := stream.Render(text), Render(text); !equalLines(got, want) {
+			if got, want := stream.Render(text, 80), Render(text, 80); !equalLines(got, want) {
 				t.Fatalf("prefix %q:\ngot %#v\nwant %#v", text, got, want)
 			}
 		}
-		if got := stream.Render(source); !equalLines(got, Render(source)) {
+		if got := stream.Render(source, 80); !equalLines(got, Render(source, 80)) {
 			t.Fatalf("complete %q: %#v", source, got)
 		}
 		for _, replacement := range []string{source + "new", "reset", ""} {
-			if got := stream.Render(replacement); !equalLines(got, Render(replacement)) {
+			if got := stream.Render(replacement, 80); !equalLines(got, Render(replacement, 80)) {
 				t.Fatalf("replacement %q: %#v", replacement, got)
 			}
+		}
+	}
+}
+
+func TestStreamTableResizesCommittedRows(t *testing.T) {
+	source := "before\n\n| Name | Description |\n|---|---|\n| 파일 | " + strings.Repeat("설명 😀 ", 24) + " |\n\nafter\n\nlast"
+	var stream Stream
+	for _, width := range []int{80, 32, 120, 8, 80, 80, 0, 80} {
+		if got, want := stream.Render(source, width), Render(source, width); !equalLines(got, want) {
+			t.Fatalf("stale table layout at width %d:\ngot %#v\nwant %#v", width, got, want)
 		}
 	}
 }
@@ -41,11 +52,11 @@ func TestStreamMatchesCompleteRendering(t *testing.T) {
 func BenchmarkStreamTail(b *testing.B) {
 	text := strings.Repeat("**Result**: example and `code`.\n\n", 4000)
 	var stream Stream
-	stream.Render(text)
+	stream.Render(text, 80)
 	b.ReportAllocs()
 	i := 0
 	for b.Loop() {
-		stream.Render(text + strings.Repeat("x", i%100))
+		stream.Render(text+strings.Repeat("x", i%100), 80)
 		i++
 	}
 }
@@ -55,7 +66,7 @@ func BenchmarkFullMarkdown(b *testing.B) {
 	i := 0
 	b.ReportAllocs()
 	for b.Loop() {
-		Render(text + strings.Repeat("x", i%100))
+		Render(text+strings.Repeat("x", i%100), 80)
 		i++
 	}
 }
@@ -70,7 +81,7 @@ func FuzzStream(f *testing.F) {
 		}
 		var stream Stream
 		for at := 0; at <= len(text); at += max(1, len(text)/32) {
-			got, want := stream.Render(text[:at]), Render(text[:at])
+			got, want := stream.Render(text[:at], 80), Render(text[:at], 80)
 			if !equalLines(got, want) {
 				t.Fatalf("prefix %q: %#v want %#v", text[:at], got, want)
 			}

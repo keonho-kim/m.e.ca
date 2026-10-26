@@ -24,12 +24,16 @@ func (a *app) steerInput(text string) {
 }
 
 func (a *app) restoreSteering() {
+	editor := &a.editor
+	if a.pendingEdit != nil {
+		editor = &a.pendingEdit.draft
+	}
 	if len(a.steeringDrafts) > 0 {
 		text := strings.Join(a.steeringDrafts, "\n\n")
-		if draft := a.editor.String(); draft != "" {
+		if draft := editor.String(); draft != "" {
 			text += "\n\n" + draft
 		}
-		a.editor.Set(text)
+		editor.Set(text)
 	}
 	a.steering, a.steeringDrafts = nil, nil
 }

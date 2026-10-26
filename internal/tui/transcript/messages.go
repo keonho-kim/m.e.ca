@@ -1,4 +1,4 @@
-// Purpose: Project conversation messages into spaced terminal turns.
+// Purpose: Project conversation messages and Thinking into styled, spaced terminal blocks.
 // Pattern: Presentation projection.
 // Usage: Session history and live output supply values and a redactor.
 // Related: internal/tui/transcript/events.go, internal/agent/model/model.go, internal/tui/viewport/viewport.go.
@@ -35,3 +35,8 @@ func Reply(text string) string {
 }
 
 func Answer(text string) viewport.Block { return viewport.Block{Text: Reply(text), Markdown: true} }
+
+// Thought projects model reasoning as dimmed Markdown without changing its source.
+func Thought(text string) viewport.Block {
+	return viewport.Block{Text: text, Markdown: true, Thinking: true}
+}

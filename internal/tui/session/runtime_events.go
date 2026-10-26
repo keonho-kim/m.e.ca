@@ -68,14 +68,14 @@ func (a *app) receiveRuntime(e *run.Event) {
 	}
 	if e.Kind == "thinking" {
 		a.thinking = ""
-		a.output.Append(e.Thinking, true)
+		a.output.AppendBlock(transcript.Thought(e.Thinking))
 		return
 	}
 	if e.Kind == "stream" {
 		a.stream, a.thinking = e.Text, e.Thinking
 	} else if e.Kind == "response" {
 		a.stream, a.thinking = "", ""
-		a.output.Append(e.Thinking, true)
+		a.output.AppendBlock(transcript.Thought(e.Thinking))
 		a.output.AppendBlock(transcript.Answer(e.Text))
 	} else {
 		a.output.Append(e.Text, false)

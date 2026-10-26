@@ -12,19 +12,23 @@ if [ "$#" -ne 0 ]; then
 fi
 
 meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-cd "$meca_install_root"
+(
+    cd "$meca_install_root"
+    meca_go_stage=
+    trap '[ -z "$meca_go_stage" ] || rm -rf -- "$meca_go_stage"' 0
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
 
-meca_go_stage=
-trap '[ -z "$meca_go_stage" ] || rm -rf -- "$meca_go_stage"' 0
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
+    if command -v go >/dev/null 2>&1; then
+        meca_go_binary=$(command -v go)
+    else
+        . "$meca_install_root/scripts/install/go.sh"
+        meca_bootstrap_go
+    fi
 
-if command -v go >/dev/null 2>&1; then
-    meca_go_binary=$(command -v go)
-else
-    . "$meca_install_root/scripts/install/go.sh"
-    meca_bootstrap_go
-fi
+    mkdir -p bin
+    CGO_ENABLED=0 "$meca_go_binary" build -trimpath -o bin/meca ./cmd/meca
+)
 
-CGO_ENABLED=0 "$meca_go_binary" run ./cmd/meca install
+exec "$meca_install_root/bin/meca" install

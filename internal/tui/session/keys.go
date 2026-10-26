@@ -28,6 +28,9 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		a.requestExit()
 		return
 	}
+	if a.pendingEditKey(e) {
+		return
+	}
 	if a.page == "files" && a.fileSendConfirm {
 		a.fileSendKey(e)
 		return
