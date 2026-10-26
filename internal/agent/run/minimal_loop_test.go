@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 )
@@ -19,7 +20,7 @@ func TestMinimalRepeatedCommandNeedsNoReasonOrInterveningEdit(t *testing.T) {
 	e := &executor{}
 	r := fixture(g, e, &journal{})
 	result, err := r.Run(context.Background(), "Wait for the service", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 2 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 2 {
 		t.Fatalf("result=%+v executed=%d err=%v", result, e.executed, err)
 	}
 }
@@ -27,7 +28,7 @@ func TestMinimalRepeatedCommandNeedsNoReasonOrInterveningEdit(t *testing.T) {
 func TestMinimalEmptyResponseStopsOnce(t *testing.T) {
 	g := &generator{replies: []string{""}}
 	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "Hello", approve, emit)
-	if err == nil || !strings.Contains(err.Error(), "empty") || result.Status != Stopped || len(g.requests) != 1 {
+	if err == nil || !strings.Contains(err.Error(), "empty") || result.Status != runrecord.Stopped || len(g.requests) != 1 {
 		t.Fatalf("%+v calls=%d err=%v", result, len(g.requests), err)
 	}
 }
@@ -36,7 +37,7 @@ func TestMinimalJSONAnswerIsOrdinaryText(t *testing.T) {
 	g := &generator{replies: []string{`{"tool":"example-only"}`}}
 	e := &executor{}
 	result, err := fixture(g, e, &journal{}).Run(context.Background(), "Show an example JSON object", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 0 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 0 {
 		t.Fatalf("%+v err=%v", result, err)
 	}
 }

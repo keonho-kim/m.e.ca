@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"time"
 )
 
@@ -27,8 +28,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	if !account {
 		role = inference.Compaction
 	}
-	generation := Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
-	if err := s.emit(Event{Kind: "generation_started"}); err != nil {
+	generation := runrecord.Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
+	if err := s.emit(runrecord.Event{Kind: "generation_started"}); err != nil {
 		return err
 	}
 	var outputBytes int64
@@ -59,12 +60,12 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 			}
 			s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 			message := fmt.Sprintf("Provider retry %d/%d: %s", event.Retry.Attempt, event.Retry.MaxAttempts, s.runner.Redact(event.Retry.Reason))
-			if err := s.emit(Event{Kind: "retry", Text: message}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "retry", Text: message}); err != nil {
 				return err
 			}
 			started = time.Now()
 			generation.Attempt++
-			if err := s.emit(Event{Kind: "generation_started"}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "generation_started"}); err != nil {
 				return err
 			}
 			return consume(event)
@@ -84,7 +85,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 			usage = &snapshot
 			measured = time.Since(started)
 			rate = outputRate(snapshot.Output, measured)
-			if err := s.emit(Event{Kind: "usage_progress", Usage: usage, TokensPerSecond: rate}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "usage_progress", Usage: usage, TokensPerSecond: rate}); err != nil {
 				return err
 			}
 		}
@@ -93,11 +94,11 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	return errors.Join(err, flush())
 }
 
-func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, rate *float64, generation Generation) error {
+func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, rate *float64, generation runrecord.Generation) error {
 	// Preserve the last received count even if the call ends without another report.
 	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	final := Event{Kind: "generation_finished", Generation: &generation}
+	final := runrecord.Event{Kind: "generation_finished", Generation: &generation}
 	if usage != nil {
 		final.Kind = "usage"
 		final.Usage = usage

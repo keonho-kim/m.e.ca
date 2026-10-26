@@ -7,6 +7,7 @@ package session
 import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/tui/input"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 )
 
@@ -25,8 +26,8 @@ func (a *app) pasteBoundary(start bool) {
 		switch {
 		case a.page == "chat" || a.page == "files" && a.browser.Input && a.filePreview == nil && !a.fileSendConfirm:
 			a.pasted.editor = &a.editor
-		case a.page == "model" && a.modelForm != nil && a.modelForm.editing && !a.modelForm.confirm:
-			a.pasted.editor, a.pasted.singleLine = a.modelForm.editor(), true
+		case a.page == "model" && a.modelForm != nil && a.modelForm.Editing && !a.modelForm.Confirm:
+			a.pasted.editor, a.pasted.singleLine = a.modelForm.Editor(), true
 		}
 		if a.pasted.editor != nil {
 			a.pasted.limit = input.MaxBytes - len(a.pasted.editor.String())
@@ -41,10 +42,10 @@ func (a *app) pasteBoundary(start bool) {
 			a.pasted.editor.Insert(a.pasted.text.String())
 			if a.page == "model" && a.modelForm != nil {
 				f := a.modelForm
-				if f.row == modelCredential {
-					f.keyChanged = true
+				if f.Row == modelsettings.Credential {
+					f.KeyChanged = true
 				}
-				f.invalidate(f.row != modelName)
+				f.Invalidate(f.Row != modelsettings.Name)
 			}
 		}
 	}

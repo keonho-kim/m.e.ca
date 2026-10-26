@@ -7,13 +7,14 @@ package run
 import (
 	"context"
 	"errors"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
 
-func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(Event) error) (toolapi.Result, error) {
+func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(runrecord.Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
-	event := Event{CallID: call.ID, Call: &call}
+	event := runrecord.Event{CallID: call.ID, Call: &call}
 	if call.Name != "execute_command" || outcome.Process == nil {
 		outcome.Started = true
 	}

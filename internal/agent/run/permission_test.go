@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
@@ -23,7 +24,7 @@ func TestAllMightyAutomaticallyApprovesRequiredOperation(t *testing.T) {
 		t.Fatal("All Mighty requested user approval")
 		return false, nil
 	}, emit)
-	if err != nil || result.Status != Answered || e.executed != 1 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 1 {
 		t.Fatalf("result=%+v executed=%d error=%v", result, e.executed, err)
 	}
 	found := false
@@ -49,7 +50,7 @@ func TestAllMightyApprovesParallelWave(t *testing.T) {
 		t.Fatal("parallel wave requested user approval")
 		return false, nil
 	}, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatal(result.Status, err)
 	}
 	for _, name := range []string{"a", "b"} {

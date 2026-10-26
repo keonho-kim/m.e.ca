@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/storage/recovery"
@@ -70,10 +70,10 @@ type interruptedCommit struct {
 	fail bool
 }
 
-func (s *interruptedCommit) Commit(ctx context.Context, session string, records []run.JournalRecord) error {
+func (s *interruptedCommit) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
 	if s.fail {
-		invalid := run.Event{Kind: "usage"}
-		records = append(records, run.JournalRecord{Event: &invalid})
+		invalid := runrecord.Event{Kind: "usage"}
+		records = append(records, runrecord.Entry{Event: &invalid})
 	}
 	return s.Store.Commit(ctx, session, records)
 }

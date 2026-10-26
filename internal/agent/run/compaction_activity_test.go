@@ -12,6 +12,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type activityRepository struct {
@@ -56,7 +57,7 @@ func TestCompactionActivityCoversPreparationAndFailure(t *testing.T) {
 			r.Generator, r.Journal = model, store
 			r.Memory = &compact.Controller{Repository: store, Session: r.Session, Model: r.Model, Prompt: prompt.Defaults().Compaction, Settings: compact.Defaults(), Redact: r.Redact}
 			starts, finishes := 0, 0
-			_, err := r.Run(context.Background(), "Continue work", approve, func(event Event) error {
+			_, err := r.Run(context.Background(), "Continue work", approve, func(event runrecord.Event) error {
 				switch event.Kind {
 				case "compaction_started":
 					starts++

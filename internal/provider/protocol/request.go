@@ -5,12 +5,18 @@
 package protocol
 
 import (
-	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
+	if kind == modelconn.LMStudio {
+		content, err := lmPayload(request.ModelID, messages, request.MaxOutput, controls.ReasoningEffort, request.Temperature, request.Tools)
+		if err != nil {
+			return "", nil, err
+		}
+		return baseURL + "/responses", content, nil
+	}
 	payload := wireRequest{Model: request.ModelID, Messages: messages, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
 	payload.Reasoning = controls.Reasoning
 	payload.Tools = Tools(request.Tools)
@@ -30,11 +36,7 @@ func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelIn
 		payload.Temperature = request.Temperature
 		payload.StreamOptions = &streamOptions{IncludeUsage: true, ContinuousUsage: kind == modelconn.VLLM || kind == modelconn.SGLang}
 	}
-	content, err := json.Marshal(payload)
-	if kind == modelconn.LMStudio {
-		endpoint = baseURL + "/responses"
-		content, err = lmPayload(request.ModelID, messages, request.MaxOutput, controls.ReasoningEffort, request.Temperature, request.Tools)
-	}
+	content, err := wireJSON.Marshal(payload)
 	if err != nil {
 		return "", nil, err
 	}

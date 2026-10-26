@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
 	"testing"
@@ -25,7 +25,7 @@ func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 	}
 	initial := snapshot()
 	raw := " \n\n\t\n"
-	a.receiveRuntime(&run.Event{Kind: "stream", Text: raw, Thinking: raw})
+	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: raw, Thinking: raw})
 	if a.stream != raw || a.thinking != raw {
 		t.Fatal("display normalization changed model snapshots")
 	}
@@ -33,7 +33,7 @@ func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 		t.Fatal("whitespace stream moved terminal content")
 	}
 	for _, kind := range []string{"thinking", "progress", "response"} {
-		a.receiveRuntime(&run.Event{Kind: kind, Text: raw, Thinking: raw})
+		a.receiveRuntime(&runrecord.Event{Kind: kind, Text: raw, Thinking: raw})
 		if current := snapshot(); current != initial {
 			t.Fatalf("%s appended blank transcript rows", kind)
 		}

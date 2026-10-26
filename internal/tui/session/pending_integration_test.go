@@ -110,14 +110,14 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 		}
 	}
-	if requests.Load() != 1 || !slices.Equal(a.pending, sequence[1:]) {
+	if requests.Load() != 1 || !slices.Equal(a.queued.Messages, sequence[1:]) {
 		t.Fatal("request started before completion")
 	}
-	retained := a.pending
+	retained := a.queued.Messages
 	a.editor.Set("unsent draft")
 	close(release)
 	drainTask(t, a, false)
-	if requests.Load() != int32(len(sequence)) || a.pending != nil || a.editor.String() != "unsent draft" {
+	if requests.Load() != int32(len(sequence)) || a.queued.Messages != nil || a.editor.String() != "unsent draft" {
 		t.Fatal("deferred input order or draft lost")
 	}
 	for _, text := range retained {

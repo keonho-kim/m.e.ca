@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
 )
@@ -28,7 +28,7 @@ func TestContextMessagesAfterTimelineAndBudget(t *testing.T) {
 	if err := s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "already compacted"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordEvent(ctx, session.ID, run.Event{Kind: "compaction", Text: "summary committed"}); err != nil {
+	if err := s.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "compaction", Text: "summary committed"}); err != nil {
 		t.Fatal(err)
 	}
 	records, _, err := s.Timeline(ctx, session.ID, 0, 10)

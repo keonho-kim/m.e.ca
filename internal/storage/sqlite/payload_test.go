@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -26,7 +26,7 @@ func TestPayloadDeduplicatedAndRestored(t *testing.T) {
 	ctx, id := context.Background(), s.Session().ID
 	text := strings.Repeat("long shared reasoning\n", 10000)
 	for range 3 {
-		if err := s.RecordEvent(ctx, id, run.Event{Kind: "thinking", Thinking: text}); err != nil {
+		if err := s.RecordEvent(ctx, id, runrecord.Event{Kind: "thinking", Thinking: text}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -72,7 +72,7 @@ func TestPayloadKeepsNativeArgumentBytes(t *testing.T) {
 	if err := s.AppendMessage(ctx, id, modelapi.Message{Role: "assistant", Calls: []toolapi.Call{call}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordEvent(ctx, id, run.Event{Kind: "tool_succeeded", Call: &call, CallID: call.ID}); err != nil {
+	if err := s.RecordEvent(ctx, id, runrecord.Event{Kind: "tool_succeeded", Call: &call, CallID: call.ID}); err != nil {
 		t.Fatal(err)
 	}
 	page, _, err := s.Timeline(ctx, id, 0, 10)

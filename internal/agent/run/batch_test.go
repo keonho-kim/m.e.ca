@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -30,7 +31,7 @@ func TestNativeBatchRejectsInvalidArgumentsBeforeAnyPreparation(t *testing.T) {
 	r := fixture(&generator{}, e, j)
 	r.Generator = g
 	result, err := r.Run(context.Background(), "create two files", approve, emit)
-	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != Answered {
+	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != runrecord.Answered {
 		t.Fatalf("result=%+v prepared=%d executed=%d: %v", result, e.prepared, e.executed, err)
 	}
 	results := map[string]bool{}

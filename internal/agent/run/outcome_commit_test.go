@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -19,7 +20,7 @@ type outcomeJournal struct {
 	t         *testing.T
 }
 
-func (j *outcomeJournal) Commit(ctx context.Context, session string, records []JournalRecord) error {
+func (j *outcomeJournal) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
 	for _, record := range records {
 		if record.Event == nil || record.Event.Kind != "tool_succeeded" {
 			continue
@@ -76,7 +77,7 @@ func TestOutcomeCommitPrecedesDisplay(t *testing.T) {
 	j := &journal{}
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "body"}), "done"}}
 	r := fixture(g, &executor{}, j)
-	_, err := r.Run(context.Background(), "write a", approve, func(event Event) error {
+	_, err := r.Run(context.Background(), "write a", approve, func(event runrecord.Event) error {
 		if event.Kind == "tool_succeeded" {
 			for _, m := range j.messages {
 				if m.Role == "tool" && m.ToolCallID == event.CallID {

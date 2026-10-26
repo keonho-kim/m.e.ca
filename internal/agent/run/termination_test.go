@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
 )
@@ -24,7 +25,7 @@ func TestToolSequenceAllowsModelReportAfter128Calls(t *testing.T) {
 		}
 		g.replies = append(g.replies, final)
 		result, err := fixture(g, e, j).Run(context.Background(), "Inspect the required files", approve, emit)
-		if err != nil || result.Status != Answered || result.Text != final || e.executed != 130 || len(g.requests) != 131 {
+		if err != nil || result.Status != runrecord.Answered || result.Text != final || e.executed != 130 || len(g.requests) != 131 {
 			t.Fatalf("result=%+v tools=%d model_calls=%d err=%v", result, e.executed, len(g.requests), err)
 		}
 		if got := j.messages[len(j.messages)-1].Content; got != final {
@@ -56,7 +57,7 @@ func TestToolSequenceBatchCanCross128Calls(t *testing.T) {
 	r := fixture(&generator{}, e, j)
 	r.Generator = g
 	result, err := r.Run(context.Background(), "Inspect the required pairs", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 130 || g.rounds != 66 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 130 || g.rounds != 66 {
 		t.Fatalf("result=%+v tools=%d model_calls=%d err=%v", result, e.executed, g.rounds, err)
 	}
 }

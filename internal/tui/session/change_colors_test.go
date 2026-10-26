@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/view"
@@ -20,7 +20,7 @@ func TestAppliedDiffColors(t *testing.T) {
 		for _, restored := range []bool{false, true} {
 			a := fixture(t)
 			a.screen.SetSize(44, 60)
-			event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: name, Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1,2 +1,2 @@\n context\n-" + strings.Repeat("old ", 24) + "\n+" + strings.Repeat("new ", 24) + "\n"}
+			event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: name, Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1,2 +1,2 @@\n context\n-" + strings.Repeat("old ", 24) + "\n+" + strings.Repeat("new ", 24) + "\n"}
 			if restored {
 				a.output.Prepend((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(event))
 			} else {
@@ -86,10 +86,10 @@ func assertDiffRows(t *testing.T, a *app) {
 
 func TestAppliedDiffDoesNotColorPlainToolOutput(t *testing.T) {
 	a := fixture(t)
-	a.receiveRuntime(&run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command"}, Output: []byte(`{"Stdout":"-   1 | old\n+   1 | new\n","ExitCode":0}`)})
+	a.receiveRuntime(&runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command"}, Output: []byte(`{"Stdout":"-   1 | old\n+   1 | new\n","ExitCode":0}`)})
 	a.render()
 	assertForegroundOnly(t, a.screen)
-	a.receiveRuntime(&run.Event{Kind: "tool_failed", Text: "failed", Call: &tool.Call{Name: "edit_file"}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1 +1 @@\n-old\n+new\n"})
+	a.receiveRuntime(&runrecord.Event{Kind: "tool_failed", Text: "failed", Call: &tool.Call{Name: "edit_file"}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1 +1 @@\n-old\n+new\n"})
 	a.render()
 	assertForegroundOnly(t, a.screen)
 }

@@ -7,20 +7,19 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/run"
+
+	json "github.com/goccy/go-json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
-// Bound original captures and nested execution records independently of context projections.
-const maxEventBytes = 512 * 1024 * 1024
-
-func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event) error {
-	return s.Commit(ctx, session, []run.JournalRecord{{Event: &event}})
+func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord.Event) error {
+	return s.Commit(ctx, session, []runrecord.Entry{{Event: &event}})
 }
 
-func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event run.Event, now string) error {
+func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string) error {
 	if err := event.Check(); err != nil {
 		return err
 	}
@@ -28,7 +27,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if err != nil {
 		return err
 	}
-	if len(body) > maxEventBytes {
+	if len(body) > recordcontent.MaxBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
 	packed, refs, err := s.packRecord(ctx, tx, body)

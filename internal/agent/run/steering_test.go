@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -22,7 +23,7 @@ func TestSteeringAfterToolOutcomeAndBeforeFinal(t *testing.T) {
 		return nil
 	}
 	result, err := r.Run(context.Background(), "Implement a", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 	if !delivered || len(g.requests) != 2 {

@@ -19,7 +19,7 @@ type directoryPage struct {
 }
 
 func (a *app) cancelDirectory() {
-	a.directoryReads.stop()
+	a.directoryReads.Stop()
 	a.directoryRevision++
 	a.directoryLoading = false
 }
@@ -28,14 +28,14 @@ func (a *app) requestDirectory(mode, path string, offset int) {
 	a.cancelDirectory()
 	a.directoryLoading = mode != "refresh"
 	page := directoryPage{revision: a.directoryRevision, mode: mode, path: path, offset: offset}
-	if a.directoryReads.submit(page) {
+	if a.directoryReads.Submit(page) {
 		a.startDirectoryRead(page)
 	}
 }
 
 func (a *app) startDirectoryRead(page directoryPage) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.directoryReads.running, a.directoryReads.revision = cancel, page.revision
+	a.directoryReads.Begin(page.revision, cancel)
 	path, mode := page.path, page.mode
 	executor, settings := a.opts.Tools, a.settings
 	a.workers.Add(1)
@@ -62,7 +62,7 @@ func (a *app) startDirectoryRead(page directoryPage) {
 }
 
 func (a *app) receiveDirectory(page *directoryPage) {
-	if next := a.directoryReads.complete(page.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.directoryReads.Complete(page.revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startDirectoryRead(*next)
 	}
 	if page.revision != a.directoryRevision || a.page != "files" {

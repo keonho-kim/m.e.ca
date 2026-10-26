@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func TestToolReadThenEditIsAutomatic(t *testing.T) {
 			t.Fatal("approval not bound to actual edit")
 		}
 		return true, nil
-	}, func(e Event) error {
+	}, func(e runrecord.Event) error {
 		if e.Kind == "tool_succeeded" && e.Call != nil && e.Call.Name == "execute_command" {
 			var read struct{ Stdout string }
 			if err := json.Unmarshal(e.Output, &read); err != nil {
@@ -40,7 +41,7 @@ func TestToolReadThenEditIsAutomatic(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("result=%+v error=%v", result, err)
 	}
 	got, err := os.ReadFile(path)

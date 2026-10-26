@@ -1,7 +1,7 @@
 // Purpose: Decode explicit repository IDs in Hugging Face cache paths without guessing filenames.
 // Pattern: Pure Function.
 // Usage: Model menus display a normalized server-declared original name.
-// Related: internal/tui/modelmenu/identity.go, internal/provider/identity/report.go.
+// Related: internal/tui/settings/model/identity.go, internal/provider/identity/report.go.
 package identity
 
 import (

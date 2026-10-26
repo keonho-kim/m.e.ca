@@ -1,13 +1,13 @@
 // Purpose: Mark interrupted tasks and complete orphaned Tool Call records without replaying effects.
 // Pattern: Recovery use case over a consumer-owned persistence contract.
 // Usage: Called for the selected session before starting terminal workers.
-// Related: internal/storage/recovery/state.go, internal/agent/run/checkpoint.go.
+// Related: internal/storage/recovery/state.go, internal/agent/record/checkpoint.go.
 package recovery
 
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -34,8 +34,8 @@ func Restore(ctx context.Context, s Store, session string) error {
 				continue
 			}
 			message := modelapi.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"error":"operation interrupted; effects were not replayed; inspect current state before retrying"}`}
-			event := run.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}
-			if err = s.Commit(ctx, session, []run.JournalRecord{{Message: &message}, {Event: &event}}); err != nil {
+			event := runrecord.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}
+			if err = s.Commit(ctx, session, []runrecord.Entry{{Message: &message}, {Event: &event}}); err != nil {
 				return err
 			}
 			delete(pending, call.ID)

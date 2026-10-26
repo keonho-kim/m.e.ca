@@ -14,14 +14,14 @@ func TestProviderSettingsUseDeclaredDefaults(t *testing.T) {
 	for target, provider := range connection.Providers() {
 		a := fixture(t)
 		a.openModel()
-		a.modelForm.credential.Set("private-key")
-		for a.modelForm.provider != target {
+		a.modelForm.Credential.Set("private-key")
+		for a.modelForm.Provider != target {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 		}
-		if a.page != "model" || a.modelForm.endpoint.String() != provider.Endpoint {
-			t.Fatalf("provider=%s url=%s", provider.Label, a.modelForm.endpoint.String())
+		if a.page != "model" || a.modelForm.Endpoint.String() != provider.Endpoint {
+			t.Fatalf("provider=%s url=%s", provider.Label, a.modelForm.Endpoint.String())
 		}
-		if target > 0 && a.modelForm.credential.String() != "" {
+		if target > 0 && a.modelForm.Credential.String() != "" {
 			t.Fatal("provider change retained a typed credential")
 		}
 	}

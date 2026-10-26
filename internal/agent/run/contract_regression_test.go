@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -38,7 +39,7 @@ func TestContractPostToolResponseStreams(t *testing.T) {
 	r := fixture(&generator{}, &executor{}, &journal{})
 	r.Generator = &chunkGenerator{chunks: []string{"Hello", " world"}}
 	visible := 0
-	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, system: "rules", checkpoint: Checkpoint{Phase: "decision", Work: toolapi.Facts{}}, emit: func(e Event) error {
+	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, system: "rules", checkpoint: runrecord.Checkpoint{Phase: "decision", Work: toolapi.Facts{}}, emit: func(e runrecord.Event) error {
 		if e.Kind == "stream" && e.Text != "" {
 			visible++
 		}

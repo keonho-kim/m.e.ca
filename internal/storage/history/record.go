@@ -6,12 +6,12 @@ package history
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type Record struct {
 	Sequence int64
 	Kind     string
 	Message  modelapi.Message
-	Event    run.Event
+	Event    runrecord.Event
 }

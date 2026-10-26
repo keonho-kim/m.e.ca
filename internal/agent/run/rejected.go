@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
 
-func (s *execution) recordRejected(ctx context.Context, v validatedCall, outcome toolapi.Result, cause error, emit func(Event) error) error {
+func (s *execution) recordRejected(ctx context.Context, v validatedCall, outcome toolapi.Result, cause error, emit func(runrecord.Event) error) error {
 	call := v.call
 	failure := outcome.Failure
 	if failure == nil {
@@ -33,7 +34,7 @@ func (s *execution) recordRejected(ctx context.Context, v validatedCall, outcome
 	if err != nil {
 		return err
 	}
-	e := Event{Kind: "tool_failed", CallID: call.ID, Call: &call, Text: s.runner.Redact(failure.Error()), Output: body}
+	e := runrecord.Event{Kind: "tool_failed", CallID: call.ID, Call: &call, Text: s.runner.Redact(failure.Error()), Output: body}
 	outcome.Failed, outcome.Failure = true, failure
 	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
@@ -20,7 +21,7 @@ func TestCompletionRetainsFailedCommandHistory(t *testing.T) {
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
 	result, err := r.Run(context.Background(), "verify both checks", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("premature completion: %+v %v", result, err)
 	}
 	body, err := json.Marshal(g.requests[len(g.requests)-1].Messages)
@@ -42,7 +43,7 @@ func TestStaleGuardAllowsFreshPreparationOfSameEdit(t *testing.T) {
 	r := fixture(g, e, &journal{})
 	r.Settings.Scope = policy.System
 	result, err := r.Run(context.Background(), "update a", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 3 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 3 {
 		t.Fatalf("safe reprepare blocked: %+v executions=%d err=%v", result, e.executed, err)
 	}
 }

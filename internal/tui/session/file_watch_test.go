@@ -152,7 +152,7 @@ func TestFileWatchCancelledRegistrationDoesNotReopen(t *testing.T) {
 		watcher := n.FileWatch.watcher
 		a.closeFiles()
 		a.receive(n)
-		if a.page != "chat" || a.fileWatch.watcher != nil || a.watchReads.running != nil {
+		if a.page != "chat" || a.fileWatch.watcher != nil || a.watchReads.Running() {
 			t.Fatal("late registration reopened the browser")
 		}
 		if err := watcher.Add(a.opts.Session.ProjectRoot); !errors.Is(err, fsnotify.ErrClosed) {
@@ -167,7 +167,7 @@ func finishVisibleReads(t *testing.T, a *app) {
 	t.Helper()
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
-	for a.directoryReads.running != nil || a.previewReads.running != nil || a.watchReads.running != nil {
+	for a.directoryReads.Running() || a.previewReads.Running() || a.watchReads.Running() {
 		select {
 		case n := <-a.events:
 			a.receive(n)

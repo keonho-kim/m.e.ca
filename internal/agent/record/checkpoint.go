@@ -2,7 +2,7 @@
 // Pattern: State Machine contracts.
 // Usage: Task runtime emits checkpoints and SQLite validates stored state.
 // Related: internal/agent/run/journal.go, internal/storage/sqlite/runs.go.
-package run
+package record
 
 import (
 	"encoding/json"

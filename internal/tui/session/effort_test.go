@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"testing"
 )
 
@@ -25,9 +26,9 @@ func TestEffortSelectionPersistsOnlyAfterConfirmation(t *testing.T) {
 	a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true, ReasoningEffort: &low}
 	a.openModel()
 	f := a.modelForm
-	f.row, f.global = modelEffort, false
+	f.Row, f.Global = modelsettings.Effort, false
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if f.effort != "medium" || a.selection.Effort() != "low" {
+	if f.Effort != "medium" || a.selection.Effort() != "low" {
 		t.Fatal("effort escaped the draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -49,9 +50,9 @@ func TestEffortUnavailableCannotChange(t *testing.T) {
 	}
 	a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{On: true, Off: true}}}
 	a.openModel()
-	a.modelForm.row = modelEffort
+	a.modelForm.Row = modelsettings.Effort
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if a.page != "model" || a.modelForm.effort != "" || a.status == "" {
+	if a.page != "model" || a.modelForm.Effort != "" || a.status == "" {
 		t.Fatal("undeclared effort accepted")
 	}
 }

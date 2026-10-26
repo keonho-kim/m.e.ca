@@ -6,7 +6,7 @@ package session
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -14,7 +14,7 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	a := fixture(t)
 	rate := 5.0
 	update := func(kind string, input, output int64) {
-		a.receiveRuntime(&run.Event{Kind: kind, Usage: &modelapi.TokenUsage{Input: input, Output: output}, TokensPerSecond: &rate})
+		a.receiveRuntime(&runrecord.Event{Kind: kind, Usage: &modelapi.TokenUsage{Input: input, Output: output}, TokensPerSecond: &rate})
 	}
 	update("usage_progress", 100, 10)
 	update("usage_progress", 100, 15)
@@ -22,7 +22,7 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 		t.Fatalf("snapshots duplicated: %+v", got)
 	}
 	update("usage", 100, 15)
-	a.receiveRuntime(&run.Event{Kind: "generation_started"})
+	a.receiveRuntime(&runrecord.Event{Kind: "generation_started"})
 	if a.tokensPerSecond != nil {
 		t.Fatal("new generation inherited throughput")
 	}
@@ -36,11 +36,11 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 func TestGenerationCompactionDisplayStops(t *testing.T) {
 	a := fixture(t)
 	defer a.stopCompression()
-	a.receiveRuntime(&run.Event{Kind: "compaction_started"})
+	a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
 	if !a.activity().Compressing {
 		t.Fatal("compression did not start")
 	}
-	a.receiveRuntime(&run.Event{Kind: "compaction_finished"})
+	a.receiveRuntime(&runrecord.Event{Kind: "compaction_finished"})
 	if a.activity().Compressing {
 		t.Fatal("compression display retained after completion")
 	}

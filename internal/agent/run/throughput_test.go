@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -47,7 +48,7 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 			r.Generator = throughputGenerator{retry: retry}
 			var progress, final []float64
 			starts := 0
-			_, err := r.Run(context.Background(), "hello", approve, func(e Event) error {
+			_, err := r.Run(context.Background(), "hello", approve, func(e runrecord.Event) error {
 				if e.Kind == "generation_started" {
 					starts++
 				}

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
@@ -31,7 +31,7 @@ func TestCommandOutcomeLocalized(t *testing.T) {
 			for _, lang := range []locale.Language{locale.Korean, locale.English} {
 				raw := json.RawMessage(tc.body)
 				original := bytes.Clone(raw)
-				event := run.Event{Kind: tc.kind, Text: "Process exited; exit code 1", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)}, Output: raw}
+				event := runrecord.Event{Kind: tc.kind, Text: "Process exited; exit code 1", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)}, Output: raw}
 				if tc.failure != "" {
 					event.Operation = &tool.Operation{Failure: &tool.Failure{Code: tc.failure, Detail: "diagnostic secret", Next: "internal retry instruction"}}
 				}
@@ -66,7 +66,7 @@ func TestCommandOutcomeLocalized(t *testing.T) {
 }
 
 func TestCommandOutcomePreservesLiteralExitText(t *testing.T) {
-	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"printf output"}`)}, Output: []byte(`{"Stdout":"exit: 1\nexit: 0","ExitCode":0,"Status":"exited"}`)}
+	event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"printf output"}`)}, Output: []byte(`{"Stdout":"exit: 1\nexit: 0","ExitCode":0,"Status":"exited"}`)}
 	f := Formatter{Redact: func(s string) string { return s }}
 	shown := f.Tool(event)
 	if !strings.Contains(shown, "exit: 1\n    exit: 0") || !strings.Contains(shown, "실행 성공") {
@@ -77,7 +77,7 @@ func TestCommandOutcomePreservesLiteralExitText(t *testing.T) {
 func TestCommandOutcomeInvalidResultDoesNotClaimSuccess(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
 	for _, body := range []string{`{"ExitCode":null,"Status":"exited"}`, `{"ExitCode":"0","Status":"exited"}`, `{"ExitCode":0,"Status":42}`} {
-		event := run.Event{Kind: "tool_failed", Text: "unrecognized command result", Call: &tool.Call{Name: "execute_command"}, Output: []byte(body)}
+		event := runrecord.Event{Kind: "tool_failed", Text: "unrecognized command result", Call: &tool.Call{Name: "execute_command"}, Output: []byte(body)}
 		block := f.Event(event)[0]
 		for _, text := range []string{block.Text, block.Summary} {
 			if !strings.Contains(text, event.Text) || strings.Contains(text, "실행 성공") {

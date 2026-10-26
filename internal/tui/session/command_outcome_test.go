@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
@@ -20,7 +20,7 @@ func TestCommandOutcomeScreen(t *testing.T) {
 		for _, restored := range []bool{false, true} {
 			a := fixture(t)
 			a.language = lang
-			event := run.Event{
+			event := runrecord.Event{
 				Kind: "tool_failed", Text: "process_failed: Process exited; exit code 1; next: internal guidance",
 				Call:      &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
 				Output:    []byte(`{"Stderr":"missing package","ExitCode":1,"Status":"exited"}`),

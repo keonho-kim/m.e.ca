@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 )
@@ -17,7 +18,7 @@ func TestFinalReportDoesNotSpendAnotherCallAtBudget(t *testing.T) {
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 2
 	result, err := r.Run(context.Background(), "inspect a and b", approve, emit)
-	if err != nil || result.Status != Answered || len(g.requests) != 2 {
+	if err != nil || result.Status != runrecord.Answered || len(g.requests) != 2 {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
@@ -28,7 +29,7 @@ func TestFinalReportFallbackAtExhaustedBudget(t *testing.T) {
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 1
 	result, err := r.Run(context.Background(), "inspect a and b", approve, emit)
-	if err != nil || result.Status != Stopped || len(g.requests) != 1 || !strings.Contains(result.Text, "마지막 관찰") {
+	if err != nil || result.Status != runrecord.Stopped || len(g.requests) != 1 || !strings.Contains(result.Text, "마지막 관찰") {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
@@ -38,7 +39,7 @@ func TestFinalReportCancellationDoesNotGenerateFallback(t *testing.T) {
 	defer cancel()
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": ""}), "partial report"}, cancelAt: 2, cancel: cancel}
 	result, err := fixture(g, &executor{}, &journal{}).Run(ctx, "create a", approve, emit)
-	if !errors.Is(err, context.Canceled) || result.Status != Interrupted {
+	if !errors.Is(err, context.Canceled) || result.Status != runrecord.Interrupted {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
@@ -46,13 +47,13 @@ func TestFinalReportCancellationDoesNotGenerateFallback(t *testing.T) {
 func TestFinalReportPreservesRuntimeDeliveryFailure(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": ""}), "report"}}
 	sentinel := errors.New("UI delivery failed")
-	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "create a", approve, func(e Event) error {
+	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "create a", approve, func(e runrecord.Event) error {
 		if e.Kind == "stream" && len(g.requests) == 1 {
 			return sentinel
 		}
 		return nil
 	})
-	if !errors.Is(err, sentinel) || result.Status != Stopped {
+	if !errors.Is(err, sentinel) || result.Status != runrecord.Stopped {
 		t.Fatalf("hidden runtime error: %+v %v", result, err)
 	}
 }

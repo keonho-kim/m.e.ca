@@ -13,7 +13,7 @@ func (op *operation) checkMutationSafety() error {
 		decision.Merge(result)
 		return err
 	}
-	if op.spec.name == "create_directory" {
+	if op.spec.Name == "create_directory" {
 		for _, dir := range op.directories {
 			if dir.info == nil {
 				if err := check(dir.target.absolute); err != nil {
@@ -21,7 +21,7 @@ func (op *operation) checkMutationSafety() error {
 				}
 			}
 		}
-	} else if op.spec.effect == policy.Change {
+	} else if op.spec.Effect == policy.Change {
 		if err := check(op.source.absolute); err != nil {
 			return err
 		}

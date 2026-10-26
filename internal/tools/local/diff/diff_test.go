@@ -25,7 +25,7 @@ func TestPreview(t *testing.T) {
 		{"binary", "\x00old", "new", true, true, []string{"Binary content changed:", "4 bytes", "3 bytes"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			preview := Preview("file", []byte(test.before), []byte(test.after), test.old, test.next)
+			preview := previewText("file", []byte(test.before), []byte(test.after), test.old, test.next)
 			for _, want := range test.want {
 				if !strings.Contains(preview, want) {
 					t.Fatalf("missing %q in %q", want, preview)
@@ -35,7 +35,7 @@ func TestPreview(t *testing.T) {
 	}
 }
 func TestLargePreviewDoesNotDropChanges(t *testing.T) {
-	preview := Preview("file", []byte(strings.Repeat("old\n", 65537)), []byte("new\n"), true, true)
+	preview := previewText("file", []byte(strings.Repeat("old\n", 65537)), []byte("new\n"), true, true)
 	if strings.Count(preview, "\n-old") != 65537 || !strings.Contains(preview, "@@ -1,65537 +1,1 @@") || !strings.Contains(preview, "+new\n") {
 		t.Fatal("large-file fallback omitted changed lines")
 	}
@@ -47,7 +47,7 @@ func TestPreviewSeparateHunks(t *testing.T) {
 	}
 	before := strings.Join(lines, "")
 	lines[2], lines[21] = "changed 3\n", "changed 22\n"
-	preview := Preview("file", []byte(before), []byte(strings.Join(lines, "")), true, true)
+	preview := previewText("file", []byte(before), []byte(strings.Join(lines, "")), true, true)
 	if strings.Count(preview, "\n@@ ") != 2 || strings.Contains(preview, "line 12") {
 		t.Fatalf("unchanged middle was not omitted: %s", preview)
 	}
@@ -78,4 +78,9 @@ func TestMatchingPreservesBothVersions(t *testing.T) {
 			t.Fatal("diff did not preserve both complete file versions")
 		}
 	}
+}
+
+func previewText(path string, before, after []byte, existed, exists bool) string {
+	text, _, _, _ := preview(path, before, after, existed, exists)
+	return text
 }

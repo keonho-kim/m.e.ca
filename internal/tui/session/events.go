@@ -6,7 +6,7 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
@@ -24,12 +24,12 @@ type notice struct {
 	FileSelection   *fileSelectionResult
 	SetupRevision   int
 	Clipboard       bool
-	RunStatus       run.Status
+	RunStatus       runrecord.Status
 	FilePreview     *local.FilePreview
 	PreviewRevision int
 	RememberModel   bool
 	credential      string
-	Event           *run.Event
+	Event           *runrecord.Event
 	Approval        *toolapi.Approval
 	Done            bool
 	Err             error

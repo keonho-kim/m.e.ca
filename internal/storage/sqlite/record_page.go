@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (s *Store) recordPage(ctx context.Context, query string, args ...any) (records []storedRecord, err error) {
@@ -21,7 +22,7 @@ func (s *Store) recordPage(ctx context.Context, query string, args ...any) (reco
 		if err := rows.Scan(&r.sequence, &r.kind, &r.body, &r.refs, &r.size); err != nil {
 			return nil, err
 		}
-		if r.size < 1 || r.size > maxEventBytes {
+		if r.size < 1 || r.size > recordcontent.MaxBytes {
 			return nil, fmt.Errorf("invalid stored record length")
 		}
 		records = append(records, r)

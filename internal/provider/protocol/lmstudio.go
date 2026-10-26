@@ -37,7 +37,7 @@ func lmPayload(model string, messages []Message, maxOutput int, effort string, t
 	if effort != "" {
 		body.Reasoning = map[string]string{"effort": effort}
 	}
-	return json.Marshal(body)
+	return wireJSON.Marshal(body)
 }
 
 func lmMessages(messages []Message) ([]map[string]any, error) {

@@ -20,11 +20,12 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/setup"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/zalando/go-keyring"
 )
 
 func editModelValue(a *app, row int, value string) {
-	a.modelForm.row = row
+	a.modelForm.Row = row
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, value, 0))
@@ -51,20 +52,20 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	f := a.modelForm
 	for i, p := range connection.Providers() {
 		if p.Kind == connection.OpenRouter {
-			f.provider = i
+			f.Provider = i
 		}
 	}
-	editModelValue(a, modelEndpoint, server.URL)
-	editModelValue(a, modelCredential, secret)
-	f.row = modelName
+	editModelValue(a, modelsettings.Endpoint, server.URL)
+	editModelValue(a, modelsettings.Credential, secret)
+	f.Row = modelsettings.Name
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	drainTask(t, a, false)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "ali", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	f.row = modelThinking
+	f.Row = modelsettings.Thinking
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	drainTask(t, a, false)
-	if f.thinking == nil || *f.thinking || f.effort != "low" {
+	if f.Thinking == nil || *f.Thinking || f.Effort != "low" {
 		t.Fatal("declared OFF and strength were not resolved")
 	}
 	if a.client != nil || a.selection.Model != "" || a.opts.Config.Model != nil {
@@ -74,7 +75,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 		t.Fatalf("key saved before confirmation: %v", err)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	f.row = modelEffort
+	f.Row = modelsettings.Effort
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
@@ -121,7 +122,7 @@ func TestModelFormGlobalFailureKeepsCommittedSession(t *testing.T) {
 	a.selection = connection.Selection{Connection: c, Model: "alias", Thinking: &off, ThinkingSupported: true}
 	a.opts.SaveConfig = func(config.Config) error { return errors.New("default write failed") }
 	a.openModel()
-	a.modelForm.row = modelThinking
+	a.modelForm.Row = modelsettings.Thinking
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))

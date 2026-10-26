@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v3/vt"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 	"testing"
 )
@@ -17,13 +18,13 @@ func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelEndpoint, true
-	f.endpoint.Set("http://localhost:8000/v1")
+	f.Row, f.Editing = modelsettings.Endpoint, true
+	f.Endpoint.Set("http://localhost:8000/v1")
 	for i := 0; i < 3; i++ {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
-	if f.endpoint.String() != "" {
+	if f.Endpoint.String() != "" {
 		t.Fatal("endpoint suffix survived clearing")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -31,10 +32,10 @@ func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
 	if a.page != "model" || a.status == "" {
 		t.Fatal("empty endpoint was accepted")
 	}
-	f.editing = true
+	f.Editing = true
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "http://127.0.0.1:9000", 0))
-	if f.endpoint.String() != "http://127.0.0.1:9000" {
-		t.Fatal(f.endpoint.String())
+	if f.Endpoint.String() != "http://127.0.0.1:9000" {
+		t.Fatal(f.Endpoint.String())
 	}
 }
 
@@ -42,8 +43,8 @@ func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelEndpoint, true
-	f.endpoint.Set("http://localhost:8000/v1")
+	f.Row, f.Editing = modelsettings.Endpoint, true
+	f.Endpoint.Set("http://localhost:8000/v1")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
 	a.render()
 	tty, ok := a.screen.Tty()
@@ -54,11 +55,11 @@ func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
 	if err := terminal.Drain(); err != nil {
 		t.Fatal(err)
 	}
-	if int(terminal.Pos().X) != a.inputRegion.x+f.endpoint.Cursor {
+	if int(terminal.Pos().X) != a.inputRegion.x+f.Endpoint.Cursor {
 		t.Fatal("cursor differs from field")
 	}
 	a.screen.SetSize(20, 10)
-	f.endpoint.End()
+	f.Endpoint.End()
 	a.render()
 	if err := terminal.Drain(); err != nil {
 		t.Fatal(err)
@@ -84,16 +85,16 @@ func TestModelThinkingUsesKnownDefaultAndStagesChanges(t *testing.T) {
 		a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: r}, ThinkingSupported: true}
 		a.openModel()
 		f := a.modelForm
-		line := screenLineAfterModelRender(a, 2+modelThinking)
+		line := screenLineAfterModelRender(a, 2+modelsettings.Thinking)
 		if known && (strings.Contains(line, "DEFAULT") || !strings.Contains(line, "ON")) {
 			t.Fatal(line)
 		}
 		if !known && !strings.Contains(line, "DEFAULT") {
 			t.Fatal(line)
 		}
-		f.row = modelThinking
+		f.Row = modelsettings.Thinking
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-		if f.thinking == nil || a.selection.Thinking != nil {
+		if f.Thinking == nil || a.selection.Thinking != nil {
 			t.Fatal("draft did not remain staged")
 		}
 	}

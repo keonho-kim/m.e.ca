@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 	"testing"
 )
@@ -92,8 +93,8 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
-	a.modelForm.row, a.modelForm.editing = modelEndpoint, true
-	a.modelForm.endpoint.Set("localhost")
+	a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true
+	a.modelForm.Endpoint.Set("localhost")
 	a.render()
 	r := a.inputRegion
 	drag(a, r.x, r.y, r.x+4, r.y)
@@ -101,8 +102,8 @@ func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 		t.Fatal("field selection copied its label or padding")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.modelForm.endpoint.String() != "host" {
-		t.Fatal(a.modelForm.endpoint.String())
+	if a.modelForm.Endpoint.String() != "host" {
+		t.Fatal(a.modelForm.Endpoint.String())
 	}
 }
 

@@ -16,7 +16,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 	arrow := e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight || e.Key() == tcell.KeyUp || e.Key() == tcell.KeyDown
 	if e.Modifiers() == tcell.ModShift && arrow {
 		forward := e.Key() == tcell.KeyRight || e.Key() == tcell.KeyDown
-		if a.pendingEdit == nil && (!a.canEditPending() || forward) {
+		if a.queued.Edit == nil && (!a.canEditPending() || forward) {
 			return false
 		}
 		delta := -1
@@ -26,7 +26,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 		a.navigatePending(delta)
 		return true
 	}
-	if a.pendingEdit == nil {
+	if a.queued.Edit == nil {
 		return false
 	}
 	switch e.Key() {
@@ -60,7 +60,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 }
 
 func (a *app) pendingDeleteKey(e *tcell.EventKey) bool {
-	if a.page != "chat" || a.pendingEdit == nil || e.Key() != tcell.KeyBackspace ||
+	if a.page != "chat" || a.queued.Edit == nil || e.Key() != tcell.KeyBackspace ||
 		(e.Modifiers() != tcell.ModCtrl && e.Modifiers() != tcell.ModMeta) {
 		return false
 	}

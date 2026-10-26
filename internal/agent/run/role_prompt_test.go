@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strconv"
 	"strings"
 	"testing"
@@ -47,7 +48,7 @@ func TestMainAgentPrompt(t *testing.T) {
 }
 
 func TestProjectDirectorySurvivesCompaction(t *testing.T) {
-	s := execution{runner: Runner{ProjectRoot: "/projects/new\nquoted\"path", Redact: func(s string) string { return s }}, limits: DefaultLimits(), system: "rules", memoryContext: "Earlier work used /projects/old", checkpoint: Checkpoint{Objective: "Continue here"}}
+	s := execution{runner: Runner{ProjectRoot: "/projects/new\nquoted\"path", Redact: func(s string) string { return s }}, limits: DefaultLimits(), system: "rules", memoryContext: "Earlier work used /projects/old", checkpoint: runrecord.Checkpoint{Objective: "Continue here"}}
 	request, err := s.request()
 	if err != nil {
 		t.Fatal(err)

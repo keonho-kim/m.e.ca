@@ -75,7 +75,7 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " revised", 0))
 			close(release)
 			drainTask(t, a, false)
-			if calls.Load() != 1 || a.pendingEdit == nil || a.editor.String() != "second queued revised" || len(a.pending) != 2 {
+			if calls.Load() != 1 || a.queued.Edit == nil || a.editor.String() != "second queued revised" || len(a.queued.Messages) != 2 {
 				t.Fatal("task completion consumed queued input while it was being edited")
 			}
 			key := map[string]tcell.Key{"save": tcell.KeyEnter, "cancel": tcell.KeyEscape, "delete": tcell.KeyBackspace}[decision]
@@ -101,8 +101,8 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 					got = append(got, m.Content)
 				}
 			}
-			if !slices.Equal(got, want) || calls.Load() != int32(len(want)) || a.pending != nil ||
-				a.pendingEdit != nil || a.editor.String() != "unsent draft" || a.editor.Cursor != 3 {
+			if !slices.Equal(got, want) || calls.Load() != int32(len(want)) || a.queued.Messages != nil ||
+				a.queued.Edit != nil || a.editor.String() != "unsent draft" || a.editor.Cursor != 3 {
 				t.Fatalf("queued history=%v; want %v, input=%q cursor=%d", got, want, a.editor.String(), a.editor.Cursor)
 			}
 		})

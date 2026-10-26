@@ -9,6 +9,7 @@ import (
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"sync/atomic"
 )
 
@@ -17,8 +18,8 @@ type operation struct {
 	directoryPaths []string
 	executor       *Executor
 	settings       policy.Settings
-	spec           specification
-	input          arguments
+	spec           toolcatalog.Specification
+	input          toolcatalog.Arguments
 	source         target
 	original       version
 	replacement    []byte
@@ -44,7 +45,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	if !op.executed.CompareAndSwap(false, true) {
 		return toolapi.Result{}, fmt.Errorf("prepared operation has already executed")
 	}
-	if op.spec.effect == policy.Command {
+	if op.spec.Effect == policy.Command {
 		current, err := op.executor.analyzeCommand(ctx, op.input.Command, op.environment)
 		if err != nil {
 			return toolapi.Result{}, err
@@ -55,10 +56,10 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	} else if err := op.checkMutationSafety(); err != nil {
 		return toolapi.Result{}, err
 	}
-	if op.spec.name == "create_directory" {
+	if op.spec.Name == "create_directory" {
 		return op.createDirectories(ctx)
 	}
-	if op.spec.effect != policy.Command {
+	if op.spec.Effect != policy.Command {
 		current, err := op.executor.resolve(op.settings.Scope, op.input.Path)
 		if err != nil {
 			return toolapi.Result{}, err
@@ -66,7 +67,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 		if current.absolute != op.source.absolute {
 			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "target changed after preparation", Next: "Inspect the intended path and its current contents before submitting the change again."}
 		}
-		if op.spec.effect == policy.Change {
+		if op.spec.Effect == policy.Change {
 			version, err := snapshot(current)
 			if err != nil {
 				return toolapi.Result{}, err

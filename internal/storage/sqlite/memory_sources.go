@@ -6,8 +6,9 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+
+	json "github.com/goccy/go-json"
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/storage/history"

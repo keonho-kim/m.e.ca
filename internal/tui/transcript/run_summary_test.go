@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/rivo/uniseg"
 )
 
 func TestRunSummaryFromHistory(t *testing.T) {
-	var event run.Event
+	var event runrecord.Event
 	if err := json.Unmarshal([]byte(`{"kind":"run_checkpoint","checkpoint":{"phase":"finished","status":"answered"},"statistics":{"elapsed_millis":3723000,"generation_millis":4000,"usage":{"input":120,"output":20}}}`), &event); err != nil {
 		t.Fatal(err)
 	}
@@ -37,10 +37,10 @@ func TestRunSummaryFromHistory(t *testing.T) {
 
 func TestRunSummaryUnavailableAndZeroUsage(t *testing.T) {
 	f := Formatter{Language: locale.English}
-	if text := f.runSummary(run.Statistics{ElapsedMillis: 1000}).Text; !strings.Contains(text, "INPUT — | OUTPUT — | TPS —") {
+	if text := f.runSummary(runrecord.Statistics{ElapsedMillis: 1000}).Text; !strings.Contains(text, "INPUT — | OUTPUT — | TPS —") {
 		t.Fatal(text)
 	}
-	zero := run.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{}}
+	zero := runrecord.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{}}
 	if text := f.runSummary(zero).Text; !strings.Contains(text, "INPUT 0 | OUTPUT 0 | TPS 0.0") {
 		t.Fatal(text)
 	}
@@ -52,7 +52,7 @@ func TestRunSummaryUnavailableAndZeroUsage(t *testing.T) {
 
 func TestRunSummaryReportedCostOrder(t *testing.T) {
 	f := Formatter{Language: locale.English}
-	s := run.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{Input: 20, Output: 5, Cost: new(0.001)}}
+	s := runrecord.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{Input: 20, Output: 5, Cost: new(0.001)}}
 	if text := f.runSummary(s).Text; !strings.Contains(text, "INPUT 20 | OUTPUT 5 | TOTAL COST $0.001 | TPS 5.0") {
 		t.Fatal(text)
 	}

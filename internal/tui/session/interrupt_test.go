@@ -7,7 +7,7 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
@@ -21,7 +21,7 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 	a.worker = workerAgent
 	a.taskCancel = cancel
 	a.editor.Set("다음 지시")
-	a.receive(notice{Event: &run.Event{Kind: "stream", Text: "부분 응답"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "부분 응답"}})
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if a.exit || ctx.Err() != context.Canceled || !a.worker.active() || a.editor.String() != "다음 지시" {
 		t.Fatal("Esc lost state or failed to cancel")
@@ -47,7 +47,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 			a.screen.SetSize(width, 24)
 			a.worker = workerAgent
 			a.tokenTotal.Input, a.tokenTotal.Output = 1234567890, 9876543210
-			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
+			a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
 			a.advanceCompression()
 			a.render()
 			header := screenLine(a.screen, 0, width)
@@ -61,7 +61,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 func TestCompressionIndicatorLifecycle(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.receive(notice{Event: &run.Event{Kind: "compaction_started"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_started"}})
 	defer a.stopCompression()
 	a.editor.Set("draft")
 	a.render()
@@ -81,7 +81,7 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 		}
 		a.advanceCompression()
 	}
-	a.receive(notice{Event: &run.Event{Kind: "compaction_finished"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_finished"}})
 	if a.compressionTicks != nil || a.activity().Compressing {
 		t.Fatal("compression timer leaked")
 	}

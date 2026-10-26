@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func BenchmarkCaptureProjections(b *testing.B) {
@@ -31,11 +31,11 @@ func BenchmarkCaptureProjections(b *testing.B) {
 	id := s.Session().ID
 	capture, _ := json.Marshal(map[string]string{"Stdout": strings.Repeat("x", 1024*1024)})
 	for range 40 {
-		if err := s.RecordEvent(ctx, id, run.Event{Kind: "tool_succeeded", Text: "complete", Capture: capture, Output: json.RawMessage(`{"Stdout":"small excerpt"}`)}); err != nil {
+		if err := s.RecordEvent(ctx, id, runrecord.Event{Kind: "tool_succeeded", Text: "complete", Capture: capture, Output: json.RawMessage(`{"Stdout":"small excerpt"}`)}); err != nil {
 			b.Fatal(err)
 		}
 	}
-	if err := s.RecordEvent(ctx, id, run.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}}); err != nil {
+	if err := s.RecordEvent(ctx, id, runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}}); err != nil {
 		b.Fatal(err)
 	}
 	b.Run("timeline", func(b *testing.B) {

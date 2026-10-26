@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,7 @@ func TestExactEditDialogue(t *testing.T) {
 	r.Generator = script
 
 	result, err := r.Run(context.Background(), "change the second line", approve, emit)
-	if err != nil || result.Status != Answered || len(script.requests) != 4 {
+	if err != nil || result.Status != runrecord.Answered || len(script.requests) != 4 {
 		t.Fatalf("%+v %v", result, err)
 	}
 	content, err := os.ReadFile(filepath.Join(project, "a"))

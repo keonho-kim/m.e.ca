@@ -8,30 +8,30 @@ import (
 	"context"
 	"sync"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type streamNotice struct {
 	mu      sync.Mutex
-	event   run.Event
+	event   runrecord.Event
 	pending bool
 }
 
-func (s *streamNotice) take() *run.Event {
+func (s *streamNotice) take() *runrecord.Event {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.pending {
 		return nil
 	}
 	event := s.event
-	s.event = run.Event{}
+	s.event = runrecord.Event{}
 	s.pending = false
 	return &event
 }
 
 type runtimeDelivery struct{ current *streamNotice }
 
-func (d *runtimeDelivery) stream(ctx context.Context, queue chan<- notice, event run.Event) error {
+func (d *runtimeDelivery) stream(ctx context.Context, queue chan<- notice, event runrecord.Event) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

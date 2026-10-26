@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"io"
 )
 
@@ -27,7 +28,7 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 			if err != nil {
 				return err
 			}
-			if len(body) > maxEventBytes || !json.Valid(body) {
+			if len(body) > recordcontent.MaxBytes || !json.Valid(body) {
 				return fmt.Errorf("invalid session export record")
 			}
 			record := struct {

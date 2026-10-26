@@ -7,7 +7,7 @@ package transcript
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -28,7 +28,7 @@ func TestToolPresentationResults(t *testing.T) {
 		t.Run(tc.name+tc.body, func(t *testing.T) {
 			raw := json.RawMessage(tc.body)
 			original := bytes.Clone(raw)
-			event := run.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: tc.name, Arguments: []byte(`{"path":"a"}`)}, Output: raw}
+			event := runrecord.Event{Kind: "tool_succeeded", Text: "Completed", Call: &tool.Call{Name: tc.name, Arguments: []byte(`{"path":"a"}`)}, Output: raw}
 			shown := f.Tool(event)
 			for _, want := range tc.want {
 				if !strings.Contains(shown, want) {
@@ -53,7 +53,7 @@ func TestToolPresentationResults(t *testing.T) {
 
 func TestToolPresentationReadAlignsNumbers(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	shown := f.Tool(run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | one\n 10 | ten\n100 | hundred\n","ExitCode":0,"Status":"exited"}`)})
+	shown := f.Tool(runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | one\n 10 | ten\n100 | hundred\n","ExitCode":0,"Status":"exited"}`)})
 	position := -1
 	for _, line := range strings.Split(shown, "\n") {
 		if at := strings.Index(line, " | "); at >= 0 {
@@ -71,7 +71,7 @@ func TestToolPresentationReadAlignsNumbers(t *testing.T) {
 func TestToolPresentationMalformedAndFailedResults(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
 	for _, tc := range []struct{ name, body, kind string }{{"execute_command", `{"Stdout":{"private":"raw"}}`, "tool_succeeded"}, {"edit_file", `{"changed":true}`, "tool_failed"}} {
-		shown := f.Tool(run.Event{Kind: tc.kind, Text: "operation could not complete", Call: &tool.Call{Name: tc.name}, Output: []byte(tc.body)})
+		shown := f.Tool(runrecord.Event{Kind: tc.kind, Text: "operation could not complete", Call: &tool.Call{Name: tc.name}, Output: []byte(tc.body)})
 		if !strings.Contains(shown, "operation could not complete") || strings.Contains(shown, "private") || strings.Contains(shown, "수정 완료") {
 			t.Fatal(shown)
 		}
@@ -80,7 +80,7 @@ func TestToolPresentationMalformedAndFailedResults(t *testing.T) {
 
 func TestToolPresentationDirectoryPartialResult(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return s }}
-	shown := f.Tool(run.Event{Kind: "tool_failed", Text: "creation interrupted", Call: &tool.Call{Name: "create_directory", Arguments: []byte(`{"paths":["src/app","tests"]}`)}, Output: []byte(`{"changed":true,"created":["src"]}`)})
+	shown := f.Tool(runrecord.Event{Kind: "tool_failed", Text: "creation interrupted", Call: &tool.Call{Name: "create_directory", Arguments: []byte(`{"paths":["src/app","tests"]}`)}, Output: []byte(`{"changed":true,"created":["src"]}`)})
 	for _, want := range []string{"경로: src/app", "경로: tests", "creation interrupted", "중단 전 생성한 폴더", "src"} {
 		if !strings.Contains(shown, want) {
 			t.Fatalf("missing %q: %s", want, shown)

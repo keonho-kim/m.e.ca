@@ -26,7 +26,7 @@ func (a *app) openFilePreview(full bool) {
 	a.filePreview = &browser.Preview{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
 	a.filePreviewPath = path
 	request := previewRequest{path: path, revision: a.previewRevision}
-	if a.previewReads.submit(request) {
+	if a.previewReads.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
@@ -35,18 +35,18 @@ func (a *app) refreshFilePreview() {
 	if a.filePreview == nil || a.filePreviewPath == "" {
 		return
 	}
-	a.previewReads.stop()
+	a.previewReads.Stop()
 	a.previewRevision++
 	a.filePreview.Loading, a.filePreview.Error = true, ""
 	request := previewRequest{path: a.filePreviewPath, revision: a.previewRevision}
-	if a.previewReads.submit(request) {
+	if a.previewReads.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
 
 func (a *app) startPreviewRead(request previewRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.previewReads.running, a.previewReads.revision = cancel, request.revision
+	a.previewReads.Begin(request.revision, cancel)
 	settings := a.settings
 	executor := a.opts.Tools
 	a.workers.Add(1)
@@ -61,13 +61,13 @@ func (a *app) startPreviewRead(request previewRequest) {
 	}()
 }
 func (a *app) closeFilePreview() {
-	a.previewReads.stop()
+	a.previewReads.Stop()
 	a.previewRevision++
 	a.filePreview = nil
 	a.filePreviewPath = ""
 }
 func (a *app) receiveFilePreview(n notice) {
-	if next := a.previewReads.complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.previewReads.Complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startPreviewRead(*next)
 	}
 	if a.filePreview == nil || n.PreviewRevision != a.previewRevision {

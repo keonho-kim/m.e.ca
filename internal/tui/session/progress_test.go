@@ -6,7 +6,7 @@ package session
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
 	"testing"
@@ -14,7 +14,7 @@ import (
 
 func TestProgressUpdateLiveMatchesRestored(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Kind: "progress", Text: "Reviewing the existing file."}
+	event := runrecord.Event{Kind: "progress", Text: "Reviewing the existing file."}
 	a.receive(notice{Event: &event})
 	formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}
 	restored := formatter.Event(event)

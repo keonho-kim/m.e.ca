@@ -14,7 +14,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
@@ -24,13 +24,13 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	a := fixture(t)
 	id := a.opts.Session.ID
 	for _, message := range []modelapi.Message{{Role: "user", Content: "Keep 한글 INPUT literal"}, {Role: "assistant", Content: "Original 한국어 answer"}} {
-		if err := a.opts.Store.Commit(a.ctx, id, []run.JournalRecord{{Message: &message}}); err != nil {
+		if err := a.opts.Store.Commit(a.ctx, id, []runrecord.Entry{{Message: &message}}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	cp := run.Checkpoint{ID: "run_language", Objective: "test", Status: run.Answered, Phase: "finished", InstructionsDigest: strings.Repeat("a", 64)}
-	stats := run.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{Input: 2, Output: 1}}
-	if err := a.opts.Store.RecordEvent(a.ctx, id, run.Event{Kind: "run_checkpoint", RunID: cp.ID, Checkpoint: &cp, Statistics: &stats}); err != nil {
+	cp := runrecord.Checkpoint{ID: "run_language", Objective: "test", Status: runrecord.Answered, Phase: "finished", InstructionsDigest: strings.Repeat("a", 64)}
+	stats := runrecord.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{Input: 2, Output: 1}}
+	if err := a.opts.Store.RecordEvent(a.ctx, id, runrecord.Event{Kind: "run_checkpoint", RunID: cp.ID, Checkpoint: &cp, Statistics: &stats}); err != nil {
 		t.Fatal(err)
 	}
 	before, err := a.opts.Store.Messages(a.ctx, id, 10)

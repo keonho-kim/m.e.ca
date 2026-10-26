@@ -11,7 +11,7 @@ import (
 )
 
 func (op *operation) run(ctx context.Context) (toolapi.Result, error) {
-	switch op.spec.name {
+	switch op.spec.Name {
 	case "write_file", "edit_file":
 		return op.mutate()
 	case "execute_command":

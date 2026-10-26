@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func BenchmarkConversations(b *testing.B) {
@@ -58,8 +58,8 @@ func BenchmarkJournal(b *testing.B) {
 			b.Cleanup(func() { s.Close() })
 			id := s.Session().ID
 			m := modelapi.Message{Role: "user", Content: "request"}
-			e := run.Event{Kind: "thinking", Thinking: "observed"}
-			records := []run.JournalRecord{{Message: &m}, {Event: &e}, {Event: &e}}
+			e := runrecord.Event{Kind: "thinking", Thinking: "observed"}
+			records := []runrecord.Entry{{Message: &m}, {Event: &e}, {Event: &e}}
 			b.ResetTimer()
 			b.ReportAllocs()
 			for b.Loop() {
@@ -67,7 +67,7 @@ func BenchmarkJournal(b *testing.B) {
 					err = s.Commit(ctx, id, records)
 				} else {
 					for _, r := range records {
-						if err = s.Commit(ctx, id, []run.JournalRecord{r}); err != nil {
+						if err = s.Commit(ctx, id, []runrecord.Entry{r}); err != nil {
 							break
 						}
 					}

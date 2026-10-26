@@ -9,13 +9,14 @@ import (
 	"errors"
 	"time"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 func (s *execution) settle(ctx context.Context, runErr error) error {
 	if runErr != nil {
 		end := work.End{Status: work.Failed, Reason: s.runner.Redact(runErr.Error())}
-		s.checkpoint.Status = Stopped
+		s.checkpoint.Status = runrecord.Stopped
 		switch {
 		case errors.Is(runErr, errModelBudget), errors.Is(runErr, errTimeBudget):
 			end.Status = work.Exhausted
@@ -23,14 +24,14 @@ func (s *execution) settle(ctx context.Context, runErr error) error {
 			end.Status = work.Denied
 		case errors.Is(runErr, context.Canceled), errors.Is(runErr, context.DeadlineExceeded):
 			end.Status = work.Interrupted
-			s.checkpoint.Status = Interrupted
+			s.checkpoint.Status = runrecord.Interrupted
 		}
 		s.checkpoint.End = &end
 		s.checkpoint.ReportReason = end.Reason
 	}
 	if s.checkpoint.End == nil {
 		status := work.Failed
-		if s.checkpoint.Status == Answered {
+		if s.checkpoint.Status == runrecord.Answered {
 			status = work.Completed
 		}
 		s.checkpoint.End = &work.End{Status: status, Reason: s.checkpoint.ReportReason}

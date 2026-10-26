@@ -1,7 +1,7 @@
 // Purpose: Validate complete native tool argument objects against the declared parameter contract.
 // Pattern: Pure parsing at the tool trust boundary.
 // Usage: Runtime candidates and local execution validate the same schema before I/O.
-// Related: internal/agent/tool/schema.go, internal/agent/tool/call.go, internal/tools/local/arguments.go.
+// Related: internal/agent/tool/schema.go, internal/agent/tool/call.go, internal/tools/local/catalog/arguments.go.
 package tool
 
 import (

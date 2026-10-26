@@ -1,8 +1,8 @@
 // Purpose: Compare payload compression time, allocations and stored size on identical JSON.
 // Pattern: Codec regression benchmark with a standard-library baseline.
-// Usage: go test ./internal/storage/sqlite -run '^$' -bench BenchmarkPayloadCodec -benchmem.
-// Related: internal/storage/sqlite/payload_codec.go.
-package sqlite
+// Usage: go test ./internal/storage/content -run '^$' -bench BenchmarkPayloadCodec -benchmem.
+// Related: internal/storage/content/compression.go.
+package content
 
 import (
 	"bytes"
@@ -37,11 +37,11 @@ func BenchmarkPayloadCodec(b *testing.B) {
 				}
 			})
 			b.Run("zstd", func(b *testing.B) {
-				var codec payloadCodec
-				defer codec.close()
+				var codec Codec
+				defer codec.Close()
 				b.ReportAllocs()
 				for b.Loop() {
-					body, err := codec.encode(raw)
+					body, err := codec.Encode(raw)
 					if err != nil {
 						b.Fatal(err)
 					}
@@ -66,9 +66,9 @@ func BenchmarkPayloadCodec(b *testing.B) {
 				}
 			})
 			b.Run("zstd_decode", func(b *testing.B) {
-				var codec payloadCodec
-				defer codec.close()
-				body, err := codec.encode(raw)
+				var codec Codec
+				defer codec.Close()
+				body, err := codec.Encode(raw)
 				if err != nil {
 					b.Fatal(err)
 				}

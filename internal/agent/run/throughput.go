@@ -1,7 +1,7 @@
 // Purpose: Calculate average output throughput from received token usage and monotonic elapsed time.
 // Pattern: Pure function.
 // Usage: Generation attaches this transient value to usage events; it is not persisted.
-// Related: internal/agent/run/usage.go, internal/agent/run/events.go.
+// Related: internal/agent/run/usage.go, internal/agent/record/events.go.
 package run
 
 import "time"

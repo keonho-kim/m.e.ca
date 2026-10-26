@@ -18,17 +18,17 @@ func (a *app) queryModelForm(model string) {
 	if f == nil || a.worker.active() {
 		return
 	}
-	c, err := f.connection()
+	c, err := f.Connection()
 	if err != nil {
 		a.status = a.language.Text(err.Error())
 		return
 	}
-	key := f.credential.String()
+	key := f.Credential.String()
 	a.opts.Vault.Remember(key)
-	f.catalog = model == ""
-	revision := f.revision
-	if f.catalog {
-		revision = f.connectionRevision
+	f.Catalog = model == ""
+	revision := f.Revision
+	if f.Catalog {
+		revision = f.ConnectionRevision
 	}
 	a.startModelSetup(modelSetupRequest{connection: c, key: key, model: model, defaults: setup.Defaults{ContextLength: a.opts.Config.ContextLength}, form: true, formRevision: revision})
 }
@@ -41,16 +41,16 @@ func (a *app) finishModelFormSetup(n notice) {
 		}
 		return
 	}
-	expected := f.revision
-	if f.catalog {
-		expected = f.connectionRevision
+	expected := f.Revision
+	if f.Catalog {
+		expected = f.ConnectionRevision
 	}
-	f.catalog = false
+	f.Catalog = false
 	if n.FormRevision != expected {
 		if n.Client != nil && n.Client != a.client {
 			n.Client.Close()
 		}
-		f.saving, a.page = false, "model"
+		f.Saving, a.page = false, "model"
 		a.status = a.language.Text("Settings changed; retry model lookup")
 		return
 	}
@@ -58,19 +58,19 @@ func (a *app) finishModelFormSetup(n notice) {
 		if n.Client != nil && n.Client != a.client {
 			n.Client.Close()
 		}
-		if f.saving && errors.Is(n.Err, context.Canceled) {
+		if f.Saving && errors.Is(n.Err, context.Canceled) {
 			a.closeModelForm()
 			a.page = "chat"
 			return
 		}
-		f.saving = false
+		f.Saving = false
 		a.page = "model"
 		return
 	}
 	if n.Models != nil {
-		f.models = n.Models
-		f.refreshHints()
-		if f.saving {
+		f.Models = n.Models
+		f.RefreshHints()
+		if f.Saving {
 			a.saveModelForm()
 		}
 		return
@@ -78,14 +78,14 @@ func (a *app) finishModelFormSetup(n notice) {
 	if n.Selection == nil || n.Client == nil {
 		return
 	}
-	if f.client != nil && f.client != a.client {
-		f.client.Close()
+	if f.Client != nil && f.Client != a.client {
+		f.Client.Close()
 	}
-	f.client, f.prepared = n.Client, n.Selection
-	if !f.controlsChanged {
-		f.applyDefaults()
+	f.Client, f.Prepared = n.Client, n.Selection
+	if !f.ControlsChanged {
+		f.ApplyDefaults()
 	}
-	if f.saving {
+	if f.Saving {
 		a.commitModelForm()
 	}
 }
@@ -95,29 +95,29 @@ func (a *app) saveModelForm() {
 	if f == nil {
 		return
 	}
-	if _, err := f.connection(); err != nil {
-		f.confirm = false
+	if _, err := f.Connection(); err != nil {
+		f.Confirm = false
 		a.status = a.language.Text(err.Error())
 		return
 	}
-	model := strings.TrimSpace(f.name.String())
+	model := strings.TrimSpace(f.Name.String())
 	if model == "" {
-		f.confirm = false
+		f.Confirm = false
 		a.status = a.language.Text("Enter a model ID before saving")
 		return
 	}
 	if a.worker.active() {
 		if !a.worker.agent() {
-			f.confirm, f.editing, f.saving = false, false, true
+			f.Confirm, f.Editing, f.Saving = false, false, true
 			a.page = "chat"
 		}
 		return
 	}
-	f.confirm, f.editing, f.saving = false, false, true
-	next := f.selection()
-	prepared := f.prepared != nil && f.prepared.Connection.ID == next.Connection.ID && f.prepared.Model == model
+	f.Confirm, f.Editing, f.Saving = false, false, true
+	next := f.Selection()
+	prepared := f.Prepared != nil && f.Prepared.Connection.ID == next.Connection.ID && f.Prepared.Model == model
 	active := a.client != nil && a.selection.Connection.ID == next.Connection.ID && a.selection.Model == model
-	if prepared && (f.client != nil || active) {
+	if prepared && (f.Client != nil || active) {
 		a.commitModelForm()
 		return
 	}
@@ -125,26 +125,26 @@ func (a *app) saveModelForm() {
 	if a.worker.active() {
 		a.page = "chat"
 	} else {
-		f.saving = false
+		f.Saving = false
 	}
 }
 
 func (a *app) commitModelForm() {
 	f := a.modelForm
-	next := f.selection()
+	next := f.Selection()
 	if err := selection.Validate(next); err != nil {
-		f.saving, a.page = false, "model"
+		f.Saving, a.page = false, "model"
 		a.fail(err)
 		return
 	}
-	client := f.client
+	client := f.Client
 	if client == nil {
 		client = a.client
 	}
-	f.client = nil // adoptConnection now owns this candidate's failure cleanup.
-	adopted, err := a.adoptConnection(notice{Client: client, Selection: &next, credential: f.credential.String(), RememberModel: f.global})
+	f.Client = nil // adoptConnection now owns this candidate's failure cleanup.
+	adopted, err := a.adoptConnection(notice{Client: client, Selection: &next, credential: f.Credential.String(), RememberModel: f.Global})
 	if err != nil && !adopted {
-		f.saving, a.page = false, "model"
+		f.Saving, a.page = false, "model"
 		a.fail(err)
 		return
 	}

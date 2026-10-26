@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -37,7 +37,7 @@ func (a *app) restore() error {
 	if taskErr != nil {
 		return taskErr
 	}
-	if cp != nil && cp.Status == run.Interrupted {
+	if cp != nil && cp.Status == runrecord.Interrupted {
 		a.output.Append(a.language.Format("Interrupted work: %s\nSend a message to inspect the current state and continue.", a.opts.Vault.Redact(cp.Objective)), false)
 	}
 	a.historyIndex = len(a.inputs)

@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
@@ -63,9 +64,9 @@ func TestChangePreviewUsesExecutedCandidate(t *testing.T) {
 }
 
 func TestChangePreviewLimitPreservesUTF8(t *testing.T) {
-	raw := strings.Repeat("한글", maxChangePreviewBytes)
+	raw := strings.Repeat("한글", runrecord.MaxChangePreviewBytes)
 	shown := boundedChangePreview(raw)
-	if len(shown) > maxChangePreviewBytes || !utf8.ValidString(shown) || !strings.Contains(shown, "일부 생략") {
+	if len(shown) > runrecord.MaxChangePreviewBytes || !utf8.ValidString(shown) || !strings.Contains(shown, "일부 생략") {
 		t.Fatal("invalid bounded preview")
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestInferenceMainParametersStayStable(t *testing.T) {
 	templates.System += "\nMAIN-AGENT-ONLY"
 	r.Prompts = &templates
 	result, err := r.Run(context.Background(), "change and verify", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 	for _, request := range g.requests {

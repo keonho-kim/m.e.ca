@@ -9,14 +9,16 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"encoding/json"
 	"fmt"
+
+	json "github.com/goccy/go-json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (store *Store) AppendMessage(ctx context.Context, session string, message modelapi.Message) error {
-	return store.Commit(ctx, session, []run.JournalRecord{{Message: &message}})
+	return store.Commit(ctx, session, []runrecord.Entry{{Message: &message}})
 }
 
 func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string) error {
@@ -71,7 +73,7 @@ func (store *Store) Messages(ctx context.Context, session string, limit int) (me
 			return nil, err
 		}
 		bytes += len(content)
-		if bytes > maxEventBytes {
+		if bytes > recordcontent.MaxBytes {
 			break
 		}
 		var message modelapi.Message

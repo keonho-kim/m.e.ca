@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	_ "modernc.org/sqlite"
 	"net/url"
@@ -16,14 +17,14 @@ import (
 )
 
 type Store struct {
-	codec   payloadCodec
+	codec   recordcontent.Codec
 	db      *sql.DB
 	path    string
 	session sessionstate.Session
 }
 
 func (s *Store) Session() sessionstate.Session { return s.session }
-func (s *Store) Close() error                  { return errors.Join(s.db.Close(), s.codec.close()) }
+func (s *Store) Close() error                  { return errors.Join(s.db.Close(), s.codec.Close()) }
 
 func connect(ctx context.Context, path string, readOnly bool) (*sql.DB, error) {
 	if err := ctx.Err(); err != nil {

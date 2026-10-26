@@ -12,6 +12,7 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestCostRetriesAndInterruption(t *testing.T) {
@@ -38,8 +39,8 @@ func TestCostRetriesAndInterruption(t *testing.T) {
 				}
 				return emit(modelapi.Event{Delta: "finished", Done: true, Usage: &modelapi.TokenUsage{Input: 20, Output: 3, Cost: new(0.003)}})
 			})
-			var summary *Statistics
-			_, err := r.Run(context.Background(), "hello", approve, func(event Event) error {
+			var summary *runrecord.Statistics
+			_, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
 				if event.Statistics != nil {
 					summary = event.Statistics
 				}

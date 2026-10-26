@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
@@ -40,7 +41,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 	return &readyExecution{call: call, operation: op, proposal: proposal}, outcome, nil
 }
 
-func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, approve Approver, emit func(Event) error) (*readyExecution, toolapi.Result, error) {
+func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
 	ready, outcome, err := s.freezeExecution(ctx, call)
 	if err != nil {
 		return nil, outcome, err
@@ -48,7 +49,7 @@ func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, app
 	return s.approveExecution(ctx, ready, approve, emit)
 }
 
-func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(Event) error) (*readyExecution, toolapi.Result, error) {
+func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
 	call, proposal := ready.call, ready.proposal
 	outcome := toolapi.Result{Target: proposal.Target}
 	var err error
@@ -72,7 +73,7 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 		if approved {
 			decision = "approved"
 		}
-		event := Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal, Call: &call, ApprovalSource: source}
+		event := runrecord.Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal, Call: &call, ApprovalSource: source}
 		if err := s.record(ctx, event); err != nil {
 			return nil, outcome, errors.Join(errRuntimeRecord, err)
 		}

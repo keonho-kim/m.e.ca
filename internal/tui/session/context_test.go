@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
@@ -38,13 +38,13 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 		if i == 0 {
 			message.Content = long
 		}
-		if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &message}}); err != nil {
+		if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &message}}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	call := toolapi.Call{ID: "earlier-call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	for _, message := range []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"content":"exact runtime output"}`}} {
-		if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &message}}); err != nil {
+		if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &message}}); err != nil {
 			t.Fatal(err)
 		}
 	}

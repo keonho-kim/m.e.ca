@@ -25,8 +25,8 @@ func (a *app) steerInput(text string) {
 
 func (a *app) restoreSteering() {
 	editor := &a.editor
-	if a.pendingEdit != nil {
-		editor = &a.pendingEdit.draft
+	if a.queued.Edit != nil {
+		editor = &a.queued.Edit.Draft
 	}
 	if len(a.steeringDrafts) > 0 {
 		text := strings.Join(a.steeringDrafts, "\n\n")

@@ -5,7 +5,7 @@
 package transcript
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
@@ -15,7 +15,7 @@ import (
 func TestAppliedFileContentsAreVisible(t *testing.T) {
 	f := Formatter{Redact: func(s string) string { return strings.ReplaceAll(s, "secret", "[redacted]") }}
 	for _, name := range []string{"write_file", "edit_file"} {
-		event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: name, Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1,1 +1,1 @@\n-old\n+secret\n@@ -100,1 +100,1 @@\n-last\n+new\n"}
+		event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: name, Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1,1 +1,1 @@\n-old\n+secret\n@@ -100,1 +100,1 @@\n-last\n+new\n"}
 		shown := f.Tool(event)
 		for _, want := range []string{"-   1 | old", "+   1 | [redacted]", "- 100 | last", "+ 100 | new"} {
 			if !strings.Contains(shown, want) {

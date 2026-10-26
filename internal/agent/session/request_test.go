@@ -14,7 +14,7 @@ import (
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -125,8 +125,8 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		result, err := session.Execute(ctx, request, func(context.Context, toolapi.Approval) (bool, error) {
 			approvals++
 			return true, nil
-		}, func(run.Event) error { return nil })
-		if err != nil || result.Status != run.Answered {
+		}, func(runrecord.Event) error { return nil })
+		if err != nil || result.Status != runrecord.Answered {
 			t.Fatalf("direct execution failed: %+v %v", result, err)
 		}
 	}

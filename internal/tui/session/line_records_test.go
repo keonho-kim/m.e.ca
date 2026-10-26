@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -13,7 +13,7 @@ import (
 
 func TestReadLineReferencesVisible(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":" 41 | first\n 42 | second\n","ExitCode":0,"Status":"exited"}`)}
+	event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":" 41 | first\n 42 | second\n","ExitCode":0,"Status":"exited"}`)}
 	a.receive(notice{Event: &event})
 	a.render()
 	var visible strings.Builder

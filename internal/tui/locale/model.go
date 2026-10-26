@@ -1,7 +1,7 @@
 // Purpose: Declare bilingual model identity and capability information labels.
 // Pattern: Declarative presentation data.
 // Usage: Model information projects server declarations and request controls beside localized labels.
-// Related: internal/tui/locale/locale.go, internal/tui/modelmenu/identity.go.
+// Related: internal/tui/locale/locale.go, internal/tui/settings/model/identity.go.
 package locale
 
 var model = []translation{

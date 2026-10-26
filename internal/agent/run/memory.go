@@ -12,6 +12,7 @@ import (
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (s *execution) observe(ctx context.Context, count compact.TokenCount) error {
@@ -24,7 +25,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	compressing := false
 	defer func() {
 		if compressing {
-			resultErr = errors.Join(resultErr, s.emit(Event{Kind: "compaction_finished"}))
+			resultErr = errors.Join(resultErr, s.emit(runrecord.Event{Kind: "compaction_finished"}))
 		}
 	}()
 	if s.runner.Memory == nil {
@@ -44,7 +45,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		refresh = s.runner.Memory.Compact
 	}
 	started := func() error {
-		if err := s.emit(Event{Kind: "compaction_started"}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "compaction_started"}); err != nil {
 			return err
 		}
 		compressing = true
@@ -81,7 +82,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		s.historyLoaded = true
 	}
 	if changed {
-		event := Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
+		event := runrecord.Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
 		if err = s.record(ctx, event); err != nil {
 			return err
 		}

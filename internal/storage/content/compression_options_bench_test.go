@@ -1,8 +1,8 @@
 // Purpose: Compare compression settings on equal payloads including ratio and construction cost.
 // Pattern: Compression selection measurement.
-// Usage: go test ./internal/storage/sqlite -run '^$' -bench BenchmarkCompressionOptions -benchmem.
-// Related: internal/storage/sqlite/payload_codec.go, internal/storage/sqlite/payload_codec_bench_test.go.
-package sqlite
+// Usage: go test ./internal/storage/content -run '^$' -bench BenchmarkCompressionOptions -benchmem.
+// Related: internal/storage/content/compression.go, internal/storage/content/compression_bench_test.go.
+package content
 
 import (
 	"encoding/json"

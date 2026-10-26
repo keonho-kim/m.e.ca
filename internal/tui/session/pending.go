@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/commands"
-	"strings"
+	"github.com/keonho-kim/meca/internal/tui/session/queue"
 )
 
 func (a *app) reserveInput() {
@@ -30,7 +30,7 @@ func (a *app) reserveMessage(text string) {
 		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
-	a.pending = append(a.pending, text)
+	a.queued.Messages = append(a.queued.Messages, text)
 	a.editor.Set("")
 	a.closeCommandHints()
 	a.status = ""
@@ -38,36 +38,26 @@ func (a *app) reserveMessage(text string) {
 
 func (a *app) restorePending() {
 	a.restorePendingEditor()
-	if len(a.pending) == 0 {
-		a.refreshHints()
-		return
-	}
-	text := strings.Join(a.pending, "\n\n")
-	if draft := a.editor.String(); draft != "" {
-		text += "\n\n" + draft
-	}
-	a.editor.Set(text)
-	clear(a.pending)
-	a.pending = nil
+	a.queued.Drain(&a.editor)
 	a.refreshHints()
 }
 
 func (a *app) finishPending(success bool) {
-	if a.pendingEdit != nil {
-		a.pendingEdit.completion = pendingStopped
+	if a.queued.Edit != nil {
+		a.queued.Edit.Completion = queue.Stopped
 		if success && !a.exit && a.ctx.Err() == nil {
-			a.pendingEdit.completion = pendingSucceeded
+			a.queued.Edit.Completion = queue.Succeeded
 		}
 		return
 	}
-	if len(a.pending) == 0 {
+	if len(a.queued.Messages) == 0 {
 		return
 	}
 	if !success || a.exit || a.ctx.Err() != nil {
 		a.restorePending()
 		return
 	}
-	text, draft := a.pending[0], a.editor
+	text, draft := a.queued.Messages[0], a.editor
 	if a.page == "files" {
 		a.closeFiles()
 	}
@@ -78,11 +68,7 @@ func (a *app) finishPending(success bool) {
 		a.restorePending()
 		return
 	}
-	a.pending[0] = ""
-	a.pending = a.pending[1:]
-	if len(a.pending) == 0 {
-		a.pending = nil
-	}
+	a.queued.Shift()
 	a.editor = draft
 	a.refreshHints()
 }

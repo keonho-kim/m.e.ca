@@ -7,7 +7,7 @@ package sqlite
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -24,11 +24,11 @@ func TestTokenUsagePersistsAndRejectsInvalidCounts(t *testing.T) {
 	ctx := context.Background()
 	session := store.Session()
 	for _, usage := range []modelapi.TokenUsage{{Input: 12, Output: 3}, {Input: 8, Output: 5}} {
-		if err := store.RecordEvent(ctx, session.ID, run.Event{Kind: "usage", Usage: &usage}); err != nil {
+		if err := store.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "usage", Usage: &usage}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := store.RecordEvent(ctx, session.ID, run.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: -1}}); err == nil {
+	if err := store.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: -1}}); err == nil {
 		t.Fatal("negative token count persisted")
 	}
 	total, err := store.TokenUsage(ctx, session.ID)

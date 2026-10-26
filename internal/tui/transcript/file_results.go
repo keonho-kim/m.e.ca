@@ -7,7 +7,7 @@ package transcript
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -18,7 +18,7 @@ func lineRange(first, last int) string {
 	return fmt.Sprintf("%d–%d", first, last)
 }
 
-func (f Formatter) fileOutput(event run.Event, body []byte) toolOutput {
+func (f Formatter) fileOutput(event runrecord.Event, body []byte) toolOutput {
 	var result struct {
 		Created []string
 		Changed *bool

@@ -7,7 +7,7 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
@@ -18,7 +18,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 	a.editor.Set("draft")
 	inputRow := -1
 	for _, response := range []string{"", "working", strings.Repeat("response\n", 40)} {
-		a.receive(notice{Event: &run.Event{Kind: "stream", Text: response}})
+		a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: response}})
 		a.render()
 		if inputRow < 0 {
 			inputRow = a.inputRegion.y

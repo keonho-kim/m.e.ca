@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (f Formatter) processOutput(event run.Event, fields map[string]json.RawMessage) toolOutput {
+func (f Formatter) processOutput(event runrecord.Event, fields map[string]json.RawMessage) toolOutput {
 	text := ""
 	for _, key := range []string{"Stdout", "Stderr"} {
 		var value string
@@ -66,7 +66,7 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 	}
 }
 
-func (f Formatter) processDiagnostic(event run.Event) string {
+func (f Formatter) processDiagnostic(event runrecord.Event) string {
 	if event.Operation == nil || event.Operation.Failure == nil {
 		return ""
 	}
@@ -80,7 +80,7 @@ func (f Formatter) processDiagnostic(event run.Event) string {
 	}
 }
 
-func (f Formatter) processSummary(event run.Event, fields map[string]json.RawMessage) string {
+func (f Formatter) processSummary(event runrecord.Event, fields map[string]json.RawMessage) string {
 	if diagnostic := f.processDiagnostic(event); diagnostic != "" {
 		return diagnostic
 	}

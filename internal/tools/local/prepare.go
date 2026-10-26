@@ -7,6 +7,7 @@ package local
 import (
 	"context"
 	"crypto/rand"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"os"
 
 	"fmt"
@@ -20,7 +21,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	spec, input, err := parseArguments(call)
+	spec, input, err := toolcatalog.Parse(call)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		}
 	}
 	op := &operation{executor: executor, settings: settings, spec: spec, input: input}
-	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.label}
-	if spec.effect == policy.Command {
+	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.Label}
+	if spec.Effect == policy.Command {
 		if settings.Scope != policy.System {
 			return nil, fmt.Errorf("host shell execution requires system Scope; directory confinement is unavailable")
 		}
@@ -63,7 +64,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		op.approval.Preview = executor.redact("Working directory: " + executor.project + "\n" + op.shell.decision.Description() + "\n\n" + input.Command)
 		return op, nil
 	}
-	if spec.name == "create_directory" {
+	if spec.Name == "create_directory" {
 		if err := op.prepareDirectories(call); err != nil {
 			return nil, err
 		}

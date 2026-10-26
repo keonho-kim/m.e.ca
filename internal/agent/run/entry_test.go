@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ func TestNativeEntryRejectsUnknownToolAndExtraArguments(t *testing.T) {
 	}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "inspect", approve, emit)
-	if err != nil || result.Status != Answered || e.prepared != 1 || e.calls[0].Name != "inspect_fixture" {
+	if err != nil || result.Status != runrecord.Answered || e.prepared != 1 || e.calls[0].Name != "inspect_fixture" {
 		t.Fatalf("result=%+v calls=%+v err=%v", result, e.calls, err)
 	}
 	for _, index := range []int{0, 1, 2, 3} {

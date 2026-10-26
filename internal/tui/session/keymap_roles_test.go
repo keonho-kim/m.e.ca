@@ -88,7 +88,7 @@ func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.editor.String() != "!model" || len(a.pending) != 0 || a.page != "chat" {
+	if a.editor.String() != "!model" || len(a.queued.Messages) != 0 || a.page != "chat" {
 		t.Fatal("command Tab did not match keymap")
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
@@ -18,7 +19,7 @@ func TestAppliedEffectSurvivesResultDeliveryFailure(t *testing.T) {
 		r, _, _, _, _ := realBatchRunner(t, nil)
 		r.Generator = &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "written"})}}
 		sentinel := errors.New("display failed")
-		result, err := r.Run(ctx, "write a", approve, func(e Event) error {
+		result, err := r.Run(ctx, "write a", approve, func(e runrecord.Event) error {
 			if e.Kind == "tool_succeeded" {
 				if interrupt {
 					cancel()

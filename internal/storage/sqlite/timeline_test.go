@@ -7,7 +7,7 @@ package sqlite
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -26,7 +26,7 @@ func TestTimeline(t *testing.T) {
 	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "fix"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.RecordEvent(ctx, session.ID, run.Event{Kind: "tool_started", Text: "Reading file"}); err != nil {
+	if err = s.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "tool_started", Text: "Reading file"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "assistant", Content: "done"}); err != nil {

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -56,7 +57,7 @@ func TestProviderContinuationSurvivesToolAndFinalReplies(t *testing.T) {
 			r := fixture(&generator{}, &executor{}, j)
 			r.Generator, r.Provider, r.Model = g, "provider", "model"
 			for _, input := range []string{"inspect files", "continue"} {
-				result, err := r.Run(context.Background(), input, approve, func(event Event) error {
+				result, err := r.Run(context.Background(), input, approve, func(event runrecord.Event) error {
 					body, err := json.Marshal(event)
 					if err != nil {
 						return err
@@ -66,7 +67,7 @@ func TestProviderContinuationSurvivesToolAndFinalReplies(t *testing.T) {
 					}
 					return nil
 				})
-				if err != nil || result.Status != Answered {
+				if err != nil || result.Status != runrecord.Answered {
 					t.Fatalf("result=%+v err=%v", result, err)
 				}
 			}

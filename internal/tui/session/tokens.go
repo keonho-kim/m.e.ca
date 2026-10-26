@@ -6,13 +6,13 @@ package session
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (a *app) displayTokens() modelapi.TokenUsage {
 	return a.tokenTotal.Add(a.tokenCurrent)
 }
-func (a *app) receiveTokens(e run.Event) {
+func (a *app) receiveTokens(e runrecord.Event) {
 	if e.Usage == nil {
 		return
 	}

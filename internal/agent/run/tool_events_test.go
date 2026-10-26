@@ -1,7 +1,7 @@
 // Purpose: Verify durable tool events carry the executed parameters and actual output.
 // Pattern: Task contract tests.
 // Usage: go test ./internal/agent/run -run TestToolEvents.
-// Related: internal/agent/run/execute.go, internal/agent/run/events.go.
+// Related: internal/agent/run/execute.go, internal/agent/record/events.go.
 package run
 
 import (

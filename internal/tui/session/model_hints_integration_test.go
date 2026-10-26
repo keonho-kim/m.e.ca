@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -45,11 +46,11 @@ func TestModelHintsConnection(t *testing.T) {
 			f := a.modelForm
 			for i, p := range connection.Providers() {
 				if p.Kind == connection.OpenRouter {
-					f.provider = i
+					f.Provider = i
 				}
 			}
-			f.endpoint.Set(server.URL)
-			f.row = modelName
+			f.Endpoint.Set(server.URL)
+			f.Row = modelsettings.Name
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 			for a.worker.active() {
 				select {
@@ -59,7 +60,7 @@ func TestModelHintsConnection(t *testing.T) {
 					t.Fatal(a.ctx.Err())
 				}
 			}
-			if a.page != "model" || !f.editing || posts.Load() != 0 {
+			if a.page != "model" || !f.Editing || posts.Load() != 0 {
 				t.Fatal("catalog changed screens or generated a response")
 			}
 			expected := "new-model"
@@ -75,7 +76,7 @@ func TestModelHintsConnection(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-			if !f.confirm || a.selection.Model != "" {
+			if !f.Confirm || a.selection.Model != "" {
 				t.Fatal("confirmation was bypassed")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
@@ -105,15 +106,15 @@ func TestModelHintsRefreshOnReentry(t *testing.T) {
 	f := a.modelForm
 	for i, p := range connection.Providers() {
 		if p.Kind == connection.OpenRouter {
-			f.provider = i
+			f.Provider = i
 		}
 	}
-	f.endpoint.Set(server.URL)
-	f.row = modelName
+	f.Endpoint.Set(server.URL)
+	f.Row = modelsettings.Name
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	drainTask(t, a, false)
-	if calls.Load() != 1 || len(f.hints) != 1 || f.hints[0] != "model-1" {
-		t.Fatalf("initial catalog: calls=%d hints=%v", calls.Load(), f.hints)
+	if calls.Load() != 1 || len(f.Hints) != 1 || f.Hints[0] != "model-1" {
+		t.Fatalf("initial catalog: calls=%d hints=%v", calls.Load(), f.Hints)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "model", 0))
 	if calls.Load() != 1 || a.worker.active() {
@@ -122,11 +123,11 @@ func TestModelHintsRefreshOnReentry(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	drainTask(t, a, false)
-	if calls.Load() != 2 || f.name.String() != "model" || len(f.hints) != 1 || f.hints[0] != "model-2" {
-		t.Fatalf("refreshed catalog: calls=%d input=%q hints=%v", calls.Load(), f.name.String(), f.hints)
+	if calls.Load() != 2 || f.Name.String() != "model" || len(f.Hints) != 1 || f.Hints[0] != "model-2" {
+		t.Fatalf("refreshed catalog: calls=%d input=%q hints=%v", calls.Load(), f.Name.String(), f.Hints)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if f.name.String() != "model-2" || f.editing || a.selection.Model != "" || a.client != nil {
+	if f.Name.String() != "model-2" || f.Editing || a.selection.Model != "" || a.client != nil {
 		t.Fatal("refreshed selection did not remain an unsaved draft")
 	}
 }

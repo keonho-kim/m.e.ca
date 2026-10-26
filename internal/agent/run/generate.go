@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 )
@@ -24,7 +25,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		return modelapi.Response{}, err
 	}
 	s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
-	if err := s.emit(Event{Kind: "stream"}); err != nil {
+	if err := s.emit(runrecord.Event{Kind: "stream"}); err != nil {
 		return modelapi.Response{}, err
 	}
 	var reply, thinking strings.Builder
@@ -42,7 +43,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			maskReply, maskThinking = s.streamMask(), s.streamMask()
 			visibleReply, visibleThinking = "", ""
 			done = false
-			return s.emit(Event{Kind: "stream"})
+			return s.emit(runrecord.Event{Kind: "stream"})
 		}
 		if len(e.Calls) > 0 {
 			if len(request.Tools) == 0 || !e.Done || len(calls) != 0 || len(e.Calls) > toolapi.MaxCalls {
@@ -71,7 +72,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			done = true
 		}
 		if e.Streaming && (e.Delta != "" || e.Thinking != "") {
-			if err := s.emit(Event{Kind: "stream", Text: visibleReply, Thinking: visibleThinking}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "stream", Text: visibleReply, Thinking: visibleThinking}); err != nil {
 				return err
 			}
 		}
@@ -82,7 +83,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		err = fmt.Errorf("model reply did not complete")
 	}
 	if thinking.Len() > 0 {
-		event := Event{Kind: "thinking", Thinking: visibleThinking}
+		event := runrecord.Event{Kind: "thinking", Thinking: visibleThinking}
 		if saveErr := s.record(context.WithoutCancel(ctx), event); saveErr != nil {
 			return modelapi.Response{}, saveErr
 		}

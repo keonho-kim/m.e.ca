@@ -18,9 +18,12 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/tui/browser/readqueue"
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/selection"
+	"github.com/keonho-kim/meca/internal/tui/session/queue"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"sync"
@@ -45,9 +48,9 @@ type app struct {
 	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line
 	historyLoading, historyEnd          bool
-	directoryReads                      readSlot[directoryPage]
+	directoryReads                      readqueue.Slot[directoryPage]
 	fileWatch                           fileWatch
-	watchReads                          readSlot[watchRequest]
+	watchReads                          readqueue.Slot[watchRequest]
 	watchRevision                       int
 	directoryRevision                   int
 	directoryLoading, fileSelectionBusy bool
@@ -69,7 +72,7 @@ type app struct {
 	textSelection                       selection.Selection
 	filePreview                         *browser.Preview
 	filePreviewPath                     string
-	previewReads                        readSlot[previewRequest]
+	previewReads                        readqueue.Slot[previewRequest]
 	previewRevision                     int
 	elapsedStarted                      time.Time
 	elapsed                             time.Duration
@@ -77,15 +80,14 @@ type app struct {
 	elapsedTicks                        <-chan time.Time
 	stopNotice                          string
 	tokensPerSecond                     *float64
-	pending                             []string
-	pendingEdit                         *pendingEdit
+	queued                              queue.State
 	worker                              workerState
 	compressionTimer                    *time.Ticker
 	compressionTicks                    <-chan time.Time
 	compressionDots                     int
 	tokenTotal                          modelapi.TokenUsage
 	tokenCurrent                        modelapi.TokenUsage
-	modelForm                           *modelForm
+	modelForm                           *modelsettings.Form
 	runSummary                          *viewport.Block
 	opts                                Options
 	screen                              tcell.Screen

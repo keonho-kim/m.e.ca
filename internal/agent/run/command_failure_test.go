@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tools/local"
@@ -34,7 +35,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	r.Settings.Scope = policy.System
 	approvals := 0
 	result, err := r.Run(context.Background(), "run check", func(context.Context, toolapi.Approval) (bool, error) { approvals++; return true, nil }, emit)
-	if err != nil || result.Status != Answered || approvals != 0 || len(g.requests) != 2 {
+	if err != nil || result.Status != runrecord.Answered || approvals != 0 || len(g.requests) != 2 {
 		t.Fatalf("result=%+v err=%v approvals=%d requests=%d", result, err, approvals, len(g.requests))
 	}
 	found := false
@@ -74,7 +75,7 @@ func TestNoMatchSearchFinishesWithoutCorrectionOrRetry(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "grep TODO app.txt"}), "No TODO matches were found; grep exited with code 1."}}
 	r.Generator = g
 	result, err := r.Run(context.Background(), "Search app.txt for TODO and report whether it occurs", approve, emit)
-	if err != nil || result.Status != Answered || len(g.requests) != 2 {
+	if err != nil || result.Status != runrecord.Answered || len(g.requests) != 2 {
 		t.Fatalf("unnecessary recovery: %+v %v calls=%d", result, err, len(g.requests))
 	}
 	if len(result.Facts.Commands) != 1 || result.Facts.Commands[0].ExitCode == nil || *result.Facts.Commands[0].ExitCode != 1 || !result.HadToolFailure {

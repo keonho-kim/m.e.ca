@@ -34,7 +34,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 	if a.page == "permission" {
 		return a.permissionShortcuts()
 	}
-	if a.page == "chat" && a.pendingEdit != nil {
+	if a.page == "chat" && a.queued.Edit != nil {
 		return a.pendingEditShortcuts()
 	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}

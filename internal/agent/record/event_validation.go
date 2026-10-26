@@ -1,8 +1,8 @@
 // Purpose: Validate durable runtime event payloads before persistence.
 // Pattern: Simple Module.
 // Usage: Journal adapters use Event.Check at their write boundary.
-// Related: internal/agent/run/events.go.
-package run
+// Related: internal/agent/record/events.go.
+package record
 
 import (
 	"encoding/json"
@@ -42,7 +42,7 @@ func (event Event) Check() error {
 		return fmt.Errorf("invalid run event identity")
 	}
 	if event.ChangePreview != "" {
-		if event.Kind != "tool_succeeded" || event.Call == nil || len(event.ChangePreview) > maxChangePreviewBytes || !utf8.ValidString(event.ChangePreview) {
+		if event.Kind != "tool_succeeded" || event.Call == nil || len(event.ChangePreview) > MaxChangePreviewBytes || !utf8.ValidString(event.ChangePreview) {
 			return fmt.Errorf("invalid applied change preview")
 		}
 		switch event.Call.Name {

@@ -7,6 +7,7 @@ package session
 import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestLocalizedThinkingChoicePositions(t *testing.T) {
 		a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &on, ThinkingSupported: true}
 		a.openModel()
 		a.render()
-		y := 2 + modelThinking
+		y := 2 + modelsettings.Thinking
 		shown := screenLine(a.screen, y, 80)
 		if !strings.Contains(shown, lang.Text("Thinking")) || !strings.Contains(shown, "ON / OFF") || strings.Contains(shown, "DEFAULT") {
 			t.Fatal(shown)

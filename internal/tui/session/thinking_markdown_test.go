@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 const thinkingMarkdown = "# Review\n\n- **inspect** `main.go`\n\n```text\n**literal code**\n```\n\n3~5, ~~keep~~ 😀"
@@ -18,7 +18,7 @@ const thinkingMarkdown = "# Review\n\n- **inspect** `main.go`\n\n```text\n**lite
 func TestThinkingMarkdownStreaming(t *testing.T) {
 	a := fixture(t)
 	for _, source := range []string{"# Review", thinkingMarkdown} {
-		a.receive(notice{Event: &run.Event{Kind: "stream", Thinking: source}})
+		a.receive(notice{Event: &runrecord.Event{Kind: "stream", Thinking: source}})
 		a.render()
 		if line := screenLine(a.screen, 1, 80); !strings.Contains(line, "Review") || strings.Contains(line, "# Review") {
 			t.Fatalf("Thinking snapshot remained literal: %q", line)
@@ -36,10 +36,10 @@ func TestThinkingMarkdownCompletionAndInterruption(t *testing.T) {
 			a := fixture(t)
 			if route == "interrupted" {
 				a.worker = workerAgentStopping
-				a.receive(notice{Event: &run.Event{Kind: "stream", Thinking: thinkingMarkdown}})
+				a.receive(notice{Event: &runrecord.Event{Kind: "stream", Thinking: thinkingMarkdown}})
 				a.receive(notice{Done: true, Err: context.Canceled})
 			} else {
-				a.receive(notice{Event: &run.Event{Kind: route, Thinking: thinkingMarkdown}})
+				a.receive(notice{Event: &runrecord.Event{Kind: route, Thinking: thinkingMarkdown}})
 			}
 			if len(a.output.Blocks) != 1 || a.output.Blocks[0].Text != thinkingMarkdown || !a.output.Blocks[0].Thinking || !a.output.Blocks[0].Markdown {
 				t.Fatal("Thinking lost its raw source or Markdown presentation")
@@ -51,7 +51,7 @@ func TestThinkingMarkdownCompletionAndInterruption(t *testing.T) {
 
 func TestThinkingMarkdownHistory(t *testing.T) {
 	a := fixture(t)
-	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "thinking", Thinking: thinkingMarkdown}); err != nil {
+	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, runrecord.Event{Kind: "thinking", Thinking: thinkingMarkdown}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.loadHistory(); err != nil {

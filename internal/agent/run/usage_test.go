@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 )
 
@@ -31,7 +32,7 @@ func TestTokenUsageRecordedOnce(t *testing.T) {
 		r.Generator = usageGenerator{interrupt: interrupted}
 		finals := 0
 		var first *modelapi.TokenUsage
-		_, err := r.Run(context.Background(), "hello", approve, func(e Event) error {
+		_, err := r.Run(context.Background(), "hello", approve, func(e runrecord.Event) error {
 			if e.Kind == "usage_progress" && first == nil {
 				first = e.Usage
 			}
@@ -71,7 +72,7 @@ func TestTokenUsageAbsentDoesNotEmitOrPersistCounts(t *testing.T) {
 			g.cancel = cancel
 		}
 		r.Generator = g
-		_, err := r.Run(ctx, "hello", approve, func(e Event) error {
+		_, err := r.Run(ctx, "hello", approve, func(e runrecord.Event) error {
 			if e.Usage != nil {
 				t.Errorf("usage emitted without provider counts: %+v", e.Usage)
 			}

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
@@ -30,12 +30,12 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 		if err := json.Unmarshal([]byte(`{"input":20,"output":5,"cost":`+cost+`}`), &usage); err != nil {
 			t.Fatal(err)
 		}
-		a.receiveRuntime(&run.Event{Kind: kind, Usage: &usage})
+		a.receiveRuntime(&runrecord.Event{Kind: kind, Usage: &usage})
 	}
 	update("usage_progress", "0.001")
 	update("usage_progress", "0.002")
 	update("usage", "0.002")
-	a.receiveRuntime(&run.Event{Kind: "generation_started"})
+	a.receiveRuntime(&runrecord.Event{Kind: "generation_started"})
 	update("usage", "0.003")
 	for _, page := range []string{"chat", "model", "language", "files"} {
 		a.page = page
@@ -65,7 +65,7 @@ func TestCostFreeCallAndNarrowCompression(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"input":20,"output":5,"cost":0}`), &usage); err != nil {
 		t.Fatal(err)
 	}
-	a.receiveRuntime(&run.Event{Kind: "usage", Usage: &usage})
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &usage})
 	a.render()
 	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "TOTAL COST $0 · TPS —") {
 		t.Fatal(line)

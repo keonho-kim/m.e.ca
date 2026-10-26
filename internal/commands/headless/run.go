@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"io"
@@ -32,7 +32,7 @@ func Run(ctx context.Context, request sessionrun.Request, output io.Writer, json
 		}
 	}
 	var text, thinking string
-	emit := func(event run.Event) error {
+	emit := func(event runrecord.Event) error {
 		if !jsonMode {
 			return nil
 		}
@@ -58,9 +58,9 @@ func Run(ctx context.Context, request sessionrun.Request, output io.Writer, json
 	result, err := sessionrun.Execute(ctx, request, approve, emit)
 	if jsonMode {
 		finish := struct {
-			Kind   string     `json:"kind"`
-			Status run.Status `json:"status"`
-			Error  string     `json:"error,omitempty"`
+			Kind   string           `json:"kind"`
+			Status runrecord.Status `json:"status"`
+			Error  string           `json:"error,omitempty"`
 		}{Kind: "run_finished", Status: result.Status}
 		if err != nil {
 			finish.Error = request.Runner.Redact(err.Error())
@@ -70,7 +70,7 @@ func Run(ctx context.Context, request sessionrun.Request, output io.Writer, json
 		_, writeErr := fmt.Fprintln(output, result.Text)
 		err = errors.Join(err, writeErr)
 	}
-	if err == nil && result.Status != run.Answered {
+	if err == nil && result.Status != runrecord.Answered {
 		err = fmt.Errorf("request ended with status %s", result.Status)
 	}
 	return err

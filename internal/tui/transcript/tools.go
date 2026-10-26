@@ -1,20 +1,20 @@
 // Purpose: Format literal tool details with redaction and explicit source-change annotations.
 // Pattern: Presentation projection.
 // Usage: Live status uses Formatter.Tool; completed and archived events retain toolBlock annotations.
-// Related: internal/agent/run/events.go, internal/tui/transcript/events.go.
+// Related: internal/agent/record/events.go, internal/tui/transcript/events.go.
 package transcript
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
 )
 
-func (f Formatter) Tool(event run.Event) string {
+func (f Formatter) Tool(event runrecord.Event) string {
 	return f.toolBlock(event).Text
 }
 
-func (f Formatter) toolBlock(event run.Event) viewport.Block {
+func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 	if event.Call == nil {
 		return viewport.Block{}
 	}

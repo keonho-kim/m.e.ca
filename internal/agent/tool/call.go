@@ -1,7 +1,7 @@
 // Purpose: Parse complete bounded tool-call identities and argument objects.
 // Pattern: Tool trust boundary.
 // Usage: The task runtime and tool adapter check calls before preparation.
-// Related: internal/agent/tool/schema.go, internal/tools/local/arguments.go.
+// Related: internal/agent/tool/schema.go, internal/tools/local/catalog/arguments.go.
 
 package tool
 

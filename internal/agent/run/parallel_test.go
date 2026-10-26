@@ -16,6 +16,7 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tools/local"
@@ -117,7 +118,7 @@ func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
 	}
 	close(held.release)
 	<-done
-	if runErr != nil || result.Status != Answered || held.maximum.Load() != 16 {
+	if runErr != nil || result.Status != runrecord.Answered || held.maximum.Load() != 16 {
 		t.Fatalf("%+v active max=%d err=%v", result, held.maximum.Load(), runErr)
 	}
 	index := 0
@@ -150,7 +151,7 @@ func TestParallelSerializesDependentTargets(t *testing.T) {
 	}
 	r, _, root, _, _ := realBatchRunner(t, calls)
 	result, err := r.Run(context.Background(), "create then update", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
 	body, err := os.ReadFile(filepath.Join(root, "dir/a"))
@@ -169,7 +170,7 @@ func TestParallelCancellationJoinsWorkersAndPairsResults(t *testing.T) {
 	var runErr error
 	go func() {
 		defer close(done)
-		result, runErr = r.Run(ctx, "create two directories", approve, func(Event) error { return ctx.Err() })
+		result, runErr = r.Run(ctx, "create two directories", approve, func(runrecord.Event) error { return ctx.Err() })
 	}()
 	t.Cleanup(func() { cancel(); <-done })
 	for i := 0; i < 2; i++ {
@@ -181,7 +182,7 @@ func TestParallelCancellationJoinsWorkersAndPairsResults(t *testing.T) {
 	}
 	cancel()
 	<-done
-	if runErr == nil || result.Status != Interrupted || held.active.Load() != 0 {
+	if runErr == nil || result.Status != runrecord.Interrupted || held.active.Load() != 0 {
 		t.Fatalf("%+v active=%d %v", result, held.active.Load(), runErr)
 	}
 	count := 0
@@ -202,7 +203,7 @@ func TestParallelApprovalDenialPreventsWaveEffects(t *testing.T) {
 
 	decisions := 0
 	result, err := r.Run(context.Background(), "create both", func(context.Context, toolapi.Approval) (bool, error) { decisions++; return decisions == 1, nil }, emit)
-	if err == nil || result.Status != Stopped || decisions != 2 {
+	if err == nil || result.Status != runrecord.Stopped || decisions != 2 {
 		t.Fatalf("%+v decisions=%d %v", result, decisions, err)
 	}
 	for _, name := range []string{"a", "b"} {
@@ -279,7 +280,7 @@ func TestParallelWritesKeepIndividualApprovals(t *testing.T) {
 	}
 	close(held.release)
 	<-done
-	if runErr != nil || result.Status != Answered || decisions != 2 || held.maximum.Load() != 2 {
+	if runErr != nil || result.Status != runrecord.Answered || decisions != 2 || held.maximum.Load() != 2 {
 		t.Fatalf("%+v approvals=%d concurrent=%d %v", result, decisions, held.maximum.Load(), runErr)
 	}
 	for _, name := range []string{"a", "b"} {

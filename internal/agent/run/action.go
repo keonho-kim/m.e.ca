@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
@@ -29,11 +30,11 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 		return err
 	}
 	if reply.Text != "" {
-		if err := s.emit(Event{Kind: "progress", Text: reply.Text}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "progress", Text: reply.Text}); err != nil {
 			return err
 		}
 	}
-	if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
+	if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
 		return err
 	}
 	_, toolErr := s.execute(ctx, v, approve, s.emit)

@@ -12,6 +12,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
@@ -21,9 +22,9 @@ func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
 				name, value string
 				row         int
 			}{
-				{"endpoint", "http://localhost:8000/v1", modelEndpoint},
-				{"credential", "private-key-for-inline-test", modelCredential},
-				{"model", "vendor/sample", modelName},
+				{"endpoint", "http://localhost:8000/v1", modelsettings.Endpoint},
+				{"credential", "private-key-for-inline-test", modelsettings.Credential},
+				{"model", "vendor/sample", modelsettings.Name},
 			} {
 				t.Run(fmt.Sprintf("%s/%v/%dx%d", field.name, language, size[0], size[1]), func(t *testing.T) {
 					a := fixture(t)
@@ -31,9 +32,9 @@ func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
 					a.screen.SetSize(size[0], size[1])
 					a.openModel()
 					f := a.modelForm
-					f.row = field.row
-					f.editor().Set(field.value)
-					f.models = []string{}
+					f.Row = field.row
+					f.Editor().Set(field.value)
+					f.Models = []string{}
 					a.render()
 					before := selectedSettingRow(t, a)
 					a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
@@ -53,7 +54,7 @@ func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
 					if int(terminal.Pos().X) >= size[0] {
 						t.Fatal("cursor escaped the value column")
 					}
-					if field.row == modelCredential {
+					if field.row == modelsettings.Credential {
 						if strings.Contains(body, field.value) || a.inputRegion.editor != nil || !strings.Contains(screenLine(a.screen, y, size[0]), "*") {
 							t.Fatal("inline credential was exposed or lost masking")
 						}
@@ -88,9 +89,9 @@ func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelName, true
-	f.models = []string{}
-	f.name.Set("A👩‍💻B")
+	f.Row, f.Editing = modelsettings.Name, true
+	f.Models = []string{}
+	f.Name.Set("A👩‍💻B")
 	a.render()
 	r := a.inputRegion
 	if r.x <= 0 || r.contains(r.x-1, r.y) {
@@ -99,7 +100,7 @@ func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
 	a.mouse(tcell.NewEventMouse(r.x+1, r.y, tcell.Button1, 0))
 	a.mouse(tcell.NewEventMouse(r.x+1, r.y, tcell.ButtonNone, 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "X", 0))
-	if f.name.String() != "AX👩‍💻B" {
+	if f.Name.String() != "AX👩‍💻B" {
 		t.Fatal("inline click did not position the editor at the clicked grapheme")
 	}
 }
@@ -108,8 +109,8 @@ func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelEndpoint, true
-	f.endpoint.Set("http://localhost:8000/v1")
+	f.Row, f.Editing = modelsettings.Endpoint, true
+	f.Endpoint.Set("http://localhost:8000/v1")
 	a.screen.SetSize(20, 10)
 	a.render()
 	r := a.inputRegion
@@ -121,7 +122,7 @@ func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
 		t.Fatalf("scrolled field copied %q instead of its visible suffix", a.textSelection.Text())
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if f.endpoint.String() != "http://localhost:8000/" {
+	if f.Endpoint.String() != "http://localhost:8000/" {
 		t.Fatal("scrolled selection deleted a different part of the source")
 	}
 }
@@ -130,10 +131,10 @@ func TestModelInlineCandidatesFollowValueColumn(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelName, true
-	f.name.Set("model")
-	f.models = []string{"model-one", "model-two"}
-	f.refreshHints()
+	f.Row, f.Editing = modelsettings.Name, true
+	f.Name.Set("model")
+	f.Models = []string{"model-one", "model-two"}
+	f.RefreshHints()
 	a.render()
 	r := a.inputRegion
 	w, _ := a.screen.Size()
@@ -142,7 +143,7 @@ func TestModelInlineCandidatesFollowValueColumn(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if f.name.String() != "model-two" || f.editing || f.confirm {
+	if f.Name.String() != "model-two" || f.Editing || f.Confirm {
 		t.Fatal("inline candidate selection changed its fill-only behavior")
 	}
 }

@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/tui/input"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
@@ -108,7 +109,7 @@ func (a *app) deleteSelection() bool {
 	a.selectionInput.editor.DeleteRange(start, end)
 	a.refreshHints()
 	if a.page == "model" && a.modelForm != nil {
-		a.modelForm.invalidate(a.modelForm.row != modelName)
+		a.modelForm.Invalidate(a.modelForm.Row != modelsettings.Name)
 		a.refreshModelHints()
 	}
 	return true

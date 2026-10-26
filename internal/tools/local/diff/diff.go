@@ -29,11 +29,6 @@ func Analyze(path string, before, after []byte, existed, exists bool) (string, i
 	return preview, added, deleted, err
 }
 
-func Preview(path string, before, after []byte, existed, exists bool) string {
-	text, _, _, _ := preview(path, before, after, existed, exists)
-	return text
-}
-
 func preview(path string, before, after []byte, existed, exists bool) (string, int, int, bool) {
 	oldPath, newPath := path, path
 	if !existed {

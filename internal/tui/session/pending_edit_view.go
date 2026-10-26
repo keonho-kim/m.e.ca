@@ -7,10 +7,10 @@ package session
 import "github.com/keonho-kim/meca/internal/tui/view"
 
 func (a *app) composerNotice() string {
-	if a.pendingEdit == nil {
+	if a.queued.Edit == nil {
 		return a.stopNotice
 	}
-	text := a.language.Format("Editing queued request %d / %d", a.pendingEdit.index+1, len(a.pending))
+	text := a.language.Format("Editing queued request %d / %d", a.queued.Edit.Index+1, len(a.queued.Messages))
 	if a.stopNotice != "" {
 		text += " · " + a.stopNotice
 	}

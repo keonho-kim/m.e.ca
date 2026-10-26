@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
@@ -112,7 +113,7 @@ func (e *executor) Execute(context.Context, bool) (toolapi.Result, error) {
 type journal struct {
 	failKind string
 	messages []modelapi.Message
-	events   []Event
+	events   []runrecord.Event
 }
 
 func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int) ([]modelapi.Message, error) {
@@ -132,7 +133,7 @@ func (j *journal) AppendMessage(_ context.Context, _ string, m modelapi.Message)
 	j.messages = append(j.messages, m)
 	return nil
 }
-func (j *journal) RecordEvent(_ context.Context, _ string, e Event) error {
+func (j *journal) RecordEvent(_ context.Context, _ string, e runrecord.Event) error {
 	if j.failKind != "" && e.Kind == j.failKind {
 		return fmt.Errorf("simulated journal failure")
 	}
@@ -140,15 +141,15 @@ func (j *journal) RecordEvent(_ context.Context, _ string, e Event) error {
 	if err != nil {
 		return err
 	}
-	var copy Event
+	var copy runrecord.Event
 	if err = json.Unmarshal(body, &copy); err != nil {
 		return err
 	}
 	j.events = append(j.events, copy)
 	return nil
 }
-func (j *journal) Commit(ctx context.Context, session string, records []JournalRecord) error {
-	copy := &journal{failKind: j.failKind, messages: append([]modelapi.Message(nil), j.messages...), events: append([]Event(nil), j.events...)}
+func (j *journal) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
+	copy := &journal{failKind: j.failKind, messages: append([]modelapi.Message(nil), j.messages...), events: append([]runrecord.Event(nil), j.events...)}
 	for _, r := range records {
 		if r.Message != nil {
 			if err := copy.AppendMessage(ctx, session, *r.Message); err != nil {
@@ -168,13 +169,13 @@ func (j *journal) Commit(ctx context.Context, session string, records []JournalR
 func fixture(g *generator, e *executor, j *journal) Runner {
 	return Runner{Generator: g, Tools: e, Journal: j, Session: "s", Model: "m", ProjectInstructions: "Use focused tests. Scope cannot be bypassed.", Settings: policy.Settings{Scope: policy.Directory}, Redact: func(s string) string { return s }}
 }
-func emit(Event) error                                        { return nil }
+func emit(runrecord.Event) error                              { return nil }
 func approve(context.Context, toolapi.Approval) (bool, error) { return true, nil }
 func TestDeniedToolStopsAndPersistsStructuredResult(t *testing.T) {
 	g, e, j := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file.txt", "content": "new"})}}, &executor{approval: true}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "change", func(context.Context, toolapi.Approval) (bool, error) { return false, nil }, emit)
-	if !errors.Is(err, errApprovalDenied) || e.executed != 0 || e.prepared != 1 || result.Status != Stopped || !result.HadToolFailure {
+	if !errors.Is(err, errApprovalDenied) || e.executed != 0 || e.prepared != 1 || result.Status != runrecord.Stopped || !result.HadToolFailure {
 		t.Fatalf("denial: %+v %v", result, err)
 	}
 	if len(g.requests) != 1 || len(j.messages) != 3 || j.messages[2].Role != "tool" {
@@ -195,16 +196,16 @@ func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(ctx, "change", approve, emit)
-	if !errors.Is(err, context.Canceled) || e.prepared != 0 || e.executed != 0 || result.Status != Interrupted {
+	if !errors.Is(err, context.Canceled) || e.prepared != 0 || e.executed != 0 || result.Status != runrecord.Interrupted {
 		t.Fatalf("partial argument: %+v %v", result, err)
 	}
-	var last *Checkpoint
+	var last *runrecord.Checkpoint
 	for _, event := range j.events {
 		if event.Checkpoint != nil {
 			last = event.Checkpoint
 		}
 	}
-	if last == nil || last.Status != Interrupted || len(last.Arguments) != 0 {
+	if last == nil || last.Status != runrecord.Interrupted || len(last.Arguments) != 0 {
 		t.Fatalf("checkpoint: %+v", last)
 	}
 }
@@ -213,7 +214,7 @@ func TestChangesAllowFinalReportWithoutCheck(t *testing.T) {
 	e, j := &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "change", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("unchecked completion: %+v %v", result, err)
 	}
 }
@@ -223,7 +224,7 @@ func TestVerifiedCommandAllowsCompletionAndFullContexts(t *testing.T) {
 	r := fixture(g, e, j)
 	r.Settings.Scope = policy.System
 	result, err := r.Run(context.Background(), "change", approve, emit)
-	if err != nil || result.Status != Answered {
+	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("completion: %+v %v", result, err)
 	}
 	for _, request := range g.requests {
@@ -241,7 +242,7 @@ func TestLongRequestRetainsActionsAndHistory(t *testing.T) {
 	g, e, j := &generator{replies: replies}, &executor{}, &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "inspect files", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 41 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 41 {
 		t.Fatalf("long run: %s %d %v", result.Status, e.executed, err)
 	}
 }
@@ -257,7 +258,7 @@ func TestModelBudgetStopsWithoutReportingSuccess(t *testing.T) {
 		r.Limits = DefaultLimits()
 		r.Limits.MaxModelCalls = tc.limit
 		result, err := r.Run(context.Background(), "work", approve, emit)
-		if err != nil || !strings.Contains(result.Text, tc.want) || result.Status != Stopped {
+		if err != nil || !strings.Contains(result.Text, tc.want) || result.Status != runrecord.Stopped {
 			t.Fatalf("stop: %+v %v", result, err)
 		}
 	}
@@ -269,7 +270,7 @@ func TestRequestsHaveIndependentCallBudgets(t *testing.T) {
 	r.Limits.MaxModelCalls = 1
 	for _, input := range []string{"first request", "second request"} {
 		result, err := r.Run(context.Background(), input, approve, emit)
-		if err != nil || result.Status != Answered || recordedModelCalls(j) != 1 {
+		if err != nil || result.Status != runrecord.Answered || recordedModelCalls(j) != 1 {
 			t.Fatalf("request inherited another budget: %+v %v", result, err)
 		}
 	}

@@ -6,11 +6,11 @@ package session
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
-func (a *app) receiveRuntime(e *run.Event) {
+func (a *app) receiveRuntime(e *runrecord.Event) {
 	switch e.Kind {
 	case "user_message":
 		if len(a.steeringDrafts) > 0 {

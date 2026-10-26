@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -66,7 +67,7 @@ func TestInterruptedGenerationRetainsExecutedWork(t *testing.T) {
 			g := &generator{replies: []string{"README.md was created; its contents remain unchecked."}}
 			r.Generator = g
 			result, err := r.Run(context.Background(), "Report current progress", approve, emit)
-			if err != nil || result.Status != Answered || e.executed != 1 {
+			if err != nil || result.Status != runrecord.Answered || e.executed != 1 {
 				t.Fatalf("resume replayed effects or failed: %+v executed=%d err=%v", result, e.executed, err)
 			}
 			messages := g.requests[0].Messages

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -33,7 +34,7 @@ func TestDirectExecutionNeedsOnlyWorkerCalls(t *testing.T) {
 		approvals++
 		return true, nil
 	}, emit)
-	if err != nil || result.Status != Answered || e.executed != 1 || approvals != 1 || len(g.requests) != 2 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 1 || approvals != 1 || len(g.requests) != 2 {
 		t.Fatalf("result=%+v executed=%d approvals=%d calls=%d err=%v", result, e.executed, approvals, len(g.requests), err)
 	}
 }
@@ -44,7 +45,7 @@ func TestDeniedChangeStillExecutesNothing(t *testing.T) {
 	r := fixture(&g.generator, e, &journal{})
 	r.Generator = g
 	result, err := r.Run(context.Background(), "Change a", func(context.Context, toolapi.Approval) (bool, error) { return false, nil }, emit)
-	if !errors.Is(err, errApprovalDenied) || result.Status != Stopped || e.executed != 0 || len(g.requests) != 1 {
+	if !errors.Is(err, errApprovalDenied) || result.Status != runrecord.Stopped || e.executed != 0 || len(g.requests) != 1 {
 		t.Fatalf("result=%+v executed=%d calls=%d err=%v", result, e.executed, len(g.requests), err)
 	}
 }

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 )
 
@@ -22,7 +23,7 @@ func (s *execution) stopReport(ctx context.Context, reason string) error {
 	if err := s.finish(ctx, modelapi.Response{Text: s.stopFacts()}); err != nil {
 		return err
 	}
-	s.checkpoint.Status = Stopped
+	s.checkpoint.Status = runrecord.Stopped
 	return nil
 }
 

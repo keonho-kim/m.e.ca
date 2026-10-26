@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
-func (f Formatter) runSummary(s run.Statistics) viewport.Block {
+func (f Formatter) runSummary(s runrecord.Statistics) viewport.Block {
 	seconds := s.ElapsedMillis / 1000
 	duration := fmt.Sprintf("%02d:%02d:%02d", seconds/3600, seconds/60%60, seconds%60)
 	input, output, rate := "—", "—", "—"

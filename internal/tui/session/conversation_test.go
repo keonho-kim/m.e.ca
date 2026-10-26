@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
@@ -21,7 +21,7 @@ func TestConversationEditorStaysAtBottom(t *testing.T) {
 		for _, block := range (transcript.Formatter{Redact: a.opts.Vault.Redact}).Message(modelapi.Message{Role: "user", Content: text}) {
 			a.output.Append(block.Text, block.Thinking)
 		}
-		a.receive(notice{Event: &run.Event{Kind: "response", Text: "answer to " + text}})
+		a.receive(notice{Event: &runrecord.Event{Kind: "response", Text: "answer to " + text}})
 		a.receive(notice{Done: true})
 	}
 	a.selection.Model = "chosen"
@@ -53,7 +53,7 @@ func TestConversationEditorStaysAtBottom(t *testing.T) {
 
 func TestTranscriptAnsweredCheckpointHidden(t *testing.T) {
 	a := fixture(t)
-	event := run.Event{Checkpoint: &run.Checkpoint{Status: run.Answered, Phase: "finished"}}
+	event := runrecord.Event{Checkpoint: &runrecord.Checkpoint{Status: runrecord.Answered, Phase: "finished"}}
 	if blocks := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(event); len(blocks) != 0 {
 		t.Fatalf("completion boilerplate restored: %+v", blocks)
 	}
@@ -85,7 +85,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 		t.Fatal("PageUp did not leave follow mode")
 	}
 	id, row := a.output.AnchorID, a.output.AnchorRow
-	a.receive(notice{Event: &run.Event{Kind: "stream", Text: "streamed answer", Thinking: "inspect"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "streamed answer", Thinking: "inspect"}})
 	a.screen.SetSize(40, 16)
 	a.render()
 	if a.output.Follow || a.output.AnchorID != id || a.output.AnchorRow != row || a.editor.String() != "line one\nline two" {
@@ -100,13 +100,13 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 
 func TestConversationResumesToolTurns(t *testing.T) {
 	a := fixture(t)
-	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &modelapi.Message{Role: "user", Content: "inspect file"}}}); err != nil {
+	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &modelapi.Message{Role: "user", Content: "inspect file"}}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, run.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}, Output: json.RawMessage(`{"Stdout":"file inspected","ExitCode":0,"Status":"exited"}`)}); err != nil {
+	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, runrecord.Event{Kind: "tool_succeeded", CallID: "call", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}, Output: json.RawMessage(`{"Stdout":"file inspected","ExitCode":0,"Status":"exited"}`)}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []run.JournalRecord{{Message: &modelapi.Message{Role: "assistant", Content: "file inspected"}}}); err != nil {
+	if err := a.opts.Store.Commit(a.ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &modelapi.Message{Role: "assistant", Content: "file inspected"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.loadHistory(); err != nil {

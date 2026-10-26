@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
 )
@@ -25,7 +26,7 @@ func TestRepeatedEditsDoNotRequireCheck(t *testing.T) {
 	replies = append(replies, "Changed a; no tests run")
 	g, e := &generator{replies: replies}, &executor{outcomes: outcomes}
 	result, err := fixture(g, e, &journal{}).Run(context.Background(), "repair a", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 4 || len(g.requests) != 5 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 4 || len(g.requests) != 5 {
 		t.Fatalf("%+v executions=%d requests=%d %v", result, e.executed, len(g.requests), err)
 	}
 }
@@ -39,7 +40,7 @@ func TestIntentionalContentReversalDoesNotForceStop(t *testing.T) {
 	j := &journal{}
 	r := fixture(g, e, j)
 	result, err := r.Run(context.Background(), "repair a", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 4 || len(g.requests) != 5 || result.Text != "Done" {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 4 || len(g.requests) != 5 || result.Text != "Done" {
 		t.Fatalf("cycle was lost: %+v %v", result, err)
 	}
 }

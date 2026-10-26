@@ -10,7 +10,8 @@
 | --- | --- |
 | cmd/meca | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
 | agent/model | 모델 메시지·스트림·출력 예산 계약 |
-| agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·요청별 실측 통계 |
+| agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·실측 통계 집계 |
+| agent/record | 실행 이벤트·체크포인트·상태·최종 통계·원자적 기록 단위와 검증 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
@@ -22,14 +23,20 @@
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
 | provider/protocol·transport·httpclient | wire 변환·HTTP/스트림/재시도·생성 요청 조율 |
 | policy·policy/command | 공통 보호 대상·파일 Scope와 execute_command의 선택적 AST 검사·값 상태·명령별 승인 근거 |
+| tools/local/catalog | 불변 도구 설명·스키마·native JSON 인자 파싱 |
+| tools/local | 준비·승인 바인딩·실행·자원 수명을 연결하는 호스트 어댑터 |
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
 | tools/local/file·textedit·textformat·diff | 파일 I/O·정확한 부분 수정·바이트 형식·변경 미리보기 |
 | tools/local/process | 호스트 셸·프로세스 그룹·출력·취소 |
 | storage/session·history·recovery | 세션 식별·순서 있는 이력·중단 복구의 저장 계약 |
-| storage/sqlite | DB 파일·SQL·트랜잭션·잠금 어댑터 |
-| tui/session | 이벤트 루프·활성 화면·모델 및 언어 설정 초안·worker 수명 |
+| storage/content | 큰 JSON 값의 참조 분리·선택 복원·압축·내용 무결성 |
+| storage/sqlite | DB 파일·SQL·트랜잭션·잠금·content 콜백 어댑터 |
+| tui/session | 이벤트 루프·화면 전환·worker 수명과 하위 화면 컴포넌트 조율 |
+| tui/session/queue | 후속 요청 순서·예약 편집·초안 복구·큐 표시 캐시 |
+| tui/settings/model | 모델 설정 초안·값 전환·입력 검증·검색·식별 정보·화면 투영 |
+| tui/browser/readqueue | 디렉터리·미리보기·감시 등록의 실행 슬롯과 최신 대기 요청 |
 | tui/locale | 불변 번역 목록·설정 우선 언어 선택·시스템 로캘 해석 |
-| tui/modelmenu·transcript·view | 모델 표시값·메시지/도구 투영·공통 설정 화면 및 대화 렌더링 |
+| tui/transcript·view | 메시지/도구 투영·공통 설정 화면 및 대화 렌더링 |
 | tui/input·textlayout·selection | 편집 revision·grapheme 배치·원문에 연결된 선택 |
 | tui/startup·browser·viewport·markdown | 대화 선택·파일 탐색·출력 위치·응답·Thinking Markdown 표시 |
 | searchmatch | 명령·모델 후보의 Unicode 축약 검색 |
@@ -38,7 +45,7 @@ TUI의 활성 worker는 idle·agent·agent stopping·setup·setup stopping 중 �
 
 TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문맥·압축 설정과 선택된 세션의 정규화한 프로젝트 경로를 사용한다. 요청의 Thinking 선택은 값으로 복사한다. 실제 자원 생성과 종료는 각 진입점, 지침 읽기와 요청 실행은 agent/session이 소유한다.
 
-실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
+실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. 영속 실행 기록은 agent/record가 정의하므로 저장 어댑터·이력·TUI 투영은 실행 루프 구현을 참조하지 않는다. storage/content는 SQL 없이 분리·복원하며 SQLite가 같은 트랜잭션의 쓰기 콜백과 조회 후 복원 콜백을 제공한다. TUI 하위 컴포넌트는 session을 역참조하지 않으며 상태 변경은 기존 이벤트 루프에서 수행한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
 
 ## 의존성과 배포
 
@@ -54,6 +61,8 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 | go-keyring | Keychain·Secret Service |
 | modernc.org/sqlite | CGO 없는 SQLite |
 | klauspost/compress/zstd | 세션의 대용량 payload를 Zstandard로 압축·복원 |
+| bytedance/sonic | 정렬된 키·문자열 검사를 유지하며 모델 요청 JSON을 인코딩 |
+| goccy/go-json | 저장 레코드의 JSON 직렬화·참조 분리·복원 |
 | x/sys·x/term | OS 파일 어댑터와 터미널 확인 |
 | mvdan.cc/sh/v3 | 실행 없는 셸 AST 분석과 정적 단어 확장 |
 | fsnotify | 파일 탐색 화면의 활성 디렉터리 변경 알림 |
@@ -148,6 +157,12 @@ MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run Test
 
 OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다. 서명·종류·식별자 경계와 알 수 없는 필드를 보존하고 닫힌 블록만 유지하므로 완료 시 모든 조각을 다시 해석하지 않는다. 취소·실패한 요청의 미완성 블록은 후속 요청에 공개하지 않는다.
 
+Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio 요청은 Responses 본문만 한 번 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
+
+메시지·실행 이벤트·요약·대용량 레코드 참조의 저장 JSON은 go-json의 기본 Marshal·Unmarshal을 사용한다. 키 정렬·HTML 이스케이프·nil과 빈 값·64비트 숫자·native arguments의 내용·복원 값의 독립성을 검사한다. SHA-256 무결성·저장 형식·트랜잭션 경계는 storage/content와 SQLite의 기존 소유권을 따른다. 반환 값이 입력 버퍼에 의존하는 무복사 옵션은 사용하지 않는다.
+
+HTTP는 표준 net/http를 사용한다. 사용자 지정 DialContext에서도 TLS ALPN으로 HTTP/2를 협상하고 HTTP/1.1 서버도 지원한다. 연결·TLS handshake·유휴 수신 감지는 각 경계의 제한을 유지하며 전체 응답 시간 제한을 추가하지 않는다. 응답 body·요청 취소·연결 종료는 기존 transport 수명으로 정리한다.
+
 로컬 도구 카탈로그는 초기화 후 변경하지 않는 내부 정의 하나를 소유한다. 인자 검사는 이를 재사용하며 외부 Definitions 반환값은 중첩 Fields·Values까지 복사해 변경이 내부 검증으로 전파되지 않게 한다.
 
 응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 참조 정의 가능성이 있는 `]:` 포함 문서는 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남기며 현재 스트리밍은 증분 처리 수명 동안 보유한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
@@ -156,7 +171,7 @@ Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다
 
 파일 변경 미리보기와 정확한 추가·삭제 줄 수는 같은 분석에서 얻는다. 공통 앞뒤 구간은 bytes.Equal 블록 비교로 건너뛰고 미리보기에 필요한 인접 문맥만 매칭한다. 전체 생성·삭제는 trace와 줄 배열 없이 출력한다. 미리보기의 작업량 한도에 도달한 경우에는 완전한 diff를 출력하고 정확한 변경량은 별도로 계산한다. 원본 검사·해시·변경 후보 바인딩은 유지한다.
 
-SQLite의 큰 JSON 값은 `payloads`에서 해시·원본 길이·압축 형식을 소유한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `run.JournalRecord` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
+큰 JSON 값의 인코딩·복원과 무결성 검사는 storage/content가 소유하고 SQLite는 `payloads`에 해시·원본 길이·압축 형식·본문을 저장한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `record.Entry` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
 압축 점유량 조회는 최근 실측 샘플·최신 요약 revision의 경계·이후 추가된 메시지 크기·현재 timeline을 한 SQL 문과 같은 읽기 스냅샷에서 계산한다. 원문 본문을 읽거나 추가 영속 카운터·캐시·인덱스를 만들지 않는다.
 
@@ -172,10 +187,12 @@ go test ./internal/tui/markdown -run '^$' -bench 'Benchmark(StreamTail|Paragraph
 go test ./internal/tui/input -run '^$' -bench BenchmarkLongDraft -benchmem
 go test ./internal/tools/local/diff -run '^$' -bench BenchmarkAnalysis -benchmem
 go test ./internal/tools/local -run '^$' -bench BenchmarkParallelPlanning -benchmem
-go test ./internal/tools/local -run '^$' -bench BenchmarkCatalog -benchmem
+go test ./internal/tools/local/catalog -run '^$' -bench BenchmarkCatalog -benchmem
 go test ./internal/tui/session -run '^$' -bench BenchmarkStreamDelivery -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkOutcomeCommit -benchtime=100x -benchmem
-go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(PayloadCodec|CompressionOptions)' -benchmem
+go test ./internal/storage/content -run '^$' -bench 'Benchmark(PayloadCodec|CompressionOptions)' -benchmem
+go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(ProviderRequests|ProviderStream|OpenRouterReasoningFragments)' -benchmem
+go test ./internal/storage/content -run '^$' -bench BenchmarkRecordContent -benchmem
 go test ./internal/tui/textlayout -run '^$' -bench BenchmarkWidth -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkMemoryWatermark -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(Conversations|Journal)' -benchmem
@@ -183,6 +200,8 @@ go test ./internal/tui/viewport -run TestDisplayResources -v
 go test ./internal/tui/markdown -run '^$' -fuzz '^FuzzStream$' -fuzztime=10s
 go test ./internal/tui/input -run '^$' -fuzz '^FuzzBoundaryEdits$' -fuzztime=10s
 go test ./internal/tools/local/diff -run '^$' -fuzz '^FuzzAnalysisCounts$' -fuzztime=10s
+go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzWireJSONEncode$' -fuzztime=15s
+go test ./internal/storage/content -run '^$' -fuzz '^FuzzStoredJSON$' -fuzztime=15s
 ```
 
 ```sh

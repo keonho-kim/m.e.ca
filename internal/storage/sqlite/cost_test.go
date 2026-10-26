@@ -10,7 +10,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestCostRestoresReportedTotals(t *testing.T) {
@@ -34,7 +34,7 @@ func TestCostRestoresReportedTotals(t *testing.T) {
 				}
 			})
 			for _, cost := range tc.costs {
-				var event run.Event
+				var event runrecord.Event
 				if err := json.Unmarshal([]byte(`{"kind":"usage","usage":{"input":20,"output":5,"cost":`+cost+`}}`), &event); err != nil {
 					t.Fatal(err)
 				}

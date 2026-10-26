@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
@@ -17,7 +17,7 @@ func (a *app) finishWorker(n notice) {
 	active, cancelled := a.worker.agent(), a.worker.stopping()
 	defer func() {
 		if active {
-			a.finishPending(n.Err == nil && !cancelled && n.RunStatus == run.Answered)
+			a.finishPending(n.Err == nil && !cancelled && n.RunStatus == runrecord.Answered)
 		}
 	}()
 	a.tokenCurrent = modelapi.TokenUsage{}
@@ -56,9 +56,9 @@ func (a *app) finishWorker(n notice) {
 	if n.Diagnostic && n.Err == nil {
 		a.status = a.language.Text("모델 연결 진단을 통과했습니다")
 	}
-	if n.Diagnostic && a.modelForm != nil && a.modelForm.saving {
+	if n.Diagnostic && a.modelForm != nil && a.modelForm.Saving {
 		if n.Err != nil {
-			a.modelForm.saving, a.page = false, "model"
+			a.modelForm.Saving, a.page = false, "model"
 		} else {
 			a.saveModelForm()
 		}

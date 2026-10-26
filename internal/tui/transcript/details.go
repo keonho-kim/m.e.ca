@@ -6,7 +6,7 @@ package transcript
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -16,7 +16,7 @@ type toolOutput struct {
 	failureHandled bool
 }
 
-func (f Formatter) output(event run.Event) toolOutput {
+func (f Formatter) output(event runrecord.Event) toolOutput {
 	body := event.Output
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(body, &fields) != nil || fields == nil {
@@ -42,7 +42,7 @@ func (f Formatter) output(event run.Event) toolOutput {
 	return output
 }
 
-func (f Formatter) resultSummary(event run.Event) string {
+func (f Formatter) resultSummary(event runrecord.Event) string {
 	if event.Text != "" {
 		return indentTool(f.Redact(event.Text))
 	}

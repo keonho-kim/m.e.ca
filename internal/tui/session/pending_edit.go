@@ -1,109 +1,64 @@
-// Purpose: Own one queued-message edit and preserve its normal input draft across completion boundaries.
-// Pattern: Event-loop state transitions.
-// Usage: Queue keys navigate, save or delete; worker completion defers dispatch until editing closes.
-// Related: internal/tui/session/pending.go, internal/tui/session/pending_edit_keys.go, internal/tui/session/state.go.
+// Purpose: Coordinate reservation editing with chat focus and deferred worker completion.
+// Pattern: Application input and completion transitions.
+// Usage: Queue keys delegate state changes; closing an edit resumes dispatch or restores interrupted drafts.
+// Related: internal/tui/session/queue/state.go, internal/tui/session/pending.go, internal/tui/session/pending_edit_keys.go.
 package session
 
-import (
-	"strings"
-
-	"github.com/keonho-kim/meca/internal/tui/input"
-)
-
-type pendingCompletion uint8
-
-const (
-	pendingRunning pendingCompletion = iota
-	pendingSucceeded
-	pendingStopped
-)
-
-type pendingEdit struct {
-	index      int
-	draft      input.Editor
-	completion pendingCompletion
-	reveal     bool
-}
+import "github.com/keonho-kim/meca/internal/tui/session/queue"
 
 func (a *app) canEditPending() bool {
-	return a.page == "chat" && len(a.pending) > 0 && a.fileSubmission == nil &&
-		!a.worker.stopping() && (!a.worker.active() || a.worker.agent())
+	return a.page == "chat" && len(a.queued.Messages) > 0 && a.fileSubmission == nil && !a.worker.stopping() && (!a.worker.active() || a.worker.agent())
 }
 
-func (a *app) pendingEditChanged() bool {
-	return a.pendingEdit != nil && a.editor.String() != a.pending[a.pendingEdit.index]
-}
+func (a *app) pendingEditChanged() bool { return a.queued.Changed(a.editor.String()) }
 
 func (a *app) navigatePending(delta int) {
-	if a.pendingEdit == nil {
-		if delta >= 0 || !a.canEditPending() {
-			return
+	if a.queued.Edit == nil && !a.canEditPending() {
+		return
+	}
+	opening := a.queued.Edit == nil
+	switch a.queued.Navigate(delta, &a.editor) {
+	case queue.Focused:
+		if opening {
+			a.clearSelection()
+			a.closeCommandHints()
 		}
-		a.pendingEdit = &pendingEdit{index: len(a.pending) - 1, draft: a.editor, reveal: true}
-		a.clearSelection()
-		a.closeCommandHints()
-		a.editor.Set(a.pending[a.pendingEdit.index])
-		return
-	}
-	next := a.pendingEdit.index + delta
-	if next < 0 {
-		return
-	}
-	if a.pendingEditChanged() {
+	case queue.Unsaved:
 		a.stopNotice = a.language.Text("Save or cancel changes before switching queued requests")
-		return
-	}
-	if next >= len(a.pending) {
+	case queue.Close:
 		a.closePendingEdit()
-		return
 	}
-	a.pendingEdit.index = next
-	a.pendingEdit.reveal = true
-	a.editor.Set(a.pending[next])
 }
 
 func (a *app) savePendingEdit() {
-	text := a.editor.String()
-	if strings.TrimSpace(text) == "" {
+	if !a.queued.Save(a.editor.String()) {
 		a.stopNotice = a.language.Text("Enter a request or use Ctrl/Cmd+Backspace to delete it from the queue")
 		return
 	}
-	a.pending[a.pendingEdit.index] = text
 	a.closePendingEdit()
 }
 
-func (a *app) deletePendingEdit() {
-	index := a.pendingEdit.index
-	copy(a.pending[index:], a.pending[index+1:])
-	a.pending[len(a.pending)-1] = ""
-	a.pending = a.pending[:len(a.pending)-1]
-	if len(a.pending) == 0 {
-		a.pending = nil
-	}
-	a.closePendingEdit()
-}
+func (a *app) deletePendingEdit() { a.queued.DeleteSelected(); a.closePendingEdit() }
 
-func (a *app) restorePendingEditor() pendingCompletion {
-	edit := a.pendingEdit
-	if edit == nil {
-		return pendingRunning
+func (a *app) restorePendingEditor() queue.Completion {
+	if a.queued.Edit == nil {
+		return queue.Running
 	}
-	a.pendingEdit = nil
-	a.editor = edit.draft
+	completion := a.queued.RestoreEditor(&a.editor)
 	a.clearSelection()
 	a.closeCommandHints()
 	a.stopNotice = ""
-	return edit.completion
+	return completion
 }
 
 func (a *app) closePendingEdit() {
-	if a.pendingEdit == nil {
+	if a.queued.Edit == nil {
 		return
 	}
 	switch a.restorePendingEditor() {
-	case pendingSucceeded:
+	case queue.Succeeded:
 		a.finishPending(true)
-	case pendingStopped:
+	case queue.Stopped:
 		a.finishPending(false)
 	}
 	a.refreshHints()

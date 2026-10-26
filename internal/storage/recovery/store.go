@@ -7,12 +7,12 @@ package recovery
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type Store interface {
-	LatestRun(context.Context, string) (*run.Checkpoint, error)
-	RecordEvent(context.Context, string, run.Event) error
+	LatestRun(context.Context, string) (*runrecord.Checkpoint, error)
+	RecordEvent(context.Context, string, runrecord.Event) error
 	Messages(context.Context, string, int) ([]modelapi.Message, error)
-	Commit(context.Context, string, []run.JournalRecord) error
+	Commit(context.Context, string, []runrecord.Entry) error
 }

@@ -6,7 +6,7 @@ package recovery
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func recoverRun(ctx context.Context, s Store, session string) error {
@@ -14,9 +14,9 @@ func recoverRun(ctx context.Context, s Store, session string) error {
 	if err != nil || cp == nil {
 		return err
 	}
-	if cp.Status != run.Running {
+	if cp.Status != runrecord.Running {
 		return nil
 	}
-	cp.Status = run.Interrupted
-	return s.RecordEvent(ctx, session, run.Event{Kind: "run_checkpoint", Text: "Run interrupted during " + cp.Phase + "; drafts and side effects were not replayed", Checkpoint: cp})
+	cp.Status = runrecord.Interrupted
+	return s.RecordEvent(ctx, session, runrecord.Event{Kind: "run_checkpoint", Text: "Run interrupted during " + cp.Phase + "; drafts and side effects were not replayed", Checkpoint: cp})
 }

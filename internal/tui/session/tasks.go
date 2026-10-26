@@ -6,7 +6,7 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	tasksession "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -51,7 +51,7 @@ func (a *app) startTask(text string) {
 		defer a.workers.Done()
 		defer cancel()
 		delivery := runtimeDelivery{}
-		emit := func(event run.Event) error {
+		emit := func(event runrecord.Event) error {
 			if event.Kind == "stream" {
 				return delivery.stream(ctx, a.events, event)
 			}

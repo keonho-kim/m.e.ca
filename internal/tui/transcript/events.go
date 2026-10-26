@@ -1,15 +1,15 @@
 // Purpose: Project archived runtime events and suppress duplicate task completion records.
 // Pattern: Presentation projection.
 // Usage: Session history passes runtime events to Formatter.Event.
-// Related: internal/agent/run/events.go, internal/tui/transcript/tools.go.
+// Related: internal/agent/record/events.go, internal/tui/transcript/tools.go.
 package transcript
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
-func (f Formatter) Event(event run.Event) []viewport.Block {
+func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 	if event.Internal {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (f Formatter) Event(event run.Event) []viewport.Block {
 		}
 		return nil
 	}
-	if cp := event.Checkpoint; cp != nil && cp.Phase == "finished" && cp.Status == run.Answered {
+	if cp := event.Checkpoint; cp != nil && cp.Phase == "finished" && cp.Status == runrecord.Answered {
 		return nil
 	}
 	if event.Kind == "thinking" {

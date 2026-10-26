@@ -15,7 +15,11 @@ import (
 func TestApprovalDiffNavigation(t *testing.T) {
 	a := fixture(t)
 	a.page = "approval"
-	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)}
+	preview, _, _, err := diff.Analyze("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: preview}
 	a.choices = []string{"Approve", "Reject"}
 	a.decision = make(chan bool, 1)
 	a.render()
@@ -41,7 +45,11 @@ func TestApprovalDiffNavigation(t *testing.T) {
 func TestApprovalChangedRowsHaveContrastingBackgrounds(t *testing.T) {
 	a := fixture(t)
 	a.page = "approval"
-	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: diff.Preview("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)}
+	preview, _, _, err := diff.Analyze("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.proposal = &toolapi.Approval{Name: "Editing", Target: "file", Diff: true, Preview: preview}
 	a.choices = []string{"Approve", "Reject"}
 	a.render()
 	for _, y := range []int{6, 7, 8, 9} {

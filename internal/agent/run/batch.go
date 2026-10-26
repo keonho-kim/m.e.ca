@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"time"
@@ -37,7 +38,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		return err
 	}
 	if reply.Text != "" {
-		if err := s.emit(Event{Kind: "progress", Text: reply.Text}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "progress", Text: reply.Text}); err != nil {
 			return err
 		}
 	}
@@ -97,7 +98,7 @@ func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail
 			return err
 		}
 		outcome := toolapi.Result{Failed: true, Failure: failure, Content: body}
-		event := Event{Kind: "tool_failed", CallID: v.call.ID, Call: &v.call, Text: failure.Error(), Output: outcome.Content}
+		event := runrecord.Event{Kind: "tool_failed", CallID: v.call.ID, Call: &v.call, Text: failure.Error(), Output: outcome.Content}
 		if err := s.acceptResult(recordCtx, v, outcome, failure, event); err != nil {
 			return errors.Join(result, errRuntimeRecord, err)
 		}

@@ -7,7 +7,7 @@ package session
 import (
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
@@ -16,7 +16,7 @@ import (
 
 func TestMarkdownLiveAndRestored(t *testing.T) {
 	a := fixture(t)
-	a.receive(notice{Event: &run.Event{Kind: "stream", Text: "# Heading\n\n**strong** 😀"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "# Heading\n\n**strong** 😀"}})
 	a.render()
 	first := screenLine(a.screen, 1, 80)
 	if !strings.Contains(first, "Heading") || strings.Contains(first, "# Heading") {
@@ -26,7 +26,7 @@ func TestMarkdownLiveAndRestored(t *testing.T) {
 	if style.GetAttributes()&tcell.AttrBold == 0 {
 		t.Fatal("heading is not bold")
 	}
-	a.receive(notice{Event: &run.Event{Kind: "response", Text: "# Heading\n\n**strong** 😀"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "response", Text: "# Heading\n\n**strong** 😀"}})
 	formatter := transcript.Formatter{Redact: func(s string) string { return s }}
 	saved := formatter.Message(modelapi.Message{Role: "assistant", Content: "# Heading\n\n**strong** 😀"})
 	if len(saved) != 1 || !saved[0].Markdown || !a.output.Blocks[0].Markdown {
@@ -53,7 +53,7 @@ func TestMarkdownUserRemainsLiteral(t *testing.T) {
 
 func TestMarkdownToolOutputRemainsLiteral(t *testing.T) {
 	a := fixture(t)
-	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Text: "**literal tool output**"}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Text: "**literal tool output**"}})
 	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Markdown || !strings.Contains(a.output.Blocks[0].Text, "**literal tool output**") {
 		t.Fatal("tool output was interpreted as Markdown")
 	}

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
@@ -17,7 +17,7 @@ func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
 	a := fixture(t)
 	a.historyEnd = true
 	a.output.Append("earlier conversation", false)
-	a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40), Text: strings.Repeat("answer  \n", 40) + "latest"})
+	a.receiveRuntime(&runrecord.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40), Text: strings.Repeat("answer  \n", 40) + "latest"})
 	a.render()
 	height := a.chatHeight(80, a.bodyHeight(24))
 	transcript := a.chatLayout(view.TranscriptWidth(80))
@@ -39,17 +39,17 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 			a.historyEnd = true
 			defer a.stopCompression()
 			a.output.Append(strings.Repeat("earlier\n", 50), false)
-			a.receiveRuntime(&run.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40)})
+			a.receiveRuntime(&runrecord.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40)})
 			a.render()
 			height := a.chatHeight(80, a.bodyHeight(24))
 			if paused {
 				a.scroll(-4, 80, height)
 			}
 			before := a.chatLayout(view.TranscriptWidth(80)).Start(&a.output, height)
-			a.receiveRuntime(&run.Event{Kind: "thinking", Thinking: a.thinking})
-			a.receiveRuntime(&run.Event{Kind: "compaction_started"})
-			a.receiveRuntime(&run.Event{Kind: "compaction_finished"})
-			a.receiveRuntime(&run.Event{Kind: "stream", Text: strings.Repeat("continued  \n", 30) + "latest answer"})
+			a.receiveRuntime(&runrecord.Event{Kind: "thinking", Thinking: a.thinking})
+			a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
+			a.receiveRuntime(&runrecord.Event{Kind: "compaction_finished"})
+			a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: strings.Repeat("continued  \n", 30) + "latest answer"})
 			a.render()
 			if a.output.Follow == paused {
 				t.Fatal("compaction changed follow preference")
@@ -119,7 +119,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 		t.Fatal("sending a direction change did not return to the bottom")
 	}
 	a.scroll(-3, 80, height)
-	a.receiveRuntime(&run.Event{Kind: "user_message", Text: "Use the existing API"})
+	a.receiveRuntime(&runrecord.Event{Kind: "user_message", Text: "Use the existing API"})
 	if a.output.Follow {
 		t.Fatal("delayed acknowledgement overrode later manual scrolling")
 	}

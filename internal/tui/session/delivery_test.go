@@ -10,14 +10,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestStreamDeliveryKeepsLatestSnapshot(t *testing.T) {
 	a := &app{events: make(chan notice, 64)}
 	delivery := runtimeDelivery{}
 	for i := range 32 {
-		if err := delivery.stream(context.Background(), a.events, run.Event{Kind: "stream", Text: fmt.Sprint(i)}); err != nil {
+		if err := delivery.stream(context.Background(), a.events, runrecord.Event{Kind: "stream", Text: fmt.Sprint(i)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -31,7 +31,7 @@ func TestStreamDeliveryPreservesBoundariesAndReleasesSnapshots(t *testing.T) {
 	delivery := runtimeDelivery{}
 	ctx := context.Background()
 	for _, kind := range []string{"stream", "stream", "retry", "stream", "usage", "thinking", "response"} {
-		event := &run.Event{Kind: kind, Text: kind}
+		event := &runrecord.Event{Kind: kind, Text: kind}
 		post := func() error {
 			if kind == "stream" {
 				return delivery.stream(ctx, a.events, *event)
@@ -57,7 +57,7 @@ func TestStreamDeliveryPreservesBoundariesAndReleasesSnapshots(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	cancel()
-	if err := delivery.stream(ctx, a.events, run.Event{Kind: "stream"}); err == nil || len(a.events) != 0 {
+	if err := delivery.stream(ctx, a.events, runrecord.Event{Kind: "stream"}); err == nil || len(a.events) != 0 {
 		t.Fatal("cancelled delivery retained a snapshot")
 	}
 }
@@ -78,7 +78,7 @@ func TestStreamDeliveryConcurrentConsumption(t *testing.T) {
 		}
 	})
 	for range 1000 {
-		if err := delivery.stream(context.Background(), a.events, run.Event{Kind: "stream", Thinking: "snapshot"}); err != nil {
+		if err := delivery.stream(context.Background(), a.events, runrecord.Event{Kind: "stream", Thinking: "snapshot"}); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ func TestReportAfterChangeWithoutCheck(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "README.md", "content": "hello"}), report}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "create README", approve, emit)
-	if err != nil || result.Status != Answered || result.Text != report || len(g.requests) != 2 {
+	if err != nil || result.Status != runrecord.Answered || result.Text != report || len(g.requests) != 2 {
 		t.Fatalf("report replaced or extra generation: %+v requests=%d err=%v", result, len(g.requests), err)
 	}
 }
@@ -27,7 +28,7 @@ func TestReportRetainsFailedCommandFacts(t *testing.T) {
 	e := &executor{outcomes: []toolapi.Result{{Content: []byte(`{"changed":true}`)}, {Failed: true, Content: []byte(`{"stderr":"assertion failed","exit_code":7}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 7}}}}
 	j := &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "edit and test", approve, emit)
-	if err != nil || !strings.Contains(result.Text, "test") || result.Status != Answered || !result.HadToolFailure {
+	if err != nil || !strings.Contains(result.Text, "test") || result.Status != runrecord.Answered || !result.HadToolFailure {
 		t.Fatalf("%+v %v", result, err)
 	}
 	found := false
@@ -46,7 +47,7 @@ func TestRepeatedCommandIsADeliberateNewExecution(t *testing.T) {
 	g, e := &generator{replies: []string{command, command, "The command already ran"}}, &executor{}
 	j := &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "run once", approve, emit)
-	if err != nil || result.Status != Answered || e.executed != 2 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 2 {
 		t.Fatalf("%+v executions=%d %v", result, e.executed, err)
 	}
 	found := false

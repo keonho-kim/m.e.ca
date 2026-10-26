@@ -8,7 +8,7 @@ import (
 	"context"
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -72,12 +72,12 @@ func TestMemoryProjectsStepChanges(t *testing.T) {
 	})
 	session := store.Session()
 
-	cp := run.Checkpoint{ID: "task", Objective: "goal", Status: run.Running, Phase: "execution", InstructionsDigest: strings.Repeat("a", 64)}
-	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
+	cp := runrecord.Checkpoint{ID: "task", Objective: "goal", Status: runrecord.Running, Phase: "execution", InstructionsDigest: strings.Repeat("a", 64)}
+	if err = store.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}
 	op := toolapi.Operation{RunID: "task", CallID: "call", Name: "write_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Action: "write_file", Path: "src/session.go"}}}
-	if err = store.RecordEvent(ctx, session.ID, run.Event{Kind: "tool_succeeded", Operation: &op}); err != nil {
+	if err = store.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "tool_succeeded", Operation: &op}); err != nil {
 		t.Fatal(err)
 	}
 	mark, err := store.MemoryWatermark(ctx, session.ID, 0)

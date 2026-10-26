@@ -7,6 +7,7 @@ package local
 import (
 	"context"
 	"errors"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,14 +68,14 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 }
 
 func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (policy.Effect, []target, error) {
-	spec, input, err := parseArguments(call)
+	spec, input, err := toolcatalog.Parse(call)
 	if err != nil {
 		return 0, nil, err
 	}
-	if spec.effect == policy.Command {
-		return spec.effect, nil, nil
+	if spec.Effect == policy.Command {
+		return spec.Effect, nil, nil
 	}
-	if spec.name == "create_directory" {
+	if spec.Name == "create_directory" {
 		dirs, err := e.directoryTargets(settings, input.Paths)
 		var targets []target
 		for _, path := range input.Paths {
@@ -89,13 +90,13 @@ func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (p
 				targets = append(targets, dir.target)
 			}
 		}
-		return spec.effect, targets, err
+		return spec.Effect, targets, err
 	}
 	resolved, err := e.resolve(settings.Scope, input.Path)
 	if err != nil {
 		return 0, nil, err
 	}
-	return spec.effect, []target{resolved}, nil
+	return spec.Effect, []target{resolved}, nil
 }
 func pathContains(parent, child string) bool {
 	relative, err := filepath.Rel(parent, child)

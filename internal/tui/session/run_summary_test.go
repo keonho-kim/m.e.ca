@@ -11,7 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/rivo/uniseg"
@@ -22,12 +22,12 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	a.language = locale.English
 	a.worker = workerAgent
 	a.tokenTotal = modelapi.TokenUsage{Input: 9999, Output: 8888}
-	a.receiveRuntime(&run.Event{Kind: "response", Text: "Finished the requested work."})
-	a.receiveRuntime(&run.Event{Statistics: &run.Statistics{ElapsedMillis: 3723000, GenerationMillis: 4000, Usage: &modelapi.TokenUsage{Input: 120, Output: 20}}})
+	a.receiveRuntime(&runrecord.Event{Kind: "response", Text: "Finished the requested work."})
+	a.receiveRuntime(&runrecord.Event{Statistics: &runrecord.Statistics{ElapsedMillis: 3723000, GenerationMillis: 4000, Usage: &modelapi.TokenUsage{Input: 120, Output: 20}}})
 	if len(a.output.Blocks) != 1 {
 		t.Fatal("completion line displayed before worker finished")
 	}
-	a.receive(notice{Done: true, RunStatus: run.Answered})
+	a.receive(notice{Done: true, RunStatus: runrecord.Answered})
 	if len(a.output.Blocks) != 2 || a.runSummary != nil {
 		t.Fatal("completion line missing, duplicated or retained")
 	}
@@ -74,9 +74,9 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 func TestRunSummaryFollowsInterruptedDraft(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgentStopping
-	a.receiveRuntime(&run.Event{Kind: "stream", Text: "partial answer", Thinking: "partial reasoning"})
-	a.receiveRuntime(&run.Event{Statistics: &run.Statistics{ElapsedMillis: 1000}})
-	a.receive(notice{Done: true, RunStatus: run.Interrupted, Err: context.Canceled})
+	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: "partial answer", Thinking: "partial reasoning"})
+	a.receiveRuntime(&runrecord.Event{Statistics: &runrecord.Statistics{ElapsedMillis: 1000}})
+	a.receive(notice{Done: true, RunStatus: runrecord.Interrupted, Err: context.Canceled})
 	if len(a.output.Blocks) != 3 || a.output.Blocks[1].Markdown == false || !a.output.Blocks[2].Centered || a.runSummary != nil {
 		t.Fatalf("interrupted response ordering: %+v", a.output.Blocks)
 	}

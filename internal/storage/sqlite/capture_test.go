@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 )
@@ -22,7 +22,7 @@ func TestCapturedOutputIsDurableAndExcludedFromProjections(t *testing.T) {
 	ctx := context.Background()
 	id := store.Session().ID
 	capture, _ := json.Marshal(map[string]string{"Stdout": strings.Repeat("full-captured-output\n", 10000)})
-	if err = store.RecordEvent(ctx, id, run.Event{Kind: "tool_succeeded", Capture: capture, Output: json.RawMessage(`{"Stdout":"excerpt"}`)}); err != nil {
+	if err = store.RecordEvent(ctx, id, runrecord.Event{Kind: "tool_succeeded", Capture: capture, Output: json.RawMessage(`{"Stdout":"excerpt"}`)}); err != nil {
 		t.Fatal(err)
 	}
 	page, _, err := store.Timeline(ctx, id, 0, 10)

@@ -1,19 +1,21 @@
 // Purpose: Load the latest validated loop checkpoint without replaying argument drafts or effects.
 // Pattern: Repository projection.
 // Usage: Used during session recovery and explicit run continuation.
-// Related: internal/storage/sqlite/runs_test.go, internal/agent/run/events.go.
+// Related: internal/storage/sqlite/runs_test.go, internal/agent/record/events.go.
 package sqlite
 
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/run"
+
+	json "github.com/goccy/go-json"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
-func (s *Store) LatestRun(ctx context.Context, session string) (*run.Checkpoint, error) {
+func (s *Store) LatestRun(ctx context.Context, session string) (*runrecord.Checkpoint, error) {
 	var record storedRecord
 	err := s.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes FROM tool_events WHERE session_id=? AND kind='run_checkpoint' ORDER BY sequence DESC LIMIT 1", session).Scan(&record.body, &record.refs, &record.size)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -22,14 +24,14 @@ func (s *Store) LatestRun(ctx context.Context, session string) (*run.Checkpoint,
 	if err != nil {
 		return nil, err
 	}
-	if record.size > maxEventBytes {
+	if record.size > recordcontent.MaxBytes {
 		return nil, fmt.Errorf("run checkpoint exceeds limit")
 	}
 	body, err := s.unpackRecord(ctx, record, nil)
 	if err != nil {
 		return nil, err
 	}
-	var event run.Event
+	var event runrecord.Event
 	if err = json.Unmarshal(body, &event); err != nil {
 		return nil, err
 	}

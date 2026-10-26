@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
@@ -25,7 +25,7 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			event := run.Event{Kind: "tool_succeeded", Text: "Process exited; exit code 0", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat large.txt"}`)}, Output: body}
+			event := runrecord.Event{Kind: "tool_succeeded", Text: "Process exited; exit code 0", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat large.txt"}`)}, Output: body}
 			if restored {
 				a.output.Prepend((transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(event))
 			} else {

@@ -93,7 +93,7 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			}
 			a.openModel()
 			on := true
-			a.modelForm.thinking, a.modelForm.global = &on, global
+			a.modelForm.Thinking, a.modelForm.Global = &on, global
 			a.saveModelForm()
 			if *a.selection.Thinking || a.status == "" {
 				t.Fatalf("failed save applied: %+v", a.selection)

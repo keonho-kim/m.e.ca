@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
-func (s *Store) Commit(ctx context.Context, session string, records []run.JournalRecord) error {
+func (s *Store) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
 	if len(records) == 0 {
 		return fmt.Errorf("journal group must not be empty")
 	}

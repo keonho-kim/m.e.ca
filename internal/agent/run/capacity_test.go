@@ -10,6 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 )
@@ -85,7 +86,7 @@ func TestCapacityCompactionDoesNotReplayRead(t *testing.T) {
 	if !strings.HasSuffix(last[len(last)-1].Content, "Read a") {
 		t.Fatal("current request missing after compaction")
 	}
-	if err != nil || result.Status != Answered || e.executed != 1 || g.summaries != 1 || recordedModelCalls(&store.journal) != 4 {
+	if err != nil || result.Status != runrecord.Answered || e.executed != 1 || g.summaries != 1 || recordedModelCalls(&store.journal) != 4 {
 		t.Fatalf("result=%+v executions=%d summaries=%d calls=%d err=%v", result, e.executed, g.summaries, recordedModelCalls(&store.journal), err)
 	}
 }

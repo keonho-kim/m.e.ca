@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (s *execution) steer(ctx context.Context) (bool, error) {
@@ -27,7 +28,7 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.checkpoint.Objective = s.runner.Redact(text)
-		if err := s.emit(Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
 			return err
 		}
 	}
@@ -46,7 +47,7 @@ func (s *execution) continueSteered(ctx context.Context, reply modelapi.Response
 		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {
 			return false, err
 		}
-		if err := s.emit(Event{Kind: "progress", Text: reply.Text}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "progress", Text: reply.Text}); err != nil {
 			return false, err
 		}
 	}

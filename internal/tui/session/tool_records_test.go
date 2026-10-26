@@ -6,7 +6,7 @@ package session
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
@@ -16,7 +16,7 @@ import (
 func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	a := fixture(t)
 	call := toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
-	event := run.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
+	event := runrecord.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
 	a.receive(notice{Event: &event})
 	if len(a.output.Blocks) != 0 || !strings.Contains(a.status, "명령 실행") {
 		t.Fatal("start should only show pending call")
@@ -51,14 +51,14 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 	a := fixture(t)
 	a.opts.Vault.Remember(`secret"key`)
 	for _, kind := range []string{"tool_failed", "denied", "tool_interrupted"} {
-		event := run.Event{Kind: kind, CallID: "call", Text: "operation stopped", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"echo secret\"key"}`)}}
+		event := runrecord.Event{Kind: kind, CallID: "call", Text: "operation stopped", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"echo secret\"key"}`)}}
 		text := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(event)
 		if !strings.Contains(text, "결과\n    operation stopped") || strings.Contains(text, `secret"key`) || !strings.Contains(text, "[redacted]") {
 			t.Fatalf("unsafe/missing failure record: %q", text)
 		}
 	}
 	a.opts.Vault.Remember("provider-secret")
-	event := run.Event{Kind: "tool_failed", Text: "exit 1", Call: &toolapi.Call{Name: "execute_command", Arguments: json.RawMessage(`{}`)}, Output: json.RawMessage(`{"Stdout":"provider-secret\nkeep","Stderr":"error","ExitCode":1,"Status":"exited"}`)}
+	event := runrecord.Event{Kind: "tool_failed", Text: "exit 1", Call: &toolapi.Call{Name: "execute_command", Arguments: json.RawMessage(`{}`)}, Output: json.RawMessage(`{"Stdout":"provider-secret\nkeep","Stderr":"error","ExitCode":1,"Status":"exited"}`)}
 	text := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Tool(event)
 	if strings.Contains(text, "provider-secret") || !strings.Contains(text, "[redacted]") || !strings.Contains(text, "표준 오류: error") || !strings.Contains(text, "실행 실패") || strings.Contains(text, "exit 1") {
 		t.Fatalf("output/failure missing or unsafe: %q", text)
@@ -67,7 +67,7 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 
 func TestToolReadLineNumbersAlignOnScreen(t *testing.T) {
 	a := fixture(t)
-	a.receive(notice{Event: &run.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | first\n 10 | tenth\n100 | hundredth\n","ExitCode":0,"Status":"exited"}`)}})
+	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | first\n 10 | tenth\n100 | hundredth\n","ExitCode":0,"Status":"exited"}`)}})
 	for _, width := range []int{80, 32} {
 		a.screen.SetSize(width, 24)
 		a.render()

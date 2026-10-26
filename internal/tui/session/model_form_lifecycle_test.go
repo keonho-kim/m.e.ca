@@ -17,30 +17,31 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row = modelCredential
+	f.Row = modelsettings.Credential
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.pasteBoundary(true)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "!quit-private-key", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.pasteBoundary(false)
 	body := modelScreen(a)
-	if a.exit || f.confirm || a.worker.active() || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
+	if a.exit || f.Confirm || a.worker.active() || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
 		t.Fatal("credential exposed or paste submitted")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "model" || f.credential.String() != "!quit-private-key" {
+	if a.page != "model" || f.Credential.String() != "!quit-private-key" {
 		t.Fatal("confirmation Esc discarded the draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
-	if a.page != "chat" || a.modelForm != nil || f.credential.String() != "" {
+	if a.page != "chat" || a.modelForm != nil || f.Credential.String() != "" {
 		t.Fatal("discard retained secret input")
 	}
 }
@@ -55,9 +56,9 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 	a.ctx = ctx
 	a.openModel()
 	f := a.modelForm
-	f.endpoint.Set(server.URL)
-	f.row = modelName
-	f.name.Set("custom/model")
+	f.Endpoint.Set(server.URL)
+	f.Row = modelsettings.Name
+	f.Name.Set("custom/model")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	select {
 	case <-started:
@@ -73,7 +74,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	if a.page != "model" || a.modelForm != f || f.endpoint.String() != server.URL || f.name.String() != "custom/model" || a.client != nil {
+	if a.page != "model" || a.modelForm != f || f.Endpoint.String() != server.URL || f.Name.String() != "custom/model" || a.client != nil {
 		t.Fatal("cancelled lookup changed the active connection or draft")
 	}
 }
@@ -91,11 +92,11 @@ func TestModelFormRejectsResultFromEarlierDraft(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer client.Close()
-	previous := f.revision
-	f.invalidate(true)
+	previous := f.Revision
+	f.Invalidate(true)
 	next := connection.Selection{Connection: c, Model: "stale"}
 	a.finishModelFormSetup(notice{FormRevision: previous, Client: client, Selection: &next, ModelForm: true})
-	if f.client != nil || f.prepared != nil || a.selection.Model != "" || a.status == "" {
+	if f.Client != nil || f.Prepared != nil || a.selection.Model != "" || a.status == "" {
 		t.Fatal("stale draft result was adopted")
 	}
 }
@@ -104,9 +105,9 @@ func TestModelFormSelectedCandidateVisibleAfterResize(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row, f.editing = modelName, true
-	f.models = []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
-	f.refreshHints()
+	f.Row, f.Editing = modelsettings.Name, true
+	f.Models = []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
+	f.RefreshHints()
 	a.screen.SetSize(24, 10)
 	for i := 0; i < 7; i++ {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
@@ -141,11 +142,11 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 			f := a.modelForm
 			for i, p := range connection.Providers() {
 				if p.Kind == connection.OpenRouter {
-					f.provider = i
+					f.Provider = i
 				}
 			}
-			f.endpoint.Set(server.URL)
-			f.row = modelName
+			f.Endpoint.Set(server.URL)
+			f.Row = modelsettings.Name
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 			select {
 			case <-started:
@@ -153,7 +154,7 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 				t.Fatal(ctx.Err())
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "alias", 0))
-			if f.name.String() != "alias" {
+			if f.Name.String() != "alias" {
 				t.Fatal("catalog lookup dropped typed input")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

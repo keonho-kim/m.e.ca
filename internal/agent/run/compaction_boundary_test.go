@@ -13,6 +13,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -64,7 +65,7 @@ func TestCompactionBoundaryAppliesSteeringBeforeNextGeneration(t *testing.T) {
 		return emit(modelapi.Event{Delta: "done", Done: true})
 	})
 	result, err := r.Run(context.Background(), "Original request", approve, emit)
-	if err != nil || result.Status != Answered || calls != 1 {
+	if err != nil || result.Status != runrecord.Answered || calls != 1 {
 		t.Fatalf("calls=%d status=%s error=%v", calls, result.Status, err)
 	}
 }
@@ -96,7 +97,7 @@ func TestCapacityRecoveryResetsAfterSuccessfulResponse(t *testing.T) {
 			if err == nil || calls != 2 || summaries != 1 || tools.executed != 0 {
 				t.Fatalf("consecutive failure retried indefinitely: calls=%d summaries=%d executed=%d error=%v", calls, summaries, tools.executed, err)
 			}
-		} else if err != nil || result.Status != Answered || calls != 4 || summaries != 2 || tools.executed != 1 {
+		} else if err != nil || result.Status != runrecord.Answered || calls != 4 || summaries != 2 || tools.executed != 1 {
 			t.Fatalf("later capacity failure not recovered: calls=%d summaries=%d executed=%d error=%v", calls, summaries, tools.executed, err)
 		}
 	}

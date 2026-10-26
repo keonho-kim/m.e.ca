@@ -1,7 +1,7 @@
 // Purpose: Match case-insensitive abbreviations while preserving character order.
 // Pattern: Pure function using Unicode and string primitives.
 // Usage: Command and model menus use this only when literal search has no results.
-// Related: internal/commands/catalog.go, internal/tui/modelmenu/suggestions.go.
+// Related: internal/commands/catalog.go, internal/tui/settings/model/suggestions.go.
 package searchmatch
 
 import (

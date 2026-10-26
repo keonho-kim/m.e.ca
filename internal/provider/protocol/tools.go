@@ -5,7 +5,6 @@
 package protocol
 
 import (
-	"encoding/json"
 	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -84,7 +83,7 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 				}
 				calls = append(calls, entry)
 			}
-			body, err := json.Marshal(calls)
+			body, err := wireJSON.Marshal(calls)
 			if err != nil {
 				return nil, err
 			}

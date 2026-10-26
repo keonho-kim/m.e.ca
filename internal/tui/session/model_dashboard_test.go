@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func modelScreen(a *app) string {
@@ -44,13 +45,13 @@ func TestModelDashboardCatalogLivesInModelField(t *testing.T) {
 		if strings.Contains(body, "List models") || strings.Contains(body, "모델 조회") {
 			t.Fatalf("standalone model catalog remains: %s", body)
 		}
-		a.modelForm.row = modelDestination
+		a.modelForm.Row = modelsettings.Destination
 		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-		if a.modelForm.row != modelInformation {
+		if a.modelForm.Row != modelsettings.Information {
 			t.Fatal("model information does not follow the save destination")
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-		if a.modelForm.row != modelDiagnostic {
+		if a.modelForm.Row != modelsettings.Diagnostic {
 			t.Fatal("connection diagnostics are not reachable")
 		}
 	}
@@ -79,19 +80,19 @@ func TestModelDashboardKeymapMatchesFocusedRow(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
 	f := a.modelForm
-	f.row = modelEndpoint
+	f.Row = modelsettings.Endpoint
 	if labels := keymapLabels(t, a); labels["→"] != "입력" || labels["←"] != "" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if !f.editing {
+	if !f.Editing {
 		t.Fatal("right did not enter the text field")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-	if f.row != modelCredential || f.editing {
+	if f.Row != modelsettings.Credential || f.Editing {
 		t.Fatal("down did not move to the next setting")
 	}
-	f.row = modelThinking
+	f.Row = modelsettings.Thinking
 	if labels := keymapLabels(t, a); labels["→"] != "" {
 		t.Fatal("unknown capabilities advertised an executable toggle")
 	}

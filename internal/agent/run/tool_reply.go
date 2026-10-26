@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -31,7 +32,7 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 		if err != nil {
 			return err
 		}
-		event := Event{Kind: "tool_failed", Text: "Not executed: " + s.runner.Redact(detail), CallID: call.ID, Call: &call, Output: body}
+		event := runrecord.Event{Kind: "tool_failed", Text: "Not executed: " + s.runner.Redact(detail), CallID: call.ID, Call: &call, Output: body}
 		if err := s.save(ctx, modelapi.Message{Role: "tool", Content: string(body), ToolCallID: call.ID, ToolName: call.Name}, event); err != nil {
 			return err
 		}

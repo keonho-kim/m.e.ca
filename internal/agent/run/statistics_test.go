@@ -12,6 +12,7 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type statisticsModel func(context.Context, modelapi.Request, func(modelapi.Event) error) error
@@ -41,12 +42,12 @@ func TestRunStatisticsAttemptsAndRequests(t *testing.T) {
 			time.Sleep(10 * time.Second)
 			return nil
 		})
-		var summaries []Event
+		var summaries []runrecord.Event
 		for i := 0; i < 2; i++ {
 			if i == 1 {
 				r.Generator = throughputGenerator{}
 			}
-			_, err := r.Run(context.Background(), "hello", approve, func(event Event) error {
+			_, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
 				if event.Statistics != nil {
 					summaries = append(summaries, event)
 				}
@@ -97,8 +98,8 @@ func TestRunStatisticsMissingZeroAndInterruptedUsage(t *testing.T) {
 					}
 					return test.err
 				})
-				var summary *Statistics
-				_, err := r.Run(context.Background(), "hello", approve, func(event Event) error {
+				var summary *runrecord.Statistics
+				_, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
 					if event.Statistics != nil {
 						summary = event.Statistics
 					}
@@ -135,16 +136,4 @@ func TestRunStatisticsIncludesCompaction(t *testing.T) {
 			t.Fatalf("compaction usage omitted: %+v", got)
 		}
 	})
-}
-
-func TestRunStatisticsCannotClaimUnmeasuredThroughput(t *testing.T) {
-	for _, stats := range []Statistics{{ElapsedMillis: -1}, {ElapsedMillis: 1, GenerationMillis: 2}, {ElapsedMillis: 1, GenerationMillis: 1}, {Usage: &modelapi.TokenUsage{Input: -1}}} {
-		if err := stats.check(); err == nil {
-			t.Fatalf("invalid measurements accepted: %+v", stats)
-		}
-	}
-	event := Event{Kind: "thinking", Statistics: &Statistics{}}
-	if err := event.Check(); err == nil {
-		t.Fatal("nonterminal event accepted request statistics")
-	}
 }

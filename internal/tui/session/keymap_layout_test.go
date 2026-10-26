@@ -10,6 +10,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/tui/browser"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -44,7 +45,7 @@ func TestKeymapLayoutClearAndPreviewLabels(t *testing.T) {
 		a := fixture(t)
 		a.language = lang
 		a.openModel()
-		a.modelForm.row, a.modelForm.editing = modelEndpoint, true
+		a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true
 		a.screen.SetSize(48, 24)
 		a.render()
 		if keys := footerKeyText(a); !strings.Contains(keys, lang.Text("Clear field")) || strings.Contains(keys, "←→") {

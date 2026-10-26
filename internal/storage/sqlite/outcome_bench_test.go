@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func BenchmarkOutcomeCommit(b *testing.B) {
@@ -34,9 +34,9 @@ func BenchmarkOutcomeCommit(b *testing.B) {
 			b.Cleanup(func() { s.Close() })
 			id := s.Session().ID
 			message := modelapi.Message{Role: "tool", ToolCallID: "call", ToolName: "write_file", Content: `{"changed":true}`}
-			outcome := run.Event{Kind: "tool_succeeded", Text: "created"}
-			checkpoint := run.Event{Kind: "thinking", Thinking: "checkpoint payload"}
-			records := []run.JournalRecord{{Event: &outcome}, {Message: &message}, {Event: &checkpoint}}
+			outcome := runrecord.Event{Kind: "tool_succeeded", Text: "created"}
+			checkpoint := runrecord.Event{Kind: "thinking", Thinking: "checkpoint payload"}
+			records := []runrecord.Entry{{Event: &outcome}, {Message: &message}, {Event: &checkpoint}}
 			b.ReportAllocs()
 			for b.Loop() {
 				if atomic {

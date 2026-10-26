@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/rivo/uniseg"
 )
 
@@ -24,7 +24,7 @@ func brief(text string) string {
 	return text
 }
 
-func (f Formatter) toolSummary(event run.Event) string {
+func (f Formatter) toolSummary(event runrecord.Event) string {
 	status := map[string]string{"tool_succeeded": "완료", "tool_failed": "실패", "tool_interrupted": "중단", "denied": "거부"}[event.Kind]
 	commandStatus, commandSummary := "", ""
 	if event.Call.Name == "execute_command" {

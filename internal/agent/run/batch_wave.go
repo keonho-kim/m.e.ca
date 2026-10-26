@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sync"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -19,7 +20,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	ready := make([]*readyExecution, len(calls))
 	for i, v := range calls {
 		s.checkpoint.Tool, s.checkpoint.Arguments = v.call.Name, v.arguments
-		if err := s.record(ctx, Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
+		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
 			return true, errors.Join(s.skipCalls(ctx, calls, fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
 		}
 		prepared, outcome, err := s.freezeExecution(ctx, v.call)
@@ -62,7 +63,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	}
 	workers.Wait()
 	// Workers are joined even after cancellation; completed effects keep their actual results.
-	completedEmit := func(event Event) error {
+	completedEmit := func(event runrecord.Event) error {
 		err := s.emit(event)
 		if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
 			return nil

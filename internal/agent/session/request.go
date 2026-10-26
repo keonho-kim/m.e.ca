@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"github.com/keonho-kim/meca/internal/agent/compact"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
@@ -29,7 +30,7 @@ type Request struct {
 	Text                string
 }
 
-func Execute(ctx context.Context, request Request, approve run.Approver, emit func(run.Event) error) (run.Result, error) {
+func Execute(ctx context.Context, request Request, approve run.Approver, emit func(runrecord.Event) error) (run.Result, error) {
 	runner := request.Runner
 	var err error
 	runner.PreviousRun, err = request.Store.LatestRun(ctx, runner.Session)

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestCommitAtomicAndOrdered(t *testing.T) {
@@ -21,15 +21,15 @@ func TestCommitAtomicAndOrdered(t *testing.T) {
 	id := s.Session().ID
 	ctx := context.Background()
 	m := modelapi.Message{Role: "user", Content: "grouped request"}
-	e := run.Event{Kind: "thinking", Thinking: "observed"}
-	invalid := run.Event{Kind: "usage"}
-	if err := s.Commit(ctx, id, []run.JournalRecord{{Message: &m}, {Event: &invalid}}); err == nil {
+	e := runrecord.Event{Kind: "thinking", Thinking: "observed"}
+	invalid := runrecord.Event{Kind: "usage"}
+	if err := s.Commit(ctx, id, []runrecord.Entry{{Message: &m}, {Event: &invalid}}); err == nil {
 		t.Fatal("invalid group committed")
 	}
 	if rows, _, err := s.Timeline(ctx, id, 0, 100); err != nil || len(rows) != 0 {
 		t.Fatalf("partial group: %v %v", rows, err)
 	}
-	if err := s.Commit(ctx, id, []run.JournalRecord{{Message: &m}, {Event: &e}}); err != nil {
+	if err := s.Commit(ctx, id, []runrecord.Entry{{Message: &m}, {Event: &e}}); err != nil {
 		t.Fatal(err)
 	}
 	rows, _, err := s.Timeline(ctx, id, 0, 100)
@@ -38,7 +38,7 @@ func TestCommitAtomicAndOrdered(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	cancel()
-	if err := s.Commit(ctx, id, []run.JournalRecord{{Message: &m}}); err == nil {
+	if err := s.Commit(ctx, id, []runrecord.Entry{{Message: &m}}); err == nil {
 		t.Fatal("cancelled commit succeeded")
 	}
 }

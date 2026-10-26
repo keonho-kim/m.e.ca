@@ -33,11 +33,11 @@ func (op *operation) mutate() (toolapi.Result, error) {
 		Changed   bool                 `json:"changed"`
 		SizeBytes int                  `json:"size_bytes"`
 		Lines     []toolapi.LineChange `json:"lines,omitempty"`
-	}{op.spec.name, op.source.absolute, true, size, op.editSpans}, summary)
+	}{op.spec.Name, op.source.absolute, true, size, op.editSpans}, summary)
 	if err != nil {
 		return result, err
 	}
-	change := toolapi.FileChange{Action: op.spec.name, Path: op.source.absolute, Lines: op.editSpans}
+	change := toolapi.FileChange{Action: op.spec.Name, Path: op.source.absolute, Lines: op.editSpans}
 	change.BeforeDigest = versionValue(op.original)
 	change.AfterDigest = fmt.Sprintf("%x", sha256.Sum256(op.replacement))
 	result.Versions = map[string]string{change.Path: change.AfterDigest}

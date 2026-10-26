@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func BenchmarkStreamDelivery(b *testing.B) {
@@ -25,7 +25,7 @@ func BenchmarkStreamDelivery(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
 				for i := range 32 {
-					event := run.Event{Kind: "stream", Text: body[:(i+1)*2048]}
+					event := runrecord.Event{Kind: "stream", Text: body[:(i+1)*2048]}
 					if latest {
 						if err := delivery.stream(context.Background(), queue, event); err != nil {
 							b.Fatal(err)

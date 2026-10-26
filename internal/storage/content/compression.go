@@ -1,8 +1,8 @@
-// Purpose: Reuse one synchronous Zstandard encoder and decoder per session store.
-// Pattern: Store-owned resource with serialized codec access.
-// Usage: Payload persistence uses encode/decode; Store.Close releases retained workspaces.
-// Related: internal/storage/sqlite/payload.go, internal/storage/sqlite/store.go.
-package sqlite
+// Purpose: Reuse synchronous Zstandard resources independently of the persistence backend.
+// Pattern: Caller-owned codec lifecycle with serialized access.
+// Usage: A session store owns one Codec and calls Close after its users stop.
+// Related: internal/storage/content/payload.go, internal/storage/sqlite/store.go.
+package content
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-type payloadCodec struct {
+type Codec struct {
 	mu      sync.Mutex
 	encoder *zstd.Encoder
 	decoder *zstd.Decoder
@@ -20,7 +20,7 @@ type payloadCodec struct {
 	closed  bool
 }
 
-func (c *payloadCodec) encode(raw []byte) ([]byte, error) {
+func (c *Codec) Encode(raw []byte) ([]byte, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
@@ -41,12 +41,12 @@ func (c *payloadCodec) encode(raw []byte) ([]byte, error) {
 	return compressed, nil
 }
 
-func (c *payloadCodec) decode(body []byte, size int) ([]byte, error) {
+func (c *Codec) decode(body []byte, size int) ([]byte, error) {
 	var header zstd.Header
 	if err := header.Decode(body); err != nil {
 		return nil, err
 	}
-	if size < 1 || size > maxEventBytes || !header.HasFCS || header.FrameContentSize != uint64(size) {
+	if size < 1 || size > MaxBytes || !header.HasFCS || header.FrameContentSize != uint64(size) {
 		return nil, fmt.Errorf("invalid stored payload frame length")
 	}
 	c.mu.Lock()
@@ -55,7 +55,7 @@ func (c *payloadCodec) decode(body []byte, size int) ([]byte, error) {
 		return nil, fmt.Errorf("payload codec is closed")
 	}
 	if c.decoder == nil {
-		decoder, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxMemory(maxEventBytes), zstd.WithDecodeAllCapLimit(true))
+		decoder, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxMemory(MaxBytes), zstd.WithDecodeAllCapLimit(true))
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +64,7 @@ func (c *payloadCodec) decode(body []byte, size int) ([]byte, error) {
 	return c.decoder.DecodeAll(body, make([]byte, 0, size))
 }
 
-func (c *payloadCodec) close() error {
+func (c *Codec) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.closed = true

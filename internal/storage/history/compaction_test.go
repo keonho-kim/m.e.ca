@@ -7,7 +7,7 @@ package history
 import (
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -16,8 +16,8 @@ import (
 func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {
 	page := []Record{
 		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "user", Content: "Preserve this exact request"}},
-		{Sequence: 3, Kind: "event", Event: run.Event{Kind: "tool_proposed"}},
-		{Sequence: 5, Kind: "event", Event: run.Event{Kind: "tool_failed", Operation: &tool.Operation{Name: "execute_command", Command: "go test ./...", Status: "tool_failed", Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "parser failed"}, Changes: []tool.FileChange{{Action: "edit_file", Path: "a.go"}}}, Output: json.RawMessage(`{"stdout":"raw large log"}`)}},
+		{Sequence: 3, Kind: "event", Event: runrecord.Event{Kind: "tool_proposed"}},
+		{Sequence: 5, Kind: "event", Event: runrecord.Event{Kind: "tool_failed", Operation: &tool.Operation{Name: "execute_command", Command: "go test ./...", Status: "tool_failed", Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "parser failed"}, Changes: []tool.FileChange{{Action: "edit_file", Path: "a.go"}}}, Output: json.RawMessage(`{"stdout":"raw large log"}`)}},
 		{Sequence: 6, Kind: "message", Message: modelapi.Message{Role: "tool", Content: `{"Content":"important source excerpt","Digest":"irrelevant hash","anchors":["metadata"]}`}},
 	}
 	original, _ := json.Marshal(page)
@@ -45,8 +45,8 @@ func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {
 func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
 	records, err := Compaction([]Record{
 		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "assistant", Content: "All files have been created", Incomplete: true, Reasoning: "unfinished thinking"}},
-		{Sequence: 2, Kind: "event", Event: run.Event{Kind: "thinking", Thinking: "unfinished thinking"}},
-		{Sequence: 3, Kind: "event", Event: run.Event{Kind: "tool_failed", Text: "write failed: permission denied"}},
+		{Sequence: 2, Kind: "event", Event: runrecord.Event{Kind: "thinking", Thinking: "unfinished thinking"}},
+		{Sequence: 3, Kind: "event", Event: runrecord.Event{Kind: "tool_failed", Text: "write failed: permission denied"}},
 		{Sequence: 4, Kind: "message", Message: modelapi.Message{Role: "user", Content: "Create only README.md now"}},
 	})
 	if err != nil || len(records) != 3 {

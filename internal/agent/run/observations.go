@@ -1,7 +1,7 @@
 // Purpose: Retain compact observed effects while original tool results remain in session history.
 // Pattern: Ordered result projection.
 // Usage: acceptResult updates these facts without completion judgements or filesystem rescans.
-// Related: internal/agent/tool/facts_observation.go, internal/agent/run/checkpoint.go.
+// Related: internal/agent/tool/facts_observation.go, internal/agent/record/checkpoint.go.
 package run
 
 import (

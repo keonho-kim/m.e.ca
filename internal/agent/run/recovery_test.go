@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -51,7 +52,7 @@ func (g recoveryGenerator) Generate(ctx context.Context, _ modelapi.Request, emi
 func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
 	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousRun = &Checkpoint{ID: "previous", Objective: "repair parser; preserve parser cancellation", Status: Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	r.PreviousRun = &runrecord.Checkpoint{ID: "previous", Objective: "repair parser; preserve parser cancellation", Status: runrecord.Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
 	if _, err := r.Run(context.Background(), "continue", approve, emit); err != nil {
 		t.Fatal(err)
 	}

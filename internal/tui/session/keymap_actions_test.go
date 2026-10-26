@@ -45,7 +45,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 				a.page, a.browser.Input = "files", true
 			}
-			if len(a.pending) != 1 || a.pending[0] != "Run this after finishing" {
+			if len(a.queued.Messages) != 1 || a.queued.Messages[0] != "Run this after finishing" {
 				t.Fatal("follow-up hint did not match action")
 			}
 			a.editor.Set("Change direction now")

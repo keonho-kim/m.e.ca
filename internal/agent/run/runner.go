@@ -10,6 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -20,7 +21,7 @@ import (
 type Runner struct {
 	PollSteering             func() []string
 	Inference                *inference.Settings
-	PreviousRun              *Checkpoint
+	PreviousRun              *runrecord.Checkpoint
 	ReasoningEffort          string
 	Generator                modelapi.Generator
 	Tools                    toolapi.Executor
@@ -43,9 +44,15 @@ type Result struct {
 	End            work.End
 	Facts          toolapi.Facts
 	Text           string
-	Status         Status
+	Status         runrecord.Status
 	HadToolFailure bool
 }
+type Journal interface {
+	ContextMessages(context.Context, string, int64, int) ([]modelapi.Message, error)
+	RecordEvent(context.Context, string, runrecord.Event) error
+	Commit(context.Context, string, []runrecord.Entry) error
+}
+
 type Approver func(context.Context, toolapi.Approval) (bool, error)
 
 var errApprovalDenied = errors.New("operation denied by user; execution stopped")

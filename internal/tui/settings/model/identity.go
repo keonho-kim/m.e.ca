@@ -2,7 +2,7 @@
 // Pattern: Presentation projection.
 // Usage: Terminal menus pass an immutable selection snapshot and redactor.
 // Related: internal/provider/identity/report.go, internal/tui/session/render_menu.go.
-package modelmenu
+package model
 
 import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -10,7 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
-func IdentifiedName(selected connection.Selection, redact func(string) string) string {
+func identifiedName(selected connection.Selection, redact func(string) string) string {
 	report := selected.Identity
 	if report == nil || report.Unavailable || report.Incomplete || report.State() != "reported" {
 		return ""
@@ -22,7 +22,7 @@ func IdentifiedName(selected connection.Selection, redact func(string) string) s
 	return redact(name)
 }
 
-func IdentityLines(selected connection.Selection, contextLength int, redact func(string) string, lang locale.Language) []string {
+func identityLines(selected connection.Selection, contextLength int, redact func(string) string, lang locale.Language) []string {
 	if selected.Model == "" {
 		return []string{lang.Text("연결된 모델이 없습니다.")}
 	}

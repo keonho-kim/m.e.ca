@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error, events ...Event) error {
+func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error, events ...runrecord.Event) error {
 	result, failed := string(outcome.Content), outcome.Failed
 	if errors.Is(toolErr, errRuntimeRecord) {
 		if outcome.Started {

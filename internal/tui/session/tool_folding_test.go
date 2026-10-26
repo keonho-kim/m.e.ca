@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/agent/run"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -23,7 +23,7 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			a := fixture(t)
-			event := run.Event{Kind: "tool_succeeded", Text: "done", Call: &toolapi.Call{Name: test.name, Arguments: json.RawMessage(test.arguments)}, Output: json.RawMessage(test.output)}
+			event := runrecord.Event{Kind: "tool_succeeded", Text: "done", Call: &toolapi.Call{Name: test.name, Arguments: json.RawMessage(test.arguments)}, Output: json.RawMessage(test.output)}
 			if test.name == "write_file" || test.name == "edit_file" {
 				event.ChangePreview = "--- old\n+++ hello.txt\n@@ -1 +1 @@\n-old\n+" + test.detail + "\n"
 			}

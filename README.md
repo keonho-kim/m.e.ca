@@ -232,7 +232,7 @@ max_output_tokens = 12800
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, klauspost/compress(Zstandard 대화 저장), go-keyring, fsnotify(파일 변경 알림), uniseg, x/sys, x/term입니다. 테스트에는 goleak·go-cmp·creack/pty를 사용합니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite와 압축은 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, klauspost/compress(Zstandard 대화 저장), Sonic(모델 요청 JSON 인코딩), go-json(대화 저장·복원), go-keyring, fsnotify(파일 변경 알림), uniseg, x/sys, x/term입니다. 테스트에는 goleak·go-cmp·creack/pty를 사용합니다. 버전은 [`go.mod`](go.mod)에 고정하며, 제품은 CGO 없이 빌드합니다. 용도별 선택 근거와 측정 방법은 [개발 가이드](docs/development.md#성능과-장시간-수명)를 따릅니다.
 
 ```sh
 gofmt -l cmd internal
@@ -268,7 +268,7 @@ M.E.CA는 [Apache License 2.0](LICENSE)을 따릅니다. 라이선스 조건을 
 | [에이전트 작동 방식](docs/runtime.md) | 단일 에이전트, native tools, 결과 확인, 종료 |
 | [모델 연결](docs/model-connections.md) | OpenRouter 연결·실제 비용, 서버 원본 표시, 서빙 한도, Thinking 설정과 진단 |
 | [실행 경계](docs/execution-boundary.md) | 호스트 개발 환경, 승인·파일 검사와 실행 권한 |
-| [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 기록 |
+| [개발 가이드](docs/development.md) | 패키지 구성, 의존성·라이선스, 검증·성능 측정 방법 |
 | [릴리스 가이드](docs/releases.md) | macOS·Linux 배포 파일, 체크섬, 날짜 버전과 게시 절차 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
 

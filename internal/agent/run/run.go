@@ -1,7 +1,7 @@
 // Purpose: Run a bounded native-tool conversation with full uncompacted context, native tool calls and persisted decision state.
 // Pattern: State Machine / Use Case.
 // Usage: Invoked for one user objective or user request; cancellation never replays effects.
-// Related: internal/agent/run/action.go, internal/agent/run/generate.go, internal/agent/run/events.go.
+// Related: internal/agent/run/action.go, internal/agent/run/generate.go, internal/agent/record/events.go.
 package run
 
 import (
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
@@ -25,8 +26,8 @@ type execution struct {
 	limits           Limits
 	system           string
 	result           Result
-	checkpoint       Checkpoint
-	emit             func(Event) error
+	checkpoint       runrecord.Checkpoint
+	emit             func(runrecord.Event) error
 	definitions      []toolapi.Definition
 	usage            *requestBudget
 	statistics       runStatistics
@@ -35,7 +36,7 @@ type execution struct {
 	capacityRecovery bool
 }
 
-func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(Event) error) (result Result, err error) {
+func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(runrecord.Event) error) (result Result, err error) {
 	started := time.Now()
 	if r.Generator == nil || r.Tools == nil || r.Journal == nil || r.Redact == nil || approve == nil || emit == nil {
 		return result, fmt.Errorf("execution dependencies are required")
@@ -72,7 +73,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		return result, fmt.Errorf("objective exceeds 64 MiB")
 	}
 	originalEmit := emit
-	emit = func(event Event) error {
+	emit = func(event runrecord.Event) error {
 		if err := originalEmit(event); err != nil {
 			return errors.Join(errRuntimeRecord, err)
 		}
@@ -84,7 +85,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
 	id := "run_" + rand.Text()
-	s.checkpoint = Checkpoint{ID: id, Objective: r.Redact(input), Status: Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
+	s.checkpoint = runrecord.Checkpoint{ID: id, Objective: r.Redact(input), Status: runrecord.Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
 	if r.PreviousRun != nil {
 		for _, file := range r.PreviousRun.Work.Files {
 			file.Changed = false
@@ -95,7 +96,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		err = s.settle(ctx, err)
 		result = s.result
 	}()
-	if previous := r.PreviousRun; previous != nil && (previous.Status == Interrupted || previous.Status == Stopped) {
+	if previous := r.PreviousRun; previous != nil && (previous.Status == runrecord.Interrupted || previous.Status == runrecord.Stopped) {
 		note := "Previous request: " + previous.Objective + "\nLast observed outcome: " + previous.Observation
 		if previous.Blocker != "" {
 			note += "\nObserved blocker: " + previous.Blocker

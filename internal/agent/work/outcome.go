@@ -1,7 +1,7 @@
 // Purpose: Define terminal work outcomes and validate their persisted identities.
 // Pattern: Typed result contract.
 // Usage: Run checkpoints and recovery preserve the terminal cause.
-// Related: internal/agent/run/checkpoint.go, internal/agent/run/settle.go.
+// Related: internal/agent/record/checkpoint.go, internal/agent/run/settle.go.
 package work
 
 import (

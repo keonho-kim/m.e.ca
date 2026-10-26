@@ -2,14 +2,14 @@
 // Pattern: Pure function.
 // Usage: Model input refreshes suggestions from the current connection's discovered IDs.
 // Related: internal/tui/session/model_form_keys.go.
-package modelmenu
+package model
 
 import (
 	"github.com/keonho-kim/meca/internal/searchmatch"
 	"strings"
 )
 
-func Suggestions(models []string, query string) []string {
+func suggestions(models []string, query string) []string {
 	query = strings.ToLower(strings.TrimSpace(query))
 	var matches []string
 	for _, model := range models {

@@ -7,11 +7,13 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/compact"
 	"time"
+
+	json "github.com/goccy/go-json"
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (s *Store) AddContextTokens(ctx context.Context, session string, count compact.TokenCount) error {
@@ -35,7 +37,7 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	if err != nil {
 		return compact.Memory{}, err
 	}
-	if len(body) > maxEventBytes {
+	if len(body) > recordcontent.MaxBytes {
 		return compact.Memory{}, fmt.Errorf("stored memory exceeds limit")
 	}
 	var memory compact.Memory

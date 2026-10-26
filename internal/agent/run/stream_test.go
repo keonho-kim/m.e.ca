@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"strings"
 	"testing"
@@ -50,7 +51,7 @@ func TestStreamingAnswerArrivesBeforeDone(t *testing.T) {
 		}
 	}
 	r.Generator = g
-	result, err := r.Run(context.Background(), "hello", approve, func(event Event) error {
+	result, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
 		if event.Kind == "stream" {
 			partial = event.Text
 		}
@@ -71,7 +72,7 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	r.Redact, r.NewStreamMask = vault.Redact, vault.NewStreamMask
 	r.Generator = &chunkGenerator{chunks: []string{"hello provider-", "secret"}, cancel: cancel}
 	var partial string
-	_, err := r.Run(ctx, "hello", approve, func(event Event) error {
+	_, err := r.Run(ctx, "hello", approve, func(event runrecord.Event) error {
 		if event.Kind == "stream" {
 			partial = event.Text
 			if strings.Contains(partial, "provider-") || strings.Contains(partial, "DONE") {
@@ -99,13 +100,13 @@ func TestStreamingConversationArrivesBeforeDone(t *testing.T) {
 		}
 	}
 	r.Generator = g
-	result, err := r.Run(context.Background(), "hello", approve, func(event Event) error {
+	result, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
 		if event.Kind == "stream" {
 			partial = event.Text
 		}
 		return nil
 	})
-	if err != nil || result.Status != Answered || partial != "Hello!" {
+	if err != nil || result.Status != runrecord.Answered || partial != "Hello!" {
 		t.Fatalf("%+v partial=%q %v", result, partial, err)
 	}
 }

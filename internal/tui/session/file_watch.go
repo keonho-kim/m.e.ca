@@ -54,17 +54,17 @@ func (a *app) syncFileWatch() {
 		a.stopFileWatch()
 		a.fileWatch.path = path
 		request := watchRequest{path: path, revision: a.watchRevision}
-		if a.watchReads.submit(request) {
+		if a.watchReads.Submit(request) {
 			a.startFileWatch(request)
 		}
 	}
-	if a.fileWatch.dirty && a.fileWatch.ticks == nil && a.directoryReads.running == nil {
+	if a.fileWatch.dirty && a.fileWatch.ticks == nil && !a.directoryReads.Running() {
 		a.scheduleFileRefresh()
 	}
 }
 
 func (a *app) stopFileWatch() {
-	a.watchReads.stop()
+	a.watchReads.Stop()
 	a.watchRevision++
 	if a.fileWatch.timer != nil {
 		a.fileWatch.timer.Stop()
@@ -81,7 +81,7 @@ func (a *app) stopFileWatch() {
 // the terminal event loop, with one active registration and one latest pending path.
 func (a *app) startFileWatch(request watchRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.watchReads.running, a.watchReads.revision = cancel, request.revision
+	a.watchReads.Begin(request.revision, cancel)
 	a.workers.Go(func() {
 		defer cancel()
 		result := watchResult{watchRequest: request}
@@ -103,7 +103,7 @@ func (a *app) startFileWatch(request watchRequest) {
 }
 
 func (a *app) receiveFileWatch(result *watchResult) {
-	if next := a.watchReads.complete(result.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.watchReads.Complete(result.revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startFileWatch(*next)
 	}
 	if result.revision != a.watchRevision || a.page != "files" || a.exit || a.ctx.Err() != nil {
@@ -162,7 +162,7 @@ func (a *app) refreshWatchedFiles() {
 		a.stopFileWatch()
 		return
 	}
-	if a.directoryReads.running != nil || !a.fileWatch.dirty {
+	if a.directoryReads.Running() || !a.fileWatch.dirty {
 		return
 	}
 	column := a.browser.Current()

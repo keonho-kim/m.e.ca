@@ -18,7 +18,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 	if err != nil {
 		return err
 	}
-	if op.spec.name != "write_file" && !op.original.exists {
+	if op.spec.Name != "write_file" && !op.original.exists {
 		return fmt.Errorf("path not found")
 	}
 
@@ -36,7 +36,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 		return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "source changed during candidate preparation", Next: "Inspect the current source and prepare a fresh change."}
 	}
 	op.replacement = []byte(op.input.Content)
-	if op.spec.name == "edit_file" {
+	if op.spec.Name == "edit_file" {
 		replacement, spans, err := textedit.ReplaceMany(op.source.absolute, before, op.input.Edits, op.input.FormatPolicy)
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 		op.replacement = replacement
 		op.editSpans = spans
 	}
-	if op.spec.name == "write_file" {
+	if op.spec.Name == "write_file" {
 		op.replacement, err = textformat.Preserve(before, op.replacement, op.input.FormatPolicy)
 		if err != nil {
 			return err
