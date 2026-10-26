@@ -227,6 +227,18 @@ go mod verify
 
 실제 모델의 작업·요약 품질, Linux Secret Service·배포판별 호스트 권한과 실행 환경, WSL·SSH·터미널별 키·마우스 전달과 실제 입력 지연은 추가 검증 대상입니다. 지원 운영체제는 Linux와 macOS입니다.
 
+## 기여 정책
+
+M.E.CA는 개인이 단독 개발·관리하며 외부 코드 기여는 받지 않습니다. 버그 제보는 환영합니다.
+
+버그와 기능 제안은 [GitHub Issues](https://github.com/keonho-kim/m.e.ca/issues)로 받습니다. 자세한 제보 방법과 코드 기여 정책은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
+
+## 라이선스
+
+M.E.CA는 [Apache License 2.0](LICENSE)을 따릅니다. 라이선스 조건을 지키면 사용·수정·재배포할 수 있습니다. 원본 저장소의 개발·병합·배포는 관리자가 결정합니다.
+
+프로젝트 저작권 고지는 [NOTICE](NOTICE), 외부 구성요소의 라이선스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 참고하세요.
+
 ## 문서
 
 | 문서 | 내용 |
@@ -240,4 +252,4 @@ go mod verify
 | [릴리스 가이드](docs/releases.md) | macOS·Linux 배포 파일, 체크섬, 날짜 버전과 게시 절차 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |
 
-에이전트 응답은 흑백 Markdown으로 표시하며 물결표 취소선은 사용하지 않습니다. 상세 표시 규칙은 [사용법](docs/usage.md), 재배포 시 포함할 라이선스는 [외부 소프트웨어 고지](THIRD_PARTY_NOTICES.md)를 참고하세요.
+에이전트 응답은 흑백 Markdown으로 표시하며 물결표 취소선은 사용하지 않습니다. 상세 표시 규칙은 [사용법](docs/usage.md)을 참고하세요.

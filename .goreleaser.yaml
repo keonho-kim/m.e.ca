@@ -29,6 +29,8 @@ archives:
       - tar.gz
     name_template: 'meca_{{ .Version }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}'
     files:
+      - LICENSE
+      - NOTICE
       - THIRD_PARTY_NOTICES.md
 
 checksum:
@@ -53,4 +55,5 @@ release:
 
     Download the archive for your OS and CPU, verify it against checksums.txt,
     extract it, and run ./meca install. Go is not required for these binaries.
-    Third-party license notices are included in each archive.
+    Apache License 2.0, project attribution and third-party notices are included
+    in each archive.

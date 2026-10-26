@@ -42,7 +42,9 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 
 ## 의존성과 배포
 
-정확한 도구 체인과 버전은 [go.mod](../go.mod), 재배포 라이선스는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다.
+정확한 도구 체인과 버전은 [go.mod](../go.mod)를 따른다. 프로젝트 라이선스는 [Apache License 2.0](../LICENSE), 저작권 고지는 [NOTICE](../NOTICE), 외부 구성요소는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다. 관리자가 단독으로 개발·병합·배포하며 외부 코드 기여는 [기여 정책](../CONTRIBUTING.md)에 따라 받지 않는다.
+
+배포 의존성을 갱신할 때 macOS·Linux의 amd64·arm64 대상으로 `go list -deps -json ./cmd/meca`를 확인하고, 선택된 모듈의 LICENSE·COPYING·NOTICE·AUTHORS·PATENTS와 추가 라이선스 고지를 함께 갱신한다. Go 런타임의 라이선스도 포함한다. 개발 도구와 테스트 전용 모듈은 제품 실행 파일의 의존성 목록과 구분한다.
 
 | 의존성 | 용도 |
 | --- | --- |

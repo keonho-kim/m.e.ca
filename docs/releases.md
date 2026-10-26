@@ -17,7 +17,7 @@
 | `linux_arm64.tar.gz` | Linux arm64 |
 | `linux_amd64.tar.gz` | Linux·WSL x86-64 |
 
-각 아카이브에는 `meca` 실행 파일과 `THIRD_PARTY_NOTICES.md`가 들어 있다. 실행·설치에는 Go나 개발 도구가 필요하지 않다. Linux 바이너리는 CGO 없이 빌드하며 macOS는 기본 OS 라이브러리를 사용한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다.
+각 아카이브에는 `meca` 실행 파일과 `LICENSE`·`NOTICE`·`THIRD_PARTY_NOTICES.md`가 들어 있다. M.E.CA는 Apache License 2.0을 따르며 외부 구성요소의 라이선스는 각 고지를 따른다. 실행·설치에는 Go나 개발 도구가 필요하지 않다. Linux 바이너리는 CGO 없이 빌드하며 macOS는 기본 OS 라이브러리를 사용한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다.
 
 ## 다운로드와 설치
 
