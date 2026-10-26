@@ -27,52 +27,19 @@
 
 [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 설치할 수 있습니다. Linux·WSL과 macOS의 amd64·arm64를 지원하며, 릴리스 바이너리는 Go 설치 없이 동작합니다.
 
-터미널에서 설치하려면 [GitHub CLI](https://cli.github.com/)를 준비합니다. 비공개 저장소에 접근할 수 있는 계정으로 `gh auth login`을 한 번 실행한 뒤 아래 명령을 사용하세요. OS·CPU에 맞는 **최신 릴리스**를 받아 SHA-256을 검증하고 설치합니다. 버전 번호는 입력하지 않습니다.
+최신 릴리스의 아카이브와 `checksums.txt`를 내려받습니다. Apple Silicon은 `macos_arm64`, Intel Mac은 `macos_amd64`, Linux·WSL은 `uname -m`이 `x86_64`이면 `linux_amd64`, `aarch64`이면 `linux_arm64`를 선택합니다. SHA-256 확인 후 빈 폴더에 압축을 풀고 그 안에서 `./meca install`을 실행합니다. 검증 명령은 [릴리스 가이드](docs/releases.md#다운로드와-설치)를 참고하세요.
+
+설치하면 `~/.local/bin/meca`, `~/.meca`의 기본 설정·프롬프트와 필요한 셸 PATH 등록이 준비됩니다. 새 터미널과 재부팅 후에도 `meca` 명령을 사용할 수 있습니다.
+
+`./meca install`은 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 `exec "$SHELL" -l`로 로그인 셸에 넘깁니다. 이 셸에서 `exit`하면 설치를 실행했던 기존 셸로 돌아갑니다. PATH가 이미 반영되어 있거나 입력·출력이 터미널이 아니면 전환하지 않습니다. 자동화나 수동 전환을 원할 때는 `./meca install --no-shell`을 사용하세요.
+
+업데이트는 실행 중인 MECA를 모두 종료한 뒤 실행합니다.
 
 ```sh
-(
-  set -eu
-
-  case "$(uname -s)" in
-    Darwin) meca_os=macos ;;
-    Linux) meca_os=linux ;;
-    *) printf '지원 OS: Linux, macOS\n' >&2; exit 1 ;;
-  esac
-  case "$(uname -m)" in
-    x86_64) meca_arch=amd64 ;;
-    arm64|aarch64) meca_arch=arm64 ;;
-    *) printf '지원 CPU: amd64, arm64\n' >&2; exit 1 ;;
-  esac
-
-  meca_stage=$(mktemp -d)
-  trap 'rm -rf -- "$meca_stage"' 0
-  gh release download --repo keonho-kim/m.e.ca \
-    --pattern "meca_*_${meca_os}_${meca_arch}.tar.gz" \
-    --pattern checksums.txt --dir "$meca_stage"
-
-  cd "$meca_stage"
-  set -- meca_*_"${meca_os}_${meca_arch}".tar.gz
-  grep -F "  $1" checksums.txt > checksums-selected.txt
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum --check checksums-selected.txt
-  else
-    shasum -a 256 --check checksums-selected.txt
-  fi
-  tar -xzf "$1"
-  ./meca install --no-shell
-)
-if [ "$?" -eq 0 ] && [ -t 0 ] && [ -t 1 ] && [ -t 2 ]; then
-  exec "$SHELL" -l
-fi
+meca upgrade
 ```
 
-설치가 끝나면 다운로드용 임시 폴더를 정리한 뒤 대화형 터미널의 로그인 셸을 다시 시작해 바로 `meca`를 사용할 수 있습니다. 한 번 설치하면 `~/.local/bin/meca`, `~/.meca`의 기본 설정·프롬프트와 필요한 셸 PATH 등록이 준비되며, 새 터미널과 재부팅 후에도 유지됩니다.
-
-브라우저로 직접 받으려면 최신 릴리스의 아카이브와 `checksums.txt`를 내려받습니다. Apple Silicon은 `macos_arm64`, Intel Mac은 `macos_amd64`, Linux·WSL은 `uname -m`이 `x86_64`이면 `linux_amd64`, `aarch64`이면 `linux_arm64`를 선택합니다. SHA-256 확인 후 빈 폴더에 압축을 풀고 그 안에서 `./meca install`을 실행합니다. 검증 명령은 [릴리스 가이드](docs/releases.md#다운로드와-설치)를 참고하세요.
-
-`./meca install`도 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 `exec "$SHELL" -l`로 로그인 셸에 넘깁니다. 이 셸에서 `exit`하면 설치를 실행했던 기존 셸로 돌아갑니다. PATH가 이미 반영되어 있거나 입력·출력이 터미널이 아니면 전환하지 않습니다. 자동화나 수동 전환을 원할 때는 `./meca install --no-shell`을 사용하세요.
-
-**업데이트도 위 설치 명령을 다시 실행하면 됩니다.** 실행 중인 MECA를 모두 종료한 뒤 설치하면 최신 바이너리로 교체되며 기존 설정·프롬프트·대화는 유지됩니다. 새 릴리스가 나왔을 때의 업데이트는 이 명령으로 직접 실행합니다.
+OS·CPU에 맞는 최신 GitHub 릴리스를 내려받아 SHA-256을 확인하고 설치합니다. 같은 날짜의 릴리스도 실제 바이너리를 비교하며, 설정·모델 연결·대화는 유지합니다. 설치·업데이트 시 세 프롬프트는 사용자 수정 여부와 관계없이 배포 기본본으로 갱신합니다. 비공개 저장소는 `GH_TOKEN`, `GITHUB_TOKEN`, 기존 `gh` 로그인 순서로 인증하며 공개 저장소는 인증 없이 사용할 수 있습니다. Go나 GitHub CLI 설치는 필수가 아닙니다. [업데이트 동작 →](docs/releases.md#업데이트)
 
 `main`에 푸시하면 검사·빌드 후 릴리스를 자동으로 갱신합니다. major·minor는 [.release-version](.release-version)에 직접 지정하며, 날짜만 한국 시간 기준으로 바뀝니다. 같은 날짜의 추가 푸시는 그날의 태그와 배포 파일을 갱신합니다.
 
@@ -259,7 +226,7 @@ max_output_tokens = 12800
 
 [전체 역할별 설정·프롬프트·Compaction →](docs/configuration.md)
 
-세션 저장 형식은 schema 20입니다. 큰 본문은 같은 DB 안에서 중복 제거·압축하며 원문 조회와 내보내기에서 복원합니다. 미지원 DB는 자동 변환하거나 삭제하지 않고 원본을 보존해 오류를 안내합니다. 사용자 프롬프트는 자동으로 덮어쓰지 않습니다. [설정과 프롬프트](docs/configuration.md)를 참고하세요.
+세션 저장 형식은 schema 20입니다. 큰 본문은 같은 DB 안에서 중복 제거·압축하며 원문 조회와 내보내기에서 복원합니다. 미지원 DB는 자동 변환하거나 삭제하지 않고 원본을 보존해 오류를 안내합니다. 프롬프트 편집은 일반 실행 중 유지하며 설치·업데이트 시 배포 기본본으로 교체합니다. [설정과 프롬프트](docs/configuration.md)를 참고하세요.
 
 ## 개발
 

@@ -43,7 +43,7 @@ func start() (err error) {
 		return err
 	}
 	if mode.Action == startup.Help {
-		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca install [--no-shell]\n       meca resume | uninstall")
+		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
 		return nil
 	}
 	home, err := os.UserHomeDir()

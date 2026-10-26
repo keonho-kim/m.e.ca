@@ -16,7 +16,7 @@
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 작업 지침·역할별 추론 설정 |
-| commands/startup·install·settings | 시작 경로·사용자 설치와 삭제·언어 설정 저장 |
+| commands/startup·install·upgrade·settings | 시작 경로·사용자 설치와 삭제·검증한 최신 릴리스 업데이트·언어 설정 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
 | provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |

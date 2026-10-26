@@ -29,6 +29,7 @@ const (
 	Help      Action = "help"
 	Install   Action = "install"
 	Uninstall Action = "uninstall"
+	Upgrade   Action = "upgrade"
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
@@ -48,8 +49,14 @@ func Parse(args []string, cwd string) (Mode, error) {
 		}
 		return mode, nil
 	}
+	if len(args) > 0 && args[0] == string(Upgrade) {
+		if len(args) != 1 {
+			return Mode{}, fmt.Errorf("usage: meca upgrade")
+		}
+		return Mode{Action: Upgrade}, nil
+	}
 	if len(args) == 1 && args[0] == string(Uninstall) {
-		return Mode{Action: Uninstall}, nil
+		return Mode{Action: Action(args[0])}, nil
 	}
 	if len(args) == 1 && args[0] == "resume" {
 		return Mode{Resume: true}, nil

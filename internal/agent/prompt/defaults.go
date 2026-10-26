@@ -1,6 +1,6 @@
-// Purpose: Embed the initial Markdown templates and validate user-owned prompt files.
+// Purpose: Embed release Markdown templates and validate editable prompt files.
 // Pattern: Simple Module (prompt assets).
-// Usage: Bootstrap publishes these defaults; subsequent tasks load ~/.meca/prompts files.
+// Usage: Startup publishes missing defaults, installation refreshes them and tasks load ~/.meca/prompts files.
 // Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/compaction.md, internal/config/prompts/prompts.go.
 package prompt
 

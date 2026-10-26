@@ -17,6 +17,9 @@ import (
 
 const maxBinaryBytes = 256 * 1024 * 1024
 
+// BinaryPath is the user-owned installation location shared by install and upgrade.
+func BinaryPath(home string) string { return filepath.Join(home, binaryName) }
+
 func binaryDigest(path string) (digest string, err error) {
 	file, err := os.Open(path)
 	if err != nil {

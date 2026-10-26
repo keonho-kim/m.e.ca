@@ -1,6 +1,6 @@
-// Purpose: Publish missing Markdown prompts atomically and load private user-owned templates.
+// Purpose: Prepare private prompt storage and load editable Markdown templates.
 // Pattern: Filesystem Adapter.
-// Usage: Bootstrap initializes prompts; the task worker loads them without overwriting edits.
+// Usage: Startup publishes missing files; tasks load edits and installation explicitly refreshes defaults.
 // Related: internal/config/prompts/prompts_test.go, internal/agent/prompt/defaults.go, internal/config/statefs/files.go.
 package prompts
 
@@ -15,6 +15,20 @@ import (
 )
 
 func Bootstrap(root *os.Root) error {
+	if err := prepareDirectory(root); err != nil {
+		return err
+	}
+	defaults := prompt.Defaults()
+	for name, text := range defaults.Files() {
+		if err := statefs.PublishMissing(root, filepath.Join("prompts", name), []byte(*text)); err != nil {
+			return err
+		}
+	}
+	_, err := Load(root.Name())
+	return err
+}
+
+func prepareDirectory(root *os.Root) error {
 	if err := root.Mkdir("prompts", 0700); err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
@@ -29,17 +43,7 @@ func Bootstrap(root *os.Root) error {
 	if err != nil {
 		return err
 	}
-	if err = errors.Join(directory.Chmod(0700), directory.Close()); err != nil {
-		return err
-	}
-	defaults := prompt.Defaults()
-	for name, text := range defaults.Files() {
-		if err := statefs.PublishMissing(root, filepath.Join("prompts", name), []byte(*text)); err != nil {
-			return err
-		}
-	}
-	_, err = Load(root.Name())
-	return err
+	return errors.Join(directory.Chmod(0700), directory.Close())
 }
 func Load(directory string) (templates prompt.Templates, err error) {
 	root, err := statefs.Open(directory)

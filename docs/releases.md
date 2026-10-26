@@ -37,7 +37,7 @@
 
 ## 다운로드와 설치
 
-[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 대상 아카이브와 `checksums.txt`를 같은 폴더에 받는다. 저장소가 비공개이면 접근 권한이 있는 GitHub 계정으로 로그인한다. OS·CPU를 감지해 최신 릴리스를 다운로드·검증·설치하는 명령은 [README의 설치 안내](../README.md#최신-릴리스로-설치하기)를 따른다.
+[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 대상 아카이브와 `checksums.txt`를 같은 폴더에 받는다. 저장소가 비공개이면 접근 권한이 있는 GitHub 계정으로 로그인한다. OS·CPU에 맞는 파일 선택과 설치 방법은 [README의 설치 안내](../README.md#최신-릴리스로-설치하기)를 따른다.
 
 ```sh
 # macOS: 받은 파일의 결과가 checksums.txt의 동일 파일 항목과 같은지 확인
@@ -48,6 +48,16 @@ sha256sum meca_<version>_linux_amd64.tar.gz
 ```
 
 `<version>`과 플랫폼 부분은 실제 파일명으로 바꾼다. 확인한 아카이브를 빈 폴더에 풀고 `./meca install`을 실행하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 로그인 셸로 전환하며, 이 셸을 종료하면 기존 셸로 돌아간다. PATH가 이미 반영되어 있거나 비대화형 실행이면 전환하지 않는다. 자동화에서는 `./meca install --no-shell`로 전환을 명시적으로 끌 수 있다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
+
+## 업데이트
+
+설치된 명령에서 `meca upgrade`를 실행하면 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)로 최신 정식 릴리스를 조회한다. 현재 macOS·Linux의 amd64·arm64에 맞는 아카이브와 `checksums.txt`를 받아 SHA-256을 검증한다. 같은 날짜의 태그·배포 파일도 갱신할 수 있으므로 버전 문자열만으로 건너뛰지 않는다.
+
+인증은 GH_TOKEN, GITHUB_TOKEN, 설치되어 있고 로그인된 gh의 github.com 토큰 순서로 선택한다. 공개 릴리스는 인증 없이 조회할 수 있다. 토큰을 설정·세션·로그에 기록하지 않으며 다른 호스트로 리다이렉트할 때 인증 헤더를 제거한다. Go·gh·tar·curl은 업데이트의 필수 실행 의존성이 아니다.
+
+임시 자료는 ~/.meca의 비공개 디렉터리에 저장하고 성공·오류·취소 시 정리한다. 메타데이터·체크섬은 각각 16MiB, 압축 파일·실행 파일은 각각 256MiB, 압축을 푼 전체 데이터는 512MiB로 제한한다. 파일명·SHA-256·실행 파일 엔트리를 확인한 뒤 검증된 바이너리의 install --no-shell을 실행한다. 아카이브의 링크·경로를 따라 외부 파일을 쓰지 않으며 다운로드·검증 실패 시 기존 설치를 변경하지 않는다. 일시적인 연결·읽기 오류와 HTTP 429·5xx는 최대 3회 시도하고 이후 원인을 반환한다.
+
+설치는 기존 실행 중인 MECA를 차단하는 전용 잠금과 원자적 바이너리 교체를 사용한다. 설정·모델 연결·인증정보·대화는 유지하고 system.md·development.md·compaction.md는 사용자 수정 여부와 관계없이 배포 기본본으로 교체한다. 바이너리가 이미 같아도 프롬프트 동기화는 수행하며 동일한 프롬프트 파일은 다시 쓰지 않는다. 일반 실행 중의 프롬프트 편집은 다음 설치·업데이트 전까지 유지한다.
 
 ## 로컬 검증
 

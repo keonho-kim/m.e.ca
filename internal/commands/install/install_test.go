@@ -120,6 +120,37 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 	}
 }
 
+func TestReinstallRefreshesEditedPromptsAndPreservesConfig(t *testing.T) {
+	o := options(t, "/bin/zsh")
+	ctx := context.Background()
+	if _, err := Install(ctx, o); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+		if err := os.WriteFile(filepath.Join(o.Home, ".meca/prompts", name), []byte("Custom prompt"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	configuration := filepath.Join(o.Home, ".meca/config.toml")
+	before, err := os.ReadFile(configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Install(ctx, o); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+		body, err := os.ReadFile(filepath.Join(o.Home, ".meca/prompts", name))
+		if err != nil || string(body) == "Custom prompt" {
+			t.Fatalf("reinstall did not refresh %s: %v", name, err)
+		}
+	}
+	after, err := os.ReadFile(configuration)
+	if err != nil || string(before) != string(after) {
+		t.Fatalf("reinstall changed configuration: %v", err)
+	}
+}
+
 func TestUninstallRefusesActiveState(t *testing.T) {
 	o := options(t, "/bin/bash")
 	if _, err := Install(context.Background(), o); err != nil {

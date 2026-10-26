@@ -29,7 +29,11 @@ func TestTaskPromptsDoNotDescribeHarness(t *testing.T) {
 
 func TestSystemGuidesUserLanguageWithoutImplementationDetails(t *testing.T) {
 	system := Defaults().System
-	for _, rule := range []string{"language of the user's latest request", "Do not write code while thinking", "completed changes, actual checks"} {
+	for _, rule := range []string{
+		"You are M.E.CA (Minimal Essentials Coding Agent)",
+		"When asked your name, introduce yourself as M.E.CA.",
+		"language of the user's latest request", "Do not write code while thinking", "completed changes, actual checks",
+	} {
 		if !strings.Contains(system, rule) {
 			t.Fatalf("missing work guideline %q", rule)
 		}

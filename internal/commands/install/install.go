@@ -1,13 +1,14 @@
-// Purpose: Install MECA's binary, initialize state and register the user's shell PATH.
+// Purpose: Install MECA's binary, refresh release prompts and register the user's shell PATH.
 // Pattern: Installation use case.
 // Usage: cmd/meca invokes Install before terminal startup.
-// Related: internal/commands/install/binary.go, internal/commands/install/shell.go, internal/config/bootstrap/bootstrap.go.
+// Related: internal/commands/install/binary.go, internal/commands/install/shell.go, internal/config/prompts/refresh.go, internal/config/bootstrap/bootstrap.go.
 package install
 
 import (
 	"context"
 	"errors"
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
@@ -50,7 +51,7 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 	if err != nil {
 		return result, err
 	}
-	result.Binary = filepath.Join(options.Home, binaryName)
+	result.Binary = BinaryPath(options.Home)
 	result.RestartShell = !slices.Contains(filepath.SplitList(options.Path), filepath.Dir(result.Binary))
 	var names []string
 	for _, r := range previous.Profiles {
@@ -69,6 +70,9 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 	}
 	profiles, err := planProfiles(root, names, previous.Profiles, false)
 	if err != nil {
+		return result, err
+	}
+	if err := prompts.Refresh(state); err != nil {
 		return result, err
 	}
 	if _, err := bootstrap.Initialize(options.Home); err != nil {

@@ -1,7 +1,7 @@
-// Purpose: Wire installation and removal to their owners and activate an installed terminal command.
+// Purpose: Dispatch installation, upgrade and removal, and activate a newly installed terminal command.
 // Pattern: Composition Root.
-// Usage: start dispatches install and uninstall before bootstrap or terminal setup.
-// Related: cmd/meca/main.go, internal/commands/install/install.go, internal/config/credentials/keyring.go.
+// Usage: start dispatches maintenance before conversation bootstrap or terminal setup.
+// Related: cmd/meca/main.go, cmd/meca/upgrade.go, internal/commands/install/install.go, internal/config/credentials/keyring.go.
 package main
 
 import (
@@ -15,6 +15,9 @@ import (
 )
 
 func maintenance(ctx context.Context, mode startup.Mode, home string) error {
+	if mode.Action == startup.Upgrade {
+		return upgradeCurrent(ctx, home)
+	}
 	if mode.Action == startup.Uninstall {
 		if err := install.Uninstall(ctx, home, credentials.Clear); err != nil {
 			return err

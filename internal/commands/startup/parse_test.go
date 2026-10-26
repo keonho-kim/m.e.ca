@@ -31,7 +31,7 @@ func TestStartModes(t *testing.T) {
 }
 
 func TestMaintenanceDoesNotRequireProjectDirectory(t *testing.T) {
-	for _, command := range []Action{Install, Uninstall} {
+	for _, command := range []Action{Install, Uninstall, "upgrade"} {
 		mode, err := Parse([]string{string(command)}, "/missing/project")
 		if err != nil || mode.Action != command || mode.Resume || mode.Project != "" {
 			t.Fatalf("%s: %+v %v", command, mode, err)
@@ -47,6 +47,14 @@ func TestInstallNoShell(t *testing.T) {
 	for _, args := range [][]string{{"install", "extra"}, {"install", "--unknown"}, {"--no-shell"}} {
 		if _, err := Parse(args, t.TempDir()); err == nil {
 			t.Fatalf("unsupported install arguments accepted: %v", args)
+		}
+	}
+}
+
+func TestUpgradeRejectsArguments(t *testing.T) {
+	for _, args := range [][]string{{"upgrade", "extra"}, {"upgrade", "--print"}, {"upgrade", "--no-shell"}} {
+		if _, err := Parse(args, "/missing/project"); err == nil {
+			t.Fatalf("unsupported upgrade arguments accepted: %v", args)
 		}
 	}
 }
