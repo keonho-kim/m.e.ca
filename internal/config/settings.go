@@ -10,10 +10,12 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type Config struct {
+	Permission    policy.Permission    `toml:"permission"`
 	Language      Language             `toml:"language"`
 	ContextLength int                  `toml:"context_length"`
 	Model         *SavedModel          `toml:"model,omitempty"`
@@ -55,6 +57,9 @@ func Defaults() Config {
 }
 
 func check(configuration Config) error {
+	if err := configuration.Permission.Check(); err != nil {
+		return err
+	}
 	if err := configuration.Language.Check(); err != nil {
 		return err
 	}

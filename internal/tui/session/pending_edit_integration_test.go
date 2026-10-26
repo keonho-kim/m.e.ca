@@ -78,8 +78,12 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 			if calls.Load() != 1 || a.pendingEdit == nil || a.editor.String() != "second queued revised" || len(a.pending) != 2 {
 				t.Fatal("task completion consumed queued input while it was being edited")
 			}
-			key := map[string]tcell.Key{"save": tcell.KeyEnter, "cancel": tcell.KeyEscape, "delete": tcell.KeyCtrlD}[decision]
-			a.keyEvent(tcell.NewEventKey(key, "", 0))
+			key := map[string]tcell.Key{"save": tcell.KeyEnter, "cancel": tcell.KeyEscape, "delete": tcell.KeyBackspace}[decision]
+			modifiers := tcell.ModNone
+			if decision == "delete" {
+				modifiers = tcell.ModCtrl
+			}
+			a.keyEvent(tcell.NewEventKey(key, "", modifiers))
 			drainTask(t, a, false)
 			want := []string{"current request", "first queued"}
 			if decision == "save" {

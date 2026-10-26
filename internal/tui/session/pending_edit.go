@@ -22,6 +22,7 @@ type pendingEdit struct {
 	index      int
 	draft      input.Editor
 	completion pendingCompletion
+	reveal     bool
 }
 
 func (a *app) canEditPending() bool {
@@ -38,7 +39,7 @@ func (a *app) navigatePending(delta int) {
 		if delta >= 0 || !a.canEditPending() {
 			return
 		}
-		a.pendingEdit = &pendingEdit{index: len(a.pending) - 1, draft: a.editor}
+		a.pendingEdit = &pendingEdit{index: len(a.pending) - 1, draft: a.editor, reveal: true}
 		a.clearSelection()
 		a.closeCommandHints()
 		a.editor.Set(a.pending[a.pendingEdit.index])
@@ -57,13 +58,14 @@ func (a *app) navigatePending(delta int) {
 		return
 	}
 	a.pendingEdit.index = next
+	a.pendingEdit.reveal = true
 	a.editor.Set(a.pending[next])
 }
 
 func (a *app) savePendingEdit() {
 	text := a.editor.String()
 	if strings.TrimSpace(text) == "" {
-		a.stopNotice = a.language.Text("Enter a request or use Ctrl+D to cancel its reservation")
+		a.stopNotice = a.language.Text("Enter a request or use Ctrl/Cmd+Backspace to delete it from the queue")
 		return
 	}
 	a.pending[a.pendingEdit.index] = text

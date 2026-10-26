@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/tools/local/diff"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
@@ -51,7 +50,5 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 			return err
 		}
 	}
-	op.approval.Preview = op.executor.redact(diff.Preview(op.source.absolute, before, op.replacement, op.original.exists, true))
-	op.approval.Diff = true
 	return op.freezeCandidate(call, before, op.replacement)
 }

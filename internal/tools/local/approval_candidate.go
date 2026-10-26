@@ -1,7 +1,7 @@
 // Purpose: Build approval metadata from exact frozen file contents, not rendered preview size.
 // Pattern: Filesystem preparation adapter.
 // Usage: Prepare calls freezeCandidate for content-changing operations.
-// Related: internal/tools/local/prepare.go, internal/tools/local/diff/count.go, internal/agent/tool/candidate.go.
+// Related: internal/tools/local/prepare.go, internal/tools/local/diff/diff.go, internal/agent/tool/candidate.go.
 package local
 
 import (
@@ -18,10 +18,12 @@ func (op *operation) freezeCandidate(call toolapi.Call, before, after []byte) er
 	if !utf8.Valid(before) || !utf8.Valid(after) || bytes.IndexByte(before, 0) >= 0 || bytes.IndexByte(after, 0) >= 0 {
 		return fmt.Errorf("file tools require inspectable UTF-8 text; binary changes are not supported")
 	}
-	added, deleted, err := diff.Count(before, after)
+	preview, added, deleted, err := diff.Analyze(op.source.absolute, before, after, op.original.exists, true)
 	if err != nil {
 		return err
 	}
+	op.approval.Preview = op.executor.redact(preview)
+	op.approval.Diff = true
 	countLines := func(body []byte) int {
 		if len(body) == 0 {
 			return 0

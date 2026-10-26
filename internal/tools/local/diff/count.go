@@ -5,37 +5,13 @@
 package diff
 
 import (
-	"bytes"
 	"fmt"
 )
 
 func Count(before, after []byte) (added, deleted int, err error) {
-	if bytes.Equal(before, after) {
-		return 0, 0, nil
-	}
-	// Remove common complete lines before allocating the line slices.
-	prefix := 0
-	for prefix < min(len(before), len(after)) && before[prefix] == after[prefix] {
-		prefix++
-	}
-	prefix = bytes.LastIndexByte(before[:prefix], '\n') + 1
-	before, after = before[prefix:], after[prefix:]
-	suffix := 0
-	for suffix < min(len(before), len(after)) && before[len(before)-1-suffix] == after[len(after)-1-suffix] {
-		suffix++
-	}
-	if suffix > 0 {
-		start := len(before) - suffix
-		// A shared byte suffix may start in the middle of a changed line.
-		if start > 0 && before[start-1] != '\n' || len(after) > suffix && after[len(after)-suffix-1] != '\n' {
-			if newline := bytes.IndexByte(before[start:], '\n'); newline >= 0 {
-				suffix -= newline + 1
-			} else {
-				suffix = 0
-			}
-		}
-		before, after = before[:len(before)-suffix], after[:len(after)-suffix]
-	}
+	start, suffix := unchangedRegion(before, after)
+	before, after = before[start:len(before)-suffix], after[start:len(after)-suffix]
+
 	n, m := lineCount(before), lineCount(after)
 	if n == 0 || m == 0 {
 		return m, n, nil

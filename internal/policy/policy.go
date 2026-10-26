@@ -1,4 +1,4 @@
-// Purpose: Define file Scope validation and tool effect classifications.
+// Purpose: Define per-request file Scope, approval settings and tool effect classifications.
 // Pattern: Pure Function.
 // Usage: File adapters and agent execution use Scope and Effect contracts.
 // Related: internal/policy/path.go, internal/policy/policy_test.go, SYSTEM.md.
@@ -15,7 +15,8 @@ const (
 )
 
 type Settings struct {
-	Scope Scope `json:"scope"`
+	Scope      Scope      `json:"scope"`
+	Permission Permission `json:"permission,omitempty"`
 }
 
 func ParseScope(value string) (Scope, error) {
@@ -28,8 +29,10 @@ func ParseScope(value string) (Scope, error) {
 }
 
 func (settings Settings) Check() error {
-	_, err := ParseScope(string(settings.Scope))
-	return err
+	if _, err := ParseScope(string(settings.Scope)); err != nil {
+		return err
+	}
+	return settings.Permission.Check()
 }
 
 type Effect uint8

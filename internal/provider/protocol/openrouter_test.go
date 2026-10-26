@@ -80,7 +80,7 @@ func TestOpenRouterReasoningBlockBoundaries(t *testing.T) {
 	if _, err := state.routerDetails(blocks, true); err != nil {
 		t.Fatal(err)
 	}
-	body, err := routerContinuation(state.reasoningDetails, true)
+	body, err := state.routerContinuation()
 	if err != nil {
 		t.Fatal(err)
 	}

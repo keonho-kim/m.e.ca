@@ -21,14 +21,13 @@ func (a *app) pendingEditShortcuts() []view.Shortcut {
 	keys := []view.Shortcut{
 		{Key: "^C", Label: "Exit"},
 		{Key: "Esc", Label: "Cancel edit"},
-		{Key: "^D", Label: "Cancel reservation"},
+		{Key: "Ctrl/Cmd+Backspace", Label: "Cancel reservation"},
 		{Key: "Enter", Label: "Save edit"},
-		{Key: "Tab", Label: "Save edit"},
 		{Key: "Shift+Enter", Label: "Newline"},
 		{Key: "PgUp/Dn", Label: "Scroll"},
 	}
 	if !a.pendingEditChanged() {
-		keys = append(keys, view.Shortcut{Key: "Shift+←/→", Label: "Browse queue"})
+		keys = append(keys, view.Shortcut{Key: "Shift+↑↓/←→", Label: "Browse queue"})
 	}
 	if a.output.HasDetails() {
 		label := "Fold tools"

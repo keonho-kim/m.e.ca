@@ -14,6 +14,12 @@ import (
 )
 
 func (event Event) Check() error {
+	if event.ApprovalSource != "" {
+		if event.Approval == nil || event.Kind != "approved" && event.Kind != "denied" ||
+			event.ApprovalSource != "user" && event.ApprovalSource != "all_mighty" || event.Kind == "denied" && event.ApprovalSource != "user" {
+			return fmt.Errorf("invalid approval decision source")
+		}
+	}
 	if event.Statistics != nil {
 		if event.Kind != "run_checkpoint" || event.Checkpoint == nil || event.Checkpoint.Phase != "finished" || event.Checkpoint.Status == Running || event.RunID != event.Checkpoint.ID {
 			return fmt.Errorf("request statistics require their finished checkpoint")

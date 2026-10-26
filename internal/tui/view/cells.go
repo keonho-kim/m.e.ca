@@ -13,13 +13,9 @@ func Text(screen tcell.Screen, x, y, width int, value string, style tcell.Style)
 	g := uniseg.NewGraphemes(value)
 	end := x + width
 	for g.Next() {
-		runes := g.Runes()
-		cells := uniseg.StringWidth(g.Str())
+		cells := g.Width()
 		if x+cells > end {
 			break
-		}
-		if len(runes) == 0 {
-			continue
 		}
 		screen.Put(x, y, g.Str(), style)
 		x += cells

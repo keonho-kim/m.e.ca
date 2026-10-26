@@ -13,15 +13,16 @@ import (
 const MaxBytes = 16 * 1024 * 1024
 
 type Editor struct {
-	runes    []rune
-	Cursor   int
-	bytes    int
-	text     string
-	dirty    bool
-	revision uint64
-	layout   editorLayout
-	column   int
-	vertical bool
+	runes      []rune
+	Cursor     int
+	bytes      int
+	text       string
+	dirty      bool
+	revision   uint64
+	layout     editorLayout
+	column     int
+	vertical   bool
+	boundaries []boundaryPoint
 }
 
 func (e *Editor) String() string {
@@ -44,6 +45,7 @@ func (e *Editor) Set(s string) {
 	e.revision++
 	e.vertical = false
 	e.layout = editorLayout{}
+	e.boundaries = nil
 }
 func (e *Editor) Insert(s string) {
 	if !utf8.ValidString(s) || e.bytes+len(s) > MaxBytes {
@@ -58,6 +60,7 @@ func (e *Editor) Insert(s string) {
 	e.replace(e.Cursor, e.Cursor, s)
 }
 func (e *Editor) replace(start, end int, s string) {
+	e.invalidateBoundaries(start)
 	r := []rune(s)
 	for _, value := range e.runes[start:end] {
 		e.bytes -= utf8.RuneLen(value)

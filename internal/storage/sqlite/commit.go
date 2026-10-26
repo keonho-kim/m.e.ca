@@ -25,9 +25,9 @@ func (s *Store) Commit(ctx context.Context, session string, records []run.Journa
 	for _, record := range records {
 		switch {
 		case record.Message != nil && record.Event == nil:
-			err = writeMessage(ctx, tx, session, *record.Message, now)
+			err = s.writeMessage(ctx, tx, session, *record.Message, now)
 		case record.Event != nil && record.Message == nil:
-			err = writeEvent(ctx, tx, session, *record.Event, now)
+			err = s.writeEvent(ctx, tx, session, *record.Event, now)
 		default:
 			err = fmt.Errorf("journal record requires exactly one payload")
 		}

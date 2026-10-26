@@ -33,7 +33,7 @@ func (a *app) reserveMessage(text string) {
 	a.pending = append(a.pending, text)
 	a.editor.Set("")
 	a.closeCommandHints()
-	a.status = a.language.Format("Queued requests: %d", len(a.pending))
+	a.status = ""
 }
 
 func (a *app) restorePending() {

@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rivo/uniseg"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/yuin/goldmark/v2/ast"
 	extast "github.com/yuin/goldmark/v2/extension/ast"
 )
@@ -46,7 +46,7 @@ func (r *renderer) table(table *extast.Table, indent string) {
 		}
 	}
 	collect(table)
-	available := max(1, r.width-uniseg.StringWidth(indent))
+	available := max(1, r.width-textlayout.Width(indent))
 	widths := tableWidths(rows, available)
 	if len(widths) == 0 {
 		r.tableFields(rows, indent, available)
@@ -69,7 +69,7 @@ func (r *renderer) table(table *extast.Table, indent string) {
 				if y < len(cells[i]) {
 					value = cells[i][y]
 				}
-				padding := max(0, width-uniseg.StringWidth(value.Text))
+				padding := max(0, width-textlayout.Width(value.Text))
 				left := 0
 				if i < len(row) {
 					switch row[i].align {

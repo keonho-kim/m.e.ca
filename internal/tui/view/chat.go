@@ -17,6 +17,7 @@ type ChatDisplay struct {
 	Activity   Activity
 	Usage      modelapi.TokenUsage
 	Lines      []viewport.Line
+	FocusedID  int
 	Scrollbar  viewport.Scrollbar
 	Input      input.Window
 	References []string
@@ -36,6 +37,9 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 		style := tcell.StyleDefault
 		if display.Lines[i].Thinking {
 			style = style.Dim(true)
+		}
+		if display.FocusedID != 0 && display.Lines[i].ID == display.FocusedID {
+			style = tcell.StyleDefault.Foreground(tcell.NewHexColor(0x7aa2c1)).Bold(true)
 		}
 		if display.Lines[i].Change != 0 {
 			style = ChangeStyle(display.Lines[i].Change)

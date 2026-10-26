@@ -1,4 +1,4 @@
-// Purpose: Restore the model, conversation and selected paths with fixed application access policy.
+// Purpose: Restore the model, conversation, selected paths and configured execution policy.
 // Pattern: Session recovery use case.
 // Usage: Called before the terminal event loop starts.
 // Related: internal/storage/recovery/recovery.go, internal/tui/session/app.go.
@@ -16,7 +16,7 @@ func (a *app) restore() error {
 	if err != nil {
 		return err
 	}
-	a.settings = policy.Settings{Scope: policy.System}
+	a.settings = policy.Settings{Scope: policy.System, Permission: a.opts.Config.Permission}
 	recent, err := a.opts.Store.Messages(ctx, a.opts.Session.ID, 1000)
 	if err != nil {
 		return err

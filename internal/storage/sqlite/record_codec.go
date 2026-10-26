@@ -5,6 +5,7 @@
 package sqlite
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -19,16 +20,19 @@ type storedRecord struct {
 	size       int
 }
 
-func packRecord(ctx context.Context, tx *sql.Tx, body []byte) ([]byte, []byte, error) {
+func (s *Store) packRecord(ctx context.Context, tx *sql.Tx, body []byte) ([]byte, []byte, error) {
+	if len(body) <= payloadThreshold {
+		return body, []byte("{}"), nil
+	}
 	refs := map[string]string{}
 	var pack func(json.RawMessage, []string) (json.RawMessage, error)
 	pack = func(raw json.RawMessage, path []string) (json.RawMessage, error) {
-		opaque := len(path) > 0 && (path[len(path)-1] == "arguments" || path[len(path)-1] == "output" || path[len(path)-1] == "capture")
-		if opaque && len(raw) <= payloadThreshold {
+		if len(raw) <= payloadThreshold {
 			return raw, nil
 		}
-		if len(raw) > payloadThreshold && (raw[0] == '"' || opaque) {
-			id, err := putPayload(ctx, tx, raw)
+		opaque := len(path) > 0 && (path[len(path)-1] == "arguments" || path[len(path)-1] == "output" || path[len(path)-1] == "capture")
+		if raw[0] == '"' || opaque {
+			id, err := s.putPayload(ctx, tx, raw)
 			if err != nil {
 				return nil, err
 			}
@@ -83,6 +87,12 @@ func appendPath(path []string, key string) []string {
 
 // Hydration happens after the result rows close: this DB owns one connection.
 func (s *Store) unpackRecord(ctx context.Context, record storedRecord, fields map[string]bool) ([]byte, error) {
+	if fields == nil && bytes.Equal(record.refs, []byte("{}")) {
+		if !json.Valid(record.body) {
+			return nil, fmt.Errorf("invalid stored record JSON")
+		}
+		return record.body, nil
+	}
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal(record.body, &root); err != nil {
 		return nil, err

@@ -13,6 +13,7 @@ import (
 )
 
 type Event struct {
+	ApprovalSource  string               `json:"approval_source,omitempty"`
 	Capture         json.RawMessage      `json:"capture,omitempty"`
 	RunID           string               `json:"run_id,omitempty"`
 	Generation      *Generation          `json:"generation,omitempty"`

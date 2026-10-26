@@ -52,7 +52,7 @@ func (s *Stream) Render(text string, width int) []Line {
 		r.rows = append(r.rows, s.rows[s.committed-1])
 	}
 	seed := len(r.rows)
-	document := newParser().Parse(r.source)
+	document := documentParser.Parse(r.source)
 	mutable := document.LastChild()
 	if mutable != nil && mutable.PreviousSibling() != nil {
 		mutable = mutable.PreviousSibling()

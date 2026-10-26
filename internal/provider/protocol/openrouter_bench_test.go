@@ -20,7 +20,7 @@ func BenchmarkOpenRouterReasoningFragments(b *testing.B) {
 				b.Fatal(err)
 			}
 		}
-		if _, err := routerContinuation(state.reasoningDetails, true); err != nil {
+		if _, err := state.routerContinuation(); err != nil {
 			b.Fatal(err)
 		}
 	}

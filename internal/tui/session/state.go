@@ -40,6 +40,7 @@ type Options struct {
 type app struct {
 	language                            locale.Language
 	languageConfirm                     bool
+	permissionConfirm                   bool
 	steering                            chan string
 	steeringDrafts                      []string
 	chatVisible, selectedTranscript     []viewport.Line

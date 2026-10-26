@@ -75,6 +75,9 @@ func (a *app) terminalEvent(event tcell.Event) error {
 		a.keyEvent(e)
 	case *tcell.EventResize:
 		a.clearSelection()
+		if a.pendingEdit != nil {
+			a.pendingEdit.reveal = true
+		}
 		a.screen.Sync()
 	case *tcell.EventMouse:
 		a.mouse(e)

@@ -19,7 +19,7 @@ func (store *Store) AppendMessage(ctx context.Context, session string, message m
 	return store.Commit(ctx, session, []run.JournalRecord{{Message: &message}})
 }
 
-func writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string) error {
+func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string) error {
 	if err := message.Check(); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func writeMessage(ctx context.Context, transaction *sql.Tx, session string, mess
 	if err != nil {
 		return err
 	}
-	packed, refs, err := packRecord(ctx, transaction, content)
+	packed, refs, err := store.packRecord(ctx, transaction, content)
 	if err != nil {
 		return err
 	}

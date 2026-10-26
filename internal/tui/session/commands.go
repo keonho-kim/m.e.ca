@@ -73,6 +73,8 @@ func (a *app) submitCommand(command commands.Command) {
 		a.openModel()
 	case commands.Language:
 		a.openLanguage()
+	case commands.Permission:
+		a.openPermission()
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Message:

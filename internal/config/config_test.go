@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func TestLoadSaveWithoutApprovalMode(t *testing.T) {
+func TestLoadSaveWithDefaultPermission(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), ".meca")
 	configuration, err := Load(directory)
 	if err != nil {
@@ -30,8 +30,8 @@ func TestLoadSaveWithoutApprovalMode(t *testing.T) {
 		t.Fatalf("configuration round trip (-want +got):\n%s", diff)
 	}
 	body, err := os.ReadFile(filepath.Join(directory, "config.toml"))
-	if err != nil || strings.Contains(string(body), "permission") || strings.Contains(string(body), "[defaults]") {
-		t.Fatalf("approval mode persisted: %s %v", body, err)
+	if err != nil || !strings.Contains(string(body), "permission = 'default'") || strings.Contains(string(body), "[defaults]") {
+		t.Fatalf("default permission missing: %s %v", body, err)
 	}
 	info, err := os.Stat(filepath.Join(directory, "config.toml"))
 	if err != nil {
@@ -44,7 +44,6 @@ func TestLoadSaveWithoutApprovalMode(t *testing.T) {
 
 func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 	for _, content := range []string{
-		"[defaults]\npermission='allow-all'\n",
 		"[ui]\ninput_max_lines=20\n",
 		"unexpected=true\n",
 		"[[model_profiles]]\nprovider=\"vllm\"\nmodel=\"alias\"\nprofile=\"generic\"\n",

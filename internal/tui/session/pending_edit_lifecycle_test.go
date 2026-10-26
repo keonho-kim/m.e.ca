@@ -45,7 +45,7 @@ func TestPendingEditApprovalKeepsForegroundKeys(t *testing.T) {
 	a.decision = make(chan bool, 1)
 	pendingArrow(a, tcell.KeyLeft)
 	a.receive(notice{Approval: &toolapi.Approval{Name: "protected operation"}})
-	if labels := keymapLabels(t, a); labels["Esc"] != "거부" || labels["^D"] != "" {
+	if labels := keymapLabels(t, a); labels["Esc"] != "거부" || labels["Ctrl/Cmd+Backspace"] != "" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

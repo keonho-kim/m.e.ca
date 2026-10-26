@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gdamore/tcell/v3 v3.6.0
 	github.com/google/go-cmp v0.7.0
+	github.com/klauspost/compress v1.20.3
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/rivo/uniseg v0.4.7
 	github.com/yuin/goldmark/v2 v2.1.6

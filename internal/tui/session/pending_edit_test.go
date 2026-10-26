@@ -71,8 +71,8 @@ func TestPendingEditSavePreservesPosition(t *testing.T) {
 func TestPendingEditCancelAndDelete(t *testing.T) {
 	for _, event := range []*tcell.EventKey{
 		tcell.NewEventKey(tcell.KeyEscape, "", 0),
-		tcell.NewEventKey(tcell.KeyCtrlD, "", 0),
-		tcell.NewEventKey(tcell.KeyRune, "d", tcell.ModCtrl),
+		tcell.NewEventKey(tcell.KeyBackspace, "", tcell.ModCtrl),
+		tcell.NewEventKey(tcell.KeyBackspace2, "", tcell.ModMeta),
 	} {
 		a := fixture(t)
 		ctx, cancel := context.WithCancel(a.ctx)
@@ -150,17 +150,17 @@ func TestPendingEditKeymapAndNotice(t *testing.T) {
 		a := fixture(t)
 		a.language, a.worker = language, workerAgent
 		a.pending = []string{"first", "second", "third"}
-		if labels := keymapLabels(t, a); labels["Shift+←"] != language.Text("Edit queue") || labels["^D"] != "" {
+		if labels := keymapLabels(t, a); labels["Shift+↑/←"] != language.Text("Edit queue") || labels["Ctrl/Cmd+Backspace"] != "" {
 			t.Fatal(labels)
 		}
 		pendingArrow(a, tcell.KeyLeft)
 		labels := keymapLabels(t, a)
-		for key, label := range map[string]string{"Enter": "Save edit", "Tab": "Save edit", "Esc": "Cancel edit", "^D": "Cancel reservation", "Shift+←/→": "Browse queue"} {
+		for key, label := range map[string]string{"Enter": "Save edit", "Esc": "Cancel edit", "Ctrl/Cmd+Backspace": "Cancel reservation", "Shift+↑↓/←→": "Browse queue"} {
 			if labels[key] != language.Text(label) {
 				t.Fatalf("key %s: %v", key, labels)
 			}
 		}
-		if labels["!"] != "" || labels["Ctrl/Cmd+↑↓"] != "" {
+		if labels["!"] != "" || labels["Ctrl/Cmd+↑↓"] != "" || labels["^D"] != "" {
 			t.Fatal("queue editing advertised normal command or input-history actions")
 		}
 		for _, width := range []int{80, 160} {
@@ -169,14 +169,14 @@ func TestPendingEditKeymapAndNotice(t *testing.T) {
 			if !strings.Contains(screenLine(a.screen, a.inputRegion.y-1, width), language.Format("Editing queued request %d / %d", 3, 3)) || a.footerRows-1 > view.MaxKeymapRows {
 				t.Fatalf("width=%d notice=%q footer=%q rows=%d", width, screenLine(a.screen, a.inputRegion.y-1, width), footerKeyText(a), a.footerRows)
 			}
-			for _, key := range []string{"Esc", "^D", "Enter", "Tab", "Shift+←/→"} {
+			for _, key := range []string{"Esc", "Ctrl/Cmd+Backspace", "Enter", "Shift+↑↓/←→"} {
 				if !strings.Contains(footerKeyText(a), key) {
 					t.Fatalf("width=%d key=%s footer=%q", width, key, footerKeyText(a))
 				}
 			}
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " changed", 0))
-		if keymapLabels(t, a)["Shift+←/→"] != "" {
+		if keymapLabels(t, a)["Shift+↑↓/←→"] != "" {
 			t.Fatal("dirty editing advertised navigation before save or cancellation")
 		}
 	}

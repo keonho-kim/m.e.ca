@@ -1,6 +1,6 @@
 // Purpose: Render monochrome settings with explicit selected values and save confirmation.
 // Pattern: Read-only terminal projection.
-// Usage: Model and language screens supply read-only setting snapshots.
+// Usage: Model, language and permission screens supply read-only setting snapshots.
 // Related: internal/tui/session/render_model.go, internal/tui/session/render_language.go, internal/tui/view/input.go.
 package view
 

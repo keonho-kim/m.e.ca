@@ -8,7 +8,7 @@ import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!", describeCommand)
-	if len(all) != 5 {
+	if len(all) != 6 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {
@@ -24,8 +24,8 @@ func TestCommandSuggestions(t *testing.T) {
 	if len(Suggestions("!unknown", describeCommand)) != 0 {
 		t.Fatal("unknown prefix matched a command")
 	}
-	if _, err := Parse("!permission"); err == nil || len(Suggestions("!permission", describeCommand)) != 0 {
-		t.Fatal("removed permission command remains available")
+	if command, err := Parse("!permission"); err != nil || command.Kind != Permission || len(Suggestions("!permission", describeCommand)) != 1 {
+		t.Fatal("permission command is unavailable")
 	}
 }
 

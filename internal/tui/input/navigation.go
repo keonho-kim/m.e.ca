@@ -1,29 +1,11 @@
 // Purpose: Move and delete input on grapheme boundaries and visual rows.
 // Pattern: Deterministic editor operations.
 // Usage: Keyboard and mouse handlers mutate the editor through these methods.
-// Related: internal/tui/input/editor.go, internal/tui/input/layout.go.
+// Related: internal/tui/input/editor.go, internal/tui/input/boundaries.go, internal/tui/input/layout.go.
 package input
 
-import (
-	"github.com/rivo/uniseg"
-	"unicode/utf8"
-)
+import "unicode/utf8"
 
-func (e *Editor) boundary(position int, next bool) int {
-	count := 0
-	g := uniseg.NewGraphemes(e.String())
-	for g.Next() {
-		end := count + utf8.RuneCountInString(g.Str())
-		if next && end > position {
-			return end
-		}
-		if !next && end >= position {
-			return count
-		}
-		count = end
-	}
-	return len(e.runes)
-}
 func (e *Editor) Move(n int) {
 	e.vertical = false
 	for ; n < 0 && e.Cursor > 0; n++ {
@@ -69,6 +51,6 @@ func (e *Editor) MoveVertical(delta, width int) {
 		x += 2
 	}
 	offset := e.layout.rows[row].Offset(e.layout.source, x, false)
-	e.Cursor = max(0, utf8.RuneCountInString(e.layout.source[:offset])-2)
+	e.Cursor = max(0, e.layout.runeStarts[row]+utf8.RuneCountInString(e.layout.source[e.layout.rows[row].Start:offset])-2)
 	e.vertical = true
 }

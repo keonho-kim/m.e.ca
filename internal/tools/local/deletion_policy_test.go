@@ -74,6 +74,16 @@ func TestDeletionPolicyBoundaryDecisions(t *testing.T) {
 	}
 }
 
+func TestAllMightyPreservesProtectedTargetChecks(t *testing.T) {
+	e, _ := testExecutor(t)
+	settings := policy.Settings{Scope: policy.System, Permission: policy.PermissionAllMighty}
+	for _, command := range []string{"rm -rf .", "rm -rf /etc", "sudo true"} {
+		if _, err := e.Prepare(context.Background(), settings, call("execute_command", fmt.Sprintf(`{"command":%q}`, command))); err == nil {
+			t.Fatalf("automatic approval bypassed a protected operation: %s", command)
+		}
+	}
+}
+
 func TestDeletionPolicyChangedAliasRequiresPreparation(t *testing.T) {
 	e, project := testExecutor(t)
 	inside, outside := filepath.Join(project, "inside"), t.TempDir()

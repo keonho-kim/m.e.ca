@@ -65,7 +65,8 @@ func TestMatchingPreservesBothVersions(t *testing.T) {
 		{strings.Repeat("old\n", 300), strings.Repeat("new\n", 300)},
 	} {
 		var old, next strings.Builder
-		for _, op := range match(split(pair[0]), split(pair[1])) {
+		ops, _ := match(split(pair[0]), split(pair[1]))
+		for _, op := range ops {
 			if op.kind != '+' {
 				old.WriteString(op.text)
 			}

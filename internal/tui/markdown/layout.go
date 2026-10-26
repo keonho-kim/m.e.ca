@@ -41,7 +41,15 @@ func SafeText(text string) string {
 	}, text)
 }
 func line(spans []Span) Line {
+	if len(spans) == 1 {
+		return Line{Text: spans[0].Text, Spans: spans}
+	}
 	var text strings.Builder
+	size := 0
+	for _, s := range spans {
+		size += len(s.Text)
+	}
+	text.Grow(size)
 	for _, s := range spans {
 		text.WriteString(s.Text)
 	}
@@ -62,13 +70,13 @@ func Rows(spans []Span, width int) iter.Seq[Line] {
 		if width < 1 {
 			return
 		}
-		var body strings.Builder
-		var ends []int
-		for _, span := range spans {
-			body.WriteString(span.Text)
-			ends = append(ends, body.Len())
+		text := line(spans).Text
+		ends := make([]int, len(spans))
+		end := 0
+		for i, span := range spans {
+			end += len(span.Text)
+			ends[i] = end
 		}
-		text := body.String()
 		styleIndex := 0
 		for wrapped := range textlayout.Rows(text, width) {
 			if !strings.ContainsRune(wrapped.Text, '\t') && strings.TrimPrefix(wrapped.Text, wrapped.Prefix) == text[wrapped.Start:wrapped.End] {
@@ -97,8 +105,10 @@ func Rows(spans []Span, width int) iter.Seq[Line] {
 				for styleIndex+1 < len(ends) && wrapped.Start+start >= ends[styleIndex] {
 					styleIndex++
 				}
-				part := strings.ReplaceAll(g.Str(), "\t", "    ")
-				size := uniseg.StringWidth(part)
+				part, size := g.Str(), g.Width()
+				if part == "\t" {
+					part, size = "    ", 4
+				}
 				if size > width-cells {
 					part, size = "�", 1
 				}

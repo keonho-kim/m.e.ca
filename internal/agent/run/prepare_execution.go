@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type readyExecution struct {
@@ -58,15 +59,20 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	defer cancel()
 	approved := !proposal.Required
 	if proposal.Required {
-		approved, err = approve(ctx, proposal)
-		if err != nil {
-			return nil, outcome, errors.Join(errRuntimeRecord, err)
+		source := "user"
+		if s.runner.Settings.Permission == policy.PermissionAllMighty {
+			approved, source = true, "all_mighty"
+		} else {
+			approved, err = approve(ctx, proposal)
+			if err != nil {
+				return nil, outcome, errors.Join(errRuntimeRecord, err)
+			}
 		}
 		decision := "denied"
 		if approved {
 			decision = "approved"
 		}
-		event := Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal, Call: &call}
+		event := Event{Kind: decision, Text: decision + " " + proposal.Name + " " + proposal.Target, CallID: call.ID, Approval: &proposal, Call: &call, ApprovalSource: source}
 		if err := s.record(ctx, event); err != nil {
 			return nil, outcome, errors.Join(errRuntimeRecord, err)
 		}

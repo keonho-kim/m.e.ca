@@ -5,6 +5,10 @@
 package locale
 
 var menus = []translation{
+	{"", "Permission mode", "승인 모드"},
+	{"", "Default", "기본"},
+	{"", "Run ordinary work automatically; ask for approval when required.", "일반 작업은 자동 실행하고 필요한 작업만 승인을 요청합니다."},
+	{"", "Automatically approve operations without asking.", "사용자에게 묻지 않고 승인 대상 작업을 자동 실행합니다."},
 	{"", "Model settings", "모델 설정"},
 	{"", "Provider", "모델 공급자"},
 	{"", "Base URL", "Base URL"},

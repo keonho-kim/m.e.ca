@@ -16,7 +16,7 @@
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 작업 지침·역할별 추론 설정 |
-| commands/startup·install·upgrade·settings | 시작 경로·사용자 설치와 삭제·검증한 최신 릴리스 업데이트·언어 설정 저장 |
+| commands/startup·install·upgrade·settings | 시작 경로·사용자 설치와 삭제·검증한 최신 릴리스 업데이트·언어와 승인 모드 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
 | provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
@@ -53,6 +53,7 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 | go-toml/v2 | TOML 파싱·직렬화 |
 | go-keyring | Keychain·Secret Service |
 | modernc.org/sqlite | CGO 없는 SQLite |
+| klauspost/compress/zstd | 세션의 대용량 payload를 Zstandard로 압축·복원 |
 | x/sys·x/term | OS 파일 어댑터와 터미널 확인 |
 | mvdan.cc/sh/v3 | 실행 없는 셸 AST 분석과 정적 단어 확장 |
 | fsnotify | 파일 탐색 화면의 활성 디렉터리 변경 알림 |
@@ -72,6 +73,7 @@ Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Doc
 | Staticcheck | Go 코드의 오류·API 오용·불필요한 연산 검사 | `go tool -modfile=devtools/go.mod staticcheck ./...` |
 | govulncheck | 알려진 취약점과 실제 호출 경로 검사 | `go tool -modfile=devtools/go.mod govulncheck ./...` |
 | deadcode | 실행 진입점에서 도달하지 않는 함수 탐색 | `go tool -modfile=devtools/go.mod deadcode ./cmd/meca` |
+| benchstat | 반복 벤치마크의 시간·할당량·저장 크기 비교 | `go tool -modfile=devtools/go.mod benchstat before.txt after.txt` |
 | GoReleaser | 배포 빌드·압축·체크섬·패키지 생성 도구 | `go tool -modfile=devtools/go.mod goreleaser --help` |
 | nFPM | Linux 설치 패키지 생성 도구 | `go tool -modfile=devtools/go.mod nfpm --help` |
 
@@ -136,21 +138,25 @@ MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run Test
 
 ## 성능과 장시간 수명
 
-입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 요청 worker가 표시용 최신 스트림 mailbox를 소유하고 재시도·완료·승인·사용량 경계에서 이전 mailbox를 분리한다. 소비 후 본문 참조를 해제하며 별도 전송 goroutine을 만들지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
+입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 커서 탐색은 약 256 rune 간격의 parser 상태 체크포인트에서 재개하며 편집 위치 이후의 인덱스만 폐기한다. 큰 삭제와 초안 교체는 불필요한 인덱스 용량을 해제한다. 입력 배치는 줄별 rune 시작 위치를 한 번 기록해 커서 줄을 이진 탐색하고 그 줄 안에서만 바이트 위치와 선택 범위를 계산한다. 출력 가능한 ASCII 폭은 바이트 길이로 계산하고 나머지는 기존 Unicode 폭 규칙을 사용한다. 이미 순회 중인 grapheme의 폭은 iterator에서 재사용한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 요청 worker가 표시용 최신 스트림 mailbox를 소유하고 재시도·완료·승인·사용량 경계에서 이전 mailbox를 분리한다. 소비 후 본문 참조를 해제하며 별도 전송 goroutine을 만들지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
 
-후속 요청 FIFO와 큐 편집은 TUI 이벤트 루프가 소유한다. 편집은 선택 위치와 기존 Editor 값만 보관하며 큐 전체를 복제하지 않는다. 편집 중에는 dequeue를 보류해 선택 위치를 유지하고, 현재 worker의 완료·실패를 편집 상태에 기록해 닫을 때 실행·복구를 이어간다. 미전달 방향 수정은 큐 편집 본문 대신 보관된 일반 초안에 복구한다. 소비·삭제·복구한 큐 항목은 참조를 지우고 빈 큐와 닫힌 편집 상태는 해제한다. 별도 worker나 모델 호출을 추가하지 않는다.
+후속 요청 FIFO와 큐 편집은 TUI 이벤트 루프가 소유한다. 편집은 선택 위치와 기존 Editor 값만 보관하며 큐 전체를 복제하지 않는다. 목록은 전체 항목을 번호순으로 표시하고 항목별 마스킹·줄 배치를 재사용한다. 원문 또는 마스킹 revision이 바뀐 항목만 표시 문자열을 갱신하며 선택 색상 전환은 본문 재배치를 유발하지 않는다. 화면 밖 항목 선택은 기존 transcript의 위치 탐색을 사용한다. 출력 증가로 live block ID가 바뀌면 큐 기준 읽기 위치를 보정하고 창 크기 변경 시 선택 항목을 다시 보이게 한다. 사용자가 직접 과거 출력으로 이동한 위치는 유지한다. 편집 중에는 dequeue를 보류해 선택 위치를 유지하고, 현재 worker의 완료·실패를 편집 상태에 기록해 닫을 때 실행·복구를 이어간다. 미전달 방향 수정은 큐 편집 본문 대신 보관된 일반 초안에 복구한다. 소비·삭제·복구한 큐 항목과 표시 캐시의 제거된 항목은 참조를 지우고 빈 큐와 닫힌 편집 상태는 해제한다. 별도 worker나 모델 호출을 추가하지 않는다.
 
 디렉터리 조회와 파일 미리보기는 각각 실행 1개·최신 대기 요청 1개를 가진다. 취소는 대기 요청을 제거하지만 실행 슬롯은 실제 I/O 완료 알림에서 해제한다. 이벤트 루프가 최신 요청만 시작하며 이전 revision의 결과는 적용하지 않는다. 종료는 대기를 비우고 실제 worker를 합류한 뒤 슬롯 참조를 해제한다.
 
 파일 변경 감시는 활성 디렉터리 하나에 연결한다. 플랫폼별 등록 I/O도 worker에서 수행하며 실행 1개·최신 대기 1개로 제한한다. 이벤트 루프가 감시 채널과 150ms 단발 타이머를 소비하고, 등록 직후와 알림 유실 시 재조회한다. 경로 전환·취소·화면 닫기에서 감시와 타이머를 정리하며 늦게 도착한 감시 객체도 닫는다. 갱신은 기존 파일 읽기 슬롯을 사용하고 새 폴링 루프를 만들지 않는다.
 
+OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다. 서명·종류·식별자 경계와 알 수 없는 필드를 보존하고 닫힌 블록만 유지하므로 완료 시 모든 조각을 다시 해석하지 않는다. 취소·실패한 요청의 미완성 블록은 후속 요청에 공개하지 않는다.
+
 로컬 도구 카탈로그는 초기화 후 변경하지 않는 내부 정의 하나를 소유한다. 인자 검사는 이를 재사용하며 외부 Definitions 반환값은 중첩 Fields·Values까지 복사해 변경이 내부 검증으로 전파되지 않게 한다.
 
 응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 참조 정의 가능성이 있는 `]:` 포함 문서는 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남기며 현재 스트리밍은 증분 처리 수명 동안 보유한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
 
-Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다. 표의 열 너비는 내용과 구분자·들여쓰기 예산으로 계산하고 셀별 styled Rows를 조립하므로 표 전체를 하나의 긴 줄로 줄바꿈하지 않는다. 같은 폭의 증분 파싱과 완료 블록 재사용은 유지하며 폭 변경 시 이전 표 배치와 재사용 줄 수를 초기화한다. 희소 인덱스의 줄 수 계산과 가시 구간 출력은 같은 폭의 배치 결과를 사용한다. 좁은 폭에서는 헤더·값을 세로로 구성해 열 구분자만 남거나 내용이 옆 열을 침범하는 상황을 피한다.
+Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다. 문법 설정은 공유하고 reader·문맥·AST는 호출마다 분리한다. 같은 스타일의 연속 inline 텍스트는 필요한 경우에만 builder로 합쳐 긴 문단의 반복 복사를 피하며 명시적 줄바꿈 조립에 임시 분할 배열을 만들지 않는다. 표의 열 너비는 내용과 구분자·들여쓰기 예산으로 계산하고 셀별 styled Rows를 조립하므로 표 전체를 하나의 긴 줄로 줄바꿈하지 않는다. 같은 폭의 증분 파싱과 완료 블록 재사용은 유지하며 폭 변경 시 이전 표 배치와 재사용 줄 수를 초기화한다. 희소 인덱스의 줄 수 계산과 가시 구간 출력은 같은 폭의 배치 결과를 사용한다. 좁은 폭에서는 헤더·값을 세로로 구성해 열 구분자만 남거나 내용이 옆 열을 침범하는 상황을 피한다.
 
-SQLite의 큰 JSON 값은 `payloads`에서 해시·원본 길이·압축 형식을 소유한다. 작은 레코드는 별도 참조 목록을 갖고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `run.JournalRecord` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
+파일 변경 미리보기와 정확한 추가·삭제 줄 수는 같은 분석에서 얻는다. 공통 앞뒤 구간은 bytes.Equal 블록 비교로 건너뛰고 미리보기에 필요한 인접 문맥만 매칭한다. 전체 생성·삭제는 trace와 줄 배열 없이 출력한다. 미리보기의 작업량 한도에 도달한 경우에는 완전한 diff를 출력하고 정확한 변경량은 별도로 계산한다. 원본 검사·해시·변경 후보 바인딩은 유지한다.
+
+SQLite의 큰 JSON 값은 `payloads`에서 해시·원본 길이·압축 형식을 소유한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `run.JournalRecord` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
 압축 점유량 조회는 최근 실측 샘플·최신 요약 revision의 경계·이후 추가된 메시지 크기·현재 timeline을 한 SQL 문과 같은 읽기 스냅샷에서 계산한다. 원문 본문을 읽거나 추가 영속 카운터·캐시·인덱스를 만들지 않는다.
 
@@ -162,15 +168,21 @@ SQLite의 큰 JSON 값은 `payloads`에서 해시·원본 길이·압축 형식�
 
 ```sh
 go test ./internal/agent/context -run '^$' -bench BenchmarkProjection -benchmem
-go test ./internal/tui/markdown -run '^$' -bench BenchmarkStreamTail -benchmem
+go test ./internal/tui/markdown -run '^$' -bench 'Benchmark(StreamTail|Paragraph)' -benchmem
+go test ./internal/tui/input -run '^$' -bench BenchmarkLongDraft -benchmem
+go test ./internal/tools/local/diff -run '^$' -bench BenchmarkAnalysis -benchmem
 go test ./internal/tools/local -run '^$' -bench BenchmarkParallelPlanning -benchmem
 go test ./internal/tools/local -run '^$' -bench BenchmarkCatalog -benchmem
 go test ./internal/tui/session -run '^$' -bench BenchmarkStreamDelivery -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkOutcomeCommit -benchtime=100x -benchmem
+go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(PayloadCodec|CompressionOptions)' -benchmem
+go test ./internal/tui/textlayout -run '^$' -bench BenchmarkWidth -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkMemoryWatermark -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(Conversations|Journal)' -benchmem
 go test ./internal/tui/viewport -run TestDisplayResources -v
 go test ./internal/tui/markdown -run '^$' -fuzz '^FuzzStream$' -fuzztime=10s
+go test ./internal/tui/input -run '^$' -fuzz '^FuzzBoundaryEdits$' -fuzztime=10s
+go test ./internal/tools/local/diff -run '^$' -fuzz '^FuzzAnalysisCounts$' -fuzztime=10s
 ```
 
 ```sh
@@ -181,6 +193,6 @@ go test ./internal/config/credentials ./internal/tui/viewport ./internal/tui/vie
 
 ## 기본 루프의 책임
 
-[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. MECA의 Go 단일 바이너리·호스트 실행·파일 검사·필수 승인·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
+[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. MECA의 Go 단일 바이너리·호스트 실행·파일 검사·승인 정책·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
 
 원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.

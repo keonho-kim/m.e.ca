@@ -6,6 +6,7 @@ package input
 
 import (
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"sort"
 	"unicode/utf8"
 )
 
@@ -15,11 +16,13 @@ type editorLayout struct {
 	source              string
 	width               int
 	rows                []textlayout.Row
+	runeStarts          []int
 }
 type Window struct {
 	Source             string
 	Rows               []textlayout.Row
 	CursorX, CursorRow int
+	runeStarts         []int
 }
 
 func (e *Editor) prepareLayout(width int) {
@@ -34,27 +37,35 @@ func (e *Editor) prepareLayout(width int) {
 		last.Soft = true
 		rows = append(rows, textlayout.Row{Start: len(source), End: len(source)})
 	}
-	e.layout = editorLayout{source: source, width: width, rows: rows}
+	starts := make([]int, len(rows))
+	position, previous := 0, 0
+	for i, row := range rows {
+		position += utf8.RuneCountInString(source[previous:row.Start])
+		starts[i], previous = position, row.Start
+	}
+	e.layout = editorLayout{source: source, width: width, rows: rows, runeStarts: starts}
 }
 func (e *Editor) position() (int, int) {
 	if e.layout.positioned && e.layout.cursor == e.Cursor {
 		return e.layout.row, e.layout.column
 	}
-	offset := 2 + len(e.Before())
-	for i, row := range e.layout.rows {
-		if offset <= row.End && !(offset == row.End && row.Soft) {
-			e.layout.cursor, e.layout.row, e.layout.column, e.layout.positioned = e.Cursor, i, row.Column(e.layout.source, offset), true
-			return e.layout.row, e.layout.column
-		}
+	position := e.Cursor + 2
+	index := max(0, sort.Search(len(e.layout.runeStarts), func(i int) bool { return e.layout.runeStarts[i] > position })-1)
+	row := e.layout.rows[index]
+	offset := row.Start
+	for left := position - e.layout.runeStarts[index]; left > 0 && offset < len(e.layout.source); left-- {
+		_, size := utf8.DecodeRuneInString(e.layout.source[offset:])
+		offset += size
 	}
-	return len(e.layout.rows) - 1, 0
+	e.layout.cursor, e.layout.row, e.layout.column, e.layout.positioned = e.Cursor, index, row.Column(e.layout.source, offset), true
+	return e.layout.row, e.layout.column
 }
 func (e *Editor) Window(width, maxRows int) Window {
 	e.prepareLayout(width)
 	row, x := e.position()
 	first := max(0, row-max(1, maxRows)+1)
 	end := min(len(e.layout.rows), first+max(1, maxRows))
-	return Window{Source: e.layout.source, Rows: e.layout.rows[first:end], CursorX: x, CursorRow: row - first}
+	return Window{Source: e.layout.source, Rows: e.layout.rows[first:end], CursorX: x, CursorRow: row - first, runeStarts: e.layout.runeStarts[first:end]}
 }
 
 func (w Window) Offset(x, row int, after bool) int {
@@ -63,5 +74,8 @@ func (w Window) Offset(x, row int, after bool) int {
 		return 0
 	}
 	offset := w.Rows[row].Offset(w.Source, x, after)
+	if len(w.runeStarts) == len(w.Rows) {
+		return max(0, w.runeStarts[row]+utf8.RuneCountInString(w.Source[w.Rows[row].Start:offset])-2)
+	}
 	return max(0, utf8.RuneCountInString(w.Source[:offset])-2)
 }

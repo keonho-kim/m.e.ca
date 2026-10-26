@@ -106,14 +106,20 @@ func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
 	}
 }
 
-func TestPendingProjectionShowsCountAndNextRequest(t *testing.T) {
+func TestPendingProjectionShowsCountAndEveryRequest(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
 		a := fixture(t)
 		a.language = language
 		a.pending = []string{"first", "second", "third"}
-		a.chatLayout(80)
-		if got := a.chatProjection.pending.Text; got != language.Format("Queued (%d) > ", 3)+"first" {
-			t.Fatalf("queue projection=%q", got)
+		transcript := a.chatLayout(80)
+		rows := transcript.Window(0, transcript.Count())
+		var lines []string
+		for _, row := range rows {
+			lines = append(lines, row.Text)
+		}
+		want := language.Format("Queued (%d)", 3) + "\n  1. first\n  2. second\n  3. third"
+		if got := strings.Join(lines, "\n"); got != want {
+			t.Fatalf("queue projection=%q; want %q", got, want)
 		}
 		a.restorePending()
 		a.chatLayout(80)

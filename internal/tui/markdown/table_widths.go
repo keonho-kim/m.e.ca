@@ -7,7 +7,7 @@ package markdown
 import (
 	"strings"
 
-	"github.com/rivo/uniseg"
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 )
 
 func tableWidths(rows [][]tableCell, width int) []int {
@@ -18,7 +18,7 @@ func tableWidths(rows [][]tableCell, width int) []int {
 				natural = append(natural, 1)
 			}
 			for part := range strings.SplitSeq(line(cell.spans).Text, "\n") {
-				natural[i] = max(natural[i], uniseg.StringWidth(part))
+				natural[i] = max(natural[i], textlayout.Width(part))
 			}
 		}
 	}

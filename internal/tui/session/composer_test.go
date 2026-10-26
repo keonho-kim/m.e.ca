@@ -76,11 +76,11 @@ func TestFixedSystemScopeOnSessionRestore(t *testing.T) {
 	}
 }
 
-func TestPermissionCommandIsUnavailable(t *testing.T) {
+func TestPermissionCommandOpensSettings(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!permission")
 	a.submit()
-	if a.page != "chat" || a.status == "" || len(a.commandHints) != 0 {
-		t.Fatal("removed permission command remains available")
+	if a.page != "permission" || a.status != "" || len(a.commandHints) != 0 {
+		t.Fatal("permission settings did not open")
 	}
 }

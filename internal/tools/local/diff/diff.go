@@ -1,7 +1,7 @@
 // Purpose: Format complete file changes as bounded line-level unified approval previews.
 // Pattern: Pure Function (bounded Myers line matching).
 // Usage: Tool preparation supplies the exact original and frozen replacement bytes.
-// Related: internal/tools/local/diff/diff_test.go, internal/tools/local/executor.go.
+// Related: internal/tools/local/diff/match.go, internal/tools/local/diff/region.go, internal/tools/local/candidate.go.
 package diff
 
 import (
@@ -19,7 +19,22 @@ type line struct {
 	text string
 }
 
+// Analyze shares exact line matching between the preview and approval metadata.
+func Analyze(path string, before, after []byte, existed, exists bool) (string, int, int, error) {
+	preview, added, deleted, exact := preview(path, before, after, existed, exists)
+	if exact {
+		return preview, added, deleted, nil
+	}
+	added, deleted, err := Count(before, after)
+	return preview, added, deleted, err
+}
+
 func Preview(path string, before, after []byte, existed, exists bool) string {
+	text, _, _, _ := preview(path, before, after, existed, exists)
+	return text
+}
+
+func preview(path string, before, after []byte, existed, exists bool) (string, int, int, bool) {
 	oldPath, newPath := path, path
 	if !existed {
 		oldPath = "/dev/null"
@@ -31,21 +46,32 @@ func Preview(path string, before, after []byte, existed, exists bool) string {
 	fmt.Fprintf(&out, "--- %s\n+++ %s\n", oldPath, newPath)
 	if bytes.Equal(before, after) {
 		out.WriteString("No content changes.\n")
-		return out.String()
+		return out.String(), 0, 0, true
 	}
 	if !utf8.Valid(before) || !utf8.Valid(after) || bytes.IndexByte(before, 0) >= 0 || bytes.IndexByte(after, 0) >= 0 {
 		fmt.Fprintf(&out, "Binary content changed: %d bytes (%x) -> %d bytes (%x)\n", len(before), sha256.Sum256(before), len(after), sha256.Sum256(after))
-		return out.String()
+		return out.String(), 0, 0, false
 	}
+	before, after, skipped := contextRegion(before, after)
+	n, m := lineCount(before), lineCount(after)
 	// Avoid allocating a slice for every line in exceptionally large line counts.
-	if bytes.Count(before, []byte{'\n'}) > 65536 || bytes.Count(after, []byte{'\n'}) > 65536 {
-		fmt.Fprintf(&out, "@@ -%s +%s @@\n", span(1, lineCount(before)), span(1, lineCount(after)))
+	// Complete creation/deletion also needs no matching trace or line slice.
+	if n == 0 || m == 0 || n > 65536 || m > 65536 {
+		fmt.Fprintf(&out, "@@ -%s +%s @@\n", span(skipped+1, n), span(skipped+1, m))
 		writeWhole(&out, '-', string(before))
 		writeWhole(&out, '+', string(after))
-		return out.String()
+		return out.String(), m, n, n == 0 || m == 0
 	}
-	ops := match(split(string(before)), split(string(after)))
-	oldLine, newLine := 1, 1
+	ops, exact := match(split(string(before)), split(string(after)))
+	added, deleted := 0, 0
+	for _, op := range ops {
+		if op.kind == '+' {
+			added++
+		} else if op.kind == '-' {
+			deleted++
+		}
+	}
+	oldLine, newLine := skipped+1, skipped+1
 	for cursor := 0; cursor < len(ops); {
 		change := cursor
 		for change < len(ops) && ops[change].kind == ' ' {
@@ -91,7 +117,7 @@ func Preview(path string, before, after []byte, existed, exists bool) string {
 		newLine += newCount
 		cursor = end
 	}
-	return out.String()
+	return out.String(), added, deleted, exact
 }
 func split(text string) []string {
 	if text == "" {
@@ -130,89 +156,4 @@ func writeWhole(out *strings.Builder, kind byte, text string) {
 			writeLine(out, kind, part)
 		}
 	}
-}
-
-func match(before, after []string) []line {
-	n, m := len(before), len(after)
-	var trace [][]int
-	work := 0
-	for d := 0; d <= min(n+m, 256); d++ {
-		current := make([]int, 2*d+1)
-		for k := -d; k <= d; k += 2 {
-			x := 0
-			if d > 0 {
-				prev := trace[d-1]
-				if k == -d || k != d && prev[k-1+d-1] < prev[k+1+d-1] {
-					x = prev[k+1+d-1]
-				} else {
-					x = prev[k-1+d-1] + 1
-				}
-			}
-			y := x - k
-			work++
-			for x < n && y < m && before[x] == after[y] {
-				x++
-				y++
-				work++
-				if work > 1000000 {
-					return expanded(before, after)
-				}
-			}
-			if work > 1000000 {
-				return expanded(before, after)
-			}
-			current[k+d] = x
-			if x >= n && y >= m {
-				trace = append(trace, current)
-				return backtrack(before, after, trace)
-			}
-		}
-		trace = append(trace, current)
-	}
-	return expanded(before, after)
-}
-func backtrack(before, after []string, trace [][]int) []line {
-	x, y := len(before), len(after)
-	var reversed []line
-	for d := len(trace) - 1; d > 0; d-- {
-		k, prev := x-y, trace[d-1]
-		previousK := k - 1
-		if k == -d || k != d && prev[k-1+d-1] < prev[k+1+d-1] {
-			previousK = k + 1
-		}
-		previousX := prev[previousK+d-1]
-		previousY := previousX - previousK
-		for x > previousX && y > previousY {
-			x--
-			y--
-			reversed = append(reversed, line{' ', before[x]})
-		}
-		if x == previousX {
-			y--
-			reversed = append(reversed, line{'+', after[y]})
-		} else {
-			x--
-			reversed = append(reversed, line{'-', before[x]})
-		}
-	}
-	for x > 0 && y > 0 {
-		x--
-		y--
-		reversed = append(reversed, line{' ', before[x]})
-	}
-	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
-		reversed[i], reversed[j] = reversed[j], reversed[i]
-	}
-	return reversed
-}
-func expanded(before, after []string) []line {
-	// A bounded fallback remains a complete valid diff; never silently omit changes.
-	ops := make([]line, 0, len(before)+len(after))
-	for _, text := range before {
-		ops = append(ops, line{'-', text})
-	}
-	for _, text := range after {
-		ops = append(ops, line{'+', text})
-	}
-	return ops
 }

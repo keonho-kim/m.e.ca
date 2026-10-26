@@ -19,7 +19,7 @@ import (
 
 const payloadThreshold = 32 * 1024
 
-func putPayload(ctx context.Context, tx *sql.Tx, raw []byte) (string, error) {
+func (s *Store) putPayload(ctx context.Context, tx *sql.Tx, raw []byte) (string, error) {
 	digest := sha256.Sum256(raw)
 	id := hex.EncodeToString(digest[:])
 	var exists int
@@ -29,20 +29,13 @@ func putPayload(ctx context.Context, tx *sql.Tx, raw []byte) (string, error) {
 	if exists > 0 {
 		return id, nil
 	}
-	var compressed bytes.Buffer
-	w, err := gzip.NewWriterLevel(&compressed, gzip.BestSpeed)
+	compressed, err := s.codec.encode(raw)
 	if err != nil {
 		return "", err
 	}
-	if _, err = w.Write(raw); err != nil {
-		return "", errors.Join(err, w.Close())
-	}
-	if err = w.Close(); err != nil {
-		return "", err
-	}
 	codec, body := 0, raw
-	if compressed.Len() < len(raw) {
-		codec, body = 1, compressed.Bytes()
+	if len(compressed) < len(raw) {
+		codec, body = 2, compressed
 	}
 	_, err = tx.ExecContext(ctx, "INSERT INTO payloads(id,codec,raw_bytes,body) VALUES(?,?,?,?)", id, codec, len(raw), body)
 	return id, err
@@ -66,6 +59,12 @@ func (s *Store) payload(ctx context.Context, id string) (json.RawMessage, error)
 		}
 		decoded, readErr := io.ReadAll(io.LimitReader(r, int64(size)+1))
 		if err := errors.Join(readErr, r.Close()); err != nil {
+			return nil, err
+		}
+		body = decoded
+	case 2:
+		decoded, err := s.codec.decode(body, size)
+		if err != nil {
 			return nil, err
 		}
 		body = decoded

@@ -54,7 +54,7 @@ func New(options Options) agentsession.Request {
 		Session: options.Session.ID, ProjectRoot: options.Session.ProjectRoot,
 		Model: selected.Model, Provider: selected.Connection.ID,
 		Thinking: thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(),
-		Settings: policy.Settings{Scope: policy.System}, Limits: options.Config.Loop, Inference: &parameters,
+		Settings: policy.Settings{Scope: policy.System, Permission: options.Config.Permission}, Limits: options.Config.Loop, Inference: &parameters,
 		Redact: options.Vault.Redact, RedactionVersion: options.Vault.RedactionVersion,
 		NewStreamMask: options.Vault.NewStreamMask, PollSteering: options.PollSteering,
 	}

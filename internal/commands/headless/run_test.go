@@ -47,7 +47,8 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
 		json, approve bool
-	}{{"print", false, false}, {"json", true, false}, {"approval", true, true}} {
+		allMighty     bool
+	}{{"print", false, false, false}, {"json", true, false, false}, {"approval", true, true, false}, {"all_mighty", true, true, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			home := t.TempDir()
@@ -70,6 +71,9 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 			}
 			t.Cleanup(func() { executor.Close() })
 			settings := policy.Settings{Scope: policy.System}
+			if tc.allMighty {
+				settings.Permission = policy.PermissionAllMighty
+			}
 			cfg := config.Defaults()
 			path := filepath.Join(project, "hello.txt")
 			if tc.approve {
@@ -79,7 +83,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 			runner := run.Runner{Generator: g, Journal: store, Tools: executor, Session: store.Session().ID, Model: "fixture", Settings: settings, Redact: func(s string) string { return s }}
 			var output bytes.Buffer
 			err = Run(ctx, sessionrun.Request{Runner: runner, Store: store, Text: "Create hello.txt", Compaction: cfg.Compaction.Settings, ProjectInstructions: executor.ProjectInstructions, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, &output, tc.json)
-			if tc.approve {
+			if tc.approve && !tc.allMighty {
 				if err == nil {
 					t.Fatal("noninteractive approval was bypassed")
 				}
@@ -90,7 +94,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				body, err := os.ReadFile(filepath.Join(project, "hello.txt"))
+				body, err := os.ReadFile(path)
 				if err != nil || string(body) != "hello\n" {
 					t.Fatalf("file=%q %v", body, err)
 				}
@@ -99,6 +103,9 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				}
 			}
 			if tc.json {
+				if tc.allMighty && !strings.Contains(output.String(), `"approval_source":"all_mighty"`) {
+					t.Fatal("automatic approval missing from execution log")
+				}
 				for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
 					if !json.Valid([]byte(line)) {
 						t.Fatalf("non-JSON stdout %q", line)

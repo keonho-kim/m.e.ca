@@ -23,8 +23,19 @@ func (state *streamState) routerDetails(blocks []json.RawMessage, streaming bool
 		if state.reasoningBytes > modelapi.MaxResponseBytes {
 			return "", &modelapi.OutputLimitError{Reason: "provider continuation state byte limit"}
 		}
-		state.reasoningDetails = append(state.reasoningDetails, raw)
-		state.reasoningStream = state.reasoningStream || streaming
+		if !streaming {
+			state.reasoningDetails = append(state.reasoningDetails, raw)
+		} else if draft := state.reasoningDraft; draft != nil && draft.accepts(block) {
+			if err := draft.append(raw, block); err != nil {
+				return "", err
+			}
+		} else {
+			if err := state.flushRouterDraft(); err != nil {
+				return "", err
+			}
+			state.reasoningDraft = &routerDraft{header: block, raw: raw}
+			state.reasoningDraft.text.WriteString(block.Text + block.Summary)
+		}
 		if block.Type == "reasoning.text" {
 			text.WriteString(block.Text)
 		} else if block.Type == "reasoning.summary" {
@@ -105,42 +116,22 @@ func (draft *routerDraft) body() (json.RawMessage, error) {
 	return json.Marshal(draft.fields)
 }
 
-func routerContinuation(blocks []json.RawMessage, streaming bool) ([]byte, error) {
-	if !streaming {
-		return json.Marshal(blocks)
-	}
-	var completed []json.RawMessage
-	var draft *routerDraft
-	flush := func() error {
-		if draft == nil {
-			return nil
-		}
-		body, err := draft.body()
-		if err != nil {
-			return err
-		}
-		completed = append(completed, body)
-		return nil
-	}
-	for _, raw := range blocks {
-		var header routerHeader
-		if err := json.Unmarshal(raw, &header); err != nil {
-			return nil, err
-		}
-		if draft != nil && draft.accepts(header) {
-			if err := draft.append(raw, header); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if err := flush(); err != nil {
-			return nil, err
-		}
-		draft = &routerDraft{header: header, raw: raw}
-		draft.text.WriteString(header.Text + header.Summary)
-	}
-	if err := flush(); err != nil {
+func (state *streamState) routerContinuation() ([]byte, error) {
+	if err := state.flushRouterDraft(); err != nil {
 		return nil, err
 	}
-	return json.Marshal(completed)
+	return json.Marshal(state.reasoningDetails)
+}
+
+func (state *streamState) flushRouterDraft() error {
+	if state.reasoningDraft == nil {
+		return nil
+	}
+	body, err := state.reasoningDraft.body()
+	if err != nil {
+		return err
+	}
+	state.reasoningDetails = append(state.reasoningDetails, body)
+	state.reasoningDraft = nil
+	return nil
 }

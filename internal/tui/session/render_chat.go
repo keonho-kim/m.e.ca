@@ -26,6 +26,7 @@ func (a *app) renderChat(width, height int) {
 	window, layout, references := a.chatComposer(width, height)
 	a.inputRegion = inputRegion{editor: &a.editor, window: window, y: layout.InputY, width: width, revision: a.editor.Revision()}
 	available := layout.TranscriptRows
+	a.revealPending(transcript, available)
 	start := transcript.Start(&a.output, available)
 	lines := transcript.Window(start, available)
 	if a.scrollbar.x != width-1 {
@@ -39,6 +40,6 @@ func (a *app) renderChat(width, height int) {
 	if a.selectedTranscript != nil && (a.textSelection.Active() || a.textSelection.Dragging()) {
 		lines = a.selectedTranscript
 	}
-	view.Chat(a.screen, view.ChatDisplay{Notice: a.composerNotice(), Activity: a.activity(), Usage: a.displayTokens(), Lines: lines, Scrollbar: a.scrollbar.bar, Input: window, References: references, Layout: layout, Candidates: a.candidates()}, width)
+	view.Chat(a.screen, view.ChatDisplay{Notice: a.composerNotice(), Activity: a.activity(), Usage: a.displayTokens(), Lines: lines, FocusedID: a.chatProjection.focusedID, Scrollbar: a.scrollbar.bar, Input: window, References: references, Layout: layout, Candidates: a.candidates()}, width)
 	a.captureChatSources(lines, available)
 }

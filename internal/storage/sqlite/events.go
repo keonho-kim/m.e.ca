@@ -20,7 +20,7 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event run.Event
 	return s.Commit(ctx, session, []run.JournalRecord{{Event: &event}})
 }
 
-func writeEvent(ctx context.Context, tx *sql.Tx, session string, event run.Event, now string) error {
+func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event run.Event, now string) error {
 	if err := event.Check(); err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func writeEvent(ctx context.Context, tx *sql.Tx, session string, event run.Event
 	if len(body) > maxEventBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
-	packed, refs, err := packRecord(ctx, tx, body)
+	packed, refs, err := s.packRecord(ctx, tx, body)
 	if err != nil {
 		return err
 	}

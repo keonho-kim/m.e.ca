@@ -9,26 +9,44 @@ import "github.com/keonho-kim/meca/internal/tui/viewport"
 type chatProjection struct {
 	thinking, stream, status, pending viewport.Block
 	layout                            viewport.Transcript
+	queued                            []pendingBlock
+	live                              []*viewport.Block
+	redactionVersion, focusedID       int
 }
 
 func (a *app) chatLayout(width int) *viewport.Transcript {
 	p := &a.chatProjection
+	queueAnchor := -1
+	if !a.output.Follow && p.pending.Text != "" {
+		offset := a.output.AnchorID - p.pending.ID
+		if offset >= 0 && offset <= len(p.queued) {
+			queueAnchor = offset
+		}
+	}
 	p.thinking.Text, p.thinking.Thinking, p.thinking.Markdown = a.thinking, true, true
 	p.stream.Text, p.stream.Markdown = a.stream, true
 	p.status.Text = a.status
-	pending := ""
-	if len(a.pending) > 0 {
-		pending = a.language.Format("Queued (%d) > ", len(a.pending)) + a.opts.Vault.Redact(a.pending[0])
-	}
-	p.pending.Text, p.pending.Thinking = pending, true
+	a.projectPending()
 	next := a.output.Next + 1
-	live := []*viewport.Block{&p.thinking, &p.stream, &p.status, &p.pending}
-	for _, block := range live {
+	clear(p.live)
+	p.live = append(p.live[:0], &p.thinking, &p.stream, &p.status, &p.pending)
+	for i := range p.queued {
+		p.live = append(p.live, &p.queued[i].block)
+	}
+	for _, block := range p.live {
 		block.ID = next
 		if block.Count(width) > 0 {
 			next++
 		}
 	}
-	p.layout.Prepare(width, a.output.Blocks, live)
+	p.focusedID = 0
+	if a.pendingEdit != nil {
+		p.focusedID = p.queued[a.pendingEdit.index].block.ID
+	}
+	if queueAnchor >= 0 && len(p.queued) > 0 {
+		// History and live blocks precede these contiguous queue IDs and may grow.
+		a.output.AnchorID = p.pending.ID + min(queueAnchor, len(p.queued))
+	}
+	p.layout.Prepare(width, a.output.Blocks, p.live)
 	return &p.layout
 }

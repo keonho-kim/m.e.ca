@@ -10,7 +10,6 @@ import (
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/extension"
 	extast "github.com/yuin/goldmark/v2/extension/ast"
-	"github.com/yuin/goldmark/v2/parser"
 	"strings"
 )
 
@@ -34,7 +33,7 @@ func Render(text string, width int) []Line {
 		return literal(text)
 	}
 	r := renderer{source: []byte(text), width: width}
-	document := newParser().Parse(r.source)
+	document := documentParser.Parse(r.source)
 	r.blocks(document, "", 0)
 	if r.failed {
 		return literal(text)
@@ -60,24 +59,22 @@ func (r *renderer) blank() {
 	}
 }
 func (r *renderer) emit(prefix string, spans []Span) {
-	parts := []Span{{Text: prefix, Style: Dim}}
-	parts = append(parts, spans...)
 	// Explicit hard breaks produce real rows before terminal-width wrapping.
 	var current []Span
-	for _, span := range parts {
-		chunks := strings.Split(span.Text, "\n")
-		for i, chunk := range chunks {
-			if i > 0 {
-				r.rows = append(r.rows, line(current))
-				current = nil
-			}
+	current = add(current, prefix, Dim)
+	for _, span := range spans {
+		text := span.Text
+		for {
+			chunk, rest, more := strings.Cut(text, "\n")
 			current = add(current, chunk, span.Style)
+			if !more {
+				break
+			}
+			r.rows = append(r.rows, line(current))
+			current, text = nil, rest
 		}
 	}
 	r.rows = append(r.rows, line(current))
-}
-func newParser() parser.Parser {
-	return parser.New(parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser))
 }
 
 func (r *renderer) blocks(parent ast.Node, indent string, depth int) {

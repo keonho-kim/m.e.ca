@@ -20,7 +20,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		return
 	}
 	e = input.NormalizeKey(e)
-	if a.selectionKey(e) {
+	if a.pendingDeleteKey(e) || a.selectionKey(e) {
 		return
 	}
 	a.stopNotice = ""
@@ -53,6 +53,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	}
 	if a.page == "language" {
 		a.languageKey(e)
+		return
+	}
+	if a.page == "permission" {
+		a.permissionKey(e)
 		return
 	}
 	if e.Key() == tcell.KeyCtrlO && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {

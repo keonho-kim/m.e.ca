@@ -65,6 +65,10 @@ func TestCountMatchesShortestEditsForRepeatedLines(t *testing.T) {
 			if err != nil || added+deleted != row[len(right)] || added-deleted != len(right)-len(left) {
 				t.Fatalf("%q -> %q: %d+%d want %d; %v", before, after, added, deleted, row[len(right)], err)
 			}
+			_, sharedAdded, sharedDeleted, sharedErr := Analyze("file", []byte(before), []byte(after), true, true)
+			if sharedErr != nil || sharedAdded != added || sharedDeleted != deleted {
+				t.Fatalf("shared matching differs from shortest edits: %q -> %q: %d/%d/%v", before, after, sharedAdded, sharedDeleted, sharedErr)
+			}
 		}
 	}
 }

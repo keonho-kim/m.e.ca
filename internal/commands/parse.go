@@ -23,6 +23,7 @@ const (
 	Exit
 	NewSession
 	Language
+	Permission
 )
 
 const MaxInputBytes = 16 * 1024 * 1024

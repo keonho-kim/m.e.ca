@@ -31,6 +31,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 	if a.page == "language" {
 		return a.languageShortcuts()
 	}
+	if a.page == "permission" {
+		return a.permissionShortcuts()
+	}
 	if a.page == "chat" && a.pendingEdit != nil {
 		return a.pendingEditShortcuts()
 	}
@@ -125,7 +128,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		controls = append(controls, view.Shortcut{Key: "^O", Label: label})
 	}
 	if a.canEditPending() {
-		controls = append(controls, view.Shortcut{Key: "Shift+←", Label: "Edit queue"})
+		controls = append(controls, view.Shortcut{Key: "Shift+↑/←", Label: "Edit queue"})
 	}
 	return append(shortcuts, controls...)
 }

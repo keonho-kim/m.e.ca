@@ -91,7 +91,7 @@ meca --session SESSION_ID --export > session.jsonl
 meca --diagnose
 ```
 
-먼저 `!model`에서 기본 연결을 저장합니다. print는 최종 답변, JSON 모드는 순서 있는 이벤트를 stdout에 기록하며 같은 에이전트 루프·세션·파일 보호 정책을 사용합니다. 비대화형 실행의 필수 승인 요청은 명시적으로 차단합니다. 세션 ID는 첫 JSON `session` 이벤트의 `session_id` 또는 `~/.meca/sessions/<project-key>/`의 DB 파일명으로 확인합니다. Export는 원본 세션 이력을 JSONL로 출력합니다.
+먼저 `!model`에서 기본 연결을 저장합니다. print는 최종 답변, JSON 모드는 순서 있는 이벤트를 stdout에 기록하며 같은 에이전트 루프·세션·파일 보호 정책을 사용합니다. 비대화형 실행은 기본 모드에서 승인 대상 작업을 중단하고 All Mighty에서는 사용자 질문 없이 자동 승인합니다. 세션 ID는 첫 JSON `session` 이벤트의 `session_id` 또는 `~/.meca/sessions/<project-key>/`의 DB 파일명으로 확인합니다. Export는 원본 세션 이력을 JSONL로 출력합니다.
 
 ### 완전히 삭제하기
 
@@ -130,6 +130,7 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 | --- | --- |
 | `!model` | 모델 연결, 추론 켜기·끄기와 지원되는 추론 강도 선택 |
 | `!language` | 화면 언어 설정 · 시스템 기본값 / 한국어 / English · 저장 확인 |
+| `!permission` | 실행 승인 설정 · 기본 / All Mighty · 저장 확인 |
 | `!dir [path]` | 파일·디렉터리 탐색 |
 | `!new` | 같은 프로젝트에서 새 세션 시작 · 전역 모델 연결 유지 |
 | `!quit` | 현재 작업을 취소·정리하고 종료 |
@@ -143,17 +144,17 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 | `Enter` / `Shift+Enter` | 전송 / 줄바꿈 |
 | 입력창 `↑↓` / `Ctrl/Cmd+↑↓` | 줄 이동 / 이전 입력 탐색 |
 | 작업 중 `Enter` / `Tab` | 다음 판단에 방향 수정 / 개수 제한 없이 후속 요청 예약 |
-| `Shift+←` / 큐 편집 중 `Shift+←/→` | 마지막 예약 열기 / 이전·다음 예약 탐색 |
-| 큐 편집 중 `Enter`·`Tab` / `Esc` / `Ctrl+D` | 수정 저장 / 편집 취소 / 선택한 예약 삭제 |
+| `Shift+↑/←` / 큐 편집 중 `Shift+↑↓/←→` | 마지막 예약 열기 / 이전·다음 예약 탐색 |
+| 큐 편집 중 `Enter`·`Tab` / `Esc` / `Ctrl/Cmd+Backspace` | 수정 저장 / 편집 취소 / 선택한 예약 삭제 |
 | `Esc` | 열린 UI·편집 닫기 · 일반 채팅에서는 작업 중지 |
 | `Ctrl+O` | 도구 결과 전체 접기·펼치기 · 기본 펼침 |
 | 선택 후 `Ctrl/Cmd+C` | 선택한 원문 복사 · 선택 없는 `Ctrl+C`는 종료 |
 
 입력창에서 선택한 내용은 Backspace로 삭제합니다. 긴 대화는 오른쪽 스크롤바로 탐색하며, 위에서는 읽던 위치를 유지하고 하단에서는 새 출력을 따라갑니다. 키 전달은 터미널 설정에 따라 달라질 수 있습니다. [전체 키맵과 조작 →](docs/usage.md)
 
-작업 중 요청을 작성하고 `Tab`을 누르면 대기열 끝에 추가됩니다. 현재 작업이 끝나면 예약 순서대로 하나씩 실행하며, 화면에는 대기 건수와 다음 요청을 표시합니다. `Esc` 중지·작업 실패 시 남은 요청은 작성 중인 입력 앞에 순서대로 복구합니다. 대기열은 현재 실행 중인 세션에서 관리하며 실행된 요청부터 대화 DB에 기록합니다.
+작업 중 요청을 작성하고 `Tab`을 누르면 대기열 끝에 추가됩니다. 현재 작업이 끝나면 예약 순서대로 하나씩 실행합니다. 화면에는 `Queued (N)`(한국어 UI는 `예약 (N)`) 아래에 모든 대기 요청을 번호순 회색 목록으로 표시하며 긴 목록은 스크롤로 탐색합니다. `Esc` 중지·작업 실패 시 남은 요청은 작성 중인 입력 앞에 순서대로 복구합니다. 대기열은 현재 실행 중인 세션에서 관리하며 실행된 요청부터 대화 DB에 기록합니다.
 
-채팅에서 `Shift+←`로 마지막 예약을 열고 `Shift+←/→`로 이동해 기존 입력창에서 수정합니다. 입력창 위에 `예약 편집 2 / 5`처럼 위치를 표시하며, 마지막 예약 다음으로 이동하면 원래 작성 중인 입력으로 돌아갑니다. `Enter`·`Tab`은 같은 큐 위치에 저장하고 복귀하며, `Esc`는 원문을 유지한 채 편집만 취소합니다. `Ctrl+D`는 선택한 예약 자체를 삭제합니다. 미저장 수정은 저장·취소 후 이동할 수 있습니다. 편집 중에도 현재 작업은 계속하며 다음 예약 시작만 보류합니다. 편집 종료 후에는 작업의 성공·실패에 따라 실행을 재개하거나 남은 요청을 초안으로 복구합니다.
+채팅에서 `Shift+↑` 또는 `Shift+←`로 가장 아래 예약을 열고, `Shift+↑/←`로 이전 항목, `Shift+↓/→`로 다음 항목을 선택합니다. 선택한 요청은 푸른색과 굵기로 강조하고 기존 입력창에 표시하며, 화면 밖 항목은 보이도록 스크롤합니다. 입력창 위에는 `예약 편집 2 / 5`처럼 위치를 표시합니다. 마지막 예약 다음으로 이동하면 원래 작성 중인 입력으로 돌아갑니다. `Enter`·`Tab`은 큐 순서를 유지한 채 해당 항목을 바꾸고 복귀하며, `Esc`는 원문을 유지한 채 편집만 취소합니다. `Ctrl/Cmd+Backspace`는 선택한 예약 자체를 삭제합니다. 미저장 수정은 저장·취소 후 이동할 수 있습니다. 편집 중에도 현재 작업은 계속하며 다음 예약 시작만 보류합니다. 편집 종료 후에는 작업의 성공·실패에 따라 실행을 재개하거나 남은 요청을 초안으로 복구합니다.
 
 ### 사용량
 
@@ -165,7 +166,7 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 
 `!dir`에서 현재 보고 있는 폴더의 파일이 바뀌면 목록과 열린 미리보기를 자동으로 갱신합니다. 작성 중인 요청과 선택은 유지하며 화면을 닫으면 감시도 종료합니다.
 
-`!model`과 `!language`는 한 화면에서 값을 편집하고 `Enter`로 저장을 확인합니다. 확인 중 `y`는 저장 후 채팅 복귀, `n`은 변경을 버리고 복귀, `Esc`는 설정 편집을 계속합니다. `!new`와 `!quit`는 즉시 실행합니다.
+`!model`·`!language`·`!permission`은 한 화면에서 값을 편집하고 `Enter`로 저장을 확인합니다. 확인 중 `y`는 저장 후 채팅 복귀, `n`은 변경을 버리고 복귀, `Esc`는 설정 편집을 계속합니다. `!new`와 `!quit`는 즉시 실행합니다.
 
 `!dir`에서 Space로 선택한 경로는 입력창 위에 표시됩니다. `Shift+Tab`으로 입력창에 이동해 요청을 작성하고 `Enter`로 전송 확인을 엽니다. `y`는 채팅 복귀 후 전송, `n`·`Esc`는 입력을 유지합니다. 탐색·입력 중 `Esc`는 요청을 보내지 않고 바로 채팅으로 돌아갑니다. 미리보기의 `Esc`는 미리보기만 닫으며 `:q`는 파일 탐색 입력에서 일반 텍스트입니다.
 
@@ -208,6 +209,7 @@ M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다. 적�
 
 ```toml
 language = "auto" # auto: 시스템 기본값, ko: 한국어, en: English
+permission = "default" # default: 필요한 작업만 승인 요청, all_mighty: 승인 요청 없이 진행
 
 [agent]
 temperature = 1.0
@@ -230,7 +232,7 @@ max_output_tokens = 12800
 
 ## 개발
 
-단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, go-keyring, fsnotify(파일 변경 알림), uniseg, x/sys, x/term입니다. 테스트에는 goleak·go-cmp·creack/pty를 사용합니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite는 CGO 없이 빌드합니다.
+단일 Go 모듈이며 진입점은 [`cmd/meca`](cmd/meca)입니다. 주요 의존성은 mvdan/sh(셸 구문 분석), goldmark, tcell, go-toml, modernc SQLite, klauspost/compress(Zstandard 대화 저장), go-keyring, fsnotify(파일 변경 알림), uniseg, x/sys, x/term입니다. 테스트에는 goleak·go-cmp·creack/pty를 사용합니다. 버전은 [`go.mod`](go.mod)에 고정하며, SQLite와 압축은 CGO 없이 빌드합니다.
 
 ```sh
 gofmt -l cmd internal

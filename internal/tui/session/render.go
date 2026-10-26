@@ -50,6 +50,8 @@ func (a *app) render() {
 		a.renderModel(w, body)
 	case "language":
 		a.renderLanguage(w, body)
+	case "permission":
+		a.renderPermission(w, body)
 	default:
 		a.renderMenu(w, body)
 	}

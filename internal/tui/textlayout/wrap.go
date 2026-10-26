@@ -43,7 +43,7 @@ func RowsFrom(source string, width, start int, prefix string) iter.Seq[Row] {
 		base := start
 		for {
 			paragraph, rest, more := strings.Cut(source[base:], "\n")
-			if !strings.ContainsRune(paragraph, '\t') && len(prefix)+uniseg.StringWidth(paragraph) <= width {
+			if !strings.ContainsRune(paragraph, '\t') && len(prefix)+Width(paragraph) <= width {
 				if !yield(Row{Text: prefix + paragraph, Prefix: prefix, Start: base, End: base + len(paragraph)}) {
 					return
 				}
@@ -66,8 +66,10 @@ func RowsFrom(source string, width, start int, prefix string) iter.Seq[Row] {
 			g := uniseg.NewGraphemes(paragraph)
 			for g.Next() {
 				start, end := g.Positions()
-				part := strings.ReplaceAll(g.Str(), "\t", "    ")
-				size := uniseg.StringWidth(part)
+				part, size := g.Str(), g.Width()
+				if part == "\t" {
+					part, size = "    ", 4
+				}
 				if cells+size > width && line.Len() > 0 {
 					row.Text, row.End, row.Soft = line.String(), base+start, true
 					if !yield(row) {
@@ -104,7 +106,10 @@ func (r Row) Offset(source string, x int, after bool) int {
 	g := uniseg.NewGraphemes(source[r.Start:r.End])
 	for g.Next() {
 		start, end := g.Positions()
-		size := uniseg.StringWidth(strings.ReplaceAll(g.Str(), "\t", "    "))
+		size := g.Width()
+		if g.Str() == "\t" {
+			size = 4
+		}
 		if x < column+size {
 			if after && x >= column {
 				return r.Start + end
@@ -117,5 +122,5 @@ func (r Row) Offset(source string, x int, after bool) int {
 }
 
 func (r Row) Column(source string, offset int) int {
-	return len(r.Prefix) + uniseg.StringWidth(strings.ReplaceAll(source[r.Start:min(r.End, max(r.Start, offset))], "\t", "    "))
+	return len(r.Prefix) + Width(strings.ReplaceAll(source[r.Start:min(r.End, max(r.Start, offset))], "\t", "    "))
 }

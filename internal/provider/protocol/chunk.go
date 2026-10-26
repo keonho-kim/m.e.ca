@@ -17,7 +17,7 @@ import (
 type streamState struct {
 	reasoningDetails []json.RawMessage
 	reasoningBytes   int
-	reasoningStream  bool
+	reasoningDraft   *routerDraft
 	calls            map[int]*callDraft
 	lmItems          map[string]int
 	provider         modelconn.ProviderKind
@@ -137,8 +137,8 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 		return state.emitFailedUsage(err, emit)
 	}
 	var continuation []byte
-	if len(state.reasoningDetails) > 0 {
-		continuation, err = routerContinuation(state.reasoningDetails, state.reasoningStream)
+	if len(state.reasoningDetails) > 0 || state.reasoningDraft != nil {
+		continuation, err = state.routerContinuation()
 		if err != nil {
 			return err
 		}
