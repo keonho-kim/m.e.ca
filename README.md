@@ -143,7 +143,9 @@ meca uninstall
 2. 자연어로 작업을 요청합니다. 참조할 파일은 `!dir`에서 선택할 수 있습니다.
 3. 변경을 diff로 확인합니다. 일반 작업은 자동 승인하며, 위험 작업은 실행 전에 별도 승인을 받습니다. 분석만 원하면 파일을 바꾸지 말고 분석해 달라고 요청합니다.
 
-OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openrouter.ai/api/v1`로 두고 OpenRouter API Key를 입력하면 됩니다. 모델명 행에서 `→`를 눌러 목록을 열고 부분 검색한 뒤 `↑↓`로 선택하고 `Tab`으로 채웁니다. `Enter`는 모델 선택이 아닌 전체 설정의 저장 확인입니다. [OpenRouter 연결 안내 →](docs/model-connections.md#openrouter-연결)
+모델명 행에서 `→`로 편집을 시작하면 목록을 자동 조회합니다. 입력한 글자로 부분 검색한 뒤 `↑↓`로 선택하고 `Tab`으로 채웁니다. 편집을 마친 뒤 다시 `→`로 들어가면 목록을 갱신하며, 타이핑 중에는 받은 목록으로 검색합니다. 목록 조회가 안 되는 서버에서도 모델 ID를 직접 입력할 수 있습니다. `Enter`는 전체 설정의 저장 확인입니다.
+
+OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openrouter.ai/api/v1`로 두고 OpenRouter API Key를 입력하면 됩니다. [OpenRouter 연결 안내 →](docs/model-connections.md#openrouter-연결)
 
 | Provider | 기본 Base URL |
 | --- | --- |

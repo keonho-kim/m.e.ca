@@ -35,6 +35,27 @@ func TestModelDashboardShowsAllSettings(t *testing.T) {
 	}
 }
 
+func TestModelDashboardCatalogLivesInModelField(t *testing.T) {
+	for _, language := range []locale.Language{locale.Korean, locale.English} {
+		a := fixture(t)
+		a.language = language
+		a.openModel()
+		body := modelScreen(a)
+		if strings.Contains(body, "List models") || strings.Contains(body, "모델 조회") {
+			t.Fatalf("standalone model catalog remains: %s", body)
+		}
+		a.modelForm.row = modelDestination
+		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+		if a.modelForm.row != modelInformation {
+			t.Fatal("model information does not follow the save destination")
+		}
+		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
+		if a.modelForm.row != modelDiagnostic {
+			t.Fatal("connection diagnostics are not reachable")
+		}
+	}
+}
+
 func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 	a := fixture(t)
 	a.language = locale.English

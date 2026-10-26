@@ -175,9 +175,7 @@ func (a *app) changeModelRow(direction int) {
 		f.editing = true
 		if f.row == modelName {
 			f.refreshHints()
-			if f.models == nil {
-				a.queryModelForm("")
-			}
+			a.queryModelForm("")
 		}
 	case modelThinking:
 		if f.prepared == nil && strings.TrimSpace(f.name.String()) != "" {
@@ -225,8 +223,6 @@ func (a *app) changeModelRow(direction int) {
 		f.controlsChanged = true
 	case modelDestination:
 		f.global = !f.global
-	case modelCatalog:
-		a.queryModelForm("")
 	case modelInformation:
 		f.details = !f.details
 	case modelDiagnostic:

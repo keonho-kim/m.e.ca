@@ -65,7 +65,6 @@ func (a *app) renderModel(w, h int) {
 		{Label: "Thinking", Values: thinking, Selected: selectedThinking, Hint: thinkingHint},
 		{Label: "Thinking effort", Values: efforts, Selected: slices.Index(efforts, f.effort)},
 		{Label: "Save destination", Values: []string{a.language.Text("Current session"), a.language.Text("Global override")}, Selected: 0},
-		{Label: "List models", Value: "→"},
 		{Label: "Model information", Value: "→"},
 		{Label: "Connection diagnostics", Value: "→"},
 	}

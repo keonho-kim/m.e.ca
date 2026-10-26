@@ -36,7 +36,7 @@ var controls = []translation{
 	{"", "Parent", "상위"},
 	{"", "Previous page", "이전 목록"},
 	{"", "Next", "다음"},
-	{"", "List models", "모델 조회"},
+	{"", "Inspect model", "모델 확인"},
 	{"", "Connect", "연결"},
 	{"", "Show suggestions", "후보 열기"},
 	{"", "Close list", "목록 닫기"},

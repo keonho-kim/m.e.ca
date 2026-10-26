@@ -56,7 +56,8 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 	a.openModel()
 	f := a.modelForm
 	f.endpoint.Set(server.URL)
-	f.row = modelCatalog
+	f.row = modelName
+	f.name.Set("custom/model")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	select {
 	case <-started:
@@ -72,7 +73,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	if a.page != "model" || a.modelForm != f || f.endpoint.String() != server.URL || a.client != nil {
+	if a.page != "model" || a.modelForm != f || f.endpoint.String() != server.URL || f.name.String() != "custom/model" || a.client != nil {
 		t.Fatal("cancelled lookup changed the active connection or draft")
 	}
 }

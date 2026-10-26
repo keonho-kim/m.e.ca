@@ -54,7 +54,7 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 		label, previous = "Next value", true
 	case modelThinking, modelEffort:
 		if f.prepared == nil && strings.TrimSpace(f.name.String()) != "" {
-			label = "모델 조회"
+			label = "Inspect model"
 			break
 		}
 		options := f.options()
@@ -73,8 +73,6 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 		} else if count == 1 && f.row == modelEffort {
 			label = "선택"
 		}
-	case modelCatalog:
-		label = "모델 조회"
 	case modelInformation:
 		label = "열기"
 		if f.details {

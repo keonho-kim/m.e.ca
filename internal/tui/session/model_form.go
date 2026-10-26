@@ -21,7 +21,6 @@ const (
 	modelThinking
 	modelEffort
 	modelDestination
-	modelCatalog
 	modelInformation
 	modelDiagnostic
 	modelRowCount
