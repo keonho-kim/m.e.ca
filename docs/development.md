@@ -61,7 +61,7 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 
 CLI 분기는 flag, 병렬 도구 합류는 sync.WaitGroup, 재시도 대기는 time.Timer를 사용한다. 검색은 strings·unicode로 부분일치를 우선하고 결과가 없을 때 문자 순서를 유지하는 축약 일치를 찾는다. 메타데이터 재사용은 연결 준비가 소유한 마지막 GET 응답으로 한정한다. 이 사용처에는 별도 CLI·동시성·캐시 프레임워크를 두지 않는다.
 
-Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#직접-빌드하기)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [릴리스 가이드](releases.md)와 GoReleaser 설정을 사용하며 CI·자동 게시 파이프라인은 구성하지 않는다.
+Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#직접-빌드하기)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [Release 워크플로](../.github/workflows/release.yml)와 GoReleaser 설정으로 검사·빌드 후 자동 게시한다. 명시적 major·minor와 같은 날짜의 갱신 정책은 [릴리스 가이드](releases.md)가 소유한다.
 
 ### 개발 도구
 
@@ -88,7 +88,7 @@ GOOS=linux GOARCH=amd64 ./bin/devtools/deadcode -test ./...
 
 govulncheck는 Go 취약점 데이터베이스를 조회한다. 보고서의 영향 버전·호출 경로·수정 버전을 확인하고, 취약점이 발견된 경우 의존성 변경과 관련 테스트를 함께 검토한다. 검사에 실패하거나 데이터베이스에 접근할 수 없었던 경우를 취약점 없음으로 처리하지 않는다.
 
-GoReleaser는 [.goreleaser.yaml](../.goreleaser.yaml)의 macOS·Linux 아카이브를 생성한다. `check`와 게시 없는 `release --snapshot --clean`으로 먼저 검증하고 사용자 요청에 따라 게시한다. nFPM은 Linux 설치 패키지가 필요할 때 사용하는 도구로 등록되어 있다. 현재 배포 형식은 tar.gz이며 제품 실행·일반 빌드·테스트에는 이 도구들이 필요하지 않다.
+GoReleaser는 [.goreleaser.yaml](../.goreleaser.yaml)의 macOS·Linux 아카이브를 생성한다. `check`와 게시 없는 `release --snapshot --clean`으로 로컬 검증하며 `main` 푸시는 자동 게시를 시작한다. 릴리스 준비·게시 경계는 `go test ./scripts/release`로 검사하고 워크플로 변경 시 Actions 문법도 확인한다. nFPM은 Linux 설치 패키지가 필요할 때 사용하는 도구로 등록되어 있다. 현재 배포 형식은 tar.gz이며 제품 실행·일반 빌드·테스트에는 이 도구들이 필요하지 않다.
 
 버전 갱신은 `go get -modfile=devtools/go.mod -tool <패키지>@<버전>`으로 수행한다. 이후 `go -C devtools mod tidy`와 `go -C devtools mod verify`를 실행하고 두 개발 도구 파일의 변경을 검토한다. 도구 요구 버전이 제품의 의존성이나 최소 Go 버전을 바꾸지 않도록 유지한다.
 

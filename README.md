@@ -52,6 +52,8 @@ cd m.e.ca
 
 릴리스 바이너리는 Go 설치 없이 동작합니다. macOS arm64는 Apple Silicon, macOS amd64는 Intel Mac용입니다. Linux/WSL은 `uname -m`이 `x86_64`이면 amd64, `aarch64`이면 arm64를 선택합니다. [검증·배포 절차](docs/releases.md)를 참고하세요.
 
+`main`에 푸시하면 검사·빌드 후 릴리스를 자동으로 갱신합니다. major·minor는 [.release-version](.release-version)에 직접 지정하며, 날짜만 한국 시간 기준으로 바뀝니다. 같은 날짜의 추가 푸시는 그날의 태그와 배포 파일을 갱신합니다.
+
 ### 빌드만 하기
 
 Go 1.27.2 이상을 설치한 환경에서 실행합니다.

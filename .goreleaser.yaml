@@ -37,7 +37,7 @@ checksum:
   name_template: checksums.txt
 
 snapshot:
-  version_template: '0.0.{{ .Now.Format "20060102" }}-snapshot'
+  version_template: '{{ readFile ".release-version" }}.{{ .Now.Format "20060102" }}-snapshot'
 
 changelog:
   disable: true
@@ -48,12 +48,4 @@ release:
     name: m.e.ca
   prerelease: auto
   mode: keep-existing
-  header: |
-    M.E.CA {{ .Tag }}
-
-    macOS / Linux · amd64 / arm64
-
-    Download the archive for your OS and CPU, verify it against checksums.txt,
-    extract it, and run ./meca install. Go is not required for these binaries.
-    Apache License 2.0, project attribution and third-party notices are included
-    in each archive.
+  header: '{{ readFile "docs/release-notes.md" }}'

@@ -112,7 +112,7 @@ execute_command는 전체 셸 구조를 AST로 읽고 단일 검사 목록에 �
 
 API Key는 macOS Keychain 또는 Linux Secret Service에 저장하고 설정·DB에는 참조만 기록한다. 비밀은 모델 문맥·출력·로그·저장 이벤트에서 제거한다. 원격 대화 저장에 의존하지 않고 로컬 이력으로 문맥을 구성한다.
 
-Go 빌드는 컴파일만 한다. ./install.sh 또는 meca install이 ~/.local/bin/meca 설치·bootstrap·필요한 PATH 등록을 담당한다. install.sh는 Go가 없으면 공식 macOS·Linux arm64·amd64 SDK를 고정 SHA-256으로 검증해 저장소 .cache에 임시 설치하고 완료·실패 시 정리한다. meca uninstall은 실행 중인 MECA가 없는 상태에서 설치 파일·등록 블록·~/.meca·MECA가 저장한 인증정보를 정리하고 사용자 프로젝트·공용 캐시는 보존한다. 릴리스는 같은 네 플랫폼의 실행 파일·프로젝트 라이선스·저작권·외부 라이선스 고지를 tar.gz로 배포하며 Go 설치가 필요 없다. 버전과 게시 절차는 [릴리스 가이드](docs/releases.md)를 따른다.
+Go 빌드는 컴파일만 한다. ./install.sh 또는 meca install이 ~/.local/bin/meca 설치·bootstrap·필요한 PATH 등록을 담당한다. install.sh는 Go가 없으면 공식 macOS·Linux arm64·amd64 SDK를 고정 SHA-256으로 검증해 저장소 .cache에 임시 설치하고 완료·실패 시 정리한다. meca uninstall은 실행 중인 MECA가 없는 상태에서 설치 파일·등록 블록·~/.meca·MECA가 저장한 인증정보를 정리하고 사용자 프로젝트·공용 캐시는 보존한다. 릴리스는 같은 네 플랫폼의 실행 파일·프로젝트 라이선스·저작권·외부 라이선스 고지를 tar.gz로 배포하며 Go 설치가 필요 없다. main 푸시는 검사·빌드 후 자동 게시하며 major·minor는 .release-version의 명시값을 사용하고 날짜만 한국 시간 기준으로 갱신한다. 같은 날짜의 후속 푸시는 해당 태그와 배포 파일을 갱신한다. 버전과 게시 절차는 [릴리스 가이드](docs/releases.md)를 따른다.
 
 ## 구현과 검증
 
