@@ -78,6 +78,13 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	if string(value) == "null" {
 		return fmt.Errorf("%s cannot be null", p.Name)
 	}
+	if p.Kind == Integer {
+		var number int
+		if json.Unmarshal(value, &number) != nil || number < 0 || number > p.Max {
+			return fmt.Errorf("%s requires an integer from 0 to %d", p.Name, p.Max)
+		}
+		return nil
+	}
 	if p.Kind == ObjectList {
 		var entries []json.RawMessage
 		if err := json.Unmarshal(value, &entries); err != nil || len(entries) == 0 || len(entries) > p.Max {

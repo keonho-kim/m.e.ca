@@ -37,8 +37,15 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 			return nil, fmt.Errorf("tool arguments contain a protected credential")
 		}
 	}
-	op := &operation{executor: executor, settings: settings, spec: spec, input: input}
+	op := &operation{executor: executor, settings: settings, spec: spec, input: input, callID: call.ID}
 	op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.Label}
+	if commandControl(spec.Name) {
+		op.approval.Target = input.CommandID
+		return op, nil
+	}
+	if spec.Effect != policy.Command && executor.activeCommands() {
+		return nil, fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
+	}
 	if spec.Effect == policy.Command {
 		if settings.Scope != policy.System {
 			return nil, fmt.Errorf("host shell execution requires system Scope; directory confinement is unavailable")

@@ -38,7 +38,7 @@ func (f *Facts) Observe(op Operation) {
 			files[change.Destination] = observedFile(op, change.Destination, change.AfterDigest, true)
 		}
 	}
-	if op.Name == "execute_command" {
+	if op.Name == "execute_command" || op.Name == "wait_command" || op.Name == "cancel_command" {
 		status := "not_started"
 		var exit *int
 		if op.Started {
@@ -50,11 +50,30 @@ func (f *Facts) Observe(op Operation) {
 		}
 		if op.Process != nil {
 			status = op.Process.Status
-			n := op.Process.ExitCode
-			exit = &n
+			if status != "running" {
+				n := op.Process.ExitCode
+				exit = &n
+			}
+			if op.Process.Command != "" {
+				op.Command = op.Process.Command
+			}
 		}
 		command, c := reportExcerpt(op.Command)
-		f.Commands = append(f.Commands, CommandFact{CallID: op.CallID, Command: command, Status: status, ExitCode: exit, Excerpt: c, ObservedRun: op.RunID, Revision: op.Revision})
+		fact := CommandFact{CallID: op.CallID, Command: command, Status: status, ExitCode: exit, Excerpt: c, ObservedRun: op.RunID, Revision: op.Revision}
+		if op.Process != nil {
+			fact.CommandID = op.Process.CommandID
+		}
+		replaced := false
+		for i, previous := range f.Commands {
+			if fact.CommandID != "" && previous.CommandID == fact.CommandID {
+				f.Commands[i] = fact
+				replaced = true
+				break
+			}
+		}
+		if !replaced && command != "" {
+			f.Commands = append(f.Commands, fact)
+		}
 	}
 	f.Files = nil
 	for _, v := range files {

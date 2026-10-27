@@ -14,6 +14,7 @@ import (
 )
 
 type operation struct {
+	callID         string
 	directories    []directoryTarget
 	directoryPaths []string
 	executor       *Executor
@@ -53,6 +54,10 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 		if !op.shell.same(current) {
 			return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and retry with the intended paths."}
 		}
+	} else if commandControl(op.spec.Name) {
+		return op.run(ctx)
+	} else if op.executor.activeCommands() {
+		return toolapi.Result{}, fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
 	} else if err := op.checkMutationSafety(); err != nil {
 		return toolapi.Result{}, err
 	}

@@ -1,12 +1,14 @@
 // Purpose: Capture bounded command output while retaining its beginning and final diagnostics.
 // Pattern: Bounded head-and-tail collector.
-// Usage: Run translates these captures into a result with explicit truncation and exit status.
+// Usage: The native waiter and registry expose captures with explicit truncation and exit status.
 // Related: internal/tools/local/process/run_unix.go, internal/tools/local/command.go.
 package process
 
 import (
 	"bytes"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Output struct {
@@ -20,6 +22,8 @@ type Output struct {
 }
 
 type cappedOutput struct {
+	mu        sync.Mutex
+	lastWrite time.Time
 	head      bytes.Buffer
 	tail      []byte
 	tailStart int
@@ -29,6 +33,11 @@ type cappedOutput struct {
 const captureHalf = 8 * 1024 * 1024
 
 func (output *cappedOutput) Write(content []byte) (int, error) {
+	output.mu.Lock()
+	defer output.mu.Unlock()
+	if len(content) > 0 {
+		output.lastWrite = time.Now()
+	}
 	count := len(content)
 	headCount := min(len(content), captureHalf-output.head.Len())
 	if _, err := output.head.Write(content[:headCount]); err != nil {
@@ -57,6 +66,8 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 }
 
 func (output *cappedOutput) String() string {
+	output.mu.Lock()
+	defer output.mu.Unlock()
 	var text strings.Builder
 	text.Grow(output.head.Len() + len(output.tail) + 32)
 	text.Write(output.head.Bytes())

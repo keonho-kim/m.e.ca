@@ -1,0 +1,32 @@
+// Purpose: Expose owned command lifecycle and completion facts to the runtime.
+// Pattern: Consumer-owned resource lifecycle contract.
+// Usage: The runtime binds commands to one request and commits completed observations serially.
+// Related: internal/tools/local/commands.go, internal/agent/run/commands.go.
+package tool
+
+import (
+	"context"
+	"time"
+)
+
+type CommandRun struct {
+	ID               string "json:\"command_id\""
+	Command          string "json:\"command\""
+	Status           string "json:\"status\""
+	ExitCode         *int   "json:\"exit_code,omitempty\""
+	ElapsedMillis    int64  "json:\"elapsed_millis\""
+	LastOutputMillis int64  "json:\"last_output_millis\""
+}
+
+type CommandCompletion struct {
+	ID, CallID, Command string
+	Result              Result
+}
+
+type CommandExecutor interface {
+	BeginCommands(context.Context, time.Time)
+	StopCommands()
+	CommandActivity() []CommandRun
+	CollectCommands() ([]CommandCompletion, error)
+	AcknowledgeCommand(string) error
+}

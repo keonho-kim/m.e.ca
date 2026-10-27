@@ -41,4 +41,5 @@ const (
 	Read Effect = iota
 	Change
 	Command
+	ProcessControl
 )

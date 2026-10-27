@@ -18,9 +18,10 @@ import (
 	"time"
 )
 
-func Run(ctx context.Context, directory, commandText string, environment []string) (Output, error) {
+// start launches synchronously; its owner must call the returned waiter once.
+func start(ctx context.Context, directory, commandText string, environment []string, stdout, stderr *cappedOutput) (func() (Output, error), error) {
 	if !filepath.IsAbs(directory) {
-		return Output{Status: "execution_failed", ExitCode: -1}, fmt.Errorf("command working directory must be absolute")
+		return nil, fmt.Errorf("command working directory must be absolute")
 	}
 	command := exec.CommandContext(ctx, "/bin/sh", "-c", commandText)
 	command.Dir = directory
@@ -37,35 +38,35 @@ func Run(ctx context.Context, directory, commandText string, environment []strin
 		return err
 	}
 	command.WaitDelay = 2 * time.Second
-	var stdout, stderr cappedOutput
-	command.Stdout, command.Stderr = &stdout, &stderr
-	runErr := command.Start()
-	started := runErr == nil
-	if started {
-		runErr = command.Wait()
+	command.Stdout, command.Stderr = stdout, stderr
+	if err := command.Start(); err != nil {
+		return nil, err
 	}
-	if command.Process != nil {
-		if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
-			runErr = errors.Join(runErr, err)
+	return func() (Output, error) {
+		runErr := command.Wait()
+		if command.Process != nil {
+			if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+				runErr = errors.Join(runErr, err)
+			}
 		}
-	}
-	output := Output{Started: started, Stdout: stdout.String(), Stderr: stderr.String(), ExitCode: -1, Truncated: stdout.truncated || stderr.truncated, Status: "execution_failed"}
-	if ctx.Err() != nil {
-		output.Status = "interrupted"
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			output.Status = "timeout"
+		output := Output{Started: true, Stdout: stdout.String(), Stderr: stderr.String(), ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: "execution_failed"}
+		if ctx.Err() != nil {
+			output.Status = "interrupted"
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				output.Status = "timeout"
+			}
+			return output, ctx.Err()
 		}
-		return output, ctx.Err()
-	}
-	if runErr != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(runErr, &exitErr) {
-			return output, runErr
+		if runErr != nil {
+			var exitErr *exec.ExitError
+			if !errors.As(runErr, &exitErr) {
+				return output, runErr
+			}
+			output.ExitCode = exitErr.ExitCode()
+		} else {
+			output.ExitCode = 0
 		}
-		output.ExitCode = exitErr.ExitCode()
-	} else {
-		output.ExitCode = 0
-	}
-	output.Status = "exited"
-	return output, nil
+		output.Status = "exited"
+		return output, nil
+	}, nil
 }

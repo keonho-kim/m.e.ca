@@ -22,7 +22,7 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 	switch event.Kind {
 	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved":
 		return nil
-	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
+	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":
 		if block := f.toolBlock(event); block.Text != "" {
 			block.Summary, block.Details = f.toolSummary(event), block.Text
 			return []viewport.Block{block}

@@ -33,7 +33,13 @@ func Compaction(page []Record) ([]compact.Record, error) {
 				role = "outcome"
 				text = op.Name + " " + op.Status
 				if op.Process != nil {
-					text += fmt.Sprintf("; process=%s exit=%d", op.Process.Status, op.Process.ExitCode)
+					text += "; process=" + op.Process.Status
+					if op.Process.CommandID != "" {
+						text += "; command_id=" + op.Process.CommandID
+					}
+					if op.Process.Status != "running" {
+						text += fmt.Sprintf(" exit=%d", op.Process.ExitCode)
+					}
 				}
 				if op.Command != "" {
 					text += "\nCommand: " + op.Command
@@ -55,6 +61,11 @@ func Compaction(page []Record) ([]compact.Record, error) {
 				}
 				if op.Result != "" {
 					text += "\nResult: " + op.Result
+				}
+				if event.Kind == "command_finished" {
+					if output := toolExcerpt(string(event.Output)); output != "" {
+						text += "\nOutput: " + output
+					}
 				}
 			} else if event.Kind == "tool_failed" || event.Kind == "denied" || event.Kind == "tool_interrupted" {
 				role, text = "failure", event.Text

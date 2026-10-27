@@ -24,8 +24,10 @@ func (f Formatter) output(event runrecord.Event) toolOutput {
 	}
 	var output toolOutput
 	switch event.Call.Name {
-	case "execute_command":
+	case "execute_command", "wait_command", "cancel_command":
 		output = f.processOutput(event, fields)
+	case "list_command_runs":
+		output = f.commandList(body)
 	case "write_file", "edit_file", "create_directory":
 		output = f.fileOutput(event, body)
 	}

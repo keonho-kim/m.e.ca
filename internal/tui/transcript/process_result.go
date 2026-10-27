@@ -46,6 +46,8 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 		return ""
 	}
 	switch status {
+	case "running":
+		return "Command running"
 	case "interrupted":
 		return "Command interrupted"
 	case "timeout":
@@ -57,7 +59,7 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 		if json.Unmarshal(fields["ExitCode"], &code) != nil || code == nil {
 			return ""
 		}
-		if *code == 0 && kind == "tool_succeeded" {
+		if *code == 0 && (kind == "tool_succeeded" || kind == "command_finished") {
 			return "Command succeeded"
 		}
 		return "Command failed"

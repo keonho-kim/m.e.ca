@@ -50,7 +50,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 		received = false
 		return err
 	}
-	err := s.runner.Generator.Generate(ctx, request, func(event modelapi.Event) error {
+	err := s.generateObserved(ctx, request, func(event modelapi.Event) error {
 		if event.Retry != nil {
 			if err := flush(); err != nil {
 				return err

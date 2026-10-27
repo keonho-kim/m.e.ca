@@ -27,7 +27,7 @@
 | tools/local | 준비·승인 바인딩·실행·자원 수명을 연결하는 호스트 어댑터 |
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
 | tools/local/file·textedit·textformat·diff | 파일 I/O·정확한 부분 수정·바이트 형식·변경 미리보기 |
-| tools/local/process | 호스트 셸·프로세스 그룹·출력·취소 |
+| tools/local/process | 호스트 셸·명령 등록부·프로세스 그룹·출력·대기·취소 |
 | storage/session·history·recovery | 세션 식별·순서 있는 이력·중단 복구의 저장 계약 |
 | storage/content | 큰 JSON 값의 참조 분리·선택 복원·압축·내용 무결성 |
 | storage/sqlite | DB 파일·SQL·트랜잭션·잠금·content 콜백 어댑터 |
@@ -155,6 +155,8 @@ MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run Test
 
 파일 변경 감시는 활성 디렉터리 하나에 연결한다. 플랫폼별 등록 I/O도 worker에서 수행하며 실행 1개·최신 대기 1개로 제한한다. 이벤트 루프가 감시 채널과 150ms 단발 타이머를 소비하고, 등록 직후와 알림 유실 시 재조회한다. 경로 전환·취소·화면 닫기에서 감시와 타이머를 정리하며 늦게 도착한 감시 객체도 닫는다. 갱신은 기존 파일 읽기 슬롯을 사용하고 새 폴링 루프를 만들지 않는다.
 
+명령 실행기는 요청의 전체 마감 시각·취소 문맥을 한 번 바인딩하고 최대 4개 명령을 소유한다. 최초 180초 대기와 wait_command의 타이머는 프로세스 수명과 분리하며 Wait는 한 번만 실행한다. TUI는 기존 경과 시간 타이머에서 작은 메타데이터만 조회한다. 완료 출력은 정제한 실행기 소유 파일로 옮겨 메모리 버퍼를 해제하고 런타임 소유자가 SQLite 기록을 확정한 뒤 핸들을 제거한다. 활성 명령이 있는 모델 요청은 I/O worker의 이벤트를 소유자에게 동기 전달하고, 소유자는 완료 결과를 수집한다. 모든 worker·타이머는 종료 시 정리하며 기록 실패를 성공으로 처리하지 않는다.
+
 OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다. 서명·종류·식별자 경계와 알 수 없는 필드를 보존하고 닫힌 블록만 유지하므로 완료 시 모든 조각을 다시 해석하지 않는다. 취소·실패한 요청의 미완성 블록은 후속 요청에 공개하지 않는다.
 
 Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio 요청은 Responses 본문만 한 번 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
@@ -212,6 +214,6 @@ go test ./internal/config/credentials ./internal/tui/viewport ./internal/tui/vie
 
 ## 기본 루프의 책임
 
-[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. MECA의 Go 단일 바이너리·호스트 실행·파일 검사·승인 정책·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 동기적인 부가 평가·별도 실행 원장·명령 재호출 추정 차단 없이 모델의 정상 응답으로 종료한다.
+[Pi의 기본 루프](https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts)의 단일 에이전트·native 도구·실제 대화 중심 문맥 구성을 참고한다. MECA의 Go 단일 바이너리·호스트 실행·파일 검사·승인 정책·OS 자격 증명·세션 SQLite는 현재 제품 계약이다. 시작한 명령의 종료·취소 결과를 수집한 뒤 모델의 정상 응답으로 종료한다. 추가 품질 평가나 명령 재호출 추정 차단을 두지 않는다.
 
 원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.

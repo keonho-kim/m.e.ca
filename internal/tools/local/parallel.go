@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,25 @@ type parallelTarget struct {
 }
 
 func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (int, error) {
+	if len(calls) > 0 && calls[0].Name == "execute_command" {
+		end := 0
+		var retained int64
+		for _, call := range calls[:min(len(calls), maximum, process.MaxActive)] {
+			if call.Name != "execute_command" {
+				break
+			}
+			if _, _, err := toolcatalog.Parse(call); err != nil {
+				return end, err
+			}
+			cost := int64(len(call.Arguments)) * 4
+			if end > 0 && retained+cost > maxParallelBytes {
+				break
+			}
+			retained += cost
+			end++
+		}
+		return end, nil
+	}
 	var prior []parallelTarget
 	var retained int64
 	end := min(len(calls), maximum)
@@ -74,6 +94,9 @@ func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (p
 	}
 	if spec.Effect == policy.Command {
 		return spec.Effect, nil, nil
+	}
+	if commandControl(spec.Name) {
+		return policy.Command, nil, nil
 	}
 	if spec.Name == "create_directory" {
 		dirs, err := e.directoryTargets(settings, input.Paths)

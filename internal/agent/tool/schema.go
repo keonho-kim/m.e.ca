@@ -15,6 +15,7 @@ const (
 	TextList    ParameterKind = "text_list"
 	LiteralPath ParameterKind = "literal_path"
 	ObjectList  ParameterKind = "object_list"
+	Integer     ParameterKind = "integer"
 )
 
 type Parameter struct {

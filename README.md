@@ -139,6 +139,8 @@ OpenRouter는 Provider를 `OpenRouter`, Base URL을 기본값 `https://openroute
 
 파일 조회·검색은 `execute_command`의 `cat`, `sed -n`, `rg` 등을 사용합니다. 삭제·이동은 같은 셸의 `rm`·`mv`로 수행합니다. 생성·본문 수정에는 원본 검사와 diff를 제공하는 `write_file`·`edit_file`, 폴더 생성에는 누락된 부모도 함께 만드는 `create_directory`를 사용합니다.
 
+명령은 완료되거나 기본 3분 대기가 끝나면 결과를 돌려줍니다. 계속 실행 중이면 `command_id`를 반환하고, 에이전트는 `list_command_runs`로 목록을 확인하거나 `wait_command`로 완료를 기다리고 `cancel_command`로 취소할 수 있습니다. 조회 대기 시간이 지나도 명령은 계속 실행됩니다. 독립적인 셸 명령은 최대 4개까지 실행하며 진행 중에는 경과 시간과 마지막 출력 시점을 표시합니다. 최종 답변 전에 명령의 종료·취소 결과를 확인하고, Esc·세션 전환·앱 종료 시 남은 명령을 정리합니다.
+
 | 조작 | 동작 |
 | --- | --- |
 | `Enter` / `Shift+Enter` | 전송 / 줄바꿈 |

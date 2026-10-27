@@ -16,6 +16,8 @@ func (op *operation) run(ctx context.Context) (toolapi.Result, error) {
 		return op.mutate()
 	case "execute_command":
 		return op.command(ctx)
+	case "list_command_runs", "wait_command", "cancel_command":
+		return op.commandControl(ctx)
 	default:
 		return toolapi.Result{}, fmt.Errorf("unknown prepared tool")
 	}

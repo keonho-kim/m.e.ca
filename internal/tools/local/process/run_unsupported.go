@@ -12,6 +12,6 @@ import (
 	"fmt"
 )
 
-func Run(context.Context, string, string, []string) (Output, error) {
-	return Output{}, fmt.Errorf("command execution is unsupported on this platform")
+func start(context.Context, string, string, []string, *cappedOutput, *cappedOutput) (func() (Output, error), error) {
+	return nil, fmt.Errorf("command execution is unsupported on this platform")
 }

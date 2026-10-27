@@ -14,6 +14,8 @@ import (
 )
 
 type Arguments struct {
+	CommandID    string          "json:\"command_id\""
+	WaitSeconds  *int            "json:\"wait_seconds,omitempty\""
 	Paths        []string        `json:"paths"`
 	FormatPolicy string          `json:"format_policy,omitempty"`
 	Path         string          `json:"path"`

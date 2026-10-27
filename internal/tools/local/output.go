@@ -24,6 +24,13 @@ func (e *Executor) commandOutput(text, stream string) (string, string, error) {
 	if err := errors.Join(writeErr, f.Close()); err != nil {
 		return "", "", err
 	}
+	return commandExcerpt(text), f.Name(), nil
+}
+
+func commandExcerpt(text string) string {
+	if len(text) <= outputExcerptBytes {
+		return text
+	}
 	head, tail := outputExcerptBytes/2, len(text)-outputExcerptBytes/2
 	for head > 0 && !utf8.RuneStart(text[head]) {
 		head--
@@ -31,5 +38,5 @@ func (e *Executor) commandOutput(text, stream string) (string, string, error) {
 	for tail < len(text) && !utf8.RuneStart(text[tail]) {
 		tail++
 	}
-	return text[:head] + "\n[output excerpt; inspect the captured log path for omitted text]\n" + text[tail:], f.Name(), nil
+	return text[:head] + "\n[output excerpt; inspect the captured log path for omitted text]\n" + text[tail:]
 }

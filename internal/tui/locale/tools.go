@@ -6,6 +6,17 @@ package locale
 
 var tools = []translation{
 	{"execute_command", "Execute command", "명령 실행"},
+	{"list_command_runs", "List command runs", "실행 명령 목록"},
+	{"wait_command", "Wait for command", "명령 완료 대기"},
+	{"cancel_command", "Cancel command", "명령 취소"},
+	{"", "Listing commands", "명령 조회"},
+	{"", "Waiting for command", "명령 대기"},
+	{"", "Cancelling command", "명령 취소"},
+	{"", "Command running", "명령 실행 중"},
+	{"", "No active command runs", "실행 중이거나 확인할 명령이 없습니다"},
+	{"", "Last output %s ago", "마지막 출력 %s 전"},
+	{"", "Command ID", "명령 ID"},
+	{"", "Wait seconds", "최대 대기 초"},
 	{"write_file", "Write file", "파일 저장"},
 	{"edit_file", "Edit file", "파일 수정"},
 	{"create_directory", "Create directories", "폴더 생성"},

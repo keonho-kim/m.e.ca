@@ -17,6 +17,7 @@ func (a *app) startElapsed() {
 func (a *app) updateElapsed(now time.Time) {
 	if a.elapsedTimer != nil {
 		a.elapsed = max(0, now.Sub(a.elapsedStarted))
+		a.updateCommandActivity()
 	}
 }
 

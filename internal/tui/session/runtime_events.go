@@ -52,7 +52,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 	case "tool_started":
 		a.status = (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Tool(*e)
 		return
-	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
+	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":
 		a.status = ""
 		for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e) {
 			a.output.AppendBlock(block)

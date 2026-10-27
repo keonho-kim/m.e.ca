@@ -58,6 +58,8 @@ func FailureOf(err error) *Failure {
 }
 
 type ProcessOutcome struct {
+	CommandID  string
+	Command    string
 	Diagnostic string
 	Truncated  bool
 	Status     string

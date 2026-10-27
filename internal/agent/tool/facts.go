@@ -22,6 +22,7 @@ type FileFact struct {
 }
 
 type CommandFact struct {
+	CommandID          string "json:\"command_id,omitempty\""
 	CallID             string `json:"call_id,omitempty"`
 	ObservedRun        string `json:"observed_run,omitempty"`
 	Revision           int    `json:"revision"`

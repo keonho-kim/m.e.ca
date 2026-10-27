@@ -15,7 +15,7 @@ import (
 func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(runrecord.Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
 	event := runrecord.Event{CallID: call.ID, Call: &call}
-	if call.Name != "execute_command" || outcome.Process == nil {
+	if call.Name != "execute_command" && call.Name != "wait_command" && call.Name != "cancel_command" && call.Name != "list_command_runs" {
 		outcome.Started = true
 	}
 	outcome.Target = proposal.Target
@@ -43,6 +43,8 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 	opFact.Revision = s.checkpoint.ChangeRevision
 	if call.Name == "execute_command" {
 		opFact.Command = proposal.Target
+	} else if outcome.Process != nil {
+		opFact.Command = outcome.Process.Command
 	}
 	event.Operation = &opFact
 	event.Output = outcome.Content

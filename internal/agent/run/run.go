@@ -34,6 +34,7 @@ type execution struct {
 	messages         []modelapi.Message
 	memoryContext    string
 	capacityRecovery bool
+	commandRevision  uint64
 }
 
 func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(runrecord.Event) error) (result Result, err error) {
@@ -75,6 +76,9 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	originalEmit := emit
 	emit = func(event runrecord.Event) error {
 		if err := originalEmit(event); err != nil {
+			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+				return ctx.Err()
+			}
 			return errors.Join(errRuntimeRecord, err)
 		}
 		return nil
@@ -93,9 +97,13 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 	}
 	defer func() {
+		err = errors.Join(err, s.stopCommands(ctx))
 		err = s.settle(ctx, err)
 		result = s.result
 	}()
+	if commands, ok := r.Tools.(toolapi.CommandExecutor); ok {
+		commands.BeginCommands(ctx, s.usage.snapshot().deadline)
+	}
 	if previous := r.PreviousRun; previous != nil && (previous.Status == runrecord.Interrupted || previous.Status == runrecord.Stopped) {
 		note := "Previous request: " + previous.Objective + "\nLast observed outcome: " + previous.Observation
 		if previous.Blocker != "" {
@@ -109,6 +117,9 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		return s.result, err
 	}
 	for {
+		if _, err = s.collectCommands(ctx); err != nil {
+			return s.result, err
+		}
 		if _, err = s.steer(ctx); err != nil {
 			return s.result, err
 		}
@@ -135,6 +146,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 				return s.result, err
 			}
 		}
+		commandRevision := s.commandRevision
 		reply, askErr := s.askResponse(ctx)
 		if askErr == nil {
 			s.capacityRecovery = false
@@ -175,6 +187,14 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			if queued, err := s.continueSteered(ctx, reply); err != nil {
 				return s.result, err
 			} else if queued {
+				continue
+			}
+			if commandRevision != s.commandRevision {
+				continue
+			}
+			if pending, pendingErr := s.pendingCommands(ctx); pendingErr != nil {
+				return s.result, pendingErr
+			} else if pending {
 				continue
 			}
 			return s.result, s.finish(ctx, reply)

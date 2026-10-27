@@ -27,7 +27,7 @@ func brief(text string) string {
 func (f Formatter) toolSummary(event runrecord.Event) string {
 	status := map[string]string{"tool_succeeded": "완료", "tool_failed": "실패", "tool_interrupted": "중단", "denied": "거부"}[event.Kind]
 	commandStatus, commandSummary := "", ""
-	if event.Call.Name == "execute_command" {
+	if event.Call.Name == "execute_command" || event.Call.Name == "wait_command" || event.Call.Name == "cancel_command" {
 		var fields map[string]json.RawMessage
 		if json.Unmarshal(event.Output, &fields) == nil {
 			commandStatus = processStatus(event.Kind, fields)
@@ -40,10 +40,14 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 	text := "\n  " + f.Language.Text(event.Call.Name) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
 	var args struct {
 		Path, Command string
+		CommandID     string "json:\"command_id\""
 		Paths         []string
 	}
 	if json.Unmarshal(event.Call.Arguments, &args) == nil {
 		target := args.Path
+		if args.CommandID != "" {
+			target = args.CommandID
+		}
 		if args.Command != "" {
 			target = args.Command
 		}

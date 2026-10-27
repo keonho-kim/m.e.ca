@@ -9,7 +9,9 @@ func (d Definition) JSONSchema() map[string]any {
 	required := []string{}
 	for _, p := range d.Parameters {
 		value := map[string]any{"type": "string", "description": p.Description}
-		if p.Kind == ObjectList {
+		if p.Kind == Integer {
+			value["type"], value["minimum"], value["maximum"] = "integer", 0, p.Max
+		} else if p.Kind == ObjectList {
 			value["type"], value["minItems"], value["maxItems"] = "array", 1, p.Max
 			value["items"] = (Definition{Parameters: p.Fields}).JSONSchema()
 		} else if p.Kind == TextList {

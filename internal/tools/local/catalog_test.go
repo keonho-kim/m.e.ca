@@ -22,7 +22,7 @@ func TestCatalogUsesShellForMoves(t *testing.T) {
 		names = append(names, definition.Name)
 	}
 	slices.Sort(names)
-	want := []string{"create_directory", "edit_file", "execute_command", "write_file"}
+	want := []string{"cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "wait_command", "write_file"}
 	if !slices.Equal(names, want) {
 		t.Fatalf("advertised tools = %v; want %v", names, want)
 	}

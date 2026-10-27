@@ -41,6 +41,7 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	commandStatus                       bool
 	language                            locale.Language
 	languageConfirm                     bool
 	permissionConfirm                   bool
