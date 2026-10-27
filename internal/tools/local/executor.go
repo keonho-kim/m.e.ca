@@ -42,7 +42,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 	if err != nil {
 		return nil, errors.Join(err, root.Close())
 	}
-	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.DefaultWait}
+	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.InitialWait}
 	executor.commands.Save = executor.archiveCommand
 	executor.artifacts, executor.artifactLease, err = newArtifacts()
 	if err != nil {

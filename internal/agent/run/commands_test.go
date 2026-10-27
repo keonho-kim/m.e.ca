@@ -68,6 +68,26 @@ func (e *commandFixture) AcknowledgeCommand(string) error {
 	return nil
 }
 
+func TestCommandLifecycleFeedbackExplainsManagementTools(t *testing.T) {
+	j := &journal{}
+	e := &commandFixture{executor: &executor{}, active: true}
+	r := fixture(&generator{}, e.executor, j)
+	r.Tools = e
+	s := execution{runner: r}
+	pending, err := s.pendingCommands(context.Background())
+	if err != nil || !pending || len(j.messages) != 1 {
+		t.Fatalf("pending command guidance not recorded: pending=%v messages=%d error=%v", pending, len(j.messages), err)
+	}
+	for _, value := range []string{"cmd_owned", "wait_command", "cancel_command", "list_command_runs", "command_id"} {
+		if !strings.Contains(j.messages[0].Content, value) {
+			t.Fatalf("model feedback omitted %s: %s", value, j.messages[0].Content)
+		}
+	}
+	if !e.active || e.executed != 0 {
+		t.Fatal("guidance changed or replayed the running command")
+	}
+}
+
 func TestCommandLifecycleRechecksResultsBeforeFinalAnswer(t *testing.T) {
 	j := &journal{}
 	e := &commandFixture{executor: &executor{}}

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,5 +115,48 @@ func TestOwnedCommandSilentOutputIsUnknown(t *testing.T) {
 	runs := e.CommandActivity()
 	if len(runs) != 1 || runs[0].LastOutputMillis != nil {
 		t.Fatalf("silent live command invented an output timestamp: %+v", runs)
+	}
+}
+
+func TestOwnedCommandInitialWaitAndEarlyCompletion(t *testing.T) {
+	e, _ := testExecutor(t)
+	if e.commandWait != 30*time.Second {
+		t.Fatalf("initial execute_command wait = %s; want 30 seconds", e.commandWait)
+	}
+	e.BeginCommands(context.Background(), time.Now().Add(5*time.Second))
+	defer e.StopCommands()
+	result := commandTool(t, e, "execute_command", map[string]any{"command": "printf finished"})
+	if result.Failed || result.Process == nil || result.Process.Status != "exited" || result.Process.ExitCode != 0 {
+		t.Fatalf("fast command did not finish before the initial wait: %+v", result)
+	}
+}
+
+func TestOwnedCommandRunningResultExplainsManagementTools(t *testing.T) {
+	e, _ := testExecutor(t)
+	e.commandWait = time.Millisecond
+	e.BeginCommands(context.Background(), time.Now().Add(time.Minute))
+	defer e.StopCommands()
+	started := commandTool(t, e, "execute_command", map[string]any{"command": "sleep 60"})
+	if started.Process == nil || started.Process.Status != "running" {
+		t.Fatalf("command did not remain running: %+v", started)
+	}
+	id := started.Process.CommandID
+	for _, result := range []toolapi.Result{started, commandTool(t, e, "wait_command", map[string]any{"command_id": id, "wait_seconds": 0})} {
+		var body struct {
+			CommandID string `json:"command_id"`
+			Status    string
+			Next      string `json:"next"`
+		}
+		if err := json.Unmarshal(result.Content, &body); err != nil {
+			t.Fatal(err)
+		}
+		if result.Failed || body.CommandID != id || body.Status != "running" {
+			t.Fatalf("running observation changed command lifetime: %s", result.Content)
+		}
+		for _, name := range []string{"wait_command", "cancel_command", "list_command_runs", "command_id"} {
+			if !strings.Contains(body.Next, name) {
+				t.Fatalf("actual model response lacks %s guidance: %s", name, result.Content)
+			}
+		}
 	}
 }

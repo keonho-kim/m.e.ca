@@ -16,10 +16,13 @@ import (
 
 func TestOwnedCommandsPresentation(t *testing.T) {
 	f := Formatter{Language: locale.Korean, Redact: func(text string) string { return text }}
-	event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "wait_command", Arguments: json.RawMessage("{\"command_id\":\"cmd_owned\",\"wait_seconds\":0}")}, Output: json.RawMessage("{\"command_id\":\"cmd_owned\",\"Status\":\"running\",\"Stdout\":\"still working\"}")}
+	event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "wait_command", Arguments: json.RawMessage(`{"command_id":"cmd_owned","wait_seconds":0}`)}, Output: json.RawMessage(`{"command_id":"cmd_owned","Status":"running","Stdout":"still working","next":"Use wait_command, cancel_command or list_command_runs"}`)}
 	block := f.Event(event)[0]
 	if !strings.Contains(block.Text, "명령 실행 중") || !strings.Contains(block.Text, "still working") || strings.Contains(block.Text, "실행 성공") {
 		t.Fatal(block.Text)
+	}
+	if strings.Contains(block.Text, "list_command_runs") || strings.Contains(block.Text, "Use wait_command") {
+		t.Fatalf("model management guidance leaked into terminal output: %s", block.Text)
 	}
 	list := f.commandList([]byte("{\"runs\":[{\"command_id\":\"cmd_owned\",\"command\":\"test\",\"status\":\"running\",\"elapsed_millis\":180000}]}"))
 	if strings.Contains(list.text, "\"runs\"") || !strings.Contains(list.text, "cmd_owned") || !strings.Contains(list.text, "00 : 03 : 00") {

@@ -105,7 +105,7 @@ All Mighty에서도 외부 전송의 직접 사용자 승인은 생략하지 않
 
 ## 프로세스 수명과 검증
 
-프로세스 어댑터가 내부 command_id에 연결한 자식 프로세스 그룹·출력 pipe·종료 대기를 소유한다. execute_command의 기본 180초 대기와 wait_command의 조회 대기는 실제 프로세스 취소와 분리한다. list_command_runs·wait_command·cancel_command는 현재 실행기의 등록부와 결과만 사용하고 임의 OS PID를 인자로 받지 않는다. Esc·실패·앱 종료 시 요청 worker를 합류하고 실행 중인 프로세스 그룹을 종료한다. 별도 세션으로 완전히 분리한 daemon의 정리까지 보장하지 않는다.
+프로세스 어댑터가 내부 command_id에 연결한 자식 프로세스 그룹·출력 pipe·종료 대기를 소유한다. execute_command의 기본 30초 대기와 wait_command의 조회 대기는 실제 프로세스 취소와 분리한다. list_command_runs·wait_command·cancel_command는 현재 실행기의 등록부와 결과만 사용하고 임의 OS PID를 인자로 받지 않는다. Esc·실패·앱 종료 시 요청 worker를 합류하고 실행 중인 프로세스 그룹을 종료한다. 별도 세션으로 완전히 분리한 daemon의 정리까지 보장하지 않는다.
 
 회귀 검사는 임시 HOME에서 캐시 생성, 기존 하드링크가 있는 프로젝트, 호스트 DNS 설정 파일 접근, 실제 설치 도구와 자식 실행, 로컬 HTTP, 승인 거절, 부분 출력과 취소를 다룬다. 호스트 DNS 설정을 읽을 수 있다는 사실과 실제 외부 도메인 조회·다운로드 성공은 별도 검증이다.
 

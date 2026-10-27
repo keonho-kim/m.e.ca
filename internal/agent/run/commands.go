@@ -78,7 +78,7 @@ func (s *execution) pendingCommands(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	body, _ := json.Marshal(pending)
-	message := fmt.Sprintf("Commands from this request are still active: %s\nUse wait_command or cancel_command to observe their terminal results before the final answer. A running command has not completed; do not start it again.", body)
+	message := fmt.Sprintf("Commands from this request are still active: %s\n%s\nObserve their terminal results before the final answer.", body, toolapi.CommandManagementHint)
 	return true, s.save(ctx, modelapi.Message{Role: "system", Content: message})
 }
 

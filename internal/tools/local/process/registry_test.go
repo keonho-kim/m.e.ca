@@ -9,8 +9,28 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 )
+
+func TestRegistryInitialAndFollowupWaitWindows(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		started := time.Now()
+		cancelled := false
+		j := &job{state: State{ID: "cmd_owned", Status: "running"}, started: started, done: make(chan struct{}), cancel: func() { cancelled = true }}
+		defer close(j.done)
+		registry := Registry{jobs: map[string]*job{"cmd_owned": j}}
+		state, err := registry.Wait(context.Background(), "cmd_owned", InitialWait)
+		if err != nil || state.Status != "running" || time.Since(started) != 30*time.Second || cancelled {
+			t.Fatalf("initial wait terminated or waited beyond 30 seconds: %+v %v", state, err)
+		}
+		followup := time.Now()
+		state, err = registry.Wait(context.Background(), "cmd_owned", DefaultWait)
+		if err != nil || state.Status != "running" || time.Since(followup) != 180*time.Second || cancelled {
+			t.Fatalf("followup wait changed its independent default: %+v %v", state, err)
+		}
+	})
+}
 
 func TestRegistryWaitDoesNotCancel(t *testing.T) {
 	root := t.TempDir()

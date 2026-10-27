@@ -160,7 +160,7 @@ write_file·edit_file의 성공에는 고정한 후보의 실제 diff를 색상�
 
 ## 긴 명령의 진행과 취소
 
-execute_command는 기본 3분까지 완료를 기다린다. 계속 실행 중이면 command_id와 running 상태를 반환하며 명령은 계속 실행된다. 에이전트는 list_command_runs로 현재 실행기 소유 명령을 찾고, wait_command(command_id, wait_seconds)로 완료를 기다리거나 cancel_command로 종료할 수 있다. wait_seconds는 기본 180초, 0은 즉시 조회이며 대기 만료만으로 명령을 취소하지 않는다. 실제 명령의 전체 시간 예산은 별도로 적용한다.
+execute_command는 기본 30초까지 완료를 기다린다. 계속 실행 중이면 command_id와 running 상태를 반환하며 명령은 계속 실행된다. 반환 결과에는 에이전트가 같은 명령을 관리할 수 있도록 list_command_runs로 실행 명령·ID 조회, wait_command(command_id, wait_seconds)로 추가 대기·출력 조회, cancel_command로 중지하는 방법을 안내한다. wait_seconds는 기본 180초, 0은 즉시 조회이며 대기 만료만으로 명령을 취소하지 않는다. 실제 명령의 전체 시간 예산은 별도로 적용한다.
 
 동시에 실행한 명령은 각각 표시하고 완료된 명령의 결과와 구분한다. 실행 중에도 긴 명령을 줄바꿈해 전체 표시하며, 화면을 넘는 내용은 스크롤로 확인한다. 한 묶음의 결과는 원래 호출 순서를 유지하되 앞에서부터 준비된 결과는 다른 명령 전체를 기다리지 않고 표시한다.
 

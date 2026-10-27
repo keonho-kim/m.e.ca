@@ -13,8 +13,11 @@ import (
 	"time"
 )
 
-const MaxActive = 4
-const DefaultWait = 180 * time.Second
+const (
+	MaxActive   = 4
+	InitialWait = 30 * time.Second
+	DefaultWait = 180 * time.Second
+)
 
 type Registry struct {
 	mu    sync.Mutex

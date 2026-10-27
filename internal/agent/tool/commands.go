@@ -1,4 +1,4 @@
-// Purpose: Expose owned command lifecycle and completion facts to the runtime.
+// Purpose: Expose owned command lifecycle, completion facts and management guidance to the runtime.
 // Pattern: Consumer-owned resource lifecycle contract.
 // Usage: The runtime binds commands to one request and commits completed observations serially.
 // Related: internal/tools/local/commands.go, internal/agent/run/commands.go.
@@ -8,6 +8,9 @@ import (
 	"context"
 	"time"
 )
+
+// CommandManagementHint guides subsequent native calls for an existing running command.
+const CommandManagementHint = "Use wait_command with this command_id to wait or inspect output (wait_seconds=0 checks immediately), cancel_command with this command_id to stop it, or list_command_runs with no arguments to list session commands and recover their IDs. Waiting does not stop the command. Do not execute the same command again just to check progress."
 
 type CommandRun struct {
 	CallID           string "json:\"-\""
