@@ -22,6 +22,7 @@ func (a *app) startTask(text string) {
 	a.runSummary = nil
 	a.stopNotice = ""
 	a.worker = workerAgent
+	a.clearToolActivity()
 	a.startElapsed()
 	a.status = ""
 	ctx, cancel := context.WithCancel(a.ctx)

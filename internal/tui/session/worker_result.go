@@ -25,6 +25,7 @@ func (a *app) finishWorker(n notice) {
 	a.worker = workerIdle
 	a.stopCompression()
 	a.stopElapsed()
+	a.clearToolActivity()
 	a.taskCancel = nil
 	if n.Err != nil {
 		a.output.AppendBlock(transcript.Thought(a.thinking))

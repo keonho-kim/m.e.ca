@@ -10,11 +10,11 @@ import (
 )
 
 type chatProjection struct {
-	thinking, stream, status viewport.Block
-	layout                   viewport.Transcript
-	queue                    queue.Projection
-	live                     []*viewport.Block
-	focusedID                int
+	thinking, stream, tools, status viewport.Block
+	layout                          viewport.Transcript
+	queue                           queue.Projection
+	live                            []*viewport.Block
+	focusedID                       int
 }
 
 func (a *app) chatLayout(width int) *viewport.Transcript {
@@ -28,11 +28,12 @@ func (a *app) chatLayout(width int) *viewport.Transcript {
 	}
 	p.thinking.Text, p.thinking.Thinking, p.thinking.Markdown = a.thinking, true, true
 	p.stream.Text, p.stream.Markdown = a.stream, true
+	p.tools.Text = a.liveToolActivity()
 	p.status.Text = a.status
 	p.queue.Prepare(a.queued.Messages, a.language, a.opts.Vault.RedactionVersion(), a.opts.Vault.Redact)
 	next := a.output.Next + 1
 	clear(p.live)
-	p.live = append(p.live[:0], &p.thinking, &p.stream, &p.status, &p.queue.Header)
+	p.live = append(p.live[:0], &p.thinking, &p.stream, &p.tools, &p.status, &p.queue.Header)
 	for i := range p.queue.Entries {
 		p.live = append(p.live, &p.queue.Entries[i].Block)
 	}

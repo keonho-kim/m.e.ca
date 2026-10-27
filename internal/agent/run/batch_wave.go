@@ -1,4 +1,4 @@
-// Purpose: Prepare a wave on its owner, execute independent operations concurrently, then commit in order.
+// Purpose: Execute independent operations concurrently and commit their ready prefix in call order.
 // Pattern: Fork/join with isolated result slots.
 // Usage: batch schedules at most sixteen operations; workers touch only their prepared operation.
 // Related: internal/agent/run/batch.go, internal/agent/run/prepare_execution.go, internal/agent/run/execution_result.go.
@@ -57,12 +57,14 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	}
 	outcomes := make([]toolapi.Result, len(calls))
 	failures := make([]error, len(calls))
+	completed := make(chan int, len(calls))
 	var workers sync.WaitGroup
 	for i, prepared := range ready {
-		workers.Go(func() { outcomes[i], failures[i] = prepared.operation.Execute(ctx, prepared.approved) })
+		workers.Go(func() {
+			outcomes[i], failures[i] = prepared.operation.Execute(ctx, prepared.approved)
+			completed <- i
+		})
 	}
-	workers.Wait()
-	// Workers are joined even after cancellation; completed effects keep their actual results.
 	completedEmit := func(event runrecord.Event) error {
 		err := s.emit(event)
 		if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
@@ -72,14 +74,23 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	}
 	failed := false
 	var terminal error
-	for i, v := range calls {
-		outcome, runErr := s.recordExecution(ctx, v, ready[i], outcomes[i], failures[i], completedEmit)
-		if errors.Is(runErr, errRuntimeRecord) {
-			terminal = errors.Join(terminal, runErr)
+	finished := make([]bool, len(calls))
+	next := 0
+	for range calls {
+		finished[<-completed] = true
+		// Preserve native reply order without waiting for later unrelated calls.
+		for next < len(calls) && finished[next] {
+			outcome, runErr := s.recordExecution(ctx, calls[next], ready[next], outcomes[next], failures[next], completedEmit)
+			if errors.Is(runErr, errRuntimeRecord) {
+				terminal = errors.Join(terminal, runErr)
+			}
+			failed = failed || outcome.Failed || runErr != nil
+			ready[next], outcomes[next], failures[next] = nil, toolapi.Result{}, nil
+			next++
 		}
-		failed = failed || outcome.Failed || runErr != nil
-		ready[i], outcomes[i], failures[i] = nil, toolapi.Result{}, nil
 	}
+	// Join every worker, including after cancellation or a failed result commit.
+	workers.Wait()
 	if ctx.Err() != nil {
 		terminal = errors.Join(terminal, ctx.Err())
 		failed = true

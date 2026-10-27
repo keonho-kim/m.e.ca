@@ -14,6 +14,8 @@ var tools = []translation{
 	{"", "Cancelling command", "명령 취소"},
 	{"", "Command running", "명령 실행 중"},
 	{"", "No active command runs", "실행 중이거나 확인할 명령이 없습니다"},
+	{"", "Elapsed %s", "경과 %s"},
+	{"", "No output yet", "아직 출력 없음"},
 	{"", "Last output %s ago", "마지막 출력 %s 전"},
 	{"", "Command ID", "명령 ID"},
 	{"", "Wait seconds", "최대 대기 초"},

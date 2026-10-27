@@ -25,8 +25,34 @@ func TestOwnedCommandsPresentation(t *testing.T) {
 	if strings.Contains(list.text, "\"runs\"") || !strings.Contains(list.text, "cmd_owned") || !strings.Contains(list.text, "00 : 03 : 00") {
 		t.Fatal(list.text)
 	}
-	live := f.CommandActivity([]tool.CommandRun{{ID: "cmd_owned", Command: "test", Status: "running", ElapsedMillis: 180000, LastOutputMillis: 20000}})
+	age := int64(20000)
+	live := f.CommandActivity([]tool.CommandRun{{ID: "cmd_owned", Command: "test", Status: "running", ElapsedMillis: 180000, LastOutputMillis: &age}})
 	if !strings.Contains(live, "마지막 출력") || !strings.Contains(live, "00 : 00 : 20") {
 		t.Fatal(live)
+	}
+}
+
+func TestOwnedCommandActivityPreservesFullCommand(t *testing.T) {
+	f := Formatter{Language: locale.Korean, Redact: func(text string) string { return strings.ReplaceAll(text, "private-value", "[redacted]") }}
+	command := "printf 'private-value " + strings.Repeat("content-", 30) + "' &&\ncat docs/final-section.md"
+	shown := f.CommandActivity([]tool.CommandRun{{ID: "cmd_owned", Command: command, Status: "running"}})
+	if !strings.Contains(shown, "cat docs/final-section.md") || !strings.Contains(shown, strings.Repeat("content-", 30)) || !strings.Contains(shown, "\n    cat") {
+		t.Fatalf("live command was shortened or lost line breaks: %s", shown)
+	}
+	if strings.Contains(shown, "private-value") || !strings.Contains(shown, "[redacted]") {
+		t.Fatalf("full live command lost redaction: %s", shown)
+	}
+}
+
+func TestOwnedCommandActivityWithoutOutput(t *testing.T) {
+	for _, lang := range []locale.Language{locale.Korean, locale.English} {
+		f := Formatter{Language: lang, Redact: func(text string) string { return text }}
+		shown := f.CommandActivity([]tool.CommandRun{{Command: "quiet-command", Status: "running", ElapsedMillis: 120000}})
+		if !strings.Contains(shown, lang.Text("No output yet")) || strings.Contains(shown, lang.Format("Last output %s ago", commandDuration(120000))) {
+			t.Fatalf("silent command invented a last-output time: %s", shown)
+		}
+		if !strings.Contains(shown, lang.Format("Elapsed %s", commandDuration(120000))) {
+			t.Fatalf("silent command lost elapsed time: %s", shown)
+		}
 	}
 }

@@ -33,7 +33,7 @@ func (e *Executor) activeCommands() bool {
 func (e *Executor) CommandActivity() []toolapi.CommandRun {
 	out := make([]toolapi.CommandRun, 0)
 	for _, state := range e.commands.List() {
-		run := toolapi.CommandRun{ID: state.ID, Command: e.redact(state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
+		run := toolapi.CommandRun{CallID: state.CallID, ID: state.ID, Command: e.redact(state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
 		if state.Status != "running" {
 			code := state.ExitCode
 			run.ExitCode = &code
@@ -78,8 +78,8 @@ func (e *Executor) runningCommand(state process.State) (toolapi.Result, error) {
 		Stderr           string
 		StdoutPath       string
 		StderrPath       string
-		ElapsedMillis    int64 "json:\"elapsed_millis\""
-		LastOutputMillis int64 "json:\"last_output_millis\""
+		ElapsedMillis    int64  "json:\"elapsed_millis\""
+		LastOutputMillis *int64 "json:\"last_output_millis\""
 	}{state.ID, "running", stdout, stderr, stdoutPath, stderrPath, state.ElapsedMillis, state.LastOutputMillis}
 	result, err := resultfmt.Encode(body, "Command is still running; use wait_command or cancel_command with "+state.ID)
 	result.Started = true

@@ -10,12 +10,13 @@ import (
 )
 
 type CommandRun struct {
+	CallID           string "json:\"-\""
 	ID               string "json:\"command_id\""
 	Command          string "json:\"command\""
 	Status           string "json:\"status\""
 	ExitCode         *int   "json:\"exit_code,omitempty\""
 	ElapsedMillis    int64  "json:\"elapsed_millis\""
-	LastOutputMillis int64  "json:\"last_output_millis\""
+	LastOutputMillis *int64 "json:\"last_output_millis\""
 }
 
 type CommandCompletion struct {

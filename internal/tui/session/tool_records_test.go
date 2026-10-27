@@ -18,7 +18,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	call := toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	event := runrecord.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
 	a.receive(notice{Event: &event})
-	if len(a.output.Blocks) != 0 || !strings.Contains(a.status, "명령 실행") {
+	if len(a.output.Blocks) != 0 || !strings.Contains(activityTranscript(a), "명령 실행") {
 		t.Fatal("start should only show pending call")
 	}
 	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"Stdout":"one\ntwo","ExitCode":0,"Status":"exited"}`)

@@ -23,8 +23,12 @@ func (f Formatter) CommandActivity(runs []toolapi.CommandRun) string {
 		if run.Status != "running" {
 			continue
 		}
-		text.WriteString("\n  " + f.Language.Text("Command running") + " · " + commandDuration(run.ElapsedMillis) + " · " + f.Language.Format("Last output %s ago", commandDuration(run.LastOutputMillis)) + "\n")
-		text.WriteString(indentTool(brief(f.Redact(run.Command))))
+		last := f.Language.Text("No output yet")
+		if run.LastOutputMillis != nil {
+			last = f.Language.Format("Last output %s ago", commandDuration(*run.LastOutputMillis))
+		}
+		text.WriteString("\n  " + f.Language.Text("Command running") + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + " · " + last + "\n")
+		text.WriteString(indentTool(f.Redact(run.Command)))
 	}
 	return text.String()
 }

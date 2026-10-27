@@ -28,6 +28,7 @@ func (a *app) interruptTask() {
 	a.choices = nil
 	a.closeCommandHints()
 	a.status = ""
+	a.clearToolActivity()
 	a.stopNotice = a.language.Text("작업을 중지하고 정리하고 있습니다")
 }
 func (a *app) startCompression() {

@@ -97,3 +97,22 @@ func TestOwnedCommandCancelAndUnknownIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnedCommandSilentOutputIsUnknown(t *testing.T) {
+	e, _ := testExecutor(t)
+	e.commandWait = time.Millisecond
+	e.BeginCommands(context.Background(), time.Now().Add(time.Minute))
+	defer e.StopCommands()
+	result := commandTool(t, e, "execute_command", map[string]any{"command": "sleep 60"})
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(result.Content, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if string(fields["last_output_millis"]) != "null" {
+		t.Fatalf("silent tool response invented an output timestamp: %s", result.Content)
+	}
+	runs := e.CommandActivity()
+	if len(runs) != 1 || runs[0].LastOutputMillis != nil {
+		t.Fatalf("silent live command invented an output timestamp: %+v", runs)
+	}
+}

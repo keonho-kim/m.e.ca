@@ -13,7 +13,7 @@ type State struct {
 	Directory        string "json:\"directory\""
 	Status           string "json:\"status\""
 	ElapsedMillis    int64  "json:\"elapsed_millis\""
-	LastOutputMillis int64  "json:\"last_output_millis\""
+	LastOutputMillis *int64 "json:\"last_output_millis\""
 	ExitCode         int    "json:\"-\""
 	Stdout, Stderr   string "json:\"-\""
 	Error            string "json:\"-\""
@@ -29,8 +29,9 @@ func (j *job) snapshot(output bool) State {
 		state.Status = "running"
 		state.ExitCode = -1
 	}
+	now := time.Now()
 	if ended.IsZero() {
-		ended = time.Now()
+		ended = now
 	}
 	state.ElapsedMillis = ended.Sub(j.started).Milliseconds()
 	var out, err time.Time
@@ -44,9 +45,8 @@ func (j *job) snapshot(output bool) State {
 		out = err
 	}
 	if !out.IsZero() {
-		state.LastOutputMillis = max(0, time.Since(out).Milliseconds())
-	} else {
-		state.LastOutputMillis = state.ElapsedMillis
+		age := max(0, now.Sub(out).Milliseconds())
+		state.LastOutputMillis = &age
 	}
 	return state
 }
