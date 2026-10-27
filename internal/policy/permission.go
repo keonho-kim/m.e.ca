@@ -1,4 +1,4 @@
-// Purpose: Define the default approval policy and explicit All Mighty automatic decisions.
+// Purpose: Define the Default and All Mighty approval mode identities.
 // Pattern: Value Object.
 // Usage: Global TOML and each request's policy settings share Permission.
 // Related: internal/config/settings.go, internal/agent/run/prepare_execution.go.

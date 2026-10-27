@@ -57,6 +57,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 			return nil, err
 		}
 		op.approval.Required = len(op.shell.decision.Reasons) > 0
+		op.approval.UserRequired = op.shell.decision.UserRequired
 		op.approval.Command = &toolapi.CommandApproval{Directory: executor.redact(executor.project)}
 		for _, finding := range op.shell.findings {
 			entry := toolapi.CommandFinding{Command: executor.redact(finding.Command)}

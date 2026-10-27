@@ -32,7 +32,7 @@ func TestLanguageScreenStagesAndConfirms(t *testing.T) {
 	if a.page != "language" || a.opts.Config.Language != config.LanguageAuto || !strings.Contains(modelScreen(a), "Save current settings?") {
 		t.Fatal("language changed before save confirmation")
 	}
-	if labels := keymapLabels(t, a); labels["y"] != "Save" || labels["n"] != "Discard" || labels["Esc"] != "Keep editing" {
+	if labels := keymapLabels(t, a); labels["y"] != "Save" || labels["N"] != "Discard" || labels["Esc"] != "Keep editing" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -41,8 +41,12 @@ func TestLanguageScreenStagesAndConfirms(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
+	if a.page != "language" || !a.languageConfirm {
+		t.Fatal("lowercase n dismissed confirmation")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", tcell.ModShift))
 	if a.page != "chat" || a.opts.Config.Language != config.LanguageAuto || a.language != locale.English {
-		t.Fatal("n applied the language draft")
+		t.Fatal("N applied the language draft")
 	}
 }
 

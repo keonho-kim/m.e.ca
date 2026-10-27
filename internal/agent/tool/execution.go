@@ -20,6 +20,8 @@ type Approval struct {
 	Preview   string
 	Diff      bool
 	Required  bool
+	// UserRequired prevents automatic consent, including in All Mighty mode.
+	UserRequired bool
 }
 
 type CommandApproval struct {

@@ -1,12 +1,10 @@
-// Purpose: Interpret explicit y/n/Esc confirmation choices and project settings confirmation hints.
+// Purpose: Interpret explicit y/N/Esc confirmation choices and project settings confirmation hints.
 // Pattern: Simple Module.
 // Usage: Settings and file submission share confirmation keys; settings also share save labels.
 // Related: internal/tui/session/model_form_keys.go, internal/tui/session/language.go, internal/tui/session/file_submission.go.
 package session
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
@@ -25,10 +23,10 @@ func confirmationKey(e *tcell.EventKey) confirmationDecision {
 		return confirmEdit
 	}
 	if e.Key() == tcell.KeyRune && e.Modifiers()&^(tcell.ModShift) == 0 {
-		switch strings.ToLower(e.Str()) {
-		case "y":
+		switch e.Str() {
+		case "y", "Y":
 			return confirmAccept
-		case "n":
+		case "N":
 			return confirmReject
 		}
 	}
@@ -36,5 +34,5 @@ func confirmationKey(e *tcell.EventKey) confirmationDecision {
 }
 
 func settingsConfirmationShortcuts() []view.Shortcut {
-	return []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "y", Label: "Save"}, {Key: "n", Label: "Discard"}, {Key: "Esc", Label: "Keep editing"}}
+	return []view.Shortcut{{Key: "^C", Label: "종료"}, {Key: "y", Label: "Save"}, {Key: "N", Label: "Discard"}, {Key: "Esc", Label: "Keep editing"}}
 }

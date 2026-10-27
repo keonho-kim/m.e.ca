@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Purpose: Publish built archives only for current main, replacing a same-day release under a tag lease.
+# Purpose: Verify archive build policy before publishing current main under a same-day tag lease.
 # Pattern: Release publication boundary.
 # Usage: GitHub Actions supplies its commit, repository, token and prepared version outputs.
 # Related: scripts/release/prepare.sh, .github/workflows/release.yml, .goreleaser.yaml, docs/release-notes.md.
@@ -46,6 +46,9 @@ if [[ $(awk '{ print $2 }' dist/checksums.txt | LC_ALL=C sort) != $(printf '%s\n
     exit 1
 fi
 (cd dist && sha256sum --check checksums.txt)
+mkdir -p .cache
+release_stage=$(mktemp -d .cache/release-verify.XXXXXX)
+trap 'rm -rf -- "$release_stage"' EXIT
 release_members=$(printf '%s\n' LICENSE NOTICE THIRD_PARTY_NOTICES.md meca | LC_ALL=C sort)
 release_assets=(dist/checksums.txt)
 for release_archive in "${release_archives[@]}"; do
@@ -53,12 +56,25 @@ for release_archive in "${release_archives[@]}"; do
         printf 'Release archive is missing its binary or license notices: %s\n' "$release_archive" >&2
         exit 1
     fi
+    tar -xOzf "dist/$release_archive" meca > "$release_stage/meca"
+    if ! release_metadata=$(go version -m "$release_stage/meca"); then
+        printf 'Cannot read Go build metadata: %s\n' "$release_archive" >&2
+        exit 1
+    fi
+    if ! awk '
+        $1 == "build" && $2 ~ /^-tags=/ {
+            count = split(substr($2, 7), tags, ",")
+            for (i = 1; i <= count; i++) if (tags[i] == "godbus_no_tcp") found = 1
+        }
+        END { exit !found }
+    ' <<< "$release_metadata"; then
+        printf 'Release binary requires the godbus_no_tcp build tag: %s\n' "$release_archive" >&2
+        exit 1
+    fi
     release_assets+=("dist/$release_archive")
 done
 
-mkdir -p .cache
-release_error=$(mktemp .cache/release-api.XXXXXX)
-trap 'rm -f "$release_error"' EXIT
+release_error=$release_stage/api-error
 release_exists=true
 if release_immutable=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$release_tag" --jq '.immutable' 2>"$release_error"); then
     if [[ "$release_immutable" != false ]]; then

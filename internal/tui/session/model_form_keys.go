@@ -1,4 +1,4 @@
-// Purpose: Apply BIOS-style row navigation, inline editing and y/n/Esc save decisions.
+// Purpose: Apply BIOS-style row navigation, inline editing and y/N/Esc save decisions.
 // Pattern: Event-loop input transitions.
 // Usage: The model settings page routes normalized keys here before generic menu handling.
 // Related: internal/tui/session/model_form.go, internal/tui/session/model_form_setup.go, internal/tui/input/keys.go.

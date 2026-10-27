@@ -134,7 +134,7 @@ done
 				if tc.existing {
 					goroot = "unrelated-go"
 				}
-				if readErr != nil || string(invocation) != source+"|build -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
+				if readErr != nil || string(invocation) != source+"|build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
 					t.Fatalf("Go invocation = %q, %v", invocation, readErr)
 				}
 			} else if !os.IsNotExist(readErr) {

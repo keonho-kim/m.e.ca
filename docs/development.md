@@ -23,6 +23,7 @@
 | provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
 | provider/protocol·transport·httpclient | wire 변환·HTTP/스트림/재시도·생성 요청 조율 |
 | policy·policy/command | 공통 보호 대상·파일 Scope와 execute_command의 선택적 AST 검사·값 상태·명령별 승인 근거 |
+| policy/command/transfer | HTTP·원격 복사·원격 실행의 전송 인자와 표시용 목적지 해석 |
 | tools/local/catalog | 불변 도구 설명·스키마·native JSON 인자 파싱 |
 | tools/local | 준비·승인 바인딩·실행·자원 수명을 연결하는 호스트 어댑터 |
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
@@ -44,6 +45,8 @@
 TUI의 활성 worker는 idle·agent·agent stopping·setup·setup stopping 중 한 상태이며 이벤트 루프만 전환한다. TUI는 저장·연결 설정·요청 준비를 직접 소유하지 않는다. worker는 결과 이벤트를 반환하고 화면 상태는 이벤트 루프에서만 바꾼다. 연결 클라이언트·HTTP body·goroutine·timer·DB·자식 프로세스에는 취소와 정리 소유자가 있어야 한다.
 
 TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문맥·압축 설정과 선택된 세션의 정규화한 프로젝트 경로를 사용한다. 요청의 Thinking 선택은 값으로 복사한다. 실제 자원 생성과 종료는 각 진입점, 지침 읽기와 요청 실행은 agent/session이 소유한다.
+
+외부 전송 판정은 AST 연결과 프로토콜 파서로 나누고 명령·파일·DNS·네트워크를 실행하지 않는 순수 함수로 유지한다. `UserRequired`는 일반 승인 필요 여부와 구분하며 All Mighty도 직접 승인을 생략하지 않는다. 기존 승인 창·원본 재검사·배치 실행 전 승인·실제 승인 출처 기록을 공유한다. 정상 다운로드·직접 지정한 loopback HTTP·인용된 명령 본문은 별도로 확인하고, 임의 프로그램 내부 통신까지 제어한다고 설명하지 않는다.
 
 실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. 영속 실행 기록은 agent/record가 정의하므로 저장 어댑터·이력·TUI 투영은 실행 루프 구현을 참조하지 않는다. storage/content는 SQL 없이 분리·복원하며 SQLite가 같은 트랜잭션의 쓰기 콜백과 조회 후 복원 콜백을 제공한다. TUI 하위 컴포넌트는 session을 역참조하지 않으며 상태 변경은 기존 이벤트 루프에서 수행한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
 
@@ -72,6 +75,8 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 CLI 분기는 flag, 병렬 도구 합류는 sync.WaitGroup, 재시도 대기는 time.Timer를 사용한다. 검색은 strings·unicode로 부분일치를 우선하고 결과가 없을 때 문자 순서를 유지하는 축약 일치를 찾는다. 메타데이터 재사용은 연결 준비가 소유한 마지막 GET 응답으로 한정한다. 이 사용처에는 별도 CLI·동시성·캐시 프레임워크를 두지 않는다.
 
 Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#설치)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [Release 워크플로](../.github/workflows/release.yml)와 GoReleaser 설정으로 검사·빌드 후 자동 게시한다. 명시적 major·minor와 같은 날짜의 갱신 정책은 [릴리스 가이드](releases.md)가 소유한다.
+
+공식 빌드·소스 설치는 `godbus_no_tcp` 태그로 DBus의 TCP·nonce-TCP 구현을 제외한다. 수동 실행 파일은 `go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca`로 만든다. 아래 개발·검증 명령은 같은 셸에서 먼저 `export GOFLAGS='-tags=godbus_no_tcp'`를 설정해 실행한다. 테스트 내부의 자식 `go build`에도 전달되며 전역 Go 설정은 바꾸지 않는다. GoReleaser는 환경변수와 별개로 빌드 태그를 명시한다. 지원 범위는 [Linux 자격 증명 전송](configuration.md#linux-자격-증명-전송)을 따른다.
 
 ### 개발 도구
 
@@ -108,6 +113,7 @@ GoReleaser는 [.goreleaser.yaml](../.goreleaser.yaml)의 macOS·Linux 아카이�
 다음은 실행 지침이며 이 문서 편집 시의 통과 기록이 아니다. 작업 범위에 맞는 집중 검사 후 공유 계약 변경은 전체 검사로 넓힌다.
 
 ```sh
+export GOFLAGS='-tags=godbus_no_tcp'
 gofmt -l cmd internal
 go test ./...
 go test -race ./...
@@ -119,6 +125,8 @@ go mod verify
 순수 상태·파서·승인·저장·Provider 변환은 작은 fixture와 httptest로 검증한다. 파일 검사는 t.TempDir, TUI는 저장소의 가상 터미널과 실제 키 입력을 사용한다. 모델 응답을 고정한 검사는 실제 모델의 완수율이나 추론 품질 검증과 구분한다.
 
 에이전트 실행·HTTP 생성·TUI 테스트는 패키지 종료 시 goleak으로 남은 고루틴을 검사한다. 구조체 복원과 대화 투영은 go-cmp로 필드 차이를 확인한다. PTY 통합 검사는 임시 HOME·프로젝트에서 실제 실행 파일을 시작해 터미널 크기 변경, Ctrl+C·!quit 종료, 터미널 설정 복원과 DB 잠금 해제를 확인한다. 설치 PTY 검사는 PATH가 필요한 대화형 설치만 동일 PID의 로그인 셸로 전환하는지, 전환 전에 설치 잠금이 풀리는지와 --no-shell·비대화형 동작을 확인한다. 소스 설치 검사는 오프라인 SDK fixture로 빌드·임시 SDK 정리·호출 환경 복원·설치 순서를 확인한다. PTY의 소유 프로세스가 종료 후 상태를 검사하고, 실패·시간 초과에는 해당 프로세스 그룹과 읽기 작업을 정리한다. `go test -short`에서는 실행 파일을 빌드하는 통합 검사를 생략한다.
+
+외부 전송 검사는 모의 실행 파일과 loopback HTTP만 사용한다. Default·All Mighty의 매 호출 직접 승인·거절·비대화형 승인 불가와 배치의 실행 전 중단·native 결과 짝·승인 출처를 확인한다. 실제 외부 업로드를 발생시키지 않는다. 확인 키는 소문자 n 무시·대문자 N 취소를 설정·파일 전송 화면에서 검증한다.
 
 ```sh
 go test ./cmd/meca -run TestTerminalExecutable -v
@@ -144,6 +152,18 @@ MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run Test
 ```
 
 실제 WSL에서는 일반 터미널과 execute_command에서 같은 도메인 조회·HTTPS 다운로드·패키지 설치를 대조한다. DNS 설정 파일 읽기와 숫자 IP의 로컬 HTTP 통과만으로 외부 DNS 성공을 판단하지 않는다. Linux Secret Service·실제 Provider·터미널 키 전달도 수행한 환경과 결과를 구분해 기록한다. 교차 빌드는 네이티브 실행 검증을 대신하지 않는다. [실행 경계](execution-boundary.md)의 호스트 권한 계약을 함께 확인한다.
+
+Linux의 필수 DBus 회귀 검사는 실제 자격 증명 조회 경로를 새 테스트 프로세스에서 호출한다. 루프백 TCP·nonce-TCP 연결과 canary 전송이 없고 Unix 소켓 연결은 유지되는지 확인한다. `linux` 조건만 사용하므로 태그를 빠뜨린 Linux 테스트는 실패한다. Unix 연결 검사만으로 키 저장·조회 성공을 판단하지 않는다.
+
+```sh
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials -run TestCredentialDBusTransport -v
+```
+
+실제 Secret Service 검사는 별도의 Unix 세션 버스와 잠금 해제된 키 저장소를 준비한 Linux 환경에서 다음과 같이 실행한다. 현재 사용자 키 저장소 대신 격리된 서비스 환경을 사용한다. 임시 서비스 이름으로 저장·조회·삭제하고 정리하며, 기본 테스트에서는 이 opt-in 검사만 생략한다.
+
+```sh
+MECA_TEST_SECRET_SERVICE=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials -run TestCredentialSecretService -v
+```
 
 ## 성능과 장시간 수명
 

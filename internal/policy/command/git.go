@@ -5,6 +5,7 @@
 package command
 
 import (
+	"github.com/keonho-kim/meca/internal/policy/command/transfer"
 	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
@@ -67,6 +68,12 @@ func (a *analyzer) git(args []word, s *state) {
 	case "checkout":
 		destructive = unknownGitOption(args[i+1:]) || !gitOption(args[i+1:], "-b") || gitOption(args[i+1:], "-f", "--force", "-B")
 	case "push":
+		values := make([]transfer.Argument, len(args)-i-1)
+		for index, arg := range args[i+1:] {
+			values[index] = transfer.Argument{Value: arg.text, Known: arg.known && !arg.glob}
+		}
+		inspection := transfer.GitPush(values)
+		a.outbound(inspection)
 		a.ask("Remote Git mutation requires approval")
 	case "branch", "tag":
 		destructive = unknownGitOption(args[i+1:]) || gitOption(args[i+1:], "-d", "-D", "--delete", "-f", "--force")

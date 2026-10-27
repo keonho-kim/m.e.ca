@@ -43,6 +43,8 @@ jobs:
         run: bash scripts/release/prepare.sh >> "$GITHUB_OUTPUT"
 
       - name: Verify source
+        env:
+          GOFLAGS: -tags=godbus_no_tcp
         run: |
           go test ./...
           go vet ./...

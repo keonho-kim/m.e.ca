@@ -28,7 +28,7 @@ meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
     fi
 
     mkdir -p bin
-    CGO_ENABLED=0 "$meca_go_binary" build -trimpath -o bin/meca ./cmd/meca
+    CGO_ENABLED=0 "$meca_go_binary" build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 )
 
 exec "$meca_install_root/bin/meca" install

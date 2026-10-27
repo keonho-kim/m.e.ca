@@ -40,7 +40,7 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 	if err := op.settings.Check(); err != nil {
 		return toolapi.Result{}, err
 	}
-	if op.approval.Required && !approved {
+	if (op.approval.Required || op.approval.UserRequired) && !approved {
 		return toolapi.Result{}, fmt.Errorf("operation denied: approval required")
 	}
 	if !op.executed.CompareAndSwap(false, true) {

@@ -8,6 +8,8 @@ import "strings"
 
 func (a *analyzer) effects(name string, args []word, s *state) {
 	switch name {
+	case "curl", "wget", "scp", "rsync", "sftp", "ssh":
+		a.transfer(name, args)
 	case "rm", "rmdir", "unlink":
 		parents := name == "rmdir" && removalParents(args)
 		for _, arg := range a.operands(args, nil) {

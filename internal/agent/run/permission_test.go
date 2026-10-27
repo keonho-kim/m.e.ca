@@ -1,4 +1,4 @@
-// Purpose: Verify All Mighty bypasses approval callbacks and records the decision source.
+// Purpose: Verify All Mighty automatically approves ordinary operations and records the decision source.
 // Pattern: Runtime approval contract test.
 // Usage: go test ./internal/agent/run -run TestAllMighty.
 // Related: internal/agent/run/prepare_execution.go, internal/policy/permission.go.

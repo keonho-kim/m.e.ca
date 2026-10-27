@@ -54,6 +54,10 @@ func TestPermissionCancelFailureAndActiveTask(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
+	if a.page != "permission" || !a.permissionConfirm {
+		t.Fatal("lowercase n dismissed confirmation")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", 0))
 	if a.page != "chat" || a.opts.Config.Permission != policy.PermissionDefault {
 		t.Fatal("discard applied a permission change")
 	}

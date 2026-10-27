@@ -1,4 +1,4 @@
-// Purpose: Allow project-child mutations while requiring external approval and blocking protected roots.
+// Purpose: Represent approval requirements and assess canonical file mutations and protected roots.
 // Pattern: Pure policy functions.
 // Usage: Shell analysis and dedicated file operations assess canonical targets here.
 // Related: internal/policy/command/targets.go, internal/tools/local/mutation_safety.go.
@@ -12,8 +12,9 @@ import (
 )
 
 type Safety struct {
-	Reasons []string
-	Targets []string
+	Reasons      []string
+	Targets      []string
+	UserRequired bool // Direct consent cannot be replaced by automatic approval.
 }
 
 func (s *Safety) Ask(reason string) {
@@ -23,6 +24,7 @@ func (s *Safety) Ask(reason string) {
 }
 
 func (s *Safety) Merge(other Safety) {
+	s.UserRequired = s.UserRequired || other.UserRequired
 	for _, reason := range other.Reasons {
 		s.Ask(reason)
 	}

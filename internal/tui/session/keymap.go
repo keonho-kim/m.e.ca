@@ -43,7 +43,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		if a.fileReserve {
 			label = "후속 예약"
 		}
-		return append(shortcuts, view.Shortcut{Key: "y", Label: label}, view.Shortcut{Key: "n", Label: "취소"}, view.Shortcut{Key: "Esc", Label: "Keep writing"})
+		return append(shortcuts, view.Shortcut{Key: "y", Label: label}, view.Shortcut{Key: "N", Label: "취소"}, view.Shortcut{Key: "Esc", Label: "Keep writing"})
 	}
 	if a.filePreview != nil {
 		controls := []view.Shortcut{{Key: "Esc", Label: "닫기"}}

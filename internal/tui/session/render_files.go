@@ -15,9 +15,9 @@ func (a *app) renderFiles(w, h int) {
 		display.Status = a.language.Text("Reading directory…")
 	}
 	if a.fileSendConfirm {
-		display.Status = a.language.Text("Send this request? (y/n)")
+		display.Status = a.language.Text("Send this request? (y/N)")
 		if a.fileReserve {
-			display.Status = a.language.Text("Queue this request? (y/n)")
+			display.Status = a.language.Text("Queue this request? (y/N)")
 		}
 	}
 	display.BrowserWidth = w

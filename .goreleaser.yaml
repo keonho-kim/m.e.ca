@@ -11,6 +11,8 @@ builds:
     binary: meca
     env:
       - CGO_ENABLED=0
+    tags:
+      - godbus_no_tcp
     goos:
       - darwin
       - linux

@@ -40,7 +40,7 @@ func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 		t.Fatal("confirmation Esc discarded the draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", 0))
 	if a.page != "chat" || a.modelForm != nil || f.Credential.String() != "" {
 		t.Fatal("discard retained secret input")
 	}
@@ -118,7 +118,7 @@ func TestModelFormSelectedCandidateVisibleAfterResize(t *testing.T) {
 }
 
 func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
-	for _, decision := range []string{"y", "n"} {
+	for _, decision := range []string{"y", "N"} {
 		t.Run(decision, func(t *testing.T) {
 			started, release := make(chan struct{}), make(chan struct{})
 			var calls atomic.Int32
@@ -174,7 +174,7 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 			if decision == "y" && (a.selection.Model != "alias" || a.client == nil || a.modelForm != nil) {
 				t.Fatalf("queued save failed: %+v %s", a.selection, a.status)
 			}
-			if decision == "n" && (a.selection.Model != "" || a.client != nil || a.modelForm != nil) {
+			if decision == "N" && (a.selection.Model != "" || a.client != nil || a.modelForm != nil) {
 				t.Fatal("discarded catalog lookup committed settings")
 			}
 		})

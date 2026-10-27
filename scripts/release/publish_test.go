@@ -1,4 +1,4 @@
-// Purpose: Verify release publication blocks stale commits, altered artifacts and conflicting tag updates.
+// Purpose: Verify publication rejects stale commits, unsafe build metadata, altered artifacts and tag conflicts.
 // Pattern: Offline publication adapter tests.
 // Usage: go test ./scripts/release -run TestPublish.
 // Related: scripts/release/publish.sh, scripts/release/prepare_test.go, .github/workflows/release.yml.
@@ -18,7 +18,7 @@ import (
 )
 
 func TestPublishRelease(t *testing.T) {
-	for _, mode := range []string{"existing", "new", "stale", "changed tag", "bad checksum", "missing notice", "immutable", "auth failure", "lease failure", "upload failure"} {
+	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing build tag", "lookalike build tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			copyReleaseScript(t, root, "publish.sh")
@@ -26,7 +26,23 @@ func TestPublishRelease(t *testing.T) {
 			var manifest strings.Builder
 			for _, platform := range []string{"linux_amd64", "linux_arm64", "macos_amd64", "macos_arm64"} {
 				name := "meca_0.0.20261026_" + platform + ".tar.gz"
-				body := releaseArchive(t, mode != "missing notice")
+				metadata := "\tbuild\t-tags=godbus_no_tcp\n"
+				if mode == "extra build tags" {
+					metadata = "\tbuild\t-tags=first,godbus_no_tcp,last\n"
+				}
+				if platform == "macos_arm64" {
+					switch mode {
+					case "missing build tag":
+						metadata = "\tbuild\t-trimpath=true\n"
+					case "lookalike build tag":
+						metadata = "\tbuild\t-tags=prefix_godbus_no_tcp,godbus_no_tcp_suffix\n"
+					case "missing build metadata":
+						metadata = "fixture without build settings\n"
+					case "unreadable build metadata":
+						metadata = "invalid executable\n"
+					}
+				}
+				body := releaseArchive(t, mode != "missing notice", metadata)
 				writeReleaseFile(t, root, "dist/"+name, string(body))
 				fmt.Fprintf(&manifest, "%x  %s\n", sha256.Sum256(body), name)
 			}
@@ -39,6 +55,7 @@ func TestPublishRelease(t *testing.T) {
 			}
 			writeReleaseFile(t, root, "commands/git", fakeReleaseGit)
 			writeReleaseFile(t, root, "commands/gh", fakeReleaseGitHub)
+			writeReleaseFile(t, root, "commands/go", fakeReleaseGo)
 			commit, previous := strings.Repeat("1", 40), strings.Repeat("2", 40)
 			main, remote := commit, previous
 			if mode == "new" {
@@ -59,9 +76,13 @@ func TestPublishRelease(t *testing.T) {
 				"RELEASE_TEST_COMMIT="+commit, "RELEASE_TEST_MAIN="+main, "RELEASE_TEST_TAG="+remote,
 				"RELEASE_TEST_MODE="+mode, "RELEASE_TEST_CALLS="+filepath.Join(root, "calls"))
 			output, err := command.CombinedOutput()
+			remaining, globErr := filepath.Glob(filepath.Join(root, ".cache/release-verify.*"))
+			if globErr != nil || len(remaining) != 0 {
+				t.Fatalf("release verification files remain: %v, %v", remaining, globErr)
+			}
 			calls, _ := os.ReadFile(filepath.Join(root, "calls"))
 			status, _ := os.ReadFile(filepath.Join(root, "output"))
-			success := mode == "existing" || mode == "new"
+			success := mode == "existing" || mode == "new" || mode == "extra build tags"
 			if success {
 				if err != nil || string(status) != "published=true\n" || !strings.Contains(string(calls), "push --force-with-lease=refs/tags/v0.0.20261026:"+previous) {
 					t.Fatalf("publish: %v\n%s\n%s", err, output, calls)
@@ -83,8 +104,8 @@ func TestPublishRelease(t *testing.T) {
 			if err == nil || strings.Contains(string(status), "published=true") || strings.Contains(string(calls), "release edit") {
 				t.Fatalf("failed publication reported success: %v\n%s\n%s", err, output, calls)
 			}
-			if mode != "lease failure" && mode != "upload failure" && strings.Contains(string(calls), "push ") {
-				t.Fatal("preflight failure moved the remote tag")
+			if mode != "lease failure" && mode != "upload failure" && (strings.Contains(string(calls), "push ") || strings.Contains(string(calls), "release upload")) {
+				t.Fatal("preflight failure moved the remote tag or uploaded assets")
 			}
 			if mode == "lease failure" && strings.Contains(string(calls), "release upload") {
 				t.Fatal("conflicting tag update still uploaded assets")
@@ -93,7 +114,7 @@ func TestPublishRelease(t *testing.T) {
 	}
 }
 
-func releaseArchive(t *testing.T, notice bool) []byte {
+func releaseArchive(t *testing.T, notice bool, metadata string) []byte {
 	t.Helper()
 	var buffer bytes.Buffer
 	gz := gzip.NewWriter(&buffer)
@@ -103,6 +124,9 @@ func releaseArchive(t *testing.T, notice bool) []byte {
 			continue
 		}
 		body := []byte("fixture " + name)
+		if name == "meca" {
+			body = []byte(metadata)
+		}
 		if err := writer.WriteHeader(&tar.Header{Name: name, Mode: 0755, Size: int64(len(body))}); err != nil {
 			t.Fatal(err)
 		}
@@ -145,4 +169,13 @@ else
   printf '%s\n' "$*" >> "$RELEASE_TEST_CALLS"
   if [ "$2" = upload ] && [ "$RELEASE_TEST_MODE" = 'upload failure' ]; then exit 1; fi
 fi
+`
+
+const fakeReleaseGo = `#!/bin/sh
+[ "$1" = version ] && [ "$2" = -m ] && [ "$#" = 3 ] || exit 2
+if grep -Fq 'invalid executable' "$3"; then
+  echo 'fixture: unreadable Go build metadata' >&2
+  exit 1
+fi
+cat "$3"
 `

@@ -32,6 +32,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 		return nil, outcome, err
 	}
 	proposal := op.Approval()
+	proposal.Required = proposal.Required || proposal.UserRequired
 	if proposal.Candidate != nil {
 		if err := proposal.Candidate.Check(call); err != nil {
 			return nil, outcome, err
@@ -61,12 +62,12 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	approved := !proposal.Required
 	if proposal.Required {
 		source := "user"
-		if s.runner.Settings.Permission == policy.PermissionAllMighty {
+		if s.runner.Settings.Permission == policy.PermissionAllMighty && !proposal.UserRequired {
 			approved, source = true, "all_mighty"
 		} else {
 			approved, err = approve(ctx, proposal)
 			if err != nil {
-				return nil, outcome, errors.Join(errRuntimeRecord, err)
+				return nil, outcome, errors.Join(errApprovalDenied, err)
 			}
 		}
 		decision := "denied"

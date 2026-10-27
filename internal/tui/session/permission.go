@@ -68,7 +68,7 @@ func (a *app) permissionShortcuts() []view.Shortcut {
 func (a *app) renderPermission(w, h int) {
 	description := "Run ordinary work automatically; ask for approval when required."
 	if a.choice == int(policy.PermissionAllMighty) {
-		description = "Automatically approve operations without asking."
+		description = "Automatically approve operations; outbound transfers still require your approval."
 	}
 	view.Settings(a.screen, view.SettingsDisplay{
 		Title: a.language.Text("Permission mode"), Language: a.language,

@@ -10,6 +10,7 @@ func inspectionRequired(name string) bool {
 	case "sudo", "su", "doas", "pkexec", "cd", "eval", ".", "source", "unset", "export", "readonly", "local", "set", "read", "getopts", "shift", "alias", "unalias", "trap",
 		"sh", "dash", "bash", "zsh", "ksh", "ash", "env", "command", "exec", "builtin", "nohup", "setsid", "nice", "timeout", "stdbuf", "time", "busybox", "toybox", "xargs",
 		"rm", "rmdir", "unlink", "mv", "cp", "install", "ln", "mkdir", "touch", "truncate", "tee", "chmod", "chown", "chgrp", "find", "git", "sed", "gsed",
+		"curl", "wget", "scp", "rsync", "sftp", "ssh",
 		"dd", "mkfs", "mke2fs", "fdisk", "sfdisk", "parted", "wipefs", "mount", "umount", "chroot":
 		return true
 	default:

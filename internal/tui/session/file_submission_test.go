@@ -24,11 +24,11 @@ func TestFileSendRequiresExplicitConfirmation(t *testing.T) {
 		a.editor.Set("review the selected files")
 		a.browser.Selected = map[string]bool{"src/main.py": true}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-		if !a.fileSendConfirm || a.page != "files" || !strings.Contains(modelScreen(a), "Send this request? (y/n)") {
+		if !a.fileSendConfirm || a.page != "files" || !strings.Contains(modelScreen(a), "Send this request? (y/N)") {
 			t.Fatal("Enter did not ask for confirmation")
 		}
 		labels := keymapLabels(t, a)
-		if labels["y"] != "Send" || labels["n"] != "Cancel" || labels["Esc"] != "Keep writing" || labels["Enter"] != "" {
+		if labels["y"] != "Send" || labels["N"] != "Cancel" || labels["Esc"] != "Keep writing" || labels["Enter"] != "" {
 			t.Fatal(labels)
 		}
 		a.pasteBoundary(true)
@@ -38,7 +38,11 @@ func TestFileSendRequiresExplicitConfirmation(t *testing.T) {
 		if !a.fileSendConfirm || a.editor.String() != "review the selected files" || a.worker.active() {
 			t.Fatal("paste or Enter bypassed explicit confirmation")
 		}
-		a.keyEvent(tcell.NewEventKey(cancel, "n", 0))
+		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
+		if !a.fileSendConfirm || a.page != "files" {
+			t.Fatal("lowercase n dismissed send confirmation")
+		}
+		a.keyEvent(tcell.NewEventKey(cancel, "N", 0))
 		if a.fileSendConfirm || a.page != "files" || a.editor.String() != "review the selected files" || !a.browser.Selected["src/main.py"] {
 			t.Fatal("cancellation changed the draft or selected paths")
 		}

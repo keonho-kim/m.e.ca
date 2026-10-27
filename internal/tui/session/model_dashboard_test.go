@@ -62,7 +62,7 @@ func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 	a.language = locale.English
 	a.openModel()
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if body := modelScreen(a); !strings.Contains(body, "Save current settings?") || !strings.Contains(body, "y") || !strings.Contains(body, "n") || !strings.Contains(body, "Esc") {
+	if body := modelScreen(a); !strings.Contains(body, "Save current settings?") || !strings.Contains(body, "y") || !strings.Contains(body, "N") || !strings.Contains(body, "Esc") {
 		t.Fatalf("save confirmation missing: %s", body)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -70,7 +70,7 @@ func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 		t.Fatal("Esc did not return to settings")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", 0))
 	if a.page != "chat" || a.selection.Model != "" {
 		t.Fatal("n did not discard and return to chat")
 	}
@@ -97,7 +97,7 @@ func TestModelDashboardKeymapMatchesFocusedRow(t *testing.T) {
 		t.Fatal("unknown capabilities advertised an executable toggle")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if labels := keymapLabels(t, a); labels["y"] == "" || labels["n"] == "" || labels["Esc"] != "설정 계속" {
+	if labels := keymapLabels(t, a); labels["y"] == "" || labels["N"] == "" || labels["Esc"] != "설정 계속" {
 		t.Fatal(labels)
 	}
 }
