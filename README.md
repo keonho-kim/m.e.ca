@@ -22,8 +22,20 @@ Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리�
 
 ### 최신 릴리스로 설치하기
 
-1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 아래 환경에 맞는 아카이브와 `checksums.txt`를 받습니다.
-2. [SHA-256을 확인](docs/releases.md#다운로드와-설치)하고 다운로드한 폴더에서 설치합니다.
+1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 운영체제와 CPU에 맞는 `.tar.gz` 파일을 받습니다.
+2. 압축을 풀고 터미널에서 압축을 푼 폴더로 이동합니다.
+3. 아래 명령으로 설치합니다.
+
+```sh
+./meca install
+```
+
+설치 후 터미널에서 `meca`를 실행하면 됩니다.
+
+<details>
+<summary>설치 상세 안내 — 파일 선택·체크섬·업데이트·소스 빌드·삭제</summary>
+
+### 운영체제와 CPU에 맞는 파일 선택
 
 | 환경 | 파일명의 `<platform>` |
 | --- | --- |
@@ -32,7 +44,11 @@ Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리�
 | Linux·WSL — `x86_64` | `linux_amd64` |
 | Linux — `aarch64`·`arm64` | `linux_arm64` |
 
-`<version>`과 `<platform>`은 받은 파일명으로 바꾸세요. Linux의 CPU 종류는 `uname -m`으로 확인할 수 있습니다.
+Linux의 CPU 종류는 `uname -m`으로 확인할 수 있습니다.
+
+### 터미널에서 압축 해제하기
+
+다운로드한 폴더에서 실행합니다. `<version>`과 `<platform>`은 받은 파일명으로 바꾸세요.
 
 ```sh
 mkdir meca-install
@@ -41,6 +57,18 @@ tar -xzf "meca_<version>_<platform>.tar.gz" -C meca-install
 ```
 
 `~/.local/bin/meca`에 설치하고 필요한 PATH를 등록합니다. 설정·프롬프트·대화는 `~/.meca`에 저장합니다.
+
+### 체크섬 확인 (선택)
+
+파일의 무결성을 확인하려면 같은 릴리스의 `checksums.txt`도 다운로드합니다. 압축을 풀기 전에 아래 명령의 결과를 `checksums.txt`의 동일 파일명 항목과 비교하세요.
+
+```sh
+# macOS
+shasum -a 256 "meca_<version>_<platform>.tar.gz"
+
+# Linux
+sha256sum "meca_<version>_<platform>.tar.gz"
+```
 
 ### 업데이트
 
@@ -88,6 +116,8 @@ meca uninstall
 설치한 명령·PATH 등록·`~/.meca` 전체와 MECA가 저장한 OS 인증정보를 삭제합니다. 사용자 프로젝트는 유지합니다.
 
 [설치 옵션·체크섬·업데이트 상세 →](docs/releases.md)
+
+</details>
 
 ## 사용법
 
