@@ -16,7 +16,7 @@ func TestCommandSnapshotOutputTiming(t *testing.T) {
 		j := &job{state: State{Status: "running"}, started: time.Now(), done: make(chan struct{})}
 		check := func(elapsed int64, age *int64) {
 			t.Helper()
-			body, err := json.Marshal(j.snapshot(false))
+			body, err := json.Marshal(j.snapshot())
 			if err != nil {
 				t.Fatal(err)
 			}

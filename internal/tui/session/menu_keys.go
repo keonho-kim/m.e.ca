@@ -20,12 +20,6 @@ func (a *app) menuKey(e *tcell.EventKey) {
 			return
 		}
 	}
-	if a.paste {
-		if e.Key() == tcell.KeyRune {
-			a.menuInput.Insert(e.Str())
-		}
-		return
-	}
 	if e.Key() == tcell.KeyEscape {
 		if a.page == "approval" {
 			a.decide(false)
@@ -63,6 +57,5 @@ func (a *app) decide(approved bool) {
 	case a.decision <- approved:
 	default:
 	}
-	a.proposal = nil
-	a.page = "chat"
+	a.closeApproval()
 }

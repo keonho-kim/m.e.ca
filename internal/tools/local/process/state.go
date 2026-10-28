@@ -15,11 +15,10 @@ type State struct {
 	ElapsedMillis    int64  "json:\"elapsed_millis\""
 	LastOutputMillis *int64 "json:\"last_output_millis\""
 	ExitCode         int    "json:\"-\""
-	Stdout, Stderr   string "json:\"-\""
 	Error            string "json:\"-\""
 }
 
-func (j *job) snapshot(output bool) State {
+func (j *job) snapshot() State {
 	j.mu.Lock()
 	state, ended := j.state, j.finished
 	j.mu.Unlock()
@@ -37,10 +36,6 @@ func (j *job) snapshot(output bool) State {
 	var out, err time.Time
 	out = j.stdout.lastOutput()
 	err = j.stderr.lastOutput()
-	if output {
-		state.Stdout = j.stdout.String()
-		state.Stderr = j.stderr.String()
-	}
 	if err.After(out) {
 		out = err
 	}

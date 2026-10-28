@@ -19,11 +19,11 @@ func (a *app) selectFile(path string) {
 	}
 	a.fileSelectionBusy = true
 	selections := maps.Clone(a.browser.Selected)
-	executor, settings, store, id, ctx := a.opts.Tools, a.settings, a.opts.Store, a.opts.Session.ID, a.ctx
+	executor, settings, store, id, ctx := a.opts.Files, a.settings, a.opts.Store, a.opts.Session.ID, a.ctx
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
-		ref, err := executor.Reference(settings, path)
+		ref, err := executor.Reference(ctx, settings, path)
 		selected := !selections[ref.Path]
 		if err == nil {
 			err = store.SelectFile(ctx, id, ref.Path, selected)

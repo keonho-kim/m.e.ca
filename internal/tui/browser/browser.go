@@ -1,17 +1,17 @@
 // Purpose: Own column navigation and per-column selection positions for the file view.
 // Pattern: Simple Module (presentation state).
 // Usage: Owned by the terminal loop; directory I/O is supplied by the caller.
-// Related: internal/tui/session/files.go, internal/tools/local/textedit/edit.go.
+// Related: internal/tui/session/files.go, internal/fileview/reader.go.
 package browser
 
 import (
-	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"path/filepath"
 )
 
 type Column struct {
 	Path          string
-	Entries       []local.Entry
+	Entries       []fileview.Entry
 	Index, Offset int
 	More          bool
 }
@@ -22,7 +22,7 @@ type Browser struct {
 	Selected map[string]bool
 }
 
-func (b *Browser) Open(path string, entries []local.Entry, more bool) {
+func (b *Browser) Open(path string, entries []fileview.Entry, more bool) {
 	b.Columns = []Column{{Path: path, Entries: entries, More: more}}
 	b.Active = 0
 	if b.Selected == nil {
@@ -52,7 +52,7 @@ func (b *Browser) Target() (string, bool) {
 	entry := c.Entries[c.Index]
 	return filepath.Join(c.Path, entry.Name), entry.Directory
 }
-func (b *Browser) Push(path string, entries []local.Entry, more bool) {
+func (b *Browser) Push(path string, entries []fileview.Entry, more bool) {
 	clear(b.Columns[b.Active+1:])
 	b.Columns = b.Columns[:b.Active+1]
 	b.Columns = append(b.Columns, Column{Path: path, Entries: entries, More: more})

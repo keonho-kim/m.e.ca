@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/tui/browser"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -52,7 +52,7 @@ func TestKeymapLayoutClearAndPreviewLabels(t *testing.T) {
 			t.Fatalf("field hints are ambiguous or redundant: %q", keys)
 		}
 		a.page = "files"
-		a.filePreview = &browser.Preview{Full: true}
+		a.filePreview = &preview.State{Full: true}
 		if labels := keymapLabels(t, a); labels["Tab"] != lang.Text("분할 보기") {
 			t.Fatal(labels)
 		}

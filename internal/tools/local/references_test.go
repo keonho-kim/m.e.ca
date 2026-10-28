@@ -1,10 +1,11 @@
 // Purpose: Verify selected paths respect scope and distinguish files from directories.
 // Pattern: Filesystem behavior tests.
 // Usage: go test ./internal/tools/local -run TestReferences.
-// Related: internal/tools/local/references.go.
+// Related: internal/fileview/references.go.
 package local
 
 import (
+	"context"
 	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
@@ -21,12 +22,12 @@ func TestReferences(t *testing.T) {
 	}
 	settings := policy.Settings{Scope: policy.Directory}
 	for _, path := range []string{"src/auth.go", "src"} {
-		ref, err := e.Reference(settings, path)
+		ref, err := e.Files.Reference(context.Background(), settings, path)
 		if err != nil || ref.Directory != (path == "src") {
 			t.Fatalf("%q: %+v %v", path, ref, err)
 		}
 	}
-	if _, err := e.Reference(settings, "../"); err == nil {
+	if _, err := e.Files.Reference(context.Background(), settings, "../"); err == nil {
 		t.Fatal("scope escape")
 	}
 }

@@ -7,8 +7,8 @@ package session
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
-	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +31,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	a.openFiles(".")
 	finishBrowserIO(t, a)
 	a.status = ""
-	a.render()
+	renderPreview(t, a)
 	if !strings.Contains(screenLine(a.screen, 3, 80), "[ ] sub/") || !strings.Contains(screenLine(a.screen, 4, 80), "[ ] a.txt") {
 		t.Fatal("file types not visible")
 	}
@@ -44,7 +44,7 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 	finishBrowserIO(t, a)
-	a.render()
+	renderPreview(t, a)
 	if !strings.Contains(screenLine(a.screen, 4, 80), "[x] a.txt") {
 		t.Fatal("selection checkbox missing")
 	}
@@ -60,12 +60,12 @@ func TestFilePreviewModesAndFolderNoOp(t *testing.T) {
 	if a.filePreview == nil || a.filePreview.Full {
 		t.Fatal("Tab did not open half preview")
 	}
-	a.render()
+	renderPreview(t, a)
 	if !strings.Contains(screenLine(a.screen, 2, 80)[40:], "1 | hello") {
 		t.Fatal("preview not in right half")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	a.render()
+	renderPreview(t, a)
 	if !a.filePreview.Full || !strings.Contains(screenLine(a.screen, 2, 80), "1 | hello") {
 		t.Fatal("Enter did not expand preview")
 	}
@@ -89,7 +89,7 @@ func TestFilePreviewEscapeLeavesAgentRunning(t *testing.T) {
 	a := fixture(t)
 	a.previewRevision = 4
 	a.page = "files"
-	a.filePreview = &browser.Preview{Content: "hello", Full: true}
+	a.filePreview = &preview.State{Content: "hello", Full: true}
 	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }
@@ -97,7 +97,7 @@ func TestFilePreviewEscapeLeavesAgentRunning(t *testing.T) {
 	if a.filePreview != nil || cancelled || !a.worker.active() {
 		t.Fatal("preview Esc interrupted agent")
 	}
-	a.receive(notice{PreviewRevision: a.previewRevision - 1, FilePreview: &local.FilePreview{Content: "stale"}})
+	a.receive(notice{PreviewRevision: a.previewRevision - 1, FilePreview: &fileview.Preview{Content: "stale"}})
 	if a.filePreview != nil {
 		t.Fatal("stale read reopened preview")
 	}

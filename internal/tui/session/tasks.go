@@ -10,9 +10,10 @@ import (
 	tasksession "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
-func (a *app) startTask(text string) {
+func (a *app) startRequest(input composer.Request) {
 	if a.worker.active() {
 		return
 	}
@@ -28,29 +29,36 @@ func (a *app) startTask(text string) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.taskCancel = cancel
 	a.decision = make(chan bool, 1)
-	steering := make(chan string, 16)
+	steering := make(chan composer.Request, 16)
 	a.steering = steering
-	request := agentrequest.New(agentrequest.Options{
+	reader, settings := a.opts.Files, a.settings
+	exists := func(ctx context.Context, path string) bool {
+		_, err := reader.Reference(ctx, settings, path)
+		return err == nil
+	}
+	options := agentrequest.Options{
 		Config: a.opts.Config, Selection: a.selection, Session: a.opts.Session,
 		Generator: a.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
-		LoadPrompts: a.opts.LoadPrompts, Text: a.withSelectedPaths(text),
+		LoadPrompts: a.opts.LoadPrompts,
 		PollSteering: func() []string {
 			var out []string
 			for {
 				select {
-				case text := <-steering:
-					out = append(out, text)
+				case request := <-steering:
+					out = append(out, request.Resolve(ctx, exists))
 				default:
 					return out
 				}
 			}
 		},
-	})
+	}
 	decisions := a.decision
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
+		options.Text = input.Resolve(ctx, exists)
+		request := agentrequest.New(options)
 		delivery := runtimeDelivery{}
 		emit := func(event runrecord.Event) error {
 			if event.Kind == "stream" {

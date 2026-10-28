@@ -5,6 +5,7 @@
 package queue
 
 import (
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/tui/input"
@@ -36,12 +37,12 @@ type Edit struct {
 
 // State is owned by the terminal event loop; Messages must remain ordered while Edit is active.
 type State struct {
-	Messages []string
+	Messages []composer.Request
 	Edit     *Edit
 }
 
 func (s *State) Changed(text string) bool {
-	return s.Edit != nil && text != s.Messages[s.Edit.Index]
+	return s.Edit != nil && text != s.Messages[s.Edit.Index].Text
 }
 
 func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
@@ -50,7 +51,7 @@ func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
 			return Unchanged
 		}
 		s.Edit = &Edit{Index: len(s.Messages) - 1, Draft: *editor, Reveal: true}
-		editor.Set(s.Messages[s.Edit.Index])
+		editor.Set(s.Messages[s.Edit.Index].Text)
 		return Focused
 	}
 	next := s.Edit.Index + delta
@@ -64,7 +65,7 @@ func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
 		return Close
 	}
 	s.Edit.Index, s.Edit.Reveal = next, true
-	editor.Set(s.Messages[next])
+	editor.Set(s.Messages[next].Text)
 	return Focused
 }
 
@@ -72,7 +73,7 @@ func (s *State) Save(text string) bool {
 	if s.Edit == nil || strings.TrimSpace(text) == "" {
 		return false
 	}
-	s.Messages[s.Edit.Index] = text
+	s.Messages[s.Edit.Index].Text = text
 	return true
 }
 
@@ -82,7 +83,7 @@ func (s *State) DeleteSelected() {
 	}
 	index := s.Edit.Index
 	copy(s.Messages[index:], s.Messages[index+1:])
-	s.Messages[len(s.Messages)-1] = ""
+	s.Messages[len(s.Messages)-1] = composer.Request{}
 	s.Messages = s.Messages[:len(s.Messages)-1]
 	if len(s.Messages) == 0 {
 		s.Messages = nil
@@ -103,7 +104,14 @@ func (s *State) Drain(editor *input.Editor) {
 	if len(s.Messages) == 0 {
 		return
 	}
-	text := strings.Join(s.Messages, "\n\n")
+	var body strings.Builder
+	for i, request := range s.Messages {
+		if i > 0 {
+			body.WriteString("\n\n")
+		}
+		body.WriteString(request.Body())
+	}
+	text := body.String()
 	if draft := editor.String(); draft != "" {
 		text += "\n\n" + draft
 	}
@@ -113,7 +121,7 @@ func (s *State) Drain(editor *input.Editor) {
 }
 
 func (s *State) Shift() {
-	s.Messages[0] = ""
+	s.Messages[0] = composer.Request{}
 	s.Messages = s.Messages[1:]
 	if len(s.Messages) == 0 {
 		s.Messages = nil

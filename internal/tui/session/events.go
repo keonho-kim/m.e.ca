@@ -8,12 +8,13 @@ import (
 	"context"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/fileview"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type notice struct {
+	PreviewLayout   *previewLayoutResult
 	FileWatch       *watchResult
 	Stream          *streamNotice
 	FormRevision    int
@@ -25,7 +26,7 @@ type notice struct {
 	SetupRevision   int
 	Clipboard       bool
 	RunStatus       runrecord.Status
-	FilePreview     *local.FilePreview
+	FilePreview     *fileview.Preview
 	PreviewRevision int
 	RememberModel   bool
 	credential      string
@@ -47,6 +48,10 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.PreviewLayout != nil {
+		a.receivePreviewLayout(n.PreviewLayout)
+		return
+	}
 	if n.FileWatch != nil {
 		a.receiveFileWatch(n.FileWatch)
 		return
@@ -89,11 +94,7 @@ func (a *app) receive(n notice) {
 		if a.worker.stopping() {
 			return
 		}
-		a.proposal = n.Approval
-		a.page = "approval"
-		a.choices = []string{"Approve", "Reject"}
-		a.choice = 0
-		a.previewOffset = 0
+		a.openApproval(n.Approval)
 		return
 	}
 	if n.Event != nil {

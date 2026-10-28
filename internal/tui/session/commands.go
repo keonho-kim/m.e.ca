@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/commands"
-	"github.com/keonho-kim/meca/internal/tui/transcript"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func (a *app) submit() {
@@ -82,11 +82,9 @@ func (a *app) submitCommand(command commands.Command) {
 			a.status = a.language.Text("Select a model using !model")
 			return
 		}
-		a.rememberInput(command.Argument)
-		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(command.Argument)), false)
 		a.cancelDirectory()
 		a.page = "chat"
-		a.startTask(command.Argument)
+		a.dispatchRequest(composer.Capture(command.Argument, a.selectedPaths()))
 	}
 	a.editor.Set("")
 	a.closeCommandHints()

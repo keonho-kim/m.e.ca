@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -59,7 +60,7 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 				t.Fatal(err)
 			}
 			a.selection = connection.Selection{Connection: c, Model: "mock"}
-			a.startTask("current request")
+			a.startRequest(composer.Capture("current request", a.selectedPaths()))
 			select {
 			case <-started:
 			case <-ctx.Done():

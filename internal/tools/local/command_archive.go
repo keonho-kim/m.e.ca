@@ -97,19 +97,6 @@ func (e *Executor) AcknowledgeCommand(id string) error {
 		return err
 	}
 	e.commands.Acknowledge(id)
+	e.liveOutputs.forget(id)
 	return nil
-}
-
-func (e *Executor) liveCommandOutput(id, stream, text string) (string, string, error) {
-	if len(text) <= outputExcerptBytes {
-		return text, "", nil
-	}
-	path, err := e.commandPath(id, "."+stream+".live.log")
-	if err != nil {
-		return "", "", err
-	}
-	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
-		return "", "", err
-	}
-	return commandExcerpt(text), path, nil
 }

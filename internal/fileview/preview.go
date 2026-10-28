@@ -1,8 +1,8 @@
 // Purpose: Read a bounded, redacted text snapshot for user-initiated file previews.
 // Pattern: Filesystem adapter.
 // Usage: The file-view worker calls Preview without model tool execution or history mutation.
-// Related: internal/tools/local/paths.go, internal/tui/session/file_preview.go.
-package local
+// Related: internal/fileview/reader.go, internal/tui/session/file_preview.go.
+package fileview
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 	"unicode/utf8"
 )
 
-type FilePreview struct {
+type Preview struct {
 	Path, Content string
 	Truncated     bool
 }
 
-func (e *Executor) Preview(ctx context.Context, settings policy.Settings, path string) (result FilePreview, err error) {
+func (e *Reader) Preview(ctx context.Context, settings policy.Settings, path string) (result Preview, err error) {
 	if err = ctx.Err(); err != nil {
 		return result, err
 	}
@@ -31,7 +31,7 @@ func (e *Executor) Preview(ctx context.Context, settings policy.Settings, path s
 	if err != nil {
 		return result, err
 	}
-	file, err := target.root.Open(target.relative)
+	file, err := target.Root.Open(target.Relative)
 	if err != nil {
 		return result, err
 	}
@@ -65,12 +65,12 @@ func (e *Executor) Preview(ctx context.Context, settings policy.Settings, path s
 	if err != nil {
 		return result, err
 	}
-	after, err := current.root.Stat(current.relative)
+	after, err := current.Root.Stat(current.Relative)
 	if err != nil {
 		return result, err
 	}
-	if current.absolute != target.absolute || !os.SameFile(info, after) || info.Size() != after.Size() || !info.ModTime().Equal(after.ModTime()) {
+	if current.Absolute != target.Absolute || !os.SameFile(info, after) || info.Size() != after.Size() || !info.ModTime().Equal(after.ModTime()) {
 		return result, fmt.Errorf("파일이 변경되었습니다. 다시 여세요")
 	}
-	return FilePreview{Path: e.redact(target.absolute), Content: e.redact(string(body)), Truncated: truncated}, nil
+	return Preview{Path: e.redact(target.Absolute), Content: e.redact(string(body)), Truncated: truncated}, nil
 }

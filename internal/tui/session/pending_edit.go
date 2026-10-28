@@ -1,10 +1,10 @@
 // Purpose: Coordinate reservation editing with chat focus and deferred worker completion.
 // Pattern: Application input and completion transitions.
 // Usage: Queue keys delegate state changes; closing an edit resumes dispatch or restores interrupted drafts.
-// Related: internal/tui/session/queue/state.go, internal/tui/session/pending.go, internal/tui/session/pending_edit_keys.go.
+// Related: internal/tui/composer/queue/state.go, internal/tui/session/pending.go, internal/tui/session/pending_edit_keys.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/session/queue"
+import "github.com/keonho-kim/meca/internal/tui/composer/queue"
 
 func (a *app) canEditPending() bool {
 	return a.page == "chat" && len(a.queued.Messages) > 0 && a.fileSubmission == nil && !a.worker.stopping() && (!a.worker.active() || a.worker.agent())

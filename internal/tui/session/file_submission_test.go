@@ -6,6 +6,7 @@ package session
 
 import (
 	"errors"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,7 +72,7 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			a.openFiles(".")
 			finishBrowserIO(t, a)
 			a.worker = workerAgent
-			a.steering = make(chan string, 1)
+			a.steering = make(chan composer.Request, 1)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 			<-blocked.started
 			a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))

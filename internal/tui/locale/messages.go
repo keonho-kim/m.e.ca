@@ -5,6 +5,9 @@
 package locale
 
 var messages = []translation{
+	{"", "Reading file…", "파일 읽는 중…"},
+	{"", "Preparing file display…", "파일 표시 준비 중…"},
+	{"", "(Empty file)", "(빈 파일)"},
 	{"", "Live file updates unavailable: %s", "파일 자동 갱신을 사용할 수 없습니다: %s"},
 	{"", "API options; run connection diagnostics to verify this model", "공급자 API의 요청 옵션입니다. 실제 지원은 연결 진단으로 확인하세요"},
 	{"", "Worked for", "작업 시간"},

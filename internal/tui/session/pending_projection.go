@@ -1,7 +1,7 @@
 // Purpose: Keep the currently selected reservation visible without changing deliberate history scrolling.
 // Pattern: Event-loop viewport coordination.
 // Usage: Chat rendering reveals newly selected or resized reservation rows.
-// Related: internal/tui/session/queue/projection.go, internal/tui/session/render_chat.go.
+// Related: internal/tui/composer/queue/projection.go, internal/tui/session/render_chat.go.
 package session
 
 import "github.com/keonho-kim/meca/internal/tui/viewport"

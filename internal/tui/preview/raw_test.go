@@ -1,16 +1,16 @@
 // Purpose: Verify sparse preview layout returns numbered visible rows and preserves scrolling bounds.
 // Pattern: Pure presentation contract tests and benchmark.
-// Usage: go test ./internal/tui/browser.
-// Related: internal/tui/browser/preview.go, internal/tui/session/file_preview.go.
-package browser
+// Usage: go test ./internal/tui/preview.
+// Related: internal/tui/preview/raw.go, internal/tui/session/file_preview.go.
+package preview
 
 import (
 	"strings"
 	"testing"
 )
 
-func TestPreviewVisibleWindow(t *testing.T) {
-	p := Preview{Content: "hello\nworld\n"}
+func TestLayoutVisibleWindow(t *testing.T) {
+	p := Layout{Content: "hello\nworld\n"}
 	if p.Count(80) != 2 {
 		t.Fatal("wrong row count")
 	}
@@ -32,11 +32,11 @@ func TestPreviewVisibleWindow(t *testing.T) {
 	}
 }
 
-func BenchmarkPreviewWindow(b *testing.B) {
+func BenchmarkLayoutWindow(b *testing.B) {
 	text := strings.Repeat("x\n", 131072)
 	b.ReportAllocs()
 	for b.Loop() {
-		p := Preview{Content: text}
+		p := Layout{Content: text}
 		p.Window(80, 131050, 24)
 	}
 }

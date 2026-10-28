@@ -67,6 +67,7 @@ func (a *app) shutdown() {
 	a.workers.Wait()
 	a.directoryReads = readqueue.Slot[directoryPage]{}
 	a.previewReads = readqueue.Slot[previewRequest]{}
+	a.previewLayouts = readqueue.Slot[previewLayoutRequest]{}
 	a.watchReads = readqueue.Slot[watchRequest]{}
 	// A connection worker may have transferred a client to a notice just before
 	// cancellation. The stopped event loop must release that queued ownership.

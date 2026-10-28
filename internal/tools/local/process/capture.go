@@ -20,6 +20,16 @@ func (output *cappedOutput) release() {
 	defer output.mu.Unlock()
 	output.head = bytes.Buffer{}
 	output.tail = nil
+	output.tailStart = 0
+	output.truncated = false
+}
+
+func (r *Registry) ReadOutput(id string, after [2]uint64) ([2]Capture, error) {
+	j, err := r.lookup(id)
+	if err != nil {
+		return [2]Capture{}, err
+	}
+	return [2]Capture{j.stdout.snapshot(after[0]), j.stderr.snapshot(after[1])}, nil
 }
 
 func (output *cappedOutput) isTruncated() bool {

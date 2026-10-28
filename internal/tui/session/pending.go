@@ -6,7 +6,8 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/commands"
-	"github.com/keonho-kim/meca/internal/tui/session/queue"
+	"github.com/keonho-kim/meca/internal/tui/composer"
+	"github.com/keonho-kim/meca/internal/tui/composer/queue"
 )
 
 func (a *app) reserveInput() {
@@ -22,7 +23,7 @@ func (a *app) reserveInput() {
 		a.status = a.language.Text("일반 메시지만 예약할 수 있습니다")
 		return
 	}
-	a.reserveMessage(command.Argument)
+	a.dispatchFileInput(command, true)
 }
 
 func (a *app) reserveMessage(text string) {
@@ -30,7 +31,7 @@ func (a *app) reserveMessage(text string) {
 		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
-	a.queued.Messages = append(a.queued.Messages, text)
+	a.queued.Messages = append(a.queued.Messages, composer.Capture(text, a.selectedPaths()))
 	a.editor.Set("")
 	a.closeCommandHints()
 	a.status = ""
@@ -57,12 +58,9 @@ func (a *app) finishPending(success bool) {
 		a.restorePending()
 		return
 	}
-	text, draft := a.queued.Messages[0], a.editor
-	if a.page == "files" {
-		a.closeFiles()
-	}
-	a.editor.Set(text)
-	a.submitCommand(commands.Command{Kind: commands.Message, Argument: text})
+	request, draft := a.queued.Messages[0], a.editor
+	a.editor.Set(request.Text)
+	a.dispatchRequest(request)
 	if !a.worker.active() {
 		a.editor = draft
 		a.restorePending()

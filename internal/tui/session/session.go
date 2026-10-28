@@ -66,7 +66,7 @@ func (a *app) restore() error {
 	}
 	a.browser.Selected = map[string]bool{}
 	for _, path := range paths {
-		if _, err := a.opts.Tools.Reference(a.settings, path); err == nil {
+		if _, err := a.opts.Files.Reference(a.ctx, a.settings, path); err == nil {
 			a.browser.Selected[path] = true
 		}
 	}

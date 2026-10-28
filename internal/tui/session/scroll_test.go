@@ -5,6 +5,7 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"strings"
 	"testing"
 
@@ -112,7 +113,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 	height := a.chatHeight(80, a.bodyHeight(24))
 	a.scroll(-3, 80, height)
 	a.worker = workerAgent
-	a.steering = make(chan string, 1)
+	a.steering = make(chan composer.Request, 1)
 	a.editor.Set("Use the existing API")
 	a.steerInput(a.editor.String())
 	if !a.output.Follow {

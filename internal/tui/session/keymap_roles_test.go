@@ -6,8 +6,8 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
-	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 	"strings"
 	"testing"
 )
@@ -40,7 +40,7 @@ func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
 func TestKeymapRolesFolderAndPreview(t *testing.T) {
 	a := fixture(t)
 	a.page = "files"
-	a.browser.Open(".", []local.Entry{{Name: "sub", Directory: true}}, false)
+	a.browser.Open(".", []fileview.Entry{{Name: "sub", Directory: true}}, false)
 	labels := map[string]string{}
 	for _, s := range a.shortcuts() {
 		labels[s.Key] = s.Label
@@ -48,7 +48,7 @@ func TestKeymapRolesFolderAndPreview(t *testing.T) {
 	if labels["Tab"] != "" || labels["Enter"] != "" || labels["Shift+Tab"] == "" {
 		t.Fatal(labels)
 	}
-	a.filePreview = &browser.Preview{Full: false}
+	a.filePreview = &preview.State{Full: false}
 	labels = map[string]string{}
 	for _, s := range a.shortcuts() {
 		labels[s.Key] = s.Label

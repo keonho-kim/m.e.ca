@@ -1,7 +1,7 @@
 // Purpose: Verify Markdown preview styling, viewer-only format toggling and contextual help.
 // Pattern: Virtual terminal workflow tests.
 // Usage: go test ./internal/tui/session -run 'TestMarkdownFilePreview|TestLiteralFilePreview'.
-// Related: internal/tui/session/file_preview.go, internal/tui/view/file_preview.go, internal/tui/browser/preview.go.
+// Related: internal/tui/session/file_preview.go, internal/tui/view/file_preview.go, internal/tui/preview/state.go.
 package session
 
 import (
@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
-	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 )
 
 func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
@@ -34,8 +34,8 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 			key = tcell.KeyEnter
 		}
 		a.keyEvent(tcell.NewEventKey(key, "", 0))
-		finishVisibleReads(t, a)
-		a.render()
+		renderPreview(t, a)
+		renderPreview(t, a)
 		shown := strings.Join(screenRows(a, 24-a.footerRows), "\n")
 		if !strings.Contains(shown, "Viewer title") || strings.Contains(shown, "# Viewer title") || strings.Contains(shown, "**strong**") || !strings.Contains(shown, "A --> B") {
 			t.Fatalf("full=%v: Markdown not rendered or Mermaid source missing: %s", full, shown)
@@ -58,7 +58,7 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 		} {
 			revision := a.previewRevision
 			a.keyEvent(toggle)
-			a.render()
+			renderPreview(t, a)
 			shown = strings.Join(screenRows(a, 24-a.footerRows), "\n")
 			if a.filePreview.Full != full || !strings.Contains(shown, "# Viewer title") || !strings.Contains(shown, "**strong**") {
 				t.Fatalf("key=%v: format toggle changed pane size or lost raw source: %s", toggle, shown)
@@ -70,7 +70,7 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 				t.Fatal(labels)
 			}
 			a.keyEvent(toggle)
-			a.render()
+			renderPreview(t, a)
 			assertPreviewHeadingBold(t, a, "Viewer title")
 		}
 	}
@@ -95,7 +95,7 @@ func assertPreviewHeadingBold(t *testing.T, a *app, title string) {
 func TestLiteralFilePreviewHasNoFormatToggle(t *testing.T) {
 	a := fixture(t)
 	a.page = "files"
-	a.filePreview = &browser.Preview{Path: "source.go", Content: "**literal source**", Full: true}
+	a.filePreview = &preview.State{Path: "source.go", Content: "**literal source**", Full: true}
 	for _, key := range []*tcell.EventKey{tcell.NewEventKey(tcell.KeyRune, "R", 0), tcell.NewEventKeyEx(tcell.KeyRune, "r", tcell.ModShift, true, tcell.KeyR, 1)} {
 		a.keyEvent(key)
 		if !a.filePreview.Full || keymapLabels(t, a)["Shift+R"] != "" {
@@ -107,19 +107,19 @@ func TestLiteralFilePreviewHasNoFormatToggle(t *testing.T) {
 func TestMarkdownFilePreviewRefreshPreservesModeAndPosition(t *testing.T) {
 	a := fixture(t)
 	a.page, a.previewRevision = "files", 7
-	a.filePreview = &browser.Preview{Path: "guide.md", Content: strings.Repeat("**before**\n", 50), Raw: true, Offset: 8, Loading: true}
-	a.render()
+	a.filePreview = &preview.State{Path: "guide.md", Content: strings.Repeat("**before**\n", 50), Raw: true, Offset: 8, Loading: true}
+	renderPreview(t, a)
 	if a.filePreview.Offset != 8 {
 		t.Fatal("loading reset the existing read position")
 	}
-	a.receiveFilePreview(notice{PreviewRevision: 7, FilePreview: &local.FilePreview{Path: "guide.md", Content: "# New heading\n\n" + strings.Repeat("**updated**\n", 50)}})
-	a.render()
+	a.receiveFilePreview(notice{PreviewRevision: 7, FilePreview: &fileview.Preview{Path: "guide.md", Content: "# New heading\n\n" + strings.Repeat("**updated**\n", 50)}})
+	renderPreview(t, a)
 	shown := strings.Join(screenRows(a, 24-a.footerRows), "\n")
 	if !a.filePreview.Raw || a.filePreview.Full || a.filePreview.Offset != 8 || !strings.Contains(shown, "**updated**") || strings.Contains(shown, "before") {
 		t.Fatalf("refreshed preview lost mode, source or position: %s", shown)
 	}
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "R", tcell.ModShift, true, tcell.KeyR, 1))
-	a.render()
+	renderPreview(t, a)
 	assertPreviewHeadingBold(t, a, "New heading")
 }
 

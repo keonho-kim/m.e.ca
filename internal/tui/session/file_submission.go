@@ -70,6 +70,9 @@ func (a *app) dispatchFileInput(command commands.Command, reserve bool) {
 }
 
 func (a *app) finishFileSubmission() {
+	if a.page == "approval" || a.fileSelectionBusy {
+		return
+	}
 	pending := a.fileSubmission
 	a.fileSubmission = nil
 	if pending == nil || a.exit || a.ctx.Err() != nil || a.page != "chat" {

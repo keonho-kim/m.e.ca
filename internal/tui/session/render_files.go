@@ -19,6 +19,9 @@ func (a *app) renderFiles(w, h int) {
 		display.Status = a.language.Text(prompt)
 	}
 	display.BrowserWidth = w
+	if column := a.browser.Current(); column != nil {
+		display.Path = a.opts.Vault.Redact(column.Path)
+	}
 	if p := a.filePreview; p != nil {
 		x := 0
 		if !p.Full {
@@ -26,7 +29,8 @@ func (a *app) renderFiles(w, h int) {
 			x = display.BrowserWidth + 1
 		}
 		offset := 0
-		if !p.Loading {
+		a.ensurePreviewLayout(max(1, w-x))
+		if !p.Loading && !p.NeedsLayout(max(1, w-x)) {
 			p.Offset = min(p.Offset, max(0, p.Count(max(1, w-x))-max(1, h-2)))
 			offset = p.Offset
 		}
@@ -38,16 +42,22 @@ func (a *app) renderFiles(w, h int) {
 			}
 		}
 		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Mode: mode, Rows: p.Window(max(1, w-x), offset, max(1, h-2)), Full: p.Full, X: x}
+		if p.Loading || p.Error != "" || p.Content == "" || p.NeedsLayout(max(1, w-x)) {
+			for i := range display.Preview.Rows {
+				display.Preview.Rows[i].Text = a.language.Text(display.Preview.Rows[i].Text)
+			}
+		}
 		display.ColumnWidth = min(display.ColumnWidth, max(1, display.BrowserWidth-1))
+		if p.Full {
+			view.Files(a.screen, display, w, h)
+			return
+		}
 	}
 	display.Input = a.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
 	display.References = a.selectedReferenceLines(display.BrowserWidth, h-len(display.Input.Rows)-4)
 	display.Layout = view.Composer(len(display.Input.Rows), h, view.Candidates{}, display.Status, len(display.References))
 	display.InputFocused = a.browser.Input && !a.fileSendConfirm
 	entryRows := max(0, display.Layout.ReferenceY-4)
-	if column := a.browser.Current(); column != nil {
-		display.Path = a.opts.Vault.Redact(column.Path)
-	}
 	visible := max(1, display.BrowserWidth/(display.ColumnWidth+1))
 	start := max(0, a.browser.Active-visible+1)
 	for i := start; i < min(len(a.browser.Columns), start+visible); i++ {

@@ -66,7 +66,7 @@ func fixture(t *testing.T) *app {
 	screen.SetSize(80, 24)
 	t.Cleanup(screen.Fini)
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".meca"), Config: configuration, Store: store, Session: session, Tools: tools, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".meca")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".meca"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
+	a := &app{opts: Options{Home: home, State: filepath.Join(home, ".meca"), Config: configuration, Store: store, Session: session, Tools: tools, Files: tools.Files, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(filepath.Join(home, ".meca")) }, SaveConfig: func(c config.Config) error { return config.Save(filepath.Join(home, ".meca"), c) }}, ctx: ctx, cancel: cancel, screen: screen, page: "chat", settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true}, events: make(chan notice, 32)}
 	t.Cleanup(a.shutdown)
 	return a
 }

@@ -47,6 +47,10 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 			return
 		}
 	}
+	if a.page == "approval" {
+		a.menuKey(e)
+		return
+	}
 	if a.page == "model" {
 		a.modelSettingsKey(e)
 		return
@@ -69,7 +73,7 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 		}
 		return
 	}
-	if a.filePreview != nil && e.Key() == tcell.KeyEscape {
+	if a.page == "files" && a.filePreview != nil && e.Key() == tcell.KeyEscape {
 		a.previewKey(e)
 		return
 	}

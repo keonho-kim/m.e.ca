@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/session/queue"
+	"github.com/keonho-kim/meca/internal/tui/composer/queue"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 

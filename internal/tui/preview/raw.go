@@ -1,8 +1,8 @@
 // Purpose: Project previews through cached Markdown or sparse numbered raw text windows.
 // Pattern: Pure presentation state with a bounded display window.
 // Usage: File preview uses Count for scrolling and Window for its current pane.
-// Related: internal/tui/browser/markdown_preview.go, internal/tui/session/render_files.go, internal/tui/textlayout/wrap.go.
-package browser
+// Related: internal/tui/preview/markdown.go, internal/tui/session/render_files.go, internal/tui/textlayout/wrap.go.
+package preview
 
 import (
 	"fmt"
@@ -17,24 +17,17 @@ const previewStride = 256
 const previewTruncated = "[미리보기는 처음 16MiB까지만 표시]"
 
 type previewPoint struct{ offset, line, row int }
-type Preview struct {
-	formatted                viewport.Block
-	index                    []previewPoint
-	width, total, digits     int
-	content                  string
-	Path, Content, Error     string
-	Full, Loading, Truncated bool
-	Raw                      bool
-	Offset                   int
+type Layout struct {
+	formatted            viewport.Block
+	index                []previewPoint
+	width, total, digits int
+	content              string
+	Path, Content        string
+	Truncated            bool
+	Raw                  bool
 }
 
-func (p *Preview) special(width int) []string {
-	if p.Loading {
-		return []string{"파일 읽는 중…"}
-	}
-	if p.Error != "" {
-		return viewport.Wrap(p.Error, max(1, width))
-	}
+func (p *Layout) special(width int) []string {
 	if p.Content == "" {
 		p.index, p.content = nil, ""
 		p.formatted = viewport.Block{}
@@ -42,7 +35,7 @@ func (p *Preview) special(width int) []string {
 	}
 	return nil
 }
-func (p *Preview) prepare(width int) {
+func (p *Layout) prepare(width int) {
 	width = max(1, width)
 	if p.width == width && p.content == p.Content && p.index != nil {
 		return
@@ -68,20 +61,20 @@ func (p *Preview) prepare(width int) {
 		line++
 	}
 }
-func (p *Preview) bodyWidth() int {
+func (p *Layout) bodyWidth() int {
 	if p.width <= p.digits+3 {
 		return p.width
 	}
 	return p.width - p.digits - 3
 }
-func (p *Preview) sourceLine(text string, line int) string {
+func (p *Layout) sourceLine(text string, line int) string {
 	text = strings.TrimSuffix(text, "\r")
 	if p.width <= p.digits+3 {
 		return fmt.Sprintf("%*d | %s", p.digits, line+1, text)
 	}
 	return text
 }
-func (p *Preview) Count(width int) int {
+func (p *Layout) Count(width int) int {
 	if rows := p.special(width); rows != nil {
 		return len(rows)
 	}
@@ -95,7 +88,7 @@ func (p *Preview) Count(width int) int {
 	}
 	return p.total
 }
-func (p *Preview) Window(width, start, count int) []viewport.Line {
+func (p *Layout) Window(width, start, count int) []viewport.Line {
 	if count < 1 {
 		return nil
 	}

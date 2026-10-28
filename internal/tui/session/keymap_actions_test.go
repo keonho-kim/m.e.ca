@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"strings"
 	"testing"
 )
@@ -28,7 +29,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			a := fixture(t)
 			a.page, a.browser.Input = page, true
 			a.worker = workerAgent
-			a.steering = make(chan string, 1)
+			a.steering = make(chan composer.Request, 1)
 			a.editor.Set("Run this after finishing")
 			labels := keymapLabels(t, a)
 			enter := "방향 수정"
@@ -45,7 +46,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 				a.page, a.browser.Input = "files", true
 			}
-			if len(a.queued.Messages) != 1 || a.queued.Messages[0] != "Run this after finishing" {
+			if len(a.queued.Messages) != 1 || a.queued.Messages[0].Text != "Run this after finishing" {
 				t.Fatal("follow-up hint did not match action")
 			}
 			a.editor.Set("Change direction now")
@@ -59,7 +60,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			}
 			select {
 			case text := <-a.steering:
-				if text != "Change direction now" {
+				if text.Text != "Change direction now" {
 					t.Fatal(text)
 				}
 			default:

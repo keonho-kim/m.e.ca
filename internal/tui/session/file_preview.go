@@ -1,14 +1,14 @@
 // Purpose: Own one active preview read, its latest replacement and half/fullscreen viewer navigation.
 // Pattern: Single-reader bulkhead with revision-bound completion.
 // Usage: File Tab/Enter opens a preview; Esc cancels it and returns to the existing browser.
-// Related: internal/tui/browser/preview.go, internal/tools/local/preview.go, internal/tui/session/files.go.
+// Related: internal/tui/preview/state.go, internal/fileview/preview.go, internal/tui/session/files.go.
 package session
 
 import (
 	"context"
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
-	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 )
 
 type previewRequest struct {
@@ -23,7 +23,7 @@ func (a *app) openFilePreview(full bool) {
 	}
 	a.closeFilePreview()
 	a.menuInput.Set("")
-	a.filePreview = &browser.Preview{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
+	a.filePreview = &preview.State{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
 	a.filePreviewPath = path
 	request := previewRequest{path: path, revision: a.previewRevision}
 	if a.previewReads.Submit(request) {
@@ -36,8 +36,10 @@ func (a *app) refreshFilePreview() {
 		return
 	}
 	a.previewReads.Stop()
+	a.stopPreviewLayout()
 	a.previewRevision++
 	a.filePreview.Loading, a.filePreview.Error = true, ""
+	a.filePreview.ReleaseLayout()
 	request := previewRequest{path: a.filePreviewPath, revision: a.previewRevision}
 	if a.previewReads.Submit(request) {
 		a.startPreviewRead(request)
@@ -48,20 +50,21 @@ func (a *app) startPreviewRead(request previewRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.previewReads.Begin(request.revision, cancel)
 	settings := a.settings
-	executor := a.opts.Tools
+	executor := a.opts.Files
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
 		result, err := executor.Preview(ctx, settings, request.path)
 		if ctx.Err() != nil {
-			result, err = local.FilePreview{}, ctx.Err()
+			result, err = fileview.Preview{}, ctx.Err()
 		}
 		a.post(a.ctx, notice{PreviewRevision: request.revision, FilePreview: &result, Err: err})
 	}()
 }
 func (a *app) closeFilePreview() {
 	a.previewReads.Stop()
+	a.stopPreviewLayout()
 	a.previewRevision++
 	a.filePreview = nil
 	a.filePreviewPath = ""
@@ -96,6 +99,15 @@ func (a *app) previewKey(e *tcell.EventKey) {
 	p := a.filePreview
 	if previewFormatKey(e) {
 		p.ToggleFormat()
+		a.stopPreviewLayout()
+		return
+	}
+	if e.Key() == tcell.KeyTab && e.Modifiers() == 0 {
+		p.Full = false
+		return
+	}
+	if e.Key() == tcell.KeyEnter {
+		p.Full = true
 		return
 	}
 	w, h := a.screen.Size()
@@ -103,14 +115,11 @@ func (a *app) previewKey(e *tcell.EventKey) {
 	if !p.Full {
 		w -= w/2 + 1
 	}
+	if p.Loading || p.NeedsLayout(w) {
+		return
+	}
 	maxOffset := max(0, p.Count(w)-max(1, h-2))
 	switch e.Key() {
-	case tcell.KeyTab:
-		if e.Modifiers() == 0 {
-			p.Full = false
-		}
-	case tcell.KeyEnter:
-		p.Full = true
 	case tcell.KeyUp:
 		p.Offset = max(0, p.Offset-1)
 	case tcell.KeyDown:

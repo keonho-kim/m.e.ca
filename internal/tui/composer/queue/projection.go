@@ -1,11 +1,12 @@
 // Purpose: Cache compact reservation rows and release source/display references when requests leave the queue.
 // Pattern: Event-loop-owned queue presentation projection.
 // Usage: Chat layout combines Header and Entries with history and other live blocks.
-// Related: internal/tui/session/queue/state.go, internal/tui/session/chat_projection.go.
+// Related: internal/tui/composer/queue/state.go, internal/tui/session/chat_projection.go.
 package queue
 
 import (
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"slices"
@@ -23,7 +24,7 @@ type projectionEntry struct {
 	Block  viewport.Block
 }
 
-func (p *Projection) Prepare(messages []string, language locale.Language, version int, redact func(string) string) {
+func (p *Projection) Prepare(messages []composer.Request, language locale.Language, version int, redact func(string) string) {
 	p.Header.Text, p.Header.Thinking = "", true
 	if len(messages) == 0 {
 		clear(p.Entries)
@@ -37,7 +38,8 @@ func (p *Projection) Prepare(messages []string, language locale.Language, versio
 	} else if len(p.Entries) < len(messages) {
 		p.Entries = slices.Grow(p.Entries, len(messages)-len(p.Entries))[:len(messages)]
 	}
-	for i, text := range messages {
+	for i, request := range messages {
+		text := request.Text
 		entry := &p.Entries[i]
 		if entry.source != text || entry.Block.Text == "" || p.redactionVersion != version {
 			entry.source = text

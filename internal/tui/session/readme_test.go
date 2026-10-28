@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -77,7 +78,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	t.Cleanup(a.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startTask("Create README.md in the current directory")
+	a.startRequest(composer.Capture("Create README.md in the current directory", a.selectedPaths()))
 	drainTask(t, a, true)
 	content, err := os.ReadFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"))
 	if err != nil || string(content) != "# Project\n" || a.status != "" {

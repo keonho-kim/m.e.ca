@@ -1,8 +1,8 @@
 // Purpose: Verify styled preview bounds, raw switching and content-cache invalidation.
 // Pattern: Presentation contract tests.
-// Usage: go test ./internal/tui/browser -run TestMarkdownPreview.
-// Related: internal/tui/browser/markdown_preview.go, internal/tui/browser/preview.go.
-package browser
+// Usage: go test ./internal/tui/preview -run TestMarkdownLayout.
+// Related: internal/tui/preview/markdown.go, internal/tui/preview/raw.go.
+package preview
 
 import (
 	"strings"
@@ -12,8 +12,8 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-func TestMarkdownPreviewModesAndRefresh(t *testing.T) {
-	p := Preview{Path: "guide.markdown", Content: "# Heading\n\n**bold** text\n\n| Name | Detail |\n| --- | --- |\n| item | a longer cell body |\n\n```mermaid\ngraph TD\nA --> B\n```\n"}
+func TestMarkdownLayoutModesAndRefresh(t *testing.T) {
+	p := Layout{Path: "guide.markdown", Content: "# Heading\n\n**bold** text\n\n| Name | Detail |\n| --- | --- |\n| item | a longer cell body |\n\n```mermaid\ngraph TD\nA --> B\n```\n"}
 	for _, width := range []int{80, 26} {
 		rows := p.Window(width, 0, p.Count(width))
 		var text strings.Builder
@@ -31,16 +31,15 @@ func TestMarkdownPreviewModesAndRefresh(t *testing.T) {
 			t.Fatalf("rendered Markdown or Mermaid source lost: %s", text.String())
 		}
 	}
-	p.Offset = 5
-	p.ToggleFormat()
+	p = Layout{Path: p.Path, Content: p.Content, Raw: true}
 	rows := p.Window(80, 0, 3)
-	if p.Rendered() || p.Offset != 0 || len(rows) == 0 || rows[0].Text != "  1 | # Heading" || len(rows[0].Spans) != 0 {
+	if p.Rendered() || len(rows) == 0 || rows[0].Text != "  1 | # Heading" || len(rows[0].Spans) != 0 {
 		t.Fatalf("raw preview lost numbering or changed the source: %+v", rows)
 	}
 	if p.formatted.Text != "" {
 		t.Fatal("raw preview retained its inactive Markdown cache")
 	}
-	p.ToggleFormat()
+	p = Layout{Path: p.Path, Content: p.Content}
 	p.Content, p.Truncated = "# Updated\n", true
 	rows = p.Window(80, 0, p.Count(80))
 	var text strings.Builder
@@ -57,8 +56,8 @@ func TestMarkdownPreviewModesAndRefresh(t *testing.T) {
 	}
 }
 
-func BenchmarkMarkdownPreviewWindow(b *testing.B) {
-	p := Preview{Path: "guide.md", Content: strings.Repeat("## Heading\n\nA **formatted** paragraph.\n\n", 4096)}
+func BenchmarkMarkdownLayoutWindow(b *testing.B) {
+	p := Layout{Path: "guide.md", Content: strings.Repeat("## Heading\n\nA **formatted** paragraph.\n\n", 4096)}
 	count := p.Count(80)
 	b.ReportAllocs()
 	b.ResetTimer()

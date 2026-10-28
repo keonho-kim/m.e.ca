@@ -1,8 +1,8 @@
 // Purpose: List bounded, sorted directory pages with Scope-filtered entries.
 // Pattern: Filesystem read Adapter.
-// Usage: Tools and file browser call Executor.Directory.
-// Related: internal/tools/local/paths.go, internal/tools/local/references.go.
-package local
+// Usage: File-browser workers call Reader.Directory through Source.
+// Related: internal/fileview/reader.go, internal/fileview/references.go.
+package fileview
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type Entry struct {
 	Directory bool   `json:"directory"`
 }
 
-func (executor *Executor) Directory(ctx context.Context, settings policy.Settings, path string, offset, limit int) ([]Entry, bool, error) {
+func (executor *Reader) Directory(ctx context.Context, settings policy.Settings, path string, offset, limit int) ([]Entry, bool, error) {
 	resolved, err := executor.resolve(settings.Scope, path)
 	if err != nil {
 		return nil, false, err
@@ -33,9 +33,9 @@ func (executor *Executor) Directory(ctx context.Context, settings policy.Setting
 	}
 	visible := entries[:0]
 	for _, entry := range entries {
-		target, resolveErr := executor.resolve(settings.Scope, filepath.Join(resolved.absolute, entry.Name))
+		target, resolveErr := executor.resolve(settings.Scope, filepath.Join(resolved.Absolute, entry.Name))
 		if resolveErr == nil {
-			info, statErr := target.root.Stat(target.relative)
+			info, statErr := target.Root.Stat(target.Relative)
 			if statErr == nil {
 				entry.Directory = info.IsDir()
 				visible = append(visible, entry)
@@ -45,11 +45,11 @@ func (executor *Executor) Directory(ctx context.Context, settings policy.Setting
 	return visible, more, nil
 }
 
-func readDirectory(ctx context.Context, path target, offset, limit int) (entries []Entry, more bool, err error) {
+func readDirectory(ctx context.Context, path Target, offset, limit int) (entries []Entry, more bool, err error) {
 	if offset < 0 || offset > 100000 || limit < 1 || limit > 1000 {
 		return nil, false, fmt.Errorf("invalid directory page")
 	}
-	file, err := path.root.Open(path.relative)
+	file, err := path.Root.Open(path.Relative)
 	if err != nil {
 		return nil, false, err
 	}

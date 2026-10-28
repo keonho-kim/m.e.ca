@@ -10,9 +10,9 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/config"
-	"github.com/keonho-kim/meca/internal/tools/local"
-	"github.com/keonho-kim/meca/internal/tui/browser"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/preview"
 )
 
 func TestLanguageScreenStagesAndConfirms(t *testing.T) {
@@ -53,11 +53,11 @@ func TestLanguageScreenStagesAndConfirms(t *testing.T) {
 func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
 	a := fixture(t)
 	a.page = "files"
-	a.browser.Open(".", []local.Entry{{Name: "README.md"}}, false)
+	a.browser.Open(".", []fileview.Entry{{Name: "README.md"}}, false)
 	a.browser.Input = true
 	a.browser.Selected = map[string]bool{"README.md": true}
 	a.editor.Set("keep draft")
-	a.filePreview = &browser.Preview{Full: true}
+	a.filePreview = &preview.State{Full: true}
 	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }

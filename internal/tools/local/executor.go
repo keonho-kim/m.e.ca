@@ -7,6 +7,8 @@ package local
 import (
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
@@ -15,6 +17,8 @@ import (
 )
 
 type Executor struct {
+	liveOutputs             liveCaptures
+	Files                   *fileview.Reader
 	commands                process.Registry
 	commandWait             time.Duration
 	project, home           string
@@ -43,6 +47,10 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 		return nil, errors.Join(err, root.Close())
 	}
 	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.InitialWait}
+	executor.Files = fileview.New(project, func(scope policy.Scope, path string) (fileview.Target, error) {
+		target, err := executor.resolve(scope, path)
+		return fileview.Target{Absolute: target.absolute, Relative: target.relative, Root: target.root}, err
+	}, func(text string) string { return executor.redact(text) })
 	executor.commands.Save = executor.archiveCommand
 	executor.artifacts, executor.artifactLease, err = newArtifacts()
 	if err != nil {
@@ -53,6 +61,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 
 func (executor *Executor) Close() error {
 	executor.commands.End()
+	executor.liveOutputs.clear()
 	err := errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))

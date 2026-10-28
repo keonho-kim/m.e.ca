@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"strings"
 	"testing"
 )
@@ -93,7 +93,7 @@ func TestForegroundOnlyViews(t *testing.T) {
 	}
 	a.page = "chat"
 	a.page = "files"
-	a.browser.Open(a.opts.Session.ProjectRoot, []local.Entry{{Name: "file.go"}}, false)
+	a.browser.Open(a.opts.Session.ProjectRoot, []fileview.Entry{{Name: "file.go"}}, false)
 	a.render()
 	assertForegroundOnly(t, a.screen)
 }

@@ -25,7 +25,11 @@ func (a *app) render() {
 		a.clearSelection()
 	}
 	a.inputRegion = inputRegion{}
-	a.selectionSources = make(map[int]textlayout.Fragment)
+	if a.selectionSources == nil {
+		a.selectionSources = make(map[int]textlayout.Fragment)
+	} else {
+		clear(a.selectionSources)
+	}
 	a.screen.Clear()
 	a.screen.HideCursor()
 	w, h := a.screen.Size()

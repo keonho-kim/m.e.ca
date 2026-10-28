@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -94,7 +95,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
-	a.startTask(sequence[0])
+	a.startRequest(composer.Capture(sequence[0], a.selectedPaths()))
 	select {
 	case <-started:
 	case <-ctx.Done():
@@ -110,7 +111,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 		}
 	}
-	if requests.Load() != 1 || !slices.Equal(a.queued.Messages, sequence[1:]) {
+	if requests.Load() != 1 || !slices.Equal(queuedTexts(a.queued.Messages), sequence[1:]) {
 		t.Fatal("request started before completion")
 	}
 	retained := a.queued.Messages
@@ -121,7 +122,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		t.Fatal("deferred input order or draft lost")
 	}
 	for _, text := range retained {
-		if text != "" {
+		if text.Text != "" || text.Paths != nil {
 			t.Fatal("completed queue retained request references")
 		}
 	}

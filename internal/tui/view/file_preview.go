@@ -1,7 +1,7 @@
 // Purpose: Render styled Markdown or numbered raw files within split or full content bounds.
 // Pattern: Terminal renderer.
 // Usage: Session supplies already wrapped, redacted rows and the requested horizontal bounds.
-// Related: internal/tui/session/render_files.go, internal/tui/browser/preview.go.
+// Related: internal/tui/session/render_files.go, internal/tui/preview/state.go.
 package view
 
 import (

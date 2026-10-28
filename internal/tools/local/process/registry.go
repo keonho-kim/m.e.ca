@@ -118,21 +118,21 @@ func (r *Registry) Wait(ctx context.Context, id string, duration time.Duration) 
 	}
 	select {
 	case <-j.done:
-		return j.snapshot(true), nil
+		return j.snapshot(), nil
 	default:
 	}
 	if duration <= 0 {
-		return j.snapshot(true), nil
+		return j.snapshot(), nil
 	}
 	timer := time.NewTimer(duration)
 	defer timer.Stop()
 	select {
 	case <-j.done:
-		return j.snapshot(true), nil
+		return j.snapshot(), nil
 	case <-timer.C:
-		return j.snapshot(true), nil
+		return j.snapshot(), nil
 	case <-ctx.Done():
-		return j.snapshot(true), ctx.Err()
+		return j.snapshot(), ctx.Err()
 	}
 }
 
@@ -150,7 +150,7 @@ func (r *Registry) List() []State {
 	defer r.mu.Unlock()
 	states := make([]State, 0, len(r.jobs))
 	for _, j := range r.jobs {
-		states = append(states, j.snapshot(false))
+		states = append(states, j.snapshot())
 	}
 	sort.Slice(states, func(i, j int) bool { return states[i].ID < states[j].ID })
 	return states

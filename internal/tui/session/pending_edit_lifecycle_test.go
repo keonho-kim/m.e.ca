@@ -17,7 +17,7 @@ func TestPendingEditFailurePreservesChangesAndUndeliveredSteering(t *testing.T) 
 	for _, save := range []bool{false, true} {
 		a := fixture(t)
 		a.worker = workerAgent
-		a.queued.Messages = []string{"first", "second"}
+		a.queued.Messages = queuedRequests("first", "second")
 		a.steeringDrafts = []string{"undelivered direction"}
 		a.editor.Set("unsent draft")
 		pendingArrow(a, tcell.KeyLeft)
@@ -41,7 +41,7 @@ func TestPendingEditFailurePreservesChangesAndUndeliveredSteering(t *testing.T) 
 func TestPendingEditApprovalKeepsForegroundKeys(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.queued.Messages = []string{"queued"}
+	a.queued.Messages = queuedRequests("queued")
 	a.decision = make(chan bool, 1)
 	pendingArrow(a, tcell.KeyLeft)
 	a.receive(notice{Approval: &toolapi.Approval{Name: "protected operation"}})
@@ -65,7 +65,7 @@ func TestPendingEditApprovalKeepsForegroundKeys(t *testing.T) {
 func TestPendingEditExitDoesNotResumeDeferredDispatch(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.queued.Messages = []string{"queued"}
+	a.queued.Messages = queuedRequests("queued")
 	a.editor.Set("unsent draft")
 	pendingArrow(a, tcell.KeyLeft)
 	a.receive(notice{Done: true, RunStatus: runrecord.Answered})

@@ -1,7 +1,7 @@
 // Purpose: Cache selected-path ordering and bounded display rows until their inputs change.
 // Pattern: Event-loop presentation cache.
 // Usage: Chat and file composers share this projection; selection commits own its revision.
-// Related: internal/tui/session/file_selection.go, internal/tui/session/file_references.go, internal/tui/view/references.go.
+// Related: internal/tui/session/file_selection.go, internal/tui/composer/request.go, internal/tui/view/references.go.
 package session
 
 import (

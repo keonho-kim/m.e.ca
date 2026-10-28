@@ -65,7 +65,6 @@ func (a *app) finishWorker(n notice) {
 		}
 	}
 	if a.proposal != nil {
-		a.proposal = nil
-		a.page = "chat"
+		a.closeApproval()
 	}
 }

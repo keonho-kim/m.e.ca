@@ -42,7 +42,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		_, label := a.fileInputAction()
 		return append(shortcuts, view.Shortcut{Key: "y", Label: label}, view.Shortcut{Key: "N", Label: "취소"}, view.Shortcut{Key: "Esc", Label: "Keep writing"})
 	}
-	if a.filePreview != nil {
+	if a.page == "files" && a.filePreview != nil {
 		controls := []view.Shortcut{{Key: "Esc", Label: "닫기"}}
 		if a.filePreview.Full {
 			controls = append(controls, view.Shortcut{Key: "Tab", Label: "분할 보기"})

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -124,7 +125,7 @@ func TestFileComposerQuitTextIsAMessage(t *testing.T) {
 	a := fixture(t)
 	a.page, a.browser.Input = "files", true
 	a.worker = workerAgent
-	a.steering = make(chan string, 1)
+	a.steering = make(chan composer.Request, 1)
 	a.editor.Set(":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
@@ -133,7 +134,7 @@ func TestFileComposerQuitTextIsAMessage(t *testing.T) {
 	}
 	select {
 	case request := <-a.steering:
-		if request != ":q" {
+		if request.Text != ":q" {
 			t.Fatal(request)
 		}
 	default:

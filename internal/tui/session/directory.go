@@ -7,13 +7,13 @@ package session
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/fileview"
 )
 
 type directoryPage struct {
 	revision, offset int
 	mode, path       string
-	entries          []local.Entry
+	entries          []fileview.Entry
 	more             bool
 	err              error
 }
@@ -37,13 +37,13 @@ func (a *app) startDirectoryRead(page directoryPage) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.directoryReads.Begin(page.revision, cancel)
 	path, mode := page.path, page.mode
-	executor, settings := a.opts.Tools, a.settings
+	executor, settings := a.opts.Files, a.settings
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
 		if mode == "open" {
-			ref, err := executor.Reference(settings, path)
+			ref, err := executor.Reference(ctx, settings, path)
 			page.err = err
 			if err == nil && !ref.Directory {
 				page.err = fmt.Errorf("not a directory: %s", path)

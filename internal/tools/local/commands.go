@@ -11,7 +11,6 @@ import (
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
-	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
@@ -19,9 +18,10 @@ func commandControl(name string) bool {
 	return name == "list_command_runs" || name == "wait_command" || name == "cancel_command"
 }
 func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
+	e.liveOutputs.clear()
 	e.commands.Begin(ctx, deadline)
 }
-func (e *Executor) StopCommands() { e.commands.End() }
+func (e *Executor) StopCommands() { e.commands.End(); e.liveOutputs.clear() }
 func (e *Executor) activeCommands() bool {
 	for _, state := range e.commands.List() {
 		if state.Status == "running" {
@@ -63,14 +63,12 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 }
 
 func (e *Executor) runningCommand(state process.State) (toolapi.Result, error) {
-	stdout, stdoutPath, err := e.liveCommandOutput(state.ID, "stdout", textformat.RedactSource(state.Stdout, e.redact))
+	captures, err := e.commandCaptures(state.ID)
 	if err != nil {
 		return toolapi.Result{}, err
 	}
-	stderr, stderrPath, err := e.liveCommandOutput(state.ID, "stderr", textformat.RedactSource(state.Stderr, e.redact))
-	if err != nil {
-		return toolapi.Result{}, err
-	}
+	stdout, stdoutPath := captures[0].excerpt, captures[0].path
+	stderr, stderrPath := captures[1].excerpt, captures[1].path
 	body := struct {
 		CommandID        string "json:\"command_id\""
 		Status           string "json:\"Status\""

@@ -41,12 +41,12 @@ func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
 	a.worker = workerAgent
 	a.editor.Set("next request")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if len(a.queued.Messages) != 1 || a.queued.Messages[0] != "next request" || a.editor.String() != "" || !a.worker.active() {
+	if len(a.queued.Messages) != 1 || a.queued.Messages[0].Text != "next request" || a.editor.String() != "" || !a.worker.active() {
 		t.Fatal("Tab did not reserve input")
 	}
 	a.editor.Set("later draft")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if len(a.queued.Messages) != 2 || a.queued.Messages[0] != "next request" || a.queued.Messages[1] != "later draft" || a.editor.String() != "" {
+	if len(a.queued.Messages) != 2 || a.queued.Messages[0].Text != "next request" || a.queued.Messages[1].Text != "later draft" || a.editor.String() != "" {
 		t.Fatal("second Tab did not append the request")
 	}
 	a.editor.Set("unsent draft")
@@ -72,7 +72,7 @@ func TestPendingRejectsLocalCommands(t *testing.T) {
 func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.queued.Messages = []string{"next request", "later request"}
+	a.queued.Messages = queuedRequests("next request", "later request")
 	a.editor.Set("unsent draft")
 	a.receive(notice{Done: true, Err: context.DeadlineExceeded})
 	if a.worker.active() || len(a.queued.Messages) != 0 || a.editor.String() != "next request\n\nlater request\n\nunsent draft" {
@@ -83,7 +83,7 @@ func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
 	a := fixture(t)
 	a.worker = workerAgent
-	a.queued.Messages = []string{"next request", "later request"}
+	a.queued.Messages = queuedRequests("next request", "later request")
 	a.receive(notice{Done: true, RunStatus: runrecord.Stopped})
 	if len(a.queued.Messages) != 0 || a.editor.String() != "next request\n\nlater request" || a.worker.active() {
 		t.Fatal("blocked completion consumed the reserved request")
@@ -92,7 +92,7 @@ func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
 
 func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
 	a := fixture(t)
-	a.queued.Messages = []string{"first", "second", "third"}
+	a.queued.Messages = queuedRequests("first", "second", "third")
 	retained := a.queued.Messages
 	a.editor.Set("unsent draft")
 	a.finishPending(true)
@@ -100,7 +100,7 @@ func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
 		t.Fatal("failed dispatch lost or started queued requests")
 	}
 	for _, text := range retained {
-		if text != "" {
+		if text.Text != "" || text.Paths != nil {
 			t.Fatal("restored queue retained request references")
 		}
 	}
@@ -110,7 +110,7 @@ func TestPendingProjectionShowsCountAndEveryRequest(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
 		a := fixture(t)
 		a.language = language
-		a.queued.Messages = []string{"first", "second", "third"}
+		a.queued.Messages = queuedRequests("first", "second", "third")
 		transcript := a.chatLayout(80)
 		rows := transcript.Window(0, transcript.Count())
 		var lines []string

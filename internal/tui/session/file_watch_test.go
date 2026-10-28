@@ -167,7 +167,17 @@ func finishVisibleReads(t *testing.T, a *app) {
 	t.Helper()
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
-	for a.directoryReads.Running() || a.previewReads.Running() || a.watchReads.Running() {
+	for {
+		if p := a.filePreview; p != nil {
+			width, _ := a.screen.Size()
+			if !p.Full {
+				width -= width/2 + 1
+			}
+			a.ensurePreviewLayout(width)
+		}
+		if !a.directoryReads.Running() && !a.previewReads.Running() && !a.watchReads.Running() && !a.previewLayouts.Running() {
+			return
+		}
 		select {
 		case n := <-a.events:
 			a.receive(n)
@@ -175,4 +185,11 @@ func finishVisibleReads(t *testing.T, a *app) {
 			t.Fatal("visible reads did not finish")
 		}
 	}
+}
+
+func renderPreview(t *testing.T, a *app) {
+	t.Helper()
+	a.render()
+	finishVisibleReads(t, a)
+	a.render()
 }

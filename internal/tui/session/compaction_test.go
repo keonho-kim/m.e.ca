@@ -13,6 +13,7 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,13 +100,13 @@ func TestCompactionContext(t *testing.T) {
 	on := true
 	effort := "medium"
 	a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Thinking: &on, ReasoningEffort: &effort}
-	a.startTask("Continue the earlier goal")
+	a.startRequest(composer.Capture("Continue the earlier goal", a.selectedPaths()))
 	drainTask(t, a, false)
 	memory, err := a.opts.Store.Memory(ctx, a.opts.Session.ID)
 	if err != nil || memory.Revision != 1 || !strings.Contains(memory.Markdown, "src/auth.go") {
 		t.Fatalf("memory: %+v %v", memory, err)
 	}
-	a.startTask("New goal after compaction")
+	a.startRequest(composer.Capture("New goal after compaction", a.selectedPaths()))
 	drainTask(t, a, false)
 	usage, err := a.opts.Store.MemoryWatermark(ctx, a.opts.Session.ID, memory.UsageThrough)
 	if err != nil || usage.Tokens != (20+7) {

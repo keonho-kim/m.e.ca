@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -49,7 +50,7 @@ func TestGreetingNeedsOneCall(t *testing.T) {
 	t.Cleanup(a.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startTask("Hello")
+	a.startRequest(composer.Capture("Hello", a.selectedPaths()))
 	drainTask(t, a, false)
 	var output strings.Builder
 	for _, block := range a.output.Blocks {

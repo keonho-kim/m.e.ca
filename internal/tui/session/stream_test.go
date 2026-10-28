@@ -11,6 +11,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"net/http"
@@ -64,7 +65,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 		t.Fatal("history inspection did not pause following")
 	}
 	a.output.Append((transcript.Formatter{}).User("hello"), false)
-	a.startTask("hello")
+	a.startRequest(composer.Capture("hello", a.selectedPaths()))
 	if !a.output.Follow {
 		t.Fatal("a new request did not resume following")
 	}

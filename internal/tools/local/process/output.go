@@ -28,6 +28,7 @@ type cappedOutput struct {
 	tail      []byte
 	tailStart int
 	truncated bool
+	revision  uint64
 }
 
 const captureHalf = 8 * 1024 * 1024
@@ -37,6 +38,7 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 	defer output.mu.Unlock()
 	if len(content) > 0 {
 		output.lastWrite = time.Now()
+		output.revision++
 	}
 	count := len(content)
 	headCount := min(len(content), captureHalf-output.head.Len())
@@ -66,8 +68,20 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 }
 
 func (output *cappedOutput) String() string {
+	return output.snapshot(0).Text
+}
+
+type Capture struct {
+	Revision uint64
+	Text     string
+}
+
+func (output *cappedOutput) snapshot(after uint64) Capture {
 	output.mu.Lock()
 	defer output.mu.Unlock()
+	if output.revision == after {
+		return Capture{Revision: after}
+	}
 	var text strings.Builder
 	text.Grow(output.head.Len() + len(output.tail) + 32)
 	text.Write(output.head.Bytes())
@@ -76,5 +90,5 @@ func (output *cappedOutput) String() string {
 	}
 	text.Write(output.tail[output.tailStart:])
 	text.Write(output.tail[:output.tailStart])
-	return text.String()
+	return Capture{Revision: output.revision, Text: text.String()}
 }

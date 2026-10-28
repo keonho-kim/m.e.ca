@@ -5,6 +5,7 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"strings"
 )
 
@@ -13,7 +14,7 @@ func (a *app) steerInput(text string) {
 		return
 	}
 	select {
-	case a.steering <- a.withSelectedPaths(text):
+	case a.steering <- composer.Capture(text, a.selectedPaths()):
 		a.output.Follow = true
 		a.steeringDrafts = append(a.steeringDrafts, text)
 		a.editor.Set("")

@@ -9,14 +9,14 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/rivo/uniseg"
 )
 
 func TestFileRowsPlainNamesAndDirectoryUnderline(t *testing.T) {
 	a := fixture(t)
 	a.page = "files"
-	a.browser.Open(".", []local.Entry{{Name: "src", Directory: true}, {Name: "server.go"}, {Name: "문서", Directory: true}, {Name: "설명.md"}}, false)
+	a.browser.Open(".", []fileview.Entry{{Name: "src", Directory: true}, {Name: "server.go"}, {Name: "문서", Directory: true}, {Name: "설명.md"}}, false)
 	a.browser.Selected["src/"] = true
 	a.browser.Selected["설명.md"] = true
 	for _, focus := range []int{0, 1} {

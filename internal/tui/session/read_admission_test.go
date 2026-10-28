@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 type readAttempt struct {
@@ -21,7 +21,7 @@ type readAttempt struct {
 }
 
 type heldReader struct {
-	Tools
+	fileview.Source
 	requests chan readAttempt
 	release  chan struct{}
 	once     sync.Once
@@ -35,24 +35,24 @@ func (r *heldReader) read(ctx context.Context, path string) {
 	<-r.release
 }
 
-func (r *heldReader) Reference(_ policy.Settings, path string) (local.Reference, error) {
-	return local.Reference{Path: path, Directory: true}, nil
+func (r *heldReader) Reference(_ context.Context, _ policy.Settings, path string) (fileview.Reference, error) {
+	return fileview.Reference{Path: path, Directory: true}, nil
 }
 
-func (r *heldReader) Directory(ctx context.Context, _ policy.Settings, path string, _, _ int) ([]local.Entry, bool, error) {
+func (r *heldReader) Directory(ctx context.Context, _ policy.Settings, path string, _, _ int) ([]fileview.Entry, bool, error) {
 	r.read(ctx, path)
 	return nil, false, nil
 }
 
-func (r *heldReader) Preview(ctx context.Context, _ policy.Settings, path string) (local.FilePreview, error) {
+func (r *heldReader) Preview(ctx context.Context, _ policy.Settings, path string) (fileview.Preview, error) {
 	r.read(ctx, path)
-	return local.FilePreview{Path: path, Content: path}, nil
+	return fileview.Preview{Path: path, Content: path}, nil
 }
 
 func controlledReader(t *testing.T, a *app) *heldReader {
 	t.Helper()
-	r := &heldReader{Tools: a.opts.Tools, requests: make(chan readAttempt, 64), release: make(chan struct{})}
-	a.opts.Tools = r
+	r := &heldReader{Source: a.opts.Files, requests: make(chan readAttempt, 64), release: make(chan struct{})}
+	a.opts.Files = r
 	t.Cleanup(r.unblock)
 	return r
 }
@@ -96,7 +96,7 @@ func TestReadAdmissionPreviewKeepsLatest(t *testing.T) {
 	a := fixture(t)
 	r := controlledReader(t, a)
 	a.page = "files"
-	a.browser.Open(".", []local.Entry{{Name: "first"}, {Name: "discarded"}, {Name: "latest"}}, false)
+	a.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}, {Name: "latest"}}, false)
 	a.openFilePreview(false)
 	firstRead(t, r)
 	for _, index := range []int{1, 2} {
@@ -124,7 +124,7 @@ func TestReadAdmissionCloseDropsPending(t *testing.T) {
 	a := fixture(t)
 	r := controlledReader(t, a)
 	a.page = "files"
-	a.browser.Open(".", []local.Entry{{Name: "first"}, {Name: "discarded"}}, false)
+	a.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}}, false)
 	a.openFilePreview(false)
 	firstRead(t, r)
 	a.browser.Current().Index = 1

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -100,7 +101,7 @@ func TestFileBrowserDuringAgentWork(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"), []byte("# Active project\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	a.startTask("initial task")
+	a.startRequest(composer.Capture("initial task", a.selectedPaths()))
 	select {
 	case <-started:
 	case <-ctx.Done():
@@ -155,7 +156,7 @@ func TestFileBrowserDuringAgentWork(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || len(a.queued.Messages) != 1 || a.queued.Messages[0] != queuedText || requests.Load() != 1 {
+	if a.page != "chat" || len(a.queued.Messages) != 1 || a.queued.Messages[0].Text != queuedText || requests.Load() != 1 {
 		t.Fatal("queued request ran before the active task completed")
 	}
 	a.editor.Set("unsent draft")
