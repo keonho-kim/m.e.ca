@@ -16,7 +16,7 @@ type Shortcut struct{ Key, Label string }
 // MaxKeymapRows applies to both session screens and the conversation picker.
 const MaxKeymapRows = 2
 
-var primaryKeys = []string{"^C", "Esc", "Enter", "Ctrl/Cmd+Backspace", "Tab", "Shift+↑↓/←→", "Shift+↑/←", "↑↓", "←→", "←", "→", "Space", "Shift+Tab", "!", ":q"}
+var primaryKeys = []string{"^C", "Esc", "Enter", "Ctrl/Cmd+Backspace", "Tab", "Shift+R", "Shift+↑↓/←→", "Shift+↑/←", "↑↓", "←→", "←", "→", "Space", "Shift+Tab", "!", ":q"}
 var supportingKeys = []string{"Backspace/Del", "^U", "Shift+Enter", "Ctrl/Cmd+↑↓", "^O", "PgUp/Dn", "PgUp", "Home/End"}
 
 func KeymapRows(shortcuts []Shortcut, width, maxRows int) int {

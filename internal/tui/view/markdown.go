@@ -1,7 +1,7 @@
 // Purpose: Apply native monochrome attributes to already wrapped Markdown spans.
 // Pattern: Terminal rendering adapter.
-// Usage: Chat draws styled agent lines without ANSI or HTML.
-// Related: internal/tui/markdown/layout.go, internal/tui/view/chat.go.
+// Usage: Chat and split/full file viewers draw styled lines without ANSI or HTML.
+// Related: internal/tui/markdown/layout.go, internal/tui/view/chat.go, internal/tui/view/file_preview.go.
 package view
 
 import (
@@ -10,8 +10,8 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-func styledText(screen tcell.Screen, y, width int, spans []markdown.Span, base tcell.Style) {
-	x := 0
+func styledText(screen tcell.Screen, x, y, width int, spans []markdown.Span, base tcell.Style) {
+	end := x + width
 	for _, span := range spans {
 		style := base
 		if span.Style&markdown.Bold != 0 {
@@ -26,9 +26,9 @@ func styledText(screen tcell.Screen, y, width int, spans []markdown.Span, base t
 		if span.Style&markdown.Dim != 0 {
 			style = style.Dim(true)
 		}
-		Text(screen, x, y, width-x, span.Text, style)
+		Text(screen, x, y, end-x, span.Text, style)
 		x += uniseg.StringWidth(span.Text)
-		if x >= width {
+		if x >= end {
 			return
 		}
 	}

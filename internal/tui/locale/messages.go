@@ -19,6 +19,7 @@ var messages = []translation{
 	{"", "endpoint cannot be empty", "서버 주소를 입력하세요"},
 	{"", "Saving selected paths before sending", "파일 선택 저장 후 요청을 전송합니다"},
 	{"", "Send this request? (y/N)", "요청을 전송할까요? (y/N)"},
+	{"", "Steer this request? (y/N)", "현재 작업에 방향 수정을 전달할까요? (y/N)"},
 	{"", "Queue this request? (y/N)", "요청을 예약할까요? (y/N)"},
 	{"", "Draft changed; send when ready", "입력이 변경되어 전송을 보류했습니다"},
 	{"", "Selected paths (%d): ", "선택 경로 (%d): "},

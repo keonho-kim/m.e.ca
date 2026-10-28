@@ -34,7 +34,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			enter := "방향 수정"
 			tab := "후속 예약"
 			if page == "files" {
-				enter = "전송 확인"
+				enter = "방향 수정 확인"
 				tab = "예약 확인"
 			}
 			if labels["Enter"] != enter || labels["Tab"] != tab {

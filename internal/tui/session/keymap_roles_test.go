@@ -75,7 +75,7 @@ func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 	for _, s := range a.shortcuts() {
 		labels[s.Key] = s.Label
 	}
-	if labels["Enter"] != "전송 확인" || labels["Tab"] != "예약 확인" || labels["Shift+Enter"] != "줄바꿈" {
+	if labels["Enter"] != "방향 수정 확인" || labels["Tab"] != "예약 확인" || labels["Shift+Enter"] != "줄바꿈" {
 		t.Fatal(labels)
 	}
 	a.page = "chat"

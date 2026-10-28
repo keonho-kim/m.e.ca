@@ -39,10 +39,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 	}
 	shortcuts := []view.Shortcut{{Key: "^C", Label: "종료"}}
 	if a.page == "files" && a.fileSendConfirm {
-		label := "전송"
-		if a.fileReserve {
-			label = "후속 예약"
-		}
+		_, label := a.fileInputAction()
 		return append(shortcuts, view.Shortcut{Key: "y", Label: label}, view.Shortcut{Key: "N", Label: "취소"}, view.Shortcut{Key: "Esc", Label: "Keep writing"})
 	}
 	if a.filePreview != nil {
@@ -51,6 +48,13 @@ func (a *app) screenShortcuts() []view.Shortcut {
 			controls = append(controls, view.Shortcut{Key: "Tab", Label: "분할 보기"})
 		} else {
 			controls = append(controls, view.Shortcut{Key: "Enter", Label: "전체 화면"})
+		}
+		if a.filePreview.IsMarkdown() {
+			label := "Show raw"
+			if a.filePreview.Raw {
+				label = "Render"
+			}
+			controls = append(controls, view.Shortcut{Key: "Shift+R", Label: label})
 		}
 		controls = append(controls, view.Shortcut{Key: "↑↓", Label: "스크롤"}, view.Shortcut{Key: "PgUp/Dn", Label: "페이지"}, view.Shortcut{Key: "Home/End", Label: "처음/끝"})
 		return append(shortcuts, controls...)
@@ -147,7 +151,9 @@ func (a *app) inputShortcuts() []view.Shortcut {
 		label = "Review send"
 	}
 	if a.worker.agent() && a.worker.active() && !a.worker.stopping() && (command.Kind == commands.Message || command.Kind == commands.Empty) {
-		if a.page != "files" {
+		if a.page == "files" {
+			label = "Review steer"
+		} else {
 			label = "방향 수정"
 		}
 		controls = append(controls, view.Shortcut{Key: "Enter", Label: label})

@@ -1,6 +1,6 @@
 // Purpose: Parse agent Markdown into safe styled lines without HTML or terminal escape execution.
 // Pattern: AST-to-terminal presentation adapter.
-// Usage: Answers and Thinking share Render for completed blocks and streamed snapshots; file/tool bodies remain plain.
+// Usage: Answers, Thinking and Markdown file previews share Render; raw source and tool bodies remain plain.
 // Related: internal/tui/markdown/inline.go, internal/tui/markdown/table.go.
 package markdown
 

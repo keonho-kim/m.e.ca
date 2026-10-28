@@ -15,10 +15,8 @@ func (a *app) renderFiles(w, h int) {
 		display.Status = a.language.Text("Reading directory…")
 	}
 	if a.fileSendConfirm {
-		display.Status = a.language.Text("Send this request? (y/N)")
-		if a.fileReserve {
-			display.Status = a.language.Text("Queue this request? (y/N)")
-		}
+		prompt, _ := a.fileInputAction()
+		display.Status = a.language.Text(prompt)
 	}
 	display.BrowserWidth = w
 	if p := a.filePreview; p != nil {
@@ -27,8 +25,19 @@ func (a *app) renderFiles(w, h int) {
 			display.BrowserWidth = max(1, w/2)
 			x = display.BrowserWidth + 1
 		}
-		p.Offset = min(p.Offset, max(0, p.Count(max(1, w-x))-max(1, h-2)))
-		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Rows: p.Window(max(1, w-x), p.Offset, max(1, h-2)), Full: p.Full, X: x}
+		offset := 0
+		if !p.Loading {
+			p.Offset = min(p.Offset, max(0, p.Count(max(1, w-x))-max(1, h-2)))
+			offset = p.Offset
+		}
+		mode := ""
+		if p.IsMarkdown() {
+			mode = a.language.Text("Rendered")
+			if p.Raw {
+				mode = a.language.Text("Raw")
+			}
+		}
+		display.Preview = &view.FilePreviewDisplay{Path: p.Path, Mode: mode, Rows: p.Window(max(1, w-x), offset, max(1, h-2)), Full: p.Full, X: x}
 		display.ColumnWidth = min(display.ColumnWidth, max(1, display.BrowserWidth-1))
 	}
 	display.Input = a.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))

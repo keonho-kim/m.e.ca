@@ -1,6 +1,6 @@
 // Purpose: Confirm file-composer requests before returning to chat and dispatching them.
 // Pattern: Event-loop input transitions.
-// Usage: Enter/Tab asks to send/reserve; y accepts, while n or Esc keeps the draft in the browser.
+// Usage: Enter/Tab asks to send/steer/reserve; y accepts, while N or Esc keeps the draft.
 // Related: internal/tui/session/keys.go, internal/tui/session/commands.go, internal/tui/session/render_files.go.
 package session
 
@@ -13,6 +13,16 @@ type fileSubmission struct {
 	command  commands.Command
 	revision uint64
 	reserve  bool
+}
+
+func (a *app) fileInputAction() (prompt, action string) {
+	if a.fileReserve {
+		return "Queue this request? (y/N)", "Queue follow-up"
+	}
+	if a.worker.agent() && a.worker.active() && !a.worker.stopping() {
+		return "Steer this request? (y/N)", "Steer"
+	}
+	return "Send this request? (y/N)", "Send"
 }
 
 func (a *app) confirmFileInput(reserve bool) {

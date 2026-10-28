@@ -47,7 +47,7 @@ func Chat(screen tcell.Screen, display ChatDisplay, width int) {
 			Text(screen, 4, y, contentWidth-4, strings.Repeat(" ", max(0, contentWidth-4)), style)
 			Text(screen, 4, y, contentWidth-4, strings.TrimPrefix(display.Lines[i].Text, "    "), style)
 		} else if len(display.Lines[i].Spans) > 0 {
-			styledText(screen, y, contentWidth, display.Lines[i].Spans, style)
+			styledText(screen, 0, y, contentWidth, display.Lines[i].Spans, style)
 		} else {
 			Text(screen, 0, y, contentWidth, display.Lines[i].Text, style)
 		}

@@ -1,7 +1,7 @@
-// Purpose: Index preview text sparsely and format only its visible numbered rows.
+// Purpose: Project previews through cached Markdown or sparse numbered raw text windows.
 // Pattern: Pure presentation state with a bounded display window.
 // Usage: File preview uses Count for scrolling and Window for its current pane.
-// Related: internal/tui/session/file_preview.go, internal/tui/session/render_files.go, internal/tui/textlayout/wrap.go.
+// Related: internal/tui/browser/markdown_preview.go, internal/tui/session/render_files.go, internal/tui/textlayout/wrap.go.
 package browser
 
 import (
@@ -18,11 +18,13 @@ const previewTruncated = "[미리보기는 처음 16MiB까지만 표시]"
 
 type previewPoint struct{ offset, line, row int }
 type Preview struct {
+	formatted                viewport.Block
 	index                    []previewPoint
 	width, total, digits     int
 	content                  string
 	Path, Content, Error     string
 	Full, Loading, Truncated bool
+	Raw                      bool
 	Offset                   int
 }
 
@@ -34,6 +36,8 @@ func (p *Preview) special(width int) []string {
 		return viewport.Wrap(p.Error, max(1, width))
 	}
 	if p.Content == "" {
+		p.index, p.content = nil, ""
+		p.formatted = viewport.Block{}
 		return []string{"(빈 파일)"}
 	}
 	return nil
@@ -81,13 +85,17 @@ func (p *Preview) Count(width int) int {
 	if rows := p.special(width); rows != nil {
 		return len(rows)
 	}
+	if p.Rendered() {
+		return p.markdownCount(width)
+	}
+	p.formatted = viewport.Block{}
 	p.prepare(width)
 	if p.Truncated {
 		return p.total + 1
 	}
 	return p.total
 }
-func (p *Preview) Window(width, start, count int) []string {
+func (p *Preview) Window(width, start, count int) []viewport.Line {
 	if count < 1 {
 		return nil
 	}
@@ -96,10 +104,17 @@ func (p *Preview) Window(width, start, count int) []string {
 		return nil
 	}
 	if rows := p.special(width); rows != nil {
-		return rows[min(start, len(rows)):min(start+count, len(rows))]
+		var out []viewport.Line
+		for _, text := range rows[min(start, len(rows)):min(start+count, len(rows))] {
+			out = append(out, viewport.Line{Text: text})
+		}
+		return out
+	}
+	if p.Rendered() {
+		return p.markdownWindow(width, start, count)
 	}
 	p.prepare(width)
-	rows := make([]string, 0, count)
+	rows := make([]viewport.Line, 0, count)
 	if start < p.total {
 		at := sort.Search(len(p.index), func(i int) bool { return p.index[i].row > start }) - 1
 		point := p.index[max(0, at)]
@@ -117,7 +132,7 @@ func (p *Preview) Window(width, start, count int) []string {
 							prefix = fmt.Sprintf("%*d | ", p.digits, line+1)
 						}
 					}
-					rows = append(rows, prefix+wrapped.Text)
+					rows = append(rows, viewport.Line{Text: prefix + wrapped.Text})
 					if len(rows) == count {
 						break
 					}
@@ -133,7 +148,7 @@ func (p *Preview) Window(width, start, count int) []string {
 		}
 	}
 	if p.Truncated && len(rows) < count && start+len(rows) >= p.total {
-		rows = append(rows, previewTruncated)
+		rows = append(rows, viewport.Line{Text: previewTruncated})
 	}
 	return rows
 }

@@ -94,6 +94,10 @@ func (a *app) previewKey(e *tcell.EventKey) {
 		return
 	}
 	p := a.filePreview
+	if previewFormatKey(e) {
+		p.ToggleFormat()
+		return
+	}
 	w, h := a.screen.Size()
 	h = a.bodyHeight(h)
 	if !p.Full {
@@ -102,7 +106,9 @@ func (a *app) previewKey(e *tcell.EventKey) {
 	maxOffset := max(0, p.Count(w)-max(1, h-2))
 	switch e.Key() {
 	case tcell.KeyTab:
-		p.Full = false
+		if e.Modifiers() == 0 {
+			p.Full = false
+		}
 	case tcell.KeyEnter:
 		p.Full = true
 	case tcell.KeyUp:
@@ -117,5 +123,20 @@ func (a *app) previewKey(e *tcell.EventKey) {
 		p.Offset = 0
 	case tcell.KeyEnd:
 		p.Offset = maxOffset
+	}
+}
+
+func previewFormatKey(e *tcell.EventKey) bool {
+	if e.Key() != tcell.KeyRune {
+		return false
+	}
+	switch e.Modifiers() {
+	case 0:
+		// Terminals may report shifted letters as uppercase runes without modifier bits.
+		return e.Str() == "R"
+	case tcell.ModShift:
+		return e.Str() == "R" || e.Str() == "r"
+	default:
+		return false
 	}
 }

@@ -15,7 +15,7 @@ func TestPreviewVisibleWindow(t *testing.T) {
 		t.Fatal("wrong row count")
 	}
 	rows := p.Window(80, 1, 1)
-	if len(rows) != 1 || rows[0] != "  2 | world" {
+	if len(rows) != 1 || rows[0].Text != "  2 | world" {
 		t.Fatal(rows)
 	}
 	p.Content = strings.Repeat("x\n", 131072)
@@ -23,7 +23,7 @@ func TestPreviewVisibleWindow(t *testing.T) {
 		t.Fatal("large preview row count changed")
 	}
 	rows = p.Window(80, 131070, 10)
-	if len(rows) != 2 || !strings.Contains(rows[1], "131072 | x") {
+	if len(rows) != 2 || !strings.Contains(rows[1].Text, "131072 | x") {
 		t.Fatal(rows)
 	}
 	p.Truncated = true

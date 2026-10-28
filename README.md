@@ -136,7 +136,7 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 | `!model` | 연결·모델·Thinking·추론 강도 설정 |
 | `!language` | 화면 언어 선택 |
 | `!permission` | 기본 / All Mighty 승인 모드 선택 |
-| `!dir [path]` | 파일 탐색·미리보기·요청에 파일 참조 |
+| `!dir [path]` | 파일 탐색·Markdown/Raw 뷰어·요청에 파일 참조 |
 | `!new` | 현재 프로젝트에서 새 대화 시작 |
 | `!quit` | 작업을 정리하고 종료 |
 
@@ -152,6 +152,7 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 | 큐 편집 중 `Ctrl/Cmd+Backspace` | 선택한 예약 삭제 |
 | `Esc` | 열린 화면·편집 닫기, 일반 채팅에서는 작업 중지 |
 | `Ctrl+O` | 도구 결과 전체 접기·펼치기 |
+| 파일 뷰어 `Shift+R` | Markdown 렌더링 / Raw 원문 전환 |
 | 선택 후 `Ctrl/Cmd+C` | 복사 · 선택 없는 `Ctrl+C`는 종료 |
 
 후속 요청은 예약 순서대로 실행합니다. 중지·실패 시 남은 요청은 초안으로 복구합니다. [전체 키맵·파일 탐색·사용량 →](docs/usage.md)
