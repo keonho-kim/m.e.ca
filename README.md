@@ -23,12 +23,32 @@ Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리�
 
 ### 최신 릴리스로 설치하기
 
-1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 운영체제와 CPU에 맞는 `.tar.gz` 파일을 받습니다.
-2. 압축을 풀고 터미널에서 압축을 푼 폴더로 이동합니다.
-3. 아래 명령으로 설치합니다.
+터미널에서 아래 명령을 실행하세요. 운영체제·CPU에 맞는 최신 릴리스를 받아 설치하고 다운로드한 임시 파일을 정리합니다. `curl`과 `tar`가 필요합니다.
 
 ```sh
-./meca install
+(
+  set -eu
+  case "$(uname -s)" in
+    Darwin) meca_os=macos ;;
+    Linux) meca_os=linux ;;
+    *) printf '%s\n' '지원 환경: macOS 또는 Linux' >&2; exit 1 ;;
+  esac
+  case "$(uname -m)" in
+    x86_64|amd64) meca_arch=amd64 ;;
+    arm64|aarch64) meca_arch=arm64 ;;
+    *) printf '%s\n' '지원 CPU: amd64 또는 arm64' >&2; exit 1 ;;
+  esac
+  meca_repo=https://github.com/keonho-kim/m.e.ca
+  meca_release=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "$meca_repo/releases/latest")
+  meca_tag=${meca_release##*/}
+  meca_version=${meca_tag#v}
+  meca_tmp=$(mktemp -d)
+  trap 'rm -rf "$meca_tmp"' EXIT
+  curl -fL -o "$meca_tmp/meca.tar.gz" \
+    "$meca_repo/releases/download/$meca_tag/meca_${meca_version}_${meca_os}_${meca_arch}.tar.gz"
+  tar -xzf "$meca_tmp/meca.tar.gz" -C "$meca_tmp"
+  "$meca_tmp/meca" install
+)
 ```
 
 설치 후 터미널에서 `meca`를 실행하면 됩니다.
