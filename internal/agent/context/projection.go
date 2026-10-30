@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -61,6 +62,10 @@ func (p *Projection) projectOnce(input Input) ([]modelapi.Message, int, error) {
 			if err != nil {
 				return nil, 0, err
 			}
+			projected.Images = slices.Clone(projected.Images)
+			for i := range projected.Images {
+				projected.Images[i].Path = input.Redact(projected.Images[i].Path)
+			}
 			projected.Content = input.Redact(projected.Content)
 			projected.Reasoning = input.Redact(projected.Reasoning)
 			state := string(projected.ReasoningState)
@@ -80,15 +85,26 @@ func (p *Projection) projectOnce(input Input) ([]modelapi.Message, int, error) {
 }
 
 func sameMessage(a, b modelapi.Message) bool {
-	return a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
+	return sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
 		return a.ID == b.ID && a.Name == b.Name && bytes.Equal(a.Arguments, b.Arguments)
 	})
 }
 
 func messageBytes(m modelapi.Message) int {
-	n := len(m.Content) + len(m.Reasoning) + len(m.ReasoningState) + len(m.ToolCallID) + len(m.ToolName)
+	n := 0
+	for _, image := range m.Images {
+		n += len(image.Data)*4/3 + 4096
+	}
+	n += len(m.Content) + len(m.Reasoning) + len(m.ReasoningState) + len(m.ToolCallID) + len(m.ToolName)
 	for _, call := range m.Calls {
 		n += len(call.ID) + len(call.Name) + len(call.Arguments)
 	}
 	return n
+}
+
+// Images are immutable snapshots, so identity comparison does not scan their bytes.
+func sameImages(a, b []media.Image) bool {
+	return slices.EqualFunc(a, b, func(x, y media.Image) bool {
+		return x.Path == y.Path && x.Digest == y.Digest && x.MIME == y.MIME && x.Format == y.Format && x.Representative == y.Representative && x.Width == y.Width && x.Height == y.Height && len(x.Data) == len(y.Data)
+	})
 }

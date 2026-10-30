@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 )
 
-type Message struct {
+type responseMessage struct {
 	ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`
 	ToolCallID       string            `json:"tool_call_id,omitempty"`
 	ToolName         string            `json:"tool_name,omitempty"`
@@ -61,16 +61,16 @@ type wireUsage struct {
 }
 
 type wireChunk struct {
-	Message     Message         `json:"message"`
+	Message     responseMessage `json:"message"`
 	Done        *bool           `json:"done"`
 	DoneReason  string          `json:"done_reason"`
 	PromptCount *int64          `json:"prompt_eval_count"`
 	EvalCount   *int64          `json:"eval_count"`
 	Error       json.RawMessage `json:"error"`
 	Choices     []struct {
-		Delta        Message `json:"delta"`
-		Message      Message `json:"message"`
-		FinishReason *string `json:"finish_reason"`
+		Delta        responseMessage `json:"delta"`
+		Message      responseMessage `json:"message"`
+		FinishReason *string         `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *wireUsage `json:"usage"`
 }

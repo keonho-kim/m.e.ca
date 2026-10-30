@@ -14,6 +14,9 @@ import (
 
 func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectImageProbe(t, w, r) {
+			return
+		}
 		if r.Method != http.MethodGet {
 			t.Errorf("setup unexpectedly generated a response: %s %s", r.Method, r.URL.Path)
 		}

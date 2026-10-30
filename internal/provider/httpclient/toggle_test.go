@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/protocol"
 	"net/http"
 	"strings"
 	"testing"
@@ -25,7 +24,7 @@ func TestReasoningToggleChecksOff(t *testing.T) {
 			fmt.Fprint(w, `{"models":[]}`)
 			return
 		}
-		var body struct{ Messages []protocol.Message }
+		var body struct{ Messages []struct{ Content string } }
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
 			return

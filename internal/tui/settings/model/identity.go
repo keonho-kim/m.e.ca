@@ -33,6 +33,10 @@ func identityLines(selected connection.Selection, contextLength int, redact func
 	}
 	lines = append(lines, lang.Format("적용 컨텍스트 예산: %d 토큰", connection.EffectiveContextLength(contextLength, reported)))
 	if info := selected.Details; info != nil {
+		lines = append(lines, lang.Format("Image input: %s", imageStatus(selected, lang)))
+		if info.ImageInput.Detail != "" {
+			lines = append(lines, redact(info.ImageInput.Detail))
+		}
 		if info.ContextWindow > 0 {
 			lines = append(lines, lang.Format("서빙 컨텍스트 한도: %d 토큰", info.ContextWindow))
 		} else {
@@ -75,4 +79,18 @@ func identityLines(selected connection.Selection, contextLength int, redact func
 		lines = append(lines, "  "+fact.Field+": "+redact(fact.Value), "    "+lang.Text("Source: ")+fact.Source)
 	}
 	return lines
+}
+
+func imageStatus(selected connection.Selection, lang locale.Language) string {
+	if selected.Details == nil {
+		return lang.Text("Unknown")
+	}
+	switch selected.Details.ImageInput.State {
+	case "supported":
+		return lang.Text("Supported")
+	case "unsupported":
+		return lang.Text("Unsupported")
+	default:
+		return lang.Text("Unknown")
+	}
 }

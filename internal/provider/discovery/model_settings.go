@@ -11,6 +11,9 @@ import (
 
 func (c *Client) PrepareModel(ctx context.Context, model string) (connection.ModelInfo, error) {
 	info := connection.ModelInfo{ID: model}
+	if c.imageModel == model {
+		info.ImageInput = c.imageInput
+	}
 	switch c.Connection.Kind {
 	case connection.Ollama:
 		var err error
@@ -41,6 +44,11 @@ func (c *Client) PrepareModel(ctx context.Context, model string) (connection.Mod
 				break
 			}
 		}
+	}
+	// SGLang's generic model list carries limits; its selected /model_info
+	// response owns image capability evidence.
+	if c.imageModel == model {
+		info.ImageInput = c.imageInput
 	}
 	if err := info.Check(); err != nil {
 		return info, err

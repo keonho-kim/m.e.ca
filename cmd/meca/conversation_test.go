@@ -132,7 +132,7 @@ func TestNewConversationReleasesLeaseAndRetainsGlobalModel(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		messages, err := reopened.Messages(ctx, id, 10)
+		messages, err := reopened.ContextMessages(ctx, id, 0, 16*1024*1024, true)
 		if err != nil {
 			t.Fatal(err)
 		}

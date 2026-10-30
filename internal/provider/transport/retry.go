@@ -73,6 +73,9 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 }
 
 func retryable(err error) bool {
+	if ImageUnsupported(err) {
+		return false
+	}
 	var capacity *modelapi.ContextLimitError
 	if errors.As(err, &capacity) {
 		return false

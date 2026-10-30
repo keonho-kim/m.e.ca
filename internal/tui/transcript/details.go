@@ -24,6 +24,8 @@ func (f Formatter) output(event runrecord.Event) toolOutput {
 	}
 	var output toolOutput
 	switch event.Call.Name {
+	case "read_image":
+		output = f.imageOutput(event, body)
 	case "execute_command", "wait_command", "cancel_command":
 		output = f.processOutput(event, fields)
 	case "list_command_runs":

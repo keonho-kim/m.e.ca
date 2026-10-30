@@ -5,16 +5,14 @@
 package discovery
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 type ollamaModel struct {
-	Details struct {
+	Capabilities []string `json:"capabilities"`
+	Details      struct {
 		Family       string   `json:"family"`
 		Families     []string `json:"families"`
 		Parent       string   `json:"parent_model"`
@@ -34,15 +32,12 @@ type ollamaModel struct {
 }
 
 func (c *Client) identifyOllama(ctx context.Context, model string) (identity.Report, error) {
-	var info ollamaModel
+	info, err := c.readOllama(ctx, model)
 	var report identity.Report
-	body, err := json.Marshal(map[string]string{"model": model})
 	if err != nil {
 		return report, err
 	}
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(body), 16*1024*1024, &info); err != nil {
-		return report, err
-	}
+
 	report.Add("/api/show.details.family", "family", info.Details.Family)
 	for _, family := range info.Details.Families {
 		report.Add("/api/show.details.families", "family", family)

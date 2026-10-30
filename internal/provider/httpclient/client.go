@@ -10,9 +10,11 @@ import (
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 	"strings"
+	"sync/atomic"
 )
 
 type Client struct {
+	imageRejected atomic.Bool
 	contextLength int
 	modelInfo     *modelconn.ModelInfo
 	connection    modelconn.Connection

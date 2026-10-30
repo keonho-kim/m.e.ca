@@ -16,6 +16,7 @@ type Store interface {
 	tasksession.Store
 	Selection(context.Context, string) (modelconn.Selection, error)
 	SaveSelection(context.Context, string, modelconn.Selection) error
+	RecentInputs(context.Context, string, int) ([]string, error)
 	FileSelections(context.Context, string) ([]string, error)
 	SelectFile(context.Context, string, string, bool) error
 	Timeline(context.Context, string, int64, int) ([]history.Record, int64, error)

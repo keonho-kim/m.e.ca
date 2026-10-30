@@ -11,10 +11,14 @@ import (
 )
 
 type Client struct {
-	Connection   connection.Connection
-	HTTP         *transport.Client
-	lastEndpoint string
-	lastResponse json.RawMessage
+	imageModel     string
+	imageInput     connection.ImageInput
+	ollamaName     string
+	ollamaSnapshot *ollamaModel
+	Connection     connection.Connection
+	HTTP           *transport.Client
+	lastEndpoint   string
+	lastResponse   json.RawMessage
 }
 
 func (c *Client) url(path string) string { return c.Connection.APIBase() + "/" + path }

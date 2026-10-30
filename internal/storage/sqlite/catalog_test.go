@@ -82,7 +82,7 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	history, err := resumed.Messages(ctx, firstID, 10)
+	history, err := resumed.ContextMessages(ctx, firstID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 1 {
 		t.Fatalf("history=%+v %v", history, err)
 	}

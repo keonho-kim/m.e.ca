@@ -42,15 +42,15 @@ func TestContextMessagesAfterTimelineAndBudget(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	messages, err := s.ContextMessages(ctx, session.ID, through, 4096)
+	messages, err := s.ContextMessages(ctx, session.ID, through, 4096, true)
 	if err != nil || len(messages) != 3 || messages[0].Content != "new goal" || messages[1].Calls[0].Name != "inspect_fixture" || messages[2].Content != `{"content":"exact output"}` {
 		t.Fatalf("tail: %+v %v", messages, err)
 	}
-	all, err := s.ContextMessages(ctx, session.ID, 0, 4096)
+	all, err := s.ContextMessages(ctx, session.ID, 0, 4096, true)
 	if err != nil || len(all) != 4 || all[0].Content != "already compacted" {
 		t.Fatalf("all: %+v %v", all, err)
 	}
-	partial, err := s.ContextMessages(ctx, session.ID, 0, 1)
+	partial, err := s.ContextMessages(ctx, session.ID, 0, 1, true)
 	if err == nil || len(partial) != 0 {
 		t.Fatal("over-budget context silently returned incomplete history")
 	}

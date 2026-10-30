@@ -7,6 +7,7 @@ package model
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
@@ -14,6 +15,7 @@ import (
 const MaxResponseBytes = 256 * 1024 * 1024
 
 type Message struct {
+	Images []media.Image `json:"images,omitempty"`
 	// ReasoningState is opaque continuation data owned by the source provider and model.
 	ReasoningState  []byte         `json:"reasoning_state,omitempty"`
 	Reasoning       string         `json:"reasoning,omitempty"`

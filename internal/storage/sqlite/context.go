@@ -5,6 +5,7 @@
 package sqlite
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -12,7 +13,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
-func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int) (messages []modelapi.Message, err error) {
+func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int, images bool) (messages []modelapi.Message, err error) {
 	if after < 0 || maxBytes < 1 {
 		return nil, fmt.Errorf("invalid conversation context bounds")
 	}
@@ -20,13 +21,19 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 	if err != nil {
 		return nil, err
 	}
-	bytes := 0
+	total := 0
 	for _, record := range page {
-		bytes += record.size
-		if bytes > maxBytes {
+		var fields map[string]bool
+		if !images {
+			fields, err = textContextFields(record.body)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if fields == nil && total+record.size > maxBytes {
 			return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes; no messages were omitted", maxBytes)
 		}
-		body, err := s.unpackRecord(ctx, record, nil)
+		body, err := s.unpackRecord(ctx, record, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -34,10 +41,47 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 		if err := json.Unmarshal(body, &message); err != nil {
 			return nil, err
 		}
+		size := record.size
+		if fields != nil {
+			message.Content += modelapi.ImageOmissionNotice
+			size = len(body) + len(modelapi.ImageOmissionNotice)
+		}
+		total += size
+		if total > maxBytes {
+			return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes; no messages were omitted", maxBytes)
+		}
 		if err := message.Check(); err != nil {
 			return nil, err
 		}
 		messages = append(messages, message)
 	}
 	return messages, nil
+}
+
+func textContextFields(body []byte) (map[string]bool, error) {
+	// The fast path does not parse ordinary text records a second time. A possible
+	// key match is always confirmed structurally before any field is excluded.
+	if !bytes.Contains(body, []byte(`"images"`)) {
+		return nil, nil
+	}
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(body, &root); err != nil {
+		return nil, err
+	}
+	var pictures []struct{}
+	if raw := root["images"]; raw != nil {
+		if err := json.Unmarshal(raw, &pictures); err != nil {
+			return nil, err
+		}
+	}
+	if len(pictures) == 0 {
+		return nil, nil
+	}
+	fields := make(map[string]bool, len(root)-1)
+	for key := range root {
+		if key != "images" {
+			fields[key] = true
+		}
+	}
+	return fields, nil
 }

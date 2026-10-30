@@ -65,7 +65,7 @@ func (s *capacityStore) InstallMemory(_ context.Context, _ string, _ int, m comp
 	s.memory = m
 	return nil
 }
-func (s *capacityStore) ContextMessages(_ context.Context, _ string, after int64, _ int) ([]modelapi.Message, error) {
+func (s *capacityStore) ContextMessages(_ context.Context, _ string, after int64, _ int, _ bool) ([]modelapi.Message, error) {
 	return append([]modelapi.Message(nil), s.messages[after:]...), nil
 }
 

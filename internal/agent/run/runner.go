@@ -19,6 +19,7 @@ import (
 )
 
 type Runner struct {
+	ImageInput               bool
 	PollSteering             func() []string
 	Inference                *inference.Settings
 	PreviousRun              *runrecord.Checkpoint
@@ -48,7 +49,7 @@ type Result struct {
 	HadToolFailure bool
 }
 type Journal interface {
-	ContextMessages(context.Context, string, int64, int) ([]modelapi.Message, error)
+	ContextMessages(context.Context, string, int64, int, bool) ([]modelapi.Message, error)
 	RecordEvent(context.Context, string, runrecord.Event) error
 	Commit(context.Context, string, []runrecord.Entry) error
 }

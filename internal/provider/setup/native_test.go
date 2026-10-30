@@ -26,7 +26,7 @@ func TestNativeReasoningSelection(t *testing.T) {
 					fmt.Fprint(w, `{"models":[{"name":"alias","context_length":4096}]}`)
 					return
 				case "/api/v1/models":
-					fmt.Fprint(w, `{"models":[{"type":"llm","key":"alias","loaded_instances":[{"id":"alias","config":{"context_length":4096}}],"capabilities":{"reasoning":{"allowed_options":["low","high"],"default":"low"}}}]}`)
+					fmt.Fprint(w, `{"models":[{"type":"llm","key":"alias","loaded_instances":[{"id":"alias","config":{"context_length":4096}}],"capabilities":{"vision":false,"reasoning":{"allowed_options":["low","high"],"default":"low"}}}]}`)
 					return
 				}
 				var body struct {

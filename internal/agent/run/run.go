@@ -83,7 +83,10 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 		return nil
 	}
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: r.Tools.Definitions(), statistics: runStatistics{started: started}}
+	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
+		r.ImageInput = r.ImageInput && support.ImageInputSupported()
+	}
+	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: imageDefinitions(r.Tools.Definitions(), r.ImageInput), statistics: runStatistics{started: started}}
 	s.usage = &requestBudget{}
 	s.usage.begin(limits)
 
@@ -152,6 +155,12 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			s.capacityRecovery = false
 		}
 		if askErr != nil {
+			if handled, imageErr := s.recoverImages(ctx, askErr); handled {
+				if imageErr != nil {
+					return s.result, imageErr
+				}
+				continue
+			}
 			var capacity *modelapi.ContextLimitError
 			if !s.capacityRecovery && errors.As(askErr, &capacity) {
 				s.capacityRecovery = true

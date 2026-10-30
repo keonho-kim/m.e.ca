@@ -8,37 +8,21 @@ import (
 	"context"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func Restore(ctx context.Context, s Store, session string) error {
 	if err := recoverRun(ctx, s, session); err != nil {
 		return err
 	}
-	messages, err := s.Messages(ctx, session, 1000)
+	calls, err := s.PendingTools(ctx, session)
 	if err != nil {
 		return err
 	}
-	pending := map[string]toolapi.Call{}
-	for _, m := range messages {
-		for _, call := range m.Calls {
-			pending[call.ID] = call
-		}
-		if m.Role == "tool" {
-			delete(pending, m.ToolCallID)
-		}
-	}
-	for _, m := range messages {
-		for _, call := range m.Calls {
-			if _, ok := pending[call.ID]; !ok {
-				continue
-			}
-			message := modelapi.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"error":"operation interrupted; effects were not replayed; inspect current state before retrying"}`}
-			event := runrecord.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}
-			if err = s.Commit(ctx, session, []runrecord.Entry{{Message: &message}, {Event: &event}}); err != nil {
-				return err
-			}
-			delete(pending, call.ID)
+	for _, call := range calls {
+		message := modelapi.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: `{"error":"operation interrupted; effects were not replayed; inspect current state before retrying"}`}
+		event := runrecord.Event{Kind: "tool_interrupted", CallID: call.ID, Text: "Interrupted " + call.Name, Call: &call}
+		if err = s.Commit(ctx, session, []runrecord.Entry{{Message: &message}, {Event: &event}}); err != nil {
+			return err
 		}
 	}
 	return nil

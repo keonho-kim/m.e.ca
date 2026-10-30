@@ -43,7 +43,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		op.approval.Target = input.CommandID
 		return op, nil
 	}
-	if spec.Effect != policy.Command && executor.activeCommands() {
+	if spec.Effect == policy.Change && executor.activeCommands() {
 		return nil, fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
 	}
 	if spec.Effect == policy.Command {
@@ -83,6 +83,9 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 		return nil, err
 	}
 	op.approval.Target = op.source.absolute
+	if spec.Effect == policy.Read {
+		return op, nil
+	}
 	if err := op.checkMutationSafety(); err != nil {
 		return nil, err
 	}

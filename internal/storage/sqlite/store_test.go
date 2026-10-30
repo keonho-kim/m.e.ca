@@ -45,7 +45,7 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	if err != nil || restored.ID != session.ID {
 		t.Fatalf("session: %+v, %v", restored, err)
 	}
-	history, err := store.Messages(ctx, session.ID, 100)
+	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 1 || history[0].Content != "Fix auth" {
 		t.Fatalf("history: %+v, %v", history, err)
 	}
@@ -65,7 +65,7 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestHistoryIsBounded(t *testing.T) {
+func TestInputHistoryIsBounded(t *testing.T) {
 	ctx := context.Background()
 	store, err := newTestStore(t)
 	if err != nil {
@@ -82,8 +82,8 @@ func TestHistoryIsBounded(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	history, err := store.Messages(ctx, session.ID, 2)
-	if err != nil || len(history) != 2 || history[0].Content != "two" || history[1].Content != "three" {
+	history, err := store.RecentInputs(ctx, session.ID, 2)
+	if err != nil || len(history) != 2 || history[0] != "two" || history[1] != "three" {
 		t.Fatalf("bounded history: %+v, %v", history, err)
 	}
 }

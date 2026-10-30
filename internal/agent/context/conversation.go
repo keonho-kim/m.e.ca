@@ -40,12 +40,12 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 		if err != nil {
 			return modelapi.Message{}, err
 		}
-		return modelapi.Message{Role: "user", Content: "Earlier notes and observations:\n" + string(body)}, nil
+		return modelapi.Message{Role: "user", Images: message.Images, Content: "Earlier notes and observations:\n" + string(body)}, nil
 	}
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
 		return modelapi.Message{}, fmt.Errorf("invalid conversation role")
 	}
-	return modelapi.Message{Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, ReasoningState: message.ReasoningState, ProviderID: message.ProviderID, ModelID: message.ModelID, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
+	return modelapi.Message{Images: message.Images, Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, ReasoningState: message.ReasoningState, ProviderID: message.ProviderID, ModelID: message.ModelID, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
 }
 
 // Compaction and interrupted work can leave partial groups. Keep those records

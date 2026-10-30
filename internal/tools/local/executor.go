@@ -17,6 +17,7 @@ import (
 )
 
 type Executor struct {
+	imageReads              chan struct{}
 	liveOutputs             liveCaptures
 	Files                   *fileview.Reader
 	commands                process.Registry
@@ -46,7 +47,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 	if err != nil {
 		return nil, errors.Join(err, root.Close())
 	}
-	executor := &Executor{project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.InitialWait}
+	executor := &Executor{imageReads: make(chan struct{}, 1), project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.InitialWait}
 	executor.Files = fileview.New(project, func(scope policy.Scope, path string) (fileview.Target, error) {
 		target, err := executor.resolve(scope, path)
 		return fileview.Target{Absolute: target.absolute, Relative: target.relative, Root: target.root}, err

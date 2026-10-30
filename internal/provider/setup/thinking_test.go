@@ -31,6 +31,9 @@ func TestThinkingOpaqueLocalRoot(t *testing.T) {
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
+				if rejectImageProbe(t, w, r) {
+					return
+				}
 				var body struct {
 					Model    string
 					Template map[string]bool `json:"chat_template_kwargs"`

@@ -42,6 +42,9 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 			continue
 		}
 		matches++
+		if row.Capabilities.Vision != nil {
+			info.ImageInput = connection.DeclaredImageInput(*row.Capabilities.Vision, "/api/v1/models.capabilities.vision")
+		}
 		// A model's theoretical maximum is not the loaded instance's usable context.
 		info.ContextWindow = contextWindow
 		if row.Capabilities.Reasoning.Options != nil {

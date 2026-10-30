@@ -45,8 +45,9 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 		Data []struct {
 			Name string `json:"model_name"`
 			Info struct {
-				Input  int `json:"max_input_tokens"`
-				Output int `json:"max_output_tokens"`
+				Input  int   `json:"max_input_tokens"`
+				Vision *bool `json:"supports_vision"`
+				Output int   `json:"max_output_tokens"`
 			} `json:"model_info"`
 		} `json:"data"`
 	}
@@ -57,12 +58,15 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 		return info, fmt.Errorf("invalid deployment model list")
 	}
 	matches := 0
+	allVision, noVision := true, true
 	unknownInput, unknownOutput := false, false
 	for _, row := range listing.Data {
 		if row.Name != model {
 			continue
 		}
 		matches++
+		allVision = allVision && row.Info.Vision != nil && *row.Info.Vision
+		noVision = noVision && row.Info.Vision != nil && !*row.Info.Vision
 		if row.Info.Input < 0 || row.Info.Output < 0 || row.Info.Input > 1<<40 || row.Info.Output > 1<<40 {
 			return info, fmt.Errorf("invalid deployment token limits")
 		}
@@ -77,6 +81,9 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 	}
 	if matches == 0 {
 		return info, fmt.Errorf("model limits not advertised for selected alias")
+	}
+	if allVision || noVision {
+		info.ImageInput = connection.DeclaredImageInput(allVision, "/model/info.model_info.supports_vision")
 	}
 	if unknownInput {
 		info.MaxInput = 0

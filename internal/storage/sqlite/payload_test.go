@@ -82,7 +82,7 @@ func TestPayloadKeepsNativeArgumentBytes(t *testing.T) {
 	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ContextMessages(ctx, id, 0, 1024*1024); err == nil {
+	if _, err := s.ContextMessages(ctx, id, 0, 1024*1024, true); err == nil {
 		t.Fatal("corrupt payload accepted")
 	}
 }

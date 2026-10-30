@@ -47,7 +47,7 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 	if err = recovery.Restore(ctx, s, session.ID); err != nil {
 		t.Fatal(err)
 	}
-	history, err := s.Messages(ctx, session.ID, 100)
+	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 3 || history[2].ToolCallID != "pending" {
 		t.Fatalf("recovery: %+v %v", history, err)
 	}
@@ -93,7 +93,7 @@ func TestRecoveryCommitsRepliesAndEventsTogether(t *testing.T) {
 	if err := recovery.Restore(ctx, fault, id); err == nil {
 		t.Fatal("invalid recovery transaction committed")
 	}
-	if history, err := s.Messages(ctx, id, 100); err != nil || len(history) != 1 {
+	if history, err := s.ContextMessages(ctx, id, 0, 16*1024*1024, true); err != nil || len(history) != 1 {
 		t.Fatalf("partial recovery reply remained: %+v %v", history, err)
 	}
 	fault.fail = false

@@ -48,7 +48,7 @@ func lmMessages(messages []Message) ([]map[string]any, error) {
 			continue
 		}
 		if message.Content != "" || len(message.Calls) == 0 {
-			input = append(input, map[string]any{"role": message.Role, "content": message.Content})
+			input = append(input, map[string]any{"role": message.Role, "content": lmContent(message)})
 		}
 		if len(message.Calls) == 0 {
 			continue

@@ -40,7 +40,7 @@ func TestProviderContinuationSurvivesRestart(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	history, err := store.Messages(ctx, session.ID, 10)
+	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 1 || !bytes.Equal(history[0].ReasoningState, state) || history[0].ProviderID != "provider" || history[0].ModelID != "model" {
 		t.Fatalf("restored=%+v err=%v", history, err)
 	}

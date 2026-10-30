@@ -56,6 +56,8 @@ func (op *operation) Execute(ctx context.Context, approved bool) (toolapi.Result
 		}
 	} else if commandControl(op.spec.Name) {
 		return op.run(ctx)
+	} else if op.spec.Effect == policy.Read {
+		// Read-only operations do not enter mutation-only command or protected-write guards.
 	} else if op.executor.activeCommands() {
 		return toolapi.Result{}, fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
 	} else if err := op.checkMutationSafety(); err != nil {

@@ -19,7 +19,17 @@ func (message Message) Check() error {
 	if len(message.ReasoningState) > 0 && (message.Role != "assistant" || message.Incomplete) {
 		return fmt.Errorf("continuation state requires a completed assistant message")
 	}
-	size := len(message.Content) + len(message.Reasoning) + len(message.ReasoningState)
+	if len(message.Images) > 0 && message.Role != "user" && message.Role != "tool" {
+		return fmt.Errorf("images require user or tool messages")
+	}
+	size := 0
+	for _, image := range message.Images {
+		if err := image.Check(); err != nil {
+			return err
+		}
+		size += len(image.Data)*4/3 + 4096
+	}
+	size += len(message.Content) + len(message.Reasoning) + len(message.ReasoningState)
 	for _, call := range message.Calls {
 		size += len(call.Arguments) + len(call.ID) + len(call.Name)
 	}

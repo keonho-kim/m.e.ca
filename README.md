@@ -12,7 +12,7 @@
 
 - Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter 연결
 - 스트리밍 응답·Thinking, Markdown과 줄 단위 diff
-- 파일·셸 도구, 오래 실행되는 명령의 조회·대기·취소
+- 파일·셸 도구, 비전 모델의 이미지 읽기, 오래 실행되는 명령의 조회·대기·취소
 - 파일 선택·분할/전체화면 Markdown 뷰어
 - 로컬 대화 저장·압축·재개, 작업 중 방향 수정과 후속 요청 예약
 - 실제 입력·출력 토큰·TPS, OpenRouter의 보고 비용 표시
@@ -226,6 +226,7 @@ GOFLAGS='-tags=godbus_no_tcp' go vet ./...
 | 문서 | 내용 |
 | --- | --- |
 | [사용 가이드](docs/usage.md) | 키맵·파일 탐색·예약·승인·사용량 |
+| [이미지 입력](docs/images.md) | 비전 지원 확인·이미지 도구·지원 형식 |
 | [모델 연결](docs/model-connections.md) | Provider·Thinking·서빙 설정·연결 진단 |
 | [설정과 대화 보존](docs/configuration.md) | 추론 인자·프롬프트·Compaction·세션 |
 | [에이전트 작동 방식](docs/runtime.md) | 모델 요청·도구·명령 수명·재개 |

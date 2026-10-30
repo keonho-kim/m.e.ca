@@ -17,18 +17,9 @@ func (a *app) restore() error {
 		return err
 	}
 	a.settings = policy.Settings{Scope: policy.System, Permission: a.opts.Config.Permission}
-	recent, err := a.opts.Store.Messages(ctx, a.opts.Session.ID, 1000)
+	a.inputs, err = a.opts.Store.RecentInputs(ctx, a.opts.Session.ID, 200)
 	if err != nil {
 		return err
-	}
-	for _, m := range recent {
-		if m.Role == "user" {
-			a.inputs = append(a.inputs, m.Content)
-		}
-	}
-	if len(a.inputs) > 200 {
-		clear(a.inputs[:len(a.inputs)-200])
-		a.inputs = a.inputs[len(a.inputs)-200:]
 	}
 	if err := a.loadHistory(); err != nil {
 		return err

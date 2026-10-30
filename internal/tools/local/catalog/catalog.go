@@ -29,6 +29,7 @@ var catalog = buildSpecifications()
 
 func buildSpecifications() []Specification {
 	specs := []Specification{
+		{"read_image", "Reading image", "Read a local raster image and provide its pixels to the current model. Supports PNG/APNG, JPEG/JPG, WebP, GIF, BMP and TIFF by file content. Animated images and multipage TIFF use a representative first frame/page, not the complete animation. Returns dimensions, format and an immutable image snapshot. Paths are absolute or relative to project_root; shell cd does not change the base. This tool does not modify files.", []toolapi.Parameter{filePath()}, policy.Read},
 
 		{"create_directory", "Creating", "Create one or more directories and missing parents (mkdir -p). Existing directories succeed without changes. File collisions are rejected. Returns created paths and preserves partial results if interrupted.", []toolapi.Parameter{{Name: "paths", Description: "Absolute directory paths or paths relative to project_root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
 		{"write_file", "Writing", "Create a UTF-8 file or replace its entire content; missing parents are created. Inspect an existing file before replacing it. Empty content creates or empties the file. Returns the applied change and file size. Use edit_file for partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},

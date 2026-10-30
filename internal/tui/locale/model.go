@@ -5,6 +5,11 @@
 package locale
 
 var model = []translation{
+	{"", "Image input: %s", "이미지 입력: %s"},
+	{"", "Supported", "지원"},
+	{"", "Unsupported", "미지원"},
+	{"", "Unknown", "확인 불가"},
+	{"", "Image input is unavailable for this connection", "현재 연결에서 이미지 입력을 사용할 수 없습니다"},
 	{"", "No model connected.", "연결된 모델이 없습니다."},
 	{"", "Requested model: ", "요청 모델: "},
 	{"", "Configured context budget: %d tokens", "설정 컨텍스트 예산: %d 토큰"},

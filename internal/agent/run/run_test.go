@@ -116,7 +116,7 @@ type journal struct {
 	events   []runrecord.Event
 }
 
-func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int) ([]modelapi.Message, error) {
+func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int, _ bool) ([]modelapi.Message, error) {
 	if after != 0 {
 		return nil, fmt.Errorf("test journal does not support compaction")
 	}

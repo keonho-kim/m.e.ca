@@ -5,25 +5,26 @@
 package discovery
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
-	"net/http"
 )
 
 func (c *Client) prepareOllama(ctx context.Context, model string) (connection.ModelInfo, error) {
 	info := connection.ModelInfo{ID: model}
 
-	payload, err := json.Marshal(map[string]string{"model": model})
+	row, err := c.readOllama(ctx, model)
 	if err != nil {
 		return info, err
 	}
-	var row ollamaModel
-	if err := transport.ReadMetadata(ctx, c.HTTP, http.MethodPost, c.url("show"), bytes.NewReader(payload), 16*1024*1024, &row); err != nil {
-		return info, err
+
+	if row.Capabilities != nil {
+		vision := false
+		for _, cap := range row.Capabilities {
+			vision = vision || cap == "vision"
+		}
+		info.ImageInput = connection.DeclaredImageInput(vision, "/api/show.capabilities")
 	}
 	if row.Thinking.Values != nil {
 		control := &connection.Reasoning{}

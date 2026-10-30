@@ -165,7 +165,7 @@ func TestFileBrowserDuringAgentWork(t *testing.T) {
 	if requests.Load() != 3 || len(a.queued.Messages) != 0 || a.editor.String() != "unsent draft" {
 		t.Fatal("steering, queued follow-up or unsent input was lost")
 	}
-	history, err := a.opts.Store.Messages(ctx, a.opts.Session.ID, 100)
+	history, err := a.opts.Store.ContextMessages(ctx, a.opts.Session.ID, 0, 16*1024*1024, true)
 	if err != nil {
 		t.Fatal(err)
 	}

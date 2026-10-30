@@ -15,6 +15,7 @@ type Capabilities struct {
 }
 
 type ModelInfo struct {
+	ImageInput    ImageInput `json:"image_input,omitempty"`
 	Notice        string     `json:"notice,omitempty"`
 	Reasoning     *Reasoning `json:"reasoning,omitempty"`
 	ID            string     `json:"id"`

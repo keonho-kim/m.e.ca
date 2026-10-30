@@ -12,6 +12,15 @@ import (
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
 	switch e.Kind {
+	case "image_input_unavailable":
+		if a.selection.Details != nil {
+			info := *a.selection.Details
+			info.ImageInput.State = "unsupported"
+			info.ImageInput.Source = "provider rejection"
+			a.selection.Details = &info
+		}
+		a.status = a.language.Text("Image input is unavailable for this connection")
+		return
 	case "user_message":
 		if len(a.steeringDrafts) > 0 {
 			a.steeringDrafts[0] = ""

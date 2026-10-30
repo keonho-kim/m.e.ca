@@ -6,13 +6,13 @@ package recovery
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type Store interface {
 	LatestRun(context.Context, string) (*runrecord.Checkpoint, error)
 	RecordEvent(context.Context, string, runrecord.Event) error
-	Messages(context.Context, string, int) ([]modelapi.Message, error)
+	PendingTools(context.Context, string) ([]toolapi.Call, error)
 	Commit(context.Context, string, []runrecord.Entry) error
 }

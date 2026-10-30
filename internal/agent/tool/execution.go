@@ -8,6 +8,7 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -45,6 +46,7 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
+	Images   []media.Image
 	Capture  json.RawMessage
 	Versions map[string]string
 	Target   string

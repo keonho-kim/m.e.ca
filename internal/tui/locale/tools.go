@@ -5,6 +5,10 @@
 package locale
 
 var tools = []translation{
+	{"read_image", "Read image", "이미지 읽기"},
+	{"", "Reading image", "이미지 읽는 중"},
+	{"", "Image loaded", "이미지 읽기 완료"},
+	{"", "Representative first frame / page", "대표 첫 프레임 / 첫 페이지"},
 	{"execute_command", "Execute command", "명령 실행"},
 	{"list_command_runs", "List command runs", "실행 명령 목록"},
 	{"wait_command", "Wait for command", "명령 완료 대기"},

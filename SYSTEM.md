@@ -23,7 +23,7 @@
 
 도구 진입은 Provider의 native function calling만 사용한다. 매 모델 요청에 JSON Schema를 전달하고 호출·결과 쌍을 유지한다. 일반 응답 본문을 도구 명령으로 해석하지 않는다.
 
-현재 카탈로그는 `execute_command`, `list_command_runs`, `wait_command`, `cancel_command`, `create_directory`, `write_file`, `edit_file`이다. 조회·검색·패키지 작업과 파일·디렉터리 이동(`mv`)은 셸로 처리한다. 생성·본문 수정에는 diff와 원본 검사를 제공하는 전용 도구를 우선 안내한다. 셸 변경은 호스트 사용자 권한과 선택한 승인 정책을 따른다. 인자는 실행에 필요한 값으로 구성한다. 도구별 계약은 [런타임 문서](docs/runtime.md#native-도구)를 따른다.
+현재 카탈로그는 `execute_command`, `list_command_runs`, `wait_command`, `cancel_command`, `create_directory`, `write_file`, `edit_file`이며 이미지 입력이 확인된 모델에 `read_image`를 추가한다. 조회·검색·패키지 작업과 파일·디렉터리 이동(`mv`)은 셸로 처리한다. 생성·본문 수정에는 diff와 원본 검사를 제공하는 전용 도구를 우선 안내한다. 셸 변경은 호스트 사용자 권한과 선택한 승인 정책을 따른다. 인자는 실행에 필요한 값으로 구성한다. 도구별 계약은 [런타임 문서](docs/runtime.md#native-도구)를 따른다.
 
 부분 수정은 현재 원문에서 old_text가 유일하게 일치해야 하며, 같은 파일의 여러 수정 범위가 겹치면 후보 전체를 거절한다. 기본 format_policy=preserve는 원본 개행 형식과 EOF를 보존하고 literal은 의도한 바이트 형식 변경에 사용한다. 승인·실행에는 정규화한 같은 후보를 사용한다.
 
@@ -77,7 +77,7 @@ Markdown 표는 실제 본문 폭과 들여쓰기에 맞춰 열 너비를 정하
 
 ## Provider와 사용량
 
-지원 연결은 Ollama, vLLM, SGLang, LM Studio, LiteLLM Proxy와 OpenRouter다. OpenRouter는 /api/v1/models에서 모델·한도·추론 선택지를 조회하고 /api/v1/chat/completions로 인증된 스트리밍·native 도구 요청을 보낸다. 연결에는 모델 응답 생성을 요구하지 않는다. !model의 연결 진단 또는 meca --diagnose로 일반 응답과 Thinking 제어를 명시적으로 검사한다. 일반 연결 진단 성공은 native 도구 실행 능력의 증명이 아니다.
+지원 연결은 Ollama, vLLM, SGLang, LM Studio, LiteLLM Proxy와 OpenRouter다. OpenRouter는 /api/v1/models에서 모델·한도·추론 선택지를 조회하고 /api/v1/chat/completions로 인증된 스트리밍·native 도구 요청을 보낸다. 연결은 이미지 입력 메타데이터를 확인하며 OpenRouter 외 확인 불가인 모델에만 작은 PNG로 입력 수용을 검사한다. 검사 결과는 답변 품질과 구분하고 확인 불가여도 텍스트 연결을 유지한다. !model의 연결 진단 또는 meca --diagnose로 일반 응답과 Thinking 제어를 명시적으로 검사한다. 일반 연결 진단 성공은 native 도구 실행 능력의 증명이 아니다.
 
 OpenRouter의 추론 블록은 완료된 응답의 Provider·모델에 연결한 불투명 상태로 저장한다. 같은 연결·모델의 후속 요청에 원래 순서를 유지해 전달하고 다른 모델·Provider, 중단된 응답, 요약 입력과 TUI 표시에는 전달하지 않는다. 화면의 Thinking과 실제 수신 토큰은 별도로 처리한다.
 
@@ -108,6 +108,10 @@ Scope는 system으로 고정되며 선택 설정·메뉴는 제공하지 않는�
 execute_command는 전체 셸 구조를 AST로 읽고 단일 검사 목록에 등록된 명령만 인자를 세부 분석한다. 목록 밖 실행 파일은 같은 기본 허용 규칙을 적용하며 별도 허용 목록이나 명령 종류별 예외를 두지 않는다. 셸의 리다이렉션·명령 치환·함수 본문은 공통으로 검사한다. 리터럴 명령명·변수 값·작업 경로의 불확실성을 분리하며 &&·파이프를 정상 지원한다. 필수 직접 승인 사유가 있는 복합 명령은 문제 단계와 실제 전체 명령을 제시하고 승인 전에 어느 단계도 실행하지 않는다. All Mighty는 외부 전송이 없는 승인 대상 명령을 승인 대기 없이 실행한다. 모든 단계가 자동 승인 대상이면 질문 없이 실행한다.
 
 외부 전송의 AST 연결과 프로토콜 인자 해석은 별도 파일·하위 패키지로 분리한다. 명시적 업로드·HTTP 요청 데이터·쿼리·커스텀 헤더·원격 실행은 모든 모드에서 매 호출 직접 승인한다. 판정의 UserRequired 표식을 런타임까지 보존해 All Mighty 자동 승인으로 대체하지 않으며 비대화형 실행에서는 중단한다. 목적지 등록 설정은 두지 않는다. 일반 다운로드·개발 도구와 직접 지정한 loopback HTTP 테스트는 유지하고 간접 라우팅은 검토한다. 검사 중 파일·명령·DNS·네트워크를 사용하지 않는다. 승인·실행 직전 재검사·기록·거절 종료 흐름을 공유하며 임의 프로그램 내부의 통신까지 통제한다고 주장하지 않는다. [외부 전송 승인](docs/execution-boundary.md#외부-전송-승인)을 따른다.
+
+## 이미지 입력
+
+모델의 이미지 입력 지원은 연결 준비가 확정하고 요청별 도구 목록·실행 경계에서 적용한다. read_image는 PNG/APNG·JPEG·WebP·GIF·BMP·TIFF를 파일 내용으로 판별하고 안정된 압축 스냅샷을 전달한다. 이미지 변환은 표준 라이브러리와 공식 Go 이미지 코덱을 사용하며 외부 실행 프로그램을 요구하지 않는다. 파일 경로 보호는 기존 읽기 경계와 같고 변경 기록은 만들지 않는다. 메타데이터·입력 검사·프레임 처리·수용 한도·저장·압축 규칙은 [이미지 입력](docs/images.md)을 따른다.
 
 ## 설정·저장·설치
 

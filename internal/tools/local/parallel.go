@@ -27,6 +27,11 @@ type parallelTarget struct {
 }
 
 func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (int, error) {
+	// Serialize image decoding and keep compressed results from accumulating in a
+	// wide wave. File changes and running shell commands retain their own limits.
+	if len(calls) > 0 && calls[0].Name == "read_image" {
+		return 1, nil
+	}
 	if len(calls) > 0 && calls[0].Name == "execute_command" {
 		end := 0
 		var retained int64
@@ -50,6 +55,9 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	var retained int64
 	end := min(len(calls), maximum)
 	for i, call := range calls[:end] {
+		if call.Name == "read_image" {
+			return max(1, i), nil
+		}
 		if err := ctx.Err(); err != nil {
 			return i, err
 		}

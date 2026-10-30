@@ -17,7 +17,21 @@ import (
 	"slices"
 )
 
-func (client *Client) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) (err error) {
+func (client *Client) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+	return client.generate(ctx, request, emit, false)
+}
+
+func (client *Client) generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error, probe bool) (err error) {
+	hasImages := imageMessages(request.Messages)
+	if hasImages && !probe && !client.ImageInputSupported() {
+		return &modelapi.ImageInputError{}
+	}
+	defer func() {
+		if hasImages && !probe && transport.ImageUnsupported(err) {
+			client.imageRejected.Store(true)
+			err = &modelapi.ImageInputError{Cause: err}
+		}
+	}()
 	if err := modelapi.CheckTemperature(request.Temperature); err != nil {
 		return err
 	}
@@ -48,9 +62,17 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 	if err != nil {
 		return err
 	}
-	request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools)
+	// The probe exercises image acceptance directly, without requiring a separate
+	// tokenizer endpoint that may be unavailable or unable to process media.
+	if !probe {
+		request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools)
+	}
 	if err != nil {
 		return err
+	}
+	// The acceptance probe leaves the server's loaded context configuration alone.
+	if probe {
+		info = nil
 	}
 	endpoint, content, err := protocol.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
 	if err != nil {

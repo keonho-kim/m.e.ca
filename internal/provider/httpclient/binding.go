@@ -10,6 +10,7 @@ func (c *Client) BindModel(info connection.ModelInfo) error {
 	if err := info.Check(); err != nil {
 		return err
 	}
+	c.imageRejected.Store(false)
 	c.modelInfo = &info
 	return nil
 }

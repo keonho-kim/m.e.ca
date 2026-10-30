@@ -24,6 +24,7 @@ type lmModelListing struct {
 			}
 		} `json:"loaded_instances"`
 		Capabilities struct {
+			Vision    *bool `json:"vision"`
 			Reasoning struct {
 				Options []json.RawMessage `json:"allowed_options"`
 				Default string            `json:"default"`

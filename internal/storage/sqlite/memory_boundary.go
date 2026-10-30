@@ -13,10 +13,19 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
-func (s *Store) CompactionBoundary(ctx context.Context, session string, through int64, keepBytes int) (int64, error) {
+func (s *Store) CompactionBoundary(ctx context.Context, session string, through int64, keepBytes int) (boundary int64, err error) {
 	if through < 0 || keepBytes < 0 {
 		return 0, fmt.Errorf("invalid compaction tail bounds")
 	}
+	pin, pinErr := s.unreadImageBoundary(ctx, session, through)
+	if pinErr != nil {
+		return 0, pinErr
+	}
+	defer func() {
+		if err == nil {
+			boundary = min(boundary, pin)
+		}
+	}()
 	if keepBytes == 0 {
 		return through, nil
 	}
@@ -31,7 +40,7 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 			return 0, nil
 		}
 		for _, record := range page {
-			body, err := s.unpackRecord(ctx, record, nil)
+			body, err := s.unpackRecord(ctx, record, map[string]bool{"role": true, "content": true, "calls": true, "tool_call_id": true, "tool_name": true, "incomplete": true})
 			if err != nil {
 				return 0, err
 			}

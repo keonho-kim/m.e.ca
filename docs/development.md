@@ -69,13 +69,14 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 | klauspost/compress/zstd | 세션의 대용량 payload를 Zstandard로 압축·복원 |
 | bytedance/sonic | 정렬된 키·문자열 검사를 유지하며 모델 요청 JSON을 인코딩 |
 | goccy/go-json | 저장 레코드의 JSON 직렬화·참조 분리·복원 |
+| x/image | WebP·BMP·TIFF 디코딩; 표준 이미지 코덱과 함께 사용 |
 | x/sys·x/term | OS 파일 어댑터와 터미널 확인 |
 | mvdan.cc/sh/v3 | 실행 없는 셸 AST 분석과 정적 단어 확장 |
 | fsnotify | 파일 탐색 화면의 활성 디렉터리 변경 알림 |
 
 테스트 전용 의존성은 go.uber.org/goleak(고루틴 정리 검사), google/go-cmp(복잡한 값 비교), creack/pty(실행 파일의 터미널 통합 검사)다. 일반 실행 파일에서는 이 패키지들을 import하지 않는다.
 
-CLI 분기는 flag, 병렬 도구 합류는 sync.WaitGroup, 재시도 대기는 time.Timer를 사용한다. 검색은 strings·unicode로 부분일치를 우선하고 결과가 없을 때 문자 순서를 유지하는 축약 일치를 찾는다. 메타데이터 재사용은 연결 준비가 소유한 마지막 GET 응답으로 한정한다. 이 사용처에는 별도 CLI·동시성·캐시 프레임워크를 두지 않는다.
+CLI 분기는 flag, 병렬 도구 합류는 sync.WaitGroup, 재시도 대기는 time.Timer를 사용한다. 검색은 strings·unicode로 부분일치를 우선하고 결과가 없을 때 문자 순서를 유지하는 축약 일치를 찾는다. 메타데이터 재사용은 연결 준비가 소유한 마지막 GET 응답과 선택한 Ollama 모델의 typed 응답으로 한정한다. 이 사용처에는 별도 CLI·동시성·캐시 프레임워크를 두지 않는다.
 
 Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#설치)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [Release 워크플로](../.github/workflows/release.yml)와 GoReleaser 설정으로 검사·빌드 후 자동 게시한다. 명시적 major·minor와 같은 날짜의 갱신 정책은 [릴리스 가이드](releases.md)가 소유한다.
 
@@ -217,6 +218,9 @@ go test ./internal/tui/session -run '^$' -bench BenchmarkStreamDelivery -benchme
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkOutcomeCommit -benchtime=100x -benchmem
 go test ./internal/storage/content -run '^$' -bench 'Benchmark(PayloadCodec|CompressionOptions)' -benchmem
 go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(ProviderRequests|ProviderStream|OpenRouterReasoningFragments)' -benchmem
+go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(TextMessages|ImageEncoding)$' -benchmem
+go test ./internal/tools/local -run '^$' -bench BenchmarkReadImageBytes -benchmem
+go test ./internal/storage/sqlite -run '^$' -bench 'BenchmarkImage(History|Boundary)$' -benchmem
 go test ./internal/storage/content -run '^$' -bench BenchmarkRecordContent -benchmem
 go test ./internal/tui/textlayout -run '^$' -bench BenchmarkWidth -benchmem
 go test ./internal/storage/sqlite -run '^$' -bench BenchmarkMemoryWatermark -benchmem
@@ -242,3 +246,11 @@ go test ./internal/config/credentials ./internal/tui/viewport ./internal/tui/vie
 메인 에이전트 하나가 native 도구와 실제 대화 문맥을 사용해 요청을 수행한다. agent/run은 실행 순서·예산·승인·명령 수명을 조율하고, 시작한 명령의 종료·취소 결과를 수집한 뒤 모델의 정상 응답으로 종료한다. 파일 검사·OS 자격 증명·세션 SQLite는 각 어댑터가 소유한다.
 
 원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.
+
+## 이미지 처리 책임
+
+agent/media는 이미지 스냅샷의 값·수용 한도, provider/connection은 입력 지원 상태, provider/discovery는 서버 선언 해석, provider/diagnostic은 입력 수용 검사, provider/setup은 연결 확정을 소유한다. provider/protocol의 요청 DTO는 수신 청크와 분리하고 chat·Ollama·Responses 형식으로 이미지를 인코딩한다. commands/agentrequest와 agent/run은 연결에 맞게 도구 목록을 구성한다.
+
+tools/local/imagefile은 파일 내용의 형식 판별·디코딩·대표 프레임 변환을 담당하고 local/image는 기존 경로 경계와 취소 가능한 단일 디코딩 수용량을 적용한다. local/image_read는 알려진 크기의 스냅샷 읽기와 크기 변경 검사를, imagefile/png는 PNG 청크 기반 애니메이션 판별을 담당한다. 이미지 본문은 model 메시지에만 보존하며 TUI 이벤트에는 작은 메타데이터를 전달한다.
+
+storage/content·sqlite는 기존 payload 저장을 재사용한다. sqlite의 RecentInputs는 사용자 텍스트만, PendingTools는 미완료 호출의 인자만 복원한다. PendingTools의 식별자 조회와 인자 선택은 별도 파일이 담당하며 부분 완료된 배치도 원래 순서를 유지한다. 모델 문맥 조회는 이미지 포함 여부를 명시하고 텍스트 연결에서는 이미지 payload를 읽지 않는다. 요약·화면 조회도 이미지 바이너리를 제외한다. 이미지 미소비 그룹은 압축 경계를 제한한다. 형식·검사·용량 계약은 [이미지 입력](images.md)을 따른다.

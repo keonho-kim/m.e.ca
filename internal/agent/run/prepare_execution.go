@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -25,6 +26,9 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 		return nil, outcome, err
 	}
 	r := s.runner
+	if call.Name == "read_image" && !r.ImageInput {
+		return nil, outcome, &modelapi.ImageInputError{}
+	}
 	op, err := r.Tools.Prepare(ctx, r.Settings, call)
 	if err != nil {
 		outcome.Failure = toolapi.FailureOf(err)

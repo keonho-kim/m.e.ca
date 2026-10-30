@@ -21,6 +21,13 @@ import (
 
 func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition) (int, error) {
 	info := c.effectiveModel()
+	// Image preprocessing contributes model-specific tokens. A text-only tokenizer
+	// count is not an exact multimodal count; use server generation limits instead.
+	for _, message := range messages {
+		if message.HasImages() {
+			return modelapi.OutputBudget(output, info.ContextWindow, info.MaxOutput, 0)
+		}
+	}
 	if c.connection.Kind != connection.VLLM || c.modelInfo == nil || c.modelInfo.ContextWindow == 0 {
 		return modelapi.OutputBudget(output, info.ContextWindow, info.MaxOutput, 0)
 	}

@@ -26,14 +26,14 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 	bytes := 0
 	for _, record := range page {
 		var fields map[string]bool
-		if record.kind == "event" {
+		if record.kind == "event" || record.kind == "message" {
 			fields = map[string]bool{}
 			var root map[string]json.RawMessage
 			if err = json.Unmarshal(record.body, &root); err != nil {
 				return nil, 0, err
 			}
 			for key := range root {
-				if key != "capture" {
+				if key != "capture" && key != "images" {
 					fields[key] = true
 				}
 			}

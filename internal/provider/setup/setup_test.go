@@ -1,4 +1,4 @@
-// Purpose: Verify opaque serving aliases and explicit Thinking preferences transfer without response generation.
+// Purpose: Verify opaque aliases and Thinking preferences survive image-only capability checks.
 // Pattern: Provider setup integration tests.
 // Usage: go test ./internal/provider/setup.
 // Related: internal/provider/setup/setup.go, internal/provider/diagnostic/control.go.
@@ -12,8 +12,11 @@ import (
 	"testing"
 )
 
-func TestPrepareAliasTransfersThinkingWithoutGenerating(t *testing.T) {
+func TestPrepareAliasTransfersThinkingDuringImageCheck(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectImageProbe(t, w, r) {
+			return
+		}
 		if r.Method != http.MethodGet {
 			t.Errorf("setup unexpectedly generated a response: %s %s", r.Method, r.URL.Path)
 		}
@@ -44,6 +47,9 @@ func TestPrepareAliasTransfersThinkingWithoutGenerating(t *testing.T) {
 
 func TestPrepareDefaultLeavesReasoningToServer(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rejectImageProbe(t, w, r) {
+			return
+		}
 		if r.Method != http.MethodGet {
 			t.Errorf("unexpected generation: %s", r.URL.Path)
 		}

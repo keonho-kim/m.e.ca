@@ -9,13 +9,14 @@ import (
 	"errors"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 	"time"
 )
 
 func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(runrecord.Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
 	event := runrecord.Event{CallID: call.ID, Call: &call}
-	if call.Name != "execute_command" && call.Name != "wait_command" && call.Name != "cancel_command" && call.Name != "list_command_runs" {
+	if v.definition.Effect == policy.Change {
 		outcome.Started = true
 	}
 	outcome.Target = proposal.Target

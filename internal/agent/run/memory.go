@@ -34,7 +34,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		}
 		var err error
 		if !s.historyLoaded {
-			s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes)
+			s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes, s.runner.ImageInput)
 			s.historyLoaded = err == nil
 		}
 		return err
@@ -75,7 +75,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	s.memoryContext, through = s.runner.Memory.Context()
 	if changed || !s.historyLoaded {
 		s.projection = contextbuild.Projection{}
-		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes)
+		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes, s.runner.ImageInput)
 		if err != nil {
 			return err
 		}

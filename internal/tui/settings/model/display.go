@@ -63,6 +63,7 @@ func (f *Form) Display(w, contextLength int, language locale.Language, redact fu
 		{Label: "Model information", Value: "→"},
 		{Label: "Connection diagnostics", Value: "→"},
 	}
+	rows[Name].Hint = language.Format("Image input: %s", imageStatus(f.Selection(), language))
 	if f.Effort == "" {
 		rows[Effort].Selected = 0
 	}

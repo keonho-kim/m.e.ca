@@ -82,6 +82,9 @@ func (r Reasoning) CheckEffort(value string) error {
 }
 
 func (m ModelInfo) Check() error {
+	if err := m.ImageInput.Check(); err != nil {
+		return err
+	}
 	if m.ID == "" || len(m.ID) > 512 || m.ContextWindow < 0 || m.MaxInput < 0 || m.MaxInput > 1<<40 || m.MaxOutput < 0 || m.ContextWindow > 1<<40 || m.MaxOutput > 1<<40 {
 		return fmt.Errorf("invalid model limits")
 	}

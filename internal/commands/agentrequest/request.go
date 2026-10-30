@@ -50,7 +50,8 @@ func New(options Options) agentsession.Request {
 		thinking = &value
 	}
 	runner := run.Runner{
-		Generator: options.Generator, Tools: options.Tools, Journal: options.Store,
+		ImageInput: selected.Details != nil && selected.Details.ImageInput.Supported(),
+		Generator:  options.Generator, Tools: options.Tools, Journal: options.Store,
 		Session: options.Session.ID, ProjectRoot: options.Session.ProjectRoot,
 		Model: selected.Model, Provider: selected.Connection.ID,
 		Thinking: thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(),

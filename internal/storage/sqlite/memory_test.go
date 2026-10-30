@@ -47,7 +47,7 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 	if err != nil || mark.Tokens != 0 {
 		t.Fatalf("watermark not reset: %+v %v", mark, err)
 	}
-	history, err := store.Messages(ctx, session.ID, 10)
+	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 1 || history[0].Content != "goal" {
 		t.Fatal("original history lost")
 	}

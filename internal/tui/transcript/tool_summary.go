@@ -62,15 +62,19 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		}
 	}
 	var output struct {
-		Changed   *bool
-		Created   []string
-		SizeBytes *int `json:"size_bytes"`
+		Format        string
+		Width, Height int
+		Changed       *bool
+		Created       []string
+		SizeBytes     *int `json:"size_bytes"`
 	}
 	result := event.Text
 	if commandStatus != "" {
 		result = commandSummary
 	} else if json.Unmarshal(event.Output, &output) == nil {
 		switch {
+		case event.Kind == "tool_succeeded" && event.Call.Name == "read_image" && output.Width > 0 && output.Height > 0:
+			result = f.Language.Format("%s · %d × %d", strings.ToUpper(output.Format), output.Width, output.Height)
 		case event.Kind == "tool_succeeded" && output.Changed != nil && !*output.Changed:
 			result = f.Language.Text("변경 없음")
 		case event.Kind == "tool_succeeded" && len(output.Created) > 0:

@@ -70,7 +70,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 		if ctx.Err() != nil {
 			return prepared, ctx.Err()
 		}
-		info = connection.ModelInfo{ID: model, Notice: "Serving limits unavailable: " + discoveryErr.Error()}
+		info = connection.ModelInfo{ID: model, ImageInput: info.ImageInput, Notice: "Serving limits unavailable: " + discoveryErr.Error()}
 	}
 	if defaults.ContextLength != 0 {
 		if err := client.SetContextLength(defaults.ContextLength); err != nil {
@@ -78,6 +78,9 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 		}
 	}
 	if err := client.BindModel(info); err != nil {
+		return prepared, err
+	}
+	if err := prepareImage(ctx, client, connectionValue.Kind, &info); err != nil {
 		return prepared, err
 	}
 	selected.Details = &info

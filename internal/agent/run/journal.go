@@ -15,6 +15,9 @@ import (
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
 	m.Content = s.runner.Redact(m.Content)
 	m.Reasoning = s.runner.Redact(m.Reasoning)
+	for i := range m.Images {
+		m.Images[i].Path = s.runner.Redact(m.Images[i].Path)
+	}
 	m.ModelID, m.ProviderID = s.runner.Model, s.runner.Provider
 	m.Thinking = s.runner.Thinking
 	if m.Thinking != nil && *m.Thinking {

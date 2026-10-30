@@ -73,11 +73,11 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		for _, definition := range request.Tools {
 			catalog[definition.Name] = true
 		}
-		if len(catalog) != len(tools.Definitions()) {
+		if len(catalog) != len(tools.Definitions())-1 {
 			t.Fatalf("main agent must receive the full direct tool catalog: %v", catalog)
 		}
 		for _, definition := range tools.Definitions() {
-			if !catalog[definition.Name] {
+			if definition.Name != "read_image" && !catalog[definition.Name] {
 				t.Fatalf("main agent lost tool %s", definition.Name)
 			}
 		}
@@ -134,7 +134,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 	if err != nil || string(content) != "two\n" || approvals != 0 || step != 4 {
 		t.Fatalf("content=%q approvals=%d calls=%d error=%v", content, approvals, step, err)
 	}
-	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024)
+	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024, true)
 	if err != nil || len(messages) != 8 {
 		t.Fatalf("single conversation history: messages=%d error=%v", len(messages), err)
 	}

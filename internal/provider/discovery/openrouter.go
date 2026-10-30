@@ -17,8 +17,11 @@ import (
 func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, error) {
 	var listing struct {
 		Data []struct {
-			ID            string `json:"id"`
-			ContextLength int    `json:"context_length"`
+			ID           string `json:"id"`
+			Architecture struct {
+				Input []string `json:"input_modalities"`
+			} `json:"architecture"`
+			ContextLength int `json:"context_length"`
 			TopProvider   struct {
 				ContextLength int `json:"context_length"`
 				MaxCompletion int `json:"max_completion_tokens"`
@@ -41,6 +44,13 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 	seen := make(map[string]bool)
 	for _, row := range listing.Data {
 		info := connection.ModelInfo{ID: row.ID, ContextWindow: row.ContextLength, MaxOutput: row.TopProvider.MaxCompletion}
+		if row.Architecture.Input != nil {
+			vision := false
+			for _, mode := range row.Architecture.Input {
+				vision = vision || mode == "image"
+			}
+			info.ImageInput = connection.DeclaredImageInput(vision, "/api/v1/models.architecture.input_modalities")
+		}
 		if strings.ContainsAny(row.ID, "\x00\r\n\x1b") || seen[row.ID] || row.TopProvider.ContextLength < 0 {
 			return nil, fmt.Errorf("invalid or duplicate OpenRouter model ID or limits")
 		}

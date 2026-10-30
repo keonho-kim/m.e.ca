@@ -11,6 +11,7 @@ import (
 )
 
 type Input struct {
+	ImageInput                bool
 	Request                   modelapi.Request
 	System, Memory, Objective string
 	ProjectRoot               string
@@ -61,6 +62,16 @@ func Build(input Input) (modelapi.Request, error) {
 	bytes := historyBytes
 	for _, m := range messages {
 		bytes += messageBytes(m)
+	}
+	if !input.ImageInput {
+		for i := range projected {
+			if len(projected[i].Images) > 0 {
+				bytes -= messageBytes(projected[i])
+				projected[i].Content += modelapi.ImageOmissionNotice
+				projected[i].Images = nil
+				bytes += messageBytes(projected[i])
+			}
+		}
 	}
 	messages = append(messages, projected...)
 	if !present {

@@ -37,7 +37,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	if err != nil || recovered == nil || recovered.Status != runrecord.Interrupted || recovered.Tool != "write_file" || recovered.Objective != cp.Objective || recovered.LastChange != cp.LastChange || len(recovered.Work.Files) != 1 || recovered.Work.Files[0].Path != "file.txt" || recovered.ReportReason != cp.ReportReason {
 		t.Fatalf("recovery: %+v %v", recovered, err)
 	}
-	history, err := s.Messages(ctx, session.ID, 100)
+	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
 	if err != nil || len(history) != 0 {
 		t.Fatalf("draft was replayed: %+v %v", history, err)
 	}

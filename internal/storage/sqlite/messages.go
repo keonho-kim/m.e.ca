@@ -1,6 +1,6 @@
-// Purpose: Persist validated model messages and load bounded session history.
+// Purpose: Persist validated model messages and their ordered timeline references.
 // Pattern: Repository.
-// Usage: Used by the agent generation loop and session restoration.
+// Usage: The journal commits messages before execution or after observed results.
 // Related: internal/agent/model/model.go, internal/storage/sqlite/store.go, internal/storage/sqlite/store_test.go.
 
 package sqlite
@@ -9,12 +9,10 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"fmt"
 
 	json "github.com/goccy/go-json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (store *Store) AppendMessage(ctx context.Context, session string, message modelapi.Message) error {
@@ -56,37 +54,4 @@ func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, sessi
 		}
 	}
 	return nil
-}
-
-func (store *Store) Messages(ctx context.Context, session string, limit int) (messages []modelapi.Message, err error) {
-	if limit < 1 || limit > 1000 {
-		return nil, fmt.Errorf("history limit must be between 1 and 1000")
-	}
-	page, err := store.recordPage(ctx, "SELECT sequence,'message',body,refs,raw_bytes FROM messages WHERE session_id=? ORDER BY sequence DESC LIMIT ?", session, limit)
-	if err != nil {
-		return nil, err
-	}
-	bytes := 0
-	for _, record := range page {
-		content, err := store.unpackRecord(ctx, record, nil)
-		if err != nil {
-			return nil, err
-		}
-		bytes += len(content)
-		if bytes > recordcontent.MaxBytes {
-			break
-		}
-		var message modelapi.Message
-		if err := json.Unmarshal(content, &message); err != nil {
-			return nil, fmt.Errorf("invalid stored message: %w", err)
-		}
-		if err := message.Check(); err != nil {
-			return nil, err
-		}
-		messages = append(messages, message)
-	}
-	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
-		messages[left], messages[right] = messages[right], messages[left]
-	}
-	return messages, nil
 }

@@ -20,10 +20,14 @@ func (s *execution) countRequest(ctx context.Context, request modelapi.Request, 
 	if usage != nil {
 		count.Amount = usage.Input + usage.Output
 	} else {
+		messages := append([]modelapi.Message(nil), request.Messages...)
+		for i := range messages {
+			messages[i].Images = nil
+		}
 		body, err := json.Marshal(struct {
 			Messages []modelapi.Message
 			Tools    []toolapi.Definition
-		}{request.Messages, request.Tools})
+		}{messages, request.Tools})
 		if err != nil {
 			return err
 		}

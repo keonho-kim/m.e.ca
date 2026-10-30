@@ -45,11 +45,11 @@ func TestMemoryTailSkipsOlderLargeResult(t *testing.T) {
 	if err := store.InstallMemory(ctx, id, 0, compact.Memory{Revision: 1, Through: boundary, Markdown: "- Earlier listing observed"}); err != nil {
 		t.Fatal(err)
 	}
-	tail, err := store.ContextMessages(ctx, id, boundary, 1024)
+	tail, err := store.ContextMessages(ctx, id, boundary, 1024, true)
 	if err != nil || len(tail) != 2 || tail[0].Calls[0].ID != "recent" || tail[1].ToolCallID != "recent" {
 		t.Fatalf("tail=%+v err=%v", tail, err)
 	}
-	original, err := store.Messages(ctx, id, 10)
+	original, err := store.ContextMessages(ctx, id, 0, 16*1024*1024, true)
 	if err != nil || len(original) != 4 || !strings.Contains(original[1].Content, "large listing") {
 		t.Fatalf("original history lost: count=%d err=%v", len(original), err)
 	}
