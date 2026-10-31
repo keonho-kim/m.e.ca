@@ -57,6 +57,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 	if err != nil {
 		return nil, errors.Join(err, executor.Close())
 	}
+	executor.commands.CaptureDirectory = executor.artifacts
 	return executor, nil
 }
 

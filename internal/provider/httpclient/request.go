@@ -58,7 +58,7 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 			history[i].ReasoningState = nil
 		}
 	}
-	messages, err := protocol.Messages(client.connection.Kind, history)
+	messages, err := encoder.Messages(client.connection.Kind, request.ModelID, history)
 	if err != nil {
 		return err
 	}
@@ -80,6 +80,11 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	}
 	if content.Len() > modelapi.MaxResponseBytes {
 		return fmt.Errorf("model context exceeds request size limit")
+	}
+	if !hasImages {
+		if err := emit(modelapi.Event{InputBytes: int64(content.Len())}); err != nil {
+			return err
+		}
 	}
 	idle := request.IdleTimeout
 	if idle <= 0 {

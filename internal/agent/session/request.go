@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"github.com/keonho-kim/meca/internal/agent/compact"
+	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
@@ -19,11 +20,13 @@ type Store interface {
 	recovery.Store
 	run.Journal
 	compact.Repository
+	latmemory.Repository
 }
 type Request struct {
 	Runner              run.Runner
 	Store               Store
 	LoadPrompts         func() (prompt.Templates, error)
+	LoadLAT             func() (prompt.Templates, error)
 	ContextWindow       int
 	Compaction          compact.Settings
 	ProjectInstructions func(context.Context) (string, error)
@@ -41,10 +44,21 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	if err != nil {
 		return run.Result{}, err
 	}
+	if runner.LAT && request.LoadLAT != nil {
+		latTemplates, loadErr := request.LoadLAT()
+		err = loadErr
+		if err != nil {
+			return run.Result{}, err
+		}
+		templates.LAT, templates.LATCompaction = latTemplates.LAT, latTemplates.LATCompaction
+	}
 	for _, text := range templates.Files() {
 		*text = runner.Redact(*text)
 	}
 	runner.Prompts = &templates
+	if runner.LAT {
+		runner.ReviewMemory = request.Store
+	}
 	runner.Memory = &compact.Controller{ContextWindow: request.ContextWindow, Inference: runner.Inference, Repository: request.Store, Session: runner.Session, Model: runner.Model, Prompt: templates.Compaction, Settings: request.Compaction, Redact: runner.Redact}
 	runner.ProjectInstructions, err = request.ProjectInstructions(ctx)
 	if err != nil {

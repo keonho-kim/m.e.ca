@@ -15,16 +15,20 @@ type Parameters struct {
 	MaxOutputTokens int     `toml:"max_output_tokens"`
 }
 type Settings struct {
-	Agent      Parameters
-	Compaction Parameters
-	Diagnostic Parameters
+	Agent         Parameters
+	Compaction    Parameters
+	Diagnostic    Parameters
+	LAT           Parameters
+	LATCompaction Parameters
 }
 
 func Defaults() Settings {
 	return Settings{
-		Agent:      Parameters{Thinking: "inherit", Temperature: 1.0, MaxOutputTokens: 0},
-		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
-		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
+		Agent:         Parameters{Thinking: "inherit", Temperature: 1.0, MaxOutputTokens: 0},
+		Compaction:    Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
+		Diagnostic:    Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
+		LAT:           Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 4096},
+		LATCompaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 2048},
 	}
 }
 func (p Parameters) Check() error {
@@ -40,7 +44,7 @@ func (p Parameters) Check() error {
 	return nil
 }
 func (s Settings) Check() error {
-	for _, role := range []Role{Agent, Compaction, Diagnostic} {
+	for _, role := range []Role{Agent, Compaction, Diagnostic, LAT, LATCompaction} {
 		if _, err := Resolve(&s, role); err != nil {
 			return err
 		}
@@ -60,6 +64,10 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 		p = s.Compaction
 	case Diagnostic:
 		p = s.Diagnostic
+	case LAT:
+		p = s.LAT
+	case LATCompaction:
+		p = s.LATCompaction
 	default:
 		return p, fmt.Errorf("unknown inference role %q", role)
 	}

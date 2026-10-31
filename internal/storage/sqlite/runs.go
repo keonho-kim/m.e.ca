@@ -8,35 +8,19 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-
-	json "github.com/goccy/go-json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (s *Store) LatestRun(ctx context.Context, session string) (*runrecord.Checkpoint, error) {
-	var record storedRecord
-	err := s.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes FROM tool_events WHERE session_id=? AND kind='run_checkpoint' ORDER BY sequence DESC LIMIT 1", session).Scan(&record.body, &record.refs, &record.size)
+	event, err := s.runState(ctx, session, "")
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	if record.size > recordcontent.MaxBytes {
-		return nil, fmt.Errorf("run checkpoint exceeds limit")
-	}
-	body, err := s.unpackRecord(ctx, record, nil)
-	if err != nil {
-		return nil, err
-	}
-	var event runrecord.Event
-	if err = json.Unmarshal(body, &event); err != nil {
-		return nil, err
-	}
 	if event.Checkpoint == nil {
-		return nil, fmt.Errorf("run checkpoint is missing")
+		return nil, errors.New("run checkpoint is missing")
 	}
 	if err = event.Checkpoint.Check(); err != nil {
 		return nil, err

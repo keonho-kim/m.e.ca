@@ -19,10 +19,7 @@ func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
 	state, err := op.executor.commands.Wait(ctx, id, op.executor.commandWait)
 	if err != nil {
 		_, _ = op.executor.commands.Cancel(context.Background(), id)
-		result, readErr := op.executor.readCommandResult(id, true)
-		if readErr == nil {
-			readErr = op.executor.AcknowledgeCommand(id)
-		}
+		result, readErr := op.executor.readCommandResult(id)
 		return result, errors.Join(err, readErr)
 	}
 	if state.Error != "" {
@@ -31,9 +28,5 @@ func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
 	if state.Status == "running" {
 		return op.executor.runningCommand(state)
 	}
-	result, err := op.executor.readCommandResult(id, true)
-	if err == nil {
-		err = op.executor.AcknowledgeCommand(id)
-	}
-	return result, err
+	return op.executor.readCommandResult(id)
 }

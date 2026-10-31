@@ -6,21 +6,38 @@ package markdown
 
 import (
 	"strings"
+	"unsafe"
 
 	"github.com/yuin/goldmark/v2/ast"
 )
 
 type Stream struct {
-	source         string
-	cut, committed int
-	rows           []Line
-	result         []Line
-	reused         int
-	width          int
+	source                  string
+	cut, committed          int
+	rows                    []Line
+	result                  []Line
+	reused                  int
+	width                   int
+	weight, committedWeight int
+	list                    *listCheckpoint
 }
 
 // ReusedRows describes the immutable prefix retained by the most recent Render.
 func (s *Stream) ReusedRows() int { return s.reused }
+
+// RetainedBytes conservatively counts backing arrays and derived text. Aliased
+// strings can be counted twice; this is a cache eviction weight, not a heap metric.
+func (s *Stream) RetainedBytes() int {
+	return s.weight + (cap(s.rows)+cap(s.result))*int(unsafe.Sizeof(Line{}))
+}
+
+func lineWeight(line Line) int {
+	weight := len(line.Text) + cap(line.Spans)*int(unsafe.Sizeof(Span{}))
+	for _, span := range line.Spans {
+		weight += len(span.Text)
+	}
+	return weight
+}
 
 // Render accepts snapshots. The last two top-level blocks remain mutable for
 // list continuation, tables and setext headings. References can affect earlier
@@ -39,20 +56,27 @@ func (s *Stream) Render(text string, width int) []Line {
 		return nil
 	}
 	if len(text) > MaxParseBytes || strings.Contains(text, "]:") {
-		*s = Stream{}
-		return Render(text, width)
+		return s.whole(text, width)
 	}
 	if s.cut > len(text) || s.cut > len(s.source) || text[:s.cut] != s.source[:s.cut] {
 		*s = Stream{width: width}
 	}
+	source := []byte(text[s.cut:])
+	document, valid := s.listDocument(source)
+	if !valid {
+		p := s.list
+		s.cut, s.committed, s.committedWeight, s.list = p.at, p.before, p.weight, nil
+		source = []byte(text[s.cut:])
+		document, _ = s.listDocument(source)
+	}
 	start := s.cut
 	s.reused = s.committed
-	r := renderer{source: []byte(text[start:]), width: width}
+	r := renderer{source: source, width: width}
 	if s.committed > 0 {
 		r.rows = append(r.rows, s.rows[s.committed-1])
 	}
 	seed := len(r.rows)
-	document := documentParser.Parse(r.source)
+	r.listProgress = progressFor(document)
 	mutable := document.LastChild()
 	if mutable != nil && mutable.PreviousSibling() != nil {
 		mutable = mutable.PreviousSibling()
@@ -67,9 +91,31 @@ func (s *Stream) Render(text string, width int) []Line {
 		r.block(node, "", 0)
 	}
 	if r.failed {
-		*s = Stream{}
-		return literal(text)
+		return s.whole(text, width)
 	}
+	var checkpoint *listCheckpoint
+	if s.list != nil && nextCut == start {
+		checkpoint = s.list
+	}
+	if p := r.listProgress; p != nil {
+		checkpoint = &listCheckpoint{at: start + blockStart(p.node, r.source), before: s.committed + p.before - seed, marker: p.node.Marker, tight: p.node.IsTight, start: p.node.Start, items: p.items}
+		if s.list != nil && document.FirstChild() == p.node {
+			checkpoint.at, checkpoint.before, checkpoint.weight = s.list.at, s.list.before, s.list.weight
+			checkpoint.start, checkpoint.items = s.list.start, s.list.items+p.items
+		}
+		nextCut, nextRows = start+blockStart(p.mutable, r.source), s.committed+p.row-seed
+	}
+	weight, nextWeight := s.committedWeight, s.committedWeight
+	for i, row := range r.rows[seed:] {
+		if checkpoint != nil && s.committed+i == checkpoint.before {
+			checkpoint.weight = weight
+		}
+		weight += lineWeight(row)
+		if s.committed+i+1 == nextRows {
+			nextWeight = weight
+		}
+	}
+	s.weight, s.committedWeight, s.list = weight, nextWeight, checkpoint
 	// Keep an untrimmed committed prefix: later blocks need its separator row.
 	previous := s.rows
 	s.rows = append(s.rows[:s.committed], r.rows[seed:]...)
@@ -89,6 +135,14 @@ func (s *Stream) Render(text string, width int) []Line {
 	// Only trailing blank rows are replaced; the committed separator precedes
 	// the two mutable blocks and is never overwritten by this normalization.
 	s.result = append(s.rows[:end], make([]Line, count)...)
+	return s.result
+}
+
+func (s *Stream) whole(text string, width int) []Line {
+	*s = Stream{source: text, width: width, result: Render(text, width)}
+	for _, row := range s.result {
+		s.weight += lineWeight(row)
+	}
 	return s.result
 }
 

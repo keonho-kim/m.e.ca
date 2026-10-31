@@ -1,24 +1,23 @@
-// Purpose: Keep an immutable encoding of each unchanged text-history message.
-// Pattern: Prefix reconciliation with owned mutable-byte snapshots.
+// Purpose: Keep an immutable encoding of each unchanged conversation message.
+// Pattern: Prefix reconciliation with immutable encodings and content fingerprints.
 // Usage: Encoder updates the changed suffix and releases obsolete fragments.
 // Related: internal/provider/protocol/encoder.go, internal/provider/protocol/lmstudio.go.
 package protocol
 
 import (
-	"bytes"
-	"encoding/json"
-
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type encodedMessage struct {
-	message Message
-	json    []byte
+	key       wireIdentity
+	source    sourceIdentity
+	hasSource bool
+	json      []byte
 }
 
 func (e *Encoder) update(messages []Message) error {
 	unchanged := 0
-	for unchanged < min(len(e.history), len(messages)) && sameTextMessage(e.history[unchanged].message, messages[unchanged]) {
+	for unchanged < min(len(e.history), len(messages)) && e.history[unchanged].matches(messages[unchanged]) {
 		unchanged++
 	}
 	for _, entry := range e.history[unchanged:] {
@@ -28,9 +27,11 @@ func (e *Encoder) update(messages []Message) error {
 	clear(e.history[unchanged:])
 	e.history = e.history[:unchanged]
 	for _, message := range messages[unchanged:] {
-		var content []byte
+		content := message.encoded
 		var err error
-		if e.kind == connection.LMStudio {
+		if content != nil {
+			// A matching source already owns its immutable provider encoding.
+		} else if e.kind == connection.LMStudio {
 			var input []map[string]any
 			input, err = lmMessages([]Message{message})
 			if err == nil && len(input) > 0 {
@@ -45,17 +46,12 @@ func (e *Encoder) update(messages []Message) error {
 		if err != nil {
 			return err
 		}
-		// RawMessage slices are caller-owned and can be overwritten on the next
-		// request. Snapshot them so an in-place mutation invalidates the cache.
-		message.Calls = bytes.Clone(message.Calls)
-		if message.ReasoningDetails != nil {
-			details := make([]json.RawMessage, len(message.ReasoningDetails))
-			for i, raw := range message.ReasoningDetails {
-				details[i] = bytes.Clone(raw)
-			}
-			message.ReasoningDetails = details
+		entry := encodedMessage{json: content}
+		if message.source != nil {
+			entry.source, entry.hasSource = *message.source, true
+		} else {
+			entry.key = identifyWire(message)
 		}
-		entry := encodedMessage{message: message, json: content}
 		e.history = append(e.history, entry)
 		e.bytes += len(content)
 		e.retained += entry.retainedBytes()
@@ -64,22 +60,12 @@ func (e *Encoder) update(messages []Message) error {
 }
 
 func (e encodedMessage) retainedBytes() int {
-	// Include conservative per-entry overhead and the mutable-byte snapshots.
-	total := 512 + len(e.json) + len(e.message.Calls) + 32*len(e.message.ReasoningDetails)
-	for _, raw := range e.message.ReasoningDetails {
-		total += len(raw)
-	}
-	return total
+	return 1024 + len(e.json)
 }
 
-func sameTextMessage(a, b Message) bool {
-	if a.Role != b.Role || a.Content != b.Content || a.ToolCallID != b.ToolCallID || a.ToolName != b.ToolName || a.Thinking != b.Thinking || a.Reasoning != b.Reasoning || a.ReasoningContent != b.ReasoningContent || !bytes.Equal(a.Calls, b.Calls) || len(a.ReasoningDetails) != len(b.ReasoningDetails) {
-		return false
+func (e encodedMessage) matches(message Message) bool {
+	if message.source != nil {
+		return e.hasSource && e.source == *message.source
 	}
-	for i, raw := range a.ReasoningDetails {
-		if !bytes.Equal(raw, b.ReasoningDetails[i]) {
-			return false
-		}
-	}
-	return true
+	return !e.hasSource && e.key == identifyWire(message)
 }

@@ -14,7 +14,7 @@ import (
 
 func TestLocalizedThinkingChoicePositions(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = lang
 		conn, err := connection.New(connection.VLLM, "")
 		if err != nil {

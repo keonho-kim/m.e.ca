@@ -31,7 +31,7 @@ func TestNativeBatchRejectsInvalidArgumentsBeforeAnyPreparation(t *testing.T) {
 	r := fixture(&generator{}, e, j)
 	r.Generator = g
 	result, err := r.Run(context.Background(), "create two files", approve, emit)
-	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != runrecord.Answered {
+	if err != nil || e.prepared != 0 || e.executed != 0 || result.Status != runrecord.Answered || !result.HadToolFailure || len(g.requests) != 2 {
 		t.Fatalf("result=%+v prepared=%d executed=%d: %v", result, e.prepared, e.executed, err)
 	}
 	results := map[string]bool{}

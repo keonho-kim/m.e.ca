@@ -6,7 +6,6 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/storage/recovery"
@@ -26,7 +25,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	})
 	ctx := context.Background()
 	session := s.Session()
-	cp := runrecord.Checkpoint{Work: tool.Facts{Files: []tool.FileFact{{Path: "file.txt", Version: "v1"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: runrecord.Running, Phase: "decision", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64), Arguments: map[string]json.RawMessage{"path": json.RawMessage(`"file.txt"`)}}
+	cp := runrecord.Checkpoint{Work: tool.Facts{Files: []tool.FileFact{{Path: "file.txt", Version: "v1"}}}, ReportReason: "reporting requested", LastChange: "Created file /project/empty (0 bytes)", ID: "task", Objective: "edit; preserve existing file contents", Status: runrecord.Running, Phase: "decision", Tool: "write_file", InstructionsDigest: strings.Repeat("a", 64)}
 	if err = s.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "run_checkpoint", Checkpoint: &cp}); err != nil {
 		t.Fatal(err)
 	}

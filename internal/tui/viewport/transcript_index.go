@@ -48,6 +48,7 @@ func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 		trailing = min(maxBoundaryBlanks, block.layout.trailing)
 	}
 	for i := t.historyLength; i < len(history); i++ {
+		history[i].live = false
 		add(&history[i])
 		if !history[i].visible {
 			history[i].releaseParsed()
@@ -56,6 +57,7 @@ func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 	t.historyHead, t.historyRevision, t.historyLength = head, view.layoutRevision, len(history)
 	t.historySections, t.historyRows, t.historyTrailing = len(t.sections), t.total, trailing
 	for _, block := range live {
+		block.live = true
 		add(block)
 	}
 	if len(previous) != len(t.sections) {

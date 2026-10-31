@@ -63,7 +63,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 			return err
 		}
 		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
-		return s.generate(ctx, request, false, emit)
+		return s.generate(ctx, request, inference.Compaction, emit)
 	})
 	if err != nil {
 		return err

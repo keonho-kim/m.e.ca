@@ -15,7 +15,7 @@ import (
 )
 
 func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
 	a.worker = workerAgent
@@ -42,7 +42,7 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		for _, width := range []int{80, 60, 40} {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.language = lang
 			a.screen.SetSize(width, 24)
 			a.worker = workerAgent
@@ -59,7 +59,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 	}
 }
 func TestCompressionIndicatorLifecycle(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_started"}})
 	defer a.stopCompression()

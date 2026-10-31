@@ -32,6 +32,7 @@ type Options struct {
 	Home, State string
 	Config      config.Config
 	LoadPrompts func() (prompt.Templates, error)
+	LoadLAT     func() (prompt.Templates, error)
 	SaveConfig  func(config.Config) error
 	Store       Store
 	Session     sessionstate.Session
@@ -40,6 +41,7 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
+	lat bool
 	fileBrowserState
 	requestState
 	toolActivity                    toolActivity
@@ -70,6 +72,7 @@ type app struct {
 	compressionDots                 int
 	tokenTotal                      modelapi.TokenUsage
 	tokenCurrent                    modelapi.TokenUsage
+	latMemoryTokens                 modelapi.TokenUsage
 	modelForm                       *modelsettings.Form
 	runSummary                      *viewport.Block
 	opts                            Options

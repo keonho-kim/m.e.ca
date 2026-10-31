@@ -72,6 +72,7 @@ func (p *Projection) projectOnce(input Input) ([]modelapi.Message, int, error) {
 			if input.Redact(state) != state {
 				return nil, 0, fmt.Errorf("provider continuation state contains protected content")
 			}
+			projected = projected.SealHistory()
 			entry = projectedMessage{source: message, message: projected, paired: paired[i], bytes: messageBytes(projected)}
 		}
 		p.entries[i] = entry

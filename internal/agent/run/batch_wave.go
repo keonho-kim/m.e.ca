@@ -19,7 +19,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 	defer cancel()
 	ready := make([]*readyExecution, len(calls))
 	for i, v := range calls {
-		s.checkpoint.Tool, s.checkpoint.Arguments = v.call.Name, v.arguments
+		s.checkpoint.Tool = v.call.Name
 		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
 			return true, errors.Join(s.skipCalls(ctx, calls, fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
 		}

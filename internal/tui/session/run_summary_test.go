@@ -18,7 +18,7 @@ import (
 )
 
 func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.worker = workerAgent
 	a.tokenTotal = modelapi.TokenUsage{Input: 9999, Output: 8888}
@@ -72,7 +72,7 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 }
 
 func TestRunSummaryFollowsInterruptedDraft(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgentStopping
 	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: "partial answer", Thinking: "partial reasoning"})
 	a.receiveRuntime(&runrecord.Event{Statistics: &runrecord.Statistics{ElapsedMillis: 1000}})

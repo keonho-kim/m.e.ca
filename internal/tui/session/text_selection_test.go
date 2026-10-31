@@ -19,7 +19,7 @@ func (s *clipboardScreen) HasClipboard() bool       { return true }
 func (s *clipboardScreen) SetClipboard(body []byte) { s.copied = string(body) }
 func TestTextSelectionCopyDoesNotExit(t *testing.T) {
 	for _, key := range []*tcell.EventKey{tcell.NewEventKey(tcell.KeyCtrlC, "", 0), tcell.NewEventKey(tcell.KeyRune, "c", tcell.ModMeta)} {
-		a := fixture(t)
+		a := screenFixture(t)
 		screen := &clipboardScreen{Screen: a.screen}
 		a.screen = screen
 		a.output.Append("한글 response", false)
@@ -47,7 +47,7 @@ func TestTextSelectionCopyDoesNotExit(t *testing.T) {
 	}
 }
 func TestTextSelectionCopiesInputAndFreezesStreaming(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.editor.Set("copy my input")
 	a.render()
 	row := a.inputRegion.y
@@ -70,7 +70,7 @@ func TestTextSelectionCopiesInputAndFreezesStreaming(t *testing.T) {
 }
 
 func TestTextSelectionClearsOnViewChange(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.render()
 	a.mouse(tcell.NewEventMouse(0, 2, tcell.Button1, 0))
 	a.mouse(tcell.NewEventMouse(5, 2, tcell.Button1, 0))

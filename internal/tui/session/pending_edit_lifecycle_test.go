@@ -15,7 +15,7 @@ import (
 
 func TestPendingEditFailurePreservesChangesAndUndeliveredSteering(t *testing.T) {
 	for _, save := range []bool{false, true} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.worker = workerAgent
 		a.queued.Messages = queuedRequests("first", "second")
 		a.steeringDrafts = []string{"undelivered direction"}
@@ -39,7 +39,7 @@ func TestPendingEditFailurePreservesChangesAndUndeliveredSteering(t *testing.T) 
 }
 
 func TestPendingEditApprovalKeepsForegroundKeys(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("queued")
 	a.decision = make(chan bool, 1)
@@ -63,7 +63,7 @@ func TestPendingEditApprovalKeepsForegroundKeys(t *testing.T) {
 }
 
 func TestPendingEditExitDoesNotResumeDeferredDispatch(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("queued")
 	a.editor.Set("unsent draft")

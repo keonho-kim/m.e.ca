@@ -21,7 +21,8 @@ func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
 	e.liveOutputs.clear()
 	e.commands.Begin(ctx, deadline)
 }
-func (e *Executor) StopCommands() { e.commands.End(); e.liveOutputs.clear() }
+func (e *Executor) StopCommands()                   { e.commands.End(); e.liveOutputs.clear() }
+func (e *Executor) CommandUpdates() <-chan struct{} { return e.commands.Updates() }
 func (e *Executor) activeCommands() bool {
 	for _, state := range e.commands.List() {
 		if state.Status == "running" {
@@ -52,7 +53,7 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 		if state.Error != "" {
 			return nil, fmt.Errorf("command result archive failed: %s", state.Error)
 		}
-		result, err := e.readCommandResult(state.ID, true)
+		result, err := e.readCommandResult(state.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +109,7 @@ func (op *operation) commandControl(ctx context.Context) (toolapi.Result, error)
 	if err != nil {
 		// Collected commands are no longer active; their executor-owned archive
 		// still supports repeated inspection without signaling an OS PID.
-		if result, readErr := e.readCommandResult(op.input.CommandID, false); readErr == nil {
+		if result, readErr := e.readCommandResult(op.input.CommandID); readErr == nil {
 			if op.spec.Name == "cancel_command" {
 				result.Failed = false
 				result.Failure = nil
@@ -123,12 +124,9 @@ func (op *operation) commandControl(ctx context.Context) (toolapi.Result, error)
 	if state.Error != "" {
 		return toolapi.Result{}, fmt.Errorf("command result archive failed for %s: %s", state.ID, state.Error)
 	}
-	result, err := e.readCommandResult(state.ID, true)
+	result, err := e.readCommandResult(state.ID)
 	if result.Process != nil {
 		result.Process.Command = e.redact(state.Command)
-	}
-	if err == nil {
-		err = e.AcknowledgeCommand(state.ID)
 	}
 	if op.spec.Name == "cancel_command" && err == nil {
 		result.Failed = false

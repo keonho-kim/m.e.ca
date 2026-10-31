@@ -16,6 +16,15 @@ import (
 func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(runrecord.Event) error) (toolapi.Result, error) {
 	r, call, proposal := s.runner, ready.call, ready.proposal
 	event := runrecord.Event{CallID: call.ID, Call: &call}
+	commands, ownsCommands := r.Tools.(toolapi.CommandExecutor)
+	completedCommand := ownsCommands && outcome.Process != nil && outcome.Process.CommandID != "" && outcome.Process.Status != "running"
+	if completedCommand && len(outcome.Capture) == 0 {
+		capture, err := commands.CommandCapture(outcome.Process.CommandID)
+		if err != nil {
+			return outcome, errors.Join(errRuntimeRecord, err)
+		}
+		outcome.Capture = capture
+	}
 	if v.definition.Effect == policy.Change {
 		outcome.Started = true
 	}
@@ -57,6 +66,15 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 	defer cancel()
 	if err := s.acceptResult(recordCtx, v, outcome, runErr, event); err != nil {
 		return outcome, errors.Join(errRuntimeRecord, err)
+	}
+	if completedCommand {
+		if err := commands.AcknowledgeCommand(outcome.Process.CommandID); err != nil {
+			return outcome, errors.Join(errRuntimeRecord, err)
+		}
+	}
+	if r.LAT && !s.latReviewed {
+		s.latObserved = true
+		s.latMemory.dirty = true
 	}
 	event.Capture = nil // Original captures are durable, never copied into live presentation events.
 	if err := emit(event); err != nil && !(ctx.Err() != nil && errors.Is(err, ctx.Err())) {

@@ -11,7 +11,7 @@ import (
 )
 
 func TestModelHintsFilterSelectAndClose(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Name, true
@@ -32,7 +32,7 @@ func TestModelHintsFilterSelectAndClose(t *testing.T) {
 }
 
 func TestModelHintsPasteDoesNotSave(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Name, true

@@ -103,7 +103,11 @@ func TestRecoveryCommitsRepliesAndEventsTogether(t *testing.T) {
 		}
 	}
 	rows, _, err := s.Timeline(ctx, id, 0, 100)
-	if err != nil || len(rows) != 3 || rows[1].Kind != "message" || rows[2].Event.Kind != "tool_interrupted" {
+	if err != nil || len(rows) != 1 || rows[0].Event.Kind != "tool_interrupted" {
 		t.Fatalf("recovery duplicated or split outcomes: %+v %v", rows, err)
+	}
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	if err != nil || len(messages) != 2 || messages[1].ToolCallID != call.ID {
+		t.Fatal("recovery lost its canonical native pair", err)
 	}
 }

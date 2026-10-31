@@ -27,6 +27,11 @@ func (s *execution) execute(ctx context.Context, v validatedCall, approve Approv
 	return s.recordExecution(ctx, v, ready, outcome, err, emit)
 }
 func (s *execution) startExecution(ctx context.Context, ready *readyExecution, emit func(runrecord.Event) error) error {
+	// Admit optional summaries into tool execution windows, not immediately
+	// after an outcome when the next foreground model request is about to start.
+	if err := s.maintainLATMemory(ctx, false); err != nil {
+		return err
+	}
 	s.checkpoint.Phase = "execution"
 	event := runrecord.Event{Kind: "tool_started", Text: ready.proposal.Name + " " + ready.proposal.Target, CallID: ready.call.ID, Call: &ready.call}
 	if err := s.persist(ctx, event); err != nil {

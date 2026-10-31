@@ -7,6 +7,7 @@ package viewport
 import (
 	"sort"
 	"strings"
+	"unsafe"
 
 	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
@@ -17,6 +18,7 @@ const maxBoundaryBlanks = 2
 type blockPoint struct {
 	source, row int
 	prefix      string
+	last        int
 }
 type blockLayout struct {
 	key                            blockKey
@@ -27,6 +29,7 @@ type blockLayout struct {
 	source                         string
 	markdown                       bool
 	total, trim, leading, trailing int
+	first                          int
 }
 
 type rowMetrics struct{ count, leading, trailing int }
@@ -49,7 +52,6 @@ func (b *Block) prepare(width int) {
 	}
 	if l.markdown {
 		l.parsed = b.stream.Render(b.Text, width)
-		l.metrics = previous.metrics[:0]
 	}
 	lastContent, firstContent := -1, -1
 	observe := func(text string) {
@@ -62,25 +64,43 @@ func (b *Block) prepare(width int) {
 		l.total++
 	}
 	if l.markdown {
-		for i, line := range l.parsed {
+		reused := 0
+		if previous.key.width == width {
+			reused = min(b.stream.ReusedRows(), len(previous.metrics), len(l.parsed))
+		}
+		l.metrics = previous.metrics[:reused]
+		l.points = previous.points[:0]
+		if reused > 0 {
+			pointIndex := (reused - 1) / 256
+			point := previous.points[pointIndex]
+			l.points = previous.points[:pointIndex+1]
+			l.total, lastContent = point.row, point.last
+			for _, metric := range l.metrics[point.source:] {
+				if metric.leading < metric.count {
+					lastContent = l.total + metric.count - metric.trailing - 1
+				}
+				l.total += metric.count
+			}
+			if previous.first >= 0 && previous.first < l.total {
+				firstContent = previous.first
+			}
+		}
+		for i := reused; i < len(l.parsed); i++ {
+			line := l.parsed[i]
 			if i%256 == 0 {
-				l.points = append(l.points, blockPoint{source: i, row: l.total})
+				l.points = append(l.points, blockPoint{source: i, row: l.total, last: lastContent})
 			}
 			var metric rowMetrics
-			if previous.key.width == width && i < b.stream.ReusedRows() && i < len(previous.metrics) {
-				metric = previous.metrics[i]
-			} else {
-				for row := range textlayout.Rows(line.Text, width) {
-					if strings.TrimSpace(row.Text) == "" {
-						if metric.leading == metric.count {
-							metric.leading++
-						}
-						metric.trailing++
-					} else {
-						metric.trailing = 0
+			for row := range textlayout.Rows(line.Text, width) {
+				if strings.TrimSpace(row.Text) == "" {
+					if metric.leading == metric.count {
+						metric.leading++
 					}
-					metric.count++
+					metric.trailing++
+				} else {
+					metric.trailing = 0
 				}
+				metric.count++
 			}
 			l.metrics = append(l.metrics, metric)
 			if metric.leading < metric.count {
@@ -100,6 +120,7 @@ func (b *Block) prepare(width int) {
 			observe(row.Text)
 		}
 	}
+	l.first = firstContent
 	if b.Markdown || b.Thinking {
 		l.trim = max(0, firstContent)
 		l.total = min(l.total, lastContent+1+maxBoundaryBlanks)
@@ -151,6 +172,15 @@ func (b *Block) Window(width, start, count int) []Line {
 	}
 	if b.Centered {
 		centerLines(out, width)
+	}
+	// The visible rows belong to the transcript window. Large immutable blocks
+	// need only their sparse index between scrolls, while live blocks retain the
+	// incremental prefix to avoid reparsing completed Markdown on every delta.
+	if !b.live {
+		weight := b.stream.RetainedBytes() + cap(l.metrics)*int(unsafe.Sizeof(rowMetrics{}))
+		if weight > 16*1024*1024 {
+			b.releaseParsed()
+		}
 	}
 	return out
 }

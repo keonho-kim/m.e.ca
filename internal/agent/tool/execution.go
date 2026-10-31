@@ -46,8 +46,9 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
-	Images   []media.Image
-	Capture  json.RawMessage
+	Images []media.Image
+	// Original captures are committed on events, never in small result archives.
+	Capture  json.RawMessage `json:"-"`
 	Versions map[string]string
 	Target   string
 	Started  bool

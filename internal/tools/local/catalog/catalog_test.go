@@ -1,4 +1,4 @@
-// Purpose: Verify native definitions cannot mutate the private argument-validation schema.
+// Purpose: Verify supported tool names and independent native argument-validation schemas.
 // Pattern: Registry ownership contract tests.
 // Usage: go test ./internal/tools/local/catalog.
 // Related: internal/tools/local/catalog/catalog.go, internal/tools/local/catalog/arguments.go.
@@ -7,6 +7,7 @@ package catalog
 import (
 	"encoding/json"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"slices"
 	"testing"
 )
 
@@ -35,5 +36,17 @@ func TestCatalogDefinitionsDoNotExposePrivateSchema(t *testing.T) {
 	}
 	if _, _, err := Parse(toolapi.Call{ID: "call_catalog", Name: "edit_file", Arguments: json.RawMessage(`{"path":"a","edits":[{"old_text":"old","new_text":"new"}],"format_policy":"preserve"}`)}); err != nil {
 		t.Fatal("a caller changed private argument validation:", err)
+	}
+}
+
+func TestCatalogAdvertisesSupportedTools(t *testing.T) {
+	var names []string
+	for _, definition := range Definitions() {
+		names = append(names, definition.Name)
+	}
+	slices.Sort(names)
+	want := []string{"cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "read_image", "wait_command", "write_file"}
+	if !slices.Equal(names, want) {
+		t.Fatalf("advertised tools = %v; want %v", names, want)
 	}
 }

@@ -23,14 +23,18 @@ func (b Body) Reader() io.Reader {
 	if b.parts == nil {
 		return bytes.NewReader(b.single)
 	}
-	return &bodyReader{parts: b.parts}
+	return &bodyReader{parts: b.parts, size: b.size}
 }
 
 type bodyReader struct {
 	parts  [][]byte
 	index  int
 	offset int
+	size   int
 }
+
+func (r *bodyReader) Len() int          { return r.size }
+func (r *bodyReader) Replay() io.Reader { return &bodyReader{parts: r.parts, size: r.size} }
 
 func (r *bodyReader) Read(dst []byte) (int, error) {
 	if len(dst) == 0 {

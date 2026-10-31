@@ -41,8 +41,12 @@ func TestPayloadDeduplicatedAndRestored(t *testing.T) {
 		t.Fatalf("count=%d stored=%d", count, bytesStored)
 	}
 	page, _, err := s.Timeline(ctx, id, 0, 10)
-	if err != nil || len(page) != 4 || page[0].Event.Thinking != text || page[3].Message.Reasoning != text {
+	if err != nil || len(page) != 4 || page[0].Event.Thinking != text || page[3].Message.Content != "answer" || page[3].Message.Reasoning != "" {
 		t.Fatal("round trip failed", err)
+	}
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	if err != nil || len(messages) != 1 || messages[0].Reasoning != text {
+		t.Fatal("model history lost full reasoning", err)
 	}
 	var output bytes.Buffer
 	if err := s.Export(ctx, id, &output); err != nil {
@@ -76,8 +80,16 @@ func TestPayloadKeepsNativeArgumentBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	page, _, err := s.Timeline(ctx, id, 0, 10)
-	if err != nil || len(page) != 2 || !bytes.Equal(page[0].Message.Calls[0].Arguments, args) || !bytes.Equal(page[1].Event.Call.Arguments, args) {
-		t.Fatal("native argument bytes changed", err)
+	if err != nil || len(page) != 1 || page[0].Event.Call == nil || bytes.Contains(page[0].Event.Call.Arguments, []byte("source")) {
+		t.Fatal("display loaded hidden source arguments", err)
+	}
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	if err != nil || len(messages) != 1 || !bytes.Equal(messages[0].Calls[0].Arguments, args) {
+		t.Fatal("canonical native argument bytes changed", err)
+	}
+	var exported bytes.Buffer
+	if err = s.Export(ctx, id, &exported); err != nil || !bytes.Contains(exported.Bytes(), []byte("sourcesource")) {
+		t.Fatal("export lost native argument content", err)
 	}
 	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
 		t.Fatal(err)

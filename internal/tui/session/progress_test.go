@@ -13,7 +13,7 @@ import (
 )
 
 func TestProgressUpdateLiveMatchesRestored(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	event := runrecord.Event{Kind: "progress", Text: "Reviewing the existing file."}
 	a.receive(notice{Event: &event})
 	formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}

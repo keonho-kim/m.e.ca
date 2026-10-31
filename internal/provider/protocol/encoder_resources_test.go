@@ -29,7 +29,7 @@ func TestEncoderResources(t *testing.T) {
 	}
 }
 
-func TestEncoderImageRequestsBypassTextCache(t *testing.T) {
+func TestEncoderUnpreparedImagesBypassCache(t *testing.T) {
 	picture, err := media.New("shot.png", "image/png", "png", 1, 1, []byte("image"))
 	if err != nil {
 		t.Fatal(err)

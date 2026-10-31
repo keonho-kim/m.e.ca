@@ -47,8 +47,13 @@ func TestImagePersistenceCompactionAndDisplay(t *testing.T) {
 		t.Fatalf("snapshot lost: count=%d err=%v", len(restored), err)
 	}
 	timeline, _, err := store.Timeline(ctx, id, 0, 10)
-	if err != nil || len(timeline[2].Message.Images) != 0 {
+	if err != nil || len(timeline) != 2 {
 		t.Fatal("terminal history hydrates image binary", err)
+	}
+	for _, record := range timeline {
+		if len(record.Message.Images) != 0 || len(record.Message.Calls) != 0 {
+			t.Fatal("terminal projection hydrated hidden tool data")
+		}
 	}
 	records, _, err := store.MemoryRecords(ctx, id, 0, mark.Timeline)
 	if err != nil {

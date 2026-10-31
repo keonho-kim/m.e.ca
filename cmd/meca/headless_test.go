@@ -22,16 +22,9 @@ import (
 )
 
 func TestHeadlessExecutable(t *testing.T) {
-	if testing.Short() {
-		t.Skip("builds and runs the executable")
-	}
+	binary := testExecutable(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	binary := filepath.Join(t.TempDir(), "meca")
-	build := exec.CommandContext(ctx, "go", "build", "-o", binary, ".")
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build: %s %v", out, err)
-	}
 	help := exec.CommandContext(ctx, binary, "--help")
 	if out, err := help.CombinedOutput(); err != nil || !strings.Contains(string(out), "Usage: meca [path]") {
 		t.Fatalf("MECA help: %s %v", out, err)
@@ -43,22 +36,14 @@ func TestHeadlessExecutable(t *testing.T) {
 			return
 		}
 		calls.Add(1)
-		var input struct {
-			Messages []struct{ Role, Content string }
-			Tools    []struct {
-				Function struct {
-					Parameters struct{ Properties map[string]json.RawMessage }
-				}
-			}
-		}
+		var input struct{ Model string }
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Error(err)
+			http.Error(w, "invalid generation request", http.StatusBadRequest)
 			return
 		}
-		for _, tool := range input.Tools {
-			if _, exists := tool.Function.Parameters.Properties["reason"]; exists {
-				t.Error("obsolete reason schema")
-			}
+		if input.Model != "unknown-serving-alias" {
+			t.Errorf("requested model = %q", input.Model)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if calls.Load() == 1 {
@@ -110,7 +95,7 @@ func TestHeadlessExecutable(t *testing.T) {
 	if !strings.Contains(string(body), `"tool_call_id":"write"`) {
 		t.Fatal("export lost the native result")
 	}
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 		if _, err := os.Stat(filepath.Join(home, ".meca", "prompts", name)); err != nil {
 			t.Fatal(err)
 		}

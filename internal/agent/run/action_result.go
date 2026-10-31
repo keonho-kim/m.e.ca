@@ -51,7 +51,6 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		return s.save(ctx, modelapi.Message{Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 	}
 	s.checkpoint.Phase = "observation"
-	s.checkpoint.Arguments = nil
 	s.checkpoint.Observation = s.runner.Redact(outcome.Summary)
 	if outcome.Started {
 		s.checkpoint.ChangeRevision++

@@ -28,6 +28,8 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.checkpoint.Objective = s.runner.Redact(text)
+		s.latReviewed = false
+		s.latObserved = false
 		if err := s.emit(runrecord.Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
 			return err
 		}

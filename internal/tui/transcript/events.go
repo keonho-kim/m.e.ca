@@ -20,8 +20,10 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 		return []viewport.Block{Answer(f.Redact(event.Text))}
 	}
 	switch event.Kind {
-	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved":
+	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved", "lat_started":
 		return nil
+	case "lat_clean", "lat_feedback", "lat_unavailable", "lat_discarded", "lat_memory_unavailable":
+		return []viewport.Block{f.latReview(event)}
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":
 		if block := f.toolBlock(event); block.Text != "" {
 			block.Summary, block.Details = f.toolSummary(event), block.Text

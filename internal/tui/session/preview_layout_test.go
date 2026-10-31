@@ -14,7 +14,7 @@ import (
 )
 
 func TestPreviewLayoutLeavesInputResponsive(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.filePreview = &preview.State{Path: "large.md", Content: strings.Repeat("# Heading\n\nParagraph.\n\n", 10000), Full: true}
 	a.editor.Set("keep draft")
@@ -33,7 +33,7 @@ func TestPreviewLayoutLeavesInputResponsive(t *testing.T) {
 }
 
 func TestPreviewLayoutKeepsLatestGeometry(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.filePreview = &preview.State{Path: "guide.md", Content: "# Current\n\n" + strings.Repeat("long paragraph ", 100), Full: true}
 	cancelled := false

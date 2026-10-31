@@ -117,7 +117,10 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 	})
 	for _, text := range []string{"Create note.txt", "Update note.txt from one to two"} {
 		thinking = false
-		request := agentrequest.New(agentrequest.Options{Config: cfg, Selection: selected, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault, Text: text, LoadPrompts: func() (prompt.Templates, error) { return templates, nil }})
+		request := agentrequest.New(agentrequest.Options{Config: cfg, Selection: selected, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault, Text: text, LoadPrompts: func() (prompt.Templates, error) { return templates, nil }, LoadLAT: func() (prompt.Templates, error) {
+			t.Fatal("disabled LAT loaded an additional prompt")
+			return prompt.Templates{}, nil
+		}})
 		thinking = true // Mutating the selection after submission must not alter the running request.
 		if request.ContextWindow != 131072 || request.Runner.ProjectRoot != store.Session().ProjectRoot {
 			t.Fatal("shared request factory lost serving limits or the selected session root")

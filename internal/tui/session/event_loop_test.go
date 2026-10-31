@@ -20,7 +20,7 @@ type frameScreen struct {
 func (s *frameScreen) Show() { s.frames++; s.Screen.Show() }
 
 func TestEventLoopPasteBatchesFrames(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	screen := &frameScreen{Screen: a.screen}
 	a.screen = screen
 	ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
@@ -64,7 +64,7 @@ func TestEventLoopPasteBatchesFrames(t *testing.T) {
 }
 
 func TestTerminalBatchPreservesQueuedRemainder(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	queue := make(chan tcell.Event, 64)
 	for range 40 {
 		queue <- tcell.NewEventKey(tcell.KeyRune, "x", 0)

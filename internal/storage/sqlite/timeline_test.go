@@ -26,7 +26,7 @@ func TestTimeline(t *testing.T) {
 	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "user", Content: "fix"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "tool_started", Text: "Reading file"}); err != nil {
+	if err = s.RecordEvent(ctx, session.ID, runrecord.Event{Kind: "progress", Text: "Reading file"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.AppendMessage(ctx, session.ID, modelapi.Message{Role: "assistant", Content: "done"}); err != nil {

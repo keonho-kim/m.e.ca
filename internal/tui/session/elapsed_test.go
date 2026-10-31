@@ -43,7 +43,7 @@ func TestElapsedTimerLifecycle(t *testing.T) {
 }
 
 func TestElapsedWorkerCompletion(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerSetup
 	a.startElapsed()
 	a.receive(notice{Done: true})

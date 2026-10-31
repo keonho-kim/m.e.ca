@@ -14,7 +14,7 @@ import (
 )
 
 func TestFixedComposerAndStopNotice(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.editor.Set("draft")
 	inputRow := -1
 	for _, response := range []string{"", "working", strings.Repeat("response\n", 40)} {
@@ -53,7 +53,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 }
 
 func TestFixedComposerShiftEnter(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	typeInput(a, "!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModShift))
 	if a.exit || a.editor.String() != "!quit\n" {
@@ -77,7 +77,7 @@ func TestFixedSystemScopeOnSessionRestore(t *testing.T) {
 }
 
 func TestPermissionCommandOpensSettings(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	typeInput(a, "!permission")
 	a.submit()
 	if a.page != "permission" || a.status != "" || len(a.commandHints) != 0 {

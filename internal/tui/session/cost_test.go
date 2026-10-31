@@ -16,7 +16,7 @@ import (
 )
 
 func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.selection.Connection.Kind = connection.OpenRouter
 	a.screen.SetSize(140, 24)
@@ -57,7 +57,7 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 }
 
 func TestCostFreeCallAndNarrowCompression(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.selection.Connection.Kind = connection.OpenRouter
 	a.screen.SetSize(140, 24)

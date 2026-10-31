@@ -14,7 +14,7 @@ import (
 )
 
 func TestToolRecordLiveMatchesRestored(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	call := toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	event := runrecord.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
 	a.receive(notice{Event: &event})
@@ -48,7 +48,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 }
 
 func TestToolFailureAndDenialHaveDetails(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.opts.Vault.Remember(`secret"key`)
 	for _, kind := range []string{"tool_failed", "denied", "tool_interrupted"} {
 		event := runrecord.Event{Kind: kind, CallID: "call", Text: "operation stopped", Call: &toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"echo secret\"key"}`)}}
@@ -66,20 +66,28 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 }
 
 func TestToolReadLineNumbersAlignOnScreen(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | first\n 10 | tenth\n100 | hundredth\n","ExitCode":0,"Status":"exited"}`)}})
 	for _, width := range []int{80, 32} {
 		a.screen.SetSize(width, 24)
 		a.render()
+		var visible strings.Builder
 		column, found := -1, 0
 		for row := 0; row < 22; row++ {
 			line := screenLine(a.screen, row, width)
+			visible.WriteString(line)
+			visible.WriteByte('\n')
 			if at := strings.Index(line, " | "); at >= 0 {
 				found++
 				if column >= 0 && column != at {
 					t.Fatalf("misaligned row: %q", line)
 				}
 				column = at
+			}
+		}
+		for _, want := range []string{"1 | first", "10 | tenth", "100 | hundredth"} {
+			if !strings.Contains(visible.String(), want) {
+				t.Fatalf("width %d lost source line %q", width, want)
 			}
 		}
 		if found != 3 {

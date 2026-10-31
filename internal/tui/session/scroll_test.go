@@ -15,7 +15,7 @@ import (
 )
 
 func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.historyEnd = true
 	a.output.Append("earlier conversation", false)
 	a.receiveRuntime(&runrecord.Event{Kind: "stream", Thinking: strings.Repeat("thinking  \n", 40), Text: strings.Repeat("answer  \n", 40) + "latest"})
@@ -36,7 +36,7 @@ func TestTranscriptScrollIncludesLiveThinkingAndAnswer(t *testing.T) {
 func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 	for _, paused := range []bool{false, true} {
 		t.Run(map[bool]string{false: "following", true: "reading"}[paused], func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.historyEnd = true
 			defer a.stopCompression()
 			a.output.Append(strings.Repeat("earlier\n", 50), false)
@@ -66,7 +66,7 @@ func TestTranscriptScrollCompactionKeepsFollowAndManualPosition(t *testing.T) {
 }
 
 func TestTranscriptScrollbarClickAndDrag(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.historyEnd = true
 	a.output.Append(strings.Repeat("history\n", 100)+"latest", false)
 	a.render()
@@ -107,7 +107,7 @@ func TestTranscriptScrollbarClickAndDrag(t *testing.T) {
 }
 
 func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.historyEnd = true
 	a.output.Append(strings.Repeat("earlier history\n", 60), false)
 	height := a.chatHeight(80, a.bodyHeight(24))
@@ -127,7 +127,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 }
 
 func TestTranscriptScrollbarReflowsAndKeepsCopyLiteral(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.historyEnd = true
 	text := strings.Repeat("한글 text ", 10)
 	a.output.Append(strings.Repeat(text+"\n", 30), false)

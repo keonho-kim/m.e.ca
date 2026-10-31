@@ -60,3 +60,15 @@ func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
 		t.Fatal("unfinished thinking reached compaction")
 	}
 }
+
+func TestCompactionRetainsAdvisoryReviewWithoutDuplicateInstructions(t *testing.T) {
+	records, err := Compaction([]Record{
+		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "system", Content: "Review observations: missing endpoint"}},
+		{Sequence: 2, Kind: "event", Event: runrecord.Event{Kind: "lat_feedback", Text: "api.py: missing requested endpoint; add its handler"}},
+		{Sequence: 3, Kind: "event", Event: runrecord.Event{Kind: "lat_unavailable", Text: "transport unavailable"}},
+		{Sequence: 4, Kind: "event", Event: runrecord.Event{Kind: "lat_clean"}},
+	})
+	if err != nil || len(records) != 1 || records[0].Role != "review_observation" || !strings.Contains(records[0].Text, "missing requested endpoint") {
+		t.Fatalf("pending review context lost or duplicated: %+v %v", records, err)
+	}
+}

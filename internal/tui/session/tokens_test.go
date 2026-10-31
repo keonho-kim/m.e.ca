@@ -12,7 +12,7 @@ import (
 )
 
 func TestTokenCounterSnapshotsAndFixedPosition(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	for _, count := range []int64{2, 5, 5} {
 		a.receive(notice{Event: &runrecord.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 20, Output: count}}})
 	}

@@ -48,6 +48,10 @@ func TestCommandCaptureIsSanitizedAndReReadable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	result.Capture, err = e.CommandCapture(result.Process.CommandID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var output process.Output
 	if err = json.Unmarshal(result.Content, &output); err != nil {
 		t.Fatal(err)

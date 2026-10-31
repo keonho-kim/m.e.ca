@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	json "github.com/goccy/go-json"
+	"github.com/keonho-kim/meca/internal/agent/lat"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
@@ -17,12 +18,29 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 	if after < 0 || maxBytes < 1 {
 		return nil, fmt.Errorf("invalid conversation context bounds")
 	}
-	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? ORDER BY t.sequence`, session, after)
+	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND (m.sequence IS NOT NULL OR e.kind='lat_feedback') ORDER BY t.sequence`, session, after)
 	if err != nil {
 		return nil, err
 	}
 	total := 0
 	for _, record := range page {
+		if record.kind == "event" {
+			body, err := s.unpackRecord(ctx, record, map[string]bool{"text": true})
+			if err != nil {
+				return nil, err
+			}
+			var feedback struct{ Text string }
+			if err = json.Unmarshal(body, &feedback); err != nil {
+				return nil, err
+			}
+			message := lat.Feedback(feedback.Text)
+			total += len(message.Content)
+			if total > maxBytes {
+				return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes", maxBytes)
+			}
+			messages = append(messages, message)
+			continue
+		}
 		var fields map[string]bool
 		if !images {
 			fields, err = textContextFields(record.body)

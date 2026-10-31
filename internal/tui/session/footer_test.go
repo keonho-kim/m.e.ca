@@ -10,7 +10,7 @@ import (
 )
 
 func TestFixedFooterContainsStatusAndKeys(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.selection.Model = "chosen"
 	a.output.Append(strings.Repeat("history\n", 50), false)
 	for _, size := range [][2]int{{80, 24}, {48, 12}, {32, 8}} {

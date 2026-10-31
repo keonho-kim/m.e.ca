@@ -12,7 +12,7 @@ import (
 
 func TestProviderSettingsUseDeclaredDefaults(t *testing.T) {
 	for target, provider := range connection.Providers() {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.openModel()
 		a.modelForm.Credential.Set("private-key")
 		for a.modelForm.Provider != target {

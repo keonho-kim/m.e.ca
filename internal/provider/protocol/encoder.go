@@ -1,4 +1,4 @@
-// Purpose: Reuse validated text-history encodings during one serial agent execution.
+// Purpose: Reuse validated conversation encodings during one serial agent execution.
 // Pattern: Execution-owned bounded prefix cache.
 // Usage: A scoped HTTP generator owns Encoder and calls Clear after its final request.
 // Related: internal/provider/protocol/encoded_history.go, internal/provider/protocol/request.go.
@@ -20,6 +20,7 @@ type Encoder struct {
 	kind     connection.ProviderKind
 	model    string
 	history  []encodedMessage
+	groups   []*sourceGroup
 	bytes    int
 	retained int
 }
@@ -35,7 +36,8 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		return singleBody(kind, baseURL, info, request, messages, controls)
 	}
 	size, text := textHistorySize(messages)
-	if !text || size < cacheThreshold || size > cacheCapacity {
+	prepared := len(messages) > 0 && messages[0].source != nil
+	if !prepared && (!text || size < cacheThreshold || size > cacheCapacity) {
 		e.Clear()
 		return singleBody(kind, baseURL, info, request, messages, controls)
 	}
@@ -99,6 +101,10 @@ func singleBody(kind connection.ProviderKind, baseURL string, info *connection.M
 func textHistorySize(messages []Message) (int, bool) {
 	total := 0
 	for _, m := range messages {
+		if m.source != nil && m.encoded != nil {
+			total += m.sourceBytes
+			continue
+		}
 		content, text := m.Content.(string)
 		if !text || len(m.Images) > 0 {
 			return 0, false

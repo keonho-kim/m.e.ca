@@ -33,7 +33,7 @@ func (event Event) Check() error {
 			return fmt.Errorf("invalid generation provenance")
 		}
 		switch g.Role {
-		case inference.Agent, inference.Compaction, inference.Diagnostic:
+		case inference.Agent, inference.Compaction, inference.Diagnostic, inference.LAT, inference.LATCompaction:
 		default:
 			return fmt.Errorf("invalid generation role")
 		}

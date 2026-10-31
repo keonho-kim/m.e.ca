@@ -22,7 +22,7 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 		{"create_directory", `{"paths":["src","tests"]}`, `{"changed":true,"created":["src","tests"]}`, "폴더 생성 완료"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			event := runrecord.Event{Kind: "tool_succeeded", Text: "done", Call: &toolapi.Call{Name: test.name, Arguments: json.RawMessage(test.arguments)}, Output: json.RawMessage(test.output)}
 			if test.name == "write_file" || test.name == "edit_file" {
 				event.ChangePreview = "--- old\n+++ hello.txt\n@@ -1 +1 @@\n-old\n+" + test.detail + "\n"

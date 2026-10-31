@@ -15,7 +15,7 @@ func TestWorkerStateCancellation(t *testing.T) {
 			t.Fatalf("invalid cancellation transition: %v -> %v", initial, state)
 		}
 	}
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.startCompression()
 	a.worker.stop()

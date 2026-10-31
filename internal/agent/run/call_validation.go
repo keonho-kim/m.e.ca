@@ -13,7 +13,7 @@ import (
 type validatedCall struct {
 	call       toolapi.Call
 	definition toolapi.Definition
-	arguments  map[string]json.RawMessage
+	command    string
 }
 
 func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
@@ -43,5 +43,9 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		return validatedCall{}, fmt.Errorf("argument validation failed: %s. %s", err, hint)
 	}
 
-	return validatedCall{call, *definition, arguments}, nil
+	var command string
+	if call.Name == "execute_command" {
+		_ = json.Unmarshal(arguments["command"], &command)
+	}
+	return validatedCall{call, *definition, command}, nil
 }

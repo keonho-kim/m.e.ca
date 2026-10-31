@@ -34,14 +34,14 @@ func TestOpenRouterConnection(t *testing.T) {
 		if provider.Kind == kind && provider.Label == "OpenRouter" {
 			found = true
 		}
-		if provider.Kind == "openai-compatible" {
-			t.Fatal("removed provider remains selectable")
-		}
 	}
 	if !found {
 		t.Fatal("OpenRouter is missing from provider selection")
 	}
-	if _, err := New("openai-compatible", ""); err == nil {
-		t.Fatal("removed provider kind is still accepted")
+}
+
+func TestUnknownProviderIsRejected(t *testing.T) {
+	if _, err := New("unknown-provider", ""); err == nil {
+		t.Fatal("unknown provider accepted")
 	}
 }

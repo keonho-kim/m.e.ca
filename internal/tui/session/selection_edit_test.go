@@ -18,7 +18,7 @@ func drag(a *app, x1, y1, x2, y2 int) {
 }
 
 func TestInputSelectionDeletesWholeGrapheme(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.editor.Set("A👩‍💻B a\u0301Z")
 	a.render()
 	y := a.inputRegion.y
@@ -30,7 +30,7 @@ func TestInputSelectionDeletesWholeGrapheme(t *testing.T) {
 }
 
 func TestInputSelectionPreservesSoftWrapsAndSpaces(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.screen.SetSize(16, 18)
 	want := "abcdefghi 👩‍💻 xyz\n  tail  "
 	a.editor.Set(want)
@@ -47,7 +47,7 @@ func TestInputSelectionPreservesSoftWrapsAndSpaces(t *testing.T) {
 }
 
 func TestInputSelectionCopyThenTypingClearsHighlight(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.screen = &clipboardScreen{Screen: a.screen}
 	a.editor.Set("draft text")
 	a.render()
@@ -73,7 +73,7 @@ func TestInputSelectionCopyThenTypingClearsHighlight(t *testing.T) {
 }
 
 func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.screen.SetSize(16, 24)
 	want := "  long line with spaces   \nnext  "
 	a.output.Append(want, false)
@@ -91,7 +91,7 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 }
 
 func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true
 	a.modelForm.Endpoint.Set("localhost")
@@ -108,7 +108,7 @@ func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 }
 
 func TestInputSelectionRejectsUnpaintedRevision(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.editor.Set("old text")
 	a.render()
 	y := a.inputRegion.y
@@ -121,7 +121,7 @@ func TestInputSelectionRejectsUnpaintedRevision(t *testing.T) {
 }
 
 func TestTranscriptSelectionKeepsItsVisibleRows(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.output.Append("keep this source", false)
 	a.render()
 	drag(a, 0, 1, 15, 1)

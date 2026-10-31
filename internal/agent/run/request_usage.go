@@ -1,18 +1,16 @@
 // Purpose: Count a finished request attempt toward compaction using measured usage or byte fallback.
 // Pattern: Usage accounting boundary.
-// Usage: generate finalizes each attempt once; compaction requests opt out of this counter.
+// Usage: generate counts agent attempts; compaction and independent review use separate contexts.
 // Related: internal/agent/run/usage.go, internal/agent/compact/usage.go.
 package run
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (s *execution) countRequest(ctx context.Context, request modelapi.Request, usage *modelapi.TokenUsage, outputBytes int64) error {
+func (s *execution) countRequest(ctx context.Context, request modelapi.Request, usage *modelapi.TokenUsage, inputBytes, outputBytes int64) error {
 	if s.runner.Memory == nil {
 		return nil
 	}
@@ -20,18 +18,10 @@ func (s *execution) countRequest(ctx context.Context, request modelapi.Request, 
 	if usage != nil {
 		count.Amount = usage.Input + usage.Output
 	} else {
-		messages := append([]modelapi.Message(nil), request.Messages...)
-		for i := range messages {
-			messages[i].Images = nil
+		if inputBytes <= 0 {
+			inputBytes = modelapi.TextBytes(request)
 		}
-		body, err := json.Marshal(struct {
-			Messages []modelapi.Message
-			Tools    []toolapi.Definition
-		}{messages, request.Tools})
-		if err != nil {
-			return err
-		}
-		count = compact.EstimateBytes(int64(len(body)) + outputBytes)
+		count = compact.EstimateBytes(inputBytes + outputBytes)
 	}
 	return s.observe(ctx, count)
 }

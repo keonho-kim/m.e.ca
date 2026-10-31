@@ -13,7 +13,7 @@ import (
 )
 
 func TestFooterWrapAndCollapse(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.selection.Model = "chosen"
 	a.editor.Set("draft")
 	for _, test := range []struct{ width, height, status int }{
@@ -55,7 +55,7 @@ func TestFooterWrapKeepsInputSelectionAnchored(t *testing.T) {
 		{"first\nlast", "last", "first\n", 5, 0, 3},
 	} {
 		t.Run(test.selected, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.screen.SetSize(80, test.height)
 			a.editor.Set(test.text)
 			a.render()
@@ -86,7 +86,7 @@ func TestFooterWrapKeepsInputSelectionAnchored(t *testing.T) {
 }
 
 func TestFooterWrapIgnoresStaleScrollbarGeometry(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.screen.SetSize(100, 24)
 	a.selection.Model = "chosen"
 	a.output.Append(strings.Repeat("line\n", 18)+"line", false)

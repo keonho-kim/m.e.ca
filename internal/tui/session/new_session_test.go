@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewSessionCommandCancelsActiveWork(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
 	a.worker, a.taskCancel = workerSetup, cancel

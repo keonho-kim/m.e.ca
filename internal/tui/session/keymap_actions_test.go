@@ -26,7 +26,7 @@ func keymapLabels(t *testing.T, a *app) map[string]string {
 func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 	for _, page := range []string{"chat", "files"} {
 		t.Run(page, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.page, a.browser.Input = page, true
 			a.worker = workerAgent
 			a.steering = make(chan composer.Request, 1)
@@ -72,7 +72,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 
 func TestKeymapActionsStopAndBlockedCommands(t *testing.T) {
 	for _, text := range []string{"continue", "!model", "!unknown", "!model extra"} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.worker = workerAgent
 		if text == "continue" {
 			a.worker.stop()
@@ -86,24 +86,20 @@ func TestKeymapActionsStopAndBlockedCommands(t *testing.T) {
 }
 
 func TestKeymapActionsFieldReturn(t *testing.T) {
-	for _, page := range []string{"model"} {
-		a := fixture(t)
-		a.page = page
-		a.openModel()
-		a.menuInput.Set(":q")
-		labels := keymapLabels(t, a)
-		if labels["Enter"] != "복귀" || labels["Tab"] != "" || labels["↑↓"] != "" {
-			t.Fatalf("%s: %v", page, labels)
-		}
-		a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-		if a.page != "chat" {
-			t.Fatal("field return hint did not match action")
-		}
+	a := screenFixture(t)
+	a.openModel()
+	a.menuInput.Set(":q")
+	if labels := keymapLabels(t, a); labels["Enter"] != "복귀" || labels["Tab"] != "" || labels["↑↓"] != "" {
+		t.Fatal(labels)
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
+	if a.page != "chat" {
+		t.Fatal("field return hint did not match action")
 	}
 }
 
 func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.editor.Set(":q")
 	if labels := keymapLabels(t, a); labels["Enter"] != "종료 확인" || labels["Tab"] != "" {
@@ -116,7 +112,7 @@ func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
 }
 
 func TestKeymapActionsCloseFileWhileLoading(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page, a.directoryLoading = "files", true
 	labels := keymapLabels(t, a)
 	if labels["Esc"] != "닫기" || labels["Enter"] != "" || labels[":q"] != "" {
@@ -131,7 +127,7 @@ func TestKeymapActionsCloseFileWhileLoading(t *testing.T) {
 func TestKeymapActionsDeleteSelection(t *testing.T) {
 	for _, scope := range []string{"input", "cross-boundary", "stale"} {
 		t.Run(scope, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.editor.Set("draft text")
 			a.render()
 			y := a.inputRegion.y
@@ -157,7 +153,7 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 }
 
 func TestKeymapActionsFooterOrder(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.screen.SetSize(160, 24)
 	a.worker = workerAgent
 	a.editor.Set("direction")

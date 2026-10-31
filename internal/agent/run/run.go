@@ -20,6 +20,12 @@ import (
 )
 
 type execution struct {
+	latMemory        *reviewMemory
+	latObserved      bool
+	latReviewed      bool
+	reviewing        bool
+	latSteering      []string
+	reviewGenerator  modelapi.Generator
 	projection       contextbuild.Projection
 	historyLoaded    bool
 	runner           Runner
@@ -86,6 +92,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
 		r.ImageInput = r.ImageInput && support.ImageInputSupported()
 	}
+	reviewGenerator := r.Generator
 	if scoped, ok := r.Generator.(interface {
 		NewRunGenerator() (modelapi.Generator, func())
 	}); ok {
@@ -94,8 +101,17 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		r.Generator = generator
 	}
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: imageDefinitions(r.Tools.Definitions(), r.ImageInput), statistics: runStatistics{started: started}}
+	if r.LAT {
+		s.reviewGenerator = reviewGenerator
+	}
 	s.usage = &requestBudget{}
 	s.usage.begin(limits)
+	if r.LAT {
+		owner, stop := context.WithDeadline(ctx, s.usage.snapshot().deadline)
+		s.latMemory = &reviewMemory{ctx: owner, stop: stop, dirty: true}
+		s.latMemory.controller.Repository, s.latMemory.controller.Session = r.ReviewMemory, r.Session
+		s.latMemory.controller.Redact = r.Redact
+	}
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
 	id := "run_" + rand.Text()
@@ -107,6 +123,7 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 	}
 	defer func() {
+		err = errors.Join(err, s.closeLATMemory(ctx))
 		err = errors.Join(err, s.stopCommands(ctx))
 		err = s.settle(ctx, err)
 		result = s.result
@@ -140,7 +157,6 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
 		s.checkpoint.Phase = "decision"
 		s.checkpoint.Tool = ""
-		s.checkpoint.Arguments = nil
 		if err = s.persist(ctx); err != nil {
 			return s.result, err
 		}
@@ -211,6 +227,11 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 			if pending, pendingErr := s.pendingCommands(ctx); pendingErr != nil {
 				return s.result, pendingErr
 			} else if pending {
+				continue
+			}
+			if continued, reviewErr := s.reviewWork(ctx, reply); reviewErr != nil {
+				return s.result, reviewErr
+			} else if continued {
 				continue
 			}
 			return s.result, s.finish(ctx, reply)

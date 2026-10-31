@@ -15,7 +15,7 @@ import (
 )
 
 func TestPendingListSelectionAndSavedOrder(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language, a.worker = locale.English, workerAgent
 	a.queued.Messages = queuedRequests("first", "second\ncontinued", "third")
 	a.editor.Set("draft")
@@ -63,7 +63,7 @@ func TestPendingListSelectionAndSavedOrder(t *testing.T) {
 }
 
 func TestPendingListRedactionAndRelease(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.queued.Messages = queuedRequests("first", "new-secret-value", "third")
 	a.chatLayout(80)
 	a.opts.Vault.Remember("new-secret-value")
@@ -91,7 +91,7 @@ func TestPendingListRedactionAndRelease(t *testing.T) {
 }
 
 func TestPendingEditVerticalNavigation(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("first", "second", "third")
 	a.editor.Set("draft")
@@ -110,7 +110,7 @@ func TestPendingEditVerticalNavigation(t *testing.T) {
 }
 
 func TestPendingListNavigationRevealsSelectedRequest(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language, a.worker = locale.English, workerAgent
 	a.screen.SetSize(60, 16)
 	for i := range 40 {
@@ -134,7 +134,7 @@ func TestPendingListNavigationRevealsSelectedRequest(t *testing.T) {
 }
 
 func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.screen.SetSize(60, 16)
 	for i := range 40 {
@@ -166,7 +166,7 @@ func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
 }
 
 func TestPendingListResizeKeepsSelectedRequestVisible(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.screen.SetSize(80, 24)
 	for i := range 20 {
@@ -194,7 +194,7 @@ func TestPendingListResizeKeepsSelectedRequestVisible(t *testing.T) {
 
 func TestPendingEditDeleteShortcutWithTextSelection(t *testing.T) {
 	for _, modifier := range []tcell.ModMask{tcell.ModCtrl, tcell.ModMeta} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.worker = workerAgent
 		a.queued.Messages = queuedRequests("first", "second", "third")
 		a.editor.Set("draft")

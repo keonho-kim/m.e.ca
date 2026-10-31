@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"github.com/keonho-kim/meca/internal/agent/compact"
+	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"testing"
 	"time"
@@ -51,6 +52,9 @@ func TestRequestAccounting(t *testing.T) {
 		{"cancelled", []modelapi.Event{{Usage: &modelapi.TokenUsage{Input: 100, Output: 3}}}, context.Canceled, true, []int64{103}, false},
 		{"retry", []modelapi.Event{{Usage: &modelapi.TokenUsage{Input: 100, Output: 3}}, {Retry: &modelapi.Retry{Attempt: 2, MaxAttempts: 3}}, {Usage: &modelapi.TokenUsage{Input: 110, Output: 5}, Done: true}}, nil, true, []int64{103, 115}, false},
 		{"no usage", []modelapi.Event{{Delta: "응답", Thinking: "추론", Done: true}}, nil, true, []int64{-1}, true},
+		{"wire bytes", []modelapi.Event{{InputBytes: 3000}, {Delta: "abc", Done: true}}, nil, true, []int64{1001}, true},
+		{"wire bytes across retry", []modelapi.Event{{InputBytes: 3000}, {Delta: "abc"}, {Retry: &modelapi.Retry{Attempt: 2, MaxAttempts: 3}}, {Done: true}}, nil, true, []int64{1001, 1000}, true},
+		{"usage overrides bytes", []modelapi.Event{{InputBytes: 3000}, {Usage: &modelapi.TokenUsage{Input: 100, Output: 5}, Done: true}}, nil, true, []int64{105}, false},
 		{"compaction excluded", []modelapi.Event{{Usage: &modelapi.TokenUsage{Input: 100, Output: 5}, Done: true}}, nil, false, nil, false},
 		{"request failed before response", nil, errors.New("connection failed"), true, nil, false},
 	} {
@@ -60,7 +64,7 @@ func TestRequestAccounting(t *testing.T) {
 			runner.Generator = attemptScript{events: tc.events, err: tc.err}
 			runner.Memory = &compact.Controller{Repository: store, Session: "s"}
 			s := execution{runner: runner, limits: DefaultLimits(), usage: &requestBudget{deadline: time.Now().Add(time.Minute)}, emit: emit}
-			err := s.generate(context.Background(), modelapi.Request{Messages: []modelapi.Message{{Role: "user", Content: "request"}}}, tc.account, func(modelapi.Event) error { return nil })
+			err := s.generate(context.Background(), modelapi.Request{Messages: []modelapi.Message{{Role: "user", Content: "request"}}}, map[bool]inference.Role{true: inference.Agent, false: inference.Compaction}[tc.account], func(modelapi.Event) error { return nil })
 			if tc.err != nil && !errors.Is(err, tc.err) || tc.err == nil && err != nil {
 				t.Fatal(err)
 			}

@@ -18,10 +18,10 @@ import (
 	"time"
 )
 
-// start launches synchronously; its owner must call the returned waiter once.
-func start(ctx context.Context, directory, commandText string, environment []string, stdout, stderr *cappedOutput) (func() (Output, error), error) {
+// start launches synchronously; its owner joins once, then materializes the capture.
+func start(ctx context.Context, directory, commandText string, environment []string, stdout, stderr *cappedOutput) (startedCommand, error) {
 	if !filepath.IsAbs(directory) {
-		return nil, fmt.Errorf("command working directory must be absolute")
+		return startedCommand{}, fmt.Errorf("command working directory must be absolute")
 	}
 	command := exec.CommandContext(ctx, "/bin/sh", "-c", commandText)
 	command.Dir = directory
@@ -40,16 +40,22 @@ func start(ctx context.Context, directory, commandText string, environment []str
 	command.WaitDelay = 2 * time.Second
 	command.Stdout, command.Stderr = stdout, stderr
 	if err := command.Start(); err != nil {
-		return nil, err
+		return startedCommand{}, err
 	}
-	return func() (Output, error) {
+	wait := func() error {
 		runErr := command.Wait()
 		if command.Process != nil {
 			if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
 				runErr = errors.Join(runErr, err)
 			}
 		}
+		return runErr
+	}
+	output := func(runErr error) (Output, error) {
 		output := Output{Started: true, Stdout: stdout.String(), Stderr: stderr.String(), ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: "execution_failed"}
+		if err := errors.Join(stdout.captureError(), stderr.captureError()); err != nil {
+			return output, errors.Join(runErr, err)
+		}
 		if ctx.Err() != nil {
 			output.Status = "interrupted"
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -68,5 +74,6 @@ func start(ctx context.Context, directory, commandText string, environment []str
 		}
 		output.Status = "exited"
 		return output, nil
-	}, nil
+	}
+	return startedCommand{wait: wait, output: output}, nil
 }

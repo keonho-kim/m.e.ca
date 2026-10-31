@@ -26,18 +26,10 @@ import (
 )
 
 func TestTerminalExecutable(t *testing.T) {
-	if testing.Short() {
-		t.Skip("builds and runs a terminal executable")
-	}
 	if os.Geteuid() == 0 {
 		t.Skip("interactive application requires an unprivileged user")
 	}
-	buildCtx, cancelBuild := context.WithTimeout(context.Background(), time.Minute)
-	defer cancelBuild()
-	binary := filepath.Join(t.TempDir(), "meca")
-	if output, err := exec.CommandContext(buildCtx, "go", "build", "-o", binary, ".").CombinedOutput(); err != nil {
-		t.Fatalf("build: %s %v", output, err)
-	}
+	binary := testExecutable(t)
 	for _, exit := range []struct{ name, input string }{{"Ctrl-C", "\x03"}, {"quit command", "!quit\r"}} {
 		t.Run(exit.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

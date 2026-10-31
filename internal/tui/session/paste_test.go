@@ -10,7 +10,7 @@ import (
 )
 
 func TestPasteCommitsOneEditWithoutExecuting(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.editor.Set("draft ")
 	revision := a.editor.Revision()
 	a.terminalEvent(tcell.NewEventPaste(true))
@@ -27,7 +27,7 @@ func TestPasteCommitsOneEditWithoutExecuting(t *testing.T) {
 }
 
 func TestPasteKeepsTerminalLineFeed(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.terminalEvent(tcell.NewEventPaste(true))
 	typeInput(a, "first")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlJ, "", 0))

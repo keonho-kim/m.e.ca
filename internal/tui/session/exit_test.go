@@ -14,7 +14,7 @@ import (
 func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.page, a.worker = page, workerSetup
 			taskCtx, cancel := context.WithCancel(a.ctx)
 			defer cancel()
@@ -30,7 +30,7 @@ func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.page, a.worker = page, workerSetup
 			if page == "chat" {
 				a.editor.Set("!quit")
@@ -43,7 +43,7 @@ func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
 			}
 		})
 	}
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
 	for _, r := range "!quit" {
@@ -73,7 +73,7 @@ func TestRunExitEndsTerminalLoop(t *testing.T) {
 }
 
 func TestShutdownJoinsBlockedWorker(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.ctx, a.cancel = context.WithCancel(context.Background())
 	for i := 0; i < cap(a.events); i++ {
 		a.events <- notice{}

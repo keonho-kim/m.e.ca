@@ -22,6 +22,9 @@ type Output struct {
 }
 
 type cappedOutput struct {
+	directory string
+	spill     *spillCapture
+	failure   error
 	mu        sync.Mutex
 	lastWrite time.Time
 	head      bytes.Buffer
@@ -41,6 +44,23 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 		output.revision++
 	}
 	count := len(content)
+	if output.spill == nil && output.directory != "" && output.head.Len()+len(output.tail)+len(content) > memoryCaptureBytes {
+		spill, err := openSpill(output.directory, output.head.Bytes())
+		if err != nil {
+			output.failure = err
+			return 0, err
+		}
+		output.spill = spill
+		output.head = bytes.Buffer{}
+		output.tail = nil
+	}
+	if output.spill != nil {
+		if err := output.spill.write(content); err != nil {
+			output.failure = err
+			return 0, err
+		}
+		return count, nil
+	}
 	headCount := min(len(content), captureHalf-output.head.Len())
 	if _, err := output.head.Write(content[:headCount]); err != nil {
 		return 0, err
@@ -81,6 +101,13 @@ func (output *cappedOutput) snapshot(after uint64) Capture {
 	defer output.mu.Unlock()
 	if output.revision == after {
 		return Capture{Revision: after}
+	}
+	if output.spill != nil {
+		text, err := output.spill.snapshot()
+		if err != nil {
+			output.failure = err
+		}
+		return Capture{Revision: output.revision, Text: text}
 	}
 	var text strings.Builder
 	text.Grow(output.head.Len() + len(output.tail) + 32)

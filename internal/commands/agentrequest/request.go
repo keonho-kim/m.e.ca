@@ -25,6 +25,8 @@ type Tools interface {
 }
 
 type Options struct {
+	LAT          bool
+	LoadLAT      func() (prompt.Templates, error)
 	Config       config.Config
 	Selection    connection.Selection
 	Session      sessionstate.Session
@@ -50,6 +52,7 @@ func New(options Options) agentsession.Request {
 		thinking = &value
 	}
 	runner := run.Runner{
+		LAT: options.LAT, ContextWindow: window,
 		ImageInput: selected.Details != nil && selected.Details.ImageInput.Supported(),
 		Generator:  options.Generator, Tools: options.Tools, Journal: options.Store,
 		Session: options.Session.ID, ProjectRoot: options.Session.ProjectRoot,
@@ -62,6 +65,7 @@ func New(options Options) agentsession.Request {
 	return agentsession.Request{
 		Runner: runner, Store: options.Store, Text: options.Text, ContextWindow: window,
 		Compaction: options.Config.Compaction.Settings, LoadPrompts: options.LoadPrompts,
+		LoadLAT:             options.LoadLAT,
 		ProjectInstructions: options.Tools.ProjectInstructions,
 	}
 }

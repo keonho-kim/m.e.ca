@@ -12,12 +12,16 @@ import (
 type Status struct {
 	Language locale.Language
 	Model    string
+	LAT      bool
 }
 
 func statusLine(screen tcell.Screen, status Status, y, w int) {
 	model := status.Model
 	if model == "" {
 		model = status.Language.Text("no-model")
+	}
+	if status.LAT {
+		model += " · " + status.Language.Text("LAT ON")
 	}
 	Text(screen, 0, y, w, model, tcell.StyleDefault)
 }

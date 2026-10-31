@@ -15,7 +15,7 @@ import (
 )
 
 func TestMarkdownLiveAndRestored(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "# Heading\n\n**strong** 😀"}})
 	a.render()
 	first := screenLine(a.screen, 1, 80)
@@ -52,7 +52,7 @@ func TestMarkdownUserRemainsLiteral(t *testing.T) {
 }
 
 func TestMarkdownToolOutputRemainsLiteral(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Text: "**literal tool output**"}})
 	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Markdown || !strings.Contains(a.output.Blocks[0].Text, "**literal tool output**") {
 		t.Fatal("tool output was interpreted as Markdown")

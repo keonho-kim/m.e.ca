@@ -63,7 +63,7 @@ func (e *Executor) archiveCommand(id string, output process.Output, runErr error
 	return os.WriteFile(path, body, 0600)
 }
 
-func (e *Executor) readCommandResult(id string, capture bool) (toolapi.Result, error) {
+func (e *Executor) readCommandResult(id string) (toolapi.Result, error) {
 	var result toolapi.Result
 	path, err := e.commandPath(id, ".json")
 	if err != nil {
@@ -79,13 +79,21 @@ func (e *Executor) readCommandResult(id string, capture bool) (toolapi.Result, e
 	if err := json.Unmarshal(body, &result); err != nil {
 		return result, err
 	}
-	if capture {
-		result.Capture, err = os.ReadFile(path + ".capture")
-		if errors.Is(err, os.ErrNotExist) {
-			err = nil
-		}
-	}
 	return result, err
+}
+
+// CommandCapture loads one original only when the runtime can commit it.
+// Completed siblings waiting for an earlier call retain only small excerpts.
+func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
+	path, err := e.commandPath(id, ".json.capture")
+	if err != nil {
+		return nil, err
+	}
+	body, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return body, err
 }
 
 func (e *Executor) AcknowledgeCommand(id string) error {

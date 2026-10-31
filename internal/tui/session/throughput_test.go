@@ -12,7 +12,7 @@ import (
 )
 
 func TestThroughputHeaderAndLifecycle(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	rate := 25.5
 	a.receive(notice{Event: &runrecord.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 100, Output: 51}, TokensPerSecond: &rate}})
 	a.render()

@@ -13,7 +13,7 @@ import (
 )
 
 func TestNativeReasoningMenu(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	conn, err := connection.New(connection.Ollama, "")
 	if err != nil {
 		t.Fatal(err)

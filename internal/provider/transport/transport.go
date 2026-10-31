@@ -18,6 +18,13 @@ func (c *Client) NewRequest(ctx context.Context, method, endpoint string, body i
 	if err != nil {
 		return nil, err
 	}
+	if source, ok := body.(interface {
+		Len() int
+		Replay() io.Reader
+	}); ok {
+		request.ContentLength = int64(source.Len())
+		request.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(source.Replay()), nil }
+	}
 	request.Header.Set("Content-Type", "application/json")
 	if c.key != "" {
 		request.Header.Set("Authorization", "Bearer "+c.key)

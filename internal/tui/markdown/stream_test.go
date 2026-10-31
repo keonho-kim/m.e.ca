@@ -72,7 +72,7 @@ func BenchmarkFullMarkdown(b *testing.B) {
 }
 
 func FuzzStream(f *testing.F) {
-	for _, text := range []string{"#", "0)", "a\n\nb\n\nc\n\n", "- a\n\n- b\n\nend", "```\ncode\n```\n\nend", "[a][b]\n\n[b]: https://example.com"} {
+	for _, text := range []string{"#", "0)", "a\n\nb\n\nc\n\n", "- a\n\n- b\n\nend", "```\ncode\n```\n\nend", "[a][b]\n\n[b]: https://example.com", strings.Repeat("- **item**\n", 8) + "\n--", strings.Repeat("1. item\n", 8) + "\n- other", strings.Repeat("- item\n  - nested\n", 6)} {
 		f.Add(text)
 	}
 	f.Fuzz(func(t *testing.T, text string) {

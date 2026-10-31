@@ -27,7 +27,7 @@ func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
 				{"model", "vendor/sample", modelsettings.Name},
 			} {
 				t.Run(fmt.Sprintf("%s/%v/%dx%d", field.name, language, size[0], size[1]), func(t *testing.T) {
-					a := fixture(t)
+					a := screenFixture(t)
 					a.language = language
 					a.screen.SetSize(size[0], size[1])
 					a.openModel()
@@ -86,7 +86,7 @@ func selectedSettingRow(t *testing.T, a *app) int {
 }
 
 func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Name, true
@@ -106,7 +106,7 @@ func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
 }
 
 func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
@@ -128,7 +128,7 @@ func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
 }
 
 func TestModelInlineCandidatesFollowValueColumn(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Name, true

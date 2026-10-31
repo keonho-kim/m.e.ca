@@ -1,6 +1,6 @@
 // Purpose: Record measured usage per attempt and apply retry budgets before restarting generation.
 // Pattern: Model I/O boundary.
-// Usage: Normal execution generation and compaction both call execution.generate.
+// Usage: Agent, compaction and independent review share execution.generate accounting.
 // Related: internal/agent/run/generate.go, internal/agent/run/memory.go, internal/agent/run/statistics.go, internal/storage/sqlite/usage.go.
 package run
 
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func (s *execution) generate(ctx context.Context, request modelapi.Request, account bool, consume func(modelapi.Event) error) error {
+func (s *execution) generate(ctx context.Context, request modelapi.Request, role inference.Role, consume func(modelapi.Event) error) error {
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return err
 	}
@@ -24,15 +24,12 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 	var rate *float64
 	var measured time.Duration
 	started := time.Now()
-	role := inference.Agent
-	if !account {
-		role = inference.Compaction
-	}
 	generation := runrecord.Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
 	if err := s.emit(runrecord.Event{Kind: "generation_started"}); err != nil {
 		return err
 	}
 	var outputBytes int64
+	var inputBytes int64
 	received := false
 	flush := func() error {
 		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -40,8 +37,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 		generation.ElapsedMillis = time.Since(started).Milliseconds()
 		s.statistics.add(usage, measured)
 		err := s.recordUsage(flushCtx, usage, rate, generation)
-		if account && (usage != nil || received) {
-			err = errors.Join(err, s.countRequest(flushCtx, request, usage, outputBytes))
+		if role == inference.Agent && (usage != nil || received) {
+			err = errors.Join(err, s.countRequest(flushCtx, request, usage, inputBytes, outputBytes))
 		}
 		usage = nil
 		rate = nil
@@ -50,7 +47,14 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, acco
 		received = false
 		return err
 	}
-	err := s.generateObserved(ctx, request, func(event modelapi.Event) error {
+	generator := s.runner.Generator
+	if role == inference.LAT {
+		generator = s.reviewGenerator
+	}
+	err := s.generateObserved(ctx, generator, request, func(event modelapi.Event) error {
+		if event.InputBytes > 0 {
+			inputBytes = event.InputBytes
+		}
 		if event.Retry != nil {
 			if err := flush(); err != nil {
 				return err

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -34,7 +35,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	var calls []toolapi.Call
 	var continuation []byte
 	done := false
-	err = s.generate(ctx, request, true, func(e modelapi.Event) error {
+	err = s.generate(ctx, request, inference.Agent, func(e modelapi.Event) error {
 		if e.Retry != nil {
 			reply.Reset()
 			calls = nil

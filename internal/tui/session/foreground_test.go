@@ -19,7 +19,7 @@ func TestApprovalSuspendsFileViewer(t *testing.T) {
 			name = "approve"
 		}
 		t.Run(name, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.page, a.worker = "files", workerAgent
 			a.filePreview = &preview.State{Path: "README.md", Content: "# Preview", Full: true}
 			a.editor.Set("unsent draft")

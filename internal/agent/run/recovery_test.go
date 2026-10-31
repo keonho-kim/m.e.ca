@@ -6,7 +6,6 @@ package run
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -49,15 +48,15 @@ func (g recoveryGenerator) Generate(ctx context.Context, _ modelapi.Request, emi
 	return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 10, Output: 3}})
 }
 
-func TestRecoveryContextPreservesCheckpointWithoutDraftReplay(t *testing.T) {
+func TestRecoveryContextPreservesCheckpointObservations(t *testing.T) {
 	g := &generator{replies: []string{"Inspect current state before continuing"}}
 	r := fixture(g, &executor{}, &journal{})
-	r.PreviousRun = &runrecord.Checkpoint{ID: "previous", Objective: "repair parser; preserve parser cancellation", Status: runrecord.Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed", Arguments: map[string]json.RawMessage{"content": json.RawMessage(`"UNEXECUTED_DRAFT"`)}}
+	r.PreviousRun = &runrecord.Checkpoint{ID: "previous", Objective: "repair parser; preserve parser cancellation", Status: runrecord.Interrupted, Phase: "execution", InstructionsDigest: strings.Repeat("0", 64), Observation: "parser-check failed"}
 	if _, err := r.Run(context.Background(), "continue", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	last := fmt.Sprint(g.requests[0].Messages)
-	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "preserve parser cancellation") || strings.Contains(last, "UNEXECUTED_DRAFT") {
+	if !strings.Contains(last, "repair parser") || !strings.Contains(last, "parser-check") || !strings.Contains(last, "preserve parser cancellation") {
 		t.Fatalf("unsafe recovery context: %s", last)
 	}
 }
@@ -106,5 +105,21 @@ func TestRecoveryRespectsCallBudget(t *testing.T) {
 	_, err := r.Run(context.Background(), "hello", approve, emit)
 	if err == nil || !strings.Contains(err.Error(), "budget exhausted before provider retry") {
 		t.Fatalf("budget error=%v", err)
+	}
+}
+
+func TestRecoveryMalformedToolReplyRecordsFailure(t *testing.T) {
+	r := fixture(&generator{}, &executor{}, &journal{})
+	calls := 0
+	r.Generator = statisticsModel(func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+		calls++
+		if calls == 1 {
+			return &modelapi.ToolCallError{Detail: "invalid generated arguments"}
+		}
+		return emit(modelapi.Event{Delta: "Need corrected arguments.", Done: true})
+	})
+	result, err := r.Run(context.Background(), "Create a", approve, emit)
+	if err != nil || !result.HadToolFailure || result.Text != "Need corrected arguments." || calls != 2 {
+		t.Fatalf("result=%+v calls=%d err=%v", result, calls, err)
 	}
 }

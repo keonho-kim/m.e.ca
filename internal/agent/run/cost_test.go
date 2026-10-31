@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/inference"
 	"math"
 	"testing"
 	"time"
@@ -76,8 +77,8 @@ func TestCostCompactionUsesSameAccounting(t *testing.T) {
 	})
 	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
 	s.usage.begin(s.limits)
-	for _, account := range []bool{true, false} {
-		if err := s.generate(context.Background(), modelapi.Request{}, account, func(modelapi.Event) error { return nil }); err != nil {
+	for _, role := range []inference.Role{inference.Agent, inference.Compaction} {
+		if err := s.generate(context.Background(), modelapi.Request{}, role, func(modelapi.Event) error { return nil }); err != nil {
 			t.Fatal(err)
 		}
 	}

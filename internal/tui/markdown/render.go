@@ -5,19 +5,17 @@
 package markdown
 
 import (
-	"fmt"
-	"github.com/rivo/uniseg"
 	"github.com/yuin/goldmark/v2/ast"
-	"github.com/yuin/goldmark/v2/extension"
 	extast "github.com/yuin/goldmark/v2/extension/ast"
 	"strings"
 )
 
 type renderer struct {
-	source []byte
-	rows   []Line
-	width  int
-	failed bool
+	source       []byte
+	rows         []Line
+	width        int
+	failed       bool
+	listProgress *listProgress
 }
 
 // MaxParseBytes bounds AST construction, not accepted or displayed source text.
@@ -97,39 +95,7 @@ func (r *renderer) block(n ast.Node, indent string, depth int) {
 		r.emit(indent, r.inline(n, 0, 0))
 		r.blank()
 	case *ast.List:
-		index := v.Start
-		for item := v.FirstChild(); item != nil; item = item.NextSibling() {
-			marker := "• "
-			if v.IsOrdered() {
-				marker = fmt.Sprintf("%d. ", index)
-				index++
-			}
-			if status, ok := extension.TaskStatusOf(item); ok {
-				marker = "[ ] "
-				if status == extension.TaskStatusCompleted {
-					marker = "[x] "
-				}
-			}
-			start := len(r.rows)
-			continuation := indent + strings.Repeat(" ", uniseg.StringWidth(marker))
-			r.blocks(item, continuation, depth+1)
-			if len(r.rows) > start {
-				first := r.rows[start]
-				prefix := indent + marker
-				// Replace only the structural indentation; keep content span styles.
-				spans := first.Spans
-				if len(spans) > 0 && strings.HasPrefix(spans[0].Text, continuation) {
-					spans[0].Text = strings.TrimPrefix(spans[0].Text, continuation)
-				}
-				r.rows[start] = line(append([]Span{{Text: prefix, Style: Dim}}, spans...))
-			}
-			if v.IsTight {
-				for len(r.rows) > start && r.rows[len(r.rows)-1].Text == "" {
-					r.rows = r.rows[:len(r.rows)-1]
-				}
-			}
-		}
-		r.blank()
+		r.list(v, indent, depth)
 	case *ast.Blockquote:
 		r.blocks(v, indent+"│ ", depth+1)
 		r.blank()

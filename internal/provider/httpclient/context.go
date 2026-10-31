@@ -5,9 +5,7 @@
 package httpclient
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -40,24 +38,23 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if controls.ReasoningEffort != "" {
 		kwargs["reasoning_effort"] = controls.ReasoningEffort
 	}
-	body, err := json.Marshal(struct {
-		Tools      []protocol.Tool    `json:"tools,omitempty"`
-		Model      string             `json:"model"`
-		Messages   []protocol.Message `json:"messages"`
-		Template   map[string]any     `json:"chat_template_kwargs"`
-		Generation bool               `json:"add_generation_prompt"`
-	}{protocol.Tools(definitions), model, messages, kwargs, true})
+	body, err := protocol.TokenizerBody(messages, struct {
+		Tools      []protocol.Tool `json:"tools,omitempty"`
+		Model      string          `json:"model"`
+		Template   map[string]any  `json:"chat_template_kwargs"`
+		Generation bool            `json:"add_generation_prompt"`
+	}{protocol.Tools(definitions), model, kwargs, true})
 	if err != nil {
 		return 0, err
 	}
-	if len(body) > modelapi.MaxResponseBytes {
+	if body.Len() > modelapi.MaxResponseBytes {
 		return 0, fmt.Errorf("tokenizer request exceeds context size limit")
 	}
 	var count struct {
 		Count *int `json:"count"`
 		Limit int  `json:"max_model_len"`
 	}
-	if err := transport.ReadMetadata(ctx, c.transport, http.MethodPost, strings.TrimSuffix(c.connection.APIBase(), "/v1")+"/tokenize", bytes.NewReader(body), 16*1024*1024, &count); err != nil {
+	if err := transport.ReadMetadata(ctx, c.transport, http.MethodPost, strings.TrimSuffix(c.connection.APIBase(), "/v1")+"/tokenize", body.Reader(), 16*1024*1024, &count); err != nil {
 		return 0, fmt.Errorf("model context tokenization: %w", err)
 	}
 	if count.Count == nil || *count.Count < 0 || count.Limit <= 0 || count.Limit > 1<<40 {

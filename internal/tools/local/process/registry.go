@@ -7,6 +7,7 @@ package process
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -20,11 +21,14 @@ const (
 )
 
 type Registry struct {
-	mu    sync.Mutex
-	owner context.Context
-	stop  context.CancelFunc
-	jobs  map[string]*job
-	Save  func(string, Output, error) error
+	CaptureDirectory string
+	mu               sync.Mutex
+	captureMu        sync.Mutex
+	owner            context.Context
+	stop             context.CancelFunc
+	jobs             map[string]*job
+	updates          chan struct{}
+	Save             func(string, Output, error) error
 }
 
 type job struct {
@@ -37,10 +41,19 @@ type job struct {
 	stdout, stderr cappedOutput
 }
 
+// Process waiting stays concurrent; only materialization and archival share a lock.
+type startedCommand struct {
+	wait   func() error
+	output func(error) (Output, error)
+}
+
 func (r *Registry) Begin(ctx context.Context, deadline time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.owner, r.stop = context.WithDeadline(ctx, deadline)
+	if r.updates == nil {
+		r.updates = make(chan struct{}, 1)
+	}
 }
 
 func (r *Registry) Start(ctx context.Context, directory, command string, environment []string, callID string) (string, error) {
@@ -67,7 +80,8 @@ func (r *Registry) Start(ctx context.Context, directory, command string, environ
 	child, cancel := context.WithCancel(owner)
 	id := "cmd_" + rand.Text()
 	j := &job{state: State{ID: id, CallID: callID, Command: command, Directory: directory, Status: "running"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
-	wait, err := start(child, directory, command, environment, &j.stdout, &j.stderr)
+	j.stdout.directory, j.stderr.directory = r.CaptureDirectory, r.CaptureDirectory
+	pending, err := start(child, directory, command, environment, &j.stdout, &j.stderr)
 	if err != nil {
 		cancel()
 		return "", err
@@ -78,15 +92,20 @@ func (r *Registry) Start(ctx context.Context, directory, command string, environ
 	r.jobs[id] = j
 	save := r.Save
 	go func() {
-		defer close(j.done)
+		defer func() {
+			close(j.done)
+			r.notify()
+		}()
 		defer cancel()
-		output, runErr := wait()
+		runErr := pending.wait()
+		r.captureMu.Lock()
+		output, runErr := pending.output(runErr)
 		var saveErr error
 		if save != nil {
 			saveErr = save(id, output, runErr)
 		}
-		j.stdout.release()
-		j.stderr.release()
+		saveErr = errors.Join(saveErr, j.stdout.release(), j.stderr.release())
+		r.captureMu.Unlock()
 		j.mu.Lock()
 		j.finished = time.Now()
 		j.state.Status, j.state.ExitCode = output.Status, output.ExitCode
@@ -96,6 +115,25 @@ func (r *Registry) Start(ctx context.Context, directory, command string, environ
 		j.mu.Unlock()
 	}()
 	return id, nil
+}
+
+// Updates is a latest-state notification, not a queue of output bytes.
+func (r *Registry) Updates() <-chan struct{} {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.updates == nil {
+		r.updates = make(chan struct{}, 1)
+	}
+	return r.updates
+}
+
+func (r *Registry) notify() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	select {
+	case r.updates <- struct{}{}:
+	default:
+	}
 }
 
 func (r *Registry) lookup(id string) (*job, error) {

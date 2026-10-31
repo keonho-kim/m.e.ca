@@ -16,7 +16,7 @@ import (
 
 func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = lang
 		a.screen.SetSize(80, 24)
 		a.worker = workerAgent
@@ -42,7 +42,7 @@ func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 
 func TestKeymapLayoutClearAndPreviewLabels(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = lang
 		a.openModel()
 		a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true

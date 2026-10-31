@@ -32,6 +32,9 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 		return errors.Join(errRuntimeRecord, err)
 	}
 	s.messages = append(s.messages, m)
+	if s.latMemory != nil && m.Role == "user" {
+		s.latMemory.dirty = true
+	}
 	return nil
 }
 

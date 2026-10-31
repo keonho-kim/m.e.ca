@@ -14,7 +14,7 @@ import (
 )
 
 func TestFileRowsPlainNamesAndDirectoryUnderline(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.browser.Open(".", []fileview.Entry{{Name: "src", Directory: true}, {Name: "server.go"}, {Name: "문서", Directory: true}, {Name: "설명.md"}}, false)
 	a.browser.Selected["src/"] = true

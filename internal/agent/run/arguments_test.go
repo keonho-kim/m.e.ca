@@ -1,6 +1,6 @@
 // Purpose: Verify complete native arguments are corrected through paired results before any preparation.
 // Pattern: Runtime trust-boundary tests.
-// Usage: go test ./internal/agent/run -run 'TestNativeArgument|TestGreeting'.
+// Usage: go test ./internal/agent/run -run TestNativeArgument.
 // Related: internal/agent/run/action.go, internal/agent/run/tool_reply.go, internal/agent/tool/arguments.go.
 package run
 
@@ -30,39 +30,22 @@ func TestNativeArgumentCorrectionReturnsPairedFailure(t *testing.T) {
 }
 
 func TestNativeArgumentFailureNeverPreparesATool(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file"}), "Need the file content", "Need the file content"}}
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file"}), "Need the file content"}}
 	e, j := &executor{}, &journal{}
 	result, err := fixture(g, e, j).Run(context.Background(), "Create file", approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != runrecord.Answered || !result.HadToolFailure {
+	if err != nil || e.prepared != 0 || len(g.requests) != 2 || result.Status != runrecord.Answered || !result.HadToolFailure {
 		t.Fatalf("result=%+v prepared=%d err=%v", result, e.prepared, err)
 	}
 }
 
-func TestGreetingDoesNotRequireATool(t *testing.T) {
-	g, e, j := &generator{replies: []string{"Hello"}}, &executor{}, &journal{}
-	result, err := fixture(g, e, j).Run(context.Background(), "Hello", approve, emit)
-	if err != nil || result.Status != runrecord.Answered || e.prepared != 0 {
-		t.Fatalf("result=%+v err=%v", result, err)
-	}
-}
-
-func TestLongConversationAnswer(t *testing.T) {
-	answer := strings.Repeat("Detailed answer. ", 2048) + "End."
-	g := &generator{replies: []string{answer}}
-	result, err := fixture(g, &executor{}, &journal{}).Run(context.Background(), "Explain in detail", approve, emit)
-	if err != nil || result.Status != runrecord.Answered || result.Text != answer {
-		t.Fatalf("long answer bytes=%d status=%s: %v", len(result.Text), result.Status, err)
-	}
-}
-
 func TestNativeArgumentsHonorConfiguredBudget(t *testing.T) {
-	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": strings.Repeat("x", 2000)}), "Need a smaller change", "Need a smaller change"}}
+	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": strings.Repeat("x", 2000)}), "Need a smaller change"}}
 	e := &executor{}
 	r := fixture(g, e, &journal{})
 	r.Limits = DefaultLimits()
 	r.Limits.MaxArgumentBytes = 1024
 	result, err := r.Run(context.Background(), "create a", approve, emit)
-	if err != nil || e.prepared != 0 || result.Status != runrecord.Answered || !result.HadToolFailure {
+	if err != nil || e.prepared != 0 || len(g.requests) != 2 || result.Status != runrecord.Answered || !result.HadToolFailure {
 		t.Fatalf("prepared=%d result=%+v: %v", e.prepared, result, err)
 	}
 }

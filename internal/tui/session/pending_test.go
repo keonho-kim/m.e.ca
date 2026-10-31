@@ -15,7 +15,7 @@ import (
 )
 
 func TestPendingAcceptsManyRequests(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	var requests []string
 	for i := range 1024 {
@@ -26,9 +26,9 @@ func TestPendingAcceptsManyRequests(t *testing.T) {
 		if a.editor.String() != "" || !a.worker.agent() {
 			t.Fatalf("request %d was not reserved", i)
 		}
-		if keymapLabels(t, a)["Tab"] != "후속 예약" {
-			t.Fatal("Tab hint disappeared while requests were queued")
-		}
+	}
+	if keymapLabels(t, a)["Tab"] != "후속 예약" {
+		t.Fatal("Tab hint disappeared while requests were queued")
 	}
 	a.restorePending()
 	if a.editor.String() != strings.Join(requests, "\n\n") {
@@ -37,7 +37,7 @@ func TestPendingAcceptsManyRequests(t *testing.T) {
 }
 
 func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.editor.Set("next request")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
@@ -60,7 +60,7 @@ func TestPendingInputPreservesOrderAndDraft(t *testing.T) {
 }
 
 func TestPendingRejectsLocalCommands(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.editor.Set("!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
@@ -70,7 +70,7 @@ func TestPendingRejectsLocalCommands(t *testing.T) {
 }
 
 func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("next request", "later request")
 	a.editor.Set("unsent draft")
@@ -81,7 +81,7 @@ func TestPendingFailureRestoresDraftWithoutStarting(t *testing.T) {
 }
 
 func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("next request", "later request")
 	a.receive(notice{Done: true, RunStatus: runrecord.Stopped})
@@ -91,7 +91,7 @@ func TestBlockedCompletionRestoresReservedInput(t *testing.T) {
 }
 
 func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.queued.Messages = queuedRequests("first", "second", "third")
 	retained := a.queued.Messages
 	a.editor.Set("unsent draft")
@@ -108,7 +108,7 @@ func TestPendingDispatchFailureRestoresWholeQueue(t *testing.T) {
 
 func TestPendingProjectionShowsCountAndEveryRequest(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = language
 		a.queued.Messages = queuedRequests("first", "second", "third")
 		transcript := a.chatLayout(80)

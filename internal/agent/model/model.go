@@ -15,6 +15,7 @@ import (
 const MaxResponseBytes = 256 * 1024 * 1024
 
 type Message struct {
+	native *nativeIdentity
 	Images []media.Image `json:"images,omitempty"`
 	// ReasoningState is opaque continuation data owned by the source provider and model.
 	ReasoningState  []byte         `json:"reasoning_state,omitempty"`
@@ -56,6 +57,8 @@ type ToolCallError struct{ Detail string }
 func (e *ToolCallError) Error() string { return "invalid tool call: " + e.Detail }
 
 type Event struct {
+	// InputBytes is transient text-request size from the transport, never token usage.
+	InputBytes     int64
 	ReasoningState []byte
 	Retry          *Retry
 	Delta          string
@@ -72,6 +75,8 @@ type Retry struct {
 	Reason               string
 }
 
+// Generator invokes emit serially and joins all callbacks before returning.
+// An emit error stops the attempt; callbacks never outlive Generate.
 type Generator interface {
 	Generate(context.Context, Request, func(Event) error) error
 }

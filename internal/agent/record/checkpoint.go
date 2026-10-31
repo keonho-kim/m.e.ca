@@ -5,7 +5,6 @@
 package record
 
 import (
-	"encoding/json"
 	"fmt"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -30,16 +29,15 @@ type Checkpoint struct {
 
 	ChangeRevision int `json:"change_revision"`
 
-	ID                 string                     `json:"id"`
-	Objective          string                     `json:"objective"`
-	Status             Status                     `json:"status"`
-	Phase              string                     `json:"phase"`
-	Iteration          int                        `json:"iteration"`
-	ModelCalls         int                        `json:"model_calls"`
-	InstructionsDigest string                     `json:"instructions_digest"`
-	Tool               string                     `json:"tool,omitempty"`
-	Arguments          map[string]json.RawMessage `json:"arguments,omitempty"`
-	Observation        string                     `json:"observation,omitempty"`
+	ID                 string `json:"id"`
+	Objective          string `json:"objective"`
+	Status             Status `json:"status"`
+	Phase              string `json:"phase"`
+	Iteration          int    `json:"iteration"`
+	ModelCalls         int    `json:"model_calls"`
+	InstructionsDigest string `json:"instructions_digest"`
+	Tool               string `json:"tool,omitempty"`
+	Observation        string `json:"observation,omitempty"`
 }
 
 func (c Checkpoint) Check() error {
@@ -72,10 +70,6 @@ func (c Checkpoint) Check() error {
 	case "decision", "approval", "execution", "observation", "reporting", "finished":
 	default:
 		return fmt.Errorf("invalid execution phase")
-	}
-	body, err := json.Marshal(c.Arguments)
-	if err != nil || len(body) > toolapi.MaxArgumentsBytes {
-		return fmt.Errorf("invalid checkpoint arguments")
 	}
 	return nil
 }

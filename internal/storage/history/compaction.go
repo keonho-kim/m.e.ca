@@ -67,6 +67,8 @@ func Compaction(page []Record) ([]compact.Record, error) {
 						text += "\nOutput: " + output
 					}
 				}
+			} else if event.Kind == "lat_feedback" {
+				role, text = "review_observation", event.Text
 			} else if event.Kind == "tool_failed" || event.Kind == "denied" || event.Kind == "tool_interrupted" {
 				role, text = "failure", event.Text
 			} else if cp := event.Checkpoint; cp != nil && (cp.Status == "stopped" || cp.Status == "interrupted") {

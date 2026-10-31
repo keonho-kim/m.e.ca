@@ -47,7 +47,7 @@ API 근거: [vLLM reasoning](https://docs.vllm.ai/en/stable/features/reasoning_o
 
 ## OpenRouter 실제 비용
 
-OpenRouter 응답의 usage.cost를 USD 비용으로 수집한다. 스트리밍에서는 마지막 SSE usage, 비스트리밍에서는 전체 응답의 usage를 사용한다. 0과 미제공을 구분하고 음수·유한하지 않은 금액은 거절한다. 다른 Provider가 같은 이름의 필드를 보내더라도 비용으로 수집하지 않는다. 호출 중에는 최신 스냅샷으로 교체하고 종료·재시도·취소 경계에서 마지막 보고값을 한 번 저장한다. 상단 세션 합계와 작업 종료 합계는 재시도·압축의 수신 비용을 포함하고 진단을 제외한다. 미제공 비용을 단가로 계산하거나 generation API로 보충하지 않는다. [OpenRouter Usage Accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting), [화면 표시](usage.md#화면과-사용량).
+OpenRouter 응답의 usage.cost를 USD 비용으로 수집한다. 스트리밍에서는 마지막 SSE usage, 비스트리밍에서는 전체 응답의 usage를 사용한다. 0과 미제공을 구분하고 음수·유한하지 않은 금액은 거절한다. 다른 Provider가 같은 이름의 필드를 보내더라도 비용으로 수집하지 않는다. 호출 중에는 최신 스냅샷으로 교체하고 종료·재시도·취소 경계에서 마지막 보고값을 한 번 저장한다. 상단 세션 합계와 작업 종료 합계는 재시도·대화 압축·활성 LAT 검토·LAT 메모 압축의 수신 비용을 포함하고 연결 진단을 제외한다. 미제공 비용을 단가로 계산하거나 generation API로 보충하지 않는다. [OpenRouter Usage Accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting), [화면 표시](usage.md#화면과-사용량).
 
 ## 연결 진단
 

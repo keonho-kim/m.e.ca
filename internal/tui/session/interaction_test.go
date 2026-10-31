@@ -11,7 +11,7 @@ import (
 
 func TestHistoryModifiers(t *testing.T) {
 	for _, modifier := range []tcell.ModMask{tcell.ModCtrl, tcell.ModMeta} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.inputs, a.historyIndex = []string{"old"}, 1
 		a.editor.Set("abc\ndef")
 		a.keyEvent(tcell.NewEventKey(tcell.KeyUp, "", 0))
@@ -30,7 +30,7 @@ func TestHistoryModifiers(t *testing.T) {
 }
 
 func TestCandidateEscapeLeavesTaskRunning(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	cancelled := false
 	a.taskCancel = func() { cancelled = true }
@@ -46,7 +46,7 @@ func TestCandidateEscapeLeavesTaskRunning(t *testing.T) {
 }
 
 func TestReleasedKeyDoesNotEdit(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "x", 0, false, 0, 1))
 	if a.editor.String() != "" {
 		t.Fatal("key release inserted text")

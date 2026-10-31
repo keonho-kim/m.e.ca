@@ -14,7 +14,7 @@ import (
 )
 
 func TestIdentityInfoMenuAndScroll(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.selection.Model = "models/bin/modelX"
 	report := &identity.Report{Routed: true}
 	report.Add("/model/info", "original", "Qwen/Qwen3.8-27B")
@@ -45,7 +45,7 @@ func TestIdentityInfoMenuAndScroll(t *testing.T) {
 func TestIdentityNameBesideServingAlias(t *testing.T) {
 	for _, alias := range []string{"team-coder", "코딩-모델"} {
 		t.Run(alias, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.selection.Model = alias
 			report := &identity.Report{}
 			report.Add("server", "original", "/cache/models--Qwen--Qwen3.8-27B/snapshots/abc")
@@ -71,7 +71,7 @@ func TestIdentityNameBesideServingAlias(t *testing.T) {
 
 func TestIdentityNameDoesNotClaimAmbiguousOrMissingOrigin(t *testing.T) {
 	for _, report := range []*identity.Report{nil, {Routed: true}, {Incomplete: true}, {Unavailable: true}, {Facts: []identity.Fact{{Source: "server", Field: "family", Value: "qwen3"}}}} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.selection.Model = "team-coder"
 		a.selection.Identity = report
 		a.openModel()

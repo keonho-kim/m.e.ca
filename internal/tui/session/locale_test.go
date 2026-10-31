@@ -13,7 +13,7 @@ import (
 
 func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = lang
 		a.selection.Model = "chosen-model"
 		a.render()
@@ -25,7 +25,7 @@ func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 }
 
 func TestLocalizedLabelsPreserveLiteralModelAndDraft(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.Korean
 	a.selection.Model = "allow-all"
 	a.editor.Set("Thinking ON / OFF allow-all")
@@ -51,7 +51,7 @@ func TestLocalizedCommandSearch(t *testing.T) {
 		{locale.Korean, "!파일", "!dir"},
 		{locale.English, "!browse", "!dir"},
 	} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = test.lang
 		a.editor.Set(test.query)
 		a.refreshHints()

@@ -18,7 +18,7 @@ import (
 func TestAppliedDiffColors(t *testing.T) {
 	for _, name := range []string{"edit_file", "write_file"} {
 		for _, restored := range []bool{false, true} {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.screen.SetSize(44, 60)
 			event := runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: name, Arguments: []byte(`{"path":"a"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1,2 +1,2 @@\n context\n-" + strings.Repeat("old ", 24) + "\n+" + strings.Repeat("new ", 24) + "\n"}
 			if restored {
@@ -85,7 +85,7 @@ func assertDiffRows(t *testing.T, a *app) {
 }
 
 func TestAppliedDiffDoesNotColorPlainToolOutput(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.receiveRuntime(&runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command"}, Output: []byte(`{"Stdout":"-   1 | old\n+   1 | new\n","ExitCode":0}`)})
 	a.render()
 	assertForegroundOnly(t, a.screen)

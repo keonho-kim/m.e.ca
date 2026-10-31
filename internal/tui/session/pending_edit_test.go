@@ -21,7 +21,7 @@ func pendingArrow(a *app, key tcell.Key) {
 }
 
 func TestPendingEditNavigationPreservesDraft(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("first", "second", "third")
 	a.editor.Set("unsent draft")
@@ -46,7 +46,7 @@ func TestPendingEditNavigationPreservesDraft(t *testing.T) {
 func TestPendingEditSavePreservesPosition(t *testing.T) {
 	for name, key := range map[string]tcell.Key{"enter": tcell.KeyEnter, "tab": tcell.KeyTab} {
 		t.Run(name, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.worker = workerAgent
 			a.steering = make(chan composer.Request, 1)
 			a.queued.Messages = queuedRequests("first", "second", "third")
@@ -75,7 +75,7 @@ func TestPendingEditCancelAndDelete(t *testing.T) {
 		tcell.NewEventKey(tcell.KeyBackspace, "", tcell.ModCtrl),
 		tcell.NewEventKey(tcell.KeyBackspace2, "", tcell.ModMeta),
 	} {
-		a := fixture(t)
+		a := screenFixture(t)
 		ctx, cancel := context.WithCancel(a.ctx)
 		t.Cleanup(cancel)
 		a.worker, a.taskCancel = workerAgent, cancel
@@ -101,7 +101,7 @@ func TestPendingEditCancelAndDelete(t *testing.T) {
 }
 
 func TestPendingEditRequiresSaveBeforeNavigation(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.queued.Messages = queuedRequests("first", "second")
 	a.worker = workerAgent
 	pendingArrow(a, tcell.KeyLeft)
@@ -118,7 +118,7 @@ func TestPendingEditRequiresSaveBeforeNavigation(t *testing.T) {
 }
 
 func TestPendingEditPasteAndCommandsStayLiteral(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.queued.Messages = queuedRequests("queued")
 	a.editor.Set("!model")
@@ -148,7 +148,7 @@ func TestPendingEditPasteAndCommandsStayLiteral(t *testing.T) {
 
 func TestPendingEditKeymapAndNotice(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language, a.worker = language, workerAgent
 		a.queued.Messages = queuedRequests("first", "second", "third")
 		if labels := keymapLabels(t, a); labels["Shift+↑/←"] != language.Text("Edit queue") || labels["Ctrl/Cmd+Backspace"] != "" {

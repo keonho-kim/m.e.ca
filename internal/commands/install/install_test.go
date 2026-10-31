@@ -91,7 +91,7 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 	if !strings.Contains(string(body), "# >>> meca PATH >>>") {
 		t.Fatalf("MECA shell registration missing: %s", body)
 	}
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 		if _, err := os.Stat(filepath.Join(o.Home, ".meca/prompts", name)); err != nil {
 			t.Fatal(err)
 		}
@@ -126,7 +126,7 @@ func TestReinstallRefreshesEditedPromptsAndPreservesConfig(t *testing.T) {
 	if _, err := Install(ctx, o); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 		if err := os.WriteFile(filepath.Join(o.Home, ".meca/prompts", name), []byte("Custom prompt"), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -139,7 +139,7 @@ func TestReinstallRefreshesEditedPromptsAndPreservesConfig(t *testing.T) {
 	if _, err := Install(ctx, o); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 		body, err := os.ReadFile(filepath.Join(o.Home, ".meca/prompts", name))
 		if err != nil || string(body) == "Custom prompt" {
 			t.Fatalf("reinstall did not refresh %s: %v", name, err)

@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	rate := 5.0
 	update := func(kind string, input, output int64) {
 		a.receiveRuntime(&runrecord.Event{Kind: kind, Usage: &modelapi.TokenUsage{Input: input, Output: output}, TokensPerSecond: &rate})
@@ -34,7 +34,7 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	}
 }
 func TestGenerationCompactionDisplayStops(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	defer a.stopCompression()
 	a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
 	if !a.activity().Compressing {

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/rivo/uniseg"
 )
 
@@ -38,12 +39,8 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		}
 	}
 	text := "\n  " + f.Language.Text(event.Call.Name) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
-	var args struct {
-		Path, Command string
-		CommandID     string "json:\"command_id\""
-		Paths         []string
-	}
-	if json.Unmarshal(event.Call.Arguments, &args) == nil {
+	args, argsErr := tool.DisplayArgs(event.Call.Arguments)
+	if argsErr == nil {
 		target := args.Path
 		if args.CommandID != "" {
 			target = args.CommandID

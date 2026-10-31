@@ -110,62 +110,6 @@ func (e *executor) Execute(context.Context, bool) (toolapi.Result, error) {
 	return toolapi.Result{Started: true, Content: json.RawMessage(`{"ok":true}`), Summary: "ok", Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}}, nil
 }
 
-type journal struct {
-	failKind string
-	messages []modelapi.Message
-	events   []runrecord.Event
-}
-
-func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int, _ bool) ([]modelapi.Message, error) {
-	if after != 0 {
-		return nil, fmt.Errorf("test journal does not support compaction")
-	}
-	bytes := 0
-	for _, m := range j.messages {
-		bytes += len(m.Content) + len(m.Calls)
-	}
-	if bytes > maxBytes {
-		return nil, fmt.Errorf("conversation limit exceeded")
-	}
-	return append([]modelapi.Message(nil), j.messages...), nil
-}
-func (j *journal) AppendMessage(_ context.Context, _ string, m modelapi.Message) error {
-	j.messages = append(j.messages, m)
-	return nil
-}
-func (j *journal) RecordEvent(_ context.Context, _ string, e runrecord.Event) error {
-	if j.failKind != "" && e.Kind == j.failKind {
-		return fmt.Errorf("simulated journal failure")
-	}
-	body, err := json.Marshal(e)
-	if err != nil {
-		return err
-	}
-	var copy runrecord.Event
-	if err = json.Unmarshal(body, &copy); err != nil {
-		return err
-	}
-	j.events = append(j.events, copy)
-	return nil
-}
-func (j *journal) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
-	copy := &journal{failKind: j.failKind, messages: append([]modelapi.Message(nil), j.messages...), events: append([]runrecord.Event(nil), j.events...)}
-	for _, r := range records {
-		if r.Message != nil {
-			if err := copy.AppendMessage(ctx, session, *r.Message); err != nil {
-				return err
-			}
-		}
-		if r.Event != nil {
-			if err := copy.RecordEvent(ctx, session, *r.Event); err != nil {
-				return err
-			}
-		}
-	}
-	j.messages, j.events = copy.messages, copy.events
-	return nil
-}
-
 func fixture(g *generator, e *executor, j *journal) Runner {
 	return Runner{Generator: g, Tools: e, Journal: j, Session: "s", Model: "m", ProjectInstructions: "Use focused tests. Scope cannot be bypassed.", Settings: policy.Settings{Scope: policy.Directory}, Redact: func(s string) string { return s }}
 }
@@ -205,7 +149,7 @@ func TestIncompleteArgumentsNeverPrepareOrExecute(t *testing.T) {
 			last = event.Checkpoint
 		}
 	}
-	if last == nil || last.Status != runrecord.Interrupted || len(last.Arguments) != 0 {
+	if last == nil || last.Status != runrecord.Interrupted || last.Tool != "" {
 		t.Fatalf("checkpoint: %+v", last)
 	}
 }

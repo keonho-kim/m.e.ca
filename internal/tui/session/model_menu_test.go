@@ -15,7 +15,7 @@ import (
 )
 
 func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
@@ -40,7 +40,7 @@ func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
 }
 
 func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
@@ -71,7 +71,7 @@ func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
 
 func TestModelThinkingUsesKnownDefaultAndStagesChanges(t *testing.T) {
 	for _, known := range []bool{false, true} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = locale.English
 		conn, err := connection.New(connection.Ollama, "")
 		if err != nil {

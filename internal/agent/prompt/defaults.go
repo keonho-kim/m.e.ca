@@ -22,15 +22,21 @@ var developmentDefault string
 //go:embed defaults/compaction.md
 var compactionDefault string
 
-type Templates struct{ System, Development, Compaction string }
+//go:embed defaults/lat.md
+var latDefault string
+
+//go:embed defaults/lat_compaction.md
+var latCompactionDefault string
+
+type Templates struct{ System, Development, Compaction, LAT, LATCompaction string }
 
 func Defaults() Templates {
-	return Templates{System: systemDefault, Development: developmentDefault, Compaction: compactionDefault}
+	return Templates{System: systemDefault, Development: developmentDefault, Compaction: compactionDefault, LAT: latDefault, LATCompaction: latCompactionDefault}
 }
 
 // Files exposes the fixed prompt fields for bootstrap publication and explicit loading.
 func (t *Templates) Files() map[string]*string {
-	return map[string]*string{"system.md": &t.System, "development.md": &t.Development, "compaction.md": &t.Compaction}
+	return map[string]*string{"system.md": &t.System, "development.md": &t.Development, "compaction.md": &t.Compaction, "lat.md": &t.LAT, "lat_compaction.md": &t.LATCompaction}
 }
 
 func CheckTemplate(text string) error {

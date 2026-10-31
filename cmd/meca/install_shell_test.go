@@ -21,15 +21,9 @@ import (
 )
 
 func TestInstallShellExecutable(t *testing.T) {
-	if testing.Short() {
-		t.Skip("builds and runs the installation executable")
-	}
+	binary := testExecutable(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	binary := filepath.Join(t.TempDir(), "meca")
-	if out, err := exec.CommandContext(ctx, "go", "build", "-o", binary, ".").CombinedOutput(); err != nil {
-		t.Fatalf("build: %s %v", out, err)
-	}
 	for _, tc := range []struct {
 		name                       string
 		terminal, disabled, inPath bool

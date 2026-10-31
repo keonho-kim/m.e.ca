@@ -16,7 +16,7 @@ func TestTranscriptScrollbarGap(t *testing.T) {
 	for _, width := range []int{80, 24} {
 		for _, markdown := range []bool{false, true} {
 			t.Run(fmt.Sprintf("width=%d/markdown=%t", width, markdown), func(t *testing.T) {
-				a := fixture(t)
+				a := screenFixture(t)
 				a.historyEnd = true
 				a.screen.SetSize(width, 24)
 				text := strings.Repeat("x", 4096)

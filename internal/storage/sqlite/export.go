@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"io"
 )
@@ -27,6 +28,22 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 			body, err := s.unpackRecord(ctx, stored, nil)
 			if err != nil {
 				return err
+			}
+			if stored.kind == "event" {
+				var event runrecord.Event
+				if err := json.Unmarshal(body, &event); err != nil {
+					return err
+				}
+				if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
+					full, err := s.runState(ctx, session, event.Checkpoint.ID)
+					if err != nil {
+						return err
+					}
+					body, err = json.Marshal(full)
+					if err != nil {
+						return err
+					}
+				}
 			}
 			if len(body) > recordcontent.MaxBytes || !json.Valid(body) {
 				return fmt.Errorf("invalid session export record")

@@ -40,6 +40,7 @@ func (a *app) startRequest(input composer.Request) {
 		Config: a.opts.Config, Selection: a.selection, Session: a.opts.Session,
 		Generator: a.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
 		LoadPrompts: a.opts.LoadPrompts,
+		LAT:         a.lat, LoadLAT: a.opts.LoadLAT,
 		PollSteering: func() []string {
 			var out []string
 			for {

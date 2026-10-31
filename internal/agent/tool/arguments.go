@@ -5,6 +5,7 @@
 package tool
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 )
 
 func argumentObject(body json.RawMessage) (map[string]json.RawMessage, error) {
-	decoder := json.NewDecoder(strings.NewReader(string(body)))
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
 		return nil, fmt.Errorf("arguments must be a JSON object")
 	}

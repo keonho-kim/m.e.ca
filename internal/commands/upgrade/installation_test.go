@@ -44,7 +44,7 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 		t.Fatal(err)
 	}
 	for pass := 0; pass < 2; pass++ {
-		for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+		for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 			if err := os.WriteFile(filepath.Join(home, ".meca/prompts", name), []byte("user edit"), 0600); err != nil {
 				t.Fatal(err)
 			}

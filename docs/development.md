@@ -13,6 +13,8 @@
 | agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·실측 통계 집계 |
 | agent/record | 실행 이벤트·체크포인트·상태·최종 통계·원자적 기록 단위와 검증 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
+| agent/lat | 독립 검토의 입력 조립·도구 없는 응답 수집·의견 해석 |
+| agent/lat/memory | 원본 자료 선택·독립 메모·백그라운드 요약 수명 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
@@ -54,6 +56,8 @@ TUI의 활성 worker는 idle·agent·agent stopping·setup·setup stopping 중 �
 TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문맥·압축 설정과 선택된 세션의 정규화한 프로젝트 경로를 사용한다. 요청의 Thinking 선택은 값으로 복사한다. 실제 자원 생성과 종료는 각 진입점, 지침 읽기와 요청 실행은 agent/session이 소유한다.
 
 외부 전송 판정은 AST 연결과 프로토콜 파서로 나누고 명령·파일·DNS·네트워크를 실행하지 않는 순수 함수로 유지한다. `UserRequired`는 일반 승인 필요 여부와 구분하며 All Mighty도 직접 승인을 생략하지 않는다. 승인 창·원본 재검사·배치 실행 전 승인·실제 승인 출처 기록을 공유한다. 정상 다운로드·직접 지정한 loopback HTTP·인용된 명령 본문은 별도로 확인하고, 임의 프로그램 내부 통신까지 제어한다고 설명하지 않는다.
+
+LAT의 활성화는 TUI 이벤트 루프, 요청 스냅샷은 commands/agentrequest, 한 번의 선택적 검토와 피드백 반영은 agent/run이 소유한다. agent/lat는 파일·DB·실행 도구를 직접 참조하지 않는다. 모델 요청은 기존 사용량·재시도·시간 예산 경계를 공유하지만 메인 이력 인코더와 압축 누적량을 공유하지 않는다. 검토의 실제 사용량은 기존 통계·세션 DB에 기록한다.
 
 실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. 영속 실행 기록은 agent/record가 정의하므로 저장 어댑터·이력·TUI 투영은 실행 루프 구현을 참조하지 않는다. storage/content는 SQL 없이 분리·복원하며 SQLite가 같은 트랜잭션의 쓰기 콜백과 조회 후 복원 콜백을 제공한다. 승인 전경은 파일 뷰어·전송 대기보다 먼저 입력을 처리하고 결정을 마치면 보류한 파일 화면·초안을 복원한다. TUI 하위 컴포넌트는 session을 역참조하지 않으며 상태 변경은 단일 이벤트 루프에서 수행한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
 
@@ -118,7 +122,7 @@ GoReleaser는 [.goreleaser.yaml](../.goreleaser.yaml)의 macOS·Linux 아카이�
 
 ## 변경 검증
 
-다음은 실행 지침이며 이 문서 편집 시의 통과 기록이 아니다. 작업 범위에 맞는 집중 검사 후 공유 계약 변경은 전체 검사로 넓힌다.
+작업 범위의 집중 검사를 먼저 실행하고 공유 계약이 바뀌면 전체 검사로 넓힌다. 동시성·취소·자원 수명 변경에는 레이스 검사를 포함한다.
 
 ```sh
 export GOFLAGS='-tags=godbus_no_tcp'
@@ -130,9 +134,9 @@ go build ./...
 go mod verify
 ```
 
-순수 상태·파서·승인·저장·Provider 변환은 작은 fixture와 httptest로 검증한다. 파일 검사는 t.TempDir, TUI는 저장소의 가상 터미널과 실제 키 입력을 사용한다. 모델 응답을 고정한 검사는 실제 모델의 완수율이나 추론 품질 검증과 구분한다.
+순수 상태·파서·승인·저장·Provider 변환은 작은 fixture와 httptest로 검증한다. 파일 검사는 t.TempDir, TUI는 가상 터미널과 실제 키 입력을 사용한다. 화면·입력·상태 검사는 `screenFixture`를 사용하고, 저장·복원·도구 실행 검사는 실제 세션 DB와 실행기를 준비하는 `fixture`를 사용한다. 화면 전용 fixture는 저장 이력을 모두 읽은 상태로 시작하며 DB·프롬프트·실행기를 생성하지 않는다. 모델 응답을 고정한 검사는 실제 모델의 완수율이나 추론 품질 검증과 구분한다.
 
-에이전트 실행·HTTP 생성·TUI 테스트는 패키지 종료 시 goleak으로 남은 고루틴을 검사한다. 구조체 복원과 대화 투영은 go-cmp로 필드 차이를 확인한다. PTY 통합 검사는 임시 HOME·프로젝트에서 실제 실행 파일을 시작해 터미널 크기 변경, Ctrl+C·!quit 종료, 터미널 설정 복원과 DB 잠금 해제를 확인한다. 설치 PTY 검사는 PATH가 필요한 대화형 설치만 동일 PID의 로그인 셸로 전환하는지, 전환 전에 설치 잠금이 풀리는지와 --no-shell·비대화형 동작을 확인한다. 소스 설치 검사는 오프라인 SDK fixture로 빌드·임시 SDK 정리·호출 환경 복원·설치 순서를 확인한다. PTY의 소유 프로세스가 종료 후 상태를 검사하고, 실패·시간 초과에는 해당 프로세스 그룹과 읽기 작업을 정리한다. `go test -short`에서는 실행 파일을 빌드하는 통합 검사를 생략한다.
+에이전트 실행·HTTP 생성·TUI 테스트는 패키지 종료 시 goleak으로 남은 고루틴을 검사한다. 구조체 복원과 대화 투영은 go-cmp로 필드 차이를 확인한다. cmd/meca의 통합 검사는 필요한 경우에만 패키지당 실행 파일 하나를 빌드하고 패키지 종료 시 제거한다. 각 실행은 별도 HOME·프로젝트·서버를 사용한다. PTY 검사는 실제 실행 파일을 시작해 터미널 크기 변경, Ctrl+C·!quit 종료, 터미널 설정 복원과 DB 잠금 해제를 확인한다. 설치 PTY 검사는 PATH가 필요한 대화형 설치만 동일 PID의 로그인 셸로 전환하는지, 전환 전에 설치 잠금이 풀리는지와 --no-shell·비대화형 동작을 확인한다. 소스 설치 검사는 오프라인 SDK fixture로 빌드·임시 SDK 정리·호출 환경 복원·설치 순서를 확인한다. PTY의 소유 프로세스가 종료 후 상태를 검사하고, 실패·시간 초과에는 해당 프로세스 그룹과 읽기 작업을 정리한다. `go test -short`에서는 실행 파일을 빌드하는 통합 검사를 생략한다.
 
 외부 전송 검사는 모의 실행 파일과 loopback HTTP만 사용한다. Default·All Mighty의 매 호출 직접 승인·거절·비대화형 승인 불가와 배치의 실행 전 중단·native 결과 짝·승인 출처를 확인한다. 실제 외부 업로드를 발생시키지 않는다. 확인 키는 소문자 n 무시·대문자 N 취소를 설정·파일 전송 화면에서 검증한다.
 
@@ -143,7 +147,7 @@ go test ./internal/commands/install -run TestSourceInstaller -v
 go test ./internal/tui/session -run TestFileWatch -v
 ```
 
-문서 변경은 실제 코드·기본값·링크·diff를 확인한다. 문서 검증은 변경된 설명과 참조 범위에 맞춰 수행한다. 코드의 헤더·주석·테스트는 해당 파일의 책임과 실제 동작을 설명하도록 유지한다.
+문서 변경은 실제 코드·기본값·로컬 링크·참조한 테스트와 벤치마크 이름을 대조한다. 코드의 헤더·주석·테스트는 해당 파일의 책임과 실제 동작을 설명하도록 유지한다.
 
 ## 플랫폼 실행 검증
 
@@ -185,13 +189,13 @@ MECA_TEST_SECRET_SERVICE=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/conf
 
 파일 변경 감시는 활성 디렉터리 하나에 연결한다. 플랫폼별 등록 I/O도 worker에서 수행하며 실행 1개·최신 대기 1개로 제한한다. 이벤트 루프가 감시 채널과 150ms 단발 타이머를 소비하고, 등록 직후와 알림 유실 시 재조회한다. 경로 전환·취소·화면 닫기에서 감시와 타이머를 정리하며 늦게 도착한 감시 객체도 닫는다. 갱신은 파일 읽기 슬롯을 사용하고 새 폴링 루프를 만들지 않는다.
 
-명령 실행기는 요청의 전체 마감 시각·취소 문맥을 한 번 바인딩하고 최대 4개 명령을 소유한다. 최초 30초 대기와 wait_command의 기본 180초 대기는 각각의 관측 창이며 프로세스 수명과 분리한다. Wait는 한 번만 실행하고, running 결과의 next와 미완료 명령 피드백은 공통 도구 관리 안내를 사용한다. TUI는 경과 시간 타이머에서 작은 메타데이터만 조회한다. 완료 출력은 정제한 실행기 소유 파일로 옮겨 메모리 버퍼를 해제하고 런타임 소유자가 SQLite 기록을 확정한 뒤 핸들을 제거한다. 활성 명령이 있는 모델 요청은 I/O worker의 이벤트를 소유자에게 동기 전달하고, 소유자는 완료 결과를 수집한다. 모든 worker·타이머는 종료 시 정리하며 기록 실패를 성공으로 처리하지 않는다.
+명령 실행기는 요청의 전체 마감 시각·취소 문맥을 한 번 바인딩하고 최대 4개 명령을 소유한다. 최초 30초 대기와 wait_command의 기본 180초 대기는 각각의 관측 창이며 프로세스 수명과 분리한다. Wait는 한 번만 실행하고, running 결과의 next와 미완료 명령 피드백은 공통 도구 관리 안내를 사용한다. TUI는 경과 시간 타이머에서 작은 메타데이터만 조회한다. stdout·stderr 각각 1MiB를 넘으면 앞·뒤 8MiB씩의 ring을 암호화한 임시 파일로 옮긴다. AES-GCM은 64KiB 블록마다 새로운 nonce를 사용하며 임시 키는 메모리에만 존재한다. 한 스트림은 한 개의 평문·암호문 블록을 보유한다. 명령 실행과 Wait는 병렬이고 최종 구체화·마스킹·보관만 직렬화한다. 완료 결과는 작은 발췌로 대기하며 CommandCapture로 기록할 원본 한 건을 읽고 SQLite 커밋 후 AcknowledgeCommand로 해제한다. 임시 캡처는 종료·오류·취소에서 닫고 제거하며 무결성·I/O 실패는 반환한다. 활성 명령이 있는 모델 요청은 I/O worker의 이벤트를 소유자에게 동기 전달하고, 소유자는 완료 결과를 수집한다. 모든 worker·타이머는 종료 시 정리하며 기록 실패를 성공으로 처리하지 않는다.
 
 OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다. 서명·종류·식별자 경계와 알 수 없는 필드를 보존하고 닫힌 블록만 유지하므로 완료 시 모든 조각을 다시 해석하지 않는다. 취소·실패한 요청의 미완성 블록은 후속 요청에 공개하지 않는다.
 
 Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio는 Responses 형식으로 직접 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
 
-하나의 요청 실행은 전용 Provider 인코더를 소유한다. 큰 텍스트 이력의 변하지 않은 메시지 JSON을 재사용하고 헤더·추론 설정·도구 선언은 매번 구성한다. 메시지 변경은 이후 접미사를 폐기하며 모델·Provider 변경이나 이력 축소는 전체 캐시를 해제한다. 캐시는 메시지별 보수적 부대비용을 포함해 약 64KiB부터 사용하고 보유 예산은 16MiB다. 작은 이력·이미지·예산 초과 이력은 캐시를 보유하지 않으며 입력 수용 한도는 유지한다. HTTP 본문은 불변 인코딩 조각을 읽고 정확한 Content-Length와 독립된 재읽기 커서를 제공해 재시도·리다이렉트를 보존한다. 실행 종료·실패·취소는 worker를 합류한 뒤 캐시 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 별도 요청으로 유지한다.
+하나의 요청 실행은 전용 Provider 인코더를 소유한다. 텍스트·이미지 이력은 Provider 변환 전에 불변 문자열·이미지 digest와 native 내용 지문을 비교해 메시지 JSON을 재사용한다. 컨텍스트 투영이 소유권을 인수한 native 인자·추론 상태는 한 번 지문을 만들고 읽기 전용으로 전달한다. 값·버퍼 교체는 지문을 무효화하며 소유권 계약이 없는 입력은 매번 내용 해시로 검사한다. 도구 결과와 뒤따르는 이미지 메시지는 하나의 그룹으로 재사용해 순서를 유지한다. 헤더·추론 설정·도구 선언은 매번 구성한다. 메시지 변경은 이후 접미사를 폐기하며 모델·Provider 변경이나 이력 축소는 전체 캐시를 해제한다. 캐시는 메시지별 보수적 부대비용을 포함해 약 64KiB부터 사용하고 보유 예산은 16MiB다. 작은 이력·예산 초과 이력은 캐시를 보유하지 않으며 입력 수용 한도는 유지한다. 이미지의 Base64와 native 인자의 인코딩 사본을 별도 캐시로 중복 보관하지 않고 최종 전송 조각을 재사용한다. HTTP 본문은 불변 인코딩 조각을 읽고 정확한 Content-Length와 독립된 재읽기 커서를 제공해 재시도·리다이렉트를 보존한다. 실행 종료·실패·취소는 worker를 합류한 뒤 캐시 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 동일 메시지 인코딩을 재사용하는 별도 요청으로 유지한다. 실제 usage가 없으면 전송 바이트를, 그 값도 없으면 이미지 본문을 제외한 텍스트 크기 근사를 압축용으로 사용한다. 이 계산을 위한 전체 요청 직렬화와 표시용 추정 토큰을 만들지 않는다.
 
 메시지·실행 이벤트·요약·대용량 레코드 참조의 저장 JSON은 go-json의 기본 Marshal·Unmarshal을 사용한다. 키 정렬·HTML 이스케이프·nil과 빈 값·64비트 숫자·native arguments의 내용·복원 값의 독립성을 검사한다. SHA-256 무결성·저장 형식·트랜잭션 경계는 storage/content와 SQLite의 소유권을 따른다. 반환 값이 입력 버퍼에 의존하는 무복사 옵션은 사용하지 않는다.
 
@@ -199,7 +203,7 @@ HTTP는 표준 net/http를 사용한다. 사용자 지정 DialContext에서도 T
 
 로컬 도구 카탈로그는 초기화 후 변경하지 않는 내부 정의 하나를 소유한다. 인자 검사는 이를 재사용하며 외부 Definitions 반환값은 중첩 Fields·Values까지 복사해 변경이 내부 검증으로 전파되지 않게 한다.
 
-응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 참조 정의 가능성이 있는 `]:` 포함 문서는 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남기며 현재 스트리밍은 증분 처리 수명 동안 보유한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
+응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 간격이 촘촘한 최상위 목록은 마지막 두 항목을 가변 구간으로 두고 앞선 항목도 재사용한다. 목록 간격·종류가 바뀌면 해당 목록 처음으로 되돌리며 번호 목록의 시작 번호를 보존한다. 줄 위치는 바뀐 접미사와 최대 256개 직전 행만 다시 계산하고 캐시 보유 비용은 렌더링 변경 시 갱신한다. 참조 정의 가능성이 있는 `]:` 포함 문서와 느슨한 목록은 필요한 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남긴다. 가시 구간의 완료 블록도 파싱 배열·span·파생 텍스트의 보수적 보유 비용이 16MiB를 넘으면 현재 창을 만든 뒤 캐시를 해제한다. 원문과 희소 인덱스는 보존하고 스크롤 시 필요한 파싱을 다시 수행한다. 현재 스트리밍은 증분 처리 수명 동안 보유해 매 delta의 전체 재파싱을 피한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
 
 Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다. 문법 설정은 공유하고 reader·문맥·AST는 호출마다 분리한다. 같은 스타일의 연속 inline 텍스트는 필요한 경우에만 builder로 합쳐 긴 문단의 반복 복사를 피하며 명시적 줄바꿈 조립에 임시 분할 배열을 만들지 않는다. 표의 열 너비는 내용과 구분자·들여쓰기 예산으로 계산하고 셀별 styled Rows를 조립하므로 표 전체를 하나의 긴 줄로 줄바꿈하지 않는다. 같은 폭의 증분 파싱과 완료 블록 재사용은 유지하며 폭 변경 시 이전 표 배치와 재사용 줄 수를 초기화한다. 희소 인덱스의 줄 수 계산과 가시 구간 출력은 같은 폭의 배치 결과를 사용한다. 좁은 폭에서는 헤더·값을 세로로 구성해 열 구분자만 남거나 내용이 옆 열을 침범하는 상황을 피한다.
 
@@ -207,71 +211,66 @@ Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다
 
 큰 JSON 값의 인코딩·복원과 무결성 검사는 storage/content가 소유하고 SQLite는 `payloads`에 해시·원본 길이·압축 형식·본문을 저장한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `record.Entry` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
+run_states는 실행별 최신 체크포인트 한 건을 갱신하며 32KiB 초과 구조화 상태를 같은 Codec으로 압축한다. 최종 이벤트는 작은 상태·통계만 두고 Export는 해당 실행의 전체 상태를 복원한다. LAT 피드백은 원본 이벤트에서 메인 지침·압축 관측을 구성하며 memory_text나 별도 메시지에 같은 본문을 중복 저장하지 않는다. Timeline은 TUI 전용 투영으로 표시할 종류를 먼저 선택하고 숨은 native 인자·continuation·이미지를 복원하지 않는다. 도구의 display_args는 표시할 경로·명령·ID만 저장하며 잘못된 표시 필드가 실패 기록 자체를 막지 않는다. 인자는 Sonic의 지역적인 무복사 탐색으로 선택하고 반환하는 문자열은 독립된 값으로 복사한다. 원본 ContextMessages·Export와 표시용 Timeline의 계약을 구분한다.
+
 압축 점유량 조회는 최근 실측 샘플·최신 요약 revision의 경계·이후 추가된 메시지 크기·현재 timeline을 한 SQL 문과 같은 읽기 스냅샷에서 계산한다. 원문 본문을 읽거나 추가 영속 카운터·캐시·인덱스를 만들지 않는다.
 
 컨텍스트 투영 캐시는 요청 실행이 소유하고 변경되지 않은 불변 메시지만 재사용한다. native 도구 결과 짝이 완성되거나 메시지·모델·비밀키 revision이 바뀌면 다시 투영한다. Compaction이 이력을 교체하면 캐시를 해제한다. 전체 미압축 대화와 Provider 전송 본문은 유지한다. 요청 인코딩 재사용은 별도 Provider 인코더가 담당하며 네트워크 전송량·모델 토큰 수를 줄이지 않는다.
 
 대화 선택은 디렉터리의 DB 파일이 식별 근거다. 최초 조회는 private 메모리 SQLite 연결 하나에 파일을 읽기 전용으로 하나씩 attach/detach하고 요약 배열 하나와 정렬 시각만 보유한다. 별도 레지스트리·sidecar·상시 worker를 만들지 않으며 정상·오류·취소 시 연결을 닫는다. 페이지 이동은 선택 화면이 소유하는 스냅샷을 사용한다. 전체 정렬을 위해 최초 조회는 파일 수에 비례한다.
 
+LAT 원본 자료·독립 메모·백그라운드 작업은 agent/lat/memory가 소유한다. 메인 메모·assistant 답변·Thinking·이전 검토 결론을 읽지 않으며, SQLite는 사용자 원문과 확정된 실행 결과를 표시용 이력과 별도로 조회한다. 메모 한 건의 revision·처리 경계를 CAS로 갱신하고 큰 본문은 기존 Codec으로 압축한다. 실패·취소·경쟁 게시가 이전 메모나 원본을 덮어쓰지 않도록 검사한다. 메모가 다루는 경계 이후의 원문 지시는 최종 검토에 유지하고, 현재 요청을 크기 비율로 자르지 않는다.
+
+요약 worker는 하나만 소유하며 새로운 기록을 복제한 대기열 대신 DB의 최신 경계를 읽어 합친다. 모델 이벤트는 worker에서 모으고 실제 usage·재시도별 receipt만 소유자에게 전달한다. 진행 usage는 최신 한 건으로 합치고 소비한 receipt 참조를 해제한다. 전경·백그라운드 모델 요청은 잠금으로 같은 호출 예산을 예약하고 전경 한 건의 여유를 남긴다. SQLite 게시·통계 변경·UI 전달은 런타임 소유자에서 수행한다. 새 사용자 지시·실제 결과가 기록되었을 때만 자료 크기를 조회하고 한 준비에서 같은 경계를 중복 집계하지 않는다. 처리 경계가 유지되는 동안 새로 추가된 원본만 크기에 더하고 새 메모 게시 후 경계를 다시 설정한다. 선택 단계부터 남은 입력 예산을 전달해 뒤쪽 원문을 불필요하게 복원하지 않는다. 큰 출력·diff는 전체 길이·SHA-256을 확인하며 발췌만 남기는 스트리밍 복원을 사용하고, 전체 JSON 복원은 별도 계약으로 유지한다. 생성기는 별도 요청 본문을 사용해 전경 인코더를 변경하지 않는다. 최종 검토는 원문이 모두 들어가면 압축을 취소·합류하고, 부족할 때만 대기하며 새 지시·취소를 확인한다. 모든 종료 경로에서 합류 후 마지막 실측값을 확정한다. 선택적인 요약은 다음 도구 실행을 시작할 때 우선 예약하고 전경 생성 중에는 새 요약을 시작하지 않는다. 이미 시작한 요약은 전경과 겹칠 수 있으므로 같은 서버의 추가 토큰·자원 경합은 별도 측정 대상이다.
+
+명령 완료는 실행기 알림으로 수집하고 스트림마다 상태를 조회하지 않는다. 알림 없는 실행기는 주기 조회를 사용한다. 모델 이벤트 확인 채널은 생성 요청 단위로 재사용하며 종료 직전에도 명령 결과를 확인한다.
+
+실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호가 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별로 동기화해 독립 명령의 I/O를 직렬화하지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
+
 ### 최적화 측정
 
-2026-10-31, Go 1.27.3·macOS arm64·Apple M1 Max에서 측정했다. 같은 부하의 비교 기준과 적용 구현을 각각 반복 실행한 중앙값이다. 줄 배치는 5회, 터미널과 첫 요청 인코딩은 6회, HTTP는 8회 반복했다.
+변경한 경로의 벤치마크를 같은 입력·환경에서 반복 실행하고 시간과 호출당 할당량을 비교한다. 아래 명령에서 해당 패키지와 이름을 골라 사용한다.
 
-| 측정 | 부하 | 비교 기준 | 적용 구현 | 감소율 |
-| --- | --- | --- | --- | --- |
-| 화면 갱신 준비 | 이력 1,000개·80셀 폭·30줄 조회 | 19.829µs | 2.681µs | 86.5% |
-| 평균 입력 표시 지연 | 프레임당 12ms 지연의 가상 터미널 | 30.54ms | 14.21ms | 53.5% |
-| 자동 그리기 시간 점유 | 같은 가상 터미널·타이핑 없음 | 43.95% | 27.57% | 37.3% |
-| 로컬 HTTP 요청 처리 | 고정된 8MiB 이력과 바뀌는 마지막 메시지 | 7.666ms | 1.504ms | 80.4% |
-
-같은 HTTP 부하의 요청당 힙 할당량은 약 23,093KiB에서 126KiB로 줄었다. 짧은 2KiB HTTP 요청과 새 인코더의 첫 8MiB 인코딩은 처리 시간에 통계적으로 유의미한 차이가 없었다. 자동 그리기 점유는 CPU 사용률이 아니며 할당량은 RSS가 아니다. 화면·요청 준비·로컬 전송의 측정값을 모델 추론 TPS·원격 응답 시간·전체 작업 완수율로 해석하지 않는다.
-
-캐시·비캐시 요청의 Provider별 JSON 값, native 호출·결과 순서, 변경·축소·모델 전환, 이미지·예산 초과, 본문 재읽기와 HTTP 재시도·리다이렉트, 완료·실패·취소 후 참조 해제를 검사했다. 전체 테스트, 관련 패키지 레이스 검사, go vet·Staticcheck·deadcode와 macOS·Linux의 amd64·arm64 교차 빌드를 수행했다. 네이티브 실행 확인은 macOS arm64의 도움말 호출이며 실제 Linux·WSL 터미널이나 실제 모델 추론의 성능 측정과 구분한다.
-
-### 재현과 추가 검사
-
-성능·수명 검사는 다음을 사용한다. 수치는 실행한 환경·입력·측정 종류를 함께 기록하고 힙 할당량을 RSS와 혼동하지 않는다. 요청 인코딩 벤치마크의 `cache=false`와 `cache=true`는 같은 부하의 비캐시·캐시 경로다. 새 인코더의 첫 요청은 ColdConversationEncoding으로 구분한다.
+| 경로 | 패키지 | 벤치마크 이름 |
+| --- | --- | --- |
+| 문맥 투영·사용량 대체 계산 | internal/agent/context · internal/agent/run | BenchmarkProjection · BenchmarkUsageFallback |
+| LAT 기준 미만 경로 | internal/agent/lat/memory | BenchmarkBelowThreshold |
+| 이력 줄 배치·입력 표시 | internal/tui/viewport · internal/tui/session | BenchmarkLiveTranscriptFrame · BenchmarkTerminalPacing · BenchmarkStreamDelivery |
+| Markdown·입력·셀 폭 | internal/tui/markdown · internal/tui/input · internal/tui/textlayout | BenchmarkStreamTail · BenchmarkParagraph · BenchmarkLongDraft · BenchmarkWidth |
+| 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkImageHistory |
+| Provider 변환·스트림 | internal/provider/protocol | BenchmarkProviderRequests · BenchmarkProviderStream · BenchmarkOpenRouterReasoningFragments · BenchmarkTextMessages · BenchmarkImageEncoding |
+| 로컬 HTTP 왕복 | internal/provider/httpclient | BenchmarkGenerationEncoding |
+| 도구 표시·diff·배치 준비 | internal/tui/transcript · internal/tools/local/diff · internal/tools/local · internal/tools/local/catalog | BenchmarkDisplayArguments · BenchmarkAnalysis · BenchmarkParallelPlanning · BenchmarkCatalog |
+| 작은 출력·대용량 출력 보관 | internal/tools/local/process | BenchmarkSmallCommandCapture · BenchmarkCappedOutput64MiB · BenchmarkSpillOutput64MiB |
+| 저장·대화 목록·압축 점유량 | internal/storage/sqlite | BenchmarkOutcomeCommit · BenchmarkConversations · BenchmarkJournal · BenchmarkMemoryWatermark |
+| 압축·발췌·저장 JSON | internal/storage/content | BenchmarkPayloadCodec · BenchmarkCompressionOptions · BenchmarkPayloadExcerpt · BenchmarkRecordContent |
+| 이미지 읽기·이력·압축 경계 | internal/tools/local · internal/storage/sqlite | BenchmarkReadImageBytes · BenchmarkImageHistory · BenchmarkImageBoundary |
 
 ```sh
-go test ./internal/agent/context -run '^$' -bench BenchmarkProjection -benchmem
-go test ./internal/tui/viewport -run '^$' -bench BenchmarkLiveTranscriptFrame -benchmem
+export GOFLAGS='-tags=godbus_no_tcp'
+go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(ConversationEncoding|ColdConversationEncoding|OwnedNativeHistory|ImageHistory)$' -benchmem -count=6
 go test ./internal/tui/session -run '^$' -bench BenchmarkTerminalPacing -benchtime=1x -count=6
-go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(ConversationEncoding|ColdConversationEncoding)' -benchmem -count=6
-go test ./internal/provider/httpclient -run '^$' -bench BenchmarkGenerationEncoding -benchmem -count=8
-go test ./internal/tui/markdown -run '^$' -bench 'Benchmark(StreamTail|Paragraph)' -benchmem
-go test ./internal/tui/input -run '^$' -bench BenchmarkLongDraft -benchmem
-go test ./internal/tools/local/diff -run '^$' -bench BenchmarkAnalysis -benchmem
-go test ./internal/tools/local -run '^$' -bench BenchmarkParallelPlanning -benchmem
-go test ./internal/tools/local/catalog -run '^$' -bench BenchmarkCatalog -benchmem
-go test ./internal/tui/session -run '^$' -bench BenchmarkStreamDelivery -benchmem
-go test ./internal/storage/sqlite -run '^$' -bench BenchmarkOutcomeCommit -benchtime=100x -benchmem
-go test ./internal/storage/content -run '^$' -bench 'Benchmark(PayloadCodec|CompressionOptions)' -benchmem
-go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(ProviderRequests|ProviderStream|OpenRouterReasoningFragments)' -benchmem
-go test ./internal/provider/protocol -run '^$' -bench 'Benchmark(TextMessages|ImageEncoding)$' -benchmem
-go test ./internal/tools/local -run '^$' -bench BenchmarkReadImageBytes -benchmem
-go test ./internal/storage/sqlite -run '^$' -bench 'BenchmarkImage(History|Boundary)$' -benchmem
-go test ./internal/storage/content -run '^$' -bench BenchmarkRecordContent -benchmem
-go test ./internal/tui/textlayout -run '^$' -bench BenchmarkWidth -benchmem
-go test ./internal/storage/sqlite -run '^$' -bench BenchmarkMemoryWatermark -benchmem
-go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(Conversations|Journal)' -benchmem
-go test ./internal/tui/viewport -run TestDisplayResources -v
+go test ./internal/tools/local/process -run '^$' -bench 'Benchmark(SmallCommandCapture|CappedOutput64MiB|SpillOutput64MiB)$' -benchmem -count=6
+```
+
+- Go·OS·CPU·소스 식별값·입력 크기·창 너비·명령을 함께 기록한다. 반복 결과는 `benchstat`으로 비교한다.
+- 인코딩의 cache=false·cache=true는 같은 부하의 비캐시·캐시 경로다. ColdConversationEncoding은 재사용 상태가 없는 첫 요청이다. Native·이미지 캐시는 보유 메모리와 준비된 경로의 할당량을 따로 본다.
+- TerminalPacing은 프레임당 12ms 지연의 가상 터미널과 29~61ms의 입력 간격을 사용한다. drawing-percent는 출력이 차지한 경과 시간이며 CPU 사용률이 아니다. echo-mean-us는 입력 표본 8개의 평균이고 echo-p95-us는 그중 최댓값이다.
+- GenerationEncoding은 로컬 HTTP 서버까지 본문을 전송하고 스트림을 읽는다. 모델 추론은 수행하지 않는다. 화면·요청 준비 비용을 실제 모델 TPS나 전체 완수 시간으로 해석하지 않는다.
+- 힙 할당량·동시에 보유한 힙·RSS·디스크 I/O는 별도로 측정한다. 출력 spill과 화면 밖 파싱 해제는 보유 메모리와 재조회 비용을 함께 비교한다. 장시간 실행·중지 후 자원 해제와 같은 서버의 동시 생성 부하는 별도로 확인한다.
+- LAT 기준 미만 벤치마크는 메모리 저장소를 사용한다. SQLite·실제 모델 비용은 통합 검사에서 확인하며 비활성 경로에는 자료 조회·추가 모델 호출·worker 생성이 없어야 한다.
+
+증분 처리와 입력 경계는 퍼즈 검사로 확인한다. 같은 명령은 한 번에 퍼즈 대상 하나만 실행한다.
+
+```sh
 go test ./internal/tui/markdown -run '^$' -fuzz '^FuzzStream$' -fuzztime=10s
 go test ./internal/tui/input -run '^$' -fuzz '^FuzzBoundaryEdits$' -fuzztime=10s
 go test ./internal/tools/local/diff -run '^$' -fuzz '^FuzzAnalysisCounts$' -fuzztime=10s
 go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzWireJSONEncode$' -fuzztime=15s
 go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzEncoderRequest$' -fuzztime=10s
 go test ./internal/storage/content -run '^$' -fuzz '^FuzzStoredJSON$' -fuzztime=15s
+go test ./internal/tui/viewport -run TestDisplayResources -v
 ```
-
-TerminalPacing의 느린 화면은 프레임마다 12ms 지연을 주는 가상 터미널이다. 입력 간격은 29~61ms로 달리해 프레임 주기와의 고정된 정렬을 피한다. drawing-percent는 화면 출력이 차지한 경과 시간이며 CPU 사용률이 아니다. echo-mean-us는 입력 표본 8개의 평균이고 echo-p95-us는 그중 최댓값이다. GenerationEncoding은 로컬 HTTP 서버까지 본문을 전송하고 스트리밍 응답을 읽지만 실제 모델 추론은 수행하지 않는다.
-
-```sh
-go test ./internal/config/credentials ./internal/tui/viewport ./internal/tui/view ./internal/tui/preview ./internal/storage/sqlite ./internal/tools/local/process -run '^$' -bench . -benchmem
-```
-
-벤치마크에는 Go·OS·CPU·데이터 크기·창 너비·명령과 소스 식별값을 함께 기록한다. 합성 줄 배치 수치를 모델 TPS나 전체 작업 시간으로 해석하지 않는다. 장시간 heap/RSS·취소 후 자원·실제 스트림의 프로파일링은 별도 확인한다.
-
-실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호가 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별로 동기화해 독립 명령의 I/O를 직렬화하지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
 
 ## 요청 실행의 책임
 

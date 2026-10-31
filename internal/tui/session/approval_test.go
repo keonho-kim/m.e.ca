@@ -13,7 +13,7 @@ import (
 )
 
 func TestApprovalDiffNavigation(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "approval"
 	preview, _, _, err := diff.Analyze("file", []byte(strings.Repeat("old\n", 30)), []byte(strings.Repeat("new\n", 30)), true, true)
 	if err != nil {
@@ -43,7 +43,7 @@ func TestApprovalDiffNavigation(t *testing.T) {
 	}
 }
 func TestApprovalChangedRowsHaveContrastingBackgrounds(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "approval"
 	preview, _, _, err := diff.Analyze("file", []byte("context\n"+strings.Repeat("old", 40)+"\n"), []byte("context\n"+strings.Repeat("new", 40)+"\n"), true, true)
 	if err != nil {

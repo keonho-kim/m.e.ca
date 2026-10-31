@@ -16,7 +16,7 @@ import (
 )
 
 func TestLanguageScreenStagesAndConfirms(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.openLanguage()
 	if labels := keymapLabels(t, a); labels["→"] != "Next value" || labels["←"] != "Previous value" || labels["↑↓"] != "" {
@@ -51,7 +51,7 @@ func TestLanguageScreenStagesAndConfirms(t *testing.T) {
 }
 
 func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.browser.Open(".", []fileview.Entry{{Name: "README.md"}}, false)
 	a.browser.Input = true
@@ -79,7 +79,7 @@ func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
 }
 
 func TestFileScreenEscCancelsLookupAndCloses(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page, a.directoryLoading = "files", true
 	cancelled := false
 	a.directoryReads.Begin(0, func() { cancelled = true })

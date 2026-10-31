@@ -41,7 +41,7 @@ func TestStreamingAnswerArrivesBeforeDone(t *testing.T) {
 	g := &chunkGenerator{chunks: []string{"H", "el", "lo", " world"}}
 	g.after = func(i int) {
 		if i == 0 && partial != "H" {
-			t.Fatalf("protocol head exposed: %q", partial)
+			t.Fatalf("first response delta not delivered: %q", partial)
 		}
 		if i == 1 && partial != "Hel" {
 			t.Fatalf("body not delivered during generation: %q", partial)
@@ -57,7 +57,7 @@ func TestStreamingAnswerArrivesBeforeDone(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil || result.Text != "Hello world" || partial != "Hello world" {
+	if err != nil || result.Status != runrecord.Answered || result.Text != "Hello world" || partial != "Hello world" {
 		t.Fatalf("answer: %+v %q %v", result, partial, err)
 	}
 }
@@ -87,26 +87,5 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	last := j.messages[len(j.messages)-1]
 	if last.Role != "assistant" || last.Content != partial || !last.Incomplete {
 		t.Fatalf("interrupted body not preserved: %+v", last)
-	}
-}
-
-func TestStreamingConversationArrivesBeforeDone(t *testing.T) {
-	r := fixture(&generator{}, &executor{}, &journal{})
-	partial := ""
-	g := &chunkGenerator{chunks: []string{"Hel", "lo!"}}
-	g.after = func(i int) {
-		if i == 0 && partial != "Hel" {
-			t.Fatalf("Reply did not stream: %q", partial)
-		}
-	}
-	r.Generator = g
-	result, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
-		if event.Kind == "stream" {
-			partial = event.Text
-		}
-		return nil
-	})
-	if err != nil || result.Status != runrecord.Answered || partial != "Hello!" {
-		t.Fatalf("%+v partial=%q %v", result, partial, err)
 	}
 }

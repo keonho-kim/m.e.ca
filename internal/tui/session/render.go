@@ -62,6 +62,6 @@ func (a *app) render() {
 	a.captureInputSources()
 	a.reanchorInputSelection(body)
 	a.textSelection.Draw(a.screen)
-	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model}, shortcuts, body, w)
+	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model, LAT: a.lat}, shortcuts, body, w)
 	a.screen.Show()
 }

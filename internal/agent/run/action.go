@@ -17,10 +17,9 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
-	call, definition, arguments := v.call, v.definition, v.arguments
+	call, definition := v.call, v.definition
 	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
 	s.checkpoint.Tool = definition.Name
-	s.checkpoint.Arguments = arguments
 	s.checkpoint.Phase = "approval"
 	if err := s.persist(ctx); err != nil {
 		return err

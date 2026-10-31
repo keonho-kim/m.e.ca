@@ -11,7 +11,7 @@ import (
 )
 
 func TestCancelledSetupDiscardsSuccessfulLateResult(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerSetup
 	a.setupRevision = 2
 	a.selection.Model = "current"

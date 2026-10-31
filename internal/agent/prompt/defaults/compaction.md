@@ -11,6 +11,7 @@
 - Organize work as a small tree of outcomes and open branches: what is complete, partial, blocked or still needed, and which dependencies matter next.
 - Preserve useful results from closed branches; prioritize unresolved branches and the next actionable frontier. Leave out the exploration trace.
 - Distinguish observed facts, user requirements, decisions, assumptions, proposals and unknowns.
+- Preserve unresolved evidence-backed review findings as suggestions, and discard feedback superseded by later corrections.
 - Treat unfinished assistant drafts as proposals. Preserve useful unresolved context without presenting draft claims as completed work.
 - Treat omissions as unknowns, not proof that a file or implementation is absent.
 - Mark checks invalidated by later changes as historical. Retain their remaining consequences without presenting them as current failures or current proof.

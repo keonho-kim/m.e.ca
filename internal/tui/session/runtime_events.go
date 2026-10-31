@@ -5,6 +5,7 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
@@ -12,6 +13,15 @@ import (
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
 	switch e.Kind {
+	case "lat_started":
+		a.status = a.language.Text("LAT: Reviewing work…")
+		return
+	case "lat_clean", "lat_feedback", "lat_unavailable", "lat_discarded", "lat_memory_unavailable":
+		a.status = ""
+		for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e) {
+			a.output.AppendBlock(block)
+		}
+		return
 	case "image_input_unavailable":
 		if a.selection.Details != nil {
 			info := *a.selection.Details
@@ -33,6 +43,11 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 	case "generation_started":
 		a.tokenCurrent = modelapi.TokenUsage{}
 		a.tokensPerSecond = nil
+		return
+	case "generation_finished":
+		if e.Generation != nil && e.Generation.Role == inference.LATCompaction {
+			a.latMemoryTokens = modelapi.TokenUsage{}
+		}
 		return
 	case "compaction_started":
 		a.startCompression()

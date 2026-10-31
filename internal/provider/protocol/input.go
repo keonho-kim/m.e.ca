@@ -9,6 +9,10 @@ import "encoding/json"
 // Message is a request DTO. Content is text or []contentPart, selected before
 // serialization; received chunk content remains a separate string contract.
 type Message struct {
+	encoded          []byte
+	source           *sourceIdentity
+	sourceBytes      int
+	hasImages        bool
 	ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`
 	ToolCallID       string            `json:"tool_call_id,omitempty"`
 	ToolName         string            `json:"tool_name,omitempty"`
@@ -33,5 +37,5 @@ type imageURL struct {
 // HasImages distinguishes multimodal content from text-only tokenization inputs.
 func (m Message) HasImages() bool {
 	parts, _ := m.Content.([]contentPart)
-	return len(parts) > 0 || len(m.Images) > 0
+	return m.hasImages || len(parts) > 0 || len(m.Images) > 0
 }

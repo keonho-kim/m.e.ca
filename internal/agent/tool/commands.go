@@ -6,6 +6,7 @@ package tool
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -32,5 +33,10 @@ type CommandExecutor interface {
 	StopCommands()
 	CommandActivity() []CommandRun
 	CollectCommands() ([]CommandCompletion, error)
+	CommandCapture(string) (json.RawMessage, error)
 	AcknowledgeCommand(string) error
 }
+
+// CommandNotifier signals terminal changes without exposing operating-system PIDs.
+// The channel coalesces completions; the runtime still collects every result.
+type CommandNotifier interface{ CommandUpdates() <-chan struct{} }

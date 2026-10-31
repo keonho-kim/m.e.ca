@@ -18,7 +18,7 @@ import (
 func TestCommandOutcomeScreen(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		for _, restored := range []bool{false, true} {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.language = lang
 			event := runrecord.Event{
 				Kind: "tool_failed", Text: "process_failed: Process exited; exit code 1; next: internal guidance",

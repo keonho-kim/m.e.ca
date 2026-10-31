@@ -13,11 +13,12 @@ import (
 )
 
 type Codec struct {
-	mu      sync.Mutex
-	encoder *zstd.Encoder
-	decoder *zstd.Decoder
-	buffer  []byte
-	closed  bool
+	mu            sync.Mutex
+	encoder       *zstd.Encoder
+	decoder       *zstd.Decoder
+	buffer        []byte
+	excerptBuffer []byte
+	closed        bool
 }
 
 func (c *Codec) Encode(raw []byte) ([]byte, error) {
@@ -69,6 +70,7 @@ func (c *Codec) Close() error {
 	defer c.mu.Unlock()
 	c.closed = true
 	c.buffer = nil
+	c.excerptBuffer = nil
 	var err error
 	if c.encoder != nil {
 		err = c.encoder.Close()

@@ -5,6 +5,15 @@
 package locale
 
 var messages = []translation{
+	{"", "LAT: Memory compaction unavailable", "LAT: 검토 메모 압축 불가"},
+	{"", "LAT independent review toggle", "LAT 독립 검토 켜기 · 끄기"},
+	{"", "LAT ON", "LAT 켜짐"},
+	{"", "LAT OFF", "LAT 꺼짐"},
+	{"", "LAT: Reviewing work…", "LAT: 작업 검토 중…"},
+	{"", "LAT: No actionable findings in supplied evidence", "LAT: 제공된 자료에서 보완 사항을 찾지 못했습니다"},
+	{"", "LAT: Review feedback", "LAT: 검토 의견"},
+	{"", "LAT: Review unavailable", "LAT: 검토하지 못했습니다"},
+	{"", "LAT: Request changed; review discarded", "LAT: 요청이 변경되어 이전 검토를 사용하지 않습니다"},
 	{"", "Reading file…", "파일 읽는 중…"},
 	{"", "Preparing file display…", "파일 표시 준비 중…"},
 	{"", "(Empty file)", "(빈 파일)"},

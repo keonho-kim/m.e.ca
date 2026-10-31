@@ -16,6 +16,7 @@ type Block struct {
 	stream           markdown.Stream
 	layout           blockLayout
 	visible          bool
+	live             bool
 	Markdown         bool
 	Centered         bool
 	ID               int

@@ -25,7 +25,7 @@ func modelScreen(a *app) string {
 }
 
 func TestModelDashboardShowsAllSettings(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.openModel()
 	body := modelScreen(a)
@@ -38,7 +38,7 @@ func TestModelDashboardShowsAllSettings(t *testing.T) {
 
 func TestModelDashboardCatalogLivesInModelField(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
-		a := fixture(t)
+		a := screenFixture(t)
 		a.language = language
 		a.openModel()
 		body := modelScreen(a)
@@ -58,7 +58,7 @@ func TestModelDashboardCatalogLivesInModelField(t *testing.T) {
 }
 
 func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.language = locale.English
 	a.openModel()
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -77,7 +77,7 @@ func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 }
 
 func TestModelDashboardKeymapMatchesFocusedRow(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.openModel()
 	f := a.modelForm
 	f.Row = modelsettings.Endpoint

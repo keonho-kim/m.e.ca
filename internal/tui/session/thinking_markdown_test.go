@@ -16,7 +16,7 @@ import (
 const thinkingMarkdown = "# Review\n\n- **inspect** `main.go`\n\n```text\n**literal code**\n```\n\n3~5, ~~keep~~ 😀"
 
 func TestThinkingMarkdownStreaming(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	for _, source := range []string{"# Review", thinkingMarkdown} {
 		a.receive(notice{Event: &runrecord.Event{Kind: "stream", Thinking: source}})
 		a.render()
@@ -33,7 +33,7 @@ func TestThinkingMarkdownStreaming(t *testing.T) {
 func TestThinkingMarkdownCompletionAndInterruption(t *testing.T) {
 	for _, route := range []string{"thinking", "response", "interrupted"} {
 		t.Run(route, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			if route == "interrupted" {
 				a.worker = workerAgentStopping
 				a.receive(notice{Event: &runrecord.Event{Kind: "stream", Thinking: thinkingMarkdown}})

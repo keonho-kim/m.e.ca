@@ -5,7 +5,6 @@
 package tool
 
 import (
-	"encoding/json"
 	"fmt"
 	"unicode/utf8"
 )
@@ -39,8 +38,7 @@ type Facts struct {
 }
 
 func (f Facts) Check() error {
-	body, err := json.Marshal(f)
-	if err != nil || len(body) > 16*1024*1024 {
+	if factsBytes(f) > 16*1024*1024 {
 		return fmt.Errorf("execution report facts exceed 16 MiB; source records remain stored")
 	}
 	for _, v := range f.Files {

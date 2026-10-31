@@ -20,8 +20,8 @@ func TestCommandHints(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
 	a.render()
-	for i, command := range []string{"!model", "!language", "!permission", "!dir", "!new", "!quit"} {
-		if !strings.Contains(screenLine(a.screen, 15+i, 80), command) {
+	for i, command := range []string{"!model", "!language", "!permission", "!lat", "!dir", "!new", "!quit"} {
+		if !strings.Contains(screenLine(a.screen, 14+i, 80), command) {
 			t.Fatalf("command missing above editor: %s", command)
 		}
 	}

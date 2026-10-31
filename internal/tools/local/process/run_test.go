@@ -8,9 +8,9 @@ import "context"
 
 func Run(ctx context.Context, directory, command string, environment []string) (Output, error) {
 	var stdout, stderr cappedOutput
-	wait, err := start(ctx, directory, command, environment, &stdout, &stderr)
+	pending, err := start(ctx, directory, command, environment, &stdout, &stderr)
 	if err != nil {
 		return Output{Status: "execution_failed", ExitCode: -1}, err
 	}
-	return wait()
+	return pending.output(pending.wait())
 }

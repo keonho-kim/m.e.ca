@@ -22,7 +22,7 @@ func TestPromptBootstrap(t *testing.T) {
 	directory := filepath.Join(home, ".meca")
 	defaults := prompt.Defaults()
 	files := defaults.Files()
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_compaction.md"} {
 		path := filepath.Join(directory, "prompts", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {

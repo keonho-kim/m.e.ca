@@ -1,4 +1,4 @@
-// Purpose: Verify output folding works with legacy and enhanced terminal key events.
+// Purpose: Verify output folding works with standard and enhanced terminal key events.
 // Pattern: Virtual terminal regression tests.
 // Usage: go test ./internal/tui/session -run TestOutputToggle.
 // Related: internal/tui/session/keys.go, internal/tui/transcript/events.go, internal/tui/viewport/viewport.go.
@@ -18,7 +18,7 @@ import (
 func TestOutputToggleTerminalProtocols(t *testing.T) {
 	for _, enhanced := range []bool{false, true} {
 		for _, restored := range []bool{false, true} {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.editor.Set("draft")
 			a.worker = workerAgent
 			body, err := json.Marshal(map[string]any{"Stdout": strings.Repeat("detail row\n", 40), "ExitCode": 0, "Status": "exited"})
@@ -58,7 +58,7 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 }
 
 func TestOutputToggleDoesNotInterpretPastedText(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.paste = true
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "o", tcell.ModCtrl, true, tcell.KeyO, 1))
 	if a.output.Collapsed || a.stopNotice != "" {
@@ -76,7 +76,7 @@ func screenRows(a *app, count int) []string {
 }
 
 func TestOutputToggleHintRequiresOutput(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	if keymapLabels(t, a)["^O"] != "" {
 		t.Fatal("fold hint advertised without any foldable output")
 	}

@@ -40,7 +40,7 @@ func TestSupportingRolesUseTopLevelTables(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, section := range []string{"[agent]", "[compaction]", "[diagnostics]"} {
+	for _, section := range []string{"[agent]", "[compaction]", "[diagnostics]", "[lat]", "[lat_compaction]"} {
 		if strings.Count(string(body), section) != 1 {
 			t.Fatalf("expected one %s section: %s", section, body)
 		}
@@ -78,7 +78,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"agent", "compaction", "diagnostics"} {
+	for _, role := range []string{"agent", "compaction", "diagnostics", "lat", "lat_compaction"} {
 		if !strings.Contains(string(body), "["+role+"]") {
 			t.Fatalf("missing persisted role %s", role)
 		}
@@ -88,7 +88,7 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := loaded.InferenceSettings()
-	for _, role := range []inference.Role{inference.Agent, inference.Compaction, inference.Diagnostic} {
+	for _, role := range []inference.Role{inference.Agent, inference.Compaction, inference.Diagnostic, inference.LAT, inference.LATCompaction} {
 		parameters, err := inference.Resolve(&settings, role)
 		want := 12800
 		if role == inference.Agent {
@@ -96,6 +96,12 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 		}
 		if role == inference.Compaction {
 			want = 8192
+		}
+		if role == inference.LAT {
+			want = 4096
+		}
+		if role == inference.LATCompaction {
+			want = 2048
 		}
 		if err != nil || parameters.MaxOutputTokens != want {
 			t.Fatalf("persisted %s default=%+v, want %d: %v", role, parameters, want, err)

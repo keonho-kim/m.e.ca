@@ -8,7 +8,7 @@ import "testing"
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!", describeCommand)
-	if len(all) != 6 {
+	if len(all) != 7 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {

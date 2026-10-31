@@ -30,6 +30,10 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 	}
 	for _, finished := range completed {
 		result := finished.Result
+		result.Capture, err = commands.CommandCapture(finished.ID)
+		if err != nil {
+			return false, errors.Join(errRuntimeRecord, err)
+		}
 		status := "tool_succeeded"
 		if result.Failed {
 			status = "tool_failed"
@@ -54,6 +58,10 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		}
 		if err := commands.AcknowledgeCommand(finished.ID); err != nil {
 			return false, errors.Join(errRuntimeRecord, err)
+		}
+		if s.runner.LAT && !s.latReviewed {
+			s.latObserved = true
+			s.latMemory.dirty = true
 		}
 		s.commandRevision++
 		event.Capture = nil

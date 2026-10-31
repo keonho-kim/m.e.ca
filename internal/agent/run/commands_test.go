@@ -68,6 +68,8 @@ func (e *commandFixture) AcknowledgeCommand(string) error {
 	return nil
 }
 
+func (e *commandFixture) CommandCapture(string) (json.RawMessage, error) { return nil, nil }
+
 func TestCommandLifecycleFeedbackExplainsManagementTools(t *testing.T) {
 	j := &journal{}
 	e := &commandFixture{executor: &executor{}, active: true}

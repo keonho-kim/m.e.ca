@@ -15,7 +15,7 @@ import (
 func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
 	for _, page := range []string{"chat", "files"} {
 		t.Run(page, func(t *testing.T) {
-			a := fixture(t)
+			a := screenFixture(t)
 			a.page, a.browser.Input = page, true
 			a.screen.SetSize(240, 24)
 			a.editor.Set("first\nsecond")
@@ -30,7 +30,7 @@ func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
 			}
 		})
 	}
-	a := fixture(t)
+	a := screenFixture(t)
 	typeInput(a, "!")
 	if labels := keymapLabels(t, a); labels["↑↓"] != "선택" {
 		t.Fatal(labels)
@@ -38,52 +38,37 @@ func TestKeymapRolesInputOmitsCursorHint(t *testing.T) {
 }
 
 func TestKeymapRolesFolderAndPreview(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.page = "files"
 	a.browser.Open(".", []fileview.Entry{{Name: "sub", Directory: true}}, false)
-	labels := map[string]string{}
-	for _, s := range a.shortcuts() {
-		labels[s.Key] = s.Label
-	}
+	labels := keymapLabels(t, a)
 	if labels["Tab"] != "" || labels["Enter"] != "" || labels["Shift+Tab"] == "" {
 		t.Fatal(labels)
 	}
 	a.filePreview = &preview.State{Full: false}
-	labels = map[string]string{}
-	for _, s := range a.shortcuts() {
-		labels[s.Key] = s.Label
-	}
+	labels = keymapLabels(t, a)
 	if labels["Tab"] != "" || labels["Enter"] == "" || labels["Esc"] != "닫기" {
 		t.Fatal(labels)
 	}
 	a.filePreview.Full = true
-	labels = map[string]string{}
-	for _, s := range a.shortcuts() {
-		labels[s.Key] = s.Label
-	}
+	labels = keymapLabels(t, a)
 	if labels["Enter"] != "" || labels["Tab"] == "" {
 		t.Fatal(labels)
 	}
 }
 
 func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	a.worker = workerAgent
 	a.page = "files"
 	a.browser.Input = true
-	labels := map[string]string{}
-	for _, s := range a.shortcuts() {
-		labels[s.Key] = s.Label
-	}
+	labels := keymapLabels(t, a)
 	if labels["Enter"] != "방향 수정 확인" || labels["Tab"] != "예약 확인" || labels["Shift+Enter"] != "줄바꿈" {
 		t.Fatal(labels)
 	}
 	a.page = "chat"
 	typeInput(a, "!mo")
-	labels = map[string]string{}
-	for _, s := range a.shortcuts() {
-		labels[s.Key] = s.Label
-	}
+	labels = keymapLabels(t, a)
 	if labels["Tab"] != "삽입" {
 		t.Fatal(labels)
 	}
@@ -94,7 +79,7 @@ func TestKeymapRolesBusyInputAndCommands(t *testing.T) {
 }
 
 func TestKeymapRolesNoMatchesAndBusyClose(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	typeInput(a, "!unknown")
 	for _, s := range a.shortcuts() {
 		if s.Key == "Enter" || s.Key == "Tab" || s.Key == "↑↓" {
