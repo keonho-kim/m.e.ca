@@ -18,7 +18,7 @@ func BenchmarkHistoryLines(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		transcript.Prepare(80, v.Blocks, nil)
+		transcript.Prepare(80, &v, nil)
 		_ = transcript.Window(max(0, transcript.Count()-30), 30)
 	}
 }
@@ -32,7 +32,7 @@ func BenchmarkMarkdownHistoryLines(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		transcript.Prepare(80, v.Blocks, nil)
+		transcript.Prepare(80, &v, nil)
 		_ = transcript.Window(max(0, transcript.Count()-30), 30)
 	}
 }

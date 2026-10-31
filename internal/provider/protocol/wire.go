@@ -37,7 +37,7 @@ type wireRequest struct {
 	ReasoningEffort string           `json:"reasoning_effort,omitempty"`
 	Think           any              `json:"think,omitempty"`
 	Model           string           `json:"model"`
-	Messages        []Message        `json:"messages"`
+	Messages        *[]Message       `json:"messages,omitempty"`
 	Stream          bool             `json:"stream"`
 	MaxTokens       int              `json:"max_tokens,omitempty"`
 	Options         *ollamaOptions   `json:"options,omitempty"`

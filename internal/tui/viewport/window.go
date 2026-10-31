@@ -1,7 +1,7 @@
 // Purpose: Compose sparse block layouts into a scrollable transcript without retaining all wrapped rows.
 // Pattern: Indexed presentation projection.
 // Usage: Session owns Transcript and requests only the visible window for rendering and copying.
-// Related: internal/tui/viewport/block_layout.go, internal/tui/session/chat_projection.go.
+// Related: internal/tui/viewport/transcript_index.go, internal/tui/viewport/block_layout.go, internal/tui/session/chat_projection.go.
 package viewport
 
 import "sort"
@@ -12,51 +12,17 @@ type section struct {
 	start, skip, count int
 }
 type Transcript struct {
+	historyHead              *Block
+	historyRevision          uint64
+	historyLength            int
+	historySections          int
+	historyRows              int
+	historyTrailing          int
+	visible, spareVisible    []*Block
 	sections                 []section
 	width, total             int
 	rows                     []Line
 	windowStart, windowCount int
-}
-
-func (t *Transcript) Prepare(width int, history []Block, live []*Block) {
-	previous := t.sections
-	changed := t.width != width
-	t.sections = t.sections[:0]
-	t.width, t.total = width, 0
-	trailing := 0
-	add := func(block *Block) {
-		count := block.Count(width)
-		if count == 0 {
-			return
-		}
-		skip := max(0, block.layout.leading-max(0, maxBoundaryBlanks-trailing))
-		part := section{block: block, key: block.layout.key, start: t.total, skip: skip, count: count - skip}
-		i := len(t.sections)
-		if i >= len(previous) || previous[i] != part {
-			changed = true
-		}
-		t.sections = append(t.sections, part)
-		t.total += count - skip
-		trailing = min(maxBoundaryBlanks, block.layout.trailing)
-	}
-	for i := range history {
-		add(&history[i])
-		if !history[i].visible {
-			history[i].releaseParsed()
-		}
-	}
-	for _, block := range live {
-		add(block)
-	}
-	if len(previous) != len(t.sections) {
-		changed = true
-	}
-	if len(previous) > len(t.sections) {
-		clear(previous[len(t.sections):])
-	}
-	if changed {
-		t.rows = nil
-	}
 }
 
 func (t *Transcript) Count() int { return t.total }
@@ -66,13 +32,20 @@ func (t *Transcript) Window(start, count int) []Line {
 	if t.rows != nil && t.windowStart == start && t.windowCount == count {
 		return t.rows
 	}
-	for _, part := range t.sections {
-		visible := count > 0 && part.start < start+count && part.start+part.count > start
-		if part.block.visible && !visible {
-			part.block.releaseParsed()
-		}
-		part.block.visible = visible
+	previous := t.visible
+	t.visible, t.spareVisible = t.spareVisible[:0], nil
+	for _, block := range previous {
+		block.visible = false
 	}
+	defer func() {
+		for _, block := range previous {
+			if !block.visible {
+				block.releaseParsed()
+			}
+		}
+		clear(previous)
+		t.spareVisible = previous[:0]
+	}()
 	if count < 1 || start >= t.total {
 		t.rows = nil
 		return nil
@@ -82,6 +55,8 @@ func (t *Transcript) Window(start, count int) []Line {
 	rows := make([]Line, 0, count)
 	for ; at < len(t.sections) && len(rows) < count; at++ {
 		part := t.sections[at]
+		part.block.visible = true
+		t.visible = append(t.visible, part.block)
 		offset := max(0, start-part.start)
 		rows = append(rows, part.block.Window(t.width, part.skip+offset, min(count-len(rows), part.count-offset))...)
 	}

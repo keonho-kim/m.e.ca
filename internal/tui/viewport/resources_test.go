@@ -22,7 +22,7 @@ func TestDisplayResources(t *testing.T) {
 		for n := range 300 {
 			view.AppendBlock(Block{Text: fmt.Sprintf("## %d %d\n\n%s", cycle, n, strings.Repeat("**body** text.\n\n", 100)), Markdown: true})
 		}
-		transcript.Prepare(80, view.Blocks, nil)
+		transcript.Prepare(80, &view, nil)
 		rows := transcript.Window(max(0, transcript.Count()-30), 30)
 		if len(rows) != 30 {
 			t.Fatal(len(rows))

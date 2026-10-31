@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func fixture(t *testing.T) *app {
+func fixture(t testing.TB) *app {
 	t.Helper()
 	home, root := t.TempDir(), t.TempDir()
 	configuration, err := bootstrap.Initialize(home)

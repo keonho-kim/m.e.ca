@@ -27,6 +27,7 @@ func (v *View) ToggleDetails() bool {
 		return false
 	}
 	v.Collapsed = !v.Collapsed
+	v.layoutRevision++
 	for i := range v.Blocks {
 		block := &v.Blocks[i]
 		v.showDetails(block)

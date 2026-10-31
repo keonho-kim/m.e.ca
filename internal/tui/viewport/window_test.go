@@ -21,7 +21,7 @@ func TestWindowMatchesFullComposition(t *testing.T) {
 			expected = AppendLines(expected, view.Blocks[i].Lines(width))
 		}
 		var transcript Transcript
-		transcript.Prepare(width, view.Blocks, nil)
+		transcript.Prepare(width, &view, nil)
 		if transcript.Count() != len(expected) {
 			t.Fatalf("width %d: count %d want %d", width, transcript.Count(), len(expected))
 		}
@@ -34,7 +34,7 @@ func TestWindowMatchesFullComposition(t *testing.T) {
 		transcript.Scroll(&view, -4, 3)
 		id, row := view.AnchorID, view.AnchorRow
 		view.Append("latest", false)
-		transcript.Prepare(width, view.Blocks, nil)
+		transcript.Prepare(width, &view, nil)
 		got := transcript.Window(transcript.Start(&view, 3), 1)
 		if !view.Follow && (got[0].ID != id || got[0].Row != row) {
 			t.Fatal("append moved the reading anchor")

@@ -16,7 +16,7 @@ func TestScrollAnchor(t *testing.T) {
 		v.Append("abcdef", false)
 	}
 	var layout Transcript
-	layout.Prepare(20, v.Blocks, nil)
+	layout.Prepare(20, &v, nil)
 	layout.Scroll(&v, -8, 5)
 	id := v.AnchorID
 	v.Append("new", false)
@@ -36,7 +36,7 @@ func TestCollapseKeepsAnchorOnItsOutput(t *testing.T) {
 	v.Append("earlier conversation", false)
 	v.AppendBlock(Block{Summary: "command summary", Details: strings.Repeat("detail\n", 100)})
 	var layout Transcript
-	layout.Prepare(80, v.Blocks, nil)
+	layout.Prepare(80, &v, nil)
 	layout.Scroll(&v, -20, 8)
 	id := v.AnchorID
 	v.ToggleDetails()

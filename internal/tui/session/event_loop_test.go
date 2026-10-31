@@ -62,3 +62,24 @@ func TestEventLoopPasteBatchesFrames(t *testing.T) {
 		t.Fatalf("paste repainted %d frames", screen.frames)
 	}
 }
+
+func TestTerminalBatchPreservesQueuedRemainder(t *testing.T) {
+	a := fixture(t)
+	queue := make(chan tcell.Event, 64)
+	for range 40 {
+		queue <- tcell.NewEventKey(tcell.KeyRune, "x", 0)
+	}
+	first := <-queue
+	if err := a.terminalBatch(first, queue); err != nil {
+		t.Fatal(err)
+	}
+	if a.editor.String() != strings.Repeat("x", 32) || len(queue) != 8 {
+		t.Fatalf("input batch lost queued events: text=%d pending=%d", len(a.editor.String()), len(queue))
+	}
+	if err := a.terminalBatch(<-queue, queue); err != nil {
+		t.Fatal(err)
+	}
+	if a.editor.String() != strings.Repeat("x", 40) || len(queue) != 0 {
+		t.Fatal("remaining input was not processed")
+	}
+}

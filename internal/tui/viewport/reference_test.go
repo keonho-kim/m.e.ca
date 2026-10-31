@@ -70,6 +70,6 @@ func modelEdges(lines []Line) []Line {
 }
 
 func (t *Transcript) all(v *View, width int) []Line {
-	t.Prepare(width, v.Blocks, nil)
+	t.Prepare(width, v, nil)
 	return t.Window(0, t.Count())
 }

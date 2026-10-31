@@ -9,24 +9,32 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
+type lmRequest struct {
+	Tools       []map[string]any  `json:"tools,omitempty"`
+	ToolChoice  string            `json:"tool_choice,omitempty"`
+	Parallel    *bool             `json:"parallel_tool_calls,omitempty"`
+	Temperature *float64          `json:"temperature,omitempty"`
+	Model       string            `json:"model"`
+	Input       *[]map[string]any `json:"input,omitempty"`
+	Stream      bool              `json:"stream"`
+	Store       bool              `json:"store"`
+	Truncation  string            `json:"truncation"`
+	MaxOutput   int               `json:"max_output_tokens"`
+	Reasoning   map[string]string `json:"reasoning,omitempty"`
+}
+
 func lmPayload(model string, messages []Message, maxOutput int, effort string, temperature *float64, definitions []toolapi.Definition) ([]byte, error) {
 	input, err := lmMessages(messages)
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Tools       []map[string]any  `json:"tools,omitempty"`
-		ToolChoice  string            `json:"tool_choice,omitempty"`
-		Parallel    *bool             `json:"parallel_tool_calls,omitempty"`
-		Temperature *float64          `json:"temperature,omitempty"`
-		Model       string            `json:"model"`
-		Input       []map[string]any  `json:"input"`
-		Stream      bool              `json:"stream"`
-		Store       bool              `json:"store"`
-		Truncation  string            `json:"truncation"`
-		MaxOutput   int               `json:"max_output_tokens"`
-		Reasoning   map[string]string `json:"reasoning,omitempty"`
-	}{Temperature: temperature, Model: model, Input: input, Stream: true, Store: false, Truncation: "disabled", MaxOutput: maxOutput}
+	body := lmHeader(model, maxOutput, effort, temperature, definitions)
+	body.Input = &input
+	return wireJSON.Marshal(body)
+}
+
+func lmHeader(model string, maxOutput int, effort string, temperature *float64, definitions []toolapi.Definition) lmRequest {
+	body := lmRequest{Temperature: temperature, Model: model, Stream: true, Store: false, Truncation: "disabled", MaxOutput: maxOutput}
 	for _, tool := range Tools(definitions) {
 		body.Tools = append(body.Tools, map[string]any{"type": "function", "name": tool.Function.Name, "description": tool.Function.Description, "parameters": tool.Function.Parameters})
 	}
@@ -37,7 +45,7 @@ func lmPayload(model string, messages []Message, maxOutput int, effort string, t
 	if effort != "" {
 		body.Reasoning = map[string]string{"effort": effort}
 	}
-	return wireJSON.Marshal(body)
+	return body
 }
 
 func lmMessages(messages []Message) ([]map[string]any, error) {

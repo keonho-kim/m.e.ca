@@ -86,6 +86,13 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
 		r.ImageInput = r.ImageInput && support.ImageInputSupported()
 	}
+	if scoped, ok := r.Generator.(interface {
+		NewRunGenerator() (modelapi.Generator, func())
+	}); ok {
+		generator, release := scoped.NewRunGenerator()
+		defer release()
+		r.Generator = generator
+	}
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: imageDefinitions(r.Tools.Definitions(), r.ImageInput), statistics: runStatistics{started: started}}
 	s.usage = &requestBudget{}
 	s.usage.begin(limits)

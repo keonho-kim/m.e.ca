@@ -31,6 +31,7 @@ type Line struct {
 	Change   byte
 }
 type View struct {
+	layoutRevision      uint64
 	Collapsed           bool
 	Blocks              []Block
 	Next                int
@@ -69,6 +70,7 @@ func (v *View) Prepend(blocks []Block) {
 	if len(blocks) == 0 {
 		return
 	}
+	v.layoutRevision++
 	first := 0
 	if len(v.Blocks) > 0 {
 		first = v.Blocks[0].ID
@@ -86,6 +88,7 @@ func (v *View) bound(older bool) {
 		bytes += b.bytes()
 	}
 	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || bytes > 16*1024*1024) {
+		v.layoutRevision++
 		index := 0
 		if older {
 			index = len(v.Blocks) - 1

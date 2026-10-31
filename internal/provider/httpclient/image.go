@@ -15,7 +15,7 @@ func (c *Client) ProbeImage(ctx context.Context, request modelapi.Request, emit 
 	if len(request.Messages) != 1 || request.Messages[0].Role != "user" || len(request.Messages[0].Images) != 1 || len(request.Tools) != 0 || request.MaxOutput < 1 || request.MaxOutput > 32 || len(request.Messages[0].Images[0].Data) > 4096 {
 		return fmt.Errorf("invalid image-input probe")
 	}
-	return c.generate(ctx, request, emit, true)
+	return c.generate(ctx, request, emit, true, nil)
 }
 
 // ImageInputSupported includes definitive rejection observed since the model was bound.

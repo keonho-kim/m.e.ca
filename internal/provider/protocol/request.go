@@ -17,7 +17,17 @@ func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelIn
 		}
 		return baseURL + "/responses", content, nil
 	}
-	payload := wireRequest{Model: request.ModelID, Messages: messages, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
+	endpoint, payload := chatPayload(kind, baseURL, info, request, controls)
+	payload.Messages = &messages
+	content, err := wireJSON.Marshal(payload)
+	if err != nil {
+		return "", nil, err
+	}
+	return endpoint, content, nil
+}
+
+func chatPayload(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, controls Controls) (string, wireRequest) {
+	payload := wireRequest{Model: request.ModelID, Stream: true, Think: controls.Think, ChatTemplate: controls.Template, ReasoningEffort: controls.ReasoningEffort}
 	payload.Reasoning = controls.Reasoning
 	payload.Tools = Tools(request.Tools)
 	if len(payload.Tools) > 0 && kind != modelconn.Ollama {
@@ -36,9 +46,5 @@ func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelIn
 		payload.Temperature = request.Temperature
 		payload.StreamOptions = &streamOptions{IncludeUsage: true, ContinuousUsage: kind == modelconn.VLLM || kind == modelconn.SGLang}
 	}
-	content, err := wireJSON.Marshal(payload)
-	if err != nil {
-		return "", nil, err
-	}
-	return endpoint, content, nil
+	return endpoint, payload
 }

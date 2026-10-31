@@ -6,22 +6,22 @@
 package httpclient
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/protocol"
 	"github.com/keonho-kim/meca/internal/provider/transport"
+	"io"
 	"net/http"
 	"slices"
 )
 
 func (client *Client) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	return client.generate(ctx, request, emit, false)
+	return client.generate(ctx, request, emit, false, nil)
 }
 
-func (client *Client) generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error, probe bool) (err error) {
+func (client *Client) generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error, probe bool, encoder *protocol.Encoder) (err error) {
 	hasImages := imageMessages(request.Messages)
 	if hasImages && !probe && !client.ImageInputSupported() {
 		return &modelapi.ImageInputError{}
@@ -74,11 +74,11 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	if probe {
 		info = nil
 	}
-	endpoint, content, err := protocol.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
+	endpoint, content, err := encoder.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
 	if err != nil {
 		return err
 	}
-	if len(content) > modelapi.MaxResponseBytes {
+	if content.Len() > modelapi.MaxResponseBytes {
 		return fmt.Errorf("model context exceeds request size limit")
 	}
 	idle := request.IdleTimeout
@@ -86,9 +86,13 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 		idle = transport.DefaultIdleTimeout
 	}
 	return client.transport.Attempts(ctx, func() (err error) {
-		request, err := client.transport.NewRequest(ctx, http.MethodPost, endpoint, bytes.NewReader(content))
+		request, err := client.transport.NewRequest(ctx, http.MethodPost, endpoint, content.Reader())
 		if err != nil {
 			return &transport.ConsumerError{Cause: err}
+		}
+		if request.GetBody == nil {
+			request.ContentLength = int64(content.Len())
+			request.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(content.Reader()), nil }
 		}
 		response, err := client.transport.SendOnce(request, idle)
 		if err != nil {

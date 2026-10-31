@@ -51,6 +51,6 @@ func (a *app) chatLayout(width int) *viewport.Transcript {
 		// History and live blocks precede these contiguous queue IDs and may grow.
 		a.output.AnchorID = p.queue.Header.ID + min(queueAnchor, len(p.queue.Entries))
 	}
-	p.layout.Prepare(width, a.output.Blocks, p.live)
+	p.layout.Prepare(width, &a.output, p.live)
 	return &p.layout
 }
