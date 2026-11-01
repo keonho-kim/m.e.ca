@@ -10,11 +10,11 @@ import (
 )
 
 func (a *app) dispatchRequest(request composer.Request) {
-	if a.client == nil || a.selection.Model == "" {
+	if a.connection.client == nil || a.connection.selection.Model == "" {
 		a.status = a.language.Text("Select a model using !model")
 		return
 	}
-	a.rememberInput(request.Text)
-	a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(request.Text)), false)
+	a.compose.rememberInput(request.Text)
+	a.chat.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(request.Text)), false)
 	a.startRequest(request)
 }

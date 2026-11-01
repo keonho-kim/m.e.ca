@@ -5,25 +5,27 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/provider/identity"
-	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"github.com/rivo/uniseg"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
+
+	"github.com/keonho-kim/meca/internal/provider/identity"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func TestIdentityInfoMenuAndScroll(t *testing.T) {
 	a := screenFixture(t)
-	a.selection.Model = "models/bin/modelX"
+	a.connection.selection.Model = "models/bin/modelX"
 	report := &identity.Report{Routed: true}
 	report.Add("/model/info", "original", "Qwen/Qwen3.8-27B")
 	report.Add("/model/info", "original", "ollama/gemma4")
-	a.selection.Identity = report
+	a.connection.selection.Identity = report
 	a.openModel()
-	a.modelForm.Row = modelsettings.Information
+	a.connection.modelForm.Row = modelsettings.Information
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if a.page != "model" || !a.modelForm.Details {
+	if a.page != "model" || !a.connection.modelForm.Details {
 		t.Fatalf("page=%s", a.page)
 	}
 	a.render()
@@ -33,7 +35,7 @@ func TestIdentityInfoMenuAndScroll(t *testing.T) {
 	a.screen.SetSize(36, 10)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, "", 0))
 	a.render()
-	if a.modelForm.DetailsOffset == 0 {
+	if a.connection.modelForm.DetailsOffset == 0 {
 		t.Fatal("identity evidence did not scroll")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -46,10 +48,10 @@ func TestIdentityNameBesideServingAlias(t *testing.T) {
 	for _, alias := range []string{"team-coder", "코딩-모델"} {
 		t.Run(alias, func(t *testing.T) {
 			a := screenFixture(t)
-			a.selection.Model = alias
+			a.connection.selection.Model = alias
 			report := &identity.Report{}
 			report.Add("server", "original", "/cache/models--Qwen--Qwen3.8-27B/snapshots/abc")
-			a.selection.Identity = report
+			a.connection.selection.Identity = report
 			a.openModel()
 			a.render()
 			if got := screenLine(a.screen, 1, 80); !strings.Contains(got, alias+"  Qwen/Qwen3.8-27B") {
@@ -72,8 +74,8 @@ func TestIdentityNameBesideServingAlias(t *testing.T) {
 func TestIdentityNameDoesNotClaimAmbiguousOrMissingOrigin(t *testing.T) {
 	for _, report := range []*identity.Report{nil, {Routed: true}, {Incomplete: true}, {Unavailable: true}, {Facts: []identity.Fact{{Source: "server", Field: "family", Value: "qwen3"}}}} {
 		a := screenFixture(t)
-		a.selection.Model = "team-coder"
-		a.selection.Identity = report
+		a.connection.selection.Model = "team-coder"
+		a.connection.selection.Identity = report
 		a.openModel()
 		a.render()
 		if got := strings.TrimSpace(screenLine(a.screen, 1, 80)); got != "team-coder" {

@@ -18,7 +18,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/local/imagefile"
 )
 
-func (op *operation) readImage(ctx context.Context) (out toolapi.Result, err error) {
+func (op *imageOperation) readImage(ctx context.Context) (out toolapi.Result, err error) {
 	select {
 	case op.executor.imageReads <- struct{}{}:
 		defer func() { <-op.executor.imageReads }()

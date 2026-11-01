@@ -107,13 +107,13 @@ func (executor *readOnlyExecutor) Prepare(ctx context.Context, settings policy.S
 	if _, err := readonly.Parse(input.Command); err != nil {
 		return nil, err
 	}
-	return &readOnlyOperation{executor: executor, command: &operation{executor: executor.Executor, settings: settings, spec: spec, input: input, callID: call.ID}}, nil
+	return &readOnlyOperation{executor: executor, command: &commandOperation{operation: operation{executor: executor.Executor, settings: settings, spec: spec, input: input, callID: call.ID}}}, nil
 }
 
 type readOnlyOperation struct {
 	executor  *readOnlyExecutor
 	delegated toolapi.Execution
-	command   *operation
+	command   *commandOperation
 	executed  atomic.Bool
 }
 

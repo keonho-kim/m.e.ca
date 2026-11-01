@@ -6,12 +6,13 @@ package session
 
 import (
 	"context"
+
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 )
 
 func (a *app) connect(connection modelconn.Connection, key, model string, remember bool) {
-	a.startModelSetup(modelSetupRequest{connection: connection, key: key, model: model, remember: remember, defaults: setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking}, previous: a.selection})
+	a.startModelSetup(modelSetupRequest{connection: connection, key: key, model: model, remember: remember, defaults: setup.Defaults{ContextLength: a.opts.Config.ContextLength, Thinking: a.opts.Config.Thinking}, previous: a.connection.selection})
 }
 
 type modelSetupRequest struct {
@@ -24,16 +25,16 @@ type modelSetupRequest struct {
 }
 
 func (a *app) startModelSetup(request modelSetupRequest) {
-	if a.worker.active() {
+	if a.work.state.active() {
 		return
 	}
-	a.worker = workerSetup
+	a.work.state = workerSetup
 	a.startElapsed()
 	a.status = a.language.Text("Connecting")
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.taskCancel = cancel
-	a.setupRevision++
-	revision := a.setupRevision
+	a.work.cancel = cancel
+	a.connection.setupRevision++
+	revision := a.connection.setupRevision
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()

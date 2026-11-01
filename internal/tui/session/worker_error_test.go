@@ -16,7 +16,7 @@ func TestWorkerErrorDisplayedOnce(t *testing.T) {
 	for _, page := range []string{"chat", "model"} {
 		t.Run(page, func(t *testing.T) {
 			a := screenFixture(t)
-			a.page, a.worker = page, workerSetup
+			a.page, a.work.state = page, workerSetup
 			a.receive(notice{Done: true, Err: errors.New("Connection diagnostic failed")})
 			check := func() {
 				t.Helper()

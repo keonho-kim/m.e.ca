@@ -8,15 +8,16 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/input"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func (a *app) modelSettingsKey(e *tcell.EventKey) {
-	if a.modelForm == nil {
+	if a.connection.modelForm == nil {
 		a.initializeModelForm()
 	}
-	f := a.modelForm
+	f := a.connection.modelForm
 	if f.Confirm {
 		switch confirmationKey(e) {
 		case confirmEdit:
@@ -29,7 +30,7 @@ func (a *app) modelSettingsKey(e *tcell.EventKey) {
 		}
 		return
 	}
-	if e.Key() == tcell.KeyEnter && !a.worker.agent() && !a.worker.stopping() {
+	if e.Key() == tcell.KeyEnter && !a.work.state.agent() && !a.work.state.stopping() {
 		if a.menuInput.String() == ":q" {
 			a.closeModelForm()
 			a.page = "chat"
@@ -39,10 +40,10 @@ func (a *app) modelSettingsKey(e *tcell.EventKey) {
 		a.menuInput.Set("")
 		return
 	}
-	if a.worker.active() {
-		if e.Key() == tcell.KeyEscape && !a.worker.agent() && a.taskCancel != nil {
-			a.worker.stop()
-			a.taskCancel()
+	if a.work.state.active() {
+		if e.Key() == tcell.KeyEscape && !a.work.state.agent() && a.work.cancel != nil {
+			a.work.state.stop()
+			a.work.cancel()
 			return
 		}
 		if !f.Catalog || !f.Editing || f.Row != modelsettings.Name {
@@ -121,13 +122,13 @@ func (a *app) modelSettingsKey(e *tcell.EventKey) {
 }
 
 func (a *app) refreshModelHints() {
-	if a.modelForm != nil && a.page == "model" {
-		a.modelForm.RefreshHints()
+	if a.connection.modelForm != nil && a.page == "model" {
+		a.connection.modelForm.RefreshHints()
 	}
 }
 
 func (a *app) changeModelRow(direction int) {
-	f := a.modelForm
+	f := a.connection.modelForm
 	action, notice := f.Change(direction)
 	if notice != "" {
 		a.status = a.language.Text(notice)
@@ -140,7 +141,7 @@ func (a *app) changeModelRow(direction int) {
 		a.queryModelForm(strings.TrimSpace(f.Name.String()))
 	case modelsettings.DiagnoseConnection:
 		selected := f.Selection()
-		if selected.Connection.ID != a.selection.Connection.ID || selected.Model != a.selection.Model || f.ControlsChanged || f.KeyChanged {
+		if selected.Connection.ID != a.connection.selection.Connection.ID || selected.Model != a.connection.selection.Model || f.ControlsChanged || f.KeyChanged {
 			a.status = a.language.Text("Save these settings before running diagnostics")
 			return
 		}

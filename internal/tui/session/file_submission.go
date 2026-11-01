@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/commands"
 )
 
@@ -16,10 +17,10 @@ type fileSubmission struct {
 }
 
 func (a *app) fileInputAction() (prompt, action string) {
-	if a.fileReserve {
+	if a.files.fileReserve {
 		return "Queue this request? (y/N)", "Queue follow-up"
 	}
-	if a.worker.agent() && a.worker.active() && !a.worker.stopping() {
+	if a.work.state.agent() && a.work.state.active() && !a.work.state.stopping() {
 		return "Steer this request? (y/N)", "Steer"
 	}
 	return "Send this request? (y/N)", "Send"
@@ -32,8 +33,8 @@ func (a *app) confirmFileInput(reserve bool) {
 		return
 	}
 	if command.Kind == commands.Message {
-		a.fileSendConfirm = true
-		a.fileReserve = reserve
+		a.files.fileSendConfirm = true
+		a.files.fileReserve = reserve
 		return
 	}
 	a.submit()
@@ -47,22 +48,22 @@ func (a *app) fileSendKey(e *tcell.EventKey) {
 			a.fail(err)
 			return
 		}
-		reserve := a.fileReserve
+		reserve := a.files.fileReserve
 		a.closeFiles()
 		a.dispatchFileInput(command, reserve)
 	case confirmReject, confirmEdit:
-		a.fileSendConfirm = false
-		a.fileReserve = false
+		a.files.fileSendConfirm = false
+		a.files.fileReserve = false
 	}
 }
 
 func (a *app) dispatchFileInput(command commands.Command, reserve bool) {
-	if !reserve || !a.worker.agent() || !a.worker.active() {
+	if !reserve || !a.work.state.agent() || !a.work.state.active() {
 		a.submitCommand(command)
 		return
 	}
-	if a.fileSelectionBusy {
-		a.fileSubmission = &fileSubmission{command: command, revision: a.editor.Revision(), reserve: true}
+	if a.files.fileSelectionBusy {
+		a.compose.fileSubmission = &fileSubmission{command: command, revision: a.compose.editor.Revision(), reserve: true}
 		a.status = a.language.Text("Saving selected paths before sending")
 		return
 	}
@@ -70,15 +71,15 @@ func (a *app) dispatchFileInput(command commands.Command, reserve bool) {
 }
 
 func (a *app) finishFileSubmission() {
-	if a.page == "approval" || a.fileSelectionBusy {
+	if a.page == "approval" || a.files.fileSelectionBusy {
 		return
 	}
-	pending := a.fileSubmission
-	a.fileSubmission = nil
+	pending := a.compose.fileSubmission
+	a.compose.fileSubmission = nil
 	if pending == nil || a.exit || a.ctx.Err() != nil || a.page != "chat" {
 		return
 	}
-	if pending.revision != a.editor.Revision() {
+	if pending.revision != a.compose.editor.Revision() {
 		a.status = a.language.Text("Draft changed; send when ready")
 		return
 	}

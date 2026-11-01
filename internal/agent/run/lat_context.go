@@ -14,7 +14,7 @@ import (
 )
 
 func (s *execution) prepareLATContext(ctx context.Context, budget int) ([]byte, error) {
-	if s.latMemory == nil {
+	if s.review.memory == nil {
 		return nil, fmt.Errorf("independent review memory is unavailable")
 	}
 	for {
@@ -24,7 +24,7 @@ func (s *execution) prepareLATContext(ctx context.Context, budget int) ([]byte, 
 		if err := s.pollLATMemory(ctx); err != nil {
 			return nil, err
 		}
-		body, err := s.latMemory.controller.Tail(ctx, budget, s.checkpoint.Objective, s.latMemory.evidence)
+		body, err := s.review.memory.controller.Tail(ctx, budget, s.checkpoint.Objective, s.review.memory.evidence)
 		if err == nil {
 			// A complete original delta already fits. Release model resources
 			// before final review instead of awaiting optional compaction.
@@ -36,15 +36,15 @@ func (s *execution) prepareLATContext(ctx context.Context, budget int) ([]byte, 
 		if !errors.Is(err, latmemory.ErrNeedsCompaction) {
 			return nil, err
 		}
-		if s.latMemory.failure != nil {
-			return nil, errors.Join(err, s.latMemory.failure)
+		if s.review.memory.failure != nil {
+			return nil, errors.Join(err, s.review.memory.failure)
 		}
 		if !s.activeLATMemory() {
 			if startErr := s.maintainLATMemory(ctx, true); startErr != nil {
 				return nil, startErr
 			}
 			if !s.activeLATMemory() {
-				return nil, errors.Join(err, s.latMemory.failure)
+				return nil, errors.Join(err, s.review.memory.failure)
 			}
 		}
 		if err := s.waitLATMemory(ctx); err != nil {
@@ -58,7 +58,7 @@ func (s *execution) waitLATMemory(ctx context.Context) error {
 	defer ticker.Stop()
 	for s.activeLATMemory() {
 		select {
-		case <-s.latMemory.controller.Done():
+		case <-s.review.memory.controller.Done():
 			return s.pollLATMemory(ctx)
 		case <-ticker.C:
 			if err := s.pollLATMemory(ctx); err != nil {

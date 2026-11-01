@@ -7,7 +7,6 @@ package session
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestGreetingNeedsOneCall(t *testing.T) {
@@ -43,17 +43,17 @@ func TestGreetingNeedsOneCall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(a.client.Close)
+	t.Cleanup(a.connection.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
-	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
 	a.startRequest(composer.Capture("Hello", a.selectedPaths()))
 	drainTask(t, a, false)
 	var output strings.Builder
-	for _, block := range a.output.Blocks {
+	for _, block := range a.chat.output.Blocks {
 		output.WriteString(block.Text)
 	}
 	if calls.Load() != 1 || a.status != "" || strings.Count(output.String(), "Hello! How can I help?") != 1 {

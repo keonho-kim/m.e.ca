@@ -11,14 +11,15 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
 func TestPendingListSelectionAndSavedOrder(t *testing.T) {
 	a := screenFixture(t)
-	a.language, a.worker = locale.English, workerAgent
-	a.queued.Messages = queuedRequests("first", "second\ncontinued", "third")
-	a.editor.Set("draft")
+	a.language, a.work.state = locale.English, workerAgent
+	a.compose.queued.Messages = queuedRequests("first", "second\ncontinued", "third")
+	a.compose.editor.Set("draft")
 	a.render()
 	if got := screenLine(a.screen, 1, 80); !strings.Contains(got, "Queued (3)") {
 		t.Fatal(got)
@@ -53,10 +54,10 @@ func TestPendingListSelectionAndSavedOrder(t *testing.T) {
 	if !previous.HasDim() || previous.GetForeground() != tcell.ColorDefault {
 		t.Fatal("previous queue selection remained highlighted")
 	}
-	a.editor.Set("revised second")
+	a.compose.editor.Set("revised second")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.render()
-	if !slices.Equal(queuedTexts(a.queued.Messages), []string{"first", "revised second", "third"}) || a.editor.String() != "draft" ||
+	if !slices.Equal(queuedTexts(a.compose.queued.Messages), []string{"first", "revised second", "third"}) || a.compose.editor.String() != "draft" ||
 		!strings.Contains(screenLine(a.screen, 3, 80), "2. revised second") {
 		t.Fatal("saving changed queue order, lost the draft or left a stale list")
 	}
@@ -64,7 +65,7 @@ func TestPendingListSelectionAndSavedOrder(t *testing.T) {
 
 func TestPendingListRedactionAndRelease(t *testing.T) {
 	a := screenFixture(t)
-	a.queued.Messages = queuedRequests("first", "new-secret-value", "third")
+	a.compose.queued.Messages = queuedRequests("first", "new-secret-value", "third")
 	a.chatLayout(80)
 	a.opts.Vault.Remember("new-secret-value")
 	layout := a.chatLayout(80)
@@ -75,8 +76,8 @@ func TestPendingListRedactionAndRelease(t *testing.T) {
 	if strings.Contains(text.String(), "new-secret-value") || !strings.Contains(text.String(), "[redacted]") {
 		t.Fatal("queue projection did not refresh after the secret list changed")
 	}
-	retained := a.chatProjection.queue.Entries
-	a.queued.Messages = a.queued.Messages[:1]
+	retained := a.chat.chatProjection.queue.Entries
+	a.compose.queued.Messages = a.compose.queued.Messages[:1]
 	a.chatLayout(80)
 	for _, entry := range retained[1:] {
 		if entry.Block.Text != "" {
@@ -85,36 +86,36 @@ func TestPendingListRedactionAndRelease(t *testing.T) {
 	}
 	a.restorePending()
 	a.chatLayout(80)
-	if a.chatProjection.queue.Entries != nil || retained[0].Block.Text != "" {
+	if a.chat.chatProjection.queue.Entries != nil || retained[0].Block.Text != "" {
 		t.Fatal("empty queue retained projected rows")
 	}
 }
 
 func TestPendingEditVerticalNavigation(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
-	a.queued.Messages = queuedRequests("first", "second", "third")
-	a.editor.Set("draft")
+	a.work.state = workerAgent
+	a.compose.queued.Messages = queuedRequests("first", "second", "third")
+	a.compose.editor.Set("draft")
 	for _, want := range []string{"third", "second", "first", "first"} {
 		pendingArrow(a, tcell.KeyUp)
-		if a.editor.String() != want {
-			t.Fatalf("selected=%q; want %q", a.editor.String(), want)
+		if a.compose.editor.String() != want {
+			t.Fatalf("selected=%q; want %q", a.compose.editor.String(), want)
 		}
 	}
 	for _, want := range []string{"second", "third", "draft"} {
 		pendingArrow(a, tcell.KeyDown)
-		if a.editor.String() != want {
-			t.Fatalf("selected=%q; want %q", a.editor.String(), want)
+		if a.compose.editor.String() != want {
+			t.Fatalf("selected=%q; want %q", a.compose.editor.String(), want)
 		}
 	}
 }
 
 func TestPendingListNavigationRevealsSelectedRequest(t *testing.T) {
 	a := screenFixture(t)
-	a.language, a.worker = locale.English, workerAgent
+	a.language, a.work.state = locale.English, workerAgent
 	a.screen.SetSize(60, 16)
 	for i := range 40 {
-		a.queued.Messages = append(a.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
+		a.compose.queued.Messages = append(a.compose.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
 	}
 	a.render()
 	for i := 39; i >= 0; i-- {
@@ -135,10 +136,10 @@ func TestPendingListNavigationRevealsSelectedRequest(t *testing.T) {
 
 func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	a.screen.SetSize(60, 16)
 	for i := range 40 {
-		a.queued.Messages = append(a.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
+		a.compose.queued.Messages = append(a.compose.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
 	}
 	a.render()
 	for range 20 {
@@ -147,9 +148,9 @@ func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
 	a.render()
 	before := screenLine(a.screen, 1, 60)
 	for range 20 {
-		a.output.Append("new tool output", false)
+		a.chat.output.Append("new tool output", false)
 	}
-	a.thinking = "streaming thought"
+	a.chat.thinking = "streaming thought"
 	a.render()
 	if after := screenLine(a.screen, 1, 60); after != before {
 		t.Fatalf("new output moved the queue reading anchor: before=%q after=%q", before, after)
@@ -158,7 +159,7 @@ func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
 	a.scroll(-100, 60, a.scrollbar.bar.Height)
 	a.render()
 	before = screenLine(a.screen, 1, 60)
-	a.output.Append("later tool output", false)
+	a.chat.output.Append("later tool output", false)
 	a.render()
 	if after := screenLine(a.screen, 1, 60); after != before {
 		t.Fatalf("queue editing overrode manual history scrolling: before=%q after=%q", before, after)
@@ -167,10 +168,10 @@ func TestPendingListKeepsItsScrollAnchorDuringOutput(t *testing.T) {
 
 func TestPendingListResizeKeepsSelectedRequestVisible(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	a.screen.SetSize(80, 24)
 	for i := range 20 {
-		a.queued.Messages = append(a.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
+		a.compose.queued.Messages = append(a.compose.queued.Messages, queuedRequests(fmt.Sprintf("request %02d", i+1))...)
 	}
 	for range 10 {
 		pendingArrow(a, tcell.KeyLeft)
@@ -183,8 +184,8 @@ func TestPendingListResizeKeepsSelectedRequestVisible(t *testing.T) {
 		}
 		a.render()
 		visible := false
-		for _, line := range a.chatVisible {
-			visible = visible || line.ID == a.chatProjection.focusedID
+		for _, line := range a.chat.chatVisible {
+			visible = visible || line.ID == a.chat.chatProjection.focusedID
 		}
 		if !visible {
 			t.Fatalf("selected request hidden after resize to %dx%d", size[0], size[1])
@@ -195,16 +196,16 @@ func TestPendingListResizeKeepsSelectedRequestVisible(t *testing.T) {
 func TestPendingEditDeleteShortcutWithTextSelection(t *testing.T) {
 	for _, modifier := range []tcell.ModMask{tcell.ModCtrl, tcell.ModMeta} {
 		a := screenFixture(t)
-		a.worker = workerAgent
-		a.queued.Messages = queuedRequests("first", "second", "third")
-		a.editor.Set("draft")
+		a.work.state = workerAgent
+		a.compose.queued.Messages = queuedRequests("first", "second", "third")
+		a.compose.editor.Set("draft")
 		pendingArrow(a, tcell.KeyLeft)
 		pendingArrow(a, tcell.KeyLeft)
 		a.render()
 		drag(a, 2, a.inputRegion.y, 4, a.inputRegion.y)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", modifier))
 		a.render()
-		if !slices.Equal(queuedTexts(a.queued.Messages), []string{"first", "third"}) || a.queued.Edit != nil || a.editor.String() != "draft" || a.textSelection.Active() {
+		if !slices.Equal(queuedTexts(a.compose.queued.Messages), []string{"first", "third"}) || a.compose.queued.Edit != nil || a.compose.editor.String() != "draft" || a.textSelection.Active() {
 			t.Fatal("delete shortcut only edited selected text or reordered the surviving queue")
 		}
 		if labels := keymapLabels(t, a); labels["Enter"] != a.language.Text("Steer") || labels["Ctrl/Cmd+Backspace"] != "" {

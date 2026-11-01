@@ -9,13 +9,14 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func TestFooterWrapAndCollapse(t *testing.T) {
 	a := screenFixture(t)
-	a.selection.Model = "chosen"
-	a.editor.Set("draft")
+	a.connection.selection.Model = "chosen"
+	a.compose.editor.Set("draft")
 	for _, test := range []struct{ width, height, status int }{
 		{240, 24, 22},
 		{60, 24, 21},
@@ -57,7 +58,7 @@ func TestFooterWrapKeepsInputSelectionAnchored(t *testing.T) {
 		t.Run(test.selected, func(t *testing.T) {
 			a := screenFixture(t)
 			a.screen.SetSize(80, test.height)
-			a.editor.Set(test.text)
+			a.compose.editor.Set(test.text)
 			a.render()
 			y := a.inputRegion.y + a.inputRegion.window.CursorRow
 			a.mouse(tcell.NewEventMouse(test.first, y, tcell.Button1, 0))
@@ -78,8 +79,8 @@ func TestFooterWrapKeepsInputSelectionAnchored(t *testing.T) {
 				t.Fatal("selection highlight detached from the input")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-			if a.editor.String() != test.remaining {
-				t.Fatalf("selection deleted wrong input: %q", a.editor.String())
+			if a.compose.editor.String() != test.remaining {
+				t.Fatalf("selection deleted wrong input: %q", a.compose.editor.String())
 			}
 		})
 	}
@@ -88,8 +89,8 @@ func TestFooterWrapKeepsInputSelectionAnchored(t *testing.T) {
 func TestFooterWrapIgnoresStaleScrollbarGeometry(t *testing.T) {
 	a := screenFixture(t)
 	a.screen.SetSize(100, 24)
-	a.selection.Model = "chosen"
-	a.output.Append(strings.Repeat("line\n", 18)+"line", false)
+	a.connection.selection.Model = "chosen"
+	a.chat.output.Append(strings.Repeat("line\n", 18)+"line", false)
 	a.scrollbar.bar = viewport.NewScrollbar(200, 18, 0)
 	a.render()
 	if a.scrollbar.bar.Visible() || strings.TrimSpace(screenLine(a.screen, 22, 100)) != "chosen" {

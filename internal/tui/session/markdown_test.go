@@ -5,13 +5,15 @@
 package session
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
-	"strings"
-	"testing"
 )
 
 func TestMarkdownLiveAndRestored(t *testing.T) {
@@ -29,7 +31,7 @@ func TestMarkdownLiveAndRestored(t *testing.T) {
 	a.receive(notice{Event: &runrecord.Event{Kind: "response", Text: "# Heading\n\n**strong** 😀"}})
 	formatter := transcript.Formatter{Redact: func(s string) string { return s }}
 	saved := formatter.Message(modelapi.Message{Role: "assistant", Content: "# Heading\n\n**strong** 😀"})
-	if len(saved) != 1 || !saved[0].Markdown || !a.output.Blocks[0].Markdown {
+	if len(saved) != 1 || !saved[0].Markdown || !a.chat.output.Blocks[0].Markdown {
 		t.Fatal("live and restored markup mismatch")
 	}
 	a.screen.SetSize(12, 24)
@@ -54,7 +56,7 @@ func TestMarkdownUserRemainsLiteral(t *testing.T) {
 func TestMarkdownToolOutputRemainsLiteral(t *testing.T) {
 	a := screenFixture(t)
 	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{ID: "read", Name: "execute_command", Arguments: []byte(`{"command":"cat a"}`)}, Text: "**literal tool output**"}})
-	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Markdown || !strings.Contains(a.output.Blocks[0].Text, "**literal tool output**") {
+	if len(a.chat.output.Blocks) != 1 || a.chat.output.Blocks[0].Markdown || !strings.Contains(a.chat.output.Blocks[0].Text, "**literal tool output**") {
 		t.Fatal("tool output was interpreted as Markdown")
 	}
 }

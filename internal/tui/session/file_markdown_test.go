@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/preview"
@@ -48,7 +49,7 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 			t.Fatal("preview toggle is hidden in the actual footer")
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "r", 0))
-		if a.filePreview.Raw {
+		if a.files.filePreview.Raw {
 			t.Fatal("unmodified lowercase r toggled the preview")
 		}
 		for _, toggle := range []*tcell.EventKey{
@@ -56,14 +57,14 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 			tcell.NewEventKeyEx(tcell.KeyRune, "R", tcell.ModShift, true, tcell.KeyR, 1),
 			tcell.NewEventKeyEx(tcell.KeyRune, "r", tcell.ModShift, true, tcell.KeyR, 1),
 		} {
-			revision := a.previewRevision
+			revision := a.files.previewRevision
 			a.keyEvent(toggle)
 			renderPreview(t, a)
 			shown = strings.Join(screenRows(a, 24-a.footerRows), "\n")
-			if a.filePreview.Full != full || !strings.Contains(shown, "# Viewer title") || !strings.Contains(shown, "**strong**") {
+			if a.files.filePreview.Full != full || !strings.Contains(shown, "# Viewer title") || !strings.Contains(shown, "**strong**") {
 				t.Fatalf("key=%v: format toggle changed pane size or lost raw source: %s", toggle, shown)
 			}
-			if a.previewRevision != revision || a.previewReads.Running() {
+			if a.files.previewRevision != revision || a.files.previewReads.Running() {
 				t.Fatal("format toggle reread the file instead of reusing its content")
 			}
 			if labels := keymapLabels(t, a); labels["Shift+R"] != a.language.Text("Render") {
@@ -95,10 +96,10 @@ func assertPreviewHeadingBold(t *testing.T, a *app, title string) {
 func TestLiteralFilePreviewHasNoFormatToggle(t *testing.T) {
 	a := fixture(t)
 	a.page = "files"
-	a.filePreview = &preview.State{Path: "source.go", Content: "**literal source**", Full: true}
+	a.files.filePreview = &preview.State{Path: "source.go", Content: "**literal source**", Full: true}
 	for _, key := range []*tcell.EventKey{tcell.NewEventKey(tcell.KeyRune, "R", 0), tcell.NewEventKeyEx(tcell.KeyRune, "r", tcell.ModShift, true, tcell.KeyR, 1)} {
 		a.keyEvent(key)
-		if !a.filePreview.Full || keymapLabels(t, a)["Shift+R"] != "" {
+		if !a.files.filePreview.Full || keymapLabels(t, a)["Shift+R"] != "" {
 			t.Fatal("format key changed a literal preview or advertised Markdown controls")
 		}
 	}
@@ -106,16 +107,16 @@ func TestLiteralFilePreviewHasNoFormatToggle(t *testing.T) {
 
 func TestMarkdownFilePreviewRefreshPreservesModeAndPosition(t *testing.T) {
 	a := fixture(t)
-	a.page, a.previewRevision = "files", 7
-	a.filePreview = &preview.State{Path: "guide.md", Content: strings.Repeat("**before**\n", 50), Raw: true, Offset: 8, Loading: true}
+	a.page, a.files.previewRevision = "files", 7
+	a.files.filePreview = &preview.State{Path: "guide.md", Content: strings.Repeat("**before**\n", 50), Raw: true, Offset: 8, Loading: true}
 	renderPreview(t, a)
-	if a.filePreview.Offset != 8 {
+	if a.files.filePreview.Offset != 8 {
 		t.Fatal("loading reset the existing read position")
 	}
 	a.receiveFilePreview(notice{PreviewRevision: 7, FilePreview: &fileview.Preview{Path: "guide.md", Content: "# New heading\n\n" + strings.Repeat("**updated**\n", 50)}})
 	renderPreview(t, a)
 	shown := strings.Join(screenRows(a, 24-a.footerRows), "\n")
-	if !a.filePreview.Raw || a.filePreview.Full || a.filePreview.Offset != 8 || !strings.Contains(shown, "**updated**") || strings.Contains(shown, "before") {
+	if !a.files.filePreview.Raw || a.files.filePreview.Full || a.files.filePreview.Offset != 8 || !strings.Contains(shown, "**updated**") || strings.Contains(shown, "before") {
 		t.Fatalf("refreshed preview lost mode, source or position: %s", shown)
 	}
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "R", tcell.ModShift, true, tcell.KeyR, 1))
@@ -125,9 +126,9 @@ func TestMarkdownFilePreviewRefreshPreservesModeAndPosition(t *testing.T) {
 
 func TestMarkdownFilePreviewShortcutLeavesInputEditable(t *testing.T) {
 	a := fixture(t)
-	a.editor.Set("draft ")
+	a.compose.editor.Set("draft ")
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "R", tcell.ModShift, true, tcell.KeyR, 1))
-	if a.editor.String() != "draft R" || a.filePreview != nil {
+	if a.compose.editor.String() != "draft R" || a.files.filePreview != nil {
 		t.Fatal("viewer-only format key intercepted ordinary input")
 	}
 }

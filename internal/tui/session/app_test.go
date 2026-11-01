@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestAtInputRemainsLiteral(t *testing.T) {
 	a := screenFixture(t)
 	typeInput(a, "read @src/main.go")
-	if a.editor.String() != "read @src/main.go" || a.commandOpen || a.worker.active() {
+	if a.compose.editor.String() != "read @src/main.go" || a.compose.commandOpen || a.work.state.active() {
 		t.Fatal("@ triggered completion")
 	}
 }
@@ -25,8 +26,8 @@ func TestKeyInputPreservesGraphemeStrings(t *testing.T) {
 	a := screenFixture(t)
 	value := "한글 a\u0301 👨‍👩‍👧‍👦"
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, value, 0))
-	if a.editor.String() != value {
-		t.Fatalf("key event lost Unicode text: %q", a.editor.String())
+	if a.compose.editor.String() != value {
+		t.Fatalf("key event lost Unicode text: %q", a.compose.editor.String())
 	}
 }
 func TestRunConsumesNativeEventQueueAndExits(t *testing.T) {
@@ -58,29 +59,29 @@ func TestRunConsumesNativeEventQueueAndExits(t *testing.T) {
 
 func TestInputSurvivesResizeAndModelMenu(t *testing.T) {
 	a := screenFixture(t)
-	a.selection.Model = "chosen"
+	a.connection.selection.Model = "chosen"
 	on := true
-	a.selection.Thinking = &on
-	a.editor.Set("draft")
+	a.connection.selection.Thinking = &on
+	a.compose.editor.Set("draft")
 	a.render()
 	line := screenLine(a.screen, 24-a.footerRows, 80)
 	if strings.TrimSpace(line) != "chosen" {
 		t.Fatal(line)
 	}
 	off := false
-	a.selection.Thinking = &off
+	a.connection.selection.Thinking = &off
 	a.render()
 	if strings.Contains(screenLine(a.screen, 24-a.footerRows, 80), "추론") {
 		t.Fatal("OFF is visible")
 	}
 	a.openModel()
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.editor.String() != "draft" {
+	if a.compose.editor.String() != "draft" {
 		t.Fatal("menu cleared draft")
 	}
 	a.screen.SetSize(32, 10)
 	a.render()
-	if a.editor.String() != "draft" {
+	if a.compose.editor.String() != "draft" {
 		t.Fatal("resize cleared draft")
 	}
 }
@@ -97,11 +98,11 @@ func screenLine(screen tcell.Screen, y, width int) string {
 }
 func TestCancellingConnectionSelectionPreservesCurrentModel(t *testing.T) {
 	a := screenFixture(t)
-	a.selection.Model = "current-model"
+	a.connection.selection.Model = "current-model"
 	candidate := modelconn.Selection{Connection: modelconn.Connection{ID: "candidate"}}
 	a.receive(notice{Done: true, Selection: &candidate, Models: []string{"new-model"}})
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.selection.Model != "current-model" {
+	if a.connection.selection.Model != "current-model" {
 		t.Fatal("connection menu cleared the current model")
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,6 +20,7 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
@@ -71,13 +71,13 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(a.client.Close)
+	t.Cleanup(a.connection.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
-	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
 	a.startRequest(composer.Capture("Create README.md in the current directory", a.selectedPaths()))
 	drainTask(t, a, true)
 	content, err := os.ReadFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"))
@@ -85,7 +85,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		t.Fatalf("content=%q status=%q err=%v", content, a.status, err)
 	}
 	visible := false
-	for _, block := range a.output.Blocks {
+	for _, block := range a.chat.output.Blocks {
 		if strings.Contains(block.Text, "+   1 | # Project") {
 			visible = true
 		}

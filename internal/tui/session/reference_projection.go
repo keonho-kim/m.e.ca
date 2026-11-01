@@ -21,16 +21,16 @@ type referenceProjection struct {
 }
 
 func (a *app) selectedPaths() []string {
-	p := &a.references
-	if !p.loaded || p.revision != a.referenceRevision || len(p.paths) != len(a.browser.Selected) {
-		*p = referenceProjection{loaded: true, revision: a.referenceRevision, paths: slices.Sorted(maps.Keys(a.browser.Selected))}
+	p := &a.files.references
+	if !p.loaded || p.revision != a.files.referenceRevision || len(p.paths) != len(a.files.browser.Selected) {
+		*p = referenceProjection{loaded: true, revision: a.files.referenceRevision, paths: slices.Sorted(maps.Keys(a.files.browser.Selected))}
 	}
 	return p.paths
 }
 
 func (a *app) selectedReferenceLines(width, rows int) []string {
 	paths := a.selectedPaths()
-	p := &a.references
+	p := &a.files.references
 	version := a.opts.Vault.RedactionVersion()
 	if p.lines != nil && p.width == width && p.rows == rows && p.language == a.language && p.redaction == version {
 		return p.lines

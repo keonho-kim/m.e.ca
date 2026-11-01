@@ -10,25 +10,26 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
-	"github.com/rivo/uniseg"
 )
 
 func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	a := screenFixture(t)
 	a.language = locale.English
-	a.worker = workerAgent
-	a.tokenTotal = modelapi.TokenUsage{Input: 9999, Output: 8888}
+	a.work.state = workerAgent
+	a.chat.tokenTotal = modelapi.TokenUsage{Input: 9999, Output: 8888}
 	a.receiveRuntime(&runrecord.Event{Kind: "response", Text: "Finished the requested work."})
 	a.receiveRuntime(&runrecord.Event{Statistics: &runrecord.Statistics{ElapsedMillis: 3723000, GenerationMillis: 4000, Usage: &modelapi.TokenUsage{Input: 120, Output: 20}}})
-	if len(a.output.Blocks) != 1 {
+	if len(a.chat.output.Blocks) != 1 {
 		t.Fatal("completion line displayed before worker finished")
 	}
 	a.receive(notice{Done: true, RunStatus: runrecord.Answered})
-	if len(a.output.Blocks) != 2 || a.runSummary != nil {
+	if len(a.chat.output.Blocks) != 2 || a.chat.runSummary != nil {
 		t.Fatal("completion line missing, duplicated or retained")
 	}
 	want := "Worked for 01:02:03 | INPUT 120 | OUTPUT 20 | TPS 5.0"
@@ -37,7 +38,7 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 		a.render()
 		layout := a.chatLayout(view.TranscriptWidth(width))
 		for _, line := range layout.Window(0, layout.Count()) {
-			if line.ID != a.output.Blocks[1].ID || strings.TrimSpace(line.Text) == "" {
+			if line.ID != a.chat.output.Blocks[1].ID || strings.TrimSpace(line.Text) == "" {
 				continue
 			}
 			text := line.Copy.Row.Text
@@ -66,25 +67,25 @@ func TestRunSummaryPlacementStyleAndCopy(t *testing.T) {
 	if got := a.textSelection.Text(); got != want {
 		t.Fatalf("centered summary copy=%q", got)
 	}
-	if a.output.Blocks[0].Centered || a.output.Blocks[0].Thinking {
+	if a.chat.output.Blocks[0].Centered || a.chat.output.Blocks[0].Thinking {
 		t.Fatal("answer inherited completion-line styling")
 	}
 }
 
 func TestRunSummaryFollowsInterruptedDraft(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgentStopping
+	a.work.state = workerAgentStopping
 	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: "partial answer", Thinking: "partial reasoning"})
 	a.receiveRuntime(&runrecord.Event{Statistics: &runrecord.Statistics{ElapsedMillis: 1000}})
 	a.receive(notice{Done: true, RunStatus: runrecord.Interrupted, Err: context.Canceled})
-	if len(a.output.Blocks) != 3 || a.output.Blocks[1].Markdown == false || !a.output.Blocks[2].Centered || a.runSummary != nil {
-		t.Fatalf("interrupted response ordering: %+v", a.output.Blocks)
+	if len(a.chat.output.Blocks) != 3 || a.chat.output.Blocks[1].Markdown == false || !a.chat.output.Blocks[2].Centered || a.chat.runSummary != nil {
+		t.Fatalf("interrupted response ordering: %+v", a.chat.output.Blocks)
 	}
-	if strings.TrimSpace(a.output.Blocks[1].Text) != "partial answer" || !strings.Contains(a.output.Blocks[2].Text, "입력 — | 출력 — | 초당 토큰 —") {
+	if strings.TrimSpace(a.chat.output.Blocks[1].Text) != "partial answer" || !strings.Contains(a.chat.output.Blocks[2].Text, "입력 — | 출력 — | 초당 토큰 —") {
 		t.Fatal("partial response or unreported usage lost")
 	}
 	a.receive(notice{Done: true})
-	if len(a.output.Blocks) != 3 {
+	if len(a.chat.output.Blocks) != 3 {
 		t.Fatal("later worker reused the previous summary")
 	}
 }

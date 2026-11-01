@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
@@ -14,33 +15,33 @@ import (
 
 func (a *app) finishWorker(n notice) {
 	a.restoreSteering()
-	active, cancelled := a.worker.agent(), a.worker.stopping()
+	active, cancelled := a.work.state.agent(), a.work.state.stopping()
 	defer func() {
 		if active {
 			a.finishPending(n.Err == nil && !cancelled && n.RunStatus == runrecord.Answered)
 		}
 	}()
-	a.tokenCurrent = modelapi.TokenUsage{}
-	stopped := a.worker.stopping()
-	a.worker = workerIdle
+	a.chat.tokenCurrent = modelapi.TokenUsage{}
+	stopped := a.work.state.stopping()
+	a.work.state = workerIdle
 	a.stopCompression()
 	a.stopElapsed()
 	a.clearToolActivity()
-	a.taskCancel = nil
+	a.work.cancel = nil
 	if n.Err != nil {
 		a.flushLATPartial()
 	}
 	a.stopLATIndicator()
-	a.latOutput = latOutput{}
+	a.chat.latOutput = latOutput{}
 	if n.Err != nil {
-		a.output.AppendBlock(transcript.Thought(a.thinking))
-		a.output.AppendBlock(transcript.Answer(a.stream))
+		a.chat.output.AppendBlock(transcript.Thought(a.chat.thinking))
+		a.chat.output.AppendBlock(transcript.Answer(a.chat.stream))
 	}
-	if active && a.runSummary != nil {
-		a.output.AppendBlock(*a.runSummary)
+	if active && a.chat.runSummary != nil {
+		a.chat.output.AppendBlock(*a.chat.runSummary)
 	}
-	a.runSummary = nil
-	a.stream, a.thinking = "", ""
+	a.chat.runSummary = nil
+	a.chat.stream, a.chat.thinking = "", ""
 	a.status = ""
 	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
@@ -62,9 +63,9 @@ func (a *app) finishWorker(n notice) {
 	if n.Diagnostic && n.Err == nil {
 		a.status = a.language.Text("모델 연결 진단을 통과했습니다")
 	}
-	if n.Diagnostic && a.modelForm != nil && a.modelForm.Saving {
+	if n.Diagnostic && a.connection.modelForm != nil && a.connection.modelForm.Saving {
 		if n.Err != nil {
-			a.modelForm.Saving, a.page = false, "model"
+			a.connection.modelForm.Saving, a.page = false, "model"
 		} else {
 			a.saveModelForm()
 		}

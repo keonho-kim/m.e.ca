@@ -30,51 +30,63 @@ func toolCallID(event *runrecord.Event) string {
 }
 
 func (a *app) startToolActivity(event *runrecord.Event) {
-	if event.Call == nil || a.worker.stopping() {
+	if event.Call == nil || a.work.state.stopping() {
 		return
 	}
-	entry := pendingTool{callID: toolCallID(event), text: (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Tool(*event)}
-	if index := slices.IndexFunc(a.toolActivity.pending, func(p pendingTool) bool { return p.callID == entry.callID }); index >= 0 {
-		a.toolActivity.pending[index] = entry
+	a.chat.toolActivity.start(event, transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact})
+}
+
+func (t *toolActivity) start(event *runrecord.Event, formatter transcript.Formatter) {
+	entry := pendingTool{callID: toolCallID(event), text: formatter.Tool(*event)}
+	if index := slices.IndexFunc(t.pending, func(p pendingTool) bool { return p.callID == entry.callID }); index >= 0 {
+		t.pending[index] = entry
 	} else {
-		a.toolActivity.pending = append(a.toolActivity.pending, entry)
+		t.pending = append(t.pending, entry)
 	}
-	a.toolActivity.dirty = true
+	t.dirty = true
 }
 
 func (a *app) finishToolActivity(event *runrecord.Event) {
-	id := toolCallID(event)
-	if index := slices.IndexFunc(a.toolActivity.pending, func(p pendingTool) bool { return p.callID == id }); index >= 0 {
-		a.toolActivity.pending = slices.Delete(a.toolActivity.pending, index, index+1)
-		a.toolActivity.dirty = true
-	}
+	a.chat.toolActivity.finish(event)
 	a.updateCommandActivity()
 }
 
 func (a *app) liveToolActivity() string {
-	if !a.toolActivity.dirty {
-		return a.toolActivity.text
+	return a.chat.toolActivity.render(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact})
+}
+
+func (t *toolActivity) finish(event *runrecord.Event) {
+	id := toolCallID(event)
+	if index := slices.IndexFunc(t.pending, func(p pendingTool) bool { return p.callID == id }); index >= 0 {
+		t.pending = slices.Delete(t.pending, index, index+1)
+		t.dirty = true
 	}
-	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
+
+}
+
+func (t *toolActivity) render(f transcript.Formatter) string {
+	if !t.dirty {
+		return t.text
+	}
 	var text strings.Builder
-	for _, pending := range a.toolActivity.pending {
+	for _, pending := range t.pending {
 		// A running command snapshot replaces its start row without duplicating it.
-		index := slices.IndexFunc(a.toolActivity.commands, func(run toolapi.CommandRun) bool {
+		index := slices.IndexFunc(t.commands, func(run toolapi.CommandRun) bool {
 			return pending.callID != "" && run.CallID == pending.callID && run.Status == "running"
 		})
 		if index >= 0 {
-			text.WriteString(f.CommandActivity(a.toolActivity.commands[index : index+1]))
+			text.WriteString(f.CommandActivity(t.commands[index : index+1]))
 		} else {
 			text.WriteString(pending.text)
 		}
 	}
-	for index, run := range a.toolActivity.commands {
-		if !slices.ContainsFunc(a.toolActivity.pending, func(p pendingTool) bool { return run.CallID != "" && p.callID == run.CallID }) {
-			text.WriteString(f.CommandActivity(a.toolActivity.commands[index : index+1]))
+	for index, run := range t.commands {
+		if !slices.ContainsFunc(t.pending, func(p pendingTool) bool { return run.CallID != "" && p.callID == run.CallID }) {
+			text.WriteString(f.CommandActivity(t.commands[index : index+1]))
 		}
 	}
-	a.toolActivity.text, a.toolActivity.dirty = text.String(), false
-	return a.toolActivity.text
+	t.text, t.dirty = text.String(), false
+	return t.text
 }
 
-func (a *app) clearToolActivity() { a.toolActivity = toolActivity{} }
+func (a *app) clearToolActivity() { a.chat.toolActivity = toolActivity{} }

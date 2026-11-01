@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,9 +17,11 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestFileComposerShowsProjectRelativeReferences(t *testing.T) {
@@ -37,7 +38,7 @@ func TestFileComposerShowsProjectRelativeReferences(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 	finishBrowserIO(t, a)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
-	a.editor.Set("review this\nthen explain")
+	a.compose.editor.Set("review this\nthen explain")
 	for _, page := range []string{"files", "chat"} {
 		a.page = page
 		shown := modelScreen(a)
@@ -46,7 +47,7 @@ func TestFileComposerShowsProjectRelativeReferences(t *testing.T) {
 				t.Fatalf("%s missing %q: %s", page, want, shown)
 			}
 		}
-		if strings.Contains(shown, a.opts.Session.ProjectRoot) || a.editor.String() != "review this\nthen explain" {
+		if strings.Contains(shown, a.opts.Session.ProjectRoot) || a.compose.editor.String() != "review this\nthen explain" {
 			t.Fatal("references changed the draft or exposed an absolute project path")
 		}
 	}
@@ -80,11 +81,11 @@ func TestFileComposerEnterSendsAfterPendingSelections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = connection.Selection{Connection: conn, Model: "test-model"}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
 	blocked := &selectionBarrier{Store: a.opts.Store, started: make(chan struct{}), release: make(chan struct{})}
 	a.opts.Store = blocked
 	var releaseOnce sync.Once
@@ -97,13 +98,13 @@ func TestFileComposerEnterSendsAfterPendingSelections(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
-	a.editor.Set("review selected folders")
+	a.compose.editor.Set("review selected folders")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "files" || a.worker.active() || !a.fileSendConfirm {
+	if a.page != "files" || a.work.state.active() || !a.files.fileSendConfirm {
 		t.Fatal("Enter did not ask for confirmation before sending")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.worker.active() {
+	if a.page != "chat" || a.work.state.active() {
 		t.Fatal("Enter did not return to chat and wait for selection persistence")
 	}
 	release()
@@ -123,17 +124,17 @@ func TestFileComposerEnterSendsAfterPendingSelections(t *testing.T) {
 
 func TestFileComposerQuitTextIsAMessage(t *testing.T) {
 	a := fixture(t)
-	a.page, a.browser.Input = "files", true
-	a.worker = workerAgent
-	a.steering = make(chan composer.Request, 1)
-	a.editor.Set(":q")
+	a.page, a.files.browser.Input = "files", true
+	a.work.state = workerAgent
+	a.compose.steering = make(chan composer.Request, 1)
+	a.compose.editor.Set(":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 	if a.page != "chat" || a.exit {
 		t.Fatal("file input interpreted :q as a navigation command")
 	}
 	select {
-	case request := <-a.steering:
+	case request := <-a.compose.steering:
 		if request.Text != ":q" {
 			t.Fatal(request)
 		}

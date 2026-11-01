@@ -22,26 +22,26 @@ type previewLayoutResult struct {
 }
 
 func (a *app) ensurePreviewLayout(width int) {
-	p := a.filePreview
+	p := a.files.filePreview
 	if p == nil || !p.NeedsLayout(width) {
 		return
 	}
 	source := p.Snapshot(width)
-	if a.previewLayouts.Running() && a.previewLayoutDesired == source {
+	if a.files.previewLayouts.Running() && a.files.previewLayoutDesired == source {
 		return
 	}
 	p.ReleaseLayout()
-	a.previewLayoutDesired = source
-	a.previewLayoutRevision++
-	request := previewLayoutRequest{source: source, revision: a.previewLayoutRevision}
-	if a.previewLayouts.Submit(request) {
+	a.files.previewLayoutDesired = source
+	a.files.previewLayoutRevision++
+	request := previewLayoutRequest{source: source, revision: a.files.previewLayoutRevision}
+	if a.files.previewLayouts.Submit(request) {
 		a.startPreviewLayout(request)
 	}
 }
 
 func (a *app) startPreviewLayout(request previewLayoutRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.previewLayouts.Begin(request.revision, cancel)
+	a.files.previewLayouts.Begin(request.revision, cancel)
 	a.workers.Go(func() {
 		defer cancel()
 		layout, err := preview.Build(ctx, request.source)
@@ -50,17 +50,17 @@ func (a *app) startPreviewLayout(request previewLayoutRequest) {
 }
 
 func (a *app) receivePreviewLayout(result *previewLayoutResult) {
-	if next := a.previewLayouts.Complete(result.request.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.files.previewLayouts.Complete(result.request.revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startPreviewLayout(*next)
 	}
-	if result.request.revision != a.previewLayoutRevision || a.filePreview == nil || result.err != nil {
+	if result.request.revision != a.files.previewLayoutRevision || a.files.filePreview == nil || result.err != nil {
 		return
 	}
-	a.filePreview.Apply(result.request.source, result.layout)
+	a.files.filePreview.Apply(result.request.source, result.layout)
 }
 
 func (a *app) stopPreviewLayout() {
-	a.previewLayouts.Stop()
-	a.previewLayoutRevision++
-	a.previewLayoutDesired = preview.Snapshot{}
+	a.files.previewLayouts.Stop()
+	a.files.previewLayoutRevision++
+	a.files.previewLayoutDesired = preview.Snapshot{}
 }

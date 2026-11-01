@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
@@ -16,19 +17,19 @@ func TestLATCommandTogglesAndDisplaysCurrentMode(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
 		a := screenFixture(t)
 		a.language = language
-		a.selection.Model = "test-model"
+		a.connection.selection.Model = "test-model"
 		if a.lat {
 			t.Fatal("LAT should start off")
 		}
 		for _, enabled := range []bool{true, false} {
 			typeInput(a, "!lat")
-			if len(a.commandHints) != 1 || a.commandHints[0].Name != "!lat" {
+			if len(a.compose.commandHints) != 1 || a.compose.commandHints[0].Name != "!lat" {
 				t.Fatal("LAT completion missing")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 			a.render()
 			footer := screenLine(a.screen, 24-a.footerRows, 80)
-			if a.lat != enabled || strings.Contains(footer, "LAT") != enabled || a.editor.String() != "" || a.worker.active() {
+			if a.lat != enabled || strings.Contains(footer, "LAT") != enabled || a.compose.editor.String() != "" || a.work.state.active() {
 				t.Fatalf("toggle=%t footer=%q", a.lat, footer)
 			}
 		}
@@ -37,10 +38,10 @@ func TestLATCommandTogglesAndDisplaysCurrentMode(t *testing.T) {
 
 func TestLATCannotChangeAnActiveRequest(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	typeInput(a, "!lat")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.lat || a.editor.String() != "!lat" {
+	if a.lat || a.compose.editor.String() != "!lat" {
 		t.Fatal("active request mode changed or draft lost")
 	}
 }

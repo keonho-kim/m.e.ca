@@ -6,16 +6,18 @@ package session
 
 import (
 	"context"
-	"github.com/gdamore/tcell/v3"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestFixedComposerAndStopNotice(t *testing.T) {
 	a := screenFixture(t)
-	a.editor.Set("draft")
+	a.compose.editor.Set("draft")
 	inputRow := -1
 	for _, response := range []string{"", "working", strings.Repeat("response\n", 40)} {
 		a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: response}})
@@ -29,7 +31,7 @@ func TestFixedComposerAndStopNotice(t *testing.T) {
 	}
 	_, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.worker, a.taskCancel = workerAgent, cancel
+	a.work.state, a.work.cancel = workerAgent, cancel
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.receive(notice{Done: true, Err: context.Canceled})
 	a.render()
@@ -56,7 +58,7 @@ func TestFixedComposerShiftEnter(t *testing.T) {
 	a := screenFixture(t)
 	typeInput(a, "!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModShift))
-	if a.exit || a.editor.String() != "!quit\n" {
+	if a.exit || a.compose.editor.String() != "!quit\n" {
 		t.Fatal("Shift+Enter executed command")
 	}
 	a.render()
@@ -80,7 +82,7 @@ func TestPermissionCommandOpensSettings(t *testing.T) {
 	a := screenFixture(t)
 	typeInput(a, "!permission")
 	a.submit()
-	if a.page != "permission" || a.status != "" || len(a.commandHints) != 0 {
+	if a.page != "permission" || a.status != "" || len(a.compose.commandHints) != 0 {
 		t.Fatal("permission settings did not open")
 	}
 }

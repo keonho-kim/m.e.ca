@@ -6,10 +6,11 @@ package session
 
 import (
 	"context"
-	"github.com/gdamore/tcell/v3"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 type frameScreen struct {
@@ -55,8 +56,8 @@ func TestEventLoopPasteBatchesFrames(t *testing.T) {
 		t.Fatal(err)
 	}
 	<-finished
-	if ctx.Err() == context.DeadlineExceeded || a.editor.String() != text {
-		t.Fatalf("paste was lost or input queue stalled: error=%v bytes=%d want=%d", ctx.Err(), len(a.editor.String()), len(text))
+	if ctx.Err() == context.DeadlineExceeded || a.compose.editor.String() != text {
+		t.Fatalf("paste was lost or input queue stalled: error=%v bytes=%d want=%d", ctx.Err(), len(a.compose.editor.String()), len(text))
 	}
 	if screen.frames > 4 {
 		t.Fatalf("paste repainted %d frames", screen.frames)
@@ -73,13 +74,13 @@ func TestTerminalBatchPreservesQueuedRemainder(t *testing.T) {
 	if err := a.terminalBatch(first, queue); err != nil {
 		t.Fatal(err)
 	}
-	if a.editor.String() != strings.Repeat("x", 32) || len(queue) != 8 {
-		t.Fatalf("input batch lost queued events: text=%d pending=%d", len(a.editor.String()), len(queue))
+	if a.compose.editor.String() != strings.Repeat("x", 32) || len(queue) != 8 {
+		t.Fatalf("input batch lost queued events: text=%d pending=%d", len(a.compose.editor.String()), len(queue))
 	}
 	if err := a.terminalBatch(<-queue, queue); err != nil {
 		t.Fatal(err)
 	}
-	if a.editor.String() != strings.Repeat("x", 40) || len(queue) != 0 {
+	if a.compose.editor.String() != strings.Repeat("x", 40) || len(queue) != 0 {
 		t.Fatal("remaining input was not processed")
 	}
 }

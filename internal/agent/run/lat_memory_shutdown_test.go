@@ -35,7 +35,7 @@ func TestLATMemoryShutdownJoinsAndRetainsActualUsage(t *testing.T) {
 		close(joined)
 		return ctx.Err()
 	})
-	s := execution{runner: r, reviewGenerator: g, latObserved: true, limits: DefaultLimits(), usage: &requestBudget{}, statistics: runStatistics{started: time.Now()}, emit: emit, latMemory: &reviewMemory{ctx: ctx, stop: stop, dirty: true, controller: latmemory.Controller{Repository: r.ReviewMemory, Session: "s", Redact: r.Redact}}}
+	s := execution{runner: r, review: reviewState{generator: g, observed: true, memory: &reviewMemory{ctx: ctx, stop: stop, dirty: true, controller: latmemory.Controller{Repository: r.ReviewMemory, Session: "s", Redact: r.Redact}}}, limits: DefaultLimits(), usage: &requestBudget{}, statistics: runStatistics{started: time.Now()}, emit: emit}
 	s.usage.begin(s.limits)
 	if err := s.maintainLATMemory(ctx, false); err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestLATMemoryShutdownJoinsAndRetainsActualUsage(t *testing.T) {
 	default:
 		t.Fatal("summary worker outlived request shutdown")
 	}
-	if s.activeLATMemory() || !s.latMemory.closed {
+	if s.activeLATMemory() || !s.review.memory.closed {
 		t.Fatal("closed worker was retained")
 	}
 	statistics := s.statistics.snapshot(time.Now())

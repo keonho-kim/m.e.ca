@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
@@ -45,13 +46,13 @@ func TestModelDashboardCatalogLivesInModelField(t *testing.T) {
 		if strings.Contains(body, "List models") || strings.Contains(body, "모델 조회") {
 			t.Fatalf("standalone model catalog remains: %s", body)
 		}
-		a.modelForm.Row = modelsettings.Destination
+		a.connection.modelForm.Row = modelsettings.Destination
 		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-		if a.modelForm.Row != modelsettings.Information {
+		if a.connection.modelForm.Row != modelsettings.Information {
 			t.Fatal("model information does not follow the save destination")
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyDown, "", 0))
-		if a.modelForm.Row != modelsettings.Diagnostic {
+		if a.connection.modelForm.Row != modelsettings.Diagnostic {
 			t.Fatal("connection diagnostics are not reachable")
 		}
 	}
@@ -71,7 +72,7 @@ func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", 0))
-	if a.page != "chat" || a.selection.Model != "" {
+	if a.page != "chat" || a.connection.selection.Model != "" {
 		t.Fatal("n did not discard and return to chat")
 	}
 }
@@ -79,7 +80,7 @@ func TestModelDashboardEnterAsksBeforeSaving(t *testing.T) {
 func TestModelDashboardKeymapMatchesFocusedRow(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row = modelsettings.Endpoint
 	if labels := keymapLabels(t, a); labels["→"] != "입력" || labels["←"] != "" {
 		t.Fatal(labels)

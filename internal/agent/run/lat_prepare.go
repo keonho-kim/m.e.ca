@@ -18,10 +18,10 @@ func (s *execution) prepareLAT(ctx context.Context) error {
 	if !s.runner.LAT {
 		return nil
 	}
-	s.latMemory.evidence = &latmemory.Evidence{}
-	defer func() { s.latMemory.evidence.Clear(); s.latMemory.evidence = nil }()
-	s.reviewing = true
-	defer func() { s.reviewing = false }()
+	s.review.memory.evidence = &latmemory.Evidence{}
+	defer func() { s.review.memory.evidence.Clear(); s.review.memory.evidence = nil }()
+	s.review.active = true
+	defer func() { s.review.active = false }()
 	for {
 		plan, err := s.refinedLATPlan(ctx)
 		if ctx.Err() != nil {
@@ -31,12 +31,12 @@ func (s *execution) prepareLAT(ctx context.Context) error {
 			return err
 		}
 		if s.runner.PollSteering != nil {
-			s.latSteering = append(s.latSteering, s.runner.PollSteering()...)
+			s.review.steering = append(s.review.steering, s.runner.PollSteering()...)
 		}
-		if len(s.latSteering) > 0 {
-			s.latMemory.evidence.Clear()
-			messages := s.latSteering
-			s.latSteering = nil
+		if len(s.review.steering) > 0 {
+			s.review.memory.evidence.Clear()
+			messages := s.review.steering
+			s.review.steering = nil
 			if err := s.applyInstructions(ctx, messages); err != nil {
 				return err
 			}
@@ -52,7 +52,7 @@ func (s *execution) prepareLAT(ctx context.Context) error {
 		if err := s.record(ctx, runrecord.Event{Kind: "lat_plan", Text: plan}); err != nil {
 			return err
 		}
-		s.latPlan = plan
+		s.review.plan = plan
 		s.messages = append(s.messages, lat.Plan(plan))
 		return s.emit(runrecord.Event{Kind: "lat_prepared"})
 	}

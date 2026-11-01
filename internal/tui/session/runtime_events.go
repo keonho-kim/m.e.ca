@@ -30,7 +30,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 	case "lat_prepared":
 		a.status = ""
 		a.stopLATIndicator()
-		a.latOutput = latOutput{}
+		a.chat.latOutput = latOutput{}
 		return
 	case "lat_started":
 		a.startLATIndicator()
@@ -40,30 +40,25 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		a.receiveLATOutcome(e)
 		return
 	case "image_input_unavailable":
-		if a.selection.Details != nil {
-			info := *a.selection.Details
-			info.ImageInput.State = "unsupported"
-			info.ImageInput.Source = "provider rejection"
-			a.selection.Details = &info
-		}
+		a.connection.rejectImages()
 		a.status = a.language.Text("Image input is unavailable for this connection")
 		return
 	case "user_message":
-		if len(a.steeringDrafts) > 0 {
-			a.steeringDrafts[0] = ""
-			a.steeringDrafts = a.steeringDrafts[1:]
+		if len(a.compose.steeringDrafts) > 0 {
+			a.compose.steeringDrafts[0] = ""
+			a.compose.steeringDrafts = a.compose.steeringDrafts[1:]
 		}
-		a.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(e.Text), false)
-		a.rememberInput(e.Text)
+		a.chat.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(e.Text), false)
+		a.compose.rememberInput(e.Text)
 		return
 
 	case "generation_started":
-		a.tokenCurrent = modelapi.TokenUsage{}
-		a.tokensPerSecond = nil
+		a.chat.tokenCurrent = modelapi.TokenUsage{}
+		a.chat.tokensPerSecond = nil
 		return
 	case "generation_finished":
 		if e.Generation != nil && e.Generation.Role == inference.LATCompaction {
-			a.latMemoryTokens = modelapi.TokenUsage{}
+			a.chat.latMemoryTokens = modelapi.TokenUsage{}
 		}
 		return
 	case "compaction_started":
@@ -77,8 +72,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		return
 	}
 	if e.Statistics != nil {
-		blocks := (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e)
-		a.runSummary = &blocks[0]
+		a.chat.receiveTranscript(e, transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact})
 		return
 	}
 	if e.Kind == "retry" {
@@ -86,7 +80,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		return
 	}
 	if e.Kind == "usage_progress" || e.Kind == "usage" {
-		a.receiveTokens(*e)
+		a.chat.receiveTokens(*e)
 		return
 	}
 	switch e.Kind {
@@ -98,29 +92,11 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		a.finishToolActivity(e)
 		a.status = ""
 		for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e) {
-			a.output.AppendBlock(block)
+			a.chat.output.AppendBlock(block)
 		}
 		return
 	case "approved":
 		return
 	}
-	if e.Kind == "progress" {
-		a.stream, a.thinking = "", ""
-		a.output.AppendBlock(transcript.Answer(e.Text))
-		return
-	}
-	if e.Kind == "thinking" {
-		a.thinking = ""
-		a.output.AppendBlock(transcript.Thought(e.Thinking))
-		return
-	}
-	if e.Kind == "stream" {
-		a.stream, a.thinking = e.Text, e.Thinking
-	} else if e.Kind == "response" {
-		a.stream, a.thinking = "", ""
-		a.output.AppendBlock(transcript.Thought(e.Thinking))
-		a.output.AppendBlock(transcript.Answer(e.Text))
-	} else {
-		a.output.Append(e.Text, false)
-	}
+	a.chat.receiveTranscript(e, transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact})
 }

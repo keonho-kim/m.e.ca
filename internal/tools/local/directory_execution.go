@@ -15,7 +15,7 @@ import (
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
-func (op *operation) createDirectories(ctx context.Context) (toolapi.Result, error) {
+func (op *directoryOperation) createDirectories(ctx context.Context) (toolapi.Result, error) {
 	current, err := op.executor.directoryTargets(op.settings, op.input.Paths)
 	if err != nil {
 		return toolapi.Result{}, err

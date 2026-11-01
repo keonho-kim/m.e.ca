@@ -8,13 +8,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"unicode/utf8"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/diff"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
-	"unicode/utf8"
 )
 
-func (op *operation) freezeCandidate(call toolapi.Call, before, after []byte) error {
+func (op *fileOperation) freezeCandidate(call toolapi.Call, before, after []byte) error {
 	if !utf8.Valid(before) || !utf8.Valid(after) || bytes.IndexByte(before, 0) >= 0 || bytes.IndexByte(after, 0) >= 0 {
 		return fmt.Errorf("file tools require inspectable UTF-8 text; binary changes are not supported")
 	}

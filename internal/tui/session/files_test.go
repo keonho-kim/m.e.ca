@@ -5,17 +5,18 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 func TestFileViewEscapePreservesDraft(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
-	a.editor.Set("existing draft")
-	a.worker = workerSetup
+	a.compose.editor.Set("existing draft")
+	a.work.state = workerSetup
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "chat" || a.exit || !a.worker.active() || a.editor.String() != "existing draft" {
+	if a.page != "chat" || a.exit || !a.work.state.active() || a.compose.editor.String() != "existing draft" {
 		t.Fatal("closing the browser did not preserve the active session and draft")
 	}
 }
@@ -23,10 +24,10 @@ func TestFileViewIgnoresNavigationCommands(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
 	finishBrowserIO(t, a)
-	a.editor.Set("existing draft")
+	a.compose.editor.Set("existing draft")
 	typeInput(a, ":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "files" || a.menuInput.String() != "" || a.editor.String() != "existing draft" {
+	if a.page != "files" || a.menuInput.String() != "" || a.compose.editor.String() != "existing draft" {
 		t.Fatal("browser focus still accepts a navigation command buffer")
 	}
 }

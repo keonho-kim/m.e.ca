@@ -7,14 +7,16 @@ package session
 import (
 	"context"
 	"fmt"
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func TestModelHintsConnection(t *testing.T) {
@@ -43,7 +45,7 @@ func TestModelHintsConnection(t *testing.T) {
 			a.ctx = ctx
 			defer func() { cancel(); a.shutdown() }()
 			a.openModel()
-			f := a.modelForm
+			f := a.connection.modelForm
 			for i, p := range connection.Providers() {
 				if p.Kind == connection.OpenRouter {
 					f.Provider = i
@@ -52,7 +54,7 @@ func TestModelHintsConnection(t *testing.T) {
 			f.Endpoint.Set(server.URL)
 			f.Row = modelsettings.Name
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-			for a.worker.active() {
+			for a.work.state.active() {
 				select {
 				case n := <-a.events:
 					a.receive(n)
@@ -76,13 +78,13 @@ func TestModelHintsConnection(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-			if !f.Confirm || a.selection.Model != "" {
+			if !f.Confirm || a.connection.selection.Model != "" {
 				t.Fatal("confirmation was bypassed")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 			drainTask(t, a, false)
-			if a.selection.Model != expected || a.client == nil || a.page != "chat" || posts.Load() != 0 {
-				t.Fatalf("selection=%+v status=%s", a.selection, a.status)
+			if a.connection.selection.Model != expected || a.connection.client == nil || a.page != "chat" || posts.Load() != 0 {
+				t.Fatalf("selection=%+v status=%s", a.connection.selection, a.status)
 			}
 		})
 	}
@@ -103,7 +105,7 @@ func TestModelHintsRefreshOnReentry(t *testing.T) {
 	defer cancel()
 	a.ctx = ctx
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	for i, p := range connection.Providers() {
 		if p.Kind == connection.OpenRouter {
 			f.Provider = i
@@ -117,7 +119,7 @@ func TestModelHintsRefreshOnReentry(t *testing.T) {
 		t.Fatalf("initial catalog: calls=%d hints=%v", calls.Load(), f.Hints)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "model", 0))
-	if calls.Load() != 1 || a.worker.active() {
+	if calls.Load() != 1 || a.work.state.active() {
 		t.Fatal("typing fetched the catalog again")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -127,7 +129,7 @@ func TestModelHintsRefreshOnReentry(t *testing.T) {
 		t.Fatalf("refreshed catalog: calls=%d input=%q hints=%v", calls.Load(), f.Name.String(), f.Hints)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if f.Name.String() != "model-2" || f.Editing || a.selection.Model != "" || a.client != nil {
+	if f.Name.String() != "model-2" || f.Editing || a.connection.selection.Model != "" || a.connection.client != nil {
 		t.Fatal("refreshed selection did not remain an unsaved draft")
 	}
 }

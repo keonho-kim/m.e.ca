@@ -7,9 +7,10 @@ package run
 import (
 	"context"
 	"errors"
+	"time"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"time"
 )
 
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
@@ -32,8 +33,8 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 		return errors.Join(errRuntimeRecord, err)
 	}
 	s.messages = append(s.messages, m)
-	if s.latMemory != nil && m.Role == "user" {
-		s.latMemory.dirty = true
+	if s.review.memory != nil && m.Role == "user" {
+		s.review.memory.dirty = true
 	}
 	return nil
 }

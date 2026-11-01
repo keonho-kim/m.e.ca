@@ -5,11 +5,13 @@
 package session
 
 import (
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"testing"
 )
 
 func TestEffortSelectionPersistsOnlyAfterConfirmation(t *testing.T) {
@@ -18,23 +20,23 @@ func TestEffortSelectionPersistsOnlyAfterConfirmation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	low, off := "low", false
-	a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true, ReasoningEffort: &low}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true, ReasoningEffort: &low}
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Global = modelsettings.Effort, false
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if f.Effort != "medium" || a.selection.Effort() != "low" {
+	if f.Effort != "medium" || a.connection.selection.Effort() != "low" {
 		t.Fatal("effort escaped the draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.worker.active() || a.selection.Effort() != "medium" || *a.selection.Thinking {
-		t.Fatalf("saved=%+v status=%s", a.selection, a.status)
+	if a.page != "chat" || a.work.state.active() || a.connection.selection.Effort() != "medium" || *a.connection.selection.Thinking {
+		t.Fatalf("saved=%+v status=%s", a.connection.selection, a.status)
 	}
 	stored, err := a.opts.Store.Selection(a.ctx, a.opts.Session.ID)
 	if err != nil || stored.Effort() != "medium" {
@@ -48,11 +50,11 @@ func TestEffortUnavailableCannotChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{On: true, Off: true}}}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{On: true, Off: true}}}
 	a.openModel()
-	a.modelForm.Row = modelsettings.Effort
+	a.connection.modelForm.Row = modelsettings.Effort
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if a.page != "model" || a.modelForm.Effort != "" || a.status == "" {
+	if a.page != "model" || a.connection.modelForm.Effort != "" || a.status == "" {
 		t.Fatal("undeclared effort accepted")
 	}
 }

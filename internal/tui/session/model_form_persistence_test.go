@@ -16,16 +16,17 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/zalando/go-keyring"
+
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"github.com/zalando/go-keyring"
 )
 
 func editModelValue(a *app, row int, value string) {
-	a.modelForm.Row = row
+	a.connection.modelForm.Row = row
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, value, 0))
@@ -49,7 +50,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	}))
 	defer server.Close()
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	for i, p := range connection.Providers() {
 		if p.Kind == connection.OpenRouter {
 			f.Provider = i
@@ -68,7 +69,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	if f.Thinking == nil || *f.Thinking || f.Effort != "low" {
 		t.Fatal("declared OFF and strength were not resolved")
 	}
-	if a.client != nil || a.selection.Model != "" || a.opts.Config.Model != nil {
+	if a.connection.client != nil || a.connection.selection.Model != "" || a.opts.Config.Model != nil {
 		t.Fatal("metadata preparation committed the draft")
 	}
 	if _, err := os.Stat(filepath.Join(a.opts.State, "credentials.used")); !os.IsNotExist(err) {
@@ -79,8 +80,8 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.modelForm != nil || a.selection.Effort() != "high" || a.selection.Thinking == nil || !*a.selection.Thinking {
-		t.Fatalf("saved=%+v status=%s", a.selection, a.status)
+	if a.page != "chat" || a.connection.modelForm != nil || a.connection.selection.Effort() != "high" || a.connection.selection.Thinking == nil || !*a.connection.selection.Thinking {
+		t.Fatalf("saved=%+v status=%s", a.connection.selection, a.status)
 	}
 	cfg, err := config.Load(a.opts.State)
 	if err != nil || cfg.Model == nil {
@@ -114,20 +115,20 @@ func TestModelFormGlobalFailureKeepsCommittedSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(c, "")
+	a.connection.client, err = httpclient.NewClient(c, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	off := false
-	a.selection = connection.Selection{Connection: c, Model: "alias", Thinking: &off, ThinkingSupported: true}
+	a.connection.selection = connection.Selection{Connection: c, Model: "alias", Thinking: &off, ThinkingSupported: true}
 	a.opts.SaveConfig = func(config.Config) error { return errors.New("default write failed") }
 	a.openModel()
-	a.modelForm.Row = modelsettings.Thinking
+	a.connection.modelForm.Row = modelsettings.Thinking
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.modelForm != nil || !strings.Contains(a.status, "default write failed") || a.selection.Thinking == nil || !*a.selection.Thinking {
-		t.Fatalf("selection=%+v status=%s", a.selection, a.status)
+	if a.page != "chat" || a.connection.modelForm != nil || !strings.Contains(a.status, "default write failed") || a.connection.selection.Thinking == nil || !*a.connection.selection.Thinking {
+		t.Fatalf("selection=%+v status=%s", a.connection.selection, a.status)
 	}
 	saved, err := a.opts.Store.Selection(a.ctx, a.opts.Session.ID)
 	if err != nil || saved.Thinking == nil || !*saved.Thinking || a.opts.Config.Model != nil {

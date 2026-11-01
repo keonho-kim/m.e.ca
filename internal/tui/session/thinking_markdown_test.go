@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
@@ -23,7 +24,7 @@ func TestThinkingMarkdownStreaming(t *testing.T) {
 		if line := screenLine(a.screen, 1, 80); !strings.Contains(line, "Review") || strings.Contains(line, "# Review") {
 			t.Fatalf("Thinking snapshot remained literal: %q", line)
 		}
-		if a.thinking != source {
+		if a.chat.thinking != source {
 			t.Fatal("rendering changed the raw Thinking snapshot")
 		}
 	}
@@ -35,13 +36,13 @@ func TestThinkingMarkdownCompletionAndInterruption(t *testing.T) {
 		t.Run(route, func(t *testing.T) {
 			a := screenFixture(t)
 			if route == "interrupted" {
-				a.worker = workerAgentStopping
+				a.work.state = workerAgentStopping
 				a.receive(notice{Event: &runrecord.Event{Kind: "stream", Thinking: thinkingMarkdown}})
 				a.receive(notice{Done: true, Err: context.Canceled})
 			} else {
 				a.receive(notice{Event: &runrecord.Event{Kind: route, Thinking: thinkingMarkdown}})
 			}
-			if len(a.output.Blocks) != 1 || a.output.Blocks[0].Text != thinkingMarkdown || !a.output.Blocks[0].Thinking || !a.output.Blocks[0].Markdown {
+			if len(a.chat.output.Blocks) != 1 || a.chat.output.Blocks[0].Text != thinkingMarkdown || !a.chat.output.Blocks[0].Thinking || !a.chat.output.Blocks[0].Markdown {
 				t.Fatal("Thinking lost its raw source or Markdown presentation")
 			}
 			checkThinkingMarkdown(t, a)
@@ -57,7 +58,7 @@ func TestThinkingMarkdownHistory(t *testing.T) {
 	if err := a.loadHistory(); err != nil {
 		t.Fatal(err)
 	}
-	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Text != thinkingMarkdown || !a.output.Blocks[0].Thinking || !a.output.Blocks[0].Markdown {
+	if len(a.chat.output.Blocks) != 1 || a.chat.output.Blocks[0].Text != thinkingMarkdown || !a.chat.output.Blocks[0].Thinking || !a.chat.output.Blocks[0].Markdown {
 		t.Fatal("history did not restore the original Thinking as Markdown")
 	}
 	checkThinkingMarkdown(t, a)

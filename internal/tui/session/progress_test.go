@@ -5,11 +5,12 @@
 package session
 
 import (
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
-	"strings"
-	"testing"
 )
 
 func TestProgressUpdateLiveMatchesRestored(t *testing.T) {
@@ -19,8 +20,8 @@ func TestProgressUpdateLiveMatchesRestored(t *testing.T) {
 	formatter := transcript.Formatter{Redact: a.opts.Vault.Redact}
 	restored := formatter.Event(event)
 	want := transcript.Reply(event.Text)
-	if len(a.output.Blocks) != 1 || a.output.Blocks[0].Text != want || len(restored) != 1 || restored[0].Text != want {
-		t.Fatalf("live=%+v restored=%+v", a.output.Blocks, restored)
+	if len(a.chat.output.Blocks) != 1 || a.chat.output.Blocks[0].Text != want || len(restored) != 1 || restored[0].Text != want {
+		t.Fatalf("live=%+v restored=%+v", a.chat.output.Blocks, restored)
 	}
 	if blocks := formatter.Message(modelapi.Message{Role: "system", Content: event.Text}); len(blocks) != 0 {
 		t.Fatal("context copy duplicated in transcript")

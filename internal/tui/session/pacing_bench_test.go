@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
@@ -48,7 +49,7 @@ func (s *pacingScreen) Show() {
 		default:
 		}
 	}
-	if s.pending != nil && len(s.app.editor.String()) >= s.pending.length {
+	if s.pending != nil && len(s.app.compose.editor.String()) >= s.pending.length {
 		s.pending.result <- time.Since(s.pending.sent)
 		s.pending = nil
 	}
@@ -141,7 +142,7 @@ func measurePacing(b *testing.B, delay time.Duration, typing bool) {
 	<-streamDone
 	<-inputDone
 	latencies := <-measurements
-	if typing && (len(latencies) != 8 || a.editor.String() != strings.Repeat("x", 8)) {
+	if typing && (len(latencies) != 8 || a.compose.editor.String() != strings.Repeat("x", 8)) {
 		b.Fatal("input probe did not complete")
 	}
 	b.ReportMetric(float64(screen.frames)/elapsed.Seconds(), "frames/s")

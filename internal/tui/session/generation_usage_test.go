@@ -5,9 +5,10 @@
 package session
 
 import (
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"testing"
 )
 
 func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
@@ -18,18 +19,18 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	}
 	update("usage_progress", 100, 10)
 	update("usage_progress", 100, 15)
-	if got := a.displayTokens(); got.Input != 100 || got.Output != 15 || *a.tokensPerSecond != 5 {
+	if got := a.chat.displayTokens(); got.Input != 100 || got.Output != 15 || *a.chat.tokensPerSecond != 5 {
 		t.Fatalf("snapshots duplicated: %+v", got)
 	}
 	update("usage", 100, 15)
 	a.receiveRuntime(&runrecord.Event{Kind: "generation_started"})
-	if a.tokensPerSecond != nil {
+	if a.chat.tokensPerSecond != nil {
 		t.Fatal("new generation inherited throughput")
 	}
 	update("usage_progress", 200, 25)
 	update("usage", 200, 25)
 	update("usage", 50, 5)
-	if got := a.displayTokens(); got.Input != 350 || got.Output != 45 || a.tokenCurrent != (modelapi.TokenUsage{}) {
+	if got := a.chat.displayTokens(); got.Input != 350 || got.Output != 45 || a.chat.tokenCurrent != (modelapi.TokenUsage{}) {
 		t.Fatalf("final usage duplicated or lost: %+v", got)
 	}
 }

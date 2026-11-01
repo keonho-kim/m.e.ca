@@ -11,26 +11,26 @@ import (
 )
 
 func (a *app) loadHistory() error {
-	a.historyRevision++
-	a.historyLoading = false
+	a.chat.historyRevision++
+	a.chat.historyLoading = false
 	records, cursor, err := a.opts.Store.Timeline(a.ctx, a.opts.Session.ID, 0, 100)
 	if err != nil {
 		return err
 	}
 	formatter := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
-	output := viewport.View{Follow: true, Collapsed: a.output.Collapsed}
+	output := viewport.View{Follow: true, Collapsed: a.chat.output.Collapsed}
 	for _, block := range formatter.History(records) {
 		output.AppendBlock(block)
 	}
-	a.output = output
-	a.historyCursor = cursor
-	a.historyEnd = len(records) == 0 || cursor == 0
+	a.chat.output = output
+	a.chat.historyCursor = cursor
+	a.chat.historyEnd = len(records) == 0 || cursor == 0
 	return nil
 }
 func (a *app) scroll(n, w, h int) {
 	transcript := a.chatLayout(view.TranscriptWidth(w))
-	transcript.Scroll(&a.output, n, h)
-	if n < 0 && !a.output.Follow && transcript.Start(&a.output, h) == 0 {
+	transcript.Scroll(&a.chat.output, n, h)
+	if n < 0 && !a.chat.output.Follow && transcript.Start(&a.chat.output, h) == 0 {
 		a.loadOlderHistory()
 	}
 }

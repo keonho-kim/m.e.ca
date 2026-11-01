@@ -6,7 +6,6 @@ package session
 
 import (
 	"errors"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
@@ -21,11 +22,11 @@ func TestFileSendRequiresExplicitConfirmation(t *testing.T) {
 	for _, cancel := range []tcell.Key{tcell.KeyRune, tcell.KeyEscape} {
 		a := fixture(t)
 		a.language = locale.English
-		a.page, a.browser.Input = "files", true
-		a.editor.Set("review the selected files")
-		a.browser.Selected = map[string]bool{"src/main.py": true}
+		a.page, a.files.browser.Input = "files", true
+		a.compose.editor.Set("review the selected files")
+		a.files.browser.Selected = map[string]bool{"src/main.py": true}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-		if !a.fileSendConfirm || a.page != "files" || !strings.Contains(modelScreen(a), "Send this request? (y/N)") {
+		if !a.files.fileSendConfirm || a.page != "files" || !strings.Contains(modelScreen(a), "Send this request? (y/N)") {
 			t.Fatal("Enter did not ask for confirmation")
 		}
 		labels := keymapLabels(t, a)
@@ -36,19 +37,19 @@ func TestFileSendRequiresExplicitConfirmation(t *testing.T) {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 		a.pasteBoundary(false)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-		if !a.fileSendConfirm || a.editor.String() != "review the selected files" || a.worker.active() {
+		if !a.files.fileSendConfirm || a.compose.editor.String() != "review the selected files" || a.work.state.active() {
 			t.Fatal("paste or Enter bypassed explicit confirmation")
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "n", 0))
-		if !a.fileSendConfirm || a.page != "files" {
+		if !a.files.fileSendConfirm || a.page != "files" {
 			t.Fatal("lowercase n dismissed send confirmation")
 		}
 		a.keyEvent(tcell.NewEventKey(cancel, "N", 0))
-		if a.fileSendConfirm || a.page != "files" || a.editor.String() != "review the selected files" || !a.browser.Selected["src/main.py"] {
+		if a.files.fileSendConfirm || a.page != "files" || a.compose.editor.String() != "review the selected files" || !a.files.browser.Selected["src/main.py"] {
 			t.Fatal("cancellation changed the draft or selected paths")
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-		if a.page != "chat" || a.editor.String() != "review the selected files" {
+		if a.page != "chat" || a.compose.editor.String() != "review the selected files" {
 			t.Fatal("Escape did not close the browser while preserving the draft")
 		}
 	}
@@ -71,15 +72,15 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			t.Cleanup(release)
 			a.openFiles(".")
 			finishBrowserIO(t, a)
-			a.worker = workerAgent
-			a.steering = make(chan composer.Request, 1)
+			a.work.state = workerAgent
+			a.compose.steering = make(chan composer.Request, 1)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 			<-blocked.started
 			a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))
-			a.editor.Set("review src")
+			a.compose.editor.Set("review src")
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-			if a.page != "chat" || a.fileSubmission == nil {
+			if a.page != "chat" || a.compose.fileSubmission == nil {
 				t.Fatal("send did not wait for persistence in chat")
 			}
 			if action == "cancel" {
@@ -89,7 +90,7 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			}
 			release()
 			finishBrowserIO(t, a)
-			if a.fileSubmission != nil || len(a.steering) != 0 || !strings.HasPrefix(a.editor.String(), "review src") || a.worker.stopping() {
+			if a.compose.fileSubmission != nil || len(a.compose.steering) != 0 || !strings.HasPrefix(a.compose.editor.String(), "review src") || a.work.state.stopping() {
 				t.Fatal("cancelled, edited or failed selection unexpectedly sent or lost the draft")
 			}
 			if action == "save-error" && !strings.Contains(a.status, "selection save failed") {
@@ -101,11 +102,11 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 
 func TestFileSendWithoutModelKeepsDraft(t *testing.T) {
 	a := fixture(t)
-	a.page, a.browser.Input = "files", true
-	a.editor.Set("review files")
+	a.page, a.files.browser.Input = "files", true
+	a.compose.editor.Set("review files")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.editor.String() != "review files" || a.worker.active() || a.status == "" {
+	if a.page != "chat" || a.compose.editor.String() != "review files" || a.work.state.active() || a.status == "" {
 		t.Fatal("unavailable connection lost the confirmed draft")
 	}
 }

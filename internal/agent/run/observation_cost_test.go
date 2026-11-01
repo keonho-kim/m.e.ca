@@ -66,7 +66,7 @@ func TestObservationSkipsUnchangedLATQueriesAndForegroundAdmission(t *testing.T)
 	}
 	r := fixture(&generator{}, &executor{}, j)
 	repo := &countedMemory{Repository: &journalMemory{journal: j}}
-	s := execution{runner: r, usage: &requestBudget{}, latObserved: true, latMemory: &reviewMemory{dirty: true, controller: latmemory.Controller{Repository: repo, Session: "s", Redact: r.Redact}}}
+	s := execution{runner: r, usage: &requestBudget{}, review: reviewState{observed: true, memory: &reviewMemory{dirty: true, controller: latmemory.Controller{Repository: repo, Session: "s", Redact: r.Redact}}}}
 	for range 1000 {
 		if err := s.maintainLATMemory(ctx, false); err != nil {
 			t.Fatal(err)
@@ -75,7 +75,7 @@ func TestObservationSkipsUnchangedLATQueriesAndForegroundAdmission(t *testing.T)
 	if repo.marks != 1 {
 		t.Fatal("unchanged records were repeatedly queried", repo.marks)
 	}
-	s.latMemory.dirty = true
+	s.review.memory.dirty = true
 	g := statisticsModel(func(_ context.Context, _ modelapi.Request, send func(modelapi.Event) error) error {
 		return send(modelapi.Event{Delta: "foreground response", Done: true})
 	})

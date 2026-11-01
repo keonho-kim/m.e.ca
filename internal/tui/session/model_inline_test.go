@@ -11,6 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
@@ -31,7 +32,7 @@ func TestModelInlineFieldStaysOnSelectedRow(t *testing.T) {
 					a.language = language
 					a.screen.SetSize(size[0], size[1])
 					a.openModel()
-					f := a.modelForm
+					f := a.connection.modelForm
 					f.Row = field.row
 					f.Editor().Set(field.value)
 					f.Models = []string{}
@@ -88,7 +89,7 @@ func selectedSettingRow(t *testing.T, a *app) int {
 func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Name, true
 	f.Models = []string{}
 	f.Name.Set("A👩‍💻B")
@@ -108,7 +109,7 @@ func TestModelInlineClickPositionsUnicodeCursor(t *testing.T) {
 func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
 	f.Endpoint.Set("http://localhost:8000/v1")
 	a.screen.SetSize(20, 10)
@@ -130,7 +131,7 @@ func TestModelInlineScrolledSelectionMapsToOriginal(t *testing.T) {
 func TestModelInlineCandidatesFollowValueColumn(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Name, true
 	f.Name.Set("model")
 	f.Models = []string{"model-one", "model-two"}

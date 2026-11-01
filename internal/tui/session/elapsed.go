@@ -4,28 +4,23 @@
 // Related: internal/tui/session/app.go, internal/tui/session/activity.go, internal/tui/session/worker_result.go.
 package session
 
-import "time"
+import (
+	"time"
+)
 
 func (a *app) startElapsed() {
 	a.stopElapsed()
-	a.elapsedStarted = time.Now()
-	a.elapsed = 0
-	a.elapsedTimer = time.NewTicker(time.Second)
-	a.elapsedTicks = a.elapsedTimer.C
+	a.work.startElapsed()
 }
 
 func (a *app) updateElapsed(now time.Time) {
-	if a.elapsedTimer != nil {
-		a.elapsed = max(0, now.Sub(a.elapsedStarted))
+	if a.work.updateElapsed(now) {
 		a.updateCommandActivity()
 	}
 }
 
 func (a *app) stopElapsed() {
-	if a.elapsedTimer != nil {
-		a.updateElapsed(time.Now())
-		a.elapsedTimer.Stop()
+	if a.work.stopElapsed(time.Now()) {
+		a.updateCommandActivity()
 	}
-	a.elapsedTimer = nil
-	a.elapsedTicks = nil
 }

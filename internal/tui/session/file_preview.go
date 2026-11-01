@@ -6,7 +6,9 @@ package session
 
 import (
 	"context"
+
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/preview"
 )
@@ -17,38 +19,38 @@ type previewRequest struct {
 }
 
 func (a *app) openFilePreview(full bool) {
-	path, directory := a.browser.Target()
+	path, directory := a.files.browser.Target()
 	if path == "" || directory {
 		return
 	}
 	a.closeFilePreview()
 	a.menuInput.Set("")
-	a.filePreview = &preview.State{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
-	a.filePreviewPath = path
-	request := previewRequest{path: path, revision: a.previewRevision}
-	if a.previewReads.Submit(request) {
+	a.files.filePreview = &preview.State{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
+	a.files.filePreviewPath = path
+	request := previewRequest{path: path, revision: a.files.previewRevision}
+	if a.files.previewReads.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
 
 func (a *app) refreshFilePreview() {
-	if a.filePreview == nil || a.filePreviewPath == "" {
+	if a.files.filePreview == nil || a.files.filePreviewPath == "" {
 		return
 	}
-	a.previewReads.Stop()
+	a.files.previewReads.Stop()
 	a.stopPreviewLayout()
-	a.previewRevision++
-	a.filePreview.Loading, a.filePreview.Error = true, ""
-	a.filePreview.ReleaseLayout()
-	request := previewRequest{path: a.filePreviewPath, revision: a.previewRevision}
-	if a.previewReads.Submit(request) {
+	a.files.previewRevision++
+	a.files.filePreview.Loading, a.files.filePreview.Error = true, ""
+	a.files.filePreview.ReleaseLayout()
+	request := previewRequest{path: a.files.filePreviewPath, revision: a.files.previewRevision}
+	if a.files.previewReads.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
 
 func (a *app) startPreviewRead(request previewRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.previewReads.Begin(request.revision, cancel)
+	a.files.previewReads.Begin(request.revision, cancel)
 	settings := a.settings
 	executor := a.opts.Files
 	a.workers.Add(1)
@@ -63,30 +65,19 @@ func (a *app) startPreviewRead(request previewRequest) {
 	}()
 }
 func (a *app) closeFilePreview() {
-	a.previewReads.Stop()
+	a.files.previewReads.Stop()
 	a.stopPreviewLayout()
-	a.previewRevision++
-	a.filePreview = nil
-	a.filePreviewPath = ""
+	a.files.previewRevision++
+	a.files.filePreview = nil
+	a.files.filePreviewPath = ""
 }
 func (a *app) receiveFilePreview(n notice) {
-	if next := a.previewReads.Complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.files.previewReads.Complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startPreviewRead(*next)
 	}
-	if a.filePreview == nil || n.PreviewRevision != a.previewRevision {
-		return
-	}
-	a.filePreview.Loading = false
-	if n.Err != nil {
-		a.filePreview.Error = a.opts.Vault.Redact(n.Err.Error())
-		return
-	}
-	if n.FilePreview != nil {
-		a.filePreview.Path = n.FilePreview.Path
-		a.filePreview.Content = n.FilePreview.Content
-		a.filePreview.Truncated = n.FilePreview.Truncated
-	}
+	a.files.applyPreview(n.PreviewRevision, n.FilePreview, n.Err, a.opts.Vault.Redact)
 }
+
 func (a *app) previewKey(e *tcell.EventKey) {
 	if a.paste {
 		return
@@ -96,7 +87,7 @@ func (a *app) previewKey(e *tcell.EventKey) {
 		a.menuInput.Set("")
 		return
 	}
-	p := a.filePreview
+	p := a.files.filePreview
 	if previewFormatKey(e) {
 		p.ToggleFormat()
 		a.stopPreviewLayout()

@@ -14,8 +14,8 @@ import (
 )
 
 func (a *app) queryModelForm(model string) {
-	f := a.modelForm
-	if f == nil || a.worker.active() {
+	f := a.connection.modelForm
+	if f == nil || a.work.state.active() {
 		return
 	}
 	c, err := f.Connection()
@@ -34,9 +34,9 @@ func (a *app) queryModelForm(model string) {
 }
 
 func (a *app) finishModelFormSetup(n notice) {
-	f := a.modelForm
+	f := a.connection.modelForm
 	if f == nil {
-		if n.Client != nil && n.Client != a.client {
+		if n.Client != nil && n.Client != a.connection.client {
 			n.Client.Close()
 		}
 		return
@@ -47,7 +47,7 @@ func (a *app) finishModelFormSetup(n notice) {
 	}
 	f.Catalog = false
 	if n.FormRevision != expected {
-		if n.Client != nil && n.Client != a.client {
+		if n.Client != nil && n.Client != a.connection.client {
 			n.Client.Close()
 		}
 		f.Saving, a.page = false, "model"
@@ -55,7 +55,7 @@ func (a *app) finishModelFormSetup(n notice) {
 		return
 	}
 	if n.Err != nil {
-		if n.Client != nil && n.Client != a.client {
+		if n.Client != nil && n.Client != a.connection.client {
 			n.Client.Close()
 		}
 		if f.Saving && errors.Is(n.Err, context.Canceled) {
@@ -78,7 +78,7 @@ func (a *app) finishModelFormSetup(n notice) {
 	if n.Selection == nil || n.Client == nil {
 		return
 	}
-	if f.Client != nil && f.Client != a.client {
+	if f.Client != nil && f.Client != a.connection.client {
 		f.Client.Close()
 	}
 	f.Client, f.Prepared = n.Client, n.Selection
@@ -91,7 +91,7 @@ func (a *app) finishModelFormSetup(n notice) {
 }
 
 func (a *app) saveModelForm() {
-	f := a.modelForm
+	f := a.connection.modelForm
 	if f == nil {
 		return
 	}
@@ -106,8 +106,8 @@ func (a *app) saveModelForm() {
 		a.status = a.language.Text("Enter a model ID before saving")
 		return
 	}
-	if a.worker.active() {
-		if !a.worker.agent() {
+	if a.work.state.active() {
+		if !a.work.state.agent() {
 			f.Confirm, f.Editing, f.Saving = false, false, true
 			a.page = "chat"
 		}
@@ -116,13 +116,13 @@ func (a *app) saveModelForm() {
 	f.Confirm, f.Editing, f.Saving = false, false, true
 	next := f.Selection()
 	prepared := f.Prepared != nil && f.Prepared.Connection.ID == next.Connection.ID && f.Prepared.Model == model
-	active := a.client != nil && a.selection.Connection.ID == next.Connection.ID && a.selection.Model == model
+	active := a.connection.client != nil && a.connection.selection.Connection.ID == next.Connection.ID && a.connection.selection.Model == model
 	if prepared && (f.Client != nil || active) {
 		a.commitModelForm()
 		return
 	}
 	a.queryModelForm(model)
-	if a.worker.active() {
+	if a.work.state.active() {
 		a.page = "chat"
 	} else {
 		f.Saving = false
@@ -130,7 +130,7 @@ func (a *app) saveModelForm() {
 }
 
 func (a *app) commitModelForm() {
-	f := a.modelForm
+	f := a.connection.modelForm
 	next := f.Selection()
 	if err := selection.Validate(next); err != nil {
 		f.Saving, a.page = false, "model"
@@ -139,7 +139,7 @@ func (a *app) commitModelForm() {
 	}
 	client := f.Client
 	if client == nil {
-		client = a.client
+		client = a.connection.client
 	}
 	f.Client = nil // adoptConnection now owns this candidate's failure cleanup.
 	adopted, err := a.adoptConnection(notice{Client: client, Selection: &next, credential: f.Credential.String(), RememberModel: f.Global})

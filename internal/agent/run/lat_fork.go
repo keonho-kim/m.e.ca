@@ -6,15 +6,12 @@ package run
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	"github.com/keonho-kim/meca/internal/agent/lat"
 	"github.com/keonho-kim/meca/internal/agent/lat/transcript"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -87,61 +84,19 @@ func (s *execution) runLATPhase(ctx context.Context, phase, instructions string,
 		return "", err
 	}
 
-	parameters, err := inference.Resolve(s.runner.Inference, role)
-	if err != nil {
-		return "", err
-	}
-	// Account for shared instructions and tool schemas before selecting evidence.
-	definitions := imageDefinitions(tools.Definitions(), s.runner.ImageInput)
-	encodedDefinitions, err := json.Marshal(definitions)
-	if err != nil {
-		return "", err
-	}
-	window := s.latWindow()
-	if window <= 0 {
-		window = 262144
-	}
-	if role == inference.Agent {
-		input.OutputReserve, err = modelapi.OutputBudget(parameters.MaxOutputTokens, window, 0, 0)
-		if err != nil {
-			return "", err
-		}
-	}
-	window -= len(encodedDefinitions) + 4096
-	if window <= 0 {
-		return "", fmt.Errorf("LAT instructions and tools exceed the available context")
-	}
-	input.Prompt, input.Instructions = instructions, s.system
-	input.Root, input.Objective = s.runner.ProjectRoot, s.checkpoint.Objective
-	input.ContextWindow, input.MaxOutput = window, parameters.MaxOutputTokens
-	frame, err := lat.Prepare(input)
-	if err != nil {
-		return "", err
-	}
-	input.Context, err = s.prepareLATContext(ctx, frame.SourceBudget())
-	if err != nil {
-		return "", err
-	}
-	packet, err := frame.Build(input.Context)
+	packet, definitions, err := s.prepareLATPacket(ctx, instructions, role, input, tools)
 	if err != nil {
 		return "", err
 	}
 
-	child := s.runner
-	child.LAT, child.PreviousRun, child.ReviewMemory = false, nil, nil
-	child.Generator, child.Tools, child.Journal = s.reviewGenerator, tools, journal
-	child.fork = &forkConfig{role: role, maxOutput: packet.MaxOutput, budget: s.usage, system: s.system + "\n\n" + instructions, definitions: definitions}
-	settings := compact.Defaults()
-	if s.runner.Memory != nil {
-		settings = s.runner.Memory.Settings
-	}
-	child.Memory = &compact.Controller{ContextWindow: s.latWindow(), Inference: child.Inference, Repository: journal, Session: child.Session, Model: child.Model, Prompt: s.latTemplates().Compaction, Settings: settings, Redact: child.Redact}
+	child := s.latRunner(instructions, role, packet, definitions, tools, journal)
+
 	owner, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 	defer cancel()
 	child.PollSteering = func() []string {
 		if s.runner.PollSteering != nil {
 			if messages := s.runner.PollSteering(); len(messages) > 0 {
-				s.latSteering = append(s.latSteering, messages...)
+				s.review.steering = append(s.review.steering, messages...)
 				cancel()
 			}
 		}
@@ -153,7 +108,7 @@ func (s *execution) runLATPhase(ctx context.Context, phase, instructions string,
 		event.Internal, event.LAT = true, scope
 		return s.forwardLATEvent(event)
 	})
-	if len(s.latSteering) > 0 {
+	if len(s.review.steering) > 0 {
 		return "", errors.Join(errReviewSuperseded, err)
 	}
 	if err != nil {

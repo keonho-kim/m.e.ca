@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/commands"
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
@@ -31,197 +32,105 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	if a.pendingEditKey(e) {
 		return
 	}
-	if a.page == "files" && a.fileSendConfirm {
+	focus := a.focus()
+	if focus == focusFileConfirmation {
 		a.fileSendKey(e)
 		return
 	}
-	if e.Key() == tcell.KeyEnter && !a.paste && e.Modifiers()&tcell.ModShift == 0 {
-		text := a.menuInput.String()
-		if a.page == "chat" || a.page == "files" && a.browser.Input {
-			text = a.editor.String()
-		}
-		command, err := commands.Parse(text)
-		if err == nil && (command.Kind == commands.Exit || command.Kind == commands.NewSession) {
-			a.newSession = command.Kind == commands.NewSession
-			a.requestExit()
-			return
-		}
+	if a.exitCommandKey(e, focus) {
+		return
 	}
-	if a.page == "approval" {
+	switch focus {
+	case focusApproval:
 		a.menuKey(e)
 		return
-	}
-	if a.page == "model" {
+	case focusModel:
 		a.modelSettingsKey(e)
 		return
-	}
-	if a.page == "language" {
+	case focusLanguage:
 		a.languageKey(e)
 		return
-	}
-	if a.page == "permission" {
+	case focusPermission:
 		a.permissionKey(e)
 		return
 	}
-	if e.Key() == tcell.KeyCtrlO && a.filePreview == nil && (a.page == "chat" || a.page == "files" && a.browser.Input) {
-		if !a.output.ToggleDetails() {
-			a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
-		} else if a.output.Collapsed {
-			a.stopNotice = a.language.Text("도구 결과 접음 · Ctrl+O로 펼치기")
-		} else {
-			a.stopNotice = a.language.Text("도구 결과 펼침 · PgUp/Dn으로 스크롤")
-		}
+	if e.Key() == tcell.KeyCtrlO && focus.composer() {
+		a.toggleToolDetails()
 		return
 	}
-	if a.page == "files" && a.filePreview != nil && e.Key() == tcell.KeyEscape {
+	if focus == focusFilePreview && e.Key() == tcell.KeyEscape {
 		a.previewKey(e)
 		return
 	}
-	if e.Key() == tcell.KeyEscape {
-		if a.page == "files" {
-			a.closeFiles()
-			return
-		}
-		if a.commandOpen {
-			a.closeCommandHints()
-			return
-		}
-		if a.directoryLoading {
-			a.cancelDirectory()
-			return
-		}
-		if a.fileSubmission != nil {
-			a.fileSubmission = nil
-			a.status = ""
-			return
-		}
-		if a.page == "approval" {
-			a.decide(false)
-			return
-		}
-		if a.worker.active() && !a.worker.agent() {
-			a.interruptSetup()
-			return
-		}
-		if a.page == "chat" {
-			if a.worker.agent() && a.worker.active() {
-				a.interruptTask()
-				return
-			}
-		}
-	}
-	if a.page == "files" && a.filePreview != nil {
-		a.previewKey(e)
+	if e.Key() == tcell.KeyEscape && a.escapeKey(focus) {
 		return
 	}
-	if a.page == "files" && !a.browser.Input {
+	switch focus {
+	case focusFilePreview:
+		a.previewKey(e)
+	case focusFileNavigation:
 		a.fileKey(e)
-		return
-	}
-	if a.page != "chat" && a.page != "files" {
-		a.menuKey(e)
-		return
-	}
-	if (e.Key() == tcell.KeyUp || e.Key() == tcell.KeyDown) && (e.Modifiers() == tcell.ModCtrl || e.Modifiers() == tcell.ModMeta) {
-		delta := -1
-		if e.Key() == tcell.KeyDown {
-			delta = 1
-		}
-		a.recall(delta)
-		a.refreshHints()
-		return
-	}
-	if e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift == 0 && !a.commandOpen && a.worker.agent() && a.worker.active() && !a.paste {
-		if a.page == "files" {
-			a.confirmFileInput(true)
+	default:
+		if focus.composer() {
+			a.composerKey(e, focus)
 		} else {
-			a.reserveInput()
+			a.menuKey(e)
 		}
-		return
-	}
-	if a.page == "files" && (e.Key() == tcell.KeyBacktab || e.Key() == tcell.KeyTab && e.Modifiers()&tcell.ModShift != 0) {
-		a.browser.Input = false
-		return
-	}
-	if a.hintKey(e) {
-		return
-	}
-	switch e.Key() {
-	case tcell.KeyEnter:
-		if a.paste || e.Modifiers()&tcell.ModShift != 0 {
-			a.editor.Insert("\n")
-			a.refreshHints()
-		} else {
-			if a.page == "files" {
-				a.confirmFileInput(false)
-			} else {
-				a.submit()
-			}
-		}
-		return
-	case tcell.KeyUp:
-		w, _ := a.screen.Size()
-		a.editor.MoveVertical(-1, w)
-		return
-	case tcell.KeyDown:
-		w, _ := a.screen.Size()
-		a.editor.MoveVertical(1, w)
-		return
-	case tcell.KeyPgUp:
-		w, h := a.screen.Size()
-		a.scroll(-max(1, a.chatHeight(w, a.bodyHeight(h))), w, a.chatHeight(w, a.bodyHeight(h)))
-		return
-	case tcell.KeyPgDn:
-		w, h := a.screen.Size()
-		a.scroll(max(1, a.chatHeight(w, a.bodyHeight(h))), w, a.chatHeight(w, a.bodyHeight(h)))
-		return
-	}
-	input.EditKey(&a.editor, e)
-	a.refreshHints()
-}
-func (a *app) recall(n int) {
-	if len(a.inputs) == 0 {
-		return
-	}
-	if a.historyIndex == len(a.inputs) {
-		a.draft = a.editor.String()
-	}
-	a.historyIndex = max(0, min(len(a.inputs), a.historyIndex+n))
-	if a.historyIndex == len(a.inputs) {
-		a.editor.Set(a.draft)
-	} else {
-		a.editor.Set(a.inputs[a.historyIndex])
 	}
 }
 
-func (a *app) mouse(e *tcell.EventMouse) {
-	if a.scrollbarMouse(e) {
-		return
+func (a *app) exitCommandKey(e *tcell.EventKey, focus focusKind) bool {
+	if e.Key() != tcell.KeyEnter || e.Modifiers()&tcell.ModShift != 0 {
+		return false
 	}
-	if a.selectionMouse(e) {
-		return
+	text := a.menuInput.String()
+	if focus.composer() {
+		text = a.compose.editor.String()
 	}
-	n := 0
-	if e.Buttons()&tcell.WheelUp != 0 {
-		n = -3
+	command, err := commands.Parse(text)
+	if err != nil || command.Kind != commands.Exit && command.Kind != commands.NewSession {
+		return false
 	}
-	if e.Buttons()&tcell.WheelDown != 0 {
-		n = 3
+	a.newSession = command.Kind == commands.NewSession
+	a.requestExit()
+	return true
+}
+
+func (a *app) escapeKey(focus focusKind) bool {
+	if focus == focusFileInput || focus == focusFileNavigation {
+		a.closeFiles()
+		return true
 	}
-	if n == 0 {
-		return
+	if a.compose.commandOpen {
+		a.closeCommandHints()
+		return true
 	}
-	if a.page == "files" && a.filePreview != nil {
-		a.filePreview.Offset = max(0, a.filePreview.Offset+n)
-		return
+	if a.files.directoryLoading {
+		a.files.cancelDirectory()
+		return true
 	}
-	if a.page == "files" {
-		a.browser.Move(n)
-		return
+	if a.compose.fileSubmission != nil {
+		a.compose.fileSubmission = nil
+		a.status = ""
+		return true
 	}
-	if a.page != "chat" {
-		return
+	if a.work.state.active() && !a.work.state.agent() {
+		a.interruptSetup()
+		return true
 	}
-	w, h := a.screen.Size()
-	a.scroll(n, w, a.chatHeight(w, a.bodyHeight(h)))
+	if focus.page() == "chat" && a.work.state.agent() && a.work.state.active() {
+		a.interruptTask()
+		return true
+	}
+	return false
+}
+
+func (a *app) toggleToolDetails() {
+	if !a.chat.output.ToggleDetails() {
+		a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
+	} else if a.chat.output.Collapsed {
+		a.stopNotice = a.language.Text("도구 결과 접음 · Ctrl+O로 펼치기")
+	} else {
+		a.stopNotice = a.language.Text("도구 결과 펼침 · PgUp/Dn으로 스크롤")
+	}
 }

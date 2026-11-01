@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,9 +16,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -79,8 +80,8 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 	t.Cleanup(func() {
 		cancel()
 		a.workers.Wait()
-		if a.client != nil {
-			a.client.Close()
+		if a.connection.client != nil {
+			a.connection.client.Close()
 		}
 		server.Close()
 	})
@@ -88,14 +89,14 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "")
+	a.connection.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: "mock"}
 	for _, input := range []string{"first request", "continue first", "continue second"} {
 		a.startRequest(composer.Capture(input, a.selectedPaths()))
-		for !strings.Contains(a.thinking, "partial thinking") {
+		for !strings.Contains(a.chat.thinking, "partial thinking") {
 			select {
 			case n := <-a.events:
 				a.receive(n)
@@ -107,7 +108,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 			}
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-		for a.worker.active() {
+		for a.work.state.active() {
 			select {
 			case n := <-a.events:
 				a.receive(n)
@@ -154,14 +155,14 @@ func checkInterruptedArchive(t *testing.T, a *app, answer bool) {
 	}
 	for _, restore := range []bool{false, true} {
 		if restore {
-			a.output = viewport.View{Follow: true}
-			a.historyCursor = 0
+			a.chat.output = viewport.View{Follow: true}
+			a.chat.historyCursor = 0
 			if err := a.loadHistory(); err != nil {
 				t.Fatal(err)
 			}
 		}
 		thoughts, drafts = 0, 0
-		for _, block := range a.output.Blocks {
+		for _, block := range a.chat.output.Blocks {
 			if block.Thinking && strings.Contains(block.Text, "partial thinking") {
 				thoughts++
 			}

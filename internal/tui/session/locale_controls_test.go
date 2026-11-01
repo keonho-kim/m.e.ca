@@ -5,11 +5,12 @@
 package session
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"strings"
-	"testing"
 )
 
 func TestLocalizedThinkingChoicePositions(t *testing.T) {
@@ -21,7 +22,7 @@ func TestLocalizedThinkingChoicePositions(t *testing.T) {
 			t.Fatal(err)
 		}
 		on := true
-		a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &on, ThinkingSupported: true}
+		a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &on, ThinkingSupported: true}
 		a.openModel()
 		a.render()
 		y := 2 + modelsettings.Thinking

@@ -11,8 +11,8 @@ import (
 
 func TestFixedFooterContainsStatusAndKeys(t *testing.T) {
 	a := screenFixture(t)
-	a.selection.Model = "chosen"
-	a.output.Append(strings.Repeat("history\n", 50), false)
+	a.connection.selection.Model = "chosen"
+	a.chat.output.Append(strings.Repeat("history\n", 50), false)
 	for _, size := range [][2]int{{80, 24}, {48, 12}, {32, 8}} {
 		a.screen.SetSize(size[0], size[1])
 		a.render()

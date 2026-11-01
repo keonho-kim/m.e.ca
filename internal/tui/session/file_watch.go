@@ -42,46 +42,46 @@ func (a *app) watchPath(path string) string {
 }
 
 func (a *app) syncFileWatch() {
-	column := a.browser.Current()
+	column := a.files.browser.Current()
 	if a.page != "files" || a.exit || a.ctx.Err() != nil || column == nil {
-		if a.fileWatch.path != "" {
+		if a.files.fileWatch.path != "" {
 			a.stopFileWatch()
 		}
 		return
 	}
 	path := a.watchPath(column.Path)
-	if path != a.fileWatch.path {
+	if path != a.files.fileWatch.path {
 		a.stopFileWatch()
-		a.fileWatch.path = path
-		request := watchRequest{path: path, revision: a.watchRevision}
-		if a.watchReads.Submit(request) {
+		a.files.fileWatch.path = path
+		request := watchRequest{path: path, revision: a.files.watchRevision}
+		if a.files.watchReads.Submit(request) {
 			a.startFileWatch(request)
 		}
 	}
-	if a.fileWatch.dirty && a.fileWatch.ticks == nil && !a.directoryReads.Running() {
+	if a.files.fileWatch.dirty && a.files.fileWatch.ticks == nil && !a.files.directoryReads.Running() {
 		a.scheduleFileRefresh()
 	}
 }
 
 func (a *app) stopFileWatch() {
-	a.watchReads.Stop()
-	a.watchRevision++
-	if a.fileWatch.timer != nil {
-		a.fileWatch.timer.Stop()
+	a.files.watchReads.Stop()
+	a.files.watchRevision++
+	if a.files.fileWatch.timer != nil {
+		a.files.fileWatch.timer.Stop()
 	}
-	if a.fileWatch.watcher != nil {
-		if err := a.fileWatch.watcher.Close(); err != nil {
+	if a.files.fileWatch.watcher != nil {
+		if err := a.files.fileWatch.watcher.Close(); err != nil {
 			a.fail(err)
 		}
 	}
-	a.fileWatch = fileWatch{}
+	a.files.fileWatch = fileWatch{}
 }
 
 // Registration can inspect directory entries on some platforms. Keep it off
 // the terminal event loop, with one active registration and one latest pending path.
 func (a *app) startFileWatch(request watchRequest) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.watchReads.Begin(request.revision, cancel)
+	a.files.watchReads.Begin(request.revision, cancel)
 	a.workers.Go(func() {
 		defer cancel()
 		result := watchResult{watchRequest: request}
@@ -103,10 +103,10 @@ func (a *app) startFileWatch(request watchRequest) {
 }
 
 func (a *app) receiveFileWatch(result *watchResult) {
-	if next := a.watchReads.Complete(result.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.files.watchReads.Complete(result.revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startFileWatch(*next)
 	}
-	if result.revision != a.watchRevision || a.page != "files" || a.exit || a.ctx.Err() != nil {
+	if result.revision != a.files.watchRevision || a.page != "files" || a.exit || a.ctx.Err() != nil {
 		if result.watcher != nil {
 			_ = result.watcher.Close()
 		}
@@ -116,20 +116,20 @@ func (a *app) receiveFileWatch(result *watchResult) {
 		a.status = a.language.Format("Live file updates unavailable: %s", a.opts.Vault.Redact(result.err.Error()))
 		return
 	}
-	a.fileWatch.watcher, a.fileWatch.events, a.fileWatch.errors = result.watcher, result.watcher.Events, result.watcher.Errors
+	a.files.fileWatch.watcher, a.files.fileWatch.events, a.files.fileWatch.errors = result.watcher, result.watcher.Events, result.watcher.Errors
 	// Catch changes made between the directory read and registration completion.
-	a.fileWatch.dirty, a.fileWatch.previewDirty = true, a.filePreview != nil
+	a.files.fileWatch.dirty, a.files.fileWatch.previewDirty = true, a.files.filePreview != nil
 }
 
 func (a *app) fileWatchFailed(err error) {
 	if errors.Is(err, fsnotify.ErrEventOverflow) {
-		a.fileWatch.dirty, a.fileWatch.previewDirty = true, a.filePreview != nil
+		a.files.fileWatch.dirty, a.files.fileWatch.previewDirty = true, a.files.filePreview != nil
 		a.scheduleFileRefresh()
 		return
 	}
-	path := a.fileWatch.path
+	path := a.files.fileWatch.path
 	a.stopFileWatch()
-	a.fileWatch.path = path // Retry when navigation opens a new subscription.
+	a.files.fileWatch.path = path // Retry when navigation opens a new subscription.
 	if err != nil {
 		a.status = a.language.Format("Live file updates unavailable: %s", a.opts.Vault.Redact(err.Error()))
 	}
@@ -139,40 +139,40 @@ func (a *app) observeFileChange(event fsnotify.Event) {
 	if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename) == 0 {
 		return
 	}
-	a.fileWatch.dirty = true
-	if a.filePreviewPath != "" && a.watchPath(event.Name) == a.watchPath(a.filePreviewPath) {
-		a.fileWatch.previewDirty = true
+	a.files.fileWatch.dirty = true
+	if a.files.filePreviewPath != "" && a.watchPath(event.Name) == a.watchPath(a.files.filePreviewPath) {
+		a.files.fileWatch.previewDirty = true
 	}
 	a.scheduleFileRefresh()
 }
 
 func (a *app) scheduleFileRefresh() {
 	const delay = 150 * time.Millisecond
-	if a.fileWatch.timer == nil {
-		a.fileWatch.timer = time.NewTimer(delay)
+	if a.files.fileWatch.timer == nil {
+		a.files.fileWatch.timer = time.NewTimer(delay)
 	} else {
-		a.fileWatch.timer.Reset(delay)
+		a.files.fileWatch.timer.Reset(delay)
 	}
-	a.fileWatch.ticks = a.fileWatch.timer.C
+	a.files.fileWatch.ticks = a.files.fileWatch.timer.C
 }
 
 func (a *app) refreshWatchedFiles() {
-	a.fileWatch.ticks = nil
+	a.files.fileWatch.ticks = nil
 	if a.page != "files" || a.exit {
 		a.stopFileWatch()
 		return
 	}
-	if a.directoryReads.Running() || !a.fileWatch.dirty {
+	if a.files.directoryReads.Running() || !a.files.fileWatch.dirty {
 		return
 	}
-	column := a.browser.Current()
-	if column == nil || a.watchPath(column.Path) != a.fileWatch.path {
+	column := a.files.browser.Current()
+	if column == nil || a.watchPath(column.Path) != a.files.fileWatch.path {
 		return
 	}
-	a.fileWatch.dirty = false
+	a.files.fileWatch.dirty = false
 	a.requestDirectory("refresh", column.Path, column.Offset)
-	if a.fileWatch.previewDirty {
-		a.fileWatch.previewDirty = false
+	if a.files.fileWatch.previewDirty {
+		a.files.fileWatch.previewDirty = false
 		a.refreshFilePreview()
 	}
 }

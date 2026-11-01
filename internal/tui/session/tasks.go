@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	tasksession "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -14,33 +15,33 @@ import (
 )
 
 func (a *app) startRequest(input composer.Request) {
-	if a.worker.active() {
+	if a.work.state.active() {
 		return
 	}
-	a.output.Follow = true
-	a.stream, a.thinking = "", ""
+	a.chat.output.Follow = true
+	a.chat.stream, a.chat.thinking = "", ""
 	a.stopLATIndicator()
-	a.latOutput = latOutput{}
-	a.tokensPerSecond = nil
-	a.runSummary = nil
+	a.chat.latOutput = latOutput{}
+	a.chat.tokensPerSecond = nil
+	a.chat.runSummary = nil
 	a.stopNotice = ""
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	a.clearToolActivity()
 	a.startElapsed()
 	a.status = ""
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.taskCancel = cancel
+	a.work.cancel = cancel
 	a.decision = make(chan bool, 1)
 	steering := make(chan composer.Request, 16)
-	a.steering = steering
+	a.compose.steering = steering
 	reader, settings := a.opts.Files, a.settings
 	exists := func(ctx context.Context, path string) bool {
 		_, err := reader.Reference(ctx, settings, path)
 		return err == nil
 	}
 	options := agentrequest.Options{
-		Config: a.opts.Config, Selection: a.selection, Session: a.opts.Session,
-		Generator: a.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
+		Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
+		Generator: a.connection.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
 		LoadPrompts: a.opts.LoadPrompts,
 		LAT:         a.lat, LoadLAT: a.opts.LoadLAT,
 		PollSteering: func() []string {

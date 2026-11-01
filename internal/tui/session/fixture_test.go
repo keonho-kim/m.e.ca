@@ -11,6 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
@@ -32,7 +33,7 @@ func screenFixture(t testing.TB) *app {
 		Session: storagesession.Session{ID: "screen-test", ProjectRoot: root, DisplayRoot: root},
 		Vault:   &credentials.Vault{State: state},
 	})
-	a.historyEnd = true
+	a.chat.historyEnd = true
 	return a
 }
 
@@ -90,8 +91,7 @@ func terminalFixture(t testing.TB, opts Options) *app {
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &app{
 		opts: opts, ctx: ctx, cancel: cancel, screen: screen, page: "chat",
-		settings: policy.Settings{Scope: policy.System}, output: viewport.View{Follow: true},
-		events: make(chan notice, 32),
+		settings: policy.Settings{Scope: policy.System}, chat: chatState{output: viewport.View{Follow: true}}, events: make(chan notice, 32),
 	}
 	t.Cleanup(a.shutdown)
 	return a

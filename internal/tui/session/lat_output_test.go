@@ -18,8 +18,8 @@ import (
 
 func TestLATOutputStreamsThoughtBodyAndToolsBetweenRules(t *testing.T) {
 	a := screenFixture(t)
-	a.worker, a.language = workerAgent, locale.English
-	a.output.Append("Main before", false)
+	a.work.state, a.language = workerAgent, locale.English
+	a.chat.output.Append("Main before", false)
 	scope := &runrecord.LATRun{ID: "phase_plan", ParentRunID: "main_run", Phase: "plan"}
 	send := func(event runrecord.Event) {
 		event.Internal, event.LAT = true, scope
@@ -50,10 +50,10 @@ func TestLATOutputStreamsThoughtBodyAndToolsBetweenRules(t *testing.T) {
 			t.Fatalf("missing or repeated %q: %s", text, shown)
 		}
 	}
-	if !strings.Contains(shown, strings.Repeat("-", 74)+"\nMain next") || a.latOutput.group.ID != "" || a.indicatorTimer != nil {
+	if !strings.Contains(shown, strings.Repeat("-", 74)+"\nMain next") || a.chat.latOutput.group.ID != "" || a.work.indicatorTimer != nil {
 		t.Fatalf("LAT group leaked into main output: %s", shown)
 	}
-	if !a.output.ToggleDetails() || strings.Contains(latScreenText(a.chatLayout(74)), "Source body") {
+	if !a.chat.output.ToggleDetails() || strings.Contains(latScreenText(a.chatLayout(74)), "Source body") {
 		t.Fatal("LAT tool output ignores normal detail toggle")
 	}
 }
@@ -61,7 +61,7 @@ func TestLATOutputStreamsThoughtBodyAndToolsBetweenRules(t *testing.T) {
 func TestLATOutputHeaderAnimationSharesTimerAndStops(t *testing.T) {
 	for _, width := range []int{100, 80, 40} {
 		a := screenFixture(t)
-		a.worker = workerAgent
+		a.work.state = workerAgent
 		a.screen.SetSize(width, 24)
 		a.receiveRuntime(&runrecord.Event{Kind: "lat_preparing", Text: "plan"})
 		for _, dots := range []int{1, 2, 3, 1} {
@@ -69,19 +69,19 @@ func TestLATOutputHeaderAnimationSharesTimerAndStops(t *testing.T) {
 			if header := screenLine(a.screen, 0, width); !strings.Contains(header, "Running Look At This "+strings.Repeat(".", dots)) {
 				t.Fatalf("width=%d dots=%d header=%q", width, dots, header)
 			}
-			a.advanceIndicator()
+			a.work.advanceIndicator()
 		}
-		timer := a.indicatorTimer
+		timer := a.work.indicatorTimer
 		a.startCompression()
-		if a.indicatorTimer != timer || !a.activity().Compressing {
+		if a.work.indicatorTimer != timer || !a.activity().Compressing {
 			t.Fatal("overlapping LAT/compaction duplicated the indicator timer")
 		}
 		a.stopCompression()
-		if a.indicatorTimer != timer || !a.activity().LAT {
+		if a.work.indicatorTimer != timer || !a.activity().LAT {
 			t.Fatal("compaction completion stopped the active LAT indicator")
 		}
 		a.receiveRuntime(&runrecord.Event{Kind: "lat_prepared"})
-		if a.indicatorTimer != nil || a.activity().LAT || a.activity().Compressing {
+		if a.work.indicatorTimer != nil || a.activity().LAT || a.activity().Compressing {
 			t.Fatal("preparation retained its timer")
 		}
 	}
@@ -89,7 +89,7 @@ func TestLATOutputHeaderAnimationSharesTimerAndStops(t *testing.T) {
 
 func TestLATOutputReviewAndCancellationKeepSingleFeedbackAndPartialText(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	scope := &runrecord.LATRun{ID: "review_1", ParentRunID: "main_run", Phase: "review"}
 	send := func(kind, text string) {
 		a.receiveRuntime(&runrecord.Event{Kind: kind, Text: text, Internal: true, LAT: scope})
@@ -103,14 +103,14 @@ func TestLATOutputReviewAndCancellationKeepSingleFeedbackAndPartialText(t *testi
 	send("response", "- Missing endpoint")
 	send("lat_phase_finished", "")
 	a.receiveRuntime(&runrecord.Event{Kind: "lat_feedback", RunID: "main_run", Text: "- Missing endpoint"})
-	if shown := latScreenText(a.chatLayout(74)); strings.Count(shown, "Missing endpoint") != 1 || a.latOutput.group.ID != "" {
+	if shown := latScreenText(a.chatLayout(74)); strings.Count(shown, "Missing endpoint") != 1 || a.chat.latOutput.group.ID != "" {
 		t.Fatal("review feedback duplicated or left its group active", shown)
 	}
 	send("lat_phase_started", "")
 	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: "Partial review", Thinking: "Partial thought", LAT: scope, Internal: true})
 	a.finishWorker(notice{Done: true, Err: context.Canceled})
 	shown := latScreenText(a.chatLayout(74))
-	if strings.Count(shown, "Partial review") != 1 || strings.Count(shown, "Partial thought") != 1 || a.indicatorTimer != nil || a.activity().LAT {
+	if strings.Count(shown, "Partial review") != 1 || strings.Count(shown, "Partial thought") != 1 || a.work.indicatorTimer != nil || a.activity().LAT {
 		t.Fatal("cancelled LAT lost partial output or retained its indicator", shown)
 	}
 }

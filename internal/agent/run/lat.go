@@ -18,27 +18,27 @@ import (
 var errReviewSuperseded = errors.New("independent review superseded by new user instructions")
 
 func (s *execution) reviewInstructions() error {
-	if !s.reviewing || s.runner.PollSteering == nil {
+	if !s.review.active || s.runner.PollSteering == nil {
 		return nil
 	}
 	if messages := s.runner.PollSteering(); len(messages) > 0 {
-		s.latSteering = append(s.latSteering, messages...)
+		s.review.steering = append(s.review.steering, messages...)
 		return errReviewSuperseded
 	}
 	return nil
 }
 
 func (s *execution) reviewWork(ctx context.Context, draft modelapi.Response) (bool, error) {
-	if !s.runner.LAT || s.latReviewed || strings.TrimSpace(draft.Text) == "" {
+	if !s.runner.LAT || s.review.reviewed || strings.TrimSpace(draft.Text) == "" {
 		return false, nil
 	}
-	s.latReviewed = true // Feedback repairs do not start a recursive review cycle.
+	s.review.reviewed = true // Feedback repairs do not start a recursive review cycle.
 	// Settle the completed main reply before the side conversation can replace
 	// its live stream. This same message is the canonical draft on every exit.
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: draft.Text, Reasoning: draft.Reasoning, ReasoningState: draft.ReasoningState}); err != nil {
 		return false, err
 	}
-	s.latDraftSaved = true
+	s.review.draftSaved = true
 	if err := s.emit(runrecord.Event{Kind: "progress", Text: draft.Text}); err != nil {
 		return false, err
 	}
@@ -53,10 +53,10 @@ func (s *execution) reviewWork(ctx context.Context, draft modelapi.Response) (bo
 	if errors.Is(err, errRuntimeRecord) {
 		return false, err
 	}
-	if len(s.latSteering) > 0 {
-		messages := s.latSteering
-		s.latSteering = nil
-		s.latDraftSaved = false
+	if len(s.review.steering) > 0 {
+		messages := s.review.steering
+		s.review.steering = nil
+		s.review.draftSaved = false
 		if err := s.applyInstructions(ctx, messages); err != nil {
 			return false, err
 		}
@@ -65,7 +65,7 @@ func (s *execution) reviewWork(ctx context.Context, draft modelapi.Response) (bo
 	// A review may take time. Admit new user instructions before its feedback
 	// can cause another model decision, and never act on a stale request.
 	if changed, steerErr := s.steer(ctx); changed || steerErr != nil {
-		s.latDraftSaved = false
+		s.review.draftSaved = false
 		return changed, errors.Join(steerErr, s.reviewEvent(ctx, "lat_discarded", ""))
 	}
 	if err != nil {
@@ -79,14 +79,14 @@ func (s *execution) reviewWork(ctx context.Context, draft modelapi.Response) (bo
 		return false, err
 	}
 	s.messages = append(s.messages, lat.Feedback(feedback))
-	s.latDraftSaved = false
+	s.review.draftSaved = false
 	return true, s.emit(runrecord.Event{Kind: "lat_feedback", RunID: s.checkpoint.ID, Text: feedback})
 }
 
 func (s *execution) independentReview(ctx context.Context, draft string) (lat.Result, error) {
-	s.reviewing = true
-	defer func() { s.reviewing = false }()
-	text, err := s.runLATPhase(ctx, "review", s.latTemplates().LAT, inference.LAT, lat.Input{Plan: s.latPlan, Draft: s.runner.Redact(draft)})
+	s.review.active = true
+	defer func() { s.review.active = false }()
+	text, err := s.runLATPhase(ctx, "review", s.latTemplates().LAT, inference.LAT, lat.Input{Plan: s.review.plan, Draft: s.runner.Redact(draft)})
 	if err != nil {
 		return lat.Result{}, err
 	}

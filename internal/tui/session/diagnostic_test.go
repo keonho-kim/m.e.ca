@@ -6,12 +6,13 @@ package session
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
 )
 
 func TestExplicitDiagnostic(t *testing.T) {
@@ -27,15 +28,15 @@ func TestExplicitDiagnostic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer a.client.Close()
-	a.selection = connection.Selection{Connection: conn, Model: "arbitrary-alias"}
+	defer a.connection.client.Close()
+	a.connection.selection = connection.Selection{Connection: conn, Model: "arbitrary-alias"}
 	a.diagnoseModel()
 	drainTask(t, a, false)
-	if posts.Load() != 1 || a.worker.active() || a.selection.Model != "arbitrary-alias" || a.status != "모델 연결 진단을 통과했습니다" {
-		t.Fatalf("posts=%d selection=%+v status=%s", posts.Load(), a.selection, a.status)
+	if posts.Load() != 1 || a.work.state.active() || a.connection.selection.Model != "arbitrary-alias" || a.status != "모델 연결 진단을 통과했습니다" {
+		t.Fatalf("posts=%d selection=%+v status=%s", posts.Load(), a.connection.selection, a.status)
 	}
 }

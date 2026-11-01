@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/preview"
 )
@@ -20,10 +21,10 @@ func TestApprovalSuspendsFileViewer(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			a := screenFixture(t)
-			a.page, a.worker = "files", workerAgent
-			a.filePreview = &preview.State{Path: "README.md", Content: "# Preview", Full: true}
-			a.editor.Set("unsent draft")
-			a.fileSubmission = &fileSubmission{}
+			a.page, a.work.state = "files", workerAgent
+			a.files.filePreview = &preview.State{Path: "README.md", Content: "# Preview", Full: true}
+			a.compose.editor.Set("unsent draft")
+			a.compose.fileSubmission = &fileSubmission{}
 			a.decision = make(chan bool, 1)
 			a.receive(notice{Approval: &toolapi.Approval{Name: "protected operation"}})
 			if keys := keymapLabels(t, a); keys["Esc"] != "거부" || keys["Shift+R"] != "" {
@@ -38,7 +39,7 @@ func TestApprovalSuspendsFileViewer(t *testing.T) {
 			default:
 				t.Fatal("approval did not receive its decision")
 			}
-			if a.page != "files" || a.filePreview == nil || !a.filePreview.Full || a.editor.String() != "unsent draft" {
+			if a.page != "files" || a.files.filePreview == nil || !a.files.filePreview.Full || a.compose.editor.String() != "unsent draft" {
 				t.Fatal("approval lost the suspended viewer or draft")
 			}
 		})

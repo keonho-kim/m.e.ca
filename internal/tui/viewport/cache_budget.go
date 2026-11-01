@@ -16,11 +16,27 @@ func (b *Block) cacheBytes() int {
 	return b.stream.RetainedBytes() + b.layout.parsedBytes + cap(b.layout.metrics)*int(unsafe.Sizeof(rowMetrics{}))
 }
 
-func (b *Block) parseStatic(width int) {
+// ensureMarkdown reports whether rows were recreated. Static line weights are
+// accumulated by the index pass, or the visible-window recovery pass, exactly once.
+func (b *Block) ensureMarkdown(width int) bool {
 	l := &b.layout
-	b.stream = markdown.Stream{}
-	l.parsed = markdown.Render(b.Text, width)
-	l.parsedBytes = cap(l.parsed) * int(unsafe.Sizeof(markdown.Line{}))
+	if l.parsed != nil {
+		return false
+	}
+	if b.live {
+		l.parsed = b.stream.Render(b.Text, width)
+	} else {
+		b.stream = markdown.Stream{}
+		l.parsed = markdown.Render(b.Text, width)
+		l.parsedBytes = cap(l.parsed) * int(unsafe.Sizeof(markdown.Line{}))
+	}
+	return true
+}
+
+func (b *Block) retainParsedLine(line markdown.Line) {
+	if !b.live {
+		b.layout.parsedBytes += line.RetainedBytes()
+	}
 }
 
 func (t *Transcript) enforceCacheBudget() {
@@ -54,4 +70,19 @@ func (t *Transcript) enforceCacheBudget() {
 		total -= block.cacheBytes()
 		block.releaseParsed()
 	}
+}
+
+// ReleaseDisplay retains scroll indexes but drops inactive parsing resources.
+func (v *View) ReleaseDisplay() {
+	for i := range v.Blocks {
+		v.Blocks[i].visible = false
+		v.Blocks[i].releaseParsed()
+	}
+}
+
+func (b *Block) releaseParsed() {
+	b.layout.parsed = nil
+	b.layout.metrics = nil
+	b.layout.parsedBytes = 0
+	b.stream = markdown.Stream{}
 }

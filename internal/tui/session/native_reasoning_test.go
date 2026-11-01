@@ -5,11 +5,13 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func TestNativeReasoningMenu(t *testing.T) {
@@ -18,9 +20,9 @@ func TestNativeReasoningMenu(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{Levels: []string{"Light", "Deep"}, Default: "Light"}}}
+	a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: &connection.Reasoning{Levels: []string{"Light", "Deep"}, Default: "Light"}}}
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	line := screenLineAfterModelRender(a, 2+modelsettings.Thinking)
 	if strings.Contains(line, "DEFAULT") || !strings.Contains(line, "ON") || !strings.Contains(line, "끄기 불가") {
 		t.Fatal(line)
@@ -32,7 +34,7 @@ func TestNativeReasoningMenu(t *testing.T) {
 	}
 	f.Row = modelsettings.Effort
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-	if f.Effort != "Deep" || a.selection.Effort() != "" {
+	if f.Effort != "Deep" || a.connection.selection.Effort() != "" {
 		t.Fatal("literal native effort lost or persisted early")
 	}
 }

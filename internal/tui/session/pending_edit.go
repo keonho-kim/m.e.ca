@@ -4,20 +4,22 @@
 // Related: internal/tui/composer/queue/state.go, internal/tui/session/pending.go, internal/tui/session/pending_edit_keys.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/composer/queue"
+import (
+	"github.com/keonho-kim/meca/internal/tui/composer/queue"
+)
 
 func (a *app) canEditPending() bool {
-	return a.page == "chat" && len(a.queued.Messages) > 0 && a.fileSubmission == nil && !a.worker.stopping() && (!a.worker.active() || a.worker.agent())
+	return a.page == "chat" && len(a.compose.queued.Messages) > 0 && a.compose.fileSubmission == nil && !a.work.state.stopping() && (!a.work.state.active() || a.work.state.agent())
 }
 
-func (a *app) pendingEditChanged() bool { return a.queued.Changed(a.editor.String()) }
+func (a *app) pendingEditChanged() bool { return a.compose.queued.Changed(a.compose.editor.String()) }
 
 func (a *app) navigatePending(delta int) {
-	if a.queued.Edit == nil && !a.canEditPending() {
+	if a.compose.queued.Edit == nil && !a.canEditPending() {
 		return
 	}
-	opening := a.queued.Edit == nil
-	switch a.queued.Navigate(delta, &a.editor) {
+	opening := a.compose.queued.Edit == nil
+	switch a.compose.queued.Navigate(delta, &a.compose.editor) {
 	case queue.Focused:
 		if opening {
 			a.clearSelection()
@@ -31,20 +33,20 @@ func (a *app) navigatePending(delta int) {
 }
 
 func (a *app) savePendingEdit() {
-	if !a.queued.Save(a.editor.String()) {
+	if !a.compose.queued.Save(a.compose.editor.String()) {
 		a.stopNotice = a.language.Text("Enter a request or use Ctrl/Cmd+Backspace to delete it from the queue")
 		return
 	}
 	a.closePendingEdit()
 }
 
-func (a *app) deletePendingEdit() { a.queued.DeleteSelected(); a.closePendingEdit() }
+func (a *app) deletePendingEdit() { a.compose.queued.DeleteSelected(); a.closePendingEdit() }
 
 func (a *app) restorePendingEditor() queue.Completion {
-	if a.queued.Edit == nil {
+	if a.compose.queued.Edit == nil {
 		return queue.Running
 	}
-	completion := a.queued.RestoreEditor(&a.editor)
+	completion := a.compose.queued.RestoreEditor(&a.compose.editor)
 	a.clearSelection()
 	a.closeCommandHints()
 	a.stopNotice = ""
@@ -52,7 +54,7 @@ func (a *app) restorePendingEditor() queue.Completion {
 }
 
 func (a *app) closePendingEdit() {
-	if a.queued.Edit == nil {
+	if a.compose.queued.Edit == nil {
 		return
 	}
 	switch a.restorePendingEditor() {

@@ -4,14 +4,16 @@
 // Related: internal/tui/session/model.go, internal/tui/session/model_form_setup.go, internal/tui/session/events.go.
 package session
 
-import "context"
+import (
+	"context"
+)
 
 func (a *app) interruptSetup() {
-	if a.taskCancel == nil {
+	if a.work.cancel == nil {
 		return
 	}
-	a.worker.stop()
-	a.taskCancel()
+	a.work.state.stop()
+	a.work.cancel()
 	a.stopElapsed()
 	a.page = "chat"
 	a.status = ""
@@ -22,12 +24,12 @@ func (a *app) setupResult(n *notice) bool {
 	if n.SetupRevision == 0 {
 		return true
 	}
-	if n.SetupRevision != a.setupRevision || a.worker.stopping() {
-		if n.Client != nil && n.Client != a.client {
+	if n.SetupRevision != a.connection.setupRevision || a.work.state.stopping() {
+		if n.Client != nil && n.Client != a.connection.client {
 			n.Client.Close()
 		}
 		n.Client, n.Selection, n.Models, n.credential = nil, nil, nil, ""
-		if n.SetupRevision != a.setupRevision {
+		if n.SetupRevision != a.connection.setupRevision {
 			return false
 		}
 		n.Err = context.Canceled

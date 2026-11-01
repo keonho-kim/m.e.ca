@@ -5,19 +5,21 @@
 package session
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"strings"
-	"testing"
 )
 
 func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
 	f.Endpoint.Set("http://localhost:8000/v1")
 	for i := 0; i < 3; i++ {
@@ -42,7 +44,7 @@ func TestEndpointClearRemovesSuffixAndRejectsEmpty(t *testing.T) {
 func TestEndpointCursorTracksEditingAndHorizontalScroll(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Endpoint, true
 	f.Endpoint.Set("http://localhost:8000/v1")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyLeft, "", 0))
@@ -82,9 +84,9 @@ func TestModelThinkingUsesKnownDefaultAndStagesChanges(t *testing.T) {
 		if known {
 			r.DefaultOn = &on
 		}
-		a.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: r}, ThinkingSupported: true}
+		a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Details: &connection.ModelInfo{ID: "alias", Reasoning: r}, ThinkingSupported: true}
 		a.openModel()
-		f := a.modelForm
+		f := a.connection.modelForm
 		line := screenLineAfterModelRender(a, 2+modelsettings.Thinking)
 		if known && (strings.Contains(line, "DEFAULT") || !strings.Contains(line, "ON")) {
 			t.Fatal(line)
@@ -94,7 +96,7 @@ func TestModelThinkingUsesKnownDefaultAndStagesChanges(t *testing.T) {
 		}
 		f.Row = modelsettings.Thinking
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
-		if f.Thinking == nil || a.selection.Thinking != nil {
+		if f.Thinking == nil || a.connection.selection.Thinking != nil {
 			t.Fatal("draft did not remain staged")
 		}
 	}

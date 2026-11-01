@@ -10,12 +10,12 @@ import (
 )
 
 func (a *app) renderModel(w, h int) {
-	if a.modelForm == nil {
+	if a.connection.modelForm == nil {
 		a.initializeModelForm()
 	}
-	f := a.modelForm
+	f := a.connection.modelForm
 	display := f.Display(w, a.opts.Config.ContextLength, a.language, a.opts.Vault.Redact)
-	display.Activity, display.Usage, display.Status, display.Command = a.activity(), a.displayTokens(), a.status, a.menuInput.String()
+	display.Activity, display.Usage, display.Status, display.Command = a.activity(), a.chat.displayTokens(), a.status, a.menuInput.String()
 	fieldX := view.SettingsValueColumn(w)
 	y := view.Settings(a.screen, display, w, h)
 	if display.Field != nil && f.Row != modelsettings.Credential && y >= 0 {

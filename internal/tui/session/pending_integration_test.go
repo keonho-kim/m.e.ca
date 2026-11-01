@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -18,9 +17,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
@@ -81,8 +82,8 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 	t.Cleanup(func() {
 		cancel()
 		a.workers.Wait()
-		if a.client != nil {
-			a.client.Close()
+		if a.connection.client != nil {
+			a.connection.client.Close()
 		}
 		server.Close()
 	})
@@ -90,11 +91,11 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "")
+	a.connection.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.selection = modelconn.Selection{Connection: connection, Model: "mock"}
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: "mock"}
 	a.startRequest(composer.Capture(sequence[0], a.selectedPaths()))
 	select {
 	case <-started:
@@ -103,22 +104,22 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 	}
 	for _, text := range sequence[1:] {
 		if text == ":q" {
-			a.page, a.browser.Input = "files", true
+			a.page, a.files.browser.Input = "files", true
 		}
-		a.editor.Set(text)
+		a.compose.editor.Set(text)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-		if a.fileSendConfirm {
+		if a.files.fileSendConfirm {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 		}
 	}
-	if requests.Load() != 1 || !slices.Equal(queuedTexts(a.queued.Messages), sequence[1:]) {
+	if requests.Load() != 1 || !slices.Equal(queuedTexts(a.compose.queued.Messages), sequence[1:]) {
 		t.Fatal("request started before completion")
 	}
-	retained := a.queued.Messages
-	a.editor.Set("unsent draft")
+	retained := a.compose.queued.Messages
+	a.compose.editor.Set("unsent draft")
 	close(release)
 	drainTask(t, a, false)
-	if requests.Load() != int32(len(sequence)) || a.queued.Messages != nil || a.editor.String() != "unsent draft" {
+	if requests.Load() != int32(len(sequence)) || a.compose.queued.Messages != nil || a.compose.editor.String() != "unsent draft" {
 		t.Fatal("deferred input order or draft lost")
 	}
 	for _, text := range retained {

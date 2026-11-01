@@ -18,21 +18,21 @@ type latOutput struct {
 }
 
 func (a *app) latGroup() viewport.Group {
-	return a.latOutput.group
+	return a.chat.latOutput.group
 }
 
 func (a *app) appendLATBlock(block viewport.Block) {
 	block.Group = a.latGroup()
-	a.output.AppendBlock(block)
+	a.chat.output.AppendBlock(block)
 }
 
 func (a *app) flushLATPartial() {
-	if a.latOutput.group.ID == "" {
+	if a.chat.latOutput.group.ID == "" {
 		return
 	}
-	a.appendLATBlock(transcript.Thought(a.thinking))
-	a.appendLATBlock(transcript.Answer(a.stream))
-	a.stream, a.thinking = "", ""
+	a.appendLATBlock(transcript.Thought(a.chat.thinking))
+	a.appendLATBlock(transcript.Answer(a.chat.stream))
+	a.chat.stream, a.chat.thinking = "", ""
 }
 
 func (a *app) receiveLAT(event *runrecord.Event) bool {
@@ -43,12 +43,12 @@ func (a *app) receiveLAT(event *runrecord.Event) bool {
 	case "generation_started", "generation_finished", "compaction_started", "compaction_finished":
 		return false // These measurements and lifecycle indicators have one owner.
 	case "usage", "usage_progress":
-		a.receiveTokens(*event)
+		a.chat.receiveTokens(*event)
 		return true
 	case "lat_phase_started":
-		a.latOutput.group = transcript.LATGroup(*event.LAT)
+		a.chat.latOutput.group = transcript.LATGroup(*event.LAT)
 		a.startLATIndicator()
-		a.stream, a.thinking = "", ""
+		a.chat.stream, a.chat.thinking = "", ""
 		a.clearToolActivity()
 		return true
 	case "lat_phase_finished":
@@ -60,24 +60,24 @@ func (a *app) receiveLAT(event *runrecord.Event) bool {
 		a.stopCompression()
 		a.status = ""
 		if event.LAT.Phase != "review" && event.Text == "" {
-			a.latOutput = latOutput{}
+			a.chat.latOutput = latOutput{}
 		}
 		return true
 	case "stream":
-		a.stream, a.thinking = event.Text, event.Thinking
+		a.chat.stream, a.chat.thinking = event.Text, event.Thinking
 		// Hide the machine verdict while it is being generated. The localized
 		// final outcome is displayed in its place after the phase has settled.
-		if event.LAT.Phase == "review" && strings.HasPrefix("NO_FINDINGS", strings.TrimSpace(a.stream)) {
-			a.stream = ""
+		if event.LAT.Phase == "review" && strings.HasPrefix("NO_FINDINGS", strings.TrimSpace(a.chat.stream)) {
+			a.chat.stream = ""
 		}
 		return true
 	case "thinking":
-		a.thinking = ""
+		a.chat.thinking = ""
 	case "progress", "response":
 		if event.LAT.Phase == "review" && event.Kind == "response" {
 			return true // Retain the live draft until its typed outcome replaces it.
 		}
-		a.stream, a.thinking = "", ""
+		a.chat.stream, a.chat.thinking = "", ""
 	case "tool_started":
 		a.startToolActivity(event)
 		a.status = ""
@@ -90,7 +90,7 @@ func (a *app) receiveLAT(event *runrecord.Event) bool {
 		return true
 	}
 	for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*event) {
-		a.output.AppendBlock(block)
+		a.chat.output.AppendBlock(block)
 	}
 	return true
 }
@@ -98,17 +98,17 @@ func (a *app) receiveLAT(event *runrecord.Event) bool {
 func (a *app) receiveLATOutcome(event *runrecord.Event) {
 	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
 	for _, block := range f.Event(*event) {
-		if event.Kind != "lat_memory_unavailable" && a.latOutput.group.ID != "" {
+		if event.Kind != "lat_memory_unavailable" && a.chat.latOutput.group.ID != "" {
 			block.Group = a.latGroup()
 		}
-		a.output.AppendBlock(block)
+		a.chat.output.AppendBlock(block)
 	}
 	if event.Kind != "lat_memory_unavailable" {
-		if a.latOutput.group.ID != "" {
-			a.stream, a.thinking = "", ""
+		if a.chat.latOutput.group.ID != "" {
+			a.chat.stream, a.chat.thinking = "", ""
 		}
 		a.stopLATIndicator()
-		a.latOutput = latOutput{}
+		a.chat.latOutput = latOutput{}
 		a.status = ""
 	}
 }

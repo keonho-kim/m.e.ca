@@ -5,10 +5,11 @@
 package session
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestTokenCounterSnapshotsAndFixedPosition(t *testing.T) {
@@ -22,7 +23,7 @@ func TestTokenCounterSnapshotsAndFixedPosition(t *testing.T) {
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 12, Output: 3}}})
 	a.receive(notice{Done: true})
-	a.output.Append(strings.Repeat("history\n", 50), false)
+	a.chat.output.Append(strings.Repeat("history\n", 50), false)
 	a.render()
 	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3 · 초당 토큰 —") {
 		t.Fatalf("final counter=%q", got)

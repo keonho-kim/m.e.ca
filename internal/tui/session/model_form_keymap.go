@@ -5,15 +5,16 @@
 package session
 
 import (
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/commands"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/view"
-	"strings"
 )
 
 func (a *app) modelSettingsShortcuts() []view.Shortcut {
 	keys := []view.Shortcut{{Key: "^C", Label: "종료"}}
-	f := a.modelForm
+	f := a.connection.modelForm
 	if a.menuInput.String() == ":q" {
 		return append(keys, view.Shortcut{Key: "Enter", Label: "복귀"}, view.Shortcut{Key: "Esc", Label: "취소"})
 	}
@@ -23,8 +24,8 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 	if f != nil && f.Confirm {
 		return settingsConfirmationShortcuts()
 	}
-	if a.worker.active() && (f == nil || !f.Catalog || !f.Editing || f.Row != modelsettings.Name) {
-		if !a.worker.agent() && !a.worker.stopping() {
+	if a.work.state.active() && (f == nil || !f.Catalog || !f.Editing || f.Row != modelsettings.Name) {
+		if !a.work.state.agent() && !a.work.state.stopping() {
 			keys = append(keys, view.Shortcut{Key: "Enter", Label: "Review save"})
 		}
 		return append(keys, view.Shortcut{Key: "Esc", Label: "연결 취소"})
@@ -32,7 +33,7 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 	if f != nil && f.Editing {
 		move, tab := "이동", "Next setting"
 		escape := "Finish editing"
-		if a.worker.active() {
+		if a.work.state.active() {
 			escape = "조회 취소"
 		}
 		if f.Row == modelsettings.Name && len(f.Hints) > 0 {
@@ -81,7 +82,7 @@ func (a *app) modelSettingsShortcuts() []view.Shortcut {
 		}
 	case modelsettings.Diagnostic:
 		next := f.Selection()
-		if a.client != nil && next.Connection.ID == a.selection.Connection.ID && next.Model == a.selection.Model && !f.ControlsChanged && !f.KeyChanged {
+		if a.connection.client != nil && next.Connection.ID == a.connection.selection.Connection.ID && next.Model == a.connection.selection.Model && !f.ControlsChanged && !f.KeyChanged {
 			label = "실행"
 		}
 	}

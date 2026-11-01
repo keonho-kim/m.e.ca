@@ -15,12 +15,12 @@ import (
 func TestLATPreparationStatusIsDistinctFromFinalReview(t *testing.T) {
 	for _, language := range []locale.Language{locale.English, locale.Korean} {
 		a := screenFixture(t)
-		a.language, a.worker = language, workerAgent
+		a.language, a.work.state = language, workerAgent
 		for _, phase := range []struct{ name, label string }{{"plan", "LAT: Preparing plan…"}, {"critique", "LAT: Reviewing plan…"}, {"refine", "LAT: Refining plan…"}} {
 			a.receiveRuntime(&runrecord.Event{Kind: "lat_preparing", Text: phase.name})
 			want := language.Text(phase.label)
-			if a.status != want || len(a.output.Blocks) != 0 {
-				t.Fatalf("preparation became transcript content: status=%q blocks=%+v", a.status, a.output.Blocks)
+			if a.status != want || len(a.chat.output.Blocks) != 0 {
+				t.Fatalf("preparation became transcript content: status=%q blocks=%+v", a.status, a.chat.output.Blocks)
 			}
 			a.render()
 			var screen strings.Builder
@@ -32,12 +32,12 @@ func TestLATPreparationStatusIsDistinctFromFinalReview(t *testing.T) {
 			}
 		}
 		a.receiveRuntime(&runrecord.Event{Kind: "lat_prepared"})
-		if a.status != "" || len(a.output.Blocks) != 0 {
-			t.Fatalf("preparation completion claimed a review result: status=%q blocks=%+v", a.status, a.output.Blocks)
+		if a.status != "" || len(a.chat.output.Blocks) != 0 {
+			t.Fatalf("preparation completion claimed a review result: status=%q blocks=%+v", a.status, a.chat.output.Blocks)
 		}
 		a.receiveRuntime(&runrecord.Event{Kind: "lat_started"})
-		if a.status != language.Text("LAT: Reviewing work…") || len(a.output.Blocks) != 0 {
-			t.Fatalf("final review changed: status=%q blocks=%+v", a.status, a.output.Blocks)
+		if a.status != language.Text("LAT: Reviewing work…") || len(a.chat.output.Blocks) != 0 {
+			t.Fatalf("final review changed: status=%q blocks=%+v", a.status, a.chat.output.Blocks)
 		}
 	}
 }

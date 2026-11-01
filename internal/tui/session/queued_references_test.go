@@ -43,22 +43,22 @@ func TestQueuedRequestKeepsReferences(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(conn, "")
+	a.connection.client, err = httpclient.NewClient(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer a.client.Close()
-	a.selection = connection.Selection{Connection: conn, Model: "test"}
+	defer a.connection.client.Close()
+	a.connection.selection = connection.Selection{Connection: conn, Model: "test"}
 	for _, name := range []string{"a.txt", "b.txt"} {
 		if err := os.WriteFile(filepath.Join(a.opts.Session.ProjectRoot, name), []byte(name), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	a.worker = workerAgent
-	a.browser.Selected = map[string]bool{"a.txt": true}
+	a.work.state = workerAgent
+	a.files.browser.Selected = map[string]bool{"a.txt": true}
 	a.reserveMessage("review the selected file")
-	a.browser.Selected = map[string]bool{"b.txt": true}
-	a.referenceRevision++
+	a.files.browser.Selected = map[string]bool{"b.txt": true}
+	a.files.referenceRevision++
 	a.finishWorker(notice{Done: true, RunStatus: runrecord.Answered})
 	drainTask(t, a, false)
 	select {

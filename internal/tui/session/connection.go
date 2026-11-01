@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/keonho-kim/meca/internal/config"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
@@ -15,7 +16,7 @@ import (
 
 func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 	defer func() {
-		if !adopted && n.Client != nil && n.Client != a.client {
+		if !adopted && n.Client != nil && n.Client != a.connection.client {
 			n.Client.Close()
 		}
 	}()
@@ -61,11 +62,7 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	previous := a.client
-	a.client, a.selection = n.Client, committed.Selection
+	a.connection.adopt(n.Client, committed.Selection)
 	adopted = true
-	if previous != nil && previous != a.client {
-		previous.Close()
-	}
 	return true, committed.DefaultError
 }

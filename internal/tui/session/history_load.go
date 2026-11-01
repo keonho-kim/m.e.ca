@@ -17,12 +17,12 @@ type historyPage struct {
 }
 
 func (a *app) loadOlderHistory() {
-	if a.historyLoading || a.historyEnd {
+	if a.chat.historyLoading || a.chat.historyEnd {
 		return
 	}
-	a.historyLoading = true
-	ctx, store, id, cursor, redact, language := a.ctx, a.opts.Store, a.opts.Session.ID, a.historyCursor, a.opts.Vault.Redact, a.language
-	revision := a.historyRevision
+	a.chat.historyLoading = true
+	ctx, store, id, cursor, redact, language := a.ctx, a.opts.Store, a.opts.Session.ID, a.chat.historyCursor, a.opts.Vault.Redact, a.language
+	revision := a.chat.historyRevision
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -35,17 +35,17 @@ func (a *app) loadOlderHistory() {
 }
 
 func (a *app) receiveHistory(page *historyPage) {
-	if page.revision != a.historyRevision {
+	if page.revision != a.chat.historyRevision {
 		return
 	}
-	a.historyLoading = false
+	a.chat.historyLoading = false
 	if page.err != nil {
 		a.fail(page.err)
 		return
 	}
-	if page.cursor == a.historyCursor || page.cursor == 0 {
-		a.historyEnd = true
+	if page.cursor == a.chat.historyCursor || page.cursor == 0 {
+		a.chat.historyEnd = true
 	}
-	a.historyCursor = page.cursor
-	a.output.Prepend(page.blocks)
+	a.chat.historyCursor = page.cursor
+	a.chat.output.Prepend(page.blocks)
 }

@@ -4,18 +4,20 @@
 // Related: internal/tui/composer/queue/projection.go, internal/tui/session/render_chat.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/viewport"
+import (
+	"github.com/keonho-kim/meca/internal/tui/viewport"
+)
 
 func (a *app) revealPending(transcript *viewport.Transcript, height int) {
-	edit := a.queued.Edit
+	edit := a.compose.queued.Edit
 	if edit == nil || !edit.Reveal || height < 1 {
 		return
 	}
-	anchor := viewport.View{AnchorID: a.chatProjection.focusedID}
+	anchor := viewport.View{AnchorID: a.chat.chatProjection.focusedID}
 	target := transcript.Start(&anchor, height)
-	start := transcript.Start(&a.output, height)
+	start := transcript.Start(&a.chat.output, height)
 	if target < start || target >= start+height {
-		transcript.Seek(&a.output, target, height)
+		transcript.Seek(&a.chat.output, target, height)
 	}
 	edit.Reveal = false
 }

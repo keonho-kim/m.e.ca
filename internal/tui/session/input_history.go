@@ -4,11 +4,26 @@
 // Related: internal/tui/session/commands.go, internal/tui/session/runtime_events.go, internal/tui/session/keys.go.
 package session
 
-func (a *app) rememberInput(text string) {
-	a.inputs = append(a.inputs, text)
-	if len(a.inputs) > 200 {
-		clear(a.inputs[:len(a.inputs)-200])
-		a.inputs = a.inputs[len(a.inputs)-200:]
+func (r *requestState) rememberInput(text string) {
+	r.inputs = append(r.inputs, text)
+	if len(r.inputs) > 200 {
+		clear(r.inputs[:len(r.inputs)-200])
+		r.inputs = r.inputs[len(r.inputs)-200:]
 	}
-	a.historyIndex = len(a.inputs)
+	r.historyIndex = len(r.inputs)
+}
+
+func (r *requestState) recall(n int) {
+	if len(r.inputs) == 0 {
+		return
+	}
+	if r.historyIndex == len(r.inputs) {
+		r.draft = r.editor.String()
+	}
+	r.historyIndex = max(0, min(len(r.inputs), r.historyIndex+n))
+	if r.historyIndex == len(r.inputs) {
+		r.editor.Set(r.draft)
+	} else {
+		r.editor.Set(r.inputs[r.historyIndex])
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
@@ -27,7 +28,7 @@ func TestCommandOutcomeScreen(t *testing.T) {
 				Operation: &tool.Operation{Failure: &tool.Failure{Code: tool.ProcessFailed}},
 			}
 			if restored {
-				a.output.Prepend((transcript.Formatter{Language: lang, Redact: a.opts.Vault.Redact}).Event(event))
+				a.chat.output.Prepend((transcript.Formatter{Language: lang, Redact: a.opts.Vault.Redact}).Event(event))
 			} else {
 				a.receiveRuntime(&event)
 			}
@@ -38,7 +39,7 @@ func TestCommandOutcomeScreen(t *testing.T) {
 				a.render()
 				shown := strings.Join(screenRows(a, 22), "\n")
 				if !strings.Contains(shown, lang.Text("Command failed")) || !strings.Contains(shown, "missing package") {
-					t.Fatalf("language=%v restored=%v collapsed=%v: outcome or diagnostic missing: %s", lang, restored, a.output.Collapsed, shown)
+					t.Fatalf("language=%v restored=%v collapsed=%v: outcome or diagnostic missing: %s", lang, restored, a.chat.output.Collapsed, shown)
 				}
 				for _, hidden := range []string{"exit:", "exit code", "종료 코드", "process_failed", "internal guidance"} {
 					if strings.Contains(shown, hidden) {

@@ -5,10 +5,12 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/fileview"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/fileview"
 )
 
 func typeInput(a *app, value string) {
@@ -26,7 +28,7 @@ func TestCommandHints(t *testing.T) {
 		}
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
-	if a.editor.String() != "!model" || a.page != "chat" {
+	if a.compose.editor.String() != "!model" || a.page != "chat" {
 		t.Fatal("completion executed the command")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -40,7 +42,7 @@ func TestCommandHints(t *testing.T) {
 		t.Fatal("prefix did not filter commands")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.editor.String() != "" || a.page != "files" {
+	if a.compose.editor.String() != "" || a.page != "files" {
 		t.Fatal("Enter must execute the selected command")
 	}
 	a.page = "chat"
@@ -48,7 +50,7 @@ func TestCommandHints(t *testing.T) {
 	typeInput(a, "!")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if a.editor.String() != "!" || strings.Contains(screenLine(a.screen, 16, 80), "!model") {
+	if a.compose.editor.String() != "!" || strings.Contains(screenLine(a.screen, 16, 80), "!model") {
 		t.Fatal("Escape must preserve input and dismiss hints")
 	}
 }
@@ -74,13 +76,13 @@ func TestCommandHintsPreserveShiftEnter(t *testing.T) {
 	typeInput(a, "!")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModShift))
 	a.render()
-	if a.editor.String() != "!\n" || strings.Contains(screenLine(a.screen, 4, 80), "!model") {
+	if a.compose.editor.String() != "!\n" || strings.Contains(screenLine(a.screen, 4, 80), "!model") {
 		t.Fatal("Shift+Enter completed a command instead of inserting a newline")
 	}
 }
 func TestForegroundOnlyViews(t *testing.T) {
 	a := fixture(t)
-	a.output.Append("thinking", true)
+	a.chat.output.Append("thinking", true)
 	a.render()
 	assertForegroundOnly(t, a.screen)
 	a.page, a.choices = "model", []string{"first", "second"}
@@ -93,7 +95,7 @@ func TestForegroundOnlyViews(t *testing.T) {
 	}
 	a.page = "chat"
 	a.page = "files"
-	a.browser.Open(a.opts.Session.ProjectRoot, []fileview.Entry{{Name: "file.go"}}, false)
+	a.files.browser.Open(a.opts.Session.ProjectRoot, []fileview.Entry{{Name: "file.go"}}, false)
 	a.render()
 	assertForegroundOnly(t, a.screen)
 }

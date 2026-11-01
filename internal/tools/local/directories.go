@@ -85,7 +85,7 @@ func (e *Executor) collectDirectories(settings policy.Settings, paths []string) 
 	return dirs, requested, nil
 }
 
-func (op *operation) prepareDirectories(call toolapi.Call) error {
+func (op *directoryOperation) prepareDirectories(call toolapi.Call) error {
 	dirs, requested, err := op.executor.planDirectories(op.settings, op.input.Paths)
 	if err != nil {
 		return err

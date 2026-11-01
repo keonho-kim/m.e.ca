@@ -14,35 +14,35 @@ import (
 func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	a := screenFixture(t)
 	typeInput(a, "!")
-	if len(a.commandHints) != 7 {
+	if len(a.compose.commandHints) != 7 {
 		t.Fatal("initial command list missing")
 	}
 	typeInput(a, "odel")
 	a.render()
-	if len(a.commandHints) != 1 || a.commandHints[0].Name != "!model" {
-		t.Fatalf("search=%v", a.commandHints)
+	if len(a.compose.commandHints) != 1 || a.compose.commandHints[0].Name != "!model" {
+		t.Fatalf("search=%v", a.compose.commandHints)
 	}
 	line := screenLine(a.screen, 20, 80)
 	if !strings.Contains(line, "!model") {
 		t.Fatalf("candidate row=%q", line)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "model" || a.editor.String() != "" {
+	if a.page != "model" || a.compose.editor.String() != "" {
 		t.Fatal("search selection did not execute canonical command")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	typeInput(a, "!unknown")
-	if len(a.commandHints) != 0 {
+	if len(a.compose.commandHints) != 0 {
 		t.Fatal("unmatched search returned commands")
 	}
 	for range "unknown" {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace2, "", 0))
 	}
-	if a.editor.String() != "!" || len(a.commandHints) != 7 {
+	if a.compose.editor.String() != "!" || len(a.compose.commandHints) != 7 {
 		t.Fatal("deletion did not restore candidates")
 	}
 	typeInput(a, "모델")
-	if len(a.commandHints) != 1 || a.commandHints[0].Name != "!model" {
-		t.Fatalf("description search=%v", a.commandHints)
+	if len(a.compose.commandHints) != 1 || a.compose.commandHints[0].Name != "!model" {
+		t.Fatalf("description search=%v", a.compose.commandHints)
 	}
 }

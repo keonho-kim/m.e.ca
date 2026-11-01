@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
@@ -23,7 +24,7 @@ import (
 func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row = modelsettings.Credential
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.pasteBoundary(true)
@@ -31,7 +32,7 @@ func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.pasteBoundary(false)
 	body := modelScreen(a)
-	if a.exit || f.Confirm || a.worker.active() || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
+	if a.exit || f.Confirm || a.work.state.active() || !strings.Contains(body, "****") || strings.Contains(body, "!quit-private-key") || a.inputRegion.editor != nil {
 		t.Fatal("credential exposed or paste submitted")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
@@ -41,7 +42,7 @@ func TestModelFormMasksKeyAndPastesWithoutSaving(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "N", 0))
-	if a.page != "chat" || a.modelForm != nil || f.Credential.String() != "" {
+	if a.page != "chat" || a.connection.modelForm != nil || f.Credential.String() != "" {
 		t.Fatal("discard retained secret input")
 	}
 }
@@ -55,7 +56,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 	defer cancel()
 	a.ctx = ctx
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Endpoint.Set(server.URL)
 	f.Row = modelsettings.Name
 	f.Name.Set("custom/model")
@@ -66,7 +67,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	for a.worker.active() {
+	for a.work.state.active() {
 		select {
 		case n := <-a.events:
 			a.receive(n)
@@ -74,7 +75,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	if a.page != "model" || a.modelForm != f || f.Endpoint.String() != server.URL || f.Name.String() != "custom/model" || a.client != nil {
+	if a.page != "model" || a.connection.modelForm != f || f.Endpoint.String() != server.URL || f.Name.String() != "custom/model" || a.connection.client != nil {
 		t.Fatal("cancelled lookup changed the active connection or draft")
 	}
 }
@@ -82,7 +83,7 @@ func TestModelFormCancelLookupKeepsDraft(t *testing.T) {
 func TestModelFormRejectsResultFromEarlierDraft(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	c, err := connection.New(connection.VLLM, "")
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +97,7 @@ func TestModelFormRejectsResultFromEarlierDraft(t *testing.T) {
 	f.Invalidate(true)
 	next := connection.Selection{Connection: c, Model: "stale"}
 	a.finishModelFormSetup(notice{FormRevision: previous, Client: client, Selection: &next, ModelForm: true})
-	if f.Client != nil || f.Prepared != nil || a.selection.Model != "" || a.status == "" {
+	if f.Client != nil || f.Prepared != nil || a.connection.selection.Model != "" || a.status == "" {
 		t.Fatal("stale draft result was adopted")
 	}
 }
@@ -104,7 +105,7 @@ func TestModelFormRejectsResultFromEarlierDraft(t *testing.T) {
 func TestModelFormSelectedCandidateVisibleAfterResize(t *testing.T) {
 	a := fixture(t)
 	a.openModel()
-	f := a.modelForm
+	f := a.connection.modelForm
 	f.Row, f.Editing = modelsettings.Name, true
 	f.Models = []string{"one", "two", "three", "four", "five", "six", "seven", "eight"}
 	f.RefreshHints()
@@ -139,7 +140,7 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 			defer cancel()
 			a.ctx = ctx
 			a.openModel()
-			f := a.modelForm
+			f := a.connection.modelForm
 			for i, p := range connection.Providers() {
 				if p.Kind == connection.OpenRouter {
 					f.Provider = i
@@ -163,7 +164,7 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 				t.Fatal("save decision did not return to chat")
 			}
 			close(release)
-			for a.worker.active() {
+			for a.work.state.active() {
 				select {
 				case n := <-a.events:
 					a.receive(n)
@@ -171,10 +172,10 @@ func TestModelFormAcceptsTypingAndSaveWhileCatalogLoads(t *testing.T) {
 					t.Fatal(ctx.Err())
 				}
 			}
-			if decision == "y" && (a.selection.Model != "alias" || a.client == nil || a.modelForm != nil) {
-				t.Fatalf("queued save failed: %+v %s", a.selection, a.status)
+			if decision == "y" && (a.connection.selection.Model != "alias" || a.connection.client == nil || a.connection.modelForm != nil) {
+				t.Fatalf("queued save failed: %+v %s", a.connection.selection, a.status)
 			}
-			if decision == "N" && (a.selection.Model != "" || a.client != nil || a.modelForm != nil) {
+			if decision == "N" && (a.connection.selection.Model != "" || a.connection.client != nil || a.connection.modelForm != nil) {
 				t.Fatal("discarded catalog lookup committed settings")
 			}
 		})

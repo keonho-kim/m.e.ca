@@ -5,11 +5,12 @@
 package session
 
 import (
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/tui/input"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
 )
 
 type inputRegion struct {
@@ -24,7 +25,7 @@ func (r inputRegion) contains(x, y int) bool {
 }
 
 func (a *app) captureChatSources(lines []viewport.Line, count int) {
-	a.chatVisible = lines[:min(len(lines), count)]
+	a.chat.chatVisible = lines[:min(len(lines), count)]
 	for i := 0; i < len(lines) && i < count; i++ {
 		a.selectionSources[1+i] = lines[i].Copy
 	}
@@ -88,7 +89,7 @@ func (r inputRegion) position(offset int) (int, int, bool) {
 func (a *app) clearSelection() {
 	a.textSelection.Clear()
 	a.selectionInput = inputRegion{}
-	a.selectedTranscript = nil
+	a.chat.selectedTranscript = nil
 }
 
 func (a *app) selectedInputRange() (int, int, bool) {
@@ -108,8 +109,8 @@ func (a *app) deleteSelection() bool {
 	}
 	a.selectionInput.editor.DeleteRange(start, end)
 	a.refreshHints()
-	if a.page == "model" && a.modelForm != nil {
-		a.modelForm.Invalidate(a.modelForm.Row != modelsettings.Name)
+	if a.page == "model" && a.connection.modelForm != nil {
+		a.connection.modelForm.Invalidate(a.connection.modelForm.Row != modelsettings.Name)
 		a.refreshModelHints()
 	}
 	return true

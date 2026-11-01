@@ -15,7 +15,7 @@ func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 	for _, lang := range []locale.Language{locale.Korean, locale.English} {
 		a := screenFixture(t)
 		a.language = lang
-		a.selection.Model = "chosen-model"
+		a.connection.selection.Model = "chosen-model"
 		a.render()
 		text := screenLine(a.screen, 24-a.footerRows, 80)
 		if strings.TrimSpace(text) != "chosen-model" {
@@ -27,13 +27,13 @@ func TestLocalizedStatusOmitsFixedApprovalPolicy(t *testing.T) {
 func TestLocalizedLabelsPreserveLiteralModelAndDraft(t *testing.T) {
 	a := screenFixture(t)
 	a.language = locale.Korean
-	a.selection.Model = "allow-all"
-	a.editor.Set("Thinking ON / OFF allow-all")
+	a.connection.selection.Model = "allow-all"
+	a.compose.editor.Set("Thinking ON / OFF allow-all")
 	a.render()
 	if got := screenLine(a.screen, 24-a.footerRows, 80); !strings.Contains(got, "allow-all") {
 		t.Fatal(got)
 	}
-	if a.editor.String() != "Thinking ON / OFF allow-all" {
+	if a.compose.editor.String() != "Thinking ON / OFF allow-all" {
 		t.Fatal("draft translated")
 	}
 	if got := screenLine(a.screen, 0, 80); !strings.Contains(got, "상태 대기") || !strings.Contains(got, "입력 0 · 출력 0") {
@@ -53,10 +53,10 @@ func TestLocalizedCommandSearch(t *testing.T) {
 	} {
 		a := screenFixture(t)
 		a.language = test.lang
-		a.editor.Set(test.query)
+		a.compose.editor.Set(test.query)
 		a.refreshHints()
-		if len(a.commandHints) != 1 || a.commandHints[0].Name != test.want {
-			t.Fatalf("%q: %+v", test.query, a.commandHints)
+		if len(a.compose.commandHints) != 1 || a.compose.commandHints[0].Name != test.want {
+			t.Fatalf("%q: %+v", test.query, a.compose.commandHints)
 		}
 	}
 }

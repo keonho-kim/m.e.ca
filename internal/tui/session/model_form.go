@@ -4,7 +4,9 @@
 // Related: internal/tui/settings/model/form.go, internal/tui/session/model_form_setup.go.
 package session
 
-import modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
+import (
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
+)
 
 func (a *app) openModel() {
 	a.closeModelForm()
@@ -14,17 +16,17 @@ func (a *app) openModel() {
 }
 
 func (a *app) initializeModelForm() {
-	a.modelForm = modelsettings.New(a.selection)
+	a.connection.modelForm = modelsettings.New(a.connection.selection)
 }
 
 func (a *app) closeModelForm() {
-	if f := a.modelForm; f != nil {
-		if a.worker.active() && !a.worker.agent() && a.taskCancel != nil {
-			a.worker.stop()
-			a.taskCancel()
+	if f := a.connection.modelForm; f != nil {
+		if a.work.state.active() && !a.work.state.agent() && a.work.cancel != nil {
+			a.work.state.stop()
+			a.work.cancel()
 		}
-		f.Close(a.client)
+		f.Close(a.connection.client)
 	}
-	a.modelForm = nil
+	a.connection.modelForm = nil
 	a.menuInput.Set("")
 }

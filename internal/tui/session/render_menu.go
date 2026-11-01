@@ -4,10 +4,12 @@
 // Related: internal/tui/view/menu.go, internal/tui/view/preview.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/view"
+import (
+	"github.com/keonho-kim/meca/internal/tui/view"
+)
 
 func (a *app) renderMenu(w, h int) {
-	display := view.MenuDisplay{Activity: a.activity(), Usage: a.displayTokens(), Title: a.language.Text(a.page), Choices: append([]string(nil), a.choices...), Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
+	display := view.MenuDisplay{Activity: a.activity(), Usage: a.chat.displayTokens(), Title: a.language.Text(a.page), Choices: append([]string(nil), a.choices...), Selected: a.choice, Status: a.status, Command: a.menuInput.String()}
 	for i, label := range display.Choices {
 		display.Choices[i] = a.language.Text(label)
 	}

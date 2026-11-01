@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
@@ -16,7 +17,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 	arrow := e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyRight || e.Key() == tcell.KeyUp || e.Key() == tcell.KeyDown
 	if e.Modifiers() == tcell.ModShift && arrow {
 		forward := e.Key() == tcell.KeyRight || e.Key() == tcell.KeyDown
-		if a.queued.Edit == nil && (!a.canEditPending() || forward) {
+		if a.compose.queued.Edit == nil && (!a.canEditPending() || forward) {
 			return false
 		}
 		delta := -1
@@ -26,7 +27,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 		a.navigatePending(delta)
 		return true
 	}
-	if a.queued.Edit == nil {
+	if a.compose.queued.Edit == nil {
 		return false
 	}
 	switch e.Key() {
@@ -34,7 +35,7 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 		a.closePendingEdit()
 	case tcell.KeyEnter:
 		if e.Modifiers() == tcell.ModShift {
-			a.editor.Insert("\n")
+			a.compose.editor.Insert("\n")
 		} else if e.Modifiers() == 0 {
 			a.savePendingEdit()
 		}
@@ -49,18 +50,18 @@ func (a *app) pendingEditKey(e *tcell.EventKey) bool {
 				delta = 1
 			}
 			width, _ := a.screen.Size()
-			a.editor.MoveVertical(delta, width)
+			a.compose.editor.MoveVertical(delta, width)
 		}
 	case tcell.KeyCtrlO, tcell.KeyPgUp, tcell.KeyPgDn:
 		return false
 	default:
-		input.EditKey(&a.editor, e)
+		input.EditKey(&a.compose.editor, e)
 	}
 	return true
 }
 
 func (a *app) pendingDeleteKey(e *tcell.EventKey) bool {
-	if a.page != "chat" || a.queued.Edit == nil || e.Key() != tcell.KeyBackspace ||
+	if a.page != "chat" || a.compose.queued.Edit == nil || e.Key() != tcell.KeyBackspace ||
 		(e.Modifiers() != tcell.ModCtrl && e.Modifiers() != tcell.ModMeta) {
 		return false
 	}

@@ -4,7 +4,9 @@
 // Related: internal/tui/session/language.go, internal/tui/view/settings.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/view"
+import (
+	"github.com/keonho-kim/meca/internal/tui/view"
+)
 
 func (a *app) renderLanguage(w, h int) {
 	labels := make([]string, len(languageChoices))
@@ -13,7 +15,7 @@ func (a *app) renderLanguage(w, h int) {
 	}
 	view.Settings(a.screen, view.SettingsDisplay{
 		Title: a.language.Text("Interface language"), Language: a.language,
-		Activity: a.activity(), Usage: a.displayTokens(), Status: a.status,
+		Activity: a.activity(), Usage: a.chat.displayTokens(), Status: a.status,
 		Confirm: a.languageConfirm, Command: a.menuInput.String(),
 		Rows: []view.SettingRow{{Label: a.language.Text("Interface language"), Values: labels, Selected: a.choice}},
 	}, w, h)

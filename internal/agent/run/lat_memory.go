@@ -25,17 +25,17 @@ type reviewMemory struct {
 }
 
 func (s *execution) activeLATMemory() bool {
-	return s.latMemory != nil && s.latMemory.controller.Active()
+	return s.review.memory != nil && s.review.memory.controller.Active()
 }
 
 func (s *execution) maintainLATMemory(ctx context.Context, force bool) error {
-	if s.latMemory == nil || s.latMemory.closed || !s.latObserved && !force || s.latReviewed && !force || ctx.Err() != nil {
+	if s.review.memory == nil || s.review.memory.closed || !s.review.observed && !force || s.review.reviewed && !force || ctx.Err() != nil {
 		return nil
 	}
 	if err := s.pollLATMemory(ctx); err != nil {
 		return err
 	}
-	m := s.latMemory
+	m := s.review.memory
 	if m.failure != nil || m.controller.Active() {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (s *execution) maintainLATMemory(ctx context.Context, force bool) error {
 	// Leave one call available to the foreground decision or final response.
 	budget, limit := s.usage, s.limits.MaxModelCalls-1
 	owner := m.ctx
-	err = m.controller.Start(owner, plan, s.reviewGenerator, func() bool { return owner.Err() == nil && budget.model(limit) })
+	err = m.controller.Start(owner, plan, s.review.generator, func() bool { return owner.Err() == nil && budget.model(limit) })
 	if err != nil {
 		return s.failLATMemory(ctx, err)
 	}
@@ -74,10 +74,10 @@ func (s *execution) maintainLATMemory(ctx context.Context, force bool) error {
 }
 
 func (s *execution) pollLATMemory(ctx context.Context) error {
-	if s.latMemory == nil {
+	if s.review.memory == nil {
 		return nil
 	}
-	update, compactErr := s.latMemory.controller.Poll(ctx)
+	update, compactErr := s.review.memory.controller.Poll(ctx)
 	if err := s.recordLATMemoryUsage(ctx, update); err != nil {
 		return err
 	}
@@ -88,10 +88,10 @@ func (s *execution) pollLATMemory(ctx context.Context) error {
 }
 
 func (s *execution) failLATMemory(ctx context.Context, failure error) error {
-	if s.latMemory.failure != nil {
+	if s.review.memory.failure != nil {
 		return nil
 	}
-	s.latMemory.failure = failure
+	s.review.memory.failure = failure
 	return s.reviewEvent(ctx, "lat_memory_unavailable", s.runner.Redact(failure.Error()))
 }
 
@@ -99,19 +99,19 @@ func (s *execution) joinLATMemory(ctx context.Context) error {
 	if !s.activeLATMemory() {
 		return nil
 	}
-	s.latMemory.controller.Cancel()
-	<-s.latMemory.controller.Done()
+	s.review.memory.controller.Cancel()
+	<-s.review.memory.controller.Done()
 	flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	return s.pollLATMemory(flush)
 }
 
 func (s *execution) closeLATMemory(ctx context.Context) error {
-	if s.latMemory == nil {
+	if s.review.memory == nil {
 		return nil
 	}
-	s.latMemory.closed = true
-	defer s.latMemory.stop()
+	s.review.memory.closed = true
+	defer s.review.memory.stop()
 	return s.joinLATMemory(ctx)
 }
 

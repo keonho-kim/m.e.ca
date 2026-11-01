@@ -6,19 +6,21 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func (a *app) render() {
-	if a.page != "chat" {
-		a.chatVisible = nil
-		if a.chatProjection.layout.Count() > 0 {
-			a.output.ReleaseDisplay()
+	page := a.focus().page()
+	if page != "chat" {
+		a.chat.chatVisible = nil
+		if a.chat.chatProjection.layout.Count() > 0 {
+			a.chat.output.ReleaseDisplay()
 		}
-		a.chatProjection = chatProjection{}
+		a.chat.chatProjection = chatProjection{}
 	}
-	if a.page == "model" && a.modelForm == nil {
+	if page == "model" && a.connection.modelForm == nil {
 		a.initializeModelForm()
 	}
 	if a.selectionPage != a.page {
@@ -33,7 +35,7 @@ func (a *app) render() {
 	a.screen.Clear()
 	a.screen.HideCursor()
 	w, h := a.screen.Size()
-	if a.page != "chat" || w < 12 || h < 4 {
+	if page != "chat" || w < 12 || h < 4 {
 		a.scrollbar = scrollbarState{}
 	}
 	if w < 12 || h < 4 {
@@ -45,7 +47,7 @@ func (a *app) render() {
 	}
 	body, shortcuts := a.footerLayout(w, h)
 	a.footerRows = h - body
-	switch a.page {
+	switch page {
 	case "files":
 		a.renderFiles(w, body)
 	case "chat":
@@ -62,6 +64,6 @@ func (a *app) render() {
 	a.captureInputSources()
 	a.reanchorInputSelection(body)
 	a.textSelection.Draw(a.screen)
-	view.Footer(a.screen, view.Status{Language: a.language, Model: a.selection.Model, LAT: a.lat}, shortcuts, body, w)
+	view.Footer(a.screen, view.Status{Language: a.language, Model: a.connection.selection.Model, LAT: a.lat}, shortcuts, body, w)
 	a.screen.Show()
 }

@@ -7,10 +7,11 @@ package run
 import (
 	"context"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"unicode/utf8"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
@@ -20,7 +21,7 @@ func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
 	}
 	s.checkpoint.Status = runrecord.Answered
 	s.result.Text = text
-	if s.latDraftSaved {
+	if s.review.draftSaved {
 		return nil // The main answer was saved and shown before its final review.
 	}
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {

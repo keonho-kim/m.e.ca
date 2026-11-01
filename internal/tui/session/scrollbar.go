@@ -6,6 +6,7 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -34,9 +35,9 @@ func (a *app) scrollbarMouse(e *tcell.EventMouse) bool {
 		w, _ := a.screen.Size()
 		transcript := a.chatLayout(view.TranscriptWidth(w))
 		bar := viewport.NewScrollbar(transcript.Count(), state.bar.Height, 0)
-		transcript.Seek(&a.output, bar.Index(y-state.y, state.grab), state.bar.Height)
+		transcript.Seek(&a.chat.output, bar.Index(y-state.y, state.grab), state.bar.Height)
 		state.dragging = e.Buttons()&tcell.Button1 != 0
-		if !a.output.Follow && transcript.Start(&a.output, state.bar.Height) == 0 {
+		if !a.chat.output.Follow && transcript.Start(&a.chat.output, state.bar.Height) == 0 {
 			a.loadOlderHistory()
 		}
 		return true

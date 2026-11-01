@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/commands"
 	settingcmd "github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/config"
@@ -26,7 +27,7 @@ var languageChoices = []struct {
 }
 
 func (a *app) openLanguage() {
-	a.cancelDirectory()
+	a.files.cancelDirectory()
 	a.stopNotice, a.status = "", ""
 	a.page, a.choice = "language", 0
 	a.languageConfirm = false
@@ -95,7 +96,7 @@ func (a *app) languageShortcuts() []view.Shortcut {
 }
 
 func (a *app) saveLanguage() {
-	if a.worker.active() {
+	if a.work.state.active() {
 		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}
@@ -107,7 +108,7 @@ func (a *app) saveLanguage() {
 	a.opts.Config = next
 	a.language = locale.Resolve(a.ctx, next.Language)
 	a.clearSelection()
-	a.chatProjection = chatProjection{}
+	a.chat.chatProjection = chatProjection{}
 	a.scrollbar = scrollbarState{}
 	a.stopNotice, a.status = "", ""
 	a.menuInput.Set("")

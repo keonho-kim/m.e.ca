@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -17,9 +16,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestPendingEditCompletionWaits(t *testing.T) {
@@ -55,11 +56,11 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.client, err = httpclient.NewClient(c, "")
+			a.connection.client, err = httpclient.NewClient(c, "")
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.selection = connection.Selection{Connection: c, Model: "mock"}
+			a.connection.selection = connection.Selection{Connection: c, Model: "mock"}
 			a.startRequest(composer.Capture("current request", a.selectedPaths()))
 			select {
 			case <-started:
@@ -67,16 +68,16 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 				t.Fatal(ctx.Err())
 			}
 			for _, text := range []string{"first queued", "second queued"} {
-				a.editor.Set(text)
+				a.compose.editor.Set(text)
 				a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 			}
-			a.editor.Set("unsent draft")
-			a.editor.MoveTo(3)
+			a.compose.editor.Set("unsent draft")
+			a.compose.editor.MoveTo(3)
 			pendingArrow(a, tcell.KeyLeft)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " revised", 0))
 			close(release)
 			drainTask(t, a, false)
-			if calls.Load() != 1 || a.queued.Edit == nil || a.editor.String() != "second queued revised" || len(a.queued.Messages) != 2 {
+			if calls.Load() != 1 || a.compose.queued.Edit == nil || a.compose.editor.String() != "second queued revised" || len(a.compose.queued.Messages) != 2 {
 				t.Fatal("task completion consumed queued input while it was being edited")
 			}
 			key := map[string]tcell.Key{"save": tcell.KeyEnter, "cancel": tcell.KeyEscape, "delete": tcell.KeyBackspace}[decision]
@@ -102,9 +103,9 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 					got = append(got, m.Content)
 				}
 			}
-			if !slices.Equal(got, want) || calls.Load() != int32(len(want)) || a.queued.Messages != nil ||
-				a.queued.Edit != nil || a.editor.String() != "unsent draft" || a.editor.Cursor != 3 {
-				t.Fatalf("queued history=%v; want %v, input=%q cursor=%d", got, want, a.editor.String(), a.editor.Cursor)
+			if !slices.Equal(got, want) || calls.Load() != int32(len(want)) || a.compose.queued.Messages != nil ||
+				a.compose.queued.Edit != nil || a.compose.editor.String() != "unsent draft" || a.compose.editor.Cursor != 3 {
+				t.Fatalf("queued history=%v; want %v, input=%q cursor=%d", got, want, a.compose.editor.String(), a.compose.editor.Cursor)
 			}
 		})
 	}

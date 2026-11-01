@@ -6,13 +6,14 @@ package session
 
 import (
 	"github.com/gdamore/tcell/v3"
+
 	settingcmd "github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func (a *app) openPermission() {
-	a.cancelDirectory()
+	a.files.cancelDirectory()
 	a.stopNotice, a.status = "", ""
 	a.page, a.choice = "permission", int(a.opts.Config.Permission)
 	a.permissionConfirm = false
@@ -44,7 +45,7 @@ func (a *app) permissionKey(e *tcell.EventKey) {
 }
 
 func (a *app) savePermission() {
-	if a.worker.active() {
+	if a.work.state.active() {
 		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}
@@ -72,7 +73,7 @@ func (a *app) renderPermission(w, h int) {
 	}
 	view.Settings(a.screen, view.SettingsDisplay{
 		Title: a.language.Text("Permission mode"), Language: a.language,
-		Activity: a.activity(), Usage: a.displayTokens(), Status: a.status,
+		Activity: a.activity(), Usage: a.chat.displayTokens(), Status: a.status,
 		Confirm: a.permissionConfirm,
 		Rows:    []view.SettingRow{{Label: a.language.Text("Permission mode"), Values: []string{a.language.Text("Default"), "All Mighty"}, Selected: a.choice}},
 		Details: []string{a.language.Text(description)},

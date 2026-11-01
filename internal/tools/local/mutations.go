@@ -1,19 +1,20 @@
 // Purpose: Apply prepared file writes and edits with exact changed-file metadata.
 // Pattern: Filesystem mutation Adapter.
 // Usage: Prepared write and edit operations call mutate after policy and version checks.
-// Related: internal/tools/local/prepare.go, internal/tools/local/dispatch.go.
+// Related: internal/tools/local/prepare.go, internal/tools/local/file_operation.go.
 package local
 
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
-	"os"
 )
 
-func (op *operation) mutate() (toolapi.Result, error) {
+func (op *fileOperation) mutate() (toolapi.Result, error) {
 	mode := os.FileMode(0o644)
 	if op.original.exists {
 		mode = op.original.info.Mode().Perm()

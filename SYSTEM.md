@@ -2,6 +2,8 @@
 
 사용 방법은 [사용 가이드](docs/usage.md), 설정은 [설정 문서](docs/configuration.md), 실행 순서는 [런타임 문서](docs/runtime.md)가 설명한다. 실행 경계와 플랫폼별 검증 범위는 별도 문서에서 설명한다.
 
+TUI는 하나의 이벤트 루프가 기능별 상태를 소유하고 입력·키맵·렌더링에 같은 포커스 판정을 사용한다. 실행기는 준비·결정 반복·종료 정리를 구분하고, 도구별 실행은 공통 승인 계약 아래 각 후보와 재검사를 소유한다. 저장 어댑터의 SQL·본문 I/O와 순수 이력 표시 투영은 분리한다. 세부 파일 책임은 [개발 가이드](docs/development.md)를 따른다.
+
 ## 제품과 실행
 
 - M.E.CA(MECA)는 Minimal Essentials Coding Agent를 뜻하는 터미널 코딩 에이전트다. Go 단일 모듈과 실행 파일 `meca`를 사용하며 로컬 상태 경로는 `~/.meca`다. 소스 저장소는 `github.com/keonho-kim/m.e.ca`이며 Go 모듈 경로는 go.mod에 선언한 `github.com/keonho-kim/meca`다.

@@ -6,11 +6,12 @@ package session
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
-	"strings"
-	"testing"
 )
 
 func TestToolRecordLiveMatchesRestored(t *testing.T) {
@@ -18,16 +19,16 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	call := toolapi.Call{ID: "call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"cat README.md"}`)}
 	event := runrecord.Event{Kind: "tool_started", CallID: call.ID, Call: &call}
 	a.receive(notice{Event: &event})
-	if len(a.output.Blocks) != 0 || !strings.Contains(activityTranscript(a), "명령 실행") {
+	if len(a.chat.output.Blocks) != 0 || !strings.Contains(activityTranscript(a), "명령 실행") {
 		t.Fatal("start should only show pending call")
 	}
 	event.Kind, event.Text, event.Output = "tool_succeeded", "9 bytes read", json.RawMessage(`{"Stdout":"one\ntwo","ExitCode":0,"Status":"exited"}`)
 	a.receive(notice{Event: &event})
-	if a.status != "" || len(a.output.Blocks) != 1 {
+	if a.status != "" || len(a.chat.output.Blocks) != 1 {
 		t.Fatal("pending call was not replaced by one completion record")
 	}
 	want := "\n  명령 실행\n\n    명령: cat README.md\n\n    결과\n    표준 출력\n    one\n    two\n    실행 성공\n"
-	if got := a.output.Blocks[0].Text; got != want {
+	if got := a.chat.output.Blocks[0].Text; got != want {
 		t.Fatalf("tool record=%q; want %q", got, want)
 	}
 	restored := (transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(event)
@@ -35,7 +36,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 		t.Fatalf("restored record: %+v", restored)
 	}
 	a.receive(notice{Done: true})
-	if len(a.output.Blocks) != 1 {
+	if len(a.chat.output.Blocks) != 1 {
 		t.Fatal("completion state added transcript boilerplate")
 	}
 	a.render()

@@ -15,7 +15,7 @@ func (a *app) submit() {
 		a.fail(err)
 		return
 	}
-	if a.page == "files" && a.browser.Input {
+	if a.page == "files" && a.files.browser.Input {
 		if command.Kind == commands.Message || command.Kind == commands.Empty {
 			a.closeFiles()
 		}
@@ -24,9 +24,9 @@ func (a *app) submit() {
 }
 
 func (a *app) inputCommand() (commands.Command, error) {
-	command, err := commands.Parse(a.editor.String())
-	if err == nil && a.page == "files" && a.browser.Input && command.Kind == commands.Quit {
-		command = commands.Command{Kind: commands.Message, Argument: a.editor.String()}
+	command, err := commands.Parse(a.compose.editor.String())
+	if err == nil && a.page == "files" && a.files.browser.Input && command.Kind == commands.Quit {
+		command = commands.Command{Kind: commands.Message, Argument: a.compose.editor.String()}
 	}
 	return command, err
 }
@@ -45,7 +45,7 @@ func (a *app) submitCommand(command commands.Command) {
 		return
 	}
 	if command.Kind == commands.Quit {
-		if a.worker.active() {
+		if a.work.state.active() {
 			a.page = "quit"
 			a.choices = []string{"Keep working", "Cancel task and exit"}
 			a.choice = 0
@@ -54,13 +54,13 @@ func (a *app) submitCommand(command commands.Command) {
 		a.exit = true
 		return
 	}
-	if command.Kind == commands.Message && a.fileSelectionBusy {
-		a.fileSubmission = &fileSubmission{command: command, revision: a.editor.Revision()}
+	if command.Kind == commands.Message && a.files.fileSelectionBusy {
+		a.compose.fileSubmission = &fileSubmission{command: command, revision: a.compose.editor.Revision()}
 		a.status = a.language.Text("Saving selected paths before sending")
 		return
 	}
-	a.fileSubmission = nil
-	if a.worker.agent() && a.worker.active() && command.Kind == commands.Message {
+	a.compose.fileSubmission = nil
+	if a.work.state.agent() && a.work.state.active() && command.Kind == commands.Message {
 		a.steerInput(command.Argument)
 		return
 	}
@@ -85,18 +85,18 @@ func (a *app) submitCommand(command commands.Command) {
 	case commands.Directory:
 		a.openFiles(command.Argument)
 	case commands.Message:
-		if a.client == nil || a.selection.Model == "" {
+		if a.connection.client == nil || a.connection.selection.Model == "" {
 			a.status = a.language.Text("Select a model using !model")
 			return
 		}
-		a.cancelDirectory()
+		a.files.cancelDirectory()
 		a.page = "chat"
 		a.dispatchRequest(composer.Capture(command.Argument, a.selectedPaths()))
 	}
-	a.editor.Set("")
+	a.compose.editor.Set("")
 	a.closeCommandHints()
 }
 
 func (a *app) canSubmit(kind commands.Kind) bool {
-	return !a.worker.active() || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
+	return !a.work.state.active() || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
 }

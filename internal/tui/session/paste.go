@@ -5,10 +5,12 @@
 package session
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/input"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
-	"strings"
 )
 
 type pasteInput struct {
@@ -24,10 +26,10 @@ func (a *app) pasteBoundary(start bool) {
 		a.paste = true
 		a.pasted = pasteInput{}
 		switch {
-		case a.page == "chat" || a.page == "files" && a.browser.Input && a.filePreview == nil && !a.fileSendConfirm:
-			a.pasted.editor = &a.editor
-		case a.page == "model" && a.modelForm != nil && a.modelForm.Editing && !a.modelForm.Confirm:
-			a.pasted.editor, a.pasted.singleLine = a.modelForm.Editor(), true
+		case a.page == "chat" || a.page == "files" && a.files.browser.Input && a.files.filePreview == nil && !a.files.fileSendConfirm:
+			a.pasted.editor = &a.compose.editor
+		case a.page == "model" && a.connection.modelForm != nil && a.connection.modelForm.Editing && !a.connection.modelForm.Confirm:
+			a.pasted.editor, a.pasted.singleLine = a.connection.modelForm.Editor(), true
 		}
 		if a.pasted.editor != nil {
 			a.pasted.limit = input.MaxBytes - len(a.pasted.editor.String())
@@ -40,8 +42,8 @@ func (a *app) pasteBoundary(start bool) {
 			a.stopNotice = a.language.Text("붙여넣기 취소: 입력은 최대 16MiB입니다")
 		} else {
 			a.pasted.editor.Insert(a.pasted.text.String())
-			if a.page == "model" && a.modelForm != nil {
-				f := a.modelForm
+			if a.page == "model" && a.connection.modelForm != nil {
+				f := a.connection.modelForm
 				if f.Row == modelsettings.Credential {
 					f.KeyChanged = true
 				}

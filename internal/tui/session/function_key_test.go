@@ -23,12 +23,12 @@ func TestUnassignedFunctionKey(t *testing.T) {
 				} else {
 					a.page = page
 				}
-				a.editor.Set("keep draft")
+				a.compose.editor.Set("keep draft")
 				a.menuInput.Set("keep field")
-				a.output.Append("existing conversation", false)
-				a.worker = workerAgent
+				a.chat.output.Append("existing conversation", false)
+				a.work.state = workerAgent
 				cancelled := false
-				a.taskCancel = func() { cancelled = true }
+				a.work.cancel = func() { cancelled = true }
 				a.render()
 				before := strings.Join(screenRows(a, 24), "\n")
 				if strings.Contains(screenLine(a.screen, 23, width), "F1") {
@@ -36,7 +36,7 @@ func TestUnassignedFunctionKey(t *testing.T) {
 				}
 				a.keyEvent(tcell.NewEventKey(tcell.KeyF1, "", 0))
 				a.render()
-				if a.page != page || a.editor.String() != "keep draft" || a.menuInput.String() != "keep field" || cancelled || !a.worker.active() {
+				if a.page != page || a.compose.editor.String() != "keep draft" || a.menuInput.String() != "keep field" || cancelled || !a.work.state.active() {
 					t.Fatal("unassigned key changed focus, input or running task")
 				}
 				if after := strings.Join(screenRows(a, 24), "\n"); after != before {

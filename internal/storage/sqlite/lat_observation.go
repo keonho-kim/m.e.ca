@@ -7,9 +7,9 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	"unicode/utf8"
 
 	json "github.com/goccy/go-json"
+
 	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 )
 
@@ -22,8 +22,8 @@ func latObservation(ctx context.Context, record storedRecord, observed string, e
 	if err := json.Unmarshal(record.refs, &refs); err != nil {
 		return "", err
 	}
-	values := map[string]string{}
-	for _, field := range []string{"output", "change_preview"} {
+	var values [2]latmemory.ObservationExcerpt
+	for i, field := range []string{"output", "change_preview"} {
 		raw := fields[field]
 		original := len(raw)
 		key, _ := json.Marshal([]string{field})
@@ -37,35 +37,7 @@ func latObservation(ctx context.Context, record storedRecord, observed string, e
 				return "", err
 			}
 		}
-		if len(raw) < original {
-			for trim := 0; trim < 3 && !utf8.Valid(raw); trim++ {
-				raw = raw[:len(raw)-1]
-			}
-		}
-		value := string(raw)
-		if field == "change_preview" && len(raw) > 0 {
-			// Stored diffs are JSON strings. Complete a clipped string only at a
-			// valid escape boundary; the complete source was authenticated above.
-			if len(raw) < original {
-				for trim := 0; trim <= 6 && trim < len(raw); trim++ {
-					prefix := raw[:len(raw)-trim]
-					if utf8.Valid(prefix) && json.Unmarshal(append(append([]byte(nil), prefix...), '"'), &value) == nil {
-						break
-					}
-				}
-			} else if err := json.Unmarshal(raw, &value); err != nil {
-				return "", err
-			}
-		}
-		if len(raw) < original {
-			value += "\n[excerpt; original record retained]"
-		}
-		values[field] = latmemory.Excerpt(value, 8192)
+		values[i] = latmemory.ObservationExcerpt{Body: raw, Original: original}
 	}
-	body, err := json.Marshal(struct {
-		Observed string `json:"observed_outcome"`
-		Output   string `json:"output_excerpt,omitempty"`
-		Diff     string `json:"applied_diff_excerpt,omitempty"`
-	}{latmemory.Excerpt(observed, latmemory.TargetBytes), values["output"], values["change_preview"]})
-	return string(body), err
+	return latmemory.DescribeObservation(observed, values[0], values[1])
 }

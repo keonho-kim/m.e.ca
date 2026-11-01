@@ -10,27 +10,27 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
-func (a *app) displayTokens() modelapi.TokenUsage {
-	return a.tokenTotal.Add(a.tokenCurrent).Add(a.latMemoryTokens)
+func (c *chatState) displayTokens() modelapi.TokenUsage {
+	return c.tokenTotal.Add(c.tokenCurrent).Add(c.latMemoryTokens)
 }
-func (a *app) receiveTokens(e runrecord.Event) {
+func (c *chatState) receiveTokens(e runrecord.Event) {
 	if e.Usage == nil {
 		return
 	}
 	if e.Generation != nil && e.Generation.Role == inference.LATCompaction {
 		if e.Kind == "usage" {
-			a.tokenTotal = a.tokenTotal.Add(*e.Usage)
-			a.latMemoryTokens = modelapi.TokenUsage{}
+			c.tokenTotal = c.tokenTotal.Add(*e.Usage)
+			c.latMemoryTokens = modelapi.TokenUsage{}
 		} else {
-			a.latMemoryTokens = e.Usage.Clone()
+			c.latMemoryTokens = e.Usage.Clone()
 		}
 		return
 	}
 	if e.Kind == "usage" {
-		a.tokenTotal = a.tokenTotal.Add(*e.Usage)
-		a.tokenCurrent = modelapi.TokenUsage{}
+		c.tokenTotal = c.tokenTotal.Add(*e.Usage)
+		c.tokenCurrent = modelapi.TokenUsage{}
 	} else {
-		a.tokenCurrent = e.Usage.Clone()
+		c.tokenCurrent = e.Usage.Clone()
 	}
-	a.tokensPerSecond = e.TokensPerSecond
+	c.tokensPerSecond = e.TokensPerSecond
 }

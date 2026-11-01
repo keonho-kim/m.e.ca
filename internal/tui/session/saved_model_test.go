@@ -70,7 +70,7 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 				want = "test-model"
 			}
 			selected, err := b.opts.Store.Selection(ctx, b.opts.Session.ID)
-			if err != nil || selected.Model != want || b.client == nil || b.selection.Model != want {
+			if err != nil || selected.Model != want || b.connection.client == nil || b.connection.selection.Model != want {
 				t.Fatalf("restored %+v %v", selected, err)
 			}
 		})

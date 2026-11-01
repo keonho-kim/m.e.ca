@@ -11,7 +11,7 @@ import (
 )
 
 func (a *app) reserveInput() {
-	command, err := commands.Parse(a.editor.String())
+	command, err := commands.Parse(a.compose.editor.String())
 	if err != nil {
 		a.fail(err)
 		return
@@ -27,46 +27,46 @@ func (a *app) reserveInput() {
 }
 
 func (a *app) reserveMessage(text string) {
-	if a.worker.stopping() {
+	if a.work.state.stopping() {
 		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
-	a.queued.Messages = append(a.queued.Messages, composer.Capture(text, a.selectedPaths()))
-	a.editor.Set("")
+	a.compose.queued.Messages = append(a.compose.queued.Messages, composer.Capture(text, a.selectedPaths()))
+	a.compose.editor.Set("")
 	a.closeCommandHints()
 	a.status = ""
 }
 
 func (a *app) restorePending() {
 	a.restorePendingEditor()
-	a.queued.Drain(&a.editor)
+	a.compose.queued.Drain(&a.compose.editor)
 	a.refreshHints()
 }
 
 func (a *app) finishPending(success bool) {
-	if a.queued.Edit != nil {
-		a.queued.Edit.Completion = queue.Stopped
+	if a.compose.queued.Edit != nil {
+		a.compose.queued.Edit.Completion = queue.Stopped
 		if success && !a.exit && a.ctx.Err() == nil {
-			a.queued.Edit.Completion = queue.Succeeded
+			a.compose.queued.Edit.Completion = queue.Succeeded
 		}
 		return
 	}
-	if len(a.queued.Messages) == 0 {
+	if len(a.compose.queued.Messages) == 0 {
 		return
 	}
 	if !success || a.exit || a.ctx.Err() != nil {
 		a.restorePending()
 		return
 	}
-	request, draft := a.queued.Messages[0], a.editor
-	a.editor.Set(request.Text)
+	request, draft := a.compose.queued.Messages[0], a.compose.editor
+	a.compose.editor.Set(request.Text)
 	a.dispatchRequest(request)
-	if !a.worker.active() {
-		a.editor = draft
+	if !a.work.state.active() {
+		a.compose.editor = draft
 		a.restorePending()
 		return
 	}
-	a.queued.Shift()
-	a.editor = draft
+	a.compose.queued.Shift()
+	a.compose.editor = draft
 	a.refreshHints()
 }

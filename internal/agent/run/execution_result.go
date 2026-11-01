@@ -7,10 +7,11 @@ package run
 import (
 	"context"
 	"errors"
+	"time"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
-	"time"
 )
 
 func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready *readyExecution, outcome toolapi.Result, runErr error, emit func(runrecord.Event) error) (toolapi.Result, error) {
@@ -72,9 +73,9 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 			return outcome, errors.Join(errRuntimeRecord, err)
 		}
 	}
-	if r.LAT && !s.latReviewed {
-		s.latObserved = true
-		s.latMemory.dirty = true
+	if r.LAT && !s.review.reviewed {
+		s.review.observed = true
+		s.review.memory.dirty = true
 	}
 	event.Capture = nil // Original captures are durable, never copied into live presentation events.
 	if err := emit(event); err != nil && !(ctx.Err() != nil && errors.Is(err, ctx.Err())) {

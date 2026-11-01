@@ -5,10 +5,12 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestKeymapMatchesFocusedScreen(t *testing.T) {
@@ -40,15 +42,15 @@ func TestKeymapMatchesFocusedScreen(t *testing.T) {
 		t.Fatalf("command footer=%q", footer)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "model" || a.editor.String() != "" {
+	if a.page != "model" || a.compose.editor.String() != "" {
 		t.Fatal("Enter completed instead of executing")
 	}
 }
 
 func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	a := fixture(t)
-	a.output.Append(strings.Repeat("history\n", 40)+"latest", false)
-	a.editor.Set("first\nsecond")
+	a.chat.output.Append(strings.Repeat("history\n", 40)+"latest", false)
+	a.compose.editor.Set("first\nsecond")
 	a.screen.SetSize(32, 12)
 	a.render()
 	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y+len(a.inputRegion.window.Rows)-1, 32)) != "second" {
@@ -59,7 +61,7 @@ func TestKeymapKeepsMultilineEditorAboveFooter(t *testing.T) {
 	}
 	a.screen.SetSize(12, 4)
 	a.render()
-	if a.editor.String() != "first\nsecond" {
+	if a.compose.editor.String() != "first\nsecond" {
 		t.Fatal("small terminal changed editor")
 	}
 }
@@ -82,9 +84,9 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 			a := fixture(t)
 			typeInput(a, "!")
 			selected := false
-			for index, hint := range a.commandHints {
+			for index, hint := range a.compose.commandHints {
 				if hint.Name == test.name {
-					a.commandIndex = index
+					a.compose.commandIndex = index
 					selected = true
 				}
 			}
@@ -92,7 +94,7 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 				t.Fatal("command missing")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-			if a.page != test.page || a.commandOpen {
+			if a.page != test.page || a.compose.commandOpen {
 				t.Fatalf("command not executed: page=%s", a.page)
 			}
 			if (test.name == "!quit" || test.name == "!new") && !a.exit {
@@ -101,10 +103,10 @@ func TestCommandCandidateEnterExecutesEveryCommand(t *testing.T) {
 		})
 	}
 	a := fixture(t)
-	a.worker = workerSetup
+	a.work.state = workerSetup
 	typeInput(a, "!mo")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.page != "chat" || !a.worker.active() || a.editor.String() != "!model" {
+	if a.page != "chat" || !a.work.state.active() || a.compose.editor.String() != "!model" {
 		t.Fatal("command selection bypassed active-task guard")
 	}
 }

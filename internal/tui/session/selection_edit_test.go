@@ -5,10 +5,12 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
 func drag(a *app, x1, y1, x2, y2 int) {
@@ -19,13 +21,13 @@ func drag(a *app, x1, y1, x2, y2 int) {
 
 func TestInputSelectionDeletesWholeGrapheme(t *testing.T) {
 	a := screenFixture(t)
-	a.editor.Set("A👩‍💻B a\u0301Z")
+	a.compose.editor.Set("A👩‍💻B a\u0301Z")
 	a.render()
 	y := a.inputRegion.y
 	drag(a, 4, y, 3, y)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.editor.String() != "AB a\u0301Z" || a.editor.Cursor != 1 || a.textSelection.Active() {
-		t.Fatalf("selection deletion: %q", a.editor.String())
+	if a.compose.editor.String() != "AB a\u0301Z" || a.compose.editor.Cursor != 1 || a.textSelection.Active() {
+		t.Fatalf("selection deletion: %q", a.compose.editor.String())
 	}
 }
 
@@ -33,7 +35,7 @@ func TestInputSelectionPreservesSoftWrapsAndSpaces(t *testing.T) {
 	a := screenFixture(t)
 	a.screen.SetSize(16, 18)
 	want := "abcdefghi 👩‍💻 xyz\n  tail  "
-	a.editor.Set(want)
+	a.compose.editor.Set(want)
 	a.render()
 	r := a.inputRegion
 	drag(a, 0, r.y, 15, r.y+len(r.window.Rows)-1)
@@ -41,7 +43,7 @@ func TestInputSelectionPreservesSoftWrapsAndSpaces(t *testing.T) {
 		t.Fatalf("copy %q, want %q", got, want)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.editor.String() != "" {
+	if a.compose.editor.String() != "" {
 		t.Fatal("wrapped selection was not deleted")
 	}
 }
@@ -49,19 +51,19 @@ func TestInputSelectionPreservesSoftWrapsAndSpaces(t *testing.T) {
 func TestInputSelectionCopyThenTypingClearsHighlight(t *testing.T) {
 	a := screenFixture(t)
 	a.screen = &clipboardScreen{Screen: a.screen}
-	a.editor.Set("draft text")
+	a.compose.editor.Set("draft text")
 	a.render()
 	y := a.inputRegion.y
 	drag(a, 2, y, 6, y)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlC, "", 0))
-	a.stream = "new response while selecting"
+	a.chat.stream = "new response while selecting"
 	a.render()
 	if !strings.Contains(screenLine(a.screen, 1, 80), "new response") {
 		t.Fatal("selection froze unrelated screen content")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "x", 0))
 	a.render()
-	if a.textSelection.Active() || a.editor.String() != "draft textx" {
+	if a.textSelection.Active() || a.compose.editor.String() != "draft textx" {
 		t.Fatal("typing retained selection")
 	}
 	for x := 2; x <= 6; x++ {
@@ -76,16 +78,16 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 	a := screenFixture(t)
 	a.screen.SetSize(16, 24)
 	want := "  long line with spaces   \nnext  "
-	a.output.Append(want, false)
-	a.editor.Set("keep draft")
+	a.chat.output.Append(want, false)
+	a.compose.editor.Set("keep draft")
 	a.render()
-	lines := a.chatVisible
+	lines := a.chat.chatVisible
 	drag(a, 0, 1, 15, len(lines))
 	if got := a.textSelection.Text(); got != want {
 		t.Fatalf("copy %q, want %q", got, want)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.editor.String() != "keep draft" || a.output.Blocks[0].Text != want {
+	if a.compose.editor.String() != "keep draft" || a.chat.output.Blocks[0].Text != want {
 		t.Fatal("transcript selection changed text")
 	}
 }
@@ -93,8 +95,8 @@ func TestTranscriptSelectionCopiesSoftWrapsWithoutEditingDraft(t *testing.T) {
 func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 	a := screenFixture(t)
 	a.openModel()
-	a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true
-	a.modelForm.Endpoint.Set("localhost")
+	a.connection.modelForm.Row, a.connection.modelForm.Editing = modelsettings.Endpoint, true
+	a.connection.modelForm.Endpoint.Set("localhost")
 	a.render()
 	r := a.inputRegion
 	drag(a, r.x, r.y, r.x+4, r.y)
@@ -102,30 +104,30 @@ func TestFieldSelectionDeletesSelectedEndpoint(t *testing.T) {
 		t.Fatal("field selection copied its label or padding")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.modelForm.Endpoint.String() != "host" {
-		t.Fatal(a.modelForm.Endpoint.String())
+	if a.connection.modelForm.Endpoint.String() != "host" {
+		t.Fatal(a.connection.modelForm.Endpoint.String())
 	}
 }
 
 func TestInputSelectionRejectsUnpaintedRevision(t *testing.T) {
 	a := screenFixture(t)
-	a.editor.Set("old text")
+	a.compose.editor.Set("old text")
 	a.render()
 	y := a.inputRegion.y
-	a.editor.Set("new unsent draft")
+	a.compose.editor.Set("new unsent draft")
 	drag(a, 2, y, 5, y)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
-	if a.editor.String() != "new unsent draft" {
+	if a.compose.editor.String() != "new unsent draft" {
 		t.Fatal("stale screen selection edited newer input")
 	}
 }
 
 func TestTranscriptSelectionKeepsItsVisibleRows(t *testing.T) {
 	a := screenFixture(t)
-	a.output.Append("keep this source", false)
+	a.chat.output.Append("keep this source", false)
 	a.render()
 	drag(a, 0, 1, 15, 1)
-	a.stream = strings.Repeat("new streamed line\n\n", 50)
+	a.chat.stream = strings.Repeat("new streamed line\n\n", 50)
 	a.render()
 	if !strings.Contains(screenLine(a.screen, 1, 80), "keep this source") {
 		t.Fatal("stream moved selected transcript")

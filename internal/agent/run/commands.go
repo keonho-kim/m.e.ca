@@ -65,9 +65,9 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		if err := commands.AcknowledgeCommand(finished.ID); err != nil {
 			return false, errors.Join(errRuntimeRecord, err)
 		}
-		if s.runner.LAT && !s.latReviewed {
-			s.latObserved = true
-			s.latMemory.dirty = true
+		if s.runner.LAT && !s.review.reviewed {
+			s.review.observed = true
+			s.review.memory.dirty = true
 		}
 		s.commandRevision++
 		event.Capture = nil

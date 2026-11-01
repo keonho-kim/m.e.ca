@@ -5,11 +5,13 @@
 package session
 
 import (
+	"testing"
+
+	"github.com/zalando/go-keyring"
+
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/zalando/go-keyring"
-	"testing"
 )
 
 func TestConnectionSaveFailure(t *testing.T) {
@@ -28,13 +30,13 @@ func TestConnectionSaveFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer candidate.Close()
-	a.client = old
-	a.selection = connection.Selection{Connection: conn, Model: "old"}
+	a.connection.client = old
+	a.connection.selection = connection.Selection{Connection: conn, Model: "old"}
 	a.opts.Session.ID = "missing-session"
 	next := connection.Selection{Connection: conn, Model: "new"}
 	a.receive(notice{Done: true, Client: candidate, Selection: &next})
-	if a.client != old || a.selection.Model != "old" || a.status == "" {
-		t.Fatalf("failed save applied: model=%s status=%s", a.selection.Model, a.status)
+	if a.connection.client != old || a.connection.selection.Model != "old" || a.status == "" {
+		t.Fatalf("failed save applied: model=%s status=%s", a.connection.selection.Model, a.status)
 	}
 }
 
@@ -59,7 +61,7 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	if a.status != "" {
 		t.Fatal(a.status)
 	}
-	if a.selection.Connection.CredentialRef == conn.CredentialRef {
+	if a.connection.selection.Connection.CredentialRef == conn.CredentialRef {
 		t.Fatal("new key reused old reference")
 	}
 	old, err := a.opts.Vault.Get(conn.CredentialRef)
@@ -85,18 +87,18 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 				t.Fatal(err)
 			}
 			off := false
-			a.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true}
+			a.connection.selection = connection.Selection{Connection: conn, Model: "alias", Thinking: &off, ThinkingSupported: true}
 			a.opts.Session.ID = "missing-session"
-			a.client, err = httpclient.NewClient(conn, "")
+			a.connection.client, err = httpclient.NewClient(conn, "")
 			if err != nil {
 				t.Fatal(err)
 			}
 			a.openModel()
 			on := true
-			a.modelForm.Thinking, a.modelForm.Global = &on, global
+			a.connection.modelForm.Thinking, a.connection.modelForm.Global = &on, global
 			a.saveModelForm()
-			if *a.selection.Thinking || a.status == "" {
-				t.Fatalf("failed save applied: %+v", a.selection)
+			if *a.connection.selection.Thinking || a.status == "" {
+				t.Fatalf("failed save applied: %+v", a.connection.selection)
 			}
 			saved, err := config.Load(a.opts.State)
 			if err != nil {

@@ -57,7 +57,7 @@ func TestParallelToolActivityPreservesSiblings(t *testing.T) {
 			t.Fatalf("sibling completion removed %q: %s", text, shown)
 		}
 	}
-	if len(a.output.Blocks) != 1 {
+	if len(a.chat.output.Blocks) != 1 {
 		t.Fatal("live activity was persisted as completed tool output")
 	}
 	// Ordered completion must release every transient tool row.

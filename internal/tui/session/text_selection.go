@@ -5,10 +5,12 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tui/input"
 	"slices"
 	"strings"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 func (a *app) selectionMouse(e *tcell.EventMouse) bool {
@@ -37,7 +39,7 @@ func (a *app) selectionMouse(e *tcell.EventMouse) bool {
 			if a.inputRegion.contains(x, y) {
 				a.selectionInput = a.inputRegion
 			} else if a.page == "chat" {
-				a.selectedTranscript = slices.Clone(a.chatVisible)
+				a.chat.selectedTranscript = slices.Clone(a.chat.chatVisible)
 			}
 		}
 		return true

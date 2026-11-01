@@ -18,24 +18,24 @@ type chatProjection struct {
 }
 
 func (a *app) chatLayout(width int) *viewport.Transcript {
-	p := &a.chatProjection
+	p := &a.chat.chatProjection
 	queueAnchor := -1
-	if !a.output.Follow && p.queue.Header.Text != "" {
-		offset := a.output.AnchorID - p.queue.Header.ID
+	if !a.chat.output.Follow && p.queue.Header.Text != "" {
+		offset := a.chat.output.AnchorID - p.queue.Header.ID
 		if offset >= 0 && offset <= len(p.queue.Entries) {
 			queueAnchor = offset
 		}
 	}
-	p.thinking.Text, p.thinking.Thinking, p.thinking.Markdown = a.thinking, true, true
-	p.stream.Text, p.stream.Markdown = a.stream, true
+	p.thinking.Text, p.thinking.Thinking, p.thinking.Markdown = a.chat.thinking, true, true
+	p.stream.Text, p.stream.Markdown = a.chat.stream, true
 	p.tools.Text = a.liveToolActivity()
 	p.status.Text = a.status
 	for _, block := range []*viewport.Block{&p.thinking, &p.stream, &p.tools, &p.status} {
 		block.Group = a.latGroup()
-		block.Group.Open = a.latOutput.running
+		block.Group.Open = a.chat.latOutput.running
 	}
-	p.queue.Prepare(a.queued.Messages, a.language, a.opts.Vault.RedactionVersion(), a.opts.Vault.Redact)
-	next := a.output.Next + 1
+	p.queue.Prepare(a.compose.queued.Messages, a.language, a.opts.Vault.RedactionVersion(), a.opts.Vault.Redact)
+	next := a.chat.output.Next + 1
 	clear(p.live)
 	p.live = append(p.live[:0], &p.thinking, &p.stream, &p.tools, &p.status, &p.queue.Header)
 	for i := range p.queue.Entries {
@@ -48,13 +48,13 @@ func (a *app) chatLayout(width int) *viewport.Transcript {
 		}
 	}
 	p.focusedID = 0
-	if a.queued.Edit != nil {
-		p.focusedID = p.queue.Entries[a.queued.Edit.Index].Block.ID
+	if a.compose.queued.Edit != nil {
+		p.focusedID = p.queue.Entries[a.compose.queued.Edit.Index].Block.ID
 	}
 	if queueAnchor >= 0 && len(p.queue.Entries) > 0 {
 		// History and live blocks precede these contiguous queue IDs and may grow.
-		a.output.AnchorID = p.queue.Header.ID + min(queueAnchor, len(p.queue.Entries))
+		a.chat.output.AnchorID = p.queue.Header.ID + min(queueAnchor, len(p.queue.Entries))
 	}
-	p.layout.Prepare(width, &a.output, p.live)
+	p.layout.Prepare(width, &a.chat.output, p.live)
 	return &p.layout
 }

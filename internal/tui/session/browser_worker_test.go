@@ -5,18 +5,19 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 func finishBrowserIO(t *testing.T, a *app) {
 	t.Helper()
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
-	for a.directoryLoading || a.fileSelectionBusy {
+	for a.files.directoryLoading || a.files.fileSelectionBusy {
 		select {
 		case notice := <-a.events:
 			a.receive(notice)
@@ -29,13 +30,13 @@ func finishBrowserIO(t *testing.T, a *app) {
 func TestDirectoryCancellationDiscardsLateResult(t *testing.T) {
 	a := fixture(t)
 	a.openFiles(".")
-	revision := a.directoryRevision
+	revision := a.files.directoryRevision
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.directoryLoading {
+	if a.files.directoryLoading {
 		t.Fatal("Escape did not cancel directory request")
 	}
 	a.receive(notice{Directory: &directoryPage{revision: revision, mode: "open", path: "stale"}})
-	if len(a.browser.Columns) != 0 {
+	if len(a.files.browser.Columns) != 0 {
 		t.Fatal("cancelled request changed browser")
 	}
 }
@@ -50,7 +51,7 @@ func TestDirectorySelectionRoundTrip(t *testing.T) {
 	for _, want := range []bool{true, false} {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 		finishBrowserIO(t, a)
-		if a.browser.Selected["folder/"] != want {
+		if a.files.browser.Selected["folder/"] != want {
 			t.Fatal("folder selection did not toggle")
 		}
 	}

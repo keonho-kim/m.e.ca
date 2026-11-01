@@ -10,11 +10,11 @@ import (
 
 func (a *app) updateCommandActivity() {
 	commands, ok := a.opts.Tools.(toolapi.CommandExecutor)
-	if !ok || a.worker.stopping() {
-		a.toolActivity.dirty = a.toolActivity.dirty || len(a.toolActivity.commands) > 0
-		a.toolActivity.commands = nil
+	if !ok || a.work.state.stopping() {
+		a.chat.toolActivity.dirty = a.chat.toolActivity.dirty || len(a.chat.toolActivity.commands) > 0
+		a.chat.toolActivity.commands = nil
 		return
 	}
-	a.toolActivity.commands = commands.CommandActivity()
-	a.toolActivity.dirty = true
+	a.chat.toolActivity.commands = commands.CommandActivity()
+	a.chat.toolActivity.dirty = true
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/locale"
@@ -53,23 +54,23 @@ func TestLanguageScreenStagesAndConfirms(t *testing.T) {
 func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
 	a := screenFixture(t)
 	a.page = "files"
-	a.browser.Open(".", []fileview.Entry{{Name: "README.md"}}, false)
-	a.browser.Input = true
-	a.browser.Selected = map[string]bool{"README.md": true}
-	a.editor.Set("keep draft")
-	a.filePreview = &preview.State{Full: true}
-	a.worker = workerAgent
+	a.files.browser.Open(".", []fileview.Entry{{Name: "README.md"}}, false)
+	a.files.browser.Input = true
+	a.files.browser.Selected = map[string]bool{"README.md": true}
+	a.compose.editor.Set("keep draft")
+	a.files.filePreview = &preview.State{Full: true}
+	a.work.state = workerAgent
 	cancelled := false
-	a.taskCancel = func() { cancelled = true }
+	a.work.cancel = func() { cancelled = true }
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.filePreview != nil || a.page != "files" || !a.browser.Input || cancelled {
+	if a.files.filePreview != nil || a.page != "files" || !a.files.browser.Input || cancelled {
 		t.Fatal("Esc did not close only the file preview")
 	}
 	if label := keymapLabels(t, a)["Esc"]; label != "닫기" {
 		t.Fatalf("input Escape hint=%q", label)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "chat" || cancelled || a.editor.String() != "keep draft" || !a.browser.Selected["README.md"] {
+	if a.page != "chat" || cancelled || a.compose.editor.String() != "keep draft" || !a.files.browser.Selected["README.md"] {
 		t.Fatal("closing file browser cancelled active work or lost the draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -80,11 +81,11 @@ func TestFileScreenEscClosesForegroundBeforeActiveTask(t *testing.T) {
 
 func TestFileScreenEscCancelsLookupAndCloses(t *testing.T) {
 	a := screenFixture(t)
-	a.page, a.directoryLoading = "files", true
+	a.page, a.files.directoryLoading = "files", true
 	cancelled := false
-	a.directoryReads.Begin(0, func() { cancelled = true })
+	a.files.directoryReads.Begin(0, func() { cancelled = true })
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if !cancelled || a.directoryLoading || a.page != "chat" {
+	if !cancelled || a.files.directoryLoading || a.page != "chat" {
 		t.Fatal("Esc did not cancel lookup and return to chat in one step")
 	}
 }

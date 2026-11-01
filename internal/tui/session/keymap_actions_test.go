@@ -5,10 +5,12 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func keymapLabels(t *testing.T, a *app) map[string]string {
@@ -27,10 +29,10 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 	for _, page := range []string{"chat", "files"} {
 		t.Run(page, func(t *testing.T) {
 			a := screenFixture(t)
-			a.page, a.browser.Input = page, true
-			a.worker = workerAgent
-			a.steering = make(chan composer.Request, 1)
-			a.editor.Set("Run this after finishing")
+			a.page, a.files.browser.Input = page, true
+			a.work.state = workerAgent
+			a.compose.steering = make(chan composer.Request, 1)
+			a.compose.editor.Set("Run this after finishing")
 			labels := keymapLabels(t, a)
 			enter := "방향 수정"
 			tab := "후속 예약"
@@ -44,12 +46,12 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyTab, "", 0))
 			if page == "files" {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-				a.page, a.browser.Input = "files", true
+				a.page, a.files.browser.Input = "files", true
 			}
-			if len(a.queued.Messages) != 1 || a.queued.Messages[0].Text != "Run this after finishing" {
+			if len(a.compose.queued.Messages) != 1 || a.compose.queued.Messages[0].Text != "Run this after finishing" {
 				t.Fatal("follow-up hint did not match action")
 			}
-			a.editor.Set("Change direction now")
+			a.compose.editor.Set("Change direction now")
 			labels = keymapLabels(t, a)
 			if labels["Tab"] != tab || labels["Enter"] != enter {
 				t.Fatal(labels)
@@ -59,7 +61,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 				a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
 			}
 			select {
-			case text := <-a.steering:
+			case text := <-a.compose.steering:
 				if text.Text != "Change direction now" {
 					t.Fatal(text)
 				}
@@ -73,13 +75,13 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 func TestKeymapActionsStopAndBlockedCommands(t *testing.T) {
 	for _, text := range []string{"continue", "!model", "!unknown", "!model extra"} {
 		a := screenFixture(t)
-		a.worker = workerAgent
+		a.work.state = workerAgent
 		if text == "continue" {
-			a.worker.stop()
+			a.work.state.stop()
 		}
-		a.editor.Set(text)
+		a.compose.editor.Set(text)
 		labels := keymapLabels(t, a)
-		if labels["Enter"] != "" || labels["Tab"] != "" || a.worker.stopping() && labels["Esc"] != "" {
+		if labels["Enter"] != "" || labels["Tab"] != "" || a.work.state.stopping() && labels["Esc"] != "" {
 			t.Fatalf("%s: %v", text, labels)
 		}
 	}
@@ -100,8 +102,8 @@ func TestKeymapActionsFieldReturn(t *testing.T) {
 
 func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
-	a.editor.Set(":q")
+	a.work.state = workerAgent
+	a.compose.editor.Set(":q")
 	if labels := keymapLabels(t, a); labels["Enter"] != "종료 확인" || labels["Tab"] != "" {
 		t.Fatal(labels)
 	}
@@ -113,13 +115,13 @@ func TestKeymapActionsBusyQuitConfirmation(t *testing.T) {
 
 func TestKeymapActionsCloseFileWhileLoading(t *testing.T) {
 	a := screenFixture(t)
-	a.page, a.directoryLoading = "files", true
+	a.page, a.files.directoryLoading = "files", true
 	labels := keymapLabels(t, a)
 	if labels["Esc"] != "닫기" || labels["Enter"] != "" || labels[":q"] != "" {
 		t.Fatal(labels)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.page != "chat" || a.directoryLoading {
+	if a.page != "chat" || a.files.directoryLoading {
 		t.Fatal("Esc should cancel lookup and close the browser")
 	}
 }
@@ -128,7 +130,7 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 	for _, scope := range []string{"input", "cross-boundary", "stale"} {
 		t.Run(scope, func(t *testing.T) {
 			a := screenFixture(t)
-			a.editor.Set("draft text")
+			a.compose.editor.Set("draft text")
 			a.render()
 			y := a.inputRegion.y
 			endY := y
@@ -137,15 +139,15 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 			}
 			drag(a, 2, y, 6, endY)
 			if scope == "stale" {
-				a.editor.Set("new draft")
+				a.compose.editor.Set("new draft")
 			}
 			labels := keymapLabels(t, a)
 			if got := labels["Backspace/Del"] != ""; got != (scope == "input") {
 				t.Fatal(labels)
 			}
-			before := a.editor.String()
+			before := a.compose.editor.String()
 			a.keyEvent(tcell.NewEventKey(tcell.KeyDelete, "", 0))
-			if changed := a.editor.String() != before; changed != (scope == "input") {
+			if changed := a.compose.editor.String() != before; changed != (scope == "input") {
 				t.Fatal("selection deletion hint did not match action")
 			}
 		})
@@ -155,8 +157,8 @@ func TestKeymapActionsDeleteSelection(t *testing.T) {
 func TestKeymapActionsFooterOrder(t *testing.T) {
 	a := screenFixture(t)
 	a.screen.SetSize(160, 24)
-	a.worker = workerAgent
-	a.editor.Set("direction")
+	a.work.state = workerAgent
+	a.compose.editor.Set("direction")
 	a.render()
 	footer := screenLine(a.screen, 23, 160)
 	keys := []string{"^C", "Esc", "Enter", "Tab"}

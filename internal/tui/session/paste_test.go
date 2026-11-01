@@ -5,23 +5,24 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 func TestPasteCommitsOneEditWithoutExecuting(t *testing.T) {
 	a := screenFixture(t)
-	a.editor.Set("draft ")
-	revision := a.editor.Revision()
+	a.compose.editor.Set("draft ")
+	revision := a.compose.editor.Revision()
 	a.terminalEvent(tcell.NewEventPaste(true))
 	typeInput(a, "!quit")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	typeInput(a, "한글 👩‍💻")
-	if a.exit || a.editor.String() != "draft " {
+	if a.exit || a.compose.editor.String() != "draft " {
 		t.Fatal("paste executed or edited before closing boundary")
 	}
 	a.terminalEvent(tcell.NewEventPaste(false))
-	if a.exit || a.editor.String() != "draft !quit\n한글 👩‍💻" || a.editor.Revision() != revision+1 {
+	if a.exit || a.compose.editor.String() != "draft !quit\n한글 👩‍💻" || a.compose.editor.Revision() != revision+1 {
 		t.Fatal("paste was not one literal edit")
 	}
 }
@@ -33,7 +34,7 @@ func TestPasteKeepsTerminalLineFeed(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlJ, "", 0))
 	typeInput(a, "second")
 	a.terminalEvent(tcell.NewEventPaste(false))
-	if a.editor.String() != "first\nsecond" {
-		t.Fatalf("terminal LF lost: %q", a.editor.String())
+	if a.compose.editor.String() != "first\nsecond" {
+		t.Fatalf("terminal LF lost: %q", a.compose.editor.String())
 	}
 }

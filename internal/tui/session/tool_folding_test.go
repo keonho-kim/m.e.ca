@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -28,13 +29,13 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 				event.ChangePreview = "--- old\n+++ hello.txt\n@@ -1 +1 @@\n-old\n+" + test.detail + "\n"
 			}
 			a.receiveRuntime(&event)
-			original := a.output.Blocks[0].Text
+			original := a.chat.output.Blocks[0].Text
 			if !strings.Contains(original, test.detail) {
 				t.Fatalf("default output was folded or missing: %q", original)
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
 			a.render()
-			folded := a.output.Blocks[0].Text
+			folded := a.chat.output.Blocks[0].Text
 			if original == folded || !strings.Contains(folded, a.language.Text(test.name)) || !strings.Contains(folded, "접힘") {
 				t.Fatalf("tool was not folded: %q", folded)
 			}
@@ -42,7 +43,7 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 				t.Fatal("fold state or Ctrl+O shortcut was not visible")
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
-			if a.output.Blocks[0].Text != original {
+			if a.chat.output.Blocks[0].Text != original {
 				t.Fatal("expansion changed the original displayed result")
 			}
 			if string(event.Output) != test.output || string(event.Call.Arguments) != test.arguments {

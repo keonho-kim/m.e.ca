@@ -15,7 +15,7 @@ import (
 
 func (s *execution) generateObserved(ctx context.Context, generator modelapi.Generator, request modelapi.Request, consume func(modelapi.Event) error) error {
 	commands, ok := s.runner.Tools.(toolapi.CommandExecutor)
-	if (!ok || len(commands.CommandActivity()) == 0) && !(s.reviewing && s.runner.PollSteering != nil) && !s.activeLATMemory() {
+	if (!ok || len(commands.CommandActivity()) == 0) && !(s.review.active && s.runner.PollSteering != nil) && !s.activeLATMemory() {
 		return generator.Generate(ctx, request, consume)
 	}
 	child, cancel := context.WithCancel(ctx)
@@ -57,7 +57,7 @@ func (s *execution) generateObserved(ctx context.Context, generator modelapi.Gen
 	for {
 		var memoryDone <-chan struct{}
 		if s.activeLATMemory() {
-			memoryDone = s.latMemory.controller.Done()
+			memoryDone = s.review.memory.controller.Done()
 		}
 		select {
 		case message := <-events:

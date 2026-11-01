@@ -8,18 +8,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/compact"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestCompactionContext(t *testing.T) {
@@ -30,8 +31,8 @@ func TestCompactionContext(t *testing.T) {
 	t.Cleanup(func() {
 		cancel()
 		a.workers.Wait()
-		if a.client != nil {
-			a.client.Close()
+		if a.connection.client != nil {
+			a.connection.client.Close()
 		}
 	})
 	if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}}}); err != nil {
@@ -93,13 +94,13 @@ func TestCompactionContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "")
+	a.connection.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	on := true
 	effort := "medium"
-	a.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Thinking: &on, ReasoningEffort: &effort}
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: "Qwen/Qwen3.8-27B", Thinking: &on, ReasoningEffort: &effort}
 	a.startRequest(composer.Capture("Continue the earlier goal", a.selectedPaths()))
 	drainTask(t, a, false)
 	memory, err := a.opts.Store.Memory(ctx, a.opts.Session.ID)
@@ -113,14 +114,14 @@ func TestCompactionContext(t *testing.T) {
 		t.Fatalf("request input and output not counted once: %+v %v", usage, err)
 	}
 	total, err := a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
-	if err != nil || calls.Load() <= 2 || total.Input != 20*calls.Load() || total.Output != 7*calls.Load() || a.displayTokens() != total {
-		t.Fatalf("compaction and conversation usage=%+v display=%+v err=%v", total, a.displayTokens(), err)
+	if err != nil || calls.Load() <= 2 || total.Input != 20*calls.Load() || total.Output != 7*calls.Load() || a.chat.displayTokens() != total {
+		t.Fatalf("compaction and conversation usage=%+v display=%+v err=%v", total, a.chat.displayTokens(), err)
 	}
-	a.tokenTotal = modelapi.TokenUsage{}
+	a.chat.tokenTotal = modelapi.TokenUsage{}
 	if err := a.restore(); err != nil {
 		t.Fatal(err)
 	}
-	if a.displayTokens() != total {
+	if a.chat.displayTokens() != total {
 		t.Fatal("usage not restored with conversation")
 	}
 }

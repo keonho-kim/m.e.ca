@@ -46,10 +46,10 @@ func TestRequestPreparationRunsOnWorker(t *testing.T) {
 	case <-timer.C:
 		t.Fatal("request preparation did not start")
 	}
-	a.editor.Insert("input remains available")
-	a.taskCancel()
+	a.compose.editor.Insert("input remains available")
+	a.work.cancel()
 	a.workers.Wait()
-	if a.editor.String() != "input remains available" {
+	if a.compose.editor.String() != "input remains available" {
 		t.Fatal("background preparation changed the input")
 	}
 }

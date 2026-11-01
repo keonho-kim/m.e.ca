@@ -19,8 +19,8 @@ func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 		a := screenFixture(t)
 		a.language = lang
 		a.screen.SetSize(80, 24)
-		a.worker = workerAgent
-		a.output.AppendBlock(viewport.Block{Summary: "summary", Details: "details"})
+		a.work.state = workerAgent
+		a.chat.output.AppendBlock(viewport.Block{Summary: "summary", Details: "details"})
 		a.render()
 		if a.footerRows != 3 {
 			t.Fatalf("expected two keymap rows, got %d footer rows", a.footerRows)
@@ -45,18 +45,18 @@ func TestKeymapLayoutClearAndPreviewLabels(t *testing.T) {
 		a := screenFixture(t)
 		a.language = lang
 		a.openModel()
-		a.modelForm.Row, a.modelForm.Editing = modelsettings.Endpoint, true
+		a.connection.modelForm.Row, a.connection.modelForm.Editing = modelsettings.Endpoint, true
 		a.screen.SetSize(48, 24)
 		a.render()
 		if keys := footerKeyText(a); !strings.Contains(keys, lang.Text("Clear field")) || strings.Contains(keys, "←→") {
 			t.Fatalf("field hints are ambiguous or redundant: %q", keys)
 		}
 		a.page = "files"
-		a.filePreview = &preview.State{Full: true}
+		a.files.filePreview = &preview.State{Full: true}
 		if labels := keymapLabels(t, a); labels["Tab"] != lang.Text("분할 보기") {
 			t.Fatal(labels)
 		}
-		a.filePreview.Full = false
+		a.files.filePreview.Full = false
 		if labels := keymapLabels(t, a); labels["Enter"] != lang.Text("전체 화면") {
 			t.Fatal(labels)
 		}

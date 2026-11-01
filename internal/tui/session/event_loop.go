@@ -5,8 +5,9 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"time"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 const frameInterval = time.Second / 60
@@ -39,25 +40,25 @@ func (a *app) loop() error {
 			case <-a.ctx.Done():
 				a.exit = true
 			case terminal = <-input:
-			case <-a.elapsedTicks:
+			case <-a.work.elapsedTicks:
 				a.updateElapsed(time.Now())
-			case <-a.indicatorTicks:
-				a.advanceIndicator()
+			case <-a.work.indicatorTicks:
+				a.work.advanceIndicator()
 			case n := <-a.events:
 				a.receive(n)
-			case event, ok := <-a.fileWatch.events:
+			case event, ok := <-a.files.fileWatch.events:
 				if ok {
 					a.observeFileChange(event)
 				} else {
 					a.fileWatchFailed(nil)
 				}
-			case err, ok := <-a.fileWatch.errors:
+			case err, ok := <-a.files.fileWatch.errors:
 				if ok {
 					a.fileWatchFailed(err)
 				} else {
 					a.fileWatchFailed(nil)
 				}
-			case <-a.fileWatch.ticks:
+			case <-a.files.fileWatch.ticks:
 				a.refreshWatchedFiles()
 			case <-frame:
 				frame = nil
@@ -116,8 +117,8 @@ func (a *app) terminalEvent(event tcell.Event) error {
 		a.keyEvent(e)
 	case *tcell.EventResize:
 		a.clearSelection()
-		if a.queued.Edit != nil {
-			a.queued.Edit.Reveal = true
+		if a.compose.queued.Edit != nil {
+			a.compose.queued.Edit.Reveal = true
 		}
 		a.screen.Sync()
 	case *tcell.EventMouse:

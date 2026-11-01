@@ -6,24 +6,26 @@ package session
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
-	"strings"
-	"testing"
 )
 
 func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 	a := screenFixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.worker = workerAgent
-	a.taskCancel = cancel
-	a.editor.Set("다음 지시")
+	a.work.state = workerAgent
+	a.work.cancel = cancel
+	a.compose.editor.Set("다음 지시")
 	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "부분 응답"}})
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	if a.exit || ctx.Err() != context.Canceled || !a.worker.active() || a.editor.String() != "다음 지시" {
+	if a.exit || ctx.Err() != context.Canceled || !a.work.state.active() || a.compose.editor.String() != "다음 지시" {
 		t.Fatal("Esc lost state or failed to cancel")
 	}
 	a.receive(notice{Approval: &toolapi.Approval{Name: "Editing"}})
@@ -31,10 +33,10 @@ func TestEscapeStopsTaskWithoutExiting(t *testing.T) {
 		t.Fatal("late approval reopened after cancellation")
 	}
 	a.receive(notice{Done: true, Err: context.Canceled})
-	if a.worker.active() || a.worker.agent() || strings.Contains(a.status, "context canceled") || a.ctx.Err() != nil {
+	if a.work.state.active() || a.work.state.agent() || strings.Contains(a.status, "context canceled") || a.ctx.Err() != nil {
 		t.Fatal("session did not return to idle")
 	}
-	if len(a.output.Blocks) != 1 || !strings.Contains(a.output.Blocks[0].Text, "부분 응답") || !a.output.Blocks[0].Markdown {
+	if len(a.chat.output.Blocks) != 1 || !strings.Contains(a.chat.output.Blocks[0].Text, "부분 응답") || !a.chat.output.Blocks[0].Markdown {
 		t.Fatal("partial answer lost")
 	}
 }
@@ -45,10 +47,10 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 			a := screenFixture(t)
 			a.language = lang
 			a.screen.SetSize(width, 24)
-			a.worker = workerAgent
-			a.tokenTotal.Input, a.tokenTotal.Output = 1234567890, 9876543210
+			a.work.state = workerAgent
+			a.chat.tokenTotal.Input, a.chat.tokenTotal.Output = 1234567890, 9876543210
 			a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
-			a.advanceIndicator()
+			a.work.advanceIndicator()
 			a.render()
 			header := screenLine(a.screen, 0, width)
 			if !strings.Contains(header, lang.Text("Compress Memory")+" ..") {
@@ -60,10 +62,10 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 }
 func TestCompressionIndicatorLifecycle(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_started"}})
 	defer a.stopCompression()
-	a.editor.Set("draft")
+	a.compose.editor.Set("draft")
 	a.render()
 	header := screenLine(a.screen, 0, 80)
 	if !strings.HasPrefix(header, "상태 작업 중 00 : 00 : 00") || !strings.Contains(header, "메모리 압축 중 .") || !strings.HasSuffix(header, "입력 0 · 출력 0 · 초당 토큰 —") {
@@ -72,17 +74,17 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != "> draft" {
 		t.Fatal("status moved into composer")
 	}
-	if a.indicatorTicks == nil {
+	if a.work.indicatorTicks == nil {
 		t.Fatal("compression timer missing")
 	}
 	for want := 1; want <= 3; want++ {
 		if !strings.Contains(a.activity().Label(), "메모리 압축 중 "+strings.Repeat(".", want)) {
 			t.Fatal(a.activity().Label())
 		}
-		a.advanceIndicator()
+		a.work.advanceIndicator()
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_finished"}})
-	if a.indicatorTicks != nil || a.activity().Compressing {
+	if a.work.indicatorTicks != nil || a.activity().Compressing {
 		t.Fatal("compression timer leaked")
 	}
 	a.receive(notice{Done: true})

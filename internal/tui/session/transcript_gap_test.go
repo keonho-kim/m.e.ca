@@ -17,13 +17,13 @@ func TestTranscriptScrollbarGap(t *testing.T) {
 		for _, markdown := range []bool{false, true} {
 			t.Run(fmt.Sprintf("width=%d/markdown=%t", width, markdown), func(t *testing.T) {
 				a := screenFixture(t)
-				a.historyEnd = true
+				a.chat.historyEnd = true
 				a.screen.SetSize(width, 24)
 				text := strings.Repeat("x", 4096)
 				if markdown {
-					a.stream = "**" + text + "**"
+					a.chat.stream = "**" + text + "**"
 				} else {
-					a.thinking = text
+					a.chat.thinking = text
 				}
 				a.render()
 				content := width - 6
@@ -44,10 +44,10 @@ func TestTranscriptScrollbarGap(t *testing.T) {
 				if a.inputRegion.width != width {
 					t.Fatal("transcript margin narrowed the input")
 				}
-				before := a.chatVisible[0].Row
+				before := a.chat.chatVisible[0].Row
 				a.mouse(tcell.NewEventMouse(0, 2, tcell.WheelUp, 0))
 				a.render()
-				if a.output.Follow || a.chatVisible[0].Row != before-3 {
+				if a.chat.output.Follow || a.chat.chatVisible[0].Row != before-3 {
 					t.Fatal("scrolling used a different wrap width")
 				}
 				drag(a, 0, 1, width-2, 2)
@@ -61,7 +61,7 @@ func TestTranscriptScrollbarGap(t *testing.T) {
 				a.mouse(tcell.NewEventMouse(width-1, a.scrollbar.y+a.scrollbar.bar.Height-1, tcell.Button1, 0))
 				a.mouse(tcell.NewEventMouse(width-1, a.scrollbar.y+a.scrollbar.bar.Height-1, tcell.ButtonNone, 0))
 				a.render()
-				if !a.output.Follow || a.textSelection.Active() {
+				if !a.chat.output.Follow || a.textSelection.Active() {
 					t.Fatal("thumb drag did not return to the actual displayed bottom")
 				}
 			})

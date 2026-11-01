@@ -5,9 +5,10 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"strings"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 type clipboardScreen struct {
@@ -22,7 +23,7 @@ func TestTextSelectionCopyDoesNotExit(t *testing.T) {
 		a := screenFixture(t)
 		screen := &clipboardScreen{Screen: a.screen}
 		a.screen = screen
-		a.output.Append("한글 response", false)
+		a.chat.output.Append("한글 response", false)
 		a.render()
 		// Use explicit screen cells so the test exercises event routing, not viewport placement.
 		screen.Put(0, 2, "한", tcell.StyleDefault)
@@ -48,7 +49,7 @@ func TestTextSelectionCopyDoesNotExit(t *testing.T) {
 }
 func TestTextSelectionCopiesInputAndFreezesStreaming(t *testing.T) {
 	a := screenFixture(t)
-	a.editor.Set("copy my input")
+	a.compose.editor.Set("copy my input")
 	a.render()
 	row := a.inputRegion.y
 	a.mouse(tcell.NewEventMouse(2, row, tcell.Button1, 0))
@@ -58,13 +59,13 @@ func TestTextSelectionCopiesInputAndFreezesStreaming(t *testing.T) {
 	if !strings.Contains(before, "copy my input") {
 		t.Fatalf("selection=%q", before)
 	}
-	a.stream = "A new streamed response"
+	a.chat.stream = "A new streamed response"
 	a.render()
 	if a.textSelection.Text() != before {
 		t.Fatal("streaming altered copied text")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "x", 0))
-	if a.textSelection.Active() || a.editor.String() != "copy my inputx" {
+	if a.textSelection.Active() || a.compose.editor.String() != "copy my inputx" {
 		t.Fatal("typing did not clear selection and edit input")
 	}
 }

@@ -8,17 +8,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
@@ -51,25 +52,25 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.client, err = httpclient.NewClient(connection, "")
+	a.connection.client, err = httpclient.NewClient(connection, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(a.client.Close)
+	t.Cleanup(a.connection.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
-	a.selection = modelconn.Selection{Connection: connection, Model: "streaming-model"}
-	a.historyEnd = true
-	a.output.Append(strings.Repeat("earlier history\n", 40), false)
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: "streaming-model"}
+	a.chat.historyEnd = true
+	a.chat.output.Append(strings.Repeat("earlier history\n", 40), false)
 	a.scroll(-5, 80, a.chatHeight(80, a.bodyHeight(24)))
-	if a.output.Follow {
+	if a.chat.output.Follow {
 		t.Fatal("history inspection did not pause following")
 	}
-	a.output.Append((transcript.Formatter{}).User("hello"), false)
+	a.chat.output.Append((transcript.Formatter{}).User("hello"), false)
 	a.startRequest(composer.Capture("hello", a.selectedPaths()))
-	if !a.output.Follow {
+	if !a.chat.output.Follow {
 		t.Fatal("a new request did not resume following")
 	}
-	for a.stream != "first" {
+	for a.chat.stream != "first" {
 		select {
 		case n := <-a.events:
 			a.receive(n)
@@ -80,7 +81,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
-	if !a.worker.active() {
+	if !a.work.state.active() {
 		t.Fatal("partial answer arrived only after completion")
 	}
 	a.render()
@@ -94,13 +95,13 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	close(resume)
 	drainTask(t, a, false)
 	var transcript strings.Builder
-	for _, block := range a.output.Blocks {
+	for _, block := range a.chat.output.Blocks {
 		transcript.WriteString(block.Text + "\n")
 	}
-	if a.stream != "" || a.thinking != "" || strings.Count(transcript.String(), "first reply") != 1 || strings.Count(transcript.String(), "inspect more") != 1 {
+	if a.chat.stream != "" || a.chat.thinking != "" || strings.Count(transcript.String(), "first reply") != 1 || strings.Count(transcript.String(), "inspect more") != 1 {
 		t.Fatalf("duplicated/unfinished stream: %q", transcript.String())
 	}
-	summary := a.output.Blocks[len(a.output.Blocks)-1]
+	summary := a.chat.output.Blocks[len(a.chat.output.Blocks)-1]
 	if !summary.Centered || !summary.Thinking || !strings.Contains(summary.Text, "입력 123 | 출력 6 | 초당 토큰 ") {
 		t.Fatalf("final request summary missing: %+v", summary)
 	}
@@ -113,12 +114,12 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 			t.Fatal("UI measurements leaked into model context")
 		}
 	}
-	a.output = viewport.View{Follow: true}
-	a.historyCursor = 0
+	a.chat.output = viewport.View{Follow: true}
+	a.chat.historyCursor = 0
 	if err := a.loadHistory(); err != nil {
 		t.Fatal(err)
 	}
-	restored := a.output.Blocks[len(a.output.Blocks)-1]
+	restored := a.chat.output.Blocks[len(a.chat.output.Blocks)-1]
 	if restored.Text != summary.Text || !restored.Centered || !restored.Thinking {
 		t.Fatalf("restored measurements changed: %+v", restored)
 	}

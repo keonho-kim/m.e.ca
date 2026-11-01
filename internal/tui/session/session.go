@@ -12,12 +12,12 @@ import (
 func (a *app) restore() error {
 	var err error
 	ctx := a.ctx
-	a.tokenTotal, err = a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
+	a.chat.tokenTotal, err = a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err
 	}
 	a.settings = policy.Settings{Scope: policy.System, Permission: a.opts.Config.Permission}
-	a.inputs, err = a.opts.Store.RecentInputs(ctx, a.opts.Session.ID, 200)
+	a.compose.inputs, err = a.opts.Store.RecentInputs(ctx, a.opts.Session.ID, 200)
 	if err != nil {
 		return err
 	}
@@ -29,36 +29,36 @@ func (a *app) restore() error {
 		return taskErr
 	}
 	if cp != nil && cp.Status == runrecord.Interrupted {
-		a.output.Append(a.language.Format("Interrupted work: %s\nSend a message to inspect the current state and continue.", a.opts.Vault.Redact(cp.Objective)), false)
+		a.chat.output.Append(a.language.Format("Interrupted work: %s\nSend a message to inspect the current state and continue.", a.opts.Vault.Redact(cp.Objective)), false)
 	}
-	a.historyIndex = len(a.inputs)
-	a.selection, err = a.opts.Store.Selection(ctx, a.opts.Session.ID)
+	a.compose.historyIndex = len(a.compose.inputs)
+	a.connection.selection, err = a.opts.Store.Selection(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err
 	}
-	if a.selection.Model == "" && a.opts.Config.Model != nil {
-		a.selection, err = a.opts.Config.Model.Selection()
+	if a.connection.selection.Model == "" && a.opts.Config.Model != nil {
+		a.connection.selection, err = a.opts.Config.Model.Selection()
 		if err != nil {
 			return err
 		}
 	}
-	if a.selection.Model != "" {
-		key, keyErr := a.opts.Vault.Get(a.selection.Connection.CredentialRef)
+	if a.connection.selection.Model != "" {
+		key, keyErr := a.opts.Vault.Get(a.connection.selection.Connection.CredentialRef)
 		if keyErr != nil {
 			a.status = keyErr.Error()
 		} else {
 			// Resolve current server metadata and configured controls before adopting the client.
-			a.connect(a.selection.Connection, key, a.selection.Model, false)
+			a.connect(a.connection.selection.Connection, key, a.connection.selection.Model, false)
 		}
 	}
 	paths, err := a.opts.Store.FileSelections(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err
 	}
-	a.browser.Selected = map[string]bool{}
+	a.files.browser.Selected = map[string]bool{}
 	for _, path := range paths {
 		if _, err := a.opts.Files.Reference(a.ctx, a.settings, path); err == nil {
-			a.browser.Selected[path] = true
+			a.files.browser.Selected[path] = true
 		}
 	}
 	return nil

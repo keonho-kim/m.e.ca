@@ -17,15 +17,15 @@ func TestLATMemoryTokenSnapshotsDoNotReplaceForeground(t *testing.T) {
 	a.receiveRuntime(&runrecord.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 100, Output: 10}})
 	background := &runrecord.Generation{ID: "generation_memory", Role: inference.LATCompaction, Attempt: 1}
 	a.receiveRuntime(&runrecord.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 20, Output: 2}, Generation: background})
-	if got := a.displayTokens(); got.Input != 120 || got.Output != 12 {
+	if got := a.chat.displayTokens(); got.Input != 120 || got.Output != 12 {
 		t.Fatal("overlap lost a measured snapshot", got)
 	}
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 20, Output: 3}, Generation: background})
-	if got := a.displayTokens(); got.Input != 120 || got.Output != 13 || a.tokenCurrent.Input != 100 {
+	if got := a.chat.displayTokens(); got.Input != 120 || got.Output != 13 || a.chat.tokenCurrent.Input != 100 {
 		t.Fatal("background final reset foreground usage", got)
 	}
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 100, Output: 11}})
-	if got := a.displayTokens(); got.Input != 120 || got.Output != 14 {
+	if got := a.chat.displayTokens(); got.Input != 120 || got.Output != 14 {
 		t.Fatal("completion duplicated or omitted usage", got)
 	}
 }

@@ -87,7 +87,7 @@ func TestReadAdmissionDirectoryKeepsLatest(t *testing.T) {
 	if len(r.requests) != 1 || (<-r.requests).path != "latest" {
 		t.Fatal("directory navigation ran obsolete queued reads")
 	}
-	if a.browser.Current() == nil || a.browser.Current().Path != "latest" {
+	if a.files.browser.Current() == nil || a.files.browser.Current().Path != "latest" {
 		t.Fatal("latest directory did not become visible")
 	}
 }
@@ -96,17 +96,17 @@ func TestReadAdmissionPreviewKeepsLatest(t *testing.T) {
 	a := fixture(t)
 	r := controlledReader(t, a)
 	a.page = "files"
-	a.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}, {Name: "latest"}}, false)
+	a.files.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}, {Name: "latest"}}, false)
 	a.openFilePreview(false)
 	firstRead(t, r)
 	for _, index := range []int{1, 2} {
-		a.browser.Current().Index = index
+		a.files.browser.Current().Index = index
 		a.openFilePreview(true)
 	}
 	r.unblock()
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
-	for a.filePreview.Loading {
+	for a.files.filePreview.Loading {
 		select {
 		case n := <-a.events:
 			a.receive(n)
@@ -115,7 +115,7 @@ func TestReadAdmissionPreviewKeepsLatest(t *testing.T) {
 		}
 	}
 	a.workers.Wait()
-	if len(r.requests) != 1 || !strings.HasSuffix((<-r.requests).path, "latest") || a.filePreview.Content != "latest" {
+	if len(r.requests) != 1 || !strings.HasSuffix((<-r.requests).path, "latest") || a.files.filePreview.Content != "latest" {
 		t.Fatal("preview navigation ran obsolete queued reads")
 	}
 }
@@ -124,10 +124,10 @@ func TestReadAdmissionCloseDropsPending(t *testing.T) {
 	a := fixture(t)
 	r := controlledReader(t, a)
 	a.page = "files"
-	a.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}}, false)
+	a.files.browser.Open(".", []fileview.Entry{{Name: "first"}, {Name: "discarded"}}, false)
 	a.openFilePreview(false)
 	firstRead(t, r)
-	a.browser.Current().Index = 1
+	a.files.browser.Current().Index = 1
 	a.openFilePreview(false)
 	a.closeFilePreview()
 	r.unblock()
@@ -135,7 +135,7 @@ func TestReadAdmissionCloseDropsPending(t *testing.T) {
 	for len(a.events) > 0 {
 		a.receive(<-a.events)
 	}
-	if len(r.requests) != 0 || a.filePreview != nil {
+	if len(r.requests) != 0 || a.files.filePreview != nil {
 		t.Fatal("closing preview retained or ran a pending read")
 	}
 }

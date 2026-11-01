@@ -6,12 +6,13 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
@@ -22,23 +23,23 @@ func pendingArrow(a *app, key tcell.Key) {
 
 func TestPendingEditNavigationPreservesDraft(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
-	a.queued.Messages = queuedRequests("first", "second", "third")
-	a.editor.Set("unsent draft")
-	a.editor.MoveTo(2)
+	a.work.state = workerAgent
+	a.compose.queued.Messages = queuedRequests("first", "second", "third")
+	a.compose.editor.Set("unsent draft")
+	a.compose.editor.MoveTo(2)
 	for _, want := range []string{"third", "second", "first", "first"} {
 		pendingArrow(a, tcell.KeyLeft)
-		if a.editor.String() != want {
-			t.Fatalf("previous queued input=%q; want %q", a.editor.String(), want)
+		if a.compose.editor.String() != want {
+			t.Fatalf("previous queued input=%q; want %q", a.compose.editor.String(), want)
 		}
 	}
 	for _, want := range []string{"second", "third", "unsent draft"} {
 		pendingArrow(a, tcell.KeyRight)
-		if a.editor.String() != want {
-			t.Fatalf("next queued input=%q; want %q", a.editor.String(), want)
+		if a.compose.editor.String() != want {
+			t.Fatalf("next queued input=%q; want %q", a.compose.editor.String(), want)
 		}
 	}
-	if a.editor.Cursor != 2 || !slices.Equal(queuedTexts(a.queued.Messages), []string{"first", "second", "third"}) {
+	if a.compose.editor.Cursor != 2 || !slices.Equal(queuedTexts(a.compose.queued.Messages), []string{"first", "second", "third"}) {
 		t.Fatal("navigation changed the draft cursor or queue")
 	}
 }
@@ -47,22 +48,22 @@ func TestPendingEditSavePreservesPosition(t *testing.T) {
 	for name, key := range map[string]tcell.Key{"enter": tcell.KeyEnter, "tab": tcell.KeyTab} {
 		t.Run(name, func(t *testing.T) {
 			a := screenFixture(t)
-			a.worker = workerAgent
-			a.steering = make(chan composer.Request, 1)
-			a.queued.Messages = queuedRequests("first", "second", "third")
-			a.editor.Set("unsent draft")
+			a.work.state = workerAgent
+			a.compose.steering = make(chan composer.Request, 1)
+			a.compose.queued.Messages = queuedRequests("first", "second", "third")
+			a.compose.editor.Set("unsent draft")
 			pendingArrow(a, tcell.KeyLeft)
 			pendingArrow(a, tcell.KeyLeft)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "edited second", 0))
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", tcell.ModShift))
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "line", 0))
-			if a.queued.Messages[1].Text != "second" {
+			if a.compose.queued.Messages[1].Text != "second" {
 				t.Fatal("typing changed the queued original before saving")
 			}
 			a.keyEvent(tcell.NewEventKey(key, "", 0))
-			if a.queued.Edit != nil || a.editor.String() != "unsent draft" ||
-				!slices.Equal(queuedTexts(a.queued.Messages), []string{"first", "edited second\nline", "third"}) || len(a.steering) != 0 {
+			if a.compose.queued.Edit != nil || a.compose.editor.String() != "unsent draft" ||
+				!slices.Equal(queuedTexts(a.compose.queued.Messages), []string{"first", "edited second\nline", "third"}) || len(a.compose.steering) != 0 {
 				t.Fatal("saving submitted a direction change, duplicated input or reordered the queue")
 			}
 		})
@@ -78,9 +79,9 @@ func TestPendingEditCancelAndDelete(t *testing.T) {
 		a := screenFixture(t)
 		ctx, cancel := context.WithCancel(a.ctx)
 		t.Cleanup(cancel)
-		a.worker, a.taskCancel = workerAgent, cancel
-		a.queued.Messages = queuedRequests("first", "second")
-		a.editor.Set("unsent draft")
+		a.work.state, a.work.cancel = workerAgent, cancel
+		a.compose.queued.Messages = queuedRequests("first", "second")
+		a.compose.editor.Set("unsent draft")
 		pendingArrow(a, tcell.KeyLeft)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " changed", 0))
 		a.keyEvent(event)
@@ -88,12 +89,12 @@ func TestPendingEditCancelAndDelete(t *testing.T) {
 		if event.Key() == tcell.KeyEscape {
 			want = append(want, "second")
 		}
-		if a.queued.Edit != nil || a.editor.String() != "unsent draft" || !slices.Equal(queuedTexts(a.queued.Messages), want) || ctx.Err() != nil || a.worker.stopping() {
+		if a.compose.queued.Edit != nil || a.compose.editor.String() != "unsent draft" || !slices.Equal(queuedTexts(a.compose.queued.Messages), want) || ctx.Err() != nil || a.work.state.stopping() {
 			t.Fatal("editing cancellation or reservation deletion stopped the running agent or lost the draft")
 		}
 		if event.Key() == tcell.KeyEscape {
 			a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-			if ctx.Err() != context.Canceled || !a.worker.stopping() {
+			if ctx.Err() != context.Canceled || !a.work.state.stopping() {
 				t.Fatal("Esc did not stop the agent after leaving queue editing")
 			}
 		}
@@ -102,26 +103,26 @@ func TestPendingEditCancelAndDelete(t *testing.T) {
 
 func TestPendingEditRequiresSaveBeforeNavigation(t *testing.T) {
 	a := screenFixture(t)
-	a.queued.Messages = queuedRequests("first", "second")
-	a.worker = workerAgent
+	a.compose.queued.Messages = queuedRequests("first", "second")
+	a.work.state = workerAgent
 	pendingArrow(a, tcell.KeyLeft)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " changed", 0))
 	pendingArrow(a, tcell.KeyLeft)
-	if a.queued.Edit.Index != 1 || a.editor.String() != "second changed" || a.stopNotice == "" {
+	if a.compose.queued.Edit.Index != 1 || a.compose.editor.String() != "second changed" || a.stopNotice == "" {
 		t.Fatal("navigation lost unsaved changes")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.queued.Edit == nil || a.queued.Messages[1].Text != "second" || a.stopNotice == "" {
+	if a.compose.queued.Edit == nil || a.compose.queued.Messages[1].Text != "second" || a.stopNotice == "" {
 		t.Fatal("empty edit deleted a reservation implicitly")
 	}
 }
 
 func TestPendingEditPasteAndCommandsStayLiteral(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerAgent
-	a.queued.Messages = queuedRequests("queued")
-	a.editor.Set("!model")
+	a.work.state = workerAgent
+	a.compose.queued.Messages = queuedRequests("queued")
+	a.compose.editor.Set("!model")
 	a.refreshHints()
 	pendingArrow(a, tcell.KeyLeft)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
@@ -130,18 +131,18 @@ func TestPendingEditPasteAndCommandsStayLiteral(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "body", 0))
 	a.pasteBoundary(false)
-	if a.commandOpen || a.exit || a.queued.Edit == nil || a.editor.String() != "!quit\nbody" {
+	if a.compose.commandOpen || a.exit || a.compose.queued.Edit == nil || a.compose.editor.String() != "!quit\nbody" {
 		t.Fatal("paste invoked a command or left queued editing")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.exit || a.queued.Messages[0].Text != "!quit\nbody" || a.editor.String() != "!model" || !a.commandOpen {
+	if a.exit || a.compose.queued.Messages[0].Text != "!quit\nbody" || a.compose.editor.String() != "!model" || !a.compose.commandOpen {
 		t.Fatal("saving interpreted queued text as a local command or lost the normal input")
 	}
 	pendingArrow(a, tcell.KeyLeft)
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlU, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "!new", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
-	if a.exit || a.newSession || a.queued.Messages[0].Text != "!new" {
+	if a.exit || a.newSession || a.compose.queued.Messages[0].Text != "!new" {
 		t.Fatal("queued editing executed a new-session command")
 	}
 }
@@ -149,8 +150,8 @@ func TestPendingEditPasteAndCommandsStayLiteral(t *testing.T) {
 func TestPendingEditKeymapAndNotice(t *testing.T) {
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
 		a := screenFixture(t)
-		a.language, a.worker = language, workerAgent
-		a.queued.Messages = queuedRequests("first", "second", "third")
+		a.language, a.work.state = language, workerAgent
+		a.compose.queued.Messages = queuedRequests("first", "second", "third")
 		if labels := keymapLabels(t, a); labels["Shift+↑/←"] != language.Text("Edit queue") || labels["Ctrl/Cmd+Backspace"] != "" {
 			t.Fatal(labels)
 		}

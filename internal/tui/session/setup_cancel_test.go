@@ -5,30 +5,32 @@
 package session
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestCancelledSetupDiscardsSuccessfulLateResult(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerSetup
-	a.setupRevision = 2
-	a.selection.Model = "current"
+	a.work.state = workerSetup
+	a.connection.setupRevision = 2
+	a.connection.selection.Model = "current"
 	cancelled := false
-	a.taskCancel = func() { cancelled = true }
+	a.work.cancel = func() { cancelled = true }
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if !cancelled {
 		t.Fatal("connection not cancelled")
 	}
 	a.receive(notice{SetupRevision: 2, Done: true, Models: []string{"late"}, Selection: &connection.Selection{}})
-	if a.worker.active() || a.page != "chat" || a.selection.Model != "current" || a.modelForm != nil {
+	if a.work.state.active() || a.page != "chat" || a.connection.selection.Model != "current" || a.connection.modelForm != nil {
 		t.Fatal("late result changed cancelled screen")
 	}
-	a.worker = workerSetup
-	a.setupRevision = 3
+	a.work.state = workerSetup
+	a.connection.setupRevision = 3
 	a.receive(notice{SetupRevision: 2, Done: true, Models: []string{"old"}})
-	if !a.worker.active() || a.page != "chat" {
+	if !a.work.state.active() || a.page != "chat" {
 		t.Fatal("old completion stopped newer request")
 	}
 }

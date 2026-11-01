@@ -4,7 +4,9 @@
 // Related: internal/tui/session/files.go, internal/tui/session/events.go, internal/tui/session/storage.go.
 package session
 
-import "maps"
+import (
+	"maps"
+)
 
 type fileSelectionResult struct {
 	path     string
@@ -13,12 +15,10 @@ type fileSelectionResult struct {
 }
 
 func (a *app) selectFile(path string) {
-	if a.fileSelectionBusy {
-		a.fileSelectionQueue = append(a.fileSelectionQueue, path)
+	if !a.files.beginSelection(path) {
 		return
 	}
-	a.fileSelectionBusy = true
-	selections := maps.Clone(a.browser.Selected)
+	selections := maps.Clone(a.files.browser.Selected)
 	executor, settings, store, id, ctx := a.opts.Files, a.settings, a.opts.Store, a.opts.Session.ID, a.ctx
 	a.workers.Add(1)
 	go func() {
@@ -33,28 +33,14 @@ func (a *app) selectFile(path string) {
 }
 
 func (a *app) receiveFileSelection(result *fileSelectionResult) {
-	a.fileSelectionBusy = false
+	next, queued := a.files.completeSelection(result)
 	if result.err != nil {
-		a.fileSubmission = nil
+		a.compose.fileSubmission = nil
 		a.fail(result.err)
-	} else {
-		a.referenceRevision++
-		if a.browser.Selected == nil {
-			a.browser.Selected = map[string]bool{}
-		}
-		if result.selected {
-			a.browser.Selected[result.path] = true
-		} else {
-			delete(a.browser.Selected, result.path)
-		}
 	}
-	if len(a.fileSelectionQueue) > 0 {
-		path := a.fileSelectionQueue[0]
-		a.fileSelectionQueue[0] = ""
-		a.fileSelectionQueue = a.fileSelectionQueue[1:]
-		a.selectFile(path)
+	if queued {
+		a.selectFile(next)
 		return
 	}
-	a.fileSelectionQueue = nil
 	a.finishFileSubmission()
 }

@@ -4,13 +4,15 @@
 // Related: internal/tui/session/render_chat.go, internal/tui/session/keymap.go, internal/tui/session/pending_edit.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/view"
+import (
+	"github.com/keonho-kim/meca/internal/tui/view"
+)
 
 func (a *app) composerNotice() string {
-	if a.queued.Edit == nil {
+	if a.compose.queued.Edit == nil {
 		return a.stopNotice
 	}
-	text := a.language.Format("Editing queued request %d / %d", a.queued.Edit.Index+1, len(a.queued.Messages))
+	text := a.language.Format("Editing queued request %d / %d", a.compose.queued.Edit.Index+1, len(a.compose.queued.Messages))
 	if a.stopNotice != "" {
 		text += " · " + a.stopNotice
 	}
@@ -29,9 +31,9 @@ func (a *app) pendingEditShortcuts() []view.Shortcut {
 	if !a.pendingEditChanged() {
 		keys = append(keys, view.Shortcut{Key: "Shift+↑↓/←→", Label: "Browse queue"})
 	}
-	if a.output.HasDetails() {
+	if a.chat.output.HasDetails() {
 		label := "Fold tools"
-		if a.output.Collapsed {
+		if a.chat.output.Collapsed {
 			label = "Expand tools"
 		}
 		keys = append(keys, view.Shortcut{Key: "^O", Label: label})

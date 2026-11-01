@@ -16,10 +16,10 @@ func BenchmarkLATLayout(b *testing.B) {
 	for _, enabled := range []bool{false, true} {
 		b.Run(fmt.Sprint(enabled), func(b *testing.B) {
 			a := screenFixture(b)
-			a.worker = workerAgent
-			a.stream = "A stable response."
+			a.work.state = workerAgent
+			a.chat.stream = "A stable response."
 			if enabled {
-				a.latOutput = latOutput{group: transcript.LATGroup(runrecord.LATRun{ID: "lat_review", ParentRunID: "run_main_123456789", Phase: "review"}), running: true}
+				a.chat.latOutput = latOutput{group: transcript.LATGroup(runrecord.LATRun{ID: "lat_review", ParentRunID: "run_main_123456789", Phase: "review"}), running: true}
 			}
 			a.chatLayout(80)
 			b.ReportAllocs()

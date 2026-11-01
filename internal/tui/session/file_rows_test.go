@@ -9,18 +9,19 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/rivo/uniseg"
+
+	"github.com/keonho-kim/meca/internal/fileview"
 )
 
 func TestFileRowsPlainNamesAndDirectoryUnderline(t *testing.T) {
 	a := screenFixture(t)
 	a.page = "files"
-	a.browser.Open(".", []fileview.Entry{{Name: "src", Directory: true}, {Name: "server.go"}, {Name: "문서", Directory: true}, {Name: "설명.md"}}, false)
-	a.browser.Selected["src/"] = true
-	a.browser.Selected["설명.md"] = true
+	a.files.browser.Open(".", []fileview.Entry{{Name: "src", Directory: true}, {Name: "server.go"}, {Name: "문서", Directory: true}, {Name: "설명.md"}}, false)
+	a.files.browser.Selected["src/"] = true
+	a.files.browser.Selected["설명.md"] = true
 	for _, focus := range []int{0, 1} {
-		a.browser.Current().Index = focus
+		a.files.browser.Current().Index = focus
 		a.render()
 		for i, want := range []string{"[x] src/", "[ ] server.go", "[ ] 문서/", "[x] 설명.md"} {
 			y := 3 + i

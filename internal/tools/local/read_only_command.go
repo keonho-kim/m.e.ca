@@ -39,7 +39,7 @@ func (op *readOnlyOperation) executeQuery(ctx context.Context) (toolapi.Result, 
 		return toolapi.Result{}, err
 	}
 	// Start only this canonical literal query, never the original shell text.
-	commandOp := &operation{executor: op.command.executor, settings: op.command.settings, input: op.command.input, callID: op.command.callID}
+	commandOp := &commandOperation{operation: operation{executor: op.command.executor, settings: op.command.settings, input: op.command.input, callID: op.command.callID}}
 	commandOp.input.Command = command
 	commandOp.environment = []string{
 		"PATH=/usr/bin:/bin", "LC_ALL=C", "LANG=C", "HOME=" + op.executor.artifacts,

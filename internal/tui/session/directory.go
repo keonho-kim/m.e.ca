@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	"fmt"
+
 	"github.com/keonho-kim/meca/internal/fileview"
 )
 
@@ -18,24 +19,16 @@ type directoryPage struct {
 	err              error
 }
 
-func (a *app) cancelDirectory() {
-	a.directoryReads.Stop()
-	a.directoryRevision++
-	a.directoryLoading = false
-}
-
 func (a *app) requestDirectory(mode, path string, offset int) {
-	a.cancelDirectory()
-	a.directoryLoading = mode != "refresh"
-	page := directoryPage{revision: a.directoryRevision, mode: mode, path: path, offset: offset}
-	if a.directoryReads.Submit(page) {
+	page, start := a.files.planDirectory(mode, path, offset)
+	if start {
 		a.startDirectoryRead(page)
 	}
 }
 
 func (a *app) startDirectoryRead(page directoryPage) {
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.directoryReads.Begin(page.revision, cancel)
+	a.files.directoryReads.Begin(page.revision, cancel)
 	path, mode := page.path, page.mode
 	executor, settings := a.opts.Files, a.settings
 	a.workers.Add(1)
@@ -62,13 +55,13 @@ func (a *app) startDirectoryRead(page directoryPage) {
 }
 
 func (a *app) receiveDirectory(page *directoryPage) {
-	if next := a.directoryReads.Complete(page.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.files.directoryReads.Complete(page.revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startDirectoryRead(*next)
 	}
-	if page.revision != a.directoryRevision || a.page != "files" {
+	if page.revision != a.files.directoryRevision || a.page != "files" {
 		return
 	}
-	a.directoryLoading = false
+	a.files.directoryLoading = false
 	if page.err != nil {
 		a.fail(page.err)
 		return
@@ -76,29 +69,5 @@ func (a *app) receiveDirectory(page *directoryPage) {
 	if page.mode != "refresh" {
 		a.clearSelection()
 	}
-	switch page.mode {
-	case "open":
-		a.browser.Open(page.path, page.entries, page.more)
-	case "push":
-		a.browser.Push(page.path, page.entries, page.more)
-	case "page":
-		if column := a.browser.Current(); column != nil && column.Path == page.path {
-			column.Entries, column.More, column.Offset, column.Index = page.entries, page.more, page.offset, 0
-		}
-	case "refresh":
-		if column := a.browser.Current(); column != nil && column.Path == page.path {
-			selected := ""
-			if column.Index >= 0 && column.Index < len(column.Entries) {
-				selected = column.Entries[column.Index].Name
-			}
-			column.Entries, column.More = page.entries, page.more
-			column.Index = max(0, min(column.Index, len(page.entries)-1))
-			for i, entry := range page.entries {
-				if entry.Name == selected {
-					column.Index = i
-					break
-				}
-			}
-		}
-	}
+	a.files.applyDirectory(page)
 }

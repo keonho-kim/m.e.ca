@@ -8,10 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (op *operation) command(ctx context.Context) (toolapi.Result, error) {
+func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error) {
 	id, err := op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, op.callID)
 	if err != nil {
 		return toolapi.Result{}, err

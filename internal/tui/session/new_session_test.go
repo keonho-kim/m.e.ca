@@ -16,8 +16,8 @@ func TestNewSessionCommandCancelsActiveWork(t *testing.T) {
 	a := screenFixture(t)
 	ctx, cancel := context.WithCancel(a.ctx)
 	defer cancel()
-	a.worker, a.taskCancel = workerSetup, cancel
-	a.editor.Set("!new")
+	a.work.state, a.work.cancel = workerSetup, cancel
+	a.compose.editor.Set("!new")
 	a.submit()
 	if !a.newSession || !a.exit || ctx.Err() == nil {
 		t.Fatal("new session did not cancel the active session")

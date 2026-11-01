@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
@@ -28,9 +29,7 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.checkpoint.Objective = s.runner.Redact(text)
-		s.latPlan = ""
-		s.latReviewed = false
-		s.latObserved = false
+		s.review.invalidatePlan()
 		if err := s.emit(runrecord.Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
 			return err
 		}

@@ -6,26 +6,28 @@ package session
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
-	"strings"
-	"testing"
 )
 
 func TestConversationEditorStaysAtBottom(t *testing.T) {
 	a := fixture(t)
 	for _, text := range []string{"first question", "second question"} {
 		for _, block := range (transcript.Formatter{Redact: a.opts.Vault.Redact}).Message(modelapi.Message{Role: "user", Content: text}) {
-			a.output.Append(block.Text, block.Thinking)
+			a.chat.output.Append(block.Text, block.Thinking)
 		}
 		a.receive(notice{Event: &runrecord.Event{Kind: "response", Text: "answer to " + text}})
 		a.receive(notice{Done: true})
 	}
-	a.selection.Model = "chosen"
-	a.editor.Set("next draft")
+	a.connection.selection.Model = "chosen"
+	a.compose.editor.Set("next draft")
 	a.render()
 	var rows []string
 	for y := 0; y < 24; y++ {
@@ -61,7 +63,7 @@ func TestTranscriptAnsweredCheckpointHidden(t *testing.T) {
 
 func TestConversationHintsScrollAndResize(t *testing.T) {
 	a := fixture(t)
-	a.output.Append(strings.Repeat("history\n", 40)+"latest answer", false)
+	a.chat.output.Append(strings.Repeat("history\n", 40)+"latest answer", false)
 	typeInput(a, "!")
 	a.screen.SetSize(32, 12)
 	a.render()
@@ -71,29 +73,29 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 			inputRow = y
 		}
 	}
-	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-len(a.commandHints), 32), "!model") {
+	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-len(a.compose.commandHints), 32), "!model") {
 		t.Fatal("editor and candidates not visible below token usage")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
-	a.editor.Set("line one\nline two")
+	a.compose.editor.Set("line one\nline two")
 	a.render()
 	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y+len(a.inputRegion.window.Rows)-1, 32)) != "line two" {
 		t.Fatal("multiline editor not at conversation end")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgUp, "", 0))
-	if a.output.Follow {
+	if a.chat.output.Follow {
 		t.Fatal("PageUp did not leave follow mode")
 	}
-	id, row := a.output.AnchorID, a.output.AnchorRow
+	id, row := a.chat.output.AnchorID, a.chat.output.AnchorRow
 	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "streamed answer", Thinking: "inspect"}})
 	a.screen.SetSize(40, 16)
 	a.render()
-	if a.output.Follow || a.output.AnchorID != id || a.output.AnchorRow != row || a.editor.String() != "line one\nline two" {
+	if a.chat.output.Follow || a.chat.output.AnchorID != id || a.chat.output.AnchorRow != row || a.compose.editor.String() != "line one\nline two" {
 		t.Fatal("stream or resize reset reading position/draft")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyPgDn, "", 0))
 	a.render()
-	if !a.output.Follow {
+	if !a.chat.output.Follow {
 		t.Fatal("PageDown did not return to latest output")
 	}
 }

@@ -12,31 +12,31 @@ import (
 
 func TestElapsedTimerLifecycle(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		a := &app{worker: workerSetup}
+		a := &app{work: workerActivity{state: workerSetup}}
 		a.startElapsed()
 		if a.activity().Label() != "상태 작업 중 00 : 00 : 00" {
 			t.Fatal(a.activity().Label())
 		}
-		first := a.elapsedTimer
+		first := a.work.elapsedTimer
 		time.Sleep(time.Hour + time.Minute + time.Second)
-		<-a.elapsedTicks
+		<-a.work.elapsedTicks
 		a.updateElapsed(time.Now())
 		if a.activity().Label() != "상태 작업 중 01 : 01 : 01" {
 			t.Fatal(a.activity().Label())
 		}
 		a.stopElapsed()
-		frozen := a.elapsed
+		frozen := a.work.elapsed
 		time.Sleep(2 * time.Second)
 		a.updateElapsed(time.Now())
-		if a.elapsed != frozen || a.elapsedTicks != nil || a.elapsedTimer != nil {
+		if a.work.elapsed != frozen || a.work.elapsedTicks != nil || a.work.elapsedTimer != nil {
 			t.Fatal("stop did not freeze/release timer")
 		}
 		a.startElapsed()
-		if a.elapsed != 0 || a.elapsedTimer == first {
+		if a.work.elapsed != 0 || a.work.elapsedTimer == first {
 			t.Fatal("new task reused old duration")
 		}
 		a.requestExit()
-		if a.elapsedTicks != nil || a.elapsedTimer != nil {
+		if a.work.elapsedTicks != nil || a.work.elapsedTimer != nil {
 			t.Fatal("exit leaked ticker")
 		}
 	})
@@ -44,10 +44,10 @@ func TestElapsedTimerLifecycle(t *testing.T) {
 
 func TestElapsedWorkerCompletion(t *testing.T) {
 	a := screenFixture(t)
-	a.worker = workerSetup
+	a.work.state = workerSetup
 	a.startElapsed()
 	a.receive(notice{Done: true})
-	if a.worker.active() || a.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
+	if a.work.state.active() || a.work.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
 		t.Fatal("worker completion retained elapsed timer")
 	}
 }

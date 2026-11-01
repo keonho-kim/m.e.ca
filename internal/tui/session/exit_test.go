@@ -6,19 +6,20 @@ package session
 
 import (
 	"context"
-	"github.com/gdamore/tcell/v3"
 	"testing"
 	"time"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 func TestExitKeyCancelsFromEveryScreen(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := screenFixture(t)
-			a.page, a.worker = page, workerSetup
+			a.page, a.work.state = page, workerSetup
 			taskCtx, cancel := context.WithCancel(a.ctx)
 			defer cancel()
-			a.taskCancel = cancel
+			a.work.cancel = cancel
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlC, "", 0))
 			if !a.exit || taskCtx.Err() == nil {
 				t.Fatal("exit did not cancel work")
@@ -31,9 +32,9 @@ func TestExitCommandWorksWhileBusyAndInMenus(t *testing.T) {
 	for _, page := range []string{"chat", "files", "model", "language", "approval"} {
 		t.Run(page, func(t *testing.T) {
 			a := screenFixture(t)
-			a.page, a.worker = page, workerSetup
+			a.page, a.work.state = page, workerSetup
 			if page == "chat" {
-				a.editor.Set("!quit")
+				a.compose.editor.Set("!quit")
 			} else {
 				a.menuInput.Set("!quit")
 			}

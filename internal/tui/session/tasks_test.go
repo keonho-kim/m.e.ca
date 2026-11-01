@@ -4,11 +4,13 @@
 // Related: internal/tui/session/tasks.go, internal/provider/protocol/request.go, internal/storage/sqlite/events.go.
 package session
 
-import "testing"
+import (
+	"testing"
+)
 
 func drainTask(t *testing.T, a *app, approve bool) {
 	t.Helper()
-	for a.worker.active() {
+	for a.work.state.active() {
 		select {
 		case n := <-a.events:
 			a.receive(n)

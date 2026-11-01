@@ -6,12 +6,13 @@ package local
 
 import (
 	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
 
-func (op *operation) prepareChange(call toolapi.Call) error {
+func (op *fileOperation) prepareChange(call toolapi.Call) error {
 	var err error
 	var before []byte
 	op.original, before, err = capture(op.source, true)

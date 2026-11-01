@@ -7,7 +7,9 @@ package session
 import (
 	"context"
 	"errors"
+
 	"github.com/gdamore/tcell/v3"
+
 	"github.com/keonho-kim/meca/internal/tui/browser/readqueue"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
@@ -21,7 +23,7 @@ const (
 )
 
 func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action, err error) {
-	app := &app{opts: opts, language: locale.Resolve(ctx, opts.Config.Language), screen: screen, events: make(chan notice, 64), page: "chat", output: viewport.View{Follow: true}}
+	app := &app{opts: opts, language: locale.Resolve(ctx, opts.Config.Language), screen: screen, events: make(chan notice, 64), page: "chat", chat: chatState{output: viewport.View{Follow: true}}}
 	app.ctx, app.cancel = context.WithCancel(ctx)
 	defer app.shutdown()
 	if err = app.restore(); err != nil {
@@ -45,18 +47,18 @@ func (a *app) fail(err error) {
 
 func (a *app) requestExit() {
 	a.stopFileWatch()
-	a.fileSubmission = nil
-	a.fileSelectionQueue = nil
+	a.compose.fileSubmission = nil
+	a.files.fileSelectionQueue = nil
 	a.closeModelForm()
-	a.cancelDirectory()
+	a.files.cancelDirectory()
 	a.closeFilePreview()
 	a.stopElapsed()
 	a.stopLATIndicator()
 	a.stopCompression()
 	a.exit = true
 	a.closePendingEdit()
-	if a.taskCancel != nil {
-		a.taskCancel()
+	if a.work.cancel != nil {
+		a.work.cancel()
 	}
 	if a.cancel != nil {
 		a.cancel()
@@ -66,10 +68,10 @@ func (a *app) requestExit() {
 func (a *app) shutdown() {
 	a.requestExit()
 	a.workers.Wait()
-	a.directoryReads = readqueue.Slot[directoryPage]{}
-	a.previewReads = readqueue.Slot[previewRequest]{}
-	a.previewLayouts = readqueue.Slot[previewLayoutRequest]{}
-	a.watchReads = readqueue.Slot[watchRequest]{}
+	a.files.directoryReads = readqueue.Slot[directoryPage]{}
+	a.files.previewReads = readqueue.Slot[previewRequest]{}
+	a.files.previewLayouts = readqueue.Slot[previewLayoutRequest]{}
+	a.files.watchReads = readqueue.Slot[watchRequest]{}
 	// A connection worker may have transferred a client to a notice just before
 	// cancellation. The stopped event loop must release that queued ownership.
 	for {
@@ -81,13 +83,11 @@ func (a *app) shutdown() {
 			if notice.Stream != nil {
 				notice.Stream.take()
 			}
-			if notice.Client != nil && notice.Client != a.client {
+			if notice.Client != nil && notice.Client != a.connection.client {
 				notice.Client.Close()
 			}
 		default:
-			if a.client != nil {
-				a.client.Close()
-			}
+			a.connection.close()
 			return
 		}
 	}

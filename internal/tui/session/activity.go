@@ -7,21 +7,20 @@ package session
 import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/view"
-	"time"
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressing, LAT: a.latOutput.running, Dots: a.indicatorDots, ShowCost: a.selection.Connection.Kind == connection.OpenRouter}
+	return view.Activity{Language: a.language, Elapsed: a.work.elapsed, TokensPerSecond: a.chat.tokensPerSecond, Running: a.work.state.active(), Compressing: a.work.compressing, LAT: a.chat.latOutput.running, Dots: a.work.indicatorDots, ShowCost: a.connection.selection.Connection.Kind == connection.OpenRouter}
 }
 func (a *app) interruptTask() {
-	if !a.worker.agent() || !a.worker.active() || a.taskCancel == nil {
+	if !a.work.state.agent() || !a.work.state.active() || a.work.cancel == nil {
 		return
 	}
 	a.restorePending()
-	a.cancelDirectory()
-	a.worker.stop()
+	a.files.cancelDirectory()
+	a.work.state.stop()
 	a.stopElapsed()
-	a.taskCancel()
+	a.work.cancel()
 	a.stopLATIndicator()
 	a.stopCompression()
 	a.proposal = nil
@@ -33,47 +32,27 @@ func (a *app) interruptTask() {
 	a.stopNotice = a.language.Text("작업을 중지하고 정리하고 있습니다")
 }
 func (a *app) startCompression() {
-	if a.worker.stopping() {
+	if a.work.state.stopping() {
 		return
 	}
-	a.compressing = true
-	a.refreshIndicator()
+	a.work.compressing = true
+	a.work.refreshIndicator(a.chat.latOutput.running)
 }
 
-func (a *app) advanceIndicator() {
-	if a.indicatorTicks != nil {
-		a.indicatorDots = a.indicatorDots%3 + 1
-	}
-}
 func (a *app) stopCompression() {
-	a.compressing = false
-	a.refreshIndicator()
+	a.work.compressing = false
+	a.work.refreshIndicator(a.chat.latOutput.running)
 }
 
 func (a *app) startLATIndicator() {
-	if a.worker.stopping() {
+	if a.work.state.stopping() {
 		return
 	}
-	a.latOutput.running = true
-	a.refreshIndicator()
+	a.chat.latOutput.running = true
+	a.work.refreshIndicator(a.chat.latOutput.running)
 }
 
 func (a *app) stopLATIndicator() {
-	a.latOutput.running = false
-	a.refreshIndicator()
-}
-
-func (a *app) refreshIndicator() {
-	if a.compressing || a.latOutput.running {
-		if a.indicatorTimer == nil {
-			a.indicatorDots = 1
-			a.indicatorTimer = time.NewTicker(400 * time.Millisecond)
-			a.indicatorTicks = a.indicatorTimer.C
-		}
-		return
-	}
-	if a.indicatorTimer != nil {
-		a.indicatorTimer.Stop()
-	}
-	a.indicatorTimer, a.indicatorTicks, a.indicatorDots = nil, nil, 0
+	a.chat.latOutput.running = false
+	a.work.refreshIndicator(a.chat.latOutput.running)
 }

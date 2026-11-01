@@ -9,10 +9,11 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"time"
 )
 
 func (s *execution) generate(ctx context.Context, request modelapi.Request, role inference.Role, consume func(modelapi.Event) error) error {
@@ -51,8 +52,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 		return err
 	}
 	generator := s.runner.Generator
-	if role == inference.LAT && s.reviewGenerator != nil {
-		generator = s.reviewGenerator
+	if role == inference.LAT && s.review.generator != nil {
+		generator = s.review.generator
 	}
 	err := s.generateObserved(ctx, generator, request, func(event modelapi.Event) error {
 		if event.InputBytes > 0 {

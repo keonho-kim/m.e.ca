@@ -5,15 +5,16 @@
 package session
 
 import (
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
 func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 	a := screenFixture(t)
-	a.output.Append((transcript.Formatter{}).User("create file"), false)
+	a.chat.output.Append((transcript.Formatter{}).User("create file"), false)
 	snapshot := func() string {
 		a.render()
 		var result strings.Builder
@@ -26,7 +27,7 @@ func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 	initial := snapshot()
 	raw := " \n\n\t\n"
 	a.receiveRuntime(&runrecord.Event{Kind: "stream", Text: raw, Thinking: raw})
-	if a.stream != raw || a.thinking != raw {
+	if a.chat.stream != raw || a.chat.thinking != raw {
 		t.Fatal("display normalization changed model snapshots")
 	}
 	if current := snapshot(); current != initial {
@@ -38,7 +39,7 @@ func TestWhitespaceModelOutputDoesNotMoveScreen(t *testing.T) {
 			t.Fatalf("%s appended blank transcript rows", kind)
 		}
 	}
-	if len(a.output.Blocks) != 1 {
+	if len(a.chat.output.Blocks) != 1 {
 		t.Fatal("whitespace persisted into viewport blocks")
 	}
 }

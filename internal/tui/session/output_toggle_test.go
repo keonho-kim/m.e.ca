@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
@@ -19,15 +20,15 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 	for _, enhanced := range []bool{false, true} {
 		for _, restored := range []bool{false, true} {
 			a := screenFixture(t)
-			a.editor.Set("draft")
-			a.worker = workerAgent
+			a.compose.editor.Set("draft")
+			a.work.state = workerAgent
 			body, err := json.Marshal(map[string]any{"Stdout": strings.Repeat("detail row\n", 40), "ExitCode": 0, "Status": "exited"})
 			if err != nil {
 				t.Fatal(err)
 			}
 			event := runrecord.Event{Kind: "tool_succeeded", Text: "Process exited; exit code 0", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"cat large.txt"}`)}, Output: body}
 			if restored {
-				a.output.Prepend((transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(event))
+				a.chat.output.Prepend((transcript.Formatter{Redact: a.opts.Vault.Redact}).Event(event))
 			} else {
 				a.receiveRuntime(&event)
 			}
@@ -39,15 +40,15 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 			a.keyEvent(key)
 			a.render()
 			visible := strings.Join(screenRows(a, 22), "\n")
-			if !a.output.Collapsed || strings.Contains(visible, "detail row") || a.editor.String() != "draft" {
-				t.Fatalf("enhanced=%t restored=%t collapsed=%t draft=%q: %s", enhanced, restored, a.output.Collapsed, a.editor.String(), visible)
+			if !a.chat.output.Collapsed || strings.Contains(visible, "detail row") || a.compose.editor.String() != "draft" {
+				t.Fatalf("enhanced=%t restored=%t collapsed=%t draft=%q: %s", enhanced, restored, a.chat.output.Collapsed, a.compose.editor.String(), visible)
 			}
 			if keymapLabels(t, a)["^O"] != "도구 펴기" {
 				t.Fatal("output advertised the wrong key action")
 			}
 			a.keyEvent(key)
 			a.render()
-			if a.output.Collapsed || !strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
+			if a.chat.output.Collapsed || !strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
 				t.Fatal("output did not expand on the second keypress")
 			}
 			if keymapLabels(t, a)["^O"] != "도구 접기" {
@@ -61,7 +62,7 @@ func TestOutputToggleDoesNotInterpretPastedText(t *testing.T) {
 	a := screenFixture(t)
 	a.paste = true
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "o", tcell.ModCtrl, true, tcell.KeyO, 1))
-	if a.output.Collapsed || a.stopNotice != "" {
+	if a.chat.output.Collapsed || a.stopNotice != "" {
 		t.Fatal("pasted content executed an output shortcut")
 	}
 }
@@ -81,7 +82,7 @@ func TestOutputToggleHintRequiresOutput(t *testing.T) {
 		t.Fatal("fold hint advertised without any foldable output")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
-	if a.output.Collapsed {
+	if a.chat.output.Collapsed {
 		t.Fatal("empty transcript changed the default for future outputs")
 	}
 }

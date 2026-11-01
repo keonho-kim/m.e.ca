@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config"
@@ -40,28 +41,28 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	if err := a.loadHistory(); err != nil {
 		t.Fatal(err)
 	}
-	a.output.Collapsed = true
+	a.chat.output.Collapsed = true
 	typeInput(a, "!language")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.render()
 	if a.page != "language" || !strings.Contains(screenLine(a.screen, 2, 80), "시스템 기본값") || keymapLabels(t, a)["Enter"] != "저장 확인" {
 		t.Fatal("language menu or keymap missing")
 	}
-	a.editor.Set("preserved draft")
+	a.compose.editor.Set("preserved draft")
 	for range 2 {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "chat" || a.language != locale.English || a.opts.Config.Language != config.LanguageEnglish || a.editor.String() != "preserved draft" || !a.output.Collapsed {
+	if a.page != "chat" || a.language != locale.English || a.opts.Config.Language != config.LanguageEnglish || a.compose.editor.String() != "preserved draft" || !a.chat.output.Collapsed {
 		t.Fatal("language did not apply without changing unrelated state")
 	}
 	a.render()
-	if !strings.HasPrefix(screenLine(a.screen, 0, 80), "STATUS IDLE") || !strings.Contains(a.output.Blocks[0].Text, "\n\nAgent") || !strings.Contains(a.output.Blocks[2].Text, "Worked for 00:00:01 | INPUT 2 | OUTPUT 1 | TPS 1.0") {
+	if !strings.HasPrefix(screenLine(a.screen, 0, 80), "STATUS IDLE") || !strings.Contains(a.chat.output.Blocks[0].Text, "\n\nAgent") || !strings.Contains(a.chat.output.Blocks[2].Text, "Worked for 00:00:01 | INPUT 2 | OUTPUT 1 | TPS 1.0") {
 		t.Fatal("existing transcript labels were not refreshed")
 	}
 	after, err := a.opts.Store.ContextMessages(a.ctx, id, 0, 16*1024*1024, true)
-	if err != nil || !reflect.DeepEqual(before, after) || !strings.Contains(a.output.Blocks[0].Text, before[0].Content) || !strings.Contains(a.output.Blocks[1].Text, before[1].Content) {
+	if err != nil || !reflect.DeepEqual(before, after) || !strings.Contains(a.chat.output.Blocks[0].Text, before[0].Content) || !strings.Contains(a.chat.output.Blocks[1].Text, before[1].Content) {
 		t.Fatal("language change modified conversation literals")
 	}
 	saved, err := config.Load(a.opts.State)
@@ -108,13 +109,13 @@ func TestLanguageSessionStartup(t *testing.T) {
 func TestLanguageFailureAndCancelPreserveSelection(t *testing.T) {
 	a := fixture(t)
 	a.language = locale.English
-	a.output.Append("preserved output", false)
+	a.chat.output.Append("preserved output", false)
 	a.opts.SaveConfig = func(config.Config) error { return errors.New("config write failed") }
 	a.openLanguage()
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
-	if a.page != "language" || a.language != locale.English || a.opts.Config.Language != config.LanguageAuto || !strings.Contains(a.status, "config write failed") || a.output.Blocks[0].Text != "preserved output" {
+	if a.page != "language" || a.language != locale.English || a.opts.Config.Language != config.LanguageAuto || !strings.Contains(a.status, "config write failed") || a.chat.output.Blocks[0].Text != "preserved output" {
 		t.Fatal("failed save changed the active language or history")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -125,14 +126,14 @@ func TestLanguageFailureAndCancelPreserveSelection(t *testing.T) {
 
 func TestLanguageReloadDiscardsOldHistoryResults(t *testing.T) {
 	a := fixture(t)
-	a.historyRevision = 3
-	a.historyLoading = true
+	a.chat.historyRevision = 3
+	a.chat.historyLoading = true
 	a.receiveHistory(&historyPage{revision: 2, blocks: []viewport.Block{{Text: "old language"}}})
-	if len(a.output.Blocks) != 0 || !a.historyLoading {
+	if len(a.chat.output.Blocks) != 0 || !a.chat.historyLoading {
 		t.Fatal("stale history replaced the refreshed language or current loading state")
 	}
 	a.receiveHistory(&historyPage{revision: 3, cursor: 1, blocks: []viewport.Block{{Text: "current language"}}})
-	if a.historyLoading || len(a.output.Blocks) != 1 || a.output.Blocks[0].Text != "current language" {
+	if a.chat.historyLoading || len(a.chat.output.Blocks) != 1 || a.chat.output.Blocks[0].Text != "current language" {
 		t.Fatal("current history result was discarded")
 	}
 }

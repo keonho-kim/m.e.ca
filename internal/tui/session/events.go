@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/fileview"
@@ -91,7 +92,7 @@ func (a *app) receive(n notice) {
 		return
 	}
 	if n.Approval != nil {
-		if a.worker.stopping() {
+		if a.work.state.stopping() {
 			return
 		}
 		a.openApproval(n.Approval)

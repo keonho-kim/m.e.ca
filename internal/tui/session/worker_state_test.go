@@ -4,7 +4,9 @@
 // Related: internal/tui/session/worker_state.go, internal/tui/session/activity.go.
 package session
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestWorkerStateCancellation(t *testing.T) {
 	for _, initial := range []workerState{workerIdle, workerAgent, workerSetup} {
@@ -16,12 +18,12 @@ func TestWorkerStateCancellation(t *testing.T) {
 		}
 	}
 	a := screenFixture(t)
-	a.worker = workerAgent
+	a.work.state = workerAgent
 	a.startCompression()
-	a.worker.stop()
+	a.work.state.stop()
 	a.stopCompression()
 	a.startCompression()
-	if a.indicatorTimer != nil || a.indicatorTicks != nil {
+	if a.work.indicatorTimer != nil || a.work.indicatorTicks != nil {
 		t.Fatal("late phase event restarted a cancelled timer")
 	}
 }

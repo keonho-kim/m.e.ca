@@ -18,7 +18,7 @@ import (
 func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 	a := screenFixture(t)
 	a.language = locale.English
-	a.selection.Connection.Kind = connection.OpenRouter
+	a.connection.selection.Connection.Kind = connection.OpenRouter
 	a.screen.SetSize(140, 24)
 	a.render()
 	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "INPUT 0 · OUTPUT 0 · TOTAL COST — · TPS —") {
@@ -49,7 +49,7 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "입력 40 · 출력 10 · 총 비용 $0.005 · 초당 토큰 —") {
 		t.Fatal(line)
 	}
-	a.selection.Connection.Kind = connection.VLLM
+	a.connection.selection.Connection.Kind = connection.VLLM
 	a.render()
 	if line := screenLine(a.screen, 0, 140); strings.Contains(line, "비용") || strings.Contains(line, "$0.005") {
 		t.Fatal("non-OpenRouter connection displays a cost: " + line)
@@ -59,7 +59,7 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 func TestCostFreeCallAndNarrowCompression(t *testing.T) {
 	a := screenFixture(t)
 	a.language = locale.English
-	a.selection.Connection.Kind = connection.OpenRouter
+	a.connection.selection.Connection.Kind = connection.OpenRouter
 	a.screen.SetSize(140, 24)
 	var usage modelapi.TokenUsage
 	if err := json.Unmarshal([]byte(`{"input":20,"output":5,"cost":0}`), &usage); err != nil {

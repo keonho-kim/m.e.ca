@@ -5,24 +5,25 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/view"
 	"path/filepath"
+
+	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
 func (a *app) renderFiles(w, h int) {
-	display := view.FilesDisplay{Activity: a.activity(), Usage: a.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, Status: a.status}
-	if a.directoryLoading {
+	display := view.FilesDisplay{Activity: a.activity(), Usage: a.chat.displayTokens(), ColumnWidth: a.opts.Config.UI.ColumnWidth, Status: a.status}
+	if a.files.directoryLoading {
 		display.Status = a.language.Text("Reading directory…")
 	}
-	if a.fileSendConfirm {
+	if a.files.fileSendConfirm {
 		prompt, _ := a.fileInputAction()
 		display.Status = a.language.Text(prompt)
 	}
 	display.BrowserWidth = w
-	if column := a.browser.Current(); column != nil {
+	if column := a.files.browser.Current(); column != nil {
 		display.Path = a.opts.Vault.Redact(column.Path)
 	}
-	if p := a.filePreview; p != nil {
+	if p := a.files.filePreview; p != nil {
 		x := 0
 		if !p.Full {
 			display.BrowserWidth = max(1, w/2)
@@ -53,29 +54,29 @@ func (a *app) renderFiles(w, h int) {
 			return
 		}
 	}
-	display.Input = a.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
+	display.Input = a.compose.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
 	display.References = a.selectedReferenceLines(display.BrowserWidth, h-len(display.Input.Rows)-4)
 	display.Layout = view.Composer(len(display.Input.Rows), h, view.Candidates{}, display.Status, len(display.References))
-	display.InputFocused = a.browser.Input && !a.fileSendConfirm
+	display.InputFocused = a.files.browser.Input && !a.files.fileSendConfirm
 	entryRows := max(0, display.Layout.ReferenceY-4)
 	visible := max(1, display.BrowserWidth/(display.ColumnWidth+1))
-	start := max(0, a.browser.Active-visible+1)
-	for i := start; i < min(len(a.browser.Columns), start+visible); i++ {
-		column := a.browser.Columns[i]
+	start := max(0, a.files.browser.Active-visible+1)
+	for i := start; i < min(len(a.files.browser.Columns), start+visible); i++ {
+		column := a.files.browser.Columns[i]
 		offset := max(0, column.Index-entryRows+1)
-		value := view.FileColumn{Title: a.opts.Vault.Redact(filepath.Base(filepath.Clean(column.Path)) + "/"), Selected: column.Index - offset, X: (i - start) * (display.ColumnWidth + 1), Active: i == a.browser.Active, Divider: i < start+visible-1}
+		value := view.FileColumn{Title: a.opts.Vault.Redact(filepath.Base(filepath.Clean(column.Path)) + "/"), Selected: column.Index - offset, X: (i - start) * (display.ColumnWidth + 1), Active: i == a.files.browser.Active, Divider: i < start+visible-1}
 		for index := offset; index < len(column.Entries) && index-offset < entryRows; index++ {
 			entry := column.Entries[index]
 			path := filepath.Join(column.Path, entry.Name)
 			if entry.Directory {
 				path += "/"
 			}
-			value.Entries = append(value.Entries, view.FileEntry{Name: a.opts.Vault.Redact(entry.Name), Directory: entry.Directory, Marked: a.browser.Selected[path]})
+			value.Entries = append(value.Entries, view.FileEntry{Name: a.opts.Vault.Redact(entry.Name), Directory: entry.Directory, Marked: a.files.browser.Selected[path]})
 		}
 		display.Columns = append(display.Columns, value)
 	}
-	if a.filePreview == nil && !a.fileSendConfirm {
-		a.inputRegion = inputRegion{editor: &a.editor, window: display.Input, y: display.Layout.InputY, width: display.BrowserWidth, revision: a.editor.Revision()}
+	if a.files.filePreview == nil && !a.files.fileSendConfirm {
+		a.inputRegion = inputRegion{editor: &a.compose.editor, window: display.Input, y: display.Layout.InputY, width: display.BrowserWidth, revision: a.compose.editor.Revision()}
 	}
 	view.Files(a.screen, display, w, h)
 }
