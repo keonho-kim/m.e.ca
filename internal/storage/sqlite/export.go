@@ -24,8 +24,14 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 		if len(page) == 0 {
 			return nil
 		}
-		for _, stored := range page {
-			body, err := s.unpackRecord(ctx, stored, nil)
+		payloads := pagePayloads{store: s, ctx: ctx}
+		for i, stored := range page {
+			if err := payloads.include(i, stored.refs); err != nil {
+				return err
+			}
+		}
+		for i, stored := range page {
+			body, err := payloads.unpack(i, stored, nil)
 			if err != nil {
 				return err
 			}

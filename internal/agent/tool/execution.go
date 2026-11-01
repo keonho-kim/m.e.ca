@@ -69,3 +69,9 @@ type Executor interface {
 	Definitions() []Definition
 	Prepare(context.Context, policy.Settings, Call) (Execution, error)
 }
+
+// BatchPlan bounds effect execution separately from temporary candidate preparation.
+type BatchPlan struct {
+	Count                  int
+	PreparationConcurrency int
+}

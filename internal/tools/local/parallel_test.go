@@ -31,8 +31,8 @@ func TestParallelTargets(t *testing.T) {
 	} {
 		left := call("write_file", `{"path":"`+tc.a+`","content":"x"}`)
 		right := call("write_file", `{"path":"`+tc.b+`","content":"y"}`)
-		end, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{left, right}, 16)
-		got := end == 2
+		plan, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{left, right}, 16)
+		got := plan.Count == 2
 		if err != nil || got != tc.want {
 			t.Fatalf("%s/%s=%t %v", tc.a, tc.b, got, err)
 		}
@@ -52,8 +52,32 @@ func TestParallelLargeCandidatesUseSmallerWaves(t *testing.T) {
 		}
 		calls = append(calls, call("write_file", `{"path":"`+name+`","content":"body"}`))
 	}
-	end, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
-	if err != nil || end != 1 {
-		t.Fatalf("large candidates shared a preparation wave: %d %v", end, err)
+	plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
+	if err != nil || plan.Count != 1 {
+		t.Fatalf("large candidates shared a preparation wave: %d %v", plan.Count, err)
+	}
+}
+
+func TestParallelPreparationScalesWithSourceSize(t *testing.T) {
+	e, root := testExecutor(t)
+	for _, size := range []int64{1024, 300 * 1024, 830 * 1024} {
+		var calls []toolapi.Call
+		for _, name := range []string{"a", "b", "c", "d"} {
+			path := filepath.Join(root, name)
+			if err := os.WriteFile(path, nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Truncate(path, size); err != nil {
+				t.Fatal(err)
+			}
+			calls = append(calls, call("write_file", `{"path":"`+name+`","content":"replacement"}`))
+		}
+		plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
+		if err != nil || plan.Count != 4 {
+			t.Fatalf("plan: %+v %v", plan, err)
+		}
+		if size < 200*1024 && plan.PreparationConcurrency != 4 || size > 800*1024 && plan.PreparationConcurrency != 1 {
+			t.Fatalf("source budget ignored: %d %+v", size, plan)
+		}
 	}
 }

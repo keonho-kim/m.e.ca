@@ -10,6 +10,7 @@ import (
 	"iter"
 	"strings"
 	"unicode"
+	"unsafe"
 )
 
 type Style uint8
@@ -29,6 +30,15 @@ type Line struct {
 	Copy  textlayout.Fragment
 	Text  string
 	Spans []Span
+}
+
+// RetainedBytes conservatively counts a line's derived text and span storage.
+func (line Line) RetainedBytes() int {
+	weight := len(line.Text) + cap(line.Spans)*int(unsafe.Sizeof(Span{}))
+	for _, span := range line.Spans {
+		weight += len(span.Text)
+	}
+	return weight
 }
 
 // SafeText replaces terminal controls and bidirectional overrides in literal model text.

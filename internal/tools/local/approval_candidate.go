@@ -24,6 +24,10 @@ func (op *operation) freezeCandidate(call toolapi.Call, before, after []byte) er
 	}
 	op.approval.Preview = op.executor.redact(preview)
 	op.approval.Diff = true
+	beforeDigest := op.original.digest
+	if !op.original.exists {
+		beforeDigest = sha256.Sum256(nil)
+	}
 	countLines := func(body []byte) int {
 		if len(body) == 0 {
 			return 0
@@ -34,7 +38,7 @@ func (op *operation) freezeCandidate(call toolapi.Call, before, after []byte) er
 		}
 		return n
 	}
-	change := toolapi.FileDelta{BeforeLineEndings: textformat.LineEndings(before), AfterLineEndings: textformat.LineEndings(after), FormatPolicy: op.input.FormatPolicy, BeforeLines: countLines(before), AfterLines: countLines(after), BeforeFinalNewline: bytes.HasSuffix(before, []byte("\n")), AfterFinalNewline: bytes.HasSuffix(after, []byte("\n")), Path: op.source.absolute, BeforeDigest: fmt.Sprintf("%x", sha256.Sum256(before)), AfterDigest: fmt.Sprintf("%x", sha256.Sum256(after)), Added: added, Deleted: deleted, Diff: op.approval.Preview}
+	change := toolapi.FileDelta{BeforeLineEndings: textformat.LineEndings(before), AfterLineEndings: textformat.LineEndings(after), FormatPolicy: op.input.FormatPolicy, BeforeLines: countLines(before), AfterLines: countLines(after), BeforeFinalNewline: bytes.HasSuffix(before, []byte("\n")), AfterFinalNewline: bytes.HasSuffix(after, []byte("\n")), Path: op.source.absolute, BeforeDigest: fmt.Sprintf("%x", beforeDigest), AfterDigest: fmt.Sprintf("%x", sha256.Sum256(after)), Added: added, Deleted: deleted, Diff: op.approval.Preview}
 	if len(before) > 0 && len(after) > 0 && (change.BeforeLineEndings != change.AfterLineEndings || change.BeforeFinalNewline != change.AfterFinalNewline) {
 		op.approval.Preview += fmt.Sprintf("\nFile format: %s -> %s; final newline: %t -> %t\n", change.BeforeLineEndings, change.AfterLineEndings, change.BeforeFinalNewline, change.AfterFinalNewline)
 	}

@@ -93,24 +93,21 @@ func (c *Controller) plan(ctx context.Context, state State, mark Mark, instructi
 	if err != nil {
 		return Plan{}, err
 	}
-	packet := struct {
-		Previous string            `json:"earlier_review_memory"`
-		Sources  []json.RawMessage `json:"original_records_oldest_first"`
-	}{Previous: c.Redact(state.Text)}
-	fixed, err := json.Marshal(packet)
+	previous := c.Redact(state.Text)
+	fixed, err := sourcePacket("earlier_review_memory", "original_records_oldest_first", previous, nil)
 	if err != nil || len(fixed)+512 > budget {
 		return Plan{}, fmt.Errorf("LAT prior memory cannot fit the available model context; previous memory retained")
 	}
-	packet.Sources, mark.Through, err = c.records(ctx, state.Through, mark.Through, budget-len(fixed)-512, "", 0)
+	sources, through, err := c.records(ctx, state.Through, mark.Through, budget-len(fixed)-512, "", 0)
 	if err != nil {
 		return Plan{}, err
 	}
-	if len(packet.Sources) == 0 {
+	if len(sources) == 0 {
 		return Plan{}, nil
 	}
-	body, err := json.Marshal(packet)
+	body, err := sourcePacket("earlier_review_memory", "original_records_oldest_first", previous, sources)
 	if err != nil || len(body) > budget {
 		return Plan{}, fmt.Errorf("LAT memory request exceeds its model context")
 	}
-	return Plan{Through: mark.Through, Request: modelapi.Request{MaxOutput: output, Messages: []modelapi.Message{{Role: "system", Content: instructions}, {Role: "user", Content: string(body)}}}}, nil
+	return Plan{Through: through, Request: modelapi.Request{MaxOutput: output, Messages: []modelapi.Message{{Role: "system", Content: instructions}, {Role: "user", Content: string(body)}}}}, nil
 }

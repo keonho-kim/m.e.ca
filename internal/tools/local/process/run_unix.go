@@ -57,11 +57,13 @@ func start(ctx context.Context, directory, commandText string, environment []str
 			return output, errors.Join(runErr, err)
 		}
 		if ctx.Err() != nil {
+			cause := ctx.Err()
 			output.Status = "interrupted"
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			if errors.Is(context.Cause(ctx), context.DeadlineExceeded) {
 				output.Status = "timeout"
+				cause = context.DeadlineExceeded
 			}
-			return output, ctx.Err()
+			return output, cause
 		}
 		if runErr != nil {
 			var exitErr *exec.ExitError

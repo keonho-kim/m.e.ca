@@ -4,12 +4,23 @@
 // Related: internal/tui/viewport/window.go, internal/tui/viewport/block_layout.go.
 package viewport
 
-import "unsafe"
+import (
+	"unsafe"
+
+	"github.com/keonho-kim/meca/internal/tui/markdown"
+)
 
 const displayCacheBudget = 16 * 1024 * 1024
 
 func (b *Block) cacheBytes() int {
-	return b.stream.RetainedBytes() + cap(b.layout.metrics)*int(unsafe.Sizeof(rowMetrics{}))
+	return b.stream.RetainedBytes() + b.layout.parsedBytes + cap(b.layout.metrics)*int(unsafe.Sizeof(rowMetrics{}))
+}
+
+func (b *Block) parseStatic(width int) {
+	l := &b.layout
+	b.stream = markdown.Stream{}
+	l.parsed = markdown.Render(b.Text, width)
+	l.parsedBytes = cap(l.parsed) * int(unsafe.Sizeof(markdown.Line{}))
 }
 
 func (t *Transcript) enforceCacheBudget() {

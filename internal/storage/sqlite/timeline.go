@@ -27,7 +27,13 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 		return nil, 0, err
 	}
 	bytes := 0
-	for _, entry := range page {
+	payloads := pagePayloads{store: s, ctx: ctx}
+	for i, entry := range page {
+		if err := payloads.include(i, entry.record.refs); err != nil {
+			return nil, 0, err
+		}
+	}
+	for i, entry := range page {
 		record := entry.record
 		// Page acceptance precedes payload hydration. An individually large
 		// visible record remains readable, but cannot overfill a preceding page.
@@ -43,7 +49,7 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 				nested = latDisplayFields
 			}
 		}
-		body, decodeErr := s.unpackRecord(ctx, record, fields, nested)
+		body, decodeErr := payloads.unpack(i, record, fields, nested)
 		if decodeErr != nil {
 			return nil, 0, decodeErr
 		}

@@ -1,7 +1,7 @@
-// Purpose: Capture and compare the full file version bound to user approval and execution.
+// Purpose: Capture source and version once or stream a version-only execution guard.
 // Pattern: Filesystem version adapter.
 // Usage: Preparation and execution guards call snapshot and sameVersion.
-// Related: internal/tools/local/paths.go, internal/tools/local/operation.go.
+// Related: internal/tools/local/candidate.go, internal/tools/local/operation.go.
 package local
 
 import (
@@ -20,48 +20,66 @@ type version struct {
 }
 
 func snapshot(path target) (captured version, err error) {
+	captured, _, err = capture(path, false)
+	return captured, err
+}
+
+// capture owns its source bytes; version-only checks retain only a bounded hash buffer.
+func capture(path target, keepContent bool) (captured version, content []byte, err error) {
 	info, err := path.root.Stat(path.relative)
 	if errors.Is(err, os.ErrNotExist) {
-		return version{}, nil
+		return version{}, nil, nil
 	}
 	if err != nil {
-		return captured, err
+		return captured, nil, err
 	}
 	captured = version{exists: true, info: info}
 	if info.IsDir() {
-		return captured, nil
+		return captured, nil, nil
 	}
 	if !info.Mode().IsRegular() {
-		return captured, fmt.Errorf("only regular files and directories are supported")
+		return captured, nil, fmt.Errorf("only regular files and directories are supported")
 	}
 	if info.Size() > fileops.MaxBytes {
-		return captured, fmt.Errorf("file exceeds modification size limit")
+		return captured, nil, fmt.Errorf("file exceeds modification size limit")
 	}
 	file, err := path.root.Open(path.relative)
 	if err != nil {
-		return captured, err
+		return captured, nil, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
-	content, err := io.ReadAll(io.LimitReader(file, fileops.MaxBytes+1))
-	if err != nil {
-		return captured, err
+	var read int64
+	if keepContent {
+		content = make([]byte, int(info.Size())+1)
+		n, readErr := io.ReadFull(file, content)
+		if readErr != nil && !errors.Is(readErr, io.EOF) && !errors.Is(readErr, io.ErrUnexpectedEOF) {
+			return captured, nil, readErr
+		}
+		content, read = content[:n], int64(n)
+		captured.digest = sha256.Sum256(content)
+	} else {
+		hash := sha256.New()
+		read, err = io.Copy(hash, io.LimitReader(file, info.Size()+1))
+		if err != nil {
+			return captured, nil, err
+		}
+		hash.Sum(captured.digest[:0])
 	}
-	if len(content) > fileops.MaxBytes {
-		return captured, fmt.Errorf("file exceeds size limit")
+	if read != info.Size() {
+		return captured, nil, fmt.Errorf("file changed while reading its version")
 	}
 	after, err := file.Stat()
 	if err != nil {
-		return captured, err
+		return captured, nil, err
 	}
 	current, err := path.root.Stat(path.relative)
 	if err != nil {
-		return captured, err
+		return captured, nil, err
 	}
 	if !os.SameFile(info, after) || !os.SameFile(after, current) || info.Size() != after.Size() || after.Size() != current.Size() || !info.ModTime().Equal(after.ModTime()) || !after.ModTime().Equal(current.ModTime()) {
-		return captured, fmt.Errorf("file changed while checking its version")
+		return captured, nil, fmt.Errorf("file changed while checking its version")
 	}
-	captured.digest = sha256.Sum256(content)
-	return captured, nil
+	return captured, content, nil
 }
 
 func sameVersion(left, right version) bool {

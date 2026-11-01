@@ -19,7 +19,7 @@ const maxParallelTools = 16
 
 // An executor opts in only when it can resolve aliases and reason about actual accesses.
 type parallelExecutor interface {
-	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (int, error)
+	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
 }
 
 func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve Approver) error {
@@ -43,11 +43,12 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		}
 	}
 	for start := 0; start < len(calls); {
-		end, err := s.waveEnd(ctx, calls, start)
+		plan, err := s.planWave(ctx, calls, start)
 		if err != nil {
 			return errors.Join(s.skipCalls(ctx, calls[start:], err.Error()), fatalBatchError(ctx, err))
 		}
-		failed, err := s.batchWave(ctx, calls[start:end], approve)
+		end := start + plan.Count
+		failed, err := s.batchWave(ctx, calls[start:end], plan.PreparationConcurrency, approve)
 		if failed || err != nil {
 			skipErr := s.skipCalls(ctx, calls[end:], "Earlier batch operation failed or was cancelled; inspect recorded outcomes before retrying.")
 			return errors.Join(err, skipErr)
@@ -57,24 +58,24 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 	return nil
 }
 
-func (s *execution) waveEnd(ctx context.Context, calls []validatedCall, start int) (int, error) {
+func (s *execution) planWave(ctx context.Context, calls []validatedCall, start int) (toolapi.BatchPlan, error) {
 	planner, ok := s.runner.Tools.(parallelExecutor)
 	if !ok {
-		return start + 1, nil
+		return toolapi.BatchPlan{Count: 1, PreparationConcurrency: 1}, nil
 	}
 	var batch [maxParallelTools]toolapi.Call
 	count := min(len(calls)-start, len(batch))
 	for i := range count {
 		batch[i] = calls[start+i].call
 	}
-	end, err := planner.ParallelBatch(ctx, s.runner.Settings, batch[:count], maxParallelTools)
+	plan, err := planner.ParallelBatch(ctx, s.runner.Settings, batch[:count], maxParallelTools)
 	if err != nil {
-		return start + end, err
+		return plan, err
 	}
-	if end < 1 || end > count {
-		return start, errors.New("invalid parallel batch boundary")
+	if plan.Count < 1 || plan.Count > count || plan.PreparationConcurrency < 1 || plan.PreparationConcurrency > min(4, plan.Count) {
+		return plan, errors.New("invalid parallel batch boundary")
 	}
-	return start + end, nil
+	return plan, nil
 }
 
 func fatalBatchError(ctx context.Context, err error) error {

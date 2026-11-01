@@ -7,29 +7,18 @@ package run
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approve Approver) (bool, error) {
+func (s *execution) batchWave(ctx context.Context, calls []validatedCall, preparation int, approve Approver) (bool, error) {
 	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 	defer cancel()
-	ready := make([]*readyExecution, len(calls))
-	for i, v := range calls {
-		s.checkpoint.Tool = v.call.Name
-		if s.runner.fork == nil {
-			if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
-				return true, errors.Join(s.skipCalls(ctx, calls, fmt.Sprintf("Call %s (%s) was not prepared: %s", v.call.ID, v.call.Name, err)), fatalBatchError(ctx, err))
-			}
-		}
-		prepared, outcome, err := s.freezeExecution(ctx, v.call)
-		if err != nil {
-			return true, errors.Join(s.rejectWave(ctx, calls, i, outcome, err), fatalBatchError(ctx, err))
-		}
-		ready[i] = prepared
+	ready, index, outcome, err := s.freezeWave(ctx, calls, preparation)
+	if err != nil {
+		return true, errors.Join(s.rejectWave(ctx, calls, index, outcome, err), fatalBatchError(ctx, err))
 	}
 	// Every candidate is frozen before approval; all workers start only after
 	// the owner has approved and rechecked the complete wave.
@@ -41,7 +30,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, approv
 		ready[i] = approved
 	}
 	// Approval may have changed filesystem aliases; recheck the wave before effects.
-	if end, err := s.waveEnd(ctx, calls, 0); err != nil || end != len(calls) {
+	if plan, err := s.planWave(ctx, calls, 0); err != nil || plan.Count != len(calls) {
 		detail := "Batch targets changed or overlap after preparation; nothing in this wave executed."
 		if err != nil {
 			detail += " " + err.Error()

@@ -16,6 +16,7 @@ type renderer struct {
 	width        int
 	failed       bool
 	listProgress *listProgress
+	leadingBlank bool
 }
 
 // MaxParseBytes bounds AST construction, not accepted or displayed source text.
@@ -32,7 +33,7 @@ func Render(text string, width int) []Line {
 	}
 	r := renderer{source: []byte(text), width: width}
 	document := documentParser.Parse(r.source)
-	r.blocks(document, "", 0)
+	r.document(document)
 	if r.failed {
 		return literal(text)
 	}
@@ -52,6 +53,9 @@ func literal(text string) []Line {
 	return rows
 }
 func (r *renderer) blank() {
+	if len(r.rows) == 0 {
+		r.leadingBlank = true
+	}
 	if len(r.rows) > 0 && r.rows[len(r.rows)-1].Text != "" {
 		r.rows = append(r.rows, Line{})
 	}

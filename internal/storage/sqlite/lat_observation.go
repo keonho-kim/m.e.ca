@@ -13,7 +13,7 @@ import (
 	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 )
 
-func (s *Store) latObservation(ctx context.Context, record storedRecord, observed string) (string, error) {
+func latObservation(ctx context.Context, record storedRecord, observed string, excerpts *reviewExcerpts) (string, error) {
 	var fields map[string]json.RawMessage
 	var refs map[string]string
 	if err := json.Unmarshal(record.body, &fields); err != nil {
@@ -31,13 +31,8 @@ func (s *Store) latObservation(ctx context.Context, record storedRecord, observe
 			if string(raw) != "null" {
 				return "", fmt.Errorf("invalid review payload placeholder")
 			}
-			var codec int
-			var body []byte
-			if err := s.db.QueryRowContext(ctx, "SELECT codec,raw_bytes,body FROM payloads WHERE id=?", id).Scan(&codec, &original, &body); err != nil {
-				return "", err
-			}
 			var err error
-			raw, err = s.codec.Excerpt(ctx, codec, original, id, body, 8192)
+			raw, original, err = excerpts.excerpt(ctx, id)
 			if err != nil {
 				return "", err
 			}

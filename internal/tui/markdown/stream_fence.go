@@ -84,7 +84,7 @@ func (s *Stream) renderFence(text string, width int) ([]Line, bool) {
 	before, weight := p.rows, p.weight
 	stable := strings.Count(suffix, "\n")
 	for i, row := range r.rows {
-		weight += lineWeight(row)
+		weight += row.RetainedBytes()
 		if i+1 == stable {
 			p.weight = weight
 		}

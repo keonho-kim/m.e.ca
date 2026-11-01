@@ -23,14 +23,26 @@ type directoryTarget struct {
 // Include existing ancestors for identity checks; missing ancestors also define
 // the write footprint, preventing parallel calls from racing to create a parent.
 func (e *Executor) directoryTargets(settings policy.Settings, paths []string) ([]directoryTarget, error) {
+	dirs, _, err := e.planDirectories(settings, paths)
+	return dirs, err
+}
+
+func (e *Executor) planDirectories(settings policy.Settings, paths []string) (dirs []directoryTarget, requested []target, err error) {
+	if err := e.boundary.Check(); err != nil {
+		return nil, nil, err
+	}
+	defer func() { err = errors.Join(err, e.boundary.Check()) }()
+	return e.collectDirectories(settings, paths)
+}
+
+// The planning owner checks the project at both ends. Each individual path is
+// still canonicalized so aliases and private paths never use a cached decision.
+func (e *Executor) collectDirectories(settings policy.Settings, paths []string) ([]directoryTarget, []target, error) {
 	var dirs []directoryTarget
+	var requested []target
 	seen := map[string]bool{}
-	var visit func(string) error
-	visit = func(path string) error {
-		t, err := e.resolve(settings.Scope, path)
-		if err != nil {
-			return err
-		}
+	var visit func(target) error
+	visit = func(t target) error {
 		if seen[t.absolute] {
 			return nil
 		}
@@ -42,7 +54,11 @@ func (e *Executor) directoryTargets(settings policy.Settings, paths []string) ([
 			return fmt.Errorf("directory path is a file: %s", t.absolute)
 		}
 		if info == nil {
-			if err := visit(filepath.Dir(t.absolute)); err != nil {
+			parent, err := e.resolveTarget(settings.Scope, filepath.Dir(t.absolute))
+			if err != nil {
+				return err
+			}
+			if err := visit(parent); err != nil {
 				return err
 			}
 		}
@@ -55,26 +71,27 @@ func (e *Executor) directoryTargets(settings policy.Settings, paths []string) ([
 	}
 	for _, path := range paths {
 		if strings.TrimSpace(path) == "" || strings.ContainsAny(path, "\r\n") {
-			return nil, fmt.Errorf("each directory path must be one nonempty literal path")
+			return nil, nil, fmt.Errorf("each directory path must be one nonempty literal path")
 		}
-		if err := visit(path); err != nil {
-			return nil, err
+		t, err := e.resolveTarget(settings.Scope, path)
+		if err != nil {
+			return nil, nil, err
 		}
+		if err := visit(t); err != nil {
+			return nil, nil, err
+		}
+		requested = append(requested, t)
 	}
-	return dirs, nil
+	return dirs, requested, nil
 }
 
 func (op *operation) prepareDirectories(call toolapi.Call) error {
-	dirs, err := op.executor.directoryTargets(op.settings, op.input.Paths)
+	dirs, requested, err := op.executor.planDirectories(op.settings, op.input.Paths)
 	if err != nil {
 		return err
 	}
 	op.directories = dirs
-	for _, path := range op.input.Paths {
-		target, err := op.executor.resolve(op.settings.Scope, path)
-		if err != nil {
-			return err
-		}
+	for _, target := range requested {
 		op.directoryPaths = append(op.directoryPaths, target.absolute)
 	}
 	var names []string

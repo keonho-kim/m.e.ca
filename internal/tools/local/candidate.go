@@ -5,7 +5,6 @@
 package local
 
 import (
-	"crypto/sha256"
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
@@ -14,7 +13,8 @@ import (
 
 func (op *operation) prepareChange(call toolapi.Call) error {
 	var err error
-	op.original, err = snapshot(op.source)
+	var before []byte
+	op.original, before, err = capture(op.source, true)
 	if err != nil {
 		return err
 	}
@@ -24,16 +24,6 @@ func (op *operation) prepareChange(call toolapi.Call) error {
 
 	if op.original.exists && op.original.info.IsDir() {
 		return fmt.Errorf("target is a directory")
-	}
-	var before []byte
-	if op.original.exists {
-		before, err = op.readSource()
-		if err != nil {
-			return err
-		}
-	}
-	if op.original.exists && sha256.Sum256(before) != op.original.digest {
-		return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "source changed during candidate preparation", Next: "Inspect the current source and prepare a fresh change."}
 	}
 	op.replacement = []byte(op.input.Content)
 	if op.spec.Name == "edit_file" {

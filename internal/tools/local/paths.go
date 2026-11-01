@@ -18,6 +18,12 @@ func (executor *Executor) resolve(scope policy.Scope, path string) (target, erro
 	if err := executor.boundary.Check(); err != nil {
 		return target{}, err
 	}
+	return executor.resolveTarget(scope, path)
+}
+
+// Callers sharing this path within a planning phase must check the pinned
+// project before and after the phase. Execution always uses fresh resolve.
+func (executor *Executor) resolveTarget(scope policy.Scope, path string) (target, error) {
 	absolute, _, err := policy.Resolve(executor.project, executor.home, scope, path)
 	if err != nil {
 		return target{}, err

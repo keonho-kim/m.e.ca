@@ -1,6 +1,6 @@
-// Purpose: Bound whole-file source reads used for mutation and content search.
+// Purpose: Bound file source capture and execution version reads for mutations.
 // Pattern: Simple Module.
-// Usage: Local version snapshots, source reads use MaxBytes.
+// Usage: Local version and source capture use MaxBytes.
 // Related: internal/tools/local/paths.go, internal/tools/local/textedit/edit.go.
 package file
 

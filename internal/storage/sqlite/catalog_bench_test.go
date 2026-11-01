@@ -14,12 +14,21 @@ import (
 )
 
 func BenchmarkConversations(b *testing.B) {
+	benchmarkConversations(b, context.Background())
+}
+
+func BenchmarkCancellableConversations(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	benchmarkConversations(b, ctx)
+}
+
+func benchmarkConversations(b *testing.B, ctx context.Context) {
 	root := b.TempDir()
 	catalog, err := OpenSessions(filepath.Join(root, "sessions"))
 	if err != nil {
 		b.Fatal(err)
 	}
-	ctx := context.Background()
 	for range 200 {
 		s, err := catalog.Create(ctx, root, root)
 		if err != nil {

@@ -30,6 +30,7 @@ type blockLayout struct {
 	markdown                       bool
 	total, trim, leading, trailing int
 	first                          int
+	parsedBytes                    int
 }
 
 type rowMetrics struct{ count, leading, trailing int }
@@ -51,7 +52,11 @@ func (b *Block) prepare(width int) {
 		return
 	}
 	if l.markdown {
-		l.parsed = b.stream.Render(b.Text, width)
+		if b.live {
+			l.parsed = b.stream.Render(b.Text, width)
+		} else {
+			b.parseStatic(width)
+		}
 	}
 	lastContent, firstContent := -1, -1
 	observe := func(text string) {
@@ -65,7 +70,7 @@ func (b *Block) prepare(width int) {
 	}
 	if l.markdown {
 		reused := 0
-		if previous.key.width == width {
+		if b.live && previous.key.width == width {
 			reused = min(b.stream.ReusedRows(), len(previous.metrics), len(l.parsed))
 		}
 		l.metrics = previous.metrics[:reused]
@@ -87,6 +92,9 @@ func (b *Block) prepare(width int) {
 		}
 		for i := reused; i < len(l.parsed); i++ {
 			line := l.parsed[i]
+			if !b.live {
+				l.parsedBytes += line.RetainedBytes()
+			}
 			if i%256 == 0 {
 				l.points = append(l.points, blockPoint{source: i, row: l.total, last: lastContent})
 			}
@@ -141,7 +149,14 @@ func (b *Block) Window(width, start, count int) []Line {
 	}
 	l := &b.layout
 	if l.markdown && l.parsed == nil {
-		l.parsed = b.stream.Render(b.Text, width)
+		if b.live {
+			l.parsed = b.stream.Render(b.Text, width)
+		} else {
+			b.parseStatic(width)
+			for _, row := range l.parsed {
+				l.parsedBytes += row.RetainedBytes()
+			}
+		}
 	}
 	start = max(0, start) + l.trim
 	end := min(l.total, start+count)
@@ -202,5 +217,6 @@ func (v *View) ReleaseDisplay() {
 func (b *Block) releaseParsed() {
 	b.layout.parsed = nil
 	b.layout.metrics = nil
+	b.layout.parsedBytes = 0
 	b.stream = markdown.Stream{}
 }

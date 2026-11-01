@@ -77,7 +77,10 @@ func (r *Registry) Start(ctx context.Context, directory, command string, environ
 	if err := owner.Err(); err != nil {
 		return "", err
 	}
-	child, cancel := context.WithCancel(owner)
+	child, cancelCause := context.WithCancelCause(owner)
+	// Owner cancellation closes Done before all children necessarily observe
+	// its cause. Cleanup must not replace an already expired deadline.
+	cancel := func() { cancelCause(context.Cause(owner)) }
 	id := "cmd_" + rand.Text()
 	j := &job{state: State{ID: id, CallID: callID, Command: command, Directory: directory, Status: "running"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
 	j.stdout.directory, j.stderr.directory = r.CaptureDirectory, r.CaptureDirectory

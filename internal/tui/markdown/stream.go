@@ -32,14 +32,6 @@ func (s *Stream) RetainedBytes() int {
 	return s.weight + (cap(s.rows)+cap(s.result))*int(unsafe.Sizeof(Line{}))
 }
 
-func lineWeight(line Line) int {
-	weight := len(line.Text) + cap(line.Spans)*int(unsafe.Sizeof(Span{}))
-	for _, span := range line.Spans {
-		weight += len(span.Text)
-	}
-	return weight
-}
-
 // Render accepts snapshots. The last two top-level blocks remain mutable for
 // list continuation, tables and setext headings. References can affect earlier
 // blocks, so a possible reference definition (]:) triggers complete parsing.
@@ -121,7 +113,7 @@ func (s *Stream) Render(text string, width int) []Line {
 		if checkpoint != nil && s.committed+i == checkpoint.before {
 			checkpoint.weight = weight
 		}
-		weight += lineWeight(row)
+		weight += row.RetainedBytes()
 		if s.committed+i+1 == nextRows {
 			nextWeight = weight
 		}
@@ -137,7 +129,7 @@ func (s *Stream) Render(text string, width int) []Line {
 	s.fence = fence
 	if fence != nil {
 		for _, row := range s.rows[:fence.rows] {
-			fence.weight += lineWeight(row)
+			fence.weight += row.RetainedBytes()
 		}
 	}
 	return s.normalized(text)
@@ -162,7 +154,7 @@ func (s *Stream) normalized(text string) []Line {
 func (s *Stream) whole(text string, width int) []Line {
 	*s = Stream{source: text, width: width, result: Render(text, width)}
 	for _, row := range s.result {
-		s.weight += lineWeight(row)
+		s.weight += row.RetainedBytes()
 	}
 	return s.result
 }

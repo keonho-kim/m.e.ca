@@ -62,9 +62,19 @@ WHERE t.session_id=?1 AND t.sequence>?2 AND t.sequence<=?3 AND (m.role='user' OR
 		return nil, through, nil
 	}
 	out := make([]latmemory.Record, 0, len(page))
-	for _, entry := range page {
+	excerpts := reviewExcerpts{store: s}
+	for i, entry := range page {
 		if entry.record.kind == "event" {
-			text, err := s.latObservation(ctx, entry.record, entry.text)
+			excerpts.last, err = indexPayloadRefs(excerpts.last, i, entry.record.refs)
+			if err != nil {
+				return nil, after, err
+			}
+		}
+	}
+	for i, entry := range page {
+		if entry.record.kind == "event" {
+			excerpts.index = i
+			text, err := latObservation(ctx, entry.record, entry.text, &excerpts)
 			if err != nil {
 				return nil, after, err
 			}

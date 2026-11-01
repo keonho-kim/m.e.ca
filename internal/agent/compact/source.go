@@ -5,8 +5,8 @@
 package compact
 
 import (
+	"bytes"
 	"container/list"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -14,7 +14,6 @@ import (
 )
 
 type sourceEntry struct {
-	key       [32]byte
 	encoded   json.RawMessage
 	mandatory bool
 	important bool
@@ -43,26 +42,24 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 		text = sourceExcerpt(text, limit)
 	}
 	payload := struct{ Role, Text string }{record.Role, redact(text)}
-	key, err := json.Marshal(payload)
+	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	if !mandatory && len(key)+1 > available && available >= 512 {
+	if !mandatory && len(encoded)+1 > available && available >= 512 {
 		// JSON can encode one byte as six ASCII bytes (\uXXXX). Keep both
 		// ends of an oversized observation and reserve its envelope overhead.
 		payload.Text = sourceExcerpt(payload.Text, (available-64)/6)
-		key, err = json.Marshal(payload)
+		encoded, err = json.Marshal(payload)
 		if err != nil {
 			return err
 		}
 	}
-	digest := sha256.Sum256(key)
-	encoded := key
 	important := record.Role == "outcome" || record.Role == "failure"
 	size := len(encoded) + 1
 	if !mandatory && b.entries.Len() > 0 {
 		last := b.entries.Back().Value.(sourceEntry)
-		if !last.mandatory && last.key == digest {
+		if !last.mandatory && bytes.Equal(last.encoded, encoded) {
 			return nil
 		}
 	}
@@ -99,7 +96,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	if mandatory {
 		b.required += size
 	}
-	entry := b.entries.PushBack(sourceEntry{digest, encoded, mandatory, important})
+	entry := b.entries.PushBack(sourceEntry{encoded, mandatory, important})
 	if !mandatory {
 		if important {
 			b.important = append(b.important, entry)
