@@ -18,8 +18,8 @@ func commandControl(name string) bool {
 	return name == "list_command_runs" || name == "wait_command" || name == "cancel_command"
 }
 func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
-	e.liveOutputs.clear()
 	e.commands.Begin(ctx, deadline)
+	e.liveOutputs.clear()
 }
 func (e *Executor) StopCommands()                   { e.commands.End(); e.liveOutputs.clear() }
 func (e *Executor) CommandUpdates() <-chan struct{} { return e.commands.Updates() }

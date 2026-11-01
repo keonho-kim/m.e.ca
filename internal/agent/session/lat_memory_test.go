@@ -48,7 +48,9 @@ func TestLATBackgroundMemoryRetainsSteeringAndConcurrentEffects(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tools.Close()
-	if err = store.AppendMessage(ctx, store.Session().ID, modelapi.Message{Role: "user", Content: "EARLY_REQUIRED_CONSTRAINT\n" + strings.Repeat("Keep a focused API.\n", 5000)}); err != nil {
+	// This exceeds the background-summary threshold while still fitting the
+	// preparation packet, so the worker starts during implementation.
+	if err = store.AppendMessage(ctx, store.Session().ID, modelapi.Message{Role: "user", Content: "EARLY_REQUIRED_CONSTRAINT\n" + strings.Repeat("Keep a focused API.\n", 1800)}); err != nil {
 		t.Fatal(err)
 	}
 	if err = store.InstallMemory(ctx, store.Session().ID, 0, compact.Memory{Revision: 1, Through: 1, Markdown: "POISON_MAIN_SUMMARY"}); err != nil {
@@ -75,9 +77,21 @@ func TestLATBackgroundMemoryRetainsSteeringAndConcurrentEffects(t *testing.T) {
 			}
 			return send(modelapi.Event{Delta: "- EARLY_REQUIRED_CONSTRAINT: keep a focused API.\n- a.txt was actually written.", Usage: usage, Done: true})
 		}
-		if len(request.Tools) == 0 {
+		if strings.Contains(request.Messages[0].Content, "# Prepare an implementation plan") {
+			return send(modelapi.Event{Delta: "Draft plan", Usage: usage, Done: true})
+		}
+		if strings.Contains(request.Messages[0].Content, "# Critique the proposed plan") {
+			return send(modelapi.Event{Delta: "NO_FINDINGS", Usage: usage, Done: true})
+		}
+		if strings.Contains(request.Messages[0].Content, "# Refine the implementation plan") {
+			return send(modelapi.Event{Delta: "Improved plan", Usage: usage, Done: true})
+		}
+		if strings.Contains(request.Messages[0].Content, "# Independent work review") {
 			reviews.Add(1)
-			all := request.Messages[1].Content
+			var all string
+			for _, message := range request.Messages {
+				all += message.Content
+			}
 			for _, value := range []string{"EARLY_REQUIRED_CONSTRAINT", "LATEST_USER_CONSTRAINT", "b.txt", "c.txt"} {
 				if !strings.Contains(all, value) {
 					t.Error("final review lost", value)
@@ -106,7 +120,9 @@ func TestLATBackgroundMemoryRetainsSteeringAndConcurrentEffects(t *testing.T) {
 		args, _ := json.Marshal(map[string]string{"path": path, "content": "actual content\n"})
 		return send(modelapi.Event{Thinking: "PRIVATE_MAIN_THINKING", Calls: []toolapi.Call{{ID: path, Name: "write_file", Arguments: args}}, Usage: usage, Done: true})
 	})
-	request := agentrequest.New(agentrequest.Options{LAT: true, Config: config.Defaults(), Selection: connection.Selection{Model: "selected", Connection: connection.Connection{ID: "provider"}}, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault, Text: "파일 세 개를 작성해 주세요", LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }, PollSteering: func() []string {
+	cfg := config.Defaults()
+	cfg.ContextLength = 524288
+	request := agentrequest.New(agentrequest.Options{LAT: true, Config: cfg, Selection: connection.Selection{Model: "selected", Connection: connection.Connection{ID: "provider"}}, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault, Text: "파일 세 개를 작성해 주세요", LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }, PollSteering: func() []string {
 		if pending.Swap(false) {
 			return []string{"LATEST_USER_CONSTRAINT: 기존 요청을 유지하고 마지막 파일도 작성하세요"}
 		}
@@ -135,7 +151,7 @@ func TestLATBackgroundMemoryRetainsSteeringAndConcurrentEffects(t *testing.T) {
 		t.Fatal("LAT modified main compaction memory", err)
 	}
 	counts, err := store.TokenUsage(ctx, store.Session().ID)
-	if err != nil || counts.Input != 600 || counts.Output != 30 {
+	if err != nil || counts.Input != 900 || counts.Output != 45 {
 		t.Fatal("concurrent model usage omitted or doubled", counts, err)
 	}
 	rows, _, err := store.Timeline(ctx, store.Session().ID, 0, 200)

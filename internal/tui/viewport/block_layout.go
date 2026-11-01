@@ -7,7 +7,6 @@ package viewport
 import (
 	"sort"
 	"strings"
-	"unsafe"
 
 	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
@@ -16,9 +15,10 @@ import (
 const maxBoundaryBlanks = 2
 
 type blockPoint struct {
-	source, row int
-	prefix      string
-	last        int
+	source, row    int
+	offset, within int
+	prefix         string
+	last           int
 }
 type blockLayout struct {
 	key                            blockKey
@@ -71,10 +71,10 @@ func (b *Block) prepare(width int) {
 		l.metrics = previous.metrics[:reused]
 		l.points = previous.points[:0]
 		if reused > 0 {
-			pointIndex := (reused - 1) / 256
-			point := previous.points[pointIndex]
-			l.points = previous.points[:pointIndex+1]
-			l.total, lastContent = point.row, point.last
+			kept := sort.Search(len(previous.points), func(i int) bool { return previous.points[i].source >= reused })
+			point := previous.points[kept-1]
+			l.points = previous.points[:kept]
+			l.total, lastContent = point.row-point.within, point.last
 			for _, metric := range l.metrics[point.source:] {
 				if metric.leading < metric.count {
 					lastContent = l.total + metric.count - metric.trailing - 1
@@ -92,6 +92,9 @@ func (b *Block) prepare(width int) {
 			}
 			var metric rowMetrics
 			for row := range textlayout.Rows(line.Text, width) {
+				if metric.count > 0 && metric.count%256 == 0 {
+					l.points = append(l.points, blockPoint{source: i, row: l.total + metric.count, offset: row.Start, within: metric.count, prefix: row.Prefix, last: lastContent})
+				}
 				if strings.TrimSpace(row.Text) == "" {
 					if metric.leading == metric.count {
 						metric.leading++
@@ -156,7 +159,11 @@ func (b *Block) Window(width, start, count int) []Line {
 	}
 	if l.markdown {
 		for i := point.source; i < len(l.parsed) && row < end; i++ {
-			for wrapped := range markdown.Rows(l.parsed[i].Spans, width) {
+			offset, prefix := 0, ""
+			if i == point.source {
+				offset, prefix = point.offset, point.prefix
+			}
+			for wrapped := range l.parsed[i].RowsFrom(width, offset, prefix) {
 				if !appendRow(Line{Text: wrapped.Text, Spans: wrapped.Spans, Copy: wrapped.Copy}) {
 					break
 				}
@@ -175,10 +182,9 @@ func (b *Block) Window(width, start, count int) []Line {
 	}
 	// The visible rows belong to the transcript window. Large immutable blocks
 	// need only their sparse index between scrolls, while live blocks retain the
-	// incremental prefix to avoid reparsing completed Markdown on every delta.
+	// incremental prefix within the transcript's shared display-cache budget.
 	if !b.live {
-		weight := b.stream.RetainedBytes() + cap(l.metrics)*int(unsafe.Sizeof(rowMetrics{}))
-		if weight > 16*1024*1024 {
+		if b.cacheBytes() > displayCacheBudget {
 			b.releaseParsed()
 		}
 	}

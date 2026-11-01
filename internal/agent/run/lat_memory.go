@@ -21,6 +21,7 @@ type reviewMemory struct {
 	failure    error
 	closed     bool
 	dirty      bool
+	evidence   *latmemory.Evidence
 }
 
 func (s *execution) activeLATMemory() bool {
@@ -28,7 +29,7 @@ func (s *execution) activeLATMemory() bool {
 }
 
 func (s *execution) maintainLATMemory(ctx context.Context, force bool) error {
-	if s.latMemory == nil || s.latMemory.closed || !s.latObserved || s.latReviewed && !force || ctx.Err() != nil {
+	if s.latMemory == nil || s.latMemory.closed || !s.latObserved && !force || s.latReviewed && !force || ctx.Err() != nil {
 		return nil
 	}
 	if err := s.pollLATMemory(ctx); err != nil {

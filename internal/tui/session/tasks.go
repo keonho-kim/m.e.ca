@@ -19,6 +19,8 @@ func (a *app) startRequest(input composer.Request) {
 	}
 	a.output.Follow = true
 	a.stream, a.thinking = "", ""
+	a.stopLATIndicator()
+	a.latOutput = latOutput{}
 	a.tokensPerSecond = nil
 	a.runSummary = nil
 	a.stopNotice = ""

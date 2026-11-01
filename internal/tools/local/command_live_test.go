@@ -47,3 +47,39 @@ func TestLiveCaptureRevision(t *testing.T) {
 		t.Fatal("acknowledged command retained its cached excerpt")
 	}
 }
+
+func TestFinalCaptureReusesPathAndStopsStaleLiveWrites(t *testing.T) {
+	e, _ := testExecutor(t)
+	id := "cmd_final"
+	before := strings.Repeat("early output\n", 4000)
+	live, err := e.projectLiveCapture(id, "stdout", liveCapture{}, process.Capture{Revision: 1, Text: before})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.liveOutputs.command(id).streams[0] = live
+	final := before + "last output"
+	if err := e.archiveCommand(id, process.Output{Stdout: final, Status: "exited", Started: true}, nil); err != nil {
+		t.Fatal(err)
+	}
+	observed, err := e.commandCaptures(id)
+	if err != nil || observed[0].path != live.path || !strings.HasSuffix(observed[0].excerpt, "last output") {
+		t.Fatalf("final capture not reused: %+v %v", observed, err)
+	}
+	body, err := os.ReadFile(live.path)
+	if err != nil || string(body) != final {
+		t.Fatal("final log replaced by stale live output", err)
+	}
+	if files, err := os.ReadDir(e.artifacts); err != nil {
+		t.Fatal(err)
+	} else {
+		logs := 0
+		for _, file := range files {
+			if strings.HasSuffix(file.Name(), ".log") {
+				logs++
+			}
+		}
+		if logs != 1 {
+			t.Fatalf("command kept %d copies of stdout", logs)
+		}
+	}
+}

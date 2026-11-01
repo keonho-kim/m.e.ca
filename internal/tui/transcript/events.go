@@ -10,6 +10,9 @@ import (
 )
 
 func (f Formatter) Event(event runrecord.Event) []viewport.Block {
+	if event.LAT != nil {
+		return f.latConversation(event)
+	}
 	if event.Internal {
 		return nil
 	}

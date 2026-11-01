@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 22
+const schemaVersion = 23
 
 const schema = `
 CREATE TABLE sessions (
@@ -86,20 +86,21 @@ CREATE TABLE timeline (
 CREATE INDEX session_timeline ON timeline(session_id,sequence);
 CREATE TABLE conversation_tokens (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL REFERENCES sessions(id),
+ session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),
  amount INTEGER NOT NULL CHECK(amount>=0),
  through_timeline INTEGER NOT NULL DEFAULT 0 CHECK(through_timeline>=0),
  estimated INTEGER NOT NULL CHECK(estimated IN (0,1)),
  kind TEXT NOT NULL
 );
-CREATE INDEX session_tokens ON conversation_tokens(session_id,sequence);
 CREATE TABLE memories (
- session_id TEXT NOT NULL REFERENCES sessions(id),
+ session_id TEXT PRIMARY KEY REFERENCES sessions(id),
  revision INTEGER NOT NULL,
  through_timeline INTEGER NOT NULL,
  through_usage INTEGER NOT NULL,
  body BLOB NOT NULL,
- created_at TEXT NOT NULL,
- PRIMARY KEY(session_id,revision)
+	 codec INTEGER NOT NULL,
+	 digest TEXT NOT NULL,
+	 raw_bytes INTEGER NOT NULL,
+	 created_at TEXT NOT NULL
 );
 `

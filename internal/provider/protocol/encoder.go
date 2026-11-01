@@ -23,10 +23,13 @@ type Encoder struct {
 	groups   []*sourceGroup
 	bytes    int
 	retained int
+	tools    toolSnapshot
 }
 
 // Clear releases all references to encoded conversation history.
 func (e *Encoder) Clear() { *e = Encoder{} }
+
+func (e *Encoder) clearHistory() { e.history = nil; e.groups = nil; e.bytes = 0; e.retained = 0 }
 
 // Encode preserves Encode's request values while reusing cached JSON fragments
 // as replayable HTTP segments. Only fragments produced by wireJSON enter
@@ -35,40 +38,39 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 	if e == nil {
 		return singleBody(kind, baseURL, info, request, messages, controls)
 	}
-	size, text := textHistorySize(messages)
-	prepared := len(messages) > 0 && messages[0].source != nil
-	if !prepared && (!text || size < cacheThreshold || size > cacheCapacity) {
-		e.Clear()
-		return singleBody(kind, baseURL, info, request, messages, controls)
-	}
-	if e.kind != kind || e.model != request.ModelID || len(messages) < len(e.history) {
+	if e.kind != kind || e.model != request.ModelID {
 		e.Clear()
 	}
 	e.kind, e.model = kind, request.ModelID
+	size, text := textHistorySize(messages)
+	prepared := len(messages) > 0 && messages[0].source != nil
+	if !prepared && (!text || size < cacheThreshold || size > cacheCapacity) {
+		e.clearHistory()
+		if len(request.Tools) == 0 {
+			e.tools = toolSnapshot{}
+			return singleBody(kind, baseURL, info, request, messages, controls)
+		}
+		return e.encodeWhole(kind, baseURL, info, request, messages, controls)
+	}
+	if len(messages) < len(e.history) {
+		e.clearHistory()
+	}
 	if err := e.update(messages); err != nil {
 		e.Clear()
 		return "", Body{}, err
 	}
-	endpoint, field := baseURL+"/responses", `,"input":[`
-	var header []byte
-	var err error
-	if kind == connection.LMStudio {
-		header, err = wireJSON.Marshal(lmHeader(request.ModelID, request.MaxOutput, controls.ReasoningEffort, request.Temperature, request.Tools))
-	} else {
-		var payload wireRequest
-		endpoint, payload = chatPayload(kind, baseURL, info, request, controls)
-		header, err = wireJSON.Marshal(payload)
+	endpoint, header, err := e.header(kind, baseURL, info, request, controls)
+	field := `,"input":[`
+	if kind != connection.LMStudio {
 		field = `,"messages":[`
 	}
 	if err != nil {
 		e.Clear()
 		return "", Body{}, err
 	}
-	header = append(header[:len(header)-1], field...)
-	parts := make([][]byte, 0, 2*len(e.history)+2)
-	parts = append(parts, header)
+	parts, headerBytes := header.appendTo(make([][]byte, 0, 2*len(e.history)+5), field)
 	comma, end := []byte(","), []byte("]}")
-	bodySize := len(header) + e.bytes + len(end)
+	bodySize := headerBytes + e.bytes + len(end)
 	count := 0
 	for _, entry := range e.history {
 		if len(entry.json) == 0 {
@@ -85,7 +87,7 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		e.Clear()
 		return singleBody(kind, baseURL, info, request, messages, controls)
 	}
-	if e.retained > cacheCapacity {
+	if e.retained+e.tools.bytes > cacheCapacity {
 		// The returned body owns its fragments until transmission ends. Discard
 		// cache keys now instead of rejecting or re-encoding a large request.
 		e.Clear()

@@ -41,7 +41,8 @@ type Options struct {
 	Vault       *credentials.Vault
 }
 type app struct {
-	lat bool
+	lat       bool
+	latOutput latOutput
 	fileBrowserState
 	requestState
 	toolActivity                    toolActivity
@@ -67,9 +68,10 @@ type app struct {
 	stopNotice                      string
 	tokensPerSecond                 *float64
 	worker                          workerState
-	compressionTimer                *time.Ticker
-	compressionTicks                <-chan time.Time
-	compressionDots                 int
+	indicatorTimer                  *time.Ticker
+	indicatorTicks                  <-chan time.Time
+	indicatorDots                   int
+	compressing                     bool
 	tokenTotal                      modelapi.TokenUsage
 	tokenCurrent                    modelapi.TokenUsage
 	latMemoryTokens                 modelapi.TokenUsage

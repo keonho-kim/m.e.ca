@@ -18,10 +18,10 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
 	}
 	label := activity.Label()
-	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
-		label = activity.compressionLabel()
+	if (activity.Compressing || activity.LAT) && uniseg.StringWidth(label+tokens)+1 > width {
+		label = activity.indicatorLabel()
 	}
-	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
+	if (activity.Compressing || activity.LAT) && uniseg.StringWidth(label+tokens)+1 > width {
 		Text(screen, 0, 0, width, label, tcell.StyleDefault.Bold(true))
 		return
 	}
@@ -34,7 +34,7 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 	if uniseg.StringWidth(tokens+rate+label)+1 <= width {
 		tokens += rate
 	}
-	if title != "" && !activity.Compressing {
+	if title != "" && !activity.Compressing && !activity.LAT {
 		label += " · " + title
 	}
 	x := width - uniseg.StringWidth(tokens)

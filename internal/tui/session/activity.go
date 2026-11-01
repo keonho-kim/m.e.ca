@@ -1,4 +1,4 @@
-// Purpose: Own task interruption and compression timer lifecycle on the terminal event loop.
+// Purpose: Own task interruption and one shared LAT/compaction indicator timer.
 // Pattern: Event-loop state transitions.
 // Usage: Esc and runtime phase notices update Activity; shutdown disposes the timer.
 // Related: internal/tui/session/app.go, internal/tui/session/tasks.go, internal/tui/view/activity.go.
@@ -11,7 +11,7 @@ import (
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressionTicks != nil, Dots: a.compressionDots, ShowCost: a.selection.Connection.Kind == connection.OpenRouter}
+	return view.Activity{Language: a.language, Elapsed: a.elapsed, TokensPerSecond: a.tokensPerSecond, Running: a.worker.active(), Compressing: a.compressing, LAT: a.latOutput.running, Dots: a.indicatorDots, ShowCost: a.selection.Connection.Kind == connection.OpenRouter}
 }
 func (a *app) interruptTask() {
 	if !a.worker.agent() || !a.worker.active() || a.taskCancel == nil {
@@ -22,6 +22,7 @@ func (a *app) interruptTask() {
 	a.worker.stop()
 	a.stopElapsed()
 	a.taskCancel()
+	a.stopLATIndicator()
 	a.stopCompression()
 	a.proposal = nil
 	a.page = "chat"
@@ -32,24 +33,47 @@ func (a *app) interruptTask() {
 	a.stopNotice = a.language.Text("작업을 중지하고 정리하고 있습니다")
 }
 func (a *app) startCompression() {
-	if a.worker.stopping() || a.compressionTimer != nil {
+	if a.worker.stopping() {
 		return
 	}
-	a.compressionDots = 1
-	a.compressionTimer = time.NewTicker(400 * time.Millisecond)
-	a.compressionTicks = a.compressionTimer.C
+	a.compressing = true
+	a.refreshIndicator()
 }
 
-func (a *app) advanceCompression() {
-	if a.compressionTicks != nil {
-		a.compressionDots = a.compressionDots%3 + 1
+func (a *app) advanceIndicator() {
+	if a.indicatorTicks != nil {
+		a.indicatorDots = a.indicatorDots%3 + 1
 	}
 }
 func (a *app) stopCompression() {
-	if a.compressionTimer != nil {
-		a.compressionTimer.Stop()
+	a.compressing = false
+	a.refreshIndicator()
+}
+
+func (a *app) startLATIndicator() {
+	if a.worker.stopping() {
+		return
 	}
-	a.compressionTimer = nil
-	a.compressionTicks = nil
-	a.compressionDots = 0
+	a.latOutput.running = true
+	a.refreshIndicator()
+}
+
+func (a *app) stopLATIndicator() {
+	a.latOutput.running = false
+	a.refreshIndicator()
+}
+
+func (a *app) refreshIndicator() {
+	if a.compressing || a.latOutput.running {
+		if a.indicatorTimer == nil {
+			a.indicatorDots = 1
+			a.indicatorTimer = time.NewTicker(400 * time.Millisecond)
+			a.indicatorTicks = a.indicatorTimer.C
+		}
+		return
+	}
+	if a.indicatorTimer != nil {
+		a.indicatorTimer.Stop()
+	}
+	a.indicatorTimer, a.indicatorTicks, a.indicatorDots = nil, nil, 0
 }

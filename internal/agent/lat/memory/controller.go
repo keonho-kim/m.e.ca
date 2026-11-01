@@ -13,16 +13,17 @@ import (
 )
 
 type Controller struct {
-	Repository Repository
-	Session    string
-	Redact     func(string) string
-	state      State
-	loaded     bool
-	job        *job
-	through    int64
-	failed     error
-	mark       Mark
-	markAfter  int64
+	Repository       Repository
+	Session          string
+	Redact           func(string) string
+	RedactionVersion func() int
+	state            State
+	loaded           bool
+	job              *job
+	through          int64
+	failed           error
+	mark             Mark
+	markAfter        int64
 }
 
 func (c *Controller) loadState(ctx context.Context) (State, error) {
@@ -128,7 +129,10 @@ func (c *Controller) Poll(ctx context.Context) (Update, error) {
 
 // Tail preserves every uncompressed user instruction in a bounded review packet.
 // An oversized tail requests another compaction, rather than omitting records.
-func (c *Controller) Tail(ctx context.Context, budget int, current string) ([]byte, error) {
+func (c *Controller) Tail(ctx context.Context, budget int, current string, reuse *Evidence) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	state, err := c.loadState(ctx)
 	if err != nil {
 		return nil, err
@@ -137,21 +141,34 @@ func (c *Controller) Tail(ctx context.Context, budget int, current string) ([]by
 	if err != nil {
 		return nil, err
 	}
-	return c.tail(ctx, state, mark, budget, current)
+	version := 0
+	if c.RedactionVersion != nil {
+		version = c.RedactionVersion()
+		if cached := reuse.get(state, mark, current, version, budget); cached != nil {
+			return cached, nil
+		}
+	}
+	reuse.Clear()
+	body, err := c.tail(ctx, state, mark, budget, current)
+	if err == nil && c.RedactionVersion != nil && version == c.RedactionVersion() {
+		reuse.set(state, mark, current, version, body)
+	}
+	return body, err
 }
 
 func (c *Controller) watermark(ctx context.Context, state State) (Mark, error) {
 	if c.markAfter != state.Through || c.mark.Through < state.Through {
-		c.mark, c.markAfter = Mark{Through: state.Through}, state.Through
+		c.mark, c.markAfter = Mark{Through: state.Through, Scanned: state.Through}, state.Through
 	}
-	delta, err := c.Repository.LATWatermark(ctx, c.Session, c.mark.Through)
+	delta, err := c.Repository.LATWatermark(ctx, c.Session, c.mark.Scanned)
 	if err != nil {
 		return Mark{}, err
 	}
-	if delta.Through < c.mark.Through || delta.Bytes < 0 || delta.LatestUser > delta.Through {
+	if delta.Scanned < c.mark.Scanned || delta.Through > delta.Scanned || delta.Bytes < 0 || delta.LatestUser > delta.Through {
 		return Mark{}, fmt.Errorf("invalid independent review source watermark")
 	}
-	c.mark.Through = delta.Through
+	c.mark.Through = max(c.mark.Through, delta.Through)
+	c.mark.Scanned = delta.Scanned
 	c.mark.Bytes += delta.Bytes
 	c.mark.LatestUser = max(c.mark.LatestUser, delta.LatestUser)
 	return c.mark, nil

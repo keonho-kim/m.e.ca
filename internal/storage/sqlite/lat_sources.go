@@ -15,10 +15,10 @@ import (
 
 func (s *Store) LATWatermark(ctx context.Context, session string, after int64) (latmemory.Mark, error) {
 	var mark latmemory.Mark
-	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(t.sequence),?2),COALESCE(SUM(CASE WHEN m.role='user' THEN m.content_bytes ELSE e.review_bytes END),0),COALESCE(MAX(CASE WHEN m.role='user' THEN t.sequence ELSE 0 END),0)
+	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(t.sequence),0),COALESCE(SUM(CASE WHEN m.role='user' THEN m.content_bytes ELSE e.review_bytes END),0),COALESCE(MAX(CASE WHEN m.role='user' THEN t.sequence ELSE 0 END),0),MAX(?2,COALESCE((SELECT MAX(sequence) FROM timeline WHERE session_id=?1),0))
 FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
 LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence
-WHERE t.session_id=?1 AND t.sequence>?2 AND (m.role='user' OR e.review_bytes>0)`, session, after).Scan(&mark.Through, &mark.Bytes, &mark.LatestUser)
+WHERE t.session_id=?1 AND t.sequence>?2 AND (m.role='user' OR e.review_bytes>0)`, session, after).Scan(&mark.Through, &mark.Bytes, &mark.LatestUser, &mark.Scanned)
 	return mark, err
 }
 

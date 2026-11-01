@@ -25,18 +25,38 @@ var compactionDefault string
 //go:embed defaults/lat.md
 var latDefault string
 
+//go:embed defaults/lat_plan.md
+var latPlanDefault string
+
+//go:embed defaults/lat_critique.md
+var latCritiqueDefault string
+
+//go:embed defaults/lat_refine.md
+var latRefineDefault string
+
 //go:embed defaults/lat_compaction.md
 var latCompactionDefault string
 
-type Templates struct{ System, Development, Compaction, LAT, LATCompaction string }
+type Templates struct {
+	System, Development, Compaction                     string
+	LAT, LATPlan, LATCritique, LATRefine, LATCompaction string
+}
 
 func Defaults() Templates {
-	return Templates{System: systemDefault, Development: developmentDefault, Compaction: compactionDefault, LAT: latDefault, LATCompaction: latCompactionDefault}
+	return Templates{
+		System: systemDefault, Development: developmentDefault, Compaction: compactionDefault,
+		LAT: latDefault, LATPlan: latPlanDefault, LATCritique: latCritiqueDefault,
+		LATRefine: latRefineDefault, LATCompaction: latCompactionDefault,
+	}
 }
 
 // Files exposes the fixed prompt fields for bootstrap publication and explicit loading.
 func (t *Templates) Files() map[string]*string {
-	return map[string]*string{"system.md": &t.System, "development.md": &t.Development, "compaction.md": &t.Compaction, "lat.md": &t.LAT, "lat_compaction.md": &t.LATCompaction}
+	return map[string]*string{
+		"system.md": &t.System, "development.md": &t.Development, "compaction.md": &t.Compaction,
+		"lat.md": &t.LAT, "lat_plan.md": &t.LATPlan, "lat_critique.md": &t.LATCritique,
+		"lat_refine.md": &t.LATRefine, "lat_compaction.md": &t.LATCompaction,
+	}
 }
 
 func CheckTemplate(text string) error {

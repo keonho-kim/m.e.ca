@@ -22,7 +22,7 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord
 }
 
 func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string) error {
-	if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
+	if event.Kind == "run_checkpoint" && event.Checkpoint != nil && !event.Internal {
 		copy := *event.Checkpoint
 		event.Checkpoint = &copy
 		if err := event.Check(); err != nil {
@@ -49,7 +49,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if len(body) > recordcontent.MaxBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
-	packed, refs, err := s.packRecord(ctx, tx, body)
+	packed, refs, err := s.packEvent(ctx, tx, body, event)
 	if err != nil {
 		return err
 	}
@@ -62,12 +62,12 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 		role, text = projected[0].Role, projected[0].Text
 	}
 	memoryBytes, memoryField := len(text), ""
-	if event.Kind == "lat_feedback" {
+	if (event.Kind == "lat_feedback" || event.Kind == "lat_plan") && !event.Internal {
 		text = ""
 		memoryField = "text"
 	}
 	displayArgs := []byte("{}")
-	if event.Call != nil {
+	if event.Call != nil && !event.Internal {
 		// A rejected argument can be valid JSON with an invalid field type.
 		// Presentation must never prevent recording that failure for correction.
 		if args, projectionErr := toolapi.DisplayArgs(event.Call.Arguments); projectionErr == nil {

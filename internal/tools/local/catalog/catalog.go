@@ -45,16 +45,25 @@ func buildSpecifications() []Specification {
 	}
 	return specs
 }
-func Definitions() []toolapi.Definition {
-	out := make([]toolapi.Definition, len(catalog))
-	for i, spec := range catalog {
-		out[i] = toolapi.Definition{Name: spec.Name, Description: spec.description, Parameters: cloneParameters(spec.fields), Effect: spec.Effect}
+
+// Definitions copies all tools, or only named tools, without allocating discarded schemas.
+func Definitions(names ...string) []toolapi.Definition {
+	capacity := len(catalog)
+	if len(names) > 0 {
+		capacity = min(capacity, len(names))
+	}
+	out := make([]toolapi.Definition, 0, capacity)
+	for _, spec := range catalog {
+		if len(names) > 0 && !slices.Contains(names, spec.Name) {
+			continue
+		}
+		out = append(out, toolapi.Definition{Name: spec.Name, Description: spec.description, Parameters: cloneParameters(spec.fields), Effect: spec.Effect})
 	}
 	return out
 }
 
-// Definitions crosses a mutable-slice boundary; private validation schemas must
-// remain independent of modifications by generators and protocol adapters.
+// cloneParameters keeps private validation schemas independent of generator
+// and protocol changes to their request-owned copies.
 func cloneParameters(parameters []toolapi.Parameter) []toolapi.Parameter {
 	copy := slices.Clone(parameters)
 	for i := range copy {

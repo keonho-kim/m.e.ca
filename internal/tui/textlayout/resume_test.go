@@ -12,7 +12,7 @@ import (
 )
 
 func TestRowsFrom(t *testing.T) {
-	for _, text := range []string{"    한글 😀 long text with spaces\n  next", strings.Repeat("abc def\t한글 ", 100), "\n\nlast\n"} {
+	for _, text := range []string{"    한글 😀 long text with spaces\n  next", strings.Repeat("abc def\t한글 ", 100), strings.Repeat("  ascii words ", 100), "\n\nlast\n"} {
 		for _, width := range []int{1, 5, 20} {
 			all := Wrap(text, width)
 			for at, row := range all {

@@ -25,7 +25,10 @@ func (e *Executor) commandPath(id, suffix string) (string, error) {
 }
 
 func (e *Executor) archiveCommand(id string, output process.Output, runErr error) error {
-	result, err := e.encodeCommand(output, runErr)
+	capture := e.liveOutputs.command(id)
+	capture.mu.Lock()
+	defer capture.mu.Unlock()
+	result, err := e.encodeCommand(id, output, runErr)
 	if err != nil && result.Content == nil {
 		return err
 	}
@@ -60,7 +63,21 @@ func (e *Executor) archiveCommand(id string, output process.Output, runErr error
 		return marshalErr
 	}
 	// Only the owning waiter writes; done is closed after this file is complete.
-	return os.WriteFile(path, body, 0600)
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		return err
+	}
+	for i, stream := range []string{"Stdout", "Stderr"} {
+		var excerpt, logPath string
+		if err := json.Unmarshal(fields[stream], &excerpt); err != nil {
+			return err
+		}
+		if err := json.Unmarshal(fields[stream+"Path"], &logPath); err != nil {
+			return err
+		}
+		capture.streams[i].excerpt, capture.streams[i].path = excerpt, logPath
+	}
+	capture.finalized = true
+	return nil
 }
 
 func (e *Executor) readCommandResult(id string) (toolapi.Result, error) {

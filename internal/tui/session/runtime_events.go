@@ -12,15 +12,32 @@ import (
 )
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
+	if a.receiveLAT(e) {
+		return
+	}
 	switch e.Kind {
+	case "lat_preparing":
+		a.startLATIndicator()
+		switch e.Text {
+		case "plan":
+			a.status = a.language.Text("LAT: Preparing plan…")
+		case "critique":
+			a.status = a.language.Text("LAT: Reviewing plan…")
+		case "refine":
+			a.status = a.language.Text("LAT: Refining plan…")
+		}
+		return
+	case "lat_prepared":
+		a.status = ""
+		a.stopLATIndicator()
+		a.latOutput = latOutput{}
+		return
 	case "lat_started":
+		a.startLATIndicator()
 		a.status = a.language.Text("LAT: Reviewing work…")
 		return
 	case "lat_clean", "lat_feedback", "lat_unavailable", "lat_discarded", "lat_memory_unavailable":
-		a.status = ""
-		for _, block := range (transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).Event(*e) {
-			a.output.AppendBlock(block)
-		}
+		a.receiveLATOutcome(e)
 		return
 	case "image_input_unavailable":
 		if a.selection.Details != nil {

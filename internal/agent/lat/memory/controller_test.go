@@ -32,8 +32,9 @@ func (r *repository) InstallLATMemory(_ context.Context, _ string, expected int,
 	return nil
 }
 func (r *repository) LATWatermark(_ context.Context, _ string, after int64) (Mark, error) {
-	mark := Mark{Through: after}
+	mark := Mark{Scanned: after}
 	for _, item := range r.items {
+		mark.Scanned = max(mark.Scanned, item.Sequence)
 		if item.Sequence > after {
 			mark.Through = item.Sequence
 			mark.Bytes += int64(len(item.Text))
@@ -112,7 +113,7 @@ func TestBackgroundPrefixKeepsNewInstructionsAndOneSlot(t *testing.T) {
 	if err != nil || !update.Done || c.Active() || r.state.Through != 1 || r.writes != 1 {
 		t.Fatal("prefix publication", r.state, err)
 	}
-	body, err := c.Tail(context.Background(), 8192, "")
+	body, err := c.Tail(context.Background(), 8192, "", nil)
 	if err != nil || !strings.Contains(string(body), "LATEST_CONSTRAINT") || !strings.Contains(string(body), "LATEST_RESULT") {
 		t.Fatal("late records lost", err)
 	}
@@ -195,7 +196,7 @@ func TestFailedMemoryLeavesOriginalTailAvailable(t *testing.T) {
 		if r.state.Text != "prior" || r.state.Through != 1 {
 			t.Fatal("previous state changed")
 		}
-		body, err := c.Tail(context.Background(), 8192, "")
+		body, err := c.Tail(context.Background(), 8192, "", nil)
 		if err != nil || !strings.Contains(string(body), "required change") {
 			t.Fatal("failed summary consumed original records", err)
 		}

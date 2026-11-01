@@ -47,16 +47,17 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 			size += len(call.Arguments) + len(call.Name) + len(call.ID)
 		}
 	}
-	if e == nil || size < cacheThreshold || size > cacheCapacity {
-		if e != nil {
-			e.Clear()
-		}
+	if e == nil {
 		return Messages(kind, source)
 	}
 	if e.kind != kind || e.model != model {
 		e.Clear()
 	}
 	e.kind, e.model = kind, model
+	if size < cacheThreshold || size > cacheCapacity {
+		e.clearHistory()
+		return Messages(kind, source)
+	}
 	out := make([]Message, 0, max(len(source), len(e.history)))
 	previous := e.groups
 	e.groups = e.groups[:0]

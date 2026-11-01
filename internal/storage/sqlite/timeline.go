@@ -11,6 +11,7 @@ import (
 
 	json "github.com/goccy/go-json"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -34,10 +35,15 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 			break
 		}
 		fields := map[string]bool{"role": true, "content": true, "incomplete": true}
+		var nested recordcontent.Selection
 		if record.kind == "event" {
 			fields = map[string]bool{"kind": true, "text": true, "thinking": true, "call_id": true, "output": true, "operation": true, "change_preview": true, "checkpoint": true, "statistics": true, "internal": true}
+			if entry.internal {
+				fields["lat"], fields["message"], fields["call"] = true, true, true
+				nested = latDisplayFields
+			}
 		}
-		body, decodeErr := s.unpackRecord(ctx, record, fields)
+		body, decodeErr := s.unpackRecord(ctx, record, fields, nested)
 		if decodeErr != nil {
 			return nil, 0, decodeErr
 		}
@@ -55,12 +61,19 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 		} else {
 			err = json.Unmarshal(body, &r.Event)
 			if err == nil {
-				var envelope struct{ Call *struct{ ID, Name string } }
-				if err = json.Unmarshal(record.body, &envelope); err != nil {
-					return nil, 0, err
-				}
-				if envelope.Call != nil {
-					r.Event.Call = &toolapi.Call{ID: envelope.Call.ID, Name: envelope.Call.Name, Arguments: entry.arguments}
+				if r.Event.Internal && r.Event.Call != nil {
+					args, projectionErr := toolapi.DisplayArgs(r.Event.Call.Arguments)
+					if projectionErr == nil {
+						r.Event.Call.Arguments, err = json.Marshal(args)
+					}
+				} else {
+					var envelope struct{ Call *struct{ ID, Name string } }
+					if err = json.Unmarshal(record.body, &envelope); err != nil {
+						return nil, 0, err
+					}
+					if envelope.Call != nil {
+						r.Event.Call = &toolapi.Call{ID: envelope.Call.ID, Name: envelope.Call.Name, Arguments: entry.arguments}
+					}
 				}
 			}
 		}
@@ -78,15 +91,27 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 type displayRecord struct {
 	record    storedRecord
 	arguments []byte
+	internal  bool
 }
 
+var latDisplayFields = recordcontent.Selection{"message": {
+	"role": nil, "content": nil, "incomplete": nil, "reasoning": nil,
+	"calls": {"*": {"id": nil, "name": nil}},
+}}
+
 func (s *Store) displayPage(ctx context.Context, session string, before int64, limit int) (page []displayRecord, err error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}')
+	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}'),COALESCE(json_extract(e.body,'$.internal'),0)
 FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence
 LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence
 WHERE t.session_id=? AND t.sequence<? AND (
  (m.role IN ('user','assistant') AND m.content_bytes>0) OR
- (e.kind IN ('thinking','progress','lat_clean','lat_feedback','lat_unavailable','lat_discarded','lat_memory_unavailable','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint') AND COALESCE(json_extract(e.body,'$.internal'),0)=0))
+ (e.kind IN ('thinking','progress','lat_clean','lat_feedback','lat_unavailable','lat_discarded','lat_memory_unavailable','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint') AND COALESCE(json_extract(e.body,'$.internal'),0)=0) OR
+ (COALESCE(json_extract(e.body,'$.internal'),0)=1 AND json_type(e.body,'$.lat')='object' AND (
+  e.kind IN ('thinking','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished') OR
+  (e.kind='lat_message' AND json_extract(e.body,'$.message.role')='assistant'
+   AND (json_extract(e.body,'$.message.content')<>'' OR json_type(e.body,'$.message.content')='null')
+   AND NOT (json_extract(e.body,'$.lat.phase')='review' AND COALESCE(json_array_length(e.body,'$.message.calls'),0)=0
+    AND COALESCE(json_extract(e.body,'$.message.incomplete'),0)=0)))))
 ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
 	if err != nil {
 		return nil, err
@@ -95,7 +120,7 @@ ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
 	for rows.Next() {
 		var entry displayRecord
 		r := &entry.record
-		if err = rows.Scan(&r.sequence, &r.kind, &r.body, &r.refs, &r.size, &entry.arguments); err != nil {
+		if err = rows.Scan(&r.sequence, &r.kind, &r.body, &r.refs, &r.size, &entry.arguments, &entry.internal); err != nil {
 			return nil, err
 		}
 		page = append(page, entry)

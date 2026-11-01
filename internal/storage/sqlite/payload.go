@@ -20,15 +20,17 @@ func (s *Store) putPayload(ctx context.Context, tx *sql.Tx, raw []byte) (string,
 	if exists > 0 {
 		return id, nil
 	}
-	compressed, err := s.codec.Encode(raw)
-	if err != nil {
-		return "", err
-	}
 	codec, body := 0, raw
-	if len(compressed) < len(raw) {
-		codec, body = 2, compressed
+	if len(raw) > recordcontent.Threshold {
+		compressed, err := s.codec.Encode(raw)
+		if err != nil {
+			return "", err
+		}
+		if len(compressed) < len(raw) {
+			codec, body = 2, compressed
+		}
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO payloads(id,codec,raw_bytes,body) VALUES(?,?,?,?)", id, codec, len(raw), body)
+	_, err := tx.ExecContext(ctx, "INSERT INTO payloads(id,codec,raw_bytes,body) VALUES(?,?,?,?)", id, codec, len(raw), body)
 	return id, err
 }
 
@@ -37,6 +39,9 @@ func (s *Store) payload(ctx context.Context, id string) (json.RawMessage, error)
 	var body []byte
 	if err := s.db.QueryRowContext(ctx, "SELECT codec,raw_bytes,body FROM payloads WHERE id=?", id).Scan(&codec, &size, &body); err != nil {
 		return nil, err
+	}
+	if codec == textFragmentsCodec {
+		return s.textFragments(ctx, id, size, body)
 	}
 	return s.codec.Restore(codec, size, id, body)
 }

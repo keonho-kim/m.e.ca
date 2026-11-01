@@ -16,15 +16,15 @@ import (
 	"unicode/utf8"
 )
 
-func (e *Executor) encodeCommand(output process.Output, runErr error) (toolapi.Result, error) {
+func (e *Executor) encodeCommand(id string, output process.Output, runErr error) (toolapi.Result, error) {
 	output.Stdout = textformat.RedactSource(output.Stdout, e.redact)
 	output.Stderr = textformat.RedactSource(output.Stderr, e.redact)
 	originalOutput := output
 	output.StdoutCapturedBytes, output.StderrCapturedBytes = len(output.Stdout), len(output.Stderr)
 	var archiveErr error
-	output.Stdout, output.StdoutPath, archiveErr = e.commandOutput(output.Stdout, "stdout")
+	output.Stdout, output.StdoutPath, archiveErr = e.commandOutput(id, output.Stdout, "stdout")
 	runErr = errors.Join(runErr, archiveErr)
-	output.Stderr, output.StderrPath, archiveErr = e.commandOutput(output.Stderr, "stderr")
+	output.Stderr, output.StderrPath, archiveErr = e.commandOutput(id, output.Stderr, "stderr")
 	runErr = errors.Join(runErr, archiveErr)
 	result, err := resultfmt.Encode(output, fmt.Sprintf("Process %s; exit code %d", output.Status, output.ExitCode))
 	if err != nil {

@@ -36,7 +36,7 @@ type Record struct {
 	Text     string `json:"text"`
 }
 
-type Mark struct{ Through, Bytes, LatestUser int64 }
+type Mark struct{ Through, Scanned, Bytes, LatestUser int64 }
 
 type Repository interface {
 	LATMemory(context.Context, string) (State, error)

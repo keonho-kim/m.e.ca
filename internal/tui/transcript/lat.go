@@ -11,6 +11,7 @@ import (
 
 func (f Formatter) latReview(event runrecord.Event) viewport.Block {
 	label := "LAT: Review feedback"
+	phase := "review"
 	switch event.Kind {
 	case "lat_clean":
 		label = "LAT: No actionable findings in supplied evidence"
@@ -18,6 +19,7 @@ func (f Formatter) latReview(event runrecord.Event) viewport.Block {
 		label = "LAT: Review unavailable"
 	case "lat_memory_unavailable":
 		label = "LAT: Memory compaction unavailable"
+		phase = "memory"
 	case "lat_discarded":
 		label = "LAT: Request changed; review discarded"
 	}
@@ -25,5 +27,5 @@ func (f Formatter) latReview(event runrecord.Event) viewport.Block {
 	if event.Text != "" {
 		text += "\n" + f.Redact(event.Text)
 	}
-	return viewport.Block{Text: text, Markdown: true}
+	return viewport.Block{Text: text, Markdown: true, Group: viewport.Group{ID: event.RunID + ":" + phase, Title: "Look At This"}}
 }

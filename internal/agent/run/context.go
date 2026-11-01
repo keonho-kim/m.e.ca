@@ -23,9 +23,16 @@ func excerpt(text string, limit int) string {
 	return text[:end] + "\n[excerpt; full record retained]"
 }
 func (s *execution) request() (modelapi.Request, error) {
-	parameters, err := inference.Resolve(s.runner.Inference, inference.Agent)
+	parameters, err := inference.Resolve(s.runner.Inference, s.inferenceRole())
 	if err != nil {
 		return modelapi.Request{}, err
 	}
-	return contextbuild.Build(contextbuild.Input{Request: parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions}), ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions})
+	if s.runner.fork != nil {
+		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
+		if s.runner.fork.role == inference.LAT {
+			request.MaxOutput = s.runner.fork.maxOutput
+		}
+	}
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

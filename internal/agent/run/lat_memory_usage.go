@@ -16,7 +16,7 @@ import (
 func (s *execution) recordLATMemoryUsage(ctx context.Context, update latmemory.Update) error {
 	for _, receipt := range update.Receipts {
 		s.statistics.add(receipt.Usage, receipt.Measured)
-		generation := runrecord.Generation{ID: receipt.ID, Role: inference.LATCompaction, Attempt: receipt.Attempt, ElapsedMillis: receipt.Elapsed.Milliseconds()}
+		generation := runrecord.Generation{ID: receipt.ID, Role: inference.LATCompaction, Attempt: receipt.Attempt, ElapsedMillis: receipt.Elapsed.Milliseconds(), MeasuredMillis: receipt.Measured.Milliseconds()}
 		var rate *float64
 		if receipt.Usage != nil {
 			rate = outputRate(receipt.Usage.Output, receipt.Measured)

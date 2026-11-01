@@ -23,8 +23,9 @@ type liveCaptures struct {
 }
 
 type liveCommandCapture struct {
-	mu      sync.Mutex
-	streams [2]liveCapture
+	mu        sync.Mutex
+	streams   [2]liveCapture
+	finalized bool
 }
 
 func (c *liveCaptures) command(id string) *liveCommandCapture {
@@ -56,6 +57,9 @@ func (e *Executor) commandCaptures(id string) ([2]liveCapture, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	previous := c.streams
+	if c.finalized {
+		return previous, nil
+	}
 	updates, err := e.commands.ReadOutput(id, [2]uint64{previous[0].revision, previous[1].revision})
 	if err != nil {
 		return previous, err
@@ -77,7 +81,7 @@ func (e *Executor) projectLiveCapture(id, stream string, previous liveCapture, u
 	text := textformat.RedactSource(update.Text, e.redact)
 	next := liveCapture{revision: update.Revision, excerpt: commandExcerpt(text)}
 	if len(text) > outputExcerptBytes {
-		path, err := e.commandPath(id, "."+stream+".live.log")
+		path, err := e.commandPath(id, "."+stream+".log")
 		if err != nil {
 			return previous, err
 		}

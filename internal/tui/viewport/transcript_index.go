@@ -7,6 +7,7 @@ package viewport
 // Prepare consumes history owned by View; callers change its blocks through
 // AppendBlock, Prepend and ToggleDetails so unchanged prefixes remain reusable.
 func (t *Transcript) Prepare(width int, view *View, live []*Block) {
+	t.live = live
 	history := view.Blocks
 	var head *Block
 	if len(history) > 0 {
@@ -27,24 +28,46 @@ func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 		clear(t.sections)
 		t.sections = t.sections[:0]
 		t.historyLength, t.historySections, t.historyRows, t.historyTrailing = 0, 0, 0, 0
+		t.historyGroup, t.historyLast = Group{}, nil
 	}
 	previous := t.sections
 	t.sections = t.sections[:t.historySections]
 	t.width, t.total = width, t.historyRows
 	trailing := t.historyTrailing
-	add := func(block *Block) {
-		count := block.Count(width)
-		if count == 0 {
-			return
-		}
-		skip := max(0, block.layout.leading-max(0, maxBoundaryBlanks-trailing))
-		part := section{block: block, key: block.layout.key, start: t.total, skip: skip, count: count - skip}
+	group, last := t.historyGroup, t.historyLast
+	push := func(part section) {
+		part.start = t.total
 		i := len(t.sections)
 		if i >= len(previous) || previous[i] != part {
 			changed = true
 		}
 		t.sections = append(t.sections, part)
 		t.total += part.count
+	}
+	add := func(block *Block) {
+		next := block.Group
+		part := section{block: block, group: next}
+		count := block.Count(width)
+		if count == 0 {
+			if next.ID != "" && next.ID == group.ID {
+				group.Open = next.Open
+			}
+			return
+		}
+		if group.ID != next.ID || group.Title != next.Title {
+			if group.ID != "" {
+				push(section{block: last, group: group, edge: '-', count: 1})
+			}
+			if next.ID != "" {
+				push(section{block: block, group: next, edge: '+', count: 1})
+			}
+			trailing = 0
+		}
+		group = next
+		skip := max(0, block.layout.leading-max(0, maxBoundaryBlanks-trailing))
+		part.key, part.skip, part.count = block.layout.key, skip, count-skip
+		push(part)
+		last = block
 		trailing = min(maxBoundaryBlanks, block.layout.trailing)
 	}
 	for i := t.historyLength; i < len(history); i++ {
@@ -56,9 +79,13 @@ func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 	}
 	t.historyHead, t.historyRevision, t.historyLength = head, view.layoutRevision, len(history)
 	t.historySections, t.historyRows, t.historyTrailing = len(t.sections), t.total, trailing
+	t.historyGroup, t.historyLast = group, last
 	for _, block := range live {
 		block.live = true
 		add(block)
+	}
+	if group.ID != "" && !group.Open {
+		push(section{block: last, group: group, edge: '-', count: 1})
 	}
 	if len(previous) != len(t.sections) {
 		changed = true

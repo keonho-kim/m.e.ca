@@ -12,8 +12,12 @@ import (
 	json "github.com/goccy/go-json"
 )
 
-func Restore(body, refsBody []byte, fields map[string]bool, load func(string) (json.RawMessage, error)) ([]byte, error) {
-	if fields == nil && bytes.Equal(refsBody, []byte("{}")) {
+func Restore(body, refsBody []byte, fields map[string]bool, load func(string) (json.RawMessage, error), nested ...Selection) ([]byte, error) {
+	var projection Selection
+	if len(nested) > 0 {
+		projection = nested[0]
+	}
+	if fields == nil && projection == nil && bytes.Equal(refsBody, []byte("{}")) {
 		if !json.Valid(body) {
 			return nil, fmt.Errorf("invalid stored record JSON")
 		}
@@ -30,6 +34,15 @@ func Restore(body, refsBody []byte, fields map[string]bool, load func(string) (j
 			}
 		}
 	}
+	for key, selected := range projection {
+		if raw, ok := root[key]; ok {
+			value, err := projectValue(raw, selected)
+			if err != nil {
+				return nil, err
+			}
+			root[key] = value
+		}
+	}
 	var refs map[string]string
 	if err := json.Unmarshal(refsBody, &refs); err != nil {
 		return nil, err
@@ -41,6 +54,9 @@ func Restore(body, refsBody []byte, fields map[string]bool, load func(string) (j
 			return nil, fmt.Errorf("invalid stored payload path")
 		}
 		if fields != nil && !fields[path[0]] {
+			continue
+		}
+		if selected, ok := projection[path[0]]; ok && !selected.allows(path[1:]) {
 			continue
 		}
 		value := loaded[id]

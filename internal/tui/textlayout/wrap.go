@@ -43,7 +43,8 @@ func RowsFrom(source string, width, start int, prefix string) iter.Seq[Row] {
 		base := start
 		for {
 			paragraph, rest, more := strings.Cut(source[base:], "\n")
-			if !strings.ContainsRune(paragraph, '\t') && len(prefix)+Width(paragraph) <= width {
+			ascii := printableASCII(paragraph)
+			if ascii && len(prefix)+len(paragraph) <= width || !ascii && !strings.ContainsRune(paragraph, '\t') && len(prefix)+Width(paragraph) <= width {
 				if !yield(Row{Text: prefix + paragraph, Prefix: prefix, Start: base, End: base + len(paragraph)}) {
 					return
 				}
@@ -52,6 +53,16 @@ func RowsFrom(source string, width, start int, prefix string) iter.Seq[Row] {
 				}
 				base = len(source) - len(rest)
 				prefix = ""
+				continue
+			}
+			if len(prefix) < width && ascii {
+				if !asciiRows(paragraph, base, width, prefix, base == start && start > 0 && source[start-1] != '\n', yield) {
+					return
+				}
+				if !more {
+					return
+				}
+				base, prefix = len(source)-len(rest), ""
 				continue
 			}
 			indent := paragraph[:len(paragraph)-len(strings.TrimLeft(paragraph, " "))]

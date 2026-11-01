@@ -58,7 +58,7 @@ func TestSourceWatermarksReadOnlyNewRecordsAndResetAfterPublication(t *testing.T
 func TestTailExcludesOnlyTheCurrentOccurrenceOfARepeatedInstruction(t *testing.T) {
 	r := &repository{items: []Record{{Sequence: 1, Kind: "user", Text: "same request"}, {Sequence: 2, Kind: "outcome", Text: "actual earlier work"}, {Sequence: 3, Kind: "user", Text: "same request"}}}
 	c := &Controller{Repository: r, Session: "s", Redact: func(text string) string { return text }}
-	body, err := c.Tail(context.Background(), 8192, "same request")
+	body, err := c.Tail(context.Background(), 8192, "same request", nil)
 	if err != nil || strings.Count(string(body), "same request") != 1 || !strings.Contains(string(body), "actual earlier work") {
 		t.Fatal("deduplication removed a historical user instruction", string(body), err)
 	}

@@ -5,81 +5,93 @@
 package tool
 
 import (
+	"slices"
 	"sort"
 	"unicode/utf8"
 )
 
-// Observe preserves known partial mutations even when an operation ended with an error.
-func (f *Facts) Observe(op Operation) {
-	files := map[string]FileFact{}
-	for _, file := range f.Files {
-		files[file.Path] = file
-	}
-	for path, version := range op.Versions {
-		prior := files[path]
-		files[path] = observedFile(op, path, version, prior.Changed)
-	}
+// Observe preserves known partial mutations and reports whether derived state changed.
+func (f *Facts) Observe(op Operation) bool {
+	command := op.Name == "execute_command" || op.Name == "wait_command" || op.Name == "cancel_command"
+	changes := 0
 	for _, change := range op.Changes {
-		if change.BeforeDigest == change.AfterDigest && change.Destination == "" {
-			continue
-		}
-		for i := range f.Commands {
-			f.Commands[i].BeforeLaterChanges = true
-		}
-		version := change.AfterDigest
-		if change.AfterDigest == "missing" || change.Destination != "" {
-			version = "missing"
-		}
-		if version == "" && op.Name == "create_directory" {
-			version = "directory"
-		}
-		files[change.Path] = observedFile(op, change.Path, version, true)
-		if change.Destination != "" {
-			files[change.Destination] = observedFile(op, change.Destination, change.AfterDigest, true)
+		if change.BeforeDigest != change.AfterDigest || change.Destination != "" {
+			changes++
 		}
 	}
-	if op.Name == "execute_command" || op.Name == "wait_command" || op.Name == "cancel_command" {
-		status := "not_started"
-		var exit *int
-		if op.Started {
-			status = "unknown"
-			for p, v := range files {
-				v.Stale = op.Versions[p] == ""
-				files[p] = v
+	if len(op.Versions) == 0 && changes == 0 && !command {
+		return false
+	}
+	if len(op.Versions) > 0 || changes > 0 {
+		// Existing runtime facts are sorted. Normalize explicitly supplied facts
+		// only at a real update boundary, never for a query-only result.
+		less := func(i, j int) bool { return f.Files[i].Path < f.Files[j].Path }
+		if !sort.SliceIsSorted(f.Files, less) {
+			sort.Slice(f.Files, less)
+		}
+		original := len(f.Files)
+		find := func(path string) int {
+			return sort.Search(original, func(i int) bool { return f.Files[i].Path >= path })
+		}
+		updates := make(map[string]FileFact, len(op.Versions)+2*changes)
+		for path, version := range op.Versions {
+			changed := false
+			if i := find(path); i < original && f.Files[i].Path == path {
+				changed = f.Files[i].Changed
+			}
+			updates[path] = observedFile(op, path, version, changed)
+		}
+		for _, change := range op.Changes {
+			if change.BeforeDigest == change.AfterDigest && change.Destination == "" {
+				continue
+			}
+			version := change.AfterDigest
+			if version == "missing" || change.Destination != "" {
+				version = "missing"
+			}
+			if version == "" && op.Name == "create_directory" {
+				version = "directory"
+			}
+			updates[change.Path] = observedFile(op, change.Path, version, true)
+			if change.Destination != "" {
+				updates[change.Destination] = observedFile(op, change.Destination, change.AfterDigest, true)
 			}
 		}
-		if op.Process != nil {
-			status = op.Process.Status
-			if status != "running" {
-				n := op.Process.ExitCode
-				exit = &n
-			}
-			if op.Process.Command != "" {
-				op.Command = op.Process.Command
+		for path, file := range updates {
+			if i := find(path); i < original && f.Files[i].Path == path {
+				f.Files[i] = file
+			} else {
+				f.Files = append(f.Files, file)
 			}
 		}
-		command, c := reportExcerpt(op.Command)
-		fact := CommandFact{CallID: op.CallID, Command: command, Status: status, ExitCode: exit, Excerpt: c, ObservedRun: op.RunID, Revision: op.Revision}
-		if op.Process != nil {
-			fact.CommandID = op.Process.CommandID
-		}
-		replaced := false
-		for i, previous := range f.Commands {
-			if fact.CommandID != "" && previous.CommandID == fact.CommandID {
-				f.Commands[i] = fact
-				replaced = true
-				break
+		if len(f.Files) != original {
+			fresh := f.Files[original:]
+			sort.Slice(fresh, func(i, j int) bool { return fresh[i].Path < fresh[j].Path })
+			if original > 0 && f.Files[original-1].Path > fresh[0].Path {
+				pending := slices.Clone(fresh)
+				left, right, at := original-1, len(pending)-1, len(f.Files)-1
+				for right >= 0 {
+					if left >= 0 && f.Files[left].Path > pending[right].Path {
+						f.Files[at] = f.Files[left]
+						left--
+					} else {
+						f.Files[at] = pending[right]
+						right--
+					}
+					at--
+				}
 			}
 		}
-		if !replaced && command != "" {
-			f.Commands = append(f.Commands, fact)
+		if changes > 0 {
+			for i := range f.Commands {
+				f.Commands[i].BeforeLaterChanges = true
+			}
 		}
 	}
-	f.Files = nil
-	for _, v := range files {
-		f.Files = append(f.Files, v)
+	if command {
+		f.observeCommand(op)
 	}
-	sort.Slice(f.Files, func(i, j int) bool { return f.Files[i].Path < f.Files[j].Path })
+	return true
 }
 
 // reportExcerpt bounds model-facing quotations; full source records remain in session storage.

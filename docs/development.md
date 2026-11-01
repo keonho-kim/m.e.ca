@@ -13,8 +13,9 @@
 | agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·실측 통계 집계 |
 | agent/record | 실행 이벤트·체크포인트·상태·최종 통계·원자적 기록 단위와 검증 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
-| agent/lat | 독립 검토의 입력 조립·도구 없는 응답 수집·의견 해석 |
+| agent/lat | 독립 검토의 입력 조립·최종 의견 해석 |
 | agent/lat/memory | 원본 자료 선택·독립 메모·백그라운드 요약 수명 |
+| agent/lat/transcript | 단계별 native 이력·내부 기록·독립 압축 저장소 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
@@ -28,6 +29,7 @@
 | provider/httpclient | 생성 요청·유효 문맥·실행별 인코더의 수명 조율 |
 | policy·policy/command | 공통 보호 대상·파일 Scope와 execute_command의 선택적 AST 검사·값 상태·명령별 승인 근거 |
 | policy/command/transfer | HTTP·원격 복사·원격 실행의 전송 인자와 표시용 목적지 해석 |
+| policy/readonly | LAT 조회 명령의 리터럴 문법·허용 옵션·Git 실행 정규화 |
 | tools/local/catalog | 불변 도구 설명·스키마·native JSON 인자 파싱 |
 | tools/local | 준비·승인 바인딩·실행·자원 수명을 연결하는 호스트 어댑터 |
 | fileview | 도구 실행과 분리한 읽기 전용 탐색·참조 검증·미리보기 I/O, 공통 경로 정책을 적용한 루트 대여 |
@@ -57,7 +59,7 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 
 외부 전송 판정은 AST 연결과 프로토콜 파서로 나누고 명령·파일·DNS·네트워크를 실행하지 않는 순수 함수로 유지한다. `UserRequired`는 일반 승인 필요 여부와 구분하며 All Mighty도 직접 승인을 생략하지 않는다. 승인 창·원본 재검사·배치 실행 전 승인·실제 승인 출처 기록을 공유한다. 정상 다운로드·직접 지정한 loopback HTTP·인용된 명령 본문은 별도로 확인하고, 임의 프로그램 내부 통신까지 제어한다고 설명하지 않는다.
 
-LAT의 활성화는 TUI 이벤트 루프, 요청 스냅샷은 commands/agentrequest, 한 번의 선택적 검토와 피드백 반영은 agent/run이 소유한다. agent/lat는 파일·DB·실행 도구를 직접 참조하지 않는다. 모델 요청은 기존 사용량·재시도·시간 예산 경계를 공유하지만 메인 이력 인코더와 압축 누적량을 공유하지 않는다. 검토의 실제 사용량은 기존 통계·세션 DB에 기록한다.
+LAT의 활성화는 TUI 이벤트 루프, 요청 스냅샷은 commands/agentrequest, 계획·사전 검토·계획 보완·최종 검토의 한 번씩 실행과 피드백 반영은 agent/run이 소유한다. 별도 단계는 같은 메인 실행 엔진과 읽기 전용 도구 실행기를 사용하고 독립된 native 이력과 압축 저장소를 유지한다. agent/lat는 검토 입력·최종 의견을 해석하며 파일·DB·실행 도구를 직접 참조하지 않는다. 모델 요청은 기존 사용량·재시도·시간 예산 경계를 공유하지만 메인 이력 인코더와 압축 누적량을 공유하지 않는다. 실제 사용량은 단계 출처가 있는 내부 이벤트로 한 번 저장하고 세션 합계에 포함한다. 부모는 이를 실시간으로 전달하고 작업 통계에 합산하며 같은 사용량을 다시 저장하지 않는다. 조회 명령의 허용 문법과 실행 경계는 도구 어댑터가 소유한다.
 
 실행 사실과 파일 관측은 agent/tool, 실행 순서는 agent/run, 문맥 조립은 agent/context가 소유한다. 영속 실행 기록은 agent/record가 정의하므로 저장 어댑터·이력·TUI 투영은 실행 루프 구현을 참조하지 않는다. storage/content는 SQL 없이 분리·복원하며 SQLite가 같은 트랜잭션의 쓰기 콜백과 조회 후 복원 콜백을 제공한다. 승인 전경은 파일 뷰어·전송 대기보다 먼저 입력을 처리하고 결정을 마치면 보류한 파일 화면·초안을 복원한다. TUI 하위 컴포넌트는 session을 역참조하지 않으며 상태 변경은 단일 이벤트 루프에서 수행한다. Compaction은 사실을 소비해 요약하며 별도 실행 원장을 만들지 않는다. SQLite는 저장 기능 전체가 아니라 저장 계약의 구현 수단이다.
 
@@ -179,6 +181,14 @@ MECA_TEST_SECRET_SERVICE=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/conf
 
 ## 성능과 장시간 수명
 
+긴 ASCII 문단은 한 셀당 한 바이트인 경우에만 전용 줄 바꿈을 사용하고 한글·이모지·탭은 grapheme 경로를 유지한다. 긴 렌더링 줄 안에도 256행 간격의 희소 위치를 기록해 가시 구간 가까이서 재개한다. 열린 최상위 코드 펜스는 완성된 줄을 재사용하며 닫힘·폭 변경·원문 교체는 정상 파싱으로 되돌린다. 참조 링크·목록·표의 전체 의미는 차등 렌더링 검사로 검증한다.
+
+대화 표시의 파생 캐시는 가시 이력과 활성 Thinking·응답을 합쳐 16MiB 예산을 적용한다. 완료 이력과 오래된 활성 블록부터 파싱 캐시를 해제하고 원문·희소 스크롤 위치·복사 좌표는 유지한다. 입력 수용 한도와 표시 캐시 예산은 별도다. LAT 그룹은 단계 시작 시 한 번 구성해 프레임마다 재사용한다.
+
+파일 관측은 변경된 경로만 갱신하고 추가 경로만 정렬·병합한다. 변화 없는 조회 결과는 작업 상태를 재구성하거나 재검증하지 않는다. 읽기 전용 LAT 단계는 native 실행 기록을 유지하며 사용하지 않는 메인 파일·명령 사실 집계를 만들지 않는다. 로그의 실행 중 게시와 최종 확정은 명령별 잠금으로 직렬화하고 동일한 재조회 파일을 사용한다.
+
+저장소의 압축본·문맥 점유 표본은 세션별 최신 한 건을 유지한다. 중첩 표시 투영은 숨은 payload를 복원하기 전에 필드를 선택하고 중간 JSON 변환을 만들지 않는다. 큰 LAT 공통 근거는 content-addressed 문자열 조각으로 공유하며 조각·완성 원문의 무결성을 확인한다. 네 단계의 저장 비용 비교에서 전체 압축이 유리하면 통째로 저장한다. 스캔 순번과 유효 근거 경계를 분리해 내부 사건을 반복 조회하지 않는다.
+
 입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 커서 탐색은 약 256 rune 간격의 parser 상태 체크포인트에서 재개하며 편집 위치 이후의 인덱스만 폐기한다. 큰 삭제와 초안 교체는 불필요한 인덱스 용량을 해제한다. 입력 배치는 줄별 rune 시작 위치를 한 번 기록해 커서 줄을 이진 탐색하고 그 줄 안에서만 바이트 위치와 선택 범위를 계산한다. 출력 가능한 ASCII 폭은 바이트 길이로 계산하고 나머지는 Unicode 폭 규칙을 사용한다. 이미 순회 중인 grapheme의 폭은 iterator에서 재사용한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 요청 worker가 표시용 최신 스트림 mailbox를 소유하고 재시도·완료·승인·사용량 경계에서 이전 mailbox를 분리한다. 소비 후 본문 참조를 해제하며 별도 전송 goroutine을 만들지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
 
 대화 줄 인덱스는 변경되지 않은 이력의 접두사를 보존하고 추가 이력과 현재 출력만 배치한다. 폭·이력 소유 배열·prepend·잘라내기·도구 접기 상태 변경은 인덱스를 다시 구성한다. 가시 블록 목록만 비교해 화면 밖 파싱 참조를 해제한다. 자동 갱신은 60Hz 간격과 최근 그리기 비용의 3배 중 큰 시간을 기다리며 추가 대기는 최대 250ms다. 입력은 이전 프레임 시작 기준 다음 60Hz 시점에 표시할 수 있다. 느린 자동 갱신 직후의 입력은 한 번 즉시 표시하고 연속 입력 프레임은 60Hz 예산을 따른다. 입력 배치는 최대 32개이며 런타임 알림과 공정하게 처리하고 붙여넣기·종료 순서를 보존한다.
@@ -195,9 +205,9 @@ OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다
 
 Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio는 Responses 형식으로 직접 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
 
-하나의 요청 실행은 전용 Provider 인코더를 소유한다. 텍스트·이미지 이력은 Provider 변환 전에 불변 문자열·이미지 digest와 native 내용 지문을 비교해 메시지 JSON을 재사용한다. 컨텍스트 투영이 소유권을 인수한 native 인자·추론 상태는 한 번 지문을 만들고 읽기 전용으로 전달한다. 값·버퍼 교체는 지문을 무효화하며 소유권 계약이 없는 입력은 매번 내용 해시로 검사한다. 도구 결과와 뒤따르는 이미지 메시지는 하나의 그룹으로 재사용해 순서를 유지한다. 헤더·추론 설정·도구 선언은 매번 구성한다. 메시지 변경은 이후 접미사를 폐기하며 모델·Provider 변경이나 이력 축소는 전체 캐시를 해제한다. 캐시는 메시지별 보수적 부대비용을 포함해 약 64KiB부터 사용하고 보유 예산은 16MiB다. 작은 이력·예산 초과 이력은 캐시를 보유하지 않으며 입력 수용 한도는 유지한다. 이미지의 Base64와 native 인자의 인코딩 사본을 별도 캐시로 중복 보관하지 않고 최종 전송 조각을 재사용한다. HTTP 본문은 불변 인코딩 조각을 읽고 정확한 Content-Length와 독립된 재읽기 커서를 제공해 재시도·리다이렉트를 보존한다. 실행 종료·실패·취소는 worker를 합류한 뒤 캐시 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 동일 메시지 인코딩을 재사용하는 별도 요청으로 유지한다. 실제 usage가 없으면 전송 바이트를, 그 값도 없으면 이미지 본문을 제외한 텍스트 크기 근사를 압축용으로 사용한다. 이 계산을 위한 전체 요청 직렬화와 표시용 추정 토큰을 만들지 않는다.
+하나의 요청 실행은 전용 Provider 인코더를 소유한다. 텍스트·이미지 이력은 Provider 변환 전에 불변 문자열·이미지 digest와 native 내용 지문을 비교해 메시지 JSON을 재사용한다. 컨텍스트 투영이 소유권을 인수한 native 인자·추론 상태는 한 번 지문을 만들고 읽기 전용으로 전달한다. 값·버퍼 교체는 지문을 무효화하며 소유권 계약이 없는 입력은 매번 내용 해시로 검사한다. 도구 결과와 뒤따르는 이미지 메시지는 하나의 그룹으로 재사용해 순서를 유지한다. 추론 설정은 매 요청 구성하고 도구 선언은 원본 정의의 구조가 같을 때 불변 wire JSON을 재사용한다. 중첩 필드·허용값 변경도 검사하며, vLLM 토큰화와 생성 요청은 같은 도구 선언 조각을 사용한다. 메시지 변경은 이후 접미사를 폐기하고 이력 축소는 이력 캐시를 해제한다. 모델·Provider 변경과 실행 종료는 도구 선언을 포함한 전체 캐시를 해제한다. 이력 캐시는 메시지별 보수적 부대비용을 포함해 약 64KiB부터 사용하며 도구 선언과 합산한 보유 예산은 16MiB다. 도구 스냅샷은 정의 메타데이터를 포함해 256KiB 이내로 유지하고 작은 이력에서도 재사용한다. 작은 이력·예산 초과 이력은 이력 캐시를 보유하지 않으며 도구가 없는 작은 요청은 단일 본문 경로를 사용한다. 캐시 한도는 입력 수용 한도를 제한하지 않는다. 이미지의 Base64와 native 인자의 인코딩 사본을 별도 캐시로 중복 보관하지 않고 최종 전송 조각을 재사용한다. HTTP 본문은 불변 인코딩 조각을 읽고 정확한 Content-Length와 독립된 재읽기 커서를 제공해 재시도·리다이렉트를 보존한다. 실행 종료·실패·취소는 worker를 합류한 뒤 캐시 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 동일 메시지 인코딩을 재사용하는 별도 요청으로 유지한다. 실제 usage가 없으면 전송 바이트를, 그 값도 없으면 이미지 본문을 제외한 텍스트 크기 근사를 압축용으로 사용한다. 이 계산을 위한 전체 요청 직렬화와 표시용 추정 토큰을 만들지 않는다.
 
-메시지·실행 이벤트·요약·대용량 레코드 참조의 저장 JSON은 go-json의 기본 Marshal·Unmarshal을 사용한다. 키 정렬·HTML 이스케이프·nil과 빈 값·64비트 숫자·native arguments의 내용·복원 값의 독립성을 검사한다. SHA-256 무결성·저장 형식·트랜잭션 경계는 storage/content와 SQLite의 소유권을 따른다. 반환 값이 입력 버퍼에 의존하는 무복사 옵션은 사용하지 않는다.
+메시지·실행 이벤트·요약·대용량 레코드 참조의 저장 JSON은 go-json의 기본 Marshal·Unmarshal을 사용한다. LAT 입력의 정확한 문자열 경계와 공유 조각의 복원에는 표준 encoding/json을 사용한다. 키 정렬·HTML 이스케이프·nil과 빈 값·64비트 숫자·native arguments의 내용·복원 값의 독립성을 검사한다. SHA-256 무결성·저장 형식·트랜잭션 경계는 storage/content와 SQLite의 소유권을 따른다. 반환 값이 입력 버퍼에 의존하는 무복사 옵션은 사용하지 않는다.
 
 HTTP는 표준 net/http를 사용한다. 사용자 지정 DialContext에서도 TLS ALPN으로 HTTP/2를 협상하고 HTTP/1.1 서버도 지원한다. 연결·TLS handshake·유휴 수신 감지는 각 경계의 제한을 유지하며 전체 응답 시간 제한을 추가하지 않는다. 응답 body·요청 취소·연결 종료는 transport가 소유한 수명으로 정리한다.
 
@@ -211,15 +221,19 @@ Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다
 
 큰 JSON 값의 인코딩·복원과 무결성 검사는 storage/content가 소유하고 SQLite는 `payloads`에 해시·원본 길이·압축 형식·본문을 저장한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. `record.Entry` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
-run_states는 실행별 최신 체크포인트 한 건을 갱신하며 32KiB 초과 구조화 상태를 같은 Codec으로 압축한다. 최종 이벤트는 작은 상태·통계만 두고 Export는 해당 실행의 전체 상태를 복원한다. LAT 피드백은 원본 이벤트에서 메인 지침·압축 관측을 구성하며 memory_text나 별도 메시지에 같은 본문을 중복 저장하지 않는다. Timeline은 TUI 전용 투영으로 표시할 종류를 먼저 선택하고 숨은 native 인자·continuation·이미지를 복원하지 않는다. 도구의 display_args는 표시할 경로·명령·ID만 저장하며 잘못된 표시 필드가 실패 기록 자체를 막지 않는다. 인자는 Sonic의 지역적인 무복사 탐색으로 선택하고 반환하는 문자열은 독립된 값으로 복사한다. 원본 ContextMessages·Export와 표시용 Timeline의 계약을 구분한다.
+run_states는 실행별 최신 체크포인트 한 건을 갱신하며 32KiB 초과 구조화 상태를 같은 Codec으로 압축한다. 최종 이벤트는 작은 상태·통계만 두고 Export는 해당 실행의 전체 상태를 복원한다. LAT 피드백은 원본 이벤트에서 메인 지침·압축 관측을 구성하며 memory_text나 별도 메시지에 같은 본문을 중복 저장하지 않는다. LAT 별도 실행은 같은 세션에 단계 ID·부모 실행 ID·단계 이름을 가진 내부 이벤트로 기록한다. native 호출·결과·Thinking·최종 상태는 원본 내보내기에 보존하되 메인 메시지·압축·사용량 중복 합산·화면 이력·독립 LAT 메모 자료에서는 제외한다. 단계 중간 체크포인트·제안·시작 알림은 생성·검사·저장을 생략하며 종료 상태에는 요청·파일 상태·집계 통계 사본을 넣지 않는다. Thinking 이벤트 본문은 native 메시지와 중복 저장하지 않고 중단 시에도 보존한다. 단계 상태는 부모의 run_states나 LatestRun을 교체하지 않는다. Timeline은 TUI 전용 투영으로 표시할 종류를 먼저 선택하고 숨은 native 인자·continuation·이미지를 복원하지 않는다. 화면에 표시하는 도구의 display_args만 경로·명령·ID를 저장하며 잘못된 표시 필드가 실패 기록 자체를 막지 않는다. 인자는 Sonic의 지역적인 무복사 탐색으로 선택하고 반환하는 문자열은 독립된 값으로 복사한다. 원본 ContextMessages·Export와 표시용 Timeline의 계약을 구분한다.
 
 압축 점유량 조회는 최근 실측 샘플·최신 요약 revision의 경계·이후 추가된 메시지 크기·현재 timeline을 한 SQL 문과 같은 읽기 스냅샷에서 계산한다. 원문 본문을 읽거나 추가 영속 카운터·캐시·인덱스를 만들지 않는다.
 
-컨텍스트 투영 캐시는 요청 실행이 소유하고 변경되지 않은 불변 메시지만 재사용한다. native 도구 결과 짝이 완성되거나 메시지·모델·비밀키 revision이 바뀌면 다시 투영한다. Compaction이 이력을 교체하면 캐시를 해제한다. 전체 미압축 대화와 Provider 전송 본문은 유지한다. 요청 인코딩 재사용은 별도 Provider 인코더가 담당하며 네트워크 전송량·모델 토큰 수를 줄이지 않는다.
+LAT 단계는 메인이 조립한 공통 지침과 해당 단계의 도구 스냅샷을 재사용한다. 읽기 전용 스키마는 사용할 도구만 복제하며 요청 봉투는 한 번 준비한 뒤 원본 증분을 결합한다. 이미지·native 메시지의 바이트 예산은 전체 JSON 직렬화 없이 계산한다. 단계 저널은 새 기록 추가 때 전체 이력을 순회하지 않고 실제 압축·이전 요청 해제 시 참조를 정리한다. 문맥 토큰·요약 자료 조회는 정렬된 순번 경계에서 시작한다. 완료 명령의 취소 문맥은 결과 확정 시 해제하고 남은 자원은 단계 종료 시 정리한다. 조회 실행 중 전역 잠금을 유지하지 않으며 기존 명령 최대 4개·이미지 읽기 1개 제한을 따른다. 종료 시 같은 진입 잠금으로 새 실행을 차단하고 취소한 뒤 활성 호출을 합류한다.
+
+컨텍스트 투영 캐시는 요청 실행이 소유하고 변경되지 않은 불변 메시지만 재사용한다. 요청 메시지 배열은 한 번 할당하고 각 요청이 독립적으로 소유한다. 변경된 접미사와 영향받는 native 그룹 경계만 다시 검사한다. 고정 시스템 지침·프로젝트 경로 투영은 256KiB 이내에서 재사용하며 원본·모델·비밀키 revision 변경 시 무효화한다. revision 재검사는 지침과 전체 문맥에 함께 적용한다. Compaction이 이력을 교체하면 캐시를 해제한다. 전체 미압축 대화와 Provider 전송 본문은 유지한다. 요청 인코딩 재사용은 별도 Provider 인코더가 담당하며 네트워크 전송량·모델 토큰 수를 줄이지 않는다.
 
 대화 선택은 디렉터리의 DB 파일이 식별 근거다. 최초 조회는 private 메모리 SQLite 연결 하나에 파일을 읽기 전용으로 하나씩 attach/detach하고 요약 배열 하나와 정렬 시각만 보유한다. 별도 레지스트리·sidecar·상시 worker를 만들지 않으며 정상·오류·취소 시 연결을 닫는다. 페이지 이동은 선택 화면이 소유하는 스냅샷을 사용한다. 전체 정렬을 위해 최초 조회는 파일 수에 비례한다.
 
-LAT 원본 자료·독립 메모·백그라운드 작업은 agent/lat/memory가 소유한다. 메인 메모·assistant 답변·Thinking·이전 검토 결론을 읽지 않으며, SQLite는 사용자 원문과 확정된 실행 결과를 표시용 이력과 별도로 조회한다. 메모 한 건의 revision·처리 경계를 CAS로 갱신하고 큰 본문은 기존 Codec으로 압축한다. 실패·취소·경쟁 게시가 이전 메모나 원본을 덮어쓰지 않도록 검사한다. 메모가 다루는 경계 이후의 원문 지시는 최종 검토에 유지하고, 현재 요청을 크기 비율로 자르지 않는다.
+LAT 출력의 단계 출처·본문·Thinking·도구 이벤트 전달은 agent/run, 화면 전환과 단일 LAT·Compaction 애니메이션 타이머는 tui/session이 소유한다. tui/transcript는 실시간·저장 이력에 같은 그룹 정보를 붙이고 tui/viewport는 희소 줄 인덱스에 제목·종료 가로선만 추가한다. 구분선은 가시 구간에서 본문 폭에 맞춰 생성하고 본문 전체를 합치거나 복사·재저장하지 않는다. 화면 이력은 기존 내부 기록을 선택해 복원하고 별도 테이블·표시용 본문 사본을 추가하지 않는다.
+
+LAT 원본 자료·독립 메모·백그라운드 작업은 agent/lat/memory가 소유한다. 사전 계획·비평·계획 보완은 최대 64KiB의 불변 근거 한 사본을 공유한다. 원본 경계·요약 revision·현재 지시·비밀키 revision이 같고 입력 예산에 맞을 때만 재사용하며, 지시 변경·예산 부족·자료 변경 시 폐기한다. 준비 종료 시 참조를 해제하고 최종 검토는 최신 근거를 다시 읽는다. revision을 제공하지 않는 호출은 원본 조회를 유지한다. 메인 메모·assistant 답변·Thinking·이전 검토 결론·별도 단계의 내부 이력을 읽지 않으며, SQLite는 사용자 원문과 확정된 실행 결과를 표시용 이력과 별도로 조회한다. 메모 한 건의 revision·처리 경계를 CAS로 갱신하고 큰 본문은 기존 Codec을 사용한다. 실패·취소·경쟁 게시가 이전 메모나 원본을 덮어쓰지 않도록 검사한다. 메모가 다루는 경계 이후의 원문 지시는 최종 검토에 유지하고, 현재 요청을 크기 비율로 자르지 않는다.
 
 요약 worker는 하나만 소유하며 새로운 기록을 복제한 대기열 대신 DB의 최신 경계를 읽어 합친다. 모델 이벤트는 worker에서 모으고 실제 usage·재시도별 receipt만 소유자에게 전달한다. 진행 usage는 최신 한 건으로 합치고 소비한 receipt 참조를 해제한다. 전경·백그라운드 모델 요청은 잠금으로 같은 호출 예산을 예약하고 전경 한 건의 여유를 남긴다. SQLite 게시·통계 변경·UI 전달은 런타임 소유자에서 수행한다. 새 사용자 지시·실제 결과가 기록되었을 때만 자료 크기를 조회하고 한 준비에서 같은 경계를 중복 집계하지 않는다. 처리 경계가 유지되는 동안 새로 추가된 원본만 크기에 더하고 새 메모 게시 후 경계를 다시 설정한다. 선택 단계부터 남은 입력 예산을 전달해 뒤쪽 원문을 불필요하게 복원하지 않는다. 큰 출력·diff는 전체 길이·SHA-256을 확인하며 발췌만 남기는 스트리밍 복원을 사용하고, 전체 JSON 복원은 별도 계약으로 유지한다. 생성기는 별도 요청 본문을 사용해 전경 인코더를 변경하지 않는다. 최종 검토는 원문이 모두 들어가면 압축을 취소·합류하고, 부족할 때만 대기하며 새 지시·취소를 확인한다. 모든 종료 경로에서 합류 후 마지막 실측값을 확정한다. 선택적인 요약은 다음 도구 실행을 시작할 때 우선 예약하고 전경 생성 중에는 새 요약을 시작하지 않는다. 이미 시작한 요약은 전경과 겹칠 수 있으므로 같은 서버의 추가 토큰·자원 경합은 별도 측정 대상이다.
 
@@ -234,10 +248,14 @@ LAT 원본 자료·독립 메모·백그라운드 작업은 agent/lat/memory가 
 | 경로 | 패키지 | 벤치마크 이름 |
 | --- | --- | --- |
 | 문맥 투영·사용량 대체 계산 | internal/agent/context · internal/agent/run | BenchmarkProjection · BenchmarkUsageFallback |
-| LAT 기준 미만 경로 | internal/agent/lat/memory | BenchmarkBelowThreshold |
+| LAT 단계 입력·저널 | internal/agent/lat · internal/agent/lat/transcript | BenchmarkPhasePacket · BenchmarkJournalImageCommit · BenchmarkPrivateWatermark |
+| LAT 조회 도구 스냅샷 | internal/tools/local | BenchmarkReadOnlyDefinitions |
+| LAT 기준 미만·사전 근거 공유 | internal/agent/lat/memory | BenchmarkBelowThreshold · BenchmarkPreparationEvidence |
+| LAT 이력·스캔 경계·화면 배치 | internal/storage/sqlite · internal/tui/session | BenchmarkLATTimeline · BenchmarkLATScanCursor · BenchmarkLATLayout |
+| 긴 본문·변화 없는 파일 관측 | internal/tui/viewport · internal/agent/tool | BenchmarkLiveMarkdownShape · BenchmarkQueryFacts |
 | 이력 줄 배치·입력 표시 | internal/tui/viewport · internal/tui/session | BenchmarkLiveTranscriptFrame · BenchmarkTerminalPacing · BenchmarkStreamDelivery |
 | Markdown·입력·셀 폭 | internal/tui/markdown · internal/tui/input · internal/tui/textlayout | BenchmarkStreamTail · BenchmarkParagraph · BenchmarkLongDraft · BenchmarkWidth |
-| 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkImageHistory |
+| 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkImageHistory · BenchmarkToolSchemaEncoding |
 | Provider 변환·스트림 | internal/provider/protocol | BenchmarkProviderRequests · BenchmarkProviderStream · BenchmarkOpenRouterReasoningFragments · BenchmarkTextMessages · BenchmarkImageEncoding |
 | 로컬 HTTP 왕복 | internal/provider/httpclient | BenchmarkGenerationEncoding |
 | 도구 표시·diff·배치 준비 | internal/tui/transcript · internal/tools/local/diff · internal/tools/local · internal/tools/local/catalog | BenchmarkDisplayArguments · BenchmarkAnalysis · BenchmarkParallelPlanning · BenchmarkCatalog |

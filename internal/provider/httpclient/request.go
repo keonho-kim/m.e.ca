@@ -65,7 +65,7 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	// The probe exercises image acceptance directly, without requiring a separate
 	// tokenizer endpoint that may be unavailable or unable to process media.
 	if !probe {
-		request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools)
+		request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools, encoder)
 	}
 	if err != nil {
 		return err

@@ -1,6 +1,6 @@
-// Purpose: Complete independent review evidence without waiting on an unnecessary summary.
+// Purpose: Complete independent phase evidence without waiting on an unnecessary summary.
 // Pattern: Safe-boundary preparation with cancellable single-job catch-up.
-// Usage: Final LAT review calls this after commands settle and before its model request.
+// Usage: Each LAT phase supplies its prepared evidence budget before opening its native loop.
 // Related: internal/agent/run/lat_memory.go, internal/agent/lat/memory/tail.go.
 package run
 
@@ -10,15 +10,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/keonho-kim/meca/internal/agent/lat"
 	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 )
 
-func (s *execution) prepareLATContext(ctx context.Context, input lat.Input) ([]byte, error) {
-	budget, err := lat.SourceBudget(input)
-	if err != nil {
-		return nil, err
-	}
+func (s *execution) prepareLATContext(ctx context.Context, budget int) ([]byte, error) {
 	if s.latMemory == nil {
 		return nil, fmt.Errorf("independent review memory is unavailable")
 	}
@@ -29,7 +24,7 @@ func (s *execution) prepareLATContext(ctx context.Context, input lat.Input) ([]b
 		if err := s.pollLATMemory(ctx); err != nil {
 			return nil, err
 		}
-		body, err := s.latMemory.controller.Tail(ctx, budget, s.checkpoint.Objective)
+		body, err := s.latMemory.controller.Tail(ctx, budget, s.checkpoint.Objective, s.latMemory.evidence)
 		if err == nil {
 			// A complete original delta already fits. Release model resources
 			// before final review instead of awaiting optional compaction.

@@ -51,6 +51,7 @@ func (a *app) requestExit() {
 	a.cancelDirectory()
 	a.closeFilePreview()
 	a.stopElapsed()
+	a.stopLATIndicator()
 	a.stopCompression()
 	a.exit = true
 	a.closePendingEdit()

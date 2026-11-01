@@ -47,37 +47,3 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 	}
 	return modelapi.Message{Images: message.Images, Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, ReasoningState: message.ReasoningState, ProviderID: message.ProviderID, ModelID: message.ModelID, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
 }
-
-// Compaction and interrupted work can leave partial groups. Keep those records
-// as quoted observations rather than sending orphan native results to a server.
-func pairedTools(messages []modelapi.Message) map[int]bool {
-	paired := make(map[int]bool)
-	for index, message := range messages {
-		if message.Role != "assistant" || message.Incomplete || len(message.Calls) == 0 || index+len(message.Calls) >= len(messages) {
-			continue
-		}
-		pending := make(map[string]string)
-		for _, call := range message.Calls {
-			pending[call.ID] = call.Name
-		}
-		if len(pending) != len(message.Calls) {
-			continue
-		}
-		valid := true
-		for offset := 1; offset <= len(message.Calls); offset++ {
-			result := messages[index+offset]
-			name, exists := pending[result.ToolCallID]
-			if result.Role != "tool" || !exists || result.ToolName != name {
-				valid = false
-				break
-			}
-			delete(pending, result.ToolCallID)
-		}
-		if valid {
-			for offset := 0; offset <= len(message.Calls); offset++ {
-				paired[index+offset] = true
-			}
-		}
-	}
-	return paired
-}

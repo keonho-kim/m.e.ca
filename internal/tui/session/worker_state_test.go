@@ -21,7 +21,7 @@ func TestWorkerStateCancellation(t *testing.T) {
 	a.worker.stop()
 	a.stopCompression()
 	a.startCompression()
-	if a.compressionTimer != nil || a.compressionTicks != nil {
+	if a.indicatorTimer != nil || a.indicatorTicks != nil {
 		t.Fatal("late phase event restarted a cancelled timer")
 	}
 }

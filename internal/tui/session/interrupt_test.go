@@ -48,7 +48,7 @@ func TestCompressionIndicatorSurvivesNarrowHeader(t *testing.T) {
 			a.worker = workerAgent
 			a.tokenTotal.Input, a.tokenTotal.Output = 1234567890, 9876543210
 			a.receiveRuntime(&runrecord.Event{Kind: "compaction_started"})
-			a.advanceCompression()
+			a.advanceIndicator()
 			a.render()
 			header := screenLine(a.screen, 0, width)
 			if !strings.Contains(header, lang.Text("Compress Memory")+" ..") {
@@ -72,17 +72,17 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != "> draft" {
 		t.Fatal("status moved into composer")
 	}
-	if a.compressionTicks == nil {
+	if a.indicatorTicks == nil {
 		t.Fatal("compression timer missing")
 	}
 	for want := 1; want <= 3; want++ {
 		if !strings.Contains(a.activity().Label(), "메모리 압축 중 "+strings.Repeat(".", want)) {
 			t.Fatal(a.activity().Label())
 		}
-		a.advanceCompression()
+		a.advanceIndicator()
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "compaction_finished"}})
-	if a.compressionTicks != nil || a.activity().Compressing {
+	if a.indicatorTicks != nil || a.activity().Compressing {
 		t.Fatal("compression timer leaked")
 	}
 	a.receive(notice{Done: true})

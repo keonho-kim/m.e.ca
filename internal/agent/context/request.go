@@ -1,13 +1,12 @@
-// Purpose: Assemble ordered model context from instructions, history and memory.
-// Pattern: Pure context projection.
-// Usage: Runtime supplies retained history and the active request for projection.
-// Related: internal/agent/context/conversation.go, internal/agent/run/context.go.
+// Purpose: Assemble each complete model request into one owned message array.
+// Pattern: Pure context projection with an execution-owned reuse boundary.
+// Usage: Runtime supplies retained history, instructions and the active request.
+// Related: internal/agent/context/projection.go, internal/agent/context/instructions.go.
 package context
 
 import (
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"strconv"
 )
 
 type Input struct {
@@ -23,61 +22,52 @@ type Input struct {
 }
 
 func Build(input Input) (modelapi.Request, error) {
-	system := input.Redact(input.System)
-	if input.ProjectRoot != "" {
-		system += "\n\nProject directory (project_root): " + strconv.Quote(input.Redact(input.ProjectRoot))
+	if input.Projection != nil && input.RedactionVersion != nil {
+		return input.Projection.build(input)
 	}
-	messages := []modelapi.Message{{Role: "system", Content: system}}
+	var uncached Projection
+	input.RedactionVersion = func() int { return 0 }
+	return uncached.build(input)
+}
+
+func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
+	// One request owns these headers. Reusing this backing array across model
+	// calls would mutate earlier requests retained by a provider or observer.
+	messages := make([]modelapi.Message, 0, len(input.Messages)+4)
+	messages = append(messages, modelapi.Message{Role: "system", Content: p.instructions(input)})
 	if input.Memory != "" {
 		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work summary (historical observations):\n" + input.Redact(input.Memory)})
 	}
 	present := input.Objective == ""
-	for _, m := range input.Messages {
-		if m.Role == "user" && m.Content == input.Objective {
-			present = true
-			break
-		}
+	for i := len(input.Messages) - 1; i >= 0 && !present; i-- {
+		present = input.Messages[i].Role == "user" && input.Messages[i].Content == input.Objective
 	}
 	if !present && input.Memory != "" {
 		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
 		present = true
 	}
-	var projected []modelapi.Message
-	var historyBytes int
-	if input.Projection != nil && input.RedactionVersion != nil {
-		var err error
-		projected, historyBytes, err = input.Projection.project(input)
-		if err != nil {
-			return modelapi.Request{}, err
-		}
-	} else {
-		var uncached Projection
-		input.RedactionVersion = func() int { return 0 }
-		var err error
-		projected, historyBytes, err = uncached.project(input)
-		if err != nil {
-			return modelapi.Request{}, err
-		}
+	prefix := len(messages)
+	messages, bytes, err := p.appendHistory(input, messages)
+	if err != nil {
+		return modelapi.Request{}, err
 	}
-	bytes := historyBytes
-	for _, m := range messages {
-		bytes += messageBytes(m)
+	for _, message := range messages[:prefix] {
+		bytes += message.ContextBytes()
 	}
 	if !input.ImageInput {
-		for i := range projected {
-			if len(projected[i].Images) > 0 {
-				bytes -= messageBytes(projected[i])
-				projected[i].Content += modelapi.ImageOmissionNotice
-				projected[i].Images = nil
-				bytes += messageBytes(projected[i])
+		for i := prefix; i < len(messages); i++ {
+			if len(messages[i].Images) > 0 {
+				bytes -= messages[i].ContextBytes()
+				messages[i].Content += modelapi.ImageOmissionNotice
+				messages[i].Images = nil
+				bytes += messages[i].ContextBytes()
 			}
 		}
 	}
-	messages = append(messages, projected...)
 	if !present {
 		message := modelapi.Message{Role: "user", Content: input.Redact(input.Objective)}
 		messages = append(messages, message)
-		bytes += messageBytes(message)
+		bytes += message.ContextBytes()
 	}
 	if bytes > input.MaxBytes {
 		return modelapi.Request{}, fmt.Errorf("full conversation context exceeds %d bytes; no messages were omitted", input.MaxBytes)

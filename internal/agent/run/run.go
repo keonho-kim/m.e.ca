@@ -23,8 +23,10 @@ type execution struct {
 	latMemory        *reviewMemory
 	latObserved      bool
 	latReviewed      bool
+	latDraftSaved    bool
 	reviewing        bool
 	latSteering      []string
+	latPlan          string
 	reviewGenerator  modelapi.Generator
 	projection       contextbuild.Projection
 	historyLoaded    bool
@@ -72,9 +74,14 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 	if r.Prompts != nil {
 		templates = *r.Prompts
 	}
-	system, err := prompt.Work(templates.System, templates.Development, r.ProjectInstructions)
-	if err != nil {
-		return result, err
+	var system string
+	if r.fork != nil {
+		system = r.fork.system
+	} else {
+		system, err = prompt.Work(templates.System, templates.Development, r.ProjectInstructions)
+		if err != nil {
+			return result, err
+		}
 	}
 	if len(input) > 64*1024*1024 {
 		return result, fmt.Errorf("objective exceeds 64 MiB")
@@ -100,17 +107,29 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		defer release()
 		r.Generator = generator
 	}
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: imageDefinitions(r.Tools.Definitions(), r.ImageInput), statistics: runStatistics{started: started}}
+	var definitions []toolapi.Definition
+	if r.fork != nil {
+		definitions = r.fork.definitions
+	} else {
+		definitions = imageDefinitions(r.Tools.Definitions(), r.ImageInput)
+	}
+	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
 	if r.LAT {
 		s.reviewGenerator = reviewGenerator
 	}
 	s.usage = &requestBudget{}
-	s.usage.begin(limits)
+	if r.fork != nil {
+		s.usage = r.fork.budget
+		s.reviewing = true
+	} else {
+		s.usage.begin(limits)
+	}
 	if r.LAT {
 		owner, stop := context.WithDeadline(ctx, s.usage.snapshot().deadline)
 		s.latMemory = &reviewMemory{ctx: owner, stop: stop, dirty: true}
 		s.latMemory.controller.Repository, s.latMemory.controller.Session = r.ReviewMemory, r.Session
 		s.latMemory.controller.Redact = r.Redact
+		s.latMemory.controller.RedactionVersion = r.RedactionVersion
 	}
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
@@ -141,6 +160,9 @@ func (r Runner) Run(ctx context.Context, input string, approve Approver, emit fu
 		}
 	}
 	if err = s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
+		return s.result, err
+	}
+	if err = s.prepareLAT(ctx); err != nil {
 		return s.result, err
 	}
 	for {

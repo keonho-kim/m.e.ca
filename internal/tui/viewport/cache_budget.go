@@ -1,0 +1,46 @@
+// Purpose: Bound aggregate derived display memory across history and active response blocks.
+// Pattern: Event-loop-owned cache budget with oldest-derived-first eviction.
+// Usage: Transcript trims after materializing visible rows; source and sparse anchors stay intact.
+// Related: internal/tui/viewport/window.go, internal/tui/viewport/block_layout.go.
+package viewport
+
+import "unsafe"
+
+const displayCacheBudget = 16 * 1024 * 1024
+
+func (b *Block) cacheBytes() int {
+	return b.stream.RetainedBytes() + cap(b.layout.metrics)*int(unsafe.Sizeof(rowMetrics{}))
+}
+
+func (t *Transcript) enforceCacheBudget() {
+	total := 0
+	for _, block := range t.visible {
+		if !block.live {
+			total += block.cacheBytes()
+		}
+	}
+	for _, block := range t.live {
+		total += block.cacheBytes()
+	}
+	if total <= displayCacheBudget {
+		return
+	}
+	// Finished history can be recreated from immutable source. Preserve active
+	// incremental state whenever it fits; older Thinking yields before the reply.
+	for _, block := range t.visible {
+		if total <= displayCacheBudget {
+			return
+		}
+		if !block.live {
+			total -= block.cacheBytes()
+			block.releaseParsed()
+		}
+	}
+	for _, block := range t.live {
+		if total <= displayCacheBudget {
+			return
+		}
+		total -= block.cacheBytes()
+		block.releaseParsed()
+	}
+}

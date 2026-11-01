@@ -51,6 +51,7 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 			return run.Result{}, err
 		}
 		templates.LAT, templates.LATCompaction = latTemplates.LAT, latTemplates.LATCompaction
+		templates.LATPlan, templates.LATCritique, templates.LATRefine = latTemplates.LATPlan, latTemplates.LATCritique, latTemplates.LATRefine
 	}
 	for _, text := range templates.Files() {
 		*text = runner.Redact(*text)

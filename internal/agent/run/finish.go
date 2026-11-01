@@ -20,6 +20,9 @@ func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
 	}
 	s.checkpoint.Status = runrecord.Answered
 	s.result.Text = text
+	if s.latDraftSaved {
+		return nil // The main answer was saved and shown before its final review.
+	}
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {
 		return err
 	}

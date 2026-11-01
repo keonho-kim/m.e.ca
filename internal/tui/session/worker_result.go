@@ -28,6 +28,11 @@ func (a *app) finishWorker(n notice) {
 	a.clearToolActivity()
 	a.taskCancel = nil
 	if n.Err != nil {
+		a.flushLATPartial()
+	}
+	a.stopLATIndicator()
+	a.latOutput = latOutput{}
+	if n.Err != nil {
 		a.output.AppendBlock(transcript.Thought(a.thinking))
 		a.output.AppendBlock(transcript.Answer(a.stream))
 	}

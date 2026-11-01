@@ -34,6 +34,12 @@ func (s *execution) startExecution(ctx context.Context, ready *readyExecution, e
 	}
 	s.checkpoint.Phase = "execution"
 	event := runrecord.Event{Kind: "tool_started", Text: ready.proposal.Name + " " + ready.proposal.Target, CallID: ready.call.ID, Call: &ready.call}
+	if s.runner.fork != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return emit(event) // The native call already owns the durable start intent.
+	}
 	if err := s.persist(ctx, event); err != nil {
 		return err
 	}

@@ -44,19 +44,30 @@ func (s *execution) checkpointEvent() (runrecord.Event, error) {
 	}
 	copy := s.checkpoint
 	event := runrecord.Event{Kind: "run_checkpoint", RunID: copy.ID, Checkpoint: &copy}
-	if copy.Phase == "finished" {
+	if copy.Phase == "finished" && s.runner.fork == nil {
 		statistics := s.statistics.snapshot(time.Now())
 		event.Statistics = &statistics
 	}
 	return event, nil
 }
 
+func (s *execution) needsCheckpoint() bool {
+	return s.runner.fork == nil || s.checkpoint.Phase == "finished"
+}
+
 func (s *execution) persist(ctx context.Context, events ...runrecord.Event) error {
-	event, err := s.checkpointEvent()
-	if err != nil {
-		return err
+	var checkpoint runrecord.Event
+	if s.needsCheckpoint() {
+		var err error
+		checkpoint, err = s.checkpointEvent()
+		if err != nil {
+			return err
+		}
+		events = append([]runrecord.Event{checkpoint}, events...)
 	}
-	events = append([]runrecord.Event{event}, events...)
+	if len(events) == 0 {
+		return ctx.Err()
+	}
 	records := make([]runrecord.Entry, len(events))
 	for i := range events {
 		events[i].RunID = s.checkpoint.ID
@@ -65,8 +76,8 @@ func (s *execution) persist(ctx context.Context, events ...runrecord.Event) erro
 	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
 		return errors.Join(errRuntimeRecord, err)
 	}
-	if event.Statistics != nil {
-		return s.emit(event)
+	if checkpoint.Statistics != nil {
+		return s.emit(checkpoint)
 	}
 	return nil
 }

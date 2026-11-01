@@ -1,16 +1,18 @@
-// Purpose: Verify LAT repairs real tool work in one session and persists measured review usage.
-// Pattern: Integration test over local files and SQLite with a scripted model.
-// Usage: go test ./internal/agent/session -run TestLAT.
-// Related: internal/commands/agentrequest/request.go, internal/agent/run/lat.go, internal/storage/sqlite/usage.go.
+// Purpose: Verify isolated native LAT work and usage survive SQLite session persistence.
+// Pattern: Scripted integration test over local tools and storage.
+// Usage: go test ./internal/agent/session -run TestLATPersists.
+// Related: internal/agent/run/lat.go, internal/storage/sqlite/events.go, internal/tools/local/read_only.go.
 package session_test
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -26,9 +28,86 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
-func TestLATPersistsOneConversationAndReviewUsage(t *testing.T) {
+type sessionLATModel struct {
+	mu                sync.Mutex
+	created, released int
+	requests          map[string][]modelapi.Request
+}
+
+func (*sessionLATModel) Generate(context.Context, modelapi.Request, func(modelapi.Event) error) error {
+	return fmt.Errorf("unscoped LAT generation")
+}
+
+func (m *sessionLATModel) NewRunGenerator() (modelapi.Generator, func()) {
+	m.mu.Lock()
+	m.created++
+	m.mu.Unlock()
+	phase := ""
+	g := generation(func(_ context.Context, request modelapi.Request, send func(modelapi.Event) error) error {
+		current := sessionLATPhase(request)
+		if phase == "" {
+			phase = current
+		} else if phase != current {
+			return fmt.Errorf("one scope served %s and %s", phase, current)
+		}
+		m.mu.Lock()
+		m.requests[phase] = append(m.requests[phase], request)
+		step := len(m.requests[phase])
+		m.mu.Unlock()
+		usage := &modelapi.TokenUsage{Input: 100, Output: 5, Cost: new(0.001)}
+		if phase == "main" {
+			switch step {
+			case 1, 3:
+				content := "one\n"
+				if step == 3 {
+					content = "two\n"
+				}
+				return send(sessionLATCall("write_file", fmt.Sprintf("main_%d", step), map[string]string{"path": "note.txt", "content": content}, usage))
+			case 2:
+				return send(modelapi.Event{Delta: "Initial draft", Thinking: "PRIVATE_MAIN_THINKING", Done: true, Usage: usage})
+			case 4:
+				return send(modelapi.Event{Delta: "Corrected file", Done: true, Usage: usage})
+			}
+			return fmt.Errorf("main script exhausted")
+		}
+		if step == 1 {
+			file := "source.txt"
+			if phase == "review" {
+				file = "note.txt"
+			}
+			return send(sessionLATCall("execute_command", phase+"_read", map[string]string{"command": "cat " + file}, usage))
+		}
+		if step != 2 {
+			return fmt.Errorf("%s script exhausted", phase)
+		}
+		text := map[string]string{"plan": "INITIAL_PLAN", "critique": "PLAN_CRITIQUE", "refine": "IMPROVED_PLAN", "review": "- note.txt: requested value is two, but observed content is one. Replace it with two."}[phase]
+		return send(modelapi.Event{Delta: text, Done: true, Usage: usage})
+	})
+	return g, func() { m.mu.Lock(); defer m.mu.Unlock(); m.released++ }
+}
+
+func sessionLATCall(name, id string, args map[string]string, usage *modelapi.TokenUsage) modelapi.Event {
+	body, _ := json.Marshal(args)
+	return modelapi.Event{Calls: []toolapi.Call{{ID: id, Name: name, Arguments: body}}, Done: true, Usage: usage}
+}
+
+func sessionLATPhase(request modelapi.Request) string {
+	for _, message := range request.Messages {
+		for _, phase := range []string{"plan", "critique", "refine", "review"} {
+			if strings.Contains(message.Content, "SESSION_LAT_"+strings.ToUpper(phase)) {
+				return phase
+			}
+		}
+	}
+	return "main"
+}
+
+func TestLATPersistsOneConversationAndNativePhaseAudit(t *testing.T) {
 	ctx := context.Background()
 	project, home, state := t.TempDir(), t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "source.txt"), []byte("SOURCE_EVIDENCE\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	sessions, err := sqlite.OpenSessions(filepath.Join(state, "sessions"))
 	if err != nil {
 		t.Fatal(err)
@@ -37,97 +116,90 @@ func TestLATPersistsOneConversationAndReviewUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := store.Close(); err != nil {
-			t.Error(err)
-		}
-	})
+	t.Cleanup(func() { _ = store.Close() })
 	vault := &credentials.Vault{State: state}
 	tools, err := local.NewExecutor(project, home, state, vault.Redact)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := tools.Close(); err != nil {
-			t.Error(err)
-		}
-	})
-	step, reviews, promptReads, summaries := 0, 0, 0, 0
-	g := generation(func(_ context.Context, request modelapi.Request, send func(modelapi.Event) error) error {
-		usage := &modelapi.TokenUsage{Input: 100, Output: 10, Cost: new(0.001)}
-		if strings.HasPrefix(request.Messages[0].Content, "# Summarize work for continuation") {
-			summaries++
-			if !strings.Contains(request.Messages[1].Content, "requested value is two") {
-				t.Fatal("compaction dropped the unresolved review finding")
-			}
-			return send(modelapi.Event{Delta: "- Pending review correction: note.txt must contain two; observed content is one.", Done: true, Usage: usage})
-		}
-		if len(request.Tools) == 0 {
-			reviews++
-			if !strings.Contains(request.Messages[0].Content, "CUSTOM_LAT_RULE") {
-				t.Error("installed LAT prompt was not used")
-			}
-			return send(modelapi.Event{Delta: "- note.txt: requested value is two, but observed content is one. Replace it with two.", Done: true, Usage: usage})
-		}
-		step++
-		if step == 3 {
-			return &modelapi.ContextLimitError{}
-		}
-		if step == 2 || step == 5 {
-			return send(modelapi.Event{Delta: "파일을 작성했습니다.", Done: true, Usage: usage})
-		}
-		content := "one\n"
-		if step == 4 {
-			found := false
-			for _, message := range request.Messages {
-				found = found || strings.Contains(message.Content, "Pending review correction")
-			}
-			if !found {
-				t.Fatal("main agent lost pending feedback after compaction")
-			}
-			content = "two\n"
-		}
-		arguments, _ := json.Marshal(map[string]string{"path": "note.txt", "content": content})
-		return send(modelapi.Event{Calls: []toolapi.Call{{ID: "write-" + content[:3], Name: "write_file", Arguments: arguments}}, Done: true, Usage: usage})
-	})
-	selected := connection.Selection{Model: "selected", Connection: connection.Connection{ID: "provider"}}
-	cfg := config.Defaults()
-	cfg.Compaction.KeepRecentTokens = 0 // Exercise feedback preservation through the real history projection.
-	request := agentrequest.New(agentrequest.Options{LAT: true, Config: cfg, Selection: selected, Session: store.Session(), Generator: g, Tools: tools, Store: store, Vault: vault,
-		Text: "note.txt에 two를 작성해주세요", LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil },
+	t.Cleanup(func() { _ = tools.Close() })
+	model := &sessionLATModel{requests: map[string][]modelapi.Request{}}
+	promptReads := 0
+	request := agentrequest.New(agentrequest.Options{
+		LAT: true, Config: config.Defaults(), Selection: connection.Selection{Model: "selected", Connection: connection.Connection{ID: "provider"}},
+		Session: store.Session(), Generator: model, Tools: tools, Store: store, Vault: vault, Text: "note.txt에 two를 작성해주세요",
+		LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil },
 		LoadLAT: func() (prompt.Templates, error) {
 			promptReads++
 			value := prompt.Defaults()
-			value.LAT += "\nCUSTOM_LAT_RULE"
+			value.LATPlan += "\nSESSION_LAT_PLAN"
+			value.LATCritique += "\nSESSION_LAT_CRITIQUE"
+			value.LATRefine += "\nSESSION_LAT_REFINE"
+			value.LAT += "\nSESSION_LAT_REVIEW"
 			return value, nil
 		},
 	})
 	result, err := session.Execute(ctx, request, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(runrecord.Event) error { return nil })
-	if err != nil || result.Status != runrecord.Answered || step != 5 || reviews != 1 || promptReads != 1 || summaries != 1 {
-		t.Fatalf("LAT execution: %+v steps=%d reviews=%d summaries=%d error=%v", result, step, reviews, summaries, err)
+	if err != nil || result.Status != runrecord.Answered || result.Text != "Corrected file" || promptReads != 1 || model.created != 5 || model.released != 5 {
+		t.Fatalf("LAT execution: %+v scopes=%d/%d prompt reads=%d err=%v", result, model.created, model.released, promptReads, err)
 	}
 	body, err := os.ReadFile(filepath.Join(project, "note.txt"))
 	if err != nil || string(body) != "two\n" {
 		t.Fatalf("correction was not applied: %q %v", body, err)
 	}
+	for _, phase := range []string{"plan", "critique", "refine", "review"} {
+		requests := model.requests[phase]
+		if len(requests) != 2 || !sessionNativePair(requests[1].Messages) {
+			t.Fatalf("%s lost its native query/result: %+v", phase, requests)
+		}
+		for _, definition := range requests[0].Tools {
+			if definition.Name == "write_file" || definition.Name == "edit_file" {
+				t.Fatalf("%s could mutate files", phase)
+			}
+		}
+	}
 	usage, err := store.TokenUsage(ctx, store.Session().ID)
-	if err != nil || usage.Input != 600 || usage.Output != 60 || usage.Cost == nil || math.Abs(*usage.Cost-0.006) > 1e-12 {
+	if err != nil || usage.Input != 1200 || usage.Output != 60 || usage.Cost == nil || math.Abs(*usage.Cost-0.012) > 1e-12 {
 		t.Fatalf("session usage: %+v %v", usage, err)
 	}
 	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paired, feedback := 0, 0
+	paired, users, improved := 0, 0, 0
 	for i, message := range messages {
 		if len(message.Calls) != 0 && i+1 < len(messages) && messages[i+1].ToolCallID == message.Calls[0].ID {
 			paired++
 		}
-		if message.Role == "system" && strings.Contains(message.Content, "requested value is two") {
-			feedback++
+		if message.Role == "user" && message.Content == request.Text {
+			users++
+		}
+		if strings.Contains(message.Content, "IMPROVED_PLAN") {
+			improved++
+		}
+		if strings.Contains(message.Content, "INITIAL_PLAN") || strings.Contains(message.Content, "PLAN_CRITIQUE") || strings.Contains(message.Content, "SOURCE_EVIDENCE") {
+			t.Fatal("private native history polluted parent context")
 		}
 	}
-	if paired != 2 || feedback != 1 {
-		t.Fatalf("native pairing or review context lost: calls=%d feedback=%d", paired, feedback)
+	if paired != 2 || users != 1 || improved != 1 {
+		t.Fatalf("parent history: native pairs=%d original requests=%d improved plans=%d", paired, users, improved)
 	}
+	var audit strings.Builder
+	if err := store.Export(ctx, store.Session().ID, &audit); err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{`"phase":"plan"`, `"phase":"critique"`, `"phase":"refine"`, `"phase":"review"`, `"tool_call_id":"plan_read"`, "SOURCE_EVIDENCE"} {
+		if !strings.Contains(audit.String(), value) {
+			t.Errorf("audit missing %s", value)
+		}
+	}
+}
+
+func sessionNativePair(messages []modelapi.Message) bool {
+	for i, message := range messages {
+		if len(message.Calls) == 1 && i+1 < len(messages) && messages[i+1].ToolCallID == message.Calls[0].ID {
+			return true
+		}
+	}
+	return false
 }

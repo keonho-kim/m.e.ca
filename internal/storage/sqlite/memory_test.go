@@ -101,8 +101,8 @@ func TestMemoryUsesLatestRequestContextInsteadOfCumulativeCost(t *testing.T) {
 	}
 	defer store.Close()
 	id := store.Session().ID
-	// Old counter facts remain stored, but are not input+output request usage.
-	if _, err = store.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind) VALUES(?,900000,1,'model')", id); err != nil {
+	// Billed generation usage stays independent of the latest context sample.
+	if err = store.RecordEvent(ctx, id, runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 900000, Output: 10}}); err != nil {
 		t.Fatal(err)
 	}
 	for _, count := range []compact.TokenCount{{Amount: 199999, Kind: "request"}, {Amount: 1, Kind: "request"}} {

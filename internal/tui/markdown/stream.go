@@ -20,6 +20,7 @@ type Stream struct {
 	width                   int
 	weight, committedWeight int
 	list                    *listCheckpoint
+	fence                   *fenceCheckpoint
 }
 
 // ReusedRows describes the immutable prefix retained by the most recent Render.
@@ -55,6 +56,12 @@ func (s *Stream) Render(text string, width int) []Line {
 		*s = Stream{}
 		return nil
 	}
+	if s.fence != nil {
+		if result, ok := s.renderFence(text, width); ok {
+			return result
+		}
+		s.fence = nil
+	}
 	if len(text) > MaxParseBytes || strings.Contains(text, "]:") {
 		return s.whole(text, width)
 	}
@@ -82,6 +89,7 @@ func (s *Stream) Render(text string, width int) []Line {
 		mutable = mutable.PreviousSibling()
 	}
 	nextCut, nextRows := start, s.committed
+	var fence *fenceCheckpoint
 	for node := document.FirstChild(); node != nil; node = node.NextSibling() {
 		if node == mutable {
 			if offset := blockStart(node, r.source); offset > 0 {
@@ -89,6 +97,9 @@ func (s *Stream) Render(text string, width int) []Line {
 			}
 		}
 		r.block(node, "", 0)
+		if node == document.LastChild() {
+			fence = openFence(node, text, start, r.source, s.committed+len(r.rows)-seed)
+		}
 	}
 	if r.failed {
 		return s.whole(text, width)
@@ -123,6 +134,16 @@ func (s *Stream) Render(text string, width int) []Line {
 		clear(previous[len(s.rows):])
 	}
 	s.source, s.cut, s.committed = text, nextCut, nextRows
+	s.fence = fence
+	if fence != nil {
+		for _, row := range s.rows[:fence.rows] {
+			fence.weight += lineWeight(row)
+		}
+	}
+	return s.normalized(text)
+}
+
+func (s *Stream) normalized(text string) []Line {
 	end := len(s.rows)
 	for end > 0 && s.rows[end-1].Text == "" {
 		end--

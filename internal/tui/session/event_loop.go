@@ -41,8 +41,8 @@ func (a *app) loop() error {
 			case terminal = <-input:
 			case <-a.elapsedTicks:
 				a.updateElapsed(time.Now())
-			case <-a.compressionTicks:
-				a.advanceCompression()
+			case <-a.indicatorTicks:
+				a.advanceIndicator()
 			case n := <-a.events:
 				a.receive(n)
 			case event, ok := <-a.fileWatch.events:

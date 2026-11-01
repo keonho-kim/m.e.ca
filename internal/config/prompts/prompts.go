@@ -46,16 +46,19 @@ func prepareDirectory(root *os.Root) error {
 	return errors.Join(directory.Chmod(0700), directory.Close())
 }
 func Load(directory string) (templates prompt.Templates, err error) {
-	fields := templates.Files()
-	delete(fields, "lat.md") // Inactive LAT adds no per-request file read or validation.
-	delete(fields, "lat_compaction.md")
-	err = load(directory, fields)
+	// Inactive LAT adds no per-request file read or validation.
+	err = load(directory, map[string]*string{
+		"system.md": &templates.System, "development.md": &templates.Development, "compaction.md": &templates.Compaction,
+	})
 	return templates, err
 }
 
-// LoadLAT reads the independent review instructions only for an enabled request.
+// LoadLAT reads planning and independent review instructions only for an enabled request.
 func LoadLAT(directory string) (templates prompt.Templates, err error) {
-	err = load(directory, map[string]*string{"lat.md": &templates.LAT, "lat_compaction.md": &templates.LATCompaction})
+	err = load(directory, map[string]*string{
+		"lat.md": &templates.LAT, "lat_plan.md": &templates.LATPlan, "lat_critique.md": &templates.LATCritique,
+		"lat_refine.md": &templates.LATRefine, "lat_compaction.md": &templates.LATCompaction,
+	})
 	return templates, err
 }
 

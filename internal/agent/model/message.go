@@ -22,17 +22,12 @@ func (message Message) Check() error {
 	if len(message.Images) > 0 && message.Role != "user" && message.Role != "tool" {
 		return fmt.Errorf("images require user or tool messages")
 	}
-	size := 0
 	for _, image := range message.Images {
 		if err := image.Check(); err != nil {
 			return err
 		}
-		size += len(image.Data)*4/3 + 4096
 	}
-	size += len(message.Content) + len(message.Reasoning) + len(message.ReasoningState)
-	for _, call := range message.Calls {
-		size += len(call.Arguments) + len(call.ID) + len(call.Name)
-	}
+	size := message.ContextBytes()
 	if size > MaxResponseBytes || len(message.Calls) > toolapi.MaxCalls {
 		return fmt.Errorf("message exceeds size limits")
 	}
@@ -45,4 +40,17 @@ func (message Message) Check() error {
 		return fmt.Errorf("invalid tool result ID")
 	}
 	return nil
+}
+
+// ContextBytes measures retained model content without serializing native state
+// or base64 images. Image envelopes reserve the same allowance as model context.
+func (message Message) ContextBytes() int {
+	size := len(message.Content) + len(message.Reasoning) + len(message.ReasoningState) + len(message.ToolCallID) + len(message.ToolName)
+	for _, image := range message.Images {
+		size += len(image.Data)*4/3 + 4096
+	}
+	for _, call := range message.Calls {
+		size += len(call.ID) + len(call.Name) + len(call.Arguments)
+	}
+	return size
 }

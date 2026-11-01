@@ -63,7 +63,7 @@ func TestImageBudgetUsesTransmittedContext(t *testing.T) {
 		if err != nil || len(request.Messages) != 2 || len(request.Messages[1].Images) != 0 {
 			t.Fatalf("omitted image consumed text context budget: %v", err)
 		}
-		exact := messageBytes(request.Messages[0]) + messageBytes(request.Messages[1])
+		exact := request.Messages[0].ContextBytes() + request.Messages[1].ContextBytes()
 		input.MaxBytes = exact
 		if _, err := Build(input); err != nil {
 			t.Fatalf("exact budget rejected: %v", err)

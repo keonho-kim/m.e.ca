@@ -1,60 +1,54 @@
-// Purpose: Verify advisory findings, retry replacement and read-only review failure semantics.
-// Pattern: Scripted model boundary tests.
-// Usage: go test ./internal/agent/lat.
-// Related: internal/agent/lat/response.go.
+// Purpose: Verify completed LAT terminal reports retain feedback and enforce bounded valid text.
+// Pattern: Pure response boundary tests.
+// Usage: go test ./internal/agent/lat -run TestParse.
+// Related: internal/agent/lat/response.go, internal/agent/run/lat.go.
 package lat
 
 import (
-	"context"
-	"errors"
 	"strings"
 	"testing"
-
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func TestReviewResponse(t *testing.T) {
+func TestParseTerminalReport(t *testing.T) {
 	for _, test := range []struct {
-		name         string
-		events       []modelapi.Event
-		clean, fails bool
-		want         string
+		name, text, feedback string
+		clean                bool
 	}{
-		{"clean", []modelapi.Event{{Delta: "NO_FINDINGS", Done: true}}, true, false, "NO_FINDINGS"},
-		{"finding", []modelapi.Event{{Delta: "- api.py: missing route; add the requested endpoint.", Done: true}}, false, false, "missing route"},
-		{"retry", []modelapi.Event{{Delta: "incorrect partial finding"}, {Retry: &modelapi.Retry{}}, {Delta: "NO_FINDINGS", Done: true}}, true, false, "NO_FINDINGS"},
-		{"unfinished", []modelapi.Event{{Delta: "NO_FINDINGS"}}, false, true, ""},
-		{"empty", []modelapi.Event{{Thinking: "reasoning alone", Done: true}}, false, true, ""},
-		{"tool", []modelapi.Event{{Calls: []toolapi.Call{{Name: "write_file"}}, Done: true}}, false, true, ""},
+		{"clean", "NO_FINDINGS", "NO_FINDINGS", true},
+		{"trimmed", " \nNO_FINDINGS\t", "NO_FINDINGS", true},
+		{"actionable", "\n- api.go: missing route; add the requested endpoint.\n", "- api.go: missing route; add the requested endpoint.", false},
+		{"unicode", "구현 결과와 계획이 일치하지 않습니다.", "구현 결과와 계획이 일치하지 않습니다.", false},
+		{"mixed", "NO_FINDINGS\nBut an endpoint is missing.", "NO_FINDINGS\nBut an endpoint is missing.", false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			result, err := Review(context.Background(), func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
-				for _, event := range test.events {
-					if err := emit(event); err != nil {
-						return err
-					}
-				}
-				return nil
-			}, modelapi.Request{})
-			if (err != nil) != test.fails || result.Clean != test.clean || !strings.Contains(result.Feedback, test.want) {
-				t.Fatalf("review=%+v error=%v", result, err)
+			result, err := Parse(test.text)
+			if err != nil || result.Clean != test.clean || result.Feedback != test.feedback {
+				t.Fatalf("parse: %+v %v", result, err)
 			}
 		})
 	}
 }
 
-func TestCancelledReviewDoesNotReturnPartialFinding(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	result, err := Review(ctx, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
-		if err := emit(modelapi.Event{Delta: "unfinished"}); err != nil {
-			return err
+func TestParseRejectsEmptyOrInvalidText(t *testing.T) {
+	for _, text := range []string{"", " \t\r\n", "\xff", "finding\n\xfe"} {
+		result, err := Parse(text)
+		if err == nil || result.Feedback != "" || result.Clean {
+			t.Fatalf("invalid terminal report accepted: %+v %v", result, err)
 		}
-		cancel()
-		return ctx.Err()
-	}, modelapi.Request{})
-	if !errors.Is(err, context.Canceled) || result.Feedback != "" || result.Clean {
-		t.Fatalf("partial review escaped cancellation: %+v %v", result, err)
+	}
+}
+
+func TestParseTerminalReportByteLimit(t *testing.T) {
+	const limit = 16 * 1024 * 1024
+	text := strings.Repeat("x", limit)
+	result, err := Parse(text)
+	if err != nil || len(result.Feedback) != limit || result.Clean {
+		t.Fatalf("exact byte limit rejected: %d %v", len(result.Feedback), err)
+	}
+	for _, text := range []string{text + "x", strings.Repeat(" ", limit+1), strings.Repeat("가", limit/3+1)} {
+		result, err := Parse(text)
+		if err == nil || result.Feedback != "" || result.Clean {
+			t.Fatalf("oversized terminal report accepted: %d %v", len(text), err)
+		}
 	}
 }

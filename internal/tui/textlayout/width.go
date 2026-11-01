@@ -8,10 +8,8 @@ import "github.com/rivo/uniseg"
 
 // Width matches uniseg.StringWidth, including zero-width controls and combining characters.
 func Width(text string) int {
-	for i := range len(text) {
-		if text[i] < ' ' || text[i] >= 0x7f {
-			return uniseg.StringWidth(text)
-		}
+	if printableASCII(text) {
+		return len(text)
 	}
-	return len(text)
+	return uniseg.StringWidth(text)
 }

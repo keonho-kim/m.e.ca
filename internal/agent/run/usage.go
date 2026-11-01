@@ -35,9 +35,12 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		generation.ElapsedMillis = time.Since(started).Milliseconds()
-		s.statistics.add(usage, measured)
+		generation.MeasuredMillis = measured.Milliseconds()
+		if s.runner.fork == nil {
+			s.statistics.add(usage, measured)
+		}
 		err := s.recordUsage(flushCtx, usage, rate, generation)
-		if role == inference.Agent && (usage != nil || received) {
+		if (role == inference.Agent || s.runner.fork != nil && role == inference.LAT) && (usage != nil || received) {
 			err = errors.Join(err, s.countRequest(flushCtx, request, usage, inputBytes, outputBytes))
 		}
 		usage = nil
@@ -48,7 +51,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 		return err
 	}
 	generator := s.runner.Generator
-	if role == inference.LAT {
+	if role == inference.LAT && s.reviewGenerator != nil {
 		generator = s.reviewGenerator
 	}
 	err := s.generateObserved(ctx, generator, request, func(event modelapi.Event) error {

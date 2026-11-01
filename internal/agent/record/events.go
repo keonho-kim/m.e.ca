@@ -22,6 +22,8 @@ type Event struct {
 	ChangePreview   string               `json:"change_preview,omitempty"`
 	TokensPerSecond *float64             `json:"-"`
 	Internal        bool                 `json:"internal,omitempty"`
+	LAT             *LATRun              `json:"lat,omitempty"`
+	Message         *modelapi.Message    `json:"message,omitempty"`
 	Usage           *modelapi.TokenUsage `json:"usage,omitempty"`
 	Call            *toolapi.Call        `json:"call,omitempty"`
 	Output          json.RawMessage      `json:"output,omitempty"`
@@ -34,11 +36,19 @@ type Event struct {
 	Checkpoint      *Checkpoint          `json:"checkpoint,omitempty"`
 }
 
+// LATRun groups one isolated native conversation under its owning main run.
+type LATRun struct {
+	ID          string `json:"id"`
+	ParentRunID string `json:"parent_run_id"`
+	Phase       string `json:"phase"`
+}
+
 type Generation struct {
-	ID            string         `json:"id"`
-	Role          inference.Role `json:"role"`
-	Attempt       int            `json:"attempt"`
-	ElapsedMillis int64          `json:"elapsed_millis"`
+	ID             string         `json:"id"`
+	Role           inference.Role `json:"role"`
+	Attempt        int            `json:"attempt"`
+	ElapsedMillis  int64          `json:"elapsed_millis"`
+	MeasuredMillis int64          `json:"measured_millis,omitempty"`
 }
 
 // Entry belongs to one durability boundary; exactly one payload must be set.

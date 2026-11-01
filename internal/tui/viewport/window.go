@@ -9,6 +9,8 @@ import "sort"
 type section struct {
 	block              *Block
 	key                blockKey
+	group              Group
+	edge               byte
 	start, skip, count int
 }
 type Transcript struct {
@@ -18,7 +20,10 @@ type Transcript struct {
 	historySections          int
 	historyRows              int
 	historyTrailing          int
+	historyGroup             Group
+	historyLast              *Block
 	visible, spareVisible    []*Block
+	live                     []*Block
 	sections                 []section
 	width, total             int
 	rows                     []Line
@@ -45,6 +50,7 @@ func (t *Transcript) Window(start, count int) []Line {
 		}
 		clear(previous)
 		t.spareVisible = previous[:0]
+		t.enforceCacheBudget()
 	}()
 	if count < 1 || start >= t.total {
 		t.rows = nil
@@ -55,10 +61,15 @@ func (t *Transcript) Window(start, count int) []Line {
 	rows := make([]Line, 0, count)
 	for ; at < len(t.sections) && len(rows) < count; at++ {
 		part := t.sections[at]
+		if part.edge != 0 {
+			rows = append(rows, part.divider(t.width))
+			continue
+		}
 		part.block.visible = true
 		t.visible = append(t.visible, part.block)
 		offset := max(0, start-part.start)
-		rows = append(rows, part.block.Window(t.width, part.skip+offset, min(count-len(rows), part.count-offset))...)
+		window := part.block.Window(t.width, part.skip+offset, min(count-len(rows), part.count-offset))
+		rows = append(rows, window...)
 	}
 	t.rows, t.windowStart, t.windowCount = rows, start, count
 	return rows
@@ -73,7 +84,7 @@ func (t *Transcript) Start(v *View, height int) int {
 			return min(part.start, last)
 		}
 		if part.block.ID == v.AnchorID {
-			local := v.AnchorRow - part.block.layout.trim - part.skip
+			local := v.AnchorRow - part.origin()
 			if local < part.count {
 				return min(part.start+max(0, local), last)
 			}

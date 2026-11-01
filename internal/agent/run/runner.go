@@ -20,6 +20,7 @@ import (
 )
 
 type Runner struct {
+	fork                     *forkConfig
 	LAT                      bool
 	ContextWindow            int
 	ImageInput               bool

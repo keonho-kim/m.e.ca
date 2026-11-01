@@ -33,8 +33,10 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 			return err
 		}
 	}
-	if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
-		return err
+	if s.runner.fork == nil {
+		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
+			return err
+		}
 	}
 	_, toolErr := s.execute(ctx, v, approve, s.emit)
 	return errors.Join(fatalBatchError(ctx, toolErr), ctx.Err())

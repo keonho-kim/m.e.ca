@@ -26,39 +26,53 @@ type Projection struct {
 	entries []projectedMessage
 	version int
 	model   string
+	system  instructionSnapshot
 }
 
-func (p *Projection) project(input Input) ([]modelapi.Message, int, error) {
+func (p *Projection) build(input Input) (modelapi.Request, error) {
 	for range 2 {
-		messages, total, err := p.projectOnce(input)
+		version := input.RedactionVersion()
+		if p.version != version || p.model != input.Request.ModelID {
+			*p = Projection{version: version, model: input.Request.ModelID}
+		}
+		request, err := p.buildOnce(input)
 		if err != nil {
 			*p = Projection{}
-			return nil, 0, err
+			return modelapi.Request{}, err
 		}
 		if input.RedactionVersion() == p.version {
-			return messages, total, nil
+			return request, nil
 		}
 		*p = Projection{}
 	}
-	return nil, 0, fmt.Errorf("protected credentials changed while assembling context; rebuild the request")
+	return modelapi.Request{}, fmt.Errorf("protected credentials changed while assembling context; rebuild the request")
 }
 
-func (p *Projection) projectOnce(input Input) ([]modelapi.Message, int, error) {
-	version := input.RedactionVersion()
-	if p.version != version || p.model != input.Request.ModelID {
-		*p = Projection{version: version, model: input.Request.ModelID}
-	}
-	paired := pairedTools(input.Messages)
+func (p *Projection) appendHistory(input Input, messages []modelapi.Message) ([]modelapi.Message, int, error) {
 	previous := p.entries
+	common := 0
+	for common < min(len(previous), len(input.Messages)) && sameMessage(previous[common].source, input.Messages[common]) {
+		common++
+	}
+	from := pairingBoundary(input.Messages, common)
 	p.entries = slices.Grow(p.entries[:0], len(input.Messages))[:len(input.Messages)]
-	messages := make([]modelapi.Message, 0, len(input.Messages))
-	total := 0
+	total, remaining := 0, 0
 	for i, message := range input.Messages {
+		paired := false
+		if i < from {
+			paired = previous[i].paired
+		} else if remaining > 0 {
+			paired = true
+			remaining--
+		} else if count := pairedGroup(input.Messages[i:]); count > 0 {
+			paired = true
+			remaining = count - 1
+		}
 		var entry projectedMessage
-		if i < len(previous) && previous[i].paired == paired[i] && sameMessage(previous[i].source, message) {
+		if i < common && previous[i].paired == paired {
 			entry = previous[i]
 		} else {
-			projected, err := conversationMessage(message, paired[i])
+			projected, err := conversationMessage(message, paired)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -73,7 +87,7 @@ func (p *Projection) projectOnce(input Input) ([]modelapi.Message, int, error) {
 				return nil, 0, fmt.Errorf("provider continuation state contains protected content")
 			}
 			projected = projected.SealHistory()
-			entry = projectedMessage{source: message, message: projected, paired: paired[i], bytes: messageBytes(projected)}
+			entry = projectedMessage{source: message, message: projected, paired: paired, bytes: projected.ContextBytes()}
 		}
 		p.entries[i] = entry
 		messages = append(messages, entry.message)
@@ -89,18 +103,6 @@ func sameMessage(a, b modelapi.Message) bool {
 	return sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
 		return a.ID == b.ID && a.Name == b.Name && bytes.Equal(a.Arguments, b.Arguments)
 	})
-}
-
-func messageBytes(m modelapi.Message) int {
-	n := 0
-	for _, image := range m.Images {
-		n += len(image.Data)*4/3 + 4096
-	}
-	n += len(m.Content) + len(m.Reasoning) + len(m.ReasoningState) + len(m.ToolCallID) + len(m.ToolName)
-	for _, call := range m.Calls {
-		n += len(call.ID) + len(call.Name) + len(call.Arguments)
-	}
-	return n
 }
 
 // Images are immutable snapshots, so identity comparison does not scan their bytes.

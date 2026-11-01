@@ -6,6 +6,7 @@ package httpclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -17,7 +18,7 @@ import (
 	"strings"
 )
 
-func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition) (int, error) {
+func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition, encoder *protocol.Encoder) (int, error) {
 	info := c.effectiveModel()
 	// Image preprocessing contributes model-specific tokens. A text-only tokenizer
 	// count is not an exact multimodal count; use server generation limits instead.
@@ -38,12 +39,16 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if controls.ReasoningEffort != "" {
 		kwargs["reasoning_effort"] = controls.ReasoningEffort
 	}
+	tools, err := encoder.EncodedTools(connection.VLLM, definitions)
+	if err != nil {
+		return 0, err
+	}
 	body, err := protocol.TokenizerBody(messages, struct {
-		Tools      []protocol.Tool `json:"tools,omitempty"`
+		Tools      json.RawMessage `json:"tools,omitempty"`
 		Model      string          `json:"model"`
 		Template   map[string]any  `json:"chat_template_kwargs"`
 		Generation bool            `json:"add_generation_prompt"`
-	}{protocol.Tools(definitions), model, kwargs, true})
+	}{tools, model, kwargs, true})
 	if err != nil {
 		return 0, err
 	}

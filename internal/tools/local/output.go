@@ -5,26 +5,24 @@
 package local
 
 import (
-	"errors"
 	"os"
 	"unicode/utf8"
 )
 
 const outputExcerptBytes = 32 * 1024
 
-func (e *Executor) commandOutput(text, stream string) (string, string, error) {
+func (e *Executor) commandOutput(id, text, stream string) (string, string, error) {
 	if len(text) <= outputExcerptBytes {
 		return text, "", nil
 	}
-	f, err := os.CreateTemp(e.artifacts, stream+"-*.log")
+	path, err := e.commandPath(id, "."+stream+".log")
 	if err != nil {
 		return "", "", err
 	}
-	_, writeErr := f.WriteString(text)
-	if err := errors.Join(writeErr, f.Close()); err != nil {
+	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
 		return "", "", err
 	}
-	return commandExcerpt(text), f.Name(), nil
+	return commandExcerpt(text), path, nil
 }
 
 func commandExcerpt(text string) string {

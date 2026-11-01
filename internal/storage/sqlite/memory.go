@@ -1,4 +1,4 @@
-// Purpose: Persist context occupancy samples and compaction revisions without deleting original history.
+// Purpose: Replace derived context occupancy and compaction state while preserving original history.
 // Pattern: Repository.
 // Usage: Each session owns its compaction revisions and token boundaries.
 // Related: internal/agent/compact/types.go, internal/storage/sqlite/memory_sources.go, internal/storage/sqlite/schema.go.
@@ -25,12 +25,14 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 	default:
 		return fmt.Errorf("invalid conversation token source")
 	}
-	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind,through_timeline) SELECT ?,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=?", session, count.Amount, count.Estimated, count.Kind, session)
+	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind,through_timeline) SELECT ?,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=? ON CONFLICT(session_id) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", session, count.Amount, count.Estimated, count.Kind, session)
 	return err
 }
 func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, error) {
 	var body []byte
-	err := s.db.QueryRowContext(ctx, "SELECT body FROM memories WHERE session_id=? ORDER BY revision DESC LIMIT 1", session).Scan(&body)
+	var codec, size int
+	var digest string
+	err := s.db.QueryRowContext(ctx, "SELECT body,codec,digest,raw_bytes FROM memories WHERE session_id=?", session).Scan(&body, &codec, &digest, &size)
 	if errors.Is(err, sql.ErrNoRows) {
 		return compact.Memory{}, nil
 	}
@@ -39,6 +41,10 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	}
 	if len(body) > recordcontent.MaxBytes {
 		return compact.Memory{}, fmt.Errorf("stored memory exceeds limit")
+	}
+	body, err = s.codec.Restore(codec, size, digest, body)
+	if err != nil {
+		return compact.Memory{}, err
 	}
 	var memory compact.Memory
 	err = json.Unmarshal(body, &memory)
@@ -58,21 +64,26 @@ func (s *Store) InstallMemory(ctx context.Context, session string, expected int,
 	if err != nil {
 		return err
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
+	codec, stored := 0, body
+	if len(body) > recordcontent.Threshold {
+		encoded, err := s.codec.Encode(body)
+		if err != nil {
+			return err
+		}
+		if len(encoded) < len(body) {
+			codec, stored = 2, encoded
+		}
+	}
+	result, err := s.db.ExecContext(ctx, `INSERT INTO memories(session_id,revision,through_timeline,through_usage,body,codec,digest,raw_bytes,created_at)
+SELECT ?,?,?,?,?,?,?,?,? WHERE ?=0 OR EXISTS(SELECT 1 FROM memories WHERE session_id=? AND revision=?)
+ON CONFLICT(session_id) DO UPDATE SET revision=excluded.revision,through_timeline=excluded.through_timeline,through_usage=excluded.through_usage,body=excluded.body,codec=excluded.codec,digest=excluded.digest,raw_bytes=excluded.raw_bytes,created_at=excluded.created_at
+WHERE memories.revision=? AND memories.through_timeline<excluded.through_timeline AND memories.through_usage<=excluded.through_usage`, session, next.Revision, next.Through, next.UsageThrough, stored, codec, recordcontent.ID(body), len(body), time.Now().UTC().Format(time.RFC3339Nano), expected, session, expected, expected)
 	if err != nil {
 		return err
 	}
-	var current int
-	err = tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(revision),0) FROM memories WHERE session_id=?", session).Scan(&current)
-	if err != nil {
-		return errors.Join(err, tx.Rollback())
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return errors.Join(fmt.Errorf("stale compaction revision; previous memory retained"), err)
 	}
-	if current != expected {
-		return errors.Join(fmt.Errorf("stale compaction revision; previous memory retained"), tx.Rollback())
-	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO memories(session_id,revision,through_timeline,through_usage,body,created_at) VALUES(?,?,?,?,?,?)", session, next.Revision, next.Through, next.UsageThrough, body, time.Now().UTC().Format(time.RFC3339Nano))
-	if err != nil {
-		return errors.Join(err, tx.Rollback())
-	}
-	return tx.Commit()
+	return nil
 }

@@ -66,11 +66,19 @@ func add(spans []Span, text string, style Style) []Span {
 	return append(spans, Span{Text: text, Style: style})
 }
 func Rows(spans []Span, width int) iter.Seq[Line] {
+	return rowsFrom(line(spans).Text, spans, width, 0, "")
+}
+
+// RowsFrom resumes one already rendered line at a sparse terminal-row boundary.
+func (line Line) RowsFrom(width, start int, prefix string) iter.Seq[Line] {
+	return rowsFrom(line.Text, line.Spans, width, start, prefix)
+}
+
+func rowsFrom(text string, spans []Span, width, start int, prefix string) iter.Seq[Line] {
 	return func(yield func(Line) bool) {
 		if width < 1 {
 			return
 		}
-		text := line(spans).Text
 		ends := make([]int, len(spans))
 		end := 0
 		for i, span := range spans {
@@ -78,7 +86,7 @@ func Rows(spans []Span, width int) iter.Seq[Line] {
 			ends[i] = end
 		}
 		styleIndex := 0
-		for wrapped := range textlayout.Rows(text, width) {
+		for wrapped := range textlayout.RowsFrom(text, width, start, prefix) {
 			if !strings.ContainsRune(wrapped.Text, '\t') && strings.TrimPrefix(wrapped.Text, wrapped.Prefix) == text[wrapped.Start:wrapped.End] {
 				var current []Span
 				current = add(current, wrapped.Prefix, 0)

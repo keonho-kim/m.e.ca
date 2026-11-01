@@ -34,7 +34,7 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 				if err := json.Unmarshal(body, &event); err != nil {
 					return err
 				}
-				if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
+				if event.Kind == "run_checkpoint" && event.Checkpoint != nil && !event.Internal {
 					full, err := s.runState(ctx, session, event.Checkpoint.ID)
 					if err != nil {
 						return err

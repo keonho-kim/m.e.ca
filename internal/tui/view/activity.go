@@ -1,4 +1,4 @@
-// Purpose: Format run duration and the bounded compression header indicator.
+// Purpose: Format run duration and the bounded LAT or compaction header indicator.
 // Pattern: Pure presentation values.
 // Usage: Session projects its worker state into every view through Activity.
 // Related: internal/tui/view/tokens.go, internal/tui/view/input.go.
@@ -16,6 +16,7 @@ type Activity struct {
 	Elapsed              time.Duration
 	TokensPerSecond      *float64
 	Running, Compressing bool
+	LAT                  bool
 	ShowCost             bool
 	Dots                 int
 }
@@ -32,13 +33,17 @@ func (a Activity) Label() string {
 		seconds := int64(max(0, a.Elapsed) / time.Second)
 		label += fmt.Sprintf(" %02d : %02d : %02d", seconds/3600, seconds/60%60, seconds%60)
 	}
-	if a.Compressing {
-		label += " · " + a.compressionLabel()
+	if a.Compressing || a.LAT {
+		label += " · " + a.indicatorLabel()
 	}
 	return label
 }
 
-func (a Activity) compressionLabel() string {
+func (a Activity) indicatorLabel() string {
 	dots := strings.Repeat(".", max(1, min(3, a.Dots)))
-	return fmt.Sprintf("%s %-3s", a.Language.Text("Compress Memory"), dots)
+	label := "Running Look At This"
+	if a.Compressing {
+		label = a.Language.Text("Compress Memory")
+	}
+	return fmt.Sprintf("%s %-3s", label, dots)
 }

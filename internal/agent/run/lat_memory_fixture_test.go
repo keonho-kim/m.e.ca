@@ -28,9 +28,10 @@ func (m *journalMemory) InstallLATMemory(_ context.Context, _ string, expected i
 	return nil
 }
 func (m *journalMemory) LATWatermark(ctx context.Context, session string, after int64) (latmemory.Mark, error) {
-	records, through, err := m.LATRecords(ctx, session, after, int64(len(m.journal.timeline)), latmemory.MaxBytes)
-	mark := latmemory.Mark{Through: through}
+	records, _, err := m.LATRecords(ctx, session, after, int64(len(m.journal.timeline)), latmemory.MaxBytes)
+	mark := latmemory.Mark{Scanned: max(after, int64(len(m.journal.timeline)))}
 	for _, record := range records {
+		mark.Through = record.Sequence
 		mark.Bytes += int64(len(record.Text))
 		if record.Kind == "user" {
 			mark.LatestUser = record.Sequence
@@ -47,7 +48,7 @@ func (m *journalMemory) LATRecords(_ context.Context, _ string, after, through i
 		if source.Kind == "message" && source.Message.Role != "user" {
 			continue
 		}
-		if source.Kind == "event" && source.Event.Operation == nil {
+		if source.Kind == "event" && (source.Event.Internal || source.Event.Operation == nil) {
 			continue
 		}
 		projected, err := history.Compaction([]history.Record{source})

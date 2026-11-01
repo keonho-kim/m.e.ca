@@ -78,7 +78,7 @@ func TestLATSourceKeepsLargeCurrentRequestOutsideSmallEvidencePacket(t *testing.
 		}
 	}
 	c := latmemory.Controller{Repository: s, Session: id, Redact: func(text string) string { return text }}
-	body, err := c.Tail(ctx, 2048, current)
+	body, err := c.Tail(ctx, 2048, current, nil)
 	if err != nil || !strings.Contains(string(body), "earlier requirement") || strings.Contains(string(body), "current instruction") {
 		t.Fatal("accepted current user instruction could not be excluded exactly", err)
 	}
