@@ -63,7 +63,7 @@ func TestRequestAccounting(t *testing.T) {
 			runner := fixture(&generator{}, &executor{}, &store.journal)
 			runner.Generator = attemptScript{events: tc.events, err: tc.err}
 			runner.Memory = &compact.Controller{Repository: store, Session: "s"}
-			s := execution{runner: runner, limits: DefaultLimits(), usage: &requestBudget{deadline: time.Now().Add(time.Minute)}, emit: emit}
+			s := execution{runner: runner, limits: DefaultLimits(), usage: requestBudget{deadline: time.Now().Add(time.Minute)}, emit: emit}
 			err := s.generate(context.Background(), modelapi.Request{Messages: []modelapi.Message{{Role: "user", Content: "request"}}}, map[bool]inference.Role{true: inference.Agent, false: inference.Compaction}[tc.account], func(modelapi.Event) error { return nil })
 			if tc.err != nil && !errors.Is(err, tc.err) || tc.err == nil && err != nil {
 				t.Fatal(err)

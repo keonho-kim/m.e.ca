@@ -14,7 +14,7 @@ import (
 )
 
 func (s *execution) batchWave(ctx context.Context, calls []validatedCall, preparation int, approve Approver) (bool, error) {
-	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
+	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	ready, index, outcome, err := s.freezeWave(ctx, calls, preparation)
 	if err != nil {

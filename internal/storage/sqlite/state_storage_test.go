@@ -1,4 +1,4 @@
-// Purpose: Verify canonical review/state storage avoids repeated bodies while preserving recovery and export.
+// Purpose: Verify canonical run-state storage avoids repeated bodies while preserving recovery and export.
 // Pattern: Persistence integration tests.
 // Usage: go test ./internal/storage/sqlite -run TestCanonical.
 // Related: internal/storage/sqlite/run_state.go, internal/storage/sqlite/context.go, internal/storage/sqlite/export.go.
@@ -7,7 +7,6 @@ package sqlite
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
@@ -54,41 +53,6 @@ func TestCanonicalRunStateReplacesSnapshots(t *testing.T) {
 	}
 	if !strings.Contains(exported.String(), strings.Repeat("file", 100)) {
 		t.Fatal("export lost canonical file facts")
-	}
-}
-
-func TestCanonicalReviewRestoresEveryProjection(t *testing.T) {
-	s, err := newTestStore(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	ctx, id := context.Background(), s.Session().ID
-	text := "required correction " + strings.Repeat("detail ", 10000)
-	if err = s.RecordEvent(ctx, id, runrecord.Event{Kind: "lat_feedback", Text: text}); err != nil {
-		t.Fatal(err)
-	}
-	var stored string
-	if err = s.db.QueryRow("SELECT memory_text FROM tool_events").Scan(&stored); err != nil || stored != "" {
-		t.Fatal("review source duplicated into memory_text", err)
-	}
-	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, false)
-	if err != nil || len(messages) != 1 || !strings.Contains(messages[0].Content, text) {
-		t.Fatal("restored review context missing", err)
-	}
-	mark, err := s.MemoryWatermark(ctx, id, 0)
-	if err != nil || mark.Tokens == 0 {
-		t.Fatal("review feedback omitted from context occupancy", err)
-	}
-	records, _, err := s.MemoryRecords(ctx, id, 0, mark.Timeline)
-	if err != nil || len(records) != 1 || records[0].Text != text {
-		t.Fatal("compaction lost review source", err)
-	}
-	var body []byte
-	s.db.QueryRow("SELECT body FROM tool_events").Scan(&body)
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(body, &fields) != nil {
-		t.Fatal("invalid canonical body")
 	}
 }
 

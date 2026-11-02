@@ -20,10 +20,8 @@ func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count
 		if err := s.checkTimeBudget(ctx); err != nil {
 			return nil, i, toolapi.Result{}, err
 		}
-		if s.runner.fork == nil {
-			if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
-				return nil, i, toolapi.Result{}, err
-			}
+		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
+			return nil, i, toolapi.Result{}, err
 		}
 		if count == 1 {
 			prepared, outcome, err := s.freezeExecution(ctx, v.call)

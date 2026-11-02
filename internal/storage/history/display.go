@@ -8,25 +8,14 @@ import (
 	json "github.com/goccy/go-json"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
-var latDisplayFields = content.Selection{"message": {
-	"role": nil, "content": nil, "incomplete": nil, "reasoning": nil,
-	"calls": {"*": {"id": nil, "name": nil}},
-}}
-
 // DisplayFields owns presentation policy; adapters retain ownership of payload I/O.
-func DisplayFields(kind string, internal bool) (map[string]bool, content.Selection) {
+func DisplayFields(kind string) map[string]bool {
 	if kind == "message" {
-		return map[string]bool{"role": true, "content": true, "incomplete": true}, nil
+		return map[string]bool{"role": true, "content": true, "incomplete": true}
 	}
-	fields := map[string]bool{"kind": true, "text": true, "thinking": true, "call_id": true, "output": true, "operation": true, "change_preview": true, "checkpoint": true, "statistics": true, "internal": true}
-	if internal {
-		fields["lat"], fields["message"], fields["call"] = true, true, true
-		return fields, latDisplayFields
-	}
-	return fields, nil
+	return map[string]bool{"kind": true, "text": true, "thinking": true, "call_id": true, "output": true, "operation": true, "change_preview": true, "checkpoint": true, "statistics": true}
 }
 
 // Display restores visible values from hydrated body and a small original envelope.
@@ -41,17 +30,6 @@ func Display(sequence int64, kind string, body, envelope, arguments []byte) (Rec
 	}
 	if err := json.Unmarshal(body, &record.Event); err != nil {
 		return Record{}, err
-	}
-	if record.Event.Internal && record.Event.Call != nil {
-		args, projectionErr := toolapi.DisplayArgs(record.Event.Call.Arguments)
-		if projectionErr == nil {
-			var err error
-			record.Event.Call.Arguments, err = json.Marshal(args)
-			if err != nil {
-				return Record{}, err
-			}
-		}
-		return record, nil
 	}
 	var call struct{ Call *struct{ ID, Name string } }
 	if err := json.Unmarshal(envelope, &call); err != nil {

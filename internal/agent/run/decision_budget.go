@@ -20,8 +20,7 @@ func (s *execution) prepareDecision(ctx context.Context) (bool, error) {
 		}
 		return true, s.stopBudget(ctx, err.Error())
 	}
-	usage := s.usage.snapshot()
-	if usage.ModelCalls >= s.limits.MaxModelCalls {
+	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
 		return true, s.stopBudget(ctx, "model call budget exhausted")
 	}
 	return false, nil

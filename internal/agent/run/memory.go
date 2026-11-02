@@ -55,7 +55,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		if !s.modelCall() {
 			return fmt.Errorf("compaction: %w", errModelBudget)
 		}
-		s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
+		s.checkpoint.ModelCalls = s.usage.ModelCalls
 		request.Thinking = s.runner.Thinking
 		request.ReasoningEffort = s.runner.ReasoningEffort
 		parameters, err := inference.Resolve(s.runner.Inference, inference.Compaction)

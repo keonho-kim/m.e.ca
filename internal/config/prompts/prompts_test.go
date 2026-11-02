@@ -20,9 +20,13 @@ func TestPromptBootstrap(t *testing.T) {
 		t.Fatal(err)
 	}
 	directory := filepath.Join(home, ".meca")
+	entries, err := os.ReadDir(filepath.Join(directory, "prompts"))
+	if err != nil || len(entries) != 3 {
+		t.Fatalf("expected exactly three prompt files: %v %v", entries, err)
+	}
 	defaults := prompt.Defaults()
 	files := defaults.Files()
-	for _, name := range []string{"system.md", "development.md", "compaction.md", "lat.md", "lat_plan.md", "lat_critique.md", "lat_refine.md", "lat_compaction.md"} {
+	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
 		path := filepath.Join(directory, "prompts", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {

@@ -5,25 +5,15 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (c *chatState) displayTokens() modelapi.TokenUsage {
-	return c.tokenTotal.Add(c.tokenCurrent).Add(c.latMemoryTokens)
+	return c.tokenTotal.Add(c.tokenCurrent)
 }
 func (c *chatState) receiveTokens(e runrecord.Event) {
 	if e.Usage == nil {
-		return
-	}
-	if e.Generation != nil && e.Generation.Role == inference.LATCompaction {
-		if e.Kind == "usage" {
-			c.tokenTotal = c.tokenTotal.Add(*e.Usage)
-			c.latMemoryTokens = modelapi.TokenUsage{}
-		} else {
-			c.latMemoryTokens = e.Usage.Clone()
-		}
 		return
 	}
 	if e.Kind == "usage" {

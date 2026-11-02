@@ -61,7 +61,7 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err
 	}
-	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
+	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	approved := !proposal.Required
 	if proposal.Required {

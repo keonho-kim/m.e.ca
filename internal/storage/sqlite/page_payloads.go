@@ -29,9 +29,9 @@ func (p *pagePayloads) include(index int, refsBody []byte) error {
 	return err
 }
 
-func (p *pagePayloads) unpack(index int, record storedRecord, fields map[string]bool, nested ...content.Selection) ([]byte, error) {
+func (p *pagePayloads) unpack(index int, record storedRecord, fields map[string]bool) ([]byte, error) {
 	p.index = index
-	return content.Restore(record.body, record.refs, fields, p.load, nested...)
+	return content.Restore(record.body, record.refs, fields, p.load)
 }
 
 func (p *pagePayloads) load(id string) (json.RawMessage, error) {

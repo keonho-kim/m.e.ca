@@ -12,14 +12,12 @@ import (
 )
 
 type chatState struct {
-	latOutput                       latOutput
 	toolActivity                    toolActivity
 	chatVisible, selectedTranscript []viewport.Line
 	historyLoading, historyEnd      bool
 	chatProjection                  chatProjection
 	tokensPerSecond                 *float64
 	tokenTotal, tokenCurrent        modelapi.TokenUsage
-	latMemoryTokens                 modelapi.TokenUsage
 	runSummary                      *viewport.Block
 	output                          viewport.View
 	stream, thinking                string

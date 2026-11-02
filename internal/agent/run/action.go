@@ -18,7 +18,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
 	call, definition := v.call, v.definition
-	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
+	s.checkpoint.Iteration = s.usage.ToolCalls
 	s.checkpoint.Tool = definition.Name
 	s.checkpoint.Phase = "approval"
 	if err := s.persist(ctx); err != nil {
@@ -33,10 +33,8 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 			return err
 		}
 	}
-	if s.runner.fork == nil {
-		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
-			return err
-		}
+	if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: call.ID, Call: &call, Text: "Native candidate; not executed"}); err != nil {
+		return err
 	}
 	_, toolErr := s.execute(ctx, v, approve, s.emit)
 	return errors.Join(fatalBatchError(ctx, toolErr), ctx.Err())

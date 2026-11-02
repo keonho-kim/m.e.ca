@@ -1,7 +1,7 @@
 // Purpose: Identify the last record referencing each payload within one bounded page.
 // Pattern: Pure page-local reference index.
-// Usage: Full hydration and LAT excerpts use this index without reading payload bodies.
-// Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/review_excerpts.go.
+// Usage: History hydration and export use this index without reading payload bodies.
+// Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/record_codec.go.
 package sqlite
 
 import "encoding/json"

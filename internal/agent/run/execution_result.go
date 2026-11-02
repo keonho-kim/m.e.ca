@@ -73,10 +73,6 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 			return outcome, errors.Join(errRuntimeRecord, err)
 		}
 	}
-	if r.LAT && !s.review.reviewed {
-		s.review.observed = true
-		s.review.memory.dirty = true
-	}
 	event.Capture = nil // Original captures are durable, never copied into live presentation events.
 	if err := emit(event); err != nil && !(ctx.Err() != nil && errors.Is(err, ctx.Err())) {
 		return outcome, errors.Join(errRuntimeRecord, err)

@@ -1,6 +1,6 @@
 // Purpose: Represent valid active-worker and cancellation states without independent boolean flags.
 // Pattern: Explicit state machine owned by the terminal event loop.
-// Usage: Task, setup and diagnostic entry points start work; cancellation and completion transition it.
+// Usage: Agent, setup and diagnostic entry points start work; cancellation and completion transition it.
 // Related: internal/tui/session/tasks.go, internal/tui/session/worker_result.go, internal/tui/session/activity.go.
 package session
 

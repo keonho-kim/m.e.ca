@@ -7,9 +7,7 @@ package inference
 type Role string
 
 const (
-	Agent         Role = "agent"
-	Compaction    Role = "compaction"
-	Diagnostic    Role = "diagnostic"
-	LAT           Role = "lat"
-	LATCompaction Role = "lat_compaction"
+	Agent      Role = "agent"
+	Compaction Role = "compaction"
+	Diagnostic Role = "diagnostic"
 )

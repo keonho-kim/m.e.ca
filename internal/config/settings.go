@@ -21,8 +21,6 @@ type Config struct {
 	Model         *SavedModel          `toml:"model,omitempty"`
 	Agent         inference.Parameters `toml:"agent"`
 	Diagnostics   inference.Parameters `toml:"diagnostics"`
-	LAT           inference.Parameters `toml:"lat"`
-	LATCompaction inference.Parameters `toml:"lat_compaction"`
 	Thinking      *bool                `toml:"thinking,omitempty"`
 	Loop          run.Limits           `toml:"loop"`
 	Compaction    Compaction           `toml:"compaction"`
@@ -37,7 +35,7 @@ type Compaction struct {
 
 // InferenceSettings resolves the configuration tables into runtime role parameters.
 func (c Config) InferenceSettings() inference.Settings {
-	return inference.Settings{Agent: c.Agent, Compaction: c.Compaction.Parameters, Diagnostic: c.Diagnostics, LAT: c.LAT, LATCompaction: c.LATCompaction}
+	return inference.Settings{Agent: c.Agent, Compaction: c.Compaction.Parameters, Diagnostic: c.Diagnostics}
 }
 
 type UI struct {
@@ -52,8 +50,6 @@ func Defaults() Config {
 		ContextLength: connection.DefaultContextLength,
 		Agent:         parameters.Agent,
 		Diagnostics:   parameters.Diagnostic,
-		LAT:           parameters.LAT,
-		LATCompaction: parameters.LATCompaction,
 		UI:            UI{ColumnWidth: 24, InputMaxLines: 5},
 		Loop:          run.DefaultLimits(),
 		Compaction:    Compaction{Settings: compact.Defaults(), Parameters: parameters.Compaction},

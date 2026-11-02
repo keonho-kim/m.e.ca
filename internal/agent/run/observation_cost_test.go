@@ -1,22 +1,16 @@
-// Purpose: Keep per-token delivery free of command polling and unchanged LAT source queries.
+// Purpose: Keep per-token delivery free of command polling.
 // Pattern: Observable call-count regression tests.
 // Usage: go test -race ./internal/agent/run -run TestObservation.
-// Related: internal/agent/run/command_generation.go, internal/agent/run/lat_memory.go.
+// Related: internal/agent/run/command_generation.go, internal/agent/run/commands.go.
 package run
 
 import (
 	"context"
 	"testing"
 
-	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
-
-type countedMemory struct {
-	latmemory.Repository
-	marks int
-}
 
 type notifyingCommands struct {
 	*commandFixture
@@ -50,39 +44,5 @@ func TestObservationDoesNotPollCommandsPerToken(t *testing.T) {
 	}
 	if e.polls != 1 {
 		t.Fatal("command state was polled for token deltas", e.polls)
-	}
-}
-
-func (r *countedMemory) LATWatermark(ctx context.Context, session string, after int64) (latmemory.Mark, error) {
-	r.marks++
-	return r.Repository.LATWatermark(ctx, session, after)
-}
-
-func TestObservationSkipsUnchangedLATQueriesAndForegroundAdmission(t *testing.T) {
-	ctx := context.Background()
-	j := &journal{}
-	if err := j.AppendMessage(ctx, "s", modelapi.Message{Role: "user", Content: "small request"}); err != nil {
-		t.Fatal(err)
-	}
-	r := fixture(&generator{}, &executor{}, j)
-	repo := &countedMemory{Repository: &journalMemory{journal: j}}
-	s := execution{runner: r, usage: &requestBudget{}, review: reviewState{observed: true, memory: &reviewMemory{dirty: true, controller: latmemory.Controller{Repository: repo, Session: "s", Redact: r.Redact}}}}
-	for range 1000 {
-		if err := s.maintainLATMemory(ctx, false); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if repo.marks != 1 {
-		t.Fatal("unchanged records were repeatedly queried", repo.marks)
-	}
-	s.review.memory.dirty = true
-	g := statisticsModel(func(_ context.Context, _ modelapi.Request, send func(modelapi.Event) error) error {
-		return send(modelapi.Event{Delta: "foreground response", Done: true})
-	})
-	if err := s.generateObserved(ctx, g, modelapi.Request{}, func(modelapi.Event) error { return nil }); err != nil || repo.marks != 1 {
-		t.Fatal("background admission competed with foreground", err)
-	}
-	if err := s.maintainLATMemory(ctx, false); err != nil || repo.marks != 2 {
-		t.Fatal("new records were not inspected at a safe boundary", err)
 	}
 }

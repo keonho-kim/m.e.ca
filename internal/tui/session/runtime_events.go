@@ -5,40 +5,13 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
-	if a.receiveLAT(e) {
-		return
-	}
 	switch e.Kind {
-	case "lat_preparing":
-		a.startLATIndicator()
-		switch e.Text {
-		case "plan":
-			a.status = a.language.Text("LAT: Preparing plan…")
-		case "critique":
-			a.status = a.language.Text("LAT: Reviewing plan…")
-		case "refine":
-			a.status = a.language.Text("LAT: Refining plan…")
-		}
-		return
-	case "lat_prepared":
-		a.status = ""
-		a.stopLATIndicator()
-		a.chat.latOutput = latOutput{}
-		return
-	case "lat_started":
-		a.startLATIndicator()
-		a.status = a.language.Text("LAT: Reviewing work…")
-		return
-	case "lat_clean", "lat_feedback", "lat_unavailable", "lat_discarded", "lat_memory_unavailable":
-		a.receiveLATOutcome(e)
-		return
 	case "image_input_unavailable":
 		a.connection.rejectImages()
 		a.status = a.language.Text("Image input is unavailable for this connection")
@@ -57,9 +30,6 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		a.chat.tokensPerSecond = nil
 		return
 	case "generation_finished":
-		if e.Generation != nil && e.Generation.Role == inference.LATCompaction {
-			a.chat.latMemoryTokens = modelapi.TokenUsage{}
-		}
 		return
 	case "compaction_started":
 		a.startCompression()
@@ -68,7 +38,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		a.stopCompression()
 		return
 	}
-	if e.Internal || e.Kind == "tool_proposed" {
+	if e.Kind == "tool_proposed" {
 		return
 	}
 	if e.Statistics != nil {

@@ -60,12 +60,10 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	} else {
 		s.checkpoint.Blocker = ""
 	}
-	if s.needsCheckpoint() {
-		event, err := s.checkpointEvent()
-		if err != nil {
-			return err
-		}
-		events = append(events, event)
+	event, err := s.checkpointEvent()
+	if err != nil {
+		return err
 	}
+	events = append(events, event)
 	return s.save(ctx, modelapi.Message{Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 }

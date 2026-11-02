@@ -1,6 +1,6 @@
 // Purpose: Define durable execution status and validate resumable loop checkpoints.
 // Pattern: State Machine contracts.
-// Usage: Task runtime emits checkpoints and SQLite validates stored state.
+// Usage: Request runtime emits checkpoints and SQLite validates stored state.
 // Related: internal/agent/run/journal.go, internal/storage/sqlite/runs.go.
 package record
 

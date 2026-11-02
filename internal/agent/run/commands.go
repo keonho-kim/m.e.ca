@@ -41,20 +41,15 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		arguments, _ := json.Marshal(map[string]string{"command": finished.Command})
 		call := toolapi.Call{ID: finished.CallID, Name: "execute_command", Arguments: arguments}
 		op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: finished.CallID, Name: "execute_command", Command: finished.Command, Started: result.Started, Status: status, Process: result.Process, Failure: result.Failure, Result: result.Summary, Revision: s.checkpoint.ChangeRevision}
-		if s.runner.fork == nil {
-			s.checkpoint.Work.Observe(op)
-		}
+		s.checkpoint.Work.Observe(op)
 		s.checkpoint.Observation = result.Summary
 		s.result.HadToolFailure = s.result.HadToolFailure || result.Failed
 		event := runrecord.Event{Kind: "command_finished", CallID: call.ID, Call: &call, Operation: &op, Output: result.Content, Capture: result.Capture, Text: result.Summary}
-		events := []runrecord.Event{event}
-		if s.needsCheckpoint() {
-			checkpoint, err := s.checkpointEvent()
-			if err != nil {
-				return false, err
-			}
-			events = append(events, checkpoint)
+		checkpoint, err := s.checkpointEvent()
+		if err != nil {
+			return false, err
 		}
+		events := []runrecord.Event{event, checkpoint}
 		content := "Observed command completion:\n" + string(result.Content)
 		if err := s.save(ctx, modelapi.Message{Role: "system", Content: content}, events...); err != nil {
 			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
@@ -64,10 +59,6 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		}
 		if err := commands.AcknowledgeCommand(finished.ID); err != nil {
 			return false, errors.Join(errRuntimeRecord, err)
-		}
-		if s.runner.LAT && !s.review.reviewed {
-			s.review.observed = true
-			s.review.memory.dirty = true
 		}
 		s.commandRevision++
 		event.Capture = nil

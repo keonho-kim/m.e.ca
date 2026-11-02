@@ -10,33 +10,10 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/work"
-	"strings"
 	"unicode/utf8"
 )
 
 func (event Event) Check() error {
-	if side := event.LAT; side != nil {
-		if !event.Internal || event.Kind == "run_checkpoint" {
-			return fmt.Errorf("invalid isolated LAT provenance")
-		}
-		if err := side.Check(); err != nil {
-			return err
-		}
-	}
-	if event.Kind == "lat_message" || event.Message != nil {
-		if event.Kind != "lat_message" || event.Message == nil || event.LAT == nil {
-			return fmt.Errorf("native LAT message requires isolated provenance")
-		}
-		if err := event.Message.Check(); err != nil {
-			return err
-		}
-	}
-	if event.Kind == "lat_checkpoint" && (event.LAT == nil || event.Checkpoint == nil) {
-		return fmt.Errorf("native LAT checkpoint requires isolated provenance")
-	}
-	if event.Kind == "lat_plan" && (len(event.Text) > 16*1024*1024 || strings.TrimSpace(event.Text) == "" || !utf8.ValidString(event.Text) || strings.ContainsRune(event.Text, 0)) {
-		return fmt.Errorf("refined implementation plan requires nonempty UTF-8 text within 16 MiB")
-	}
 	if event.ApprovalSource != "" {
 		if event.Approval == nil || event.Kind != "approved" && event.Kind != "denied" ||
 			event.ApprovalSource != "user" && event.ApprovalSource != "all_mighty" || event.Kind == "denied" && event.ApprovalSource != "user" {
@@ -44,7 +21,7 @@ func (event Event) Check() error {
 		}
 	}
 	if event.Statistics != nil {
-		if event.Kind != "run_checkpoint" && event.Kind != "lat_checkpoint" || event.Checkpoint == nil || event.Checkpoint.Phase != "finished" || event.Checkpoint.Status == Running || event.RunID != event.Checkpoint.ID {
+		if event.Kind != "run_checkpoint" || event.Checkpoint == nil || event.Checkpoint.Phase != "finished" || event.Checkpoint.Status == Running || event.RunID != event.Checkpoint.ID {
 			return fmt.Errorf("request statistics require their finished checkpoint")
 		}
 		if err := event.Statistics.check(); err != nil {
@@ -56,7 +33,7 @@ func (event Event) Check() error {
 			return fmt.Errorf("invalid generation provenance")
 		}
 		switch g.Role {
-		case inference.Agent, inference.Compaction, inference.Diagnostic, inference.LAT, inference.LATCompaction:
+		case inference.Agent, inference.Compaction, inference.Diagnostic:
 		default:
 			return fmt.Errorf("invalid generation role")
 		}
@@ -108,16 +85,4 @@ func (event Event) Check() error {
 		}
 	}
 	return nil
-}
-
-func (side LATRun) Check() error {
-	if !work.ValidID(side.ID) || !work.ValidID(side.ParentRunID) {
-		return fmt.Errorf("invalid isolated LAT provenance")
-	}
-	switch side.Phase {
-	case "plan", "critique", "refine", "review":
-		return nil
-	default:
-		return fmt.Errorf("invalid isolated LAT phase")
-	}
 }

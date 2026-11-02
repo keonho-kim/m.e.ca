@@ -75,7 +75,7 @@ func TestCostCompactionUsesSameAccounting(t *testing.T) {
 	r.Generator = statisticsModel(func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 10, Output: 2, Cost: new(0.001)}})
 	})
-	s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
+	s := execution{runner: r, limits: DefaultLimits(), usage: requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
 	s.usage.begin(s.limits)
 	for _, role := range []inference.Role{inference.Agent, inference.Compaction} {
 		if err := s.generate(context.Background(), modelapi.Request{}, role, func(modelapi.Event) error { return nil }); err != nil {

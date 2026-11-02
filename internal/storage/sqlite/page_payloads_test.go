@@ -1,7 +1,7 @@
 // Purpose: Verify page-local reuse preserves originals, projection, cancellation and integrity boundaries.
 // Pattern: Storage hydration lifecycle regression tests.
-// Usage: Run TestPagePayload and TestReviewExcerpts with -race.
-// Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/review_excerpts.go.
+// Usage: Run TestPagePayload and TestPageReference with -race.
+// Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/page_references.go.
 package sqlite
 
 import (
@@ -87,48 +87,6 @@ func TestPagePayloadBudgetDoesNotRestrictLargeOriginals(t *testing.T) {
 	body, err := p.unpack(0, page[0], nil)
 	if err != nil || !strings.Contains(string(body), text) || p.bytes != 0 {
 		t.Fatal("cache budget constrained an accepted original", err)
-	}
-}
-
-func TestReviewExcerptsAuthenticateOnceAndRelease(t *testing.T) {
-	s, err := newTestStore(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	ctx := context.Background()
-	for range 3 {
-		output := json.RawMessage(fmt.Sprintf(`{"result":%q}`, strings.Repeat("original", 10000)))
-		if err := s.RecordEvent(ctx, s.Session().ID, runrecord.Event{Kind: "tool_succeeded", Text: "observed", Output: output}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	var id string
-	if err := s.db.QueryRow("SELECT id FROM payloads LIMIT 1").Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	p := reviewExcerpts{store: s, last: map[string]int{id: 2}}
-	var original []byte
-	for i := range 3 {
-		p.index = i
-		body, size, err := p.excerpt(ctx, id)
-		if err != nil || len(body) > 8192 || size < 70000 {
-			t.Fatal("incorrect authenticated excerpt", size, err)
-		}
-		if i == 0 {
-			original = body
-		} else if &body[0] != &original[0] {
-			t.Fatal("repeated excerpt was decompressed again")
-		}
-	}
-	if p.bytes != 0 || len(p.entries) != 0 {
-		t.Fatal("completed page retained excerpts")
-	}
-	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := p.excerpt(ctx, id); err == nil {
-		t.Fatal("released excerpt was reused without checking integrity")
 	}
 }
 

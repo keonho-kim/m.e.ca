@@ -53,8 +53,8 @@ func (w *workerActivity) advanceIndicator() {
 	}
 }
 
-func (w *workerActivity) refreshIndicator(latRunning bool) {
-	if w.compressing || latRunning {
+func (w *workerActivity) refreshIndicator() {
+	if w.compressing {
 		if w.indicatorTimer == nil {
 			w.indicatorDots = 1
 			w.indicatorTimer = time.NewTicker(400 * time.Millisecond)

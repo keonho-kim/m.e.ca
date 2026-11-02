@@ -9,7 +9,6 @@ import (
 	"errors"
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/inference"
-	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
@@ -20,9 +19,6 @@ import (
 )
 
 type Runner struct {
-	fork                     *forkConfig
-	LAT                      bool
-	ContextWindow            int
 	ImageInput               bool
 	PollSteering             func() []string
 	Inference                *inference.Settings
@@ -36,7 +32,6 @@ type Runner struct {
 	ProjectRoot              string
 	Prompts                  *prompt.Templates
 	Memory                   *compact.Controller
-	ReviewMemory             latmemory.Repository
 
 	Thinking          *bool
 	ThinkingSupported bool

@@ -20,8 +20,6 @@ func (a *app) startRequest(input composer.Request) {
 	}
 	a.chat.output.Follow = true
 	a.chat.stream, a.chat.thinking = "", ""
-	a.stopLATIndicator()
-	a.chat.latOutput = latOutput{}
 	a.chat.tokensPerSecond = nil
 	a.chat.runSummary = nil
 	a.stopNotice = ""
@@ -43,7 +41,6 @@ func (a *app) startRequest(input composer.Request) {
 		Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
 		Generator: a.connection.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
 		LoadPrompts: a.opts.LoadPrompts,
-		LAT:         a.lat, LoadLAT: a.opts.LoadLAT,
 		PollSteering: func() []string {
 			var out []string
 			for {

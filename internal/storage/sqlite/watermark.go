@@ -20,12 +20,11 @@ WITH latest AS (
  WHERE session_id=?1 AND sequence>?2 AND kind='request'
 )
 SELECT COALESCE(sample.amount,0), COALESCE(sample.sequence,?2), COALESCE(sample.estimated,0),
- COALESCE((SELECT SUM(COALESCE(m.content_bytes,e.memory_bytes)) FROM timeline t
- LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
- LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence AND e.kind IN ('lat_feedback','lat_plan') AND COALESCE(json_extract(e.body,'$.internal'),0)=0
+ COALESCE((SELECT SUM(m.content_bytes) FROM timeline t
+ JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
  WHERE t.session_id=?1 AND t.sequence>MAX(COALESCE(sample.through_timeline,0),
  COALESCE((SELECT through_timeline FROM memories WHERE session_id=?1),0))
- AND (m.role IN ('user','tool','system') OR e.kind IN ('lat_feedback','lat_plan'))),0),
+ AND m.role IN ('user','tool','system')),0),
  COALESCE((SELECT MAX(sequence) FROM timeline WHERE session_id=?1),0)
 FROM latest LEFT JOIN conversation_tokens sample ON sample.sequence=latest.sequence`, session, after).Scan(&mark.Tokens, &mark.Usage, &estimated, &trailingBytes, &mark.Timeline)
 	if err != nil {

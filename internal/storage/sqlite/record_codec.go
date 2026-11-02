@@ -22,6 +22,6 @@ func (s *Store) packRecord(ctx context.Context, tx *sql.Tx, body []byte) ([]byte
 	return recordcontent.Pack(body, func(raw []byte) (string, error) { return s.putPayload(ctx, tx, raw) })
 }
 
-func (s *Store) unpackRecord(ctx context.Context, record storedRecord, fields map[string]bool, nested ...recordcontent.Selection) ([]byte, error) {
-	return recordcontent.Restore(record.body, record.refs, fields, func(id string) (json.RawMessage, error) { return s.payload(ctx, id) }, nested...)
+func (s *Store) unpackRecord(ctx context.Context, record storedRecord, fields map[string]bool) ([]byte, error) {
+	return recordcontent.Restore(record.body, record.refs, fields, func(id string) (json.RawMessage, error) { return s.payload(ctx, id) })
 }

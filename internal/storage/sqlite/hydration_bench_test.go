@@ -6,21 +6,19 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func BenchmarkPayloadPages(b *testing.B) {
 	for _, shared := range []bool{false, true} {
 		b.Run(fmt.Sprintf("shared%t", shared), func(b *testing.B) {
-			s := benchmarkLATStore(b)
+			s := benchmarkPayloadStore(b)
 			ctx, id := context.Background(), s.Session().ID
 			for i := range 32 {
 				text := strings.Repeat("Observed original reasoning line.\n", 4096)
@@ -51,30 +49,17 @@ func BenchmarkPayloadPages(b *testing.B) {
 	}
 }
 
-func BenchmarkLATOutcomePages(b *testing.B) {
-	for _, shared := range []bool{false, true} {
-		b.Run(fmt.Sprintf("shared%t", shared), func(b *testing.B) {
-			s := benchmarkLATStore(b)
-			ctx, id := context.Background(), s.Session().ID
-			for i := range 32 {
-				text := strings.Repeat("Actual command output.\n", 8192)
-				if !shared {
-					text += fmt.Sprint(i)
-				}
-				output, err := json.Marshal(map[string]string{"stdout": text})
-				if err != nil {
-					b.Fatal(err)
-				}
-				if err := s.RecordEvent(ctx, id, runrecord.Event{Kind: "tool_succeeded", Text: "Observed result", Output: output, Operation: &toolapi.Operation{Name: "execute_command", Status: "tool_succeeded", Result: "Observed result"}}); err != nil {
-					b.Fatal(err)
-				}
-			}
-			b.ReportAllocs()
-			for b.Loop() {
-				if records, _, err := s.LATRecords(ctx, id, 0, 1<<62, latmemory.MaxBytes); err != nil || len(records) != 32 {
-					b.Fatalf("outcomes=%d: %v", len(records), err)
-				}
-			}
-		})
+func benchmarkPayloadStore(b *testing.B) *Store {
+	b.Helper()
+	root := b.TempDir()
+	catalog, err := OpenSessions(filepath.Join(root, "sessions"))
+	if err != nil {
+		b.Fatal(err)
 	}
+	s, err := catalog.Create(context.Background(), root, root)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(func() { s.Close() })
+	return s
 }

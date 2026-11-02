@@ -27,7 +27,6 @@ type Options struct {
 	Home, State string
 	Config      config.Config
 	LoadPrompts func() (prompt.Templates, error)
-	LoadLAT     func() (prompt.Templates, error)
 	SaveConfig  func(config.Config) error
 	Store       Store
 	Session     sessionstate.Session
@@ -41,7 +40,6 @@ type app struct {
 	chat                        chatState
 	connection                  connectionState
 	work                        workerActivity
-	lat                         bool
 	language                    locale.Language
 	languageConfirm             bool
 	permissionConfirm           bool

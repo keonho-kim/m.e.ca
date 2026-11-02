@@ -1,6 +1,6 @@
 // Purpose: Record measured usage per attempt and apply retry budgets before restarting generation.
 // Pattern: Model I/O boundary.
-// Usage: Agent, compaction and independent review share execution.generate accounting.
+// Usage: Agent and compaction share execution.generate accounting.
 // Related: internal/agent/run/generate.go, internal/agent/run/memory.go, internal/agent/run/statistics.go, internal/storage/sqlite/usage.go.
 package run
 
@@ -37,11 +37,9 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 		defer cancel()
 		generation.ElapsedMillis = time.Since(started).Milliseconds()
 		generation.MeasuredMillis = measured.Milliseconds()
-		if s.runner.fork == nil {
-			s.statistics.add(usage, measured)
-		}
+		s.statistics.add(usage, measured)
 		err := s.recordUsage(flushCtx, usage, rate, generation)
-		if (role == inference.Agent || s.runner.fork != nil && role == inference.LAT) && (usage != nil || received) {
+		if role == inference.Agent && (usage != nil || received) {
 			err = errors.Join(err, s.countRequest(flushCtx, request, usage, inputBytes, outputBytes))
 		}
 		usage = nil
@@ -51,11 +49,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 		received = false
 		return err
 	}
-	generator := s.runner.Generator
-	if role == inference.LAT && s.review.generator != nil {
-		generator = s.review.generator
-	}
-	err := s.generateObserved(ctx, generator, request, func(event modelapi.Event) error {
+	err := s.generateObserved(ctx, s.runner.Generator, request, func(event modelapi.Event) error {
 		if event.InputBytes > 0 {
 			inputBytes = event.InputBytes
 		}
@@ -66,7 +60,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			if !s.modelCall() {
 				return fmt.Errorf("%w before provider retry: %s", errModelBudget, s.runner.Redact(event.Retry.Reason))
 			}
-			s.checkpoint.ModelCalls = s.usage.snapshot().ModelCalls
+			s.checkpoint.ModelCalls = s.usage.ModelCalls
 			message := fmt.Sprintf("Provider retry %d/%d: %s", event.Retry.Attempt, event.Retry.MaxAttempts, s.runner.Redact(event.Retry.Reason))
 			if err := s.emit(runrecord.Event{Kind: "retry", Text: message}); err != nil {
 				return err

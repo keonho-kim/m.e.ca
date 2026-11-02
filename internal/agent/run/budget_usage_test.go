@@ -15,7 +15,7 @@ func TestRequestBudget(t *testing.T) {
 			t.Fatal("model rejected before budget")
 		}
 	}
-	if u.model(200) || u.snapshot().ToolCalls != 1001 || u.snapshot().ModelCalls != 200 {
+	if u.model(200) || u.ToolCalls != 1001 || u.ModelCalls != 200 {
 		t.Fatal("request budget overrun")
 	}
 }

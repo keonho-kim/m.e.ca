@@ -1,4 +1,4 @@
-// Purpose: Own task interruption and one shared LAT/compaction indicator timer.
+// Purpose: Own task interruption and the compaction indicator timer.
 // Pattern: Event-loop state transitions.
 // Usage: Esc and runtime phase notices update Activity; shutdown disposes the timer.
 // Related: internal/tui/session/app.go, internal/tui/session/tasks.go, internal/tui/view/activity.go.
@@ -10,7 +10,7 @@ import (
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.work.elapsed, TokensPerSecond: a.chat.tokensPerSecond, Running: a.work.state.active(), Compressing: a.work.compressing, LAT: a.chat.latOutput.running, Dots: a.work.indicatorDots, ShowCost: a.connection.selection.Connection.Kind == connection.OpenRouter}
+	return view.Activity{Language: a.language, Elapsed: a.work.elapsed, TokensPerSecond: a.chat.tokensPerSecond, Running: a.work.state.active(), Compressing: a.work.compressing, Dots: a.work.indicatorDots, ShowCost: a.connection.selection.Connection.Kind == connection.OpenRouter}
 }
 func (a *app) interruptTask() {
 	if !a.work.state.agent() || !a.work.state.active() || a.work.cancel == nil {
@@ -21,7 +21,6 @@ func (a *app) interruptTask() {
 	a.work.state.stop()
 	a.stopElapsed()
 	a.work.cancel()
-	a.stopLATIndicator()
 	a.stopCompression()
 	a.proposal = nil
 	a.page = "chat"
@@ -36,23 +35,10 @@ func (a *app) startCompression() {
 		return
 	}
 	a.work.compressing = true
-	a.work.refreshIndicator(a.chat.latOutput.running)
+	a.work.refreshIndicator()
 }
 
 func (a *app) stopCompression() {
 	a.work.compressing = false
-	a.work.refreshIndicator(a.chat.latOutput.running)
-}
-
-func (a *app) startLATIndicator() {
-	if a.work.state.stopping() {
-		return
-	}
-	a.chat.latOutput.running = true
-	a.work.refreshIndicator(a.chat.latOutput.running)
-}
-
-func (a *app) stopLATIndicator() {
-	a.chat.latOutput.running = false
-	a.work.refreshIndicator(a.chat.latOutput.running)
+	a.work.refreshIndicator()
 }

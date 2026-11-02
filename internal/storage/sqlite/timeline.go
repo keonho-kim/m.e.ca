@@ -36,8 +36,8 @@ func (s *Store) Timeline(ctx context.Context, session string, before int64, limi
 		if bytes+record.size > 16*1024*1024 && len(records) > 0 {
 			break
 		}
-		fields, nested := history.DisplayFields(record.kind, entry.internal)
-		body, decodeErr := payloads.unpack(i, record, fields, nested)
+		fields := history.DisplayFields(record.kind)
+		body, decodeErr := payloads.unpack(i, record, fields)
 		if decodeErr != nil {
 			return nil, 0, decodeErr
 		}

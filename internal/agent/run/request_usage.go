@@ -1,6 +1,6 @@
 // Purpose: Count a finished request attempt toward compaction using measured usage or byte fallback.
 // Pattern: Usage accounting boundary.
-// Usage: generate counts agent attempts; compaction and independent review use separate contexts.
+// Usage: generate counts agent attempts; compaction generation uses a separate context.
 // Related: internal/agent/run/usage.go, internal/agent/compact/usage.go.
 package run
 

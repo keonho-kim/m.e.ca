@@ -9,9 +9,6 @@ import (
 )
 
 func (s *execution) observeResult(v validatedCall, outcome toolapi.Result) error {
-	if s.runner.fork != nil {
-		return nil
-	}
 	op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: v.call.ID, Name: v.call.Name, Revision: s.checkpoint.ChangeRevision, Started: outcome.Started, Versions: outcome.Versions, Changes: outcome.Changes, Process: outcome.Process, Command: v.command}
 	if !s.checkpoint.Work.Observe(op) {
 		return nil

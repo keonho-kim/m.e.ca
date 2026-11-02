@@ -15,7 +15,7 @@ import (
 
 func (s *execution) generateObserved(ctx context.Context, generator modelapi.Generator, request modelapi.Request, consume func(modelapi.Event) error) error {
 	commands, ok := s.runner.Tools.(toolapi.CommandExecutor)
-	if (!ok || len(commands.CommandActivity()) == 0) && !(s.review.active && s.runner.PollSteering != nil) && !s.activeLATMemory() {
+	if !ok || len(commands.CommandActivity()) == 0 {
 		return generator.Generate(ctx, request, consume)
 	}
 	child, cancel := context.WithCancel(ctx)
@@ -40,46 +40,34 @@ func (s *execution) generateObserved(ctx context.Context, generator modelapi.Gen
 			}
 		})
 	}()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	var updates <-chan struct{}
 	if source, ok := s.runner.Tools.(toolapi.CommandNotifier); ok {
 		updates = source.CommandUpdates()
 	}
+	var ticks <-chan time.Time
+	if updates == nil {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		ticks = ticker.C
+	}
 	observe := func() error {
-		if err := s.pollLATMemory(ctx); err != nil {
-			return err
-		}
 		_, err := s.collectCommands(ctx)
 		return err
 	}
 	var failure error
 	for {
-		var memoryDone <-chan struct{}
-		if s.activeLATMemory() {
-			memoryDone = s.review.memory.controller.Done()
-		}
 		select {
 		case message := <-events:
 			if failure == nil {
 				failure = consume(message)
-				if failure == nil {
-					failure = s.reviewInstructions()
-				}
 			}
 			reply <- failure
 			if failure != nil {
 				cancel()
 			}
-		case <-ticker.C:
+		case <-ticks:
 			if failure == nil {
-				failure = s.pollLATMemory(ctx)
-				if failure == nil && updates == nil {
-					_, failure = s.collectCommands(ctx)
-				}
-				if failure == nil {
-					failure = s.reviewInstructions()
-				}
+				_, failure = s.collectCommands(ctx)
 				if failure != nil {
 					cancel()
 				}
@@ -87,13 +75,6 @@ func (s *execution) generateObserved(ctx context.Context, generator modelapi.Gen
 		case <-updates:
 			if failure == nil {
 				failure = observe()
-			}
-			if failure != nil {
-				cancel()
-			}
-		case <-memoryDone:
-			if failure == nil {
-				failure = s.pollLATMemory(ctx)
 			}
 			if failure != nil {
 				cancel()

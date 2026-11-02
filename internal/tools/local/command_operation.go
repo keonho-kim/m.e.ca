@@ -1,7 +1,7 @@
 // Purpose: Own a shell safety snapshot and recheck the exact command before process start.
 // Pattern: Concrete prepared command execution.
-// Usage: Host commands use Execute; the LAT adapter calls command after its own validation.
-// Related: internal/tools/local/command.go, internal/tools/local/command_safety.go, internal/tools/local/read_only_command.go.
+// Usage: Execute rechecks shell policy before starting the prepared host command.
+// Related: internal/tools/local/command.go, internal/tools/local/command_safety.go, internal/tools/local/prepare.go.
 package local
 
 import (

@@ -40,8 +40,5 @@ func (s *Store) payload(ctx context.Context, id string) (json.RawMessage, error)
 	if err := s.db.QueryRowContext(ctx, "SELECT codec,raw_bytes,body FROM payloads WHERE id=?", id).Scan(&codec, &size, &body); err != nil {
 		return nil, err
 	}
-	if codec == textFragmentsCodec {
-		return s.textFragments(ctx, id, size, body)
-	}
 	return s.codec.Restore(codec, size, id, body)
 }

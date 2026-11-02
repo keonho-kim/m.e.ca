@@ -22,8 +22,8 @@ func TestCommandHints(t *testing.T) {
 	a := fixture(t)
 	typeInput(a, "!")
 	a.render()
-	for i, command := range []string{"!model", "!language", "!permission", "!lat", "!dir", "!new", "!quit"} {
-		if !strings.Contains(screenLine(a.screen, 14+i, 80), command) {
+	for i, command := range []string{"!model", "!language", "!permission", "!dir", "!new", "!quit"} {
+		if !strings.Contains(screenLine(a.screen, 15+i, 80), command) {
 			t.Fatalf("command missing above editor: %s", command)
 		}
 	}
@@ -50,7 +50,7 @@ func TestCommandHints(t *testing.T) {
 	typeInput(a, "!")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	a.render()
-	if a.compose.editor.String() != "!" || strings.Contains(screenLine(a.screen, 16, 80), "!model") {
+	if a.compose.editor.String() != "!" || a.compose.commandOpen || strings.Contains(screenLine(a.screen, 15, 80), "!model") {
 		t.Fatal("Escape must preserve input and dismiss hints")
 	}
 }

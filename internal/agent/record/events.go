@@ -21,9 +21,6 @@ type Event struct {
 	Statistics      *Statistics          `json:"statistics,omitempty"`
 	ChangePreview   string               `json:"change_preview,omitempty"`
 	TokensPerSecond *float64             `json:"-"`
-	Internal        bool                 `json:"internal,omitempty"`
-	LAT             *LATRun              `json:"lat,omitempty"`
-	Message         *modelapi.Message    `json:"message,omitempty"`
 	Usage           *modelapi.TokenUsage `json:"usage,omitempty"`
 	Call            *toolapi.Call        `json:"call,omitempty"`
 	Output          json.RawMessage      `json:"output,omitempty"`
@@ -34,13 +31,6 @@ type Event struct {
 	CallID          string               `json:"call_id,omitempty"`
 	Approval        *toolapi.Approval    `json:"approval,omitempty"`
 	Checkpoint      *Checkpoint          `json:"checkpoint,omitempty"`
-}
-
-// LATRun groups one isolated native conversation under its owning main run.
-type LATRun struct {
-	ID          string `json:"id"`
-	ParentRunID string `json:"parent_run_id"`
-	Phase       string `json:"phase"`
 }
 
 type Generation struct {

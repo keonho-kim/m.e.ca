@@ -125,7 +125,7 @@ func TestRunStatisticsIncludesCompaction(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		r := fixture(&generator{}, &executor{}, &journal{})
 		r.Generator = throughputGenerator{}
-		s := execution{runner: r, limits: DefaultLimits(), usage: &requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
+		s := execution{runner: r, limits: DefaultLimits(), usage: requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
 		s.usage.begin(s.limits)
 		for _, role := range []inference.Role{inference.Agent, inference.Compaction} {
 			if err := s.generate(context.Background(), modelapi.Request{}, role, func(modelapi.Event) error { return nil }); err != nil {

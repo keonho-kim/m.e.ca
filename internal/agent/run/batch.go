@@ -33,7 +33,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		}
 		calls[i] = value
 	}
-	s.checkpoint.Iteration = s.usage.snapshot().ToolCalls
+	s.checkpoint.Iteration = s.usage.ToolCalls
 	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
 		return err
 	}

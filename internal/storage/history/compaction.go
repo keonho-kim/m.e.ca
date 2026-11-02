@@ -1,4 +1,4 @@
-// Purpose: Project conversation, proposed plans and actual outcomes into concise compaction inputs without duplicate audit events.
+// Purpose: Project conversation and actual outcomes into concise compaction inputs without duplicate audit events.
 // Pattern: Pure history projection.
 // Usage: SQLite passes ordered pages; originals remain untouched in session storage.
 // Related: internal/agent/compact/types.go, internal/storage/sqlite/memory_sources.go.
@@ -29,12 +29,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 			}
 		} else {
 			event := record.Event
-			if event.Internal {
-				continue
-			}
-			if event.Kind == "lat_plan" {
-				role, text = "implementation_plan", event.Text
-			} else if op := event.Operation; op != nil {
+			if op := event.Operation; op != nil {
 				role = "outcome"
 				text = op.Name + " " + op.Status
 				if op.Process != nil {
@@ -72,8 +67,6 @@ func Compaction(page []Record) ([]compact.Record, error) {
 						text += "\nOutput: " + output
 					}
 				}
-			} else if event.Kind == "lat_feedback" {
-				role, text = "review_observation", event.Text
 			} else if event.Kind == "tool_failed" || event.Kind == "denied" || event.Kind == "tool_interrupted" {
 				role, text = "failure", event.Text
 			} else if cp := event.Checkpoint; cp != nil && (cp.Status == "stopped" || cp.Status == "interrupted") {

@@ -1,6 +1,6 @@
 // Purpose: Deliver worker results in order and apply them only in the session event loop.
 // Pattern: Explicit event delivery and state transitions.
-// Usage: Task and connection workers post notices; the terminal loop receives them.
+// Usage: Agent and connection workers post notices; the terminal loop receives them.
 // Related: internal/tui/session/app.go, internal/tui/session/tasks.go, internal/tui/session/model.go.
 package session
 

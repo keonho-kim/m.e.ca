@@ -11,7 +11,6 @@ import (
 )
 
 type Block struct {
-	Group            Group
 	Summary, Details string
 	Changes          *Changes
 	stream           markdown.Stream

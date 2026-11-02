@@ -16,7 +16,7 @@ import (
 func (s *execution) startConversation(ctx context.Context, input string) error {
 	r := s.runner
 	if commands, ok := r.Tools.(toolapi.CommandExecutor); ok {
-		commands.BeginCommands(ctx, s.usage.snapshot().deadline)
+		commands.BeginCommands(ctx, s.usage.deadline)
 	}
 	if previous := r.PreviousRun; previous != nil && (previous.Status == runrecord.Interrupted || previous.Status == runrecord.Stopped) {
 		note := "Previous request: " + previous.Objective + "\nLast observed outcome: " + previous.Observation
@@ -30,14 +30,10 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 	if err := s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
 		return err
 	}
-	if err := s.prepareLAT(ctx); err != nil {
-		return err
-	}
 	return nil
 }
 
 func (s *execution) close(ctx context.Context, cause error) error {
-	cause = errors.Join(cause, s.closeLATMemory(ctx))
 	cause = errors.Join(cause, s.stopCommands(ctx))
 	return s.settle(ctx, cause)
 }

@@ -69,13 +69,6 @@ func (a *app) submitCommand(command commands.Command) {
 		return
 	}
 	switch command.Kind {
-	case commands.LAT:
-		a.lat = !a.lat
-		label := "LAT OFF"
-		if a.lat {
-			label = "LAT ON"
-		}
-		a.status = a.language.Text(label)
 	case commands.Model:
 		a.openModel()
 	case commands.Language:

@@ -1,6 +1,6 @@
 // Purpose: Coordinate preparation, conversation admission, decision work and cleanup for one request.
 // Pattern: State Machine / Use Case.
-// Usage: Invoked for one user objective or user request; cancellation never replays effects.
+// Usage: Invoked once per submitted user request; cancellation never replays effects.
 // Related: internal/agent/run/start.go, internal/agent/run/conversation.go, internal/agent/run/loop.go.
 package run
 
@@ -16,7 +16,6 @@ import (
 )
 
 type execution struct {
-	review           reviewState
 	projection       contextbuild.Projection
 	historyLoaded    bool
 	runner           Runner
@@ -26,7 +25,7 @@ type execution struct {
 	checkpoint       runrecord.Checkpoint
 	emit             func(runrecord.Event) error
 	definitions      []toolapi.Definition
-	usage            *requestBudget
+	usage            requestBudget
 	statistics       runStatistics
 	messages         []modelapi.Message
 	memoryContext    string

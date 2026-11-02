@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	json "github.com/goccy/go-json"
-	latmemory "github.com/keonho-kim/meca/internal/agent/lat/memory"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
@@ -22,7 +21,7 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord
 }
 
 func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string) error {
-	if event.Kind == "run_checkpoint" && event.Checkpoint != nil && !event.Internal {
+	if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
 		copy := *event.Checkpoint
 		event.Checkpoint = &copy
 		if err := event.Check(); err != nil {
@@ -49,7 +48,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if len(body) > recordcontent.MaxBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
-	packed, refs, err := s.packEvent(ctx, tx, body, event)
+	packed, refs, err := s.packRecord(ctx, tx, body)
 	if err != nil {
 		return err
 	}
@@ -61,13 +60,9 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if len(projected) > 0 {
 		role, text = projected[0].Role, projected[0].Text
 	}
-	memoryBytes, memoryField := len(text), ""
-	if (event.Kind == "lat_feedback" || event.Kind == "lat_plan") && !event.Internal {
-		text = ""
-		memoryField = "text"
-	}
+	memoryBytes := len(text)
 	displayArgs := []byte("{}")
-	if event.Call != nil && !event.Internal {
+	if event.Call != nil {
 		// A rejected argument can be valid JSON with an invalid field type.
 		// Presentation must never prevent recording that failure for correction.
 		if args, projectionErr := toolapi.DisplayArgs(event.Call.Arguments); projectionErr == nil {
@@ -77,11 +72,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 			}
 		}
 	}
-	reviewBytes := 0
-	if (role == "outcome" || role == "failure") && !event.Internal {
-		reviewBytes = min(memoryBytes, latmemory.TargetBytes) + min(len(event.Output), 8192) + min(len(event.ChangePreview), 8192) + 256
-	}
-	inserted, err := tx.ExecContext(ctx, "INSERT INTO tool_events(session_id,body,refs,raw_bytes,kind,memory_role,memory_text,memory_field,memory_bytes,display_args,review_bytes,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", session, packed, refs, len(body), event.Kind, role, text, memoryField, memoryBytes, displayArgs, reviewBytes, now)
+	inserted, err := tx.ExecContext(ctx, "INSERT INTO tool_events(session_id,body,refs,raw_bytes,kind,memory_role,memory_text,memory_bytes,display_args,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", session, packed, refs, len(body), event.Kind, role, text, memoryBytes, displayArgs, now)
 	if err != nil {
 		return err
 	}

@@ -30,10 +30,6 @@ func (a *app) chatLayout(width int) *viewport.Transcript {
 	p.stream.Text, p.stream.Markdown = a.chat.stream, true
 	p.tools.Text = a.liveToolActivity()
 	p.status.Text = a.status
-	for _, block := range []*viewport.Block{&p.thinking, &p.stream, &p.tools, &p.status} {
-		block.Group = a.latGroup()
-		block.Group.Open = a.chat.latOutput.running
-	}
 	p.queue.Prepare(a.compose.queued.Messages, a.language, a.opts.Vault.RedactionVersion(), a.opts.Vault.Redact)
 	next := a.chat.output.Next + 1
 	clear(p.live)

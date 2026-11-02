@@ -33,9 +33,6 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 		return errors.Join(errRuntimeRecord, err)
 	}
 	s.messages = append(s.messages, m)
-	if s.review.memory != nil && m.Role == "user" {
-		s.review.memory.dirty = true
-	}
 	return nil
 }
 
@@ -45,30 +42,19 @@ func (s *execution) checkpointEvent() (runrecord.Event, error) {
 	}
 	copy := s.checkpoint
 	event := runrecord.Event{Kind: "run_checkpoint", RunID: copy.ID, Checkpoint: &copy}
-	if copy.Phase == "finished" && s.runner.fork == nil {
+	if copy.Phase == "finished" {
 		statistics := s.statistics.snapshot(time.Now())
 		event.Statistics = &statistics
 	}
 	return event, nil
 }
 
-func (s *execution) needsCheckpoint() bool {
-	return s.runner.fork == nil || s.checkpoint.Phase == "finished"
-}
-
 func (s *execution) persist(ctx context.Context, events ...runrecord.Event) error {
-	var checkpoint runrecord.Event
-	if s.needsCheckpoint() {
-		var err error
-		checkpoint, err = s.checkpointEvent()
-		if err != nil {
-			return err
-		}
-		events = append([]runrecord.Event{checkpoint}, events...)
+	checkpoint, err := s.checkpointEvent()
+	if err != nil {
+		return err
 	}
-	if len(events) == 0 {
-		return ctx.Err()
-	}
+	events = append([]runrecord.Event{checkpoint}, events...)
 	records := make([]runrecord.Entry, len(events))
 	for i := range events {
 		events[i].RunID = s.checkpoint.ID

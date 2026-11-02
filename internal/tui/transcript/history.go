@@ -5,31 +5,19 @@
 package transcript
 
 import (
-	"strings"
-
 	"github.com/keonho-kim/meca/internal/storage/history"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func (f Formatter) History(records []history.Record) []viewport.Block {
 	var blocks []viewport.Block
-	var lastGroup viewport.Group
 	for _, record := range records {
-		start := len(blocks)
 		if record.Kind == "message" {
 			blocks = append(blocks, f.Message(record.Message)...)
 		} else {
 			blocks = append(blocks, f.Event(record.Event)...)
 		}
-		for i := start; i < len(blocks); i++ {
-			block := &blocks[i]
-			if !record.Event.Internal && strings.HasPrefix(record.Event.Kind, "lat_") &&
-				record.Event.Kind != "lat_memory_unavailable" &&
-				lastGroup.ID != "" && strings.HasPrefix(lastGroup.ID, record.Event.RunID+":") {
-				block.Group = lastGroup
-			}
-			lastGroup = block.Group
-		}
+
 	}
 	return blocks
 }

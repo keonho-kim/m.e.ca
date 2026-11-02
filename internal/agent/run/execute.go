@@ -18,7 +18,7 @@ func (s *execution) execute(ctx context.Context, v validatedCall, approve Approv
 	if err != nil {
 		return outcome, errors.Join(err, s.recordRejected(ctx, v, outcome, err, emit))
 	}
-	ctx, cancel := context.WithDeadline(ctx, s.usage.snapshot().deadline)
+	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	if err := s.startExecution(ctx, ready, emit); err != nil {
 		return outcome, errors.Join(errRuntimeRecord, err)
@@ -27,19 +27,8 @@ func (s *execution) execute(ctx context.Context, v validatedCall, approve Approv
 	return s.recordExecution(ctx, v, ready, outcome, err, emit)
 }
 func (s *execution) startExecution(ctx context.Context, ready *readyExecution, emit func(runrecord.Event) error) error {
-	// Admit optional summaries into tool execution windows, not immediately
-	// after an outcome when the next foreground model request is about to start.
-	if err := s.maintainLATMemory(ctx, false); err != nil {
-		return err
-	}
 	s.checkpoint.Phase = "execution"
 	event := runrecord.Event{Kind: "tool_started", Text: ready.proposal.Name + " " + ready.proposal.Target, CallID: ready.call.ID, Call: &ready.call}
-	if s.runner.fork != nil {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		return emit(event) // The native call already owns the durable start intent.
-	}
 	if err := s.persist(ctx, event); err != nil {
 		return err
 	}
