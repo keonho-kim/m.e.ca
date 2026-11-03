@@ -5,6 +5,8 @@
 package transcript
 
 import (
+	"strings"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -17,7 +19,11 @@ func (f Formatter) teamEvent(event runrecord.Event) []viewport.Block {
 		}
 		return []viewport.Block{{Text: event.Agent + " · " + f.Language.Text(label), Thinking: true}}
 	}
-	return []viewport.Block{f.TeamHeader(event.Agent, event.Final), {Text: f.Redact(event.Text), Markdown: true}}
+	text := f.Redact(event.Text)
+	if strings.TrimSpace(text) == "" {
+		return nil
+	}
+	return []viewport.Block{f.TeamHeader(event.Agent, event.Final), {Text: text, Markdown: true}}
 }
 
 // TeamHeader shares attribution between incremental streams and committed history.
@@ -26,5 +32,5 @@ func (f Formatter) TeamHeader(agent string, final bool) viewport.Block {
 	if final {
 		header += " · " + f.Language.Text("작업 결과")
 	}
-	return viewport.Block{Text: header + "\n\n", Markdown: true}
+	return viewport.Block{Text: header + "\n\n", Markdown: true, KeepWithNext: true}
 }

@@ -80,7 +80,7 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		result = commandSummary
 	} else if json.Unmarshal(event.Output, &output) == nil {
 		switch {
-		case event.Kind == "tool_succeeded" && event.Call.Name == "read_image" && output.Width > 0 && output.Height > 0:
+		case event.Kind == "tool_succeeded" && event.Call.Name == "view_image" && output.Width > 0 && output.Height > 0:
 			result = f.Language.Format("%s · %d × %d", strings.ToUpper(output.Format), output.Width, output.Height)
 		case event.Kind == "tool_succeeded" && output.Changed != nil && !*output.Changed:
 			result = f.Language.Text("변경 없음")
@@ -93,5 +93,5 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 	if result != "" {
 		text += indentTool(brief(f.Redact(result)))
 	}
-	return text + "    [Ctrl+O: " + f.Language.Text("Expand") + "]\n"
+	return text
 }

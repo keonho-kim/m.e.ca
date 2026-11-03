@@ -63,13 +63,13 @@ func runImageSession(t *testing.T, reject bool) {
 		step++
 		imageTool := false
 		for _, d := range request.Tools {
-			imageTool = imageTool || d.Name == "read_image"
+			imageTool = imageTool || d.Name == "view_image"
 		}
 		if imageTool != (request.ModelID == "vision" && (!reject || step < 3)) {
 			t.Fatal("incorrect dynamic image tool selection")
 		}
 		if step == 1 {
-			return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "read", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}}})
+			return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}}})
 		}
 		found := false
 		for _, m := range request.Messages {

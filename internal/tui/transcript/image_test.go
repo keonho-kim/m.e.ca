@@ -14,7 +14,7 @@ import (
 )
 
 func TestImageMetadataPresentation(t *testing.T) {
-	e := runrecord.Event{Kind: "tool_succeeded", Text: "Image loaded", Call: &toolapi.Call{ID: "read", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.gif"}`)}, Output: json.RawMessage(`{"Path":"shot.gif","Format":"gif","MIME":"image/png","Width":100,"Height":200,"Representative":true}`)}
+	e := runrecord.Event{Kind: "tool_succeeded", Text: "Image loaded", Call: &toolapi.Call{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.gif"}`)}, Output: json.RawMessage(`{"Path":"shot.gif","Format":"gif","MIME":"image/png","Width":100,"Height":200,"Representative":true}`)}
 	for _, language := range []locale.Language{locale.Korean, locale.English} {
 		f := Formatter{Language: language, Redact: func(s string) string { return s }}
 		for _, text := range []string{f.Tool(e), f.toolSummary(e)} {
@@ -22,7 +22,7 @@ func TestImageMetadataPresentation(t *testing.T) {
 				t.Fatalf("raw or incomplete image presentation: %s", text)
 			}
 		}
-		if language == locale.Korean && !strings.Contains(f.Tool(e), "이미지 읽기") {
+		if language == locale.Korean && !strings.Contains(f.Tool(e), "이미지 보기") {
 			t.Fatal("untranslated image result")
 		}
 	}

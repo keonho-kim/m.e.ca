@@ -40,14 +40,20 @@ func (b *Block) indexMarkdown(previous blockLayout, width int) (firstContent, la
 			firstContent = previous.first
 		}
 	}
-	for i := reused; i < len(l.parsed); i++ {
-		line := l.parsed[i]
-		b.retainParsedLine(line)
+	for i := reused; i < l.markdownLines(); i++ {
+		var text string
+		if l.packed != nil {
+			text = l.packed.Text(i)
+		} else {
+			line := l.parsed[i]
+			b.retainParsedLine(line)
+			text = line.Text
+		}
 		if i%256 == 0 {
 			l.points = append(l.points, blockPoint{source: i, row: l.total, last: lastContent})
 		}
 		var metric rowMetrics
-		for row := range textlayout.Rows(line.Text, width) {
+		for row := range textlayout.Rows(text, width) {
 			if metric.count > 0 && metric.count%256 == 0 {
 				l.points = append(l.points, blockPoint{source: i, row: l.total + metric.count, offset: row.Start, within: metric.count, prefix: row.Prefix, last: lastContent})
 			}

@@ -36,7 +36,11 @@ func (a *app) receiveTeam(event *runrecord.Event) {
 		if event.Kind == "usage" && event.Usage != nil {
 			a.chat.tokenTotal = a.chat.tokenTotal.Add(*event.Usage)
 		}
-		a.chat.tokenCurrent, a.chat.tokensPerSecond = a.team.view.CurrentUsage()
+		current, rate := a.team.view.CurrentUsage()
+		a.chat.tokenCurrent = current
+		if rate != nil {
+			a.chat.tokensPerSecond = rate
+		}
 	case "retry":
 		a.status = event.Agent + " · " + event.Text
 	case "image_input_unavailable":

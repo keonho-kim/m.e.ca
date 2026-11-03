@@ -29,6 +29,17 @@ func (p *Peer) AdmitModel() bool {
 	return true
 }
 func (p *Peer) InitialCursor() int64 { return max(0, p.room.firstMessage-1) }
+
+// HasSpoken reports a committed public response in this active lifetime.
+// Private reasoning, streamed drafts and restored historical speech do not count.
+func (p *Peer) HasSpoken() bool {
+	r := p.room
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	live := r.active[p.ID]
+	return live != nil && !live.closed && !live.leaving && live.spoke
+}
+
 func (p *Peer) Names() string {
 	r := p.room
 	r.mu.Lock()

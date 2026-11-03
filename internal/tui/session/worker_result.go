@@ -23,6 +23,7 @@ func (a *app) finishWorker(n notice) {
 	}()
 	a.team.finish(&a.chat.output)
 	a.chat.tokenCurrent = modelapi.TokenUsage{}
+	a.chat.currentMeasurement = runrecord.Throughput{}
 	stopped := a.work.state.stopping()
 	a.work.state = workerIdle
 	a.stopCompression()

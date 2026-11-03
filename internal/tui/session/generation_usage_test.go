@@ -6,6 +6,7 @@ package session
 
 import (
 	"testing"
+	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -13,9 +14,8 @@ import (
 
 func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	a := screenFixture(t)
-	rate := 5.0
 	update := func(kind string, input, output int64) {
-		a.receiveRuntime(&runrecord.Event{Kind: kind, Usage: &modelapi.TokenUsage{Input: input, Output: output}, TokensPerSecond: &rate})
+		a.receiveRuntime(&runrecord.Event{Kind: kind, Usage: &modelapi.TokenUsage{Input: input, Output: output}, MeasuredDuration: time.Duration(output) * time.Second / 5})
 	}
 	update("usage_progress", 100, 10)
 	update("usage_progress", 100, 15)
@@ -24,8 +24,8 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	}
 	update("usage", 100, 15)
 	a.receiveRuntime(&runrecord.Event{Kind: "generation_started"})
-	if a.chat.tokensPerSecond != nil {
-		t.Fatal("new generation inherited throughput")
+	if a.chat.tokensPerSecond == nil || *a.chat.tokensPerSecond != 5 {
+		t.Fatal("generation boundary cleared measured request throughput")
 	}
 	update("usage_progress", 200, 25)
 	update("usage", 200, 25)

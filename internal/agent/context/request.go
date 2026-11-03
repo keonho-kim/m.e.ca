@@ -36,7 +36,9 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 	messages := make([]modelapi.Message, 0, len(input.Messages)+4)
 	messages = append(messages, modelapi.Message{Role: "system", Content: p.instructions(input)})
 	if input.Memory != "" {
-		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work summary (historical observations):\n" + input.Redact(input.Memory)})
+		messages = append(messages, modelapi.Message{Role: "user", Content: p.summary(input)})
+	} else {
+		p.memory = summarySnapshot{}
 	}
 	present := input.Objective == ""
 	for i := len(input.Messages) - 1; i >= 0 && !present; i-- {

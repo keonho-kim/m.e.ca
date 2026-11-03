@@ -7,6 +7,7 @@ package team
 import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"strings"
 )
 
 func (r *Room) publish(message channel.Message) (channel.Message, error) {
@@ -34,6 +35,9 @@ func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 	r.latestPublic = value.Sequence
 	if value.From == "user" {
 		r.latestUser = value.Sequence
+	}
+	if live := r.active[value.From]; live != nil && value.FromStream && strings.TrimSpace(value.Text) != "" {
+		live.spoke = true
 	}
 	for id, live := range r.active {
 		if id != value.From && !live.closed && !live.leaving {

@@ -47,7 +47,7 @@ func BenchmarkImageHistory(b *testing.B) {
 	}
 	messages := []modelapi.Message{{Role: "user", Content: "inspect"}}
 	for i := range 10 {
-		messages = append(messages, modelapi.Message{Role: "tool", ToolName: "read_image", ToolCallID: fmt.Sprintf("read%d", i), Images: []media.Image{picture}})
+		messages = append(messages, modelapi.Message{Role: "tool", ToolName: "view_image", ToolCallID: fmt.Sprintf("read%d", i), Images: []media.Image{picture}})
 	}
 	messages = append(messages, modelapi.Message{Role: "assistant", Content: "completed"})
 	entries := make([]runrecord.Entry, len(messages))
@@ -91,7 +91,7 @@ func BenchmarkImageBoundary(b *testing.B) {
 					messages[i] = modelapi.Message{Role: "user", Content: "check image"}
 				}
 				if i%3 == 1 {
-					messages[i] = modelapi.Message{Role: "tool", ToolName: "read_image", ToolCallID: fmt.Sprintf("call%d", i), Images: []media.Image{picture}}
+					messages[i] = modelapi.Message{Role: "tool", ToolName: "view_image", ToolCallID: fmt.Sprintf("call%d", i), Images: []media.Image{picture}}
 				}
 				entries[i].Message = &messages[i]
 			}

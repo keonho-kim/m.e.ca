@@ -16,7 +16,7 @@ import (
 
 func TestImageProjectionAndModelChange(t *testing.T) {
 	picture, _ := media.New("shot.png", "image/png", "png", 8, 8, []byte("image payload"))
-	call := toolapi.Call{ID: "read", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
+	call := toolapi.Call{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
 	messages := []modelapi.Message{{Role: "user", Content: "Inspect"}, {Role: "assistant", Calls: []toolapi.Call{call}}, {Role: "tool", ToolName: call.Name, ToolCallID: call.ID, Content: "Image loaded", Images: []media.Image{picture}}}
 	var projection Projection
 	input := Input{Request: modelapi.Request{ModelID: "vision"}, ImageInput: true, System: "Rules", Messages: messages, MaxBytes: 16 * 1024 * 1024, Redact: func(s string) string { return s }, Projection: &projection, RedactionVersion: func() int { return 1 }}

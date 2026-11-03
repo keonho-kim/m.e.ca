@@ -38,16 +38,28 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
+	var firstUser *string
+	hasMessage := false
 	for _, record := range records {
 		switch {
 		case record.Message != nil && record.Event == nil:
 			err = s.writeMessage(ctx, tx, session, *record.Message, now, receipt)
+			hasMessage = true
+			if firstUser == nil && record.Message.Role == "user" {
+				summary := conversationSummary(record.Message.Content)
+				firstUser = &summary
+			}
 		case record.Event != nil && record.Message == nil:
 			err = s.writeEvent(ctx, tx, session, *record.Event, now, receipt)
 		default:
 			err = fmt.Errorf("journal record requires exactly one payload")
 		}
 		if err != nil {
+			return errors.Join(err, tx.Rollback())
+		}
+	}
+	if hasMessage {
+		if _, err := tx.ExecContext(ctx, "UPDATE sessions SET updated_at=?,summary=COALESCE(summary,?) WHERE id=?", now, firstUser, session); err != nil {
 			return errors.Join(err, tx.Rollback())
 		}
 	}

@@ -24,6 +24,7 @@ func (v publicObservation) retainedBytes() int { return len(v.context.Content) +
 
 type publicHistory struct {
 	mu             sync.Mutex
+	loadMu         sync.Mutex
 	values         []publicObservation
 	after, through int64
 	bytes          int
@@ -53,10 +54,49 @@ func (h *publicHistory) read(ctx context.Context, store channel.Repository, afte
 		return nil, err
 	}
 	h.mu.Lock()
-	defer h.mu.Unlock()
+	values, ok := h.cached(after, through, limit)
+	h.mu.Unlock()
+	if ok {
+		return values, nil
+	}
+	// Serialize cold loads, but leave recent reads and publication independent
+	// of repository latency. Recheck after another receiver finishes loading.
+	h.loadMu.Lock()
+	defer h.loadMu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	h.mu.Lock()
+	values, ok = h.cached(after, through, limit)
+	oldAfter, oldThrough := h.after, h.through
+	h.mu.Unlock()
+	if ok {
+		return values, nil
+	}
+	messages, err := store.TeamMessages(ctx, after, through, limit)
+	if err != nil {
+		return nil, err
+	}
+	values = make([]publicObservation, len(messages))
+	for i, message := range messages {
+		values[i] = observePublic(message)
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	// Historical pages never displace a newer window or a concurrent append.
+	if h.after == oldAfter && h.through == oldThrough && (h.through == 0 || after == h.through) {
+		if len(h.values) == 0 {
+			h.reset(after)
+		}
+		for _, value := range values {
+			h.add(value)
+		}
+	}
+	return values, nil
+}
+
+// cached requires mu and copies only receiver-owned message headers.
+func (h *publicHistory) cached(after, through int64, limit int) ([]publicObservation, bool) {
 	if after >= h.after && after < h.through {
 		first := slices.IndexFunc(h.values, func(v publicObservation) bool { return v.message.Sequence > after })
 		if first >= 0 {
@@ -64,20 +104,10 @@ func (h *publicHistory) read(ctx context.Context, store channel.Repository, afte
 			for end < len(h.values) && end-first < limit && h.values[end].message.Sequence <= through {
 				end++
 			}
-			return slices.Clone(h.values[first:end]), nil
+			return slices.Clone(h.values[first:end]), true
 		}
 	}
-	messages, err := store.TeamMessages(ctx, after, through, limit)
-	if err != nil {
-		return nil, err
-	}
-	values := make([]publicObservation, len(messages))
-	h.reset(after)
-	for i, message := range messages {
-		values[i] = observePublic(message)
-		h.add(values[i])
-	}
-	return values, nil
+	return nil, false
 }
 
 func (h *publicHistory) reset(after int64) {

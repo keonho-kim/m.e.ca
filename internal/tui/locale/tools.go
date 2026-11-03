@@ -5,9 +5,9 @@
 package locale
 
 var tools = []translation{
-	{"read_image", "Read image", "이미지 읽기"},
-	{"", "Reading image", "이미지 읽는 중"},
-	{"", "Image loaded", "이미지 읽기 완료"},
+	{"view_image", "View image", "이미지 보기"},
+	{"", "Viewing image", "이미지 보는 중"},
+	{"", "Image loaded", "이미지 불러오기 완료"},
 	{"", "Representative first frame / page", "대표 첫 프레임 / 첫 페이지"},
 	{"execute_command", "Execute command", "명령 실행"},
 	{"list_command_runs", "List command runs", "실행 명령 목록"},
@@ -43,7 +43,6 @@ var tools = []translation{
 	{"", "Failed", "실패"},
 	{"", "Interrupted", "중단"},
 	{"", "Collapsed", "접힘"},
-	{"", "Expand", "펼치기"},
 	{"", " and %d more", " 외 %d개"},
 	{"", "Created %d directories", "생성한 폴더 %d개"},
 	{"", "%d bytes", "%d바이트"},

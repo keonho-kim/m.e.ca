@@ -1,7 +1,7 @@
-// Purpose: Map native targets and wait notices to the shared workspace access boundary.
+// Purpose: Admit announced peer work and reserve its actual shared-workspace targets.
 // Pattern: Tool-to-resource adapter.
-// Usage: Executor.Prepare reserves access before constructing large local candidates.
-// Related: internal/tools/team/executor.go, internal/tools/team/workspace/workspace.go.
+// Usage: Executor.Prepare checks public participation before constructing large local candidates.
+// Related: internal/agent/team/peer.go, internal/tools/team/executor.go, internal/tools/team/workspace/workspace.go.
 package team
 
 import (
@@ -14,8 +14,21 @@ import (
 )
 
 func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.Lease, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	switch call.Name {
-	case "wait_command", "cancel_command", "list_command_runs", "read_image":
+	case "wait_command", "cancel_command", "list_command_runs":
+		return nil, nil
+	}
+	if !e.Peer.HasSpoken() {
+		return nil, &toolapi.Failure{
+			Code:   "team_contribution_required",
+			Detail: "Nothing executed. Tell your teammates your contribution before starting local work.",
+			Next:   "In your public response, state what you will inspect or change and the project-relative paths. Refer to a peer's announced work when it affects yours. You may include the tool call in the same response. Keep the message concise and use the user's language.",
+		}
+	}
+	if call.Name == "view_image" {
 		return nil, nil
 	}
 	shell := call.Name == "execute_command"

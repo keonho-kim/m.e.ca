@@ -26,7 +26,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 		return nil, outcome, err
 	}
 	r := s.runner
-	if call.Name == "read_image" && !r.ImageInput {
+	if call.Name == "view_image" && !r.ImageInput {
 		return nil, outcome, &modelapi.ImageInputError{}
 	}
 	op, err := r.Tools.Prepare(ctx, r.Settings, call)

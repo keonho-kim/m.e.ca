@@ -18,17 +18,15 @@ func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output 
 	}
 	id := key(event.Agent, event.Call.ID)
 	if s.tools == nil {
-		s.tools = make(map[string]int)
+		s.tools = make(map[string]messageDisplay)
 	}
 	block := s.tools[id]
-	if block == 0 {
-		appendBlock(output, f.TeamHeader(event.Agent, false))
-	}
 	text := f.Tool(event)
 	if event.Kind == "tool_waiting" {
 		text += "\n" + f.Language.Text("실행 대기")
 	}
-	s.tools[id] = replaceBlock(output, block, viewport.Block{Text: text})
+	block.show(event.Agent, false, viewport.Block{Text: text}, f, output)
+	s.tools[id] = block
 }
 func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output *viewport.View) {
 	if event.Call == nil || catalog.IsTool(event.Call.Name) {
@@ -36,16 +34,14 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 	}
 	id := key(event.Agent, event.Call.ID)
 	block := s.tools[id]
-	if block == 0 {
-		appendBlock(output, f.TeamHeader(event.Agent, false))
-	}
+	agent := event.Agent
 	event.Agent = ""
 	for _, value := range f.Event(event) {
-		block = replaceBlock(output, block, value)
+		block.show(agent, false, value, f, output)
 	}
 	if event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Status == "running" {
 		if s.tools == nil {
-			s.tools = make(map[string]int)
+			s.tools = make(map[string]messageDisplay)
 		}
 		s.tools[id] = block
 	} else {
@@ -55,8 +51,9 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 func (s *State) Commands(agent string, commands []toolapi.CommandRun, f transcript.Formatter, output *viewport.View) {
 	for _, command := range commands {
 		block := s.tools[key(agent, command.CallID)]
-		if block != 0 && command.Status == "running" {
-			output.Update(block, viewport.Block{Text: f.CommandActivity([]toolapi.CommandRun{command})})
+		if block.body != 0 && command.Status == "running" {
+			block.show(agent, false, viewport.Block{Text: f.CommandActivity([]toolapi.CommandRun{command})}, f, output)
+			s.tools[key(agent, command.CallID)] = block
 		}
 	}
 }

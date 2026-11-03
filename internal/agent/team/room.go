@@ -22,6 +22,7 @@ type participant struct {
 	member          identity.Member
 	wake            chan struct{}
 	leaving, closed bool
+	spoke           bool
 }
 type Room struct {
 	mu           sync.Mutex

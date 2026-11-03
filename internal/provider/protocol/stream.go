@@ -20,11 +20,11 @@ import (
 func ReadResponse(ctx context.Context, response *http.Response, provider modelconn.ProviderKind, emit func(modelapi.Event) error) error {
 	state := streamState{provider: provider}
 	native := provider == modelconn.Ollama
-	reader := bufio.NewReader(response.Body)
+	reader := streamLines{Reader: bufio.NewReader(response.Body)}
 	sse := strings.Contains(response.Header.Get("Content-Type"), "text/event-stream")
 	state.streaming = sse || native && strings.Contains(response.Header.Get("Content-Type"), "ndjson")
 	if !native && !sse {
-		content, err := io.ReadAll(io.LimitReader(reader, modelapi.MaxResponseBytes+1))
+		content, err := io.ReadAll(io.LimitReader(reader.Reader, modelapi.MaxResponseBytes+1))
 		if err != nil {
 			return err
 		}
@@ -37,25 +37,31 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 		return state.complete(emit)
 	}
 	var frame bytes.Buffer
-	consumeFrame := func() error {
-		if frame.Len() == 0 {
+	consumeFrame := func(content []byte) error {
+		if len(content) == 0 {
 			return nil
 		}
-		content := bytes.TrimSpace(frame.Bytes())
+		content = bytes.TrimSpace(content)
 		if bytes.Equal(content, []byte("[DONE]")) {
 			if provider == modelconn.LMStudio && !state.finished {
 				return fmt.Errorf("model Responses stream ended without a completed response")
 			}
 			state.finished = true
-			frame.Reset()
 			return nil
 		}
-		err := state.consume(content, false, emit)
-		frame.Reset()
+		return state.consume(content, false, emit)
+	}
+	flushFrame := func() error {
+		err := consumeFrame(frame.Bytes())
+		if frame.Cap() > retainedFrameBytes {
+			frame = bytes.Buffer{}
+		} else {
+			frame.Reset()
+		}
 		return err
 	}
 	for {
-		line, readErr := reader.ReadString('\n')
+		line, readErr := reader.next(ctx)
 		if readErr != nil && readErr != io.EOF {
 			return fmt.Errorf("read model stream: %w", readErr)
 		}
@@ -65,22 +71,29 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		line = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+		line = bytes.TrimSuffix(bytes.TrimSuffix(line, []byte("\n")), []byte("\r"))
 		if native {
-			if strings.TrimSpace(line) == "" {
+			if len(bytes.TrimSpace(line)) == 0 {
 				continue
 			}
-			if err := state.consume([]byte(line), false, emit); err != nil {
+			if err := state.consume(line, false, emit); err != nil {
 				return err
 			}
 		} else {
-			if line == "" {
-				if err := consumeFrame(); err != nil {
+			if len(line) == 0 {
+				if err := flushFrame(); err != nil {
 					return err
 				}
-			} else if strings.HasPrefix(line, "data:") {
-				frame.WriteString(strings.TrimSpace(strings.TrimPrefix(line, "data:")))
-				frame.WriteByte('\n')
+			} else if bytes.HasPrefix(line, []byte("data:")) {
+				data := bytes.TrimSpace(line[len("data:"):])
+				if frame.Len() == 0 && len(data) > 0 && reader.skipBoundary() {
+					if err := consumeFrame(data); err != nil {
+						return err
+					}
+				} else {
+					frame.Write(data)
+					frame.WriteByte('\n')
+				}
 			}
 		}
 		if state.finished {
@@ -94,7 +107,7 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 		return err
 	}
 	if !native && frame.Len() > 0 {
-		if err := consumeFrame(); err != nil {
+		if err := flushFrame(); err != nil {
 			return err
 		}
 	}

@@ -21,7 +21,7 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 	a.connection.selection.Connection.Kind = connection.OpenRouter
 	a.screen.SetSize(140, 24)
 	a.render()
-	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "INPUT 0 · OUTPUT 0 · TOTAL COST — · TPS —") {
+	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "INPUT 0 · OUTPUT 0 · TOTAL COST —") {
 		t.Fatal(line)
 	}
 	update := func(kind, cost string) {
@@ -40,13 +40,13 @@ func TestCostHeaderSnapshotsAndProviderSwitch(t *testing.T) {
 	for _, page := range []string{"chat", "model", "language", "files"} {
 		a.page = page
 		a.render()
-		if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "INPUT 40 · OUTPUT 10 · TOTAL COST $0.005 · TPS —") {
+		if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "INPUT 40 · OUTPUT 10 · TOTAL COST $0.005") {
 			t.Fatalf("%s: %s", page, line)
 		}
 	}
 	a.language = locale.Korean
 	a.render()
-	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "입력 40 · 출력 10 · 총 비용 $0.005 · 초당 토큰 —") {
+	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "입력 40 · 출력 10 · 총 비용 $0.005") {
 		t.Fatal(line)
 	}
 	a.connection.selection.Connection.Kind = connection.VLLM
@@ -67,7 +67,7 @@ func TestCostFreeCallAndNarrowCompression(t *testing.T) {
 	}
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &usage})
 	a.render()
-	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "TOTAL COST $0 · TPS —") {
+	if line := screenLine(a.screen, 0, 140); !strings.Contains(line, "TOTAL COST $0") {
 		t.Fatal(line)
 	}
 	a.screen.SetSize(32, 12)

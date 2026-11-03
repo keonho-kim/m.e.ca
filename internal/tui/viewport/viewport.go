@@ -28,6 +28,7 @@ type Block struct {
 	ID               int
 	Text             string
 	Thinking         bool
+	KeepWithNext     bool // Retain an attribution header together with its following body.
 }
 type Line struct {
 	Copy     textlayout.Fragment
@@ -105,19 +106,42 @@ func (v *View) bound(older bool) {
 		v.releaseColdDetails()
 	}
 	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || v.sourceBytes > sourceMemoryBudget) {
-		v.layoutRevision++
 		index := 0
 		if older {
 			index = len(v.Blocks) - 1
 		} else if !v.Follow {
 			index = len(v.Blocks) - 2
 		}
-		v.sourceBytes -= v.Blocks[index].bytes()
-		delete(v.streams, v.Blocks[index].ID)
-		copy(v.Blocks[index:], v.Blocks[index+1:])
-		v.Blocks[len(v.Blocks)-1] = Block{}
-		v.Blocks = v.Blocks[:len(v.Blocks)-1]
+		first, last := v.group(index)
+		// Keep the newest complete message while reading older history, just
+		// as an ungrouped last block remains available under memory pressure.
+		if !older && last == len(v.Blocks) && first > 0 {
+			first, last = v.group(first - 1)
+		}
+		if first == 0 && last == len(v.Blocks) {
+			break
+		}
+		v.layoutRevision++
+		for _, block := range v.Blocks[first:last] {
+			v.sourceBytes -= block.bytes()
+			delete(v.streams, block.ID)
+		}
+		copy(v.Blocks[first:], v.Blocks[last:])
+		size := len(v.Blocks) - (last - first)
+		clear(v.Blocks[size:])
+		v.Blocks = v.Blocks[:size]
 	}
+}
+
+func (v *View) group(index int) (first, last int) {
+	first, last = index, index+1
+	for first > 0 && v.Blocks[first-1].KeepWithNext {
+		first--
+	}
+	for last < len(v.Blocks) && v.Blocks[last-1].KeepWithNext {
+		last++
+	}
+	return first, last
 }
 
 func (v *View) ensureBytes() {

@@ -1,6 +1,6 @@
 // Purpose: Own one image target and revalidate its path before taking the raster snapshot.
 // Pattern: Concrete prepared read execution.
-// Usage: Executor.Prepare returns this operation for read_image.
+// Usage: Executor.Prepare returns this operation for view_image.
 // Related: internal/tools/local/image.go, internal/tools/local/operation.go.
 package local
 
@@ -22,5 +22,5 @@ func (op *imageOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 	if _, err := op.currentTarget(op.source); err != nil {
 		return toolapi.Result{}, err
 	}
-	return op.readImage(ctx)
+	return op.viewImage(ctx)
 }

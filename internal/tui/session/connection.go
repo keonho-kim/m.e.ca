@@ -63,6 +63,7 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 		return false, err
 	}
 	a.connection.adopt(n.Client, committed.Selection)
+	a.chat.resetThroughput()
 	adopted = true
 	return true, committed.DefaultError
 }

@@ -31,6 +31,12 @@ func (b *Block) ensureMarkdown(width int) bool {
 		l.parsed = b.stream.Render(l.source, width)
 	} else {
 		b.stream = markdown.Stream{}
+		if len(l.source) >= 128*1024 {
+			l.packed = markdown.RenderPacked(l.source, width, displayCacheBudget)
+			if l.packed != nil {
+				return true
+			}
+		}
 		l.parsed = markdown.Render(l.source, width)
 		l.parsedBytes = cap(l.parsed) * int(unsafe.Sizeof(markdown.Line{}))
 	}

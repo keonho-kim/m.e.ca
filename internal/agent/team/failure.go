@@ -25,7 +25,7 @@ func (r *Room) deliver(event runrecord.Event, persist bool) error {
 	defer r.eventMu.Unlock()
 	if persist && r.options.Record != nil {
 		stored := event
-		stored.TokensPerSecond = nil
+		stored.MeasuredDuration = 0
 		if event.Reference != nil {
 			stored = runrecord.Event{Kind: "team_reference", Agent: event.Agent, Reference: event.Reference}
 		}

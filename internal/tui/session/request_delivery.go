@@ -62,7 +62,7 @@ func (d *requestDelivery) post(ctx context.Context, queue chan<- notice, n notic
 	}
 	if n.Approval != nil || n.Done {
 		for _, peer := range d.peers {
-			peer.current = nil
+			peer.current, peer.usage = nil, nil
 		}
 	}
 	err := d.peer(id).post(ctx, queue, n)

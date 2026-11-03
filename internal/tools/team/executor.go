@@ -38,7 +38,7 @@ func (e *Executor) Definitions() []toolapi.Definition {
 	definitions := e.Local.Definitions()
 	for i := range definitions {
 		if definitions[i].Name == "execute_command" {
-			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. A call can wait for shared access before process start; command controls remain available.")
+			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Briefly tell peers your intended work and project-relative paths before the first local tool; public response text can accompany this call. A call can wait for shared access before process start; command controls remain available.")
 		}
 	}
 	return append(definitions, catalog.Definitions()...)

@@ -24,8 +24,7 @@ func (v *View) trackStream(id int, active bool) {
 func (v *View) FinishStream(id int) {
 	i := sort.Search(len(v.Blocks), func(i int) bool { return v.Blocks[i].ID >= id })
 	if i < len(v.Blocks) && v.Blocks[i].ID == id {
-		v.Blocks[i].Streaming, v.Blocks[i].live = false, false
-		v.Blocks[i].releaseParsed()
+		v.Blocks[i].finishStream()
 	}
 	delete(v.streams, id)
 }

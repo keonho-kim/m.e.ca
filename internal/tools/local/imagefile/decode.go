@@ -1,6 +1,6 @@
 // Purpose: Decode bounded raster snapshots and normalize formats unsupported by vision APIs.
 // Pattern: Pure codec adapter with cancellable stream boundaries.
-// Usage: Local read_image execution supplies a stable file snapshot.
+// Usage: Local view_image execution supplies a stable file snapshot.
 // Related: internal/agent/media/image.go, internal/tools/local/imagefile/webp.go.
 package imagefile
 

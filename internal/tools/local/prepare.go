@@ -62,7 +62,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 			return nil, err
 		}
 		return op, op.checkMutationSafety()
-	case "read_image":
+	case "view_image":
 		op := &imageOperation{}
 		initialize(&op.operation)
 		op.source, err = executor.resolve(settings.Scope, input.Path)

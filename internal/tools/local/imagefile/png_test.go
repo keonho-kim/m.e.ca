@@ -1,6 +1,6 @@
 // Purpose: Preserve static PNG bytes and recognize animation only from an actual control chunk.
 // Pattern: Raster container regression tests.
-// Usage: Image codec tests exercise read_image normalization independently of file extensions.
+// Usage: Image codec tests exercise view_image normalization independently of file extensions.
 // Related: internal/tools/local/imagefile/decode.go, internal/tools/local/imagefile/png.go.
 package imagefile
 

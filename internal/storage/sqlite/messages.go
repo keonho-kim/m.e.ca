@@ -45,13 +45,5 @@ func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, sessi
 	if err != nil {
 		return err
 	}
-	if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET updated_at=? WHERE id=?", now, session); err != nil {
-		return err
-	}
-	if message.Role == "user" {
-		if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET summary=? WHERE id=? AND summary IS NULL", conversationSummary(message.Content), session); err != nil {
-			return err
-		}
-	}
 	return nil
 }

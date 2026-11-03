@@ -11,24 +11,24 @@ import (
 )
 
 type peerDisplay struct {
-	header, stream      int
+	message             messageDisplay
 	current             modelapi.TokenUsage
-	rate                *float64
+	measured            runrecord.Throughput
 	compressing, active bool
 }
 type State struct {
-	peers   map[string]*peerDisplay
-	tools   map[string]int
-	totals  runrecord.UsageTotals
-	members int
+	peers    map[string]*peerDisplay
+	tools    map[string]messageDisplay
+	measured runrecord.Throughput
+	members  int
 }
 
 func (s *State) Begin() {
-	*s = State{peers: make(map[string]*peerDisplay), tools: make(map[string]int)}
+	*s = State{peers: make(map[string]*peerDisplay), tools: make(map[string]messageDisplay)}
 }
 func (s *State) Finish(output *viewport.View) {
 	for _, peer := range s.peers {
-		output.FinishStream(peer.stream)
+		output.FinishStream(peer.message.body)
 	}
 	*s = State{}
 }
@@ -45,14 +45,12 @@ func (s *State) peer(id string) *peerDisplay {
 	return peer
 }
 func appendBlock(output *viewport.View, block viewport.Block) int {
+	previous := output.Next
 	output.AppendBlock(block)
-	return output.Next
-}
-func replaceBlock(output *viewport.View, id int, block viewport.Block) int {
-	if id != 0 && output.Update(id, block) {
-		return id
+	if output.Next == previous {
+		return 0
 	}
-	return appendBlock(output, block)
+	return output.Next
 }
 func key(agent, call string) string { return agent + "/" + call }
 func (s *State) Compressing() bool {
@@ -65,16 +63,10 @@ func (s *State) Compressing() bool {
 }
 func (s *State) CurrentUsage() (modelapi.TokenUsage, *float64) {
 	var current modelapi.TokenUsage
-	measured := float64(s.totals.MeasuredMillis)
+	measured := s.measured
 	for _, peer := range s.peers {
 		current = current.Add(peer.current)
-		if peer.rate != nil && *peer.rate > 0 {
-			measured += float64(peer.current.Output) / (*peer.rate) * 1000
-		}
+		measured = measured.Add(peer.measured)
 	}
-	if measured <= 0 {
-		return current, nil
-	}
-	rate := float64(s.totals.Usage.Output+current.Output) * 1000 / measured
-	return current, &rate
+	return current, measured.Rate()
 }

@@ -1,6 +1,6 @@
 // Purpose: Read a stable policy-checked raster snapshot without recording a filesystem mutation.
 // Pattern: Read-only filesystem adapter with one decoder at a time per executor.
-// Usage: Prepared read_image operations call readImage after path revalidation.
+// Usage: Prepared view_image operations call viewImage after path revalidation.
 // Related: internal/tools/local/image_read.go, internal/tools/local/imagefile/decode.go, internal/tools/local/paths.go.
 package local
 
@@ -18,7 +18,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/local/imagefile"
 )
 
-func (op *imageOperation) readImage(ctx context.Context) (out toolapi.Result, err error) {
+func (op *imageOperation) viewImage(ctx context.Context) (out toolapi.Result, err error) {
 	select {
 	case op.executor.imageReads <- struct{}{}:
 		defer func() { <-op.executor.imageReads }()
@@ -57,7 +57,7 @@ func (op *imageOperation) readImage(ctx context.Context) (out toolapi.Result, er
 		return out, err
 	}
 	if current.absolute != op.source.absolute || !os.SameFile(before, after) || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
-		return out, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image changed while reading its snapshot", Next: "Read the intended image again."}
+		return out, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image changed while reading its snapshot", Next: "View the intended image again."}
 	}
 	image, err := imagefile.Decode(ctx, op.executor.redact(op.source.absolute), data)
 	if err != nil {

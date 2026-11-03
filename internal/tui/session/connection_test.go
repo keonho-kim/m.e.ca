@@ -6,9 +6,12 @@ package session
 
 import (
 	"testing"
+	"time"
 
 	"github.com/zalando/go-keyring"
 
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
@@ -32,11 +35,15 @@ func TestConnectionSaveFailure(t *testing.T) {
 	defer candidate.Close()
 	a.connection.client = old
 	a.connection.selection = connection.Selection{Connection: conn, Model: "old"}
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.opts.Session.ID = "missing-session"
 	next := connection.Selection{Connection: conn, Model: "new"}
 	a.receive(notice{Done: true, Client: candidate, Selection: &next})
 	if a.connection.client != old || a.connection.selection.Model != "old" || a.status == "" {
 		t.Fatalf("failed save applied: model=%s status=%s", a.connection.selection.Model, a.status)
+	}
+	if a.chat.tokensPerSecond == nil || *a.chat.tokensPerSecond != 20 {
+		t.Fatal("failed connection replacement discarded the active model's measured TPS")
 	}
 }
 
@@ -57,9 +64,13 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	}
 	defer candidate.Close()
 	next := connection.Selection{Connection: conn, Model: "alias"}
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.receive(notice{Done: true, Client: candidate, Selection: &next, credential: "new-key"})
 	if a.status != "" {
 		t.Fatal(a.status)
+	}
+	if a.chat.tokensPerSecond != nil {
+		t.Fatal("new connection reused throughput measured for the previous model")
 	}
 	if a.connection.selection.Connection.CredentialRef == conn.CredentialRef {
 		t.Fatal("new key reused old reference")

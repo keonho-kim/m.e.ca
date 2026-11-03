@@ -31,7 +31,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 
 	case "generation_started":
 		a.chat.tokenCurrent = modelapi.TokenUsage{}
-		a.chat.tokensPerSecond = nil
+		a.chat.currentMeasurement = runrecord.Throughput{}
 		return
 	case "generation_finished":
 		return

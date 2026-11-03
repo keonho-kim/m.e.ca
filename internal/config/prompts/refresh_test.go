@@ -1,4 +1,4 @@
-// Purpose: Verify release refresh replaces edits, skips identical files and protects linked targets.
+// Purpose: Verify profile refresh replaces edits, skips identical files and protects linked targets.
 // Pattern: Private filesystem behavior tests.
 // Usage: go test ./internal/config/prompts -run TestRefresh.
 // Related: internal/config/prompts/refresh.go, internal/config/prompts/prompts.go.
@@ -16,36 +16,40 @@ import (
 )
 
 func TestRefreshReplacesEditsAndSkipsIdenticalFiles(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	root, err := statefs.Open(filepath.Join(home, ".meca"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer root.Close()
-	path := filepath.Join(root.Name(), "prompts/single/system.md")
-	before, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := prompts.Refresh(root); err != nil {
-		t.Fatal(err)
-	}
-	after, err := os.Stat(path)
-	if err != nil || !os.SameFile(before, after) {
-		t.Fatalf("identical default was rewritten: %v", err)
-	}
-	if err := os.WriteFile(path, []byte("custom prompt"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := prompts.Refresh(root); err != nil {
-		t.Fatal(err)
-	}
-	body, err := os.ReadFile(path)
-	if err != nil || string(body) != prompt.Defaults().System {
-		t.Fatalf("edited prompt was not replaced: %v", err)
+	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+		t.Run(string(profile), func(t *testing.T) {
+			home := t.TempDir()
+			if _, err := bootstrap.Initialize(home); err != nil {
+				t.Fatal(err)
+			}
+			root, err := statefs.Open(filepath.Join(home, ".meca"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer root.Close()
+			path := filepath.Join(root.Name(), "prompts", string(profile), "system.md")
+			before, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := prompts.Refresh(root); err != nil {
+				t.Fatal(err)
+			}
+			after, err := os.Stat(path)
+			if err != nil || !os.SameFile(before, after) {
+				t.Fatalf("identical default was rewritten: %v", err)
+			}
+			if err := os.WriteFile(path, []byte("custom prompt"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := prompts.Refresh(root); err != nil {
+				t.Fatal(err)
+			}
+			body, err := os.ReadFile(path)
+			if err != nil || string(body) != prompt.DefaultsFor(profile).System {
+				t.Fatalf("edited prompt was not replaced: %v", err)
+			}
+		})
 	}
 }
 

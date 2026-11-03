@@ -73,6 +73,15 @@ func Pack(lines []Line, budget int) *Packed {
 func (p *Packed) Len() int           { return len(p.lines) }
 func (p *Packed) RetainedBytes() int { return p.retained }
 
+// Text returns one immutable logical row for sparse wrapping indexes.
+func (p *Packed) Text(index int) string {
+	var start uint32
+	if index > 0 {
+		start = p.lines[index-1].textEnd
+	}
+	return p.text[start:p.lines[index].textEnd]
+}
+
 // RowsFrom reconstructs spans only for the requested window, including lines
 // with many style runs. Copy offsets stay relative to the same rendered line.
 func (p *Packed) RowsFrom(index, width, start int, prefix string) iter.Seq[Line] {

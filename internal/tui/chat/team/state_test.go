@@ -11,6 +11,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"strings"
 	"testing"
+	"time"
 )
 
 func formatter() transcript.Formatter {
@@ -29,9 +30,9 @@ func TestStateAggregatesOnlyReportedUsage(t *testing.T) {
 	if state.Count() != 2 {
 		t.Fatal(state.Count())
 	}
-	rate := 20.0
+	measured := 2 * time.Second
 	state.Apply(runrecord.Event{Kind: "usage", Agent: "agent-a", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}, Generation: &runrecord.Generation{MeasuredMillis: 1000}}, f, &output)
-	state.Apply(runrecord.Event{Kind: "usage_progress", Agent: "agent-b", Usage: &modelapi.TokenUsage{Input: 200, Output: 40}, TokensPerSecond: &rate}, f, &output)
+	state.Apply(runrecord.Event{Kind: "usage_progress", Agent: "agent-b", Usage: &modelapi.TokenUsage{Input: 200, Output: 40}, MeasuredDuration: measured}, f, &output)
 	usage, tps := state.CurrentUsage()
 	if usage.Input != 200 || usage.Output != 40 || tps == nil || *tps != 20 {
 		t.Fatalf("usage=%+v tps=%v", usage, tps)
@@ -68,7 +69,7 @@ func TestStatePreservesStreamsAndReleasesOwnedReferences(t *testing.T) {
 		t.Fatal(text.String())
 	}
 	state.Finish(&output)
-	if state.peers != nil || state.tools != nil || state.totals.Received {
+	if state.peers != nil || state.tools != nil || state.measured != (runrecord.Throughput{}) {
 		t.Fatal("closed projection retained per-request data")
 	}
 	for _, block := range output.Blocks {

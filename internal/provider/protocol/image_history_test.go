@@ -27,7 +27,7 @@ func TestImageHistoryReusesWholeNativeGroups(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			var encoder Encoder
 			t.Cleanup(encoder.Clear)
-			source := []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{{ID: "a", Name: "read_image", Arguments: []byte(`{"path":"image.png"}`)}}}, {Role: "tool", ToolCallID: "a", ToolName: "read_image", Content: "image", Images: []media.Image{picture}}, {Role: "assistant", Content: "observed"}}
+			source := []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{{ID: "a", Name: "view_image", Arguments: []byte(`{"path":"image.png"}`)}}}, {Role: "tool", ToolCallID: "a", ToolName: "view_image", Content: "image", Images: []media.Image{picture}}, {Role: "assistant", Content: "observed"}}
 			request := modelapi.Request{ModelID: "model", MaxOutput: 32}
 			var previous []byte
 			for step := range 5 {

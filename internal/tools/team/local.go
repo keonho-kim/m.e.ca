@@ -37,7 +37,7 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 		result, err := op.operation.Execute(ctx, approved)
 		e.releaseFinishedShell()
 		return result, err
-	case "read_image":
+	case "view_image":
 		if err := e.Workspace.AcquireImage(ctx); err != nil {
 			return toolapi.Result{}, err
 		}

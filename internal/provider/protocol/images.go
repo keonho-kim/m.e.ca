@@ -35,7 +35,7 @@ func attachImages(kind connection.ProviderKind, message *Message, images []media
 		if err := image.Check(); err != nil {
 			return err
 		}
-		label := fmt.Sprintf("Image from read_image: %s (%s, %d x %d)", image.Path, image.Digest, image.Width, image.Height)
+		label := fmt.Sprintf("Image from view_image: %s (%s, %d x %d)", image.Path, image.Digest, image.Width, image.Height)
 		prefix := ""
 		if kind != connection.Ollama {
 			prefix = "data:" + image.MIME + ";base64,"

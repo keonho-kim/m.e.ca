@@ -26,6 +26,7 @@ type cappedOutput struct {
 	spill     *spillCapture
 	failure   error
 	mu        sync.Mutex
+	timingMu  sync.Mutex
 	lastWrite time.Time
 	head      bytes.Buffer
 	tail      []byte
@@ -40,7 +41,9 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 	output.mu.Lock()
 	defer output.mu.Unlock()
 	if len(content) > 0 {
+		output.timingMu.Lock()
 		output.lastWrite = time.Now()
+		output.timingMu.Unlock()
 		output.revision++
 	}
 	count := len(content)

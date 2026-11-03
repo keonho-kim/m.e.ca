@@ -27,23 +27,18 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 			appendBlock(output, block)
 		}
 		if !joined {
-			output.FinishStream(peer.stream)
+			output.FinishStream(peer.message.body)
 			delete(s.peers, event.Agent)
 		}
 	case "generation_started":
 		peer := s.peer(event.Agent)
-		output.FinishStream(peer.stream)
-		peer.stream, peer.header = 0, 0
-		peer.rate = nil
+		output.FinishStream(peer.message.body)
+		peer.message = messageDisplay{}
+		peer.measured = runrecord.Throughput{}
 		peer.current = modelapi.TokenUsage{}
 	case "stream":
 		peer := s.peer(event.Agent)
-		if event.Text != "" || peer.stream != 0 {
-			if peer.header == 0 && event.Text != "" {
-				peer.header = appendBlock(output, f.TeamHeader(event.Agent, false))
-			}
-			peer.stream = replaceBlock(output, peer.stream, viewport.Block{Text: event.Text, Markdown: true, Streaming: true})
-		}
+		peer.message.show(event.Agent, false, viewport.Block{Text: event.Text, Markdown: true, Streaming: true}, f, output)
 	case "team_message", "team_progress":
 		blocks := f.Event(event)
 		if len(blocks) != 2 {
@@ -51,9 +46,8 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 		}
 		if event.Kind == "team_progress" {
 			peer := s.peer(event.Agent)
-			replaceBlock(output, peer.header, blocks[0])
-			replaceBlock(output, peer.stream, blocks[1])
-			peer.header, peer.stream = 0, 0
+			peer.message.show(event.Agent, event.Final, blocks[1], f, output)
+			peer.message = messageDisplay{}
 		} else {
 			appendBlock(output, blocks[0])
 			appendBlock(output, blocks[1])
@@ -66,13 +60,13 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 		if event.Usage != nil {
 			peer := s.peer(event.Agent)
 			peer.current = event.Usage.Clone()
-			peer.rate = event.TokensPerSecond
+			peer.measured = runrecord.MeasuredThroughput(event)
 		}
 	case "usage":
-		s.totals.Add(event)
+		s.measured = s.measured.Add(runrecord.MeasuredThroughput(event))
 		peer := s.peer(event.Agent)
 		peer.current = modelapi.TokenUsage{}
-		peer.rate = nil
+		peer.measured = runrecord.Throughput{}
 	case "tool_started", "tool_waiting":
 		s.startTool(event, f, output)
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":

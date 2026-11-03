@@ -25,7 +25,7 @@ func (a *app) startRequest(input composer.Request) {
 	a.team.begin()
 	a.chat.output.Follow = true
 	a.chat.stream, a.chat.thinking = "", ""
-	a.chat.tokensPerSecond = nil
+	a.chat.resetThroughput()
 	a.chat.runSummary = nil
 	a.stopNotice = ""
 	a.work.state = workerAgent

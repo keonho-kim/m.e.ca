@@ -9,6 +9,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
+	"time"
 )
 
 func BenchmarkTeamUsageProjection(b *testing.B) {
@@ -20,8 +21,8 @@ func BenchmarkTeamUsageProjection(b *testing.B) {
 			for i := range count {
 				a.receiveTeam(&runrecord.Event{Kind: "team_notice", Agent: fmt.Sprintf("agent-%c", 'a'+i), Text: "joined"})
 			}
-			rate := 25.0
-			event := runrecord.Event{Kind: "usage_progress", Agent: "agent-a", Usage: &modelapi.TokenUsage{Input: 1000, Output: 100}, TokensPerSecond: &rate}
+			measured := 4 * time.Second
+			event := runrecord.Event{Kind: "usage_progress", Agent: "agent-a", Usage: &modelapi.TokenUsage{Input: 1000, Output: 100}, MeasuredDuration: measured}
 			b.ReportAllocs()
 			for b.Loop() {
 				a.receiveTeam(&event)

@@ -20,7 +20,7 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 		if len(blocks) == 0 {
 			return nil
 		}
-		return append([]viewport.Block{{Text: "**" + agent + "**", Markdown: true}}, blocks...)
+		return append([]viewport.Block{f.TeamHeader(agent, false)}, blocks...)
 	}
 	if event.Statistics != nil {
 		return []viewport.Block{f.runSummary(*event.Statistics)}

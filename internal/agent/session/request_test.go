@@ -77,7 +77,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 			t.Fatalf("main agent must receive the full direct tool catalog: %v", catalog)
 		}
 		for _, definition := range tools.Definitions() {
-			if definition.Name != "read_image" && !catalog[definition.Name] {
+			if definition.Name != "view_image" && !catalog[definition.Name] {
 				t.Fatalf("main agent lost tool %s", definition.Name)
 			}
 		}

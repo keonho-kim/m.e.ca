@@ -37,7 +37,7 @@ func TestRunSummaryFromHistory(t *testing.T) {
 
 func TestRunSummaryUnavailableAndZeroUsage(t *testing.T) {
 	f := Formatter{Language: locale.English}
-	if text := f.runSummary(runrecord.Statistics{ElapsedMillis: 1000}).Text; !strings.Contains(text, "INPUT — | OUTPUT — | TPS —") {
+	if text := f.runSummary(runrecord.Statistics{ElapsedMillis: 1000}).Text; !strings.Contains(text, "INPUT — | OUTPUT —") || strings.Contains(text, "TPS") {
 		t.Fatal(text)
 	}
 	zero := runrecord.Statistics{ElapsedMillis: 1000, GenerationMillis: 1000, Usage: &modelapi.TokenUsage{}}

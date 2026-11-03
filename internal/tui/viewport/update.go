@@ -19,12 +19,12 @@ func (v *View) Update(id int, value Block) bool {
 		block.Text, block.Summary, block.Details = value.Text, value.Summary, value.Details
 		block.Changes, block.Markdown, block.Thinking, block.Centered = value.Changes, value.Markdown, value.Thinking, value.Centered
 		block.Streaming = value.Streaming
-		if wasStreaming && !value.Streaming {
-			block.live = false
-			block.releaseParsed()
-		}
+		block.KeepWithNext = value.KeepWithNext
 		block.DetailRef = value.DetailRef
 		v.showDetails(block)
+		if wasStreaming && !value.Streaming {
+			block.finishStream()
+		}
 		v.sourceBytes += block.bytes()
 		v.trackStream(id, value.Streaming)
 		if v.dirtyID == 0 || id < v.dirtyID {
