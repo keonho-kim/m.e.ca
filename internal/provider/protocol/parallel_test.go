@@ -1,7 +1,7 @@
 // Purpose: Verify supported request dialects advertise native multi-call support.
 // Pattern: Wire contract tests.
 // Usage: go test ./internal/provider/protocol -run TestParallel.
-// Related: internal/provider/protocol/request.go, internal/provider/protocol/lmstudio.go.
+// Related: internal/provider/protocol/request.go, internal/provider/protocol/response_input.go.
 package protocol
 
 import (

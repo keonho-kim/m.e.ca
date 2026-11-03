@@ -1,8 +1,8 @@
-// Purpose: Share committed public observations across receivers within one bounded request lifetime.
+// Purpose: Own bounded public-channel history shared by receivers within one request lifetime.
 // Pattern: Mutex-owned contiguous log window with repository fallback.
 // Usage: Publication appends committed values; inbox and explicit history reads use read.
 // Related: internal/agent/team/inbox.go, internal/agent/team/publication.go.
-package team
+package channel
 
 import (
 	"context"
@@ -10,34 +10,33 @@ import (
 	"sync"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
-const publicHistoryBytes = 2 * 1024 * 1024
+const historyBytes = 2 * 1024 * 1024
 
-type publicObservation struct {
-	message channel.Message
-	context modelapi.Message
+type Entry struct {
+	Message Message
+	Context modelapi.Message
 }
 
-func (v publicObservation) retainedBytes() int { return len(v.context.Content) + 512 }
+func (v Entry) retainedBytes() int { return len(v.Context.Content) + 512 }
 
-type publicHistory struct {
+type History struct {
 	mu             sync.Mutex
 	loadMu         sync.Mutex
-	values         []publicObservation
+	values         []Entry
 	after, through int64
 	bytes          int
 }
 
-func observePublic(message channel.Message) publicObservation {
+func observePublic(message Message) Entry {
 	value := message.Context()
 	// Peer attribution and raw text share one immutable string allocation.
 	message.Text = value.Content[len(value.Content)-len(message.Text):]
-	return publicObservation{message, value}
+	return Entry{message, value}
 }
 
-func (h *publicHistory) append(message channel.Message, previous int64) {
+func (h *History) Append(message Message, previous int64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if previous == 0 {
@@ -49,7 +48,7 @@ func (h *publicHistory) append(message channel.Message, previous int64) {
 	h.add(observePublic(message))
 }
 
-func (h *publicHistory) read(ctx context.Context, store channel.Repository, after, through int64, limit int) ([]publicObservation, error) {
+func (h *History) Read(ctx context.Context, store Reader, after, through int64, limit int) ([]Entry, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func (h *publicHistory) read(ctx context.Context, store channel.Repository, afte
 	if err != nil {
 		return nil, err
 	}
-	values = make([]publicObservation, len(messages))
+	values = make([]Entry, len(messages))
 	for i, message := range messages {
 		values[i] = observePublic(message)
 	}
@@ -96,12 +95,12 @@ func (h *publicHistory) read(ctx context.Context, store channel.Repository, afte
 }
 
 // cached requires mu and copies only receiver-owned message headers.
-func (h *publicHistory) cached(after, through int64, limit int) ([]publicObservation, bool) {
+func (h *History) cached(after, through int64, limit int) ([]Entry, bool) {
 	if after >= h.after && after < h.through {
-		first := slices.IndexFunc(h.values, func(v publicObservation) bool { return v.message.Sequence > after })
+		first := slices.IndexFunc(h.values, func(v Entry) bool { return v.Message.Sequence > after })
 		if first >= 0 {
 			end := first
-			for end < len(h.values) && end-first < limit && h.values[end].message.Sequence <= through {
+			for end < len(h.values) && end-first < limit && h.values[end].Message.Sequence <= through {
 				end++
 			}
 			return slices.Clone(h.values[first:end]), true
@@ -110,27 +109,27 @@ func (h *publicHistory) cached(after, through int64, limit int) ([]publicObserva
 	return nil, false
 }
 
-func (h *publicHistory) reset(after int64) {
+func (h *History) reset(after int64) {
 	clear(h.values)
 	h.values = h.values[:0]
 	h.after, h.through, h.bytes = after, after, 0
 }
 
-func (h *publicHistory) add(value publicObservation) {
+func (h *History) add(value Entry) {
 	cost := value.retainedBytes()
-	if cost > publicHistoryBytes {
-		h.reset(value.message.Sequence)
+	if cost > historyBytes {
+		h.reset(value.Message.Sequence)
 		h.values = nil
 		return
 	}
-	for len(h.values) > 0 && (h.bytes+cost > publicHistoryBytes || len(h.values) >= 128) {
-		h.after = h.values[0].message.Sequence
+	for len(h.values) > 0 && (h.bytes+cost > historyBytes || len(h.values) >= 128) {
+		h.after = h.values[0].Message.Sequence
 		h.bytes -= h.values[0].retainedBytes()
 		copy(h.values, h.values[1:])
-		h.values[len(h.values)-1] = publicObservation{}
+		h.values[len(h.values)-1] = Entry{}
 		h.values = h.values[:len(h.values)-1]
 	}
 	h.values = append(h.values, value)
-	h.through = value.message.Sequence
+	h.through = value.Message.Sequence
 	h.bytes += cost
 }

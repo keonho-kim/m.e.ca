@@ -39,19 +39,21 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 	case "stream":
 		peer := s.peer(event.Agent)
 		peer.message.show(event.Agent, false, viewport.Block{Text: event.Text, Markdown: true, Streaming: true}, f, output)
-	case "team_message", "team_progress", "team_work":
+	case "team_progress":
+		body := f.TeamBody(event.Text)
+		if body.Text == "" {
+			return
+		}
+		peer := s.peer(event.Agent)
+		peer.message.show(event.Agent, event.Final, body, f, output)
+		peer.message = messageDisplay{}
+	case "team_message", "team_work":
 		blocks := f.Event(event)
 		if len(blocks) != 2 {
 			return
 		}
-		if event.Kind == "team_progress" {
-			peer := s.peer(event.Agent)
-			peer.message.show(event.Agent, event.Final, blocks[1], f, output)
-			peer.message = messageDisplay{}
-		} else {
-			appendBlock(output, blocks[0])
-			appendBlock(output, blocks[1])
-		}
+		appendBlock(output, blocks[0])
+		appendBlock(output, blocks[1])
 	case "compaction_started":
 		s.peer(event.Agent).compressing = true
 	case "compaction_finished", "compaction":

@@ -13,7 +13,7 @@ import (
 func (b *Block) finishStream() {
 	b.Streaming, b.live = false, false
 	l := &b.layout
-	if !b.visible || !l.ready || l.key != (blockKey{b.Text, l.key.width, b.ID, b.Markdown, b.Thinking, b.Centered, b.Changes}) {
+	if !b.visible || !l.ready || l.key != (blockKey{b.Text, l.key.width, b.ID, b.Markdown, b.Thinking, b.Centered, b.SpaceAfter, b.Changes}) {
 		b.releaseParsed()
 		return
 	}

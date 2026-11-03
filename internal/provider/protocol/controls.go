@@ -8,10 +8,11 @@ import (
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 )
 
 type Controls struct {
-	Reasoning       *routerReasoning
+	Reasoning       *chat.Reasoning
 	Think           any
 	Template        map[string]any
 	ReasoningEffort string

@@ -1,17 +1,20 @@
 // Purpose: Translate LM Studio Responses events, terminal failures and actual token usage.
 // Pattern: Stateful stream adapter.
 // Usage: The SSE reader dispatches LM Studio JSON frames here.
-// Related: internal/provider/protocol/lmstudio.go, internal/provider/protocol/stream.go.
-package protocol
+// Related: internal/provider/protocol/response_input.go, internal/provider/protocol/stream.go.
+package responses
 
 import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
-type lmResponse struct {
+type Decoder struct{ items map[string]int }
+
+type response struct {
 	Status     string          `json:"status"`
 	Error      json.RawMessage `json:"error"`
 	Incomplete struct {
@@ -21,16 +24,16 @@ type lmResponse struct {
 		Input  *int64 `json:"input_tokens"`
 		Output *int64 `json:"output_tokens"`
 	} `json:"usage"`
-	Output []lmItem `json:"output"`
+	Output []Item `json:"output"`
 }
 
-func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.Event) error) error {
+func (s *Decoder) Consume(content []byte, single bool, state *native.State, emit func(modelapi.Event) error) error {
 	var frame struct {
 		Error       json.RawMessage `json:"error"`
 		Type        string          `json:"type"`
 		Delta       string          `json:"delta"`
-		Response    lmResponse      `json:"response"`
-		Item        lmItem          `json:"item"`
+		Response    response        `json:"response"`
+		Item        Item            `json:"item"`
 		OutputIndex *int            `json:"output_index"`
 		ItemID      string          `json:"item_id"`
 		Arguments   string          `json:"arguments"`
@@ -53,7 +56,7 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 				if frame.Response.Status != "completed" {
 					continue
 				}
-				if err := s.lmCall(index, item, true); err != nil {
+				if err := s.call(state, index, item, true); err != nil {
 					return err
 				}
 				continue
@@ -77,38 +80,38 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 	}
 	switch frame.Type {
 	case "response.output_text.delta", "response.reasoning_text.delta", "response.reasoning_summary_text.delta":
-		event := modelapi.Event{Streaming: s.streaming}
+		event := modelapi.Event{Streaming: state.Streaming}
 		if frame.Type == "response.output_text.delta" {
 			event.Delta = frame.Delta
 		} else {
 			event.Thinking = frame.Delta
 		}
-		s.received = true
-		s.usage = nil
+		state.Received = true
+		state.Usage = nil
 		return emit(event)
 	case "response.output_item.added", "response.output_item.done":
 		if frame.Item.Type == "function_call" {
 			if frame.OutputIndex == nil {
 				return fmt.Errorf("function output has no index")
 			}
-			return s.lmCall(*frame.OutputIndex, frame.Item, frame.Type == "response.output_item.done")
+			return s.call(state, *frame.OutputIndex, frame.Item, frame.Type == "response.output_item.done")
 		}
 		if frame.Item.Type != "message" && frame.Item.Type != "reasoning" {
 			return fmt.Errorf("unsupported Responses output type")
 		}
 	case "response.function_call_arguments.delta", "response.function_call_arguments.done":
-		index, ok := s.lmItems[frame.ItemID]
+		index, ok := s.items[frame.ItemID]
 		if !ok {
 			return fmt.Errorf("arguments refer to an unknown function item")
 		}
-		draft, err := s.callAt(index)
+		draft, err := state.Calls.At(index)
 		if err != nil {
 			return err
 		}
 		if frame.Type == "response.function_call_arguments.delta" {
-			return draft.appendArguments(frame.Delta)
+			return draft.Append(frame.Delta)
 		}
-		return draft.finalArguments(frame.Arguments)
+		return draft.Final(frame.Arguments)
 	case "error":
 		return transport.ParseError(0, content, "")
 	case "response.completed", "response.failed", "response.incomplete":
@@ -119,10 +122,10 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 				return fmt.Errorf("invalid provider token usage")
 			}
 			if input != nil && output != nil {
-				s.usage = &modelapi.TokenUsage{Input: *input, Output: *output}
+				state.Usage = &modelapi.TokenUsage{Input: *input, Output: *output}
 			}
 		}
-		s.received = true
+		state.Received = true
 		if response.Status != "completed" || frame.Type != "response.completed" {
 			detail := "response did not complete"
 			if response.Incomplete.Reason != "" {
@@ -134,23 +137,23 @@ func (s *streamState) consumeLM(content []byte, single bool, emit func(modelapi.
 				detail = cause.Error()
 			}
 			if response.Incomplete.Reason == "max_output_tokens" {
-				return s.emitFailedUsage(&modelapi.OutputLimitError{Reason: detail}, emit)
+				return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: detail}, emit)
 			}
 			if cause != nil {
-				return s.emitFailedUsage(fmt.Errorf("LM Studio: %w", cause), emit)
+				return state.EmitFailedUsage(fmt.Errorf("LM Studio: %w", cause), emit)
 			}
-			return s.emitFailedUsage(fmt.Errorf("LM Studio: %s", detail), emit)
+			return state.EmitFailedUsage(fmt.Errorf("LM Studio: %s", detail), emit)
 		}
 		for index, item := range response.Output {
 			if item.Type == "function_call" {
-				if err := s.lmCall(index, item, true); err != nil {
-					return s.emitFailedUsage(err, emit)
+				if err := s.call(state, index, item, true); err != nil {
+					return state.EmitFailedUsage(err, emit)
 				}
 			} else if item.Type != "message" && item.Type != "reasoning" {
-				return s.emitFailedUsage(fmt.Errorf("unsupported Responses output type"), emit)
+				return state.EmitFailedUsage(fmt.Errorf("unsupported Responses output type"), emit)
 			}
 		}
-		s.finished = true
+		state.Finished = true
 	}
 	return nil
 }

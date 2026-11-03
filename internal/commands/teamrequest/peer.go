@@ -32,7 +32,7 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 	}
 	r.service.track(member.ID, local)
 	defer func() { r.service.track(member.ID, nil); resultErr = errors.Join(resultErr, local.Close()) }()
-	tools := &teamtools.Executor{Local: local, Peer: peer, Workspace: r.access, Project: r.options.Session.ProjectRoot}
+	tools := &teamtools.Executor{Local: local, Peer: peer, Workspace: r.access, Refusals: &r.refusals, Images: r.images, Project: r.options.Session.ProjectRoot}
 	cursor, err := child.Store.ContextCursor(ctx, child.Session.ID)
 	if err != nil {
 		return result, err

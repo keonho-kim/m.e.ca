@@ -2,7 +2,7 @@
 // Pattern: Provider continuation adapter.
 // Usage: The response decoder retains opaque blocks; Messages restores completed history.
 // Related: internal/provider/protocol/chunk.go, internal/provider/protocol/tools.go.
-package protocol
+package chat
 
 import (
 	"encoding/json"
@@ -12,29 +12,37 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
-func (state *streamState) routerDetails(blocks []json.RawMessage, streaming bool) (string, error) {
+type ReasoningState struct {
+	details []json.RawMessage
+	bytes   int
+	draft   *routerDraft
+}
+
+func (state *ReasoningState) HasData() bool { return len(state.details) > 0 || state.draft != nil }
+
+func (state *ReasoningState) Add(blocks []json.RawMessage, streaming bool) (string, error) {
 	var text strings.Builder
 	for _, raw := range blocks {
 		var block routerHeader
 		if err := json.Unmarshal(raw, &block); err != nil || block.Type == "" {
 			return "", fmt.Errorf("invalid OpenRouter reasoning block")
 		}
-		state.reasoningBytes += len(raw)
-		if state.reasoningBytes > modelapi.MaxResponseBytes {
+		state.bytes += len(raw)
+		if state.bytes > modelapi.MaxResponseBytes {
 			return "", &modelapi.OutputLimitError{Reason: "provider continuation state byte limit"}
 		}
 		if !streaming {
-			state.reasoningDetails = append(state.reasoningDetails, raw)
-		} else if draft := state.reasoningDraft; draft != nil && draft.accepts(block) {
+			state.details = append(state.details, raw)
+		} else if draft := state.draft; draft != nil && draft.accepts(block) {
 			if err := draft.append(raw, block); err != nil {
 				return "", err
 			}
 		} else {
-			if err := state.flushRouterDraft(); err != nil {
+			if err := state.flush(); err != nil {
 				return "", err
 			}
-			state.reasoningDraft = &routerDraft{header: block, raw: raw}
-			state.reasoningDraft.text.WriteString(block.Text + block.Summary)
+			state.draft = &routerDraft{header: block, raw: raw}
+			state.draft.text.WriteString(block.Text + block.Summary)
 		}
 		if block.Type == "reasoning.text" {
 			text.WriteString(block.Text)
@@ -45,16 +53,16 @@ func (state *streamState) routerDetails(blocks []json.RawMessage, streaming bool
 	return text.String(), nil
 }
 
-func routerHistory(content []byte) ([]json.RawMessage, error) {
-	var state streamState
+func ReasoningHistory(content []byte) ([]json.RawMessage, error) {
+	var state ReasoningState
 	var blocks []json.RawMessage
 	if err := json.Unmarshal(content, &blocks); err != nil || blocks == nil {
 		return nil, fmt.Errorf("invalid OpenRouter continuation state")
 	}
-	if _, err := state.routerDetails(blocks, false); err != nil {
+	if _, err := state.Add(blocks, false); err != nil {
 		return nil, err
 	}
-	return state.reasoningDetails, nil
+	return state.details, nil
 }
 
 type routerHeader struct{ Type, Text, Summary, Signature, ID, Format string }
@@ -116,22 +124,22 @@ func (draft *routerDraft) body() (json.RawMessage, error) {
 	return json.Marshal(draft.fields)
 }
 
-func (state *streamState) routerContinuation() ([]byte, error) {
-	if err := state.flushRouterDraft(); err != nil {
+func (state *ReasoningState) Continuation() ([]byte, error) {
+	if err := state.flush(); err != nil {
 		return nil, err
 	}
-	return json.Marshal(state.reasoningDetails)
+	return json.Marshal(state.details)
 }
 
-func (state *streamState) flushRouterDraft() error {
-	if state.reasoningDraft == nil {
+func (state *ReasoningState) flush() error {
+	if state.draft == nil {
 		return nil
 	}
-	body, err := state.reasoningDraft.body()
+	body, err := state.draft.body()
 	if err != nil {
 		return err
 	}
-	state.reasoningDetails = append(state.reasoningDetails, body)
-	state.reasoningDraft = nil
+	state.details = append(state.details, body)
+	state.draft = nil
 	return nil
 }

@@ -1,7 +1,7 @@
 // Purpose: Verify boolean Thinking discovery, wire settings and separate output.
 // Pattern: HTTP contract tests.
 // Usage: go test ./internal/provider/httpclient -run TestThinking.
-// Related: internal/provider/diagnostic/control.go, internal/provider/protocol/wire.go.
+// Related: internal/provider/diagnostic/control.go, internal/provider/protocol/native/frame.go.
 package httpclient
 
 import (

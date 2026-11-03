@@ -1,8 +1,8 @@
 // Purpose: Compare complete JSON argument values while preserving strings, numbers and unique keys.
 // Pattern: Bounded pure parser at the Responses stream boundary.
 // Usage: finalArguments accepts equivalent serialization without replacing the streamed source.
-// Related: internal/provider/protocol/lmstudio_calls.go, internal/agent/tool/arguments.go.
-package protocol
+// Related: internal/provider/protocol/responses/calls.go, internal/agent/tool/arguments.go.
+package native
 
 import (
 	"encoding/json"

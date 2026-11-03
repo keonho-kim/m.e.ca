@@ -1,7 +1,7 @@
 // Purpose: Verify LM Studio Responses preserves history, exact usage and reasoning streams.
 // Pattern: HTTP contract tests.
 // Usage: go test ./internal/provider/httpclient -run TestLMStudioResponses.
-// Related: internal/provider/protocol/lmstudio.go, internal/provider/protocol/request.go.
+// Related: internal/provider/protocol/response_input.go, internal/provider/protocol/request.go.
 package httpclient
 
 import (

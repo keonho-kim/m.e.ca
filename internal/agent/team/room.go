@@ -45,7 +45,7 @@ type Room struct {
 	firstMessage int64
 	latestPublic int64
 	latestStatus int64
-	public       publicHistory
+	public       channel.History
 	work         contribution.State
 	workView     workProjection
 	latestUser   int64

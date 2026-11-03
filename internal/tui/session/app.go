@@ -10,7 +10,6 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/tui/browser/readqueue"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -67,17 +66,14 @@ func (a *app) requestExit() {
 func (a *app) shutdown() {
 	a.requestExit()
 	a.workers.Wait()
-	a.files.directoryReads = readqueue.Slot[directoryPage]{}
-	a.files.previewReads = readqueue.Slot[previewRequest]{}
-	a.files.previewLayouts = readqueue.Slot[previewLayoutRequest]{}
-	a.files.watchReads = readqueue.Slot[watchRequest]{}
+	a.fail(a.files.reads.Close())
 	// A connection worker may have transferred a client to a notice just before
 	// cancellation. The stopped event loop must release that queued ownership.
 	for {
 		select {
 		case notice := <-a.events:
-			if notice.FileWatch != nil && notice.FileWatch.watcher != nil {
-				_ = notice.FileWatch.watcher.Close()
+			if notice.FileWatch != nil && notice.FileWatch.Watcher != nil {
+				_ = notice.FileWatch.Watcher.Close()
 			}
 			if notice.Stream != nil {
 				notice.Stream.take()

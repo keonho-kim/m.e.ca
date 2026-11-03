@@ -21,6 +21,7 @@ func (s *Store) OpenTeamAgent(ctx context.Context, id string) (*Store, error) {
 	if err == nil {
 		child.room = s
 		s.teamContent.acquire()
+		child.teamLease = &s.teamContent
 	}
 	return child, err
 }

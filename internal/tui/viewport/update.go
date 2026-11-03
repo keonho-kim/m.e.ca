@@ -14,14 +14,20 @@ func (v *View) Update(id int, value Block) bool {
 		if block.ID != id {
 			return false
 		}
+		// Normalize incoming details before comparison without disturbing the
+		// owned block's prepared layout when the visible value is unchanged.
+		v.showDetails(&value)
+		if block.samePresentation(&value) {
+			return true
+		}
 		wasStreaming := block.Streaming
 		v.sourceBytes -= block.bytes()
 		block.Text, block.Summary, block.Details = value.Text, value.Summary, value.Details
 		block.Changes, block.Markdown, block.Thinking, block.Centered = value.Changes, value.Markdown, value.Thinking, value.Centered
 		block.Streaming = value.Streaming
 		block.KeepWithNext = value.KeepWithNext
+		block.SpaceAfter = value.SpaceAfter
 		block.DetailRef = value.DetailRef
-		v.showDetails(block)
 		if wasStreaming && !value.Streaming {
 			block.finishStream()
 		}
@@ -34,6 +40,13 @@ func (v *View) Update(id int, value Block) bool {
 		return true
 	}
 	return false
+}
+
+func (b *Block) samePresentation(value *Block) bool {
+	return b.Text == value.Text && b.Summary == value.Summary && b.Details == value.Details &&
+		b.Changes == value.Changes && b.DetailRef == value.DetailRef &&
+		b.Markdown == value.Markdown && b.Thinking == value.Thinking && b.Centered == value.Centered &&
+		b.Streaming == value.Streaming && b.KeepWithNext == value.KeepWithNext && b.SpaceAfter == value.SpaceAfter
 }
 
 func (t *Transcript) updateSuffix(view *View) {

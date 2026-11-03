@@ -30,7 +30,7 @@ func (op *localOperation) Release() {
 func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.Result, error) {
 	defer op.Release()
 	e := op.executor
-	if e.Workspace.Refused(op.operation.Approval()) {
+	if e.Refusals.Refused(op.operation.Approval()) {
 		return toolapi.Result{}, fmt.Errorf("the user refused this operation; do not repeat it through another peer")
 	}
 	switch op.call.Name {
@@ -39,10 +39,12 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 		e.releaseFinishedShell()
 		return result, err
 	case "view_image":
-		if err := e.Workspace.AcquireImage(ctx); err != nil {
-			return toolapi.Result{}, err
+		select {
+		case e.Images <- struct{}{}:
+		case <-ctx.Done():
+			return toolapi.Result{}, ctx.Err()
 		}
-		defer e.Workspace.ReleaseImage()
+		defer func() { <-e.Images }()
 		return op.operation.Execute(ctx, approved)
 	}
 	if e.Peer.HasNewUserInstruction() {

@@ -55,7 +55,7 @@ func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 	r.mu.Unlock()
 	value.ChangedPaths = nil
 	value.Reference = nil
-	r.public.append(value, previous)
+	r.public.Append(value, previous)
 	r.mu.Lock()
 	r.latestPublic = value.Sequence
 	if value.From == "user" {

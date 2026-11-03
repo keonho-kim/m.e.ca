@@ -5,19 +5,8 @@
 package session
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 )
-
-type directoryPage struct {
-	revision, offset int
-	mode, path       string
-	entries          []fileview.Entry
-	more             bool
-	err              error
-}
 
 func (a *app) requestDirectory(mode, path string, offset int) {
 	page, start := a.files.planDirectory(mode, path, offset)
@@ -26,47 +15,23 @@ func (a *app) requestDirectory(mode, path string, offset int) {
 	}
 }
 
-func (a *app) startDirectoryRead(page directoryPage) {
-	ctx, cancel := context.WithCancel(a.ctx)
-	a.files.directoryReads.Begin(page.revision, cancel)
-	path, mode := page.path, page.mode
-	executor, settings := a.opts.Files, a.settings
-	a.workers.Add(1)
-	go func() {
-		defer a.workers.Done()
-		defer cancel()
-		if mode == "open" {
-			ref, err := executor.Reference(ctx, settings, path)
-			page.err = err
-			if err == nil && !ref.Directory {
-				page.err = fmt.Errorf("not a directory: %s", path)
-			}
-			page.path = ref.Path
-		}
-		if page.err == nil && ctx.Err() == nil {
-			page.entries, page.more, page.err = executor.Directory(ctx, settings, page.path, page.offset, 1000)
-		}
-		if ctx.Err() != nil {
-			page.entries, page.err = nil, ctx.Err()
-		}
-		// Cancellation does not release the slot until the actual I/O returns.
-		a.post(a.ctx, notice{Directory: &page})
-	}()
+func (a *app) startDirectoryRead(page controller.DirectoryPage) {
+	a.files.reads.ReadDirectory(a.ctx, a, a.opts.Files, a.settings, page)
 }
 
-func (a *app) receiveDirectory(page *directoryPage) {
-	if next := a.files.directoryReads.Complete(page.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+func (a *app) receiveDirectory(page *controller.DirectoryPage) {
+	if next := a.files.reads.Directory.Complete(page.Revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startDirectoryRead(*next)
 	}
-	if page.revision != a.files.directoryRevision || a.page != "files" {
+	if page.Revision != a.files.directoryRevision || a.page != "files" {
 		return
 	}
 	a.files.directoryLoading = false
-	if page.err != nil {
-		a.fail(page.err)
+	if page.Err != nil {
+		a.fail(page.Err)
 		return
 	}
-	if page.mode != "refresh" {
+	if page.Mode != "refresh" {
 		a.clearSelection()
 	}
 	a.files.applyDirectory(page)

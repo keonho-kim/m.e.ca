@@ -5,18 +5,12 @@
 package session
 
 import (
-	"context"
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/tui/preview"
 )
-
-type previewRequest struct {
-	path     string
-	revision int
-}
 
 func (a *app) openFilePreview(full bool) {
 	path, directory := a.files.browser.Target()
@@ -27,8 +21,8 @@ func (a *app) openFilePreview(full bool) {
 	a.menuInput.Set("")
 	a.files.filePreview = &preview.State{Path: a.opts.Vault.Redact(path), Full: full, Loading: true}
 	a.files.filePreviewPath = path
-	request := previewRequest{path: path, revision: a.files.previewRevision}
-	if a.files.previewReads.Submit(request) {
+	request := controller.PreviewRequest{Path: path, Revision: a.files.previewRevision}
+	if a.files.reads.Preview.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
@@ -37,42 +31,29 @@ func (a *app) refreshFilePreview() {
 	if a.files.filePreview == nil || a.files.filePreviewPath == "" {
 		return
 	}
-	a.files.previewReads.Stop()
+	a.files.reads.Preview.Stop()
 	a.stopPreviewLayout()
 	a.files.previewRevision++
 	a.files.filePreview.Loading, a.files.filePreview.Error = true, ""
 	a.files.filePreview.ReleaseLayout()
-	request := previewRequest{path: a.files.filePreviewPath, revision: a.files.previewRevision}
-	if a.files.previewReads.Submit(request) {
+	request := controller.PreviewRequest{Path: a.files.filePreviewPath, Revision: a.files.previewRevision}
+	if a.files.reads.Preview.Submit(request) {
 		a.startPreviewRead(request)
 	}
 }
 
-func (a *app) startPreviewRead(request previewRequest) {
-	ctx, cancel := context.WithCancel(a.ctx)
-	a.files.previewReads.Begin(request.revision, cancel)
-	settings := a.settings
-	executor := a.opts.Files
-	a.workers.Add(1)
-	go func() {
-		defer a.workers.Done()
-		defer cancel()
-		result, err := executor.Preview(ctx, settings, request.path)
-		if ctx.Err() != nil {
-			result, err = fileview.Preview{}, ctx.Err()
-		}
-		a.post(a.ctx, notice{PreviewRevision: request.revision, FilePreview: &result, Err: err})
-	}()
+func (a *app) startPreviewRead(request controller.PreviewRequest) {
+	a.files.reads.ReadPreview(a.ctx, a, a.opts.Files, a.settings, request)
 }
 func (a *app) closeFilePreview() {
-	a.files.previewReads.Stop()
+	a.files.reads.Preview.Stop()
 	a.stopPreviewLayout()
 	a.files.previewRevision++
 	a.files.filePreview = nil
 	a.files.filePreviewPath = ""
 }
 func (a *app) receiveFilePreview(n notice) {
-	if next := a.files.previewReads.Complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
+	if next := a.files.reads.Preview.Complete(n.PreviewRevision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startPreviewRead(*next)
 	}
 	a.files.applyPreview(n.PreviewRevision, n.FilePreview, n.Err, a.opts.Vault.Redact)

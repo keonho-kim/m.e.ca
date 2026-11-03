@@ -1,13 +1,14 @@
 // Purpose: Verify ordered reasoning-state round trips without exposing encrypted data or duplicating text.
 // Pattern: Provider protocol contract tests.
 // Usage: go test ./internal/provider/protocol -run TestOpenRouter.
-// Related: internal/provider/protocol/openrouter.go, internal/provider/protocol/chunk.go.
+// Related: internal/provider/protocol/chat/reasoning.go, internal/provider/protocol/chunk.go.
 package protocol
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 	"io"
 	"net/http"
 	"strings"
@@ -67,7 +68,7 @@ func TestOpenRouterReasoningState(t *testing.T) {
 }
 
 func TestOpenRouterReasoningBlockBoundaries(t *testing.T) {
-	state := streamState{}
+	state := chat.ReasoningState{}
 	blocks := []json.RawMessage{
 		json.RawMessage(`{"type":"reasoning.summary","summary":"one","index":0}`),
 		json.RawMessage(`{"type":"reasoning.summary","summary":" two","index":0}`),
@@ -77,10 +78,10 @@ func TestOpenRouterReasoningBlockBoundaries(t *testing.T) {
 		json.RawMessage(`{"type":"reasoning.text","text":"another","index":0}`),
 		json.RawMessage(`{"type":"reasoning.text","signature":"sig2","index":0}`),
 	}
-	if _, err := state.routerDetails(blocks, true); err != nil {
+	if _, err := state.Add(blocks, true); err != nil {
 		t.Fatal(err)
 	}
-	body, err := state.routerContinuation()
+	body, err := state.Continuation()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +104,7 @@ func TestOpenRouterReasoningBlockBoundaries(t *testing.T) {
 		t.Fatalf("fragments not assembled: %+v %+v", first, last)
 	}
 	history := `[{"type":"reasoning.summary","summary":"first"},{"type":"reasoning.summary","summary":"second"}]`
-	if details, err := routerHistory([]byte(history)); err != nil || len(details) != 2 {
+	if details, err := chat.ReasoningHistory([]byte(history)); err != nil || len(details) != 2 {
 		t.Fatalf("already completed history was merged: %s %v", details, err)
 	}
 }

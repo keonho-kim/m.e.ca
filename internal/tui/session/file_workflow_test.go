@@ -84,6 +84,7 @@ func TestFileBrowserDuringAgentWork(t *testing.T) {
 		cancel()
 		releaseTask()
 		releaseSelection()
+		a.files.reads.Wait()
 		a.workers.Wait()
 		if a.connection.client != nil {
 			a.connection.client.Close()

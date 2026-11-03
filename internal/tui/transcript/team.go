@@ -19,18 +19,28 @@ func (f Formatter) teamEvent(event runrecord.Event) []viewport.Block {
 		}
 		return []viewport.Block{{Text: event.Agent + " · " + f.Language.Text(label), Thinking: true}}
 	}
-	text := f.Redact(event.Text)
-	if strings.TrimSpace(text) == "" {
+	body := f.TeamBody(event.Text)
+	if body.Text == "" {
 		return nil
 	}
-	return []viewport.Block{f.TeamHeader(event.Agent, event.Final), {Text: text, Markdown: true}}
+	return []viewport.Block{f.TeamHeader(event.Agent, event.Final), body}
+}
+
+// TeamBody shares source-preserving redaction and spacing across live and saved
+// public speech without allocating an unused attribution block for live updates.
+func (f Formatter) TeamBody(text string) viewport.Block {
+	text = f.Redact(text)
+	if strings.TrimSpace(text) == "" {
+		return viewport.Block{}
+	}
+	return viewport.Block{Text: text, Markdown: true, SpaceAfter: 2}
 }
 
 // TeamHeader shares attribution between incremental streams and committed history.
 func (f Formatter) TeamHeader(agent string, final bool) viewport.Block {
-	header := "\n\n**" + agent + "**"
+	header := "**" + agent + "**"
 	if final {
 		header += " · " + f.Language.Text("작업 결과")
 	}
-	return viewport.Block{Text: header + "\n\n", Markdown: true, KeepWithNext: true}
+	return viewport.Block{Text: header, Markdown: true, KeepWithNext: true, SpaceAfter: 1}
 }

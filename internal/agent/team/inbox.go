@@ -41,7 +41,7 @@ func (p *Peer) Inbox(ctx context.Context) (run.ContextBatch, error) {
 	batch := run.ContextBatch{}
 	bytes := 0
 	for p.Cursor < through {
-		messages, err := r.public.read(ctx, r.options.Store, p.Cursor, through, 100)
+		messages, err := r.public.Read(ctx, r.options.Store, p.Cursor, through, 100)
 		if err != nil {
 			return batch, err
 		}
@@ -49,9 +49,9 @@ func (p *Peer) Inbox(ctx context.Context) (run.ContextBatch, error) {
 			break
 		}
 		for _, observation := range messages {
-			message := observation.message
+			message := observation.Message
 			if !message.Passive && (message.From != p.ID || !message.FromStream && !message.Observation && !message.Declaration) {
-				value := observation.context
+				value := observation.Context
 				batch.Messages = append(batch.Messages, value)
 				bytes += len(value.Content)
 				if message.From == "user" {
@@ -73,13 +73,13 @@ func (p *Peer) ReadMessages(ctx context.Context, after int64) ([]channel.Message
 	r.mu.Lock()
 	through := r.latestPublic
 	r.mu.Unlock()
-	values, err := r.public.read(ctx, r.options.Store, after, through, 100)
+	values, err := r.public.Read(ctx, r.options.Store, after, through, 100)
 	if err != nil {
 		return nil, err
 	}
 	messages := make([]channel.Message, len(values))
 	for i, value := range values {
-		messages[i] = value.message
+		messages[i] = value.Message
 	}
 	return messages, nil
 }

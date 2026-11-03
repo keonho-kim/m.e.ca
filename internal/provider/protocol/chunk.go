@@ -1,102 +1,75 @@
 // Purpose: Translate individual provider chunks and their completion and usage state.
 // Pattern: Stateful stream decoder.
 // Usage: Created per model response by the provider stream reader.
-// Related: internal/provider/protocol/stream.go, internal/provider/protocol/wire.go, internal/agent/model/model.go, internal/provider/connection/connection.go.
+// Related: internal/provider/protocol/stream.go, internal/provider/protocol/native/frame.go, internal/agent/model/model.go, internal/provider/connection/connection.go.
 
 package protocol
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+	"github.com/keonho-kim/meca/internal/provider/protocol/ollama"
+	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 )
 
 type streamState struct {
-	reasoningDetails []json.RawMessage
-	reasoningBytes   int
-	reasoningDraft   *routerDraft
-	calls            map[int]*callDraft
-	lmItems          map[string]int
-	provider         modelconn.ProviderKind
-	usage            *modelapi.TokenUsage
-	finished         bool
-	streaming        bool
-	received         bool
-	failure          error
+	router chat.ReasoningState
+	native.State
+	responses responses.Decoder
+	provider  modelconn.ProviderKind
 }
 
 func (state *streamState) consume(content []byte, single bool, emit func(modelapi.Event) error) error {
 	if state.provider == modelconn.LMStudio {
-		return state.consumeLM(content, single, emit)
+		return state.responses.Consume(content, single, &state.State, emit)
 	}
-	native := state.provider == modelconn.Ollama
-	var chunk wireChunk
-	if err := json.Unmarshal(content, &chunk); err != nil {
-		return fmt.Errorf("invalid model stream: %w", err)
+	isOllama := state.provider == modelconn.Ollama
+	var frame native.Frame
+	var err error
+	if isOllama {
+		frame, err = ollama.Decode(content)
+	} else {
+		frame, err = chat.Decode(content, single)
 	}
-	input, output := chunk.PromptCount, chunk.EvalCount
-	if !native && chunk.Usage != nil {
-		input, output = chunk.Usage.Input, chunk.Usage.Output
-	}
+	input, output := frame.Input, frame.Output
 	if input != nil && (*input < 0 || *input > modelapi.MaxCallTokens) || output != nil && (*output < 0 || *output > modelapi.MaxCallTokens) {
 		return fmt.Errorf("invalid provider token usage")
 	}
 	var observed *modelapi.TokenUsage
 	if input != nil && output != nil {
-		state.usage = &modelapi.TokenUsage{Input: *input, Output: *output}
-		if state.provider == modelconn.OpenRouter && chunk.Usage != nil {
-			state.usage.Cost = chunk.Usage.Cost
+		state.Usage = &modelapi.TokenUsage{Input: *input, Output: *output}
+		if state.provider == modelconn.OpenRouter && frame.Cost != nil {
+			state.Usage.Cost = frame.Cost
 		}
-		if err := state.usage.Check(); err != nil {
+		if err := state.Usage.Check(); err != nil {
 			return err
 		}
-		observed = state.usage
+		observed = state.Usage
 	}
-	if len(chunk.Error) > 0 && string(chunk.Error) != "null" && string(chunk.Error) != `""` {
-		return state.emitFailedUsage(transport.ParseError(0, content, ""), emit)
+	if err != nil {
+		return state.EmitFailedUsage(err, emit)
 	}
-	state.received = true
-	message := chunk.Message
-	if native {
-		if chunk.Done == nil {
-			return fmt.Errorf("missing Ollama done state")
-		}
-		state.finished = *chunk.Done
-		if err := sanitizeReason(chunk.DoneReason); err != nil {
-			state.failure = err
-		}
-	} else {
-		if len(chunk.Choices) > 1 {
-			return fmt.Errorf("multiple model choices are not supported")
-		}
-		if len(chunk.Choices) == 1 {
-			choice := chunk.Choices[0]
-			message = choice.Delta
-			if single {
-				message = choice.Message
-			}
-			if choice.FinishReason != nil {
-				if err := sanitizeReason(*choice.FinishReason); err != nil {
-					state.failure = err
-				}
-				if single {
-					state.finished = true
-				}
-			}
-		} else if chunk.Usage == nil {
-			return fmt.Errorf("missing model choices")
+	state.Received = true
+	message := frame.Message
+	if frame.Done != nil {
+		state.Finished = *frame.Done
+	}
+	if frame.Reason != nil {
+		if reasonErr := sanitizeReason(*frame.Reason); reasonErr != nil {
+			state.Failure = reasonErr
 		}
 	}
+
 	reasoning := message.Reasoning
 	if state.provider == modelconn.LiteLLM || state.provider == modelconn.SGLang {
 		reasoning = message.ReasoningContent
 	}
 	reason := message.Thinking + reasoning
 	if state.provider == modelconn.OpenRouter {
-		text, err := state.routerDetails(message.ReasoningDetails, !single)
+		text, err := state.router.Add(message.ReasoningDetails, !single)
 		if err != nil {
 			return err
 		}
@@ -105,43 +78,36 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		}
 	}
 	if observed == nil && (message.Content != "" || reason != "") {
-		state.usage = nil
+		state.Usage = nil
 	}
 	if len(message.Calls) > 0 && string(message.Calls) != "null" && string(message.Calls) != "[]" {
-		if err := state.addCalls(message.Calls, native, single); err != nil {
+		if err := state.Calls.Add(message.Calls, isOllama, single); err != nil {
 			return err
 		}
 	}
 	if message.Content != "" || reason != "" || observed != nil {
-		return emit(modelapi.Event{Delta: message.Content, Thinking: reason, Streaming: state.streaming, Usage: observed})
+		return emit(modelapi.Event{Delta: message.Content, Thinking: reason, Streaming: state.Streaming, Usage: observed})
 	}
 	return nil
 }
 
-func (state *streamState) emitFailedUsage(err error, emit func(modelapi.Event) error) error {
-	if state.usage != nil {
-		return errors.Join(err, emit(modelapi.Event{Usage: state.usage, Streaming: state.streaming}))
-	}
-	return err
-}
-
 func (state *streamState) complete(emit func(modelapi.Event) error) error {
-	if state.failure != nil {
-		return state.emitFailedUsage(state.failure, emit)
+	if state.Failure != nil {
+		return state.EmitFailedUsage(state.Failure, emit)
 	}
-	if !state.finished || !state.received {
+	if !state.Finished || !state.Received {
 		return fmt.Errorf("model stream ended before completion")
 	}
-	calls, err := state.completedCalls()
+	calls, err := state.Calls.Complete()
 	if err != nil {
-		return state.emitFailedUsage(err, emit)
+		return state.EmitFailedUsage(err, emit)
 	}
 	var continuation []byte
-	if len(state.reasoningDetails) > 0 || state.reasoningDraft != nil {
-		continuation, err = state.routerContinuation()
+	if state.router.HasData() {
+		continuation, err = state.router.Continuation()
 		if err != nil {
 			return err
 		}
 	}
-	return emit(modelapi.Event{Done: true, Streaming: state.streaming, Usage: state.usage, Calls: calls, ReasoningState: continuation})
+	return emit(modelapi.Event{Done: true, Streaming: state.Streaming, Usage: state.Usage, Calls: calls, ReasoningState: continuation})
 }

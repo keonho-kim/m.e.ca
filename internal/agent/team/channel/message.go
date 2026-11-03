@@ -41,8 +41,12 @@ func (m Message) Kind() string {
 	}
 }
 
-type Repository interface {
-	AppendTeamMessage(context.Context, Message) (Message, error)
+type Reader interface {
 	TeamMessages(context.Context, int64, int64, int) ([]Message, error)
+}
+
+type Repository interface {
+	Reader
+	AppendTeamMessage(context.Context, Message) (Message, error)
 	TeamPending(context.Context, int64, int64, string) (bool, error)
 }

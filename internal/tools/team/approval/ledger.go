@@ -1,15 +1,21 @@
 // Purpose: Preserve explicit user refusals across peers for the same frozen operation.
 // Pattern: Request-scoped denial ledger.
 // Usage: Approval composition records refusals; local execution checks them before effects.
-// Related: internal/tools/team/workspace/workspace.go, internal/commands/teamrequest/request.go.
-package workspace
+// Related: internal/tools/team/local.go, internal/commands/teamrequest/request.go.
+package approval
 
 import (
 	"crypto/sha256"
 	"fmt"
+	"sync"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
+
+type Ledger struct {
+	mu     sync.Mutex
+	denied map[string]bool
+}
 
 func denialKey(proposal toolapi.Approval) string {
 	if proposal.Candidate != nil {
@@ -24,7 +30,7 @@ func denialKey(proposal toolapi.Approval) string {
 	}
 	return ""
 }
-func (w *Access) Deny(proposal toolapi.Approval) {
+func (w *Ledger) Deny(proposal toolapi.Approval) {
 	key := denialKey(proposal)
 	if key == "" {
 		return
@@ -36,7 +42,7 @@ func (w *Access) Deny(proposal toolapi.Approval) {
 	}
 	w.denied[key] = true
 }
-func (w *Access) Refused(proposal toolapi.Approval) bool {
+func (w *Ledger) Refused(proposal toolapi.Approval) bool {
 	key := denialKey(proposal)
 	w.mu.Lock()
 	defer w.mu.Unlock()

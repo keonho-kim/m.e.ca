@@ -12,6 +12,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	localcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
+	"github.com/keonho-kim/meca/internal/tools/team/approval"
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 )
@@ -28,6 +29,8 @@ type Executor struct {
 	Local        Local
 	Peer         *team.Peer
 	Workspace    *workspace.Access
+	Refusals     *approval.Ledger
+	Images       chan struct{}
 	Project      string
 	mu           sync.Mutex
 	shell        *workspace.Lease

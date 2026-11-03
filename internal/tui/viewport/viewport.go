@@ -28,7 +28,8 @@ type Block struct {
 	ID               int
 	Text             string
 	Thinking         bool
-	KeepWithNext     bool // Retain an attribution header together with its following body.
+	KeepWithNext     bool  // Retain an attribution header together with its following body.
+	SpaceAfter       uint8 // Exact trailing blank rows when positive, capped by the chat boundary budget.
 }
 type Line struct {
 	Copy     textlayout.Fragment
@@ -55,6 +56,7 @@ type blockKey struct {
 	text                         string
 	width, id                    int
 	markdown, thinking, centered bool
+	spaceAfter                   uint8
 	changes                      *Changes
 }
 

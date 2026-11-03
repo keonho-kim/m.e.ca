@@ -1,4 +1,4 @@
-// Purpose: Coordinate shared file mutations and hold exclusive shell ownership through actual completion.
+// Purpose: Own shared file mutation leases and exclusive shell access through actual completion.
 // Pattern: Context-cancellable resource admission.
 // Usage: Every cooperative local executor shares one Access for the request.
 // Related: internal/tools/team/executor.go, internal/tools/team/local.go.
@@ -22,9 +22,7 @@ type Access struct {
 	mu      sync.Mutex
 	changed chan struct{}
 	shell   bool
-	denied  map[string]bool
 	writes  map[*Lease][]target
-	images  chan struct{}
 }
 type Lease struct {
 	once      sync.Once
@@ -33,7 +31,7 @@ type Lease struct {
 }
 
 func New() *Access {
-	return &Access{changed: make(chan struct{}), writes: map[*Lease][]target{}, images: make(chan struct{}, 1)}
+	return &Access{changed: make(chan struct{}), writes: map[*Lease][]target{}}
 }
 
 func canonical(path string) target {
@@ -126,14 +124,3 @@ func (w *Access) ReserveFiles(ctx context.Context, paths []string, waiting func(
 func (w *Access) ReserveShell(ctx context.Context, waiting func() error) (*Lease, error) {
 	return w.reserve(ctx, nil, true, waiting)
 }
-
-// AcquireImage bounds active decoding; the successful caller owns ReleaseImage.
-func (w *Access) AcquireImage(ctx context.Context) error {
-	select {
-	case w.images <- struct{}{}:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-func (w *Access) ReleaseImage() { <-w.images }

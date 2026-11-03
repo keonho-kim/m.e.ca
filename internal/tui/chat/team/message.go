@@ -18,6 +18,7 @@ func (p *messageDisplay) show(agent string, final bool, body viewport.Block, f t
 	if strings.TrimSpace(body.Text) == "" {
 		return
 	}
+	body.SpaceAfter = 2
 	if p.paired(output) {
 		if final {
 			output.Update(p.header, f.TeamHeader(agent, final))

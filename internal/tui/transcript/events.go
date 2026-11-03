@@ -23,6 +23,9 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 		if len(blocks) == 0 {
 			return nil
 		}
+		for i := range blocks {
+			blocks[i].SpaceAfter = 2
+		}
 		return append([]viewport.Block{f.TeamHeader(agent, false)}, blocks...)
 	}
 	if event.Statistics != nil {

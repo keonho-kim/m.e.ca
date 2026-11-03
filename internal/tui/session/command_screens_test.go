@@ -83,7 +83,7 @@ func TestFileScreenEscCancelsLookupAndCloses(t *testing.T) {
 	a := screenFixture(t)
 	a.page, a.files.directoryLoading = "files", true
 	cancelled := false
-	a.files.directoryReads.Begin(0, func() { cancelled = true })
+	a.files.reads.Directory.Begin(0, func() { cancelled = true })
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
 	if !cancelled || a.files.directoryLoading || a.page != "chat" {
 		t.Fatal("Esc did not cancel lookup and return to chat in one step")

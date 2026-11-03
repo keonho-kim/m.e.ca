@@ -1,7 +1,7 @@
 // Purpose: Measure eight receivers with repository-only and shared public-body admission.
 // Pattern: Fixed committed-message workload benchmark.
 // Usage: go test ./internal/agent/team -run '^$' -bench BenchmarkPublicHistoryFanout -benchmem.
-// Related: internal/agent/team/public_history.go, internal/storage/sqlite/team_messages.go.
+// Related: internal/agent/team/channel/history.go, internal/storage/sqlite/team_messages.go.
 package team
 
 import (
@@ -34,14 +34,14 @@ func BenchmarkPublicHistoryFanout(b *testing.B) {
 			}
 			for _, shared := range []bool{false, true} {
 				b.Run(fmt.Sprintf("shared%v", shared), func(b *testing.B) {
-					var history publicHistory
-					history.append(message, message.Sequence-1)
+					var history channel.History
+					history.Append(message, message.Sequence-1)
 					b.ReportAllocs()
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
 						for range 8 {
 							if shared {
-								values, err := history.read(context.Background(), store, message.Sequence-1, message.Sequence, 100)
+								values, err := history.Read(context.Background(), store, message.Sequence-1, message.Sequence, 100)
 								if err != nil || len(values) != 1 {
 									b.Fatal(err)
 								}

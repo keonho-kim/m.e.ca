@@ -1,7 +1,7 @@
 // Purpose: Serialize real user approval and preserve refusals across peer executors.
 // Pattern: Request-owned approval boundary.
 // Usage: Every private peer delegates prepared approvals to the same request instance.
-// Related: internal/commands/teamrequest/request.go, internal/tools/team/workspace/denial.go.
+// Related: internal/commands/teamrequest/request.go, internal/tools/team/approval/ledger.go.
 package teamrequest
 
 import (
@@ -15,7 +15,7 @@ func (r *request) approve(ctx context.Context, peer string, proposal toolapi.App
 	defer r.approval.Unlock()
 	approved, err := r.approver(ctx, proposal)
 	if err == nil && !approved {
-		r.access.Deny(proposal)
+		r.refusals.Deny(proposal)
 	}
 	return approved, err
 }

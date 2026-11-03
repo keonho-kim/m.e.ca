@@ -5,21 +5,10 @@
 package session
 
 import (
-	"context"
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	"github.com/keonho-kim/meca/internal/tui/preview"
 )
-
-type previewLayoutRequest struct {
-	source   preview.Snapshot
-	revision int
-}
-
-type previewLayoutResult struct {
-	request previewLayoutRequest
-	layout  *preview.Layout
-	err     error
-}
 
 func (a *app) ensurePreviewLayout(width int) {
 	p := a.files.filePreview
@@ -27,40 +16,34 @@ func (a *app) ensurePreviewLayout(width int) {
 		return
 	}
 	source := p.Snapshot(width)
-	if a.files.previewLayouts.Running() && a.files.previewLayoutDesired == source {
+	if a.files.reads.Layout.Running() && a.files.previewLayoutDesired == source {
 		return
 	}
 	p.ReleaseLayout()
 	a.files.previewLayoutDesired = source
 	a.files.previewLayoutRevision++
-	request := previewLayoutRequest{source: source, revision: a.files.previewLayoutRevision}
-	if a.files.previewLayouts.Submit(request) {
+	request := controller.LayoutRequest{Source: source, Revision: a.files.previewLayoutRevision}
+	if a.files.reads.Layout.Submit(request) {
 		a.startPreviewLayout(request)
 	}
 }
 
-func (a *app) startPreviewLayout(request previewLayoutRequest) {
-	ctx, cancel := context.WithCancel(a.ctx)
-	a.files.previewLayouts.Begin(request.revision, cancel)
-	a.workers.Go(func() {
-		defer cancel()
-		layout, err := preview.Build(ctx, request.source)
-		a.post(a.ctx, notice{PreviewLayout: &previewLayoutResult{request: request, layout: layout, err: err}})
-	})
+func (a *app) startPreviewLayout(request controller.LayoutRequest) {
+	a.files.reads.BuildLayout(a.ctx, a, request)
 }
 
-func (a *app) receivePreviewLayout(result *previewLayoutResult) {
-	if next := a.files.previewLayouts.Complete(result.request.revision); next != nil && !a.exit && a.ctx.Err() == nil {
+func (a *app) receivePreviewLayout(result *controller.LayoutResult) {
+	if next := a.files.reads.Layout.Complete(result.Request.Revision); next != nil && !a.exit && a.ctx.Err() == nil {
 		a.startPreviewLayout(*next)
 	}
-	if result.request.revision != a.files.previewLayoutRevision || a.files.filePreview == nil || result.err != nil {
+	if result.Request.Revision != a.files.previewLayoutRevision || a.files.filePreview == nil || result.Err != nil {
 		return
 	}
-	a.files.filePreview.Apply(result.request.source, result.layout)
+	a.files.filePreview.Apply(result.Request.Source, result.Layout)
 }
 
 func (a *app) stopPreviewLayout() {
-	a.files.previewLayouts.Stop()
+	a.files.reads.Layout.Stop()
 	a.files.previewLayoutRevision++
 	a.files.previewLayoutDesired = preview.Snapshot{}
 }

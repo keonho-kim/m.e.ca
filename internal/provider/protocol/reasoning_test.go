@@ -1,7 +1,7 @@
 // Purpose: Verify each provider projects its declared reasoning field into model events.
 // Pattern: Provider stream contract tests.
 // Usage: go test ./internal/provider/protocol -run TestProviderReasoningFields.
-// Related: internal/provider/protocol/chunk.go, internal/provider/protocol/wire.go.
+// Related: internal/provider/protocol/chunk.go, internal/provider/protocol/native/frame.go.
 package protocol
 
 import (

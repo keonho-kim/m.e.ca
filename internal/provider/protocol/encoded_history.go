@@ -1,7 +1,7 @@
 // Purpose: Reuse a bounded immutable prefix while encoding every uncached request fragment.
 // Pattern: Prefix reconciliation with request-owned overflow segments.
 // Usage: Encoder keeps only complete source groups that fit alongside its tool schema.
-// Related: internal/provider/protocol/encoder.go, internal/provider/protocol/lmstudio.go.
+// Related: internal/provider/protocol/encoder.go, internal/provider/protocol/response_input.go.
 package protocol
 
 import (
@@ -90,7 +90,7 @@ func encodeMessage(kind connection.ProviderKind, message Message) ([]byte, error
 	if kind != connection.LMStudio {
 		return wireJSON.Marshal(message)
 	}
-	input, err := lmMessages([]Message{message})
+	input, err := responseInput([]Message{message})
 	if err != nil || len(input) == 0 {
 		return nil, err
 	}

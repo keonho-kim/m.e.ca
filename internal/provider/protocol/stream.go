@@ -22,7 +22,7 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 	native := provider == modelconn.Ollama
 	reader := streamLines{Reader: bufio.NewReader(response.Body)}
 	sse := strings.Contains(response.Header.Get("Content-Type"), "text/event-stream")
-	state.streaming = sse || native && strings.Contains(response.Header.Get("Content-Type"), "ndjson")
+	state.Streaming = sse || native && strings.Contains(response.Header.Get("Content-Type"), "ndjson")
 	if !native && !sse {
 		content, err := io.ReadAll(io.LimitReader(reader.Reader, modelapi.MaxResponseBytes+1))
 		if err != nil {
@@ -43,10 +43,10 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 		}
 		content = bytes.TrimSpace(content)
 		if bytes.Equal(content, []byte("[DONE]")) {
-			if provider == modelconn.LMStudio && !state.finished {
+			if provider == modelconn.LMStudio && !state.Finished {
 				return fmt.Errorf("model Responses stream ended without a completed response")
 			}
-			state.finished = true
+			state.Finished = true
 			return nil
 		}
 		return state.consume(content, false, emit)
@@ -96,7 +96,7 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 				}
 			}
 		}
-		if state.finished {
+		if state.Finished {
 			return state.complete(emit)
 		}
 		if readErr == io.EOF {

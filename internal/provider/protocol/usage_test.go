@@ -7,11 +7,12 @@ package protocol
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"testing"
 )
 
 func TestTokenUsageAccompaniesTextAndDoesNotBecomeStale(t *testing.T) {
-	state := streamState{provider: connection.VLLM, streaming: true}
+	state := streamState{provider: connection.VLLM, State: native.State{Streaming: true}}
 	var events []modelapi.Event
 	emit := func(e modelapi.Event) error { events = append(events, e); return nil }
 	if err := state.consume([]byte(`{"choices":[{"delta":{"content":"hi"}}],"usage":{"prompt_tokens":12,"completion_tokens":1}}`), false, emit); err != nil {
@@ -24,7 +25,7 @@ func TestTokenUsageAccompaniesTextAndDoesNotBecomeStale(t *testing.T) {
 	if err := state.consume([]byte(`{"choices":[{"delta":{"content":" again"}}]}`), false, emit); err != nil {
 		t.Fatal(err)
 	}
-	state.finished = true
+	state.Finished = true
 	if err := state.complete(emit); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +34,7 @@ func TestTokenUsageAccompaniesTextAndDoesNotBecomeStale(t *testing.T) {
 	}
 }
 func TestTokenUsageZeroIsReported(t *testing.T) {
-	state := streamState{provider: connection.VLLM, streaming: true}
+	state := streamState{provider: connection.VLLM, State: native.State{Streaming: true}}
 	var usage *modelapi.TokenUsage
 	err := state.consume([]byte(`{"choices":[],"usage":{"prompt_tokens":0,"completion_tokens":0}}`), false, func(e modelapi.Event) error { usage = e.Usage; return nil })
 	if err != nil || usage == nil || usage.Input != 0 || usage.Output != 0 {
@@ -42,7 +43,7 @@ func TestTokenUsageZeroIsReported(t *testing.T) {
 }
 
 func TestTokenUsageOnErrorIsDeliveredBeforeRetry(t *testing.T) {
-	state := streamState{provider: connection.VLLM, streaming: true}
+	state := streamState{provider: connection.VLLM, State: native.State{Streaming: true}}
 	var usage *modelapi.TokenUsage
 	err := state.consume([]byte(`{"error":{"message":"engine failed"},"usage":{"prompt_tokens":12,"completion_tokens":3}}`), false, func(e modelapi.Event) error { usage = e.Usage; return nil })
 	if err == nil || usage == nil || usage.Input != 12 || usage.Output != 3 {
@@ -51,7 +52,7 @@ func TestTokenUsageOnErrorIsDeliveredBeforeRetry(t *testing.T) {
 }
 
 func TestOpenRouterRejectsNegativeCost(t *testing.T) {
-	state := streamState{provider: connection.OpenRouter, streaming: true}
+	state := streamState{provider: connection.OpenRouter, State: native.State{Streaming: true}}
 	err := state.consume([]byte(`{"choices":[],"usage":{"prompt_tokens":12,"completion_tokens":3,"cost":-0.1}}`), false, func(modelapi.Event) error {
 		t.Fatal("invalid charge was emitted")
 		return nil

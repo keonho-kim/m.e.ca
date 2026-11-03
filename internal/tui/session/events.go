@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -16,14 +17,14 @@ import (
 
 type notice struct {
 	Detail          *detailResult
-	PreviewLayout   *previewLayoutResult
-	FileWatch       *watchResult
+	PreviewLayout   *controller.LayoutResult
+	FileWatch       *controller.WatchResult
 	Stream          *streamNotice
 	FormRevision    int
 	ModelForm       bool
 	Diagnostic      bool
 	History         *historyPage
-	Directory       *directoryPage
+	Directory       *controller.DirectoryPage
 	FileSelection   *fileSelectionResult
 	SetupRevision   int
 	Clipboard       bool

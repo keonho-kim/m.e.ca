@@ -14,6 +14,29 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
+func TestHistoryReaderDoesNotReleaseActiveTeamCacheLease(t *testing.T) {
+	root, child := teamStorage(t)
+	if _, err := root.teamContent.encoding(1, "active shared context"); err != nil {
+		t.Fatal(err)
+	}
+	page := teamPage{parent: root}
+	if _, err := page.source(context.Background(), child.session.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := page.close(); err != nil {
+		t.Fatal(err)
+	}
+	if root.teamContent.users != 1 || len(root.teamContent.values) != 1 {
+		t.Fatal("history reader released an active session's cache ownership")
+	}
+	if err := child.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if root.teamContent.users != 0 || root.teamContent.values != nil {
+		t.Fatal("last active session retained its cache lease")
+	}
+}
+
 func TestTeamTextCacheReleasesAfterLastPrivateReader(t *testing.T) {
 	root, child := teamStorage(t)
 	ctx := context.Background()

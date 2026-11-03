@@ -1,8 +1,8 @@
 // Purpose: Verify Responses may reformat JSON but cannot change streamed argument values.
 // Pattern: Stream boundary contract tests.
-// Usage: go test ./internal/provider/protocol -run TestArgumentIdentity.
-// Related: internal/provider/protocol/lmstudio_calls.go.
-package protocol
+// Usage: go test ./internal/provider/protocol/native -run TestArgumentIdentity.
+// Related: internal/provider/protocol/responses/calls.go.
+package native
 
 import "testing"
 
@@ -19,15 +19,15 @@ func TestArgumentIdentityPreservesValuesAcrossJSONFormatting(t *testing.T) {
 		{`{"path":"a"}`, `{"path":"a"} {}`, false},
 		{`{"offset":9007199254740992}`, `{"offset":9007199254740993}`, false},
 	} {
-		var draft callDraft
-		if err := draft.appendArguments(tc.streamed); err != nil {
+		var draft Draft
+		if err := draft.Append(tc.streamed); err != nil {
 			t.Fatal(err)
 		}
-		err := draft.finalArguments(tc.final)
+		err := draft.Final(tc.final)
 		if (err == nil) != tc.ok {
 			t.Fatalf("%s -> %s: %v", tc.streamed, tc.final, err)
 		}
-		if draft.arguments.String() != tc.streamed {
+		if draft.Arguments.String() != tc.streamed {
 			t.Fatal("literal streamed content changed")
 		}
 	}

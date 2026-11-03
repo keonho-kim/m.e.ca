@@ -6,6 +6,8 @@ package protocol
 
 import (
 	"encoding/json"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 	"reflect"
 	"slices"
 
@@ -38,9 +40,9 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 	}
 	var value any
 	if kind == connection.LMStudio {
-		value = lmHeader("", 0, "", nil, definitions).Tools
+		value = responses.Header("", 0, "", nil, definitions).Tools
 	} else {
-		value = Tools(definitions)
+		value = native.Tools(definitions)
 	}
 	encoded, err := wireJSON.Marshal(value)
 	if err != nil {
