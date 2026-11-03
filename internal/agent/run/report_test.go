@@ -29,7 +29,7 @@ func TestFinalReportFallbackAtExhaustedBudget(t *testing.T) {
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 1
 	result, err := r.Run(context.Background(), "inspect a and b", approve, emit)
-	if err != nil || result.Status != runrecord.Stopped || len(g.requests) != 1 || !strings.Contains(result.Text, "마지막 관찰") {
+	if err != nil || result.Status != runrecord.Stopped || len(g.requests) != 1 || !strings.Contains(result.Text, "budget") || !strings.Contains(result.Text, "마지막 관찰") {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
