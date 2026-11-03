@@ -20,6 +20,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 	if err != nil {
 		return true, errors.Join(s.rejectWave(ctx, calls, index, outcome, err), fatalBatchError(ctx, err))
 	}
+	defer releaseReady(ready)
 	// Every candidate is frozen before approval; all workers start only after
 	// the owner has approved and rechecked the complete wave.
 	for i, prepared := range ready {
@@ -76,6 +77,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 				terminal = errors.Join(terminal, runErr)
 			}
 			failed = failed || outcome.Failed || runErr != nil
+			toolapi.Release(ready[next].operation)
 			ready[next], outcomes[next], failures[next] = nil, toolapi.Result{}, nil
 			next++
 		}

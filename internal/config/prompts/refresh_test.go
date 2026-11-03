@@ -25,7 +25,7 @@ func TestRefreshReplacesEditsAndSkipsIdenticalFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer root.Close()
-	path := filepath.Join(root.Name(), "prompts/system.md")
+	path := filepath.Join(root.Name(), "prompts/single/system.md")
 	before, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestRefreshRefusesLinkedPrompt(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(root.Name(), "prompts/system.md")
+	path := filepath.Join(root.Name(), "prompts/single/system.md")
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}

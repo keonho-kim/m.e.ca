@@ -1,10 +1,10 @@
 // Purpose: Skip sed numeric and regular-expression addresses before identifying actual script commands.
 // Pattern: Script-scanner subroutine.
-// Usage: sedProgram calls addresses for each statement.
-// Related: internal/policy/command/sed_program.go.
-package command
+// Usage: Analyze calls addresses for each statement.
+// Related: internal/policy/command/sedscript/program.go.
+package sedscript
 
-func (p *sedScanner) addresses() bool {
+func (p *scanner) addresses() bool {
 	for count := 0; count < 2; count++ {
 		p.skip(" \t")
 		if p.index >= len(p.text) {

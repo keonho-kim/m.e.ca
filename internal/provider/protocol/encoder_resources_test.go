@@ -49,3 +49,19 @@ func TestEncoderUnpreparedImagesBypassCache(t *testing.T) {
 		}
 	}
 }
+
+func TestEncoderPeerBudgetSurvivesResetWithoutLimitingInput(t *testing.T) {
+	const budget = 128 * 1024
+	encoder := NewEncoder(budget)
+	request := modelapi.Request{ModelID: "peer", MaxOutput: 123}
+	for _, size := range []int{70 * 1024, 256 * 1024, 70 * 1024} {
+		assertEncodedRequest(t, &encoder, connection.OpenRouter, request, []Message{{Role: "user", Content: strings.Repeat("x", size)}}, Controls{})
+		if encoder.retained+encoder.tools.bytes > budget {
+			t.Fatal("peer exceeded retained encoding budget")
+		}
+		encoder.Clear()
+		if encoder.limit() != budget {
+			t.Fatal("model/reset lost peer cache budget")
+		}
+	}
+}

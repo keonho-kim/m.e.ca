@@ -12,6 +12,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/commands/teamrequest"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/fileview"
@@ -24,17 +25,21 @@ import (
 )
 
 type Options struct {
-	Home, State string
-	Config      config.Config
-	LoadPrompts func() (prompt.Templates, error)
-	SaveConfig  func(config.Config) error
-	Store       Store
-	Session     sessionstate.Session
-	Tools       Tools
-	Files       fileview.Source
-	Vault       *credentials.Vault
+	Home, State  string
+	Config       config.Config
+	LoadPrompts  func() (prompt.Templates, error)
+	Team         *teamrequest.Service
+	LoadTeamMode func(context.Context) (bool, error)
+	SaveTeamMode func(context.Context, bool) error
+	SaveConfig   func(config.Config) error
+	Store        Store
+	Session      sessionstate.Session
+	Tools        Tools
+	Files        fileview.Source
+	Vault        *credentials.Vault
 }
 type app struct {
+	team                        teamMode
 	files                       fileBrowserState
 	compose                     requestState
 	chat                        chatState

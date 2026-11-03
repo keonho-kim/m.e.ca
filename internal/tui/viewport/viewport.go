@@ -5,19 +5,25 @@
 package viewport
 
 import (
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"strings"
+	"unsafe"
 )
+
+const sourceMemoryBudget = 16 * 1024 * 1024
 
 type Block struct {
 	Summary, Details string
+	DetailRef        *runrecord.EventReference
 	Changes          *Changes
 	stream           markdown.Stream
 	layout           blockLayout
 	visible          bool
 	live             bool
 	Markdown         bool
+	Streaming        bool
 	Centered         bool
 	ID               int
 	Text             string
@@ -33,6 +39,10 @@ type Line struct {
 }
 type View struct {
 	layoutRevision      uint64
+	dirtyID             int
+	sourceBytes         int
+	bytesReady          bool
+	streams             map[int]bool
 	Collapsed           bool
 	Blocks              []Block
 	Next                int
@@ -51,6 +61,7 @@ func (v *View) Append(text string, thinking bool) {
 	v.AppendBlock(Block{Text: text, Thinking: thinking})
 }
 func (v *View) AppendBlock(block Block) {
+	v.ensureBytes()
 	v.showDetails(&block)
 	if strings.TrimSpace(block.Text) == "" {
 		return
@@ -58,6 +69,8 @@ func (v *View) AppendBlock(block Block) {
 	v.Next++
 	block.ID = v.Next
 	v.Blocks = append(v.Blocks, block)
+	v.sourceBytes += block.bytes()
+	v.trackStream(block.ID, block.Streaming)
 	v.bound(false)
 }
 func Wrap(text string, width int) []string {
@@ -72,6 +85,7 @@ func (v *View) Prepend(blocks []Block) {
 		return
 	}
 	v.layoutRevision++
+	v.ensureBytes()
 	first := 0
 	if len(v.Blocks) > 0 {
 		first = v.Blocks[0].ID
@@ -79,16 +93,18 @@ func (v *View) Prepend(blocks []Block) {
 	for i := range blocks {
 		blocks[i].ID = first - len(blocks) + i
 		v.showDetails(&blocks[i])
+		v.sourceBytes += blocks[i].bytes()
+		v.trackStream(blocks[i].ID, blocks[i].Streaming)
 	}
 	v.Blocks = append(blocks, v.Blocks...)
 	v.bound(true)
 }
 func (v *View) bound(older bool) {
-	bytes := 0
-	for _, b := range v.Blocks {
-		bytes += b.bytes()
+	v.ensureBytes()
+	if v.sourceBytes > sourceMemoryBudget {
+		v.releaseColdDetails()
 	}
-	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || bytes > 16*1024*1024) {
+	for len(v.Blocks) > 1 && (len(v.Blocks) > 1000 || v.sourceBytes > sourceMemoryBudget) {
 		v.layoutRevision++
 		index := 0
 		if older {
@@ -96,16 +112,33 @@ func (v *View) bound(older bool) {
 		} else if !v.Follow {
 			index = len(v.Blocks) - 2
 		}
-		bytes -= v.Blocks[index].bytes()
+		v.sourceBytes -= v.Blocks[index].bytes()
+		delete(v.streams, v.Blocks[index].ID)
 		copy(v.Blocks[index:], v.Blocks[index+1:])
 		v.Blocks[len(v.Blocks)-1] = Block{}
 		v.Blocks = v.Blocks[:len(v.Blocks)-1]
 	}
 }
 
-func (b Block) bytes() int {
-	if b.Details != "" {
-		return len(b.Summary) + len(b.Details)
+func (v *View) ensureBytes() {
+	if !v.bytesReady {
+		for _, b := range v.Blocks {
+			v.sourceBytes += b.bytes()
+		}
+		v.bytesReady = true
 	}
-	return len(b.Text)
+}
+
+func (b Block) bytes() int {
+	size := len(b.Text)
+	if b.Details != "" {
+		size = len(b.Summary) + len(b.Details)
+	}
+	if b.Changes != nil {
+		size += cap(b.Changes.Ranges) * int(unsafe.Sizeof(ChangeRange{}))
+		if b.Changes.Source != b.Text && b.Changes.Source != b.Details && b.Changes.Source != b.Summary {
+			size += len(b.Changes.Source)
+		}
+	}
+	return size
 }

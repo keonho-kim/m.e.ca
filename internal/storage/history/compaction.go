@@ -7,6 +7,7 @@ package history
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
@@ -18,14 +19,18 @@ func Compaction(page []Record) ([]compact.Record, error) {
 		role, text := "", ""
 		if record.Kind == "message" {
 			m := record.Message
-			switch m.Role {
-			case "user", "assistant":
-				role, text = m.Role, m.Content
-				if m.Incomplete {
-					role = "unfinished_assistant_draft"
+			if channel.IsPeer(m.ID) {
+				role, text = "peer", m.Content
+			} else {
+				switch m.Role {
+				case "user", "assistant":
+					role, text = m.Role, m.Content
+					if m.Incomplete {
+						role = "unfinished_assistant_draft"
+					}
+				case "tool":
+					role, text = "observation", toolExcerpt(m.Content)
 				}
-			case "tool":
-				role, text = "observation", toolExcerpt(m.Content)
 			}
 		} else {
 			event := record.Event

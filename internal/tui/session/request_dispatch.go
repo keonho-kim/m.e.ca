@@ -15,6 +15,10 @@ func (a *app) dispatchRequest(request composer.Request) {
 		return
 	}
 	a.compose.rememberInput(request.Text)
-	a.chat.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(request.Text)), false)
+	if a.team.enabled {
+		a.chat.output.Append("> "+a.opts.Vault.Redact(request.Text)+"\n\n", false)
+	} else {
+		a.chat.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(a.opts.Vault.Redact(request.Text)), false)
+	}
 	a.startRequest(request)
 }

@@ -17,6 +17,9 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		if _, err = s.collectCommands(ctx); err != nil {
 			return err
 		}
+		if _, err = s.admitContext(ctx); err != nil {
+			return err
+		}
 		if _, err = s.steer(ctx); err != nil {
 			return err
 		}
@@ -41,6 +44,9 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			if err = s.persist(ctx); err != nil {
 				return err
 			}
+		}
+		if _, err = s.admitContext(ctx); err != nil {
+			return err
 		}
 		commandRevision := s.commandRevision
 		reply, askErr := s.askResponse(ctx)
@@ -76,6 +82,19 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 				return err
 			}
 		} else if len(reply.Calls) > 0 {
+			if s.runner.PollContext != nil {
+				objective := s.checkpoint.Objective
+				if _, err = s.admitContext(ctx); err != nil {
+					return err
+				}
+				if objective != s.checkpoint.Objective {
+					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request."); err != nil {
+						return err
+					}
+					continue
+				}
+			}
+
 			if len(reply.Calls) > 1 {
 				err = s.batch(ctx, reply, approve)
 			} else {
@@ -86,6 +105,11 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			}
 
 		} else {
+			if changed, err := s.continueContext(ctx, reply); err != nil {
+				return err
+			} else if changed {
+				continue
+			}
 			if queued, err := s.continueSteered(ctx, reply); err != nil {
 				return err
 			} else if queued {
@@ -99,7 +123,18 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			} else if pending {
 				continue
 			}
-			return s.finish(ctx, reply)
+			if err := s.finish(ctx, reply); err != nil {
+				return err
+			}
+			if s.runner.OnAnswer == nil {
+				return nil
+			}
+			again, err := s.runner.OnAnswer(ctx, s.result.Text)
+			if err != nil || !again {
+				return err
+			}
+			s.result.Text = ""
+			s.checkpoint.Status = "running"
 		}
 	}
 }

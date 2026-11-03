@@ -29,6 +29,7 @@ func (a *app) renderChat(width, height int) {
 	a.revealPending(transcript, available)
 	start := transcript.Start(&a.chat.output, available)
 	lines := transcript.Window(start, available)
+	a.loadToolDetail(transcript)
 	if a.scrollbar.x != width-1 {
 		a.scrollbar.dragging = false
 	}

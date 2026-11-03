@@ -14,13 +14,16 @@ import (
 	_ "modernc.org/sqlite"
 	"net/url"
 	"os"
+	"sync/atomic"
 )
 
 type Store struct {
-	codec   recordcontent.Codec
-	db      *sql.DB
-	path    string
-	session sessionstate.Session
+	latestEvent atomic.Int64
+	room        *Store
+	codec       recordcontent.Codec
+	db          *sql.DB
+	path        string
+	session     sessionstate.Session
 }
 
 func (s *Store) Session() sessionstate.Session { return s.session }

@@ -8,9 +8,7 @@ import (
 	"context"
 	"errors"
 
-	json "github.com/goccy/go-json"
 	"github.com/keonho-kim/meca/internal/agent/compact"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -50,14 +48,24 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 	if err != nil {
 		return nil, cursor, err
 	}
+	var shared map[string]string
+	if s.room != nil {
+		messages := make([]storedRecord, 0, len(page))
+		for _, e := range page {
+			if e.record.kind == "message" {
+				messages = append(messages, e.record)
+			}
+		}
+		shared, err = s.sharedContext(ctx, messages)
+		if err != nil {
+			return nil, cursor, err
+		}
+	}
+	fields := map[string]bool{"id": true, "role": true, "content": true, "incomplete": true}
 	for _, e := range page {
 		if e.record.kind == "message" {
-			body, err := s.unpackRecord(ctx, e.record, map[string]bool{"role": true, "content": true, "incomplete": true})
+			message, _, err := s.contextRecord(ctx, e.record, fields, shared)
 			if err != nil {
-				return nil, cursor, err
-			}
-			var message modelapi.Message
-			if err := json.Unmarshal(body, &message); err != nil {
 				return nil, cursor, err
 			}
 			projected, err := history.Compaction([]history.Record{{Sequence: e.record.sequence, Kind: "message", Message: message}})

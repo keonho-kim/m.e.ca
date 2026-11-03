@@ -54,7 +54,7 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 		e.Clear()
 	}
 	e.kind, e.model = kind, model
-	if size < cacheThreshold || size > cacheCapacity {
+	if size < cacheThreshold {
 		e.clearHistory()
 		return Messages(kind, source)
 	}

@@ -10,13 +10,14 @@ import (
 )
 
 type Statistics struct {
+	Concurrent       bool                 `json:"concurrent,omitempty"`
 	ElapsedMillis    int64                `json:"elapsed_millis"`
 	GenerationMillis int64                `json:"generation_millis"`
 	Usage            *modelapi.TokenUsage `json:"usage,omitempty"`
 }
 
 func (s Statistics) check() error {
-	if s.ElapsedMillis < 0 || s.GenerationMillis < 0 || s.GenerationMillis > s.ElapsedMillis {
+	if s.ElapsedMillis < 0 || s.GenerationMillis < 0 || !s.Concurrent && s.GenerationMillis > s.ElapsedMillis {
 		return fmt.Errorf("invalid request measurement duration")
 	}
 	if s.Usage == nil {

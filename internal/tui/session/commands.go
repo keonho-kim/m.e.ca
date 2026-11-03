@@ -54,6 +54,12 @@ func (a *app) submitCommand(command commands.Command) {
 		a.exit = true
 		return
 	}
+	if command.Kind == commands.Team {
+		a.toggleTeam()
+		a.compose.editor.Set("")
+		a.closeCommandHints()
+		return
+	}
 	if command.Kind == commands.Message && a.files.fileSelectionBusy {
 		a.compose.fileSubmission = &fileSubmission{command: command, revision: a.compose.editor.Revision()}
 		a.status = a.language.Text("Saving selected paths before sending")
@@ -91,5 +97,5 @@ func (a *app) submitCommand(command commands.Command) {
 }
 
 func (a *app) canSubmit(kind commands.Kind) bool {
-	return !a.work.state.active() || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
+	return !a.work.state.active() || kind == commands.Team || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
 }

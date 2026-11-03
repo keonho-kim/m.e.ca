@@ -21,6 +21,7 @@ var catalog = []struct {
 	{"!dir", "파일 탐색", Directory},
 	{"!new", "새 세션", NewSession},
 	{"!quit", "앱 종료", Exit},
+	{"!team", "팀 모드 전환", Team},
 }
 
 func Suggestions(input string, describe func(string) string) []Suggestion {

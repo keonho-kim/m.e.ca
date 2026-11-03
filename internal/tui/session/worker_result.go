@@ -21,6 +21,7 @@ func (a *app) finishWorker(n notice) {
 			a.finishPending(n.Err == nil && !cancelled && n.RunStatus == runrecord.Answered)
 		}
 	}()
+	a.team.finish(&a.chat.output)
 	a.chat.tokenCurrent = modelapi.TokenUsage{}
 	stopped := a.work.state.stopping()
 	a.work.state = workerIdle

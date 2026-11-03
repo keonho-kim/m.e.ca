@@ -18,10 +18,15 @@ func Bootstrap(root *os.Root) error {
 	if err := prepareDirectory(root); err != nil {
 		return err
 	}
-	defaults := prompt.Defaults()
-	for name, text := range defaults.Files() {
-		if err := statefs.PublishMissing(root, filepath.Join("prompts", name), []byte(*text)); err != nil {
+	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+		if err := prepareProfile(root, profile); err != nil {
 			return err
+		}
+		defaults := prompt.DefaultsFor(profile)
+		for name, text := range defaults.Files() {
+			if err := statefs.PublishMissing(root, filepath.Join("prompts", string(profile), name), []byte(*text)); err != nil {
+				return err
+			}
 		}
 	}
 	_, err := Load(root.Name())
@@ -45,21 +50,26 @@ func prepareDirectory(root *os.Root) error {
 	}
 	return errors.Join(directory.Chmod(0700), directory.Close())
 }
-func Load(directory string) (templates prompt.Templates, err error) {
-	err = load(directory, map[string]*string{
+func Load(directory string) (prompt.Templates, error) { return LoadProfile(directory, prompt.Single) }
+
+func LoadProfile(directory string, profile prompt.Profile) (templates prompt.Templates, err error) {
+	if !profile.Valid() {
+		return templates, fmt.Errorf("invalid prompt profile")
+	}
+	err = load(directory, profile, map[string]*string{
 		"system.md": &templates.System, "development.md": &templates.Development, "compaction.md": &templates.Compaction,
 	})
 	return templates, err
 }
 
-func load(directory string, fields map[string]*string) (err error) {
+func load(directory string, profile prompt.Profile, fields map[string]*string) (err error) {
 	root, err := statefs.Open(directory)
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
 	read := func(name string) (text string, err error) {
-		path := filepath.Join("prompts", name)
+		path := filepath.Join("prompts", string(profile), name)
 		info, err := root.Lstat(path)
 		if err != nil {
 			return "", err
@@ -87,4 +97,23 @@ func load(directory string, fields map[string]*string) (err error) {
 		*destination = text
 	}
 	return nil
+}
+
+func prepareProfile(root *os.Root, profile prompt.Profile) error {
+	path := filepath.Join("prompts", string(profile))
+	if err := root.Mkdir(path, 0700); err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	info, err := root.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("%s must be a real directory", path)
+	}
+	directory, err := root.Open(path)
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Chmod(0700), directory.Close())
 }

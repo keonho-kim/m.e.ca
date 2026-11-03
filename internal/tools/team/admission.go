@@ -1,0 +1,64 @@
+// Purpose: Map native targets and wait notices to the shared workspace access boundary.
+// Pattern: Tool-to-resource adapter.
+// Usage: Executor.Prepare reserves access before constructing large local candidates.
+// Related: internal/tools/team/executor.go, internal/tools/team/workspace/workspace.go.
+package team
+
+import (
+	"context"
+	"fmt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tools/team/workspace"
+	"path/filepath"
+)
+
+func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.Lease, error) {
+	switch call.Name {
+	case "wait_command", "cancel_command", "list_command_runs", "read_image":
+		return nil, nil
+	}
+	shell := call.Name == "execute_command"
+	if shell {
+		for _, command := range e.Local.CommandActivity() {
+			if command.Status == "running" {
+				return nil, fmt.Errorf("a command is still active; wait_command or cancel_command before starting another")
+			}
+		}
+	}
+	var paths []string
+	if !shell {
+		var err error
+		paths, err = e.paths(call)
+		if err != nil {
+			return nil, err
+		}
+	}
+	waiting := func() error {
+		return e.Peer.Emit(runrecord.Event{Kind: "tool_waiting", CallID: call.ID, Call: &call, Text: "Waiting for shared workspace access"})
+	}
+	if shell {
+		return e.Workspace.ReserveShell(ctx, waiting)
+	}
+	return e.Workspace.ReserveFiles(ctx, paths, waiting)
+}
+
+func (e *Executor) paths(call toolapi.Call) ([]string, error) {
+	input, err := toolapi.DisplayArgs(call.Arguments)
+	if err != nil {
+		return nil, err
+	}
+	paths := input.Paths
+	if input.Path != "" {
+		paths = append(paths, input.Path)
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("file operation has no target")
+	}
+	for i, path := range paths {
+		if !filepath.IsAbs(path) {
+			paths[i] = filepath.Join(e.Project, path)
+		}
+	}
+	return paths, nil
+}

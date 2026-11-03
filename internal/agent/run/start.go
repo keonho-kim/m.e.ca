@@ -56,6 +56,20 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	}
 	originalEmit := emit
 	emit = func(event runrecord.Event) error {
+		if references, ok := r.Journal.(interface {
+			LatestEventReference(context.Context) (*runrecord.EventReference, error)
+		}); ok {
+			switch event.Kind {
+			case "tool_succeeded", "tool_failed", "tool_interrupted", "command_finished", "denied":
+				flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+				reference, err := references.LatestEventReference(flush)
+				cancel()
+				if err != nil {
+					return errors.Join(errRuntimeRecord, err)
+				}
+				event.Reference = reference
+			}
+		}
 		if err := originalEmit(event); err != nil {
 			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
 				return ctx.Err()
@@ -77,6 +91,9 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	definitions := imageDefinitions(r.Tools.Definitions(), r.ImageInput)
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
 	s.usage.begin(limits)
+	if !r.Deadline.IsZero() {
+		s.usage.deadline = r.Deadline
+	}
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
 	id := "run_" + rand.Text()

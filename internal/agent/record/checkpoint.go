@@ -35,7 +35,7 @@ type Checkpoint struct {
 	Phase              string `json:"phase"`
 	Iteration          int    `json:"iteration"`
 	ModelCalls         int    `json:"model_calls"`
-	InstructionsDigest string `json:"instructions_digest"`
+	InstructionsDigest string `json:"instructions_digest,omitempty"`
 	Tool               string `json:"tool,omitempty"`
 	Observation        string `json:"observation,omitempty"`
 }
@@ -58,7 +58,7 @@ func (c Checkpoint) Check() error {
 	if c.ChangeRevision < 0 {
 		return fmt.Errorf("invalid change revision")
 	}
-	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || len(c.InstructionsDigest) != 64 {
+	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || (c.InstructionsDigest != "" && len(c.InstructionsDigest) != 64) {
 		return fmt.Errorf("invalid execution checkpoint")
 	}
 	switch c.Status {

@@ -11,9 +11,18 @@ import (
 
 var errModelBudget = errors.New("model call budget exhausted")
 
-func (s *execution) modelCall() bool { return s.usage.model(s.limits.MaxModelCalls) }
+func (s *execution) modelCall() bool {
+	if !s.usage.model(s.limits.MaxModelCalls) {
+		return false
+	}
+	return s.runner.AdmitModel == nil || s.runner.AdmitModel()
+}
 
 func (s *execution) prepareDecision(ctx context.Context) (bool, error) {
+	if s.result.Departed {
+		s.checkpoint.Status = "answered"
+		return true, nil
+	}
 	if err := s.checkTimeBudget(ctx); err != nil {
 		if ctx.Err() != nil {
 			return true, ctx.Err()

@@ -5,9 +5,15 @@
 
 package sqlite
 
-const schemaVersion = 24
+const schemaVersion = 26
 
 const schema = `
+CREATE TABLE team_members (
+ ordinal INTEGER PRIMARY KEY CHECK(ordinal>=0),
+ agent_id TEXT NOT NULL UNIQUE,
+ session_id TEXT NOT NULL UNIQUE,
+ summary TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE sessions (
  singleton INTEGER PRIMARY KEY DEFAULT 1 CHECK(singleton=1),
  id TEXT NOT NULL UNIQUE,
@@ -15,6 +21,8 @@ CREATE TABLE sessions (
  display_root TEXT NOT NULL,
  created_at TEXT NOT NULL,
  updated_at TEXT NOT NULL,
+ team_enabled INTEGER NOT NULL DEFAULT 0,
+ context_cursor INTEGER NOT NULL DEFAULT 0,
  selection BLOB,
  summary TEXT
 );

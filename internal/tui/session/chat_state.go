@@ -12,6 +12,7 @@ import (
 )
 
 type chatState struct {
+	details                         detailRead
 	toolActivity                    toolActivity
 	chatVisible, selectedTranscript []viewport.Line
 	historyLoading, historyEnd      bool

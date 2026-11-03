@@ -11,6 +11,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -20,7 +21,12 @@ import (
 
 type Runner struct {
 	ImageInput               bool
+	Resume                   bool
 	PollSteering             func() []string
+	PollContext              func(context.Context) (ContextBatch, error)
+	OnAnswer                 func(context.Context, string) (bool, error)
+	AdmitModel               func() bool
+	Deadline                 time.Time
 	Inference                *inference.Settings
 	PreviousRun              *runrecord.Checkpoint
 	ReasoningEffort          string
@@ -42,6 +48,7 @@ type Runner struct {
 	NewStreamMask     func() func(string, bool) string
 }
 type Result struct {
+	Departed       bool
 	End            work.End
 	Facts          toolapi.Facts
 	Text           string

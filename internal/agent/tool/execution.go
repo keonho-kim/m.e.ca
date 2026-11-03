@@ -46,6 +46,8 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
+	// Depart closes a cooperative session after its native result is durable.
+	Depart bool `json:"-"`
 	Images []media.Image
 	// Original captures are committed on events, never in small result archives.
 	Capture  json.RawMessage `json:"-"`

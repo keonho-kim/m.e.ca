@@ -31,7 +31,10 @@ type Candidate struct {
 }
 
 func BindCandidate(call Call, files []FileDelta) Candidate {
-	return Candidate{CallID: call.ID, Binding: fmt.Sprintf("%x", sha256.Sum256(append([]byte(call.Name+"\n"), call.Arguments...))), Files: files}
+	digest := sha256.New()
+	digest.Write([]byte(call.Name + "\n"))
+	digest.Write(call.Arguments)
+	return Candidate{CallID: call.ID, Binding: fmt.Sprintf("%x", digest.Sum(nil)), Files: files}
 }
 func (c Candidate) Check(call Call) error {
 	if err := call.Check(); err != nil {

@@ -14,6 +14,9 @@ import (
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
+	Agent           string               `json:"agent,omitempty"`
+	Final           bool                 `json:"final,omitempty"`
+	Reference       *EventReference      `json:"reference,omitempty"`
 	ApprovalSource  string               `json:"approval_source,omitempty"`
 	Capture         json.RawMessage      `json:"capture,omitempty"`
 	RunID           string               `json:"run_id,omitempty"`
@@ -45,4 +48,10 @@ type Generation struct {
 type Entry struct {
 	Message *modelapi.Message
 	Event   *Event
+}
+
+// EventReference points to one committed original in the current or a private team session.
+type EventReference struct {
+	Session  string `json:"session"`
+	Sequence int64  `json:"sequence"`
 }

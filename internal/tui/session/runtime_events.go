@@ -11,6 +11,10 @@ import (
 )
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
+	if e.Agent != "" {
+		a.receiveTeam(e)
+		return
+	}
 	switch e.Kind {
 	case "image_input_unavailable":
 		a.connection.rejectImages()

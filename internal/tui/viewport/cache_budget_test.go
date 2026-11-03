@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestLargeMarkdownDropsDerivedCacheAfterWindow(t *testing.T) {
+func TestLargeMarkdownKeepsCompactRowsWithinBudget(t *testing.T) {
 	text := strings.Repeat("**item** `value`\n\n", 60000) + "last value"
 	block := Block{Text: text, Markdown: true}
 	count := block.Count(80)
@@ -18,7 +18,11 @@ func TestLargeMarkdownDropsDerivedCacheAfterWindow(t *testing.T) {
 		t.Fatal("large Markdown lost visible content")
 	}
 	if block.layout.parsed != nil || block.layout.metrics != nil || block.stream.RetainedBytes() != 0 {
-		t.Fatal("oversized derived cache remained resident")
+		t.Fatal("full rendered arrays remained resident")
+	}
+	packed := block.layout.packed
+	if packed == nil || block.cacheBytes() > displayCacheBudget {
+		t.Fatal("completed document did not keep a bounded compact cache")
 	}
 	if block.Count(80) != count || block.Text != text || len(block.layout.points) == 0 {
 		t.Fatal("eviction dropped source or sparse scroll index")
@@ -26,6 +30,13 @@ func TestLargeMarkdownDropsDerivedCacheAfterWindow(t *testing.T) {
 	rows = block.Window(80, 0, 2)
 	if len(rows) == 0 || !strings.Contains(rows[0].Text, "item") {
 		t.Fatal("evicted Markdown cannot be scrolled back")
+	}
+	if block.layout.packed != packed || block.layout.parsed != nil {
+		t.Fatal("scrolling reparsed the complete document")
+	}
+	block.releaseParsed()
+	if block.layout.packed != nil || block.cacheBytes() != 0 {
+		t.Fatal("released display retained compact rows")
 	}
 }
 
@@ -62,5 +73,22 @@ func TestLargeMarkdownSharesOneLiveDisplayBudget(t *testing.T) {
 	}
 	if rows := transcript.Window(0, 2); len(rows) == 0 || !strings.Contains(rows[0].Text, "Result") {
 		t.Fatal("evicted Thinking cannot be read again")
+	}
+}
+
+func TestLargeMarkdownCompletedBlocksShareCompactBudget(t *testing.T) {
+	text := strings.Repeat("**item** `value`\n\n", 25000) + "last value"
+	view := View{Follow: true}
+	view.AppendBlock(Block{Text: text, Markdown: true})
+	view.AppendBlock(Block{Text: text, Markdown: true})
+	first := view.Blocks[0].Count(80)
+	var transcript Transcript
+	transcript.Prepare(80, &view, nil)
+	if rows := transcript.Window(first-2, 4); len(rows) != 4 {
+		t.Fatal("visible boundary lost rows")
+	}
+	total := view.Blocks[0].cacheBytes() + view.Blocks[1].cacheBytes()
+	if total > displayCacheBudget || view.Blocks[0].layout.packed == nil {
+		t.Fatal("completed visible blocks were evicted before trying compact storage")
 	}
 }

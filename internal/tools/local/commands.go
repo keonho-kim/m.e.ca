@@ -21,8 +21,9 @@ func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
 	e.commands.Begin(ctx, deadline)
 	e.liveOutputs.clear()
 }
-func (e *Executor) StopCommands()                   { e.commands.End(); e.liveOutputs.clear() }
-func (e *Executor) CommandUpdates() <-chan struct{} { return e.commands.Updates() }
+func (e *Executor) StopCommands()                                  { e.commands.End(); e.liveOutputs.clear() }
+func (e *Executor) CommandUpdates() <-chan struct{}                { return e.commands.Updates() }
+func (e *Executor) CommandDone(id string) (<-chan struct{}, error) { return e.commands.Done(id) }
 func (e *Executor) activeCommands() bool {
 	for _, state := range e.commands.List() {
 		if state.Status == "running" {

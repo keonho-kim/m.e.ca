@@ -7,13 +7,16 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"io"
 )
 
-func (s *Store) Export(ctx context.Context, session string, output io.Writer) error {
+func (s *Store) Export(ctx context.Context, session string, output io.Writer) (resultErr error) {
+	pageTeam := teamPage{parent: s}
+	defer func() { resultErr = errors.Join(resultErr, pageTeam.close()) }()
 	encoder := json.NewEncoder(output)
 	var after int64
 	for {
@@ -25,12 +28,17 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 			return nil
 		}
 		payloads := pagePayloads{store: s, ctx: ctx}
+		pageTeam.payloads = &payloads
+		if err := pageTeam.prepare(ctx, page); err != nil {
+			return err
+		}
 		for i, stored := range page {
 			if err := payloads.include(i, stored.refs); err != nil {
 				return err
 			}
 		}
 		for i, stored := range page {
+			payloads.store = s
 			body, err := payloads.unpack(i, stored, nil)
 			if err != nil {
 				return err
@@ -39,6 +47,17 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) er
 				var event runrecord.Event
 				if err := json.Unmarshal(body, &event); err != nil {
 					return err
+				}
+				if event.Kind == "team_reference" {
+					pageTeam.index = i
+					event, err = pageTeam.resolve(ctx, event, false)
+					if err != nil {
+						return err
+					}
+					body, err = json.Marshal(event)
+					if err != nil {
+						return err
+					}
 				}
 				if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
 					full, err := s.runState(ctx, session, event.Checkpoint.ID)

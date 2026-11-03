@@ -12,6 +12,7 @@ type section struct {
 	start, skip, count int
 }
 type Transcript struct {
+	active                   []*Block
 	historyHead              *Block
 	historyRevision          uint64
 	historyLength            int
@@ -40,7 +41,7 @@ func (t *Transcript) Window(start, count int) []Line {
 	}
 	defer func() {
 		for _, block := range previous {
-			if !block.visible {
+			if !block.visible && !block.live {
 				block.releaseParsed()
 			}
 		}

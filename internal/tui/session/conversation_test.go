@@ -73,7 +73,7 @@ func TestConversationHintsScrollAndResize(t *testing.T) {
 			inputRow = y
 		}
 	}
-	if inputRow < 1 || !strings.Contains(screenLine(a.screen, inputRow-len(a.compose.commandHints), 32), "!model") {
+	if inputRow < 1 || !strings.Contains(screenLine(a.screen, max(1, inputRow-len(a.compose.commandHints)), 32), "!model") {
 		t.Fatal("editor and candidates not visible below token usage")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEscape, "", 0))
@@ -114,7 +114,7 @@ func TestConversationResumesToolTurns(t *testing.T) {
 	if err := a.loadHistory(); err != nil {
 		t.Fatal(err)
 	}
-	a.render()
+	settleVisibleDetails(t, a)
 	for y, text := range []string{"입력 0 · 출력 0 · 초당 토큰 —", "> inspect file", "", "에이전트", "", "명령 실행", "", "명령: cat README.md", "", "결과", "표준 출력: file inspected", "실행 성공", "", "file inspected", "", ""} {
 		if y == 0 {
 			got := screenLine(a.screen, 0, 80)

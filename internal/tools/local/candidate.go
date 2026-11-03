@@ -41,5 +41,10 @@ func (op *fileOperation) prepareChange(call toolapi.Call) error {
 			return err
 		}
 	}
-	return op.freezeCandidate(call, before, op.replacement)
+	if err := op.freezeCandidate(call, before, op.replacement); err != nil {
+		return err
+	}
+	// Execution owns the frozen bytes; decoded arguments are no longer needed.
+	op.input.Content, op.input.Edits = "", nil
+	return nil
 }

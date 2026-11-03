@@ -15,6 +15,7 @@ import (
 )
 
 type notice struct {
+	Detail          *detailResult
 	PreviewLayout   *previewLayoutResult
 	FileWatch       *watchResult
 	Stream          *streamNotice
@@ -49,6 +50,10 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.Detail != nil {
+		a.receiveToolDetail(n.Detail)
+		return
+	}
 	if n.PreviewLayout != nil {
 		a.receivePreviewLayout(n.PreviewLayout)
 		return

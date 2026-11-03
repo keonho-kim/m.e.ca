@@ -21,13 +21,13 @@ func TestPromptBootstrap(t *testing.T) {
 	}
 	directory := filepath.Join(home, ".meca")
 	entries, err := os.ReadDir(filepath.Join(directory, "prompts"))
-	if err != nil || len(entries) != 3 {
-		t.Fatalf("expected exactly three prompt files: %v %v", entries, err)
+	if err != nil || len(entries) != 2 {
+		t.Fatalf("expected two prompt profiles: %v %v", entries, err)
 	}
 	defaults := prompt.Defaults()
 	files := defaults.Files()
 	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
-		path := filepath.Join(directory, "prompts", name)
+		path := filepath.Join(directory, "prompts", "single", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {
 			t.Fatalf("%s: %v", name, err)
@@ -40,7 +40,7 @@ func TestPromptBootstrap(t *testing.T) {
 			t.Fatalf("prompt permissions: %v %v", info, err)
 		}
 	}
-	path := filepath.Join(directory, "prompts/system.md")
+	path := filepath.Join(directory, "prompts/single/system.md")
 	if err := os.WriteFile(path, []byte("# My prompt\nKeep responses concise.\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestDevelopmentPromptEditsSurviveLoad(t *testing.T) {
 	}
 	directory := filepath.Join(home, ".meca")
 	for _, name := range []string{"development.md"} {
-		if err := os.WriteFile(filepath.Join(directory, "prompts", name), []byte("Custom "+name), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(directory, "prompts", "single", name), []byte("Custom "+name), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

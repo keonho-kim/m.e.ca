@@ -28,7 +28,8 @@ func resolve(current string, edit Edit, format string) (replacement, error) {
 	if start < 0 {
 		return replacement{}, &toolapi.Failure{Code: "text_not_found", Detail: "old_text does not occur in the current source", Next: "Read the affected source and provide its exact old_text. Nothing was applied."}
 	}
-	if strings.LastIndex(current, edit.OldText) != start {
+	// Starting one byte later also detects overlapping duplicate matches.
+	if strings.Contains(current[start+1:], edit.OldText) {
 		return replacement{}, &toolapi.Failure{Code: "ambiguous_text", Detail: "old_text occurs more than once", Next: "Include enough unchanged surrounding source to identify one occurrence. Nothing was applied."}
 	}
 	text := edit.NewText

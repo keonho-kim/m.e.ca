@@ -39,6 +39,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 	proposal.Required = proposal.Required || proposal.UserRequired
 	if proposal.Candidate != nil {
 		if err := proposal.Candidate.Check(call); err != nil {
+			toolapi.Release(op)
 			return nil, outcome, err
 		}
 	}
@@ -54,9 +55,14 @@ func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, app
 	return s.approveExecution(ctx, ready, approve, emit)
 }
 
-func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
+func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (result *readyExecution, outcome toolapi.Result, resultErr error) {
+	defer func() {
+		if resultErr != nil {
+			toolapi.Release(ready.operation)
+		}
+	}()
 	call, proposal := ready.call, ready.proposal
-	outcome := toolapi.Result{Target: proposal.Target}
+	outcome = toolapi.Result{Target: proposal.Target}
 	var err error
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err

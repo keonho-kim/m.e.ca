@@ -1,10 +1,11 @@
 // Purpose: Separate sed invocation options, programs and in-place targets before applying shared path policy.
 // Pattern: Command-specific argument parser.
 // Usage: Shell effect inspection dispatches sed and gsed invocations here.
-// Related: internal/policy/command/sed_program.go, internal/policy/command/effects.go.
+// Related: internal/policy/command/sedscript/program.go, internal/policy/command/effects.go.
 package command
 
 import (
+	"github.com/keonho-kim/meca/internal/policy/command/sedscript"
 	"strings"
 
 	"mvdan.cc/sh/v3/syntax"
@@ -107,17 +108,17 @@ func (a *analyzer) sed(args []word, s *state) {
 			a.ask("Dynamic sed program or target requires approval")
 			continue
 		}
-		effects := sedProgram(source.text)
-		if effects.unknown {
+		effects := sedscript.Analyze(source.text)
+		if effects.Unknown {
 			a.ask("Unrecognized sed program requires approval")
 		}
-		if effects.dynamic {
+		if effects.Dynamic {
 			a.ask("Sed executes runtime-generated commands; approval required")
 		}
-		for _, path := range effects.writes {
+		for _, path := range effects.Writes {
 			a.target(word{text: path, known: true}, s, false)
 		}
-		for _, code := range effects.commands {
+		for _, code := range effects.Commands {
 			a.parse(code, syntax.LangPOSIX, s.clone())
 		}
 	}

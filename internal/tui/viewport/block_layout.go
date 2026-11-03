@@ -23,6 +23,7 @@ type blockLayout struct {
 	ready                          bool
 	points                         []blockPoint
 	parsed                         []markdown.Line
+	packed                         *markdown.Packed
 	metrics                        []rowMetrics
 	source                         string
 	markdown                       bool
@@ -41,9 +42,16 @@ func (b *Block) prepare(width int) {
 	}
 	previous := *l
 	*l = blockLayout{key: key, ready: true}
-	l.source, l.markdown = b.Text, b.Markdown && len(b.Text) <= markdown.MaxParseBytes
+	l.source = b.Text
+	if b.Markdown || b.Thinking {
+		// Chat displays at most two boundary blanks. Keep the original block
+		// intact, but never allocate Markdown rows for blanks that will be hidden.
+		end := len(strings.TrimRight(l.source, "\n"))
+		l.source = l.source[:min(len(l.source), end+maxBoundaryBlanks)]
+	}
+	l.markdown = b.Markdown && len(l.source) <= markdown.MaxParseBytes
 	if b.Markdown && !l.markdown {
-		l.source = markdown.SafeText(b.Text)
+		l.source = markdown.SafeText(l.source)
 	}
 	if width < 1 || strings.TrimSpace(b.Text) == "" {
 		b.stream = markdown.Stream{}

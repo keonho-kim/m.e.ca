@@ -149,6 +149,15 @@ func (r *Registry) lookup(id string) (*job, error) {
 	return j, nil
 }
 
+// Done closes after process exit, output archival and capture cleanup.
+func (r *Registry) Done(id string) (<-chan struct{}, error) {
+	j, err := r.lookup(id)
+	if err != nil {
+		return nil, err
+	}
+	return j.done, nil
+}
+
 func (r *Registry) Wait(ctx context.Context, id string, duration time.Duration) (State, error) {
 	if err := ctx.Err(); err != nil {
 		return State{}, err

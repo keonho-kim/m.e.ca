@@ -1,36 +1,37 @@
 // Purpose: Recognize sed script effects without mistaking patterns, replacement text or appended text for commands.
 // Pattern: Bounded script scanner.
 // Usage: The sed invocation parser applies returned write paths and embedded shell programs.
-// Related: internal/policy/command/sed.go, internal/policy/command/sed_address.go.
-package command
+// Related: internal/policy/command/sed.go, internal/policy/command/sedscript/address.go.
+package sedscript
 
 import "strings"
 
-type sedEffects struct {
-	writes, commands []string
-	dynamic, unknown bool
+type Effects struct {
+	Writes, Commands []string
+	Dynamic, Unknown bool
 }
 
-type sedScanner struct {
+type scanner struct {
 	text    string
 	index   int
-	effects sedEffects
+	effects Effects
 }
 
-func sedProgram(text string) sedEffects {
-	p := sedScanner{text: text}
+// Analyze reports file writes and embedded execution without running the program.
+func Analyze(text string) Effects {
+	p := scanner{text: text}
 	for p.index < len(p.text) {
 		p.skip(" \t\r\n;}")
 		if p.index == len(p.text) {
 			break
 		}
 		if !p.addresses() {
-			p.effects.unknown = true
+			p.effects.Unknown = true
 			break
 		}
 		p.skip(" \t!")
 		if p.index >= len(p.text) {
-			p.effects.unknown = true
+			p.effects.Unknown = true
 			break
 		}
 		action := p.text[p.index]
@@ -43,7 +44,7 @@ func sedProgram(text string) sedEffects {
 			p.substitute()
 		case 'y':
 			if p.index >= len(p.text) {
-				p.effects.unknown = true
+				p.effects.Unknown = true
 				break
 			}
 			delimiter := p.text[p.index]
@@ -51,21 +52,21 @@ func sedProgram(text string) sedEffects {
 			// Consume the source and destination alphabets in order.
 			for range 2 {
 				if !p.delimited(delimiter) {
-					p.effects.unknown = true
+					p.effects.Unknown = true
 					break
 				}
 			}
 		case 'w', 'W':
 			if target := strings.TrimSpace(p.restLine()); target != "" {
-				p.effects.writes = append(p.effects.writes, target)
+				p.effects.Writes = append(p.effects.Writes, target)
 			} else {
-				p.effects.unknown = true
+				p.effects.Unknown = true
 			}
 		case 'e':
 			if code := strings.TrimSpace(p.restLine()); code != "" {
-				p.effects.commands = append(p.effects.commands, code)
+				p.effects.Commands = append(p.effects.Commands, code)
 			} else {
-				p.effects.dynamic = true
+				p.effects.Dynamic = true
 			}
 		case 'r', 'R':
 			p.restLine()
@@ -81,24 +82,24 @@ func sedProgram(text string) sedEffects {
 		case 'v':
 			p.restLine()
 		default:
-			p.effects.unknown = true
+			p.effects.Unknown = true
 		}
-		if p.effects.unknown {
+		if p.effects.Unknown {
 			break
 		}
 	}
 	return p.effects
 }
 
-func (p *sedScanner) substitute() {
+func (p *scanner) substitute() {
 	if p.index >= len(p.text) {
-		p.effects.unknown = true
+		p.effects.Unknown = true
 		return
 	}
 	delimiter := p.text[p.index]
 	p.index++
 	if delimiter == '\n' || delimiter == '\\' || !p.delimited(delimiter) || !p.delimited(delimiter) {
-		p.effects.unknown = true
+		p.effects.Unknown = true
 		return
 	}
 	for p.index < len(p.text) {
@@ -111,21 +112,21 @@ func (p *sedScanner) substitute() {
 		case strings.ContainsRune("gpiImM \t\r", rune(flag)) || flag >= '0' && flag <= '9':
 		case flag == 'w':
 			if path := strings.TrimSpace(p.restLine()); path != "" {
-				p.effects.writes = append(p.effects.writes, path)
+				p.effects.Writes = append(p.effects.Writes, path)
 			} else {
-				p.effects.unknown = true
+				p.effects.Unknown = true
 			}
 			return
 		case flag == 'e':
-			p.effects.dynamic = true
+			p.effects.Dynamic = true
 		default:
-			p.effects.unknown = true
+			p.effects.Unknown = true
 			return
 		}
 	}
 }
 
-func (p *sedScanner) delimited(delimiter byte) bool {
+func (p *scanner) delimited(delimiter byte) bool {
 	for p.index < len(p.text) {
 		ch := p.text[p.index]
 		p.index++
@@ -142,13 +143,13 @@ func (p *sedScanner) delimited(delimiter byte) bool {
 	return false
 }
 
-func (p *sedScanner) skip(characters string) {
+func (p *scanner) skip(characters string) {
 	for p.index < len(p.text) && strings.ContainsRune(characters, rune(p.text[p.index])) {
 		p.index++
 	}
 }
 
-func (p *sedScanner) restLine() string {
+func (p *scanner) restLine() string {
 	start := p.index
 	for p.index < len(p.text) && p.text[p.index] != '\n' {
 		p.index++
@@ -156,7 +157,7 @@ func (p *sedScanner) restLine() string {
 	return p.text[start:p.index]
 }
 
-func (p *sedScanner) literalText() {
+func (p *scanner) literalText() {
 	p.skip(" \t")
 	if p.index+1 < len(p.text) && p.text[p.index] == '\\' && p.text[p.index+1] == '\n' {
 		p.index += 2

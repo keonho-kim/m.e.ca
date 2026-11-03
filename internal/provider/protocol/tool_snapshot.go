@@ -53,7 +53,7 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 	for _, definition := range definitions {
 		retained += 128 + len(definition.Name) + len(definition.Description) + parameterBytes(definition.Parameters)
 	}
-	if e != nil && retained <= toolCacheCapacity {
+	if e != nil && retained <= min(toolCacheCapacity, e.limit()) {
 		owned := slices.Clone(definitions)
 		for i := range owned {
 			owned[i].Parameters = copyParameters(owned[i].Parameters)

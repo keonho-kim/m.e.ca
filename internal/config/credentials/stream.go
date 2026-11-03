@@ -13,12 +13,22 @@ import (
 func (v *Vault) NewStreamMask() func(string, bool) string {
 	var output strings.Builder
 	consumed, keyCount := 0, 0
+	changed := false
 	return func(text string, final bool) string {
 		v.mu.RLock()
 		defer v.mu.RUnlock()
 		if keyCount != len(v.keys) || consumed > len(text) {
 			output.Reset()
 			consumed, keyCount = 0, len(v.keys)
+			changed = false
+		}
+		// Clean snapshots keep sharing the caller's immutable string. A mask,
+		// removed control or invalid rune takes ownership of a sanitized copy.
+		change := func() {
+			if !changed {
+				output.WriteString(text[:consumed])
+				changed = true
+			}
 		}
 		for consumed < len(text) {
 			rest := text[consumed:]
@@ -34,11 +44,13 @@ func (v *Vault) NewStreamMask() func(string, bool) string {
 				break
 			}
 			if matched > 0 {
+				change()
 				output.WriteString("[redacted]")
 				consumed += matched
 				continue
 			}
 			if partial {
+				change()
 				output.WriteString("[redacted]")
 				consumed = len(text)
 				break
@@ -47,10 +59,20 @@ func (v *Vault) NewStreamMask() func(string, bool) string {
 				break
 			}
 			r, size := utf8.DecodeRuneInString(rest)
-			if !unicode.IsControl(r) || r == '\n' || r == '\t' {
-				output.WriteRune(r)
+			if unicode.IsControl(r) && r != '\n' && r != '\t' {
+				change()
+			} else {
+				if r == utf8.RuneError && size == 1 {
+					change()
+				}
+				if changed {
+					output.WriteRune(r)
+				}
 			}
 			consumed += size
+		}
+		if !changed {
+			return text[:consumed]
 		}
 		return output.String()
 	}

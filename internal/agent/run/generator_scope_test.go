@@ -61,3 +61,21 @@ func TestGeneratorScope(t *testing.T) {
 		})
 	}
 }
+
+func TestGeneratorScopeSurvivesPublicAnswerBoundary(t *testing.T) {
+	g := &scopedGenerator{base: &generator{replies: []string{"first public contribution", "final answer"}}}
+	r := fixture(g.base, &executor{}, &journal{})
+	r.Generator = g
+	answers := 0
+	r.OnAnswer = func(_ context.Context, text string) (bool, error) {
+		answers++
+		if !g.active || text == "" {
+			t.Fatal("private run resources closed at public answer")
+		}
+		return answers == 1, nil
+	}
+	result, err := r.Run(context.Background(), "contribute", approve, emit)
+	if err != nil || result.Text != "final answer" || answers != 2 || g.created != 1 || g.released != 1 {
+		t.Fatalf("result=%+v answers=%d scopes=%d/%d error=%v", result, answers, g.created, g.released, err)
+	}
+}

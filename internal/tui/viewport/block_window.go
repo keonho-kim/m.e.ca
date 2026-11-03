@@ -21,6 +21,9 @@ func (b *Block) Window(width, start, count int) []Line {
 			b.retainParsedLine(row)
 		}
 	}
+	if l.markdown && b.cacheBytes() > displayCacheBudget {
+		b.compactMarkdown()
+	}
 	start = max(0, start) + l.trim
 	end := min(l.total, start+count)
 	at := sort.Search(len(l.points), func(i int) bool { return l.points[i].row > start }) - 1
@@ -36,14 +39,24 @@ func (b *Block) Window(width, start, count int) []Line {
 		return row < end
 	}
 	if l.markdown {
-		for i := point.source; i < len(l.parsed) && row < end; i++ {
+		for i := point.source; i < l.markdownLines() && row < end; i++ {
 			offset, prefix := 0, ""
 			if i == point.source {
 				offset, prefix = point.offset, point.prefix
 			}
-			for wrapped := range l.parsed[i].RowsFrom(width, offset, prefix) {
-				if !appendRow(Line{Text: wrapped.Text, Spans: wrapped.Spans, Copy: wrapped.Copy}) {
-					break
+			// Concrete iterators let the compiler keep normal row wrapping on
+			// the stack; an indirect representation call allocates per row.
+			if l.packed != nil {
+				for wrapped := range l.packed.RowsFrom(i, width, offset, prefix) {
+					if !appendRow(Line{Text: wrapped.Text, Spans: wrapped.Spans, Copy: wrapped.Copy}) {
+						break
+					}
+				}
+			} else {
+				for wrapped := range l.parsed[i].RowsFrom(width, offset, prefix) {
+					if !appendRow(Line{Text: wrapped.Text, Spans: wrapped.Spans, Copy: wrapped.Copy}) {
+						break
+					}
 				}
 			}
 		}
@@ -58,9 +71,9 @@ func (b *Block) Window(width, start, count int) []Line {
 	if b.Centered {
 		centerLines(out, width)
 	}
-	// The visible rows belong to the transcript window. Large immutable blocks
-	// need only their sparse index between scrolls, while live blocks retain the
-	// incremental prefix within the transcript's shared display-cache budget.
+	// The visible rows belong to the transcript window. Completed blocks keep
+	// compact rows when they fit; otherwise sparse indexes support restoration.
+	// Live blocks keep incremental prefixes within the same shared budget.
 	if !b.live {
 		if b.cacheBytes() > displayCacheBudget {
 			b.releaseParsed()

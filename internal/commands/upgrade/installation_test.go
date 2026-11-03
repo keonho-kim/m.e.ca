@@ -45,7 +45,7 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 	}
 	for pass := 0; pass < 2; pass++ {
 		for _, name := range []string{"system.md", "development.md", "compaction.md"} {
-			if err := os.WriteFile(filepath.Join(home, ".meca/prompts", name), []byte("user edit"), 0600); err != nil {
+			if err := os.WriteFile(filepath.Join(home, ".meca/prompts/single", name), []byte("user edit"), 0600); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -55,7 +55,7 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 		}
 		defaults := prompt.Defaults()
 		for name, expected := range defaults.Files() {
-			got, err := os.ReadFile(filepath.Join(home, ".meca/prompts", name))
+			got, err := os.ReadFile(filepath.Join(home, ".meca/prompts/single", name))
 			if err != nil || string(got) != *expected {
 				t.Fatalf("upgrade did not refresh %s: %v", name, err)
 			}

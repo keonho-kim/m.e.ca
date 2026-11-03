@@ -18,6 +18,7 @@ func (s *execution) execute(ctx context.Context, v validatedCall, approve Approv
 	if err != nil {
 		return outcome, errors.Join(err, s.recordRejected(ctx, v, outcome, err, emit))
 	}
+	defer toolapi.Release(ready.operation)
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	if err := s.startExecution(ctx, ready, emit); err != nil {

@@ -19,6 +19,11 @@ func (b *Block) indexMarkdown(previous blockLayout, width int) (firstContent, la
 		reused = min(b.stream.ReusedRows(), len(previous.metrics), len(l.parsed))
 	}
 	l.metrics = previous.metrics[:reused]
+	if !b.live {
+		// Completed windows resume from sparse points; only a live prefix
+		// needs one reusable metric for every rendered logical row.
+		l.metrics = nil
+	}
 	l.points = previous.points[:0]
 	if reused > 0 {
 		kept := sort.Search(len(previous.points), func(i int) bool { return previous.points[i].source >= reused })
@@ -56,7 +61,9 @@ func (b *Block) indexMarkdown(previous blockLayout, width int) (firstContent, la
 			}
 			metric.count++
 		}
-		l.metrics = append(l.metrics, metric)
+		if b.live {
+			l.metrics = append(l.metrics, metric)
+		}
 		if metric.leading < metric.count {
 			if firstContent < 0 {
 				firstContent = l.total + metric.leading

@@ -43,6 +43,9 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		}
 	}
 	for start := 0; start < len(calls); {
+		if s.result.Departed {
+			return s.skipCalls(ctx, calls[start:], "The session has closed; these calls did not execute.")
+		}
 		plan, err := s.planWave(ctx, calls, start)
 		if err != nil {
 			return errors.Join(s.skipCalls(ctx, calls[start:], err.Error()), fatalBatchError(ctx, err))

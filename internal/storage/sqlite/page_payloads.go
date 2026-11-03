@@ -30,11 +30,19 @@ func (p *pagePayloads) include(index int, refsBody []byte) error {
 }
 
 func (p *pagePayloads) unpack(index int, record storedRecord, fields map[string]bool) ([]byte, error) {
-	p.index = index
-	return content.Restore(record.body, record.refs, fields, p.load)
+	return p.unpackWith(index, record, fields, func(id string) (json.RawMessage, error) {
+		return p.store.payload(p.ctx, id)
+	})
 }
 
-func (p *pagePayloads) load(id string) (json.RawMessage, error) {
+func (p *pagePayloads) unpackWith(index int, record storedRecord, fields map[string]bool, read func(string) (json.RawMessage, error)) ([]byte, error) {
+	p.index = index
+	return content.Restore(record.body, record.refs, fields, func(id string) (json.RawMessage, error) {
+		return p.load(id, read)
+	})
+}
+
+func (p *pagePayloads) load(id string, read func(string) (json.RawMessage, error)) (json.RawMessage, error) {
 	if err := p.ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -42,7 +50,7 @@ func (p *pagePayloads) load(id string) (json.RawMessage, error) {
 	body := cached
 	if body == nil {
 		var err error
-		body, err = p.store.payload(p.ctx, id)
+		body, err = read(id)
 		if err != nil {
 			return nil, err
 		}
