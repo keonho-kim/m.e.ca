@@ -14,10 +14,14 @@ import (
 	_ "modernc.org/sqlite"
 	"net/url"
 	"os"
+	"sync"
 	"sync/atomic"
 )
 
 type Store struct {
+	closeOnce   sync.Once
+	closeErr    error
+	teamContent teamContentCache
 	latestEvent atomic.Int64
 	room        *Store
 	codec       recordcontent.Codec
@@ -27,7 +31,16 @@ type Store struct {
 }
 
 func (s *Store) Session() sessionstate.Session { return s.session }
-func (s *Store) Close() error                  { return errors.Join(s.db.Close(), s.codec.Close()) }
+func (s *Store) Close() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = errors.Join(s.db.Close(), s.codec.Close())
+		if s.room != nil {
+			s.room.teamContent.release()
+		}
+		s.teamContent.clear()
+	})
+	return s.closeErr
+}
 
 func connect(ctx context.Context, path string, readOnly bool) (*sql.DB, error) {
 	if err := ctx.Err(); err != nil {

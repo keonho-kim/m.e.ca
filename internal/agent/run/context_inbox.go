@@ -37,7 +37,12 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	entries := make([]runrecord.Entry, len(batch.Messages))
 	for i := range batch.Messages {
 		message := &batch.Messages[i]
-		message.Content = s.runner.Redact(message.Content)
+		clean := s.runner.Redact(message.Content)
+		if clean != message.Content {
+			// A sanitized local observation must not reference different original bytes.
+			message.ID += "#local"
+		}
+		message.Content = clean
 		message.ModelID, message.ProviderID = s.runner.Model, s.runner.Provider
 		if err := message.Check(); err != nil {
 			return false, err

@@ -37,6 +37,11 @@ func (a *app) startRequest(input composer.Request) {
 	a.decision = make(chan bool, 1)
 	steering := make(chan composer.Request, 16)
 	a.compose.steering = steering
+	var steeringReady chan struct{}
+	if a.team.active {
+		steeringReady = make(chan struct{}, 1)
+	}
+	a.compose.steeringReady = steeringReady
 	reader, settings := a.opts.Files, a.settings
 	exists := func(ctx context.Context, path string) bool {
 		_, err := reader.Reference(ctx, settings, path)
@@ -45,7 +50,8 @@ func (a *app) startRequest(input composer.Request) {
 	options := agentrequest.Options{
 		Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
 		Generator: a.connection.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
-		LoadPrompts: a.opts.LoadPrompts,
+		LoadPrompts:   a.opts.LoadPrompts,
+		SteeringReady: steeringReady,
 		PollSteering: func() []string {
 			var out []string
 			for {

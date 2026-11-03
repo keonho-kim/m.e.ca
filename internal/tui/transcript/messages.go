@@ -12,8 +12,9 @@ import (
 )
 
 type Formatter struct {
-	Language locale.Language
-	Redact   func(string) string
+	Language         locale.Language
+	Redact           func(string) string
+	RedactionVersion func() int
 }
 
 func (f Formatter) Message(m modelapi.Message) []viewport.Block {

@@ -38,7 +38,7 @@ func (s *Store) TeamMember(ctx context.Context, id string) (teamidentity.Member,
 	}
 	member, err := readMember(s.db.QueryRowContext(ctx, "SELECT agent_id,session_id,summary FROM team_members WHERE agent_id=?", id))
 	if err == sql.ErrNoRows {
-		return member, fmt.Errorf("unknown peer %q; use list_friends", id)
+		return member, fmt.Errorf("unknown peer %q; use list_team_members", id)
 	}
 	return member, err
 }

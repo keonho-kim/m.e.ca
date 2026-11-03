@@ -20,6 +20,7 @@ func (s *Store) OpenTeamAgent(ctx context.Context, id string) (*Store, error) {
 	child, err := sessions.Open(ctx, s.session.ProjectRoot, id)
 	if err == nil {
 		child.room = s
+		s.teamContent.acquire()
 	}
 	return child, err
 }

@@ -11,10 +11,12 @@ import (
 )
 
 type Arguments struct {
-	Message   string `json:"message"`
-	Agent     string `json:"agent_id"`
-	AfterPeer string `json:"after_peer"`
-	After     int64  `json:"after"`
+	Message     string   `json:"message"`
+	Member      string   `json:"member_name"`
+	AfterMember string   `json:"after_member"`
+	Summary     string   `json:"summary"`
+	Paths       []string `json:"paths"`
+	After       int64    `json:"after"`
 }
 
 func Parse(call toolapi.Call) (Arguments, error) {

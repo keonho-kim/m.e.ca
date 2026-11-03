@@ -42,7 +42,7 @@ func teamStorage(t *testing.T) (*Store, *Store) {
 func TestTeamStorageReferencesPublicBodyAndAuthenticatesIt(t *testing.T) {
 	root, child := teamStorage(t)
 	ctx := context.Background()
-	message, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "agent-a", Text: strings.Repeat("shared result ", 12000)})
+	message, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "Hana", Text: strings.Repeat("shared result ", 12000)})
 	if err != nil {
 		t.Fatal(err)
 	}

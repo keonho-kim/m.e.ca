@@ -12,7 +12,7 @@ import (
 )
 
 func TestPeerConversationRetainsPlainAttribution(t *testing.T) {
-	peer := (channel.Message{Sequence: 4, From: "agent-b", Text: "제가 api/routes를 맡겠습니다.\n저장소 인터페이스를 알려주세요."}).Context()
+	peer := (channel.Message{Sequence: 4, From: "Ren", Text: "제가 api/routes를 맡겠습니다.\n저장소 인터페이스를 알려주세요."}).Context()
 	projected, err := conversationMessage(peer, false)
 	if err != nil || projected.Role != "user" || projected.Content != peer.Content {
 		t.Fatalf("peer speech was wrapped or lost its sender: %+v %v", projected, err)
@@ -27,7 +27,7 @@ func TestPeerConversationRetainsPlainAttribution(t *testing.T) {
 
 func TestPeerMarkerDoesNotReclassifyUserOrOrdinaryNotes(t *testing.T) {
 	for _, original := range []modelapi.Message{
-		{Role: "user", ID: "peer:agent-b/4", Content: "A real user request"},
+		{Role: "user", ID: "peer:Ren/4", Content: "A real user request"},
 		{Role: "system", Content: "An ordinary execution observation"},
 	} {
 		projected, err := conversationMessage(original, false)

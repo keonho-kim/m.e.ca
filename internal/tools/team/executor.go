@@ -25,20 +25,25 @@ type Local interface {
 	Close() error
 }
 type Executor struct {
-	Local     Local
-	Peer      *team.Peer
-	Workspace *workspace.Access
-	Project   string
-	mu        sync.Mutex
-	shell     *workspace.Lease
-	commands  sync.WaitGroup
+	Local        Local
+	Peer         *team.Peer
+	Workspace    *workspace.Access
+	Project      string
+	mu           sync.Mutex
+	shell        *workspace.Lease
+	commands     sync.WaitGroup
+	commandPaths map[string][]string
 }
 
 func (e *Executor) Definitions() []toolapi.Definition {
 	definitions := e.Local.Definitions()
 	for i := range definitions {
+		switch definitions[i].Name {
+		case "write_file", "edit_file", "create_directory":
+			definitions[i].Description += " Declare the target files or subdirectories with set_work before changing them. Respect the named teammate's ownership and inspect newer relevant changes before retrying a conflict."
+		}
 		if definitions[i].Name == "execute_command" {
-			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Briefly tell peers your intended work and project-relative paths before the first local tool; public response text can accompany this call. A call can wait for shared access before process start; command controls remain available.")
+			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Tell teammates your contribution before the first local tool. Use set_work before changing files; resolved mutation targets must belong to your current contribution. Inspection commands do not require owning files. Address relevant teammates by name, use their actual work, and use add_team_member for unassigned independent parts. A call may wait for shared access; command controls remain available.")
 		}
 	}
 	return append(definitions, catalog.Definitions()...)
@@ -51,7 +56,7 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 		}
 		return &coordinationOperation{executor: e, call: call, input: input}, nil
 	}
-	held, err := e.reserve(ctx, call)
+	held, paths, err := e.reserve(ctx, call)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +70,18 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 		toolapi.Release(op)
 		return nil, err
 	}
-	return &localOperation{executor: e, call: call, operation: op, held: held}, nil
+	if proposal := op.Approval(); call.Name == "execute_command" && proposal.Command != nil {
+		paths, err = e.canonicalPaths(proposal.Command.MutationTargets, false)
+	}
+	if err == nil {
+		err = e.Peer.CheckWork(paths)
+	}
+	if err != nil {
+		held.Release()
+		toolapi.Release(op)
+		return nil, err
+	}
+	return &localOperation{executor: e, call: call, operation: op, held: held, paths: paths}, nil
 }
 
 func (e *Executor) ProjectInstructions(ctx context.Context) (string, error) {

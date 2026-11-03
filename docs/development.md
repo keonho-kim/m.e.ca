@@ -12,7 +12,8 @@
 | agent/model | 모델 메시지·스트림·출력 예산 계약 |
 | agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·실측 통계 집계 |
 | agent/team | 참여·초대·복구·공용 대화 전달·공유 요청 예산·최종 보고자 전이 |
-| agent/team/identity·channel | 안정된 참여자 식별·공개 메시지·문맥 출처와 참조 ID·공개 로그 저장 계약 |
+| agent/team/identity·channel | 고정 이름 목록·미사용 이름 선택·안정된 참여자 식별·공개 메시지·문맥 출처와 참조 ID·공개 로그 저장 계약 |
+| agent/team/contribution | 현재 담당 영역의 원자적 교체·겹침 판정·관련 변경 순서·독립 스냅샷과 예산 내 현황 포맷 |
 | commands/teamrequest | 요청 공통 자원·개인 세션 수명·직렬 승인·활성 명령 조회를 분리한 팀 조립 |
 | agent/record | 실행 이벤트·체크포인트·상태·실측 처리량과 최종 통계·원자적 기록 단위와 검증 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
@@ -67,7 +68,17 @@ TUI·비대화형 실행은 commands/agentrequest.New에서 같은 추론·문�
 
 팀 실행은 agent/team과 commands/teamrequest가 소유한다. 단일 요청은 팀 참여·공용 대화·팀 도구를 구성하지 않는다. 팀 요청은 선택적 수신 문맥과 전체 요청 예산·마감 시각을 연결하고 같은 agent/run을 독립적으로 사용한다. 공용 본문은 원본 참조, 개인 수신 위치는 개인 문맥과 원자적으로 저장한다. TUI의 팀 스트림은 발신자별 최신 스냅샷으로 전달하고 같은 이력 블록을 갱신해 변경되지 않은 앞부분의 배치를 보존한다. tui/chat/team/message.go는 응답·도구 카드의 발신자와 본문 ID를 함께 소유한다. 공백뿐인 응답은 표시를 만들지 않으며 viewport는 이름표와 본문의 보유·제거를 한 그룹으로 처리한다. 원본 이력과 본문의 증분 Markdown은 별도로 유지한다.
 
-현재 참여자의 공개 발언 여부는 Room의 수명 한정 상태다. 커밋한 일반 발언만 표시하고 재개 시 초기화하며 DB 행이나 대화 사본을 추가하지 않는다. tools/team/admission은 첫 로컬 작업 전에 이를 검사하고 미충족 시 실행하지 않은 도구 피드백을 반환한다. 명령 제어·대화 조회는 독립적으로 유지한다. agent/context는 출처가 표시된 peer 관측 본문을 읽기 쉬운 비권한 문맥으로 제공하고 일반 관측·사용자 요청·native 호출의 처리는 구분한다.
+현재 참여자의 공개 발언 여부는 Room의 수명 한정 상태다. 커밋한 일반 발언과 담당 선언으로 갱신하고 재개 시 초기화하며 DB 행이나 대화 사본을 추가하지 않는다. tools/team/admission은 첫 로컬 작업 전에 이를 검사하고 미충족 시 실행하지 않은 도구 피드백을 반환한다. 명령 제어·대화 조회는 독립적으로 유지한다. agent/context는 출처가 표시된 peer 관측 본문을 읽기 쉬운 비권한 문맥으로 제공하고 일반 관측·사용자 요청·native 호출의 처리는 구분한다.
+
+팀의 set_work는 정규화한 경로 집합을 Room 잠금 안에서 원자적으로 교체하고 team_work로 공개 선언을 확정한다. 도구 결과는 확인된 이름·경로만 반환하며 본인 문맥에 선언을 다시 추가하지 않는다. tools/team은 파일 후보를 만들기 전과 실행 직전에 담당 영역을 검사하고 준비 단계의 경로 투영을 후보 안에서 재사용한다. 공유 예약의 파일 상태는 대기 후 재검사하고 같은 대기 호출의 배열을 재사용한다. CommandApproval의 일시적인 MutationTargets는 기존 AST가 관측한 경로만 전달하고 JSON·SQLite에 보관하지 않는다. 셸 실행기는 해당 경로를 종료 관측까지 보유하고, 조립 어댑터가 커밋 이후 Operation.AffectedPaths에 연결해 영향 가능 관측으로 공유한 뒤 참조를 해제한다.
+
+실제 변경·실패는 team_observation, 변경 경로나 실패가 없는 명령 상태는 team_status로 공개 로그에 투영한다. 원본 출력·diff·Thinking을 복제하지 않고 변경 경로·명령 상태·원본 참조만 공유한다. 개인 결과가 확정된 뒤 공용 원본 참조와 관측을 한 트랜잭션으로 저장한다. 실행 중인 명령 ID만 중복 판정에 보유하고 첫 종료 관측에서 해제한다. 완료 보관 결과의 재조회는 새 관측을 만들지 않는다. team_status는 공용 원본과 수신 위치를 보존하고 개인 이력에는 추가하지 않는다. 활성 멤버별 최신 한 건을 현재 관측에 투영하며 새 변경·실패가 있으면 이전 일반 상태를 해제한다. wake·TeamPending·도구 없는 응답의 추가 판단 사유에서 제외한다. 변경·실패·실제 대화는 계속 판단을 재개한다. TUI는 두 자동 관측을 큐와 스트림 병합 경계에 넣지 않으며 JSONL과 저장 원문은 유지한다. 마지막 판단의 수신 위치보다 뒤에 다른 동료가 관련 경로를 변경했거나 영향을 주었을 수 있으면 오래된 후보를 거절한다. 독립 변경은 그대로 실행한다.
+
+현재 담당 현황은 선택적 ContextObservations로 요청에만 주입하며 개인 이력에 추가하지 않는다. Room은 멤버·가용 자리·담당 revision·최신 상태 순서의 같은 스냅샷을 사용해 불변 현황 하나를 재사용한다. 캐시가 비면 전용 구성 잠금으로 중복 포맷을 합치고 문자열 구성 중에는 공유 상태 잠금을 놓는다. 반복 주입 예산과 전체 선언·경로 보존 계약은 [팀 모드](team.md#자원-관리)를 따른다. agent/context는 마스킹·접두문 투영을 최대 256KiB로 재사용하며 원문·모델·비밀키 revision 변경 때 무효화한다. BeforeDecision은 그 호출이 실제로 받은 수신 위치를 고정한다. 두 연결은 팀 조립에서만 제공한다. 현재 영역은 활성 인원만 보유하고 관련 변경 인덱스는 모든 활성 판단이 소비한 순서까지 제거한다. 확인 지점이 전진할 때만 정리하고 새 변경이 없으면 전체 변경 검색을 생략한다. 퇴장·취소·실패는 영역·명령 상태 참조를 정리한다.
+
+팀 입력은 SteeringReady 알림에서 PollSteering의 캡처된 요청을 소비한다. 입력 알림이 없는 비대화형 요청은 타이머를 만들지 않는다. 닫힌 알림 채널은 비활성화하고 새 공용 메시지가 없는 답변 경계는 TeamPending SQL을 생략한다.
+
+팀의 숨긴 Thinking은 원문·실제 usage를 계속 소비하고 종료·취소 시 마스킹한 개인 기록과 정상 continuation을 보존한다. 표시용 증분 마스킹과 Thinking 전용 스트림·화면 이벤트는 생성하지 않는다. 일반 모드의 Thinking 표시 경로는 같은 루프의 기본 동작이다.
 
 실행기는 실제 usage와 대응하는 단조 시계 경과 시간을 전달한다. 순간 TPS를 별도로 전달하거나 저장하지 않는다. agent/record/throughput.go의 작은 값 누산기가 단일·팀·완료 표시의 같은 가중 평균 계산을 소유한다. 화면은 완료 합계와 최신 진행 표본을 분리해 중복 집계를 피하고 새 요청·연결 채택 시 측정 상태를 비운다. 전송용 정밀 시간은 JSON에서 제외하고 DB에는 기존 generation의 밀리초 기록만 보관한다.
 
@@ -171,12 +182,6 @@ Linux·WSL·macOS에서 호스트 셸의 작업 디렉터리·환경·프로세�
 go test ./internal/tools/local/... ./internal/agent/run ./internal/commands/headless
 ```
 
-실제 uv 설치 경로 검사는 다음의 opt-in 진입점을 사용한다. MECA_TEST_UV_PYTHON_ROOT로 관리 Python 트리를 지정할 수 있다. 이는 시험 fixture의 입력이며 제품의 언어별 실행 분기가 아니다. fixture는 사용자 캐시 쓰기 예외나 링크 모드 변경 없이 임시 HOME을 사용한다.
-
-```sh
-MECA_TEST_UV_BINARY=/path/to/uv go test ./internal/tools/local/process -run TestUVPackageProject -v
-```
-
 실제 WSL에서는 일반 터미널과 execute_command에서 같은 도메인 조회·HTTPS 다운로드·패키지 설치를 대조한다. DNS 설정 파일 읽기와 숫자 IP의 로컬 HTTP 통과만으로 외부 DNS 성공을 판단하지 않는다. Linux Secret Service·실제 Provider·터미널 키 전달도 수행한 환경과 결과를 구분해 기록한다. 교차 빌드는 네이티브 실행 검증을 대신하지 않는다. [실행 경계](execution-boundary.md)의 호스트 권한 계약을 함께 확인한다.
 
 Linux의 필수 DBus 회귀 검사는 실제 자격 증명 조회 경로를 새 테스트 프로세스에서 호출한다. 루프백 TCP·nonce-TCP 연결과 canary 전송이 없고 Unix 소켓 연결은 유지되는지 확인한다. `linux` 조건만 사용하므로 태그를 빠뜨린 Linux 테스트는 실패한다. Unix 연결 검사만으로 키 저장·조회 성공을 판단하지 않는다.
@@ -243,6 +248,8 @@ tools/local의 Prepare는 공통 인자 검사를 마친 뒤 파일·폴더·셸
 
 storage/history가 화면 표시 필드 선택과 복원된 값의 표시 투영을 소유하고 SQLite는 표시할 레코드 조회·본문 복원·페이지 수명을 담당한다.
 
+공용 본문 저장 시 canonical JSON 문자열의 해시·길이는 공용 Store가 최대 128건·본문 2MiB 안에서 재사용한다. 마지막 개인 Store가 닫히면 원문 참조와 인덱스를 함께 해제한다. 마스킹으로 원문이 바뀐 수신 문맥은 로컬 식별자로 저장해 다른 원본 바이트에 대한 참조를 만들지 않는다. 개인 DB 준비는 공용 트랜잭션 밖에서 수행하고 이름·순서·세션 연결만 짧은 트랜잭션으로 등록한다. 실패·불확실 커밋은 등록 여부를 확인한 뒤 미등록 새 파일만 정리한다.
+
 큰 JSON 값의 인코딩·복원과 무결성 검사는 storage/content가 소유하고 SQLite는 `payloads`에 해시·원본 길이·압축 형식·본문을 저장한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. 메시지 묶음의 수정 시각과 최초 사용자 요약은 같은 트랜잭션에서 한 번 갱신하며 수신 커서도 함께 확정한다. `record.Entry` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
 run_states는 실행별 최신 체크포인트 한 건을 갱신하며 32KiB 초과 구조화 상태를 같은 Codec으로 압축한다. 최종 이벤트는 작은 상태·통계만 두고 Export는 해당 실행의 전체 상태를 복원한다. Timeline은 TUI 전용 투영으로 표시할 종류를 먼저 선택하고 숨은 native 인자·continuation·이미지를 복원하지 않는다. 화면에 표시하는 도구의 display_args만 경로·명령·ID를 저장하며 잘못된 표시 필드가 실패 기록 자체를 막지 않는다. 인자는 Sonic의 지역적인 무복사 탐색으로 선택하고 반환하는 문자열은 독립된 값으로 복사한다. 원본 ContextMessages·Export와 표시용 Timeline의 계약을 구분한다.
@@ -259,6 +266,8 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 
 명령 완료는 실행기 알림으로 수집하고 스트림마다 상태를 조회하지 않는다. 팀의 공유 셸 예약은 명령 종료·출력 보관·캡처 정리가 끝나는 전용 완료 신호로 해제하며 결과 수집 호출과 독립적이다. 이 신호를 기다리는 작업자는 실행기 종료 때 합류한다. 알림 없는 실행기는 주기 조회를 사용한다. 모델 이벤트 확인 채널은 생성 요청 단위로 재사용하며 종료 직전에도 명령 결과를 확인한다.
 
+실행 중 명령의 화면은 고정 명령 본문과 변하는 시간 머리말을 분리해 조립한다. 마스킹 revision이 같으면 들여쓰기·마스킹한 본문을 재사용하고 최대 256KiB 안에서 실제 표시 문자열의 부분 참조로 보유한다. 명령 완료·화면 종료에서 표시 참조를 해제한다. 활성 명령 원본 목록은 레지스트리 잠금 안에서 짧게 캡처하고 개별 상태 조회는 잠금 밖에서 수행하며 조회 계약은 실행기 종료와 동시 호출을 허용한다.
+
 실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호가 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별로 동기화해 독립 명령의 I/O를 직렬화하지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
 
 ### 최적화 측정
@@ -271,10 +280,12 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 | 압축 자료 선택 | internal/agent/compact | BenchmarkSourceSelection |
 | 반복 본문·팀 압축·과거 개인 기록 복원 | internal/storage/sqlite | BenchmarkPayloadPages · BenchmarkTeamSharedMemory · BenchmarkTeamHistoricalReaders |
 | 공용 대화 수신 | internal/agent/team | BenchmarkPublicHistoryFanout |
+| 현재 팀 현황·확인한 변경 검색과 정리 | internal/agent/team · internal/agent/team/contribution | BenchmarkTeamWorkContext · BenchmarkReviewedChanges |
+| 공용 원본 참조·실행 관측의 트랜잭션 | internal/storage/sqlite | BenchmarkTeamFactCommit · BenchmarkTeamTextIdentity |
 | 완료 Markdown 초기 배치·스크롤·경계 빈 줄 | internal/tui/viewport | BenchmarkMarkdownInitialLayout · BenchmarkCompletedMarkdownInitial · BenchmarkCompletedMarkdownScroll · BenchmarkTrailingRows |
 | 경로 묶음·재귀 폴더 준비 | internal/tools/local | BenchmarkParallelPlanning · BenchmarkDirectoryPreparation |
 | 긴 본문·변화 없는 파일 관측 | internal/tui/viewport · internal/agent/tool | BenchmarkLiveMarkdownShape · BenchmarkQueryFacts |
-| 이력 줄 배치·입력 표시 | internal/tui/viewport · internal/tui/session | BenchmarkLiveTranscriptFrame · BenchmarkTerminalPacing · BenchmarkStreamDelivery |
+| 이력 줄 배치·입력 표시 | internal/tui/viewport · internal/tui/session | BenchmarkLiveTranscriptFrame · BenchmarkTerminalPacing · BenchmarkStreamDelivery · BenchmarkLiveCommandView |
 | Markdown·입력·셀 폭 | internal/tui/markdown · internal/tui/input · internal/tui/textlayout | BenchmarkStreamTail · BenchmarkParagraph · BenchmarkLongDraft · BenchmarkWidth |
 | 스트림 마스킹·동일 파일 복수 수정 | internal/config/credentials · internal/tools/local/textedit | BenchmarkCleanStreamMask · BenchmarkBatchEdits |
 | 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkPartialHistory · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkImageHistory · BenchmarkToolSchemaEncoding |

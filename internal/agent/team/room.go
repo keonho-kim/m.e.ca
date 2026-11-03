@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	"sync"
 	"time"
@@ -23,9 +24,12 @@ type participant struct {
 	wake            chan struct{}
 	leaving, closed bool
 	spoke           bool
+	reviewed        int64
+	status          commandStatus
 }
 type Room struct {
 	mu           sync.Mutex
+	workViewMu   sync.Mutex
 	memberMu     sync.Mutex
 	logMu        sync.Mutex
 	eventMu      sync.Mutex
@@ -40,7 +44,10 @@ type Room struct {
 	input        string
 	firstMessage int64
 	latestPublic int64
+	latestStatus int64
 	public       publicHistory
+	work         contribution.State
+	workView     workProjection
 	latestUser   int64
 	deadline     time.Time
 	modelCalls   int
@@ -53,6 +60,9 @@ type Room struct {
 func Run(ctx context.Context, options Options, text string) (Result, error) {
 	if options.Store == nil || options.Execute == nil || options.Emit == nil || options.MaxModelCalls < 1 || options.MaxSeconds < 1 {
 		return Result{}, fmt.Errorf("team dependencies and request limits are required")
+	}
+	if options.PollSteering != nil && options.SteeringReady == nil {
+		return Result{}, fmt.Errorf("team steering requires an input notification channel")
 	}
 	if options.Redact != nil {
 		text = options.Redact(text)
@@ -68,16 +78,17 @@ func Run(ctx context.Context, options Options, text string) (Result, error) {
 	if err := r.initialize(); err != nil {
 		return r.result, err
 	}
-	// Only the user-input channel is checked here; public messages wake peers directly.
-	tick := time.NewTicker(100 * time.Millisecond)
-	defer tick.Stop()
+	inputReady := options.SteeringReady
 	for {
 		select {
 		case <-ctx.Done():
 			cancel(nil)
 			r.workers.Wait()
 			return r.complete(context.Cause(ctx))
-		case <-tick.C:
+		case _, open := <-inputReady:
+			if !open {
+				inputReady = nil
+			}
 			if err := r.admitUser(); err != nil {
 				cancel(err)
 				r.workers.Wait()

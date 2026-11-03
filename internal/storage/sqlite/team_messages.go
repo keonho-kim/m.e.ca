@@ -18,6 +18,9 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	if message.Text == "" || len(message.Text) > 64*1024*1024 {
 		return message, fmt.Errorf("invalid public message")
 	}
+	if message.Passive && !message.Observation || message.Observation && (message.From == "user" || message.FromStream || message.Declaration || message.Final) || message.Declaration && (message.From == "user" || message.FromStream || message.Final) {
+		return message, fmt.Errorf("inconsistent public message provenance")
+	}
 	var records []runrecord.Entry
 	if message.From == "user" {
 		records = []runrecord.Entry{{Message: &modelapi.Message{ID: "team-user", Role: "user", Content: message.Text}}}
@@ -25,14 +28,18 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 		if !teamidentity.ValidName(message.From) {
 			return message, fmt.Errorf("invalid public sender")
 		}
-		event := runrecord.Event{Kind: "team_message", Agent: message.From, Final: message.Final, Text: message.Text}
-		if message.FromStream {
-			event.Kind = "team_progress"
-		}
+		event := runrecord.Event{Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text}
 		records = []runrecord.Entry{{Event: &event}}
 		if message.Final {
 			records = append([]runrecord.Entry{{Message: &modelapi.Message{ID: "team-report", Role: "assistant", Content: message.Text}}}, records...)
 		}
+	}
+	if message.Reference != nil {
+		if !message.Observation {
+			return message, fmt.Errorf("only execution observations can attach an original reference")
+		}
+		reference := runrecord.Event{Kind: "team_reference", Agent: message.From, Reference: message.Reference}
+		records = append([]runrecord.Entry{{Event: &reference}}, records...)
 	}
 	receipt := journalReceipt{}
 	if err := s.commit(ctx, s.session.ID, records, 0, &receipt); err != nil {
@@ -49,7 +56,7 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 	if after < 0 || through < after || limit < 1 || limit > 200 {
 		return nil, fmt.Errorf("invalid room page")
 	}
-	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress')) ORDER BY t.sequence LIMIT ?`, s.session.ID, after, through, limit)
+	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_observation','team_status')) ORDER BY t.sequence LIMIT ?`, s.session.ID, after, through, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +87,6 @@ func (s *Store) TeamPending(ctx context.Context, after, through int64, own strin
  LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
  LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence
  WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND
- (m.role='user' OR e.kind='team_message' OR e.kind='team_progress' AND json_extract(e.body,'$.agent')<>?))`, s.session.ID, after, through, own).Scan(&pending)
+ (m.role='user' OR e.kind='team_message' OR e.kind IN ('team_progress','team_work','team_observation') AND json_extract(e.body,'$.agent')<>?))`, s.session.ID, after, through, own).Scan(&pending)
 	return pending, err
 }

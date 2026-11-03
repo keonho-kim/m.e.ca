@@ -12,7 +12,7 @@ import (
 )
 
 func BenchmarkTeamBodyProjection(b *testing.B) {
-	event := runrecord.Event{Kind: "team_progress", Agent: "agent-a", Text: strings.Repeat("response\n", 128*1024)}
+	event := runrecord.Event{Kind: "team_progress", Agent: "Hana", Text: strings.Repeat("response\n", 128*1024)}
 	formatter := Formatter{Redact: func(s string) string { return s }}
 	b.ReportAllocs()
 	for b.Loop() {

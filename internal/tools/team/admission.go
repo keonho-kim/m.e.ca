@@ -10,32 +10,31 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
-	"path/filepath"
 )
 
-func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.Lease, error) {
+func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.Lease, []string, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	switch call.Name {
 	case "wait_command", "cancel_command", "list_command_runs":
-		return nil, nil
+		return nil, nil, nil
 	}
 	if !e.Peer.HasSpoken() {
-		return nil, &toolapi.Failure{
+		return nil, nil, &toolapi.Failure{
 			Code:   "team_contribution_required",
 			Detail: "Nothing executed. Tell your teammates your contribution before starting local work.",
 			Next:   "In your public response, state what you will inspect or change and the project-relative paths. Refer to a peer's announced work when it affects yours. You may include the tool call in the same response. Keep the message concise and use the user's language.",
 		}
 	}
 	if call.Name == "view_image" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	shell := call.Name == "execute_command"
 	if shell {
 		for _, command := range e.Local.CommandActivity() {
 			if command.Status == "running" {
-				return nil, fmt.Errorf("a command is still active; wait_command or cancel_command before starting another")
+				return nil, nil, fmt.Errorf("a command is still active; wait_command or cancel_command before starting another")
 			}
 		}
 	}
@@ -44,16 +43,21 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 		var err error
 		paths, err = e.paths(call)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		if err := e.Peer.CheckWork(paths); err != nil {
+			return nil, nil, err
 		}
 	}
 	waiting := func() error {
 		return e.Peer.Emit(runrecord.Event{Kind: "tool_waiting", CallID: call.ID, Call: &call, Text: "Waiting for shared workspace access"})
 	}
 	if shell {
-		return e.Workspace.ReserveShell(ctx, waiting)
+		held, err := e.Workspace.ReserveShell(ctx, waiting)
+		return held, nil, err
 	}
-	return e.Workspace.ReserveFiles(ctx, paths, waiting)
+	held, err := e.Workspace.ReserveFiles(ctx, paths, waiting)
+	return held, paths, err
 }
 
 func (e *Executor) paths(call toolapi.Call) ([]string, error) {
@@ -68,10 +72,5 @@ func (e *Executor) paths(call toolapi.Call) ([]string, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("file operation has no target")
 	}
-	for i, path := range paths {
-		if !filepath.IsAbs(path) {
-			paths[i] = filepath.Join(e.Project, path)
-		}
-	}
-	return paths, nil
+	return e.canonicalPaths(paths, false)
 }

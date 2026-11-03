@@ -4,7 +4,7 @@
 // Related: internal/agent/team/types.go, internal/storage/sqlite/team_members.go.
 package identity
 
-import "strings"
+import "slices"
 
 type Member struct {
 	ID      string `json:"id"`
@@ -12,25 +12,4 @@ type Member struct {
 	Summary string `json:"summary,omitempty"`
 }
 
-func ValidName(id string) bool {
-	if !strings.HasPrefix(id, "agent-") || len(id) < 7 || len(id) > 40 {
-		return false
-	}
-	for _, c := range id[6:] {
-		if c < 'a' || c > 'z' {
-			return false
-		}
-	}
-	return true
-}
-func Name(index int) string {
-	value := ""
-	for {
-		value = string(rune('a'+index%26)) + value
-		index = index/26 - 1
-		if index < 0 {
-			break
-		}
-	}
-	return "agent-" + value
-}
+func ValidName(id string) bool { return slices.Contains(names[:], id) }

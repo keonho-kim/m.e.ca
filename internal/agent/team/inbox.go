@@ -50,7 +50,7 @@ func (p *Peer) Inbox(ctx context.Context) (run.ContextBatch, error) {
 		}
 		for _, observation := range messages {
 			message := observation.message
-			if message.From != p.ID || !message.FromStream {
+			if !message.Passive && (message.From != p.ID || !message.FromStream && !message.Observation && !message.Declaration) {
 				value := observation.context
 				batch.Messages = append(batch.Messages, value)
 				bytes += len(value.Content)

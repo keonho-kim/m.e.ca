@@ -5,9 +5,11 @@
 package teamrequest
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/team"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
+// CommandActivity exposes synchronized metadata and remains safe during or after Close.
 type commandSource interface{ CommandActivity() []toolapi.CommandRun }
 
 func (s *Service) track(id string, executor commandSource) {
@@ -27,14 +29,23 @@ func (s *Service) track(id string, executor commandSource) {
 }
 func (s *Service) CommandActivity() map[string][]toolapi.CommandRun {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	var sources [team.MaxActive]struct {
+		id     string
+		source commandSource
+	}
+	count := 0
+	for id, source := range s.active {
+		sources[count].id, sources[count].source = id, source
+		count++
+	}
+	s.mu.Unlock()
 	var result map[string][]toolapi.CommandRun
-	for id, executor := range s.active {
-		if commands := executor.CommandActivity(); len(commands) > 0 {
+	for _, current := range sources[:count] {
+		if commands := current.source.CommandActivity(); len(commands) > 0 {
 			if result == nil {
 				result = map[string][]toolapi.CommandRun{}
 			}
-			result[id] = commands
+			result[current.id] = commands
 		}
 	}
 	return result

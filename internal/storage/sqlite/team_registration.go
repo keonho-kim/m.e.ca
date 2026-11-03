@@ -17,6 +17,20 @@ func (s *Store) CreateTeamAgent(ctx context.Context) (member teamidentity.Member
 	if err != nil {
 		return member, err
 	}
+	child, err := sessions.Create(ctx, s.session.ProjectRoot, s.session.DisplayRoot)
+	if err != nil {
+		return member, err
+	}
+	member.Session = child.session.ID
+	defer func() {
+		if resultErr != nil {
+			resultErr = errors.Join(resultErr, s.removeUnregisteredTeamSession(ctx, member.Session, child.path))
+		}
+	}()
+	if err := child.Close(); err != nil {
+		return member, err
+	}
+	// Filesystem preparation never holds the public journal's sole DB connection.
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return member, err
@@ -26,41 +40,50 @@ func (s *Store) CreateTeamAgent(ctx context.Context) (member teamidentity.Member
 	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(ordinal),-1)+1 FROM team_members").Scan(&ordinal); err != nil {
 		return member, err
 	}
-	child, err := sessions.Create(ctx, s.session.ProjectRoot, s.session.DisplayRoot)
+	rows, err := tx.QueryContext(ctx, "SELECT agent_id FROM team_members")
 	if err != nil {
 		return member, err
 	}
-	member = teamidentity.Member{ID: teamidentity.Name(ordinal), Session: child.session.ID}
-	path := child.path
-	defer func() {
-		if resultErr == nil {
-			return
+	var used []string
+	for rows.Next() {
+		var name string
+		if err = rows.Scan(&name); err != nil {
+			break
 		}
-		// A cancelled/uncertain commit is checked independently before deleting only
-		// the exact new empty database. Existing/restored sessions are never removed.
-		_ = tx.Rollback()
-		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		var registered bool
-		check := s.db.QueryRowContext(flush, "SELECT EXISTS(SELECT 1 FROM team_members WHERE session_id=?)", member.Session).Scan(&registered)
-		if check != nil {
-			resultErr = errors.Join(resultErr, check)
-			return
-		}
-		if registered {
-			return
-		}
-		for _, suffix := range []string{"", "-wal", "-shm"} {
-			if err := os.Remove(path + suffix); err != nil && !errors.Is(err, os.ErrNotExist) {
-				resultErr = errors.Join(resultErr, err)
-			}
-		}
-	}()
-	if err := child.Close(); err != nil {
+		used = append(used, name)
+	}
+	err = errors.Join(err, rows.Err(), rows.Close())
+	if err != nil {
 		return member, err
 	}
+	name, err := teamidentity.Choose(used)
+	if err != nil {
+		return member, err
+	}
+
+	member.ID = name
 	if _, err := tx.ExecContext(ctx, "INSERT INTO team_members(ordinal,agent_id,session_id) VALUES(?,?,?)", ordinal, member.ID, member.Session); err != nil {
 		return member, err
 	}
 	return member, tx.Commit()
+}
+
+// removeUnregisteredTeamSession checks uncertain commits before deleting only the new DB.
+func (s *Store) removeUnregisteredTeamSession(ctx context.Context, session, path string) error {
+	flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	var registered bool
+	if err := s.db.QueryRowContext(flush, "SELECT EXISTS(SELECT 1 FROM team_members WHERE session_id=?)", session).Scan(&registered); err != nil {
+		return err
+	}
+	if registered {
+		return nil
+	}
+	var result error
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, os.ErrNotExist) {
+			result = errors.Join(result, err)
+		}
+	}
+	return result
 }

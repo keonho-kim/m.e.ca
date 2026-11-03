@@ -22,28 +22,28 @@ func TestStateAggregatesOnlyReportedUsage(t *testing.T) {
 	state.Begin()
 	output := viewport.View{Follow: true}
 	f := formatter()
-	for _, id := range []string{"agent-a", "agent-b"} {
+	for _, id := range []string{"Hana", "Ren"} {
 		state.Apply(runrecord.Event{Kind: "team_notice", Agent: id, Text: "joined"}, f, &output)
 	}
 	// Repeated membership notices must not inflate the cached active count.
-	state.Apply(runrecord.Event{Kind: "team_notice", Agent: "agent-a", Text: "joined"}, f, &output)
+	state.Apply(runrecord.Event{Kind: "team_notice", Agent: "Hana", Text: "joined"}, f, &output)
 	if state.Count() != 2 {
 		t.Fatal(state.Count())
 	}
 	measured := 2 * time.Second
-	state.Apply(runrecord.Event{Kind: "usage", Agent: "agent-a", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}, Generation: &runrecord.Generation{MeasuredMillis: 1000}}, f, &output)
-	state.Apply(runrecord.Event{Kind: "usage_progress", Agent: "agent-b", Usage: &modelapi.TokenUsage{Input: 200, Output: 40}, MeasuredDuration: measured}, f, &output)
+	state.Apply(runrecord.Event{Kind: "usage", Agent: "Hana", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}, Generation: &runrecord.Generation{MeasuredMillis: 1000}}, f, &output)
+	state.Apply(runrecord.Event{Kind: "usage_progress", Agent: "Ren", Usage: &modelapi.TokenUsage{Input: 200, Output: 40}, MeasuredDuration: measured}, f, &output)
 	usage, tps := state.CurrentUsage()
 	if usage.Input != 200 || usage.Output != 40 || tps == nil || *tps != 20 {
 		t.Fatalf("usage=%+v tps=%v", usage, tps)
 	}
-	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "agent-a"}, f, &output)
-	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "agent-b"}, f, &output)
-	state.Apply(runrecord.Event{Kind: "compaction_finished", Agent: "agent-a"}, f, &output)
+	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "Hana"}, f, &output)
+	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "Ren"}, f, &output)
+	state.Apply(runrecord.Event{Kind: "compaction_finished", Agent: "Hana"}, f, &output)
 	if !state.Compressing() {
 		t.Fatal("one peer still compacts")
 	}
-	state.Apply(runrecord.Event{Kind: "team_notice", Agent: "agent-b", Text: "left"}, f, &output)
+	state.Apply(runrecord.Event{Kind: "team_notice", Agent: "Ren", Text: "left"}, f, &output)
 	if state.Compressing() || state.Count() != 1 {
 		t.Fatal("closed peer retained active compression")
 	}
@@ -54,10 +54,10 @@ func TestStatePreservesStreamsAndReleasesOwnedReferences(t *testing.T) {
 	output := viewport.View{Follow: true}
 	f := formatter()
 	for _, event := range []runrecord.Event{
-		{Kind: "stream", Agent: "agent-a", Text: "first", Thinking: "private"},
-		{Kind: "stream", Agent: "agent-b", Text: "second"},
-		{Kind: "stream", Agent: "agent-a", Text: "first completed"},
-		{Kind: "team_progress", Agent: "agent-a", Text: "first completed"},
+		{Kind: "stream", Agent: "Hana", Text: "first", Thinking: "private"},
+		{Kind: "stream", Agent: "Ren", Text: "second"},
+		{Kind: "stream", Agent: "Hana", Text: "first completed"},
+		{Kind: "team_progress", Agent: "Hana", Text: "first completed"},
 	} {
 		state.Apply(event, f, &output)
 	}

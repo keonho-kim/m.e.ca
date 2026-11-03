@@ -26,8 +26,9 @@ type Approval struct {
 }
 
 type CommandApproval struct {
-	Directory string
-	Findings  []CommandFinding
+	MutationTargets []string `json:"-"`
+	Directory       string
+	Findings        []CommandFinding
 }
 
 type CommandFinding struct {

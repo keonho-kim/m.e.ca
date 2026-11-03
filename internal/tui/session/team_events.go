@@ -23,7 +23,7 @@ func (a *app) receiveTeam(event *runrecord.Event) {
 		a.compose.rememberInput(event.Text)
 		return
 	}
-	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
+	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion}
 	a.team.view.Apply(*event, f, &a.chat.output)
 	switch event.Kind {
 	case "compaction_started":
@@ -51,7 +51,7 @@ func (a *app) updateTeamCommands() {
 	if a.opts.Team == nil {
 		return
 	}
-	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
+	f := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion}
 	for agent, commands := range a.opts.Team.CommandActivity() {
 		a.team.view.Commands(agent, commands, f, &a.chat.output)
 	}

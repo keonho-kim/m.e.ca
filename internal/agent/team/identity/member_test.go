@@ -1,20 +1,29 @@
-// Purpose: Verify stable peer labels across alphabet boundaries and reject malformed identities.
-// Pattern: Pure domain contract tests.
-// Usage: go test ./internal/agent/team/identity.
-// Related: internal/agent/team/identity/member.go.
+// Purpose: Verify readable name uniqueness, selection and stable stored identities.
+// Pattern: Pure catalog and allocation behavior tests.
+// Usage: Identity tests cover the complete fixed catalog without model calls.
+// Related: internal/agent/team/identity/member.go, internal/agent/team/identity/names.go.
 package identity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestNamesRemainStableAfterFirstAlphabet(t *testing.T) {
-	for index, want := range map[int]string{0: "agent-a", 25: "agent-z", 26: "agent-aa", 51: "agent-az", 52: "agent-ba", 701: "agent-zz", 702: "agent-aaa"} {
-		if got := Name(index); got != want || !ValidName(got) {
-			t.Fatalf("index=%d got=%s expected=%s", index, got, want)
+func TestNamesAreUniqueAndChosenWithoutReplacement(t *testing.T) {
+	used := make([]string, 0, 100)
+	seen := map[string]bool{}
+	for range 100 {
+		name, err := Choose(used)
+		if err != nil || !ValidName(name) || seen[strings.ToLower(name)] {
+			t.Fatal(name, err)
 		}
+		seen[strings.ToLower(name)] = true
+		used = append(used, name)
 	}
-	for _, id := range []string{"agent-", "agent-a/b", "Agent-a", "agent-a1", "agent-한"} {
-		if ValidName(id) {
-			t.Fatalf("invalid identity accepted: %s", id)
-		}
+	if _, err := Choose(used); err == nil {
+		t.Fatal("exhausted catalog reused a name")
+	}
+	if ValidName("agent-a") || ValidName("../Hana") || ValidName("") {
+		t.Fatal("invalid member name accepted")
 	}
 }

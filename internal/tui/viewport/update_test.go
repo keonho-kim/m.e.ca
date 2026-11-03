@@ -12,9 +12,9 @@ import (
 func TestStableBlockUpdateMatchesFreshLayout(t *testing.T) {
 	v := View{Follow: true}
 	v.AppendBlock(Block{Text: "earlier history\n\n", Markdown: true})
-	v.AppendBlock(Block{Text: "**agent-a**\n\nfirst", Markdown: true})
+	v.AppendBlock(Block{Text: "**Hana**\n\nfirst", Markdown: true})
 	a := v.Next
-	v.AppendBlock(Block{Text: "**agent-b**\n\nsecond", Markdown: true})
+	v.AppendBlock(Block{Text: "**Ren**\n\nsecond", Markdown: true})
 	var cached Transcript
 	cached.Prepare(35, &v, nil)
 	for _, text := range []string{"first update\n\nmore text", "", "a completed answer with a longer paragraph and wrapped lines"} {

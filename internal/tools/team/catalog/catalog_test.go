@@ -18,7 +18,7 @@ func TestTeamCatalogHasOnlyMembershipAndHistoryTools(t *testing.T) {
 			t.Fatal("catalog and dispatcher differ")
 		}
 	}
-	if !reflect.DeepEqual(names, []string{"call_friend", "say_goodbye", "list_friends", "read_team_messages"}) {
+	if !reflect.DeepEqual(names, []string{"add_team_member", "leave_team", "list_team_members", "read_team_messages", "set_work"}) {
 		t.Fatal(names)
 	}
 	original := definitions[0].Parameters[0].Description

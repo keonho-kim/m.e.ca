@@ -5,9 +5,11 @@
 package team
 
 import (
+	"context"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"strings"
+	"time"
 )
 
 func (r *Room) publish(message channel.Message) (channel.Message, error) {
@@ -22,14 +24,37 @@ func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 	if r.options.Redact != nil {
 		message.Text = r.options.Redact(message.Text)
 	}
-	value, err := r.options.Store.AppendTeamMessage(r.ctx, message)
+	ctx := r.ctx
+	if message.Reference != nil {
+		// An already committed private result must remain reachable after Esc or a deadline.
+		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		ctx = flush
+	}
+	value, err := r.options.Store.AppendTeamMessage(ctx, message)
 	if err != nil {
 		r.fail(err)
 		return value, err
 	}
 	r.mu.Lock()
 	previous := r.latestPublic
+	if value.Passive {
+		if live := r.active[value.From]; live != nil {
+			live.status = commandStatus{from: value.From, text: value.Text, sequence: value.Sequence}
+			r.latestStatus = value.Sequence
+		}
+	} else if value.Observation {
+		if live := r.active[value.From]; live != nil && live.status.sequence != 0 {
+			live.status = commandStatus{}
+			r.latestStatus = value.Sequence
+		}
+	}
+	if value.Observation {
+		r.work.Record(value.From, value.ChangedPaths, value.Sequence)
+	}
 	r.mu.Unlock()
+	value.ChangedPaths = nil
+	value.Reference = nil
 	r.public.append(value, previous)
 	r.mu.Lock()
 	r.latestPublic = value.Sequence
@@ -40,18 +65,12 @@ func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 		live.spoke = true
 	}
 	for id, live := range r.active {
-		if id != value.From && !live.closed && !live.leaving {
+		if !value.Passive && id != value.From && !live.closed && !live.leaving {
 			wake(live)
 		}
 	}
 	r.mu.Unlock()
-	event := runrecord.Event{Kind: "team_message", Agent: value.From, Final: value.Final, Text: value.Text}
-	if value.FromStream {
-		event.Kind = "team_progress"
-	}
-	if value.From == "user" {
-		event.Kind = "user_message"
-	}
+	event := runrecord.Event{Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text}
 	return value, r.deliver(event, false)
 }
 func wake(live *participant) {

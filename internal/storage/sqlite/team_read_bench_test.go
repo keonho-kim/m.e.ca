@@ -29,7 +29,7 @@ func BenchmarkTeamSharedMemory(b *testing.B) {
 	}
 	defer child.Close()
 	for i := range 32 {
-		value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "agent-a", Text: strings.Repeat("Observed file content.\n", 3000) + fmt.Sprint(i)})
+		value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "Hana", Text: strings.Repeat("Observed file content.\n", 3000) + fmt.Sprint(i)})
 		if err != nil {
 			b.Fatal(err)
 		}

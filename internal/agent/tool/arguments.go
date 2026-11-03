@@ -100,7 +100,7 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	}
 	if p.Kind == TextList {
 		var values []string
-		if err := json.Unmarshal(value, &values); err != nil || len(values) < 1 || len(values) > p.Max {
+		if err := json.Unmarshal(value, &values); err != nil || !p.AllowEmpty && len(values) < 1 || len(values) > p.Max {
 			return fmt.Errorf("%s requires a bounded string array", p.Name)
 		}
 		for _, text := range values {

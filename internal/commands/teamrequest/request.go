@@ -37,5 +37,5 @@ func (s *Service) Run(ctx context.Context, options agentrequest.Options, approve
 		return team.Result{}, err
 	}
 	current := &request{service: s, options: options, templates: templates, access: workspace.New(), approver: approve}
-	return team.Run(ctx, team.Options{Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds}, options.Text)
+	return team.Run(ctx, team.Options{Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds, ProjectRoot: options.Session.ProjectRoot}, options.Text)
 }

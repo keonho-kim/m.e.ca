@@ -45,6 +45,9 @@ func (d *requestDelivery) stream(ctx context.Context, queue chan<- notice, event
 	return d.peer(event.Agent).stream(ctx, queue, event)
 }
 func (d *requestDelivery) post(ctx context.Context, queue chan<- notice, n notice) error {
+	if n.Event != nil && (n.Event.Kind == "team_observation" || n.Event.Kind == "team_status") {
+		return ctx.Err()
+	}
 	if !d.team {
 		return d.single.post(ctx, queue, n)
 	}

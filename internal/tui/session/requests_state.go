@@ -20,6 +20,7 @@ type requestState struct {
 	commandOpen    bool
 	commandIndex   int
 	steering       chan composer.Request
+	steeringReady  chan struct{}
 	steeringDrafts []string
 	queued         queue.State
 	fileSubmission *fileSubmission

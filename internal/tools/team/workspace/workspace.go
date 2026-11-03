@@ -49,11 +49,12 @@ func overlap(a, b target) bool {
 }
 func (w *Access) reserve(ctx context.Context, paths []string, shell bool, waiting func() error) (*Lease, error) {
 	announced := false
+	keys := make([]target, len(paths))
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		keys := make([]target, len(paths))
+		// Recheck aliases after every wait, but reuse the attempt's owned slice.
 		for i, path := range paths {
 			keys[i] = canonical(path)
 		}

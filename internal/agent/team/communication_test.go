@@ -15,7 +15,7 @@ import (
 
 func TestContributionRequiresOwnPublicSpeechInCurrentLifetime(t *testing.T) {
 	r := testRoom(t)
-	a, b := &Peer{ID: "agent-a", room: r}, &Peer{ID: "agent-b", room: r}
+	a, b := &Peer{ID: "Hana", room: r}, &Peer{ID: "Ren", room: r}
 	for _, event := range []runrecord.Event{
 		{Kind: "thinking", Thinking: "I will inspect api/handler.go"},
 		{Kind: "stream", Text: "I will inspect api/handler.go"},
@@ -28,13 +28,13 @@ func TestContributionRequiresOwnPublicSpeechInCurrentLifetime(t *testing.T) {
 			t.Fatal("private reasoning, a draft or empty text enabled local work")
 		}
 	}
-	if _, err := r.publish(channel.Message{From: "agent-b", Text: "agent-a: please inspect the interface"}); err != nil {
+	if _, err := r.publish(channel.Message{From: "Ren", Text: "Hana: please inspect the interface"}); err != nil {
 		t.Fatal(err)
 	}
 	if a.HasSpoken() || b.HasSpoken() {
 		t.Fatal("an invitation was mistaken for a public contribution")
 	}
-	if err := a.Emit(runrecord.Event{Kind: "progress", Text: "agent-b is editing storage/query.go; I will inspect api/handler.go."}); err != nil {
+	if err := a.Emit(runrecord.Event{Kind: "progress", Text: "Ren is editing storage/query.go; I will inspect api/handler.go."}); err != nil {
 		t.Fatal(err)
 	}
 	if !a.HasSpoken() || b.HasSpoken() {
@@ -63,7 +63,7 @@ func TestContributionPublicationFailureDoesNotEnableWork(t *testing.T) {
 	r := testRoom(t)
 	want := errors.New("public speech could not be stored")
 	r.options.Store = rejectedSpeech{Repository: r.options.Store, err: want}
-	a := &Peer{ID: "agent-a", room: r}
+	a := &Peer{ID: "Hana", room: r}
 	if err := a.Emit(runrecord.Event{Kind: "progress", Text: "I will edit api/handler.go."}); !errors.Is(err, want) {
 		t.Fatal(err)
 	}

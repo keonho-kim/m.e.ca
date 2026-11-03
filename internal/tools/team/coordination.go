@@ -22,7 +22,7 @@ type coordinationOperation struct {
 }
 
 func (op *coordinationOperation) Approval() toolapi.Approval {
-	return toolapi.Approval{Name: op.call.Name, Target: op.input.Agent}
+	return toolapi.Approval{Name: op.call.Name, Target: op.input.Member}
 }
 func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.Result, error) {
 	if err := ctx.Err(); err != nil {
@@ -33,38 +33,56 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 	}
 	e := op.executor
 	switch op.call.Name {
-	case "call_friend":
-		value, err := e.Peer.Invite(ctx, op.input.Agent, op.input.Message)
+	case "add_team_member":
+		value, err := e.Peer.AddMember(ctx, op.input.Member, op.input.Message)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
-		return resultfmt.Encode(value, "Peer invitation processed")
-	case "list_friends":
-		page, err := e.Peer.Friends(ctx, op.input.AfterPeer)
+		return resultfmt.Encode(value, "Team member added or restored")
+	case "list_team_members":
+		page, err := e.Peer.Members(ctx, op.input.AfterMember)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
-		return resultfmt.Encode(page, "Known peers")
+		return resultfmt.Encode(page, "Team members")
 	case "read_team_messages":
 		messages, err := e.Peer.ReadMessages(ctx, op.input.After)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
 		return resultfmt.Encode(messages, "Public conversation")
-	case "say_goodbye":
+	case "set_work":
+		for _, command := range e.CommandActivity() {
+			if command.Status == "running" {
+				return toolapi.Result{}, fmt.Errorf("settle your active commands before changing or releasing your contribution")
+			}
+		}
+		paths, err := e.canonicalPaths(op.input.Paths, true)
+		if err != nil {
+			return toolapi.Result{}, err
+		}
+		work, err := e.Peer.SetWork(op.input.Summary, paths)
+		if err != nil {
+			return toolapi.Result{}, err
+		}
+		return resultfmt.Encode(struct {
+			Member string   `json:"member_name"`
+			Paths  []string `json:"paths"`
+		}{work.Member, work.Paths}, "Team contribution updated")
+	case "leave_team":
 		for _, command := range e.CommandActivity() {
 			if command.Status == "running" {
 				return toolapi.Result{}, fmt.Errorf("settle active commands with wait_command or cancel_command before leaving")
 			}
 		}
-		depart, err := e.Peer.Goodbye(ctx, op.input.Message)
+		depart, err := e.Peer.Leave(ctx, op.input.Message)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
 		status, next := "closed", "Your session is closing; its history remains available."
 		if !depart {
 			status = "report_required"
-			next = "You are the last peer. Read the latest public conversation and report directly to the user: completed changes, actual checks, remaining uncertainty. Respond normally without another goodbye. You may call a peer if more work is justified."
+			next = "You are the last member. Read the latest public conversation and report directly to the user: completed changes, actual checks, remaining uncertainty. Respond normally without another leave_team. Use add_team_member if another independent contribution is justified."
 		}
 		result, err := resultfmt.Encode(map[string]string{"status": status, "next": next}, "Contribution delivered")
 		result.Depart = depart

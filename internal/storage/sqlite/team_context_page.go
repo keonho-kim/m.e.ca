@@ -119,11 +119,14 @@ func (s *Store) publicMessage(ctx context.Context, record storedRecord) (teamcha
 		if err := json.Unmarshal(body, &value); err != nil {
 			return message, err
 		}
-		if value.Kind != "team_message" && value.Kind != "team_progress" {
+		if value.Kind != "team_message" && value.Kind != "team_progress" && value.Kind != "team_work" && value.Kind != "team_observation" && value.Kind != "team_status" {
 			return message, fmt.Errorf("source is not public conversation")
 		}
 		message.From, message.Text, message.Final = value.Agent, value.Text, value.Final
 		message.FromStream = value.Kind == "team_progress"
+		message.Declaration = value.Kind == "team_work"
+		message.Passive = value.Kind == "team_status"
+		message.Observation = value.Kind == "team_observation" || message.Passive
 	}
 	return message, nil
 }

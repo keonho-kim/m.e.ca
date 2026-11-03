@@ -34,5 +34,9 @@ func (p *Peer) Emit(event runrecord.Event) error {
 		r.statistics.Add(event)
 		r.mu.Unlock()
 	}
-	return r.deliver(event, event.Reference != nil || event.Kind == "usage")
+	observed, err := p.observe(event)
+	if err != nil {
+		return err
+	}
+	return r.deliver(event, !observed && event.Reference != nil || event.Kind == "usage")
 }

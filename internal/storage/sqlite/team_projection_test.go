@@ -20,7 +20,7 @@ func TestTeamPageCachedEnvelopeNeedsNoPrivateConnection(t *testing.T) {
 	if err := child.RecordEvent(ctx, child.session.ID, runrecord.Event{Kind: "tool_succeeded", Text: "created", Output: []byte(`{"ok":true}`)}); err != nil {
 		t.Fatal(err)
 	}
-	event := runrecord.Event{Kind: "team_reference", Agent: "agent-a", Reference: &runrecord.EventReference{Session: child.session.ID, Sequence: child.latestEvent.Load()}}
+	event := runrecord.Event{Kind: "team_reference", Agent: "Hana", Reference: &runrecord.EventReference{Session: child.session.ID, Sequence: child.latestEvent.Load()}}
 	body, _ := json.Marshal(event)
 	page := teamPage{parent: root, compact: true}
 	if err := page.prepare(ctx, []storedRecord{{kind: "event", body: body}}); err != nil {
@@ -31,7 +31,7 @@ func TestTeamPageCachedEnvelopeNeedsNoPrivateConnection(t *testing.T) {
 	}
 	page.stores, page.parent = nil, nil
 	got, err := page.resolve(ctx, event, true)
-	if err != nil || got.Text != "created" || got.Agent != "agent-a" {
+	if err != nil || got.Text != "created" || got.Agent != "Hana" {
 		t.Fatalf("cached projection: %+v %v", got, err)
 	}
 }
@@ -41,7 +41,7 @@ func TestSharedContextCompactionPreservesOrderAndAuthenticatesOriginals(t *testi
 	ctx := context.Background()
 	var want []string
 	for range 8 {
-		value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "agent-a", Text: strings.Repeat("observed result ", 5000)})
+		value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "Hana", Text: strings.Repeat("observed result ", 5000)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -69,7 +69,7 @@ func TestSharedContextCompactionPreservesOrderAndAuthenticatesOriginals(t *testi
 }
 
 func TestSharedContextProjectionAppliesFieldSelectionAndSize(t *testing.T) {
-	body := []byte(`{"id":"peer:agent-a/1","role":"system","content":null,"reasoning":"omit"}`)
+	body := []byte(`{"id":"peer:Hana/1","role":"system","content":null,"reasoning":"omit"}`)
 	refs := []byte(`{"[\"content\"]":"body"}`)
 	content := strings.Repeat("context", 100)
 	raw, _ := json.Marshal(content)

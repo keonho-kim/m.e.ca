@@ -24,7 +24,11 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		through, count, remaining := r.latestPublic, r.countLocked(), r.remainingLocked()
 		live := r.active[p.ID]
 		r.mu.Unlock()
-		pending, err := r.options.Store.TeamPending(ctx, p.Cursor, through, p.ID)
+		var pending bool
+		var err error
+		if p.Cursor < through {
+			pending, err = r.options.Store.TeamPending(ctx, p.Cursor, through, p.ID)
+		}
 		if err == nil && count == 1 && !pending {
 			_, err = r.appendPublic(channel.Message{From: p.ID, Text: text, FromStream: true, Final: true})
 			if err == nil {

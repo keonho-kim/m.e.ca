@@ -28,7 +28,7 @@ func BenchmarkPublicHistoryFanout(b *testing.B) {
 				b.Fatal(err)
 			}
 			b.Cleanup(func() { store.Close() })
-			message, err := store.AppendTeamMessage(context.Background(), channel.Message{From: "agent-a", Text: strings.Repeat("x", size)})
+			message, err := store.AppendTeamMessage(context.Background(), channel.Message{From: "Hana", Text: strings.Repeat("x", size)})
 			if err != nil {
 				b.Fatal(err)
 			}

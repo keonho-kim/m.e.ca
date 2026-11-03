@@ -18,6 +18,7 @@ type localOperation struct {
 	call      toolapi.Call
 	operation toolapi.Execution
 	held      *workspace.Lease
+	paths     []string
 }
 
 func (op *localOperation) Approval() toolapi.Approval { return op.operation.Approval() }
@@ -48,7 +49,14 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 		failure := &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "A new user instruction arrived while this operation was waiting; nothing executed.", Next: "Read the latest instruction and reconsider the operation."}
 		return toolapi.Result{Failed: true, Failure: failure}, failure
 	}
+	if err := e.Peer.CheckWork(op.paths); err != nil {
+		failure := &toolapi.Failure{Code: toolapi.StaleTarget, Detail: err.Error(), Next: "Read current teammate work and regenerate this operation after coordinating the relevant path."}
+		return toolapi.Result{Failed: true, Failure: failure}, failure
+	}
 	result, err := op.operation.Execute(ctx, approved)
+	if op.call.Name == "execute_command" && result.Process != nil && len(op.paths) > 0 {
+		e.trackCommandPaths(result.Process.CommandID, op.paths)
+	}
 	if op.call.Name == "execute_command" && result.Process != nil && result.Process.Status == "running" {
 		held := op.held
 		op.held = nil

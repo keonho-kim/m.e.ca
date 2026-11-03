@@ -4,17 +4,17 @@
 // Related: internal/agent/team/inbox.go, internal/agent/team/membership.go.
 package team
 
-import (
-	"slices"
-	"strings"
-	"time"
-)
+import "time"
 
 type Peer struct {
-	ID           string
-	Cursor       int64
-	UserSequence int64
-	room         *Room
+	ID             string
+	Cursor         int64
+	UserSequence   int64
+	DecisionCursor int64
+	room           *Room
+	// Only commands awaiting their first terminal observation remain here.
+	// Publication owns this map under room.logMu; completed archives need no entry.
+	running map[string]struct{}
 }
 
 func (p *Peer) Deadline() time.Time { return p.room.deadline }
@@ -40,19 +40,6 @@ func (p *Peer) HasSpoken() bool {
 	return live != nil && !live.closed && !live.leaving && live.spoke
 }
 
-func (p *Peer) Names() string {
-	r := p.room
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	names := make([]string, 0, len(r.active))
-	for id, live := range r.active {
-		if !live.closed && !live.leaving {
-			names = append(names, id)
-		}
-	}
-	slices.Sort(names)
-	return strings.Join(names, ", ")
-}
 func (p *Peer) HasNewUserInstruction() bool {
 	r := p.room
 	r.mu.Lock()

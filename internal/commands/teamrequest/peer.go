@@ -53,7 +53,7 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 	}
 	own.LoadPrompts = func() (prompt.Templates, error) {
 		value := r.templates
-		value.System += "\n\nYour peer name is " + member.ID + ". Known peers: " + peer.Names() + ".\n"
+		value.System += "\n\nYour peer name is " + member.ID + ". Speak as " + member.ID + ".\n"
 		return value, nil
 	}
 	action := agentrequest.New(own)
@@ -62,9 +62,16 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 		return r.projectInstructions, r.instructionsErr
 	}
 	action.Runner.PollContext, action.Runner.OnAnswer = peer.Inbox, peer.AfterAnswer
+	action.Runner.BeforeDecision, action.Runner.ContextObservations = peer.BeginDecision, peer.WorkContext
 	action.Runner.Resume = true
+	action.Runner.HideThinking = true
 	action.Runner.AdmitModel, action.Runner.Deadline = peer.AdmitModel, peer.Deadline()
 	emit := func(event runrecord.Event) error {
+		if op := event.Operation; op != nil && op.Process != nil {
+			copy := *op
+			copy.AffectedPaths = tools.CommandTargets(op.Process.CommandID, op.Process.Status != "running")
+			event.Operation = &copy
+		}
 		if event.Call != nil && catalog.IsTool(event.Call.Name) {
 			event.Reference = nil
 		}

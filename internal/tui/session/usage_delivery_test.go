@@ -18,10 +18,10 @@ func TestUsageDeliveryCoalescesWithoutBreakingText(t *testing.T) {
 		queue := make(chan notice, 64)
 		ctx := context.Background()
 		for i := range 20 {
-			if err := d.stream(ctx, queue, runrecord.Event{Kind: "stream", Agent: "agent-a", Text: string(rune('a' + i))}); err != nil {
+			if err := d.stream(ctx, queue, runrecord.Event{Kind: "stream", Agent: "Hana", Text: string(rune('a' + i))}); err != nil {
 				t.Fatal(err)
 			}
-			e := runrecord.Event{Kind: "usage_progress", Agent: "agent-a", Usage: &modelapi.TokenUsage{Output: int64(i)}}
+			e := runrecord.Event{Kind: "usage_progress", Agent: "Hana", Usage: &modelapi.TokenUsage{Output: int64(i)}}
 			if err := d.post(ctx, queue, notice{Event: &e}); err != nil {
 				t.Fatal(err)
 			}

@@ -5,6 +5,7 @@
 package tool
 
 type Operation struct {
+	AffectedPaths                                []string `json:"-"`
 	Revision                                     int
 	Target                                       string
 	Versions                                     map[string]string

@@ -29,6 +29,7 @@ import (
 type teamModel struct {
 	mu      sync.Mutex
 	steps   map[string]int
+	names   []string
 	restore bool
 	sawPeer bool
 }
@@ -36,47 +37,56 @@ type teamModel struct {
 func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 	g.mu.Lock()
 	id := ""
-	for _, name := range []string{"agent-a", "agent-b", "agent-c"} {
+	for _, name := range g.names {
 		if strings.Contains(request.Messages[0].Content, "Your peer name is "+name+".") {
 			id = name
 		}
 	}
 	if id == "" {
-		g.mu.Unlock()
-		return fmt.Errorf("missing peer identity")
+		_, tail, found := strings.Cut(request.Messages[0].Content, "Your peer name is ")
+		if !found {
+			g.mu.Unlock()
+			return fmt.Errorf("missing peer identity")
+		}
+		id, _, _ = strings.Cut(tail, ".")
+		g.names = append(g.names, id)
 	}
 	for _, m := range request.Messages {
-		if strings.Contains(m.Content, "Public conversation — agent-") && !strings.Contains(m.Content, "Public conversation — "+id+"\n") {
+		if strings.Contains(m.Content, "Public conversation — ") && !strings.Contains(m.Content, "Public conversation — "+id+"\n") {
 			g.sawPeer = true
 		}
 	}
 	step := g.steps[id]
 	g.steps[id]++
 	restore := g.restore
+	names := append([]string(nil), g.names...)
 	g.mu.Unlock()
 	var name string
 	var arguments any
 	switch step {
 	case 0:
-		if id == "agent-a" {
-			name = "call_friend"
-			arguments = map[string]string{"message": "Create agent-c.txt with an independent contribution. Keep agent-a.txt and agent-b.txt unchanged and report your result publicly."}
+		if id == names[0] {
+			name = "add_team_member"
+			arguments = map[string]string{"message": "Create your own name.txt as an independent contribution. Use set_work first. Preserve the other teammates files and report results publicly."}
 			if restore {
-				arguments.(map[string]string)["agent_id"] = "agent-c"
+				arguments.(map[string]string)["member_name"] = names[2]
 			}
 		} else {
-			name = "list_friends"
+			name = "list_team_members"
 			arguments = map[string]string{}
 		}
 	case 1:
+		name = "set_work"
+		arguments = map[string]any{"summary": "Create my independent file", "paths": []string{id + ".txt"}}
+	case 2:
 		name = "write_file"
 		arguments = map[string]string{"path": id + ".txt", "content": "A verified local contribution\n"}
-		if id == "agent-b" {
+		if id == names[1] {
 			name = "execute_command"
-			arguments = map[string]string{"command": "printf 'A verified local contribution\\n' > agent-b.txt"}
+			arguments = map[string]string{"command": "printf 'A verified local contribution\\n' > " + id + ".txt"}
 		}
-	case 2:
-		name = "say_goodbye"
+	case 3:
+		name = "leave_team"
 		arguments = map[string]string{"message": id + " created its file. No integration test was requested."}
 	default:
 		if err := emit(modelapi.Event{Streaming: true, Delta: "The requested contributions are written."}); err != nil {
@@ -123,8 +133,21 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		t.Fatal(err)
 	}
 	var original []string
+	for range 2 {
+		if _, err := store.CreateTeamAgent(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for round := range 2 {
-		model := &teamModel{steps: map[string]int{}, restore: round > 0}
+		seeded, err := store.TeamMembers(context.Background(), "", 8)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, member := range seeded {
+			names = append(names, member.ID)
+		}
+		model := &teamModel{steps: map[string]int{}, names: names, restore: round > 0}
 		var events []runrecord.Event
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		result, err := service.Run(ctx, agentrequest.Options{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Generator: model, Vault: vault, Text: "Create independent contributions inside the project."}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error { events = append(events, event); return nil })
@@ -132,10 +155,15 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		if err != nil || result.Status != runrecord.Answered || result.Text == "" {
 			t.Fatalf("round %d result=%+v error=%v", round, result, err)
 		}
+		sawShellTargets := false
 		for _, event := range events {
+			sawShellTargets = sawShellTargets || event.Kind == "team_observation" && strings.Contains(event.Text, "May have affected:")
 			if event.Kind == "tool_failed" || event.Kind == "tool_interrupted" {
 				t.Fatalf("scripted happy path failed a tool: %+v", event)
 			}
+		}
+		if !sawShellTargets {
+			t.Fatal("known shell mutation targets were not shared as uncertain effects")
 		}
 		members, err := store.TeamMembers(context.Background(), "", 100)
 		if err != nil || len(members) != 3 {

@@ -30,13 +30,13 @@ func (s *Store) packMessage(ctx context.Context, tx *sql.Tx, message modelapi.Me
 		packed, refs, err := s.packRecord(ctx, tx, body)
 		return packed, refs, len(body), err
 	}
-	raw, err := json.Marshal(message.Content)
+	encoded, err := s.room.teamContent.encoding(sequence, message.Content)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	id := recordcontent.ID(raw)
+	id := encoded.id
 	reference, _ := json.Marshal(roomPayload{Sequence: sequence})
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO payloads(id,codec,raw_bytes,body) VALUES(?,3,?,?)", id, len(raw), reference); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO payloads(id,codec,raw_bytes,body) VALUES(?,3,?,?)", id, encoded.size, reference); err != nil {
 		return nil, nil, 0, err
 	}
 	// Marshal metadata once; never allocate a full JSON message just to discard its content.
@@ -49,7 +49,7 @@ func (s *Store) packMessage(ctx context.Context, tx *sql.Tx, message modelapi.Me
 		return nil, nil, 0, err
 	}
 	refs, err := json.Marshal(map[string]string{`["content"]`: id})
-	return body, refs, len(body) - len("null") + len(raw), err
+	return body, refs, len(body) - len("null") + encoded.size, err
 }
 
 func (s *Store) roomPayload(ctx context.Context, id string, size int, body []byte) (json.RawMessage, error) {

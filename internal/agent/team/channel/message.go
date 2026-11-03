@@ -4,14 +4,41 @@
 // Related: internal/agent/team/inbox.go, internal/storage/sqlite/team_messages.go.
 package channel
 
-import "context"
+import (
+	"context"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+)
 
 type Message struct {
-	FromStream bool   `json:"-"`
-	Final      bool   `json:"final,omitempty"`
-	Sequence   int64  `json:"sequence"`
-	From       string `json:"from"`
-	Text       string `json:"text"`
+	Reference    *runrecord.EventReference `json:"-"`
+	Passive      bool                      `json:"passive,omitempty"`
+	Declaration  bool                      `json:"-"`
+	Observation  bool                      `json:"observation,omitempty"`
+	ChangedPaths []string                  `json:"-"`
+	FromStream   bool                      `json:"-"`
+	Final        bool                      `json:"final,omitempty"`
+	Sequence     int64                     `json:"sequence"`
+	From         string                    `json:"from"`
+	Text         string                    `json:"text"`
+}
+
+// Kind owns the persisted provenance shared by live delivery and log restoration.
+func (m Message) Kind() string {
+	switch {
+	case m.From == "user":
+		return "user_message"
+	case m.Observation && m.Passive:
+		return "team_status"
+	case m.Observation:
+		return "team_observation"
+	case m.FromStream:
+		return "team_progress"
+	case m.Declaration:
+		return "team_work"
+	default:
+		return "team_message"
+	}
 }
 
 type Repository interface {

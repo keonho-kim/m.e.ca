@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 )
 
-func (p *Peer) Invite(ctx context.Context, id, message string) (map[string]any, error) {
+func (p *Peer) AddMember(ctx context.Context, id, message string) (map[string]any, error) {
 	r := p.room
 	r.memberMu.Lock()
 	defer r.memberMu.Unlock()
@@ -31,7 +31,7 @@ func (p *Peer) Invite(ctx context.Context, id, message string) (map[string]any, 
 		if live.leaving {
 			status = "closing"
 		}
-		return map[string]any{"status": status, "agent_id": id, "available": MaxActive - count}, nil
+		return map[string]any{"status": status, "member_name": id, "available": MaxActive - count}, nil
 	}
 	if count >= MaxActive {
 		return map[string]any{"status": "capacity_full", "active": count, "available": 0, "next": "Continue your contribution or coordinate with active peers; do not repeatedly retry the invitation."}, nil
@@ -54,9 +54,9 @@ func (p *Peer) Invite(ctx context.Context, id, message string) (map[string]any, 
 	if err = r.start(member); err != nil {
 		return nil, err
 	}
-	return map[string]any{"status": status, "agent_id": member.ID, "active": count + 1, "available": MaxActive - count - 1}, nil
+	return map[string]any{"status": status, "member_name": member.ID, "active": count + 1, "available": MaxActive - count - 1}, nil
 }
-func (p *Peer) Goodbye(ctx context.Context, message string) (bool, error) {
+func (p *Peer) Leave(ctx context.Context, message string) (bool, error) {
 	r := p.room
 	if err := r.admitUser(); err != nil {
 		return false, err
@@ -95,17 +95,19 @@ func (p *Peer) Goodbye(ctx context.Context, message string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.remainingLocked() == 1 {
+		r.work.Release(p.ID)
+		r.workView = workProjection{}
 		return false, nil
 	}
 	live.leaving = true
 	return true, nil
 }
-func (p *Peer) Friends(ctx context.Context, after string) (FriendPage, error) {
+func (p *Peer) Members(ctx context.Context, after string) (MemberPage, error) {
 	members, err := p.room.options.Store.TeamMembers(ctx, after, 33)
 	if err != nil {
-		return FriendPage{}, err
+		return MemberPage{}, err
 	}
-	page := FriendPage{Friends: make([]Friend, 0, min(32, len(members)))}
+	page := MemberPage{Members: make([]MemberStatus, 0, min(32, len(members)))}
 	if len(members) > 32 {
 		members = members[:32]
 		page.Next = members[31].ID
@@ -115,7 +117,11 @@ func (p *Peer) Friends(ctx context.Context, after string) (FriendPage, error) {
 	defer r.mu.Unlock()
 	for _, member := range members {
 		live := r.active[member.ID]
-		page.Friends = append(page.Friends, Friend{ID: member.ID, Summary: member.Summary, Active: live != nil && !live.closed})
+		value := MemberStatus{ID: member.ID, Summary: member.Summary, Active: live != nil && !live.closed && !live.leaving}
+		if scope := r.work.Overview(member.ID); len(scope.Paths) > 0 {
+			value.Work = &scope
+		}
+		page.Members = append(page.Members, value)
 	}
 	return page, nil
 }

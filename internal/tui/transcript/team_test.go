@@ -15,10 +15,10 @@ func TestTeamHistoryPreservesOnlySubstantiveSpeech(t *testing.T) {
 	f := Formatter{Redact: func(text string) string { return text }}
 	var records []history.Record
 	for _, event := range []runrecord.Event{
-		{Kind: "team_progress", Agent: "agent-a", Text: "\n\n"},
-		{Kind: "team_message", Agent: "agent-b", Text: " \t\n"},
-		{Kind: "team_progress", Agent: "agent-a", Text: "\n\nA-public\n"},
-		{Kind: "team_progress", Agent: "agent-b", Text: "B-public", Final: true},
+		{Kind: "team_progress", Agent: "Hana", Text: "\n\n"},
+		{Kind: "team_message", Agent: "Ren", Text: " \t\n"},
+		{Kind: "team_progress", Agent: "Hana", Text: "\n\nA-public\n"},
+		{Kind: "team_progress", Agent: "Ren", Text: "B-public", Final: true},
 	} {
 		records = append(records, history.Record{Kind: "event", Event: event})
 	}

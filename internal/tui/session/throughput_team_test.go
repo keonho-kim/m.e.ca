@@ -18,16 +18,16 @@ func TestThroughputTeamInterleavingAndDepartures(t *testing.T) {
 	a.team.enabled = true
 	a.team.begin()
 	for _, event := range []runrecord.Event{
-		{Kind: "generation_started", Agent: "agent-a"},
-		{Kind: "generation_started", Agent: "agent-b"},
-		{Kind: "usage_progress", Agent: "agent-a", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: 2 * time.Second},
-		{Kind: "usage_progress", Agent: "agent-b", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
-		{Kind: "usage_progress", Agent: "agent-b", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
-		{Kind: "usage", Agent: "agent-a", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: 2 * time.Second},
-		{Kind: "team_notice", Agent: "agent-a", Text: "left"},
-		{Kind: "usage", Agent: "agent-b", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
-		{Kind: "generation_started", Agent: "agent-b"},
-		{Kind: "usage", Agent: "agent-b", Usage: &modelapi.TokenUsage{Output: 100}},
+		{Kind: "generation_started", Agent: "Hana"},
+		{Kind: "generation_started", Agent: "Ren"},
+		{Kind: "usage_progress", Agent: "Hana", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: 2 * time.Second},
+		{Kind: "usage_progress", Agent: "Ren", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
+		{Kind: "usage_progress", Agent: "Ren", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
+		{Kind: "usage", Agent: "Hana", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: 2 * time.Second},
+		{Kind: "team_notice", Agent: "Hana", Text: "left"},
+		{Kind: "usage", Agent: "Ren", Usage: &modelapi.TokenUsage{Output: 30}, MeasuredDuration: time.Second},
+		{Kind: "generation_started", Agent: "Ren"},
+		{Kind: "usage", Agent: "Ren", Usage: &modelapi.TokenUsage{Output: 100}},
 	} {
 		a.receiveRuntime(&event)
 	}

@@ -28,5 +28,9 @@ func (s *execution) request() (modelapi.Request, error) {
 		return modelapi.Request{}, err
 	}
 	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions})
-	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	observations := ""
+	if s.runner.ContextObservations != nil {
+		observations = s.runner.ContextObservations()
+	}
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

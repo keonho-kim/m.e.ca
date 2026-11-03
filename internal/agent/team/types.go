@@ -7,6 +7,7 @@ package team
 import (
 	"context"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	"time"
 
@@ -16,14 +17,15 @@ import (
 
 const MaxActive = 8
 
-type Friend struct {
-	ID      string `json:"id"`
-	Summary string `json:"summary,omitempty"`
-	Active  bool   `json:"active"`
+type MemberStatus struct {
+	ID      string              `json:"member_name"`
+	Summary string              `json:"summary,omitempty"`
+	Active  bool                `json:"active"`
+	Work    *contribution.Scope `json:"work,omitempty"`
 }
-type FriendPage struct {
-	Friends []Friend `json:"friends"`
-	Next    string   `json:"next,omitempty"`
+type MemberPage struct {
+	Members []MemberStatus `json:"members"`
+	Next    string         `json:"next,omitempty"`
 }
 
 type Repository interface {
@@ -41,9 +43,11 @@ type Options struct {
 	Emit          func(runrecord.Event) error
 	Record        func(context.Context, runrecord.Event) error
 	PollSteering  func() []string
+	SteeringReady <-chan struct{}
 	Redact        func(string) string
 	MaxModelCalls int
 	MaxSeconds    int
+	ProjectRoot   string
 }
 type Result struct {
 	Text, Agent string

@@ -83,12 +83,12 @@ func TestModelAdmissionBudgetIsShared(t *testing.T) {
 
 func TestConcurrentRestorationStartsOnePrivateSession(t *testing.T) {
 	r := testRoom(t)
-	r.options.Store.(*memoryRoom).members = append(r.options.Store.(*memoryRoom).members, identity.Member{ID: "agent-c", Session: "session_abc"})
-	p := &Peer{ID: "agent-a", room: r}
+	r.options.Store.(*memoryRoom).members = append(r.options.Store.(*memoryRoom).members, identity.Member{ID: "Arjun", Session: "session_abc"})
+	p := &Peer{ID: "Hana", room: r}
 	var workers sync.WaitGroup
 	for range 20 {
 		workers.Go(func() {
-			if _, err := p.Invite(r.ctx, "agent-c", "Check the remaining work"); err != nil {
+			if _, err := p.AddMember(r.ctx, "Arjun", "Check the remaining work"); err != nil {
 				t.Error(err)
 			}
 		})
@@ -103,8 +103,8 @@ func TestConcurrentRestorationStartsOnePrivateSession(t *testing.T) {
 
 func TestPublishedContributionEntersOwnContextWithoutRepeatingAssistantResponses(t *testing.T) {
 	r := testRoom(t)
-	p := &Peer{ID: "agent-a", room: r}
-	if _, err := p.Goodbye(r.ctx, "I updated storage/query.go; keep the interface unchanged."); err != nil {
+	p := &Peer{ID: "Hana", room: r}
+	if _, err := p.Leave(r.ctx, "I updated storage/query.go; keep the interface unchanged."); err != nil {
 		t.Fatal(err)
 	}
 	batch, err := p.Inbox(r.ctx)
@@ -128,8 +128,8 @@ func TestNewUserInstructionPrecedesGoodbye(t *testing.T) {
 		pending = nil
 		return out
 	}
-	p := &Peer{ID: "agent-a", room: r}
-	if _, err := p.Goodbye(r.ctx, "The previous request is complete"); err == nil {
+	p := &Peer{ID: "Hana", room: r}
+	if _, err := p.Leave(r.ctx, "The previous request is complete"); err == nil {
 		t.Fatal("peer left without reading the newest instruction")
 	}
 	if r.active[p.ID].leaving {
@@ -139,7 +139,7 @@ func TestNewUserInstructionPrecedesGoodbye(t *testing.T) {
 	if err != nil || batch.Objective != "Only inspect the files; keep them unchanged." {
 		t.Fatalf("new instruction missing: %+v %v", batch, err)
 	}
-	if departed, err := p.Goodbye(r.ctx, "I inspected the files without changing them."); err != nil || !departed {
+	if departed, err := p.Leave(r.ctx, "I inspected the files without changing them."); err != nil || !departed {
 		t.Fatalf("contribution could not close after reading the instruction: %t %v", departed, err)
 	}
 }
@@ -149,7 +149,7 @@ type failedPublicStore struct{ *memoryRoom }
 var errPublicWrite = errors.New("public message transaction failed")
 
 func (s failedPublicStore) AppendTeamMessage(ctx context.Context, message channel.Message) (channel.Message, error) {
-	if message.From == "agent-a" {
+	if message.From == "Hana" {
 		return message, errPublicWrite
 	}
 	return s.memoryRoom.AppendTeamMessage(ctx, message)
@@ -167,7 +167,7 @@ func TestFailedPublicWriteCancelsAndJoinsRunningPeers(t *testing.T) {
 				close(ready)
 			}
 			<-ready
-			if member.ID == "agent-a" {
+			if member.ID == "Hana" {
 				err := peer.Emit(runrecord.Event{Kind: "progress", Text: "A result that must be recorded"})
 				return run.Result{}, err
 			}
@@ -184,11 +184,11 @@ func TestFinalPeerCleanupFailureIsReturnedAfterJoining(t *testing.T) {
 	goodbye := make(chan struct{})
 	result, err := Run(context.Background(), Options{Store: &memoryRoom{}, Emit: quiet, MaxModelCalls: 10, MaxSeconds: 5,
 		Execute: func(ctx context.Context, member identity.Member, _ string, peer *Peer) (run.Result, error) {
-			if member.ID == "agent-b" {
+			if member.ID == "Ren" {
 				if _, err := peer.Inbox(ctx); err != nil {
 					return run.Result{}, err
 				}
-				left, err := peer.Goodbye(ctx, "I finished the requested contribution.")
+				left, err := peer.Leave(ctx, "I finished the requested contribution.")
 				close(goodbye)
 				return run.Result{Departed: left}, err
 			}

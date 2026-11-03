@@ -18,13 +18,13 @@ type peerDisplay struct {
 }
 type State struct {
 	peers    map[string]*peerDisplay
-	tools    map[string]messageDisplay
+	tools    map[string]toolDisplay
 	measured runrecord.Throughput
 	members  int
 }
 
 func (s *State) Begin() {
-	*s = State{peers: make(map[string]*peerDisplay), tools: make(map[string]messageDisplay)}
+	*s = State{peers: make(map[string]*peerDisplay), tools: make(map[string]toolDisplay)}
 }
 func (s *State) Finish(output *viewport.View) {
 	for _, peer := range s.peers {

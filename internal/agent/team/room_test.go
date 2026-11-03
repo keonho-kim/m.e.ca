@@ -68,7 +68,7 @@ func (s *memoryRoom) TeamPending(_ context.Context, after, through int64, own st
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, m := range s.messages {
-		if m.Sequence > after && m.Sequence <= through && (m.From != own || !m.FromStream) {
+		if m.Sequence > after && m.Sequence <= through && !m.Passive && (m.From != own || !m.FromStream && !m.Observation && !m.Declaration) {
 			return true, nil
 		}
 	}
@@ -105,21 +105,21 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 			if _, err := peer.Inbox(ctx); err != nil {
 				return run.Result{}, err
 			}
-			if member.ID == "agent-a" {
+			if member.ID == "Hana" {
 				id := ""
 				if request > 0 {
-					id = "agent-c"
+					id = "Arjun"
 				}
-				if _, err := peer.Invite(ctx, id, "Check the implementation"); err != nil {
+				if _, err := peer.AddMember(ctx, id, "Check the implementation"); err != nil {
 					return run.Result{}, err
 				}
 				close(invited)
 			}
-			if member.ID == "agent-b" {
+			if member.ID == "Ren" {
 				<-invited
 			}
-			if member.ID != "agent-c" {
-				leave, err := peer.Goodbye(ctx, "Contribution finished")
+			if member.ID != "Arjun" {
+				leave, err := peer.Leave(ctx, "Contribution finished")
 				departed <- struct{}{}
 				return run.Result{Departed: leave}, err
 			}
@@ -133,7 +133,7 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		result, err := Run(ctx, Options{Store: store, Execute: execute, Emit: quiet, MaxModelCalls: 100, MaxSeconds: 5}, "Build the requested feature")
 		cancel()
-		if err != nil || result.Agent != "agent-c" || result.Text == "" {
+		if err != nil || result.Agent != "Arjun" || result.Text == "" {
 			t.Fatalf("result=%+v err=%v", result, err)
 		}
 		members, _ := store.TeamMembers(context.Background(), "", 100)
@@ -170,11 +170,11 @@ func testRoom(t *testing.T) *Room {
 }
 func TestConcurrentInvitationsReserveOnlyEightSlots(t *testing.T) {
 	r := testRoom(t)
-	p := &Peer{ID: "agent-a", room: r}
+	p := &Peer{ID: "Hana", room: r}
 	var workers sync.WaitGroup
 	for range 20 {
 		workers.Go(func() {
-			if _, err := p.Invite(r.ctx, "", "Help independently"); err != nil {
+			if _, err := p.AddMember(r.ctx, "", "Help independently"); err != nil {
 				t.Error(err)
 			}
 		})
@@ -190,9 +190,9 @@ func TestConcurrentGoodbyesLeaveExactlyOneReporter(t *testing.T) {
 	r := testRoom(t)
 	values := make(chan bool, 2)
 	var workers sync.WaitGroup
-	for _, id := range []string{"agent-a", "agent-b"} {
+	for _, id := range []string{"Hana", "Ren"} {
 		workers.Go(func() {
-			left, err := (&Peer{ID: id, room: r}).Goodbye(r.ctx, "Done")
+			left, err := (&Peer{ID: id, room: r}).Leave(r.ctx, "Done")
 			if err != nil {
 				t.Error(err)
 			}
@@ -213,11 +213,11 @@ func TestConcurrentGoodbyesLeaveExactlyOneReporter(t *testing.T) {
 }
 func TestPublicProgressReachesEveryPeer(t *testing.T) {
 	r := testRoom(t)
-	a := &Peer{ID: "agent-a", room: r}
+	a := &Peer{ID: "Hana", room: r}
 	if err := a.Emit(runrecord.Event{Kind: "progress", Text: "I will update api/handler.go using the existing interface."}); err != nil {
 		t.Fatal(err)
 	}
-	c := &Peer{ID: "agent-c", room: r}
+	c := &Peer{ID: "Arjun", room: r}
 	batch, err := c.Inbox(r.ctx)
 	if err != nil || len(batch.Messages) != 1 {
 		t.Fatalf("batch=%+v error=%v", batch, err)

@@ -39,7 +39,7 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 	case "stream":
 		peer := s.peer(event.Agent)
 		peer.message.show(event.Agent, false, viewport.Block{Text: event.Text, Markdown: true, Streaming: true}, f, output)
-	case "team_message", "team_progress":
+	case "team_message", "team_progress", "team_work":
 		blocks := f.Event(event)
 		if len(blocks) != 2 {
 			return

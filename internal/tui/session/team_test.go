@@ -18,14 +18,14 @@ func TestTeamStreamsStayInTheirOwnMessageBlocks(t *testing.T) {
 	a.team.enabled = true
 	a.team.begin()
 	for _, event := range []runrecord.Event{
-		{Kind: "generation_started", Agent: "agent-a"},
-		{Kind: "stream", Agent: "agent-a", Text: "first", Thinking: "hidden reasoning"},
-		{Kind: "generation_started", Agent: "agent-b"},
-		{Kind: "stream", Agent: "agent-b", Text: "second"},
-		{Kind: "stream", Agent: "agent-a", Text: "first complete"},
-		{Kind: "team_progress", Agent: "agent-b", Text: "second"},
-		{Kind: "team_progress", Agent: "agent-a", Text: "first complete"},
-		{Kind: "team_message", Agent: "agent-b", Text: "Please keep the interface."},
+		{Kind: "generation_started", Agent: "Hana"},
+		{Kind: "stream", Agent: "Hana", Text: "first", Thinking: "hidden reasoning"},
+		{Kind: "generation_started", Agent: "Ren"},
+		{Kind: "stream", Agent: "Ren", Text: "second"},
+		{Kind: "stream", Agent: "Hana", Text: "first complete"},
+		{Kind: "team_progress", Agent: "Ren", Text: "second"},
+		{Kind: "team_progress", Agent: "Hana", Text: "first complete"},
+		{Kind: "team_message", Agent: "Ren", Text: "Please keep the interface."},
 	} {
 		a.receiveRuntime(&event)
 	}
@@ -37,7 +37,7 @@ func TestTeamStreamsStayInTheirOwnMessageBlocks(t *testing.T) {
 	if strings.Count(value, "first complete") != 1 || strings.Count(value, "second") != 1 || strings.Contains(value, "hidden reasoning") {
 		t.Fatalf("mixed output: %s", value)
 	}
-	if !strings.Contains(value, "agent-b") {
+	if !strings.Contains(value, "Ren") {
 		t.Fatal("public sender missing")
 	}
 	if strings.Contains(value, "#team") {
@@ -77,7 +77,7 @@ func TestTeamCancellationFinishesEveryStream(t *testing.T) {
 	a.team.enabled = true
 	for range 3 {
 		a.team.begin()
-		for _, id := range []string{"agent-a", "agent-b"} {
+		for _, id := range []string{"Hana", "Ren"} {
 			a.receiveTeam(&runrecord.Event{Kind: "generation_started", Agent: id})
 			a.receiveTeam(&runrecord.Event{Kind: "stream", Agent: id, Text: "**unfinished** contribution"})
 		}

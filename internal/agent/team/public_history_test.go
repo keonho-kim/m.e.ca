@@ -32,7 +32,7 @@ func (r *publicReader) TeamMessages(_ context.Context, after, through int64, lim
 }
 
 func TestPublicHistoryRestoresOnceAndCopiesReceiverMetadata(t *testing.T) {
-	reader := &publicReader{values: []channel.Message{{Sequence: 10, From: "agent-a", Text: strings.Repeat("x", 65536)}, {Sequence: 20, From: "user", Text: "current request"}}}
+	reader := &publicReader{values: []channel.Message{{Sequence: 10, From: "Hana", Text: strings.Repeat("x", 65536)}, {Sequence: 20, From: "user", Text: "current request"}}}
 	var h publicHistory
 	for range 8 {
 		values, err := h.read(context.Background(), reader, 0, 20, 100)
@@ -72,7 +72,7 @@ func TestPublicHistoryPublicationAndEvictionKeepCoverage(t *testing.T) {
 }
 
 func TestPublicHistoryLargeBodyAndCancellation(t *testing.T) {
-	reader := &publicReader{values: []channel.Message{{Sequence: 1, From: "agent-a", Text: strings.Repeat("x", publicHistoryBytes)}}}
+	reader := &publicReader{values: []channel.Message{{Sequence: 1, From: "Hana", Text: strings.Repeat("x", publicHistoryBytes)}}}
 	var h publicHistory
 	values, err := h.read(context.Background(), reader, 0, 1, 100)
 	if err != nil || len(values) != 1 || len(h.values) != 0 || h.bytes != 0 {
@@ -98,7 +98,7 @@ func TestPublicHistoryInboxDrainsPartialWindowThroughLatestUser(t *testing.T) {
 			room.public.append(message, int64(i-1))
 		}
 	}
-	peer := &Peer{ID: "agent-a", room: room}
+	peer := &Peer{ID: "Hana", room: room}
 	batch, err := peer.Inbox(ctx)
 	if err != nil || len(batch.Messages) != 150 || batch.Cursor != 150 || peer.UserSequence != 150 {
 		t.Fatalf("latest user was delayed behind a short cached page: %d cursor=%d %v", len(batch.Messages), batch.Cursor, err)

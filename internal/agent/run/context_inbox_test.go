@@ -13,11 +13,37 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 type contextJournalFixture struct {
 	journal
 	cursor int64
+}
+
+func TestSanitizedPeerContextDetachesFromItsOriginalSharedBytes(t *testing.T) {
+	j := &contextJournalFixture{}
+	r := fixture(&generator{replies: []string{"done"}}, &executor{}, &j.journal)
+	r.Journal = j
+	r.Redact = func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") }
+	r.PollContext = func(context.Context) (ContextBatch, error) {
+		if j.cursor == 0 {
+			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Role: "system", Content: "Public conversation — Ren\nprovider-secret"}}}, nil
+		}
+		return ContextBatch{}, nil
+	}
+	if _, err := r.Run(context.Background(), "Continue", approve, emit); err != nil {
+		t.Fatal(err)
+	}
+	for _, message := range j.messages {
+		if channel.IsPeer(message.ID) {
+			if _, shared := channel.Sequence(message.ID); shared || strings.Contains(message.Content, "provider-secret") {
+				t.Fatal("sanitized context kept a reference to different original bytes", message)
+			}
+			return
+		}
+	}
+	t.Fatal("peer observation was not committed")
 }
 
 func (j *contextJournalFixture) CommitContext(ctx context.Context, id string, entries []runrecord.Entry, cursor int64) error {
@@ -78,7 +104,7 @@ func TestCooperativeContextArrivingDuringCompactionReachesFirstCall(t *testing.T
 	pending := false
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if pending && j.cursor == 0 {
-			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:agent-b/9", Role: "system", Content: "Public conversation — agent-b\nUse the existing storage interface."}}}, nil
+			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Role: "system", Content: "Public conversation — Ren\nUse the existing storage interface."}}}, nil
 		}
 		return ContextBatch{}, nil
 	}
@@ -101,5 +127,22 @@ func TestCooperativeContextArrivingDuringCompactionReachesFirstCall(t *testing.T
 	}
 	if j.cursor != 9 {
 		t.Fatal("receive cursor was not committed")
+	}
+}
+
+func TestContextCursorWithoutNewMessagesDoesNotRequestAnotherInference(t *testing.T) {
+	g := &generator{replies: []string{"Finished the requested change"}}
+	j := &contextJournalFixture{}
+	r := fixture(g, &executor{}, &j.journal)
+	r.Journal = j
+	r.PollContext = func(context.Context) (ContextBatch, error) {
+		if len(g.requests) == 1 && j.cursor == 0 {
+			return ContextBatch{Cursor: 7}, nil
+		}
+		return ContextBatch{}, nil
+	}
+	result, err := r.Run(context.Background(), "Implement a change", approve, emit)
+	if err != nil || result.Status != runrecord.Answered || len(g.requests) != 1 || j.cursor != 7 {
+		t.Fatal("passive observation forced inference or lost its durable cursor", result, len(g.requests), err)
 	}
 }

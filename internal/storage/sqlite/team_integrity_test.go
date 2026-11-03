@@ -47,7 +47,7 @@ func TestTeamRegistrationFailureRemovesOnlyNewDatabase(t *testing.T) {
 func TestTeamShortMessagesStayInline(t *testing.T) {
 	root, child := teamStorage(t)
 	ctx := context.Background()
-	value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "agent-a", Text: "Check api.go."})
+	value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "Hana", Text: "Check api.go."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestTeamConcurrentPublicationsReturnOwnSequence(t *testing.T) {
 	for i := range 16 {
 		workers.Go(func() {
 			text := fmt.Sprintf("result %d", i)
-			value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "agent-a", Text: text})
+			value, err := root.AppendTeamMessage(ctx, teamchannel.Message{From: "Hana", Text: text})
 			if err != nil {
 				t.Error(err)
 				return
@@ -83,4 +83,35 @@ func TestTeamConcurrentPublicationsReturnOwnSequence(t *testing.T) {
 		})
 	}
 	workers.Wait()
+}
+
+func TestTeamConcurrentRegistrationsKeepUniqueNamesAndCompleteSessions(t *testing.T) {
+	root, _ := teamStorage(t)
+	var workers sync.WaitGroup
+	for range 6 {
+		workers.Go(func() {
+			if _, err := root.CreateTeamAgent(context.Background()); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	workers.Wait()
+	members, err := root.TeamMembers(context.Background(), "", 32)
+	if err != nil || len(members) != 7 {
+		t.Fatal("concurrent registration lost members", len(members), err)
+	}
+	seen := map[string]bool{}
+	for _, member := range members {
+		if seen[member.ID] {
+			t.Fatal("concurrent registrations reused a name")
+		}
+		seen[member.ID] = true
+		child, err := root.OpenTeamAgent(context.Background(), member.Session)
+		if err != nil {
+			t.Fatal("member points at an incomplete database", err)
+		}
+		if err := child.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

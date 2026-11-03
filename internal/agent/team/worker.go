@@ -41,6 +41,8 @@ func (r *Room) worker(live *participant) {
 		r.memberMu.Lock()
 		r.mu.Lock()
 		live.closed = true
+		r.work.Release(peer.ID)
+		r.workView = workProjection{}
 		if r.active[peer.ID] == live {
 			delete(r.active, peer.ID)
 		}

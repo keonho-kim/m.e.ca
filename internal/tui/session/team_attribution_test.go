@@ -20,14 +20,14 @@ func TestTeamDeliveredAttribution(t *testing.T) {
 	delivery := requestDelivery{team: true}
 	queue := make(chan notice, 16)
 	for _, event := range []runrecord.Event{
-		{Kind: "generation_started", Agent: "agent-a"},
-		{Kind: "stream", Agent: "agent-a", Text: "A-public"},
-		{Kind: "generation_started", Agent: "agent-b"},
-		{Kind: "stream", Agent: "agent-b", Text: "\n\n"},
-		{Kind: "stream", Agent: "agent-a", Text: "A-public-complete"},
-		{Kind: "stream", Agent: "agent-b", Text: "\n\nB-public-complete"},
-		{Kind: "team_progress", Agent: "agent-b", Text: "B-public-complete"},
-		{Kind: "team_progress", Agent: "agent-a", Text: "A-public-complete", Final: true},
+		{Kind: "generation_started", Agent: "Hana"},
+		{Kind: "stream", Agent: "Hana", Text: "A-public"},
+		{Kind: "generation_started", Agent: "Ren"},
+		{Kind: "stream", Agent: "Ren", Text: "\n\n"},
+		{Kind: "stream", Agent: "Hana", Text: "A-public-complete"},
+		{Kind: "stream", Agent: "Ren", Text: "\n\nB-public-complete"},
+		{Kind: "team_progress", Agent: "Ren", Text: "B-public-complete"},
+		{Kind: "team_progress", Agent: "Hana", Text: "A-public-complete", Final: true},
 	} {
 		var err error
 		if event.Kind == "stream" {
@@ -50,7 +50,7 @@ func TestTeamDeliveredAttribution(t *testing.T) {
 	}
 	text := shown.String()
 	previous := -1
-	for _, marker := range []string{"agent-a", "A-public-complete", "agent-b", "B-public-complete"} {
+	for _, marker := range []string{"Hana", "A-public-complete", "Ren", "B-public-complete"} {
 		at := strings.Index(text, marker)
 		if at <= previous || strings.Count(text, marker) != 1 {
 			t.Fatalf("missing or crossed sender %q: %s", marker, text)

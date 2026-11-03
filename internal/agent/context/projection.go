@@ -28,6 +28,7 @@ type Projection struct {
 	model   string
 	system  instructionSnapshot
 	memory  summarySnapshot
+	work    summarySnapshot
 }
 
 func (p *Projection) build(input Input) (modelapi.Request, error) {

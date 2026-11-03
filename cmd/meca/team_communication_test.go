@@ -26,6 +26,7 @@ import (
 )
 
 type communicatingTeamModel struct {
+	names       []string
 	mu          sync.Mutex
 	steps       map[string]int
 	bAnnounced  chan struct{}
@@ -34,21 +35,21 @@ type communicatingTeamModel struct {
 }
 
 func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	id := "agent-a"
-	if strings.Contains(request.Messages[0].Content, "Your peer name is agent-b.") {
-		id = "agent-b"
+	id := g.names[0]
+	if strings.Contains(request.Messages[0].Content, "Your peer name is "+g.names[1]+".") {
+		id = g.names[1]
 	}
 	g.mu.Lock()
 	step := g.steps[id]
 	g.steps[id]++
-	if id == "agent-a" && step == 1 {
+	if id == g.names[0] && step == 1 {
 		for _, message := range request.Messages {
 			g.sawFeedback = g.sawFeedback || message.Role == "tool" && strings.Contains(message.Content, "team_contribution_required")
-			g.sawPeer = g.sawPeer || strings.Contains(message.Content, "Public conversation — agent-b\nI will implement b.txt")
+			g.sawPeer = g.sawPeer || strings.Contains(message.Content, "Public conversation — "+g.names[1]+"\nI will implement b.txt")
 		}
 	}
 	g.mu.Unlock()
-	if id == "agent-a" && step == 0 {
+	if id == g.names[0] && step == 0 {
 		select {
 		case <-g.bAnnounced:
 		case <-ctx.Done():
@@ -58,16 +59,20 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 	var name, text string
 	var args any
 	switch {
-	case id == "agent-a" && step == 0:
+	case id == g.names[0] && step == 0:
 		name, args = "execute_command", map[string]string{"command": "printf unannounced > silent.txt"}
-	case id == "agent-a" && step == 1:
+	case id == g.names[0] && step == 1:
+		name, args = "set_work", map[string]any{"summary": "Implement a.txt alongside " + g.names[1], "paths": []string{"a.txt"}}
+		text = g.names[1] + " is implementing b.txt; I will implement a.txt and keep b.txt unchanged."
+	case id == g.names[1] && step == 0:
+		name, args = "set_work", map[string]any{"summary": "Implement b.txt", "paths": []string{"b.txt"}}
+		text = "I will implement b.txt. " + g.names[0] + " can handle a.txt independently."
+	case id == g.names[0] && step == 2:
 		name, args = "write_file", map[string]string{"path": "a.txt", "content": "A contribution\n"}
-		text = "agent-b is implementing b.txt; I will implement a.txt and keep b.txt unchanged."
-	case id == "agent-b" && step == 0:
+	case id == g.names[1] && step == 1:
 		name, args = "write_file", map[string]string{"path": "b.txt", "content": "B contribution\n"}
-		text = "I will implement b.txt. agent-a can handle a.txt independently."
-	case id == "agent-a" && step == 2 || id == "agent-b" && step == 1:
-		name, args = "say_goodbye", map[string]string{"message": id + " completed its independent file."}
+	case id == g.names[0] && step == 3 || id == g.names[1] && step == 2:
+		name, args = "leave_team", map[string]string{"message": id + " completed its independent file."}
 	default:
 		return emit(modelapi.Event{Delta: "The contributions are complete.", Done: true})
 	}
@@ -93,19 +98,27 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 	defer store.Close()
 	vault := &credentials.Vault{State: state}
 	service := teamService(store, home, state, vault)
-	model := &communicatingTeamModel{steps: map[string]int{}, bAnnounced: make(chan struct{})}
+	var names []string
+	for range 2 {
+		member, err := store.CreateTeamAgent(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, member.ID)
+	}
+	model := &communicatingTeamModel{steps: map[string]int{}, names: names, bAnnounced: make(chan struct{})}
 	spoke := map[string]bool{}
 	feedback := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	result, err := service.Run(ctx, agentrequest.Options{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Generator: model, Vault: vault, Text: "Create a.txt and b.txt together; coordinate separate contributions."}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
 		if event.Kind == "team_progress" {
-			if event.Agent == "agent-b" && !spoke[event.Agent] {
+			if event.Agent == names[1] && !spoke[event.Agent] {
 				close(model.bAnnounced)
 			}
 			spoke[event.Agent] = true
 		}
-		if event.Kind == "tool_started" && event.Call != nil && event.Call.Name != "say_goodbye" && !spoke[event.Agent] {
+		if event.Kind == "tool_started" && event.Call != nil && event.Call.Name != "leave_team" && !spoke[event.Agent] {
 			t.Errorf("%s started %s without a public contribution", event.Agent, event.Call.Name)
 		}
 		if event.Kind == "tool_failed" {
