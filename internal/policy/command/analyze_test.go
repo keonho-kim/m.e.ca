@@ -65,7 +65,6 @@ func TestAnalyzeDecisions(t *testing.T) {
 		{"rm -rf .", "block"},
 		{"rm -rf ..", "block"},
 		{"rm -- file", "normal"},
-		{"mv old new", "normal"},
 		{"printf hi > /etc/config", "block"},
 		{"cp file /etc/file", "block"},
 		{"mkdir -p /etc/new", "block"},

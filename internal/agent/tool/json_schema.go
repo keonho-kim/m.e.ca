@@ -17,6 +17,9 @@ func (d Definition) JSONSchema() map[string]any {
 		} else if p.Kind == TextList {
 			value["type"] = "array"
 			value["minItems"] = 1
+			if p.AllowEmpty {
+				value["minItems"] = 0
+			}
 			value["maxItems"] = p.Max
 			value["items"] = map[string]any{"type": "string", "minLength": 1, "maxLength": p.MaxBytes}
 		} else {

@@ -14,8 +14,14 @@ import (
 var errRuntimeRecord = errors.New("runtime observation could not be committed or delivered")
 
 func (s *execution) execute(ctx context.Context, v validatedCall, approve Approver, emit func(runrecord.Event) error) (toolapi.Result, error) {
+	instructionRevision := s.instructionRevision
 	ready, outcome, err := s.prepareExecution(ctx, v.call, approve, emit)
 	if err != nil {
+		return outcome, errors.Join(err, s.recordRejected(ctx, v, outcome, err, emit))
+	}
+	defer toolapi.Release(ready.operation)
+	if err := s.checkSteering(ctx, instructionRevision); err != nil {
+		outcome.Failure = toolapi.FailureOf(err)
 		return outcome, errors.Join(err, s.recordRejected(ctx, v, outcome, err, emit))
 	}
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)

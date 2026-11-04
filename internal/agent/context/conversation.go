@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -21,6 +22,11 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 			return modelapi.Message{}, err
 		}
 		return modelapi.Message{Role: "user", Content: "Unfinished assistant draft (interrupted; not evidence of completed work):\n" + string(body)}, nil
+	}
+	if message.Role == "system" && channel.IsPeer(message.ID) {
+		// Public speech already names its sender. Keep that observation readable
+		// without promoting it to instructions or replaying another peer's calls.
+		return modelapi.Message{Role: "user", Content: message.Content}, nil
 	}
 	if message.Role == "system" || !paired && (len(message.Calls) > 0 || message.Role == "tool") {
 		// Runtime observations have content, but only assistant replies own

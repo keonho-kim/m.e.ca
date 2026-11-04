@@ -13,7 +13,7 @@ import (
 func (a *app) loadHistory() error {
 	a.chat.historyRevision++
 	a.chat.historyLoading = false
-	records, cursor, err := a.opts.Store.Timeline(a.ctx, a.opts.Session.ID, 0, 100)
+	records, cursor, err := terminalHistory(a.ctx, a.opts.Store, a.opts.Session.ID, 0, 100)
 	if err != nil {
 		return err
 	}

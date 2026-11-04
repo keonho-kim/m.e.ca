@@ -8,6 +8,7 @@ import (
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 )
 
 func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
@@ -29,7 +30,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 		if on && !r.Enabled() || !on && !r.Off {
 			return controls, fmt.Errorf("thinking choice is unavailable for this OpenRouter model")
 		}
-		controls.Reasoning = &routerReasoning{Enabled: on}
+		controls.Reasoning = &chat.Reasoning{Enabled: on}
 		if on {
 			controls.Reasoning.Effort = request.ReasoningEffort
 		}

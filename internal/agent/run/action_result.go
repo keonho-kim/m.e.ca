@@ -21,6 +21,9 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		}
 		return toolErr
 	}
+	if outcome.Depart && toolErr == nil && !failed {
+		s.result.Departed = true
+	}
 	s.result.HadToolFailure = s.result.HadToolFailure || failed || toolErr != nil
 	if ctx.Err() != nil {
 		return errors.Join(ctx.Err(), s.observeResult(v, outcome))

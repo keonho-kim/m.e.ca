@@ -68,7 +68,7 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	a.compose.editor.Set("draft")
 	a.render()
 	header := screenLine(a.screen, 0, 80)
-	if !strings.HasPrefix(header, "상태 작업 중 00 : 00 : 00") || !strings.Contains(header, "메모리 압축 중 .") || !strings.HasSuffix(header, "입력 0 · 출력 0 · 초당 토큰 —") {
+	if !strings.HasPrefix(header, "상태 작업 중 00 : 00 : 00") || !strings.Contains(header, "메모리 압축 중 .") || !strings.HasSuffix(header, "입력 0 · 출력 0") {
 		t.Fatalf("header alignment: %q", header)
 	}
 	if strings.TrimSpace(screenLine(a.screen, a.inputRegion.y, 80)) != "> draft" {
@@ -89,7 +89,7 @@ func TestCompressionIndicatorLifecycle(t *testing.T) {
 	}
 	a.receive(notice{Done: true})
 	a.render()
-	if !strings.HasPrefix(screenLine(a.screen, 0, 80), "상태 대기") || !strings.HasSuffix(screenLine(a.screen, 0, 80), "입력 0 · 출력 0 · 초당 토큰 —") {
+	if !strings.HasPrefix(screenLine(a.screen, 0, 80), "상태 대기") || !strings.HasSuffix(screenLine(a.screen, 0, 80), "입력 0 · 출력 0") {
 		t.Fatal("idle status missing")
 	}
 }

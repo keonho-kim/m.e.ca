@@ -14,6 +14,7 @@ type Input struct {
 	Request                   modelapi.Request
 	System, Memory, Objective string
 	ProjectRoot               string
+	Observations              string
 	Messages                  []modelapi.Message
 	Redact                    func(string) string
 	MaxBytes                  int
@@ -36,7 +37,9 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 	messages := make([]modelapi.Message, 0, len(input.Messages)+4)
 	messages = append(messages, modelapi.Message{Role: "system", Content: p.instructions(input)})
 	if input.Memory != "" {
-		messages = append(messages, modelapi.Message{Role: "user", Content: "Earlier work summary (historical observations):\n" + input.Redact(input.Memory)})
+		messages = append(messages, modelapi.Message{Role: "user", Content: p.summary(input)})
+	} else {
+		p.memory = summarySnapshot{}
 	}
 	present := input.Objective == ""
 	for i := len(input.Messages) - 1; i >= 0 && !present; i-- {
@@ -68,6 +71,13 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 		message := modelapi.Message{Role: "user", Content: input.Redact(input.Objective)}
 		messages = append(messages, message)
 		bytes += message.ContextBytes()
+	}
+	if input.Observations != "" {
+		message := modelapi.Message{Role: "user", Content: p.observations(input)}
+		messages = append(messages, message)
+		bytes += message.ContextBytes()
+	} else {
+		p.work = summarySnapshot{}
 	}
 	if bytes > input.MaxBytes {
 		return modelapi.Request{}, fmt.Errorf("full conversation context exceeds %d bytes; no messages were omitted", input.MaxBytes)

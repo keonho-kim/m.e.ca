@@ -20,6 +20,7 @@ type toolActivity struct {
 	commands []toolapi.CommandRun
 	text     string
 	dirty    bool
+	views    map[string]transcript.CommandView
 }
 
 func toolCallID(event *runrecord.Event) string {
@@ -52,7 +53,7 @@ func (a *app) finishToolActivity(event *runrecord.Event) {
 }
 
 func (a *app) liveToolActivity() string {
-	return a.chat.toolActivity.render(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact})
+	return a.chat.toolActivity.render(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion})
 }
 
 func (t *toolActivity) finish(event *runrecord.Event) {
@@ -69,24 +70,44 @@ func (t *toolActivity) render(f transcript.Formatter) string {
 		return t.text
 	}
 	var text strings.Builder
+	for id := range t.views {
+		if !slices.ContainsFunc(t.commands, func(run toolapi.CommandRun) bool { return run.ID == id && run.Status == "running" }) {
+			delete(t.views, id)
+		}
+	}
+	if len(t.views) == 0 {
+		t.views = nil
+	}
 	for _, pending := range t.pending {
 		// A running command snapshot replaces its start row without duplicating it.
 		index := slices.IndexFunc(t.commands, func(run toolapi.CommandRun) bool {
 			return pending.callID != "" && run.CallID == pending.callID && run.Status == "running"
 		})
 		if index >= 0 {
-			text.WriteString(f.CommandActivity(t.commands[index : index+1]))
+			text.WriteString(t.commandText(t.commands[index], f))
 		} else {
 			text.WriteString(pending.text)
 		}
 	}
-	for index, run := range t.commands {
+	for _, run := range t.commands {
 		if !slices.ContainsFunc(t.pending, func(p pendingTool) bool { return run.CallID != "" && p.callID == run.CallID }) {
-			text.WriteString(f.CommandActivity(t.commands[index : index+1]))
+			text.WriteString(t.commandText(run, f))
 		}
 	}
 	t.text, t.dirty = text.String(), false
 	return t.text
+}
+
+func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatter) string {
+	view := t.views[run.ID]
+	text := view.Render(run, f)
+	if run.Status == "running" && f.RedactionVersion != nil {
+		if t.views == nil {
+			t.views = make(map[string]transcript.CommandView)
+		}
+		t.views[run.ID] = view
+	}
+	return text
 }
 
 func (a *app) clearToolActivity() { a.chat.toolActivity = toolActivity{} }

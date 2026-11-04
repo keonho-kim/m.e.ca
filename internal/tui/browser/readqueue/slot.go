@@ -1,7 +1,7 @@
 // Purpose: Admit one active read and replace a single pending request on the event loop.
 // Pattern: Per-feature bulkhead with latest-request backpressure.
 // Usage: Directory and preview workers release their slot through completion notices, including cancelled reads.
-// Related: internal/tui/session/directory.go, internal/tui/session/file_preview.go.
+// Related: internal/tui/browser/controller/reads.go, internal/tui/browser/controller/watch.go.
 package readqueue
 
 import "context"

@@ -18,25 +18,25 @@ func TestTokenCounterSnapshotsAndFixedPosition(t *testing.T) {
 		a.receive(notice{Event: &runrecord.Event{Kind: "usage_progress", Usage: &modelapi.TokenUsage{Input: 20, Output: count}}})
 	}
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 20 · 출력 5 · 초당 토큰 —") {
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 20 · 출력 5") {
 		t.Fatalf("live counter=%q", got)
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 12, Output: 3}}})
 	a.receive(notice{Done: true})
 	a.chat.output.Append(strings.Repeat("history\n", 50), false)
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3 · 초당 토큰 —") {
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3") {
 		t.Fatalf("final counter=%q", got)
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "stream", Text: "text without usage"}})
 	a.receive(notice{Done: true})
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3 · 초당 토큰 —") {
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3") {
 		t.Fatalf("unreported usage changed counter=%q", got)
 	}
 	a.openModel()
 	a.render()
-	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3 · 초당 토큰 —") {
+	if got := screenLine(a.screen, 0, 80); !strings.HasSuffix(got, "입력 12 · 출력 3") {
 		t.Fatalf("menu counter=%q", got)
 	}
 	a.receive(notice{Event: &runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Input: 8, Output: 4}}})

@@ -25,16 +25,17 @@ type Tools interface {
 }
 
 type Options struct {
-	Config       config.Config
-	Selection    connection.Selection
-	Session      sessionstate.Session
-	Generator    modelapi.Generator
-	Tools        Tools
-	Store        agentsession.Store
-	Vault        *credentials.Vault
-	LoadPrompts  func() (prompt.Templates, error)
-	PollSteering func() []string
-	Text         string
+	Config        config.Config
+	Selection     connection.Selection
+	Session       sessionstate.Session
+	Generator     modelapi.Generator
+	Tools         Tools
+	Store         agentsession.Store
+	Vault         *credentials.Vault
+	LoadPrompts   func() (prompt.Templates, error)
+	PollSteering  func() []string
+	SteeringReady <-chan struct{}
+	Text          string
 }
 
 func New(options Options) agentsession.Request {

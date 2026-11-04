@@ -1,4 +1,4 @@
-// Purpose: Own one session database connection and its reusable payload compression resources.
+// Purpose: Own one database connection, its codec and only the cache lease acquired for this handle.
 // Pattern: Repository lifecycle boundary.
 // Usage: Sessions opens a Store for the selected session; the caller closes it after workers stop.
 // Related: internal/storage/sqlite/catalog.go, internal/storage/sqlite/session.go, internal/storage/sqlite/schema.go.
@@ -14,17 +14,35 @@ import (
 	_ "modernc.org/sqlite"
 	"net/url"
 	"os"
+	"sync"
+	"sync/atomic"
 )
 
 type Store struct {
-	codec   recordcontent.Codec
-	db      *sql.DB
-	path    string
-	session sessionstate.Session
+	closeOnce   sync.Once
+	closeErr    error
+	teamContent teamContentCache
+	latestEvent atomic.Int64
+	room        *Store
+	teamLease   *teamContentCache
+	codec       recordcontent.Codec
+	db          *sql.DB
+	path        string
+	session     sessionstate.Session
 }
 
 func (s *Store) Session() sessionstate.Session { return s.session }
-func (s *Store) Close() error                  { return errors.Join(s.db.Close(), s.codec.Close()) }
+func (s *Store) Close() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = errors.Join(s.db.Close(), s.codec.Close())
+		if s.teamLease != nil {
+			s.teamLease.release()
+			s.teamLease = nil
+		}
+		s.teamContent.clear()
+	})
+	return s.closeErr
+}
 
 func connect(ctx context.Context, path string, readOnly bool) (*sql.DB, error) {
 	if err := ctx.Err(); err != nil {

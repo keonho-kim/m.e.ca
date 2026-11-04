@@ -12,11 +12,18 @@ import (
 )
 
 type Formatter struct {
-	Language locale.Language
-	Redact   func(string) string
+	Language         locale.Language
+	Redact           func(string) string
+	RedactionVersion func() int
 }
 
 func (f Formatter) Message(m modelapi.Message) []viewport.Block {
+	if m.ID == "team-report" {
+		return nil
+	}
+	if m.ID == "team-user" {
+		return []viewport.Block{{Text: "> " + f.Redact(m.Content) + "\n\n"}}
+	}
 	if m.Role == "user" {
 		return []viewport.Block{{Text: f.User(f.Redact(m.Content))}}
 	}

@@ -1,6 +1,6 @@
 // Purpose: Show compact image metadata without rendering or exposing binary request data.
 // Pattern: Pure presentation projection.
-// Usage: Both live and restored read_image tool results use imageOutput.
+// Usage: Both live and restored view_image tool results use imageOutput.
 // Related: internal/tui/transcript/details.go, internal/tools/local/image.go.
 package transcript
 

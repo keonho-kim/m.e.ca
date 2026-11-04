@@ -27,8 +27,10 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 			return err
 		}
 	}
-	if err := s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
-		return err
+	if !r.Resume {
+		if err := s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

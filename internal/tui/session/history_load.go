@@ -26,7 +26,7 @@ func (a *app) loadOlderHistory() {
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
-		records, next, err := store.Timeline(ctx, id, cursor, 100)
+		records, next, err := terminalHistory(ctx, store, id, cursor, 100)
 		page := historyPage{revision: revision, cursor: next, err: err}
 		formatter := transcript.Formatter{Language: language, Redact: redact}
 		page.blocks = formatter.History(records)

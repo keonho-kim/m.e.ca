@@ -19,10 +19,17 @@ type runGenerator struct {
 // NewRunGenerator shares the connection, but never cached conversation state,
 // with other user requests. Its owner calls release after all Generate calls end.
 func (c *Client) NewRunGenerator() (modelapi.Generator, func()) {
-	g := &runGenerator{client: c}
+	return c.NewRunGeneratorWithBudget(0)
+}
+
+// NewRunGeneratorWithBudget shares the transport while bounding this peer's retained encodings.
+func (c *Client) NewRunGeneratorWithBudget(bytes int) (modelapi.Generator, func()) {
+	g := &runGenerator{client: c, encoder: protocol.NewEncoder(bytes)}
 	return g, g.encoder.Clear
 }
 
 func (g *runGenerator) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 	return g.client.generate(ctx, request, emit, false, &g.encoder)
 }
+
+func (g *runGenerator) ImageInputSupported() bool { return g.client.ImageInputSupported() }

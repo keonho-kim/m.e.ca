@@ -58,7 +58,7 @@ func TestFinalCaptureReusesPathAndStopsStaleLiveWrites(t *testing.T) {
 	}
 	e.liveOutputs.command(id).streams[0] = live
 	final := before + "last output"
-	if err := e.archiveCommand(id, process.Output{Stdout: final, Status: "exited", Started: true}, nil); err != nil {
+	if err := e.archiveCommand(id, "printf final", process.Output{Stdout: final, Status: "exited", Started: true}, nil); err != nil {
 		t.Fatal(err)
 	}
 	observed, err := e.commandCaptures(id)

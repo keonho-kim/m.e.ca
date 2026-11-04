@@ -1,7 +1,7 @@
 // Purpose: Verify native call/result formats and completion boundaries for Ollama and Responses.
 // Pattern: Provider wire contract tests.
 // Usage: go test ./internal/provider/protocol -run TestNative.
-// Related: internal/provider/protocol/tools.go, internal/provider/protocol/lmstudio_calls.go.
+// Related: internal/provider/protocol/tools.go, internal/provider/protocol/responses/calls.go.
 package protocol
 
 import (

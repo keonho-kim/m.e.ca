@@ -47,6 +47,7 @@ func (op *commandOperation) prepareCommand(ctx context.Context) error {
 	op.approval.Required = len(op.shell.decision.Reasons) > 0
 	op.approval.UserRequired = op.shell.decision.UserRequired
 	op.approval.Command = &toolapi.CommandApproval{Directory: op.executor.redact(op.executor.project)}
+	op.approval.Command.MutationTargets = op.shell.decision.Targets
 	for _, finding := range op.shell.findings {
 		entry := toolapi.CommandFinding{Command: op.executor.redact(finding.Command)}
 		for _, reason := range finding.Reasons {

@@ -1,19 +1,24 @@
-// Purpose: Extend the immutable history index while rebuilding only the small live transcript suffix.
+// Purpose: Preserve unchanged history layout and rebuild updated blocks and the live suffix.
 // Pattern: Event-loop-owned incremental prefix projection.
 // Usage: Transcript.Prepare reads View mutations and resets on reflow, prepend, trimming or detail changes.
 // Related: internal/tui/viewport/window.go, internal/tui/viewport/viewport.go, internal/tui/viewport/details.go.
 package viewport
 
 // Prepare consumes history owned by View; callers change its blocks through
-// AppendBlock, Prepend and ToggleDetails so unchanged prefixes remain reusable.
+// AppendBlock, Update, Prepend and ToggleDetails so unchanged prefixes remain reusable.
 func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 	t.live = live
+	t.activeStreams(view)
 	history := view.Blocks
 	var head *Block
 	if len(history) > 0 {
 		head = &history[0]
 	}
 	reset := t.width != width || t.historyHead != head || t.historyRevision != view.layoutRevision || len(history) < t.historyLength
+	if !reset {
+		t.updateSuffix(view)
+	}
+	view.dirtyID = 0
 	changed := reset || len(history) != t.historyLength
 	if reset {
 		for _, block := range t.visible {
@@ -54,9 +59,9 @@ func (t *Transcript) Prepare(width int, view *View, live []*Block) {
 		trailing = min(maxBoundaryBlanks, block.layout.trailing)
 	}
 	for i := t.historyLength; i < len(history); i++ {
-		history[i].live = false
+		history[i].live = history[i].Streaming
 		add(&history[i])
-		if !history[i].visible {
+		if !history[i].visible && !history[i].live {
 			history[i].releaseParsed()
 		}
 	}

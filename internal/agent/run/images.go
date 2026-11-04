@@ -15,7 +15,7 @@ import (
 func imageDefinitions(definitions []toolapi.Definition, enabled bool) []toolapi.Definition {
 	out := make([]toolapi.Definition, 0, len(definitions))
 	for _, definition := range definitions {
-		if definition.Name != "read_image" || enabled {
+		if definition.Name != "view_image" || enabled {
 			out = append(out, definition)
 		}
 	}
@@ -29,7 +29,7 @@ func (s *execution) recoverImages(ctx context.Context, err error) (bool, error) 
 	}
 	s.runner.ImageInput = false
 	s.definitions = imageDefinitions(s.definitions, false)
-	note := "The selected model rejected image input. Images were not available for visual inspection. read_image is unavailable for this connection. Report this limitation when the request requires images."
+	note := "The selected model rejected image input. Images were not available for visual inspection. view_image is unavailable for this connection. Report this limitation when the request requires images."
 	if err := s.save(ctx, modelapi.Message{Role: "system", Content: note}); err != nil {
 		return true, err
 	}

@@ -75,7 +75,7 @@ func (s *execution) pendingCommands(ctx context.Context) (bool, error) {
 		return changed, err
 	}
 	commands, ok := s.runner.Tools.(toolapi.CommandExecutor)
-	if !ok {
+	if !ok || !commands.HasCommands() {
 		return false, nil
 	}
 	pending := commands.CommandActivity()

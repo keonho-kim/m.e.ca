@@ -34,15 +34,22 @@ func ReplaceMany(path string, current []byte, edits []Edit, format string) ([]by
 			return nil, nil, fmt.Errorf("%s edits[%d] overlaps edits[%d]; nothing was applied", path, ranges[i-1].index, ranges[i].index)
 		}
 	}
-	var out strings.Builder
+	size := len(source)
+	for _, r := range ranges {
+		size += len(r.text) - (r.end - r.start)
+	}
+	out := make([]byte, 0, size)
 	spans := make([]toolapi.LineChange, len(ranges))
-	cursor, line := 0, 1
+	cursor, line, oldLine := 0, 1, 1
 	for _, r := range ranges {
 		gap := source[cursor:r.start]
-		out.WriteString(gap)
-		line += strings.Count(gap, "\n")
-		oldStart := 1 + strings.Count(source[:r.start], "\n")
-		oldEnd := oldStart + strings.Count(source[r.start:r.end], "\n")
+		out = append(out, gap...)
+		gapLines := strings.Count(gap, "\n")
+		line += gapLines
+		oldLine += gapLines
+		oldStart := oldLine
+		oldLine += strings.Count(source[r.start:r.end], "\n")
+		oldEnd := oldLine
 		if strings.HasSuffix(source[r.start:r.end], "\n") {
 			oldEnd--
 		}
@@ -57,11 +64,11 @@ func ReplaceMany(path string, current []byte, edits []Edit, format string) ([]by
 			span.NewEndLine = 0
 		}
 		spans[r.index] = span
-		out.WriteString(r.text)
+		out = append(out, r.text...)
 		line += n
 		cursor = r.end
 	}
-	out.WriteString(source[cursor:])
-	after, err := textformat.Preserve(current, []byte(out.String()), format)
+	out = append(out, source[cursor:]...)
+	after, err := textformat.Preserve(current, out, format)
 	return after, spans, err
 }

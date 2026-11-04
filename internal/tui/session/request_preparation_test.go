@@ -6,9 +6,12 @@ package session
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tui/composer"
@@ -32,9 +35,14 @@ func TestRequestPreparationRunsOnWorker(t *testing.T) {
 	ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
 	a.ctx = ctx
 	defer cancel()
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.startRequest(composer.Capture("review", []string{"captured.txt"}))
 	if ctx.Err() != nil {
 		t.Fatal("request preparation blocked the terminal event loop")
+	}
+	a.render()
+	if line := screenLine(a.screen, 0, 80); strings.Contains(line, "초당 토큰") || !strings.HasSuffix(line, "출력 20") {
+		t.Fatalf("new request reused old TPS or lost session totals: %q", line)
 	}
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()

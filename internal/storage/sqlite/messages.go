@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 
-	json "github.com/goccy/go-json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
@@ -19,22 +18,18 @@ func (store *Store) AppendMessage(ctx context.Context, session string, message m
 	return store.Commit(ctx, session, []runrecord.Entry{{Message: &message}})
 }
 
-func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string) error {
+func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, session string, message modelapi.Message, now string, receipt *journalReceipt) error {
 	if err := message.Check(); err != nil {
 		return err
 	}
 	if message.ID == "" {
 		message.ID = "message_" + rand.Text()
 	}
-	content, err := json.Marshal(message)
+	packed, refs, size, err := store.packMessage(ctx, transaction, message)
 	if err != nil {
 		return err
 	}
-	packed, refs, err := store.packRecord(ctx, transaction, content)
-	if err != nil {
-		return err
-	}
-	inserted, err := transaction.ExecContext(ctx, "INSERT INTO messages(session_id,body,refs,raw_bytes,role,content_bytes,created_at) VALUES(?,?,?,?,?,?,?)", session, packed, refs, len(content), message.Role, len(message.Content), now)
+	inserted, err := transaction.ExecContext(ctx, "INSERT INTO messages(session_id,body,refs,raw_bytes,role,content_bytes,created_at) VALUES(?,?,?,?,?,?,?)", session, packed, refs, size, message.Role, len(message.Content), now)
 	if err != nil {
 		return err
 	}
@@ -42,16 +37,13 @@ func (store *Store) writeMessage(ctx context.Context, transaction *sql.Tx, sessi
 	if err != nil {
 		return err
 	}
-	if _, err = transaction.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'message',?)", session, sequence); err != nil {
+	timeline, err := transaction.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'message',?)", session, sequence)
+	if err != nil {
 		return err
 	}
-	if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET updated_at=? WHERE id=?", now, session); err != nil {
+	receipt.timeline, err = timeline.LastInsertId()
+	if err != nil {
 		return err
-	}
-	if message.Role == "user" {
-		if _, err := transaction.ExecContext(ctx, "UPDATE sessions SET summary=? WHERE id=? AND summary IS NULL", conversationSummary(message.Content), session); err != nil {
-			return err
-		}
 	}
 	return nil
 }

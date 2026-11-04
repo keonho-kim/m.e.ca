@@ -80,6 +80,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
 	a.startRequest(composer.Capture("Create README.md in the current directory", a.selectedPaths()))
 	drainTask(t, a, true)
+	settleVisibleDetails(t, a)
 	content, err := os.ReadFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"))
 	if err != nil || string(content) != "# Project\n" || a.status != "" {
 		t.Fatalf("content=%q status=%q err=%v", content, a.status, err)

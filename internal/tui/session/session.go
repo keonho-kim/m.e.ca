@@ -12,6 +12,12 @@ import (
 func (a *app) restore() error {
 	var err error
 	ctx := a.ctx
+	if a.opts.LoadTeamMode != nil {
+		a.team.enabled, err = a.opts.LoadTeamMode(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	a.chat.tokenTotal, err = a.opts.Store.TokenUsage(ctx, a.opts.Session.ID)
 	if err != nil {
 		return err

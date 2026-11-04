@@ -1,7 +1,7 @@
 // Purpose: Verify native call retries and exact tokenization include the generation tool contract.
 // Pattern: HTTP integration contract tests.
 // Usage: go test ./internal/provider/httpclient -run TestNative.
-// Related: internal/provider/httpclient/context.go, internal/provider/protocol/tool_calls.go.
+// Related: internal/provider/httpclient/context.go, internal/provider/protocol/native/calls.go.
 package httpclient
 
 import (
@@ -12,7 +12,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/protocol"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"net/http"
 	"sync/atomic"
 	"testing"
@@ -45,14 +45,14 @@ func TestNativeRetryDiscardsPartialArguments(t *testing.T) {
 func TestNativeTokenizationUsesGenerationSchemas(t *testing.T) {
 	request := recoveryRequest()
 	request.Tools = []toolapi.Definition{{Name: "inspect_fixture", Description: "Read", Parameters: []toolapi.Parameter{{Name: "path", Kind: toolapi.LiteralPath, Required: true, MaxBytes: 4096}}}}
-	expected := protocol.Tools(request.Tools)
+	expected := native.Tools(request.Tools)
 	var tokenized, generated atomic.Bool
 	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/models" {
 			fmt.Fprint(w, `{"data":[{"id":"alias","max_model_len":100}]}`)
 			return
 		}
-		var body struct{ Tools []protocol.Tool }
+		var body struct{ Tools []native.Tool }
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
 		}

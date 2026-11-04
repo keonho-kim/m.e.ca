@@ -14,6 +14,9 @@ import (
 )
 
 func (event Event) Check() error {
+	if err := event.Team.Check(event.Kind); err != nil {
+		return err
+	}
 	if event.ApprovalSource != "" {
 		if event.Approval == nil || event.Kind != "approved" && event.Kind != "denied" ||
 			event.ApprovalSource != "user" && event.ApprovalSource != "all_mighty" || event.Kind == "denied" && event.ApprovalSource != "user" {
@@ -52,8 +55,8 @@ func (event Event) Check() error {
 		}
 	}
 
-	if event.TokensPerSecond != nil {
-		return fmt.Errorf("transient throughput cannot be persisted")
+	if event.MeasuredDuration != 0 {
+		return fmt.Errorf("transient measurement duration cannot be persisted")
 	}
 	if event.Kind == "usage" {
 		if event.Usage == nil {

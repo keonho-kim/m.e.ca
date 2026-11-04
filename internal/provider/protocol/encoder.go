@@ -17,19 +17,28 @@ const (
 // Encoder is owned by one serial generation loop, never by a shared HTTP client.
 // The bound limits additional retained encodings, not accepted context size.
 type Encoder struct {
+	capacity int
 	kind     connection.ProviderKind
 	model    string
 	history  []encodedMessage
 	groups   []*sourceGroup
-	bytes    int
 	retained int
 	tools    toolSnapshot
 }
 
 // Clear releases all references to encoded conversation history.
-func (e *Encoder) Clear() { *e = Encoder{} }
+func (e *Encoder) Clear() { *e = Encoder{capacity: e.capacity} }
 
-func (e *Encoder) clearHistory() { e.history = nil; e.groups = nil; e.bytes = 0; e.retained = 0 }
+// NewEncoder bounds retained wire encodings without restricting accepted input.
+func NewEncoder(capacity int) Encoder { return Encoder{capacity: capacity} }
+func (e *Encoder) limit() int {
+	if e.capacity > 0 {
+		return e.capacity
+	}
+	return cacheCapacity
+}
+
+func (e *Encoder) clearHistory() { e.history = nil; e.groups = nil; e.retained = 0 }
 
 // Encode preserves Encode's request values while reusing cached JSON fragments
 // as replayable HTTP segments. Only fragments produced by wireJSON enter
@@ -44,7 +53,7 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 	e.kind, e.model = kind, request.ModelID
 	size, text := textHistorySize(messages)
 	prepared := len(messages) > 0 && messages[0].source != nil
-	if !prepared && (!text || size < cacheThreshold || size > cacheCapacity) {
+	if !prepared && (!text || size < cacheThreshold) {
 		e.clearHistory()
 		if len(request.Tools) == 0 {
 			e.tools = toolSnapshot{}
@@ -52,12 +61,8 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		}
 		return e.encodeWhole(kind, baseURL, info, request, messages, controls)
 	}
-	if len(messages) < len(e.history) {
-		e.clearHistory()
-	}
-	if err := e.update(messages); err != nil {
-		e.Clear()
-		return "", Body{}, err
+	if !prepared {
+		e.groups = nil
 	}
 	endpoint, header, err := e.header(kind, baseURL, info, request, controls)
 	field := `,"input":[`
@@ -68,31 +73,14 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		e.Clear()
 		return "", Body{}, err
 	}
-	parts, headerBytes := header.appendTo(make([][]byte, 0, 2*len(e.history)+5), field)
-	comma, end := []byte(","), []byte("]}")
-	bodySize := headerBytes + e.bytes + len(end)
-	count := 0
-	for _, entry := range e.history {
-		if len(entry.json) == 0 {
-			continue
-		}
-		if count > 0 {
-			parts = append(parts, comma)
-			bodySize++
-		}
-		parts = append(parts, entry.json)
-		count++
-	}
-	if count == 0 {
+	parts, headerBytes := header.appendTo(make([][]byte, 0, 2*len(messages)+5), field)
+	parts, historyBytes, err := e.appendHistory(parts, messages)
+	if err != nil {
 		e.Clear()
-		return singleBody(kind, baseURL, info, request, messages, controls)
+		return "", Body{}, err
 	}
-	if e.retained+e.tools.bytes > cacheCapacity {
-		// The returned body owns its fragments until transmission ends. Discard
-		// cache keys now instead of rejecting or re-encoding a large request.
-		e.Clear()
-	}
-	return endpoint, Body{parts: append(parts, end), size: bodySize}, nil
+	end := []byte("]}")
+	return endpoint, Body{parts: append(parts, end), size: headerBytes + historyBytes + len(end)}, nil
 }
 
 func singleBody(kind connection.ProviderKind, baseURL string, info *connection.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {

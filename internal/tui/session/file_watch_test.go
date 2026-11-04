@@ -30,7 +30,7 @@ func TestFileWatchRefreshPreservesInputSelectionAndPreview(t *testing.T) {
 	a.compose.editor.Set("keep this request")
 	a.syncFileWatch()
 	finishVisibleReads(t, a)
-	watcher := a.files.fileWatch.watcher
+	watcher := a.files.reads.Watch.Watcher
 	if watcher == nil || len(watcher.WatchList()) != 1 {
 		t.Fatal("visible directory was not watched")
 	}
@@ -38,12 +38,12 @@ func TestFileWatchRefreshPreservesInputSelectionAndPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitFileChange(t, a, "a.txt")
-	timer := a.files.fileWatch.timer
+	timer := a.files.reads.Watch.Timer
 	if err := os.WriteFile(path, []byte("after\nsecond\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	waitFileChange(t, a, "b.txt")
-	if timer != a.files.fileWatch.timer || !a.files.fileWatch.previewDirty {
+	if timer != a.files.reads.Watch.Timer || !a.files.reads.Watch.PreviewDirty {
 		t.Fatal("updates were not coalesced")
 	}
 	a.refreshWatchedFiles()
@@ -58,15 +58,15 @@ func TestFileWatchRefreshPreservesInputSelectionAndPreview(t *testing.T) {
 		t.Fatalf("preview state lost: %+v", a.files.filePreview)
 	}
 	a.syncFileWatch()
-	if a.files.fileWatch.watcher != watcher {
+	if a.files.reads.Watch.Watcher != watcher {
 		t.Fatal("refresh recreated the subscription")
 	}
 	a.fileWatchFailed(fsnotify.ErrEventOverflow)
-	if a.files.fileWatch.watcher != watcher || !a.files.fileWatch.dirty || !a.files.fileWatch.previewDirty {
+	if a.files.reads.Watch.Watcher != watcher || !a.files.reads.Watch.Dirty || !a.files.reads.Watch.PreviewDirty {
 		t.Fatal("overflow did not request a fresh observation")
 	}
 	a.closeFiles()
-	if a.files.fileWatch.watcher != nil || a.files.fileWatch.ticks != nil || a.files.filePreviewPath != "" {
+	if a.files.reads.Watch.Watcher != nil || a.files.reads.Watch.Ticks != nil || a.files.filePreviewPath != "" {
 		t.Fatal("closed browser retained resources")
 	}
 	if err := watcher.Add(root); !errors.Is(err, fsnotify.ErrClosed) {
@@ -85,12 +85,12 @@ func TestFileWatchNavigationAndFailureRelease(t *testing.T) {
 	finishBrowserIO(t, a)
 	a.syncFileWatch()
 	finishVisibleReads(t, a)
-	previous := a.files.fileWatch.watcher
+	previous := a.files.reads.Watch.Watcher
 	a.requestDirectory("push", child, 0)
 	finishBrowserIO(t, a)
 	a.syncFileWatch()
 	finishVisibleReads(t, a)
-	if previous == a.files.fileWatch.watcher || len(a.files.fileWatch.watcher.WatchList()) != 1 {
+	if previous == a.files.reads.Watch.Watcher || len(a.files.reads.Watch.Watcher.WatchList()) != 1 {
 		t.Fatal("navigation retained the wrong watch")
 	}
 	if err := previous.Add(root); !errors.Is(err, fsnotify.ErrClosed) {
@@ -98,7 +98,7 @@ func TestFileWatchNavigationAndFailureRelease(t *testing.T) {
 	}
 	a.fileWatchFailed(errors.New("notification unavailable"))
 	a.syncFileWatch()
-	if a.files.fileWatch.watcher != nil || a.files.fileWatch.events != nil {
+	if a.files.reads.Watch.Watcher != nil || a.files.reads.Watch.Events != nil {
 		t.Fatal("failed watch was retried on each frame")
 	}
 	a.closeFiles()
@@ -106,11 +106,11 @@ func TestFileWatchNavigationAndFailureRelease(t *testing.T) {
 	finishBrowserIO(t, a)
 	a.syncFileWatch()
 	finishVisibleReads(t, a)
-	if a.files.fileWatch.watcher == nil {
+	if a.files.reads.Watch.Watcher == nil {
 		t.Fatal("reopening did not establish a new subscription")
 	}
 	a.requestExit()
-	if a.files.fileWatch.watcher != nil || a.files.fileWatch.path != "" {
+	if a.files.reads.Watch.Watcher != nil || a.files.reads.Watch.Path != "" {
 		t.Fatal("exit retained a subscription")
 	}
 }
@@ -121,7 +121,7 @@ func waitFileChange(t *testing.T, a *app, name string) {
 	defer timer.Stop()
 	for {
 		select {
-		case event, ok := <-a.files.fileWatch.events:
+		case event, ok := <-a.files.reads.Watch.Events:
 			if !ok {
 				t.Fatal("watch ended before the change")
 			}
@@ -129,7 +129,7 @@ func waitFileChange(t *testing.T, a *app, name string) {
 			if filepath.Base(event.Name) == name && event.Op&(fsnotify.Create|fsnotify.Write) != 0 {
 				return
 			}
-		case err := <-a.files.fileWatch.errors:
+		case err := <-a.files.reads.Watch.Errors:
 			t.Fatal(err)
 		case <-timer.C:
 			t.Fatalf("no change notification for %s", name)
@@ -146,13 +146,13 @@ func TestFileWatchCancelledRegistrationDoesNotReopen(t *testing.T) {
 	defer timer.Stop()
 	select {
 	case n := <-a.events:
-		if n.FileWatch == nil || n.FileWatch.watcher == nil {
+		if n.FileWatch == nil || n.FileWatch.Watcher == nil {
 			t.Fatalf("registration failed: %+v", n.FileWatch)
 		}
-		watcher := n.FileWatch.watcher
+		watcher := n.FileWatch.Watcher
 		a.closeFiles()
 		a.receive(n)
-		if a.page != "chat" || a.files.fileWatch.watcher != nil || a.files.watchReads.Running() {
+		if a.page != "chat" || a.files.reads.Watch.Watcher != nil || a.files.reads.WatchReads.Running() {
 			t.Fatal("late registration reopened the browser")
 		}
 		if err := watcher.Add(a.opts.Session.ProjectRoot); !errors.Is(err, fsnotify.ErrClosed) {
@@ -175,7 +175,7 @@ func finishVisibleReads(t *testing.T, a *app) {
 			}
 			a.ensurePreviewLayout(width)
 		}
-		if !a.files.directoryReads.Running() && !a.files.previewReads.Running() && !a.files.watchReads.Running() && !a.files.previewLayouts.Running() {
+		if !a.files.reads.Directory.Running() && !a.files.reads.Preview.Running() && !a.files.reads.WatchReads.Running() && !a.files.reads.Layout.Running() {
 			return
 		}
 		select {

@@ -18,9 +18,14 @@ func (a *app) startRequest(input composer.Request) {
 	if a.work.state.active() {
 		return
 	}
+	if a.team.enabled && a.opts.Team == nil {
+		a.status = a.language.Text("팀 실행 구성이 준비되지 않았습니다")
+		return
+	}
+	a.team.begin()
 	a.chat.output.Follow = true
 	a.chat.stream, a.chat.thinking = "", ""
-	a.chat.tokensPerSecond = nil
+	a.chat.resetThroughput()
 	a.chat.runSummary = nil
 	a.stopNotice = ""
 	a.work.state = workerAgent
@@ -32,6 +37,11 @@ func (a *app) startRequest(input composer.Request) {
 	a.decision = make(chan bool, 1)
 	steering := make(chan composer.Request, 16)
 	a.compose.steering = steering
+	var steeringReady chan struct{}
+	if a.team.active {
+		steeringReady = make(chan struct{}, 1)
+	}
+	a.compose.steeringReady = steeringReady
 	reader, settings := a.opts.Files, a.settings
 	exists := func(ctx context.Context, path string) bool {
 		_, err := reader.Reference(ctx, settings, path)
@@ -40,7 +50,8 @@ func (a *app) startRequest(input composer.Request) {
 	options := agentrequest.Options{
 		Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
 		Generator: a.connection.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
-		LoadPrompts: a.opts.LoadPrompts,
+		LoadPrompts:   a.opts.LoadPrompts,
+		SteeringReady: steeringReady,
 		PollSteering: func() []string {
 			var out []string
 			for {
@@ -54,13 +65,13 @@ func (a *app) startRequest(input composer.Request) {
 		},
 	}
 	decisions := a.decision
+	teamMode := a.team.active
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
 		options.Text = input.Resolve(ctx, exists)
-		request := agentrequest.New(options)
-		delivery := runtimeDelivery{}
+		delivery := requestDelivery{team: teamMode}
 		emit := func(event runrecord.Event) error {
 			if event.Kind == "stream" {
 				return delivery.stream(ctx, a.events, event)
@@ -82,6 +93,12 @@ func (a *app) startRequest(input composer.Request) {
 				return false, ctx.Err()
 			}
 		}
+		if teamMode {
+			result, err := a.opts.Team.Run(ctx, options, approve, emit)
+			delivery.post(a.ctx, a.events, notice{Done: true, Err: err, RunStatus: result.Status})
+			return
+		}
+		request := agentrequest.New(options)
 		result, err := tasksession.Execute(ctx, request, approve, emit)
 		delivery.post(a.ctx, a.events, notice{Done: true, Err: err, RunStatus: result.Status})
 	}()

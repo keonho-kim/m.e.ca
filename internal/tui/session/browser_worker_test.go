@@ -5,6 +5,7 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,7 +36,7 @@ func TestDirectoryCancellationDiscardsLateResult(t *testing.T) {
 	if a.files.directoryLoading {
 		t.Fatal("Escape did not cancel directory request")
 	}
-	a.receive(notice{Directory: &directoryPage{revision: revision, mode: "open", path: "stale"}})
+	a.receive(notice{Directory: &controller.DirectoryPage{Revision: revision, Mode: "open", Path: "stale"}})
 	if len(a.files.browser.Columns) != 0 {
 		t.Fatal("cancelled request changed browser")
 	}

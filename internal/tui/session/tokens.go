@@ -19,8 +19,18 @@ func (c *chatState) receiveTokens(e runrecord.Event) {
 	if e.Kind == "usage" {
 		c.tokenTotal = c.tokenTotal.Add(*e.Usage)
 		c.tokenCurrent = modelapi.TokenUsage{}
+		c.measured = c.measured.Add(runrecord.MeasuredThroughput(e))
+		c.currentMeasurement = runrecord.Throughput{}
 	} else {
 		c.tokenCurrent = e.Usage.Clone()
+		c.currentMeasurement = runrecord.MeasuredThroughput(e)
 	}
-	c.tokensPerSecond = e.TokensPerSecond
+	if rate := c.measured.Add(c.currentMeasurement).Rate(); rate != nil {
+		c.tokensPerSecond = rate
+	}
+}
+
+func (c *chatState) resetThroughput() {
+	c.measured, c.currentMeasurement = runrecord.Throughput{}, runrecord.Throughput{}
+	c.tokensPerSecond = nil
 }

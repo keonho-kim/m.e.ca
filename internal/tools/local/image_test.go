@@ -1,6 +1,6 @@
 // Purpose: Verify image snapshots obey filesystem policy and do not count as file changes.
 // Pattern: Filesystem integration tests.
-// Usage: go test ./internal/tools/local -run TestReadImage.
+// Usage: go test ./internal/tools/local -run TestViewImage.
 // Related: internal/tools/local/image.go, internal/tools/local/prepare.go.
 package local
 
@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-func TestReadImageSnapshotAndPathPolicy(t *testing.T) {
+func TestViewImageSnapshotAndPathPolicy(t *testing.T) {
 	executor, root := testExecutor(t)
 	var data bytes.Buffer
 	if err := png.Encode(&data, image.NewGray(image.Rect(0, 0, 12, 10))); err != nil {
@@ -26,7 +26,7 @@ func TestReadImageSnapshotAndPathPolicy(t *testing.T) {
 	if err := os.WriteFile(path, data.Bytes(), 0600); err != nil {
 		t.Fatal(err)
 	}
-	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call("read_image", `{"path":"shot.bin"}`))
+	op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call("view_image", `{"path":"shot.bin"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,8 +47,11 @@ func TestReadImageSnapshotAndPathPolicy(t *testing.T) {
 	if !bytes.Equal(result.Images[0].Data, before) {
 		t.Fatal("snapshot changed with its source file")
 	}
-	for _, path := range []string{".", "../outside"} {
-		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call("read_image", `{"path":"`+path+`"}`))
+	if err := os.WriteFile(filepath.Join(root, "script.sh"), []byte("echo script content\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{".", "../outside", "script.sh"} {
+		op, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.Directory}, call("view_image", `{"path":"`+path+`"}`))
 		if err == nil {
 			_, err = op.Execute(context.Background(), true)
 		}

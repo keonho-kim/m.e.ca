@@ -24,6 +24,7 @@ const (
 	NewSession
 	Language
 	Permission
+	Team
 )
 
 const MaxInputBytes = 16 * 1024 * 1024

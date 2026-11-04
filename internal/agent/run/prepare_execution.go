@@ -26,7 +26,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 		return nil, outcome, err
 	}
 	r := s.runner
-	if call.Name == "read_image" && !r.ImageInput {
+	if call.Name == "view_image" && !r.ImageInput {
 		return nil, outcome, &modelapi.ImageInputError{}
 	}
 	op, err := r.Tools.Prepare(ctx, r.Settings, call)
@@ -39,6 +39,7 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 	proposal.Required = proposal.Required || proposal.UserRequired
 	if proposal.Candidate != nil {
 		if err := proposal.Candidate.Check(call); err != nil {
+			toolapi.Release(op)
 			return nil, outcome, err
 		}
 	}
@@ -54,9 +55,15 @@ func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, app
 	return s.approveExecution(ctx, ready, approve, emit)
 }
 
-func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
+func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (result *readyExecution, outcome toolapi.Result, resultErr error) {
+	defer func() {
+		if resultErr != nil {
+			toolapi.Release(ready.operation)
+		}
+	}()
 	call, proposal := ready.call, ready.proposal
-	outcome := toolapi.Result{Target: proposal.Target}
+	instructionRevision := s.instructionRevision
+	outcome = toolapi.Result{Target: proposal.Target}
 	var err error
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err
@@ -64,11 +71,13 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	approved := !proposal.Required
+	waitedForUser := false
 	if proposal.Required {
 		source := "user"
 		if s.runner.Settings.Permission == policy.PermissionAllMighty && !proposal.UserRequired {
 			approved, source = true, "all_mighty"
 		} else {
+			waitedForUser = true
 			approved, err = approve(ctx, proposal)
 			if err != nil {
 				return nil, outcome, errors.Join(errApprovalDenied, err)
@@ -87,6 +96,11 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 		}
 		if !approved {
 			return nil, outcome, errApprovalDenied
+		}
+	}
+	if waitedForUser {
+		if err := s.checkSteering(ctx, instructionRevision); err != nil {
+			return nil, outcome, err
 		}
 	}
 

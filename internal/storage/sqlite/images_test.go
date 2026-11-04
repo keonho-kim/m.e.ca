@@ -26,8 +26,8 @@ func TestImagePersistenceCompactionAndDisplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	invocation := toolapi.Call{ID: "read", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
-	for _, message := range []modelapi.Message{{Role: "user", Content: "Inspect this image"}, {Role: "assistant", Calls: []toolapi.Call{invocation}}, {Role: "tool", ToolName: "read_image", ToolCallID: "read", Content: `{"Path":"shot.png","Width":16,"Height":16}`, Images: []media.Image{image}}, {Role: "user", Content: "Also check the spacing"}} {
+	invocation := toolapi.Call{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
+	for _, message := range []modelapi.Message{{Role: "user", Content: "Inspect this image"}, {Role: "assistant", Calls: []toolapi.Call{invocation}}, {Role: "tool", ToolName: "view_image", ToolCallID: "read", Content: `{"Path":"shot.png","Width":16,"Height":16}`, Images: []media.Image{image}}, {Role: "user", Content: "Also check the spacing"}} {
 		if err := store.AppendMessage(ctx, id, message); err != nil {
 			t.Fatal(err)
 		}

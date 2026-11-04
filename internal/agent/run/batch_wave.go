@@ -16,10 +16,12 @@ import (
 func (s *execution) batchWave(ctx context.Context, calls []validatedCall, preparation int, approve Approver) (bool, error) {
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
+	instructionRevision := s.instructionRevision
 	ready, index, outcome, err := s.freezeWave(ctx, calls, preparation)
 	if err != nil {
 		return true, errors.Join(s.rejectWave(ctx, calls, index, outcome, err), fatalBatchError(ctx, err))
 	}
+	defer releaseReady(ready)
 	// Every candidate is frozen before approval; all workers start only after
 	// the owner has approved and rechecked the complete wave.
 	for i, prepared := range ready {
@@ -29,21 +31,28 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 		}
 		ready[i] = approved
 	}
+	if err := s.checkSteering(ctx, instructionRevision); err != nil {
+		var failure *toolapi.Failure
+		if errors.As(err, &failure) && failure.Code == toolapi.InstructionChanged {
+			return true, s.skipCalls(ctx, calls, skipForInstruction, failure.Detail)
+		}
+		return true, errors.Join(err, s.skipCalls(ctx, calls, skipForContext, err.Error()))
+	}
 	// Approval may have changed filesystem aliases; recheck the wave before effects.
 	if plan, err := s.planWave(ctx, calls, 0); err != nil || plan.Count != len(calls) {
 		detail := "Batch targets changed or overlap after preparation; nothing in this wave executed."
 		if err != nil {
 			detail += " " + err.Error()
 		}
-		return true, errors.Join(s.skipCalls(ctx, calls, detail), fatalBatchError(ctx, err))
+		return true, errors.Join(s.skipCalls(ctx, calls, skipAfterFailure, detail), fatalBatchError(ctx, err))
 	}
 	// Persist start intent before allowing any effects. A crash never replays it automatically.
 	for _, prepared := range ready {
 		if err := s.checkTimeBudget(ctx); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), err)
+			return true, errors.Join(s.skipCalls(ctx, calls, skipForInterruption, err.Error()), err)
 		}
 		if err := s.startExecution(ctx, prepared, s.emit); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, err.Error()), errRuntimeRecord, err)
+			return true, errors.Join(s.skipCalls(ctx, calls, skipForContext, err.Error()), errRuntimeRecord, err)
 		}
 	}
 	outcomes := make([]toolapi.Result, len(calls))
@@ -76,6 +85,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 				terminal = errors.Join(terminal, runErr)
 			}
 			failed = failed || outcome.Failed || runErr != nil
+			toolapi.Release(ready[next].operation)
 			ready[next], outcomes[next], failures[next] = nil, toolapi.Result{}, nil
 			next++
 		}

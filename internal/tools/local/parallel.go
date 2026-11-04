@@ -46,7 +46,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	}
 	// Serialize image decoding and keep compressed results from accumulating in a
 	// wide wave. File changes and running shell commands retain their own limits.
-	if len(calls) > 0 && calls[0].Name == "read_image" {
+	if len(calls) > 0 && calls[0].Name == "view_image" {
 		return plan(1, nil)
 	}
 	if len(calls) > 0 && calls[0].Name == "execute_command" {
@@ -76,7 +76,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	defer func() { err = errors.Join(err, e.boundary.Check()) }()
 	end := min(len(calls), maximum)
 	for i, call := range calls[:end] {
-		if call.Name == "read_image" {
+		if call.Name == "view_image" {
 			return plan(max(1, i), nil)
 		}
 		if err := ctx.Err(); err != nil {

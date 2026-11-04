@@ -21,6 +21,9 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	if !s.modelCall() {
 		return modelapi.Response{}, errModelBudget
 	}
+	if s.runner.BeforeDecision != nil {
+		s.runner.BeforeDecision()
+	}
 	request, err := s.request()
 	if err != nil {
 		return modelapi.Response{}, err
@@ -30,7 +33,11 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		return modelapi.Response{}, err
 	}
 	var reply, thinking strings.Builder
-	maskReply, maskThinking := s.streamMask(), s.streamMask()
+	maskReply := s.streamMask()
+	var maskThinking func(string, bool) string
+	if !s.runner.HideThinking {
+		maskThinking = s.streamMask()
+	}
 	var visibleReply, visibleThinking string
 	var calls []toolapi.Call
 	var continuation []byte
@@ -41,7 +48,10 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			calls = nil
 			continuation = nil
 			thinking.Reset()
-			maskReply, maskThinking = s.streamMask(), s.streamMask()
+			maskReply = s.streamMask()
+			if !s.runner.HideThinking {
+				maskThinking = s.streamMask()
+			}
 			visibleReply, visibleThinking = "", ""
 			done = false
 			return s.emit(runrecord.Event{Kind: "stream"})
@@ -55,7 +65,9 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		reply.WriteString(e.Delta)
 		thinking.WriteString(e.Thinking)
 		visibleReply = maskReply(reply.String(), false)
-		visibleThinking = maskThinking(thinking.String(), false)
+		if maskThinking != nil {
+			visibleThinking = maskThinking(thinking.String(), false)
+		}
 		if len(e.ReasoningState) > 0 {
 			if !e.Done {
 				return fmt.Errorf("provider continuation state arrived before completion")
@@ -72,13 +84,16 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		if e.Done {
 			done = true
 		}
-		if e.Streaming && (e.Delta != "" || e.Thinking != "") {
+		if e.Streaming && (e.Delta != "" || !s.runner.HideThinking && e.Thinking != "") {
 			if err := s.emit(runrecord.Event{Kind: "stream", Text: visibleReply, Thinking: visibleThinking}); err != nil {
 				return err
 			}
 		}
 		return ctx.Err()
 	})
+	if maskThinking == nil {
+		maskThinking = s.streamMask()
+	}
 	visibleReply, visibleThinking = maskReply(reply.String(), true), maskThinking(thinking.String(), true)
 	if err == nil && !done {
 		err = fmt.Errorf("model reply did not complete")
@@ -89,8 +104,10 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			return modelapi.Response{}, saveErr
 		}
 		if err == nil {
-			if emitErr := s.emit(event); emitErr != nil {
-				return modelapi.Response{}, emitErr
+			if !s.runner.HideThinking {
+				if emitErr := s.emit(event); emitErr != nil {
+					return modelapi.Response{}, emitErr
+				}
 			}
 		}
 	}

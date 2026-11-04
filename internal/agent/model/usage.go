@@ -17,6 +17,12 @@ type TokenUsage struct {
 	Cost   *float64 `json:"cost,omitempty"`
 }
 
+// Equal compares received values, preserving absent cost versus reported zero.
+func (u TokenUsage) Equal(other TokenUsage) bool {
+	return u.Input == other.Input && u.Output == other.Output &&
+		(u.Cost == nil && other.Cost == nil || u.Cost != nil && other.Cost != nil && *u.Cost == *other.Cost)
+}
+
 func (u TokenUsage) Check() error {
 	if err := u.CheckTotals(); err != nil {
 		return err

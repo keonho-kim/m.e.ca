@@ -16,6 +16,10 @@ func (a *app) steerInput(text string) {
 	}
 	select {
 	case a.compose.steering <- composer.Capture(text, a.selectedPaths()):
+		select {
+		case a.compose.steeringReady <- struct{}{}:
+		default:
+		}
 		a.chat.output.Follow = true
 		a.compose.steeringDrafts = append(a.compose.steeringDrafts, text)
 		a.compose.editor.Set("")
@@ -38,4 +42,5 @@ func (a *app) restoreSteering() {
 		editor.Set(text)
 	}
 	a.compose.steering, a.compose.steeringDrafts = nil, nil
+	a.compose.steeringReady = nil
 }

@@ -1,7 +1,7 @@
 // Purpose: Encode text and image request parts independently of received stream chunks.
 // Pattern: Request-only transport DTOs.
 // Usage: Messages builds these values; chat and Responses adapters encode them.
-// Related: internal/provider/protocol/images.go, internal/provider/protocol/wire.go.
+// Related: internal/provider/protocol/images.go, internal/provider/protocol/native/frame.go.
 package protocol
 
 import "encoding/json"

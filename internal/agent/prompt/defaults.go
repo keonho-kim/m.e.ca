@@ -1,6 +1,6 @@
 // Purpose: Embed release Markdown templates and validate editable prompt files.
 // Pattern: Simple Module (prompt assets).
-// Usage: Startup publishes missing defaults, installation refreshes them and tasks load ~/.meca/prompts files.
+// Usage: Startup publishes missing defaults, installation refreshes them and tasks load the selected ~/.meca/prompts profile.
 // Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/compaction.md, internal/config/prompts/prompts.go.
 package prompt
 
@@ -22,13 +22,31 @@ var developmentDefault string
 //go:embed defaults/compaction.md
 var compactionDefault string
 
+//go:embed defaults/team.md
+var teamDefault string
+
+type Profile string
+
+const (
+	Single Profile = "single"
+	Team   Profile = "team"
+)
+
+func (p Profile) Valid() bool { return p == Single || p == Team }
+
 type Templates struct {
 	System, Development, Compaction string
 }
 
-func Defaults() Templates {
+func Defaults() Templates { return DefaultsFor(Single) }
+
+func DefaultsFor(profile Profile) Templates {
+	system := systemDefault
+	if profile == Team {
+		system = teamDefault
+	}
 	return Templates{
-		System: systemDefault, Development: developmentDefault, Compaction: compactionDefault,
+		System: system, Development: developmentDefault, Compaction: compactionDefault,
 	}
 }
 

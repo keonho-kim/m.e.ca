@@ -7,10 +7,9 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	json "github.com/goccy/go-json"
 	"github.com/keonho-kim/meca/internal/agent/compact"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -22,6 +21,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 	type entry struct {
 		record     storedRecord
 		role, text string
+		public     int64
 	}
 	var page []entry
 	bytes := 0
@@ -39,6 +39,10 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		if text != nil {
 			e.text = *text
 		}
+		e.public, err = publicMemorySequence(e.role)
+		if err != nil {
+			break
+		}
 		bytes += contentBytes
 		if bytes > 16*1024*1024 && cursor > after {
 			break
@@ -50,14 +54,37 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 	if err != nil {
 		return nil, cursor, err
 	}
+	var shared map[string]string
+	if s.room != nil {
+		messages := make([]storedRecord, 0, len(page))
+		for _, e := range page {
+			if e.record.kind == "message" {
+				messages = append(messages, e.record)
+			}
+		}
+		shared, err = s.sharedContext(ctx, messages)
+		if err != nil {
+			return nil, cursor, err
+		}
+	}
+	fields := map[string]bool{"id": true, "role": true, "content": true, "incomplete": true}
+	var sequences []any
+	for _, e := range page {
+		if e.public > 0 {
+			sequences = append(sequences, e.public)
+		}
+	}
+	var authored map[int64]string
+	if len(sequences) > 0 {
+		authored, err = s.publicContexts(ctx, sequences)
+		if err != nil {
+			return nil, cursor, err
+		}
+	}
 	for _, e := range page {
 		if e.record.kind == "message" {
-			body, err := s.unpackRecord(ctx, e.record, map[string]bool{"role": true, "content": true, "incomplete": true})
+			message, _, err := s.contextRecord(ctx, e.record, fields, shared)
 			if err != nil {
-				return nil, cursor, err
-			}
-			var message modelapi.Message
-			if err := json.Unmarshal(body, &message); err != nil {
 				return nil, cursor, err
 			}
 			projected, err := history.Compaction([]history.Record{{Sequence: e.record.sequence, Kind: "message", Message: message}})
@@ -65,6 +92,12 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 				return nil, cursor, err
 			}
 			records = append(records, projected...)
+		} else if e.public > 0 {
+			text, ok := authored[e.public]
+			if !ok {
+				return nil, cursor, fmt.Errorf("authored public note #%d is missing", e.public)
+			}
+			records = append(records, compact.Record{Sequence: e.record.sequence, Role: "peer", Text: text})
 		} else if e.role != "" && e.text != "" {
 			records = append(records, compact.Record{Sequence: e.record.sequence, Role: e.role, Text: e.text})
 		}

@@ -10,11 +10,13 @@ import (
 )
 
 func TestTaskPromptsDoNotDescribeHarness(t *testing.T) {
-	templates := Defaults()
-	for name, text := range templates.Files() {
-		for _, term := range []string{"harness", "checkpoint", "runtime"} {
-			if strings.Contains(strings.ToLower(*text), term) {
-				t.Errorf("%s exposes orchestration term %q", name, term)
+	for _, profile := range []Profile{Single, Team} {
+		templates := DefaultsFor(profile)
+		for name, text := range templates.Files() {
+			for _, term := range []string{"harness", "checkpoint", "runtime"} {
+				if strings.Contains(strings.ToLower(*text), term) {
+					t.Errorf("%s/%s exposes orchestration term %q", profile, name, term)
+				}
 			}
 		}
 	}
@@ -24,6 +26,18 @@ func TestTaskPromptsDoNotDescribeHarness(t *testing.T) {
 	}
 	if strings.Contains(system, "completion review") || strings.Contains(system, "native function") {
 		t.Fatal("hidden orchestration instructions appended")
+	}
+}
+
+func TestTeamSystemIsConciseEnglishGuidance(t *testing.T) {
+	text := DefaultsFor(Team).System
+	if lines := strings.Count(text, "\n"); lines > 100 {
+		t.Fatalf("team system exceeds the 100-line budget: %d", lines)
+	}
+	for _, r := range text {
+		if r > 127 {
+			t.Fatalf("team system prompt must be authored in English: %q", r)
+		}
 	}
 }
 

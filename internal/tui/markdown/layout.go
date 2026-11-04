@@ -85,28 +85,28 @@ func (line Line) RowsFrom(width, start int, prefix string) iter.Seq[Line] {
 }
 
 func rowsFrom(text string, spans []Span, width, start int, prefix string) iter.Seq[Line] {
+	cursor := spanCursor{spans: spans}
+	if len(spans) > 0 {
+		cursor.end = len(spans[0].Text)
+	}
+	return styledRows(text, width, start, prefix, cursor)
+}
+
+func styledRows(text string, width, start int, prefix string, initial spanCursor) iter.Seq[Line] {
 	return func(yield func(Line) bool) {
 		if width < 1 {
 			return
 		}
-		ends := make([]int, len(spans))
-		end := 0
-		for i, span := range spans {
-			end += len(span.Text)
-			ends[i] = end
-		}
-		styleIndex := 0
+		cursor := initial
 		for wrapped := range textlayout.RowsFrom(text, width, start, prefix) {
 			if !strings.ContainsRune(wrapped.Text, '\t') && strings.TrimPrefix(wrapped.Text, wrapped.Prefix) == text[wrapped.Start:wrapped.End] {
 				var current []Span
 				current = add(current, wrapped.Prefix, 0)
 				at := wrapped.Start
 				for at < wrapped.End {
-					for styleIndex+1 < len(ends) && at >= ends[styleIndex] {
-						styleIndex++
-					}
-					end := min(wrapped.End, ends[styleIndex])
-					current = add(current, text[at:end], spans[styleIndex].Style)
+					style, until := cursor.at(at)
+					end := min(wrapped.End, until)
+					current = add(current, text[at:end], style)
 					at = end
 				}
 				if !yield(Line{Text: wrapped.Text, Spans: current, Copy: textlayout.Fragment{Source: text, Row: wrapped}}) {
@@ -120,9 +120,7 @@ func rowsFrom(text string, spans []Span, width, start int, prefix string) iter.S
 			g := uniseg.NewGraphemes(text[wrapped.Start:wrapped.End])
 			for g.Next() {
 				start, _ := g.Positions()
-				for styleIndex+1 < len(ends) && wrapped.Start+start >= ends[styleIndex] {
-					styleIndex++
-				}
+				style, _ := cursor.at(wrapped.Start + start)
 				part, size := g.Str(), g.Width()
 				if part == "\t" {
 					part, size = "    ", 4
@@ -130,7 +128,7 @@ func rowsFrom(text string, spans []Span, width, start int, prefix string) iter.S
 				if size > width-cells {
 					part, size = "�", 1
 				}
-				current = add(current, part, spans[styleIndex].Style)
+				current = add(current, part, style)
 				cells += size
 			}
 			row := line(current)

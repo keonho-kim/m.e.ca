@@ -1,7 +1,7 @@
 // Purpose: Translate agent generation requests into native and compatible wire formats.
 // Pattern: Adapter.
 // Usage: Client.Generate and connection diagnostics.
-// Related: internal/agent/model/model.go, internal/provider/protocol/stream.go, internal/provider/protocol/wire.go.
+// Related: internal/agent/model/model.go, internal/provider/protocol/stream.go, internal/provider/protocol/native/frame.go.
 
 package httpclient
 

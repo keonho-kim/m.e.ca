@@ -64,7 +64,7 @@ func TestMarkdownFilePreviewRenderingAndToggle(t *testing.T) {
 			if a.files.filePreview.Full != full || !strings.Contains(shown, "# Viewer title") || !strings.Contains(shown, "**strong**") {
 				t.Fatalf("key=%v: format toggle changed pane size or lost raw source: %s", toggle, shown)
 			}
-			if a.files.previewRevision != revision || a.files.previewReads.Running() {
+			if a.files.previewRevision != revision || a.files.reads.Preview.Running() {
 				t.Fatal("format toggle reread the file instead of reusing its content")
 			}
 			if labels := keymapLabels(t, a); labels["Shift+R"] != a.language.Text("Render") {

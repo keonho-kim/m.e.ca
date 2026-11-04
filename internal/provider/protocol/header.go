@@ -7,6 +7,7 @@ package protocol
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 )
 
 type requestHeader struct{ controls, tools []byte }
@@ -28,7 +29,7 @@ func (e *Encoder) header(kind connection.ProviderKind, baseURL string, info *con
 	}
 	request.Tools = nil
 	if kind == connection.LMStudio {
-		base := lmHeader(request.ModelID, request.MaxOutput, controls.ReasoningEffort, request.Temperature, nil)
+		base := responses.Header(request.ModelID, request.MaxOutput, controls.ReasoningEffort, request.Temperature, nil)
 		if len(tools) > 0 {
 			parallel := true
 			base.Parallel, base.ToolChoice = &parallel, "auto"
@@ -36,7 +37,12 @@ func (e *Encoder) header(kind connection.ProviderKind, baseURL string, info *con
 		body, err := wireJSON.Marshal(base)
 		return baseURL + "/responses", requestHeader{controls: body, tools: tools}, err
 	}
-	endpoint, base := chatPayload(kind, baseURL, info, request, controls)
+	if kind == connection.Ollama {
+		base := ollamaPayload(info, request, controls)
+		body, err := wireJSON.Marshal(base)
+		return baseURL + "/chat", requestHeader{controls: body, tools: tools}, err
+	}
+	endpoint, base := chatPayload(kind, baseURL, request, controls)
 	if len(tools) > 0 && kind != connection.Ollama {
 		parallel := true
 		base.ToolChoice, base.ParallelCalls = "auto", &parallel
@@ -55,7 +61,7 @@ func (e *Encoder) encodeWhole(kind connection.ProviderKind, baseURL string, info
 	field := `,"messages":`
 	if kind == connection.LMStudio {
 		field = `,"input":`
-		values, convertErr := lmMessages(messages)
+		values, convertErr := responseInput(messages)
 		if convertErr != nil {
 			e.Clear()
 			return "", Body{}, convertErr

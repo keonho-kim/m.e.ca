@@ -83,6 +83,7 @@ func TestReadAdmissionDirectoryKeepsLatest(t *testing.T) {
 	}
 	r.unblock()
 	finishBrowserIO(t, a)
+	a.files.reads.Wait()
 	a.workers.Wait()
 	if len(r.requests) != 1 || (<-r.requests).path != "latest" {
 		t.Fatal("directory navigation ran obsolete queued reads")
@@ -114,6 +115,7 @@ func TestReadAdmissionPreviewKeepsLatest(t *testing.T) {
 			t.Fatal("latest preview did not finish")
 		}
 	}
+	a.files.reads.Wait()
 	a.workers.Wait()
 	if len(r.requests) != 1 || !strings.HasSuffix((<-r.requests).path, "latest") || a.files.filePreview.Content != "latest" {
 		t.Fatal("preview navigation ran obsolete queued reads")
@@ -131,6 +133,7 @@ func TestReadAdmissionCloseDropsPending(t *testing.T) {
 	a.openFilePreview(false)
 	a.closeFilePreview()
 	r.unblock()
+	a.files.reads.Wait()
 	a.workers.Wait()
 	for len(a.events) > 0 {
 		a.receive(<-a.events)

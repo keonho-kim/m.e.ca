@@ -11,8 +11,8 @@ import (
 )
 
 func (output *cappedOutput) lastOutput() time.Time {
-	output.mu.Lock()
-	defer output.mu.Unlock()
+	output.timingMu.Lock()
+	defer output.timingMu.Unlock()
 	return output.lastWrite
 }
 

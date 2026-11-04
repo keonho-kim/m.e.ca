@@ -1,6 +1,6 @@
 // Purpose: Read one bounded image snapshot with a buffer sized from its opened file.
 // Pattern: Cancellable read boundary with explicit stale-source detection.
-// Usage: readImage supplies a regular file and its current size before codec validation.
+// Usage: viewImage supplies a regular file and its current size before codec validation.
 // Related: internal/tools/local/image.go, internal/agent/media/image.go.
 package local
 
@@ -43,7 +43,7 @@ func readImageBytes(ctx context.Context, reader io.Reader, size int64) ([]byte, 
 		return nil, err
 	}
 	if int64(n) != size {
-		return nil, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image size changed while reading its snapshot", Next: "Read the intended image again."}
+		return nil, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image size changed while reading its snapshot", Next: "View the intended image again."}
 	}
 	return data[:n:n], nil
 }

@@ -9,6 +9,10 @@ import (
 )
 
 func (a *app) updateCommandActivity() {
+	if a.team.active {
+		a.updateTeamCommands()
+		return
+	}
 	commands, ok := a.opts.Tools.(toolapi.CommandExecutor)
 	if !ok || a.work.state.stopping() {
 		a.chat.toolActivity.dirty = a.chat.toolActivity.dirty || len(a.chat.toolActivity.commands) > 0

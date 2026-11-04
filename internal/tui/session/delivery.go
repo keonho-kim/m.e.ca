@@ -1,4 +1,4 @@
-// Purpose: Keep only the latest pending stream snapshot between ordered worker notifications.
+// Purpose: Keep latest pending text and usage snapshots between ordered worker notifications.
 // Pattern: Bounded latest-value mailbox with explicit ordering barriers.
 // Usage: A task worker owns delivery; receive consumes mailbox values on the terminal event loop.
 // Related: internal/tui/session/events.go, internal/tui/session/app.go.
@@ -29,16 +29,20 @@ func (s *streamNotice) take() *runrecord.Event {
 	return &event
 }
 
-type runtimeDelivery struct{ current *streamNotice }
+type runtimeDelivery struct{ current, usage *streamNotice }
 
 func (d *runtimeDelivery) stream(ctx context.Context, queue chan<- notice, event runrecord.Event) error {
+	return latestNotice(ctx, queue, &d.current, event)
+}
+
+func latestNotice(ctx context.Context, queue chan<- notice, slot **streamNotice, event runrecord.Event) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if d.current == nil {
-		d.current = &streamNotice{}
+	if *slot == nil {
+		*slot = &streamNotice{}
 	}
-	current := d.current
+	current := *slot
 	current.mu.Lock()
 	pending := current.pending
 	current.event, current.pending = event, true
@@ -59,9 +63,12 @@ func (d *runtimeDelivery) post(ctx context.Context, queue chan<- notice, n notic
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	// Freeze earlier snapshots before retry, completion, usage or approval.
+	if n.Event != nil && n.Event.Kind == "usage_progress" {
+		return latestNotice(ctx, queue, &d.usage, *n.Event)
+	}
+	// Freeze earlier snapshots before retry, completion, final usage or approval.
 	// The next stream gets a distinct mailbox and cannot cross this barrier.
-	d.current = nil
+	d.current, d.usage = nil, nil
 	select {
 	case queue <- n:
 		return nil

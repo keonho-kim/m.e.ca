@@ -96,7 +96,7 @@ func TestHeadlessExecutable(t *testing.T) {
 		t.Fatal("export lost the native result")
 	}
 	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
-		if _, err := os.Stat(filepath.Join(home, ".meca", "prompts", name)); err != nil {
+		if _, err := os.Stat(filepath.Join(home, ".meca", "prompts", "single", name)); err != nil {
 			t.Fatal(err)
 		}
 	}

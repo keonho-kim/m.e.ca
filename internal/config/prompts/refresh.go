@@ -19,12 +19,24 @@ func Refresh(root *os.Root) (err error) {
 	if err := prepareDirectory(root); err != nil {
 		return err
 	}
-	directory, err := root.OpenRoot("prompts")
+	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+		if err := refreshProfile(root, profile); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func refreshProfile(root *os.Root, profile prompt.Profile) (err error) {
+	if err := prepareProfile(root, profile); err != nil {
+		return err
+	}
+	directory, err := root.OpenRoot("prompts/" + string(profile))
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, directory.Close()) }()
-	defaults := prompt.Defaults()
+	defaults := prompt.DefaultsFor(profile)
 	for name, text := range defaults.Files() {
 		body := []byte(*text)
 		matches, err := matchesDefault(directory, name, body)

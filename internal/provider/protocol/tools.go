@@ -7,29 +7,12 @@ package protocol
 import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
-
-type Function struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Parameters  map[string]any `json:"parameters"`
-}
-type Tool struct {
-	Type     string   `json:"type"`
-	Function Function `json:"function"`
-}
-
-func Tools(definitions []toolapi.Definition) []Tool {
-	var tools []Tool
-	for _, d := range definitions {
-		tools = append(tools, Tool{Type: "function", Function: Function{Name: d.Name, Description: d.Description, Parameters: d.JSONSchema()}})
-	}
-	return tools
-}
 
 func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Message, error) {
 	var messages []Message
@@ -58,7 +41,7 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 		message := Message{Role: m.Role, Content: m.Content}
 		if kind == connection.OpenRouter && m.Role == "assistant" && !m.Incomplete && len(m.ReasoningState) > 0 {
 			var err error
-			message.ReasoningDetails, err = routerHistory(m.ReasoningState)
+			message.ReasoningDetails, err = chat.ReasoningHistory(m.ReasoningState)
 			if err != nil {
 				return nil, err
 			}

@@ -23,7 +23,7 @@ func TestUnreadImageBoundaryUsesCompletedGenerations(t *testing.T) {
 	t.Cleanup(func() { s.Close() })
 	ctx, id := context.Background(), s.Session().ID
 	picture, _ := media.New("shot.png", "image/png", "png", 8, 8, []byte("snapshot"))
-	call := toolapi.Call{ID: "image", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
+	call := toolapi.Call{ID: "image", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}
 	for _, message := range []modelapi.Message{
 		{Role: "user", Content: "inspect"},
 		{Role: "assistant", Content: "earlier response"},

@@ -14,15 +14,15 @@ import (
 )
 
 func brief(text string) string {
-	text = strings.NewReplacer("\r", "", "\n", " ↵ ", "\t", " ").Replace(text)
 	graphemes := uniseg.NewGraphemes(text)
 	for count := 0; graphemes.Next(); count++ {
 		if count == 120 {
 			start, _ := graphemes.Positions()
-			return text[:start] + "…"
+			text = text[:start] + "…"
+			break
 		}
 	}
-	return text
+	return strings.NewReplacer("\r", "", "\n", " ↵ ", "\t", " ").Replace(text)
 }
 
 func (f Formatter) toolSummary(event runrecord.Event) string {
@@ -30,7 +30,17 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 	commandStatus, commandSummary := "", ""
 	if event.Call.Name == "execute_command" || event.Call.Name == "wait_command" || event.Call.Name == "cancel_command" {
 		var fields map[string]json.RawMessage
-		if json.Unmarshal(event.Output, &fields) == nil {
+		valid := false
+		if event.Operation != nil && event.Operation.Process != nil {
+			process := event.Operation.Process
+			status, _ := json.Marshal(process.Status)
+			code, _ := json.Marshal(process.ExitCode)
+			fields = map[string]json.RawMessage{"Status": status, "ExitCode": code}
+			valid = true
+		} else {
+			valid = json.Unmarshal(event.Output, &fields) == nil
+		}
+		if valid {
 			commandStatus = processStatus(event.Kind, fields)
 			if commandStatus != "" {
 				status = commandStatus
@@ -70,7 +80,7 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		result = commandSummary
 	} else if json.Unmarshal(event.Output, &output) == nil {
 		switch {
-		case event.Kind == "tool_succeeded" && event.Call.Name == "read_image" && output.Width > 0 && output.Height > 0:
+		case event.Kind == "tool_succeeded" && event.Call.Name == "view_image" && output.Width > 0 && output.Height > 0:
 			result = f.Language.Format("%s · %d × %d", strings.ToUpper(output.Format), output.Width, output.Height)
 		case event.Kind == "tool_succeeded" && output.Changed != nil && !*output.Changed:
 			result = f.Language.Text("변경 없음")
@@ -83,5 +93,5 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 	if result != "" {
 		text += indentTool(brief(f.Redact(result)))
 	}
-	return text + "    [Ctrl+O: " + f.Language.Text("Expand") + "]\n"
+	return text
 }

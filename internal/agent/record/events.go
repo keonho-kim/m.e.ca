@@ -9,28 +9,33 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"time"
 )
 
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
-	ApprovalSource  string               `json:"approval_source,omitempty"`
-	Capture         json.RawMessage      `json:"capture,omitempty"`
-	RunID           string               `json:"run_id,omitempty"`
-	Generation      *Generation          `json:"generation,omitempty"`
-	Statistics      *Statistics          `json:"statistics,omitempty"`
-	ChangePreview   string               `json:"change_preview,omitempty"`
-	TokensPerSecond *float64             `json:"-"`
-	Usage           *modelapi.TokenUsage `json:"usage,omitempty"`
-	Call            *toolapi.Call        `json:"call,omitempty"`
-	Output          json.RawMessage      `json:"output,omitempty"`
-	Operation       *toolapi.Operation   `json:"operation,omitempty"`
-	Kind            string               `json:"kind"`
-	Text            string               `json:"text"`
-	Thinking        string               `json:"thinking,omitempty"`
-	CallID          string               `json:"call_id,omitempty"`
-	Approval        *toolapi.Approval    `json:"approval,omitempty"`
-	Checkpoint      *Checkpoint          `json:"checkpoint,omitempty"`
+	Team             *TeamNote            `json:"team,omitempty"`
+	Agent            string               `json:"agent,omitempty"`
+	Final            bool                 `json:"final,omitempty"`
+	Reference        *EventReference      `json:"reference,omitempty"`
+	ApprovalSource   string               `json:"approval_source,omitempty"`
+	Capture          json.RawMessage      `json:"capture,omitempty"`
+	RunID            string               `json:"run_id,omitempty"`
+	Generation       *Generation          `json:"generation,omitempty"`
+	Statistics       *Statistics          `json:"statistics,omitempty"`
+	ChangePreview    string               `json:"change_preview,omitempty"`
+	MeasuredDuration time.Duration        `json:"-"`
+	Usage            *modelapi.TokenUsage `json:"usage,omitempty"`
+	Call             *toolapi.Call        `json:"call,omitempty"`
+	Output           json.RawMessage      `json:"output,omitempty"`
+	Operation        *toolapi.Operation   `json:"operation,omitempty"`
+	Kind             string               `json:"kind"`
+	Text             string               `json:"text"`
+	Thinking         string               `json:"thinking,omitempty"`
+	CallID           string               `json:"call_id,omitempty"`
+	Approval         *toolapi.Approval    `json:"approval,omitempty"`
+	Checkpoint       *Checkpoint          `json:"checkpoint,omitempty"`
 }
 
 type Generation struct {
@@ -45,4 +50,10 @@ type Generation struct {
 type Entry struct {
 	Message *modelapi.Message
 	Event   *Event
+}
+
+// EventReference points to one committed original in the current or a private team session.
+type EventReference struct {
+	Session  string `json:"session"`
+	Sequence int64  `json:"sequence"`
 }

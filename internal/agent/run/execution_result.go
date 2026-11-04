@@ -42,8 +42,8 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 		event.Kind = "tool_failed"
 	}
 	if outcome.Failure != nil {
-		// The local stale-version guard proves it rejected the operation before mutation.
-		if outcome.Failure.Code == toolapi.StaleTarget {
+		// Version and instruction guards reject candidates before any mutation.
+		if outcome.Failure.Code == toolapi.StaleTarget || outcome.Failure.Code == toolapi.InstructionChanged {
 			outcome.Started = false
 		}
 		outcome.Failure.Detail = r.Redact(outcome.Failure.Detail)

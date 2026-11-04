@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -15,14 +16,15 @@ import (
 )
 
 type notice struct {
-	PreviewLayout   *previewLayoutResult
-	FileWatch       *watchResult
+	Detail          *detailResult
+	PreviewLayout   *controller.LayoutResult
+	FileWatch       *controller.WatchResult
 	Stream          *streamNotice
 	FormRevision    int
 	ModelForm       bool
 	Diagnostic      bool
 	History         *historyPage
-	Directory       *directoryPage
+	Directory       *controller.DirectoryPage
 	FileSelection   *fileSelectionResult
 	SetupRevision   int
 	Clipboard       bool
@@ -49,6 +51,10 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.Detail != nil {
+		a.receiveToolDetail(n.Detail)
+		return
+	}
 	if n.PreviewLayout != nil {
 		a.receivePreviewLayout(n.PreviewLayout)
 		return

@@ -12,15 +12,16 @@ import (
 )
 
 const (
-	CommandBlocked  = "command_blocked"
-	InvalidCommand  = "invalid_command"
-	StaleTarget     = "file_changed"
-	InvalidArgument = "invalid_argument"
-	OutputTruncated = "output_truncated"
-	Timeout         = "timeout"
-	Interrupted     = "interrupted"
-	ProcessFailed   = "process_failed"
-	ExecutionFailed = "execution_failed"
+	CommandBlocked     = "command_blocked"
+	InvalidCommand     = "invalid_command"
+	StaleTarget        = "file_changed"
+	InstructionChanged = "user_instruction_changed"
+	InvalidArgument    = "invalid_argument"
+	OutputTruncated    = "output_truncated"
+	Timeout            = "timeout"
+	Interrupted        = "interrupted"
+	ProcessFailed      = "process_failed"
+	ExecutionFailed    = "execution_failed"
 )
 
 type Failure struct {
@@ -28,6 +29,11 @@ type Failure struct {
 	Detail string `json:"detail"`
 	Next   string `json:"next"`
 	Cause  error  `json:"-"`
+}
+
+// NewInstructionChanged describes a rejected candidate, never a failed file mutation.
+func NewInstructionChanged() *Failure {
+	return &Failure{Code: InstructionChanged, Detail: "A user instruction arrived after the model decision; nothing executed.", Next: "Read the latest user messages and reconsider the remaining work in a new model decision. Preserve completed results; do not replay the previous candidates automatically."}
 }
 
 func (f *Failure) Error() string { return fmt.Sprintf("%s: %s; next: %s", f.Code, f.Detail, f.Next) }

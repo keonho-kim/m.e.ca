@@ -15,6 +15,12 @@ import (
 
 func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count int) ([]*readyExecution, int, toolapi.Result, error) {
 	ready := make([]*readyExecution, len(calls))
+	complete := false
+	defer func() {
+		if !complete {
+			releaseReady(ready)
+		}
+	}()
 	for i, v := range calls {
 		s.checkpoint.Tool = v.call.Name
 		if err := s.checkTimeBudget(ctx); err != nil {
@@ -32,6 +38,7 @@ func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count
 		}
 	}
 	if count == 1 {
+		complete = true
 		return ready, -1, toolapi.Result{}, nil
 	}
 	failures := make([]error, len(calls))
@@ -54,5 +61,14 @@ func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count
 			return nil, i, toolapi.Result{}, err
 		}
 	}
+	complete = true
 	return ready, -1, toolapi.Result{}, nil
+}
+
+func releaseReady(ready []*readyExecution) {
+	for _, value := range ready {
+		if value != nil {
+			toolapi.Release(value.operation)
+		}
+	}
 }

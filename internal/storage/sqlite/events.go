@@ -20,7 +20,7 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord
 	return s.Commit(ctx, session, []runrecord.Entry{{Event: &event}})
 }
 
-func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string) error {
+func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string, receipt *journalReceipt) error {
 	if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
 		copy := *event.Checkpoint
 		event.Checkpoint = &copy
@@ -61,6 +61,11 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 		role, text = projected[0].Role, projected[0].Text
 	}
 	memoryBytes := len(text)
+	if ref, size, err := s.publicMemoryReference(ctx, event); err != nil {
+		return err
+	} else if ref != "" {
+		role, text, memoryBytes = ref, "", size
+	}
 	displayArgs := []byte("{}")
 	if event.Call != nil {
 		// A rejected argument can be valid JSON with an invalid field type.
@@ -80,7 +85,13 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'event',?)", session, sequence); err != nil {
+	timeline, err := tx.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'event',?)", session, sequence)
+	if err != nil {
+		return err
+	}
+	receipt.event = sequence
+	receipt.timeline, err = timeline.LastInsertId()
+	if err != nil {
 		return err
 	}
 	return nil

@@ -11,6 +11,10 @@ import (
 )
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
+	if e.Agent != "" {
+		a.receiveTeam(e)
+		return
+	}
 	switch e.Kind {
 	case "image_input_unavailable":
 		a.connection.rejectImages()
@@ -27,7 +31,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 
 	case "generation_started":
 		a.chat.tokenCurrent = modelapi.TokenUsage{}
-		a.chat.tokensPerSecond = nil
+		a.chat.currentMeasurement = runrecord.Throughput{}
 		return
 	case "generation_finished":
 		return

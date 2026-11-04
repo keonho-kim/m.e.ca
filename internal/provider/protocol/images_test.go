@@ -20,8 +20,8 @@ func TestImageRequestDialectsAndNativeOrdering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	calls := []toolapi.Call{{ID: "image-call", Name: "read_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}, {ID: "other-call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"pwd"}`)}}
-	source := []modelapi.Message{{Role: "assistant", Calls: calls}, {Role: "tool", ToolName: "read_image", ToolCallID: "image-call", Content: "dimensions", Images: []media.Image{picture}}, {Role: "tool", ToolName: "execute_command", ToolCallID: "other-call", Content: "/project"}, {Role: "assistant", Content: "Seen"}}
+	calls := []toolapi.Call{{ID: "image-call", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}, {ID: "other-call", Name: "execute_command", Arguments: json.RawMessage(`{"command":"pwd"}`)}}
+	source := []modelapi.Message{{Role: "assistant", Calls: calls}, {Role: "tool", ToolName: "view_image", ToolCallID: "image-call", Content: "dimensions", Images: []media.Image{picture}}, {Role: "tool", ToolName: "execute_command", ToolCallID: "other-call", Content: "/project"}, {Role: "assistant", Content: "Seen"}}
 	for _, kind := range []connection.ProviderKind{connection.VLLM, connection.SGLang, connection.LiteLLM, connection.OpenRouter, connection.Ollama, connection.LMStudio} {
 		t.Run(string(kind), func(t *testing.T) {
 			messages, err := Messages(kind, source)

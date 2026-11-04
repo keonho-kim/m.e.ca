@@ -81,7 +81,7 @@ func TestRunSummaryFollowsInterruptedDraft(t *testing.T) {
 	if len(a.chat.output.Blocks) != 3 || a.chat.output.Blocks[1].Markdown == false || !a.chat.output.Blocks[2].Centered || a.chat.runSummary != nil {
 		t.Fatalf("interrupted response ordering: %+v", a.chat.output.Blocks)
 	}
-	if strings.TrimSpace(a.chat.output.Blocks[1].Text) != "partial answer" || !strings.Contains(a.chat.output.Blocks[2].Text, "입력 — | 출력 — | 초당 토큰 —") {
+	if strings.TrimSpace(a.chat.output.Blocks[1].Text) != "partial answer" || !strings.Contains(a.chat.output.Blocks[2].Text, "입력 — | 출력 —") {
 		t.Fatal("partial response or unreported usage lost")
 	}
 	a.receive(notice{Done: true})

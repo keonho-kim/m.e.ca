@@ -12,6 +12,7 @@ type section struct {
 	start, skip, count int
 }
 type Transcript struct {
+	active                   []*Block
 	historyHead              *Block
 	historyRevision          uint64
 	historyLength            int
@@ -40,7 +41,7 @@ func (t *Transcript) Window(start, count int) []Line {
 	}
 	defer func() {
 		for _, block := range previous {
-			if !block.visible {
+			if !block.visible && !block.live {
 				block.releaseParsed()
 			}
 		}
@@ -60,8 +61,7 @@ func (t *Transcript) Window(start, count int) []Line {
 		part.block.visible = true
 		t.visible = append(t.visible, part.block)
 		offset := max(0, start-part.start)
-		window := part.block.Window(t.width, part.skip+offset, min(count-len(rows), part.count-offset))
-		rows = append(rows, window...)
+		rows = part.block.appendWindow(rows, t.width, part.skip+offset, min(count-len(rows), part.count-offset))
 	}
 	t.rows, t.windowStart, t.windowCount = rows, start, count
 	return rows

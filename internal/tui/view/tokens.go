@@ -13,7 +13,7 @@ import (
 
 func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width int, activity Activity) {
 	tokens := fmt.Sprintf("%s %d · %s %d", activity.Language.Text("INPUT"), usage.Input, activity.Language.Text("OUTPUT"), usage.Output)
-	rate := " · " + activity.Language.Text("TPS") + " —"
+	rate := ""
 	if activity.TokensPerSecond != nil {
 		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
 	}
@@ -31,7 +31,7 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 			tokens += cost
 		}
 	}
-	if uniseg.StringWidth(tokens+rate+label)+1 <= width {
+	if rate != "" && uniseg.StringWidth(tokens+rate+label)+1 <= width {
 		tokens += rate
 	}
 	if title != "" && !activity.Compressing {

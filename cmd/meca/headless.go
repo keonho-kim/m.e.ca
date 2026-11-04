@@ -117,10 +117,17 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		return err
 	}
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	request := agentrequest.New(agentrequest.Options{
+	options := agentrequest.Options{
 		Config: cfg, Selection: selected, Session: store.Session(), Generator: prepared.Client,
 		Tools: executor, Store: store, Vault: vault, Text: text,
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
-	})
-	return headless.Run(ctx, request, os.Stdout, mode.Output == "json")
+	}
+	teamMode, err := store.TeamMode(ctx)
+	if err != nil {
+		return err
+	}
+	if teamMode {
+		return headless.RunTeam(ctx, teamService(store, home, state, vault), options, os.Stdout, mode.Output == "json")
+	}
+	return headless.Run(ctx, agentrequest.New(options), os.Stdout, mode.Output == "json")
 }

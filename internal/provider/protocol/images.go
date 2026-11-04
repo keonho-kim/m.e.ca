@@ -1,7 +1,7 @@
 // Purpose: Attach immutable local image bytes using each provider's documented request dialect.
 // Pattern: Multimodal request adapter.
 // Usage: Messages flushes tool images after their complete native result group.
-// Related: internal/provider/protocol/tools.go, internal/provider/protocol/lmstudio.go.
+// Related: internal/provider/protocol/tools.go, internal/provider/protocol/response_input.go.
 package protocol
 
 import (
@@ -35,7 +35,7 @@ func attachImages(kind connection.ProviderKind, message *Message, images []media
 		if err := image.Check(); err != nil {
 			return err
 		}
-		label := fmt.Sprintf("Image from read_image: %s (%s, %d x %d)", image.Path, image.Digest, image.Width, image.Height)
+		label := fmt.Sprintf("Image from view_image: %s (%s, %d x %d)", image.Path, image.Digest, image.Width, image.Height)
 		prefix := ""
 		if kind != connection.Ollama {
 			prefix = "data:" + image.MIME + ";base64,"
@@ -74,7 +74,7 @@ func encodeImage(data []byte, prefix string) (string, error) {
 	return out.String(), nil
 }
 
-func lmContent(message Message) any {
+func responseContent(message Message) any {
 	parts, _ := message.Content.([]contentPart)
 	if len(parts) == 0 {
 		return message.Content

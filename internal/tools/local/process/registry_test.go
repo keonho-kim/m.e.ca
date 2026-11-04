@@ -8,10 +8,56 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
 )
+
+func TestRegistryDoneWaitsForArchiveAndSurvivesAcknowledgement(t *testing.T) {
+	var registry Registry
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	registry.Begin(ctx, time.Now().Add(5*time.Second))
+	archiving, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(release) }) }
+	t.Cleanup(func() { unblock(); registry.End() })
+	registry.Save = func(string, string, Output, error) error { close(archiving); <-release; return nil }
+	id, err := registry.Start(ctx, t.TempDir(), "printf finished", os.Environ(), "call")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done, err := registry.Done(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-archiving:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	select {
+	case <-done:
+		t.Fatal("completion preceded output archival")
+	default:
+	}
+	unblock()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	registry.Acknowledge(id)
+	select {
+	case <-done:
+	default:
+		t.Fatal("acknowledgement replaced the completion signal")
+	}
+	if _, err := registry.Done(id); err == nil {
+		t.Fatal("unknown command identity accepted")
+	}
+}
 
 func TestRegistryInitialAndFollowupWaitWindows(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
@@ -38,7 +84,7 @@ func TestRegistryWaitDoesNotCancel(t *testing.T) {
 	var registry Registry
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
 	t.Cleanup(func() { registry.End() })
-	registry.Save = func(string, Output, error) error { return nil }
+	registry.Save = func(string, string, Output, error) error { return nil }
 	id, err := registry.Start(context.Background(), root, "printf started; while [ ! -f release ]; do sleep 0.02; done; printf finished", os.Environ(), "call_1")
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +105,7 @@ func TestRegistryWaitDoesNotCancel(t *testing.T) {
 func TestRegistryOwnsCancellationAndCapacity(t *testing.T) {
 	var registry Registry
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
-	registry.Save = func(string, Output, error) error { return nil }
+	registry.Save = func(string, string, Output, error) error { return nil }
 	t.Cleanup(func() { registry.End() })
 	for range MaxActive {
 		if _, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), "call"); err != nil {
@@ -89,7 +135,7 @@ func TestRegistryOwnsCancellationAndCapacity(t *testing.T) {
 func TestRegistryWatcherCancellationLeavesCommandRunning(t *testing.T) {
 	var registry Registry
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
-	registry.Save = func(string, Output, error) error { return nil }
+	registry.Save = func(string, string, Output, error) error { return nil }
 	t.Cleanup(func() { registry.End() })
 	id, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), "call")
 	if err != nil {

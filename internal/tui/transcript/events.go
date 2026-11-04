@@ -10,6 +10,24 @@ import (
 )
 
 func (f Formatter) Event(event runrecord.Event) []viewport.Block {
+	if event.Kind == "team_observation" || event.Kind == "team_status" {
+		return nil
+	}
+	if event.Kind == "team_message" || event.Kind == "team_progress" || event.Kind == "team_work" || event.Kind == "team_discussion" || event.Kind == "team_notice" {
+		return f.teamEvent(event)
+	}
+	if event.Agent != "" {
+		agent := event.Agent
+		event.Agent = ""
+		blocks := f.Event(event)
+		if len(blocks) == 0 {
+			return nil
+		}
+		for i := range blocks {
+			blocks[i].SpaceAfter = 2
+		}
+		return append([]viewport.Block{f.TeamHeader(agent, false)}, blocks...)
+	}
 	if event.Statistics != nil {
 		return []viewport.Block{f.runSummary(*event.Statistics)}
 	}
@@ -20,6 +38,10 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 	case "generation_started", "compaction", "compaction_started", "compaction_finished", "tool_proposed", "tool_started", "approved":
 		return nil
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":
+		if event.Call != nil && event.Reference != nil {
+			summary := f.toolSummary(event)
+			return []viewport.Block{{Text: summary, Summary: summary, DetailRef: event.Reference}}
+		}
 		if block := f.toolBlock(event); block.Text != "" {
 			block.Summary, block.Details = f.toolSummary(event), block.Text
 			return []viewport.Block{block}

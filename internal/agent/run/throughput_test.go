@@ -1,7 +1,7 @@
-// Purpose: Verify throughput uses real output counts and resets at each retry without storage changes.
+// Purpose: Verify attempt measurements preserve real counts and exclude completion delays without storage changes.
 // Pattern: Generation lifecycle tests with virtual time.
 // Usage: go test ./internal/agent/run -run TestThroughput.
-// Related: internal/agent/run/throughput.go, internal/agent/run/usage.go.
+// Related: internal/agent/record/throughput.go, internal/agent/run/usage.go.
 package run
 
 import (
@@ -52,12 +52,12 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 				if e.Kind == "generation_started" {
 					starts++
 				}
-				if e.TokensPerSecond != nil {
+				if rate := runrecord.MeasuredThroughput(e).Rate(); rate != nil {
 					if e.Kind == "usage_progress" {
-						progress = append(progress, *e.TokensPerSecond)
+						progress = append(progress, *rate)
 					}
 					if e.Kind == "usage" {
-						final = append(final, *e.TokensPerSecond)
+						final = append(final, *rate)
 					}
 				}
 				return nil
@@ -75,14 +75,14 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 				t.Fatalf("starts=%d progress=%v final=%v", starts, progress, final)
 			}
 			for _, event := range j.events {
-				if event.TokensPerSecond != nil {
+				if event.MeasuredDuration != 0 {
 					t.Fatal("transient throughput stored")
 				}
 				body, err := json.Marshal(event)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if strings.Contains(string(body), "TokensPerSecond") {
+				if strings.Contains(string(body), "MeasuredDuration") {
 					t.Fatal("throughput serialized")
 				}
 			}
@@ -90,11 +90,38 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 	}
 }
 
-func TestThroughputUnmeasurableInterval(t *testing.T) {
-	if outputRate(50, 0) != nil {
-		t.Fatal("zero duration produced throughput")
-	}
-	if rate := outputRate(0, time.Second); rate == nil || *rate != 0 {
-		t.Fatal("reported zero lost")
-	}
+func TestThroughputDuplicateUsageKeepsItsMeasuredInterval(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		r := fixture(&generator{}, &executor{}, &journal{})
+		r.Generator = statisticsModel(func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+			time.Sleep(2 * time.Second)
+			if err := emit(modelapi.Event{Usage: &modelapi.TokenUsage{Input: 100, Output: 20, Cost: new(0.001)}}); err != nil {
+				return err
+			}
+			time.Sleep(10 * time.Second)
+			return emit(modelapi.Event{Delta: "answer", Done: true, Usage: &modelapi.TokenUsage{Input: 100, Output: 20, Cost: new(0.002)}})
+		})
+		var measured []time.Duration
+		var summary *runrecord.Statistics
+		_, err := r.Run(context.Background(), "hello", approve, func(event runrecord.Event) error {
+			if event.Usage != nil {
+				measured = append(measured, event.MeasuredDuration)
+			}
+			if event.Statistics != nil {
+				summary = event.Statistics
+			}
+			return nil
+		})
+		if err != nil || len(measured) != 3 {
+			t.Fatalf("measurements=%v err=%v", measured, err)
+		}
+		for _, duration := range measured {
+			if duration != 2*time.Second {
+				t.Fatalf("unchanged token count was diluted by completion delay: %v", measured)
+			}
+		}
+		if summary == nil || summary.GenerationMillis != 2000 || summary.ElapsedMillis != 12000 || summary.Usage.Cost == nil || *summary.Usage.Cost != 0.002 {
+			t.Fatalf("duplicate final usage lost actual totals or final cost: %+v", summary)
+		}
+	})
 }

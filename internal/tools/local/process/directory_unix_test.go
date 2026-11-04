@@ -3,7 +3,7 @@
 // Purpose: Verify commands start in the selected project independently of inherited directory state.
 // Pattern: Native process contract tests.
 // Usage: go test ./internal/tools/local/process -run TestSelectedProjectDirectory.
-// Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/host_tools_test.go.
+// Related: internal/tools/local/process/run_unix.go, internal/tools/local/process/run_test.go.
 package process
 
 import (
