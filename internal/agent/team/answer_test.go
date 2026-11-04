@@ -13,20 +13,15 @@ import (
 	"testing"
 )
 
-type observedRoom struct {
-	*memoryRoom
-	checked chan struct{}
-}
-
-func (s observedRoom) TeamPending(ctx context.Context, after, through int64, own string) (bool, error) {
-	pending, err := s.memoryRoom.TeamPending(ctx, after, through, own)
-	s.checked <- struct{}{}
-	return pending, err
-}
 func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 	r := testRoom(t)
-	store := observedRoom{memoryRoom: r.options.Store.(*memoryRoom), checked: make(chan struct{}, 8)}
-	r.options.Store = store
+	announced := make(chan struct{})
+	r.options.Emit = func(event runrecord.Event) error {
+		if event.Kind == "team_progress" && event.Agent == "Hana" {
+			close(announced)
+		}
+		return nil
+	}
 	peer := &Peer{ID: "Hana", room: r}
 	if _, err := r.publish(channel.Message{From: "Ren", Text: "I will update api/router.go."}); err != nil {
 		t.Fatal(err)
@@ -34,6 +29,7 @@ func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 	if _, err := peer.Inbox(r.ctx); err != nil {
 		t.Fatal(err)
 	}
+	peer.BeginDecision()
 	ctx, cancel := context.WithCancel(r.ctx)
 	defer cancel()
 	done := make(chan error, 1)
@@ -44,8 +40,8 @@ func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 		}
 		done <- err
 	}()
-	// The fully consumed prefix needs no SQL; only the newly published own answer is checked.
-	<-store.checked
+	// Wait for publication before cancelling the idle run; consumed hints never restart it.
+	<-announced
 	cancel()
 	if err := <-done; !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
@@ -70,7 +66,7 @@ func TestSlowDeliveryDoesNotHoldMembershipState(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- (&Peer{ID: "Hana", room: r}).Emit(runrecord.Event{Kind: "stream", Text: "answer"}) }()
 	<-entered
-	if work := (&Peer{ID: "Ren", room: r}).WorkContext(); !strings.Contains(work, "Active teammates: Hana, Ren") {
+	if work := (&Peer{ID: "Ren", room: r}).ContextObservations(nil); !strings.Contains(work, "Active teammates: Hana, Ren") {
 		t.Fatal(work)
 	}
 	close(release)

@@ -96,6 +96,20 @@ func (r *Registry) List() []State {
 	return states
 }
 
+// ActiveID checks actual owned completion without allocating or reading output metadata.
+func (r *Registry) ActiveID() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, j := range r.jobs {
+		select {
+		case <-j.done:
+		default:
+			return id
+		}
+	}
+	return ""
+}
+
 func (r *Registry) Acknowledge(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

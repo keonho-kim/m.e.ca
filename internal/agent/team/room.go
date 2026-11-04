@@ -24,37 +24,47 @@ type participant struct {
 	wake            chan struct{}
 	leaving, closed bool
 	spoke           bool
+	waiting         bool
+	commands        int
 	reviewed        int64
+	attention       int64
+	discussion      discussionPreview
 	status          commandStatus
 }
 type Room struct {
-	mu           sync.Mutex
-	workViewMu   sync.Mutex
-	memberMu     sync.Mutex
-	logMu        sync.Mutex
-	eventMu      sync.Mutex
-	inputMu      sync.Mutex
-	options      Options
-	ctx          context.Context
-	cancel       context.CancelCauseFunc
-	workers      sync.WaitGroup
-	changed      chan struct{}
-	active       map[string]*participant
-	result       Result
-	input        string
-	firstMessage int64
-	latestPublic int64
-	latestStatus int64
-	public       channel.History
-	work         contribution.State
-	workView     workProjection
-	latestUser   int64
-	deadline     time.Time
-	modelCalls   int
-	finished     bool
-	failures     error
-	statistics   runrecord.UsageTotals
-	runID        string
+	mu                                  sync.Mutex
+	workViewMu                          sync.Mutex
+	memberMu                            sync.Mutex
+	logMu                               sync.Mutex
+	eventMu                             sync.Mutex
+	inputMu                             sync.Mutex
+	options                             Options
+	ctx                                 context.Context
+	cancel                              context.CancelCauseFunc
+	workers                             sync.WaitGroup
+	changed                             chan struct{}
+	active                              map[string]*participant
+	result                              Result
+	input                               string
+	firstMessage                        int64
+	latestPublic                        int64
+	latestStatus                        int64
+	latestDiscussion                    int64
+	public                              channel.History
+	work                                contribution.State
+	workView                            *workProjection
+	latestUser                          int64
+	userChanged                         chan struct{}
+	deadline                            time.Time
+	modelCalls                          int
+	finished                            bool
+	progress, idleEpoch                 uint64
+	progressFacts                       [64][32]byte
+	progressFactCount, progressFactNext int
+	idleAttempted                       bool
+	failures                            error
+	statistics                          runrecord.UsageTotals
+	runID                               string
 }
 
 func Run(ctx context.Context, options Options, text string) (Result, error) {

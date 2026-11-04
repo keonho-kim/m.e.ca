@@ -10,8 +10,13 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
+// PageBytes bounds a receive page, independently of the accepted size of one record.
+const PageBytes = 16 * 1024 * 1024
+
 type Message struct {
+	Note         *runrecord.TeamNote       `json:"note,omitempty"`
 	Reference    *runrecord.EventReference `json:"-"`
+	Discussion   bool                      `json:"-"`
 	Passive      bool                      `json:"passive,omitempty"`
 	Declaration  bool                      `json:"-"`
 	Observation  bool                      `json:"observation,omitempty"`
@@ -21,6 +26,24 @@ type Message struct {
 	Sequence     int64                     `json:"sequence"`
 	From         string                    `json:"from"`
 	Text         string                    `json:"text"`
+}
+
+// ContextBytes conservatively sizes attribution and all metadata without formatting.
+func (m Message) ContextBytes() int {
+	size := len(m.Text) + len(m.From) + 512
+	if n := m.Note; n != nil {
+		size += len(n.ReplyAuthor)
+		for _, name := range n.Mentions {
+			size += len(name) + 2
+		}
+		if w := n.Work; w != nil {
+			size += len(w.Contract)
+			for _, path := range w.Paths {
+				size += len(path) + 2
+			}
+		}
+	}
+	return size
 }
 
 // Kind owns the persisted provenance shared by live delivery and log restoration.
@@ -36,6 +59,8 @@ func (m Message) Kind() string {
 		return "team_progress"
 	case m.Declaration:
 		return "team_work"
+	case m.Discussion:
+		return "team_discussion"
 	default:
 		return "team_message"
 	}
@@ -45,8 +70,15 @@ type Reader interface {
 	TeamMessages(context.Context, int64, int64, int) ([]Message, error)
 }
 
+// Metadata identifies a public record without restoring its potentially large body.
+type Metadata struct {
+	Sequence   int64
+	From, Kind string
+	Bytes      int
+}
+
 type Repository interface {
 	Reader
+	TeamMessageMetadata(context.Context, int64) (Metadata, error)
 	AppendTeamMessage(context.Context, Message) (Message, error)
-	TeamPending(context.Context, int64, int64, string) (bool, error)
 }

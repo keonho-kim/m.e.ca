@@ -31,12 +31,12 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 		return nil, nil, nil
 	}
 	shell := call.Name == "execute_command"
-	if shell {
-		for _, command := range e.Local.CommandActivity() {
-			if command.Status == "running" {
-				return nil, nil, fmt.Errorf("a command is still active; wait_command or cancel_command before starting another")
-			}
-		}
+	if id := e.Local.ActiveCommand(); id != "" {
+		return nil, nil, &toolapi.Failure{Code: "team_command_pending", Detail: "Your command " + id + " is still running; nothing else started.", Next: "Use wait_command or cancel_command with this command_id before executing another command or changing files. Use list_command_runs to inspect session commands."}
+	}
+	obsolete, err := e.Peer.UserChanges()
+	if err != nil {
+		return nil, nil, err
 	}
 	var paths []string
 	if !shell {
@@ -53,10 +53,10 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 		return e.Peer.Emit(runrecord.Event{Kind: "tool_waiting", CallID: call.ID, Call: &call, Text: "Waiting for shared workspace access"})
 	}
 	if shell {
-		held, err := e.Workspace.ReserveShell(ctx, waiting)
+		held, err := e.Workspace.ReserveShell(ctx, obsolete, waiting)
 		return held, nil, err
 	}
-	held, err := e.Workspace.ReserveFiles(ctx, paths, waiting)
+	held, err := e.Workspace.ReserveFiles(ctx, paths, obsolete, waiting)
 	return held, paths, err
 }
 

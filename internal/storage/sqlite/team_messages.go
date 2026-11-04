@@ -18,7 +18,7 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	if message.Text == "" || len(message.Text) > 64*1024*1024 {
 		return message, fmt.Errorf("invalid public message")
 	}
-	if message.Passive && !message.Observation || message.Observation && (message.From == "user" || message.FromStream || message.Declaration || message.Final) || message.Declaration && (message.From == "user" || message.FromStream || message.Final) {
+	if message.Passive && !message.Observation || message.Observation && (message.From == "user" || message.FromStream || message.Declaration || message.Discussion || message.Final) || message.Declaration && (message.From == "user" || message.FromStream || message.Discussion || message.Final) || message.Discussion && (message.From == "user" || message.FromStream || message.Final) || message.From == "user" && message.Note != nil {
 		return message, fmt.Errorf("inconsistent public message provenance")
 	}
 	var records []runrecord.Entry
@@ -28,7 +28,7 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 		if !teamidentity.ValidName(message.From) {
 			return message, fmt.Errorf("invalid public sender")
 		}
-		event := runrecord.Event{Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text}
+		event := runrecord.Event{Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text, Team: message.Note}
 		records = []runrecord.Entry{{Event: &event}}
 		if message.Final {
 			records = append([]runrecord.Entry{{Message: &modelapi.Message{ID: "team-report", Role: "assistant", Content: message.Text}}}, records...)
@@ -56,14 +56,14 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 	if after < 0 || through < after || limit < 1 || limit > 200 {
 		return nil, fmt.Errorf("invalid room page")
 	}
-	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_observation','team_status')) ORDER BY t.sequence LIMIT ?`, s.session.ID, after, through, limit)
+	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_discussion','team_observation','team_status')) ORDER BY t.sequence LIMIT ?`, s.session.ID, after, through, limit)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]teamchannel.Message, 0, len(page))
 	size := 0
 	for _, record := range page {
-		if size+record.size > 16*1024*1024 && len(out) > 0 {
+		if size+record.size > teamchannel.PageBytes && len(out) > 0 {
 			break
 		}
 		message, err := s.publicMessage(ctx, record)
@@ -71,22 +71,12 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 			return nil, err
 		}
 
-		if size+len(message.Text) > 16*1024*1024 && len(out) > 0 {
+		cost := max(record.size, message.ContextBytes())
+		if size+cost > teamchannel.PageBytes && len(out) > 0 {
 			break
 		}
-		size += len(message.Text)
+		size += cost
 		out = append(out, message)
 	}
 	return out, nil
-}
-
-// TeamPending checks unread work without hydrating bodies or counting own native responses twice.
-func (s *Store) TeamPending(ctx context.Context, after, through int64, own string) (bool, error) {
-	var pending bool
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM timeline t
- LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
- LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence
- WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND
- (m.role='user' OR e.kind='team_message' OR e.kind IN ('team_progress','team_work','team_observation') AND json_extract(e.body,'$.agent')<>?))`, s.session.ID, after, through, own).Scan(&pending)
-	return pending, err
 }

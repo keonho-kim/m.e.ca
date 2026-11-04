@@ -26,7 +26,7 @@ type Runner struct {
 	PollSteering             func() []string
 	PollContext              func(context.Context) (ContextBatch, error)
 	BeforeDecision           func()
-	ContextObservations      func() string
+	ContextObservations      func([]modelapi.Message) string
 	OnAnswer                 func(context.Context, string) (bool, error)
 	AdmitModel               func() bool
 	Deadline                 time.Time

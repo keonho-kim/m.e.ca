@@ -22,7 +22,10 @@ func (p *Peer) Emit(event runrecord.Event) error {
 		}
 	}
 	if event.Kind == "progress" && strings.TrimSpace(event.Text) != "" {
-		_, err := r.publish(channel.Message{From: p.ID, Text: event.Text, FromStream: true})
+		r.mu.Lock()
+		basedOn := p.DecisionCursor
+		r.mu.Unlock()
+		_, err := r.publish(channel.Message{From: p.ID, Text: event.Text, FromStream: true, Note: &runrecord.TeamNote{BasedOn: basedOn}})
 		return err
 	}
 	if event.Statistics != nil {

@@ -17,8 +17,10 @@ func (r *Room) start(member identity.Member) error {
 }
 func (r *Room) reserve(member identity.Member) *participant {
 	live := &participant{member: member, wake: make(chan struct{}, 1)}
+	progress := progressKey("member", member.ID, member.Session)
 	r.mu.Lock()
 	r.active[member.ID] = live
+	r.recordProgress(progress)
 	r.mu.Unlock()
 	return live
 }
@@ -42,7 +44,7 @@ func (r *Room) worker(live *participant) {
 		r.mu.Lock()
 		live.closed = true
 		r.work.Release(peer.ID)
-		r.workView = workProjection{}
+		r.workView = nil
 		if r.active[peer.ID] == live {
 			delete(r.active, peer.ID)
 		}

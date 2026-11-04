@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -64,15 +65,16 @@ func (s *memoryRoom) CreateTeamAgent(context.Context) (identity.Member, error) {
 	s.members = append(s.members, m)
 	return m, nil
 }
-func (s *memoryRoom) TeamPending(_ context.Context, after, through int64, own string) (bool, error) {
+func (s *memoryRoom) DiscardTeamAgent(_ context.Context, member identity.Member) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, m := range s.messages {
-		if m.Sequence > after && m.Sequence <= through && !m.Passive && (m.From != own || !m.FromStream && !m.Observation && !m.Declaration) {
-			return true, nil
+	for i, current := range s.members {
+		if current.ID == member.ID && current.Session == member.Session {
+			s.members = slices.Delete(s.members, i, i+1)
+			return nil
 		}
 	}
-	return false, nil
+	return fmt.Errorf("unknown unstarted peer")
 }
 func (s *memoryRoom) AppendTeamMessage(_ context.Context, m channel.Message) (channel.Message, error) {
 	s.mu.Lock()
@@ -93,6 +95,17 @@ func (s *memoryRoom) TeamMessages(_ context.Context, after, through int64, limit
 	}
 	return append([]channel.Message(nil), s.messages[after:end]...), nil
 }
+func (s *memoryRoom) TeamMessageMetadata(ctx context.Context, sequence int64) (channel.Metadata, error) {
+	values, err := s.TeamMessages(ctx, sequence-1, sequence, 1)
+	if err != nil {
+		return channel.Metadata{}, err
+	}
+	if len(values) != 1 {
+		return channel.Metadata{}, fmt.Errorf("unknown public record")
+	}
+	m := values[0]
+	return channel.Metadata{Sequence: sequence, From: m.From, Kind: m.Kind(), Bytes: len(m.Context().Content)}, nil
+}
 func quiet(runrecord.Event) error { return nil }
 
 func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
@@ -100,11 +113,13 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 	var first []identity.Member
 	for request := range 2 {
 		invited := make(chan struct{})
+		firstLeft := make(chan struct{})
 		departed := make(chan struct{}, 2)
 		execute := func(ctx context.Context, member identity.Member, _ string, peer *Peer) (run.Result, error) {
 			if _, err := peer.Inbox(ctx); err != nil {
 				return run.Result{}, err
 			}
+			peer.BeginDecision()
 			if member.ID == "Hana" {
 				id := ""
 				if request > 0 {
@@ -117,9 +132,17 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 			}
 			if member.ID == "Ren" {
 				<-invited
+				<-firstLeft
 			}
 			if member.ID != "Arjun" {
+				if _, err := peer.Inbox(ctx); err != nil {
+					return run.Result{}, err
+				}
+				peer.BeginDecision()
 				leave, err := peer.Leave(ctx, "Contribution finished")
+				if member.ID == "Hana" {
+					close(firstLeft)
+				}
 				departed <- struct{}{}
 				return run.Result{Departed: leave}, err
 			}
@@ -128,6 +151,7 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 			if _, err := peer.Inbox(ctx); err != nil {
 				return run.Result{}, err
 			}
+			peer.BeginDecision()
 			return run.Result{Text: "Implemented and checked"}, nil
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

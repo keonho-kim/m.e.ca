@@ -24,7 +24,7 @@ type Registry struct {
 	stop             context.CancelFunc
 	jobs             map[string]*job
 	updates          chan struct{}
-	Save             func(string, Output, error) error
+	Save             func(id, command string, output Output, runErr error) error
 }
 
 type job struct {

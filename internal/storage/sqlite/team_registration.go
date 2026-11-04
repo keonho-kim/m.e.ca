@@ -7,6 +7,7 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"fmt"
 	teamidentity "github.com/keonho-kim/meca/internal/agent/team/identity"
 	"os"
 	"time"
@@ -66,6 +67,40 @@ func (s *Store) CreateTeamAgent(ctx context.Context) (member teamidentity.Member
 		return member, err
 	}
 	return member, tx.Commit()
+}
+
+// DiscardTeamAgent removes only a freshly registered, closed session that the
+// room has not admitted or published. Recorded work is never a cleanup target.
+func (s *Store) DiscardTeamAgent(ctx context.Context, member teamidentity.Member) error {
+	sessions, err := s.teamSessions()
+	if err != nil {
+		return err
+	}
+	child, err := sessions.Open(ctx, s.session.ProjectRoot, member.Session)
+	if err != nil {
+		return err
+	}
+	var used bool
+	err = child.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM timeline) OR EXISTS(SELECT 1 FROM run_states) OR EXISTS(SELECT 1 FROM team_members)").Scan(&used)
+	err = errors.Join(err, child.Close())
+	if err != nil {
+		return err
+	}
+	if used {
+		return fmt.Errorf("cannot discard a team session containing recorded work")
+	}
+	result, err := s.db.ExecContext(ctx, "DELETE FROM team_members WHERE agent_id=? AND session_id=? AND summary=''", member.ID, member.Session)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("unstarted team registration does not match")
+	}
+	return s.removeUnregisteredTeamSession(ctx, member.Session, child.path)
 }
 
 // removeUnregisteredTeamSession checks uncertain commits before deleting only the new DB.

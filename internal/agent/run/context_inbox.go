@@ -13,22 +13,32 @@ import (
 )
 
 type ContextBatch struct {
-	Messages  []modelapi.Message
-	Cursor    int64
-	Objective string
+	Messages     []modelapi.Message
+	Cursor       int64
+	UserSequence int64
+	Objective    string
+	Reconsider   bool
 }
 
 type contextJournal interface {
 	CommitContext(context.Context, string, []runrecord.Entry, int64) error
 }
 
+// admitContext preserves all received content and returns only whether another decision is needed.
 func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	if s.runner.PollContext == nil {
 		return false, nil
 	}
 	batch, err := s.runner.PollContext(ctx)
-	if err != nil || batch.Cursor == 0 {
+	if err != nil {
 		return false, err
+	}
+	if batch.UserSequence < 0 || batch.Objective != "" && batch.UserSequence == 0 {
+		return false, fmt.Errorf("user context requires its committed public sequence")
+	}
+	if batch.Cursor == 0 {
+		s.observeUserSequence(batch.UserSequence)
+		return batch.Reconsider, nil
 	}
 	journal, ok := s.runner.Journal.(contextJournal)
 	if !ok {
@@ -53,19 +63,27 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	s.messages = append(s.messages, batch.Messages...)
+	s.observeUserSequence(batch.UserSequence)
 	if batch.Objective != "" {
 		s.checkpoint.Objective = s.runner.Redact(batch.Objective)
 	}
-	return len(batch.Messages) > 0, nil
+	return batch.Reconsider || batch.Objective != "", nil
+}
+
+func (s *execution) observeUserSequence(sequence int64) {
+	if sequence > s.userSequence {
+		s.userSequence = sequence
+		s.instructionRevision++
+	}
 }
 
 func (s *execution) continueContext(ctx context.Context, reply modelapi.Response) (bool, error) {
 	if s.runner.PollContext == nil {
 		return false, nil
 	}
-	changed, err := s.admitContext(ctx)
-	if err != nil || !changed {
-		return changed, err
+	reconsider, err := s.admitContext(ctx)
+	if err != nil || !reconsider {
+		return reconsider, err
 	}
 	if reply.Text != "" {
 		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {

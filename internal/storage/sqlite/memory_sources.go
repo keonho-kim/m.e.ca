@@ -7,6 +7,7 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/storage/history"
@@ -20,6 +21,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 	type entry struct {
 		record     storedRecord
 		role, text string
+		public     int64
 	}
 	var page []entry
 	bytes := 0
@@ -36,6 +38,10 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		}
 		if text != nil {
 			e.text = *text
+		}
+		e.public, err = publicMemorySequence(e.role)
+		if err != nil {
+			break
 		}
 		bytes += contentBytes
 		if bytes > 16*1024*1024 && cursor > after {
@@ -62,6 +68,19 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		}
 	}
 	fields := map[string]bool{"id": true, "role": true, "content": true, "incomplete": true}
+	var sequences []any
+	for _, e := range page {
+		if e.public > 0 {
+			sequences = append(sequences, e.public)
+		}
+	}
+	var authored map[int64]string
+	if len(sequences) > 0 {
+		authored, err = s.publicContexts(ctx, sequences)
+		if err != nil {
+			return nil, cursor, err
+		}
+	}
 	for _, e := range page {
 		if e.record.kind == "message" {
 			message, _, err := s.contextRecord(ctx, e.record, fields, shared)
@@ -73,6 +92,12 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 				return nil, cursor, err
 			}
 			records = append(records, projected...)
+		} else if e.public > 0 {
+			text, ok := authored[e.public]
+			if !ok {
+				return nil, cursor, fmt.Errorf("authored public note #%d is missing", e.public)
+			}
+			records = append(records, compact.Record{Sequence: e.record.sequence, Role: "peer", Text: text})
 		} else if e.role != "" && e.text != "" {
 			records = append(records, compact.Record{Sequence: e.record.sequence, Role: e.role, Text: e.text})
 		}

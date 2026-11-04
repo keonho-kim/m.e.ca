@@ -52,8 +52,14 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 		g.names = append(g.names, id)
 	}
 	for _, m := range request.Messages {
-		if strings.Contains(m.Content, "Public conversation — ") && !strings.Contains(m.Content, "Public conversation — "+id+"\n") {
-			g.sawPeer = true
+		if m.Role == "user" && strings.HasPrefix(m.Content, "Public conversation — ") {
+			speaker := strings.TrimPrefix(m.Content, "Public conversation — ")
+			if end := strings.IndexAny(speaker, " \t\r\n"); end >= 0 {
+				speaker = speaker[:end]
+			}
+			if speaker != id {
+				g.sawPeer = true
+			}
 		}
 	}
 	step := g.steps[id]
@@ -63,36 +69,55 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 	g.mu.Unlock()
 	var name string
 	var arguments any
-	switch step {
-	case 0:
-		if id == names[0] {
-			name = "add_team_member"
-			arguments = map[string]string{"message": "Create your own name.txt as an independent contribution. Use set_work first. Preserve the other teammates files and report results publicly."}
-			if restore {
-				arguments.(map[string]string)["member_name"] = names[2]
+	retryDeparture := false
+	for i := len(request.Messages) - 1; i >= 0; i-- {
+		m := request.Messages[i]
+		if m.Role != "tool" {
+			continue
+		}
+		if m.ToolName == "leave_team" {
+			var result struct{ Failure *toolapi.Failure }
+			if json.Unmarshal([]byte(m.Content), &result) == nil && result.Failure != nil && result.Failure.Code == "team_feedback_pending" {
+				retryDeparture = true
 			}
-		} else {
-			name = "list_team_members"
-			arguments = map[string]string{}
 		}
-	case 1:
-		name = "set_work"
-		arguments = map[string]any{"summary": "Create my independent file", "paths": []string{id + ".txt"}}
-	case 2:
-		name = "write_file"
-		arguments = map[string]string{"path": id + ".txt", "content": "A verified local contribution\n"}
-		if id == names[1] {
-			name = "execute_command"
-			arguments = map[string]string{"command": "printf 'A verified local contribution\\n' > " + id + ".txt"}
-		}
-	case 3:
+		break
+	}
+	if retryDeparture {
 		name = "leave_team"
-		arguments = map[string]string{"message": id + " created its file. No integration test was requested."}
-	default:
-		if err := emit(modelapi.Event{Streaming: true, Delta: "The requested contributions are written."}); err != nil {
-			return err
+		arguments = map[string]string{"message": id + " reviewed the current teammate results and finished its contribution."}
+	} else {
+		switch step {
+		case 0:
+			if id == names[0] {
+				name = "add_team_member"
+				arguments = map[string]string{"message": "Create your own name.txt as an independent contribution. Use set_work first. Preserve the other teammates files and report results publicly."}
+				if restore {
+					arguments.(map[string]string)["member_name"] = names[2]
+				}
+			} else {
+				name = "list_team_members"
+				arguments = map[string]string{}
+			}
+		case 1:
+			name = "set_work"
+			arguments = map[string]any{"summary": "Create my independent file", "paths": []string{id + ".txt"}}
+		case 2:
+			name = "write_file"
+			arguments = map[string]string{"path": id + ".txt", "content": "A verified local contribution\n"}
+			if id == names[1] {
+				name = "execute_command"
+				arguments = map[string]string{"command": "printf 'A verified local contribution\\n' > " + id + ".txt"}
+			}
+		case 3:
+			name = "leave_team"
+			arguments = map[string]string{"message": id + " created its file. No integration test was requested."}
+		default:
+			if err := emit(modelapi.Event{Streaming: true, Delta: "The requested contributions are written."}); err != nil {
+				return err
+			}
+			return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
 		}
-		return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
 	}
 	body, _ := json.Marshal(arguments)
 	call := toolapi.Call{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}
@@ -156,11 +181,22 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 			t.Fatalf("round %d result=%+v error=%v", round, result, err)
 		}
 		sawShellTargets := false
+		deferredDepartures := map[string]bool{}
 		for _, event := range events {
 			sawShellTargets = sawShellTargets || event.Kind == "team_observation" && strings.Contains(event.Text, "May have affected:")
 			if event.Kind == "tool_failed" || event.Kind == "tool_interrupted" {
+				if op := event.Operation; event.Kind == "tool_failed" && event.Call != nil && event.Call.Name == "leave_team" && op != nil && op.Failure != nil && op.Failure.Code == "team_feedback_pending" {
+					deferredDepartures[event.Agent] = true
+					continue
+				}
 				t.Fatalf("scripted happy path failed a tool: %+v", event)
 			}
+			if event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "leave_team" {
+				delete(deferredDepartures, event.Agent)
+			}
+		}
+		if len(deferredDepartures) > 0 {
+			t.Fatal("deferred departure never reviewed the feedback", deferredDepartures)
 		}
 		if !sawShellTargets {
 			t.Fatal("known shell mutation targets were not shared as uncertain effects")

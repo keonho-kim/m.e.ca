@@ -13,7 +13,7 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 	if event.Kind == "team_observation" || event.Kind == "team_status" {
 		return nil
 	}
-	if event.Kind == "team_message" || event.Kind == "team_progress" || event.Kind == "team_work" || event.Kind == "team_notice" {
+	if event.Kind == "team_message" || event.Kind == "team_progress" || event.Kind == "team_work" || event.Kind == "team_discussion" || event.Kind == "team_notice" {
 		return f.teamEvent(event)
 	}
 	if event.Agent != "" {

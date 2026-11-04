@@ -12,6 +12,7 @@
 - Preserve useful results from closed branches; prioritize unresolved branches and the next actionable frontier. Leave out the exploration trace.
 - Distinguish observed facts, user requirements, decisions, assumptions, proposals and unknowns.
 - Preserve unresolved evidence-backed review findings as suggestions, and discard feedback superseded by later corrections.
+- When teammates are present, retain relevant names, current self-reported interfaces, unresolved differing opinions and their public note references. Distinguish a proposed contract from agreement and a work announcement from execution.
 - Treat unfinished assistant drafts as proposals. Preserve useful unresolved context without presenting draft claims as completed work.
 - Treat omissions as unknowns, not proof that a file or implementation is absent.
 - Mark checks invalidated by later changes as historical. Retain their remaining consequences without presenting them as current failures or current proof.

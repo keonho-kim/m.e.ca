@@ -21,6 +21,7 @@ func (e *Executor) StopCommands() {
 	e.releaseShell()
 }
 func (e *Executor) CommandUpdates() <-chan struct{}       { return e.Local.CommandUpdates() }
+func (e *Executor) HasCommands() bool                     { return e.Local.HasCommands() }
 func (e *Executor) CommandActivity() []toolapi.CommandRun { return e.Local.CommandActivity() }
 func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 	out, err := e.Local.CollectCommands()
@@ -54,10 +55,8 @@ func (e *Executor) holdShell(id string, held *workspace.Lease) error {
 	return nil
 }
 func (e *Executor) releaseFinishedShell() {
-	for _, command := range e.Local.CommandActivity() {
-		if command.Status == "running" {
-			return
-		}
+	if e.Local.ActiveCommand() != "" {
+		return
 	}
 	e.releaseShell()
 }

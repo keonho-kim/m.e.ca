@@ -24,7 +24,7 @@ func (e *Executor) commandPath(id, suffix string) (string, error) {
 	return filepath.Join(e.artifacts, id+suffix), nil
 }
 
-func (e *Executor) archiveCommand(id string, output process.Output, runErr error) error {
+func (e *Executor) archiveCommand(id, command string, output process.Output, runErr error) error {
 	capture := e.liveOutputs.command(id)
 	capture.mu.Lock()
 	defer capture.mu.Unlock()
@@ -33,12 +33,7 @@ func (e *Executor) archiveCommand(id string, output process.Output, runErr error
 		return err
 	}
 	result.Process.CommandID = id
-	for _, state := range e.commands.List() {
-		if state.ID == id {
-			result.Process.Command = e.redact(state.Command)
-			break
-		}
-	}
+	result.Process.Command = e.redact(command)
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(result.Content, &fields); err != nil {
 		return err

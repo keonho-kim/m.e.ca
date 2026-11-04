@@ -15,19 +15,19 @@ import (
 func TestWorkRequiresCoordinationAndReviewOfRelatedActualChanges(t *testing.T) {
 	r := testRoom(t)
 	a, b := &Peer{ID: "Hana", room: r}, &Peer{ID: "Ren", room: r}
-	if _, err := a.SetWork("Implement API", []string{"/project/api"}); err != nil {
+	if _, err := a.SetWork("Implement API", []string{"/project/api"}, "", 0); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.SetWork("Duplicate API", []string{"/project/api/file"}); err == nil || !strings.Contains(err.Error(), "Hana") {
+	if _, err := b.SetWork("Duplicate API", []string{"/project/api/file"}, "", 0); err == nil || !strings.Contains(err.Error(), "Hana") {
 		t.Fatal("conflict did not identify owner", err)
 	}
 	if err := a.Emit(runrecord.Event{Kind: "tool_succeeded", Operation: &toolapi.Operation{Name: "write_file", Status: "tool_succeeded", Started: true, Changes: []toolapi.FileChange{{Path: "/project/api/file", Action: "modified"}}}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.SetWork("Ready for Ren to integrate", nil); err != nil {
+	if _, err := a.SetWork("Ready for Ren to integrate", nil, "", 0); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.SetWork("Integrate Hana's API", []string{"/project/api", "/project/tests"}); err != nil {
+	if _, err := b.SetWork("Integrate Hana's API", []string{"/project/api", "/project/tests"}, "", 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := b.CheckWork([]string{"/project/api/file"}); err == nil {
@@ -51,7 +51,7 @@ func TestWorkRequiresCoordinationAndReviewOfRelatedActualChanges(t *testing.T) {
 	if err := b.CheckWork([]string{"/project/api/file"}); err != nil {
 		t.Fatal("reviewed handoff blocked", err)
 	}
-	if !strings.Contains(b.WorkContext(), "Ren: Integrate Hana's API") {
+	if !strings.Contains(b.ContextObservations(nil), "Ren: Integrate Hana's API") {
 		t.Fatal("current scope absent from post-compaction observations")
 	}
 }
@@ -85,12 +85,12 @@ func TestUnchangedWorkDoesNotWakePeersOrDuplicatePublicRecords(t *testing.T) {
 	r := testRoom(t)
 	p := &Peer{ID: "Hana", room: r}
 	for range 3 {
-		if _, err := p.SetWork("Own API", []string{"/project/api"}); err != nil {
+		if _, err := p.SetWork("Own API", []string{"/project/api"}, "", 0); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for range 3 {
-		if _, err := p.SetWork("API handoff ready", nil); err != nil {
+		if _, err := p.SetWork("API handoff ready", nil, "", 0); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -103,7 +103,7 @@ func TestUnchangedWorkDoesNotWakePeersOrDuplicatePublicRecords(t *testing.T) {
 func TestWorkDeclarationIsAdmittedOnlyToOtherMembers(t *testing.T) {
 	r := testRoom(t)
 	p := &Peer{ID: "Hana", room: r}
-	if _, err := p.SetWork("Own API", []string{"/project/api"}); err != nil {
+	if _, err := p.SetWork("Own API", []string{"/project/api"}, "", 0); err != nil {
 		t.Fatal(err)
 	}
 	own, err := p.Inbox(r.ctx)

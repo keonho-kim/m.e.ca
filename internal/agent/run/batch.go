@@ -6,13 +6,11 @@ package run
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
-	"time"
 )
 
 const maxParallelTools = 16
@@ -42,18 +40,32 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 			return err
 		}
 	}
+	instructionRevision := s.instructionRevision
 	for start := 0; start < len(calls); {
 		if s.result.Departed {
-			return s.skipCalls(ctx, calls[start:], "The session has closed; these calls did not execute.")
+			return s.skipCalls(ctx, calls[start:], skipForClosure, "The session has closed; these calls did not execute.")
+		}
+		if err := s.checkSteering(ctx, instructionRevision); err != nil {
+			var failure *toolapi.Failure
+			if errors.As(err, &failure) && failure.Code == toolapi.InstructionChanged {
+				return s.skipCalls(ctx, calls[start:], skipForInstruction, failure.Detail)
+			}
+			return errors.Join(err, s.skipCalls(ctx, calls[start:], skipForContext, "Instruction admission failed before this wave; nothing in it executed."))
 		}
 		plan, err := s.planWave(ctx, calls, start)
 		if err != nil {
-			return errors.Join(s.skipCalls(ctx, calls[start:], err.Error()), fatalBatchError(ctx, err))
+			return errors.Join(s.skipCalls(ctx, calls[start:], skipAfterFailure, err.Error()), fatalBatchError(ctx, err))
 		}
 		end := start + plan.Count
 		failed, err := s.batchWave(ctx, calls[start:end], plan.PreparationConcurrency, approve)
 		if failed || err != nil {
-			skipErr := s.skipCalls(ctx, calls[end:], "Earlier batch operation failed or was cancelled; inspect recorded outcomes before retrying.")
+			reason := skipAfterFailure
+			if ctx.Err() != nil {
+				reason = skipForInterruption
+			} else if instructionRevision != s.instructionRevision {
+				reason = skipForInstruction
+			}
+			skipErr := s.skipCalls(ctx, calls[end:], reason, "Earlier batch operation failed or was cancelled; inspect recorded outcomes before considering remaining work.")
 			return errors.Join(err, skipErr)
 		}
 		start = end
@@ -89,26 +101,4 @@ func fatalBatchError(ctx context.Context, err error) error {
 		return err
 	}
 	return nil
-}
-
-func (s *execution) skipCalls(ctx context.Context, calls []validatedCall, detail string) error {
-	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer cancel()
-	var result error
-	for _, v := range calls {
-		failure := &toolapi.Failure{Code: "batch_not_executed", Detail: detail, Next: "This call did not execute. Preserve completed sibling results. Correct the named failed call, then submit only the still-needed failed or skipped work; do not replay successful changes."}
-		body, err := json.Marshal(map[string]any{"executed": false, "call_id": v.call.ID, "tool": v.call.Name, "status": "skipped", "cause": detail})
-		if err != nil {
-			return err
-		}
-		outcome := toolapi.Result{Failed: true, Failure: failure, Content: body}
-		event := runrecord.Event{Kind: "tool_failed", CallID: v.call.ID, Call: &v.call, Text: failure.Error(), Output: outcome.Content}
-		if err := s.acceptResult(recordCtx, v, outcome, failure, event); err != nil {
-			return errors.Join(result, errRuntimeRecord, err)
-		}
-		if err := s.emit(event); err != nil {
-			result = errors.Join(result, err)
-		}
-	}
-	return result
 }

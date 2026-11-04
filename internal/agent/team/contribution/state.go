@@ -12,10 +12,20 @@ import (
 )
 
 type Scope struct {
-	Member  string   `json:"member_name"`
-	Summary string   `json:"summary"`
-	Paths   []string `json:"paths"`
+	summaryHash, contractHash [32]byte
+	progressHash              [32]byte
+	Member                    string   `json:"member_name"`
+	Summary                   string   `json:"summary"`
+	Paths                     []string `json:"paths"`
+	Contract                  string   `json:"contract,omitempty"`
+	Sequence                  int64    `json:"sequence"`
+	Revision                  uint64   `json:"revision"`
+	ReplyTo                   int64    `json:"reply_to,omitempty"`
 }
+
+// ProgressKey identifies ownership and shared behavior, independently of explanatory wording.
+func (s Scope) ProgressKey() [32]byte { return s.progressHash }
+
 type Change struct {
 	Member   string
 	Sequence int64
@@ -32,30 +42,33 @@ func contains(parent, path string) bool {
 }
 func overlap(a, b string) bool { return contains(a, b) || contains(b, a) }
 
-// Set replaces a contribution atomically: conflicts leave its existing scope intact.
-func (s *State) Set(member, summary string, paths []string) error {
+// Prepare validates a described candidate before publication freezes its paths.
+func (s *State) Prepare(value Scope) (Scope, error) {
 	for other, scope := range s.scopes {
-		if other == member {
+		if other == value.Member {
 			continue
 		}
 		for _, held := range scope.Paths {
-			for _, path := range paths {
+			for _, path := range value.Paths {
 				if overlap(held, path) {
-					return fmt.Errorf("%s is working on %s; coordinate a handoff or choose another contribution", other, held)
+					return Scope{}, fmt.Errorf("%s is working on %s; coordinate a handoff or choose another contribution", other, held)
 				}
 			}
 		}
 	}
-	if len(paths) == 0 {
-		s.Release(member)
-		return nil
-	}
+	value.Revision = s.scopes[value.Member].Revision + 1
+	value.Sequence = 0
+	return value, nil
+}
+
+// Commit installs the frozen candidate after publication. Room serializes prepare/commit pairs.
+func (s *State) Commit(value Scope, sequence int64) {
 	if s.scopes == nil {
 		s.scopes = make(map[string]Scope)
 	}
-	s.scopes[member] = Scope{member, summary, slices.Clone(paths)}
+	value.Sequence = sequence
+	s.scopes[value.Member] = value
 	s.revision++
-	return nil
 }
 
 // Check distinguishes missing ownership, conflicting work and unseen actual changes.
@@ -109,12 +122,50 @@ func (s *State) Scope(member string) Scope {
 	return value
 }
 
-func (s *State) Matches(member, summary string, paths []string) bool {
-	value := s.scopes[member]
-	if len(paths) == 0 {
-		return len(value.Paths) == 0
+func (s *State) Matches(value Scope) bool {
+	current, exists := s.scopes[value.Member]
+	return exists && current.summaryHash == value.summaryHash && current.contractHash == value.contractHash && current.ReplyTo == value.ReplyTo && slices.Equal(current.Paths, value.Paths)
+}
+
+// SameCoordination ignores wording and reply references while comparing actual ownership and behavior.
+func (s *State) SameCoordination(value Scope) bool {
+	current, exists := s.scopes[value.Member]
+	return exists && current.progressHash == value.progressHash
+}
+
+// ContractChanged includes removal and compares original text rather than context previews.
+func (s *State) ContractChanged(value Scope) bool {
+	current, exists := s.scopes[value.Member]
+	if !exists {
+		return value.Contract != ""
 	}
-	return value.Summary == summary && slices.Equal(value.Paths, paths)
+	return current.contractHash != value.contractHash
+}
+
+func (s *State) HasPaths(member string, paths []string) bool {
+	return slices.Equal(s.scopes[member].Paths, paths)
+}
+
+// Related conservatively targets current work; unknown scope or targets remain visible to all.
+func (s *State) Related(member, source string, paths []string) bool {
+	own := s.scopes[member].Paths
+	old := s.scopes[source].Paths
+	if len(own) == 0 || len(paths) == 0 && len(old) == 0 {
+		return true
+	}
+	for _, held := range own {
+		for _, path := range paths {
+			if overlap(held, path) {
+				return true
+			}
+		}
+		for _, path := range old {
+			if overlap(held, path) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s *State) Release(member string) {

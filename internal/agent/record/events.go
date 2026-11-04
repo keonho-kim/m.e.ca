@@ -15,6 +15,7 @@ import (
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
+	Team             *TeamNote            `json:"team,omitempty"`
 	Agent            string               `json:"agent,omitempty"`
 	Final            bool                 `json:"final,omitempty"`
 	Reference        *EventReference      `json:"reference,omitempty"`

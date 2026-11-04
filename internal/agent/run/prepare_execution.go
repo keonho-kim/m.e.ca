@@ -62,6 +62,7 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 		}
 	}()
 	call, proposal := ready.call, ready.proposal
+	instructionRevision := s.instructionRevision
 	outcome = toolapi.Result{Target: proposal.Target}
 	var err error
 	if err := s.checkTimeBudget(ctx); err != nil {
@@ -70,11 +71,13 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	approved := !proposal.Required
+	waitedForUser := false
 	if proposal.Required {
 		source := "user"
 		if s.runner.Settings.Permission == policy.PermissionAllMighty && !proposal.UserRequired {
 			approved, source = true, "all_mighty"
 		} else {
+			waitedForUser = true
 			approved, err = approve(ctx, proposal)
 			if err != nil {
 				return nil, outcome, errors.Join(errApprovalDenied, err)
@@ -93,6 +96,11 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 		}
 		if !approved {
 			return nil, outcome, errApprovalDenied
+		}
+	}
+	if waitedForUser {
+		if err := s.checkSteering(ctx, instructionRevision); err != nil {
+			return nil, outcome, err
 		}
 	}
 

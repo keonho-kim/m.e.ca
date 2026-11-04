@@ -11,8 +11,12 @@ var messages = []translation{
 	{"", " · Applies to the next request", " · 다음 요청부터 적용"},
 	{"", "Team execution is unavailable", "팀 실행 구성이 준비되지 않았습니다"},
 	{"", "Joined", "입장했습니다"},
-	{"", "Finished and left", "작업을 마치고 나갔습니다"},
+	{"", "Left", "퇴장했습니다"},
 	{"", "Work results", "작업 결과"},
+	{"", " · to %s", " · %s에게"},
+	{"", "Working paths", "작업 경로"},
+	{"", "Shared details", "함께 맞출 내용"},
+	{"", "You", "사용자"},
 	{"", "Waiting to execute", "실행 대기"},
 	{"", "Toggle team mode", "팀 모드 전환"},
 

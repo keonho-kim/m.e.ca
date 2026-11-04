@@ -11,7 +11,7 @@ import (
 
 func BenchmarkReviewedChanges(b *testing.B) {
 	var s State
-	s.Set("Ren", "Check integration", []string{"/project"})
+	setScope(&s, "Ren", "Check integration", []string{"/project"})
 	for i := range 4096 {
 		s.Record("Hana", []string{fmt.Sprintf("/project/file%d", i)}, 1)
 	}

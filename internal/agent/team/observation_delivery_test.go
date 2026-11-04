@@ -25,11 +25,11 @@ func TestPassiveCommandFactsReachPeersWithoutRequestingInference(t *testing.T) {
 	if len(r.active[other.ID].wake) != 0 {
 		t.Fatal("a successful inspection woke an idle teammate")
 	}
-	if pending, err := r.options.Store.TeamPending(r.ctx, 0, r.latestPublic, other.ID); err != nil || pending {
-		t.Fatal("passive status requested another model call", err)
+	if r.active[other.ID].attention != 0 {
+		t.Fatal("passive status requested another model call")
 	}
 	batch, err := other.Inbox(r.ctx)
-	if err != nil || len(batch.Messages) != 0 || batch.Cursor == 0 || !strings.Contains(other.WorkContext(), "cat README.md") {
+	if err != nil || len(batch.Messages) != 0 || batch.Cursor == 0 || !strings.Contains(other.ContextObservations(nil), "cat README.md") {
 		t.Fatal("the next decision lost the passive observation", batch, err)
 	}
 	op = &toolapi.Operation{Name: "write_file", Status: "tool_succeeded", Changes: []toolapi.FileChange{{Path: "/project/api.go", Action: "modified"}}}

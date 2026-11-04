@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) drive(ctx context.Context, approve Approver) error {
@@ -17,10 +18,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		if _, err = s.collectCommands(ctx); err != nil {
 			return err
 		}
-		if _, err = s.admitContext(ctx); err != nil {
-			return err
-		}
-		if _, err = s.steer(ctx); err != nil {
+		if _, err = s.admitInstructions(ctx); err != nil {
 			return err
 		}
 		if finished, decisionErr := s.prepareDecision(ctx); finished || decisionErr != nil {
@@ -49,6 +47,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			return err
 		}
 		commandRevision := s.commandRevision
+		instructionRevision := s.instructionRevision
 		reply, askErr := s.askResponse(ctx)
 		if askErr == nil {
 			s.capacityRecovery = false
@@ -82,17 +81,15 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 				return err
 			}
 		} else if len(reply.Calls) > 0 {
-			if s.runner.PollContext != nil {
-				objective := s.checkpoint.Objective
-				if _, err = s.admitContext(ctx); err != nil {
-					return err
-				}
-				if objective != s.checkpoint.Objective {
+			if err = s.checkInstructions(ctx, instructionRevision); err != nil {
+				var failure *tool.Failure
+				if errors.As(err, &failure) && failure.Code == tool.InstructionChanged {
 					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request."); err != nil {
 						return err
 					}
 					continue
 				}
+				return err
 			}
 
 			if len(reply.Calls) > 1 {

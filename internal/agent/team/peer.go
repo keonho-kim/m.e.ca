@@ -7,11 +7,18 @@ package team
 import "time"
 
 type Peer struct {
-	ID             string
-	Cursor         int64
-	UserSequence   int64
-	DecisionCursor int64
-	room           *Room
+	ID                   string
+	Cursor               int64
+	UserSequence         int64
+	DecisionCursor       int64
+	DecisionUserSequence int64
+	receivedView         decisionSnapshot
+	decisionView         decisionSnapshot
+	contextView          *workProjection
+	contextMask          uint16
+	contextText          string
+	idleDirective        string
+	room                 *Room
 	// Only commands awaiting their first terminal observation remain here.
 	// Publication owns this map under room.logMu; completed archives need no entry.
 	running map[string]struct{}
@@ -38,11 +45,4 @@ func (p *Peer) HasSpoken() bool {
 	defer r.mu.Unlock()
 	live := r.active[p.ID]
 	return live != nil && !live.closed && !live.leaving && live.spoke
-}
-
-func (p *Peer) HasNewUserInstruction() bool {
-	r := p.room
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return p.UserSequence < r.latestUser
 }

@@ -51,11 +51,17 @@ func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, index
 		outcome.Failure = toolapi.FailureOf(cause)
 	}
 	var result error
+	reason := skipAfterFailure
+	if outcome.Failure.Code == toolapi.InstructionChanged {
+		reason = skipForInstruction
+	} else if ctx.Err() != nil {
+		reason = skipForInterruption
+	}
 	for i, call := range calls {
 		if i == index {
 			result = errors.Join(result, s.recordRejected(ctx, v, outcome, cause, s.emit))
 		} else {
-			result = errors.Join(result, s.skipCalls(ctx, []validatedCall{call}, "Blocked by "+v.call.ID+" ("+v.call.Name+"); this call did not execute."))
+			result = errors.Join(result, s.skipCalls(ctx, []validatedCall{call}, reason, "Blocked by "+v.call.ID+" ("+v.call.Name+"); this call did not execute."))
 		}
 	}
 	return result

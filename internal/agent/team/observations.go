@@ -14,6 +14,10 @@ func (p *Peer) observe(event runrecord.Event) (bool, error) {
 		return false, nil
 	}
 	r := p.room
+	// Projection and output hashing borrow the immutable event only for this call.
+	// Keep their linear work outside the room's ordered append boundary.
+	message := operationObservation(p.ID, r.options.ProjectRoot, event)
+	evidence, hasEvidence := operationProgress(event)
 	r.logMu.Lock()
 	defer r.logMu.Unlock()
 	if op.Process != nil {
@@ -23,8 +27,8 @@ func (p *Peer) observe(event runrecord.Event) (bool, error) {
 			return false, nil
 		}
 	}
-	message := operationObservation(p.ID, r.options.ProjectRoot, event)
-	if _, err := r.appendPublic(message); err != nil {
+	value, err := r.storePublic(message)
+	if err != nil {
 		return false, err
 	}
 	if process := op.Process; process != nil {
@@ -40,5 +44,15 @@ func (p *Peer) observe(event runrecord.Event) (bool, error) {
 			}
 		}
 	}
-	return true, nil
+	r.mu.Lock()
+	if live := r.active[p.ID]; live != nil {
+		live.commands = len(p.running)
+	}
+	r.mu.Unlock()
+	effect := publicEffect{}
+	if hasEvidence {
+		effect.evidence = &evidence
+	}
+	_, err = r.acceptPublic(value, effect)
+	return true, err
 }

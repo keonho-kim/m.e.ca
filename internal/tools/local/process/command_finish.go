@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (r *Registry) finish(id string, j *job, pending startedCommand, save func(string, Output, error) error) {
+func (r *Registry) finish(id string, j *job, pending startedCommand, save func(string, string, Output, error) error) {
 	defer func() {
 		close(j.done)
 		r.notify()
@@ -20,7 +20,7 @@ func (r *Registry) finish(id string, j *job, pending startedCommand, save func(s
 	output, runErr := pending.output(runErr)
 	var saveErr error
 	if save != nil {
-		saveErr = save(id, output, runErr)
+		saveErr = save(id, j.state.Command, output, runErr)
 	}
 	saveErr = errors.Join(saveErr, j.stdout.release(), j.stderr.release())
 	r.captureMu.Unlock()

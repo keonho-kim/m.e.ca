@@ -15,15 +15,44 @@ func (f Formatter) teamEvent(event runrecord.Event) []viewport.Block {
 	if event.Kind == "team_notice" {
 		label := "입장했습니다"
 		if event.Text == "left" {
-			label = "작업을 마치고 나갔습니다"
+			label = "퇴장했습니다"
 		}
 		return []viewport.Block{{Text: event.Agent + " · " + f.Language.Text(label), Thinking: true}}
 	}
-	body := f.TeamBody(event.Text)
+	text := event.Text
+	if event.Team != nil && event.Team.Work != nil {
+		work := event.Team.Work
+		if len(work.Paths) > 0 {
+			text += "\n\n" + f.Language.Text("작업 경로") + ": " + strings.Join(work.Paths, ", ")
+		}
+		if work.Contract != "" {
+			text += "\n\n" + f.Language.Text("함께 맞출 내용") + ": " + work.Contract
+		}
+	}
+	body := f.TeamBody(text)
 	if body.Text == "" {
 		return nil
 	}
-	return []viewport.Block{f.TeamHeader(event.Agent, event.Final), body}
+	header := f.TeamHeader(event.Agent, event.Final)
+	if event.Team != nil {
+		target := event.Team.ReplyAuthor
+		if target == "user" {
+			target = f.Language.Text("사용자")
+		}
+		for _, name := range event.Team.Mentions {
+			if name == event.Team.ReplyAuthor {
+				continue
+			}
+			if target != "" {
+				target += ", "
+			}
+			target += name
+		}
+		if target != "" {
+			header.Text += f.Language.Format(" · %s에게", f.Redact(target))
+		}
+	}
+	return []viewport.Block{header, body}
 }
 
 // TeamBody shares source-preserving redaction and spacing across live and saved

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestTeamCatalogHasOnlyMembershipAndHistoryTools(t *testing.T) {
+func TestTeamCatalogHasOnlyPublicCollaborationTools(t *testing.T) {
 	definitions := Definitions()
 	names := make([]string, 0, len(definitions))
 	for _, item := range definitions {
@@ -18,7 +18,7 @@ func TestTeamCatalogHasOnlyMembershipAndHistoryTools(t *testing.T) {
 			t.Fatal("catalog and dispatcher differ")
 		}
 	}
-	if !reflect.DeepEqual(names, []string{"add_team_member", "leave_team", "list_team_members", "read_team_messages", "set_work"}) {
+	if !reflect.DeepEqual(names, []string{"add_team_member", "leave_team", "list_team_members", "read_team_messages", "set_work", "discuss"}) {
 		t.Fatal(names)
 	}
 	original := definitions[0].Parameters[0].Description

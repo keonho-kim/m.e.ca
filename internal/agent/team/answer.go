@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
@@ -13,6 +14,7 @@ import (
 // A buffered notification is only a hint: consumed messages never start another model call.
 func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 	r := p.room
+	p.idleDirective = ""
 	announced := false
 	for {
 		if err := r.admitUser(); err != nil {
@@ -21,16 +23,26 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		r.memberMu.Lock()
 		r.logMu.Lock()
 		r.mu.Lock()
-		through, count, remaining := r.latestPublic, r.countLocked(), r.remainingLocked()
+		count, remaining := r.countLocked(), r.remainingLocked()
 		live := r.active[p.ID]
-		r.mu.Unlock()
-		var pending bool
-		var err error
-		if p.Cursor < through {
-			pending, err = r.options.Store.TeamPending(ctx, p.Cursor, through, p.ID)
+		pending := live.attention > p.DecisionCursor
+		live.waiting = !pending
+		resume, idleErr := r.resolveIdleLocked()
+		if resume {
+			live.waiting = false
+			pending = true
+			p.idleDirective = "All active teammates have finished responding and no command is running. Select a concrete remaining contribution and act, or use leave_team if your contribution is complete. Explain an actual blocker instead of asking another idle teammate to decide."
 		}
-		if err == nil && count == 1 && !pending {
-			_, err = r.appendPublic(channel.Message{From: p.ID, Text: text, FromStream: true, Final: true})
+		r.mu.Unlock()
+		if idleErr != nil {
+			r.logMu.Unlock()
+			r.memberMu.Unlock()
+			r.fail(idleErr)
+			return false, idleErr
+		}
+		var err error
+		if count == 1 && !pending {
+			_, err = r.appendPublic(p.answerMessage(text, true))
 			if err == nil {
 				r.mu.Lock()
 				r.result.Text, r.result.Agent = text, p.ID
@@ -42,8 +54,8 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 			r.notify()
 			return false, err
 		}
-		if err == nil && !announced && (pending || remaining > 1) {
-			_, err = r.appendPublic(channel.Message{From: p.ID, Text: text, FromStream: true})
+		if !announced && (pending || remaining > 1) {
+			_, err = r.appendPublic(p.answerMessage(text, false))
 			announced = true
 		}
 		r.logMu.Unlock()
@@ -57,4 +69,11 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		case <-live.wake:
 		}
 	}
+}
+
+func (p *Peer) answerMessage(text string, final bool) channel.Message {
+	p.room.mu.Lock()
+	basedOn := p.DecisionCursor
+	p.room.mu.Unlock()
+	return channel.Message{From: p.ID, Text: text, FromStream: true, Final: final, Note: &runrecord.TeamNote{BasedOn: basedOn}}
 }

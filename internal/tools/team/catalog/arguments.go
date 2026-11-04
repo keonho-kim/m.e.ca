@@ -15,6 +15,9 @@ type Arguments struct {
 	Member      string   `json:"member_name"`
 	AfterMember string   `json:"after_member"`
 	Summary     string   `json:"summary"`
+	Contract    string   `json:"contract"`
+	Mentions    []string `json:"mentions"`
+	ReplyTo     int64    `json:"reply_to"`
 	Paths       []string `json:"paths"`
 	After       int64    `json:"after"`
 }

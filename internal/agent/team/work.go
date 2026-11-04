@@ -6,15 +6,26 @@ package team
 
 import (
 	"fmt"
-	"strings"
 
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (p *Peer) SetWork(summary string, paths []string) (contribution.Scope, error) {
+func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64) (contribution.Scope, error) {
 	r := p.room
+	if err := r.admitUser(); err != nil {
+		return contribution.Scope{}, err
+	}
+	note, err := p.note(r.ctx, replyTo, nil)
+	if err != nil {
+		return contribution.Scope{}, err
+	}
+	if r.options.Redact != nil {
+		summary, contract = r.options.Redact(summary), r.options.Redact(contract)
+	}
+	requested := contribution.Describe(contribution.Scope{Member: p.ID, Summary: summary, Paths: paths, Contract: contract, ReplyTo: replyTo})
 	r.logMu.Lock()
 	defer r.logMu.Unlock()
 	if err := r.ctx.Err(); err != nil {
@@ -26,43 +37,33 @@ func (p *Peer) SetWork(summary string, paths []string) (contribution.Scope, erro
 		r.mu.Unlock()
 		return contribution.Scope{}, fmt.Errorf("this team member is no longer active")
 	}
-	if r.work.Matches(p.ID, summary, paths) {
+	if err := p.checkUserDecisionLocked(); err != nil {
+		r.mu.Unlock()
+		return contribution.Scope{}, err
+	}
+	candidate, err := r.work.Prepare(requested)
+	if err == nil && r.work.Matches(candidate) {
 		value := r.work.Scope(p.ID)
-		if len(paths) == 0 {
-			value = contribution.Scope{Member: p.ID, Summary: summary, Paths: []string{}}
-		}
 		r.mu.Unlock()
 		return value, nil
 	}
-	err := r.work.Set(p.ID, summary, paths)
 	if err != nil {
 		r.mu.Unlock()
 		return contribution.Scope{}, &toolapi.Failure{Code: "team_work_conflict", Detail: err.Error(), Next: "Read the named teammate's work. Agree on a handoff publicly or take a different nonoverlapping part; do not retry the same claim unchanged."}
 	}
-	r.workView = workProjection{}
-	value := r.work.Scope(p.ID)
-	if len(paths) == 0 {
-		value = contribution.Scope{Member: p.ID, Summary: summary, Paths: []string{}}
-	}
 	r.mu.Unlock()
-	var text strings.Builder
-	size := len(summary)
-	for _, path := range paths {
-		size += len(path) + 3
+	note.Work = &runrecord.TeamWork{Paths: candidate.Paths, Contract: contract, Revision: candidate.Revision}
+	value, err := r.storePublic(channel.Message{From: p.ID, Text: summary, Declaration: true, Note: note})
+	if err != nil {
+		return contribution.Scope{}, err
 	}
-	text.Grow(size)
-	text.WriteString(summary)
-	for _, path := range paths {
-		text.WriteString("\n  ")
-		text.WriteString(path)
-	}
-	if _, err := r.appendPublic(channel.Message{From: p.ID, Text: text.String(), Declaration: true}); err != nil {
+	if _, err := r.acceptPublic(value, publicEffect{work: &candidate}); err != nil {
 		return contribution.Scope{}, err
 	}
 	r.mu.Lock()
-	live.spoke = true
+	current := r.work.Scope(p.ID)
 	r.mu.Unlock()
-	return value, nil
+	return current, nil
 }
 
 // BeginDecision captures the last conversation actually admitted to this model call.
@@ -71,8 +72,14 @@ func (p *Peer) BeginDecision() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	p.DecisionCursor = p.Cursor
+	p.DecisionUserSequence = p.UserSequence
+	p.decisionView = p.receivedView
 	if live := r.active[p.ID]; live != nil {
 		live.reviewed = p.Cursor
+		live.waiting = false
+	}
+	if p.contextView != p.decisionView.view {
+		p.contextView, p.contextText = nil, ""
 	}
 	through := p.Cursor
 	for _, live := range r.active {
@@ -92,4 +99,11 @@ func (p *Peer) CheckWork(paths []string) error {
 		return nil
 	}
 	return &toolapi.Failure{Code: "team_work_conflict", Detail: "Nothing executed. " + err.Error(), Next: "Read the current team work and actual results, coordinate by name, and regenerate only the still-needed operation."}
+}
+
+func (p *Peer) HasWorkPaths(paths []string) bool {
+	r := p.room
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.work.HasPaths(p.ID, paths)
 }

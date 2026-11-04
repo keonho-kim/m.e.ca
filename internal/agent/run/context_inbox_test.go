@@ -64,7 +64,7 @@ func TestCooperativeContextDefersToolForNewUserInstruction(t *testing.T) {
 	r.Journal = j
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if len(g.requests) == 1 && j.cursor == 0 {
-			return ContextBatch{Cursor: 1, Objective: "Do not create the file", Messages: []modelapi.Message{{Role: "user", Content: "Do not create the file"}}}, nil
+			return ContextBatch{Cursor: 1, UserSequence: 1, Objective: "Do not create the file", Messages: []modelapi.Message{{Role: "user", Content: "Do not create the file"}}}, nil
 		}
 		return ContextBatch{}, nil
 	}

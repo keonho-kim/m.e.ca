@@ -5,7 +5,6 @@
 package channel
 
 import (
-	"context"
 	"slices"
 	"sync"
 
@@ -19,14 +18,45 @@ type Entry struct {
 	Context modelapi.Message
 }
 
-func (v Entry) retainedBytes() int { return len(v.Context.Content) + 512 }
+func (v Entry) retainedBytes() int {
+	return len(v.Context.Content) + 512 + v.Message.metadataBytes()
+}
+
+func (m Message) metadataBytes() int {
+	size := 0
+	if note := m.Note; note != nil {
+		for _, name := range note.Mentions {
+			size += len(name) + 16
+		}
+		if work := note.Work; work != nil {
+			size += len(work.Contract)
+			for _, path := range work.Paths {
+				size += len(path) + 16
+			}
+		}
+	}
+	return size
+}
 
 type History struct {
 	mu             sync.Mutex
-	loadMu         sync.Mutex
+	loading        *historyLoad
 	values         []Entry
 	after, through int64
 	bytes          int
+}
+
+// Metadata borrows only immutable identity and sizing facts from the current window.
+func (h *History) Metadata(sequence int64) (Metadata, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, value := range h.values {
+		if value.Message.Sequence == sequence {
+			m := value.Message
+			return Metadata{Sequence: sequence, From: m.From, Kind: m.Kind(), Bytes: m.ContextBytes()}, true
+		}
+	}
+	return Metadata{}, false
 }
 
 func observePublic(message Message) Entry {
@@ -45,53 +75,13 @@ func (h *History) Append(message Message, previous int64) {
 	if h.through != previous {
 		h.reset(previous)
 	}
+	// Cache admission precedes the potentially large attribution allocation.
+	if message.ContextBytes()+message.metadataBytes() > historyBytes {
+		h.reset(message.Sequence)
+		h.values = nil
+		return
+	}
 	h.add(observePublic(message))
-}
-
-func (h *History) Read(ctx context.Context, store Reader, after, through int64, limit int) ([]Entry, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	h.mu.Lock()
-	values, ok := h.cached(after, through, limit)
-	h.mu.Unlock()
-	if ok {
-		return values, nil
-	}
-	// Serialize cold loads, but leave recent reads and publication independent
-	// of repository latency. Recheck after another receiver finishes loading.
-	h.loadMu.Lock()
-	defer h.loadMu.Unlock()
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	h.mu.Lock()
-	values, ok = h.cached(after, through, limit)
-	oldAfter, oldThrough := h.after, h.through
-	h.mu.Unlock()
-	if ok {
-		return values, nil
-	}
-	messages, err := store.TeamMessages(ctx, after, through, limit)
-	if err != nil {
-		return nil, err
-	}
-	values = make([]Entry, len(messages))
-	for i, message := range messages {
-		values[i] = observePublic(message)
-	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	// Historical pages never displace a newer window or a concurrent append.
-	if h.after == oldAfter && h.through == oldThrough && (h.through == 0 || after == h.through) {
-		if len(h.values) == 0 {
-			h.reset(after)
-		}
-		for _, value := range values {
-			h.add(value)
-		}
-	}
-	return values, nil
 }
 
 // cached requires mu and copies only receiver-owned message headers.

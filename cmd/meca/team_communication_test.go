@@ -26,12 +26,14 @@ import (
 )
 
 type communicatingTeamModel struct {
-	names       []string
-	mu          sync.Mutex
-	steps       map[string]int
-	bAnnounced  chan struct{}
-	sawFeedback bool
-	sawPeer     bool
+	names         []string
+	mu            sync.Mutex
+	steps         map[string]int
+	bAnnounced    chan struct{}
+	bDiscussed    chan struct{}
+	sawFeedback   bool
+	sawPeer       bool
+	sawDiscussion bool
 }
 
 func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
@@ -45,13 +47,19 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 	if id == g.names[0] && step == 1 {
 		for _, message := range request.Messages {
 			g.sawFeedback = g.sawFeedback || message.Role == "tool" && strings.Contains(message.Content, "team_contribution_required")
-			g.sawPeer = g.sawPeer || strings.Contains(message.Content, "Public conversation — "+g.names[1]+"\nI will implement b.txt")
+			g.sawPeer = g.sawPeer || message.Role == "user" && strings.Contains(message.Content, "Public conversation — "+g.names[1]) && strings.Contains(message.Content, "I will implement b.txt")
+			g.sawDiscussion = g.sawDiscussion || message.Role == "user" && strings.Contains(message.Content, "The locked-account response is 423.")
 		}
 	}
 	g.mu.Unlock()
 	if id == g.names[0] && step == 0 {
 		select {
 		case <-g.bAnnounced:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		select {
+		case <-g.bDiscussed:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -70,8 +78,10 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 	case id == g.names[0] && step == 2:
 		name, args = "write_file", map[string]string{"path": "a.txt", "content": "A contribution\n"}
 	case id == g.names[1] && step == 1:
+		name, args = "discuss", map[string]any{"message": "The locked-account response is 423.", "mentions": []string{g.names[0]}}
+	case id == g.names[1] && step == 2:
 		name, args = "write_file", map[string]string{"path": "b.txt", "content": "B contribution\n"}
-	case id == g.names[0] && step == 3 || id == g.names[1] && step == 2:
+	case id == g.names[0] && step == 3 || id == g.names[1] && step == 3:
 		name, args = "leave_team", map[string]string{"message": id + " completed its independent file."}
 	default:
 		return emit(modelapi.Event{Delta: "The contributions are complete.", Done: true})
@@ -106,7 +116,7 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 		}
 		names = append(names, member.ID)
 	}
-	model := &communicatingTeamModel{steps: map[string]int{}, names: names, bAnnounced: make(chan struct{})}
+	model := &communicatingTeamModel{steps: map[string]int{}, names: names, bAnnounced: make(chan struct{}), bDiscussed: make(chan struct{})}
 	spoke := map[string]bool{}
 	feedback := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -117,6 +127,9 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 				close(model.bAnnounced)
 			}
 			spoke[event.Agent] = true
+		}
+		if event.Kind == "team_discussion" && event.Agent == names[1] {
+			close(model.bDiscussed)
 		}
 		if event.Kind == "tool_started" && event.Call != nil && event.Call.Name != "leave_team" && !spoke[event.Agent] {
 			t.Errorf("%s started %s without a public contribution", event.Agent, event.Call.Name)
@@ -138,8 +151,8 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(project, "silent.txt")); !os.IsNotExist(err) {
 		t.Fatalf("unannounced command was allowed to execute: %v", err)
 	}
-	if feedback != 1 || !model.sawFeedback || !model.sawPeer {
-		t.Fatalf("feedback=%d received=%t peer=%t", feedback, model.sawFeedback, model.sawPeer)
+	if feedback != 1 || !model.sawFeedback || !model.sawPeer || !model.sawDiscussion {
+		t.Fatalf("feedback=%d received=%t peer=%t discussion=%t", feedback, model.sawFeedback, model.sawPeer, model.sawDiscussion)
 	}
 	for _, file := range []string{"a.txt", "b.txt"} {
 		if _, err := os.Stat(filepath.Join(project, file)); err != nil {

@@ -10,22 +10,30 @@ import (
 	"testing"
 )
 
+func setScope(s *State, member, summary string, paths []string) error {
+	value, err := s.Prepare(Describe(Scope{Member: member, Summary: summary, Paths: paths}))
+	if err == nil {
+		s.Commit(value, int64(value.Revision))
+	}
+	return err
+}
+
 func TestOwnershipConflictIsAtomicAndReleaseAllowsHandoff(t *testing.T) {
 	var s State
-	if err := s.Set("Hana", "API", []string{"/p/api"}); err != nil {
+	if err := setScope(&s, "Hana", "API", []string{"/p/api"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Set("Ren", "tests", []string{"/p/tests"}); err != nil {
+	if err := setScope(&s, "Ren", "tests", []string{"/p/tests"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Set("Ren", "duplicate API", []string{"/p/api/file", "/p/other"}); err == nil || !strings.Contains(err.Error(), "Hana") {
+	if err := setScope(&s, "Ren", "duplicate API", []string{"/p/api/file", "/p/other"}); err == nil || !strings.Contains(err.Error(), "Hana") {
 		t.Fatal("overlap accepted", err)
 	}
 	if err := s.Check("Ren", []string{"/p/tests/test"}, 0); err != nil {
 		t.Fatal("conflict replaced existing work", err)
 	}
 	s.Release("Hana")
-	if err := s.Set("Ren", "API handoff", []string{"/p/api"}); err != nil {
+	if err := setScope(&s, "Ren", "API handoff", []string{"/p/api"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Check("Ren", []string{"/p/api/file"}, 0); err != nil {
@@ -38,7 +46,7 @@ func TestOwnershipConflictIsAtomicAndReleaseAllowsHandoff(t *testing.T) {
 
 func TestPruningPreservesUnseenFactsAndNewerChanges(t *testing.T) {
 	var s State
-	s.Set("Ren", "integration", []string{"/p"})
+	setScope(&s, "Ren", "integration", []string{"/p"})
 	for i := range 2048 {
 		s.Record("Hana", []string{fmt.Sprintf("/p/%d", i)}, 10)
 	}
@@ -60,8 +68,8 @@ func TestPruningPreservesUnseenFactsAndNewerChanges(t *testing.T) {
 
 func TestConflictErrorsDoNotRepeatLargeDeclarations(t *testing.T) {
 	var s State
-	s.Set("Hana", strings.Repeat("Detailed contribution ", 100000), []string{"/p/api"})
-	err := s.Set("Ren", "conflicting scope", []string{"/p/api/file"})
+	setScope(&s, "Hana", strings.Repeat("Detailed contribution ", 100000), []string{"/p/api"})
+	err := setScope(&s, "Ren", "conflicting scope", []string{"/p/api/file"})
 	if err == nil || len(err.Error()) > 256 || !strings.Contains(err.Error(), "Hana") {
 		t.Fatal("conflict copied the full declaration or omitted its owner", err)
 	}
@@ -69,7 +77,7 @@ func TestConflictErrorsDoNotRepeatLargeDeclarations(t *testing.T) {
 
 func TestActualChangesInvalidateOnlyRelatedOlderCandidates(t *testing.T) {
 	var s State
-	s.Set("Ren", "integration", []string{"/p/api", "/p/tests"})
+	setScope(&s, "Ren", "integration", []string{"/p/api", "/p/tests"})
 	s.Record("Hana", []string{"/p/api/file"}, 10)
 	if err := s.Check("Ren", []string{"/p/api/file"}, 9); err == nil {
 		t.Fatal("stale candidate accepted")
@@ -84,16 +92,16 @@ func TestActualChangesInvalidateOnlyRelatedOlderCandidates(t *testing.T) {
 	if err := s.Check("Ren", []string{"/p/api/file"}, 10); err != nil {
 		t.Fatal("own batch result invalidated siblings", err)
 	}
-	before := Context(s.Snapshot())
+	before := s.Snapshot()
 	s.Release("Ren")
-	if before == "" || Context(s.Snapshot()) != "" {
+	if len(before) == 0 || len(s.Snapshot()) != 0 {
 		t.Fatal("closed work retained in context")
 	}
 }
 
 func TestConsumedFactsAndReleasedScopesDropReferences(t *testing.T) {
 	var s State
-	s.Set("Hana", "current work", []string{"/p/file"})
+	setScope(&s, "Hana", "current work", []string{"/p/file"})
 	s.Record("Ren", []string{"/p/file"}, 10)
 	s.Record("Ren", []string{"/p/file"}, 11)
 	if len(s.changes) != 1 {
@@ -104,7 +112,11 @@ func TestConsumedFactsAndReleasedScopesDropReferences(t *testing.T) {
 		t.Fatal("unseen change was dropped")
 	}
 	s.Prune(11)
-	s.Set("Hana", "Finished", nil)
+	setScope(&s, "Hana", "Finished", nil)
+	if scope := s.Scope("Hana"); len(scope.Paths) != 0 || scope.Summary != "Finished" {
+		t.Fatal("released work retained the previous scope")
+	}
+	s.Release("Hana")
 	if s.changes != nil || s.scopes != nil {
 		t.Fatal("consumed work retained its indexes or projection")
 	}

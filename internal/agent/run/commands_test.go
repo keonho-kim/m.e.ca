@@ -50,6 +50,11 @@ func (e *commandFixture) CommandActivity() []toolapi.CommandRun {
 	}
 	return nil
 }
+func (e *commandFixture) HasCommands() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.active || e.completed
+}
 func (e *commandFixture) CollectCommands() ([]toolapi.CommandCompletion, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()

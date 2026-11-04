@@ -139,6 +139,7 @@ func TestNewUserInstructionPrecedesGoodbye(t *testing.T) {
 	if err != nil || batch.Objective != "Only inspect the files; keep them unchanged." {
 		t.Fatalf("new instruction missing: %+v %v", batch, err)
 	}
+	p.BeginDecision()
 	if departed, err := p.Leave(r.ctx, "I inspected the files without changing them."); err != nil || !departed {
 		t.Fatalf("contribution could not close after reading the instruction: %t %v", departed, err)
 	}
@@ -188,6 +189,7 @@ func TestFinalPeerCleanupFailureIsReturnedAfterJoining(t *testing.T) {
 				if _, err := peer.Inbox(ctx); err != nil {
 					return run.Result{}, err
 				}
+				peer.BeginDecision()
 				left, err := peer.Leave(ctx, "I finished the requested contribution.")
 				close(goodbye)
 				return run.Result{Departed: left}, err
@@ -196,6 +198,7 @@ func TestFinalPeerCleanupFailureIsReturnedAfterJoining(t *testing.T) {
 			if _, err := peer.Inbox(ctx); err != nil {
 				return run.Result{}, err
 			}
+			peer.BeginDecision()
 			if _, err := peer.AfterAnswer(ctx, "Completed changes; checks described above."); err != nil {
 				return run.Result{}, err
 			}

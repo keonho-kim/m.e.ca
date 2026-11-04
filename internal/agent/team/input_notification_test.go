@@ -13,8 +13,19 @@ import (
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 )
+
+type readCountingRoom struct {
+	*memoryRoom
+	reads atomic.Int64
+}
+
+func (s *readCountingRoom) TeamMessages(ctx context.Context, after, through int64, limit int) ([]channel.Message, error) {
+	s.reads.Add(1)
+	return s.memoryRoom.TeamMessages(ctx, after, through, limit)
+}
 
 func TestTeamInputNotificationDeliversWhileAllWorkersAreIdle(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
@@ -67,14 +78,14 @@ func TestTeamInputNotificationDeliversWhileAllWorkersAreIdle(t *testing.T) {
 func TestAnswerBoundarySkipsSQLWhenNoNewConversationExists(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		r := testRoom(t)
-		store := observedRoom{memoryRoom: r.options.Store.(*memoryRoom), checked: make(chan struct{}, 8)}
+		store := &readCountingRoom{memoryRoom: r.options.Store.(*memoryRoom)}
 		r.options.Store = store
 		r.active["Ren"].leaving = true
 		ctx, cancel := context.WithCancel(r.ctx)
 		done := make(chan error, 1)
 		go func() { _, err := (&Peer{ID: "Hana", room: r}).AfterAnswer(ctx, "Done"); done <- err }()
 		synctest.Wait()
-		if len(store.checked) != 0 {
+		if store.reads.Load() != 0 {
 			t.Fatal("unchanged conversation queried storage")
 		}
 		cancel()

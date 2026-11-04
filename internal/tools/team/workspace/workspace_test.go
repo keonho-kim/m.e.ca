@@ -24,7 +24,7 @@ func TestWorkspaceDetectsHardlinkAndParentConflicts(t *testing.T) {
 	}
 	for _, second := range []string{b, directory} {
 		w := New()
-		first, err := w.reserve(context.Background(), []string{a}, false, nil)
+		first, err := w.reserve(context.Background(), []string{a}, false, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -32,7 +32,7 @@ func TestWorkspaceDetectsHardlinkAndParentConflicts(t *testing.T) {
 		waiting := make(chan struct{})
 		done := make(chan error, 1)
 		go func() {
-			held, err := w.reserve(ctx, []string{second}, false, func() error { close(waiting); return nil })
+			held, err := w.reserve(ctx, []string{second}, false, nil, func() error { close(waiting); return nil })
 			if held != nil {
 				held.Release()
 			}
@@ -48,14 +48,14 @@ func TestWorkspaceDetectsHardlinkAndParentConflicts(t *testing.T) {
 }
 func TestWorkspaceShellExcludesWritesUntilReleased(t *testing.T) {
 	w := New()
-	shell, err := w.reserve(context.Background(), nil, true, nil)
+	shell, err := w.reserve(context.Background(), nil, true, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	waiting := make(chan struct{})
 	done := make(chan *Lease, 1)
 	go func() {
-		held, err := w.reserve(context.Background(), []string{filepath.Join(t.TempDir(), "file")}, false, func() error { close(waiting); return nil })
+		held, err := w.reserve(context.Background(), []string{filepath.Join(t.TempDir(), "file")}, false, nil, func() error { close(waiting); return nil })
 		if err != nil {
 			t.Error(err)
 		}
@@ -77,7 +77,7 @@ func TestWorkspaceRejectsChangedPreparedAlias(t *testing.T) {
 		}
 	}
 	w := New()
-	held, err := w.reserve(context.Background(), []string{first}, false, nil)
+	held, err := w.reserve(context.Background(), []string{first}, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -32,6 +32,7 @@ type Repository interface {
 	TeamMembers(context.Context, string, int) ([]identity.Member, error)
 	TeamMember(context.Context, string) (identity.Member, error)
 	CreateTeamAgent(context.Context) (identity.Member, error)
+	DiscardTeamAgent(context.Context, identity.Member) error
 	SetTeamSummary(context.Context, string, string) error
 	channel.Repository
 }

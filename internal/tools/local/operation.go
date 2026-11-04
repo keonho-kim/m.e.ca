@@ -43,7 +43,7 @@ func (op *operation) claim(ctx context.Context, approved bool) error {
 }
 
 func (op *operation) mutable() error {
-	if op.executor.activeCommands() {
+	if op.executor.ActiveCommand() != "" {
 		return fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
 	}
 	return nil

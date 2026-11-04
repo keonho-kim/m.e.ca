@@ -31,6 +31,7 @@ type CommandCompletion struct {
 type CommandExecutor interface {
 	BeginCommands(context.Context, time.Time)
 	StopCommands()
+	HasCommands() bool
 	CommandActivity() []CommandRun
 	CollectCommands() ([]CommandCompletion, error)
 	CommandCapture(string) (json.RawMessage, error)

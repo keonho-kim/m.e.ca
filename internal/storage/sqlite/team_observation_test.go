@@ -19,11 +19,11 @@ func TestTeamObservationRestoresWithoutVisibleDuplicateOrOwnWakeup(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pending, err := root.TeamPending(ctx, 0, value.Sequence, "Hana"); err != nil || pending {
-		t.Fatal("own operation restarted the member", err)
+	if attentionAt(t, root, value.Sequence, "Hana") {
+		t.Fatal("own operation restarted the member")
 	}
-	if pending, err := root.TeamPending(ctx, 0, value.Sequence, "Ren"); err != nil || !pending {
-		t.Fatal("teammate missed actual work", err)
+	if !attentionAt(t, root, value.Sequence, "Ren") {
+		t.Fatal("teammate missed actual work")
 	}
 	message := value.Context()
 	if err := child.CommitContext(ctx, child.Session().ID, []runrecord.Entry{{Message: &message}}, value.Sequence); err != nil {
@@ -51,19 +51,19 @@ func TestPassiveStatusAndWorkDeclarationKeepTheirAdmissionSemanticsAfterRestore(
 		t.Fatal(err)
 	}
 	for _, own := range []string{"Hana", "Ren"} {
-		if pending, err := root.TeamPending(ctx, 0, status.Sequence, own); err != nil || pending {
-			t.Fatal("passive status resumed inference", own, err)
+		if attentionAt(t, root, status.Sequence, own) {
+			t.Fatal("passive status resumed inference", own)
 		}
 	}
 	work, err := root.AppendTeamMessage(ctx, channel.Message{From: "Hana", Text: "Own api/", Declaration: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pending, err := root.TeamPending(ctx, 0, work.Sequence, "Hana"); err != nil || pending {
-		t.Fatal("native declaration returned to its author", err)
+	if attentionAt(t, root, work.Sequence, "Hana") {
+		t.Fatal("native declaration returned to its author")
 	}
-	if pending, err := root.TeamPending(ctx, 0, work.Sequence, "Ren"); err != nil || !pending {
-		t.Fatal("declaration did not notify a teammate", err)
+	if !attentionAt(t, root, work.Sequence, "Ren") {
+		t.Fatal("declaration did not notify a teammate")
 	}
 	values, err := root.TeamMessages(ctx, 0, work.Sequence, 10)
 	if err != nil || len(values) != 2 || !values[0].Passive || !values[0].Observation || !values[1].Declaration {
@@ -110,4 +110,13 @@ func TestExecutionReferenceAndPublicFactCommitAtomically(t *testing.T) {
 	if err != nil || len(visible) != 1 || visible[0].Event.Text != "created" {
 		t.Fatal("original result did not restore through its single reference", visible, err)
 	}
+}
+
+func attentionAt(t *testing.T, store *Store, sequence int64, member string) bool {
+	t.Helper()
+	values, err := store.TeamMessages(context.Background(), sequence-1, sequence, 1)
+	if err != nil || len(values) != 1 {
+		t.Fatalf("missing public record: %+v %v", values, err)
+	}
+	return values[0].Attention(member)
 }

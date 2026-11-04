@@ -14,6 +14,9 @@ import (
 )
 
 func (event Event) Check() error {
+	if err := event.Team.Check(event.Kind); err != nil {
+		return err
+	}
 	if event.ApprovalSource != "" {
 		if event.Approval == nil || event.Kind != "approved" && event.Kind != "denied" ||
 			event.ApprovalSource != "user" && event.ApprovalSource != "all_mighty" || event.Kind == "denied" && event.ApprovalSource != "user" {

@@ -22,6 +22,7 @@ type Local interface {
 	toolapi.CommandExecutor
 	toolapi.CommandNotifier
 	CommandDone(string) (<-chan struct{}, error)
+	ActiveCommand() string
 	ProjectInstructions(context.Context) (string, error)
 	Close() error
 }
@@ -37,6 +38,9 @@ type Executor struct {
 	commands     sync.WaitGroup
 	commandPaths map[string][]string
 }
+
+// CheckUserDecision lets the runtime reject stale waves without projecting public notes mid-call.
+func (e *Executor) CheckUserDecision() error { return e.Peer.CheckUserDecision() }
 
 func (e *Executor) Definitions() []toolapi.Definition {
 	definitions := e.Local.Definitions()

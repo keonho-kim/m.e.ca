@@ -70,20 +70,9 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 	if len(refs) == 0 {
 		return nil, nil
 	}
-	source, err := s.room.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes)
- FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
- LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence
- WHERE t.session_id=? AND t.sequence IN (`+placeholders(len(args))+`)`, append([]any{s.room.session.ID}, args...)...)
+	bySequence, err := s.publicContexts(ctx, args)
 	if err != nil {
 		return nil, err
-	}
-	bySequence := make(map[int64]string, len(source))
-	for _, record := range source {
-		value, err := s.room.publicMessage(ctx, record)
-		if err != nil {
-			return nil, err
-		}
-		bySequence[value.Sequence] = value.Context().Content
 	}
 	out := make(map[string]string, len(refs))
 	for _, ref := range refs {
@@ -119,10 +108,15 @@ func (s *Store) publicMessage(ctx context.Context, record storedRecord) (teamcha
 		if err := json.Unmarshal(body, &value); err != nil {
 			return message, err
 		}
-		if value.Kind != "team_message" && value.Kind != "team_progress" && value.Kind != "team_work" && value.Kind != "team_observation" && value.Kind != "team_status" {
+		if value.Kind != "team_message" && value.Kind != "team_progress" && value.Kind != "team_work" && value.Kind != "team_discussion" && value.Kind != "team_observation" && value.Kind != "team_status" {
 			return message, fmt.Errorf("source is not public conversation")
 		}
+		if err := value.Team.Check(value.Kind); err != nil {
+			return message, err
+		}
 		message.From, message.Text, message.Final = value.Agent, value.Text, value.Final
+		message.Note = value.Team
+		message.Discussion = value.Kind == "team_discussion"
 		message.FromStream = value.Kind == "team_progress"
 		message.Declaration = value.Kind == "team_work"
 		message.Passive = value.Kind == "team_status"

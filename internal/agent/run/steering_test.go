@@ -13,10 +13,11 @@ import (
 func TestSteeringAfterToolOutcomeAndBeforeFinal(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "one"}), "Updated approach", "Finished"}}
 	j := &journal{}
-	r := fixture(g, &executor{}, j)
+	tools := &executor{}
+	r := fixture(g, tools, j)
 	delivered := false
 	r.PollSteering = func() []string {
-		if len(g.requests) == 1 && !delivered {
+		if tools.executed == 1 && !delivered {
 			delivered = true
 			return []string{"Also include the endpoint"}
 		}

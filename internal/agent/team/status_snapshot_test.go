@@ -29,7 +29,7 @@ func TestPassiveStatusReplacesTransientViewWithoutGrowingPrivateHistory(t *testi
 			t.Fatal("passive status entered permanent peer history", batch, err)
 		}
 	}
-	text := b.WorkContext()
+	text := b.ContextObservations(nil)
 	if !strings.Contains(text, "file-39.txt") || strings.Contains(text, "file-0.txt") {
 		t.Fatal("transient command state accumulated old commands", text)
 	}
@@ -43,7 +43,7 @@ func TestPassiveStatusReplacesTransientViewWithoutGrowingPrivateHistory(t *testi
 		t.Fatal(err)
 	}
 	batch, err := b.Inbox(r.ctx)
-	if err != nil || len(batch.Messages) != 1 || !strings.Contains(batch.Messages[0].Content, "check failed") || strings.Contains(b.WorkContext(), "file-39.txt") {
+	if err != nil || len(batch.Messages) != 1 || !strings.Contains(batch.Messages[0].Content, "check failed") || strings.Contains(b.ContextObservations(nil), "file-39.txt") {
 		t.Fatal("failure was hidden by a stale successful status", batch, err)
 	}
 }
@@ -53,7 +53,7 @@ func TestMemberOverviewBoundsSummaryAndKeepsAllOwnedPaths(t *testing.T) {
 	p := &Peer{ID: "Hana", room: r}
 	summary := strings.Repeat("상세 작업 근거 ", 100000)
 	paths := []string{"/project/api", "/project/tests"}
-	if _, err := p.SetWork(summary, paths); err != nil {
+	if _, err := p.SetWork(summary, paths, "", 0); err != nil {
 		t.Fatal(err)
 	}
 	page, err := p.Members(r.ctx, "")
@@ -65,8 +65,8 @@ func TestMemberOverviewBoundsSummaryAndKeepsAllOwnedPaths(t *testing.T) {
 			if member.Work == nil || len(member.Work.Summary) > 5000 || !utf8.ValidString(member.Work.Summary) || len(member.Work.Paths) != 2 {
 				t.Fatal("member query copied the full declaration or lost ownership", member)
 			}
-			if r.work.Scope(p.ID).Summary != summary {
-				t.Fatal("query formatting changed the stored declaration")
+			if len(r.work.Scope(p.ID).Summary) > 4096 {
+				t.Fatal("current scope retained an unbounded declaration")
 			}
 			return
 		}

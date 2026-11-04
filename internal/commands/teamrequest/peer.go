@@ -62,7 +62,7 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 		return r.projectInstructions, r.instructionsErr
 	}
 	action.Runner.PollContext, action.Runner.OnAnswer = peer.Inbox, peer.AfterAnswer
-	action.Runner.BeforeDecision, action.Runner.ContextObservations = peer.BeginDecision, peer.WorkContext
+	action.Runner.BeforeDecision, action.Runner.ContextObservations = peer.BeginDecision, peer.ContextObservations
 	action.Runner.Resume = true
 	action.Runner.HideThinking = true
 	action.Runner.AdmitModel, action.Runner.Deadline = peer.AdmitModel, peer.Deadline()

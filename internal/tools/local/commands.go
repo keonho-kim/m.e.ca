@@ -24,14 +24,8 @@ func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
 func (e *Executor) StopCommands()                                  { e.commands.End(); e.liveOutputs.clear() }
 func (e *Executor) CommandUpdates() <-chan struct{}                { return e.commands.Updates() }
 func (e *Executor) CommandDone(id string) (<-chan struct{}, error) { return e.commands.Done(id) }
-func (e *Executor) activeCommands() bool {
-	for _, state := range e.commands.List() {
-		if state.Status == "running" {
-			return true
-		}
-	}
-	return false
-}
+func (e *Executor) ActiveCommand() string                          { return e.commands.ActiveID() }
+func (e *Executor) HasCommands() bool                              { return e.commands.HasCommands() }
 func (e *Executor) CommandActivity() []toolapi.CommandRun {
 	out := make([]toolapi.CommandRun, 0)
 	for _, state := range e.commands.List() {
@@ -46,11 +40,13 @@ func (e *Executor) CommandActivity() []toolapi.CommandRun {
 }
 
 func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
-	var completed []toolapi.CommandCompletion
-	for _, state := range e.commands.List() {
-		if state.Status == "running" {
-			continue
-		}
+	var storage [process.MaxActive]process.Completion
+	states := e.commands.AppendCompleted(storage[:0])
+	if len(states) == 0 {
+		return nil, nil
+	}
+	completed := make([]toolapi.CommandCompletion, 0, len(states))
+	for _, state := range states {
 		if state.Error != "" {
 			return nil, fmt.Errorf("command result archive failed: %s", state.Error)
 		}
@@ -58,8 +54,9 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 		if err != nil {
 			return nil, err
 		}
-		result.Process.Command = e.redact(state.Command)
-		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, Command: e.redact(state.Command), Result: result})
+		command := e.redact(state.Command)
+		result.Process.Command = command
+		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, Command: command, Result: result})
 	}
 	return completed, nil
 }

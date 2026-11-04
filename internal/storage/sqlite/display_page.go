@@ -22,7 +22,7 @@ FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m
 LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence
 WHERE t.session_id=? AND t.sequence<? AND (
  (m.role IN ('user','assistant') AND m.content_bytes>0) OR
- e.kind IN ('thinking','progress','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_notice','team_reference'))
+ e.kind IN ('thinking','progress','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference'))
 ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
 	if err != nil {
 		return nil, err

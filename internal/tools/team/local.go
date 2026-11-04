@@ -47,9 +47,8 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 		defer func() { <-e.Images }()
 		return op.operation.Execute(ctx, approved)
 	}
-	if e.Peer.HasNewUserInstruction() {
-		failure := &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "A new user instruction arrived while this operation was waiting; nothing executed.", Next: "Read the latest instruction and reconsider the operation."}
-		return toolapi.Result{Failed: true, Failure: failure}, failure
+	if err := e.Peer.CheckUserDecision(); err != nil {
+		return toolapi.Result{Failed: true, Failure: toolapi.FailureOf(err)}, err
 	}
 	if err := e.Peer.CheckWork(op.paths); err != nil {
 		failure := &toolapi.Failure{Code: toolapi.StaleTarget, Detail: err.Error(), Next: "Read current teammate work and regenerate this operation after coordinating the relevant path."}

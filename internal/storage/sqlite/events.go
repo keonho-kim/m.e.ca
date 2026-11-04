@@ -61,6 +61,11 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 		role, text = projected[0].Role, projected[0].Text
 	}
 	memoryBytes := len(text)
+	if ref, size, err := s.publicMemoryReference(ctx, event); err != nil {
+		return err
+	} else if ref != "" {
+		role, text, memoryBytes = ref, "", size
+	}
 	displayArgs := []byte("{}")
 	if event.Call != nil {
 		// A rejected argument can be valid JSON with an invalid field type.
