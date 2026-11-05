@@ -5,6 +5,7 @@
 package team
 
 import (
+	"encoding/json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
@@ -38,8 +39,10 @@ func TestActiveCommandsKeepSeparateCardsWhenCallIDsAreReused(t *testing.T) {
 	var state State
 	output := viewport.View{Follow: true}
 	f := formatter()
-	call := &toolapi.Call{ID: "reused", Name: "execute_command", Arguments: []byte(`{"command":"sleep 60"}`)}
-	for _, id := range []string{"cmd_old", "cmd_new"} {
+	for _, part := range []string{"old", "new"} {
+		id := "cmd_" + part
+		arguments, _ := json.Marshal(map[string]string{"command": part + "-command"})
+		call := &toolapi.Call{ID: "reused", Name: "execute_command", Arguments: arguments}
 		state.Apply(runrecord.Event{Kind: "tool_started", Agent: "Hana", Call: call}, f, &output)
 		state.Apply(runrecord.Event{Kind: "tool_succeeded", Agent: "Hana", Call: call, Operation: &toolapi.Operation{Process: &toolapi.ProcessOutcome{CommandID: id, Status: "running"}}}, f, &output)
 	}

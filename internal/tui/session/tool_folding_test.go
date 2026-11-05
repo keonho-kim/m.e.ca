@@ -1,4 +1,4 @@
-// Purpose: Verify every completed tool result starts expanded and folds without altering history.
+// Purpose: Verify completed tools start collapsed and preserve details through explicit expansion.
 // Pattern: Virtual terminal regression tests.
 // Usage: go test ./internal/tui/session -run TestAllToolResults.
 // Related: internal/tui/transcript/events.go, internal/tui/viewport/viewport.go, internal/tui/session/keys.go.
@@ -15,7 +15,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
+func TestAllToolResultsStartCollapsedAndExpand(t *testing.T) {
 	for _, test := range []struct{ name, arguments, output, detail string }{
 		{"execute_command", `{"command":"printf detail"}`, `{"Stdout":"command-detail","ExitCode":0,"Status":"exited"}`, "command-detail"},
 		{"write_file", `{"path":"hello.txt","content":"file-detail"}`, `{"changed":true}`, "file-detail"},
@@ -29,15 +29,20 @@ func TestAllToolResultsStartExpandedAndFold(t *testing.T) {
 				event.ChangePreview = "--- old\n+++ hello.txt\n@@ -1 +1 @@\n-old\n+" + test.detail + "\n"
 			}
 			a.receiveRuntime(&event)
-			original := a.chat.output.Blocks[0].Text
-			if !strings.Contains(original, test.detail) {
-				t.Fatalf("default output was folded or missing: %q", original)
+			folded := a.chat.output.Blocks[0].Text
+			if !a.chat.output.Collapsed || !strings.Contains(folded, a.language.Text(test.name)) || !strings.Contains(folded, "접힘") {
+				t.Fatalf("default output did not stay collapsed: %q", folded)
 			}
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
 			a.render()
-			folded := a.chat.output.Blocks[0].Text
-			if original == folded || !strings.Contains(folded, a.language.Text(test.name)) || !strings.Contains(folded, "접힘") {
-				t.Fatalf("tool was not folded: %q", folded)
+			original := a.chat.output.Blocks[0].Text
+			if a.chat.output.Collapsed || !strings.Contains(original, test.detail) || original == folded {
+				t.Fatalf("tool detail did not expand: %q", original)
+			}
+			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
+			a.render()
+			if a.chat.output.Blocks[0].Text != folded {
+				t.Fatal("collapse changed the original summary")
 			}
 			if !strings.Contains(strings.Join(screenRows(a, 24-a.footerRows), "\n"), "접힘") || !strings.Contains(footerKeyText(a), "^O") {
 				t.Fatal("fold state or Ctrl+O shortcut was not visible")

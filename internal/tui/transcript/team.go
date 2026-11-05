@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -75,4 +76,11 @@ func (f Formatter) TeamHeader(agent string, final bool) viewport.Block {
 		header += " · " + f.Language.Text("작업 결과")
 	}
 	return viewport.Block{Text: header, Markdown: true, KeepWithNext: true, SpaceAfter: 1}
+}
+
+// TeamCommandHeader updates only the small activity line, leaving result sources intact.
+func (f Formatter) TeamCommandHeader(agent string, run toolapi.CommandRun) viewport.Block {
+	header := f.TeamHeader(agent, false)
+	header.Text += " · " + strings.TrimSpace(f.commandHeading(run))
+	return header
 }

@@ -1,7 +1,7 @@
-// Purpose: Maintain team tool cards from prepared events and owned command snapshots.
+// Purpose: Connect team tool events and command controls to their owned display cards.
 // Pattern: Source-keyed presentation projection.
 // Usage: State.Apply and the session clock update cards through the same identity map.
-// Related: internal/tui/chat/team/events.go, internal/tui/transcript/tools.go.
+// Related: internal/tui/chat/team/command_cards.go, internal/tui/chat/team/events.go, internal/tui/transcript/tools.go.
 package team
 
 import (
@@ -14,8 +14,8 @@ import (
 
 type toolDisplay struct {
 	messageDisplay
-	command  transcript.CommandView
-	terminal bool
+	status      string
+	maskVersion int
 }
 
 func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output *viewport.View) {
@@ -27,11 +27,8 @@ func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output 
 		s.tools = make(map[string]toolDisplay)
 	}
 	block := s.tools[id]
-	text := f.Tool(event)
-	if event.Kind == "tool_waiting" {
-		text += "\n" + f.Language.Text("실행 대기")
-	}
-	block.show(event.Agent, false, viewport.Block{Text: text}, f, output)
+	block.maskVersion = commandMaskVersion(f)
+	block.show(event.Agent, false, f.PendingTool(event), f, output)
 	s.tools[id] = block
 }
 func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output *viewport.View) {
@@ -39,19 +36,28 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 		return
 	}
 	id := toolCallKey(event.Agent, event.Call.ID)
-	command := event.Call.Name == "execute_command" && event.Operation != nil && event.Operation.Process != nil
+	command := event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.CommandID != ""
 	if command {
 		owned := commandKey(event.Agent, event.Operation.Process.CommandID)
 		if _, exists := s.tools[owned]; exists {
+			if id != owned {
+				pending := s.tools[id]
+				pending.discard(output)
+				delete(s.tools, id)
+			}
 			id = owned
 		}
 	}
 	block := s.tools[id]
-	if command && toolapi.CommandActive(event.Operation.Process.Status) && block.terminal {
+	if command && toolapi.CommandActive(event.Operation.Process.Status) && block.status != "" && !toolapi.CommandActive(block.status) {
 		return
 	}
 	agent := event.Agent
 	event.Agent = ""
+	block.maskVersion = commandMaskVersion(f)
+	if command {
+		block.status = event.Operation.Process.Status
+	}
 	for _, value := range f.Event(event) {
 		block.show(agent, false, value, f, output)
 	}
@@ -62,25 +68,8 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 		delete(s.tools, id)
 		s.tools[commandKey(agent, event.Operation.Process.CommandID)] = block
 	} else {
+		output.Update(block.header, f.TeamHeader(agent, false))
 		delete(s.tools, id)
-	}
-}
-func (s *State) Commands(agent string, commands []toolapi.CommandRun, f transcript.Formatter, output *viewport.View) {
-	for _, command := range commands {
-		id := commandKey(agent, command.ID)
-		block, found := s.tools[id]
-		if !found {
-			pending := toolCallKey(agent, command.CallID)
-			block, found = s.tools[pending]
-			if found {
-				delete(s.tools, pending)
-			}
-		}
-		if block.body != 0 && !block.terminal {
-			block.show(agent, false, viewport.Block{Text: block.command.Render(command, f)}, f, output)
-			block.terminal = !toolapi.CommandActive(command.Status)
-			s.tools[id] = block
-		}
 	}
 }
 

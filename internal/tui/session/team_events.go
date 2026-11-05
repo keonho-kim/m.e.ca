@@ -41,8 +41,6 @@ func (a *app) receiveTeam(event *runrecord.Event) {
 		if rate != nil {
 			a.chat.tokensPerSecond = rate
 		}
-	case "retry":
-		a.status = event.Agent + " · " + event.Text
 	case "image_input_unavailable":
 		a.connection.rejectImages()
 	}

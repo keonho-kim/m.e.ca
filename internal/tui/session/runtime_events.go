@@ -11,6 +11,7 @@ import (
 )
 
 func (a *app) receiveRuntime(e *runrecord.Event) {
+	a.updateRetryNotice(e)
 	if e.Agent != "" {
 		a.receiveTeam(e)
 		return
@@ -50,7 +51,6 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		return
 	}
 	if e.Kind == "retry" {
-		a.status = e.Text
 		return
 	}
 	if e.Kind == "usage_progress" || e.Kind == "usage" {

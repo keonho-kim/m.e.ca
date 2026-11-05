@@ -32,7 +32,7 @@ func TestKeymapLayoutPrimaryAndSupportingRows(t *testing.T) {
 				t.Fatalf("primary hint %q misplaced: %q", key, primary)
 			}
 		}
-		for _, label := range []string{"줄바꿈", "입력 기록", "도구 접기", "스크롤"} {
+		for _, label := range []string{"줄바꿈", "입력 기록", "도구 펴기", "스크롤"} {
 			if !strings.Contains(supporting, lang.Text(label)) {
 				t.Fatalf("supporting hint %q misplaced: %q", lang.Text(label), supporting)
 			}

@@ -11,6 +11,7 @@ import (
 )
 
 func (a *app) loadHistory() error {
+	a.cancelToolDetail()
 	a.chat.historyRevision++
 	a.chat.historyLoading = false
 	records, cursor, err := terminalHistory(a.ctx, a.opts.Store, a.opts.Session.ID, 0, 100)

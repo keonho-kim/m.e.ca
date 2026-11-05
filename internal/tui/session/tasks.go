@@ -27,6 +27,7 @@ func (a *app) startRequest(input composer.Request) {
 	a.chat.stream, a.chat.thinking = "", ""
 	a.chat.resetThroughput()
 	a.chat.runSummary = nil
+	a.chat.retry = retryNotice{}
 	a.stopNotice = ""
 	a.work.state = workerAgent
 	a.clearToolActivity()
@@ -73,14 +74,7 @@ func (a *app) startRequest(input composer.Request) {
 		options.Text = input.Resolve(ctx, exists)
 		delivery := requestDelivery{team: teamMode}
 		emit := func(event runrecord.Event) error {
-			if event.Kind == "stream" {
-				return delivery.stream(ctx, a.events, event)
-			}
-			copy := event
-			if event.Kind == "usage" || event.Statistics != nil {
-				return delivery.post(a.ctx, a.events, notice{Event: &copy})
-			}
-			return delivery.post(ctx, a.events, notice{Event: &copy})
+			return delivery.emit(ctx, a.ctx, a.events, event)
 		}
 		approve := func(ctx context.Context, request toolapi.Approval) (bool, error) {
 			if err := delivery.post(ctx, a.events, notice{Approval: &request}); err != nil {

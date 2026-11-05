@@ -19,6 +19,22 @@ type requestDelivery struct {
 	texts  map[string]string
 }
 
+// emit keeps committed results deliverable after request cancellation while
+// drafts, approvals and new work remain bound to the request lifetime.
+func (d *requestDelivery) emit(ctx, presentation context.Context, queue chan<- notice, event runrecord.Event) error {
+	if event.Kind == "stream" {
+		return d.stream(ctx, queue, event)
+	}
+	switch event.Kind {
+	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished", "usage":
+		ctx = presentation
+	}
+	if event.Statistics != nil {
+		ctx = presentation
+	}
+	return d.post(ctx, queue, notice{Event: &event})
+}
+
 func (d *requestDelivery) peer(id string) *runtimeDelivery {
 	if d.peers == nil {
 		d.peers = map[string]*runtimeDelivery{}
@@ -46,7 +62,7 @@ func (d *requestDelivery) stream(ctx context.Context, queue chan<- notice, event
 }
 func (d *requestDelivery) post(ctx context.Context, queue chan<- notice, n notice) error {
 	if n.Event != nil && (n.Event.Kind == "team_observation" || n.Event.Kind == "team_status") {
-		return ctx.Err()
+		return nil
 	}
 	if !d.team {
 		return d.single.post(ctx, queue, n)

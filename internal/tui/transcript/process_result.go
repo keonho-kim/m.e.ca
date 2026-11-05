@@ -93,9 +93,16 @@ func (f Formatter) processSummary(event runrecord.Event, fields map[string]json.
 	if event.Kind == "tool_succeeded" {
 		return ""
 	}
+	if event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Diagnostic != "" {
+		return f.Redact(strings.TrimSpace(event.Operation.Process.Diagnostic))
+	}
 	var stderr string
 	if json.Unmarshal(fields["Stderr"], &stderr) == nil {
 		return f.Redact(strings.TrimSpace(stderr))
+	}
+	var output struct{ Stderr string }
+	if json.Unmarshal(event.Output, &output) == nil {
+		return f.Redact(strings.TrimSpace(output.Stderr))
 	}
 	return ""
 }

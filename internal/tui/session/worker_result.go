@@ -38,6 +38,7 @@ func (a *app) finishWorker(n notice) {
 		a.chat.output.AppendBlock(*a.chat.runSummary)
 	}
 	a.chat.runSummary = nil
+	a.chat.retry = retryNotice{}
 	a.chat.stream, a.chat.thinking = "", ""
 	a.status = ""
 	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {

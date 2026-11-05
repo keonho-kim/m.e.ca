@@ -25,7 +25,7 @@ func TestCommandOutcomeScreen(t *testing.T) {
 				Kind: "tool_failed", Text: "process_failed: Process exited; exit code 1; next: internal guidance",
 				Call:      &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
 				Output:    []byte(`{"Stderr":"missing package","ExitCode":1,"Status":"exited"}`),
-				Operation: &tool.Operation{Failure: &tool.Failure{Code: tool.ProcessFailed}},
+				Operation: &tool.Operation{Process: &tool.ProcessOutcome{CommandID: "cmd_failed", Status: "exited", ExitCode: 1, Diagnostic: "missing package"}, Failure: &tool.Failure{Code: tool.ProcessFailed}},
 			}
 			if restored {
 				a.chat.output.Prepend((transcript.Formatter{Language: lang, Redact: a.opts.Vault.Redact}).Event(event))
@@ -48,5 +48,31 @@ func TestCommandOutcomeScreen(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestCommandFailureCauseSurvivesLazyHistory(t *testing.T) {
+	a := fixture(t)
+	event := runrecord.Event{Kind: "tool_failed", CallID: "failed", Text: "Process exited; exit code 1",
+		Call:   &tool.Call{ID: "failed", Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
+		Output: []byte(`{"Stdout":"original output","Stderr":"missing package","ExitCode":1,"Status":"exited"}`),
+		Operation: &tool.Operation{
+			Process: &tool.ProcessOutcome{CommandID: "cmd_failed", Status: "exited", ExitCode: 1, Diagnostic: "missing package"},
+			Failure: &tool.Failure{Code: tool.ProcessFailed},
+		},
+	}
+	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, event); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.loadHistory(); err != nil {
+		t.Fatal(err)
+	}
+	a.render()
+	if shown := activityTranscript(a); !strings.Contains(shown, "missing package") || strings.Contains(shown, "original output") || a.chat.details.cancel != nil {
+		t.Fatalf("collapsed history lost its cause or loaded full output: %q", shown)
+	}
+	expandVisibleDetails(t, a)
+	if shown := activityTranscript(a); !strings.Contains(shown, "missing package") || !strings.Contains(shown, "original output") {
+		t.Fatalf("expanded history lost original command output: %q", shown)
 	}
 }

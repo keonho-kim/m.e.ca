@@ -12,8 +12,8 @@ import (
 )
 
 type detailRead struct {
-	loading bool
-	cancel  context.CancelFunc
+	cancel    context.CancelFunc
+	abandoned bool
 }
 type detailResult struct {
 	id, revision int
@@ -23,7 +23,7 @@ type detailResult struct {
 }
 
 func (a *app) loadToolDetail(layout *viewport.Transcript) {
-	if a.chat.output.Collapsed || a.chat.details.loading {
+	if a.chat.output.Collapsed || a.chat.details.cancel != nil {
 		return
 	}
 	id, ref := layout.PendingDetail()
@@ -37,7 +37,7 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 		return
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
-	a.chat.details = detailRead{loading: true, cancel: cancel}
+	a.chat.details = detailRead{cancel: cancel}
 	result := detailResult{id: id, revision: a.chat.historyRevision, reference: *ref}
 	language, redact := a.language, a.opts.Vault.Redact
 	a.workers.Add(1)
@@ -45,6 +45,9 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 		defer a.workers.Done()
 		defer cancel()
 		event, err := store.ToolEvent(ctx, result.reference)
+		if err == nil {
+			err = ctx.Err()
+		}
 		result.err = err
 		if err == nil {
 			event.Reference = nil
@@ -54,16 +57,28 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 				result.block = blocks[0]
 			}
 		}
+		if err := ctx.Err(); err != nil {
+			result.err, result.block = err, viewport.Block{}
+		}
 		a.post(a.ctx, notice{Detail: &result})
 	}()
 }
 func (a *app) receiveToolDetail(result *detailResult) {
+	read := a.chat.details
 	a.chat.details = detailRead{}
-	if result.revision != a.chat.historyRevision || a.chat.output.Collapsed {
+	if read.cancel == nil || read.abandoned || result.revision != a.chat.historyRevision || a.chat.output.Collapsed {
 		return
 	}
 	if result.err != nil {
 		result.block.Text = "\n  " + a.language.Text("Failed: ") + a.opts.Vault.Redact(result.err.Error()) + "\n"
 	}
 	a.chat.output.UpdateDetails(result.id, result.reference, result.block)
+}
+
+// Keep the slot until its worker responds so repeated toggles never overlap reads.
+func (a *app) cancelToolDetail() {
+	if read := &a.chat.details; read.cancel != nil && !read.abandoned {
+		read.abandoned = true
+		read.cancel()
+	}
 }

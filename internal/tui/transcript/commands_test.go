@@ -59,3 +59,16 @@ func TestOwnedCommandActivityWithoutOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnedCommandTerminalHeadingsMatchActualStatus(t *testing.T) {
+	for _, lang := range []locale.Language{locale.Korean, locale.English} {
+		f := Formatter{Language: lang, Redact: func(text string) string { return text }}
+		for _, tc := range []struct{ status, label string }{
+			{"interrupted", "Command interrupted"}, {"timeout", "Command timed out"}, {"execution_failed", "Command failed"},
+		} {
+			if shown := f.commandHeading(tool.CommandRun{Status: tc.status}); !strings.Contains(shown, lang.Text(tc.label)) {
+				t.Fatalf("%s heading reported the wrong outcome: %q", tc.status, shown)
+			}
+		}
+	}
+}

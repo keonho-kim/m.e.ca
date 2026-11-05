@@ -18,7 +18,7 @@ func settleVisibleDetails(t *testing.T, a *app) {
 	defer deadline.Stop()
 	for {
 		a.render()
-		if !a.chat.details.loading {
+		if a.chat.details.cancel == nil {
 			return
 		}
 		select {
@@ -29,6 +29,15 @@ func settleVisibleDetails(t *testing.T, a *app) {
 		}
 	}
 }
+
+func expandVisibleDetails(t *testing.T, a *app) {
+	t.Helper()
+	if a.chat.output.Collapsed {
+		a.toggleToolDetails()
+	}
+	settleVisibleDetails(t, a)
+}
+
 func TestLazyToolDetailsExpandAndRelease(t *testing.T) {
 	a := fixture(t)
 	event := runrecord.Event{Kind: "tool_succeeded", CallID: "change", Text: "File changed", Call: &toolapi.Call{ID: "change", Name: "edit_file", Arguments: []byte(`{"path":"app.go"}`)}, Output: []byte(`{"changed":true}`), ChangePreview: "--- app.go\n+++ app.go\n@@ -1 +1 @@\n-old\n+new\n"}
@@ -41,7 +50,7 @@ func TestLazyToolDetailsExpandAndRelease(t *testing.T) {
 	}
 	a.render()
 	block := a.chat.output.Blocks[0]
-	if block.DetailRef == nil || block.Details != "" || block.Changes != nil || a.chat.details.loading {
+	if block.DetailRef == nil || block.Details != "" || block.Changes != nil || a.chat.details.cancel != nil {
 		t.Fatal("collapsed result hydrated original details")
 	}
 	a.toggleToolDetails()

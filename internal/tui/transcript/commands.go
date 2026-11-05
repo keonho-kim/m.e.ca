@@ -10,7 +10,25 @@ import (
 	"strings"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
+
+// CommandBlock reconstructs an evicted pending card without parsing native arguments again.
+func (f Formatter) CommandBlock(run toolapi.CommandRun) viewport.Block {
+	command := f.Redact(run.Command)
+	heading := f.commandHeading(run)
+	text := heading + indentTool(command)
+	return viewport.Block{Text: text, Summary: f.commandSummary(run, command), Details: text}
+}
+
+// CommandSummary projects current status without loading or replacing captured output.
+func (f Formatter) CommandSummary(run toolapi.CommandRun) string {
+	return f.commandSummary(run, f.Redact(run.Command))
+}
+
+func (f Formatter) commandSummary(run toolapi.CommandRun, command string) string {
+	return "\n  " + f.Language.Text("execute_command") + " · " + f.Language.Text(commandLabel(run)) + " · " + f.Language.Text("Collapsed") + "\n" + indentTool(brief(command))
+}
 
 func commandDuration(millis int64) string {
 	seconds := max(0, millis/1000)
@@ -30,25 +48,35 @@ func (f Formatter) CommandActivity(runs []toolapi.CommandRun) string {
 }
 
 func (f Formatter) commandHeading(run toolapi.CommandRun) string {
+	label := commandLabel(run)
+	if !toolapi.CommandActive(run.Status) {
+		return "\n  " + f.Language.Text(label) + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + "\n"
+	}
 	last := f.Language.Text("No output yet")
 	if run.LastOutputMillis != nil {
 		last = f.Language.Format("Last output %s ago", commandDuration(*run.LastOutputMillis))
 	}
-	label := "Command running"
-	if run.Status == "finalizing" {
-		label = "Finalizing command output"
-	}
-	if run.Status == "waiting" {
-		label = "Command waiting"
-	}
-	if !toolapi.CommandActive(run.Status) {
-		label = "Command failed"
-		if run.Status == "exited" && run.ExitCode != nil && *run.ExitCode == 0 {
-			label = "Command succeeded"
-		}
-		return "\n  " + f.Language.Text(label) + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + "\n"
-	}
 	return "\n  " + f.Language.Text(label) + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + " · " + last + "\n"
+}
+
+func commandLabel(run toolapi.CommandRun) string {
+	switch run.Status {
+	case "running":
+		return "Command running"
+	case "waiting":
+		return "Command waiting"
+	case "finalizing":
+		return "Finalizing command output"
+	case "interrupted":
+		return "Command interrupted"
+	case "timeout":
+		return "Command timed out"
+	case "exited":
+		if run.ExitCode != nil && *run.ExitCode == 0 {
+			return "Command succeeded"
+		}
+	}
+	return "Command failed"
 }
 
 func (f Formatter) commandList(body []byte) toolOutput {
@@ -63,24 +91,7 @@ func (f Formatter) commandList(body []byte) toolOutput {
 	}
 	var text strings.Builder
 	for _, run := range result.Runs {
-		label := "Command running"
-		switch run.Status {
-		case "finalizing":
-			label = "Finalizing command output"
-		case "waiting":
-			label = "Command waiting"
-		case "exited":
-			label = "Command failed"
-			if run.ExitCode != nil && *run.ExitCode == 0 {
-				label = "Command succeeded"
-			}
-		case "interrupted":
-			label = "Command interrupted"
-		case "timeout":
-			label = "Command timed out"
-		case "execution_failed":
-			label = "Command failed"
-		}
+		label := commandLabel(run)
 		text.WriteString(indentTool(f.Redact(run.ID) + " · " + f.Language.Text(label) + " · " + commandDuration(run.ElapsedMillis)))
 		text.WriteString(indentTool("  " + brief(f.Redact(run.Command))))
 	}

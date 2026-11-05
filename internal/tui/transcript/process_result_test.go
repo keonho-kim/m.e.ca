@@ -86,3 +86,30 @@ func TestCommandOutcomeInvalidResultDoesNotClaimSuccess(t *testing.T) {
 		}
 	}
 }
+
+func TestCommandSummaryKeepsReportedDiagnosticAndMasking(t *testing.T) {
+	f := Formatter{Redact: func(text string) string { return strings.ReplaceAll(text, "private-value", "[redacted]") }}
+	for _, kind := range []string{"tool_failed", "command_finished"} {
+		event := runrecord.Event{Kind: kind, Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
+			Reference: &runrecord.EventReference{Session: "private", Sequence: 1},
+			Output:    []byte(`{"Stderr":"original stderr","ExitCode":1,"Status":"exited"}`),
+			Operation: &tool.Operation{Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "missing private-value"}, Failure: &tool.Failure{Code: tool.ProcessFailed}},
+		}
+		block := f.Event(event)[0]
+		if !strings.Contains(block.Summary, "missing [redacted]") || strings.Contains(block.Text, "private-value") || strings.Contains(block.Text, "original stderr") || block.Details != "" || block.DetailRef != event.Reference {
+			t.Fatalf("%s lost its masked diagnostic or loaded the original output: %+v", kind, block)
+		}
+	}
+}
+
+func TestCommandSummaryUsesStderrWhenDiagnosticMissing(t *testing.T) {
+	f := Formatter{Redact: func(text string) string { return text }}
+	event := runrecord.Event{Kind: "tool_failed", Call: &tool.Call{Name: "execute_command"},
+		Reference: &runrecord.EventReference{Session: "private", Sequence: 1},
+		Output:    []byte(`{"Stderr":"missing package","ExitCode":1,"Status":"exited"}`),
+		Operation: &tool.Operation{Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1}},
+	}
+	if summary := f.Event(event)[0].Summary; !strings.Contains(summary, "missing package") {
+		t.Fatal("available stderr was discarded:", summary)
+	}
+}

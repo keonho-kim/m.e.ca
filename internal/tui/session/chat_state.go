@@ -12,6 +12,7 @@ import (
 )
 
 type chatState struct {
+	retry                           retryNotice
 	details                         detailRead
 	toolActivity                    toolActivity
 	chatVisible, selectedTranscript []viewport.Line

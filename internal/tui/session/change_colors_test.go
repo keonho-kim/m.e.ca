@@ -27,7 +27,7 @@ func TestAppliedDiffColors(t *testing.T) {
 			} else {
 				a.receiveRuntime(&event)
 			}
-			a.render()
+			expandVisibleDetails(t, a)
 			assertDiffRows(t, a)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
 			a.render()
@@ -88,7 +88,7 @@ func assertDiffRows(t *testing.T, a *app) {
 func TestAppliedDiffDoesNotColorPlainToolOutput(t *testing.T) {
 	a := screenFixture(t)
 	a.receiveRuntime(&runrecord.Event{Kind: "tool_succeeded", Call: &tool.Call{Name: "execute_command"}, Output: []byte(`{"Stdout":"-   1 | old\n+   1 | new\n","ExitCode":0}`)})
-	a.render()
+	expandVisibleDetails(t, a)
 	assertForegroundOnly(t, a.screen)
 	a.receiveRuntime(&runrecord.Event{Kind: "tool_failed", Text: "failed", Call: &tool.Call{Name: "edit_file"}, Output: []byte(`{"changed":true}`), ChangePreview: "--- a\n+++ a\n@@ -1 +1 @@\n-old\n+new\n"})
 	a.render()

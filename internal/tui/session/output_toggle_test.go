@@ -40,18 +40,18 @@ func TestOutputToggleTerminalProtocols(t *testing.T) {
 			a.keyEvent(key)
 			a.render()
 			visible := strings.Join(screenRows(a, 22), "\n")
-			if !a.chat.output.Collapsed || strings.Contains(visible, "detail row") || a.compose.editor.String() != "draft" {
+			if a.chat.output.Collapsed || !strings.Contains(visible, "detail row") || a.compose.editor.String() != "draft" {
 				t.Fatalf("enhanced=%t restored=%t collapsed=%t draft=%q: %s", enhanced, restored, a.chat.output.Collapsed, a.compose.editor.String(), visible)
 			}
-			if keymapLabels(t, a)["^O"] != "도구 펴기" {
+			if keymapLabels(t, a)["^O"] != "도구 접기" {
 				t.Fatal("output advertised the wrong key action")
 			}
 			a.keyEvent(key)
 			a.render()
-			if a.chat.output.Collapsed || !strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
-				t.Fatal("output did not expand on the second keypress")
+			if !a.chat.output.Collapsed || strings.Contains(strings.Join(screenRows(a, 22), "\n"), "detail row") {
+				t.Fatal("output did not collapse on the second keypress")
 			}
-			if keymapLabels(t, a)["^O"] != "도구 접기" {
+			if keymapLabels(t, a)["^O"] != "도구 펴기" {
 				t.Fatal("output advertised the wrong key action")
 			}
 		}
@@ -62,7 +62,7 @@ func TestOutputToggleDoesNotInterpretPastedText(t *testing.T) {
 	a := screenFixture(t)
 	a.paste = true
 	a.keyEvent(tcell.NewEventKeyEx(tcell.KeyRune, "o", tcell.ModCtrl, true, tcell.KeyO, 1))
-	if a.chat.output.Collapsed || a.stopNotice != "" {
+	if !a.chat.output.Collapsed || a.stopNotice != "" {
 		t.Fatal("pasted content executed an output shortcut")
 	}
 }
@@ -82,7 +82,7 @@ func TestOutputToggleHintRequiresOutput(t *testing.T) {
 		t.Fatal("fold hint advertised without any foldable output")
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyCtrlO, "", 0))
-	if a.chat.output.Collapsed {
+	if !a.chat.output.Collapsed {
 		t.Fatal("empty transcript changed the default for future outputs")
 	}
 }

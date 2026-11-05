@@ -1,7 +1,7 @@
 // Purpose: Reuse the immutable command body while refreshing elapsed-time headings.
 // Pattern: Display-owner-scoped bounded projection.
-// Usage: Single and team active-tool state retain one CommandView until the command settles.
-// Related: internal/tui/transcript/commands.go, internal/tui/chat/team/tools.go, internal/tui/session/tool_activity.go.
+// Usage: Single-mode live activity retains one CommandView until the command settles.
+// Related: internal/tui/transcript/commands.go, internal/tui/session/tool_activity.go.
 package transcript
 
 import toolapi "github.com/keonho-kim/meca/internal/agent/tool"

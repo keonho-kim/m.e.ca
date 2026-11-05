@@ -51,6 +51,7 @@ func TestParallelToolActivityPreservesSiblings(t *testing.T) {
 	}
 	first.Kind, first.Output = "tool_succeeded", []byte(`{"Stdout":"guide contents","Status":"exited","ExitCode":0}`)
 	a.receiveRuntime(&first)
+	expandVisibleDetails(t, a)
 	shown = activityTranscript(a)
 	for _, text := range []string{"guide contents", "ruff check src", "ty check src"} {
 		if !strings.Contains(shown, text) {

@@ -14,6 +14,7 @@ import (
 func (a *app) render() {
 	page := a.focus().page()
 	if page != "chat" {
+		a.cancelToolDetail()
 		a.chat.chatVisible = nil
 		if a.chat.chatProjection.layout.Count() > 0 {
 			a.chat.output.ReleaseDisplay()

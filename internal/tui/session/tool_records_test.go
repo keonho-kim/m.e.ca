@@ -27,6 +27,7 @@ func TestToolRecordLiveMatchesRestored(t *testing.T) {
 	if a.status != "" || len(a.chat.output.Blocks) != 1 {
 		t.Fatal("pending call was not replaced by one completion record")
 	}
+	expandVisibleDetails(t, a)
 	want := "\n  명령 실행\n\n    명령: cat README.md\n\n    결과\n    표준 출력\n    one\n    two\n    실행 성공\n"
 	if got := a.chat.output.Blocks[0].Text; got != want {
 		t.Fatalf("tool record=%q; want %q", got, want)
@@ -69,6 +70,7 @@ func TestToolFailureAndDenialHaveDetails(t *testing.T) {
 func TestToolReadLineNumbersAlignOnScreen(t *testing.T) {
 	a := screenFixture(t)
 	a.receive(notice{Event: &runrecord.Event{Kind: "tool_succeeded", Call: &toolapi.Call{Name: "execute_command", Arguments: []byte(`{"command":"nl a"}`)}, Output: []byte(`{"Stdout":"  1 | first\n 10 | tenth\n100 | hundredth\n","ExitCode":0,"Status":"exited"}`)}})
+	expandVisibleDetails(t, a)
 	for _, width := range []int{80, 32} {
 		a.screen.SetSize(width, 24)
 		a.render()

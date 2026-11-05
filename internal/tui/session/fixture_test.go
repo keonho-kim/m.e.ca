@@ -91,7 +91,7 @@ func terminalFixture(t testing.TB, opts Options) *app {
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &app{
 		opts: opts, ctx: ctx, cancel: cancel, screen: screen, page: "chat",
-		settings: policy.Settings{Scope: policy.System}, chat: chatState{output: viewport.View{Follow: true}}, events: make(chan notice, 32),
+		settings: policy.Settings{Scope: policy.System}, chat: chatState{output: viewport.View{Follow: true, Collapsed: true}}, events: make(chan notice, 32),
 	}
 	t.Cleanup(a.shutdown)
 	return a

@@ -14,6 +14,17 @@ import (
 
 type messageDisplay struct{ header, body int }
 
+// discard releases only the uncommitted pair owned by this presentation source.
+func (p *messageDisplay) discard(output *viewport.View) {
+	if p.header != 0 {
+		output.Update(p.header, viewport.Block{})
+	}
+	if p.body != 0 {
+		output.Update(p.body, viewport.Block{})
+	}
+	*p = messageDisplay{}
+}
+
 func (p *messageDisplay) show(agent string, final bool, body viewport.Block, f transcript.Formatter, output *viewport.View) {
 	if strings.TrimSpace(body.Text) == "" {
 		return
@@ -29,13 +40,7 @@ func (p *messageDisplay) show(agent string, final bool, body viewport.Block, f t
 	}
 	// Trimming can remove either owned block. Clear surviving fragments before
 	// appending the complete snapshot with its own header at the current tail.
-	if p.header != 0 {
-		output.Update(p.header, viewport.Block{})
-	}
-	if p.body != 0 {
-		output.FinishStream(p.body)
-		output.Update(p.body, viewport.Block{})
-	}
+	p.discard(output)
 	p.header = appendBlock(output, f.TeamHeader(agent, final))
 	p.body = appendBlock(output, body)
 }

@@ -26,7 +26,21 @@ func brief(text string) string {
 }
 
 func (f Formatter) toolSummary(event runrecord.Event) string {
-	status := map[string]string{"tool_succeeded": "완료", "tool_failed": "실패", "tool_interrupted": "중단", "denied": "거부"}[event.Kind]
+	status := ""
+	switch event.Kind {
+	case "tool_started":
+		status = "Running"
+	case "tool_waiting":
+		status = "실행 대기"
+	case "tool_succeeded":
+		status = "완료"
+	case "tool_failed":
+		status = "실패"
+	case "tool_interrupted":
+		status = "중단"
+	case "denied":
+		status = "거부"
+	}
 	commandStatus, commandSummary := "", ""
 	if event.Call.Name == "execute_command" || event.Call.Name == "wait_command" || event.Call.Name == "cancel_command" {
 		var fields map[string]json.RawMessage
@@ -58,6 +72,9 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		if args.Command != "" {
 			target = args.Command
 		}
+		if args.CommandID != "" && event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Command != "" {
+			target = event.Operation.Process.Command
+		}
 		if len(args.Paths) > 0 {
 			target = args.Paths[0]
 			if len(args.Paths) > 1 {
@@ -76,6 +93,9 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		SizeBytes     *int `json:"size_bytes"`
 	}
 	result := event.Text
+	if event.Kind == "tool_started" || event.Kind == "tool_waiting" {
+		result = ""
+	}
 	if commandStatus != "" {
 		result = commandSummary
 	} else if json.Unmarshal(event.Output, &output) == nil {

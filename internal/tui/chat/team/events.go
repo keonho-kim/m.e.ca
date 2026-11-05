@@ -32,8 +32,7 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 		}
 	case "generation_started":
 		peer := s.peer(event.Agent)
-		output.FinishStream(peer.message.body)
-		peer.message = messageDisplay{}
+		peer.message.discard(output)
 		peer.measured = runrecord.Throughput{}
 		peer.current = modelapi.TokenUsage{}
 	case "stream":

@@ -14,6 +14,15 @@ func (f Formatter) Tool(event runrecord.Event) string {
 	return f.toolBlock(event).Text
 }
 
+// PendingTool keeps in-flight arguments foldable without inventing an output section.
+func (f Formatter) PendingTool(event runrecord.Event) viewport.Block {
+	block := f.toolBlock(event)
+	if block.Text != "" {
+		block.Summary, block.Details = f.toolSummary(event), block.Text
+	}
+	return block
+}
+
 func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 	if event.Call == nil {
 		return viewport.Block{}
@@ -21,11 +30,18 @@ func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 	var text strings.Builder
 	var changes []viewport.ChangeRange
 	label := f.Language.Text(event.Call.Name)
-	if event.Kind == "tool_started" {
-		return viewport.Block{Text: "\n  " + label + " · " + f.Language.Text("Running") + "…\n" + f.arguments(*event.Call)}
+	if event.Kind == "tool_started" || event.Kind == "tool_waiting" {
+		status := "Running"
+		if event.Kind == "tool_waiting" {
+			status = "실행 대기"
+		}
+		return viewport.Block{Text: "\n  " + label + " · " + f.Language.Text(status) + "…\n" + f.arguments(*event.Call)}
 	}
 	text.WriteString("\n  " + label + "\n\n")
 	text.WriteString(f.arguments(*event.Call))
+	if event.Call.Name != "execute_command" && event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Command != "" {
+		text.WriteString(indentTool(f.Redact(event.Operation.Process.Command)))
+	}
 	text.WriteString("\n    " + f.Language.Text("Output") + "\n")
 	rendered := f.output(event)
 	if len(event.Output) > 0 {

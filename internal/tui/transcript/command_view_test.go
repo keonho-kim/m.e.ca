@@ -1,6 +1,6 @@
 // Purpose: Preserve command text and fresh clocks while reusing sanitized immutable bodies.
 // Pattern: Presentation equivalence and credential-invalidation tests.
-// Usage: Single and team active-command displays use the same bounded CommandView.
+// Usage: Single-mode active-command displays use this bounded CommandView.
 // Related: internal/tui/transcript/command_view.go, internal/tui/transcript/commands.go.
 package transcript
 
