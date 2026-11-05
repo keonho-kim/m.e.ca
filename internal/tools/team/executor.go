@@ -50,7 +50,7 @@ func (e *Executor) Definitions() []toolapi.Definition {
 			definitions[i].Description += " Declare the target files or subdirectories with set_work before changing them. Respect the named teammate's ownership and inspect newer relevant changes before retrying a conflict."
 		}
 		if definitions[i].Name == "execute_command" {
-			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Tell teammates your contribution before the first local tool. Use set_work before changing files; resolved mutation targets must belong to your current contribution. Inspection commands do not require owning files. Address relevant teammates by name, use their actual work, and use add_team_member for unassigned independent parts. A call may wait for shared access; command controls remain available.")
+			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Tell teammates your contribution before the first local tool. Use set_work before changing files; resolved mutation targets must belong to your current contribution. Inspection commands do not require owning files. A call may wait for shared access; command controls remain available.")
 		}
 	}
 	return append(definitions, catalog.Definitions()...)

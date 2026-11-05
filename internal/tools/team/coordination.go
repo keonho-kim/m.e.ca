@@ -88,7 +88,7 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		status, next := "closed", "Your session is closing; its history remains available."
 		if !depart {
 			status = "report_required"
-			next = "You are the last member. Read the latest public conversation and report directly to the user: completed changes, actual checks, remaining uncertainty. Respond normally without another leave_team. Use add_team_member if another independent contribution is justified."
+			next = "You are the last member. Read the latest public conversation and report directly to the user: completed changes, actual checks, remaining uncertainty. Respond normally without another leave_team. Use add_team_member only when the invitation criteria hold."
 		}
 		result, err := resultfmt.Encode(map[string]string{"status": status, "next": next}, "Contribution delivered")
 		result.Depart = depart

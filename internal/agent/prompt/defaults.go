@@ -1,7 +1,7 @@
-// Purpose: Embed release Markdown templates and validate editable prompt files.
+// Purpose: Embed common Markdown guidance, compose team defaults and validate editable prompt files.
 // Pattern: Simple Module (prompt assets).
 // Usage: Startup publishes missing defaults, installation refreshes them and tasks load the selected ~/.meca/prompts profile.
-// Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/compaction.md, internal/config/prompts/prompts.go.
+// Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/team.md, internal/config/prompts/prompts.go.
 package prompt
 
 import (
@@ -23,7 +23,9 @@ var developmentDefault string
 var compactionDefault string
 
 //go:embed defaults/team.md
-var teamDefault string
+var teamSupplement string
+
+var teamDefault = systemDefault + "\n" + teamSupplement
 
 type Profile string
 

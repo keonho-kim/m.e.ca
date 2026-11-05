@@ -1,4 +1,4 @@
-// Purpose: Verify isolated single/team defaults and mode-specific edits.
+// Purpose: Verify complete shared-base profile defaults are published and remain independently editable.
 // Pattern: Filesystem contract tests.
 // Usage: go test ./internal/config/prompts -run TestProfiles.
 // Related: internal/config/prompts/prompts.go, internal/agent/prompt/defaults.go.
@@ -22,9 +22,10 @@ func TestProfilesBootstrapAndLoadSeparately(t *testing.T) {
 	state := filepath.Join(home, ".meca")
 	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
 		defaults := prompt.DefaultsFor(profile)
-		for name := range defaults.Files() {
-			if _, err := os.Stat(filepath.Join(state, "prompts", string(profile), name)); err != nil {
-				t.Fatal(err)
+		for name, expected := range defaults.Files() {
+			body, err := os.ReadFile(filepath.Join(state, "prompts", string(profile), name))
+			if err != nil || string(body) != *expected {
+				t.Fatalf("%s/%s did not publish the complete default: %v", profile, name, err)
 			}
 		}
 	}

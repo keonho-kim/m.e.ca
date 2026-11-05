@@ -20,7 +20,7 @@
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
 | commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
-| agent/prompt·inference | 작업 지침·역할별 추론 설정 |
+| agent/prompt·inference | 공통 작업 지침·팀 보강 합성·역할별 추론 설정 |
 | commands/startup·install·upgrade·settings | 시작 경로·사용자 설치와 삭제·검증한 최신 릴리스 업데이트·언어와 승인 모드 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
 | provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
@@ -288,7 +288,8 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 | 압축 자료 선택 | internal/agent/compact | BenchmarkSourceSelection |
 | 반복 본문·팀 압축·과거 개인 기록 복원 | internal/storage/sqlite | BenchmarkPayloadPages · BenchmarkTeamSharedMemory · BenchmarkTeamHistoricalReaders |
 | 공용 대화 수신 | internal/agent/team | BenchmarkPublicHistoryFanout |
-| 현재 팀 현황·확인한 변경 검색과 정리 | internal/agent/team · internal/agent/team/contribution | BenchmarkTeamWorkContext · BenchmarkReviewedChanges |
+| 현재 팀 현황·확인한 변경 검색과 정리 | internal/agent/team · internal/agent/team/contribution | BenchmarkTeamWorkContext · BenchmarkTeamCoveredContext · BenchmarkReviewedChanges |
+| 실행 근거 해시·명령 메타데이터·빈 판단 경계 | internal/agent/team · internal/tools/local/process · internal/tools/local · internal/agent/run | BenchmarkOperationEvidence · BenchmarkCommandMetadata · BenchmarkEmptyCommandCollection · BenchmarkEmptyInstructionCheck |
 | 공용 원본 참조·실행 관측의 트랜잭션 | internal/storage/sqlite | BenchmarkTeamFactCommit · BenchmarkTeamTextIdentity |
 | 완료 Markdown 초기 배치·스크롤·경계 빈 줄 | internal/tui/viewport | BenchmarkMarkdownInitialLayout · BenchmarkCompletedMarkdownInitial · BenchmarkCompletedMarkdownScroll · BenchmarkTrailingRows |
 | 경로 묶음·재귀 폴더 준비 | internal/tools/local | BenchmarkParallelPlanning · BenchmarkDirectoryPreparation |
@@ -333,7 +334,7 @@ go test ./internal/tui/viewport -run TestDisplayResources -v
 
 ## 요청 실행의 책임
 
-메인 에이전트 하나가 native 도구와 실제 대화 문맥을 사용해 요청을 수행한다. agent/run은 실행 순서·예산·승인·명령 수명을 조율하고, 시작한 명령의 종료·취소 결과를 수집한 뒤 모델의 정상 응답으로 종료한다. 파일 검사·OS 자격 증명·세션 SQLite는 각 어댑터가 소유한다.
+단일 모드는 메인 에이전트 하나가, 팀 모드는 각 참여자가 독립된 문맥으로 같은 agent/run을 사용한다. agent/run은 실행 순서·예산·승인·명령 수명을 조율하고, 시작한 명령의 종료·취소 결과를 수집한 뒤 응답 경계에 도달한다. 단일 모드는 정상 응답으로 종료하며 팀은 agent/team의 대화·퇴장·최종 보고 판단을 거친다. 파일 검사·OS 자격 증명·세션 SQLite는 각 어댑터가 소유한다.
 
 원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.
 

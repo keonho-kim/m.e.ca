@@ -1,7 +1,7 @@
-// Purpose: Keep supplied work prompts free of agent-orchestration explanations.
+// Purpose: Verify task-only guidance and common system instruction inheritance across modes.
 // Pattern: Prompt contract regression tests.
 // Usage: go test ./internal/agent/prompt -run TestTaskPrompts.
-// Related: internal/agent/prompt/defaults.go, internal/agent/prompt/prompt.go.
+// Related: internal/agent/prompt/defaults.go, internal/agent/prompt/prompt.go, internal/config/prompts/profiles_test.go.
 package prompt
 
 import (
@@ -38,6 +38,22 @@ func TestTeamSystemIsConciseEnglishGuidance(t *testing.T) {
 		if r > 127 {
 			t.Fatalf("team system prompt must be authored in English: %q", r)
 		}
+	}
+}
+
+func TestTeamSystemExtendsSingleInstructionsExactlyOnce(t *testing.T) {
+	single, team := DefaultsFor(Single), DefaultsFor(Team)
+	if !strings.HasPrefix(team.System, single.System+"\n") {
+		t.Fatal("team system replaced the common instructions instead of extending them")
+	}
+	if strings.Count(team.System, single.System) != 1 {
+		t.Fatal("team system repeated the common instructions")
+	}
+	if strings.TrimSpace(strings.TrimPrefix(team.System, single.System)) == "" {
+		t.Fatal("team system has no collaboration guidance")
+	}
+	if team.Development != single.Development || team.Compaction != single.Compaction {
+		t.Fatal("common development or compaction defaults diverged between modes")
 	}
 }
 
