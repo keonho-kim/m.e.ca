@@ -30,14 +30,14 @@ func TestMemoryCounterPlacementAcrossScreens(t *testing.T) {
 		a.page = page
 		a.render()
 		line := screenLine(a.screen, 0, 80)
-		if !strings.Contains(line, "MEM. USAGE 42.0 MiB · 입력 0 · 출력 0") {
+		if !strings.Contains(line, "MEM 42.0 MiB · 입력 0 · 출력 0") {
 			t.Fatalf("%s header=%q", page, line)
 		}
 	}
 	a.page = "chat"
 	a.work.state, a.work.compressing = workerAgent, true
 	a.render()
-	if line := screenLine(a.screen, 0, 80); !strings.Contains(line, a.language.Text("Compress Memory")) || !strings.Contains(line, "MEM. USAGE 42.0 MiB") {
+	if line := screenLine(a.screen, 0, 80); !strings.Contains(line, a.language.Text("Compress Memory")) || !strings.Contains(line, "MEM 42.0 MiB") {
 		t.Fatalf("compression or memory disappeared: %q", line)
 	}
 	a.screen.SetSize(32, 12)
@@ -91,7 +91,7 @@ func TestMemoryReadFailureReplacesStaleValue(t *testing.T) {
 		t.Fatal("unavailable sample did not replace the previous value once")
 	}
 	a.render()
-	if line := screenLine(a.screen, 0, 80); !strings.Contains(line, "MEM. USAGE —") || strings.Contains(line, "42.0 MiB") {
+	if line := screenLine(a.screen, 0, 80); !strings.Contains(line, "MEM —") || strings.Contains(line, "42.0 MiB") {
 		t.Fatal(line)
 	}
 }

@@ -36,11 +36,14 @@ func (f Formatter) teamEvent(event runrecord.Event) []viewport.Block {
 	header := f.TeamHeader(event.Agent, event.Final)
 	if event.Team != nil {
 		target := event.Team.ReplyAuthor
+		if target == event.Agent {
+			target = ""
+		}
 		if target == "user" {
 			target = f.Language.Text("사용자")
 		}
 		for _, name := range event.Team.Mentions {
-			if name == event.Team.ReplyAuthor {
+			if name == event.Agent || name == event.Team.ReplyAuthor {
 				continue
 			}
 			if target != "" {

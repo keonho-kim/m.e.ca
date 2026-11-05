@@ -27,10 +27,10 @@ func ResidentMemory(bytes uint64) MemorySize {
 // Label allocates one header string for an available value and reuses the unavailable literal.
 func (m MemorySize) Label() string {
 	if m.scale == 0 {
-		return "MEM. USAGE —"
+		return "MEM —"
 	}
 	var buffer [64]byte
-	line := append(buffer[:0], "MEM. USAGE "...)
+	line := append(buffer[:0], "MEM "...)
 	scale := uint64(m.scale)
 	line = strconv.AppendUint(line, m.amount/scale, 10)
 	line = append(line, '.')

@@ -25,6 +25,10 @@ func TestAttentionNeverTreatsOrdinaryProgressAsARequest(t *testing.T) {
 		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Hana", Mentions: []string{"Arjun"}}}, "Hana", true},
 		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Hana", Mentions: []string{"Arjun"}}}, "Arjun", true},
 		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Hana"}}, "Mina", false},
+		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Ren"}}, "Hana", true},
+		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Ren"}}, "Ren", false},
+		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Ren", Mentions: []string{"Hana"}}}, "Hana", true},
+		{Message{From: "Ren", Discussion: true, Note: &runrecord.TeamNote{ReplyTo: 4, ReplyAuthor: "Ren", Mentions: []string{"Hana"}}}, "Mina", false},
 	}
 	for _, tc := range cases {
 		if got := tc.message.Attention(tc.member); got != tc.want {

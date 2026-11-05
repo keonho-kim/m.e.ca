@@ -11,6 +11,7 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func TestPublicDiscussionUsesNaturalAttribution(t *testing.T) {
@@ -69,5 +70,38 @@ func TestPublicDiscussionShowsReplyAndOtherMentionedPeers(t *testing.T) {
 	e.Team.Mentions = []string{"Hana"}
 	if header := f.Event(e)[0].Text; header != "**Ren** · 사용자, Hana에게" {
 		t.Fatal(header)
+	}
+}
+
+func TestPublicDiscussionOmitsItsAuthorFromRecipients(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		note *runrecord.TeamNote
+		ko   string
+		en   string
+	}{
+		{"own reference", &runrecord.TeamNote{ReplyTo: 3, ReplyAuthor: "Ren"}, "**Ren**", "**Ren**"},
+		{"own mention", &runrecord.TeamNote{Mentions: []string{"Ren"}}, "**Ren**", "**Ren**"},
+		{"followup for a peer", &runrecord.TeamNote{ReplyTo: 3, ReplyAuthor: "Ren", Mentions: []string{"Ren", "Hana"}}, "**Ren** · Hana에게", "**Ren** · to Hana"},
+		{"peer reply with own mention", &runrecord.TeamNote{ReplyTo: 3, ReplyAuthor: "Hana", Mentions: []string{"Ren", "Hana", "Arjun"}}, "**Ren** · Hana, Arjun에게", "**Ren** · to Hana, Arjun"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, language := range []locale.Language{locale.Korean, locale.English} {
+				want := tc.ko
+				if language == locale.English {
+					want = tc.en
+				}
+				f := Formatter{Language: language, Redact: func(s string) string { return s }}
+				event := runrecord.Event{Kind: "team_discussion", Agent: "Ren", Text: "A public finding.", Team: tc.note}
+				for _, blocks := range [][]viewport.Block{f.Event(event), f.History([]history.Record{{Kind: "event", Event: event}})} {
+					if len(blocks) != 2 {
+						t.Fatalf("expected header and body, got %d blocks", len(blocks))
+					}
+					if blocks[0].Text != want || blocks[1].Text != event.Text {
+						t.Fatalf("unexpected live or restored recipients: header=%q body=%q", blocks[0].Text, blocks[1].Text)
+					}
+				}
+			}
+		})
 	}
 }

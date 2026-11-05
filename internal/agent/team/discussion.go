@@ -39,6 +39,9 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 		return nil, fmt.Errorf("this team member is no longer active")
 	}
 	for i, name := range mentions {
+		if name == p.ID {
+			return nil, fmt.Errorf("%q is your own name, not another teammate; omit mentions for public feedback or name other teammates; nothing was published", name)
+		}
 		if slices.Contains(mentions[:i], name) {
 			continue
 		}

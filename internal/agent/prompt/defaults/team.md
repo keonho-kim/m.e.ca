@@ -30,7 +30,7 @@ Keep small follow-up edits with the current owner. Reuse completed checks; do no
 
 ## Communicate useful facts
 - Your ordinary responses and progress text are public. Speak as yourself and name the recipient when the message concerns their work.
-- Use discuss for a useful question, answer, objection, alternative or finding. Reference the relevant public note with reply_to and name peers in mentions when their attention matters. Everyone can read and join; this does not assign work or require agreement.
+- Use discuss for a useful question, answer, objection, alternative or finding. Reference the relevant public note with reply_to and name other teammates, never yourself, in mentions when their attention matters. Use mentions only when particular other teammates need attention. Everyone can read and join; this does not assign work or require agreement.
 - Keep routine progress in ordinary responses. Avoid repeating a discussion in both response text and discuss. Keep exchanges short and actionable: a split, interface decision, answer, finding, blocker, result or handoff.
 - Answer a teammate's public question with discuss and reply_to pointing to that question, giving a concrete decision or useful fact. Then act. Share meaningful work or agreement changes; skip empty acknowledgments, routine successes and unchanged polling. An acknowledgment alone needs no reply.
 - Consider feedback on its evidence. Explain a supported disagreement, inspect uncertain facts, or update your own contract when adopting a suggestion. Receiving a message does not mean accepting it. Repeated disagreement should lead to a concrete check rather than the same claim again.

@@ -20,7 +20,9 @@ func (m Message) Attention(member string) bool {
 	if m.Note.ReplyAuthor == member || slices.Contains(m.Note.Mentions, member) {
 		return true
 	}
-	return m.Note.ReplyTo == 0 && len(m.Note.Mentions) == 0
+	// Referring to the author's earlier note is a public followup. Only
+	// explicit peer mentions restrict its audience.
+	return (m.Note.ReplyTo == 0 || m.Note.ReplyAuthor == m.From) && len(m.Note.Mentions) == 0
 }
 
 // OwnContext excludes native content already retained by its author's private conversation.

@@ -62,6 +62,7 @@ func TestDiscussionValidatesRoomReferencesWithoutSideEffects(t *testing.T) {
 		mentions []string
 	}{
 		{reply: -1}, {reply: 1000}, {mentions: []string{"unknown"}},
+		{mentions: []string{"Hana"}}, {mentions: []string{"Ren", "Hana"}},
 	} {
 		if _, err := p.Discuss(r.ctx, "Consider an alternative", args.reply, args.mentions); err == nil {
 			t.Fatal("invalid public reference was accepted", args)
@@ -77,6 +78,36 @@ func TestDiscussionValidatesRoomReferencesWithoutSideEffects(t *testing.T) {
 	}
 	if r.active["Arjun"] != nil {
 		t.Fatal("a mention restarted a closed session")
+	}
+}
+
+func TestDiscussionOwnFollowupStaysPublicWithoutReturningToItsAuthor(t *testing.T) {
+	r := testRoom(t)
+	a, b := &Peer{ID: "Hana", room: r}, &Peer{ID: "Ren", room: r}
+	original, err := a.Discuss(r.ctx, "The API uses a stable response type.", 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, peer := range []*Peer{a, b} {
+		if _, err := peer.Inbox(r.ctx); err != nil {
+			t.Fatal(err)
+		}
+		peer.BeginDecision()
+	}
+	sequence, err := a.Discuss(r.ctx, "The compatibility check confirms that response type.", original, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if own, err := a.Inbox(r.ctx); err != nil || len(own.Messages) != 0 || own.Reconsider {
+		t.Fatal("public followup returned to its own author", own, err)
+	}
+	batch, err := b.Inbox(r.ctx)
+	if err != nil || len(batch.Messages) != 1 || !batch.Reconsider || !strings.Contains(batch.Messages[0].Content, "compatibility check") {
+		t.Fatal("an undirected public followup failed to reach the other peer", batch, err)
+	}
+	stored, err := a.ReadMessages(r.ctx, original)
+	if err != nil || len(stored) != 1 || stored[0].Sequence != sequence || stored[0].Note.ReplyTo != original || stored[0].Note.ReplyAuthor != a.ID {
+		t.Fatal("public followup lost its original reference", stored, err)
 	}
 }
 
