@@ -12,6 +12,8 @@ import (
 )
 
 type Output struct {
+	CommandID                                string    `json:"command_id,omitempty"`
+	Revisions                                [2]uint64 `json:"-"`
 	StdoutPath, StderrPath                   string
 	StdoutCapturedBytes, StderrCapturedBytes int
 	Started                                  bool
@@ -102,6 +104,9 @@ type Capture struct {
 func (output *cappedOutput) snapshot(after uint64) Capture {
 	output.mu.Lock()
 	defer output.mu.Unlock()
+	return output.snapshotLocked(after)
+}
+func (output *cappedOutput) snapshotLocked(after uint64) Capture {
 	if output.revision == after {
 		return Capture{Revision: after}
 	}

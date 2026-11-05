@@ -6,7 +6,6 @@ package process
 
 import (
 	"bytes"
-	"errors"
 	"time"
 )
 
@@ -29,15 +28,6 @@ func (output *cappedOutput) release() error {
 		return err
 	}
 	return nil
-}
-
-func (r *Registry) ReadOutput(id string, after [2]uint64) ([2]Capture, error) {
-	j, err := r.lookup(id)
-	if err != nil {
-		return [2]Capture{}, err
-	}
-	captures := [2]Capture{j.stdout.snapshot(after[0]), j.stderr.snapshot(after[1])}
-	return captures, errors.Join(j.stdout.captureError(), j.stderr.captureError())
 }
 
 func (output *cappedOutput) isTruncated() bool {

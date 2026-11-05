@@ -46,24 +46,25 @@ func TestWorkspaceDetectsHardlinkAndParentConflicts(t *testing.T) {
 		first.Release()
 	}
 }
-func TestWorkspaceShellExcludesWritesUntilReleased(t *testing.T) {
+func TestWorkspaceCommandExcludesOnlyOverlappingWrites(t *testing.T) {
 	w := New()
-	shell, err := w.reserve(context.Background(), nil, true, nil, nil)
+	path := filepath.Join(t.TempDir(), "file")
+	command, err := w.ReserveCommand(context.Background(), []string{path}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	waiting := make(chan struct{})
 	done := make(chan *Lease, 1)
 	go func() {
-		held, err := w.reserve(context.Background(), []string{filepath.Join(t.TempDir(), "file")}, false, nil, func() error { close(waiting); return nil })
+		held, err := w.ReserveFiles(context.Background(), []string{path}, nil, func() error { close(waiting); return nil })
 		if err != nil {
 			t.Error(err)
 		}
 		done <- held
 	}()
 	<-waiting
-	shell.Release()
-	shell.Release()
+	command.Release()
+	command.Release()
 	held := <-done
 	held.Release()
 }

@@ -46,6 +46,10 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 		return ""
 	}
 	switch status {
+	case "finalizing":
+		return "Finalizing command output"
+	case "waiting":
+		return "Command waiting"
 	case "running":
 		return "Command running"
 	case "interrupted":

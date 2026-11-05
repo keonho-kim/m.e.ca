@@ -16,6 +16,7 @@ type State struct {
 	LastOutputMillis *int64 "json:\"last_output_millis\""
 	ExitCode         int    "json:\"-\""
 	Error            string "json:\"-\""
+	Failure          error  `json:"-"`
 }
 
 func (j *job) snapshot() State {
@@ -25,7 +26,9 @@ func (j *job) snapshot() State {
 	select {
 	case <-j.done:
 	default:
-		state.Status = "running"
+		if state.Status != "waiting" && state.Status != "finalizing" {
+			state.Status = "running"
+		}
 		state.ExitCode = -1
 	}
 	now := time.Now()

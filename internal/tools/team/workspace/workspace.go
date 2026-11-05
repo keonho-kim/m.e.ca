@@ -1,4 +1,4 @@
-// Purpose: Own shared file mutation leases and exclusive shell access through actual completion.
+// Purpose: Reserve overlapping mutation targets while allowing independent commands and file work.
 // Pattern: Context-cancellable resource admission.
 // Usage: Every cooperative local executor shares one Access for the request.
 // Related: internal/tools/team/executor.go, internal/tools/team/local.go.
@@ -8,7 +8,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -21,18 +20,18 @@ type target struct {
 }
 type Access struct {
 	mu      sync.Mutex
-	changed chan struct{}
-	shell   bool
+	waiters []*waiter
+	files   int
 	writes  map[*Lease][]target
 }
 type Lease struct {
 	once      sync.Once
 	workspace *Access
-	shell     bool
+	command   bool
 }
 
 func New() *Access {
-	return &Access{changed: make(chan struct{}), writes: map[*Lease][]target{}}
+	return &Access{writes: make(map[*Lease][]target)}
 }
 
 func canonical(path string) target {
@@ -44,65 +43,22 @@ func canonical(path string) target {
 	return target{path, info}
 }
 func overlap(a, b target) bool {
-	return a.path == b.path || strings.HasPrefix(a.path, b.path+string(filepath.Separator)) || strings.HasPrefix(b.path, a.path+string(filepath.Separator)) || a.info != nil && b.info != nil && os.SameFile(a.info, b.info)
+	return containsPath(a.path, b.path) || containsPath(b.path, a.path) || a.info != nil && b.info != nil && os.SameFile(a.info, b.info)
 }
-func (w *Access) reserve(ctx context.Context, paths []string, shell bool, obsolete <-chan struct{}, waiting func() error) (*Lease, error) {
-	announced := false
-	keys := make([]target, len(paths))
-	for {
-		if err := admissionError(ctx, obsolete); err != nil {
-			return nil, err
-		}
-		// Recheck aliases after every wait, but reuse the attempt's owned slice.
-		for i, path := range paths {
-			keys[i] = canonical(path)
-		}
-		w.mu.Lock()
-		ready := !w.shell
-		if shell {
-			ready = ready && len(w.writes) == 0
-		} else {
-			ready = ready && len(w.writes) < 16
-			for _, held := range w.writes {
-				for _, a := range held {
-					for _, b := range keys {
-						if overlap(a, b) {
-							ready = false
-						}
-					}
-				}
+
+func containsPath(parent, child string) bool {
+	return parent == child || len(child) > len(parent) && child[:len(parent)] == parent && (parent == string(filepath.Separator) || child[len(parent)] == filepath.Separator)
+}
+
+func conflicts(left, right []target) bool {
+	for _, a := range left {
+		for _, b := range right {
+			if overlap(a, b) {
+				return true
 			}
-		}
-		if ready {
-			if err := admissionError(ctx, obsolete); err != nil {
-				w.mu.Unlock()
-				return nil, err
-			}
-			value := &Lease{workspace: w, shell: shell}
-			if shell {
-				w.shell = true
-			} else {
-				w.writes[value] = keys
-			}
-			w.mu.Unlock()
-			return value, nil
-		}
-		changed := w.changed
-		w.mu.Unlock()
-		if !announced && waiting != nil {
-			if err := waiting(); err != nil {
-				return nil, err
-			}
-			announced = true
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-obsolete:
-			return nil, toolapi.NewInstructionChanged()
-		case <-changed:
 		}
 	}
+	return false
 }
 
 func admissionError(ctx context.Context, obsolete <-chan struct{}) error {
@@ -124,13 +80,12 @@ func (l *Lease) Release() {
 		w := l.workspace
 		w.mu.Lock()
 		defer w.mu.Unlock()
-		if l.shell {
-			w.shell = false
-		} else {
-			delete(w.writes, l)
+		keys := w.writes[l]
+		delete(w.writes, l)
+		if !l.command {
+			w.files--
 		}
-		close(w.changed)
-		w.changed = make(chan struct{})
+		w.notify(keys, !l.command)
 	})
 }
 
@@ -139,7 +94,10 @@ func (w *Access) ReserveFiles(ctx context.Context, paths []string, obsolete <-ch
 	return w.reserve(ctx, paths, false, obsolete, waiting)
 }
 
-// ReserveShell excludes file mutations and other shells through actual command completion.
-func (w *Access) ReserveShell(ctx context.Context, obsolete <-chan struct{}, waiting func() error) (*Lease, error) {
-	return w.reserve(ctx, nil, true, obsolete, waiting)
+// ReserveCommand protects only known mutation paths; the owning process registry bounds commands.
+func (w *Access) ReserveCommand(ctx context.Context, paths []string, obsolete <-chan struct{}, waiting func() error) (*Lease, error) {
+	if len(paths) == 0 {
+		return nil, admissionError(ctx, obsolete)
+	}
+	return w.reserve(ctx, paths, true, obsolete, waiting)
 }

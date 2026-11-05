@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	record "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"slices"
 	"strconv"
 )
@@ -81,7 +82,7 @@ func operationProgress(event record.Event) ([32]byte, bool) {
 		copy(joined[32:], errorKey[:])
 		return sha256.Sum256(joined[:]), true
 	}
-	if p.Status == "running" {
+	if toolapi.CommandActive(p.Status) {
 		return key, found
 	}
 	var stdout, stderr, stdoutBytes, stderrBytes string

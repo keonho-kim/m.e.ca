@@ -83,3 +83,26 @@ func TestFinalCaptureReusesPathAndStopsStaleLiveWrites(t *testing.T) {
 		}
 	}
 }
+
+func TestFinalCaptureDoesNotRewriteUnchangedMaskedStream(t *testing.T) {
+	e, _ := testExecutor(t)
+	e.SetRedactionVersion(func() int { return 0 })
+	id := "cmd_unchanged"
+	text := strings.Repeat("output\n", 8192)
+	live, err := e.projectLiveCapture(id, "stdout", liveCapture{}, process.Capture{Revision: 1, Text: text})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.liveOutputs.command(id).streams[0] = live
+	stamp := time.Unix(100, 0)
+	if err := os.Chtimes(live.path, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.archiveCommand(id, "printf output", process.Output{Stdout: text, Status: "exited", Started: true, Revisions: [2]uint64{1, 0}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(live.path)
+	if err != nil || !info.ModTime().Equal(stamp) {
+		t.Fatal("final archive rewrote an unchanged stream", err)
+	}
+}

@@ -9,8 +9,10 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-func Text(screen tcell.Screen, x, y, width int, value string, style tcell.Style) {
+// Text returns the number of cells drawn so callers can clear only unused padding.
+func Text(screen tcell.Screen, x, y, width int, value string, style tcell.Style) int {
 	g := uniseg.NewGraphemes(value)
+	start := x
 	end := x + width
 	for g.Next() {
 		cells := g.Width()
@@ -20,4 +22,5 @@ func Text(screen tcell.Screen, x, y, width int, value string, style tcell.Style)
 		screen.Put(x, y, g.Str(), style)
 		x += cells
 	}
+	return x - start
 }

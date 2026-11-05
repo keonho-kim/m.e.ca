@@ -85,14 +85,22 @@ func (r *Registry) Cancel(ctx context.Context, id string) (State, error) {
 	return r.Wait(ctx, id, 24*time.Hour)
 }
 
-func (r *Registry) List() []State {
+func (r *Registry) List() []State { return r.AppendStates(nil) }
+
+// AppendStates snapshots references under the lock, then formats outside it.
+func (r *Registry) AppendStates(states []State) []State {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	states := make([]State, 0, len(r.jobs))
+	var storage [MaxActive]*job
+	jobs := storage[:0]
 	for _, j := range r.jobs {
+		jobs = append(jobs, j)
+	}
+	r.mu.Unlock()
+	from := len(states)
+	for _, j := range jobs {
 		states = append(states, j.snapshot())
 	}
-	sort.Slice(states, func(i, j int) bool { return states[i].ID < states[j].ID })
+	sort.Slice(states[from:], func(i, j int) bool { return states[from+i].ID < states[from+j].ID })
 	return states
 }
 

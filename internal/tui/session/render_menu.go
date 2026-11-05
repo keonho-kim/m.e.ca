@@ -19,5 +19,6 @@ func (a *app) renderMenu(w, h int) {
 		a.previewOffset = min(a.previewOffset, max(0, len(lines)-max(0, h-7)))
 		display.Preview = lines[a.previewOffset:]
 	}
+	a.headerTitle = display.Title
 	view.Menu(a.screen, display, w, h)
 }

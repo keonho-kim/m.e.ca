@@ -12,6 +12,9 @@ import (
 	"github.com/rivo/uniseg"
 )
 
+// SettingsMinHeight reserves the header and the minimum editable settings rows.
+const SettingsMinHeight = 4
+
 type SettingRow struct {
 	Label, Value, Hint string
 	Values             []string
@@ -39,11 +42,11 @@ func SettingsValueColumn(width int) int {
 
 // Settings returns the inline editor row for clipboard source mapping.
 func Settings(screen tcell.Screen, d SettingsDisplay, w, h int) int {
-	if h < 4 {
+	if h < SettingsMinHeight {
 		Text(screen, 0, 0, w, d.Language.Text("Resize terminal"), tcell.StyleDefault)
 		return -1
 	}
-	topLine(screen, d.Title, d.Usage, w, d.Activity)
+	Header(screen, d.Title, d.Usage, w, d.Activity)
 	Text(screen, 0, 1, w, d.Subject, tcell.StyleDefault)
 	x := uniseg.StringWidth(d.Subject) + 2
 	if x < w {

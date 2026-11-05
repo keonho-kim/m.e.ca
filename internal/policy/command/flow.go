@@ -78,7 +78,7 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 			if value.known {
 				body.set(loop.Name.Value, value.text)
 			} else {
-				body.unknown[loop.Name.Value] = true
+				body.invalidate(loop.Name.Value)
 			}
 			a.statements(c.Do, body)
 			before.join(body)
@@ -105,7 +105,7 @@ func (a *analyzer) statement(st *syntax.Stmt, s *state) *state {
 			a.ask("Anonymous or multi-name shell function requires inspection")
 			a.statement(c.Body, s.clone())
 		} else {
-			s.functions[c.Name.Value] = c.Body
+			s.function(c.Name.Value, c.Body)
 		}
 		failure = s.clone()
 	case *syntax.TimeClause:

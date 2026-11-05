@@ -20,7 +20,7 @@ func commandDuration(millis int64) string {
 func (f Formatter) CommandActivity(runs []toolapi.CommandRun) string {
 	var text strings.Builder
 	for _, run := range runs {
-		if run.Status != "running" {
+		if !toolapi.CommandActive(run.Status) {
 			continue
 		}
 		text.WriteString(f.commandHeading(run))
@@ -34,7 +34,21 @@ func (f Formatter) commandHeading(run toolapi.CommandRun) string {
 	if run.LastOutputMillis != nil {
 		last = f.Language.Format("Last output %s ago", commandDuration(*run.LastOutputMillis))
 	}
-	return "\n  " + f.Language.Text("Command running") + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + " · " + last + "\n"
+	label := "Command running"
+	if run.Status == "finalizing" {
+		label = "Finalizing command output"
+	}
+	if run.Status == "waiting" {
+		label = "Command waiting"
+	}
+	if !toolapi.CommandActive(run.Status) {
+		label = "Command failed"
+		if run.Status == "exited" && run.ExitCode != nil && *run.ExitCode == 0 {
+			label = "Command succeeded"
+		}
+		return "\n  " + f.Language.Text(label) + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + "\n"
+	}
+	return "\n  " + f.Language.Text(label) + " · " + f.Language.Format("Elapsed %s", commandDuration(run.ElapsedMillis)) + " · " + last + "\n"
 }
 
 func (f Formatter) commandList(body []byte) toolOutput {
@@ -51,6 +65,10 @@ func (f Formatter) commandList(body []byte) toolOutput {
 	for _, run := range result.Runs {
 		label := "Command running"
 		switch run.Status {
+		case "finalizing":
+			label = "Finalizing command output"
+		case "waiting":
+			label = "Command waiting"
 		case "exited":
 			label = "Command failed"
 			if run.ExitCode != nil && *run.ExitCode == 0 {

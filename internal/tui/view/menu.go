@@ -20,7 +20,7 @@ type MenuDisplay struct {
 }
 
 func Menu(screen tcell.Screen, display MenuDisplay, w, h int) {
-	topLine(screen, display.Title, display.Usage, w, display.Activity)
+	Header(screen, display.Title, display.Usage, w, display.Activity)
 	y := 2
 	for _, line := range display.Preview {
 		if y >= h-5 {

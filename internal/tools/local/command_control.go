@@ -54,15 +54,9 @@ func (op *commandControlOperation) commandControl(ctx context.Context) (toolapi.
 		}
 		return toolapi.Result{}, err
 	}
-	if state.Status == "running" {
-		return e.runningCommand(state)
-	}
-	if state.Error != "" {
-		return toolapi.Result{}, fmt.Errorf("command result archive failed for %s: %s", state.ID, state.Error)
-	}
-	result, err := e.readCommandResult(state.ID)
-	if result.Process != nil {
-		result.Process.Command = e.redact(state.Command)
+	result, err := e.commandResult(state)
+	if op.spec.Name == "cancel_command" && state.Error == "" {
+		err = nil
 	}
 	if op.spec.Name == "cancel_command" && err == nil {
 		result.Failed = false

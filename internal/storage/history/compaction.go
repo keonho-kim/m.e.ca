@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
@@ -42,7 +43,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 					if op.Process.CommandID != "" {
 						text += "; command_id=" + op.Process.CommandID
 					}
-					if op.Process.Status != "running" {
+					if !tool.CommandActive(op.Process.Status) {
 						text += fmt.Sprintf(" exit=%d", op.Process.ExitCode)
 					}
 				}

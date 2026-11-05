@@ -23,6 +23,7 @@ func (a *app) renderFiles(w, h int) {
 	if column := a.files.browser.Current(); column != nil {
 		display.Path = a.opts.Vault.Redact(column.Path)
 	}
+	a.headerTitle = display.Path
 	if p := a.files.filePreview; p != nil {
 		x := 0
 		if !p.Full {

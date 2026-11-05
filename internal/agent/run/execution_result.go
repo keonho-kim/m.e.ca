@@ -18,7 +18,7 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 	r, call, proposal := s.runner, ready.call, ready.proposal
 	event := runrecord.Event{CallID: call.ID, Call: &call}
 	commands, ownsCommands := r.Tools.(toolapi.CommandExecutor)
-	completedCommand := ownsCommands && outcome.Process != nil && outcome.Process.CommandID != "" && outcome.Process.Status != "running"
+	completedCommand := ownsCommands && outcome.Process != nil && outcome.Process.CommandID != "" && !toolapi.CommandActive(outcome.Process.Status)
 	if completedCommand && len(outcome.Capture) == 0 {
 		capture, err := commands.CommandCapture(outcome.Process.CommandID)
 		if err != nil {

@@ -5,6 +5,7 @@
 package approval
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -20,11 +21,31 @@ func TestRefusalTracksCandidateAcrossPeersAndStaysRequestLocal(t *testing.T) {
 	}
 	workers.Wait()
 	proposal.Name = "Ren · write_file"
-	if !ledger.Refused(proposal) || other.Refused(proposal) {
+	if !ledger.Refused(proposal, nil) || other.Refused(proposal, nil) {
 		t.Fatal("refusal was bypassed by renaming or escaped its request")
 	}
 	proposal.Candidate = &toolapi.Candidate{Binding: "different-operation"}
-	if ledger.Refused(proposal) {
+	if ledger.Refused(proposal, nil) {
 		t.Fatal("refusal blocked a different candidate")
+	}
+}
+
+func TestEmptyRefusalLedgerDoesNotCopyLargeCommand(t *testing.T) {
+	var ledger Ledger
+	proposal := toolapi.Approval{Command: &toolapi.CommandApproval{Directory: "/project"}, Target: strings.Repeat("command ", 1<<17)}
+	if allocs := testing.AllocsPerRun(100, func() {
+		if ledger.Refused(proposal, nil) {
+			t.Fatal("empty ledger refused command")
+		}
+	}); allocs != 0 {
+		t.Fatal("empty refusal check allocated", allocs)
+	}
+	ledger.Deny(proposal)
+	var key string
+	if !ledger.Refused(proposal, &key) {
+		t.Fatal("command denial did not survive bounded hashing")
+	}
+	if allocs := testing.AllocsPerRun(100, func() { ledger.Refused(proposal, &key) }); allocs != 0 {
+		t.Fatal("frozen command identity was rehashed", allocs)
 	}
 }

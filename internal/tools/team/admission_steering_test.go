@@ -1,6 +1,6 @@
 // Purpose: Return a waiting candidate to its model when real public user steering arrives.
 // Pattern: Temporary SQLite and controlled-executor integration test.
-// Usage: Team admission tests keep another shell lease held while publishing a new user request.
+// Usage: Team admission tests keep a conflicting command target held while publishing a new request.
 // Related: internal/tools/team/admission.go, internal/agent/team/decision.go.
 package team
 
@@ -26,7 +26,7 @@ type idleAdmission struct{ runningAdmission }
 
 func (*idleAdmission) ActiveCommand() string { return "" }
 
-func TestSteeringInterruptsWorkspacePreparationBeforeAnotherShellEnds(t *testing.T) {
+func TestSteeringInterruptsWorkspacePreparationBeforeConflictingCommandEnds(t *testing.T) {
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +43,7 @@ func TestSteeringInterruptsWorkspacePreparationBeforeAnotherShellEnds(t *testing
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	w := workspace.New()
-	held, err := w.ReserveShell(ctx, nil, nil)
+	held, err := w.ReserveCommand(ctx, []string{filepath.Join(root, "api.py")}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

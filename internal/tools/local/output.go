@@ -1,29 +1,14 @@
-// Purpose: Archive sanitized command captures and return small, re-readable output excerpts.
-// Pattern: Session-owned output projection.
-// Usage: Command execution stores large captures until Executor.Close releases them.
+// Purpose: Select UTF-8-safe head and tail excerpts from sanitized command output.
+// Pattern: Pure bounded display projection.
+// Usage: Live and final command projections share the same excerpt selection.
 // Related: internal/tools/local/command.go, internal/tools/local/executor.go.
 package local
 
 import (
-	"os"
 	"unicode/utf8"
 )
 
 const outputExcerptBytes = 32 * 1024
-
-func (e *Executor) commandOutput(id, text, stream string) (string, string, error) {
-	if len(text) <= outputExcerptBytes {
-		return text, "", nil
-	}
-	path, err := e.commandPath(id, "."+stream+".log")
-	if err != nil {
-		return "", "", err
-	}
-	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
-		return "", "", err
-	}
-	return commandExcerpt(text), path, nil
-}
 
 func commandExcerpt(text string) string {
 	if len(text) <= outputExcerptBytes {

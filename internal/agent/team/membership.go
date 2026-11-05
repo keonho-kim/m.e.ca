@@ -72,7 +72,7 @@ func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[st
 		return nil, err
 	}
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[st
 	}
 	return map[string]any{"status": status, "member_name": member.ID, "active": count + 1, "available": MaxActive - count - 1}, nil
 }
-func (p *Peer) Leave(ctx context.Context, message string) (bool, error) {
+func (p *Peer) Leave(ctx context.Context, message string) (depart bool, resultErr error) {
 	r := p.room
 	if err := r.admitUser(); err != nil {
 		return false, err
@@ -105,7 +105,7 @@ func (p *Peer) Leave(ctx context.Context, message string) (bool, error) {
 	r.memberMu.Lock()
 	defer r.memberMu.Unlock()
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
@@ -143,7 +143,7 @@ func (p *Peer) Leave(ctx context.Context, message string) (bool, error) {
 	defer r.mu.Unlock()
 	if r.remainingLocked() == 1 {
 		r.work.Release(p.ID)
-		r.workView = nil
+		r.invalidateWorkLocked()
 		return false, nil
 	}
 	live.leaving = true

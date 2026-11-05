@@ -28,30 +28,15 @@ func (e *Executor) archiveCommand(id, command string, output process.Output, run
 	capture := e.liveOutputs.command(id)
 	capture.mu.Lock()
 	defer capture.mu.Unlock()
-	result, err := e.encodeCommand(id, output, runErr)
-	if err != nil && result.Content == nil {
+	result, err := e.encodeCommand(id, output, runErr, capture)
+	if err != nil {
 		return err
 	}
 	result.Process.CommandID = id
 	result.Process.Command = e.redact(command)
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(result.Content, &fields); err != nil {
-		return err
-	}
-	fields["command_id"], _ = json.Marshal(id)
-	result.Content, err = json.Marshal(fields)
-	if err != nil {
-		return err
-	}
 	path, pathErr := e.commandPath(id, ".json")
 	if pathErr != nil {
 		return pathErr
-	}
-	if len(result.Capture) > 0 {
-		if err := os.WriteFile(path+".capture", result.Capture, 0600); err != nil {
-			return err
-		}
-		result.Capture = nil
 	}
 	body, marshalErr := json.Marshal(result)
 	if marshalErr != nil {
@@ -60,16 +45,6 @@ func (e *Executor) archiveCommand(id, command string, output process.Output, run
 	// Only the owning waiter writes; done is closed after this file is complete.
 	if err := os.WriteFile(path, body, 0600); err != nil {
 		return err
-	}
-	for i, stream := range []string{"Stdout", "Stderr"} {
-		var excerpt, logPath string
-		if err := json.Unmarshal(fields[stream], &excerpt); err != nil {
-			return err
-		}
-		if err := json.Unmarshal(fields[stream+"Path"], &logPath); err != nil {
-			return err
-		}
-		capture.streams[i].excerpt, capture.streams[i].path = excerpt, logPath
 	}
 	capture.finalized = true
 	return nil
@@ -94,26 +69,8 @@ func (e *Executor) readCommandResult(id string) (toolapi.Result, error) {
 	return result, err
 }
 
-// CommandCapture loads one original only when the runtime can commit it.
-// Completed siblings waiting for an earlier call retain only small excerpts.
-func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
-	path, err := e.commandPath(id, ".json.capture")
-	if err != nil {
-		return nil, err
-	}
-	body, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
-	return body, err
-}
-
 func (e *Executor) AcknowledgeCommand(id string) error {
-	path, err := e.commandPath(id, ".json.capture")
-	if err != nil {
-		return err
-	}
-	if err = os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if _, err := e.commandPath(id, ".json"); err != nil {
 		return err
 	}
 	e.commands.Acknowledge(id)

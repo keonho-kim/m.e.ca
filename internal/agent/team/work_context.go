@@ -5,7 +5,10 @@
 package team
 
 import (
+	"cmp"
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 )
@@ -17,17 +20,26 @@ type workContextKey struct {
 	status           int64
 	discussion       int64
 }
+type workBase struct {
+	key    workContextKey
+	scopes []contribution.Scope
+	text   string
+}
 type workProjection struct {
+	base        *workBase
 	key         workContextKey
 	text        string
 	scopes      []contribution.Scope
-	statuses    [MaxActive]commandStatus
+	statuses    []commandStatus
 	discussions [MaxActive]discussionPreview
 }
 type decisionSnapshot struct {
 	view    *workProjection
 	through int64
 }
+
+// Caller holds room state; inactive work must not remain in either cache.
+func (r *Room) invalidateWorkLocked() { r.workView, r.workBase = nil, nil }
 
 // workKeyLocked captures membership and contributions at the same boundary.
 func (r *Room) workKeyLocked() workContextKey {
@@ -62,21 +74,47 @@ func (r *Room) workSnapshot() decisionSnapshot {
 		return decisionSnapshot{cached, through}
 	}
 	through := r.latestPublic
-	snapshot := r.work.Snapshot()
-	var statuses [MaxActive]commandStatus
+	baseKey := key
+	baseKey.status, baseKey.discussion = 0, 0
+	base := r.workBase
+	if base == nil || base.key != baseKey {
+		base = &workBase{key: baseKey, scopes: r.work.Snapshot()}
+	}
+	var statuses []commandStatus
 	var discussions [MaxActive]discussionPreview
 	for i, name := range key.names[:key.count] {
-		statuses[i] = r.active[name].status
-		discussions[i] = r.active[name].discussion
+		live := r.active[name]
+		if len(live.statuses) > 0 {
+			for _, status := range live.statuses {
+				statuses = append(statuses, status)
+			}
+		} else if live.status.sequence != 0 {
+			statuses = append(statuses, live.status)
+		}
+		discussions[i] = live.discussion
 	}
+	slices.SortFunc(statuses, func(a, b commandStatus) int { return cmp.Compare(a.sequence, b.sequence) })
 	r.mu.Unlock()
-	view := &workProjection{key: key, scopes: snapshot, statuses: statuses, discussions: discussions}
+	if base.text == "" {
+		base.text = base.render(0)
+	}
+	view := &workProjection{key: key, base: base, scopes: base.scopes, statuses: statuses, discussions: discussions}
 	view.text = view.render(0)
 	r.mu.Lock()
 	// A slow formatter never replaces a newer snapshot made by another peer.
 	if r.workKeyLocked() == key {
 		r.workView = view
+		r.workBase = base
 	}
 	r.mu.Unlock()
 	return decisionSnapshot{view, through}
+}
+
+func (b *workBase) render(covered uint16) string {
+	var out strings.Builder
+	fmt.Fprintf(&out, "Active teammates: %s\nAvailable places: %d\nCurrent contributions:\n", strings.Join(b.key.names[:b.key.count], ", "), b.key.available)
+	for i, scope := range b.scopes {
+		contribution.WriteContext(&out, scope, covered&(1<<i) != 0)
+	}
+	return out.String()
 }

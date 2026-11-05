@@ -12,13 +12,13 @@ type CommandView struct {
 }
 
 func (v *CommandView) Render(run toolapi.CommandRun, f Formatter) string {
+	if !toolapi.CommandActive(run.Status) {
+		*v = CommandView{}
+		return f.commandHeading(run) + indentTool(f.Redact(run.Command))
+	}
 	if f.RedactionVersion == nil {
 		*v = CommandView{}
 		return f.CommandActivity([]toolapi.CommandRun{run})
-	}
-	if run.Status != "running" {
-		*v = CommandView{}
-		return ""
 	}
 	version := f.RedactionVersion()
 	body := v.body

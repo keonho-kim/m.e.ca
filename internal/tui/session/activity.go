@@ -10,7 +10,7 @@ import (
 )
 
 func (a *app) activity() view.Activity {
-	return view.Activity{Language: a.language, Elapsed: a.work.elapsed, TokensPerSecond: a.chat.tokensPerSecond, Running: a.work.state.active(), Compressing: a.work.compressing, Dots: a.work.indicatorDots, ShowCost: a.connection.selection.Connection.Kind == connection.OpenRouter}
+	return view.Activity{Language: a.language, MemoryUsage: a.memory.label, Elapsed: a.work.elapsed, TokensPerSecond: a.chat.tokensPerSecond, Running: a.work.state.active(), Compressing: a.work.compressing, Dots: a.work.indicatorDots, ShowCost: a.connection.selection.Connection.Kind == connection.OpenRouter}
 }
 func (a *app) interruptTask() {
 	if !a.work.state.agent() || !a.work.state.active() || a.work.cancel == nil {

@@ -6,8 +6,10 @@ package team
 
 import (
 	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
 	"time"
@@ -53,11 +55,18 @@ func TestIdleGuardWaitsForActualWorkAndResetsAfterProgress(t *testing.T) {
 	for _, live := range r.active {
 		live.waiting = true
 	}
-	r.active["Ren"].commands = 1
+	peer := &Peer{ID: "Ren", room: r}
+	op := &toolapi.Operation{Name: "execute_command", Status: "tool_succeeded", Process: &toolapi.ProcessOutcome{CommandID: "cmd_own", Status: "running"}}
+	if err := peer.Emit(runrecord.Event{Kind: "tool_succeeded", Operation: op}); err != nil {
+		t.Fatal(err)
+	}
 	if resume, err := r.resolveIdleLocked(); resume || err != nil {
 		t.Fatal("running command was treated as idle")
 	}
-	r.active["Ren"].commands = 0
+	op.Process = &toolapi.ProcessOutcome{CommandID: "cmd_own", Status: "exited"}
+	if err := peer.Emit(runrecord.Event{Kind: "command_finished", Operation: op}); err != nil {
+		t.Fatal(err)
+	}
 	if resume, err := r.resolveIdleLocked(); !resume || err != nil {
 		t.Fatal("no reconsideration")
 	}

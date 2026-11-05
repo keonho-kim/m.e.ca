@@ -9,7 +9,7 @@ import (
 )
 
 func (s *execution) observeResult(v validatedCall, outcome toolapi.Result) error {
-	op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: v.call.ID, Name: v.call.Name, Revision: s.checkpoint.ChangeRevision, Started: outcome.Started, Versions: outcome.Versions, Changes: outcome.Changes, Process: outcome.Process, Command: v.command}
+	op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: v.call.ID, Name: v.call.Name, Revision: s.checkpoint.ChangeRevision, Started: outcome.Started, Versions: outcome.Versions, Changes: outcome.Changes, Process: outcome.Process, Command: observedCommand(v.call.Name, outcome)}
 	if !s.checkpoint.Work.Observe(op) {
 		return nil
 	}
@@ -17,4 +17,14 @@ func (s *execution) observeResult(v validatedCall, outcome toolapi.Result) error
 		s.checkpoint.LastChange = excerpt(s.runner.Redact(outcome.Summary), 768)
 	}
 	return s.checkpoint.Work.Check()
+}
+
+func observedCommand(name string, outcome toolapi.Result) string {
+	if name == "execute_command" {
+		return outcome.Target
+	}
+	if outcome.Process != nil {
+		return outcome.Process.Command
+	}
+	return ""
 }

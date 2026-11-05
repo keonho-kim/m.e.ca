@@ -1,6 +1,6 @@
-// Purpose: Fit tokens, optional OpenRouter cost and throughput beside activity without hiding compression.
+// Purpose: Fit resident memory, tokens, optional cost and throughput beside the activity indicator.
 // Pattern: Terminal renderer.
-// Usage: Chat, menu and file views share topLine while retaining their own content layout.
+// Usage: Every screen uses Header; status-only frames reuse it without rebuilding body layout.
 // Related: internal/tui/view/chat.go, internal/tui/view/menu.go, internal/tui/view/files.go.
 package view
 
@@ -11,19 +11,28 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width int, activity Activity) {
+// Header replaces the top row, retaining unchanged cells and clearing only unused padding.
+func Header(screen tcell.Screen, title string, usage modelapi.TokenUsage, width int, activity Activity) {
 	tokens := fmt.Sprintf("%s %d · %s %d", activity.Language.Text("INPUT"), usage.Input, activity.Language.Text("OUTPUT"), usage.Output)
 	rate := ""
 	if activity.TokensPerSecond != nil {
 		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
 	}
 	label := activity.Label()
-	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
+	withMemory := tokens
+	if activity.MemoryUsage != "" {
+		withMemory = activity.MemoryUsage + " · " + tokens
+	}
+	if activity.Compressing && uniseg.StringWidth(label+withMemory)+1 > width {
 		label = activity.indicatorLabel()
 	}
 	if activity.Compressing && uniseg.StringWidth(label+tokens)+1 > width {
-		Text(screen, 0, 0, width, label, tcell.StyleDefault.Bold(true))
+		used := Text(screen, 0, 0, width, label, tcell.StyleDefault.Bold(true))
+		screen.FillArea(used, 0, width-used, 1, ' ', tcell.StyleDefault)
 		return
+	}
+	if uniseg.StringWidth(withMemory+label)+1 <= width {
+		tokens = withMemory
 	}
 	if activity.ShowCost {
 		cost := " · " + activity.Language.Cost(usage.Cost)
@@ -39,9 +48,11 @@ func topLine(screen tcell.Screen, title string, usage modelapi.TokenUsage, width
 	}
 	x := width - uniseg.StringWidth(tokens)
 	if x < 0 {
-		Text(screen, 0, 0, width, label, tcell.StyleDefault)
+		used := Text(screen, 0, 0, width, label, tcell.StyleDefault)
+		screen.FillArea(used, 0, width-used, 1, ' ', tcell.StyleDefault)
 		return
 	}
-	Text(screen, 0, 0, max(0, x-1), label, tcell.StyleDefault.Bold(activity.Running).Dim(!activity.Running))
+	used := Text(screen, 0, 0, max(0, x-1), label, tcell.StyleDefault.Bold(activity.Running).Dim(!activity.Running))
+	screen.FillArea(used, 0, x-used, 1, ' ', tcell.StyleDefault)
 	Text(screen, x, 0, width-x, tokens, tcell.StyleDefault.Dim(true))
 }

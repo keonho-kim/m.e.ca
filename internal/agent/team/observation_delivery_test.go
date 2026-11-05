@@ -103,7 +103,7 @@ func TestCommandObservationsReleaseTerminalIdentityAndIgnoreArchivePolling(t *te
 			t.Fatal(err)
 		}
 	}
-	if p.running != nil {
+	if r.active[p.ID].statuses != nil {
 		t.Fatal("synchronously completed commands retained their identities")
 	}
 	op := &toolapi.Operation{Name: "execute_command", Status: "tool_succeeded", Process: &toolapi.ProcessOutcome{CommandID: "background", Status: "running"}}
@@ -126,7 +126,7 @@ func TestCommandObservationsReleaseTerminalIdentityAndIgnoreArchivePolling(t *te
 			t.Fatal(err)
 		}
 	}
-	if p.running != nil || r.latestPublic != through || through != 130 {
+	if r.active[p.ID].statuses != nil || r.latestPublic != through || through != 130 {
 		t.Fatal("terminal state was retained or archive polling was rebroadcast", through, r.latestPublic)
 	}
 }

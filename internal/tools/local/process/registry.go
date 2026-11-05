@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	MaxActive   = 4
+	// MaxActive bounds waiting, running and finalizing commands owned by one agent.
+	MaxActive   = 16
 	InitialWait = 30 * time.Second
 	DefaultWait = 180 * time.Second
 )
@@ -19,7 +20,7 @@ const (
 type Registry struct {
 	CaptureDirectory string
 	mu               sync.Mutex
-	captureMu        sync.Mutex
+	projection       *ProjectionBudget
 	owner            context.Context
 	stop             context.CancelFunc
 	jobs             map[string]*job
@@ -33,11 +34,12 @@ type job struct {
 	started        time.Time
 	finished       time.Time
 	done           chan struct{}
+	launched       chan struct{}
 	cancel         context.CancelFunc
 	stdout, stderr cappedOutput
 }
 
-// Process waiting stays concurrent; only materialization and archival share a lock.
+// One worker waits, then projects output under the request-shared byte budget.
 type startedCommand struct {
 	wait   func() error
 	output func(error) (Output, error)
@@ -47,6 +49,9 @@ func (r *Registry) Begin(ctx context.Context, deadline time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.owner, r.stop = context.WithDeadline(ctx, deadline)
+	if shared, ok := ctx.Value(projectionKey{}).(*ProjectionBudget); ok {
+		r.projection = shared
+	}
 	if r.updates == nil {
 		r.updates = make(chan struct{}, 1)
 	}

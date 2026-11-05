@@ -7,7 +7,6 @@ package command
 import (
 	"strings"
 
-	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -34,8 +33,8 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 				break
 			}
 			if arg.text == "-i" || arg.text == "--ignore-environment" {
-				work.vars = map[string]expand.Variable{}
-				work.unknown = map[string]bool{}
+				work.bindings = &bindings{functions: work.functions}
+				work.shared = true
 				work.dynamic = false
 				args = args[1:]
 				continue
@@ -46,8 +45,7 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 					return true
 				}
 				if args[1].known {
-					delete(work.vars, args[1].text)
-					delete(work.unknown, args[1].text)
+					work.unset(args[1].text)
 				} else {
 					work.invalidateVariables()
 				}
@@ -69,7 +67,7 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 				continue
 			}
 			if strings.HasPrefix(arg.text, "--unset=") {
-				delete(work.vars, strings.TrimPrefix(arg.text, "--unset="))
+				work.unset(strings.TrimPrefix(arg.text, "--unset="))
 				args = args[1:]
 				continue
 			}

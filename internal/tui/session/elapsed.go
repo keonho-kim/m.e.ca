@@ -1,6 +1,6 @@
-// Purpose: Own the live worker elapsed-time ticker and reset it between operations.
+// Purpose: Project monotonic worker elapsed time through the shared terminal status clock.
 // Pattern: Event-loop lifecycle.
-// Usage: Agent and connection workers start timing; cancellation and completion stop it.
+// Usage: Agent and connection workers start timing; whole-second changes refresh command metadata.
 // Related: internal/tui/session/app.go, internal/tui/session/activity.go, internal/tui/session/worker_result.go.
 package session
 
@@ -13,10 +13,12 @@ func (a *app) startElapsed() {
 	a.work.startElapsed()
 }
 
-func (a *app) updateElapsed(now time.Time) {
+func (a *app) updateElapsed(now time.Time) bool {
 	if a.work.updateElapsed(now) {
 		a.updateCommandActivity()
+		return true
 	}
+	return false
 }
 
 func (a *app) stopElapsed() {

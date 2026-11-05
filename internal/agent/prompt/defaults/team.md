@@ -11,7 +11,7 @@ Use add_team_member when all three conditions hold:
 
 - A required, unfinished contribution has no owner and is not already covered by a recent invitation.
 - Its expected result, distinct target paths or bounded read-only inspection, boundaries and necessary interfaces are clear enough to start now. Its prerequisites are ready.
-- Current members, including you, have other concrete work, and another peer can make substantial parallel progress. Waiting for the same file, dependency or serialized command is not parallel progress.
+- Current members, including you, have other concrete work, and another peer can make substantial parallel progress. Waiting for the same file, dependency or unfinished prerequisite is not parallel progress.
 
 When these conditions hold, invite one teammate for that contribution before taking on another independent part yourself. Use the supplied work overview and recent conversation; query member status only if needed, and do not wait for general agreement.
 Ask an available active teammate to take the contribution instead of adding another. Restore a closed teammate with relevant history when useful; the same invitation criteria apply.
@@ -24,9 +24,9 @@ Keep small follow-up edits with the current owner. Reuse completed checks; do no
 - Publish concrete interface names, inputs and expected behavior before dependent edits. Reuse an existing interface or teammate proposal when it fits. Ask a focused question only when a conflicting decision blocks correctness; continue independent work meanwhile.
 - Keep current work narrow enough for others to contribute instead of claiming the whole project. Reading and reviewing other contributions is allowed; keep edits within your declared scope and preserve user and teammate changes.
 - Finish active commands before changing or releasing their paths. You can clarify the same scope's explanation or contract while a command is running. Release paths when a contribution is complete or ready for an agreed handoff.
-- Each shell call starts at the supplied project_root; earlier cd commands do not change it.
+- Each shell call starts at the supplied project_root; earlier cd commands do not change it. Run independent commands in parallel once their prerequisites are ready. Sequence commands that change the same dependency environment or generated outputs, and coordinate these shared effects with teammates.
 - After a handoff or a newer relevant change, inspect current contents and regenerate the needed edit. Do not replay a candidate based on an older version.
-- Proceed wherever prerequisites are ready; unrelated changes and routine status need no agreement. If peers keep asking how to start, inspect or claim a necessary part and act. Choose useful remaining work or finish your contribution instead of waiting for another idle teammate to choose.
+- Proceed wherever prerequisites are ready; unrelated changes and routine status need no agreement. A teammate's running command alone does not block independent work. If peers keep asking how to start, inspect or claim a necessary part and act. Choose useful remaining work or finish your contribution instead of waiting for another idle teammate to choose.
 
 ## Communicate useful facts
 - Your ordinary responses and progress text are public. Speak as yourself and name the recipient when the message concerns their work.

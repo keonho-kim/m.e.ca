@@ -10,22 +10,22 @@ import (
 )
 
 func (r *Registry) finish(id string, j *job, pending startedCommand, save func(string, string, Output, error) error) {
-	defer func() {
-		close(j.done)
-		r.notify()
-	}()
-	defer j.cancel()
 	runErr := pending.wait()
-	r.captureMu.Lock()
+	ended := time.Now()
+	j.mu.Lock()
+	j.finished = ended
+	j.state.Status = "finalizing"
+	j.mu.Unlock()
+	release := r.ProjectionBudget().Acquire(j.stdout.retainedBytes() + j.stderr.retainedBytes())
+	defer release()
 	output, runErr := pending.output(runErr)
 	var saveErr error
 	if save != nil {
 		saveErr = save(id, j.state.Command, output, runErr)
 	}
 	saveErr = errors.Join(saveErr, j.stdout.release(), j.stderr.release())
-	r.captureMu.Unlock()
 	j.mu.Lock()
-	j.finished = time.Now()
+	j.finished = ended
 	j.state.Status, j.state.ExitCode = output.Status, output.ExitCode
 	if saveErr != nil {
 		j.state.Error = saveErr.Error()

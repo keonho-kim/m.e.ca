@@ -6,27 +6,30 @@ package team
 
 import (
 	"context"
+	"errors"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"time"
 )
 
 // publicEffect carries transient state transitions, never additional persisted metadata.
 type publicEffect struct {
+	command  *toolapi.ProcessOutcome
 	work     *contribution.Scope
 	evidence *[32]byte
 }
 
-func (r *Room) publish(message channel.Message) (channel.Message, error) {
+func (r *Room) publish(message channel.Message) (result channel.Message, resultErr error) {
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	return r.appendPublic(message)
 }
 
-// appendPublic requires logMu, never mu: SQLite and slow UI consumers must not
-// prevent another peer from inspecting membership or admitting existing context.
+// appendPublic requires logMu, never mu. Presentation is drained after this
+// ordered durable boundary has been released.
 func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 	value, err := r.storePublic(message)
 	if err != nil {
@@ -105,17 +108,8 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 			r.latestDiscussion = value.Sequence
 		}
 	}
-	if value.Passive {
-		if live := r.active[value.From]; live != nil {
-			live.status = commandStatus{from: value.From, text: value.Text, sequence: value.Sequence}
-			r.latestStatus = value.Sequence
-		}
-	} else if value.Observation {
-		if live := r.active[value.From]; live != nil && live.status.sequence != 0 {
-			live.status = commandStatus{}
-			r.latestStatus = value.Sequence
-		}
-	}
+	r.updateCommandStatus(value, effect.command)
+
 	if value.Observation {
 		r.work.Record(value.From, value.ChangedPaths, value.Sequence)
 	}
@@ -139,7 +133,8 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 	}
 	r.mu.Unlock()
 	event := runrecord.Event{Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}
-	return value, r.deliver(event, false)
+	r.queuePublic(event)
+	return value, nil
 }
 func wake(live *participant) {
 	select {

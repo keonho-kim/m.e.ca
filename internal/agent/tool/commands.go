@@ -13,6 +13,11 @@ import (
 // CommandManagementHint guides subsequent native calls for an existing running command.
 const CommandManagementHint = "Use wait_command with this command_id to wait or inspect output (wait_seconds=0 checks immediately), cancel_command with this command_id to stop it, or list_command_runs with no arguments to list session commands and recover their IDs. Waiting does not stop the command. Do not execute the same command again just to check progress."
 
+// CommandActive includes a queued command that has not acquired its mutation targets.
+func CommandActive(status string) bool {
+	return status == "running" || status == "waiting" || status == "finalizing"
+}
+
 type CommandRun struct {
 	CallID           string "json:\"-\""
 	ID               string "json:\"command_id\""

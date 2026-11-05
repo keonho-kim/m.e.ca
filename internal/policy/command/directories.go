@@ -11,6 +11,9 @@ import "slices"
 const maxDirectoryCandidates = 32
 
 func mergeDirectories(left, right []string) []string {
+	if slices.Equal(left, right) {
+		return left
+	}
 	if len(left) == 0 || len(right) == 0 {
 		return nil
 	}

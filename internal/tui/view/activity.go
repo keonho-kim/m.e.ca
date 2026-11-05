@@ -13,6 +13,7 @@ import (
 
 type Activity struct {
 	Language             locale.Language
+	MemoryUsage          string
 	Elapsed              time.Duration
 	TokensPerSecond      *float64
 	Running, Compressing bool

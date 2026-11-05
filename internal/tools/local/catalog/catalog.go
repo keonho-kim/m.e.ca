@@ -1,14 +1,16 @@
 // Purpose: Own native tool descriptions, input schemas and effects in one immutable catalog.
 // Pattern: Declarative tool contracts.
 // Usage: Definitions supplies copied schemas; Parse validates against private originals.
-// Related: internal/tools/local/catalog/arguments.go, internal/tools/local/catalog/edit_schema.go.
+// Related: internal/tools/local/catalog/arguments.go, internal/tools/local/catalog/edit_schema.go, internal/tools/local/process/registry.go.
 package catalog
 
 import (
+	"fmt"
 	"slices"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 type Specification struct {
@@ -25,7 +27,10 @@ func textField(name, description string, empty bool) toolapi.Parameter {
 }
 
 // The private catalog is immutable after package initialization.
-var catalog = buildSpecifications()
+var (
+	commandCapacityDescription = fmt.Sprintf("Each agent may own up to %d active commands, including path waits, execution and output finalization. ", process.MaxActive)
+	catalog                    = buildSpecifications()
+)
 
 func buildSpecifications() []Specification {
 	specs := []Specification{
@@ -34,7 +39,7 @@ func buildSpecifications() []Specification {
 		{"create_directory", "Creating", "Create one or more directories and missing parents (mkdir -p). Existing directories succeed without changes. File collisions are rejected. Returns created paths and preserves partial results if interrupted.", []toolapi.Parameter{{Name: "paths", Description: "Absolute directory paths or paths relative to project_root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
 		{"write_file", "Writing", "Create a UTF-8 file or replace its entire content; missing parents are created. Inspect an existing file before replacing it. Empty content creates or empties the file. Returns the applied change and file size. Use edit_file for partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
 		editSpecification(),
-		{"execute_command", "Running", CommandDescription("Independent commands in the same tool batch may run together, up to four active commands."), []toolapi.Parameter{textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
+		{"execute_command", "Running", CommandDescription("Independent commands in the same tool batch may run together."), []toolapi.Parameter{textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
 	}
 	specs = append(specs, commandSpecifications()...)
 	for index := range specs {
@@ -75,5 +80,5 @@ func cloneParameters(parameters []toolapi.Parameter) []toolapi.Parameter {
 
 // CommandDescription keeps the common shell contract separate from mode scheduling.
 func CommandDescription(scheduling string) string {
-	return "Run a POSIX shell command in project_root with the inherited host environment. Supports &&, ||, pipelines, command substitutions and multiple statements; cd applies only to this call. Use for file inspection, search, builds, tests, package management and host file operations, including mv for moving or renaming files and directories. Deleting or moving project_root itself or its ancestors, protected root/system mutations and privilege escalation are blocked. Explicit outbound data transfers require direct user approval in every permission mode, including All Mighty. Ordinary downloads and direct loopback HTTP tests remain available. Prefer file tools for precise edits and diff previews. Use && when later steps depend on earlier success, or cd path || exit before subsequent statements. Use the supplied project_root or an observed path for directory changes. A POSIX pipeline reports its last command's exit code. Preserve failures; grep/rg exit 1 means no matches. Waits up to 30 seconds, returning early on completion. If still running, returns command_id, running status and next guidance for wait_command, list_command_runs or cancel_command; the command continues executing. " + scheduling + " Await prerequisites and avoid overlapping effects. Returns an exit code only after exit, plus stdout/stderr. Large output includes excerpts and session log paths readable with cat/sed. Failures or cancellation can leave partial effects; inspect current state before retrying."
+	return "Run a POSIX shell command in project_root with the inherited host environment. Supports &&, ||, pipelines, command substitutions and multiple statements; cd applies only to this call. Use for file inspection, search, builds, tests, package management and host file operations, including mv for moving or renaming files and directories. Deleting or moving project_root itself or its ancestors, protected root/system mutations and privilege escalation are blocked. Explicit outbound data transfers require direct user approval in every permission mode, including All Mighty. Ordinary downloads and direct loopback HTTP tests remain available. Prefer file tools for precise edits and diff previews. Use && when later steps depend on earlier success, or cd path || exit before subsequent statements. Use the supplied project_root or an observed path for directory changes. A POSIX pipeline reports its last command's exit code. Preserve failures; grep/rg exit 1 means no matches. Waits up to 30 seconds, returning early on completion. Pending work returns command_id, waiting/running/finalizing status and guidance for wait_command, list_command_runs or cancel_command; observation expiry does not stop it. Live output can report output_pending while being prepared. " + commandCapacityDescription + scheduling + " Await prerequisites and avoid overlapping effects. Returns an exit code only after exit, plus stdout/stderr. Large output includes excerpts and session log paths readable with cat/sed. Failures or cancellation can leave partial effects; inspect current state before retrying."
 }

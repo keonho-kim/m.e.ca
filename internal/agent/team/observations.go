@@ -5,10 +5,11 @@
 package team
 
 import (
+	"errors"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
-func (p *Peer) observe(event runrecord.Event) (bool, error) {
+func (p *Peer) observe(event runrecord.Event) (observed bool, resultErr error) {
 	op := event.Operation
 	if op == nil || len(op.Changes) == 0 && op.Process == nil && (!op.Started || op.Failure == nil) {
 		return false, nil
@@ -19,11 +20,18 @@ func (p *Peer) observe(event runrecord.Event) (bool, error) {
 	message := operationObservation(p.ID, r.options.ProjectRoot, event)
 	evidence, hasEvidence := operationProgress(event)
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if op.Process != nil {
-		_, running := p.running[op.Process.CommandID]
+		r.mu.Lock()
+		live := r.active[p.ID]
+		previous := commandStatus{}
+		if live != nil {
+			previous = live.statuses[op.Process.CommandID]
+		}
+		r.mu.Unlock()
+		running := previous.sequence != 0
 		initial := op.Name == "execute_command" && event.Kind != "command_finished"
-		if running && op.Process.Status == "running" || !running && !initial {
+		if running && previous.status == op.Process.Status || !running && !initial {
 			return false, nil
 		}
 	}
@@ -31,25 +39,7 @@ func (p *Peer) observe(event runrecord.Event) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if process := op.Process; process != nil {
-		if process.Status == "running" {
-			if p.running == nil {
-				p.running = make(map[string]struct{})
-			}
-			p.running[process.CommandID] = struct{}{}
-		} else {
-			delete(p.running, process.CommandID)
-			if len(p.running) == 0 {
-				p.running = nil
-			}
-		}
-	}
-	r.mu.Lock()
-	if live := r.active[p.ID]; live != nil {
-		live.commands = len(p.running)
-	}
-	r.mu.Unlock()
-	effect := publicEffect{}
+	effect := publicEffect{command: op.Process}
 	if hasEvidence {
 		effect.evidence = &evidence
 	}

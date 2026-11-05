@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -69,7 +70,7 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 	return note, nil
 }
 
-func (p *Peer) Discuss(ctx context.Context, text string, replyTo int64, mentions []string) (int64, error) {
+func (p *Peer) Discuss(ctx context.Context, text string, replyTo int64, mentions []string) (sequence int64, resultErr error) {
 	if strings.TrimSpace(text) == "" {
 		return 0, fmt.Errorf("public feedback must contain a useful message")
 	}
@@ -85,7 +86,7 @@ func (p *Peer) Discuss(ctx context.Context, text string, replyTo int64, mentions
 	}
 	r := p.room
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}

@@ -42,6 +42,15 @@ func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {
 	}
 }
 
+func TestCompactionDoesNotInventExitCodesForActiveCommands(t *testing.T) {
+	for _, status := range []string{"waiting", "running", "finalizing"} {
+		records, err := Compaction([]Record{{Sequence: 1, Kind: "event", Event: runrecord.Event{Operation: &tool.Operation{Name: "execute_command", Process: &tool.ProcessOutcome{CommandID: "cmd_active", Status: status}}}}})
+		if err != nil || len(records) != 1 || strings.Contains(records[0].Text, "exit=") {
+			t.Fatal("active command became a completed observation", records, err)
+		}
+	}
+}
+
 func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
 	records, err := Compaction([]Record{
 		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "assistant", Content: "All files have been created", Incomplete: true, Reasoning: "unfinished thinking"}},

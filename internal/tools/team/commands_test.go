@@ -1,81 +1,84 @@
-// Purpose: Verify settled commands release only their owned workspace lease without runtime polling.
-// Pattern: Deterministic resource-lifecycle tests.
+// Purpose: Verify mutation targets remain owned through queued commands and process cleanup.
+// Pattern: Real process-registry and workspace integration tests.
 // Usage: go test -race ./internal/tools/team -run TestCommandLease.
-// Related: internal/tools/team/commands.go, internal/tools/team/workspace/workspace.go.
+// Related: internal/tools/team/command_admission.go, internal/tools/local/process/command_start.go.
 package team
 
 import (
 	"context"
-	"errors"
-	"testing"
-	"testing/synctest"
-	"time"
-
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
 )
 
-type commandLifecycle struct {
-	Local
-	done map[string]chan struct{}
-}
-
-func (l commandLifecycle) CommandDone(id string) (<-chan struct{}, error) { return l.done[id], nil }
-func (l commandLifecycle) StopCommands()                                  {}
-
-func TestCommandLeaseSettlesWithoutCollection(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func TestCommandLeaseAdmissionIsObservableAndShutdownReleasesTargets(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 	w := workspace.New()
-	held, err := w.ReserveShell(ctx, nil, nil)
+	paths := []string{filepath.Join(t.TempDir(), "file")}
+	first, err := w.ReserveCommand(ctx, paths, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	done := make(chan struct{})
-	e := &Executor{Workspace: w, Local: commandLifecycle{done: map[string]chan struct{}{"one": done}}}
-	if err := e.holdShell("one", held); err != nil {
-		t.Fatal(err)
-	}
-	// Completion can happen after the runtime starts waiting for a file lease.
-	file, err := w.ReserveFiles(ctx, []string{"/project/file"}, nil, func() error { close(done); return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	file.Release()
-	e.StopCommands()
-}
-
-func TestCommandLeaseOldCompletionCannotReleaseNewCommand(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		w := workspace.New()
-		a, b := make(chan struct{}), make(chan struct{})
-		e := &Executor{Workspace: w, Local: commandLifecycle{done: map[string]chan struct{}{"a": a, "b": b}}}
-		first, _ := w.ReserveShell(ctx, nil, nil)
-		if err := e.holdShell("a", first); err != nil {
-			t.Fatal(err)
-		}
-		e.releaseShell()
-		second, err := w.ReserveShell(ctx, nil, nil)
+	defer first.Release()
+	var r process.Registry
+	r.Begin(ctx, time.Now().Add(time.Minute))
+	defer r.End()
+	entered := make(chan struct{})
+	id, err := r.StartAdmitted(ctx, t.TempDir(), "printf done", os.Environ(), "call", func(ctx context.Context) (func(), error) {
+		held, err := w.ReserveCommand(ctx, paths, nil, func() error { close(entered); return nil })
 		if err != nil {
-			t.Fatal(err)
+			return nil, err
 		}
-		if err := e.holdShell("b", second); err != nil {
-			t.Fatal(err)
-		}
-		close(a)
-		synctest.Wait()
-		waiting, stop := context.WithCancel(ctx)
-		_, err = w.ReserveFiles(waiting, []string{"/project/file"}, nil, func() error { stop(); return nil })
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("second command lost ownership: %v", err)
-		}
-		close(b)
-		e.StopCommands()
-		file, err := w.ReserveFiles(ctx, []string{"/project/file"}, nil, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		file.Release()
+		return held.Release, nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-entered
+	state, err := r.Wait(ctx, id, 0)
+	if err != nil || state.Status != "waiting" {
+		t.Fatalf("queued command not visible: %+v %v", state, err)
+	}
+	first.Release()
+	state, err = r.Wait(ctx, id, time.Minute)
+	if err != nil || state.ExitCode != 0 {
+		t.Fatalf("queued command failed: %+v %v", state, err)
+	}
+	held, err := w.ReserveFiles(ctx, paths, nil, func() error { t.Error("completed command retained lease"); return context.Canceled })
+	if err != nil {
+		t.Fatal(err)
+	}
+	held.Release()
+}
+func TestCommandLeaseCancellationDoesNotReleaseAnotherCommand(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	w := workspace.New()
+	path := filepath.Join(t.TempDir(), "file")
+	first, _ := w.ReserveCommand(ctx, []string{path}, nil, nil)
+	defer first.Release()
+	var r process.Registry
+	r.Begin(ctx, time.Now().Add(time.Minute))
+	entered := make(chan struct{})
+	_, err := r.StartAdmitted(ctx, t.TempDir(), "printf never", os.Environ(), "call", func(ctx context.Context) (func(), error) {
+		held, err := w.ReserveCommand(ctx, []string{path}, nil, func() error { close(entered); return nil })
+		if err != nil {
+			return nil, err
+		}
+		return held.Release, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-entered
+	r.End()
+	probe, stop := context.WithCancel(ctx)
+	held, err := w.ReserveFiles(probe, []string{path}, nil, func() error { stop(); return nil })
+	if err == nil || held != nil {
+		t.Fatal("cancelling a queued command released another command's target")
+	}
 }

@@ -39,12 +39,18 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 		return true, errors.Join(err, s.skipCalls(ctx, calls, skipForContext, err.Error()))
 	}
 	// Approval may have changed filesystem aliases; recheck the wave before effects.
-	if plan, err := s.planWave(ctx, calls, 0); err != nil || plan.Count != len(calls) {
-		detail := "Batch targets changed or overlap after preparation; nothing in this wave executed."
-		if err != nil {
-			detail += " " + err.Error()
+	commandsOnly := true
+	for _, call := range calls {
+		commandsOnly = commandsOnly && call.call.Name == "execute_command"
+	}
+	if !commandsOnly {
+		if plan, err := s.planWave(ctx, calls, 0); err != nil || plan.Count != len(calls) {
+			detail := "Batch targets changed or overlap after preparation; nothing in this wave executed."
+			if err != nil {
+				detail += " " + err.Error()
+			}
+			return true, errors.Join(s.skipCalls(ctx, calls, skipAfterFailure, detail), fatalBatchError(ctx, err))
 		}
-		return true, errors.Join(s.skipCalls(ctx, calls, skipAfterFailure, detail), fatalBatchError(ctx, err))
 	}
 	// Persist start intent before allowing any effects. A crash never replays it automatically.
 	for _, prepared := range ready {

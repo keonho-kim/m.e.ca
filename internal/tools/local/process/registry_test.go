@@ -107,7 +107,7 @@ func TestRegistryOwnsCancellationAndCapacity(t *testing.T) {
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
 	registry.Save = func(string, string, Output, error) error { return nil }
 	t.Cleanup(func() { registry.End() })
-	for range MaxActive {
+	for range 16 {
 		if _, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), "call"); err != nil {
 			t.Fatal(err)
 		}

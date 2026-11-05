@@ -49,13 +49,10 @@ func (a *analyzer) call(c *syntax.CallExpr, redirs []*syntax.Redirect, s *state)
 					continue
 				}
 				name := assignment.Name.Value
-				delete(work.vars, name)
-				delete(work.unknown, name)
-				if value, ok := failure.vars[name]; ok {
-					work.vars[name] = value
-				}
+				value, _ := failure.value(name)
+				work.put(name, value)
 				if failure.unknown[name] {
-					work.unknown[name] = true
+					work.markUnknown(name)
 				}
 			}
 		}
@@ -118,9 +115,8 @@ func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state, func
 	case "unset":
 		for _, arg := range args {
 			if arg.known && !strings.HasPrefix(arg.text, "-") {
-				delete(s.vars, arg.text)
-				delete(s.unknown, arg.text)
-				delete(s.functions, arg.text)
+				s.unset(arg.text)
+				s.function(arg.text, nil)
 			} else {
 				s.invalidateVariables()
 			}

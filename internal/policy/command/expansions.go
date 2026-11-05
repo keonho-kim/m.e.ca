@@ -65,7 +65,7 @@ func (a *analyzer) parameterAssignment(n *syntax.ParamExp, s *state) {
 		return
 	}
 	name := n.Param.Value
-	prior, found := s.vars[name]
+	prior, found := s.value(name)
 	known := !s.unknown[name] && (!s.dynamic || found)
 	assign := !prior.IsSet() || n.Exp.Op == syntax.AssignUnsetOrNull && prior.Str == ""
 	if known && !assign {

@@ -12,6 +12,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/keonho-kim/meca/internal/agent/team"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"github.com/keonho-kim/meca/internal/tools/team/approval"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 	"sync"
@@ -40,5 +41,6 @@ func (s *Service) Run(ctx context.Context, options agentrequest.Options, approve
 		return team.Result{}, err
 	}
 	current := &request{service: s, options: options, templates: templates, access: workspace.New(), images: make(chan struct{}, 1), approver: approve}
+	ctx = process.WithProjectionBudget(ctx)
 	return team.Run(ctx, team.Options{Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds, ProjectRoot: options.Session.ProjectRoot}, options.Text)
 }

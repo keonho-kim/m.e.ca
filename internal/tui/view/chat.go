@@ -30,7 +30,7 @@ type ChatDisplay struct {
 func TranscriptWidth(width int) int { return max(1, width-1-5) }
 
 func Chat(screen tcell.Screen, display ChatDisplay, width int) {
-	topLine(screen, "", display.Usage, width, display.Activity)
+	Header(screen, "", display.Usage, width, display.Activity)
 	contentWidth := TranscriptWidth(width)
 	y := 1
 	for i := 0; i < len(display.Lines) && y-1 < display.Layout.TranscriptRows; i++ {

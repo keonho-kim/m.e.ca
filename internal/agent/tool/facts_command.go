@@ -15,7 +15,7 @@ func (f *Facts) observeCommand(op Operation) {
 	}
 	if op.Process != nil {
 		status = op.Process.Status
-		if status != "running" {
+		if !CommandActive(status) {
 			code := op.Process.ExitCode
 			exit = &code
 		}

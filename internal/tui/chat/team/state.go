@@ -52,7 +52,6 @@ func appendBlock(output *viewport.View, block viewport.Block) int {
 	}
 	return output.Next
 }
-func key(agent, call string) string { return agent + "/" + call }
 func (s *State) Compressing() bool {
 	for _, peer := range s.peers {
 		if peer.compressing {

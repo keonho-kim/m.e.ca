@@ -25,11 +25,11 @@ type participant struct {
 	leaving, closed bool
 	spoke           bool
 	waiting         bool
-	commands        int
 	reviewed        int64
 	attention       int64
 	discussion      discussionPreview
 	status          commandStatus
+	statuses        map[string]commandStatus
 }
 type Room struct {
 	mu                                  sync.Mutex
@@ -37,6 +37,9 @@ type Room struct {
 	memberMu                            sync.Mutex
 	logMu                               sync.Mutex
 	eventMu                             sync.Mutex
+	publicEmitMu                        sync.Mutex
+	pendingPublic                       []runrecord.Event
+	publicHead                          int
 	inputMu                             sync.Mutex
 	options                             Options
 	ctx                                 context.Context
@@ -53,6 +56,7 @@ type Room struct {
 	public                              channel.History
 	work                                contribution.State
 	workView                            *workProjection
+	workBase                            *workBase
 	latestUser                          int64
 	userChanged                         chan struct{}
 	deadline                            time.Time

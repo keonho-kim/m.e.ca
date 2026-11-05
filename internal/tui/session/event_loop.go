@@ -1,4 +1,4 @@
-// Purpose: Process input immediately and coalesce terminal repaint work into active frames.
+// Purpose: Prioritize terminal input and coalesce adaptive status samples with pending screen updates.
 // Pattern: Input-prioritized event loop with an adaptive one-shot render timer.
 // Usage: Run invokes loop after restoration; shutdown joins workers and releases timers.
 // Related: internal/tui/session/app.go, internal/tui/session/frame_pacer.go, internal/tui/session/paste.go, internal/tui/session/render.go.
@@ -17,16 +17,22 @@ func (a *app) loop() error {
 	timer := time.NewTimer(time.Hour)
 	timer.Stop()
 	defer timer.Stop()
+	statusInterval := memoryInterval(a.work.state.active())
+	statusClock := time.NewTicker(statusInterval)
+	defer statusClock.Stop()
 	var frame <-chan time.Time
 	a.syncFileWatch()
+	a.memory.sample()
 	started := time.Now()
 	a.render()
 	var pacer framePacer
 	pacer.painted(started, time.Now(), false)
 	inputPending := false
+	fullPending := false
 	preferInput := true
 	for !a.exit && a.ctx.Err() == nil {
 		var terminal tcell.Event
+		fullUpdate := true
 		// Give ready input the first turn, then fairly service runtime notices
 		// before allowing another priority batch. Continuous input cannot starve them.
 		if preferInput {
@@ -40,10 +46,15 @@ func (a *app) loop() error {
 			case <-a.ctx.Done():
 				a.exit = true
 			case terminal = <-input:
-			case <-a.work.elapsedTicks:
-				a.updateElapsed(time.Now())
+			case <-statusClock.C:
+				changed := a.memory.sample()
+				fullUpdate = a.updateElapsed(time.Now())
+				if !fullUpdate && !changed {
+					continue
+				}
 			case <-a.work.indicatorTicks:
 				a.work.advanceIndicator()
+				fullUpdate = false
 			case n := <-a.events:
 				a.receive(n)
 			case event, ok := <-a.files.reads.Watch.Events:
@@ -62,6 +73,7 @@ func (a *app) loop() error {
 				a.refreshWatchedFiles()
 			case <-frame:
 				frame = nil
+				fullUpdate = false
 			}
 		}
 		if terminal != nil {
@@ -73,6 +85,11 @@ func (a *app) loop() error {
 		} else {
 			preferInput = true
 		}
+		fullPending = fullPending || fullUpdate
+		if interval := memoryInterval(a.work.state.active()); interval != statusInterval {
+			statusInterval = interval
+			statusClock.Reset(interval)
+		}
 		a.syncFileWatch()
 		if a.exit || a.paste {
 			continue
@@ -82,9 +99,14 @@ func (a *app) loop() error {
 			timer.Stop()
 			frame = nil
 			started := time.Now()
-			a.render()
+			if fullPending {
+				a.render()
+			} else {
+				a.renderHeader()
+			}
 			pacer.painted(started, time.Now(), inputPending)
 			inputPending = false
+			fullPending = false
 		} else if frame == nil || inputPending {
 			timer.Reset(remaining)
 			frame = timer.C

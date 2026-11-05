@@ -1,4 +1,4 @@
-// Purpose: Verify elapsed time advances from monotonic time and releases its ticker on stop or restart.
+// Purpose: Verify shared-clock elapsed time advances monotonically and freezes on stop or completion.
 // Pattern: Lifecycle tests with virtual time.
 // Usage: go test ./internal/tui/session -run TestElapsed.
 // Related: internal/tui/session/elapsed.go, internal/tui/session/app.go.
@@ -10,16 +10,15 @@ import (
 	"time"
 )
 
-func TestElapsedTimerLifecycle(t *testing.T) {
+func TestElapsedClockLifecycle(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		a := &app{work: workerActivity{state: workerSetup}}
 		a.startElapsed()
 		if a.activity().Label() != "상태 작업 중 00 : 00 : 00" {
 			t.Fatal(a.activity().Label())
 		}
-		first := a.work.elapsedTimer
+		first := a.work.elapsedStarted
 		time.Sleep(time.Hour + time.Minute + time.Second)
-		<-a.work.elapsedTicks
 		a.updateElapsed(time.Now())
 		if a.activity().Label() != "상태 작업 중 01 : 01 : 01" {
 			t.Fatal(a.activity().Label())
@@ -28,16 +27,16 @@ func TestElapsedTimerLifecycle(t *testing.T) {
 		frozen := a.work.elapsed
 		time.Sleep(2 * time.Second)
 		a.updateElapsed(time.Now())
-		if a.work.elapsed != frozen || a.work.elapsedTicks != nil || a.work.elapsedTimer != nil {
-			t.Fatal("stop did not freeze/release timer")
+		if a.work.elapsed != frozen || !a.work.elapsedStarted.IsZero() {
+			t.Fatal("stop did not freeze elapsed time")
 		}
 		a.startElapsed()
-		if a.work.elapsed != 0 || a.work.elapsedTimer == first {
+		if a.work.elapsed != 0 || a.work.elapsedStarted == first {
 			t.Fatal("new task reused old duration")
 		}
 		a.requestExit()
-		if a.work.elapsedTicks != nil || a.work.elapsedTimer != nil {
-			t.Fatal("exit leaked ticker")
+		if !a.work.elapsedStarted.IsZero() {
+			t.Fatal("exit retained active timing")
 		}
 	})
 }
@@ -47,7 +46,7 @@ func TestElapsedWorkerCompletion(t *testing.T) {
 	a.work.state = workerSetup
 	a.startElapsed()
 	a.receive(notice{Done: true})
-	if a.work.state.active() || a.work.elapsedTicks != nil || a.activity().Label() != "상태 대기" {
-		t.Fatal("worker completion retained elapsed timer")
+	if a.work.state.active() || !a.work.elapsedStarted.IsZero() || a.activity().Label() != "상태 대기" {
+		t.Fatal("worker completion retained active timing")
 	}
 }

@@ -11,26 +11,42 @@ import (
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
+	commandpolicy "github.com/keonho-kim/meca/internal/policy/command"
 )
 
 type commandOperation struct {
 	operation
 	environment []string
 	shell       shellSafety
+	program     *commandpolicy.Program
+	admit       func(context.Context) (func(), error)
 }
 
 func (op *commandOperation) Execute(ctx context.Context, approved bool) (toolapi.Result, error) {
 	if err := op.claim(ctx, approved); err != nil {
 		return toolapi.Result{}, err
 	}
-	current, err := op.executor.analyzeCommand(ctx, op.input.Command, op.environment)
-	if err != nil {
-		return toolapi.Result{}, err
-	}
-	if !op.shell.same(current) {
-		return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and retry with the intended paths."}
-	}
 	return op.command(ctx)
+}
+
+// SetCommandAdmission binds request-owned resources to the actual command lifetime.
+func (op *commandOperation) SetCommandAdmission(admit func(context.Context) (func(), error)) {
+	op.admit = admit
+}
+func (op *commandOperation) admitCommand(ctx context.Context) (func(), error) {
+	var release func()
+	if op.admit != nil {
+		var err error
+		release, err = op.admit(ctx)
+		if err != nil {
+			return release, err
+		}
+	}
+	current, err := op.executor.analyzeProgram(ctx, op.program)
+	if err == nil && !op.shell.same(current) {
+		err = &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and retry with the intended paths."}
+	}
+	return release, err
 }
 
 func (op *commandOperation) prepareCommand(ctx context.Context) error {
@@ -40,7 +56,11 @@ func (op *commandOperation) prepareCommand(ctx context.Context) error {
 	op.approval.Target = op.input.Command
 	op.environment = os.Environ()
 	var err error
-	op.shell, err = op.executor.analyzeCommand(ctx, op.input.Command, op.environment)
+	op.program, err = commandpolicy.Parse(op.input.Command, op.environment)
+	if err != nil {
+		return commandAnalysisError(err)
+	}
+	op.shell, err = op.executor.analyzeProgram(ctx, op.program)
 	if err != nil {
 		return err
 	}

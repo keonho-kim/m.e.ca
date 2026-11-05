@@ -37,12 +37,12 @@ type FilesDisplay struct {
 
 func Files(screen tcell.Screen, display FilesDisplay, w, h int) {
 	if display.Preview != nil && display.Preview.Full {
-		topLine(screen, display.Path, display.Usage, w, display.Activity)
+		Header(screen, display.Path, display.Usage, w, display.Activity)
 		FilePreview(screen, *display.Preview, w, h)
 		return
 	}
 	width := display.ColumnWidth
-	topLine(screen, display.Path, display.Usage, w, display.Activity)
+	Header(screen, display.Path, display.Usage, w, display.Activity)
 	for _, column := range display.Columns {
 		x := column.X
 		Text(screen, x, 2, width, column.Title, tcell.StyleDefault.Underline(tcell.UnderlineStyleDotted))

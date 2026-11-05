@@ -29,22 +29,23 @@ func (e *environment) Get(name string) expand.Variable {
 		e.unresolved = true
 		return expand.Variable{Set: true, Kind: expand.String}
 	}
-	value := e.state.vars[name]
+	value, _ := e.state.value(name)
 	if (name != "IFS" || !e.literal) && e.unknown(name) {
 		e.unresolved = true
 	}
 	return value
 }
 func (e *environment) unknown(name string) bool {
-	_, found := e.state.vars[name]
+	_, found := e.state.value(name)
 	return e.state.unknown[name] || e.state.dynamic && !found
 }
 func (e *environment) Each(fn func(string, expand.Variable) bool) {
-	for name, value := range e.state.vars {
-		if !fn(name, value) {
-			return
+	e.state.each(func(name string, value expand.Variable) bool {
+		if !value.Declared() {
+			return true
 		}
-	}
+		return fn(name, value)
+	})
 }
 
 func (a *analyzer) substitutions(w *syntax.Word, s *state) bool {

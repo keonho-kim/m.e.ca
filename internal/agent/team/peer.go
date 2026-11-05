@@ -17,11 +17,11 @@ type Peer struct {
 	contextView          *workProjection
 	contextMask          uint16
 	contextText          string
+	contextBase          *workBase
+	contextBaseText      string
+	contextBaseMask      uint16
 	idleDirective        string
 	room                 *Room
-	// Only commands awaiting their first terminal observation remain here.
-	// Publication owns this map under room.logMu; completed archives need no entry.
-	running map[string]struct{}
 }
 
 func (p *Peer) Deadline() time.Time { return p.room.deadline }

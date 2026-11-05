@@ -11,7 +11,7 @@ func (r *Room) resolveIdleLocked() (bool, error) {
 		return false, nil
 	}
 	for _, live := range r.active {
-		if !live.closed && !live.leaving && (!live.waiting || live.commands > 0 || live.attention > live.reviewed) {
+		if !live.closed && !live.leaving && (!live.waiting || len(live.statuses) > 0 || live.attention > live.reviewed) {
 			return false, nil
 		}
 	}

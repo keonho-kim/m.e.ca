@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	"errors"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
@@ -35,7 +36,7 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		}
 		r.mu.Unlock()
 		if idleErr != nil {
-			r.logMu.Unlock()
+			idleErr = errors.Join(idleErr, r.endPublication())
 			r.memberMu.Unlock()
 			r.fail(idleErr)
 			return false, idleErr
@@ -49,7 +50,7 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 				r.finished = true
 				r.mu.Unlock()
 			}
-			r.logMu.Unlock()
+			err = errors.Join(err, r.endPublication())
 			r.memberMu.Unlock()
 			r.notify()
 			return false, err
@@ -58,7 +59,7 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 			_, err = r.appendPublic(p.answerMessage(text, false))
 			announced = true
 		}
-		r.logMu.Unlock()
+		err = errors.Join(err, r.endPublication())
 		r.memberMu.Unlock()
 		if err != nil || pending {
 			return pending, err

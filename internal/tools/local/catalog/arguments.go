@@ -5,12 +5,10 @@
 package catalog
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
-	"io"
 )
 
 type Arguments struct {
@@ -25,7 +23,7 @@ type Arguments struct {
 }
 
 func Parse(call toolapi.Call) (Specification, Arguments, error) {
-	if err := call.Check(); err != nil {
+	if err := call.CheckIdentity(); err != nil {
 		return Specification{}, Arguments{}, err
 	}
 	var spec Specification
@@ -42,13 +40,8 @@ func Parse(call toolapi.Call) (Specification, Arguments, error) {
 		return spec, Arguments{}, err
 	}
 	var input Arguments
-	decoder := json.NewDecoder(bytes.NewReader(call.Arguments))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&input); err != nil {
+	if err := json.Unmarshal(call.Arguments, &input); err != nil {
 		return spec, input, err
-	}
-	if err := decoder.Decode(new(json.RawMessage)); err != io.EOF {
-		return spec, input, fmt.Errorf("trailing tool arguments")
 	}
 	return spec, input, nil
 }

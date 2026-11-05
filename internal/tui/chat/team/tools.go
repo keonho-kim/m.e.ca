@@ -14,14 +14,15 @@ import (
 
 type toolDisplay struct {
 	messageDisplay
-	command transcript.CommandView
+	command  transcript.CommandView
+	terminal bool
 }
 
 func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output *viewport.View) {
 	if event.Call == nil || catalog.IsTool(event.Call.Name) {
 		return
 	}
-	id := key(event.Agent, event.Call.ID)
+	id := toolCallKey(event.Agent, event.Call.ID)
 	if s.tools == nil {
 		s.tools = make(map[string]toolDisplay)
 	}
@@ -37,28 +38,51 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 	if event.Call == nil || catalog.IsTool(event.Call.Name) {
 		return
 	}
-	id := key(event.Agent, event.Call.ID)
+	id := toolCallKey(event.Agent, event.Call.ID)
+	command := event.Call.Name == "execute_command" && event.Operation != nil && event.Operation.Process != nil
+	if command {
+		owned := commandKey(event.Agent, event.Operation.Process.CommandID)
+		if _, exists := s.tools[owned]; exists {
+			id = owned
+		}
+	}
 	block := s.tools[id]
+	if command && toolapi.CommandActive(event.Operation.Process.Status) && block.terminal {
+		return
+	}
 	agent := event.Agent
 	event.Agent = ""
 	for _, value := range f.Event(event) {
 		block.show(agent, false, value, f, output)
 	}
-	if event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Status == "running" {
+	if command && toolapi.CommandActive(event.Operation.Process.Status) {
 		if s.tools == nil {
 			s.tools = make(map[string]toolDisplay)
 		}
-		s.tools[id] = block
+		delete(s.tools, id)
+		s.tools[commandKey(agent, event.Operation.Process.CommandID)] = block
 	} else {
 		delete(s.tools, id)
 	}
 }
 func (s *State) Commands(agent string, commands []toolapi.CommandRun, f transcript.Formatter, output *viewport.View) {
 	for _, command := range commands {
-		block := s.tools[key(agent, command.CallID)]
-		if block.body != 0 && command.Status == "running" {
+		id := commandKey(agent, command.ID)
+		block, found := s.tools[id]
+		if !found {
+			pending := toolCallKey(agent, command.CallID)
+			block, found = s.tools[pending]
+			if found {
+				delete(s.tools, pending)
+			}
+		}
+		if block.body != 0 && !block.terminal {
 			block.show(agent, false, viewport.Block{Text: block.command.Render(command, f)}, f, output)
-			s.tools[key(agent, command.CallID)] = block
+			block.terminal = !toolapi.CommandActive(command.Status)
+			s.tools[id] = block
 		}
 	}
 }
+
+func toolCallKey(agent, call string) string { return agent + "/call:" + call }
+func commandKey(agent, id string) string    { return agent + "/command:" + id }

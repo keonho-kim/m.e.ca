@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,7 +51,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	if len(calls) > 0 && calls[0].Name == "execute_command" {
 		end := 0
 		var retained int64
-		for _, call := range calls[:min(len(calls), maximum, process.MaxActive)] {
+		for _, call := range calls[:min(len(calls), maximum, max(1, e.commands.Available()))] {
 			if call.Name != "execute_command" {
 				break
 			}

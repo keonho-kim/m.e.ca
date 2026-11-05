@@ -25,7 +25,7 @@ func start(ctx context.Context, directory, commandText string, environment []str
 	}
 	command := exec.CommandContext(ctx, "/bin/sh", "-c", commandText)
 	command.Dir = directory
-	command.Env = append([]string{}, environment...)
+	command.Env = environment
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Cancel = func() error {
 		if command.Process == nil {
@@ -42,8 +42,12 @@ func start(ctx context.Context, directory, commandText string, environment []str
 	if err := command.Start(); err != nil {
 		return startedCommand{}, err
 	}
+	var executionCause error
 	wait := func() error {
 		runErr := command.Wait()
+		if ctx.Err() != nil {
+			executionCause = context.Cause(ctx)
+		}
 		if command.Process != nil {
 			if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
 				runErr = errors.Join(runErr, err)
@@ -52,14 +56,15 @@ func start(ctx context.Context, directory, commandText string, environment []str
 		return runErr
 	}
 	output := func(runErr error) (Output, error) {
-		output := Output{Started: true, Stdout: stdout.String(), Stderr: stderr.String(), ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: "execution_failed"}
+		outCapture, errCapture := stdout.snapshot(0), stderr.snapshot(0)
+		output := Output{Revisions: [2]uint64{outCapture.Revision, errCapture.Revision}, Started: true, Stdout: outCapture.Text, Stderr: errCapture.Text, ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: "execution_failed"}
 		if err := errors.Join(stdout.captureError(), stderr.captureError()); err != nil {
 			return output, errors.Join(runErr, err)
 		}
-		if ctx.Err() != nil {
-			cause := ctx.Err()
+		if executionCause != nil {
+			cause := executionCause
 			output.Status = "interrupted"
-			if errors.Is(context.Cause(ctx), context.DeadlineExceeded) {
+			if errors.Is(executionCause, context.DeadlineExceeded) {
 				output.Status = "timeout"
 				cause = context.DeadlineExceeded
 			}

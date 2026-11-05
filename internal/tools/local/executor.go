@@ -18,6 +18,7 @@ import (
 
 type Executor struct {
 	imageReads              chan struct{}
+	redactionVersion        func() int
 	liveOutputs             liveCaptures
 	Files                   *fileview.Reader
 	commands                process.Registry
@@ -62,6 +63,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 }
 
 func (executor *Executor) Close() error {
+	executor.liveOutputs.releaseProjections()
 	executor.commands.End()
 	executor.liveOutputs.clear()
 	err := errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())

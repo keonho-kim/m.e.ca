@@ -6,20 +6,8 @@ package command
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 )
-
-func testContext() Context {
-	return Context{Project: "/work/project", Home: "/home/user", Environment: []string{"HOME=/home/user", "PATH=/usr/bin:/bin"}, Resolve: func(dir, path string, _ bool) (ResolvedPath, error) {
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(dir, path)
-		}
-		path = filepath.Clean(path)
-		directory := path == "/work" || path == "/work/project" || path == "/work/project/out" || path == "/etc"
-		return ResolvedPath{Path: path, Directory: directory}, nil
-	}}
-}
 
 func TestAnalyzeDecisions(t *testing.T) {
 	for _, test := range []struct{ text, want string }{

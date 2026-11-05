@@ -6,6 +6,7 @@ package local
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,16 +22,24 @@ func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
 	e.commands.Begin(ctx, deadline)
 	e.liveOutputs.clear()
 }
-func (e *Executor) StopCommands()                                  { e.commands.End(); e.liveOutputs.clear() }
-func (e *Executor) CommandUpdates() <-chan struct{}                { return e.commands.Updates() }
-func (e *Executor) CommandDone(id string) (<-chan struct{}, error) { return e.commands.Done(id) }
-func (e *Executor) ActiveCommand() string                          { return e.commands.ActiveID() }
-func (e *Executor) HasCommands() bool                              { return e.commands.HasCommands() }
+func (e *Executor) StopCommands() {
+	e.liveOutputs.releaseProjections()
+	e.commands.End()
+	e.liveOutputs.clear()
+}
+func (e *Executor) CommandUpdates() <-chan struct{} { return e.commands.Updates() }
+func (e *Executor) ActiveCommand() string           { return e.commands.ActiveID() }
+func (e *Executor) HasCommands() bool               { return e.commands.HasCommands() }
 func (e *Executor) CommandActivity() []toolapi.CommandRun {
-	out := make([]toolapi.CommandRun, 0)
-	for _, state := range e.commands.List() {
-		run := toolapi.CommandRun{CallID: state.CallID, ID: state.ID, Command: e.redact(state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
-		if state.Status != "running" {
+	var storage [process.MaxActive]process.State
+	states := e.commands.AppendStates(storage[:0])
+	if len(states) == 0 {
+		return nil
+	}
+	out := make([]toolapi.CommandRun, 0, len(states))
+	for _, state := range states {
+		run := toolapi.CommandRun{CallID: state.CallID, ID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
+		if !toolapi.CommandActive(state.Status) {
 			code := state.ExitCode
 			run.ExitCode = &code
 		}
@@ -54,7 +63,7 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 		if err != nil {
 			return nil, err
 		}
-		command := e.redact(state.Command)
+		command := e.commandLabel(state.ID, state.Command)
 		result.Process.Command = command
 		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, Command: command, Result: result})
 	}
@@ -62,9 +71,13 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 }
 
 func (e *Executor) runningCommand(state process.State) (toolapi.Result, error) {
+	// A projection failure does not terminate the owned process. Preserve its
+	// identity so callers retain mutation leases and can wait or cancel it.
+	metadata := toolapi.Result{Started: state.Status != "waiting", Process: &toolapi.ProcessOutcome{CommandID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status}}
 	captures, err := e.commandCaptures(state.ID)
-	if err != nil {
-		return toolapi.Result{}, err
+	pending := errors.Is(err, process.ErrProjectionBusy)
+	if err != nil && !pending {
+		return metadata, err
 	}
 	stdout, stdoutPath := captures[0].excerpt, captures[0].path
 	stderr, stderrPath := captures[1].excerpt, captures[1].path
@@ -78,9 +91,9 @@ func (e *Executor) runningCommand(state process.State) (toolapi.Result, error) {
 		ElapsedMillis    int64  "json:\"elapsed_millis\""
 		LastOutputMillis *int64 "json:\"last_output_millis\""
 		Next             string "json:\"next\""
-	}{state.ID, "running", stdout, stderr, stdoutPath, stderrPath, state.ElapsedMillis, state.LastOutputMillis, toolapi.CommandManagementHint}
-	result, err := resultfmt.Encode(body, "Command is still running: "+state.ID)
-	result.Started = true
-	result.Process = &toolapi.ProcessOutcome{CommandID: state.ID, Command: e.redact(state.Command), Status: "running"}
+		OutputPending    bool   `json:"output_pending,omitempty"`
+	}{state.ID, state.Status, stdout, stderr, stdoutPath, stderrPath, state.ElapsedMillis, state.LastOutputMillis, toolapi.CommandManagementHint, pending}
+	result, err := resultfmt.Encode(body, "Command "+state.Status+": "+state.ID)
+	result.Started, result.Process = metadata.Started, metadata.Process
 	return result, err
 }

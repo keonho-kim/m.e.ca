@@ -45,6 +45,8 @@ type app struct {
 	chat                        chatState
 	connection                  connectionState
 	work                        workerActivity
+	memory                      memoryUsage
+	headerTitle                 string
 	language                    locale.Language
 	languageConfirm             bool
 	permissionConfirm           bool

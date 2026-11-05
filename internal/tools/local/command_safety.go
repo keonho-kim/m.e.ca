@@ -16,6 +16,10 @@ import (
 	commandpolicy "github.com/keonho-kim/meca/internal/policy/command"
 )
 
+type resolutionQuery struct {
+	directory, path string
+	removal         bool
+}
 type shellTarget struct {
 	path string
 	info os.FileInfo
@@ -26,14 +30,19 @@ type shellSafety struct {
 	targets  []shellTarget
 }
 
-func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string) (shellSafety, error) {
+func (e *Executor) analyzeProgram(ctx context.Context, program *commandpolicy.Program) (shellSafety, error) {
 	var result shellSafety
+	var resolvedQueries map[resolutionQuery]int
 	if err := e.boundary.Check(); err != nil {
 		return result, err
 	}
-	report, err := commandpolicy.Analyze(ctx, text, commandpolicy.Context{
-		Project: e.project, Home: e.home, Environment: env,
+	report, err := program.Analyze(ctx, commandpolicy.Context{
+		Project: e.project, Home: e.home,
 		Resolve: func(directory, path string, removal bool) (commandpolicy.ResolvedPath, error) {
+			query := resolutionQuery{directory, path, removal}
+			if i, found := resolvedQueries[query]; found {
+				return result.targets[i].resolved(), nil
+			}
 			if !filepath.IsAbs(path) {
 				path = directory + "/" + path
 			}
@@ -47,11 +56,18 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return commandpolicy.ResolvedPath{}, err
 			}
+			if resolvedQueries == nil {
+				resolvedQueries = make(map[resolutionQuery]int)
+			}
+			resolvedQueries[query] = len(result.targets)
 			result.targets = append(result.targets, shellTarget{resolved, info})
-			return commandpolicy.ResolvedPath{Path: resolved, Directory: info != nil && info.IsDir(), Symlink: info != nil && info.Mode()&os.ModeSymlink != 0}, nil
+			return result.targets[len(result.targets)-1].resolved(), nil
 		},
 	})
 	result.decision, result.findings = report.Safety, report.Findings
+	return result, commandAnalysisError(err)
+}
+func commandAnalysisError(err error) error {
 	var invalid *commandpolicy.SyntaxError
 	var blocked *commandpolicy.BlockedError
 	if errors.As(err, &invalid) {
@@ -60,7 +76,7 @@ func (e *Executor) analyzeCommand(ctx context.Context, text string, env []string
 	if errors.As(err, &blocked) {
 		err = &toolapi.Failure{Code: toolapi.CommandBlocked, Detail: err.Error(), Next: "Respect the protected target or privilege restriction; do not retry the same effect through another command.", Cause: err}
 	}
-	return result, err
+	return err
 }
 
 func (s shellSafety) same(other shellSafety) bool {
@@ -77,4 +93,9 @@ func (s shellSafety) same(other shellSafety) bool {
 		}
 	}
 	return true
+}
+
+func (target shellTarget) resolved() commandpolicy.ResolvedPath {
+	info := target.info
+	return commandpolicy.ResolvedPath{Path: target.path, Directory: info != nil && info.IsDir(), Symlink: info != nil && info.Mode()&os.ModeSymlink != 0}
 }

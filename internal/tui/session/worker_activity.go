@@ -1,6 +1,6 @@
 // Purpose: Own worker status, cancellation linkage and bounded activity clocks.
 // Pattern: Event-loop-owned lifecycle state.
-// Usage: Runtime and setup handlers update workerActivity; session polls its timer channels.
+// Usage: Runtime and setup handlers set timing state; the event loop supplies status-clock updates.
 // Related: internal/tui/session/elapsed.go, internal/tui/session/activity.go, internal/tui/session/worker_state.go.
 package session
 
@@ -14,8 +14,6 @@ type workerActivity struct {
 	cancel         context.CancelFunc
 	elapsedStarted time.Time
 	elapsed        time.Duration
-	elapsedTimer   *time.Ticker
-	elapsedTicks   <-chan time.Time
 	indicatorTimer *time.Ticker
 	indicatorTicks <-chan time.Time
 	indicatorDots  int
@@ -23,27 +21,24 @@ type workerActivity struct {
 }
 
 func (w *workerActivity) startElapsed() {
-	w.stopElapsed(time.Now())
 	w.elapsedStarted = time.Now()
 	w.elapsed = 0
-	w.elapsedTimer = time.NewTicker(time.Second)
-	w.elapsedTicks = w.elapsedTimer.C
 }
 
 func (w *workerActivity) updateElapsed(now time.Time) bool {
-	if w.elapsedTimer == nil {
+	if w.elapsedStarted.IsZero() {
 		return false
 	}
-	w.elapsed = max(0, now.Sub(w.elapsedStarted))
-	return true
+	elapsed := max(0, now.Sub(w.elapsedStarted))
+	changed := elapsed/time.Second != w.elapsed/time.Second
+	w.elapsed = elapsed
+	return changed
 }
 
 func (w *workerActivity) stopElapsed(now time.Time) bool {
-	active := w.updateElapsed(now)
-	if w.elapsedTimer != nil {
-		w.elapsedTimer.Stop()
-	}
-	w.elapsedTimer, w.elapsedTicks = nil, nil
+	active := !w.elapsedStarted.IsZero()
+	w.updateElapsed(now)
+	w.elapsedStarted = time.Time{}
 	return active
 }
 

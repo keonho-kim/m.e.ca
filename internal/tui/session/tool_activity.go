@@ -71,7 +71,7 @@ func (t *toolActivity) render(f transcript.Formatter) string {
 	}
 	var text strings.Builder
 	for id := range t.views {
-		if !slices.ContainsFunc(t.commands, func(run toolapi.CommandRun) bool { return run.ID == id && run.Status == "running" }) {
+		if !slices.ContainsFunc(t.commands, func(run toolapi.CommandRun) bool { return run.ID == id && toolapi.CommandActive(run.Status) }) {
 			delete(t.views, id)
 		}
 	}
@@ -81,7 +81,7 @@ func (t *toolActivity) render(f transcript.Formatter) string {
 	for _, pending := range t.pending {
 		// A running command snapshot replaces its start row without duplicating it.
 		index := slices.IndexFunc(t.commands, func(run toolapi.CommandRun) bool {
-			return pending.callID != "" && run.CallID == pending.callID && run.Status == "running"
+			return pending.callID != "" && run.CallID == pending.callID && toolapi.CommandActive(run.Status)
 		})
 		if index >= 0 {
 			text.WriteString(t.commandText(t.commands[index], f))
@@ -101,7 +101,7 @@ func (t *toolActivity) render(f transcript.Formatter) string {
 func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatter) string {
 	view := t.views[run.ID]
 	text := view.Render(run, f)
-	if run.Status == "running" && f.RedactionVersion != nil {
+	if toolapi.CommandActive(run.Status) && f.RedactionVersion != nil {
 		if t.views == nil {
 			t.views = make(map[string]transcript.CommandView)
 		}

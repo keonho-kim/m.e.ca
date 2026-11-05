@@ -8,6 +8,7 @@ import (
 	"fmt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"path/filepath"
 	"strings"
 )
@@ -41,7 +42,7 @@ func operationObservation(member, projectRoot string, event runrecord.Event) cha
 	}
 	if process := op.Process; process != nil {
 		text.WriteString("\nCommand " + process.CommandID + ": " + process.Status)
-		if process.Status != "running" {
+		if !toolapi.CommandActive(process.Status) {
 			fmt.Fprintf(&text, "; exit=%d", process.ExitCode)
 		}
 		if len(op.Command) <= 4096 {
@@ -58,7 +59,7 @@ func operationObservation(member, projectRoot string, event runrecord.Event) cha
 		fmt.Fprintf(&text, "\nOriginal record: %s/%d", event.Reference.Session, event.Reference.Sequence)
 	}
 	passive := len(paths) == 0 && op.Failure == nil && op.Status == "tool_succeeded"
-	if process := op.Process; process != nil && process.Status != "running" && (process.Status != "exited" || process.ExitCode != 0) {
+	if process := op.Process; process != nil && !toolapi.CommandActive(process.Status) && (process.Status != "exited" || process.ExitCode != 0) {
 		passive = false
 	}
 	return channel.Message{From: member, Text: text.String(), Observation: true, Passive: passive, ChangedPaths: paths, Reference: event.Reference}

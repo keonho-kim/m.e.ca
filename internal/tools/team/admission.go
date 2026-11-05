@@ -30,34 +30,37 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 	if call.Name == "view_image" {
 		return nil, nil, nil
 	}
-	shell := call.Name == "execute_command"
-	if id := e.Local.ActiveCommand(); id != "" {
-		return nil, nil, &toolapi.Failure{Code: "team_command_pending", Detail: "Your command " + id + " is still running; nothing else started.", Next: "Use wait_command or cancel_command with this command_id before executing another command or changing files. Use list_command_runs to inspect session commands."}
+	if call.Name == "execute_command" {
+		// Mutation targets are available after local shell analysis. Reserve them
+		// at execution, so freezing a batch cannot wait on its own pending calls.
+		return nil, nil, e.Peer.CheckUserDecision()
 	}
-	obsolete, err := e.Peer.UserChanges()
+	if id := e.Local.ActiveCommand(); id != "" {
+		return nil, nil, &toolapi.Failure{Code: "team_command_pending", Detail: "Your command " + id + " is still running; this file change did not start.", Next: "Use wait_command or cancel_command with this command_id before changing files. Independent commands remain available within your command capacity; use list_command_runs to inspect them."}
+	}
+	paths, err := e.paths(call)
 	if err != nil {
 		return nil, nil, err
 	}
-	var paths []string
-	if !shell {
-		var err error
-		paths, err = e.paths(call)
-		if err != nil {
-			return nil, nil, err
-		}
-		if err := e.Peer.CheckWork(paths); err != nil {
-			return nil, nil, err
-		}
+	if err := e.Peer.CheckWork(paths); err != nil {
+		return nil, nil, err
+	}
+	held, err := e.reservePaths(ctx, call, paths, false)
+	return held, paths, err
+}
+
+func (e *Executor) reservePaths(ctx context.Context, call toolapi.Call, paths []string, command bool) (*workspace.Lease, error) {
+	obsolete, err := e.Peer.UserChanges()
+	if err != nil {
+		return nil, err
 	}
 	waiting := func() error {
 		return e.Peer.Emit(runrecord.Event{Kind: "tool_waiting", CallID: call.ID, Call: &call, Text: "Waiting for shared workspace access"})
 	}
-	if shell {
-		held, err := e.Workspace.ReserveShell(ctx, obsolete, waiting)
-		return held, nil, err
+	if command {
+		return e.Workspace.ReserveCommand(ctx, paths, obsolete, nil)
 	}
-	held, err := e.Workspace.ReserveFiles(ctx, paths, obsolete, waiting)
-	return held, paths, err
+	return e.Workspace.ReserveFiles(ctx, paths, obsolete, waiting)
 }
 
 func (e *Executor) paths(call toolapi.Call) ([]string, error) {

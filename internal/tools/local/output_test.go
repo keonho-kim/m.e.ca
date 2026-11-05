@@ -23,7 +23,8 @@ func TestCommandOutputArchiveAndCleanup(t *testing.T) {
 	})
 	e, _ := testExecutor(t)
 	source := strings.Repeat("한글 출력\n", 10000)
-	excerpt, path, err := e.commandOutput("cmd_test", source, "stdout")
+	projected, err := e.projectLiveCapture("cmd_test", "stdout", liveCapture{}, process.Capture{Revision: 1, Text: source})
+	excerpt, path := projected.excerpt, projected.path
 	if err != nil || path == "" || len(excerpt) > outputExcerptBytes+150 {
 		t.Fatalf("size=%d path=%s err=%v", len(excerpt), path, err)
 	}

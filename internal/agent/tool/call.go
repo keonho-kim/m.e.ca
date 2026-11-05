@@ -23,7 +23,8 @@ type Call struct {
 	Arguments json.RawMessage `json:"arguments"`
 }
 
-func (call Call) Check() error {
+// CheckIdentity validates call routing and byte bounds; schema parsing owns the argument object.
+func (call Call) CheckIdentity() error {
 	if call.ID == "" || len(call.ID) > 128 || !utf8.ValidString(call.ID) {
 		return fmt.Errorf("invalid Tool Call ID")
 	}
@@ -40,8 +41,15 @@ func (call Call) Check() error {
 			return fmt.Errorf("invalid tool name")
 		}
 	}
-	if len(call.Arguments) > MaxArgumentsBytes || !json.Valid(call.Arguments) {
+	if len(call.Arguments) > MaxArgumentsBytes {
 		return fmt.Errorf("invalid or oversized Tool Call arguments")
+	}
+	return nil
+}
+
+func (call Call) Check() error {
+	if err := call.CheckIdentity(); err != nil {
+		return err
 	}
 	if _, err := argumentObject(call.Arguments); err != nil {
 		return err

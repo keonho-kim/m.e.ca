@@ -5,6 +5,7 @@
 package team
 
 import (
+	"errors"
 	"fmt"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -13,7 +14,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64) (contribution.Scope, error) {
+func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64) (result contribution.Scope, resultErr error) {
 	r := p.room
 	if err := r.admitUser(); err != nil {
 		return contribution.Scope{}, err
@@ -27,7 +28,7 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 	}
 	requested := contribution.Describe(contribution.Scope{Member: p.ID, Summary: summary, Paths: paths, Contract: contract, ReplyTo: replyTo})
 	r.logMu.Lock()
-	defer r.logMu.Unlock()
+	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if err := r.ctx.Err(); err != nil {
 		return contribution.Scope{}, err
 	}

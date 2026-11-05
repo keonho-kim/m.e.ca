@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/keonho-kim/meca/internal/agent/team"
@@ -21,21 +22,19 @@ type Local interface {
 	toolapi.Executor
 	toolapi.CommandExecutor
 	toolapi.CommandNotifier
-	CommandDone(string) (<-chan struct{}, error)
 	ActiveCommand() string
+	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
 	ProjectInstructions(context.Context) (string, error)
 	Close() error
 }
 type Executor struct {
-	Local        Local
+	Local
 	Peer         *team.Peer
 	Workspace    *workspace.Access
 	Refusals     *approval.Ledger
 	Images       chan struct{}
 	Project      string
 	mu           sync.Mutex
-	shell        *workspace.Lease
-	commands     sync.WaitGroup
 	commandPaths map[string][]string
 }
 
@@ -50,7 +49,7 @@ func (e *Executor) Definitions() []toolapi.Definition {
 			definitions[i].Description += " Declare the target files or subdirectories with set_work before changing them. Respect the named teammate's ownership and inspect newer relevant changes before retrying a conflict."
 		}
 		if definitions[i].Name == "execute_command" {
-			definitions[i].Description = localcatalog.CommandDescription("Team shell commands execute one at a time across peers and are serialized with file changes. Tell teammates your contribution before the first local tool. Use set_work before changing files; resolved mutation targets must belong to your current contribution. Inspection commands do not require owning files. A call may wait for shared access; command controls remain available.")
+			definitions[i].Description = localcatalog.CommandDescription("Independent commands run concurrently across teammates. Submit independent commands together; sequence dependent steps. Tell teammates your contribution before the first local tool. Use set_work before changing files; resolved mutation targets must belong to your current contribution. Only overlapping known mutation targets wait for shared access. Inspection commands do not require owning files. Coordinate commands that change the same dependency environment or generated outputs; arbitrary program effects cannot be inferred. Command controls manage only your own commands.")
 		}
 	}
 	return append(definitions, catalog.Definitions()...)
@@ -78,7 +77,7 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 		return nil, err
 	}
 	if proposal := op.Approval(); call.Name == "execute_command" && proposal.Command != nil {
-		paths, err = e.canonicalPaths(proposal.Command.MutationTargets, false)
+		paths = proposal.Command.MutationTargets
 	}
 	if err == nil {
 		err = e.Peer.CheckWork(paths)
@@ -88,9 +87,16 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 		toolapi.Release(op)
 		return nil, err
 	}
-	return &localOperation{executor: e, call: call, operation: op, held: held, paths: paths}, nil
-}
-
-func (e *Executor) ProjectInstructions(ctx context.Context) (string, error) {
-	return e.Local.ProjectInstructions(ctx)
+	prepared := &localOperation{executor: e, call: call, operation: op, held: held, paths: paths}
+	if call.Name == "execute_command" {
+		command, ok := op.(interface {
+			SetCommandAdmission(func(context.Context) (func(), error))
+		})
+		if !ok {
+			toolapi.Release(op)
+			return nil, fmt.Errorf("command executor must own queued admission")
+		}
+		command.SetCommandAdmission(prepared.admitCommand)
+	}
+	return prepared, nil
 }

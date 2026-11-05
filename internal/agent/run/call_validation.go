@@ -5,7 +5,6 @@
 package run
 
 import (
-	"encoding/json"
 	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -13,7 +12,6 @@ import (
 type validatedCall struct {
 	call       toolapi.Call
 	definition toolapi.Definition
-	command    string
 }
 
 func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
@@ -25,7 +23,7 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 			break
 		}
 	}
-	if err := call.Check(); err != nil {
+	if err := call.CheckIdentity(); err != nil {
 		return validatedCall{}, err
 	}
 	if definition == nil {
@@ -34,7 +32,7 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 	if len(call.Arguments) > s.limits.MaxArgumentBytes {
 		return validatedCall{}, fmt.Errorf("arguments exceed the configured %d-byte limit; narrow the operation; nothing executed", s.limits.MaxArgumentBytes)
 	}
-	arguments, err := toolapi.ValidateArguments(*definition, call.Arguments)
+	_, err := toolapi.ValidateArguments(*definition, call.Arguments)
 	if err != nil {
 		hint := "Correct only the invalid argument; no operation was executed."
 		if call.Name == "edit_file" {
@@ -43,9 +41,5 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		return validatedCall{}, fmt.Errorf("argument validation failed: %s. %s", err, hint)
 	}
 
-	var command string
-	if call.Name == "execute_command" {
-		_ = json.Unmarshal(arguments["command"], &command)
-	}
-	return validatedCall{call, *definition, command}, nil
+	return validatedCall{call, *definition}, nil
 }

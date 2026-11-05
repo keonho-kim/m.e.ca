@@ -67,12 +67,13 @@ func (a *app) permissionShortcuts() []view.Shortcut {
 }
 
 func (a *app) renderPermission(w, h int) {
+	a.headerTitle = a.language.Text("Permission mode")
 	description := "Run ordinary work automatically; ask for approval when required."
 	if a.choice == int(policy.PermissionAllMighty) {
 		description = "Automatically approve operations; outbound transfers still require your approval."
 	}
 	view.Settings(a.screen, view.SettingsDisplay{
-		Title: a.language.Text("Permission mode"), Language: a.language,
+		Title: a.headerTitle, Language: a.language,
 		Activity: a.activity(), Usage: a.chat.displayTokens(), Status: a.status,
 		Confirm: a.permissionConfirm,
 		Rows:    []view.SettingRow{{Label: a.language.Text("Permission mode"), Values: []string{a.language.Text("Default"), "All Mighty"}, Selected: a.choice}},

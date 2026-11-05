@@ -69,7 +69,10 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 	emit := func(event runrecord.Event) error {
 		if op := event.Operation; op != nil && op.Process != nil {
 			copy := *op
-			copy.AffectedPaths = tools.CommandTargets(op.Process.CommandID, op.Process.Status != "running")
+			copy.AffectedPaths = tools.CommandTargets(op.Process.CommandID, !toolapi.CommandActive(op.Process.Status))
+			if !op.Started {
+				copy.AffectedPaths = nil
+			}
 			event.Operation = &copy
 		}
 		if event.Call != nil && catalog.IsTool(event.Call.Name) {

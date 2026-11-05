@@ -1,12 +1,11 @@
 // Purpose: Apply shared-workspace admission around real local effects without bypassing approval.
 // Pattern: Prepared operation decorator.
-// Usage: Executor.Prepare wraps local operations; command completion releases transferred ownership.
+// Usage: Files reserve before preparation; commands reserve known targets only at execution.
 // Related: internal/tools/team/executor.go, internal/tools/team/workspace/workspace.go.
 package team
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -19,6 +18,7 @@ type localOperation struct {
 	operation toolapi.Execution
 	held      *workspace.Lease
 	paths     []string
+	denialKey string
 }
 
 func (op *localOperation) Approval() toolapi.Approval { return op.operation.Approval() }
@@ -30,14 +30,12 @@ func (op *localOperation) Release() {
 func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.Result, error) {
 	defer op.Release()
 	e := op.executor
-	if e.Refusals.Refused(op.operation.Approval()) {
+	if e.Refusals.Refused(op.operation.Approval(), &op.denialKey) {
 		return toolapi.Result{}, fmt.Errorf("the user refused this operation; do not repeat it through another peer")
 	}
 	switch op.call.Name {
 	case "wait_command", "cancel_command", "list_command_runs":
-		result, err := op.operation.Execute(ctx, approved)
-		e.releaseFinishedShell()
-		return result, err
+		return op.operation.Execute(ctx, approved)
 	case "view_image":
 		select {
 		case e.Images <- struct{}{}:
@@ -47,6 +45,7 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 		defer func() { <-e.Images }()
 		return op.operation.Execute(ctx, approved)
 	}
+
 	if err := e.Peer.CheckUserDecision(); err != nil {
 		return toolapi.Result{Failed: true, Failure: toolapi.FailureOf(err)}, err
 	}
@@ -58,10 +57,6 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 	if op.call.Name == "execute_command" && result.Process != nil && len(op.paths) > 0 {
 		e.trackCommandPaths(result.Process.CommandID, op.paths)
 	}
-	if op.call.Name == "execute_command" && result.Process != nil && result.Process.Status == "running" {
-		held := op.held
-		op.held = nil
-		err = errors.Join(err, e.holdShell(result.Process.CommandID, held))
-	}
+
 	return result, err
 }

@@ -116,6 +116,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 	if err != nil {
 		return err
 	}
+	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
 	options := agentrequest.Options{
 		Config: cfg, Selection: selected, Session: store.Session(), Generator: prepared.Client,

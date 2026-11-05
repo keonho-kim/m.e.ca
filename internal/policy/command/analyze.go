@@ -1,6 +1,6 @@
 // Purpose: Analyze shell syntax for explicit hazardous effects without executing shell code.
 // Pattern: Conservative syntax-tree analysis.
-// Usage: Local command preparation and execution call Analyze with a filesystem resolver.
+// Usage: Prepared programs analyze fresh filesystem observations without executing shell code.
 // Related: internal/policy/command/flow.go, internal/policy/command/words.go, internal/policy/safety.go.
 package command
 
@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/policy"
-	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -23,7 +22,6 @@ type ResolvedPath struct {
 
 type Context struct {
 	Project, Home string
-	Environment   []string
 	Resolve       func(directory, path string, removal bool) (ResolvedPath, error)
 }
 
@@ -37,31 +35,31 @@ type analyzer struct {
 	depth, steps int
 }
 
-func Analyze(ctx context.Context, text string, input Context) (Report, error) {
+func (p *Program) Analyze(ctx context.Context, input Context) (Report, error) {
 	if input.Resolve == nil || !filepath.IsAbs(input.Project) {
 		return Report{}, fmt.Errorf("shell analysis requires a project and target resolver")
 	}
 	a := &analyzer{ctx: ctx, input: input}
-	s := &state{directories: []string{input.Project}, vars: map[string]expand.Variable{}, unknown: map[string]bool{}, functions: map[string]*syntax.Stmt{}}
-	expand.ListEnviron(input.Environment...).Each(func(name string, value expand.Variable) bool {
-		s.vars[name] = value
-		return true
-	})
+	s := &state{directories: []string{input.Project}, bindings: &bindings{base: p.base}}
 	s.set("PWD", input.Project)
 	s.parameters(nil, 0)
 	s.set("0", "/bin/sh")
 	for _, name := range []string{"?", "$", "!", "-", "PPID", "RANDOM", "SECONDS"} {
-		s.unknown[name] = true
+		s.markUnknown(name)
 	}
 	a.executableEnvironment(s)
-	a.parse(text, syntax.LangPOSIX, s)
+	if a.enter() {
+		a.statements(p.file.Stmts, s)
+		a.depth--
+	}
 	return Report{Safety: a.result, Findings: a.findings}, a.err
 }
 
 func (a *analyzer) executableEnvironment(s *state) {
 	// Startup files and loader hooks execute code outside the supplied AST.
 	for _, name := range []string{"ENV", "BASH_ENV", "SHELLOPTS", "BASHOPTS", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES"} {
-		if s.unknown[name] || s.vars[name].Str != "" {
+		value, _ := s.value(name)
+		if s.unknown[name] || value.Str != "" {
 			a.ask("Executable environment settings require approval")
 		}
 	}

@@ -29,7 +29,7 @@ func TestCommandViewReusesBodyAndTracksCredentialVersion(t *testing.T) {
 		t.Fatal("credential revision reused an unsafe projection", got, scans)
 	}
 	run.Status = "exited"
-	if v.Render(run, f) != "" || v.source != "" || v.body != "" {
+	if shown := v.Render(run, f); shown == "" || v.source != "" || v.body != "" {
 		t.Fatal("completed command retained presentation references")
 	}
 }

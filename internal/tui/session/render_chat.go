@@ -22,6 +22,7 @@ func (a *app) chatComposer(width, height int) (input.Window, view.ComposerLayout
 }
 
 func (a *app) renderChat(width, height int) {
+	a.headerTitle = ""
 	transcript := a.chatLayout(view.TranscriptWidth(width))
 	window, layout, references := a.chatComposer(width, height)
 	a.inputRegion = inputRegion{editor: &a.compose.editor, window: window, y: layout.InputY, width: width, revision: a.compose.editor.Revision()}

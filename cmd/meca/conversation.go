@@ -34,6 +34,7 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 	if err != nil {
 		return tuisession.Exit, err
 	}
+	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
 	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, SaveConfig: func(c config.Config) error { return config.Save(state, c) }})
 }

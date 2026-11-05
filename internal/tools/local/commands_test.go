@@ -40,7 +40,7 @@ func TestOwnedCommandWaitAndCollect(t *testing.T) {
 	e.BeginCommands(context.Background(), time.Now().Add(time.Minute))
 	defer e.StopCommands()
 	result := commandTool(t, e, "execute_command", map[string]any{"command": "printf begin; while [ ! -f release ]; do sleep 0.02; done; printf finished"})
-	if result.Failed || result.Process == nil || result.Process.Status != "running" {
+	if result.Failed || result.Process == nil || !toolapi.CommandActive(result.Process.Status) {
 		t.Fatalf("running marked failed: %+v", result)
 	}
 	id := result.Process.CommandID
@@ -137,7 +137,7 @@ func TestOwnedCommandRunningResultExplainsManagementTools(t *testing.T) {
 	e.BeginCommands(context.Background(), time.Now().Add(time.Minute))
 	defer e.StopCommands()
 	started := commandTool(t, e, "execute_command", map[string]any{"command": "sleep 60"})
-	if started.Process == nil || started.Process.Status != "running" {
+	if started.Process == nil || !toolapi.CommandActive(started.Process.Status) {
 		t.Fatalf("command did not remain running: %+v", started)
 	}
 	id := started.Process.CommandID
@@ -150,7 +150,7 @@ func TestOwnedCommandRunningResultExplainsManagementTools(t *testing.T) {
 		if err := json.Unmarshal(result.Content, &body); err != nil {
 			t.Fatal(err)
 		}
-		if result.Failed || body.CommandID != id || body.Status != "running" {
+		if result.Failed || body.CommandID != id || !toolapi.CommandActive(body.Status) {
 			t.Fatalf("running observation changed command lifetime: %s", result.Content)
 		}
 		for _, name := range []string{"wait_command", "cancel_command", "list_command_runs", "command_id"} {

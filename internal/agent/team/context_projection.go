@@ -6,21 +6,26 @@ package team
 
 import (
 	"encoding/json"
-	"fmt"
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 )
 
 func (v *workProjection) render(covered uint16) string {
-	var out strings.Builder
-	fmt.Fprintf(&out, "Active teammates: %s\nAvailable places: %d\nCurrent contributions:\n", strings.Join(v.key.names[:v.key.count], ", "), v.key.available)
-	for i, scope := range v.scopes {
-		contribution.WriteContext(&out, scope, covered&(1<<i) != 0)
+	base := ""
+	if v.base != nil {
+		base = v.base.text
+		if covered&((1<<MaxActive)-1) != 0 {
+			base = v.base.render(covered)
+		}
 	}
-	writeCommandStatuses(&out, v.statuses[:v.key.count])
+	return v.overlay(base, covered)
+}
+func (v *workProjection) overlay(base string, covered uint16) string {
+	var out strings.Builder
+	out.WriteString(base)
+	writeCommandStatuses(&out, v.statuses)
 	values := v.discussions
 	for i := range values {
 		if covered&(1<<(MaxActive+i)) != 0 {
@@ -76,13 +81,22 @@ func (p *Peer) ContextObservations(messages []model.Message) string {
 	}
 	if covered == 0 {
 		p.contextView, p.contextText = nil, ""
+		p.contextBase, p.contextBaseText = nil, ""
 		if p.idleDirective != "" {
 			return view.text + "\n" + p.idleDirective
 		}
 		return view.text
 	}
 	if p.contextView != view || p.contextMask != covered {
-		p.contextView, p.contextMask, p.contextText = view, covered, view.render(covered)
+		scopeMask := covered & ((1 << MaxActive) - 1)
+		if view.base != nil && (p.contextBase != view.base || p.contextBaseMask != scopeMask) {
+			p.contextBase, p.contextBaseMask = view.base, scopeMask
+			p.contextBaseText = view.base.text
+			if scopeMask != 0 {
+				p.contextBaseText = view.base.render(scopeMask)
+			}
+		}
+		p.contextView, p.contextMask, p.contextText = view, covered, view.overlay(p.contextBaseText, covered)
 	}
 	if p.idleDirective != "" {
 		return p.contextText + "\n" + p.idleDirective

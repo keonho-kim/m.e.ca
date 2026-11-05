@@ -10,7 +10,7 @@ import (
 )
 
 func (l *Lease) Check(proposal toolapi.Approval) error {
-	if l == nil || l.shell {
+	if l == nil {
 		return nil
 	}
 	w := l.workspace

@@ -15,6 +15,7 @@ func (a *app) renderModel(w, h int) {
 	}
 	f := a.connection.modelForm
 	display := f.Display(w, a.opts.Config.ContextLength, a.language, a.opts.Vault.Redact)
+	a.headerTitle = display.Title
 	display.Activity, display.Usage, display.Status, display.Command = a.activity(), a.chat.displayTokens(), a.status, a.menuInput.String()
 	fieldX := view.SettingsValueColumn(w)
 	y := view.Settings(a.screen, display, w, h)

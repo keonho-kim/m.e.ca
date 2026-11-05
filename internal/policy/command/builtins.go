@@ -40,7 +40,8 @@ func (a *analyzer) set(args []word, s *state) {
 func (a *analyzer) cd(args []word, s *state) {
 	var path word
 	if len(args) == 0 {
-		path = word{text: s.vars["HOME"].Str, known: !s.unknown["HOME"] && s.vars["HOME"].IsSet()}
+		value, _ := s.value("HOME")
+		path = word{text: value.Str, known: !s.unknown["HOME"] && value.IsSet()}
 	} else {
 		for _, arg := range args {
 			if arg.known && (arg.text == "--" || arg.text == "-P" || arg.text == "-L") {
@@ -54,9 +55,11 @@ func (a *analyzer) cd(args []word, s *state) {
 		}
 	}
 	if path.text == "-" {
-		path = word{text: s.vars["OLDPWD"].Str, known: !s.unknown["OLDPWD"] && s.vars["OLDPWD"].IsSet()}
+		value, _ := s.value("OLDPWD")
+		path = word{text: value.Str, known: !s.unknown["OLDPWD"] && value.IsSet()}
 	}
-	if !path.known || !filepath.IsAbs(path.text) && (len(s.directories) == 0 || s.vars["CDPATH"].Str != "" || s.unknown["CDPATH"]) {
+	cdpath, _ := s.value("CDPATH")
+	if !path.known || !filepath.IsAbs(path.text) && (len(s.directories) == 0 || cdpath.Str != "" || s.unknown["CDPATH"]) {
 		s.changeDirectories(nil)
 		return
 	}
