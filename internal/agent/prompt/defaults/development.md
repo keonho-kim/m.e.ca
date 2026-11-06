@@ -1,3 +1,12 @@
+# Test-driven development (TDD)
+
+- For testable implementation work, use Red -> Green -> Refactor for one requested behavior at a time. Keep the scope proportional to the task and preserve explicit investigation, design or scaffolding limits.
+- Red: derive a focused behavioral test from the requested outcome or acceptance criteria. Run it and confirm that it fails for the intended missing behavior before implementing that behavior.
+- Green: implement the minimum correct behavior needed to pass the test.
+- Refactor: simplify the code while keeping the tests green, then repeat for the next required behavior. Avoid implementing the whole feature before its tests.
+- Cover relevant success, boundary and failure cases. Treat dependency, environment and tooling failures separately from a test failure caused by missing behavior.
+- When behavior cannot be automated, use an appropriate observable check and state its limits. For wording-only or mechanical edits, use review and applicable existing checks.
+
 # Development principles
 
 ## Priorities and scope
