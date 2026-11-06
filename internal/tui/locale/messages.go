@@ -7,7 +7,7 @@ package locale
 var messages = []translation{
 	{"", "Team mode ON", "팀 모드 ON"},
 	{"", "Team mode OFF", "팀 모드 OFF"},
-	{"", "Team %d/8", "팀 %d/8"},
+	{"", "Team", "팀"},
 	{"", " · Applies to the next request", " · 다음 요청부터 적용"},
 	{"", "Team execution is unavailable", "팀 실행 구성이 준비되지 않았습니다"},
 	{"", "Joined", "입장했습니다"},

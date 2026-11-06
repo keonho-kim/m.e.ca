@@ -90,3 +90,56 @@ func TestTeamCancellationFinishesEveryStream(t *testing.T) {
 		}
 	}
 }
+
+func TestTeamFooterShowsActiveNamesInJoinOrder(t *testing.T) {
+	for _, language := range []locale.Language{locale.Korean, locale.English} {
+		a := screenFixture(t)
+		a.language = language
+		a.team.enabled = true
+		a.team.begin()
+		a.connection.selection.Model = "test-model"
+		label := "Team"
+		if language == locale.Korean {
+			label = "팀"
+		}
+		if caption := a.teamCaption(); caption != label {
+			t.Fatalf("empty team caption: %q", caption)
+		}
+		for _, step := range []struct{ name, event, names string }{
+			{"Ren", "joined", "Ren"},
+			{"Hana", "joined", "Ren Hana"},
+			{"Ren", "joined", "Ren Hana"},
+			{"Ren", "left", "Hana"},
+			{"Ren", "left", "Hana"},
+			{"Ren", "joined", "Hana Ren"},
+		} {
+			a.receiveRuntime(&runrecord.Event{Kind: "team_notice", Agent: step.name, Text: step.event})
+			want := "test-model · " + label + " " + step.names
+			if got := a.footerModel(); got != want {
+				t.Fatalf("%s %s: footer %q, want %q", step.name, step.event, got, want)
+			}
+			a.render()
+			_, height := a.screen.Size()
+			if shown := screenLine(a.screen, height-a.footerRows, 80); !strings.Contains(shown, want) {
+				t.Fatalf("footer did not render active names: %q", shown)
+			}
+		}
+		// A delayed runtime event must not make a departed peer active again.
+		a.receiveRuntime(&runrecord.Event{Kind: "generation_started", Agent: "Arjun"})
+		if a.teamCaption() != label+" Hana Ren" {
+			t.Fatal("unjoined peer appeared in the footer")
+		}
+		a.toggleTeam()
+		if a.teamCaption() != label+" Hana Ren" {
+			t.Fatal("deferred mode change hid the active request")
+		}
+		a.team.finish(&a.chat.output)
+		if a.teamCaption() != "" {
+			t.Fatal("finished team retained active names")
+		}
+		a.team.enabled = true
+		if a.teamCaption() != label {
+			t.Fatal("completed request retained previous peer names")
+		}
+	}
+}

@@ -32,7 +32,7 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		if resume {
 			live.waiting = false
 			pending = true
-			p.idleDirective = "All active teammates have finished responding and no command is running. Select a concrete remaining contribution and act, or use leave_team if your contribution is complete. Explain an actual blocker instead of asking another idle teammate to decide."
+			p.idleDirective = "All active teammates have finished responding and no command is running. If responsibilities or the Spec are unresolved, use discuss to propose or accept the missing agreement before implementation. Otherwise act on a ready contribution within the agreed scope, or use leave_team if your contribution is complete. State a concrete blocker rather than repeating a general question about what to do."
 		}
 		r.mu.Unlock()
 		if idleErr != nil {

@@ -52,8 +52,11 @@ func TestTeamSystemExtendsSingleInstructionsExactlyOnce(t *testing.T) {
 	if strings.TrimSpace(strings.TrimPrefix(team.System, single.System)) == "" {
 		t.Fatal("team system has no collaboration guidance")
 	}
-	if team.Development != single.Development || team.Compaction != single.Compaction {
-		t.Fatal("common development or compaction defaults diverged between modes")
+	if team.Development == single.Development {
+		t.Fatal("team development must have its own default")
+	}
+	if team.Compaction != single.Compaction {
+		t.Fatal("compaction defaults diverged between modes")
 	}
 }
 

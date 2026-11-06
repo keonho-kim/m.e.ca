@@ -44,7 +44,11 @@ func (a *app) teamCaption() string {
 	if !a.team.enabled && !a.team.active {
 		return ""
 	}
-	return a.language.Format("팀 %d/8", a.team.view.Count())
+	label := a.language.Text("팀")
+	if a.team.view.Count() == 0 {
+		return label
+	}
+	return label + " " + a.team.view.Names()
 }
 
 func (a *app) footerModel() string {

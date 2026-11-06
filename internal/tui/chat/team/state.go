@@ -20,7 +20,8 @@ type State struct {
 	peers    map[string]*peerDisplay
 	tools    map[string]toolDisplay
 	measured runrecord.Throughput
-	members  int
+	members  []string
+	names    string
 }
 
 func (s *State) Begin() {
@@ -32,7 +33,10 @@ func (s *State) Finish(output *viewport.View) {
 	}
 	*s = State{}
 }
-func (s *State) Count() int { return s.members }
+func (s *State) Count() int { return len(s.members) }
+
+// Names returns cached active names separated by spaces in join order.
+func (s *State) Names() string { return s.names }
 func (s *State) peer(id string) *peerDisplay {
 	if s.peers == nil {
 		s.peers = make(map[string]*peerDisplay)

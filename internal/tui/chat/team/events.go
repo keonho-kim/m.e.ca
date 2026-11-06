@@ -5,6 +5,9 @@
 package team
 
 import (
+	"slices"
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
@@ -16,11 +19,17 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 	case "team_notice":
 		peer := s.peer(event.Agent)
 		joined := event.Text == "joined"
+		changed := peer.active != joined
 		if joined && !peer.active {
-			s.members++
+			s.members = append(s.members, event.Agent)
 		}
 		if !joined && peer.active {
-			s.members--
+			if index := slices.Index(s.members, event.Agent); index >= 0 {
+				s.members = slices.Delete(s.members, index, index+1)
+			}
+		}
+		if changed {
+			s.names = strings.Join(s.members, " ")
 		}
 		peer.active = joined
 		for _, block := range f.Event(event) {
