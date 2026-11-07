@@ -8,6 +8,9 @@ import "strings"
 
 func (c Connection) APIBase() string {
 	base := c.Endpoint
+	if c.Kind == Gemini {
+		return strings.TrimSuffix(base, "/v1beta") + "/v1beta"
+	}
 	if c.Kind == OpenRouter {
 		base = strings.TrimSuffix(base, "/v1")
 		return strings.TrimSuffix(base, "/api") + "/api/v1"
@@ -20,3 +23,5 @@ func (c Connection) APIBase() string {
 	}
 	return strings.TrimSuffix(base, "/v1") + "/v1"
 }
+
+func UsesResponses(kind ProviderKind) bool { return kind == LMStudio || kind == OpenAI }

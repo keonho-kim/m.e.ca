@@ -1,4 +1,4 @@
-// Purpose: Bind one serial metadata preparation and its last GET snapshot to a caller-owned transport.
+// Purpose: Bind one serial metadata preparation and its last GET outcome to a caller-owned transport.
 // Pattern: Metadata adapter.
 // Usage: Setup supplies and closes HTTP after metadata discovery.
 // Related: internal/provider/discovery/discovery.go, internal/provider/transport/client.go.
@@ -19,6 +19,7 @@ type Client struct {
 	HTTP           *transport.Client
 	lastEndpoint   string
 	lastResponse   json.RawMessage
+	lastError      error
 }
 
 func (c *Client) url(path string) string { return c.Connection.APIBase() + "/" + path }

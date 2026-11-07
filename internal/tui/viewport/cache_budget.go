@@ -5,6 +5,7 @@
 package viewport
 
 import (
+	"strings"
 	"unsafe"
 
 	"github.com/keonho-kim/meca/internal/tui/markdown"
@@ -17,6 +18,9 @@ func (b *Block) cacheBytes() int {
 	if b.layout.packed != nil {
 		bytes += b.layout.packed.RetainedBytes()
 	}
+	if b.layout.plan != nil {
+		bytes += b.layout.plan.RetainedBytes()
+	}
 	return bytes
 }
 
@@ -24,18 +28,21 @@ func (b *Block) cacheBytes() int {
 // accumulated by the index pass, or the visible-window recovery pass, exactly once.
 func (b *Block) ensureMarkdown(width int) bool {
 	l := &b.layout
-	if l.parsed != nil || l.packed != nil {
+	if l.parsed != nil || l.packed != nil || l.sparse {
 		return false
 	}
-	if b.live {
+	dense := len(l.source) >= 128*1024 && strings.Count(l.source, "\n") > 32*1024
+	if b.live && !dense {
 		l.parsed = b.stream.Render(l.source, width)
 	} else {
 		b.stream = markdown.Stream{}
 		if len(l.source) >= 128*1024 {
-			l.packed = markdown.RenderPacked(l.source, width, displayCacheBudget)
+			l.packed, l.plan = markdown.RenderResumable(l.source, width, displayCacheBudget)
 			if l.packed != nil {
 				return true
 			}
+			l.sparse = true
+			return true
 		}
 		l.parsed = markdown.Render(l.source, width)
 		l.parsedBytes = cap(l.parsed) * int(unsafe.Sizeof(markdown.Line{}))
@@ -113,8 +120,12 @@ func (v *View) ReleaseDisplay() {
 }
 
 func (b *Block) releaseParsed() {
+	if b.layout.plan != nil {
+		b.layout.sparse = false
+	}
 	b.layout.parsed = nil
 	b.layout.packed = nil
+	b.layout.plan = nil
 	b.layout.metrics = nil
 	b.layout.parsedBytes = 0
 	b.stream = markdown.Stream{}

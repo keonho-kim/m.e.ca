@@ -51,6 +51,12 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 		if clean != message.Content {
 			// A sanitized local observation must not reference different original bytes.
 			message.ID += "#local"
+			if message.Source != nil {
+				local := *message.Source
+				local.Sequence = 0
+				local.Session = ""
+				message.Source = &local
+			}
 		}
 		message.Content = clean
 		message.ModelID, message.ProviderID = s.runner.Model, s.runner.Provider

@@ -1,4 +1,4 @@
-// Purpose: Read streaming NDJSON and SSE without transport byte caps.
+// Purpose: Bound and decode ordered NDJSON and SSE before forwarding model events.
 // Pattern: Adapter stream boundary.
 // Usage: Called by Client.Generate; closes with its caller's HTTP response lifecycle.
 // Related: internal/provider/protocol/chunk.go, internal/provider/httpclient/client_test.go, internal/agent/model/model.go, internal/provider/connection/connection.go.
@@ -18,17 +18,24 @@ import (
 )
 
 func ReadResponse(ctx context.Context, response *http.Response, provider modelconn.ProviderKind, emit func(modelapi.Event) error) error {
+	return readResponse(ctx, response, provider, modelapi.MaxResponseBytes, emit)
+}
+
+func readResponse(ctx context.Context, response *http.Response, provider modelconn.ProviderKind, frameLimit int, emit func(modelapi.Event) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	state := streamState{provider: provider}
 	native := provider == modelconn.Ollama
-	reader := streamLines{Reader: bufio.NewReader(response.Body)}
+	reader := streamLines{Reader: bufio.NewReader(response.Body), limit: frameLimit}
 	sse := strings.Contains(response.Header.Get("Content-Type"), "text/event-stream")
 	state.Streaming = sse || native && strings.Contains(response.Header.Get("Content-Type"), "ndjson")
 	if !native && !sse {
-		content, err := io.ReadAll(io.LimitReader(reader.Reader, modelapi.MaxResponseBytes+1))
+		content, err := io.ReadAll(io.LimitReader(reader.Reader, int64(frameLimit)+1))
 		if err != nil {
 			return err
 		}
-		if len(content) > modelapi.MaxResponseBytes {
+		if len(content) > frameLimit {
 			return fmt.Errorf("response exceeds size limit")
 		}
 		if err := state.consume(content, true, emit); err != nil {
@@ -38,12 +45,15 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 	}
 	var frame bytes.Buffer
 	consumeFrame := func(content []byte) error {
+		if len(content) > frameLimit {
+			return &modelapi.OutputLimitError{Reason: "model stream frame byte limit"}
+		}
 		if len(content) == 0 {
 			return nil
 		}
 		content = bytes.TrimSpace(content)
 		if bytes.Equal(content, []byte("[DONE]")) {
-			if provider == modelconn.LMStudio && !state.Finished {
+			if (modelconn.UsesResponses(provider) || provider == modelconn.Claude || provider == modelconn.Gemini) && !state.Finished {
 				return fmt.Errorf("model Responses stream ended without a completed response")
 			}
 			state.Finished = true
@@ -91,6 +101,9 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 						return err
 					}
 				} else {
+					if len(data)+frame.Len()+1 > frameLimit {
+						return &modelapi.OutputLimitError{Reason: "model stream frame byte limit"}
+					}
 					frame.Write(data)
 					frame.WriteByte('\n')
 				}

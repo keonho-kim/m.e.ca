@@ -1,18 +1,21 @@
 // Purpose: Read one original tool result for user-requested expansion of a compact transcript block.
 // Pattern: On-demand repository projection.
-// Usage: The TUI detail worker calls ToolEvent outside the input event loop.
-// Related: internal/storage/sqlite/team_references.go, internal/tui/session/tool_details.go.
+// Usage: Terminal and server detail readers call ToolEvent outside their state locks.
+// Related: internal/storage/sqlite/team_references.go, internal/commands/server/detail.go, internal/tui/session/tool_details.go.
 package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
+	"io/fs"
 )
 
-func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference) (result runrecord.Event, resultErr error) {
+func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds) (result runrecord.Event, resultErr error) {
 	if ref.Sequence < 1 {
 		return result, fmt.Errorf("invalid tool detail reference")
 	}
@@ -23,17 +26,35 @@ func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference) (re
 		var err error
 		source, err = page.source(ctx, ref.Session)
 		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return result, errors.Join(history.ErrNotFound, err)
+			}
 			return result, err
 		}
 	}
 	var record storedRecord
 	var arguments []byte
 	record.kind = "event"
-	err := source.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes,display_args FROM tool_events WHERE session_id=? AND sequence=?", ref.Session, ref.Sequence).Scan(&record.body, &record.refs, &record.size, &arguments)
+	maxBytes := bounds.MaxBytes
+	if maxBytes == 0 {
+		maxBytes = content.MaxBytes
+	}
+	err := source.db.QueryRowContext(ctx, "SELECT CASE WHEN length(body)<=? THEN body END,refs,raw_bytes,display_args FROM tool_events WHERE sequence=?", maxBytes, ref.Sequence).Scan(&record.body, &record.refs, &record.size, &arguments)
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, history.ErrNotFound
+	}
 	if err != nil {
 		return result, err
 	}
-	body, err := source.unpackRecord(ctx, record, history.DisplayFields("event"))
+	if record.body == nil {
+		return result, history.ErrReadLimit
+	}
+	budget := newReadBudget(bounds.MaxBytes)
+	if err := budget.take(len(record.body)); err != nil {
+		return result, err
+	}
+	payloads := pagePayloads{store: source, ctx: ctx, budget: budget}
+	body, err := payloads.unpack(0, record, history.DisplayFields("event"))
 	if err != nil {
 		return result, err
 	}

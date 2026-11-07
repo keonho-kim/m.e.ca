@@ -13,6 +13,7 @@ import (
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
+	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 const MaxActive = 8
@@ -51,6 +52,7 @@ type Options struct {
 	ProjectRoot   string
 }
 type Result struct {
+	End         work.End
 	Text, Agent string
 	Status      runrecord.Status
 	Started     time.Time

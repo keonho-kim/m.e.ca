@@ -121,7 +121,7 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 	feedback := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	result, err := service.Run(ctx, agentrequest.Options{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Generator: model, Vault: vault, Text: "Create a.txt and b.txt together; coordinate separate contributions."}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
+	result, err := service.Run(ctx, agentrequest.Options{Runtime: agentrequest.Runtime{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Vault: vault}, Text: "Create a.txt and b.txt together; coordinate separate contributions.", Generator: model}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
 		if event.Kind == "team_progress" {
 			if event.Agent == names[1] && !spoke[event.Agent] {
 				close(model.bAnnounced)

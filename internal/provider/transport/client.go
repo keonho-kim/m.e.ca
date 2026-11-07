@@ -6,24 +6,29 @@ package transport
 
 import (
 	"fmt"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type Client struct {
-	key  string
-	HTTP *http.Client
+	key      string
+	HTTP     *http.Client
+	provider connection.ProviderKind
 }
 
-func New(key string) *Client {
-	return &Client{key: key, HTTP: &http.Client{
+func New(key string, provider connection.ProviderKind) *Client {
+	return &Client{key: strings.Trim(key, " \t"), provider: provider, HTTP: &http.Client{
 		Transport: &http.Transport{
-			Proxy:               http.ProxyFromEnvironment,
-			DialContext:         (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
-			ForceAttemptHTTP2:   true,
-			MaxIdleConns:        2,
-			MaxIdleConnsPerHost: 2,
+			Proxy:             http.ProxyFromEnvironment,
+			DialContext:       (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+			ForceAttemptHTTP2: true,
+			// Retain a small parallel round across HTTP/1.1 fallbacks. This
+			// bounds idle sockets only; request admission remains caller-owned.
+			MaxIdleConns:        8,
+			MaxIdleConnsPerHost: 8,
 			IdleConnTimeout:     30 * time.Second,
 			TLSHandshakeTimeout: 10 * time.Second,
 		},

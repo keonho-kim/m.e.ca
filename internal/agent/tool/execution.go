@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -47,6 +48,7 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
+	Source *source.Public `json:"source,omitempty"`
 	// Depart closes a cooperative session after its native result is durable.
 	Depart bool `json:"-"`
 	Images []media.Image

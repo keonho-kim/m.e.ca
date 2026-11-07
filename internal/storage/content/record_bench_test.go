@@ -28,6 +28,10 @@ func BenchmarkRecordContent(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	encodedRefs, err := json.Marshal(refs)
+	if err != nil {
+		b.Fatal(err)
+	}
 	b.Run("pack", func(b *testing.B) {
 		b.ReportAllocs()
 		b.SetBytes(int64(len(body)))
@@ -41,7 +45,7 @@ func BenchmarkRecordContent(b *testing.B) {
 		b.ReportAllocs()
 		b.SetBytes(int64(len(body)))
 		for b.Loop() {
-			if _, err := Restore(packed, refs, nil, func(id string) (json.RawMessage, error) { return values[id], nil }); err != nil {
+			if _, err := Restore(packed, encodedRefs, nil, func(id string) (json.RawMessage, error) { return values[id], nil }); err != nil {
 				b.Fatal(err)
 			}
 		}

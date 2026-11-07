@@ -55,3 +55,11 @@ func conversationSummary(text string) string {
 	}
 	return text
 }
+
+// checkSession binds each public operation to the identity validated when opening this store.
+func (s *Store) checkSession(id string) error {
+	if id != s.session.ID {
+		return sessionstate.ErrForeignSession
+	}
+	return nil
+}

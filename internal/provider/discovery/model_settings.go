@@ -15,6 +15,8 @@ func (c *Client) PrepareModel(ctx context.Context, model string) (connection.Mod
 		info.ImageInput = c.imageInput
 	}
 	switch c.Connection.Kind {
+	case connection.Claude, connection.Gemini:
+		return c.cloudModel(ctx, model)
 	case connection.Ollama:
 		var err error
 		info, err = c.prepareOllama(ctx, model)
@@ -44,6 +46,9 @@ func (c *Client) PrepareModel(ctx context.Context, model string) (connection.Mod
 				break
 			}
 		}
+	}
+	if c.Connection.Kind == connection.OpenAI {
+		info.Notice = "The Models API does not advertise context or sampling capabilities; configured context limits and provider sampling defaults apply."
 	}
 	// SGLang's generic model list carries limits; its selected /model_info
 	// response owns image capability evidence.

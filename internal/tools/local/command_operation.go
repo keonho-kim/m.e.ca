@@ -29,10 +29,6 @@ func (op *commandOperation) Execute(ctx context.Context, approved bool) (toolapi
 	return op.command(ctx)
 }
 
-// SetCommandAdmission binds request-owned resources to the actual command lifetime.
-func (op *commandOperation) SetCommandAdmission(admit func(context.Context) (func(), error)) {
-	op.admit = admit
-}
 func (op *commandOperation) admitCommand(ctx context.Context) (func(), error) {
 	var release func()
 	if op.admit != nil {

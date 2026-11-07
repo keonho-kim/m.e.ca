@@ -24,18 +24,24 @@ type Tools interface {
 	ProjectInstructions(context.Context) (string, error)
 }
 
+type Runtime struct {
+	Config      config.Config
+	Selection   connection.Selection
+	Session     sessionstate.Session
+	Tools       Tools
+	Store       agentsession.Store
+	Vault       *credentials.Vault
+	LoadPrompts func() (prompt.Templates, error)
+}
+
 type Options struct {
-	Config        config.Config
-	Selection     connection.Selection
-	Session       sessionstate.Session
-	Generator     modelapi.Generator
-	Tools         Tools
-	Store         agentsession.Store
-	Vault         *credentials.Vault
-	LoadPrompts   func() (prompt.Templates, error)
+	Generator modelapi.Generator
+	Runtime
 	PollSteering  func() []string
 	SteeringReady <-chan struct{}
 	Text          string
+	// ClientContext seeds private team peers with the same external text history.
+	ClientContext []modelapi.Message
 }
 
 func New(options Options) agentsession.Request {

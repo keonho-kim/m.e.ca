@@ -50,6 +50,25 @@ func (a *app) finishWorker(n notice) {
 			a.stopNotice = a.language.Text("연결 작업을 취소했습니다")
 		}
 	}
+	if n.Commit != nil {
+		adopted, err := a.adoptConnection(n)
+		if adopted {
+			a.stopNotice = ""
+		}
+		if n.ModelForm {
+			if adopted {
+				a.closeModelForm()
+				a.page = "chat"
+			} else if f := a.connection.modelForm; f != nil {
+				f.Saving = false
+				a.page = "model"
+			}
+		}
+		if err != nil && !(stopped && !adopted && errors.Is(err, context.Canceled)) {
+			a.status = a.opts.Vault.Redact(err.Error())
+		}
+		return
+	}
 	if n.ModelForm {
 		a.finishModelFormSetup(n)
 		return

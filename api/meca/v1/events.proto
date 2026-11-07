@@ -1,0 +1,73 @@
+// Purpose: Define ordered streamed deltas and public execution metadata.
+// Pattern: Versioned external event contract.
+// Usage: Notifications use a process epoch and sequence cursor for replay or snapshot recovery.
+// Related: api/meca/v1/control.proto, api/meca/v1/state.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+import "meca/v1/control.proto";
+
+message Approval {
+  string id = 1;
+  string call_id = 2;
+  string name = 3;
+  string target = 4;
+  string preview = 5;
+  bool diff = 6;
+  bool user_required = 7;
+  bool truncated = 8;
+}
+message Tool {
+  string call_id = 1;
+  string name = 2;
+  // Visible arguments only. Truncated arguments are not valid executable JSON.
+  bytes arguments_json = 3;
+  EventReference reference = 4;
+}
+message Usage { int64 input = 1; int64 output = 2; optional double cost = 3; }
+message Statistics {
+  bool concurrent = 1;
+  int64 elapsed_millis = 2;
+  int64 generation_millis = 3;
+  Usage usage = 4;
+}
+message GenerationMeasurement {
+  string id = 1;
+  string role = 2;
+  int32 attempt = 3;
+  int64 elapsed_millis = 4;
+  int64 measured_millis = 5;
+}
+message Team {
+  int64 reply_to = 1;
+  string reply_author = 2;
+  repeated string mentions = 3;
+  int64 based_on = 4;
+  repeated string paths = 5;
+  string contract = 6;
+  uint64 revision = 7;
+}
+message Event {
+  string cursor = 1;
+  string session_id = 2;
+  string task_id = 3;
+  string agent = 4;
+  string run_id = 5;
+  uint64 generation = 6;
+  string kind = 7;
+  string text = 8;
+  string thinking = 9;
+  bool reset = 10;
+  bool truncated = 11;
+  bool final = 12;
+  Approval approval = 13;
+  string approval_id = 14;
+  Tool tool = 15;
+  Usage usage = 16;
+  Team team = 17;
+  string approval_source = 18;
+  string status = 19;
+  string error = 20;
+  Statistics statistics = 21;
+  GenerationMeasurement measurement = 22;
+}

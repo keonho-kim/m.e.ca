@@ -5,16 +5,24 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
 )
 
+// ErrNotFound distinguishes a missing conversation from an unreadable or unsupported database.
+var ErrNotFound = errors.New("session was not found")
+var ErrForeignSession = errors.New("session does not belong to this database")
+var ErrCursor = errors.New("invalid or expired session page cursor; refresh the session list")
+var ErrPageLimit = errors.New("session list snapshot limit reached; refresh, retry, or inspect sessions locally")
+
 type Session struct{ ID, ProjectRoot, DisplayRoot string }
 type Conversation struct {
 	Session
 	Summary, Updated string
+	Unavailable      string
 }
 
 func ValidID(id string) bool {

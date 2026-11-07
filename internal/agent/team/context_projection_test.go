@@ -7,6 +7,7 @@ package team
 import (
 	"encoding/json"
 	model "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -50,7 +51,7 @@ func TestContextProjectionRestoresDetailsOnlyWhenHistoryLacksThem(t *testing.T) 
 	}{{"set_work", work.Sequence}, {"discuss", seq}} {
 		raw, _ := json.Marshal(map[string]int64{"sequence": value.seq})
 		ownHistory = append(ownHistory, model.Message{Role: "assistant", Calls: []tool.Call{{ID: value.name, Name: value.name, Arguments: json.RawMessage("{}")}}})
-		ownHistory = append(ownHistory, model.Message{Role: "tool", ToolCallID: value.name, ToolName: value.name, Content: string(raw)})
+		ownHistory = append(ownHistory, model.Message{Source: &source.Public{Author: a.ID, Kind: map[string]string{"set_work": "team_work", "discuss": "team_discussion"}[value.name], Sequence: value.seq}, Role: "tool", ToolCallID: value.name, ToolName: value.name, Content: string(raw)})
 	}
 	if _, err = a.Inbox(r.ctx); err != nil {
 		t.Fatal(err)

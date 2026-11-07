@@ -88,7 +88,7 @@ func runImageSession(t *testing.T, reject bool) {
 		selected.Details.ID = model
 		selected.Details.ImageInput = connection.DeclaredImageInput(model == "vision", "test")
 		cfg := config.Defaults()
-		req := agentrequest.New(agentrequest.Options{Config: cfg, Selection: selected, Session: store.Session(), Generator: generator, Tools: tools, Store: store, Vault: &credentials.Vault{State: t.TempDir()}, Text: "Inspect image", LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }})
+		req := agentrequest.New(agentrequest.Options{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: tools, Store: store, Vault: &credentials.Vault{State: t.TempDir()}, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, Text: "Inspect image", Generator: generator})
 		_, err := session.Execute(ctx, req, func(context.Context, toolapi.Approval) (bool, error) {
 			t.Fatal("read requested approval")
 			return false, nil

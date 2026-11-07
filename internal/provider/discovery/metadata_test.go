@@ -26,7 +26,7 @@ func TestMetadataSnapshotRetriesAndCopies(t *testing.T) {
 		fmt.Fprint(w, `{"values":["original"]}`)
 	}))
 	t.Cleanup(server.Close)
-	httpClient := transport.New("")
+	httpClient := transport.New("", "")
 	t.Cleanup(httpClient.Close)
 	client := Client{HTTP: httpClient}
 	var first, second struct{ Values []string }
@@ -50,5 +50,45 @@ func TestMetadataSnapshotRetriesAndCopies(t *testing.T) {
 	}
 	if calls.Load() != 3 {
 		t.Fatal("different endpoints shared a response")
+	}
+}
+
+func TestMetadataSharesFailedPreparationOutcome(t *testing.T) {
+	var calls atomic.Int32
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer endpoint.Close()
+	httpClient := transport.New("", "")
+	defer httpClient.Close()
+	client := Client{HTTP: httpClient}
+	var value map[string]any
+	first := readMetadata(t.Context(), &client, endpoint.URL, &value)
+	second := readMetadata(t.Context(), &client, endpoint.URL, &value)
+	if first == nil || second != first || calls.Load() != 1 {
+		t.Fatal("one preparation repeated its failed metadata request", calls.Load(), first, second)
+	}
+	fresh := Client{HTTP: httpClient}
+	if err := readMetadata(t.Context(), &fresh, endpoint.URL, &value); err == nil || calls.Load() != 2 {
+		t.Fatal("a new preparation reused a stale failure", calls.Load(), err)
+	}
+}
+
+func TestMetadataTypeFailureDoesNotPoisonAnotherProjection(t *testing.T) {
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"value":"text"}`)
+	}))
+	defer endpoint.Close()
+	httpClient := transport.New("", "")
+	defer httpClient.Close()
+	client := Client{HTTP: httpClient}
+	var wrong struct{ Value int }
+	if err := readMetadata(t.Context(), &client, endpoint.URL, &wrong); err == nil {
+		t.Fatal("invalid shape accepted")
+	}
+	var right struct{ Value string }
+	if err := readMetadata(t.Context(), &client, endpoint.URL, &right); err != nil || right.Value != "text" {
+		t.Fatal("one projection's type failure poisoned another", right, err)
 	}
 }

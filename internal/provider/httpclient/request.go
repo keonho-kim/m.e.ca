@@ -22,7 +22,13 @@ func (client *Client) Generate(ctx context.Context, request modelapi.Request, em
 }
 
 func (client *Client) generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error, probe bool, encoder *protocol.Encoder) (err error) {
-	hasImages := imageMessages(request.Messages)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	hasImages, err := imageMessages(request.Messages)
+	if err != nil {
+		return err
+	}
 	if hasImages && !probe && !client.ImageInputSupported() {
 		return &modelapi.ImageInputError{}
 	}
@@ -51,6 +57,9 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	controls, err := protocol.ControlsFor(client.connection.Kind, client.modelInfo, request)
 	if err != nil {
 		return err
+	}
+	if model := client.summaryUnsupportedModel.Load(); model != nil && *model == request.ModelID {
+		controls.OmitThinkingSummary = true
 	}
 	history := slices.Clone(request.Messages)
 	for i := range history {
@@ -91,24 +100,56 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 		idle = transport.DefaultIdleTimeout
 	}
 	return client.transport.Attempts(ctx, func() (err error) {
-		request, err := client.transport.NewRequest(ctx, http.MethodPost, endpoint, content.Reader())
-		if err != nil {
-			return &transport.ConsumerError{Cause: err}
-		}
-		if request.GetBody == nil {
-			request.ContentLength = int64(content.Len())
-			request.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(content.Reader()), nil }
-		}
-		response, err := client.transport.SendOnce(request, idle)
-		if err != nil {
-			return err
-		}
-		defer func() { err = errors.Join(err, response.Body.Close()) }()
-		return protocol.ReadResponse(ctx, response, client.connection.Kind, func(event modelapi.Event) error {
-			if err := emit(event); err != nil {
-				return &transport.ConsumerError{Cause: err}
+		for {
+			httpRequest, buildErr := client.transport.NewRequest(ctx, http.MethodPost, endpoint, content.Reader())
+			if buildErr != nil {
+				return &transport.ConsumerError{Cause: buildErr}
 			}
-			return nil
-		})
+			if httpRequest.GetBody == nil {
+				httpRequest.ContentLength = int64(content.Len())
+				httpRequest.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(content.Reader()), nil }
+			}
+			response, sendErr := client.transport.SendOnce(httpRequest, idle)
+			if sendErr != nil {
+				if !controls.OmitThinkingSummary && transport.ThinkingSummaryUnsupported(sendErr, client.connection.Kind) {
+					// A permanent 400 rejects the option before generation. Observe this
+					// model's capability once without changing explicit reasoning effort.
+					controls.OmitThinkingSummary = true
+					client.summaryUnsupportedModel.Store(new(request.ModelID))
+					// Rebuild only on this rejected option. Keeping converted DTOs
+					// in the attempt closure would pin their base64 images and native
+					// histories throughout a potentially long streaming response.
+					messages, convertErr := encoder.Messages(client.connection.Kind, request.ModelID, history)
+					if convertErr != nil {
+						return &transport.ConsumerError{Cause: convertErr}
+					}
+					endpoint, content, err = encoder.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
+					if err != nil {
+						return &transport.ConsumerError{Cause: err}
+					}
+					if !hasImages {
+						if err := emit(modelapi.Event{InputBytes: int64(content.Len())}); err != nil {
+							return &transport.ConsumerError{Cause: err}
+						}
+					}
+					continue
+				}
+				return sendErr
+			}
+			defer func() { err = errors.Join(err, response.Body.Close()) }()
+			return protocol.ReadResponse(ctx, response, client.connection.Kind, func(event modelapi.Event) error {
+				if event.Done {
+					var err error
+					event.ReasoningState, err = content.BindContinuation(event.ReasoningState)
+					if err != nil {
+						return &transport.ConsumerError{Cause: err}
+					}
+				}
+				if err := emit(event); err != nil {
+					return &transport.ConsumerError{Cause: err}
+				}
+				return nil
+			})
+		}
 	}, func(retry modelapi.Retry) error { return emit(modelapi.Event{Retry: &retry}) })
 }

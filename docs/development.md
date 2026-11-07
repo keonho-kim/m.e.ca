@@ -1,6 +1,6 @@
 # 개발 가이드
 
-[← README](../README.md) · [제품 명세](../SYSTEM.md)
+[← README](../README.md) · [제품 명세](../SYSTEM.md) · [서버 API](server.md)
 
 ## 책임과 의존성
 
@@ -11,23 +11,36 @@
 | cmd/meca | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
 | agent/model | 모델 메시지·스트림·출력 예산 계약 |
 | agent/session·run | 요청 준비·실행 순서·승인 조율·공유 예산·실측 통계 집계 |
+| agent/session/recovery | 중단된 요청·native 호출의 복구 정책과 원자적 복구 기록 |
 | agent/team | 참여·초대·복구·공용 대화 전달·공유 요청 예산·최종 보고자 전이 |
-| agent/team/identity·channel | 고정 이름 목록·미사용 이름 선택·안정된 참여자 식별·공개 메시지·문맥 출처와 참조 ID·공개 로그 저장 계약 |
+| agent/team/identity·channel·source | 고정 이름 목록·공개 메시지와 문맥 투영·명시적 공용 출처 값·공개 로그 저장 계약 |
 | agent/team/contribution | 현재 담당 영역의 원자적 교체·겹침 판정·관련 변경 순서·독립 스냅샷과 예산 내 현황 포맷 |
 | commands/teamrequest | 요청 공통 자원·개인 세션 수명·직렬 승인·활성 명령 조회를 분리한 팀 조립 |
 | agent/record | 실행 이벤트·체크포인트·상태·실측 처리량과 최종 통계·원자적 기록 단위와 검증 |
 | agent/context·compact | 모델 문맥과 단일 호출 요약 |
 | commands/headless | 같은 요청 경로의 text·JSONL 출력 어댑터 |
-| commands/agentrequest | TUI·비대화형 실행의 설정·모델·세션을 공통 요청으로 조립 |
+| commands/server | 프로세스 소유 요청·native 선택과 호환 작업 대화의 분리·승인·방향 수정·취소·이벤트 보관·대화별 원본 읽기 대여 |
+| commands/conversation | 서버 대화·실행이 공유하는 모델 연결의 명시적 대여와 마지막 소유자의 정리 |
+| commands/modelchange | 세션 연결 저장·불확실한 커밋 확인·독립된 기본값 저장의 부분 실패 정책 |
+| serverapi · api/meca/v1 | 공통 외부 계약·투영·인증·TLS·SSE·WebSocket·Protobuf RPC |
+| serverapi/admission | 입력 바이트·큰 원문 작업의 동시 입장·취소·해제 |
+| serverapi/detail | 공개 필드만 가진 상세 JSON·마스킹·바이트 페이지·세션별 최근 문서와 private spool 수명 |
+| serverapi/openai | 텍스트 호환 입력 경계·Chat/Responses DTO·append-only 출력 투영과 오류 |
+| serverapi/eventstream | 5초 무출력 이후 1초 heartbeat 시계·SSE 기록·flush. 실행 이력과 독립 |
+| storage/serverrequests | 프로젝트별 SQLite의 원문 없는 요청 접수·완료·키 바인딩·원본 범위·후속 head의 원자적 예약 |
+| storage/capacity | 프로세스 공통 할당 상한·지속적인 예약 횟수·새 할당 전 여유 공간 검사 |
+| storage/credentialstore | Provider/endpoint에 인증된 API Key 암호문·독립 난수 암호화 키의 OS 저장 계약·원자적 SQLite 저장과 복구 실패 보존 |
+| commands/agentrequest | 재사용 Runtime과 요청별 Generator·입력·방향 수정 채널을 공통 요청으로 조립 |
 | agent/tool·work | 실행 사실·가벼운 파일 관측·종료 원인 |
 | agent/prompt·inference | 공통 작업 지침·팀 보강 합성·역할별 추론 설정 |
 | commands/startup·install·upgrade·settings | 시작 경로·사용자 설치와 삭제·검증한 최신 릴리스 업데이트·언어와 승인 모드 저장 |
 | config/bootstrap·prompts·statefs·credentials | 초기화·Markdown 파일·private 상태 수명·OS 자격 증명 |
+| redaction | 저장소·OS I/O와 독립된 비밀값 등록·revision·JSON과 스트림 마스킹 |
 | processmemory | 외부 명령·CGO 없이 현재 프로세스의 RSS 조회 |
 | provider/connection·identity·selection | 연결 값·서버 원본 표시·Provider 추론 옵션·선택 검증 |
-| provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·연결 저장과 소유권 이전 |
+| provider/discovery·diagnostic·setup | 메타데이터·실제 생성 진단·준비된 연결 반환. 영속 확정은 commands/modelchange가 담당 |
 | provider/protocol | API 조립·실행 범위의 이력 인코딩 재사용·재읽기 가능한 본문·공통 스트림 프레이밍 |
-| provider/protocol/chat·ollama·responses | API별 요청 DTO·수신 형식과 전용 상태 |
+| provider/protocol/chat·ollama·responses·claude·gemini | API별 요청 DTO·수신 형식·signed reasoning/도구 이력과 전용 상태 |
 | provider/protocol/native | 공통 함수 스키마·인자 누적·완료 검사·관측 사용량 상태 |
 | provider/transport | HTTP 연결·수신 감지·재시도 |
 | provider/httpclient | 생성 요청·유효 문맥·실행별 인코더의 수명 조율 |
@@ -44,7 +57,7 @@
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
 | tools/local/file·textedit·textformat·diff | 파일 I/O·정확한 부분 수정·바이트 형식·변경 미리보기 |
 | tools/local/process | 호스트 셸·명령 등록부·프로세스 그룹·출력·대기·취소 |
-| storage/session·history·recovery | 세션 식별·순서 있는 이력·표시 필드 선택과 순수 복원 투영·중단 복구의 저장 계약 |
+| storage/session·history | 세션 식별·순서 있는 이력·표시 필드 선택과 순수 복원 투영 |
 | storage/content | 큰 JSON 값의 참조 분리·선택 복원·압축·내용 무결성 |
 | storage/sqlite | DB 파일·SQL·트랜잭션·잠금·content 콜백 어댑터 |
 | tui/session | 단일 이벤트 루프·기능별 상태 구성·공통 포커스 판정·화면 전환과 I/O 조율 |
@@ -97,7 +110,7 @@ agent/run의 Run은 실행 준비(start.go), 대화 입장과 정리(conversatio
 
 ## 의존성과 배포
 
-정확한 도구 체인과 버전은 [go.mod](../go.mod)를 따른다. 프로젝트 라이선스는 [Apache License 2.0](../LICENSE), 저작권 고지는 [NOTICE](../NOTICE), 외부 구성요소는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다. 관리자가 단독으로 개발·병합·배포하며 외부 코드 기여는 [기여 정책](../CONTRIBUTING.md)에 따라 받지 않는다.
+제품은 [go.mod](../go.mod)의 Go 1.27.2 이상, 개발 도구는 [devtools/go.mod](../devtools/go.mod)의 Go 1.27.3 이상을 사용한다. 프로젝트 라이선스는 [Apache License 2.0](../LICENSE), 저작권 고지는 [NOTICE](../NOTICE), 외부 구성요소는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다. 관리자가 단독으로 개발·병합·배포하며 외부 코드 기여는 [기여 정책](../CONTRIBUTING.md)에 따라 받지 않는다.
 
 배포 의존성을 갱신할 때 macOS·Linux의 amd64·arm64 대상으로 `go list -deps -json ./cmd/meca`를 확인하고, 선택된 모듈의 LICENSE·COPYING·NOTICE·AUTHORS·PATENTS와 추가 라이선스 고지를 함께 갱신한다. Go 런타임의 라이선스도 포함한다. 개발 도구와 테스트 전용 모듈은 제품 실행 파일의 의존성 목록과 구분한다.
 
@@ -106,7 +119,7 @@ agent/run의 Run은 실행 준비(start.go), 대화 입장과 정리(conversatio
 | tcell/v3·uniseg | 터미널·입력·마우스·문자 경계와 셀 폭 |
 | goldmark/v2 | 응답·Thinking·파일 뷰어의 Markdown AST를 TUI span으로 변환 |
 | go-toml/v2 | TOML 파싱·직렬화 |
-| go-keyring | Keychain·Secret Service |
+| godbus/dbus/v5 | 취소 가능한 Linux Secret Service IPC; macOS Keychain은 표준 os/exec 사용 |
 | modernc.org/sqlite | CGO 없는 SQLite |
 | klauspost/compress/zstd | 세션의 대용량 payload를 Zstandard로 압축·복원 |
 | bytedance/sonic | 정렬된 키·문자열 검사를 유지하며 모델 요청 JSON을 인코딩 |
@@ -115,6 +128,8 @@ agent/run의 Run은 실행 준비(start.go), 대화 입장과 정리(conversatio
 | x/sys·x/term | OS 파일 어댑터와 터미널 확인 |
 | mvdan.cc/sh/v3 | 실행 없는 셸 AST 분석과 정적 단어 확장 |
 | fsnotify | 파일 탐색 화면의 활성 디렉터리 변경 알림 |
+| connectrpc.com/connect/v2·protobuf | native gRPC·gRPC-Web·Connect와 공통 명령/이벤트 계약 |
+| coder/websocket | 인증한 WebSocket 제어와 이벤트 구독 |
 
 테스트 전용 의존성은 go.uber.org/goleak(고루틴 정리 검사), google/go-cmp(복잡한 값 비교), creack/pty(실행 파일의 터미널 통합 검사)다. 일반 실행 파일에서는 이 패키지들을 import하지 않는다.
 
@@ -183,6 +198,67 @@ go test ./internal/tui/session -run TestFileWatch -v
 
 문서 변경은 실제 코드·기본값·로컬 링크·참조한 테스트와 벤치마크 이름을 대조한다. 코드의 헤더·주석·테스트는 해당 파일의 책임과 실제 동작을 설명하도록 유지한다.
 
+### 서버 계약 검증
+
+```sh
+GOFLAGS='-tags=godbus_no_tcp' go test -race ./internal/commands/server ./internal/serverapi/... ./internal/storage/serverrequests ./cmd/meca
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/serverapi -run 'TestOpenAI|TestNativeHeartbeat|TestStreamingInputDeadline'
+go test ./internal/commands/server ./internal/serverapi/detail -run '^$' -bench 'Benchmark(StreamProjection|ToolProjection|EventReplay|DetailPages)$' -benchmem
+```
+
+서버 검사는 모의 모델과 실제 SQLite·도구·TLS 연결을 사용한다. SSE·WebSocket·native gRPC·gRPC-Web·Connect에서 완료 전 스트리밍·중복 접수·승인·취소·재접속·저널 순서와 도구 효과를 확인한다. 실행 파일 검사는 TTY 없는 시작·모델 저장·세션 재열기·요청 실행·SIGTERM 종료와 팀 실행 조립을 확인한다. Proto 생성 명령·생성 파일 예외·네트워크 한도는 [서버 API](server.md)를 따른다. 실제 브라우저 앱·원격 프록시·실모델 품질 검증과는 구분한다.
+
+구독 취소는 이미 읽은 묶음의 다음 이벤트와 최초 snapshot도 중단하는지 확인한다. 시작 중 토큰 파일 교체에도 인증과 마스킹이 같은 토큰을 사용하는지, 4KiB 오류의 JSON 이스케이프 후에도 완료 기록을 재시작 후 조회·중복 확인할 수 있는지 검증한다. 저장 한도를 넘는 완료 기록은 기존 기록을 유지한 채 거부해야 한다.
+
+설정·세션 변경은 서비스가 하나의 변경 상태를 예약한 뒤 I/O를 수행하고 짧은 잠금 안에서 결과만 확정한다. 모델 준비·키링·DB·설정 파일·접수 조회·자원 정리와 reader 합류는 상태 잠금 밖에서 실행한다. 종료는 새 등록을 막은 뒤 접수·준비·설정 I/O와 실제 요청을 취소·합류한다. 변경 중 다른 변경과 새 원본 조회는 거부하되 state·이벤트·작업 상태 조회와 활성 요청 취소는 계속 처리한다. 설정의 현재 값은 서비스 한 곳이 소유하고 조립 콜백에는 불변 설정·모델 준비 기본값을 전달한다.
+
+Start는 조회 뒤 변경 상태 예약에 실패하면 이미 확정된 동일 접수를 다시 확인하고 원래 작업을 반환한다. 현재 프로세스의 접수 인계 ID를 보관해 accepted를 재시작 후 interrupted와 구분하며, 접수와 실행 사이의 조회도 실제 소유권을 반영한다. 아직 확정되지 않은 접수나 다른 변경에는 conflict를 반환할 수 있다.
+
+모델 준비 콜백은 클라이언트와 메타데이터만 반환한다. 서비스가 commands/modelchange.Commit으로 세션·키링·선택적 기본값 저장을 확정한 뒤 클라이언트를 인계받는다. 저장 오류는 취소와 독립된 제한 시간의 읽기로 확인하고 실제 선택이 일치하면 확정된 결과로 적용한다. 저장 여부를 확인하지 못하면 이전 모델도 해제하고 재연결을 요구한다. 기본값 저장만 실패한 경우의 세션 유지·자격 증명 보존은 같은 Commit 계약을 따른다. 세션 자원은 먼저 선택 상태에서 분리하고 읽기 context를 취소한 뒤 합류·정리한다. 실패해도 분리한 상태를 게시하며 새로 연 자원의 정리 오류도 합친다.
+
+상세 조회는 commands/server.OpenDetail이 참조와 현재 승인을 검사하고 원본 읽기를 대여한다. API 어댑터는 대여를 반환하고, 세션 정리는 모든 대여가 끝난 뒤 API 캐시의 해당 세션과 실제 저장 자원을 닫는다. DTO에는 허용된 공개 필드만 옮기며 내부 구조체를 통째로 직렬화하지 않는다. 인증·Host·Origin·CORS는 security.go, 생성·입장 한도·요청 취소·종료 합류는 transport.go가 담당한다. 동일 WebSocket에서 응답·실행 이벤트·취소·unwatch·구독 교체를 함께 검증하고 서버 API 패키지 종료에서 goleak으로 worker 누수를 검사한다.
+
+이벤트 조회는 보관된 연속 sequence로 시작 위치를 계산하고 필요한 페이지만 복사한다. 알림 채널은 실제 대기자가 생겼을 때 생성한다. 전송 투영의 마스킹은 구독자가 소유한 배열·선택 값만 수정하며 공통 보관 이벤트를 변경하지 않는다. 상세 조회 벤치마크는 1MiB 원문을 64KiB 페이지로 끝까지 읽는 동안의 시간·할당·원문 복원 횟수를 측정한다. 최근 상세 한 건의 재사용은 세션 수명과 마스킹 revision에 묶이며 전송 구독 수만큼 원문을 복제하지 않는다.
+
+### 서버 데이터와 자원 소유권
+
+서버 조립부는 프로젝트별 독점 lease를 서비스 자원보다 먼저 확보하고 마지막에 해제한다. 전역 설정은 `config.Update`가 `config-write/`의 프로세스 공통 잠금 안에서 최신 파일을 읽고 항목별 함수를 적용한 뒤 원자적으로 저장한다. TUI·서버는 이 계약으로 언어·승인 모드·기본 모델을 갱신하며 반환된 설정을 채택한다.
+
+`serverapi/admission`은 입력 바이트와 큰 읽기 작업의 입장·취소·해제를 소유한다. 입력 예약은 32MiB이며 HTTP·RPC의 길이 미상·압축 본문과 WebSocket 프레임은 최대 17MiB를 예약한다. 호환 요청은 접수가 끝나면 입력 예약을 반환한다. RPC watch는 4KiB를 검사한 뒤 예약을 반환하고, 소켓은 프레임 입력을 30초로 제한하며 처리한 프레임을 다음 읽기 전에 해제한다. 큰 원문 읽기는 API 전체에서 한 번에 하나만 허용하고 완료 JSON·SSE 전송까지 슬롯을 보유한다.
+
+`history.ReadBounds`는 서버의 32MiB 복원 예산과 16KiB 표시 접두부를 구분한다. SQLite는 선택한 payload의 원문·저장 바이트 수를 복원 전에 확인하며 팀의 원본 참조도 같은 예산을 사용한다. 메시지 미리보기는 숨겨진 continuation을 복원하지 않고 공개 문자열의 접두부만 디코딩한다. 한도 초과는 원문을 보존한 `resource_exhausted`이며 export는 API 조회 예산을 사용하지 않는다. 스트림의 상태·원문 조회와 슬롯 대기는 `eventstream.Await`의 합류 가능한 worker로 분리하고 작성자는 heartbeat와 데이터 전송을 하나의 순서로 처리한다.
+
+세션 목록의 최초 검색은 최대 101건의 표시 메타데이터 heap과 ID·시각 참조만 유지한다. 후속 페이지는 해당 ID의 DB만 읽으며 별도 영속 카탈로그나 대화 사본을 만들지 않는다. 정렬 참조는 2분 동안 최대 8건·합계 8MiB, 한 건은 2MiB로 제한하고 변경이 없는 순서는 공유한다. 만료는 다음 접근에서 정리하며 DB 핸들이나 정리 worker를 보유하지 않는다. 커서는 현재 프로세스·프로젝트·정렬 참조·위치에 묶이고 갱신되거나 사라진 세션은 건너뛴다. 새 조회는 현재 순서를 다시 확인한다. 입력/복원 한도는 최종 RSS나 OS 메모리 quota를 뜻하지 않는다.
+
+`storage/capacity`는 private 할당 카운터와 독점 lease를 소유한다. 새 세션·접수·OS 암호화 키 할당 전에 카운터를 확정하며 불확실한 부작용은 예약을 반환하지 않는다. 프로젝트당 대화 4096개, 전체 서버 접수 100000개, 새 암호화 키 버전 65536개를 허용한다. 카운터 최초 생성 시 현재 DB·파일의 해당 항목 수를 포함하며 이미 보존된 과거 OS 키의 전체 개수를 추측하지 않는다. 자격 증명 DB의 현재 참조는 256개로 제한하고 SQLite 문장 하나가 경쟁 삽입에도 상한을 유지한다. 새 할당에는 여유 공간 1GiB를 요구한다. 기존 조회·중복 확인·완료 기록과 백업 키는 자동 삭제하지 않는다.
+
+세션 DB의 512MiB 상한은 실제 파일 헤더의 페이지 크기에서 계산해 DSN에 넣으므로 연결이 교체되어도 유지된다. 이미 더 큰 파일은 기존 페이지 수 아래로 줄이지 않는다. WAL은 256페이지마다 자동 checkpoint를 시도하고 정리 후 journal 보관은 16MiB로 제한한다. 활성 읽기 중 WAL 성장과 외부 프로그램의 디스크 사용은 별도다.
+
+storage/serverrequests는 프로젝트 scope별 SQLite 연결 하나를 소유한다. 접수·실행 경계·종료를 별도 트랜잭션으로 확정하며 native 작업 조회는 같은 응답 행을 복원한다. 이어가기 head와 자식 예약을 한 트랜잭션으로 묶고 확정된 종료 값은 재변경하지 않는다. 전체 입력 해시는 길이 구분 형식으로 계산하고 입력 본문은 저장하지 않는다. WAL·FULL 동기화와 즉시 쓰기 트랜잭션을 사용하며 schema·application ID·DB 소유 프로젝트 scope를 확인한다. 식별자는 DB 행에 한 번만 저장하고 호환 상태는 저장소 전용 메타데이터 형식으로 보관한다. 기존 JSON 접수는 자동 변환하지 않고 시작을 거부한다. 모델 선택을 새 DB에 저장한 뒤 준비된 연결의 대여를 얻고 대화·요청마다 자기 핸들을 해제한다.
+
+선택된 결과는 reader 대여로 DB를 재사용하고 과거 결과는 읽기 전용 DB로 읽는다. 짧은 범위는 타임라인 인덱스, 긴 범위는 메시지 INTEGER PRIMARY KEY의 시작·끝 범위와 source 순서로 조회한다. 미완성 메시지는 payload 복원 전에 제외하고 공개 content만 읽되 원본 payload 길이·해시 검증은 유지한다. 실패한 Chat의 버릴 원문은 읽지 않고 cancel의 결과는 한 번만 읽는다.
+
+비스트림·팀·중복 스트림은 작업 완료 신호로 기다린다. 활성 상태 조회는 context·worker 등록 없이 잠금 안에서 값만 복사한다. 이벤트 로그는 지연 할당한 순환 버퍼에 공개 투영만 보관하며 삭제 칸의 참조를 해제한다. JSON 마스킹은 문자열 토큰만 바꾸고 숫자·컨테이너를 다시 만들지 않는다. redaction.Registry는 불변 비밀값 목록의 snapshot을 얻은 뒤 긴 문자열 처리를 잠금 밖에서 수행한다. credentials.Vault가 이를 포함하고 OS 저장 I/O만 추가한다. Provider의 HTTP/1.1 유휴 연결은 전체·호스트당 8개, 30초까지 재사용한다.
+
+서버의 입력 파싱·델타 작성·접수·조회·페이지 복원은 아래 벤치마크로 현재 환경에서 측정한다. 로컬 HTTP 부하는 모델 추론을 포함하지 않으며 B/op는 누적 할당량이다. 최고 힙·RSS·파일 동기화 지연·다중 구독자의 총 메모리는 별도로 측정한다.
+
+```sh
+GOFLAGS='-tags=godbus_no_tcp' go test -p 1 ./internal/serverapi/openai ./internal/commands/server ./internal/storage/sqlite ./internal/storage/serverrequests ./internal/serverapi/detail -run '^$' -bench 'Benchmark(ParseMessages|OutputAppend|Stream|SubmissionDigest|EventPublishSteady|ActiveResponseState|ResponseOutput|ResponseLifecycle|DetailPages)$' -benchmem -count=2
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/provider/transport -run '^$' -bench BenchmarkIdlePool -benchmem -benchtime=30x
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/serverapi/openai -run '^$' -fuzz FuzzParseJSON -fuzztime=5s -parallel=2
+```
+
+세션 이력과 요청 중복 방지 기록은 자동 만료하지 않는다. 동기화·원본 무결성·승인 검사는 성능 경로에서도 유지하며, 실행 동시 수용량과 네트워크 연결 한도는 [서버 API](server.md)가 소유한다.
+
+메모리 경계와 느린 I/O의 heartbeat는 다음 집중 검사로 확인한다. B/op는 누적 할당이며 RSS와 구분한다. 스트림의 보류 공백은 연결당 64KiB까지만 보관하고 이를 넘으면 완성 원문 조회로 전환한다.
+
+```sh
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/storage/content ./internal/storage/sqlite -run '^$' -bench 'BenchmarkTextPrefix8MiB|BenchmarkServerPreview8MiB' -benchmem
+GOFLAGS='-tags=godbus_no_tcp' go test -race ./internal/serverapi/... -run 'TestAwait|TestResultSlot|TestInputBudget|TestSocketReleases|TestWhitespaceBuffer'
+```
+
+파일 탐색은 nonblocking open 뒤 실제 파일 종류를 확인해 FIFO 대기와 종료 worker 정체를 막는다. 디렉터리 페이지는 선택한 항목만 복사하고 정책 필터에서 제거한 참조도 비운다. TCP 수용량과 HTTP/2 스트림 수용량은 HTTP 요청의 동시 처리 한도와 별도로 전송 경계에서 제한한다.
+
 ## 플랫폼 실행 검증
 
 Linux·WSL·macOS에서 호스트 셸의 작업 디렉터리·환경·프로세스 정리와 필수 승인 거절을 검증한다. 임시 HOME에서 캐시 생성, 하드링크, 호스트 DNS 설정 파일, 자식 프로세스·로컬 HTTP, 시작 실패·비정상 종료·취소 후 부분 출력을 확인한다.
@@ -193,7 +269,7 @@ go test ./internal/tools/local/... ./internal/agent/run ./internal/commands/head
 
 실제 WSL에서는 일반 터미널과 execute_command에서 같은 도메인 조회·HTTPS 다운로드·패키지 설치를 대조한다. DNS 설정 파일 읽기와 숫자 IP의 로컬 HTTP 통과만으로 외부 DNS 성공을 판단하지 않는다. Linux Secret Service·실제 Provider·터미널 키 전달도 수행한 환경과 결과를 구분해 기록한다. 교차 빌드는 네이티브 실행 검증을 대신하지 않는다. [실행 경계](execution-boundary.md)의 호스트 권한 계약을 함께 확인한다.
 
-Linux의 필수 DBus 회귀 검사는 실제 자격 증명 조회 경로를 새 테스트 프로세스에서 호출한다. 루프백 TCP·nonce-TCP 연결과 canary 전송이 없고 Unix 소켓 연결은 유지되는지 확인한다. `linux` 조건만 사용하므로 태그를 빠뜨린 Linux 테스트는 실패한다. Unix 연결 검사만으로 키 저장·조회 성공을 판단하지 않는다.
+Linux의 필수 DBus 회귀 검사는 실제 자격 증명 조회 경로를 새 테스트 프로세스에서 호출한다. 루프백 TCP·nonce-TCP 연결과 canary 전송이 없고 Unix 소켓 연결은 유지되는지 확인한다. 직접 어댑터의 Unix 제한은 태그 없는 빌드에도 적용하며 배포 태그 존재는 별도 빌드 메타데이터 검사로 확인한다. Unix 연결 검사만으로 키 저장·조회 성공을 판단하지 않는다.
 
 ```sh
 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials -run TestCredentialDBusTransport -v
@@ -204,6 +280,49 @@ GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials -run TestCre
 ```sh
 MECA_TEST_SECRET_SERVICE=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials -run TestCredentialSecretService -v
 ```
+
+macOS Keychain은 별도 임의 서비스 이름으로만 검증하고 마지막에 해당 서비스의 키를 제거한다. 기본 테스트는 주입한 메모리 저장소·명령 경계로 실제 사용자 키를 건드리지 않는다.
+
+```sh
+MECA_TEST_KEYCHAIN=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/config/credentials/... -run 'TestNativeEncryptedVault|TestKeychainNativeRoundTrip' -count=1 -v
+GOFLAGS='-tags=godbus_no_tcp' go test -race ./internal/provider/... ./internal/config/credentials/... ./internal/storage/credentialstore ./internal/commands/install ./internal/agent/run ./internal/agent/context
+```
+
+### 자격 증명 구현과 검증
+
+자동 교체 pass의 전체 I/O 예산은 2분이다. 시간 초과 시 마지막 시도 위치를 private cursor에 기록해 느린 앞 항목이 이후 키를 계속 막지 않게 한다. 진단 파일 쓰기 실패도 worker를 종료하지 않으며 다음 확인에서 재시도한다. 진단 실패가 해소되지 않으면 종료 시 오류를 보고한다. 저장용 키 할당 카운터는 백업 키를 삭제하지 않는 보관 상한이며 한도에서 새 할당을 거절한다.
+
+Vault의 평문 마스킹 목록은 최대 1024개, 개별 값은 2048바이트다. 새 값을 기억할 수 없으면 연결·저장을 거부하며 기존 값을 잊지 않는다. 완전한 값은 긴 일치가 우선하는 불변 matcher를 사용하고, 스트림은 제어문자 제거로 비밀값이 다시 이어지는 경우도 차단한다. 잘린 미리보기 끝의 자격 증명 접두부도 마스킹한다.
+
+credentialstore의 Put·Delete는 취소 가능한 프로세스 공통 쓰기 lease를 공유한다. 참조 scope와 현재 credential 수를 OS 키 발급 전에 확인하며 최종 SQL의 원자적 조건도 유지한다. 확실히 거절할 저장은 키와 할당 슬롯을 만들지 않는다. maintenance는 기존 optimistic 교체를 유지한다.
+
+credentialstore는 저장 버전마다 `crypto/rand`로 독립적인 256비트 키를 만들고 OS 저장·재조회를 확인한 뒤 AES-256-GCM 암호문을 SQLite에 확정한다. nonce는 매번 새로 생성하며 credential 참조·Provider/endpoint 식별자의 SHA-256·암호화 키 참조를 인증 데이터에 묶는다. SQLite에는 암호문만 전달하고 원자적 쓰기·`synchronous=FULL`을 유지한다. 설정·대화에는 참조만 기록한다.
+
+프로세스는 자격 증명 유지 worker 하나를 시작하고 종료 시 취소·합류한다. 시작과 매시간 저장된 버전을 확인하며, 처음 관측한 버전의 시각부터 24시간이 지나면 API Key 값·연결 참조를 유지한 채 재암호화한다. 주기는 내부 상수이며 메뉴·CLI·API 옵션으로 노출하지 않는다. export와 유지보수 명령에는 worker를 시작하지 않는다. credentials.db 형식은 유지하고 private `credential-rotation/`의 버전별 시각을 원자적으로 기록해 재시작 후에도 주기를 유지한다.
+
+교체 pass는 별도 디렉터리 lease로 프로세스 간 중복을 막는다. 32건씩 읽고 DB 조회를 닫은 뒤 OS I/O를 수행하며 항목별 30초 상한을 둔다. 현재 key_ref·scope·암호문이 관측한 값과 같을 때만 조건부 갱신해 동시 저장·삭제를 우선한다. 확인된 갱신 뒤에만 시각을 기록하고 일부 항목 실패는 다른 항목의 처리를 막지 않는다. 시계가 뒤로 이동하면 만료를 무기한 연장하지 않고 교체한다. 실패는 원본과 OS 키를 유지한 채 다음 pass에서 재시도하며 private 진단 파일에는 고정된 상태만 남긴다.
+
+조회는 누락된 키를 재생성하지 않고 변조·미지원 형식에 오류를 반환한다. 불확실한 저장과 DB 백업의 복구를 위해 암호화 키 버전을 보존한다. 비밀값은 완전한 텍스트·스트림 조각·중첩 JSON에서 검사하며 서명 상태를 변경해야 하면 저장·재전송을 거부한다. 실행 중 평문 문자열과 OS 계정·프로세스 메모리 침해까지 완전한 소거·유출 방지를 보장하지 않는다.
+
+credentials/osstore는 명령·DBus 연결·session·prompt의 취소와 정리를 소유한다. Vault가 호출자 context와 30초 상한을 제공하고 credentialstore의 AES 키 저장·재조회·SQLite 쓰기까지 같은 context를 전달한다. 읽기 실패·불확실한 선택 저장에는 기존 credential을 삭제하지 않는다. TUI 복원도 credential 읽기를 연결 worker에 맡겨 이벤트 루프의 취소 처리를 막지 않는다. 제거는 private DB 삭제의 디렉터리 동기화 이후에만 OS 키를 지우고 홈 lease와 제거 기록으로 재시도·동시 시작을 조율한다.
+
+프로토콜 회귀 검사는 원본 블록 순서·빈 signed 필드·지문 변경 시 thinking 제외·무인자 Gemini 호출·필수 함수명·거절 텍스트·부분 캐시 usage·추론 전용 usage·영구 종료의 재시도 억제를 확인한다. JSON 이스케이프와 중첩 JSON 문자열의 비밀값도 검사한다. Claude 지문은 요청 한 번이 소유한 누적 해시로 계산하고 앞선 전체 JSON을 매 상태마다 다시 만들지 않는다.
+
+### Provider 요청과 메모리 소유권
+
+도구 이력은 Claude·Gemini·Responses 변환에서 검사한 엔진 호출을 읽기 전용으로 빌린다. Chat JSON을 만든 뒤 다시 파싱하는 중간 사본을 만들지 않는다. Claude는 continuation과 prefix를 한 번 복원하고, 응답 바인딩에서는 이미 검사한 block JSON을 그대로 감싼다. 제외한 thinking의 슬라이스 꼬리도 비운다. OpenAI Decoder는 반복 전송된 최종 텍스트를 문자열로 다시 보관하지 않고 형식만 검사하며, 최종 output JSON의 소유권을 continuation에 넘긴다. 최종 output이 없는 경우에만 완료 항목을 순서대로 합친다. Gemini는 조각을 한 번 인코딩해 응답 전용 버퍼에 쌓고 완료 시 그 버퍼를 넘긴다. 각 Decoder와 native 호출 누적기는 완료·실패 전환에서 임시 참조를 해제한다.
+
+Gemini의 continuation 본문·서명 인자·로컬 호출 ID는 현재 메시지와 대조한다. Encoder가 캐시를 사용하지 않는 Provider로 바뀌면 이전 캐시도 해제하고 Responses 항목 ID 추적은 도구 호출 상한에 묶는다. HTTP 재요청 클로저는 변환한 이미지/이력 DTO를 잡아 두지 않는다. 자동 추론 요약 옵션이 거절된 경우에만 원래 이력에서 다시 변환하며 토큰화·모델 실행을 추가하지 않는다. 이미지의 Base64 바이트만으로 요청 한도를 넘으면 변환 전에 거부한다. 실행기는 응답을 버퍼에 추가하기 전에 크기를 확인하며, 큰 공백을 제거하고 남은 작은 최종 답변은 원래 버퍼와 분리한다.
+
+비밀값 검사는 전체 원문 검사와 JSON 문자열 순회를 구분한다. JSON 문법 검사를 중복 실행하지 않고 escape가 없는 문자열은 재파싱하지 않으며, JSON이 아닌 문자열의 재귀용 바이트 사본도 만들지 않는다. 중첩 JSON 문자열·객체 키·Unicode escape·터미널 제어문자 검사는 유지한다. Projection의 Provider/model 출처 무효화도 회귀 검사한다.
+
+서명 이력·도구 인자·완료 응답·조각 누적·중첩 JSON 보호 검사는 아래 명령으로 측정한다. 같은 입력과 Go·OS·CPU에서 반복하며 누적 할당량, 동시에 보유한 힙과 RSS를 구분한다. 실모델 생성 지연과 동시 접속 부하는 이 벤치마크에 포함하지 않는다.
+
+```sh
+GOFLAGS='-tags=godbus_no_tcp' go test ./internal/provider/protocol ./internal/provider/protocol/responses ./internal/provider/protocol/gemini ./internal/config/credentials -run '^$' -bench 'BenchmarkClaudeSignedHistory|BenchmarkCloudToolHistory|BenchmarkCompletedResponse|BenchmarkContinuation|BenchmarkCheckProtected' -benchmem -benchtime=300ms -count=3
+```
+
+이벤트 링·서버 draft·상세 원본 spool·페이지 payload·팀 공유 텍스트·TUI 표시 캐시는 각 소유자의 용량·수명 경계를 따른다. 서명된 원문과 표시/실행용 값은 서로 다른 소비 계약이므로 한쪽을 제거하지 않는다. 보관한 암호화 키 버전과 알려진 비밀값은 각각 DB 백업 복원과 이후 출력의 마스킹에 필요하다. 메모리 회수는 소유권 해제에 따른다. 강제 GC·전역 응답 캐시·별도 DB 연결 풀은 사용하지 않는다. 실제 Provider의 대형 서명 응답, 다중 구독자의 대형 최종 응답, Linux 런타임의 장시간 RSS는 별도 부하 측정 대상이다.
 
 ## 성능과 장시간 수명
 
@@ -231,9 +350,11 @@ MECA_TEST_SECRET_SERVICE=1 GOFLAGS='-tags=godbus_no_tcp' go test ./internal/conf
 
 OpenRouter reasoning은 수신 시 현재 블록을 점진적으로 병합한다. 서명·종류·식별자 경계와 알 수 없는 필드를 보존하고 닫힌 블록만 유지하므로 완료 시 모든 조각을 다시 해석하지 않는다. 취소·실패한 요청의 미완성 블록은 후속 요청에 공개하지 않는다.
 
-Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio는 Responses 형식으로 직접 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
+Provider 요청·native 호출 이력의 JSON 인코딩은 protocol의 불변 Sonic 설정을 사용한다. HTTP JSON 본문에서 불필요한 HTML 이스케이프는 생략하고 키 정렬·문자열 검사·RawMessage 검증을 유지한다. LM Studio·OpenAI는 Responses, Claude는 Messages, Gemini는 GenerateContent 형식으로 인코딩한다. 스트림과 OpenRouter continuation의 파싱·병합은 표준 encoding/json을 사용한다. 도구 인자의 중복 키·종류·알 수 없는 필드·후행 입력 검사도 별도 경계에서 유지한다.
 
-하나의 요청 실행은 전용 Provider 인코더를 소유한다. 텍스트·이미지 이력은 Provider 변환 전에 불변 문자열·이미지 digest와 native 내용 지문을 비교해 메시지 JSON을 재사용한다. 컨텍스트 투영이 소유권을 인수한 native 인자·추론 상태는 한 번 지문을 만들고 읽기 전용으로 전달한다. 값·버퍼 교체는 지문을 무효화하며 소유권 계약이 없는 입력은 매번 내용 해시로 검사한다. 도구 결과와 뒤따르는 이미지 메시지는 하나의 그룹으로 재사용해 순서를 유지한다. 추론 설정은 매 요청 구성하고 도구 선언은 원본 정의의 구조가 같을 때 불변 wire JSON을 재사용한다. 중첩 필드·허용값 변경도 검사하며, vLLM 토큰화와 생성 요청은 같은 도구 선언 조각을 사용한다. 메시지 변경·이력 축소는 실제 값이 달라진 접미사와 영향받는 그룹을 폐기한다. 모델·Provider 변경과 실행 종료는 도구 선언을 포함한 전체 캐시를 해제한다. 이력 캐시는 메시지별 보수적 부대비용을 포함해 약 64KiB부터 사용하며 도구 선언과 합산한 보유 예산은 16MiB다. 도구 스냅샷은 정의 메타데이터를 포함해 256KiB 이내로 유지하고 작은 이력에서도 재사용한다. 작은 이력은 이력 캐시를 보유하지 않으며 도구가 없는 작은 요청은 단일 본문 경로를 사용한다. 예산 초과 이력은 예산 안의 완전한 앞부분 그룹을 유지하고 초과 인코딩은 재전송 가능한 HTTP 본문만 소유한다. 캐시 한도는 입력 수용 한도를 제한하지 않는다. 이미지의 Base64와 native 인자의 인코딩 사본을 별도 캐시로 중복 보관하지 않고 최종 전송 조각을 재사용한다. HTTP 본문은 불변 인코딩 조각을 읽고 정확한 Content-Length와 독립된 재읽기 커서를 제공해 재시도·리다이렉트를 보존한다. 실행 종료·실패·취소는 worker를 합류한 뒤 캐시 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 동일 메시지 인코딩을 재사용하는 별도 요청으로 유지한다. 실제 usage가 없으면 전송 바이트를, 그 값도 없으면 이미지 본문을 제외한 텍스트 크기 근사를 압축용으로 사용한다. 이 계산을 위한 전체 요청 직렬화와 표시용 추정 토큰을 만들지 않는다.
+하나의 요청 실행은 전용 Provider 인코더를 소유한다. Chat Completions·Ollama·Responses는 Provider 변환 전에 불변 문자열·이미지 digest와 native 내용 지문을 비교해 메시지 JSON을 재사용한다. Claude·Gemini는 별도 native 원본 그룹과 wire 접두사를 재사용한다. 원본 지문으로 검증을 재사용하고, 큰 인자·continuation은 캐시 사본으로 보관하지 않고 현재 요청에서 다시 연결한다. 원본 그룹의 메타데이터·이미지 변환은 전체 인코딩 예산의 절반 이내, 최종 전송 조각은 남은 예산 안에서 유지한다. 원본 그룹과 wire 조각은 수명을 분리해 작은 식별자가 전체 그룹을 붙잡지 않는다. Claude의 시스템 지침·도구 변경은 서명 접두사를 다시 계산하고 변경된 메시지 이후를 재구성한다. SHA-256의 요청 내부 체크포인트만 재사용하며 서명된 원문을 바꾸지 않는다. Gemini는 같은 접두사에 속한 호출 ID만 복원하고 변경된 호출 뒤의 결과를 다시 연결한다.
+
+컨텍스트 투영이 소유권을 인수한 native 인자·추론 상태는 한 번 지문을 만들고 읽기 전용으로 전달한다. 값·버퍼 교체는 지문을 무효화하며 소유권 계약이 없는 입력은 매번 내용 해시로 검사한다. 도구 결과와 뒤따르는 이미지 메시지는 한 그룹으로 순서를 유지한다. 추론 설정·도구 정의·서버 한도는 매번 반영한다. Chat Completions·Ollama·Responses의 도구 선언은 원본 정의의 구조와 중첩 필드·허용값이 같을 때 불변 wire JSON을 재사용하고 vLLM 토큰화에도 같은 조각을 사용한다. 모델·Provider 변경과 실행 종료는 전체 캐시를 해제한다. 이력 캐시는 보수적 부대비용을 포함해 약 64KiB부터 사용하며 전체 보유 예산은 16MiB다. 도구 스냅샷은 정의 메타데이터를 포함해 256KiB 이내로 유지한다. 예산 초과 이력은 완전한 앞부분만 재사용하고 나머지는 해당 HTTP 본문만 소유한다. 캐시 한도는 입력 수용 한도를 제한하지 않는다. HTTP 본문은 불변 조각과 정확한 Content-Length·독립 재읽기 커서로 재시도·리다이렉트를 보존한다. 종료·실패·취소는 worker를 합류한 뒤 참조를 해제한다. vLLM의 정확한 토큰 수 사전 검사는 같은 메시지 인코딩을 재사용하는 별도 요청으로 유지한다. 실제 usage가 없으면 전송 바이트를, 그 값도 없으면 이미지 본문을 제외한 텍스트 크기를 압축용으로 사용하며 이를 위한 전체 요청 재직렬화나 표시용 추정 토큰은 만들지 않는다.
 
 메시지·실행 이벤트·요약·대용량 레코드 참조의 저장 JSON은 go-json의 기본 Marshal·Unmarshal을 사용한다. 키 정렬·HTML 이스케이프·nil과 빈 값·64비트 숫자·native arguments의 내용·복원 값의 독립성을 검사한다. SHA-256 무결성·저장 형식·트랜잭션 경계는 storage/content와 SQLite의 소유권을 따른다. 반환 값이 입력 버퍼에 의존하는 무복사 옵션은 사용하지 않는다.
 
@@ -241,7 +362,7 @@ HTTP는 표준 net/http를 사용한다. 사용자 지정 DialContext에서도 T
 
 로컬 도구 카탈로그는 초기화 후 변경하지 않는 내부 정의 하나를 소유한다. 인자 검사는 이를 재사용하며 외부 Definitions 반환값은 중첩 Fields·Values까지 복사해 변경이 내부 검증으로 전파되지 않게 한다.
 
-응답별 마스킹은 누적 스냅샷에서 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 치환이 없는 출력은 원문 문자열을 공유하고 비밀키·제어 문자·잘못된 UTF-8을 변환하는 순간부터 독립된 출력 버퍼를 만든다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 간격이 촘촘한 최상위 목록은 마지막 두 항목을 가변 구간으로 두고 앞선 항목도 재사용한다. 목록 간격·종류가 바뀌면 해당 목록 처음으로 되돌리며 번호 목록의 시작 번호를 보존한다. 줄 위치는 바뀐 접미사와 최대 256개 직전 행만 다시 계산하고 캐시 보유 비용은 렌더링 변경 시 갱신한다. 참조 정의 가능성이 있는 `]:` 포함 문서와 느슨한 목록은 필요한 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남긴다. 완료 블록의 큰 행 배열은 하나의 텍스트와 32비트 스타일 경계 배열로 보관하며 화면에 필요한 행과 스타일만 구체화한다. 희소 스크롤 위치는 유지하고 행별 재사용 지표는 활성 스트림만 보유한다. 표시 캐시 합계가 16MiB를 넘으면 완료 블록을 먼저 작은 표현으로 전환하고 예산 안에서 줄어드는 경우만 유지한다. 담을 수 없는 결과나 화면 밖 캐시는 해제하며 원문·희소 인덱스로 다시 구성한다. 현재 스트리밍은 증분 처리 수명 동안 보유해 매 delta의 전체 재파싱을 피한다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
+응답별 마스킹은 불변 압축 접두사 트리에서 누적 스냅샷의 새 구간만 검사하고 비밀키 접두사·미완성 UTF-8을 보류한다. 전체 키 목록을 문자마다 순회하지 않으며 가장 긴 일치와 제어 문자 제거로 재구성되는 키도 처리한다. 치환이 없는 출력은 원문 문자열을 공유하고 비밀키·제어 문자·잘못된 UTF-8을 변환하는 순간부터 독립된 출력 버퍼를 만든다. 응답과 Thinking은 상태를 공유하지 않으며 재시도마다 초기화한다. 파일 미리보기와 대화 본문은 희소 위치 인덱스로 가시 구간만 구체화한다. 일반 본문은 256개 표시 줄마다 원문 위치를 기록해 긴 한 줄도 중간부터 재개한다. 응답·Thinking의 Markdown은 마지막 두 최상위 블록을 가변 구간으로 두고 완성된 앞부분의 파싱·줄 수를 재사용한다. 간격이 촘촘한 최상위 목록은 마지막 두 항목을 가변 구간으로 두고 앞선 항목도 재사용한다. 목록 간격·종류가 바뀌면 해당 목록 처음으로 되돌리며 번호 목록의 시작 번호를 보존한다. 줄 위치는 바뀐 접미사와 최대 256개 직전 행만 다시 계산하고 캐시 보유 비용은 렌더링 변경 시 갱신한다. 참조 정의 가능성이 있는 `]:` 포함 문서와 느슨한 목록은 필요한 전체 파싱을 유지한다. 화면 밖 과거 응답·Thinking은 파싱 결과·span을 해제하고 위치 인덱스만 남긴다. 완료 블록의 큰 행 배열은 하나의 텍스트와 32비트 스타일 경계 배열로 보관하며 화면에 필요한 행과 스타일만 구체화한다. 희소 스크롤 위치는 유지하고 행별 재사용 지표는 활성 스트림만 보유한다. 표시 캐시 합계가 16MiB를 넘으면 완료 블록을 먼저 작은 표현으로 전환하고 예산 안에서 줄어드는 경우만 유지한다. 담을 수 없는 결과나 화면 밖 캐시는 해제하며 원문·희소 인덱스로 다시 구성한다. 일반 스트리밍은 증분 처리 수명 동안 보유해 매 delta의 전체 재파싱을 피한다. 줄이 매우 많은 활성 본문은 압축 행 또는 희소 순회로 전환하고 행별 재사용 지표를 만들지 않는다. 경로 표시는 선택 revision·폭·언어·마스킹 revision으로 캐시하고 실제 표시 예산을 채우면 변환을 끝낸다. Compaction은 시간 순서 목록과 우선순위별 제거 대기열로 사용자 지시·결과·실패의 보존 순서를 유지한다.
 
 채팅에서 숨길 끝 빈 줄은 Markdown 행을 만들기 전에 표시 경계로 줄이고 원본과 파일 미리보기는 보존한다. 원문 예산은 diff 범위 배열의 보유 용량도 포함하며 예산 초과 시 화면 밖의 재조회 가능한 상세 내용을 먼저 해제한다. 요약·원본 참조와 가시 상세 내용은 유지한다.
 
@@ -251,7 +372,9 @@ Markdown의 Render·Stream.Render는 뷰포트의 실제 본문 폭을 받는다
 
 tui/viewport는 블록 인덱스 조율(block_layout.go), Markdown·일반 텍스트 인덱스 구성(markdown_index.go·literal_index.go), 가시 줄 추출(block_window.go)을 구분한다. 표시할 내용이 없는 Markdown은 여백을 추가하지 않으며 원문에 내용이 이어지면 다시 배치한다. View.Update는 현재 접힘 상태로 정규화한 본문·참조·스타일·스트림 상태·간격이 모두 같으면 기존 배치와 창을 유지한다. 스트림 종료나 실제 표시 변경은 정상적으로 갱신한다. Transcript.Window는 하나의 최종 행 배열에 블록별 가시 행을 직접 추가하며 diff·가운데 정렬은 추가한 구간에만 적용한다. Block.Window를 직접 사용하는 미리보기는 독립된 행 배열을 받는다. Markdown 준비·복원과 파생 메모리 계수는 cache_budget.go가 소유하며 최초 인덱스 처리와 캐시 복원에서 같은 계산을 사용한다. markdown/packed.go는 완료 행의 불변 배열을, markdown/styles.go는 일반·작은 배열의 스타일 경계 순회를 소유한다. viewport/markdown_cache.go는 실제 표시 예산에 맞는 표현을 선택한다. completion.go는 원문·폭·표시 속성이 일치하는 스트림의 행과 희소 인덱스를 완료 표현으로 인계하고 가변 체크포인트·행 지표를 해제한다. markdown/render_packed.go는 큰 완료 문서를 전체 행 배열 없이 수집한다.
 
-완료 응답과 파일 미리보기는 전체 Markdown 렌더링을 사용하고 활성 스트림은 증분 렌더링을 유지한다. 128KiB 이상이며 최상위 블록이 32개 이상인 전체 문서는 같은 불변 AST를 최대 네 그룹으로 나눠 처리하고 원래 순서로 합친다. 최상위 블록에 표가 있는 문서는 셀 배치의 임시 메모리를 줄이도록 직렬 처리한다. 참조 링크 해석은 분할 전에 수행하며 공백·표·목록·스타일·복사 좌표를 보존한다. 일반 행 배열은 합산 크기로 한 번 할당하고 모든 작업자를 합류한다. 큰 완료 뷰포트는 최상위 블록을 작은 행 묶음으로 수집해 압축된 텍스트·스타일 배열에 직접 기록한다. 병렬 그룹은 표시 예산을 나눠 사용하고 합친 결과도 같은 예산으로 검사한다. 담기지 않는 문서는 일반 렌더러로 표시한다. 완료 문서와 활성 스트림의 파생 메모리는 같은 표시 캐시 예산으로 계산한다.
+완료 응답·파일 미리보기와 줄이 많은 활성 본문은 행을 생성하는 중간에 같은 16MiB 표시 예산을 검사한다. 코드 블록 어댑터는 Goldmark의 문법 판정을 재사용하고 파싱 context가 소유한 본문 버퍼와 작은 segment scratch만 유지해 줄마다 원문 segment를 쌓지 않는다. 목록의 첫 행 표식과 끝 공백은 공통 행 sink에서 보존한다. 같은 내용·스타일의 연속 행은 횟수로 압축하며 논리 행 번호·복사 좌표는 유지한다. 압축 표현도 담을 수 없으면 전체 행 배열로 재시도하지 않고 원문을 순회해 희소 인덱스와 가시 구간만 구성한다. 일반 활성 스트림은 기존 증분 경계를 사용한다. 128KiB 이상이며 최상위 블록이 32개 이상인 큰 문서는 같은 불변 AST를 최대 네 그룹으로 나눠 처리하고 원래 순서로 합친다. 표가 있는 문서는 셀 배치의 임시 메모리를 줄이도록 직렬 처리하며 병렬 그룹도 표시 예산을 나눠 사용하고 합류한다.
+
+압축 행이 예산을 넘으면 같은 AST에서 블록별 재개 계획을 시도한다. 일반 블록은 작은 압축 행, 최상위 코드 블록은 정규화한 본문과 256행 간격 바이트 위치로 보관한다. 원문과 같은 본문은 원문을 빌리고 변환된 본문만 소유하며 AST와 전체 행 배열은 보관하지 않는다. 희소 위치의 해당 논리 행에서 바로 재개한다. 계획도 같은 표시 예산을 따르며 화면 밖 해제·원문 교체·폭 변경에서 정리하고 필요할 때 재구성한다. 계획을 만들 수 없는 문서는 기존 순회·literal 경로로 표시한다.
 
 tools/local의 Prepare는 공통 인자 검사를 마친 뒤 파일·폴더·셸·명령 제어·이미지의 구체 실행을 구성한다. 각 실행은 필요한 후보·경로·환경만 소유하고 공통 operation은 승인과 일회 실행 진입을 담당한다. 변경 전 원본·경로 재검사와 명령 안전성 재검사는 각 구체 실행 경계에 둔다.
 
@@ -265,9 +388,13 @@ storage/history가 화면 표시 필드 선택과 복원된 값의 표시 투영
 
 큰 JSON 값의 인코딩·복원과 무결성 검사는 storage/content가 소유하고 SQLite는 `payloads`에 해시·원본 길이·압축 형식·본문을 저장한다. 새 payload는 Zstandard의 빠른 단일 실행 설정과 128KiB 창을 사용하며 압축 결과가 원문보다 작을 때 저장한다. 압축기·복원기는 Store가 지연 생성해 잠금 안에서 재사용하고 Close에서 해제한다. 재사용 출력 버퍼는 최대 256KiB로 제한하며 호출자에게는 독립된 결과를 반환한다. 복원 전 프레임의 선언 길이를 확인하고 출력 용량·해시·JSON 검사를 적용한다. 원문·gzip·Zstandard는 명시한 codec 값으로 구분한다. 작은 레코드는 payload 참조가 필요 없으면 재파싱·재직렬화를 생략하고 내용에 임의의 표식을 삽입하지 않는다. 한 연결을 쓰므로 조회 페이지를 닫은 뒤 payload를 복원한다. 기록과 payload는 같은 트랜잭션으로 커밋한다. 메시지 묶음의 수정 시각과 최초 사용자 요약은 같은 트랜잭션에서 한 번 갱신하며 수신 커서도 함께 확정한다. `record.Entry` 그룹은 같은 확정 시점의 메시지·이벤트·체크포인트를 원자적으로 저장한다. 실행 전 시작 의도는 효과 발생 전에, 실제 실행 결과·native 응답·변경 후 체크포인트는 취소와 무관하게 5초 저장 문맥에서 함께 확정한다. 실행 시작과 결과의 두 경계를 합치지 않는다. 종류·본문 길이·요약 입력 투영을 저장 시 기록하며 원본 읽기·export·취소 후 복원 계약을 함께 검사한다.
 
+SQLite journal은 입력 검증을 쓰기 연결 대기 전에 끝내고, 약 4MiB의 준비 예산 안에서 메시지·이벤트·체크포인트·payload의 직렬화·해시·압축을 트랜잭션 밖에서 수행한다. 준비 배열의 예약 용량과 payload 메타데이터도 계산한다. 마지막으로 준비 중인 한 레코드는 기존 수용 한도까지 허용하고, 예산 이후 항목은 같은 트랜잭션 안에서 이어 처리한다. 불변 payload의 사전 존재 조회는 압축 생략에만 사용하며 실제 쓰기 때 재확인한다. 동시 신규 payload는 INSERT OR IGNORE로 합치고 실제 payload·레코드·수신 커서·체크포인트는 원래 순서로 원자적으로 확정한다. 준비한 payload는 쓰기 후 참조를 해제한다.
+
+텍스트 미리보기는 저장 크기와 원본 크기로 먼저 읽기 예산을 확인한다. 압축 해제 중 전체 길이·해시·JSON 문자열을 끝까지 검사하고 32KiB 읽기 스크래치와 표시 접두사만 구체화한다. Zstandard의 모든 프레임에 작은 복원 창 상한을 적용하며 더 큰 창이 필요한 값은 같은 원본 읽기 예산 안의 완전 복원으로 검증해 큰 history ring 할당을 피한다. 디코더 옵션은 호출 후 복원한다. 같은 페이지의 반복 접두사는 2MiB payload 캐시 예산을 공유하고 마지막 참조에서 해제한다. 원문·export·숨은 필드 제외·손상 검출·취소 계약은 유지한다.
+
 run_states는 실행별 최신 체크포인트 한 건을 갱신하며 32KiB 초과 구조화 상태를 같은 Codec으로 압축한다. 최종 이벤트는 작은 상태·통계만 두고 Export는 해당 실행의 전체 상태를 복원한다. Timeline은 TUI 전용 투영으로 표시할 종류를 먼저 선택하고 숨은 native 인자·continuation·이미지를 복원하지 않는다. 화면에 표시하는 도구의 display_args만 경로·명령·ID를 저장하며 잘못된 표시 필드가 실패 기록 자체를 막지 않는다. 인자는 Sonic의 지역적인 무복사 탐색으로 선택하고 반환하는 문자열은 독립된 값으로 복사한다. 원본 ContextMessages·Export와 표시용 Timeline의 계약을 구분한다.
 
-storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지막 참조 인덱스와 작은 읽기 캐시를 소유한다. 인덱스 예산을 넘는 본문도 캐시 없이 복원한다. 표시할 필드만 선택하고 반복되는 본문은 복원 결과를 공유한다. 팀의 공용 본문은 일반 문맥과 압축 입력 모두 페이지 단위로 조회·검증하며 전체 메시지 JSON을 다시 만들지 않고 선택한 메타데이터와 결합한다. 이미 읽은 개인 도구 메타데이터는 재연결 없이 투영하고 실제 payload가 필요할 때만 해당 DB를 연다. 캐시는 페이지 밖으로 전달하거나 Store에 저장하지 않는다. 원본 내보내기·숨은 필드 제외·손상 검출·취소·큰 단일 본문 수용을 함께 검증한다.
+storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지막 참조 인덱스와 작은 읽기 캐시를 소유한다. 키는 Store 소유자와 DB 내부 payload ID의 조합이므로 서로 다른 개인 DB의 같은 숫자 ID가 섞이지 않는다. 인덱스 예산을 넘는 본문도 캐시 없이 복원한다. 표시할 필드만 선택하고 반복되는 본문은 복원 결과를 공유한다. 팀의 공용 본문은 일반 문맥과 압축 입력 모두 페이지 단위로 조회·검증하며 전체 메시지 JSON을 다시 만들지 않고 선택한 메타데이터와 결합한다. 이미 읽은 개인 도구 메타데이터는 재연결 없이 투영하고 실제 payload가 필요할 때만 해당 DB를 연다. 캐시는 페이지 밖으로 전달하거나 Store에 저장하지 않는다. 원본 내보내기·숨은 필드 제외·손상 검출·취소·큰 단일 본문 수용을 함께 검증한다.
 
 압축 점유량 조회는 최근 실측 샘플·최신 요약 revision의 경계·이후 추가된 메시지 크기·현재 timeline을 한 SQL 문과 같은 읽기 스냅샷에서 계산한다. 원문 본문을 읽거나 추가 영속 카운터·캐시·인덱스를 만들지 않는다.
 
@@ -281,7 +408,7 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 
 실행 중 명령의 화면은 고정 명령 본문과 변하는 시간 머리말을 분리해 조립한다. 마스킹 revision이 같으면 들여쓰기·마스킹한 본문을 재사용하고 최대 256KiB 안에서 실제 표시 문자열의 부분 참조로 보유한다. 명령 완료·화면 종료에서 표시 참조를 해제한다. 활성 명령 원본 목록은 레지스트리 잠금 안에서 짧게 캡처하고 개별 상태 조회는 잠금 밖에서 수행하며 조회 계약은 실행기 종료와 동시 호출을 허용한다.
 
-실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호 또는 마스킹 revision이 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별로 동기화해 독립 명령의 I/O를 직렬화하지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
+실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호 또는 마스킹 revision이 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별 표시 계산을 독립적으로 수행한다. 정제 로그·결과의 게시·회수만 실행기 예산 잠금으로 직렬화하고 완성 파일을 원자적으로 교체한다. 보관은 256MiB·256건으로 제한하며 DB 확정 뒤 acknowledge한 결과만 회수한다. 미확정 자료는 공간이 없어도 버리지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
 
 ### 최적화 측정
 
@@ -303,14 +430,16 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 | 이력 줄 배치·입력 표시 | internal/tui/viewport · internal/tui/session | BenchmarkLiveTranscriptFrame · BenchmarkTerminalPacing · BenchmarkStreamDelivery · BenchmarkLiveCommandView |
 | 팀 화면 반복·변경 갱신과 완료 발화 | internal/tui/viewport · internal/tui/chat/team | BenchmarkUnchangedTeamFrame · BenchmarkManyTeamCards · BenchmarkTeamCompletionExistingPair |
 | Markdown·입력·셀 폭 | internal/tui/markdown · internal/tui/input · internal/tui/textlayout | BenchmarkStreamTail · BenchmarkParagraph · BenchmarkLongDraft · BenchmarkWidth |
-| 스트림 마스킹·동일 파일 복수 수정 | internal/config/credentials · internal/tools/local/textedit | BenchmarkCleanStreamMask · BenchmarkBatchEdits |
-| 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkPartialHistory · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkImageHistory · BenchmarkToolSchemaEncoding |
+| 스트림 마스킹·동일 파일 복수 수정 | internal/redaction · internal/tools/local/textedit | BenchmarkCleanStreamMask · BenchmarkBatchEdits |
+| 요청·native·이미지 이력 인코딩 | internal/provider/protocol | BenchmarkConversationEncoding · BenchmarkColdConversationEncoding · BenchmarkPartialHistory · BenchmarkNativeHistoryEncoding · BenchmarkOwnedNativeHistory · BenchmarkCloudConversationEncoding · BenchmarkImageHistory · BenchmarkToolSchemaEncoding |
 | Provider 변환·스트림 | internal/provider/protocol | BenchmarkProviderRequests · BenchmarkProviderStream · BenchmarkOpenRouterReasoningFragments · BenchmarkTextMessages · BenchmarkImageEncoding |
 | 로컬 HTTP 왕복 | internal/provider/httpclient | BenchmarkGenerationEncoding |
 | 도구 표시·diff·배치 준비 | internal/tui/transcript · internal/tools/local/diff · internal/tools/local · internal/tools/local/catalog | BenchmarkDisplayArguments · BenchmarkAnalysis · BenchmarkParallelPlanning · BenchmarkCandidatePreparation · BenchmarkExecutionSnapshot · BenchmarkCatalog |
 | 작은 출력·대용량 출력 보관 | internal/tools/local/process | BenchmarkSmallCommandCapture · BenchmarkCappedOutput64MiB · BenchmarkSpillOutput64MiB |
-| 저장·대화 목록·압축 점유량 | internal/storage/sqlite | BenchmarkOutcomeCommit · BenchmarkConversations · BenchmarkCancellableConversations · BenchmarkJournal · BenchmarkMemoryWatermark |
+| 저장·대화 목록·압축 점유량 | internal/storage/sqlite | BenchmarkOutcomeCommit · BenchmarkConversations · BenchmarkCancellableConversations · BenchmarkJournal · BenchmarkJournalTransaction · BenchmarkMemoryWatermark · BenchmarkSessionFootprint |
 | 압축·저장 JSON | internal/storage/content | BenchmarkPayloadCodec · BenchmarkCompressionOptions · BenchmarkRecordContent |
+| 원문 미리보기·희소 스크롤·SSE 묶음 | internal/storage/sqlite · internal/tui/viewport · internal/serverapi/openai | BenchmarkServerPreview8MiB · BenchmarkSparseMarkdownScroll · BenchmarkStreamBatch |
+| 전체 엔진 부하 | cmd/meca | BenchmarkEngineWorkload |
 | 이미지 읽기·이력·압축 경계 | internal/tools/local · internal/storage/sqlite | BenchmarkReadImageBytes · BenchmarkImageHistory · BenchmarkImageBoundary |
 
 ```sh
@@ -334,19 +463,52 @@ go test ./internal/tui/input -run '^$' -fuzz '^FuzzBoundaryEdits$' -fuzztime=10s
 go test ./internal/tools/local/diff -run '^$' -fuzz '^FuzzAnalysisCounts$' -fuzztime=10s
 go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzWireJSONEncode$' -fuzztime=15s
 go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzEncoderRequest$' -fuzztime=10s
+go test ./internal/provider/protocol -run '^$' -fuzz '^FuzzCloudResponse$' -fuzztime=10s
 go test ./internal/storage/content -run '^$' -fuzz '^FuzzStoredJSON$' -fuzztime=15s
 go test ./internal/tui/viewport -run TestDisplayResources -v
 ```
+
+### 저장 구조 측정값
+
+2026-11-07, Go 1.27.3·macOS arm64·Apple M1 Max의 로컬 임시 디렉터리에서 구현 전·후 작업 트리를 같은 입력으로 비교했다. 아래 값은 3회 측정의 중앙값이며 실제 모델 호출을 포함하지 않는다. 짧은 표본의 관측값으로 운영 환경의 지연·메모리 감소를 보장하지 않는다.
+
+| 측정 | 변경 전 | 현재 |
+| --- | ---: | ---: |
+| 응답 접수→실행 경계→종료, ResponseLifecycle | 39.6ms | 13.9ms |
+| 4×128KiB journal, 트랜잭션 밖 준비 | 1.291ms | 1.219ms |
+| 위 journal의 쓰기 트랜잭션 구간 | 293µs | 230µs |
+| 위 journal의 할당 횟수 | 468 | 459 |
+| 메시지 1000건, 각 128바이트 본문 DB | 581632바이트 | 389120바이트 |
+| 메시지 1000건, 각 48KiB 압축 본문 DB | 733184바이트 | 401408바이트 |
+| 공용 원문 32건의 개인 압축 자료 복원 | 14.70ms | 14.74ms |
+
+Journal·공용 복원은 `-benchmem -benchtime=500ms -count=3`, DB 크기는 `BenchmarkSessionFootprint -benchtime=1x -count=3`로 측정했다. 크기 비교는 DB를 닫아 WAL을 반영한 뒤 main 파일을 읽는다. 응답 저장의 이전 표본은 `-benchtime=100ms`, 현재 표본은 `500ms`이므로 동기화 지연의 변동도 함께 고려한다. Claude·Gemini의 같은 cached 인코딩 입력은 각각 약 0.42ms로 유지됐다.
+
+공용 복원의 누적 할당량은 14.65MB→14.69MB이며 할당 횟수는 3905→4903이다. 출처 값과 접두부 무결성 복원 비용이 추가됐으므로 모든 경로의 할당 감소로 해석하지 않는다. DB 크기·공용 복원을 함께 3회 실행한 테스트 프로세스의 최고 RSS는 42.04MB→40.50MB로 관측했으며 `/usr/bin/time -l`의 프로세스 최고값 한 표본이다. 누수 판정·운영 한도와 구분하고 수명 검사는 레이스·취소·종료 합류 검사로 별도 확인한다.
+
+### PGO 빌드 측정
+
+[Go PGO](https://go.dev/doc/pgo)는 실제 호출 비중을 컴파일러에 전달하는 빌드 최적화다. `BenchmarkEngineWorkload`는 임시 프로젝트·실제 에이전트·도구·SQLite·세 Provider의 로컬 HTTP 응답·OpenAI SSE·증분 Markdown 렌더링을 하나의 요청으로 실행한다. 실제 API Key·사용자 상태·외부 모델은 사용하지 않는다. 프로파일 생성은 기존 PGO를 끄고 합성 모델 서버의 CPU 표본을 제외한다. 프로파일과 임시 테스트 실행 파일은 성공·실패 모두에서 정리하며 완성된 프로파일만 지정 경로에 원자적으로 게시한다. 프로파일은 해당 소스·Go·플랫폼·부하에 대한 빌드 입력이므로 비교 결과와 함께 관리한다.
+
+```sh
+sh scripts/performance/pgo.sh bin/pgo/default.pgo
+go build -tags=godbus_no_tcp -trimpath -pgo=off -o bin/meca-baseline ./cmd/meca
+go build -tags=godbus_no_tcp -trimpath -pgo="$PWD/bin/pgo/default.pgo" -o bin/meca-pgo ./cmd/meca
+go test -tags=godbus_no_tcp -pgo=off ./cmd/meca -run '^$' -bench '^BenchmarkEngineWorkload$' -benchmem -count=6
+go test -tags=godbus_no_tcp -pgo="$PWD/bin/pgo/default.pgo" ./cmd/meca -run '^$' -bench '^BenchmarkEngineWorkload$' -benchmem -count=6
+```
+
+환경의 영향을 줄이려면 두 빌드를 번갈아 실행하고 `benchstat`으로 비교한다. CPU 시간·할당량·벽시계 시간을 구분하며 합성 부하의 수치를 실제 모델 응답 속도로 해석하지 않는다. 단일 미세 벤치마크만으로 기본 빌드에 적용하지 않는다. 생성한 자료는 무시되는 `bin/` 안에 둔다.
 
 ## 요청 실행의 책임
 
 단일 모드는 메인 에이전트 하나가, 팀 모드는 각 참여자가 독립된 문맥으로 같은 agent/run을 사용한다. agent/run은 실행 순서·예산·승인·명령 수명을 조율하고, 시작한 명령의 종료·취소 결과를 수집한 뒤 응답 경계에 도달한다. 단일 모드는 정상 응답으로 종료하며 팀은 agent/team의 대화·퇴장·최종 보고 판단을 거친다. 파일 검사·OS 자격 증명·세션 SQLite는 각 어댑터가 소유한다.
 
-원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. 비대화형 실행과 TUI는 agent/session을 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.
+원본 출력은 실행 이벤트가 소유하고, 작은 체크포인트·TUI·모델 문맥은 각각 필요한 투영만 사용한다. TUI·CLI·서버는 agent/session과 팀 실행기를 공유하며 테스트가 별도 실행 루프를 만들지 않는다. cmd/meca의 실행 파일 통합 검사는 임시 HOME·프로젝트와 모의 Provider를 사용하며 실모델 E2E와 구분한다.
 
 ## 이미지 처리 책임
 
-agent/media는 이미지 스냅샷의 값·수용 한도, provider/connection은 입력 지원 상태, provider/discovery는 서버 선언 해석, provider/diagnostic은 입력 수용 검사, provider/setup은 연결 확정을 소유한다. provider/protocol의 요청 DTO는 수신 청크와 분리하고 chat·Ollama·Responses 형식으로 이미지를 인코딩한다. commands/agentrequest와 agent/run은 연결에 맞게 도구 목록을 구성한다.
+agent/media는 이미지 스냅샷의 값·수용 한도, provider/connection은 입력 지원 상태, provider/discovery는 서버 선언 해석, provider/diagnostic은 입력 수용 검사, provider/setup은 연결 확정을 소유한다. provider/protocol의 요청 DTO는 수신 청크와 분리하고 Chat Completions·Ollama·Responses·Claude·Gemini의 형식으로 이미지를 인코딩한다. commands/agentrequest와 agent/run은 연결에 맞게 도구 목록을 구성한다.
 
 tools/local/imagefile은 파일 내용의 형식 판별·디코딩·대표 프레임 변환을 담당하고 local/image는 기존 경로 경계와 취소 가능한 단일 디코딩 수용량을 적용한다. local/image_read는 알려진 크기의 스냅샷 읽기와 크기 변경 검사를, imagefile/png는 PNG 청크 기반 애니메이션 판별을 담당한다. 이미지 본문은 model 메시지에만 보존하며 TUI 이벤트에는 작은 메타데이터를 전달한다.
 
@@ -354,4 +516,4 @@ storage/content·sqlite는 이미지 본문을 같은 세션의 payload에 저�
 
 셸 AST와 초기 환경은 승인 후보가 불변 값으로 소유하고 실행 전에는 새 파일시스템 관측으로 재분석한다. 분기는 초기 환경을 공유하며 변경된 변수·함수만 copy-on-write로 분리한다. 한 분석 안의 같은 경로 질의만 재사용하고 실행 시점에는 별칭과 inode를 다시 확인한다. 명령 전용 묶음은 승인 후 불변 인자를 다시 파싱하지 않으며 파일 묶음의 별칭 재계획은 유지한다.
 
-공유 작업 공간은 할당 없는 경로 경계 비교로 충돌을 검사하고 실제 대기자만 알림 채널을 소유한다. 해제·취소는 관련 경로와 파일 슬롯 대기자에게만 전달하고 오래된 후보는 실행 전에 반환한다. 명령 정리는 프로세스 소유자가 경로 예약까지 합류하며 별도 완료 감시 goroutine을 두지 않는다. 팀의 상태 문맥은 모든 활성 명령의 작은 관측과 불변 담당 업무 투영을 분리한다. 공개 기록은 저장 순서를 유지하고 UI 전달은 기록 잠금 밖에서 호출자들이 순서대로 처리한다.
+명령의 경로 입장은 local.PrepareAdmitted의 명시적 콜백으로 준비하며 준비 후 런타임 타입 단언으로 주입하지 않는다. 예약 해제는 실제 subprocess 종료와 출력 정리를 소유하는 등록부에 연결한다. 공유 작업 공간은 할당 없는 경로 경계 비교로 충돌을 검사하고 실제 대기자만 알림 채널을 소유한다. 해제·취소는 관련 경로와 파일 슬롯 대기자에게만 전달하고 오래된 후보는 실행 전에 반환한다. 명령 정리는 프로세스 소유자가 경로 예약까지 합류하며 별도 완료 감시 goroutine을 두지 않는다. 팀의 상태 문맥은 모든 활성 명령의 작은 관측과 불변 담당 업무 투영을 분리한다. 공개 기록은 저장 순서를 유지하고 UI 전달은 기록 잠금 밖에서 호출자들이 순서대로 처리한다.

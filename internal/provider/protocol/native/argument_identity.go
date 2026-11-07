@@ -1,6 +1,6 @@
 // Purpose: Compare complete JSON argument values while preserving strings, numbers and unique keys.
 // Pattern: Bounded pure parser at the Responses stream boundary.
-// Usage: finalArguments accepts equivalent serialization without replacing the streamed source.
+// Usage: Final and signed Gemini history accept equivalent serialization without replacing the source.
 // Related: internal/provider/protocol/responses/calls.go, internal/agent/tool/arguments.go.
 package native
 
@@ -14,7 +14,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func equivalentArguments(left, right string) bool {
+func SameArguments(left, right string) bool {
 	parse := func(text string) (any, error) {
 		if len(text) > toolapi.MaxArgumentsBytes {
 			return nil, fmt.Errorf("arguments exceed limit")

@@ -11,6 +11,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/redaction"
 	"strings"
 )
 
@@ -62,24 +63,25 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			}
 			calls = append(calls, e.Calls...)
 		}
-		reply.WriteString(e.Delta)
-		thinking.WriteString(e.Thinking)
-		visibleReply = maskReply(reply.String(), false)
-		if maskThinking != nil {
-			visibleThinking = maskThinking(thinking.String(), false)
-		}
 		if len(e.ReasoningState) > 0 {
 			if !e.Done {
 				return fmt.Errorf("provider continuation state arrived before completion")
 			}
 			continuation = e.ReasoningState
 		}
-		size := reply.Len() + thinking.Len() + len(continuation)
+		size := reply.Len() + thinking.Len() + len(continuation) + len(e.Delta) + len(e.Thinking)
 		for _, call := range calls {
 			size += len(call.Arguments) + len(call.ID) + len(call.Name)
 		}
 		if size > modelapi.MaxResponseBytes {
 			return &modelapi.OutputLimitError{Reason: "model response byte limit"}
+		}
+		// Check before allocating append buffers or masking an oversized event.
+		reply.WriteString(e.Delta)
+		thinking.WriteString(e.Thinking)
+		visibleReply = maskReply(reply.String(), false)
+		if maskThinking != nil {
+			visibleThinking = maskThinking(thinking.String(), false)
 		}
 		if e.Done {
 			done = true
@@ -124,8 +126,8 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	if s.runner.Redact(reply.String()) != reply.String() {
 		return modelapi.Response{}, fmt.Errorf("model reply contains a protected credential or terminal control")
 	}
-	if s.runner.Redact(string(continuation)) != string(continuation) {
-		return modelapi.Response{}, fmt.Errorf("provider continuation state contains protected content")
+	if err := redaction.CheckProtected(continuation, s.runner.Redact); err != nil {
+		return modelapi.Response{}, err
 	}
 	ids := map[string]bool{}
 	for _, call := range calls {
@@ -133,8 +135,8 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 			return modelapi.Response{}, &modelapi.ToolCallError{Detail: "duplicate call IDs in one response"}
 		}
 		ids[call.ID] = true
-		if s.runner.Redact(string(call.Arguments)) != string(call.Arguments) {
-			return modelapi.Response{}, fmt.Errorf("tool arguments contain a protected credential or terminal control")
+		if err := redaction.CheckProtected(call.Arguments, s.runner.Redact); err != nil {
+			return modelapi.Response{}, err
 		}
 	}
 	return modelapi.Response{Text: reply.String(), Reasoning: visibleThinking, ReasoningState: continuation, Calls: calls}, nil

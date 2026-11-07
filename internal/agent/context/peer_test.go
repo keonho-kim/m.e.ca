@@ -5,6 +5,7 @@
 package context
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -17,7 +18,7 @@ func TestPeerConversationRetainsPlainAttribution(t *testing.T) {
 	if err != nil || projected.Role != "user" || projected.Content != peer.Content {
 		t.Fatalf("peer speech was wrapped or lost its sender: %+v %v", projected, err)
 	}
-	if peer.Role != "system" || !channel.IsPeer(peer.ID) {
+	if peer.Role != "system" || !channel.IsPeer(peer) {
 		t.Fatal("projection changed the stored peer observation")
 	}
 	if projected.Reasoning != "" || len(projected.Calls) != 0 {
@@ -27,7 +28,7 @@ func TestPeerConversationRetainsPlainAttribution(t *testing.T) {
 
 func TestPeerMarkerDoesNotReclassifyUserOrOrdinaryNotes(t *testing.T) {
 	for _, original := range []modelapi.Message{
-		{Role: "user", ID: "peer:Ren/4", Content: "A real user request"},
+		{Role: "user", ID: "peer:Ren/4", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 4}, Content: "A real user request"},
 		{Role: "system", Content: "An ordinary execution observation"},
 	} {
 		projected, err := conversationMessage(original, false)

@@ -10,6 +10,17 @@ import (
 )
 
 func (message Message) Check() error {
+	if message.Source != nil {
+		if message.Role != "user" && message.Role != "system" && message.Role != "tool" {
+			return fmt.Errorf("public provenance requires an observation or user message")
+		}
+		if err := message.Source.Check(); err != nil {
+			return err
+		}
+		if message.Role != "tool" && (message.Role == "user") != (message.Source.Author == "user") {
+			return fmt.Errorf("message role and public provenance disagree")
+		}
+	}
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" && message.Role != "system" {
 		return fmt.Errorf("invalid message role")
 	}

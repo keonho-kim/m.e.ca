@@ -29,7 +29,11 @@ func (p *Peer) AdmitModel() bool {
 	r := p.room
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.modelCalls >= r.options.MaxModelCalls || !time.Now().Before(r.deadline) || r.ctx.Err() != nil {
+	if r.ctx.Err() != nil || !time.Now().Before(r.deadline) {
+		return false
+	}
+	if r.modelCalls >= r.options.MaxModelCalls {
+		r.budgetExhausted = true
 		return false
 	}
 	r.modelCalls++

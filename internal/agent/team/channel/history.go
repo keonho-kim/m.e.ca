@@ -62,7 +62,10 @@ func (h *History) Metadata(sequence int64) (Metadata, bool) {
 func observePublic(message Message) Entry {
 	value := message.Context()
 	// Peer attribution and raw text share one immutable string allocation.
-	message.Text = value.Content[len(value.Content)-len(message.Text):]
+	boundary := len(value.Content) - len(message.Text)
+	prefix := value.Content[:boundary]
+	message.Prefix = &prefix
+	message.Text = value.Content[boundary:]
 	return Entry{message, value}
 }
 

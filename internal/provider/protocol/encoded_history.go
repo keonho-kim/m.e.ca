@@ -87,7 +87,7 @@ func encodeMessage(kind connection.ProviderKind, message Message) ([]byte, error
 	if message.encoded != nil {
 		return message.encoded, nil
 	}
-	if kind != connection.LMStudio {
+	if !connection.UsesResponses(kind) {
 		return wireJSON.Marshal(message)
 	}
 	input, err := responseInput([]Message{message})

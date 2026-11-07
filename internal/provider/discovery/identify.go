@@ -25,6 +25,8 @@ func (c *Client) Identify(ctx context.Context, model string) (identity.Report, e
 	var report identity.Report
 	var err error
 	switch c.Connection.Kind {
+	case connection.Claude, connection.Gemini:
+		report = identity.Report{Unavailable: true}
 	case connection.Ollama:
 		report, err = c.identifyOllama(ctx, model)
 	case connection.SGLang:

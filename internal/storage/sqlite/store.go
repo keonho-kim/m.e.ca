@@ -14,6 +14,7 @@ import (
 	_ "modernc.org/sqlite"
 	"net/url"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 )
@@ -67,6 +68,14 @@ func connect(ctx context.Context, path string, readOnly bool) (*sql.DB, error) {
 	query.Add("_pragma", "foreign_keys(1)")
 	if !readOnly {
 		query.Set("_txlock", "immediate")
+		// SQLite enforces the main-file ceiling atomically across all handles.
+		pages, err := sessionPageLimit(path)
+		if err != nil {
+			return nil, err
+		}
+		query.Add("_pragma", "max_page_count("+strconv.FormatInt(pages, 10)+")")
+		query.Add("_pragma", "journal_size_limit(16777216)")
+		query.Add("_pragma", "wal_autocheckpoint(256)")
 	}
 	endpoint.RawQuery = query.Encode()
 	db, err := sql.Open("sqlite", endpoint.String())

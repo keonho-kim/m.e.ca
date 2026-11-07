@@ -14,12 +14,19 @@ import (
 )
 
 func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
-	if kind == modelconn.LMStudio {
+	if kind == modelconn.Claude {
+		endpoint, body, _, err := claudeRequest(baseURL, request, messages, controls)
+		return endpoint, body, err
+	}
+	if kind == modelconn.Gemini {
+		return geminiRequest(baseURL, request, messages, controls)
+	}
+	if modelconn.UsesResponses(kind) {
 		input, err := responseInput(messages)
 		if err != nil {
 			return "", nil, err
 		}
-		body := responses.Header(request.ModelID, request.MaxOutput, controls.ReasoningEffort, request.Temperature, request.Tools)
+		body := responseHeader(kind, request, controls)
 		body.Input = &input
 		content, err := wireJSON.Marshal(body)
 		return baseURL + "/responses", content, err
@@ -51,6 +58,26 @@ func ollamaPayload(info *modelconn.ModelInfo, request modelapi.Request, controls
 	}
 	if controls.Reasoning != nil {
 		body.Reasoning = controls.Reasoning
+	}
+	return body
+}
+
+func responseHeader(kind modelconn.ProviderKind, request modelapi.Request, controls Controls) responses.Request {
+	temperature := request.Temperature
+	if kind == modelconn.OpenAI {
+		temperature = nil
+	}
+	body := responses.Header(request.ModelID, request.MaxOutput, controls.ReasoningEffort, temperature, request.Tools)
+	if kind == modelconn.OpenAI {
+		if !controls.OmitThinkingSummary {
+			if body.Reasoning == nil {
+				body.Reasoning = map[string]string{}
+			}
+			body.Reasoning["summary"] = "auto"
+		}
+		for _, tool := range body.Tools {
+			tool["strict"] = false
+		}
 	}
 	return body
 }

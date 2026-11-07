@@ -1,7 +1,7 @@
 // Purpose: Verify session listing, model settings and interrupted Tool Calls recover without replay.
 // Pattern: Repository behavior tests.
 // Usage: go test ./internal/storage/sqlite -run TestResume.
-// Related: internal/storage/recovery/recovery.go, internal/storage/sqlite/selection.go.
+// Related: internal/agent/session/recovery/recovery.go, internal/storage/sqlite/selection.go.
 package sqlite
 
 import (
@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"path/filepath"
 	"testing"
 )

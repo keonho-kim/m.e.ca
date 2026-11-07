@@ -20,6 +20,8 @@ type Codec struct {
 	closed  bool
 }
 
+const payloadWindowBytes = 128 * 1024
+
 func (c *Codec) Encode(raw []byte) ([]byte, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -27,7 +29,7 @@ func (c *Codec) Encode(raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("payload codec is closed")
 	}
 	if c.encoder == nil {
-		encoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1), zstd.WithWindowSize(128*1024), zstd.WithEncoderLevel(zstd.SpeedFastest))
+		encoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1), zstd.WithWindowSize(payloadWindowBytes), zstd.WithEncoderLevel(zstd.SpeedFastest))
 		if err != nil {
 			return nil, err
 		}
@@ -42,15 +44,20 @@ func (c *Codec) Encode(raw []byte) ([]byte, error) {
 }
 
 func (c *Codec) decode(body []byte, size int) ([]byte, error) {
-	var header zstd.Header
-	if err := header.Decode(body); err != nil {
+	if err := checkFrameLength(body, size); err != nil {
 		return nil, err
-	}
-	if size < 1 || size > MaxBytes || !header.HasFCS || header.FrameContentSize != uint64(size) {
-		return nil, fmt.Errorf("invalid stored payload frame length")
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	decoder, err := c.decoderLocked()
+	if err != nil {
+		return nil, err
+	}
+	return decoder.DecodeAll(body, make([]byte, 0, size))
+}
+
+// decoderLocked requires the codec mutex; bulk and streaming reads share one resource owner.
+func (c *Codec) decoderLocked() (*zstd.Decoder, error) {
 	if c.closed {
 		return nil, fmt.Errorf("payload codec is closed")
 	}
@@ -61,7 +68,18 @@ func (c *Codec) decode(body []byte, size int) ([]byte, error) {
 		}
 		c.decoder = decoder
 	}
-	return c.decoder.DecodeAll(body, make([]byte, 0, size))
+	return c.decoder, nil
+}
+
+func checkFrameLength(body []byte, size int) error {
+	var header zstd.Header
+	if err := header.Decode(body); err != nil {
+		return err
+	}
+	if size < 1 || size > MaxBytes || !header.HasFCS || header.FrameContentSize != uint64(size) {
+		return fmt.Errorf("invalid stored payload frame length")
+	}
+	return nil
 }
 
 func (c *Codec) Close() error {

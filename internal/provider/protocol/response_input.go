@@ -4,30 +4,30 @@
 // Related: internal/provider/protocol/input.go, internal/provider/protocol/responses/request.go.
 package protocol
 
-import "encoding/json"
-
 func responseInput(messages []Message) ([]map[string]any, error) {
 	var input []map[string]any
 	for _, message := range messages {
+		if len(message.continuation) > 0 {
+			items, err := openAIHistory(message)
+			if err != nil {
+				return nil, err
+			}
+			input = append(input, items...)
+			continue
+		}
 		if message.Role == "tool" {
 			input = append(input, map[string]any{"type": "function_call_output", "call_id": message.ToolCallID, "output": message.Content})
 			continue
 		}
-		if message.Content != "" || len(message.Calls) == 0 {
-			input = append(input, map[string]any{"role": message.Role, "content": responseContent(message)})
-		}
-		if len(message.Calls) == 0 {
-			continue
-		}
-		var calls []struct {
-			ID       string
-			Function struct{ Name, Arguments string }
-		}
-		if err := json.Unmarshal(message.Calls, &calls); err != nil {
+		calls, err := message.functionCalls()
+		if err != nil {
 			return nil, err
 		}
+		if message.Content != "" || len(calls) == 0 {
+			input = append(input, map[string]any{"role": message.Role, "content": responseContent(message)})
+		}
 		for _, call := range calls {
-			input = append(input, map[string]any{"type": "function_call", "call_id": call.ID, "name": call.Function.Name, "arguments": call.Function.Arguments})
+			input = append(input, map[string]any{"type": "function_call", "call_id": call.ID, "name": call.Name, "arguments": string(call.Arguments)})
 		}
 	}
 	return input, nil

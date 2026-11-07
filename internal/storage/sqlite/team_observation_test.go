@@ -6,6 +6,7 @@ package sqlite
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/storage/history"
 	"testing"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -37,7 +38,7 @@ func TestTeamObservationRestoresWithoutVisibleDuplicateOrOwnWakeup(t *testing.T)
 	if err != nil || len(public) != 1 || !public[0].Observation {
 		t.Fatal("observation provenance lost", err)
 	}
-	visible, _, err := root.TimelineSummaries(ctx, root.Session().ID, 0, 10)
+	visible, _, err := root.TimelineSummaries(ctx, root.Session().ID, 0, 10, history.ReadBounds{})
 	if err != nil || len(visible) != 0 {
 		t.Fatal("operation fact duplicated a visible tool card", err)
 	}
@@ -69,7 +70,7 @@ func TestPassiveStatusAndWorkDeclarationKeepTheirAdmissionSemanticsAfterRestore(
 	if err != nil || len(values) != 2 || !values[0].Passive || !values[0].Observation || !values[1].Declaration {
 		t.Fatal("stored admission semantics changed", values, err)
 	}
-	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10)
+	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10, history.ReadBounds{})
 	if err != nil || len(visible) != 1 || visible[0].Event.Kind != "team_work" {
 		t.Fatal("work declaration disappeared or hidden status gained a card", visible, err)
 	}
@@ -106,7 +107,7 @@ func TestExecutionReferenceAndPublicFactCommitAtomically(t *testing.T) {
  WHERE t.kind='event' AND e.kind='team_reference'`).Scan(&referenceSequence); err != nil || referenceSequence+1 != value.Sequence {
 		t.Fatal("reference and observation were not adjacent committed records", referenceSequence, value.Sequence, err)
 	}
-	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10)
+	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10, history.ReadBounds{})
 	if err != nil || len(visible) != 1 || visible[0].Event.Text != "created" {
 		t.Fatal("original result did not restore through its single reference", visible, err)
 	}

@@ -35,6 +35,7 @@ func (a *app) startModelSetup(request modelSetupRequest) {
 	a.work.cancel = cancel
 	a.connection.setupRevision++
 	revision := a.connection.setupRevision
+	opts := a.opts
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -55,6 +56,9 @@ func (a *app) startModelSetup(request modelSetupRequest) {
 			for _, model := range prepared.Models {
 				n.Models = append(n.Models, model.ID)
 			}
+		}
+		if !request.form {
+			n = commitPreparedModel(ctx, opts, n)
 		}
 		finish(n)
 	}()

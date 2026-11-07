@@ -62,7 +62,7 @@ func TestSharedDeliveryFailureStopsTheWholeRequest(t *testing.T) {
 			t.Error("a peer started after its join notification failed")
 			return run.Result{}, nil
 		}}, "Build the requested change")
-	if !errors.Is(err, want) || result.Status == runrecord.Answered {
+	if !errors.Is(err, want) || result.Status != runrecord.Stopped || result.End.Status != work.Failed {
 		t.Fatalf("result=%+v error=%v", result, err)
 	}
 }
@@ -76,8 +76,18 @@ func TestModelAdmissionBudgetIsShared(t *testing.T) {
 			}
 			return run.Result{Status: runrecord.Stopped, End: work.End{Reason: "model call budget exhausted"}}, nil
 		}}, "Work within the request budget")
-	if admitted.Load() != 1 || err == nil || !strings.Contains(err.Error(), "model call budget exhausted") || result.Status != runrecord.Stopped {
+	if admitted.Load() != 1 || err == nil || !strings.Contains(err.Error(), "model call budget exhausted") || result.Status != runrecord.Stopped || result.End.Status != work.Exhausted {
 		t.Fatalf("admitted=%d result=%+v error=%v", admitted.Load(), result, err)
+	}
+}
+
+func TestPeerBudgetOutcomeReachesTheTeamResult(t *testing.T) {
+	result, err := Run(t.Context(), Options{Store: &memoryRoom{}, Emit: quiet, MaxModelCalls: 10, MaxSeconds: 5,
+		Execute: func(context.Context, identity.Member, string, *Peer) (run.Result, error) {
+			return run.Result{Status: runrecord.Stopped, End: work.End{Status: work.Exhausted, Reason: "private context budget exhausted"}}, nil
+		}}, "Work within the context budget")
+	if err == nil || result.End.Status != work.Exhausted {
+		t.Fatal("team discarded the typed peer outcome", result, err)
 	}
 }
 

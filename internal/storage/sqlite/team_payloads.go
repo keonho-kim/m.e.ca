@@ -1,4 +1,4 @@
-// Purpose: Store received public message bodies by authenticated room reference instead of receiver copies.
+// Purpose: Prepare and restore received public message bodies through authenticated room references.
 // Pattern: Cross-session immutable payload reference.
 // Usage: Private context commits create codec-3 references; normal hydration verifies the original body hash.
 // Related: internal/storage/sqlite/messages.go, internal/storage/sqlite/payload.go, internal/agent/team/channel/context.go.
@@ -6,10 +6,10 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"strconv"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
@@ -19,16 +19,20 @@ type roomPayload struct {
 	Sequence int64 `json:"sequence"`
 }
 
-func (s *Store) packMessage(ctx context.Context, tx *sql.Tx, message modelapi.Message) ([]byte, []byte, int, error) {
-	sequence, shared := channel.Sequence(message.ID)
+func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[string]string, int, error) {
+	s := p.store
+	sequence, shared := channel.Sequence(message)
 	// References have fixed envelope/index overhead; short text is smaller inline.
-	if !shared || s.room == nil || len(message.Content) < 256 {
+	if !shared || s.room == nil || message.Role == "tool" || len(message.Content) < 256 {
 		body, err := json.Marshal(message)
 		if err != nil {
 			return nil, nil, 0, err
 		}
-		packed, refs, err := s.packRecord(ctx, tx, body)
+		packed, refs, err := p.pack(body)
 		return packed, refs, len(body), err
+	}
+	if message.Source.Session != "" && message.Source.Session != s.room.session.ID {
+		return nil, nil, 0, fmt.Errorf("public message belongs to a different room")
 	}
 	encoded, err := s.room.teamContent.encoding(sequence, message.Content)
 	if err != nil {
@@ -36,9 +40,9 @@ func (s *Store) packMessage(ctx context.Context, tx *sql.Tx, message modelapi.Me
 	}
 	id := encoded.id
 	reference, _ := json.Marshal(roomPayload{Sequence: sequence})
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO payloads(id,codec,raw_bytes,body) VALUES(?,3,?,?)", id, encoded.size, reference); err != nil {
-		return nil, nil, 0, err
-	}
+	slot := strconv.Itoa(len(p.referenced))
+	p.referenced = append(p.referenced, &preparedPayload{storedValue: storedValue{id: id, codec: 3, size: encoded.size, body: reference}})
+	p.retained += len(reference)
 	// Marshal metadata once; never allocate a full JSON message just to discard its content.
 	type metadata modelapi.Message
 	body, err := json.Marshal(struct {
@@ -48,8 +52,7 @@ func (s *Store) packMessage(ctx context.Context, tx *sql.Tx, message modelapi.Me
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	refs, err := json.Marshal(map[string]string{`["content"]`: id})
-	return body, refs, len(body) - len("null") + encoded.size, err
+	return body, map[string]string{`["content"]`: slot}, len(body) - len("null") + encoded.size, nil
 }
 
 func (s *Store) roomPayload(ctx context.Context, id string, size int, body []byte) (json.RawMessage, error) {

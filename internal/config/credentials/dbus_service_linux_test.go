@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zalando/go-keyring"
+	"github.com/keonho-kim/meca/internal/config/credentials/osstore"
 )
 
 func TestCredentialSecretService(t *testing.T) {
@@ -32,23 +32,24 @@ func TestCredentialSecretService(t *testing.T) {
 func credentialSecretServiceRoundTrip(t *testing.T) {
 	t.Helper()
 	name := "meca-credential-test-" + rand.Text()
+	store := osstore.Store{Service: name}
 	const user, secret = "fixture-user", "fixture-secret-not-an-api-key"
-	if err := keyring.Set(name, user, secret); err != nil {
+	if err := store.Set(t.Context(), user, secret); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := keyring.DeleteAll(name); err != nil && !errors.Is(err, keyring.ErrNotFound) {
+		if err := store.Clear(t.Context()); err != nil && !errors.Is(err, osstore.ErrNotFound) {
 			t.Error("remove test service:", err)
 		}
 	}()
-	value, err := keyring.Get(name, user)
+	value, err := store.Get(t.Context(), user)
 	if err != nil || value != secret {
 		t.Fatalf("secret retrieval mismatch: %v", err)
 	}
-	if err := keyring.Delete(name, user); err != nil {
+	if err := store.Clear(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := keyring.Get(name, user); !errors.Is(err, keyring.ErrNotFound) {
+	if _, err := store.Get(t.Context(), user); !errors.Is(err, osstore.ErrNotFound) {
 		t.Fatalf("deleted secret remains: %v", err)
 	}
 }

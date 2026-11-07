@@ -20,7 +20,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 		role, text := "", ""
 		if record.Kind == "message" {
 			m := record.Message
-			if channel.IsPeer(m.ID) {
+			if channel.IsPeer(m) {
 				role, text = "peer", m.Content
 			} else {
 				switch m.Role {

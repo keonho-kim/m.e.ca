@@ -4,19 +4,21 @@
 
 *A coding agent with just the essentials.*
 
-[설치](#설치) · [사용법](#사용법) · [Program Philosophy](#program-philosophy) · [설정](#설정) · [문서](#문서)
+[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [서버](#서버) · [설정](#설정) · [문서](#문서)
 
 </div>
 
-**M.E.CA — Minimal Essentials Coding Agent**는 필요한 기능만 담은 터미널 코딩 에이전트입니다. 모델을 연결하고, 자연어로 코드 작성·수정·검증을 요청하세요.
+**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
 
-- Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter 연결
+- Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude, Gemini 연결
 - 스트리밍 응답·Thinking, Markdown과 줄 단위 diff
 - 파일·셸 도구, 비전 모델의 이미지 보기, 오래 실행되는 명령의 조회·대기·취소
 - 파일 선택·분할/전체화면 Markdown 뷰어
 - 로컬 대화 저장·압축·재개, 작업 중 방향 수정과 후속 요청 예약
 - 선택적 팀 모드: 공유 프로젝트에서 최대 8개 세션의 자율 협업과 공용 대화
 - 프로세스 메모리 사용량·실제 입력/출력 토큰·TPS, OpenRouter의 보고 비용 표시
+- 선택형 SSE·WebSocket·gRPC 서버 API와 재접속·승인·취소 제어
+- 선택적 OpenAI 호환 텍스트 API: Chat Completions·Responses·SSE
 
 ## 설치
 
@@ -101,11 +103,13 @@ git pull --ff-only
 
 ### 빌드만 하기
 
-Go 1.27.2 이상에서 실행합니다.
+제품 빌드는 Go 1.27.2 이상, 개발 도구는 Go 1.27.3 이상이 필요합니다. 제품과 도구의 요구 버전은 각각 [go.mod](go.mod)와 [devtools/go.mod](devtools/go.mod)가 소유합니다.
 
 ```sh
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```
+
+PGO 프로파일 생성과 빌드 비교는 [개발 가이드](docs/development.md#pgo-빌드-측정)를 따릅니다.
 
 설치하려면 `./bin/meca install`을 실행합니다. 공식 빌드와 소스 설치에도 같은 [DBus 전송 정책](docs/configuration.md#linux-자격-증명-전송)을 적용합니다.
 
@@ -120,6 +124,26 @@ meca uninstall
 [설치 옵션·체크섬·업데이트 상세 →](docs/releases.md)
 
 </details>
+
+## 지원 Provider
+
+모델 연결은 TUI의 `!model` 또는 서버의 `setModel`로 설정합니다. Base URL에는 생성 API 경로를 덧붙이지 않습니다.
+
+| Provider | 식별값 | 기본 Base URL | 생성 API |
+| --- | --- | --- | --- |
+| Ollama | `ollama` | `http://localhost:11434` | Ollama Chat |
+| vLLM | `vllm` | `http://localhost:8000/v1` | Chat Completions |
+| SGLang | `sglang` | `http://localhost:8000/v1` | Chat Completions |
+| LM Studio | `lm-studio` | `http://localhost:1234` | Responses |
+| LiteLLM | `litellm` | `http://localhost:4000/v1` | Chat Completions |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | Chat Completions |
+| OpenAI | `openai` | `https://api.openai.com/v1` | Responses |
+| Claude | `claude` | `https://api.anthropic.com/v1` | Messages |
+| Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta` | GenerateContent |
+
+OpenAI·Claude·Gemini는 각 공급자의 API Key가 필요합니다. 인증이 설정된 모델 서버·게이트웨이에는 해당 Key를 사용하며, 인증 없는 로컬 서버에서는 비워 둡니다. 저장한 API Key는 암호화해 보관합니다.
+
+코딩 작업에는 native tool calling을 지원하는 모델·서버 설정이 필요합니다. 이미지 입력과 Thinking 제어는 메타데이터 또는 명시적 검사로 확인합니다. [Provider별 연결·인증·추론 설정 →](docs/model-connections.md)
 
 ## 사용법
 
@@ -183,6 +207,35 @@ meca --diagnose
 
 print는 최종 답변, JSON 모드는 순서 있는 이벤트를 출력합니다. [세션 재개·내보내기 →](docs/usage.md#도구-결과와-markdown)
 
+## 서버
+
+서버는 native API에서 선택한 대화와 OpenAI 호환 작업의 대화를 별도로 소유하며, 같은 코어에서 작업 하나씩 실행합니다. 저장 형식과 기존 데이터의 열기 제한은 [세션·서버 저장 안내](docs/configuration.md#세션-저장과-복원)를 확인하세요.
+
+```sh
+meca --server                            # 기본 SSE
+meca /path/to/project --server --protocol socket
+meca /path/to/project --server --protocol grpc
+meca --server --openai                    # 같은 포트에 OpenAI 호환 HTTP API 추가
+```
+
+기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 프로젝트 하나를 서비스하며 선택 세션 하나와 사용자 작업 하나를 소유합니다. 팀 모드에서는 같은 작업 안의 에이전트가 독립 실행합니다.
+
+| `--protocol` | 제어·이벤트 인터페이스 |
+| --- | --- |
+| `sse` | `POST /v1/command`와 `GET /v1/events` |
+| `socket` | `/v1/socket`의 WebSocket 명령·이벤트 |
+| `grpc` | Protobuf 계약의 native gRPC·gRPC-Web·Connect |
+
+선택한 전송 방식 하나를 열며 세션 생성·선택, 모델 설정, 요청 접수·상태 조회, 이력·원문 조회, 승인·방향 수정·취소를 제공합니다. 작업은 서버 프로세스에 속하므로 클라이언트 연결이 끊겨도 계속됩니다. 마지막 이벤트 커서로 재접속할 수 있고 안정된 요청 키로 중복 실행을 막습니다.
+
+기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
+
+`--openai`는 선택한 전송 방식과 함께 `/v1/models`, `/v1/chat/completions`, `/v1/responses`와 Responses 조회·취소를 같은 포트에서 제공합니다. 가상 모델 ID `meca`는 선택한 실제 Provider·모델로 실행됩니다. 텍스트 JSON·SSE와 Responses의 background·store·후속 응답을 지원하며 외부 도구 선언·이미지·sampling 인자는 받지 않습니다. 승인 채널이 없는 호환 요청에서는 필수 사용자 승인을 거절합니다. [지원 범위·클라이언트 설정 →](docs/server.md#openai-호환-api)
+
+모든 서버 스트림은 애플리케이션 데이터가 5초간 없으면 heartbeat를 보내고 1초마다 반복합니다. 데이터가 재개되면 다시 5초를 기다립니다. 모델을 연결하는 **OpenAI Provider**와 클라이언트에 제공하는 **OpenAI 호환 API**는 별개 기능입니다.
+
+프로젝트별 서버 프로세스는 하나만 실행합니다. 실제 TCP 연결·HTTP 요청 수와 임시 명령 로그의 보관량을 제한합니다. 세션 목록은 유효 기간이 있는 커서로 페이지 조회하며, 큰 원문 조회는 동시 처리량과 복원 바이트를 제한합니다. 저장 한도에 도달하면 기존 기록을 보존하고 추가 저장을 거절합니다. [서버 자원 한도 →](docs/server.md)
+
 ## Program Philosophy
 
 M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다.
@@ -194,15 +247,18 @@ M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다.
 
 긴 대화에서는 이력 배치와 요청 인코딩을 재사용하고, 화면 출력이 느려지면 입력을 우선 처리합니다. [개발 가이드](docs/development.md#최적화-측정)에서 성능 검사 방법과 측정 기준을 확인할 수 있습니다.
 
-별도 MECA 계정이나 중앙 대화 서버를 사용하지 않습니다. 추론까지 로컬에서 처리하려면 Ollama·LM Studio 같은 로컬 서버를 연결하세요. 원격 모델을 선택하면 프롬프트·대화·작업에 포함된 코드와 도구 결과가 해당 서버로 전송됩니다. OpenRouter에는 실제 추론 공급자의 처리 정책도 적용됩니다.
+별도 MECA 계정이나 중앙 대화 서버를 사용하지 않습니다. 추론까지 로컬에서 처리하려면 Ollama·LM Studio 같은 로컬 서버를 연결하세요. 원격 모델을 선택하면 프롬프트·대화·작업에 포함된 코드와 도구 결과가 해당 서버로 전송됩니다. 서버 모드도 사용자가 실행하는 MECA 프로세스에서 같은 Provider 연결을 사용합니다. OpenRouter에는 실제 추론 공급자의 처리 정책도 적용됩니다.
 
 ## 설정
 
-첫 실행에서 기본 파일을 생성합니다.
+첫 실행에서 기본 설정·프롬프트를 준비하고 기능 사용에 따라 다음 상태를 보관합니다.
 
 ```text
 ~/.meca/
 ├── config.toml
+├── credentials.db     # API Key를 저장할 때 생성
+├── server.token       # 서버 시작 시 생성
+├── server-requests/   # 서버 요청의 중복 방지·상태 기록
 ├── prompts/
 │   ├── single/
 │   └── team/
@@ -210,7 +266,7 @@ M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다.
 └── logs/
 ```
 
-화면 언어는 `!language`, 모델은 `!model`, 승인 모드는 `!permission`에서 설정합니다. API Key는 macOS Keychain 또는 Linux Secret Service에 보관합니다. 역할별 추론 인자·출력 예산·대화 압축은 [설정 가이드](docs/configuration.md)를 따릅니다.
+화면 언어는 `!language`, 모델은 `!model`, 승인 모드는 `!permission`에서 설정합니다. API Key 저장에는 macOS Keychain 또는 Linux Secret Service가 필요합니다. 백업에는 자격 증명 DB와 OS 저장소를 함께 포함합니다. [암호화와 복구](docs/configuration.md#api-key-암호화와-복구), 역할별 추론 인자·출력 예산·대화 압축은 [설정 가이드](docs/configuration.md)를 따릅니다.
 
 ## 개발
 
@@ -236,10 +292,12 @@ GOFLAGS='-tags=godbus_no_tcp' go vet ./...
 | [사용 가이드](docs/usage.md) | 키맵·파일 탐색·예약·승인·사용량 |
 | [이미지 입력](docs/images.md) | 비전 지원 확인·이미지 도구·지원 형식 |
 | [모델 연결](docs/model-connections.md) | Provider·Thinking·서빙 설정·연결 진단 |
+| [서버 API](docs/server.md) | SSE·WebSocket·gRPC·인증·작업 제어·OpenAI 호환 API |
 | [설정과 대화 보존](docs/configuration.md) | 추론 인자·프롬프트·Compaction·세션 |
 | [에이전트 작동 방식](docs/runtime.md) | 모델 요청·도구·명령 수명·재개 |
 | [팀 모드](docs/team.md) | 독립 세션·공용 대화·초대·복구·작업 조율 |
 | [실행 경계](docs/execution-boundary.md) | 호스트 권한·파일 검사·외부 전송 승인 |
 | [개발 가이드](docs/development.md) | 패키지 구성·검증·성능 측정 |
 | [릴리스 가이드](docs/releases.md) | 설치 상세·배포 파일·날짜 버전·게시 |
+| [배포 기능 안내](docs/release-notes.md) | 배포 안내에 사용하는 현재 기능·실행·보관 요약 |
 | [제품 명세](SYSTEM.md) | 요구사항과 아키텍처 |

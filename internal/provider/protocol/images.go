@@ -7,6 +7,7 @@ package protocol
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
@@ -24,11 +25,11 @@ func attachImages(kind connection.ProviderKind, message *Message, images []media
 	if !ok && message.Content != nil {
 		return fmt.Errorf("image inputs require an unencoded text message")
 	}
-	var parts []contentPart
+	var parts []native.ContentPart
 	if kind != connection.Ollama {
-		parts = make([]contentPart, 0, 1+2*len(images))
+		parts = make([]native.ContentPart, 0, 1+2*len(images))
 		if text != "" {
-			parts = append(parts, contentPart{Type: "text", Text: text})
+			parts = append(parts, native.ContentPart{Type: "text", Text: text})
 		}
 	}
 	for _, image := range images {
@@ -48,7 +49,7 @@ func attachImages(kind connection.ProviderKind, message *Message, images []media
 			message.Images = append(message.Images, encoded)
 			text = strings.TrimSpace(text + "\n" + label)
 		} else {
-			parts = append(parts, contentPart{Type: "text", Text: label}, contentPart{Type: "image_url", ImageURL: &imageURL{URL: encoded}})
+			parts = append(parts, native.ContentPart{Type: "text", Text: label}, native.ContentPart{Type: "image_url", ImageURL: &native.ImageURL{URL: encoded}})
 		}
 	}
 	message.Content = text
@@ -75,7 +76,7 @@ func encodeImage(data []byte, prefix string) (string, error) {
 }
 
 func responseContent(message Message) any {
-	parts, _ := message.Content.([]contentPart)
+	parts, _ := message.Content.([]native.ContentPart)
 	if len(parts) == 0 {
 		return message.Content
 	}

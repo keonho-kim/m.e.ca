@@ -17,6 +17,9 @@ import (
 )
 
 func (s *Store) SaveSelection(ctx context.Context, session string, selection modelconn.Selection) error {
+	if err := s.checkSession(session); err != nil {
+		return err
+	}
 	if err := selectioncheck.Validate(selection); err != nil {
 		return err
 	}
@@ -41,6 +44,9 @@ func (s *Store) SaveSelection(ctx context.Context, session string, selection mod
 	return nil
 }
 func (s *Store) Selection(ctx context.Context, session string) (modelconn.Selection, error) {
+	if err := s.checkSession(session); err != nil {
+		return modelconn.Selection{}, err
+	}
 	var body []byte
 	err := s.db.QueryRowContext(ctx, "SELECT selection FROM sessions WHERE id=?", session).Scan(&body)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {

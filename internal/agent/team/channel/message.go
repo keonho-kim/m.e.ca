@@ -14,6 +14,8 @@ import (
 const PageBytes = 16 * 1024 * 1024
 
 type Message struct {
+	Session      string                    `json:"-"`
+	Prefix       *string                   `json:"-"`
 	Note         *runrecord.TeamNote       `json:"note,omitempty"`
 	Reference    *runrecord.EventReference `json:"-"`
 	Discussion   bool                      `json:"-"`
@@ -30,6 +32,9 @@ type Message struct {
 
 // ContextBytes conservatively sizes attribution and all metadata without formatting.
 func (m Message) ContextBytes() int {
+	if m.Prefix != nil {
+		return len(m.Text) + len(*m.Prefix)
+	}
 	size := len(m.Text) + len(m.From) + 512
 	if n := m.Note; n != nil {
 		size += len(n.ReplyAuthor)

@@ -61,6 +61,7 @@ type Room struct {
 	userChanged                         chan struct{}
 	deadline                            time.Time
 	modelCalls                          int
+	budgetExhausted                     bool
 	finished                            bool
 	progress, idleEpoch                 uint64
 	progressFacts                       [64][32]byte
@@ -90,7 +91,9 @@ func Run(ctx context.Context, options Options, text string) (Result, error) {
 	r.result.Started, r.deadline = started, deadline
 	defer func() { cancel(nil); r.workers.Wait() }()
 	if err := r.initialize(); err != nil {
-		return r.result, err
+		cancel(err)
+		r.workers.Wait()
+		return r.complete(err)
 	}
 	inputReady := options.SteeringReady
 	for {
@@ -185,9 +188,15 @@ func (r *Room) complete(cause error) (Result, error) {
 	status, end := runrecord.Answered, work.Completed
 	if cause != nil {
 		status, end = runrecord.Stopped, work.Failed
+		if r.budgetExhausted && r.result.Text == "" {
+			end = work.Exhausted
+		}
 	}
 	if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
 		status, end = runrecord.Interrupted, work.Interrupted
+		if errors.Is(cause, context.DeadlineExceeded) && !r.deadline.IsZero() && !time.Now().Before(r.deadline) {
+			status, end = runrecord.Stopped, work.Exhausted
+		}
 	}
 	r.result.Status = status
 	cp := runrecord.Checkpoint{ID: r.runID, Objective: r.input, Status: status, Phase: "finished", ModelCalls: r.modelCalls, End: &work.End{Status: end}}
@@ -208,6 +217,10 @@ func (r *Room) complete(cause error) (Result, error) {
 	cause = errors.Join(cause, r.options.Emit(event))
 	if cause != nil && r.result.Status == runrecord.Answered {
 		r.result.Status = runrecord.Stopped
+	}
+	r.result.End = *cp.End
+	if cause != nil && r.result.End.Status == work.Completed {
+		r.result.End = work.End{Status: work.Failed, Reason: cause.Error()}
 	}
 	return r.result, cause
 }

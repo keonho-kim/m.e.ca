@@ -1,4 +1,4 @@
-// Purpose: Compose maintenance, headless and terminal startup with owned session transitions.
+// Purpose: Compose maintenance, headless, server and terminal startup with owned session transitions.
 // Pattern: Composition Root.
 // Usage: meca --help lists maintenance, interactive and headless invocations.
 // Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go, internal/tui/session/app.go, cmd/meca/conversation.go.
@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -43,7 +45,7 @@ func start() (err error) {
 		return err
 	}
 	if mode.Action == startup.Help {
-		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
+		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca [path] --server [--protocol sse|socket|grpc] [--listen IP:port]\n            [--session ID] [--token-file PATH] [--tls-cert PATH --tls-key PATH]\n            [--allow-host host:port] [--allow-origin http(s)://host:port]\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
 		return nil
 	}
 	home, err := os.UserHomeDir()
@@ -62,6 +64,21 @@ func start() (err error) {
 	if err := startup.CheckAgentUser(os.Geteuid()); err != nil {
 		return err
 	}
+	homeRoot, err := os.OpenRoot(home)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, homeRoot.Close()) }()
+	// This shared identity survives removal of the state directory, so startup
+	// cannot race pending key cleanup or create replacement state during it.
+	homeLease, err := statefs.Lease(homeRoot, false)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, homeLease.Close()) }()
+	if err := install.CheckReady(home); err != nil {
+		return err
+	}
 	root, err := statefs.Open(filepath.Join(home, statefs.DirectoryName))
 	if err != nil {
 		return err
@@ -72,17 +89,27 @@ func start() (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
+	if err := install.CheckReady(home); err != nil {
+		return err
+	}
 	configuration, err := bootstrap.Initialize(home)
 	if err != nil {
 		return fmt.Errorf("bootstrap configuration: %w", err)
 	}
 	state := filepath.Join(home, statefs.DirectoryName)
+	if !mode.Export {
+		stopRotation := (&credentials.Vault{State: state}).StartRotation(ctx)
+		defer func() { err = errors.Join(err, stopRotation()) }()
+	}
 	sessions, err := sqlite.OpenSessions(filepath.Join(state, "sessions"))
 	if err != nil {
 		return fmt.Errorf("open session directory: %w", err)
 	}
 	if mode.Print {
 		return runHeadless(ctx, mode, configuration, home, state, sessions)
+	}
+	if mode.Server {
+		return runServer(ctx, mode, configuration, home, state, sessions)
 	}
 	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
 		return fmt.Errorf("use --print or --mode json without an interactive TTY")

@@ -1,0 +1,22 @@
+// Purpose: Mark unfinished run states interrupted without replaying operations.
+// Pattern: Recovery state transitions.
+// Usage: Restore invokes these state recovery steps.
+// Related: internal/agent/session/recovery/recovery.go.
+package recovery
+
+import (
+	"context"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+)
+
+func recoverRun(ctx context.Context, s Store, session string) error {
+	cp, err := s.LatestRun(ctx, session)
+	if err != nil || cp == nil {
+		return err
+	}
+	if cp.Status != runrecord.Running {
+		return nil
+	}
+	cp.Status = runrecord.Interrupted
+	return s.RecordEvent(ctx, session, runrecord.Event{Kind: "run_checkpoint", Text: "Run interrupted during " + cp.Phase + "; drafts and side effects were not replayed", Checkpoint: cp})
+}

@@ -58,6 +58,7 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 		opFact.Command = outcome.Process.Command
 	}
 	event.Operation = &opFact
+	event.Source = outcome.Source
 	event.Output = outcome.Content
 	event.Capture = outcome.Capture
 	if event.Kind == "tool_succeeded" && proposal.Diff {

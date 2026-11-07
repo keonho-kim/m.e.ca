@@ -7,6 +7,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"testing"
 
@@ -79,7 +80,7 @@ func BenchmarkTeamHistoricalReaders(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rows, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 64)
+				rows, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 64, history.ReadBounds{})
 				if err != nil || len(rows) != 64 {
 					b.Fatal(err)
 				}

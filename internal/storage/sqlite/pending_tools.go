@@ -1,7 +1,7 @@
 // Purpose: Find unfinished native calls without restoring completed arguments or message images.
 // Pattern: Paged metadata scan followed by selective payload hydration.
 // Usage: Interrupted-work recovery consumes PendingTools in original call order.
-// Related: internal/storage/recovery/recovery.go, internal/storage/sqlite/pending_projection.go.
+// Related: internal/agent/session/recovery/recovery.go, internal/storage/sqlite/pending_projection.go.
 package sqlite
 
 import (
@@ -20,6 +20,9 @@ type pendingToolGroup struct {
 
 // PendingTools loads full arguments only for calls without a subsequent result.
 func (s *Store) PendingTools(ctx context.Context, session string) ([]toolapi.Call, error) {
+	if err := s.checkSession(session); err != nil {
+		return nil, err
+	}
 	groups, err := s.pendingToolGroups(ctx, session)
 	if err != nil {
 		return nil, err
@@ -56,8 +59,8 @@ func (s *Store) pendingToolGroups(ctx context.Context, session string) ([]pendin
 	var groups []pendingToolGroup
 	before := int64(1 << 62)
 	for {
-		page, err := s.recordPage(ctx, `SELECT sequence,'message',body,refs,raw_bytes FROM messages
- WHERE session_id=? AND sequence<? AND role IN ('assistant','tool') ORDER BY sequence DESC LIMIT 64`, session, before)
+		page, err := s.recordPage(ctx, "SELECT sequence,'message',body,refs,raw_bytes FROM messages\n WHERE sequence<? AND role IN ('assistant','tool') ORDER BY sequence DESC LIMIT 64",
+			before)
 		if err != nil {
 			return nil, err
 		}

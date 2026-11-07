@@ -26,6 +26,9 @@ func (s *Store) OpenTeamAgent(ctx context.Context, id string) (*Store, error) {
 	return child, err
 }
 func (s *Store) ContextCursor(ctx context.Context, session string) (int64, error) {
+	if err := s.checkSession(session); err != nil {
+		return 0, err
+	}
 	var cursor int64
 	err := s.db.QueryRowContext(ctx, "SELECT context_cursor FROM sessions WHERE id=?", session).Scan(&cursor)
 	return cursor, err

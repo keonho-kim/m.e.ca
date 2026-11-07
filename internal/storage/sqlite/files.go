@@ -11,7 +11,10 @@ import (
 )
 
 func (s *Store) FileSelections(ctx context.Context, session string) (out []string, err error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT path FROM file_selections WHERE session_id=? ORDER BY path", session)
+	if err := s.checkSession(session); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, "SELECT path FROM file_selections ORDER BY path")
 	if err != nil {
 		return nil, err
 	}
@@ -26,13 +29,16 @@ func (s *Store) FileSelections(ctx context.Context, session string) (out []strin
 	return out, rows.Err()
 }
 func (s *Store) SelectFile(ctx context.Context, session, path string, selected bool) error {
+	if err := s.checkSession(session); err != nil {
+		return err
+	}
 	if len(path) > 4096 {
 		return fmt.Errorf("invalid selected path")
 	}
 	if selected {
-		_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO file_selections(session_id,path) VALUES(?,?)", session, path)
+		_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO file_selections(path) VALUES(?)", path)
 		return err
 	}
-	_, err := s.db.ExecContext(ctx, "DELETE FROM file_selections WHERE session_id=? AND path=?", session, path)
+	_, err := s.db.ExecContext(ctx, "DELETE FROM file_selections WHERE path=?", path)
 	return err
 }

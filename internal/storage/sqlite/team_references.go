@@ -34,7 +34,7 @@ func (p *teamPage) resolve(ctx context.Context, event runrecord.Event, display b
 			return event, err
 		}
 		entry.record.kind = "event"
-		err = source.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes,display_args FROM tool_events WHERE session_id=? AND sequence=?", source.session.ID, event.Reference.Sequence).Scan(&entry.record.body, &entry.record.refs, &entry.record.size, &entry.arguments)
+		err = source.db.QueryRowContext(ctx, "SELECT body,refs,raw_bytes,display_args FROM tool_events WHERE sequence=?", event.Reference.Sequence).Scan(&entry.record.body, &entry.record.refs, &entry.record.size, &entry.arguments)
 		if err != nil {
 			return event, err
 		}
@@ -53,6 +53,9 @@ func (p *teamPage) resolve(ctx context.Context, event runrecord.Event, display b
 		source, err := p.source(ctx, event.Reference.Session)
 		if err != nil {
 			return nil, err
+		}
+		if p.payloads != nil && p.payloads.budget != nil {
+			return source.readPayload(ctx, id, p.payloads.budget)
 		}
 		return source.payload(ctx, id)
 	}

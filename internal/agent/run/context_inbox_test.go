@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
 	"testing"
 
@@ -28,7 +29,7 @@ func TestSanitizedPeerContextDetachesFromItsOriginalSharedBytes(t *testing.T) {
 	r.Redact = func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") }
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if j.cursor == 0 {
-			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Role: "system", Content: "Public conversation — Ren\nprovider-secret"}}}, nil
+			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 9}, Role: "system", Content: "Public conversation — Ren\nprovider-secret"}}}, nil
 		}
 		return ContextBatch{}, nil
 	}
@@ -36,8 +37,8 @@ func TestSanitizedPeerContextDetachesFromItsOriginalSharedBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, message := range j.messages {
-		if channel.IsPeer(message.ID) {
-			if _, shared := channel.Sequence(message.ID); shared || strings.Contains(message.Content, "provider-secret") {
+		if channel.IsPeer(message) {
+			if _, shared := channel.Sequence(message); shared || strings.Contains(message.Content, "provider-secret") {
 				t.Fatal("sanitized context kept a reference to different original bytes", message)
 			}
 			return
@@ -104,7 +105,7 @@ func TestCooperativeContextArrivingDuringCompactionReachesFirstCall(t *testing.T
 	pending := false
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if pending && j.cursor == 0 {
-			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Role: "system", Content: "Public conversation — Ren\nUse the existing storage interface."}}}, nil
+			return ContextBatch{Cursor: 9, Messages: []modelapi.Message{{ID: "peer:Ren/9", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 9}, Role: "system", Content: "Public conversation — Ren\nUse the existing storage interface."}}}, nil
 		}
 		return ContextBatch{}, nil
 	}

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	record "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
@@ -23,12 +24,13 @@ func TestAuthoredDiscussionCompactionUsesPublicOriginal(t *testing.T) {
 		t.Fatal(err)
 	}
 	output, _ := json.Marshal(map[string]int64{"sequence": message.Sequence})
-	event := record.Event{Kind: "tool_succeeded", CallID: "opinion", Call: &tool.Call{ID: "opinion", Name: "discuss", Arguments: json.RawMessage("{}")}, Operation: &tool.Operation{Name: "discuss", Status: "tool_succeeded", Result: "Published to the team"}, Output: output}
+	event := record.Event{Source: &source.Public{Author: "Hana", Kind: "team_discussion", Sequence: message.Sequence}, Kind: "tool_succeeded", CallID: "opinion", Call: &tool.Call{ID: "opinion", Name: "discuss", Arguments: json.RawMessage("{}")}, Operation: &tool.Operation{Name: "discuss", Status: "tool_succeeded", Result: "Published to the team"}, Output: output}
 	if err = child.RecordEvent(ctx, child.session.ID, event); err != nil {
 		t.Fatal(err)
 	}
 	var role, text string
-	if err = child.db.QueryRow("SELECT memory_role,memory_text FROM tool_events").Scan(&role, &text); err != nil || text != "" || !strings.HasPrefix(role, "public:") {
+	var sourceSequence int64
+	if err = child.db.QueryRow("SELECT memory_role,memory_text,memory_source FROM tool_events").Scan(&role, &text, &sourceSequence); err != nil || text != "" || role != "peer" || sourceSequence != message.Sequence {
 		t.Fatal("public body duplicated in memory projection", role, text, err)
 	}
 	records, _, err := child.MemoryRecords(ctx, child.session.ID, 0, 1<<60)

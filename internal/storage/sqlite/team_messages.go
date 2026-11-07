@@ -21,6 +21,7 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	if message.Passive && !message.Observation || message.Observation && (message.From == "user" || message.FromStream || message.Declaration || message.Discussion || message.Final) || message.Declaration && (message.From == "user" || message.FromStream || message.Discussion || message.Final) || message.Discussion && (message.From == "user" || message.FromStream || message.Final) || message.From == "user" && message.Note != nil {
 		return message, fmt.Errorf("inconsistent public message provenance")
 	}
+	message.Note = message.Note.Clone()
 	var records []runrecord.Entry
 	if message.From == "user" {
 		records = []runrecord.Entry{{Message: &modelapi.Message{ID: "team-user", Role: "user", Content: message.Text}}}
@@ -41,7 +42,7 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 		reference := runrecord.Event{Kind: "team_reference", Agent: message.From, Reference: message.Reference}
 		records = append([]runrecord.Entry{{Event: &reference}}, records...)
 	}
-	receipt := journalReceipt{}
+	receipt := journalReceipt{public: &message}
 	if err := s.commit(ctx, s.session.ID, records, 0, &receipt); err != nil {
 		return message, err
 	}
@@ -56,7 +57,21 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 	if after < 0 || through < after || limit < 1 || limit > 200 {
 		return nil, fmt.Errorf("invalid room page")
 	}
-	page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_discussion','team_observation','team_status')) ORDER BY t.sequence LIMIT ?`, s.session.ID, after, through, limit)
+	page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_discussion','team_observation','team_status')) ORDER BY t.sequence LIMIT ?", after, through, limit)
+	if err != nil {
+		return nil, err
+	}
+	// Admit the page before reading frozen prefixes or any large original body.
+	bytes, count := 0, 0
+	for _, record := range page {
+		if count > 0 && record.size > teamchannel.PageBytes-bytes {
+			break
+		}
+		bytes += record.size
+		count++
+	}
+	page = page[:count]
+	prefixes, err := s.publicPrefixes(ctx, page)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +81,7 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 		if size+record.size > teamchannel.PageBytes && len(out) > 0 {
 			break
 		}
-		message, err := s.publicMessage(ctx, record)
+		message, err := s.publicMessage(ctx, record, prefixes[record.sequence])
 		if err != nil {
 			return nil, err
 		}

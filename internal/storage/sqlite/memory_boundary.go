@@ -14,6 +14,9 @@ import (
 )
 
 func (s *Store) CompactionBoundary(ctx context.Context, session string, through int64, keepBytes int) (boundary int64, err error) {
+	if err := s.checkSession(session); err != nil {
+		return 0, err
+	}
 	if through < 0 || keepBytes < 0 {
 		return 0, fmt.Errorf("invalid compaction tail bounds")
 	}
@@ -32,7 +35,7 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 	selection := history.TailSelection{Target: keepBytes}
 	before := through + 1
 	for {
-		page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence<? ORDER BY t.sequence DESC LIMIT 64`, session, before)
+		page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.sequence<? ORDER BY t.sequence DESC LIMIT 64", before)
 		if err != nil {
 			return 0, err
 		}

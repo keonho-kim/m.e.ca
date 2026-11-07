@@ -6,6 +6,8 @@ package session
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/commands/modelchange"
+	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -16,6 +18,8 @@ import (
 )
 
 type notice struct {
+	Commit          *modelchange.Committed
+	Config          *config.Config
 	Detail          *detailResult
 	PreviewLayout   *controller.LayoutResult
 	FileWatch       *controller.WatchResult

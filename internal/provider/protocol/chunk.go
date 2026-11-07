@@ -10,6 +10,8 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
+	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
+	"github.com/keonho-kim/meca/internal/provider/protocol/gemini"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/protocol/ollama"
 	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
@@ -20,10 +22,19 @@ type streamState struct {
 	native.State
 	responses responses.Decoder
 	provider  modelconn.ProviderKind
+	claude    claude.Decoder
+	gemini    gemini.Decoder
 }
 
 func (state *streamState) consume(content []byte, single bool, emit func(modelapi.Event) error) error {
-	if state.provider == modelconn.LMStudio {
+	if state.provider == modelconn.Claude {
+		return state.claude.Consume(content, single, &state.State, emit)
+	}
+	if state.provider == modelconn.Gemini {
+		return state.gemini.Consume(content, single, &state.State, emit)
+	}
+	if modelconn.UsesResponses(state.provider) {
+		state.responses.Retain = state.provider == modelconn.OpenAI
 		return state.responses.Consume(content, single, &state.State, emit)
 	}
 	isOllama := state.provider == modelconn.Ollama
@@ -102,7 +113,7 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 	if err != nil {
 		return state.EmitFailedUsage(err, emit)
 	}
-	var continuation []byte
+	continuation := state.Continuation
 	if state.router.HasData() {
 		continuation, err = state.router.Continuation()
 		if err != nil {

@@ -30,6 +30,14 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 		return result, err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
+	homeLease, err := statefs.Lease(root, true)
+	if err != nil {
+		return result, err
+	}
+	defer func() { err = errors.Join(err, homeLease.Close()) }()
+	if err := checkNoPending(root); err != nil {
+		return result, err
+	}
 	state, err := statefs.Open(filepath.Join(options.Home, statefs.DirectoryName))
 	if err != nil {
 		return result, err
@@ -40,6 +48,9 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 		return result, err
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
+	if err := checkNoPending(root); err != nil {
+		return result, err
+	}
 	previous, err := loadReceipt(root)
 	if err != nil {
 		return result, err

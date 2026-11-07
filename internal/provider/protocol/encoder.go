@@ -17,13 +17,18 @@ const (
 // Encoder is owned by one serial generation loop, never by a shared HTTP client.
 // The bound limits additional retained encodings, not accepted context size.
 type Encoder struct {
-	capacity int
-	kind     connection.ProviderKind
-	model    string
-	history  []encodedMessage
-	groups   []*sourceGroup
-	retained int
-	tools    toolSnapshot
+	capacity         int
+	kind             connection.ProviderKind
+	model            string
+	history          []encodedMessage
+	groups           []*sourceGroup
+	retained         int
+	tools            toolSnapshot
+	cloud            []cloudEntry
+	cloudInitial     string
+	cloudRetained    int
+	cloudSourceBytes int
+	cloudGroups      []*cloudSourceGroup
 }
 
 // Clear releases all references to encoded conversation history.
@@ -44,6 +49,9 @@ func (e *Encoder) clearHistory() { e.history = nil; e.groups = nil; e.retained =
 // as replayable HTTP segments. Only fragments produced by wireJSON enter
 // the cache; untrusted raw values still pass through its normal validation.
 func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *connection.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {
+	if kind == connection.Claude || kind == connection.Gemini {
+		return e.encodeCloud(kind, baseURL, request, messages, controls)
+	}
 	if e == nil {
 		return singleBody(kind, baseURL, info, request, messages, controls)
 	}
@@ -66,7 +74,7 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 	}
 	endpoint, header, err := e.header(kind, baseURL, info, request, controls)
 	field := `,"input":[`
-	if kind != connection.LMStudio {
+	if !connection.UsesResponses(kind) {
 		field = `,"messages":[`
 	}
 	if err != nil {
@@ -84,6 +92,10 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 }
 
 func singleBody(kind connection.ProviderKind, baseURL string, info *connection.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {
+	if kind == connection.Claude {
+		endpoint, content, prefix, err := claudeRequest(baseURL, request, messages, controls)
+		return endpoint, Body{single: content, size: len(content), bind: claudeContinuation(prefix)}, err
+	}
 	endpoint, content, err := Encode(kind, baseURL, info, request, messages, controls)
 	return endpoint, Body{single: content, size: len(content)}, err
 }
@@ -99,9 +111,12 @@ func textHistorySize(messages []Message) (int, bool) {
 		if !text || len(m.Images) > 0 {
 			return 0, false
 		}
-		total += 512 + len(content) + len(m.Thinking) + len(m.Reasoning) + len(m.ReasoningContent) + len(m.Calls) + 32*len(m.ReasoningDetails)
+		total += 512 + len(content) + len(m.Thinking) + len(m.Reasoning) + len(m.ReasoningContent) + len(m.Calls) + len(m.continuation) + 32*len(m.ReasoningDetails)
 		for _, raw := range m.ReasoningDetails {
 			total += len(raw)
+		}
+		for _, call := range m.nativeCalls {
+			total += len(call.ID) + len(call.Name) + len(call.Arguments)
 		}
 	}
 	return total, true

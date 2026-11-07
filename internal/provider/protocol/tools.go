@@ -39,6 +39,9 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 			return nil, fmt.Errorf("invalid message role")
 		}
 		message := Message{Role: m.Role, Content: m.Content}
+		if (kind == connection.Claude || kind == connection.Gemini || kind == connection.OpenAI) && m.Role == "assistant" && !m.Incomplete {
+			message.continuation = m.ReasoningState
+		}
 		if kind == connection.OpenRouter && m.Role == "assistant" && !m.Incomplete && len(m.ReasoningState) > 0 {
 			var err error
 			message.ReasoningDetails, err = chat.ReasoningHistory(m.ReasoningState)
@@ -60,9 +63,10 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 			if m.ToolCallID == "" || m.ToolName == "" {
 				return nil, fmt.Errorf("tool result lacks its call identity")
 			}
-			if kind == connection.Ollama {
+			if kind == connection.Ollama || kind == connection.Gemini {
 				message.ToolName = m.ToolName
-			} else {
+			}
+			if kind != connection.Ollama {
 				message.ToolCallID = m.ToolCallID
 			}
 		}
@@ -70,26 +74,32 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 			if m.Role != "assistant" || len(m.Calls) > toolapi.MaxCalls {
 				return nil, fmt.Errorf("invalid assistant tool calls")
 			}
-			var calls []map[string]any
 			for _, call := range m.Calls {
 				if err := call.Check(); err != nil {
 					return nil, err
 				}
-				var arguments any = string(call.Arguments)
-				if kind == connection.Ollama {
-					arguments = call.Arguments
-				}
-				entry := map[string]any{"type": "function", "function": map[string]any{"name": call.Name, "arguments": arguments}}
-				if kind != connection.Ollama {
-					entry["id"] = call.ID
-				}
-				calls = append(calls, entry)
 			}
-			body, err := wireJSON.Marshal(calls)
-			if err != nil {
-				return nil, err
+			if kind == connection.Claude || kind == connection.Gemini || connection.UsesResponses(kind) {
+				message.nativeCalls = m.Calls
+			} else {
+				var calls []map[string]any
+				for _, call := range m.Calls {
+					var arguments any = string(call.Arguments)
+					if kind == connection.Ollama {
+						arguments = call.Arguments
+					}
+					entry := map[string]any{"type": "function", "function": map[string]any{"name": call.Name, "arguments": arguments}}
+					if kind != connection.Ollama {
+						entry["id"] = call.ID
+					}
+					calls = append(calls, entry)
+				}
+				body, err := wireJSON.Marshal(calls)
+				if err != nil {
+					return nil, err
+				}
+				message.Calls = body
 			}
-			message.Calls = body
 		}
 		if m.Role == "tool" {
 			pending = append(pending, m.Images...)

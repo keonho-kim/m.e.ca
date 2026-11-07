@@ -9,10 +9,10 @@ import (
 	"errors"
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/prompts"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	tuisession "github.com/keonho-kim/meca/internal/tui/session"
@@ -36,5 +36,7 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 	}
 	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, SaveConfig: func(c config.Config) error { return config.Save(state, c) }})
+	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
+		return config.Update(ctx, state, apply)
+	}})
 }

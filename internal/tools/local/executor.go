@@ -17,6 +17,7 @@ import (
 )
 
 type Executor struct {
+	retained                artifactRetention
 	imageReads              chan struct{}
 	redactionVersion        func() int
 	liveOutputs             liveCaptures
@@ -70,6 +71,7 @@ func (executor *Executor) Close() error {
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))
 	}
+	executor.retained.clear()
 	if executor.artifactLease != nil {
 		err = errors.Join(err, executor.artifactLease.Close())
 		executor.artifactLease = nil

@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -22,7 +23,7 @@ type cancelableDetailStore struct {
 	calls   atomic.Int32
 }
 
-func (s *cancelableDetailStore) ToolEvent(ctx context.Context, _ runrecord.EventReference) (runrecord.Event, error) {
+func (s *cancelableDetailStore) ToolEvent(ctx context.Context, _ runrecord.EventReference, _ history.ReadBounds) (runrecord.Event, error) {
 	if s.calls.Add(1) == 1 {
 		close(s.started)
 		<-ctx.Done()

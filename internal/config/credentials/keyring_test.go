@@ -5,7 +5,7 @@
 package credentials
 
 import (
-	"github.com/zalando/go-keyring"
+	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,28 +27,27 @@ func TestRedactionAndStreaming(t *testing.T) {
 }
 
 func TestClearDeletesOnlyMECAServiceAndMarksSavedCredentials(t *testing.T) {
-	keyring.MockInit()
-	v := &Vault{State: t.TempDir()}
-	if err := v.Set("provider", "provider-secret"); err != nil {
+	keys := &credentialtest.Memory{}
+	v := &Vault{State: t.TempDir(), Keys: keys}
+	if err := v.Set(t.Context(), "provider", "connection-scope", "provider-secret"); err != nil {
 		t.Fatal(err)
 	}
-	if value, err := keyring.Get("meca", "provider"); err != nil || value != "provider-secret" {
-		t.Fatal("MECA credential service was not used", err)
+	if value, err := v.Get(t.Context(), "provider", "connection-scope"); err != nil || value != "provider-secret" {
+		t.Fatal("encrypted credential was not readable", err)
 	}
-	if err := keyring.Set("other-app", "provider", "other-secret"); err != nil {
-		t.Fatal(err)
-	}
+
 	body, err := os.ReadFile(filepath.Join(v.State, "credentials.used"))
 	if err != nil || string(body) != "meca\n" || strings.Contains(string(body), "provider-secret") {
 		t.Fatal("credential cleanup marker missing or contains a secret")
 	}
-	if err := Clear(); err != nil {
+	if err := v.Clear(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := keyring.Get(service, "provider"); err == nil {
+	if _, err := keys.Get(t.Context(), "provider"); err == nil {
 		t.Fatal("MECA credential remains")
 	}
-	if value, err := keyring.Get("other-app", "provider"); err != nil || value != "other-secret" {
-		t.Fatal("other service was modified")
+	if _, err := v.Get(t.Context(), "provider", "connection-scope"); err == nil {
+		t.Fatal("MECA encryption key remains after uninstall cleanup")
 	}
+
 }

@@ -15,9 +15,18 @@ type Body struct {
 	parts  [][]byte
 	single []byte
 	size   int
+	bind   func([]byte) ([]byte, error)
 }
 
 func (b Body) Len() int { return b.size }
+
+// BindContinuation attaches the request prefix only to completed Claude output.
+func (b Body) BindContinuation(raw []byte) ([]byte, error) {
+	if len(raw) == 0 || b.bind == nil {
+		return raw, nil
+	}
+	return b.bind(raw)
+}
 
 func (b Body) Reader() io.Reader {
 	if b.parts == nil {

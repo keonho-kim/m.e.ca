@@ -1,7 +1,7 @@
 // Purpose: Prepare restored context and execute one submitted user request.
 // Pattern: Use Case.
 // Usage: TUI and headless commands call Execute with a selected runtime snapshot.
-// Related: internal/agent/run/runner.go, internal/storage/recovery/recovery.go.
+// Related: internal/agent/run/runner.go, internal/agent/session/recovery/recovery.go.
 package session
 
 import (
@@ -12,7 +12,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 )
 
 type Store interface {

@@ -15,12 +15,15 @@ import (
 )
 
 func (s *Store) Export(ctx context.Context, session string, output io.Writer) (resultErr error) {
+	if err := s.checkSession(session); err != nil {
+		return err
+	}
 	pageTeam := teamPage{parent: s}
 	defer func() { resultErr = errors.Join(resultErr, pageTeam.close()) }()
 	encoder := json.NewEncoder(output)
 	var after int64
 	for {
-		page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? ORDER BY t.sequence LIMIT 64`, session, after)
+		page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? ORDER BY t.sequence LIMIT 64", after)
 		if err != nil {
 			return err
 		}
@@ -33,7 +36,7 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) (r
 			return err
 		}
 		for i, stored := range page {
-			if err := payloads.include(i, stored.refs); err != nil {
+			if err := payloads.include(i, s, stored.refs); err != nil {
 				return err
 			}
 		}

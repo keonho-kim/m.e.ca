@@ -104,3 +104,7 @@ func testOwnActiveCommandAdmission(t *testing.T, name string) {
 		t.Fatal("file preparation did not return control before waiting", err)
 	}
 }
+
+func (l *runningAdmission) PrepareAdmitted(ctx context.Context, settings policy.Settings, call tool.Call, _ func(context.Context) (func(), error)) (tool.Execution, error) {
+	return l.Prepare(ctx, settings, call)
+}

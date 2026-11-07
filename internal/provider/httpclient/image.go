@@ -1,4 +1,4 @@
-// Purpose: Isolate minimal image probes and reject unconfirmed image inputs during normal generation.
+// Purpose: Own minimal image probes, capability checks and pre-encoding byte admission.
 // Pattern: Connection-bound image request boundary.
 // Usage: Setup probes with no task context; Generate enforces the established capability.
 // Related: internal/provider/httpclient/request.go, internal/provider/diagnostic/image.go.
@@ -6,6 +6,7 @@ package httpclient
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
@@ -23,11 +24,23 @@ func (c *Client) ImageInputSupported() bool {
 	return c.modelInfo != nil && c.modelInfo.ImageInput.Supported() && !c.imageRejected.Load()
 }
 
-func imageMessages(messages []modelapi.Message) bool {
+// The base64 bytes alone are a lower bound for every supported wire dialect.
+// Reject impossible requests before allocating their encoded image copies.
+func imageMessages(messages []modelapi.Message) (bool, error) {
+	hasImages, encoded := false, 0
 	for _, message := range messages {
 		if len(message.Images) > 0 {
-			return true
+			hasImages = true
+		}
+		for _, image := range message.Images {
+			if len(image.Data) > modelapi.MaxResponseBytes {
+				return true, fmt.Errorf("model context exceeds request size limit")
+			}
+			encoded += base64.StdEncoding.EncodedLen(len(image.Data))
+			if encoded > modelapi.MaxResponseBytes {
+				return true, fmt.Errorf("model context exceeds request size limit")
+			}
 		}
 	}
-	return false
+	return hasImages, nil
 }

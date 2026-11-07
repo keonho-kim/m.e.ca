@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
+	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
 func (r *Room) start(member identity.Member) error {
@@ -65,6 +66,11 @@ func (r *Room) worker(live *participant) {
 	input := r.input
 	r.mu.Unlock()
 	result, err := r.options.Execute(r.ctx, live.member, input, peer)
+	if result.End.Status == work.Exhausted {
+		r.mu.Lock()
+		r.budgetExhausted = true
+		r.mu.Unlock()
+	}
 	if err == nil && result.Status != "" && result.Status != "answered" {
 		err = fmt.Errorf("peer stopped: %s", result.End.Reason)
 	}

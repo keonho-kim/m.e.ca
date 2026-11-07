@@ -1,6 +1,6 @@
 # 릴리스
 
-[← README](../README.md) · [개발 가이드](development.md)
+[← README](../README.md) · [개발 가이드](development.md) · [현재 제공 기능](release-notes.md)
 
 ## 버전 규칙
 
@@ -35,7 +35,7 @@
 | `linux_arm64.tar.gz` | Linux arm64 |
 | `linux_amd64.tar.gz` | Linux·WSL x86-64 |
 
-각 아카이브에는 `meca` 실행 파일과 `LICENSE`·`NOTICE`·`THIRD_PARTY_NOTICES.md`가 들어 있다. M.E.CA는 Apache License 2.0을 따르며 외부 구성요소의 라이선스는 각 고지를 따른다. 실행·설치에는 Go나 개발 도구가 필요하지 않다. Linux 바이너리는 CGO 없이 빌드하며 macOS는 기본 OS 라이브러리를 사용한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다.
+각 아카이브에는 `meca` 실행 파일과 `LICENSE`·`NOTICE`·`THIRD_PARTY_NOTICES.md`가 들어 있다. 같은 실행 파일이 TUI·CLI·서버와 9개 Provider 어댑터를 제공한다. M.E.CA는 Apache License 2.0을 따르며 외부 구성요소의 라이선스는 각 고지를 따른다. 실행·설치에는 Go나 개발 도구가 필요하지 않다. 네 대상 모두 `CGO_ENABLED=0`으로 빌드한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다.
 
 모든 배포본은 `godbus_no_tcp`를 적용한다. Linux DBus의 TCP·nonce-TCP 전송 구현을 제외하고 Unix 소켓과 macOS Keychain을 유지한다. 모델 API·셸의 네트워크 기능은 영향을 받지 않는다. 보장 범위와 수동 빌드 옵션은 [설정 가이드](configuration.md#linux-자격-증명-전송)를 따른다.
 
@@ -66,6 +66,8 @@ sha256sum meca_<version>_linux_amd64.tar.gz
 소스 설치도 배포본과 같은 `godbus_no_tcp` 빌드 태그를 적용한다. 저장소 `bin/meca`를 만든 뒤 호출한 작업 폴더·환경에서 설치 명령을 실행한다. 설치 위치·기본 설정·PATH 등록과 로그인 셸 전환은 릴리스 바이너리의 install과 같다.
 
 `meca uninstall`은 설치된 `~/.local/bin/meca`, MECA가 등록한 PATH 블록, `~/.meca` 전체와 저장한 OS 자격 증명을 제거한다. 실행 중인 에이전트를 종료한 뒤 사용한다. 사용자 프로젝트·다른 셸 설정·소스 저장소·공용 캐시는 유지하며 정리에 실패하면 원인을 반환한다.
+
+제거 전에 필요한 대화와 [자격 증명을 백업](configuration.md#api-key-암호화와-복구)한다. OS 인증정보 정리에 실패하면 `meca uninstall`을 다시 실행해 완료한다. 정리가 끝날 때까지 일반 시작·설치는 차단된다.
 
 ## 업데이트
 

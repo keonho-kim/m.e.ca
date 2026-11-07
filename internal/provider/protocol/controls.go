@@ -12,10 +12,11 @@ import (
 )
 
 type Controls struct {
-	Reasoning       *chat.Reasoning
-	Think           any
-	Template        map[string]any
-	ReasoningEffort string
+	OmitThinkingSummary bool
+	Reasoning           *chat.Reasoning
+	Think               any
+	Template            map[string]any
+	ReasoningEffort     string
 }
 
 func ControlsFor(kind connection.ProviderKind, info *connection.ModelInfo, request modelapi.Request) (Controls, error) {
@@ -23,5 +24,9 @@ func ControlsFor(kind connection.ProviderKind, info *connection.ModelInfo, reque
 		return Controls{}, fmt.Errorf("request model differs from prepared model")
 	}
 	options := connection.ReasoningOptions(kind, info)
-	return nativeControls(kind, &options, request)
+	controls, err := nativeControls(kind, &options, request)
+	if info != nil && info.ThoughtSummary != nil && !*info.ThoughtSummary {
+		controls.OmitThinkingSummary = true
+	}
+	return controls, err
 }

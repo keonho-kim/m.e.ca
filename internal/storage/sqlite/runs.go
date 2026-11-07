@@ -12,6 +12,9 @@ import (
 )
 
 func (s *Store) LatestRun(ctx context.Context, session string) (*runrecord.Checkpoint, error) {
+	if err := s.checkSession(session); err != nil {
+		return nil, err
+	}
 	event, err := s.runState(ctx, session, "")
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil

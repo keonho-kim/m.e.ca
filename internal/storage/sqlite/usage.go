@@ -12,23 +12,15 @@ import (
 )
 
 func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenUsage, error) {
+	if err := s.checkSession(session); err != nil {
+		return modelapi.TokenUsage{}, err
+	}
 	var total modelapi.TokenUsage
 	var cost sql.NullFloat64
 	var invalid int
-	err := s.db.QueryRowContext(ctx, `SELECT
-	 COALESCE(SUM(json_extract(body,'$.usage.input')),0),
-	 COALESCE(SUM(json_extract(body,'$.usage.output')),0),
-	 SUM(json_extract(body,'$.usage.cost')),
-	 COALESCE(SUM(CASE WHEN
-	  json_type(body,'$.usage.input') IS NOT 'integer' OR
-	  json_type(body,'$.usage.output') IS NOT 'integer' OR
-	  EXISTS (SELECT 1 FROM json_each(body,'$.usage') WHERE key NOT IN ('input','output','cost')) OR
-	  (json_type(body,'$.usage.cost') IS NOT NULL AND json_type(body,'$.usage.cost') NOT IN ('integer','real','null')) OR
-	  json_extract(body,'$.usage.cost') < 0 OR
-	  json_extract(body,'$.usage.input') NOT BETWEEN 0 AND ? OR
-	  json_extract(body,'$.usage.output') NOT BETWEEN 0 AND ?
-	 THEN 1 ELSE 0 END),0)
-	 FROM tool_events WHERE session_id=? AND kind='usage'`, modelapi.MaxCallTokens, modelapi.MaxCallTokens, session).Scan(&total.Input, &total.Output, &cost, &invalid)
+	err := s.db.QueryRowContext(ctx, "SELECT\n\t COALESCE(SUM(json_extract(body,'$.usage.input')),0),\n\t COALESCE(SUM(json_extract(body,'$.usage.output')),0),\n\t SUM(json_extract(body,'$.usage.cost')),\n\t COALESCE(SUM(CASE WHEN\n\t  json_type(body,'$.usage.input') IS NOT 'integer' OR\n\t  json_type(body,'$.usage.output') IS NOT 'integer' OR\n\t  EXISTS (SELECT 1 FROM json_each(body,'$.usage') WHERE key NOT IN ('input','output','cost')) OR\n\t  (json_type(body,'$.usage.cost') IS NOT NULL AND json_type(body,'$.usage.cost') NOT IN ('integer','real','null')) OR\n\t  json_extract(body,'$.usage.cost') < 0 OR\n\t  json_extract(body,'$.usage.input') NOT BETWEEN 0 AND ? OR\n\t  json_extract(body,'$.usage.output') NOT BETWEEN 0 AND ?\n\t THEN 1 ELSE 0 END),0)\n\t FROM tool_events WHERE kind='usage'",
+
+		modelapi.MaxCallTokens, modelapi.MaxCallTokens).Scan(&total.Input, &total.Output, &cost, &invalid)
 	if err != nil {
 		return total, err
 	}

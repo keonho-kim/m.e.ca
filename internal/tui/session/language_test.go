@@ -110,7 +110,9 @@ func TestLanguageFailureAndCancelPreserveSelection(t *testing.T) {
 	a := fixture(t)
 	a.language = locale.English
 	a.chat.output.Append("preserved output", false)
-	a.opts.SaveConfig = func(config.Config) error { return errors.New("config write failed") }
+	a.opts.UpdateConfig = func(context.Context, func(*config.Config)) (config.Config, error) {
+		return config.Config{}, errors.New("config write failed")
+	}
 	a.openLanguage()
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))

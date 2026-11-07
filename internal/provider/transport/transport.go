@@ -8,7 +8,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"io"
+	"net"
 	"net/http"
 	"time"
 )
@@ -26,8 +28,22 @@ func (c *Client) NewRequest(ctx context.Context, method, endpoint string, body i
 		request.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(source.Replay()), nil }
 	}
 	request.Header.Set("Content-Type", "application/json")
+	if c.provider == connection.Claude {
+		request.Header.Set("anthropic-version", "2026-10-21")
+	}
 	if c.key != "" {
-		request.Header.Set("Authorization", "Bearer "+c.key)
+		ip := net.ParseIP(request.URL.Hostname())
+		if request.URL.Scheme != "https" && request.URL.Hostname() != "localhost" && !ip.IsLoopback() {
+			return nil, fmt.Errorf("API keys require HTTPS outside loopback")
+		}
+		switch c.provider {
+		case connection.Claude:
+			request.Header.Set("x-api-key", c.key)
+		case connection.Gemini:
+			request.Header.Set("x-goog-api-key", c.key)
+		default:
+			request.Header.Set("Authorization", "Bearer "+c.key)
+		}
 	}
 	return request, nil
 }

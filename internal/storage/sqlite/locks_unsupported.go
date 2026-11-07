@@ -12,6 +12,10 @@ import (
 
 type SessionLease struct{}
 
+func (*Sessions) LeaseServer(string) (*SessionLease, error) {
+	return nil, fmt.Errorf("server locking requires Linux or macOS")
+}
+
 func (*Store) LeaseSession() (*SessionLease, error) {
 	return nil, fmt.Errorf("session locking requires Linux or macOS")
 }

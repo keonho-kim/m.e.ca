@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 	"unicode/utf8"
 )
 
@@ -31,7 +32,10 @@ func (e *Reader) Preview(ctx context.Context, settings policy.Settings, path str
 	if err != nil {
 		return result, err
 	}
-	file, err := target.Root.Open(target.Relative)
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	file, err := target.Root.OpenFile(target.Relative, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return result, err
 	}

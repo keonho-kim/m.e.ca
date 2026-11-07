@@ -68,6 +68,9 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 			c := conversations[i]
 			style := view.SelectionStyle(i == index)
 			title := strings.ReplaceAll(c.Summary, "\n", " ")
+			if c.Unavailable != "" {
+				title = "[Unavailable] " + title
+			}
 			if uniseg.StringWidth(title) > w/3 {
 				r := []rune(title)
 				title = string(r[:min(len(r), w/3)])
@@ -138,6 +141,10 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 						return newConversation, true, nil
 					}
 					if len(conversations) == 0 {
+						continue
+					}
+					if reason := conversations[index].Unavailable; reason != "" {
+						status = reason
 						continue
 					}
 					selected := conversations[index].Session

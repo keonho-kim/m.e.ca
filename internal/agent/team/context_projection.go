@@ -5,10 +5,8 @@
 package team
 
 import (
-	"encoding/json"
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 )
 
@@ -43,28 +41,9 @@ func (p *Peer) ContextObservations(messages []model.Message) string {
 	}
 	view := snapshot.view
 	var covered uint16
-	var calls []tool.Call
 	for _, m := range messages {
-		if m.Role == "assistant" && len(m.Calls) > 0 {
-			calls = m.Calls
-		}
-		sequence, _ := channel.Sequence(m.ID)
-		if sequence == 0 && m.Role == "tool" && (m.ToolName == "discuss" || m.ToolName == "set_work") {
-			paired := false
-			for _, call := range calls {
-				if call.ID == m.ToolCallID && call.Name == m.ToolName {
-					paired = true
-					break
-				}
-			}
-			if !paired {
-				continue
-			}
-			var outcome struct{ Sequence int64 }
-			if json.Unmarshal([]byte(m.Content), &outcome) == nil {
-				sequence = outcome.Sequence
-			}
-		}
+		sequence, _ := channel.Sequence(m)
+
 		if sequence == 0 {
 			continue
 		}

@@ -17,6 +17,9 @@ import (
 )
 
 func (s *Store) AddContextTokens(ctx context.Context, session string, count compact.TokenCount) error {
+	if err := s.checkSession(session); err != nil {
+		return err
+	}
 	if count.Amount < 0 || count.Amount > 1000000000 {
 		return fmt.Errorf("invalid conversation token count")
 	}
@@ -25,14 +28,17 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 	default:
 		return fmt.Errorf("invalid conversation token source")
 	}
-	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(session_id,amount,estimated,kind,through_timeline) SELECT ?,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE session_id=? ON CONFLICT(session_id) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", session, count.Amount, count.Estimated, count.Kind, session)
+	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(singleton,amount,estimated,kind,through_timeline) SELECT 1,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE true ON CONFLICT(singleton) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", count.Amount, count.Estimated, count.Kind)
 	return err
 }
 func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, error) {
+	if err := s.checkSession(session); err != nil {
+		return compact.Memory{}, err
+	}
 	var body []byte
 	var codec, size int
 	var digest string
-	err := s.db.QueryRowContext(ctx, "SELECT body,codec,digest,raw_bytes FROM memories WHERE session_id=?", session).Scan(&body, &codec, &digest, &size)
+	err := s.db.QueryRowContext(ctx, "SELECT body,codec,digest,raw_bytes FROM memories WHERE singleton=1").Scan(&body, &codec, &digest, &size)
 	if errors.Is(err, sql.ErrNoRows) {
 		return compact.Memory{}, nil
 	}
@@ -54,6 +60,9 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 	return memory, memory.Check(compact.MaxBodyBytes)
 }
 func (s *Store) InstallMemory(ctx context.Context, session string, expected int, next compact.Memory) error {
+	if err := s.checkSession(session); err != nil {
+		return err
+	}
 	if next.Revision != expected+1 {
 		return fmt.Errorf("invalid compaction revision")
 	}
@@ -74,10 +83,10 @@ func (s *Store) InstallMemory(ctx context.Context, session string, expected int,
 			codec, stored = 2, encoded
 		}
 	}
-	result, err := s.db.ExecContext(ctx, `INSERT INTO memories(session_id,revision,through_timeline,through_usage,body,codec,digest,raw_bytes,created_at)
-SELECT ?,?,?,?,?,?,?,?,? WHERE ?=0 OR EXISTS(SELECT 1 FROM memories WHERE session_id=? AND revision=?)
-ON CONFLICT(session_id) DO UPDATE SET revision=excluded.revision,through_timeline=excluded.through_timeline,through_usage=excluded.through_usage,body=excluded.body,codec=excluded.codec,digest=excluded.digest,raw_bytes=excluded.raw_bytes,created_at=excluded.created_at
-WHERE memories.revision=? AND memories.through_timeline<excluded.through_timeline AND memories.through_usage<=excluded.through_usage`, session, next.Revision, next.Through, next.UsageThrough, stored, codec, recordcontent.ID(body), len(body), time.Now().UTC().Format(time.RFC3339Nano), expected, session, expected, expected)
+	result, err := s.db.ExecContext(ctx, `INSERT INTO memories(singleton,revision,through_timeline,through_usage,body,codec,digest,raw_bytes,created_at)
+SELECT 1,?,?,?,?,?,?,?,? WHERE ?=0 OR EXISTS(SELECT 1 FROM memories WHERE singleton=1 AND revision=?)
+ON CONFLICT(singleton) DO UPDATE SET revision=excluded.revision,through_timeline=excluded.through_timeline,through_usage=excluded.through_usage,body=excluded.body,codec=excluded.codec,digest=excluded.digest,raw_bytes=excluded.raw_bytes,created_at=excluded.created_at
+WHERE memories.revision=? AND memories.through_timeline<excluded.through_timeline AND memories.through_usage<=excluded.through_usage`, next.Revision, next.Through, next.UsageThrough, stored, codec, recordcontent.ID(body), len(body), time.Now().UTC().Format(time.RFC3339Nano), expected, expected, expected)
 	if err != nil {
 		return err
 	}

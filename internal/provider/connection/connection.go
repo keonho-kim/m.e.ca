@@ -19,6 +19,13 @@ type Connection struct {
 	CredentialRef string       `json:"credential_ref"`
 }
 
+// CredentialScope binds a saved secret to the full provider and endpoint identity.
+// It intentionally retains all 256 digest bits, independently of display IDs.
+func (c Connection) CredentialScope() string {
+	sum := sha256.Sum256([]byte(string(c.Kind) + "\n" + c.Endpoint))
+	return fmt.Sprintf("credential_scope_%x", sum)
+}
+
 func New(kind ProviderKind, endpoint string) (Connection, error) {
 	defaultEndpoint := ""
 	for _, provider := range Providers() {

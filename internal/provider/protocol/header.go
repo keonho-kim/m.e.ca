@@ -7,7 +7,6 @@ package protocol
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 )
 
 type requestHeader struct{ controls, tools []byte }
@@ -28,8 +27,8 @@ func (e *Encoder) header(kind connection.ProviderKind, baseURL string, info *con
 		return "", requestHeader{}, err
 	}
 	request.Tools = nil
-	if kind == connection.LMStudio {
-		base := responses.Header(request.ModelID, request.MaxOutput, controls.ReasoningEffort, request.Temperature, nil)
+	if connection.UsesResponses(kind) {
+		base := responseHeader(kind, request, controls)
 		if len(tools) > 0 {
 			parallel := true
 			base.Parallel, base.ToolChoice = &parallel, "auto"
@@ -59,7 +58,7 @@ func (e *Encoder) encodeWhole(kind connection.ProviderKind, baseURL string, info
 	}
 	var content []byte
 	field := `,"messages":`
-	if kind == connection.LMStudio {
+	if connection.UsesResponses(kind) {
 		field = `,"input":`
 		values, convertErr := responseInput(messages)
 		if convertErr != nil {

@@ -74,7 +74,7 @@ func TestCostRejectsInvalidStoredAmounts(t *testing.T) {
 			})
 			ctx := context.Background()
 			body := `{"kind":"usage","usage":{"input":20,"output":5,"cost":` + cost + `}}`
-			_, err = store.db.ExecContext(ctx, "INSERT INTO tool_events(session_id,kind,body,raw_bytes,created_at) VALUES(?,'usage',?,?,?)", store.Session().ID, body, len(body), "2026-10-25T00:00:00Z")
+			_, err = store.db.ExecContext(ctx, "INSERT INTO tool_events(kind,body,raw_bytes,created_at) VALUES('usage',?,?,?)", body, len(body), "2026-10-25T00:00:00Z")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +82,7 @@ func TestCostRejectsInvalidStoredAmounts(t *testing.T) {
 				t.Fatal("invalid stored charge was accepted")
 			}
 			var retained string
-			if err := store.db.QueryRowContext(ctx, "SELECT body FROM tool_events WHERE session_id=? ORDER BY sequence DESC LIMIT 1", store.Session().ID).Scan(&retained); err != nil || retained != body {
+			if err := store.db.QueryRowContext(ctx, "SELECT body FROM tool_events ORDER BY sequence DESC LIMIT 1").Scan(&retained); err != nil || retained != body {
 				t.Fatalf("stored record changed: %s %v", retained, err)
 			}
 		})

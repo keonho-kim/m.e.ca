@@ -31,7 +31,7 @@ type Options struct {
 	Team         *teamrequest.Service
 	LoadTeamMode func(context.Context) (bool, error)
 	SaveTeamMode func(context.Context, bool) error
-	SaveConfig   func(config.Config) error
+	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Store        Store
 	Session      sessionstate.Session
 	Tools        Tools

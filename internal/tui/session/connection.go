@@ -1,17 +1,13 @@
-// Purpose: Adopt a prepared connection only after its selection has been persisted.
-// Pattern: Session settings use case.
-// Usage: The event loop calls adoptConnection when a connection worker finishes.
-// Related: internal/tui/session/events.go, internal/provider/setup/setup.go, internal/storage/sqlite/selection.go.
+// Purpose: Adopt only durable worker results without performing terminal-loop persistence.
+// Pattern: Event-loop-owned state transition.
+// Usage: finishWorker applies committed selections and closes rejected candidates.
+// Related: internal/tui/session/model_commit.go, internal/tui/session/setup_cancel.go.
 package session
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
-	"github.com/keonho-kim/meca/internal/config"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/setup"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func (a *app) adoptConnection(n notice) (adopted bool, err error) {
@@ -20,50 +16,28 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 			n.Client.Close()
 		}
 	}()
-	listing := n.Selection != nil && n.Selection.Model == "" && n.Models != nil
-	if n.Err != nil && (!listing || errors.Is(n.Err, context.Canceled) || errors.Is(n.Err, context.DeadlineExceeded)) {
-		return false, nil
-	}
-	if n.Selection == nil {
+	if n.Commit == nil {
 		if n.Client != nil {
-			return false, fmt.Errorf("prepared client has no selection")
+			return false, fmt.Errorf("prepared connection has no durable selection")
 		}
 		return false, nil
 	}
-	if n.Selection.Model == "" {
-		return false, nil
+	if n.Commit.Uncertain {
+		a.connection.close()
+		a.connection.selection = connection.Selection{}
+		return false, n.Err
 	}
-	if n.Client == nil {
-		return false, fmt.Errorf("prepared selection has no client")
+	if n.Err != nil {
+		return false, n.Err
 	}
-	next := *n.Selection
-	if next.Details != nil {
-		details := *next.Details
-		details.Notice = a.opts.Vault.Redact(details.Notice)
-		next.Details = &details
+	if n.Client == nil || n.Commit.Selection.Model == "" {
+		return false, fmt.Errorf("committed connection has no client or model")
 	}
-	if next.Identity != nil {
-		next.Identity.Redact(a.opts.Vault.Redact)
+	if n.Config != nil {
+		a.opts.Config = *n.Config
+		a.settings.Permission = n.Config.Permission
 	}
-	var remember func(modelconn.Selection) error
-	if n.RememberModel {
-		remember = func(selected modelconn.Selection) error {
-			updated := a.opts.Config
-			updated.Model = config.RememberModel(selected)
-			updated.Thinking = selected.Thinking
-			if err := a.opts.SaveConfig(updated); err != nil {
-				return err
-			}
-			a.opts.Config = updated
-			return nil
-		}
-	}
-	committed, err := setup.Commit(a.ctx, a.opts.Store, a.opts.Vault, a.opts.Session.ID, next, n.credential, remember)
-	if err != nil {
-		return false, err
-	}
-	a.connection.adopt(n.Client, committed.Selection)
+	a.connection.adopt(n.Client, n.Commit.Selection)
 	a.chat.resetThroughput()
-	adopted = true
-	return true, committed.DefaultError
+	return true, n.Commit.DefaultError
 }

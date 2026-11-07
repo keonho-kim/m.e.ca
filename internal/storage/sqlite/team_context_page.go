@@ -6,6 +6,7 @@ package sqlite
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 	if len(args) == 0 {
 		return nil, nil
 	}
-	rows, err := s.db.QueryContext(ctx, "SELECT id,raw_bytes,body FROM payloads WHERE codec=3 AND id IN ("+placeholders(len(args))+")", args...)
+	rows, err := s.db.QueryContext(ctx, "SELECT id,raw_bytes,body,digest FROM payloads WHERE codec=3 AND id IN ("+placeholders(len(args))+")", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,22 +46,23 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 		id       string
 		sequence int64
 		size     int
+		digest   string
 	}
 	var refs []ref
 	args = nil
 	for rows.Next() {
 		var id string
 		var size int
-		var body []byte
+		var body, digest []byte
 		var value roomPayload
-		if err = rows.Scan(&id, &size, &body); err != nil {
+		if err = rows.Scan(&id, &size, &body, &digest); err != nil {
 			break
 		}
 		if err = json.Unmarshal(body, &value); err != nil || value.Sequence < 1 {
 			err = fmt.Errorf("invalid public conversation reference")
 			break
 		}
-		refs = append(refs, ref{id, value.Sequence, size})
+		refs = append(refs, ref{id: id, sequence: value.Sequence, size: size, digest: hex.EncodeToString(digest)})
 		args = append(args, value.Sequence)
 	}
 	err = errors.Join(err, rows.Err(), rows.Close())
@@ -81,19 +83,19 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 		if err != nil {
 			return nil, err
 		}
-		if !ok || len(raw) != ref.size || recordcontent.ID(raw) != ref.id {
+		if !ok || len(raw) != ref.size || recordcontent.ID(raw) != ref.digest {
 			return nil, fmt.Errorf("referenced public message failed length/hash verification")
 		}
 		out[ref.id] = content
 	}
 	return out, nil
 }
-func (s *Store) publicMessage(ctx context.Context, record storedRecord) (teamchannel.Message, error) {
+func (s *Store) publicMessage(ctx context.Context, record storedRecord, prefix *string) (teamchannel.Message, error) {
 	body, err := s.unpackRecord(ctx, record, nil)
 	if err != nil {
 		return teamchannel.Message{}, err
 	}
-	message := teamchannel.Message{Sequence: record.sequence}
+	message := teamchannel.Message{Sequence: record.sequence, Session: s.session.ID, Prefix: prefix}
 	if record.kind == "message" {
 		var value modelapi.Message
 		if err := json.Unmarshal(body, &value); err != nil {
@@ -104,6 +106,9 @@ func (s *Store) publicMessage(ctx context.Context, record storedRecord) (teamcha
 		}
 		message.From, message.Text = "user", value.Content
 	} else {
+		if prefix == nil {
+			return message, fmt.Errorf("public context prefix is missing")
+		}
 		var value runrecord.Event
 		if err := json.Unmarshal(body, &value); err != nil {
 			return message, err

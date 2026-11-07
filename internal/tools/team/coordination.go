@@ -7,6 +7,7 @@ package team
 import (
 	"context"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
 	"sync/atomic"
 
@@ -56,7 +57,9 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		if err != nil {
 			return toolapi.Result{}, err
 		}
-		return resultfmt.Encode(map[string]int64{"sequence": sequence}, "Published to the team")
+		result, err := resultfmt.Encode(map[string]int64{"sequence": sequence}, "Published to the team")
+		result.Source = &source.Public{Sequence: sequence, Author: e.Peer.ID, Kind: "team_discussion"}
+		return result, err
 	case "set_work":
 		paths, err := e.canonicalPaths(op.input.Paths, true)
 		if err != nil {
@@ -71,12 +74,14 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		if err != nil {
 			return toolapi.Result{}, err
 		}
-		return resultfmt.Encode(struct {
+		result, err := resultfmt.Encode(struct {
 			Member   string   `json:"member_name"`
 			Paths    []string `json:"paths"`
 			Sequence int64    `json:"sequence"`
 			Revision uint64   `json:"work_revision"`
 		}{work.Member, work.Paths, work.Sequence, work.Revision}, "Team contribution updated")
+		result.Source = &source.Public{Sequence: work.Sequence, Author: e.Peer.ID, Kind: "team_work"}
+		return result, err
 	case "leave_team":
 		if e.Local.ActiveCommand() != "" {
 			return toolapi.Result{}, fmt.Errorf("settle active commands with wait_command or cancel_command before leaving")

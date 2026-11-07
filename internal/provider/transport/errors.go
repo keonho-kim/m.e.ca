@@ -19,6 +19,7 @@ import (
 type responseError struct {
 	status        int
 	code, message string
+	param         string
 	retryAfter    time.Duration
 }
 
@@ -55,19 +56,42 @@ func ParseError(status int, body []byte, after string) error {
 		}
 		if len(envelope.Error) > 0 && json.Unmarshal(envelope.Error, &e.message) != nil {
 			var detail struct {
-				Message string
-				Code    json.RawMessage
+				Message             string
+				Code                json.RawMessage
+				Type, Status, Param string
 			}
 			if json.Unmarshal(envelope.Error, &detail) == nil {
 				e.message = detail.Message
+				e.param = detail.Param
 				if json.Unmarshal(detail.Code, &e.code) != nil {
-					e.code = ""
+					e.code = detail.Status
+					var numeric int
+					if status == 0 && json.Unmarshal(detail.Code, &numeric) == nil && numeric >= 400 && numeric <= 599 {
+						e.status = numeric
+					}
+				}
+				if e.code == "" {
+					e.code = detail.Type
 				}
 			}
 		}
 	}
 	if e.code == "" {
 		_ = json.Unmarshal(envelope.Code, &e.code)
+	}
+	if e.status == 0 {
+		switch e.code {
+		case "invalid_request_error", "invalid_api_key", "unsupported_parameter":
+			e.status = http.StatusBadRequest
+		case "authentication_error":
+			e.status = http.StatusUnauthorized
+		case "permission_error":
+			e.status = http.StatusForbidden
+		case "not_found_error":
+			e.status = http.StatusNotFound
+		case "overloaded_error":
+			e.status = 529
+		}
 	}
 	if seconds, err := strconv.Atoi(after); err == nil && seconds > 0 {
 		e.retryAfter = time.Duration(min(seconds, 30)) * time.Second

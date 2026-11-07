@@ -111,7 +111,7 @@ func credentialDBusProcess(t *testing.T, address, mode string) error {
 func TestCredentialDBusHelper(t *testing.T) {
 	switch os.Getenv("MECA_DBUS_TEST_HELPER") {
 	case "probe":
-		if _, err := (&Vault{}).Get("transport-test-no-credential"); err == nil {
+		if err := (&Vault{State: t.TempDir()}).Set(t.Context(), "transport-test-no-credential", "connection-scope", "fixture-api-key"); err == nil {
 			t.Fatal("fixture connection unexpectedly returned a credential")
 		}
 	case "secret-service":

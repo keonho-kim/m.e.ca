@@ -8,6 +8,7 @@ package model
 import (
 	"context"
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
@@ -15,6 +16,7 @@ import (
 const MaxResponseBytes = 256 * 1024 * 1024
 
 type Message struct {
+	Source *source.Public `json:"source,omitempty"`
 	native *nativeIdentity
 	Images []media.Image `json:"images,omitempty"`
 	// ReasoningState is opaque continuation data owned by the source provider and model.

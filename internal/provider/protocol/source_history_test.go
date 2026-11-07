@@ -17,7 +17,7 @@ import (
 )
 
 func TestSourceHistoryPreservesNativeRequests(t *testing.T) {
-	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.VLLM, connection.LMStudio, connection.Ollama, connection.SGLang, connection.LiteLLM} {
+	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.VLLM, connection.LMStudio, connection.OpenAI, connection.Ollama, connection.SGLang, connection.LiteLLM} {
 		t.Run(string(kind), func(t *testing.T) {
 			var encoder Encoder
 			defer encoder.Clear()

@@ -1,0 +1,222 @@
+// Purpose: Compose real storage, policy and tools with a deterministic model for server contract tests.
+// Pattern: Integration fixture with explicit resource cleanup.
+// Usage: Transport tests share this fixture to compare observable behavior.
+// Related: internal/serverapi/transports_test.go, internal/commands/server/tasks.go.
+package serverapi
+
+import (
+	"context"
+	"errors"
+	"path/filepath"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
+	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/setup"
+	"github.com/keonho-kim/meca/internal/serverapi/detail"
+	"github.com/keonho-kim/meca/internal/storage/serverrequests"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/local"
+)
+
+const testToken = "test-token-0123456789-abcdefghijklmnopqrstuvwxyz"
+
+type generateFunc func(context.Context, model.Request, func(model.Event) error) error
+
+func (g generateFunc) Generate(ctx context.Context, r model.Request, emit func(model.Event) error) error {
+	return g(ctx, r, emit)
+}
+
+type fixture struct {
+	app         *server.Service
+	api         *API
+	project     string
+	requests    string
+	store       *sqlite.Store
+	executed    atomic.Int32
+	outputReads atomic.Int32
+	resultOpens atomic.Int32
+}
+
+func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
+	t.Helper()
+	home := t.TempDir()
+	project := t.TempDir()
+	state := filepath.Join(home, ".meca")
+	sessions, err := sqlite.OpenSessions(filepath.Join(state, "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger, err := serverrequests.Open(t.Context(), filepath.Join(state, "requests"), server.ProjectScope(project))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := ledger.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	vault := &credentials.Vault{State: state}
+	vault.Remember(testToken)
+	pages := detail.NewCache()
+	t.Cleanup(func() {
+		if err := pages.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	f := &fixture{project: project, requests: filepath.Join(state, "requests")}
+	conn, err := connection.New(connection.Ollama, "http://127.0.0.1:11434")
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected := connection.Selection{Connection: conn, Model: "fixture"}
+	cfg := config.Defaults()
+	f.app, err = server.New(t.Context(), server.Options{
+		Config: cfg, Ledger: ledger, Responses: ledger, Project: project,
+		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
+			f.resultOpens.Add(1)
+			f.outputReads.Add(1)
+			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes)
+		},
+		List: func(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
+			return sessions.ConversationPage(ctx, project, cursor, limit)
+		},
+		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
+			var store *sqlite.Store
+			var err error
+			if create {
+				store, err = sessions.Create(ctx, project, project)
+			} else {
+				store, err = sessions.Open(ctx, project, id)
+			}
+			if err != nil {
+				return nil, err
+			}
+			lease, err := store.LeaseSession()
+			if err != nil {
+				_ = store.Close()
+				return nil, err
+			}
+			executor, err := local.NewExecutor(project, home, state, vault.Redact)
+			if err != nil {
+				_ = lease.Close()
+				_ = store.Close()
+				return nil, err
+			}
+			if err := store.SaveSelection(ctx, store.Session().ID, selected); err != nil {
+				_ = executor.Close()
+				_ = store.Close()
+				_ = lease.Close()
+				return nil, err
+			}
+			f.store = store
+			tools := &countTools{Executor: executor, count: &f.executed, approval: approval}
+			return &server.Conversation{Runtime: agentrequest.Runtime{Config: defaults, Selection: selected, Session: store.Session(), Tools: tools, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, History: store, Models: store, Output: outputProbe{store, &f.outputReads}, Close: func() error {
+				return errors.Join(pages.CloseSession(store.Session().ID), executor.Close(), store.Close(), lease.Close())
+			}, Model: conversationruntime.NewModel(g, nil),
+			}, nil
+		},
+		PrepareModel: func(_ context.Context, _ connection.Selection, _ string, _ setup.Defaults) (server.PreparedModel, error) {
+			return server.PreparedModel{Selection: selected, Generator: g}, nil
+		},
+		UpdateConfig: func(_ context.Context, apply func(*config.Config)) (config.Config, error) {
+			apply(&cfg)
+			return cfg, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := f.app.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	f.api = &API{Service: f.app, Redact: vault.Redact, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	return f
+}
+
+type outputProbe struct {
+	*sqlite.Store
+	reads *atomic.Int32
+}
+
+func (p outputProbe) ResponseOutput(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
+	p.reads.Add(1)
+	return p.Store.ResponseOutput(ctx, id, after, through, maxBytes)
+}
+
+type countTools struct {
+	*local.Executor
+	count    *atomic.Int32
+	approval bool
+}
+
+func (e *countTools) Prepare(ctx context.Context, p policy.Settings, c tool.Call) (tool.Execution, error) {
+	op, err := e.Executor.Prepare(ctx, p, c)
+	if err != nil {
+		return nil, err
+	}
+	return countExecution{Execution: op, count: e.count, approval: e.approval}, nil
+}
+
+type countExecution struct {
+	tool.Execution
+	count    *atomic.Int32
+	approval bool
+}
+
+func (e countExecution) Approval() tool.Approval {
+	a := e.Execution.Approval()
+	if e.approval {
+		a.Required = true
+		a.UserRequired = true
+	}
+	return a
+}
+func (e countExecution) Execute(ctx context.Context, allow bool) (tool.Result, error) {
+	e.count.Add(1)
+	return e.Execution.Execute(ctx, allow)
+}
+func (e countExecution) Release() { tool.Release(e.Execution) }
+
+func deadline(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func waitFinished(t *testing.T, ctx context.Context, app *server.Service, cursor string) server.Task {
+	t.Helper()
+	for {
+		batch, err := app.Next(ctx, cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if batch.Snapshot != nil {
+			cursor = batch.Snapshot.Cursor
+			if batch.Snapshot.Task != nil && batch.Snapshot.Task.Status != "running" && batch.Snapshot.Task.Status != "canceling" {
+				return *batch.Snapshot.Task
+			}
+		}
+		for _, event := range batch.Events {
+			cursor = event.Cursor
+			if event.Record.Kind == "request_finished" {
+				state := app.State()
+				return *state.Task
+			}
+		}
+	}
+}

@@ -1,16 +1,44 @@
 # 모델 연결과 추론 설정
 
-[← README](../README.md) · [사용법](usage.md) · [설정](configuration.md)
+[← README](../README.md) · [사용법](usage.md) · [설정](configuration.md) · [서버 API](server.md)
 
 ## 연결과 기본값
 
 !model에서 Provider·주소·API 키·서빙 모델 ID를 선택한다. 실제 요청에는 선택한 ID를 그대로 사용하며, 연결 기능과 한도는 서버 메타데이터와 Provider API 규약으로 결정한다.
 
+지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 서버에서는 `setModel`에 같은 식별값을 사용한다. 모델을 호출하는 OpenAI Provider와 `--server --openai`로 제공하는 호환 API를 구분한다.
+
 설정 화면은 저장된 Thinking·강도 또는 서버가 공개한 기본값을 표시한다. 확인된 기본값은 구체적인 ON/OFF·강도로 표시하고, 공개되지 않은 값만 DEFAULT로 둔다. DEFAULT는 think·reasoning·reasoning_effort·chat_template_kwargs의 해당 제어 필드 생략을 뜻한다. 역할별 temperature·출력 예산·컨텍스트 예산은 [설정 문서](configuration.md)의 독립된 설정이다.
 
 연결 준비는 메타데이터를 조회하고 클라이언트를 구성한다. [이미지 입력](images.md)의 지원 정보가 없는 OpenRouter 외 모델에는 작은 PNG로 입력 수용을 검사한다. 일반 응답과 Thinking 진단은 !model → 연결 진단 또는 meca --diagnose에서 수행한다. 메타데이터 조회 실패는 원인을 남기고 일반 연결을 준비하며 사용자 취소는 즉시 전파한다.
 
-한 연결 준비 안에서는 마지막으로 성공한 GET 메타데이터 응답 한 개를 재사용한다. 동일한 목록에서 원본 식별과 서빙 한도를 각각 읽을 때 HTTP 요청을 반복하지 않으며, 각 해석 결과는 독립된 값이다. Ollama의 선택 모델 /api/show 응답도 식별·설정 조회에서 하나의 typed 스냅샷으로 재사용한다. 응답 보존은 16MiB 수용 한도와 준비 작업의 수명에 한정한다. 새 연결 준비·목록 새로고침은 다시 서버를 조회하고 실패·취소 응답은 재사용하지 않는다.
+한 연결 준비 안에서는 마지막 GET 결과 한 개를 재사용한다. 동일한 목록에서 원본 식별과 서빙 한도를 각각 읽을 때 HTTP 요청을 반복하지 않으며, 각 해석 결과는 독립된 값이다. 최종 전송 실패도 준비 작업 안에서 공유하되 타입 변환 오류는 다른 해석을 막지 않는다. 취소한 context는 재사용보다 먼저 검사한다. Ollama의 선택 모델 /api/show 응답도 식별·설정 조회에서 하나의 typed 스냅샷으로 재사용한다. 응답 보존은 16MiB 수용 한도와 준비 작업의 수명에 한정한다. 새 연결 준비·목록 새로고침은 다시 서버를 조회한다.
+
+## OpenAI, Claude, Gemini
+
+`!model`에서 공급자를 고르고 각 공급자가 발급한 API Key·모델 ID를 입력한다. 서버의 `setModel.provider` 값은 각각 `openai`, `claude`, `gemini`다. 별도 SDK나 로컬 모델 서버가 필요하지 않으며 API Key 보관은 [암호화와 복구](configuration.md#api-key-암호화와-복구)를 따른다.
+
+| Provider | 기본 Base URL | 생성 API | 인증 |
+| --- | --- | --- | --- |
+| OpenAI | https://api.openai.com/v1 | /responses, store:false | Authorization: Bearer |
+| Claude | https://api.anthropic.com/v1 | /messages | x-api-key, anthropic-version:2026-10-21 |
+| Gemini | https://generativelanguage.googleapis.com/v1beta | /models/{model}:streamGenerateContent?alt=sse | x-goog-api-key |
+
+Claude는 workspace에 연결된 API Key를 사용한다. workspace 선택 헤더·OAuth·Bedrock·Vertex AI 인증은 이 연결에 포함하지 않는다. Gemini는 Google AI API Key를 사용하며 OpenAI 호환 URL을 Base URL로 넣지 않는다. 인증된 원격 HTTP와 다른 origin으로의 redirect는 차단한다. 모델 API Key를 URL query에 넣지 않는다.
+
+OpenAI는 Models API 목록을 사용하며 한도·추론·sampling 기능을 모델명으로 추정하지 않는다. 모델 API가 한도를 공개하지 않으면 설정한 context length와 API 오류를 따른다. OpenAI·Claude의 temperature는 보내지 않고 공급자 sampling 기본값을 사용한다. Claude의 선택 모델 API가 광고한 max_input_tokens·max_tokens·이미지 수용·adaptive Thinking·disabled·effort를 적용한다. 수동 Thinking 토큰 예산 UI는 추가하지 않는다. Gemini는 생성 가능한 모델의 목록과 inputTokenLimit·outputTokenLimit를 읽고 Thinking은 모델 기본값을 유지한다. 모델 목록 페이지는 100페이지·10000개로 제한하고 반복 cursor를 거부한다.
+
+세 Provider 모두 본문과 Thinking을 스트리밍하며 함수 인자를 완성·검사하고 정상 종료를 확인한 뒤에만 실행기에 도구 호출을 넘긴다. 실패·토큰 상한·끊긴 스트림의 부분 호출은 실행하지 않는다. OpenAI의 reasoning output, Claude의 signed thinking, Gemini의 thoughtSignature는 같은 연결·모델의 완료된 후속 요청에만 보존한다. 서명된 빈 text/thinking 필드도 보존하며 Gemini의 본문·서명된 인자·로컬 호출 ID와 현재 메시지 이력이 달라지면 재사용을 거부한다. 원격 대화 ID에 의존하지 않는다.
+
+OpenAI의 `reasoning.summary=auto`, Gemini의 `thinkingConfig.includeThoughts=true`로 표시 가능한 추론 요약을 요청한다. 추론 깊이나 budget의 기본값은 바꾸지 않는다. Gemini 메타데이터의 `thinking=false`는 이 옵션을 생략한다. 공급자가 자동 요약 옵션을 지원하지 않는다고 명확히 400 오류를 반환하면 그 옵션만 제거해 한 번 요청하고, 같은 클라이언트·모델에서는 관측한 미지원을 재사용한다. 다른 인자·인증 오류와 안전 필터·거절·문맥/출력 한도 종료는 같은 요청으로 반복하지 않는다. OpenAI 거절 텍스트는 정상 응답의 본문으로 표시한다.
+
+Claude와 OpenAI의 응답은 원래 text/message·tool 블록 경계와 순서를 유지한다. Claude continuation version 1에는 system·tools·앞선 메시지의 지문을 함께 보관한다. 압축·팀 관측 갱신·지침/도구 변경으로 지문이 달라지면 해당 응답의 thinking·redacted_thinking만 전송에서 제외하고 관측 텍스트·완료된 도구 호출은 유지한다. 지원 버전·유효한 지문·본문과 도구 이력을 확인할 수 없는 상태는 원본 기록을 보존하고 거부한다. JSON과 그 안에 직렬화된 JSON의 비밀값도 저장·전송 전에 검사하며 서명 바이트를 마스킹해서 재사용하지 않는다.
+
+사용량은 OpenAI의 input/output_tokens, Claude의 input·cache_creation·cache_read와 output_tokens, Gemini의 promptTokenCount와 candidatesTokenCount+thoughtsTokenCount를 사용한다. 공급자가 보고하지 않은 값을 0으로 추정하지 않는다.
+
+Claude의 누적 usage는 보고된 필드만 갱신하고 생략된 캐시 카운터를 유지한다. Gemini의 usageMetadata가 있으면 protobuf 규약에 따라 생략된 scalar 카운터는 0이다. 따라서 답변 없이 추론만 생성해도 thoughtsTokenCount를 수집한다. usageMetadata 자체가 없으면 미보고로 유지한다. 모든 Provider의 SSE 프레임·NDJSON 한 줄과 Claude의 숨은 block payload에 256MiB 응답 한도를 적용한다.
+
+규약 근거: [OpenAI stateless reasoning](https://developers.openai.com/api/docs/guides/reasoning#keeping-reasoning-items-in-context), [Claude 스트리밍](https://platform.claude.com/docs/en/build-with-claude/streaming), [Claude 모델 정보](https://platform.claude.com/docs/en/api/models/retrieve), [Gemini GenerateContent](https://ai.google.dev/api/generate-content), [Gemini 모델 정보](https://ai.google.dev/api/models).
 
 ## OpenRouter 연결
 
@@ -18,7 +46,7 @@
 
 1. !model에서 Provider를 OpenRouter로 선택한다. Base URL 기본값은 `https://openrouter.ai/api/v1`이며 `/chat/completions`를 덧붙이지 않는다. API Key 행에서 OpenRouter 키를 입력한다.
 2. 모델명 행의 →로 서버 모델 목록을 연다. 글자를 입력해 대소문자 구분 없이 부분 검색하고 ↑↓로 선택한 뒤 Tab으로 ID를 채운다. 코딩 작업에는 [native 도구 호출](#native-tool-calling)을 지원하는 모델을 선택한다. 모델 ID를 알고 있으면 직접 입력할 수도 있다.
-3. 필요한 Thinking·추론 강도와 저장 범위를 선택한다. 모든 대화의 기본값으로 저장하면 새 세션에서도 연결을 재사용한다. Enter로 전체 설정의 저장 확인을 열고 y로 확정한다. 키는 OS 자격 증명 저장소에 보관하며 설정·DB에는 참조만 남긴다.
+3. 필요한 Thinking·추론 강도와 저장 범위를 선택한다. 모든 대화의 기본값으로 저장하면 새 세션에서도 연결을 재사용한다. Enter로 전체 설정의 저장 확인을 열고 y로 확정한다. API Key는 암호화해 보관하며 [백업·복구 안내](configuration.md#api-key-암호화와-복구)를 따른다.
 
 요청은 API Key를 Bearer 인증으로 전송한다. OpenRouter를 통한 요청은 해당 서비스와 실제 추론 공급자의 데이터 처리 정책을 따른다. [공급자별 보관 정책](https://openrouter.ai/docs/guides/privacy/provider-logging)을 확인한다. 비용 집계는 [OpenRouter 실제 비용](#openrouter-실제-비용)을 따른다.
 
@@ -36,6 +64,9 @@ Thinking effort의 DEFAULT는 강도 필드 생략이다. 서버가 제공한 �
 | SGLang | Provider API의 boolean·effort 요청 규약 | chat_template_kwargs의 enable_thinking·thinking·reasoning_effort |
 | OpenRouter | /api/v1/models의 reasoning·supported_efforts·mandatory | reasoning.enabled와 ON에서 reasoning.effort |
 | LiteLLM | 현재 어댑터에 제어 규약이 없는 경우 서버 기본값 | 추론 제어 인자 생략; 수신된 reasoning은 별도로 표시 |
+| OpenAI | 모델 목록에 확인 가능한 제어 선언이 없으면 서버 기본값 | 추론 제어 인자 생략; 암호화 reasoning은 후속 Responses에 보존 |
+| Claude | 선택 모델의 adaptive·disabled·effort capability | thinking.type과 ON에서 output_config.effort |
+| Gemini | 현재 모델의 기본 Thinking | 추론 제어 인자 생략; thoughtSignature 보존 |
 
 vLLM·SGLang의 강도 후보는 minimal·low·medium·high·xhigh·max이다. 이는 API 요청 구문이며 모든 모델이 각 강도를 구현한다는 선언이 아니다. 같은 모델명이어도 서버 버전·template·parser·라우팅 설정에 따라 적용 결과가 달라질 수 있다. 모델 고유 boolean이나 강도를 다른 값으로 번역하는 규칙은 두지 않는다.
 
@@ -69,6 +100,8 @@ LM Studio는 Responses에 전체 역할별 메시지를 보내고 store:false·t
 | Ollama | /api/show | 원본 저장소·모델군·아키텍처·파라미터·양자화·manifest digest·Thinking 값 |
 | LM Studio | /api/v1/models | key 또는 loaded_instances.id 일치, publisher·아키텍처·양자화·규모 |
 | LiteLLM | /model/info, 불가하면 /model_group/info | 선택한 model_name의 upstream·Provider 선언 |
+| OpenAI | /v1/models | 선택한 id의 root·parent·owned_by 선언. 비공개 가중치의 동일성은 검증하지 않음 |
+| Claude·Gemini | 별도 원본 식별 조회 없음 | 선택한 모델 ID와 기능·한도를 사용하며 원본 체크포인트를 추측하지 않음 |
 
 서버 원본 선언·모델군 정보·복수 모델/동적 라우팅·원본 식별 불가를 구분한다. 단일 저장소 ID·정확한 저장소 URL·캐시 경로는 표시용으로 정규화한다. 일반 로컬 파일명으로 체크포인트를 추측하지 않으며 표시된 원본은 추론 옵션 선택에 관여하지 않는다.
 
@@ -86,6 +119,6 @@ Ollama에는 확인된 context를 num_ctx로 지정하지만 공개 Chat API만�
 
 ## Native tool calling
 
-MECA는 Chat Completions의 tools·tool_calls, Ollama Chat의 객체형 인자, LM Studio Responses의 function_call·function_call_output을 사용한다. 일반 답변의 JSON은 실행하지 않는다. 서버가 도구를 지원하지 않거나 parser 설정이 틀리면 native 호출을 생성할 수 없다.
+MECA는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio·OpenAI Responses의 `function_call`·`function_call_output`, Claude의 `tool_use`·`tool_result`, Gemini의 `functionCall`·`functionResponse`를 사용한다. 완성된 인자와 정상 종료를 확인한 뒤 실행기에 넘기며 일반 답변의 JSON은 실행하지 않는다. 서버가 도구를 지원하지 않거나 parser 설정이 틀리면 native 호출을 생성할 수 없다.
 
 vLLM은 자동 도구 선택에 --enable-auto-tool-choice와 모델에 맞는 --tool-call-parser가 필요하다. Reasoning parser는 별도 설정이며 서빙 모델의 공식 권장 구성을 따른다. 서빙 별칭만으로 parser를 추측하지 않는다. [vLLM Tool Calling](https://docs.vllm.ai/en/latest/features/tool_calling/), [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling).

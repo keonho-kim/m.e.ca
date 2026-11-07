@@ -19,7 +19,7 @@ func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 		return upgradeCurrent(ctx, home)
 	}
 	if mode.Action == startup.Uninstall {
-		if err := install.Uninstall(ctx, home, credentials.Clear); err != nil {
+		if err := install.Uninstall(ctx, home, (&credentials.Vault{}).Clear); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stdout, "MECA 삭제 완료: 설치 실행 파일, PATH 등록, 저장 데이터와 인증정보를 정리했습니다.")

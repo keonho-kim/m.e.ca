@@ -108,7 +108,9 @@ func (d *Draft) Append(text string) error {
 	return nil
 }
 
+// Complete consumes the drafts; returned calls own their argument bytes.
 func (s *Calls) Complete() ([]toolapi.Call, error) {
+	defer func() { s.values = nil }()
 	indices := make([]int, 0, len(s.values))
 	for index := range s.values {
 		indices = append(indices, index)

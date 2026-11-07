@@ -108,7 +108,7 @@ func TestConversationReaderRechecksEachAttachedDatabase(t *testing.T) {
 	if err != nil || closeErr != nil {
 		t.Fatalf("fixture: %v %v", err, closeErr)
 	}
-	if _, err := reader.Read(ctx, files[1]); err == nil {
-		t.Fatal("schema version was not rechecked for the current file")
+	if result, err := reader.Read(ctx, files[1]); err != nil || result.conversation.ID != files[1].id || result.conversation.Unavailable == "" {
+		t.Fatal("schema version was not rechecked for the current file", result, err)
 	}
 }

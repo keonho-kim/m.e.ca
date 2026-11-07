@@ -14,7 +14,10 @@ import (
 )
 
 func (s *Store) MemoryRecords(ctx context.Context, session string, after, through int64) (records []compact.Record, cursor int64, err error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,m.body,m.refs,e.memory_role,e.memory_text,COALESCE(m.content_bytes,e.memory_bytes,0) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? AND t.sequence<=? ORDER BY t.sequence LIMIT 64`, session, after, through)
+	if err := s.checkSession(session); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,e.memory_role,e.memory_text,COALESCE(m.content_bytes,e.memory_bytes,0),COALESCE(e.memory_source,0) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? AND t.sequence<=? ORDER BY t.sequence LIMIT 64", after, through)
 	if err != nil {
 		return nil, after, err
 	}
@@ -30,7 +33,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		var e entry
 		var role, text *string
 		var contentBytes int
-		if err = rows.Scan(&e.record.sequence, &e.record.kind, &e.record.body, &e.record.refs, &role, &text, &contentBytes); err != nil {
+		if err = rows.Scan(&e.record.sequence, &e.record.kind, &e.record.body, &e.record.refs, &role, &text, &contentBytes, &e.public); err != nil {
 			break
 		}
 		if role != nil {
@@ -39,10 +42,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		if text != nil {
 			e.text = *text
 		}
-		e.public, err = publicMemorySequence(e.role)
-		if err != nil {
-			break
-		}
+
 		bytes += contentBytes
 		if bytes > 16*1024*1024 && cursor > after {
 			break
@@ -67,7 +67,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 			return nil, cursor, err
 		}
 	}
-	fields := map[string]bool{"id": true, "role": true, "content": true, "incomplete": true}
+	fields := map[string]bool{"source": true, "id": true, "role": true, "content": true, "incomplete": true}
 	var sequences []any
 	for _, e := range page {
 		if e.public > 0 {

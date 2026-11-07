@@ -36,7 +36,7 @@ func TestProviderNegotiatedStream(t *testing.T) {
 			server.StartTLS()
 			defer server.Close()
 
-			client := New("fixture")
+			client := New("fixture", "")
 			defer client.Close()
 			roots := x509.NewCertPool()
 			roots.AddCert(server.Certificate())

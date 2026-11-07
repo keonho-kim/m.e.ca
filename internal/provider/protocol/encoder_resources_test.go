@@ -65,3 +65,24 @@ func TestEncoderPeerBudgetSurvivesResetWithoutLimitingInput(t *testing.T) {
 		}
 	}
 }
+
+func TestEncoderProviderSwitchReleasesHistory(t *testing.T) {
+	for _, kind := range []connection.ProviderKind{connection.Claude, connection.Gemini} {
+		for _, prepare := range []bool{false, true} {
+			var encoder Encoder
+			request := modelapi.Request{ModelID: "model", MaxOutput: 32}
+			assertEncodedRequest(t, &encoder, connection.OpenRouter, request, []Message{{Role: "user", Content: strings.Repeat("old", cacheThreshold)}}, Controls{})
+			messages := []Message{{Role: "user", Content: "new provider"}}
+			if prepare {
+				if _, err := encoder.Messages(kind, "model", []modelapi.Message{{Role: "user", Content: "new provider"}}); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, _, err := encoder.Encode(kind, "https://example.com", nil, request, messages, Controls{}); err != nil {
+				t.Fatal(err)
+			}
+			if encoder.history != nil || encoder.groups != nil || encoder.retained != 0 || encoder.tools.bytes != 0 {
+				t.Fatalf("%s prepare=%v kept another provider's context", kind, prepare)
+			}
+		}
+	}
+}
