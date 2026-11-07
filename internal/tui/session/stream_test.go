@@ -102,7 +102,9 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 		t.Fatalf("duplicated/unfinished stream: %q", transcript.String())
 	}
 	summary := a.chat.output.Blocks[len(a.chat.output.Blocks)-1]
-	if !summary.Centered || !summary.Thinking || !strings.Contains(summary.Text, "입력 123 | 출력 6 | 초당 토큰 ") {
+	// Fast streams can finish below the persisted millisecond precision.
+	// Summary tests cover TPS with an explicit generation duration.
+	if !summary.Centered || !summary.Thinking || !strings.Contains(summary.Text, "입력 123 | 출력 6") {
 		t.Fatalf("final request summary missing: %+v", summary)
 	}
 	messages, err := a.opts.Store.ContextMessages(ctx, a.opts.Session.ID, 0, 16*1024*1024, true)
