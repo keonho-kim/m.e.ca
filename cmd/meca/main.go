@@ -1,6 +1,6 @@
 // Purpose: Compose maintenance, headless, server and terminal startup with owned session transitions.
 // Pattern: Composition Root.
-// Usage: meca --help lists maintenance, interactive and headless invocations.
+// Usage: meca --help lists maintenance, interactive, headless and server invocations.
 // Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go, internal/tui/session/app.go, cmd/meca/conversation.go.
 package main
 
@@ -45,7 +45,7 @@ func start() (err error) {
 		return err
 	}
 	if mode.Action == startup.Help {
-		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca [path] --server [--protocol sse|socket|grpc] [--listen IP:port]\n            [--session ID] [--token-file PATH] [--tls-cert PATH --tls-key PATH]\n            [--allow-host host:port] [--allow-origin http(s)://host:port]\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
+		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca [path] --server [--protocol sse|socket|grpc] [--listen IP:port]\n            [--session ID] [--openai] [--token-file PATH] [--tls-cert PATH --tls-key PATH]\n            [--allow-host host:port] [--allow-origin http(s)://host:port]\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
 		return nil
 	}
 	home, err := os.UserHomeDir()
