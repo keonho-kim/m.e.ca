@@ -175,7 +175,7 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		model := &teamModel{steps: map[string]int{}, names: names, restore: round > 0}
 		var events []runrecord.Event
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		result, err := service.Run(ctx, agentrequest.Options{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Generator: model, Vault: vault, Text: "Create independent contributions inside the project."}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error { events = append(events, event); return nil })
+		result, err := service.Run(ctx, agentrequest.Options{Runtime: agentrequest.Runtime{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Vault: vault}, Text: "Create independent contributions inside the project.", Generator: model}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error { events = append(events, event); return nil })
 		cancel()
 		if err != nil || result.Status != runrecord.Answered || result.Text == "" {
 			t.Fatalf("round %d result=%+v error=%v", round, result, err)

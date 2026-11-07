@@ -5,7 +5,6 @@
 package local
 
 import (
-	"os"
 	"sync"
 
 	"github.com/keonho-kim/meca/internal/tools/local/process"
@@ -133,7 +132,7 @@ func (e *Executor) projectLiveCapture(id, stream string, previous liveCapture, u
 		if err != nil {
 			return previous, err
 		}
-		if err := os.WriteFile(path, []byte(text), 0600); err != nil {
+		if err := e.writeArtifact(id, path, []byte(text)); err != nil {
 			return previous, err
 		}
 		next.path = path

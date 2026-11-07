@@ -7,6 +7,8 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/storage/content"
+	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
 type displayRecord struct {
@@ -16,14 +18,15 @@ type displayRecord struct {
 	arguments []byte
 }
 
-func (s *Store) displayPage(ctx context.Context, session string, before int64, limit int) (page []displayRecord, err error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}'),t.source_sequence,COALESCE(e.kind,'')
-FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence
-LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence
-WHERE t.session_id=? AND t.sequence<? AND (
- (m.role IN ('user','assistant') AND m.content_bytes>0) OR
- e.kind IN ('thinking','progress','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference'))
-ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
+func (s *Store) displayPage(ctx context.Context, session string, before int64, limit int, maxBytes int) (page []displayRecord, err error) {
+	limited := maxBytes > 0
+	retained := 0
+	if maxBytes == 0 {
+		maxBytes = content.MaxBytes
+	}
+	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,CASE WHEN length(COALESCE(m.body,e.body))<=? THEN COALESCE(m.body,e.body) END,COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}'),t.source_sequence,COALESCE(e.kind,'')\nFROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence\nLEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence\nWHERE t.sequence<? AND (\n (m.role IN ('user','assistant') AND m.content_bytes>0) OR\n e.kind IN ('thinking','progress','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference'))\nORDER BY t.sequence DESC LIMIT ?",
+
+		maxBytes, before, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +37,20 @@ ORDER BY t.sequence DESC LIMIT ?`, session, before, limit)
 		if err = rows.Scan(&r.sequence, &r.kind, &r.body, &r.refs, &r.size, &entry.arguments, &entry.source, &entry.eventKind); err != nil {
 			return nil, err
 		}
+		if r.body == nil {
+			if len(page) > 0 {
+				break
+			}
+			return nil, history.ErrReadLimit
+		}
+		size := len(r.body) + len(r.refs) + len(entry.arguments)
+		if limited && size > maxBytes-retained {
+			if len(page) > 0 {
+				break
+			}
+			return nil, history.ErrReadLimit
+		}
+		retained += size
 		page = append(page, entry)
 	}
 	return page, rows.Err()

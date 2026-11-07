@@ -16,6 +16,7 @@ import (
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/policy"
 	storagesession "github.com/keonho-kim/meca/internal/storage/session"
@@ -31,7 +32,7 @@ func screenFixture(t testing.TB) *app {
 	a := terminalFixture(t, Options{
 		Home: home, State: state, Config: config.Defaults(),
 		Session: storagesession.Session{ID: "screen-test", ProjectRoot: root, DisplayRoot: root},
-		Vault:   &credentials.Vault{State: state},
+		Vault:   &credentials.Vault{State: state, Keys: &credentialtest.Memory{}},
 	})
 	a.chat.historyEnd = true
 	return a
@@ -58,7 +59,7 @@ func fixture(t testing.TB) *app {
 			t.Error(err)
 		}
 	})
-	vault := &credentials.Vault{State: state}
+	vault := &credentials.Vault{State: state, Keys: &credentialtest.Memory{}}
 	tools, err := local.NewExecutor(root, home, state, vault.Redact)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +73,9 @@ func fixture(t testing.TB) *app {
 		Home: home, State: state, Config: configuration,
 		Store: store, Session: store.Session(), Tools: tools, Files: tools.Files, Vault: vault,
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
-		SaveConfig:  func(c config.Config) error { return config.Save(state, c) },
+		UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
+			return config.Update(ctx, state, apply)
+		},
 	})
 }
 

@@ -7,8 +7,15 @@ package markdown
 import (
 	"github.com/yuin/goldmark/v2/extension"
 	"github.com/yuin/goldmark/v2/parser"
+	"github.com/yuin/goldmark/v2/util"
 )
 
 // Goldmark initializes grammar tables with sync.Once. Parse creates its own
 // reader, context and AST; this configured parser never retains document text.
-var documentParser = parser.New(parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser))
+var documentParser = parser.New(
+	parser.WithBlockParsers(
+		util.Prioritized[parser.BlockParser](compactCodeParser{native: parser.NewCodeBlockParser()}, 499),
+		util.Prioritized[parser.BlockParser](compactCodeParser{native: parser.NewFencedCodeBlockParser()}, 699),
+	),
+	parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser),
+)

@@ -14,6 +14,9 @@ import (
 )
 
 func (client *Client) ListModels(ctx context.Context) (models []modelconn.ModelInfo, err error) {
+	if client.Connection.Kind == modelconn.Claude || client.Connection.Kind == modelconn.Gemini {
+		return client.cloudModels(ctx)
+	}
 	if client.Connection.Kind == modelconn.OpenRouter {
 		return client.openRouterModels(ctx)
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"time"
 )
@@ -15,6 +16,7 @@ import (
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
+	Source           *source.Public       `json:"source,omitempty"`
 	Team             *TeamNote            `json:"team,omitempty"`
 	Agent            string               `json:"agent,omitempty"`
 	Final            bool                 `json:"final,omitempty"`

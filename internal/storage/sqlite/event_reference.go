@@ -17,7 +17,7 @@ func (s *Store) LatestEventReference(ctx context.Context) (*runrecord.EventRefer
 		return ref, nil
 	}
 	var seq int64
-	err := s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(sequence),0) FROM tool_events WHERE session_id=?", s.session.ID).Scan(&seq)
+	err := s.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(sequence),0) FROM tool_events").Scan(&seq)
 	if err != nil {
 		return nil, err
 	}

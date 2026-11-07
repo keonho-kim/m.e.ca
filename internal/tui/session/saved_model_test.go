@@ -60,7 +60,10 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			b.opts.SaveConfig = func(config.Config) error { t.Error("restoration overwrote global default"); return nil }
+			b.opts.UpdateConfig = func(context.Context, func(*config.Config)) (config.Config, error) {
+				t.Error("restoration overwrote global default")
+				return config.Config{}, nil
+			}
 			if err := b.restore(); err != nil {
 				t.Fatal(err)
 			}

@@ -39,8 +39,14 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 		e.tools = toolSnapshot{}
 	}
 	var value any
-	if kind == connection.LMStudio {
-		value = responses.Header("", 0, "", nil, definitions).Tools
+	if connection.UsesResponses(kind) {
+		body := responses.Header("", 0, "", nil, definitions)
+		if kind == connection.OpenAI {
+			for _, tool := range body.Tools {
+				tool["strict"] = false
+			}
+		}
+		value = body.Tools
 	} else {
 		value = native.Tools(definitions)
 	}

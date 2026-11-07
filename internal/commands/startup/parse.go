@@ -16,6 +16,8 @@ import (
 
 type Mode struct {
 	Print, Export, Diagnose bool
+	Server                  bool
+	ServerOptions           ServerOptions
 	NoShell                 bool
 	Output, Prompt, Session string
 	Action                  Action
@@ -73,6 +75,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 	flags.StringVar(&mode.Session, "session", "", "resume a session ID in this project")
 	flags.BoolVar(&mode.Export, "export", false, "export the selected session as JSONL")
 	flags.BoolVar(&mode.Diagnose, "diagnose", false, "explicitly diagnose the selected model")
+	serverFlags(flags, &mode)
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return Mode{Action: Help}, nil
@@ -81,6 +84,9 @@ func Parse(args []string, cwd string) (Mode, error) {
 	}
 	if mode.Output != "text" && mode.Output != "json" {
 		return Mode{}, fmt.Errorf("mode must be text or json")
+	}
+	if err := checkServerFlags(flags, mode); err != nil {
+		return Mode{}, err
 	}
 	mode.Print = mode.Print || mode.Output == "json" || mode.Diagnose || mode.Export
 	rest := flags.Args()

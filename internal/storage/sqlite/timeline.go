@@ -6,33 +6,42 @@ package sqlite
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/storage/content"
 
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
 func (s *Store) Timeline(ctx context.Context, session string, before int64, limit int) (records []history.Record, cursor int64, err error) {
-	return s.timeline(ctx, session, before, limit, false)
+	if err := s.checkSession(session); err != nil {
+		return nil, 0, err
+	}
+	return s.timeline(ctx, session, before, limit, false, history.ReadBounds{})
 }
 
 // TimelineSummaries leaves original tool output in storage until the user expands it.
-func (s *Store) TimelineSummaries(ctx context.Context, session string, before int64, limit int) ([]history.Record, int64, error) {
-	return s.timeline(ctx, session, before, limit, true)
+func (s *Store) TimelineSummaries(ctx context.Context, session string, before int64, limit int, bounds history.ReadBounds) ([]history.Record, int64, error) {
+	if err := s.checkSession(session); err != nil {
+		return nil, 0, err
+	}
+	return s.timeline(ctx, session, before, limit, true, bounds)
 }
-func (s *Store) timeline(ctx context.Context, session string, before int64, limit int, compact bool) (records []history.Record, cursor int64, err error) {
-	if limit < 1 || limit > 200 {
+func (s *Store) timeline(ctx context.Context, session string, before int64, limit int, compact bool, bounds history.ReadBounds) (records []history.Record, cursor int64, err error) {
+	if limit < 1 || limit > 200 || bounds.MaxBytes < 0 || bounds.TextBytes < 0 {
 		return nil, 0, fmt.Errorf("invalid history page")
 	}
 	if before == 0 {
 		before = 1 << 62
 	}
-	page, err := s.displayPage(ctx, session, before, limit)
+	page, err := s.displayPage(ctx, session, before, limit, bounds.MaxBytes)
 	if err != nil {
 		return nil, 0, err
 	}
-	payloads := pagePayloads{store: s, ctx: ctx}
+	budget := newReadBudget(bounds.MaxBytes)
+	payloads := pagePayloads{store: s, ctx: ctx, budget: budget}
 	pageTeam := teamPage{parent: s, compact: compact, payloads: &payloads}
 	var metadata []storedRecord
 	for i, entry := range page {
@@ -50,12 +59,44 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 	defer func() { err = errors.Join(err, pageTeam.close()) }()
 	bytes := 0
 	for i, entry := range page {
-		if err := payloads.include(i, entry.record.refs); err != nil {
+		if err := payloads.include(i, s, entry.record.refs); err != nil {
 			return nil, 0, err
 		}
 	}
 	for i, entry := range page {
 		record := entry.record
+		payloads.store = s
+		if err := budget.take(len(record.body)); err != nil {
+			if len(records) > 0 {
+				break
+			}
+			return nil, 0, err
+		}
+		if bounds.TextBytes > 0 && record.kind == "message" {
+			payloads.index = i
+			var visible history.Record
+			visible.Sequence, visible.Kind = record.sequence, record.kind
+			var envelope struct {
+				ID, Role   string
+				Incomplete bool
+			}
+			if err := json.Unmarshal(record.body, &envelope); err != nil {
+				return nil, 0, err
+			}
+			visible.Message.ID, visible.Message.Role, visible.Message.Incomplete = envelope.ID, envelope.Role, envelope.Incomplete
+			visible.Message.Content, visible.Truncated, err = content.TextPrefix(record.body, record.refs, func(id string, limit int) (string, bool, error) {
+				return payloads.prefix(id, limit)
+			}, bounds.TextBytes)
+			if err != nil {
+				return nil, 0, err
+			}
+			if err := visible.Message.Check(); err != nil {
+				return nil, 0, err
+			}
+			records = append(records, visible)
+			cursor = record.sequence
+			continue
+		}
 		// Page acceptance precedes payload hydration. An individually large
 		// visible record remains readable, but cannot overfill a preceding page.
 		if !compact && bytes+record.size > 16*1024*1024 && len(records) > 0 {
@@ -66,7 +107,6 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 		if compact && tool {
 			fields = compactToolFields(fields)
 		}
-		payloads.store = s
 		body, decodeErr := payloads.unpack(i, record, fields)
 		if decodeErr != nil {
 			return nil, 0, decodeErr

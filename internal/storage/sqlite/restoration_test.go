@@ -16,8 +16,8 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
 )
 
 func TestRestorationSkipsCompletedPayloads(t *testing.T) {

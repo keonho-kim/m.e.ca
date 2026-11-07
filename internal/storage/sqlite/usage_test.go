@@ -36,14 +36,14 @@ func TestTokenUsagePersistsAndRejectsInvalidCounts(t *testing.T) {
 		t.Fatalf("total=%+v err=%v", total, err)
 	}
 	unsupported := `{"kind":"usage","usage":{"input":100,"output":50,"estimated":true}}`
-	if _, err := store.db.ExecContext(ctx, "INSERT INTO tool_events(session_id,kind,body,raw_bytes,created_at) VALUES(?,'usage',?,?,?)", session.ID, unsupported, len(unsupported), "2026-10-13T00:00:00Z"); err != nil {
+	if _, err := store.db.ExecContext(ctx, "INSERT INTO tool_events(kind,body,raw_bytes,created_at) VALUES('usage',?,?,?)", unsupported, len(unsupported), "2026-10-13T00:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.TokenUsage(ctx, session.ID); err == nil {
 		t.Fatal("estimated record accepted as actual usage")
 	}
 	var retained string
-	if err := store.db.QueryRowContext(ctx, "SELECT body FROM tool_events WHERE session_id=? ORDER BY sequence DESC LIMIT 1", session.ID).Scan(&retained); err != nil || retained != unsupported {
+	if err := store.db.QueryRowContext(ctx, "SELECT body FROM tool_events ORDER BY sequence DESC LIMIT 1").Scan(&retained); err != nil || retained != unsupported {
 		t.Fatalf("unsupported record modified: %q %v", retained, err)
 	}
 }

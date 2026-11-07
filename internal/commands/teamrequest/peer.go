@@ -26,6 +26,16 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 		return result, err
 	}
 	defer func() { resultErr = errors.Join(resultErr, child.Close()) }()
+	if len(r.options.ClientContext) > 0 {
+		entries := make([]runrecord.Entry, len(r.options.ClientContext))
+		for i := range r.options.ClientContext {
+			message := r.options.ClientContext[i]
+			entries[i].Message = &message
+		}
+		if err := child.Store.Commit(ctx, child.Session.ID, entries); err != nil {
+			return result, err
+		}
+	}
 	local, err := r.service.NewTools()
 	if err != nil {
 		return result, err

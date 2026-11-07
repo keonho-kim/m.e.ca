@@ -16,7 +16,7 @@ func TestDirectPackedRenderingMatchesFullRows(t *testing.T) {
 	for _, text := range []string{unit + "[ref]: https://example.com\n", strings.Repeat(unit, 1000) + "[ref]: https://example.com", strings.Repeat(unit, 1000) + "\n\n\n", strings.Repeat("| Name | Value |\n|---|---|\n| **파일** | value 한글 |\n\n", 100)} {
 		for _, width := range []int{8, 30, 80} {
 			want := Render(text, width)
-			got := RenderPacked(text, width, 16<<20)
+			got, _ := RenderResumable(text, width, 16<<20)
 			if got == nil || got.Len() != len(want) || got.RetainedBytes() > 16<<20 {
 				t.Fatalf("width=%d: compact row count or budget changed", width)
 			}
@@ -27,7 +27,7 @@ func TestDirectPackedRenderingMatchesFullRows(t *testing.T) {
 			}
 		}
 	}
-	if RenderPacked(strings.Repeat(unit, 100), 80, 128) != nil {
+	if packed, plan := RenderResumable(strings.Repeat(unit, 100), 80, 128); packed != nil || plan != nil {
 		t.Fatal("over-budget compact result retained")
 	}
 }

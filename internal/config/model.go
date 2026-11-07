@@ -1,7 +1,7 @@
 // Purpose: Describe the remembered connection and model-bound controls for new sessions.
 // Pattern: Configuration value boundary.
 // Usage: Setup remembers non-secret connection fields; startup rebuilds an unverified selection.
-// Related: internal/config/settings.go, internal/tui/session/session.go, internal/provider/setup/commit.go.
+// Related: internal/config/settings.go, internal/tui/session/session.go, internal/commands/modelchange/commit.go.
 package config
 
 import (

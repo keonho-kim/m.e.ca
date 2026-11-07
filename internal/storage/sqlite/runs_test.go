@@ -1,14 +1,14 @@
 // Purpose: Preserve interrupted checkpoints and outcome claims without executing stored drafts.
 // Pattern: Repository recovery tests.
 // Usage: go test ./internal/storage/sqlite -run TestRunCheckpoint.
-// Related: internal/storage/sqlite/runs.go, internal/storage/recovery/recovery.go.
+// Related: internal/storage/sqlite/runs.go, internal/agent/session/recovery/recovery.go.
 package sqlite
 
 import (
 	"context"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"strings"
 	"testing"
 )

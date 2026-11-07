@@ -100,12 +100,13 @@ func (a *app) saveLanguage() {
 		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}
-	next, err := settingcmd.Language(a.opts.Config, languageChoices[a.choice].value, a.opts.SaveConfig)
+	next, err := settingcmd.Language(a.ctx, a.opts.Config, languageChoices[a.choice].value, a.opts.UpdateConfig)
 	if err != nil {
 		a.fail(err)
 		return
 	}
 	a.opts.Config = next
+	a.settings.Permission = next.Permission
 	a.language = locale.Resolve(a.ctx, next.Language)
 	a.clearSelection()
 	a.chat.chatProjection = chatProjection{}

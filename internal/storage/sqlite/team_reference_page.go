@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/storage/content"
+	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
 type privateRecord struct {
@@ -54,7 +56,11 @@ func (p *teamPage) prepare(ctx context.Context, page []storedRecord) error {
 		if err != nil {
 			return err
 		}
-		rows, err := source.db.QueryContext(ctx, "SELECT sequence,body,refs,raw_bytes,display_args FROM tool_events WHERE session_id=? AND sequence IN ("+placeholders(len(args))+")", append([]any{session}, args...)...)
+		maximum := content.MaxBytes
+		if p.payloads.budget != nil && p.payloads.budget.limited {
+			maximum = p.payloads.budget.remaining
+		}
+		rows, err := source.db.QueryContext(ctx, "SELECT sequence,CASE WHEN length(body)<=? THEN body END,refs,raw_bytes,display_args FROM tool_events WHERE sequence IN ("+placeholders(len(args))+")", append([]any{maximum}, args...)...)
 		if err != nil {
 			return err
 		}
@@ -64,9 +70,18 @@ func (p *teamPage) prepare(ctx context.Context, page []storedRecord) error {
 			if err = rows.Scan(&sequence, &entry.record.body, &entry.record.refs, &entry.record.size, &entry.arguments); err != nil {
 				break
 			}
+			if entry.record.body == nil {
+				err = history.ErrReadLimit
+				break
+			}
+			if p.payloads.budget != nil {
+				if err = p.payloads.budget.take(len(entry.record.body)); err != nil {
+					break
+				}
+			}
 			ref := runrecord.EventReference{Session: session, Sequence: sequence}
 			p.records[ref] = entry
-			if err = p.payloads.include(refs[ref], entry.record.refs); err != nil {
+			if err = p.payloads.include(refs[ref], source, entry.record.refs); err != nil {
 				break
 			}
 		}

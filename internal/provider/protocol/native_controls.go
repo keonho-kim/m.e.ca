@@ -22,6 +22,19 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 		}
 		return controls, nil
 	}
+	if kind == connection.Claude {
+		on := *request.Thinking
+		if on && !r.Enabled() || !on && !r.Off {
+			return controls, fmt.Errorf("thinking choice is unavailable for this Claude model")
+		}
+		mode := "disabled"
+		if on {
+			mode = "adaptive"
+			controls.ReasoningEffort = request.ReasoningEffort
+		}
+		controls.Think = map[string]string{"type": mode}
+		return controls, nil
+	}
 	if kind == connection.VLLM || kind == connection.SGLang {
 		return templateControls(kind, r, request)
 	}

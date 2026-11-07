@@ -14,6 +14,7 @@ type State struct {
 	Usage                         *modelapi.TokenUsage
 	Finished, Streaming, Received bool
 	Failure                       error
+	Continuation                  []byte
 }
 
 func (s *State) EmitFailedUsage(err error, emit func(modelapi.Event) error) error {

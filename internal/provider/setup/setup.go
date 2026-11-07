@@ -12,10 +12,11 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/discovery"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/transport"
+	"strings"
 )
 
 type Credentials interface {
-	Get(string) (string, error)
+	Get(context.Context, string, string) (string, error)
 }
 
 type Defaults struct {
@@ -30,11 +31,15 @@ type Prepared struct {
 }
 
 func Prepare(ctx context.Context, connectionValue connection.Connection, key, model string, defaults Defaults, previous connection.Selection, credentials Credentials) (prepared Prepared, err error) {
+	if err := ctx.Err(); err != nil {
+		return prepared, err
+	}
+	key = strings.Trim(key, " \t")
 	if key == "" && connectionValue.CredentialRef != "" {
 		if credentials == nil {
 			return prepared, fmt.Errorf("credential store is required for saved connection")
 		}
-		key, err = credentials.Get(connectionValue.CredentialRef)
+		key, err = credentials.Get(ctx, connectionValue.CredentialRef, connectionValue.CredentialScope())
 		if err != nil {
 			return prepared, err
 		}
@@ -48,7 +53,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 			client.Close()
 		}
 	}()
-	metadataHTTP := transport.New(key)
+	metadataHTTP := transport.New(key, connectionValue.Kind)
 	defer metadataHTTP.Close()
 	catalog := discovery.Client{Connection: connectionValue, HTTP: metadataHTTP}
 	selected := connection.Selection{Connection: connectionValue, Model: model}

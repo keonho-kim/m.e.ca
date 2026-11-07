@@ -35,6 +35,7 @@ func TestEffortSelectionPersistsOnlyAfterConfirmation(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+	finishModelChange(t, a)
 	if a.page != "chat" || a.work.state.active() || a.connection.selection.Effort() != "medium" || *a.connection.selection.Thinking {
 		t.Fatalf("saved=%+v status=%s", a.connection.selection, a.status)
 	}

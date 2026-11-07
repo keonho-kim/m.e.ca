@@ -117,3 +117,27 @@ func TestProjectionFailureAndCredentialChange(t *testing.T) {
 		t.Fatal("credential change escaped request invalidation")
 	}
 }
+
+func TestProjectionInvalidatesNativeSourceBinding(t *testing.T) {
+	var projection Projection
+	in := Input{Projection: &projection, MaxBytes: 1 << 20, RedactionVersion: func() int { return 0 }, Redact: func(s string) string { return s }}
+	in.Messages = []modelapi.Message{{Role: "assistant", Content: "reply", ReasoningState: []byte(`[]`), ProviderID: "first", ModelID: "first-model"}}
+	if _, err := Build(in); err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []string{"provider", "model"} {
+		if change == "provider" {
+			in.Messages[0].ProviderID = "second"
+		} else {
+			in.Messages[0].ModelID = "second-model"
+		}
+		request, err := Build(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := request.Messages[len(request.Messages)-1]
+		if got.ProviderID != in.Messages[0].ProviderID || got.ModelID != in.Messages[0].ModelID {
+			t.Fatalf("%s change reused another native source: %s/%s", change, got.ProviderID, got.ModelID)
+		}
+	}
+}

@@ -18,7 +18,7 @@ func TestAttemptsReturnsPermanentErrorsWithoutReplay(t *testing.T) {
 		&modelapi.OutputLimitError{Reason: "output token limit"},
 		&modelapi.ToolCallError{Detail: "invalid arguments"},
 	} {
-		c := New("")
+		c := New("", "")
 		attempts := 0
 		err := c.Attempts(context.Background(), func() error { attempts++; return cause }, nil)
 		c.Close()
@@ -30,7 +30,7 @@ func TestAttemptsReturnsPermanentErrorsWithoutReplay(t *testing.T) {
 
 func TestAttemptsTransientFailureRecovers(t *testing.T) {
 	for _, status := range []int{429, 503} {
-		c := New("")
+		c := New("", "")
 		attempts, resets := 0, 0
 		err := c.Attempts(context.Background(), func() error {
 			attempts++

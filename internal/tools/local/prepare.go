@@ -16,6 +16,18 @@ import (
 )
 
 func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
+	return executor.prepare(ctx, settings, call, nil)
+}
+
+// PrepareAdmitted binds command reservations before an executable candidate escapes.
+func (executor *Executor) PrepareAdmitted(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (toolapi.Execution, error) {
+	if call.Name != "execute_command" || admit == nil {
+		return nil, fmt.Errorf("command admission requires an execute_command candidate")
+	}
+	return executor.prepare(ctx, settings, call, admit)
+}
+
+func (executor *Executor) prepare(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (toolapi.Execution, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -44,7 +56,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 	}
 	switch spec.Name {
 	case "execute_command":
-		op := &commandOperation{}
+		op := &commandOperation{admit: admit}
 		initialize(&op.operation)
 		if err := op.prepareCommand(ctx); err != nil {
 			return nil, err

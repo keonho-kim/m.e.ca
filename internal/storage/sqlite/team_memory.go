@@ -6,49 +6,33 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	record "github.com/keonho-kim/meca/internal/agent/record"
-	"strconv"
-	"strings"
 )
 
-func (s *Store) publicMemoryReference(ctx context.Context, event record.Event) (string, int, error) {
-	if s.room == nil || event.Kind != "tool_succeeded" || event.Call == nil {
-		return "", 0, nil
+func (s *Store) publicMemoryReference(ctx context.Context, event record.Event) (int64, int, error) {
+	if event.Source == nil {
+		return 0, 0, nil
 	}
-	kind := ""
-	switch event.Call.Name {
-	case "discuss":
-		kind = "team_discussion"
-	case "set_work":
-		kind = "team_work"
-	default:
-		return "", 0, nil
+	if s.room == nil {
+		return 0, 0, fmt.Errorf("public source requires its owning room")
 	}
-	var result struct{ Sequence int64 }
-	if err := json.Unmarshal(event.Output, &result); err != nil || result.Sequence < 1 {
-		return "", 0, fmt.Errorf("successful collaboration outcome requires its public sequence")
+	origin := event.Source
+	if origin.Session != "" && origin.Session != s.room.session.ID {
+		return 0, 0, fmt.Errorf("public source belongs to a different room")
 	}
-	meta, err := s.room.TeamMessageMetadata(ctx, result.Sequence)
-	if err != nil {
-		return "", 0, err
+	if origin.Sequence < 1 {
+		return 0, 0, fmt.Errorf("public source requires a committed sequence")
 	}
-	if meta.Kind != kind {
-		return "", 0, fmt.Errorf("collaboration outcome references a different public record kind")
-	}
-	return "public:" + strconv.FormatInt(result.Sequence, 10), meta.Bytes, nil
-}
 
-func publicMemorySequence(role string) (int64, error) {
-	if !strings.HasPrefix(role, "public:") {
-		return 0, nil
+	meta, err := s.room.TeamMessageMetadata(ctx, origin.Sequence)
+	if err != nil {
+		return 0, 0, err
 	}
-	sequence, err := strconv.ParseInt(strings.TrimPrefix(role, "public:"), 10, 64)
-	if err != nil || sequence < 1 {
-		return 0, fmt.Errorf("invalid authored public reference")
+	if meta.Kind != origin.Kind || meta.From != origin.Author {
+		return 0, 0, fmt.Errorf("collaboration outcome references a different public record kind")
 	}
-	return sequence, nil
+	return origin.Sequence, meta.Bytes, nil
 }
 
 func (s *Store) publicContexts(ctx context.Context, sequences []any) (map[int64]string, error) {
@@ -58,14 +42,18 @@ func (s *Store) publicContexts(ctx context.Context, sequences []any) (map[int64]
 	query := "SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) " +
 		"FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence " +
 		"LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence " +
-		"WHERE t.session_id=? AND t.sequence IN (" + placeholders(len(sequences)) + ")"
-	records, err := s.room.recordPage(ctx, query, append([]any{s.room.session.ID}, sequences...)...)
+		"WHERE t.sequence IN (" + placeholders(len(sequences)) + ")"
+	records, err := s.room.recordPage(ctx, query, sequences...)
+	if err != nil {
+		return nil, err
+	}
+	prefixes, err := s.room.publicPrefixes(ctx, records)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[int64]string, len(records))
 	for _, r := range records {
-		m, err := s.room.publicMessage(ctx, r)
+		m, err := s.room.publicMessage(ctx, r, prefixes[r.sequence])
 		if err != nil {
 			return nil, err
 		}

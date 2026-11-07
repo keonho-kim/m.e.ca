@@ -24,7 +24,7 @@ func TestLargeErrorPreservesCapacityClassification(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	client := New("")
+	client := New("", "")
 	defer client.Close()
 	request, err := client.NewRequest(context.Background(), http.MethodGet, server.URL, nil)
 	if err != nil {

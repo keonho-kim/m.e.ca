@@ -14,6 +14,14 @@ import (
 )
 
 func (event Event) Check() error {
+	if event.Source != nil {
+		if event.Kind != "tool_succeeded" || event.Source.Kind != "team_discussion" && event.Source.Kind != "team_work" {
+			return fmt.Errorf("public result source requires a successful outcome")
+		}
+		if err := event.Source.Check(); err != nil {
+			return err
+		}
+	}
 	if err := event.Team.Check(event.Kind); err != nil {
 		return err
 	}

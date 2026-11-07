@@ -1,0 +1,15 @@
+// Purpose: Define unary control and independent server streaming for Connect and gRPC clients.
+// Pattern: Versioned Protobuf service contract.
+// Usage: The grpc transport serves native gRPC, gRPC-Web and Connect with these methods.
+// Related: api/meca/v1/control.proto, api/meca/v1/state.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+import "meca/v1/control.proto";
+import "meca/v1/state.proto";
+
+service MecaService {
+  rpc Call(Command) returns (Reply);
+  // Closing this stream detaches the observer; use Cancel to stop a request.
+  rpc WatchEvents(WatchRequest) returns (stream Notification);
+}

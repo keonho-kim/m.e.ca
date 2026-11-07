@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-func Uninstall(ctx context.Context, home string, clearCredentials func() error) (err error) {
+func Uninstall(ctx context.Context, home string, clearCredentials func(context.Context) error) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -22,8 +22,20 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 		return err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
+	homeLease, err := statefs.Lease(root, true)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, homeLease.Close()) }()
+	pending, exists, err := pendingCleanup(root)
+	if err != nil {
+		return err
+	}
 	info, err := root.Lstat(statefs.DirectoryName)
 	if errors.Is(err, os.ErrNotExist) {
+		if exists {
+			return finishCleanup(ctx, root, pending, clearCredentials)
+		}
 		if _, binaryErr := root.Lstat(binaryName); binaryErr == nil {
 			return fmt.Errorf("installation state is missing; run meca install before meca uninstall")
 		} else if !errors.Is(binaryErr, os.ErrNotExist) {
@@ -47,6 +59,9 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 		return err
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
+	if exists {
+		return finishCleanup(ctx, root, pending, clearCredentials)
+	}
 	r, err := loadReceipt(root)
 	if err != nil {
 		return err
@@ -62,12 +77,11 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 	if err != nil {
 		return err
 	}
+	credentialsUsed := false
 	if _, err := state.Lstat("credentials.used"); err == nil {
+		credentialsUsed = true
 		if clearCredentials == nil {
 			return fmt.Errorf("credential cleanup is required")
-		}
-		if err := clearCredentials(); err != nil {
-			return fmt.Errorf("remove MECA credentials before deleting state: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -82,6 +96,12 @@ func Uninstall(ctx context.Context, home string, clearCredentials func() error) 
 	}
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if credentialsUsed {
+		if err := publishCleanup(root, r.Digest); err != nil {
+			return err
+		}
+		return finishCleanup(ctx, root, r.Digest, clearCredentials)
 	}
 	if err := root.Remove(binaryName); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err

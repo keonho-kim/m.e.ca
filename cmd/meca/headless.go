@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/headless"
 	"github.com/keonho-kim/meca/internal/commands/startup"
@@ -18,7 +19,6 @@ import (
 	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 	"github.com/keonho-kim/meca/internal/provider/setup"
-	"github.com/keonho-kim/meca/internal/storage/recovery"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	"golang.org/x/term"
@@ -118,11 +118,9 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 	}
 	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	options := agentrequest.Options{
-		Config: cfg, Selection: selected, Session: store.Session(), Generator: prepared.Client,
-		Tools: executor, Store: store, Vault: vault, Text: text,
-		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
-	}
+	options := agentrequest.Options{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(),
+		Tools: executor, Store: store, Vault: vault,
+		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, Text: text, Generator: prepared.Client}
 	teamMode, err := store.TeamMode(ctx)
 	if err != nil {
 		return err

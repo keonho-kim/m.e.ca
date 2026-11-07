@@ -121,6 +121,9 @@ func TestSanitizedLocalPeerContentDoesNotDependOnPublicOriginal(t *testing.T) {
 	message := value.Context()
 	message.Content = strings.ReplaceAll(message.Content, "private-original", "[redacted]")
 	message.ID += "#local"
+	local := *message.Source
+	local.Sequence = 0
+	message.Source = &local
 	if err := child.CommitContext(ctx, child.session.ID, []runrecord.Entry{{Message: &message}}, value.Sequence); err != nil {
 		t.Fatal(err)
 	}

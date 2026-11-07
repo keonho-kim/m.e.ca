@@ -49,7 +49,7 @@ func (a *app) savePermission() {
 		a.status = a.language.Text("Stop the current task before changing settings")
 		return
 	}
-	next, err := settingcmd.Permission(a.opts.Config, policy.Permission(a.choice), a.opts.SaveConfig)
+	next, err := settingcmd.Permission(a.ctx, a.opts.Config, policy.Permission(a.choice), a.opts.UpdateConfig)
 	if err != nil {
 		a.fail(err)
 		return

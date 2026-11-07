@@ -10,7 +10,7 @@ func (d *Draft) Final(value string) error {
 	if d.Arguments.Len() == 0 {
 		return d.Append(value)
 	}
-	if d.Arguments.String() != value && !equivalentArguments(d.Arguments.String(), value) {
+	if d.Arguments.String() != value && !SameArguments(d.Arguments.String(), value) {
 		return &modelapi.ToolCallError{Detail: "final function arguments differ from streamed arguments"}
 	}
 	return nil

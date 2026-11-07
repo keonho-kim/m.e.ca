@@ -51,7 +51,7 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		return err
 	}
 	if errors.Is(toolErr, errApprovalDenied) {
-		return s.save(ctx, modelapi.Message{Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
+		return s.save(ctx, modelapi.Message{Source: outcome.Source, Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 	}
 	s.checkpoint.Phase = "observation"
 	s.checkpoint.Observation = s.runner.Redact(outcome.Summary)
@@ -68,5 +68,5 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		return err
 	}
 	events = append(events, event)
-	return s.save(ctx, modelapi.Message{Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
+	return s.save(ctx, modelapi.Message{Source: outcome.Source, Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
 }

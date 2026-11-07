@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 26
+const schemaVersion = 27
 
 const schema = `
 CREATE TABLE team_members (
@@ -27,14 +27,21 @@ CREATE TABLE sessions (
  summary TEXT
 );
 CREATE TABLE payloads (
- id TEXT PRIMARY KEY,
+ id INTEGER PRIMARY KEY,
+ digest BLOB NOT NULL UNIQUE CHECK(length(digest)=32),
  codec INTEGER NOT NULL,
  raw_bytes INTEGER NOT NULL,
  body BLOB NOT NULL
 );
+CREATE TABLE public_contexts (
+ sequence INTEGER PRIMARY KEY REFERENCES timeline(sequence),
+ prefix BLOB NOT NULL,
+ codec INTEGER NOT NULL,
+ raw_bytes INTEGER NOT NULL,
+ digest BLOB NOT NULL CHECK(length(digest)=32)
+);
 CREATE TABLE messages (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL REFERENCES sessions(id),
  body BLOB NOT NULL,
  refs BLOB NOT NULL DEFAULT '{}',
  raw_bytes INTEGER NOT NULL,
@@ -42,10 +49,8 @@ CREATE TABLE messages (
  content_bytes INTEGER NOT NULL,
  created_at TEXT NOT NULL
 );
-CREATE INDEX session_messages ON messages(session_id, sequence);
 CREATE TABLE tool_events (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL REFERENCES sessions(id),
  body BLOB NOT NULL,
  refs BLOB NOT NULL DEFAULT '{}',
  raw_bytes INTEGER NOT NULL,
@@ -53,44 +58,40 @@ CREATE TABLE tool_events (
  memory_role TEXT NOT NULL DEFAULT '',
  memory_text TEXT NOT NULL DEFAULT '',
  memory_bytes INTEGER NOT NULL DEFAULT 0,
+ memory_source INTEGER NOT NULL DEFAULT 0 CHECK(memory_source>=0),
  display_args BLOB NOT NULL DEFAULT '{}',
  created_at TEXT NOT NULL
 );
-CREATE INDEX session_tool_events ON tool_events(session_id,sequence);
-CREATE INDEX event_kind ON tool_events(session_id,kind,sequence);
+CREATE INDEX event_kind ON tool_events(kind,sequence);
 CREATE TABLE run_states (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL REFERENCES sessions(id),
  run_id TEXT NOT NULL,
  body BLOB NOT NULL,
  codec INTEGER NOT NULL,
  digest TEXT NOT NULL,
  raw_bytes INTEGER NOT NULL,
- UNIQUE(session_id,run_id)
+ UNIQUE(run_id)
 );
 CREATE TABLE file_selections (
- session_id TEXT NOT NULL REFERENCES sessions(id),
  path TEXT NOT NULL,
- PRIMARY KEY(session_id,path)
+ PRIMARY KEY(path)
 );
 CREATE TABLE timeline (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL REFERENCES sessions(id),
  kind TEXT NOT NULL CHECK(kind IN ('message','event')),
  source_sequence INTEGER NOT NULL,
  UNIQUE(kind,source_sequence)
 );
-CREATE INDEX session_timeline ON timeline(session_id,sequence);
 CREATE TABLE conversation_tokens (
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
- session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id),
+ singleton INTEGER NOT NULL UNIQUE DEFAULT 1 CHECK(singleton=1),
  amount INTEGER NOT NULL CHECK(amount>=0),
  through_timeline INTEGER NOT NULL DEFAULT 0 CHECK(through_timeline>=0),
  estimated INTEGER NOT NULL CHECK(estimated IN (0,1)),
  kind TEXT NOT NULL
 );
 CREATE TABLE memories (
- session_id TEXT PRIMARY KEY REFERENCES sessions(id),
+ singleton INTEGER PRIMARY KEY DEFAULT 1 CHECK(singleton=1),
  revision INTEGER NOT NULL,
  through_timeline INTEGER NOT NULL,
  through_usage INTEGER NOT NULL,

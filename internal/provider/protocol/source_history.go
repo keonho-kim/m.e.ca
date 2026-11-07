@@ -1,7 +1,7 @@
 // Purpose: Reuse owned text and image groups before provider conversion without copying large keys.
 // Pattern: Execution-owned immutable encoding cache with content fingerprints.
 // Usage: The scoped HTTP generator calls Encoder.Messages before tokenization and Encode.
-// Related: internal/provider/protocol/encoded_history.go, internal/provider/httpclient/request.go.
+// Related: internal/provider/protocol/encoded_history.go, internal/provider/protocol/cloud_sources.go, internal/provider/httpclient/request.go.
 package protocol
 
 import (
@@ -34,19 +34,14 @@ type wireIdentity struct {
 	raw                                                                    [32]byte
 }
 
-// Messages returns DTOs for this encoder's next request. Matching DTOs carry
-// their immutable wire bytes; they must be consumed by Encode or TokenizerBody.
+// Messages returns immutable prepared DTOs for this encoder's next serial
+// request. Consume them with Encode or TokenizerBody before changing originals;
+// native arguments and continuation bytes remain owned by the current caller.
 func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []modelapi.Message) ([]Message, error) {
-	size := 0
-	for _, m := range source {
-		size += 512 + len(m.Content) + len(m.Reasoning) + len(m.ReasoningState)
-		for _, image := range m.Images {
-			size += len(image.Data)*4/3 + 1024
-		}
-		for _, call := range m.Calls {
-			size += len(call.Arguments) + len(call.Name) + len(call.ID)
-		}
+	if kind == connection.Claude || kind == connection.Gemini {
+		return e.cloudMessages(kind, model, source)
 	}
+	size := sourceHistoryBytes(source)
 	if e == nil {
 		return Messages(kind, source)
 	}
@@ -113,12 +108,30 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 	return out, nil
 }
 
+func sourceHistoryBytes(source []modelapi.Message) int {
+	size := 0
+	for _, m := range source {
+		size += 512 + len(m.Content) + len(m.Reasoning) + len(m.ReasoningState)
+		for _, image := range m.Images {
+			size += len(image.Data)*4/3 + 1024
+		}
+		for _, call := range m.Calls {
+			size += len(call.Arguments) + len(call.Name) + len(call.ID)
+		}
+	}
+	return size
+}
+
 func (g *sourceGroup) matches(source []modelapi.Message) bool {
-	if len(g.keys) != len(source) {
+	return sameSource(g.keys, source)
+}
+
+func sameSource(keys []sourceIdentity, source []modelapi.Message) bool {
+	if len(keys) != len(source) {
 		return false
 	}
 	for i, m := range source {
-		if identifySource(m) != g.keys[i] {
+		if identifySource(m) != keys[i] {
 			return false
 		}
 	}
@@ -152,11 +165,22 @@ func identifySource(m modelapi.Message) sourceIdentity {
 func identifyWire(m Message) wireIdentity {
 	content, _ := m.Content.(string)
 	key := wireIdentity{role: m.Role, content: content, thinking: m.Thinking, reasoning: m.Reasoning, reasoningContent: m.ReasoningContent, toolID: m.ToolCallID, toolName: m.ToolName}
-	if len(m.Calls) > 0 || len(m.ReasoningDetails) > 0 {
+	if len(m.Calls) > 0 || len(m.ReasoningDetails) > 0 || len(m.continuation) > 0 {
 		h := sha256.New()
 		fingerprintPart(h, m.Calls)
+		fingerprintPart(h, m.continuation)
 		for _, raw := range m.ReasoningDetails {
 			fingerprintPart(h, raw)
+		}
+		copy(key.raw[:], h.Sum(nil))
+	}
+	if len(m.nativeCalls) > 0 {
+		h := sha256.New()
+		fingerprintPart(h, key.raw[:])
+		for _, call := range m.nativeCalls {
+			fingerprintPart(h, []byte(call.ID))
+			fingerprintPart(h, []byte(call.Name))
+			fingerprintPart(h, call.Arguments)
 		}
 		copy(key.raw[:], h.Sum(nil))
 	}

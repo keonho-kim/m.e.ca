@@ -1,4 +1,4 @@
-// Purpose: Separate large JSON values into content-addressed references before persistence.
+// Purpose: Separate large JSON values into an envelope and caller-resolved references.
 // Pattern: Pure record transformation with a caller-owned payload write callback.
 // Usage: SQLite packs a record and writes referenced payloads in the same transaction.
 // Related: internal/storage/content/restore.go, internal/storage/sqlite/record_codec.go.
@@ -15,9 +15,9 @@ const (
 	MaxBytes  = 512 * 1024 * 1024
 )
 
-func Pack(body []byte, put func([]byte) (string, error)) ([]byte, []byte, error) {
+func Pack(body []byte, put func([]byte) (string, error)) ([]byte, map[string]string, error) {
 	if len(body) <= Threshold {
-		return body, []byte("{}"), nil
+		return body, nil, nil
 	}
 	refs := map[string]string{}
 	var pack func(json.RawMessage, []string) (json.RawMessage, error)
@@ -69,8 +69,7 @@ func Pack(body []byte, put func([]byte) (string, error)) ([]byte, []byte, error)
 	if err != nil {
 		return nil, nil, err
 	}
-	encoded, err := json.Marshal(refs)
-	return packed, encoded, err
+	return packed, refs, nil
 }
 
 func appendPath(path []string, key string) []string {

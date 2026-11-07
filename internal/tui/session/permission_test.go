@@ -5,6 +5,7 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -62,7 +63,9 @@ func TestPermissionCancelFailureAndActiveTask(t *testing.T) {
 	if a.page != "chat" || a.opts.Config.Permission != policy.PermissionDefault {
 		t.Fatal("discard applied a permission change")
 	}
-	a.opts.SaveConfig = func(config.Config) error { return errors.New("write failed") }
+	a.opts.UpdateConfig = func(context.Context, func(*config.Config)) (config.Config, error) {
+		return config.Config{}, errors.New("write failed")
+	}
 	a.openPermission()
 	a.choice = 1
 	a.savePermission()

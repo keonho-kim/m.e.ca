@@ -21,6 +21,9 @@ func (a *app) interruptSetup() {
 }
 
 func (a *app) setupResult(n *notice) bool {
+	if n.Commit != nil && (n.Commit.Selection.Model != "" || n.Commit.Uncertain) {
+		return true
+	}
 	if n.SetupRevision == 0 {
 		return true
 	}

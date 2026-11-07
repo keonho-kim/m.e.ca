@@ -12,6 +12,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/redaction"
 )
 
 type projectedMessage struct {
@@ -84,9 +85,8 @@ func (p *Projection) appendHistory(input Input, messages []modelapi.Message) ([]
 			}
 			projected.Content = input.Redact(projected.Content)
 			projected.Reasoning = input.Redact(projected.Reasoning)
-			state := string(projected.ReasoningState)
-			if input.Redact(state) != state {
-				return nil, 0, fmt.Errorf("provider continuation state contains protected content")
+			if err := redaction.CheckProtected(projected.ReasoningState, input.Redact); err != nil {
+				return nil, 0, err
 			}
 			projected = projected.SealHistory()
 			entry = projectedMessage{source: message, message: projected, paired: paired, bytes: projected.ContextBytes()}
@@ -102,7 +102,7 @@ func (p *Projection) appendHistory(input Input, messages []modelapi.Message) ([]
 }
 
 func sameMessage(a, b modelapi.Message) bool {
-	return sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
+	return samePublicSource(a, b) && sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
 		return a.ID == b.ID && a.Name == b.Name && bytes.Equal(a.Arguments, b.Arguments)
 	})
 }
@@ -112,4 +112,11 @@ func sameImages(a, b []media.Image) bool {
 	return slices.EqualFunc(a, b, func(x, y media.Image) bool {
 		return x.Path == y.Path && x.Digest == y.Digest && x.MIME == y.MIME && x.Format == y.Format && x.Representative == y.Representative && x.Width == y.Width && x.Height == y.Height && len(x.Data) == len(y.Data)
 	})
+}
+
+func samePublicSource(a, b modelapi.Message) bool {
+	if a.Source == nil || b.Source == nil {
+		return a.Source == nil && b.Source == nil
+	}
+	return *a.Source == *b.Source
 }

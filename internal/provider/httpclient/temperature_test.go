@@ -1,4 +1,4 @@
-// Purpose: Verify role-selected temperature reaches every provider unchanged, including zero and retries.
+// Purpose: Verify sampling transport, explicit provider-default policy and request replay on retries.
 // Pattern: HTTP contract tests.
 // Usage: go test ./internal/provider/httpclient -run TestTemperature.
 // Related: internal/provider/protocol/request.go, internal/provider/transport/retry.go.
@@ -23,7 +23,10 @@ func TestTemperatureProviderRequestsAndRetries(t *testing.T) {
 				client := mockClient(t, provider.Kind, func(w http.ResponseWriter, r *http.Request) {
 					var body struct {
 						Temperature *float64 `json:"temperature"`
-						Options     struct {
+						Generation  struct {
+							Temperature *float64 `json:"temperature"`
+						} `json:"generationConfig"`
+						Options struct {
 							Temperature *float64 `json:"temperature"`
 						} `json:"options"`
 					}
@@ -37,7 +40,14 @@ func TestTemperatureProviderRequestsAndRetries(t *testing.T) {
 							t.Error("native temperature leaked to top level")
 						}
 					}
-					if got == nil || *got != value {
+					if provider.Kind == connection.Gemini {
+						got = body.Generation.Temperature
+					}
+					if provider.Kind == connection.OpenAI || provider.Kind == connection.Claude {
+						if got != nil {
+							t.Error("unsupported sampling override sent to first-party API")
+						}
+					} else if got == nil || *got != value {
 						t.Errorf("temperature lost: %+v", body)
 					}
 					if calls.Add(1) == 1 {
@@ -45,14 +55,7 @@ func TestTemperatureProviderRequestsAndRetries(t *testing.T) {
 						return
 					}
 					w.Header().Set("Content-Type", "application/json")
-					switch provider.Kind {
-					case connection.Ollama:
-						fmt.Fprint(w, `{"message":{"content":"ok"},"done":true}`)
-					case connection.LMStudio:
-						fmt.Fprint(w, `{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`)
-					default:
-						fmt.Fprint(w, `{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}`)
-					}
+					writeProviderSuccess(w, provider.Kind, "ok")
 				})
 				request := recoveryRequest()
 				request.Temperature = &value

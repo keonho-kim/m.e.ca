@@ -1,0 +1,87 @@
+// Purpose: Define server replies, snapshots and paged visible history.
+// Pattern: Versioned external read contract.
+// Usage: All transports serialize these messages with Protobuf JSON or binary encoding.
+// Related: api/meca/v1/control.proto, api/meca/v1/events.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+import "meca/v1/events.proto";
+
+message Error { string code = 1; string message = 2; }
+message Reply {
+  string id = 1;
+  oneof result {
+    EmptyResult ok = 10;
+    Error error = 11;
+    Sessions sessions = 12;
+    Snapshot state = 13;
+    HistoryPage history = 14;
+    DetailPage detail = 15;
+    Task task = 16;
+  }
+}
+message EmptyResult {}
+message Session {
+  string id = 1;
+  string project_root = 2;
+  string display_root = 3;
+  string summary = 4;
+  string updated = 5;
+  string unavailable = 6;
+}
+message Sessions { repeated Session items = 1; string next_cursor = 2; }
+message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; }
+message Model {
+  string provider = 1;
+  string endpoint = 2;
+  string model = 3;
+  bool credential_saved = 4;
+  optional bool thinking = 5;
+  optional string reasoning_effort = 6;
+  bool thinking_supported = 7;
+  int32 context_window = 8;
+  string notice = 9;
+}
+message Draft {
+  string agent = 1;
+  uint64 generation = 2;
+  string text = 3;
+  string thinking = 4;
+  bool truncated = 5;
+}
+message Execution {
+  Session session = 1;
+  Model model = 2;
+  bool team = 3;
+}
+message Snapshot {
+  string cursor = 1;
+  Session session = 2;
+  Task task = 3;
+  Model model = 4;
+  string permission = 5;
+  bool team = 6;
+  repeated Approval approvals = 7;
+  repeated Draft drafts = 8;
+  Execution execution = 9;
+}
+message HistoryItem {
+  int64 sequence = 1;
+  string kind = 2;
+  string role = 3;
+  string text = 4;
+  bool incomplete = 5;
+  Event event = 6;
+  bool truncated = 7;
+}
+message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; }
+message DetailPage {
+  bytes data = 1;
+  int64 offset = 2;
+  int64 next_offset = 3;
+  int64 total_bytes = 4;
+  string content_type = 5;
+}
+message Notification {
+  oneof body { Reply reply = 1; Snapshot snapshot = 2; Event event = 3; }
+}

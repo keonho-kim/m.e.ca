@@ -15,13 +15,14 @@ type Capabilities struct {
 }
 
 type ModelInfo struct {
-	ImageInput    ImageInput `json:"image_input,omitempty"`
-	Notice        string     `json:"notice,omitempty"`
-	Reasoning     *Reasoning `json:"reasoning,omitempty"`
-	ID            string     `json:"id"`
-	ContextWindow int        `json:"context_window"`
-	MaxInput      int        `json:"max_input"`
-	MaxOutput     int        `json:"max_output"`
+	ThoughtSummary *bool      `json:"thought_summary,omitempty"`
+	ImageInput     ImageInput `json:"image_input,omitempty"`
+	Notice         string     `json:"notice,omitempty"`
+	Reasoning      *Reasoning `json:"reasoning,omitempty"`
+	ID             string     `json:"id"`
+	ContextWindow  int        `json:"context_window"`
+	MaxInput       int        `json:"max_input"`
+	MaxOutput      int        `json:"max_output"`
 }
 
 type Selection struct {

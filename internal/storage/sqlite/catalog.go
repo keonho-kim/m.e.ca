@@ -16,7 +16,10 @@ import (
 	"time"
 )
 
-type Sessions struct{ directory string }
+type Sessions struct {
+	directory string
+	pages     conversationPages
+}
 
 func OpenSessions(directory string) (*Sessions, error) {
 	absolute, err := filepath.Abs(directory)
@@ -32,7 +35,16 @@ func OpenSessions(directory string) (*Sessions, error) {
 	}
 	return &Sessions{directory: absolute}, nil
 }
-func (s *Sessions) Open(ctx context.Context, project, id string) (*Store, error) {
+func (s *Sessions) Open(ctx context.Context, project, id string) (store *Store, resultErr error) {
+	return s.open(ctx, project, id, false)
+}
+
+func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) (store *Store, resultErr error) {
+	defer func() {
+		if errors.Is(resultErr, os.ErrNotExist) {
+			resultErr = errors.Join(sessionstate.ErrNotFound, resultErr)
+		}
+	}()
 	if !sessionstate.ValidID(id) {
 		return nil, fmt.Errorf("invalid session ID")
 	}
@@ -41,7 +53,7 @@ func (s *Sessions) Open(ctx context.Context, project, id string) (*Store, error)
 		return nil, err
 	}
 	path := filepath.Join(directory, id+".db")
-	db, err := connect(ctx, path, false)
+	db, err := connect(ctx, path, readOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +64,10 @@ func (s *Sessions) Open(ctx context.Context, project, id string) (*Store, error)
 	if c.ProjectRoot != canonical {
 		return nil, errors.Join(fmt.Errorf("session project does not match its storage directory"), db.Close())
 	}
-	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
-		return nil, errors.Join(err, db.Close())
+	if !readOnly {
+		if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
+			return nil, errors.Join(err, db.Close())
+		}
 	}
 	return &Store{db: db, path: path, session: c.Session}, nil
 }
@@ -66,6 +80,9 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 	}
 	directory, project, err := s.projectDirectory(project, true)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.reserveSession(ctx, directory, project); err != nil {
 		return nil, err
 	}
 	id := "session_" + rand.Text()

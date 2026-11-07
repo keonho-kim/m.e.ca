@@ -1,7 +1,7 @@
 // Purpose: Restore the model, conversation, selected paths and configured execution policy.
 // Pattern: Session recovery use case.
 // Usage: Called before the terminal event loop starts.
-// Related: internal/storage/recovery/recovery.go, internal/tui/session/app.go.
+// Related: internal/agent/session/recovery/recovery.go, internal/tui/session/app.go.
 package session
 
 import (
@@ -49,13 +49,9 @@ func (a *app) restore() error {
 		}
 	}
 	if a.connection.selection.Model != "" {
-		key, keyErr := a.opts.Vault.Get(a.connection.selection.Connection.CredentialRef)
-		if keyErr != nil {
-			a.status = keyErr.Error()
-		} else {
-			// Resolve current server metadata and configured controls before adopting the client.
-			a.connect(a.connection.selection.Connection, key, a.connection.selection.Model, false)
-		}
+		// The setup worker owns credential I/O so an OS unlock prompt never
+		// prevents the terminal event loop from processing cancellation.
+		a.connect(a.connection.selection.Connection, "", a.connection.selection.Model, false)
 	}
 	paths, err := a.opts.Store.FileSelections(ctx, a.opts.Session.ID)
 	if err != nil {

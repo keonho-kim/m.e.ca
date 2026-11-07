@@ -24,7 +24,10 @@ func (a *app) queryModelForm(model string) {
 		return
 	}
 	key := f.Credential.String()
-	a.opts.Vault.Remember(key)
+	if err := a.opts.Vault.Remember(key); err != nil {
+		a.fail(err)
+		return
+	}
 	f.Catalog = model == ""
 	revision := f.Revision
 	if f.Catalog {
@@ -141,16 +144,6 @@ func (a *app) commitModelForm() {
 	if client == nil {
 		client = a.connection.client
 	}
-	f.Client = nil // adoptConnection now owns this candidate's failure cleanup.
-	adopted, err := a.adoptConnection(notice{Client: client, Selection: &next, credential: f.Credential.String(), RememberModel: f.Global})
-	if err != nil && !adopted {
-		f.Saving, a.page = false, "model"
-		a.fail(err)
-		return
-	}
-	a.closeModelForm()
-	a.page, a.status = "chat", ""
-	if err != nil {
-		a.fail(err)
-	}
+	f.Client = nil
+	a.startModelCommit(notice{Client: client, Selection: &next, credential: f.Credential.String(), RememberModel: f.Global, ModelForm: true})
 }

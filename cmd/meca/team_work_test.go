@@ -127,7 +127,7 @@ func TestTeamRecoversFromDuplicateScopeAndSharesActualResult(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	writes, conflicts := 0, 0
-	result, err := service.Run(ctx, agentrequest.Options{Config: cfg, Session: store.Session(), Selection: connection.Selection{Model: "fixture"}, Generator: g, Vault: vault, Text: "Implement shared.txt and independent checks.txt together."}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
+	result, err := service.Run(ctx, agentrequest.Options{Runtime: agentrequest.Runtime{Config: cfg, Session: store.Session(), Selection: connection.Selection{Model: "fixture"}, Vault: vault}, Text: "Implement shared.txt and independent checks.txt together.", Generator: g}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
 		if event.Agent == names[0] && event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "set_work" {
 			close(g.claimed)
 		}

@@ -1,7 +1,7 @@
 // Purpose: Keep raw command output private while spilling bounded captures to disk.
 // Pattern: Encrypted fixed-block file with one resident block and an ephemeral key.
 // Usage: spillCapture owns the file; release closes and removes it after archival.
-// Related: internal/tools/local/process/spill.go, internal/tools/local/process/output.go.
+// Related: internal/tools/local/process/spill.go, internal/storage/capacity/space_unix.go.
 package process
 
 import (
@@ -11,18 +11,21 @@ import (
 	"errors"
 	"io"
 	"os"
+
+	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
 const captureBlock = 64 * 1024
 
 type captureFile struct {
-	file    *os.File
-	aead    cipher.AEAD
-	plain   []byte
-	encoded []byte
-	known   [2 * captureHalf / captureBlock]bool
-	block   int
-	dirty   bool
+	file      *os.File
+	directory string
+	aead      cipher.AEAD
+	plain     []byte
+	encoded   []byte
+	known     [2 * captureHalf / captureBlock]bool
+	block     int
+	dirty     bool
 }
 
 func newCaptureFile(directory string) (*captureFile, error) {
@@ -43,13 +46,18 @@ func newCaptureFile(directory string) (*captureFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &captureFile{file: file, aead: aead, block: -1,
+	return &captureFile{file: file, directory: directory, aead: aead, block: -1,
 		plain: make([]byte, captureBlock), encoded: make([]byte, captureBlock+aead.NonceSize()+aead.Overhead())}, nil
 }
 
 func (f *captureFile) flush() error {
 	if !f.dirty {
 		return nil
+	}
+	if !f.known[f.block] {
+		if err := capacity.CheckFree(f.directory, 1<<30+uint64(len(f.encoded))); err != nil {
+			return err
+		}
 	}
 	nonce := f.encoded[:f.aead.NonceSize()]
 	if _, err := rand.Read(nonce); err != nil {

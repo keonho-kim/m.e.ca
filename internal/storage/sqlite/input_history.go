@@ -15,11 +15,14 @@ import (
 
 // RecentInputs returns chronological user text, keeping binary and provider state out of the editor.
 func (s *Store) RecentInputs(ctx context.Context, session string, limit int) ([]string, error) {
+	if err := s.checkSession(session); err != nil {
+		return nil, err
+	}
 	if limit < 1 || limit > 200 {
 		return nil, fmt.Errorf("input history limit must be between 1 and 200")
 	}
-	page, err := s.recordPage(ctx, `SELECT sequence,'message',body,refs,raw_bytes FROM messages
- WHERE session_id=? AND role='user' ORDER BY sequence DESC LIMIT ?`, session, limit)
+	page, err := s.recordPage(ctx, "SELECT sequence,'message',body,refs,raw_bytes FROM messages\n WHERE role='user' ORDER BY sequence DESC LIMIT ?",
+		limit)
 	if err != nil {
 		return nil, err
 	}

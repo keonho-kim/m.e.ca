@@ -24,7 +24,7 @@ func options(t *testing.T, shell string) Options {
 	return Options{Home: home, Executable: executable, Shell: shell, Path: "/usr/bin:/bin"}
 }
 
-func TestCredentialFailurePreservesInstallationForRetry(t *testing.T) {
+func TestCredentialFailureKeepsRetryCommandAndCleanupIntent(t *testing.T) {
 	o := options(t, "/bin/zsh")
 	if _, err := Install(context.Background(), o); err != nil {
 		t.Fatal(err)
@@ -32,10 +32,10 @@ func TestCredentialFailurePreservesInstallationForRetry(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(o.Home, ".meca/credentials.used"), []byte("used"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), o.Home, func() error { return errors.New("keyring locked") }); err == nil {
+	if err := Uninstall(context.Background(), o.Home, func(context.Context) error { return errors.New("keyring locked") }); err == nil {
 		t.Fatal("ignored credential cleanup failure")
 	}
-	for _, name := range []string{binaryName, ".meca/installation.json", ".zshrc"} {
+	for _, name := range []string{binaryName, cleanupName} {
 		if _, err := os.Stat(filepath.Join(o.Home, name)); err != nil {
 			t.Fatalf("cleanup failure destroyed %s: %v", name, err)
 		}
@@ -100,7 +100,7 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	if err := Uninstall(ctx, o.Home, func() error { calls++; return nil }); err != nil {
+	if err := Uninstall(ctx, o.Home, func(context.Context) error { calls++; return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if calls != 1 {

@@ -24,9 +24,11 @@ type blockLayout struct {
 	points                         []blockPoint
 	parsed                         []markdown.Line
 	packed                         *markdown.Packed
+	plan                           *markdown.Plan
 	metrics                        []rowMetrics
 	source                         string
 	markdown                       bool
+	sparse                         bool
 	total, trim, leading, trailing int
 	first                          int
 	parsedBytes                    int

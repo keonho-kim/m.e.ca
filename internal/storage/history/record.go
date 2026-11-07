@@ -5,13 +5,18 @@
 package history
 
 import (
+	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
+// ErrNotFound distinguishes an absent visible record from a storage failure.
+var ErrNotFound = errors.New("history record was not found")
+
 type Record struct {
-	Sequence int64
-	Kind     string
-	Message  modelapi.Message
-	Event    runrecord.Event
+	Truncated bool
+	Sequence  int64
+	Kind      string
+	Message   modelapi.Message
+	Event     runrecord.Event
 }

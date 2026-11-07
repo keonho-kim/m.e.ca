@@ -1,6 +1,8 @@
 # 사용 가이드
 
-[← README](../README.md) · [설정과 대화 보존](configuration.md) · [모델 연결](model-connections.md)
+[← README](../README.md) · [설정과 대화 보존](configuration.md) · [모델 연결](model-connections.md) · [서버 API](server.md)
+
+기본 `meca [path]`는 TUI, `--print`·`--mode json`은 일회성 CLI, `--server`는 장기 실행 서버다. 세 방식은 선택 모델과 단일/팀 실행·저장·도구 정책을 공유한다. 이 문서의 키보드·화면 조작은 TUI에 해당하며 서버의 제어·승인은 API로 전달한다.
 
 설정 저장·파일 전송 확인의 `y/N`에서 `y`·`Y`는 진행, 대문자 `N`은 취소다. 소문자 `n`은 무시한다. `Esc`는 화면에 안내된 편집·입력 유지 동작을 따른다.
 
@@ -20,7 +22,7 @@
 
 설치·삭제 명령은 [README](../README.md#설치)를 따른다. 첫 실행은 ~/.meca의 누락된 기본 파일을 준비한다. 일반 시작은 현재 프로젝트의 대화 목록을 표시하고 맨 위의 새 대화를 선택한다. meca resume은 모든 프로젝트를 표시한다.
 
-!model은 Provider·Base URL·API Key·모델 ID·Thinking·추론 강도·저장 범위를 한 화면에 배치한다. ↑↓로 항목을 이동하고 →로 텍스트 편집을 시작하거나 다음 값을 선택한다. Base URL·API Key·모델 ID는 값이 보이던 같은 행에서 편집하며 별도 입력줄을 만들지 않는다. 긴 값은 값 영역 안에서 가로 스크롤하고 API Key는 마스킹한다. 선택형 항목은 ←로 이전 값도 고를 수 있다. 편집 중에는 커서가 표시되고 Esc로 편집을 마치며 Tab으로 다음 항목에 이동한다. 지원 Provider는 Ollama, vLLM, SGLang, LM Studio, LiteLLM과 OpenRouter다. OpenRouter의 기본 주소는 https://openrouter.ai/api/v1이며 API Key와 해당 서비스의 모델 ID를 사용한다. 주소 입력의 Ctrl+U는 전체 내용을 지우며, HTTP 어댑터가 필요한 API 경로를 조립한다. 목록 조회를 지원하지 않는 서버에는 모델 ID를 직접 입력할 수 있다.
+!model은 Provider·Base URL·API Key·모델 ID·Thinking·추론 강도·저장 범위를 한 화면에 배치한다. ↑↓로 항목을 이동하고 →로 텍스트 편집을 시작하거나 다음 값을 선택한다. Base URL·API Key·모델 ID는 값이 보이던 같은 행에서 편집하며 별도 입력줄을 만들지 않는다. 긴 값은 값 영역 안에서 가로 스크롤하고 API Key는 마스킹한다. 선택형 항목은 ←로 이전 값도 고를 수 있다. 편집 중에는 커서가 표시되고 Esc로 편집을 마치며 Tab으로 다음 항목에 이동한다. 지원 Provider는 Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude와 Gemini다. OpenRouter의 기본 주소는 https://openrouter.ai/api/v1이며 API Key와 해당 서비스의 모델 ID를 사용한다. OpenAI·Claude·Gemini도 해당 공급자의 API Key와 모델 ID를 사용하며 기본 URL과 API 형식은 [모델 연결](model-connections.md#openai-claude-gemini)에 정리한다. 주소 입력의 Ctrl+U는 전체 내용을 지우며, HTTP 어댑터가 필요한 API 경로를 조립한다. 목록 조회를 지원하지 않는 서버에는 모델 ID를 직접 입력할 수 있다.
 
 모델 ID 행에서 →로 편집을 시작할 때마다 목록을 자동 조회하고, 값 바로 아래의 같은 열에 후보를 표시한다. 대소문자를 구분하지 않는 부분일치로 검색하며 결과가 없으면 입력한 문자가 같은 순서로 나타나는 축약 검색을 적용한다. 예를 들어 q38로 Qwen-3.8을 찾을 수 있다. 후보가 열려 있을 때 ↑↓로 고르고 Tab으로 ID를 채운다. 일치 후보가 없거나 조회에 실패해도 직접 입력할 수 있다. 편집을 마친 뒤 다시 →로 들어가면 목록을 갱신하며 타이핑 중에는 이미 받은 목록을 사용한다.
 
@@ -28,9 +30,9 @@ Enter는 어느 항목에서든 현재 설정의 저장 확인을 연다. y는 �
 
 서빙 별칭 오른쪽에는 확인된 단일 원본 모델명을 흐리게 표시한다. !model의 모델 정보 항목에서 →로 식별 근거·추론 옵션·서버 한도를 같은 화면에 펼친다. PgUp/PgDn으로 정보를 스크롤한다. 서빙 ID는 그대로 사용하며 Provider별 Thinking 계약은 [모델 연결](model-connections.md)을 따른다.
 
-연결 설정은 이미지 입력 지원을 확인한다. OpenRouter 외 확인 불가인 모델에는 작은 PNG 요청을 사용하며, 실패해도 텍스트 연결은 유지한다. [이미지 입력](images.md)에서 검사와 지원 형식을 확인할 수 있다. !model → 연결 진단 또는 meca --diagnose에서 일반 응답과 Thinking을 명시적으로 확인한다. 실제 작업에는 native tool calling과 서버에 맞는 parser 설정이 별도로 필요하다. 연결 진단 성공이 도구 실행 성공을 보장하지 않는다. 준비·세션 저장 실패나 취소 시 적용 중인 선택을 유지한다. 세션 저장 후 전역 기본값 저장만 실패하면 현재 연결은 유지하고 전역 저장 실패를 명시한다.
+연결 설정은 이미지 입력 지원을 확인한다. OpenRouter 외 확인 불가인 모델에는 작은 PNG 요청을 사용하며, 실패해도 텍스트 연결은 유지한다. [이미지 입력](images.md)에서 검사와 지원 형식을 확인할 수 있다. !model → 연결 진단 또는 meca --diagnose에서 일반 응답과 Thinking을 명시적으로 확인한다. 실제 작업에는 native tool calling과 서버에 맞는 parser 설정이 별도로 필요하다. 연결 진단 성공이 도구 실행 성공을 보장하지 않는다. 저장 작업 중에도 입력과 Esc를 처리한다. 준비·저장이 확실히 실패하면 적용 중인 선택을 유지한다. 취소 후라도 저장 완료를 확인하면 저장한 연결을 적용하고, DB에서 저장 여부를 확인할 수 없으면 재연결을 요구한다. 세션 저장 후 전역 기본값 저장만 실패하면 현재 연결은 유지하고 전역 저장 실패를 명시한다.
 
-API Key는 macOS Keychain 또는 Linux Secret Service에 저장한다. 사용할 수 없거나 잠겨 있으면 오류를 표시하며 평문 파일로 대체하지 않는다. 인증 없는 로컬 서버는 Key를 비워 둔다. 모든 대화의 기본값으로 저장한 연결은 새 세션에서 사용하고, 저장된 대화에서는 해당 세션의 선택을 우선한다.
+API Key는 암호화해 보관하며 macOS Keychain 또는 Linux Secret Service가 필요하다. 백업·복구는 [설정 안내](configuration.md#api-key-암호화와-복구)를 따른다. 인증 없는 로컬 서버는 Key를 비워 둔다. 새 세션은 전역 모델 기본값을, 저장된 대화는 해당 세션의 선택을 우선한다.
 
 ## Thinking
 
@@ -179,7 +181,7 @@ execute_command는 기본 30초까지 완료를 기다린다. 계속 실행 중�
 
 ## Provider 스트림과 복구
 
-SSE·NDJSON 파서는 순차 처리하며 전송 전체와 단일 프레임 크기에 고정 제한을 두지 않는다. 메인 실행기가 조립하는 한 응답에는 답변·Thinking·추론 상태·native 호출 식별자와 인자를 합산한 256MiB 한도를 적용한다. 비스트리밍 JSON·실행 문맥·개별 인자·저장도 [각 본문 한도](configuration.md#본문-한도)를 따른다. 수신 중에는 응답과 Thinking을 갱신하고 미완성 도구 인자는 일반 응답에 표시하지 않는다.
+SSE·NDJSON 파서는 순차 처리하며 수신 전체의 heartbeat 누적 바이트로 스트림을 끊지 않는다. OpenAI·Claude·Gemini의 단일 프레임·continuation에는 256MiB 한도를 적용하고 Claude의 숨은 block payload도 포함한다. 실행기는 답변·Thinking·추론 상태·native 호출 식별자와 인자를 합산해 버퍼 추가 전에 256MiB 한도를 검사한다. 비스트리밍 JSON·실행 문맥·개별 인자·저장은 [각 본문 한도](configuration.md#본문-한도)를 따른다. 미완성 도구 인자는 일반 응답에 표시하지 않는다.
 
 에이전트·압축 호출의 무수신 한도는 기본 600초이며 [loop].max_model_seconds로 설정한다. 메타데이터 조회와 연결 진단도 무수신 한도를 적용하며 기본 3분이다. 응답의 총 소요 시간 제한과 구분하며, 데이터가 수신되면 대기 시간을 다시 센다. 소비자 처리 시간에는 읽기 대기 타이머를 멈춘다. DNS·연결·TLS 초기화 제한과 사용자 취소는 별도다.
 
@@ -192,3 +194,15 @@ SSE·NDJSON 파서는 순차 처리하며 전송 전체와 단일 프레임 크�
 도구 결과는 기본으로 접혀 보이며 Ctrl+O로 전체를 펼치거나 접는다. 접으면 도구 이름·대상·실행 상태와 오류 원인 또는 변경 요약을 남기고 stdout·stderr·본문·diff를 숨긴다. Thinking·에이전트 응답·사용자 입력은 그대로 유지한다. 팀 명령의 경과 시간·상태 갱신은 도구 카드 상단만 바꾸며 접힘 상태와 원본 참조를 유지한다. 대기 도구에는 실행 결과 영역을 표시하지 않는다. 접거나 채팅을 벗어나면 상세 조회를 취소하고 늦게 도착한 취소 결과를 본문에 표시하지 않는다. 전환 상태는 입력창 위에 표시하고 긴 출력은 PgUp/PgDn으로 읽는다. 펼칠 대상이 있을 때 하단 키맵에 현재 동작을 표시한다. 모델에는 stdout·stderr 각각 32KiB의 앞뒤 발췌와 재조회 로그 경로가 전달된다. cat·sed로 필요한 부분을 다시 읽을 수 있으며 이 로그는 현재 Executor가 종료될 때 제거된다. 수집 원본은 세션 DB와 JSONL export에 보존한다. 스트림별 16MiB 수집 한도를 넘으면 생략을 명시한다.
 
 meca --print는 최종 답변만, meca --mode json은 이벤트를 stdout에 출력한다. 파이프 stdin을 요청에 포함할 수 있다. meca --session ID --print로 재개하고 meca --session ID --export로 시간순 원본 JSONL을 내보낸다. 같은 도구·저장·승인 정책을 사용하며 필요한 승인을 받을 수 없으면 실행을 차단한다.
+
+## 서버 실행과 연동
+
+```sh
+meca /path/to/project --server --protocol sse
+meca /path/to/project --server --protocol socket
+meca /path/to/project --server --protocol grpc --openai
+```
+
+기본 주소는 `127.0.0.1:8787`, 인증 토큰은 `~/.meca/server.token`이다. native API에서 세션·모델을 설정하고 요청 키와 본문으로 작업을 접수한다. 상태·이벤트·이력을 조회하면서 승인·방향 수정·취소를 전달할 수 있다. 연결이 끊겨도 수락한 작업은 계속되며 재접속 시 마지막 커서를 사용한다.
+
+`--openai`는 가상 모델 `meca`의 텍스트 Chat Completions·Responses를 제공한다. 모델 API Key를 서버 Bearer 토큰 대신 사용하지 않는다. 데이터가 5초간 없는 스트림에는 1초마다 heartbeat를 보낸다. 외부 바인딩은 TLS와 정확한 Host/Origin 설정이 필요하다. [전체 옵션·전송·호환 범위](server.md)를 따른다.

@@ -46,13 +46,23 @@ func TestListModelsProviderContracts(t *testing.T) {
 		{modelconn.SGLang, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
 		{modelconn.LMStudio, "/api/v1/models", `{"models":[{"type":"llm","key":"z-model"},{"type":"embedding","key":"embedding"},{"type":"llm","key":"a-model"}]}`},
 		{modelconn.OpenRouter, "/api/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
+		{modelconn.OpenAI, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
+		{modelconn.Claude, "/v1/models", `{"data":[{"id":"z-model"},{"id":"a-model"}]}`},
+		{modelconn.Gemini, "/v1beta/models", `{"models":[{"name":"models/z-model","supportedGenerationMethods":["generateContent"]},{"name":"models/a-model","supportedGenerationMethods":["generateContent"]}]}`},
 	} {
 		t.Run(string(test.kind), func(t *testing.T) {
 			client := mockClient(t, test.kind, func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != test.path {
 					t.Errorf("path = %s", r.URL.Path)
 				}
-				if r.Header.Get("Authorization") != "Bearer test-secret" {
+				header, value := "Authorization", "Bearer test-secret"
+				if test.kind == modelconn.Claude {
+					header, value = "x-api-key", "test-secret"
+				}
+				if test.kind == modelconn.Gemini {
+					header, value = "x-goog-api-key", "test-secret"
+				}
+				if r.Header.Get(header) != value {
 					t.Error("missing authentication")
 				}
 				fmt.Fprint(w, test.response)

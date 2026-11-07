@@ -10,10 +10,25 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 )
 
 type SessionLease struct{ file *os.File }
+
+// LeaseServer reserves durable request status ownership for one canonical project.
+// The composition root keeps this lease until all server work has joined.
+func (s *Sessions) LeaseServer(project string) (*SessionLease, error) {
+	directory, _, err := s.projectDirectory(project, true)
+	if err != nil {
+		return nil, err
+	}
+	file, err := openLock(filepath.Join(directory, ".server.lock"), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		return nil, fmt.Errorf("server ownership unavailable; another MECA server may own this project: %w", err)
+	}
+	return &SessionLease{file: file}, nil
+}
 
 func (s *Store) LeaseSession() (*SessionLease, error) {
 	file, err := openLock(s.path+".lock", syscall.LOCK_EX|syscall.LOCK_NB)

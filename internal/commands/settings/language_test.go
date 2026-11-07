@@ -5,6 +5,7 @@
 package settings
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -18,18 +19,20 @@ func TestLanguageSaveFailureAndInvalidValue(t *testing.T) {
 	current.Thinking = &on
 	failure := errors.New("config write failed")
 	calls := 0
-	save := func(next config.Config) error {
+	save := func(_ context.Context, apply func(*config.Config)) (config.Config, error) {
+		next := current
+		apply(&next)
 		calls++
 		if next.Language != config.LanguageEnglish || (next.Thinking == nil || !*next.Thinking) {
 			t.Fatal("language save changed another preference")
 		}
-		return failure
+		return config.Config{}, failure
 	}
-	got, err := Language(current, config.LanguageEnglish, save)
+	got, err := Language(t.Context(), current, config.LanguageEnglish, save)
 	if !errors.Is(err, failure) || !reflect.DeepEqual(got, current) || calls != 1 {
 		t.Fatalf("failed save applied settings: %+v, %v", got, err)
 	}
-	got, err = Language(current, config.Language("unknown"), save)
+	got, err = Language(t.Context(), current, config.Language("unknown"), save)
 	if err == nil || calls != 1 || !reflect.DeepEqual(got, current) {
 		t.Fatal("unsupported language reached persistence")
 	}

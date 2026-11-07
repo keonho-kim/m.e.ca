@@ -14,6 +14,12 @@ import (
 
 type ConsumerError struct{ Cause error }
 
+// PermanentError stops retries of a completed provider decision or unsupported protocol value.
+type PermanentError struct{ Cause error }
+
+func (e *PermanentError) Error() string { return e.Cause.Error() }
+func (e *PermanentError) Unwrap() error { return e.Cause }
+
 const maxAttempts = 3
 
 func (e *ConsumerError) Error() string { return e.Cause.Error() }
@@ -73,6 +79,10 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 }
 
 func retryable(err error) bool {
+	var permanent *PermanentError
+	if errors.As(err, &permanent) {
+		return false
+	}
 	if ImageUnsupported(err) {
 		return false
 	}

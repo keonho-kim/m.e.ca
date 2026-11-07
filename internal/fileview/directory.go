@@ -10,8 +10,11 @@ import (
 	"fmt"
 	"github.com/keonho-kim/meca/internal/policy"
 	"io"
+	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"syscall"
 )
 
 type Entry struct {
@@ -42,6 +45,7 @@ func (executor *Reader) Directory(ctx context.Context, settings policy.Settings,
 			}
 		}
 	}
+	clear(entries[len(visible):])
 	return visible, more, nil
 }
 
@@ -49,7 +53,10 @@ func readDirectory(ctx context.Context, path Target, offset, limit int) (entries
 	if offset < 0 || offset > 100000 || limit < 1 || limit > 1000 {
 		return nil, false, fmt.Errorf("invalid directory page")
 	}
-	file, err := path.Root.Open(path.Relative)
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+	file, err := path.Root.OpenFile(path.Relative, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_DIRECTORY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil, false, err
 	}
@@ -83,6 +90,6 @@ func readDirectory(ctx context.Context, path Target, offset, limit int) (entries
 		return nil, false, nil
 	}
 	more = len(entries) > offset+limit
-	entries = entries[offset:min(len(entries), offset+limit)]
+	entries = slices.Clone(entries[offset:min(len(entries), offset+limit)])
 	return entries, more, nil
 }

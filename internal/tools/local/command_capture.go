@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
@@ -43,7 +44,11 @@ func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
 		if path == "" {
 			continue
 		}
-		text, readErr := readCaptureText(path)
+		expected := output.StdoutCapturedBytes
+		if i == 1 {
+			expected = output.StderrCapturedBytes
+		}
+		text, readErr := readCaptureText(path, expected)
 		if readErr != nil {
 			release()
 			return nil, readErr
@@ -64,8 +69,11 @@ func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
 	return body, nil
 }
 
-func readCaptureText(path string) (string, error) {
-	file, err := os.Open(path)
+func readCaptureText(path string, expected int) (string, error) {
+	if expected < 0 || expected > maxArtifactBytes {
+		return "", fmt.Errorf("invalid captured log size")
+	}
+	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return "", err
 	}
@@ -74,8 +82,14 @@ func readCaptureText(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if !info.Mode().IsRegular() || info.Size() != int64(expected) {
+		return "", fmt.Errorf("captured log changed before its durable record")
+	}
 	var text strings.Builder
 	text.Grow(int(info.Size()))
-	_, err = io.Copy(&text, file)
+	_, err = io.Copy(&text, io.LimitReader(file, int64(expected)+1))
+	if err == nil && text.Len() != expected {
+		err = fmt.Errorf("captured log changed while reading")
+	}
 	return text.String(), err
 }

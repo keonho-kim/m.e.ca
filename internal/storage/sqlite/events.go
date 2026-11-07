@@ -1,5 +1,5 @@
-// Purpose: Persist ordered runtime events, including final per-call token usage.
-// Pattern: Repository.
+// Purpose: Prepare and persist ordered runtime events at their journal durability boundary.
+// Pattern: SQLite journal adapter.
 // Usage: Implements the agent task journal contract and feeds restored terminal history.
 // Related: internal/agent/run/run.go, internal/storage/sqlite/store.go.
 package sqlite
@@ -20,14 +20,15 @@ func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord
 	return s.Commit(ctx, session, []runrecord.Entry{{Event: &event}})
 }
 
-func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, event runrecord.Event, now string, receipt *journalReceipt) error {
+func (p *journalEncoder) event(value *preparedRecord) error {
+	s := p.store
+	event := *value.source.Event
 	if event.Kind == "run_checkpoint" && event.Checkpoint != nil {
 		copy := *event.Checkpoint
 		event.Checkpoint = &copy
-		if err := event.Check(); err != nil {
-			return err
-		}
-		if err := s.writeRunState(ctx, tx, session, event); err != nil {
+		var err error
+		value.state, err = s.prepareRunState(event)
+		if err != nil {
 			return err
 		}
 		if copy.Phase != "finished" {
@@ -38,9 +39,6 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 		copy.Work.Commands = nil
 		copy.Objective = ""
 	}
-	if err := event.Check(); err != nil {
-		return err
-	}
 	body, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -48,7 +46,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if len(body) > recordcontent.MaxBytes {
 		return fmt.Errorf("event exceeds limit")
 	}
-	packed, refs, err := s.packRecord(ctx, tx, body)
+	packed, refs, err := p.pack(body)
 	if err != nil {
 		return err
 	}
@@ -61,10 +59,11 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 		role, text = projected[0].Role, projected[0].Text
 	}
 	memoryBytes := len(text)
-	if ref, size, err := s.publicMemoryReference(ctx, event); err != nil {
+	if ref, size, err := s.publicMemoryReference(p.ctx, event); err != nil {
 		return err
-	} else if ref != "" {
-		role, text, memoryBytes = ref, "", size
+	} else if ref != 0 {
+		value.memorySource = ref
+		role, text, memoryBytes = "peer", "", size
 	}
 	displayArgs := []byte("{}")
 	if event.Call != nil {
@@ -77,7 +76,21 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 			}
 		}
 	}
-	inserted, err := tx.ExecContext(ctx, "INSERT INTO tool_events(session_id,body,refs,raw_bytes,kind,memory_role,memory_text,memory_bytes,display_args,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", session, packed, refs, len(body), event.Kind, role, text, memoryBytes, displayArgs, now)
+	value.body, value.referenceSlots, value.size, value.display = packed, refs, len(body), displayArgs
+	value.memoryRole, value.memoryText, value.memoryBytes = role, text, memoryBytes
+	return nil
+}
+
+func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, value *preparedRecord, now string, receipt *journalReceipt) error {
+	if value.state != nil {
+		if err := s.writeRunState(ctx, tx, session, value.state); err != nil {
+			return err
+		}
+	}
+	if value.body == nil {
+		return nil
+	}
+	inserted, err := tx.ExecContext(ctx, "INSERT INTO tool_events(body,refs,raw_bytes,kind,memory_role,memory_text,memory_bytes,memory_source,display_args,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", value.body, value.refs, value.size, value.source.Event.Kind, value.memoryRole, value.memoryText, value.memoryBytes, value.memorySource, value.display, now)
 	if err != nil {
 		return err
 	}
@@ -85,7 +98,7 @@ func (s *Store) writeEvent(ctx context.Context, tx *sql.Tx, session string, even
 	if err != nil {
 		return err
 	}
-	timeline, err := tx.ExecContext(ctx, "INSERT INTO timeline(session_id,kind,source_sequence) VALUES(?,'event',?)", session, sequence)
+	timeline, err := tx.ExecContext(ctx, "INSERT INTO timeline(kind,source_sequence) VALUES('event',?)", sequence)
 	if err != nil {
 		return err
 	}

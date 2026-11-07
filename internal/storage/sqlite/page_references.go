@@ -10,7 +10,7 @@ import "encoding/json"
 // Unindexed payloads still load normally, without temporary reuse.
 const pageReferenceEntries = 256
 
-func indexPayloadRefs(last map[string]int, index int, refsBody []byte) (map[string]int, error) {
+func indexPayloadRefs(last map[payloadKey]int, store *Store, index int, refsBody []byte) (map[payloadKey]int, error) {
 	if string(refsBody) == "{}" {
 		return last, nil
 	}
@@ -19,13 +19,14 @@ func indexPayloadRefs(last map[string]int, index int, refsBody []byte) (map[stri
 		return nil, err
 	}
 	for _, id := range refs {
-		if _, tracked := last[id]; !tracked && len(last) >= pageReferenceEntries {
+		key := payloadKey{store, id}
+		if _, tracked := last[key]; !tracked && len(last) >= pageReferenceEntries {
 			continue
 		}
 		if last == nil {
-			last = make(map[string]int)
+			last = make(map[payloadKey]int)
 		}
-		last[id] = index
+		last[key] = index
 	}
 	return last, nil
 }

@@ -14,11 +14,12 @@ import (
 )
 
 type Client struct {
-	imageRejected atomic.Bool
-	contextLength int
-	modelInfo     *modelconn.ModelInfo
-	connection    modelconn.Connection
-	transport     *transport.Client
+	summaryUnsupportedModel atomic.Pointer[string]
+	imageRejected           atomic.Bool
+	contextLength           int
+	modelInfo               *modelconn.ModelInfo
+	connection              modelconn.Connection
+	transport               *transport.Client
 }
 
 func NewClient(connection modelconn.Connection, key string) (*Client, error) {
@@ -26,11 +27,15 @@ func NewClient(connection modelconn.Connection, key string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.ContainsAny(key, "\r\n") || len(key) > 16*1024 {
+	if strings.ContainsAny(key, "\r\n\x00") || len(key) > 2048 {
 		return nil, fmt.Errorf("invalid API Key")
 	}
+	key = strings.Trim(key, " \t")
+	if key == "" && (parsed.Kind == modelconn.OpenAI || parsed.Kind == modelconn.Claude || parsed.Kind == modelconn.Gemini) {
+		return nil, fmt.Errorf("this provider requires an API Key")
+	}
 	parsed.CredentialRef = connection.CredentialRef
-	return &Client{contextLength: modelconn.DefaultContextLength, connection: parsed, transport: transport.New(key)}, nil
+	return &Client{contextLength: modelconn.DefaultContextLength, connection: parsed, transport: transport.New(key, parsed.Kind)}, nil
 }
 
 // Close releases this adapter's idle HTTP connections after its task owner has joined.

@@ -6,6 +6,7 @@ package sqlite
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestDiscussionMetadataAndReferencedBodiesRoundTrip(t *testing.T) {
 	if err != nil || len(page) != 2 || page[0].Note.Work.Contract != "locked accounts return 423" || page[1].Note.ReplyAuthor != "Hana" || !page[1].Discussion || !page[1].Attention("Hana") || page[1].Attention("Arjun") {
 		t.Fatal("collaboration provenance changed", page, err)
 	}
-	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10)
+	visible, _, err := root.TimelineSummaries(ctx, root.session.ID, 0, 10, history.ReadBounds{})
 	if err != nil || len(visible) != 2 || visible[1].Event.Team == nil || visible[1].Event.Team.ReplyTo != work.Sequence {
 		t.Fatal("display hydration omitted public metadata", visible, err)
 	}

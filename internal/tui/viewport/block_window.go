@@ -52,7 +52,9 @@ func (b *Block) appendWindow(out []Line, width, start, count int) []Line {
 			row++
 			return row < renderEnd
 		}
-		if l.markdown {
+		if l.markdown && l.sparse {
+			b.walkMarkdownWindow(point, width, appendRow)
+		} else if l.markdown {
 			for i := point.source; i < l.markdownLines() && row < renderEnd; i++ {
 				offset, prefix := 0, ""
 				if i == point.source {

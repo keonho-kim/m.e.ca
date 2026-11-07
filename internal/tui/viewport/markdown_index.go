@@ -6,20 +6,20 @@ package viewport
 
 import (
 	"sort"
-	"strings"
-
-	"github.com/keonho-kim/meca/internal/tui/textlayout"
 )
 
 func (b *Block) indexMarkdown(previous blockLayout, width int) (firstContent, lastContent int) {
 	l := &b.layout
+	if l.sparse {
+		return b.indexMarkdownWalk(width)
+	}
 	firstContent, lastContent = -1, -1
 	reused := 0
-	if b.live && previous.key.width == width {
+	if b.live && l.packed == nil && previous.key.width == width {
 		reused = min(b.stream.ReusedRows(), len(previous.metrics), len(l.parsed))
 	}
 	l.metrics = previous.metrics[:reused]
-	if !b.live {
+	if !b.live || l.packed != nil {
 		// Completed windows resume from sparse points; only a live prefix
 		// needs one reusable metric for every rendered logical row.
 		l.metrics = nil
@@ -49,34 +49,7 @@ func (b *Block) indexMarkdown(previous blockLayout, width int) (firstContent, la
 			b.retainParsedLine(line)
 			text = line.Text
 		}
-		if i%256 == 0 {
-			l.points = append(l.points, blockPoint{source: i, row: l.total, last: lastContent})
-		}
-		var metric rowMetrics
-		for row := range textlayout.Rows(text, width) {
-			if metric.count > 0 && metric.count%256 == 0 {
-				l.points = append(l.points, blockPoint{source: i, row: l.total + metric.count, offset: row.Start, within: metric.count, prefix: row.Prefix, last: lastContent})
-			}
-			if strings.TrimSpace(row.Text) == "" {
-				if metric.leading == metric.count {
-					metric.leading++
-				}
-				metric.trailing++
-			} else {
-				metric.trailing = 0
-			}
-			metric.count++
-		}
-		if b.live {
-			l.metrics = append(l.metrics, metric)
-		}
-		if metric.leading < metric.count {
-			if firstContent < 0 {
-				firstContent = l.total + metric.leading
-			}
-			lastContent = l.total + metric.count - metric.trailing - 1
-		}
-		l.total += metric.count
+		b.indexMarkdownText(text, i, width, &firstContent, &lastContent)
 	}
 	return firstContent, lastContent
 }

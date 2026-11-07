@@ -48,11 +48,9 @@ func (a *app) startRequest(input composer.Request) {
 		_, err := reader.Reference(ctx, settings, path)
 		return err == nil
 	}
-	options := agentrequest.Options{
-		Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
-		Generator: a.connection.client, Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
-		LoadPrompts:   a.opts.LoadPrompts,
-		SteeringReady: steeringReady,
+	options := agentrequest.Options{Runtime: agentrequest.Runtime{Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
+		Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
+		LoadPrompts: a.opts.LoadPrompts}, SteeringReady: steeringReady,
 		PollSteering: func() []string {
 			var out []string
 			for {
@@ -63,7 +61,7 @@ func (a *app) startRequest(input composer.Request) {
 					return out
 				}
 			}
-		},
+		}, Generator: a.connection.client,
 	}
 	decisions := a.decision
 	teamMode := a.team.active

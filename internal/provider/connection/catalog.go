@@ -14,6 +14,9 @@ const (
 	LMStudio   ProviderKind = "lm-studio"
 	LiteLLM    ProviderKind = "litellm"
 	OpenRouter ProviderKind = "openrouter"
+	OpenAI     ProviderKind = "openai"
+	Claude     ProviderKind = "claude"
+	Gemini     ProviderKind = "gemini"
 )
 
 type Provider struct {
@@ -30,5 +33,8 @@ func Providers() []Provider {
 		{"LM Studio", LMStudio, "http://localhost:1234"},
 		{"LiteLLM", LiteLLM, "http://localhost:4000/v1"},
 		{"OpenRouter", OpenRouter, "https://openrouter.ai/api/v1"},
+		{"OpenAI", OpenAI, "https://api.openai.com/v1"},
+		{"Claude", Claude, "https://api.anthropic.com/v1"},
+		{"Gemini", Gemini, "https://generativelanguage.googleapis.com/v1beta"},
 	}
 }

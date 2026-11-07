@@ -31,9 +31,15 @@ func TestTokenUsageProviderStreams(t *testing.T) {
 					w.Header().Set("Content-Type", "application/x-ndjson")
 					fmt.Fprintln(w, `{"message":{"content":"hi"},"done":false}`)
 					fmt.Fprintln(w, `{"message":{},"done":true,"prompt_eval_count":12,"eval_count":3}`)
-				} else if provider.Kind == connection.LMStudio {
+				} else if connection.UsesResponses(provider.Kind) {
 					w.Header().Set("Content-Type", "text/event-stream")
 					fmt.Fprint(w, "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":12,\"output_tokens\":3}}}\n\n")
+				} else if provider.Kind == connection.Claude {
+					w.Header().Set("Content-Type", "text/event-stream")
+					fmt.Fprint(w, "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":12,\"output_tokens\":0}}}\n\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":3}}\n\ndata: {\"type\":\"message_stop\"}\n\n")
+				} else if provider.Kind == connection.Gemini {
+					w.Header().Set("Content-Type", "text/event-stream")
+					fmt.Fprint(w, "data: {\"candidates\":[{\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":12,\"candidatesTokenCount\":3}}\n\n")
 				} else {
 					continuous := provider.Kind == connection.VLLM || provider.Kind == connection.SGLang
 					if body.Options["continuous_usage_stats"] != continuous {

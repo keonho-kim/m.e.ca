@@ -50,8 +50,8 @@ func TestUnsupportedSchemaPreserved(t *testing.T) {
 			if openErr == nil {
 				t.Fatal("unsupported schema accepted")
 			}
-			if _, err := catalog.Conversations(context.Background(), ""); err == nil {
-				t.Fatal("unsupported DB silently hidden from discovery")
+			if values, err := catalog.Conversations(context.Background(), ""); err != nil || len(values) != 1 || values[0].Unavailable == "" {
+				t.Fatal("unsupported DB was hidden or blocked discovery", values, err)
 			}
 			after, err := os.ReadFile(path)
 			if err != nil {

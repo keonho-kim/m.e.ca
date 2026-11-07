@@ -65,8 +65,10 @@ func (op barrierCommand) Execute(ctx context.Context, approved bool) (toolapi.Re
 	}
 }
 
-func (op barrierCommand) SetCommandAdmission(admit func(context.Context) (func(), error)) {
-	op.Execution.(interface {
-		SetCommandAdmission(func(context.Context) (func(), error))
-	}).SetCommandAdmission(admit)
+func (l *barrierCommands) PrepareAdmitted(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (toolapi.Execution, error) {
+	op, err := l.Executor.PrepareAdmitted(ctx, settings, call, admit)
+	if err != nil {
+		return nil, err
+	}
+	return barrierCommand{Execution: op, owner: l, id: call.ID}, nil
 }

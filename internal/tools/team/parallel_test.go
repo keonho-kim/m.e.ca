@@ -73,11 +73,10 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 		}
 		tools := &Executor{Local: &barrierCommands{Executor: native, entered: entered, release: release, member: member.ID}, Peer: peer, Workspace: access, Refusals: &approval.Ledger{}, Project: root}
 		model := &commandBatchModel{}
-		action := agentrequest.New(agentrequest.Options{Config: config.Defaults(), Generator: model, Tools: tools,
+		action := agentrequest.New(agentrequest.Options{Runtime: agentrequest.Runtime{Config: config.Defaults(), Tools: tools,
 			Session: child.Session(), Store: child, Vault: &credentials.Vault{State: filepath.Join(home, ".meca")},
-			Selection: connection.Selection{Model: "fixture"}, Text: "Inspect sixteen independent commands",
-			LoadPrompts: func() (prompt.Templates, error) { return prompt.DefaultsFor(prompt.Team), nil },
-		})
+			Selection:   connection.Selection{Model: "fixture"},
+			LoadPrompts: func() (prompt.Templates, error) { return prompt.DefaultsFor(prompt.Team), nil }}, Text: "Inspect sixteen independent commands", Generator: model})
 		var ordered []string
 		result, err := agentsession.Execute(ctx, action, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
 			if event.Kind == "tool_succeeded" {

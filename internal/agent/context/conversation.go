@@ -23,7 +23,7 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 		}
 		return modelapi.Message{Role: "user", Content: "Unfinished assistant draft (interrupted; not evidence of completed work):\n" + string(body)}, nil
 	}
-	if message.Role == "system" && channel.IsPeer(message.ID) {
+	if message.Role == "system" && channel.IsPeer(message) {
 		// Public speech already names its sender. Keep that observation readable
 		// without promoting it to instructions or replaying another peer's calls.
 		return modelapi.Message{Role: "user", Content: message.Content}, nil

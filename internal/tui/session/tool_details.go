@@ -7,6 +7,7 @@ package session
 import (
 	"context"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/storage/history"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -31,7 +32,7 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 		return
 	}
 	store, ok := a.opts.Store.(interface {
-		ToolEvent(context.Context, runrecord.EventReference) (runrecord.Event, error)
+		ToolEvent(context.Context, runrecord.EventReference, history.ReadBounds) (runrecord.Event, error)
 	})
 	if !ok {
 		return
@@ -44,7 +45,7 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
-		event, err := store.ToolEvent(ctx, result.reference)
+		event, err := store.ToolEvent(ctx, result.reference, history.ReadBounds{})
 		if err == nil {
 			err = ctx.Err()
 		}

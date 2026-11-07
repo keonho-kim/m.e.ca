@@ -35,7 +35,7 @@ func TestPagePayloadReleasesLastUseAndRechecksNextPage(t *testing.T) {
 	}
 	p := pagePayloads{store: s, ctx: ctx}
 	for i, record := range page {
-		if err := p.include(i, record.refs); err != nil {
+		if err := p.include(i, p.store, record.refs); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -81,7 +81,7 @@ func TestPagePayloadBudgetDoesNotRestrictLargeOriginals(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := pagePayloads{store: s, ctx: ctx}
-	if err := p.include(1, page[0].refs); err != nil {
+	if err := p.include(1, p.store, page[0].refs); err != nil {
 		t.Fatal(err)
 	}
 	body, err := p.unpack(0, page[0], nil)
@@ -91,7 +91,7 @@ func TestPagePayloadBudgetDoesNotRestrictLargeOriginals(t *testing.T) {
 }
 
 func TestPageReferenceIndexStaysBoundedAndTracksExistingReferences(t *testing.T) {
-	last, err := indexPayloadRefs(nil, 0, []byte(`{"[\"output\"]":"kept"}`))
+	last, err := indexPayloadRefs(nil, nil, 0, []byte(`{"[\"output\"]":"kept"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,12 +103,12 @@ func TestPageReferenceIndexStaysBoundedAndTracksExistingReferences(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	last, err = indexPayloadRefs(last, 1, body)
+	last, err = indexPayloadRefs(last, nil, 1, body)
 	if err != nil || len(last) != pageReferenceEntries {
 		t.Fatal("reference index exceeded its page budget", len(last), err)
 	}
-	last, err = indexPayloadRefs(last, 2, []byte(`{"[\"output\"]":"kept"}`))
-	if err != nil || last["kept"] != 2 || len(last) != pageReferenceEntries {
+	last, err = indexPayloadRefs(last, nil, 2, []byte(`{"[\"output\"]":"kept"}`))
+	if err != nil || last[payloadKey{nil, "kept"}] != 2 || len(last) != pageReferenceEntries {
 		t.Fatal("full index stopped updating a cached payload's last reference", err)
 	}
 }

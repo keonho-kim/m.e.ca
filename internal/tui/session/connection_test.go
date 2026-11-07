@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zalando/go-keyring"
-
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config"
@@ -38,7 +36,8 @@ func TestConnectionSaveFailure(t *testing.T) {
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.opts.Session.ID = "missing-session"
 	next := connection.Selection{Connection: conn, Model: "new"}
-	a.receive(notice{Done: true, Client: candidate, Selection: &next})
+	a.startModelCommit(notice{Client: candidate, Selection: &next})
+	finishModelChange(t, a)
 	if a.connection.client != old || a.connection.selection.Model != "old" || a.status == "" {
 		t.Fatalf("failed save applied: model=%s status=%s", a.connection.selection.Model, a.status)
 	}
@@ -48,14 +47,14 @@ func TestConnectionSaveFailure(t *testing.T) {
 }
 
 func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
-	keyring.MockInit()
+
 	a := fixture(t)
 	conn, err := connection.New(connection.VLLM, "http://localhost:8000")
 	if err != nil {
 		t.Fatal(err)
 	}
 	conn.CredentialRef = conn.ID
-	if err := a.opts.Vault.Set(conn.CredentialRef, "old-key"); err != nil {
+	if err := a.opts.Vault.Set(a.ctx, conn.CredentialRef, conn.CredentialScope(), "old-key"); err != nil {
 		t.Fatal(err)
 	}
 	candidate, err := httpclient.NewClient(conn, "new-key")
@@ -65,7 +64,8 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	defer candidate.Close()
 	next := connection.Selection{Connection: conn, Model: "alias"}
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
-	a.receive(notice{Done: true, Client: candidate, Selection: &next, credential: "new-key"})
+	a.startModelCommit(notice{Client: candidate, Selection: &next, credential: "new-key"})
+	finishModelChange(t, a)
 	if a.status != "" {
 		t.Fatal(a.status)
 	}
@@ -75,7 +75,7 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	if a.connection.selection.Connection.CredentialRef == conn.CredentialRef {
 		t.Fatal("new key reused old reference")
 	}
-	old, err := a.opts.Vault.Get(conn.CredentialRef)
+	old, err := a.opts.Vault.Get(a.ctx, conn.CredentialRef, conn.CredentialScope())
 	if err != nil || old != "old-key" {
 		t.Fatalf("saved key overwritten: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	current, err := a.opts.Vault.Get(saved.Connection.CredentialRef)
+	current, err := a.opts.Vault.Get(a.ctx, saved.Connection.CredentialRef, saved.Connection.CredentialScope())
 	if err != nil || current != "new-key" {
 		t.Fatalf("new key not bound to persisted selection: %v", err)
 	}
@@ -108,6 +108,7 @@ func TestThinkingSaveFailurePreservesChoice(t *testing.T) {
 			on := true
 			a.connection.modelForm.Thinking, a.connection.modelForm.Global = &on, global
 			a.saveModelForm()
+			finishModelChange(t, a)
 			if *a.connection.selection.Thinking || a.status == "" {
 				t.Fatalf("failed save applied: %+v", a.connection.selection)
 			}

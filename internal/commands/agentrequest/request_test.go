@@ -22,7 +22,7 @@ func TestPermissionSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { tools.Close() })
-	request := New(Options{Config: configuration, Vault: &credentials.Vault{}, Tools: tools})
+	request := New(Options{Runtime: Runtime{Config: configuration, Vault: &credentials.Vault{}, Tools: tools}})
 	configuration.Permission = policy.PermissionDefault
 	if request.Runner.Settings.Permission != policy.PermissionAllMighty || request.Runner.Settings.Scope != policy.System {
 		t.Fatal("request did not retain the selected execution policy")

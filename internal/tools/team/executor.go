@@ -6,7 +6,6 @@ package team
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/keonho-kim/meca/internal/agent/team"
@@ -20,6 +19,7 @@ import (
 
 type Local interface {
 	toolapi.Executor
+	PrepareAdmitted(context.Context, policy.Settings, toolapi.Call, func(context.Context) (func(), error)) (toolapi.Execution, error)
 	toolapi.CommandExecutor
 	toolapi.CommandNotifier
 	ActiveCommand() string
@@ -66,7 +66,13 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 	if err != nil {
 		return nil, err
 	}
-	op, err := e.Local.Prepare(ctx, settings, call)
+	prepared := &localOperation{executor: e, call: call, held: held, paths: paths}
+	var op toolapi.Execution
+	if call.Name == "execute_command" {
+		op, err = e.Local.PrepareAdmitted(ctx, settings, call, prepared.admitCommand)
+	} else {
+		op, err = e.Local.Prepare(ctx, settings, call)
+	}
 	if err != nil {
 		held.Release()
 		return nil, err
@@ -87,16 +93,6 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 		toolapi.Release(op)
 		return nil, err
 	}
-	prepared := &localOperation{executor: e, call: call, operation: op, held: held, paths: paths}
-	if call.Name == "execute_command" {
-		command, ok := op.(interface {
-			SetCommandAdmission(func(context.Context) (func(), error))
-		})
-		if !ok {
-			toolapi.Release(op)
-			return nil, fmt.Errorf("command executor must own queued admission")
-		}
-		command.SetCommandAdmission(prepared.admitCommand)
-	}
+	prepared.operation, prepared.paths = op, paths
 	return prepared, nil
 }

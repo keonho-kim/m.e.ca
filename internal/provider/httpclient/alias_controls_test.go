@@ -64,20 +64,20 @@ func TestServerDefaultDoesNotOverrideReasoning(t *testing.T) {
 					t.Error(err)
 					return
 				}
-				for _, field := range []string{"think", "reasoning_effort", "chat_template_kwargs", "reasoning"} {
+				for _, field := range []string{"think", "reasoning_effort", "chat_template_kwargs", "reasoning", "thinking"} {
+					if provider.Kind == connection.OpenAI && field == "reasoning" {
+						var options map[string]string
+						if err := json.Unmarshal(body[field], &options); err != nil || len(options) != 1 || options["summary"] != "auto" {
+							t.Error("default reasoning depth changed", err)
+						}
+						continue
+					}
 					if _, exists := body[field]; exists {
 						t.Errorf("server default overridden by %s", field)
 					}
 				}
 				w.Header().Set("Content-Type", "application/json")
-				switch provider.Kind {
-				case connection.Ollama:
-					fmt.Fprint(w, `{"message":{"content":"answer"},"done":true}`)
-				case connection.LMStudio:
-					fmt.Fprint(w, `{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"answer"}]}]}`)
-				default:
-					fmt.Fprint(w, `{"choices":[{"message":{"content":"answer"},"finish_reason":"stop"}]}`)
-				}
+				writeProviderSuccess(w, provider.Kind, "answer")
 			})
 			err := client.Generate(context.Background(), modelapi.Request{ModelID: "models/bin/model114", MaxOutput: 128, Messages: []modelapi.Message{{Role: "user", Content: "hello"}}}, func(modelapi.Event) error { return nil })
 			if err != nil {

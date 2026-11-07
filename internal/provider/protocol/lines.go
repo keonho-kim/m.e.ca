@@ -1,4 +1,4 @@
-// Purpose: Read uncapped stream lines while reusing only bounded exceptional-line storage.
+// Purpose: Read stream lines within the provider response budget and release oversized scratch buffers.
 // Pattern: Response-owned buffered reader.
 // Usage: ReadResponse consumes each borrowed line before advancing to the next one.
 // Related: internal/provider/protocol/stream.go, internal/provider/protocol/chunk.go.
@@ -7,13 +7,15 @@ package protocol
 import (
 	"bufio"
 	"context"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 const retainedFrameBytes = 64 * 1024
 
 type streamLines struct {
 	*bufio.Reader
-	long []byte
+	long  []byte
+	limit int
 }
 
 func (r *streamLines) next(ctx context.Context) ([]byte, error) {
@@ -26,6 +28,9 @@ func (r *streamLines) next(ctx context.Context) ([]byte, error) {
 			return nil, err
 		}
 		part, err := r.ReadSlice('\n')
+		if r.limit > 0 && len(r.long)+len(part) > r.limit {
+			return nil, &modelapi.OutputLimitError{Reason: "model stream frame byte limit"}
+		}
 		if len(r.long) == 0 && err != bufio.ErrBufferFull {
 			return part, err
 		}

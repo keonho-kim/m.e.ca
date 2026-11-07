@@ -71,3 +71,20 @@ func TestImageRejectionDisablesOnlyImageInput(t *testing.T) {
 		t.Fatal("text request did not execute")
 	}
 }
+
+func TestImagePreflightCountsRepeatedSnapshots(t *testing.T) {
+	// Images may share one immutable snapshot while each occurrence still costs
+	// wire bytes. This fixture needs 6 MiB, rather than a 256 MiB HTTP encoding.
+	data := make([]byte, 6<<20)
+	message := modelapi.Message{Role: "user"}
+	for range 32 {
+		message.Images = append(message.Images, media.Image{Data: data})
+	}
+	if images, err := imageMessages([]modelapi.Message{message}); !images || err != nil {
+		t.Fatalf("exact base64 budget was rejected: %v", err)
+	}
+	message.Images = append(message.Images, media.Image{Data: data})
+	if _, err := imageMessages([]modelapi.Message{message}); err == nil {
+		t.Fatal("repeated snapshots exceeded the wire budget")
+	}
+}

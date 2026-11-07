@@ -6,7 +6,7 @@ package channel
 
 import (
 	"fmt"
-	"strconv"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -14,11 +14,25 @@ import (
 
 // Context distinguishes actual user instructions from attributed peer observations.
 func (m Message) Context() modelapi.Message {
+	origin := &source.Public{Session: m.Session, Sequence: m.Sequence, Author: m.From, Kind: m.Kind()}
 	if m.From == "user" {
-		return modelapi.Message{ID: fmt.Sprintf("room:user/%d", m.Sequence), Role: "user", Content: m.Text}
+		return modelapi.Message{Source: origin, ID: fmt.Sprintf("room:user/%d", m.Sequence), Role: "user", Content: m.Text}
+	}
+	prefix := m.ContextPrefix()
+	return modelapi.Message{Source: origin, ID: fmt.Sprintf("peer:%s/%d", m.From, m.Sequence), Role: "system", Content: prefix + m.Text}
+}
+
+// ContextPrefix freezes attribution separately from the shared source text.
+func (m Message) ContextPrefix() string {
+	if m.Prefix != nil {
+		return *m.Prefix
+	}
+
+	if m.From == "user" {
+		return ""
 	}
 	var text strings.Builder
-	size := len(m.Text) + len(m.From) + 64
+	size := len(m.From) + 64
 	if note := m.Note; note != nil {
 		size += len(note.ReplyAuthor) + 128
 		for _, name := range note.Mentions {
@@ -63,22 +77,18 @@ func (m Message) Context() modelapi.Message {
 		}
 	}
 	text.WriteByte('\n')
-	text.WriteString(m.Text)
-	return modelapi.Message{ID: fmt.Sprintf("peer:%s/%d", m.From, m.Sequence), Role: "system", Content: text.String()}
+	return text.String()
 }
 
-// Sequence recognizes context records backed by the public channel.
-func Sequence(id string) (int64, bool) {
-	if !IsPeer(id) && !strings.HasPrefix(id, "room:") {
+// Sequence returns an explicit public receive or authored-result reference.
+func Sequence(message modelapi.Message) (int64, bool) {
+	if message.Source == nil || message.Source.Sequence < 1 {
 		return 0, false
 	}
-	index := strings.LastIndexByte(id, '/')
-	if index < 0 {
-		return 0, false
-	}
-	sequence, err := strconv.ParseInt(id[index+1:], 10, 64)
-	return sequence, err == nil && sequence > 0
+	return message.Source.Sequence, true
 }
 
-// IsPeer identifies the provenance marker used by private context and compaction.
-func IsPeer(id string) bool { return strings.HasPrefix(id, "peer:") }
+// IsPeer distinguishes attributed observations from actual user instructions.
+func IsPeer(message modelapi.Message) bool {
+	return message.Source != nil && message.Source.Author != "user" && message.Role == "system"
+}

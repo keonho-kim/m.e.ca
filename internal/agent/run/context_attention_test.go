@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestPeerAttentionControlsContinuationWithoutChangingUserObjective(t *testin
 			r.Journal = j
 			r.PollContext = func(context.Context) (ContextBatch, error) {
 				if len(g.requests) == 1 && j.cursor == 0 {
-					return ContextBatch{Cursor: 7, Reconsider: reconsider, Messages: []modelapi.Message{{ID: "peer:Ren/7", Role: "system", Content: "Public conversation — Ren\nMy tests cover the existing 423 response."}}}, nil
+					return ContextBatch{Cursor: 7, Reconsider: reconsider, Messages: []modelapi.Message{{ID: "peer:Ren/7", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 7}, Role: "system", Content: "Public conversation — Ren\nMy tests cover the existing 423 response."}}}, nil
 				}
 				return ContextBatch{}, nil
 			}

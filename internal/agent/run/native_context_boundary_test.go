@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestPeerObservationDuringPreparationPreservesNativePairing(t *testing.T) {
 	r.Journal = j
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if tools.prepared > 0 && j.cursor == 0 {
-			return ContextBatch{Cursor: 7, Messages: []model.Message{{ID: "peer:Ren/7", Role: "system", Content: "Public conversation — Ren\nI am reviewing the existing interface."}}}, nil
+			return ContextBatch{Cursor: 7, Messages: []model.Message{{ID: "peer:Ren/7", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 7}, Role: "system", Content: "Public conversation — Ren\nI am reviewing the existing interface."}}}, nil
 		}
 		return ContextBatch{}, nil
 	}
@@ -47,7 +48,7 @@ func TestPeerObservationBetweenWavesPreservesTheWholeNativeGroup(t *testing.T) {
 	r.Journal, r.Generator = j, g
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if tools.executed > 0 && j.cursor == 0 {
-			return ContextBatch{Cursor: 9, Messages: []model.Message{{ID: "peer:Ren/9", Role: "system", Content: "Public conversation — Ren\nThe interface review is complete."}}}, nil
+			return ContextBatch{Cursor: 9, Messages: []model.Message{{ID: "peer:Ren/9", Source: &source.Public{Author: "Ren", Kind: "team_message", Sequence: 9}, Role: "system", Content: "Public conversation — Ren\nThe interface review is complete."}}}, nil
 		}
 		return ContextBatch{}, nil
 	}

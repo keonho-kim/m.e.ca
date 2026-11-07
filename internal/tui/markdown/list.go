@@ -16,12 +16,15 @@ import (
 func (r *renderer) list(v *ast.List, indent string, depth int) {
 	index := v.Start
 	for item := v.FirstChild(); item != nil; item = item.NextSibling() {
+		if r.failed || r.stopped {
+			return
+		}
 		if p := r.listProgress; p != nil && p.node == v {
 			if item == v.FirstChild() {
-				p.before = len(r.rows)
+				p.before = r.rowCount()
 			}
 			if item == p.mutable {
-				p.row = len(r.rows)
+				p.row = r.rowCount()
 			}
 		}
 		marker := "• "
@@ -35,20 +38,22 @@ func (r *renderer) list(v *ast.List, indent string, depth int) {
 				marker = "[x] "
 			}
 		}
-		start := len(r.rows)
+		start := r.rowCount()
 		continuation := indent + strings.Repeat(" ", uniseg.StringWidth(marker))
-		r.blocks(item, continuation, depth+1)
-		if len(r.rows) > start {
-			spans := r.rows[start].Spans
-			if len(spans) > 0 && strings.HasPrefix(spans[0].Text, continuation) {
-				spans[0].Text = strings.TrimPrefix(spans[0].Text, continuation)
+		outer := r.firstRow
+		r.firstRow = func(value Line) Line {
+			value = listMarker(value, continuation, indent+marker)
+			if outer != nil {
+				value = outer(value)
 			}
-			r.rows[start] = line(append([]Span{{Text: indent + marker, Style: Dim}}, spans...))
+			return value
+		}
+		r.blocks(item, continuation, depth+1)
+		if r.rowCount() == start {
+			r.firstRow = outer
 		}
 		if v.IsTight {
-			for len(r.rows) > start && r.rows[len(r.rows)-1].Text == "" {
-				r.rows = r.rows[:len(r.rows)-1]
-			}
+			r.trimBlankRows(start)
 		}
 	}
 	r.blank()

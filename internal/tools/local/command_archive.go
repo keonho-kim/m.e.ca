@@ -1,7 +1,7 @@
-// Purpose: Store sanitized completed command results outside the active in-memory registry.
+// Purpose: Store sanitized command results within the executor's acknowledged-artifact retention budget.
 // Pattern: Executor-owned ephemeral result archive.
-// Usage: A command waiter archives once; tools and the runtime load results until session cleanup.
-// Related: internal/tools/local/commands.go, internal/tools/local/executor.go.
+// Usage: A command waiter archives once; tools and runtime read results until retention expiry or cleanup.
+// Related: internal/tools/local/artifact_retention.go, internal/tools/local/commands.go.
 package local
 
 import (
@@ -43,7 +43,7 @@ func (e *Executor) archiveCommand(id, command string, output process.Output, run
 		return marshalErr
 	}
 	// Only the owning waiter writes; done is closed after this file is complete.
-	if err := os.WriteFile(path, body, 0600); err != nil {
+	if err := e.writeArtifact(id, path, body); err != nil {
 		return err
 	}
 	capture.finalized = true
@@ -73,7 +73,15 @@ func (e *Executor) AcknowledgeCommand(id string) error {
 	if _, err := e.commandPath(id, ".json"); err != nil {
 		return err
 	}
+	if done, err := e.commands.Done(id); err == nil {
+		select {
+		case <-done:
+		default:
+			return fmt.Errorf("command is still running; wait for completion before acknowledgement")
+		}
+	}
 	e.commands.Acknowledge(id)
 	e.liveOutputs.forget(id)
+	e.retained.acknowledge(id)
 	return nil
 }

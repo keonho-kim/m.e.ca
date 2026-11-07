@@ -1,10 +1,11 @@
 // Purpose: Verify confirmed model settings persist credentials and controls while partial failures remain explicit.
 // Pattern: Temporary-storage, mock-keyring and HTTP integration tests.
 // Usage: go test ./internal/tui/session -run TestModelForm.
-// Related: internal/tui/session/model_form_setup.go, internal/provider/setup/commit.go, internal/config/model.go.
+// Related: internal/tui/session/model_form_setup.go, internal/commands/modelchange/commit.go, internal/config/model.go.
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
-	"github.com/zalando/go-keyring"
 
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -34,7 +34,7 @@ func editModelValue(a *app, row int, value string) {
 }
 
 func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
-	keyring.MockInit()
+
 	a := fixture(t)
 	secret := "private-form-test-key"
 	var posts atomic.Int32
@@ -80,6 +80,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+	finishModelChange(t, a)
 	if a.page != "chat" || a.connection.modelForm != nil || a.connection.selection.Effort() != "high" || a.connection.selection.Thinking == nil || !*a.connection.selection.Thinking {
 		t.Fatalf("saved=%+v status=%s", a.connection.selection, a.status)
 	}
@@ -91,7 +92,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	if err != nil || saved.Effort() != "high" || saved.Thinking == nil || !*saved.Thinking {
 		t.Fatalf("stored defaults=%+v err=%v", saved, err)
 	}
-	key, err := a.opts.Vault.Get(saved.Connection.CredentialRef)
+	key, err := a.opts.Vault.Get(a.ctx, saved.Connection.CredentialRef, saved.Connection.CredentialScope())
 	if err != nil || key != secret {
 		t.Fatalf("credential=%q err=%v", key, err)
 	}
@@ -121,12 +122,15 @@ func TestModelFormGlobalFailureKeepsCommittedSession(t *testing.T) {
 	}
 	off := false
 	a.connection.selection = connection.Selection{Connection: c, Model: "alias", Thinking: &off, ThinkingSupported: true}
-	a.opts.SaveConfig = func(config.Config) error { return errors.New("default write failed") }
+	a.opts.UpdateConfig = func(context.Context, func(*config.Config)) (config.Config, error) {
+		return config.Config{}, errors.New("default write failed")
+	}
 	a.openModel()
 	a.connection.modelForm.Row = modelsettings.Thinking
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+	finishModelChange(t, a)
 	if a.page != "chat" || a.connection.modelForm != nil || !strings.Contains(a.status, "default write failed") || a.connection.selection.Thinking == nil || !*a.connection.selection.Thinking {
 		t.Fatalf("selection=%+v status=%s", a.connection.selection, a.status)
 	}

@@ -14,12 +14,15 @@ import (
 )
 
 func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int, images bool) (messages []modelapi.Message, err error) {
+	if err := s.checkSession(session); err != nil {
+		return nil, err
+	}
 	if after < 0 || maxBytes < 1 {
 		return nil, fmt.Errorf("invalid conversation context bounds")
 	}
 	total := 0
 	for {
-		page, err := s.recordPage(ctx, `SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.session_id=? AND t.sequence>? ORDER BY t.sequence LIMIT 64`, session, after)
+		page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.sequence>? ORDER BY t.sequence LIMIT 64", after)
 		if err != nil {
 			return nil, err
 		}
