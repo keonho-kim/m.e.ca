@@ -6,11 +6,12 @@ package sqlite
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestRunCheckpointRecovery(t *testing.T) {
@@ -36,7 +37,7 @@ func TestRunCheckpointRecovery(t *testing.T) {
 	if err != nil || recovered == nil || recovered.Status != runrecord.Interrupted || recovered.Tool != "write_file" || recovered.Objective != cp.Objective || recovered.LastChange != cp.LastChange || len(recovered.Work.Files) != 1 || recovered.Work.Files[0].Path != "file.txt" || recovered.ReportReason != cp.ReportReason {
 		t.Fatalf("recovery: %+v %v", recovered, err)
 	}
-	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
+	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(history) != 0 {
 		t.Fatalf("draft was replayed: %+v %v", history, err)
 	}

@@ -11,15 +11,26 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
+
 	"io"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/klauspost/compress/zstd"
+
+	// TextPrefix never publishes a preview before validating the complete original
+	// length, digest and JSON string. The encoded database body remains caller-owned.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// TextPrefix never publishes a preview before validating the complete original
-// length, digest and JSON string. The encoded database body remains caller-owned.
 func (c *Codec) TextPrefix(ctx context.Context, codec, size int, id string, body []byte, limit int) (text string, clipped bool, err error) {
+	return c.textPrefix(ctx, codec, size, id, body, limit, false)
+}
+
+func (c *Codec) RawTextPrefix(ctx context.Context, codec, size int, id string, body []byte, limit int) (string, bool, error) {
+	return c.textPrefix(ctx, codec, size, id, body, limit, true)
+}
+
+func (c *Codec) textPrefix(ctx context.Context, codec, size int, id string, body []byte, limit int, raw bool) (text string, clipped bool, err error) {
 	if err := ctx.Err(); err != nil {
 		return "", false, err
 	}
@@ -32,12 +43,15 @@ func (c *Codec) TextPrefix(ctx context.Context, codec, size int, id string, body
 		}
 	}()
 	if size < 1 || size > MaxBytes || limit < 1 {
-		return "", false, fmt.Errorf("invalid stored text length or preview limit")
+		return "", false, faults.Errorf(diagcatalog.ContentInvalidStoredTextLengthOrPreviewLimit)
 	}
 	switch codec {
 	case 0:
 		if len(body) != size || ID(body) != id {
-			return "", false, fmt.Errorf("stored payload integrity check failed")
+			return "", false, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
+		}
+		if raw {
+			return rawTextPrefix(body, limit)
 		}
 		return StringPrefix(body, limit)
 	case 1:
@@ -46,31 +60,43 @@ func (c *Codec) TextPrefix(ctx context.Context, codec, size int, id string, body
 			return "", false, err
 		}
 		defer func() { err = errors.Join(err, reader.Close()) }()
-		return readPrefix(ctx, reader, size, id, limit)
+		return readProjection(ctx, reader, size, id, limit, raw)
 	case 2:
 		if err := checkFrameLength(body, size); err != nil {
 			return "", false, err
 		}
-		text, clipped, err = c.prefixZstd(ctx, body, size, id, limit)
+		text, clipped, err = c.prefixZstd(ctx, body, size, id, limit, raw)
 		if errors.Is(err, zstd.ErrWindowSizeExceeded) || errors.Is(err, zstd.ErrDecoderSizeExceeded) {
 			// A wide history window can cost more memory than the full original.
 			// Bulk decoding uses the already charged original-size bound instead.
-			raw, restoreErr := c.Restore(codec, size, id, body)
+			restored, restoreErr := c.Restore(codec, size, id, body)
 			if restoreErr != nil {
 				return "", false, restoreErr
 			}
-			return StringPrefix(raw, limit)
+			if raw {
+				return rawTextPrefix(restored, limit)
+			}
+			return StringPrefix(restored, limit)
 		}
 		return text, clipped, err
 	default:
-		return "", false, fmt.Errorf("unsupported payload codec %d", codec)
+		return "", false, faults.Errorf(diagcatalog.ContentUnsupportedPayloadCodec, codec)
 	}
 }
 
-func readPrefix(ctx context.Context, source io.Reader, size int, id string, limit int) (string, bool, error) {
+func readProjection(ctx context.Context, source io.Reader, size int, id string, limit int, raw bool) (string, bool, error) {
 	reader := io.LimitReader(source, int64(size)+1)
 	digest := sha256.New()
-	parser := newPrefixString(size, limit)
+	var parser interface {
+		write([]byte) error
+		finish(int) (string, bool, error)
+	}
+	if raw {
+		parser = &rawPrefix{limit: limit}
+	} else {
+		value := newPrefixString(size, limit)
+		parser = &value
+	}
 	buffer := make([]byte, 32<<10)
 	total := 0
 	for {
@@ -81,7 +107,7 @@ func readPrefix(ctx context.Context, source io.Reader, size int, id string, limi
 		if n > 0 {
 			total += n
 			if total > size {
-				return "", false, fmt.Errorf("stored payload length exceeded")
+				return "", false, faults.Errorf(diagcatalog.ContentStoredPayloadLengthExceeded)
 			}
 			digest.Write(buffer[:n])
 			if parseErr := parser.write(buffer[:n]); parseErr != nil {
@@ -99,7 +125,7 @@ func readPrefix(ctx context.Context, source io.Reader, size int, id string, limi
 		return "", false, err
 	}
 	if total != size || hex.EncodeToString(digest.Sum(nil)) != id {
-		return "", false, fmt.Errorf("stored payload integrity check failed")
+		return "", false, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
 	}
 	return parser.finish(limit)
 }

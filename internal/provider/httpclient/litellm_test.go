@@ -8,10 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestLiteLLMProxyDialogueAndReasoning(t *testing.T) {

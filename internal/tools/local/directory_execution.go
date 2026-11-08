@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
@@ -67,7 +69,7 @@ func (op *directoryOperation) createDirectories(ctx context.Context) (toolapi.Re
 			return finish(err)
 		}
 		if parentTarget.absolute != parentPath {
-			return finish(fmt.Errorf("directory parent changed: %s", parentPath))
+			return finish(faults.Errorf(diagcatalog.LocalDirectoryParentChanged, parentPath))
 		}
 		parent, err := parentTarget.root.OpenRoot(parentTarget.relative)
 		if err != nil {
@@ -75,7 +77,7 @@ func (op *directoryOperation) createDirectories(ctx context.Context) (toolapi.Re
 		}
 		info, statErr := parent.Stat(".")
 		if statErr != nil || identities[parentPath] == nil || !os.SameFile(info, identities[parentPath]) {
-			return finish(errors.Join(fmt.Errorf("directory parent identity changed: %s", parentPath), statErr, parent.Close()))
+			return finish(errors.Join(faults.Errorf(diagcatalog.LocalDirectoryParentIdentityChanged, parentPath), statErr, parent.Close()))
 		}
 		name := filepath.Base(dir.target.absolute)
 		err = parent.Mkdir(name, 0755)
@@ -92,5 +94,5 @@ func (op *directoryOperation) createDirectories(ctx context.Context) (toolapi.Re
 	return finish(nil)
 }
 func directoryStale() error {
-	return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "directory targets changed after preparation", Next: "Inspect the current directory paths and retry with the intended paths."}
+	return &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalDirectoryTargetsChangedAfterPreparation), Next: diagcatalog.Text(diagcatalog.LocalInspectTheCurrentDirectoryPathsAndRetry)}
 }

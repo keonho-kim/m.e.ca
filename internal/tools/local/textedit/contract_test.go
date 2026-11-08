@@ -5,9 +5,9 @@
 package textedit
 
 import (
-	"testing"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"testing"
 )
 
 func TestAmbiguousAndMissingSourceReturnSpecificFailures(t *testing.T) {
@@ -16,7 +16,7 @@ func TestAmbiguousAndMissingSourceReturnSpecificFailures(t *testing.T) {
 		{"current", "previous", "text_not_found"},
 	} {
 		after, _, err := ReplaceMany("/source", []byte(tc.source), []Edit{{tc.old, "new"}}, "preserve")
-		if err == nil || toolapi.FailureOf(err).Code != tc.code || after != nil {
+		if err == nil || faults.FailureOf(err).Code != tc.code || after != nil {
 			t.Fatalf("%+v: result=%q err=%v", tc, after, err)
 		}
 	}

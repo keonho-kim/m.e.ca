@@ -7,11 +7,14 @@ package startup
 import (
 	"errors"
 	"flag"
-	"fmt"
+
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Mode struct {
@@ -47,13 +50,13 @@ func Parse(args []string, cwd string) (Mode, error) {
 			return Mode{}, err
 		}
 		if flags.NArg() != 0 {
-			return Mode{}, fmt.Errorf("usage: meca install [--no-shell]")
+			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaInstallNoShell)
 		}
 		return mode, nil
 	}
 	if len(args) > 0 && args[0] == string(Upgrade) {
 		if len(args) != 1 {
-			return Mode{}, fmt.Errorf("usage: meca upgrade")
+			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaUpgrade)
 		}
 		return Mode{Action: Upgrade}, nil
 	}
@@ -80,10 +83,10 @@ func Parse(args []string, cwd string) (Mode, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			return Mode{Action: Help}, nil
 		}
-		return Mode{}, fmt.Errorf("%w; usage: meca [path] [--print|--mode json] [--session ID] [prompt]", err)
+		return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaPathPrintModeJsonSession, err)
 	}
 	if mode.Output != "text" && mode.Output != "json" {
-		return Mode{}, fmt.Errorf("mode must be text or json")
+		return Mode{}, faults.Errorf(diagcatalog.StartupModeMustBeTextOrJson)
 	}
 	if err := checkServerFlags(flags, mode); err != nil {
 		return Mode{}, err
@@ -95,13 +98,13 @@ func Parse(args []string, cwd string) (Mode, error) {
 	} else if len(rest) == 1 && rest[0] != "" {
 		path = rest[0]
 	} else if len(rest) > 0 {
-		return Mode{}, fmt.Errorf("expected one project path")
+		return Mode{}, faults.Errorf(diagcatalog.StartupExpectedOneProjectPath)
 	}
 	if mode.Export && (mode.Session == "" || mode.Prompt != "" || mode.Diagnose) {
-		return Mode{}, fmt.Errorf("--export requires --session ID and no prompt or diagnostic")
+		return Mode{}, faults.Errorf(diagcatalog.StartupExportRequiresSessionIDAndNoPrompt)
 	}
 	if mode.Diagnose && mode.Prompt != "" {
-		return Mode{}, fmt.Errorf("--diagnose does not accept a prompt")
+		return Mode{}, faults.Errorf(diagcatalog.StartupDiagnoseDoesNotAcceptAPrompt)
 	}
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(cwd, path)
@@ -112,7 +115,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 	}
 	real, err := filepath.EvalSymlinks(absolute)
 	if err != nil {
-		return Mode{}, fmt.Errorf("project directory: %w", err)
+		return Mode{}, faults.Errorf(diagcatalog.StartupProjectDirectory, err)
 	}
 	file, err := os.Open(real)
 	if err != nil {
@@ -127,7 +130,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 		return Mode{}, closeErr
 	}
 	if !info.IsDir() {
-		return Mode{}, fmt.Errorf("project path must be a directory")
+		return Mode{}, faults.Errorf(diagcatalog.StartupProjectPathMustBeADirectory)
 	}
 	mode.Project, mode.Display = real, absolute
 	return mode, nil

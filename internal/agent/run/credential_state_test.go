@@ -6,9 +6,10 @@ package run
 
 import (
 	"context"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/config/credentials"
-	"testing"
 )
 
 func TestProtectedContinuationCannotPersistEscapedCredential(t *testing.T) {

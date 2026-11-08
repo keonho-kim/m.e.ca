@@ -5,6 +5,8 @@
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"context"
 	"strings"
 	"testing"
@@ -56,7 +58,7 @@ func TestSingleSteeringBetweenWavesPreservesTheCompletedSibling(t *testing.T) {
 		}
 		found := false
 		for _, message := range request.Messages {
-			found = found || strings.Contains(message.Content, tool.InstructionChanged)
+			found = found || strings.Contains(message.Content, diagcatalog.InstructionChanged)
 		}
 		if !found {
 			t.Error("the next model decision missed why the remaining call was skipped")

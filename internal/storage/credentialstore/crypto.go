@@ -11,25 +11,32 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"fmt"
+	"errors"
+
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func aad(ref, scope, keyRef string) []byte {
 	return []byte("meca-credential-aes256gcm-v1\x00" + ref + "\x00" + scope + "\x00" + keyRef)
 }
 
-func (s *Store) seal(ctx context.Context, ref, scope, secret string) (string, []byte, error) {
-	if err := s.reserveKey(ctx); err != nil {
+func (s *Store) seal(ctx context.Context, ref, scope, secret string) (keyRef string, sealed []byte, resultErr error) {
+	reservation, err := s.reserveKey(ctx)
+	if err != nil {
 		return "", nil, err
 	}
+	defer func() { resultErr = errors.Join(resultErr, reservation.Close()) }()
 	var material [32]byte
 	if _, err := rand.Read(material[:]); err != nil {
 		return "", nil, err
 	}
 	defer clear(material[:])
-	keyRef := "encryption_" + rand.Text()
+	keyRef = "encryption_" + rand.Text()
 	encoded := base64.StdEncoding.EncodeToString(material[:])
+	reservation.Publish()
 	if err := s.keys.Set(ctx, keyRef, encoded); err != nil {
 		if ctx.Err() != nil {
 			return "", nil, ctx.Err()
@@ -78,7 +85,7 @@ func (s *Store) open(ctx context.Context, ref, scope, keyRef string, sealed []by
 	defer clear(material)
 	block, err := aes.NewCipher(material)
 	if err != nil {
-		return "", fmt.Errorf("invalid encryption key")
+		return "", faults.Errorf(diagcatalog.CredentialstoreInvalidEncryptionKey)
 	}
 	aead, err := cipher.NewGCMWithRandomNonce(block)
 	if err != nil {

@@ -6,17 +6,20 @@ package startup
 
 import (
 	"context"
-	"fmt"
+
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/commands"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/rivo/uniseg"
-	"strings"
 )
 
 type Conversations func(context.Context, int, int) ([]sessionstate.Conversation, error)
@@ -28,7 +31,7 @@ func Pages(snapshot []sessionstate.Conversation) Conversations {
 			return nil, err
 		}
 		if offset < 0 || limit < 1 || limit > 100 {
-			return nil, fmt.Errorf("invalid conversation page")
+			return nil, faults.Errorf(diagcatalog.StartupInvalidConversationPage)
 		}
 		start := min(offset, len(snapshot))
 		return snapshot[start : start+min(limit, len(snapshot)-start)], nil
@@ -160,7 +163,7 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 					return selected, true, nil
 				}
 			case *tcell.EventError:
-				return sessionstate.Session{}, false, fmt.Errorf("terminal: %w", e)
+				return sessionstate.Session{}, false, faults.Errorf(diagcatalog.StartupTerminal, e)
 			}
 		}
 	}

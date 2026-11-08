@@ -6,9 +6,10 @@ package diagnostic
 
 import (
 	"context"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/transport"
-	"testing"
 )
 
 func TestImageProbeClassifications(t *testing.T) {

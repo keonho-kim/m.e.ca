@@ -5,13 +5,14 @@
 package prompts_test
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
-	"github.com/keonho-kim/meca/internal/config/prompts"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/prompts"
 )
 
 func TestPromptBootstrap(t *testing.T) {

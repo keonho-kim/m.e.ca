@@ -5,11 +5,12 @@
 package session
 
 import (
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
 	"time"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func settleVisibleDetails(t *testing.T, a *app) {

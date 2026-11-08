@@ -6,10 +6,12 @@ package team
 
 import (
 	"errors"
-	"fmt"
+
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	"github.com/keonho-kim/meca/internal/agent/work"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (r *Room) start(member identity.Member) error {
@@ -72,7 +74,7 @@ func (r *Room) worker(live *participant) {
 		r.mu.Unlock()
 	}
 	if err == nil && result.Status != "" && result.Status != "answered" {
-		err = fmt.Errorf("peer stopped: %s", result.End.Reason)
+		err = faults.Errorf(diagcatalog.TeamPeerStopped, result.End.Reason)
 	}
 	if err == nil && !result.Departed {
 		r.mu.Lock()
@@ -82,13 +84,13 @@ func (r *Room) worker(live *participant) {
 			again, answerErr := peer.AfterAnswer(r.ctx, result.Text)
 			err = answerErr
 			if again && err == nil {
-				err = fmt.Errorf("peer execution returned before admitting pending public conversation")
+				err = faults.Errorf(diagcatalog.TeamPeerExecutionReturnedBeforeAdmittingPendingPublic)
 			}
 		}
 	}
 	if err != nil {
 		r.mu.Lock()
-		r.failures = errors.Join(r.failures, fmt.Errorf("%s: %w", peer.ID, err))
+		r.failures = errors.Join(r.failures, faults.Errorf(diagcatalog.TeamWrappedCause, peer.ID, err))
 		finalFailure := r.finished && r.result.Agent == peer.ID
 		r.mu.Unlock()
 		if finalFailure {

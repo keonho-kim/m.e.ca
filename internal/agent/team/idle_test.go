@@ -6,13 +6,14 @@ package team
 
 import (
 	"context"
+	"strings"
+	"testing"
+	"time"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestAllIdleReconsidersOnceThenReportsNoProgress(t *testing.T) {

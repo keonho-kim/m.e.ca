@@ -5,12 +5,17 @@
 package run
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome toolapi.Result, toolErr error, events ...runrecord.Event) error {
@@ -31,14 +36,14 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	if toolErr != nil || failed {
 		failure := outcome.Failure
 		if failure == nil {
-			failure = toolapi.FailureOf(toolErr)
+			failure = faults.FailureOf(toolErr)
 		}
 		if failure == nil {
-			failure = &toolapi.Failure{Code: toolapi.ExecutionFailed, Detail: "tool reported failure", Next: "Inspect its output before choosing another action."}
+			failure = &faults.Failure{Code: diagcatalog.ExecutionFailed, Detail: diagcatalog.Text(diagcatalog.RunToolReportedFailure), Next: diagcatalog.Text(diagcatalog.RunInspectItsOutputBeforeChoosingAnotherAction)}
 		}
 		failure.Detail = s.runner.Redact(failure.Detail)
 		encoded, encodeErr := json.Marshal(struct {
-			Failure *toolapi.Failure
+			Failure *faults.Failure
 			Output  json.RawMessage
 		}{failure, outcome.Content})
 		if encodeErr != nil {
@@ -68,5 +73,22 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 		return err
 	}
 	events = append(events, event)
-	return s.save(ctx, modelapi.Message{Source: outcome.Source, Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}, events...)
+	message := modelapi.Message{Source: outcome.Source, Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}
+	if (outcome.Skill != nil || outcome.SkillFile != nil) && !failed && toolErr == nil {
+		message.ID = "skill_" + rand.Text()
+	}
+	if err := s.save(ctx, message, events...); err != nil {
+		return err
+	}
+	if outcome.Skill != nil && !failed && toolErr == nil {
+		if err := s.retainSkillRead(*outcome.Skill, s.messages[len(s.messages)-1]); err != nil {
+			return err
+		}
+	}
+	if outcome.SkillFile != nil && !failed && toolErr == nil {
+		if err := s.retainSkillReference(*outcome.SkillFile, s.messages[len(s.messages)-1]); err != nil {
+			return err
+		}
+	}
+	return nil
 }

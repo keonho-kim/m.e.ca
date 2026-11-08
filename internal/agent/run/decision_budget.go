@@ -6,10 +6,12 @@ package run
 
 import (
 	"context"
-	"errors"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-var errModelBudget = errors.New("model call budget exhausted")
+var errModelBudget = faults.Errorf(diagcatalog.RunModelCallBudgetExhausted)
 
 func (s *execution) modelCall() bool {
 	if !s.usage.model(s.limits.MaxModelCalls) {

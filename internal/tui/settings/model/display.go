@@ -5,13 +5,14 @@
 package model
 
 import (
+	"slices"
+	"strings"
+	"unicode/utf8"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"slices"
-	"strings"
-	"unicode/utf8"
 )
 
 func (f *Form) Display(w, contextLength int, language locale.Language, redact func(string) string) view.SettingsDisplay {

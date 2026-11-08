@@ -6,10 +6,11 @@ package protocol
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
-	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 	"reflect"
 	"slices"
+
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"

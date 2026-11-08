@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const MaxBytes = 32 * 1024 * 1024
@@ -36,24 +39,24 @@ func New(path, mime, format string, width, height int, data []byte) (Image, erro
 // Check validates inexpensive bounds; decoding and snapshot integrity belong to their I/O boundaries.
 func (i Image) Check() error {
 	if i.Path == "" || len(i.Path) > 4096 || !utf8.ValidString(i.Path) || strings.ContainsRune(i.Path, 0) {
-		return fmt.Errorf("invalid image path")
+		return faults.Errorf(diagcatalog.MediaInvalidImagePath)
 	}
 	switch i.Format {
 	case "png", "jpeg", "webp", "gif", "bmp", "tiff":
 	default:
-		return fmt.Errorf("unsupported image source format")
+		return faults.Errorf(diagcatalog.MediaUnsupportedImageSourceFormat)
 	}
 	if i.MIME != "image/png" && i.MIME != "image/jpeg" && i.MIME != "image/webp" {
-		return fmt.Errorf("unsupported image transport format")
+		return faults.Errorf(diagcatalog.MediaUnsupportedImageTransportFormat)
 	}
 	if i.Width < 1 || i.Height < 1 || i.Width > MaxPixels || i.Height > MaxPixels || int64(i.Width)*int64(i.Height) > MaxPixels {
-		return fmt.Errorf("image exceeds the %d-pixel decode budget", MaxPixels)
+		return faults.Errorf(diagcatalog.MediaImageExceedsThePixelDecodeBudget, MaxPixels)
 	}
 	if len(i.Data) == 0 || len(i.Data) > MaxBytes {
-		return fmt.Errorf("image exceeds the %d-byte limit or is empty", MaxBytes)
+		return faults.Errorf(diagcatalog.MediaImageExceedsTheByteLimitOrIs, MaxBytes)
 	}
 	if len(i.Digest) != 64 || strings.Trim(i.Digest, "0123456789abcdef") != "" {
-		return fmt.Errorf("invalid image digest")
+		return faults.Errorf(diagcatalog.MediaInvalidImageDigest)
 	}
 	return nil
 }

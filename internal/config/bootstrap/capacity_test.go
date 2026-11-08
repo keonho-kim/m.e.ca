@@ -5,9 +5,10 @@
 package bootstrap
 
 import (
-	"github.com/keonho-kim/meca/internal/config"
 	"path/filepath"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config"
 )
 
 func TestCompactionCapacityDefaultsPersist(t *testing.T) {

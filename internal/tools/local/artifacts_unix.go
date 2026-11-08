@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,7 +28,7 @@ func newArtifacts() (path string, lease *os.File, err error) {
 		return "", nil, err
 	}
 	if info.Uid != uint32(os.Getuid()) || info.Mode&unix.S_IFMT != unix.S_IFDIR || info.Mode&0077 != 0 {
-		return "", nil, fmt.Errorf("captured-output directory must be private and owned by the current user")
+		return "", nil, faults.Errorf(diagcatalog.LocalCapturedOutputDirectoryMustBePrivateAnd)
 	}
 	root, err := os.OpenRoot(base)
 	if err != nil {

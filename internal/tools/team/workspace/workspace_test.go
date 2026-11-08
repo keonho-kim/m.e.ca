@@ -5,12 +5,16 @@
 package workspace
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"os"
 	"path/filepath"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestWorkspaceDetectsHardlinkAndParentConflicts(t *testing.T) {
@@ -84,8 +88,8 @@ func TestWorkspaceRejectsChangedPreparedAlias(t *testing.T) {
 	}
 	defer held.Release()
 	proposal := toolapi.Approval{Candidate: &toolapi.Candidate{Files: []toolapi.FileDelta{{Path: second}}}}
-	var failure *toolapi.Failure
-	if err := held.Check(proposal); !errors.As(err, &failure) || failure.Code != toolapi.StaleTarget {
+	var failure *faults.Failure
+	if err := held.Check(proposal); !errors.As(err, &failure) || failure.Code != diagcatalog.StaleTarget {
 		t.Fatalf("changed alias accepted: %v", err)
 	}
 }

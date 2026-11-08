@@ -5,9 +5,10 @@
 package view
 
 import (
-	"github.com/rivo/uniseg"
 	"reflect"
 	"testing"
+
+	"github.com/rivo/uniseg"
 )
 
 func TestKeymapLayoutOrderAndBounds(t *testing.T) {

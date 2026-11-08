@@ -6,6 +6,7 @@ package transcript
 
 import (
 	"encoding/json"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )

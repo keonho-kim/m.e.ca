@@ -6,11 +6,12 @@ package history
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestCompactionOmitsDuplicateAuditRecords(t *testing.T) {

@@ -6,10 +6,12 @@ package local
 
 import (
 	"context"
-	"fmt"
+
 	"os"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 	commandpolicy "github.com/keonho-kim/meca/internal/policy/command"
 )
@@ -40,14 +42,14 @@ func (op *commandOperation) admitCommand(ctx context.Context) (func(), error) {
 	}
 	current, err := op.executor.analyzeProgram(ctx, op.program)
 	if err == nil && !op.shell.same(current) {
-		err = &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "command targets changed after preparation", Next: "Inspect the current targets and retry with the intended paths."}
+		err = &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalCommandTargetsChangedAfterPreparation), Next: diagcatalog.Text(diagcatalog.LocalInspectTheCurrentTargetsAndRetryWith)}
 	}
 	return release, err
 }
 
 func (op *commandOperation) prepareCommand(ctx context.Context) error {
 	if op.settings.Scope != policy.System {
-		return fmt.Errorf("host shell execution requires system Scope; directory confinement is unavailable")
+		return faults.Errorf(diagcatalog.LocalHostShellExecutionRequiresSystemScopeDirectory)
 	}
 	op.approval.Target = op.input.Command
 	op.environment = os.Environ()

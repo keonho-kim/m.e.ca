@@ -6,9 +6,10 @@ package sqlite
 
 import (
 	"context"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/identity"
-	"testing"
 )
 
 func TestIdentitySelection(t *testing.T) {

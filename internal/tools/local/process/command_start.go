@@ -8,11 +8,15 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"fmt"
+
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// Start reserves a job before launching its process outside the registry lock.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// Start reserves a job before launching its process outside the registry lock.
 func (r *Registry) Start(ctx context.Context, directory, command string, environment []string, callID string) (string, error) {
 	id, j, err := r.register(ctx, directory, command, environment, callID, nil, true)
 	if err != nil {
@@ -35,7 +39,7 @@ func (r *Registry) register(ctx context.Context, directory, command string, envi
 	r.mu.Lock()
 	if r.availableLocked() == 0 {
 		r.mu.Unlock()
-		return "", nil, fmt.Errorf("command capacity reached (%d active); use list_command_runs and wait_command or cancel_command", MaxActive)
+		return "", nil, faults.Errorf(diagcatalog.ProcessCommandCapacityReachedActiveUseListCommand, MaxActive)
 	}
 	owner := r.owner
 	if owner == nil {
@@ -83,7 +87,11 @@ func (r *Registry) launch(ctx context.Context, id string, j *job, environment []
 	}()
 	var err error
 	if admit != nil {
-		release, err = admit(ctx)
+		err = faults.Guard(func() error {
+			var cause error
+			release, cause = admit(ctx)
+			return cause
+		})
 	}
 	if err == nil {
 		err = ctx.Err()
@@ -93,16 +101,16 @@ func (r *Registry) launch(ctx context.Context, id string, j *job, environment []
 		pending, err = start(ctx, j.state.Directory, j.state.Command, environment, &j.stdout, &j.stderr)
 	}
 	if err != nil {
-		output := Output{Status: "execution_failed", ExitCode: -1}
+		output := Output{Status: diagcatalog.ExecutionFailed, ExitCode: -1}
 		if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
-			output.Status = "interrupted"
+			output.Status = diagcatalog.Interrupted
 			if errors.Is(context.Cause(ctx), context.DeadlineExceeded) {
-				output.Status = "timeout"
+				output.Status = diagcatalog.Timeout
 			}
 		}
 		var archiveErr error
 		if save != nil {
-			archiveErr = save(id, j.state.Command, output, err)
+			archiveErr = faults.Guard(func() error { return save(id, j.state.Command, output, err) })
 		}
 		j.mu.Lock()
 		j.finished = time.Now()
@@ -119,7 +127,7 @@ func (r *Registry) launch(ctx context.Context, id string, j *job, environment []
 	j.state.Status = "running"
 	j.mu.Unlock()
 	launched()
-	r.finish(id, j, pending, save)
+	r.finish(ctx, id, j, pending, save)
 }
 
 func (r *Registry) availableLocked() int {

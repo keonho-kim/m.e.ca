@@ -6,8 +6,10 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) LatestEventReference(ctx context.Context) (*runrecord.EventReference, error) {
@@ -24,7 +26,7 @@ func (s *Store) LatestEventReference(ctx context.Context) (*runrecord.EventRefer
 	s.latestEvent.CompareAndSwap(0, seq)
 	ref.Sequence = s.latestEvent.Load()
 	if ref.Sequence < 1 {
-		return nil, fmt.Errorf("no committed event is available")
+		return nil, faults.Errorf(diagcatalog.SqliteNoCommittedEventIsAvailable)
 	}
 	return ref, nil
 }

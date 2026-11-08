@@ -6,11 +6,12 @@ package team
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
-	"testing"
 )
 
 func TestCompletedCommandStatusDoesNotWaitForEarlierReply(t *testing.T) {

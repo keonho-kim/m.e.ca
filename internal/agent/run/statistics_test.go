@@ -7,10 +7,11 @@ package run
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/agent/inference"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/agent/inference"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"

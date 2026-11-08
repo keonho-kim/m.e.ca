@@ -8,10 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestReasoningToggleChecksOff(t *testing.T) {

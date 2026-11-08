@@ -6,9 +6,10 @@ package catalog
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"slices"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestCatalogDefinitionsDoNotExposePrivateSchema(t *testing.T) {
@@ -45,7 +46,7 @@ func TestCatalogAdvertisesSupportedTools(t *testing.T) {
 		names = append(names, definition.Name)
 	}
 	slices.Sort(names)
-	want := []string{"cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "view_image", "wait_command", "write_file"}
+	want := []string{"cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "list_skills", "load_skill", "read_skill_file", "view_image", "wait_command", "write_file"}
 	if !slices.Equal(names, want) {
 		t.Fatalf("advertised tools = %v; want %v", names, want)
 	}

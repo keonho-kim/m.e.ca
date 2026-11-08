@@ -12,11 +12,12 @@
 package mecav1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -81,6 +82,9 @@ type Command struct {
 	//	*Command_Cancel
 	//	*Command_Approve
 	//	*Command_Steer
+	//	*Command_ListSkills
+	//	*Command_GetSkill
+	//	*Command_ReadSkillFile
 	Operation     isCommand_Operation `protobuf_oneof:"operation"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -247,6 +251,33 @@ func (x *Command) GetSteer() *SteeringRequest {
 	return nil
 }
 
+func (x *Command) GetListSkills() *SkillListRequest {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_ListSkills); ok {
+			return x.ListSkills
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetGetSkill() *SkillRequest {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_GetSkill); ok {
+			return x.GetSkill
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetReadSkillFile() *SkillFileRequest {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_ReadSkillFile); ok {
+			return x.ReadSkillFile
+		}
+	}
+	return nil
+}
+
 type isCommand_Operation interface {
 	isCommand_Operation()
 }
@@ -303,6 +334,18 @@ type Command_Steer struct {
 	Steer *SteeringRequest `protobuf:"bytes,22,opt,name=steer,proto3,oneof"`
 }
 
+type Command_ListSkills struct {
+	ListSkills *SkillListRequest `protobuf:"bytes,23,opt,name=list_skills,json=listSkills,proto3,oneof"`
+}
+
+type Command_GetSkill struct {
+	GetSkill *SkillRequest `protobuf:"bytes,24,opt,name=get_skill,json=getSkill,proto3,oneof"`
+}
+
+type Command_ReadSkillFile struct {
+	ReadSkillFile *SkillFileRequest `protobuf:"bytes,25,opt,name=read_skill_file,json=readSkillFile,proto3,oneof"`
+}
+
 func (*Command_ListSessions) isCommand_Operation() {}
 
 func (*Command_SelectSession) isCommand_Operation() {}
@@ -328,6 +371,12 @@ func (*Command_Cancel) isCommand_Operation() {}
 func (*Command_Approve) isCommand_Operation() {}
 
 func (*Command_Steer) isCommand_Operation() {}
+
+func (*Command_ListSkills) isCommand_Operation() {}
+
+func (*Command_GetSkill) isCommand_Operation() {}
+
+func (*Command_ReadSkillFile) isCommand_Operation() {}
 
 type SelectSession struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1176,8 +1225,8 @@ var File_meca_v1_control_proto protoreflect.FileDescriptor
 
 const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
-	"\x15meca/v1/control.proto\x12\ameca.v1\"\a\n" +
-	"\x05Empty\"\xe7\x05\n" +
+	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\"\a\n" +
+	"\x05Empty\"\xa0\a\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12B\n" +
 	"\rlist_sessions\x18\n" +
@@ -1194,7 +1243,11 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"taskStatus\x12.\n" +
 	"\x06cancel\x18\x14 \x01(\v2\x14.meca.v1.TaskRequestH\x00R\x06cancel\x125\n" +
 	"\aapprove\x18\x15 \x01(\v2\x19.meca.v1.ApprovalDecisionH\x00R\aapprove\x120\n" +
-	"\x05steer\x18\x16 \x01(\v2\x18.meca.v1.SteeringRequestH\x00R\x05steerB\v\n" +
+	"\x05steer\x18\x16 \x01(\v2\x18.meca.v1.SteeringRequestH\x00R\x05steer\x12<\n" +
+	"\vlist_skills\x18\x17 \x01(\v2\x19.meca.v1.SkillListRequestH\x00R\n" +
+	"listSkills\x124\n" +
+	"\tget_skill\x18\x18 \x01(\v2\x15.meca.v1.SkillRequestH\x00R\bgetSkill\x12C\n" +
+	"\x0fread_skill_file\x18\x19 \x01(\v2\x19.meca.v1.SkillFileRequestH\x00R\rreadSkillFileB\v\n" +
 	"\toperation\"F\n" +
 	"\rSelectSession\x12\x1d\n" +
 	"\n" +
@@ -1290,6 +1343,9 @@ var file_meca_v1_control_proto_goTypes = []any{
 	(*SteeringRequest)(nil),    // 12: meca.v1.SteeringRequest
 	(*WatchRequest)(nil),       // 13: meca.v1.WatchRequest
 	(*SocketFrame)(nil),        // 14: meca.v1.SocketFrame
+	(*SkillListRequest)(nil),   // 15: meca.v1.SkillListRequest
+	(*SkillRequest)(nil),       // 16: meca.v1.SkillRequest
+	(*SkillFileRequest)(nil),   // 17: meca.v1.SkillFileRequest
 }
 var file_meca_v1_control_proto_depIdxs = []int32{
 	3,  // 0: meca.v1.Command.list_sessions:type_name -> meca.v1.SessionListRequest
@@ -1305,15 +1361,18 @@ var file_meca_v1_control_proto_depIdxs = []int32{
 	10, // 10: meca.v1.Command.cancel:type_name -> meca.v1.TaskRequest
 	11, // 11: meca.v1.Command.approve:type_name -> meca.v1.ApprovalDecision
 	12, // 12: meca.v1.Command.steer:type_name -> meca.v1.SteeringRequest
-	5,  // 13: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
-	1,  // 14: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
-	13, // 15: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
-	0,  // 16: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	15, // 13: meca.v1.Command.list_skills:type_name -> meca.v1.SkillListRequest
+	16, // 14: meca.v1.Command.get_skill:type_name -> meca.v1.SkillRequest
+	17, // 15: meca.v1.Command.read_skill_file:type_name -> meca.v1.SkillFileRequest
+	5,  // 16: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
+	1,  // 17: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
+	13, // 18: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
+	0,  // 19: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
+	20, // [20:20] is the sub-list for method output_type
+	20, // [20:20] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_control_proto_init() }
@@ -1321,6 +1380,7 @@ func file_meca_v1_control_proto_init() {
 	if File_meca_v1_control_proto != nil {
 		return
 	}
+	file_meca_v1_skills_proto_init()
 	file_meca_v1_control_proto_msgTypes[1].OneofWrappers = []any{
 		(*Command_ListSessions)(nil),
 		(*Command_SelectSession)(nil),
@@ -1335,6 +1395,9 @@ func file_meca_v1_control_proto_init() {
 		(*Command_Cancel)(nil),
 		(*Command_Approve)(nil),
 		(*Command_Steer)(nil),
+		(*Command_ListSkills)(nil),
+		(*Command_GetSkill)(nil),
+		(*Command_ReadSkillFile)(nil),
 	}
 	file_meca_v1_control_proto_msgTypes[6].OneofWrappers = []any{
 		(*DetailRequest_Tool)(nil),

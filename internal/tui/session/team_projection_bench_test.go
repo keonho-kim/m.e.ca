@@ -6,11 +6,12 @@ package session
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
-	"testing"
-	"time"
 )
 
 func BenchmarkTeamUsageProjection(b *testing.B) {

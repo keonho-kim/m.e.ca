@@ -8,10 +8,12 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"errors"
+
 	"io"
 	"os"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
@@ -98,7 +100,7 @@ func (f *captureFile) load(block int) error {
 
 func (f *captureFile) WriteAt(value []byte, offset int64) (int, error) {
 	if offset < 0 {
-		return 0, errors.New("negative capture offset")
+		return 0, faults.Errorf(diagcatalog.ProcessNegativeCaptureOffset)
 	}
 	written := 0
 	for len(value) > 0 {
@@ -114,7 +116,7 @@ func (f *captureFile) WriteAt(value []byte, offset int64) (int, error) {
 
 func (f *captureFile) ReadAt(value []byte, offset int64) (int, error) {
 	if offset < 0 {
-		return 0, errors.New("negative capture offset")
+		return 0, faults.Errorf(diagcatalog.ProcessNegativeCaptureOffset)
 	}
 	read := 0
 	for len(value) > 0 {

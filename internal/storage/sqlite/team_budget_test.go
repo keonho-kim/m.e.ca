@@ -6,10 +6,11 @@ package sqlite
 
 import (
 	"context"
-	record "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"strings"
 	"testing"
+
+	record "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 func TestPublicPageCountsWorkMetadata(t *testing.T) {

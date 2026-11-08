@@ -6,8 +6,9 @@ package native
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type Input struct {

@@ -7,6 +7,7 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
+
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 

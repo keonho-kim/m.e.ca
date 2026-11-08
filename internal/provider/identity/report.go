@@ -5,12 +5,14 @@
 package identity
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Fact struct {
@@ -93,14 +95,14 @@ func (r Report) State() string {
 
 func (r Report) Validate() error {
 	if r.Failure != "" && !safe(r.Failure) {
-		return fmt.Errorf("invalid model identity failure detail")
+		return faults.Errorf(diagcatalog.IdentityInvalidModelIdentityFailureDetail)
 	}
 	if len(r.Facts) > 64 {
-		return fmt.Errorf("too many model identity facts")
+		return faults.Errorf(diagcatalog.IdentityTooManyModelIdentityFacts)
 	}
 	for _, f := range r.Facts {
 		if !valid(f) {
-			return fmt.Errorf("invalid model identity evidence")
+			return faults.Errorf(diagcatalog.IdentityInvalidModelIdentityEvidence)
 		}
 	}
 	return nil

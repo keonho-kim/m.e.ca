@@ -56,7 +56,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), func(s string) string { return s }, local.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 	if err != nil || string(content) != "two\n" || approvals != 0 || step != 4 {
 		t.Fatalf("content=%q approvals=%d calls=%d error=%v", content, approvals, step, err)
 	}
-	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024, true)
+	messages, err := store.ContextMessages(ctx, store.Session().ID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(messages) != 8 {
 		t.Fatalf("single conversation history: messages=%d error=%v", len(messages), err)
 	}

@@ -5,12 +5,18 @@
 package run
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
+	"time"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -29,9 +35,10 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 	if call.Name == "view_image" && !r.ImageInput {
 		return nil, outcome, &modelapi.ImageInputError{}
 	}
-	op, err := r.Tools.Prepare(ctx, r.Settings, call)
+	var op toolapi.Execution
+	err = faults.Guard(func() error { var cause error; op, cause = r.Tools.Prepare(ctx, r.Settings, call); return cause })
 	if err != nil {
-		outcome.Failure = toolapi.FailureOf(err)
+		outcome.Failure = faults.FailureOf(err)
 
 		return nil, outcome, err
 	}
@@ -78,7 +85,10 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 			approved, source = true, "all_mighty"
 		} else {
 			waitedForUser = true
+			started := time.Now()
+			diagnostics.Log(ctx, diagcatalog.ApprovalWaiting, "call_id", call.ID, "operation", call.Name)
 			approved, err = approve(ctx, proposal)
+			diagnostics.Log(ctx, diagcatalog.ApprovalDecided, "call_id", call.ID, "duration_ms", time.Since(started).Milliseconds(), "error_code", diagnostics.Code(err), "status", approved)
 			if err != nil {
 				return nil, outcome, errors.Join(errApprovalDenied, err)
 			}

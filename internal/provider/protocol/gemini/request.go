@@ -6,10 +6,13 @@ package gemini
 
 import (
 	"encoding/json"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+
 	"strings"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
 func Base(request modelapi.Request, system []string, thinking any, omitSummary bool) Request {
@@ -57,7 +60,7 @@ func messageParts(message native.Input, wireIDs map[string]string) ([]Part, erro
 	if len(message.State) > 0 {
 		var prior Continuation
 		if err := json.Unmarshal(message.State, &prior); err != nil || prior.Parts == nil {
-			return nil, fmt.Errorf("invalid Gemini continuation")
+			return nil, faults.Errorf(diagcatalog.GeminiInvalidGeminiContinuation)
 		}
 		at := 0
 		var original strings.Builder
@@ -69,19 +72,19 @@ func messageParts(message native.Input, wireIDs map[string]string) ([]Part, erro
 				continue
 			}
 			if at >= len(calls) || at >= len(prior.CallIDs) || prior.CallIDs[at] != calls[at].ID || part.Call.Name != calls[at].Name {
-				return nil, fmt.Errorf("gemini continuation differs from tool history")
+				return nil, faults.Errorf(diagcatalog.GeminiGeminiContinuationDiffersFromToolHistory)
 			}
 			if !native.SameArguments(string(part.Call.Arguments()), string(calls[at].Arguments)) {
-				return nil, fmt.Errorf("gemini signed arguments differ from tool history")
+				return nil, faults.Errorf(diagcatalog.GeminiGeminiSignedArgumentsDifferFromToolHistory)
 			}
 			wireIDs[calls[at].ID] = part.Call.ID
 			at++
 		}
 		if at != len(calls) || at != len(prior.CallIDs) {
-			return nil, fmt.Errorf("gemini continuation omitted a tool call")
+			return nil, faults.Errorf(diagcatalog.GeminiGeminiContinuationOmittedAToolCall)
 		}
 		if original.String() != text && strings.TrimSpace(original.String()) != text {
-			return nil, fmt.Errorf("gemini continuation text differs from message history")
+			return nil, faults.Errorf(diagcatalog.GeminiGeminiContinuationTextDiffersFromMessageHistory)
 		}
 		// Signed parts must keep their exact text, argument and signature pairing.
 		return prior.Parts, nil
@@ -97,7 +100,7 @@ func messageParts(message native.Input, wireIDs map[string]string) ([]Part, erro
 			}
 			mime, data, ok := native.DataImage(part.ImageURL.URL)
 			if !ok {
-				return nil, fmt.Errorf("gemini requires embedded images")
+				return nil, faults.Errorf(diagcatalog.GeminiGeminiRequiresEmbeddedImages)
 			}
 			parts = append(parts, Part{Inline: &Blob{MIME: mime, Data: data}})
 		}

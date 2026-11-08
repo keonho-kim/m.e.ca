@@ -5,6 +5,8 @@
 package team
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"fmt"
 	"strings"
 	"testing"
@@ -37,7 +39,7 @@ func TestPassiveStatusReplacesTransientViewWithoutGrowingPrivateHistory(t *testi
 	if err != nil || len(values) != 40 {
 		t.Fatal("original public history was discarded", len(values), err)
 	}
-	op := &toolapi.Operation{Name: "execute_command", Status: "tool_failed", Failure: &toolapi.Failure{Code: "command_failed", Detail: "check failed"},
+	op := &toolapi.Operation{Name: "execute_command", Status: "tool_failed", Failure: &faults.Failure{Code: "command_failed", Detail: "check failed"},
 		Process: &toolapi.ProcessOutcome{CommandID: "failure", Status: "exited", ExitCode: 1}}
 	if err := a.Emit(runrecord.Event{Kind: "tool_failed", Operation: op}); err != nil {
 		t.Fatal(err)

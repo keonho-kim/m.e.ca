@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- Purpose: Demonstrate the complete 공간 가이드 task in a linked practical application.
+Pattern: Editorial HTML composition with native local interactions.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/application-design/references/code-examples.md, internal/config/bootstrap/defaults/application-design/assets/examples/archive/archive.css, internal/config/bootstrap/defaults/application-design/assets/examples/archive/archive-editorial.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="archive">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>공간 가이드 / Archive</title>
+    <meta name="description" content="공간 가이드 / Archive 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다.">
+    <link rel="icon" type="image/jpeg" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="archive.css">
+    <link rel="stylesheet" href="archive-editorial.css">
+    <script data-required src="../shared/interaction.js" defer></script>
+    <script data-required src="../shared/local-state.js" defer></script>
+    <script data-required src="../shared/media.js" defer></script>
+    <script data-required src="archive.js" defer></script>
+  </head>
+  <body data-app="archive" data-page="guide">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <div class="archive-main">
+      <div class="archive-chrome">
+      <header class="archive-masthead">
+        <a class="archive-brand" href="archive-library.html">Archive<span>작업의 자료와 맥락</span></a>
+        <div class="archive-project">
+          성수 스튜디오 프로젝트
+        </div>
+        <div class="archive-masthead-actions">
+          <span class="demo-chip">로컬 데모</span>
+          <button class="icon-button" type="button" data-open="command-dialog" aria-label="화면 바로가기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#search"></use></svg></button>
+          <span class="avatar" aria-label="김민서">민</span>
+        </div>
+      </header>
+      <nav class="archive-nav" aria-label="자료 공간">
+        <a class="archive-nav-link" href="archive-library.html" data-collection="library">모든 자료</a>
+        <a class="archive-nav-link" href="archive-library.html?saved=1" data-collection="saved">저장한 자료</a>
+        <a class="archive-nav-link" href="archive-guide.html" aria-current="page">공간 가이드</a>
+        <a class="archive-nav-link" href="archive-lesson.html">디자인 클래스</a>
+      </nav>
+      </div>
+      <main id="main" class="workspace">
+        <nav class="editorial-breadcrumb" aria-label="문서 경로">
+          <a href="archive-library.html">모든 자료</a>
+          <span>공간 가이드</span>
+        </nav>
+        <p class="notice error" data-page-error role="alert" hidden></p>
+        <div class="article-frame">
+          <article class="article-main">
+            <header class="article-heading">
+              <h1 id="page-title" tabindex="-1">함께 쓰는 공간을<br>더 편안하게 만드는 방법</h1>
+              <p class="article-lead">처음 방문하는 사람도 필요한 정보를 찾고, 다음 행동을 자연스럽게 결정할 수 있도록.</p>
+              <div class="article-meta">
+                <span>프로젝트 가이드</span>
+                <span>2026.11.05 개정</span>
+                <span>약 4분</span>
+              </div>
+            </header>
+            <figure class="article-photo">
+            <div class="media wide">
+              <img class="preview" src="../shared/daylight-preview.jpg" width="40" height="30" alt="" aria-hidden="true">
+              <img class="full" data-blur-up src="../shared/studio-daylight.jpg" alt="창가 공동 작업 테이블과 통로가 보이는 스튜디오" width="1448" height="1086" loading="eager" decoding="async">
+              <span class="fallback" role="status" hidden>이미지를 불러오지 못했습니다. 창가 공동 작업 테이블과 통로가 보이는 스튜디오</span>
+            </div>
+              <figcaption>Daylight studio / 창가 공동 작업 테이블과 통로가 보이는 스튜디오</figcaption>
+            </figure>
+            <div class="prose">
+              <section id="purpose">
+                <h2>01 / 공간을 고르기 전에
+                  </h2>
+                <p>이번 모임에서 무엇을 하려는지 먼저 정해보세요. 긴 집중 작업에는 넓은 테이블과 채광이, 민감한 대화에는 독립된 회의실이 필요합니다. 분위기보다 인원, 소음과 필요한 장비를 먼저 비교하면 선택이 쉬워집니다.
+                  </p>
+                <p>Daylight는 최대 8명의 워크숍에, Warm room은 최대 4명의 집중 회의에 맞춘 가상의 공간입니다.
+                  </p>
+              </section>
+              <section id="arrival">
+                <h2>02 / 도착과 이용
+                  </h2>
+                <p>예약 내용을 확인한 뒤 안내된 공간을 이용합니다. 테이블 사이의 이동 경로와 출입구는 비워두세요. 장비가 작동하지 않으면 변경하기 전에 담당자에게 상태를 설명합니다.
+                  </p>
+                <details class="disclosure">
+                  <summary>준비하면 좋은 것</summary>
+                  <p>개인 노트북, 사용할 자료, 필요한 연결 케이블과 모임의 목적을 준비하세요. 팀의 결정과 다음 할 일을 남길 간단한 문서도 유용합니다.
+                  </p>
+                </details>
+              </section>
+              <section id="finish">
+                <h2>03 / 마무리와 기록
+                  </h2>
+                <p>사용한 물건을 제자리에 두고 결과물과 다음 할 일을 정리합니다. 발견한 문제는 위치와 관찰한 상태를 함께 기록하면 다음 사용자의 혼란을 줄일 수 있습니다.
+                  </p>
+              </section>
+              <a class="btn" href="../morrow/atelier-home.html">공간 예시 둘러보기 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-up-right"></use></svg></a>
+            </div>
+          </article>
+          <nav class="article-toc" aria-label="문서 목차">
+            <strong>이 문서에서</strong>
+            <a href="#purpose">공간을 고르기 전에</a>
+            <a href="#arrival">도착과 이용</a>
+            <a href="#finish">마무리와 기록</a>
+            <a href="archive-library.html">모든 자료 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-left"></use></svg></a>
+          </nav>
+        </div>
+      </main>
+    </div>
+    <dialog id="command-dialog" class="modal" aria-labelledby="command-title">
+      <header class="modal-head">
+        <h2 id="command-title">빠른 이동
+        </h2>
+        <button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <label>화면 검색<input type="search" data-command-query autofocus placeholder="이동할 화면 이름"></label>
+        <nav class="stack-sm">
+          <a class="nav-link" data-command-link href="archive-library.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#folder"></use></svg>모든 자료</a>
+          <a class="nav-link" data-command-link href="archive-library.html?saved=1"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#bookmark"></use></svg>저장한 자료</a>
+          <a class="nav-link" data-command-link href="archive-guide.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>공간 가이드</a>
+          <a class="nav-link" data-command-link href="archive-lesson.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg>디자인 클래스</a>
+        </nav>
+      </div>
+    </dialog>
+    <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+      <header class="modal-head">
+        <h2 id="confirm-title">변경 확인
+        </h2>
+      </header>
+      <div class="modal-body">
+        <p></p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="cancel" autofocus>취소</button>
+        <button class="btn primary" value="confirm">확인</button>
+      </form>
+    </dialog>
+    <div class="toast-stack" data-toasts>
+
+    </div>
+  </body>
+</html>

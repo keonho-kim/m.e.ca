@@ -6,11 +6,12 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestCommandContractUsesAutomaticApproval(t *testing.T) {

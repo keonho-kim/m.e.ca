@@ -5,10 +5,10 @@
 package record
 
 import (
-	"fmt"
-
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/agent/work"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Status string
@@ -17,7 +17,7 @@ const (
 	Running     Status = "running"
 	Answered    Status = "answered"
 	Stopped     Status = "stopped"
-	Interrupted Status = "interrupted"
+	Interrupted Status = diagcatalog.Interrupted
 )
 
 type Checkpoint struct {
@@ -50,26 +50,26 @@ func (c Checkpoint) Check() error {
 		return err
 	}
 	if len(c.ReportReason) > 256*1024*1024 {
-		return fmt.Errorf("invalid report reason")
+		return faults.Errorf(diagcatalog.RecordInvalidReportReason)
 	}
 	if len(c.Blocker) > 16*1024*1024 || len(c.LastChange) > 16*1024*1024 {
-		return fmt.Errorf("invalid blocker detail")
+		return faults.Errorf(diagcatalog.RecordInvalidBlockerDetail)
 	}
 	if c.ChangeRevision < 0 {
-		return fmt.Errorf("invalid change revision")
+		return faults.Errorf(diagcatalog.RecordInvalidChangeRevision)
 	}
 	if c.ID == "" || len(c.ID) > 128 || len(c.Objective) > 64*1024*1024 || c.Iteration < 0 || c.ModelCalls < 0 || len(c.Observation) > 256*1024*1024 || (c.InstructionsDigest != "" && len(c.InstructionsDigest) != 64) {
-		return fmt.Errorf("invalid execution checkpoint")
+		return faults.Errorf(diagcatalog.RecordInvalidExecutionCheckpoint)
 	}
 	switch c.Status {
 	case Running, Answered, Stopped, Interrupted:
 	default:
-		return fmt.Errorf("invalid execution status")
+		return faults.Errorf(diagcatalog.RecordInvalidExecutionStatus)
 	}
 	switch c.Phase {
 	case "decision", "approval", "execution", "observation", "reporting", "finished":
 	default:
-		return fmt.Errorf("invalid execution phase")
+		return faults.Errorf(diagcatalog.RecordInvalidExecutionPhase)
 	}
 	return nil
 }

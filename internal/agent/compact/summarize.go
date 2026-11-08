@@ -7,11 +7,14 @@ package compact
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/inference"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+
 	"strings"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/agent/inference"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (c *Controller) summarize(ctx context.Context, generate Generate, messages []modelapi.Message, budget summaryBudget) (string, error) {
@@ -20,7 +23,7 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, messages 
 		size += len(message.Content)
 	}
 	if size > budget.inputBytes {
-		return "", fmt.Errorf("compaction packet exceeds model-context input budget; original history retained")
+		return "", faults.Errorf(diagcatalog.CompactCompactionPacketExceedsModelContextInputBudget)
 	}
 	parameters, err := inference.Resolve(c.Inference, inference.Compaction)
 	if err != nil {
@@ -37,11 +40,11 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, messages 
 			return ctx.Err()
 		}
 		if len(event.Calls) > 0 {
-			return fmt.Errorf("compaction cannot call tools")
+			return faults.Errorf(diagcatalog.CompactCompactionCannotCallTools)
 		}
 		reply.WriteString(event.Delta)
 		if reply.Len() > c.Settings.MaxSummaryBytes {
-			return fmt.Errorf("compaction output exceeds limit")
+			return faults.Errorf(diagcatalog.CompactCompactionOutputExceedsLimit)
 		}
 		if event.Done {
 			done = true
@@ -52,14 +55,14 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, messages 
 		return "", err
 	}
 	if !done {
-		return "", fmt.Errorf("compaction model response incomplete")
+		return "", faults.Errorf(diagcatalog.CompactCompactionModelResponseIncomplete)
 	}
 	text := c.Redact(reply.String())
 	if strings.TrimSpace(text) == "" {
-		return "", fmt.Errorf("compaction response is empty")
+		return "", faults.Errorf(diagcatalog.CompactCompactionResponseIsEmpty)
 	}
 	if len(text) > c.Settings.MaxSummaryBytes || !utf8.ValidString(text) {
-		return "", fmt.Errorf("compaction response exceeds size limit or is not valid UTF-8")
+		return "", faults.Errorf(diagcatalog.CompactCompactionResponseExceedsSizeLimitOrIs)
 	}
 
 	return text, nil
@@ -80,7 +83,7 @@ func (c *Controller) summaryMessages(previous string, source []json.RawMessage, 
 		bytes += len(m.Content)
 	}
 	if bytes > c.Settings.MaxInputBytes {
-		return nil, fmt.Errorf("compaction input cannot fit without dropping information")
+		return nil, faults.Errorf(diagcatalog.CompactCompactionInputCannotFitWithoutDroppingInformation)
 	}
 
 	return messages, nil

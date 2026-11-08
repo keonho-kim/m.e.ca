@@ -6,12 +6,13 @@ package team
 
 import (
 	"crypto/sha256"
+	"slices"
+	"strconv"
+
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	record "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"slices"
-	"strconv"
 )
 
 // recordProgress retains at most 64 digests and no source strings, command IDs or outputs.

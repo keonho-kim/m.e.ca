@@ -5,8 +5,9 @@
 package command
 
 import (
-	"github.com/keonho-kim/meca/internal/policy/command/transfer"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/policy/command/transfer"
 
 	"mvdan.cc/sh/v3/syntax"
 )

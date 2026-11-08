@@ -29,6 +29,11 @@ func (a *app) refreshHints() {
 		a.compose.commandHints = commands.Suggestions(prefix, a.language.Text)
 		return
 	}
+	if a.page == "chat" && a.compose.editor.Cursor == a.compose.editor.Len() {
+		if query := skillCompletion(prefix); query != "" {
+			a.requestSkillHints(query)
+		}
+	}
 }
 func (a *app) hintKey(e *tcell.EventKey) bool {
 	if a.paste || e.Key() == tcell.KeyEnter && e.Modifiers()&tcell.ModShift != 0 {
@@ -44,7 +49,15 @@ func (a *app) hintKey(e *tcell.EventKey) bool {
 			a.closeCommandHints()
 		case tcell.KeyEnter, tcell.KeyTab:
 			if len(a.compose.commandHints) > 0 {
-				a.compose.editor.Set(a.compose.commandHints[a.compose.commandIndex].Name)
+				name := a.compose.commandHints[a.compose.commandIndex].Name
+				if strings.HasPrefix(name, "#") {
+					text := a.compose.editor.String()
+					query := skillCompletion(text)
+					a.compose.editor.Set(strings.TrimSuffix(text, query) + name + " ")
+					a.closeCommandHints()
+					return true
+				}
+				a.compose.editor.Set(name)
 				a.closeCommandHints()
 				if e.Key() == tcell.KeyEnter {
 					a.submit()

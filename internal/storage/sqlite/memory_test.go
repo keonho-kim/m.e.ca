@@ -6,12 +6,13 @@ package sqlite
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestMemoryCountersAndOriginalHistory(t *testing.T) {
@@ -47,7 +48,7 @@ func TestMemoryCountersAndOriginalHistory(t *testing.T) {
 	if err != nil || mark.Tokens != 0 {
 		t.Fatalf("watermark not reset: %+v %v", mark, err)
 	}
-	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
+	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(history) != 1 || history[0].Content != "goal" {
 		t.Fatal("original history lost")
 	}

@@ -6,10 +6,11 @@ package compact
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/prompt"
 )
 
 func TestFailedDiagnosticIsSourceOnly(t *testing.T) {

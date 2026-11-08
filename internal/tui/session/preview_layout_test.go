@@ -6,9 +6,10 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	"github.com/gdamore/tcell/v3"
 

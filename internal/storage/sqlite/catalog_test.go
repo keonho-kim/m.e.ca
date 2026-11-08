@@ -6,10 +6,11 @@ package sqlite
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"os"
 	"path/filepath"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
@@ -82,7 +83,7 @@ func TestSessionFilesAreDiscoveredWithoutIndex(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	history, err := resumed.ContextMessages(ctx, firstID, 0, 16*1024*1024, true)
+	history, err := resumed.ContextMessages(ctx, firstID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(history) != 1 {
 		t.Fatalf("history=%+v %v", history, err)
 	}

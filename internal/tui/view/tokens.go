@@ -6,6 +6,7 @@ package view
 
 import (
 	"fmt"
+
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/rivo/uniseg"

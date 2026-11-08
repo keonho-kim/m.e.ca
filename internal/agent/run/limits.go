@@ -5,8 +5,9 @@
 package run
 
 import (
-	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Limits struct {
@@ -22,7 +23,7 @@ func DefaultLimits() Limits {
 }
 func (l Limits) Check() error {
 	if l.MaxModelCalls < 1 || l.MaxModelCalls > 16384 || l.MaxSeconds < 1 || l.MaxSeconds > 86400 || l.MaxModelSeconds < 1 || l.MaxModelSeconds > 3600 || l.MaxContextBytes < 8192 || l.MaxContextBytes > 256*1024*1024 || l.MaxArgumentBytes < 1024 || l.MaxArgumentBytes > toolapi.MaxArgumentsBytes {
-		return fmt.Errorf("invalid execution limits")
+		return faults.Errorf(diagcatalog.RunInvalidExecutionLimits)
 	}
 	return nil
 }

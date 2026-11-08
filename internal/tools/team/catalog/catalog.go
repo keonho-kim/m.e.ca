@@ -5,8 +5,9 @@
 package catalog
 
 import (
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"slices"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 var catalog = buildDefinitions()

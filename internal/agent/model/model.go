@@ -7,10 +7,13 @@ package model
 
 import (
 	"context"
+	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/agent/team/source"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"time"
 )
 
 const MaxResponseBytes = 256 * 1024 * 1024
@@ -56,9 +59,13 @@ type Response struct {
 // ToolCallError reports unusable model tool syntax before any operation exists.
 type ToolCallError struct{ Detail string }
 
-func (e *ToolCallError) Error() string { return "invalid tool call: " + e.Detail }
+func (e *ToolCallError) Error() string {
+	return diagcatalog.Text(diagcatalog.InvalidToolCall, e.Detail)
+}
 
 type Event struct {
+	// Progress marks validated non-display tool or continuation bytes, never a keepalive.
+	Progress bool
 	// InputBytes is transient text-request size from the transport, never token usage.
 	InputBytes     int64
 	ReasoningState []byte

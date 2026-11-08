@@ -5,12 +5,13 @@
 package protocol
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func FuzzCloudResponse(f *testing.F) {

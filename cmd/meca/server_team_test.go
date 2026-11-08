@@ -7,12 +7,13 @@ package main
 import (
 	"context"
 	"fmt"
-	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/commands/server"
@@ -68,7 +69,7 @@ func testServerTeamRequest(t *testing.T, compatible bool) {
 			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes)
 		},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, id, create)
+			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
 			if err != nil {
 				return nil, err
 			}

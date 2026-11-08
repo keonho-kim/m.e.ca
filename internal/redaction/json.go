@@ -6,13 +6,16 @@ package redaction
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func RedactJSON(body []byte, redact func(string) string) ([]byte, error) {
 	if !utf8.Valid(body) || !json.Valid(body) {
-		return nil, fmt.Errorf("invalid complete UTF-8 JSON")
+		return nil, faults.Errorf(diagcatalog.RedactionInvalidCompleteUTFJSON)
 	}
 	var output []byte
 	copied := 0

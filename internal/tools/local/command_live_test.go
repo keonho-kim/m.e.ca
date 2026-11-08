@@ -86,7 +86,7 @@ func TestFinalCaptureReusesPathAndStopsStaleLiveWrites(t *testing.T) {
 
 func TestFinalCaptureDoesNotRewriteUnchangedMaskedStream(t *testing.T) {
 	e, _ := testExecutor(t)
-	e.SetRedactionVersion(func() int { return 0 })
+	e.redactionVersion = func() int { return 0 }
 	id := "cmd_unchanged"
 	text := strings.Repeat("output\n", 8192)
 	live, err := e.projectLiveCapture(id, "stdout", liveCapture{}, process.Capture{Revision: 1, Text: text})

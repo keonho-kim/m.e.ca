@@ -7,12 +7,25 @@ package run
 import (
 	"context"
 	"errors"
+	"time"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (s *execution) record(ctx context.Context, event runrecord.Event) error {
-	event.RunID = s.checkpoint.ID
-	if err := s.runner.Journal.RecordEvent(ctx, s.runner.Session, event); err != nil {
+	return s.recordEvents(ctx, []runrecord.Event{event})
+}
+
+func (s *execution) recordEvents(ctx context.Context, events []runrecord.Event) error {
+	records := make([]runrecord.Entry, len(events))
+	for i := range events {
+		events[i].RunID = s.checkpoint.ID
+		if events[i].OccurredAt == "" {
+			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
+		}
+		records[i].Event = &events[i]
+	}
+	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
 		return errors.Join(errRuntimeRecord, err)
 	}
 	return nil

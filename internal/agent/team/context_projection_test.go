@@ -6,11 +6,12 @@ package team
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestContextProjectionRestoresDetailsOnlyWhenHistoryLacksThem(t *testing.T) {

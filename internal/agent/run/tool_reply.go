@@ -7,17 +7,18 @@ package run
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Response, detail string) error {
 	calls := reply.Calls
 	if len(calls) == 0 || len(calls) > toolapi.MaxCalls {
-		return fmt.Errorf("invalid native call count")
+		return faults.Errorf(diagcatalog.RunInvalidNativeCallCount)
 	}
 	for _, call := range calls {
 		if err := call.Check(); err != nil {

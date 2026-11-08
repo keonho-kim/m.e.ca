@@ -4,14 +4,17 @@
 // Related: internal/provider/protocol/native/calls.go, internal/provider/protocol/native/argument_identity.go.
 package native
 
-import modelapi "github.com/keonho-kim/meca/internal/agent/model"
+import (
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+)
 
 func (d *Draft) Final(value string) error {
 	if d.Arguments.Len() == 0 {
 		return d.Append(value)
 	}
 	if d.Arguments.String() != value && !SameArguments(d.Arguments.String(), value) {
-		return &modelapi.ToolCallError{Detail: "final function arguments differ from streamed arguments"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeFinalFunctionArgumentsDifferFromStreamedArguments)}
 	}
 	return nil
 }

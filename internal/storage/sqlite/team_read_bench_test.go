@@ -7,9 +7,10 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/storage/history"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"

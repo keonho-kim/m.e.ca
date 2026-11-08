@@ -5,6 +5,7 @@
 syntax = "proto3";
 package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+import "meca/v1/skills.proto";
 
 message Empty {}
 message Command {
@@ -24,6 +25,9 @@ message Command {
     TaskRequest cancel = 20;
     ApprovalDecision approve = 21;
     SteeringRequest steer = 22;
+    SkillListRequest list_skills = 23;
+    SkillRequest get_skill = 24;
+    SkillFileRequest read_skill_file = 25;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }

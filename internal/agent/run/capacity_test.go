@@ -7,12 +7,13 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"strings"
-	"testing"
 )
 
 type capacityGenerator struct {
@@ -65,7 +66,7 @@ func (s *capacityStore) InstallMemory(_ context.Context, _ string, _ int, m comp
 	s.memory = m
 	return nil
 }
-func (s *capacityStore) ContextMessages(_ context.Context, _ string, after int64, _ int, _ bool) ([]modelapi.Message, error) {
+func (s *capacityStore) ContextMessages(_ context.Context, _ string, after int64, _ int, _ bool, _ func(int) error) ([]modelapi.Message, error) {
 	return append([]modelapi.Message(nil), s.messages[after:]...), nil
 }
 

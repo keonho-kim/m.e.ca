@@ -1,0 +1,91 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: project palettes (preserved) · redesign: full · v2.0.0
+ * pre-emit critique: native controls, legible text and app-owned work planes take priority over repeated chrome.
+ * Purpose: Own native typography and shared layout primitives without a default app navigation.
+ * Pattern: Shared presentation foundation.
+ * Usage: Every practical example loads this before its application stylesheet.
+ * Related: internal/config/bootstrap/defaults/application-design/assets/examples/shared/components.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js.
+ */
+/* Hallmark · waive 24b · optical icon gaps below eight pixels · compact control padding preserves alignment while app work zones use a four-pixel rhythm. */
+/* Hallmark · dropped ../shared/preview.js · screens without native tab groups no longer load the tab-only controller; actual tab screens retain the same script and deep links. */
+/* Hallmark · finish-review: subagent · two suite findings resolved; Archive editorial ship · gap: none. */
+:root {
+  --bg:#f8f8f6; --surface:#fff; --raised:#fff; --soft:#efefed; --text:#20242c; --muted:#586270;
+  --line:#e1e5eb; --control:#8d96a3; --accent:#353b38; --on-accent:#fff; --accent-soft:#e8f2ec;
+  --success:#276649; --warning:#8a5d16; --danger:#b73540; --focus:#353b38;
+  --radius:10px; --font:"Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --display-serif:"AppleMyungjo", "Batang", Georgia, serif; --wordmark-serif:Georgia, "Times New Roman", serif;
+  --mono:ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+* {box-sizing:border-box}
+html {scroll-padding-top:80px}
+html,body {overflow-x:clip}
+body {margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select,textarea {font:inherit}
+button,a,input,select,textarea {touch-action:manipulation}
+button {cursor:pointer}
+a {color:inherit;text-decoration:none}
+a:hover {text-decoration:none}
+button:disabled {cursor:not-allowed}
+:focus-visible {outline:3px solid var(--focus);outline-offset:3px}
+[hidden] {display:none!important}
+h1,h2,h3,p,figure {margin:0}
+h1,h2 {text-wrap:balance;min-width:0;overflow-wrap:break-word}
+p {text-wrap:pretty}
+h1 {font-size:32px;line-height:1.25;letter-spacing:-.025em;font-weight:720}
+h2 {font-size:20px;line-height:1.4;font-weight:680}
+h3 {font-size:16px;font-weight:650}
+small,.small {font-size:14px}
+code,pre,.mono {font-family:var(--mono)}
+pre {white-space:pre-wrap;overflow-wrap:anywhere}
+:where(.muted) {color:var(--muted)}
+.strong {font-weight:650}
+.visually-hidden {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.skip {position:fixed;top:-100px;left:20px;z-index:100;background:var(--surface);padding:8px 16px}
+.skip:focus {top:10px}
+.icon {width:19px;height:19px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav-group {display:grid;gap:4px}
+.nav-link {display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:7px;color:var(--muted);font-size:14px;white-space:nowrap}
+.nav-link:hover {background:var(--soft);color:var(--text)}
+.nav-link[aria-current=page] {color:var(--accent);background:var(--accent-soft);font-weight:650}
+.demo-chip {font-size:12px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--control);padding:2px 6px;border-radius:4px;color:var(--muted);font-weight:600;letter-spacing:0}
+.user {display:flex;align-items:center;gap:8px;font-size:14px}
+.avatar {display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;flex-shrink:0}
+.workspace {padding:32px 32px 40px;max-width:1440px;margin:0 auto;min-width:0}
+.page-head {display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
+.page-head p {color:var(--muted);font-size:14px;margin-top:8px;max-width:62ch}
+.page-actions {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.content-grid {display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.split {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+.stack {display:grid;gap:20px;align-content:start}
+.stack-sm {display:grid;gap:8px;align-content:start}
+.surface {min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.pad {padding:24px}
+.section-head {display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+.section-head p {font-size:14px;color:var(--muted);margin-top:4px}
+.section-link {font-size:14px;color:var(--accent);font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.rule {height:1px;border:0;background:var(--line);margin:16px 0}
+.prose {max-width:72ch;font-size:16px;line-height:1.8}
+.prose h2 {margin:32px 0 12px;font-size:24px}
+.prose h3 {margin:24px 0 8px}
+.prose p+p {margin-top:16px}
+.prose li {margin:8px 0}
+.text-link {color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.inline {display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.flex {display:flex;align-items:center;gap:12px}
+.between {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pill {display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--line);border-radius:100px;font-size:13px;white-space:nowrap}
+.page-note {font-size:13px;color:var(--muted);margin-top:32px;display:flex;justify-content:space-between;gap:8px}
+@media(max-width:1180px){.content-grid{grid-template-columns:minmax(0,1fr) 260px}.workspace{padding:24px}}
+@media(max-width:1000px){.workspace{padding:24px}.content-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.workspace{padding:20px 16px}.split{grid-template-columns:minmax(0,1fr)}.page-head{flex-direction:column;gap:16px}.page-actions{width:100%}h1{font-size:26px}}
+
+::selection {background:var(--accent-soft);color:var(--text)}
+input,textarea {caret-color:var(--accent)}
+* {scrollbar-color:var(--control) transparent;scrollbar-width:thin}
+:focus-visible {transition:none}
+button:active,.btn:active {transform:translateY(1px)}
+button[aria-busy=true] {cursor:progress}
+@media(pointer:coarse){.btn,.icon-button,.menu-toggle{min-width:44px;min-height:44px}input,select,textarea{font-size:16px}}
+@media(prefers-reduced-motion:reduce){button:active,.btn:active{transform:none}}
+
+.table-scroll {overflow-x:auto;min-width:0}

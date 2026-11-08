@@ -6,9 +6,11 @@ package diagnostic
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -30,19 +32,19 @@ func Check(ctx context.Context, client modelapi.Generator, model string, support
 	if supported || nativeOn {
 		caps.Reasoning, err = probeThinking(ctx, client, model, "", true, settings)
 		if err != nil {
-			return caps, fmt.Errorf("thinking ON diagnostic failed: %w", err)
+			return caps, faults.Errorf(diagcatalog.DiagnosticThinkingONDiagnosticFailed, err)
 		}
 	}
 	if supported && !caps.Reasoning {
-		return caps, fmt.Errorf("thinking ON diagnostic did not produce separate reasoning; the server may ignore the requested option")
+		return caps, faults.Errorf(diagcatalog.DiagnosticThinkingONDiagnosticDidNotProduceSeparate)
 	}
 	if supported && caps.Reasoning {
 		reasoning, err := probeThinking(ctx, client, model, "", false, settings)
 		if err != nil {
-			return caps, fmt.Errorf("thinking OFF diagnostic failed: %w", err)
+			return caps, faults.Errorf(diagcatalog.DiagnosticThinkingOFFDiagnosticFailed, err)
 		}
 		if reasoning {
-			return caps, fmt.Errorf("server emitted reasoning with Thinking OFF on the paired reasoning diagnostic")
+			return caps, faults.Errorf(diagcatalog.DiagnosticServerEmittedReasoningWithThinkingOFFOn)
 		}
 	}
 	caps.Thinking = supported && caps.Reasoning

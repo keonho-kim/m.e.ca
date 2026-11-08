@@ -6,10 +6,11 @@ package run
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/compact"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/compact"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func BenchmarkUsageFallback(b *testing.B) {

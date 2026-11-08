@@ -5,33 +5,34 @@
 package model
 
 import (
-	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (message Message) Check() error {
 	if message.Source != nil {
 		if message.Role != "user" && message.Role != "system" && message.Role != "tool" {
-			return fmt.Errorf("public provenance requires an observation or user message")
+			return faults.Errorf(diagcatalog.ModelPublicProvenanceRequiresAnObservationOrUser)
 		}
 		if err := message.Source.Check(); err != nil {
 			return err
 		}
 		if message.Role != "tool" && (message.Role == "user") != (message.Source.Author == "user") {
-			return fmt.Errorf("message role and public provenance disagree")
+			return faults.Errorf(diagcatalog.ModelMessageRoleAndPublicProvenanceDisagree)
 		}
 	}
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" && message.Role != "system" {
-		return fmt.Errorf("invalid message role")
+		return faults.Errorf(diagcatalog.ModelInvalidMessageRole)
 	}
 	if message.Incomplete && (message.Role != "assistant" || len(message.Calls) != 0 || message.ToolCallID != "" || message.ToolName != "") {
-		return fmt.Errorf("unfinished drafts must be assistant messages without native tool calls or results")
+		return faults.Errorf(diagcatalog.ModelUnfinishedDraftsMustBeAssistantMessagesWithout)
 	}
 	if len(message.ReasoningState) > 0 && (message.Role != "assistant" || message.Incomplete) {
-		return fmt.Errorf("continuation state requires a completed assistant message")
+		return faults.Errorf(diagcatalog.ModelContinuationStateRequiresACompletedAssistantMessage)
 	}
 	if len(message.Images) > 0 && message.Role != "user" && message.Role != "tool" {
-		return fmt.Errorf("images require user or tool messages")
+		return faults.Errorf(diagcatalog.ModelImagesRequireUserOrToolMessages)
 	}
 	for _, image := range message.Images {
 		if err := image.Check(); err != nil {
@@ -40,7 +41,7 @@ func (message Message) Check() error {
 	}
 	size := message.ContextBytes()
 	if size > MaxResponseBytes || len(message.Calls) > toolapi.MaxCalls {
-		return fmt.Errorf("message exceeds size limits")
+		return faults.Errorf(diagcatalog.ModelMessageExceedsSizeLimits)
 	}
 	for _, call := range message.Calls {
 		if err := call.Check(); err != nil {
@@ -48,7 +49,7 @@ func (message Message) Check() error {
 		}
 	}
 	if message.Role == "tool" && (message.ToolCallID == "" || len(message.ToolCallID) > 128) {
-		return fmt.Errorf("invalid tool result ID")
+		return faults.Errorf(diagcatalog.ModelInvalidToolResultID)
 	}
 	return nil
 }

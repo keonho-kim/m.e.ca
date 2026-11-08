@@ -5,11 +5,12 @@
 package session
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/diff"
-	"strings"
-	"testing"
 )
 
 func TestApprovalDiffNavigation(t *testing.T) {

@@ -6,12 +6,13 @@ package run
 
 import (
 	"context"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type previewExecutor struct {

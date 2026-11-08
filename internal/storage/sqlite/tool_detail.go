@@ -8,16 +8,19 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+
+	"io/fs"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
-	"io/fs"
 )
 
 func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds) (result runrecord.Event, resultErr error) {
 	if ref.Sequence < 1 {
-		return result, fmt.Errorf("invalid tool detail reference")
+		return result, faults.Errorf(diagcatalog.SqliteInvalidToolDetailReference)
 	}
 	source := s
 	page := teamPage{parent: s}

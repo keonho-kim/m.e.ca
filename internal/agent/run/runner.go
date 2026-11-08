@@ -6,20 +6,25 @@ package run
 
 import (
 	"context"
-	"errors"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"time"
-
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/agent/work"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/skills/instruction"
 )
 
 type Runner struct {
+	Skills                   SkillLoader
+	SkillReads               []instruction.Document
+	ClientContext            []modelapi.Message
 	HideThinking             bool
 	ImageInput               bool
 	Resume                   bool
@@ -50,6 +55,12 @@ type Runner struct {
 	RedactionVersion  func() int
 	NewStreamMask     func() func(string, bool) string
 }
+
+// SkillLoader is the request owner's instruction-read I/O boundary. The
+// filesystem reader is supplied by application composition, never constructed here.
+type SkillLoader interface {
+	Load(context.Context, instruction.Selector, bool) (instruction.Document, error)
+}
 type Result struct {
 	Departed       bool
 	End            work.End
@@ -59,11 +70,11 @@ type Result struct {
 	HadToolFailure bool
 }
 type Journal interface {
-	ContextMessages(context.Context, string, int64, int, bool) ([]modelapi.Message, error)
+	ContextMessages(context.Context, string, int64, int, bool, func(int) error) ([]modelapi.Message, error)
 	RecordEvent(context.Context, string, runrecord.Event) error
 	Commit(context.Context, string, []runrecord.Entry) error
 }
 
 type Approver func(context.Context, toolapi.Approval) (bool, error)
 
-var errApprovalDenied = errors.New("operation denied by user; execution stopped")
+var errApprovalDenied = faults.Errorf(diagcatalog.RunOperationDeniedByUserExecutionStopped)

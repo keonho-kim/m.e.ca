@@ -5,9 +5,10 @@
 package viewport
 
 import (
-	"github.com/rivo/uniseg"
 	"strings"
 	"testing"
+
+	"github.com/rivo/uniseg"
 )
 
 func TestScrollAnchor(t *testing.T) {

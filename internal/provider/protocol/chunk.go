@@ -6,8 +6,9 @@
 package protocol
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
@@ -47,7 +48,7 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 	}
 	input, output := frame.Input, frame.Output
 	if input != nil && (*input < 0 || *input > modelapi.MaxCallTokens) || output != nil && (*output < 0 || *output > modelapi.MaxCallTokens) {
-		return fmt.Errorf("invalid provider token usage")
+		return faults.Errorf(diagcatalog.ProtocolInvalidProviderTokenUsage)
 	}
 	var observed *modelapi.TokenUsage
 	if input != nil && output != nil {
@@ -79,7 +80,9 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		reasoning = message.ReasoningContent
 	}
 	reason := message.Thinking + reasoning
+	opaqueProgress := false
 	if state.provider == modelconn.OpenRouter {
+		previous := state.router.Progress()
 		text, err := state.router.Add(message.ReasoningDetails, !single)
 		if err != nil {
 			return err
@@ -87,17 +90,20 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		if text != "" || reason == "" {
 			reason = text
 		}
+		opaqueProgress = state.router.Progress() != previous
 	}
 	if observed == nil && (message.Content != "" || reason != "") {
 		state.Usage = nil
 	}
+	beforeCalls := state.Calls.Bytes()
 	if len(message.Calls) > 0 && string(message.Calls) != "null" && string(message.Calls) != "[]" {
 		if err := state.Calls.Add(message.Calls, isOllama, single); err != nil {
 			return err
 		}
 	}
-	if message.Content != "" || reason != "" || observed != nil {
-		return emit(modelapi.Event{Delta: message.Content, Thinking: reason, Streaming: state.Streaming, Usage: observed})
+	progress := state.Calls.Bytes() > beforeCalls || opaqueProgress
+	if message.Content != "" || reason != "" || observed != nil || progress {
+		return emit(modelapi.Event{Progress: progress, Delta: message.Content, Thinking: reason, Streaming: state.Streaming, Usage: observed})
 	}
 	return nil
 }
@@ -107,7 +113,7 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 		return state.EmitFailedUsage(state.Failure, emit)
 	}
 	if !state.Finished || !state.Received {
-		return fmt.Errorf("model stream ended before completion")
+		return faults.Transient(faults.Errorf(diagcatalog.ProtocolModelStreamEndedBeforeCompletion))
 	}
 	calls, err := state.Calls.Complete()
 	if err != nil {

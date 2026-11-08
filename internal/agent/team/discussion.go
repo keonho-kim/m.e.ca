@@ -7,22 +7,25 @@ package team
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"slices"
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// note resolves only this room's committed records; model text cannot choose its sender or provenance.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// note resolves only this room's committed records; model text cannot choose its sender or provenance.
 func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*runrecord.TeamNote, error) {
 	r := p.room
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	if replyTo < 0 || len(mentions) > MaxActive {
-		return nil, fmt.Errorf("invalid public discussion reference or mentions")
+		return nil, faults.Errorf(diagcatalog.TeamInvalidPublicDiscussionReferenceOrMentions)
 	}
 	r.mu.Lock()
 	through, based := r.latestPublic, p.DecisionCursor
@@ -36,11 +39,11 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 	}
 	r.mu.Unlock()
 	if !valid {
-		return nil, fmt.Errorf("this team member is no longer active")
+		return nil, faults.Errorf(diagcatalog.TeamThisTeamMemberIsNoLongerActive)
 	}
 	for i, name := range mentions {
 		if name == p.ID {
-			return nil, fmt.Errorf("%q is your own name, not another teammate; omit mentions for public feedback or name other teammates; nothing was published", name)
+			return nil, faults.Errorf(diagcatalog.TeamIsYourOwnNameNotAnotherTeammate, name)
 		}
 		if slices.Contains(mentions[:i], name) {
 			continue
@@ -49,13 +52,13 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 			continue
 		}
 		if _, err := r.options.Store.TeamMember(ctx, name); err != nil {
-			return nil, fmt.Errorf("unknown teammate %q; use list_team_members: %w", name, err)
+			return nil, faults.Errorf(diagcatalog.TeamUnknownTeammateUseListTeamMembers, name, err)
 		}
 	}
 	note := &runrecord.TeamNote{ReplyTo: replyTo, Mentions: mentions, BasedOn: based}
 	if replyTo > 0 {
 		if replyTo > through {
-			return nil, fmt.Errorf("public note #%d does not exist in this conversation", replyTo)
+			return nil, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, replyTo)
 		}
 		value, known := r.public.Metadata(replyTo)
 		if !known {
@@ -66,7 +69,7 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 			}
 		}
 		if value.Sequence != replyTo {
-			return nil, fmt.Errorf("public note #%d does not exist in this conversation", replyTo)
+			return nil, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, replyTo)
 		}
 		note.ReplyAuthor = value.From
 	}
@@ -75,7 +78,7 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 
 func (p *Peer) Discuss(ctx context.Context, text string, replyTo int64, mentions []string) (sequence int64, resultErr error) {
 	if strings.TrimSpace(text) == "" {
-		return 0, fmt.Errorf("public feedback must contain a useful message")
+		return 0, faults.Errorf(diagcatalog.TeamPublicFeedbackMustContainAUsefulMessage)
 	}
 	if err := p.room.admitUser(); err != nil {
 		return 0, err

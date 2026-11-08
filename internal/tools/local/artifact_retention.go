@@ -7,11 +7,13 @@ package local
 import (
 	"container/list"
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"sync"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
@@ -77,7 +79,7 @@ func (e *Executor) writeArtifact(id, path string, body []byte) error {
 	}
 	entry := r.entries[id]
 	if entry != nil && entry.retired != nil {
-		return fmt.Errorf("completed command artifacts are immutable")
+		return faults.Errorf(diagcatalog.LocalCompletedCommandArtifactsAreImmutable)
 	}
 	var previous int64
 	if entry != nil {

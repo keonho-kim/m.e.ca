@@ -5,13 +5,15 @@
 package history
 
 import (
-	"errors"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// ErrNotFound distinguishes an absent visible record from a storage failure.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// ErrNotFound distinguishes an absent visible record from a storage failure.
-var ErrNotFound = errors.New("history record was not found")
+var ErrNotFound = faults.Errorf(diagcatalog.ServerHistoryRecordWasNotFound)
 
 type Record struct {
 	Truncated bool

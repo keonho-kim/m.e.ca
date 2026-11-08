@@ -32,11 +32,8 @@ func teamService(root *sqlite.Store, home, state string, vault *credentials.Vaul
 			}
 			return teamrequest.Child{Store: store, Session: store.Session(), Close: func() error { return errors.Join(store.Close(), lease.Close()) }}, nil
 		},
-		NewTools: func() (teamtools.Local, error) {
-			executor, err := local.NewExecutor(root.Session().ProjectRoot, home, state, vault.Redact)
-			if err == nil {
-				executor.SetRedactionVersion(vault.RedactionVersion)
-			}
+		NewTools: func(options teamrequest.LocalOptions) (teamtools.Local, error) {
+			executor, err := local.NewExecutor(root.Session().ProjectRoot, home, state, vault.Redact, local.Options{Skills: options.Skills, Images: options.Images, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 			return executor, err
 		},
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.LoadProfile(state, prompt.Team) },

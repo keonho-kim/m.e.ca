@@ -9,8 +9,11 @@ import (
 	"crypto/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const (
@@ -62,6 +65,9 @@ func (s *Service) publish(value Event) {
 	if value.Task == "" && s.active != nil {
 		value.Task = s.active.task.ID
 	}
+	if value.Record.OccurredAt == "" {
+		value.Record.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
+	}
 	value = ProjectEvent(value)
 	f := &s.feed
 	f.sequence++
@@ -96,7 +102,7 @@ func (s *Service) Next(ctx context.Context, cursor string) (Batch, error) {
 		}
 		if s.closed {
 			s.mu.Unlock()
-			return Batch{}, failure("unavailable", "server is shutting down")
+			return Batch{}, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 		}
 		if s.feed.changed == nil {
 			s.feed.changed = make(chan struct{})
@@ -129,14 +135,14 @@ func (s *Service) readEvents(cursor string) (Batch, bool, error) {
 	epoch, raw, ok := strings.Cut(cursor, ":")
 	sequence, err := strconv.ParseUint(raw, 10, 64)
 	if !ok || err != nil || len(epoch) != 26 {
-		return Batch{}, false, failure("invalid_argument", "invalid event cursor")
+		return Batch{}, false, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidEventCursor)
 	}
 	if epoch != f.epoch || (f.count > 0 && sequence < f.entry(0).sequence-1) {
 		snapshot := s.snapshot()
 		return Batch{Snapshot: &snapshot}, true, nil
 	}
 	if sequence > f.sequence {
-		return Batch{}, false, failure("invalid_argument", "event cursor is ahead of this server")
+		return Batch{}, false, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerEventCursorIsAheadOfThisServer)
 	}
 	if sequence == f.sequence {
 		return Batch{}, false, nil

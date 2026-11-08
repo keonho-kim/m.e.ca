@@ -6,9 +6,10 @@ package run
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/tool"

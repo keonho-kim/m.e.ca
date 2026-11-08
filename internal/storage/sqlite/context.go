@@ -7,18 +7,20 @@ package sqlite
 import (
 	"bytes"
 	"context"
-	"fmt"
+
 	json "github.com/goccy/go-json"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int, images bool) (messages []modelapi.Message, err error) {
+func (s *Store) ContextMessages(ctx context.Context, session string, after int64, maxBytes int, images bool, reserve func(int) error) (messages []modelapi.Message, err error) {
 	if err := s.checkSession(session); err != nil {
 		return nil, err
 	}
 	if after < 0 || maxBytes < 1 {
-		return nil, fmt.Errorf("invalid conversation context bounds")
+		return nil, faults.Errorf(diagcatalog.SqliteInvalidConversationContextBounds)
 	}
 	total := 0
 	for {
@@ -29,6 +31,33 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 		if len(page) == 0 {
 			return messages, nil
 		}
+		needed := total
+		selectedFields := make([]map[string]bool, len(page))
+		for i, record := range page {
+			if !images {
+				selectedFields[i], err = textContextFields(record.body)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+		}
+		sizes, sizeErr := s.contextReadSizes(ctx, page, selectedFields)
+		if sizeErr != nil {
+			return nil, sizeErr
+		}
+		for _, size := range sizes {
+			if size > maxBytes-needed {
+				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
+			}
+			needed += size
+		}
+		if reserve != nil {
+			if err := reserve(needed); err != nil {
+				return nil, err
+			}
+		}
+
 		var shared map[string]string
 		if s.room != nil {
 			selected := page
@@ -45,17 +74,12 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 				return nil, err
 			}
 		}
-		for _, record := range page {
-			var fields map[string]bool
-			if !images {
-				fields, err = textContextFields(record.body)
-				if err != nil {
-					return nil, err
-				}
-			}
+		for i, record := range page {
+			fields := selectedFields[i]
 			if fields == nil && total+record.size > maxBytes {
-				return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes; no messages were omitted", maxBytes)
+				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
 			}
+
 			message, bodyBytes, err := s.contextRecord(ctx, record, fields, shared)
 			if err != nil {
 				return nil, err
@@ -67,7 +91,7 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 			}
 			total += size
 			if total > maxBytes {
-				return nil, fmt.Errorf("uncompacted conversation exceeds %d bytes; no messages were omitted", maxBytes)
+				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
 			}
 			if err := message.Check(); err != nil {
 				return nil, err

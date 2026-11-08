@@ -7,9 +7,10 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
@@ -25,7 +26,7 @@ type teamPage struct {
 
 func (p *teamPage) resolve(ctx context.Context, event runrecord.Event, display bool) (runrecord.Event, error) {
 	if event.Reference == nil || event.Reference.Sequence < 1 {
-		return event, fmt.Errorf("missing private event reference")
+		return event, faults.Errorf(diagcatalog.SqliteMissingPrivateEventReference)
 	}
 	entry, ok := p.records[*event.Reference]
 	if !ok {

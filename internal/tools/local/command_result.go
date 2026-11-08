@@ -5,13 +5,17 @@
 package local
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"errors"
 	"fmt"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
-	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 	"strings"
 	"unicode/utf8"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
+	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
 func (e *Executor) encodeCommand(id string, output process.Output, runErr error, capture *liveCommandCapture) (toolapi.Result, error) {
@@ -46,9 +50,9 @@ func (e *Executor) encodeCommand(id string, output process.Output, runErr error,
 		result.Process.Diagnostic = commandDiagnostic(output.Stdout, output.Stderr)
 	}
 	if runErr != nil {
-		result.Failure = toolapi.FailureOf(runErr)
+		result.Failure = faults.FailureOf(runErr)
 	} else if result.Failed {
-		result.Failure = &toolapi.Failure{Code: toolapi.ProcessFailed, Detail: result.Summary, Next: "Interpret stdout, stderr and the exit code for this command. grep/rg exit 1 means no matches. If this is the requested observation, report it; otherwise correct the cause and retry only the needed work."}
+		result.Failure = &faults.Failure{Code: diagcatalog.ProcessFailed, Detail: result.Summary, Next: diagcatalog.Text(diagcatalog.LocalInterpretStdoutStderrAndTheExitCode)}
 	}
 	return result, projectionErr
 }

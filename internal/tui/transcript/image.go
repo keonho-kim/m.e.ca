@@ -6,8 +6,9 @@ package transcript
 
 import (
 	"encoding/json"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (f Formatter) imageOutput(event runrecord.Event, body []byte) toolOutput {

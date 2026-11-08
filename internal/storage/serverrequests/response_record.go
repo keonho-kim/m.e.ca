@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+
 	"io"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/work"
 	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxResponseRecordBytes = 64 << 10
@@ -47,14 +49,14 @@ func encodeResponse(v server.Response) ([]byte, error) {
 	}
 	body, err := json.Marshal(value)
 	if err == nil && len(body) > maxResponseRecordBytes {
-		err = fmt.Errorf("response metadata exceeds limit")
+		err = faults.Errorf(diagcatalog.ServerrequestsResponseMetadataExceedsLimit)
 	}
 	return body, err
 }
 
 func decodeResponse(v stored, id, scope string) (server.Response, error) {
 	if v.kind == "native" {
-		return server.Response{}, &server.Error{Code: "not_found", Message: "response was not found"}
+		return server.Response{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerResponseWasNotFound)
 	}
 	var value responseRecord
 	decoder := json.NewDecoder(bytes.NewReader(v.response))
@@ -63,7 +65,7 @@ func decodeResponse(v stored, id, scope string) (server.Response, error) {
 		return server.Response{}, err
 	}
 	if decoder.Decode(new(any)) != io.EOF {
-		return server.Response{}, fmt.Errorf("invalid response metadata; original preserved")
+		return server.Response{}, faults.Errorf(diagcatalog.ServerrequestsInvalidResponseMetadataOriginalPreserved)
 	}
 	result := server.Response{
 		ID: id, Scope: scope, Digest: hex.EncodeToString(v.digest), Kind: v.kind,

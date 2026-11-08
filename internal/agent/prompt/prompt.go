@@ -5,9 +5,11 @@
 package prompt
 
 import (
-	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const MaxInstructionsBytes = 16 * 1024 * 1024
@@ -27,7 +29,7 @@ func Compose(base, instructions string) (string, error) {
 
 func checkInstructions(instructions string) error {
 	if len(instructions) > MaxInstructionsBytes || !utf8.ValidString(instructions) || strings.ContainsRune(instructions, 0) {
-		return fmt.Errorf("project AGENTS.md exceeds the instruction limit or has invalid encoding")
+		return faults.Errorf(diagcatalog.PromptProjectAGENTSMdExceedsTheInstructionLimit)
 	}
 	return nil
 }

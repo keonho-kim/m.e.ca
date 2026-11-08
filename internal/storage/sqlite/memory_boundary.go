@@ -6,10 +6,11 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
 
 	json "github.com/goccy/go-json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -18,7 +19,7 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 		return 0, err
 	}
 	if through < 0 || keepBytes < 0 {
-		return 0, fmt.Errorf("invalid compaction tail bounds")
+		return 0, faults.Errorf(diagcatalog.SqliteInvalidCompactionTailBounds)
 	}
 	pin, pinErr := s.unreadImageBoundary(ctx, session, through)
 	if pinErr != nil {

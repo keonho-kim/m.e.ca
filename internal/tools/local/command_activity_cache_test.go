@@ -20,7 +20,7 @@ func TestCommandActivityMaskTracksVaultRevision(t *testing.T) {
 		t.Fatal(err)
 	}
 	version, scans := 0, 0
-	e.SetRedactionVersion(func() int { return version })
+	e.redactionVersion = func() int { return version }
 	e.redact = func(text string) string {
 		scans++
 		if version > 0 {
@@ -48,7 +48,7 @@ func TestCommandActivityMaskTracksVaultRevision(t *testing.T) {
 
 func BenchmarkCommandActivityCached(b *testing.B) {
 	home, project := b.TempDir(), b.TempDir()
-	e, err := NewExecutor(project, home, home+"/.meca", func(s string) string { return s })
+	e, err := NewExecutor(project, home, home+"/.meca", func(s string) string { return s }, Options{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func BenchmarkCommandActivityCached(b *testing.B) {
 			b.Error(err)
 		}
 	})
-	e.SetRedactionVersion(func() int { return 0 })
+	e.redactionVersion = func() int { return 0 }
 	e.BeginCommands(b.Context(), time.Now().Add(time.Minute))
 	for range 4 {
 		if _, err := e.commands.Start(b.Context(), project, "sleep 60 # "+strings.Repeat("details ", 8192), os.Environ(), "call"); err != nil {

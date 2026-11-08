@@ -7,10 +7,11 @@ package sqlite
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"os"
 	"path/filepath"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestSessionHistorySurvivesRestart(t *testing.T) {
@@ -45,7 +46,7 @@ func TestSessionHistorySurvivesRestart(t *testing.T) {
 	if err != nil || restored.ID != session.ID {
 		t.Fatalf("session: %+v, %v", restored, err)
 	}
-	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
+	history, err := store.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(history) != 1 || history[0].Content != "Fix auth" {
 		t.Fatalf("history: %+v, %v", history, err)
 	}

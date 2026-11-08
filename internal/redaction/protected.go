@@ -7,17 +7,21 @@ package redaction
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// CheckProtected inspects JSON string values, including JSON serialized inside a
+	// string, without changing signed provider bytes. Non-JSON opaque state still
+	// receives the normal text check. Encrypted bytes remain provider-owned.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// CheckProtected inspects JSON string values, including JSON serialized inside a
-// string, without changing signed provider bytes. Non-JSON opaque state still
-// receives the normal text check. Encrypted bytes remain provider-owned.
 func CheckProtected(body []byte, redact func(string) string) error {
 	if text := string(body); redact(text) != text {
-		return fmt.Errorf("native state contains protected content")
+		return faults.Errorf(diagcatalog.RedactionNativeStateContainsProtectedContent)
 	}
 	return checkJSONProtected(body, redact, 0)
 }
@@ -28,17 +32,17 @@ func checkJSONProtected(body []byte, redact func(string) string, depth int) erro
 		return nil
 	}
 	if depth > 64 {
-		return fmt.Errorf("native state JSON nesting exceeds limit")
+		return faults.Errorf(diagcatalog.RedactionNativeStateJSONNestingExceedsLimit)
 	}
 	if !json.Valid(body) {
 		return nil
 	}
 	if !utf8.Valid(body) {
-		return fmt.Errorf("invalid complete UTF-8 JSON")
+		return faults.Errorf(diagcatalog.RedactionInvalidCompleteUTFJSON)
 	}
 	return walkJSONStrings(body, func(_, _ int, value string) error {
 		if redact(value) != value {
-			return fmt.Errorf("native state contains protected content")
+			return faults.Errorf(diagcatalog.RedactionNativeStateContainsProtectedContent)
 		}
 		nested := strings.TrimSpace(value)
 		if len(nested) == 0 || nested[0] != '{' && nested[0] != '[' && nested[0] != '"' {

@@ -1,15 +1,14 @@
-// Purpose: Isolate compatible histories and reject stale response continuations before execution.
-// Pattern: Conversation ownership and input trust boundary.
+// Purpose: Acquire the compatible conversation and reject stale continuation boundaries before execution.
+// Pattern: Conversation ownership transition.
 // Usage: Submit holds one change reservation across session transfer and history seeding.
 // Related: internal/commands/server/lifecycle.go, internal/agent/context/conversation.go.
 package server
 
 import (
-	"context"
 	"errors"
 
-	"github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Service) submissionSession(change sessionChange, previous, id string) (*Conversation, error) {
@@ -21,7 +20,7 @@ func (s *Service) submissionSession(change sessionChange, previous, id string) (
 			return nil, err
 		}
 		if parent.Status != "completed" || parent.Next != "" && parent.Next != id {
-			return nil, failure("conflict", "previous_response_id must name the latest completed response")
+			return nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerPreviousResponseIdMustNameTheLatest)
 		}
 	}
 	s.mu.Lock()
@@ -65,7 +64,7 @@ func (s *Service) submissionSession(change sessionChange, previous, id string) (
 	}
 
 	if c.Output == nil {
-		return nil, failure("failed_precondition", "conversation result history is unavailable")
+		return nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerConversationResultHistoryIsUnavailable)
 	}
 	if previous != "" {
 		position, err := c.Output.OutputPosition(change.ctx, c.Runtime.Session.ID)
@@ -73,17 +72,17 @@ func (s *Service) submissionSession(change sessionChange, previous, id string) (
 			return nil, err
 		}
 		if position != parent.Through {
-			return nil, failure("conflict", "conversation changed after previous_response_id")
+			return nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerConversationChangedAfterPreviousResponseId)
 		}
 
 	}
 	if c.TeamEnabled && c.Team == nil {
-		return nil, failure("failed_precondition", "team service is unavailable")
+		return nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerTeamServiceIsUnavailable)
 	}
 	if c.Model == nil {
 		selected := c.Runtime.Selection
 		if selected.Model == "" {
-			return nil, failure("failed_precondition", "select or save a model before using the compatible API")
+			return nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSelectOrSaveAModelBeforeUsing)
 		}
 		change.conversation = c
 		if err := s.selectModel(change, ModelSettings{Provider: string(selected.Connection.Kind), Endpoint: selected.Connection.Endpoint, Name: selected.Model, Thinking: selected.Thinking, Effort: selected.ReasoningEffort}); err != nil {
@@ -91,24 +90,4 @@ func (s *Service) submissionSession(change sessionChange, previous, id string) (
 		}
 	}
 	return c, nil
-}
-
-func seedInput(ctx context.Context, c *Conversation, messages []InputMessage) ([]model.Message, error) {
-	if len(messages) == 0 {
-		return nil, nil
-	}
-	entries := make([]record.Entry, len(messages))
-	contextMessages := make([]model.Message, len(messages))
-	for i, input := range messages {
-		message := model.Message{Role: input.Role, Content: c.Runtime.Vault.Redact(input.Text)}
-		if input.Role == "system" || input.Role == "developer" {
-			// Client instructions are contextual notes. The runtime's operator
-			// instructions and actual execution/approval policy retain ownership.
-			message.Role = "system"
-			message.Content = "Client " + input.Role + " instructions:\n" + message.Content
-		}
-		contextMessages[i] = message
-		entries[i].Message = &contextMessages[i]
-	}
-	return contextMessages, c.Runtime.Store.Commit(ctx, c.Runtime.Session.ID, entries)
 }

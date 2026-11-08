@@ -10,10 +10,11 @@
 package mecav1connect
 
 import (
-	connect "connectrpc.com/connect/v2"
 	context "context"
-	mecav1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	sync "sync"
+
+	connect "connectrpc.com/connect/v2"
+	mecav1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
 
 const (

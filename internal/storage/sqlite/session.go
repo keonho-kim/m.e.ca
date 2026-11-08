@@ -7,10 +7,13 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+
 	"time"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func readConversation(ctx context.Context, db *sql.DB, id string) (sessionstate.Conversation, error) {
@@ -30,16 +33,16 @@ func parseConversation(row *sql.Row, id string) (sessionstate.Conversation, erro
 		return c, err
 	}
 	if !sessionstate.ValidID(id) || c.ID != id {
-		return c, fmt.Errorf("session identity does not match database filename")
+		return c, faults.Errorf(diagcatalog.SqliteSessionIdentityDoesNotMatchDatabaseFilename)
 	}
 	if err := sessionstate.CheckProject(c.ProjectRoot, c.DisplayRoot); err != nil {
 		return c, err
 	}
 	if _, err := time.Parse(time.RFC3339Nano, c.Updated); err != nil {
-		return c, fmt.Errorf("invalid session timestamp: %w", err)
+		return c, faults.Errorf(diagcatalog.SqliteInvalidSessionTimestamp, err)
 	}
 	if !utf8.ValidString(c.Summary) {
-		return c, fmt.Errorf("invalid session summary")
+		return c, faults.Errorf(diagcatalog.SqliteInvalidSessionSummary)
 	}
 	c.Summary = conversationSummary(c.Summary)
 	return c, nil

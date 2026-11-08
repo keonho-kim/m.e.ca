@@ -8,11 +8,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+
 	"time"
 
 	json "github.com/goccy/go-json"
 	"github.com/keonho-kim/meca/internal/agent/compact"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -21,12 +23,12 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 		return err
 	}
 	if count.Amount < 0 || count.Amount > 1000000000 {
-		return fmt.Errorf("invalid conversation token count")
+		return faults.Errorf(diagcatalog.SqliteInvalidConversationTokenCount)
 	}
 	switch count.Kind {
 	case "request":
 	default:
-		return fmt.Errorf("invalid conversation token source")
+		return faults.Errorf(diagcatalog.SqliteInvalidConversationTokenSource)
 	}
 	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(singleton,amount,estimated,kind,through_timeline) SELECT 1,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE true ON CONFLICT(singleton) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", count.Amount, count.Estimated, count.Kind)
 	return err
@@ -46,7 +48,7 @@ func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, err
 		return compact.Memory{}, err
 	}
 	if len(body) > recordcontent.MaxBytes {
-		return compact.Memory{}, fmt.Errorf("stored memory exceeds limit")
+		return compact.Memory{}, faults.Errorf(diagcatalog.SqliteStoredMemoryExceedsLimit)
 	}
 	body, err = s.codec.Restore(codec, size, digest, body)
 	if err != nil {
@@ -64,7 +66,7 @@ func (s *Store) InstallMemory(ctx context.Context, session string, expected int,
 		return err
 	}
 	if next.Revision != expected+1 {
-		return fmt.Errorf("invalid compaction revision")
+		return faults.Errorf(diagcatalog.SqliteInvalidCompactionRevision)
 	}
 	if err := next.Check(compact.MaxBodyBytes); err != nil {
 		return err
@@ -92,7 +94,7 @@ WHERE memories.revision=? AND memories.through_timeline<excluded.through_timelin
 	}
 	changed, err := result.RowsAffected()
 	if err != nil || changed != 1 {
-		return errors.Join(fmt.Errorf("stale compaction revision; previous memory retained"), err)
+		return errors.Join(faults.Errorf(diagcatalog.SqliteStaleCompactionRevisionPreviousMemoryRetained), err)
 	}
 	return nil
 }

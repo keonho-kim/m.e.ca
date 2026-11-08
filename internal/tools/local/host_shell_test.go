@@ -21,7 +21,7 @@ func TestHostShellCacheAndHardlinks(t *testing.T) {
 	for _, linked := range []bool{false, true} {
 		project, home := t.TempDir(), t.TempDir()
 		t.Setenv("HOME", home)
-		executor, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+		executor, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s }, Options{})
 		if err != nil {
 			t.Fatal(err)
 		}

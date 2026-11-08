@@ -5,9 +5,10 @@
 package team
 
 import (
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"testing"
 )
 
 func TestSlowPublicDeliveryDoesNotHoldPublicationLock(t *testing.T) {

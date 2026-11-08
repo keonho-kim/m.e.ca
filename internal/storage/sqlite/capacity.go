@@ -13,7 +13,7 @@ import (
 
 const maxProjectSessions = 4096
 
-func (s *Sessions) reserveSession(ctx context.Context, directory, project string) error {
+func (s *Sessions) reserveSession(ctx context.Context, directory, project string) (*capacity.Reservation, error) {
 	return capacity.Reserve(ctx, filepath.Join(directory, "capacity"), maxProjectSessions, func() (count int64, err error) {
 		err = s.walkDatabases(ctx, project, func(string, string, string) error {
 			count++

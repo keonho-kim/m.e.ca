@@ -6,11 +6,12 @@ package controller
 
 import (
 	"context"
+	"sync"
+
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tui/browser/readqueue"
 	"github.com/keonho-kim/meca/internal/tui/preview"
-	"sync"
 )
 
 type Reader interface {

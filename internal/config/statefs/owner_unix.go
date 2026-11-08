@@ -7,15 +7,17 @@
 package statefs
 
 import (
-	"fmt"
 	"os"
 	"syscall"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func checkOwner(info os.FileInfo) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != uint32(os.Geteuid()) {
-		return fmt.Errorf("application state must belong to the current user")
+		return faults.Errorf(diagcatalog.StatefsApplicationStateMustBelongToTheCurrent)
 	}
 	return nil
 }

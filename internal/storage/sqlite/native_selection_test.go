@@ -6,8 +6,9 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestNativeSelection(t *testing.T) {

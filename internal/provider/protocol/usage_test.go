@@ -5,10 +5,11 @@
 package protocol
 
 import (
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
-	"testing"
 )
 
 func TestTokenUsageAccompaniesTextAndDoesNotBecomeStale(t *testing.T) {

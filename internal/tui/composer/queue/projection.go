@@ -6,11 +6,12 @@ package queue
 
 import (
 	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"slices"
-	"strings"
 )
 
 type Projection struct {

@@ -5,9 +5,10 @@
 package view
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"strings"
 )
 
 type MenuDisplay struct {

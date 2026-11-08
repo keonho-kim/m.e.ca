@@ -11,13 +11,15 @@ import (
 	"unicode/utf8"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/diff"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
 
 func (op *fileOperation) freezeCandidate(call toolapi.Call, before, after []byte) error {
 	if !utf8.Valid(before) || !utf8.Valid(after) || bytes.IndexByte(before, 0) >= 0 || bytes.IndexByte(after, 0) >= 0 {
-		return fmt.Errorf("file tools require inspectable UTF-8 text; binary changes are not supported")
+		return faults.Errorf(diagcatalog.LocalFileToolsRequireInspectableUTFTextBinary)
 	}
 	preview, added, deleted, err := diff.Analyze(op.source.absolute, before, after, op.original.exists, true)
 	if err != nil {

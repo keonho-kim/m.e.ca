@@ -6,7 +6,9 @@ package chat
 
 import (
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -26,7 +28,7 @@ func Decode(content []byte, single bool) (native.Frame, error) {
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(content, &wire); err != nil {
-		return native.Frame{}, fmt.Errorf("invalid model stream: %w", err)
+		return native.Frame{}, faults.Errorf(diagcatalog.ChatInvalidModelStream, err)
 	}
 	var value native.Frame
 	if wire.Usage != nil {
@@ -36,11 +38,11 @@ func Decode(content []byte, single bool) (native.Frame, error) {
 		return value, transport.ParseError(0, content, "")
 	}
 	if len(wire.Choices) > 1 {
-		return value, fmt.Errorf("multiple model choices are not supported")
+		return value, faults.Errorf(diagcatalog.ChatMultipleModelChoicesAreNotSupported)
 	}
 	if len(wire.Choices) == 0 {
 		if wire.Usage == nil {
-			return value, fmt.Errorf("missing model choices")
+			return value, faults.Errorf(diagcatalog.ChatMissingModelChoices)
 		}
 		return value, nil
 	}

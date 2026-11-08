@@ -6,11 +6,14 @@ package claude
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
-	"strings"
 )
 
 type blockDraft struct {
@@ -45,7 +48,7 @@ func (d *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		} `json:"message"`
 	}
 	if err := json.Unmarshal(content, &frame); err != nil {
-		return fmt.Errorf("invalid Claude event: %w", err)
+		return faults.Errorf(diagcatalog.ClaudeInvalidClaudeEvent, err)
 	}
 	if single {
 		return d.single(content, state, emit)
@@ -59,7 +62,7 @@ func (d *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		return d.setUsage(frame.Message.Usage, state)
 	case "content_block_start":
 		if frame.Index != len(d.blocks) || frame.Index >= 1024 {
-			return fmt.Errorf("invalid Claude block index")
+			return faults.Errorf(diagcatalog.ClaudeInvalidClaudeBlockIndex)
 		}
 		if err := d.addBytes(len(frame.Block)); err != nil {
 			return err
@@ -71,7 +74,7 @@ func (d *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		switch b.Type {
 		case "text", "thinking", "redacted_thinking", "tool_use":
 		default:
-			return fmt.Errorf("unsupported Claude content type")
+			return faults.Errorf(diagcatalog.ClaudeUnsupportedClaudeContentType)
 		}
 		draft := &blockDraft{block: b}
 		draft.text.WriteString(b.Text)
@@ -90,7 +93,7 @@ func (d *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		}
 	case "content_block_delta":
 		if frame.Index < 0 || frame.Index >= len(d.blocks) || d.blocks[frame.Index].stopped {
-			return fmt.Errorf("claude delta has no active block")
+			return faults.Errorf(diagcatalog.ClaudeClaudeDeltaHasNoActiveBlock)
 		}
 		b := d.blocks[frame.Index]
 		if err := d.addBytes(len(frame.Delta.Text) + len(frame.Delta.Thinking) + len(frame.Delta.Signature) + len(frame.Delta.Partial)); err != nil {
@@ -99,38 +102,47 @@ func (d *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		switch frame.Delta.Type {
 		case "text_delta":
 			if b.block.Type != "text" {
-				return fmt.Errorf("claude text delta changed block type")
+				return faults.Errorf(diagcatalog.ClaudeClaudeTextDeltaChangedBlockType)
 			}
 			b.text.WriteString(frame.Delta.Text)
 			state.Usage = nil
 			return emit(modelapi.Event{Delta: frame.Delta.Text, Streaming: state.Streaming})
 		case "thinking_delta":
 			if b.block.Type != "thinking" {
-				return fmt.Errorf("claude thinking delta changed block type")
+				return faults.Errorf(diagcatalog.ClaudeClaudeThinkingDeltaChangedBlockType)
 			}
 			b.thinking.WriteString(frame.Delta.Thinking)
 			state.Usage = nil
 			return emit(modelapi.Event{Thinking: frame.Delta.Thinking, Streaming: state.Streaming})
 		case "signature_delta":
 			if b.block.Type != "thinking" {
-				return fmt.Errorf("claude signature has no thinking block")
+				return faults.Errorf(diagcatalog.ClaudeClaudeSignatureHasNoThinkingBlock)
 			}
 			b.signature.WriteString(frame.Delta.Signature)
+			if frame.Delta.Signature != "" {
+				return emit(modelapi.Event{Progress: true})
+			}
 		case "input_json_delta":
 			if b.block.Type != "tool_use" {
-				return fmt.Errorf("claude arguments have no tool block")
+				return faults.Errorf(diagcatalog.ClaudeClaudeArgumentsHaveNoToolBlock)
 			}
 			call, err := state.Calls.At(frame.Index)
 			if err != nil {
 				return err
 			}
-			return call.Append(frame.Delta.Partial)
+			if err := call.Append(frame.Delta.Partial); err != nil {
+				return err
+			}
+			if frame.Delta.Partial != "" {
+				return emit(modelapi.Event{Progress: true})
+			}
+			return nil
 		default:
-			return fmt.Errorf("unsupported Claude content delta")
+			return faults.Errorf(diagcatalog.ClaudeUnsupportedClaudeContentDelta)
 		}
 	case "content_block_stop":
 		if frame.Index < 0 || frame.Index >= len(d.blocks) || d.blocks[frame.Index].stopped {
-			return fmt.Errorf("invalid Claude block stop")
+			return faults.Errorf(diagcatalog.ClaudeInvalidClaudeBlockStop)
 		}
 		b := d.blocks[frame.Index]
 		b.stopped = true

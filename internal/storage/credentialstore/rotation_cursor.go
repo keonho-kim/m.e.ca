@@ -7,12 +7,14 @@ package credentialstore
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func rotationCursor(root *os.Root) (cursor string, resultErr error) {
@@ -24,7 +26,7 @@ func rotationCursor(root *os.Root) (cursor string, resultErr error) {
 		return "", err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 256 {
-		return "", fmt.Errorf("invalid private rotation cursor; contents preserved")
+		return "", faults.Errorf(diagcatalog.CredentialstoreInvalidPrivateRotationCursorContentsPreserved)
 	}
 	file, err := root.Open("cursor")
 	if err != nil {
@@ -36,7 +38,7 @@ func rotationCursor(root *os.Root) (cursor string, resultErr error) {
 		return "", err
 	}
 	if !os.SameFile(info, current) {
-		return "", fmt.Errorf("rotation cursor changed while opening")
+		return "", faults.Errorf(diagcatalog.CredentialstoreRotationCursorChangedWhileOpening)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, 257))
 	if err != nil {
@@ -44,7 +46,7 @@ func rotationCursor(root *os.Root) (cursor string, resultErr error) {
 	}
 	parts := strings.Split(string(body), "\n")
 	if len(body) > 256 || len(parts) != 3 || parts[0] != "v1" || parts[2] != "" {
-		return "", fmt.Errorf("unsupported rotation cursor; contents preserved")
+		return "", faults.Errorf(diagcatalog.CredentialstoreUnsupportedRotationCursorContentsPreserved)
 	}
 	if parts[1] != "" {
 		if err := checkRef(parts[1]); err != nil {

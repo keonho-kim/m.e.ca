@@ -5,12 +5,14 @@
 package transport
 
 import (
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type Client struct {
@@ -34,7 +36,7 @@ func New(key string, provider connection.ProviderKind) *Client {
 		},
 		CheckRedirect: func(request *http.Request, previous []*http.Request) error {
 			if len(previous) >= 5 || request.URL.Scheme != previous[0].URL.Scheme || request.URL.Host != previous[0].URL.Host {
-				return fmt.Errorf("cross-origin or excessive provider redirect denied")
+				return faults.Errorf(diagcatalog.TransportCrossOriginOrExcessiveProviderRedirectDenied)
 			}
 			return nil
 		},

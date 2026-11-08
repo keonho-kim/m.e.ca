@@ -140,7 +140,7 @@ func (w *timedWriter) Flush() {
 
 func TestNetworkWriteDeadlineDoesNotExpireIdleObservers(t *testing.T) {
 	underlying := &timedWriter{ResponseRecorder: httptest.NewRecorder()}
-	writer := deadlineWriter{underlying}
+	writer := deadlineWriter{ResponseWriter: underlying, ctx: t.Context()}
 	if _, err := writer.Write([]byte("event")); err != nil {
 		t.Fatal(err)
 	}

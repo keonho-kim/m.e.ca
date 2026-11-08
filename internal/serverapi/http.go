@@ -6,12 +6,13 @@ package serverapi
 
 import (
 	"context"
-	"fmt"
+
 	"io"
 	"mime"
 	"net/http"
 
-	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -22,7 +23,7 @@ const maxRequestBytes = 17 << 20
 func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		http.Error(w, diagcatalog.Text(diagcatalog.OpenaiContentTypeMustBeApplicationJson), http.StatusUnsupportedMediaType)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
@@ -34,13 +35,18 @@ func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 	}
 	var reply *v1.Reply
 	if err != nil {
-		reply = t.api.errorReply("", &server.Error{Code: "invalid_argument", Message: "invalid or oversized Protobuf JSON command"})
+		if faults.Code(err) == diagcatalog.ResourceExhausted || r.Context().Err() != nil {
+			reply = t.api.errorReply("", err)
+		} else {
+			reply = t.api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerapiInvalidOrOversizedProtobufJSONCommand))
+		}
 	} else {
+		body = nil
 		reply, _ = t.api.Call(r.Context(), &cmd)
 	}
 	data, encodeErr := protojson.Marshal(reply)
 	if encodeErr != nil {
-		http.Error(w, "could not encode reply", http.StatusInternalServerError)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiCouldNotEncodeReply), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -51,22 +57,7 @@ func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 }
 
 func errorStatus(code string) int {
-	switch code {
-	case "invalid_argument":
-		return http.StatusBadRequest
-	case "not_found":
-		return http.StatusNotFound
-	case "conflict", "failed_precondition", "canceled":
-		return http.StatusConflict
-	case "resource_exhausted":
-		return http.StatusTooManyRequests
-	case "unavailable":
-		return http.StatusServiceUnavailable
-	case "deadline_exceeded":
-		return http.StatusGatewayTimeout
-	default:
-		return http.StatusInternalServerError
-	}
+	return diagcatalog.HTTPStatus(code)
 }
 
 func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
@@ -74,13 +65,13 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 	case t.streams <- struct{}{}:
 		defer func() { <-t.streams }()
 	default:
-		http.Error(w, "too many observers", http.StatusTooManyRequests)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiTooManyObservers), http.StatusTooManyRequests)
 		return
 	}
 	query, err := r.URL.Query(), error(nil)
 	for key, values := range query {
 		if key != "cursor" || len(values) != 1 {
-			err = fmt.Errorf("only one cursor query parameter is supported")
+			err = faults.Errorf(diagcatalog.ServerapiOnlyOneCursorQueryParameterIsSupported)
 		}
 	}
 	if err != nil {
@@ -93,7 +84,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 	}
 	first, err := t.api.Service.Replay(cursor)
 	if err != nil {
-		http.Error(w, "invalid event cursor", http.StatusBadRequest)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerInvalidEventCursor), http.StatusBadRequest)
 		return
 	}
 	writer, err := eventstream.New(w)

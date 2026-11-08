@@ -6,6 +6,7 @@ package process
 
 import (
 	"context"
+	"slices"
 	"sync"
 )
 
@@ -13,10 +14,10 @@ const projectionBytes = 64 << 20
 
 type projectionKey struct{}
 type ProjectionBudget struct {
-	mu            sync.Mutex
-	changed       *sync.Cond
-	used          int64
-	next, serving uint64
+	mu      sync.Mutex
+	changed chan struct{}
+	used    int64
+	waiting []*projectionWaiter
 }
 
 func WithProjectionBudget(ctx context.Context) context.Context {
@@ -31,40 +32,62 @@ func projectionCost(bytes int64) int64 {
 	}
 	return min(int64(projectionBytes), bytes*4)
 }
+
+// A nonzero size makes each queued pointer a distinct identity.
+type projectionWaiter struct{ _ byte }
+
+func (b *ProjectionBudget) wake() {
+	if b.changed != nil {
+		close(b.changed)
+		b.changed = nil
+	}
+}
 func (b *ProjectionBudget) release(cost int64) func() {
 	if cost == 0 {
 		return func() {}
 	}
-	return func() {
-		b.mu.Lock()
-		b.used -= cost
-		if b.changed != nil {
-			b.changed.Broadcast()
-		}
-		b.mu.Unlock()
-	}
+	return sync.OnceFunc(func() { b.mu.Lock(); b.used -= cost; b.wake(); b.mu.Unlock() })
 }
-func (b *ProjectionBudget) Acquire(bytes int64) func() {
+
+func (b *ProjectionBudget) Acquire(ctx context.Context, bytes int64) (func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	cost := projectionCost(bytes)
 	if cost == 0 {
-		return func() {}
+		return func() {}, nil
 	}
+	waiter := &projectionWaiter{}
 	b.mu.Lock()
-	ticket := b.next
-	b.next++
-	for ticket != b.serving || b.used+cost > projectionBytes {
-		if b.changed == nil {
-			b.changed = sync.NewCond(&b.mu)
+	b.waiting = append(b.waiting, waiter)
+	for {
+		if err := ctx.Err(); err != nil {
+			at := slices.Index(b.waiting, waiter)
+			if at >= 0 {
+				b.waiting = slices.Delete(b.waiting, at, at+1)
+			}
+			b.wake()
+			b.mu.Unlock()
+			return nil, err
 		}
-		b.changed.Wait()
+		if b.waiting[0] == waiter && b.used+cost <= projectionBytes {
+			b.waiting = slices.Delete(b.waiting, 0, 1)
+			b.used += cost
+			b.wake()
+			b.mu.Unlock()
+			return b.release(cost), nil
+		}
+		if b.changed == nil {
+			b.changed = make(chan struct{})
+		}
+		changed := b.changed
+		b.mu.Unlock()
+		select {
+		case <-ctx.Done():
+		case <-changed:
+		}
+		b.mu.Lock()
 	}
-	b.used += cost
-	b.serving++
-	if b.next != b.serving && b.changed != nil {
-		b.changed.Broadcast()
-	}
-	b.mu.Unlock()
-	return b.release(cost)
 }
 
 // TryAcquire keeps live status observations from waiting behind output archival.
@@ -75,7 +98,7 @@ func (b *ProjectionBudget) TryAcquire(bytes int64) (func(), bool) {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.next != b.serving || b.used+cost > projectionBytes {
+	if len(b.waiting) > 0 || b.used+cost > projectionBytes {
 		return nil, false
 	}
 	b.used += cost

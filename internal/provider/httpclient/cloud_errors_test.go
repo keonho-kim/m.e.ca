@@ -7,11 +7,12 @@ package httpclient
 import (
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"sync/atomic"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestCloudRequestsVisibleThinkingAndObservesUnsupportedModels(t *testing.T) {

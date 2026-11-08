@@ -6,11 +6,12 @@ package session
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/storage/history"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"

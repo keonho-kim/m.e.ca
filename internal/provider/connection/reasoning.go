@@ -5,9 +5,11 @@
 package connection
 
 import (
-	"fmt"
 	"slices"
 	"unicode"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Reasoning struct {
@@ -37,11 +39,11 @@ func (r Reasoning) KnownDefault() *bool {
 
 func CheckEffortName(value string) error {
 	if len(value) > 64 {
-		return fmt.Errorf("reasoning effort exceeds 64 bytes")
+		return faults.Errorf(diagcatalog.ConnectionReasoningEffortExceedsBytes)
 	}
 	for _, r := range value {
 		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '-' {
-			return fmt.Errorf("invalid reasoning effort")
+			return faults.Errorf(diagcatalog.ConnectionInvalidReasoningEffort)
 		}
 	}
 	return nil
@@ -49,15 +51,15 @@ func CheckEffortName(value string) error {
 
 func (r Reasoning) Check() error {
 	if r.DefaultOn != nil && (*r.DefaultOn && !r.Enabled() || !*r.DefaultOn && !r.Off) {
-		return fmt.Errorf("reasoning default is not an advertised state")
+		return faults.Errorf(diagcatalog.ConnectionReasoningDefaultIsNotAnAdvertisedState)
 	}
 	if len(r.Levels) > 32 {
-		return fmt.Errorf("too many reasoning levels")
+		return faults.Errorf(diagcatalog.ConnectionTooManyReasoningLevels)
 	}
 	seen := map[string]bool{}
 	for _, value := range r.Levels {
 		if value == "" || seen[value] {
-			return fmt.Errorf("invalid or duplicate reasoning level")
+			return faults.Errorf(diagcatalog.ConnectionInvalidOrDuplicateReasoningLevel)
 		}
 		if err := CheckEffortName(value); err != nil {
 			return err
@@ -65,7 +67,7 @@ func (r Reasoning) Check() error {
 		seen[value] = true
 	}
 	if r.Default != "" && !slices.Contains(r.Levels, r.Default) {
-		return fmt.Errorf("reasoning default is not an advertised level")
+		return faults.Errorf(diagcatalog.ConnectionReasoningDefaultIsNotAnAdvertisedLevel)
 	}
 	return nil
 }
@@ -76,7 +78,7 @@ func (r Reasoning) CheckEffort(value string) error {
 		return err
 	}
 	if value != "" && !slices.Contains(r.Levels, value) {
-		return fmt.Errorf("reasoning effort %q is not advertised by this model", value)
+		return faults.Errorf(diagcatalog.ConnectionReasoningEffortIsNotAdvertisedByThis, value)
 	}
 	return nil
 }
@@ -86,7 +88,7 @@ func (m ModelInfo) Check() error {
 		return err
 	}
 	if m.ID == "" || len(m.ID) > 512 || m.ContextWindow < 0 || m.MaxInput < 0 || m.MaxInput > 1<<40 || m.MaxOutput < 0 || m.ContextWindow > 1<<40 || m.MaxOutput > 1<<40 {
-		return fmt.Errorf("invalid model limits")
+		return faults.Errorf(diagcatalog.ConnectionInvalidModelLimits)
 	}
 	if m.Reasoning != nil {
 		return m.Reasoning.Check()

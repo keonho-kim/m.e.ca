@@ -6,10 +6,12 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Kind uint8
@@ -25,6 +27,7 @@ const (
 	Language
 	Permission
 	Team
+	Skills
 )
 
 const MaxInputBytes = 16 * 1024 * 1024
@@ -36,7 +39,7 @@ type Command struct {
 
 func Parse(input string) (Command, error) {
 	if len(input) > MaxInputBytes || !utf8.ValidString(input) || strings.ContainsRune(input, 0) {
-		return Command{}, fmt.Errorf("invalid or oversized input")
+		return Command{}, faults.Errorf(diagcatalog.CommandsInvalidOrOversizedInput)
 	}
 	input = strings.TrimSpace(input)
 	if input == "" {
@@ -60,10 +63,10 @@ func Parse(input string) (Command, error) {
 		}
 	}
 	if kind == Empty {
-		return Command{}, fmt.Errorf("unknown command: %s", words[0])
+		return Command{}, faults.Errorf(diagcatalog.CommandsUnknownCommand, words[0])
 	}
 	if len(words) > 1 && kind != Directory || len(words) > 2 {
-		return Command{}, fmt.Errorf("invalid arguments for %s", words[0])
+		return Command{}, faults.Errorf(diagcatalog.CommandsInvalidArgumentsFor, words[0])
 	}
 	command := Command{Kind: kind}
 	if len(words) == 2 {
@@ -112,7 +115,7 @@ func quotedWords(input string) ([]string, error) {
 		started = true
 	}
 	if quote != 0 || escaped {
-		return nil, fmt.Errorf("unterminated quote or escape")
+		return nil, faults.Errorf(diagcatalog.CommandsUnterminatedQuoteOrEscape)
 	}
 	if started {
 		words = append(words, word.String())

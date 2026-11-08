@@ -64,6 +64,7 @@ var controls = []translation{
 	{"", "Clear selection", "선택 해제"},
 	{"", "Send", "전송"},
 	{"", "Browse files", "파일 탐색"},
+	{"", "Skills · descriptions · instructions", "스킬 목록 · 설명 · 본문"},
 	{"", "Select model · Thinking settings", "모델 선택 · 추론 설정"},
 	{"", "Interface language", "언어 설정"},
 	{"", "New session", "새 세션"},

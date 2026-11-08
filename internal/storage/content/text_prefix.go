@@ -7,11 +7,14 @@ package content
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
 	"strconv"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func TextPrefix(body, refs []byte, load func(string, int) (string, bool, error), limit int) (string, bool, error) {
@@ -29,7 +32,7 @@ func TextPrefix(body, refs []byte, load func(string, int) (string, bool, error),
 func StringPrefix(raw []byte, limit int) (string, bool, error) {
 	raw = bytes.TrimSpace(raw)
 	if limit < 1 || !json.Valid(raw) || len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' {
-		return "", false, fmt.Errorf("invalid stored text prefix")
+		return "", false, faults.Errorf(diagcatalog.ContentInvalidStoredTextPrefix)
 	}
 	end := min(limit, len(raw)-2) + 1
 	for end > 1 && end < len(raw)-1 && !utf8.RuneStart(raw[end]) {

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )

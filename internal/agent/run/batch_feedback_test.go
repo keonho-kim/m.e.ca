@@ -5,6 +5,9 @@
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -32,7 +35,7 @@ func TestClosedSessionDoesNotSuggestRetryingSkippedSiblings(t *testing.T) {
 		if message.Role != "tool" || message.ToolCallID != "after" {
 			continue
 		}
-		var body struct{ Failure *tool.Failure }
+		var body struct{ Failure *faults.Failure }
 		if err := json.Unmarshal([]byte(message.Content), &body); err != nil {
 			t.Fatal(err)
 		}
@@ -46,14 +49,14 @@ func TestClosedSessionDoesNotSuggestRetryingSkippedSiblings(t *testing.T) {
 
 func TestInstructionGuardRecordsNoFileMutation(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "file", "content": "obsolete"}), "Preserved existing files"}}
-	tools := &executor{outcomes: []tool.Result{{Failed: true, Failure: tool.NewInstructionChanged()}}}
+	tools := &executor{outcomes: []tool.Result{{Failed: true, Failure: faults.NewInstructionChanged()}}}
 	j := &journal{}
 	r := fixture(g, tools, j)
 	if _, err := r.Run(context.Background(), "Update file", approve, emit); err != nil {
 		t.Fatal(err)
 	}
 	for _, event := range j.events {
-		if op := event.Operation; op != nil && op.Failure != nil && op.Failure.Code == tool.InstructionChanged {
+		if op := event.Operation; op != nil && op.Failure != nil && op.Failure.Code == diagcatalog.InstructionChanged {
 			if op.Started || len(op.Changes) != 0 {
 				t.Fatal("instruction rejection was recorded as a mutation", op)
 			}

@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- Purpose: Demonstrate 팀 일정에 맞는 시간을 찾으세요. while preserving the shared reservation contract.
+Pattern: Native multi-page composition with app-owned visual direction.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/application-design/assets/examples/booking/booking-views.js, internal/config/bootstrap/defaults/application-design/assets/examples/booking/booking-studies.css, internal/config/bootstrap/defaults/application-design/references/composition-decisions.md. -->
+<html lang="ko" data-theme="schedule">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>팀 일정에 맞는 시간을 찾으세요. / Morrow Studies</title><meta name="description" content="팀 일정에 맞는 시간을 찾으세요. / Morrow Studies 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다."><link rel="icon" href="../shared/daylight-preview.jpg"><link rel="stylesheet" href="../shared/base.css"><link rel="stylesheet" href="../shared/components.css"><link rel="stylesheet" href="../shared/motion.css"><link rel="stylesheet" href="../shared/glass.css"><link rel="stylesheet" href="booking-studies.css"><script src="../shared/interaction.js" defer data-required></script><script src="../shared/local-state.js" defer data-required></script><script src="../shared/media.js" defer data-required></script><script src="../morrow/booking-data.js" defer data-required></script><script src="booking-views.js" defer data-required></script>
+  </head>
+  <body data-study="schedule"><a class="skip" href="#main">본문으로 이동</a>
+    <header class="study-header glass-surface"><a class="study-brand" href="booking-explore.html">morrow / studies</a>
+      <nav aria-label="같은 예약의 다른 접근"><a href="booking-explore.html">공간 먼저</a><a href="booking-schedule.html" aria-current="page">시간 먼저</a><a href="booking-quick.html">빠른 입력</a><a href="../morrow/atelier-booking.html">기본 예약</a>
+      </nav>
+    </header>
+    <main id="main" class="study-main">
+      <header>
+
+        <h1 class="study-title">팀 일정에 맞는 시간을 찾으세요.
+        </h1>
+        <p class="study-intro">날짜와 이용 시간을 먼저 정하고 두 공간의 시작 시각을 한 화면에서 비교합니다. 단가와 인원을 함께 확인할 수 있습니다.
+        </p>
+      </header>
+      <p class="notice error" data-page-error role="alert" hidden>
+      </p><noscript>
+      <p class="notice">입력·계산·화면 간 초안 보존에는 JavaScript와 세션 저장이 필요합니다. 실제 서비스로 전송하지 않습니다.
+      </p></noscript>
+      <form id="booking-study">
+        <div class="study-date-choices" data-date-choices role="group" aria-label="가까운 날짜 선택">
+        </div>
+        <div class="study-fields"><label>이용 날짜<input name="date" type="date" required></label><label>이용 시간<select name="hours"><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option></select></label><label>인원<input name="people" type="number" min="1" max="8" value="2" required><small class="muted" data-capacity>최대 8명</small></label>
+        </div><input type="hidden" name="space" value="daylight"><input type="hidden" name="start" value="10">
+        <div class="schedule-section"><p class="schedule-caption" id="schedule-label">공간별 시작 시간 / 선택을 설명하는 고정 예시</p><div class="schedule-grid"><table aria-labelledby="schedule-label">
+<thead>
+              <tr><th scope="col">공간 / 시작 시각</th><th scope="col">10:00</th><th scope="col">11:00</th><th scope="col">12:00</th><th scope="col">13:00</th><th scope="col">14:00</th><th scope="col">15:00</th><th scope="col">16:00</th><th scope="col">17:00</th><th scope="col">18:00</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Daylight studio<small>최대 8명 / <span data-room-price="daylight"></span>/시간</small></th><td><button type="button" data-time-cell data-space="daylight" data-time="10" aria-label="Daylight studio 10:00 시작 선택" aria-pressed="false"><strong>10:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="11" aria-label="Daylight studio 11:00 시작 선택" aria-pressed="false"><strong>11:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="12" aria-label="Daylight studio 12:00 시작 선택" aria-pressed="false"><strong>12:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="13" aria-label="Daylight studio 13:00 시작 선택" aria-pressed="false" disabled><strong>13:00</strong><span>선택 불가</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="14" aria-label="Daylight studio 14:00 시작 선택" aria-pressed="false"><strong>14:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="15" aria-label="Daylight studio 15:00 시작 선택" aria-pressed="false"><strong>15:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="16" aria-label="Daylight studio 16:00 시작 선택" aria-pressed="false"><strong>16:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="17" aria-label="Daylight studio 17:00 시작 선택" aria-pressed="false"><strong>17:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="daylight" data-time="18" aria-label="Daylight studio 18:00 시작 선택" aria-pressed="false"><strong>18:00</strong><span>시작 선택</span></button></td>
+              </tr>
+              <tr><th scope="row">Warm meeting room<small>최대 4명 / <span data-room-price="warm"></span>/시간</small></th><td><button type="button" data-time-cell data-space="warm" data-time="10" aria-label="Warm meeting room 10:00 시작 선택" aria-pressed="false"><strong>10:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="11" aria-label="Warm meeting room 11:00 시작 선택" aria-pressed="false"><strong>11:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="12" aria-label="Warm meeting room 12:00 시작 선택" aria-pressed="false"><strong>12:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="13" aria-label="Warm meeting room 13:00 시작 선택" aria-pressed="false" disabled><strong>13:00</strong><span>선택 불가</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="14" aria-label="Warm meeting room 14:00 시작 선택" aria-pressed="false"><strong>14:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="15" aria-label="Warm meeting room 15:00 시작 선택" aria-pressed="false"><strong>15:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="16" aria-label="Warm meeting room 16:00 시작 선택" aria-pressed="false"><strong>16:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="17" aria-label="Warm meeting room 17:00 시작 선택" aria-pressed="false"><strong>17:00</strong><span>시작 선택</span></button></td><td><button type="button" data-time-cell data-space="warm" data-time="18" aria-label="Warm meeting room 18:00 시작 선택" aria-pressed="false"><strong>18:00</strong><span>시작 선택</span></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div></div>
+        <p class="study-note">13:00는 선택 불가를 보여주는 예시입니다. 표는 실시간 예약 현황이나 빈 시간의 보장이 아닙니다. 이용 시간이 20:00를 넘는 시작 시각은 선택할 수 없습니다.
+        </p>
+        <div class="schedule-lower">
+          <div>
+            <section class="study-form-section">
+              <h2>선택한 시간의 이용 정보
+              </h2>
+              <div class="study-fields"><label>담당자 이름<input name="name" value="김민서" required maxlength="40" autocomplete="off"></label><label class="study-span">남길 요청 <span class="muted">선택</span><textarea name="note" rows="2" maxlength="500" placeholder="이 예시에는 개인정보를 입력하지 마세요."></textarea></label>
+              </div><label class="study-option"><input type="checkbox" name="equipment"><span>외부 모니터 추가<small>이용당 8,000원 / 부가세 별도</small></span></label>
+            </section>
+          </div>
+          <aside class="study-summary" data-enter>
+
+            <h2 data-selected-space>선택한 공간
+            </h2>
+            <p data-selected-time>
+            </p><dl>
+            <div><dt data-base-label>공간 이용</dt><dd data-price-base></dd>
+            </div>
+            <div><dt>선택 장비</dt><dd data-price-equipment></dd>
+            </div>
+            <div><dt>부가세 10%</dt><dd data-price-tax></dd>
+            </div>
+            <div class="total"><dt>총액</dt><dd data-price-total></dd>
+            </div></dl><button type="submit" class="btn primary" disabled>예약 내용 확인 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-right"></use></svg></button>
+            <p class="study-note">검토 후 이 탭에 보관합니다.<br>실제 예약·결제는 이루어지지 않습니다.
+            </p>
+            <p data-quote-status class="visually-hidden" role="status">
+            </p>
+          </aside>
+        </div>
+      </form>
+      <dialog id="study-review" class="modal" aria-labelledby="review-title">
+        <header class="modal-head">
+          <h2 id="review-title">예약 내용을 확인해주세요
+          </h2><button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+        </header>
+        <div class="modal-body">
+          <h3 data-review-space>
+          </h3>
+          <p data-review-time class="study-note">
+          </p>
+          <p data-review-total style="font-size:29px;font-weight:650;margin-top:25px">
+          </p>
+          <p class="notice">로컬 데모입니다. 검토한 내용만 이 탭에 보관하며 실제 예약·결제·실시간 재고 검증은 수행하지 않습니다.
+          </p>
+          <p class="notice error" data-review-error role="alert" hidden>
+          </p>
+        </div>
+        <footer class="modal-foot"><button class="btn" data-close-dialog>수정하기</button><button class="btn primary" data-study-commit>로컬 예약 보관</button>
+        </footer>
+      </dialog>
+    </main>
+    <footer class="study-footer">
+      <p>같은 공간·단가·세금·예약 조건을 사용하는 시각적 대안입니다. 입력은 이 탭에서 공유합니다.
+      </p>
+    </footer>
+    <div class="toast-stack" data-toasts>
+    </div>
+  </body>
+</html>

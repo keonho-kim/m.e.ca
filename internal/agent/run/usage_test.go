@@ -7,9 +7,10 @@ package run
 import (
 	"context"
 	"errors"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"testing"
 )
 
 type usageGenerator struct{ interrupt bool }

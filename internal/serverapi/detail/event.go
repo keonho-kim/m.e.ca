@@ -12,22 +12,25 @@ import (
 )
 
 type event struct {
-	Kind           string          `json:"kind"`
-	Agent          string          `json:"agent,omitempty"`
-	Final          bool            `json:"final,omitempty"`
-	RunID          string          `json:"runId,omitempty"`
-	Text           string          `json:"text,omitempty"`
-	Thinking       string          `json:"thinking,omitempty"`
-	CallID         string          `json:"callId,omitempty"`
-	ApprovalSource string          `json:"approvalSource,omitempty"`
-	ChangePreview  string          `json:"changePreview,omitempty"`
-	Call           *call           `json:"call,omitempty"`
-	Output         json.RawMessage `json:"output,omitempty"`
-	Operation      *operation      `json:"operation,omitempty"`
-	Reference      *reference      `json:"reference,omitempty"`
-	Usage          *usage          `json:"usage,omitempty"`
-	Statistics     *statistics     `json:"statistics,omitempty"`
-	Team           *team           `json:"team,omitempty"`
+	OccurredAt     string            `json:"occurredAt,omitempty"`
+	ErrorCode      string            `json:"errorCode,omitempty"`
+	Skill          *record.SkillRead `json:"skill,omitempty"`
+	Kind           string            `json:"kind"`
+	Agent          string            `json:"agent,omitempty"`
+	Final          bool              `json:"final,omitempty"`
+	RunID          string            `json:"runId,omitempty"`
+	Text           string            `json:"text,omitempty"`
+	Thinking       string            `json:"thinking,omitempty"`
+	CallID         string            `json:"callId,omitempty"`
+	ApprovalSource string            `json:"approvalSource,omitempty"`
+	ChangePreview  string            `json:"changePreview,omitempty"`
+	Call           *call             `json:"call,omitempty"`
+	Output         json.RawMessage   `json:"output,omitempty"`
+	Operation      *operation        `json:"operation,omitempty"`
+	Reference      *reference        `json:"reference,omitempty"`
+	Usage          *usage            `json:"usage,omitempty"`
+	Statistics     *statistics       `json:"statistics,omitempty"`
+	Team           *team             `json:"team,omitempty"`
 }
 
 type call struct {
@@ -69,6 +72,7 @@ func publicUsage(value *model.TokenUsage) *usage {
 
 func publicEvent(value record.Event) *event {
 	e := &event{Kind: value.Kind, Agent: value.Agent, Final: value.Final, RunID: value.RunID, Text: value.Text, Thinking: value.Thinking, CallID: value.CallID, ApprovalSource: value.ApprovalSource, ChangePreview: value.ChangePreview, Output: value.Output, Usage: publicUsage(value.Usage)}
+	e.Kind, e.OccurredAt, e.ErrorCode, e.Skill = value.PublicKind(), value.OccurredAt, value.ErrorCode, value.Skill
 	if value.Call != nil {
 		e.Call = &call{value.Call.ID, value.Call.Name, value.Call.Arguments}
 	}

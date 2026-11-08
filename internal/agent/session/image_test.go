@@ -52,7 +52,7 @@ func runImageSession(t *testing.T, reject bool) {
 		t.Fatal(err)
 	}
 	defer store.Close()
-	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, t.TempDir(), t.TempDir(), func(s string) string { return s }, local.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

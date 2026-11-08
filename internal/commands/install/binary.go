@@ -13,11 +13,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// BinaryPath is the user-owned installation location shared by install and upgrade.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxBinaryBytes = 256 * 1024 * 1024
 
-// BinaryPath is the user-owned installation location shared by install and upgrade.
 func BinaryPath(home string) string { return filepath.Join(home, binaryName) }
 
 func binaryDigest(path string) (digest string, err error) {
@@ -31,12 +35,12 @@ func binaryDigest(path string) (digest string, err error) {
 		return "", err
 	}
 	if !info.Mode().IsRegular() || info.Size() > maxBinaryBytes {
-		return "", fmt.Errorf("executable must be a regular file within 256 MiB")
+		return "", faults.Errorf(diagcatalog.InstallExecutableMustBeARegularFileWithin)
 	}
 	hash := sha256.New()
 	size, err := io.Copy(hash, io.LimitReader(file, maxBinaryBytes+1))
 	if err != nil || size > maxBinaryBytes {
-		return "", errors.Join(err, fmt.Errorf("could not hash bounded executable"))
+		return "", errors.Join(err, faults.Errorf(diagcatalog.InstallCouldNotHashBoundedExecutable))
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
@@ -50,7 +54,7 @@ func checkInstalledBinary(root *os.Root, expected string) error {
 		return err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("installed meca must be a regular file, not a symlink")
+		return faults.Errorf(diagcatalog.InstallInstalledMecaMustBeARegularFile)
 	}
 	path := filepath.Join(root.Name(), binaryName)
 	digest, err := binaryDigest(path)
@@ -65,7 +69,7 @@ func checkInstalledBinary(root *os.Root, expected string) error {
 	if err == nil && build.Path == "github.com/keonho-kim/meca/cmd/meca" && build.Main.Path == "github.com/keonho-kim/meca" {
 		return nil
 	}
-	return fmt.Errorf("%s belongs to another program or was replaced; refusing to modify it", path)
+	return faults.Errorf(diagcatalog.InstallBelongsToAnotherProgramOrWasReplaced, path)
 }
 
 func copyBinary(root *os.Root, source, expected string) (err error) {
@@ -93,7 +97,7 @@ func copyBinary(root *os.Root, source, expected string) (err error) {
 		return err
 	}
 	if size > maxBinaryBytes || fmt.Sprintf("%x", hash.Sum(nil)) != expected {
-		return fmt.Errorf("executable changed during installation")
+		return faults.Errorf(diagcatalog.InstallExecutableChangedDuringInstallation)
 	}
 	return root.Rename(name, binaryName)
 }

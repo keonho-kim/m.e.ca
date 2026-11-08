@@ -6,12 +6,13 @@ package channel
 
 import (
 	"context"
-	record "github.com/keonho-kim/meca/internal/agent/record"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	record "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type sharedLargeReader struct {

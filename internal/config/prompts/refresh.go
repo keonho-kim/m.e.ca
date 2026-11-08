@@ -7,12 +7,14 @@ package prompts
 import (
 	"bytes"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Refresh(root *os.Root) (err error) {
@@ -61,7 +63,7 @@ func matchesDefault(directory *os.Root, name string, expected []byte) (matches b
 		return false, err
 	}
 	if !info.Mode().IsRegular() {
-		return false, fmt.Errorf("%s must be a regular prompt file", name)
+		return false, faults.Errorf(diagcatalog.PromptsMustBeARegularPromptFile, name)
 	}
 	if info.Size() != int64(len(expected)) {
 		return false, nil

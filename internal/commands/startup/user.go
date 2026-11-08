@@ -4,11 +4,14 @@
 // Related: cmd/meca/main.go, internal/commands/startup/user_test.go.
 package startup
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func CheckAgentUser(effectiveUID int) error {
 	if effectiveUID == 0 {
-		return fmt.Errorf("agent sessions cannot run as root; start MECA as a regular user")
+		return faults.Errorf(diagcatalog.StartupAgentSessionsCannotRunAsRootStart)
 	}
 	return nil
 }

@@ -5,7 +5,7 @@
 
 package sqlite
 
-const schemaVersion = 27
+const schemaVersion = 28
 
 const schema = `
 CREATE TABLE team_members (

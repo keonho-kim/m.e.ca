@@ -6,9 +6,10 @@ package transport
 
 import (
 	"errors"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestProviderErrorMessages(t *testing.T) {

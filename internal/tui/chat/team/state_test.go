@@ -5,13 +5,14 @@
 package team
 
 import (
+	"strings"
+	"testing"
+	"time"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
-	"testing"
-	"time"
 )
 
 func formatter() transcript.Formatter {

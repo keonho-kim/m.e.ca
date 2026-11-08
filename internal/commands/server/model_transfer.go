@@ -4,11 +4,16 @@
 // Related: internal/commands/server/submission_session.go, internal/commands/server/lifecycle.go.
 package server
 
-import "context"
+import (
+	"context"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func (s *Service) transferModel(ctx context.Context, old, next *Conversation) error {
 	if next.Models == nil {
-		return failure("failed_precondition", "session model persistence is unavailable")
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSessionModelPersistenceIsUnavailable)
 	}
 	if err := next.Models.SaveSelection(ctx, next.Runtime.Session.ID, old.Runtime.Selection); err != nil {
 		return err

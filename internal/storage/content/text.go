@@ -6,13 +6,19 @@ package content
 
 import (
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Text(body, refsBody []byte, load func(string) (json.RawMessage, error)) (string, error) {
 	raw, reference, err := textSource(body, refsBody, true)
 	if err == nil && reference != "" {
-		raw, err = load(reference)
+		id, quoted := Reference(reference)
+		raw, err = load(id)
+		if quoted {
+			return string(raw), err
+		}
 	}
 	if err != nil || len(raw) == 0 || string(raw) == "null" {
 		return "", err
@@ -43,13 +49,13 @@ func textSource(body, refsBody []byte, skipIncomplete bool) (json.RawMessage, st
 	for key, id := range refs {
 		var path []string
 		if err := json.Unmarshal([]byte(key), &path); err != nil || len(path) == 0 {
-			return nil, "", fmt.Errorf("invalid stored payload path")
+			return nil, "", faults.Errorf(diagcatalog.ContentInvalidStoredPayloadPath)
 		}
 		if path[0] != "content" {
 			continue
 		}
 		if len(path) != 1 || string(message.Content) != "null" || reference != "" || id == "" {
-			return nil, "", fmt.Errorf("invalid stored content placeholder")
+			return nil, "", faults.Errorf(diagcatalog.ContentInvalidStoredContentPlaceholder)
 		}
 		reference = id
 	}

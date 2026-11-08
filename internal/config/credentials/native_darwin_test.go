@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"github.com/keonho-kim/meca/internal/config/credentials/osstore"
-	"github.com/keonho-kim/meca/internal/storage/credentialstore"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/config/credentials/osstore"
+	"github.com/keonho-kim/meca/internal/storage/credentialstore"
 )
 
 func TestNativeEncryptedVaultRotationAndBackup(t *testing.T) {

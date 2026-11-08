@@ -7,11 +7,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	json "github.com/goccy/go-json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
@@ -27,7 +28,7 @@ func (p *journalEncoder) event(value *preparedRecord) error {
 		copy := *event.Checkpoint
 		event.Checkpoint = &copy
 		var err error
-		value.state, err = s.prepareRunState(event)
+		value.state, err = p.prepareRunState(event)
 		if err != nil {
 			return err
 		}
@@ -44,9 +45,13 @@ func (p *journalEncoder) event(value *preparedRecord) error {
 		return err
 	}
 	if len(body) > recordcontent.MaxBytes {
-		return fmt.Errorf("event exceeds limit")
+		return faults.Errorf(diagcatalog.SqliteEventExceedsLimit)
 	}
-	packed, refs, err := p.pack(body)
+	sharedField := ""
+	if event.Kind == "thinking" && len(event.Thinking) >= recordcontent.SharedThreshold {
+		sharedField = "thinking"
+	}
+	packed, refs, err := p.pack(body, sharedField)
 	if err != nil {
 		return err
 	}

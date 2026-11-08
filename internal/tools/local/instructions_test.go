@@ -6,11 +6,12 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/prompt"
 )
 
 func TestProjectInstructions(t *testing.T) {

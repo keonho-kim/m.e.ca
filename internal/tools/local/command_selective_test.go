@@ -5,6 +5,9 @@
 package local
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,7 +18,6 @@ import (
 	"strings"
 	"testing"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -93,9 +95,9 @@ func TestSelectiveCommandUnregisteredExecutablesUseDefault(t *testing.T) {
 
 func TestSelectiveCommandErrorsIdentifyTheirCause(t *testing.T) {
 	executor, _ := testExecutor(t)
-	for _, test := range []struct{ command, code string }{{"if then", toolapi.InvalidCommand}, {"rm -rf /etc", toolapi.CommandBlocked}} {
+	for _, test := range []struct{ command, code string }{{"if then", diagcatalog.InvalidCommand}, {"rm -rf /etc", diagcatalog.CommandBlocked}} {
 		_, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", fmt.Sprintf(`{"command":%q}`, test.command)))
-		var failure *toolapi.Failure
+		var failure *faults.Failure
 		if !errors.As(err, &failure) || failure.Code != test.code {
 			t.Fatalf("command=%q error=%v", test.command, err)
 		}

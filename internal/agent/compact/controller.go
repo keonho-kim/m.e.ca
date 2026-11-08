@@ -6,9 +6,11 @@ package compact
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Controller struct {
@@ -40,7 +42,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 		return false, err
 	}
 	if c.Repository == nil || c.Redact == nil || generate == nil {
-		return false, fmt.Errorf("compaction dependencies are required")
+		return false, faults.Errorf(diagcatalog.CompactCompactionDependenciesAreRequired)
 	}
 	if err := prompt.CheckTemplate(c.Prompt); err != nil {
 		return false, err
@@ -76,7 +78,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 		return false, err
 	}
 	if boundary < 0 || boundary > mark.Timeline {
-		return false, fmt.Errorf("invalid compaction source boundary")
+		return false, faults.Errorf(diagcatalog.CompactInvalidCompactionSourceBoundary)
 	}
 	if boundary <= c.memory.Through {
 		return false, nil
@@ -98,7 +100,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 			return false, err
 		}
 		if through <= cursor || through > boundary {
-			return false, fmt.Errorf("invalid compaction source cursor")
+			return false, faults.Errorf(diagcatalog.CompactInvalidCompactionSourceCursor)
 		}
 		for _, record := range records {
 			if err := sources.add(record, c.Redact); err != nil {

@@ -4,7 +4,9 @@
 // Related: internal/agent/team/work.go, internal/tools/team/local.go.
 package team
 
-import tool "github.com/keonho-kim/meca/internal/agent/tool"
+import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func (p *Peer) CheckUserDecision() error {
 	if err := p.room.admitUser(); err != nil {
@@ -17,7 +19,7 @@ func (p *Peer) CheckUserDecision() error {
 
 func (p *Peer) checkUserDecisionLocked() error {
 	if p.DecisionUserSequence < p.room.latestUser {
-		return tool.NewInstructionChanged()
+		return faults.NewInstructionChanged()
 	}
 	return nil
 }

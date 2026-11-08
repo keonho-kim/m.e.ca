@@ -5,6 +5,7 @@
 package credentials
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/diagnostics"
 
 	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 )
@@ -92,7 +95,13 @@ func TestRotationWorkerFailureIsPrivateAndRetries(t *testing.T) {
 		if err := v.Set(t.Context(), "provider", "scope", "provider-secret"); err != nil {
 			t.Fatal(err)
 		}
-		stop := v.StartRotation(t.Context())
+		var output bytes.Buffer
+		sink, err := diagnostics.New(diagnostics.Options{Writer: &output, Redact: v.Redact})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = sink.Close() }()
+		stop := v.StartRotation(diagnostics.WithSink(t.Context(), sink))
 		defer func() {
 			if err := stop(); err != nil {
 				t.Error(err)
@@ -102,8 +111,8 @@ func TestRotationWorkerFailureIsPrivateAndRetries(t *testing.T) {
 		keys.failed.Store(true)
 		time.Sleep(rotationPeriod)
 		synctest.Wait()
-		body, err := os.ReadFile(filepath.Join(v.State, "logs", "credential-rotation.log"))
-		if err != nil || !strings.Contains(string(body), "deferred") || strings.Contains(string(body), "provider-secret") || strings.Contains(string(body), "untrusted-backend") {
+		body := output.String()
+		if !strings.Contains(body, "deferred") || strings.Contains(string(body), "provider-secret") || strings.Contains(string(body), "untrusted-backend") {
 			t.Fatal("failure was missing or disclosed sensitive backend text", err)
 		}
 		if keys.writes.Load() != 1 {

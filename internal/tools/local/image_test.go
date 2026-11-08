@@ -7,13 +7,14 @@ package local
 import (
 	"bytes"
 	"context"
-	"github.com/keonho-kim/meca/internal/policy"
 	"image"
 	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestViewImageSnapshotAndPathPolicy(t *testing.T) {

@@ -5,6 +5,9 @@
 package team
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -88,8 +91,8 @@ func TestSteeringInterruptsWorkspacePreparationBeforeConflictingCommandEnds(t *t
 		},
 	}, "Implement API")
 	err = <-result
-	var failure *tool.Failure
-	if !waited.Load() || local.prepared.Load() || !errors.As(err, &failure) || failure.Code != tool.InstructionChanged {
+	var failure *faults.Failure
+	if !waited.Load() || local.prepared.Load() || !errors.As(err, &failure) || failure.Code != diagcatalog.InstructionChanged {
 		t.Fatal("waiting operation did not return directly to a fresh decision", err)
 	}
 }

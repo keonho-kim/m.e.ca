@@ -5,8 +5,9 @@
 package record
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Statistics struct {
@@ -18,11 +19,11 @@ type Statistics struct {
 
 func (s Statistics) check() error {
 	if s.ElapsedMillis < 0 || s.GenerationMillis < 0 || !s.Concurrent && s.GenerationMillis > s.ElapsedMillis {
-		return fmt.Errorf("invalid request measurement duration")
+		return faults.Errorf(diagcatalog.RecordInvalidRequestMeasurementDuration)
 	}
 	if s.Usage == nil {
 		if s.GenerationMillis != 0 {
-			return fmt.Errorf("generation measurement requires reported token usage")
+			return faults.Errorf(diagcatalog.RecordGenerationMeasurementRequiresReportedTokenUsage)
 		}
 	} else if err := s.Usage.CheckTotals(); err != nil {
 		return err

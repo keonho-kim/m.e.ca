@@ -5,11 +5,9 @@
 package detail
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/keonho-kim/meca/internal/commands/server"
-	"github.com/keonho-kim/meca/internal/redaction"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type document struct {
@@ -43,7 +41,7 @@ type finding struct {
 	Targets []string `json:"targets"`
 }
 
-func marshalDocument(original server.DetailOriginal, redact func(string) string) ([]byte, error) {
+func documentValue(original server.DetailOriginal) (document, error) {
 	var value document
 	switch {
 	case original.Tool != nil:
@@ -68,11 +66,7 @@ func marshalDocument(original server.DetailOriginal, redact func(string) string)
 			value.Approval.Command = c
 		}
 	default:
-		return nil, fmt.Errorf("detail has no visible original")
+		return document{}, faults.Errorf(diagcatalog.DetailDetailHasNoVisibleOriginal)
 	}
-	body, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return redaction.RedactJSON(body, redact)
+	return value, nil
 }

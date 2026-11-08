@@ -9,12 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestImagePreparationMetadataAndProbe(t *testing.T) {

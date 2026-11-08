@@ -6,11 +6,12 @@ package team
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"path/filepath"
-	"strings"
 )
 
 func operationObservation(member, projectRoot string, event runrecord.Event) channel.Message {

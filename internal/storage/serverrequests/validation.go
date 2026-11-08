@@ -6,10 +6,13 @@ package serverrequests
 
 import (
 	"encoding/hex"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/commands/server"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func validResponseID(id string) bool {
@@ -21,55 +24,55 @@ func validResponseID(id string) bool {
 }
 
 func checkResponse(value server.Response) error {
-	if !validResponseID(value.ID) || len(value.Scope) != 64 || len(value.Digest) != 64 || value.Created < 1 || value.Begin < 0 || value.Through < 0 || value.Session != "" && !sessionstate.ValidID(value.Session) {
-		return fmt.Errorf("invalid response metadata; contents preserved")
+	if !validResponseID(value.ID) || len(value.Scope) != 64 || len(value.Digest) != 64 || value.Created < 1 || value.Begin < 0 || value.Through < 0 || !diagcatalog.ValidCode(value.Code) || value.Session != "" && !sessionstate.ValidID(value.Session) {
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseMetadataContentsPreserved)
 	}
 	if _, err := hex.DecodeString(value.Scope + value.Digest); err != nil {
-		return fmt.Errorf("invalid response digest")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseDigest)
 	}
 	if value.Kind != "chat" && value.Kind != "response" {
-		return fmt.Errorf("invalid response kind")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseKind)
 	}
 	switch value.Status {
 	case "queued", "in_progress", "completed", "failed", "cancelled", "incomplete":
 	default:
-		return fmt.Errorf("invalid response status")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseStatus)
 	}
 	if value.Previous != "" && !validResponseID(value.Previous) || value.Next != "" && !validResponseID(value.Next) {
-		return fmt.Errorf("invalid response continuation")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseContinuation)
 	}
 	if value.Task != "" {
 		if value.Task != "task_"+value.ID[5:] || value.Session == "" {
-			return fmt.Errorf("invalid response task")
+			return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseTask)
 		}
 		if _, err := hex.DecodeString(value.Task[5:]); err != nil {
-			return fmt.Errorf("invalid response task digest")
+			return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseTaskDigest)
 		}
 	}
-	if value.TaskStatus != "" && value.TaskStatus != "answered" && value.TaskStatus != "stopped" && value.TaskStatus != "interrupted" {
-		return fmt.Errorf("invalid response task status")
+	if value.TaskStatus != "" && value.TaskStatus != "answered" && value.TaskStatus != "stopped" && value.TaskStatus != diagcatalog.Interrupted {
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidResponseTaskStatus)
 	}
 	if value.Status == "in_progress" || value.Status == "completed" || value.Status == "cancelled" || value.Status == "incomplete" {
 		if value.Task == "" || value.Session == "" {
-			return fmt.Errorf("response execution identity is missing")
+			return faults.Errorf(diagcatalog.ServerrequestsResponseExecutionIdentityIsMissing)
 		}
 	}
 	if value.Status != "queued" && value.Status != "in_progress" {
 		if value.Task != "" && value.TaskStatus == "" {
-			return fmt.Errorf("terminal response task status is missing")
+			return faults.Errorf(diagcatalog.ServerrequestsTerminalResponseTaskStatusIsMissing)
 		}
 		if value.Completed < value.Created || value.Through < value.Begin {
-			return fmt.Errorf("invalid terminal response boundaries")
+			return faults.Errorf(diagcatalog.ServerrequestsInvalidTerminalResponseBoundaries)
 		}
 		if err := value.End.Check(); err != nil {
 			return err
 		}
 	}
 	if value.Next != "" && (value.Kind != "response" || !value.Stored || value.Status != "completed") {
-		return fmt.Errorf("invalid continuation head")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidContinuationHead)
 	}
 	if value.Kind == "chat" && (value.Background || value.Previous != "") {
-		return fmt.Errorf("invalid chat response settings")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidChatResponseSettings)
 	}
 	if value.Usage != nil {
 		return value.Usage.CheckTotals()

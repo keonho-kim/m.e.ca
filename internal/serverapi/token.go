@@ -7,7 +7,7 @@ package serverapi
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"path/filepath"
@@ -15,6 +15,8 @@ import (
 	"syscall"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func validToken(token string) bool {
@@ -48,10 +50,10 @@ func LoadToken(path string) (token string, resultErr error) {
 		return "", err
 	}
 	if !before.Mode().IsRegular() || before.Mode().Perm()&0077 != 0 {
-		return "", fmt.Errorf("token file must be a private regular file (0600)")
+		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustBeAPrivateRegular)
 	}
 	if stat, ok := before.Sys().(*syscall.Stat_t); !ok || stat.Uid != uint32(os.Geteuid()) {
-		return "", fmt.Errorf("token file must be owned by the current user")
+		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustBeOwnedByThe)
 	}
 	file, err := root.Open(name)
 	if err != nil {
@@ -63,7 +65,7 @@ func LoadToken(path string) (token string, resultErr error) {
 		return "", err
 	}
 	if !os.SameFile(before, after) {
-		return "", fmt.Errorf("token file changed while opening")
+		return "", faults.Errorf(diagcatalog.ServerapiTokenFileChangedWhileOpening)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, 258))
 	if err != nil {
@@ -71,7 +73,7 @@ func LoadToken(path string) (token string, resultErr error) {
 	}
 	token = strings.TrimSuffix(string(body), "\n")
 	if !validToken(token) {
-		return "", fmt.Errorf("token file must contain 32 to 256 printable non-space ASCII bytes")
+		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustContainToPrintableNon)
 	}
 	return token, nil
 }

@@ -7,6 +7,10 @@ package openai
 import (
 	"bytes"
 	"encoding/json"
+
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func jsonString(raw []byte, value *string) bool {
@@ -108,7 +112,7 @@ func jsonKey(raw []byte) string {
 func object(raw []byte, param string) (map[string]json.RawMessage, error) {
 	object, ok := newObject(raw)
 	if !ok {
-		return nil, invalid(param, "expected a JSON object")
+		return nil, faults.Invalid(param, diagcatalog.OpenaiExpectedAJSONObject)
 	}
 	fields := make(map[string]json.RawMessage, 4)
 	for {
@@ -117,10 +121,10 @@ func object(raw []byte, param string) (map[string]json.RawMessage, error) {
 			break
 		}
 		if fields[key] != nil {
-			return nil, invalid(param, "duplicate JSON field")
+			return nil, faults.Invalid(param, diagcatalog.OpenaiDuplicateJSONField)
 		}
 		if len(fields) == 16 {
-			return nil, invalid(param, "too many object fields")
+			return nil, faults.Invalid(param, diagcatalog.OpenaiTooManyObjectFields)
 		}
 		fields[key] = value
 	}
@@ -143,20 +147,20 @@ func known(fields map[string]json.RawMessage, param string, names ...string) err
 		}
 	}
 	if foundUnknown {
-		return prefixError(invalid(unknown, "this parameter is not supported by MECA"), param)
+		return prefixError(faults.Invalid(unknown, diagcatalog.OpenaiThisParameterIsNotSupportedByMECA), param)
 	}
 	return nil
 }
 
 func prefixError(err error, prefix string) error {
-	if value, ok := err.(*inputError); ok && prefix != "" {
-		if value.param != "" {
-			if value.param[0] != '[' {
+	if value, ok := err.(*faults.InputError); ok && prefix != "" {
+		if value.Param != "" {
+			if value.Param[0] != '[' {
 				prefix += "."
 			}
-			prefix += value.param
+			prefix += value.Param
 		}
-		return invalid(prefix, value.message)
+		return faults.InputParam(prefix, value.Cause)
 	}
 	return err
 }

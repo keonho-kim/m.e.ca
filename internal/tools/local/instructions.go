@@ -7,12 +7,15 @@ package local
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/policy"
+
 	"io"
 	"os"
 	"syscall"
+
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func (e *Executor) ProjectInstructions(ctx context.Context) (text string, err error) {
@@ -36,17 +39,17 @@ func (e *Executor) ProjectInstructions(ctx context.Context) (text string, err er
 		return "", err
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("project AGENTS.md must be a regular file")
+		return "", faults.Errorf(diagcatalog.LocalProjectAGENTSMdMustBeARegular)
 	}
 	if info.Size() > prompt.MaxInstructionsBytes {
-		return "", fmt.Errorf("project AGENTS.md is %d bytes; maximum is %d bytes (16 MiB)", info.Size(), prompt.MaxInstructionsBytes)
+		return "", faults.Errorf(diagcatalog.LocalProjectAGENTSMdIsBytesMaximumIs, info.Size(), prompt.MaxInstructionsBytes)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, prompt.MaxInstructionsBytes+1))
 	if err != nil {
 		return "", err
 	}
 	if len(body) > prompt.MaxInstructionsBytes {
-		return "", fmt.Errorf("project AGENTS.md grew beyond the %d-byte limit (16 MiB) while reading", prompt.MaxInstructionsBytes)
+		return "", faults.Errorf(diagcatalog.LocalProjectAGENTSMdGrewBeyondTheByte, prompt.MaxInstructionsBytes)
 	}
 	if _, err = prompt.Compose(prompt.Defaults().System, string(body)); err != nil {
 		return "", err

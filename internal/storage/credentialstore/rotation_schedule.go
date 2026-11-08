@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"strconv"
@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const rotationDirectory = "credential-rotation"
@@ -35,7 +37,7 @@ func rotationDue(root *os.Root, directory string, row credentialVersion, now tim
 		return false, err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 128 {
-		return false, fmt.Errorf("rotation schedule must be a small private regular file")
+		return false, faults.Errorf(diagcatalog.CredentialstoreRotationScheduleMustBeASmallPrivate)
 	}
 	file, err := root.Open(name)
 	if err != nil {
@@ -47,7 +49,7 @@ func rotationDue(root *os.Root, directory string, row credentialVersion, now tim
 		return false, err
 	}
 	if !os.SameFile(info, current) || !current.Mode().IsRegular() || current.Mode().Perm()&0077 != 0 {
-		return false, fmt.Errorf("rotation schedule changed while opening")
+		return false, faults.Errorf(diagcatalog.CredentialstoreRotationScheduleChangedWhileOpening)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, 129))
 	if err != nil {
@@ -55,11 +57,11 @@ func rotationDue(root *os.Root, directory string, row credentialVersion, now tim
 	}
 	parts := strings.Split(string(body), "\n")
 	if len(body) > 128 || len(parts) != 4 || parts[0] != "v1" || parts[3] != "" || len(parts[1]) != 37 || !strings.HasPrefix(parts[1], "encryption_") {
-		return false, fmt.Errorf("unsupported credential rotation schedule; existing data preserved")
+		return false, faults.Errorf(diagcatalog.CredentialstoreUnsupportedCredentialRotationScheduleExistingDataPreserved)
 	}
 	nanos, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil || nanos <= 0 {
-		return false, fmt.Errorf("invalid credential rotation time; existing data preserved")
+		return false, faults.Errorf(diagcatalog.CredentialstoreInvalidCredentialRotationTimeExistingDataPreserved)
 	}
 	if parts[1] != row.keyRef {
 		// A foreground save or restored backup changed the credential version.

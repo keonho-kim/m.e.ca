@@ -7,6 +7,9 @@ package tool
 import (
 	"crypto/sha256"
 	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type FileDelta struct {
@@ -42,11 +45,11 @@ func (c Candidate) Check(call Call) error {
 	}
 	expected := BindCandidate(call, nil)
 	if c.CallID != expected.CallID || c.Binding != expected.Binding || len(c.Files) > 64 {
-		return fmt.Errorf("candidate does not match the frozen native call")
+		return faults.Errorf(diagcatalog.ToolCandidateDoesNotMatchTheFrozenNative)
 	}
 	for _, file := range c.Files {
 		if file.Path == "" || file.Added < 0 || file.Deleted < 0 || file.Added > 10000000 || file.Deleted > 10000000 || len(file.Diff) > 64*1024*1024 {
-			return fmt.Errorf("invalid prepared file delta")
+			return faults.Errorf(diagcatalog.ToolInvalidPreparedFileDelta)
 		}
 	}
 	return nil

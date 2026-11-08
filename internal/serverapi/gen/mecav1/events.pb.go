@@ -12,11 +12,12 @@
 package mecav1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -515,6 +516,9 @@ type Event struct {
 	Error          string                 `protobuf:"bytes,20,opt,name=error,proto3" json:"error,omitempty"`
 	Statistics     *Statistics            `protobuf:"bytes,21,opt,name=statistics,proto3" json:"statistics,omitempty"`
 	Measurement    *GenerationMeasurement `protobuf:"bytes,22,opt,name=measurement,proto3" json:"measurement,omitempty"`
+	OccurredAt     string                 `protobuf:"bytes,23,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	ErrorCode      string                 `protobuf:"bytes,24,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	Skill          *SkillRead             `protobuf:"bytes,25,opt,name=skill,proto3" json:"skill,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -703,11 +707,32 @@ func (x *Event) GetMeasurement() *GenerationMeasurement {
 	return nil
 }
 
+func (x *Event) GetOccurredAt() string {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return ""
+}
+
+func (x *Event) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *Event) GetSkill() *SkillRead {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
 var File_meca_v1_events_proto protoreflect.FileDescriptor
 
 const file_meca_v1_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\"\xd0\x01\n" +
+	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x14meca/v1/skills.proto\"\xd0\x01\n" +
 	"\bApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x12\n" +
@@ -748,7 +773,7 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\bbased_on\x18\x04 \x01(\x03R\abasedOn\x12\x14\n" +
 	"\x05paths\x18\x05 \x03(\tR\x05paths\x12\x1a\n" +
 	"\bcontract\x18\x06 \x01(\tR\bcontract\x12\x1a\n" +
-	"\brevision\x18\a \x01(\x04R\brevision\"\xbc\x05\n" +
+	"\brevision\x18\a \x01(\x04R\brevision\"\xa6\x06\n" +
 	"\x05Event\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x1d\n" +
 	"\n" +
@@ -778,7 +803,12 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\n" +
 	"statistics\x18\x15 \x01(\v2\x13.meca.v1.StatisticsR\n" +
 	"statistics\x12@\n" +
-	"\vmeasurement\x18\x16 \x01(\v2\x1e.meca.v1.GenerationMeasurementR\vmeasurementBAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
+	"\vmeasurement\x18\x16 \x01(\v2\x1e.meca.v1.GenerationMeasurementR\vmeasurement\x12\x1f\n" +
+	"\voccurred_at\x18\x17 \x01(\tR\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x18 \x01(\tR\terrorCode\x12(\n" +
+	"\x05skill\x18\x19 \x01(\v2\x12.meca.v1.SkillReadR\x05skillBAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
 
 var (
 	file_meca_v1_events_proto_rawDescOnce sync.Once
@@ -802,6 +832,7 @@ var file_meca_v1_events_proto_goTypes = []any{
 	(*Team)(nil),                  // 5: meca.v1.Team
 	(*Event)(nil),                 // 6: meca.v1.Event
 	(*EventReference)(nil),        // 7: meca.v1.EventReference
+	(*SkillRead)(nil),             // 8: meca.v1.SkillRead
 }
 var file_meca_v1_events_proto_depIdxs = []int32{
 	7, // 0: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
@@ -812,11 +843,12 @@ var file_meca_v1_events_proto_depIdxs = []int32{
 	5, // 5: meca.v1.Event.team:type_name -> meca.v1.Team
 	3, // 6: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
 	4, // 7: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	8, // 8: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_events_proto_init() }
@@ -825,6 +857,7 @@ func file_meca_v1_events_proto_init() {
 		return
 	}
 	file_meca_v1_control_proto_init()
+	file_meca_v1_skills_proto_init()
 	file_meca_v1_events_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

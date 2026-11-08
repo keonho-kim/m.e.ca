@@ -5,8 +5,12 @@
 package workspace
 
 import (
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"os"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func (l *Lease) Check(proposal toolapi.Approval) error {
@@ -42,5 +46,5 @@ func (l *Lease) Check(proposal toolapi.Approval) error {
 	return nil
 }
 func changedReservation() error {
-	return &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "The file target changed while shared access was being prepared; nothing executed.", Next: "Inspect the current target and resubmit the needed operation."}
+	return &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.WorkspaceTheFileTargetChangedWhileSharedAccess), Next: diagcatalog.Text(diagcatalog.WorkspaceInspectTheCurrentTargetAndResubmitThe)}
 }

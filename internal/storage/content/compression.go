@@ -6,9 +6,11 @@ package content
 
 import (
 	"bytes"
-	"fmt"
+
 	"sync"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -26,7 +28,7 @@ func (c *Codec) Encode(raw []byte) ([]byte, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
-		return nil, fmt.Errorf("payload codec is closed")
+		return nil, faults.Errorf(diagcatalog.ContentPayloadCodecIsClosed)
 	}
 	if c.encoder == nil {
 		encoder, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1), zstd.WithWindowSize(payloadWindowBytes), zstd.WithEncoderLevel(zstd.SpeedFastest))
@@ -59,7 +61,7 @@ func (c *Codec) decode(body []byte, size int) ([]byte, error) {
 // decoderLocked requires the codec mutex; bulk and streaming reads share one resource owner.
 func (c *Codec) decoderLocked() (*zstd.Decoder, error) {
 	if c.closed {
-		return nil, fmt.Errorf("payload codec is closed")
+		return nil, faults.Errorf(diagcatalog.ContentPayloadCodecIsClosed)
 	}
 	if c.decoder == nil {
 		decoder, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxMemory(MaxBytes), zstd.WithDecodeAllCapLimit(true))
@@ -77,7 +79,7 @@ func checkFrameLength(body []byte, size int) error {
 		return err
 	}
 	if size < 1 || size > MaxBytes || !header.HasFCS || header.FrameContentSize != uint64(size) {
-		return fmt.Errorf("invalid stored payload frame length")
+		return faults.Errorf(diagcatalog.ContentInvalidStoredPayloadFrameLength)
 	}
 	return nil
 }

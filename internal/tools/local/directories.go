@@ -6,12 +6,14 @@ package local
 
 import (
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"strings"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -51,7 +53,7 @@ func (e *Executor) collectDirectories(settings policy.Settings, paths []string) 
 			return err
 		}
 		if err == nil && !info.IsDir() {
-			return fmt.Errorf("directory path is a file: %s", t.absolute)
+			return faults.Errorf(diagcatalog.LocalDirectoryPathIsAFile, t.absolute)
 		}
 		if info == nil {
 			parent, err := e.resolveTarget(settings.Scope, filepath.Dir(t.absolute))
@@ -63,7 +65,7 @@ func (e *Executor) collectDirectories(settings policy.Settings, paths []string) 
 			}
 		}
 		if len(dirs) >= 64 {
-			return fmt.Errorf("directory operation exceeds 64 targets including parents")
+			return faults.Errorf(diagcatalog.LocalDirectoryOperationExceedsTargetsIncludingParents)
 		}
 		seen[t.absolute] = true
 		dirs = append(dirs, directoryTarget{t, info})
@@ -71,7 +73,7 @@ func (e *Executor) collectDirectories(settings policy.Settings, paths []string) 
 	}
 	for _, path := range paths {
 		if strings.TrimSpace(path) == "" || strings.ContainsAny(path, "\r\n") {
-			return nil, nil, fmt.Errorf("each directory path must be one nonempty literal path")
+			return nil, nil, faults.Errorf(diagcatalog.LocalEachDirectoryPathMustBeOneNonempty)
 		}
 		t, err := e.resolveTarget(settings.Scope, path)
 		if err != nil {

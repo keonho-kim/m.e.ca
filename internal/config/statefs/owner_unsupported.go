@@ -7,10 +7,12 @@
 package statefs
 
 import (
-	"fmt"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func checkOwner(os.FileInfo) error {
-	return fmt.Errorf("private state is supported only on Linux and macOS")
+	return faults.Errorf(diagcatalog.StatefsPrivateStateIsSupportedOnlyOnLinux)
 }

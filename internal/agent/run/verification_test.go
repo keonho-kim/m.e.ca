@@ -5,13 +5,17 @@
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
-	"strings"
-	"testing"
 )
 
 func TestCompletionRetainsFailedCommandHistory(t *testing.T) {
@@ -36,7 +40,7 @@ func TestCompletionRetainsFailedCommandHistory(t *testing.T) {
 func TestStaleGuardAllowsFreshPreparationOfSameEdit(t *testing.T) {
 	g := &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("write_file", map[string]any{"path": "a", "content": "new"}), nativeCall("execute_command", map[string]any{"command": "verify-a"}), "Verified"}}
 	e := &executor{outcomes: []toolapi.Result{
-		{Failed: true, Failure: &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed before execution", Next: "Inspect latest version and prepare again."}},
+		{Failed: true, Failure: &faults.Failure{Code: diagcatalog.StaleTarget, Detail: "file changed before execution", Next: "Inspect latest version and prepare again."}},
 		{Content: []byte(`{"changed":true}`)},
 		{Content: []byte(`{"ExitCode":0}`), Process: &toolapi.ProcessOutcome{Status: "exited", ExitCode: 0}},
 	}}

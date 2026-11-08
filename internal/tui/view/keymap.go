@@ -5,10 +5,11 @@
 package view
 
 import (
-	"github.com/gdamore/tcell/v3"
-	"github.com/rivo/uniseg"
 	"slices"
 	"strings"
+
+	"github.com/gdamore/tcell/v3"
+	"github.com/rivo/uniseg"
 )
 
 type Shortcut struct{ Key, Label string }

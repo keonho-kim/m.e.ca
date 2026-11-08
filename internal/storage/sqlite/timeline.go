@@ -8,10 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/storage/content"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -31,7 +33,7 @@ func (s *Store) TimelineSummaries(ctx context.Context, session string, before in
 }
 func (s *Store) timeline(ctx context.Context, session string, before int64, limit int, compact bool, bounds history.ReadBounds) (records []history.Record, cursor int64, err error) {
 	if limit < 1 || limit > 200 || bounds.MaxBytes < 0 || bounds.TextBytes < 0 {
-		return nil, 0, fmt.Errorf("invalid history page")
+		return nil, 0, faults.Errorf(diagcatalog.SqliteInvalidHistoryPage)
 	}
 	if before == 0 {
 		before = 1 << 62

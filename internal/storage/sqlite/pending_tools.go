@@ -6,11 +6,12 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
 
 	json "github.com/goccy/go-json"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type pendingToolGroup struct {
@@ -81,7 +82,7 @@ func (s *Store) pendingToolGroups(ctx context.Context, session string) ([]pendin
 			before = record.sequence
 			if header.Role == "tool" {
 				if header.ToolCallID == "" {
-					return nil, fmt.Errorf("stored tool result lacks its call identity")
+					return nil, faults.Errorf(diagcatalog.SqliteStoredToolResultLacksItsCallIdentity)
 				}
 				resolved[header.ToolCallID] = true
 				continue

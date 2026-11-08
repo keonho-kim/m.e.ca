@@ -49,7 +49,7 @@ func (a *app) startRequest(input composer.Request) {
 		return err == nil
 	}
 	options := agentrequest.Options{Runtime: agentrequest.Runtime{Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
-		Tools: a.opts.Tools, Store: a.opts.Store, Vault: a.opts.Vault,
+		Tools: a.opts.Tools, Skills: a.opts.Skills, Store: a.opts.Store, Vault: a.opts.Vault,
 		LoadPrompts: a.opts.LoadPrompts}, SteeringReady: steeringReady,
 		PollSteering: func() []string {
 			var out []string

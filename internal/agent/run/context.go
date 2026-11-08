@@ -23,6 +23,13 @@ func excerpt(text string, limit int) string {
 	return text[:end] + "\n[excerpt; full record retained]"
 }
 func (s *execution) request() (modelapi.Request, error) {
+	var retained int64
+	for _, message := range s.messages {
+		retained += int64(message.ContextBytes())
+	}
+	if err := s.reserveContext(retained); err != nil {
+		return modelapi.Request{}, err
+	}
 	parameters, err := inference.Resolve(s.runner.Inference, inference.Agent)
 	if err != nil {
 		return modelapi.Request{}, err
@@ -32,5 +39,8 @@ func (s *execution) request() (modelapi.Request, error) {
 	if s.runner.ContextObservations != nil {
 		observations = s.runner.ContextObservations(s.messages)
 	}
-	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	if err := s.reserveContext(retained + int64(len(observations))); err != nil {
+		return modelapi.Request{}, err
+	}
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, ClientContext: s.runner.ClientContext, SkillReads: s.skillReads, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

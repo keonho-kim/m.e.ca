@@ -6,10 +6,13 @@ package osstore
 
 import (
 	"context"
-	"fmt"
-	dbus "github.com/godbus/dbus/v5"
+
 	"strings"
 	"time"
+
+	dbus "github.com/godbus/dbus/v5"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Store struct{ Service string }
@@ -36,7 +39,7 @@ func (s Store) open(ctx context.Context) (*secretClient, error) {
 		return nil, err
 	}
 	if s.Service == "" || len(s.Service) > 128 || strings.ContainsAny(s.Service, "\x00\r\n") {
-		return nil, fmt.Errorf("invalid OS credential service")
+		return nil, faults.Errorf(diagcatalog.OsstoreInvalidOSCredentialService)
 	}
 	conn, err := connectSecretBus(ctx)
 	if err != nil {
@@ -64,7 +67,7 @@ func (c *secretClient) startSession() error {
 		return err
 	}
 	if c.session == "/" || !c.session.IsValid() {
-		return fmt.Errorf("invalid Secret Service session")
+		return faults.Errorf(diagcatalog.OsstoreInvalidSecretServiceSession)
 	}
 	return nil
 }
@@ -94,7 +97,7 @@ func (s Store) Set(ctx context.Context, ref, value string) error {
 	}
 	paths, ok := collections.Value().([]dbus.ObjectPath)
 	if !ok {
-		return fmt.Errorf("invalid Secret Service collections")
+		return faults.Errorf(diagcatalog.OsstoreInvalidSecretServiceCollections)
 	}
 	collection := dbus.ObjectPath("/")
 	for _, path := range paths {
@@ -109,7 +112,7 @@ func (s Store) Set(ctx context.Context, ref, value string) error {
 		}
 	}
 	if collection == "/" || !collection.IsValid() {
-		return fmt.Errorf("configure a default Secret Service collection")
+		return faults.Errorf(diagcatalog.OsstoreConfigureADefaultSecretServiceCollection)
 	}
 	if err := c.unlock([]dbus.ObjectPath{collection}); err != nil {
 		return err
@@ -144,7 +147,7 @@ func (s Store) Get(ctx context.Context, ref string) (string, error) {
 		return "", ErrNotFound
 	}
 	if len(items) != 1 {
-		return "", fmt.Errorf("ambiguous OS encryption key; preserve the OS store")
+		return "", faults.Errorf(diagcatalog.OsstoreAmbiguousOSEncryptionKeyPreserveTheOS)
 	}
 	if err := c.startSession(); err != nil {
 		return "", err
@@ -155,7 +158,7 @@ func (s Store) Get(ctx context.Context, ref string) (string, error) {
 	}
 	defer clear(value.Value)
 	if value.Session != c.session || len(value.Parameters) != 0 {
-		return "", fmt.Errorf("invalid Secret Service response")
+		return "", faults.Errorf(diagcatalog.OsstoreInvalidSecretServiceResponse)
 	}
 	return string(value.Value), nil
 }

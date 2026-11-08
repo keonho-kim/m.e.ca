@@ -7,7 +7,9 @@ package discovery
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -19,7 +21,7 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 		return info, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {
-		return info, fmt.Errorf("invalid native model list")
+		return info, faults.Errorf(diagcatalog.DiscoveryInvalidNativeModelList)
 	}
 	matches := 0
 	for _, row := range listing.Models {
@@ -62,7 +64,7 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 				case "low", "medium", "high":
 					control.Levels = append(control.Levels, value)
 				default:
-					return info, fmt.Errorf("unsupported LM Studio reasoning option %q", value)
+					return info, faults.Errorf(diagcatalog.DiscoveryUnsupportedLMStudioReasoningOption, value)
 				}
 			}
 			if value := row.Capabilities.Reasoning.Default; value != "on" && value != "off" {
@@ -75,7 +77,7 @@ func (c *Client) prepareLmstudio(ctx context.Context, model string) (connection.
 		}
 	}
 	if matches != 1 {
-		return info, fmt.Errorf("LM Studio model must identify exactly one model entry")
+		return info, faults.Errorf(diagcatalog.DiscoveryLMStudioModelMustIdentifyExactlyOne)
 	}
 
 	return info, nil

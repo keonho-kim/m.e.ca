@@ -6,9 +6,10 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/compact"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/compact"
 )
 
 func TestLargeMemoryRoundTrip(t *testing.T) {

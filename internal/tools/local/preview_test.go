@@ -6,12 +6,13 @@ package local
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestFilePreviewRead(t *testing.T) {

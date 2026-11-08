@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
-	"strings"
-	"testing"
 )
 
 type generator struct {

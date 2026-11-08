@@ -5,10 +5,11 @@
 package main
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"fmt"
-	teamcatalog "github.com/keonho-kim/meca/internal/tools/team/catalog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,10 +17,13 @@ import (
 	"testing"
 	"time"
 
+	teamcatalog "github.com/keonho-kim/meca/internal/tools/team/catalog"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	"github.com/keonho-kim/meca/internal/commands/teamrequest"
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -76,7 +80,7 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 			continue
 		}
 		if m.ToolName == "leave_team" {
-			var result struct{ Failure *toolapi.Failure }
+			var result struct{ Failure *faults.Failure }
 			if json.Unmarshal([]byte(m.Content), &result) == nil && result.Failure != nil && result.Failure.Code == "team_feedback_pending" {
 				retryDeparture = true
 			}
@@ -145,7 +149,7 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 	defer store.Close()
 	vault := &credentials.Vault{State: state}
 	service := teamService(store, home, state, vault)
-	local, err := service.NewTools()
+	local, err := service.NewTools(teamrequest.LocalOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +284,7 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		messages, err := private.ContextMessages(ctx, private.Session().ID, 0, 1<<20, false)
+		messages, err := private.ContextMessages(ctx, private.Session().ID, 0, 1<<20, false, nil)
 		closeErr := private.Close()
 		if err != nil || closeErr != nil || len(messages) == 0 {
 			t.Fatalf("private context did not survive reopening: %v %v", err, closeErr)

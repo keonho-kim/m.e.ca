@@ -5,9 +5,10 @@
 package input
 
 import (
-	"github.com/gdamore/tcell/v3"
 	"runtime"
 	"testing"
+
+	"github.com/gdamore/tcell/v3"
 )
 
 func TestExitKey(t *testing.T) {

@@ -5,9 +5,10 @@
 package channel
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestContextBytesIncludesFrozenAttribution(t *testing.T) {

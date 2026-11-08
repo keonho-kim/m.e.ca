@@ -6,14 +6,15 @@ package startup
 
 import (
 	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
 	"github.com/keonho-kim/meca/internal/config"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 func TestResumeExit(t *testing.T) {

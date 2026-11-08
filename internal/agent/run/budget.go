@@ -6,11 +6,14 @@ package run
 
 import (
 	"context"
-	"errors"
+
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-var errTimeBudget = errors.New("execution time budget exhausted before the next operation")
+var errTimeBudget = faults.Errorf(diagcatalog.RunExecutionTimeBudgetExhaustedBeforeTheNext)
 
 func (s *execution) checkTimeBudget(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {

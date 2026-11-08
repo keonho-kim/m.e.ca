@@ -7,11 +7,12 @@ package run
 import (
 	"context"
 	"errors"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type ownedOperation struct {

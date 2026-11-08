@@ -9,11 +9,12 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestCommandSearchPipeline(t *testing.T) {

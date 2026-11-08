@@ -6,8 +6,9 @@ package sqlite
 
 import (
 	"context"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestCompactionTail(t *testing.T) {
@@ -35,7 +36,7 @@ func TestCompactionTail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	messages, err := store.ContextMessages(ctx, session.ID, boundary, 8192, true)
+	messages, err := store.ContextMessages(ctx, session.ID, boundary, 8192, true, nil)
 	if err != nil || len(messages) != 1 || messages[0].Content != "recent exact content" {
 		t.Fatalf("tail=%+v err=%v", messages, err)
 	}

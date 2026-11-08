@@ -6,10 +6,12 @@ package context
 
 import (
 	"encoding/json"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func conversationMessage(message modelapi.Message, paired bool) (modelapi.Message, error) {
@@ -49,7 +51,7 @@ func conversationMessage(message modelapi.Message, paired bool) (modelapi.Messag
 		return modelapi.Message{Role: "user", Images: message.Images, Content: "Earlier notes and observations:\n" + string(body)}, nil
 	}
 	if message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
-		return modelapi.Message{}, fmt.Errorf("invalid conversation role")
+		return modelapi.Message{}, faults.Errorf(diagcatalog.ContextInvalidConversationRole)
 	}
 	return modelapi.Message{Images: message.Images, Role: message.Role, Content: message.Content, Reasoning: message.Reasoning, ReasoningState: message.ReasoningState, ProviderID: message.ProviderID, ModelID: message.ModelID, Calls: message.Calls, ToolCallID: message.ToolCallID, ToolName: message.ToolName}, nil
 }

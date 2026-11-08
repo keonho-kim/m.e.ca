@@ -7,10 +7,12 @@ package sqlite
 import (
 	"context"
 	"encoding/hex"
+
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudget, limit int) (string, bool, error) {
+	id, quoted := content.Reference(id)
 	if _, err := payloadNumber(id); err != nil {
 		return "", false, err
 	}
@@ -32,6 +34,9 @@ func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudge
 	var body []byte
 	if err := s.db.QueryRowContext(ctx, "SELECT body FROM payloads WHERE id=? AND codec=? AND raw_bytes=? AND length(body)=?", id, codec, size, stored).Scan(&body); err != nil {
 		return "", false, err
+	}
+	if quoted {
+		return s.codec.RawTextPrefix(ctx, codec, size, hex.EncodeToString(digest), body, limit)
 	}
 	return s.codec.TextPrefix(ctx, codec, size, hex.EncodeToString(digest), body, limit)
 }

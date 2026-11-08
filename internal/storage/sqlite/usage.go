@@ -7,8 +7,10 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenUsage, error) {
@@ -25,7 +27,7 @@ func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenU
 		return total, err
 	}
 	if invalid != 0 {
-		return modelapi.TokenUsage{}, fmt.Errorf("invalid stored usage: expected provider-reported counts and optional cost; records were not modified")
+		return modelapi.TokenUsage{}, faults.Errorf(diagcatalog.SqliteInvalidStoredUsageExpectedProviderReportedCounts)
 	}
 	if cost.Valid {
 		total.Cost = &cost.Float64

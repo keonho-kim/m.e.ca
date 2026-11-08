@@ -6,10 +6,11 @@ package compact
 
 import (
 	"context"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"testing"
 )
 
 func TestInferenceCompaction(t *testing.T) {

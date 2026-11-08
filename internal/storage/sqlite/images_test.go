@@ -8,11 +8,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestImagePersistenceCompactionAndDisplay(t *testing.T) {
@@ -42,7 +43,7 @@ func TestImagePersistenceCompactionAndDisplay(t *testing.T) {
 			t.Fatalf("unread image compacted: boundary=%d keep=%d err=%v", boundary, keep, err)
 		}
 	}
-	restored, err := store.ContextMessages(ctx, id, 0, 16*1024*1024, true)
+	restored, err := store.ContextMessages(ctx, id, 0, 16*1024*1024, true, nil)
 	if err != nil || len(restored) != 4 || len(restored[2].Images) != 1 || !bytes.Equal(restored[2].Images[0].Data, image.Data) {
 		t.Fatalf("snapshot lost: count=%d err=%v", len(restored), err)
 	}
@@ -91,10 +92,10 @@ func TestImageTextContextSkipsPixelsAndTheirBudget(t *testing.T) {
 	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ContextMessages(ctx, id, 0, 16<<20, true); err == nil {
+	if _, err := s.ContextMessages(ctx, id, 0, 16<<20, true, nil); err == nil {
 		t.Fatal("fixture did not make the original image unavailable")
 	}
-	got, err := s.ContextMessages(ctx, id, 0, 8192, false)
+	got, err := s.ContextMessages(ctx, id, 0, 8192, false, nil)
 	if err != nil || len(got) != 1 || len(got[0].Images) != 0 || !strings.Contains(got[0].Content, modelapi.ImageOmissionNotice) {
 		t.Fatalf("text context restored omitted pixels or counted their size: %v", err)
 	}

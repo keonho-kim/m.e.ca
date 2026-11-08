@@ -6,6 +6,8 @@ package openai
 
 import (
 	"encoding/json"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 )
@@ -131,7 +133,7 @@ func (e *encoder) finish(value server.Response, text string) error {
 }
 func (e *encoder) fail(code, message string) {
 	if e.chat {
-		_ = e.send("", map[string]any{"error": apiError{Message: message, Type: "server_error", Code: code}})
+		_ = e.send("", map[string]any{"error": apiError{Message: message, Type: diagcatalog.ServerError, Code: code}})
 	} else {
 		_ = e.send("error", map[string]any{"code": code, "message": message, "param": nil})
 	}

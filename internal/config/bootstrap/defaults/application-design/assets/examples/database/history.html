@@ -1,0 +1,204 @@
+<!doctype html>
+<!-- Purpose: Present the 쿼리 이력 surface of a static database workbench.
+     Pattern: Task-owned IDE composition with native disclosure and tab inspection.
+     Usage: Serve database/history.html from the example static root.
+     Related: internal/config/bootstrap/defaults/application-design/assets/examples/database/database.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="database">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="연결, 탐색, SQL과 결과를 다루는 DB 워크벤치 디자인 예시">
+    <title>쿼리 이력 | Querydesk</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="database.css">
+    <script defer src="../shared/interaction.js"></script>
+  </head>
+  <body data-product="database">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="database-top">
+      <div class="database-wordmark">
+        <a href="connections.html" aria-label="Querydesk 홈"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg> Querydesk</a>
+        <span>Research team</span>
+      </div>
+      <nav aria-label="주 메뉴">
+        <a href="connections.html">연결</a>
+        <a href="workbench.html">작업 공간</a>
+        <a href="history.html" aria-current="page">쿼리 이력</a>
+      </nav>
+      <div class="database-top-actions">
+        <span>디자인 예시 / 실제 연결 없음</span>
+        <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+      </div>
+    </header>
+    <div class="database-layout glass-surface">
+      <nav class="database-tree" aria-label="데이터베이스 탐색">
+        <div class="tree-heading">
+          <h2>데이터베이스</h2>
+          <a class="icon-button" href="connections.html" aria-label="연결 목록"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#plus"></use></svg></a>
+        </div>
+        <div class="tree-connection">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg>
+          <div>
+            <strong>Research sandbox</strong>
+            <small>PostgreSQL / 샘플</small>
+          </div>
+        </div>
+        <details open>
+          <summary>research_demo</summary>
+          <div class="tree-indent">
+            <details open>
+              <summary>public</summary>
+              <div class="tree-indent">
+                <details open>
+                  <summary>테이블 <span>3</span></summary>
+                  <div class="tree-objects">
+                    <a href="table.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> accounts <small>6</small></a>
+                    <a href="table.html#relations"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> onboarding_events</a>
+                    <a href="table.html#relations"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> support_tickets</a>
+                  </div>
+                </details>
+                <a class="tree-leaf" href="table.html#structure-panel"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#folder"></use></svg> 뷰</a>
+              </div>
+            </details>
+          </div>
+        </details>
+        <div class="tree-section">
+          <h3>SQL 스크립트</h3>
+          <a class="tree-leaf" href="workbench.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg> 고객 온보딩.sql</a>
+          <a class="tree-leaf" href="history.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#clock"></use></svg> 쿼리 이력</a>
+        </div>
+        <div class="tree-footer">
+          <span>연결 범위</span>
+          <strong>디자인 샘플</strong>
+          <p>실제 데이터베이스에 접속하지 않습니다.</p>
+        </div>
+      </nav>
+      <main id="main" class="database-work">
+        <details class="mobile-database-tree">
+          <summary>데이터베이스 탐색</summary>
+          <nav class="database-tree" aria-label="데이터베이스 탐색">
+            <div class="tree-heading">
+              <h2>데이터베이스</h2>
+              <a class="icon-button" href="connections.html" aria-label="연결 목록"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#plus"></use></svg></a>
+            </div>
+            <div class="tree-connection">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg>
+              <div>
+                <strong>Research sandbox</strong>
+                <small>PostgreSQL / 샘플</small>
+              </div>
+            </div>
+            <details open>
+              <summary>research_demo</summary>
+              <div class="tree-indent">
+                <details open>
+                  <summary>public</summary>
+                  <div class="tree-indent">
+                    <details open>
+                      <summary>테이블 <span>3</span></summary>
+                      <div class="tree-objects">
+                        <a href="table.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> accounts <small>6</small></a>
+                        <a href="table.html#relations"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> onboarding_events</a>
+                        <a href="table.html#relations"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg> support_tickets</a>
+                      </div>
+                    </details>
+                    <a class="tree-leaf" href="table.html#structure-panel"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#folder"></use></svg> 뷰</a>
+                  </div>
+                </details>
+              </div>
+            </details>
+            <div class="tree-section">
+              <h3>SQL 스크립트</h3>
+              <a class="tree-leaf" href="workbench.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg> 고객 온보딩.sql</a>
+              <a class="tree-leaf" href="history.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#clock"></use></svg> 쿼리 이력</a>
+            </div>
+            <div class="tree-footer">
+              <span>연결 범위</span>
+              <strong>디자인 샘플</strong>
+              <p>실제 데이터베이스에 접속하지 않습니다.</p>
+            </div>
+          </nav>
+        </details>
+        <nav class="database-editor-tabs" aria-label="열린 작업">
+          <a href="workbench.html" aria-label="SQL 스크립트 고객 온보딩"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>고객 온보딩.sql</a>
+          <a href="table.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg>public.accounts</a>
+        </nav>
+        <header class="table-object-head">
+          <div>
+            <h1>쿼리 이력</h1>
+            <p>실행 맥락, SQL과 결과를 함께 확인하는 화면입니다.</p>
+          </div>
+          <span class="read-only">샘플 이력 2개</span>
+        </header>
+        <div class="history-layout">
+          <section>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="두 개의 샘플 쿼리 이력">
+              <table class="db-grid" role="table">
+                <caption class="visually-hidden">두 개의 샘플 쿼리 이력</caption>
+                <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">쿼리</th><th scope="col" role="columnheader">데이터베이스</th><th scope="col" role="columnheader">결과</th><th scope="col" role="columnheader">열기</th></tr></thead>
+                <tbody role="rowgroup">
+                  <tr role="row">
+                    <td role="cell"><strong>고객 온보딩 단계</strong><small>SELECT account_id, company_name, …</small></td>
+                    <td role="cell">Research sandbox</td>
+                    <td role="cell">예시 6행</td>
+                    <td role="cell"><a class="quiet-link" href="workbench.html">워크벤치</a></td>
+                  </tr>
+                  <tr role="row">
+                    <td role="cell"><strong>보안 검토 단계의 팀</strong><small>WHERE onboarding_stage = …</small></td>
+                    <td role="cell">Research sandbox</td>
+                    <td role="cell">예시 2행</td>
+                    <td role="cell"><button class="btn" type="button" data-open="query-dialog">SQL 보기</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="history-note">고정된 디자인 데이터입니다. 실제 실행 이력, 서버 시간, 성능 수치나 입력 원문을 수집·보관하지 않습니다.</p>
+          </section>
+          <aside class="history-inspector">
+            <h2>고객 온보딩 단계</h2>
+            <div class="history-properties">
+              <span>Research sandbox</span>
+              <span>읽기 쿼리</span>
+            </div>
+            <pre class="sql-code" tabindex="0" aria-label="실행되지 않는 SQL 예시"><code><span class="sql-line"><span class="sql-number" aria-hidden="true">1</span><span class="sql-keyword">SELECT</span></span><span class="sql-line"><span class="sql-number" aria-hidden="true">2</span>    account_id,</span><span class="sql-line"><span class="sql-number" aria-hidden="true">3</span>    company_name,</span><span class="sql-line"><span class="sql-number" aria-hidden="true">4</span>    onboarding_stage,</span><span class="sql-line"><span class="sql-number" aria-hidden="true">5</span>    region,</span><span class="sql-line"><span class="sql-number" aria-hidden="true">6</span>    elapsed_days</span><span class="sql-line"><span class="sql-number" aria-hidden="true">7</span><span class="sql-keyword">FROM</span> public.accounts</span><span class="sql-line"><span class="sql-number" aria-hidden="true">8</span><span class="sql-keyword">ORDER BY</span> elapsed_days <span class="sql-keyword">DESC</span>, account_id <span class="sql-keyword">DESC</span></span><span class="sql-line"><span class="sql-number" aria-hidden="true">9</span><span class="sql-keyword">LIMIT</span> 100;</span></code></pre>
+            <a class="quiet-link" href="workbench.html">워크벤치에서 보기</a>
+          </aside>
+        </div>
+      </main>
+    </div>
+    <footer class="database-status">
+      <span><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#shield"></use></svg>
+      읽기 전용 디자인 예시</span>
+      <span>Research sandbox / PostgreSQL</span>
+      <span>입력·연결·실행·저장 없음</span>
+    </footer>
+    <dialog id="preview-note" class="modal" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">DB 워크벤치 디자인 예시</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>연결·스키마·SQL·결과의 배치를 살펴보는 정적 화면입니다. 샘플 데이터만 표시하며 실제 접속, 쿼리 실행, 저장과 내보내기는 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+    <dialog class="modal" id="query-dialog" aria-labelledby="query-title">
+      <header class="modal-head">
+        <h2 id="query-title">보안 검토 단계의 팀</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="쿼리 예시 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <pre class="sql-code" tabindex="0" aria-label="실행되지 않는 SQL 예시"><code><span class="sql-line"><span class="sql-number" aria-hidden="true">1</span><span class="sql-keyword">SELECT</span> company_name</span><span class="sql-line"><span class="sql-number" aria-hidden="true">2</span><span class="sql-keyword">FROM</span> public.accounts</span><span class="sql-line"><span class="sql-number" aria-hidden="true">3</span><span class="sql-keyword">WHERE</span> onboarding_stage = <span class="sql-string">'보안 검토'</span>;</span></code></pre>
+        <p class="small muted">예시 결과: Orbit Labs, Northworks. 쿼리를 실제로 실행하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+  </body>
+</html>

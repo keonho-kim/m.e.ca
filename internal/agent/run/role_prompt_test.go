@@ -6,11 +6,12 @@ package run
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/prompt"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestMainAgentPrompt(t *testing.T) {

@@ -5,11 +5,12 @@
 package model
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/identity"
 	"github.com/keonho-kim/meca/internal/tui/locale"
-	"strings"
-	"testing"
 )
 
 func TestIdentityContextBudgets(t *testing.T) {

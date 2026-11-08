@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
@@ -18,7 +19,7 @@ type journal struct {
 	events   []runrecord.Event
 }
 
-func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int, _ bool) ([]modelapi.Message, error) {
+func (j *journal) ContextMessages(_ context.Context, _ string, after int64, maxBytes int, _ bool, _ func(int) error) ([]modelapi.Message, error) {
 	if after != 0 {
 		return nil, fmt.Errorf("test journal does not support compaction")
 	}

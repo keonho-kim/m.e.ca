@@ -24,10 +24,12 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
+	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/serverrequests"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 )
 
 const testToken = "test-token-0123456789-abcdefghijklmnopqrstuvwxyz"
@@ -82,8 +84,13 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 	}
 	selected := connection.Selection{Connection: conn, Model: "fixture"}
 	cfg := config.Defaults()
+	boundary, err := filesystem.New(project, home, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skillReader := skills.New(project, home, skills.Options{Redact: vault.Redact, Check: boundary.SkillTarget, RedactRange: vault.RedactRange, Version: vault.RedactionVersion})
 	f.app, err = server.New(t.Context(), server.Options{
-		Config: cfg, Ledger: ledger, Responses: ledger, Project: project,
+		Config: cfg, Ledger: ledger, Responses: ledger, Project: project, Skills: skillReader,
 		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
 			f.resultOpens.Add(1)
 			f.outputReads.Add(1)
@@ -108,7 +115,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 				_ = store.Close()
 				return nil, err
 			}
-			executor, err := local.NewExecutor(project, home, state, vault.Redact)
+			executor, err := local.NewExecutor(project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 			if err != nil {
 				_ = lease.Close()
 				_ = store.Close()
@@ -122,7 +129,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 			}
 			f.store = store
 			tools := &countTools{Executor: executor, count: &f.executed, approval: approval}
-			return &server.Conversation{Runtime: agentrequest.Runtime{Config: defaults, Selection: selected, Session: store.Session(), Tools: tools, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, History: store, Models: store, Output: outputProbe{store, &f.outputReads}, Close: func() error {
+			return &server.Conversation{Runtime: agentrequest.Runtime{Config: defaults, Selection: selected, Session: store.Session(), Tools: tools, Skills: skillReader, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, History: store, Models: store, Output: outputProbe{store, &f.outputReads}, Close: func() error {
 				return errors.Join(pages.CloseSession(store.Session().ID), executor.Close(), store.Close(), lease.Close())
 			}, Model: conversationruntime.NewModel(g, nil),
 			}, nil
@@ -143,7 +150,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 			t.Error(err)
 		}
 	})
-	f.api = &API{Service: f.app, Redact: vault.Redact, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	f.api = &API{Service: f.app, Redact: vault.Redact, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
 	return f
 }
 

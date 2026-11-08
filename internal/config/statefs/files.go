@@ -46,6 +46,11 @@ func Write(directory, name string, content []byte) (err error) {
 
 // PublishMissing exposes only complete content and never replaces an existing file.
 func PublishMissing(root *os.Root, name string, content []byte) (err error) {
+	if _, err := root.Lstat(name); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	temporary := ".bootstrap-" + rand.Text()
 	file, err := root.OpenFile(temporary, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
@@ -64,5 +69,12 @@ func PublishMissing(root *os.Root, name string, content []byte) (err error) {
 	if err = root.Link(temporary, name); errors.Is(err, os.ErrExist) {
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	directory, err := root.Open(".")
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Sync(), directory.Close())
 }

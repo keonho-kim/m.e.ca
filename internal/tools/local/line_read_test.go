@@ -7,10 +7,11 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestLineReadAndEditReportsPositions(t *testing.T) {

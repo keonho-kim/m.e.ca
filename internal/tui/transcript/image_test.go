@@ -6,11 +6,12 @@ package transcript
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
-	"strings"
-	"testing"
 )
 
 func TestImageMetadataPresentation(t *testing.T) {

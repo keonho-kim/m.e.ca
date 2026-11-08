@@ -6,11 +6,13 @@
 package httpclient
 
 import (
-	"fmt"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
 	"strings"
 	"sync/atomic"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 type Client struct {
@@ -28,11 +30,11 @@ func NewClient(connection modelconn.Connection, key string) (*Client, error) {
 		return nil, err
 	}
 	if strings.ContainsAny(key, "\r\n\x00") || len(key) > 2048 {
-		return nil, fmt.Errorf("invalid API Key")
+		return nil, faults.Errorf(diagcatalog.HttpclientInvalidAPIKey)
 	}
 	key = strings.Trim(key, " \t")
 	if key == "" && (parsed.Kind == modelconn.OpenAI || parsed.Kind == modelconn.Claude || parsed.Kind == modelconn.Gemini) {
-		return nil, fmt.Errorf("this provider requires an API Key")
+		return nil, faults.Errorf(diagcatalog.HttpclientThisProviderRequiresAnAPIKey)
 	}
 	parsed.CredentialRef = connection.CredentialRef
 	return &Client{contextLength: modelconn.DefaultContextLength, connection: parsed, transport: transport.New(key, parsed.Kind)}, nil

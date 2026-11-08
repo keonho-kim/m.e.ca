@@ -6,10 +6,11 @@ package team
 
 import (
 	"fmt"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestContextIncludesEveryActiveCommand(t *testing.T) {

@@ -8,10 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
+
 	"io"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
 func (s *Store) Export(ctx context.Context, session string, output io.Writer) (resultErr error) {
@@ -74,7 +77,7 @@ func (s *Store) Export(ctx context.Context, session string, output io.Writer) (r
 				}
 			}
 			if len(body) > recordcontent.MaxBytes || !json.Valid(body) {
-				return fmt.Errorf("invalid session export record")
+				return faults.Errorf(diagcatalog.SqliteInvalidSessionExportRecord)
 			}
 			record := struct {
 				Sequence int64           `json:"sequence"`

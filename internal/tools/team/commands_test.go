@@ -6,12 +6,13 @@ package team
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
-	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/tools/local/process"
+	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 )
 
 func TestCommandLeaseAdmissionIsObservableAndShutdownReleasesTargets(t *testing.T) {

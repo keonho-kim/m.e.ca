@@ -9,6 +9,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
@@ -19,14 +21,14 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 		limit = 64 << 10
 	}
 	if r.GetOffset() < 0 || limit < 1 || limit > 64<<10 {
-		return nil, &server.Error{Code: "invalid_argument", Message: "detail offset must be nonnegative and limit must be 1 to 65536"}
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetMustBeNonnegativeAndLimit)
 	}
 	read, err := a.Service.OpenDetail(ctx, server.DetailSource{Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
 	if err != nil {
 		return nil, err
 	}
 	defer read.Release()
-	data, total, err := a.Details.Read(read.Context, detail.Request{Session: read.Session, Source: read.Source, Version: a.RedactionVersion, Redact: a.Redact, Load: read.Load}, r.GetOffset(), limit)
+	data, total, err := a.Details.Read(read.Context, detail.Request{Session: read.Session, Source: read.Source, Version: a.RedactionVersion, NewMask: a.NewMask, Load: read.Load}, r.GetOffset(), limit)
 	if err != nil {
 		return nil, err
 	}

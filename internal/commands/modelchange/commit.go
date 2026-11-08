@@ -8,13 +8,17 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+
 	"strings"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 type SelectionStore interface {
@@ -23,6 +27,7 @@ type SelectionStore interface {
 }
 type CredentialWriter interface {
 	Set(context.Context, string, string, string) error
+	Get(context.Context, string, string) (string, error)
 }
 
 type Committed struct {
@@ -37,11 +42,27 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 	}
 	credential = strings.Trim(credential, " \t")
 	if credential != "" {
-		createdRef := "credential_" + rand.Text()
-		if err := vault.Set(ctx, createdRef, next.Connection.CredentialScope(), credential); err != nil {
-			return Committed{}, err
+		current, readErr := store.Selection(ctx, session)
+		if ctx.Err() != nil {
+			return Committed{}, ctx.Err()
 		}
-		next.Connection.CredentialRef = createdRef
+		reuse := ""
+		if readErr == nil && current.Connection.ID == next.Connection.ID && current.Connection.CredentialRef != "" {
+			saved, err := vault.Get(ctx, current.Connection.CredentialRef, next.Connection.CredentialScope())
+			if ctx.Err() != nil {
+				return Committed{}, ctx.Err()
+			}
+			if err == nil && subtle.ConstantTimeCompare([]byte(saved), []byte(credential)) == 1 {
+				reuse = current.Connection.CredentialRef
+			}
+		}
+		if reuse == "" {
+			reuse = "credential_" + rand.Text()
+			if err := vault.Set(ctx, reuse, next.Connection.CredentialScope(), credential); err != nil {
+				return Committed{}, err
+			}
+		}
+		next.Connection.CredentialRef = reuse
 	}
 	if err := store.SaveSelection(ctx, session, next); err != nil {
 		if errors.Is(err, sessionstate.ErrForeignSession) {
@@ -53,7 +74,7 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 		expectedBody, encodeErr := json.Marshal(next)
 		actualBody, actualErr := json.Marshal(actual)
 		if readErr != nil || encodeErr != nil || actualErr != nil || !bytes.Equal(expectedBody, actualBody) {
-			return Committed{Uncertain: readErr != nil}, fmt.Errorf("save model connection; existing credentials retained: %w", errors.Join(err, readErr, encodeErr, actualErr))
+			return Committed{Uncertain: readErr != nil}, faults.Errorf(diagcatalog.ModelchangeSaveModelConnectionExistingCredentialsRetained, errors.Join(err, readErr, encodeErr, actualErr))
 		}
 	}
 
@@ -62,7 +83,7 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 		if err := remember(next); err != nil {
 			// The session and credential are already durable. Keep them usable even
 			// if the independent default cannot be written; never delete their key.
-			result.DefaultError = fmt.Errorf("connection saved for this session, but saving the default for new sessions failed: %w", err)
+			result.DefaultError = faults.Errorf(diagcatalog.ModelchangeConnectionSavedForThisSessionButSaving, err)
 		}
 	}
 	return result, nil

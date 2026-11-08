@@ -6,9 +6,11 @@ package diagnostic
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func probeThinking(ctx context.Context, c modelapi.Generator, model, effort string, on bool, settings *inference.Settings) (bool, error) {
@@ -28,7 +30,7 @@ func probeThinking(ctx context.Context, c modelapi.Generator, model, effort stri
 		return ctx.Err()
 	})
 	if err == nil && (!answer || !done) {
-		err = fmt.Errorf("thinking diagnostic did not produce a complete answer")
+		err = faults.Errorf(diagcatalog.DiagnosticThinkingDiagnosticDidNotProduceAComplete)
 	}
 	return reasoning, err
 }
@@ -42,7 +44,7 @@ func Effort(ctx context.Context, c modelapi.Generator, model, effort string, set
 		return err
 	}
 	if !supported {
-		return fmt.Errorf("thinking effort diagnostic did not produce a complete answer with separate reasoning")
+		return faults.Errorf(diagcatalog.DiagnosticThinkingEffortDiagnosticDidNotProduceA)
 	}
 	return nil
 }

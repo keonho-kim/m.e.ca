@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/protocol"
 	"net/http"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol"
 )
 
 func TestContextCapacity(t *testing.T) {

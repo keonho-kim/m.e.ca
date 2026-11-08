@@ -8,12 +8,14 @@ import (
 	"context"
 	"errors"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func (s *Service) Sessions(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
 	if limit < 1 || limit > 100 || len(cursor) > 1024 {
-		return nil, "", failure("invalid_argument", "session page requires limit 1 to 100 and a cursor of at most 1024 bytes")
+		return nil, "", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerSessionPageRequiresLimitToAndA)
 	}
 	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
@@ -22,17 +24,17 @@ func (s *Service) Sessions(ctx context.Context, cursor string, limit int) ([]ses
 	defer done()
 	values, next, err := s.options.List(ctx, cursor, limit)
 	if errors.Is(err, sessionstate.ErrCursor) {
-		return nil, "", failure("invalid_argument", err.Error())
+		return nil, "", faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
 	}
 	if errors.Is(err, sessionstate.ErrPageLimit) {
-		return nil, "", failure("resource_exhausted", err.Error())
+		return nil, "", faults.New(diagcatalog.ResourceExhausted, diagcatalog.WrappedCause, err)
 	}
 	return values, next, err
 }
 
 func (s *Service) Select(ctx context.Context, id string, create bool) (Snapshot, error) {
 	if create == (id != "") || !create && !sessionstate.ValidID(id) {
-		return Snapshot{}, failure("invalid_argument", "choose create or a valid existing session ID")
+		return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseCreateOrAValidExistingSession)
 	}
 	change, err := s.beginChange(ctx)
 	if err != nil {
@@ -56,7 +58,7 @@ func (s *Service) Select(ctx context.Context, id string, create bool) (Snapshot,
 	next, err := s.options.Open(change.ctx, id, create, change.config)
 	if err != nil {
 		if errors.Is(err, sessionstate.ErrNotFound) {
-			return Snapshot{}, failure("not_found", "session was not found in this project")
+			return Snapshot{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerSessionWasNotFoundInThisProject)
 		}
 		return Snapshot{}, err
 	}

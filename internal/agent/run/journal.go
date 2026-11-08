@@ -27,6 +27,9 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 	records := []runrecord.Entry{{Message: &m}}
 	for i := range events {
 		events[i].RunID = s.checkpoint.ID
+		if events[i].OccurredAt == "" {
+			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
+		}
 		records = append(records, runrecord.Entry{Event: &events[i]})
 	}
 	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
@@ -58,6 +61,9 @@ func (s *execution) persist(ctx context.Context, events ...runrecord.Event) erro
 	records := make([]runrecord.Entry, len(events))
 	for i := range events {
 		events[i].RunID = s.checkpoint.ID
+		if events[i].OccurredAt == "" {
+			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
+		}
 		records[i].Event = &events[i]
 	}
 	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {

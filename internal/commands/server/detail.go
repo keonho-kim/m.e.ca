@@ -11,6 +11,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
@@ -49,7 +51,7 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 		choices++
 	}
 	if choices != 1 || source.Tool.Sequence < 0 || source.HistorySequence < 0 || source.HistorySequence == 1<<63-1 || source.Tool.Session != "" && !sessionstate.ValidID(source.Tool.Session) {
-		return DetailRead{}, failure("invalid_argument", "choose exactly one valid detail reference")
+		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
 	}
 	c, ctx, done, err := s.beginRead(ctx)
 	if err != nil {
@@ -64,7 +66,7 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 		s.mu.Unlock()
 		if pending == nil {
 			done()
-			return DetailRead{}, failure("conflict", "approval is no longer pending")
+			return DetailRead{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerApprovalIsNoLongerPending)
 		}
 	}
 	if source.Tool.Sequence != 0 && source.Tool.Session == "" {
@@ -83,18 +85,18 @@ func (c *Conversation) loadDetail(ctx context.Context, source DetailSource, pend
 		return DetailOriginal{Approval: &pending.value}, nil
 	}
 	if source.Tool.Sequence != 0 {
-		value, err := c.History.ToolEvent(ctx, source.Tool, history.ReadBounds{MaxBytes: MaxReadBytes})
+		value, err := c.History.ToolEvent(ctx, source.Tool, history.ReadBounds{MaxBytes: MaxOriginalBytes})
 		if errors.Is(err, history.ErrNotFound) || errors.Is(err, sessionstate.ErrNotFound) {
-			return DetailOriginal{}, failure("not_found", "tool detail was not found")
+			return DetailOriginal{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerToolDetailWasNotFound)
 		}
 		return DetailOriginal{Tool: &value}, err
 	}
-	values, _, err := c.History.TimelineSummaries(ctx, c.Runtime.Session.ID, source.HistorySequence+1, 1, history.ReadBounds{MaxBytes: MaxReadBytes})
+	values, _, err := c.History.TimelineSummaries(ctx, c.Runtime.Session.ID, source.HistorySequence+1, 1, history.ReadBounds{MaxBytes: MaxOriginalBytes})
 	if err != nil {
 		return DetailOriginal{}, err
 	}
 	if len(values) != 1 || values[0].Sequence != source.HistorySequence {
-		return DetailOriginal{}, failure("not_found", "history record was not found")
+		return DetailOriginal{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerHistoryRecordWasNotFound)
 	}
 	return DetailOriginal{History: &values[0]}, nil
 }

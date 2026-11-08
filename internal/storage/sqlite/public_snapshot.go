@@ -10,9 +10,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -66,11 +67,11 @@ func (s *Store) publicPrefixes(ctx context.Context, records []storedRecord) (pre
 			return nil, err
 		}
 		if len(body) == 0 || size > bounds[sequence] || len(body) > bounds[sequence] || len(digest) != 32 {
-			return nil, fmt.Errorf("invalid public context prefix length")
+			return nil, faults.Errorf(diagcatalog.SqliteInvalidPublicContextPrefixLength)
 		}
 		prefix, _, err := s.codec.TextPrefix(ctx, codec, size, hex.EncodeToString(digest), body, size)
 		if err != nil {
-			return nil, fmt.Errorf("public context prefix failed integrity verification: %w", err)
+			return nil, faults.Errorf(diagcatalog.SqlitePublicContextPrefixFailedIntegrityVerification, err)
 		}
 		prefixes[sequence] = &prefix
 	}

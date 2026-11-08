@@ -6,6 +6,7 @@ package compact
 
 import (
 	"context"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 

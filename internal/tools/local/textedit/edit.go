@@ -5,10 +5,11 @@
 package textedit
 
 import (
-	"fmt"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Edit struct {
@@ -22,15 +23,15 @@ type replacement struct {
 
 func resolve(current string, edit Edit, format string) (replacement, error) {
 	if edit.OldText == "" || !utf8.ValidString(edit.OldText) || !utf8.ValidString(edit.NewText) {
-		return replacement{}, fmt.Errorf("old_text must be nonempty and both texts must be UTF-8")
+		return replacement{}, faults.Errorf(diagcatalog.TexteditOldTextMustBeNonemptyAndBoth)
 	}
 	start := strings.Index(current, edit.OldText)
 	if start < 0 {
-		return replacement{}, &toolapi.Failure{Code: "text_not_found", Detail: "old_text does not occur in the current source", Next: "Read the affected source and provide its exact old_text. Nothing was applied."}
+		return replacement{}, &faults.Failure{Code: diagcatalog.TextNotFound, Detail: diagcatalog.Text(diagcatalog.TexteditOldTextDoesNotOccurInThe), Next: diagcatalog.Text(diagcatalog.TexteditReadTheAffectedSourceAndProvideIts)}
 	}
 	// Starting one byte later also detects overlapping duplicate matches.
 	if strings.Contains(current[start+1:], edit.OldText) {
-		return replacement{}, &toolapi.Failure{Code: "ambiguous_text", Detail: "old_text occurs more than once", Next: "Include enough unchanged surrounding source to identify one occurrence. Nothing was applied."}
+		return replacement{}, &faults.Failure{Code: diagcatalog.AmbiguousText, Detail: diagcatalog.Text(diagcatalog.TexteditOldTextOccursMoreThanOnce), Next: diagcatalog.Text(diagcatalog.TexteditIncludeEnoughUnchangedSurroundingSourceToIdentify)}
 	}
 	text := edit.NewText
 	if format != "literal" {

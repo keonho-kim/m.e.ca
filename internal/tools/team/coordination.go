@@ -6,12 +6,15 @@ package team
 
 import (
 	"context"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/source"
-	"github.com/keonho-kim/meca/internal/tools/team/catalog"
+
 	"sync/atomic"
 
+	"github.com/keonho-kim/meca/internal/agent/team/source"
+	"github.com/keonho-kim/meca/internal/tools/team/catalog"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
 
@@ -30,7 +33,7 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		return toolapi.Result{}, err
 	}
 	if !op.used.CompareAndSwap(false, true) {
-		return toolapi.Result{}, fmt.Errorf("operation already executed")
+		return toolapi.Result{}, faults.Errorf(diagcatalog.TeamOperationAlreadyExecuted)
 	}
 	e := op.executor
 	switch op.call.Name {
@@ -67,7 +70,7 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		}
 		if !e.Peer.HasWorkPaths(paths) {
 			if e.Local.ActiveCommand() != "" {
-				return toolapi.Result{}, fmt.Errorf("settle your active commands before changing or releasing your paths")
+				return toolapi.Result{}, faults.Errorf(diagcatalog.TeamSettleYourActiveCommandsBeforeChangingOr)
 			}
 		}
 		work, err := e.Peer.SetWork(op.input.Summary, paths, op.input.Contract, op.input.ReplyTo)
@@ -84,7 +87,7 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		return result, err
 	case "leave_team":
 		if e.Local.ActiveCommand() != "" {
-			return toolapi.Result{}, fmt.Errorf("settle active commands with wait_command or cancel_command before leaving")
+			return toolapi.Result{}, faults.Errorf(diagcatalog.TeamSettleActiveCommandsWithWaitCommandOr)
 		}
 		depart, err := e.Peer.Leave(ctx, op.input.Message)
 		if err != nil {
@@ -99,5 +102,5 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 		result.Depart = depart
 		return result, err
 	}
-	return toolapi.Result{}, fmt.Errorf("unknown cooperative tool")
+	return toolapi.Result{}, faults.Errorf(diagcatalog.CatalogUnknownCooperativeTool)
 }

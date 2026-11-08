@@ -6,22 +6,25 @@
 package policy
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// Resolve does not follow symlinks; the filesystem boundary must use os.Root.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// Resolve does not follow symlinks; the filesystem boundary must use os.Root.
 func Resolve(project, home string, scope Scope, path string) (string, string, error) {
 	if _, err := ParseScope(string(scope)); err != nil {
 		return "", "", err
 	}
 	if !filepath.IsAbs(project) || !filepath.IsAbs(home) {
-		return "", "", fmt.Errorf("project and home roots must be absolute")
+		return "", "", faults.Errorf(diagcatalog.PolicyProjectAndHomeRootsMustBeAbsolute)
 	}
 	if len(path) > 4096 || !utf8.ValidString(path) || strings.ContainsRune(path, 0) {
-		return "", "", fmt.Errorf("invalid path")
+		return "", "", faults.Errorf(diagcatalog.PolicyInvalidPath)
 	}
 	if path == "~" {
 		path = home
@@ -38,7 +41,7 @@ func Resolve(project, home string, scope Scope, path string) (string, string, er
 	}
 	relative, err := filepath.Rel(root, path)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("access denied by scope: %s", path)
+		return "", "", faults.Errorf(diagcatalog.PolicyAccessDeniedByScope, path)
 	}
 	return path, relative, nil
 }

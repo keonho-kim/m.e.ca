@@ -5,6 +5,9 @@
 package local
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"bytes"
 	"context"
 	"errors"
@@ -12,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type imageReadFunc func([]byte) (int, error)
@@ -34,8 +36,8 @@ func TestReadImageBytes(t *testing.T) {
 				}
 				return
 			}
-			var stale *toolapi.Failure
-			if !errors.As(err, &stale) || stale.Code != toolapi.StaleTarget {
+			var stale *faults.Failure
+			if !errors.As(err, &stale) || stale.Code != diagcatalog.StaleTarget {
 				t.Fatalf("source change did not produce a stale-target error: %v", err)
 			}
 		})

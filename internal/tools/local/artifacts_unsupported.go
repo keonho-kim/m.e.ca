@@ -7,10 +7,12 @@
 package local
 
 import (
-	"fmt"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func newArtifacts() (string, *os.File, error) {
-	return "", nil, fmt.Errorf("captured-output leases require a Unix platform")
+	return "", nil, faults.Errorf(diagcatalog.LocalCapturedOutputLeasesRequireAUnixPlatform)
 }

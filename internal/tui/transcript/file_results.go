@@ -7,6 +7,7 @@ package transcript
 import (
 	"encoding/json"
 	"fmt"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 )

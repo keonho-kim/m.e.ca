@@ -5,6 +5,9 @@
 package team
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -66,7 +69,7 @@ func TestRepeatedFailureRemainsVisibleWithoutRestartingIdlePeers(t *testing.T) {
 		err := a.Emit(record.Event{Kind: "tool_failed", Output: output, Operation: &tool.Operation{
 			Name: "execute_command", Status: "tool_failed", Started: true, Command: "check",
 			Process: &tool.ProcessOutcome{CommandID: id, Status: "exited", ExitCode: 1},
-			Failure: &tool.Failure{Code: tool.ProcessFailed, Detail: diagnostic},
+			Failure: &faults.Failure{Code: diagcatalog.ProcessFailed, Detail: diagnostic},
 		}})
 		if err != nil {
 			t.Fatal(err)

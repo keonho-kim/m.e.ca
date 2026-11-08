@@ -5,8 +5,9 @@
 package inference
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Parameters struct {
@@ -29,7 +30,7 @@ func Defaults() Settings {
 }
 func (p Parameters) Check() error {
 	if p.Thinking != "" && p.Thinking != "inherit" && p.Thinking != "off_if_supported" {
-		return fmt.Errorf("thinking must be inherit or off_if_supported")
+		return faults.Errorf(diagcatalog.InferenceThinkingMustBeInheritOrOffIf)
 	}
 	if err := modelapi.CheckTemperature(&p.Temperature); err != nil {
 		return err
@@ -61,10 +62,10 @@ func Resolve(settings *Settings, role Role) (Parameters, error) {
 	case Diagnostic:
 		p = s.Diagnostic
 	default:
-		return p, fmt.Errorf("unknown inference role %q", role)
+		return p, faults.Errorf(diagcatalog.InferenceUnknownInferenceRole, role)
 	}
 	if err := p.Check(); err != nil {
-		return p, fmt.Errorf("%s inference parameters: %w", role, err)
+		return p, faults.Errorf(diagcatalog.InferenceInferenceParameters, role, err)
 	}
 	return p, nil
 }

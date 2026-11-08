@@ -5,12 +5,14 @@
 package local
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestEditFailureReasons(t *testing.T) {
@@ -25,7 +27,7 @@ func TestEditFailureReasons(t *testing.T) {
 	}
 	settings := policy.Settings{Scope: policy.Directory}
 	_, err := executor.Prepare(context.Background(), settings, edit)
-	failure := tool.FailureOf(err)
+	failure := faults.FailureOf(err)
 	if failure == nil || failure.Code != "text_not_found" || failure.Next == "" {
 		t.Fatalf("middle change accepted: %+v", failure)
 	}

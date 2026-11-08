@@ -7,8 +7,9 @@ package server
 import (
 	"context"
 	"errors"
-	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"testing"
+
+	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
 )

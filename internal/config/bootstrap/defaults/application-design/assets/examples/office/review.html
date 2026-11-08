@@ -1,0 +1,120 @@
+<!doctype html>
+<!-- Purpose: Show the 검토와 내보내기 설정 surface as a static commercial application design.
+     Pattern: Semantic page with progressive native inspection controls.
+     Usage: Open office/review.html from the example static root.
+     Related: internal/config/bootstrap/defaults/application-design/assets/examples/office/office.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="office">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Folio의 검토와 내보내기 설정 화면을 보여주는 정적 프론트엔드 디자인 예시입니다.">
+    <title>검토와 내보내기 설정 | Folio</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/product-shell.css">
+    <link rel="stylesheet" href="office.css">
+    <script defer src="../shared/interaction.js"></script>
+  </head>
+  <body data-product="office">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="product-top">
+      <div class="product-top-inner">
+        <div class="product-identity">
+          <a class="product-wordmark" href="library.html" aria-label="Folio 홈"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>Folio</a>
+          <a class="office-library-return" href="library.html">문서 라이브러리</a>
+        </div>
+        <div class="product-utilities">
+          <span class="sample-label">디자인 예시 / 샘플 콘텐츠</span>
+          <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+          <span class="avatar" aria-label="샘플 사용자 김민서">민</span>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="product-body">
+      <header class="product-head">
+        <div>
+          <h1>공유하기 전에, 한 번 더 확인합니다.</h1>
+          <p>내용 검토와 전달 형식을 한 화면에서 정리합니다.</p>
+        </div>
+        <div class="product-actions">
+
+        </div>
+      </header>
+      <div class="review-layout">
+        <div>
+          <section class="review-section">
+            <h2>검토할 문서</h2>
+            <div class="source-line">
+              <span class="source-mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span>
+              <div>
+                <strong>리서치 워크스페이스 도입 제안</strong>
+                <small>문서 초안 / 발표 자료 3장</small>
+              </div>
+            </div>
+            <div class="section-row">
+              <a class="product-link" href="document.html">문서 화면 보기</a>
+              <a class="product-link" href="slides.html">발표 화면 보기</a>
+            </div>
+          </section>
+          <section class="review-section">
+            <h2>콘텐츠 검토</h2>
+            <div class="review-check">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#check"></use></svg>
+              <div>
+                <strong>제안과 확정 사실을 구분했습니다.</strong>
+                <p>시범 도입 범위와 합의할 조건을 별도로 표시했습니다.</p>
+              </div>
+            </div>
+            <div class="review-check">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#check"></use></svg>
+              <div>
+                <strong>출처 없는 성과 수치를 추가하지 않았습니다.</strong>
+                <p>확인 기준을 제시하고, 개선 효과를 단정하지 않았습니다.</p>
+              </div>
+            </div>
+            <div class="review-check warning">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg>
+              <div>
+                <strong>공유 전, 담당자와 자료 범위를 확인하세요.</strong>
+                <p>실제 프로젝트의 접근 권한과 검토 담당자는 별도로 정해야 합니다.</p>
+              </div>
+            </div>
+          </section>
+          <section class="review-section">
+            <h2>검토 결과의 성격</h2>
+            <p class="flat-note">체크 항목은 검토 UI를 보여주는 고정 샘플입니다. AI 검사나 문서 분석이 실행된 결과가 아닙니다. 실제 자료의 정확성·권한·표현은 소유자가 확인해야 합니다.</p>
+          </section>
+        </div>
+        <aside class="office-aside">
+          <h2>전달 형식</h2>
+          <p>내보내기 설정의 구성 예시입니다.</p>
+          <div class="review-options">
+            <label>문서 형식<select name="export-format"><option>Word 문서 (.docx)</option><option>발표 자료 (.pptx)</option><option>PDF</option></select></label>
+            <label class="check-label"><input type="checkbox" name="include-notes" checked>검토 메모 포함</label>
+            <label class="check-label"><input type="checkbox" name="include-sources" checked>출처와 확인 사항 포함</label>
+          </div>
+          <button class="btn primary" type="button" data-open="preview-note">내보내기 예시 안내</button>
+          <p class="flat-note">실제 파일을 생성하거나 다운로드하지 않습니다.</p>
+        </aside>
+      </div>
+      <footer class="product-footer">
+        <span>Folio / 프론트엔드 디자인 스터디</span>
+        <span>화면 이동·탭·대화상자만 동작합니다. 실제 연동·저장은 없습니다.</span>
+      </footer>
+    </main>
+    <dialog class="modal product-modal" id="preview-note" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">디자인 예시 안내</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>이 예시는 화면 구성과 상호작용 형태를 살펴보는 정적 프론트입니다. 데이터, 문서, 답변과 검토 결과는 모두 샘플 콘텐츠입니다.</p>
+        <p>실제 데이터베이스 연결, AI 요청, 편집·저장, 파일 내보내기는 구현하지 않았습니다. 입력 내용은 저장하거나 전송하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button type="submit" class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+  </body>
+</html>

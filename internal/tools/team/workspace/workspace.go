@@ -5,12 +5,13 @@
 package workspace
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"os"
 	"path/filepath"
 	"sync"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 )
 
@@ -67,7 +68,7 @@ func admissionError(ctx context.Context, obsolete <-chan struct{}) error {
 	}
 	select {
 	case <-obsolete:
-		return toolapi.NewInstructionChanged()
+		return faults.NewInstructionChanged()
 	default:
 		return nil
 	}

@@ -31,7 +31,7 @@ func cacheFixture(t testing.TB, value *record.Event) (*Cache, Request, *atomic.I
 	})
 	vault := &credentials.Vault{}
 	loads := &atomic.Int64{}
-	r := Request{Session: "selected-session", Source: server.DetailSource{Tool: record.EventReference{Sequence: 1}}, Version: vault.RedactionVersion, Redact: vault.Redact, Load: func() (server.DetailOriginal, error) {
+	r := Request{Session: "selected-session", Source: server.DetailSource{Tool: record.EventReference{Sequence: 1}}, Version: vault.RedactionVersion, NewMask: vault.NewChunkMask, Load: func() (server.DetailOriginal, error) {
 		loads.Add(1)
 		return server.DetailOriginal{Tool: value}, nil
 	}}

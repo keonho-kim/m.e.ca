@@ -10,6 +10,8 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -40,11 +42,14 @@ func Run(ctx context.Context, screen tcell.Screen, opts Options) (action Action,
 }
 func (a *app) fail(err error) {
 	if err != nil && !errors.Is(err, context.Canceled) {
+		diagnostics.Log(a.ctx, diagcatalog.UIOperationFailed, "component", "tui", "operation", a.page, "error_code", diagnostics.Code(err))
 		a.status = a.opts.Vault.Redact(err.Error())
 	}
 }
 
 func (a *app) requestExit() {
+	a.closeSkills()
+	a.releaseApprovalPreview()
 	a.stopFileWatch()
 	a.compose.fileSubmission = nil
 	a.files.fileSelectionQueue = nil

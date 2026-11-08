@@ -8,9 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -28,7 +30,7 @@ func (s *Store) ResponseOutput(ctx context.Context, session string, after, throu
 		return "", err
 	}
 	if after < 0 || through < after {
-		return "", fmt.Errorf("invalid output boundaries")
+		return "", faults.Errorf(diagcatalog.SqliteInvalidOutputBoundaries)
 	}
 	var text strings.Builder
 	budget := newReadBudget(maxBytes)

@@ -5,10 +5,11 @@
 package command
 
 import (
-	"errors"
 	"io/fs"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -92,7 +93,10 @@ func (a *analyzer) word(w *syntax.Word, s *state, literal bool) []word {
 	}
 	env := &environment{state: s, literal: literalWord(w)}
 	glob := false
-	cfg := &expand.Config{Env: env, ReadDir2: func(string) ([]fs.DirEntry, error) { glob = true; return nil, errors.New("glob expansion deferred") }}
+	cfg := &expand.Config{Env: env, ReadDir2: func(string) ([]fs.DirEntry, error) {
+		glob = true
+		return nil, faults.Errorf(diagcatalog.CommandGlobExpansionDeferred)
+	}}
 	if literal {
 		value, err := expand.Literal(cfg, w)
 		return []word{{text: value, known: err == nil && !unknown && !env.unresolved, single: true}}

@@ -56,7 +56,7 @@ func BenchmarkCandidatePreparation(b *testing.B) {
 		b.Run(fmt.Sprintf("Lines%d", lines), func(b *testing.B) {
 			root, home := b.TempDir(), b.TempDir()
 			vault := &credentials.Vault{}
-			e, err := NewExecutor(root, home, filepath.Join(home, ".meca"), vault.Redact)
+			e, err := NewExecutor(root, home, filepath.Join(home, ".meca"), vault.Redact, Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 			if err != nil {
 				b.Fatal(err)
 			}

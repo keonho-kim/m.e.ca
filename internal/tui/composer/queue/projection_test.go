@@ -5,8 +5,9 @@
 package queue
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/tui/composer"
 
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )

@@ -9,11 +9,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
+
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const receiptName = "installation.json"
@@ -38,19 +41,19 @@ func loadReceipt(root *os.Root) (r receipt, err error) {
 	d := json.NewDecoder(bytes.NewReader(body))
 	d.DisallowUnknownFields()
 	if err := d.Decode(&r); err != nil {
-		return r, fmt.Errorf("invalid installation receipt: %w", err)
+		return r, faults.Errorf(diagcatalog.InstallInvalidInstallationReceipt, err)
 	}
 	if err := d.Decode(new(any)); err != io.EOF {
-		return r, fmt.Errorf("trailing installation receipt content")
+		return r, faults.Errorf(diagcatalog.InstallTrailingInstallationReceiptContent)
 	}
 	digest, err := hex.DecodeString(r.Digest)
 	if err != nil || len(digest) != 32 {
-		return r, fmt.Errorf("invalid installed binary digest")
+		return r, faults.Errorf(diagcatalog.InstallInvalidInstalledBinaryDigest)
 	}
 	seen := map[string]bool{}
 	for _, profile := range r.Profiles {
 		if !validProfile(profile.Name) || seen[profile.Name] {
-			return r, fmt.Errorf("invalid shell registration")
+			return r, faults.Errorf(diagcatalog.InstallInvalidShellRegistration)
 		}
 		seen[profile.Name] = true
 	}
@@ -74,7 +77,7 @@ func readFile(root *os.Root, name string) ([]byte, bool, os.FileMode, error) {
 		return nil, false, 0, err
 	}
 	if !info.Mode().IsRegular() || info.Size() > maxFileBytes {
-		return nil, false, 0, fmt.Errorf("%s must be a regular file within 16 MiB", name)
+		return nil, false, 0, faults.Errorf(diagcatalog.InstallMustBeARegularFileWithinMiB, name)
 	}
 	file, err := root.Open(name)
 	if err != nil {
@@ -83,7 +86,7 @@ func readFile(root *os.Root, name string) ([]byte, bool, os.FileMode, error) {
 	body, readErr := io.ReadAll(io.LimitReader(file, maxFileBytes+1))
 	err = errors.Join(readErr, file.Close())
 	if len(body) > maxFileBytes {
-		err = errors.Join(err, fmt.Errorf("%s exceeds 16 MiB", name))
+		err = errors.Join(err, faults.Errorf(diagcatalog.InstallExceedsMiB, name))
 	}
 	return body, true, info.Mode().Perm(), err
 }

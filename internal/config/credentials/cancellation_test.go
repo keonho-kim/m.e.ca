@@ -7,11 +7,12 @@ package credentials
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 )
 
 type waitingKeys struct {

@@ -5,12 +5,16 @@
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
-	model "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	model "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type contextDecisionTools struct {
@@ -45,7 +49,7 @@ func TestUserInstructionBetweenWavesPreservesOnlyCompletedEffects(t *testing.T) 
 	r.Journal = j
 	r.Tools = contextDecisionTools{tools, func() error {
 		if tools.executed == 1 && j.cursor == 0 {
-			return tool.NewInstructionChanged()
+			return faults.NewInstructionChanged()
 		}
 		return nil
 	}}
@@ -55,7 +59,7 @@ func TestUserInstructionBetweenWavesPreservesOnlyCompletedEffects(t *testing.T) 
 		requests++
 		if requests > 1 {
 			for _, message := range request.Messages {
-				sawInstructionFeedback = sawInstructionFeedback || strings.Contains(message.Content, tool.InstructionChanged) && strings.Contains(message.Content, "latest user")
+				sawInstructionFeedback = sawInstructionFeedback || strings.Contains(message.Content, diagcatalog.InstructionChanged) && strings.Contains(message.Content, "latest user")
 			}
 			return emit(model.Event{Delta: "Preserved the second file", Done: true})
 		}

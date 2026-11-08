@@ -15,6 +15,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/imagefile"
 )
 
@@ -30,7 +32,7 @@ func (op *imageOperation) viewImage(ctx context.Context) (out toolapi.Result, er
 		return out, err
 	}
 	if !info.Mode().IsRegular() {
-		return out, fmt.Errorf("image must be a regular file")
+		return out, faults.Errorf(diagcatalog.LocalImageMustBeARegularFile)
 	}
 	file, err := op.source.root.OpenFile(op.source.relative, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOFOLLOW, 0)
 	if err != nil {
@@ -42,7 +44,7 @@ func (op *imageOperation) viewImage(ctx context.Context) (out toolapi.Result, er
 		return out, err
 	}
 	if !before.Mode().IsRegular() {
-		return out, fmt.Errorf("image must be a regular file")
+		return out, faults.Errorf(diagcatalog.LocalImageMustBeARegularFile)
 	}
 	data, err := readImageBytes(ctx, file, before.Size())
 	if err != nil {
@@ -57,7 +59,7 @@ func (op *imageOperation) viewImage(ctx context.Context) (out toolapi.Result, er
 		return out, err
 	}
 	if current.absolute != op.source.absolute || !os.SameFile(before, after) || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
-		return out, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image changed while reading its snapshot", Next: "View the intended image again."}
+		return out, &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalImageChangedWhileReadingItsSnapshot), Next: diagcatalog.Text(diagcatalog.LocalViewTheIntendedImageAgain)}
 	}
 	image, err := imagefile.Decode(ctx, op.executor.redact(op.source.absolute), data)
 	if err != nil {

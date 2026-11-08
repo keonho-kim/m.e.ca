@@ -5,8 +5,9 @@
 package context
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestMinimalContextKeepsOneRequestAndEndsWithToolResult(t *testing.T) {

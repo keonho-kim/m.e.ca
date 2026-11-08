@@ -13,7 +13,10 @@ tool (
 	honnef.co/go/tools/cmd/staticcheck
 )
 
-require github.com/openai/openai-go/v3 v3.96.0
+require (
+	github.com/openai/openai-go/v3 v3.96.0
+	golang.org/x/tools v0.52.0
+)
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
@@ -342,7 +345,6 @@ require (
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/vuln v1.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.287.1 // indirect

@@ -7,6 +7,7 @@ package teamrequest
 import (
 	"context"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -16,43 +17,55 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
+	"github.com/keonho-kim/meca/internal/diagnostics"
 	teamtools "github.com/keonho-kim/meca/internal/tools/team"
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
 )
 
 func (r *request) execute(ctx context.Context, member identity.Member, input string, peer *team.Peer) (result run.Result, resultErr error) {
+	ctx = diagnostics.WithFields(ctx, "agent", member.ID)
 	child, err := r.service.Open(ctx, member.Session)
 	if err != nil {
 		return result, err
 	}
 	defer func() { resultErr = errors.Join(resultErr, child.Close()) }()
-	if len(r.options.ClientContext) > 0 {
-		entries := make([]runrecord.Entry, len(r.options.ClientContext))
-		for i := range r.options.ClientContext {
-			message := r.options.ClientContext[i]
-			entries[i].Message = &message
-		}
-		if err := child.Store.Commit(ctx, child.Session.ID, entries); err != nil {
-			return result, err
-		}
-	}
-	local, err := r.service.NewTools()
+
+	local, err := r.service.NewTools(LocalOptions{Skills: r.options.Skills, Images: r.images})
 	if err != nil {
 		return result, err
 	}
 	r.service.track(member.ID, local)
 	defer func() { r.service.track(member.ID, nil); resultErr = errors.Join(resultErr, local.Close()) }()
-	tools := &teamtools.Executor{Local: local, Peer: peer, Workspace: r.access, Refusals: &r.refusals, Images: r.images, Project: r.options.Session.ProjectRoot}
+	tools := &teamtools.Executor{Local: local, Peer: peer, Workspace: r.access, Refusals: &r.refusals, Project: r.options.Session.ProjectRoot}
 	cursor, err := child.Store.ContextCursor(ctx, child.Session.ID)
 	if err != nil {
 		return result, err
 	}
+	storedCursor := cursor
 	if cursor == 0 {
 		cursor = peer.InitialCursor()
 	}
 	peer.Cursor = cursor
 	own := r.options
 	own.Session, own.Store, own.Tools, own.Text = child.Session, child.Store, tools, input
+	own.ClientContext = nil
+	var sources []runrecord.Entry
+	for _, message := range r.options.ClientContext {
+		if message.Source == nil {
+			own.ClientContext = append(own.ClientContext, message)
+		} else if message.Source.Sequence > storedCursor {
+			// Durable input already belongs to the public room. Commit only its
+			// authenticated reference; transient Chat history remains request-owned.
+			copy := message
+			sources = append(sources, runrecord.Entry{Message: &copy})
+		}
+	}
+	if len(sources) > 0 {
+		if err := child.Store.Commit(ctx, child.Session.ID, sources); err != nil {
+			return result, err
+		}
+	}
+	own.Skills = local.Skills()
 	own.PollSteering = nil
 	if scoped, ok := own.Generator.(interface {
 		NewRunGeneratorWithBudget(int) (modelapi.Generator, func())

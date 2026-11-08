@@ -5,11 +5,12 @@
 package session
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 	"time"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestThroughputHeaderAndLifecycle(t *testing.T) {

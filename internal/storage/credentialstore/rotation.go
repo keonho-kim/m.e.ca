@@ -7,7 +7,7 @@ package credentialstore
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type credentialVersion struct {
@@ -29,7 +31,7 @@ func (s *Store) RotateDue(ctx context.Context, now time.Time, period time.Durati
 		return err
 	}
 	if now.UnixNano() <= 0 || period <= 0 {
-		return fmt.Errorf("invalid credential rotation period or time")
+		return faults.Errorf(diagcatalog.CredentialstoreInvalidCredentialRotationPeriodOrTime)
 	}
 	directory := filepath.Join(s.directory, rotationDirectory)
 	root, err := statefs.Open(directory)
@@ -79,7 +81,7 @@ func (s *Store) RotateDue(ctx context.Context, now time.Time, period time.Durati
 		}
 	}
 	if first != nil {
-		return fmt.Errorf("credential rotation deferred for %d records: %w", failures, first)
+		return faults.Errorf(diagcatalog.CredentialstoreCredentialRotationDeferredForRecords, failures, first)
 	}
 	return nil
 }

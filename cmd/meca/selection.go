@@ -7,10 +7,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	tuistartup "github.com/keonho-kim/meca/internal/tui/startup"
@@ -51,7 +53,7 @@ func selectConversation(ctx context.Context, screen tcell.Screen, sessions *sqli
 		return nil, false, err
 	}
 	if store.Session() != selected {
-		return nil, false, errors.Join(fmt.Errorf("selected session metadata changed; select it again"), store.Close())
+		return nil, false, errors.Join(faults.Errorf(diagcatalog.MecaSelectedSessionMetadataChangedSelectItAgain), store.Close())
 	}
 	return store, true, nil
 }

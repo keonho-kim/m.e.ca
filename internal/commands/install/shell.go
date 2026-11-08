@@ -8,10 +8,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const pathBlock = "# >>> meca PATH >>>\ncase \":$PATH:\" in\n  *\":$HOME/.local/bin:\"*) ;;\n  *) export PATH=\"$HOME/.local/bin:$PATH\" ;;\nesac\n# <<< meca PATH <<<\n"
@@ -48,7 +51,7 @@ func profileNames(root *os.Root, shell string) ([]string, error) {
 	case "sh", "dash":
 		return []string{".profile"}, nil
 	default:
-		return nil, fmt.Errorf("automatic PATH registration supports zsh, bash and sh; SHELL=%q", shell)
+		return nil, faults.Errorf(diagcatalog.InstallAutomaticPATHRegistrationSupportsZshBashAnd, shell)
 	}
 }
 
@@ -70,7 +73,7 @@ func planProfiles(root *os.Root, names []string, previous []registration, remove
 		text := string(body)
 		count := strings.Count(text, pathBlock)
 		if count > 1 || strings.Contains(text, "# >>> meca PATH >>>") && count == 0 {
-			return nil, fmt.Errorf("%s contains an edited MECA PATH block; restore or remove that block first", name)
+			return nil, faults.Errorf(diagcatalog.InstallContainsAnEditedMECAPATHBlockRestore, name)
 		}
 		block := pathBlock
 		if r.Separator {
@@ -81,7 +84,7 @@ func planProfiles(root *os.Root, names []string, previous []registration, remove
 				continue
 			}
 			if !strings.Contains(text, block) {
-				return nil, fmt.Errorf("%s registration boundary changed", name)
+				return nil, faults.Errorf(diagcatalog.InstallRegistrationBoundaryChanged, name)
 			}
 			text = strings.Replace(text, block, "", 1)
 		} else if count == 0 {
@@ -98,7 +101,7 @@ func writeProfile(root *os.Root, change profileChange, remove bool) (err error) 
 		return err
 	}
 	if exists != change.existed || mode != change.mode || !bytes.Equal(current, change.before) {
-		return fmt.Errorf("%s changed during installation; retry with the current file", change.Name)
+		return faults.Errorf(diagcatalog.InstallChangedDuringInstallationRetryWithTheCurrent, change.Name)
 	}
 	if remove && change.Created && len(change.body) == 0 {
 		return root.Remove(change.Name)

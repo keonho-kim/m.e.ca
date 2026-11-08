@@ -5,9 +5,10 @@
 package input
 
 import (
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"github.com/rivo/uniseg"
-	"strings"
 )
 
 func (e *Editor) FieldWindow(width int, masked bool) Window {

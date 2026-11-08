@@ -6,11 +6,12 @@ package discovery
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 func TestCloudCatalogsAndSelectedMetadata(t *testing.T) {

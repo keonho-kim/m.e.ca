@@ -6,8 +6,10 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
+
 	record "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) publicMemoryReference(ctx context.Context, event record.Event) (int64, int, error) {
@@ -15,14 +17,14 @@ func (s *Store) publicMemoryReference(ctx context.Context, event record.Event) (
 		return 0, 0, nil
 	}
 	if s.room == nil {
-		return 0, 0, fmt.Errorf("public source requires its owning room")
+		return 0, 0, faults.Errorf(diagcatalog.SqlitePublicSourceRequiresItsOwningRoom)
 	}
 	origin := event.Source
 	if origin.Session != "" && origin.Session != s.room.session.ID {
-		return 0, 0, fmt.Errorf("public source belongs to a different room")
+		return 0, 0, faults.Errorf(diagcatalog.SqlitePublicSourceBelongsToADifferentRoom)
 	}
 	if origin.Sequence < 1 {
-		return 0, 0, fmt.Errorf("public source requires a committed sequence")
+		return 0, 0, faults.Errorf(diagcatalog.SqlitePublicSourceRequiresACommittedSequence)
 	}
 
 	meta, err := s.room.TeamMessageMetadata(ctx, origin.Sequence)
@@ -30,14 +32,14 @@ func (s *Store) publicMemoryReference(ctx context.Context, event record.Event) (
 		return 0, 0, err
 	}
 	if meta.Kind != origin.Kind || meta.From != origin.Author {
-		return 0, 0, fmt.Errorf("collaboration outcome references a different public record kind")
+		return 0, 0, faults.Errorf(diagcatalog.SqliteCollaborationOutcomeReferencesADifferentPublicRecord)
 	}
 	return origin.Sequence, meta.Bytes, nil
 }
 
 func (s *Store) publicContexts(ctx context.Context, sequences []any) (map[int64]string, error) {
 	if s.room == nil {
-		return nil, fmt.Errorf("public conversation owner is required")
+		return nil, faults.Errorf(diagcatalog.SqlitePublicConversationOwnerIsRequired)
 	}
 	query := "SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) " +
 		"FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence " +

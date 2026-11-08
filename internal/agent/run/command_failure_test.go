@@ -1,25 +1,29 @@
 // Purpose: Verify real command outcomes reach model context and observation reports without losing failure facts.
 // Pattern: Runtime and process integration test.
 // Usage: go test ./internal/agent/run -run TestCommandFailureReachesModel.
-// Related: internal/agent/run/action.go, internal/tools/local/command.go, internal/agent/tool/failure.go.
+// Related: internal/agent/run/action.go, internal/tools/local/command.go, internal/diagnostics/fault/tool.go.
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 func TestCommandFailureReachesModel(t *testing.T) {
 	project, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+	tools, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s }, local.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +48,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 			continue
 		}
 		var body struct {
-			Failure *toolapi.Failure
+			Failure *faults.Failure
 			Output  struct {
 				Stdout, Stderr, Status string
 				ExitCode               int
@@ -53,7 +57,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 		if err := json.Unmarshal([]byte(message.Content), &body); err != nil {
 			t.Fatal(err)
 		}
-		if body.Failure == nil || body.Failure.Code != toolapi.ProcessFailed || body.Failure.Next == "" || body.Output.ExitCode != 7 || body.Output.Stderr != "missing dependency" || body.Output.Stdout != "progress" {
+		if body.Failure == nil || body.Failure.Code != diagcatalog.ProcessFailed || body.Failure.Next == "" || body.Output.ExitCode != 7 || body.Output.Stderr != "missing dependency" || body.Output.Stdout != "progress" {
 			t.Fatalf("failure information lost: %+v", body)
 		}
 		found = true
@@ -62,7 +66,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 	for _, message := range g.requests[1].Messages {
 		contextText.WriteString(message.Content)
 	}
-	if !found || !strings.Contains(contextText.String(), "missing dependency") || !strings.Contains(contextText.String(), toolapi.ProcessFailed) {
+	if !found || !strings.Contains(contextText.String(), "missing dependency") || !strings.Contains(contextText.String(), diagcatalog.ProcessFailed) {
 		t.Fatal("failure omitted from next model context")
 	}
 }

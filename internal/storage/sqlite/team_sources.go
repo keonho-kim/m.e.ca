@@ -7,9 +7,12 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+
 	"path/filepath"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func (p *teamPage) close() error {
@@ -42,7 +45,7 @@ func (p *teamPage) source(ctx context.Context, id string) (*Store, error) {
 	}
 	// Opening through the ordinary catalog validates IDs before constructing paths.
 	if !sessionstate.ValidID(id) {
-		return nil, fmt.Errorf("invalid private event reference")
+		return nil, faults.Errorf(diagcatalog.SqliteInvalidPrivateEventReference)
 	}
 	path := filepath.Join(directory, id+".db")
 	db, err := connect(ctx, path, true)
@@ -54,7 +57,7 @@ func (p *teamPage) source(ctx context.Context, id string) (*Store, error) {
 		return nil, errors.Join(err, db.Close())
 	}
 	if conversation.ProjectRoot != p.parent.session.ProjectRoot {
-		return nil, errors.Join(fmt.Errorf("private session project mismatch"), db.Close())
+		return nil, errors.Join(faults.Errorf(diagcatalog.SqlitePrivateSessionProjectMismatch), db.Close())
 	}
 	store := &Store{db: db, path: path, session: conversation.Session, room: p.parent}
 	if p.stores == nil {

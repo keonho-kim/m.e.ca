@@ -7,17 +7,20 @@ package tool
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
 	"io"
 	"slices"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func argumentObject(body json.RawMessage) (map[string]json.RawMessage, error) {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
-		return nil, fmt.Errorf("arguments must be a JSON object")
+		return nil, faults.Errorf(diagcatalog.ToolArgumentsMustBeAJSONObject)
 	}
 	fields := make(map[string]json.RawMessage)
 	for decoder.More() {
@@ -27,10 +30,10 @@ func argumentObject(body json.RawMessage) (map[string]json.RawMessage, error) {
 		}
 		key, ok := token.(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid argument key")
+			return nil, faults.Errorf(diagcatalog.ToolInvalidArgumentKey)
 		}
 		if _, exists := fields[key]; exists {
-			return nil, fmt.Errorf("duplicate argument %s", key)
+			return nil, faults.Errorf(diagcatalog.ToolDuplicateArgument, key)
 		}
 		var value json.RawMessage
 		if err := decoder.Decode(&value); err != nil {
@@ -42,14 +45,14 @@ func argumentObject(body json.RawMessage) (map[string]json.RawMessage, error) {
 		return nil, err
 	}
 	if _, err := decoder.Token(); err != io.EOF {
-		return nil, fmt.Errorf("trailing tool arguments")
+		return nil, faults.Errorf(diagcatalog.ToolTrailingToolArguments)
 	}
 	return fields, nil
 }
 
 func ValidateArguments(definition Definition, body json.RawMessage) (map[string]json.RawMessage, error) {
 	if len(body) > MaxArgumentsBytes || !utf8.Valid(body) {
-		return nil, fmt.Errorf("invalid or oversized arguments")
+		return nil, faults.Errorf(diagcatalog.ToolInvalidOrOversizedArguments)
 	}
 	fields, err := argumentObject(body)
 	if err != nil {
@@ -57,14 +60,14 @@ func ValidateArguments(definition Definition, body json.RawMessage) (map[string]
 	}
 	for name := range fields {
 		if !slices.ContainsFunc(definition.Parameters, func(p Parameter) bool { return p.Name == name }) {
-			return nil, fmt.Errorf("unexpected %s argument: %s", definition.Name, name)
+			return nil, faults.Errorf(diagcatalog.ToolUnexpectedArgument, definition.Name, name)
 		}
 	}
 	for _, parameter := range definition.Parameters {
 		value, present := fields[parameter.Name]
 		if !present {
 			if parameter.Required {
-				return nil, fmt.Errorf("missing %s argument", parameter.Name)
+				return nil, faults.Errorf(diagcatalog.ToolMissingArgument, parameter.Name)
 			}
 			continue
 		}
@@ -77,23 +80,23 @@ func ValidateArguments(definition Definition, body json.RawMessage) (map[string]
 
 func validateValue(p Parameter, value json.RawMessage) error {
 	if string(value) == "null" {
-		return fmt.Errorf("%s cannot be null", p.Name)
+		return faults.Errorf(diagcatalog.ToolCannotBeNull, p.Name)
 	}
 	if p.Kind == Integer {
 		var number int
 		if json.Unmarshal(value, &number) != nil || number < 0 || number > p.Max {
-			return fmt.Errorf("%s requires an integer from 0 to %d", p.Name, p.Max)
+			return faults.Errorf(diagcatalog.ToolRequiresAnIntegerFromTo, p.Name, p.Max)
 		}
 		return nil
 	}
 	if p.Kind == ObjectList {
 		var entries []json.RawMessage
 		if err := json.Unmarshal(value, &entries); err != nil || len(entries) == 0 || len(entries) > p.Max {
-			return fmt.Errorf("%s requires 1 to %d objects", p.Name, p.Max)
+			return faults.Errorf(diagcatalog.ToolRequiresToObjects, p.Name, p.Max)
 		}
 		for i, entry := range entries {
 			if _, err := ValidateArguments(Definition{Name: p.Name, Parameters: p.Fields}, entry); err != nil {
-				return fmt.Errorf("%s[%d]: %w", p.Name, i, err)
+				return faults.Errorf(diagcatalog.ToolWrappedCause, p.Name, i, err)
 			}
 		}
 		return nil
@@ -101,33 +104,33 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	if p.Kind == TextList {
 		var values []string
 		if err := json.Unmarshal(value, &values); err != nil || !p.AllowEmpty && len(values) < 1 || len(values) > p.Max {
-			return fmt.Errorf("%s requires a bounded string array", p.Name)
+			return faults.Errorf(diagcatalog.ToolRequiresABoundedStringArray, p.Name)
 		}
 		for _, text := range values {
 			if strings.TrimSpace(text) == "" || len(text) > p.MaxBytes || strings.ContainsRune(text, 0) || !utf8.ValidString(text) {
-				return fmt.Errorf("invalid %s item", p.Name)
+				return faults.Errorf(diagcatalog.ToolInvalidItem, p.Name)
 			}
 		}
 		return nil
 	}
 	var text string
 	if err := json.Unmarshal(value, &text); err != nil || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
-		return fmt.Errorf("%s requires a valid string", p.Name)
+		return faults.Errorf(diagcatalog.ToolRequiresAValidString, p.Name)
 	}
 	if len(text) > p.MaxBytes || !p.AllowEmpty && strings.TrimSpace(text) == "" {
-		return fmt.Errorf("%s requires text within %d bytes", p.Name, p.MaxBytes)
+		return faults.Errorf(diagcatalog.ToolRequiresTextWithinBytes, p.Name, p.MaxBytes)
 	}
 	if len(p.Values) > 0 && !slices.Contains(p.Values, text) {
-		return fmt.Errorf("%s must be one of %s", p.Name, strings.Join(p.Values, ", "))
+		return faults.Errorf(diagcatalog.ToolMustBeOneOf, p.Name, strings.Join(p.Values, ", "))
 	}
 	switch p.Kind {
 	case Text:
 	case LiteralPath:
 		if strings.ContainsAny(text, "\r\n") {
-			return fmt.Errorf("%s requires one literal path without line breaks", p.Name)
+			return faults.Errorf(diagcatalog.ToolRequiresOneLiteralPathWithoutLineBreaks, p.Name)
 		}
 	default:
-		return fmt.Errorf("unsupported parameter kind")
+		return faults.Errorf(diagcatalog.ToolUnsupportedParameterKind)
 	}
 	return nil
 }

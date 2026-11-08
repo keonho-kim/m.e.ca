@@ -9,8 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
@@ -39,7 +41,7 @@ func (p *teamPage) prepare(ctx context.Context, page []storedRecord) error {
 			continue
 		}
 		if event.Reference == nil || event.Reference.Sequence < 1 {
-			return fmt.Errorf("missing private event reference")
+			return faults.Errorf(diagcatalog.SqliteMissingPrivateEventReference)
 		}
 		groups[event.Reference.Session] = append(groups[event.Reference.Session], event.Reference.Sequence)
 		refs[*event.Reference] = i
@@ -90,7 +92,7 @@ func (p *teamPage) prepare(ctx context.Context, page []storedRecord) error {
 		}
 	}
 	if len(p.records) != len(refs) {
-		return fmt.Errorf("referenced private event is missing")
+		return faults.Errorf(diagcatalog.SqliteReferencedPrivateEventIsMissing)
 	}
 	return nil
 }

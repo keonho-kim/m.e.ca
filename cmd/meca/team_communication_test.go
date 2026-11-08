@@ -5,6 +5,8 @@
 package main
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -136,8 +138,8 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 		}
 		if event.Kind == "tool_failed" {
 			var rejected struct {
-				Executed bool             `json:"executed"`
-				Failure  *toolapi.Failure `json:"failure"`
+				Executed bool            `json:"executed"`
+				Failure  *faults.Failure `json:"failure"`
 			}
 			if json.Unmarshal(event.Output, &rejected) == nil && rejected.Failure != nil && rejected.Failure.Code == "team_contribution_required" && !rejected.Executed {
 				feedback++

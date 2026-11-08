@@ -6,12 +6,19 @@ package catalog
 
 import (
 	"encoding/json"
-	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
 )
 
 type Arguments struct {
+	Revision     string          `json:"revision"`
+	SkillID      string          `json:"id"`
+	Cursor       string          `json:"cursor"`
+	Offset       *int            `json:"offset,omitempty"`
+	Limit        *int            `json:"limit,omitempty"`
 	CommandID    string          "json:\"command_id\""
 	WaitSeconds  *int            "json:\"wait_seconds,omitempty\""
 	Paths        []string        `json:"paths"`
@@ -34,7 +41,7 @@ func Parse(call toolapi.Call) (Specification, Arguments, error) {
 		}
 	}
 	if spec.Name == "" {
-		return spec, Arguments{}, fmt.Errorf("unknown tool: %s", call.Name)
+		return spec, Arguments{}, faults.Errorf(diagcatalog.CatalogUnknownTool, call.Name)
 	}
 	if _, err := toolapi.ValidateArguments(toolapi.Definition{Name: spec.Name, Parameters: spec.fields}, call.Arguments); err != nil {
 		return spec, Arguments{}, err

@@ -6,11 +6,14 @@ package main
 
 import (
 	"context"
-	"fmt"
+
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func activateInstallShell(ctx context.Context, shell, binary string) error {
@@ -19,7 +22,7 @@ func activateInstallShell(ctx context.Context, shell, binary string) error {
 	}
 	path, err := exec.LookPath(shell)
 	if err != nil {
-		return fmt.Errorf("installation completed, but the login shell is unavailable: %w", err)
+		return faults.Errorf(diagcatalog.MecaInstallationCompletedButTheLoginShellIs, err)
 	}
 	activePath := filepath.Dir(binary)
 	if previous := os.Getenv("PATH"); previous != "" {
@@ -29,7 +32,7 @@ func activateInstallShell(ctx context.Context, shell, binary string) error {
 		return err
 	}
 	if err := syscall.Exec(path, []string{shell, "-l"}, os.Environ()); err != nil {
-		return fmt.Errorf("installation completed, but login shell activation failed: %w", err)
+		return faults.Errorf(diagcatalog.MecaInstallationCompletedButLoginShellActivationFailed, err)
 	}
 	return nil
 }

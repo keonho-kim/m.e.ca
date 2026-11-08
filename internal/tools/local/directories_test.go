@@ -6,11 +6,12 @@ package local
 
 import (
 	"context"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestDirectories(t *testing.T) {

@@ -7,12 +7,13 @@ package team
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"time"
 )
 
 // publicEffect carries transient state transitions, never additional persisted metadata.

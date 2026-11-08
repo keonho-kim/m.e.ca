@@ -6,10 +6,11 @@ package local
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func observedEdit(t *testing.T, e *Executor, path string, first, last int, replacement string) toolapi.Call {

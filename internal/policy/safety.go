@@ -5,10 +5,12 @@
 package policy
 
 import (
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Safety struct {
@@ -55,7 +57,7 @@ func MutationWithin(project, home, directory string, removal bool) (Safety, erro
 func mutation(project, home, path string, removal, contents bool) (Safety, error) {
 	var result Safety
 	if !filepath.IsAbs(path) {
-		return result, fmt.Errorf("mutation target is not absolute")
+		return result, faults.Errorf(diagcatalog.PolicyMutationTargetIsNotAbsolute)
 	}
 	path = filepath.Clean(path)
 	if path == "/dev/null" && !removal {
@@ -67,15 +69,15 @@ func mutation(project, home, path string, removal, contents bool) (Safety, error
 	}
 	for _, root := range protected {
 		if contains(root, path) {
-			return result, fmt.Errorf("operation blocked: protected system target %s", path)
+			return result, faults.Errorf(diagcatalog.PolicyOperationBlockedProtectedSystemTarget, path)
 		}
 	}
 	if path == "/" || path == home || !contents && path == project || removal && path != project && contains(path, project) {
-		return result, fmt.Errorf("operation blocked: protected root %s", path)
+		return result, faults.Errorf(diagcatalog.PolicyOperationBlockedProtectedRoot, path)
 	}
 	for _, root := range []string{"/Users", "/home", "/tmp", "/var", "/private", "/private/var", "/private/tmp", "/opt"} {
 		if path == root {
-			return result, fmt.Errorf("operation blocked: protected root %s", path)
+			return result, faults.Errorf(diagcatalog.PolicyOperationBlockedProtectedRoot, path)
 		}
 	}
 	result.Targets = []string{path}

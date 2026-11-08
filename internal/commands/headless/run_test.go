@@ -8,6 +8,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
@@ -17,10 +22,6 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
 )
 
 type script struct {
@@ -65,7 +66,7 @@ func TestSharedLoopPrintJSONAndApproval(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { store.Close() })
-			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+			executor, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s }, local.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}

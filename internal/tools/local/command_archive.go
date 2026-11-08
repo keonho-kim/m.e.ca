@@ -7,19 +7,21 @@ package local
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 func (e *Executor) commandPath(id, suffix string) (string, error) {
 	if !strings.HasPrefix(id, "cmd_") || len(id) > 128 || len(id) <= 4 || strings.ContainsFunc(id[4:], func(r rune) bool { return r > 127 || !unicode.IsLetter(r) && !unicode.IsDigit(r) }) {
-		return "", fmt.Errorf("invalid command_id; use an ID returned by this session")
+		return "", faults.Errorf(diagcatalog.LocalInvalidCommandIdUseAnIDReturned)
 	}
 	return filepath.Join(e.artifacts, id+suffix), nil
 }
@@ -58,7 +60,7 @@ func (e *Executor) readCommandResult(id string) (toolapi.Result, error) {
 	}
 	body, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return result, fmt.Errorf("unknown command_id %q in this session", id)
+		return result, faults.Errorf(diagcatalog.LocalUnknownCommandIdInThisSession, id)
 	}
 	if err != nil {
 		return result, err
@@ -77,7 +79,7 @@ func (e *Executor) AcknowledgeCommand(id string) error {
 		select {
 		case <-done:
 		default:
-			return fmt.Errorf("command is still running; wait for completion before acknowledgement")
+			return faults.Errorf(diagcatalog.LocalCommandIsStillRunningWaitForCompletion)
 		}
 	}
 	e.commands.Acknowledge(id)

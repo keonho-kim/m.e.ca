@@ -6,6 +6,7 @@ syntax = "proto3";
 package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/events.proto";
+import "meca/v1/skills.proto";
 
 message Error { string code = 1; string message = 2; }
 message Reply {
@@ -18,6 +19,9 @@ message Reply {
     HistoryPage history = 14;
     DetailPage detail = 15;
     Task task = 16;
+    Skills skills = 17;
+    SkillDocument skill = 18;
+    SkillFile skill_file = 19;
   }
 }
 message EmptyResult {}
@@ -30,7 +34,7 @@ message Session {
   string unavailable = 6;
 }
 message Sessions { repeated Session items = 1; string next_cursor = 2; }
-message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; }
+message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; }
 message Model {
   string provider = 1;
   string endpoint = 2;

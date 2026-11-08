@@ -5,9 +5,15 @@
 package team
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"errors"
+	"path/filepath"
+	"sync/atomic"
+	"testing"
+
 	record "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	room "github.com/keonho-kim/meca/internal/agent/team"
@@ -16,9 +22,6 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
-	"path/filepath"
-	"sync/atomic"
-	"testing"
 )
 
 type runningAdmission struct {
@@ -99,7 +102,7 @@ func testOwnActiveCommandAdmission(t *testing.T, name string) {
 		}
 		return
 	}
-	var failure *tool.Failure
+	var failure *faults.Failure
 	if waited.Load() || local.prepared.Load() || !errors.As(err, &failure) || failure.Code != "team_command_pending" {
 		t.Fatal("file preparation did not return control before waiting", err)
 	}

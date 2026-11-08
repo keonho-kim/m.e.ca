@@ -5,8 +5,10 @@
 package tool
 
 import (
-	"fmt"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type FileFact struct {
@@ -39,22 +41,22 @@ type Facts struct {
 
 func (f Facts) Check() error {
 	if factsBytes(f) > 16*1024*1024 {
-		return fmt.Errorf("execution report facts exceed 16 MiB; source records remain stored")
+		return faults.Errorf(diagcatalog.ToolExecutionReportFactsExceedMiBSourceRecords)
 	}
 	for _, v := range f.Files {
-		if v.Revision < 0 || len(v.SourceID) > 256 || len(v.ObservedRun) > 256 || (v.Observation != "" && v.Observation != "present" && v.Observation != "missing" && v.Observation != "unavailable") {
-			return fmt.Errorf("invalid file observation provenance")
+		if v.Revision < 0 || len(v.SourceID) > 256 || len(v.ObservedRun) > 256 || (v.Observation != "" && v.Observation != "present" && v.Observation != "missing" && v.Observation != diagcatalog.Unavailable) {
+			return faults.Errorf(diagcatalog.ToolInvalidFileObservationProvenance)
 		}
 		if v.Path == "" || len(v.Path) > 4096 || len(v.Version) > 128 || !utf8.ValidString(v.Path) || !utf8.ValidString(v.Version) {
-			return fmt.Errorf("invalid reported file observation")
+			return faults.Errorf(diagcatalog.ToolInvalidReportedFileObservation)
 		}
 	}
 	for _, v := range f.Commands {
 		if v.Revision < 0 || len(v.ObservedRun) > 256 || !utf8.ValidString(v.ObservedRun) || len(v.CallID) > 128 || !utf8.ValidString(v.CallID) {
-			return fmt.Errorf("invalid reported command ordering")
+			return faults.Errorf(diagcatalog.ToolInvalidReportedCommandOrdering)
 		}
 		if v.Command == "" || !utf8.ValidString(v.Command) {
-			return fmt.Errorf("invalid reported command observation")
+			return faults.Errorf(diagcatalog.ToolInvalidReportedCommandObservation)
 		}
 	}
 	return nil

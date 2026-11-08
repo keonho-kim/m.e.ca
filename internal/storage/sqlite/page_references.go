@@ -4,7 +4,11 @@
 // Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/record_codec.go.
 package sqlite
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/keonho-kim/meca/internal/storage/content"
+)
 
 // Index growth is independent of accepted record sizes and reference counts.
 // Unindexed payloads still load normally, without temporary reuse.
@@ -19,6 +23,7 @@ func indexPayloadRefs(last map[payloadKey]int, store *Store, index int, refsBody
 		return nil, err
 	}
 	for _, id := range refs {
+		id, _ = content.Reference(id)
 		key := payloadKey{store, id}
 		if _, tracked := last[key]; !tracked && len(last) >= pageReferenceEntries {
 			continue

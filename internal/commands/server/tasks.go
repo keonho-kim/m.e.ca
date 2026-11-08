@@ -7,9 +7,12 @@ package server
 import (
 	"context"
 	"errors"
-	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"strings"
 	"unicode/utf8"
+
+	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type request struct {
@@ -28,13 +31,13 @@ type request struct {
 
 func (s *Service) Start(ctx context.Context, session, key, text string) (Task, error) {
 	if strings.TrimSpace(text) == "" || !utf8.ValidString(text) {
-		return Task{}, failure("invalid_argument", "a UTF-8 prompt is required")
+		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerAUTFPromptIsRequired)
 	}
 	if err := checkText(text, 16<<20); err != nil {
 		return Task{}, err
 	}
 	if len(key) < 8 || len(key) > 128 || !utf8.ValidString(key) || strings.ContainsAny(key, "\r\n\x00") {
-		return Task{}, failure("invalid_argument", "request key must contain 8 to 128 UTF-8 bytes")
+		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerRequestKeyMustContainToUTFBytes)
 	}
 	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
@@ -44,7 +47,7 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 	s.mu.Lock()
 	err = s.requireConversation()
 	if err == nil && session != s.conversation.Runtime.Session.ID {
-		err = failure("conflict", "request session is not the selected session")
+		err = faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestSessionIsNotTheSelectedSession)
 	}
 	s.mu.Unlock()
 	if err != nil {
@@ -56,8 +59,8 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 	}
 	change, err := s.beginChange(ctx)
 	if err != nil {
-		var busy *Error
-		if errors.As(err, &busy) && busy.Code == "conflict" {
+		var busy *faults.Error
+		if errors.As(err, &busy) && busy.ErrorCode() == diagcatalog.Conflict {
 			if task, found, cause := s.existingRequest(ctx, session, key, text); cause != nil || found {
 				return task, cause
 			}
@@ -67,7 +70,7 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 	defer change.finish()
 	c := change.conversation
 	if c == nil || c.Runtime.Session.ID != session {
-		return Task{}, failure("conflict", "selected session changed before admission")
+		return Task{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerSelectedSessionChangedBeforeAdmission)
 	}
 	s.mu.Lock()
 	s.admitting = TaskID(session, key)
@@ -75,7 +78,7 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 	if c.Model == nil {
 		selected := c.Runtime.Selection
 		if selected.Model == "" {
-			return Task{}, failure("failed_precondition", "select a model before starting a request")
+			return Task{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSelectAModelBeforeStartingARequest)
 		}
 		if err := s.selectModel(change, ModelSettings{Provider: string(selected.Connection.Kind), Endpoint: selected.Connection.Endpoint, Name: selected.Model, Thinking: selected.Thinking, Effort: selected.ReasoningEffort}); err != nil {
 			return Task{}, err
@@ -112,8 +115,8 @@ func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
 		if cause == nil && response.Task == id {
 			return response.task(), nil
 		}
-		var public *Error
-		if cause != nil && (!errors.As(cause, &public) || public.Code != "not_found") {
+		var public *faults.Error
+		if cause != nil && (!errors.As(cause, &public) || public.ErrorCode() != diagcatalog.NotFound) {
 			return Task{}, cause
 		}
 	}
@@ -138,10 +141,10 @@ func (s *Service) Cancel(id string) error {
 
 func (s *Service) currentRequest(id string) (*request, error) {
 	if s.closed {
-		return nil, failure("unavailable", "server is shutting down")
+		return nil, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 	}
 	if s.active == nil || s.active.task.ID != id {
-		return nil, failure("conflict", "request is no longer active")
+		return nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestIsNoLongerActive)
 	}
 	return s.active, nil
 }

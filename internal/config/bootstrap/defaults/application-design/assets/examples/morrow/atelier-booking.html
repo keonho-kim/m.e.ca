@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Purpose: Demonstrate the complete 예약하기 task in a linked practical application.
+Pattern: Native multi-page HTML/CSS with local Vanilla JS state.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/application-design/references/code-examples.md, internal/config/bootstrap/defaults/application-design/assets/examples/morrow/atelier.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="atelier">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>예약하기 / morrow</title><meta name="description" content="예약하기 / morrow 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다."><link rel="icon" type="image/jpeg" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css"><link rel="stylesheet" href="../shared/components.css"><link rel="stylesheet" href="../shared/motion.css"><link rel="stylesheet" href="../shared/glass.css"><link rel="stylesheet" href="atelier.css">
+    <script data-required src="../shared/interaction.js" defer></script>
+    <script data-required src="../shared/local-state.js" defer></script>
+    <script data-required src="../shared/media.js" defer></script>
+    <script data-required src="booking-data.js" defer></script>
+    <script data-required src="booking.js" defer></script>
+  </head>
+  <body data-app="atelier" data-page="booking">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="site-header glass-surface"><a class="site-brand" href="atelier-home.html">morrow</a>
+      <nav class="site-nav" aria-label="주요 메뉴"><a href="atelier-home.html#spaces">공간 둘러보기</a><a href="atelier-booking.html" aria-current="page">예약하기</a><span class="demo-chip">Demo</span>
+      </nav>
+    </header>
+    <main id="main" class="site-main">
+      <p class="notice error" data-page-error role="alert" hidden>
+      </p>
+      <header class="space-detail-hero"><a class="small muted" href="atelier-home.html#spaces"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-left"></use></svg> 공간 다시 보기</a>
+        <h1>우리 팀의 시간을 정하세요.
+        </h1>
+        <p>01 날짜와 이용 정보 → 02 내용 확인 → 03 로컬 예약 완료
+        </p>
+      </header>
+      <div class="reserve-layout">
+        <form id="booking-form" class="reserve-form">
+          <section class="reserve-section">
+            <h2>01 / 공간과 날짜
+            </h2>
+            <div class="form-grid"><label>공간<select name="space"><option value="daylight">Daylight studio / 최대 8명</option><option value="warm">Warm meeting room / 최대 4명</option></select></label><label>이용 날짜<input type="date" name="date" required></label>
+            </div>
+            <div class="form-grid"><label>이용 시간<select name="hours"><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option></select></label><label>인원<input type="number" name="people" min="1" max="8" value="2" required><small class="muted" data-capacity>최대 8명</small></label>
+            </div>
+            <fieldset><legend>시작 시간</legend><input type="hidden" name="start" value="10">
+              <div class="slot-grid" data-slots><button class="slot" type="button" data-slot="10" aria-pressed="true">10:00</button><button class="slot" type="button" data-slot="11" aria-pressed="false">11:00</button><button class="slot" type="button" data-slot="12" aria-pressed="false">12:00</button><button class="slot" type="button" data-slot="13" aria-pressed="false" disabled>13:00</button><button class="slot" type="button" data-slot="14" aria-pressed="false">14:00</button><button class="slot" type="button" data-slot="15" aria-pressed="false">15:00</button><button class="slot" type="button" data-slot="16" aria-pressed="false">16:00</button><button class="slot" type="button" data-slot="17" aria-pressed="false">17:00</button><button class="slot" type="button" data-slot="18" aria-pressed="false">18:00</button>
+              </div>
+              <p class="small muted" style="margin-top:10px">고정된 예시 시간입니다. 13:00는 선택 불가 상태이며 실제 재고가 아닙니다.
+              </p>
+            </fieldset>
+          </section>
+          <section class="reserve-section">
+            <h2>02 / 필요한 것만 추가
+            </h2><label class="soft-option"><input type="checkbox" name="equipment"><span>외부 모니터<small class="muted" style="display:block;margin-top:5px">이용당 8,000원 / 부가세 별도</small></span></label>
+          </section>
+          <section class="reserve-section">
+            <h2>03 / 이용 정보
+            </h2><label>담당자 이름<input name="name" maxlength="40" value="김민서" required autocomplete="off"></label><label>남길 요청 <span class="muted">선택</span><textarea name="note" rows="3" maxlength="500" placeholder="데모에는 개인정보를 입력하지 마세요."></textarea></label>
+            <p class="small muted">입력과 예약은 이 탭의 세션에만 보관합니다. 실제 연락·결제 정보는 받지 않습니다.
+            </p>
+          </section>
+          <div><button type="submit" class="btn primary">예약 내용 확인 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-right"></use></svg></button>
+          </div>
+        </form>
+        <aside class="booking-card">
+          <div class="booking-summary-image" data-booking-photo>
+            <div class="media"><span class="fallback" role="status" hidden>공간 이미지를 불러오지 못했습니다.</span>
+            </div>
+          </div>
+          <h2 style="font-size:18px" data-summary-name>Daylight studio
+          </h2>
+          <p class="small muted" data-summary-time style="margin-top:8px">
+          </p><dl class="price-lines">
+          <div><dt data-base-label>시간당 금액 × 2시간</dt><dd data-price-base></dd>
+          </div>
+          <div><dt>선택 장비</dt><dd data-price-equipment></dd>
+          </div>
+          <div><dt>부가세 10%</dt><dd data-price-tax></dd>
+          </div>
+          <div class="total"><dt>총 이용 금액</dt><dd data-price-total></dd>
+          </div></dl>
+          <p class="small muted">설정한 옵션으로 실제 계산한 예시 금액입니다. 결제는 진행되지 않습니다.
+          </p>
+        </aside>
+      </div>
+      <dialog id="booking-review" class="modal" aria-labelledby="review-title">
+        <header class="modal-head">
+          <h2 id="review-title">예약 내용을 확인해주세요
+          </h2><button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+        </header>
+        <div class="modal-body">
+          <h3 data-review-space>
+          </h3>
+          <p data-review-time class="muted small" style="margin-top:12px">
+          </p>
+          <p class="booking-price" data-review-total style="margin-top:25px">
+          </p>
+          <p class="notice">로컬 데모입니다. 이 탭에 내용을 보관하며 실제 예약이나 결제가 이루어지지 않습니다.
+          </p>
+        </div>
+        <footer class="modal-foot"><button class="btn" data-close-dialog>수정하기</button><button class="btn primary" data-booking-commit>로컬 예약 보관</button>
+        </footer>
+      </dialog>
+    </main>
+    <footer class="site-footer"><a class="site-brand" href="atelier-home.html">morrow</a>
+      <div>워크숍과 집중 작업을 위한 공간<br>로컬 데모 / 실제 장소·예약·결제가 아닙니다.
+      </div>
+    </footer>
+
+    <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+      <header class="modal-head">
+        <h2 id="confirm-title">변경 확인
+        </h2>
+      </header>
+      <div class="modal-body">
+        <p>
+        </p>
+      </div>
+      <form method="dialog" class="modal-foot"><button class="btn" value="cancel" autofocus>취소</button><button class="btn primary" value="confirm">확인</button>
+      </form>
+    </dialog>
+
+    <div class="toast-stack" data-toasts>
+    </div>
+  </body>
+</html>

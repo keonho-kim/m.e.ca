@@ -11,6 +11,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/team"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/skills"
 	localcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"github.com/keonho-kim/meca/internal/tools/team/approval"
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
@@ -25,6 +26,7 @@ type Local interface {
 	ActiveCommand() string
 	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
 	ProjectInstructions(context.Context) (string, error)
+	Skills() *skills.Reader
 	Close() error
 }
 type Executor struct {
@@ -32,7 +34,6 @@ type Executor struct {
 	Peer         *team.Peer
 	Workspace    *workspace.Access
 	Refusals     *approval.Ledger
-	Images       chan struct{}
 	Project      string
 	mu           sync.Mutex
 	commandPaths map[string][]string
@@ -40,6 +41,12 @@ type Executor struct {
 
 // CheckUserDecision lets the runtime reject stale waves without projecting public notes mid-call.
 func (e *Executor) CheckUserDecision() error { return e.Peer.CheckUserDecision() }
+
+func (e *Executor) SetSkillImageInput(enabled bool) {
+	if local, ok := e.Local.(interface{ SetSkillImageInput(bool) }); ok {
+		local.SetSkillImageInput(enabled)
+	}
+}
 
 func (e *Executor) Definitions() []toolapi.Definition {
 	definitions := e.Local.Definitions()

@@ -5,12 +5,15 @@
 package team
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"encoding/json"
 	"fmt"
-	record "github.com/keonho-kim/meca/internal/agent/record"
-	tool "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	record "github.com/keonho-kim/meca/internal/agent/record"
+	tool "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestInterfaceDecisionAdvancesProgressWithoutRewritingFiles(t *testing.T) {
@@ -85,7 +88,7 @@ func TestExplicitFailureIsEvidenceEvenWithEmptySuccessfulProcessOutput(t *testin
 	event := record.Event{Operation: &tool.Operation{
 		Name: "execute_command", Status: "tool_failed", Started: true, Command: "check",
 		Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 0},
-		Failure: &tool.Failure{Code: "capture_failed", Detail: "Could not read stdout"},
+		Failure: &faults.Failure{Code: "capture_failed", Detail: "Could not read stdout"},
 	}}
 	first, found := operationProgress(event)
 	if !found {

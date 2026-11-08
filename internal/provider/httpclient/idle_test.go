@@ -7,14 +7,15 @@ package httpclient
 import (
 	"context"
 	"errors"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

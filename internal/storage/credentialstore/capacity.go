@@ -14,7 +14,7 @@ import (
 const maxCredentials = 256
 const maxKeyVersions = 65536
 
-func (s *Store) reserveKey(ctx context.Context) error {
+func (s *Store) reserveKey(ctx context.Context) (*capacity.Reservation, error) {
 	return capacity.Reserve(ctx, filepath.Join(s.directory, "credential-key-capacity"), maxKeyVersions, func() (count int64, err error) {
 		err = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM credentials").Scan(&count)
 		return count, err

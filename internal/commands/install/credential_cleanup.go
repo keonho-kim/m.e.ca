@@ -9,9 +9,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
+
 	"os"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const cleanupName = ".meca-credential-cleanup"
@@ -25,19 +28,19 @@ func pendingCleanup(root *os.Root) (string, bool, error) {
 		return "", false, err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() != 65 {
-		return "", false, fmt.Errorf("invalid private credential cleanup marker; preserve it for recovery")
+		return "", false, faults.Errorf(diagcatalog.InstallInvalidPrivateCredentialCleanupMarkerPreserveIt)
 	}
 	body, _, _, err := readFile(root, cleanupName)
 	if err != nil {
 		return "", false, err
 	}
 	if len(body) != 65 {
-		return "", false, fmt.Errorf("credential cleanup marker changed while reading")
+		return "", false, faults.Errorf(diagcatalog.InstallCredentialCleanupMarkerChangedWhileReading)
 	}
 	digest := string(body[:64])
 	decoded, err := hex.DecodeString(digest)
 	if err != nil || len(decoded) != 32 || body[64] != '\n' {
-		return "", false, fmt.Errorf("invalid credential cleanup identity")
+		return "", false, faults.Errorf(diagcatalog.InstallInvalidCredentialCleanupIdentity)
 	}
 	return digest, true, nil
 }
@@ -69,7 +72,7 @@ func publishCleanup(root *os.Root, digest string) (resultErr error) {
 
 func finishCleanup(ctx context.Context, root *os.Root, digest string, clearCredentials func(context.Context) error) error {
 	if clearCredentials == nil {
-		return fmt.Errorf("OS credential cleanup is required; rerun meca uninstall")
+		return faults.Errorf(diagcatalog.InstallOSCredentialCleanupIsRequiredRerunMeca)
 	}
 	if err := checkInstalledBinary(root, digest); err != nil {
 		return err
@@ -86,7 +89,7 @@ func finishCleanup(ctx context.Context, root *os.Root, digest string, clearCrede
 		return err
 	}
 	if err := clearCredentials(ctx); err != nil {
-		return fmt.Errorf("private state removed; rerun meca uninstall to finish OS credential cleanup: %w", err)
+		return faults.Errorf(diagcatalog.InstallPrivateStateRemovedRerunMecaUninstallTo, err)
 	}
 	// Keys are gone. Complete removal even if cancellation arrives now.
 	if err := checkInstalledBinary(root, digest); err != nil {
@@ -110,7 +113,7 @@ func checkNoPending(root *os.Root) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("credential cleanup is unfinished; run meca uninstall before starting or installing MECA")
+		return faults.Errorf(diagcatalog.InstallCredentialCleanupIsUnfinishedRunMecaUninstall)
 	}
 	return nil
 }

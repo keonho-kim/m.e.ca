@@ -16,6 +16,8 @@ import (
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/skills"
+	"github.com/keonho-kim/meca/internal/skills/instruction"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
@@ -29,18 +31,20 @@ type Runtime struct {
 	Selection   connection.Selection
 	Session     sessionstate.Session
 	Tools       Tools
+	Skills      *skills.Reader
 	Store       agentsession.Store
 	Vault       *credentials.Vault
 	LoadPrompts func() (prompt.Templates, error)
 }
 
 type Options struct {
-	Generator modelapi.Generator
+	SkillReads []instruction.Document
+	Generator  modelapi.Generator
 	Runtime
 	PollSteering  func() []string
 	SteeringReady <-chan struct{}
 	Text          string
-	// ClientContext seeds private team peers with the same external text history.
+	// ClientContext lends immutable external text to this request without journaling copies.
 	ClientContext []modelapi.Message
 }
 
@@ -57,14 +61,19 @@ func New(options Options) agentsession.Request {
 		thinking = &value
 	}
 	runner := run.Runner{
-		ImageInput: selected.Details != nil && selected.Details.ImageInput.Supported(),
-		Generator:  options.Generator, Tools: options.Tools, Journal: options.Store,
+		SkillReads:    options.SkillReads,
+		ClientContext: options.ClientContext,
+		ImageInput:    selected.Details != nil && selected.Details.ImageInput.Supported(),
+		Generator:     options.Generator, Tools: options.Tools, Journal: options.Store,
 		Session: options.Session.ID, ProjectRoot: options.Session.ProjectRoot,
 		Model: selected.Model, Provider: selected.Connection.ID,
 		Thinking: thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(),
 		Settings: policy.Settings{Scope: policy.System, Permission: options.Config.Permission}, Limits: options.Config.Loop, Inference: &parameters,
 		Redact: options.Vault.Redact, RedactionVersion: options.Vault.RedactionVersion,
 		NewStreamMask: options.Vault.NewStreamMask, PollSteering: options.PollSteering,
+	}
+	if options.Skills != nil {
+		runner.Skills = options.Skills
 	}
 	return agentsession.Request{
 		Runner: runner, Store: options.Store, Text: options.Text, ContextWindow: window,

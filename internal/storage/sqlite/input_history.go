@@ -6,20 +6,23 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
+
 	"slices"
 
 	json "github.com/goccy/go-json"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
+
+	// RecentInputs returns chronological user text, keeping binary and provider state out of the editor.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// RecentInputs returns chronological user text, keeping binary and provider state out of the editor.
 func (s *Store) RecentInputs(ctx context.Context, session string, limit int) ([]string, error) {
 	if err := s.checkSession(session); err != nil {
 		return nil, err
 	}
 	if limit < 1 || limit > 200 {
-		return nil, fmt.Errorf("input history limit must be between 1 and 200")
+		return nil, faults.Errorf(diagcatalog.SqliteInputHistoryLimitMustBeBetweenAnd)
 	}
 	page, err := s.recordPage(ctx, "SELECT sequence,'message',body,refs,raw_bytes FROM messages\n WHERE role='user' ORDER BY sequence DESC LIMIT ?",
 		limit)

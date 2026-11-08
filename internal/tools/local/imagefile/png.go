@@ -6,24 +6,28 @@ package imagefile
 
 import (
 	"encoding/binary"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// DecodeConfig has already identified the PNG signature. Chunk sizes include
+	// neither their length/type header nor their CRC; subtraction avoids overflow.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func pngAnimation(data []byte) (bool, error) {
-	// DecodeConfig has already identified the PNG signature. Chunk sizes include
-	// neither their length/type header nor their CRC; subtraction avoids overflow.
+
 	for offset := 8; offset < len(data); {
 		if len(data)-offset < 12 {
-			return false, fmt.Errorf("truncated PNG chunk header")
+			return false, faults.Errorf(diagcatalog.ImagefileTruncatedPNGChunkHeader)
 		}
 		size := uint64(binary.BigEndian.Uint32(data[offset : offset+4]))
 		if size > uint64(len(data)-offset-12) {
-			return false, fmt.Errorf("truncated PNG chunk body")
+			return false, faults.Errorf(diagcatalog.ImagefileTruncatedPNGChunkBody)
 		}
 		switch string(data[offset+4 : offset+8]) {
 		case "acTL":
 			if size != 8 {
-				return false, fmt.Errorf("invalid PNG animation control chunk")
+				return false, faults.Errorf(diagcatalog.ImagefileInvalidPNGAnimationControlChunk)
 			}
 			return true, nil
 		case "IDAT", "IEND":
@@ -31,5 +35,5 @@ func pngAnimation(data []byte) (bool, error) {
 		}
 		offset += int(size) + 12
 	}
-	return false, fmt.Errorf("PNG contains no image data")
+	return false, faults.Errorf(diagcatalog.ImagefilePNGContainsNoImageData)
 }

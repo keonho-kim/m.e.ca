@@ -5,10 +5,12 @@
 package contribution
 
 import (
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Scope struct {
@@ -51,7 +53,7 @@ func (s *State) Prepare(value Scope) (Scope, error) {
 		for _, held := range scope.Paths {
 			for _, path := range value.Paths {
 				if overlap(held, path) {
-					return Scope{}, fmt.Errorf("%s is working on %s; coordinate a handoff or choose another contribution", other, held)
+					return Scope{}, faults.Errorf(diagcatalog.ContributionIsWorkingOnCoordinateAHandoffOr, other, held)
 				}
 			}
 		}
@@ -78,7 +80,7 @@ func (s *State) Check(member string, paths []string, seen int64) error {
 		for owner, scope := range s.scopes {
 			for _, held := range scope.Paths {
 				if owner != member && overlap(held, path) {
-					return fmt.Errorf("%s owns %s; agree on a handoff before changing it", owner, held)
+					return faults.Errorf(diagcatalog.ContributionOwnsAgreeOnAHandoffBeforeChanging, owner, held)
 				}
 			}
 		}
@@ -90,14 +92,14 @@ func (s *State) Check(member string, paths []string, seen int64) error {
 			}
 		}
 		if !covered {
-			return fmt.Errorf("%s is outside your current contribution; use set_work with concrete paths before changing it", path)
+			return faults.Errorf(diagcatalog.ContributionIsOutsideYourCurrentContributionUseSet, path)
 		}
 		if s.latest <= seen {
 			continue
 		}
 		for changed, fact := range s.changes {
 			if fact.Member != member && fact.Sequence > seen && overlap(changed, path) {
-				return fmt.Errorf("%s changed or may have affected %s after your last decision; read the latest result and inspect the file before regenerating this operation", fact.Member, changed)
+				return faults.Errorf(diagcatalog.ContributionChangedOrMayHaveAffectedAfterYour, fact.Member, changed)
 			}
 		}
 	}

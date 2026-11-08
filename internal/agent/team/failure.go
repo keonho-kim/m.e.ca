@@ -7,8 +7,9 @@ package team
 import (
 	"context"
 	"errors"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"time"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func (r *Room) fail(err error) {

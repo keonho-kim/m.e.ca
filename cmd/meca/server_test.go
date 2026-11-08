@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -66,10 +67,12 @@ func TestServerExecutable(t *testing.T) {
 		scanner := bufio.NewScanner(pipe)
 		for scanner.Scan() {
 			line := scanner.Text()
-			if strings.HasPrefix(line, "MECA server (sse): ") {
-				value := strings.TrimPrefix(line, "MECA server (sse): ")
-				url, _, _ := strings.Cut(value, ";")
-				address <- url
+			var entry struct {
+				Message string `json:"msg"`
+				Listen  string `json:"listen"`
+			}
+			if json.Unmarshal([]byte(line), &entry) == nil && entry.Message == "server_listening" {
+				address <- entry.Listen
 			}
 		}
 	}()

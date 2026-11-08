@@ -4,14 +4,20 @@
 // Related: internal/serverapi/openai/json.go, internal/serverapi/openai/messages.go.
 package openai
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+)
 
 type messageInput struct{ role, content, kind json.RawMessage }
 type partInput struct{ kind, text json.RawMessage }
 
 func assignInput(target *json.RawMessage, raw json.RawMessage, name string) error {
 	if *target != nil {
-		return invalid(name, "duplicate JSON field")
+		return faults.Invalid(name, diagcatalog.OpenaiDuplicateJSONField)
 	}
 	*target = raw
 	return nil
@@ -20,7 +26,7 @@ func assignInput(target *json.RawMessage, raw json.RawMessage, name string) erro
 func messageFields(raw []byte, responses bool) (messageInput, error) {
 	object, ok := newObject(raw)
 	if !ok {
-		return messageInput{}, invalid("", "expected a JSON object")
+		return messageInput{}, faults.Invalid("", diagcatalog.OpenaiExpectedAJSONObject)
 	}
 	var fields messageInput
 	for {
@@ -40,7 +46,7 @@ func messageFields(raw []byte, responses bool) (messageInput, error) {
 			}
 		}
 		if target == nil {
-			return fields, invalid(key, "this parameter is not supported by MECA")
+			return fields, faults.Invalid(key, diagcatalog.OpenaiThisParameterIsNotSupportedByMECA)
 		}
 		if err := assignInput(target, value, key); err != nil {
 			return fields, err
@@ -51,7 +57,7 @@ func messageFields(raw []byte, responses bool) (messageInput, error) {
 func partFields(raw []byte) (partInput, error) {
 	object, ok := newObject(raw)
 	if !ok {
-		return partInput{}, invalid("", "expected a JSON object")
+		return partInput{}, faults.Invalid("", diagcatalog.OpenaiExpectedAJSONObject)
 	}
 	var fields partInput
 	for {
@@ -67,7 +73,7 @@ func partFields(raw []byte) (partInput, error) {
 			target = &fields.text
 		}
 		if target == nil {
-			return fields, invalid(key, "this parameter is not supported by MECA")
+			return fields, faults.Invalid(key, diagcatalog.OpenaiThisParameterIsNotSupportedByMECA)
 		}
 		if err := assignInput(target, value, key); err != nil {
 			return fields, err

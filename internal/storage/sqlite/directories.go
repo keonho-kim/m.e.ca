@@ -8,13 +8,15 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
@@ -31,7 +33,7 @@ func (s *Sessions) projectDirectory(project string, create bool) (directory, can
 		return "", "", err
 	}
 	if !info.IsDir() {
-		return "", "", fmt.Errorf("session project must be a directory")
+		return "", "", faults.Errorf(diagcatalog.SqliteSessionProjectMustBeADirectory)
 	}
 	key, err := sessionstate.ProjectKey(canonical)
 	if err != nil {
@@ -71,7 +73,7 @@ func (s *Sessions) walkDatabases(ctx context.Context, project string, visit func
 			return nil
 		}
 		if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("project session group must be a real directory: %s", name)
+			return faults.Errorf(diagcatalog.SqliteProjectSessionGroupMustBeAReal, name)
 		}
 		directory := filepath.Join(s.directory, name)
 		root, err := statefs.Open(directory)
@@ -93,7 +95,7 @@ func walkDatabaseDirectory(ctx context.Context, directory string, visit func(str
 		}
 		id := strings.TrimSuffix(name, ".db")
 		if !sessionstate.ValidID(id) {
-			return fmt.Errorf("invalid session database filename: %s", name)
+			return faults.Errorf(diagcatalog.SqliteInvalidSessionDatabaseFilename, name)
 		}
 		return visit(filepath.Join(directory, name), id, filepath.Base(directory))
 	})

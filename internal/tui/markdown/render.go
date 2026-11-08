@@ -5,9 +5,10 @@
 package markdown
 
 import (
+	"strings"
+
 	"github.com/yuin/goldmark/v2/ast"
 	extast "github.com/yuin/goldmark/v2/extension/ast"
-	"strings"
 )
 
 type renderer struct {

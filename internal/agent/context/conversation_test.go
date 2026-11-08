@@ -6,12 +6,13 @@ package context
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestNativeHistoryPreservesPairsAndQuotesOrphans(t *testing.T) {

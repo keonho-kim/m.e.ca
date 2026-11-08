@@ -6,9 +6,10 @@ package team
 
 import (
 	"context"
-	"fmt"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 )
 
@@ -31,26 +32,18 @@ func (op *localOperation) Execute(ctx context.Context, approved bool) (toolapi.R
 	defer op.Release()
 	e := op.executor
 	if e.Refusals.Refused(op.operation.Approval(), &op.denialKey) {
-		return toolapi.Result{}, fmt.Errorf("the user refused this operation; do not repeat it through another peer")
+		return toolapi.Result{}, faults.Errorf(diagcatalog.TeamTheUserRefusedThisOperationDoNot)
 	}
 	switch op.call.Name {
-	case "wait_command", "cancel_command", "list_command_runs":
-		return op.operation.Execute(ctx, approved)
-	case "view_image":
-		select {
-		case e.Images <- struct{}{}:
-		case <-ctx.Done():
-			return toolapi.Result{}, ctx.Err()
-		}
-		defer func() { <-e.Images }()
+	case "wait_command", "cancel_command", "list_command_runs", "list_skills", "load_skill", "view_image", "read_skill_file":
 		return op.operation.Execute(ctx, approved)
 	}
 
 	if err := e.Peer.CheckUserDecision(); err != nil {
-		return toolapi.Result{Failed: true, Failure: toolapi.FailureOf(err)}, err
+		return toolapi.Result{Failed: true, Failure: faults.FailureOf(err)}, err
 	}
 	if err := e.Peer.CheckWork(op.paths); err != nil {
-		failure := &toolapi.Failure{Code: toolapi.StaleTarget, Detail: err.Error(), Next: "Read current teammate work and regenerate this operation after coordinating the relevant path."}
+		failure := &faults.Failure{Code: diagcatalog.StaleTarget, Detail: err.Error(), Next: diagcatalog.Text(diagcatalog.TeamReadCurrentTeammateWorkAndRegenerateThis)}
 		return toolapi.Result{Failed: true, Failure: failure}, failure
 	}
 	result, err := op.operation.Execute(ctx, approved)

@@ -5,8 +5,9 @@
 package command
 
 import (
-	"github.com/keonho-kim/meca/internal/policy/command/sedscript"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/policy/command/sedscript"
 
 	"mvdan.cc/sh/v3/syntax"
 )

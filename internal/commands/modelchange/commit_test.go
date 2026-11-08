@@ -37,6 +37,10 @@ func (v commitVault) Set(_ context.Context, ref, scope, value string) error {
 	return nil
 }
 
+func (v commitVault) Get(_ context.Context, ref, _ string) (string, error) {
+	return v[ref], nil
+}
+
 func TestCommitPreservesCredentialWhenDefaultFails(t *testing.T) {
 	store, vault := &commitStore{}, commitVault{}
 	saved := connection.Selection{Model: "alias"}

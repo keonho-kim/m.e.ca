@@ -16,7 +16,7 @@ import (
 
 func BenchmarkParallelPlanning(b *testing.B) {
 	root, home := b.TempDir(), b.TempDir()
-	e, err := NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+	e, err := NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s }, Options{})
 	if err != nil {
 		b.Fatal(err)
 	}

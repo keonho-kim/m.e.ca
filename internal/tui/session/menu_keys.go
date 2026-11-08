@@ -20,12 +20,23 @@ func (a *app) menuKey(e *tcell.EventKey) {
 			return
 		}
 	}
+	if a.page == "skills" && a.skills.document != nil {
+		switch e.Key() {
+		case tcell.KeyPgDn:
+			a.previewOffset += 8
+			return
+		case tcell.KeyPgUp:
+			a.previewOffset = max(0, a.previewOffset-8)
+			return
+		}
+	}
 	if e.Key() == tcell.KeyEscape {
 		if a.page == "approval" {
 			a.decide(false)
 
 		} else {
 			a.page = "chat"
+			a.closeSkills()
 		}
 		a.menuInput.Set("")
 		return
@@ -41,6 +52,7 @@ func (a *app) menuKey(e *tcell.EventKey) {
 				a.decide(false)
 			} else {
 				a.page = "chat"
+				a.closeSkills()
 			}
 			a.menuInput.Set("")
 			return

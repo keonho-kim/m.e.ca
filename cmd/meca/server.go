@@ -7,21 +7,23 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/serverapi"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
+	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/serverrequests"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 )
 
 func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions) (err error) {
@@ -36,15 +38,21 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 	}
 	defer func() { err = errors.Join(err, ledger.Close()) }()
 	vault := &credentials.Vault{State: state}
+	ctx = diagnostics.WithRedactor(ctx, vault.Redact)
+	skillBoundary, err := filesystem.New(mode.Project, home, state)
+	if err != nil {
+		return err
+	}
+	skillReader := skills.New(mode.Project, home, skills.Options{Redact: vault.Redact, Check: skillBoundary.SkillTarget, RedactRange: vault.RedactRange, Version: vault.RedactionVersion})
 	pages := detail.NewCache()
 	defer func() { err = errors.Join(err, pages.Close()) }()
 	application, err := server.New(ctx, server.Options{
-		Config: cfg, Ledger: ledger, Responses: ledger, Project: mode.Project,
+		Config: cfg, Ledger: ledger, Responses: ledger, Project: mode.Project, Skills: skillReader,
 		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
 			return sessions.ResponseOutput(ctx, mode.Project, id, after, through, maxBytes)
 		},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, id, create)
+			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +91,7 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 	if err := vault.Remember(token); err != nil {
 		return err
 	}
-	return serverapi.ListenAndServe(ctx, &serverapi.API{Service: application, Redact: vault.Redact, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, OpenAI: o.OpenAI}, func(address string) {
-		fmt.Fprintf(os.Stderr, "MECA server (%s): %s; token file: %s\n", o.Protocol, address, o.TokenFile)
+	return serverapi.ListenAndServe(ctx, &serverapi.API{Service: application, Redact: vault.Redact, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, OpenAI: o.OpenAI}, func(address string) {
+		diagnostics.Log(ctx, diagcatalog.ServerListening, "component", "server", "protocol", o.Protocol, "listen", address)
 	})
 }

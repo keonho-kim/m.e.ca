@@ -14,7 +14,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 type parsed struct {
@@ -55,7 +58,7 @@ func requiredString(raw []byte, name string) (string, error) {
 	}
 	var value string
 	if !jsonString(raw, &value) {
-		return "", invalid(name, "expected a UTF-8 string")
+		return "", faults.Invalid(name, diagcatalog.OpenaiExpectedAUTFString)
 	}
 	return value, nil
 }
@@ -65,7 +68,7 @@ func boolField(fields map[string]json.RawMessage, name string, fallback bool) (b
 		return fallback, nil
 	}
 	if !bytes.Equal(raw, []byte("true")) && !bytes.Equal(raw, []byte("false")) {
-		return false, invalid(name, "expected a boolean")
+		return false, faults.Invalid(name, diagcatalog.OpenaiExpectedABoolean)
 	}
 	return bytes.Equal(raw, []byte("true")), nil
 }
@@ -77,11 +80,14 @@ func parse(r *http.Request, w http.ResponseWriter, kind string) (parsed, error) 
 	}
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
-		return parsed{}, invalid("", "Content-Type must be application/json")
+		return parsed{}, faults.Invalid("", diagcatalog.OpenaiContentTypeMustBeApplicationJson)
 	}
 	body, err := readInput(w, r)
+	if err != nil && faults.Code(err) == diagcatalog.ResourceExhausted {
+		return parsed{}, err
+	}
 	if err != nil || !utf8.Valid(body) || !json.Valid(body) {
-		return parsed{}, invalid("", "invalid or oversized UTF-8 JSON body")
+		return parsed{}, faults.Invalid("", diagcatalog.OpenaiInvalidOrOversizedUTFJSONBody)
 	}
 	if err := r.Context().Err(); err != nil {
 		return parsed{}, err
@@ -95,16 +101,16 @@ func parse(r *http.Request, w http.ResponseWriter, kind string) (parsed, error) 
 		return parsed{}, err
 	}
 	if model != "meca" {
-		return parsed{}, invalid("model", "the only exposed model is meca")
+		return parsed{}, faults.Invalid("model", diagcatalog.OpenaiTheOnlyExposedModelIsMeca)
 	}
 	p := parsed{input: server.Submission{Kind: kind, Stored: true}}
 	keys := r.Header.Values("Idempotency-Key")
 	if len(keys) > 1 || len(keys) == 1 && len(keys[0]) == 0 {
-		return p, invalid("Idempotency-Key", "provide one nonempty request key")
+		return p, faults.Invalid("Idempotency-Key", diagcatalog.OpenaiProvideOneNonemptyRequestKey)
 	}
 	p.input.Key = r.Header.Get("Idempotency-Key")
 	if len(p.input.Key) > 128 || strings.ContainsAny(p.input.Key, "\r\n\x00") || !utf8.ValidString(p.input.Key) {
-		return p, invalid("Idempotency-Key", "provide one key of at most 128 UTF-8 bytes")
+		return p, faults.Invalid("Idempotency-Key", diagcatalog.OpenaiProvideOneKeyOfAtMostUTF)
 	}
 	p.stream, err = boolField(fields, "stream", false)
 	if err != nil {
@@ -119,7 +125,7 @@ func parse(r *http.Request, w http.ResponseWriter, kind string) (parsed, error) 
 func readInput(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	const limit = 17 << 20
 	if r.ContentLength > limit {
-		return nil, invalid("", "JSON body exceeds 17 MiB")
+		return nil, faults.Invalid("", diagcatalog.OpenaiJSONBodyExceedsMiB)
 	}
 	reader := http.MaxBytesReader(w, r.Body, limit)
 	if r.ContentLength <= 0 {
@@ -133,7 +139,7 @@ func readInput(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	}
 	var extra [1]byte
 	if _, err := io.ReadFull(reader, extra[:]); err != io.EOF {
-		return nil, invalid("", "JSON body length does not match Content-Length")
+		return nil, faults.Invalid("", diagcatalog.OpenaiJSONBodyLengthDoesNotMatchContent)
 	}
 	return body, nil
 }
@@ -143,11 +149,11 @@ func parseChat(ctx context.Context, fields map[string]json.RawMessage, p parsed)
 		return p, err
 	}
 	if raw, ok := fields["n"]; ok && string(raw) != "1" {
-		return p, invalid("n", "only n=1 is supported")
+		return p, faults.Invalid("n", diagcatalog.OpenaiOnlyNIsSupported)
 	}
 	if raw, ok := fields["stream_options"]; ok {
 		if !p.stream {
-			return p, invalid("stream_options", "stream_options requires stream=true")
+			return p, faults.Invalid("stream_options", diagcatalog.OpenaiStreamOptionsRequiresStreamTrue)
 		}
 		options, err := object(raw, "stream_options")
 		if err != nil {
@@ -158,7 +164,7 @@ func parseChat(ctx context.Context, fields map[string]json.RawMessage, p parsed)
 		}
 		p.includeUsage, err = boolField(options, "include_usage", false)
 		if err != nil {
-			return p, invalid("stream_options.include_usage", err.Error())
+			return p, faults.InputParam("stream_options.include_usage", err)
 		}
 	}
 	var err error
@@ -180,7 +186,7 @@ func parseResponse(ctx context.Context, fields map[string]json.RawMessage, p par
 		return p, err
 	}
 	if p.input.Background && !p.input.Stored {
-		return p, invalid("store", "MECA background responses require store=true")
+		return p, faults.Invalid("store", diagcatalog.OpenaiMECABackgroundResponsesRequireStoreTrue)
 	}
 	if raw := fields["previous_response_id"]; raw != nil && string(raw) != "null" {
 		p.input.Previous, err = stringField(fields, "previous_response_id", true)

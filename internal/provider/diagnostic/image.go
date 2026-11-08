@@ -8,18 +8,21 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
+
 	"image"
 	"image/png"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/transport"
+
+	// ImageGenerator sends the probe through the same transport as normal generation.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// ImageGenerator sends the probe through the same transport as normal generation.
 type ImageGenerator func(context.Context, modelapi.Request, func(modelapi.Event) error) error
 
 // The fixture is encoded once; each request borrows its immutable compressed bytes.
@@ -38,7 +41,7 @@ var probeImage = func() media.Image {
 // CheckImage tests request acceptance without judging the generated answer.
 func CheckImage(ctx context.Context, generate ImageGenerator, model string) (connection.ImageInput, error) {
 	if generate == nil {
-		return connection.ImageInput{}, fmt.Errorf("image probe generator is required")
+		return connection.ImageInput{}, faults.Errorf(diagcatalog.DiagnosticImageProbeGeneratorIsRequired)
 	}
 	parent := ctx
 	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)

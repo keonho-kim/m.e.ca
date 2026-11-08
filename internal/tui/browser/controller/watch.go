@@ -7,9 +7,10 @@ package controller
 import (
 	"context"
 	"errors"
-	"github.com/fsnotify/fsnotify"
 	"path/filepath"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 type WatchRequest struct {

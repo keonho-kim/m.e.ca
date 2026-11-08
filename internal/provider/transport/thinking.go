@@ -6,8 +6,9 @@ package transport
 
 import (
 	"errors"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func ThinkingSummaryUnsupported(err error, kind connection.ProviderKind) bool {

@@ -6,12 +6,13 @@ package local
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 func TestRunningProjectionFailureKeepsProcessIdentity(t *testing.T) {
@@ -52,7 +53,7 @@ func TestArchiveFailureKeepsProcessIdentity(t *testing.T) {
 func TestCommandOriginalUsesExistingLogsOnly(t *testing.T) {
 	e, _ := testExecutor(t)
 	result := commandTool(t, e, "execute_command", map[string]any{"command": "head -c 131072 /dev/zero"})
-	original, err := e.CommandCapture(result.Process.CommandID)
+	original, err := e.CommandCapture(t.Context(), result.Process.CommandID)
 	if err != nil || len(original) < 131072 {
 		t.Fatal("original was lost", err)
 	}

@@ -6,9 +6,10 @@ package sqlite
 
 import (
 	"context"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"sort"
 	"time"
+
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func (s *Sessions) Conversations(ctx context.Context, project string) ([]sessionstate.Conversation, error) {

@@ -8,15 +8,18 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
-	_ "modernc.org/sqlite"
+
 	"net/url"
 	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	_ "modernc.org/sqlite"
 )
 
 type Store struct {
@@ -27,6 +30,7 @@ type Store struct {
 	room        *Store
 	teamLease   *teamContentCache
 	codec       recordcontent.Codec
+	objective   objectiveCache
 	db          *sql.DB
 	path        string
 	session     sessionstate.Session
@@ -54,7 +58,7 @@ func connect(ctx context.Context, path string, readOnly bool) (*sql.DB, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("session database must be a regular file: %s", path)
+		return nil, faults.Errorf(diagcatalog.SqliteSessionDatabaseMustBeARegularFile, path)
 	}
 	endpoint := url.URL{Scheme: "file", Path: path}
 	query := endpoint.Query()
@@ -95,7 +99,7 @@ func checkSchema(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	if version != schemaVersion {
-		return fmt.Errorf("unsupported session database schema %d; required %d; existing contents are preserved", version, schemaVersion)
+		return faults.Errorf(diagcatalog.SqliteUnsupportedSessionDatabaseSchemaRequiredExistingContents, version, schemaVersion)
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )

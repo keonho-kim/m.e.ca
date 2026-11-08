@@ -6,7 +6,9 @@ package controller
 
 import (
 	"context"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tui/preview"
@@ -25,7 +27,7 @@ func (c *Controller) ReadDirectory(parent context.Context, sink Sink, reader Rea
 			ref, err := reader.Reference(ctx, settings, page.Path)
 			page.Err = err
 			if err == nil && !ref.Directory {
-				page.Err = fmt.Errorf("not a directory: %s", page.Path)
+				page.Err = faults.Errorf(diagcatalog.ControllerNotADirectory, page.Path)
 			}
 			page.Path = ref.Path
 		}

@@ -5,9 +5,12 @@
 package local
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 type fileOperation struct {
@@ -37,7 +40,7 @@ func (op *fileOperation) Execute(ctx context.Context, approved bool) (toolapi.Re
 		return toolapi.Result{}, err
 	}
 	if !sameVersion(op.original, version) {
-		return toolapi.Result{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "file changed after preparation", Next: "Read the latest file and submit a change against its current contents."}
+		return toolapi.Result{}, &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalFileChangedAfterPreparation), Next: diagcatalog.Text(diagcatalog.LocalReadTheLatestFileAndSubmitA)}
 	}
 	return op.mutate()
 }

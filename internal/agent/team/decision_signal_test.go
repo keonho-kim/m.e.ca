@@ -5,11 +5,13 @@
 package team
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"errors"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestInstructionSignalIsSharedUntilTheNextUserMessage(t *testing.T) {
@@ -31,8 +33,8 @@ func TestInstructionSignalIsSharedUntilTheNextUserMessage(t *testing.T) {
 	default:
 		t.Fatal("new instruction did not invalidate waiting work")
 	}
-	var failure *tool.Failure
-	if _, err := p.UserChanges(); !errors.As(err, &failure) || failure.Code != tool.InstructionChanged {
+	var failure *faults.Failure
+	if _, err := p.UserChanges(); !errors.As(err, &failure) || failure.Code != diagcatalog.InstructionChanged {
 		t.Fatal("receiving a new generation bypassed model review", err)
 	}
 	p.Inbox(r.ctx)

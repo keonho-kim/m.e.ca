@@ -64,7 +64,7 @@ func TestOutboundNeedsInteractiveApproval(t *testing.T) {
 					t.Error(err)
 				}
 			})
-			tools, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(text string) string { return text })
+			tools, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), func(text string) string { return text }, local.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}

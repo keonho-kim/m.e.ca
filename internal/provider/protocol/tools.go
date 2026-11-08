@@ -5,12 +5,13 @@
 package protocol
 
 import (
-	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -36,7 +37,7 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 			}
 		}
 		if m.Role != "system" && m.Role != "user" && m.Role != "assistant" && m.Role != "tool" {
-			return nil, fmt.Errorf("invalid message role")
+			return nil, faults.Errorf(diagcatalog.ModelInvalidMessageRole)
 		}
 		message := Message{Role: m.Role, Content: m.Content}
 		if (kind == connection.Claude || kind == connection.Gemini || kind == connection.OpenAI) && m.Role == "assistant" && !m.Incomplete {
@@ -61,7 +62,7 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 		}
 		if m.Role == "tool" {
 			if m.ToolCallID == "" || m.ToolName == "" {
-				return nil, fmt.Errorf("tool result lacks its call identity")
+				return nil, faults.Errorf(diagcatalog.ProtocolToolResultLacksItsCallIdentity)
 			}
 			if kind == connection.Ollama || kind == connection.Gemini {
 				message.ToolName = m.ToolName
@@ -72,7 +73,7 @@ func Messages(kind connection.ProviderKind, source []modelapi.Message) ([]Messag
 		}
 		if len(m.Calls) > 0 {
 			if m.Role != "assistant" || len(m.Calls) > toolapi.MaxCalls {
-				return nil, fmt.Errorf("invalid assistant tool calls")
+				return nil, faults.Errorf(diagcatalog.ProtocolInvalidAssistantToolCalls)
 			}
 			for _, call := range m.Calls {
 				if err := call.Check(); err != nil {

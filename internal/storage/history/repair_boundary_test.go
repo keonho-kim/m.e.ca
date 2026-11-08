@@ -5,9 +5,10 @@
 package history
 
 import (
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"testing"
 )
 
 func TestTailKeepsRepairReadAndNativePairs(t *testing.T) {

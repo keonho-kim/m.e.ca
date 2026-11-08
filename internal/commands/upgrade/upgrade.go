@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"os/exec"
@@ -19,6 +19,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Result struct {
@@ -30,10 +32,10 @@ func Run(ctx context.Context, home string, client *Client) (result Result, err e
 	installed := install.BinaryPath(home)
 	info, err := os.Lstat(installed)
 	if err != nil {
-		return result, fmt.Errorf("read installed MECA binary: %w; run meca install before upgrade", err)
+		return result, faults.Errorf(diagcatalog.UpgradeReadInstalledMECABinaryRunMecaInstall, err)
 	}
 	if !info.Mode().IsRegular() {
-		return result, fmt.Errorf("upgrade requires an installed regular MECA binary; run meca install first")
+		return result, faults.Errorf(diagcatalog.UpgradeUpgradeRequiresAnInstalledRegularMECABinary)
 	}
 	root, err := statefs.Open(filepath.Join(home, statefs.DirectoryName))
 	if err != nil {
@@ -70,7 +72,7 @@ func Run(ctx context.Context, home string, client *Client) (result Result, err e
 	command.WaitDelay = 2 * time.Second
 	output, err := command.CombinedOutput()
 	if err != nil {
-		return result, fmt.Errorf("release %s installation failed: %w: %s", result.Version, err, strings.TrimSpace(string(output)))
+		return result, faults.Errorf(diagcatalog.UpgradeReleaseInstallationFailed, result.Version, err, strings.TrimSpace(string(output)))
 	}
 	return result, nil
 }
@@ -84,7 +86,7 @@ func executableHash(path string) (digest [sha256.Size]byte, err error) {
 	hash := sha256.New()
 	count, err := io.Copy(hash, io.LimitReader(file, maxArchiveBytes+1))
 	if count > maxArchiveBytes {
-		return digest, fmt.Errorf("MECA executable exceeds 256 MiB")
+		return digest, faults.Errorf(diagcatalog.UpgradeMECAExecutableExceedsMiB)
 	}
 	copy(digest[:], hash.Sum(nil))
 	return digest, err

@@ -5,12 +5,13 @@
 package markdown
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/textlayout"
-	"github.com/rivo/uniseg"
 	"iter"
 	"strings"
 	"unicode"
 	"unsafe"
+
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/rivo/uniseg"
 )
 
 type Style uint8

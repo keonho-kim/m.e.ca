@@ -5,9 +5,10 @@
 package viewport
 
 import (
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
-	"strings"
 )
 
 func (b *Block) Lines(width int) []Line {

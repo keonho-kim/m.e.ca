@@ -6,15 +6,18 @@ package headless
 
 import (
 	"context"
-	"fmt"
+
+	"io"
+
 	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
-	"io"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Run(ctx context.Context, request sessionrun.Request, output io.Writer, jsonMode bool) error {
 	if request.Runner.Redact == nil {
-		return fmt.Errorf("a secret redactor is required")
+		return faults.Errorf(diagcatalog.HeadlessASecretRedactorIsRequired)
 	}
 	view := newOutput(output, jsonMode, request.Runner.Redact)
 	if err := view.begin(request.Runner.Session, request.Runner.ProjectRoot); err != nil {

@@ -5,8 +5,9 @@
 package protocol
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 )
@@ -18,14 +19,14 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 	}
 	if request.Thinking == nil {
 		if request.ReasoningEffort != "" {
-			return controls, fmt.Errorf("explicit Thinking is required for effort")
+			return controls, faults.Errorf(diagcatalog.ProtocolExplicitThinkingIsRequiredForEffort)
 		}
 		return controls, nil
 	}
 	if kind == connection.Claude {
 		on := *request.Thinking
 		if on && !r.Enabled() || !on && !r.Off {
-			return controls, fmt.Errorf("thinking choice is unavailable for this Claude model")
+			return controls, faults.Errorf(diagcatalog.ProtocolThinkingChoiceIsUnavailableForThisClaude)
 		}
 		mode := "disabled"
 		if on {
@@ -41,7 +42,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 	if kind == connection.OpenRouter {
 		on := *request.Thinking
 		if on && !r.Enabled() || !on && !r.Off {
-			return controls, fmt.Errorf("thinking choice is unavailable for this OpenRouter model")
+			return controls, faults.Errorf(diagcatalog.ProtocolThinkingChoiceIsUnavailableForThisOpenRouter)
 		}
 		controls.Reasoning = &chat.Reasoning{Enabled: on}
 		if on {
@@ -51,7 +52,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 	}
 	if !*request.Thinking {
 		if !r.Off {
-			return controls, fmt.Errorf("this model does not advertise Thinking OFF")
+			return controls, faults.Errorf(diagcatalog.ProtocolThisModelDoesNotAdvertiseThinkingOFF)
 		}
 		if kind == connection.Ollama {
 			controls.Think = false
@@ -61,7 +62,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 		return controls, nil
 	}
 	if !r.Enabled() {
-		return controls, fmt.Errorf("this model does not advertise Thinking ON")
+		return controls, faults.Errorf(diagcatalog.ProtocolThisModelDoesNotAdvertiseThinkingON)
 	}
 	level := request.ReasoningEffort
 	if level == "" {
@@ -89,7 +90,7 @@ func nativeControls(kind connection.ProviderKind, r *connection.Reasoning, reque
 func templateControls(kind connection.ProviderKind, r *connection.Reasoning, request modelapi.Request) (Controls, error) {
 	on := *request.Thinking
 	if on && !r.Enabled() || !on && !r.Off {
-		return Controls{}, fmt.Errorf("thinking choice is unavailable for this connection")
+		return Controls{}, faults.Errorf(diagcatalog.ProtocolThinkingChoiceIsUnavailableForThisConnection)
 	}
 	controls := Controls{Template: map[string]any{"enable_thinking": on, "thinking": on}}
 	if on && request.ReasoningEffort != "" {

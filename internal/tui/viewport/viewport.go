@@ -5,11 +5,12 @@
 package viewport
 
 import (
+	"strings"
+	"unsafe"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/markdown"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
-	"strings"
-	"unsafe"
 )
 
 const sourceMemoryBudget = 16 * 1024 * 1024

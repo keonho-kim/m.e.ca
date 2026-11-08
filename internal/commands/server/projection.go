@@ -89,6 +89,10 @@ func ProjectEvent(value Event) Event {
 	value.Status, value.Error = clipped(value.Status, 128), clipped(value.Error, 4096)
 	e := value.Record
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
+	p.Kind, p.OccurredAt, p.ErrorCode = clipped(e.PublicKind(), 128), clipped(e.OccurredAt, 35), clipped(e.ErrorCode, 128)
+	if e.Skill != nil {
+		p.Skill = &record.SkillRead{ID: clipped(e.Skill.ID, 512), Name: clipped(e.Skill.Name, 64), Source: clipped(e.Skill.Source, 32), Revision: clipped(e.Skill.Revision, 64)}
+	}
 	value.Truncated = value.Truncated || len(e.Text) > maxTextBytes || len(e.Thinking) > maxTextBytes || len(e.Output) > 0 || len(e.ChangePreview) > 0
 	if e.Reference != nil {
 		copy := *e.Reference
@@ -156,6 +160,10 @@ func eventBytes(value Event) int {
 	// backing slices and small allocations rather than replacing text accounting.
 	n := 1024 + len(value.Cursor) + len(value.Session) + len(value.Task) + len(value.Status) + len(value.Error) + len(value.ApprovalID)
 	n += len(e.Kind) + len(e.Agent) + len(e.RunID) + len(e.Text) + len(e.Thinking) + len(e.CallID) + len(e.ApprovalSource)
+	n += len(e.OccurredAt) + len(e.ErrorCode)
+	if e.Skill != nil {
+		n += len(e.Skill.ID) + len(e.Skill.Name) + len(e.Skill.Source) + len(e.Skill.Revision)
+	}
 	if e.Reference != nil {
 		n += len(e.Reference.Session)
 	}

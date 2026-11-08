@@ -7,6 +7,7 @@ package protocol
 import (
 	"bufio"
 	"context"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
@@ -24,7 +25,7 @@ func (r *streamLines) next(ctx context.Context) ([]byte, error) {
 	}
 	r.long = r.long[:0]
 	for {
-		if err := ctx.Err(); err != nil {
+		if err := context.Cause(ctx); err != nil {
 			return nil, err
 		}
 		part, err := r.ReadSlice('\n')

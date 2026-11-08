@@ -5,6 +5,9 @@
 package local
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
 	"fmt"
@@ -12,7 +15,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -76,8 +78,8 @@ func TestCommandDirectoryExternalBranchNeedsApproval(t *testing.T) {
 func TestCommandDirectoryProtectedBranchIsBlocked(t *testing.T) {
 	executor, _ := testExecutor(t)
 	_, err := executor.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"cd /etc; printf changed > v-test-result"}`))
-	var failure *toolapi.Failure
-	if !errors.As(err, &failure) || failure.Code != toolapi.CommandBlocked {
+	var failure *faults.Failure
+	if !errors.As(err, &failure) || failure.Code != diagcatalog.CommandBlocked {
 		t.Fatalf("known system directory branch was not blocked: %v", err)
 	}
 }

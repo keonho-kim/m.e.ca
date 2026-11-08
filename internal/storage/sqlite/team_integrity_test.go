@@ -7,11 +7,12 @@ package sqlite
 import (
 	"context"
 	"fmt"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 func TestTeamRegistrationFailureRemovesOnlyNewDatabase(t *testing.T) {
@@ -59,7 +60,7 @@ func TestTeamShortMessagesStayInline(t *testing.T) {
 	if err := child.db.QueryRow("SELECT COUNT(*) FROM payloads WHERE codec=3").Scan(&references); err != nil || references != 0 {
 		t.Fatalf("short body got a larger reference: %d %v", references, err)
 	}
-	restored, err := child.ContextMessages(ctx, child.session.ID, 0, 1<<20, false)
+	restored, err := child.ContextMessages(ctx, child.session.ID, 0, 1<<20, false, nil)
 	if err != nil || len(restored) != 1 || restored[0].Content != message.Content {
 		t.Fatalf("short context changed: %v %v", restored, err)
 	}

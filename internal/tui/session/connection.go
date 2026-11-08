@@ -5,8 +5,8 @@
 package session
 
 import (
-	"fmt"
-
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -18,7 +18,7 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 	}()
 	if n.Commit == nil {
 		if n.Client != nil {
-			return false, fmt.Errorf("prepared connection has no durable selection")
+			return false, faults.Errorf(diagcatalog.SessionPreparedConnectionHasNoDurableSelection)
 		}
 		return false, nil
 	}
@@ -31,7 +31,7 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 		return false, n.Err
 	}
 	if n.Client == nil || n.Commit.Selection.Model == "" {
-		return false, fmt.Errorf("committed connection has no client or model")
+		return false, faults.Errorf(diagcatalog.SessionCommittedConnectionHasNoClientOrModel)
 	}
 	if n.Config != nil {
 		a.opts.Config = *n.Config

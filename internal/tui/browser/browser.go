@@ -5,8 +5,9 @@
 package browser
 
 import (
-	"github.com/keonho-kim/meca/internal/fileview"
 	"path/filepath"
+
+	"github.com/keonho-kim/meca/internal/fileview"
 )
 
 type Column struct {

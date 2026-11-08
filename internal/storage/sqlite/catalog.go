@@ -9,11 +9,14 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 type Sessions struct {
@@ -46,7 +49,7 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 		}
 	}()
 	if !sessionstate.ValidID(id) {
-		return nil, fmt.Errorf("invalid session ID")
+		return nil, faults.Errorf(diagcatalog.SqliteInvalidSessionID)
 	}
 	directory, canonical, err := s.projectDirectory(project, false)
 	if err != nil {
@@ -62,7 +65,7 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 		return nil, errors.Join(err, db.Close())
 	}
 	if c.ProjectRoot != canonical {
-		return nil, errors.Join(fmt.Errorf("session project does not match its storage directory"), db.Close())
+		return nil, errors.Join(faults.Errorf(diagcatalog.SqliteSessionProjectDoesNotMatchItsStorage), db.Close())
 	}
 	if !readOnly {
 		if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
@@ -82,9 +85,11 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 	if err != nil {
 		return nil, err
 	}
-	if err := s.reserveSession(ctx, directory, project); err != nil {
+	reservation, err := s.reserveSession(ctx, directory, project)
+	if err != nil {
 		return nil, err
 	}
+	defer func() { err = errors.Join(err, reservation.Close()) }()
 	id := "session_" + rand.Text()
 	// Publish a complete, closed database atomically. Directory scans never see a
 	// half-initialized session; no central catalogue or bootstrap lock is needed.
@@ -126,6 +131,7 @@ func (s *Sessions) Create(ctx context.Context, project, display string) (store *
 	if err := errors.Join(tx.Commit(), db.Close()); err != nil {
 		return nil, err
 	}
+	reservation.Publish()
 	if err := os.Link(path, filepath.Join(directory, id+".db")); err != nil {
 		return nil, err
 	}

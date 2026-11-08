@@ -5,18 +5,23 @@
 package local
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
+
 	"io"
 	"os"
 	"strings"
 	"syscall"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
+
+	// CommandCapture does not create another full-output file beside the readable logs.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// CommandCapture does not create another full-output file beside the readable logs.
-func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
+func (e *Executor) CommandCapture(ctx context.Context, id string) (json.RawMessage, error) {
 	if _, err := e.commands.Done(id); err != nil {
 		return nil, nil
 	}
@@ -31,14 +36,20 @@ func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
 	if output.StdoutPath == "" && output.StderrPath == "" {
 		return nil, nil
 	}
-	size := int64(output.StdoutCapturedBytes + output.StderrCapturedBytes)
-	release := e.commands.ProjectionBudget().Acquire(size)
+	if output.StdoutCapturedBytes < 0 || output.StderrCapturedBytes < 0 || output.StdoutCapturedBytes > maxArtifactBytes || output.StderrCapturedBytes > maxArtifactBytes {
+		return nil, faults.Errorf(diagcatalog.LocalInvalidCapturedLogSize)
+	}
+	size := int64(output.StdoutCapturedBytes) + int64(output.StderrCapturedBytes)
+	release, err := e.commands.ProjectionBudget().Acquire(ctx, size)
+	if err != nil {
+		return nil, err
+	}
 	c := e.liveOutputs.command(id)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.captureRelease != nil {
 		release()
-		return nil, fmt.Errorf("command output is already borrowed for commit; acknowledge this command before collecting it again")
+		return nil, faults.Errorf(diagcatalog.LocalCommandOutputIsAlreadyBorrowedForCommit)
 	}
 	for i, path := range []string{output.StdoutPath, output.StderrPath} {
 		if path == "" {
@@ -48,7 +59,7 @@ func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
 		if i == 1 {
 			expected = output.StderrCapturedBytes
 		}
-		text, readErr := readCaptureText(path, expected)
+		text, readErr := readCaptureText(ctx, path, expected)
 		if readErr != nil {
 			release()
 			return nil, readErr
@@ -69,27 +80,47 @@ func (e *Executor) CommandCapture(id string) (json.RawMessage, error) {
 	return body, nil
 }
 
-func readCaptureText(path string, expected int) (string, error) {
+func readCaptureText(ctx context.Context, path string, expected int) (result string, err error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if expected < 0 || expected > maxArtifactBytes {
-		return "", fmt.Errorf("invalid captured log size")
+		return "", faults.Errorf(diagcatalog.LocalInvalidCapturedLogSize)
 	}
 	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
 	info, err := file.Stat()
 	if err != nil {
 		return "", err
 	}
 	if !info.Mode().IsRegular() || info.Size() != int64(expected) {
-		return "", fmt.Errorf("captured log changed before its durable record")
+		return "", faults.Errorf(diagcatalog.LocalCapturedLogChangedBeforeItsDurableRecord)
 	}
 	var text strings.Builder
 	text.Grow(int(info.Size()))
-	_, err = io.Copy(&text, io.LimitReader(file, int64(expected)+1))
-	if err == nil && text.Len() != expected {
-		err = fmt.Errorf("captured log changed while reading")
+	buffer := make([]byte, 64<<10)
+	for text.Len() < expected {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		n, err := file.Read(buffer[:min(len(buffer), expected-text.Len())])
+		text.Write(buffer[:n])
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		if n == 0 || err != nil && text.Len() != expected {
+			return "", faults.Errorf(diagcatalog.LocalCapturedLogChangedWhileReading)
+		}
 	}
-	return text.String(), err
+	after, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if !os.SameFile(info, after) || after.Size() != info.Size() || !after.ModTime().Equal(info.ModTime()) {
+		return "", faults.Errorf(diagcatalog.LocalCapturedLogChangedWhileReading)
+	}
+	return text.String(), ctx.Err()
 }

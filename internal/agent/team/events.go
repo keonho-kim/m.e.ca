@@ -5,9 +5,10 @@
 package team
 
 import (
+	"strings"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"strings"
 )
 
 func (p *Peer) Emit(event runrecord.Event) error {

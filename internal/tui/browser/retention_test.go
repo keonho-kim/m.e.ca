@@ -5,8 +5,9 @@
 package browser
 
 import (
-	"github.com/keonho-kim/meca/internal/fileview"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/fileview"
 )
 
 func TestMoveReleasesColumns(t *testing.T) {

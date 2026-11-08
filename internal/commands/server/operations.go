@@ -8,6 +8,8 @@ import (
 	"context"
 
 	"github.com/keonho-kim/meca/internal/config"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type sessionChange struct {
@@ -32,7 +34,7 @@ func (s *Service) beginOperation(ctx context.Context) (context.Context, func(), 
 		return nil, nil, err
 	}
 	if s.closed || s.ctx.Err() != nil {
-		return nil, nil, failure("unavailable", "server is shutting down")
+		return nil, nil, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 	}
 	ctx, done := s.trackLocked(ctx)
 	return ctx, done, nil
@@ -69,7 +71,7 @@ func (s *Service) beginRead(ctx context.Context) (*Conversation, context.Context
 		return nil, nil, nil, err
 	}
 	if s.changing {
-		return nil, nil, nil, failure("conflict", "session configuration is changing")
+		return nil, nil, nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerSessionConfigurationIsChanging)
 	}
 	return s.borrowReadLocked(ctx, s.conversation)
 }

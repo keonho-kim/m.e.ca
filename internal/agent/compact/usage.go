@@ -4,7 +4,10 @@
 // Related: internal/config/settings.go, internal/agent/compact/controller.go.
 package compact
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 const MaxBodyBytes = 16 * 1024 * 1024
 
@@ -22,7 +25,7 @@ func Defaults() Settings {
 }
 func (s Settings) Check() error {
 	if s.KeepRecentTokens < 0 || s.KeepRecentTokens > MaxBodyBytes || s.ReserveTokens < 1 || s.ReserveTokens > 1000000000 || s.MaxSummaryBytes < 1024 || s.MaxSummaryBytes > MaxBodyBytes || s.MaxInputBytes < 8192 || s.MaxInputBytes > MaxBodyBytes {
-		return fmt.Errorf("invalid compaction settings")
+		return faults.Errorf(diagcatalog.CompactInvalidCompactionSettings)
 	}
 	return nil
 }

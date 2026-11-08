@@ -5,10 +5,11 @@
 package command
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -95,7 +96,7 @@ func (a *analyzer) invoke(args []word, redirs []*syntax.Redirect, s *state, func
 	}
 	switch name {
 	case "sudo", "su", "doas", "pkexec":
-		a.err = &BlockedError{Cause: fmt.Errorf("operation blocked: privilege escalation via %s", name)}
+		a.err = &BlockedError{Cause: faults.Errorf(diagcatalog.CommandOperationBlockedPrivilegeEscalationVia, name)}
 	case "cd":
 		a.cd(args, s)
 	case "eval":

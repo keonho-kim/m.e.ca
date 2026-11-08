@@ -58,6 +58,9 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 
 | operation | 입력과 결과 |
 | --- | --- |
+| `listSkills` | `cursor`, `limit` → `skills:{items,nextCursor,diagnostics,diagnosticsTruncated}`. 기본·최대 32건 |
+| `getSkill` | `id` → `skill:{skill,revision,body}`. 본문 미리보기이며 모델 작업을 시작하지 않음 |
+| `readSkillFile` | `id`, 스킬 루트 기준 `path`, `offset`, `limit`, 선택적 `revision` → `skillFile:{revision,text,mediaType,offset,nextOffset,totalBytes,binary}`. offset이 0보다 크면 첫 페이지의 revision 필수 |
 | `listSessions` | 선택적 `cursor`, `limit` → 현재 프로젝트의 목록 페이지와 `nextCursor`. 기본 50건, 최대 100건. 미지원 DB는 `unavailable`에 사유를 표시 |
 | `selectSession` | `{"create":true}` 또는 `{"sessionId":"…"}` → 상태 |
 | `closeSession` | `{}` → 자원 해제. 작업 중에는 거부 |
@@ -78,6 +81,10 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 
 `id`는 응답 상관관계용이다. 실제 실행 중복 방지는 `start.key`가 담당한다. 호출자가 요청마다 안정된 키를 만들고 응답을 잃었을 때 같은 세션·키·본문으로 재전송한다. 동일 키의 다른 본문은 conflict이며 기존 작업을 바꾸지 않는다. key는 8~128바이트다. `~/.meca/server-requests/<project-scope>/requests.db`는 본문 대신 해시와 작업 식별·상태만 저장한다. project-scope는 정규화 프로젝트 경로의 SHA-256이며 프로젝트 간 접수·조회가 분리된다. 실행 전에 기록하고 완료 후 상태를 확정한다. 비정상 종료되어 접수만 남은 작업은 interrupted로 조회되며 자동 재실행하지 않는다. 다시 수행하려면 실제 부분 효과를 확인한 뒤 새 키로 요청한다.
 
+Task는 `code`와 `persistence`도 제공한다. `pending`은 현재 프로세스가 접수·실행을 소유한 상태, `confirmed`는 종료 상태의 저장을 확인한 상태, `uncertain`은 종료 저장이나 효과를 확인할 수 없는 상태다. 완료 쓰기가 실패하면 취소와 독립된 읽기로 같은 결과가 저장되었는지 확인한다. 확인하지 못하면 `code=completion_not_saved`, `persistence=uncertain`을 반환하고 해당 프로세스의 새 작업 접수를 막는다. 실행·쓰기 자체를 자동 재시도하지 않는다. 프로세스가 소유하지 않는 미완료 접수는 `interrupted`·`uncertain`으로 조회한다.
+
+전송 어댑터는 [중앙 오류 분류](diagnostics.md#중앙-소유권과-오류)를 공유한다. 용량·저장 오류를 취소로 덮지 않으며 observer deadline은 HTTP 504, 용량 초과는 429다. 이미 응답을 쓰기 시작했다면 두 번째 오류 JSON을 이어 쓰지 않는다. 소켓·SSE의 전달 실패와 출력 내용의 재작성은 다른 오류다.
+
 접수 조회 뒤 다른 호출이 먼저 같은 키를 확정한 경우에도 원래 작업을 반환한다. 현재 프로세스가 접수 확정 후 실행 인계를 진행 중이면 accepted, 실행 중이면 running/canceling으로 조회되며, 주인 없는 이전 프로세스의 접수만 interrupted로 복원한다.
 
 승인은 서버가 발급한 일회성 approval ID와 task ID에 묶는다. 재사용·다른 작업·이미 끝난 승인에는 conflict를 반환한다. 승인 뒤에도 기존 실행기의 대상·버전·사용자 지침 재검사가 적용된다. 승인 이벤트의 preview가 잘렸으면 `detail.approvalId`로 전체 preview와 명령 판정 근거를 확인한다. 거절·취소·실행기 마감은 대기 중인 승인을 끝낸다.
@@ -85,6 +92,8 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 명령 오류는 공통 `Reply.error:{code,message}`다. HTTP 제어는 이에 맞는 4xx/5xx 상태를 함께 반환한다. RPC의 애플리케이션 오류도 같은 Reply에 담으며 인증·잘못된 프레이밍·스트림 종료 등의 전송 오류는 해당 RPC 상태를 사용한다. 클라이언트는 둘 다 확인해야 한다.
 
 ID·모델 설정 형식 오류는 invalid_argument, 없는 세션·원문은 not_found다. 취소된 제어·조회는 canceled이며 HTTP에서는 409로 반환한다. 세션 변경으로 조회가 취소되면 최신 상태를 확인한 뒤 필요한 원문만 다시 요청한다.
+
+스킬 조회는 세션 선택 전에도 가능하며 서버의 고정 프로젝트·실행 계정을 기준으로 한다. `getSkill`은 탐색 ID와 엔진에서 경로로 읽어 등록한 ID를 받고 임의 경로 입력은 받지 않는다. 참고 파일은 검증한 스킬 루트 안에서만 읽는다. 목록 페이지는 현재 파일을 다시 조회하므로 파일 변경 뒤에는 빈 cursor로 목록을 갱신한다. `start` 입력은 기존 sessionId·key·text이며 스킬은 현재 입력의 #이름 또는 에이전트의 읽기 도구로 지정한다. 형식과 한도는 [스킬 문서](skills.md)가 소유한다.
 
 ## SSE
 
@@ -143,6 +152,8 @@ SSE 작성기는 이미 도착한 연속 델타의 flush를 묶는다. 첫 애�
 
 ## 이벤트·재접속·수명
 
+새 사건은 `occurredAt`과 가능한 `errorCode`를 포함한다. 순서는 시각 대신 커서를 따른다. `skill_loaded`의 `skill:{id,name,source,revision}`은 본문 읽기 성공을 나타내며 모델의 지침 준수나 작업 완료를 뜻하지 않는다. 본문은 이벤트에 반복해서 넣지 않는다. 재접속 시 기존 history/detail의 같은 메타데이터로 읽기 기록을 복원한다. 별도 활성 스킬 snapshot이나 활성화 명령은 없다. [운영 로그](diagnostics.md)는 동일한 작업 식별자로 장애 추적 정보를 제공한다.
+
 커서는 프로세스 epoch와 단조 증가 sequence의 조합이다. 세션 선택·닫기·호환 작업의 대화 교체에서도 같은 커서를 이어간다. 재시작하면 새 epoch를 사용한다. 작업 ID는 내부 에이전트의 run ID와 별개다. 이벤트에는 실제 작업의 session·task·agent·run·generation 식별자를 제공한다. snapshot의 session·model·team은 native 선택, execution은 현재 작업의 session·model·team이다. 작업이 없으면 execution은 없다. 마지막 task가 호환 대화에 속하면 task.sessionId는 선택한 session.id와 다를 수 있다. assistant_delta는 추가할 본문·Thinking, draft_reset은 해당 발신자의 초안을 교체하라는 뜻이다. Provider 재시도도 reset을 발생시킨다. progress·response·thinking은 완성된 해당 내용이며 델타로 다시 덧붙이지 않는다. 도구 이벤트는 원본 참조를, usage와 최종 checkpoint는 실제 수신 사용량과 통계를 제공한다. request_finished에는 최종 status와 error가 있다.
 
 첫 구독이나 만료된/다른 epoch 커서에는 현재 상태의 snapshot을 보낸다. 보관 중인 커서라면 그 이후 이벤트만 순서대로 전송한다. snapshot을 받으면 그 커서까지 반영된 상태로 바꾸고 저장 이력은 history로 별도 조회한다. 과거 이력은 페이지별 시간순이며 다음 요청에는 응답의 before를 전달하고 빈 페이지에서 끝낸다. history/detail 조회는 모델·도구를 실행하지 않는다.
@@ -164,15 +175,15 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 {"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"path":"result.txt","content":"written"}},"output":{"ok":true}}}
 ```
 
-같은 상세의 연속 페이지는 선택 세션에 보관한 최근 원문 한 건을 재사용한다. 64KiB 이하는 메모리, 그보다 큰 마스킹 완료 JSON은 private 임시 파일에 두고 파일 경로를 즉시 제거한다. 다른 원문이나 자격 증명 마스킹 revision으로 바뀌면 다시 준비하고, 세션 교체·닫기·프로세스 종료에서 자원을 해제한다. 끝난 승인은 보관 여부와 무관하게 조회를 거부한다. 임시 보관을 사용할 수 없으면 현재 페이지를 반환하고 다음 조회에서 원문을 다시 준비한다. 상세 첫 조회는 기존 저장 어댑터에서 원문 한 건을 복원·변환하므로 그 초기 비용 자체가 페이지 크기로 제한되는 것은 아니다.
+같은 상세의 연속 페이지는 선택 세션에 보관한 최근 문서 한 건을 재사용한다. 공개 DTO를 증분 JSON으로 인코딩하고 문자열을 조각별로 마스킹하여 완성 JSON 전체를 메모리에 만들지 않는다. 64KiB 이하는 메모리, 큰 문서는 private 임시 파일에 두고 파일 경로를 즉시 제거한다. 다른 원문이나 마스킹 revision으로 바뀌면 이전 문서를 먼저 해제한다. 세션 교체·닫기·프로세스 종료에서도 자원을 해제한다. 끝난 승인은 보관 여부와 무관하게 조회를 거부한다. 임시 보관을 사용할 수 없으면 현재 페이지만 수집해 반환하고 다음 조회에서 다시 준비하며 `detail_cache_bypassed`로 진단한다. 파일 정리 실패는 오류로 반환한다. 첫 조회의 저장 원문 복원과 이스케이프된 JSON 값 해석 비용까지 페이지 크기로 제한되는 것은 아니다.
 
 | 한도 | 소유 범위 |
 | --- | --- |
 | 제어 요청 17MiB, 요청 본문 16MiB | 전송 수용·사용자 요청 |
 | 세션 목록 1~100건, 기본 50건 | `nextCursor`로 다음 페이지 조회 |
 | 세션 목록 snapshot 2분, 최대 8건·합계 8MiB | ID·정렬 시각만 보관하며 한 snapshot은 최대 2MiB |
-| 입력 예약 합계 32MiB | HTTP·RPC·WebSocket 본문 파싱. 길이 미상·압축 입력은 최대 수용 크기를 예약하며 초과는 실행 접수 전에 거절 |
-| 원문 복원 32MiB, 동시 작업 1개 | 이력·상세·호환 완료 결과가 공유. JSON 응답·완료 스트림의 출력이 끝날 때까지 슬롯 유지 |
+| 입력 예약 합계 32MiB | HTTP·RPC·WebSocket 본문 파싱. 일반 입력은 실제 읽는 크기에 따라 32KiB 단위로 예약. 압축 입력은 해제 전 일시적으로 17MiB를 예약하고 RPC 해석 후 실제 명령 크기로 조정. 초과는 실행 접수 전에 거절 |
+| 이력 페이지 복원 32MiB, 상세·완료 원문 복원 512MiB | 원문 읽기는 동시 작업 1개. 완료 JSON·SSE의 출력 또는 상세 문서의 마스킹·임시 보관이 끝날 때까지 공유 메모리 예약 유지 |
 | 이력 1~100건, 기본 32건 | history 페이지 |
 | 상세 1~65536바이트, 기본 65536 | detail 응답 바이트 |
 | 최근 상세 1건, 메모리 보관 최대 64KiB | 큰 상세는 경로 없는 임시 파일에서 페이지 단위로 조회 |
@@ -190,7 +201,7 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 
 원문 복원 한도는 선택한 공개 payload의 읽기 작업량이며 모델 실행의 문맥·출력 예산과 구분한다. 한도 초과는 원문을 자르거나 삭제하지 않고 `resource_exhausted`로 반환한다. 세션 export에는 이 API 조회 한도를 적용하지 않는다. 느린 원문 조회와 조회 슬롯 대기 중에도 SSE heartbeat를 유지한다.
 
-프로젝트의 대화 할당은 4096개, 전체 서버 접수 기록은 100000개까지 허용한다. 세션 DB는 512MiB 페이지 상한을 적용하고, 이미 더 큰 DB는 기존 페이지를 보존하며 추가 성장을 막는다. WAL은 checkpoint 정책으로 정리하지만 활성 reader 동안에는 별도 공간을 사용할 수 있다. 새 저장 할당 전에는 파일시스템 여유 공간 1GiB를 확인한다. 할당 횟수는 재시작 후에도 유지하며 불확실한 쓰기의 예약을 되돌리지 않는다. 한도에 도달해도 기존 조회·중복 확인·작업 완료 기록은 유지하고 새 할당을 거절한다. 이 검사는 다른 프로그램의 동시 쓰기까지 예약하는 OS 디스크 quota는 아니다.
+프로젝트의 대화 할당은 4096개, 전체 서버 접수 기록은 100000개까지 허용한다. 세션 DB는 512MiB 페이지 상한을 적용하고, 이미 더 큰 DB는 기존 페이지를 보존하며 추가 성장을 막는다. WAL은 checkpoint 정책으로 정리하지만 활성 reader 동안에는 별도 공간을 사용할 수 있다. 새 저장 할당 전에는 파일시스템 여유 공간 1GiB를 확인한다. 게시 전에 확정적으로 실패한 예약은 한 번 반환한다. 게시·커밋을 시도했거나 중단 후 결과를 확인할 수 없는 예약은 유지한다. 한도의 90%부터 storage_capacity_low에 count·limit을 기록한다. 한도에 도달해도 기존 조회·중복 확인·작업 완료 기록은 유지하고 새 할당을 거절한다. 기존 DB·접수 기록을 자동 삭제하거나 불확실한 counter를 재설정하지 않는다. 이 검사는 다른 프로그램의 동시 쓰기까지 예약하는 OS 디스크 quota는 아니다.
 
 재조회용 정제 명령 로그·결과는 실행기당 256MiB·256건까지 보관한다. 상한에 도달하면 원본을 DB에 확정한 오래된 결과부터 회수한다. 미확정 결과는 지우지 않으며 여유가 없으면 오류를 반환한다. 원자적 교체에는 현재 쓰는 한 파일 크기만큼 추가 공간을 사용할 수 있다. 활성 원문 캡처는 별도 스트림별 수집 한도를 따르며 새 블록으로 커질 때에도 여유 공간 1GiB를 검사한다. 임시 파일의 만료는 DB 원본과 export를 삭제하지 않는다.
 
@@ -236,11 +247,15 @@ response, err := client.Responses.New(ctx, responses.ResponseNewParams{
 
 새 Chat 요청과 previous ID가 없는 Responses 요청은 접수 예약 안에서 새 작업 대화를 만든다. native 선택 대화는 그대로 유지하고 작업 대화 한 자리만 재사용·교체한다. 기존 대화의 이력에 전체 messages를 다시 덧붙이지 않는다. 현재 모델과 팀 모드는 이어받으며 여전히 동시에 작업 하나만 수락한다. 실행 중인 다른 작업이 있으면 `409`다. `previous_response_id`는 보관한 최신 completed 응답만 받으며 후속 응답이나 native 작업으로 대화가 바뀌었다면 거부한다. 실패하거나 불확실한 후속 접수도 자동 분기·재실행하지 않는다.
 
+Chat의 재전송된 과거 messages는 요청 소유 문맥으로 공유하며 새 작업 DB나 팀 개인 DB에 다시 적재하지 않는다. 마지막 사용자 입력과 실제 엔진 실행은 저장한다. 이 외부 문맥은 요청 전체에 유지되므로 Provider 문맥에 들어가는 크기로 보내야 하며, 엔진의 대화 압축은 저장된 실행 이력을 대상으로 한다. Responses는 이어 읽기와 재시작 복구를 위해 초기 외부 이력을 대화에 한 번 저장한다. 팀에서는 외부 이력을 공용 원문으로 보관하고 개인 DB는 출처를 검증한 참조만 저장한다. 외부 이력을 실제 MECA 실행이나 운영자 지침으로 승격하지 않는다. 서로 다른 요청을 이력의 공통 접두부로 자동 합치지 않는다. stateless 호출의 대화 수는 계속 증가하므로 긴 대화는 previous_response_id를 사용하고 위의 저장 할당 한도를 운영 용량으로 고려한다.
+
+실행 식별자를 획득하기 전에 실패한 후속 접수는 실패 기록과 부모의 해당 head 점유 해제를 한 트랜잭션으로 확정한다. 실행을 시작했거나 결과가 불확실한 자식은 head를 유지하며 자동 재실행하지 않는다.
+
 `Idempotency-Key`는 MECA의 선택적 확장이다. 프로젝트·API 종류·키를 전체 정규화 입력 해시에 세션 생성 전에 바인딩한다. 같은 입력의 재시도는 같은 응답과 작업을 반환하며 다른 입력은 `409`다. stream 선택은 응답 표현이므로 키의 입력 해시에 포함하지 않는다. 키가 없으면 매 요청이 새 작업이다. `X-Request-ID`는 응답 ID, `X-Meca-Task-ID`는 접수한 작업 ID다. 수락했거나 접수를 예약한 응답은 `X-Should-Retry: false`를 보낸다. 네트워크 실패만으로 효과를 판단할 수 없으므로 부작용이 있는 호출에는 안정된 키를 사용하고 클라이언트 자동 재시도를 끈다.
 
 연결 종료는 관찰만 끝낸다. Responses의 `background:true`는 접수 상태를 즉시 돌려주며 GET으로 조회하고 cancel로 중지할 수 있다. `store:false`는 호환 GET·후속 연결을 차단한다. 작업 중복 방지용 메타데이터와 MECA의 기존 운영 이력 보관 정책은 유지한다. 이 구현의 background는 조회와 취소가 필요하므로 `store:true`를 요구한다. 재시작 뒤 진행 상태는 실패·중단으로 조회하며 작업을 자동 재생하지 않는다.
 
-요청 DB의 형식은 user_version 1이며 native·Chat·Responses 접수를 함께 저장한다. 길이로 구분한 전체 정규화 입력의 해시와 native 작업 상태를 응답 한 행에 보관한다. 후속 head 예약과 자식 행 삽입은 같은 트랜잭션으로 확정한다. 예약·실행 경계·완료를 각각 동기화하고 종료된 상태의 재변경을 거부한다. native task ID는 response ID와 같은 digest를 사용하며 native 작업 조회도 이 행을 읽는다. `server-requests/`에 이전 JSON 접수 파일이 있으면 서버 시작을 거부하고 원본을 보존한다. 자동 변환·무시·삭제·재생하지 않으며 운영자가 기존 부분 효과와 보존 자료를 확인해야 한다. 대화 DB도 현재 schema만 열 수 있다.
+요청 DB의 형식은 **user_version 2**이며 native·Chat·Responses 접수를 함께 저장한다. 길이로 구분한 전체 정규화 입력의 해시와 native 작업 상태·오류 코드를 응답 한 행에 보관한다. 후속 head 예약과 자식 행 삽입은 같은 트랜잭션으로 확정한다. 예약·실행 경계·완료를 각각 동기화하고 종료된 상태의 재변경을 거부한다. native task ID는 response ID와 같은 digest를 사용하며 native 작업 조회도 이 행을 읽는다. 이전 SQLite 형식 또는 JSON 접수 파일이 있으면 서버 시작을 거부하고 원본을 보존한다. 자동 변환·무시·삭제·재생하지 않으며 운영자가 기존 부분 효과와 보존 자료를 확인해야 한다. 대화 DB도 현재 schema 28만 열 수 있다.
 
 일반 OpenAI 클라이언트에는 MECA 승인 입력 채널이 없으므로 기존 비대화형 승인 차단을 사용한다. 승인이 필요하면 `approval_required`로 끝내며 대기 승인을 남기거나 권한을 올리지 않는다. native API로 시작한 작업의 대화형 승인은 기존과 같다.
 

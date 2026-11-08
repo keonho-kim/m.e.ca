@@ -6,8 +6,9 @@ package team
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 func TestPublicHistoryInboxDrainsPartialWindowThroughLatestUser(t *testing.T) {

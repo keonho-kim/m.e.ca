@@ -16,11 +16,12 @@ import (
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
-func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, vault *credentials.Vault, id string, create bool) (value *server.Conversation, resultErr error) {
+func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, vault *credentials.Vault, skillReader *skills.Reader, id string, create bool) (value *server.Conversation, resultErr error) {
 	var store *sqlite.Store
 	var err error
 	if create {
@@ -58,7 +59,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 			return nil, err
 		}
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact)
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +68,11 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 			resultErr = errors.Join(resultErr, executor.Close())
 		}
 	}()
-	executor.SetRedactionVersion(vault.RedactionVersion)
 	team, err := store.TeamMode(ctx)
 	if err != nil {
 		return nil, err
 	}
-	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Output: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
+	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Output: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working

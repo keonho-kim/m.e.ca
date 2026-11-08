@@ -5,9 +5,10 @@
 package protocol
 
 import (
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
-	"strings"
 )
 
 func claudeRequest(base string, request modelapi.Request, messages []Message, controls Controls) (string, []byte, string, error) {

@@ -1,0 +1,21 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass (by request) · redesign: full · v2.0.0
+ * pre-emit critique: material must separate real work planes without making text or data translucent.
+ * Purpose: Render bounded glass surfaces with opaque accessibility and feature fallbacks.
+ * Pattern: Shared material primitive with app-owned tokens.
+ * Usage: Non-office example chrome and workspace owners opt into glass-surface.
+ * Related: internal/config/bootstrap/defaults/application-design/assets/examples/shared/base.css. */
+:root {
+ --glass-solid:#f8f9f7;--glass-fill:#f8f9f7eb;--glass-edge:#ffffffbd;--glass-blur:18px;
+ --glass-shadow:inset 0 1px 0 #ffffffd9,0 12px 32px -14px #242a3229;
+}
+.glass-surface {background:var(--glass-solid);border:0;border-radius:var(--glass-radius,14px);box-shadow:var(--glass-shadow);isolation:isolate}
+@supports((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ .glass-surface {background:var(--glass-fill);-webkit-backdrop-filter:blur(var(--glass-blur));backdrop-filter:blur(var(--glass-blur))}
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){
+ .glass-surface {background:var(--glass-solid);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--control)}
+}
+@media(forced-colors:active){
+ :root {--glass-solid:Canvas;--glass-edge:CanvasText}
+ .glass-surface {background:var(--glass-solid);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border:1px solid var(--glass-edge)}
+}

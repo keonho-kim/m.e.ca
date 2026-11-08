@@ -6,7 +6,9 @@ package discovery
 
 import (
 	"context"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -21,7 +23,7 @@ func (c *Client) ollamaContext(ctx context.Context, model string) (int, error) {
 		return 0, err
 	}
 	if listing.Models == nil || len(listing.Models) > 10000 {
-		return 0, fmt.Errorf("invalid running model list")
+		return 0, faults.Errorf(diagcatalog.DiscoveryInvalidRunningModelList)
 	}
 	size := 0
 	for _, row := range listing.Models {
@@ -29,10 +31,10 @@ func (c *Client) ollamaContext(ctx context.Context, model string) (int, error) {
 			continue
 		}
 		if row.Context < 0 || row.Context > 1<<40 {
-			return 0, fmt.Errorf("invalid running model context")
+			return 0, faults.Errorf(diagcatalog.DiscoveryInvalidRunningModelContext)
 		}
 		if size != 0 && size != row.Context {
-			return 0, fmt.Errorf("ambiguous running model context")
+			return 0, faults.Errorf(diagcatalog.DiscoveryAmbiguousRunningModelContext)
 		}
 		size = row.Context
 	}
@@ -55,7 +57,7 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 		return info, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {
-		return info, fmt.Errorf("invalid deployment model list")
+		return info, faults.Errorf(diagcatalog.DiscoveryInvalidDeploymentModelList)
 	}
 	matches := 0
 	allVision, noVision := true, true
@@ -68,7 +70,7 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 		allVision = allVision && row.Info.Vision != nil && *row.Info.Vision
 		noVision = noVision && row.Info.Vision != nil && !*row.Info.Vision
 		if row.Info.Input < 0 || row.Info.Output < 0 || row.Info.Input > 1<<40 || row.Info.Output > 1<<40 {
-			return info, fmt.Errorf("invalid deployment token limits")
+			return info, faults.Errorf(diagcatalog.DiscoveryInvalidDeploymentTokenLimits)
 		}
 		unknownInput = unknownInput || row.Info.Input == 0
 		unknownOutput = unknownOutput || row.Info.Output == 0
@@ -80,7 +82,7 @@ func (c *Client) liteLLMLimits(ctx context.Context, model string) (connection.Mo
 		}
 	}
 	if matches == 0 {
-		return info, fmt.Errorf("model limits not advertised for selected alias")
+		return info, faults.Errorf(diagcatalog.DiscoveryModelLimitsNotAdvertisedForSelectedAlias)
 	}
 	if allVision || noVision {
 		info.ImageInput = connection.DeclaredImageInput(allVision, "/model/info.model_info.supports_vision")

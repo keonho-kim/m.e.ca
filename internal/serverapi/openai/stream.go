@@ -9,6 +9,9 @@ import (
 	"errors"
 	"net/http"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	"github.com/keonho-kim/meca/internal/storage/history"
@@ -41,7 +44,7 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, p parsed, accep
 			return h.Service.ResponseState(ctx, accepted.Response.ID, false)
 		})
 		if err != nil {
-			encoding.fail("server_error", "could not read task status")
+			encoding.fail(diagcatalog.ServerError, diagcatalog.Text(diagcatalog.OpenaiCouldNotReadTaskStatus))
 			return
 		}
 		value.Error = h.redact(value.Error)
@@ -50,22 +53,28 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, p parsed, accep
 				if value.Status == "failed" && !encoding.chat {
 					_ = encoding.send("response.failed", map[string]any{"response": responseValue(value, "")})
 				} else {
-					encoding.fail(value.Code, "the engine task did not complete")
+					encoding.fail(value.Code, diagcatalog.Text(diagcatalog.OpenaiTheEngineTaskDidNotComplete))
 				}
 				return
 			}
 			err := h.withResult(r.Context(), writer, value, func(text string) error {
 				if err := projection.finish(text); err != nil {
-					encoding.fail("stream_rewrite", "public output changed; retrieve the response result")
+					if faults.Code(err) != diagcatalog.StreamRewrite {
+						return err
+					}
+					encoding.fail(diagcatalog.StreamRewrite, diagcatalog.Text(diagcatalog.OpenaiPublicOutputChangedRetrieveTheResponse))
 					return nil
 				}
 				return encoding.finish(value, text)
 			})
 			if err != nil {
+				if r.Context().Err() != nil || faults.Code(err) == diagcatalog.DeliveryFailed {
+					return
+				}
 				if errors.Is(err, history.ErrReadLimit) {
-					encoding.fail("resource_exhausted", err.Error())
+					encoding.fail(diagcatalog.ResourceExhausted, err.Error())
 				} else {
-					encoding.fail("server_error", "could not prepare or send original task output")
+					encoding.fail(diagcatalog.ServerError, diagcatalog.Text(diagcatalog.OpenaiCouldNotPrepareOrSendOriginal))
 				}
 			}
 			return
@@ -97,12 +106,12 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, p parsed, accep
 				}
 				continue
 			}
-			encoding.fail("server_error", "event observation ended; retrieve the response result")
+			encoding.fail(diagcatalog.ServerError, diagcatalog.Text(diagcatalog.OpenaiEventObservationEndedRetrieveTheResponse))
 			return
 		}
 		cursor = batchCursor(batch, cursor)
 		if batch.Snapshot != nil && !projection.buffered {
-			encoding.fail("stream_gap", "observer fell behind; retrieve the response result")
+			encoding.fail(diagcatalog.StreamGap, diagcatalog.Text(diagcatalog.OpenaiObserverFellBehindRetrieveTheResponse))
 			return
 		}
 		err = writer.Batch(func() error {
@@ -121,7 +130,9 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, p parsed, accep
 			return nil
 		})
 		if err != nil {
-			encoding.fail("stream_rewrite", "generation rewrote a draft; the task continues, retrieve its result")
+			if faults.Code(err) == diagcatalog.StreamRewrite {
+				encoding.fail(diagcatalog.StreamRewrite, diagcatalog.Text(diagcatalog.StreamRewritten))
+			}
 			return
 		}
 	}

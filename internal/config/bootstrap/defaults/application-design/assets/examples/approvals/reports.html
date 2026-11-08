@@ -1,0 +1,296 @@
+<!doctype html>
+<!-- Purpose: Show the 결재 리포트 surface of a commercial approval application.
+     Pattern: Task-specific application shell with static document and workflow states.
+     Usage: Serve approvals/reports.html from the example static root.
+     Related: internal/config/bootstrap/defaults/application-design/assets/examples/approvals/approvals.css, internal/config/bootstrap/defaults/application-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="approvals">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="결재 문서와 검토 흐름을 중심으로 구성한 상업용 업무 앱 디자인 예시">
+    <title>결재 리포트 | Fieldwork</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="approvals.css">
+    <script defer src="../shared/interaction.js"></script>
+    <link rel="stylesheet" href="approval-admin.css">
+  </head>
+  <body data-product="approvals">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <div class="approval-shell top-navigation">
+      <div class="approval-main">
+        <header class="approval-topbar glass-surface">
+          <a class="approval-wordmark" href="inbox.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg> Fieldwork</a>
+          <span class="approval-org-label">North design</span>
+          <nav class="approval-navigation" aria-label="업무 공간">
+            <a href="inbox.html">결재함</a>
+            <a href="review.html">내 검토</a>
+            <a href="board.html">진행 현황</a>
+            <a href="reports.html" aria-current="page">리포트</a>
+          </nav>
+          <div class="approval-global-actions">
+            <span class="approval-demo">디자인 예시</span>
+            <details class="menu stagger-menu">
+              <summary class="icon-button" aria-label="워크스페이스 관리"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#settings"></use></svg></summary>
+              <div class="menu-panel">
+                <a href="team.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#users"></use></svg>멤버와 역할</a>
+                <a href="settings.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#sliders-horizontal"></use></svg>결재 규칙</a>
+              </div>
+            </details>
+            <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+            <span class="avatar" aria-label="샘플 검토자 김민서">민</span>
+          </div>
+        </header>
+        <main id="main" class="approval-workspace">
+          <header class="approval-page-head">
+            <div>
+              <h1>결재 리포트</h1>
+              <p>금액과 현재 단계를 함께 살펴보고, 확인할 문서를 찾습니다.</p>
+            </div>
+            <div class="approval-actions">
+              <a class="btn" href="inbox.html">샘플 요청 보기</a>
+            </div>
+          </header>
+          <dl class="approval-report-summary">
+            <div>
+              <dt>전체 요청</dt>
+              <dd>6<span>개</span></dd>
+              <p>샘플 문서 집계</p>
+            </div>
+            <div>
+              <dt>요청 금액 합계</dt>
+              <dd>6,391,000<span>원</span></dd>
+              <p>부가세 포함 예시</p>
+            </div>
+            <div>
+              <dt>검토 필요</dt>
+              <dd>2<span>개</span></dd>
+              <p>접수·검토 요청</p>
+            </div>
+          </dl>
+          <div class="approval-report-layout">
+            <section>
+              <div class="approval-section-head">
+                <h2>부서별 요청 금액</h2>
+                <span>샘플 문서 6개 기준</span>
+              </div>
+              <div class="approval-bars">
+                <div class="approval-bar-row">
+                  <span>마케팅</span>
+                  <div class="approval-bar-track">
+                    <span style="--amount:100.000%"></span>
+                  </div>
+                  <strong>3,800,000원</strong>
+                </div>
+                <div class="approval-bar-row">
+                  <span>디자인</span>
+                  <div class="approval-bar-track">
+                    <span style="--amount:25.263%"></span>
+                  </div>
+                  <strong>960,000원</strong>
+                </div>
+                <div class="approval-bar-row">
+                  <span>운영</span>
+                  <div class="approval-bar-track">
+                    <span style="--amount:23.053%"></span>
+                  </div>
+                  <strong>876,000원</strong>
+                </div>
+                <div class="approval-bar-row">
+                  <span>제품</span>
+                  <div class="approval-bar-track">
+                    <span style="--amount:12.632%"></span>
+                  </div>
+                  <strong>480,000원</strong>
+                </div>
+                <div class="approval-bar-row">
+                  <span>개발</span>
+                  <div class="approval-bar-track">
+                    <span style="--amount:7.237%"></span>
+                  </div>
+                  <strong>275,000원</strong>
+                </div>
+              </div>
+              <p class="report-caption">그래프의 합계는 아래 요청 목록의 6,391,000원과 같습니다. 실시간 통계나 성과 측정이 아닙니다.</p>
+            </section>
+            <aside class="report-reading">
+              <h2>어디부터 확인할까요?</h2>
+              <p>마케팅 요청 1개가 샘플 금액의 약 59.5%를 차지합니다. 집행 범위와 항목별 금액을 먼저 확인할 수 있도록 문서로 연결합니다.</p>
+              <a class="quiet-link" href="request.html">해당 요청 문서 보기</a>
+              <div>
+                <h3>단계별 현황</h3>
+                <dl>
+                  <div><dt>검토 필요</dt><dd>2개</dd></div>
+                  <div><dt>보완 요청</dt><dd>2개</dd></div>
+                  <div><dt>결재 중</dt><dd>1개</dd></div>
+                  <div><dt>완료</dt><dd>1개</dd></div>
+                </dl>
+              </div>
+            </aside>
+          </div>
+          <section class="report-source">
+            <h2>집계에 사용한 요청</h2>
+            <div class="approval-table-scroll" tabindex="0" role="region" aria-label="리포트에 사용한 샘플 요청 6개">
+              <table class="approval-table" data-requests>
+                <caption class="visually-hidden">리포트에 사용한 샘플 요청 6개</caption>
+                <thead><tr><th scope="col">요청 문서</th><th scope="col">요청자</th><th scope="col"><span class="desktop-amount-label">요청 금액</span><span class="mobile-amount-label">금액 / 상태</span></th><th scope="col">상태</th><th scope="col">요청일</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><a class="request-title" href="request.html">브랜드 캠페인 제작비 집행 요청</a><div class="request-meta"><span>FW-208</span><span>마케팅</span><span class="mobile-request-author">임수빈</span></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">임</span>임수빈</span></td>
+                    <td class="request-amount"><span class="amount-number">3,800,000원</span><span class="mobile-request-state"><span class="approval-state state-review">검토 요청</span></span></td>
+                    <td><span class="approval-state state-review">검토 요청</span></td>
+                    <td class="request-date">11.08</td>
+                  </tr>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong class="request-name">리서치 참여자 사례비 지급</strong><div class="request-meta"><span>FW-207</span><span>제품</span><span class="mobile-request-author">강다은</span><button class="request-preview" type="button" data-open="preview-FW-207" aria-label="리서치 참여자 사례비 지급 요약 보기">요약 보기</button></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">강</span>강다은</span></td>
+                    <td class="request-amount"><span class="amount-number">480,000원</span><span class="mobile-request-state"><span class="approval-state state-waiting">접수</span></span></td>
+                    <td><span class="approval-state state-waiting">접수</span></td>
+                    <td class="request-date">11.08</td>
+                  </tr>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong class="request-name">빌드 서버 인프라 이용료</strong><div class="request-meta"><span>FW-206</span><span>개발</span><span class="mobile-request-author">정현우</span><button class="request-preview" type="button" data-open="preview-FW-206" aria-label="빌드 서버 인프라 이용료 요약 보기">요약 보기</button></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">정</span>정현우</span></td>
+                    <td class="request-amount"><span class="amount-number">275,000원</span><span class="mobile-request-state"><span class="approval-state state-progress">결재 중</span></span></td>
+                    <td><span class="approval-state state-progress">결재 중</span></td>
+                    <td class="request-date">11.07</td>
+                  </tr>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong class="request-name">디자인 도구 연간 이용료</strong><div class="request-meta"><span>FW-205</span><span>디자인</span><span class="mobile-request-author">박지훈</span><button class="request-preview" type="button" data-open="preview-FW-205" aria-label="디자인 도구 연간 이용료 요약 보기">요약 보기</button></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">박</span>박지훈</span></td>
+                    <td class="request-amount"><span class="amount-number">960,000원</span><span class="mobile-request-state"><span class="approval-state state-blocked">보완 요청</span></span></td>
+                    <td><span class="approval-state state-blocked">보완 요청</span></td>
+                    <td class="request-date">11.07</td>
+                  </tr>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong class="request-name">팀 워크숍 공간 대관료</strong><div class="request-meta"><span>FW-204</span><span>운영</span><span class="mobile-request-author">이서연</span><button class="request-preview" type="button" data-open="preview-FW-204" aria-label="팀 워크숍 공간 대관료 요약 보기">요약 보기</button></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">이</span>이서연</span></td>
+                    <td class="request-amount"><span class="amount-number">720,000원</span><span class="mobile-request-state"><span class="approval-state state-done">승인 완료</span></span></td>
+                    <td><span class="approval-state state-done">승인 완료</span></td>
+                    <td class="request-date">11.06</td>
+                  </tr>
+                  <tr>
+                    <td><div class="request-object"><span class="document-symbol"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong class="request-name">외부 미팅 교통비 정산</strong><div class="request-meta"><span>FW-203</span><span>운영</span><span class="mobile-request-author">최도윤</span><button class="request-preview" type="button" data-open="preview-FW-203" aria-label="외부 미팅 교통비 정산 요약 보기">요약 보기</button></div></div></div></td>
+                    <td><span class="request-person"><span class="avatar">최</span>최도윤</span></td>
+                    <td class="request-amount"><span class="amount-number">156,000원</span><span class="mobile-request-state"><span class="approval-state state-blocked">보완 요청</span></span></td>
+                    <td><span class="approval-state state-blocked">보완 요청</span></td>
+                    <td class="request-date">11.06</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+        <footer class="approval-footer">
+          <span>Fieldwork / 결재 업무 디자인 스터디</span>
+          <span>실제 제출·승인·저장 없이 화면과 탐색만 제공합니다.</span>
+        </footer>
+      </div>
+    </div>
+    <dialog id="preview-note" class="modal" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">결재 앱 디자인 예시</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>문서, 금액, 담당자와 결재 상태는 고정된 샘플입니다. 실제 제출·승인·저장이나 권한 처리를 실행하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+    <dialog id="preview-FW-207" class="modal" aria-labelledby="title-FW-207">
+      <header class="modal-head">
+        <h2 id="title-FW-207">리서치 참여자 사례비 지급</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="요청 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="document-meta">
+          <div><dt>문서 번호</dt><dd>FW-207</dd></div>
+          <div><dt>요청자</dt><dd>강다은 / 제품</dd></div>
+          <div><dt>요청 금액</dt><dd>480,000원</dd></div>
+          <div><dt>현재 단계</dt><dd>접수</dd></div>
+        </dl>
+        <p class="small muted">샘플 요청의 요약 화면입니다. 실제 결재나 상태 변경은 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog id="preview-FW-206" class="modal" aria-labelledby="title-FW-206">
+      <header class="modal-head">
+        <h2 id="title-FW-206">빌드 서버 인프라 이용료</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="요청 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="document-meta">
+          <div><dt>문서 번호</dt><dd>FW-206</dd></div>
+          <div><dt>요청자</dt><dd>정현우 / 개발</dd></div>
+          <div><dt>요청 금액</dt><dd>275,000원</dd></div>
+          <div><dt>현재 단계</dt><dd>결재 중</dd></div>
+        </dl>
+        <p class="small muted">샘플 요청의 요약 화면입니다. 실제 결재나 상태 변경은 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog id="preview-FW-205" class="modal" aria-labelledby="title-FW-205">
+      <header class="modal-head">
+        <h2 id="title-FW-205">디자인 도구 연간 이용료</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="요청 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="document-meta">
+          <div><dt>문서 번호</dt><dd>FW-205</dd></div>
+          <div><dt>요청자</dt><dd>박지훈 / 디자인</dd></div>
+          <div><dt>요청 금액</dt><dd>960,000원</dd></div>
+          <div><dt>현재 단계</dt><dd>보완 요청</dd></div>
+        </dl>
+        <p class="small muted">샘플 요청의 요약 화면입니다. 실제 결재나 상태 변경은 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog id="preview-FW-204" class="modal" aria-labelledby="title-FW-204">
+      <header class="modal-head">
+        <h2 id="title-FW-204">팀 워크숍 공간 대관료</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="요청 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="document-meta">
+          <div><dt>문서 번호</dt><dd>FW-204</dd></div>
+          <div><dt>요청자</dt><dd>이서연 / 운영</dd></div>
+          <div><dt>요청 금액</dt><dd>720,000원</dd></div>
+          <div><dt>현재 단계</dt><dd>승인 완료</dd></div>
+        </dl>
+        <p class="small muted">샘플 요청의 요약 화면입니다. 실제 결재나 상태 변경은 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog id="preview-FW-203" class="modal" aria-labelledby="title-FW-203">
+      <header class="modal-head">
+        <h2 id="title-FW-203">외부 미팅 교통비 정산</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="요청 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="document-meta">
+          <div><dt>문서 번호</dt><dd>FW-203</dd></div>
+          <div><dt>요청자</dt><dd>최도윤 / 운영</dd></div>
+          <div><dt>요청 금액</dt><dd>156,000원</dd></div>
+          <div><dt>현재 단계</dt><dd>보완 요청</dd></div>
+        </dl>
+        <p class="small muted">샘플 요청의 요약 화면입니다. 실제 결재나 상태 변경은 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+  </body>
+</html>

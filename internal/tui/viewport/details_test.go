@@ -5,9 +5,10 @@
 package viewport
 
 import (
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
 	"unsafe"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestDetailsPreferenceAcrossHistory(t *testing.T) {

@@ -11,9 +11,13 @@ import (
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/skills/instruction"
 )
 
 func (s *execution) batchWave(ctx context.Context, calls []validatedCall, preparation int, approve Approver) (bool, error) {
+	ctx = instruction.WithExplicitReads(ctx, s.explicitSkills)
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	instructionRevision := s.instructionRevision
@@ -32,8 +36,8 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 		ready[i] = approved
 	}
 	if err := s.checkSteering(ctx, instructionRevision); err != nil {
-		var failure *toolapi.Failure
-		if errors.As(err, &failure) && failure.Code == toolapi.InstructionChanged {
+		var failure *faults.Failure
+		if errors.As(err, &failure) && failure.Code == diagcatalog.InstructionChanged {
 			return true, s.skipCalls(ctx, calls, skipForInstruction, failure.Detail)
 		}
 		return true, errors.Join(err, s.skipCalls(ctx, calls, skipForContext, err.Error()))
@@ -53,13 +57,11 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 		}
 	}
 	// Persist start intent before allowing any effects. A crash never replays it automatically.
-	for _, prepared := range ready {
-		if err := s.checkTimeBudget(ctx); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, skipForInterruption, err.Error()), err)
-		}
-		if err := s.startExecution(ctx, prepared, s.emit); err != nil {
-			return true, errors.Join(s.skipCalls(ctx, calls, skipForContext, err.Error()), errRuntimeRecord, err)
-		}
+	if err := s.checkTimeBudget(ctx); err != nil {
+		return true, errors.Join(s.skipCalls(ctx, calls, skipForInterruption, err.Error()), err)
+	}
+	if err := s.startExecutions(ctx, ready, s.emit); err != nil {
+		return true, errors.Join(s.skipCalls(ctx, calls, skipForContext, err.Error()), errRuntimeRecord, err)
 	}
 	outcomes := make([]toolapi.Result, len(calls))
 	failures := make([]error, len(calls))
@@ -67,7 +69,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 	var workers sync.WaitGroup
 	for i, prepared := range ready {
 		workers.Go(func() {
-			outcomes[i], failures[i] = prepared.operation.Execute(ctx, prepared.approved)
+			outcomes[i], failures[i] = executePrepared(ctx, prepared)
 			completed <- i
 		})
 	}
@@ -87,7 +89,7 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 		// Preserve native reply order without waiting for later unrelated calls.
 		for next < len(calls) && finished[next] {
 			outcome, runErr := s.recordExecution(ctx, calls[next], ready[next], outcomes[next], failures[next], completedEmit)
-			if errors.Is(runErr, errRuntimeRecord) {
+			if errors.Is(runErr, errRuntimeRecord) || faults.IsPanic(runErr) {
 				terminal = errors.Join(terminal, runErr)
 			}
 			failed = failed || outcome.Failed || runErr != nil

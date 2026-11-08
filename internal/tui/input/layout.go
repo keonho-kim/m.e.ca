@@ -5,9 +5,10 @@
 package input
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/textlayout"
 	"sort"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
 )
 
 type editorLayout struct {

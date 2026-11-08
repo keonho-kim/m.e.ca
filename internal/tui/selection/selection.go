@@ -5,9 +5,10 @@
 package selection
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/tui/textlayout"
-	"strings"
 )
 
 type cell struct {

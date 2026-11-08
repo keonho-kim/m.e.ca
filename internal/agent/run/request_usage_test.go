@@ -7,11 +7,12 @@ package run
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"testing"
-	"time"
 )
 
 type usageRecords struct {

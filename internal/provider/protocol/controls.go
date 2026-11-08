@@ -5,8 +5,9 @@
 package protocol
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 )
@@ -21,7 +22,7 @@ type Controls struct {
 
 func ControlsFor(kind connection.ProviderKind, info *connection.ModelInfo, request modelapi.Request) (Controls, error) {
 	if info != nil && info.ID != request.ModelID {
-		return Controls{}, fmt.Errorf("request model differs from prepared model")
+		return Controls{}, faults.Errorf(diagcatalog.ProtocolRequestModelDiffersFromPreparedModel)
 	}
 	options := connection.ReasoningOptions(kind, info)
 	controls, err := nativeControls(kind, &options, request)

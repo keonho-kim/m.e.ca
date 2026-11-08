@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type delta struct{ text, thinking string }
@@ -40,6 +42,10 @@ func (o *output) begin(session, project string) error {
 func (o *output) emit(event runrecord.Event) error {
 	if !o.jsonMode {
 		return nil
+	}
+	event.Kind = event.PublicKind()
+	if event.Skill != nil {
+		event.Output = nil
 	}
 	state := o.single
 	if event.Agent != "" {
@@ -89,7 +95,7 @@ func (o *output) finish(status runrecord.Status, text string, cause error) error
 		cause = errors.Join(cause, err)
 	}
 	if cause == nil && status != runrecord.Answered {
-		cause = fmt.Errorf("request ended with status %s", status)
+		cause = faults.Errorf(diagcatalog.HeadlessRequestEndedWithStatus, status)
 	}
 	return cause
 }

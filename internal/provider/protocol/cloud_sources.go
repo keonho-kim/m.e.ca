@@ -5,8 +5,9 @@
 package protocol
 
 import (
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"slices"
+
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
