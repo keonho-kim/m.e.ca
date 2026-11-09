@@ -24,14 +24,14 @@ func indexPayloadRefs(last map[payloadKey]int, store *Store, index int, refsBody
 	}
 	for _, id := range refs {
 		id, _ = content.Reference(id)
-		key := payloadKey{store, id}
+		key := payloadKey{payloadSession(store), id}
 		if _, tracked := last[key]; !tracked && len(last) >= pageReferenceEntries {
 			continue
 		}
 		if last == nil {
 			last = make(map[payloadKey]int)
 		}
-		last[key] = index
+		last[key] = max(last[key], index)
 	}
 	return last, nil
 }

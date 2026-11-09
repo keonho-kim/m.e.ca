@@ -21,6 +21,8 @@ type catalogSnapshot struct {
 	truncated   bool
 	version     int
 	at          time.Time
+	directories sourceRevision
+	cacheable   bool
 }
 
 // Cached sizing belongs to the reader snapshot, not the instruction value
@@ -48,14 +50,20 @@ func (r *Reader) snapshot(ctx context.Context, fresh bool) (*catalogSnapshot, er
 	scope := catalogScope(ctx)
 	current := func() *catalogSnapshot {
 		r.mu.RLock()
-		defer r.mu.RUnlock()
 		cached := r.cached
-		if cached != nil && cached.scope == scope && cached.version == r.version() {
+		if cached != nil && cached.cacheable && cached.scope == scope && cached.version == r.version() {
 			age := r.now().Sub(cached.at)
 			if age >= 0 && age < time.Second {
-				return cached
+				directories := cached.directories
+				r.mu.RUnlock()
+				current, valid := r.sourceRevision()
+				if valid && sameSourceRevision(directories, current) {
+					return cached
+				}
+				return nil
 			}
 		}
+		r.mu.RUnlock()
 		return nil
 	}
 	if !fresh {
@@ -76,14 +84,16 @@ func (r *Reader) snapshot(ctx context.Context, fresh bool) (*catalogSnapshot, er
 	}
 	for range 2 {
 		version := r.version()
+		before, beforeValid := r.sourceRevision()
 		items, diagnostics, truncated, err := r.catalog(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if version != r.version() {
+		after, afterValid := r.sourceRevision()
+		if version != r.version() || beforeValid && afterValid && !sameSourceRevision(before, after) {
 			continue
 		}
-		cached := &catalogSnapshot{id: rand.Text(), scope: scope, items: items, diagnostics: diagnostics, truncated: truncated, version: version, at: r.now()}
+		cached := &catalogSnapshot{id: rand.Text(), scope: scope, items: items, diagnostics: diagnostics, truncated: truncated, version: version, at: r.now(), directories: after, cacheable: beforeValid && afterValid}
 		return r.retainCatalog(cached)
 	}
 	return nil, ErrInvalid

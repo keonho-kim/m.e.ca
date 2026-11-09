@@ -39,7 +39,7 @@ type ResponseStore interface {
 
 type OutputHistory interface {
 	OutputPosition(context.Context, string) (int64, error)
-	ResponseOutput(context.Context, string, int64, int64, int) (string, error)
+	ResponseOutput(context.Context, string, int64, int64, int, func(int) error) (string, error)
 }
 
 type Submitted struct {

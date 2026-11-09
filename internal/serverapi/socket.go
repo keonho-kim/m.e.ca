@@ -16,6 +16,7 @@ import (
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func (t *Transport) socket(w http.ResponseWriter, r *http.Request) {
@@ -106,18 +107,26 @@ func (t *Transport) socket(w http.ResponseWriter, r *http.Request) {
 				return false
 			}
 			body = nil
-			input.Release()
+			commandCtx := admission.WithInput(ctx, input)
+			if err := input.Resize(int64(proto.Size(&frame)) + 4096); err != nil {
+				return false
+			}
 			switch op := frame.GetBody().(type) {
 			case *v1.SocketFrame_Command:
 				if !validCorrelation(op.Command.GetId()) {
 					_ = conn.Close(websocket.StatusPolicyViolation, diagcatalog.Text(diagcatalog.ServerapiCommandIDIsRequired))
 					return false
 				}
-				reply, _ := t.api.Call(ctx, op.Command)
+				reply, _ := t.api.Call(commandCtx, op.Command)
 				if err := send(&v1.Notification{Body: &v1.Notification_Reply{Reply: reply}}); err != nil {
 					return false
 				}
 			case *v1.SocketFrame_Watch:
+				if proto.Size(op.Watch) > 4096 {
+					_ = conn.Close(websocket.StatusPolicyViolation, diagcatalog.Text(diagcatalog.ServerapiWatchRequestExceedsBytes))
+					return false
+				}
+				input.Release()
 				stopWatch()
 				watchCtx, done := context.WithCancel(ctx)
 				watchCancel = done

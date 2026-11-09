@@ -5,12 +5,13 @@
 package instruction
 
 type Metadata struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Source      string   `json:"source"`
-	ManualOnly  bool     `json:"manual_only,omitempty"`
-	Warnings    []string `json:"warnings,omitempty"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Compatibility string   `json:"compatibility,omitempty"`
+	Source        string   `json:"source"`
+	ManualOnly    bool     `json:"manual_only,omitempty"`
+	Warnings      []string `json:"warnings,omitempty"`
 }
 
 type Document struct {

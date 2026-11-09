@@ -52,7 +52,7 @@ func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bou
 	if record.body == nil {
 		return result, history.ErrReadLimit
 	}
-	budget := newReadBudget(bounds.MaxBytes)
+	budget := newReadBudget(bounds.MaxBytes, bounds.Reserve)
 	if err := budget.take(len(record.body)); err != nil {
 		return result, err
 	}

@@ -61,7 +61,7 @@ func (p *teamPage) resolve(ctx context.Context, event runrecord.Event, display b
 		return source.payload(ctx, id)
 	}
 	if p.payloads != nil {
-		body, err = p.payloads.unpackWith(p.index, record, fields, read)
+		body, err = p.payloads.unpackWith(p.index, event.Reference.Session, record, fields, read)
 	} else {
 		body, err = recordcontent.Restore(record.body, record.refs, fields, read)
 	}

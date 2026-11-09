@@ -5,3 +5,5 @@
 package catalog
 
 const ReplyMemoryLimit Message = "aggregate in-flight model replies exceed their process byte budget"
+
+const PayloadMemoryLimit Message = "selected originals exceed the available process payload budget"

@@ -13,30 +13,19 @@ import (
 
 func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudget, limit int) (string, bool, error) {
 	id, quoted := content.Reference(id)
-	if _, err := payloadNumber(id); err != nil {
+	value, err := s.admitPayload(ctx, id, budget)
+	if err != nil {
 		return "", false, err
 	}
-	var codec, size, stored int
-	var digest []byte
-	if err := s.db.QueryRowContext(ctx, "SELECT codec,raw_bytes,length(body),digest FROM payloads WHERE id=?", id).Scan(&codec, &size, &stored, &digest); err != nil {
-		return "", false, err
-	}
-	if err := budget.take(max(size, stored)); err != nil {
-		return "", false, err
-	}
-	if codec == 3 {
-		raw, err := s.payload(ctx, id)
+	if value.codec == 3 {
+		raw, err := s.restorePayload(ctx, value.codec, value.size, value.digest, value.body)
 		if err != nil {
 			return "", false, err
 		}
 		return content.StringPrefix(raw, limit)
 	}
-	var body []byte
-	if err := s.db.QueryRowContext(ctx, "SELECT body FROM payloads WHERE id=? AND codec=? AND raw_bytes=? AND length(body)=?", id, codec, size, stored).Scan(&body); err != nil {
-		return "", false, err
-	}
 	if quoted {
-		return s.codec.RawTextPrefix(ctx, codec, size, hex.EncodeToString(digest), body, limit)
+		return s.codec.RawTextPrefix(ctx, value.codec, value.size, hex.EncodeToString(value.digest), value.body, limit)
 	}
-	return s.codec.TextPrefix(ctx, codec, size, hex.EncodeToString(digest), body, limit)
+	return s.codec.TextPrefix(ctx, value.codec, value.size, hex.EncodeToString(value.digest), value.body, limit)
 }

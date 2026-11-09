@@ -48,8 +48,8 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 	defer func() { err = errors.Join(err, pages.Close()) }()
 	application, err := server.New(ctx, server.Options{
 		Config: cfg, Ledger: ledger, Responses: ledger, Project: mode.Project, Skills: skillReader,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
-			return sessions.ResponseOutput(ctx, mode.Project, id, after, through, maxBytes)
+		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
+			return sessions.ResponseOutput(ctx, mode.Project, id, after, through, maxBytes, reserve)
 		},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
 			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create)

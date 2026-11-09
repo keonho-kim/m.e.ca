@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-// Purpose: Keep inherited output flags intact and skip diagnostic writes to a full pipe.
+// Purpose: Keep inherited output flags intact and bound queued writes behind a full pipe.
 // Pattern: Unix descriptor ownership regression tests.
 // Usage: go test ./internal/diagnostics -run TestStderr.
 // Related: internal/diagnostics/stderr_unix.go, internal/diagnostics/writer.go.
@@ -31,7 +31,7 @@ func TestStderrKeepsInheritedFlags(t *testing.T) {
 	}
 }
 
-func TestStderrSkipsFullPipe(t *testing.T) {
+func TestStderrBoundsFullPipe(t *testing.T) {
 	var fds [2]int
 	if err := unix.Pipe(fds[:]); err != nil {
 		t.Fatal(err)
@@ -54,8 +54,17 @@ func TestStderrSkipsFullPipe(t *testing.T) {
 	if err := unix.SetNonblock(fds[1], false); err != nil {
 		t.Fatal(err)
 	}
-	output := &Stderr{fd: fds[1]}
-	if n, err := output.Write([]byte("diagnostic")); n != 0 || !errors.Is(err, unix.EAGAIN) {
-		t.Fatal("full pipe was not skipped", n, err)
+	output, err := openStderr(fds[1])
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer output.Close()
+	for range 512 {
+		if _, err := output.Write(body); errors.Is(err, unix.EAGAIN) {
+			return
+		} else if err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Fatal("blocked stderr exceeded the bounded relay buffer")
 }

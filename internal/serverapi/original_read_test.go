@@ -31,7 +31,7 @@ func TestLargeOriginalSurvivesSmallerPreviewBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := f.app.ResponseResult(t.Context(), server.Response{Session: id, Begin: before, Through: through})
+	got, err := f.app.ResponseResult(t.Context(), server.Response{Session: id, Begin: before, Through: through}, nil)
 	if err != nil || got != text {
 		t.Fatal("accepted original cannot be recovered", len(got), err)
 	}

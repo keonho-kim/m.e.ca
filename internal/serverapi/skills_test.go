@@ -21,7 +21,7 @@ func serverSkill(t *testing.T, project string) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: review\ndescription: Review source\n---\nUnique-skill-instructions"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: review\ndescription: Review source\ncompatibility: Requires a Git working tree\n---\nUnique-skill-instructions"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "reference.txt"), []byte("Reference text"), 0600); err != nil {
@@ -45,11 +45,11 @@ func TestSkillReadContractsAcrossTransports(t *testing.T) {
 			serverSkill(t, f.project)
 			ctx, w := deadline(t), tlsWire(t, kind, f.api)
 			page := call(t, ctx, w, &v1.Command{Operation: &v1.Command_ListSkills{ListSkills: &v1.SkillListRequest{}}}).GetSkills()
-			if len(page.GetItems()) != 1 || page.Items[0].Name != "review" {
+			if len(page.GetItems()) != 1 || page.Items[0].Name != "review" || page.Items[0].Compatibility != "Requires a Git working tree" {
 				t.Fatal(page)
 			}
 			preview := call(t, ctx, w, &v1.Command{Operation: &v1.Command_GetSkill{GetSkill: &v1.SkillRequest{Id: page.Items[0].Id}}}).GetSkill()
-			if preview.Body != "Unique-skill-instructions" || preview.Revision == "" || f.executed.Load() != 0 {
+			if preview.Body != "Unique-skill-instructions" || preview.Revision == "" || preview.Skill.Compatibility != "Requires a Git working tree" || f.executed.Load() != 0 {
 				t.Fatal(preview)
 			}
 			file := call(t, ctx, w, &v1.Command{Operation: &v1.Command_ReadSkillFile{ReadSkillFile: &v1.SkillFileRequest{Id: page.Items[0].Id, Path: "reference.txt"}}}).GetSkillFile()

@@ -15,7 +15,7 @@ const catalogSnapshots = 8
 
 func sameCatalog(a, b *catalogSnapshot) bool {
 	return a.scope == b.scope && a.version == b.version && a.truncated == b.truncated && slices.Equal(a.diagnostics, b.diagnostics) && slices.EqualFunc(a.items, b.items, func(x, y catalogEntry) bool {
-		return x.ID == y.ID && x.Name == y.Name && x.Description == y.Description && x.Source == y.Source && x.ManualOnly == y.ManualOnly && slices.Equal(x.Warnings, y.Warnings)
+		return x.ID == y.ID && x.Name == y.Name && x.Description == y.Description && x.Compatibility == y.Compatibility && x.Source == y.Source && x.ManualOnly == y.ManualOnly && slices.Equal(x.Warnings, y.Warnings)
 	})
 }
 
@@ -55,6 +55,7 @@ func (r *Reader) retainCatalog(next *catalogSnapshot) (*catalogSnapshot, error) 
 	}
 	if matching != nil {
 		matching.at = next.at
+		matching.directories, matching.cacheable = next.directories, next.cacheable
 		r.cached = matching
 		return matching, nil
 	}

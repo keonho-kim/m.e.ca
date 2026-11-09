@@ -47,7 +47,7 @@ func parseMetadata(body []byte, folder string) (instruction.Metadata, error) {
 	if !instruction.ValidName(value.Name) || value.Name != folder || strings.TrimSpace(value.Description) == "" || utf8.RuneCountInString(value.Description) > 1024 || utf8.RuneCountInString(value.Compatibility) > 500 {
 		return instruction.Metadata{}, faults.Errorf(diagcatalog.SkillsNameDescriptionOrCompatibilityViolatesTheSkill, ErrInvalid)
 	}
-	return instruction.Metadata{Name: value.Name, Description: value.Description, ManualOnly: value.ManualOnly, Warnings: warnings}, nil
+	return instruction.Metadata{Name: value.Name, Description: value.Description, Compatibility: value.Compatibility, ManualOnly: value.ManualOnly, Warnings: warnings}, nil
 }
 
 func metadataNode(body []byte) (*yaml.Node, error) {

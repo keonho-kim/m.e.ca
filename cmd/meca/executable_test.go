@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/diagnostics"
 )
 
 var cliBuild struct {
@@ -23,6 +25,9 @@ var cliBuild struct {
 }
 
 func TestMain(m *testing.M) {
+	if handled, code := diagnostics.RunStderrRelay(os.Args); handled {
+		os.Exit(code)
+	}
 	code := m.Run()
 	if cliBuild.dir != "" {
 		if err := os.RemoveAll(cliBuild.dir); err != nil {

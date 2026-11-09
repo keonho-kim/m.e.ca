@@ -42,7 +42,7 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 	if err != nil {
 		return nil, 0, err
 	}
-	budget := newReadBudget(bounds.MaxBytes)
+	budget := newReadBudget(bounds.MaxBytes, bounds.Reserve)
 	payloads := pagePayloads{store: s, ctx: ctx, budget: budget}
 	pageTeam := teamPage{parent: s, compact: compact, payloads: &payloads}
 	var metadata []storedRecord

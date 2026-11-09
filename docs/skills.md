@@ -87,7 +87,7 @@ description: 변경한 코드의 정확성과 실패 경로를 검토할 때 사
 관찰한 결과와 확인하지 못한 부분을 구분해 보고한다.
 ```
 
-SKILL.md라는 이름과 YAML frontmatter의 name·description이 필요하다. name은 실제 스킬 디렉터리 이름과 일치하는 1~64자의 소문자 영숫자·하이픈이다. 처음·마지막·연속 하이픈은 허용하지 않는다. description은 비어 있지 않은 최대 1024자 문자열이다. compatibility가 있으면 최대 500자 문자열이어야 한다.
+SKILL.md라는 이름과 YAML frontmatter의 name·description이 필요하다. name은 실제 스킬 디렉터리 이름과 일치하는 1~64자의 소문자 영숫자·하이픈이다. 처음·마지막·연속 하이픈은 허용하지 않는다. description은 비어 있지 않은 최대 1024자 문자열이다. compatibility가 있으면 최대 500자 문자열이어야 하며 목록·본문·서버 API에 환경 요구사항으로 전달한다. 이 값의 변경도 본문 revision에 반영한다.
 
 실제 YAML 파서를 사용하고 중복 키·잘못된 타입·과도한 중첩·alias·잘못된 UTF-8을 거부한다. README 대체나 자동 형식 보정은 하지 않는다. 잘못된 파일은 목록의 진단에 표시하며 다른 정상 스킬을 계속 조회할 수 있다.
 
@@ -97,13 +97,15 @@ disable-model-invocation: true와 선택적인 agents/openai.yaml의 policy.allo
 
 !skills는 목록·출처·진단을 표시한다. Enter로 본문을 미리 보고 PgUp/PgDn으로 이동한다. 미리보기는 모델 요청을 시작하지 않는다. #를 입력하면 이름을 자동완성하며 Enter·Tab은 작성 중인 요청에 이름을 삽입한다.
 
-목록의 첫 페이지는 새로 탐색하고 후속 페이지는 같은 메타데이터 snapshot을 읽는다. reader당 최대 8건·합계 8MiB의 독립 snapshot을 보관하므로 다른 요청의 목록 갱신이 기존 탐색을 바꾸지 않는다. 불투명 cursor는 최대 64바이트이며 같은 읽기 범위·마스킹 revision에서 2분 동안 유효하다. 만료·용량 회수 시 빈 cursor로 다시 시작하며 !skills는 한 번 자동 재조회한다. 자동완성의 재사용 기간은 1초이며 본문은 캐시하지 않는다. 실제 load_skill·참고 파일 읽기는 현재 파일과 접근 정책을 다시 검사한다.
+목록의 첫 페이지는 새로 탐색하고 후속 페이지는 같은 메타데이터 snapshot을 읽는다. reader당 최대 8건·합계 8MiB의 독립 snapshot을 보관하므로 다른 요청의 목록 갱신이 기존 탐색을 바꾸지 않는다. 불투명 cursor는 최대 64바이트이며 같은 읽기 범위·마스킹 revision에서 2분 동안 유효하다. 만료·용량 회수 시 빈 cursor로 다시 시작하며 !skills는 한 번 자동 재조회한다. 이름 탐색·자동완성의 메타데이터 재사용 기간은 1초이며 설치 루트의 항목 변경·교체가 확인되면 즉시 다시 탐색한다. 본문은 캐시하지 않는다. 실제 load_skill·참고 파일 읽기는 현재 파일과 접근 정책을 다시 검사한다.
 
 #review는 우선순위에 따라 선택한 본문을 첫 모델 판단 전에 읽는다. 동명 출처를 지정하려면 #project:review, #meca:review, #shared:review를 사용한다. 코드·인용·URL·이스케이프·일반 이슈 번호 #123은 호출로 해석하지 않는다. 숫자로만 된 이름은 출처를 함께 지정한다. 명시한 스킬을 읽지 못하면 모델 작업을 진행하지 않고 오류를 알린다.
 
+심볼릭 링크의 설치 폴더와 실제 스킬 이름이 달라도 목록의 name으로 호출할 수 있다. 반환한 id는 설치 위치를 구분하며 load_skill·참고 파일 읽기에 그대로 사용한다. 동일 이름의 선택은 프로젝트·개인·공유 출처 순서를 따른다.
+
 | 도구 | 역할 |
 | --- | --- |
-| list_skills | 이름·설명·출처·manual_only·warnings 조회. cursor·limit으로 다음 페이지 읽기 |
+| list_skills | 이름·설명·환경 요구사항·출처·manual_only·warnings 조회. cursor·limit으로 다음 페이지 읽기 |
 | load_skill | id 또는 스킬 디렉터리/SKILL.md path 중 하나로 본문 읽기 |
 | read_skill_file | id와 스킬 루트 기준 상대 path로 참고 자료 읽기. 첫 페이지의 revision과 next_offset을 다음 offset·revision으로 전달 |
 

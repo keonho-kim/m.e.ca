@@ -72,7 +72,7 @@ func TestAdmissionFailureConfirmsItsTerminalWrite(t *testing.T) {
 			t.Cleanup(func() { _ = s.Close() })
 			store := &admissionResponseStore{persist: persisted}
 			s.options.Responses = store
-			s.options.ReadOutput = func(context.Context, string, int64, int64, int) (string, error) { return "", nil }
+			s.options.ReadOutput = func(context.Context, string, int64, int64, int, func(int) error) (string, error) { return "", nil }
 			s.options.Open = func(context.Context, string, bool, config.Config) (*Conversation, error) {
 				return nil, errors.New("session source unavailable")
 			}

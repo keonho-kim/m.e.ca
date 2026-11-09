@@ -33,18 +33,19 @@ type repetition struct {
 	suppressed uint64
 }
 type Sink struct {
-	options    Options
-	low, high  chan []byte
-	stop, done chan struct{}
-	mu         sync.Mutex
-	closed     bool
-	recent     map[string]repetition
-	dropped    atomic.Uint64
-	suppressed atomic.Uint64
-	writeErr   error
-	failed     atomic.Bool
-	failure    chan struct{}
-	once       sync.Once
+	options       Options
+	low, high     chan []byte
+	stop, done    chan struct{}
+	mu            sync.Mutex
+	closed        bool
+	recent        map[string]repetition
+	dropped       atomic.Uint64
+	suppressed    atomic.Uint64
+	writeErr      error
+	failed        atomic.Bool
+	failure       chan struct{}
+	outputFailure <-chan struct{}
+	once          sync.Once
 }
 
 func New(options Options) (*Sink, error) {
@@ -55,6 +56,9 @@ func New(options Options) (*Sink, error) {
 		options.Now = time.Now
 	}
 	s := &Sink{options: options, low: make(chan []byte, 224), high: make(chan []byte, 32), stop: make(chan struct{}), done: make(chan struct{}), failure: make(chan struct{}), recent: make(map[string]repetition)}
+	if output, ok := options.Writer.(interface{ Failure() <-chan struct{} }); ok {
+		s.outputFailure = output.Failure()
+	}
 	go s.run()
 	return s, nil
 }

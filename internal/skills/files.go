@@ -126,6 +126,7 @@ func (r *Reader) documentAt(ctx context.Context, root *os.Root, path, scope, act
 		doc.ID = fmt.Sprintf("path:%x", sha256.Sum256([]byte(actual)))
 	}
 	doc.Description = r.clean(doc.Description)
+	doc.Compatibility = r.clean(doc.Compatibility)
 	if r.clean(doc.ID) != doc.ID || r.clean(doc.Name) != doc.Name {
 		return doc, faults.Errorf(diagcatalog.SkillsProtectedCredentialInSkillIdentity, ErrInvalid)
 	}

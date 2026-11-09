@@ -20,6 +20,7 @@ func (s *Sink) run() {
 	defer ticker.Stop()
 	burst := 0
 	var dropped, suppressed, missing uint64
+	outputFailure := s.outputFailure
 	summary := func() {
 		d, next, absent := s.dropped.Load(), s.suppressed.Load(), missingReporters.Load()
 		if d == dropped && next == suppressed && absent == missing {
@@ -31,6 +32,9 @@ func (s *Sink) run() {
 	}
 	for {
 		select {
+		case <-outputFailure:
+			s.fail()
+			outputFailure = nil
 		case <-ticker.C:
 			summary()
 		default:
@@ -53,6 +57,9 @@ func (s *Sink) run() {
 			}
 		}
 		select {
+		case <-outputFailure:
+			s.fail()
+			outputFailure = nil
 		case body := <-s.high:
 			s.write(body)
 			burst++
@@ -90,9 +97,16 @@ func (s *Sink) write(body []byte) {
 		return
 	}
 	if err != nil || n != len(body) {
+		s.fail()
+	}
+}
+
+func (s *Sink) fail() {
+	if s.failed.CompareAndSwap(false, true) {
 		s.writeErr = ErrWrite
-		s.failed.Store(true)
 		close(s.failure)
-		emergency(catalog.ReporterFailed)
+		if _, stderrFailed := s.options.Writer.(*Stderr); !stderrFailed {
+			emergency(catalog.ReporterFailed)
+		}
 	}
 }

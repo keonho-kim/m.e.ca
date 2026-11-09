@@ -17,7 +17,7 @@ import (
 const MaxReadBytes = 32 << 20
 const MaxOriginalBytes = 2 * model.MaxResponseBytes
 
-func (s *Service) ResponseResult(ctx context.Context, value Response) (string, error) {
+func (s *Service) ResponseResult(ctx context.Context, value Response, reserve func(int) error) (string, error) {
 	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
 		return "", err
@@ -30,12 +30,12 @@ func (s *Service) ResponseResult(ctx context.Context, value Response) (string, e
 	if c, readCtx, release, err := s.beginResultRead(ctx, value.Session); err == nil {
 		if c.Runtime.Session.ID == value.Session && c.Output != nil {
 			defer release()
-			return c.Output.ResponseOutput(readCtx, value.Session, value.Begin, value.Through, MaxOriginalBytes)
+			return c.Output.ResponseOutput(readCtx, value.Session, value.Begin, value.Through, MaxOriginalBytes, reserve)
 		}
 		release()
 	}
 	if s.options.ReadOutput == nil {
 		return "", faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOriginalOutputIsUnavailable)
 	}
-	return s.options.ReadOutput(ctx, value.Session, value.Begin, value.Through, MaxOriginalBytes)
+	return s.options.ReadOutput(ctx, value.Session, value.Begin, value.Through, MaxOriginalBytes, reserve)
 }

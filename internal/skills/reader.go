@@ -130,12 +130,23 @@ func (r *Reader) resolve(ctx context.Context, selected instruction.Selector) (st
 	if !instruction.ValidName(selected.ID) {
 		return "", "", ErrInvalid
 	}
-	for _, source := range r.sources() {
-		path := filepath.Join(source.path, selected.ID)
-		if _, _, err := r.document(ctx, path, source.name, true); err == nil {
-			return path, source.name, nil
-		} else if ctx.Err() != nil {
-			return "", "", ctx.Err()
+	for _, fresh := range []bool{false, true} {
+		snapshot, err := r.snapshot(ctx, fresh)
+		if err != nil {
+			return "", "", err
+		}
+		for _, entry := range snapshot.items {
+			if entry.Name != selected.ID {
+				continue
+			}
+			// Metadata names belong to the real skill directory. IDs retain
+			// the installed alias so subsequent reference reads use that root.
+			scope, name, _ := strings.Cut(entry.ID, ":")
+			for _, source := range r.sources() {
+				if source.name == scope {
+					return filepath.Join(source.path, name), scope, nil
+				}
+			}
 		}
 	}
 	return "", "", faults.Errorf(diagcatalog.SkillsWrappedCause, ErrNotFound, selected.ID)
@@ -149,6 +160,9 @@ func (r *Reader) Load(ctx context.Context, selected instruction.Selector, explic
 	doc, actual, err := r.document(ctx, path, scope, false)
 	if err != nil {
 		return instruction.Document{}, err
+	}
+	if selected.Path == "" && !strings.Contains(selected.ID, ":") && doc.Name != selected.ID {
+		return instruction.Document{}, ErrNotFound
 	}
 	if doc.ManualOnly && !explicit && !instruction.ExplicitRead(ctx, doc.ID) {
 		return instruction.Document{}, ErrManual

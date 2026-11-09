@@ -65,8 +65,8 @@ func testServerTeamRequest(t *testing.T, compatible bool) {
 		t.Fatal(err)
 	}
 	app, err := server.New(ctx, server.Options{Config: cfg, Ledger: ledger, Responses: ledger, Project: project,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
-			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes)
+		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
+			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes, reserve)
 		},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
 			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
@@ -148,7 +148,7 @@ func testServerTeamRequest(t *testing.T, compatible bool) {
 		if err != nil || value.Status != "completed" {
 			t.Fatal(value, err)
 		}
-		text, err := app.ResponseResult(ctx, value)
+		text, err := app.ResponseResult(ctx, value, nil)
 		if err != nil || text != strings.TrimSpace(finalText) || !model.sawContext.Load() {
 			t.Fatal(text, finalText, model.sawContext.Load(), err)
 		}

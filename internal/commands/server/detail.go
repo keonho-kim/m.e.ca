@@ -35,7 +35,7 @@ type DetailRead struct {
 	Context context.Context
 	Session string
 	Source  DetailSource
-	Load    func() (DetailOriginal, error)
+	Load    func(func(int) error) (DetailOriginal, error)
 	Release func()
 }
 
@@ -72,26 +72,26 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 	if source.Tool.Sequence != 0 && source.Tool.Session == "" {
 		source.Tool.Session = c.Runtime.Session.ID
 	}
-	return DetailRead{Context: ctx, Session: c.Runtime.Session.ID, Source: source, Release: sync.OnceFunc(done), Load: func() (DetailOriginal, error) {
+	return DetailRead{Context: ctx, Session: c.Runtime.Session.ID, Source: source, Release: sync.OnceFunc(done), Load: func(reserve func(int) error) (DetailOriginal, error) {
 		if err := ctx.Err(); err != nil {
 			return DetailOriginal{}, err
 		}
-		return c.loadDetail(ctx, source, pending)
+		return c.loadDetail(ctx, source, pending, reserve)
 	}}, nil
 }
 
-func (c *Conversation) loadDetail(ctx context.Context, source DetailSource, pending *pendingApproval) (DetailOriginal, error) {
+func (c *Conversation) loadDetail(ctx context.Context, source DetailSource, pending *pendingApproval, reserve func(int) error) (DetailOriginal, error) {
 	if pending != nil {
 		return DetailOriginal{Approval: &pending.value}, nil
 	}
 	if source.Tool.Sequence != 0 {
-		value, err := c.History.ToolEvent(ctx, source.Tool, history.ReadBounds{MaxBytes: MaxOriginalBytes})
+		value, err := c.History.ToolEvent(ctx, source.Tool, history.ReadBounds{MaxBytes: MaxOriginalBytes, Reserve: reserve})
 		if errors.Is(err, history.ErrNotFound) || errors.Is(err, sessionstate.ErrNotFound) {
 			return DetailOriginal{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerToolDetailWasNotFound)
 		}
 		return DetailOriginal{Tool: &value}, err
 	}
-	values, _, err := c.History.TimelineSummaries(ctx, c.Runtime.Session.ID, source.HistorySequence+1, 1, history.ReadBounds{MaxBytes: MaxOriginalBytes})
+	values, _, err := c.History.TimelineSummaries(ctx, c.Runtime.Session.ID, source.HistorySequence+1, 1, history.ReadBounds{MaxBytes: MaxOriginalBytes, Reserve: reserve})
 	if err != nil {
 		return DetailOriginal{}, err
 	}

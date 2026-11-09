@@ -91,10 +91,10 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 	skillReader := skills.New(project, home, skills.Options{Redact: vault.Redact, Check: boundary.SkillTarget, RedactRange: vault.RedactRange, Version: vault.RedactionVersion})
 	f.app, err = server.New(t.Context(), server.Options{
 		Config: cfg, Ledger: ledger, Responses: ledger, Project: project, Skills: skillReader,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
+		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
 			f.resultOpens.Add(1)
 			f.outputReads.Add(1)
-			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes)
+			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes, reserve)
 		},
 		List: func(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
 			return sessions.ConversationPage(ctx, project, cursor, limit)
@@ -159,9 +159,9 @@ type outputProbe struct {
 	reads *atomic.Int32
 }
 
-func (p outputProbe) ResponseOutput(ctx context.Context, id string, after, through int64, maxBytes int) (string, error) {
+func (p outputProbe) ResponseOutput(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
 	p.reads.Add(1)
-	return p.Store.ResponseOutput(ctx, id, after, through, maxBytes)
+	return p.Store.ResponseOutput(ctx, id, after, through, maxBytes, reserve)
 }
 
 type countTools struct {

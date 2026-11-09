@@ -14,4 +14,6 @@ var ErrReadLimit = faults.Errorf(diagcatalog.HistoryStoredOriginalExceedsTheRead
 type ReadBounds struct {
 	MaxBytes  int
 	TextBytes int
+	// Reserve admits cumulative selected bytes before restoring their bodies.
+	Reserve func(int) error
 }

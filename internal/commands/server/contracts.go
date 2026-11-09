@@ -78,7 +78,7 @@ type Options struct {
 	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Ledger       Ledger
 	Responses    ResponseStore
-	ReadOutput   func(context.Context, string, int64, int64, int) (string, error)
+	ReadOutput   func(context.Context, string, int64, int64, int, func(int) error) (string, error)
 }
 
 type Task struct{ ID, Session, Status, Error, Code, Persistence string }

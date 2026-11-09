@@ -15,10 +15,12 @@ import (
 type readBudget struct {
 	remaining int
 	limited   bool
+	selected  int
+	reserve   func(int) error
 }
 
-func newReadBudget(maxBytes int) *readBudget {
-	return &readBudget{remaining: maxBytes, limited: maxBytes > 0}
+func newReadBudget(maxBytes int, reserve func(int) error) *readBudget {
+	return &readBudget{remaining: maxBytes, limited: maxBytes > 0, reserve: reserve}
 }
 
 func (b *readBudget) take(size int) error {
@@ -26,6 +28,14 @@ func (b *readBudget) take(size int) error {
 		if size < 0 || size > b.remaining {
 			return history.ErrReadLimit
 		}
+	}
+	if b.reserve != nil {
+		if err := b.reserve(b.selected + size); err != nil {
+			return err
+		}
+		b.selected += size
+	}
+	if b.limited {
 		b.remaining -= size
 	}
 	return nil
@@ -33,6 +43,13 @@ func (b *readBudget) take(size int) error {
 
 func (s *Store) readPayload(ctx context.Context, id string, budget *readBudget) (json.RawMessage, error) {
 	id, _ = content.Reference(id)
+	if budget.reserve != nil {
+		value, err := s.admitPayload(ctx, id, budget)
+		if err != nil {
+			return nil, err
+		}
+		return s.restorePayload(ctx, value.codec, value.size, value.digest, value.body)
+	}
 	if _, err := payloadNumber(id); err != nil {
 		return nil, err
 	}

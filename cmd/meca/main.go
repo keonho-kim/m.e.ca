@@ -31,6 +31,9 @@ import (
 )
 
 func main() {
+	if handled, code := diagnostics.RunStderrRelay(os.Args); handled {
+		os.Exit(code)
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	output, err := diagnostics.OpenStderr()
 	if err != nil {

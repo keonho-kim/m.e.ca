@@ -23,7 +23,7 @@ type Request struct {
 	Source  server.DetailSource
 	Version func() int
 	NewMask func() func(string, bool) string
-	Load    func() (server.DetailOriginal, error)
+	Load    func(func(int) error) (server.DetailOriginal, error)
 }
 
 type Cache struct {
@@ -107,12 +107,9 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 // The original is transient. Keep its reservation until the masked document
 // has reached the bounded cache or private spool, then discard all references.
 func loadDocument(ctx context.Context, spool *documentSpool, request Request) error {
-	release, err := processmemory.AcquirePayload(ctx, server.MaxOriginalBytes)
-	if err != nil {
-		return err
-	}
-	defer release()
-	original, err := request.Load()
+	memory := processmemory.NewPayloadLease()
+	defer memory.Close()
+	original, err := request.Load(memory.Resize)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ message Skill {
   string source = 4;
   bool manual_only = 5;
   repeated string warnings = 6;
+  string compatibility = 7;
 }
 message SkillDiagnostic { string id = 1; string message = 2; }
 message Skills {

@@ -23,17 +23,14 @@ func (h *Handler) withResult(ctx context.Context, writer *eventstream.Writer, va
 			h.Reads = admission.New(1)
 		}
 	})
+	memory := processmemory.NewPayloadLease()
+	defer memory.Close()
 	release, err := eventstream.Await(ctx, writer, func(ctx context.Context) (func(), error) {
 		releaseRead, err := h.Reads.Acquire(ctx, 1)
 		if err != nil {
 			return nil, err
 		}
-		releaseMemory, err := processmemory.AcquirePayload(ctx, server.MaxOriginalBytes)
-		if err != nil {
-			releaseRead()
-			return nil, err
-		}
-		return func() { releaseMemory(); releaseRead() }, nil
+		return releaseRead, nil
 	})
 	if release != nil {
 		defer release()
@@ -42,13 +39,16 @@ func (h *Handler) withResult(ctx context.Context, writer *eventstream.Writer, va
 		return err
 	}
 	text, err := eventstream.Await(ctx, writer, func(ctx context.Context) (string, error) {
-		text, err := h.Service.ResponseResult(ctx, value)
+		text, err := h.Service.ResponseResult(ctx, value, memory.Resize)
 		if err != nil {
 			return "", err
 		}
 		return h.redact(text), nil
 	})
 	if err != nil {
+		return err
+	}
+	if err := memory.Resize(len(text)); err != nil {
 		return err
 	}
 	return send(text)

@@ -13,7 +13,7 @@ import (
 )
 
 func wireSkill(m instruction.Metadata) *v1.Skill {
-	return &v1.Skill{Id: m.ID, Name: m.Name, Description: m.Description, Source: m.Source, ManualOnly: m.ManualOnly, Warnings: m.Warnings}
+	return &v1.Skill{Id: m.ID, Name: m.Name, Description: m.Description, Compatibility: m.Compatibility, Source: m.Source, ManualOnly: m.ManualOnly, Warnings: m.Warnings}
 }
 
 func (a *API) listSkills(ctx context.Context, input *v1.SkillListRequest, reply *v1.Reply) error {
