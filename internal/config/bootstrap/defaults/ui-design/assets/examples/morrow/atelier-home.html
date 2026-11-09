@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- Purpose: Demonstrate the complete 집중이 머무는 공간 task in a linked practical application.
+Pattern: Native multi-page HTML/CSS with local Vanilla JS state.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/ui-design/references/code-examples.md, internal/config/bootstrap/defaults/ui-design/assets/examples/morrow/atelier.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="atelier">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>집중이 머무는 공간 / morrow</title>
+    <meta name="description" content="집중이 머무는 공간 / morrow 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다.">
+    <link rel="icon" type="image/jpeg" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css"><link rel="stylesheet" href="atelier.css">
+    <script data-required src="../shared/interaction.js" defer></script>
+    <script data-required src="../shared/local-state.js" defer></script>
+    <script data-required src="../shared/media.js" defer></script>
+    <script data-required src="booking-data.js" defer></script>
+    <script data-required src="booking.js" defer></script>
+  </head>
+  <body data-app="atelier" data-page="home">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="site-header glass-surface">
+      <a class="site-brand" href="atelier-home.html">morrow</a>
+      <nav class="site-nav" aria-label="주요 메뉴">
+        <a href="atelier-home.html#spaces">공간 둘러보기</a>
+        <a href="atelier-booking.html">예약하기</a>
+        <span class="demo-chip">Demo</span>
+      </nav>
+    </header>
+    <main id="main" class="site-main">
+      <p class="notice error" data-page-error role="alert" hidden></p>
+      <section class="site-hero">
+        <div class="hero-copy">
+          <h1>좋은 생각이<br>자라는 자리.
+          </h1>
+          <p>혼자 시작한 아이디어가 함께하는 작업이 될 때.<br>팀의 속도에 맞는 조용하고 편안한 공간을 만나보세요.
+          </p>
+          <a class="btn primary" href="#spaces">우리 팀에 맞는 공간 찾기 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-right"></use></svg></a>
+          <p class="small">2~8명 / 최소 2시간 / 독립된 작업 공간
+          </p>
+        </div>
+        <div class="media">
+          <img class="preview" src="../shared/daylight-preview.jpg" width="40" height="30" alt="" aria-hidden="true">
+          <img class="full" data-blur-up src="../shared/studio-daylight.jpg" alt="긴 테이블과 자연광이 들어오는 Daylight studio" width="1448" height="1086" loading="eager" decoding="async">
+          <span class="fallback" role="status" hidden>이미지를 불러오지 못했습니다. 긴 테이블과 자연광이 들어오는 Daylight studio</span>
+        </div>
+      </section>
+      <section id="spaces" class="site-section">
+        <header>
+          <div>
+            <h2>오늘의 작업에 맞게
+            </h2>
+            <p>공간의 크기, 구성과 이용 금액을 함께 비교하세요.
+            </p>
+          </div>
+          <span class="small muted">두 가지 공간</span>
+        </header>
+        <div class="space-grid">
+          <article class="space-card">
+            <a href="atelier-space.html?space=daylight"><div class="media" style="view-transition-name:morrow-room-daylight"><img class="preview" src="../shared/daylight-preview.jpg" width="40" height="30" alt="" aria-hidden="true"><img class="full" data-blur-up src="../shared/studio-daylight.jpg" alt="Daylight studio의 테이블과 8인용 의자" width="1448" height="1086" loading="lazy" decoding="async"><span class="fallback" role="status" hidden>이미지를 불러오지 못했습니다. Daylight studio의 테이블과 8인용 의자</span></div></a>
+            <div class="space-card-info">
+              <div>
+                <h3><a href="atelier-space.html?space=daylight">Daylight studio <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-up-right"></use></svg></a></h3>
+                <p>최대 8명 / 워크숍, 공동 작업 / 자연광
+                </p>
+              </div>
+              <div class="space-price">
+                35,000원
+                <br>
+                <small>/ 시간 / 부가세 별도</small>
+              </div>
+            </div>
+          </article>
+          <article class="space-card">
+            <a href="atelier-space.html?space=warm"><div class="media" style="view-transition-name:morrow-room-warm"><img class="preview" src="../shared/warm-preview.jpg" width="40" height="30" alt="" aria-hidden="true"><img class="full" data-blur-up src="../shared/studio-warm.jpg" alt="Warm room의 원목 회의 테이블과 네 개의 의자" width="1448" height="1086" loading="lazy" decoding="async"><span class="fallback" role="status" hidden>이미지를 불러오지 못했습니다. Warm room의 원목 회의 테이블과 네 개의 의자</span></div></a>
+            <div class="space-card-info">
+              <div>
+                <h3><a href="atelier-space.html?space=warm">Warm meeting room <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-up-right"></use></svg></a></h3>
+                <p>최대 4명 / 팀 회의, 인터뷰 / 독립실
+                </p>
+              </div>
+              <div class="space-price">
+                22,000원
+                <br>
+                <small>/ 시간 / 부가세 별도</small>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="site-section service-points">
+        <article>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#users"></use></svg>
+          <h3>작업에 맞는 구성
+          </h3>
+          <p>인원과 목적부터 비교합니다. 여러 장의 분위기 사진보다 모임에 필요한 조건을 먼저 확인하세요.
+          </p>
+        </article>
+        <article>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#calendar"></use></svg>
+          <h3>이용 전에 보는 전체 금액
+          </h3>
+          <p>시간, 선택 장비와 부가세를 합산해 보여드립니다. 확인 전에는 예약 내용을 보관하지 않습니다.
+          </p>
+        </article>
+        <article>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>
+          <h3>분명한 이용 안내
+          </h3>
+          <p>이 예시는 가상 공간의 로컬 데모입니다. 실제 장소, 예약 재고, 결제와 연결되지 않습니다.
+          </p>
+        </article>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <a class="site-brand" href="atelier-home.html">morrow</a>
+      <div>
+        워크숍과 집중 작업을 위한 공간
+        <br>
+        로컬 데모 / 실제 장소·예약·결제가 아닙니다.
+      </div>
+    </footer>
+    <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+      <header class="modal-head">
+        <h2 id="confirm-title">변경 확인
+        </h2>
+      </header>
+      <div class="modal-body">
+        <p></p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="cancel" autofocus>취소</button>
+        <button class="btn primary" value="confirm">확인</button>
+      </form>
+    </dialog>
+    <div class="toast-stack" data-toasts>
+
+    </div>
+  </body>
+</html>

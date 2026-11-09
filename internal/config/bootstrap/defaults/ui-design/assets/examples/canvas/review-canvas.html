@@ -1,0 +1,135 @@
+<!doctype html>
+<!-- Purpose: Demonstrate spatial review with local images, notes and a persistent inspector.
+Pattern: Native full-canvas application with bounded page-owned placement.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/ui-design/assets/examples/canvas/review-canvas.js, internal/config/bootstrap/defaults/ui-design/assets/examples/canvas/review-canvas.css, internal/config/bootstrap/defaults/ui-design/references/composition-decisions.md. -->
+<html lang="ko" data-theme="canvas">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>자료 검토 캔버스 / Field Notes</title>
+    <meta name="description" content="자료 검토 캔버스 / Field Notes 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다.">
+    <link rel="icon" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="review-canvas.css">
+    <script src="../shared/interaction.js" defer data-required></script>
+    <script src="../shared/media.js" defer data-required></script>
+    <script src="review-canvas.js" defer data-required></script>
+  </head>
+  <body data-app="canvas">
+    <a class="skip" href="#main">작업 영역으로 이동</a>
+    <header class="canvas-header">
+      <span class="canvas-brand">FIELD / NOTES</span>
+      <nav aria-label="프로젝트 탐색">
+        <a href="../archive/archive-library.html">자료 라이브러리</a>
+      </nav>
+    </header>
+    <div class="canvas-toolbar">
+      <div class="canvas-heading">
+        <h1>공간 콘셉트 검토
+        </h1>
+        <p>사진과 메모를 함께 놓고 관계를 확인합니다.
+        </p>
+      </div>
+      <div class="canvas-tools">
+        <label class="zoom-control">확대<input type="range" min="50" max="150" step="10" value="100" data-zoom><output data-zoom-value>100%</output></label>
+        <button class="btn" data-fit>전체 보기</button>
+        <button class="btn" data-reset-layout>배치 초기화</button>
+      </div>
+    </div>
+    <main id="main" class="canvas-workspace">
+      <p class="notice error" data-page-error role="alert" hidden></p>
+      <div class="canvas-scroller" data-canvas-viewport tabindex="0" aria-label="가로와 세로로 스크롤할 수 있는 자료 작업 영역">
+        <div class="canvas-extent" data-canvas-extent>
+          <div class="canvas-plane" data-canvas-plane>
+            <p class="canvas-board-label">02 / 공간 검토 / 1280 × 760
+            </p>
+            <figure class="canvas-card" data-artifact="daylight" data-kind="이미지" data-description="가상 공간의 원본 이미지입니다. 빛과 테이블 구성을 함께 비교합니다." style="--x:50px;--y:85px">
+              <header>
+                <span>Image / daylight</span>
+                <button type="button" data-drag aria-label="채광과 공동 작업 드래그 이동"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#menu"></use></svg></button>
+              </header>
+              <div class="media">
+                <img class="preview" src="../shared/daylight-preview.jpg" alt="" aria-hidden="true" width="40" height="30">
+                <img class="full" data-blur-up src="../shared/studio-daylight.jpg" alt="채광과 공동 작업" width="1448" height="1086" decoding="async">
+                <span class="fallback" role="status" hidden>공간 이미지를 불러오지 못했습니다. 공간 이름과 조건은 아래에서 확인할 수 있습니다.</span>
+              </div>
+              <figcaption>
+                <button class="canvas-select" data-select aria-pressed="false">채광과 공동 작업</button>
+              </figcaption>
+            </figure>
+            <figure class="canvas-card" data-artifact="warm" data-kind="이미지" data-description="가상 공간의 원본 이미지입니다. 빛과 테이블 구성을 함께 비교합니다." style="--x:640px;--y:105px">
+              <header>
+                <span>Image / warm</span>
+                <button type="button" data-drag aria-label="독립된 회의 공간 드래그 이동"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#menu"></use></svg></button>
+              </header>
+              <div class="media">
+                <img class="preview" src="../shared/warm-preview.jpg" alt="" aria-hidden="true" width="40" height="30">
+                <img class="full" data-blur-up src="../shared/studio-warm.jpg" alt="독립된 회의 공간" width="1448" height="1086" decoding="async">
+                <span class="fallback" role="status" hidden>공간 이미지를 불러오지 못했습니다. 공간 이름과 조건은 아래에서 확인할 수 있습니다.</span>
+              </div>
+              <figcaption>
+                <button class="canvas-select" data-select aria-pressed="false">독립된 회의 공간</button>
+              </figcaption>
+            </figure>
+            <article class="canvas-card note" data-artifact="criteria" data-kind="검토 메모" data-description="프로젝트의 비교 기준과 다음 확인 사항을 정리한 예시 메모입니다." style="--x:370px;--y:400px">
+              <header>
+                <span>Note / criteria</span>
+                <button type="button" data-drag aria-label="공간을 비교하는 기준 드래그 이동"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#menu"></use></svg></button>
+              </header>
+              <h2><button class="canvas-select" data-select aria-pressed="false">공간을 비교하는 기준</button></h2>
+              <p class="note-copy">채광이 중요한 워크숍인지, 대화에 집중해야 하는 회의인지 먼저 정합니다. 분위기와 수용 인원도 함께 봅니다.
+              </p>
+            </article>
+            <article class="canvas-card note green" data-artifact="next" data-kind="검토 메모" data-description="프로젝트의 비교 기준과 다음 확인 사항을 정리한 예시 메모입니다." style="--x:990px;--y:380px">
+              <header>
+                <span>Note / next</span>
+                <button type="button" data-drag aria-label="다음 검토에서 확인할 것 드래그 이동"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#menu"></use></svg></button>
+              </header>
+              <h2><button class="canvas-select" data-select aria-pressed="false">다음 검토에서 확인할 것</button></h2>
+              <p class="note-copy">선택한 공간의 이름과 조건은 이미지가 실패해도 남아 있어야 합니다. 예약 전에는 전체 금액을 확인합니다.
+              </p>
+            </article>
+          </div>
+        </div>
+      </div>
+      <aside class="canvas-inspector glass-surface" aria-label="선택한 자료">
+        <h2 data-inspector-title>채광과 공동 작업
+        </h2>
+        <p data-inspector-copy></p>
+        <dl class="canvas-facts">
+          <div><dt>자료 유형</dt><dd data-inspector-type>이미지</dd></div>
+          <div><dt>가로 위치</dt><dd data-inspector-x></dd></div>
+          <div><dt>세로 위치</dt><dd data-inspector-y></dd></div>
+          <div><dt>보관 범위</dt><dd>현재 페이지</dd></div>
+        </dl>
+        <h3>선택한 자료 이동 / 10px
+        </h3>
+        <div class="nudge-controls">
+          <button class="btn" data-nudge="-10,0"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-left"></use></svg>왼쪽</button>
+          <button class="btn" data-nudge="10,0">오른쪽<svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-right"></use></svg></button>
+          <button class="btn" data-nudge="0,-10">위로</button>
+          <button class="btn" data-nudge="0,10">아래로</button>
+        </div>
+        <p>자료의 위쪽 손잡이를 드래그하거나, 선택 버튼에 포커스한 상태에서 Alt + 방향키로 이동할 수 있습니다. 작업 영역은 일반 스크롤로 탐색합니다.
+        </p>
+        <p>사진과 메모는 가상의 프로젝트 자료입니다. 배치는 이 페이지에만 유지되며 새로고침하면 초기 상태로 돌아옵니다.
+        </p>
+        <noscript>
+          <p>선택·배치·확대에는 JavaScript가 필요합니다.
+        </p>
+        </noscript>
+      </aside>
+    </main>
+    <footer class="canvas-footer">
+      <span data-artifact-count>4개 자료</span>
+      <span data-canvas-status role="status">선택과 배치는 실제로 조작한 상태만 표시합니다.</span>
+    </footer>
+    <div class="toast-stack" data-toasts>
+
+    </div>
+  </body>
+</html>

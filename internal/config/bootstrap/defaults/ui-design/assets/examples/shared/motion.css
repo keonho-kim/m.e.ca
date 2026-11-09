@@ -1,0 +1,64 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: project palettes (preserved) · redesign: full · v2.0.0
+ * pre-emit critique: tiny secondary text and excess chrome; strengthen reading and flatten redundant frames.
+ * Purpose: Compose functional motion, skeletons and real image readiness without delaying work.
+ * Pattern: State-driven progressive presentation.
+ * Usage: interaction.js adds bounded entry order only after content is available.
+ * Related: internal/config/bootstrap/defaults/ui-design/references/motion/composition-patterns.md, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/media.js.
+ */
+:root {--ease-out:cubic-bezier(.2,.75,.25,1);--fast:140ms;--panel:220ms;--reveal-duration:200ms;--reveal-distance:7px}
+.btn,.icon-button,.nav-link {transition:background-color var(--fast),color var(--fast),border-color var(--fast)}
+.menu-toggle span {transition:transform 180ms var(--ease-out),opacity 120ms}
+.menu-toggle[aria-expanded=true] span:nth-child(1) {transform:translateY(4.6px) rotate(45deg)}
+.menu-toggle[aria-expanded=true] span:nth-child(2) {opacity:0}
+.menu-toggle[aria-expanded=true] span:nth-child(3) {transform:translateY(-4.6px) rotate(-45deg)}
+.side-drawer[open] {animation:drawer-in var(--panel) var(--ease-out)}
+.modal[open] {animation:modal-in var(--modal-duration,170ms) var(--ease-out)}
+.menu-panel.menu-visible>*:not(.menu-divider) {animation:menu-in 160ms var(--ease-out) both;animation-delay:calc(min(var(--i,0),4)*18ms)}
+.menu-panel.menu-visible>*:focus-visible {animation:none}
+.motion-ready .stagger-item {animation:content-in var(--reveal-duration) var(--ease-out) both;animation-delay:calc(min(var(--i,0),5)*24ms)}
+.motion-ready .stagger-item:focus-within {animation:none}
+.toast {animation:toast-in 170ms var(--ease-out)}
+@keyframes drawer-in {from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes modal-in {from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes menu-in {from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes content-in {from{opacity:0;transform:translateY(var(--reveal-distance))}to{opacity:1;transform:none}}
+@keyframes toast-in {from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.skeleton {height:12px;border-radius:4px;background:var(--soft);position:relative;overflow:hidden}
+.skeleton+.skeleton {margin-top:12px}
+.skeleton.wide {width:84%}
+.skeleton.short {width:46%}
+.skeleton.block {height:155px}
+.skeleton-pulse {animation:pulse 1.65s ease-in-out infinite}
+.skeleton-shimmer:after {content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(100deg,transparent,var(--surface),transparent);animation:shimmer 1.8s linear infinite}
+@keyframes pulse {0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes shimmer {to{transform:translateX(100%)}}
+.media {position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--soft);border-radius:inherit}
+.media.wide {aspect-ratio:16/9}
+.media img {display:block;width:100%;height:100%;object-fit:cover}
+.media .preview {position:absolute;inset:0;filter:blur(12px);transform:scale(1.04);transition:opacity 220ms var(--ease-out);pointer-events:none}
+.media .full {position:absolute;inset:0}
+.media.is-loading .full {opacity:0}
+.media.is-ready .full {opacity:1;transition:opacity 220ms var(--ease-out)}
+.media.is-ready .preview,.media.is-error .preview {opacity:0}
+.media.is-cached .full,.media.is-cached .preview {transition:none}
+.media.is-error .full {display:none}
+.media .fallback {padding:24px;height:100%;display:grid;place-content:center;color:var(--muted);font-size:12px;line-height:1.6}
+@media(prefers-reduced-motion:reduce){.menu-toggle span,.media .full,.media .preview,.btn,.icon-button,.nav-link{transition:none}.side-drawer[open],.modal[open],.menu-panel.menu-visible>*,.motion-ready .stagger-item,.toast,.skeleton-pulse,.skeleton-shimmer:after{animation:none}}
+@media(forced-colors:active){.skeleton{background:Canvas;border:1px solid CanvasText}.skeleton-shimmer:after{display:none}.btn,.modal,input,select,textarea,.step-dot{border-color:CanvasText}}
+
+html,body {overflow-x:clip}
+
+:root {--dialog-from:translateY(8px) scale(.985);--route-duration:150ms}
+@supports(transition-behavior:allow-discrete){
+ .modal {opacity:0;transform:var(--dialog-from);transition:opacity 120ms var(--ease-out),transform 160ms var(--ease-out),display 160ms allow-discrete,overlay 160ms allow-discrete;pointer-events:none}
+ .modal[open] {opacity:1;transform:none;animation:none;pointer-events:auto;transition-duration:180ms}
+ @starting-style {.modal[open]{opacity:0;transform:var(--dialog-from)}}
+}
+@media(prefers-reduced-motion:no-preference){
+ @view-transition {navigation:auto}
+ ::view-transition-old(root),::view-transition-new(root){animation-duration:var(--route-duration);animation-timing-function:cubic-bezier(.16,1,.3,1)}
+ ::view-transition-group(*){animation-duration:220ms;animation-timing-function:cubic-bezier(.16,1,.3,1)}
+ details:not(.stagger-menu)[open]>.source-line,details:not(.stagger-menu)[open]>.mobile-queue-items,details:not(.stagger-menu)[open]>.modal-body{animation:disclosure-in 160ms var(--ease-out)}
+}
+@keyframes disclosure-in{from{opacity:.5;clip-path:inset(0 0 8% 0);transform:translateY(-4px)}to{opacity:1;clip-path:inset(0);transform:none}}
+@media(prefers-reduced-motion:reduce){.modal{transition:none;transform:none}.evidence-record:target{animation:none}}

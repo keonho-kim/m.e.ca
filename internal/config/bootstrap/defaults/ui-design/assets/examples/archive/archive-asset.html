@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- Purpose: Demonstrate the complete 자료 보기 task in a linked practical application.
+Pattern: Editorial HTML composition with native local interactions.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/ui-design/references/code-examples.md, internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive.css, internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive-editorial.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="archive">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>자료 보기 / Archive</title>
+    <meta name="description" content="자료 보기 / Archive 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다.">
+    <link rel="icon" type="image/jpeg" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="archive.css">
+    <link rel="stylesheet" href="archive-editorial.css">
+    <script data-required src="../shared/interaction.js" defer></script>
+    <script data-required src="../shared/local-state.js" defer></script>
+    <script data-required src="../shared/media.js" defer></script>
+    <script data-required src="archive.js" defer></script>
+  </head>
+  <body data-app="archive" data-page="asset">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <div class="archive-main">
+      <div class="archive-chrome">
+      <header class="archive-masthead">
+        <a class="archive-brand" href="archive-library.html">Archive<span>작업의 자료와 맥락</span></a>
+        <div class="archive-project">
+          성수 스튜디오 프로젝트
+        </div>
+        <div class="archive-masthead-actions">
+          <span class="demo-chip">로컬 데모</span>
+          <button class="icon-button" type="button" data-open="command-dialog" aria-label="화면 바로가기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#search"></use></svg></button>
+          <span class="avatar" aria-label="김민서">민</span>
+        </div>
+      </header>
+      <nav class="archive-nav" aria-label="자료 공간">
+        <a class="archive-nav-link" href="archive-library.html" data-collection="library">모든 자료</a>
+        <a class="archive-nav-link" href="archive-library.html?saved=1" data-collection="saved">저장한 자료</a>
+        <a class="archive-nav-link" href="archive-guide.html">공간 가이드</a>
+        <a class="archive-nav-link" href="archive-lesson.html">디자인 클래스</a>
+      </nav>
+      </div>
+      <main id="main" class="workspace">
+        <header class="editorial-heading asset-heading">
+          <nav class="editorial-breadcrumb" aria-label="자료 경로">
+            <a href="archive-library.html" data-collection-return>모든 자료로</a>
+            <span>프로젝트 자료</span>
+          </nav>
+          <div class="asset-title-row">
+            <h1 id="page-title" tabindex="-1">자료 보기</h1>
+            <button class="btn" data-save aria-pressed="false" hidden><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#bookmark"></use></svg><span>자료 저장</span></button>
+          </div>
+        </header>
+        <p class="notice error" data-page-error role="alert" hidden></p>
+        <section data-asset-missing class="empty" hidden>
+          <h2>자료를 찾을 수 없습니다
+            </h2>
+          <p>주소가 바뀌었거나, 이 탭에 보관된 자료가 아닙니다.
+            </p>
+          <a class="btn" href="archive-library.html">모든 자료로</a>
+        </section>
+        <section class="asset-view" data-asset-view>
+          <figure class="asset-viewer">
+            <div data-viewer></div>
+            <figcaption class="viewer-toolbar">
+              <div class="caption-copy">
+                <strong data-asset-title></strong>
+                <span data-asset-file></span>
+              </div>
+              <div class="floating-tools">
+                <a class="icon-button" href="archive-library.html" aria-label="모든 자료"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg></a>
+                <button class="icon-button" data-open="asset-info-dialog" aria-label="자료 정보"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+              </div>
+            </figcaption>
+          </figure>
+          <div class="asset-context">
+            <aside class="asset-inspector">
+              <h2>자료 정보</h2>
+              <div class="inspector-owner">
+                <span class="avatar">민</span>
+                <span data-asset-owner></span>
+                <span>추가</span>
+              </div>
+              <dl class="inspector-facts">
+                <div><dt>유형</dt><dd data-asset-type></dd></div>
+                <div><dt>크기</dt><dd data-asset-size></dd></div>
+                <div><dt>추가일</dt><dd data-asset-date></dd></div>
+                <div><dt>컬렉션</dt><dd>성수 스튜디오</dd></div>
+              </dl>
+              <p class="small muted">이미지는 가상 공간의 예시입니다. 파일 정보는 데모 자료에 해당합니다.</p>
+            </aside>
+            <section class="asset-comments">
+              <h2>검토 메모</h2>
+              <div data-asset-comments></div>
+              <form id="asset-comment" class="stack-sm">
+                <label>새 메모<textarea name="comment" rows="3" required maxlength="1000" placeholder="자료와 관련된 결정을 남기세요."></textarea></label>
+                <div><button class="btn" type="submit">메모 남기기</button></div>
+              </form>
+            </section>
+          </div>
+        </section>
+        <dialog id="asset-info-dialog" class="modal" aria-labelledby="asset-info-title">
+          <header class="modal-head">
+            <h2 id="asset-info-title">자료 이용 안내
+              </h2>
+            <button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+          </header>
+          <div class="modal-body prose">
+            <p>이 라이브러리는 가상의 프로젝트입니다. 원본과 저해상도 프리뷰는 같은 이미지에서 만들었습니다.
+              </p>
+            <p>저장 표시와 메모는 이 탭의 세션에 보관됩니다. 실제 팀 공유나 다운로드 권한은 연결되어 있지 않습니다.
+              </p>
+          </div>
+        </dialog>
+      </main>
+    </div>
+    <dialog id="command-dialog" class="modal" aria-labelledby="command-title">
+      <header class="modal-head">
+        <h2 id="command-title">빠른 이동
+        </h2>
+        <button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <label>화면 검색<input type="search" data-command-query autofocus placeholder="이동할 화면 이름"></label>
+        <nav class="stack-sm">
+          <a class="nav-link" data-command-link href="archive-library.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#folder"></use></svg>모든 자료</a>
+          <a class="nav-link" data-command-link href="archive-library.html?saved=1"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#bookmark"></use></svg>저장한 자료</a>
+          <a class="nav-link" data-command-link href="archive-guide.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>공간 가이드</a>
+          <a class="nav-link" data-command-link href="archive-lesson.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg>디자인 클래스</a>
+        </nav>
+      </div>
+    </dialog>
+    <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+      <header class="modal-head">
+        <h2 id="confirm-title">변경 확인
+        </h2>
+      </header>
+      <div class="modal-body">
+        <p></p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="cancel" autofocus>취소</button>
+        <button class="btn primary" value="confirm">확인</button>
+      </form>
+    </dialog>
+    <div class="toast-stack" data-toasts>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<!-- Purpose: Present the 데이터베이스 연결 surface of a static database workbench.
+     Pattern: Task-owned IDE composition with native disclosure and tab inspection.
+     Usage: Serve database/connections.html from the example static root.
+     Related: internal/config/bootstrap/defaults/ui-design/assets/examples/database/database.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="database">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="연결, 탐색, SQL과 결과를 다루는 DB 워크벤치 디자인 예시">
+    <title>데이터베이스 연결 | Querydesk</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="database.css">
+    <script defer src="../shared/interaction.js"></script>
+  </head>
+  <body data-product="database">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="database-top">
+      <div class="database-wordmark">
+        <a href="connections.html" aria-label="Querydesk 홈"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg> Querydesk</a>
+        <span>Research team</span>
+      </div>
+      <nav aria-label="주 메뉴">
+        <a href="connections.html" aria-current="page">연결</a>
+        <a href="workbench.html">작업 공간</a>
+        <a href="history.html">쿼리 이력</a>
+      </nav>
+      <div class="database-top-actions">
+        <span>디자인 예시 / 실제 연결 없음</span>
+        <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+      </div>
+    </header>
+    <main id="main" class="database-page glass-surface">
+      <header class="database-page-head">
+        <div>
+          <h1>데이터베이스 연결</h1>
+          <p>연결을 고르고, 스키마와 쿼리를 같은 작업 공간에서 살펴봅니다.</p>
+        </div>
+        <button class="btn primary" type="button" data-open="connection-dialog"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#plus"></use></svg> 새 연결</button>
+      </header>
+      <div class="connections-layout">
+        <section>
+          <div class="database-section-title">
+            <h2>팀 연결</h2>
+            <span>샘플 3개</span>
+          </div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="샘플 데이터베이스 연결 목록">
+            <table class="db-grid" role="table">
+              <caption class="visually-hidden">샘플 데이터베이스 연결 목록</caption>
+              <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">연결</th><th scope="col" role="columnheader">데이터베이스</th><th scope="col" role="columnheader">환경</th><th scope="col" role="columnheader"></th></tr></thead>
+              <tbody role="rowgroup">
+                <tr role="row">
+                  <td role="cell"><a class="connection-name" href="workbench.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg><span><strong>Research sandbox</strong><small>localhost:5432 / research_demo</small></span></a></td>
+                  <td role="cell">PostgreSQL</td>
+                  <td role="cell">선택한 샘플 환경</td>
+                  <td role="cell"><a class="quiet-link" href="workbench.html">워크벤치 열기</a></td>
+                </tr>
+                <tr role="row">
+                  <td role="cell"><button class="connection-name" type="button" data-open="analytics-settings"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg><span><strong>Analytics staging</strong><small>staging.example.internal / analytics</small></span></button></td>
+                  <td role="cell">PostgreSQL</td>
+                  <td role="cell">연결 구성 예시</td>
+                  <td role="cell"><button class="text-connection-action" type="button" data-open="analytics-settings">설정 보기</button></td>
+                </tr>
+                <tr role="row">
+                  <td role="cell"><button class="connection-name" type="button" data-open="local-settings"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg><span><strong>Local prototype</strong><small>sample.db</small></span></button></td>
+                  <td role="cell">SQLite</td>
+                  <td role="cell">파일 연결 화면 예시</td>
+                  <td role="cell"><button class="text-connection-action" type="button" data-open="local-settings">설정 보기</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <section class="connection-recent">
+            <h2>최근 살펴본 작업</h2>
+            <a href="workbench.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg><span><strong>고객 온보딩.sql</strong><small>Research sandbox / public.accounts</small></span><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#chevron-right"></use></svg></a>
+            <a href="table.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layout-grid"></use></svg><span><strong>accounts 테이블</strong><small>열 구조, 데이터와 관계</small></span><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#chevron-right"></use></svg></a>
+          </section>
+        </section>
+        <aside class="connection-inspector">
+          <h2>Research sandbox</h2>
+          <p>분석용 데이터 구조를 확인하는 샘플 연결입니다.</p>
+          <dl>
+            <div><dt>엔진</dt><dd>PostgreSQL</dd></div>
+            <div><dt>데이터베이스</dt><dd>research_demo</dd></div>
+            <div><dt>기본 스키마</dt><dd>public</dd></div>
+            <div><dt>사용 모드</dt><dd>읽기 화면 예시</dd></div>
+          </dl>
+          <div class="connection-scope">
+            <h3>포함한 화면</h3>
+            <p>테이블 탐색, 쿼리 편집 형태, 결과 그리드, 열 구조와 쿼리 이력. 실제 DB 엔진이나 드라이버는 포함하지 않습니다.</p>
+          </div>
+          <a class="btn" href="workbench.html">SQL 워크벤치 열기</a>
+        </aside>
+      </div>
+    </main>
+    <footer class="database-status">
+      <span><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#shield"></use></svg>
+      읽기 전용 디자인 예시</span>
+      <span>Research sandbox / PostgreSQL</span>
+      <span>입력·연결·실행·저장 없음</span>
+    </footer>
+    <dialog id="preview-note" class="modal" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">DB 워크벤치 디자인 예시</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>연결·스키마·SQL·결과의 배치를 살펴보는 정적 화면입니다. 샘플 데이터만 표시하며 실제 접속, 쿼리 실행, 저장과 내보내기는 하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+    <dialog class="modal" id="connection-dialog" aria-labelledby="connection-title">
+      <header class="modal-head">
+        <h2 id="connection-title">연결 설정</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="연결 설정 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label>데이터베이스<select name="database"><option>PostgreSQL</option><option>MySQL</option><option>SQLite</option></select></label>
+          <label>연결 이름<input name="connection-name" value="Research sandbox" autocomplete="off"></label>
+          <label>호스트<input name="host" placeholder="localhost" autocomplete="off"></label>
+          <label>포트<input name="port" inputmode="numeric" value="5432"></label>
+          <label class="wide">데이터베이스 이름<input name="database-name" value="research_demo" autocomplete="off"></label>
+          <label>사용자<input name="username" placeholder="사용자 이름" autocomplete="off"></label>
+          <label>비밀번호<input name="password" type="password" autocomplete="off" placeholder="입력 모양 예시"></label>
+        </div>
+        <p class="small muted">정적 설정 화면입니다. 입력값을 전송하거나 보관하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+        <a class="btn primary" href="workbench.html">워크벤치 예시 보기</a>
+      </form>
+    </dialog>
+    <dialog class="modal" id="analytics-settings" aria-labelledby="analytics-settings-title">
+      <header class="modal-head">
+        <h2 id="analytics-settings-title">Analytics staging</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="연결 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="connection-summary">
+          <div><dt>데이터베이스</dt><dd>PostgreSQL</dd></div>
+          <div><dt>주소 또는 파일</dt><dd>staging.example.internal:5432</dd></div>
+          <div><dt>데이터 범위</dt><dd>analytics</dd></div>
+        </dl>
+        <p class="small muted">이 연결은 설정 구성을 살펴보는 정적 예시입니다. SQL 작업 화면은 Research sandbox의 샘플로 제공하며, 다른 연결로 가장하여 열지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog class="modal" id="local-settings" aria-labelledby="local-settings-title">
+      <header class="modal-head">
+        <h2 id="local-settings-title">Local prototype</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="연결 요약 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <dl class="connection-summary">
+          <div><dt>데이터베이스</dt><dd>SQLite</dd></div>
+          <div><dt>주소 또는 파일</dt><dd>sample.db</dd></div>
+          <div><dt>데이터 범위</dt><dd>파일 기반 샘플</dd></div>
+        </dl>
+        <p class="small muted">이 연결은 설정 구성을 살펴보는 정적 예시입니다. SQL 작업 화면은 Research sandbox의 샘플로 제공하며, 다른 연결로 가장하여 열지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+  </body>
+</html>

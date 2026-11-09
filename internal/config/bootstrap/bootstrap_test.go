@@ -48,7 +48,8 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 		}
 	}
 	readDefaultSkill(t, home)
-	readApplicationSkill(t, home)
+	readUIDesignSkill(t, home)
+	readBackendSkill(t, home)
 	entries, err := os.ReadDir(filepath.Join(home, ".meca/skills/create-skill"))
 	if err != nil || len(entries) != 1 || entries[0].Name() != "SKILL.md" {
 		t.Fatalf("incomplete or temporary skill files: %v %v", entries, err)

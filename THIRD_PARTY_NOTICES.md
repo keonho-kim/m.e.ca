@@ -5143,7 +5143,7 @@ limitations under the License.
 
 ## Lucide static reference icons
 
-The application-design reference bundle includes 39 local SVG icon definitions from
+The ui-design reference bundle includes 39 local SVG icon definitions from
 [Lucide](https://github.com/lucide-icons/lucide/tree/53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c),
 pinned at revision 53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c and repackaged as symbols.
 No icon runtime package or CDN is required. The upstream ISC and inherited Feather
@@ -5198,7 +5198,7 @@ SOFTWARE.
 
 ## Hallmark application palette references
 
-The bundled application-design examples independently adapt Cobalt and Console app palette roles from the installed Hallmark v2.0.0 design references. The full theme files, fonts, scripts, tools and upstream page implementations are not bundled. The notice is also retained in internal/config/bootstrap/defaults/application-design/NOTICE.md.
+The bundled ui-design examples independently adapt Cobalt and Console app palette roles from the installed Hallmark v2.0.0 design references. The full theme files, fonts, scripts, tools and upstream page implementations are not bundled. The notice is also retained in internal/config/bootstrap/defaults/ui-design/NOTICE.md.
 
 ```text
 MIT License
