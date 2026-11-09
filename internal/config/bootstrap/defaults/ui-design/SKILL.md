@@ -72,6 +72,6 @@ Apply [anti-slop](references/anti-slop.md) throughout: real content, meaningful 
 
 ## Verify and refine the cause
 
-Use [quality checks](references/quality.md). Compare real rendered views with the brief at relevant widths and heights, then exercise navigation, inputs, keyboard/IME, applicable failure and interruption. Diagnose structure, type, content, state or material before changing the whole palette. Recheck affected behavior after corrections.
+Use Playwright CLI (`playwright-cli`) for browser verification following [quality checks](references/quality.md). Compare rendered views with the brief at relevant sizes and exercise navigation, inputs, keyboard/IME, failure and interruption. Diagnose structure, type, content, state or material before changing the palette. Recheck affected behavior after corrections.
 
 Report actual evidence and remaining limits in the user's language. A screenshot proves a painted state; a build, detector score or agent walkthrough does not certify usability, accessibility, service integration or production readiness.

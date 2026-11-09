@@ -2,6 +2,26 @@
 
 Choose evidence proportional to the requested scope. A guide should help produce a useful application, not compliance with a case study or a low detector count. Distinguish a design shell, a functional frontend and a live service when stating what was verified.
 
+## Use Playwright CLI for browser verification
+
+Use [Playwright CLI](https://github.com/microsoft/playwright-cli) for rendered UI checks. Inspect `playwright-cli --help` or the configured project-local CLI equivalent for installed commands. Start the project's dev/static server and confirm its actual URL. Choose a task-unique session; the name, URL and dimensions below are illustrative.
+
+```sh
+playwright-cli --help
+playwright-cli -s=ui-review open http://127.0.0.1:3000
+playwright-cli -s=ui-review resize 1440 900
+playwright-cli -s=ui-review snapshot
+# Exercise the relevant flow using current snapshot references before capturing.
+playwright-cli -s=ui-review screenshot
+playwright-cli -s=ui-review console error
+playwright-cli -s=ui-review requests
+playwright-cli -s=ui-review close
+```
+
+Use current snapshot references with `click`, `fill` and `press`; refresh references after view changes. Exercise the applicable paths below, inspect screenshots at relevant sizes, and investigate console/network failures. Wait for observable readiness rather than arbitrary sleeps. Recheck the affected path after corrections. Snapshot text alone does not establish painted appearance.
+
+Keep captures/logs in project-approved, task-owned locations and close only your session and server. Do not persist credentials or unrelated browser state. If CLI/browser setup is unavailable, resolve it within project rules and report browser checks as not run until performed. Existing [Playwright Test](https://playwright.dev/docs/test-cli) suites supplement this interactive inspection. CLI availability is a development prerequisite, not a runtime dependency of MECA or the generated app.
+
 ## Check information and direction first
 
 Can a person identify the object/task, find decisive facts, make the needed comparison, recognize the next action and understand actual state? Is persistent context worth its width, and optional disclosure worth its extra travel? Do required and conditional regions still fit the requested path?
