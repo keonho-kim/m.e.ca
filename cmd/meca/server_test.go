@@ -43,7 +43,7 @@ func TestServerExecutable(t *testing.T) {
 	defer provider.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, binary, "--server", "--listen", "127.0.0.1:0", "--openai")
+	cmd := exec.CommandContext(ctx, binary, "--server", "--listen", "127.0.0.1:0")
 	cmd.Dir = project
 	cmd.Env = append(os.Environ(), "HOME="+home)
 	pipe, err := cmd.StderrPipe()
@@ -142,14 +142,14 @@ func TestServerExecutable(t *testing.T) {
 		}
 		return &reply
 	}
-	control(&v1.Command{Operation: &v1.Command_SetModel{SetModel: &v1.ModelRequest{Provider: "openrouter", Endpoint: provider.URL, Model: "unknown-serving-alias", Remember: true}}})
+	control(&v1.Command{Operation: &v1.Command_SetModel{SetModel: &v1.ModelRequest{SessionId: session, Provider: "openrouter", Endpoint: provider.URL, Model: "unknown-serving-alias", Remember: true}}})
 	permission := "all_mighty"
-	control(&v1.Command{Operation: &v1.Command_SetSettings{SetSettings: &v1.SettingsRequest{Permission: &permission}}})
+	control(&v1.Command{Operation: &v1.Command_SetSettings{SetSettings: &v1.SettingsRequest{SessionId: session, Permission: &permission}}})
 	saved, err := config.Load(filepath.Join(home, ".meca"))
 	if err != nil || saved.Model == nil || saved.Model.Name != "unknown-serving-alias" {
 		t.Fatal(saved.Model, err)
 	}
-	control(&v1.Command{Operation: &v1.Command_CloseSession{CloseSession: &v1.Empty{}}})
+	control(&v1.Command{Operation: &v1.Command_CloseSession{CloseSession: &v1.SessionTarget{SessionId: session}}})
 	control(&v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{SessionId: session}}})
 	task := control(&v1.Command{Operation: &v1.Command_Start{Start: &v1.StartRequest{SessionId: session, Key: "executable-request", Text: "answer"}}}).GetTask()
 	watch, err := http.NewRequestWithContext(ctx, http.MethodGet, url+"/v1/events", nil)
@@ -184,21 +184,6 @@ func TestServerExecutable(t *testing.T) {
 	status := control(&v1.Command{Operation: &v1.Command_TaskStatus{TaskStatus: &v1.TaskRequest{TaskId: task.Id}}}).GetTask()
 	if status.Status != "answered" || generations.Load() != 1 {
 		t.Fatal(status, generations.Load())
-	}
-	compatible, err := http.NewRequestWithContext(ctx, "POST", url+"/v1/responses", strings.NewReader(`{"model":"meca","input":"answer via compatible API"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	compatible.Header.Set("Content-Type", "application/json")
-	compatible.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(token)))
-	compatibleReply, err := client.Do(compatible)
-	if err != nil {
-		t.Fatal(err)
-	}
-	compatibleBody, err := io.ReadAll(compatibleReply.Body)
-	_ = compatibleReply.Body.Close()
-	if err != nil || compatibleReply.StatusCode != 200 || !bytes.Contains(compatibleBody, []byte(`"text":"served"`)) || generations.Load() != 2 {
-		t.Fatal(compatibleReply.StatusCode, string(compatibleBody), err)
 	}
 	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		t.Fatal(err)

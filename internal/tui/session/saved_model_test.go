@@ -35,9 +35,9 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	a := fixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
 	a.ctx = ctx
 	t.Cleanup(a.shutdown)
 	conn, err := connection.New(connection.OpenRouter, server.URL)
@@ -53,6 +53,10 @@ func TestSavedModelReusedWithSessionPrecedence(t *testing.T) {
 	for _, ownModel := range []string{"", "session-model"} {
 		t.Run(ownModel, func(t *testing.T) {
 			b := fixture(t)
+			// Bound each model operation independently; fixture bootstrap and
+			// previous restore cases do not consume this operation's deadline.
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
 			b.ctx, b.opts.Config = ctx, cfg
 			t.Cleanup(b.shutdown)
 			if ownModel != "" {

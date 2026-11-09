@@ -114,8 +114,12 @@ func textContextFields(body []byte) (map[string]bool, error) {
 	}
 	var pictures []struct{}
 	if raw := root["images"]; raw != nil {
-		if err := json.Unmarshal(raw, &pictures); err != nil {
-			return nil, err
+		if string(raw) == "null" {
+			pictures = make([]struct{}, 1)
+		} else {
+			if err := json.Unmarshal(raw, &pictures); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if len(pictures) == 0 {

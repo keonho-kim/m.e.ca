@@ -12,15 +12,15 @@ import (
 )
 
 type ServerOptions struct {
+	Concurrency                                   int
 	Protocol, Listen, TokenFile, Certificate, Key string
 	Hosts, Origins                                []string
-	OpenAI                                        bool
 }
 
 func serverFlags(flags *flag.FlagSet, mode *Mode) {
 	flags.BoolVar(&mode.Server, "server", false, "serve the selected project without a terminal")
 	o := &mode.ServerOptions
-	flags.BoolVar(&o.OpenAI, "openai", false, "add text OpenAI-compatible HTTP endpoints to the server")
+	flags.IntVar(&o.Concurrency, "concurrency", 1, diagcatalog.Text(diagcatalog.ServerConcurrencyHelp))
 	flags.StringVar(&o.Protocol, "protocol", "sse", "server transport: sse, socket (WebSocket), grpc")
 	flags.StringVar(&o.Listen, "listen", "127.0.0.1:8787", "server TCP address")
 	flags.StringVar(&o.TokenFile, "token-file", "", "private bearer-token file; defaults to ~/.meca/server.token")
@@ -40,7 +40,7 @@ func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 	serverFlag := false
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "protocol", "listen", "token-file", "tls-cert", "tls-key", "allow-host", "allow-origin", "openai":
+		case "protocol", "listen", "token-file", "tls-cert", "tls-key", "allow-host", "allow-origin", "concurrency":
 			serverFlag = true
 		}
 	})
@@ -49,6 +49,9 @@ func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 	}
 	if !mode.Server {
 		return nil
+	}
+	if mode.ServerOptions.Concurrency < 1 {
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerConcurrencyRange)
 	}
 	if mode.Print || mode.Output != "text" || mode.Export || mode.Diagnose {
 		return faults.Errorf(diagcatalog.StartupServerCannotBeCombinedWithOneShot)

@@ -209,3 +209,22 @@ func (w *documentWriter) mapping(value reflect.Value) error {
 	}
 	return w.literal("}")
 }
+
+func writePlainText(ctx context.Context, output io.Writer, text string, newMask func() func(string, bool) string) error {
+	if newMask == nil {
+		return faults.Errorf(diagcatalog.DetailMaskFactoryRequired)
+	}
+	mask := newMask()
+	for len(text) > 0 {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		n := min(32<<10, len(text))
+		if _, err := io.WriteString(output, mask(text[:n], false)); err != nil {
+			return err
+		}
+		text = text[n:]
+	}
+	_, err := io.WriteString(output, mask("", true))
+	return err
+}

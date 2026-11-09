@@ -18,9 +18,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -95,7 +95,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 	}
 	a.connection.selection = modelconn.Selection{Connection: connection, Model: "mock"}
 	for _, input := range []string{"first request", "continue first", "continue second"} {
-		a.startRequest(composer.Capture(input, a.selectedPaths()))
+		a.startRequest(requestinput.Capture(input, a.selectedPaths()))
 		for !strings.Contains(a.chat.thinking, "partial thinking") {
 			select {
 			case n := <-a.events:
@@ -120,7 +120,7 @@ func checkInterruptedContext(t *testing.T, answer bool) {
 	if a.exit || a.ctx.Err() != nil {
 		t.Fatal("Esc closed session")
 	}
-	a.startRequest(composer.Capture("continue now", a.selectedPaths()))
+	a.startRequest(requestinput.Capture("continue now", a.selectedPaths()))
 	drainTask(t, a, false)
 	if !continued.Load() || requests.Load() != 4 {
 		t.Fatalf("context lost or request replayed: %d requests", requests.Load())

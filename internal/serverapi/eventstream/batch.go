@@ -1,7 +1,7 @@
 // Purpose: Flush already available SSE batches without adding a timer, queue or retained body copy.
 // Pattern: Single-writer scoped batching over HTTP's existing bounded output buffer.
-// Usage: Native and OpenAI handlers batch received events and explicitly flush critical boundaries.
-// Related: internal/serverapi/eventstream/writer.go, internal/serverapi/http.go, internal/serverapi/openai/stream.go.
+// Usage: Native handlers batch received events and explicitly flush critical boundaries.
+// Related: internal/serverapi/eventstream/writer.go, internal/serverapi/http.go.
 package eventstream
 
 // Batch flushes the first application frame immediately, then at 64KiB or the

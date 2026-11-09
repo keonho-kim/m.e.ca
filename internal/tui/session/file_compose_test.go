@@ -19,9 +19,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestFileComposerShowsProjectRelativeReferences(t *testing.T) {
@@ -126,7 +126,7 @@ func TestFileComposerQuitTextIsAMessage(t *testing.T) {
 	a := fixture(t)
 	a.page, a.files.browser.Input = "files", true
 	a.work.state = workerAgent
-	a.compose.steering = make(chan composer.Request, 1)
+	a.compose.steering = make(chan requestinput.Request, 1)
 	a.compose.editor.Set(":q")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))

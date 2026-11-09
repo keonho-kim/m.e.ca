@@ -17,10 +17,10 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
@@ -78,7 +78,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	t.Cleanup(a.connection.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startRequest(composer.Capture("Create README.md in the current directory", a.selectedPaths()))
+	a.startRequest(requestinput.Capture("Create README.md in the current directory", a.selectedPaths()))
 	drainTask(t, a, true)
 	expandVisibleDetails(t, a)
 	content, err := os.ReadFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"))

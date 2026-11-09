@@ -1,6 +1,6 @@
 // Purpose: Serve Protobuf JSON control requests and independently resumable SSE notifications.
 // Pattern: HTTP and SSE transport adapters.
-// Usage: --protocol sse exposes POST /v1/command and GET /v1/events.
+// Usage: Every server protocol exposes POST /v1/command and GET /v1/events.
 // Related: internal/serverapi/commands.go, internal/serverapi/watch.go.
 package serverapi
 
@@ -10,6 +10,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"net/url"
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -23,7 +24,7 @@ const maxRequestBytes = 17 << 20
 func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || media != "application/json" {
-		http.Error(w, diagcatalog.Text(diagcatalog.OpenaiContentTypeMustBeApplicationJson), http.StatusUnsupportedMediaType)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiContentTypeMustBeApplicationJSON), http.StatusUnsupportedMediaType)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
@@ -44,16 +45,7 @@ func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 		body = nil
 		reply, _ = t.api.Call(r.Context(), &cmd)
 	}
-	data, encodeErr := protojson.Marshal(reply)
-	if encodeErr != nil {
-		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiCouldNotEncodeReply), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if reply.GetError() != nil {
-		w.WriteHeader(errorStatus(reply.GetError().Code))
-	}
-	_, _ = w.Write(data)
+	t.writeControlReply(w, reply)
 }
 
 func errorStatus(code string) int {
@@ -68,9 +60,9 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiTooManyObservers), http.StatusTooManyRequests)
 		return
 	}
-	query, err := r.URL.Query(), error(nil)
+	query, err := url.ParseQuery(r.URL.RawQuery)
 	for key, values := range query {
-		if key != "cursor" || len(values) != 1 {
+		if (key != "cursor" && key != "task_id") || len(values) != 1 {
 			err = faults.Errorf(diagcatalog.ServerapiOnlyOneCursorQueryParameterIsSupported)
 		}
 	}
@@ -79,10 +71,15 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cursor := query.Get("cursor")
+	taskID := query.Get("task_id")
+	if len(taskID) > 128 {
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerInvalidTaskFilter), http.StatusBadRequest)
+		return
+	}
 	if header := r.Header.Get("Last-Event-ID"); header != "" {
 		cursor = header
 	}
-	first, err := t.api.Service.Replay(cursor)
+	first, err := t.api.Service.ReplayTask(cursor, taskID)
 	if err != nil {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerInvalidEventCursor), http.StatusBadRequest)
 		return
@@ -92,7 +89,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	firstDelta := true
-	send := func(n *v1.Notification) error {
+	send := taskSender(taskID, func(n *v1.Notification) error {
 		body, err := protojson.Marshal(n)
 		if err != nil {
 			return err
@@ -113,8 +110,8 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 			return writer.Flush()
 		}
 		return nil
-	}
-	if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), first, send) }); err != nil {
+	})
+	if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), first, taskID, send) }); err != nil {
 		return
 	}
 	if first.Snapshot != nil {
@@ -132,7 +129,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		poll, cancel := writer.PollContext(r.Context())
-		batch, err := t.api.Service.Next(poll, cursor)
+		batch, err := t.api.Service.NextTask(poll, cursor, taskID)
 		cancel()
 		if err != nil {
 			if r.Context().Err() != nil {
@@ -147,7 +144,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), batch, send) }); err != nil {
+		if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), batch, taskID, send) }); err != nil {
 			return
 		}
 		if batch.Snapshot != nil {

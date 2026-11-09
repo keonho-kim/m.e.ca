@@ -22,7 +22,7 @@ func (l *admissionLedger) Get(ctx context.Context, _ string) (Task, error) {
 	}
 	return l.lookup()
 }
-func (l *admissionLedger) Admit(context.Context, string, string, string) (Task, bool, error) {
+func (l *admissionLedger) Admit(context.Context, string, string, [32]byte) (Task, bool, error) {
 	return l.task, true, nil
 }
 func (*admissionLedger) Finish(context.Context, Task) error { return nil }
@@ -39,7 +39,7 @@ func TestStartRetryAcrossAdmissionRace(t *testing.T) {
 			// This lookup observed absence; another caller published the same key
 			// and adopted its task before the first caller reserved idle state.
 			s.mu.Lock()
-			s.active = &request{task: task}
+			s.active = map[string]*request{task.ID: {task: task}}
 			s.mu.Unlock()
 			return Task{}, ErrTaskNotFound
 		}

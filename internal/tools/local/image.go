@@ -1,7 +1,7 @@
 // Purpose: Read a stable policy-checked raster snapshot without recording a filesystem mutation.
 // Pattern: Read-only filesystem adapter with one decoder at a time per executor.
 // Usage: Prepared view_image operations call viewImage after path revalidation.
-// Related: internal/tools/local/image_read.go, internal/tools/local/imagefile/decode.go, internal/tools/local/paths.go.
+// Related: internal/tools/local/image_read.go, internal/media/imagefile/decode.go, internal/tools/local/paths.go.
 package local
 
 import (
@@ -17,7 +17,7 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
-	"github.com/keonho-kim/meca/internal/tools/local/imagefile"
+	"github.com/keonho-kim/meca/internal/media/imagefile"
 )
 
 func (op *imageOperation) viewImage(ctx context.Context) (out toolapi.Result, err error) {

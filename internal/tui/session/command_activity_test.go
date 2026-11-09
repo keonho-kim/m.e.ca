@@ -36,7 +36,7 @@ func activityTranscript(a *app) string {
 }
 
 func TestParallelToolActivityPreservesSiblings(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	first := commandStart("read", "cat docs/guide.md")
 	second := commandStart("ruff", "ruff check src")
 	third := commandStart("ty", "ty check src")
@@ -69,13 +69,14 @@ func TestParallelToolActivityPreservesSiblings(t *testing.T) {
 }
 
 func TestRunningCommandActivityPreservesFullCommandAndNotices(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	command := "printf '%s' '" + strings.Repeat("long-command-", 20) + "' && cat docs/final-section.md"
 	a.opts.Tools = &activityTools{Tools: a.opts.Tools, runs: []toolapi.CommandRun{{ID: "cmd_check", Command: command, Status: "running"}}}
 	file := runrecord.Event{Kind: "tool_started", CallID: "write", Call: &toolapi.Call{ID: "write", Name: "write_file", Arguments: []byte(`{"path":"pending.txt","content":"source"}`)}}
 	a.receiveRuntime(&file)
 	a.status = "separate notice"
 	a.updateCommandActivity()
+	a.toggleToolDetails()
 	shown := activityTranscript(a)
 	for _, text := range []string{"pending.txt", "cat docs/final-section.md", "separate notice"} {
 		if !strings.Contains(strings.Join(strings.Fields(shown), ""), strings.Join(strings.Fields(text), "")) {
@@ -85,7 +86,7 @@ func TestRunningCommandActivityPreservesFullCommandAndNotices(t *testing.T) {
 }
 
 func TestRunningCommandActivityShowsFourCallsWithoutDuplicates(t *testing.T) {
-	a := fixture(t)
+	a := screenFixture(t)
 	tools := &activityTools{Tools: a.opts.Tools}
 	a.opts.Tools = tools
 	for _, command := range []string{"cat README.md", "cat src/main.py", "ruff check src", "ty check src"} {

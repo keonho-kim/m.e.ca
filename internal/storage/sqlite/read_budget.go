@@ -1,6 +1,6 @@
 // Purpose: Reject oversized selected payloads before allocating their restored bodies.
 // Pattern: Operation-owned restoration budget.
-// Usage: Timeline, tool detail and compatible output readers share one budget per operation.
+// Usage: Timeline, tool detail readers share one budget per operation.
 // Related: internal/storage/sqlite/payload.go, internal/storage/history/read.go.
 package sqlite
 
@@ -13,10 +13,12 @@ import (
 )
 
 type readBudget struct {
-	remaining int
-	limited   bool
-	selected  int
-	reserve   func(int) error
+	previewScratch bool
+	scratch        int
+	remaining      int
+	limited        bool
+	selected       int
+	reserve        func(int) error
 }
 
 func newReadBudget(maxBytes int, reserve func(int) error) *readBudget {
@@ -30,7 +32,7 @@ func (b *readBudget) take(size int) error {
 		}
 	}
 	if b.reserve != nil {
-		if err := b.reserve(b.selected + size); err != nil {
+		if err := b.reserve(b.selected + size + b.scratch); err != nil {
 			return err
 		}
 		b.selected += size

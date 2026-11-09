@@ -7,7 +7,7 @@ package queue
 import (
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
@@ -15,7 +15,7 @@ import (
 func TestProjectionReleasesRemovedRows(t *testing.T) {
 	var projection Projection
 	redact := func(text string) string { return text }
-	messages := []composer.Request{{Text: "first"}, {Text: "second"}, {Text: "third"}}
+	messages := []requestinput.Request{{Text: "first"}, {Text: "second"}, {Text: "third"}}
 	projection.Prepare(messages, locale.English, 0, redact)
 	retained := projection.Entries
 	projection.Prepare(messages[:1], locale.English, 0, redact)

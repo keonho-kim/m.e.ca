@@ -1,6 +1,6 @@
 // Purpose: Keep tool results compact and release on-demand detail bodies when collapsed.
 // Pattern: Presentation state transition.
-// Usage: AppendBlock, Prepend and terminal Ctrl+O share this session-owned state.
+// Usage: AppendBlock, Prepend and terminal Ctrl+O share this preference, including live tool rows.
 // Related: internal/tui/viewport/viewport.go, internal/tui/transcript/events.go.
 package viewport
 
@@ -54,10 +54,7 @@ func (v *View) HasDetails() bool {
 	return false
 }
 
-func (v *View) ToggleDetails() bool {
-	if !v.HasDetails() {
-		return false
-	}
+func (v *View) ToggleDetails() {
 	v.ensureBytes()
 	v.Collapsed = !v.Collapsed
 	v.layoutRevision++
@@ -70,7 +67,6 @@ func (v *View) ToggleDetails() bool {
 			v.AnchorRow = 0
 		}
 	}
-	return true
 }
 
 // PendingDetail returns the first visible original that expanded presentation needs.

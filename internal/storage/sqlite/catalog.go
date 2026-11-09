@@ -42,6 +42,10 @@ func (s *Sessions) Open(ctx context.Context, project, id string) (store *Store, 
 	return s.open(ctx, project, id, false)
 }
 
+func (s *Sessions) OpenRead(ctx context.Context, project, id string) (*Store, error) {
+	return s.open(ctx, project, id, true)
+}
+
 func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) (store *Store, resultErr error) {
 	defer func() {
 		if errors.Is(resultErr, os.ErrNotExist) {

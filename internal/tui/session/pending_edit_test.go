@@ -12,7 +12,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
@@ -49,7 +49,7 @@ func TestPendingEditSavePreservesPosition(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a := screenFixture(t)
 			a.work.state = workerAgent
-			a.compose.steering = make(chan composer.Request, 1)
+			a.compose.steering = make(chan requestinput.Request, 1)
 			a.compose.queued.Messages = queuedRequests("first", "second", "third")
 			a.compose.editor.Set("unsent draft")
 			pendingArrow(a, tcell.KeyLeft)

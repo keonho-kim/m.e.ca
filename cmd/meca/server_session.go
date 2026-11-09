@@ -59,7 +59,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 			return nil, err
 		}
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Output: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
+	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working

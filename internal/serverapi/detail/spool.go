@@ -6,11 +6,17 @@ package detail
 
 import (
 	"errors"
+
+	"github.com/keonho-kim/meca/internal/storage/capacity"
 	"io"
 	"os"
 )
 
+const maxSpoolBytes = 64 << 20
+
 type documentSpool struct {
+	archive       *chunkArchive
+	budget        *spoolBudget
 	memory, page  []byte
 	file          *os.File
 	total, offset int64
@@ -38,6 +44,10 @@ func (s *documentSpool) Write(body []byte) (int, error) {
 		return len(body), nil
 	}
 	if s.file == nil {
+		if err := capacity.CheckFree(os.TempDir(), (1<<30)+maxSpoolBytes); err != nil {
+			s.disable(err)
+			return len(body), nil
+		}
 		file, err := os.CreateTemp("", "meca-server-detail-*")
 		if err != nil {
 			s.disable(err)
@@ -49,7 +59,8 @@ func (s *documentSpool) Write(body []byte) (int, error) {
 			return len(body), nil
 		}
 		s.file = file
-		if n, err := file.Write(s.memory); err != nil || n != len(s.memory) {
+		s.archive = &chunkArchive{file: file, budget: s.budget}
+		if n, err := s.archive.Write(s.memory); err != nil || n != len(s.memory) {
 			if err == nil {
 				err = io.ErrShortWrite
 			}
@@ -58,7 +69,7 @@ func (s *documentSpool) Write(body []byte) (int, error) {
 		s.memory = nil
 	}
 	if s.cacheable {
-		if n, err := s.file.Write(body); err != nil || n != len(body) {
+		if n, err := s.archive.Write(body); err != nil || n != len(body) {
 			if err == nil {
 				err = io.ErrShortWrite
 			}
@@ -70,6 +81,10 @@ func (s *documentSpool) Write(body []byte) (int, error) {
 
 func (s *documentSpool) disable(cause error) {
 	s.failure = errors.Join(s.failure, cause)
+	if s.archive != nil {
+		s.archive.release()
+		s.archive = nil
+	}
 	if s.file != nil {
 		s.cleanupErr = errors.Join(s.cleanupErr, s.file.Close())
 		s.file = nil
@@ -79,6 +94,10 @@ func (s *documentSpool) disable(cause error) {
 }
 
 func (s *documentSpool) close() error {
+	if s.archive != nil {
+		s.archive.release()
+		s.archive = nil
+	}
 	if s.file != nil {
 		file := s.file
 		s.file = nil
@@ -88,3 +107,10 @@ func (s *documentSpool) close() error {
 }
 
 var _ io.Writer = (*documentSpool)(nil)
+
+func (s *documentSpool) finish() error {
+	if s.archive != nil {
+		return s.archive.flush()
+	}
+	return nil
+}

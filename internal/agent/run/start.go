@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -60,6 +61,12 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	emit = newRunEmitter(ctx, r.Journal, r.Session, id, emit)
 	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
 		r.ImageInput = r.ImageInput && support.ImageInputSupported()
+	}
+	if err := media.CheckInput(r.Images); err != nil {
+		return nil, nil, err
+	}
+	if len(r.Images) > 0 && !r.ImageInput {
+		return nil, nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.MediaImageInputUnavailable)
 	}
 	if scoped, ok := r.Generator.(interface {
 		NewRunGenerator() (modelapi.Generator, func())

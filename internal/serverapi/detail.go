@@ -20,17 +20,17 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if limit == 0 {
 		limit = 64 << 10
 	}
-	if r.GetOffset() < 0 || limit < 1 || limit > 64<<10 {
+	if r.GetOffset() < 0 || r.GetOffset() > 0 && r.GetRevision() == "" || len(r.GetRevision()) > 64 || limit < 1 || limit > 64<<10 {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetMustBeNonnegativeAndLimit)
 	}
-	read, err := a.Service.OpenDetail(ctx, server.DetailSource{Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
+	read, err := a.Service.OpenDetail(ctx, server.DetailSource{Session: r.GetSessionId(), Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
 	if err != nil {
 		return nil, err
 	}
 	defer read.Release()
-	data, total, err := a.Details.Read(read.Context, detail.Request{Session: read.Session, Source: read.Source, Version: a.RedactionVersion, NewMask: a.NewMask, Load: read.Load}, r.GetOffset(), limit)
+	data, total, revision, err := a.Details.Read(read.Context, detail.Request{Expected: r.GetRevision(), Session: read.Session, Source: read.Source, Version: a.RedactionVersion, NewMask: a.NewMask, Load: read.Load}, r.GetOffset(), limit)
 	if err != nil {
 		return nil, err
 	}
-	return &v1.DetailPage{Data: data, Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(len(data)), TotalBytes: total, ContentType: "application/json; charset=utf-8"}, nil
+	return &v1.DetailPage{Data: data, Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(len(data)), TotalBytes: total, ContentType: "application/json; charset=utf-8", Revision: revision}, nil
 }

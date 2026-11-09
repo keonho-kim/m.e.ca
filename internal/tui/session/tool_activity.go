@@ -1,4 +1,4 @@
-// Purpose: Preserve each pending tool independently from notices and observed command lifetimes.
+// Purpose: Preserve foldable pending tools independently from notices and observed command lifetimes.
 // Pattern: Event-loop-owned presentation state.
 // Usage: Runtime notifications update pending rows; chatLayout projects them with command snapshots.
 // Related: internal/tui/session/runtime_events.go, internal/tui/session/command_activity.go.
@@ -13,14 +13,21 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
-type pendingTool struct{ callID, text string }
+type pendingTool struct {
+	callID, kind, summary, details string
+	// The immutable call borrows argument bytes until completion; rebuilding
+	// summaries must redact complete values before truncating their targets.
+	call toolapi.Call
+}
 
 type toolActivity struct {
-	pending  []pendingTool
-	commands []toolapi.CommandRun
-	text     string
-	dirty    bool
-	views    map[string]transcript.CommandView
+	pending     []pendingTool
+	commands    []toolapi.CommandRun
+	text        string
+	dirty       bool
+	collapsed   bool
+	maskVersion int
+	views       map[string]transcript.CommandView
 }
 
 func toolCallID(event *runrecord.Event) string {
@@ -38,7 +45,11 @@ func (a *app) startToolActivity(event *runrecord.Event) {
 }
 
 func (t *toolActivity) start(event *runrecord.Event, formatter transcript.Formatter) {
-	entry := pendingTool{callID: toolCallID(event), text: formatter.Tool(*event)}
+	if id := transcript.PendingCommand(*event.Call); id != "" && slices.ContainsFunc(t.commands, func(run toolapi.CommandRun) bool { return run.ID == id }) {
+		return
+	}
+	block := formatter.PendingTool(*event)
+	entry := pendingTool{callID: toolCallID(event), kind: event.Kind, call: *event.Call, summary: block.Summary, details: block.Details}
 	if index := slices.IndexFunc(t.pending, func(p pendingTool) bool { return p.callID == entry.callID }); index >= 0 {
 		t.pending[index] = entry
 	} else {
@@ -53,7 +64,7 @@ func (a *app) finishToolActivity(event *runrecord.Event) {
 }
 
 func (a *app) liveToolActivity() string {
-	return a.chat.toolActivity.render(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion})
+	return a.chat.toolActivity.render(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion}, a.chat.output.Collapsed)
 }
 
 func (t *toolActivity) finish(event *runrecord.Event) {
@@ -62,12 +73,22 @@ func (t *toolActivity) finish(event *runrecord.Event) {
 		t.pending = slices.Delete(t.pending, index, index+1)
 		t.dirty = true
 	}
-
 }
 
-func (t *toolActivity) render(f transcript.Formatter) string {
-	if !t.dirty {
+func (t *toolActivity) render(f transcript.Formatter, collapsed bool) string {
+	version := -1
+	if f.RedactionVersion != nil {
+		version = f.RedactionVersion()
+	}
+	if !t.dirty && t.collapsed == collapsed && version >= 0 && t.maskVersion == version {
 		return t.text
+	}
+	if version < 0 || t.maskVersion != version {
+		for i := range t.pending {
+			pending := &t.pending[i]
+			block := f.PendingTool(runrecord.Event{Kind: pending.kind, Call: &pending.call})
+			pending.summary, pending.details = block.Summary, block.Details
+		}
 	}
 	var text strings.Builder
 	for id := range t.views {
@@ -84,23 +105,28 @@ func (t *toolActivity) render(f transcript.Formatter) string {
 			return pending.callID != "" && run.CallID == pending.callID && toolapi.CommandActive(run.Status)
 		})
 		if index >= 0 {
-			text.WriteString(t.commandText(t.commands[index], f))
+			text.WriteString(t.commandText(t.commands[index], f, collapsed))
 		} else {
-			text.WriteString(pending.text)
+			body := pending.details
+			if collapsed {
+				body = pending.summary
+			}
+			text.WriteString(body)
 		}
 	}
 	for _, run := range t.commands {
 		if !slices.ContainsFunc(t.pending, func(p pendingTool) bool { return run.CallID != "" && p.callID == run.CallID }) {
-			text.WriteString(t.commandText(run, f))
+			text.WriteString(t.commandText(run, f, collapsed))
 		}
 	}
 	t.text, t.dirty = text.String(), false
+	t.collapsed, t.maskVersion = collapsed, version
 	return t.text
 }
 
-func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatter) string {
+func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatter, collapsed bool) string {
 	view := t.views[run.ID]
-	text := view.Render(run, f)
+	text := view.Render(run, f, collapsed)
 	if toolapi.CommandActive(run.Status) && f.RedactionVersion != nil {
 		if t.views == nil {
 			t.views = make(map[string]transcript.CommandView)
@@ -109,5 +135,7 @@ func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatte
 	}
 	return text
 }
+
+func (t *toolActivity) hasDetails() bool { return len(t.pending) > 0 || len(t.commands) > 0 }
 
 func (a *app) clearToolActivity() { a.chat.toolActivity = toolActivity{} }

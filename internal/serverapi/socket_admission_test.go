@@ -21,7 +21,7 @@ import (
 
 type socketWaitingLedger struct{ entered chan struct{} }
 
-func (l socketWaitingLedger) Admit(context.Context, string, string, string) (server.Task, bool, error) {
+func (l socketWaitingLedger) Admit(context.Context, string, string, [32]byte) (server.Task, bool, error) {
 	return server.Task{}, false, nil
 }
 func (l socketWaitingLedger) Get(ctx context.Context, _ string) (server.Task, error) {
@@ -36,7 +36,7 @@ func TestSocketRetainsDecodedInputAdmission(t *testing.T) {
 	const session = "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
 	ledger := socketWaitingLedger{entered: make(chan struct{})}
 	app, err := server.New(ctx, server.Options{
-		Project: t.TempDir(), Ledger: ledger,
+		Ledger: ledger,
 		Open: func(context.Context, string, bool, config.Config) (*server.Conversation, error) {
 			return &server.Conversation{Runtime: agentrequest.Runtime{Session: sessionstate.Session{ID: session}}, Close: func() error { return nil }}, nil
 		},

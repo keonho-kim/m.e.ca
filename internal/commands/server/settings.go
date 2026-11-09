@@ -20,21 +20,36 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/setup"
 )
 
-func (s *Service) Configure(ctx context.Context, permission *string, team *bool) (Snapshot, error) {
+func (s *Service) Configure(ctx context.Context, session string, permission *string, team *bool) (Snapshot, error) {
 	if (permission == nil) == (team == nil) {
 		return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChangeExactlyOneSettingPerCommand)
 	}
-	change, err := s.beginChange(ctx)
+	var change sessionChange
+	var err error
+	if permission != nil {
+		change, err = s.beginChange(ctx)
+	} else {
+		change, err = s.beginTargetChange(ctx, session)
+	}
 	if err != nil {
 		return Snapshot{}, err
 	}
 	defer change.finish()
 	c := change.conversation
-	if c == nil {
+	if err := s.sessionIdle(c); team != nil && err != nil {
+		return Snapshot{}, err
+	}
+	if c == nil && team != nil {
 		return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
 	next := change.config
 	if permission != nil {
+		s.mu.Lock()
+		busy := len(s.active) > 0
+		s.mu.Unlock()
+		if busy {
+			return Snapshot{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerPermissionTaskActive)
+		}
 		var value policy.Permission
 		if err := value.UnmarshalText([]byte(*permission)); err != nil {
 			return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
@@ -55,12 +70,20 @@ func (s *Service) Configure(ctx context.Context, permission *string, team *bool)
 	if team != nil {
 		c.TeamEnabled = *team
 	}
-	s.publish(Event{Record: eventKind("settings_changed")})
-	return s.snapshot(), nil
+	event := Event{Record: eventKind("settings_changed")}
+	if team != nil {
+		event.Session = c.Runtime.Session.ID
+	}
+	s.publish(event)
+	value := s.snapshot()
+	if c != nil {
+		value = s.sessionSnapshot(c)
+	}
+	return value, nil
 }
 
 func (s *Service) SetModel(ctx context.Context, value ModelSettings) (Snapshot, error) {
-	change, err := s.beginChange(ctx)
+	change, err := s.beginTargetChange(ctx, value.Session)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -68,8 +91,11 @@ func (s *Service) SetModel(ctx context.Context, value ModelSettings) (Snapshot, 
 	if change.conversation == nil {
 		return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
+	if err := s.sessionIdle(change.conversation); err != nil {
+		return Snapshot{}, err
+	}
 	err = s.selectModel(change, value)
-	return s.State(), err
+	return s.targetState(change.conversation), err
 }
 
 // selectModel requires a change reservation. Commit owns partial-default failure semantics.

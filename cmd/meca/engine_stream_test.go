@@ -6,12 +6,13 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
+	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"github.com/keonho-kim/meca/internal/tui/markdown"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type engineStream struct {
@@ -61,23 +62,31 @@ func (s *engineStream) consume(frame []byte) {
 		if !ok {
 			continue
 		}
-		var event struct{ Type, Delta string }
-		if err := json.Unmarshal(data, &event); err != nil {
+		var notification v1.Notification
+		if err := protojson.Unmarshal(data, &notification); err != nil {
 			s.err = err
 			return
 		}
-		switch event.Type {
-		case "response.output_text.delta":
-			s.text.WriteString(event.Delta)
+		event := notification.GetEvent()
+		if event == nil {
+			continue
+		}
+		switch event.Kind {
+		case "draft_reset":
+			s.text.Reset()
+			s.render = markdown.Stream{}
+		case "assistant_delta":
+			s.text.WriteString(event.Text)
 			rows := s.render.Render(s.text.String(), 100)
 			for _, row := range rows[max(0, len(rows)-24):] {
 				for range row.RowsFrom(100, 0, "") {
 				}
 			}
-		case "response.completed":
+		case "request_finished":
 			s.completed = true
-		case "response.failed", "error":
-			s.err = fmt.Errorf("fixture stream failed: %s", data[:min(len(data), 4096)])
+			if event.Status != "answered" {
+				s.err = fmt.Errorf("native fixture task failed: %s %s", event.Status, event.Error)
+			}
 		}
 	}
 }

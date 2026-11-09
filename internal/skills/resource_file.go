@@ -7,6 +7,7 @@ package skills
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"io"
 	"os"
 
@@ -60,7 +61,7 @@ func (f *ResourceFile) check(ctx context.Context) error {
 }
 
 func (f *ResourceFile) ReadBytes(ctx context.Context, maximum int64) ([]byte, error) {
-	if maximum < 1 || maximum > 32<<20 || f.info.Size() > maximum {
+	if maximum < 1 || maximum > media.MaxBytes || f.info.Size() > maximum {
 		return nil, ErrLimit
 	}
 	if err := f.check(ctx); err != nil {

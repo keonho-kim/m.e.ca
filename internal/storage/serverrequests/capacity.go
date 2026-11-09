@@ -1,6 +1,6 @@
 // Purpose: Bound durable admission rows across projects without expiring deduplication identities.
 // Pattern: Serialized admission with a persistent conservative allocation ceiling.
-// Usage: Admit and ReserveResponse reserve only genuinely new request records.
+// Usage: Admit reserve only genuinely new request records.
 // Related: internal/storage/serverrequests/ledger.go, internal/storage/capacity/reserve.go.
 package serverrequests
 

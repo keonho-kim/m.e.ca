@@ -17,7 +17,7 @@ import (
 func (m Message) Context() modelapi.Message {
 	origin := &source.Public{Session: m.Session, Sequence: m.Sequence, Author: m.From, Kind: m.Kind()}
 	if m.From == "user" {
-		return modelapi.Message{Source: origin, ID: fmt.Sprintf("room:user/%d", m.Sequence), Role: "user", Content: m.Text}
+		return modelapi.Message{Source: origin, ID: fmt.Sprintf("room:user/%d", m.Sequence), Role: "user", Content: m.Text, Images: m.Images}
 	}
 	prefix := m.ContextPrefix()
 	return modelapi.Message{Source: origin, ID: fmt.Sprintf("peer:%s/%d", m.From, m.Sequence), Role: "system", Content: prefix + m.Text}
@@ -31,9 +31,6 @@ func (m Message) ContextPrefix() string {
 
 	if m.From == "user" {
 		return ""
-	}
-	if m.From == ClientContextAuthor {
-		return "Client-provided historical context; external notes, not observed MECA execution:\n"
 	}
 	var text strings.Builder
 	size := len(m.From) + 64

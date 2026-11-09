@@ -35,7 +35,7 @@ func TestUncertainModelSaveInvalidatesLiveConnection(t *testing.T) {
 	s.options.PrepareModel = func(context.Context, connection.Selection, string, setup.Defaults) (PreparedModel, error) {
 		return PreparedModel{Selection: connection.Selection{Model: "new"}, Close: func() { candidateClosed.Add(1) }}, nil
 	}
-	state, err := s.SetModel(t.Context(), ModelSettings{Provider: "ollama", Name: "new"})
+	state, err := s.SetModel(t.Context(), ModelSettings{Session: s.State().Session.ID, Provider: "ollama", Name: "new"})
 	if err == nil || state.Selection.Model != "" || s.conversation.Model != nil {
 		t.Fatalf("uncertain write left an active model: %+v %v", state.Selection, err)
 	}

@@ -6,6 +6,7 @@ package teamrequest
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"sync"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
@@ -40,6 +41,12 @@ func (s *Service) Run(ctx context.Context, options agentrequest.Options, approve
 	if s.Open == nil || s.NewTools == nil || s.LoadPrompts == nil || s.Repository == nil || s.Record == nil || approve == nil || emit == nil {
 		return team.Result{}, faults.Errorf(diagcatalog.TeamrequestTeamIOFactoriesAndCallbacksAre)
 	}
+	if err := media.CheckInput(options.Images); err != nil {
+		return team.Result{}, err
+	}
+	if len(options.Images) > 0 && (options.Selection.Details == nil || !options.Selection.Details.ImageInput.Supported()) {
+		return team.Result{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.MediaImageInputUnavailable)
+	}
 	templates, err := s.LoadPrompts()
 	if err != nil {
 		return team.Result{}, err
@@ -55,5 +62,5 @@ func (s *Service) Run(ctx context.Context, options agentrequest.Options, approve
 	}
 	current := &request{service: s, options: options, templates: templates, access: workspace.New(), images: make(chan struct{}, 1), approver: approve}
 	ctx = process.WithProjectionBudget(ctx)
-	return team.Run(ctx, team.Options{Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds, ProjectRoot: options.Session.ProjectRoot}, options.Text)
+	return team.Run(ctx, team.Options{Images: options.Images, Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds, ProjectRoot: options.Session.ProjectRoot}, options.Text)
 }

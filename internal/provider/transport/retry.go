@@ -1,4 +1,4 @@
-// Purpose: Retry transient provider failures and return permanent failures for request correction.
+// Purpose: Retry transient provider failures after fixed waits and return permanent failures for correction.
 // Pattern: Pure retry classification with sequential I/O recovery.
 // Usage: Generation and metadata transport share attempts without nesting retries.
 // Related: internal/provider/protocol/request.go, internal/provider/transport/transport.go.
@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"math/rand/v2"
 	"net"
 	"syscall"
 	"time"
@@ -28,8 +27,6 @@ type PermanentError struct{ Cause error }
 func (e *PermanentError) Error() string { return e.Cause.Error() }
 func (e *PermanentError) Unwrap() error { return e.Cause }
 
-const maxAttempts = 3
-
 func (e *ConsumerError) Error() string { return e.Cause.Error() }
 func (e *ConsumerError) Unwrap() error { return e.Cause }
 
@@ -45,6 +42,8 @@ func (e *recoveryError) Error() string {
 func (e *recoveryError) Unwrap() error { return e.cause }
 
 func (c *Client) Attempts(ctx context.Context, run func() error, restart func(modelapi.Retry) error) error {
+	delays := [...]time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
+	maxAttempts := len(delays) + 1
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -63,7 +62,7 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 		if attempt == maxAttempts || !retryable(err) {
 			return &recoveryError{attempt, err, c.FailureReason(err)}
 		}
-		delay := time.Duration(attempt)*250*time.Millisecond + time.Duration(rand.Int64N(int64(100*time.Millisecond)))
+		delay := delays[attempt-1]
 		var response *responseError
 		if errors.As(err, &response) {
 			delay = max(delay, response.retryAfter)

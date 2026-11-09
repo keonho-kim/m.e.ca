@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"sync"
+	"time"
 
 	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"github.com/keonho-kim/meca/internal/commands/modelchange"
@@ -19,6 +20,7 @@ import (
 	"github.com/keonho-kim/meca/internal/config"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/skills"
@@ -42,12 +44,12 @@ type Conversation struct {
 	Close       func() error
 	Model       *conversationruntime.Model
 	readers     sync.WaitGroup
-	Output      OutputHistory
 	readContext context.Context
 	stopReaders context.CancelFunc
 }
 
 type ModelSettings struct {
+	Session                              string
 	Provider, Endpoint, Name, Credential string
 	Thinking                             *bool
 	Effort                               *string
@@ -62,23 +64,24 @@ type PreparedModel struct {
 
 // Ledger commits admission before any model or tool work; duplicates never run again.
 type Ledger interface {
-	Admit(context.Context, string, string, string) (Task, bool, error)
+	Admit(context.Context, string, string, [32]byte) (Task, bool, error)
 	Get(context.Context, string) (Task, error)
 	Finish(context.Context, Task) error
 }
 
 type Options struct {
-	Skills  *skills.Reader
-	Project string
-	Config  config.Config
-	Open    func(context.Context, string, bool, config.Config) (*Conversation, error)
-	List    func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
+	Files       fileview.Source
+	Read        func(context.Context, string) (*Conversation, error)
+	Discover    func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
+	Concurrency int
+	Skills      *skills.Reader
+	Config      config.Config
+	Open        func(context.Context, string, bool, config.Config) (*Conversation, error)
+	List        func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
 	// PrepareModel reads metadata and returns an owned client without saving selections or credentials.
 	PrepareModel func(context.Context, connection.Selection, string, setup.Defaults) (PreparedModel, error)
 	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Ledger       Ledger
-	Responses    ResponseStore
-	ReadOutput   func(context.Context, string, int64, int64, int, func(int) error) (string, error)
 }
 
 type Task struct{ ID, Session, Status, Error, Code, Persistence string }
@@ -90,34 +93,51 @@ const (
 )
 
 type Approval struct {
+	ExpiresAt time.Time
+	Task      string
 	ID        string
 	Truncated bool
 	Value     record.Event
 }
 type Draft struct {
-	Agent          string
-	Generation     uint64
-	Text, Thinking string
-	Truncated      bool
+	TextBytes, ThinkingBytes int64
+	Task                     string
+	Agent                    string
+	Generation               uint64
+	Text, Thinking           string
+	Truncated                bool
 }
 type ExecutionState struct {
-	Session   sessionstate.Session
-	Selection connection.Selection
-	Team      bool
+	StartedAt  time.Time
+	Statistics record.Statistics
+	Task       string
+	Session    sessionstate.Session
+	Selection  connection.Selection
+	Team       bool
 }
 
 type Snapshot struct {
-	Execution  *ExecutionState
-	Cursor     string
-	Session    sessionstate.Session
-	Task       *Task
-	Selection  connection.Selection
-	Permission string
-	Team       bool
-	Approvals  []Approval
-	Drafts     []Draft
+	ActivityTruncated bool
+	Activity          []Event
+	Language          string
+	NextTask          string
+	TotalTasks        int
+	Tasks             []Task
+	Concurrency       int
+	Executions        []ExecutionState
+	Execution         *ExecutionState
+	Cursor            string
+	Session           sessionstate.Session
+	Task              *Task
+	Selection         connection.Selection
+	Permission        string
+	Team              bool
+	Approvals         []Approval
+	Drafts            []Draft
 }
 type Event struct {
+	ApprovalExpiresAt     time.Time
+	Sequence              uint64
 	Cursor, Session, Task string
 	Status, Error         string
 	Generation            uint64
@@ -139,12 +159,9 @@ func (s *Service) requireConversation() error {
 	}
 	return nil
 }
-func (s *Service) requireIdle() error {
+func (s *Service) requireAvailable() error {
 	if s.closed || s.ctx.Err() != nil {
 		return faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
-	}
-	if s.active != nil {
-		return faults.New(diagcatalog.Conflict, diagcatalog.ServerARequestIsAlreadyRunning)
 	}
 	if s.completionErr != nil {
 		return faults.New(diagcatalog.CompletionNotSaved, diagcatalog.CompletionUncertain)

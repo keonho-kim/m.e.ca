@@ -31,7 +31,7 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 		return tuisession.Exit, err
 	}
 	vault := &credentials.Vault{State: state}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
+	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return tuisession.Exit, err
 	}

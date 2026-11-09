@@ -7,7 +7,7 @@ package session
 import (
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 )
 
 func (a *app) steerInput(text string) {
@@ -15,7 +15,7 @@ func (a *app) steerInput(text string) {
 		return
 	}
 	select {
-	case a.compose.steering <- composer.Capture(text, a.selectedPaths()):
+	case a.compose.steering <- requestinput.Capture(text, a.selectedPaths()):
 		select {
 		case a.compose.steeringReady <- struct{}{}:
 		default:

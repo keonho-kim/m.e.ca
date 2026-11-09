@@ -71,7 +71,7 @@ func TestRequestSurvivesObserverAndSubmissionCancellation(t *testing.T) {
 	if _, err := f.app.Start(ctx, state.Session.ID, "request-2", "answer"); err == nil {
 		t.Fatal("concurrent request accepted")
 	}
-	if err := f.app.CloseSession(); err == nil {
+	if err := f.app.CloseSession(t.Context(), f.app.State().Session.ID); err == nil {
 		t.Fatal("active session closed")
 	}
 	if err := f.app.Steer(task.ID, "finish with the new instruction"); err != nil {
@@ -83,7 +83,7 @@ func TestRequestSurvivesObserverAndSubmissionCancellation(t *testing.T) {
 	if finished.ID != task.ID || finished.Status != "answered" || calls.Load() != 2 {
 		t.Fatal(finished, calls.Load())
 	}
-	items, _, err := f.app.History(ctx, 0, 100)
+	items, _, err := f.app.History(ctx, "", 0, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestApprovalIsSingleUseAndHistoryRetainsToolOriginal(t *testing.T) {
 	if err != nil || string(body) != "written" {
 		t.Fatal(string(body), err)
 	}
-	items, _, err := f.app.History(ctx, 0, 100)
+	items, _, err := f.app.History(ctx, "", 0, 100)
 	if err != nil {
 		t.Fatal(err)
 	}

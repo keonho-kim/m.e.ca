@@ -6,6 +6,7 @@ package channel
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
@@ -13,10 +14,8 @@ import (
 // PageBytes bounds a receive page, independently of the accepted size of one record.
 const PageBytes = 16 * 1024 * 1024
 
-// ClientContextAuthor names external historical notes, never a team member.
-const ClientContextAuthor = "client_context"
-
 type Message struct {
+	Images       []media.Image             `json:"images,omitempty"`
 	Session      string                    `json:"-"`
 	Prefix       *string                   `json:"-"`
 	Note         *runrecord.TeamNote       `json:"note,omitempty"`
@@ -35,10 +34,14 @@ type Message struct {
 
 // ContextBytes conservatively sizes attribution and all metadata without formatting.
 func (m Message) ContextBytes() int {
-	if m.Prefix != nil {
-		return len(m.Text) + len(*m.Prefix)
+	imageBytes := 0
+	for _, image := range m.Images {
+		imageBytes += len(image.Data)*4/3 + 4096
 	}
-	size := len(m.Text) + len(m.From) + 512
+	if m.Prefix != nil {
+		return len(m.Text) + len(*m.Prefix) + imageBytes
+	}
+	size := len(m.Text) + len(m.From) + 512 + imageBytes
 	if n := m.Note; n != nil {
 		size += len(n.ReplyAuthor)
 		for _, name := range n.Mentions {

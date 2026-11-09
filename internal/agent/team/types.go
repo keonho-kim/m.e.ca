@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
@@ -41,6 +42,7 @@ type Repository interface {
 
 type Execute func(context.Context, identity.Member, string, *Peer) (run.Result, error)
 type Options struct {
+	Images        []media.Image
 	Store         Repository
 	Execute       Execute
 	Emit          func(runrecord.Event) error

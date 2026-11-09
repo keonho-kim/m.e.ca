@@ -26,7 +26,6 @@ type projectedMessage struct {
 // Messages and their call/state bytes are immutable after entering execution
 // history. This cache retains references, not another copy of large bodies.
 type Projection struct {
-	client  *Projection
 	entries []projectedMessage
 	skills  []projectedSkill
 	version int

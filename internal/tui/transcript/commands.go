@@ -15,6 +15,18 @@ import (
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
+// PendingCommand identifies the existing command represented by a control call.
+func PendingCommand(call toolapi.Call) string {
+	if call.Name != "wait_command" && call.Name != "cancel_command" {
+		return ""
+	}
+	args, err := toolapi.DisplayArgs(call.Arguments)
+	if err != nil {
+		return ""
+	}
+	return args.CommandID
+}
+
 // CommandBlock reconstructs an evicted pending card without parsing native arguments again.
 func (f Formatter) CommandBlock(run toolapi.CommandRun) viewport.Block {
 	command := f.Redact(run.Command)

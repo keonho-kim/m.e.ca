@@ -26,27 +26,24 @@ import (
 const Filename = "requests.db"
 const requestSchema = `
 PRAGMA application_id=1296388689;
-PRAGMA user_version=2;
+PRAGMA user_version=4;
 CREATE TABLE project(
  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
  scope BLOB NOT NULL CHECK(length(scope)=32)
 );
 CREATE TABLE requests(
  id BLOB PRIMARY KEY CHECK(length(id)=32),
- kind TEXT NOT NULL CHECK(kind IN ('native','chat','response')),
  digest BLOB NOT NULL CHECK(length(digest)=32),
  session TEXT NOT NULL DEFAULT '',
  status TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',
- error_code TEXT NOT NULL DEFAULT '' CHECK(length(error_code)<=128),
- response BLOB,
- version INTEGER NOT NULL DEFAULT 1 CHECK(version=1)
+ error_code TEXT NOT NULL DEFAULT '' CHECK(length(error_code)<=128)
 );`
 
 type Ledger struct {
-	db                     *sql.DB
-	root                   *os.Root
-	directory, scope, path string
+	db              *sql.DB
+	root            *os.Root
+	directory, path string
 }
 
 func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultErr error) {
@@ -121,7 +118,7 @@ func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultE
 	if err == nil {
 		err = db.QueryRowContext(ctx, "PRAGMA application_id").Scan(&application)
 	}
-	if err == nil && (version != 2 || application != 1296388689) {
+	if err == nil && (version != 4 || application != 1296388689) {
 		err = faults.Errorf(diagcatalog.ServerrequestsUnsupportedRequestDatabaseExistingContentsPreserved)
 	}
 	if err == nil {
@@ -138,7 +135,7 @@ func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultE
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
-	return &Ledger{db: db, root: root, directory: directory, scope: scope, path: path}, nil
+	return &Ledger{db: db, root: root, directory: directory, path: path}, nil
 }
 func (l *Ledger) Close() error { return errors.Join(l.db.Close(), l.root.Close()) }
 

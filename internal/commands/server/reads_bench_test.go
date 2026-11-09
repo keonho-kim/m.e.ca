@@ -58,14 +58,3 @@ func BenchmarkEventPublishSteady(b *testing.B) {
 		s.publish(value)
 	}
 }
-
-func BenchmarkActiveResponseState(b *testing.B) {
-	s, r := projectionFixture()
-	r.response = &Response{ID: "active", Status: "in_progress"}
-	b.ReportAllocs()
-	for b.Loop() {
-		if _, err := s.ResponseState(b.Context(), "active", false); err != nil {
-			b.Fatal(err)
-		}
-	}
-}

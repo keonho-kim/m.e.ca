@@ -34,6 +34,9 @@ func (s *Store) restorePayload(ctx context.Context, codec, size int, digest, bod
 	if codec == 3 {
 		return s.roomPayload(ctx, hex.EncodeToString(digest), size, body)
 	}
+	if codec == 4 {
+		return s.roomImages(ctx, hex.EncodeToString(digest), size, body)
+	}
 	return s.codec.Restore(codec, size, hex.EncodeToString(digest), body)
 }
 

@@ -15,9 +15,9 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestGreetingNeedsOneCall(t *testing.T) {
@@ -50,7 +50,7 @@ func TestGreetingNeedsOneCall(t *testing.T) {
 	t.Cleanup(a.connection.client.Close)
 	t.Cleanup(func() { cancel(); a.workers.Wait() })
 	a.connection.selection = connection.Selection{Connection: conn, Model: "test-model"}
-	a.startRequest(composer.Capture("Hello", a.selectedPaths()))
+	a.startRequest(requestinput.Capture("Hello", a.selectedPaths()))
 	drainTask(t, a, false)
 	var output strings.Builder
 	for _, block := range a.chat.output.Blocks {

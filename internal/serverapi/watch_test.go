@@ -20,14 +20,14 @@ func TestWatchCancellationStopsRetainedBatch(t *testing.T) {
 	}
 	permission := state.Permission
 	for range 3 {
-		if _, err := f.app.Configure(deadline(t), &permission, nil); err != nil {
+		if _, err := f.app.Configure(deadline(t), f.app.State().Session.ID, &permission, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
 	ctx, cancel := context.WithCancel(deadline(t))
 	defer cancel()
 	sent := 0
-	err = f.api.watch(ctx, state.Cursor, func(*v1.Notification) error {
+	err = f.api.watch(ctx, state.Cursor, "", func(*v1.Notification) error {
 		sent++
 		cancel()
 		return nil
@@ -42,7 +42,7 @@ func TestWatchCancellationPrecedesSnapshot(t *testing.T) {
 	ctx, cancel := context.WithCancel(deadline(t))
 	cancel()
 	sent := 0
-	err := f.api.watch(ctx, "", func(*v1.Notification) error {
+	err := f.api.watch(ctx, "", "", func(*v1.Notification) error {
 		sent++
 		return context.Canceled
 	})

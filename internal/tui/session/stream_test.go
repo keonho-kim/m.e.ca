@@ -15,9 +15,9 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -66,7 +66,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 		t.Fatal("history inspection did not pause following")
 	}
 	a.chat.output.Append((transcript.Formatter{}).User("hello"), false)
-	a.startRequest(composer.Capture("hello", a.selectedPaths()))
+	a.startRequest(requestinput.Capture("hello", a.selectedPaths()))
 	if !a.chat.output.Follow {
 		t.Fatal("a new request did not resume following")
 	}

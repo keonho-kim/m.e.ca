@@ -49,21 +49,21 @@ func TestProjectIsolationUsesGlobalCapacity(t *testing.T) {
 	}
 	defer b.Close()
 	const session = "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
-	first, _, err := a.Admit(t.Context(), session, "same-key", "a")
+	first, _, err := a.Admit(t.Context(), session, "same-key", server.InputDigest("a", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.Get(t.Context(), first.ID); !errors.Is(err, server.ErrTaskNotFound) {
 		t.Fatal("cross-project task became visible", err)
 	}
-	if _, duplicate, err := b.Admit(t.Context(), session, "same-key", "b"); err != nil || duplicate {
+	if _, duplicate, err := b.Admit(t.Context(), session, "same-key", server.InputDigest("b", nil)); err != nil || duplicate {
 		t.Fatal("cross-project admission collided", duplicate, err)
 	}
 	if err := statefs.Write(filepath.Join(directory, "capacity"), "allocated", []byte("v1\n"+strconv.Itoa(maxAdmissions)+"\n")); err != nil {
 		t.Fatal(err)
 	}
 	for _, owner := range []*Ledger{a, b} {
-		if _, _, err := owner.Admit(t.Context(), session, "overflow", "text"); !errors.Is(err, capacity.ErrLimit) {
+		if _, _, err := owner.Admit(t.Context(), session, "overflow", server.InputDigest("text", nil)); !errors.Is(err, capacity.ErrLimit) {
 			t.Fatal("project bypassed the global quota", err)
 		}
 	}

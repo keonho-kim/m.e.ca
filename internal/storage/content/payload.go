@@ -1,6 +1,6 @@
 // Purpose: Decode registered payload formats and verify their original length, digest and JSON.
 // Pattern: Content integrity boundary.
-// Usage: SQLite reads stored bytes; Codec.Restore validates them before public hydration.
+// Usage: SQLite restores JSON; detail archives verify compressed blocks before page reads.
 // Related: internal/storage/content/compression.go, internal/storage/sqlite/payload.go.
 package content
 
@@ -23,7 +23,7 @@ func ID(raw []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func (c *Codec) Restore(codec, size int, id string, body []byte) (json.RawMessage, error) {
+func (c *Codec) DecodeVerified(codec, size int, id string, body []byte) ([]byte, error) {
 	if size < 1 || size > MaxBytes {
 		return nil, faults.Errorf(diagcatalog.ContentInvalidStoredPayloadLength)
 	}
@@ -48,8 +48,19 @@ func (c *Codec) Restore(codec, size int, id string, body []byte) (json.RawMessag
 	default:
 		return nil, faults.Errorf(diagcatalog.ContentUnsupportedPayloadCodec, codec)
 	}
-	if len(body) != size || ID(body) != id || !json.Valid(body) {
+	if len(body) != size || ID(body) != id {
 		return nil, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
 	}
 	return body, nil
+}
+
+func (c *Codec) Restore(codec, size int, id string, body []byte) (json.RawMessage, error) {
+	raw, err := c.DecodeVerified(codec, size, id, body)
+	if err != nil {
+		return nil, err
+	}
+	if !json.Valid(raw) {
+		return nil, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
+	}
+	return raw, nil
 }

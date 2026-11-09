@@ -142,7 +142,7 @@ func (r *Room) initialize() error {
 		}
 		members = append(members, member)
 	}
-	message, err := r.publish(channel.Message{From: "user", Text: r.input})
+	message, err := r.publish(channel.Message{From: "user", Text: r.input, Images: r.options.Images})
 	if err != nil {
 		return err
 	}

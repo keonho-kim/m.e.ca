@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
@@ -114,7 +114,7 @@ func TestTranscriptScrollSteeringPreservesLaterManualScroll(t *testing.T) {
 	height := a.chatHeight(80, a.bodyHeight(24))
 	a.scroll(-3, 80, height)
 	a.work.state = workerAgent
-	a.compose.steering = make(chan composer.Request, 1)
+	a.compose.steering = make(chan requestinput.Request, 1)
 	a.compose.editor.Set("Use the existing API")
 	a.steerInput(a.compose.editor.String())
 	if !a.chat.output.Follow {

@@ -89,7 +89,7 @@ func TestListenerTLSAndLoopbackHTTP2(t *testing.T) {
 			}
 			client := &http.Client{Transport: tokenTransport{base: transport, token: token}}
 			rpc := mecav1connect.NewMecaServiceClient(connect.NewClient(connecthttp.NewTransport(client, url, connecthttp.WithGRPC())))
-			if _, err := rpc.Call(ctx, &v1.Command{Operation: &v1.Command_State{State: &v1.Empty{}}}); err != nil {
+			if _, err := rpc.Call(ctx, &v1.Command{Operation: &v1.Command_State{State: &v1.StateRequest{}}}); err != nil {
 				t.Fatal(err)
 			}
 			watch, err := rpc.WatchEvents(ctx, &v1.WatchRequest{})

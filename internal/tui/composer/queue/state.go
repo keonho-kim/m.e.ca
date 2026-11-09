@@ -5,9 +5,11 @@
 package queue
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/media"
+	"slices"
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
@@ -30,20 +32,25 @@ const (
 )
 
 type Edit struct {
-	Index      int
-	Draft      input.Editor
-	Completion Completion
-	Reveal     bool
+	Index       int
+	Draft       input.Editor
+	DraftImages []media.Image
+	Completion  Completion
+	Reveal      bool
 }
 
 // State is owned by the terminal event loop; Messages must remain ordered while Edit is active.
 type State struct {
-	Messages []composer.Request
+	Messages []requestinput.Request
 	Edit     *Edit
 }
 
-func (s *State) Changed(text string) bool {
-	return s.Edit != nil && text != s.Messages[s.Edit.Index].Text
+func (s *State) Changed(text string, images ...media.Image) bool {
+	if s.Edit == nil {
+		return false
+	}
+	message := s.Messages[s.Edit.Index]
+	return text != message.Text || !slices.EqualFunc(images, message.Images, func(a, b media.Image) bool { return a.Digest == b.Digest })
 }
 
 func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
@@ -59,7 +66,7 @@ func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
 	if next < 0 {
 		return Unchanged
 	}
-	if s.Changed(editor.String()) {
+	if editor.String() != s.Messages[s.Edit.Index].Text {
 		return Unsaved
 	}
 	if next >= len(s.Messages) {
@@ -70,11 +77,17 @@ func (s *State) Navigate(delta int, editor *input.Editor) Navigation {
 	return Focused
 }
 
-func (s *State) Save(text string) bool {
-	if s.Edit == nil || strings.TrimSpace(text) == "" {
+func (s *State) Save(text string, images ...media.Image) bool {
+	if s.Edit == nil || strings.TrimSpace(text) == "" && len(images) == 0 {
+		return false
+	}
+	candidate := s.Messages[s.Edit.Index]
+	candidate.Text = text
+	if s.checkText(candidate, s.Edit.Index) != nil {
 		return false
 	}
 	s.Messages[s.Edit.Index].Text = text
+	s.Messages[s.Edit.Index].Images = slices.Clone(images)
 	return true
 }
 
@@ -84,7 +97,7 @@ func (s *State) DeleteSelected() {
 	}
 	index := s.Edit.Index
 	copy(s.Messages[index:], s.Messages[index+1:])
-	s.Messages[len(s.Messages)-1] = composer.Request{}
+	s.Messages[len(s.Messages)-1] = requestinput.Request{}
 	s.Messages = s.Messages[:len(s.Messages)-1]
 	if len(s.Messages) == 0 {
 		s.Messages = nil
@@ -101,16 +114,18 @@ func (s *State) RestoreEditor(editor *input.Editor) Completion {
 	return edit.Completion
 }
 
-func (s *State) Drain(editor *input.Editor) {
+func (s *State) Drain(editor *input.Editor, draftImages ...media.Image) []media.Image {
 	if len(s.Messages) == 0 {
-		return
+		return draftImages
 	}
 	var body strings.Builder
+	var images []media.Image
 	for i, request := range s.Messages {
 		if i > 0 {
 			body.WriteString("\n\n")
 		}
 		body.WriteString(request.Body())
+		images = append(images, request.Images...)
 	}
 	text := body.String()
 	if draft := editor.String(); draft != "" {
@@ -119,10 +134,11 @@ func (s *State) Drain(editor *input.Editor) {
 	editor.Set(text)
 	clear(s.Messages)
 	s.Messages = nil
+	return append(images, draftImages...)
 }
 
 func (s *State) Shift() {
-	s.Messages[0] = composer.Request{}
+	s.Messages[0] = requestinput.Request{}
 	s.Messages = s.Messages[1:]
 	if len(s.Messages) == 0 {
 		s.Messages = nil

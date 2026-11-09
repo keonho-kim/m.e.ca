@@ -1,7 +1,7 @@
-// Purpose: Restore only committed assistant content without reserializing a complete JSON record.
+// Purpose: Locate stored message text and its immutable payload reference for bounded native history reads.
 // Pattern: Selective text projection with caller-owned authenticated payload reads.
-// Usage: SQLite ResponseOutput reads original public text and skips incomplete drafts before hydration.
-// Related: internal/storage/sqlite/response_output.go, internal/storage/content/payload.go.
+// Usage: TextPrefix reads only requested public text prefixes without hydrating private fields.
+// Related: internal/storage/content/text_prefix.go, internal/storage/sqlite/text_prefix.go.
 package content
 
 import (
@@ -10,25 +10,6 @@ import (
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
-
-func Text(body, refsBody []byte, load func(string) (json.RawMessage, error)) (string, error) {
-	raw, reference, err := textSource(body, refsBody, true)
-	if err == nil && reference != "" {
-		id, quoted := Reference(reference)
-		raw, err = load(id)
-		if quoted {
-			return string(raw), err
-		}
-	}
-	if err != nil || len(raw) == 0 || string(raw) == "null" {
-		return "", err
-	}
-	var text string
-	if err := json.Unmarshal(raw, &text); err != nil {
-		return "", err
-	}
-	return text, nil
-}
 
 func textSource(body, refsBody []byte, skipIncomplete bool) (json.RawMessage, string, error) {
 	var message struct {

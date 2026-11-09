@@ -26,7 +26,7 @@ func (l *waitingLedger) Get(ctx context.Context, _ string) (Task, error) {
 		return Task{}, ctx.Err()
 	}
 }
-func (*waitingLedger) Admit(context.Context, string, string, string) (Task, bool, error) {
+func (*waitingLedger) Admit(context.Context, string, string, [32]byte) (Task, bool, error) {
 	return Task{}, false, ErrTaskNotFound
 }
 func (*waitingLedger) Finish(context.Context, Task) error { return nil }
@@ -38,7 +38,7 @@ func TestLedgerReadDoesNotBlockCancellation(t *testing.T) {
 	s.options.Ledger = ledger
 	run, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	s.active = &request{task: Task{ID: "active", Status: "running"}, cancel: cancel}
+	s.active = map[string]*request{"active": {task: Task{ID: "active", Status: "running"}, cancel: cancel}}
 	read := make(chan error, 1)
 	go func() { _, err := s.TaskStatus(t.Context(), "older-task"); read <- err }()
 	<-ledger.entered
@@ -69,7 +69,7 @@ func TestShutdownDuringModelPreparation(t *testing.T) {
 		return PreparedModel{}, ctx.Err()
 	}
 	go func() {
-		_, err := s.SetModel(t.Context(), ModelSettings{Provider: "ollama", Name: "fixture"})
+		_, err := s.SetModel(t.Context(), ModelSettings{Session: s.State().Session.ID, Provider: "ollama", Name: "fixture"})
 		prepared <- err
 	}()
 	<-entered

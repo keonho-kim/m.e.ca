@@ -12,9 +12,6 @@ import (
 
 func (s *execution) contextBaseBytes() int64 {
 	bytes := int64(len(s.system) + len(s.memoryContext) + len(s.checkpoint.Objective))
-	for _, message := range s.runner.ClientContext {
-		bytes += int64(message.ContextBytes())
-	}
 	for _, read := range s.skillReads {
 		bytes += int64(read.ContextBytes())
 	}

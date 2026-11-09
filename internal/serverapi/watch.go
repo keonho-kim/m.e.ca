@@ -12,11 +12,12 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/diagnostics"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
 
-func (a *API) sendBatch(ctx context.Context, batch server.Batch, send func(*v1.Notification) error) error {
+func (a *API) sendBatch(ctx context.Context, batch server.Batch, taskID string, send func(*v1.Notification) error) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -26,6 +27,9 @@ func (a *API) sendBatch(ctx context.Context, batch server.Batch, send func(*v1.N
 		return send(n)
 	}
 	for _, value := range batch.Events {
+		if taskID != "" && value.Task != taskID {
+			continue
+		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -38,7 +42,13 @@ func (a *API) sendBatch(ctx context.Context, batch server.Batch, send func(*v1.N
 	return nil
 }
 
-func (a *API) watch(ctx context.Context, cursor string, send func(*v1.Notification) error) (resultErr error) {
+func (a *API) watch(ctx context.Context, cursor, taskID string, send func(*v1.Notification) error) (resultErr error) {
+	if len(taskID) > 128 {
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidTaskFilter)
+	}
+	delivered := false
+	write := send
+	send = taskSender(taskID, func(n *v1.Notification) error { delivered = true; return write(n) })
 	started := time.Now()
 	defer func() {
 		diagnostics.Log(ctx, diagcatalog.StreamClosed, "component", "serverapi", "duration_ms", time.Since(started).Milliseconds(), "error_code", diagnostics.Code(resultErr))
@@ -55,7 +65,7 @@ func (a *API) watch(ctx context.Context, cursor string, send func(*v1.Notificati
 			idle.Heartbeat()
 		}
 		poll, cancel := idle.PollContext(ctx)
-		batch, err := a.Service.Next(poll, cursor)
+		batch, err := a.Service.NextTask(poll, cursor, taskID)
 		cancel()
 		if err != nil {
 			if ctx.Err() == nil && errors.Is(err, context.DeadlineExceeded) {
@@ -63,10 +73,13 @@ func (a *API) watch(ctx context.Context, cursor string, send func(*v1.Notificati
 			}
 			return err
 		}
-		if err := a.sendBatch(ctx, batch, send); err != nil {
+		delivered = false
+		if err := a.sendBatch(ctx, batch, taskID, send); err != nil {
 			return err
 		}
-		idle.Activity()
+		if delivered {
+			idle.Activity()
+		}
 		if batch.Snapshot != nil {
 			cursor = batch.Snapshot.Cursor
 		} else {

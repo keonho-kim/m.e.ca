@@ -29,10 +29,11 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 		}
 	}
 	if !r.Resume {
-		if err := s.save(ctx, modelapi.Message{Role: "user", Content: input}); err != nil {
+		if err := s.save(ctx, modelapi.Message{Role: "user", Content: input, Images: r.Images}); err != nil {
 			return err
 		}
 	}
+	s.runner.Images = nil
 	for _, doc := range r.SkillReads {
 		s.allowExplicitSkill(doc.ID)
 		body, err := json.Marshal(doc)

@@ -6,6 +6,7 @@ package server
 
 import (
 	"context"
+	"errors"
 
 	"github.com/keonho-kim/meca/internal/config"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -46,19 +47,35 @@ func (s *Service) beginChange(ctx context.Context) (sessionChange, error) {
 	if err := ctx.Err(); err != nil {
 		return sessionChange{}, err
 	}
-	if err := s.requireIdle(); err != nil {
+	if err := s.requireAvailable(); err != nil {
 		return sessionChange{}, err
 	}
 	s.changing = true
 	ctx, done := s.trackLocked(ctx)
 	return sessionChange{ctx: ctx, conversation: s.conversation, config: s.options.Config, finish: func() {
-		s.mu.Lock()
-		s.changing, s.admitting = false, ""
-		s.submitting = ""
-		s.feed.wake()
-		s.mu.Unlock()
+		s.endChange()
 		done()
 	}}, nil
+}
+
+// endChange keeps session preparation resources alive until the reservation ends.
+func (s *Service) endChange() {
+	s.mu.Lock()
+	var keep *Conversation
+	if s.last != nil {
+		keep = s.jobs[s.last.Session]
+	}
+	retired := s.idleJobs(keep)
+	s.mu.Unlock()
+	var closeErr error
+	for _, c := range retired {
+		closeErr = errors.Join(closeErr, s.closeReadersAndConversation(c))
+	}
+	s.mu.Lock()
+	s.closeErr = errors.Join(s.closeErr, closeErr)
+	s.changing, s.admitting = false, ""
+	s.feed.wake()
+	s.mu.Unlock()
 }
 
 func (s *Service) beginRead(ctx context.Context) (*Conversation, context.Context, func(), error) {

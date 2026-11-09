@@ -95,19 +95,19 @@ func TestSocketDuplexControlAndUnwatch(t *testing.T) {
 	p.receive(func(n *v1.Notification) bool { return n.GetEvent().GetKind() == "request_finished" })
 	// A control reply after unwatch is a barrier: prior watch writes have joined.
 	p.send(&v1.SocketFrame{Body: &v1.SocketFrame_Unwatch{Unwatch: &v1.Empty{}}})
-	before := p.command(&v1.Command{Id: "unwatched", Operation: &v1.Command_State{State: &v1.Empty{}}}).GetState()
+	before := p.command(&v1.Command{Id: "unwatched", Operation: &v1.Command_State{State: &v1.StateRequest{}}}).GetState()
 	p.pending = nil
 	permission := "all_mighty"
-	if _, err := f.app.Configure(ctx, &permission, nil); err != nil {
+	if _, err := f.app.Configure(ctx, f.app.State().Session.ID, &permission, nil); err != nil {
 		t.Fatal(err)
 	}
-	p.send(&v1.SocketFrame{Body: &v1.SocketFrame_Command{Command: &v1.Command{Id: "quiet", Operation: &v1.Command_State{State: &v1.Empty{}}}}})
+	p.send(&v1.SocketFrame{Body: &v1.SocketFrame_Command{Command: &v1.Command{Id: "quiet", Operation: &v1.Command_State{State: &v1.StateRequest{}}}}})
 	n := p.receive(func(*v1.Notification) bool { return true })
 	if n.GetReply().GetId() != "quiet" {
 		t.Fatal("unwatch delivered another event", n)
 	}
 	p.send(&v1.SocketFrame{Body: &v1.SocketFrame_Watch{Watch: &v1.WatchRequest{Cursor: before.Cursor}}})
-	p.command(&v1.Command{Id: "resumed", Operation: &v1.Command_State{State: &v1.Empty{}}})
+	p.command(&v1.Command{Id: "resumed", Operation: &v1.Command_State{State: &v1.StateRequest{}}})
 	p.receive(func(n *v1.Notification) bool { return n.GetEvent().GetKind() == "settings_changed" })
 	p.send(&v1.SocketFrame{Body: &v1.SocketFrame_Watch{Watch: &v1.WatchRequest{}}})
 	p.receive(func(n *v1.Notification) bool { return n.GetSnapshot().GetPermission() == permission })

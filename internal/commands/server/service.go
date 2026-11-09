@@ -8,23 +8,27 @@ import (
 	"context"
 	"sync"
 
+	"github.com/keonho-kim/meca/internal/tools/workspacegate"
+
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Service struct {
+	workspace     workspacegate.Gate
 	mu            sync.Mutex
 	ctx           context.Context
 	cancel        context.CancelFunc
 	options       Options
-	scope         string
 	conversation  *Conversation
-	job           *Conversation
-	active        *request
+	jobs          map[string]*Conversation
+	attachments   map[string]*attachment
+	active        map[string]*request
+	bySession     map[string]*request
+	admissions    chan struct{}
 	last          *Task
 	changing      bool
 	admitting     string
-	submitting    string
 	closed        bool
 	closeDone     chan struct{}
 	closeErr      error
@@ -35,9 +39,15 @@ type Service struct {
 }
 
 func New(ctx context.Context, options Options) (*Service, error) {
+	if options.Concurrency == 0 {
+		options.Concurrency = 1
+	}
+	if options.Concurrency < 1 {
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerConcurrencyRange)
+	}
 	if options.Open == nil || options.List == nil || options.PrepareModel == nil || options.UpdateConfig == nil || options.Ledger == nil {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerServerIODependenciesAreRequired)
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{ctx: ctx, cancel: cancel, options: options, scope: ProjectScope(options.Project), closeDone: make(chan struct{}), feed: newEventLog()}, nil
+	return &Service{ctx: ctx, cancel: cancel, options: options, closeDone: make(chan struct{}), feed: newEventLog(), active: make(map[string]*request), jobs: make(map[string]*Conversation), admissions: make(chan struct{}, 1)}, nil
 }

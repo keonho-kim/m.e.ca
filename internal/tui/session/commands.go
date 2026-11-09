@@ -6,7 +6,7 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/commands"
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 )
 
 func (a *app) submit() {
@@ -25,6 +25,9 @@ func (a *app) submit() {
 
 func (a *app) inputCommand() (commands.Command, error) {
 	command, err := commands.Parse(a.compose.editor.String())
+	if err == nil && command.Kind == commands.Empty && len(a.compose.images) > 0 {
+		command.Kind = commands.Message
+	}
 	if err == nil && a.page == "files" && a.files.browser.Input && command.Kind == commands.Quit {
 		command = commands.Command{Kind: commands.Message, Argument: a.compose.editor.String()}
 	}
@@ -67,6 +70,10 @@ func (a *app) submitCommand(command commands.Command) {
 	}
 	a.compose.fileSubmission = nil
 	if a.work.state.agent() && a.work.state.active() && command.Kind == commands.Message {
+		if len(a.compose.images) > 0 {
+			a.reserveMessage(command.Argument)
+			return
+		}
 		a.steerInput(command.Argument)
 		return
 	}
@@ -92,7 +99,10 @@ func (a *app) submitCommand(command commands.Command) {
 		}
 		a.files.cancelDirectory()
 		a.page = "chat"
-		a.dispatchRequest(composer.Capture(command.Argument, a.selectedPaths()))
+		if !a.dispatchRequest(requestinput.Capture(command.Argument, a.selectedPaths(), a.compose.images...)) {
+			return
+		}
+		a.clearDraftImages()
 	}
 	a.compose.editor.Set("")
 	a.closeCommandHints()

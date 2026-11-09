@@ -24,18 +24,28 @@ func task(value server.Task) *v1.Task {
 }
 
 func snapshot(value server.Snapshot) *v1.Snapshot {
-	s := &v1.Snapshot{Cursor: value.Cursor, Permission: value.Permission, Team: value.Team, Session: wireSession(value.Session), Model: wireModel(value.Selection)}
+	value = server.BoundSnapshot(value)
+	s := &v1.Snapshot{Cursor: value.Cursor, Permission: value.Permission, Team: value.Team, Session: wireSession(value.Session), Model: wireModel(value.Selection), Concurrency: int64(value.Concurrency), NextTask: value.NextTask, TotalTasks: int64(value.TotalTasks), Language: value.Language, ActivityTruncated: value.ActivityTruncated}
+	for _, t := range value.Tasks {
+		s.Tasks = append(s.Tasks, task(t))
+	}
+	for _, x := range value.Executions {
+		s.Executions = append(s.Executions, &v1.Execution{TaskId: x.Task, Session: wireSession(x.Session), Model: wireModel(x.Selection), Team: x.Team, Statistics: wireStatistics(x.Statistics), StartedAt: wireTime(x.StartedAt)})
+	}
 	if value.Task != nil {
 		s.Task = task(*value.Task)
 	}
 	if x := value.Execution; x != nil {
-		s.Execution = &v1.Execution{Session: wireSession(x.Session), Model: wireModel(x.Selection), Team: x.Team}
+		s.Execution = &v1.Execution{TaskId: x.Task, Session: wireSession(x.Session), Model: wireModel(x.Selection), Team: x.Team, Statistics: wireStatistics(x.Statistics), StartedAt: wireTime(x.StartedAt)}
 	}
 	for _, p := range value.Approvals {
-		s.Approvals = append(s.Approvals, event(server.Event{ApprovalID: p.ID, Record: p.Value, Truncated: p.Truncated}).Approval)
+		s.Approvals = append(s.Approvals, event(server.Event{Task: p.Task, ApprovalID: p.ID, ApprovalExpiresAt: p.ExpiresAt, Record: p.Value, Truncated: p.Truncated}).Approval)
 	}
 	for _, d := range value.Drafts {
-		s.Drafts = append(s.Drafts, &v1.Draft{Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated})
+		s.Drafts = append(s.Drafts, &v1.Draft{TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes})
+	}
+	for _, e := range value.Activity {
+		s.Activity = append(s.Activity, event(e))
 	}
 	return s
 }
@@ -51,12 +61,14 @@ func wireModel(m connection.Selection) *v1.Model {
 	if m.Model == "" {
 		return nil
 	}
-	value := &v1.Model{Provider: string(m.Connection.Kind), Endpoint: m.Connection.Endpoint, Model: m.Model, CredentialSaved: m.Connection.CredentialRef != "", Thinking: m.Thinking, ThinkingSupported: m.ThinkingSupported}
+	reasoning := connection.ReasoningOptions(m.Connection.Kind, m.Details)
+	value := &v1.Model{ReasoningLevels: reasoning.Levels, ReasoningOff: reasoning.Off, Provider: string(m.Connection.Kind), Endpoint: m.Connection.Endpoint, Model: m.Model, CredentialSaved: m.Connection.CredentialRef != "", Thinking: m.Thinking, ThinkingSupported: m.ThinkingSupported}
 	if m.ReasoningEffort != nil {
 		value.ReasoningEffort = new(*m.ReasoningEffort)
 	}
 	if m.Details != nil {
 		value.ContextWindow, value.Notice = int32(m.Details.ContextWindow), m.Details.Notice
+		value.ImageInputState, value.ImageInputSupported = m.Details.ImageInput.State, m.Details.ImageInput.Supported()
 	}
 	return value
 }
@@ -65,12 +77,14 @@ func event(value server.Event) *v1.Event {
 	e := value.Record
 	result := &v1.Event{Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
 	result.Status, result.Error = value.Status, value.Error
+	result.Sequence = value.Sequence
+	result.MeasuredMillis = e.MeasuredDuration.Milliseconds()
 	result.OccurredAt, result.ErrorCode = e.OccurredAt, e.ErrorCode
 	if e.Skill != nil {
 		result.Skill = &v1.SkillRead{Id: e.Skill.ID, Name: e.Skill.Name, Source: e.Skill.Source, Revision: e.Skill.Revision}
 	}
 	if a := e.Approval; a != nil {
-		result.Approval = &v1.Approval{Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
+		result.Approval = &v1.Approval{ExpiresAt: wireTime(value.ApprovalExpiresAt), TaskId: value.Task, Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
 	}
 	if e.Call != nil || e.Reference != nil || e.CallID != "" {
 		result.Tool = &v1.Tool{CallId: e.CallID}
@@ -125,6 +139,9 @@ func textPreview(text string) string {
 
 func historyItem(value history.Record) *v1.HistoryItem {
 	item := &v1.HistoryItem{Sequence: value.Sequence, Kind: value.Kind}
+	for index, image := range value.Images {
+		item.Images = append(item.Images, wireImage(index, image))
+	}
 	if value.Kind == "message" {
 		item.Role = value.Message.Role
 		item.Text = strings.Clone(textPreview(value.Message.Content))

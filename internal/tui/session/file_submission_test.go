@@ -14,7 +14,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
@@ -73,7 +73,7 @@ func TestFileSelectionPendingSendPreservesDraft(t *testing.T) {
 			a.openFiles(".")
 			finishBrowserIO(t, a)
 			a.work.state = workerAgent
-			a.compose.steering = make(chan composer.Request, 1)
+			a.compose.steering = make(chan requestinput.Request, 1)
 			a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " ", 0))
 			<-blocked.started
 			a.keyEvent(tcell.NewEventKey(tcell.KeyBacktab, "", 0))

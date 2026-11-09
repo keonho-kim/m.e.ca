@@ -30,7 +30,7 @@ func (a *API) WatchEvents(ctx context.Context, request *v1.WatchRequest, stream 
 		return connect.NewError(connect.CodeResourceExhausted, diagcatalog.Text(diagcatalog.ServerapiWatchRequestExceedsBytes))
 	}
 	admission.ReleaseInput(ctx)
-	err := a.watch(ctx, request.GetCursor(), stream.Send)
+	err := a.watch(ctx, request.GetCursor(), request.GetTaskId(), stream.Send)
 	if err == nil {
 		return nil
 	}

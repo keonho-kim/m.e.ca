@@ -23,7 +23,7 @@ func TestAdmissionInsertFailureReturnsUnusedCapacity(t *testing.T) {
 		t.Fatal(err)
 	}
 	const session = "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
-	if _, _, err := l.Admit(t.Context(), session, "key", "input"); err == nil {
+	if _, _, err := l.Admit(t.Context(), session, "key", server.InputDigest("input", nil)); err == nil {
 		t.Fatal("failed insertion accepted")
 	}
 	body, err := os.ReadFile(filepath.Join(directory, "capacity", "allocated"))
@@ -33,10 +33,10 @@ func TestAdmissionInsertFailureReturnsUnusedCapacity(t *testing.T) {
 	if _, err := l.db.Exec("DROP TRIGGER reject_admission"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := l.Admit(t.Context(), session, "key", "input"); err != nil {
+	if _, _, err := l.Admit(t.Context(), session, "key", server.InputDigest("input", nil)); err != nil {
 		t.Fatal(err)
 	}
-	if _, duplicate, err := l.Admit(t.Context(), session, "key", "input"); err != nil || !duplicate {
+	if _, duplicate, err := l.Admit(t.Context(), session, "key", server.InputDigest("input", nil)); err != nil || !duplicate {
 		t.Fatal("deduplication lost", duplicate, err)
 	}
 	body, err = os.ReadFile(filepath.Join(directory, "capacity", "allocated"))

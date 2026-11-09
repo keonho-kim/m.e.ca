@@ -10,7 +10,6 @@ const (
 	ApprovalRequired         = "approval_required"
 	BatchNotExecuted         = "batch_not_executed"
 	SessionClosed            = "session_closed"
-	AdmissionFailed          = "admission_failed"
 	HttpHandlerPanic         = "http_handler_panic"
 	HttpServerError          = "http_server_error"
 	PathNotFound             = "path_not_found"
@@ -43,9 +42,6 @@ const (
 	CompletionNotSaved       = "completion_not_saved"
 	PersistenceFailed        = "persistence_failed"
 	IntegrityFailed          = "integrity_failed"
-	ObserverCanceled         = "observer_cancelled"
-	StreamRewrite            = "stream_rewrite"
-	StreamGap                = "stream_gap"
 	DeliveryFailed           = "delivery_failed"
 )
 
@@ -58,7 +54,7 @@ func Priority(code string) int {
 		return 90
 	case PermissionDenied, FailedPrecondition:
 		return 80
-	case Internal, OperationFailed, Unavailable, DeliveryFailed, StreamRewrite, StreamGap:
+	case Internal, OperationFailed, Unavailable, DeliveryFailed:
 		return 70
 	case InvalidArgument, Conflict:
 		return 60
@@ -66,7 +62,7 @@ func Priority(code string) int {
 		return 50
 	case DeadlineExceeded:
 		return 30
-	case Canceled, ObserverCanceled:
+	case Canceled:
 		return 20
 	default:
 		return 0
@@ -82,7 +78,7 @@ func HTTPStatus(code string) int {
 		return 403
 	case NotFound:
 		return 404
-	case Conflict, FailedPrecondition, Canceled, ObserverCanceled:
+	case Conflict, FailedPrecondition, Canceled:
 		return 409
 	case ResourceExhausted:
 		return 429

@@ -11,10 +11,10 @@ import (
 	tasksession "github.com/keonho-kim/meca/internal/agent/session"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 )
 
-func (a *app) startRequest(input composer.Request) {
+func (a *app) startRequest(input requestinput.Request) {
 	if a.work.state.active() {
 		return
 	}
@@ -36,7 +36,7 @@ func (a *app) startRequest(input composer.Request) {
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.work.cancel = cancel
 	a.decision = make(chan bool, 1)
-	steering := make(chan composer.Request, 16)
+	steering := make(chan requestinput.Request, 16)
 	a.compose.steering = steering
 	var steeringReady chan struct{}
 	if a.team.active {
@@ -70,6 +70,7 @@ func (a *app) startRequest(input composer.Request) {
 		defer a.workers.Done()
 		defer cancel()
 		options.Text = input.Resolve(ctx, exists)
+		options.Images = input.Images
 		delivery := requestDelivery{team: teamMode}
 		emit := func(event runrecord.Event) error {
 			return delivery.emit(ctx, a.ctx, a.events, event)

@@ -56,19 +56,20 @@ func eventKind(kind string) record.Event { return record.Event{Kind: kind} }
 // publish requires s.mu. The log owns immutable, bounded projections only.
 func (s *Service) publish(value Event) {
 	if value.Session == "" {
-		if s.active != nil && value.Task == s.active.task.ID {
-			value.Session = s.active.task.Session
+		if r := s.active[value.Task]; r != nil {
+			value.Session = r.task.Session
 		} else if s.conversation != nil {
 			value.Session = s.conversation.Runtime.Session.ID
 		}
-	}
-	if value.Task == "" && s.active != nil {
-		value.Task = s.active.task.ID
 	}
 	if value.Record.OccurredAt == "" {
 		value.Record.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 	value = ProjectEvent(value)
+	if r := s.active[value.Task]; r != nil {
+		r.sequence++
+		value.Sequence = r.sequence
+	}
 	f := &s.feed
 	f.sequence++
 	value.Cursor = f.cursor()
@@ -93,9 +94,13 @@ func (s *Service) publish(value Event) {
 }
 
 func (s *Service) Next(ctx context.Context, cursor string) (Batch, error) {
+	return s.NextTask(ctx, cursor, "")
+}
+
+func (s *Service) NextTask(ctx context.Context, cursor, taskID string) (Batch, error) {
 	for {
 		s.mu.Lock()
-		batch, ready, err := s.readEvents(cursor)
+		batch, ready, err := s.readEvents(cursor, taskID)
 		if err != nil || ready {
 			s.mu.Unlock()
 			return batch, err
@@ -119,17 +124,19 @@ func (s *Service) Next(ctx context.Context, cursor string) (Batch, error) {
 
 // Replay validates a cursor and reads available events without waiting. SSE
 // uses it to establish response headers even when the subscriber is caught up.
-func (s *Service) Replay(cursor string) (Batch, error) {
+func (s *Service) Replay(cursor string) (Batch, error) { return s.ReplayTask(cursor, "") }
+
+func (s *Service) ReplayTask(cursor, taskID string) (Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	batch, _, err := s.readEvents(cursor)
+	batch, _, err := s.readEvents(cursor, taskID)
 	return batch, err
 }
 
-func (s *Service) readEvents(cursor string) (Batch, bool, error) {
+func (s *Service) readEvents(cursor, taskID string) (Batch, bool, error) {
 	f := &s.feed
 	if cursor == "" {
-		snapshot := s.snapshot()
+		snapshot := s.snapshotPage(taskID, "", 32)
 		return Batch{Snapshot: &snapshot}, true, nil
 	}
 	epoch, raw, ok := strings.Cut(cursor, ":")
@@ -138,7 +145,7 @@ func (s *Service) readEvents(cursor string) (Batch, bool, error) {
 		return Batch{}, false, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidEventCursor)
 	}
 	if epoch != f.epoch || (f.count > 0 && sequence < f.entry(0).sequence-1) {
-		snapshot := s.snapshot()
+		snapshot := s.snapshotPage(taskID, "", 32)
 		return Batch{Snapshot: &snapshot}, true, nil
 	}
 	if sequence > f.sequence {

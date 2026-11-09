@@ -10,7 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 )
 
 func keymapLabels(t *testing.T, a *app) map[string]string {
@@ -31,7 +31,7 @@ func TestKeymapActionsSteeringAndFollowup(t *testing.T) {
 			a := screenFixture(t)
 			a.page, a.files.browser.Input = page, true
 			a.work.state = workerAgent
-			a.compose.steering = make(chan composer.Request, 1)
+			a.compose.steering = make(chan requestinput.Request, 1)
 			a.compose.editor.Set("Run this after finishing")
 			labels := keymapLabels(t, a)
 			enter := "방향 수정"

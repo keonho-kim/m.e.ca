@@ -18,6 +18,7 @@ import (
 )
 
 type DetailSource struct {
+	Session         string
 	Tool            record.EventReference
 	ApprovalID      string
 	HistorySequence int64
@@ -50,24 +51,12 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 	if source.HistorySequence != 0 {
 		choices++
 	}
-	if choices != 1 || source.Tool.Sequence < 0 || source.HistorySequence < 0 || source.HistorySequence == 1<<63-1 || source.Tool.Session != "" && !sessionstate.ValidID(source.Tool.Session) {
+	if choices != 1 || source.Tool.Sequence < 0 || source.HistorySequence < 0 || source.HistorySequence == 1<<63-1 || source.Tool.Session != "" && !sessionstate.ValidID(source.Tool.Session) || source.Session != "" && !sessionstate.ValidID(source.Session) {
 		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
 	}
-	c, ctx, done, err := s.beginRead(ctx)
+	c, ctx, done, pending, err := s.beginDetailRead(ctx, source)
 	if err != nil {
 		return DetailRead{}, err
-	}
-	var pending *pendingApproval
-	if source.ApprovalID != "" {
-		s.mu.Lock()
-		if s.active != nil {
-			pending = s.active.approvals[source.ApprovalID]
-		}
-		s.mu.Unlock()
-		if pending == nil {
-			done()
-			return DetailRead{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerApprovalIsNoLongerPending)
-		}
 	}
 	if source.Tool.Sequence != 0 && source.Tool.Session == "" {
 		source.Tool.Session = c.Runtime.Session.ID
@@ -78,6 +67,43 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 		}
 		return c.loadDetail(ctx, source, pending, reserve)
 	}}, nil
+}
+
+func (s *Service) beginDetailRead(ctx context.Context, source DetailSource) (*Conversation, context.Context, func(), *pendingApproval, error) {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return nil, nil, nil, nil, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
+	}
+	c := s.conversation
+	if source.Session != "" {
+		c = s.ownedConversation(source.Session)
+	}
+	var pending *pendingApproval
+	if source.ApprovalID != "" {
+		for _, r := range s.active {
+			if value := r.approvals[source.ApprovalID]; value != nil && (source.Session == "" || r.task.Session == source.Session) {
+				c, pending = r.conversation, value
+				break
+			}
+		}
+		if pending == nil {
+			s.mu.Unlock()
+			return nil, nil, nil, nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerApprovalIsNoLongerPending)
+		}
+	}
+	if pending == nil && source.Session != "" {
+		s.mu.Unlock()
+		c, ctx, done, err := s.beginSessionRead(ctx, source.Session)
+		return c, ctx, done, nil, err
+	}
+	if c == nil {
+		s.mu.Unlock()
+		return nil, nil, nil, nil, faults.New(diagcatalog.NotFound, diagcatalog.ServerConversationIsNotCurrentlyOwned)
+	}
+	c, ctx, done, err := s.borrowReadLocked(ctx, c)
+	s.mu.Unlock()
+	return c, ctx, done, pending, err
 }
 
 func (c *Conversation) loadDetail(ctx context.Context, source DetailSource, pending *pendingApproval, reserve func(int) error) (DetailOriginal, error) {

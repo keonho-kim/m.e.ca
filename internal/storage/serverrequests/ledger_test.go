@@ -21,7 +21,7 @@ func TestAdmissionSurvivesRestartAndRejectsChangedPayload(t *testing.T) {
 	}
 	ctx := context.Background()
 	id := "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
-	first, duplicate, err := ledger.Admit(ctx, id, "request-1", "change file")
+	first, duplicate, err := ledger.Admit(ctx, id, "request-1", server.InputDigest("change file", nil))
 	if err != nil || duplicate {
 		t.Fatal(first, duplicate, err)
 	}
@@ -33,11 +33,11 @@ func TestAdmissionSurvivesRestartAndRejectsChangedPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ledger.Close()
-	again, duplicate, err := ledger.Admit(ctx, id, "request-1", "change file")
+	again, duplicate, err := ledger.Admit(ctx, id, "request-1", server.InputDigest("change file", nil))
 	if err != nil || !duplicate || again.ID != first.ID || again.Status != "interrupted" {
 		t.Fatal(again, duplicate, err)
 	}
-	if _, _, err := ledger.Admit(ctx, id, "request-1", "different change"); err == nil {
+	if _, _, err := ledger.Admit(ctx, id, "request-1", server.InputDigest("different change", nil)); err == nil {
 		t.Fatal("key reused with different payload")
 	}
 	first.Status = "answered"
@@ -66,7 +66,7 @@ func TestCompletionWithEscapedErrorSurvivesRestart(t *testing.T) {
 	})
 	ctx := t.Context()
 	session := "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
-	task, _, err := ledger.Admit(ctx, session, "request-error", "answer")
+	task, _, err := ledger.Admit(ctx, session, "request-error", server.InputDigest("answer", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestCompletionWithEscapedErrorSurvivesRestart(t *testing.T) {
 	if err != nil || stored != task {
 		t.Fatalf("saved completion could not be restored: %v", err)
 	}
-	again, duplicate, err := ledger.Admit(ctx, session, "request-error", "answer")
+	again, duplicate, err := ledger.Admit(ctx, session, "request-error", server.InputDigest("answer", nil))
 	if err != nil || !duplicate || again != task {
 		t.Fatalf("saved completion was not deduplicated: duplicate=%t, error=%v", duplicate, err)
 	}
@@ -111,7 +111,7 @@ func TestNativeCompletionCannotBeRewritten(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer l.Close()
-	task, _, err := l.Admit(t.Context(), "session_AAAAAAAAAAAAAAAAAAAAAAAAAA", "key", "input")
+	task, _, err := l.Admit(t.Context(), "session_AAAAAAAAAAAAAAAAAAAAAAAAAA", "key", server.InputDigest("input", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestOversizedStoredErrorIsRejectedWithoutChangingOriginal(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer l.Close()
-	task, _, err := l.Admit(t.Context(), "session_AAAAAAAAAAAAAAAAAAAAAAAAAA", "key", "input")
+	task, _, err := l.Admit(t.Context(), "session_AAAAAAAAAAAAAAAAAAAAAAAAAA", "key", server.InputDigest("input", nil))
 	if err != nil {
 		t.Fatal(err)
 	}

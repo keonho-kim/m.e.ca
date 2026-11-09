@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/media"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/storage/content"
@@ -81,11 +82,29 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 			var envelope struct {
 				ID, Role   string
 				Incomplete bool
+				Images     []struct {
+					Path, MIME, Digest string
+					Width, Height      int
+					Data               json.RawMessage
+				}
 			}
 			if err := json.Unmarshal(record.body, &envelope); err != nil {
 				return nil, 0, err
 			}
 			visible.Message.ID, visible.Message.Role, visible.Message.Incomplete = envelope.ID, envelope.Role, envelope.Incomplete
+			for _, image := range envelope.Images {
+				var imageBytes int64
+				if raw := image.Data; len(raw) >= 2 && raw[0] == '"' {
+					imageBytes = int64((len(raw) - 2) / 4 * 3)
+					if len(raw) > 3 && raw[len(raw)-2] == '=' {
+						imageBytes--
+					}
+					if len(raw) > 4 && raw[len(raw)-3] == '=' {
+						imageBytes--
+					}
+				}
+				visible.Images = append(visible.Images, media.Metadata{Path: image.Path, MIME: image.MIME, Digest: image.Digest, Width: image.Width, Height: image.Height, Bytes: imageBytes})
+			}
 			visible.Message.Content, visible.Truncated, err = content.TextPrefix(record.body, record.refs, func(id string, limit int) (string, bool, error) {
 				return payloads.prefix(id, limit)
 			}, bounds.TextBytes)

@@ -28,6 +28,7 @@ type Executor struct {
 	retained                artifactRetention
 	imageReads              chan struct{}
 	redactionVersion        func() int
+	newChunkMask            func() func(string, bool) string
 	liveOutputs             liveCaptures
 	Files                   *fileview.Reader
 	commands                process.Registry
@@ -45,6 +46,7 @@ type Options struct {
 	Images           chan struct{}
 	RedactRange      func(string, int, int) (string, error)
 	RedactionVersion func() int
+	NewChunkMask     func() func(string, bool) string
 }
 
 func NewExecutor(project, home, private string, redact func(string) string, options Options) (*Executor, error) {
@@ -69,6 +71,7 @@ func NewExecutor(project, home, private string, redact func(string) string, opti
 		executor.imageReads = options.Images
 	}
 	executor.redactionVersion = options.RedactionVersion
+	executor.newChunkMask = options.NewChunkMask
 	executor.skills = options.Skills
 	if executor.skills == nil {
 		executor.skills = skills.New(project, home, skills.Options{Redact: redact, Check: boundary.SkillTarget, RedactRange: options.RedactRange, Version: options.RedactionVersion})

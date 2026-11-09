@@ -19,9 +19,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
@@ -96,7 +96,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.connection.selection = modelconn.Selection{Connection: connection, Model: "mock"}
-	a.startRequest(composer.Capture(sequence[0], a.selectedPaths()))
+	a.startRequest(requestinput.Capture(sequence[0], a.selectedPaths()))
 	select {
 	case <-started:
 	case <-ctx.Done():
