@@ -9,6 +9,7 @@ The target project's requirements, established design system and current request
 | `SKILL.md` | Shared purpose, authority, essential boundaries and routing | Load once when the skill applies; choose what changes the current decision |
 | `references/` maps | Locate a focused design question | Select a topic internally; no user-facing recipe command |
 | `references/` guides | Criteria, relationships, tradeoffs, state and verification | Apply the reasoning to actual content; adapt or omit patterns |
+| `scripts/` | Optional Playwright CLI diagnostic functions | Read the selected resource and run it only for a relevant browser check |
 | Source-study maps | Locate one implemented case and its direct dependencies | Inspect why it works and what it costs before copying any source |
 | `assets/examples/` | Concrete HTML/CSS/JS, media and painted records | Optional material to inspect/adapt, not universal requirements |
 | Study `DESIGN.md` / `PRODUCT.md` | Explain the fictional collection's scope and local choices | Keep separate from the actual project's design/product authority |
@@ -29,7 +30,7 @@ No overview gallery, per-folder browsing app, theme selector or extra invocation
 | Limit/convention | Applies to |
 | --- | --- |
 | Explanatory Markdown≤8KiB per file | Instructions maintained in this bundle |
-| Code/media≤1MiB, preferably≤512KiB | Bundled study assets |
+| Code/media≤1MiB, preferably≤512KiB | Bundled study assets and diagnostics |
 | Repository code headers and 350 physical lines | Authored study code in MECA's source tree |
 | Reader text paging | Delivery through MECA's existing reader, not app source-file size |
 | Local offline HTML/CSS/Vanilla JS studies | Their runtime portability, not a requirement that every target app use this stack |

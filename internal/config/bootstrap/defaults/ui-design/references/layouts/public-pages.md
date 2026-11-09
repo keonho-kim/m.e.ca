@@ -24,6 +24,12 @@ Evidence, use cases, pricing, integrations and FAQ are conditional on actual mat
 
 A real action leads to the supported destination or honestly labeled prototype boundary. Necessary support/policy destinations follow the product. Do not end every page with a mailing list or repeated CTA band by habit.
 
+## Compose an illustrative product demonstration
+
+When a product view explains the subject, choose the task, action and result before adding detail. Keep enough real context to recognize the product and make the important labels, control and result legible at the displayed size. A focused crop can explain one relationship better than a tiny whole application; do not cut the action or result. Recompose for a narrow host instead of shrinking meaningful text. A full view remains valid when it serves the brief.
+
+For an authored animation, show a coherent beginning, action and result, with enough time to read the outcome. A repeated demonstration needs an understandable reset; a static or reduced-motion view should convey the result without freezing mid-change. Distinguish illustrative behavior and sample data from a working service. A decorative mock must not expose dead controls to keyboard or assistive technology; give meaningful content a text alternative. An interactive demonstration needs real accessible controls and an honest boundary.
+
 ## Give the direction substance
 
 Choose typography, scale, rhythm, image contribution, geometry and color together. Editorial does not mandate serif; minimal does not mean empty; corporate does not mean blue. Several accents can help a real hierarchy without decorating every block. A requested material deserves a coherent implementation, not removal to satisfy a generic warning.

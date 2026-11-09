@@ -1,7 +1,7 @@
 // Purpose: Verify bounded ui-design discovery, installed code assets and preserved user edits.
 // Pattern: Installed skill contract tests through the real reader.
 // Usage: Bootstrap and concurrent-initialization tests read the published ui-design skill here.
-// Related: internal/config/bootstrap/skills.go, internal/skills/reader.go, internal/skills/resources.go.
+// Related: internal/config/bootstrap/skills.go, internal/config/bootstrap/defaults/ui-design/scripts, internal/skills/reader.go, internal/skills/resources.go.
 package bootstrap
 
 import (
@@ -47,7 +47,7 @@ func readUIDesignSkill(t *testing.T, home string) map[string]int {
 		name := queue[0]
 		queue = queue[1:]
 		body := readUIDesignResource(t, r, doc.ID, home, name)
-		if !strings.HasPrefix(name, "assets/") && len(body) > 8<<10 {
+		if (name == "SKILL.md" || strings.HasPrefix(name, "references/")) && len(body) > 8<<10 {
 			t.Fatalf("ui-design instruction %s exceeds its 8KiB context budget", name)
 		}
 		for _, link := range links.FindAllStringSubmatch(body, -1) {
@@ -56,7 +56,7 @@ func readUIDesignSkill(t *testing.T, home string) map[string]int {
 				continue
 			}
 			target = path.Clean(path.Join(path.Dir(name), target))
-			if target != "SKILL.md" && !strings.HasPrefix(target, "references/") && !strings.HasPrefix(target, "assets/examples/") {
+			if target != "SKILL.md" && !strings.HasPrefix(target, "references/") && !strings.HasPrefix(target, "assets/examples/") && !strings.HasPrefix(target, "scripts/") {
 				t.Fatalf("instruction link leaves the reference tree: %s -> %s", name, target)
 			}
 			if _, exists := depths[target]; !exists {
@@ -179,8 +179,17 @@ func TestBootstrapPreservesAndRestoresUIDesignResources(t *testing.T) {
 	if err := os.WriteFile(path, custom, 0600); err != nil {
 		t.Fatal(err)
 	}
+	script := filepath.Join(directory, "scripts/layout-check.js")
+	customScript := []byte("// User-owned diagnostic.\n")
+	if err := os.WriteFile(script, customScript, 0600); err != nil {
+		t.Fatal(err)
+	}
 	missing := filepath.Join(directory, "references/layout-map.md")
 	if err := os.Remove(missing); err != nil {
+		t.Fatal(err)
+	}
+	missingScript := filepath.Join(directory, "scripts/motion-check.js")
+	if err := os.Remove(missingScript); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Initialize(home); err != nil {
@@ -189,8 +198,14 @@ func TestBootstrapPreservesAndRestoresUIDesignResources(t *testing.T) {
 	if body, err := os.ReadFile(path); err != nil || string(body) != string(custom) {
 		t.Fatal("ui-design resource edit was overwritten", err)
 	}
+	if body, err := os.ReadFile(script); err != nil || string(body) != string(customScript) {
+		t.Fatal("ui-design diagnostic edit was overwritten", err)
+	}
 	if body, err := os.ReadFile(missing); err != nil || len(body) == 0 {
 		t.Fatal("missing ui-design resource was not restored", err)
+	}
+	if body, err := os.ReadFile(missingScript); err != nil || len(body) == 0 {
+		t.Fatal("missing ui-design diagnostic was not restored", err)
 	}
 	if body, err := os.ReadFile(previous); err != nil || string(body) != string(userSkill) {
 		t.Fatal("previous user-owned skill was changed", err)
