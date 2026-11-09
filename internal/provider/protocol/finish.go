@@ -5,9 +5,11 @@
 package protocol
 
 import (
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"strings"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func sanitizeReason(reason string) error {
@@ -15,7 +17,7 @@ func sanitizeReason(reason string) error {
 		return &modelapi.OutputLimitError{Reason: "output token limit"}
 	}
 	if reason == "content_filter" || reason == "error" || reason == "abort" {
-		return fmt.Errorf("model response stopped: %s", strings.ReplaceAll(reason, "\n", ""))
+		return faults.Errorf(diagcatalog.ProtocolModelResponseStopped, strings.ReplaceAll(reason, "\n", ""))
 	}
 	return nil
 }

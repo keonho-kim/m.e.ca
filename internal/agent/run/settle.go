@@ -9,6 +9,9 @@ import (
 	"errors"
 	"time"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/work"
 )
@@ -17,12 +20,15 @@ func (s *execution) settle(ctx context.Context, runErr error) error {
 	if runErr != nil {
 		end := work.End{Status: work.Failed, Reason: s.runner.Redact(runErr.Error())}
 		s.checkpoint.Status = runrecord.Stopped
+		class := diagcatalog.Semantic(faults.Code(runErr))
 		switch {
-		case errors.Is(runErr, errModelBudget), errors.Is(runErr, errTimeBudget):
+		case class == diagcatalog.PersistenceFailed || class == diagcatalog.IntegrityFailed || class == diagcatalog.CompletionNotSaved:
+			end.Status = work.Failed
+		case class == diagcatalog.ResourceExhausted && errors.Is(runErr, errModelBudget), class == diagcatalog.DeadlineExceeded && errors.Is(runErr, errTimeBudget):
 			end.Status = work.Exhausted
-		case errors.Is(runErr, errApprovalDenied):
+		case class == diagcatalog.FailedPrecondition && errors.Is(runErr, errApprovalDenied):
 			end.Status = work.Denied
-		case errors.Is(runErr, context.Canceled), errors.Is(runErr, context.DeadlineExceeded):
+		case diagcatalog.Semantic(faults.Code(runErr)) == diagcatalog.Canceled, diagcatalog.Semantic(faults.Code(runErr)) == diagcatalog.DeadlineExceeded:
 			end.Status = work.Interrupted
 			s.checkpoint.Status = runrecord.Interrupted
 		}

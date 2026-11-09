@@ -5,10 +5,10 @@
 package compact
 
 import (
-	"fmt"
-
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type summaryBudget struct {
@@ -44,7 +44,7 @@ func (c *Controller) budget(previous string) (summaryBudget, error) {
 		remaining -= len(message.Content)
 	}
 	if remaining <= 0 {
-		return summaryBudget{}, fmt.Errorf("compaction instructions, current request and previous memory exceed the %d-byte summary input budget at %d context tokens with %d output tokens reserved; original history retained; increase model context or adjust compaction input/output limits", input, window, output)
+		return summaryBudget{}, faults.Errorf(diagcatalog.CompactCompactionInstructionsCurrentRequestAndPreviousMemory, input, window, output)
 	}
 	return summaryBudget{inputBytes: input, sourceBytes: remaining, outputTokens: output}, nil
 }
@@ -57,7 +57,7 @@ func (b summaryBudget) fitObserved(packetBytes int, capacity *modelapi.ContextLi
 	input := min(b.inputBytes-1, int(int64(packetBytes)*int64(available)/int64(capacity.Input)*9/10)-256)
 	remaining := b.sourceBytes - (b.inputBytes - input)
 	if remaining <= 0 {
-		return summaryBudget{}, fmt.Errorf("compaction fixed input cannot fit the measured model context with output reserved; original history retained")
+		return summaryBudget{}, faults.Errorf(diagcatalog.CompactCompactionFixedInputCannotFitTheMeasured)
 	}
 	return summaryBudget{inputBytes: input, sourceBytes: remaining, outputTokens: output}, nil
 }

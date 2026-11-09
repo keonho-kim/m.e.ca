@@ -19,6 +19,8 @@
 - 프로세스 메모리 사용량·실제 입력/출력 토큰·TPS, OpenRouter의 보고 비용 표시
 - 선택형 SSE·WebSocket·gRPC 서버 API와 재접속·승인·취소 제어
 - 선택적 OpenAI 호환 텍스트 API: Chat Completions·Responses·SSE
+- 공통 SKILL.md 스킬: `!skills` 조회·미리보기, `#스킬명` 지정과 에이전트의 자율 탐색
+- 스킬 읽기 이벤트와 작업 식별자로 연결되는 bounded JSON 운영 로그
 
 ## 설치
 
@@ -166,8 +168,13 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 | `!new` | 현재 프로젝트에서 새 대화 시작 |
 | `!quit` | 작업을 정리하고 종료 |
 | `!team` | 현재 대화의 팀 모드 켜기·끄기 |
+| `!skills` | 설치한 스킬·출처·진단 조회와 본문 미리보기 |
 
 `!` 뒤에 글자를 입력하면 명령을 검색합니다. 설정 저장·파일 전송 확인에서는 `y`·`Y`로 진행하고, 대문자 `N`으로 취소합니다. 소문자 `n`은 무시합니다.
+
+스킬은 프로젝트 `.agents/skills/`, 개인 `~/.meca/skills/`, 공유 `~/.agents/skills/`에서 찾습니다. 시작·설치 시 `create-skill`·`ui-design`·`backend-design` 기본 스킬을 참고 파일과 함께 생성하며 기존 파일은 보존합니다. `#ui-design`만 호출하면 에이전트가 과업·정보 관계·빈도·위험 등 사용 맥락을 살펴 페이지·레이아웃·컴포넌트·모션을 응용합니다. 목록은 조합·변형할 수 있는 예시이며, 실제 내용에 맞는 구조·강조·문구·상태를 만드는 anti-slop 지침을 설계 전 과정에 적용합니다. Product Design의 맥락·시각적 근거·완전한 작업 흐름·실제 렌더링/상호작용 검토 원칙도 반영합니다. Skeleton Pulse/Shimmer·기본 Blur-up·Step Status와 Hamburger Morph·Side Drawer·Staggered Dropdown의 조합, 색을 맥락에 따라 결정하는 8가지 원칙을 다룹니다. 타이포·형태·밀도·이미지·전체 구성·상호작용·모션을 독립적으로 판단하는 지침과 의도한 표현을 보존하는 anti-slop 사례도 제공합니다. 외부 의존성 없는 HTML/CSS/Vanilla JS 예시는 결재·DB 워크벤치·자료 관리·예약·DB 지식 대화·AI 오피스의 여섯 앱과 예약 대안·캔버스·모션을 포함한 36페이지입니다. 동봉 예시에서 오피스는 문서·슬라이드 도구와 작업면을, Archive는 미니멀리즘·에디토리얼 구성과 역할별 포인트 색을 사용하며 Querydesk는 다크 테마입니다. 참고 지침은 선택 기준과 장단점을 설명하고, 에셋과 그 디자인 기록은 해당 사례만 설명합니다. 실제 프로젝트의 요구와 디자인 시스템이 우선하며 예시의 색·화면 수·파일 구조를 그대로 따를 필요는 없습니다. 결재·DB·지식 대화·오피스는 화면별 디자인 셸이며 실제 DB·AI·승인·문서 편집·내보내기를 구현하지 않습니다. 자료는 앱별·공통·모션·참고 캡처 폴더로 구분하며 Markdown 안내에서 필요한 파일을 직접 선택합니다. 참고 자료는 최대 세 층이며 설명은 파일별 8KiB, 코드·미디어는 1MiB까지 허용하고 512KiB 이하를 권장합니다. 서브커맨드는 없습니다. `#create-skill`은 스킬 작성을 돕고, 에이전트가 설명을 보고 필요한 스킬을 자율적으로 읽을 수도 있습니다. [스킬 형식·도구·범위 →](docs/skills.md)
+
+`#backend-design`은 설계 단계부터 CPU·메모리·저장공간·I/O·네트워크·응답 지연을 고려하도록 안내합니다. SQLite·PostgreSQL·Redis의 역할과 동시성, API·스트리밍·작업 수명, 중앙 로거/에러 계약, 고급 암호화·키 관리, 검색·벡터·메모리 최적화를 부하와 장애 조건에 맞춰 판단합니다. 기본 개발 패턴을 책임·호출 흐름·트랜잭션·자원 소유가 드러나는 일곱 실전 구성으로 확장하고, 네 가상 서비스의 설계안과 예상 비용을 비교합니다. 단일 호출에서 필요한 참고 자료만 탐색합니다. [스킬 본문](internal/config/bootstrap/defaults/backend-design/SKILL.md)과 [조사 출처](internal/config/bootstrap/defaults/backend-design/references/sources.md)를 참고하세요.
 
 | 조작 | 동작 |
 | --- | --- |
@@ -236,6 +243,8 @@ meca --server --openai                    # 같은 포트에 OpenAI 호환 HTTP 
 
 프로젝트별 서버 프로세스는 하나만 실행합니다. 실제 TCP 연결·HTTP 요청 수와 임시 명령 로그의 보관량을 제한합니다. 세션 목록은 유효 기간이 있는 커서로 페이지 조회하며, 큰 원문 조회는 동시 처리량과 복원 바이트를 제한합니다. 저장 한도에 도달하면 기존 기록을 보존하고 추가 저장을 거절합니다. [서버 자원 한도 →](docs/server.md)
 
+작업의 `code`·`persistence`로 오류와 종료 저장 확인 여부를 제공합니다. 완료 저장을 확인할 수 없으면 새 접수를 막고, 이미 수행한 작업을 자동 재실행하지 않습니다. 현재 저장 형식은 세션 schema 28·서버 접수 DB user_version 2이며, 이전 형식은 자동 변환하지 않고 원본을 보존한 채 거부합니다. [보관 형식 →](docs/configuration.md#세션-저장과-복원)
+
 ## Program Philosophy
 
 M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다.
@@ -290,6 +299,8 @@ GOFLAGS='-tags=godbus_no_tcp' go vet ./...
 | 문서 | 내용 |
 | --- | --- |
 | [사용 가이드](docs/usage.md) | 키맵·파일 탐색·예약·승인·사용량 |
+| [스킬](docs/skills.md) | 설치 경로·SKILL.md·명시 지정·모델 도구·참고 자료 |
+| [이벤트와 운영 로그](docs/diagnostics.md) | 스킬 읽기 기록·식별자·JSON 로그·보관 한도 |
 | [이미지 입력](docs/images.md) | 비전 지원 확인·이미지 도구·지원 형식 |
 | [모델 연결](docs/model-connections.md) | Provider·Thinking·서빙 설정·연결 진단 |
 | [서버 API](docs/server.md) | SSE·WebSocket·gRPC·인증·작업 제어·OpenAI 호환 API |

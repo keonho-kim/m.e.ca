@@ -6,9 +6,10 @@ package protocol
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 )
 
 func BenchmarkOpenRouterReasoningFragments(b *testing.B) {

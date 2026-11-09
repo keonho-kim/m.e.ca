@@ -7,10 +7,13 @@ package responses
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+
 	"sort"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
 func (d *Decoder) remember(index *int, raw json.RawMessage) error {
@@ -18,7 +21,7 @@ func (d *Decoder) remember(index *int, raw json.RawMessage) error {
 		return nil
 	}
 	if index == nil || *index < 0 || *index >= 1024 {
-		return fmt.Errorf("invalid Responses output index")
+		return faults.Errorf(diagcatalog.ResponsesInvalidResponsesOutputIndex)
 	}
 	if d.output == nil {
 		d.output = map[int]json.RawMessage{}

@@ -5,13 +5,15 @@
 package compact
 
 import (
-	"fmt"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (m Memory) Check(maxSummary int) error {
 	if m.Revision < 0 || m.Through < 0 || m.UsageThrough < 0 || len(m.Markdown) > maxSummary || !utf8.ValidString(m.Markdown) {
-		return fmt.Errorf("invalid compaction memory")
+		return faults.Errorf(diagcatalog.CompactInvalidCompactionMemory)
 	}
 	return nil
 }

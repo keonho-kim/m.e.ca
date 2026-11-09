@@ -22,6 +22,8 @@
 
 게시 사전 검사는 타 플랫폼 실행 파일을 실행하지 않고 빌드 메타데이터만 읽는다. 메타데이터 판독 실패·태그 누락·비슷한 이름의 태그는 원격 태그 변경·업로드 전에 거절하며, 추출한 임시 파일은 성공·실패 모두 정리한다. 이 검사는 빌드 옵션 누락을 막으며 바이너리의 무결성 증명이나 의존성의 악성 행위 탐지를 대신하지 않는다.
 
+로컬 파일 검증은 [artifacts.sh](../scripts/release/artifacts.sh)의 verify_release_artifacts가, 원격 main·태그 lease 확인과 GitHub 게시는 [publish.sh](../scripts/release/publish.sh)가 소유한다. 검증 모듈은 같은 셸에서 source하므로 프로세스·검증 패스를 추가하지 않는다. publish.sh가 임시 디렉터리 정리를 소유하고 검증된 release_assets만 게시한다. 네 아카이브의 빌드 메타데이터는 한 번씩만 확인하며 테스트에서도 그 횟수를 검사한다.
+
 기본 `GITHUB_TOKEN`의 `contents: write` 권한을 게시 작업에 부여하며 별도 PAT나 사용자 인증정보를 등록할 필요는 없다. 같은 날짜의 갱신을 위해 릴리스는 수정 가능해야 한다. GitHub의 immutable release가 적용되어 있으면 태그를 바꾸기 전에 오류로 중단한다.
 
 ## 배포 파일

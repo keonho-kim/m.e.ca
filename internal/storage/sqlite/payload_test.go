@@ -44,7 +44,7 @@ func TestPayloadDeduplicatedAndRestored(t *testing.T) {
 	if err != nil || len(page) != 4 || page[0].Event.Thinking != text || page[3].Message.Content != "answer" || page[3].Message.Reasoning != "" {
 		t.Fatal("round trip failed", err)
 	}
-	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true, nil)
 	if err != nil || len(messages) != 1 || messages[0].Reasoning != text {
 		t.Fatal("model history lost full reasoning", err)
 	}
@@ -83,7 +83,7 @@ func TestPayloadKeepsNativeArgumentBytes(t *testing.T) {
 	if err != nil || len(page) != 1 || page[0].Event.Call == nil || bytes.Contains(page[0].Event.Call.Arguments, []byte("source")) {
 		t.Fatal("display loaded hidden source arguments", err)
 	}
-	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true, nil)
 	if err != nil || len(messages) != 1 || !bytes.Equal(messages[0].Calls[0].Arguments, args) {
 		t.Fatal("canonical native argument bytes changed", err)
 	}
@@ -94,7 +94,7 @@ func TestPayloadKeepsNativeArgumentBytes(t *testing.T) {
 	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ContextMessages(ctx, id, 0, 1024*1024, true); err == nil {
+	if _, err := s.ContextMessages(ctx, id, 0, 1024*1024, true, nil); err == nil {
 		t.Fatal("corrupt payload accepted")
 	}
 }

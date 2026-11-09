@@ -4,7 +4,9 @@
 // Related: internal/agent/model/output.go, internal/provider/transport/errors.go, internal/agent/run/run.go.
 package model
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+)
 
 type ContextLimitError struct {
 	Input, Capacity int
@@ -16,9 +18,9 @@ func (e *ContextLimitError) Error() string {
 		return e.Cause.Error()
 	}
 	if e.Capacity <= 0 {
-		return "model context limit exceeded; history was preserved"
+		return diagcatalog.Text(diagcatalog.ModelContextUnavailable)
 	}
-	return fmt.Sprintf("model context exhausted: input %d tokens, capacity %d; history was preserved", e.Input, e.Capacity)
+	return diagcatalog.Text(diagcatalog.ModelContextExhausted, e.Input, e.Capacity)
 }
 
 func (e *ContextLimitError) Unwrap() error { return e.Cause }

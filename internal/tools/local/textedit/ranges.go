@@ -5,24 +5,26 @@
 package textedit
 
 import (
-	"fmt"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 	"sort"
 	"strings"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
 
 func ReplaceMany(path string, current []byte, edits []Edit, format string) ([]byte, []toolapi.LineChange, error) {
 	if len(edits) < 1 || len(edits) > 64 {
-		return nil, nil, fmt.Errorf("edits requires 1 to 64 replacements")
+		return nil, nil, faults.Errorf(diagcatalog.TexteditEditsRequiresToReplacements)
 	}
 	source := string(current)
 	ranges := make([]replacement, len(edits))
 	for i, edit := range edits {
 		r, err := resolve(source, edit, format)
 		if err != nil {
-			f := toolapi.FailureOf(err)
-			f.Detail = fmt.Sprintf("%s edits[%d]: %s", path, i, f.Detail)
+			f := faults.FailureOf(err)
+			f.Detail = diagcatalog.Text(diagcatalog.IndexedEditFailure, path, i, f.Detail)
 			return nil, nil, f
 		}
 		r.index = i
@@ -31,7 +33,7 @@ func ReplaceMany(path string, current []byte, edits []Edit, format string) ([]by
 	sort.Slice(ranges, func(i, j int) bool { return ranges[i].start < ranges[j].start })
 	for i := 1; i < len(ranges); i++ {
 		if ranges[i].start < ranges[i-1].end {
-			return nil, nil, fmt.Errorf("%s edits[%d] overlaps edits[%d]; nothing was applied", path, ranges[i-1].index, ranges[i].index)
+			return nil, nil, faults.Errorf(diagcatalog.TexteditEditsOverlapsEditsNothingWasApplied, path, ranges[i-1].index, ranges[i].index)
 		}
 	}
 	size := len(source)

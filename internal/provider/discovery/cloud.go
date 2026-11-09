@@ -6,13 +6,16 @@ package discovery
 
 import (
 	"context"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
+
 	"net/url"
 	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type supported struct {
@@ -85,7 +88,7 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 				return nil, err
 			}
 			if page.Data == nil {
-				return nil, fmt.Errorf("invalid Claude model catalog")
+				return nil, faults.Errorf(diagcatalog.DiscoveryInvalidClaudeModelCatalog)
 			}
 			for _, row := range page.Data {
 				values = append(values, row.info())
@@ -93,7 +96,7 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 			if page.More {
 				next = page.Last
 				if next == "" {
-					return nil, fmt.Errorf("claude model page omitted its cursor")
+					return nil, faults.Errorf(diagcatalog.DiscoveryClaudeModelPageOmittedItsCursor)
 				}
 			}
 		} else {
@@ -109,7 +112,7 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 				return nil, err
 			}
 			if page.Models == nil {
-				return nil, fmt.Errorf("invalid Gemini model catalog")
+				return nil, faults.Errorf(diagcatalog.DiscoveryInvalidGeminiModelCatalog)
 			}
 			for _, row := range page.Models {
 				for _, method := range row.Methods {
@@ -122,7 +125,7 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 			next = page.Next
 		}
 		if len(values) > 10000 {
-			return nil, fmt.Errorf("too many provider models")
+			return nil, faults.Errorf(diagcatalog.DiscoveryTooManyProviderModels)
 		}
 		if next == "" {
 			ids := map[string]bool{}
@@ -131,7 +134,7 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 					return nil, err
 				}
 				if ids[value.ID] {
-					return nil, fmt.Errorf("duplicate provider model")
+					return nil, faults.Errorf(diagcatalog.DiscoveryDuplicateProviderModel)
 				}
 				ids[value.ID] = true
 			}
@@ -139,12 +142,12 @@ func (c *Client) cloudModels(ctx context.Context) ([]connection.ModelInfo, error
 			return values, nil
 		}
 		if len(next) > 4096 || seen[next] {
-			return nil, fmt.Errorf("invalid provider model page cursor")
+			return nil, faults.Errorf(diagcatalog.DiscoveryInvalidProviderModelPageCursor)
 		}
 		seen[next] = true
 		cursor = next
 	}
-	return nil, fmt.Errorf("provider model pagination exceeds limit")
+	return nil, faults.Errorf(diagcatalog.DiscoveryProviderModelPaginationExceedsLimit)
 }
 
 func (c *Client) cloudModel(ctx context.Context, model string) (connection.ModelInfo, error) {
@@ -171,7 +174,7 @@ func (c *Client) cloudModel(ctx context.Context, model string) (connection.Model
 
 func checkCloudModel(value connection.ModelInfo) error {
 	if !utf8.ValidString(value.ID) || strings.ContainsFunc(value.ID, unicode.IsControl) {
-		return fmt.Errorf("invalid provider model ID")
+		return faults.Errorf(diagcatalog.DiscoveryInvalidProviderModelID)
 	}
 	return value.Check()
 }

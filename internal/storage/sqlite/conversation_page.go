@@ -11,12 +11,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"io"
 	"path/filepath"
 	"sort"
 	"unsafe"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
@@ -49,7 +51,7 @@ func (h *conversationHeap) Pop() any {
 
 func (s *Sessions) ConversationPage(ctx context.Context, project, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
 	if limit < 1 || limit > 100 {
-		return nil, "", fmt.Errorf("session page limit must be 1 to 100")
+		return nil, "", faults.Errorf(diagcatalog.SqliteSessionPageLimitMustBeTo)
 	}
 	canonical, err := filepath.EvalSymlinks(project)
 	if err != nil {

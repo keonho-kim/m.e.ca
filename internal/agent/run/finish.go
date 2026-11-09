@@ -6,18 +6,20 @@ package run
 
 import (
 	"context"
-	"fmt"
+
 	"strings"
 	"unicode/utf8"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
 	text := strings.TrimSpace(reply.Text)
 	if text == "" || !utf8.ValidString(text) {
-		return fmt.Errorf("model completed with an empty or invalid response and no native call")
+		return faults.Errorf(diagcatalog.RunModelCompletedWithAnEmptyOrInvalid)
 	}
 	// Trimming a pathological padded reply can leave a tiny final value holding
 	// megabytes alive in the result, history and presentation layers.

@@ -6,13 +6,17 @@ package run
 
 import (
 	"context"
-	"fmt"
+
+	"strings"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/redaction"
-	"strings"
 )
 
 func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) {
@@ -32,6 +36,11 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	s.checkpoint.ModelCalls = s.usage.ModelCalls
 	if err := s.emit(runrecord.Event{Kind: "stream"}); err != nil {
 		return modelapi.Response{}, err
+	}
+	if s.replyMemory != nil {
+		if err := s.replyMemory.Resize(0); err != nil {
+			return modelapi.Response{}, err
+		}
 	}
 	var reply, thinking strings.Builder
 	maskReply := s.streamMask()
@@ -54,18 +63,23 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 				maskThinking = s.streamMask()
 			}
 			visibleReply, visibleThinking = "", ""
+			if s.replyMemory != nil {
+				if err := s.replyMemory.Resize(0); err != nil {
+					return err
+				}
+			}
 			done = false
 			return s.emit(runrecord.Event{Kind: "stream"})
 		}
 		if len(e.Calls) > 0 {
 			if len(request.Tools) == 0 || !e.Done || len(calls) != 0 || len(e.Calls) > toolapi.MaxCalls {
-				return &modelapi.ToolCallError{Detail: "unavailable, incomplete or excessive native tool calls"}
+				return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.RunUnavailableIncompleteOrExcessiveNativeToolCalls)}
 			}
 			calls = append(calls, e.Calls...)
 		}
 		if len(e.ReasoningState) > 0 {
 			if !e.Done {
-				return fmt.Errorf("provider continuation state arrived before completion")
+				return faults.Errorf(diagcatalog.RunProviderContinuationStateArrivedBeforeCompletion)
 			}
 			continuation = e.ReasoningState
 		}
@@ -75,6 +89,11 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		}
 		if size > modelapi.MaxResponseBytes {
 			return &modelapi.OutputLimitError{Reason: "model response byte limit"}
+		}
+		if s.replyMemory != nil {
+			if err := s.replyMemory.Resize(int64(size)); err != nil {
+				return err
+			}
 		}
 		// Check before allocating append buffers or masking an oversized event.
 		reply.WriteString(e.Delta)
@@ -98,11 +117,14 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	}
 	visibleReply, visibleThinking = maskReply(reply.String(), true), maskThinking(thinking.String(), true)
 	if err == nil && !done {
-		err = fmt.Errorf("model reply did not complete")
+		err = faults.Errorf(diagcatalog.RunModelReplyDidNotComplete)
 	}
 	if thinking.Len() > 0 {
 		event := runrecord.Event{Kind: "thinking", Thinking: visibleThinking}
-		if saveErr := s.record(context.WithoutCancel(ctx), event); saveErr != nil {
+		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		saveErr := s.record(flush, event)
+		cancel()
+		if saveErr != nil {
 			return modelapi.Response{}, saveErr
 		}
 		if err == nil {
@@ -117,14 +139,17 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 		// The thinking event preserves the visible trace without replaying an
 		// unfinished reasoning chain as input to the next generation.
 		if body := reply.String(); body != "" {
-			if saveErr := s.save(context.WithoutCancel(ctx), modelapi.Message{Role: "assistant", Content: visibleReply, Incomplete: true}); saveErr != nil {
+			flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			saveErr := s.save(flush, modelapi.Message{Role: "assistant", Content: visibleReply, Incomplete: true})
+			cancel()
+			if saveErr != nil {
 				return modelapi.Response{}, saveErr
 			}
 		}
 		return modelapi.Response{}, err
 	}
 	if s.runner.Redact(reply.String()) != reply.String() {
-		return modelapi.Response{}, fmt.Errorf("model reply contains a protected credential or terminal control")
+		return modelapi.Response{}, faults.Errorf(diagcatalog.RunModelReplyContainsAProtectedCredentialOr)
 	}
 	if err := redaction.CheckProtected(continuation, s.runner.Redact); err != nil {
 		return modelapi.Response{}, err
@@ -132,7 +157,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	ids := map[string]bool{}
 	for _, call := range calls {
 		if ids[call.ID] {
-			return modelapi.Response{}, &modelapi.ToolCallError{Detail: "duplicate call IDs in one response"}
+			return modelapi.Response{}, &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.RunDuplicateCallIDsInOneResponse)}
 		}
 		ids[call.ID] = true
 		if err := redaction.CheckProtected(call.Arguments, s.runner.Redact); err != nil {

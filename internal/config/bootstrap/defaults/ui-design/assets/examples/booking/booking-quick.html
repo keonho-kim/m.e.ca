@@ -1,0 +1,101 @@
+<!doctype html>
+<!-- Purpose: Demonstrate 익숙한 예약은, 필요한 정보만. while preserving the shared reservation contract.
+Pattern: Native multi-page composition with app-owned visual direction.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/ui-design/assets/examples/booking/booking-views.js, internal/config/bootstrap/defaults/ui-design/assets/examples/booking/booking-studies.css, internal/config/bootstrap/defaults/ui-design/references/composition-decisions.md. -->
+<html lang="ko" data-theme="quick">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>익숙한 예약은, 필요한 정보만. / Morrow Studies</title><meta name="description" content="익숙한 예약은, 필요한 정보만. / Morrow Studies 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다."><link rel="icon" href="../shared/daylight-preview.jpg"><link rel="stylesheet" href="../shared/base.css"><link rel="stylesheet" href="../shared/components.css"><link rel="stylesheet" href="../shared/motion.css"><link rel="stylesheet" href="../shared/glass.css"><link rel="stylesheet" href="booking-studies.css"><script src="../shared/interaction.js" defer data-required></script><script src="../shared/local-state.js" defer data-required></script><script src="../shared/media.js" defer data-required></script><script src="../morrow/booking-data.js" defer data-required></script><script src="booking-views.js" defer data-required></script>
+  </head>
+  <body data-study="quick"><a class="skip" href="#main">본문으로 이동</a>
+    <header class="study-header glass-surface"><a class="study-brand" href="booking-explore.html">morrow / studies</a>
+      <nav aria-label="같은 예약의 다른 접근"><a href="booking-explore.html">공간 먼저</a><a href="booking-schedule.html">시간 먼저</a><a href="booking-quick.html" aria-current="page">빠른 입력</a><a href="../morrow/atelier-booking.html">기본 예약</a>
+      </nav>
+    </header>
+    <main id="main" class="study-main">
+      <header>
+
+        <h1 class="study-title">익숙한 예약은, 필요한 정보만.
+        </h1>
+        <p class="study-intro">공간과 조건을 알고 있다면 문서처럼 차례로 입력하세요. 실제로 보관한 예약이 있을 때만 최근 이용 조건을 불러올 수 있습니다.
+        </p>
+      </header>
+      <p class="notice error" data-page-error role="alert" hidden>
+      </p><noscript>
+      <p class="notice">입력·계산·화면 간 초안 보존에는 JavaScript와 세션 저장이 필요합니다. 실제 서비스로 전송하지 않습니다.
+      </p></noscript>
+      <div class="repeat-action"><button class="btn" data-reuse-booking disabled>최근 이용 조건 적용</button>
+        <p>공간·시작 시간·이용 시간·인원·장비를 가져옵니다. 현재 날짜와 담당자·메모는 유지합니다.
+        </p>
+      </div>
+      <form id="booking-study" class="document-layout">
+        <nav class="document-margin" aria-label="예약 정보 목차"><strong>예약 노트</strong><a href="#conditions">01 / 공간과 시간</a><br><a href="#contact">02 / 이용 정보</a><br><a href="#quote">03 / 금액 확인</a>
+          <p class="study-note">초안은 화면을 바꿔도<br>이 탭에서 이어집니다.
+          </p>
+        </nav>
+        <article class="document-paper" data-enter>
+          <section id="conditions" class="study-form-section">
+            <h2>공간과 시간
+            </h2>
+            <div class="study-fields"><label>공간<select name="space"><option value="daylight">Daylight studio</option><option value="warm">Warm meeting room</option></select></label><label>이용 날짜<input name="date" type="date" required></label><label>시작 시간<select name="start"><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option></select></label><label>이용 시간<select name="hours"><option value="2">2시간</option><option value="3">3시간</option><option value="4">4시간</option><option value="5">5시간</option><option value="6">6시간</option></select></label><label>인원<input name="people" type="number" min="1" max="8" value="2" required><small class="muted" data-capacity>최대 8명</small></label>
+            </div>
+            <p class="study-note">고정된 선택 예시 / 10:00~20:00 / 최소 2시간
+            </p>
+          </section>
+          <section id="contact" class="study-form-section">
+            <h2>이용 정보
+            </h2>
+            <div class="study-fields"><label>담당자 이름<input name="name" value="김민서" required maxlength="40" autocomplete="off"></label><label class="study-span">남길 요청 <span class="muted">선택</span><textarea name="note" rows="2" maxlength="500" placeholder="이 예시에는 개인정보를 입력하지 마세요."></textarea></label>
+            </div><label class="study-option"><input type="checkbox" name="equipment"><span>외부 모니터 추가<small>이용당 8,000원 / 부가세 별도</small></span></label>
+          </section>
+        </article>
+        <div id="quote">
+          <aside class="study-summary" data-enter>
+
+            <h2 data-selected-space>선택한 공간
+            </h2>
+            <p data-selected-time>
+            </p><dl>
+            <div><dt data-base-label>공간 이용</dt><dd data-price-base></dd>
+            </div>
+            <div><dt>선택 장비</dt><dd data-price-equipment></dd>
+            </div>
+            <div><dt>부가세 10%</dt><dd data-price-tax></dd>
+            </div>
+            <div class="total"><dt>총액</dt><dd data-price-total></dd>
+            </div></dl><button type="submit" class="btn primary" disabled>예약 내용 확인 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-right"></use></svg></button>
+            <p class="study-note">검토 후 이 탭에 보관합니다.<br>실제 예약·결제는 이루어지지 않습니다.
+            </p>
+            <p data-quote-status class="visually-hidden" role="status">
+            </p>
+          </aside>
+        </div>
+      </form>
+      <dialog id="study-review" class="modal" aria-labelledby="review-title">
+        <header class="modal-head">
+          <h2 id="review-title">예약 내용을 확인해주세요
+          </h2><button class="icon-button" data-close-dialog aria-label="닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+        </header>
+        <div class="modal-body">
+          <h3 data-review-space>
+          </h3>
+          <p data-review-time class="study-note">
+          </p>
+          <p data-review-total style="font-size:29px;font-weight:650;margin-top:25px">
+          </p>
+          <p class="notice">로컬 데모입니다. 검토한 내용만 이 탭에 보관하며 실제 예약·결제·실시간 재고 검증은 수행하지 않습니다.
+          </p>
+          <p class="notice error" data-review-error role="alert" hidden>
+          </p>
+        </div>
+        <footer class="modal-foot"><button class="btn" data-close-dialog>수정하기</button><button class="btn primary" data-study-commit>로컬 예약 보관</button>
+        </footer>
+      </dialog>
+    </main>
+    <footer class="study-footer">
+      <p>같은 공간·단가·세금·예약 조건을 사용하는 시각적 대안입니다. 입력은 이 탭에서 공유합니다.
+      </p>
+    </footer>
+    <div class="toast-stack" data-toasts>
+    </div>
+  </body>
+</html>

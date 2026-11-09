@@ -7,8 +7,9 @@ package setup
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 type canceledCredentials struct{ called bool }

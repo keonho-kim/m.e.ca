@@ -127,7 +127,7 @@ func TestPendingRunsAfterCurrentAnswer(t *testing.T) {
 			t.Fatal("completed queue retained request references")
 		}
 	}
-	history, err := a.opts.Store.ContextMessages(a.ctx, a.opts.Session.ID, 0, 16*1024*1024, true)
+	history, err := a.opts.Store.ContextMessages(a.ctx, a.opts.Session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

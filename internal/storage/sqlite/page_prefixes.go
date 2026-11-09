@@ -4,13 +4,21 @@
 // Related: internal/storage/sqlite/page_payloads.go, internal/storage/sqlite/text_prefix.go.
 package sqlite
 
+import "github.com/keonho-kim/meca/internal/storage/content"
+
+type prefixKey struct {
+	payloadKey
+	quoted bool
+}
+
 type textPrefix struct {
 	text    string
 	clipped bool
 }
 
 func (p *pagePayloads) prefix(id string, limit int) (string, bool, error) {
-	key := payloadKey{p.store, id}
+	physical, quoted := content.Reference(id)
+	key := prefixKey{payloadKey{payloadSession(p.store), physical}, quoted}
 	value, cached := p.prefixes[key]
 	if !cached {
 		text, clipped, err := p.store.readTextPrefix(p.ctx, id, p.budget, limit)
@@ -19,14 +27,11 @@ func (p *pagePayloads) prefix(id string, limit int) (string, bool, error) {
 		}
 		value = textPrefix{text: text, clipped: clipped}
 	}
-	if p.last[key] <= p.index {
-		if cached {
-			p.bytes -= len(value.text)
-			delete(p.prefixes, key)
-		}
+	if p.last[key.payloadKey] <= p.index {
+		p.release(key.payloadKey)
 	} else if !cached && len(value.text) <= pagePayloadBytes-p.bytes {
 		if p.prefixes == nil {
-			p.prefixes = make(map[payloadKey]textPrefix)
+			p.prefixes = make(map[prefixKey]textPrefix)
 		}
 		p.prefixes[key] = value
 		p.bytes += len(value.text)

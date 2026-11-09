@@ -9,12 +9,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
-	"strings"
 )
 
 func placeholders(count int) string { return strings.TrimSuffix(strings.Repeat("?,", count), ",") }
@@ -59,7 +62,7 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 			break
 		}
 		if err = json.Unmarshal(body, &value); err != nil || value.Sequence < 1 {
-			err = fmt.Errorf("invalid public conversation reference")
+			err = faults.Errorf(diagcatalog.SqliteInvalidPublicConversationReference)
 			break
 		}
 		refs = append(refs, ref{id: id, sequence: value.Sequence, size: size, digest: hex.EncodeToString(digest)})
@@ -84,7 +87,7 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 			return nil, err
 		}
 		if !ok || len(raw) != ref.size || recordcontent.ID(raw) != ref.digest {
-			return nil, fmt.Errorf("referenced public message failed length/hash verification")
+			return nil, faults.Errorf(diagcatalog.SqliteReferencedPublicMessageFailedLengthHashVerification)
 		}
 		out[ref.id] = content
 	}
@@ -102,19 +105,19 @@ func (s *Store) publicMessage(ctx context.Context, record storedRecord, prefix *
 			return message, err
 		}
 		if value.Role != "user" {
-			return message, fmt.Errorf("public source is not a user instruction")
+			return message, faults.Errorf(diagcatalog.SqlitePublicSourceIsNotAUserInstruction)
 		}
 		message.From, message.Text = "user", value.Content
 	} else {
 		if prefix == nil {
-			return message, fmt.Errorf("public context prefix is missing")
+			return message, faults.Errorf(diagcatalog.SqlitePublicContextPrefixIsMissing)
 		}
 		var value runrecord.Event
 		if err := json.Unmarshal(body, &value); err != nil {
 			return message, err
 		}
 		if value.Kind != "team_message" && value.Kind != "team_progress" && value.Kind != "team_work" && value.Kind != "team_discussion" && value.Kind != "team_observation" && value.Kind != "team_status" {
-			return message, fmt.Errorf("source is not public conversation")
+			return message, faults.Errorf(diagcatalog.SqliteSourceIsNotPublicConversation)
 		}
 		if err := value.Team.Check(value.Kind); err != nil {
 			return message, err

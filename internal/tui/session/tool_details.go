@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	"github.com/keonho-kim/meca/internal/tui/transcript"

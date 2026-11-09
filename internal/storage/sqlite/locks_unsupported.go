@@ -7,16 +7,19 @@
 package sqlite
 
 import (
-	"fmt"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type SessionLease struct{}
 
 func (*Sessions) LeaseServer(string) (*SessionLease, error) {
-	return nil, fmt.Errorf("server locking requires Linux or macOS")
+	return nil, faults.Errorf(diagcatalog.SqliteServerLockingRequiresLinuxOrMacOS)
 }
 
 func (*Store) LeaseSession() (*SessionLease, error) {
-	return nil, fmt.Errorf("session locking requires Linux or macOS")
+	return nil, faults.Errorf(diagcatalog.SqliteSessionLockingRequiresLinuxOrMacOS)
 }
-func (*SessionLease) Close() error { return fmt.Errorf("session locking requires Linux or macOS") }
+func (*SessionLease) Close() error {
+	return faults.Errorf(diagcatalog.SqliteSessionLockingRequiresLinuxOrMacOS)
+}

@@ -5,6 +5,9 @@
 package session
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"strings"
 	"testing"
 
@@ -25,7 +28,7 @@ func TestCommandOutcomeScreen(t *testing.T) {
 				Kind: "tool_failed", Text: "process_failed: Process exited; exit code 1; next: internal guidance",
 				Call:      &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
 				Output:    []byte(`{"Stderr":"missing package","ExitCode":1,"Status":"exited"}`),
-				Operation: &tool.Operation{Process: &tool.ProcessOutcome{CommandID: "cmd_failed", Status: "exited", ExitCode: 1, Diagnostic: "missing package"}, Failure: &tool.Failure{Code: tool.ProcessFailed}},
+				Operation: &tool.Operation{Process: &tool.ProcessOutcome{CommandID: "cmd_failed", Status: "exited", ExitCode: 1, Diagnostic: "missing package"}, Failure: &faults.Failure{Code: diagcatalog.ProcessFailed}},
 			}
 			if restored {
 				a.chat.output.Prepend((transcript.Formatter{Language: lang, Redact: a.opts.Vault.Redact}).Event(event))
@@ -58,7 +61,7 @@ func TestCommandFailureCauseSurvivesLazyHistory(t *testing.T) {
 		Output: []byte(`{"Stdout":"original output","Stderr":"missing package","ExitCode":1,"Status":"exited"}`),
 		Operation: &tool.Operation{
 			Process: &tool.ProcessOutcome{CommandID: "cmd_failed", Status: "exited", ExitCode: 1, Diagnostic: "missing package"},
-			Failure: &tool.Failure{Code: tool.ProcessFailed},
+			Failure: &faults.Failure{Code: diagcatalog.ProcessFailed},
 		},
 	}
 	if err := a.opts.Store.RecordEvent(a.ctx, a.opts.Session.ID, event); err != nil {

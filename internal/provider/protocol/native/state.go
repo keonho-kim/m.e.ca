@@ -6,6 +6,7 @@ package native
 
 import (
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 

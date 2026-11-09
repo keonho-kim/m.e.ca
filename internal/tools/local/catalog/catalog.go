@@ -42,6 +42,7 @@ func buildSpecifications() []Specification {
 		{"execute_command", "Running", CommandDescription("Independent commands in the same tool batch may run together."), []toolapi.Parameter{textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
 	}
 	specs = append(specs, commandSpecifications()...)
+	specs = append(specs, skillSpecifications()...)
 	for index := range specs {
 		if specs[index].Name == "edit_file" || specs[index].Name == "write_file" {
 			specs[index].fields = append(specs[index].fields, toolapi.Parameter{Name: "format_policy", Description: "Default preserve: retain existing EOF/newline format, adding a missing final terminator. literal permits intentional format changes and preserves supplied bytes. Empty/new files use supplied content.", Kind: toolapi.Text, MaxBytes: 8, Values: []string{"preserve", "literal"}})

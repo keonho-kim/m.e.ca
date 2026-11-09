@@ -59,7 +59,7 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 			return run.Result{}, err
 		}
 		defer child.Close()
-		native, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+		native, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s }, local.Options{})
 		if err != nil {
 			return run.Result{}, err
 		}
@@ -85,7 +85,7 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 			return nil
 		})
 		if err == nil {
-			messages, readErr := child.ContextMessages(ctx, child.Session().ID, 0, 16<<20, false)
+			messages, readErr := child.ContextMessages(ctx, child.Session().ID, 0, 16<<20, false, nil)
 			err = readErr
 			var saved []string
 			for _, message := range messages {

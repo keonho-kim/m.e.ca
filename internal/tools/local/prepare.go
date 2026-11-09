@@ -7,11 +7,11 @@ package local
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
-	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
 
@@ -22,7 +22,7 @@ func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings,
 // PrepareAdmitted binds command reservations before an executable candidate escapes.
 func (executor *Executor) PrepareAdmitted(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (toolapi.Execution, error) {
 	if call.Name != "execute_command" || admit == nil {
-		return nil, fmt.Errorf("command admission requires an execute_command candidate")
+		return nil, faults.Errorf(diagcatalog.LocalCommandAdmissionRequiresAnExecuteCommandCandidate)
 	}
 	return executor.prepare(ctx, settings, call, admit)
 }
@@ -31,7 +31,7 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	spec, input, err := toolcatalog.Parse(call)
+	spec, input, err := executor.parsedCall(call)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 	}
 	for _, text := range texts {
 		if textformat.RedactSource(text, executor.redact) != text {
-			return nil, fmt.Errorf("tool arguments contain a protected credential")
+			return nil, faults.Errorf(diagcatalog.LocalToolArgumentsContainAProtectedCredential)
 		}
 	}
 	initialize := func(op *operation) {
@@ -52,9 +52,13 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 		op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.Label}
 	}
 	if spec.Effect == policy.Change && executor.ActiveCommand() != "" {
-		return nil, fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
+		return nil, faults.Errorf(diagcatalog.LocalCommandsAreStillRunningWaitCommandOr)
 	}
 	switch spec.Name {
+	case "list_skills", "load_skill", "read_skill_file":
+		op := &skillOperation{}
+		initialize(&op.operation)
+		return op, nil
 	case "execute_command":
 		op := &commandOperation{admit: admit}
 		initialize(&op.operation)
@@ -99,6 +103,6 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 		}
 		return op, op.checkMutationPath(op.source.absolute)
 	default:
-		return nil, fmt.Errorf("unknown prepared tool")
+		return nil, faults.Errorf(diagcatalog.LocalUnknownPreparedTool)
 	}
 }

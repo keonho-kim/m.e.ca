@@ -20,7 +20,7 @@ import (
 )
 
 func task(value server.Task) *v1.Task {
-	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error}
+	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence}
 }
 
 func snapshot(value server.Snapshot) *v1.Snapshot {
@@ -65,6 +65,10 @@ func event(value server.Event) *v1.Event {
 	e := value.Record
 	result := &v1.Event{Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
 	result.Status, result.Error = value.Status, value.Error
+	result.OccurredAt, result.ErrorCode = e.OccurredAt, e.ErrorCode
+	if e.Skill != nil {
+		result.Skill = &v1.SkillRead{Id: e.Skill.ID, Name: e.Skill.Name, Source: e.Skill.Source, Revision: e.Skill.Revision}
+	}
 	if a := e.Approval; a != nil {
 		result.Approval = &v1.Approval{Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
 	}

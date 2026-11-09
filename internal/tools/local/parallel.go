@@ -7,7 +7,6 @@ package local
 import (
 	"context"
 	"errors"
-	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +39,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 		return plan(0, nil)
 	}
 	if commandControl(calls[0].Name) {
-		_, _, err := toolcatalog.Parse(calls[0])
+		_, _, err := e.parsedCall(calls[0])
 		return plan(1, err)
 	}
 	// Serialize image decoding and keep compressed results from accumulating in a
@@ -55,7 +54,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 			if call.Name != "execute_command" {
 				break
 			}
-			if _, _, err := toolcatalog.Parse(call); err != nil {
+			if _, _, err := e.parsedCall(call); err != nil {
 				return plan(end, err)
 			}
 			cost := int64(len(call.Arguments)) * 4
@@ -90,6 +89,11 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 		}
 		current := make([]parallelTarget, 0, len(paths))
 		cost := int64(len(call.Arguments)) * 4
+		if call.Name == "read_skill_file" && e.skillImageInput.Load() {
+			// The resource's content, not its extension, decides whether this
+			// result contains pixels. Budget its largest possible owned image.
+			cost += 32 << 20
+		}
 		temporary := cost
 		for _, path := range paths {
 			info, err := path.root.Stat(path.relative)
@@ -120,7 +124,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 }
 
 func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (policy.Effect, []target, error) {
-	spec, input, err := toolcatalog.Parse(call)
+	spec, input, err := e.parsedCall(call)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -129,6 +133,9 @@ func (e *Executor) parallelPaths(settings policy.Settings, call toolapi.Call) (p
 	}
 	if commandControl(spec.Name) {
 		return policy.Command, nil, nil
+	}
+	if spec.Name == "list_skills" || spec.Name == "load_skill" || spec.Name == "read_skill_file" {
+		return policy.Read, nil, nil
 	}
 	if spec.Name == "create_directory" {
 		dirs, requested, err := e.collectDirectories(settings, input.Paths)

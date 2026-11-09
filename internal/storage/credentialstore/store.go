@@ -7,11 +7,13 @@ package credentialstore
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/storage/capacity"
+
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
 type Keys interface {
@@ -26,15 +28,15 @@ type Store struct {
 }
 
 var (
-	ErrKeyUnavailable = errors.New("OS encryption key unavailable; preserve the credential database and restore the OS credential store")
-	ErrIntegrity      = errors.New("credential authentication failed; existing data was preserved")
+	ErrKeyUnavailable = faults.Errorf(diagcatalog.CredentialstoreOSEncryptionKeyUnavailablePreserveTheCredential)
+	ErrIntegrity      = faults.Errorf(diagcatalog.CredentialstoreCredentialAuthenticationFailedExistingDataWasPreserved)
 )
 
 func (s *Store) Close() error { return s.db.Close() }
 
 func checkRef(ref string) error {
 	if ref == "" || len(ref) > 128 || !utf8.ValidString(ref) || strings.ContainsAny(ref, "\r\n\x00") {
-		return fmt.Errorf("invalid credential reference")
+		return faults.Errorf(diagcatalog.CredentialstoreInvalidCredentialReference)
 	}
 	return nil
 }
@@ -44,7 +46,7 @@ func (s *Store) Put(ctx context.Context, ref, scope, secret string) error {
 		return err
 	}
 	if secret == "" || len(secret) > 2048 || !utf8.ValidString(secret) || strings.ContainsAny(secret, "\r\n\x00") {
-		return fmt.Errorf("invalid credential")
+		return faults.Errorf(diagcatalog.ServerInvalidCredential)
 	}
 	if err := ctx.Err(); err != nil {
 		return err

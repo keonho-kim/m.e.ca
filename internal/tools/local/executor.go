@@ -6,17 +6,25 @@ package local
 
 import (
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/fileview"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
+
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/skills"
+	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 type Executor struct {
+	arguments               argumentCache
+	skills                  *skills.Reader
+	skillImageInput         atomic.Bool
 	retained                artifactRetention
 	imageReads              chan struct{}
 	redactionVersion        func() int
@@ -32,9 +40,16 @@ type Executor struct {
 	boundary                *filesystem.Boundary
 }
 
-func NewExecutor(project, home, private string, redact func(string) string) (*Executor, error) {
+type Options struct {
+	Skills           *skills.Reader
+	Images           chan struct{}
+	RedactRange      func(string, int, int) (string, error)
+	RedactionVersion func() int
+}
+
+func NewExecutor(project, home, private string, redact func(string) string, options Options) (*Executor, error) {
 	if redact == nil {
-		return nil, fmt.Errorf("a secret redactor is required")
+		return nil, faults.Errorf(diagcatalog.HeadlessASecretRedactorIsRequired)
 	}
 	boundary, err := filesystem.New(project, home, private)
 	if err != nil {
@@ -50,6 +65,14 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 		return nil, errors.Join(err, root.Close())
 	}
 	executor := &Executor{imageReads: make(chan struct{}, 1), project: project, home: home, projectRoot: root, systemRoot: system, redact: redact, boundary: boundary, commandWait: process.InitialWait}
+	if options.Images != nil {
+		executor.imageReads = options.Images
+	}
+	executor.redactionVersion = options.RedactionVersion
+	executor.skills = options.Skills
+	if executor.skills == nil {
+		executor.skills = skills.New(project, home, skills.Options{Redact: redact, Check: boundary.SkillTarget, RedactRange: options.RedactRange, Version: options.RedactionVersion})
+	}
 	executor.Files = fileview.New(project, func(scope policy.Scope, path string) (fileview.Target, error) {
 		target, err := executor.resolve(scope, path)
 		return fileview.Target{Absolute: target.absolute, Relative: target.relative, Root: target.root}, err
@@ -64,6 +87,7 @@ func NewExecutor(project, home, private string, redact func(string) string) (*Ex
 }
 
 func (executor *Executor) Close() error {
+	executor.arguments.clear()
 	executor.liveOutputs.releaseProjections()
 	executor.commands.End()
 	executor.liveOutputs.clear()

@@ -7,13 +7,14 @@ package team
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/identity"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"

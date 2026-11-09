@@ -9,6 +9,8 @@ import (
 	"sort"
 
 	"github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -49,7 +51,7 @@ func (s *Service) snapshot() Snapshot {
 
 func (s *Service) History(ctx context.Context, before int64, limit int) ([]history.Record, int64, error) {
 	if before < 0 || limit < 1 || limit > 100 {
-		return nil, 0, failure("invalid_argument", "history limit must be 1 to 100 and cursor must be nonnegative")
+		return nil, 0, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerHistoryLimitMustBeToAndCursor)
 	}
 	c, ctx, done, err := s.beginRead(ctx)
 	if err != nil {

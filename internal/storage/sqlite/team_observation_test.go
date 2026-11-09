@@ -6,8 +6,9 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/storage/history"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/storage/history"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
@@ -30,7 +31,7 @@ func TestTeamObservationRestoresWithoutVisibleDuplicateOrOwnWakeup(t *testing.T)
 	if err := child.CommitContext(ctx, child.Session().ID, []runrecord.Entry{{Message: &message}}, value.Sequence); err != nil {
 		t.Fatal(err)
 	}
-	messages, err := child.ContextMessages(ctx, child.Session().ID, 0, 16<<20, false)
+	messages, err := child.ContextMessages(ctx, child.Session().ID, 0, 16<<20, false, nil)
 	if err != nil || len(messages) != 1 || messages[0].Content != message.Content {
 		t.Fatal("fact restoration changed", err)
 	}

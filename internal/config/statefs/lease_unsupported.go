@@ -7,10 +7,12 @@
 package statefs
 
 import (
-	"fmt"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Lease(*os.Root, bool) (*os.File, error) {
-	return nil, fmt.Errorf("application state leases require Linux or macOS")
+	return nil, faults.Errorf(diagcatalog.StatefsApplicationStateLeasesRequireLinuxOrMacOS)
 }

@@ -1,0 +1,153 @@
+<!doctype html>
+<!-- Purpose: Show the 멤버와 역할 surface of a commercial approval application.
+     Pattern: Task-specific application shell with static document and workflow states.
+     Usage: Serve approvals/team.html from the example static root.
+     Related: internal/config/bootstrap/defaults/ui-design/assets/examples/approvals/approvals.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="approvals">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="결재 문서와 검토 흐름을 중심으로 구성한 상업용 업무 앱 디자인 예시">
+    <title>멤버와 역할 | Fieldwork</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="approvals.css">
+    <script defer src="../shared/interaction.js"></script>
+    <link rel="stylesheet" href="approval-admin.css">
+  </head>
+  <body data-product="approvals">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <div class="approval-shell top-navigation">
+      <div class="approval-main">
+        <header class="approval-topbar glass-surface">
+          <a class="approval-wordmark" href="inbox.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg> Fieldwork</a>
+          <span class="approval-org-label">North design</span>
+          <nav class="approval-navigation" aria-label="업무 공간">
+            <a href="inbox.html">결재함</a>
+            <a href="review.html">내 검토</a>
+            <a href="board.html">진행 현황</a>
+            <a href="reports.html">리포트</a>
+          </nav>
+          <div class="approval-global-actions">
+            <span class="approval-demo">디자인 예시</span>
+            <details class="menu stagger-menu">
+              <summary class="icon-button" aria-label="워크스페이스 관리"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#settings"></use></svg></summary>
+              <div class="menu-panel">
+                <a href="team.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#users"></use></svg>멤버와 역할</a>
+                <a href="settings.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#sliders-horizontal"></use></svg>결재 규칙</a>
+              </div>
+            </details>
+            <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+            <span class="avatar" aria-label="샘플 검토자 김민서">민</span>
+          </div>
+        </header>
+        <main id="main" class="approval-workspace">
+          <header class="approval-page-head">
+            <div>
+              <h1>멤버와 역할</h1>
+              <p>누가 요청하고, 어떤 범위를 검토하는지 분명하게 구분합니다.</p>
+            </div>
+            <div class="approval-actions">
+              <button class="btn" type="button" data-open="preview-note">역할 설정 예시</button>
+            </div>
+          </header>
+          <div class="team-context">
+            <div>
+              <h2>North design</h2>
+              <p>결재선에 등장하는 역할을 포함한 샘플 멤버 목록입니다.</p>
+            </div>
+            <span class="team-count">샘플 멤버 8명</span>
+          </div>
+          <div class="approval-table-scroll">
+            <table class="approval-table">
+              <caption class="visually-hidden">샘플 멤버와 결재 역할</caption>
+              <thead><tr><th scope="col">멤버</th><th scope="col">부서</th><th scope="col">역할</th><th scope="col">담당 범위</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">김</span><strong>김민서</strong></span></td>
+                  <td>운영</td>
+                  <td>팀 검토자</td>
+                  <td>결재 내용 검토</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">윤</span><strong>윤지후</strong></span></td>
+                  <td>재무</td>
+                  <td>재무 검토자</td>
+                  <td>금액·증빙 확인</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">임</span><strong>임수빈</strong></span></td>
+                  <td>마케팅</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">박</span><strong>박지훈</strong></span></td>
+                  <td>디자인</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">정</span><strong>정현우</strong></span></td>
+                  <td>개발</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">강</span><strong>강다은</strong></span></td>
+                  <td>제품</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">이</span><strong>이서연</strong></span></td>
+                  <td>운영</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+                <tr>
+                  <td><span class="request-person"><span class="avatar">최</span><strong>최도윤</strong></span></td>
+                  <td>운영</td>
+                  <td>요청자</td>
+                  <td>요청 작성·보완</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="role-definitions">
+            <section>
+              <h2>요청자</h2>
+              <p>목적·금액·참고 자료를 작성하고, 보완할 내용을 확인합니다.</p>
+            </section>
+            <section>
+              <h2>팀 검토자</h2>
+              <p>업무 목적과 집행 범위를 확인하고 다음 검토 단계로 넘깁니다.</p>
+            </section>
+            <section>
+              <h2>재무 검토자</h2>
+              <p>정해진 금액 기준에 따라 집행 내역과 증빙을 검토합니다.</p>
+            </section>
+          </div>
+        </main>
+        <footer class="approval-footer">
+          <span>Fieldwork / 결재 업무 디자인 스터디</span>
+          <span>실제 제출·승인·저장 없이 화면과 탐색만 제공합니다.</span>
+        </footer>
+      </div>
+    </div>
+    <dialog id="preview-note" class="modal" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">결재 앱 디자인 예시</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>문서, 금액, 담당자와 결재 상태는 고정된 샘플입니다. 실제 제출·승인·저장이나 권한 처리를 실행하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+  </body>
+</html>

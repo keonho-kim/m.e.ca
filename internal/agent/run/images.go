@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -28,10 +29,17 @@ func (s *execution) recoverImages(ctx context.Context, err error) (bool, error) 
 		return false, nil
 	}
 	s.runner.ImageInput = false
+	setSkillImageInput(s.runner.Tools, false)
 	s.definitions = imageDefinitions(s.definitions, false)
 	note := "The selected model rejected image input. Images were not available for visual inspection. view_image is unavailable for this connection. Report this limitation when the request requires images."
 	if err := s.save(ctx, modelapi.Message{Role: "system", Content: note}); err != nil {
 		return true, err
 	}
 	return true, s.emit(runrecord.Event{Kind: "image_input_unavailable", Text: s.runner.Redact(unavailable.Error())})
+}
+
+func setSkillImageInput(executor toolapi.Executor, enabled bool) {
+	if tools, ok := executor.(interface{ SetSkillImageInput(bool) }); ok {
+		tools.SetSkillImageInput(enabled)
+	}
 }

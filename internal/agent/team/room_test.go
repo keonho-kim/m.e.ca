@@ -8,12 +8,13 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	"slices"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/identity"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"

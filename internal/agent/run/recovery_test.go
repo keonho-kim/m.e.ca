@@ -7,12 +7,13 @@ package run
 import (
 	"context"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 type recoveryGenerator struct{ slow bool }

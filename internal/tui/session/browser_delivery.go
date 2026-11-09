@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+
 	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 )
 

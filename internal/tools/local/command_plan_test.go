@@ -5,13 +5,14 @@
 package local
 
 import (
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 func TestCommandWaveUsesRemainingCapacity(t *testing.T) {
@@ -34,7 +35,7 @@ func TestCommandWaveUsesRemainingCapacity(t *testing.T) {
 }
 func BenchmarkRepeatedCommandPreparation(b *testing.B) {
 	home, project := b.TempDir(), b.TempDir()
-	e, err := NewExecutor(project, home, home+"/.meca", func(s string) string { return s })
+	e, err := NewExecutor(project, home, home+"/.meca", func(s string) string { return s }, Options{})
 	if err != nil {
 		b.Fatal(err)
 	}

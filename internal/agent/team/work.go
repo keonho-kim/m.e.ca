@@ -6,12 +6,12 @@ package team
 
 import (
 	"errors"
-	"fmt"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64) (result contribution.Scope, resultErr error) {
@@ -36,7 +36,7 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 	live := r.active[p.ID]
 	if live == nil || live.closed || live.leaving {
 		r.mu.Unlock()
-		return contribution.Scope{}, fmt.Errorf("this team member is no longer active")
+		return contribution.Scope{}, faults.Errorf(diagcatalog.TeamThisTeamMemberIsNoLongerActive)
 	}
 	if err := p.checkUserDecisionLocked(); err != nil {
 		r.mu.Unlock()
@@ -50,7 +50,7 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 	}
 	if err != nil {
 		r.mu.Unlock()
-		return contribution.Scope{}, &toolapi.Failure{Code: "team_work_conflict", Detail: err.Error(), Next: "Read the named teammate's work. Agree on a handoff publicly or take a different nonoverlapping part; do not retry the same claim unchanged."}
+		return contribution.Scope{}, &faults.Failure{Code: diagcatalog.TeamWorkConflict, Detail: err.Error(), Next: diagcatalog.Text(diagcatalog.TeamReadTheNamedTeammateSWorkAgree)}
 	}
 	r.mu.Unlock()
 	note.Work = &runrecord.TeamWork{Paths: candidate.Paths, Contract: contract, Revision: candidate.Revision}
@@ -99,7 +99,7 @@ func (p *Peer) CheckWork(paths []string) error {
 	if err == nil {
 		return nil
 	}
-	return &toolapi.Failure{Code: "team_work_conflict", Detail: "Nothing executed. " + err.Error(), Next: "Read the current team work and actual results, coordinate by name, and regenerate only the still-needed operation."}
+	return &faults.Failure{Code: diagcatalog.TeamWorkConflict, Detail: diagcatalog.Text(diagcatalog.TeamNothingExecutedS, err.Error()), Next: diagcatalog.Text(diagcatalog.TeamReadTheCurrentTeamWorkAndActual)}
 }
 
 func (p *Peer) HasWorkPaths(paths []string) bool {

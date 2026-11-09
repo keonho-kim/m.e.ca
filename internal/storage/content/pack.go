@@ -11,27 +11,48 @@ import (
 )
 
 const (
-	Threshold = 32 * 1024
-	MaxBytes  = 512 * 1024 * 1024
+	Threshold       = 32 * 1024
+	SharedThreshold = 512
+	MaxBytes        = 512 * 1024 * 1024
 )
 
-func Pack(body []byte, put func([]byte) (string, error)) ([]byte, map[string]string, error) {
-	if len(body) <= Threshold {
+func Pack(body []byte, sharedField string, put func([]byte) (string, error)) ([]byte, map[string]string, error) {
+	minimum := Threshold
+	if sharedField != "" {
+		minimum = SharedThreshold
+	}
+	if len(body) <= minimum {
 		return body, nil, nil
 	}
 	refs := map[string]string{}
 	var pack func(json.RawMessage, []string) (json.RawMessage, error)
 	pack = func(raw json.RawMessage, path []string) (json.RawMessage, error) {
-		if len(raw) <= Threshold {
+		limit := Threshold
+		if len(path) == 1 && path[0] == sharedField {
+			limit = SharedThreshold
+		}
+		if (len(path) > 0 && len(raw) <= limit) || (len(path) == 0 && len(raw) <= minimum) {
 			return raw, nil
 		}
 		opaque := len(path) > 0 && (path[len(path)-1] == "arguments" || path[len(path)-1] == "output" || path[len(path)-1] == "capture")
 		if raw[0] == '"' || opaque {
-			id, err := put(raw)
+			payload := []byte(raw)
+			quote := false
+			if raw[0] == '"' {
+				var text string
+				if json.Unmarshal(raw, &text) == nil && json.Valid([]byte(text)) {
+					payload = []byte(text)
+					quote = true
+				}
+			}
+			id, err := put(payload)
 			if err != nil {
 				return nil, err
 			}
 			key, _ := json.Marshal(path)
+			if quote {
+				id = StringReference(id)
+			}
 			refs[string(key)] = id
 			return json.RawMessage("null"), nil
 		}

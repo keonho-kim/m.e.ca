@@ -5,13 +5,15 @@
 package local
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/policy"
 	commandpolicy "github.com/keonho-kim/meca/internal/policy/command"
 )
@@ -71,10 +73,10 @@ func commandAnalysisError(err error) error {
 	var invalid *commandpolicy.SyntaxError
 	var blocked *commandpolicy.BlockedError
 	if errors.As(err, &invalid) {
-		err = &toolapi.Failure{Code: toolapi.InvalidCommand, Detail: err.Error(), Next: "Correct the command syntax before retrying.", Cause: err}
+		err = &faults.Failure{Code: diagcatalog.InvalidCommand, Detail: err.Error(), Next: diagcatalog.Text(diagcatalog.LocalCorrectTheCommandSyntaxBeforeRetrying), Cause: err}
 	}
 	if errors.As(err, &blocked) {
-		err = &toolapi.Failure{Code: toolapi.CommandBlocked, Detail: err.Error(), Next: "Respect the protected target or privilege restriction; do not retry the same effect through another command.", Cause: err}
+		err = &faults.Failure{Code: diagcatalog.CommandBlocked, Detail: err.Error(), Next: diagcatalog.Text(diagcatalog.LocalRespectTheProtectedTargetOrPrivilegeRestriction), Cause: err}
 	}
 	return err
 }

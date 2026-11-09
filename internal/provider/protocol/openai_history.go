@@ -7,9 +7,12 @@ package protocol
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
 func openAIHistory(message Message) ([]map[string]any, error) {
@@ -17,7 +20,7 @@ func openAIHistory(message Message) ([]map[string]any, error) {
 	decoder := json.NewDecoder(bytes.NewReader(message.continuation))
 	decoder.UseNumber()
 	if err := decoder.Decode(&items); err != nil || items == nil || !json.Valid(message.continuation) {
-		return nil, fmt.Errorf("invalid OpenAI continuation")
+		return nil, faults.Errorf(diagcatalog.ProtocolInvalidOpenAIContinuation)
 	}
 	calls, err := message.functionCalls()
 	if err != nil {
@@ -30,22 +33,22 @@ func openAIHistory(message Message) ([]map[string]any, error) {
 		case "reasoning":
 		case "function_call":
 			if at >= len(calls) || item["call_id"] != calls[at].ID || item["name"] != calls[at].Name {
-				return nil, fmt.Errorf("OpenAI continuation differs from tool history")
+				return nil, faults.Errorf(diagcatalog.ProtocolOpenAIContinuationDiffersFromToolHistory)
 			}
 			arguments, ok := item["arguments"].(string)
 			if !ok || !native.SameArguments(arguments, string(calls[at].Arguments)) {
-				return nil, fmt.Errorf("OpenAI continuation arguments differ from tool history")
+				return nil, faults.Errorf(diagcatalog.ProtocolOpenAIContinuationArgumentsDifferFromToolHistory)
 			}
 			at++
 		case "message":
 			parts, ok := item["content"].([]any)
 			if !ok {
-				return nil, fmt.Errorf("invalid OpenAI message content")
+				return nil, faults.Errorf(diagcatalog.ProtocolInvalidOpenAIMessageContent)
 			}
 			for _, value := range parts {
 				part, ok := value.(map[string]any)
 				if !ok {
-					return nil, fmt.Errorf("invalid OpenAI content part")
+					return nil, faults.Errorf(diagcatalog.ProtocolInvalidOpenAIContentPart)
 				}
 				field := "text"
 				if part["type"] == "refusal" {
@@ -53,20 +56,20 @@ func openAIHistory(message Message) ([]map[string]any, error) {
 				}
 				value, ok := part[field].(string)
 				if !ok {
-					return nil, fmt.Errorf("unsupported OpenAI content part")
+					return nil, faults.Errorf(diagcatalog.ProtocolUnsupportedOpenAIContentPart)
 				}
 				text.WriteString(value)
 			}
 		default:
-			return nil, fmt.Errorf("unsupported OpenAI continuation item")
+			return nil, faults.Errorf(diagcatalog.ProtocolUnsupportedOpenAIContinuationItem)
 		}
 	}
 	if at != len(calls) {
-		return nil, fmt.Errorf("OpenAI continuation omitted a tool call")
+		return nil, faults.Errorf(diagcatalog.ProtocolOpenAIContinuationOmittedAToolCall)
 	}
 	content, ok := message.Content.(string)
 	if !ok || text.String() != content && strings.TrimSpace(text.String()) != content {
-		return nil, fmt.Errorf("OpenAI continuation text differs from message history")
+		return nil, faults.Errorf(diagcatalog.ProtocolOpenAIContinuationTextDiffersFromMessageHistory)
 	}
 	// Keep item and text boundaries, argument serialization and opaque metadata intact.
 	return items, nil

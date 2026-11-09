@@ -7,9 +7,11 @@ package history
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 )
@@ -75,7 +77,7 @@ func Compaction(page []Record) ([]compact.Record, error) {
 				}
 			} else if event.Kind == "tool_failed" || event.Kind == "denied" || event.Kind == "tool_interrupted" {
 				role, text = "failure", event.Text
-			} else if cp := event.Checkpoint; cp != nil && (cp.Status == "stopped" || cp.Status == "interrupted") {
+			} else if cp := event.Checkpoint; cp != nil && (cp.Status == "stopped" || cp.Status == diagcatalog.Interrupted) {
 				role, text = "failure", string(cp.Status)+": "+cp.Blocker+" "+cp.Observation
 			}
 		}
@@ -98,7 +100,7 @@ func toolExcerpt(text string) string {
 		}
 	}
 	var parts []string
-	for _, key := range []string{"Content", "Stdout", "Stderr"} {
+	for _, key := range []string{"Content", "text", "Stdout", "Stderr"} {
 		var value string
 		if json.Unmarshal(fields[key], &value) == nil && strings.TrimSpace(value) != "" {
 			parts = append(parts, key+": "+value)

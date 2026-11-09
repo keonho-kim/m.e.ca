@@ -7,13 +7,15 @@ package credentials
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/keonho-kim/meca/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/credentialstore"
 )
 
@@ -44,33 +46,27 @@ func (v *Vault) StartRotation(parent context.Context) func() error {
 }
 
 func (v *Vault) runRotation(ctx context.Context, now func() time.Time, ticks <-chan time.Time) error {
-	var diagnosticErr error
 	for {
 		if ctx.Err() != nil {
-			return diagnosticErr
+			return nil
 		}
 		at := now()
-		err := v.rotateOnce(ctx, at)
+		err := faults.Guard(func() error { return v.rotateOnce(ctx, at) })
+		if faults.IsPanic(err) {
+			return err
+		}
 		if ctx.Err() != nil {
-			return diagnosticErr
+			return nil
 		}
 		if err != nil {
-			// Backend errors can contain untrusted text. Persist only a fixed
-			// bounded diagnostic, never key values or raw OS/SQL error output.
-			body := at.UTC().Format(time.RFC3339) + " credential key rotation deferred; current API credentials retained; retry scheduled\n"
-			diagnosticErr = nil
-			if err := statefs.Write(filepath.Join(v.State, "logs"), "credential-rotation.log", []byte(body)); err != nil {
-				diagnosticErr = fmt.Errorf("record credential maintenance failure: %w", err)
-			}
-		} else {
-			diagnosticErr = nil
+			diagnostics.Log(ctx, diagcatalog.RotationDeferred, "component", "credentials", "error_code", diagcatalog.RotationDeferredCode)
 		}
 		select {
 		case <-ctx.Done():
-			return diagnosticErr
+			return nil
 		case _, ok := <-ticks:
 			if !ok {
-				return diagnosticErr
+				return nil
 			}
 		}
 	}
@@ -83,7 +79,7 @@ func (v *Vault) rotateOnce(ctx context.Context, now time.Time) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if v.State == "" {
-		return fmt.Errorf("credential state directory is required")
+		return faults.Errorf(diagcatalog.CredentialsCredentialStateDirectoryIsRequired)
 	}
 	// A process without saved credentials needs no database or OS key access.
 	if _, err := os.Lstat(filepath.Join(v.State, credentialstore.Filename)); errors.Is(err, os.ErrNotExist) {

@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 	"regexp"
@@ -18,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxArchiveBytes = 256 * 1024 * 1024
@@ -55,7 +58,7 @@ func (c *Client) fetch(ctx context.Context, directory *os.Root) (string, error) 
 	}
 	name, err := archiveName(latest.Version, runtime.GOOS, runtime.GOARCH)
 	if err != nil || latest.Draft || latest.Prerelease {
-		return "", fmt.Errorf("latest release is not a supported published version")
+		return "", faults.Errorf(diagcatalog.UpgradeLatestReleaseIsNotASupportedPublished)
 	}
 	find := func(name string) (asset, error) {
 		var matches []asset
@@ -65,7 +68,7 @@ func (c *Client) fetch(ctx context.Context, directory *os.Root) (string, error) 
 			}
 		}
 		if len(matches) != 1 || matches[0].ID <= 0 || matches[0].Size <= 0 {
-			return asset{}, fmt.Errorf("release asset %q is missing or ambiguous", name)
+			return asset{}, faults.Errorf(diagcatalog.UpgradeReleaseAssetIsMissingOrAmbiguous, name)
 		}
 		return matches[0], nil
 	}
@@ -118,7 +121,7 @@ func (c *Client) fetch(ctx context.Context, directory *os.Root) (string, error) 
 		return "", err
 	}
 	if hex.EncodeToString(hash.Sum(nil)) != expected {
-		return "", fmt.Errorf("release archive SHA-256 does not match checksums.txt")
+		return "", faults.Errorf(diagcatalog.UpgradeReleaseArchiveSHADoesNotMatchChecksums)
 	}
 	if err := extract(directory); err != nil {
 		return "", err
@@ -133,16 +136,16 @@ func assetPath(asset asset) string {
 func archiveName(version, system, architecture string) (string, error) {
 	parts := releaseTag.FindStringSubmatch(version)
 	if len(parts) != 4 {
-		return "", fmt.Errorf("unsupported release version")
+		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedReleaseVersion)
 	}
 	if _, err := time.Parse("20060102", parts[3]); err != nil {
-		return "", fmt.Errorf("invalid release date")
+		return "", faults.Errorf(diagcatalog.UpgradeInvalidReleaseDate)
 	}
 	if system == "darwin" {
 		system = "macos"
 	}
 	if system != "macos" && system != "linux" || architecture != "amd64" && architecture != "arm64" {
-		return "", fmt.Errorf("unsupported release platform")
+		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedReleasePlatform)
 	}
 	return "meca_" + strings.TrimPrefix(version, "v") + "_" + system + "_" + architecture + ".tar.gz", nil
 }
@@ -156,12 +159,12 @@ func archiveChecksum(manifest, name string) (string, error) {
 		}
 		decoded, err := hex.DecodeString(fields[0])
 		if result != "" || err != nil || len(decoded) != sha256.Size {
-			return "", fmt.Errorf("invalid or duplicate archive checksum")
+			return "", faults.Errorf(diagcatalog.UpgradeInvalidOrDuplicateArchiveChecksum)
 		}
 		result = hex.EncodeToString(decoded)
 	}
 	if result == "" {
-		return "", fmt.Errorf("archive checksum is missing")
+		return "", faults.Errorf(diagcatalog.UpgradeArchiveChecksumIsMissing)
 	}
 	return result, nil
 }

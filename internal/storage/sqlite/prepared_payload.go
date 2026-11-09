@@ -9,10 +9,12 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
+
 	"strconv"
 
 	json "github.com/goccy/go-json"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -42,8 +44,8 @@ func (s *Store) encodeValue(id string, body []byte) (storedValue, error) {
 	return value, nil
 }
 
-func (p *journalEncoder) pack(body []byte) ([]byte, map[string]string, error) {
-	return content.Pack(body, p.payload)
+func (p *journalEncoder) pack(body []byte, shared string) ([]byte, map[string]string, error) {
+	return content.Pack(body, shared, p.payload)
 }
 
 func (p *journalEncoder) payload(raw []byte) (string, error) {
@@ -109,7 +111,7 @@ func (p *preparedPayload) write(ctx context.Context, tx *sql.Tx) error {
 	}
 	if p.known || p.local == 0 {
 		if err := tx.QueryRowContext(ctx, "SELECT id FROM payloads WHERE digest=?", p.digest).Scan(&p.local); err != nil {
-			return fmt.Errorf("prepared immutable payload unavailable: %w", err)
+			return faults.Errorf(diagcatalog.SqlitePreparedImmutablePayloadUnavailable, err)
 		}
 	}
 	p.written, p.body = true, nil
@@ -122,11 +124,15 @@ func (v *preparedRecord) localRefs() error {
 		return nil
 	}
 	for path, slot := range v.referenceSlots {
+		slot, quote := content.Reference(slot)
 		index, err := strconv.Atoi(slot)
 		if err != nil || index < 0 || index >= len(v.payloads) || v.payloads[index].local < 1 {
-			return fmt.Errorf("unresolved prepared payload reference")
+			return faults.Errorf(diagcatalog.SqliteUnresolvedPreparedPayloadReference)
 		}
 		v.referenceSlots[path] = strconv.FormatInt(v.payloads[index].local, 10)
+		if quote {
+			v.referenceSlots[path] = content.StringReference(v.referenceSlots[path])
+		}
 	}
 	body, err := json.Marshal(v.referenceSlots)
 	v.refs, v.referenceSlots = body, nil

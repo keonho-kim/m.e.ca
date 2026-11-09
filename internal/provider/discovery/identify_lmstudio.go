@@ -7,6 +7,7 @@ package discovery
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/keonho-kim/meca/internal/provider/identity"
 )
 

@@ -7,7 +7,9 @@ package discovery
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -37,7 +39,7 @@ func (c *Client) prepareOllama(ctx context.Context, model string) (connection.Mo
 			default:
 				var level string
 				if err := json.Unmarshal(value, &level); err != nil {
-					return info, fmt.Errorf("invalid native reasoning value: %w", err)
+					return info, faults.Errorf(diagcatalog.DiscoveryInvalidNativeReasoningValue, err)
 				}
 				control.Levels = append(control.Levels, level)
 			}

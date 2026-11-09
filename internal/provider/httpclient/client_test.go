@@ -10,12 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func mockClient(t *testing.T, kind modelconn.ProviderKind, handler http.HandlerFunc) *Client {

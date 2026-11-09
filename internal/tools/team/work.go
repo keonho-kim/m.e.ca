@@ -5,10 +5,11 @@
 package team
 
 import (
-	"fmt"
 	"path/filepath"
 	"slices"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 )
 
@@ -33,7 +34,7 @@ func (e *Executor) canonicalPaths(paths []string, declaration bool) ([]string, e
 		if declaration {
 			relative, err := filepath.Rel(path, root)
 			if err == nil && (relative == "." || filepath.IsLocal(relative)) {
-				return nil, fmt.Errorf("claim concrete files or subdirectories; owning project_root or an ancestor would prevent teammates from contributing")
+				return nil, faults.Errorf(diagcatalog.TeamClaimConcreteFilesOrSubdirectoriesOwningProject)
 			}
 		}
 		out = append(out, path)

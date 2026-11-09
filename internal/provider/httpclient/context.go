@@ -7,15 +7,18 @@ package httpclient
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/protocol"
-	"github.com/keonho-kim/meca/internal/provider/transport"
+
 	"maps"
 	"net/http"
 	"strings"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/protocol"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition, encoder *protocol.Encoder) (int, error) {
@@ -53,17 +56,17 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 		return 0, err
 	}
 	if body.Len() > modelapi.MaxResponseBytes {
-		return 0, fmt.Errorf("tokenizer request exceeds context size limit")
+		return 0, faults.Errorf(diagcatalog.HttpclientTokenizerRequestExceedsContextSizeLimit)
 	}
 	var count struct {
 		Count *int `json:"count"`
 		Limit int  `json:"max_model_len"`
 	}
 	if err := transport.ReadMetadata(ctx, c.transport, http.MethodPost, strings.TrimSuffix(c.connection.APIBase(), "/v1")+"/tokenize", body.Reader(), 16*1024*1024, &count); err != nil {
-		return 0, fmt.Errorf("model context tokenization: %w", err)
+		return 0, faults.Errorf(diagcatalog.HttpclientModelContextTokenization, err)
 	}
 	if count.Count == nil || *count.Count < 0 || count.Limit <= 0 || count.Limit > 1<<40 {
-		return 0, fmt.Errorf("invalid tokenizer context limits")
+		return 0, faults.Errorf(diagcatalog.HttpclientInvalidTokenizerContextLimits)
 	}
 	limit := min(info.ContextWindow, count.Limit)
 	return modelapi.OutputBudget(output, limit, info.MaxOutput, *count.Count)

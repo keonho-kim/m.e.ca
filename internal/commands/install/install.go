@@ -7,12 +7,13 @@ package install
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
-	"github.com/keonho-kim/meca/internal/config/prompts"
-	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 	"slices"
+
+	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 type Options struct{ Home, Executable, Shell, Path string }

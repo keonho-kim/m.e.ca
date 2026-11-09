@@ -8,9 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"io"
 	"net/http"
 	"strings"
@@ -18,6 +15,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestCloudProviderStreamingAndSignedToolContinuation(t *testing.T) {

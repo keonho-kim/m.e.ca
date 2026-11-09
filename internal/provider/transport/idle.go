@@ -6,10 +6,13 @@ package transport
 
 import (
 	"context"
-	"fmt"
+
 	"io"
 	"sync"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const DefaultIdleTimeout = 3 * time.Minute
@@ -44,7 +47,7 @@ func (w *idleWatch) expire() {
 		w.timer.Reset(remaining)
 		return
 	}
-	w.cancel(fmt.Errorf("provider sent no response data for %s", w.interval))
+	w.cancel(faults.New(diagcatalog.DeadlineExceeded, diagcatalog.TransportProviderSentNoResponseDataFor, w.interval))
 }
 
 func (w *idleWatch) resume() {

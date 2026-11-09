@@ -5,9 +5,10 @@
 package command
 
 import (
+	"strings"
+
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
-	"strings"
 )
 
 type Program struct {

@@ -8,13 +8,16 @@ package httpclient
 import (
 	"context"
 	"errors"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/protocol"
-	"github.com/keonho-kim/meca/internal/provider/transport"
+
 	"io"
 	"net/http"
 	"slices"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/protocol"
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 func (client *Client) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
@@ -42,13 +45,13 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 		return err
 	}
 	if emit == nil {
-		return fmt.Errorf("a model event consumer is required")
+		return faults.Errorf(diagcatalog.HttpclientAModelEventConsumerIsRequired)
 	}
 	if request.ModelID == "" || len(request.ModelID) > 512 || request.IdleTimeout < 0 {
-		return fmt.Errorf("invalid model request limits")
+		return faults.Errorf(diagcatalog.HttpclientInvalidModelRequestLimits)
 	}
 	if len(request.Messages) == 0 {
-		return fmt.Errorf("invalid message or tool count")
+		return faults.Errorf(diagcatalog.HttpclientInvalidMessageOrToolCount)
 	}
 	if err := modelapi.CheckOutputBudget(request.MaxOutput); err != nil {
 		return err
@@ -88,7 +91,7 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 		return err
 	}
 	if content.Len() > modelapi.MaxResponseBytes {
-		return fmt.Errorf("model context exceeds request size limit")
+		return faults.Errorf(diagcatalog.HttpclientModelContextExceedsRequestSizeLimit)
 	}
 	if !hasImages {
 		if err := emit(modelapi.Event{InputBytes: int64(content.Len())}); err != nil {
@@ -100,8 +103,11 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 		idle = transport.DefaultIdleTimeout
 	}
 	return client.transport.Attempts(ctx, func() (err error) {
+		progress := transport.WatchContent(ctx, idle)
+		defer progress.Close()
+		attemptCtx := progress.Context()
 		for {
-			httpRequest, buildErr := client.transport.NewRequest(ctx, http.MethodPost, endpoint, content.Reader())
+			httpRequest, buildErr := client.transport.NewRequest(attemptCtx, http.MethodPost, endpoint, content.Reader())
 			if buildErr != nil {
 				return &transport.ConsumerError{Cause: buildErr}
 			}
@@ -137,7 +143,13 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 				return sendErr
 			}
 			defer func() { err = errors.Join(err, response.Body.Close()) }()
-			return protocol.ReadResponse(ctx, response, client.connection.Kind, func(event modelapi.Event) error {
+			return protocol.ReadResponse(attemptCtx, response, client.connection.Kind, func(event modelapi.Event) error {
+				if event.Progress || event.Delta != "" || event.Thinking != "" || len(event.Calls) > 0 || event.Done {
+					progress.Activity()
+				}
+				if event.Progress && event.Delta == "" && event.Thinking == "" && len(event.Calls) == 0 && !event.Done && event.Usage == nil {
+					return nil
+				}
 				if event.Done {
 					var err error
 					event.ReasoningState, err = content.BindContinuation(event.ReasoningState)
@@ -145,7 +157,7 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 						return &transport.ConsumerError{Cause: err}
 					}
 				}
-				if err := emit(event); err != nil {
+				if err := progress.Consume(func() error { return emit(event) }); err != nil {
 					return &transport.ConsumerError{Cause: err}
 				}
 				return nil

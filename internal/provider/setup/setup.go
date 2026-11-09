@@ -6,13 +6,16 @@ package setup
 
 import (
 	"context"
-	"fmt"
+
+	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 	"github.com/keonho-kim/meca/internal/provider/discovery"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/transport"
-	"strings"
 )
 
 type Credentials interface {
@@ -37,7 +40,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 	key = strings.Trim(key, " \t")
 	if key == "" && connectionValue.CredentialRef != "" {
 		if credentials == nil {
-			return prepared, fmt.Errorf("credential store is required for saved connection")
+			return prepared, faults.Errorf(diagcatalog.SetupCredentialStoreIsRequiredForSavedConnection)
 		}
 		key, err = credentials.Get(ctx, connectionValue.CredentialRef, connectionValue.CredentialScope())
 		if err != nil {
@@ -97,7 +100,7 @@ func Prepare(ctx context.Context, connectionValue connection.Connection, key, mo
 		selected.ReasoningEffort = previous.ReasoningEffort
 	}
 	if selected.Thinking != nil && (*selected.Thinking && !options.Enabled() || !*selected.Thinking && !options.Off) {
-		return prepared, fmt.Errorf("saved Thinking choice is unavailable; connect using the server default")
+		return prepared, faults.Errorf(diagcatalog.SetupSavedThinkingChoiceIsUnavailableConnectUsing)
 	}
 	if err := options.CheckEffort(selected.Effort()); err != nil {
 		return prepared, err

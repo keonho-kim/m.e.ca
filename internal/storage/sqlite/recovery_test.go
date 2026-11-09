@@ -7,13 +7,14 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
-	"path/filepath"
-	"testing"
 )
 
 func TestResumeSettingsAndInterruptedTool(t *testing.T) {
@@ -47,7 +48,7 @@ func TestResumeSettingsAndInterruptedTool(t *testing.T) {
 	if err = recovery.Restore(ctx, s, session.ID); err != nil {
 		t.Fatal(err)
 	}
-	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true)
+	history, err := s.ContextMessages(ctx, session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil || len(history) != 3 || history[2].ToolCallID != "pending" {
 		t.Fatalf("recovery: %+v %v", history, err)
 	}
@@ -93,7 +94,7 @@ func TestRecoveryCommitsRepliesAndEventsTogether(t *testing.T) {
 	if err := recovery.Restore(ctx, fault, id); err == nil {
 		t.Fatal("invalid recovery transaction committed")
 	}
-	if history, err := s.ContextMessages(ctx, id, 0, 16*1024*1024, true); err != nil || len(history) != 1 {
+	if history, err := s.ContextMessages(ctx, id, 0, 16*1024*1024, true, nil); err != nil || len(history) != 1 {
 		t.Fatalf("partial recovery reply remained: %+v %v", history, err)
 	}
 	fault.fail = false
@@ -106,7 +107,7 @@ func TestRecoveryCommitsRepliesAndEventsTogether(t *testing.T) {
 	if err != nil || len(rows) != 1 || rows[0].Event.Kind != "tool_interrupted" {
 		t.Fatalf("recovery duplicated or split outcomes: %+v %v", rows, err)
 	}
-	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true)
+	messages, err := s.ContextMessages(ctx, id, 0, 1<<20, true, nil)
 	if err != nil || len(messages) != 2 || messages[1].ToolCallID != call.ID {
 		t.Fatal("recovery lost its canonical native pair", err)
 	}

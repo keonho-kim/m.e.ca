@@ -1,0 +1,224 @@
+<!doctype html>
+<!-- Purpose: Show the 요청 문서 surface of a commercial approval application.
+     Pattern: Task-specific application shell with static document and workflow states.
+     Usage: Serve approvals/request.html from the example static root.
+     Related: internal/config/bootstrap/defaults/ui-design/assets/examples/approvals/approvals.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="approvals">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="결재 문서와 검토 흐름을 중심으로 구성한 상업용 업무 앱 디자인 예시">
+    <title>요청 문서 | Fieldwork</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="approvals.css">
+    <script defer src="../shared/interaction.js"></script>
+    <link rel="stylesheet" href="approval-document.css">
+  </head>
+  <body data-product="approvals">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <div class="approval-shell top-navigation">
+      <div class="approval-main">
+        <header class="approval-topbar glass-surface">
+          <a class="approval-wordmark" href="inbox.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg> Fieldwork</a>
+          <span class="approval-org-label">North design</span>
+          <nav class="approval-navigation" aria-label="업무 공간">
+            <a href="inbox.html" aria-current="true">결재함</a>
+            <a href="review.html">내 검토</a>
+            <a href="board.html">진행 현황</a>
+            <a href="reports.html">리포트</a>
+          </nav>
+          <div class="approval-global-actions">
+            <span class="approval-demo">디자인 예시</span>
+            <details class="menu stagger-menu">
+              <summary class="icon-button" aria-label="워크스페이스 관리"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#settings"></use></svg></summary>
+              <div class="menu-panel">
+                <a href="team.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#users"></use></svg>멤버와 역할</a>
+                <a href="settings.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#sliders-horizontal"></use></svg>결재 규칙</a>
+              </div>
+            </details>
+            <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+            <span class="avatar" aria-label="샘플 검토자 김민서">민</span>
+          </div>
+        </header>
+        <main id="main" class="approval-workspace">
+          <header class="approval-page-head">
+            <div>
+              <h1>브랜드 캠페인 제작비 집행 요청</h1>
+              <p>요청 내용과 결재선을 확인한 뒤 검토 의견을 남깁니다.</p>
+            </div>
+            <div class="approval-actions">
+              <button class="btn" type="button" data-open="return-dialog">보완 요청</button>
+              <button class="btn primary" type="button" data-open="approve-dialog">승인 전 확인</button>
+            </div>
+          </header>
+          <nav class="document-back" aria-label="문서 상위 경로">
+            <a href="inbox.html"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#arrow-left"></use></svg> 결재함으로 돌아가기</a>
+            <span>요청 문서 FW-208</span>
+          </nav>
+          <div class="approval-document-layout">
+            <article class="approval-document">
+              <div class="document-heading">
+                <div>
+                  <h2>제작비 집행 요청서</h2>
+                  <p>FW-208 / 마케팅</p>
+                </div>
+                <span class="approval-state state-review">검토 요청</span>
+              </div>
+              <div class="document-total">
+                <span>요청 금액</span>
+                <strong>3,800,000<small>원</small></strong>
+                <p>부가세 포함 / 샘플 금액</p>
+              </div>
+              <dl class="document-meta">
+                <div><dt>요청자</dt><dd>임수빈 / 마케팅</dd></div>
+                <div><dt>사용 목적</dt><dd>브랜드 캠페인 제작</dd></div>
+                <div><dt>비용 분류</dt><dd>외주 제작비</dd></div>
+                <div><dt>검토 단계</dt><dd>팀 검토 → 재무 검토</dd></div>
+              </dl>
+              <section class="document-section">
+                <h3>요청 배경</h3>
+                <p>새 캠페인의 메시지를 영상과 일러스트로 일관되게 전달하기 위한 제작비입니다. 두 산출물의 작업 범위를 나누고, 합계 금액을 함께 검토합니다.</p>
+              </section>
+              <section class="document-section">
+                <h3>집행 내역</h3>
+                <table class="expense-table">
+                  <caption class="visually-hidden">샘플 제작비 내역</caption>
+                  <thead><tr><th scope="col">항목</th><th scope="col">작업 범위</th><th scope="col">금액</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td>영상 제작</td>
+                      <td>메인 영상과 편집본</td>
+                      <td>2,800,000원</td>
+                    </tr>
+                    <tr>
+                      <td>일러스트</td>
+                      <td>캠페인 키 비주얼</td>
+                      <td>1,000,000원</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th scope="row" colspan="2">합계</th>
+                      <td>3,800,000원</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </section>
+              <section class="document-section">
+                <h3>참고 자료</h3>
+                <div class="attachment-preview">
+                  <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>
+                  <span><strong>제작 범위 및 견적서.pdf</strong><small>첨부파일 표시 예시 / 실제 파일 없음</small></span>
+                  <span class="attachment-kind">PDF</span>
+                </div>
+              </section>
+            </article>
+            <aside class="approval-document-side">
+              <section class="approval-route" aria-labelledby="route-title">
+                <div class="approval-section-head">
+                  <h2 id="route-title">결재선</h2>
+                  <span>3단계</span>
+                </div>
+                <ol>
+                  <li class="route-done">
+                    <span class="route-marker"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#check"></use></svg></span>
+                    <div>
+                      <strong>임수빈 <small>요청자</small></strong>
+                      <p>마케팅 / 요청 접수</p>
+                    </div>
+                  </li>
+                  <li class="route-current">
+                    <span class="route-marker">2</span>
+                    <div>
+                      <strong>김민서 <small>팀 검토</small></strong>
+                      <p>현재 검토할 단계</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="route-marker">3</span>
+                    <div>
+                      <strong>윤지후 <small>재무 검토</small></strong>
+                      <p>이전 단계 완료 후 검토</p>
+                    </div>
+                  </li>
+                </ol>
+                <div class="route-rule">
+                  50만원 이상 요청의 재무 검토 규칙을 적용한 샘플입니다.
+                </div>
+              </section>
+              <section class="review-context">
+                <h2>검토할 내용</h2>
+                <ul>
+                  <li>
+                    영상과 일러스트의 작업 범위
+                  </li>
+                  <li>
+                    요청 금액과 항목별 합계
+                  </li>
+                  <li>
+                    재무 검토가 필요한 기준
+                  </li>
+                </ul>
+              </section>
+              <section class="review-history">
+                <h2>문서 이력</h2>
+                <div>
+                  <span class="avatar">수</span>
+                  <p><strong>임수빈</strong>이 검토를 요청했습니다.<small>요청 접수 상태의 예시</small></p>
+                </div>
+                <p class="review-history-note">실시간 활동 로그가 아닌 샘플 상태입니다.</p>
+              </section>
+            </aside>
+          </div>
+        </main>
+        <footer class="approval-footer">
+          <span>Fieldwork / 결재 업무 디자인 스터디</span>
+          <span>실제 제출·승인·저장 없이 화면과 탐색만 제공합니다.</span>
+        </footer>
+      </div>
+    </div>
+    <dialog id="preview-note" class="modal" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">결재 앱 디자인 예시</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>문서, 금액, 담당자와 결재 상태는 고정된 샘플입니다. 실제 제출·승인·저장이나 권한 처리를 실행하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+    <dialog class="modal" id="approve-dialog" aria-labelledby="approve-title">
+      <header class="modal-head">
+        <h2 id="approve-title">승인 전 확인</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="승인 검토 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p><strong>브랜드 캠페인 제작비 집행 요청</strong><br>3,800,000원 / 임수빈</p>
+        <label class="check-label"><input type="checkbox" name="scope-confirmed">집행 내역과 참고 자료를 확인했습니다.</label>
+        <label>검토 의견<textarea name="approval-comment" rows="3" placeholder="결정과 함께 남길 내용을 입력하세요"></textarea></label>
+        <p class="small muted">확인 화면의 디자인 예시입니다. 승인 상태를 변경하거나 의견을 저장하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+    <dialog class="modal" id="return-dialog" aria-labelledby="return-title">
+      <header class="modal-head">
+        <h2 id="return-title">보완 요청</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="보완 요청 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <label>보완할 내용<textarea name="revision-request" placeholder="요청자가 수정할 부분을 구체적으로 알려주세요"></textarea></label>
+        <p class="small muted">입력 형태만 확인하며 요청이나 알림을 전송하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button class="btn" value="close">닫기</button>
+      </form>
+    </dialog>
+  </body>
+</html>

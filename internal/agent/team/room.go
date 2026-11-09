@@ -8,15 +8,18 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/contribution"
-	"github.com/keonho-kim/meca/internal/agent/team/identity"
+
 	"sync"
 	"time"
 
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/contribution"
+	"github.com/keonho-kim/meca/internal/agent/team/identity"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/work"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type participant struct {
@@ -74,10 +77,10 @@ type Room struct {
 
 func Run(ctx context.Context, options Options, text string) (Result, error) {
 	if options.Store == nil || options.Execute == nil || options.Emit == nil || options.MaxModelCalls < 1 || options.MaxSeconds < 1 {
-		return Result{}, fmt.Errorf("team dependencies and request limits are required")
+		return Result{}, faults.Errorf(diagcatalog.TeamTeamDependenciesAndRequestLimitsAreRequired)
 	}
 	if options.PollSteering != nil && options.SteeringReady == nil {
-		return Result{}, fmt.Errorf("team steering requires an input notification channel")
+		return Result{}, faults.Errorf(diagcatalog.TeamTeamSteeringRequiresAnInputNotificationChannel)
 	}
 	if options.Redact != nil {
 		text = options.Redact(text)
@@ -183,7 +186,7 @@ func (r *Room) notify() {
 func (r *Room) complete(cause error) (Result, error) {
 	// Run joins all workers before this final snapshot and delivery.
 	if cause == nil && r.result.Text == "" {
-		cause = errors.Join(fmt.Errorf("all team sessions stopped before a final report"), r.failures)
+		cause = errors.Join(faults.Errorf(diagcatalog.TeamAllTeamSessionsStoppedBeforeAFinal), r.failures)
 	}
 	status, end := runrecord.Answered, work.Completed
 	if cause != nil {

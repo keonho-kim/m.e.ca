@@ -7,12 +7,15 @@ package discovery
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/identity"
+
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
+	"github.com/keonho-kim/meca/internal/provider/identity"
 )
 
 func (c *Client) Identify(ctx context.Context, model string) (identity.Report, error) {
@@ -20,7 +23,7 @@ func (c *Client) Identify(ctx context.Context, model string) (identity.Report, e
 		return identity.Report{}, err
 	}
 	if model == "" || len(model) > 512 || !utf8.ValidString(model) || strings.ContainsFunc(model, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) }) {
-		return identity.Report{}, fmt.Errorf("invalid Model ID")
+		return identity.Report{}, faults.Errorf(diagcatalog.DiscoveryInvalidModelID)
 	}
 	var report identity.Report
 	var err error

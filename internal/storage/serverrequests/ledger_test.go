@@ -74,6 +74,8 @@ func TestCompletionWithEscapedErrorSurvivesRestart(t *testing.T) {
 	// Runtime errors are bounded to 4 KiB before JSON encoding. HTML escaping
 	// can expand this valid payload beyond the former 8 KiB read limit.
 	task.Error = strings.Repeat("<>&\n", 1024)
+	task.Code = "interrupted"
+	task.Persistence = server.PersistenceConfirmed
 	if err := ledger.Finish(ctx, task); err != nil {
 		t.Fatal(err)
 	}

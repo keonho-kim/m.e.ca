@@ -6,11 +6,12 @@
 package config
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestLoadSaveWithDefaultPermission(t *testing.T) {

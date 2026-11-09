@@ -7,9 +7,10 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
@@ -95,7 +96,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 		} else if e.public > 0 {
 			text, ok := authored[e.public]
 			if !ok {
-				return nil, cursor, fmt.Errorf("authored public note #%d is missing", e.public)
+				return nil, cursor, faults.Errorf(diagcatalog.SqliteAuthoredPublicNoteIsMissing, e.public)
 			}
 			records = append(records, compact.Record{Sequence: e.record.sequence, Role: "peer", Text: text})
 		} else if e.role != "" && e.text != "" {

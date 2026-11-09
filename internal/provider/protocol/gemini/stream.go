@@ -7,8 +7,10 @@ package gemini
 import (
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -32,7 +34,7 @@ func (d *Decoder) Consume(content []byte, _ bool, state *native.State, emit func
 		Usage *usageMetadata `json:"usageMetadata"`
 	}
 	if err := json.Unmarshal(content, &frame); err != nil {
-		return fmt.Errorf("invalid Gemini response: %w", err)
+		return faults.Errorf(diagcatalog.GeminiInvalidGeminiResponse, err)
 	}
 	if len(frame.Error) > 0 && string(frame.Error) != "null" {
 		return transport.ParseError(0, content, "")
@@ -41,20 +43,20 @@ func (d *Decoder) Consume(content []byte, _ bool, state *native.State, emit func
 		if err := d.usage(frame.Usage, state); err != nil {
 			return err
 		}
-		return state.EmitFailedUsage(&transport.PermanentError{Cause: fmt.Errorf("gemini prompt was blocked: %s", frame.Feedback.Block)}, emit)
+		return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.GeminiGeminiPromptWasBlocked, frame.Feedback.Block)}, emit)
 	}
 	if len(frame.Candidates) > 1 {
-		return fmt.Errorf("multiple Gemini candidates are not supported")
+		return faults.Errorf(diagcatalog.GeminiMultipleGeminiCandidatesAreNotSupported)
 	}
 	if len(frame.Candidates) == 1 {
 		candidate := frame.Candidates[0]
 		if candidate.Index != 0 {
-			return fmt.Errorf("invalid Gemini candidate index")
+			return faults.Errorf(diagcatalog.GeminiInvalidGeminiCandidateIndex)
 		}
 		state.Received = true
 		for _, part := range candidate.Content.Parts {
 			if part.Inline != nil || part.Response != nil {
-				return fmt.Errorf("unsupported Gemini output part")
+				return faults.Errorf(diagcatalog.GeminiUnsupportedGeminiOutputPart)
 			}
 			raw, err := json.Marshal(part)
 			if err != nil {
@@ -82,6 +84,11 @@ func (d *Decoder) Consume(content []byte, _ bool, state *native.State, emit func
 					return err
 				}
 				d.callIDs = append(d.callIDs, call.ID)
+			}
+			if part.Call != nil || part.Signature != "" {
+				if err := emit(modelapi.Event{Progress: true}); err != nil {
+					return err
+				}
 			}
 			if part.Text != nil && *part.Text != "" {
 				state.Usage = nil
@@ -122,7 +129,7 @@ func (d *Decoder) Consume(content []byte, _ bool, state *native.State, emit func
 		case "MAX_TOKENS":
 			return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Gemini output token limit"}, emit)
 		default:
-			return state.EmitFailedUsage(&transport.PermanentError{Cause: fmt.Errorf("gemini response did not complete: %s", candidate.Finish)}, emit)
+			return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.GeminiGeminiResponseDidNotComplete, candidate.Finish)}, emit)
 		}
 	} else if err := d.usage(frame.Usage, state); err != nil {
 		return err
@@ -141,12 +148,12 @@ func (d *Decoder) usage(value *usageMetadata, state *native.State) error {
 		return nil
 	}
 	if value.Thoughts < 0 || value.Thoughts > modelapi.MaxCallTokens {
-		return fmt.Errorf("invalid Gemini thought usage")
+		return faults.Errorf(diagcatalog.GeminiInvalidGeminiThoughtUsage)
 	}
 	// These are non-optional protobuf scalars: an omitted counter is exactly zero.
 	// A missing usageMetadata object still means usage was not reported.
 	if value.Output < 0 || value.Output > modelapi.MaxCallTokens {
-		return fmt.Errorf("invalid Gemini output usage")
+		return faults.Errorf(diagcatalog.GeminiInvalidGeminiOutputUsage)
 	}
 	state.Usage = &modelapi.TokenUsage{Input: value.Input, Output: value.Output + value.Thoughts}
 	return state.Usage.Check()

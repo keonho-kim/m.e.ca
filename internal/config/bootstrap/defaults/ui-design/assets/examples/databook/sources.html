@@ -1,0 +1,135 @@
+<!doctype html>
+<!-- Purpose: Show the 소스 surface as a static commercial application design.
+     Pattern: Semantic page with progressive native inspection controls.
+     Usage: Open databook/sources.html from the example static root.
+     Related: internal/config/bootstrap/defaults/ui-design/assets/examples/databook/databook.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="databook">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Databook의 소스 화면을 보여주는 정적 프론트엔드 디자인 예시입니다.">
+    <title>소스 | Databook</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/product-shell.css">
+    <link rel="stylesheet" href="../shared/glass.css">
+    <link rel="stylesheet" href="databook.css">
+    <script defer src="../shared/interaction.js"></script>
+  </head>
+  <body data-product="databook">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="product-top">
+      <div class="product-top-inner">
+        <div class="product-identity">
+          <a class="product-wordmark" href="workspaces.html" aria-label="Databook 홈"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg>Databook</a>
+          <details class="menu stagger-menu db-project-menu">
+            <summary>고객 온보딩 분석 <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#chevron-down"></use></svg></summary>
+            <div class="menu-panel">
+              <a href="chat.html">현재 워크스페이스</a>
+              <a href="workspaces.html">모든 워크스페이스</a>
+            </div>
+          </details>
+        </div>
+        <div class="product-utilities">
+          <span class="sample-label">디자인 예시 / 샘플 콘텐츠</span>
+          <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+          <span class="avatar" aria-label="샘플 사용자 김민서">민</span>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="product-body glass-surface">
+      <header class="db-workspace-bar">
+        <div>
+          <h1>소스</h1>
+        </div>
+        <nav class="product-tabs" aria-label="고객 온보딩 분석 화면">
+          <a href="sources.html" aria-current="page">소스</a>
+          <a href="explorer.html">데이터 탐색</a>
+          <a href="chat.html">대화</a>
+          <a href="insights.html">인사이트</a>
+        </nav>
+        <div class="product-actions">
+          <button class="btn" type="button" data-open="preview-note"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#plus"></use></svg> 소스 추가</button>
+        </div>
+      </header>
+      <div class="db-source-grid">
+        <section aria-labelledby="source-list-title">
+          <div class="section-row">
+            <h2 id="source-list-title">연결된 소스</h2>
+            <span class="preview-status">샘플 구성 / 실제 연결 없음</span>
+          </div>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="샘플 데이터베이스와 문서 소스">
+            <table class="product-table">
+              <caption class="visually-hidden">샘플 데이터베이스와 문서 소스</caption>
+              <thead><tr><th scope="col">소스</th><th scope="col">유형</th><th scope="col">사용 범위</th><th scope="col">관리</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div class="source-line"><span class="source-mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg></span><div><strong>Customer workspace</strong><small>샘플 PostgreSQL 데이터베이스</small></div></div></td>
+                  <td>데이터베이스</td>
+                  <td>테이블 3개</td>
+                  <td><a class="product-link" href="explorer.html">구조 보기</a></td>
+                </tr>
+                <tr>
+                  <td><div class="source-line"><span class="source-mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong>고객 인터뷰 요약</strong><small>보안 검토 과정과 연결 경험</small></div></div></td>
+                  <td>문서</td>
+                  <td>요약 1개</td>
+                  <td><button class="btn" type="button" data-open="preview-note">상세 보기</button></td>
+                </tr>
+                <tr>
+                  <td><div class="source-line"><span class="source-mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span><div><strong>온보딩 운영 가이드</strong><small>담당자와 단계별 확인 항목</small></div></div></td>
+                  <td>문서</td>
+                  <td>가이드 1개</td>
+                  <td><button class="btn" type="button" data-open="preview-note">상세 보기</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="db-toolbar">
+            <span class="preview-status">분석 범위: accounts, onboarding_events, support_tickets</span>
+            <a class="product-link" href="chat.html">이 소스로 대화하기</a>
+          </div>
+          <details class="disclosure">
+            <summary>데이터베이스 연결 설정 예시</summary>
+            <div class="form-grid">
+              <label>연결 이름<input name="connection-name" value="Customer workspace" autocomplete="off"></label>
+              <label>데이터베이스 유형<select name="database-type"><option>PostgreSQL</option><option>MySQL</option></select></label>
+              <label class="wide">호스트<input name="database-host" placeholder="db.example.internal" autocomplete="off"></label>
+              <p class="field-hint wide">레이아웃을 확인하는 입력 UI입니다. 접속 정보나 비밀번호를 입력하지 마세요. 연결은 실행되지 않습니다.</p>
+            </div>
+          </details>
+        </section>
+        <aside class="db-scope">
+          <h2>질문에 필요한 자료만</h2>
+          <p>소스가 많아져도, 질문에 포함할 범위는 작고 명확하게 유지합니다.</p>
+          <div class="scope-item">
+            <strong>테이블별 범위</strong>
+            <p>고객 정보와 온보딩 이벤트를 연결해 읽습니다. 불필요한 개인정보 열은 제외하는 구성을 보여줍니다.</p>
+          </div>
+          <div class="scope-item">
+            <strong>확인할 상태</strong>
+            <p>연결 전, 접근 권한 부족, 새로고침 필요. 이 예시는 연결 후 화면의 정적 샘플입니다.</p>
+          </div>
+          <a class="product-link" href="explorer.html">샘플 테이블 살펴보기</a>
+        </aside>
+      </div>
+      <footer class="product-footer">
+        <span>Databook / 프론트엔드 디자인 스터디</span>
+        <span>화면 이동·탭·대화상자만 동작합니다. 실제 연동·저장은 없습니다.</span>
+      </footer>
+    </main>
+    <dialog class="modal product-modal" id="preview-note" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">디자인 예시 안내</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>이 예시는 화면 구성과 상호작용 형태를 살펴보는 정적 프론트입니다. 데이터, 문서, 답변과 검토 결과는 모두 샘플 콘텐츠입니다.</p>
+        <p>실제 데이터베이스 연결, AI 요청, 편집·저장, 파일 내보내기는 구현하지 않았습니다. 입력 내용은 저장하거나 전송하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button type="submit" class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+  </body>
+</html>

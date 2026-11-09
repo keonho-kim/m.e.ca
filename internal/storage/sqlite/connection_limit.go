@@ -7,9 +7,12 @@ package sqlite
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxSessionBytes = 512 << 20
@@ -29,14 +32,14 @@ func sessionPageLimit(path string) (pages int64, resultErr error) {
 		return 0, err
 	}
 	if string(header[:16]) != "SQLite format 3\x00" {
-		return 0, fmt.Errorf("invalid SQLite header; existing contents preserved")
+		return 0, faults.Errorf(diagcatalog.SqliteInvalidSQLiteHeaderExistingContentsPreserved)
 	}
 	size := int64(binary.BigEndian.Uint16(header[16:]))
 	if size == 1 {
 		size = 65536
 	}
 	if size < 512 || size > 65536 || size&(size-1) != 0 {
-		return 0, fmt.Errorf("invalid SQLite page size")
+		return 0, faults.Errorf(diagcatalog.SqliteInvalidSQLitePageSize)
 	}
 	return maxSessionBytes / size, nil
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/work"
 	"github.com/keonho-kim/meca/internal/commands/server"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func TestResponseReservationIsAtomicBeforeSessionCreation(t *testing.T) {
@@ -155,8 +156,8 @@ func TestResponseCompletionAndStrictRestart(t *testing.T) {
 		t.Fatal("invalid ID accepted")
 	}
 	_, err = ledger.ReadResponse(ctx, server.ResponseID(scope, "response", "absent"))
-	var public *server.Error
-	if !errors.As(err, &public) || public.Code != "not_found" {
+	var public *faults.Error
+	if !errors.As(err, &public) || public.ErrorCode() != "not_found" {
 		t.Fatal(err)
 	}
 }

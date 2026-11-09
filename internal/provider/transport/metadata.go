@@ -8,8 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"io"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func ReadMetadata[T any](ctx context.Context, c *Client, method, endpoint string, payload io.Reader, limit int, target *T) (err error) {
@@ -20,11 +23,15 @@ func ReadMetadata[T any](ctx context.Context, c *Client, method, endpoint string
 	if request.Body != nil {
 		defer func() { err = errors.Join(err, request.Body.Close()) }()
 		if request.GetBody == nil {
-			return fmt.Errorf("provider request body must be replayable")
+			return faults.Errorf(diagcatalog.TransportProviderRequestBodyMustBeReplayable)
 		}
 	}
 	return c.Attempts(ctx, func() error {
-		attempt := request.Clone(ctx)
+		// Unlike generation, a metadata exchange has no incremental semantic
+		// progress. Bound its complete attempt even if a peer trickles bytes.
+		attemptCtx, cancel := context.WithTimeout(ctx, DefaultIdleTimeout)
+		defer cancel()
+		attempt := request.Clone(attemptCtx)
 		if request.GetBody != nil {
 			body, bodyErr := request.GetBody()
 			if bodyErr != nil {
@@ -41,11 +48,11 @@ func ReadMetadata[T any](ctx context.Context, c *Client, method, endpoint string
 			return err
 		}
 		if len(body) > limit {
-			return fmt.Errorf("provider metadata exceeds %d-byte limit", limit)
+			return faults.Errorf(diagcatalog.TransportProviderMetadataExceedsByteLimit, limit)
 		}
 		var decoded T
 		if err := json.Unmarshal(body, &decoded); err != nil {
-			return fmt.Errorf("invalid provider metadata: %w", err)
+			return faults.Transient(faults.Errorf(diagcatalog.TransportInvalidProviderMetadata, err))
 		}
 		*target = decoded
 		return nil

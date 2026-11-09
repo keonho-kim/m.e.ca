@@ -5,7 +5,8 @@
 package protocol
 
 import (
-	"fmt"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
@@ -22,7 +23,7 @@ func nativeMessage(message Message) (native.Input, error) {
 		value.Parts = content
 	case nil:
 	default:
-		return value, fmt.Errorf("native message requires text or image parts")
+		return value, faults.Errorf(diagcatalog.ProtocolNativeMessageRequiresTextOrImageParts)
 	}
 	return value, nil
 }

@@ -8,33 +8,37 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
+	"time"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"time"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *execution) recordRejected(ctx context.Context, v validatedCall, outcome toolapi.Result, cause error, emit func(runrecord.Event) error) error {
 	call := v.call
 	failure := outcome.Failure
 	if failure == nil {
-		failure = toolapi.FailureOf(cause)
+		failure = faults.FailureOf(cause)
 	}
 	if failure == nil {
-		return fmt.Errorf("rejected call requires its cause")
+		return faults.Errorf(diagcatalog.RunRejectedCallRequiresItsCause)
 	}
 	copy := *failure
 	copy.Detail = s.runner.Redact(copy.Detail)
 	copy.Next = s.runner.Redact(copy.Next)
 	failure = &copy
 	body, err := json.Marshal(struct {
-		Executed bool             `json:"executed"`
-		Failure  *toolapi.Failure `json:"failure"`
+		Executed bool            `json:"executed"`
+		Failure  *faults.Failure `json:"failure"`
 	}{false, failure})
 	if err != nil {
 		return err
 	}
 	e := runrecord.Event{Kind: "tool_failed", CallID: call.ID, Call: &call, Text: s.runner.Redact(failure.Error()), Output: body}
+	e.ErrorCode, e.OccurredAt = string(failure.Code), time.Now().UTC().Format(time.RFC3339Nano)
 	outcome.Failed, outcome.Failure = true, failure
 	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
@@ -48,11 +52,11 @@ func (s *execution) rejectWave(ctx context.Context, calls []validatedCall, index
 	v := calls[index]
 	outcome.Failed = true
 	if outcome.Failure == nil {
-		outcome.Failure = toolapi.FailureOf(cause)
+		outcome.Failure = faults.FailureOf(cause)
 	}
 	var result error
 	reason := skipAfterFailure
-	if outcome.Failure.Code == toolapi.InstructionChanged {
+	if outcome.Failure.Code == diagcatalog.InstructionChanged {
 		reason = skipForInstruction
 	} else if ctx.Err() != nil {
 		reason = skipForInterruption

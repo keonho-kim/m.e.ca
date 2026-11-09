@@ -7,10 +7,11 @@ package team
 import (
 	"context"
 	"errors"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {

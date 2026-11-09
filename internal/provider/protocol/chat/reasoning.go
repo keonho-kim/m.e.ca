@@ -5,31 +5,45 @@
 package chat
 
 import (
+	"crypto/sha256"
 	"encoding/json"
-	"fmt"
+
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type ReasoningState struct {
-	details []json.RawMessage
-	bytes   int
-	draft   *routerDraft
+	details    []json.RawMessage
+	bytes      int
+	draft      *routerDraft
+	progress   uint64
+	lastOpaque [32]byte
+	hasOpaque  bool
 }
 
-func (state *ReasoningState) HasData() bool { return len(state.details) > 0 || state.draft != nil }
+func (state *ReasoningState) HasData() bool    { return len(state.details) > 0 || state.draft != nil }
+func (state *ReasoningState) Progress() uint64 { return state.progress }
 
 func (state *ReasoningState) Add(blocks []json.RawMessage, streaming bool) (string, error) {
 	var text strings.Builder
 	for _, raw := range blocks {
 		var block routerHeader
 		if err := json.Unmarshal(raw, &block); err != nil || block.Type == "" {
-			return "", fmt.Errorf("invalid OpenRouter reasoning block")
+			return "", faults.Errorf(diagcatalog.ChatInvalidOpenRouterReasoningBlock)
 		}
 		state.bytes += len(raw)
 		if state.bytes > modelapi.MaxResponseBytes {
 			return "", &modelapi.OutputLimitError{Reason: "provider continuation state byte limit"}
+		}
+		if streaming && (block.Signature != "" || bool(block.Data)) {
+			fingerprint := sha256.Sum256(raw)
+			if !state.hasOpaque || fingerprint != state.lastOpaque {
+				state.progress++
+				state.lastOpaque, state.hasOpaque = fingerprint, true
+			}
 		}
 		if !streaming {
 			state.details = append(state.details, raw)
@@ -57,7 +71,7 @@ func ReasoningHistory(content []byte) ([]json.RawMessage, error) {
 	var state ReasoningState
 	var blocks []json.RawMessage
 	if err := json.Unmarshal(content, &blocks); err != nil || blocks == nil {
-		return nil, fmt.Errorf("invalid OpenRouter continuation state")
+		return nil, faults.Errorf(diagcatalog.ChatInvalidOpenRouterContinuationState)
 	}
 	if _, err := state.Add(blocks, false); err != nil {
 		return nil, err
@@ -65,7 +79,25 @@ func ReasoningHistory(content []byte) ([]json.RawMessage, error) {
 	return state.details, nil
 }
 
-type routerHeader struct{ Type, Text, Summary, Signature, ID, Format string }
+type routerHeader struct {
+	Type, Text, Summary, Signature, ID, Format string
+	Data                                       opaqueReasoning `json:"data"`
+}
+
+// Inspect an opaque field without duplicating its encrypted string in memory.
+type opaqueReasoning bool
+
+func (value *opaqueReasoning) UnmarshalJSON(raw []byte) error {
+	if string(raw) == "null" {
+		*value = false
+		return nil
+	}
+	if len(raw) < 2 || raw[0] != '"' {
+		return faults.Errorf(diagcatalog.ChatInvalidOpenRouterReasoningBlock)
+	}
+	*value = len(raw) > 2
+	return nil
+}
 
 type routerDraft struct {
 	header routerHeader

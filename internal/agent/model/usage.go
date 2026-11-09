@@ -5,8 +5,10 @@
 package model
 
 import (
-	"fmt"
 	"math"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const MaxCallTokens int64 = 1 << 40
@@ -28,7 +30,7 @@ func (u TokenUsage) Check() error {
 		return err
 	}
 	if u.Input > MaxCallTokens || u.Output > MaxCallTokens {
-		return fmt.Errorf("invalid per-call token usage")
+		return faults.Errorf(diagcatalog.ModelInvalidPerCallTokenUsage)
 	}
 	return nil
 }
@@ -36,10 +38,10 @@ func (u TokenUsage) Check() error {
 // CheckTotals validates accumulated measurements without applying per-call token bounds.
 func (u TokenUsage) CheckTotals() error {
 	if u.Input < 0 || u.Output < 0 {
-		return fmt.Errorf("invalid token usage")
+		return faults.Errorf(diagcatalog.ModelInvalidTokenUsage)
 	}
 	if u.Cost != nil && (*u.Cost < 0 || math.IsNaN(*u.Cost) || math.IsInf(*u.Cost, 0)) {
-		return fmt.Errorf("invalid provider-reported cost")
+		return faults.Errorf(diagcatalog.ModelInvalidProviderReportedCost)
 	}
 	return nil
 }

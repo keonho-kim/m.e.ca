@@ -5,9 +5,9 @@
 package local
 
 import (
-	"fmt"
-
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/textedit"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
 )
@@ -20,11 +20,11 @@ func (op *fileOperation) prepareChange(call toolapi.Call) error {
 		return err
 	}
 	if op.spec.Name != "write_file" && !op.original.exists {
-		return fmt.Errorf("path not found")
+		return faults.Errorf(diagcatalog.LocalPathNotFound)
 	}
 
 	if op.original.exists && op.original.info.IsDir() {
-		return fmt.Errorf("target is a directory")
+		return faults.Errorf(diagcatalog.LocalTargetIsADirectory)
 	}
 	op.replacement = []byte(op.input.Content)
 	if op.spec.Name == "edit_file" {

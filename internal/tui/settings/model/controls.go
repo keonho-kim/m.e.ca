@@ -5,11 +5,12 @@
 package model
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/tui/input"
-	"slices"
-	"strings"
 )
 
 type ControlAction uint8

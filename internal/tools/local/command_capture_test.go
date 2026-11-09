@@ -28,7 +28,7 @@ func TestCompletedCommandDefersCaptureUntilCommit(t *testing.T) {
 	if len(e.CommandActivity()) != 1 {
 		t.Fatal("command was acknowledged before the runtime could commit it")
 	}
-	original, err := e.CommandCapture(id)
+	original, err := e.CommandCapture(t.Context(), id)
 	if err != nil || len(original) < 4*1024*1024 {
 		t.Fatal("deferred original missing", err)
 	}
@@ -38,7 +38,7 @@ func TestCompletedCommandDefersCaptureUntilCommit(t *testing.T) {
 	if len(e.CommandActivity()) != 0 {
 		t.Fatal("committed command handle was retained")
 	}
-	if original, err = e.CommandCapture(id); err != nil || len(original) != 0 {
+	if original, err = e.CommandCapture(t.Context(), id); err != nil || len(original) != 0 {
 		t.Fatal("acknowledged capture was retained", err)
 	}
 }

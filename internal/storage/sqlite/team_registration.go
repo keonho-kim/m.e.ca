@@ -7,10 +7,13 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
-	teamidentity "github.com/keonho-kim/meca/internal/agent/team/identity"
+
 	"os"
 	"time"
+
+	teamidentity "github.com/keonho-kim/meca/internal/agent/team/identity"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) CreateTeamAgent(ctx context.Context) (member teamidentity.Member, resultErr error) {
@@ -87,7 +90,7 @@ func (s *Store) DiscardTeamAgent(ctx context.Context, member teamidentity.Member
 		return err
 	}
 	if used {
-		return fmt.Errorf("cannot discard a team session containing recorded work")
+		return faults.Errorf(diagcatalog.SqliteCannotDiscardATeamSessionContainingRecorded)
 	}
 	result, err := s.db.ExecContext(ctx, "DELETE FROM team_members WHERE agent_id=? AND session_id=? AND summary=''", member.ID, member.Session)
 	if err != nil {
@@ -98,7 +101,7 @@ func (s *Store) DiscardTeamAgent(ctx context.Context, member teamidentity.Member
 		return err
 	}
 	if count != 1 {
-		return fmt.Errorf("unstarted team registration does not match")
+		return faults.Errorf(diagcatalog.SqliteUnstartedTeamRegistrationDoesNotMatch)
 	}
 	return s.removeUnregisteredTeamSession(ctx, member.Session, child.path)
 }

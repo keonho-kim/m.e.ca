@@ -6,10 +6,11 @@ package setup
 
 import (
 	"context"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestEffortSetupDefaultsAndSessionOverride(t *testing.T) {

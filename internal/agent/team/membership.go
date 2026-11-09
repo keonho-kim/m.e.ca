@@ -7,12 +7,14 @@ package team
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/identity"
-	"github.com/keonho-kim/meca/internal/agent/tool"
+
 	"time"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/identity"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[string]any, resultErr error) {
@@ -34,7 +36,7 @@ func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[st
 		return nil, decisionErr
 	}
 	if finished || r.ctx.Err() != nil {
-		return nil, fmt.Errorf("the current team request has ended")
+		return nil, faults.Errorf(diagcatalog.TeamTheCurrentTeamRequestHasEnded)
 	}
 	if live != nil {
 		status := "already_active"
@@ -84,7 +86,7 @@ func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[st
 		return nil, decisionErr
 	}
 	if finished || r.ctx.Err() != nil {
-		return nil, fmt.Errorf("the current team request has ended")
+		return nil, faults.Errorf(diagcatalog.TeamTheCurrentTeamRequestHasEnded)
 	}
 	// A publication attempt may have committed even if delivery then fails.
 	// Preserve that registration rather than deleting potentially referenced state.
@@ -116,13 +118,13 @@ func (p *Peer) Leave(ctx context.Context, message string) (depart bool, resultEr
 	pending := live != nil && r.remainingLocked() > 1 && live.attention > p.DecisionCursor
 	r.mu.Unlock()
 	if !valid {
-		return false, fmt.Errorf("this peer is already leaving")
+		return false, faults.Errorf(diagcatalog.TeamThisPeerIsAlreadyLeaving)
 	}
 	if decisionErr != nil {
 		return false, decisionErr
 	}
 	if pending {
-		return false, &tool.Failure{Code: "team_feedback_pending", Detail: "Public feedback requiring your attention arrived after the last model decision; nothing closed.", Next: "Review the newly received public conversation in your next decision. Then answer with discuss(reply_to), continue useful work, or choose leave_team again."}
+		return false, &faults.Failure{Code: diagcatalog.TeamFeedbackPending, Detail: diagcatalog.Text(diagcatalog.TeamPublicFeedbackRequiringYourAttentionArrivedAfter), Next: diagcatalog.Text(diagcatalog.TeamReviewTheNewlyReceivedPublicConversationIn)}
 	}
 	if _, err := r.appendPublic(channel.Message{From: p.ID, Text: message}); err != nil {
 		return false, err

@@ -6,7 +6,9 @@ package textformat
 
 import (
 	"bytes"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func LineEndings(body []byte) string {
@@ -30,7 +32,7 @@ func Preserve(before, after []byte, policy string) ([]byte, error) {
 		return after, nil
 	}
 	if policy != "" && policy != "preserve" {
-		return nil, fmt.Errorf("unknown format_policy")
+		return nil, faults.Errorf(diagcatalog.TextformatUnknownFormatPolicy)
 	}
 	if len(before) == 0 || len(after) == 0 {
 		return after, nil
@@ -38,7 +40,7 @@ func Preserve(before, after []byte, policy string) ([]byte, error) {
 	previous := bytes.HasSuffix(before, []byte("\n"))
 	next := bytes.HasSuffix(after, []byte("\n"))
 	if !previous && next {
-		return nil, fmt.Errorf("format_change: existing file has no final newline; use format_policy=literal for an intentional change")
+		return nil, faults.Errorf(diagcatalog.TextformatFormatChangeExistingFileHasNoFinal)
 	}
 	if previous && !next {
 		ending := []byte("\n")
@@ -49,7 +51,7 @@ func Preserve(before, after []byte, policy string) ([]byte, error) {
 	}
 	oldStyle, newStyle := LineEndings(before), LineEndings(after)
 	if oldStyle != "none" && newStyle != "none" && oldStyle != newStyle {
-		return nil, fmt.Errorf("format_change: newline convention would change from %s to %s; preserve it or explicitly use format_policy=literal", oldStyle, newStyle)
+		return nil, faults.Errorf(diagcatalog.TextformatFormatChangeNewlineConventionWouldChangeFrom, oldStyle, newStyle)
 	}
 	return after, nil
 }

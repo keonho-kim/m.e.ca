@@ -4,9 +4,13 @@
 // Related: internal/provider/setup/image.go, internal/provider/discovery/model_settings.go.
 package connection
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
-// ImageInput records supported, unsupported or unknown acceptance and its evidence.
+	// ImageInput records supported, unsupported or unknown acceptance and its evidence.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
+
 type ImageInput struct {
 	State  string `json:"state"`
 	Source string `json:"source,omitempty"`
@@ -22,10 +26,10 @@ func (i ImageInput) Known() bool { return i.State == "supported" || i.State == "
 // Check rejects unsupported capability states before persistence or client binding.
 func (i ImageInput) Check() error {
 	if i.State != "" && i.State != "unknown" && !i.Known() {
-		return fmt.Errorf("invalid image-input state")
+		return faults.Errorf(diagcatalog.ConnectionInvalidImageInputState)
 	}
 	if len(i.Source) > 256 || len(i.Detail) > 4096 {
-		return fmt.Errorf("image-input evidence exceeds its bounds")
+		return faults.Errorf(diagcatalog.ConnectionImageInputEvidenceExceedsItsBounds)
 	}
 	return nil
 }

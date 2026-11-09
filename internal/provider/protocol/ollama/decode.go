@@ -6,7 +6,9 @@ package ollama
 
 import (
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -21,14 +23,14 @@ func Decode(content []byte) (native.Frame, error) {
 		Error   json.RawMessage `json:"error"`
 	}
 	if err := json.Unmarshal(content, &wire); err != nil {
-		return native.Frame{}, fmt.Errorf("invalid model stream: %w", err)
+		return native.Frame{}, faults.Errorf(diagcatalog.ChatInvalidModelStream, err)
 	}
 	value := native.Frame{Message: wire.Message, Input: wire.Input, Output: wire.Output, Done: wire.Done, Reason: &wire.Reason}
 	if len(wire.Error) > 0 && string(wire.Error) != "null" && string(wire.Error) != `""` {
 		return value, transport.ParseError(0, content, "")
 	}
 	if wire.Done == nil {
-		return value, fmt.Errorf("missing Ollama done state")
+		return value, faults.Errorf(diagcatalog.OllamaMissingOllamaDoneState)
 	}
 	return value, nil
 }

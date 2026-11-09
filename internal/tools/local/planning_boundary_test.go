@@ -76,7 +76,7 @@ func TestPlanningBoundaryRechecksProjectBeforePreparation(t *testing.T) {
 
 func BenchmarkDirectoryPreparation(b *testing.B) {
 	project, home := b.TempDir(), b.TempDir()
-	e, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+	e, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s }, Options{})
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -66,6 +66,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		if focus == focusCommands {
 			label := "실행"
 			if len(a.compose.commandHints) > 0 {
+				if a.compose.commandHints[a.compose.commandIndex].Name[0] == '#' {
+					label = "삽입"
+				}
 				command, err := commands.Parse(a.compose.commandHints[a.compose.commandIndex].Name)
 				if err == nil && !a.canSubmit(command.Kind) {
 					label = "입력만"
@@ -108,6 +111,9 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "확정"}, {Key: "PgUp/Dn", Label: "변경 내용"}, {Key: "Esc", Label: "거부"}}
 	default:
 		controls = []view.Shortcut{{Key: "↑↓", Label: "선택"}, {Key: "Enter", Label: "확정"}, {Key: "Esc", Label: "닫기"}}
+		if a.page == "skills" && a.skills.document != nil {
+			controls = append(controls, view.Shortcut{Key: "PgUp/Dn", Label: "스크롤"})
+		}
 	}
 	if focus == focusChat && a.compose.fileSubmission != nil {
 		shortcuts = append(shortcuts, view.Shortcut{Key: "Esc", Label: "Cancel send"})

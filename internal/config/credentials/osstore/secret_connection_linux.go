@@ -8,12 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dbus "github.com/godbus/dbus/v5"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	dbus "github.com/godbus/dbus/v5"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func connectSecretBus(ctx context.Context) (*dbus.Conn, error) {
@@ -26,7 +29,7 @@ func connectSecretBus(ctx context.Context) (*dbus.Conn, error) {
 		address = "unix:path=" + filepath.Join(directory, "bus")
 	}
 	if len(address) > 4096 {
-		return nil, fmt.Errorf("DBus address exceeds limit")
+		return nil, faults.Errorf(diagcatalog.OsstoreDBusAddressExceedsLimit)
 	}
 	var failures error
 	for _, entry := range strings.Split(address, ";") {
@@ -68,38 +71,38 @@ func connectSecretBus(ctx context.Context) (*dbus.Conn, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	return nil, fmt.Errorf("OS credentials require a running Unix session bus: %w", failures)
+	return nil, faults.Errorf(diagcatalog.OsstoreOSCredentialsRequireARunningUnixSession, failures)
 }
 
 func secretBusPath(address string) (string, error) {
 	if !strings.HasPrefix(address, "unix:") {
-		return "", fmt.Errorf("only Unix DBus transports are supported")
+		return "", faults.Errorf(diagcatalog.OsstoreOnlyUnixDBusTransportsAreSupported)
 	}
 	path := ""
 	for _, field := range strings.Split(strings.TrimPrefix(address, "unix:"), ",") {
 		name, value, ok := strings.Cut(field, "=")
 		if !ok {
-			return "", fmt.Errorf("invalid Unix DBus address")
+			return "", faults.Errorf(diagcatalog.OsstoreInvalidUnixDBusAddress)
 		}
 		if name != "path" && name != "abstract" {
 			continue
 		}
 		if path != "" {
-			return "", fmt.Errorf("ambiguous Unix DBus address")
+			return "", faults.Errorf(diagcatalog.OsstoreAmbiguousUnixDBusAddress)
 		}
 		decoded, err := url.PathUnescape(value)
 		if err != nil || decoded == "" || strings.ContainsRune(decoded, '\x00') {
-			return "", fmt.Errorf("invalid Unix DBus socket")
+			return "", faults.Errorf(diagcatalog.OsstoreInvalidUnixDBusSocket)
 		}
 		path = decoded
 		if name == "abstract" {
 			path = "\x00" + path
 		} else if !filepath.IsAbs(path) {
-			return "", fmt.Errorf("DBus socket path must be absolute")
+			return "", faults.Errorf(diagcatalog.OsstoreDBusSocketPathMustBeAbsolute)
 		}
 	}
 	if path == "" {
-		return "", fmt.Errorf("unix DBus socket is missing")
+		return "", faults.Errorf(diagcatalog.OsstoreUnixDBusSocketIsMissing)
 	}
 	return path, nil
 }

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"sort"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 // Observe preserves known partial mutations and reports whether derived state changed.
@@ -112,7 +114,7 @@ func observedFile(op Operation, path, version string, changed bool) FileFact {
 	if version == "missing" {
 		observation = "missing"
 	} else if version == "" {
-		observation = "unavailable"
+		observation = diagcatalog.Unavailable
 	}
 	return FileFact{Path: path, Version: version, Changed: changed, Stale: version == "", SourceID: op.CallID, ObservedRun: op.RunID, Revision: op.Revision, Observation: observation}
 }

@@ -6,9 +6,10 @@ package fileview
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/policy"
 	"path/filepath"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Reference struct {

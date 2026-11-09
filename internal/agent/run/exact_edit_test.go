@@ -6,11 +6,12 @@ package run
 
 import (
 	"context"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestExactEditDialogue(t *testing.T) {

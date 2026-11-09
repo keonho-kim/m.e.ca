@@ -6,8 +6,9 @@ package run
 
 import (
 	"context"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestNativeEntryRejectsUnknownToolAndExtraArguments(t *testing.T) {

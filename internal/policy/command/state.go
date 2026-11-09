@@ -6,10 +6,11 @@ package command
 
 import (
 	"maps"
-	"mvdan.cc/sh/v3/expand"
-	"mvdan.cc/sh/v3/syntax"
 	"slices"
 	"strconv"
+
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 type state struct {

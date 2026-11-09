@@ -12,6 +12,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/work"
 	"github.com/keonho-kim/meca/internal/commands/server"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func completedResponse(t *testing.T, l *Ledger) server.Response {
@@ -52,8 +53,8 @@ func TestContinuationHasOneDurableChild(t *testing.T) {
 				results <- v.ID
 				return
 			}
-			var public *server.Error
-			if !errors.As(err, &public) || public.Code != "conflict" {
+			var public *faults.Error
+			if !errors.As(err, &public) || public.ErrorCode() != "conflict" {
 				t.Error(err)
 			}
 		})

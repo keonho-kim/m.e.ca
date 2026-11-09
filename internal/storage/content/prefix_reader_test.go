@@ -59,17 +59,17 @@ func TestPrefixCodecsVerifyTheEntireOriginal(t *testing.T) {
 
 func TestPrefixRejectsInvalidTailAndCancellation(t *testing.T) {
 	for _, raw := range []string{`"visible" garbage`, `"visible\q"`, `"visible\u00x0"`, `"unfinished`, "\"raw\ncontrol\""} {
-		if _, _, err := readPrefix(t.Context(), strings.NewReader(raw), len(raw), ID([]byte(raw)), 1); err == nil {
+		if _, _, err := readProjection(t.Context(), strings.NewReader(raw), len(raw), ID([]byte(raw)), 1, false); err == nil {
 			t.Fatal("invalid tail accepted", raw)
 		}
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	raw := []byte(`"` + strings.Repeat("x", 128<<10) + `"`)
 	reader := cancelPrefixReader{Reader: bytes.NewReader(raw), cancel: cancel}
-	if text, _, err := readPrefix(ctx, reader, len(raw), ID(raw), 16); !errors.Is(err, context.Canceled) || text != "" {
+	if text, _, err := readProjection(ctx, reader, len(raw), ID(raw), 16, false); !errors.Is(err, context.Canceled) || text != "" {
 		t.Fatal("partial text escaped cancellation", text, err)
 	}
-	if _, _, err := readPrefix(t.Context(), bytes.NewReader(raw), len(raw)-1, ID(raw), 16); err == nil {
+	if _, _, err := readProjection(t.Context(), bytes.NewReader(raw), len(raw)-1, ID(raw), 16, false); err == nil {
 		t.Fatal("oversized original accepted")
 	}
 }

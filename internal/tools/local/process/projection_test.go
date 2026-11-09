@@ -21,16 +21,35 @@ func TestProjectionBudgetIsSharedAndDoesNotAllocateForSmallOutput(t *testing.T) 
 		t.Fatal("team registries did not share output admission")
 	}
 	budget := a.ProjectionBudget()
-	if allocs := testing.AllocsPerRun(100, func() { release := budget.Acquire(1024); release() }); allocs != 0 {
+	if allocs := testing.AllocsPerRun(100, func() {
+		release, err := budget.Acquire(t.Context(), 1024)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		release()
+	}); allocs != 0 {
 		t.Fatal("small output allocated admission state", allocs)
 	}
 }
 func TestProjectionBudgetSerializesOnlyLargeMaterializations(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var budget ProjectionBudget
-		release := budget.Acquire(32 << 20)
+		release, err := budget.Acquire(t.Context(), 32<<20)
+		if err != nil {
+			t.Fatal(err)
+		}
 		admitted, done := make(chan struct{}), make(chan struct{})
-		go func() { release := budget.Acquire(1 << 20); close(admitted); release(); close(done) }()
+		go func() {
+			release, err := budget.Acquire(t.Context(), 1<<20)
+			close(admitted)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			release()
+			close(done)
+		}()
 		synctest.Wait()
 		select {
 		case <-admitted:

@@ -17,12 +17,15 @@ func TestPermissionSnapshot(t *testing.T) {
 	configuration := config.Defaults()
 	configuration.Permission = policy.PermissionAllMighty
 	home := t.TempDir()
-	tools, err := local.NewExecutor(t.TempDir(), home, home+"/.meca", func(text string) string { return text })
+	tools, err := local.NewExecutor(t.TempDir(), home, home+"/.meca", func(text string) string { return text }, local.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { tools.Close() })
 	request := New(Options{Runtime: Runtime{Config: configuration, Vault: &credentials.Vault{}, Tools: tools}})
+	if request.Runner.Skills != nil {
+		t.Fatal("absent filesystem reader became a non-nil skill interface")
+	}
 	configuration.Permission = policy.PermissionDefault
 	if request.Runner.Settings.Permission != policy.PermissionAllMighty || request.Runner.Settings.Scope != policy.System {
 		t.Fatal("request did not retain the selected execution policy")

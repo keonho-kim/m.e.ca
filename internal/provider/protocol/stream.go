@@ -9,12 +9,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+
 	"io"
 	"net/http"
 	"strings"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func ReadResponse(ctx context.Context, response *http.Response, provider modelconn.ProviderKind, emit func(modelapi.Event) error) error {
@@ -22,7 +25,7 @@ func ReadResponse(ctx context.Context, response *http.Response, provider modelco
 }
 
 func readResponse(ctx context.Context, response *http.Response, provider modelconn.ProviderKind, frameLimit int, emit func(modelapi.Event) error) error {
-	if err := ctx.Err(); err != nil {
+	if err := context.Cause(ctx); err != nil {
 		return err
 	}
 	state := streamState{provider: provider}
@@ -36,7 +39,7 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 			return err
 		}
 		if len(content) > frameLimit {
-			return fmt.Errorf("response exceeds size limit")
+			return faults.Errorf(diagcatalog.ProtocolResponseExceedsSizeLimit)
 		}
 		if err := state.consume(content, true, emit); err != nil {
 			return err
@@ -54,7 +57,7 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 		content = bytes.TrimSpace(content)
 		if bytes.Equal(content, []byte("[DONE]")) {
 			if (modelconn.UsesResponses(provider) || provider == modelconn.Claude || provider == modelconn.Gemini) && !state.Finished {
-				return fmt.Errorf("model Responses stream ended without a completed response")
+				return faults.Errorf(diagcatalog.ProtocolModelResponsesStreamEndedWithoutACompleted)
 			}
 			state.Finished = true
 			return nil
@@ -73,12 +76,12 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 	for {
 		line, readErr := reader.next(ctx)
 		if readErr != nil && readErr != io.EOF {
-			return fmt.Errorf("read model stream: %w", readErr)
+			return faults.Errorf(diagcatalog.ProtocolReadModelStream, readErr)
 		}
 		if readErr == io.EOF && len(line) == 0 {
 			break
 		}
-		if err := ctx.Err(); err != nil {
+		if err := context.Cause(ctx); err != nil {
 			return err
 		}
 		line = bytes.TrimSuffix(bytes.TrimSuffix(line, []byte("\n")), []byte("\r"))
@@ -116,7 +119,7 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 			break
 		}
 	}
-	if err := ctx.Err(); err != nil {
+	if err := context.Cause(ctx); err != nil {
 		return err
 	}
 	if !native && frame.Len() > 0 {

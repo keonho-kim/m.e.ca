@@ -6,9 +6,10 @@ package discovery
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/provider/identity"
 	"slices"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/provider/identity"
 )
 
 func (c *Client) identifyLiteLLM(ctx context.Context, model string) (identity.Report, error) {

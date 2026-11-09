@@ -20,7 +20,7 @@ import (
 
 const maxAdmissions = 100000
 
-func (l *Ledger) reserve(ctx context.Context) error {
+func (l *Ledger) reserve(ctx context.Context) (*capacity.Reservation, error) {
 	return capacity.Reserve(ctx, filepath.Join(l.directory, "capacity"), maxAdmissions, func() (count int64, resultErr error) {
 		file, err := os.Open(l.directory)
 		if err != nil {

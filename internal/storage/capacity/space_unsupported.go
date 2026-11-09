@@ -6,8 +6,11 @@
 // Related: internal/storage/capacity/space_unix.go.
 package capacity
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func CheckFree(string, uint64) error {
-	return fmt.Errorf("filesystem capacity checks require Linux or macOS")
+	return faults.Errorf(diagcatalog.CapacityFilesystemCapacityChecksRequireLinuxOrMacOS)
 }

@@ -6,13 +6,15 @@ package teamrequest
 
 import (
 	"context"
+	"sync"
+
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	agentsession "github.com/keonho-kim/meca/internal/agent/session"
 	"github.com/keonho-kim/meca/internal/agent/team"
+	"github.com/keonho-kim/meca/internal/skills"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	teamtools "github.com/keonho-kim/meca/internal/tools/team"
-	"sync"
 )
 
 type Store interface {
@@ -24,10 +26,14 @@ type Child struct {
 	Session sessionstate.Session
 	Close   func() error
 }
+type LocalOptions struct {
+	Skills *skills.Reader
+	Images chan struct{}
+}
 type Service struct {
 	Repository  team.Repository
 	Open        func(context.Context, string) (Child, error)
-	NewTools    func() (teamtools.Local, error)
+	NewTools    func(LocalOptions) (teamtools.Local, error)
 	LoadPrompts func() (prompt.Templates, error)
 	Record      func(context.Context, runrecord.Event) error
 	mu          sync.Mutex

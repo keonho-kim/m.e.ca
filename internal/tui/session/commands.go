@@ -75,6 +75,8 @@ func (a *app) submitCommand(command commands.Command) {
 		return
 	}
 	switch command.Kind {
+	case commands.Skills:
+		a.openSkills()
 	case commands.Model:
 		a.openModel()
 	case commands.Language:
@@ -97,5 +99,5 @@ func (a *app) submitCommand(command commands.Command) {
 }
 
 func (a *app) canSubmit(kind commands.Kind) bool {
-	return !a.work.state.active() || kind == commands.Team || kind == commands.Directory || kind == commands.Exit || kind == commands.NewSession
+	return !a.work.state.active() || kind == commands.Team || kind == commands.Directory || kind == commands.Skills || kind == commands.Exit || kind == commands.NewSession
 }

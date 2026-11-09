@@ -5,9 +5,10 @@
 package session
 
 import (
+	"path/filepath"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/keonho-kim/meca/internal/tui/browser/controller"
-	"path/filepath"
 )
 
 func (a *app) watchPath(path string) string {

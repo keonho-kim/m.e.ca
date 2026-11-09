@@ -5,11 +5,12 @@
 package transcript
 
 import (
+	"strings"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/locale"
-	"strings"
-	"testing"
 )
 
 func TestAppliedFileContentsAreVisible(t *testing.T) {

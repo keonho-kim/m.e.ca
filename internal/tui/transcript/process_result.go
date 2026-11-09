@@ -5,11 +5,12 @@
 package transcript
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"encoding/json"
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (f Formatter) processOutput(event runrecord.Event, fields map[string]json.RawMessage) toolOutput {
@@ -52,11 +53,11 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 		return "Command waiting"
 	case "running":
 		return "Command running"
-	case "interrupted":
+	case diagcatalog.Interrupted:
 		return "Command interrupted"
-	case "timeout":
+	case diagcatalog.Timeout:
 		return "Command timed out"
-	case "execution_failed":
+	case diagcatalog.ExecutionFailed:
 		return "Command failed"
 	case "", "exited":
 		var code *int
@@ -78,7 +79,7 @@ func (f Formatter) processDiagnostic(event runrecord.Event) string {
 	}
 	failure := event.Operation.Failure
 	switch failure.Code {
-	case tool.ProcessFailed, tool.Interrupted, tool.Timeout:
+	case diagcatalog.ProcessFailed, diagcatalog.Interrupted, diagcatalog.Timeout:
 		// The outcome and streams already describe these process failures.
 		return ""
 	default:

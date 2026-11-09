@@ -9,10 +9,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"net/url"
 	"os"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 type conversationResult struct {
@@ -57,18 +60,18 @@ func (r *conversationReader) Read(ctx context.Context, file conversationFile) (c
 		return value, err
 	}
 	if !info.Mode().IsRegular() {
-		return value, fmt.Errorf("session database must be a regular file: %s", file.path)
+		return value, faults.Errorf(diagcatalog.SqliteSessionDatabaseMustBeARegularFile, file.path)
 	}
 	endpoint := url.URL{Scheme: "file", Path: file.path}
 	query := endpoint.Query()
 	query.Set("mode", "ro")
 	endpoint.RawQuery = query.Encode()
 	if _, err := r.connection.ExecContext(ctx, "ATTACH DATABASE ? AS candidate", endpoint.String()); err != nil {
-		return value, fmt.Errorf("read %s: %w", file.path, err)
+		return value, faults.Errorf(diagcatalog.SqliteRead, file.path, err)
 	}
 	value, err = r.readAttached(ctx, file.id, file.group)
 	if err != nil {
-		return value, fmt.Errorf("read %s: %w", file.path, err)
+		return value, faults.Errorf(diagcatalog.SqliteRead, file.path, err)
 	}
 	// Detach releases the file even after cancellation. SQLite's busy timeout
 	// bounds cleanup; the worker closes its connection on any detach failure.
@@ -85,7 +88,7 @@ func (r *conversationReader) readAttached(ctx context.Context, id, group string)
 	}
 	if version != schemaVersion {
 		if !sessionstate.ValidID(id) {
-			return conversationResult{}, fmt.Errorf("invalid stored conversation identity")
+			return conversationResult{}, faults.Errorf(diagcatalog.SqliteInvalidStoredConversationIdentity)
 		}
 		at := time.Time{}
 		return conversationResult{conversation: sessionstate.Conversation{Session: sessionstate.Session{ID: id, DisplayRoot: group}, Summary: "Unavailable saved conversation", Updated: at.Format(time.RFC3339Nano), Unavailable: fmt.Sprintf("unsupported saved schema %d; required %d; original preserved", version, schemaVersion)}, updated: at}, nil
@@ -100,7 +103,7 @@ func (r *conversationReader) readAttached(ctx context.Context, id, group string)
 		return conversationResult{}, err
 	}
 	if key != group {
-		return conversationResult{}, fmt.Errorf("session project does not match directory")
+		return conversationResult{}, faults.Errorf(diagcatalog.SqliteSessionProjectDoesNotMatchDirectory)
 	}
 	updated, err := time.Parse(time.RFC3339Nano, c.Updated)
 	return conversationResult{c, updated}, err

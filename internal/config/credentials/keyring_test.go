@@ -5,11 +5,12 @@
 package credentials
 
 import (
-	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
 )
 
 func TestRedactionAndStreaming(t *testing.T) {

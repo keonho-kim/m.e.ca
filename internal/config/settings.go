@@ -5,11 +5,12 @@
 package config
 
 import (
-	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/run"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
@@ -68,7 +69,7 @@ func check(configuration Config) error {
 	}
 	if configuration.Model != nil {
 		if _, err := configuration.Model.Selection(); err != nil {
-			return fmt.Errorf("saved model: %w", err)
+			return faults.Errorf(diagcatalog.ConfigSavedModel, err)
 		}
 	}
 	if err := configuration.InferenceSettings().Check(); err != nil {
@@ -81,10 +82,10 @@ func check(configuration Config) error {
 		return err
 	}
 	if configuration.UI.ColumnWidth < 8 || configuration.UI.ColumnWidth > 80 {
-		return fmt.Errorf("column_width must be between 8 and 80")
+		return faults.Errorf(diagcatalog.ConfigColumnWidthMustBeBetweenAnd)
 	}
 	if configuration.UI.InputMaxLines < 1 || configuration.UI.InputMaxLines > 5 {
-		return fmt.Errorf("input_max_lines must be between 1 and 5")
+		return faults.Errorf(diagcatalog.ConfigInputMaxLinesMustBeBetweenAnd)
 	}
 	return nil
 }

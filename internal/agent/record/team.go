@@ -5,8 +5,10 @@
 package record
 
 import (
-	"fmt"
 	"slices"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type TeamNote struct {
@@ -45,13 +47,13 @@ func (n *TeamNote) Check(kind string) error {
 		return nil
 	}
 	if kind != "team_discussion" && kind != "team_work" && kind != "team_progress" && kind != "team_message" {
-		return fmt.Errorf("collaboration metadata requires a public peer event")
+		return faults.Errorf(diagcatalog.RecordCollaborationMetadataRequiresAPublicPeerEvent)
 	}
 	if n.ReplyTo < 0 || n.BasedOn < 0 || (n.ReplyTo == 0) != (n.ReplyAuthor == "") {
-		return fmt.Errorf("invalid public reply reference")
+		return faults.Errorf(diagcatalog.RecordInvalidPublicReplyReference)
 	}
 	if n.Work != nil && (kind != "team_work" || n.Work.Revision == 0) {
-		return fmt.Errorf("work metadata requires a versioned self-declaration")
+		return faults.Errorf(diagcatalog.RecordWorkMetadataRequiresAVersionedSelfDeclaration)
 	}
 	return nil
 }

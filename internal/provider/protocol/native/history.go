@@ -6,8 +6,10 @@ package native
 
 import (
 	"encoding/json"
-	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func History(raw json.RawMessage) ([]toolapi.Call, error) {
@@ -19,10 +21,10 @@ func History(raw json.RawMessage) ([]toolapi.Call, error) {
 		Function struct{ Name, Arguments string }
 	}
 	if err := json.Unmarshal(raw, &values); err != nil {
-		return nil, fmt.Errorf("invalid function call history")
+		return nil, faults.Errorf(diagcatalog.NativeInvalidFunctionCallHistory)
 	}
 	if len(values) > toolapi.MaxCalls {
-		return nil, fmt.Errorf("too many function calls")
+		return nil, faults.Errorf(diagcatalog.NativeTooManyFunctionCalls)
 	}
 	calls := make([]toolapi.Call, len(values))
 	for i, value := range values {

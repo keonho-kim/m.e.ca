@@ -51,7 +51,7 @@ func TestResponseOutputPreservesBoundsAndCommittedOrder(t *testing.T) {
 	if err := s.AppendMessage(ctx, id, model.Message{Role: "assistant", Content: "later"}); err != nil {
 		t.Fatal(err)
 	}
-	text, err := s.ResponseOutput(ctx, id, after, through, 0)
+	text, err := s.ResponseOutput(ctx, id, after, through, 0, nil)
 	if err != nil || text != strings.Join(expected, "\n\n") {
 		t.Fatal("output boundaries or ordering changed", err, text)
 	}
@@ -98,7 +98,7 @@ func BenchmarkResponseOutput(b *testing.B) {
 			}
 			b.ReportAllocs()
 			for b.Loop() {
-				text, err := s.ResponseOutput(b.Context(), id, after, through, 0)
+				text, err := s.ResponseOutput(b.Context(), id, after, through, 0, nil)
 				if err != nil || text != "answer" {
 					b.Fatal(text, err)
 				}

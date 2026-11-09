@@ -6,12 +6,14 @@ package context
 
 import (
 	"bytes"
-	"fmt"
+
 	"slices"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/redaction"
 )
 
@@ -24,7 +26,9 @@ type projectedMessage struct {
 // Messages and their call/state bytes are immutable after entering execution
 // history. This cache retains references, not another copy of large bodies.
 type Projection struct {
+	client  *Projection
 	entries []projectedMessage
+	skills  []projectedSkill
 	version int
 	model   string
 	system  instructionSnapshot
@@ -48,7 +52,7 @@ func (p *Projection) build(input Input) (modelapi.Request, error) {
 		}
 		*p = Projection{}
 	}
-	return modelapi.Request{}, fmt.Errorf("protected credentials changed while assembling context; rebuild the request")
+	return modelapi.Request{}, faults.Errorf(diagcatalog.ContextProtectedCredentialsChangedWhileAssemblingContextRebuild)
 }
 
 func (p *Projection) appendHistory(input Input, messages []modelapi.Message) ([]modelapi.Message, int, error) {

@@ -107,7 +107,7 @@ func TestStreamingResponseBeforeServerCompletes(t *testing.T) {
 	if !summary.Centered || !summary.Thinking || !strings.Contains(summary.Text, "입력 123 | 출력 6") {
 		t.Fatalf("final request summary missing: %+v", summary)
 	}
-	messages, err := a.opts.Store.ContextMessages(ctx, a.opts.Session.ID, 0, 16*1024*1024, true)
+	messages, err := a.opts.Store.ContextMessages(ctx, a.opts.Session.ID, 0, 16*1024*1024, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

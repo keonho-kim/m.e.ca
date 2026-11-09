@@ -5,11 +5,13 @@
 package run
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (s *execution) drive(ctx context.Context, approve Approver) error {
@@ -82,8 +84,8 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			}
 		} else if len(reply.Calls) > 0 {
 			if err = s.checkInstructions(ctx, instructionRevision); err != nil {
-				var failure *tool.Failure
-				if errors.As(err, &failure) && failure.Code == tool.InstructionChanged {
+				var failure *faults.Failure
+				if errors.As(err, &failure) && failure.Code == diagcatalog.InstructionChanged {
 					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request."); err != nil {
 						return err
 					}

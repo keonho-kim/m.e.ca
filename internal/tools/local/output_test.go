@@ -7,11 +7,12 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 func TestCommandOutputArchiveAndCleanup(t *testing.T) {
@@ -49,7 +50,7 @@ func TestCommandCaptureIsSanitizedAndReReadable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result.Capture, err = e.CommandCapture(result.Process.CommandID)
+	result.Capture, err = e.CommandCapture(t.Context(), result.Process.CommandID)
 	if err != nil {
 		t.Fatal(err)
 	}

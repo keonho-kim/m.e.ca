@@ -6,12 +6,15 @@ package prompts
 
 import (
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
+
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/keonho-kim/meca/internal/agent/prompt"
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Bootstrap(root *os.Root) error {
@@ -42,7 +45,7 @@ func prepareDirectory(root *os.Root) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("prompts must be a real directory")
+		return faults.Errorf(diagcatalog.PromptsPromptsMustBeARealDirectory)
 	}
 	directory, err := root.Open("prompts")
 	if err != nil {
@@ -54,7 +57,7 @@ func Load(directory string) (prompt.Templates, error) { return LoadProfile(direc
 
 func LoadProfile(directory string, profile prompt.Profile) (templates prompt.Templates, err error) {
 	if !profile.Valid() {
-		return templates, fmt.Errorf("invalid prompt profile")
+		return templates, faults.Errorf(diagcatalog.PromptsInvalidPromptProfile)
 	}
 	err = load(directory, profile, map[string]*string{
 		"system.md": &templates.System, "development.md": &templates.Development, "compaction.md": &templates.Compaction,
@@ -75,7 +78,7 @@ func load(directory string, profile prompt.Profile, fields map[string]*string) (
 			return "", err
 		}
 		if !info.Mode().IsRegular() || info.Size() > prompt.MaxTemplateBytes {
-			return "", fmt.Errorf("%s must be a regular bounded prompt file", path)
+			return "", faults.Errorf(diagcatalog.PromptsMustBeARegularBoundedPromptFile, path)
 		}
 		file, err := root.Open(path)
 		if err != nil {
@@ -109,7 +112,7 @@ func prepareProfile(root *os.Root, profile prompt.Profile) error {
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("%s must be a real directory", path)
+		return faults.Errorf(diagcatalog.BootstrapMustBeARealDirectory, path)
 	}
 	directory, err := root.Open(path)
 	if err != nil {

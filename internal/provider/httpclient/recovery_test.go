@@ -8,12 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func recoveryRequest() modelapi.Request {

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -67,9 +69,9 @@ func commandLabel(run toolapi.CommandRun) string {
 		return "Command waiting"
 	case "finalizing":
 		return "Finalizing command output"
-	case "interrupted":
+	case diagcatalog.Interrupted:
 		return "Command interrupted"
-	case "timeout":
+	case diagcatalog.Timeout:
 		return "Command timed out"
 	case "exited":
 		if run.ExitCode != nil && *run.ExitCode == 0 {

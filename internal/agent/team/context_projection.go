@@ -5,9 +5,10 @@
 package team
 
 import (
+	"strings"
+
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"strings"
 )
 
 func (v *workProjection) render(covered uint16) string {

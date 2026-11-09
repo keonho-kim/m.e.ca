@@ -7,9 +7,10 @@ package transcript
 import (
 	"encoding/json"
 	"fmt"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func BenchmarkDisplayArguments(b *testing.B) {

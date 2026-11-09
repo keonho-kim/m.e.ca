@@ -11,8 +11,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"io"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func ID(raw []byte) string {
@@ -22,7 +25,7 @@ func ID(raw []byte) string {
 
 func (c *Codec) Restore(codec, size int, id string, body []byte) (json.RawMessage, error) {
 	if size < 1 || size > MaxBytes {
-		return nil, fmt.Errorf("invalid stored payload length")
+		return nil, faults.Errorf(diagcatalog.ContentInvalidStoredPayloadLength)
 	}
 	switch codec {
 	case 0:
@@ -43,10 +46,10 @@ func (c *Codec) Restore(codec, size int, id string, body []byte) (json.RawMessag
 		}
 		body = decoded
 	default:
-		return nil, fmt.Errorf("unsupported payload codec %d", codec)
+		return nil, faults.Errorf(diagcatalog.ContentUnsupportedPayloadCodec, codec)
 	}
 	if len(body) != size || ID(body) != id || !json.Valid(body) {
-		return nil, fmt.Errorf("stored payload integrity check failed")
+		return nil, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
 	}
 	return body, nil
 }

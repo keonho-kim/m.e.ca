@@ -5,12 +5,13 @@
 package filesystem
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Boundary struct {
@@ -38,7 +39,7 @@ func New(project, home, private string) (*Boundary, error) {
 		return nil, err
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("project root must be a directory")
+		return nil, faults.Errorf(diagcatalog.FilesystemProjectRootMustBeADirectory)
 	}
 	b := &Boundary{project: project, home: home, projectInfo: info, protected: []string{private}}
 	for _, name := range []string{statefs.DirectoryName, ".v", ".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".colima", ".orbstack", ".config/gcloud", ".config/gh", ".config/op", ".netrc", "Library/Keychains"} {
@@ -66,7 +67,7 @@ func (b *Boundary) Check() error {
 		return err
 	}
 	if path != b.project || !os.SameFile(info, b.projectInfo) {
-		return fmt.Errorf("project root changed: %s", b.project)
+		return faults.Errorf(diagcatalog.FilesystemProjectRootChanged, b.project)
 	}
 	return nil
 }

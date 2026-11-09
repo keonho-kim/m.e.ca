@@ -5,7 +5,10 @@
 
 package policy
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 type Scope string
 
@@ -24,7 +27,7 @@ func ParseScope(value string) (Scope, error) {
 	case Directory, System:
 		return Scope(value), nil
 	default:
-		return "", fmt.Errorf("invalid Scope: %q", value)
+		return "", faults.Errorf(diagcatalog.PolicyInvalidScope, value)
 	}
 }
 

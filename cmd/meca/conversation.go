@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"errors"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/session/recovery"
@@ -30,13 +31,12 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 		return tuisession.Exit, err
 	}
 	vault := &credentials.Vault{State: state}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact)
+	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 	if err != nil {
 		return tuisession.Exit, err
 	}
-	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
+	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Skills: executor.Skills(), Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
 		return config.Update(ctx, state, apply)
 	}})
 }

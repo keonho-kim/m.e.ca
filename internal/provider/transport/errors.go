@@ -6,12 +6,13 @@ package transport
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
@@ -24,15 +25,15 @@ type responseError struct {
 }
 
 func (e *responseError) Error() string {
-	label := "provider generation error"
+	label := diagcatalog.Text(diagcatalog.ProviderGenerationFailure)
 	if e.status != 0 {
-		label = fmt.Sprintf("HTTP %d (%s)", e.status, http.StatusText(e.status))
+		label = diagcatalog.Text(diagcatalog.ProviderHTTPFailure, e.status, http.StatusText(e.status))
 	}
 	if e.code != "" {
-		label += " [" + e.code + "]"
+		label = diagcatalog.Text(diagcatalog.ProviderFailureCode, label, e.code)
 	}
 	if e.message != "" {
-		label += ": " + e.message
+		label = diagcatalog.Text(diagcatalog.ProviderFailureDetail, label, e.message)
 	}
 	return label
 }
@@ -79,6 +80,16 @@ func ParseError(status int, body []byte, after string) error {
 	if e.code == "" {
 		_ = json.Unmarshal(envelope.Code, &e.code)
 	}
+	if len(e.message) > 8<<10 {
+		e.message = diagcatalog.Text(diagcatalog.ProviderDetailOmitted)
+	}
+	if len(e.code) > 128 {
+		e.code = ""
+	}
+	if len(e.param) > 256 {
+		e.param = ""
+	}
+
 	if e.status == 0 {
 		switch e.code {
 		case "invalid_request_error", "invalid_api_key", "unsupported_parameter":
@@ -110,17 +121,20 @@ func (c *Client) FailureReason(err error) string {
 	if c.key != "" {
 		text = strings.ReplaceAll(text, c.key, "[redacted]")
 	}
-	text = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
-			return ' '
+	var result strings.Builder
+	count := 0
+	for _, r := range text {
+		if count == 500 {
+			result.WriteRune('…')
+			break
 		}
-		return r
-	}, text)
-	runes := []rune(text)
-	if len(runes) > 500 {
-		text = string(runes[:500]) + "…"
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			r = ' '
+		}
+		result.WriteRune(r)
+		count++
 	}
-	return text
+	return result.String()
 }
 
 func (c *Client) Redact(text string) string {

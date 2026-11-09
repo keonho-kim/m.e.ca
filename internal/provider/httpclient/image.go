@@ -7,14 +7,17 @@ package httpclient
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// ProbeImage sends only a minimal self-contained connection test.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// ProbeImage sends only a minimal self-contained connection test.
 func (c *Client) ProbeImage(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 	if len(request.Messages) != 1 || request.Messages[0].Role != "user" || len(request.Messages[0].Images) != 1 || len(request.Tools) != 0 || request.MaxOutput < 1 || request.MaxOutput > 32 || len(request.Messages[0].Images[0].Data) > 4096 {
-		return fmt.Errorf("invalid image-input probe")
+		return faults.Errorf(diagcatalog.HttpclientInvalidImageInputProbe)
 	}
 	return c.generate(ctx, request, emit, true, nil)
 }
@@ -34,11 +37,11 @@ func imageMessages(messages []modelapi.Message) (bool, error) {
 		}
 		for _, image := range message.Images {
 			if len(image.Data) > modelapi.MaxResponseBytes {
-				return true, fmt.Errorf("model context exceeds request size limit")
+				return true, faults.Errorf(diagcatalog.HttpclientModelContextExceedsRequestSizeLimit)
 			}
 			encoded += base64.StdEncoding.EncodedLen(len(image.Data))
 			if encoded > modelapi.MaxResponseBytes {
-				return true, fmt.Errorf("model context exceeds request size limit")
+				return true, faults.Errorf(diagcatalog.HttpclientModelContextExceedsRequestSizeLimit)
 			}
 		}
 	}

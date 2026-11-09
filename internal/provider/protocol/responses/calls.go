@@ -5,9 +5,10 @@
 package responses
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
@@ -29,7 +30,7 @@ func (*skippedText) UnmarshalJSON(raw []byte) error {
 	if len(raw) > 0 && (raw[0] == '"' || string(raw) == "null") {
 		return nil
 	}
-	return fmt.Errorf("responses output text must be a string")
+	return faults.Errorf(diagcatalog.ResponsesResponsesOutputTextMustBeAString)
 }
 
 type outputItem struct {
@@ -52,17 +53,17 @@ func (s *Decoder) call(state *native.State, index int, item functionItem, final 
 	if previous, ok := s.items[item.ID]; ok && item.ID != "" {
 		index = previous
 	} else if item.ID != "" && len(s.items) >= toolapi.MaxCalls {
-		return &modelapi.ToolCallError{Detail: "too many Responses function identities"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesTooManyResponsesFunctionIdentities)}
 	}
 	draft, err := state.Calls.At(index)
 	if err != nil {
 		return err
 	}
 	if item.CallID == "" || len(item.CallID) > 128 || item.Name == "" || len(item.Name) > 128 || len(item.ID) > 256 {
-		return &modelapi.ToolCallError{Detail: "incomplete Responses function identity"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesIncompleteResponsesFunctionIdentity)}
 	}
 	if draft.ID != "" && (draft.ID != item.CallID || draft.Name != item.Name) {
-		return &modelapi.ToolCallError{Detail: "Responses function identity changed"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesResponsesFunctionIdentityChanged)}
 	}
 	draft.ID, draft.Name = item.CallID, item.Name
 	if item.ID != "" {

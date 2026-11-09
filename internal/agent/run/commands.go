@@ -30,7 +30,7 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 	}
 	for _, finished := range completed {
 		result := finished.Result
-		result.Capture, err = commands.CommandCapture(finished.ID)
+		result.Capture, err = commands.CommandCapture(ctx, finished.ID)
 		if err != nil {
 			return false, errors.Join(errRuntimeRecord, err)
 		}
@@ -50,8 +50,10 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 			return false, err
 		}
 		events := []runrecord.Event{event, checkpoint}
-		content := "Observed command completion:\n" + string(result.Content)
-		if err := s.save(ctx, modelapi.Message{Role: "system", Content: content}, events...); err != nil {
+		// Keep the original JSON identical to the outcome payload. Context
+		// projection supplies the observation label without duplicating storage.
+		message := modelapi.Message{Role: "system", Content: string(result.Content), ToolCallID: call.ID, ToolName: call.Name}
+		if err := s.save(ctx, message, events...); err != nil {
 			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
 				return false, ctx.Err()
 			}

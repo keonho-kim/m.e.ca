@@ -5,9 +5,10 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -30,7 +31,7 @@ func (m SavedModel) Selection() (connection.Selection, error) {
 		return connection.Selection{}, err
 	}
 	if strings.TrimSpace(m.Name) == "" || len(m.Name) > 512 || strings.ContainsAny(m.Name, "\r\n\x00") || len(m.CredentialRef) > 128 || strings.ContainsAny(m.CredentialRef, "\r\n\x00") {
-		return connection.Selection{}, fmt.Errorf("invalid saved model name or credential reference")
+		return connection.Selection{}, faults.Errorf(diagcatalog.ConfigInvalidSavedModelNameOrCredentialReference)
 	}
 	conn.CredentialRef = m.CredentialRef
 	if m.ReasoningEffort != nil {
@@ -38,7 +39,7 @@ func (m SavedModel) Selection() (connection.Selection, error) {
 			return connection.Selection{}, err
 		}
 		if *m.ReasoningEffort != "" && m.Thinking == nil {
-			return connection.Selection{}, fmt.Errorf("saved effort requires a Thinking setting")
+			return connection.Selection{}, faults.Errorf(diagcatalog.ConfigSavedEffortRequiresAThinkingSetting)
 		}
 	}
 	return connection.Selection{Connection: conn, Model: m.Name, Thinking: m.Thinking, ReasoningEffort: m.ReasoningEffort}, nil

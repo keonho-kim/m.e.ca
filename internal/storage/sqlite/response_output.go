@@ -8,9 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -23,15 +25,15 @@ func (s *Store) OutputPosition(ctx context.Context, session string) (int64, erro
 	return position, err
 }
 
-func (s *Store) ResponseOutput(ctx context.Context, session string, after, through int64, maxBytes int) (string, error) {
+func (s *Store) ResponseOutput(ctx context.Context, session string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
 	if err := s.checkSession(session); err != nil {
 		return "", err
 	}
 	if after < 0 || through < after {
-		return "", fmt.Errorf("invalid output boundaries")
+		return "", faults.Errorf(diagcatalog.SqliteInvalidOutputBoundaries)
 	}
 	var text strings.Builder
-	budget := newReadBudget(maxBytes)
+	budget := newReadBudget(maxBytes, reserve)
 	for {
 		page, err := s.outputPage(ctx, session, after, through, budget)
 		if err != nil {
@@ -79,11 +81,11 @@ func (s *Store) outputPage(ctx context.Context, session string, after, through i
 		maxBytes, after, after, through, after, through, count)
 }
 
-func (s *Sessions) ResponseOutput(ctx context.Context, project, id string, after, through int64, maxBytes int) (text string, resultErr error) {
+func (s *Sessions) ResponseOutput(ctx context.Context, project, id string, after, through int64, maxBytes int, reserve func(int) error) (text string, resultErr error) {
 	store, err := s.open(ctx, project, id, true)
 	if err != nil {
 		return "", err
 	}
 	defer func() { resultErr = errors.Join(resultErr, store.Close()) }()
-	return store.ResponseOutput(ctx, id, after, through, maxBytes)
+	return store.ResponseOutput(ctx, id, after, through, maxBytes, reserve)
 }

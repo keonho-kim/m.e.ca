@@ -5,9 +5,10 @@
 package model
 
 import (
-	"fmt"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/tui/input"
@@ -90,7 +91,7 @@ func (f *Form) Editor() *input.Editor {
 
 func (f *Form) Connection() (connection.Connection, error) {
 	if strings.TrimSpace(f.Endpoint.String()) == "" {
-		return connection.Connection{}, fmt.Errorf("endpoint cannot be empty")
+		return connection.Connection{}, faults.Errorf(diagcatalog.ModelEndpointCannotBeEmpty)
 	}
 	c, err := connection.New(connection.Providers()[f.Provider].Kind, f.Endpoint.String())
 	if err == nil && c.ID == f.credentialOwner && !f.KeyChanged {

@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-func (c *Codec) prefixZstd(ctx context.Context, body []byte, size int, id string, limit int) (text string, clipped bool, err error) {
+func (c *Codec) prefixZstd(ctx context.Context, body []byte, size int, id string, limit int, raw bool) (text string, clipped bool, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	decoder, err := c.decoderLocked()
@@ -27,5 +27,5 @@ func (c *Codec) prefixZstd(ctx context.Context, body []byte, size int, id string
 	if err := decoder.ResetWithOptions(bytes.NewReader(body), zstd.WithDecoderMaxMemory(payloadWindowBytes), zstd.WithDecoderMaxWindow(payloadWindowBytes)); err != nil {
 		return "", false, err
 	}
-	return readPrefix(ctx, decoder, size, id, limit)
+	return readProjection(ctx, decoder, size, id, limit, raw)
 }

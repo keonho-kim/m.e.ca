@@ -31,7 +31,7 @@ func cacheFixture(t testing.TB, value *record.Event) (*Cache, Request, *atomic.I
 	})
 	vault := &credentials.Vault{}
 	loads := &atomic.Int64{}
-	r := Request{Session: "selected-session", Source: server.DetailSource{Tool: record.EventReference{Sequence: 1}}, Version: vault.RedactionVersion, Redact: vault.Redact, Load: func() (server.DetailOriginal, error) {
+	r := Request{Session: "selected-session", Source: server.DetailSource{Tool: record.EventReference{Sequence: 1}}, Version: vault.RedactionVersion, NewMask: vault.NewChunkMask, Load: func(func(int) error) (server.DetailOriginal, error) {
 		loads.Add(1)
 		return server.DetailOriginal{Tool: value}, nil
 	}}
@@ -138,7 +138,11 @@ func TestCacheWaitingReaderCanCancel(t *testing.T) {
 	c, request, _, _ := cacheFixture(t, &record.Event{Text: "visible"})
 	entered, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	load := request.Load
-	request.Load = func() (server.DetailOriginal, error) { close(entered); <-release; return load() }
+	request.Load = func(reserve func(int) error) (server.DetailOriginal, error) {
+		close(entered)
+		<-release
+		return load(reserve)
+	}
 	go func() { _, _, err := c.Read(t.Context(), request, 0, 1024); done <- err }()
 	<-entered
 	ctx, cancel := context.WithCancel(t.Context())

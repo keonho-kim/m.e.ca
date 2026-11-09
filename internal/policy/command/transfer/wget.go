@@ -4,7 +4,11 @@
 // Related: internal/policy/command/transfer/inspect.go, internal/policy/command/transfer/curl.go.
 package transfer
 
-import "strings"
+import (
+	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+)
 
 func inspectWget(args []Argument) Inspection {
 	var h httpCall
@@ -79,7 +83,7 @@ func wgetLongOption(name string) string {
 		return "header"
 	case "config", "execute", "input-file":
 		return "opaque"
-	case "output-document", "output-file", "append-output", "directory-prefix", "timeout", "connect-timeout", "read-timeout", "dns-timeout", "tries", "wait", "waitretry", "user-agent", "referer", "limit-rate", "max-redirect", "ca-certificate", "certificate", "private-key", "save-cookies", "accept", "reject", "level":
+	case "output-document", "output-file", "append-output", "directory-prefix", diagcatalog.Timeout, "connect-timeout", "read-timeout", "dns-timeout", "tries", "wait", "waitretry", "user-agent", "referer", "limit-rate", "max-redirect", "ca-certificate", "certificate", "private-key", "save-cookies", "accept", "reject", "level":
 		return "value"
 	case "quiet", "verbose", "no-verbose", "continue", "no-check-certificate", "spider", "server-response", "content-disposition", "trust-server-names", "timestamping", "no-clobber", "recursive", "page-requisites", "convert-links", "adjust-extension", "no-parent", "no-proxy", "help", "version":
 		return "flag"

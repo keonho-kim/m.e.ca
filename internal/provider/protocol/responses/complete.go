@@ -6,8 +6,10 @@ package responses
 
 import (
 	"encoding/json"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -30,7 +32,7 @@ func (s *Decoder) finish(response response, kind string, single bool, state *nat
 	if response.Usage != nil {
 		input, output := response.Usage.Input, response.Usage.Output
 		if input != nil && (*input < 0 || *input > modelapi.MaxCallTokens) || output != nil && (*output < 0 || *output > modelapi.MaxCallTokens) {
-			return fmt.Errorf("invalid provider token usage")
+			return faults.Errorf(diagcatalog.ProtocolInvalidProviderTokenUsage)
 		}
 		if input != nil && output != nil {
 			state.Usage = &modelapi.TokenUsage{Input: *input, Output: *output}
@@ -51,9 +53,9 @@ func (s *Decoder) finish(response response, kind string, single bool, state *nat
 			return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: detail}, emit)
 		}
 		if cause != nil {
-			return state.EmitFailedUsage(fmt.Errorf("responses: %w", cause), emit)
+			return state.EmitFailedUsage(faults.Errorf(diagcatalog.ResponsesResponses, cause), emit)
 		}
-		return state.EmitFailedUsage(&transport.PermanentError{Cause: fmt.Errorf("responses: %s", detail)}, emit)
+		return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.ResponsesResponses2, detail)}, emit)
 	}
 	if err := s.finishOutput(response.Output, single, state, emit); err != nil {
 		return state.EmitFailedUsage(err, emit)
@@ -91,7 +93,7 @@ func (s *Decoder) finishOutput(raw json.RawMessage, single bool, state *native.S
 			continue
 		}
 		if item.Type != "message" && item.Type != "reasoning" {
-			return fmt.Errorf("unsupported Responses output type")
+			return faults.Errorf(diagcatalog.ResponsesUnsupportedResponsesOutputType)
 		}
 		if !single {
 			continue

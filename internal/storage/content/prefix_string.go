@@ -4,7 +4,10 @@
 // Related: internal/storage/content/prefix_reader.go, internal/storage/content/text_prefix.go.
 package content
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 type prefixString struct {
 	state, digits             byte
@@ -46,7 +49,7 @@ func (p *prefixString) write(body []byte) error {
 				continue
 			}
 			if value != '"' {
-				return fmt.Errorf("stored text must be a JSON string")
+				return faults.Errorf(diagcatalog.ContentStoredTextMustBeAJSONString)
 			}
 			p.state = 1
 		case 1: // Quoted string contents.
@@ -56,7 +59,7 @@ func (p *prefixString) write(body []byte) error {
 			case value == '\\':
 				p.state = 2
 			case value < 0x20:
-				return fmt.Errorf("invalid stored text control character")
+				return faults.Errorf(diagcatalog.ContentInvalidStoredTextControlCharacter)
 			}
 		case 2: // A JSON escape.
 			switch value {
@@ -65,11 +68,11 @@ func (p *prefixString) write(body []byte) error {
 			case 'u':
 				p.state, p.digits = 3, 4
 			default:
-				return fmt.Errorf("invalid stored text escape")
+				return faults.Errorf(diagcatalog.ContentInvalidStoredTextEscape)
 			}
 		case 3: // Four hexadecimal Unicode escape digits.
 			if !(value >= '0' && value <= '9' || value >= 'a' && value <= 'f' || value >= 'A' && value <= 'F') {
-				return fmt.Errorf("invalid stored text Unicode escape")
+				return faults.Errorf(diagcatalog.ContentInvalidStoredTextUnicodeEscape)
 			}
 			p.digits--
 			if p.digits == 0 {
@@ -77,7 +80,7 @@ func (p *prefixString) write(body []byte) error {
 			}
 		case 4: // Nothing except whitespace may follow the closing quote.
 			if !jsonSpace(value) {
-				return fmt.Errorf("invalid stored text suffix")
+				return faults.Errorf(diagcatalog.ContentInvalidStoredTextSuffix)
 			}
 			continue
 		}
@@ -96,7 +99,7 @@ func (p *prefixString) write(body []byte) error {
 
 func (p *prefixString) finish(limit int) (string, bool, error) {
 	if p.state != 4 {
-		return "", false, fmt.Errorf("incomplete stored text")
+		return "", false, faults.Errorf(diagcatalog.ContentIncompleteStoredText)
 	}
 	// Drop only an unfinished escape at the retention boundary. At least
 	// limit+1 decoded bytes fit before that boundary whenever text was clipped.

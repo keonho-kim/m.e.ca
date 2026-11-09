@@ -1,27 +1,29 @@
 // Purpose: Validate one request and assemble its owned runtime resources before conversation work.
 // Pattern: Execution composition boundary.
 // Usage: Runner.Run receives the prepared execution and releases its scoped generator last.
-// Related: internal/agent/run/run.go, internal/agent/run/runner.go, internal/agent/run/conversation.go.
+// Related: internal/agent/run/run.go, internal/agent/run/emitter.go, internal/agent/run/conversation.go.
 package run
 
 import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/processmemory"
 )
 
 func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Event) error, started time.Time) (*execution, func(), error) {
 	var err error
 	release := func() {}
 	if r.Generator == nil || r.Tools == nil || r.Journal == nil || r.Redact == nil || emit == nil {
-		return nil, nil, fmt.Errorf("execution dependencies are required")
+		return nil, nil, faults.Errorf(diagcatalog.RunExecutionDependenciesAreRequired)
 	}
 	if r.PreviousRun != nil {
 		if err := r.PreviousRun.Check(); err != nil {
@@ -52,32 +54,10 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 		return nil, nil, err
 	}
 	if len(input) > 64*1024*1024 {
-		return nil, nil, fmt.Errorf("objective exceeds 64 MiB")
+		return nil, nil, faults.Errorf(diagcatalog.RunObjectiveExceedsMiB)
 	}
-	originalEmit := emit
-	emit = func(event runrecord.Event) error {
-		if references, ok := r.Journal.(interface {
-			LatestEventReference(context.Context) (*runrecord.EventReference, error)
-		}); ok {
-			switch event.Kind {
-			case "tool_succeeded", "tool_failed", "tool_interrupted", "command_finished", "denied":
-				flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-				reference, err := references.LatestEventReference(flush)
-				cancel()
-				if err != nil {
-					return errors.Join(errRuntimeRecord, err)
-				}
-				event.Reference = reference
-			}
-		}
-		if err := originalEmit(event); err != nil {
-			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
-				return ctx.Err()
-			}
-			return errors.Join(errRuntimeRecord, err)
-		}
-		return nil
-	}
+	id := "run_" + rand.Text()
+	emit = newRunEmitter(ctx, r.Journal, r.Session, id, emit)
 	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
 		r.ImageInput = r.ImageInput && support.ImageInputSupported()
 	}
@@ -89,6 +69,13 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 		r.Generator = generator
 	}
 	definitions := imageDefinitions(r.Tools.Definitions(), r.ImageInput)
+	setSkillImageInput(r.Tools, r.ImageInput)
+	for _, definition := range definitions {
+		if definition.Name == "list_skills" {
+			system += prompt.SkillTools
+			break
+		}
+	}
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
 	s.usage.begin(limits)
 	if !r.Deadline.IsZero() {
@@ -96,7 +83,6 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	}
 
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
-	id := "run_" + rand.Text()
 	s.checkpoint = runrecord.Checkpoint{ID: id, Objective: r.Redact(input), Status: runrecord.Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
 	if r.PreviousRun != nil {
 		for _, file := range r.PreviousRun.Work.Files {
@@ -104,5 +90,14 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 			s.checkpoint.Work.Files = append(s.checkpoint.Work.Files, file)
 		}
 	}
-	return s, release, nil
+	s.contextMemory = processmemory.NewContextLease()
+	s.replyMemory = processmemory.NewReplyLease()
+	if err := s.reserveContext(0); err != nil {
+		s.contextMemory.Close()
+		s.replyMemory.Close()
+		release()
+		return nil, nil, err
+	}
+	releaseScope := release
+	return s, func() { s.contextMemory.Close(); s.replyMemory.Close(); releaseScope() }, nil
 }

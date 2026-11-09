@@ -39,7 +39,7 @@ type CommandExecutor interface {
 	HasCommands() bool
 	CommandActivity() []CommandRun
 	CollectCommands() ([]CommandCompletion, error)
-	CommandCapture(string) (json.RawMessage, error)
+	CommandCapture(context.Context, string) (json.RawMessage, error)
 	AcknowledgeCommand(string) error
 }
 

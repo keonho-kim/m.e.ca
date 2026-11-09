@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Connection struct {
@@ -35,18 +38,18 @@ func New(kind ProviderKind, endpoint string) (Connection, error) {
 		}
 	}
 	if defaultEndpoint == "" {
-		return Connection{}, fmt.Errorf("unknown provider: %s", kind)
+		return Connection{}, faults.Errorf(diagcatalog.ConnectionUnknownProvider, kind)
 	}
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
 		endpoint = defaultEndpoint
 	}
 	if len(endpoint) > 4096 {
-		return Connection{}, fmt.Errorf("endpoint is too long")
+		return Connection{}, faults.Errorf(diagcatalog.ConnectionEndpointIsTooLong)
 	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil || parsed.Hostname() == "" || parsed.Scheme != "http" && parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return Connection{}, fmt.Errorf("endpoint must be an HTTP(S) URL without credentials, query or fragment")
+		return Connection{}, faults.Errorf(diagcatalog.ConnectionEndpointMustBeAnHTTPSURL)
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/")
 	endpoint = parsed.String()

@@ -5,8 +5,9 @@
 package inference
 
 import (
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"testing"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestRoleThinkingHonorsConfirmedSupport(t *testing.T) {

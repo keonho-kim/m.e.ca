@@ -4,7 +4,6 @@
 // Related: internal/tools/local/commands.go, internal/tools/local/command_live.go.
 package local
 
-func (e *Executor) SetRedactionVersion(version func() int) { e.redactionVersion = version }
 func (e *Executor) commandVersion() int {
 	if e.redactionVersion != nil {
 		return e.redactionVersion()

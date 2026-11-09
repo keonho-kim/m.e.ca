@@ -6,8 +6,11 @@ package main
 
 import (
 	"context"
-	"fmt"
+
 	"io"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func readPrompt(ctx context.Context, input io.ReadCloser) ([]byte, error) {
@@ -26,7 +29,7 @@ func readPrompt(ctx context.Context, input io.ReadCloser) ([]byte, error) {
 		return nil, err
 	}
 	if len(body) > 16*1024*1024 {
-		return nil, fmt.Errorf("stdin exceeds 16 MiB")
+		return nil, faults.Errorf(diagcatalog.MecaStdinExceedsMiB)
 	}
 	return body, nil
 }

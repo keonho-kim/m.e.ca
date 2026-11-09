@@ -130,7 +130,7 @@ func TestSanitizedLocalPeerContentDoesNotDependOnPublicOriginal(t *testing.T) {
 	if _, err := root.db.Exec("DELETE FROM tool_events WHERE kind='team_message'"); err != nil {
 		t.Fatal(err)
 	}
-	got, err := child.ContextMessages(ctx, child.session.ID, 0, 16<<20, false)
+	got, err := child.ContextMessages(ctx, child.session.ID, 0, 16<<20, false, nil)
 	if err != nil || len(got) != 1 || got[0].Content != message.Content {
 		t.Fatal("local sanitized text attempted to restore different shared bytes", got, err)
 	}

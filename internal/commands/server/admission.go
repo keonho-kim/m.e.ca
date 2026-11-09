@@ -7,6 +7,8 @@ package server
 import (
 	"context"
 	"errors"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func (s *Service) existingRequest(ctx context.Context, session, key, text string) (Task, bool, error) {
@@ -35,10 +37,12 @@ func (s *Service) observedTask(value Task) Task {
 	if s.last != nil && s.last.ID == value.ID {
 		return *s.last
 	}
-	if s.admitting == value.ID && value.Status == "interrupted" {
+	if s.admitting == value.ID && value.Status == diagcatalog.Interrupted {
 		// This process still owns the handoff after durable admission. Only an
 		// unowned accepted record is evidence of an interrupted previous process.
 		value.Status = "accepted"
+		value.Code = ""
+		value.Persistence = PersistencePending
 	}
 	return value
 }

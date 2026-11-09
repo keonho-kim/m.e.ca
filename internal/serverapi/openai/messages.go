@@ -8,8 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/commands/server"
 	"strings"
+
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
+	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func parseMessages(ctx context.Context, raw json.RawMessage, param string, responses bool) ([]server.InputMessage, error) {
@@ -19,7 +23,7 @@ func parseMessages(ctx context.Context, raw json.RawMessage, param string, respo
 	}
 	list, ok := jsonArray(raw)
 	if !ok {
-		return nil, invalid(param, "expected 1 to 4096 text messages")
+		return nil, faults.Invalid(param, diagcatalog.OpenaiExpectedToTextMessages)
 	}
 	messages := make([]server.InputMessage, 0, 8)
 	parts, size := 0, 0
@@ -28,7 +32,7 @@ func parseMessages(ctx context.Context, raw json.RawMessage, param string, respo
 			return nil, err
 		}
 		if len(messages) == 4096 {
-			return nil, invalid(param, "expected 1 to 4096 text messages")
+			return nil, faults.Invalid(param, diagcatalog.OpenaiExpectedToTextMessages)
 		}
 		message, err := parseMessage(ctx, item, responses, &parts)
 		if err != nil {
@@ -36,12 +40,12 @@ func parseMessages(ctx context.Context, raw json.RawMessage, param string, respo
 		}
 		size += len(message.Text)
 		if size > 16<<20 {
-			return nil, invalid(param, "input text exceeds 16 MiB")
+			return nil, faults.Invalid(param, diagcatalog.ServerInputTextExceedsMiB)
 		}
 		messages = append(messages, message)
 	}
 	if len(messages) == 0 || messages[len(messages)-1].Role != "user" {
-		return nil, invalid(param, "the last input message must have role user")
+		return nil, faults.Invalid(param, diagcatalog.OpenaiTheLastInputMessageMustHaveRole)
 	}
 	return messages, nil
 }
@@ -54,7 +58,7 @@ func parseMessage(ctx context.Context, item []byte, responses bool, parts *int) 
 	if fields.kind != nil {
 		kind, err := requiredString(fields.kind, "type")
 		if err != nil || kind != "message" {
-			return server.InputMessage{}, invalid("type", "only message input items are supported")
+			return server.InputMessage{}, faults.Invalid("type", diagcatalog.OpenaiOnlyMessageInputItemsAreSupported)
 		}
 	}
 	role, err := requiredString(fields.role, "role")
@@ -64,7 +68,7 @@ func parseMessage(ctx context.Context, item []byte, responses bool, parts *int) 
 	switch role {
 	case "system", "developer", "user", "assistant":
 	default:
-		return server.InputMessage{}, invalid("role", "unsupported input role")
+		return server.InputMessage{}, faults.Invalid("role", diagcatalog.ServerUnsupportedInputRole)
 	}
 	text, err := parseContent(ctx, fields.content, responses, role, parts)
 	return server.InputMessage{Role: role, Text: text}, prefixError(err, "content")
@@ -77,7 +81,7 @@ func parseContent(ctx context.Context, raw []byte, responses bool, role string, 
 	}
 	parts, ok := jsonArray(raw)
 	if !ok {
-		return "", invalid("", "expected text or text content parts")
+		return "", faults.Invalid("", diagcatalog.OpenaiExpectedTextOrTextContentParts)
 	}
 	var content strings.Builder
 	i := 0
@@ -86,7 +90,7 @@ func parseContent(ctx context.Context, raw []byte, responses bool, role string, 
 			return "", err
 		}
 		if *count == 16384 {
-			return "", invalid("", "input exceeds 16384 text content parts")
+			return "", faults.Invalid("", diagcatalog.OpenaiInputExceedsTextContentParts)
 		}
 		(*count)++
 		value, err := parsePart(part, responses, role)
@@ -94,13 +98,13 @@ func parseContent(ctx context.Context, raw []byte, responses bool, role string, 
 			return "", prefixError(err, fmt.Sprintf("[%d]", i))
 		}
 		if content.Len()+len(value) > 16<<20 {
-			return "", invalid("", "input text exceeds 16 MiB")
+			return "", faults.Invalid("", diagcatalog.ServerInputTextExceedsMiB)
 		}
 		content.WriteString(value)
 		i++
 	}
 	if i == 0 {
-		return "", invalid("", "expected text content parts")
+		return "", faults.Invalid("", diagcatalog.OpenaiExpectedTextContentParts)
 	}
 	return content.String(), nil
 }
@@ -115,7 +119,7 @@ func parsePart(part []byte, responses bool, role string) (string, error) {
 		return "", err
 	}
 	if !responses && kind != "text" || responses && kind != "input_text" && !(role == "assistant" && kind == "output_text") {
-		return "", invalid("type", "only text content is supported")
+		return "", faults.Invalid("type", diagcatalog.OpenaiOnlyTextContentIsSupported)
 	}
 	return requiredString(fields.text, "text")
 }

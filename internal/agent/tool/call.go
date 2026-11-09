@@ -7,9 +7,12 @@ package tool
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const (
@@ -26,23 +29,23 @@ type Call struct {
 // CheckIdentity validates call routing and byte bounds; schema parsing owns the argument object.
 func (call Call) CheckIdentity() error {
 	if call.ID == "" || len(call.ID) > 128 || !utf8.ValidString(call.ID) {
-		return fmt.Errorf("invalid Tool Call ID")
+		return faults.Errorf(diagcatalog.ToolInvalidToolCallID)
 	}
 	for _, char := range call.ID {
 		if unicode.IsControl(char) {
-			return fmt.Errorf("invalid Tool Call ID")
+			return faults.Errorf(diagcatalog.ToolInvalidToolCallID)
 		}
 	}
 	if call.Name == "" || len(call.Name) > 128 {
-		return fmt.Errorf("invalid tool name")
+		return faults.Errorf(diagcatalog.ToolInvalidToolName)
 	}
 	for _, char := range call.Name {
 		if !(char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || char == '_') {
-			return fmt.Errorf("invalid tool name")
+			return faults.Errorf(diagcatalog.ToolInvalidToolName)
 		}
 	}
 	if len(call.Arguments) > MaxArgumentsBytes {
-		return fmt.Errorf("invalid or oversized Tool Call arguments")
+		return faults.Errorf(diagcatalog.ToolInvalidOrOversizedToolCallArguments)
 	}
 	return nil
 }

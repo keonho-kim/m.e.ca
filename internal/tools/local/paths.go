@@ -5,8 +5,9 @@
 package local
 
 import (
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type target struct {

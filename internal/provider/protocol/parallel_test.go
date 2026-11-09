@@ -6,10 +6,11 @@ package protocol
 
 import (
 	"encoding/json"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"testing"
 )
 
 func TestParallelNativeRequests(t *testing.T) {

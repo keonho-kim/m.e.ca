@@ -6,11 +6,13 @@ package diagnostic
 
 import (
 	"context"
-	"fmt"
+
 	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -26,10 +28,10 @@ func checkChat(ctx context.Context, client modelapi.Generator, parameters infere
 		}
 		received += len(event.Delta) + len(event.Thinking)
 		if received > modelapi.MaxResponseBytes {
-			return fmt.Errorf("connection diagnostic response exceeds the response limit")
+			return faults.Errorf(diagcatalog.DiagnosticConnectionDiagnosticResponseExceedsTheResponseLimit)
 		}
 		if len(event.Calls) > 0 {
-			return fmt.Errorf("connection diagnostic received a native tool call instead of an answer")
+			return faults.Errorf(diagcatalog.DiagnosticConnectionDiagnosticReceivedANativeToolCall)
 		}
 		answer = answer || strings.TrimSpace(event.Delta) != ""
 		reasoning = reasoning || event.Thinking != ""
@@ -39,13 +41,13 @@ func checkChat(ctx context.Context, client modelapi.Generator, parameters infere
 		return ctx.Err()
 	})
 	if err != nil {
-		return caps, fmt.Errorf("connection diagnostic failed: %w", err)
+		return caps, faults.Errorf(diagcatalog.DiagnosticConnectionDiagnosticFailed, err)
 	}
 	if !answer || !done {
-		return caps, fmt.Errorf("connection diagnostic did not produce a complete nonempty answer")
+		return caps, faults.Errorf(diagcatalog.DiagnosticConnectionDiagnosticDidNotProduceAComplete)
 	}
 	if thinking != nil && !*thinking && reasoning {
-		return caps, fmt.Errorf("server emitted reasoning with Thinking OFF; verify its chat template and reasoning parser")
+		return caps, faults.Errorf(diagcatalog.DiagnosticServerEmittedReasoningWithThinkingOFFVerify)
 	}
 	caps.Chat = true
 	return caps, nil

@@ -8,13 +8,16 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/config/credentials/osstore"
-	"github.com/keonho-kim/meca/internal/config/statefs"
-	"github.com/keonho-kim/meca/internal/storage/credentialstore"
+
 	"os"
 	"strings"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/config/credentials/osstore"
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/storage/credentialstore"
 )
 
 const service = "meca"
@@ -39,14 +42,14 @@ func (v *Vault) Set(ctx context.Context, ref, scope, key string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	if ref == "" || len(key) > 2048 || strings.ContainsAny(key, "\r\n\x00") {
-		return fmt.Errorf("invalid credential")
+		return faults.Errorf(diagcatalog.ServerInvalidCredential)
 	}
 	key = strings.Trim(key, " \t")
 	if err := v.Remember(key); err != nil {
 		return err
 	}
 	if v.State == "" {
-		return fmt.Errorf("credential state directory is required")
+		return faults.Errorf(diagcatalog.CredentialsCredentialStateDirectoryIsRequired)
 	}
 	if err := statefs.Write(v.State, "credentials.used", []byte(service+"\n")); err != nil {
 		return err
@@ -87,16 +90,16 @@ func (v *Vault) Get(ctx context.Context, ref, scope string) (string, error) {
 		return "", nil
 	}
 	if v.State == "" {
-		return "", fmt.Errorf("credential state directory is required")
+		return "", faults.Errorf(diagcatalog.CredentialsCredentialStateDirectoryIsRequired)
 	}
 	store, err := credentialstore.Open(ctx, v.State, v.keyStore(), false)
 	if err != nil {
-		return "", fmt.Errorf("encrypted credential unavailable; preserve existing state and reconnect using !model: %w", err)
+		return "", faults.Errorf(diagcatalog.CredentialsEncryptedCredentialUnavailablePreserveExistingStateAnd, err)
 	}
 	key, err := store.Get(ctx, ref, scope)
 	if err = errors.Join(err, store.Close()); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf("encrypted credential record was not found; existing OS entries are preserved; reconnect using !model")
+			return "", faults.Errorf(diagcatalog.CredentialsEncryptedCredentialRecordWasNotFoundExisting)
 		}
 		return "", err
 	}

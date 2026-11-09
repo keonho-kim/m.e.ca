@@ -6,9 +6,11 @@ package team
 
 import (
 	"context"
-	"fmt"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/team/workspace"
 )
 
@@ -17,14 +19,14 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 		return nil, nil, err
 	}
 	switch call.Name {
-	case "wait_command", "cancel_command", "list_command_runs":
+	case "wait_command", "cancel_command", "list_command_runs", "list_skills", "load_skill", "read_skill_file":
 		return nil, nil, nil
 	}
 	if !e.Peer.HasSpoken() {
-		return nil, nil, &toolapi.Failure{
-			Code:   "team_contribution_required",
-			Detail: "Nothing executed. Tell your teammates your contribution before starting local work.",
-			Next:   "In your public response, state what you will inspect or change and the project-relative paths. Refer to a peer's announced work when it affects yours. You may include the tool call in the same response. Keep the message concise and use the user's language.",
+		return nil, nil, &faults.Failure{
+			Code:   diagcatalog.TeamContributionRequired,
+			Detail: diagcatalog.Text(diagcatalog.TeamNothingExecutedTellYourTeammatesYourContribution),
+			Next:   diagcatalog.Text(diagcatalog.TeamInYourPublicResponseStateWhatYou),
 		}
 	}
 	if call.Name == "view_image" {
@@ -36,7 +38,7 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 		return nil, nil, e.Peer.CheckUserDecision()
 	}
 	if id := e.Local.ActiveCommand(); id != "" {
-		return nil, nil, &toolapi.Failure{Code: "team_command_pending", Detail: "Your command " + id + " is still running; this file change did not start.", Next: "Use wait_command or cancel_command with this command_id before changing files. Independent commands remain available within your command capacity; use list_command_runs to inspect them."}
+		return nil, nil, &faults.Failure{Code: diagcatalog.TeamCommandPending, Detail: diagcatalog.Text(diagcatalog.TeamYourCommandSIsStillRunning, id), Next: diagcatalog.Text(diagcatalog.TeamUseWaitCommandOrCancelCommandWith)}
 	}
 	paths, err := e.paths(call)
 	if err != nil {
@@ -73,7 +75,7 @@ func (e *Executor) paths(call toolapi.Call) ([]string, error) {
 		paths = append(paths, input.Path)
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("file operation has no target")
+		return nil, faults.Errorf(diagcatalog.TeamFileOperationHasNoTarget)
 	}
 	return e.canonicalPaths(paths, false)
 }

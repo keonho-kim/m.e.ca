@@ -23,12 +23,12 @@ func TestDetailLeaseReturnsOriginalAndReleasesSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer read.Release()
-	original, err := read.Load()
+	original, err := read.Load(nil)
 	if err != nil || original.Tool.Text != "original" || read.Source.Tool.Session != s.State().Session.ID {
 		t.Fatal(original, err)
 	}
 	read.Release()
-	if _, err := read.Load(); !errors.Is(err, context.Canceled) {
+	if _, err := read.Load(nil); !errors.Is(err, context.Canceled) {
 		t.Fatal("released lease remained usable", err)
 	}
 }

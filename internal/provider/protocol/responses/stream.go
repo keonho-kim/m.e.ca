@@ -6,8 +6,10 @@ package responses
 
 import (
 	"encoding/json"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -38,13 +40,13 @@ func (s *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		Arguments   string          `json:"arguments"`
 	}
 	if err := json.Unmarshal(content, &frame); err != nil {
-		return fmt.Errorf("invalid Responses event: %w", err)
+		return faults.Errorf(diagcatalog.ResponsesInvalidResponsesEvent, err)
 	}
 	if len(frame.Error) > 0 && string(frame.Error) != "null" {
 		return transport.ParseError(0, content, "")
 	}
 	if frame.Type == "" {
-		return fmt.Errorf("missing Responses event type")
+		return faults.Errorf(diagcatalog.ResponsesMissingResponsesEventType)
 	}
 	switch frame.Type {
 	case "response.output_text.delta", "response.refusal.delta", "response.reasoning_text.delta", "response.reasoning_summary_text.delta":
@@ -58,7 +60,12 @@ func (s *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		state.Usage = nil
 		return emit(event)
 	case "response.output_item.added", "response.output_item.done":
+		newContinuation := false
 		if frame.Type == "response.output_item.done" && s.Retain {
+			if frame.OutputIndex != nil {
+				_, known := s.output[*frame.OutputIndex]
+				newContinuation = !known
+			}
 			if err := s.remember(frame.OutputIndex, frame.Item); err != nil {
 				return err
 			}
@@ -69,26 +76,49 @@ func (s *Decoder) Consume(content []byte, single bool, state *native.State, emit
 		}
 		if item.Type == "function_call" {
 			if frame.OutputIndex == nil {
-				return fmt.Errorf("function output has no index")
+				return faults.Errorf(diagcatalog.ResponsesFunctionOutputHasNoIndex)
 			}
-			return s.call(state, *frame.OutputIndex, item, frame.Type == "response.output_item.done")
+			before := state.Calls.Bytes()
+			if err := s.call(state, *frame.OutputIndex, item, frame.Type == "response.output_item.done"); err != nil {
+				return err
+			}
+			if state.Calls.Bytes() > before {
+				return emit(modelapi.Event{Progress: true})
+			}
+			return nil
 		}
 		if item.Type != "message" && item.Type != "reasoning" {
-			return fmt.Errorf("unsupported Responses output type")
+			return faults.Errorf(diagcatalog.ResponsesUnsupportedResponsesOutputType)
+		}
+		if item.Type == "reasoning" && newContinuation {
+			return emit(modelapi.Event{Progress: true})
 		}
 	case "response.function_call_arguments.delta", "response.function_call_arguments.done":
 		index, ok := s.items[frame.ItemID]
 		if !ok {
-			return fmt.Errorf("arguments refer to an unknown function item")
+			return faults.Errorf(diagcatalog.ResponsesArgumentsReferToAnUnknownFunctionItem)
 		}
 		draft, err := state.Calls.At(index)
 		if err != nil {
 			return err
 		}
 		if frame.Type == "response.function_call_arguments.delta" {
-			return draft.Append(frame.Delta)
+			if err := draft.Append(frame.Delta); err != nil {
+				return err
+			}
+			if frame.Delta != "" {
+				return emit(modelapi.Event{Progress: true})
+			}
+			return nil
 		}
-		return draft.Final(frame.Arguments)
+		before := draft.Arguments.Len()
+		if err := draft.Final(frame.Arguments); err != nil {
+			return err
+		}
+		if draft.Arguments.Len() > before {
+			return emit(modelapi.Event{Progress: true})
+		}
+		return nil
 	case "error":
 		return transport.ParseError(0, content, "")
 	case "response.completed", "response.failed", "response.incomplete":

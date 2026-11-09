@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Purpose: Verify archive build policy before publishing current main under a same-day tag lease.
+# Purpose: Publish verified current-main artifacts under the existing same-day tag lease.
 # Pattern: Release publication boundary.
 # Usage: GitHub Actions supplies its commit, repository, token and prepared version outputs.
-# Related: scripts/release/prepare.sh, .github/workflows/release.yml, .goreleaser.yaml, docs/release-notes.md.
+# Related: scripts/release/prepare.sh, scripts/release/artifacts.sh, .github/workflows/release.yml, docs/release-notes.md.
 set -euo pipefail
 
 : "${GITHUB_REPOSITORY:?Repository is required}"
@@ -34,45 +34,12 @@ if [[ "$release_previous" != "$MECA_PREVIOUS_TAG" ]]; then
     exit 1
 fi
 
-release_version=${release_tag#v}
-release_archives=(
-    "meca_${release_version}_linux_amd64.tar.gz"
-    "meca_${release_version}_linux_arm64.tar.gz"
-    "meca_${release_version}_macos_amd64.tar.gz"
-    "meca_${release_version}_macos_arm64.tar.gz"
-)
-if [[ $(awk '{ print $2 }' dist/checksums.txt | LC_ALL=C sort) != $(printf '%s\n' "${release_archives[@]}" | LC_ALL=C sort) ]]; then
-    printf 'Release checksums must describe exactly the four expected archives.\n' >&2
-    exit 1
-fi
-(cd dist && sha256sum --check checksums.txt)
-mkdir -p .cache
-release_stage=$(mktemp -d .cache/release-verify.XXXXXX)
-trap 'rm -rf -- "$release_stage"' EXIT
-release_members=$(printf '%s\n' LICENSE NOTICE THIRD_PARTY_NOTICES.md meca | LC_ALL=C sort)
-release_assets=(dist/checksums.txt)
-for release_archive in "${release_archives[@]}"; do
-    if [[ $(tar -tzf "dist/$release_archive" | LC_ALL=C sort) != "$release_members" ]]; then
-        printf 'Release archive is missing its binary or license notices: %s\n' "$release_archive" >&2
-        exit 1
-    fi
-    tar -xOzf "dist/$release_archive" meca > "$release_stage/meca"
-    if ! release_metadata=$(go version -m "$release_stage/meca"); then
-        printf 'Cannot read Go build metadata: %s\n' "$release_archive" >&2
-        exit 1
-    fi
-    if ! awk '
-        $1 == "build" && $2 ~ /^-tags=/ {
-            count = split(substr($2, 7), tags, ",")
-            for (i = 1; i <= count; i++) if (tags[i] == "godbus_no_tcp") found = 1
-        }
-        END { exit !found }
-    ' <<< "$release_metadata"; then
-        printf 'Release binary requires the godbus_no_tcp build tag: %s\n' "$release_archive" >&2
-        exit 1
-    fi
-    release_assets+=("dist/$release_archive")
-done
+release_stage=
+trap '[ -z "$release_stage" ] || rm -rf -- "$release_stage"' EXIT
+release_script_dir=${BASH_SOURCE[0]%/*}
+if [[ "$release_script_dir" == "${BASH_SOURCE[0]}" ]]; then release_script_dir=.; fi
+source "$release_script_dir/artifacts.sh"
+verify_release_artifacts "$release_tag"
 
 release_error=$release_stage/api-error
 release_exists=true

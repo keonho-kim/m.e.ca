@@ -1,0 +1,44 @@
+// Purpose: Define read-only skill discovery and confined reference previews.
+// Pattern: Versioned external read contract.
+// Usage: HTTP, socket and RPC commands share these messages.
+// Related: api/meca/v1/control.proto, api/meca/v1/state.proto, api/meca/v1/events.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+
+message Skill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string source = 4;
+  bool manual_only = 5;
+  repeated string warnings = 6;
+  string compatibility = 7;
+}
+message SkillDiagnostic { string id = 1; string message = 2; }
+message Skills {
+  repeated Skill items = 1;
+  string next_cursor = 2;
+  repeated SkillDiagnostic diagnostics = 3;
+  bool diagnostics_truncated = 4;
+}
+message SkillListRequest { string cursor = 1; int32 limit = 2; }
+message SkillRequest { string id = 1; }
+message SkillDocument { Skill skill = 1; string revision = 2; string body = 3; }
+message SkillFileRequest {
+  string id = 1;
+  string path = 2;
+  int64 offset = 3;
+  int32 limit = 4;
+  string revision = 5;
+}
+message SkillFile {
+  string text = 1;
+  string media_type = 2;
+  int64 offset = 3;
+  int64 next_offset = 4;
+  int64 total_bytes = 5;
+  bool binary = 6;
+  string revision = 7;
+}
+message SkillRead { string id = 1; string name = 2; string source = 3; string revision = 4; }

@@ -6,9 +6,10 @@ package diagnostic
 
 import (
 	"context"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"testing"
 )
 
 type generatorFunc func(context.Context, modelapi.Request, func(modelapi.Event) error) error

@@ -23,6 +23,7 @@ func (a *app) interruptTask() {
 	a.work.cancel()
 	a.stopCompression()
 	a.proposal = nil
+	a.releaseApprovalPreview()
 	a.page = "chat"
 	a.choices = nil
 	a.closeCommandHints()

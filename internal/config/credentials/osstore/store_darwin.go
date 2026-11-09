@@ -12,9 +12,13 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// Store has no persistent processes or handles. Each method owns its command.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// Store has no persistent processes or handles. Each method owns its command.
 type Store struct {
 	Service string
 	run     func(context.Context, string, ...string) ([]byte, error)
@@ -54,7 +58,7 @@ func (s Store) command(ctx context.Context, input string, args ...string) ([]byt
 
 func (s Store) Set(ctx context.Context, ref, value string) error {
 	if !keychainIdentifier(s.Service) || !keychainIdentifier(ref) {
-		return fmt.Errorf("invalid OS credential identity")
+		return faults.Errorf(diagcatalog.OsstoreInvalidOSCredentialIdentity)
 	}
 	encoded := keychainEncoding + base64.StdEncoding.EncodeToString([]byte(value))
 	input := fmt.Sprintf("add-generic-password -U -s %s -a %s -w %s\n", s.Service, ref, encoded)
@@ -64,7 +68,7 @@ func (s Store) Set(ctx context.Context, ref, value string) error {
 
 func (s Store) Get(ctx context.Context, ref string) (string, error) {
 	if !keychainIdentifier(s.Service) || !keychainIdentifier(ref) {
-		return "", fmt.Errorf("invalid OS credential identity")
+		return "", faults.Errorf(diagcatalog.OsstoreInvalidOSCredentialIdentity)
 	}
 	body, err := s.command(ctx, "", "find-generic-password", "-s", s.Service, "-wa", ref)
 	if keychainMissing(err) {
@@ -75,11 +79,11 @@ func (s Store) Get(ctx context.Context, ref string) (string, error) {
 	}
 	text := strings.TrimSpace(string(body))
 	if !strings.HasPrefix(text, keychainEncoding) {
-		return "", fmt.Errorf("unsupported OS encryption key encoding")
+		return "", faults.Errorf(diagcatalog.OsstoreUnsupportedOSEncryptionKeyEncoding)
 	}
 	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(text, keychainEncoding))
 	if err != nil {
-		return "", fmt.Errorf("invalid OS encryption key encoding")
+		return "", faults.Errorf(diagcatalog.OsstoreInvalidOSEncryptionKeyEncoding)
 	}
 	defer clear(decoded)
 	return string(decoded), nil
@@ -87,7 +91,7 @@ func (s Store) Get(ctx context.Context, ref string) (string, error) {
 
 func (s Store) Clear(ctx context.Context) error {
 	if !keychainIdentifier(s.Service) {
-		return fmt.Errorf("invalid OS credential service")
+		return faults.Errorf(diagcatalog.OsstoreInvalidOSCredentialService)
 	}
 	for {
 		_, err := s.command(ctx, "", "delete-generic-password", "-s", s.Service)

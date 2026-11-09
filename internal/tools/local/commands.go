@@ -7,10 +7,12 @@ package local
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"time"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
@@ -19,6 +21,7 @@ func commandControl(name string) bool {
 	return name == "list_command_runs" || name == "wait_command" || name == "cancel_command"
 }
 func (e *Executor) BeginCommands(ctx context.Context, deadline time.Time) {
+	e.arguments.clear()
 	e.commands.Begin(ctx, deadline)
 	e.liveOutputs.clear()
 }
@@ -26,6 +29,7 @@ func (e *Executor) StopCommands() {
 	e.liveOutputs.releaseProjections()
 	e.commands.End()
 	e.liveOutputs.clear()
+	e.arguments.clear()
 }
 func (e *Executor) CommandUpdates() <-chan struct{} { return e.commands.Updates() }
 func (e *Executor) ActiveCommand() string           { return e.commands.ActiveID() }
@@ -57,7 +61,7 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 	completed := make([]toolapi.CommandCompletion, 0, len(states))
 	for _, state := range states {
 		if state.Error != "" {
-			return nil, fmt.Errorf("command result archive failed: %s", state.Error)
+			return nil, faults.Errorf(diagcatalog.LocalCommandResultArchiveFailed, state.Error)
 		}
 		result, err := e.readCommandResult(state.ID)
 		if err != nil {

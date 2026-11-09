@@ -5,11 +5,12 @@
 package openai
 
 import (
-	"github.com/keonho-kim/meca/internal/commands/server"
-	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 )
 
 type discardStream struct {

@@ -5,6 +5,9 @@
 package local
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +16,6 @@ import (
 	"runtime"
 	"testing"
 
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
@@ -188,8 +190,8 @@ func TestMovePolicyRechecksDirectoryAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = op.Execute(context.Background(), false)
-	var failure *toolapi.Failure
-	if !errors.As(err, &failure) || failure.Code != toolapi.StaleTarget {
+	var failure *faults.Failure
+	if !errors.As(err, &failure) || failure.Code != diagcatalog.StaleTarget {
 		t.Fatalf("changed alias executed: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(project, "source")); err != nil {
@@ -209,8 +211,8 @@ func TestMovePolicyBlocksProtectedDirectoryAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"mv source alias"}`))
-	var failure *toolapi.Failure
-	if !errors.As(err, &failure) || failure.Code != toolapi.CommandBlocked {
+	var failure *faults.Failure
+	if !errors.As(err, &failure) || failure.Code != diagcatalog.CommandBlocked {
 		t.Fatalf("protected destination alias was not blocked: %v", err)
 	}
 	if body, err := os.ReadFile(filepath.Join(project, "source")); err != nil || string(body) != "keep" {

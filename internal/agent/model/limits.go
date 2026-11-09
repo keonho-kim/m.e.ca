@@ -4,6 +4,10 @@
 // Related: internal/provider/diagnostic/check.go, internal/agent/run/generate.go.
 package model
 
+import diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 type OutputLimitError struct{ Reason string }
 
-func (e *OutputLimitError) Error() string { return "model output truncated: " + e.Reason }
+func (e *OutputLimitError) Error() string {
+	return diagcatalog.Text(diagcatalog.ModelOutputTruncated, e.Reason)
+}

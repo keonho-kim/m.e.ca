@@ -5,6 +5,9 @@
 package transcript
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"bytes"
 	"encoding/json"
 	"strings"
@@ -20,12 +23,12 @@ func TestCommandOutcomeLocalized(t *testing.T) {
 		name, kind, body, failure, korean, english string
 	}{
 		{"success", "tool_succeeded", `{"Stdout":"result","ExitCode":0,"Status":"exited"}`, "", "실행 성공", "Command succeeded"},
-		{"failure", "tool_failed", `{"Stderr":"check failed","ExitCode":1,"Status":"exited"}`, tool.ProcessFailed, "실행 실패", "Command failed"},
-		{"quiet failure", "tool_failed", `{"ExitCode":2,"Status":"exited"}`, tool.ProcessFailed, "실행 실패", "Command failed"},
-		{"interrupted", "tool_failed", `{"Stdout":"partial","ExitCode":-1,"Status":"interrupted"}`, tool.Interrupted, "실행 중단", "Command interrupted"},
-		{"timeout", "tool_failed", `{"Stdout":"partial","ExitCode":-1,"Status":"timeout"}`, tool.Timeout, "시간 초과", "Command timed out"},
-		{"start failure", "tool_failed", `{"Started":false,"ExitCode":-1,"Status":"execution_failed"}`, tool.ExecutionFailed, "실행 실패", "Command failed"},
-		{"capture failure", "tool_failed", `{"Stdout":"completed","ExitCode":0,"Status":"exited"}`, tool.ExecutionFailed, "실행 실패", "Command failed"},
+		{"failure", "tool_failed", `{"Stderr":"check failed","ExitCode":1,"Status":"exited"}`, diagcatalog.ProcessFailed, "실행 실패", "Command failed"},
+		{"quiet failure", "tool_failed", `{"ExitCode":2,"Status":"exited"}`, diagcatalog.ProcessFailed, "실행 실패", "Command failed"},
+		{"interrupted", "tool_failed", `{"Stdout":"partial","ExitCode":-1,"Status":"interrupted"}`, diagcatalog.Interrupted, "실행 중단", "Command interrupted"},
+		{"timeout", "tool_failed", `{"Stdout":"partial","ExitCode":-1,"Status":"timeout"}`, diagcatalog.Timeout, "시간 초과", "Command timed out"},
+		{"start failure", "tool_failed", `{"Started":false,"ExitCode":-1,"Status":"execution_failed"}`, diagcatalog.ExecutionFailed, "실행 실패", "Command failed"},
+		{"capture failure", "tool_failed", `{"Stdout":"completed","ExitCode":0,"Status":"exited"}`, diagcatalog.ExecutionFailed, "실행 실패", "Command failed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, lang := range []locale.Language{locale.Korean, locale.English} {
@@ -33,7 +36,7 @@ func TestCommandOutcomeLocalized(t *testing.T) {
 				original := bytes.Clone(raw)
 				event := runrecord.Event{Kind: tc.kind, Text: "Process exited; exit code 1", Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)}, Output: raw}
 				if tc.failure != "" {
-					event.Operation = &tool.Operation{Failure: &tool.Failure{Code: tc.failure, Detail: "diagnostic secret", Next: "internal retry instruction"}}
+					event.Operation = &tool.Operation{Failure: &faults.Failure{Code: tc.failure, Detail: "diagnostic secret", Next: "internal retry instruction"}}
 				}
 				f := Formatter{Language: lang, Redact: func(s string) string { return strings.ReplaceAll(s, "secret", "[redacted]") }}
 				want := tc.korean
@@ -53,7 +56,7 @@ func TestCommandOutcomeLocalized(t *testing.T) {
 							t.Fatalf("internal metadata %q leaked: %s", hidden, shown)
 						}
 					}
-					if tc.failure == tool.ExecutionFailed && !strings.Contains(shown, "diagnostic [redacted]") {
+					if tc.failure == diagcatalog.ExecutionFailed && !strings.Contains(shown, "diagnostic [redacted]") {
 						t.Fatalf("execution diagnostic lost: %s", shown)
 					}
 				}
@@ -93,7 +96,7 @@ func TestCommandSummaryKeepsReportedDiagnosticAndMasking(t *testing.T) {
 		event := runrecord.Event{Kind: kind, Call: &tool.Call{Name: "execute_command", Arguments: []byte(`{"command":"check"}`)},
 			Reference: &runrecord.EventReference{Session: "private", Sequence: 1},
 			Output:    []byte(`{"Stderr":"original stderr","ExitCode":1,"Status":"exited"}`),
-			Operation: &tool.Operation{Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "missing private-value"}, Failure: &tool.Failure{Code: tool.ProcessFailed}},
+			Operation: &tool.Operation{Process: &tool.ProcessOutcome{Status: "exited", ExitCode: 1, Diagnostic: "missing private-value"}, Failure: &faults.Failure{Code: diagcatalog.ProcessFailed}},
 		}
 		block := f.Event(event)[0]
 		if !strings.Contains(block.Summary, "missing [redacted]") || strings.Contains(block.Text, "private-value") || strings.Contains(block.Text, "original stderr") || block.Details != "" || block.DetailRef != event.Reference {

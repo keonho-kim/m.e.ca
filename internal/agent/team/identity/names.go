@@ -6,12 +6,16 @@ package identity
 
 import (
 	"crypto/rand"
-	"fmt"
+
 	"math/big"
 	"slices"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// Arrays cannot be const in Go; this private catalog is never mutated.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// Arrays cannot be const in Go; this private catalog is never mutated.
 var names = [...]string{
 	"Hana",
 	"Ren",
@@ -132,7 +136,7 @@ func Choose(used []string) (string, error) {
 		}
 	}
 	if count == 0 {
-		return "", fmt.Errorf("no unused team member name is available")
+		return "", faults.Errorf(diagcatalog.IdentityNoUnusedTeamMemberNameIsAvailable)
 	}
 	index, err := rand.Int(rand.Reader, big.NewInt(int64(count)))
 	if err != nil {

@@ -7,10 +7,11 @@ package imagefile
 import (
 	"bytes"
 	"context"
-	"golang.org/x/image/bmp"
 	"image"
 	"image/png"
 	"testing"
+
+	"golang.org/x/image/bmp"
 )
 
 func BenchmarkDecode(b *testing.B) {

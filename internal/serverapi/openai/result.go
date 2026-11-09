@@ -8,7 +8,11 @@ import (
 	"context"
 	"net/http"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/processmemory"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 )
@@ -19,7 +23,15 @@ func (h *Handler) withResult(ctx context.Context, writer *eventstream.Writer, va
 			h.Reads = admission.New(1)
 		}
 	})
-	release, err := eventstream.Await(ctx, writer, func(ctx context.Context) (func(), error) { return h.Reads.Acquire(ctx, 1) })
+	memory := processmemory.NewPayloadLease()
+	defer memory.Close()
+	release, err := eventstream.Await(ctx, writer, func(ctx context.Context) (func(), error) {
+		releaseRead, err := h.Reads.Acquire(ctx, 1)
+		if err != nil {
+			return nil, err
+		}
+		return releaseRead, nil
+	})
 	if release != nil {
 		defer release()
 	}
@@ -27,7 +39,7 @@ func (h *Handler) withResult(ctx context.Context, writer *eventstream.Writer, va
 		return err
 	}
 	text, err := eventstream.Await(ctx, writer, func(ctx context.Context) (string, error) {
-		text, err := h.Service.ResponseResult(ctx, value)
+		text, err := h.Service.ResponseResult(ctx, value, memory.Resize)
 		if err != nil {
 			return "", err
 		}
@@ -36,23 +48,27 @@ func (h *Handler) withResult(ctx context.Context, writer *eventstream.Writer, va
 	if err != nil {
 		return err
 	}
+	if err := memory.Resize(len(text)); err != nil {
+		return err
+	}
 	return send(text)
 }
 
 func (h *Handler) writeResult(w http.ResponseWriter, r *http.Request, value server.Response, chat bool) {
 	send := func(text string) error {
 		if chat {
-			writeJSON(w, 200, chatValue(value, text))
+			return writeJSON(w, 200, chatValue(value, text))
 		} else {
-			writeJSON(w, 200, responseValue(value, text))
+			return writeJSON(w, 200, responseValue(value, text))
 		}
-		return nil
 	}
 	if !terminal(value) {
 		_ = send("")
 		return
 	}
 	if err := h.withResult(r.Context(), nil, value, send); err != nil {
-		h.fail(w, err)
+		if faults.Code(err) != diagcatalog.DeliveryFailed {
+			h.fail(w, err)
+		}
 	}
 }

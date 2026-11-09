@@ -7,13 +7,15 @@
 package local
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"context"
 	"encoding/json"
 	"errors"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestCommandFailurePreservesOutput(t *testing.T) {
@@ -47,7 +49,7 @@ func TestCommandTaskDeadlinePreservesPartialOutput(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	result, err := op.Execute(ctx, true)
-	if !errors.Is(err, context.DeadlineExceeded) || !result.Failed || result.Failure == nil || result.Failure.Code != toolapi.Timeout {
+	if !errors.Is(err, context.DeadlineExceeded) || !result.Failed || result.Failure == nil || result.Failure.Code != diagcatalog.Timeout {
 		t.Fatalf("timeout=%+v %v", result, err)
 	}
 	var output struct{ Stdout, Status string }

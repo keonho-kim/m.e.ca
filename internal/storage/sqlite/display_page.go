@@ -7,6 +7,7 @@ package sqlite
 import (
 	"context"
 	"errors"
+
 	"github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
@@ -24,7 +25,7 @@ func (s *Store) displayPage(ctx context.Context, session string, before int64, l
 	if maxBytes == 0 {
 		maxBytes = content.MaxBytes
 	}
-	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,CASE WHEN length(COALESCE(m.body,e.body))<=? THEN COALESCE(m.body,e.body) END,COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}'),t.source_sequence,COALESCE(e.kind,'')\nFROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence\nLEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence\nWHERE t.sequence<? AND (\n (m.role IN ('user','assistant') AND m.content_bytes>0) OR\n e.kind IN ('thinking','progress','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference'))\nORDER BY t.sequence DESC LIMIT ?",
+	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,CASE WHEN length(COALESCE(m.body,e.body))<=? THEN COALESCE(m.body,e.body) END,COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes),COALESCE(e.display_args,'{}'),t.source_sequence,COALESCE(e.kind,'')\nFROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence\nLEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence\nWHERE t.sequence<? AND (\n (m.role IN ('user','assistant') AND m.content_bytes>0) OR\n e.kind IN ('thinking','progress','skill_loaded','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference'))\nORDER BY t.sequence DESC LIMIT ?",
 
 		maxBytes, before, limit)
 	if err != nil {

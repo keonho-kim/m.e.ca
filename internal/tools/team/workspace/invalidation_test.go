@@ -5,11 +5,12 @@
 package workspace
 
 import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestNewInstructionInterruptsWaitWithoutReleasingCurrentCommand(t *testing.T) {
@@ -25,8 +26,8 @@ func TestNewInstructionInterruptsWaitWithoutReleasingCurrentCommand(t *testing.T
 		close(obsolete)
 		return nil
 	})
-	var failure *tool.Failure
-	if held != nil || !errors.As(err, &failure) || failure.Code != tool.InstructionChanged || ctx.Err() != nil {
+	var failure *faults.Failure
+	if held != nil || !errors.As(err, &failure) || failure.Code != diagcatalog.InstructionChanged || ctx.Err() != nil {
 		t.Fatal("waiting candidate did not return instruction feedback", err)
 	}
 	w.mu.Lock()
@@ -49,8 +50,8 @@ func TestObsoleteCandidateCannotAcquireAnAlreadyFreeWorkspace(t *testing.T) {
 	obsolete := make(chan struct{})
 	close(obsolete)
 	held, err := w.ReserveCommand(context.Background(), []string{"/project/file"}, obsolete, nil)
-	var failure *tool.Failure
-	if held != nil || !errors.As(err, &failure) || failure.Code != tool.InstructionChanged {
+	var failure *faults.Failure
+	if held != nil || !errors.As(err, &failure) || failure.Code != diagcatalog.InstructionChanged {
 		t.Fatal("obsolete candidate acquired free access", err)
 	}
 }

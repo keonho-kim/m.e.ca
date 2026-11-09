@@ -6,10 +6,12 @@ package local
 
 import (
 	"context"
-	"fmt"
+
 	"sync/atomic"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
@@ -34,17 +36,17 @@ func (op *operation) claim(ctx context.Context, approved bool) error {
 		return err
 	}
 	if (op.approval.Required || op.approval.UserRequired) && !approved {
-		return fmt.Errorf("operation denied: approval required")
+		return faults.Errorf(diagcatalog.LocalOperationDeniedApprovalRequired)
 	}
 	if !op.executed.CompareAndSwap(false, true) {
-		return fmt.Errorf("prepared operation has already executed")
+		return faults.Errorf(diagcatalog.LocalPreparedOperationHasAlreadyExecuted)
 	}
 	return nil
 }
 
 func (op *operation) mutable() error {
 	if op.executor.ActiveCommand() != "" {
-		return fmt.Errorf("commands are still running; wait_command or cancel_command before changing files")
+		return faults.Errorf(diagcatalog.LocalCommandsAreStillRunningWaitCommandOr)
 	}
 	return nil
 }
@@ -55,7 +57,7 @@ func (op *operation) currentTarget(original target) (target, error) {
 		return target{}, err
 	}
 	if current.absolute != original.absolute {
-		return target{}, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "target changed after preparation", Next: "Inspect the intended path and its current contents before submitting the change again."}
+		return target{}, &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalTargetChangedAfterPreparation), Next: diagcatalog.Text(diagcatalog.LocalInspectTheIntendedPathAndItsCurrent)}
 	}
 	return current, nil
 }

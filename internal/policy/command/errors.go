@@ -4,11 +4,15 @@
 // Related: internal/policy/command/analyze.go, internal/policy/command/effects.go, internal/tools/local/command_safety.go.
 package command
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+)
 
 type SyntaxError struct{ Cause error }
 
-func (e *SyntaxError) Error() string { return fmt.Sprintf("invalid shell command: %v", e.Cause) }
+func (e *SyntaxError) Error() string {
+	return diagcatalog.Text(diagcatalog.InvalidShellCommand, e.Cause)
+}
 func (e *SyntaxError) Unwrap() error { return e.Cause }
 
 type BlockedError struct{ Cause error }

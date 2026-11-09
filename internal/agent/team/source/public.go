@@ -5,12 +5,15 @@
 package source
 
 import (
-	"fmt"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// Public resolves an empty Session against the executing peer's owned public room.
+	// Sequence zero denotes a local sanitized observation, without an original reference.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// Public resolves an empty Session against the executing peer's owned public room.
-// Sequence zero denotes a local sanitized observation, without an original reference.
 type Public struct {
 	Session  string `json:"session,omitempty"`
 	Sequence int64  `json:"sequence,omitempty"`
@@ -20,15 +23,15 @@ type Public struct {
 
 func (p Public) Check() error {
 	if p.Sequence < 0 || p.Author == "" || len(p.Author) > 128 || len(p.Session) > 128 || strings.ContainsAny(p.Session+p.Author, "\r\n\x00") {
-		return fmt.Errorf("invalid public provenance")
+		return faults.Errorf(diagcatalog.SourceInvalidPublicProvenance)
 	}
 	switch p.Kind {
 	case "user_message", "team_message", "team_progress", "team_work", "team_discussion", "team_observation", "team_status":
 	default:
-		return fmt.Errorf("invalid public source kind")
+		return faults.Errorf(diagcatalog.SourceInvalidPublicSourceKind)
 	}
 	if (p.Kind == "user_message") != (p.Author == "user") {
-		return fmt.Errorf("public author and kind disagree")
+		return faults.Errorf(diagcatalog.SourcePublicAuthorAndKindDisagree)
 	}
 	return nil
 }

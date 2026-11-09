@@ -6,12 +6,13 @@ package serverapi
 
 import (
 	"context"
-	"errors"
 	"net/http"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
-	"github.com/keonho-kim/meca/internal/commands/server"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"github.com/keonho-kim/meca/internal/serverapi/gen/mecav1/mecav1connect"
@@ -26,28 +27,42 @@ func mountRPC(mux *http.ServeMux, api *API) {
 
 func (a *API) WatchEvents(ctx context.Context, request *v1.WatchRequest, stream mecav1connect.MecaServiceWatchEventsServerStream) error {
 	if proto.Size(request) > 4096 {
-		return connect.NewError(connect.CodeResourceExhausted, "watch request exceeds 4096 bytes")
+		return connect.NewError(connect.CodeResourceExhausted, diagcatalog.Text(diagcatalog.ServerapiWatchRequestExceedsBytes))
 	}
 	admission.ReleaseInput(ctx)
 	err := a.watch(ctx, request.GetCursor(), stream.Send)
-	if errors.Is(err, context.Canceled) {
-		return connect.NewError(connect.CodeCanceled, "observer disconnected")
+	if err == nil {
+		return nil
 	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return connect.NewError(connect.CodeDeadlineExceeded, "observer deadline exceeded")
+	code := connect.CodeInternal
+	switch diagcatalog.Semantic(faults.Code(err)) {
+	case diagcatalog.Canceled:
+		code = connect.CodeCanceled
+	case diagcatalog.DeadlineExceeded:
+		code = connect.CodeDeadlineExceeded
+	case diagcatalog.InvalidArgument:
+		code = connect.CodeInvalidArgument
+	case diagcatalog.NotFound:
+		code = connect.CodeNotFound
+	case diagcatalog.PermissionDenied:
+		code = connect.CodePermissionDenied
+	case diagcatalog.ResourceExhausted:
+		code = connect.CodeResourceExhausted
+	case diagcatalog.Unavailable, diagcatalog.DeliveryFailed:
+		code = connect.CodeUnavailable
+	case diagcatalog.Conflict:
+		code = connect.CodeAborted
+	case diagcatalog.FailedPrecondition:
+		code = connect.CodeFailedPrecondition
 	}
-	var domain *server.Error
-	if errors.As(err, &domain) && domain.Code == "invalid_argument" {
-		return connect.NewError(connect.CodeInvalidArgument, domain.Message)
-	}
-	return connect.NewError(connect.CodeUnavailable, "event observer closed")
+	return connect.NewError(code, faults.PublicMessage(err, a.Redact))
 }
 
 func writeAuthError(w http.ResponseWriter, r *http.Request) {
 	writer := connecthttp.NewErrorWriter()
 	if writer.IsSupported(r) {
-		_ = writer.Write(w, r, connect.NewError(connect.CodeUnauthenticated, "bearer token is required"))
+		_ = writer.Write(w, r, connect.NewError(connect.CodeUnauthenticated, diagcatalog.Text(diagcatalog.ServerapiBearerTokenIsRequired)))
 	} else {
-		http.Error(w, "bearer token is required", http.StatusUnauthorized)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiBearerTokenIsRequired), http.StatusUnauthorized)
 	}
 }

@@ -7,11 +7,12 @@ package context
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestImageProjectionAndModelChange(t *testing.T) {

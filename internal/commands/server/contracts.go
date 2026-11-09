@@ -6,26 +6,25 @@ package server
 
 import (
 	"context"
-	"fmt"
+
+	"sync"
+
 	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"github.com/keonho-kim/meca/internal/commands/modelchange"
-	"sync"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/teamrequest"
 	"github.com/keonho-kim/meca/internal/config"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
+	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
-
-type Error struct{ Code, Message string }
-
-func (e *Error) Error() string           { return e.Message }
-func failure(code, message string) error { return &Error{code, message} }
 
 type History interface {
 	TimelineSummaries(context.Context, string, int64, int, history.ReadBounds) ([]history.Record, int64, error)
@@ -69,6 +68,7 @@ type Ledger interface {
 }
 
 type Options struct {
+	Skills  *skills.Reader
 	Project string
 	Config  config.Config
 	Open    func(context.Context, string, bool, config.Config) (*Conversation, error)
@@ -78,10 +78,17 @@ type Options struct {
 	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Ledger       Ledger
 	Responses    ResponseStore
-	ReadOutput   func(context.Context, string, int64, int64, int) (string, error)
+	ReadOutput   func(context.Context, string, int64, int64, int, func(int) error) (string, error)
 }
 
-type Task struct{ ID, Session, Status, Error string }
+type Task struct{ ID, Session, Status, Error, Code, Persistence string }
+
+const (
+	PersistencePending   = "pending"
+	PersistenceConfirmed = "confirmed"
+	PersistenceUncertain = "uncertain"
+)
+
 type Approval struct {
 	ID        string
 	Truncated bool
@@ -125,28 +132,34 @@ type Batch struct {
 
 func (s *Service) requireConversation() error {
 	if s.closed || s.ctx.Err() != nil {
-		return failure("unavailable", "server is shutting down")
+		return faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 	}
 	if s.conversation == nil {
-		return failure("failed_precondition", "open a session first")
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
 	return nil
 }
 func (s *Service) requireIdle() error {
 	if s.closed || s.ctx.Err() != nil {
-		return failure("unavailable", "server is shutting down")
+		return faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 	}
 	if s.active != nil {
-		return failure("conflict", "a request is already running")
+		return faults.New(diagcatalog.Conflict, diagcatalog.ServerARequestIsAlreadyRunning)
+	}
+	if s.completionErr != nil {
+		return faults.New(diagcatalog.CompletionNotSaved, diagcatalog.CompletionUncertain)
+	}
+	if s.executionErr != nil {
+		return faults.New(diagcatalog.Internal, diagcatalog.UnexpectedFailure)
 	}
 	if s.changing {
-		return failure("conflict", "session configuration is changing")
+		return faults.New(diagcatalog.Conflict, diagcatalog.ServerSessionConfigurationIsChanging)
 	}
 	return nil
 }
 func checkText(value string, max int) error {
 	if len(value) == 0 || len(value) > max {
-		return failure("invalid_argument", fmt.Sprintf("text must contain 1 to %d bytes", max))
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerTextMustContainToBytes, max)
 	}
 	return nil
 }

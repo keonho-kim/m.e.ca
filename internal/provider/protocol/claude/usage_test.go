@@ -5,9 +5,10 @@
 package claude
 
 import (
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
-	"testing"
 )
 
 func TestUsageMergesOnlyReportedCounters(t *testing.T) {

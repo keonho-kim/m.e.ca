@@ -73,7 +73,9 @@ func (e *commandFixture) AcknowledgeCommand(string) error {
 	return nil
 }
 
-func (e *commandFixture) CommandCapture(string) (json.RawMessage, error) { return nil, nil }
+func (e *commandFixture) CommandCapture(context.Context, string) (json.RawMessage, error) {
+	return nil, nil
+}
 
 func TestCommandLifecycleFeedbackExplainsManagementTools(t *testing.T) {
 	j := &journal{}
@@ -131,6 +133,18 @@ func TestCommandLifecycleRechecksResultsBeforeFinalAnswer(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("completion recorded %d times", count)
+	}
+	observations := 0
+	for _, message := range j.messages {
+		if message.ToolCallID == "call_original" {
+			observations++
+			if message.ToolName != "execute_command" || !json.Valid([]byte(message.Content)) || !strings.Contains(message.Content, "actual result") {
+				t.Fatal("completion lost canonical JSON or native provenance", message)
+			}
+		}
+	}
+	if observations != 1 {
+		t.Fatal("completion payload recorded more than once", observations)
 	}
 }
 

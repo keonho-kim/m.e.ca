@@ -6,8 +6,9 @@ package catalog
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func BenchmarkCatalog(b *testing.B) {

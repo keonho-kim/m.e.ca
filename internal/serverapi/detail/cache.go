@@ -10,6 +10,10 @@ import (
 	"os"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/processmemory"
 )
 
 const memoryBytes = 64 << 10
@@ -18,8 +22,8 @@ type Request struct {
 	Session string
 	Source  server.DetailSource
 	Version func() int
-	Redact  func(string) string
-	Load    func() (server.DetailOriginal, error)
+	NewMask func() func(string, bool) string
+	Load    func(func(int) error) (server.DetailOriginal, error)
 }
 
 type Cache struct {
@@ -37,7 +41,7 @@ func NewCache() *Cache { return &Cache{gate: make(chan struct{}, 1)} }
 
 func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit int) ([]byte, int64, error) {
 	if offset < 0 || limit < 1 || limit > 64<<10 {
-		return nil, 0, &server.Error{Code: "invalid_argument", Message: "detail offset must be nonnegative and limit must be 1 to 65536"}
+		return nil, 0, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetMustBeNonnegativeAndLimit)
 	}
 	select {
 	case c.gate <- struct{}{}:
@@ -45,7 +49,7 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 		return nil, 0, ctx.Err()
 	}
 	defer func() { <-c.gate }()
-	for {
+	for range 2 {
 		if err := ctx.Err(); err != nil {
 			return nil, 0, err
 		}
@@ -53,36 +57,46 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 		if c.loaded && c.session == request.Session && c.source == request.Source && c.version == version {
 			break
 		}
-		original, err := request.Load()
-		if err != nil {
+		if err := c.clear(); err != nil {
 			return nil, 0, err
 		}
-		body, err := marshalDocument(original, request.Redact)
-		if err != nil {
-			return nil, 0, err
+		spool := newDocumentSpool(offset, limit)
+		if err := loadDocument(ctx, spool, request); err != nil {
+			return nil, 0, errors.Join(err, spool.close())
+		}
+		if spool.failure != nil {
+			diagnostics.Log(ctx, diagcatalog.DetailCacheBypassed, "error_code", faults.Code(spool.failure))
+		}
+		if spool.cleanupErr != nil {
+			return nil, 0, spool.close()
 		}
 		if err := ctx.Err(); err != nil {
-			return nil, 0, err
+			return nil, 0, errors.Join(err, spool.close())
 		}
 		if version != request.Version() {
+			if err := spool.close(); err != nil {
+				return nil, 0, err
+			}
 			continue
 		}
-		if err := c.replace(ctx, request, version, body); err != nil {
-			if cause := ctx.Err(); cause != nil {
-				return nil, 0, cause
-			}
-			if version != request.Version() {
-				continue
-			}
-			// A spool failure must not hide a successfully restored public original.
-			return memoryPage(body, offset, limit)
+		if offset > spool.total {
+			return nil, 0, errors.Join(faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetExceedsOriginal), spool.close())
 		}
+		if spool.cacheable {
+			c.file, c.memory, c.size = spool.file, spool.memory, spool.total
+			spool.file = nil
+			c.session, c.source, c.version, c.loaded = request.Session, request.Source, version, true
+		}
+		return spool.page, spool.total, nil
+	}
+	if !c.loaded || c.session != request.Session || c.source != request.Source || c.version != request.Version() {
+		return nil, 0, faults.Errorf(diagcatalog.DetailMaskChanged)
 	}
 	if c.file == nil {
 		return memoryPage(c.memory, offset, limit)
 	}
 	if offset > c.size {
-		return nil, 0, &server.Error{Code: "invalid_argument", Message: "detail offset exceeds original"}
+		return nil, 0, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetExceedsOriginal)
 	}
 	end := min(c.size, offset+int64(limit))
 	page := make([]byte, int(end-offset))
@@ -90,42 +104,24 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 	return page, c.size, err
 }
 
+// The original is transient. Keep its reservation until the masked document
+// has reached the bounded cache or private spool, then discard all references.
+func loadDocument(ctx context.Context, spool *documentSpool, request Request) error {
+	memory := processmemory.NewPayloadLease()
+	defer memory.Close()
+	original, err := request.Load(memory.Resize)
+	if err != nil {
+		return err
+	}
+	return writeDocument(ctx, spool, original, request.NewMask)
+}
+
 func memoryPage(body []byte, offset int64, limit int) ([]byte, int64, error) {
 	if offset > int64(len(body)) {
-		return nil, 0, &server.Error{Code: "invalid_argument", Message: "detail offset exceeds original"}
+		return nil, 0, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetExceedsOriginal)
 	}
 	end := min(int64(len(body)), offset+int64(limit))
 	return append([]byte(nil), body[offset:end]...), int64(len(body)), nil
-}
-
-func (c *Cache) replace(ctx context.Context, request Request, version int, body []byte) error {
-	if err := c.clear(); err != nil {
-		return err
-	}
-	if len(body) <= memoryBytes {
-		c.memory = body
-	} else {
-		file, err := os.CreateTemp("", "meca-server-detail-*")
-		if err != nil {
-			return err
-		}
-		if err := os.Remove(file.Name()); err != nil {
-			return errors.Join(err, file.Close())
-		}
-		for rest := body; len(rest) > 0; {
-			if err := ctx.Err(); err != nil {
-				return errors.Join(err, file.Close())
-			}
-			n := min(len(rest), memoryBytes)
-			if _, err := file.Write(rest[:n]); err != nil {
-				return errors.Join(err, file.Close())
-			}
-			rest = rest[n:]
-		}
-		c.file = file
-	}
-	c.session, c.source, c.version, c.size, c.loaded = request.Session, request.Source, version, int64(len(body)), true
-	return nil
 }
 
 func (c *Cache) clear() error {

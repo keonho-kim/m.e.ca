@@ -6,7 +6,9 @@ package startup
 
 import (
 	"flag"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type ServerOptions struct {
@@ -43,21 +45,21 @@ func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 		}
 	})
 	if !mode.Server && serverFlag {
-		return fmt.Errorf("server options require --server")
+		return faults.Errorf(diagcatalog.StartupServerOptionsRequireServer)
 	}
 	if !mode.Server {
 		return nil
 	}
 	if mode.Print || mode.Output != "text" || mode.Export || mode.Diagnose {
-		return fmt.Errorf("--server cannot be combined with one-shot options")
+		return faults.Errorf(diagcatalog.StartupServerCannotBeCombinedWithOneShot)
 	}
 	switch mode.ServerOptions.Protocol {
 	case "sse", "socket", "grpc":
 	default:
-		return fmt.Errorf("protocol must be sse, socket or grpc")
+		return faults.Errorf(diagcatalog.StartupProtocolMustBeSseSocketOrGrpc)
 	}
 	if (mode.ServerOptions.Certificate == "") != (mode.ServerOptions.Key == "") {
-		return fmt.Errorf("--tls-cert and --tls-key must be provided together")
+		return faults.Errorf(diagcatalog.StartupTlsCertAndTlsKeyMustBe)
 	}
 	return nil
 }

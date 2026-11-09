@@ -5,8 +5,9 @@
 package markdown
 
 import (
-	"github.com/yuin/goldmark/v2/ast"
 	"strings"
+
+	"github.com/yuin/goldmark/v2/ast"
 )
 
 func (r *renderer) inline(n ast.Node, style Style, depth int) []Span {

@@ -7,7 +7,9 @@ package openai
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (e *encoder) sendText(kind string, fields map[string]any, quoted []byte) error {
@@ -22,7 +24,7 @@ func (e *encoder) sendText(kind string, fields map[string]any, quoted []byte) er
 	// DTO change removes or duplicates the single expected text placeholder.
 	marker := []byte(`"text":null`)
 	if bytes.Count(body, marker) != 1 {
-		return fmt.Errorf("terminal event must contain one text placeholder")
+		return faults.Errorf(diagcatalog.OpenaiTerminalEventMustContainOneTextPlaceholder)
 	}
 	start := bytes.Index(body, marker) + len(`"text":`)
 	return e.writer.SendParts(kind, "", body[:start], quoted, body[start+len("null"):])

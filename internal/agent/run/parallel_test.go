@@ -80,7 +80,7 @@ func (op heldOperation) Execute(ctx context.Context, approved bool) (toolapi.Res
 func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executor, string, *journal, *parallelModel) {
 	t.Helper()
 	root, home := t.TempDir(), t.TempDir()
-	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+	tools, err := local.NewExecutor(root, home, filepath.Join(home, ".meca"), func(s string) string { return s }, local.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,6 +19,7 @@ func (a *app) openApproval(request *toolapi.Approval) {
 }
 
 func (a *app) closeApproval() {
+	a.releaseApprovalPreview()
 	a.page = "chat"
 	if a.approvalReturn == "files" {
 		a.page = "files"

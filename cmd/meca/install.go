@@ -7,11 +7,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"golang.org/x/term"
-	"os"
 )
 
 func maintenance(ctx context.Context, mode startup.Mode, home string) error {

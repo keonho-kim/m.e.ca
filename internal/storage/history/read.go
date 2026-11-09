@@ -4,11 +4,16 @@
 // Related: internal/storage/sqlite/timeline.go, internal/commands/server/snapshot.go.
 package history
 
-import "errors"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
-var ErrReadLimit = errors.New("stored original exceeds the read budget; narrow the query or export the session")
+var ErrReadLimit = faults.Errorf(diagcatalog.HistoryStoredOriginalExceedsTheReadBudgetNarrow)
 
 type ReadBounds struct {
 	MaxBytes  int
 	TextBytes int
+	// Reserve admits cumulative selected bytes before restoring their bodies.
+	Reserve func(int) error
 }

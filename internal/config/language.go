@@ -4,7 +4,10 @@
 // Related: internal/config/settings.go, internal/commands/settings/language.go, internal/tui/locale/preference.go.
 package config
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 type Language string
 
@@ -19,6 +22,6 @@ func (l Language) Check() error {
 	case LanguageAuto, LanguageKorean, LanguageEnglish:
 		return nil
 	default:
-		return fmt.Errorf("language must be auto, ko or en; got %q", l)
+		return faults.Errorf(diagcatalog.ConfigLanguageMustBeAutoKoOrEn, l)
 	}
 }

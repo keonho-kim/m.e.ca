@@ -7,14 +7,16 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
+
 	teamidentity "github.com/keonho-kim/meca/internal/agent/team/identity"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 func (s *Store) TeamMembers(ctx context.Context, after string, limit int) ([]teamidentity.Member, error) {
 	if limit < 1 || limit > 200 || after != "" && !teamidentity.ValidName(after) {
-		return nil, fmt.Errorf("invalid peer page")
+		return nil, faults.Errorf(diagcatalog.SqliteInvalidPeerPage)
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT agent_id,session_id,summary FROM team_members
  WHERE ordinal>COALESCE((SELECT ordinal FROM team_members WHERE agent_id=?),-1) ORDER BY ordinal LIMIT ?`, after, limit)
@@ -34,11 +36,11 @@ func (s *Store) TeamMembers(ctx context.Context, after string, limit int) ([]tea
 }
 func (s *Store) TeamMember(ctx context.Context, id string) (teamidentity.Member, error) {
 	if !teamidentity.ValidName(id) {
-		return teamidentity.Member{}, fmt.Errorf("invalid peer ID")
+		return teamidentity.Member{}, faults.Errorf(diagcatalog.SqliteInvalidPeerID)
 	}
 	member, err := readMember(s.db.QueryRowContext(ctx, "SELECT agent_id,session_id,summary FROM team_members WHERE agent_id=?", id))
 	if err == sql.ErrNoRows {
-		return member, fmt.Errorf("unknown peer %q; use list_team_members", id)
+		return member, faults.Errorf(diagcatalog.SqliteUnknownPeerUseListTeamMembers, id)
 	}
 	return member, err
 }
@@ -48,7 +50,7 @@ func readMember(row interface{ Scan(...any) error }) (teamidentity.Member, error
 		return member, err
 	}
 	if !teamidentity.ValidName(member.ID) || !sessionstate.ValidID(member.Session) {
-		return member, fmt.Errorf("invalid stored team identity")
+		return member, faults.Errorf(diagcatalog.SqliteInvalidStoredTeamIdentity)
 	}
 	return member, nil
 }
@@ -59,7 +61,7 @@ func (s *Store) SetTeamSummary(ctx context.Context, id, summary string) error {
 	}
 	n, err := result.RowsAffected()
 	if err == nil && n != 1 {
-		err = fmt.Errorf("unknown peer %q", id)
+		err = faults.Errorf(diagcatalog.SqliteUnknownPeer, id)
 	}
 	return err
 }

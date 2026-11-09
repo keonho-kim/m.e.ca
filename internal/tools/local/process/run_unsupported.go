@@ -9,9 +9,11 @@ package process
 
 import (
 	"context"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func start(context.Context, string, string, []string, *cappedOutput, *cappedOutput) (startedCommand, error) {
-	return startedCommand{}, fmt.Errorf("command execution is unsupported on this platform")
+	return startedCommand{}, faults.Errorf(diagcatalog.ProcessCommandExecutionIsUnsupportedOnThisPlatform)
 }

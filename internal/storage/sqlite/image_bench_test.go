@@ -61,8 +61,8 @@ func BenchmarkImageHistory(b *testing.B) {
 		name string
 		read func() error
 	}{
-		{"original_context", func() error { _, err := s.ContextMessages(ctx, id, 0, 16<<20, true); return err }},
-		{"text_context", func() error { _, err := s.ContextMessages(ctx, id, 0, 8192, false); return err }},
+		{"original_context", func() error { _, err := s.ContextMessages(ctx, id, 0, 16<<20, true, nil); return err }},
+		{"text_context", func() error { _, err := s.ContextMessages(ctx, id, 0, 8192, false, nil); return err }},
 		{"recent_inputs", func() error { _, err := s.RecentInputs(ctx, id, 200); return err }},
 		{"pending_tools", func() error { _, err := s.PendingTools(ctx, id); return err }},
 	} {

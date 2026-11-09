@@ -6,9 +6,10 @@ package sqlite
 
 import (
 	"context"
-	"github.com/keonho-kim/meca/internal/storage/history"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/storage/history"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
@@ -29,7 +30,7 @@ func TestDiscussionMetadataAndReferencedBodiesRoundTrip(t *testing.T) {
 	if err := child.CommitContext(ctx, child.session.ID, []runrecord.Entry{{Message: &message}}, feedback.Sequence); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := child.ContextMessages(ctx, child.session.ID, 0, 16<<20, false)
+	loaded, err := child.ContextMessages(ctx, child.session.ID, 0, 16<<20, false, nil)
 	if err != nil || len(loaded) != 1 || loaded[0].Content != message.Content {
 		t.Fatal("public reference hash or content changed", loaded, err)
 	}

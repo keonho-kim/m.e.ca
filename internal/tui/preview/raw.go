@@ -6,11 +6,12 @@ package preview
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/textlayout"
-	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/tui/textlayout"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 const previewStride = 256

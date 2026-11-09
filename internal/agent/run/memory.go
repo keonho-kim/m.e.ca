@@ -7,12 +7,14 @@ package run
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *execution) observe(ctx context.Context, count compact.TokenCount) error {
@@ -30,11 +32,11 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	}()
 	if s.runner.Memory == nil {
 		if force {
-			return fmt.Errorf("context limit reached without an available compaction store")
+			return faults.Errorf(diagcatalog.RunContextLimitReachedWithoutAnAvailableCompaction)
 		}
 		var err error
 		if !s.historyLoaded {
-			s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, 0, s.limits.MaxContextBytes, s.runner.ImageInput)
+			err = s.loadContext(ctx, 0)
 			s.historyLoaded = err == nil
 		}
 		return err
@@ -53,7 +55,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	}
 	changed, err := refresh(ctx, started, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		if !s.modelCall() {
-			return fmt.Errorf("compaction: %w", errModelBudget)
+			return faults.Errorf(diagcatalog.RunCompaction, errModelBudget)
 		}
 		s.checkpoint.ModelCalls = s.usage.ModelCalls
 		request.Thinking = s.runner.Thinking
@@ -69,13 +71,13 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		return err
 	}
 	if force && !changed {
-		return fmt.Errorf("context limit reached but no older history can be compacted; reduce fixed instructions or increase model context")
+		return faults.Errorf(diagcatalog.RunContextLimitReachedButNoOlderHistory)
 	}
 	var through int64
 	s.memoryContext, through = s.runner.Memory.Context()
 	if changed || !s.historyLoaded {
 		s.projection = contextbuild.Projection{}
-		s.messages, err = s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes, s.runner.ImageInput)
+		err = s.loadContext(ctx, through)
 		if err != nil {
 			return err
 		}

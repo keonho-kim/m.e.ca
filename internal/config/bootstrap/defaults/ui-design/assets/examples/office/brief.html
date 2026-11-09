@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Purpose: Show the 작성 요청 surface as a static commercial application design.
+     Pattern: Semantic page with progressive native inspection controls.
+     Usage: Open office/brief.html from the example static root.
+     Related: internal/config/bootstrap/defaults/ui-design/assets/examples/office/office.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="office">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Folio의 작성 요청 화면을 보여주는 정적 프론트엔드 디자인 예시입니다.">
+    <title>작성 요청 | Folio</title>
+    <link rel="stylesheet" href="../shared/base.css">
+    <link rel="stylesheet" href="../shared/components.css">
+    <link rel="stylesheet" href="../shared/motion.css">
+    <link rel="stylesheet" href="../shared/product-shell.css">
+    <link rel="stylesheet" href="office.css">
+    <script defer src="../shared/interaction.js"></script>
+  </head>
+  <body data-product="office">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="product-top">
+      <div class="product-top-inner">
+        <div class="product-identity">
+          <a class="product-wordmark" href="library.html" aria-label="Folio 홈"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg>Folio</a>
+          <a class="office-library-return" href="library.html">문서 라이브러리</a>
+        </div>
+        <div class="product-utilities">
+          <span class="sample-label">디자인 예시 / 샘플 콘텐츠</span>
+          <button class="icon-button" type="button" data-open="preview-note" aria-label="예시 범위 안내"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-question-mark"></use></svg></button>
+          <span class="avatar" aria-label="샘플 사용자 김민서">민</span>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="product-body">
+      <div class="product-context">
+        <nav class="screen-sequence" aria-label="작성 화면 순서">
+          <a href="brief.html" aria-current="step">작성 목적</a>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#chevron-right"></use></svg>
+          <a href="outline.html">구조 검토</a>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#chevron-right"></use></svg>
+          <span>문서 또는 슬라이드</span>
+        </nav>
+      </div>
+      <header class="product-head">
+        <div>
+          <h1>무엇을 전달할 문서인가요?</h1>
+          <p>형식을 고르기 전에, 독자와 전달할 내용을 짧게 정리합니다.</p>
+        </div>
+        <div class="product-actions">
+
+        </div>
+      </header>
+      <div class="office-form-layout">
+        <section aria-label="작성 요청 입력 예시">
+          <div class="office-form-section">
+            <h2>만들 자료</h2>
+            <p>이 흐름은 제안서와 발표 자료를 함께 준비하는 화면 예시입니다.</p>
+            <fieldset class="fieldset">
+              <legend class="visually-hidden">
+                자료 형식
+              </legend>
+              <div class="office-format-options">
+                <label><input type="radio" name="format" value="document" checked><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg><span>문서<small>논리와 세부 내용을 차분하게</small></span></label>
+                <label><input type="radio" name="format" value="slides"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#layers"></use></svg><span>발표 자료<small>회의에서 핵심을 선명하게</small></span></label>
+              </div>
+            </fieldset>
+            <label>프로젝트 이름<input name="project-name" autocomplete="off" value="리서치 워크스페이스 도입 제안"></label>
+          </div>
+          <div class="office-form-section">
+            <h2>독자와 목적</h2>
+            <div class="form-grid">
+              <label>누가 읽나요?<input name="audience" autocomplete="off" value="제품 리서치 팀 리드"></label>
+              <label>읽은 뒤 무엇을 결정하나요?<input name="decision" autocomplete="off" value="소규모 시범 도입 여부"></label>
+              <label class="wide">반드시 전달할 내용<textarea name="brief" rows="4">흩어진 인터뷰·데이터를 같은 맥락에서 살펴보는 리서치 워크스페이스를 제안합니다. 현재 업무의 문제, 제안 범위, 검토 기준과 다음 단계를 담아주세요.</textarea></label>
+            </div>
+          </div>
+          <div class="office-form-section">
+            <h2>참고 자료</h2>
+            <div class="source-line">
+              <span class="source-mark"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#file-text"></use></svg></span>
+              <div>
+                <strong>팀 리서치 메모</strong>
+                <small>자료 위치, 검토 과정, 공유 방식 / 샘플 문서</small>
+              </div>
+            </div>
+            <p class="flat-note">자료 추가·업로드는 화면 구성만 보여줍니다. 이 예시에는 실제 파일이 연결되지 않습니다.</p>
+          </div>
+          <div class="office-form-actions">
+            <p>입력 내용은 저장되지 않으며,<br>다음 화면은 고정된 구성안 예시입니다.</p>
+            <a class="btn primary" href="outline.html">구성안 화면 보기</a>
+          </div>
+        </section>
+        <aside class="office-aside">
+          <h2>좋은 초안의 출발점</h2>
+          <p>‘멋진 제안서’보다 ‘누가 무엇을 결정할지’를 알려주면 문서의 순서와 분량을 잡기 쉽습니다.</p>
+          <h3>이 예시의 작성 기준</h3>
+          <ul>
+            <li>
+              내부 시범 도입 제안
+            </li>
+            <li>
+              사실과 제안을 구분
+            </li>
+            <li>
+              검토가 필요한 주장 표시
+            </li>
+            <li>
+              마지막에 다음 결정 제시
+            </li>
+          </ul>
+          <h3>같은 내용, 다른 형식</h3>
+          <p>문서는 논거를 충분히 읽게 하고, 슬라이드는 회의에서 결정할 핵심을 앞으로 옮깁니다.</p>
+        </aside>
+      </div>
+      <footer class="product-footer">
+        <span>Folio / 프론트엔드 디자인 스터디</span>
+        <span>화면 이동·탭·대화상자만 동작합니다. 실제 연동·저장은 없습니다.</span>
+      </footer>
+    </main>
+    <dialog class="modal product-modal" id="preview-note" aria-labelledby="preview-title">
+      <header class="modal-head">
+        <h2 id="preview-title">디자인 예시 안내</h2>
+        <button class="icon-button" type="button" data-close-dialog aria-label="안내 닫기"><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#x"></use></svg></button>
+      </header>
+      <div class="modal-body">
+        <p>이 예시는 화면 구성과 상호작용 형태를 살펴보는 정적 프론트입니다. 데이터, 문서, 답변과 검토 결과는 모두 샘플 콘텐츠입니다.</p>
+        <p>실제 데이터베이스 연결, AI 요청, 편집·저장, 파일 내보내기는 구현하지 않았습니다. 입력 내용은 저장하거나 전송하지 않습니다.</p>
+      </div>
+      <form method="dialog" class="modal-foot">
+        <button type="submit" class="btn" value="close">확인</button>
+      </form>
+    </dialog>
+  </body>
+</html>

@@ -5,10 +5,11 @@
 package markdown
 
 import (
-	"github.com/rivo/uniseg"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/rivo/uniseg"
 )
 
 func TestMarkdownRendering(t *testing.T) {

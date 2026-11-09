@@ -6,20 +6,23 @@ package serverapi
 
 import (
 	"context"
-	"errors"
 	"sync"
+	"time"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
-	"github.com/keonho-kim/meca/internal/storage/capacity"
-	"github.com/keonho-kim/meca/internal/storage/history"
+	"google.golang.org/protobuf/proto"
 )
 
 type API struct {
 	Service          *server.Service
 	Redact           func(string) string
+	NewMask          func() func(string, bool) string
 	RedactPreview    func(string) string
 	RedactionVersion func() int
 	Details          *detail.Cache
@@ -27,14 +30,30 @@ type API struct {
 	reads            *admission.Budget
 }
 
-func (a *API) Call(ctx context.Context, cmd *v1.Command) (*v1.Reply, error) {
+func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, cause error) {
+	if err := admission.ResizeInput(ctx, int64(proto.Size(cmd))+4096); err != nil {
+		return a.errorReply(cmd.GetId(), err), nil
+	}
+	started := time.Now()
+	ctx = diagnostics.WithRedactor(ctx, a.Redact)
+	operation := "unknown"
+	if cmd != nil {
+		message := cmd.ProtoReflect()
+		if field := message.WhichOneof(message.Descriptor().Oneofs().ByName("operation")); field != nil {
+			operation = string(field.Name())
+		}
+	}
+	defer func() {
+		code := result.GetError().GetCode()
+		diagnostics.Log(ctx, diagcatalog.ControlCompleted, "component", "serverapi", "operation", operation, "duration_ms", time.Since(started).Milliseconds(), "error_code", code, "task_id", result.GetTask().GetId())
+	}()
 	reply := &v1.Reply{Id: cmd.GetId(), Result: &v1.Reply_Ok{Ok: &v1.EmptyResult{}}}
 	if len(cmd.GetId()) > 128 {
-		return a.errorReply("", &server.Error{Code: "invalid_argument", Message: "command ID exceeds 128 bytes"}), nil
+		return a.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerapiCommandIDExceedsBytes)), nil
 	}
 	var err error
 	switch cmd.GetOperation().(type) {
-	case *v1.Command_ListSessions, *v1.Command_History, *v1.Command_Detail:
+	case *v1.Command_ListSessions, *v1.Command_History, *v1.Command_Detail, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile:
 		release, err := a.readLimit().Acquire(ctx, 1)
 		if err != nil {
 			return a.errorReply(cmd.GetId(), err), nil
@@ -42,6 +61,12 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (*v1.Reply, error) {
 		defer release()
 	}
 	switch op := cmd.GetOperation().(type) {
+	case *v1.Command_ListSkills:
+		err = a.listSkills(ctx, op.ListSkills, reply)
+	case *v1.Command_GetSkill:
+		err = a.getSkill(ctx, op.GetSkill, reply)
+	case *v1.Command_ReadSkillFile:
+		err = a.readSkillFile(ctx, op.ReadSkillFile, reply)
 	case *v1.Command_ListSessions:
 		var items v1.Sessions
 		limit := int(op.ListSessions.GetLimit())
@@ -107,7 +132,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (*v1.Reply, error) {
 		r := op.Steer
 		err = a.Service.Steer(r.GetTaskId(), r.GetText())
 	default:
-		err = &server.Error{Code: "invalid_argument", Message: "one supported command is required"}
+		err = faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerapiOneSupportedCommandIsRequired)
 	}
 	if err != nil {
 		return a.errorReply(cmd.GetId(), err), nil
@@ -117,27 +142,8 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (*v1.Reply, error) {
 }
 
 func (a *API) errorReply(id string, err error) *v1.Reply {
-	code := "internal"
-	var domain *server.Error
-	if errors.As(err, &domain) {
-		code = domain.Code
-	}
-	if errors.Is(err, server.ErrTaskNotFound) {
-		code = "not_found"
-	}
-	if errors.Is(err, context.Canceled) {
-		code = "canceled"
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		code = "deadline_exceeded"
-	}
-	if errors.Is(err, history.ErrReadLimit) || errors.Is(err, admission.ErrCapacity) || errors.Is(err, capacity.ErrLimit) {
-		code = "resource_exhausted"
-	}
-	message := err.Error()
-	if a.Redact != nil {
-		message = a.Redact(message)
-	}
+	code := diagcatalog.NativeCode(faults.Code(err))
+	message := faults.PublicMessage(err, a.Redact)
 	reply := &v1.Reply{Id: id, Result: &v1.Reply_Error{Error: &v1.Error{Code: code, Message: textPreview(message)}}}
 	a.sanitize(reply)
 	return reply

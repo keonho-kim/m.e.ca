@@ -8,9 +8,12 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func extract(directory *os.Root) (err error) {
@@ -39,7 +42,7 @@ func extract(directory *os.Root) (err error) {
 			continue // License files and other entries are never written to disk.
 		}
 		if found || header.Typeflag != tar.TypeReg || header.Size < 1 || header.Size > maxArchiveBytes {
-			return fmt.Errorf("archive must contain one regular bounded meca executable")
+			return faults.Errorf(diagcatalog.UpgradeArchiveMustContainOneRegularBoundedMeca)
 		}
 		file, err := directory.OpenFile("meca", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0700)
 		if err != nil {
@@ -57,10 +60,10 @@ func extract(directory *os.Root) (err error) {
 		return err
 	}
 	if expanded.N == 0 {
-		return fmt.Errorf("expanded release archive exceeds 512 MiB")
+		return faults.Errorf(diagcatalog.UpgradeExpandedReleaseArchiveExceedsMiB)
 	}
 	if !found {
-		return fmt.Errorf("release archive contains no meca executable")
+		return faults.Errorf(diagcatalog.UpgradeReleaseArchiveContainsNoMecaExecutable)
 	}
 	return nil
 }

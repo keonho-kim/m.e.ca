@@ -4,13 +4,16 @@
 // Related: internal/config/settings.go, internal/provider/httpclient/request.go.
 package connection
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 const DefaultContextLength = 262144
 
 func CheckContextLength(tokens int) error {
 	if tokens < 1024 || tokens > 1<<30 {
-		return fmt.Errorf("context_length must be between 1024 and 1073741824 tokens")
+		return faults.Errorf(diagcatalog.ConnectionContextLengthMustBeBetweenAndTokens)
 	}
 	return nil
 }

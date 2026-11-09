@@ -6,9 +6,12 @@ package process
 
 import (
 	"context"
-	"fmt"
+
 	"sort"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (r *Registry) Updates() <-chan struct{} {
@@ -34,7 +37,7 @@ func (r *Registry) lookup(id string) (*job, error) {
 	defer r.mu.Unlock()
 	j := r.jobs[id]
 	if j == nil {
-		return nil, fmt.Errorf("unknown owned command_id %q; use list_command_runs", id)
+		return nil, faults.Errorf(diagcatalog.ProcessUnknownOwnedCommandIdUseListCommand, id)
 	}
 	return j, nil
 }

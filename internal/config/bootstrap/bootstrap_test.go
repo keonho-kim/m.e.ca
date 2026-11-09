@@ -5,11 +5,12 @@
 package bootstrap
 
 import (
-	"github.com/keonho-kim/meca/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config"
 )
 
 func TestBootstrap(t *testing.T) {
@@ -45,6 +46,13 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 		if err := <-results; err != nil {
 			t.Fatal(err)
 		}
+	}
+	readDefaultSkill(t, home)
+	readUIDesignSkill(t, home)
+	readBackendSkill(t, home)
+	entries, err := os.ReadDir(filepath.Join(home, ".meca/skills/create-skill"))
+	if err != nil || len(entries) != 1 || entries[0].Name() != "SKILL.md" {
+		t.Fatalf("incomplete or temporary skill files: %v %v", entries, err)
 	}
 }
 

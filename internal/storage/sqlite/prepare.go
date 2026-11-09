@@ -7,10 +7,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
+
 	"unsafe"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const journalPrepareBytes = 4 << 20
@@ -54,7 +56,7 @@ func checkJournal(ctx context.Context, records []runrecord.Entry) error {
 				return err
 			}
 		default:
-			return fmt.Errorf("journal record requires exactly one payload")
+			return faults.Errorf(diagcatalog.SqliteJournalRecordRequiresExactlyOnePayload)
 		}
 	}
 	return ctx.Err()

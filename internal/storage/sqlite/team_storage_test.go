@@ -6,10 +6,11 @@ package sqlite
 
 import (
 	"context"
-	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	teamchannel "github.com/keonho-kim/meca/internal/agent/team/channel"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -54,7 +55,7 @@ func TestTeamStorageReferencesPublicBodyAndAuthenticatesIt(t *testing.T) {
 	if err := child.db.QueryRow("SELECT codec,length(body) FROM payloads").Scan(&codec, &size); err != nil || codec != 3 || size > 256 {
 		t.Fatalf("private payload was copied: codec=%d bytes=%d err=%v", codec, size, err)
 	}
-	restored, err := child.ContextMessages(ctx, child.Session().ID, 0, 16*1024*1024, false)
+	restored, err := child.ContextMessages(ctx, child.Session().ID, 0, 16*1024*1024, false, nil)
 	if err != nil || len(restored) != 1 || restored[0].Content != contextMessage.Content {
 		t.Fatalf("restored=%d err=%v", len(restored), err)
 	}
@@ -65,7 +66,7 @@ func TestTeamStorageReferencesPublicBodyAndAuthenticatesIt(t *testing.T) {
 	if _, err := root.db.Exec("DELETE FROM tool_events WHERE kind='team_message'"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := child.ContextMessages(ctx, child.Session().ID, 0, 16*1024*1024, false); err == nil {
+	if _, err := child.ContextMessages(ctx, child.Session().ID, 0, 16*1024*1024, false, nil); err == nil {
 		t.Fatal("missing public original was silently accepted")
 	}
 }
@@ -81,7 +82,7 @@ func TestTeamStorageReceiveCursorCommitsWithMessages(t *testing.T) {
 	if cursor, err := child.ContextCursor(ctx, id); err != nil || cursor != 0 {
 		t.Fatalf("cursor advanced after rollback: %d %v", cursor, err)
 	}
-	if messages, err := child.ContextMessages(ctx, id, 0, 16*1024*1024, false); err != nil || len(messages) != 0 {
+	if messages, err := child.ContextMessages(ctx, id, 0, 16*1024*1024, false, nil); err != nil || len(messages) != 0 {
 		t.Fatal("message escaped rollback")
 	}
 	if err := child.CommitContext(ctx, id, []runrecord.Entry{{Message: &valid}}, 7); err != nil {

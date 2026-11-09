@@ -5,15 +5,13 @@
 package openai
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/commands/server"
-	"github.com/keonho-kim/meca/internal/storage/capacity"
-	"github.com/keonho-kim/meca/internal/storage/history"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type apiError struct {
@@ -22,60 +20,39 @@ type apiError struct {
 	Param   *string `json:"param"`
 	Code    string  `json:"code"`
 }
-type inputError struct{ param, message string }
-
-func (e *inputError) Error() string       { return e.message }
-func invalid(param, message string) error { return &inputError{param, message} }
 
 func IsPath(path string) bool {
 	return path == "/v1/models" || strings.HasPrefix(path, "/v1/models/") || path == "/v1/chat/completions" || path == "/v1/responses" || strings.HasPrefix(path, "/v1/responses/")
 }
 
 func WriteError(w http.ResponseWriter, status int, message, code, param string) {
-	value := apiError{Message: message, Type: "invalid_request_error", Code: code}
+	value := apiError{Message: message, Type: diagcatalog.CompatibleType(status), Code: code}
 	if param != "" {
 		value.Param = &param
-	}
-	if status >= 500 {
-		value.Type = "server_error"
-	}
-	if status == 401 {
-		value.Type = "authentication_error"
-	}
-	if status == 429 {
-		value.Type = "rate_limit_error"
 	}
 	writeJSON(w, status, map[string]any{"error": value})
 }
 
-func writeJSON(w http.ResponseWriter, status int, value any) {
+func writeJSON(w http.ResponseWriter, status int, value any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	err := json.NewEncoder(w).Encode(value)
+	if reporter, ok := w.(interface{ ReportError(error) }); ok {
+		reporter.ReportError(err)
+	}
+	if err != nil {
+		return faults.New(diagcatalog.DeliveryFailed, diagcatalog.WrappedCause, err)
+	}
+	return err
 }
 
 func (h *Handler) fail(w http.ResponseWriter, err error) {
-	if errors.Is(err, history.ErrReadLimit) || errors.Is(err, capacity.ErrLimit) {
-		WriteError(w, 429, err.Error(), "resource_exhausted", "")
-		return
+	code := faults.Code(err)
+	var input *faults.InputError
+	parameter := errors.As(err, &input) && code == diagcatalog.InvalidArgument
+	param := ""
+	if parameter {
+		param = input.Param
 	}
-	var input *inputError
-	if errors.As(err, &input) {
-		WriteError(w, 400, input.message, "invalid_parameter", input.param)
-		return
-	}
-	var public *server.Error
-	if errors.As(err, &public) {
-		status := map[string]int{"invalid_argument": 400, "not_found": 404, "conflict": 409, "failed_precondition": 409, "resource_exhausted": 429, "unavailable": 503}[public.Code]
-		if status == 0 {
-			status = 500
-		}
-		WriteError(w, status, h.redact(public.Message), public.Code, "")
-		return
-	}
-	if errors.Is(err, context.Canceled) {
-		WriteError(w, 409, "observer disconnected; the accepted task continues", "observer_cancelled", "")
-		return
-	}
-	WriteError(w, 500, "could not complete the compatible API request; inspect the response before retrying", "server_error", "")
+	WriteError(w, diagcatalog.HTTPStatus(code), faults.PublicMessage(err, h.Redact), diagcatalog.CompatibleCode(code, parameter), param)
 }

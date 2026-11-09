@@ -6,10 +6,13 @@ package filesystem
 
 import (
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Within(parent, path string) bool {
@@ -18,7 +21,7 @@ func Within(parent, path string) bool {
 }
 func Canonical(path string) (string, error) {
 	if !filepath.IsAbs(path) || strings.ContainsRune(path, 0) {
-		return "", fmt.Errorf("expected absolute filesystem path")
+		return "", faults.Errorf(diagcatalog.FilesystemExpectedAbsoluteFilesystemPath)
 	}
 	path = filepath.Clean(path)
 	var tail []string
@@ -55,7 +58,7 @@ func (b *Boundary) ReadTarget(path string) (string, error) {
 	}
 	for _, secret := range b.protected {
 		if Within(secret, absolute) {
-			return "", fmt.Errorf("protected path: %s", absolute)
+			return "", faults.Errorf(diagcatalog.FilesystemProtectedPath, absolute)
 		}
 	}
 	return absolute, nil

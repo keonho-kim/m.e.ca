@@ -55,7 +55,7 @@ func TestHostFileOperationsDeletionRequiresApproval(t *testing.T) {
 
 func TestHostFileOperationsAbsoluteFileAndShellPaths(t *testing.T) {
 	project, home, cache := t.TempDir(), t.TempDir(), t.TempDir()
-	e, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s })
+	e, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(s string) string { return s }, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

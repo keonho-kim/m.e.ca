@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/session/recovery"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -17,13 +20,13 @@ import (
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/prompts"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	"golang.org/x/term"
-	"os"
-	"strings"
 )
 
 func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions) (err error) {
@@ -39,7 +42,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 			}
 		}
 		if strings.TrimSpace(text) == "" {
-			return fmt.Errorf("noninteractive mode requires a prompt or stdin")
+			return faults.Errorf(diagcatalog.MecaNoninteractiveModeRequiresAPromptOrStdin)
 		}
 
 	}
@@ -76,7 +79,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		}
 	}
 	if selected.Model == "" {
-		return fmt.Errorf("select a model with !model before using noninteractive mode")
+		return faults.Errorf(diagcatalog.MecaSelectAModelWithModelBeforeUsing)
 	}
 	vault := &credentials.Vault{State: state}
 	prepared, err := setup.Prepare(ctx, selected.Connection, "", selected.Model, setup.Defaults{ContextLength: cfg.ContextLength, Thinking: cfg.Thinking}, selected, vault)
@@ -112,14 +115,13 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		}
 		return err
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact)
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 	if err != nil {
 		return err
 	}
-	executor.SetRedactionVersion(vault.RedactionVersion)
 	defer func() { err = errors.Join(err, executor.Close()) }()
 	options := agentrequest.Options{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(),
-		Tools: executor, Store: store, Vault: vault,
+		Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault,
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, Text: text, Generator: prepared.Client}
 	teamMode, err := store.TeamMode(ctx)
 	if err != nil {

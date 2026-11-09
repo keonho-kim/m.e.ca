@@ -8,16 +8,20 @@ package sqlite
 
 import (
 	"errors"
-	"fmt"
+
 	"os"
 	"path/filepath"
 	"syscall"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// LeaseServer reserves durable request status ownership for one canonical project.
+	// The composition root keeps this lease until all server work has joined.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type SessionLease struct{ file *os.File }
 
-// LeaseServer reserves durable request status ownership for one canonical project.
-// The composition root keeps this lease until all server work has joined.
 func (s *Sessions) LeaseServer(project string) (*SessionLease, error) {
 	directory, _, err := s.projectDirectory(project, true)
 	if err != nil {
@@ -25,7 +29,7 @@ func (s *Sessions) LeaseServer(project string) (*SessionLease, error) {
 	}
 	file, err := openLock(filepath.Join(directory, ".server.lock"), syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		return nil, fmt.Errorf("server ownership unavailable; another MECA server may own this project: %w", err)
+		return nil, faults.Errorf(diagcatalog.SqliteServerOwnershipUnavailableAnotherMECAServerMay, err)
 	}
 	return &SessionLease{file: file}, nil
 }
@@ -33,7 +37,7 @@ func (s *Sessions) LeaseServer(project string) (*SessionLease, error) {
 func (s *Store) LeaseSession() (*SessionLease, error) {
 	file, err := openLock(s.path+".lock", syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		return nil, fmt.Errorf("conversation lock unavailable; another MECA process may own this session: %w", err)
+		return nil, faults.Errorf(diagcatalog.SqliteConversationLockUnavailableAnotherMECAProcessMay, err)
 	}
 	return &SessionLease{file: file}, nil
 }

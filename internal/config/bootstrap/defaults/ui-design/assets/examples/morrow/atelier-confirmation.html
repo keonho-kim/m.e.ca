@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Purpose: Demonstrate the complete 예약 확인 task in a linked practical application.
+Pattern: Native multi-page HTML/CSS with local Vanilla JS state.
+Usage: Read this file directly; for browser inspection serve assets/examples as the static root.
+Related: internal/config/bootstrap/defaults/ui-design/references/code-examples.md, internal/config/bootstrap/defaults/ui-design/assets/examples/morrow/atelier.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. -->
+<html lang="ko" data-theme="atelier">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>예약 확인 / morrow</title><meta name="description" content="예약 확인 / morrow 화면을 살펴보는 로컬 프론트엔드 디자인 예시입니다."><link rel="icon" type="image/jpeg" href="../shared/daylight-preview.jpg">
+    <link rel="stylesheet" href="../shared/base.css"><link rel="stylesheet" href="../shared/components.css"><link rel="stylesheet" href="../shared/motion.css"><link rel="stylesheet" href="../shared/glass.css"><link rel="stylesheet" href="atelier.css">
+    <script data-required src="../shared/interaction.js" defer></script>
+    <script data-required src="../shared/local-state.js" defer></script>
+    <script data-required src="../shared/media.js" defer></script>
+    <script data-required src="booking-data.js" defer></script>
+    <script data-required src="booking.js" defer></script>
+  </head>
+  <body data-app="atelier" data-page="confirmation">
+    <a class="skip" href="#main">본문으로 이동</a>
+    <header class="site-header glass-surface"><a class="site-brand" href="atelier-home.html">morrow</a>
+      <nav class="site-nav" aria-label="주요 메뉴"><a href="atelier-home.html#spaces">공간 둘러보기</a><a href="atelier-booking.html">예약하기</a><span class="demo-chip">Demo</span>
+      </nav>
+    </header>
+    <main id="main" class="site-main">
+      <p class="notice error" data-page-error role="alert" hidden>
+      </p>
+      <section class="confirmation" data-confirmation><svg class="icon" aria-hidden="true" focusable="false"><use href="../shared/icons.svg#circle-check"></use></svg>
+        <h1 data-confirm-title>예약 내용을 보관했습니다
+        </h1>
+        <p>아래 내용은 이 탭에 저장된 데모 예약입니다.<br>실제 장소의 이용 권한이나 결제 완료를 의미하지 않습니다.
+        </p>
+        <article class="confirmation-card">
+          <div class="between">
+            <h2 style="font-size:20px" data-confirm-space>
+            </h2><span class="small muted" data-booking-id></span>
+          </div><dl class="price-lines">
+          <div><dt>일시</dt><dd data-confirm-time></dd>
+          </div>
+          <div><dt>인원 / 담당자</dt><dd data-confirm-people></dd>
+          </div>
+          <div class="total"><dt>예시 총액</dt><dd data-confirm-total></dd>
+          </div></dl>
+          <p class="small muted">예약 내용은 새로고침해도 이 탭의 세션 동안 유지됩니다.
+          </p>
+        </article>
+        <div class="page-actions" style="justify-content:center"><a class="btn primary" href="atelier-home.html">공간 둘러보기</a><button class="btn" data-cancel-booking>로컬 예약 취소</button>
+        </div>
+      </section>
+      <section data-booking-missing class="empty" hidden>
+        <h1>예약 정보를 찾을 수 없습니다
+        </h1>
+        <p>이 주소의 예약이 현재 탭에 없거나, 세션이 종료되었습니다.
+        </p><a class="btn" href="atelier-booking.html">새 예약 만들기</a>
+      </section>
+    </main>
+    <footer class="site-footer"><a class="site-brand" href="atelier-home.html">morrow</a>
+      <div>워크숍과 집중 작업을 위한 공간<br>로컬 데모 / 실제 장소·예약·결제가 아닙니다.
+      </div>
+    </footer>
+
+    <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+      <header class="modal-head">
+        <h2 id="confirm-title">변경 확인
+        </h2>
+      </header>
+      <div class="modal-body">
+        <p>
+        </p>
+      </div>
+      <form method="dialog" class="modal-foot"><button class="btn" value="cancel" autofocus>취소</button><button class="btn primary" value="confirm">확인</button>
+      </form>
+    </dialog>
+
+    <div class="toast-stack" data-toasts>
+    </div>
+  </body>
+</html>

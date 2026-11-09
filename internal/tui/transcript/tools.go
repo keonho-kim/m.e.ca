@@ -5,9 +5,10 @@
 package transcript
 
 import (
+	"strings"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
 )
 
 func (f Formatter) Tool(event runrecord.Event) string {

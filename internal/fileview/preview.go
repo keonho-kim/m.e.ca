@@ -7,13 +7,16 @@ package fileview
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/policy"
+
 	"io"
 	"os"
 	"strings"
 	"syscall"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Preview struct {
@@ -45,7 +48,7 @@ func (e *Reader) Preview(ctx context.Context, settings policy.Settings, path str
 		return result, err
 	}
 	if !info.Mode().IsRegular() {
-		return result, fmt.Errorf("일반 파일만 미리볼 수 있습니다")
+		return result, faults.Errorf(diagcatalog.FileviewWrappedCause)
 	}
 	const limit = 16 * 1024 * 1024
 	body, err := io.ReadAll(io.LimitReader(file, limit+1))
@@ -63,7 +66,7 @@ func (e *Reader) Preview(ctx context.Context, settings policy.Settings, path str
 		}
 	}
 	if !utf8.Valid(body) || strings.IndexByte(string(body), 0) >= 0 {
-		return result, fmt.Errorf("바이너리 또는 UTF-8이 아닌 파일은 텍스트 미리보기를 지원하지 않습니다")
+		return result, faults.Errorf(diagcatalog.FileviewUTF)
 	}
 	current, err := e.resolve(settings.Scope, path)
 	if err != nil {
@@ -74,7 +77,7 @@ func (e *Reader) Preview(ctx context.Context, settings policy.Settings, path str
 		return result, err
 	}
 	if current.Absolute != target.Absolute || !os.SameFile(info, after) || info.Size() != after.Size() || !info.ModTime().Equal(after.ModTime()) {
-		return result, fmt.Errorf("파일이 변경되었습니다. 다시 여세요")
+		return result, faults.Errorf(diagcatalog.FileviewWrappedCause2)
 	}
 	return Preview{Path: e.redact(target.Absolute), Content: e.redact(string(body)), Truncated: truncated}, nil
 }

@@ -5,11 +5,12 @@
 package view
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
 )
 
 type ChatDisplay struct {

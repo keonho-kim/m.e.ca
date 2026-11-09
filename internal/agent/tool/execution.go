@@ -1,16 +1,19 @@
 // Purpose: Define approval-bound tool execution and observed outcomes.
 // Pattern: Consumer-owned execution contract.
 // Usage: Local adapters satisfy Executor and Execution; the task loop consumes them.
-// Related: internal/tools/local/executor.go, internal/agent/run/execute.go.
+// Related: internal/tools/local/executor.go, internal/agent/run/execute.go, internal/skills/instruction/document.go.
 
 package tool
 
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/agent/team/source"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/skills/instruction"
 )
 
 type Approval struct {
@@ -48,7 +51,10 @@ type FileChange struct {
 	BeforeDigest, AfterDigest string
 }
 type Result struct {
-	Source *source.Public `json:"source,omitempty"`
+	// Skill is the already-read instruction result, retained only for this request.
+	SkillFile *instruction.ReferenceRead `json:"-"`
+	Skill     *instruction.Document      `json:"-"`
+	Source    *source.Public             `json:"source,omitempty"`
 	// Depart closes a cooperative session after its native result is durable.
 	Depart bool `json:"-"`
 	Images []media.Image
@@ -57,7 +63,7 @@ type Result struct {
 	Versions map[string]string
 	Target   string
 	Started  bool
-	Failure  *Failure
+	Failure  *faults.Failure
 	Process  *ProcessOutcome
 	Content  json.RawMessage
 	Summary  string

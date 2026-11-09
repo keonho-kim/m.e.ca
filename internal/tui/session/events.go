@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+
 	"github.com/keonho-kim/meca/internal/commands/modelchange"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/tui/browser/controller"
@@ -18,6 +19,8 @@ import (
 )
 
 type notice struct {
+	ApprovalPreview *approvalPreviewNotice
+	Skills          *skillNotice
 	Commit          *modelchange.Committed
 	Config          *config.Config
 	Detail          *detailResult
@@ -55,6 +58,14 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.ApprovalPreview != nil {
+		a.receiveApprovalPreview(n.ApprovalPreview)
+		return
+	}
+	if n.Skills != nil {
+		a.receiveSkills(n.Skills)
+		return
+	}
 	if n.Detail != nil {
 		a.receiveToolDetail(n.Detail)
 		return

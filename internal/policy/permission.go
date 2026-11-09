@@ -4,7 +4,10 @@
 // Related: internal/config/settings.go, internal/agent/run/prepare_execution.go.
 package policy
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 type Permission uint8
 
@@ -15,7 +18,7 @@ const (
 
 func (p Permission) Check() error {
 	if p != PermissionDefault && p != PermissionAllMighty {
-		return fmt.Errorf("invalid permission mode: %d", p)
+		return faults.Errorf(diagcatalog.PolicyInvalidPermissionMode, p)
 	}
 	return nil
 }
@@ -37,7 +40,7 @@ func (p *Permission) UnmarshalText(text []byte) error {
 	case "all_mighty":
 		*p = PermissionAllMighty
 	default:
-		return fmt.Errorf("invalid permission mode: %q", text)
+		return faults.Errorf(diagcatalog.PolicyInvalidPermissionMode2, text)
 	}
 	return nil
 }

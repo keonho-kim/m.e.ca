@@ -6,9 +6,10 @@ package sqlite
 
 import (
 	"context"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"testing"
 )
 
 func TestTokenUsagePersistsAndRejectsInvalidCounts(t *testing.T) {

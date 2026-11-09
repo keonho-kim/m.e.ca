@@ -75,6 +75,7 @@ func TestPublishRelease(t *testing.T) {
 				"GITHUB_OUTPUT="+filepath.Join(root, "output"), "MECA_RELEASE_TAG=v0.0.20261026", "MECA_PREVIOUS_TAG="+previous,
 				"RELEASE_TEST_COMMIT="+commit, "RELEASE_TEST_MAIN="+main, "RELEASE_TEST_TAG="+remote,
 				"RELEASE_TEST_MODE="+mode, "RELEASE_TEST_CALLS="+filepath.Join(root, "calls"))
+			command.Env = append(command.Env, "RELEASE_TEST_METADATA="+filepath.Join(root, "metadata-calls"))
 			output, err := command.CombinedOutput()
 			remaining, globErr := filepath.Glob(filepath.Join(root, ".cache/release-verify.*"))
 			if globErr != nil || len(remaining) != 0 {
@@ -84,6 +85,10 @@ func TestPublishRelease(t *testing.T) {
 			status, _ := os.ReadFile(filepath.Join(root, "output"))
 			success := mode == "existing" || mode == "new" || mode == "extra build tags"
 			if success {
+				metadataCalls, readErr := os.ReadFile(filepath.Join(root, "metadata-calls"))
+				if readErr != nil || strings.Count(string(metadataCalls), "\n") != 4 {
+					t.Fatal("archives were not verified exactly once", string(metadataCalls), readErr)
+				}
 				if err != nil || string(status) != "published=true\n" || !strings.Contains(string(calls), "push --force-with-lease=refs/tags/v0.0.20261026:"+previous) {
 					t.Fatalf("publish: %v\n%s\n%s", err, output, calls)
 				}
@@ -173,6 +178,7 @@ fi
 
 const fakeReleaseGo = `#!/bin/sh
 [ "$1" = version ] && [ "$2" = -m ] && [ "$#" = 3 ] || exit 2
+printf '%s\n' "$3" >> "$RELEASE_TEST_METADATA"
 if grep -Fq 'invalid executable' "$3"; then
   echo 'fixture: unreadable Go build metadata' >&2
   exit 1

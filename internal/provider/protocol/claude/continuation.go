@@ -7,7 +7,9 @@ package claude
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Continuation struct {
@@ -21,7 +23,7 @@ func Bind(blocks []byte, prefix string) ([]byte, error) {
 	// objects without decoding their large text/signatures into another model.
 	var values []struct{}
 	if err := json.Unmarshal(blocks, &values); err != nil || values == nil {
-		return nil, fmt.Errorf("invalid completed Claude content")
+		return nil, faults.Errorf(diagcatalog.ClaudeInvalidCompletedClaudeContent)
 	}
 	return json.Marshal(struct {
 		Version int             `json:"version"`
@@ -33,10 +35,10 @@ func Bind(blocks []byte, prefix string) ([]byte, error) {
 func Restore(raw []byte) (Continuation, error) {
 	var value Continuation
 	if err := json.Unmarshal(raw, &value); err != nil || value.Version != 1 || len(value.Prefix) != 64 || value.Blocks == nil {
-		return value, fmt.Errorf("unsupported Claude continuation; original history was preserved")
+		return value, faults.Errorf(diagcatalog.ClaudeUnsupportedClaudeContinuationOriginalHistoryWasPreserved)
 	}
 	if _, err := hex.DecodeString(value.Prefix); err != nil {
-		return value, fmt.Errorf("invalid Claude conversation digest; original history was preserved")
+		return value, faults.Errorf(diagcatalog.ClaudeInvalidClaudeConversationDigestOriginalHistoryWas)
 	}
 	return value, nil
 }

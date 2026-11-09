@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/serverapi/openai"
 )
 
@@ -46,11 +47,11 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if !t.hosts[strings.ToLower(r.Host)] {
-		t.reject(w, r, "Host is not allowed", http.StatusForbidden)
+		t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiHostIsNotAllowed), http.StatusForbidden)
 		return false
 	}
 	if r.URL.RawQuery != "" && r.URL.Path != "/v1/events" {
-		t.reject(w, r, "query parameters are not supported", http.StatusBadRequest)
+		t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiQueryParametersAreNotSupported), http.StatusBadRequest)
 		return false
 	}
 	if origin := r.Header.Get("Origin"); origin != "" {
@@ -59,7 +60,7 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 			scheme = "https"
 		}
 		if !t.origins[origin] && origin != scheme+"://"+r.Host {
-			t.reject(w, r, "Origin is not allowed", http.StatusForbidden)
+			t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiOriginIsNotAllowed), http.StatusForbidden)
 			return false
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -68,19 +69,19 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if r.Method == http.MethodOptions {
 		if r.Header.Get("Origin") == "" {
-			t.reject(w, r, "Origin is required", http.StatusForbidden)
+			t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiOriginIsRequired), http.StatusForbidden)
 			return false
 		}
 		method := r.Header.Get("Access-Control-Request-Method")
 		if method != "GET" && method != "POST" {
-			t.reject(w, r, "method is not allowed", http.StatusForbidden)
+			t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiMethodIsNotAllowed), http.StatusForbidden)
 			return false
 		}
 		for _, header := range strings.Split(r.Header.Get("Access-Control-Request-Headers"), ",") {
 			switch strings.ToLower(strings.TrimSpace(header)) {
 			case "", "authorization", "content-type", "last-event-id", "connect-protocol-version", "connect-timeout-ms", "x-grpc-web", "grpc-timeout", "x-user-agent", "idempotency-key", "x-client-request-id", "x-stainless-lang", "x-stainless-package-version", "x-stainless-os", "x-stainless-arch", "x-stainless-runtime", "x-stainless-runtime-version", "x-stainless-retry-count", "x-stainless-timeout":
 			default:
-				t.reject(w, r, "header is not allowed", http.StatusForbidden)
+				t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiHeaderIsNotAllowed), http.StatusForbidden)
 				return false
 			}
 		}
@@ -96,7 +97,7 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 		if len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || !t.authenticates(strings.TrimPrefix(values[0], "Bearer ")) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			if t.openAI && openai.IsPath(r.URL.Path) {
-				t.reject(w, r, "bearer authentication required", http.StatusUnauthorized)
+				t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiBearerAuthenticationRequired), http.StatusUnauthorized)
 			} else {
 				writeAuthError(w, r)
 			}

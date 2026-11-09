@@ -5,9 +5,11 @@
 package selection
 
 import (
-	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func Validate(selected connection.Selection) error {
@@ -16,7 +18,7 @@ func Validate(selected connection.Selection) error {
 		return err
 	}
 	if parsed.ID != selected.Connection.ID || strings.TrimSpace(selected.Model) == "" || len(selected.Model) > 512 || strings.ContainsAny(selected.Model, "\r\n\x00") {
-		return fmt.Errorf("invalid model selection")
+		return faults.Errorf(diagcatalog.SelectionInvalidModelSelection)
 	}
 	if selected.Identity != nil {
 		if err := selected.Identity.Validate(); err != nil {
@@ -25,7 +27,7 @@ func Validate(selected connection.Selection) error {
 	}
 	if info := selected.Details; info != nil {
 		if info.ID != selected.Model {
-			return fmt.Errorf("model metadata binding mismatch")
+			return faults.Errorf(diagcatalog.SelectionModelMetadataBindingMismatch)
 		}
 		if err := info.Check(); err != nil {
 			return err
@@ -33,13 +35,13 @@ func Validate(selected connection.Selection) error {
 	}
 	options := connection.ReasoningOptions(selected.Connection.Kind, selected.Details)
 	if selected.ThinkingSupported && (!options.Enabled() || !options.Off) {
-		return fmt.Errorf("invalid ON/OFF request capability")
+		return faults.Errorf(diagcatalog.SelectionInvalidONOFFRequestCapability)
 	}
 	if selected.Thinking != nil && (*selected.Thinking && !options.Enabled() || !*selected.Thinking && !options.Off) {
-		return fmt.Errorf("unsupported Thinking choice")
+		return faults.Errorf(diagcatalog.SelectionUnsupportedThinkingChoice)
 	}
 	if selected.Effort() != "" && selected.Thinking == nil {
-		return fmt.Errorf("effort requires an explicit Thinking setting")
+		return faults.Errorf(diagcatalog.SelectionEffortRequiresAnExplicitThinkingSetting)
 	}
 	return options.CheckEffort(selected.Effort())
 }

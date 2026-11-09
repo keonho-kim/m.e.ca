@@ -10,18 +10,22 @@ package process
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// start launches synchronously; its owner joins once, then materializes the capture.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// start launches synchronously; its owner joins once, then materializes the capture.
 func start(ctx context.Context, directory, commandText string, environment []string, stdout, stderr *cappedOutput) (startedCommand, error) {
 	if !filepath.IsAbs(directory) {
-		return startedCommand{}, fmt.Errorf("command working directory must be absolute")
+		return startedCommand{}, faults.Errorf(diagcatalog.ProcessCommandWorkingDirectoryMustBeAbsolute)
 	}
 	command := exec.CommandContext(ctx, "/bin/sh", "-c", commandText)
 	command.Dir = directory
@@ -57,15 +61,15 @@ func start(ctx context.Context, directory, commandText string, environment []str
 	}
 	output := func(runErr error) (Output, error) {
 		outCapture, errCapture := stdout.snapshot(0), stderr.snapshot(0)
-		output := Output{Revisions: [2]uint64{outCapture.Revision, errCapture.Revision}, Started: true, Stdout: outCapture.Text, Stderr: errCapture.Text, ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: "execution_failed"}
+		output := Output{Revisions: [2]uint64{outCapture.Revision, errCapture.Revision}, Started: true, Stdout: outCapture.Text, Stderr: errCapture.Text, ExitCode: -1, Truncated: stdout.isTruncated() || stderr.isTruncated(), Status: diagcatalog.ExecutionFailed}
 		if err := errors.Join(stdout.captureError(), stderr.captureError()); err != nil {
 			return output, errors.Join(runErr, err)
 		}
 		if executionCause != nil {
 			cause := executionCause
-			output.Status = "interrupted"
+			output.Status = diagcatalog.Interrupted
 			if errors.Is(executionCause, context.DeadlineExceeded) {
-				output.Status = "timeout"
+				output.Status = diagcatalog.Timeout
 				cause = context.DeadlineExceeded
 			}
 			return output, cause

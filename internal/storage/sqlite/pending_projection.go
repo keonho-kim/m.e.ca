@@ -5,10 +5,11 @@
 package sqlite
 
 import (
-	"fmt"
 	"strconv"
 
 	json "github.com/goccy/go-json"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (group pendingToolGroup) selectedRecord() (storedRecord, error) {
@@ -21,7 +22,7 @@ func (group pendingToolGroup) selectedRecord() (storedRecord, error) {
 	selected := make([]bool, len(message.Calls))
 	for _, position := range group.indices {
 		if position < 0 || position >= len(selected) {
-			return storedRecord{}, fmt.Errorf("stored pending call position is invalid")
+			return storedRecord{}, faults.Errorf(diagcatalog.SqliteStoredPendingCallPositionIsInvalid)
 		}
 		selected[position] = true
 	}
@@ -37,18 +38,18 @@ func (group pendingToolGroup) selectedRecord() (storedRecord, error) {
 	for key := range refs {
 		var path []string
 		if err := json.Unmarshal([]byte(key), &path); err != nil || len(path) == 0 {
-			return storedRecord{}, fmt.Errorf("invalid stored payload path")
+			return storedRecord{}, faults.Errorf(diagcatalog.ContentInvalidStoredPayloadPath)
 		}
 		if path[0] != "calls" {
 			delete(refs, key)
 			continue
 		}
 		if len(path) < 3 {
-			return storedRecord{}, fmt.Errorf("invalid stored call payload path")
+			return storedRecord{}, faults.Errorf(diagcatalog.SqliteInvalidStoredCallPayloadPath)
 		}
 		position, err := strconv.Atoi(path[1])
 		if err != nil || position < 0 || position >= len(selected) {
-			return storedRecord{}, fmt.Errorf("invalid stored call payload position")
+			return storedRecord{}, faults.Errorf(diagcatalog.SqliteInvalidStoredCallPayloadPosition)
 		}
 		if !selected[position] {
 			delete(refs, key)

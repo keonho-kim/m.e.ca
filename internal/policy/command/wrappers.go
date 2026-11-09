@@ -7,6 +7,8 @@ package command
 import (
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -93,14 +95,14 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 		}
 		a.invoke(args, redirs, s, false)
 		return true
-	case "exec", "builtin", "nohup", "setsid", "nice", "timeout", "stdbuf", "time":
+	case "exec", "builtin", "nohup", "setsid", "nice", diagcatalog.Timeout, "stdbuf", "time":
 		for len(args) > 0 && args[0].known && strings.HasPrefix(args[0].text, "-") {
 			option := args[0].text
 			args = args[1:]
 			if option == "--" {
 				break
 			}
-			takes := name == "nice" && (option == "-n" || option == "--adjustment") || name == "timeout" && (option == "-k" || option == "--kill-after" || option == "-s" || option == "--signal") || name == "time" && (option == "-o" || option == "-f") || name == "exec" && option == "-a" || name == "stdbuf" && (option == "-o" || option == "-i" || option == "-e")
+			takes := name == "nice" && (option == "-n" || option == "--adjustment") || name == diagcatalog.Timeout && (option == "-k" || option == "--kill-after" || option == "-s" || option == "--signal") || name == "time" && (option == "-o" || option == "-f") || name == "exec" && option == "-a" || name == "stdbuf" && (option == "-o" || option == "-i" || option == "-e")
 			if takes && len(args) > 0 {
 				if !args[0].known && !args[0].single {
 					a.ask("Runtime wrapper operands may change the executed command")
@@ -113,7 +115,7 @@ func (a *analyzer) wrapper(name string, args []word, redirs []*syntax.Redirect, 
 			}
 			a.ask("Wrapper option requires inspection")
 		}
-		if name == "timeout" && len(args) > 0 {
+		if name == diagcatalog.Timeout && len(args) > 0 {
 			if !args[0].known && !args[0].single {
 				a.ask("Runtime wrapper operands may change the executed command")
 			}

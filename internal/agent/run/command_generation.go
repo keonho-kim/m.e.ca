@@ -9,6 +9,8 @@ import (
 	"errors"
 	"time"
 
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -26,18 +28,20 @@ func (s *execution) generateObserved(ctx context.Context, generator modelapi.Gen
 	reply := make(chan error, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- generator.Generate(child, request, func(event modelapi.Event) error {
-			select {
-			case events <- event:
-			case <-child.Done():
-				return child.Err()
-			}
-			select {
-			case err := <-reply:
-				return err
-			case <-child.Done():
-				return child.Err()
-			}
+		done <- faults.Guard(func() error {
+			return generator.Generate(child, request, func(event modelapi.Event) error {
+				select {
+				case events <- event:
+				case <-child.Done():
+					return child.Err()
+				}
+				select {
+				case err := <-reply:
+					return err
+				case <-child.Done():
+					return child.Err()
+				}
+			})
 		})
 	}()
 	var updates <-chan struct{}

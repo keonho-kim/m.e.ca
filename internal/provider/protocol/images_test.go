@@ -7,12 +7,13 @@ package protocol
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
-	"strings"
-	"testing"
 )
 
 func TestImageRequestDialectsAndNativeOrdering(t *testing.T) {

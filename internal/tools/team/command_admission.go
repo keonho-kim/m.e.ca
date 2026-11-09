@@ -6,7 +6,9 @@ package team
 
 import (
 	"context"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (op *localOperation) admitCommand(ctx context.Context) (func(), error) {
@@ -18,7 +20,7 @@ func (op *localOperation) admitCommand(ctx context.Context) (func(), error) {
 	// The native operation rechecks its frozen AST and target identities after
 	// this callback; repeating the same filesystem observation here adds no guard.
 	if e.Refusals.Refused(op.operation.Approval(), &op.denialKey) {
-		return held.Release, fmt.Errorf("the user refused this operation; do not repeat it through another peer")
+		return held.Release, faults.Errorf(diagcatalog.TeamTheUserRefusedThisOperationDoNot)
 	}
 	if err := e.Peer.CheckUserDecision(); err != nil {
 		return held.Release, err

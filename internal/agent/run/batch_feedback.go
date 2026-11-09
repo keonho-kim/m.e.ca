@@ -5,6 +5,8 @@
 package run
 
 import (
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +14,7 @@ import (
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 type skipReason uint8
@@ -24,22 +27,22 @@ const (
 	skipForInterruption
 )
 
-func skippedFailure(reason skipReason, detail string) *toolapi.Failure {
+func skippedFailure(reason skipReason, detail string) *faults.Failure {
 	if reason == skipForInstruction {
-		failure := toolapi.NewInstructionChanged()
+		failure := faults.NewInstructionChanged()
 		failure.Detail = detail
 		return failure
 	}
-	failure := &toolapi.Failure{Code: "batch_not_executed", Detail: detail,
-		Next: "Preserve completed sibling results. Inspect the blocking outcome and the latest user request, then submit only still-needed work; do not replay successful changes."}
+	failure := &faults.Failure{Code: diagcatalog.BatchNotExecuted, Detail: detail,
+		Next: diagcatalog.Text(diagcatalog.RunPreserveCompletedSiblingResultsInspectTheBlocking)}
 	switch reason {
 	case skipForClosure:
-		failure.Code = "session_closed"
-		failure.Next = "The session has closed. Do not retry these calls. Its completed work and final report remain in the recorded conversation."
+		failure.Code = diagcatalog.SessionClosed
+		failure.Next = diagcatalog.Text(diagcatalog.ClosedSessionRecovery)
 	case skipForContext:
-		failure.Next = "Restore the failed context or journal access before making another decision. Inspect saved outcomes and the latest user instructions before considering any remaining work."
+		failure.Next = diagcatalog.Text(diagcatalog.ContextFailureRecovery)
 	case skipForInterruption:
-		failure.Next = "Execution was interrupted or its budget ended. Inspect saved outcomes and any partial effects before resuming only work the user still requires."
+		failure.Next = diagcatalog.Text(diagcatalog.InterruptedBatchRecovery)
 	}
 	return failure
 }

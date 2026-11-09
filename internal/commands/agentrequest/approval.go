@@ -6,12 +6,13 @@ package agentrequest
 
 import (
 	"context"
-	"errors"
 
 	"github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-var ErrApprovalRequired = errors.New("approval required in noninteractive mode; no operation was approved")
+var ErrApprovalRequired = faults.Errorf(diagcatalog.AgentrequestApprovalRequiredInNoninteractiveModeNoOperation)
 
 func RejectApproval(context.Context, tool.Approval) (bool, error) {
 	return false, ErrApprovalRequired

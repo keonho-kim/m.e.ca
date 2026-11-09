@@ -5,8 +5,9 @@
 package run
 
 import (
-	"fmt"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type validatedCall struct {
@@ -27,10 +28,10 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		return validatedCall{}, err
 	}
 	if definition == nil {
-		return validatedCall{}, fmt.Errorf("unknown tool; select a declared native function")
+		return validatedCall{}, faults.Errorf(diagcatalog.RunUnknownToolSelectADeclaredNativeFunction)
 	}
 	if len(call.Arguments) > s.limits.MaxArgumentBytes {
-		return validatedCall{}, fmt.Errorf("arguments exceed the configured %d-byte limit; narrow the operation; nothing executed", s.limits.MaxArgumentBytes)
+		return validatedCall{}, faults.Errorf(diagcatalog.RunArgumentsExceedTheConfiguredByteLimitNarrow, s.limits.MaxArgumentBytes)
 	}
 	_, err := toolapi.ValidateArguments(*definition, call.Arguments)
 	if err != nil {
@@ -38,7 +39,7 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		if call.Name == "edit_file" {
 			hint = "Use edits:[{old_text,new_text}] from completed reads of the unchanged original. old_text must match once; a read in this batch cannot supply source for its dependent edit."
 		}
-		return validatedCall{}, fmt.Errorf("argument validation failed: %s. %s", err, hint)
+		return validatedCall{}, faults.Errorf(diagcatalog.RunArgumentValidationFailed, err, hint)
 	}
 
 	return validatedCall{call, *definition}, nil

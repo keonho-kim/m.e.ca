@@ -8,8 +8,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/provider/transport"
 	"net/http"
+
+	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
 func (c *Client) readOllama(ctx context.Context, model string) (ollamaModel, error) {

@@ -6,11 +6,15 @@ package statefs
 
 import (
 	"errors"
-	"fmt"
+
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// DirectoryName is the private application directory under the user's home.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// DirectoryName is the private application directory under the user's home.
 const DirectoryName = ".meca"
 
 func Open(directory string) (*os.Root, error) {
@@ -22,7 +26,7 @@ func Open(directory string) (*os.Root, error) {
 		return nil, err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return nil, fmt.Errorf("application state must be a real directory")
+		return nil, faults.Errorf(diagcatalog.InstallApplicationStateMustBeARealDirectory)
 	}
 	if err := checkOwner(info); err != nil {
 		return nil, err
@@ -40,7 +44,7 @@ func Open(directory string) (*os.Root, error) {
 		return nil, errors.Join(statErr, file.Close(), root.Close())
 	}
 	if !os.SameFile(info, current) {
-		return nil, errors.Join(fmt.Errorf("application directory changed during initialization"), file.Close(), root.Close())
+		return nil, errors.Join(faults.Errorf(diagcatalog.StatefsApplicationDirectoryChangedDuringInitialization), file.Close(), root.Close())
 	}
 	if err = errors.Join(file.Chmod(0700), file.Close()); err != nil {
 		return nil, errors.Join(err, root.Close())

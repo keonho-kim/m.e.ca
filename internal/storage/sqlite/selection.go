@@ -10,10 +10,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
+
+	"io"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	selectioncheck "github.com/keonho-kim/meca/internal/provider/selection"
-	"io"
 )
 
 func (s *Store) SaveSelection(ctx context.Context, session string, selection modelconn.Selection) error {
@@ -28,7 +31,7 @@ func (s *Store) SaveSelection(ctx context.Context, session string, selection mod
 		return err
 	}
 	if len(body) > 16*1024*1024 {
-		return fmt.Errorf("model selection exceeds limit")
+		return faults.Errorf(diagcatalog.SqliteModelSelectionExceedsLimit)
 	}
 	result, err := s.db.ExecContext(ctx, "UPDATE sessions SET selection=? WHERE id=?", body, session)
 	if err != nil {
@@ -39,7 +42,7 @@ func (s *Store) SaveSelection(ctx context.Context, session string, selection mod
 		return err
 	}
 	if count != 1 {
-		return fmt.Errorf("model selection session no longer exists")
+		return faults.Errorf(diagcatalog.SqliteModelSelectionSessionNoLongerExists)
 	}
 	return nil
 }
@@ -56,7 +59,7 @@ func (s *Store) Selection(ctx context.Context, session string) (modelconn.Select
 		return modelconn.Selection{}, nil
 	}
 	if len(body) > 16*1024*1024 {
-		return modelconn.Selection{}, fmt.Errorf("model selection exceeds limit")
+		return modelconn.Selection{}, faults.Errorf(diagcatalog.SqliteModelSelectionExceedsLimit)
 	}
 	var selected modelconn.Selection
 	decoder := json.NewDecoder(bytes.NewReader(body))
@@ -66,7 +69,7 @@ func (s *Store) Selection(ctx context.Context, session string) (modelconn.Select
 		return selected, err
 	}
 	if decoder.Decode(new(any)) != io.EOF {
-		return selected, fmt.Errorf("invalid trailing model selection content")
+		return selected, faults.Errorf(diagcatalog.SqliteInvalidTrailingModelSelectionContent)
 	}
 	return selected, selectioncheck.Validate(selected)
 }

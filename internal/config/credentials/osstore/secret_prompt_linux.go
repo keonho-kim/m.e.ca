@@ -6,9 +6,12 @@ package osstore
 
 import (
 	"context"
-	"fmt"
-	dbus "github.com/godbus/dbus/v5"
+
 	"time"
+
+	dbus "github.com/godbus/dbus/v5"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (c *secretClient) unlock(paths []dbus.ObjectPath) error {
@@ -25,7 +28,7 @@ func (c *secretClient) prompt(path dbus.ObjectPath) error {
 		return nil
 	}
 	if !path.IsValid() {
-		return fmt.Errorf("invalid Secret Service prompt")
+		return faults.Errorf(diagcatalog.OsstoreInvalidSecretServicePrompt)
 	}
 	options := []dbus.MatchOption{dbus.WithMatchSender(secretName), dbus.WithMatchObjectPath(path), dbus.WithMatchInterface(secretInterface + "Prompt"), dbus.WithMatchMember("Completed")}
 	if err := c.conn.AddMatchSignalContext(c.ctx, options...); err != nil {
@@ -53,11 +56,11 @@ func (c *secretClient) prompt(path dbus.ObjectPath) error {
 		return c.ctx.Err()
 	case signal, ok := <-signals:
 		if !ok || signal == nil || len(signal.Body) != 2 {
-			return fmt.Errorf("secret service prompt ended without a result")
+			return faults.Errorf(diagcatalog.OsstoreSecretServicePromptEndedWithoutAResult)
 		}
 		dismissed, ok := signal.Body[0].(bool)
 		if !ok || dismissed {
-			return fmt.Errorf("secret service prompt was dismissed")
+			return faults.Errorf(diagcatalog.OsstoreSecretServicePromptWasDismissed)
 		}
 		return nil
 	}

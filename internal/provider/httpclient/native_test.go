@@ -9,13 +9,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"sync/atomic"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
-	"net/http"
-	"sync/atomic"
-	"testing"
 )
 
 func TestNativeRetryDiscardsPartialArguments(t *testing.T) {

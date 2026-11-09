@@ -7,6 +7,8 @@ package session
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
@@ -52,7 +54,9 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	}
 	result, err := runner.Run(ctx, request.Text, approve, emit)
 	if err != nil {
-		err = errors.Join(err, recovery.Restore(context.WithoutCancel(ctx), request.Store, runner.Session))
+		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		err = errors.Join(err, recovery.Restore(flush, request.Store, runner.Session))
+		cancel()
 	}
 	return result, err
 }

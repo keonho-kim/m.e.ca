@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -32,7 +33,17 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 			return err
 		}
 	}
-	return nil
+	for _, doc := range r.SkillReads {
+		s.allowExplicitSkill(doc.ID)
+		body, err := json.Marshal(doc)
+		if err != nil {
+			return err
+		}
+		if err := s.saveSkillRead(ctx, doc, string(body)); err != nil {
+			return err
+		}
+	}
+	return s.readMentions(ctx, input)
 }
 
 func (s *execution) close(ctx context.Context, cause error) error {

@@ -7,10 +7,13 @@ package discovery
 
 import (
 	"context"
-	"fmt"
-	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
+
 	"sort"
 	"strings"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func (client *Client) ListModels(ctx context.Context) (models []modelconn.ModelInfo, err error) {
@@ -42,19 +45,19 @@ func (client *Client) ListModels(ctx context.Context) (models []modelconn.ModelI
 		return nil, err
 	}
 	if listing.Models == nil && listing.Data == nil {
-		return nil, fmt.Errorf("unsupported model list format; enter Model ID manually")
+		return nil, faults.Errorf(diagcatalog.DiscoveryUnsupportedModelListFormatEnterModelID)
 	}
 	seen := make(map[string]bool)
 	appendModel := func(id string, contextWindow int) error {
 		if id == "" || len(id) > 512 || strings.ContainsAny(id, "\x00\r\n\x1b") {
-			return fmt.Errorf("invalid Model ID")
+			return faults.Errorf(diagcatalog.DiscoveryInvalidModelID)
 		}
 		if !seen[id] {
 			models = append(models, modelconn.ModelInfo{ID: id, ContextWindow: contextWindow})
 			seen[id] = true
 		}
 		if len(models) > 10000 {
-			return fmt.Errorf("too many models")
+			return faults.Errorf(diagcatalog.DiscoveryTooManyModels)
 		}
 		return nil
 	}

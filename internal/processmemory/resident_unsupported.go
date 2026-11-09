@@ -6,8 +6,11 @@
 // Related: internal/processmemory/resident_linux.go, internal/processmemory/resident_darwin.go.
 package processmemory
 
-import "errors"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func ResidentBytes() (uint64, error) {
-	return 0, errors.New("resident-memory measurement is unavailable on this operating system")
+	return 0, faults.Errorf(diagcatalog.ProcessmemoryResidentMemoryMeasurementIsUnavailableOnThis)
 }

@@ -6,23 +6,25 @@ package imagefile
 
 import (
 	"encoding/binary"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func firstWebPFrame(data []byte) ([]byte, error) {
 	if len(data) < 12 || string(data[:4]) != "RIFF" || string(data[8:12]) != "WEBP" || uint64(binary.LittleEndian.Uint32(data[4:8]))+8 != uint64(len(data)) {
-		return nil, fmt.Errorf("invalid animated WebP container")
+		return nil, faults.Errorf(diagcatalog.ImagefileInvalidAnimatedWebPContainer)
 	}
 	for offset := 12; offset+8 <= len(data); {
 		size := uint64(binary.LittleEndian.Uint32(data[offset+4 : offset+8]))
 		end := uint64(offset) + 8 + size
 		if end > uint64(len(data)) {
-			return nil, fmt.Errorf("truncated WebP chunk")
+			return nil, faults.Errorf(diagcatalog.ImagefileTruncatedWebPChunk)
 		}
 		if string(data[offset:offset+4]) == "ANMF" {
 			frame := data[offset+8 : int(end)]
 			if len(frame) < 16 {
-				return nil, fmt.Errorf("invalid WebP frame header")
+				return nil, faults.Errorf(diagcatalog.ImagefileInvalidWebPFrameHeader)
 			}
 			width, height := frame[6:9], frame[9:12]
 			chunks := frame[16:]
@@ -43,5 +45,5 @@ func firstWebPFrame(data []byte) ([]byte, error) {
 		}
 		offset = int(end + size%2)
 	}
-	return nil, fmt.Errorf("animated WebP contains no frame")
+	return nil, faults.Errorf(diagcatalog.ImagefileAnimatedWebPContainsNoFrame)
 }

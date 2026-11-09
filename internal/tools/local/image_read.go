@@ -6,11 +6,12 @@ package local
 
 import (
 	"context"
-	"fmt"
+
 	"io"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func readImageBytes(ctx context.Context, reader io.Reader, size int64) ([]byte, error) {
@@ -18,7 +19,7 @@ func readImageBytes(ctx context.Context, reader io.Reader, size int64) ([]byte, 
 		return nil, err
 	}
 	if size < 0 || size > media.MaxBytes {
-		return nil, fmt.Errorf("image exceeds %d bytes", media.MaxBytes)
+		return nil, faults.Errorf(diagcatalog.LocalImageExceedsBytes, media.MaxBytes)
 	}
 	// A single extra byte detects growth without expanding the original buffer.
 	data := make([]byte, int(size)+1)
@@ -43,7 +44,7 @@ func readImageBytes(ctx context.Context, reader io.Reader, size int64) ([]byte, 
 		return nil, err
 	}
 	if int64(n) != size {
-		return nil, &toolapi.Failure{Code: toolapi.StaleTarget, Detail: "image size changed while reading its snapshot", Next: "View the intended image again."}
+		return nil, &faults.Failure{Code: diagcatalog.StaleTarget, Detail: diagcatalog.Text(diagcatalog.LocalImageSizeChangedWhileReadingItsSnapshot), Next: diagcatalog.Text(diagcatalog.LocalViewTheIntendedImageAgain)}
 	}
 	return data[:n:n], nil
 }

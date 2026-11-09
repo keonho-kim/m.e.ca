@@ -34,7 +34,7 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	if err := a.opts.Store.RecordEvent(a.ctx, id, runrecord.Event{Kind: "run_checkpoint", RunID: cp.ID, Checkpoint: &cp, Statistics: &stats}); err != nil {
 		t.Fatal(err)
 	}
-	before, err := a.opts.Store.ContextMessages(a.ctx, id, 0, 16*1024*1024, true)
+	before, err := a.opts.Store.ContextMessages(a.ctx, id, 0, 16*1024*1024, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	if !strings.HasPrefix(screenLine(a.screen, 0, 80), "STATUS IDLE") || !strings.Contains(a.chat.output.Blocks[0].Text, "\n\nAgent") || !strings.Contains(a.chat.output.Blocks[2].Text, "Worked for 00:00:01 | INPUT 2 | OUTPUT 1 | TPS 1.0") {
 		t.Fatal("existing transcript labels were not refreshed")
 	}
-	after, err := a.opts.Store.ContextMessages(a.ctx, id, 0, 16*1024*1024, true)
+	after, err := a.opts.Store.ContextMessages(a.ctx, id, 0, 16*1024*1024, true, nil)
 	if err != nil || !reflect.DeepEqual(before, after) || !strings.Contains(a.chat.output.Blocks[0].Text, before[0].Content) || !strings.Contains(a.chat.output.Blocks[1].Text, before[1].Content) {
 		t.Fatal("language change modified conversation literals")
 	}

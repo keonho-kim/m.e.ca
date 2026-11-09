@@ -108,7 +108,11 @@ func TestPageReferenceIndexStaysBoundedAndTracksExistingReferences(t *testing.T)
 		t.Fatal("reference index exceeded its page budget", len(last), err)
 	}
 	last, err = indexPayloadRefs(last, nil, 2, []byte(`{"[\"output\"]":"kept"}`))
-	if err != nil || last[payloadKey{nil, "kept"}] != 2 || len(last) != pageReferenceEntries {
+	if err != nil || last[payloadKey{"", "kept"}] != 2 || len(last) != pageReferenceEntries {
 		t.Fatal("full index stopped updating a cached payload's last reference", err)
+	}
+	last, err = indexPayloadRefs(last, nil, 0, []byte(`{"[\"output\"]":"kept"}`))
+	if err != nil || last[payloadKey{"", "kept"}] != 2 {
+		t.Fatal("out-of-order source rows moved the last reference backwards", err)
 	}
 }

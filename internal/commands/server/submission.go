@@ -13,6 +13,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/work"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Service) Submit(ctx context.Context, input Submission) (submitted Submitted, resultErr error) {
@@ -25,7 +28,7 @@ func (s *Service) Submit(ctx context.Context, input Submission) (submitted Submi
 	}
 	defer done()
 	if s.options.Responses == nil || s.options.ReadOutput == nil {
-		return Submitted{}, failure("failed_precondition", "compatible submission storage is unavailable")
+		return Submitted{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerCompatibleSubmissionStorageIsUnavailable)
 	}
 	key := input.Key
 	if key == "" {
@@ -57,14 +60,25 @@ func (s *Service) Submit(ctx context.Context, input Submission) (submitted Submi
 		if resultErr == nil {
 			return
 		}
-		value.Status, value.Error, value.Completed = "failed", "request admission failed; no automatic replay is allowed", max(value.Created, time.Now().Unix())
-		value.Code = "admission_failed"
-		value.TaskStatus = "interrupted"
+		value.Status, value.Error, value.Completed = "failed", diagcatalog.Text(diagcatalog.AdmissionUncertain), max(value.Created, time.Now().Unix())
+		value.Code = diagcatalog.AdmissionFailed
+		value.TaskStatus = diagcatalog.Interrupted
 		value.Through = value.Begin
 		value.End = work.End{Status: work.Failed, Reason: value.Error}
 		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		resultErr = errors.Join(resultErr, s.options.Responses.SaveResponse(flush, value))
+		saveErr := s.options.Responses.SaveResponse(flush, value)
+		cancel()
+		saveErr = s.confirmCompletion(ctx, Task{}, &value, saveErr)
+		if saveErr != nil {
+			s.mu.Lock()
+			s.completionErr = saveErr
+			s.closeErr = errors.Join(s.closeErr, saveErr)
+			s.mu.Unlock()
+			value.Code, value.Error = diagcatalog.CompletionNotSaved, diagcatalog.Text(diagcatalog.CompletionUncertain)
+			value.End.Reason = value.Error
+			resultErr = errors.Join(resultErr, faults.New(diagcatalog.CompletionNotSaved, diagcatalog.CompletionUncertain), saveErr)
+			diagnostics.Log(ctx, diagcatalog.CompletionSaveFailed, "error_code", faults.Code(saveErr))
+		}
 		submitted.Response = value
 	}()
 	c, err := s.submissionSession(change, input.Previous, value.ID)
@@ -80,7 +94,7 @@ func (s *Service) Submit(ctx context.Context, input Submission) (submitted Submi
 	s.mu.Lock()
 	s.admitting = task.ID
 	s.mu.Unlock()
-	clientContext, err := seedInput(change.ctx, c, input.Messages[:len(input.Messages)-1])
+	clientContext, err := seedInput(change.ctx, c, input.Messages[:len(input.Messages)-1], input.Kind == "response")
 	if err != nil {
 		return Submitted{Response: value}, err
 	}
@@ -104,42 +118,42 @@ func (s *Service) Submit(ctx context.Context, input Submission) (submitted Submi
 func (s *Service) findSubmission(ctx context.Context, value Response) (Response, bool, error) {
 	old, err := s.options.Responses.ReadResponse(ctx, value.ID)
 	if err != nil {
-		var public *Error
-		if errors.As(err, &public) && public.Code == "not_found" {
+		var public *faults.Error
+		if errors.As(err, &public) && public.ErrorCode() == diagcatalog.NotFound {
 			return Response{}, false, nil
 		}
 		return Response{}, false, err
 	}
 	if old.Digest != value.Digest || old.Scope != value.Scope || old.Kind != value.Kind {
-		return Response{}, true, failure("conflict", "Idempotency-Key was already used with a different request")
+		return Response{}, true, faults.New(diagcatalog.Conflict, diagcatalog.ServerIdempotencyKeyWasAlreadyUsedWithA)
 	}
 	return old, true, nil
 }
 
 func checkSubmission(input Submission) error {
 	if input.Kind != "chat" && input.Kind != "response" {
-		return failure("invalid_argument", "unsupported compatible request kind")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerUnsupportedCompatibleRequestKind)
 	}
 	if len(input.Key) > 128 || !utf8.ValidString(input.Key) || strings.ContainsAny(input.Key, "\r\n\x00") {
-		return failure("invalid_argument", "Idempotency-Key must contain 1 to 128 UTF-8 bytes")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerIdempotencyKeyMustContainToUTFBytes)
 	}
 	if len(input.Messages) == 0 || len(input.Messages) > 4096 || input.Messages[len(input.Messages)-1].Role != "user" {
-		return failure("invalid_argument", "input must end with a user message")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInputMustEndWithAUserMessage)
 	}
 	bytes := 0
 	for _, message := range input.Messages {
 		switch message.Role {
 		case "system", "developer", "user", "assistant":
 		default:
-			return failure("invalid_argument", "unsupported input role")
+			return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerUnsupportedInputRole)
 		}
 		if !utf8.ValidString(message.Text) || strings.TrimSpace(message.Text) == "" {
-			return failure("invalid_argument", "input messages must contain UTF-8 text")
+			return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInputMessagesMustContainUTFText)
 		}
 		bytes += len(message.Text)
 	}
 	if bytes > 16<<20 {
-		return failure("invalid_argument", "input text exceeds 16 MiB")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInputTextExceedsMiB)
 	}
 	return nil
 }

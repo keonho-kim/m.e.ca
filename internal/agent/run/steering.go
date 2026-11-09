@@ -6,14 +6,15 @@ package run
 
 import (
 	"context"
-	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// admitInstructions merges the mode-specific inputs on the serial runtime owner.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// admitInstructions merges the mode-specific inputs on the serial runtime owner.
 func (s *execution) admitInstructions(ctx context.Context) (bool, error) {
 	changed, err := s.admitContext(ctx)
 	if err != nil {
@@ -39,7 +40,7 @@ func (s *execution) checkSteering(ctx context.Context, revision uint64) error {
 		return err
 	}
 	if revision != s.instructionRevision {
-		return tool.NewInstructionChanged()
+		return faults.NewInstructionChanged()
 	}
 	if guard, ok := s.runner.Tools.(instructionGuard); ok {
 		return guard.CheckUserDecision()
@@ -58,12 +59,15 @@ func (s *execution) steer(ctx context.Context) (bool, error) {
 func (s *execution) applyInstructions(ctx context.Context, messages []string) error {
 	for _, text := range messages {
 		if len(text) > 64*1024*1024 {
-			return fmt.Errorf("user instruction exceeds 64 MiB")
+			return faults.Errorf(diagcatalog.RunUserInstructionExceedsMiB)
 		}
 		if err := s.save(ctx, modelapi.Message{Role: "user", Content: text}); err != nil {
 			return err
 		}
 		s.instructionRevision++
+		if err := s.readMentions(ctx, text); err != nil {
+			return err
+		}
 		s.checkpoint.Objective = s.runner.Redact(text)
 		if err := s.emit(runrecord.Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
 			return err

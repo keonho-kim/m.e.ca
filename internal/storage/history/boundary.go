@@ -6,6 +6,7 @@ package history
 
 import (
 	"encoding/json"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 

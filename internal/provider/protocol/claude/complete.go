@@ -6,8 +6,10 @@ package claude
 
 import (
 	"encoding/json"
-	"fmt"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
@@ -19,12 +21,12 @@ func (d *Decoder) finish(state *native.State, emit func(modelapi.Event) error) e
 	case "max_tokens", "model_context_window_exceeded":
 		return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Claude output token limit"}, emit)
 	default:
-		return state.EmitFailedUsage(&transport.PermanentError{Cause: fmt.Errorf("claude response did not complete: %s", d.reason)}, emit)
+		return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.ClaudeClaudeResponseDidNotComplete, d.reason)}, emit)
 	}
 	blocks := make([]Block, len(d.blocks))
 	for i, b := range d.blocks {
 		if !b.stopped {
-			return fmt.Errorf("claude response ended with an unfinished block")
+			return faults.Errorf(diagcatalog.ClaudeClaudeResponseEndedWithAnUnfinishedBlock)
 		}
 		blocks[i] = b.block
 	}
@@ -55,7 +57,7 @@ func (d *Decoder) single(content []byte, state *native.State, emit func(modelapi
 		return transport.ParseError(0, content, "")
 	}
 	if value.Type != "message" {
-		return fmt.Errorf("invalid Claude message")
+		return faults.Errorf(diagcatalog.ClaudeInvalidClaudeMessage)
 	}
 	for i, b := range value.Content {
 		switch b.Type {
@@ -73,7 +75,7 @@ func (d *Decoder) single(content []byte, state *native.State, emit func(modelapi
 				return err
 			}
 		default:
-			return fmt.Errorf("unsupported Claude content type")
+			return faults.Errorf(diagcatalog.ClaudeUnsupportedClaudeContentType)
 		}
 		d.blocks = append(d.blocks, &blockDraft{block: b, stopped: true})
 	}

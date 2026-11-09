@@ -26,7 +26,7 @@ func TestPublicContextSnapshotFreezesPublishedPrefix(t *testing.T) {
 	if err := child.CommitContext(t.Context(), child.session.ID, []record.Entry{{Message: &message}}, published.Sequence); err != nil {
 		t.Fatal(err)
 	}
-	restored, err := child.ContextMessages(t.Context(), child.session.ID, 0, 1<<20, false)
+	restored, err := child.ContextMessages(t.Context(), child.session.ID, 0, 1<<20, false, nil)
 	if err != nil || len(restored) != 1 || restored[0].Content != message.Content {
 		t.Fatal("frozen context did not round-trip", err)
 	}

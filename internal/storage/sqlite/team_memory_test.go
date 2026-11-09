@@ -7,12 +7,13 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	record "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 func TestAuthoredDiscussionCompactionUsesPublicOriginal(t *testing.T) {

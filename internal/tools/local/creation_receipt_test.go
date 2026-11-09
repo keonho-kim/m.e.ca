@@ -7,9 +7,10 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/policy"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func TestCreationReceipt(t *testing.T) {

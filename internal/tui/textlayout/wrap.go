@@ -5,10 +5,11 @@
 package textlayout
 
 import (
-	"github.com/rivo/uniseg"
 	"iter"
 	"slices"
 	"strings"
+
+	"github.com/rivo/uniseg"
 )
 
 type Row struct {

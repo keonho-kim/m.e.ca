@@ -6,9 +6,13 @@ package prompt
 
 import (
 	_ "embed"
-	"fmt"
+
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const MaxTemplateBytes = 16 * 1024 * 1024
@@ -64,7 +68,7 @@ func (t *Templates) Files() map[string]*string {
 
 func CheckTemplate(text string) error {
 	if strings.TrimSpace(text) == "" || len(text) > MaxTemplateBytes || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
-		return fmt.Errorf("prompt must be nonempty UTF-8 Markdown within %d bytes", MaxTemplateBytes)
+		return faults.Errorf(diagcatalog.PromptPromptMustBeNonemptyUTFMarkdownWithin, MaxTemplateBytes)
 	}
 	return nil
 }

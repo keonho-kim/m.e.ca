@@ -16,7 +16,12 @@ type admissionLedger struct {
 	task   Task
 }
 
-func (l *admissionLedger) Get(context.Context, string) (Task, error) { return l.lookup() }
+func (l *admissionLedger) Get(ctx context.Context, _ string) (Task, error) {
+	if err := ctx.Err(); err != nil {
+		return Task{}, err
+	}
+	return l.lookup()
+}
 func (l *admissionLedger) Admit(context.Context, string, string, string) (Task, bool, error) {
 	return l.task, true, nil
 }

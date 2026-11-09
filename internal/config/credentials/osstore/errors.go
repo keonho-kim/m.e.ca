@@ -4,6 +4,9 @@
 // Related: internal/config/credentials/osstore/store_darwin.go, internal/config/credentials/osstore/store_linux.go.
 package osstore
 
-import "errors"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
-var ErrNotFound = errors.New("OS credential was not found")
+var ErrNotFound = faults.Errorf(diagcatalog.OsstoreOSCredentialWasNotFound)

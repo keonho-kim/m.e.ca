@@ -14,6 +14,8 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *execution) generate(ctx context.Context, request modelapi.Request, role inference.Role, consume func(modelapi.Event) error) error {
@@ -25,7 +27,12 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 	var measured time.Duration
 	started := time.Now()
 	generation := runrecord.Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
-	if err := s.emit(runrecord.Event{Kind: "generation_started"}); err != nil {
+	emitStart := func() error {
+		copy := generation
+		copy.ElapsedMillis, copy.MeasuredMillis = 0, 0
+		return s.emit(runrecord.Event{Kind: "generation_started", Generation: &copy})
+	}
+	if err := emitStart(); err != nil {
 		return err
 	}
 	var outputBytes int64
@@ -52,20 +59,23 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			inputBytes = event.InputBytes
 		}
 		if event.Retry != nil {
+			if err := s.checkTimeBudget(ctx); err != nil {
+				return err
+			}
 			if err := flush(); err != nil {
 				return err
 			}
 			if !s.modelCall() {
-				return fmt.Errorf("%w before provider retry: %s", errModelBudget, s.runner.Redact(event.Retry.Reason))
+				return faults.Errorf(diagcatalog.RunBeforeProviderRetry, errModelBudget, s.runner.Redact(event.Retry.Reason))
 			}
 			s.checkpoint.ModelCalls = s.usage.ModelCalls
 			message := fmt.Sprintf("Provider retry %d/%d: %s", event.Retry.Attempt, event.Retry.MaxAttempts, s.runner.Redact(event.Retry.Reason))
-			if err := s.emit(runrecord.Event{Kind: "retry", Text: message}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "retry", Text: message, ErrorCode: diagcatalog.Text(diagcatalog.RunProviderRetry)}); err != nil {
 				return err
 			}
 			started = time.Now()
 			generation.Attempt++
-			if err := s.emit(runrecord.Event{Kind: "generation_started"}); err != nil {
+			if err := emitStart(); err != nil {
 				return err
 			}
 			return consume(event)
@@ -105,6 +115,7 @@ func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage,
 	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	final := runrecord.Event{Kind: "generation_finished", Generation: &generation}
+	final.RunID, final.OccurredAt = s.checkpoint.ID, time.Now().UTC().Format(time.RFC3339Nano)
 	if usage != nil {
 		final.Kind = "usage"
 		final.Usage = usage

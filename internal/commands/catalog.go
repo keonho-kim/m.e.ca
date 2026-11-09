@@ -5,8 +5,9 @@
 package commands
 
 import (
-	"github.com/keonho-kim/meca/internal/searchmatch"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/searchmatch"
 )
 
 type Suggestion struct{ Name, Description string }
@@ -22,6 +23,7 @@ var catalog = []struct {
 	{"!new", "새 세션", NewSession},
 	{"!quit", "앱 종료", Exit},
 	{"!team", "팀 모드 전환", Team},
+	{"!skills", "스킬 목록 · 설명 · 본문", Skills},
 }
 
 func Suggestions(input string, describe func(string) string) []Suggestion {

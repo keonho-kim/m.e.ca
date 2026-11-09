@@ -7,8 +7,11 @@ package serverapi
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
@@ -35,7 +38,11 @@ func (a *API) sendBatch(ctx context.Context, batch server.Batch, send func(*v1.N
 	return nil
 }
 
-func (a *API) watch(ctx context.Context, cursor string, send func(*v1.Notification) error) error {
+func (a *API) watch(ctx context.Context, cursor string, send func(*v1.Notification) error) (resultErr error) {
+	started := time.Now()
+	defer func() {
+		diagnostics.Log(ctx, diagcatalog.StreamClosed, "component", "serverapi", "duration_ms", time.Since(started).Milliseconds(), "error_code", diagnostics.Code(resultErr))
+	}()
 	idle := eventstream.NewIdle()
 	for {
 		if err := ctx.Err(); err != nil {

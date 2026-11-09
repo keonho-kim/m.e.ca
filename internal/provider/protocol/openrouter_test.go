@@ -8,11 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/protocol/chat"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"

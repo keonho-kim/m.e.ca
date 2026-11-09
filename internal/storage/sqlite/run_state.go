@@ -7,10 +7,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"encoding/hex"
 
 	json "github.com/goccy/go-json"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -19,15 +21,32 @@ type preparedState struct {
 	run string
 }
 
-func (s *Store) prepareRunState(event runrecord.Event) (*preparedState, error) {
-	body, err := json.Marshal(event)
+// Only the immutable objective is shared. Mutable file facts stay in the one
+// replaceable run row so updates cannot accumulate obsolete payload snapshots.
+type stateBody struct {
+	runrecord.Event
+	ObjectivePayload string `json:"objective_payload,omitempty"`
+}
+
+func (p *journalEncoder) prepareRunState(event runrecord.Event) (*preparedState, error) {
+	wire := stateBody{Event: event}
+	if len(event.Checkpoint.Objective) > content.Threshold {
+		copy := *event.Checkpoint
+		id, err := p.objectivePayload(copy.ID, copy.Objective)
+		if err != nil {
+			return nil, err
+		}
+		copy.Objective = ""
+		wire.Checkpoint, wire.ObjectivePayload = &copy, id
+	}
+	body, err := json.Marshal(wire)
 	if err != nil {
 		return nil, err
 	}
 	if len(body) > content.MaxBytes {
-		return nil, fmt.Errorf("run state exceeds limit")
+		return nil, faults.Errorf(diagcatalog.SqliteRunStateExceedsLimit)
 	}
-	value, err := s.encodeValue(content.ID(body), body)
+	value, err := p.store.encodeValue(content.ID(body), body)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +76,30 @@ func (s *Store) runState(ctx context.Context, session, id string) (runrecord.Eve
 	if err != nil {
 		return runrecord.Event{}, err
 	}
-	var event runrecord.Event
-	if err = json.Unmarshal(raw, &event); err != nil {
-		return event, err
+	var wire stateBody
+	if err = json.Unmarshal(raw, &wire); err != nil {
+		return wire.Event, err
 	}
-	return event, event.Check()
+	if wire.ObjectivePayload != "" {
+		physical, quote := content.Reference(wire.ObjectivePayload)
+		digest, err := hex.DecodeString(physical)
+		if err != nil || len(digest) != 32 || wire.Checkpoint == nil || wire.Checkpoint.Objective != "" {
+			return wire.Event, faults.Errorf(diagcatalog.ContentStoredPayloadIntegrityCheckFailed)
+		}
+		var codec, size int
+		var body []byte
+		if err := s.db.QueryRowContext(ctx, "SELECT codec,raw_bytes,body FROM payloads WHERE digest=?", digest).Scan(&codec, &size, &body); err != nil {
+			return wire.Event, err
+		}
+		raw, err := s.restorePayload(ctx, codec, size, digest, body)
+		if err != nil {
+			return wire.Event, err
+		}
+		if quote {
+			wire.Checkpoint.Objective = string(raw)
+		} else if err := json.Unmarshal(raw, &wire.Checkpoint.Objective); err != nil {
+			return wire.Event, err
+		}
+	}
+	return wire.Event, wire.Event.Check()
 }

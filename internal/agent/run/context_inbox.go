@@ -6,10 +6,11 @@ package run
 
 import (
 	"context"
-	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type ContextBatch struct {
@@ -34,7 +35,7 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	if batch.UserSequence < 0 || batch.Objective != "" && batch.UserSequence == 0 {
-		return false, fmt.Errorf("user context requires its committed public sequence")
+		return false, faults.Errorf(diagcatalog.RunUserContextRequiresItsCommittedPublicSequence)
 	}
 	if batch.Cursor == 0 {
 		s.observeUserSequence(batch.UserSequence)
@@ -42,7 +43,7 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	}
 	journal, ok := s.runner.Journal.(contextJournal)
 	if !ok {
-		return false, fmt.Errorf("cooperative context requires an atomic receive cursor")
+		return false, faults.Errorf(diagcatalog.RunCooperativeContextRequiresAnAtomicReceiveCursor)
 	}
 	entries := make([]runrecord.Entry, len(batch.Messages))
 	for i := range batch.Messages {
@@ -72,6 +73,9 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	s.observeUserSequence(batch.UserSequence)
 	if batch.Objective != "" {
 		s.checkpoint.Objective = s.runner.Redact(batch.Objective)
+		if err := s.readMentions(ctx, batch.Objective); err != nil {
+			return false, err
+		}
 	}
 	return batch.Reconsider || batch.Objective != "", nil
 }

@@ -7,10 +7,13 @@ package install
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
+
 	"os"
 	"path/filepath"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Uninstall(ctx context.Context, home string, clearCredentials func(context.Context) error) (err error) {
@@ -37,7 +40,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 			return finishCleanup(ctx, root, pending, clearCredentials)
 		}
 		if _, binaryErr := root.Lstat(binaryName); binaryErr == nil {
-			return fmt.Errorf("installation state is missing; run meca install before meca uninstall")
+			return faults.Errorf(diagcatalog.InstallInstallationStateIsMissingRunMecaInstall)
 		} else if !errors.Is(binaryErr, os.ErrNotExist) {
 			return binaryErr
 		}
@@ -47,7 +50,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 		return err
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("application state must be a real directory")
+		return faults.Errorf(diagcatalog.InstallApplicationStateMustBeARealDirectory)
 	}
 	state, err := statefs.Open(filepath.Join(home, statefs.DirectoryName))
 	if err != nil {
@@ -81,7 +84,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 	if _, err := state.Lstat("credentials.used"); err == nil {
 		credentialsUsed = true
 		if clearCredentials == nil {
-			return fmt.Errorf("credential cleanup is required")
+			return faults.Errorf(diagcatalog.InstallCredentialCleanupIsRequired)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err

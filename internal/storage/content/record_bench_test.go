@@ -24,7 +24,7 @@ func BenchmarkRecordContent(b *testing.B) {
 		values[id] = append(json.RawMessage(nil), raw...)
 		return id, nil
 	}
-	packed, refs, err := Pack(body, put)
+	packed, refs, err := Pack(body, "", put)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func BenchmarkRecordContent(b *testing.B) {
 		b.ReportAllocs()
 		b.SetBytes(int64(len(body)))
 		for b.Loop() {
-			if _, _, err := Pack(body, put); err != nil {
+			if _, _, err := Pack(body, "", put); err != nil {
 				b.Fatal(err)
 			}
 		}

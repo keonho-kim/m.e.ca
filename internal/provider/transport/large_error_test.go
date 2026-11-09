@@ -8,12 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func TestLargeErrorPreservesCapacityClassification(t *testing.T) {

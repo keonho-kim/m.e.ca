@@ -7,10 +7,12 @@ package discovery
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
 	"sort"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -38,7 +40,7 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 		return nil, err
 	}
 	if listing.Data == nil || len(listing.Data) > 10000 {
-		return nil, fmt.Errorf("invalid OpenRouter model catalog")
+		return nil, faults.Errorf(diagcatalog.DiscoveryInvalidOpenRouterModelCatalog)
 	}
 	models := make([]connection.ModelInfo, 0, len(listing.Data))
 	seen := make(map[string]bool)
@@ -52,7 +54,7 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 			info.ImageInput = connection.DeclaredImageInput(vision, "/api/v1/models.architecture.input_modalities")
 		}
 		if strings.ContainsAny(row.ID, "\x00\r\n\x1b") || seen[row.ID] || row.TopProvider.ContextLength < 0 {
-			return nil, fmt.Errorf("invalid or duplicate OpenRouter model ID or limits")
+			return nil, faults.Errorf(diagcatalog.DiscoveryInvalidOrDuplicateOpenRouterModelIDOr)
 		}
 		if row.TopProvider.ContextLength > 0 && (info.ContextWindow == 0 || row.TopProvider.ContextLength < info.ContextWindow) {
 			info.ContextWindow = row.TopProvider.ContextLength
@@ -64,7 +66,7 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 			} else if len(r.Efforts) > 0 {
 				var levels []string
 				if err := json.Unmarshal(r.Efforts, &levels); err != nil {
-					return nil, fmt.Errorf("OpenRouter reasoning efforts: %w", err)
+					return nil, faults.Errorf(diagcatalog.DiscoveryOpenRouterReasoningEfforts, err)
 				}
 				for _, level := range levels {
 					if level != "none" {
@@ -78,7 +80,7 @@ func (c *Client) openRouterModels(ctx context.Context) ([]connection.ModelInfo, 
 			info.Reasoning = options
 		}
 		if err := info.Check(); err != nil {
-			return nil, fmt.Errorf("OpenRouter model %q: %w", row.ID, err)
+			return nil, faults.Errorf(diagcatalog.DiscoveryOpenRouterModel, row.ID, err)
 		}
 		seen[row.ID] = true
 		models = append(models, info)

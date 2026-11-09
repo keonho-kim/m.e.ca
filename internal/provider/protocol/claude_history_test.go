@@ -6,12 +6,13 @@ package protocol
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
-	"strings"
-	"testing"
 )
 
 func TestClaudeHistoryBindsPrefixAndKeepsBlocks(t *testing.T) {

@@ -5,12 +5,14 @@
 package redaction
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
 	"unicode"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Registry struct {
@@ -31,8 +33,8 @@ func (v *Registry) Remember(key string) error {
 	if key == "" {
 		return nil
 	}
-	if len(key) > 2048 || !utf8.ValidString(key) || strings.ContainsFunc(key, unicode.IsControl) {
-		return fmt.Errorf("invalid credential for private masking")
+	if len(key) > MaxCredentialBytes || !utf8.ValidString(key) || strings.ContainsFunc(key, unicode.IsControl) {
+		return faults.Errorf(diagcatalog.RedactionInvalidCredentialForPrivateMasking)
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -42,7 +44,7 @@ func (v *Registry) Remember(key string) error {
 		}
 	}
 	if len(v.keys) >= 1024 {
-		return fmt.Errorf("credential masking history limit reached; restart MECA before selecting another key")
+		return faults.Errorf(diagcatalog.RedactionCredentialMaskingHistoryLimitReachedRestartMECA)
 	}
 	v.keys = append(v.keys, key)
 	v.index = indexKeys(v.keys)

@@ -7,6 +7,7 @@ package tool
 import (
 	"encoding/json"
 	"errors"
+
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 )

@@ -8,18 +8,19 @@ package local
 import (
 	"context"
 	"encoding/json"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 func testExecutor(t *testing.T) (*Executor, string) {
 	t.Helper()
 	project, home := t.TempDir(), t.TempDir()
-	executor, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") })
+	executor, err := NewExecutor(project, home, filepath.Join(home, ".meca"), func(text string) string { return strings.ReplaceAll(text, "provider-secret", "[redacted]") }, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

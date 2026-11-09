@@ -60,7 +60,7 @@ func fixture(t testing.TB) *app {
 		}
 	})
 	vault := &credentials.Vault{State: state, Keys: &credentialtest.Memory{}}
-	tools, err := local.NewExecutor(root, home, state, vault.Redact)
+	tools, err := local.NewExecutor(root, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func fixture(t testing.TB) *app {
 	})
 	return terminalFixture(t, Options{
 		Home: home, State: state, Config: configuration,
-		Store: store, Session: store.Session(), Tools: tools, Files: tools.Files, Vault: vault,
+		Store: store, Session: store.Session(), Tools: tools, Skills: tools.Skills(), Files: tools.Files, Vault: vault,
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
 		UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
 			return config.Update(ctx, state, apply)

@@ -8,9 +8,12 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
-	"fmt"
+
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type sourceEntry struct {
@@ -64,7 +67,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 		}
 	}
 	if mandatory && b.required+size > b.limit {
-		return fmt.Errorf("compaction user instructions exceed the available summary input budget; previous memory and original history retained; increase model context or adjust compaction input/output limits")
+		return faults.Errorf(diagcatalog.CompactCompactionUserInstructionsExceedTheAvailableSummary)
 	}
 	if !mandatory && size > b.limit-b.required {
 		b.omitted++
@@ -76,7 +79,7 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 			queue = &b.important
 		}
 		if len(*queue) == 0 {
-			return fmt.Errorf("compaction source budget exhausted")
+			return faults.Errorf(diagcatalog.CompactCompactionSourceBudgetExhausted)
 		}
 		remove := (*queue)[0]
 		entry := remove.Value.(sourceEntry)

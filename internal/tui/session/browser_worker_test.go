@@ -5,11 +5,12 @@
 package session
 
 import (
-	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/tui/browser/controller"
 
 	"github.com/gdamore/tcell/v3"
 )

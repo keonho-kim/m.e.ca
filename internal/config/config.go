@@ -8,11 +8,13 @@ package config
 import (
 	"bytes"
 	"errors"
-	"fmt"
+
 	"io"
 	"os"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -38,10 +40,10 @@ func Load(directory string) (configuration Config, err error) {
 		return configuration, err
 	}
 	if len(content) > 16*1024*1024 {
-		return configuration, fmt.Errorf("configuration exceeds 16 MiB")
+		return configuration, faults.Errorf(diagcatalog.ConfigConfigurationExceedsMiB)
 	}
 	if err = toml.NewDecoder(bytes.NewReader(content)).DisallowUnknownFields().Decode(&configuration); err != nil {
-		return configuration, fmt.Errorf("parse configuration: %w", err)
+		return configuration, faults.Errorf(diagcatalog.ConfigParseConfiguration, err)
 	}
 	return configuration, check(configuration)
 }

@@ -8,9 +8,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
 	"io"
 	"os"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	fileops "github.com/keonho-kim/meca/internal/tools/local/file"
 )
 
 type version struct {
@@ -38,10 +41,10 @@ func capture(path target, keepContent bool) (captured version, content []byte, e
 		return captured, nil, nil
 	}
 	if !info.Mode().IsRegular() {
-		return captured, nil, fmt.Errorf("only regular files and directories are supported")
+		return captured, nil, faults.Errorf(diagcatalog.LocalOnlyRegularFilesAndDirectoriesAreSupported)
 	}
 	if info.Size() > fileops.MaxBytes {
-		return captured, nil, fmt.Errorf("file exceeds modification size limit")
+		return captured, nil, faults.Errorf(diagcatalog.LocalFileExceedsModificationSizeLimit)
 	}
 	file, err := path.root.Open(path.relative)
 	if err != nil {
@@ -66,7 +69,7 @@ func capture(path target, keepContent bool) (captured version, content []byte, e
 		hash.Sum(captured.digest[:0])
 	}
 	if read != info.Size() {
-		return captured, nil, fmt.Errorf("file changed while reading its version")
+		return captured, nil, faults.Errorf(diagcatalog.LocalFileChangedWhileReadingItsVersion)
 	}
 	after, err := file.Stat()
 	if err != nil {
@@ -77,7 +80,7 @@ func capture(path target, keepContent bool) (captured version, content []byte, e
 		return captured, nil, err
 	}
 	if !os.SameFile(info, after) || !os.SameFile(after, current) || info.Size() != after.Size() || after.Size() != current.Size() || !info.ModTime().Equal(after.ModTime()) || !after.ModTime().Equal(current.ModTime()) {
-		return captured, nil, fmt.Errorf("file changed while checking its version")
+		return captured, nil, faults.Errorf(diagcatalog.LocalFileChangedWhileCheckingItsVersion)
 	}
 	return captured, content, nil
 }

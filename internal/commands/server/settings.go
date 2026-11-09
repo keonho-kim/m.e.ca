@@ -6,12 +6,15 @@ package server
 
 import (
 	"context"
+	"strings"
+
 	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"github.com/keonho-kim/meca/internal/commands/modelchange"
-	"strings"
 
 	"github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/config"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
@@ -19,7 +22,7 @@ import (
 
 func (s *Service) Configure(ctx context.Context, permission *string, team *bool) (Snapshot, error) {
 	if (permission == nil) == (team == nil) {
-		return Snapshot{}, failure("invalid_argument", "change exactly one setting per command")
+		return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChangeExactlyOneSettingPerCommand)
 	}
 	change, err := s.beginChange(ctx)
 	if err != nil {
@@ -28,18 +31,18 @@ func (s *Service) Configure(ctx context.Context, permission *string, team *bool)
 	defer change.finish()
 	c := change.conversation
 	if c == nil {
-		return Snapshot{}, failure("failed_precondition", "open a session first")
+		return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
 	next := change.config
 	if permission != nil {
 		var value policy.Permission
 		if err := value.UnmarshalText([]byte(*permission)); err != nil {
-			return Snapshot{}, failure("invalid_argument", err.Error())
+			return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
 		}
 		next, err = settings.Permission(change.ctx, next, value, s.options.UpdateConfig)
 	} else {
 		if *team && c.Team == nil {
-			return Snapshot{}, failure("failed_precondition", "team service is unavailable")
+			return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerTeamServiceIsUnavailable)
 		}
 		err = c.History.SetTeamMode(change.ctx, *team)
 	}
@@ -63,7 +66,7 @@ func (s *Service) SetModel(ctx context.Context, value ModelSettings) (Snapshot, 
 	}
 	defer change.finish()
 	if change.conversation == nil {
-		return Snapshot{}, failure("failed_precondition", "open a session first")
+		return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
 	err = s.selectModel(change, value)
 	return s.State(), err
@@ -73,10 +76,10 @@ func (s *Service) SetModel(ctx context.Context, value ModelSettings) (Snapshot, 
 func (s *Service) selectModel(change sessionChange, value ModelSettings) error {
 	c := change.conversation
 	if c.Models == nil || c.Runtime.Vault == nil {
-		return failure("failed_precondition", "session model persistence is unavailable")
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSessionModelPersistenceIsUnavailable)
 	}
 	if len(value.Credential) > 2048 || strings.ContainsAny(value.Credential, "\r\n\x00") {
-		return failure("invalid_argument", "invalid credential")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidCredential)
 	}
 	value.Credential = strings.Trim(value.Credential, " \t")
 	if err := c.Runtime.Vault.Remember(value.Credential); err != nil {
@@ -84,7 +87,7 @@ func (s *Service) selectModel(change sessionChange, value ModelSettings) error {
 	}
 	selected, err := (config.SavedModel{Provider: connection.ProviderKind(value.Provider), Endpoint: value.Endpoint, Name: value.Name, Thinking: value.Thinking, ReasoningEffort: value.Effort}).Selection()
 	if err != nil {
-		return failure("invalid_argument", err.Error())
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
 	}
 	if value.Credential == "" && c.Runtime.Selection.Connection.ID == selected.Connection.ID {
 		selected.Connection.CredentialRef = c.Runtime.Selection.Connection.CredentialRef

@@ -6,6 +6,8 @@ package session
 
 func (a *app) choose() {
 	switch a.page {
+	case "skills":
+		a.chooseSkill()
 	case "quit":
 		if a.choice == 1 {
 			a.requestExit()

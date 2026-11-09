@@ -7,11 +7,14 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
+
 	"strconv"
 
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -28,11 +31,15 @@ func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[stri
 		if err != nil {
 			return nil, nil, 0, err
 		}
-		packed, refs, err := p.pack(body)
+		sharedField := ""
+		if len(message.Reasoning) >= recordcontent.SharedThreshold {
+			sharedField = "reasoning"
+		}
+		packed, refs, err := p.pack(body, sharedField)
 		return packed, refs, len(body), err
 	}
 	if message.Source.Session != "" && message.Source.Session != s.room.session.ID {
-		return nil, nil, 0, fmt.Errorf("public message belongs to a different room")
+		return nil, nil, 0, faults.Errorf(diagcatalog.SqlitePublicMessageBelongsToADifferentRoom)
 	}
 	encoded, err := s.room.teamContent.encoding(sequence, message.Content)
 	if err != nil {
@@ -57,25 +64,25 @@ func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[stri
 
 func (s *Store) roomPayload(ctx context.Context, id string, size int, body []byte) (json.RawMessage, error) {
 	if s.room == nil {
-		return nil, fmt.Errorf("shared conversation owner is required to restore this private context")
+		return nil, faults.Errorf(diagcatalog.SqliteSharedConversationOwnerIsRequiredToRestore)
 	}
 	var reference roomPayload
 	if err := json.Unmarshal(body, &reference); err != nil || reference.Sequence < 1 {
-		return nil, fmt.Errorf("invalid public conversation reference")
+		return nil, faults.Errorf(diagcatalog.SqliteInvalidPublicConversationReference)
 	}
 	messages, err := s.room.TeamMessages(ctx, reference.Sequence-1, reference.Sequence, 1)
 	if err != nil {
 		return nil, err
 	}
 	if len(messages) != 1 || messages[0].Sequence != reference.Sequence {
-		return nil, fmt.Errorf("referenced public message is missing")
+		return nil, faults.Errorf(diagcatalog.SqliteReferencedPublicMessageIsMissing)
 	}
 	raw, err := json.Marshal(messages[0].Context().Content)
 	if err != nil {
 		return nil, err
 	}
 	if len(raw) != size || recordcontent.ID(raw) != id {
-		return nil, fmt.Errorf("referenced public message failed length/hash verification")
+		return nil, faults.Errorf(diagcatalog.SqliteReferencedPublicMessageFailedLengthHashVerification)
 	}
 	return raw, nil
 }

@@ -7,11 +7,12 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"strings"
-	"testing"
 )
 
 type batchGenerator struct{ requests []modelapi.Request }

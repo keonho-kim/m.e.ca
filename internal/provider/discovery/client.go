@@ -6,6 +6,7 @@ package discovery
 
 import (
 	"encoding/json"
+
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )

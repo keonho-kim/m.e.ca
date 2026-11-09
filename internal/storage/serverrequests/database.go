@@ -10,20 +10,23 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/config/statefs"
+
 	"io"
-	_ "modernc.org/sqlite"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	_ "modernc.org/sqlite"
 )
 
 const Filename = "requests.db"
 const requestSchema = `
 PRAGMA application_id=1296388689;
-PRAGMA user_version=1;
+PRAGMA user_version=2;
 CREATE TABLE project(
  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
  scope BLOB NOT NULL CHECK(length(scope)=32)
@@ -35,6 +38,7 @@ CREATE TABLE requests(
  session TEXT NOT NULL DEFAULT '',
  status TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',
+ error_code TEXT NOT NULL DEFAULT '' CHECK(length(error_code)<=128),
  response BLOB,
  version INTEGER NOT NULL DEFAULT 1 CHECK(version=1)
 );`
@@ -53,10 +57,10 @@ func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultE
 		}
 	}()
 	if len(scope) != 64 {
-		return nil, fmt.Errorf("request storage requires a project scope")
+		return nil, faults.Errorf(diagcatalog.ServerrequestsRequestStorageRequiresAProjectScope)
 	}
 	if _, err := hex.DecodeString(scope); err != nil || strings.ToLower(scope) != scope {
-		return nil, fmt.Errorf("invalid project scope")
+		return nil, faults.Errorf(diagcatalog.ServerrequestsInvalidProjectScope)
 	}
 	directory, err := filepath.Abs(directory)
 	if err != nil {
@@ -117,15 +121,15 @@ func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultE
 	if err == nil {
 		err = db.QueryRowContext(ctx, "PRAGMA application_id").Scan(&application)
 	}
-	if err == nil && (version != 1 || application != 1296388689) {
-		err = fmt.Errorf("unsupported request database; existing contents preserved")
+	if err == nil && (version != 2 || application != 1296388689) {
+		err = faults.Errorf(diagcatalog.ServerrequestsUnsupportedRequestDatabaseExistingContentsPreserved)
 	}
 	if err == nil {
 		var storedScope []byte
 		err = db.QueryRowContext(ctx, "SELECT scope FROM project WHERE singleton=1").Scan(&storedScope)
 		expected, _ := hex.DecodeString(scope)
 		if err == nil && !bytes.Equal(storedScope, expected) {
-			err = fmt.Errorf("request database belongs to another project; original preserved")
+			err = faults.Errorf(diagcatalog.ServerrequestsRequestDatabaseBelongsToAnotherProjectOriginal)
 		}
 	}
 	if err == nil {
@@ -144,7 +148,7 @@ func connect(ctx context.Context, path string) (*sql.DB, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return nil, fmt.Errorf("request database must be a private regular file")
+		return nil, faults.Errorf(diagcatalog.ServerrequestsRequestDatabaseMustBeAPrivateRegular)
 	}
 	u := url.URL{Scheme: "file", Path: path}
 	q := u.Query()
@@ -206,7 +210,7 @@ func rejectLegacy(root *os.Root) (resultErr error) {
 		entries, err := file.ReadDir(128)
 		for _, entry := range entries {
 			if strings.HasSuffix(entry.Name(), ".json") {
-				return fmt.Errorf("unsupported JSON request ledger; existing records were preserved")
+				return faults.Errorf(diagcatalog.ServerrequestsUnsupportedJSONRequestLedgerExistingRecordsWere)
 			}
 		}
 		if errors.Is(err, io.EOF) {

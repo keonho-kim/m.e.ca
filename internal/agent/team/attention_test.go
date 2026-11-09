@@ -5,8 +5,9 @@
 package team
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 )
 
 func TestUnrelatedChangesRemainVisibleWithoutRestartingInference(t *testing.T) {

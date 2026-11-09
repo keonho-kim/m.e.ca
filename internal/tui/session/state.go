@@ -17,6 +17,7 @@ import (
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
+	"github.com/keonho-kim/meca/internal/skills"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/tui/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
@@ -35,10 +36,13 @@ type Options struct {
 	Store        Store
 	Session      sessionstate.Session
 	Tools        Tools
+	Skills       *skills.Reader
 	Files        fileview.Source
 	Vault        *credentials.Vault
 }
 type app struct {
+	approvalPreview             approvalPreviewState
+	skills                      skillBrowserState
 	team                        teamMode
 	files                       fileBrowserState
 	compose                     requestState

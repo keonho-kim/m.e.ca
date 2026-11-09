@@ -7,9 +7,17 @@ package transport
 import (
 	"context"
 	"errors"
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"io"
+	"math/rand/v2"
+	"net"
+	"syscall"
 	"time"
+
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 type ConsumerError struct{ Cause error }
@@ -32,7 +40,7 @@ type recoveryError struct {
 }
 
 func (e *recoveryError) Error() string {
-	return fmt.Sprintf("provider failed after %d attempts: %s", e.attempts, e.detail)
+	return diagcatalog.Text(diagcatalog.ProviderAttemptsFailed, e.attempts, e.detail)
 }
 func (e *recoveryError) Unwrap() error { return e.cause }
 
@@ -46,7 +54,7 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 			return nil
 		}
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return errors.Join(err, ctx.Err())
 		}
 		var consumer *ConsumerError
 		if errors.As(err, &consumer) {
@@ -55,9 +63,7 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 		if attempt == maxAttempts || !retryable(err) {
 			return &recoveryError{attempt, err, c.FailureReason(err)}
 		}
-		// Release potentially stale connections before issuing the next request.
-		c.HTTP.CloseIdleConnections()
-		delay := time.Duration(attempt) * 250 * time.Millisecond
+		delay := time.Duration(attempt)*250*time.Millisecond + time.Duration(rand.Int64N(int64(100*time.Millisecond)))
 		var response *responseError
 		if errors.As(err, &response) {
 			delay = max(delay, response.retryAfter)
@@ -66,7 +72,7 @@ func (c *Client) Attempts(ctx context.Context, run func() error, restart func(mo
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-			return ctx.Err()
+			return errors.Join(err, ctx.Err())
 		case <-timer.C:
 		}
 		if restart != nil {
@@ -83,6 +89,9 @@ func retryable(err error) bool {
 	if errors.As(err, &permanent) {
 		return false
 	}
+	if faults.IsTransient(err) {
+		return true
+	}
 	if ImageUnsupported(err) {
 		return false
 	}
@@ -96,5 +105,19 @@ func retryable(err error) bool {
 	}
 	var malformed *modelapi.ToolCallError
 	var truncated *modelapi.OutputLimitError
-	return !errors.As(err, &malformed) && !errors.As(err, &truncated)
+	if errors.As(err, &malformed) || errors.As(err, &truncated) {
+		return false
+	}
+	var network net.Error
+	if errors.As(err, &network) && network.Timeout() {
+		return true
+	}
+	var dns *net.DNSError
+	if errors.As(err, &dns) && dns.IsTemporary {
+		return true
+	}
+	if faults.Code(err) == diagcatalog.DeadlineExceeded {
+		return true
+	}
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.ECONNABORTED) || errors.Is(err, syscall.ENETUNREACH)
 }

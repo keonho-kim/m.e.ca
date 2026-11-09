@@ -6,8 +6,10 @@ package local
 
 import (
 	"errors"
-	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
@@ -17,7 +19,7 @@ func (e *Executor) commandResult(state process.State) (toolapi.Result, error) {
 	}
 	result, err := e.readCommandResult(state.ID)
 	if state.Error != "" {
-		err = errors.Join(err, fmt.Errorf("command result archive failed for %s: %s", state.ID, state.Error))
+		err = errors.Join(err, faults.Errorf(diagcatalog.LocalCommandResultArchiveFailedFor, state.ID, state.Error))
 	}
 	err = errors.Join(err, state.Failure)
 	if result.Process == nil {
@@ -28,7 +30,7 @@ func (e *Executor) commandResult(state process.State) (toolapi.Result, error) {
 	if err != nil {
 		result.Failed = true
 		if result.Failure == nil {
-			result.Failure = toolapi.FailureOf(err)
+			result.Failure = faults.FailureOf(err)
 		}
 	}
 	return result, err

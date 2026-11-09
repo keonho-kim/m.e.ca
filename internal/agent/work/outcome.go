@@ -5,9 +5,11 @@
 package work
 
 import (
-	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Status string
@@ -15,7 +17,7 @@ type Status string
 const (
 	Completed   Status = "completed"
 	Failed      Status = "failed"
-	Interrupted Status = "interrupted"
+	Interrupted Status = diagcatalog.Interrupted
 	Denied      Status = "denied"
 	Exhausted   Status = "exhausted"
 )
@@ -29,10 +31,10 @@ func (e End) Check() error {
 	switch e.Status {
 	case Completed, Failed, Interrupted, Denied, Exhausted:
 	default:
-		return fmt.Errorf("invalid work terminal status")
+		return faults.Errorf(diagcatalog.WorkInvalidWorkTerminalStatus)
 	}
 	if len(e.Reason) > 32*1024*1024 || !utf8.ValidString(e.Reason) || strings.ContainsRune(e.Reason, 0) {
-		return fmt.Errorf("invalid terminal reason")
+		return faults.Errorf(diagcatalog.WorkInvalidTerminalReason)
 	}
 	return nil
 }

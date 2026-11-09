@@ -7,14 +7,17 @@ package fileview
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/policy"
+
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"sort"
 	"syscall"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/policy"
 )
 
 type Entry struct {
@@ -51,7 +54,7 @@ func (executor *Reader) Directory(ctx context.Context, settings policy.Settings,
 
 func readDirectory(ctx context.Context, path Target, offset, limit int) (entries []Entry, more bool, err error) {
 	if offset < 0 || offset > 100000 || limit < 1 || limit > 1000 {
-		return nil, false, fmt.Errorf("invalid directory page")
+		return nil, false, faults.Errorf(diagcatalog.FileviewInvalidDirectoryPage)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
@@ -71,7 +74,7 @@ func readDirectory(ctx context.Context, path Target, offset, limit int) (entries
 			entries = append(entries, Entry{Name: entry.Name(), Directory: entry.IsDir()})
 		}
 		if len(entries) > 25000 {
-			return nil, false, fmt.Errorf("directory exceeds 25000 entries")
+			return nil, false, faults.Errorf(diagcatalog.FileviewDirectoryExceedsEntries)
 		}
 		if readErr == io.EOF {
 			break

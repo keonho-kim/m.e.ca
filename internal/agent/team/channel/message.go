@@ -13,6 +13,9 @@ import (
 // PageBytes bounds a receive page, independently of the accepted size of one record.
 const PageBytes = 16 * 1024 * 1024
 
+// ClientContextAuthor names external historical notes, never a team member.
+const ClientContextAuthor = "client_context"
+
 type Message struct {
 	Session      string                    `json:"-"`
 	Prefix       *string                   `json:"-"`

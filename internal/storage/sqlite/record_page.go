@@ -7,7 +7,9 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
@@ -27,7 +29,7 @@ func (s *Store) recordPage(ctx context.Context, query string, args ...any) (reco
 			return nil, history.ErrReadLimit
 		}
 		if r.size < 1 || r.size > recordcontent.MaxBytes {
-			return nil, fmt.Errorf("invalid stored record length")
+			return nil, faults.Errorf(diagcatalog.SqliteInvalidStoredRecordLength)
 		}
 		records = append(records, r)
 	}

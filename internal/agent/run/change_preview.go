@@ -5,8 +5,9 @@
 package run
 
 import (
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"unicode/utf8"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func boundedChangePreview(text string) string {

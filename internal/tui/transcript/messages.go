@@ -5,10 +5,11 @@
 package transcript
 
 import (
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
-	"strings"
 )
 
 type Formatter struct {

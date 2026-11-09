@@ -4,7 +4,12 @@
 // Related: internal/commands/server/execution.go, internal/commands/server/events.go.
 package server
 
-import "context"
+import (
+	"context"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func (s *Service) WaitResponse(ctx context.Context, id string) (Response, error) {
 	for {
@@ -29,7 +34,7 @@ func (s *Service) WaitResponse(ctx context.Context, id string) (Response, error)
 		case <-ctx.Done():
 			return Response{}, ctx.Err()
 		case <-s.ctx.Done():
-			return Response{}, failure("unavailable", "server is shutting down")
+			return Response{}, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 		case <-changed:
 		}
 	}

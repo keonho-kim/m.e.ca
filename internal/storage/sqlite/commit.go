@@ -7,11 +7,15 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
+
 	"time"
 
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/diagnostics"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) Commit(ctx context.Context, session string, records []runrecord.Entry) error {
@@ -19,7 +23,7 @@ func (s *Store) Commit(ctx context.Context, session string, records []runrecord.
 		return err
 	}
 	if len(records) == 0 {
-		return fmt.Errorf("journal group must not be empty")
+		return faults.Errorf(diagcatalog.SqliteJournalGroupMustNotBeEmpty)
 	}
 	return s.commit(ctx, session, records, 0, nil)
 }
@@ -29,7 +33,7 @@ func (s *Store) CommitContext(ctx context.Context, session string, records []run
 		return err
 	}
 	if cursor < 1 {
-		return fmt.Errorf("invalid context cursor")
+		return faults.Errorf(diagcatalog.SqliteInvalidContextCursor)
 	}
 	return s.commit(ctx, session, records, cursor, nil)
 }
@@ -39,10 +43,26 @@ type journalReceipt struct {
 	public          *channel.Message
 }
 
-func (s *Store) commit(ctx context.Context, session string, records []runrecord.Entry, cursor int64, receipt *journalReceipt) error {
+func (s *Store) commit(ctx context.Context, session string, records []runrecord.Entry, cursor int64, receipt *journalReceipt) (resultErr error) {
+	started := time.Now()
+	defer func() {
+		elapsed := time.Since(started).Milliseconds()
+		if resultErr != nil {
+			diagnostics.Log(ctx, diagcatalog.StorageCommitFailed, "component", "storage", "session_id", session, "duration_ms", elapsed, "error_code", diagnostics.Code(resultErr))
+		} else if elapsed >= 100 {
+			diagnostics.Log(ctx, diagcatalog.StorageCommitSlow, "component", "storage", "session_id", session, "duration_ms", elapsed)
+		} else {
+			diagnostics.Log(ctx, diagcatalog.StorageCommitted, "component", "storage", "session_id", session, "duration_ms", elapsed, "count", len(records))
+		}
+	}()
 	if err := checkJournal(ctx, records); err != nil {
 		return err
 	}
+	release, err := reserveJournal(ctx, records)
+	if err != nil {
+		return err
+	}
+	defer release()
 	prepared, err := s.prepareJournal(ctx, records)
 	if err != nil {
 		return err
@@ -50,7 +70,11 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 	if receipt == nil {
 		receipt = &journalReceipt{}
 	}
+	waitStarted := time.Now()
 	tx, err := s.db.BeginTx(ctx, nil)
+	if waited := time.Since(waitStarted).Milliseconds(); waited >= 100 {
+		diagnostics.Log(ctx, diagcatalog.StorageWriterWait, "component", "storage", "session_id", session, "duration_ms", waited)
+	}
 	if err != nil {
 		return err
 	}
@@ -97,7 +121,7 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return err
+		return faults.New(diagcatalog.PersistenceFailed, diagcatalog.WrappedCause, err)
 	}
 	for old := s.latestEvent.Load(); receipt.event > old; old = s.latestEvent.Load() {
 		if s.latestEvent.CompareAndSwap(old, receipt.event) {

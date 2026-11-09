@@ -5,7 +5,8 @@
 package diff
 
 import (
-	"fmt"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Count(before, after []byte) (added, deleted int, err error) {
@@ -17,7 +18,7 @@ func Count(before, after []byte) (added, deleted int, err error) {
 		return m, n, nil
 	}
 	if n+m > 524288 {
-		return 0, 0, fmt.Errorf("exact change count exceeds line budget; prepare a smaller change")
+		return 0, 0, faults.Errorf(diagcatalog.DiffExactChangeCountExceedsLineBudgetPrepare)
 	}
 	left, right := split(string(before)), split(string(after))
 	frontier := make([]int, 2*(n+m)+3)
@@ -38,11 +39,11 @@ func Count(before, after []byte) (added, deleted int, err error) {
 				y++
 				work++
 				if work > 16000000 {
-					return 0, 0, fmt.Errorf("exact change count exceeds work budget; prepare a smaller change")
+					return 0, 0, faults.Errorf(diagcatalog.DiffExactChangeCountExceedsWorkBudgetPrepare)
 				}
 			}
 			if work > 16000000 {
-				return 0, 0, fmt.Errorf("exact change count exceeds work budget; prepare a smaller change")
+				return 0, 0, faults.Errorf(diagcatalog.DiffExactChangeCountExceedsWorkBudgetPrepare)
 			}
 			frontier[offset+diagonal] = x
 			if x >= n && y >= m {
@@ -52,5 +53,5 @@ func Count(before, after []byte) (added, deleted int, err error) {
 			}
 		}
 	}
-	return 0, 0, fmt.Errorf("could not count line changes")
+	return 0, 0, faults.Errorf(diagcatalog.DiffCouldNotCountLineChanges)
 }

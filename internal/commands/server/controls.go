@@ -13,6 +13,8 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	"github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type pendingApproval struct {
@@ -31,7 +33,7 @@ func (s *Service) approver(r *request) run.Approver {
 			return false, ctx.Err()
 		}
 		r.approvals[id] = pending
-		s.publish(Event{Task: r.task.ID, ApprovalID: id, Record: record.Event{Kind: "approval_required", Approval: &value, CallID: value.ID}})
+		s.publish(Event{Task: r.task.ID, ApprovalID: id, Record: record.Event{Kind: diagcatalog.ApprovalRequired, Approval: &value, CallID: value.ID}})
 		s.mu.Unlock()
 		defer func() {
 			s.mu.Lock()
@@ -60,7 +62,7 @@ func (s *Service) Approve(task, id string, allow bool) error {
 	}
 	pending := r.approvals[id]
 	if pending == nil || pending.ctx.Err() != nil || r.task.Status != "running" {
-		return failure("conflict", "approval is stale or already answered")
+		return faults.New(diagcatalog.Conflict, diagcatalog.ServerApprovalIsStaleOrAlreadyAnswered)
 	}
 	delete(r.approvals, id)
 	pending.decision <- allow
@@ -69,7 +71,7 @@ func (s *Service) Approve(task, id string, allow bool) error {
 
 func (s *Service) Steer(task, text string) error {
 	if strings.TrimSpace(text) == "" || !utf8.ValidString(text) {
-		return failure("invalid_argument", "a UTF-8 instruction is required")
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerAUTFInstructionIsRequired)
 	}
 	if err := checkText(text, 1<<20); err != nil {
 		return err
@@ -81,10 +83,10 @@ func (s *Service) Steer(task, text string) error {
 		return err
 	}
 	if r.task.Status != "running" {
-		return failure("conflict", "request is canceling")
+		return faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestIsCanceling)
 	}
 	if len(r.steering) >= 16 || r.steeringBytes+len(text) > 1<<20 {
-		return failure("resource_exhausted", "steering queue is full")
+		return faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerSteeringQueueIsFull)
 	}
 	r.steering = append(r.steering, text)
 	r.steeringBytes += len(text)

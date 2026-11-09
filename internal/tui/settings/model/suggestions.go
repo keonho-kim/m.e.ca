@@ -5,8 +5,9 @@
 package model
 
 import (
-	"github.com/keonho-kim/meca/internal/searchmatch"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/searchmatch"
 )
 
 func suggestions(models []string, query string) []string {

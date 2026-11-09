@@ -5,11 +5,12 @@
 package conversation
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type modelConnection struct {
@@ -30,13 +31,13 @@ func NewModel(generator model.Generator, close func()) *Model {
 
 func (m *Model) Borrow() (*Model, error) {
 	if m == nil {
-		return nil, fmt.Errorf("model connection is unavailable")
+		return nil, faults.Errorf(diagcatalog.ConversationModelConnectionIsUnavailable)
 	}
 	c := m.connection
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if m.released.Load() || c.owners == 0 {
-		return nil, fmt.Errorf("model connection was released")
+		return nil, faults.Errorf(diagcatalog.ConversationModelConnectionWasReleased)
 	}
 	c.owners++
 	return &Model{connection: c}, nil

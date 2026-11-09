@@ -5,9 +5,10 @@
 package textformat
 
 import (
-	"github.com/keonho-kim/meca/internal/config/credentials"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config/credentials"
 )
 
 func TestSourceRedactionPreservesOnlyUnmaskedCRLF(t *testing.T) {

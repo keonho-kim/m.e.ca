@@ -7,6 +7,9 @@ package server
 import (
 	"context"
 	"errors"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Service) replaceJob(change sessionChange, next *Conversation) error {
@@ -41,7 +44,7 @@ func (s *Service) beginResultRead(ctx context.Context, id string) (*Conversation
 		c = s.job
 	}
 	if c == nil || c.Runtime.Session.ID != id {
-		return nil, nil, nil, failure("not_found", "conversation is not currently owned")
+		return nil, nil, nil, faults.New(diagcatalog.NotFound, diagcatalog.ServerConversationIsNotCurrentlyOwned)
 	}
 	return s.borrowReadLocked(ctx, c)
 }

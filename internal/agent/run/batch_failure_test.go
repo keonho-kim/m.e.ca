@@ -6,8 +6,9 @@ package run
 
 import (
 	"context"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestBatchFailureHasOneEventPerCall(t *testing.T) {

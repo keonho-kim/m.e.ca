@@ -6,27 +6,30 @@ package processmemory
 
 import (
 	"bytes"
-	"fmt"
+
 	"strconv"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func residentPages(snapshot []byte, pageSize uint64) (uint64, error) {
 	if pageSize == 0 {
-		return 0, fmt.Errorf("invalid resident-memory page size")
+		return 0, faults.Errorf(diagcatalog.ProcessmemoryInvalidResidentMemoryPageSize)
 	}
 	column := 0
 	for field := range bytes.FieldsSeq(snapshot) {
 		if column == 1 {
 			pages, err := strconv.ParseUint(string(field), 10, 64)
 			if err != nil {
-				return 0, fmt.Errorf("read resident page count: %w", err)
+				return 0, faults.Errorf(diagcatalog.ProcessmemoryReadResidentPageCount, err)
 			}
 			if pages > ^uint64(0)/pageSize {
-				return 0, fmt.Errorf("resident-memory size overflows")
+				return 0, faults.Errorf(diagcatalog.ProcessmemoryResidentMemorySizeOverflows)
 			}
 			return pages * pageSize, nil
 		}
 		column++
 	}
-	return 0, fmt.Errorf("resident page count is missing")
+	return 0, faults.Errorf(diagcatalog.ProcessmemoryResidentPageCountIsMissing)
 }

@@ -6,8 +6,9 @@ package httpclient
 
 import (
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func writeProviderSuccess(w http.ResponseWriter, kind connection.ProviderKind, text string) {

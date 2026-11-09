@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 )
@@ -39,7 +41,7 @@ func method(w http.ResponseWriter, r *http.Request, want string) bool {
 		return true
 	}
 	w.Header().Set("Allow", want)
-	WriteError(w, 405, "method is not supported", "method_not_allowed", "")
+	WriteError(w, 405, diagcatalog.Text(diagcatalog.OpenaiMethodIsNotSupported), diagcatalog.MethodNotAllowed, "")
 	return false
 }
 func (h *Handler) models(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +55,7 @@ func (h *Handler) models(w http.ResponseWriter, r *http.Request) {
 	case "/v1/models/meca":
 		writeJSON(w, 200, model)
 	default:
-		WriteError(w, 404, "model was not found", "model_not_found", "model")
+		WriteError(w, 404, diagcatalog.Text(diagcatalog.OpenaiModelWasNotFound), diagcatalog.ModelNotFound, "model")
 	}
 }
 
@@ -71,7 +73,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request, kind string) {
 		case h.Streams <- struct{}{}:
 			defer func() { <-h.Streams }()
 		default:
-			WriteError(w, 429, "too many observers", "resource_exhausted", "")
+			WriteError(w, 429, diagcatalog.Text(diagcatalog.ServerapiTooManyObservers), diagcatalog.ResourceExhausted, "")
 			return
 		}
 	}
@@ -131,17 +133,17 @@ func batchCursor(batch server.Batch, current string) string {
 func (h *Handler) taskFailure(w http.ResponseWriter, value server.Response) {
 	code := value.Code
 	if code == "" {
-		code = "execution_failed"
+		code = diagcatalog.ExecutionFailed
 	}
 	message := value.Error
 	if message == "" {
 		message = "the engine task did not complete"
 	}
-	status := 500
-	if value.Status == "cancelled" || code == "approval_required" || code == "interrupted" {
+	status := diagcatalog.HTTPStatus(code)
+	if value.Status == "cancelled" || code == diagcatalog.ApprovalRequired || code == diagcatalog.Interrupted {
 		status = 409
 	}
-	WriteError(w, status, h.redact(message), code, "")
+	WriteError(w, status, h.redact(message), diagcatalog.CompatibleCode(code, false), "")
 }
 func (h *Handler) chat(w http.ResponseWriter, r *http.Request)      { h.submit(w, r, "chat") }
 func (h *Handler) responses(w http.ResponseWriter, r *http.Request) { h.submit(w, r, "response") }
@@ -150,7 +152,7 @@ func (h *Handler) response(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/responses/"), "/")
 	cancel := len(parts) == 2 && parts[1] == "cancel"
 	if len(parts) != 1 && !cancel {
-		WriteError(w, 404, "route was not found", "not_found", "")
+		WriteError(w, 404, diagcatalog.Text(diagcatalog.OpenaiRouteWasNotFound), diagcatalog.NotFound, "")
 		return
 	}
 	want := "GET"
@@ -167,7 +169,7 @@ func (h *Handler) response(w http.ResponseWriter, r *http.Request) {
 	}
 	if cancel {
 		if !value.Background {
-			WriteError(w, 409, "only background responses can be cancelled here", "failed_precondition", "")
+			WriteError(w, 409, diagcatalog.Text(diagcatalog.OpenaiOnlyBackgroundResponsesCanBeCancelled), diagcatalog.FailedPrecondition, "")
 			return
 		}
 		if !terminal(value) {

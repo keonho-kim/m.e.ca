@@ -8,12 +8,14 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+
 	"net/url"
 	"os"
 	"path/filepath"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	_ "modernc.org/sqlite"
 )
 
@@ -29,7 +31,7 @@ PRAGMA application_id=1296384833;`
 
 func Open(ctx context.Context, directory string, keys Keys, create bool) (store *Store, resultErr error) {
 	if keys == nil {
-		return nil, fmt.Errorf("OS key storage is required")
+		return nil, faults.Errorf(diagcatalog.CredentialstoreOSKeyStorageIsRequired)
 	}
 	directory, err := filepath.Abs(directory)
 	if err != nil {
@@ -63,7 +65,7 @@ func Open(ctx context.Context, directory string, keys Keys, create bool) (store 
 		err = db.QueryRowContext(ctx, "PRAGMA application_id").Scan(&application)
 	}
 	if err == nil && (version != 1 || application != 1296384833) {
-		err = fmt.Errorf("unsupported credential database; existing contents were preserved")
+		err = faults.Errorf(diagcatalog.CredentialstoreUnsupportedCredentialDatabaseExistingContentsWerePreserved)
 	}
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
@@ -77,7 +79,7 @@ func connect(ctx context.Context, path string) (*sql.DB, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return nil, fmt.Errorf("credential database must be a private regular file")
+		return nil, faults.Errorf(diagcatalog.CredentialstoreCredentialDatabaseMustBeAPrivateRegular)
 	}
 	u := url.URL{Scheme: "file", Path: path}
 	q := u.Query()

@@ -7,12 +7,13 @@ package run
 import (
 	"context"
 	"encoding/json"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestToolReadThenEditIsAutomatic(t *testing.T) {

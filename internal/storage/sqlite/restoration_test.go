@@ -68,7 +68,7 @@ func TestRestorationSkipsCompletedPayloads(t *testing.T) {
 	if _, err := s.db.Exec("UPDATE payloads SET body=x'00'"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ContextMessages(ctx, id, 0, 16*1024*1024, true); err == nil {
+	if _, err := s.ContextMessages(ctx, id, 0, 16*1024*1024, true, nil); err == nil {
 		t.Fatal("test fixture did not make original payloads unavailable")
 	}
 	inputs, err := s.RecentInputs(ctx, id, 2)

@@ -7,11 +7,12 @@ package install
 import (
 	"context"
 	"errors"
-	"github.com/keonho-kim/meca/internal/config/statefs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 func options(t *testing.T, shell string) Options {

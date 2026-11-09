@@ -8,11 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestIdentifyProviderMetadata(t *testing.T) {

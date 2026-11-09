@@ -4,9 +4,14 @@
 // Related: internal/tools/local/process/projection.go, internal/tools/local/process/output.go.
 package process
 
-import "errors"
+import (
+	"errors"
 
-var ErrProjectionBusy = errors.New("command output is being finalized; inspect the same command_id again")
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
+
+var ErrProjectionBusy = faults.Errorf(diagcatalog.ProcessCommandOutputIsBeingFinalizedInspectThe)
 
 func (r *Registry) ReadProjection(id string, after [2]uint64) ([2]Capture, func(), error) {
 	j, err := r.lookup(id)

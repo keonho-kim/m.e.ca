@@ -7,7 +7,9 @@ package sqlite
 import (
 	"context"
 	"errors"
-	"fmt"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) FileSelections(ctx context.Context, session string) (out []string, err error) {
@@ -33,7 +35,7 @@ func (s *Store) SelectFile(ctx context.Context, session, path string, selected b
 		return err
 	}
 	if len(path) > 4096 {
-		return fmt.Errorf("invalid selected path")
+		return faults.Errorf(diagcatalog.SqliteInvalidSelectedPath)
 	}
 	if selected {
 		_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO file_selections(path) VALUES(?)", path)

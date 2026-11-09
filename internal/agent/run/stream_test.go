@@ -6,11 +6,12 @@ package run
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/config/credentials"
-	"strings"
-	"testing"
 )
 
 type chunkGenerator struct {

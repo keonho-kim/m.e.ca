@@ -7,15 +7,19 @@ package run
 import (
 	"context"
 	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/policy"
+
+	// An executor opts in only when it can resolve aliases and reason about actual accesses.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxParallelTools = 16
 
-// An executor opts in only when it can resolve aliases and reason about actual accesses.
 type parallelExecutor interface {
 	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
 }
@@ -46,8 +50,8 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 			return s.skipCalls(ctx, calls[start:], skipForClosure, "The session has closed; these calls did not execute.")
 		}
 		if err := s.checkSteering(ctx, instructionRevision); err != nil {
-			var failure *toolapi.Failure
-			if errors.As(err, &failure) && failure.Code == toolapi.InstructionChanged {
+			var failure *faults.Failure
+			if errors.As(err, &failure) && failure.Code == diagcatalog.InstructionChanged {
 				return s.skipCalls(ctx, calls[start:], skipForInstruction, failure.Detail)
 			}
 			return errors.Join(err, s.skipCalls(ctx, calls[start:], skipForContext, "Instruction admission failed before this wave; nothing in it executed."))
@@ -88,7 +92,7 @@ func (s *execution) planWave(ctx context.Context, calls []validatedCall, start i
 		return plan, err
 	}
 	if plan.Count < 1 || plan.Count > count || plan.PreparationConcurrency < 1 || plan.PreparationConcurrency > min(4, plan.Count) {
-		return plan, errors.New("invalid parallel batch boundary")
+		return plan, faults.Errorf(diagcatalog.RunInvalidParallelBatchBoundary)
 	}
 	return plan, nil
 }
@@ -97,7 +101,7 @@ func fatalBatchError(ctx context.Context, err error) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	if errors.Is(err, errApprovalDenied) || errors.Is(err, errRuntimeRecord) {
+	if errors.Is(err, errApprovalDenied) || errors.Is(err, errRuntimeRecord) || faults.IsPanic(err) {
 		return err
 	}
 	return nil

@@ -6,8 +6,9 @@ package transcript
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func (f Formatter) arguments(call tool.Call) string {

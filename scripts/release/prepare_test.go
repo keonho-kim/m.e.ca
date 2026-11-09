@@ -83,6 +83,9 @@ func copyReleaseScript(t *testing.T, root, name string) {
 		t.Fatal(err)
 	}
 	writeReleaseFile(t, root, name, string(body))
+	if name == "publish.sh" {
+		copyReleaseScript(t, root, "artifacts.sh")
+	}
 }
 
 func writeReleaseFile(t *testing.T, root, name, body string) {

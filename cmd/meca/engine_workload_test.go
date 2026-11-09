@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,6 +18,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/commands/startup"
@@ -113,11 +114,11 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 	}
 	app, err := server.New(ctx, server.Options{
 		Project: project, Config: cfg, Ledger: ledger, Responses: ledger,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, max int) (string, error) {
-			return sessions.ResponseOutput(ctx, project, id, after, through, max)
+		ReadOutput: func(ctx context.Context, id string, after, through int64, max int, reserve func(int) error) (string, error) {
+			return sessions.ResponseOutput(ctx, project, id, after, through, max, reserve)
 		},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, id, create)
+			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
 			if err == nil {
 				c.Runtime.Selection = selected
 				c.Model = conversationruntime.NewModel(client, nil)

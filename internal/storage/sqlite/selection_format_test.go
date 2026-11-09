@@ -7,8 +7,9 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestSelectionRejectsUnsupportedFields(t *testing.T) {

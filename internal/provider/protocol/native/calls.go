@@ -7,12 +7,13 @@ package native
 import (
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
+
 	"sort"
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 type Calls struct{ values map[int]*Draft }
@@ -20,6 +21,16 @@ type Calls struct{ values map[int]*Draft }
 type Draft struct {
 	ID, Name  string
 	Arguments strings.Builder
+}
+
+// Bytes observes retained identity and argument growth without rescanning the
+// argument strings. Empty fragments and repeated identities make no progress.
+func (s *Calls) Bytes() int {
+	bytes := 0
+	for _, draft := range s.values {
+		bytes += len(draft.ID) + len(draft.Name) + draft.Arguments.Len()
+	}
+	return bytes
 }
 
 func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
@@ -34,7 +45,7 @@ func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
 		} `json:"function"`
 	}
 	if err := json.Unmarshal(body, &parts); err != nil {
-		return &modelapi.ToolCallError{Detail: "malformed native function call array"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeMalformedNativeFunctionCallArray)}
 	}
 	for position, part := range parts {
 		index := position
@@ -45,10 +56,10 @@ func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
 		} else if ollama {
 			index = len(s.values)
 		} else if !single {
-			return &modelapi.ToolCallError{Detail: "streamed tool call has no index"}
+			return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeStreamedToolCallHasNoIndex)}
 		}
 		if part.Type != "" && part.Type != "function" {
-			return &modelapi.ToolCallError{Detail: "unsupported tool call type"}
+			return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeUnsupportedToolCallType)}
 		}
 		draft, err := s.At(index)
 		if err != nil {
@@ -56,7 +67,7 @@ func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
 		}
 		if part.ID != "" {
 			if draft.ID != "" && draft.ID != part.ID {
-				return &modelapi.ToolCallError{Detail: "tool call ID changed during streaming"}
+				return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeToolCallIDChangedDuringStreaming)}
 			}
 			draft.ID = part.ID
 		}
@@ -66,14 +77,14 @@ func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
 			if ollama {
 				arguments = string(part.Function.Arguments)
 			} else if err := json.Unmarshal(part.Function.Arguments, &arguments); err != nil {
-				return &modelapi.ToolCallError{Detail: "function arguments must be a JSON-encoded string"}
+				return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeFunctionArgumentsMustBeAJSONEncoded)}
 			}
 		}
 		if err := draft.Append(arguments); err != nil {
 			return err
 		}
 		if len(draft.Name) > 128 || len(draft.ID) > 128 {
-			return &modelapi.ToolCallError{Detail: "tool identity exceeds limit"}
+			return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeToolIdentityExceedsLimit)}
 		}
 		if ollama && draft.ID == "" {
 			draft.ID = "call_" + rand.Text()
@@ -84,7 +95,7 @@ func (s *Calls) Add(body json.RawMessage, ollama, single bool) error {
 
 func (s *Calls) At(index int) (*Draft, error) {
 	if index < 0 || index >= 1024 {
-		return nil, &modelapi.ToolCallError{Detail: "invalid tool call index"}
+		return nil, &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeInvalidToolCallIndex)}
 	}
 	if s.values == nil {
 		s.values = make(map[int]*Draft)
@@ -93,7 +104,7 @@ func (s *Calls) At(index int) (*Draft, error) {
 		return draft, nil
 	}
 	if len(s.values) >= toolapi.MaxCalls {
-		return nil, &modelapi.ToolCallError{Detail: "too many tool calls"}
+		return nil, &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeTooManyToolCalls)}
 	}
 	draft := &Draft{}
 	s.values[index] = draft
@@ -102,7 +113,7 @@ func (s *Calls) At(index int) (*Draft, error) {
 
 func (d *Draft) Append(text string) error {
 	if d.Arguments.Len()+len(text) > toolapi.MaxArgumentsBytes {
-		return &modelapi.ToolCallError{Detail: "tool arguments exceed size limit"}
+		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeToolArgumentsExceedSizeLimit)}
 	}
 	d.Arguments.WriteString(text)
 	return nil
@@ -125,7 +136,7 @@ func (s *Calls) Complete() ([]toolapi.Call, error) {
 			return nil, &modelapi.ToolCallError{Detail: err.Error()}
 		}
 		if ids[call.ID] {
-			return nil, &modelapi.ToolCallError{Detail: fmt.Sprintf("duplicate tool call ID %s", call.ID)}
+			return nil, &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.NativeDuplicateToolCallID, call.ID)}
 		}
 		ids[call.ID] = true
 		calls = append(calls, call)

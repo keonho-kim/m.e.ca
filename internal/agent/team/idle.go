@@ -4,7 +4,10 @@
 // Related: internal/agent/team/answer.go, internal/agent/team/observations.go.
 package team
 
-import "fmt"
+import (
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+)
 
 func (r *Room) resolveIdleLocked() (bool, error) {
 	if r.remainingLocked() < 2 {
@@ -16,7 +19,7 @@ func (r *Room) resolveIdleLocked() (bool, error) {
 		}
 	}
 	if r.idleAttempted && r.idleEpoch == r.progress {
-		return false, fmt.Errorf("team stalled: all active teammates are waiting, no command is running, and reconsideration produced no progress")
+		return false, faults.Errorf(diagcatalog.TeamTeamStalledAllActiveTeammatesAreWaiting)
 	}
 	r.idleAttempted, r.idleEpoch = true, r.progress
 	return true, nil

@@ -6,9 +6,10 @@ package view
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/locale"
 	"strings"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
 type Activity struct {

@@ -7,10 +7,13 @@ package protocol
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"strings"
 
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
+
 	"github.com/keonho-kim/meca/internal/agent/media"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -19,11 +22,11 @@ func attachImages(kind connection.ProviderKind, message *Message, images []media
 		return nil
 	}
 	if message.Role != "user" {
-		return fmt.Errorf("provider image inputs require a user message")
+		return faults.Errorf(diagcatalog.ProtocolProviderImageInputsRequireAUserMessage)
 	}
 	text, ok := message.Content.(string)
 	if !ok && message.Content != nil {
-		return fmt.Errorf("image inputs require an unencoded text message")
+		return faults.Errorf(diagcatalog.ProtocolImageInputsRequireAnUnencodedTextMessage)
 	}
 	var parts []native.ContentPart
 	if kind != connection.Ollama {

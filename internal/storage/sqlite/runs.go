@@ -8,7 +8,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func (s *Store) LatestRun(ctx context.Context, session string) (*runrecord.Checkpoint, error) {
@@ -23,7 +26,7 @@ func (s *Store) LatestRun(ctx context.Context, session string) (*runrecord.Check
 		return nil, err
 	}
 	if event.Checkpoint == nil {
-		return nil, errors.New("run checkpoint is missing")
+		return nil, faults.Errorf(diagcatalog.SqliteRunCheckpointIsMissing)
 	}
 	if err = event.Checkpoint.Check(); err != nil {
 		return nil, err

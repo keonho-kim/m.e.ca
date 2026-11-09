@@ -6,9 +6,10 @@ package run
 
 import (
 	"context"
+	"strings"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"strings"
 )
 
 func (s *execution) stopReport(ctx context.Context, reason string) error {

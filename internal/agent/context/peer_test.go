@@ -5,8 +5,9 @@
 package context
 
 import (
-	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"

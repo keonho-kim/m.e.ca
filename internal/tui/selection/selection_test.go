@@ -5,9 +5,10 @@
 package selection
 
 import (
+	"testing"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/gdamore/tcell/v3/vt"
-	"testing"
 )
 
 func TestSelectionUnicodeAndReverse(t *testing.T) {

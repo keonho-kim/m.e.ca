@@ -6,18 +6,20 @@ package native
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"io"
 	"reflect"
 	"strings"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func SameArguments(left, right string) bool {
 	parse := func(text string) (any, error) {
 		if len(text) > toolapi.MaxArgumentsBytes {
-			return nil, fmt.Errorf("arguments exceed limit")
+			return nil, faults.Errorf(diagcatalog.NativeArgumentsExceedLimit)
 		}
 		decoder := json.NewDecoder(strings.NewReader(text))
 		decoder.UseNumber()
@@ -26,10 +28,10 @@ func SameArguments(left, right string) bool {
 			return nil, err
 		}
 		if _, ok := value.(map[string]any); !ok {
-			return nil, fmt.Errorf("arguments must be an object")
+			return nil, faults.Errorf(diagcatalog.NativeArgumentsMustBeAnObject)
 		}
 		if _, err = decoder.Token(); err != io.EOF {
-			return nil, fmt.Errorf("trailing argument content")
+			return nil, faults.Errorf(diagcatalog.NativeTrailingArgumentContent)
 		}
 		return value, nil
 	}
@@ -43,7 +45,7 @@ func SameArguments(left, right string) bool {
 
 func argumentValue(d *json.Decoder, depth int) (any, error) {
 	if depth > 64 {
-		return nil, fmt.Errorf("argument nesting exceeds limit")
+		return nil, faults.Errorf(diagcatalog.NativeArgumentNestingExceedsLimit)
 	}
 	token, err := d.Token()
 	if err != nil {
@@ -59,10 +61,10 @@ func argumentValue(d *json.Decoder, depth int) (any, error) {
 			}
 			name, ok := key.(string)
 			if !ok {
-				return nil, fmt.Errorf("invalid object key")
+				return nil, faults.Errorf(diagcatalog.NativeInvalidObjectKey)
 			}
 			if _, exists := fields[name]; exists {
-				return nil, fmt.Errorf("duplicate object key")
+				return nil, faults.Errorf(diagcatalog.NativeDuplicateObjectKey)
 			}
 			value, err := argumentValue(d, depth+1)
 			if err != nil {
@@ -72,7 +74,7 @@ func argumentValue(d *json.Decoder, depth int) (any, error) {
 		}
 		end, err := d.Token()
 		if err != nil || end != json.Delim('}') {
-			return nil, fmt.Errorf("incomplete object")
+			return nil, faults.Errorf(diagcatalog.NativeIncompleteObject)
 		}
 		return fields, nil
 	case json.Delim('['):
@@ -86,12 +88,12 @@ func argumentValue(d *json.Decoder, depth int) (any, error) {
 		}
 		end, err := d.Token()
 		if err != nil || end != json.Delim(']') {
-			return nil, fmt.Errorf("incomplete array")
+			return nil, faults.Errorf(diagcatalog.NativeIncompleteArray)
 		}
 		return values, nil
 	default:
 		if _, ok := token.(json.Delim); ok {
-			return nil, fmt.Errorf("unexpected argument delimiter")
+			return nil, faults.Errorf(diagcatalog.NativeUnexpectedArgumentDelimiter)
 		}
 		return token, nil
 	}

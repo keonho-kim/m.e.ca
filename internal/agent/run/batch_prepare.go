@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
@@ -21,12 +23,16 @@ func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count
 			releaseReady(ready)
 		}
 	}()
+	proposals := make([]runrecord.Event, len(calls))
+	for i, v := range calls {
+		proposals[i] = runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &calls[i].call, Text: "Native candidate; not executed"}
+	}
+	if err := s.recordEvents(ctx, proposals); err != nil {
+		return nil, 0, toolapi.Result{}, err
+	}
 	for i, v := range calls {
 		s.checkpoint.Tool = v.call.Name
 		if err := s.checkTimeBudget(ctx); err != nil {
-			return nil, i, toolapi.Result{}, err
-		}
-		if err := s.record(ctx, runrecord.Event{Kind: "tool_proposed", CallID: v.call.ID, Call: &v.call, Text: "Native candidate; not executed"}); err != nil {
 			return nil, i, toolapi.Result{}, err
 		}
 		if count == 1 {
@@ -51,7 +57,7 @@ func (s *execution) freezeWave(ctx context.Context, calls []validatedCall, count
 				if i >= len(calls) {
 					return
 				}
-				ready[i], _, failures[i] = s.freezeExecution(ctx, calls[i].call)
+				failures[i] = faults.Guard(func() error { var err error; ready[i], _, err = s.freezeExecution(ctx, calls[i].call); return err })
 			}
 		})
 	}

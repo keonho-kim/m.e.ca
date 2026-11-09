@@ -5,13 +5,15 @@
 package model
 
 import (
-	"fmt"
 	"math"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func CheckTemperature(value *float64) error {
 	if value != nil && (math.IsNaN(*value) || math.IsInf(*value, 0) || *value < 0 || *value > 2) {
-		return fmt.Errorf("temperature must be a finite number between 0 and 2")
+		return faults.Errorf(diagcatalog.ModelTemperatureMustBeAFiniteNumberBetween)
 	}
 	return nil
 }

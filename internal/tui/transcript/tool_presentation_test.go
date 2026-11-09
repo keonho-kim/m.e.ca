@@ -7,10 +7,11 @@ package transcript
 import (
 	"bytes"
 	"encoding/json"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func TestToolPresentationResults(t *testing.T) {

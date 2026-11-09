@@ -6,15 +6,18 @@ package command
 
 import (
 	"context"
-	"fmt"
+
 	"path/filepath"
 	"strings"
 
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/policy"
 	"mvdan.cc/sh/v3/syntax"
+
+	// ResolvedPath describes the entry observed after the requested path resolution.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// ResolvedPath describes the entry observed after the requested path resolution.
 type ResolvedPath struct {
 	Path               string
 	Directory, Symlink bool
@@ -37,7 +40,7 @@ type analyzer struct {
 
 func (p *Program) Analyze(ctx context.Context, input Context) (Report, error) {
 	if input.Resolve == nil || !filepath.IsAbs(input.Project) {
-		return Report{}, fmt.Errorf("shell analysis requires a project and target resolver")
+		return Report{}, faults.Errorf(diagcatalog.CommandShellAnalysisRequiresAProjectAndTarget)
 	}
 	a := &analyzer{ctx: ctx, input: input}
 	s := &state{directories: []string{input.Project}, bindings: &bindings{base: p.base}}

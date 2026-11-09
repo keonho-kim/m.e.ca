@@ -7,18 +7,21 @@ package upgrade
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const maxInfoBytes = 16 * 1024 * 1024
 
-var errTooLarge = errors.New("release response exceeds its size limit")
+var errTooLarge = faults.Errorf(diagcatalog.UpgradeReleaseResponseExceedsItsSizeLimit)
 
 type Client struct {
 	http    *http.Client
@@ -30,7 +33,7 @@ func NewClient(token string) (*Client, error) {
 	token = strings.TrimSpace(token)
 	for _, character := range token {
 		if character <= ' ' || character > '~' {
-			return nil, fmt.Errorf("GitHub credential must be one ASCII token")
+			return nil, faults.Errorf(diagcatalog.UpgradeGitHubCredentialMustBeOneASCIIToken)
 		}
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -45,10 +48,10 @@ func (c *Client) Close() { c.http.CloseIdleConnections() }
 
 func releaseRedirect(request *http.Request, previous []*http.Request) error {
 	if len(previous) >= 10 {
-		return fmt.Errorf("too many release download redirects")
+		return faults.Errorf(diagcatalog.UpgradeTooManyReleaseDownloadRedirects)
 	}
 	if request.URL.Scheme != "https" {
-		return fmt.Errorf("release download requires HTTPS")
+		return faults.Errorf(diagcatalog.UpgradeReleaseDownloadRequiresHTTPS)
 	}
 	if request.URL.Host != previous[0].URL.Host {
 		request.Header.Del("Authorization")
@@ -60,7 +63,7 @@ func (c *Client) read(ctx context.Context, path, accept string, consume func(io.
 	for attempt := 0; attempt < 3; attempt++ {
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 		if err != nil {
-			return fmt.Errorf("invalid GitHub release endpoint")
+			return faults.Errorf(diagcatalog.UpgradeInvalidGitHubReleaseEndpoint)
 		}
 		request.Header.Set("Accept", accept)
 		request.Header.Set("X-GitHub-Api-Version", "2026-03-10")
@@ -74,9 +77,9 @@ func (c *Client) read(ctx context.Context, path, accept string, consume func(io.
 			if response.StatusCode == http.StatusOK {
 				err = consume(response.Body)
 			} else {
-				err = fmt.Errorf("GitHub returned HTTP %d", response.StatusCode)
+				err = faults.Errorf(diagcatalog.UpgradeGitHubReturnedHTTP, response.StatusCode)
 				if response.StatusCode == 401 || response.StatusCode == 403 || response.StatusCode == 404 {
-					err = fmt.Errorf("release access failed (HTTP %d): check repository access and GH_TOKEN, GITHUB_TOKEN or gh auth login", response.StatusCode)
+					err = faults.Errorf(diagcatalog.UpgradeReleaseAccessFailedHTTPCheckRepositoryAccess, response.StatusCode)
 				}
 				retry = response.StatusCode == 429 || response.StatusCode >= 500
 			}
@@ -94,7 +97,7 @@ func (c *Client) read(ctx context.Context, path, accept string, consume func(io.
 			if errors.As(err, &requestError) {
 				err = requestError.Err // Signed asset URLs must not appear in errors.
 			}
-			return fmt.Errorf("GitHub release request failed after %d attempt(s): %w", attempt+1, err)
+			return faults.Errorf(diagcatalog.UpgradeGitHubReleaseRequestFailedAfterAttemptS, attempt+1, err)
 		}
 		timer := time.NewTimer(time.Duration(250*(1<<attempt)) * time.Millisecond)
 		select {

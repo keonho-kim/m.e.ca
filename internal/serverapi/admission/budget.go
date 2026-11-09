@@ -6,11 +6,14 @@ package admission
 
 import (
 	"context"
-	"errors"
+
 	"sync"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-var ErrCapacity = errors.New("server work exceeds its admission budget")
+var ErrCapacity = faults.Errorf(diagcatalog.AdmissionServerWorkExceedsItsAdmissionBudget)
 
 type Budget struct {
 	mu             sync.Mutex
@@ -19,6 +22,20 @@ type Budget struct {
 }
 
 func New(capacity int64) *Budget { return &Budget{capacity: capacity} }
+
+func (b *Budget) resize(previous, next int64) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if next-previous > b.capacity-b.used {
+		return false
+	}
+	b.used += next - previous
+	if next < previous && b.wake != nil {
+		close(b.wake)
+		b.wake = nil
+	}
+	return true
+}
 
 func (b *Budget) take(weight int64) func() {
 	b.used += weight
@@ -69,17 +86,5 @@ func (b *Budget) Acquire(ctx context.Context, weight int64) (func(), error) {
 			return nil, ctx.Err()
 		case <-wake:
 		}
-	}
-}
-
-type inputKey struct{}
-
-func WithInput(ctx context.Context, release func()) context.Context {
-	return context.WithValue(ctx, inputKey{}, release)
-}
-
-func ReleaseInput(ctx context.Context) {
-	if release, ok := ctx.Value(inputKey{}).(func()); ok {
-		release()
 	}
 }

@@ -7,9 +7,10 @@ package run
 import (
 	"context"
 	"errors"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"strings"
 	"testing"
+
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
 func TestFinalReportDoesNotSpendAnotherCallAtBudget(t *testing.T) {

@@ -7,12 +7,14 @@ package openai
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
+
 	"hash"
 	"strings"
 	"unicode"
 
 	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type outputProjection struct {
@@ -54,7 +56,7 @@ func (p *outputProjection) event(event server.Event) error {
 	switch event.Record.Kind {
 	case "draft_reset":
 		if p.segmentBytes > 0 && !p.committed {
-			return fmt.Errorf("generation rewrote an exposed draft")
+			return faults.New(diagcatalog.StreamRewrite, diagcatalog.OpenaiGenerationRewroteAnExposedDraft)
 		}
 		p.segment.Reset()
 		p.segmentBytes = 0
@@ -90,7 +92,7 @@ func (p *outputProjection) event(event server.Event) error {
 		}
 		text := strings.TrimSpace(event.Record.Text)
 		if !matchesPrefix(p.segment, p.segmentBytes, text) {
-			return fmt.Errorf("accepted generation differs from its exposed draft")
+			return faults.New(diagcatalog.StreamRewrite, diagcatalog.OpenaiAcceptedGenerationDiffersFromItsExposedDraft)
 		}
 		p.pending.Reset()
 		if err := p.append(text[p.segmentBytes:]); err != nil {
@@ -120,7 +122,7 @@ func matchesPrefix(h hash.Hash, n int, text string) bool {
 }
 func (p *outputProjection) finish(text string) error {
 	if !matchesPrefix(p.all, p.bytes, text) {
-		return fmt.Errorf("final output differs from its exposed draft")
+		return faults.New(diagcatalog.StreamRewrite, diagcatalog.OpenaiFinalOutputDiffersFromItsExposedDraft)
 	}
 	if p.bytes < len(text) {
 		return p.emit(text[p.bytes:])

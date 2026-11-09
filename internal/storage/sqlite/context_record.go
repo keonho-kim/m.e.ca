@@ -6,10 +6,12 @@ package sqlite
 
 import (
 	"context"
-	"fmt"
+
 	json "github.com/goccy/go-json"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 )
 
@@ -47,7 +49,7 @@ func (s *Store) contextRecord(ctx context.Context, record storedRecord, fields m
 			return message, 0, err
 		}
 		if string(metadata.Content) != "null" {
-			return message, 0, fmt.Errorf("invalid shared content placeholder")
+			return message, 0, faults.Errorf(diagcatalog.SqliteInvalidSharedContentPlaceholder)
 		}
 		message.Content = content
 	}

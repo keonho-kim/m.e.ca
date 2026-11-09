@@ -8,8 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/config"
-	"github.com/keonho-kim/meca/internal/provider/connection"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,6 +17,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
 func TestHeadlessExecutable(t *testing.T) {

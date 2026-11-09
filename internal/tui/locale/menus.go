@@ -4,7 +4,16 @@
 // Related: internal/tui/locale/locale.go, internal/tui/view/menu.go.
 package locale
 
+import diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
 var menus = []translation{
+	{"", "Skills", "스킬"},
+	{"", "Reading skills", "스킬을 읽는 중"},
+	{"", "Skill reader is unavailable", "스킬을 읽을 수 없습니다"},
+	{"", "Back to skills", "스킬 목록으로"},
+	{"", "More skills", "다음 스킬 목록"},
+	{"", "Invalid or inaccessible skills", "잘못되었거나 읽을 수 없는 스킬"},
+	{"", "No skills found", "설치된 스킬이 없습니다"},
 	{"", "Permission mode", "승인 모드"},
 	{"", "Default", "기본"},
 	{"", "Run ordinary work automatically; ask for approval when required.", "일반 작업은 자동 실행하고 필요한 작업만 승인을 요청합니다."},
@@ -47,7 +56,7 @@ var menus = []translation{
 	{"", "DEFAULT", "기본값"},
 	{"", "ON", "켜짐"},
 	{"", "OFF", "꺼짐"},
-	{"", "unavailable", "사용 불가"},
+	{"", diagcatalog.Unavailable, "사용 불가"},
 	{"", "ON/OFF control unavailable", "켜기·끄기 설정 불가"},
 	{"", "OFF unavailable", "끄기 불가"},
 	{"", "no-model", "모델 미선택"},

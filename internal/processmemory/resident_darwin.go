@@ -5,13 +5,16 @@
 package processmemory
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+
+	// ResidentBytes returns the current process's RSS rather than its historical peak.
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-// ResidentBytes returns the current process's RSS rather than its historical peak.
 func ResidentBytes() (uint64, error) {
 	// PROC_PIDTASKINFO has six uint64 values followed by twelve int32 counters.
 	// Keep the complete 96-byte ABI record; RSS is the second uint64 field.
@@ -27,7 +30,7 @@ func ResidentBytes() (uint64, error) {
 		return 0, errno
 	}
 	if n != size {
-		return 0, fmt.Errorf("incomplete resident-memory snapshot: %d of %d bytes", n, size)
+		return 0, faults.Errorf(diagcatalog.ProcessmemoryIncompleteResidentMemorySnapshotOfBytes, n, size)
 	}
 	return info.Resident, nil
 }

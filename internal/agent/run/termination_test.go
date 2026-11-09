@@ -8,10 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"testing"
 )
 
 func TestToolSequenceAllowsModelReportAfter128Calls(t *testing.T) {

@@ -5,8 +5,9 @@
 package claude
 
 import (
-	"fmt"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
@@ -32,7 +33,7 @@ func (d *Decoder) setUsage(value *usage, state *native.State) error {
 			continue
 		}
 		if *pair.next < 0 || *pair.next > modelapi.MaxCallTokens {
-			return fmt.Errorf("invalid Claude token usage")
+			return faults.Errorf(diagcatalog.ClaudeInvalidClaudeTokenUsage)
 		}
 		*pair.saved = pair.next
 	}

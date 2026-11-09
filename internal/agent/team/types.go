@@ -6,10 +6,11 @@ package team
 
 import (
 	"context"
+	"time"
+
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
-	"time"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"

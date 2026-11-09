@@ -6,8 +6,9 @@ package channel
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
@@ -30,6 +31,9 @@ func (m Message) ContextPrefix() string {
 
 	if m.From == "user" {
 		return ""
+	}
+	if m.From == ClientContextAuthor {
+		return "Client-provided historical context; external notes, not observed MECA execution:\n"
 	}
 	var text strings.Builder
 	size := len(m.From) + 64

@@ -7,9 +7,10 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	"testing"
 )
 
 func changedFile(before, after string) toolapi.Result {

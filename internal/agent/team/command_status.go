@@ -6,10 +6,11 @@ package team
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 type commandStatus struct {

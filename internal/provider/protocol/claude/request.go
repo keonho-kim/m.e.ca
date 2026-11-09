@@ -5,10 +5,12 @@
 package claude
 
 import (
-	"fmt"
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"strings"
+
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
 func Base(request modelapi.Request, system string, thinking any, effort string) (Request, *Prefix, error) {
@@ -69,22 +71,22 @@ func messageBlocks(message native.Input) ([]Block, string, error) {
 				original.WriteString(block.Text)
 			case "tool_use":
 				if callIndex >= len(calls) || calls[callIndex].ID != block.ID || calls[callIndex].Name != block.Name {
-					return nil, "", fmt.Errorf("claude continuation differs from tool history")
+					return nil, "", faults.Errorf(diagcatalog.ClaudeClaudeContinuationDiffersFromToolHistory)
 				}
 				if !native.SameArguments(string(block.Input), string(calls[callIndex].Arguments)) {
-					return nil, "", fmt.Errorf("claude continuation arguments differ from tool history")
+					return nil, "", faults.Errorf(diagcatalog.ClaudeClaudeContinuationArgumentsDifferFromToolHistory)
 				}
 				callIndex++
 			case "thinking", "redacted_thinking":
 			default:
-				return nil, "", fmt.Errorf("unsupported Claude continuation block")
+				return nil, "", faults.Errorf(diagcatalog.ClaudeUnsupportedClaudeContinuationBlock)
 			}
 		}
 		if callIndex != len(calls) {
-			return nil, "", fmt.Errorf("claude continuation omitted a tool call")
+			return nil, "", faults.Errorf(diagcatalog.ClaudeClaudeContinuationOmittedAToolCall)
 		}
 		if original.String() != text && strings.TrimSpace(original.String()) != text {
-			return nil, "", fmt.Errorf("claude continuation text differs from message history")
+			return nil, "", faults.Errorf(diagcatalog.ClaudeClaudeContinuationTextDiffersFromMessageHistory)
 		}
 		return blocks, prior.Prefix, nil
 	}
@@ -99,7 +101,7 @@ func messageBlocks(message native.Input) ([]Block, string, error) {
 			}
 			mime, encoded, ok := native.DataImage(part.ImageURL.URL)
 			if !ok {
-				return nil, "", fmt.Errorf("claude requires embedded image data")
+				return nil, "", faults.Errorf(diagcatalog.ClaudeClaudeRequiresEmbeddedImageData)
 			}
 			blocks = append(blocks, Block{Type: "image", Source: &ImageSource{Type: "base64", Media: mime, Data: encoded}})
 		}

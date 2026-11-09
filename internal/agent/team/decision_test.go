@@ -5,9 +5,10 @@
 package team
 
 import (
+	"testing"
+
 	record "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"testing"
 )
 
 func TestReceivedInstructionStillNeedsANewModelDecision(t *testing.T) {

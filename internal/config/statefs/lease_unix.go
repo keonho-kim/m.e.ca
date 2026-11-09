@@ -8,9 +8,12 @@ package statefs
 
 import (
 	"errors"
-	"fmt"
+
 	"os"
 	"syscall"
+
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 func Lease(root *os.Root, exclusive bool) (*os.File, error) {
@@ -23,7 +26,7 @@ func Lease(root *os.Root, exclusive bool) (*os.File, error) {
 		flags = syscall.LOCK_EX | syscall.LOCK_NB
 	}
 	if err := syscall.Flock(int(file.Fd()), flags); err != nil {
-		return nil, errors.Join(fmt.Errorf("another MECA process is using application state; close MECA before installing or uninstalling: %w", err), file.Close())
+		return nil, errors.Join(faults.Errorf(diagcatalog.StatefsAnotherMECAProcessIsUsingApplicationState, err), file.Close())
 	}
 	return file, nil
 }

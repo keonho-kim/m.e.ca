@@ -6,11 +6,12 @@ package run
 
 import (
 	"context"
+	"testing"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	"testing"
 )
 
 func checkInference(t *testing.T, request modelapi.Request, parameters inference.Parameters) {

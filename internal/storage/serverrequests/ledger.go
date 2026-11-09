@@ -10,19 +10,22 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"github.com/keonho-kim/meca/internal/commands/server"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/commands/server"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
 type rowQuery interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 type stored struct {
-	kind, session, status, message string
-	digest, response               []byte
-	version                        int
+	kind, session, status, message, code string
+	digest, response                     []byte
+	version                              int
 }
 
 func read(ctx context.Context, q rowQuery, id []byte) (stored, error) {
@@ -33,32 +36,36 @@ func read(ctx context.Context, q rowQuery, id []byte) (stored, error) {
  CASE WHEN length(CAST(session AS BLOB))<=34 THEN session END,
  CASE WHEN length(CAST(status AS BLOB))<=16 THEN status END,
  CASE WHEN length(CAST(error AS BLOB))<=4096 THEN error END,
+ CASE WHEN length(CAST(error_code AS BLOB))<=128 THEN error_code END,
  CASE WHEN length(response)<=? THEN response END,version
- FROM requests WHERE id=?`, maxResponseRecordBytes, id).Scan(&v.kind, &v.digest, &v.session, &v.status, &v.message, &v.response, &v.version)
-	if err == nil && (v.version != 1 || len(v.digest) != 32 || v.kind != "native" && v.response == nil) {
-		err = fmt.Errorf("unsupported request record; original preserved")
+ FROM requests WHERE id=?`, maxResponseRecordBytes, id).Scan(&v.kind, &v.digest, &v.session, &v.status, &v.message, &v.code, &v.response, &v.version)
+	if err == nil && (v.version != 1 || len(v.digest) != 32 || !diagcatalog.ValidCode(v.code) || v.kind != "native" && v.response == nil) {
+		err = faults.Errorf(diagcatalog.ServerrequestsUnsupportedRequestRecordOriginalPreserved)
 	}
 	return v, err
 }
 func identity(id, prefix string) ([]byte, error) {
 	if len(id) != 69 || !strings.HasPrefix(id, prefix) {
-		return nil, &server.Error{Code: "invalid_argument", Message: "invalid request identity"}
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerrequestsInvalidRequestIdentity)
 	}
 	raw, err := hex.DecodeString(id[5:])
 	if err != nil {
-		return nil, &server.Error{Code: "invalid_argument", Message: "invalid request digest"}
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerrequestsInvalidRequestDigest)
 	}
 	return raw, nil
 }
 func restored(t server.Task) server.Task {
+	t.Persistence = server.PersistenceConfirmed
 	if t.Status == "accepted" {
-		t.Status = "interrupted"
+		t.Status = diagcatalog.Interrupted
+		t.Code = diagcatalog.Interrupted
+		t.Persistence = server.PersistenceUncertain
 	}
 	return t
 }
 func (l *Ledger) Admit(ctx context.Context, session, key, text string) (result server.Task, duplicate bool, resultErr error) {
 	if !sessionstate.ValidID(session) {
-		return result, false, fmt.Errorf("invalid request session")
+		return result, false, faults.Errorf(diagcatalog.ServerrequestsInvalidRequestSession)
 	}
 	id := server.TaskID(session, key)
 	raw, _ := identity(id, "task_")
@@ -71,24 +78,27 @@ func (l *Ledger) Admit(ctx context.Context, session, key, text string) (result s
 	old, err := read(ctx, tx, raw)
 	if err == nil {
 		if old.kind != "native" || old.session != session || string(old.digest) != string(digest[:]) {
-			return result, true, &server.Error{Code: "conflict", Message: "request key was already used with different text"}
+			return result, true, faults.New(diagcatalog.Conflict, diagcatalog.ServerrequestsRequestKeyWasAlreadyUsedWithDifferent)
 		}
-		return restored(server.Task{ID: id, Session: session, Status: old.status, Error: old.message}), true, nil
+		return restored(server.Task{ID: id, Session: session, Status: old.status, Error: old.message, Code: old.code}), true, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return result, false, err
 	}
-	if err := l.reserve(ctx); err != nil {
+	reservation, err := l.reserve(ctx)
+	if err != nil {
 		return result, false, err
 	}
+	defer func() { resultErr = errors.Join(resultErr, reservation.Close()) }()
 	_, err = tx.ExecContext(ctx, "INSERT INTO requests(id,kind,digest,session,status) VALUES(?,'native',?,?,'accepted')", raw, digest[:], session)
 	if err != nil {
 		return result, false, err
 	}
+	reservation.Publish()
 	if err := tx.Commit(); err != nil {
 		return result, false, err
 	}
-	return server.Task{ID: id, Session: session, Status: "accepted"}, false, nil
+	return server.Task{ID: id, Session: session, Status: "accepted", Persistence: server.PersistencePending}, false, nil
 }
 func (l *Ledger) Get(ctx context.Context, id string) (server.Task, error) {
 	raw, err := identity(id, "task_")
@@ -111,20 +121,22 @@ func (l *Ledger) Get(ctx context.Context, id string) (server.Task, error) {
 			return server.Task{}, server.ErrTaskNotFound
 		}
 		status := value.TaskStatus
-		if status == "" {
-			status = "interrupted"
+		if status == "" || status == "accepted" {
+			status = diagcatalog.Interrupted
+			value.Code = diagcatalog.Interrupted
+			return server.Task{ID: id, Session: value.Session, Status: status, Error: value.Error, Code: value.Code, Persistence: server.PersistenceUncertain}, nil
 		}
-		return server.Task{ID: id, Session: value.Session, Status: status, Error: value.Error}, nil
+		return server.Task{ID: id, Session: value.Session, Status: status, Error: value.Error, Code: value.Code, Persistence: server.PersistenceConfirmed}, nil
 	}
 	if !sessionstate.ValidID(v.session) {
-		return server.Task{}, fmt.Errorf("invalid stored session")
+		return server.Task{}, faults.Errorf(diagcatalog.ServerrequestsInvalidStoredSession)
 	}
 	switch v.status {
-	case "accepted", "answered", "stopped", "interrupted":
+	case "accepted", "answered", "stopped", diagcatalog.Interrupted:
 	default:
-		return server.Task{}, fmt.Errorf("invalid stored task status")
+		return server.Task{}, faults.Errorf(diagcatalog.ServerrequestsInvalidStoredTaskStatus)
 	}
-	return restored(server.Task{ID: id, Session: v.session, Status: v.status, Error: v.message}), nil
+	return restored(server.Task{ID: id, Session: v.session, Status: v.status, Error: v.message, Code: v.code}), nil
 }
 func (l *Ledger) Finish(ctx context.Context, task server.Task) error {
 	raw, err := identity(task.ID, "task_")
@@ -132,14 +144,14 @@ func (l *Ledger) Finish(ctx context.Context, task server.Task) error {
 		return err
 	}
 	switch task.Status {
-	case "answered", "stopped", "interrupted":
+	case "answered", "stopped", diagcatalog.Interrupted:
 	default:
-		return fmt.Errorf("invalid completion status")
+		return faults.Errorf(diagcatalog.ServerrequestsInvalidCompletionStatus)
 	}
-	if len(task.Error) > 4096 {
-		return fmt.Errorf("request completion exceeds limit")
+	if len(task.Error) > 4096 || !diagcatalog.ValidCode(task.Code) {
+		return faults.Errorf(diagcatalog.ServerrequestsRequestCompletionExceedsLimit)
 	}
-	result, err := l.db.ExecContext(ctx, "UPDATE requests SET status=?,error=? WHERE id=? AND kind='native' AND session=? AND (status='accepted' OR (status=? AND error=?))", task.Status, task.Error, raw, task.Session, task.Status, task.Error)
+	result, err := l.db.ExecContext(ctx, "UPDATE requests SET status=?,error=?,error_code=? WHERE id=? AND kind='native' AND session=? AND (status='accepted' OR (status=? AND error=? AND error_code=?))", task.Status, task.Error, task.Code, raw, task.Session, task.Status, task.Error, task.Code)
 	if err != nil {
 		return err
 	}

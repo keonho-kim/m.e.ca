@@ -6,8 +6,10 @@ package catalog
 
 import (
 	"encoding/json"
-	"fmt"
+
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type Arguments struct {
@@ -25,7 +27,7 @@ type Arguments struct {
 func Parse(call toolapi.Call) (Arguments, error) {
 	spec, ok := definition(call.Name)
 	if !ok {
-		return Arguments{}, fmt.Errorf("unknown cooperative tool")
+		return Arguments{}, faults.Errorf(diagcatalog.CatalogUnknownCooperativeTool)
 	}
 	if _, err := toolapi.ValidateArguments(spec, call.Arguments); err != nil {
 		return Arguments{}, err

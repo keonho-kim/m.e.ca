@@ -5,9 +5,10 @@
 package viewport
 
 import (
+	"sort"
+
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/markdown"
-	"sort"
 )
 
 func (v *View) showDetails(block *Block) {

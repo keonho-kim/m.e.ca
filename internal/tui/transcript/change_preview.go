@@ -6,11 +6,12 @@ package transcript
 
 import (
 	"fmt"
-	"github.com/keonho-kim/meca/internal/tui/locale"
-	"github.com/keonho-kim/meca/internal/tui/viewport"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/keonho-kim/meca/internal/tui/locale"
+	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 var changeHunk = regexp.MustCompile(`^@@ -([0-9]+)(?:,[0-9]+)? \+([0-9]+)(?:,[0-9]+)? @@`)
