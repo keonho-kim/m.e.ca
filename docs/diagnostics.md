@@ -18,7 +18,7 @@ skill_loaded는 본문을 읽었다는 사실과 skill의 id·name·source·revi
 
 ## 운영 로그
 
-서버·CLI는 stderr에 JSONL, TUI는 `~/.meca/logs/run-<id>/current.jsonl`에 JSONL을 기록한다. stdout의 최종 답변·JSON 이벤트·export 형식은 유지한다. 서버 준비 로그는 `msg=server_listening`의 listen·protocol로 주소를 알린다. 서버 토큰이나 토큰 파일 내용은 출력하지 않는다.
+서버·CLI는 stderr에 JSONL, TUI는 `~/.meca/logs/run-<id>/current.jsonl`에 JSONL을 기록한다. stdout의 최종 답변·JSON 이벤트·export 형식은 유지한다. 서버 준비 로그는 `msg=server_listening`의 listen·protocol로 주소를 알리고 토큰을 포함하지 않는다. 서버 인증 토큰은 준비 완료 시 stdout에 한 번만 표시하며 운영 로그·API 이벤트에는 넣지 않는다.
 
 기본 레벨은 info다. 프로세스 시작 때 환경변수 MECA_LOG_LEVEL=debug|info|warn|error로 선택한다. debug에서는 세부 도구·저장·제어·스트림 종료 기록을 볼 수 있다. 작업 시작·종료와 스킬 읽기, 승인 대기·결정, 느린 모델 호출·저장, 실패·재시도를 작은 메타데이터로 기록한다.
 

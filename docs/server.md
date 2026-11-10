@@ -2,7 +2,7 @@
 
 [← README](../README.md) · [제품 명세](../SYSTEM.md)
 
-서버와 내장 WebUI는 `full` 배포본에서 제공한다. `tui`은 TUI·CLI만 포함하며 서버 옵션은 full 설치 안내와 함께 거절한다. `meca --help` 첫 줄로 종류를 확인한다. MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
+서버와 내장 WebUI는 `full` 배포본에서 제공한다. `tui`는 TUI·CLI만 포함하며 서버 옵션은 full 설치 안내와 함께 거절한다. `meca --help` 첫 줄로 종류를 확인한다. MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
 
 ## 기동
 
@@ -20,7 +20,7 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 ### 내장 화면으로 시작하기
 
 1. `meca /path/to/project --server --ui`로 기동한다. `--ui`만 지정하면 오류이며, 기본 수신 주소는 `127.0.0.1:8787`이다.
-2. `http://127.0.0.1:8787/ui/`에 접속하고 기본 토큰 파일 `~/.meca/server.token`의 값을 연결 화면에 입력한다. `--token-file`을 지정했다면 해당 파일을 사용한다.
+2. `http://127.0.0.1:8787/ui/`에 접속하고 서버 시작 터미널의 `Server token: …` 값을 연결 화면에 입력한다. `--token-file`을 지정한 경우에도 실제 인증에 사용하는 토큰을 표시한다.
 3. 작업공간·대화를 만들고 설정 → 모델에서 연결을 준비한 뒤 요청한다. 팀·스킬·파일 참조·이미지와 작업 승인·중지는 같은 API를 사용한다.
 
 로컬 loopback의 대화형 출력 터미널에서는 브라우저를 자동으로 연다. 원격·비대화형 실행은 출력된 URL에 직접 접속하며, 다른 컴퓨터에서 사용할 때는 TLS·Host·Origin을 아래 인증 규칙에 맞게 설정한다. 화면 사용은 [WebUI 구조와 동작](webui-design.md), 클라이언트 구현은 [연동 계약](webui-api.md)을 따른다.
@@ -45,7 +45,9 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ## 인증과 네트워크
 
-기본 토큰 파일은 `~/.meca/server.token`이다. 처음 실행할 때 원자적으로 생성하며 현재 사용자 소유의 private 일반 파일만 허용한다. `--token-file PATH`로 다른 파일을 지정할 수 있다. 상위 디렉터리는 미리 만들어야 하며 파일에는 32~256바이트의 공백 없는 ASCII 토큰을 넣는다. 시작 시 한 번 읽은 토큰을 인증과 비밀값 마스킹에 함께 사용한다. 파일을 교체한 뒤에는 서버를 다시 시작해야 적용된다. 토큰 내용은 시작 메시지에 출력하지 않는다.
+기본 토큰 파일은 `~/.meca/server.token`이다. 처음 실행할 때 원자적으로 생성하며 현재 사용자 소유의 private 일반 파일만 허용한다. `--token-file PATH`로 다른 파일을 지정할 수 있다. 상위 디렉터리는 미리 만들어야 하며 파일에는 32~256바이트의 공백 없는 ASCII 토큰을 넣는다. 시작 시 한 번 읽은 토큰을 인증과 비밀값 마스킹에 함께 사용한다. 파일을 교체한 뒤에는 서버를 다시 시작해야 적용된다.
+
+서버를 기동할 때마다 리스너 준비 완료 후 현재 토큰을 `Server token: …` 형식으로 stdout에 한 번 출력한다. `--ui` 유무와 전송 방식에 관계없이 적용하며 리스너 준비 전에 실패하면 표시하지 않는다. 토큰은 stderr의 JSON 운영 로그·API 이벤트·URL에는 포함하지 않는다. stdout에 쓸 수 없으면 서버를 종료하고 출력 오류를 반환한다.
 
 외부 HTTP·SSE·RPC 클라이언트는 `Authorization: Bearer <token>` 헤더를 사용한다. URL 토큰은 받지 않는다. `--ui`에서는 POST /v1/ui/login에 같은 토큰을 제출해 만료하는 HttpOnly·SameSite=Strict 쿠키를 발급한다. 쿠키를 쓰는 변경 요청에는 동일 Origin과 X-Meca-UI: 1이 필요하다. 내장 EventSource·저장 이미지도 같은 쿠키를 사용한다. [브라우저 인증 상세](webui-api.md#내장-브라우저-인증)를 따른다.
 

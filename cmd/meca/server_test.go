@@ -1,6 +1,6 @@
 //go:build !tui
 
-// Purpose: Verify the executable serves a real project without a TTY and shuts down on SIGTERM.
+// Purpose: Verify server authentication, one-time stdout token delivery and joined executable shutdown.
 // Pattern: Executable integration test.
 // Usage: go test ./cmd/meca -run TestServerExecutable.
 // Related: cmd/meca/server.go, cmd/meca/executable_test.go.
@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -48,6 +49,8 @@ func TestServerExecutable(t *testing.T) {
 	cmd := exec.CommandContext(ctx, binary, "--server", "--listen", "127.0.0.1:0")
 	cmd.Dir = project
 	cmd.Env = append(os.Environ(), "HOME="+home)
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -64,11 +67,14 @@ func TestServerExecutable(t *testing.T) {
 	}()
 	address := make(chan string, 1)
 	readDone := make(chan struct{})
+	var diagnosticOutput strings.Builder
 	go func() {
 		defer close(readDone)
 		scanner := bufio.NewScanner(pipe)
 		for scanner.Scan() {
 			line := scanner.Text()
+			diagnosticOutput.WriteString(line)
+			diagnosticOutput.WriteByte('\n')
 			var entry struct {
 				Message string `json:"msg"`
 				Listen  string `json:"listen"`
@@ -196,4 +202,54 @@ func TestServerExecutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	<-readDone
+	value := strings.TrimSpace(string(token))
+	if stdout.String() != "Server token: "+value+"\n" {
+		t.Fatal("server did not print its authenticated token exactly once to stdout")
+	}
+	if strings.Contains(diagnosticOutput.String(), value) {
+		t.Fatal("server exposed its authentication token in diagnostics")
+	}
+}
+
+func TestServerStartupOutputFailure(t *testing.T) {
+	binary := testExecutable(t)
+	path := filepath.Join(t.TempDir(), "read-only-stdout")
+	if err := os.WriteFile(path, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	output, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer output.Close()
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "--server", "--listen", "127.0.0.1:0")
+	command.Dir = t.TempDir()
+	command.Env = append(os.Environ(), "HOME="+t.TempDir())
+	command.Stdout = output
+	var diagnosticOutput bytes.Buffer
+	command.Stderr = &diagnosticOutput
+	if err := command.Run(); err == nil || ctx.Err() != nil || !strings.Contains(diagnosticOutput.String(), "delivery_failed") {
+		t.Fatal("server did not stop with a delivery failure when startup stdout was unavailable", err, ctx.Err())
+	}
+}
+
+func TestServerBindFailureDoesNotPrintToken(t *testing.T) {
+	binary := testExecutable(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "--server", "--listen", listener.Addr().String())
+	command.Dir = t.TempDir()
+	command.Env = append(os.Environ(), "HOME="+t.TempDir())
+	var output bytes.Buffer
+	command.Stdout = &output
+	if err := command.Run(); err == nil || ctx.Err() != nil || output.Len() != 0 {
+		t.Fatal("failed server startup printed credentials or failed to stop", err, ctx.Err())
+	}
 }

@@ -5,7 +5,6 @@
 package catalog
 
 const (
-	UIReady                 Message = "Web UI: %s"
 	UIFlagHelp              Message = "serve the embedded browser workspace"
 	UIWorkspaceInvalid      Message = "select an existing accessible workspace directory"
 	UIWorkspaceUnknown      Message = "workspace is not registered"
