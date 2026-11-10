@@ -18,6 +18,7 @@ func (w *documentWriter) quotedPart(text string) error {
 	}
 	if w.encoder == nil {
 		w.encoder = json.NewEncoder(&w.quoted)
+		w.encoder.SetEscapeHTML(false)
 	}
 	w.quoted.Reset()
 	if err := w.encoder.Encode(text); err != nil {

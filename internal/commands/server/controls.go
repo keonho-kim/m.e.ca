@@ -7,7 +7,9 @@ package server
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/record"
@@ -24,7 +26,9 @@ type pendingApproval struct {
 }
 
 func (s *Service) approver(r *request) run.Approver {
-	return func(ctx context.Context, value tool.Approval) (bool, error) {
+	return func(ctx context.Context, value tool.Approval) (approved bool, cause error) {
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
 		id := "approval_" + rand.Text()
 		pending := &pendingApproval{value: value, ctx: ctx, decision: make(chan bool, 1)}
 		s.mu.Lock()
@@ -33,12 +37,26 @@ func (s *Service) approver(r *request) run.Approver {
 			return false, ctx.Err()
 		}
 		r.approvals[id] = pending
-		s.publish(Event{Task: r.task.ID, ApprovalID: id, Record: record.Event{Kind: diagcatalog.ApprovalRequired, Approval: &value, CallID: value.ID}})
+		expires, _ := ctx.Deadline()
+		s.publish(Event{Task: r.task.ID, ApprovalID: id, ApprovalExpiresAt: expires, Record: record.Event{Kind: diagcatalog.ApprovalRequired, Approval: &value, CallID: value.ID}})
 		s.mu.Unlock()
 		defer func() {
 			s.mu.Lock()
 			delete(r.approvals, id)
-			s.publish(Event{Task: r.task.ID, ApprovalID: id, Record: eventKind("approval_closed")})
+			status := "denied"
+			if approved {
+				status = "approved"
+			}
+			if errors.Is(cause, context.DeadlineExceeded) {
+				status = "expired"
+			} else if errors.Is(cause, context.Canceled) {
+				status = "canceled"
+			} else if cause != nil {
+				status = "failed"
+			}
+			event := eventKind("approval_closed")
+			event.ErrorCode = faults.Code(cause)
+			s.publish(Event{Task: r.task.ID, ApprovalID: id, Status: status, Record: event})
 			s.mu.Unlock()
 		}()
 		select {
@@ -61,7 +79,7 @@ func (s *Service) Approve(task, id string, allow bool) error {
 		return err
 	}
 	pending := r.approvals[id]
-	if pending == nil || pending.ctx.Err() != nil || r.task.Status != "running" {
+	if pending == nil || pending.ctx == nil || pending.ctx.Err() != nil || r.task.Status != "running" {
 		return faults.New(diagcatalog.Conflict, diagcatalog.ServerApprovalIsStaleOrAlreadyAnswered)
 	}
 	delete(r.approvals, id)

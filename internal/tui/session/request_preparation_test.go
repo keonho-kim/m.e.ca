@@ -12,9 +12,9 @@ import (
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 type blockedReference struct {
@@ -36,7 +36,7 @@ func TestRequestPreparationRunsOnWorker(t *testing.T) {
 	a.ctx = ctx
 	defer cancel()
 	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
-	a.startRequest(composer.Capture("review", []string{"captured.txt"}))
+	a.startRequest(requestinput.Capture("review", []string{"captured.txt"}))
 	if ctx.Err() != nil {
 		t.Fatal("request preparation blocked the terminal event loop")
 	}

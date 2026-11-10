@@ -4,17 +4,17 @@
 // Related: internal/tui/composer/request.go, internal/tui/composer/queue/state.go.
 package session
 
-import "github.com/keonho-kim/meca/internal/tui/composer"
+import requestinput "github.com/keonho-kim/meca/internal/commands/input"
 
-func queuedRequests(texts ...string) []composer.Request {
-	out := make([]composer.Request, len(texts))
+func queuedRequests(texts ...string) []requestinput.Request {
+	out := make([]requestinput.Request, len(texts))
 	for i, text := range texts {
 		out[i].Text = text
 	}
 	return out
 }
 
-func queuedTexts(requests []composer.Request) []string {
+func queuedTexts(requests []requestinput.Request) []string {
 	out := make([]string, len(requests))
 	for i, request := range requests {
 		out[i] = request.Text

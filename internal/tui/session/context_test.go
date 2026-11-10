@@ -18,9 +18,9 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
@@ -113,7 +113,7 @@ func TestConversationContextIncludesAllBeforeCompaction(t *testing.T) {
 	a.connection.selection = modelconn.Selection{Connection: connection, Model: "context-model"}
 	for _, question := range []string{"new question", "different question"} {
 		a.chat.stream, a.chat.thinking = "stale answer", "stale thinking"
-		a.startRequest(composer.Capture(question, a.selectedPaths()))
+		a.startRequest(requestinput.Capture(question, a.selectedPaths()))
 		if a.chat.stream != "" || a.chat.thinking != "" {
 			t.Fatal("previous response retained on new task")
 		}

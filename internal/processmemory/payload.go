@@ -1,7 +1,7 @@
 // Purpose: Charge selected original reads to the shared payload budget as they grow.
 // Pattern: Caller-owned nonblocking byte reservation.
 // Usage: API originals reserve before hydration and retain only their output charge during delivery.
-// Related: internal/processmemory/transient.go, internal/serverapi/openai/result.go, internal/serverapi/detail/cache.go.
+// Related: internal/processmemory/transient.go, internal/serverapi/detail/cache.go.
 package processmemory
 
 import (

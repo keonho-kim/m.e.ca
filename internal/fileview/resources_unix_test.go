@@ -37,7 +37,7 @@ func TestSpecialFileReadDoesNotBlock(t *testing.T) {
 			done := make(chan error, 1)
 			go func() {
 				if directory {
-					_, _, err := reader.Directory(t.Context(), policy.Settings{Scope: policy.System}, "pipe", 0, 100)
+					_, err := reader.Directory(t.Context(), policy.Settings{Scope: policy.System}, "pipe", 0, 100, "")
 					done <- err
 				} else {
 					_, err := reader.Preview(t.Context(), policy.Settings{Scope: policy.System}, "pipe")
@@ -74,7 +74,11 @@ func TestDirectoryPageOwnsOnlySelectedEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer root.Close()
-	page, more, err := readDirectory(context.Background(), Target{Absolute: directory, Relative: ".", Root: root}, 20, 10)
+	reader := New(directory, func(policy.Scope, string) (Target, error) {
+		return Target{Absolute: directory, Relative: ".", Root: root}, nil
+	}, func(s string) string { return s })
+	value, err := reader.Directory(context.Background(), policy.Settings{Scope: policy.System}, ".", 20, 10, "")
+	page, more := value.Entries, value.More
 	if err != nil || !more || len(page) != 10 || page[0].Name != "entry-020" {
 		t.Fatal(page, more, err)
 	}

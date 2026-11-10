@@ -35,6 +35,17 @@ AGENTS.md
 /.cache/
 /.gocache/
 
+# Embedded UI source dependencies and reproducible build output
+/webui/node_modules/
+/webui/dist/
+/webui/tsconfig.tsbuildinfo
+/webui/test-results/
+/webui/playwright-report/
+/webui/.playwright-cli/
+/.playwright-cli/
+/internal/webui/assets/*.gz
+/internal/webui/assets/manifest.json
+
 # Temporary directories and runtime diagnostics
 /real-world-test/
 /tmp/
@@ -97,3 +108,9 @@ ehthumbs.db
 ehthumbs_vista.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# Frontend design review captures (the design system sources remain reviewable)
+webui/.impeccable/review/
+
+# Built Astryx theme descriptors are regenerated before browser type checks and builds.
+webui/src/app/styles/generated/

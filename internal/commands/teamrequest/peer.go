@@ -41,30 +41,13 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 	if err != nil {
 		return result, err
 	}
-	storedCursor := cursor
 	if cursor == 0 {
 		cursor = peer.InitialCursor()
 	}
 	peer.Cursor = cursor
 	own := r.options
 	own.Session, own.Store, own.Tools, own.Text = child.Session, child.Store, tools, input
-	own.ClientContext = nil
-	var sources []runrecord.Entry
-	for _, message := range r.options.ClientContext {
-		if message.Source == nil {
-			own.ClientContext = append(own.ClientContext, message)
-		} else if message.Source.Sequence > storedCursor {
-			// Durable input already belongs to the public room. Commit only its
-			// authenticated reference; transient Chat history remains request-owned.
-			copy := message
-			sources = append(sources, runrecord.Entry{Message: &copy})
-		}
-	}
-	if len(sources) > 0 {
-		if err := child.Store.Commit(ctx, child.Session.ID, sources); err != nil {
-			return result, err
-		}
-	}
+	own.Images = nil // Public room owns user attachments; private journals retain its source.
 	own.Skills = local.Skills()
 	own.PollSteering = nil
 	if scoped, ok := own.Generator.(interface {

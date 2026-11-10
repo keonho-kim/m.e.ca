@@ -6,12 +6,12 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/commands"
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/composer/queue"
 )
 
 func (a *app) reserveInput() {
-	command, err := commands.Parse(a.compose.editor.String())
+	command, err := a.inputCommand()
 	if err != nil {
 		a.fail(err)
 		return
@@ -31,7 +31,11 @@ func (a *app) reserveMessage(text string) {
 		a.status = a.language.Text("중지 처리 중입니다. 초안을 유지합니다")
 		return
 	}
-	a.compose.queued.Messages = append(a.compose.queued.Messages, composer.Capture(text, a.selectedPaths()))
+	if err := a.compose.queued.Append(requestinput.Capture(text, a.selectedPaths(), a.compose.images...)); err != nil {
+		a.fail(err)
+		return
+	}
+	a.clearDraftImages()
 	a.compose.editor.Set("")
 	a.closeCommandHints()
 	a.status = ""
@@ -39,7 +43,8 @@ func (a *app) reserveMessage(text string) {
 
 func (a *app) restorePending() {
 	a.restorePendingEditor()
-	a.compose.queued.Drain(&a.compose.editor)
+	a.compose.images = a.compose.queued.Drain(&a.compose.editor, a.compose.images...)
+	a.compose.imageEpoch++
 	a.refreshHints()
 }
 

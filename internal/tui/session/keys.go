@@ -1,7 +1,7 @@
 // Purpose: Route focused keyboard input into local commands, editor actions and menus.
 // Pattern: Event Loop input handler.
 // Usage: Called only by the terminal loop for tcell key events.
-// Related: internal/tui/session/app.go, internal/tui/session/menus.go, internal/tui/input/editor.go, internal/tui/session/hints.go.
+// Related: internal/tui/session/app.go, internal/tui/session/menus.go, internal/tui/input/editor.go, internal/tui/session/tool_folding.go.
 package session
 
 import (
@@ -27,6 +27,9 @@ func (a *app) keyEvent(e *tcell.EventKey) {
 	a.stopNotice = ""
 	if input.ExitKey(e) {
 		a.requestExit()
+		return
+	}
+	if a.imageKey(e) {
 		return
 	}
 	if a.pendingEditKey(e) {
@@ -123,15 +126,4 @@ func (a *app) escapeKey(focus focusKind) bool {
 		return true
 	}
 	return false
-}
-
-func (a *app) toggleToolDetails() {
-	if !a.chat.output.ToggleDetails() {
-		a.stopNotice = a.language.Text("접거나 펼칠 도구 결과가 없습니다")
-	} else if a.chat.output.Collapsed {
-		a.cancelToolDetail()
-		a.stopNotice = a.language.Text("도구 결과 접음 · Ctrl+O로 펼치기")
-	} else {
-		a.stopNotice = a.language.Text("도구 결과 펼침 · PgUp/Dn으로 스크롤")
-	}
 }

@@ -41,17 +41,15 @@ func (g generateFunc) Generate(ctx context.Context, r model.Request, emit func(m
 }
 
 type fixture struct {
-	app         *server.Service
-	api         *API
-	project     string
-	requests    string
-	store       *sqlite.Store
-	executed    atomic.Int32
-	outputReads atomic.Int32
-	resultOpens atomic.Int32
+	app      *server.Service
+	api      *API
+	project  string
+	requests string
+	store    *sqlite.Store
+	executed atomic.Int32
 }
 
-func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
+func newFixture(t *testing.T, g model.Generator, approval bool, concurrency ...int) *fixture {
 	t.Helper()
 	home := t.TempDir()
 	project := t.TempDir()
@@ -83,19 +81,43 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 		t.Fatal(err)
 	}
 	selected := connection.Selection{Connection: conn, Model: "fixture"}
+	if vision, ok := g.(interface{ ImageInputSupported() bool }); ok && vision.ImageInputSupported() {
+		selected.Details = &connection.ModelInfo{ID: "fixture", ImageInput: connection.DeclaredImageInput(true, "fixture")}
+	}
 	cfg := config.Defaults()
+	limit := 1
+	if len(concurrency) > 0 {
+		limit = concurrency[0]
+	}
 	boundary, err := filesystem.New(project, home, state)
 	if err != nil {
 		t.Fatal(err)
 	}
 	skillReader := skills.New(project, home, skills.Options{Redact: vault.Redact, Check: boundary.SkillTarget, RedactRange: vault.RedactRange, Version: vault.RedactionVersion})
+	files, err := local.NewExecutor(project, home, state, vault.Redact, local.Options{Skills: skillReader})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = files.Close() })
 	f.app, err = server.New(t.Context(), server.Options{
-		Config: cfg, Ledger: ledger, Responses: ledger, Project: project, Skills: skillReader,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
-			f.resultOpens.Add(1)
-			f.outputReads.Add(1)
-			return sessions.ResponseOutput(ctx, project, id, after, through, maxBytes, reserve)
+		Files: files.Files,
+		Read: func(ctx context.Context, id string) (*server.Conversation, error) {
+			store, err := sessions.OpenRead(ctx, project, id)
+			if err != nil {
+				return nil, err
+			}
+			selected, err := store.Selection(ctx, id)
+			if err != nil {
+				_ = store.Close()
+				return nil, err
+			}
+			return &server.Conversation{Runtime: agentrequest.Runtime{Session: store.Session(), Selection: selected}, History: store, Close: store.Close}, nil
 		},
+		Discover: func(ctx context.Context, _ connection.Selection, _ string, _ setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error) {
+			return []connection.ModelInfo{{ID: "fixture"}}, nil, ctx.Err()
+		},
+		Concurrency: limit,
+		Config:      cfg, Ledger: ledger, Skills: skillReader,
 		List: func(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
 			return sessions.ConversationPage(ctx, project, cursor, limit)
 		},
@@ -115,7 +137,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 				_ = store.Close()
 				return nil, err
 			}
-			executor, err := local.NewExecutor(project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
+			executor, err := local.NewExecutor(project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 			if err != nil {
 				_ = lease.Close()
 				_ = store.Close()
@@ -129,7 +151,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 			}
 			f.store = store
 			tools := &countTools{Executor: executor, count: &f.executed, approval: approval}
-			return &server.Conversation{Runtime: agentrequest.Runtime{Config: defaults, Selection: selected, Session: store.Session(), Tools: tools, Skills: skillReader, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, History: store, Models: store, Output: outputProbe{store, &f.outputReads}, Close: func() error {
+			return &server.Conversation{Team: fixtureTeam(store, home, state, vault), Runtime: agentrequest.Runtime{Config: defaults, Selection: selected, Session: store.Session(), Tools: tools, Skills: skillReader, Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil }}, History: store, Models: store, Close: func() error {
 				return errors.Join(pages.CloseSession(store.Session().ID), executor.Close(), store.Close(), lease.Close())
 			}, Model: conversationruntime.NewModel(g, nil),
 			}, nil
@@ -150,18 +172,8 @@ func newFixture(t *testing.T, g model.Generator, approval bool) *fixture {
 			t.Error(err)
 		}
 	})
-	f.api = &API{Service: f.app, Redact: vault.Redact, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	f.api = &API{Service: f.app, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
 	return f
-}
-
-type outputProbe struct {
-	*sqlite.Store
-	reads *atomic.Int32
-}
-
-func (p outputProbe) ResponseOutput(ctx context.Context, id string, after, through int64, maxBytes int, reserve func(int) error) (string, error) {
-	p.reads.Add(1)
-	return p.Store.ResponseOutput(ctx, id, after, through, maxBytes, reserve)
 }
 
 type countTools struct {

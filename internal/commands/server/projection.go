@@ -13,12 +13,6 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-type draftState struct {
-	Draft
-	textBytes, thinkingBytes int
-	text, thinking           strings.Builder
-}
-
 func prefix[T ~string | ~[]byte](value T, limit int) T {
 	if len(value) <= limit {
 		return value
@@ -31,65 +25,18 @@ func prefix[T ~string | ~[]byte](value T, limit int) T {
 
 func clipped(value string, limit int) string { return strings.Clone(prefix(value, limit)) }
 
-func appendDraft(builder *strings.Builder, delta string) string {
-	if remaining := maxDraftBytes - builder.Len(); remaining > 0 {
-		builder.WriteString(prefix(delta, remaining))
-	}
-	return builder.String()
-}
-
-func (s *Service) emit(r *request, value record.Event) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if value.Kind != "stream" && value.Kind != "generation_started" {
-		s.publish(Event{Task: r.task.ID, Record: value})
-		if value.Kind == "team_notice" && value.Text == "left" {
-			delete(r.drafts, value.Agent)
-		}
-		return
-	}
-	draft := r.drafts[value.Agent]
-	if draft == nil {
-		// Team runtime limits active participants to eight. Retired sources are
-		// discarded above; this separate cap also bounds unexpected producers.
-		if len(r.drafts) >= 16 {
-			return
-		}
-		draft = &draftState{Draft: Draft{Agent: value.Agent}}
-		r.drafts[value.Agent] = draft
-	}
-	reset := value.Kind == "generation_started" || len(value.Text) < draft.textBytes || len(value.Thinking) < draft.thinkingBytes
-	if reset {
-		draft.Generation++
-		draft.textBytes, draft.thinkingBytes = 0, 0
-		draft.Text, draft.Thinking, draft.Truncated = "", "", false
-		draft.text.Reset()
-		draft.thinking.Reset()
-		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Reset: true, Record: record.Event{Kind: "draft_reset", Agent: value.Agent, RunID: value.RunID}})
-	}
-	if value.Kind == "generation_started" {
-		return
-	}
-	// The core guarantees append-only snapshots between generation_started
-	// events, including provider retries. Keep offsets, not full model buffers.
-	text, thinking := value.Text[draft.textBytes:], value.Thinking[draft.thinkingBytes:]
-	draft.textBytes, draft.thinkingBytes = len(value.Text), len(value.Thinking)
-	draft.Text, draft.Thinking = appendDraft(&draft.text, text), appendDraft(&draft.thinking, thinking)
-	draft.Truncated = len(value.Text) > maxDraftBytes || len(value.Thinking) > maxDraftBytes
-	for text != "" || thinking != "" {
-		// publish makes the one detached copy retained by the replay log.
-		t, h := prefix(text, maxTextBytes), prefix(thinking, maxTextBytes)
-		text, thinking = text[len(t):], thinking[len(h):]
-		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Record: record.Event{Kind: "assistant_delta", Agent: value.Agent, RunID: value.RunID, Text: t, Thinking: h}})
-	}
-}
-
 // ProjectEvent bounds and detaches visible fields for replay and saved history.
 func ProjectEvent(value Event) Event {
+	if value.Outcome != nil {
+		copy := *value.Outcome
+		copy.Reason = clipped(copy.Reason, 4096)
+		value.Outcome = &copy
+	}
 	value.Status, value.Error = clipped(value.Status, 128), clipped(value.Error, 4096)
 	e := value.Record
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
 	p.Kind, p.OccurredAt, p.ErrorCode = clipped(e.PublicKind(), 128), clipped(e.OccurredAt, 35), clipped(e.ErrorCode, 128)
+	p.MeasuredDuration = e.MeasuredDuration
 	if e.Skill != nil {
 		p.Skill = &record.SkillRead{ID: clipped(e.Skill.ID, 512), Name: clipped(e.Skill.Name, 64), Source: clipped(e.Skill.Source, 32), Revision: clipped(e.Skill.Revision, 64)}
 	}
@@ -159,6 +106,10 @@ func eventBytes(value Event) int {
 	// Include every retained string; fixed overhead covers the value structs,
 	// backing slices and small allocations rather than replacing text accounting.
 	n := 1024 + len(value.Cursor) + len(value.Session) + len(value.Task) + len(value.Status) + len(value.Error) + len(value.ApprovalID)
+	n += len(value.Workspace)
+	if value.Outcome != nil {
+		n += len(value.Outcome.Status) + len(value.Outcome.Reason)
+	}
 	n += len(e.Kind) + len(e.Agent) + len(e.RunID) + len(e.Text) + len(e.Thinking) + len(e.CallID) + len(e.ApprovalSource)
 	n += len(e.OccurredAt) + len(e.ErrorCode)
 	if e.Skill != nil {

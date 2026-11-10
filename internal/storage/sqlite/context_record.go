@@ -16,6 +16,11 @@ import (
 )
 
 func (s *Store) contextRecord(ctx context.Context, record storedRecord, fields map[string]bool, shared map[string]string) (modelapi.Message, int, error) {
+	if fields == nil && s.room != nil {
+		if message, ok, err := s.roomImageContext(ctx, record); ok || err != nil {
+			return message, record.size, err
+		}
+	}
 	var refs map[string]string
 	if len(shared) > 0 {
 		if err := json.Unmarshal(record.refs, &refs); err != nil {

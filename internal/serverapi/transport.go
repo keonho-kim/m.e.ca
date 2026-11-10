@@ -17,16 +17,27 @@ import (
 
 	"github.com/keonho-kim/meca/internal/diagnostics"
 
+	"github.com/keonho-kim/meca/internal/agent/media"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
-	"github.com/keonho-kim/meca/internal/serverapi/openai"
 )
 
-const maxRequests = 32
+const (
+	maxRequests        = 32
+	maxControlRequests = 4
+	maxHTTP2Streams    = maxRequests + maxControlRequests + 1
+)
 
 type Transport struct {
+	ui             http.Handler
+	uiSeed         string
+	browser        *browserSessions
 	inputs         *admission.Budget
+	mediaInputs    *admission.Budget
+	thumbnails     thumbnailCache
+	outputs        *admission.Budget
+	outputOnce     sync.Once
 	api            *API
 	protocol       string
 	handler        http.Handler
@@ -38,8 +49,8 @@ type Transport struct {
 	closing        bool
 	workers        sync.WaitGroup
 	requests       chan struct{}
+	controls       chan struct{}
 	streams        chan struct{}
-	openAI         bool
 }
 
 func newTransport(ctx context.Context, api *API, protocol, token string, hosts, origins []string) (*Transport, error) {
@@ -47,7 +58,7 @@ func newTransport(ctx context.Context, api *API, protocol, token string, hosts, 
 		return nil, faults.Errorf(diagcatalog.ServerapiServerServiceAndPrivateTokenAreRequired)
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	t := &Transport{api: api, protocol: protocol, token: sha256.Sum256([]byte(token)), hosts: map[string]bool{}, origins: map[string]bool{}, ctx: ctx, cancel: cancel, requests: make(chan struct{}, maxRequests), streams: make(chan struct{}, 16), inputs: admission.New(32 << 20)}
+	t := &Transport{api: api, protocol: protocol, token: sha256.Sum256([]byte(token)), hosts: map[string]bool{}, origins: map[string]bool{}, ctx: ctx, cancel: cancel, requests: make(chan struct{}, maxRequests), streams: make(chan struct{}, 16), inputs: admission.New(32 << 20), mediaInputs: admission.New(2 * media.MaxBytes)}
 	for _, host := range hosts {
 		if !validHost(host) {
 			cancel()
@@ -63,10 +74,16 @@ func newTransport(ctx context.Context, api *API, protocol, token string, hosts, 
 		t.origins[origin] = true
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/command", t.command)
+	mux.HandleFunc("GET /v1/events", t.sse)
+	mux.HandleFunc("GET /v1/files/events", t.filesWatch)
+	mux.HandleFunc("/v1/tasks/", t.taskControl)
+	mux.HandleFunc("/v1/sessions/", t.historyImage)
+	mux.HandleFunc("/v1/workspaces/", t.workspaceHTTP)
+	mux.HandleFunc("/v1/attachments", t.attachment)
+	mux.HandleFunc("/v1/attachments/", t.attachment)
 	switch protocol {
 	case "sse":
-		mux.HandleFunc("POST /v1/command", t.command)
-		mux.HandleFunc("GET /v1/events", t.sse)
 	case "socket":
 		mux.HandleFunc("GET /v1/socket", t.socket)
 	case "grpc":
@@ -76,21 +93,8 @@ func newTransport(ctx context.Context, api *API, protocol, token string, hosts, 
 		return nil, faults.Errorf(diagcatalog.StartupProtocolMustBeSseSocketOrGrpc)
 	}
 	t.handler = mux
+	t.controls = make(chan struct{}, maxControlRequests)
 	return t, nil
-}
-
-func (t *Transport) enableOpenAI() {
-	t.openAI = true
-	(&openai.Handler{Service: t.api.Service, Redact: t.api.Redact, Streams: t.streams, Reads: t.api.readLimit()}).Mount(t.handler.(*http.ServeMux))
-}
-
-func (t *Transport) reject(w http.ResponseWriter, r *http.Request, message string, status int) {
-	if t.openAI && openai.IsPath(r.URL.Path) {
-		code := map[int]string{400: diagcatalog.InvalidRequest, 401: diagcatalog.InvalidAPIKey, 403: diagcatalog.Forbidden, 429: diagcatalog.ResourceExhausted, 503: diagcatalog.Unavailable}[status]
-		openai.WriteError(w, status, message, code, "")
-		return
-	}
-	http.Error(w, message, status)
 }
 
 func (t *Transport) socketHandshake(r *http.Request) bool {
@@ -101,7 +105,7 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.mu.Lock()
 	if t.closing {
 		t.mu.Unlock()
-		t.reject(w, r, diagcatalog.Text(diagcatalog.ServerServerIsShuttingDown), http.StatusServiceUnavailable)
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerServerIsShuttingDown), http.StatusServiceUnavailable)
 		return
 	}
 	t.workers.Add(1)
@@ -121,14 +125,22 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	select {
-	case t.requests <- struct{}{}:
-		defer func() { <-t.requests }()
-	default:
-		t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiTooManyConnections), http.StatusTooManyRequests)
+	if t.ui != nil && (r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/")) && (r.Method == "GET" || r.Method == "HEAD") {
+		t.handler.ServeHTTP(w, r)
 		return
 	}
-	if t.protocol == "grpc" && r.URL.Path == "/meca.v1.MecaService/WatchEvents" {
+	admissionSlots := t.requests
+	if r.Method == "POST" && (strings.HasPrefix(r.URL.Path, "/v1/tasks/") || strings.HasPrefix(r.URL.Path, "/v1/workspaces/") && strings.Contains(r.URL.Path, "/tasks/")) {
+		admissionSlots = t.controls
+	}
+	select {
+	case admissionSlots <- struct{}{}:
+		defer func() { <-admissionSlots }()
+	default:
+		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiTooManyConnections), http.StatusTooManyRequests)
+		return
+	}
+	if t.protocol == "grpc" && (r.URL.Path == "/meca.v1.MecaService/WatchEvents" || r.URL.Path == "/meca.v1.MecaService/WatchFiles") {
 		select {
 		case t.streams <- struct{}{}:
 			defer func() { <-t.streams }()
@@ -138,8 +150,14 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !t.socketHandshake(r) && r.Body != nil && r.Body != http.NoBody {
+		budget := t.inputs
+		limit := int64(maxRequestBytes)
+		if r.Method == "POST" && r.URL.Path == "/v1/attachments" {
+			budget = t.mediaInputs
+			limit = media.MaxBytes
+		}
 		weight := r.ContentLength
-		if weight < 0 || weight > maxRequestBytes {
+		if weight < 0 || weight > limit {
 			weight = 0
 		}
 		if encoding := r.Header.Get("Grpc-Encoding"); encoding != "" && encoding != "identity" || r.Header.Get("Content-Encoding") != "" {
@@ -147,9 +165,9 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// Call/Watch resize or release this reservation immediately after decoding.
 			weight = maxRequestBytes
 		}
-		input, err := admission.NewInput(t.inputs, weight)
+		input, err := admission.NewInput(budget, weight)
 		if err != nil {
-			t.reject(w, r, diagcatalog.Text(diagcatalog.ServerapiServerInputMemoryBudgetIsOccupied), http.StatusTooManyRequests)
+			http.Error(w, diagcatalog.Text(diagcatalog.ServerapiServerInputMemoryBudgetIsOccupied), http.StatusTooManyRequests)
 			return
 		}
 		defer input.Release()

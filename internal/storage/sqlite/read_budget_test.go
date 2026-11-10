@@ -5,7 +5,6 @@
 package sqlite
 
 import (
-	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,20 +24,14 @@ func TestReadBudgetRejectsOriginalWithoutChangingIt(t *testing.T) {
 	if err := s.AppendMessage(t.Context(), id, model.Message{Role: "assistant", Content: text}); err != nil {
 		t.Fatal(err)
 	}
-	through, err := s.OutputPosition(t.Context(), id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.ResponseOutput(t.Context(), id, 0, through, 1<<20, nil); !errors.Is(err, history.ErrReadLimit) {
-		t.Fatal("large payload reached restoration", err)
-	}
+
 	page, _, err := s.TimelineSummaries(t.Context(), id, 0, 1, history.ReadBounds{MaxBytes: 4 << 20, TextBytes: 16 << 10})
 	if err != nil || len(page) != 1 || len(page[0].Message.Content) != 16<<10 || !page[0].Truncated {
 		t.Fatal("preview not bounded", err)
 	}
-	got, err := s.ResponseOutput(t.Context(), id, 0, through, 0, nil)
-	if err != nil || got != text {
-		t.Fatal("budget rejection changed original", err)
+	full, _, err := s.TimelineSummaries(t.Context(), id, 0, 1, history.ReadBounds{MaxBytes: 4 << 20})
+	if err != nil || len(full) != 1 || full[0].Message.Content != text {
+		t.Fatal("preview changed stored original", err)
 	}
 }
 

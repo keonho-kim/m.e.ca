@@ -37,11 +37,11 @@ func TestRememberedModelSurvivesPermissionChanges(t *testing.T) {
 		saved = next
 		return next, nil
 	}
-	if _, err := s.SetModel(t.Context(), ModelSettings{Provider: "ollama", Name: "fixture", Remember: true}); err != nil {
+	if _, err := s.SetModel(t.Context(), ModelSettings{Session: s.State().Session.ID, Provider: "ollama", Name: "fixture", Remember: true}); err != nil {
 		t.Fatal(err)
 	}
 	permission := "all_mighty"
-	if _, err := s.Configure(t.Context(), &permission, nil); err != nil {
+	if _, err := s.Configure(t.Context(), s.State().Session.ID, &permission, nil); err != nil {
 		t.Fatal(err)
 	}
 	if saved.Model == nil || saved.Model.Name != "first" {
@@ -49,7 +49,7 @@ func TestRememberedModelSurvivesPermissionChanges(t *testing.T) {
 	}
 	fail = true
 	selected.Model = "second"
-	if _, err := s.SetModel(t.Context(), ModelSettings{Provider: "ollama", Name: "fixture", Remember: true}); err == nil {
+	if _, err := s.SetModel(t.Context(), ModelSettings{Session: s.State().Session.ID, Provider: "ollama", Name: "fixture", Remember: true}); err == nil {
 		t.Fatal("default failure was hidden")
 	}
 	if s.State().Selection.Model != "second" {
@@ -57,7 +57,7 @@ func TestRememberedModelSurvivesPermissionChanges(t *testing.T) {
 	}
 	fail = false
 	permission = "default"
-	if _, err := s.Configure(t.Context(), &permission, nil); err != nil {
+	if _, err := s.Configure(t.Context(), s.State().Session.ID, &permission, nil); err != nil {
 		t.Fatal(err)
 	}
 	if saved.Model.Name != "first" {

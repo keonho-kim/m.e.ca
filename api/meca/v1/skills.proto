@@ -24,6 +24,7 @@ message Skills {
 }
 message SkillListRequest { string cursor = 1; int32 limit = 2; }
 message SkillRequest { string id = 1; }
+message SkillPrefix { string prefix = 1; }
 message SkillDocument { Skill skill = 1; string revision = 2; string body = 3; }
 message SkillFileRequest {
   string id = 1;

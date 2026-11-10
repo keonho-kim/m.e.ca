@@ -35,6 +35,7 @@ type cappedOutput struct {
 	tailStart int
 	truncated bool
 	revision  uint64
+	written   int64
 }
 
 const captureHalf = 8 * 1024 * 1024
@@ -47,6 +48,7 @@ func (output *cappedOutput) Write(content []byte) (int, error) {
 		output.lastWrite = time.Now()
 		output.timingMu.Unlock()
 		output.revision++
+		output.written += int64(len(content))
 	}
 	count := len(content)
 	if output.spill == nil && output.directory != "" && output.head.Len()+len(output.tail)+len(content) > memoryCaptureBytes {
@@ -97,6 +99,9 @@ func (output *cappedOutput) String() string {
 }
 
 type Capture struct {
+	Offset   int64
+	Total    int64
+	Append   bool
 	Revision uint64
 	Text     string
 }

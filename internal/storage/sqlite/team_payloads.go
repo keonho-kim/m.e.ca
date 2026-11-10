@@ -6,7 +6,7 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
+	json "github.com/goccy/go-json"
 
 	"strconv"
 
@@ -25,11 +25,17 @@ type roomPayload struct {
 func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[string]string, int, error) {
 	s := p.store
 	sequence, shared := channel.Sequence(message)
+	if shared && s.room != nil && len(message.Images) > 0 {
+		return p.packTeamImages(message, sequence)
+	}
 	// References have fixed envelope/index overhead; short text is smaller inline.
 	if !shared || s.room == nil || message.Role == "tool" || len(message.Content) < 256 {
-		body, err := json.Marshal(message)
+		body, err := json.MarshalWithOption(message, json.DisableHTMLEscape())
 		if err != nil {
 			return nil, nil, 0, err
+		}
+		if len(body) > recordcontent.MaxBytes {
+			return nil, nil, 0, faults.Errorf(diagcatalog.ModelMessageExceedsSizeLimits)
 		}
 		sharedField := ""
 		if len(message.Reasoning) >= recordcontent.SharedThreshold {

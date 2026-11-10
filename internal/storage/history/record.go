@@ -5,6 +5,7 @@
 package history
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -16,6 +17,7 @@ import (
 var ErrNotFound = faults.Errorf(diagcatalog.ServerHistoryRecordWasNotFound)
 
 type Record struct {
+	Images    []media.Metadata
 	Truncated bool
 	Sequence  int64
 	Kind      string

@@ -5,13 +5,16 @@
 package session
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/commands"
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/composer/queue"
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 type requestState struct {
+	images         []media.Image
+	imageEpoch     uint64
 	editor         input.Editor
 	inputs         []string
 	historyIndex   int
@@ -19,7 +22,7 @@ type requestState struct {
 	commandHints   []commands.Suggestion
 	commandOpen    bool
 	commandIndex   int
-	steering       chan composer.Request
+	steering       chan requestinput.Request
 	steeringReady  chan struct{}
 	steeringDrafts []string
 	queued         queue.State

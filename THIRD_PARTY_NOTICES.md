@@ -3,7 +3,13 @@
 These notices cover the Go runtime and the external modules selected for the
 macOS and Linux amd64/arm64 binaries built from cmd/meca with CGO_ENABLED=0
 and the godbus_no_tcp build tag. This executable includes the TUI, CLI,
-server transports and model-provider adapters. Development tools and
+server transports, model-provider adapters and the embedded WebUI.
+Browser runtime notices are generated from the bundled modules and included as
+WEBUI_THIRD_PARTY_NOTICES.txt in release archives and at /ui/THIRD_PARTY_NOTICES.txt
+when the embedded UI is enabled. The npm package for Astryx Core 0.7.12-canary.f124c2f omits
+its root license; webui/licenses/astryx-core-0.7.12-canary.f124c2f.LICENSE preserves
+the upstream MIT license retrieved from https://github.com/meta/astryx/blob/main/LICENSE.
+The package declares MIT; the fallback is not a commit-specific license snapshot. Development tools and
 test-only clients are outside the product dependency set. M.E.CA's own license is in LICENSE.
 Third-party components retain their respective licenses. Upstream notices are
 reproduced below; they may describe additional components within each module.
@@ -5204,6 +5210,34 @@ The bundled ui-design examples independently adapt Cobalt and Console app palett
 MIT License
 
 Copyright (c) 2026 Hallmark contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Stageshow design and diagnostic references
+
+The ui-design product-demonstration guidance and optional Playwright CLI diagnostics adapt ideas from [Stageshow](https://github.com/benjitaylor/skills/tree/299140fafd08df55a9c234e610c3f64af3f45531/stageshow), pinned at revision 299140fafd08df55a9c234e610c3f64af3f45531. Its React kit, examples, third-party artwork and filming runner are not bundled. The notice is also retained in internal/config/bootstrap/defaults/ui-design/NOTICE.md.
+
+```text
+MIT License
+
+Copyright (c) 2026 Benji Taylor
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

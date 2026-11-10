@@ -1,6 +1,6 @@
 // Purpose: Page one masked public JSON document without reloading its original for every request.
-// Pattern: Session-scoped single-entry cache with bounded memory and an unlinked private spool.
-// Usage: API detail reads call Read; the conversation's composed cleanup calls CloseSession.
+// Pattern: Revision-bound document slot with bounded memory and indexed compressed blocks.
+// Usage: The cache pool lends a slot; session cleanup releases its retained document.
 // Related: internal/serverapi/detail/document.go, internal/commands/server/detail.go.
 package detail
 
@@ -19,14 +19,19 @@ import (
 const memoryBytes = 64 << 10
 
 type Request struct {
-	Session string
-	Source  server.DetailSource
-	Version func() int
-	NewMask func() func(string, bool) string
-	Load    func(func(int) error) (server.DetailOriginal, error)
+	File, FileRevision string
+	LoadText           func(func(int) error) (string, error)
+	Expected           string
+	Session            string
+	Source             server.DetailSource
+	Version            func() int
+	NewMask            func() func(string, bool) string
+	Load               func(func(int) error) (server.DetailOriginal, error)
 }
 
-type Cache struct {
+type documentCache struct {
+	archive *chunkArchive
+	budget  *spoolBudget
 	gate    chan struct{}
 	session string
 	source  server.DetailSource
@@ -37,9 +42,11 @@ type Cache struct {
 	size    int64
 }
 
-func NewCache() *Cache { return &Cache{gate: make(chan struct{}, 1)} }
+func newDocumentCache(budget *spoolBudget) *documentCache {
+	return &documentCache{budget: budget, gate: make(chan struct{}, 1)}
+}
 
-func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit int) ([]byte, int64, error) {
+func (c *documentCache) Read(ctx context.Context, request Request, offset int64, limit int) ([]byte, int64, error) {
 	if offset < 0 || limit < 1 || limit > 64<<10 {
 		return nil, 0, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetMustBeNonnegativeAndLimit)
 	}
@@ -61,8 +68,12 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 			return nil, 0, err
 		}
 		spool := newDocumentSpool(offset, limit)
+		spool.budget = c.budget
 		if err := loadDocument(ctx, spool, request); err != nil {
 			return nil, 0, errors.Join(err, spool.close())
+		}
+		if err := spool.finish(); err != nil {
+			spool.disable(err)
 		}
 		if spool.failure != nil {
 			diagnostics.Log(ctx, diagcatalog.DetailCacheBypassed, "error_code", faults.Code(spool.failure))
@@ -83,8 +94,8 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 			return nil, 0, errors.Join(faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetExceedsOriginal), spool.close())
 		}
 		if spool.cacheable {
-			c.file, c.memory, c.size = spool.file, spool.memory, spool.total
-			spool.file = nil
+			c.file, c.archive, c.memory, c.size = spool.file, spool.archive, spool.memory, spool.total
+			spool.file, spool.archive = nil, nil
 			c.session, c.source, c.version, c.loaded = request.Session, request.Source, version, true
 		}
 		return spool.page, spool.total, nil
@@ -100,7 +111,7 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 	}
 	end := min(c.size, offset+int64(limit))
 	page := make([]byte, int(end-offset))
-	_, err := c.file.ReadAt(page, offset)
+	_, err := c.archive.ReadAt(page, offset)
 	return page, c.size, err
 }
 
@@ -109,6 +120,13 @@ func (c *Cache) Read(ctx context.Context, request Request, offset int64, limit i
 func loadDocument(ctx context.Context, spool *documentSpool, request Request) error {
 	memory := processmemory.NewPayloadLease()
 	defer memory.Close()
+	if request.LoadText != nil {
+		text, err := request.LoadText(memory.Resize)
+		if err != nil {
+			return err
+		}
+		return writePlainText(ctx, spool, text, request.NewMask)
+	}
 	original, err := request.Load(memory.Resize)
 	if err != nil {
 		return err
@@ -124,8 +142,12 @@ func memoryPage(body []byte, offset int64, limit int) ([]byte, int64, error) {
 	return append([]byte(nil), body[offset:end]...), int64(len(body)), nil
 }
 
-func (c *Cache) clear() error {
+func (c *documentCache) clear() error {
 	file := c.file
+	if c.archive != nil {
+		c.archive.release()
+		c.archive = nil
+	}
 	c.file, c.memory, c.loaded, c.size, c.session = nil, nil, false, 0, ""
 	if file != nil {
 		return file.Close()
@@ -133,7 +155,7 @@ func (c *Cache) clear() error {
 	return nil
 }
 
-func (c *Cache) CloseSession(session string) error {
+func (c *documentCache) CloseSession(session string) error {
 	c.gate <- struct{}{}
 	defer func() { <-c.gate }()
 	if c.session != session {
@@ -142,7 +164,7 @@ func (c *Cache) CloseSession(session string) error {
 	return c.clear()
 }
 
-func (c *Cache) Close() error {
+func (c *documentCache) Close() error {
 	c.gate <- struct{}{}
 	defer func() { <-c.gate }()
 	return c.clear()

@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
@@ -22,9 +23,9 @@ import (
 )
 
 type Runner struct {
+	Images                   []media.Image
 	Skills                   SkillLoader
 	SkillReads               []instruction.Document
-	ClientContext            []modelapi.Message
 	HideThinking             bool
 	ImageInput               bool
 	Resume                   bool

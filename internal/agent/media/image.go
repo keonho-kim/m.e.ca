@@ -1,7 +1,7 @@
 // Purpose: Define immutable image snapshots shared by tools, model requests and persistence.
 // Pattern: Provider-independent value contract.
 // Usage: Image readers create snapshots; context and transport adapters retain their bytes read-only.
-// Related: internal/tools/local/imagefile/decode.go, internal/agent/model/message.go.
+// Related: internal/media/imagefile/decode.go, internal/agent/model/message.go.
 package media
 
 import (
@@ -14,8 +14,8 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-const MaxBytes = 32 * 1024 * 1024
-const MaxPixels = 32 * 1024 * 1024
+const MaxBytes = 64 * 1024 * 1024
+const MaxPixels = 64 * 1024 * 1024
 
 // Image owns compressed bytes. Copies share Data, which consumers must never mutate.
 type Image struct {

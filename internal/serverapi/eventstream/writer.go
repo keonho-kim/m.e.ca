@@ -1,7 +1,7 @@
 // Purpose: Write SSE records and schedule idle heartbeats without altering application payloads.
 // Pattern: Single-writer HTTP streaming adapter.
-// Usage: Native and OpenAI SSE handlers own one Writer per connection.
-// Related: internal/serverapi/http.go, internal/serverapi/openai/stream.go.
+// Usage: Native SSE handlers own one Writer per connection.
+// Related: internal/serverapi/http.go.
 package eventstream
 
 import (
@@ -25,7 +25,7 @@ func New(w http.ResponseWriter) (*Writer, error) {
 	return writer, writer.controller.Flush()
 }
 
-// Send accepts compact JSON, or the protocol's [DONE] marker, from its caller.
+// Send accepts compact JSON, from its caller.
 func (w *Writer) Send(event, id string, body []byte) error {
 	return w.SendParts(event, id, body)
 }

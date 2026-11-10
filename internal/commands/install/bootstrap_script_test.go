@@ -1,4 +1,4 @@
-// Purpose: Verify source installation bootstraps Go only when needed and cleans temporary downloads.
+// Purpose: Verify UI source builds precede Go installation and temporary Go downloads are verified and cleaned.
 // Pattern: Shell boundary integration tests with offline toolchain fixtures.
 // Usage: go test ./internal/commands/install -run TestSourceInstaller.
 // Related: install.sh, scripts/install/go.sh, scripts/install/go.sha256.
@@ -52,14 +52,15 @@ func TestSourceInstaller(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			for _, name := range []string{"install.sh", "scripts/install/go.sh", "go.mod"} {
+			for _, name := range []string{"install.sh", "scripts/build-ui.sh", "scripts/install/go.sh", "go.mod"} {
 				body, err := os.ReadFile(filepath.Join(repository, name))
 				if err != nil {
 					t.Fatal(err)
 				}
 				writeScriptFixture(t, filepath.Join(source, name), body)
 			}
-			for _, command := range []string{"dirname", "mkdir", "mktemp", "rm", "awk", "tar", "gzip", "cp", "shasum"} {
+			writeScriptFixture(t, filepath.Join(commands, "bun"), []byte("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$MECA_TEST_UI_CALL\"\n"))
+			for _, command := range []string{"sh", "dirname", "mkdir", "mktemp", "rm", "awk", "tar", "gzip", "cp", "shasum"} {
 				path, err := exec.LookPath(command)
 				if err != nil {
 					if command == "shasum" {
@@ -120,11 +121,16 @@ done
 			command := exec.Command("/bin/sh", filepath.Join(source, "install.sh"))
 			command.Dir = root
 			command.Env = []string{
+				"MECA_TEST_UI_CALL=" + filepath.Join(root, "ui-call"),
 				"HOME=" + root, "PATH=" + commands, "GOROOT=unrelated-go",
 				"MECA_TEST_GO_CALL=" + call, "MECA_TEST_ARCHIVE=" + archivePath, "MECA_TEST_GO_EXIT=" + tc.buildExit,
 				"MECA_TEST_INSTALLER=" + installer, "MECA_TEST_INSTALL_CALL=" + installCall, "MECA_TEST_SOURCE=" + source,
 			}
 			output, err := command.CombinedOutput()
+			ui, uiErr := os.ReadFile(filepath.Join(root, "ui-call"))
+			if uiErr != nil || string(ui) != "install --cwd "+filepath.Join(source, "webui")+" --frozen-lockfile --ignore-scripts\nrun --cwd "+filepath.Join(source, "webui")+" build\n" {
+				t.Fatalf("UI build: %q %v", ui, uiErr)
+			}
 			if tc.wantError == "" && err != nil || tc.wantError != "" && (err == nil || !strings.Contains(string(output), tc.wantError)) {
 				t.Fatalf("installer: %v\n%s", err, output)
 			}

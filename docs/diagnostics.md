@@ -6,7 +6,7 @@
 
 ## 이벤트
 
-native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 기존 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다. OpenAI 호환 응답의 표준 형식은 유지한다.
+native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 기존 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
 
 새 실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 과거 기록에 없던 시각을 조회 시각으로 소급 생성하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
 
@@ -30,7 +30,7 @@ skill_loaded는 본문을 읽었다는 사실과 skill의 id·name·source·revi
 
 `internal/diagnostics/catalog`가 오류 코드·메시지 템플릿·복구 문구·이벤트 이름·레벨·외부 상태 변환을 소유한다. `diagnostics/fault`는 원인 연결을 유지한 오류를 만들고 분류하며, 제품 패키지는 등록한 값으로 오류를 생성하고 `diagnostics.Log`로 사건을 기록한다. slog 구현은 외부로 노출하지 않는다. `diagnostics/logfile`은 private 파일·회전·보관만 담당한다. cmd/meca는 인자 해석·Bootstrap·유지보수 전에 진단 출력을 조립한다.
 
-합쳐진 오류에서는 저장 무결성·완료 저장 실패, 용량·권한 실패가 취소보다 우선한다. SQLite의 busy·read-only·full·corrupt·I/O 실패도 공통 분류를 사용한다. native HTTP·WebSocket·RPC·OpenAI 호환 API와 로그가 같은 원인 분류를 사용하며, 알려지지 않은 내부 오류는 고정된 공개 문구로 표시한다. 전송 실패를 내용 변경 오류로 바꾸거나 접수 이전 취소를 실행 중인 작업의 취소로 추정하지 않는다.
+합쳐진 오류에서는 저장 무결성·완료 저장 실패, 용량·권한 실패가 취소보다 우선한다. SQLite의 busy·read-only·full·corrupt·I/O 실패도 공통 분류를 사용한다. native HTTP·WebSocket·RPC와 로그가 같은 원인 분류를 사용하며, 알려지지 않은 내부 오류는 고정된 공개 문구로 표시한다. 전송 실패를 다른 오류로 바꾸거나 접수 이전 취소를 실행 중인 작업의 취소로 추정하지 않는다.
 
 예상하지 못한 panic은 실행 소유 경계에서 고정된 내부 오류로 변환한다. panic 값은 로그나 응답에 넣지 않는다. 이미 시작했을 수 있는 도구의 효과는 재생하지 않고, 서버는 실행 상태를 신뢰할 수 없으면 새 접수를 막는다. 중앙 선언을 우회한 오류·로거 생성과 진단 필드의 임의 문구·코드는 개발 검사에서 거부한다.
 

@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -16,6 +17,7 @@ import (
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
 	m.Content = s.runner.Redact(m.Content)
 	m.Reasoning = s.runner.Redact(m.Reasoning)
+	m.Images = slices.Clone(m.Images)
 	for i := range m.Images {
 		m.Images[i].Path = s.runner.Redact(m.Images[i].Path)
 	}

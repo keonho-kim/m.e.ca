@@ -27,7 +27,7 @@ func TestStateDuringModelPreparation(t *testing.T) {
 	}
 	go func() {
 		defer close(finished)
-		_, _ = s.SetModel(t.Context(), ModelSettings{Provider: "ollama", Name: "fixture"})
+		_, _ = s.SetModel(t.Context(), ModelSettings{Session: s.State().Session.ID, Provider: "ollama", Name: "fixture"})
 	}()
 	<-entered
 	queried := make(chan struct{})

@@ -17,7 +17,7 @@ import (
 func projectionFixture() (*Service, *request) {
 	s := &Service{ctx: context.Background(), options: Options{Config: config.Defaults()}, feed: newEventLog()}
 	r := &request{task: Task{ID: "task-test"}, drafts: map[string]*draftState{}, approvals: map[string]*pendingApproval{}}
-	s.active = r
+	s.active = map[string]*request{r.task.ID: r}
 	return s, r
 }
 

@@ -5,6 +5,12 @@
 package locale
 
 var messages = []translation{
+	{"", "Paste image", "이미지 붙여넣기"},
+	{"", "Remove image", "이미지 제거"},
+	{"", "image attached", "이미지를 첨부했습니다"},
+	{"", "Draft changed; paste the image again", "초안이 바뀌었습니다. 이미지를 다시 붙여넣으세요"},
+	{"", "Image %d · %s · %d×%d · %.1f MiB", "이미지 %d · %s · %d×%d · %.1f MiB"},
+	{"", "[Images attached: %d]\n\n", "[첨부 이미지: %d]\n\n"},
 	{"", "Team mode ON", "팀 모드 ON"},
 	{"", "Team mode OFF", "팀 모드 OFF"},
 	{"", "Team", "팀"},

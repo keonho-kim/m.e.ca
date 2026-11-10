@@ -18,9 +18,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 )
 
 func TestPendingEditCompletionWaits(t *testing.T) {
@@ -61,7 +61,7 @@ func TestPendingEditCompletionWaits(t *testing.T) {
 				t.Fatal(err)
 			}
 			a.connection.selection = connection.Selection{Connection: c, Model: "mock"}
-			a.startRequest(composer.Capture("current request", a.selectedPaths()))
+			a.startRequest(requestinput.Capture("current request", a.selectedPaths()))
 			select {
 			case <-started:
 			case <-ctx.Done():

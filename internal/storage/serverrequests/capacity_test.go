@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
@@ -24,17 +25,17 @@ func TestAdmissionCapacityRetainsDuplicateAndCompletion(t *testing.T) {
 	}
 	defer l.Close()
 	const session = "session_AAAAAAAAAAAAAAAAAAAAAAAAAA"
-	first, _, err := l.Admit(t.Context(), session, "original", "text")
+	first, _, err := l.Admit(t.Context(), session, "original", server.InputDigest("text", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := statefs.Write(filepath.Join(directory, "capacity"), "allocated", []byte("v1\n"+strconv.Itoa(maxAdmissions)+"\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := l.Admit(t.Context(), session, "new", "text"); !errors.Is(err, capacity.ErrLimit) {
+	if _, _, err := l.Admit(t.Context(), session, "new", server.InputDigest("text", nil)); !errors.Is(err, capacity.ErrLimit) {
 		t.Fatal(err)
 	}
-	if _, duplicate, err := l.Admit(t.Context(), session, "original", "text"); err != nil || !duplicate {
+	if _, duplicate, err := l.Admit(t.Context(), session, "original", server.InputDigest("text", nil)); err != nil || !duplicate {
 		t.Fatal("retry was blocked", err)
 	}
 	first.Status = "answered"

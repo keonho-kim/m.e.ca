@@ -7,6 +7,7 @@ package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/control.proto";
 import "meca/v1/skills.proto";
+import "meca/v1/application.proto";
 
 message Approval {
   string id = 1;
@@ -17,6 +18,8 @@ message Approval {
   bool diff = 6;
   bool user_required = 7;
   bool truncated = 8;
+  string task_id = 9;
+  string expires_at = 10;
 }
 message Tool {
   string call_id = 1;
@@ -49,6 +52,8 @@ message Team {
   uint64 revision = 7;
 }
 message Event {
+  string workspace_id = 28;
+ RunOutcome outcome = 29;
   string cursor = 1;
   string session_id = 2;
   string task_id = 3;
@@ -74,4 +79,6 @@ message Event {
   string occurred_at = 23;
   string error_code = 24;
   SkillRead skill = 25;
+  uint64 sequence = 26;
+  int64 measured_millis = 27;
 }

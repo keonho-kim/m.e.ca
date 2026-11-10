@@ -8,23 +8,23 @@
 
 </div>
 
-**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
+**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버·내장 WebUI로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
 
 - Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude, Gemini 연결
 - 스트리밍 응답·Thinking, Markdown과 줄 단위 diff
-- 파일·셸 도구, 비전 모델의 이미지 보기, 오래 실행되는 명령의 조회·대기·취소
+- 파일·셸 도구, 비전 모델의 이미지 붙여넣기·보기, 오래 실행되는 명령의 조회·대기·취소
 - 파일 선택·분할/전체화면 Markdown 뷰어
 - 로컬 대화 저장·압축·재개, 작업 중 방향 수정과 후속 요청 예약
 - 선택적 팀 모드: 공유 프로젝트에서 최대 8개 세션의 자율 협업과 공용 대화
 - 프로세스 메모리 사용량·실제 입력/출력 토큰·TPS, OpenRouter의 보고 비용 표시
 - 선택형 SSE·WebSocket·gRPC 서버 API와 재접속·승인·취소 제어
-- 선택적 OpenAI 호환 텍스트 API: Chat Completions·Responses·SSE
+- `meca --server --ui`: 다중 작업공간·대화, 파일 편집과 설정을 제공하는 내장 React WebUI
 - 공통 SKILL.md 스킬: `!skills` 조회·미리보기, `#스킬명` 지정과 에이전트의 자율 탐색
 - 스킬 읽기 이벤트와 작업 식별자로 연결되는 bounded JSON 운영 로그
 
 ## 설치
 
-Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리는 Go 설치 없이 사용할 수 있습니다.
+Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리는 Go·Bun·Node 설치 없이 TUI와 내장 WebUI를 사용할 수 있습니다.
 
 ### 최신 릴리스로 설치하기
 
@@ -88,7 +88,7 @@ meca upgrade
 
 ### 소스에서 설치하기
 
-Git과 Go로 소스에서 설치합니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
+소스 빌드에는 Git·Bun 1.4.4 이상·Go가 필요합니다. Bun으로 고정된 프론트 의존성을 설치하고 화면을 빌드한 뒤 Go 실행 파일에 포함합니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
@@ -108,6 +108,7 @@ git pull --ff-only
 제품 빌드는 Go 1.27.2 이상, 개발 도구는 Go 1.27.3 이상이 필요합니다. 제품과 도구의 요구 버전은 각각 [go.mod](go.mod)와 [devtools/go.mod](devtools/go.mod)가 소유합니다.
 
 ```sh
+sh scripts/build-ui.sh
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```
 
@@ -185,13 +186,13 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 | 큐 편집 중 `Enter`·`Tab` / `Esc` | 수정 저장 / 편집 취소 |
 | 큐 편집 중 `Ctrl/Cmd+Backspace` | 선택한 예약 삭제 |
 | `Esc` | 열린 화면·편집 닫기, 일반 채팅에서는 작업 중지 |
-| `Ctrl+O` | 도구 결과 전체 접기·펼치기 |
+| `Ctrl+O` | 실행 중인 도구·완료 결과 전체 접기·펼치기 |
 | 파일 탐색 `Shift+Tab` | 목록 / 요청 입력창 포커스 전환 |
 | 파일 목록 `Tab` / `Enter` | 분할 / 전체화면 미리보기 |
 | 파일 뷰어 `Shift+R` | Markdown 렌더링 / Raw 원문 전환 |
 | 선택 후 `Ctrl/Cmd+C` | 복사 · 선택 없는 `Ctrl+C`는 종료 |
 
-후속 요청은 예약 당시 선택한 파일 경로와 함께 순서대로 실행합니다. 중지·실패 시 남은 요청은 초안으로 복구합니다. 도구 결과는 기본으로 접혀 있으며 `Ctrl+O`로 펼칩니다. [전체 키맵·파일 탐색·사용량 →](docs/usage.md)
+후속 요청은 예약 당시 선택한 파일 경로와 함께 순서대로 실행합니다. 중지·실패 시 남은 요청은 초안으로 복구합니다. 실행 중인 도구와 완료 결과는 기본으로 접혀 있으며 첫 결과 전에도 `Ctrl+O`로 긴 명령과 상세를 펼칩니다. [전체 키맵·파일 탐색·사용량 →](docs/usage.md)
 
 `!team`을 켠 뒤 요청을 보내면 두 에이전트가 같은 프로젝트에서 시작합니다. 바로 진행할 독립 작업에 추가 인원이 필요하면 동료를 초대하거나 이전 세션을 복구합니다. 각 에이전트는 이름과 담당 파일을 공유하며, 대화와 응답은 하나의 화면에 발신자별로 표시합니다. 팀 Thinking은 개인 이력에 보관하고 화면에서는 숨깁니다. 독립 셸 명령은 에이전트별 최대 16개씩 병렬 실행하고 확인된 변경 경로의 충돌을 조율합니다. [팀 모드 →](docs/team.md)
 
@@ -216,16 +217,17 @@ print는 최종 답변, JSON 모드는 순서 있는 이벤트를 출력합니�
 
 ## 서버
 
-서버는 native API에서 선택한 대화와 OpenAI 호환 작업의 대화를 별도로 소유하며, 같은 코어에서 작업 하나씩 실행합니다. 저장 형식과 기존 데이터의 열기 제한은 [세션·서버 저장 안내](docs/configuration.md#세션-저장과-복원)를 확인하세요.
+서버는 native 선택 대화와 작업별 대화를 소유하며 같은 코어에서 실행합니다. `--concurrency N`은 기본 1이며 양의 정수로 설정합니다. 제품이 정한 고정 상한은 없고, 메모리·입력·연결 예산은 별도로 적용합니다. 같은 세션의 중복 실행은 차단합니다. 저장 형식과 기존 데이터의 열기 제한은 [세션·서버 저장 안내](docs/configuration.md#세션-저장과-복원)를 확인하세요.
 
 ```sh
 meca --server                            # 기본 SSE
+meca --server --ui                       # 내장 화면: http://127.0.0.1:8787/ui/
 meca /path/to/project --server --protocol socket
 meca /path/to/project --server --protocol grpc
-meca --server --openai                    # 같은 포트에 OpenAI 호환 HTTP API 추가
+meca --server --concurrency 4             # 서로 다른 세션의 작업을 최대 4개 실행
 ```
 
-기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 프로젝트 하나를 서비스하며 선택 세션 하나와 사용자 작업 하나를 소유합니다. 팀 모드에서는 같은 작업 안의 에이전트가 독립 실행합니다.
+기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 등록한 여러 프로젝트를 서비스하며 팀 에이전트는 각 작업 안에서 독립 실행합니다. 프로젝트의 변경·셸 실행은 공통 효과 게이트로 직렬화해 서로 다른 작업의 파일 효과가 섞이지 않게 합니다.
 
 | `--protocol` | 제어·이벤트 인터페이스 |
 | --- | --- |
@@ -233,17 +235,23 @@ meca --server --openai                    # 같은 포트에 OpenAI 호환 HTTP 
 | `socket` | `/v1/socket`의 WebSocket 명령·이벤트 |
 | `grpc` | Protobuf 계약의 native gRPC·gRPC-Web·Connect |
 
-선택한 전송 방식 하나를 열며 세션 생성·선택, 모델 설정, 요청 접수·상태 조회, 이력·원문 조회, 승인·방향 수정·취소를 제공합니다. 작업은 서버 프로세스에 속하므로 클라이언트 연결이 끊겨도 계속됩니다. 마지막 이벤트 커서로 재접속할 수 있고 안정된 요청 키로 중복 실행을 막습니다.
+선택한 전송 방식과 함께 공통 HTTP 제어·이벤트·첨부·작업 승인 경로를 제공합니다. 작업은 서버 프로세스에 속하므로 스트림을 닫아 일시정지해도 계속됩니다. 마지막 커서로 다시 구독하며 안정된 요청 키로 중복 실행을 막습니다.
 
 기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
 
-`--openai`는 선택한 전송 방식과 함께 `/v1/models`, `/v1/chat/completions`, `/v1/responses`와 Responses 조회·취소를 같은 포트에서 제공합니다. 가상 모델 ID `meca`는 선택한 실제 Provider·모델로 실행됩니다. 텍스트 JSON·SSE와 Responses의 background·store·후속 응답을 지원하며 외부 도구 선언·이미지·sampling 인자는 받지 않습니다. 승인 채널이 없는 호환 요청에서는 필수 사용자 승인을 거절합니다. [지원 범위·클라이언트 설정 →](docs/server.md#openai-호환-api)
+내장 화면에서는 워크스페이스별 대화 생성·전환·삭제, 동시 작업·승인, 이미지 첨부, 스킬과 파일 참조, 문법 강조 텍스트 편집을 사용할 수 있습니다. 컴포저의 `+`를 누르면 이미지 첨부와 스킬 목록 패널이 위로 펼쳐집니다. 좌측 하단 설정에서 모델·승인 모드·팀·언어·테마를 바꿉니다. `!model`·`!permission`·`!team`·`!language`·`!dir`·`!skills`도 컴포저에서 사용할 수 있습니다. 서버 토큰은 접속 화면에 입력하고 브라우저 저장소에 원문을 보관하지 않습니다. [화면 구성과 동작 →](docs/webui-design.md)
 
-모든 서버 스트림은 애플리케이션 데이터가 5초간 없으면 heartbeat를 보내고 1초마다 반복합니다. 데이터가 재개되면 다시 5초를 기다립니다. 모델을 연결하는 **OpenAI Provider**와 클라이언트에 제공하는 **OpenAI 호환 API**는 별개 기능입니다.
+화면은 React·Astryx와 Astryx Neutral의 Lucide 아이콘을 사용하며 소스는 FSD 계층과 공개 API를 따릅니다. 서버 데이터 캐시는 TanStack Query, 인증·표시 설정·워크스페이스 임시 상태는 책임별 Zustand 스토어가 소유합니다. Astryx 공용 미디어 쿼리·locale·단축키 유틸리티를 사용합니다. 빌드 전에 TypeScript·Biome·Oxlint·Knip·Steiger로 타입, 코드 품질, Promise 처리, 데드코드와 계층 의존성을 검사합니다. [프론트 구성과 검증 →](docs/development.md#내장-webui)
+
+자체 API는 세션별 모델·설정 변경, provider/model 탐색, 파일 탐색·미리보기·참조 선택, 이미지 업로드·저장 이미지 조회, 작업 목록·승인·취소를 제공합니다. 여러 화면은 전역 선택을 바꾸지 않고 sessionId로 연동합니다. 긴 실행 중 응답과 상태는 페이지로 복원합니다. [WebUI 연결 계약](docs/webui-api.md)을 참고하세요. 모든 팀원의 공개 출력과 도구·승인 이벤트는 같은 스트림에서 task·agent·generation으로 구분합니다. [자체 API 계약 →](docs/server.md)
+
+모든 서버 스트림은 애플리케이션 데이터가 5초간 없으면 heartbeat를 보내고 1초마다 반복합니다. 데이터가 재개되면 다시 5초를 기다립니다.
+
+TUI에서는 `Alt+V`(macOS는 `Ctrl+V`도 지원)로 로컬 클립보드 이미지를 첨부합니다. 이미지당 64MiB·64M픽셀, 요청당 최대 8개·합계 128MiB이며 입력창 위에서 첨부를 확인하고 `Alt+Backspace`로 마지막 이미지를 제거합니다. [이미지 입력과 제한 →](docs/images.md)
 
 프로젝트별 서버 프로세스는 하나만 실행합니다. 실제 TCP 연결·HTTP 요청 수와 임시 명령 로그의 보관량을 제한합니다. 세션 목록은 유효 기간이 있는 커서로 페이지 조회하며, 큰 원문 조회는 동시 처리량과 복원 바이트를 제한합니다. 저장 한도에 도달하면 기존 기록을 보존하고 추가 저장을 거절합니다. [서버 자원 한도 →](docs/server.md)
 
-작업의 `code`·`persistence`로 오류와 종료 저장 확인 여부를 제공합니다. 완료 저장을 확인할 수 없으면 새 접수를 막고, 이미 수행한 작업을 자동 재실행하지 않습니다. 현재 저장 형식은 세션 schema 28·서버 접수 DB user_version 2이며, 이전 형식은 자동 변환하지 않고 원본을 보존한 채 거부합니다. [보관 형식 →](docs/configuration.md#세션-저장과-복원)
+작업의 `code`·`persistence`로 오류와 종료 저장 확인 여부를 제공합니다. 완료 저장을 확인할 수 없으면 새 접수를 막고, 이미 수행한 작업을 자동 재실행하지 않습니다. 현재 저장 형식은 세션 schema 28·서버 접수 DB user_version 4이며, 이전 형식은 자동 변환하지 않고 원본을 보존한 채 거부합니다. [보관 형식 →](docs/configuration.md#세션-저장과-복원)
 
 ## Program Philosophy
 
@@ -303,7 +311,7 @@ GOFLAGS='-tags=godbus_no_tcp' go vet ./...
 | [이벤트와 운영 로그](docs/diagnostics.md) | 스킬 읽기 기록·식별자·JSON 로그·보관 한도 |
 | [이미지 입력](docs/images.md) | 비전 지원 확인·이미지 도구·지원 형식 |
 | [모델 연결](docs/model-connections.md) | Provider·Thinking·서빙 설정·연결 진단 |
-| [서버 API](docs/server.md) | SSE·WebSocket·gRPC·인증·작업 제어·OpenAI 호환 API |
+| [서버 API](docs/server.md) | SSE·WebSocket·gRPC·인증·작업 제어·이미지 입력·재구독 |
 | [설정과 대화 보존](docs/configuration.md) | 추론 인자·프롬프트·Compaction·세션 |
 | [에이전트 작동 방식](docs/runtime.md) | 모델 요청·도구·명령 수명·재개 |
 | [팀 모드](docs/team.md) | 독립 세션·공용 대화·초대·복구·작업 조율 |

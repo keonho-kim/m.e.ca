@@ -6,6 +6,8 @@ package config
 
 import (
 	"github.com/keonho-kim/meca/internal/agent/inference"
+	"path/filepath"
+	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	"github.com/keonho-kim/meca/internal/agent/run"
@@ -16,6 +18,7 @@ import (
 )
 
 type Config struct {
+	Workspaces    []string             `toml:"workspaces,omitempty"`
 	Permission    policy.Permission    `toml:"permission"`
 	Language      Language             `toml:"language"`
 	ContextLength int                  `toml:"context_length"`
@@ -58,6 +61,11 @@ func Defaults() Config {
 }
 
 func check(configuration Config) error {
+	for _, path := range configuration.Workspaces {
+		if !filepath.IsAbs(path) || strings.ContainsRune(path, '\x00') {
+			return faults.New(diagcatalog.InvalidArgument, diagcatalog.UIWorkspaceInvalid)
+		}
+	}
 	if err := configuration.Permission.Check(); err != nil {
 		return err
 	}

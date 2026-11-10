@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,7 +45,7 @@ func TestCachePagesLoadOnceAndRefreshMask(t *testing.T) {
 	c, request, loads, vault := cacheFixture(t, value)
 	var joined []byte
 	for {
-		page, total, err := c.Read(t.Context(), request, int64(len(joined)), 64<<10)
+		page, total, _, err := c.Read(t.Context(), request, int64(len(joined)), 64<<10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,7 +58,7 @@ func TestCachePagesLoadOnceAndRefreshMask(t *testing.T) {
 		t.Fatal("original was not paged once")
 	}
 	vault.Remember("future-key")
-	page, _, err := c.Read(t.Context(), request, int64(len(joined)-128), 1024)
+	page, _, _, err := c.Read(t.Context(), request, int64(len(joined)-128), 1024)
 	if err != nil || bytes.Contains(page, []byte("future-key")) || !bytes.Contains(page, []byte("[redacted]")) || loads.Load() != 2 {
 		t.Fatal(string(page), loads.Load(), err)
 	}
@@ -67,7 +69,7 @@ func TestCacheConcurrentPagesLoadOnce(t *testing.T) {
 	var workers sync.WaitGroup
 	for i := range 4 {
 		workers.Go(func() {
-			if _, _, err := c.Read(t.Context(), request, int64(i*1024), 1024); err != nil {
+			if _, _, _, err := c.Read(t.Context(), request, int64(i*1024), 1024); err != nil {
 				t.Error(err)
 			}
 		})
@@ -81,10 +83,10 @@ func TestCacheConcurrentPagesLoadOnce(t *testing.T) {
 func TestCacheSpoolFollowsSelectedSession(t *testing.T) {
 	value := &record.Event{Text: strings.Repeat("x", 128<<10)}
 	c, request, _, _ := cacheFixture(t, value)
-	if _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
+	if _, _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
 		t.Fatal(err)
 	}
-	first := c.file
+	first := c.slots[0].value.file
 	if first == nil {
 		t.Fatal("large detail retained in memory")
 	}
@@ -95,17 +97,17 @@ func TestCacheSpoolFollowsSelectedSession(t *testing.T) {
 		t.Fatal(info, err)
 	}
 	value.Text, request.Source.Tool.Sequence = "small", 2
-	if _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
+	if _, _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := first.Stat(); !errors.Is(err, os.ErrClosed) {
-		t.Fatal("replaced spool stayed open", err)
+	if _, err := first.Stat(); err != nil {
+		t.Fatal("another document evicted a live view", err)
 	}
 	value.Text, request.Source.Tool.Sequence = strings.Repeat("y", 128<<10), 3
-	if _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
+	if _, _, _, err := c.Read(t.Context(), request, 0, 1024); err != nil {
 		t.Fatal(err)
 	}
-	last := c.file
+	last := c.slots[2].value.file
 	if err := c.CloseSession("another-session"); err != nil {
 		t.Fatal(err)
 	}
@@ -124,13 +126,50 @@ func TestCacheWorksWithoutTemporaryStorage(t *testing.T) {
 	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "unavailable"))
 	c, request, loads, _ := cacheFixture(t, &record.Event{Text: strings.Repeat("x", 128<<10)})
 	for _, offset := range []int64{0, 1024} {
-		page, total, err := c.Read(t.Context(), request, offset, 1024)
+		page, total, _, err := c.Read(t.Context(), request, offset, 1024)
 		if err != nil || len(page) != 1024 || total <= 128<<10 {
 			t.Fatal(len(page), total, err)
 		}
 	}
 	if loads.Load() != 2 {
 		t.Fatal("uncached original did not reload")
+	}
+}
+
+func TestCacheLargeCompressedDocumentAndIndependentViews(t *testing.T) {
+	value := &record.Event{Kind: "tool_succeeded", Text: strings.Repeat("x", 65<<20)}
+	c, request, loads, _ := cacheFixture(t, value)
+	first, total, _, err := c.Read(t.Context(), request, 0, 1024)
+	if err != nil || len(first) != 1024 || total < 65<<20 {
+		t.Fatal(total, err)
+	}
+	other := request
+	other.Source.Tool.Sequence = 2
+	other.LoadText = func(func(int) error) (string, error) { return "other document", nil }
+	if _, _, _, err := c.Read(t.Context(), other, 0, 1024); err != nil {
+		t.Fatal(err)
+	}
+	last, again, _, err := c.Read(t.Context(), request, total-1024, 1024)
+	if err != nil || len(last) != 1024 || again != total || loads.Load() != 1 {
+		t.Fatal("large document or another view forced full reload", loads.Load(), err)
+	}
+	if c.budget.used > maxSpoolBytes {
+		t.Fatal("cache exceeded shared disk budget")
+	}
+}
+
+func TestCacheRejectsChangedMaskBetweenPages(t *testing.T) {
+	c, request, _, vault := cacheFixture(t, &record.Event{Text: strings.Repeat("x", 128<<10) + "later-key"})
+	_, _, token, err := c.Read(t.Context(), request, 0, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Expected = token
+	if err := vault.Remember("later-key"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := c.Read(t.Context(), request, 1024, 1024); faults.Code(err) != diagcatalog.Conflict {
+		t.Fatal("pages mixed different masking revisions", err)
 	}
 }
 
@@ -143,11 +182,11 @@ func TestCacheWaitingReaderCanCancel(t *testing.T) {
 		<-release
 		return load(reserve)
 	}
-	go func() { _, _, err := c.Read(t.Context(), request, 0, 1024); done <- err }()
+	go func() { _, _, _, err := c.Read(t.Context(), request, 0, 1024); done <- err }()
 	<-entered
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	_, _, err := c.Read(ctx, request, 0, 1024)
+	_, _, _, err := c.Read(ctx, request, 0, 1024)
 	close(release)
 	if cause := <-done; cause != nil {
 		t.Fatal(cause)
@@ -165,7 +204,7 @@ func BenchmarkDetailPages(b *testing.B) {
 		request.Source.Tool.Sequence++
 		var offset int64
 		for {
-			page, total, err := c.Read(b.Context(), request, offset, 64<<10)
+			page, total, _, err := c.Read(b.Context(), request, offset, 64<<10)
 			if err != nil {
 				b.Fatal(err)
 			}

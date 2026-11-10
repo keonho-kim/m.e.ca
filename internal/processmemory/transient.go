@@ -1,7 +1,7 @@
 // Purpose: Admit cancellable byte reservations for transient decoding and payload transformations.
 // Pattern: Process-owned byte admission with caller-owned release.
 // Usage: Runtime, image decoders and SQLite reserve before materializing transient values.
-// Related: internal/processmemory/reply.go, internal/tools/local/imagefile/decode.go, internal/storage/sqlite/commit.go.
+// Related: internal/processmemory/reply.go, internal/media/imagefile/decode.go, internal/storage/sqlite/commit.go.
 package processmemory
 
 import (
@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const DecodeBytes int64 = 256 << 20
+const DecodeBytes int64 = 768 << 20
 const PayloadBytes int64 = 512 << 20
 
 type transientBudget struct {

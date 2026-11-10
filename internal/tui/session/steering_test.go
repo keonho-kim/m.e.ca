@@ -9,13 +9,13 @@ import (
 
 	"github.com/gdamore/tcell/v3"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 )
 
 func TestSteeringKeepsLocalCommands(t *testing.T) {
 	a := fixture(t)
 	a.work.state = workerAgent
-	a.compose.steering = make(chan composer.Request, 1)
+	a.compose.steering = make(chan requestinput.Request, 1)
 	a.compose.editor.Set("Use the alternate approach")
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	select {

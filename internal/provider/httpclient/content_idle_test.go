@@ -53,7 +53,7 @@ func TestSemanticIdleRejectsKeepaliveAndEmptyFunctionFragments(t *testing.T) {
 			request.IdleTimeout = time.Second
 			started := time.Now()
 			err = client.Generate(t.Context(), request, func(modelapi.Event) error { return nil })
-			if err == nil || attempts != 3 || time.Since(started) > 5*time.Second {
+			if err == nil || attempts != 4 || time.Since(started) != 13*time.Second {
 				t.Fatal("no-content connection remained alive", attempts, err)
 			}
 		})

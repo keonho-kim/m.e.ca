@@ -1,0 +1,50 @@
+// Purpose: Define session-scoped workspace, discovery and incremental state read contracts.
+// Pattern: Versioned external wire values.
+// Usage: Native commands return these bounded pages through every transport.
+// Related: api/meca/v1/control.proto, api/meca/v1/state.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+
+message SessionTarget { string session_id = 1; }
+message StateRequest { string task_id = 1; string after_task = 2; int32 limit = 3; string session_id = 4; }
+message FileRequest { string path = 1; int32 offset = 2; int32 limit = 3; string revision = 4; }
+message FileSelection { string session_id = 1; string path = 2; bool selected = 3; }
+message FileEntry { string name = 1; bool directory = 2; }
+message DirectoryPage { repeated FileEntry items = 1; int32 next_offset = 2; bool more = 3; string path = 4; string parent = 5; string revision = 6; }
+message FilePreview { string path = 1; string text = 2; int64 offset = 3; int64 next_offset = 4; bool truncated = 5; string revision = 6; int64 total_bytes = 7; bool source_truncated = 8; }
+message FileSelections { repeated string paths = 1; }
+message ImageRequest { string session_id = 1; int64 sequence = 2; int32 index = 3; }
+message ImageMetadata { int32 index = 1; string path = 2; string mime = 3; int32 width = 4; int32 height = 5; string digest = 6; int64 bytes = 7; }
+message DraftRequest { string task_id = 1; string agent = 2; uint64 generation = 3; int64 offset = 4; int32 limit = 5; bool thinking = 6; optional int64 revision = 7; }
+message DraftPage { string text = 1; uint64 generation = 2; int64 offset = 3; int64 next_offset = 4; int64 total_bytes = 5; bool truncated = 6; int64 revision = 7; }
+message TaskListRequest { string session_id = 1; string cursor = 2; int32 limit = 3; }
+message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; string outcome = 7; }
+message TaskPage { repeated Task items = 1; string next_cursor = 2; }
+message Provider { string id = 1; string name = 2; string endpoint = 3; }
+message Providers { repeated Provider items = 1; }
+message ModelCandidate { string id = 1; int32 context_window = 2; string image_input_state = 3; bool image_input_supported = 4; bool reasoning_on = 5; bool reasoning_off = 6; repeated string reasoning_levels = 7; string notice = 8; }
+message Models { repeated ModelCandidate items = 1; string notice = 2; }
+message Capabilities {
+  string api_version = 1;
+  repeated string features = 2;
+  repeated string image_types = 3;
+  int64 image_bytes = 4;
+  int64 input_image_bytes = 5;
+  int32 input_images = 6;
+  int64 concurrency = 7;
+  int32 state_page_size = 8;
+  int32 detail_page_bytes = 9;
+  string language = 10;
+  int64 request_records = 11;
+  int64 request_capacity = 12;
+  int64 editor_bytes = 13;
+  int64 prompt_bytes = 14;
+  int64 command_bytes = 15;
+}
+
+message ModelQuery { string session_id = 1; string provider = 2; string endpoint = 3; string credential = 4; string model = 5; }
+message CommandListRequest { string task_id = 1; }
+message CommandState { string task_id = 1; string agent = 2; string id = 3; string call_id = 4; string command = 5; string status = 6; optional int32 exit_code = 7; int64 elapsed_millis = 8; optional int64 last_output_millis = 9; bool truncated = 10; }
+message CommandStates { repeated CommandState items = 1; }
+message Resources { optional uint64 resident_bytes = 1; string error_code = 2; }

@@ -6,7 +6,7 @@
 
 !model에서 Provider·주소·API 키·서빙 모델 ID를 선택한다. 실제 요청에는 선택한 ID를 그대로 사용하며, 연결 기능과 한도는 서버 메타데이터와 Provider API 규약으로 결정한다.
 
-지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 서버에서는 `setModel`에 같은 식별값을 사용한다. 모델을 호출하는 OpenAI Provider와 `--server --openai`로 제공하는 호환 API를 구분한다.
+지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 자체 서버 API의 `setModel`에도 같은 식별값을 사용한다. OpenAI Provider는 모델 연결 기능으로 유지한다.
 
 설정 화면은 저장된 Thinking·강도 또는 서버가 공개한 기본값을 표시한다. 확인된 기본값은 구체적인 ON/OFF·강도로 표시하고, 공개되지 않은 값만 DEFAULT로 둔다. DEFAULT는 think·reasoning·reasoning_effort·chat_template_kwargs의 해당 제어 필드 생략을 뜻한다. 역할별 temperature·출력 예산·컨텍스트 예산은 [설정 문서](configuration.md)의 독립된 설정이다.
 
@@ -107,7 +107,7 @@ LM Studio는 Responses에 전체 역할별 메시지를 보내고 store:false·t
 
 조회는 구성한 서버와 같은 origin에서 수행한다. 반환된 URL이나 경로를 따라가지 않고 인증·프롬프트·Modelfile·template 원문은 수집하지 않는다. 알려진 비밀값과 터미널 제어 문자는 제외한다. 식별 정보는 세션 선택 메타데이터로 저장한다.
 
-메타데이터는 무수신 3분 제한을 적용한다. 일시적 연결 실패와 HTTP 408·425·429·5xx는 최대 3회 시도하고 인증·잘못된 요청·지원하지 않는 경로의 4xx는 반복하지 않는다. 응답은 16MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 복구 후에도 조회할 수 없으면 모델 정보에 원인을 표시한다.
+메타데이터는 무수신 3분 제한을 적용한다. 일시적 연결 실패와 HTTP 408·425·429·5xx는 최초 요청을 포함해 최대 4회 시도하며 기본 재시도 대기는 1초·3초·5초로 고정한다. 더 긴 Retry-After는 기존 최대 30초 범위에서 우선하고 인증·잘못된 요청·지원하지 않는 경로의 4xx는 반복하지 않는다. 응답은 16MiB, 목록은 10,000개, 보존 근거는 64개·값당 2,048바이트로 제한한다. 복구 후에도 조회할 수 없으면 모델 정보에 원인을 표시한다.
 
 ## 서빙 한도
 

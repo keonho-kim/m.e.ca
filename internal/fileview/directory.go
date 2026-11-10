@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"syscall"
 
@@ -25,19 +24,26 @@ type Entry struct {
 	Directory bool   `json:"directory"`
 }
 
-func (executor *Reader) Directory(ctx context.Context, settings policy.Settings, path string, offset, limit int) ([]Entry, bool, error) {
+func (executor *Reader) Directory(ctx context.Context, settings policy.Settings, path string, offset, limit int, revision string) (DirectoryPage, error) {
+	if offset < 0 || offset > 100000 || limit < 1 || limit > 1000 || len(revision) > 64 {
+		return DirectoryPage{}, faults.Errorf(diagcatalog.FileviewInvalidDirectoryPage)
+	}
 	resolved, err := executor.resolve(settings.Scope, path)
 	if err != nil {
-		return nil, false, err
+		return DirectoryPage{}, err
 	}
 	if err := settings.Check(); err != nil {
-		return nil, false, err
+		return DirectoryPage{}, err
 	}
-	entries, more, err := readDirectory(ctx, resolved, offset, limit)
+	all, version, err := executor.directories.load(ctx, resolved, revision)
 	if err != nil {
-		return nil, false, err
+		return DirectoryPage{}, err
 	}
-	visible := entries[:0]
+	if offset >= len(all) {
+		return DirectoryPage{Revision: version}, nil
+	}
+	entries := all[offset:min(len(all), offset+limit)]
+	visible := make([]Entry, 0, len(entries))
 	for _, entry := range entries {
 		target, resolveErr := executor.resolve(settings.Scope, filepath.Join(resolved.Absolute, entry.Name))
 		if resolveErr == nil {
@@ -48,39 +54,35 @@ func (executor *Reader) Directory(ctx context.Context, settings policy.Settings,
 			}
 		}
 	}
-	clear(entries[len(visible):])
-	return visible, more, nil
+	return DirectoryPage{Entries: visible, More: len(all) > offset+limit, Revision: version}, nil
 }
 
-func readDirectory(ctx context.Context, path Target, offset, limit int) (entries []Entry, more bool, err error) {
-	if offset < 0 || offset > 100000 || limit < 1 || limit > 1000 {
-		return nil, false, faults.Errorf(diagcatalog.FileviewInvalidDirectoryPage)
-	}
+func readDirectoryEntries(ctx context.Context, path Target) (entries []Entry, err error) {
 	if err := ctx.Err(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	file, err := path.Root.OpenFile(path.Relative, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_DIRECTORY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
 
 	for {
 		if err := ctx.Err(); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		batch, readErr := file.ReadDir(1000)
 		for _, entry := range batch {
 			entries = append(entries, Entry{Name: entry.Name(), Directory: entry.IsDir()})
 		}
 		if len(entries) > 25000 {
-			return nil, false, faults.Errorf(diagcatalog.FileviewDirectoryExceedsEntries)
+			return nil, faults.Errorf(diagcatalog.FileviewDirectoryExceedsEntries)
 		}
 		if readErr == io.EOF {
 			break
 		}
 		if readErr != nil {
-			return nil, false, readErr
+			return nil, readErr
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool {
@@ -89,10 +91,5 @@ func readDirectory(ctx context.Context, path Target, offset, limit int) (entries
 		}
 		return entries[i].Name < entries[j].Name
 	})
-	if offset >= len(entries) {
-		return nil, false, nil
-	}
-	more = len(entries) > offset+limit
-	entries = slices.Clone(entries[offset:min(len(entries), offset+limit)])
-	return entries, more, nil
+	return entries, nil
 }

@@ -58,10 +58,10 @@ func (r *Room) worker(live *participant) {
 			}
 		}
 		r.mu.Unlock()
-		r.memberMu.Unlock()
 		if r.ctx.Err() == nil {
 			_ = r.notice(peer.ID, "left")
 		}
+		r.memberMu.Unlock()
 		r.notify()
 	}()
 	r.mu.Lock()

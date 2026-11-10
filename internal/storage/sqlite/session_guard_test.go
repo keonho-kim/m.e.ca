@@ -16,7 +16,6 @@ func TestStoreRejectsForeignSession(t *testing.T) {
 		func() error { _, err := s.Selection(t.Context(), "foreign"); return err },
 		func() error { _, err := s.FileSelections(t.Context(), "foreign"); return err },
 		func() error { _, err := s.Memory(t.Context(), "foreign"); return err },
-		func() error { _, err := s.OutputPosition(t.Context(), "foreign"); return err },
 		func() error { _, _, err := s.Timeline(t.Context(), "foreign", 0, 5); return err },
 	} {
 		if err := read(); err == nil {

@@ -13,8 +13,8 @@
 [Release 워크플로](../.github/workflows/release.yml)는 `main` 푸시 또는 `main`에서의 수동 실행으로 시작한다. 원본 저장소에서만 게시하며 동시에 한 실행만 진행한다. 실행 중인 배포를 새 푸시로 취소하지 않고 후속 실행을 대기시킨다.
 
 1. 명시한 major·minor와 고정 GoReleaser 버전을 읽어 로컬 날짜 태그를 준비한다.
-2. 검증 단계에 `GOFLAGS=-tags=godbus_no_tcp`를 설정하고 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
-3. GoReleaser의 명시적 `godbus_no_tcp` 태그로 네 플랫폼을 빌드한다. SHA-256·아카이브의 실행 파일·라이선스 고지를 검사하고 추출한 실행 파일의 `go version -m` 메타데이터에 정확한 태그 항목이 있는지 확인한다.
+2. 고정 Bun으로 webui/bun.lock 의존성과 UI를 빌드하고 프론트 타입·상태 테스트를 수행한다. 그 뒤 검증 단계에 `GOFLAGS=-tags=godbus_no_tcp`를 설정하고 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
+3. GoReleaser의 명시적 `godbus_no_tcp` 태그로 네 플랫폼을 빌드한다. SHA-256·아카이브의 실행 파일·Go 고지·WEBUI_THIRD_PARTY_NOTICES.txt를 검사하고 추출한 실행 파일의 `go version -m` 메타데이터에 정확한 태그 항목이 있는지 확인한다.
 4. 원격 `main`이 이미 더 최신 커밋이면 이번 게시를 생략한다. 준비 이후 태그가 다른 작업에 의해 바뀌었으면 오류로 중단한다.
 5. 태그를 갱신하고 배포 파일과 체크섬을 게시한다. 새 릴리스는 초안에서 업로드를 마친 뒤 공개하고, 같은 날짜에 게시된 릴리스는 파일을 교체한다.
 
@@ -63,7 +63,7 @@ sha256sum meca_<version>_linux_amd64.tar.gz
 
 ## 소스 설치와 삭제
 
-[README의 소스 설치](../README.md#소스에서-설치하기)는 저장소의 `install.sh`를 사용한다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
+[README의 소스 설치](../README.md#소스에서-설치하기)는 저장소의 `install.sh`를 사용한다. 소스 빌드는 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
 
 소스 설치도 배포본과 같은 `godbus_no_tcp` 빌드 태그를 적용한다. 저장소 `bin/meca`를 만든 뒤 호출한 작업 폴더·환경에서 설치 명령을 실행한다. 설치 위치·기본 설정·PATH 등록과 로그인 셸 전환은 릴리스 바이너리의 install과 같다.
 

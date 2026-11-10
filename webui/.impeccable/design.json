@@ -1,0 +1,575 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T01:25:06.357230Z",
+  "title": "Design System: MECA Embedded WebUI",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "단색 동작",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "동작 위 글자",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "background-body": {
+        "role": "neutral",
+        "displayName": "바깥 바탕",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "background-surface": {
+        "role": "neutral",
+        "displayName": "읽기 표면",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "background-card": {
+        "role": "neutral",
+        "displayName": "카드 표면",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "background-popover": {
+        "role": "neutral",
+        "displayName": "떠 있는 glass",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "background-muted": {
+        "role": "neutral",
+        "displayName": "보조면",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "탐색 재질",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "본문 잉크",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "보조 잉크·Thinking",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "accent-muted": {
+        "role": "neutral",
+        "displayName": "포커스 보조면",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "neutral": {
+        "role": "neutral",
+        "displayName": "중성 조작·선택",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "경계",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "border-emphasized": {
+        "role": "neutral",
+        "displayName": "강조 경계",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "overlay-hover": {
+        "role": "neutral",
+        "displayName": "Hover overlay",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "overlay-pressed": {
+        "role": "neutral",
+        "displayName": "Press overlay",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#777777",
+          "#9e9e9e",
+          "#b9b9b9",
+          "#d4d4d4",
+          "#f1f1f1"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "연결·완료",
+        "tonalRamp": [
+          "#003002",
+          "#00490b",
+          "#17631e",
+          "#3c8a3f",
+          "#6ab26b",
+          "#90ca90",
+          "#b7e2b6",
+          "#defadd"
+        ]
+      },
+      "success-muted": {
+        "role": "secondary",
+        "displayName": "완료 배경",
+        "tonalRamp": [
+          "#003002",
+          "#00490b",
+          "#17631e",
+          "#3c8a3f",
+          "#6ab26b",
+          "#90ca90",
+          "#b7e2b6",
+          "#defadd"
+        ]
+      },
+      "on-success-muted": {
+        "role": "secondary",
+        "displayName": "완료 배경 위 글자",
+        "tonalRamp": [
+          "#003002",
+          "#00490b",
+          "#17631e",
+          "#3c8a3f",
+          "#6ab26b",
+          "#90ca90",
+          "#b7e2b6",
+          "#defadd"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "승인·중단",
+        "tonalRamp": [
+          "#312400",
+          "#4b3900",
+          "#664f00",
+          "#927300",
+          "#c29900",
+          "#e2b623",
+          "#f8d36a",
+          "#fff0ca"
+        ]
+      },
+      "warning-muted": {
+        "role": "secondary",
+        "displayName": "주의 배경",
+        "tonalRamp": [
+          "#312400",
+          "#4b3900",
+          "#664f00",
+          "#927300",
+          "#c29900",
+          "#e2b623",
+          "#f8d36a",
+          "#fff0ca"
+        ]
+      },
+      "on-warning-muted": {
+        "role": "secondary",
+        "displayName": "주의 배경 위 글자",
+        "tonalRamp": [
+          "#312400",
+          "#4b3900",
+          "#664f00",
+          "#927300",
+          "#c29900",
+          "#e2b623",
+          "#f8d36a",
+          "#fff0ca"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "실패",
+        "tonalRamp": [
+          "#500004",
+          "#76000c",
+          "#9e0015",
+          "#cf3738",
+          "#fa6762",
+          "#ff9890",
+          "#ffc4be",
+          "#ffece9"
+        ]
+      },
+      "error-muted": {
+        "role": "secondary",
+        "displayName": "오류·파괴적 동작 배경",
+        "tonalRamp": [
+          "#500004",
+          "#76000c",
+          "#9e0015",
+          "#cf3738",
+          "#fa6762",
+          "#ff9890",
+          "#ffc4be",
+          "#ffece9"
+        ]
+      },
+      "on-error-muted": {
+        "role": "secondary",
+        "displayName": "오류 배경 위 글자",
+        "tonalRamp": [
+          "#500004",
+          "#76000c",
+          "#9e0015",
+          "#cf3738",
+          "#fa6762",
+          "#ff9890",
+          "#ffc4be",
+          "#ffece9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-2": {
+        "displayName": "빈 대화 제목",
+        "purpose": "공식 ai-chat-landing 구성의 질문 제목."
+      },
+      "heading-2": {
+        "displayName": "표면 제목",
+        "purpose": "Dialog·Drawer 등 표면 제목."
+      },
+      "body": {
+        "displayName": "본문",
+        "purpose": "답변·입력·폼의 기본 본문. Markdown의 내부 위계는 공식 컴포넌트를 따른다."
+      },
+      "label": {
+        "displayName": "조작 레이블",
+        "purpose": "버튼·탐색·폼 이름."
+      },
+      "supporting": {
+        "displayName": "보조 정보",
+        "purpose": "메타데이터·Thinking 트리거·연결 복구 안내."
+      },
+      "code": {
+        "displayName": "코드",
+        "purpose": "공식 CodeBlock·Astryx Lab CodeEditor와 경로·정량 정보."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-low",
+        "value": "0 2px 12px light-dark(#0000000c, #00000040)",
+        "purpose": "theme.ts의 낮은 표면 그림자. 컴포저 기본 층위."
+      },
+      {
+        "name": "shadow-med",
+        "value": "0 12px 36px light-dark(#00000014, #00000070)",
+        "purpose": "theme.ts의 중간 그림자. 컴포저 hover·focus 및 더 높은 표면."
+      },
+      {
+        "name": "shadow-high",
+        "value": "0 4px 6px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), 0 12px 24px light-dark(oklch(0 0 0 / 15%), oklch(0 0 0 / 70%)), inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 15%))",
+        "purpose": "Neutral에서 상속한 Dialog 등 overlay의 깊은 층위."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "130ms",
+        "purpose": "버튼 등 빠른 상태 전환. theme.ts의 fast."
+      },
+      {
+        "name": "duration-medium",
+        "value": "220ms",
+        "purpose": "+ 회전과 ChatComposerDrawer 펼침. theme.ts의 medium."
+      },
+      {
+        "name": "duration-slow",
+        "value": "360ms",
+        "purpose": "공식 느린 진입·이동 모션의 기준. theme.ts의 slow."
+      },
+      {
+        "name": "duration-ratio",
+        "value": "0.8",
+        "purpose": "공식 motion scale의 min·max 시간 변동 비율."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.24, 1, 0.4, 1)",
+        "purpose": "공식 상태 변화·추가한 회전·펼침의 easing."
+      },
+      {
+        "name": "attachment-rotation",
+        "value": "90deg",
+        "purpose": "aria-expanded=true일 때 첨부 + 아이콘 회전."
+      },
+      {
+        "name": "reduced-attachment-duration",
+        "value": "0ms",
+        "purpose": "reduced-motion에서 추가한 첨부 버튼·컴포저 drawer의 전환 시간. 공식 적응은 함께 상속한다."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "navigation-drawer",
+        "value": "768px",
+        "purpose": "AppShell의 기본 md 미만에서 모바일 탐색."
+      },
+      {
+        "name": "compact-settings",
+        "value": "640px",
+        "purpose": "이하에서 설정 좌측 List를 상단 Selector로 전환."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "주요 버튼",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Astryx Button의 primary 변형. 공식 상태 overlay와 포커스 토큰을 사용한다.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">저장</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-sizing:border-box;height:32px;padding:.5rem .75rem;border:0;border-radius:var(--radius-element,.625rem);font:500 .875rem/1.4286 var(--font-family-body,system-ui);cursor:pointer;transition:background-color var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1)),transform var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1));background:var(--color-accent,light-dark(#171717,#f5f5f5));color:var(--color-on-accent,light-dark(#ffffff,#171717));}.ds-button-primary:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-button-primary:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-button-primary:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
+    },
+    {
+      "name": "보조 버튼",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Astryx Button의 secondary 변형. 공식 상태 overlay와 포커스 토큰을 사용한다.",
+      "html": "<button class=\"ds-button-secondary\" type=\"button\">모델 조회</button>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-sizing:border-box;height:32px;padding:.5rem .75rem;border:0;border-radius:var(--radius-element,.625rem);font:500 .875rem/1.4286 var(--font-family-body,system-ui);cursor:pointer;transition:background-color var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1)),transform var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1));background:var(--color-neutral,light-dark(#0000000F,#ffffff1A));color:var(--color-text-primary,light-dark(#171717,#f5f5f5));}.ds-button-secondary:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-button-secondary:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-button-secondary:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
+    },
+    {
+      "name": "Ghost 버튼",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Astryx Button의 ghost 변형. 공식 상태 overlay와 포커스 토큰을 사용한다.",
+      "html": "<button class=\"ds-button-ghost\" type=\"button\">스킬 찾아보기</button>",
+      "css": ".ds-button-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-sizing:border-box;height:32px;padding:.5rem .75rem;border:0;border-radius:var(--radius-element,.625rem);font:500 .875rem/1.4286 var(--font-family-body,system-ui);cursor:pointer;transition:background-color var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1)),transform var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1));background:transparent;color:var(--color-text-primary,light-dark(#171717,#f5f5f5));}.ds-button-ghost:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-button-ghost:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-button-ghost:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}@media(prefers-reduced-motion:reduce){.ds-button-ghost{transition:none;}}"
+    },
+    {
+      "name": "파괴적 버튼",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Astryx Button의 destructive 변형. 공식 상태 overlay와 포커스 토큰을 사용한다.",
+      "html": "<button class=\"ds-button-destructive\" type=\"button\">대화 삭제</button>",
+      "css": ".ds-button-destructive{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-sizing:border-box;height:32px;padding:.5rem .75rem;border:0;border-radius:var(--radius-element,.625rem);font:500 .875rem/1.4286 var(--font-family-body,system-ui);cursor:pointer;transition:background-color var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1)),transform var(--duration-fast,130ms) var(--ease-standard,cubic-bezier(.24,1,.4,1));background:var(--color-error-muted,light-dark(#ffc4be,#ff98903D));color:var(--color-on-error-muted,light-dark(#76000c,#ffaea7));}.ds-button-destructive:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-button-destructive:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-button-destructive:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}@media(prefers-reduced-motion:reduce){.ds-button-destructive{transition:none;}}"
+    },
+    {
+      "name": "모델 입력",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "TextInput의 중성 표면·강조 경계와 인접 레이블.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-model\">모델 ID</label><div class=\"ds-field-control\"><input class=\"ds-field-input\" id=\"ds-model\" value=\"meca-model\" placeholder=\"모델 ID 입력\" /></div></div>",
+      "css": ".ds-field{display:grid;gap:.5rem;font-family:var(--font-family-body,system-ui);color:var(--color-text-primary,light-dark(#171717,#f5f5f5));}.ds-field-label{font-size:.875rem;font-weight:500;line-height:1.4286;}.ds-field-control{display:flex;padding:.25rem .5rem;border:1px solid var(--color-border-emphasized,light-dark(#d4d4d4,#525252));border-radius:var(--radius-element,.625rem);background:var(--color-background-surface,light-dark(#ffffff,#141414));transition:border-color var(--duration-fast,130ms),box-shadow var(--duration-fast,130ms);}.ds-field-control:hover:not(:focus-within){box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--color-border-emphasized,light-dark(#d4d4d4,#525252)) 30%,transparent);}.ds-field-control:focus-within{border-color:var(--color-accent,light-dark(#171717,#f5f5f5));box-shadow:inset 0 0 0 2px var(--color-accent-muted,light-dark(rgb(0 0 0 / 6%),rgb(255 255 255 / 10%)));}.ds-field-input{width:100%;min-width:0;height:32px;padding:0;border:0;outline:none;background:transparent;color:inherit;font:400 .875rem/1.4286 var(--font-family-body,system-ui);}.ds-field-input::placeholder{color:var(--color-text-secondary,light-dark(#666666,#aaaaaa));}@media(prefers-reduced-motion:reduce){.ds-field-control{transition:none;}}@media(pointer:coarse){@supports(-webkit-touch-callout:none){.ds-field-input{font-size:1rem;}}}"
+    },
+    {
+      "name": "선택된 대화 행",
+      "kind": "nav",
+      "refersTo": "conversation-nav",
+      "description": "SideNavItem의 중성 선택과 긴 레이블 축약.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"대화\"><button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z\"/></svg><span class=\"ds-nav-label\">변경 내용을 검토하고 다음 작업 이어가기</span></button></nav>",
+      "css": ".ds-nav{max-width:100%;}.ds-nav-item{display:flex;align-items:center;gap:.5rem;width:100%;min-width:0;min-height:32px;padding:0 .5rem;border:0;border-radius:var(--radius-element,.625rem);background:var(--color-neutral,light-dark(#0000000F,#ffffff1A));color:var(--color-text-primary,light-dark(#171717,#f5f5f5));font:500 .875rem/1.4286 var(--font-family-body,system-ui);text-align:start;cursor:pointer;}.ds-nav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-nav-item>svg{flex-shrink:0;}.ds-nav-item:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-nav-item:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-nav-item:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}"
+    },
+    {
+      "name": "참조 Token",
+      "kind": "chip",
+      "refersTo": "reference-token",
+      "description": "파일·이미지 이름을 보관하고 제거하는 공식 Token.",
+      "html": "<span class=\"ds-token\"><span class=\"ds-token-label\">docs/webui-design.md</span><button class=\"ds-token-remove\" type=\"button\" aria-label=\"참조 제거\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m18 6-12 12M6 6l12 12\"/></svg></button></span>",
+      "css": ".ds-token{display:inline-flex;align-items:center;gap:.25rem;max-width:100%;height:24px;padding:0 .5rem;overflow:hidden;border-radius:var(--radius-inner,.375rem);background:var(--color-neutral,light-dark(#0000000F,#ffffff1A));color:var(--color-text-primary,light-dark(#171717,#f5f5f5));font:500 .75rem/1.6667 var(--font-family-body,system-ui);}.ds-token-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-token-remove{display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:var(--radius-full,9999px);background:transparent;color:inherit;cursor:pointer;}.ds-token-remove:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-token-remove:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-token-remove:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}"
+    },
+    {
+      "name": "사용자 메시지",
+      "kind": "card",
+      "refersTo": "message-filled",
+      "description": "채워진 ChatMessageBubble. 답변은 같은 대화 흐름에서 ghost 표면을 사용한다.",
+      "html": "<article class=\"ds-message\"><p class=\"ds-message-text\">현재 변경 내용을 확인해 주세요.</p></article>",
+      "css": ".ds-message{padding:.75rem 1rem;border-radius:var(--radius-chat,24px);background:var(--color-neutral,light-dark(#0000000F,#ffffff1A));color:var(--color-text-primary,light-dark(#171717,#f5f5f5));font:400 .875rem/1.4286 var(--font-family-body,system-ui);}.ds-message-text{margin:0;}"
+    },
+    {
+      "name": "대화 컴포저",
+      "kind": "custom",
+      "refersTo": "composer",
+      "description": "ChatComposer의 glass·동심 반경·입력·회전 조작과 ChatSendButton을 보여 주는 시각 견본.",
+      "html": "<section class=\"ds-composer\"><div class=\"ds-composer-input\" role=\"textbox\" aria-label=\"메시지\" contenteditable=\"true\">현재 작업에 대해 입력해 주세요.</div><div class=\"ds-composer-footer\"><button class=\"ds-composer-add\" type=\"button\" aria-label=\"첨부 메뉴\" aria-expanded=\"false\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg></button><button class=\"ds-composer-send\" type=\"button\" aria-label=\"전송\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"/></svg></button></div></section>",
+      "css": ".ds-composer{display:flex;flex-direction:column;gap:.5rem;padding:.75rem;border-radius:var(--radius-chat,24px);background:var(--color-background-popover,light-dark(rgb(255 255 255 / 88%),rgb(28 28 28 / 92%)));color:var(--color-text-primary,light-dark(#171717,#f5f5f5));box-shadow:var(--shadow-low,0 2px 12px light-dark(#0000000c,#00000040));backdrop-filter:blur(20px);font:400 .875rem/1.4286 var(--font-family-body,system-ui);}.ds-composer:hover,.ds-composer:focus-within{box-shadow:var(--shadow-med,0 12px 36px light-dark(#00000014,#00000070));}.ds-composer-input{min-width:0;outline:none;}.ds-composer-footer{display:flex;justify-content:space-between;gap:.5rem;}.ds-composer-add,.ds-composer-send{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0;border-radius:max(var(--radius-element,.625rem),calc(var(--radius-chat,24px) - .75rem));cursor:pointer;}.ds-composer-add{background:transparent;color:var(--color-icon-primary,light-dark(#000000,#ffffff));transition:transform var(--duration-medium,220ms) var(--ease-standard,cubic-bezier(.24,1,.4,1));}.ds-composer-add[aria-expanded=\"true\"]{transform:rotate(90deg);}.ds-composer-send{background:var(--color-accent,light-dark(#171717,#f5f5f5));color:var(--color-on-accent,light-dark(#ffffff,#171717));}.ds-composer-add:hover,.ds-composer-send:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-composer-add:focus-visible,.ds-composer-send:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-composer-input:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-composer-add:active,.ds-composer-send:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}@media(prefers-reduced-motion:reduce){.ds-composer-add{transition:none;}}@supports not (backdrop-filter:blur(1px)){.ds-composer{background:var(--color-background-surface,light-dark(#ffffff,#141414));}}"
+    },
+    {
+      "name": "Thinking",
+      "kind": "custom",
+      "refersTo": "thinking",
+      "description": "기본 펼침 Collapsible과 secondary Markdown의 읽기 계층. 스트리밍·이력이 같은 표현을 쓴다.",
+      "html": "<details class=\"ds-thinking\" open><summary class=\"ds-thinking-trigger\">Thinking</summary><div class=\"ds-thinking-markdown\"><p class=\"ds-thinking-text\">관련 경로와 변경 범위를 확인하고 있습니다.</p></div></details>",
+      "css": ".ds-thinking{color:var(--color-text-secondary,light-dark(#666666,#aaaaaa));font-family:var(--font-family-body,system-ui);}.ds-thinking-trigger{font-size:.75rem;font-weight:400;line-height:1.6667;cursor:pointer;}.ds-thinking-trigger:hover{background-image:linear-gradient(var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)),var(--color-overlay-hover,light-dark(#0000000D,#ffffff0D)));}.ds-thinking-trigger:focus-visible{outline:2px solid var(--color-accent,light-dark(#171717,#f5f5f5));outline-offset:3px;}.ds-thinking-trigger:active{background-image:linear-gradient(var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)),var(--color-overlay-pressed,light-dark(#0000001A,#ffffff1A)));}.ds-thinking-markdown{font-size:.875rem;font-weight:400;line-height:1.4286;color:inherit;}.ds-thinking-text{margin:.5rem 0 0;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Operate 작업대",
+    "overview": "흑백 중심의 표면과 얇은 glass로 읽기와 실행에 집중하는 작업대다. 프로젝트에서 대화를 고르고, 입력한 뒤 답변·Thinking·도구 진행을 읽는 흐름이 화면의 중심이다. 넓은 읽기 영역과 밀도 있는 탐색·설정의 차이로 위계를 만들며, 색은 의미가 있는 상태에 사용한다.\n\nAstryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약은 [SYSTEM.md](../SYSTEM.md), 화면 계약은 [내장 WebUI 구조와 디자인](../docs/webui-design.md)이 소유한다. 시각 값과 공식 컴포넌트 확장은 [theme.ts](src/app/styles/theme.ts), 스타일 조합은 [base.css](src/app/styles/base.css), 테마 적용은 [main.tsx](src/app/main.tsx)가 소유한다. 공식 ai-chat·ai-chat-landing의 구성 언어를 따르며 새로운 브랜드·장식 이미지·외부 글꼴을 추가하지 않는다.",
+    "keyCharacteristics": [
+      "기본 라이트와 저장된 라이트·다크·시스템 선택.",
+      "흑백 동작·중성 선택과 Astryx의 의미별 상태색.",
+      "운영체제 한글 글꼴, 읽기와 조작의 다른 밀도.",
+      "겹친 표면의 기능적 glass와 공식 모션·reduced-motion.",
+      "Astryx가 소유하는 위젯·키보드·포커스·모달 수명."
+    ],
+    "rules": [
+      {
+        "name": "The Semantic Pair Rule",
+        "body": "상태는 공식 의미 토큰과 글자·아이콘·접근성 상태를 함께 사용한다. 주요 동작과 팀 선택은 중성 체계를 유지한다.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Rhythm Rule",
+        "body": "긴 답변과 조작 영역의 밀도를 구분한다. Thinking의 본문과 제목은 같은 secondary 의미색으로 읽히게 한다.",
+        "section": "typography"
+      },
+      {
+        "name": "The Overlap Rule",
+        "body": "Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유지하고 읽기 본문·편집기까지 확장하지 않는다.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 의미 토큰으로 두 테마를 연결하고 상태의 글자·아이콘·바탕을 함께 확인한다.",
+      "**Do** Astryx의 실제 포커스·선택·모달·reduced-motion 동작을 유지한다.",
+      "**Do** 긴 탐색 레이블을 행 안에서 줄이고 선택 항목과 실제 조작을 보이게 한다.",
+      "**Do** 스트리밍과 저장 이력에서 답변·Thinking·도구의 같은 위계를 유지한다.",
+      "**Do** 좁은 설정에서는 상단 Selector와 폼의 사용 가능한 폭을 함께 확인한다."
+    ],
+    "donts": [
+      "**Don't** 녹색 주요 버튼·보라색 팀 전용 팔레트·임의 회색 단계를 추가한다.",
+      "**Don't** 위젯 내부 DOM이나 직접 만든 textarea·select·checkbox·modal CSS로 공식 조작을 대체한다.",
+      "**Don't** 컴포저에 모델 선택·음성 입력을 되돌리거나 !명령을 slash 명령으로 바꾼다.",
+      "**Don't** 색만으로 상태를 전달하거나 reduced-motion에서 추가한 회전·펼침 전환을 유지한다.",
+      "**Don't** 대화 작업 영역을 장식 카드·지표 대시보드로 채우거나 fixture 문구를 제품 문구의 기준으로 취급한다."
+    ]
+  }
+}

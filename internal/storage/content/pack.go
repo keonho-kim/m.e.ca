@@ -69,7 +69,7 @@ func Pack(body []byte, sharedField string, put func([]byte) (string, error)) ([]
 				}
 				fields[key] = next
 			}
-			return json.Marshal(fields)
+			return json.MarshalWithOption(fields, json.DisableHTMLEscape())
 		case '[':
 			var values []json.RawMessage
 			if err := json.Unmarshal(raw, &values); err != nil {
@@ -82,7 +82,7 @@ func Pack(body []byte, sharedField string, put func([]byte) (string, error)) ([]
 				}
 				values[i] = next
 			}
-			return json.Marshal(values)
+			return json.MarshalWithOption(values, json.DisableHTMLEscape())
 		}
 		return raw, nil
 	}

@@ -78,7 +78,7 @@ func Restore(body, refsBody []byte, fields map[string]bool, load func(string) (j
 		}
 		root[field] = restored
 	}
-	return json.Marshal(root)
+	return json.MarshalWithOption(root, json.DisableHTMLEscape())
 }
 
 // Each ancestor is decoded and encoded once, regardless of its descendant count.
@@ -133,7 +133,7 @@ func (n *restoreNode) apply(raw json.RawMessage) (json.RawMessage, error) {
 			}
 			fields[key] = next
 		}
-		return json.Marshal(fields)
+		return json.MarshalWithOption(fields, json.DisableHTMLEscape())
 	}
 	if raw[0] == '[' {
 		var values []json.RawMessage
@@ -151,7 +151,7 @@ func (n *restoreNode) apply(raw json.RawMessage) (json.RawMessage, error) {
 			}
 			values[i] = next
 		}
-		return json.Marshal(values)
+		return json.MarshalWithOption(values, json.DisableHTMLEscape())
 	}
 	return nil, faults.Errorf(diagcatalog.ContentInvalidStoredPayloadContainer)
 }

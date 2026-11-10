@@ -86,7 +86,7 @@ func TestSecurityGRPCAuthenticationStatus(t *testing.T) {
 	f := newFixture(t, generateFunc(idleGenerator), false)
 	w := tlsWire(t, "grpc", f.api)
 	rpc := mecav1connect.NewMecaServiceClient(connect.NewClient(connecthttp.NewTransport(w.http, w.url, connecthttp.WithGRPC())))
-	_, err := rpc.Call(deadline(t), &v1.Command{Operation: &v1.Command_State{State: &v1.Empty{}}})
+	_, err := rpc.Call(deadline(t), &v1.Command{Operation: &v1.Command_State{State: &v1.StateRequest{}}})
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatal(err)
 	}

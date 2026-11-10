@@ -17,7 +17,7 @@ import (
 )
 
 func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Message) (teamchannel.Message, error) {
-	if message.Text == "" || len(message.Text) > 64*1024*1024 {
+	if message.Text == "" && len(message.Images) == 0 || len(message.Text) > 64*1024*1024 || len(message.Images) > 0 && message.From != "user" {
 		return message, faults.Errorf(diagcatalog.SqliteInvalidPublicMessage)
 	}
 	if message.Passive && !message.Observation || message.Observation && (message.From == "user" || message.FromStream || message.Declaration || message.Discussion || message.Final) || message.Declaration && (message.From == "user" || message.FromStream || message.Discussion || message.Final) || message.Discussion && (message.From == "user" || message.FromStream || message.Final) || message.From == "user" && message.Note != nil {
@@ -26,10 +26,9 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	message.Note = message.Note.Clone()
 	var records []runrecord.Entry
 	if message.From == "user" {
-		records = []runrecord.Entry{{Message: &modelapi.Message{ID: "team-user", Role: "user", Content: message.Text}}}
+		records = []runrecord.Entry{{Message: &modelapi.Message{ID: "team-user", Role: "user", Content: message.Text, Images: message.Images}}}
 	} else {
-		external := message.From == teamchannel.ClientContextAuthor && message.Observation && message.Note == nil && message.Reference == nil
-		if !teamidentity.ValidName(message.From) && !external {
+		if !teamidentity.ValidName(message.From) {
 			return message, faults.Errorf(diagcatalog.SqliteInvalidPublicSender)
 		}
 		event := runrecord.Event{Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text, Team: message.Note}

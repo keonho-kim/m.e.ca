@@ -13,6 +13,7 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tools/local/textformat"
+	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
 func (executor *Executor) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
@@ -27,7 +28,7 @@ func (executor *Executor) PrepareAdmitted(ctx context.Context, settings policy.S
 	return executor.prepare(ctx, settings, call, admit)
 }
 
-func (executor *Executor) prepare(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (toolapi.Execution, error) {
+func (executor *Executor) prepare(ctx context.Context, settings policy.Settings, call toolapi.Call, admit func(context.Context) (func(), error)) (result toolapi.Execution, resultErr error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -37,6 +38,19 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 	}
 	if err := settings.Check(); err != nil {
 		return nil, err
+	}
+	if spec.Name == "execute_command" || spec.Effect == policy.Change {
+		release, err := workspacegate.Acquire(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			if resultErr != nil {
+				release()
+			} else {
+				result = &workspaceExecution{Execution: result, release: release}
+			}
+		}()
 	}
 	texts := []string{input.Content, input.Command}
 	for _, edit := range input.Edits {

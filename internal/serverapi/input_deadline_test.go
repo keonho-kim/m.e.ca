@@ -1,7 +1,7 @@
 // Purpose: Keep input deadlines from expiring established streaming responses.
 // Pattern: HTTP boundary regression tests with recorded read-deadline operations.
 // Usage: go test ./internal/serverapi -run TestStreamingInputDeadline.
-// Related: internal/serverapi/transport.go, internal/serverapi/openai/handler.go.
+// Related: internal/serverapi/transport.go, internal/serverapi/http.go.
 package serverapi
 
 import (
@@ -35,8 +35,8 @@ func (w *deadlineRecorder) FlushError() error {
 
 func TestStreamingInputDeadline(t *testing.T) {
 	f := newFixture(t, generateFunc(idleGenerator), false)
-	transport := openAITransport(t, f, "sse")
-	post := httptest.NewRequest("POST", "http://localhost:8787/v1/responses", strings.NewReader(`{"model":"meca","input":"hello","stream":true}`))
+	transport := nativeTransport(t, f, "sse")
+	post := httptest.NewRequest("POST", "http://localhost:8787/v1/command", strings.NewReader(`{"state":{}}`))
 	post.Header.Set("Authorization", "Bearer "+testToken)
 	post.Header.Set("Content-Type", "application/json")
 	writer := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}

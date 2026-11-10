@@ -22,6 +22,11 @@ func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output 
 	if event.Call == nil || catalog.IsTool(event.Call.Name) {
 		return
 	}
+	if command := transcript.PendingCommand(*event.Call); command != "" {
+		if block, found := s.tools[commandKey(event.Agent, command)]; found && block.paired(output) {
+			return
+		}
+	}
 	id := toolCallKey(event.Agent, event.Call.ID)
 	if s.tools == nil {
 		s.tools = make(map[string]toolDisplay)

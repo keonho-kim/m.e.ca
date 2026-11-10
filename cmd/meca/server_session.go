@@ -1,7 +1,7 @@
 // Purpose: Acquire exclusive server conversation resources using existing recovery and request factories.
 // Pattern: Composition root resource factory.
 // Usage: The server service adopts the returned conversation until close or replacement.
-// Related: cmd/meca/conversation.go, cmd/meca/team.go, internal/agent/session/recovery/recovery.go.
+// Related: cmd/meca/server_selection.go, cmd/meca/conversation.go, cmd/meca/team.go.
 package main
 
 import (
@@ -53,13 +53,11 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	if selected.Model == "" && cfg.Model != nil {
-		selected, err = cfg.Model.Selection()
-		if err != nil {
-			return nil, err
-		}
+	selected, err = serverSelection(selected, cfg.Model)
+	if err != nil {
+		return nil, err
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion})
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +70,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Output: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
+	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working

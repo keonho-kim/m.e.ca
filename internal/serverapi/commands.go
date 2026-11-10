@@ -20,22 +20,43 @@ import (
 )
 
 type API struct {
+	ScopeID          string
+	Workspaces       *server.Workspaces
+	Remember         func(string) error
 	Service          *server.Service
 	Redact           func(string) string
 	NewMask          func() func(string, bool) string
 	RedactPreview    func(string) string
+	RedactRange      func(string, int, int) (string, error)
 	RedactionVersion func() int
 	Details          *detail.Cache
 	readOnce         sync.Once
 	reads            *admission.Budget
+	browseOnce       sync.Once
+	browse           *admission.Budget
+	events           eventProjectionCache
 }
 
 func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, cause error) {
+	if cmd.GetWorkspaceId() != "" && (len(cmd.GetWorkspaceId()) > 128 || a.Workspaces == nil && a.ScopeID != cmd.GetWorkspaceId()) {
+		return a.errorReply(cmd.GetId(), faults.New(diagcatalog.NotFound, diagcatalog.UIWorkspaceUnknown)), nil
+	}
+	if a.Workspaces != nil && cmd.GetWorkspaceId() != "" && a.ScopeID != cmd.GetWorkspaceId() {
+		service, done, err := a.Workspaces.Acquire(ctx, cmd.GetWorkspaceId())
+		if err != nil {
+			return a.errorReply(cmd.GetId(), err), nil
+		}
+		defer done()
+		return a.scoped(service, cmd.GetWorkspaceId()).Call(ctx, cmd)
+	}
 	if err := admission.ResizeInput(ctx, int64(proto.Size(cmd))+4096); err != nil {
 		return a.errorReply(cmd.GetId(), err), nil
 	}
 	started := time.Now()
 	ctx = diagnostics.WithRedactor(ctx, a.Redact)
+	if a.ScopeID != "" {
+		ctx = diagnostics.WithFields(ctx, "workspace_id", a.ScopeID)
+	}
 	operation := "unknown"
 	if cmd != nil {
 		message := cmd.ProtoReflect()
@@ -44,6 +65,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		}
 	}
 	defer func() {
+		if result != nil {
+			result.WorkspaceId = cmd.GetWorkspaceId()
+		}
 		code := result.GetError().GetCode()
 		diagnostics.Log(ctx, diagcatalog.ControlCompleted, "component", "serverapi", "operation", operation, "duration_ms", time.Since(started).Milliseconds(), "error_code", code, "task_id", result.GetTask().GetId())
 	}()
@@ -53,10 +77,23 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 	}
 	var err error
 	switch cmd.GetOperation().(type) {
-	case *v1.Command_ListSessions, *v1.Command_History, *v1.Command_Detail, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile:
-		release, err := a.readLimit().Acquire(ctx, 1)
-		if err != nil {
-			return a.errorReply(cmd.GetId(), err), nil
+	case *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
+		weight := int64(2)
+		if cmd.GetHistory() != nil {
+			weight = 1
+		}
+		if cmd.GetHistoryImage() != nil {
+			weight = 1
+		}
+		release, ok := a.readLimit().Try(weight)
+		if !ok {
+			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerOriginalReadBusy)), nil
+		}
+		defer release()
+	case *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels:
+		release, ok := a.browseLimit().Try(1)
+		if !ok {
+			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerBrowseBusy)), nil
 		}
 		defer release()
 	}
@@ -77,7 +114,8 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		items.NextCursor = next
 		err = cause
 		for _, value := range values {
-			items.Items = append(items.Items, &v1.Session{Id: value.ID, ProjectRoot: value.ProjectRoot, DisplayRoot: value.DisplayRoot, Summary: value.Summary, Updated: value.Updated, Unavailable: value.Unavailable})
+			taskID, pending := a.Service.SessionActivity(value.ID)
+			items.Items = append(items.Items, &v1.Session{Id: value.ID, ProjectRoot: value.ProjectRoot, DisplayRoot: value.DisplayRoot, Summary: value.Summary, Updated: value.Updated, Unavailable: value.Unavailable, RunningTaskId: taskID, PendingApprovals: int32(pending)})
 		}
 		reply.Result = &v1.Reply_Sessions{Sessions: &items}
 	case *v1.Command_SelectSession:
@@ -85,15 +123,17 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		err = cause
 		reply.Result = &v1.Reply_State{State: snapshot(value)}
 	case *v1.Command_CloseSession:
-		err = a.Service.CloseSession()
+		err = a.Service.CloseSession(ctx, op.CloseSession.GetSessionId())
 	case *v1.Command_State:
-		reply.Result = &v1.Reply_State{State: snapshot(a.Service.State())}
+		value, cause := a.Service.StatePage(ctx, op.State.GetSessionId(), op.State.GetTaskId(), op.State.GetAfterTask(), int(op.State.GetLimit()))
+		err = cause
+		reply.Result = &v1.Reply_State{State: snapshot(value)}
 	case *v1.Command_History:
 		limit := int(op.History.GetLimit())
 		if limit == 0 {
 			limit = 32
 		}
-		values, cursor, cause := a.Service.History(ctx, op.History.GetBefore(), limit)
+		values, cursor, cause := a.Service.History(ctx, op.History.GetSessionId(), op.History.GetBefore(), limit)
 		err = cause
 		page := &v1.HistoryPage{Before: cursor}
 		for _, value := range values {
@@ -106,17 +146,25 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		reply.Result = &v1.Reply_Detail{Detail: page}
 	case *v1.Command_SetModel:
 		r := op.SetModel
-		value, cause := a.Service.SetModel(ctx, server.ModelSettings{Provider: r.GetProvider(), Endpoint: r.GetEndpoint(), Name: r.GetModel(), Credential: r.GetCredential(), Thinking: r.Thinking, Effort: r.ReasoningEffort, Remember: r.GetRemember()})
+		value, cause := a.Service.SetModel(ctx, modelSettings(r))
 		err = cause
 		reply.Result = &v1.Reply_State{State: snapshot(value)}
 	case *v1.Command_SetSettings:
 		r := op.SetSettings
-		value, cause := a.Service.Configure(ctx, r.Permission, r.Team)
+		var value server.Snapshot
+		var cause error
+		if r.Language != nil && r.Permission == nil && r.Team == nil {
+			value, cause = a.Service.SetLanguage(ctx, r.GetLanguage())
+		} else if r.Language != nil {
+			cause = faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChangeExactlyOneSettingPerCommand)
+		} else {
+			value, cause = a.Service.Configure(ctx, r.GetSessionId(), r.Permission, r.Team)
+		}
 		err = cause
 		reply.Result = &v1.Reply_State{State: snapshot(value)}
 	case *v1.Command_Start:
 		r := op.Start
-		value, cause := a.Service.Start(ctx, r.GetSessionId(), r.GetKey(), r.GetText())
+		value, cause := a.Service.StartAttachments(ctx, r.GetSessionId(), r.GetKey(), r.GetText(), r.GetAttachmentIds(), r.GetPaths())
 		err = cause
 		reply.Result = &v1.Reply_Task{Task: task(value)}
 	case *v1.Command_TaskStatus:
@@ -130,9 +178,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		err = a.Service.Approve(r.GetTaskId(), r.GetApprovalId(), r.GetAllow())
 	case *v1.Command_Steer:
 		r := op.Steer
-		err = a.Service.Steer(r.GetTaskId(), r.GetText())
+		err = a.Service.SteerPaths(ctx, r.GetTaskId(), r.GetText(), r.GetPaths())
 	default:
-		err = faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerapiOneSupportedCommandIsRequired)
+		reply, err = a.applicationCall(ctx, cmd)
 	}
 	if err != nil {
 		return a.errorReply(cmd.GetId(), err), nil
@@ -142,6 +190,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 }
 
 func (a *API) errorReply(id string, err error) *v1.Reply {
+	if !validCorrelation(id) {
+		id = ""
+	}
 	code := diagcatalog.NativeCode(faults.Code(err))
 	message := faults.PublicMessage(err, a.Redact)
 	reply := &v1.Reply{Id: id, Result: &v1.Reply_Error{Error: &v1.Error{Code: code, Message: textPreview(message)}}}

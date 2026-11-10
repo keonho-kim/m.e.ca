@@ -45,9 +45,8 @@ func (s *Service) Select(ctx context.Context, id string, create bool) (Snapshot,
 		return s.State(), nil
 	}
 	s.mu.Lock()
-	existing := s.job
+	existing := s.jobs[id]
 	if !create && existing != nil && existing.Runtime.Session.ID == id {
-		s.job = nil
 	} else {
 		existing = nil
 	}
@@ -69,19 +68,38 @@ func (s *Service) Select(ctx context.Context, id string, create bool) (Snapshot,
 }
 
 func (s *Service) replaceConversation(change sessionChange, next *Conversation) (Snapshot, error) {
+	s.mu.Lock()
+	owned := s.ownedConversation(next.Runtime.Session.ID) == next
+	s.mu.Unlock()
+	discard := func() error {
+		if owned {
+			return nil
+		}
+		return closeConversation(next)
+	}
 	if change.conversation != nil {
 		s.mu.Lock()
+		busy := s.sessionRequest(change.conversation.Runtime.Session.ID) != nil
+		if busy {
+			if s.jobs == nil {
+				s.jobs = make(map[string]*Conversation)
+			}
+			s.jobs[change.conversation.Runtime.Session.ID] = change.conversation
+		}
 		s.detachConversation()
 		s.mu.Unlock()
-		if err := s.closeReadersAndConversation(change.conversation); err != nil {
-			return Snapshot{}, errors.Join(err, closeConversation(next))
+		if !busy {
+			if err := s.closeReadersAndConversation(change.conversation); err != nil {
+				return Snapshot{}, errors.Join(err, discard())
+			}
 		}
 	}
 	s.mu.Lock()
 	if s.closed || change.ctx.Err() != nil {
 		s.mu.Unlock()
-		return Snapshot{}, errors.Join(context.Canceled, closeConversation(next))
+		return Snapshot{}, errors.Join(context.Canceled, discard())
 	}
+	delete(s.jobs, next.Runtime.Session.ID)
 	s.conversation = next
 	s.publish(Event{Record: eventKind("session_opened")})
 	state := s.snapshot()
@@ -89,18 +107,31 @@ func (s *Service) replaceConversation(change sessionChange, next *Conversation) 
 	return state, nil
 }
 
-func (s *Service) CloseSession() error {
-	change, err := s.beginChange(context.Background())
+func (s *Service) CloseSession(ctx context.Context, id string) error {
+	if !sessionstate.ValidID(id) {
+		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerExplicitSession)
+	}
+	change, err := s.beginChange(ctx)
 	if err != nil {
 		return err
 	}
 	defer change.finish()
 	s.mu.Lock()
-	job := s.job
-	s.job = nil
-	s.detachConversation()
+	change.conversation = s.ownedConversation(id)
 	s.mu.Unlock()
-	return errors.Join(s.closeReadersAndConversation(change.conversation), s.closeReadersAndConversation(job))
+	if change.conversation == nil {
+		return nil
+	}
+	if err := s.sessionIdle(change.conversation); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	if s.conversation == change.conversation {
+		s.detachConversation()
+	}
+	delete(s.jobs, id)
+	s.mu.Unlock()
+	return s.closeReadersAndConversation(change.conversation)
 }
 
 // detachConversation requires s.mu. Readers are canceled outside the mutex.
@@ -141,14 +172,24 @@ func (s *Service) Close() error {
 	}
 	s.closed = true
 	s.cancel()
+	s.closeAttachments()
 	s.mu.Unlock()
 	s.workers.Wait()
 	s.mu.Lock()
-	c, job := s.conversation, s.job
-	s.job = nil
+	c := s.conversation
+	var jobs []*Conversation
+	for _, job := range s.jobs {
+		if job != c {
+			jobs = append(jobs, job)
+		}
+	}
+	s.jobs = nil
 	s.detachConversation()
 	s.mu.Unlock()
-	err := errors.Join(s.closeReadersAndConversation(c), s.closeReadersAndConversation(job))
+	err := s.closeReadersAndConversation(c)
+	for _, job := range jobs {
+		err = errors.Join(err, s.closeReadersAndConversation(job))
+	}
 	s.mu.Lock()
 	s.closeErr = errors.Join(s.closeErr, err)
 	s.feed.wake()

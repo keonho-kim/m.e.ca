@@ -72,6 +72,6 @@ Apply [anti-slop](references/anti-slop.md) throughout: real content, meaningful 
 
 ## Verify and refine the cause
 
-Use Playwright CLI (`playwright-cli`) for browser verification following [quality checks](references/quality.md). Compare rendered views with the brief at relevant sizes and exercise navigation, inputs, keyboard/IME, failure and interruption. Diagnose structure, type, content, state or material before changing the palette. Recheck affected behavior after corrections.
+Use [browser tools](references/browser-tools.md) and [quality checks](references/quality.md). If Playwright CLI is missing, ask the user to install it for UI verification; do not install it automatically. Compare rendered views with the brief at relevant sizes; exercise paths, keyboard/IME, failure and interruption. Diagnose layout, type, content, state or material; recheck corrections.
 
 Report actual evidence and remaining limits in the user's language. A screenshot proves a painted state; a build, detector score or agent walkthrough does not certify usability, accessibility, service integration or production readiness.

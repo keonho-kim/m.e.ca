@@ -108,6 +108,7 @@ func (s *Store) publicMessage(ctx context.Context, record storedRecord, prefix *
 			return message, faults.Errorf(diagcatalog.SqlitePublicSourceIsNotAUserInstruction)
 		}
 		message.From, message.Text = "user", value.Content
+		message.Images = value.Images
 	} else {
 		if prefix == nil {
 			return message, faults.Errorf(diagcatalog.SqlitePublicContextPrefixIsMissing)

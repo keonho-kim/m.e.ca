@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
 func TestQueuePreservesReferenceOwnership(t *testing.T) {
-	state := State{Messages: []composer.Request{composer.Capture("review", []string{"a.txt"})}}
+	state := State{Messages: []requestinput.Request{requestinput.Capture("review", []string{"a.txt"})}}
 	var editor input.Editor
 	state.Navigate(-1, &editor)
 	if !state.Save("revised") || state.Messages[0].Text != "revised" || state.Messages[0].Paths[0] != "a.txt" {
@@ -24,7 +24,7 @@ func TestQueuePreservesReferenceOwnership(t *testing.T) {
 	if !strings.Contains(editor.String(), "revised") || !strings.Contains(editor.String(), "a.txt") || state.Messages != nil {
 		t.Fatal("draft recovery lost references or retained queue memory")
 	}
-	state.Messages = []composer.Request{composer.Capture("another", []string{"b.txt"})}
+	state.Messages = []requestinput.Request{requestinput.Capture("another", []string{"b.txt"})}
 	retained := state.Messages
 	state.Shift()
 	if retained[0].Text != "" || retained[0].Paths != nil {

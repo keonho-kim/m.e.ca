@@ -27,7 +27,9 @@ func TestNativeHeartbeatAfterFiveSecondsThenEverySecond(t *testing.T) {
 		defer cancel()
 		frames := make(chan *v1.Notification, 8)
 		done := make(chan error, 1)
-		go func() { done <- f.api.watch(ctx, cursor, func(n *v1.Notification) error { frames <- n; return nil }) }()
+		go func() {
+			done <- f.api.watch(ctx, cursor, "", func(n *v1.Notification) error { frames <- n; return nil })
+		}()
 		synctest.Wait()
 		time.Sleep(4999 * time.Millisecond)
 		select {

@@ -17,7 +17,7 @@ func (a *app) chatHeight(width, height int) int {
 
 func (a *app) chatComposer(width, height int) (input.Window, view.ComposerLayout, []string) {
 	window := a.compose.editor.Window(width, min(a.opts.Config.UI.InputMaxLines, max(1, height-1)))
-	references := a.selectedReferenceLines(width, height-len(window.Rows)-2)
+	references := a.composerReferenceLines(width, height-len(window.Rows)-2)
 	return window, view.Composer(len(window.Rows), height, a.candidates(), a.composerNotice(), len(references)), references
 }
 

@@ -6,16 +6,19 @@ syntax = "proto3";
 package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/skills.proto";
+import "meca/v1/workspace.proto";
+import "meca/v1/application.proto";
 
 message Empty {}
 message Command {
   // Correlates replies on a socket. It is separate from StartRequest.key.
   string id = 1;
+  string workspace_id = 2;
   oneof operation {
     SessionListRequest list_sessions = 10;
     SelectSession select_session = 11;
-    Empty close_session = 12;
-    Empty state = 13;
+    SessionTarget close_session = 12;
+    StateRequest state = 13;
     HistoryRequest history = 14;
     DetailRequest detail = 15;
     ModelRequest set_model = 16;
@@ -28,11 +31,34 @@ message Command {
     SkillListRequest list_skills = 23;
     SkillRequest get_skill = 24;
     SkillFileRequest read_skill_file = 25;
+    Empty capabilities = 26;
+    Empty providers = 27;
+    ModelQuery discover_models = 28;
+    FileRequest directory = 29;
+    FileRequest preview_file = 30;
+    SessionTarget file_selections = 31;
+    FileSelection select_file = 32;
+    ImageRequest history_image = 33;
+    DraftRequest draft = 34;
+    TaskListRequest list_tasks = 35;
+    CommandListRequest commands = 36;
+    Empty resources = 37;
+    Empty list_workspaces = 38;
+    WorkspaceRequest add_workspace = 39;
+    SessionTarget delete_session = 40;
+    Empty command_catalog = 41;
+    ParseInput parse_input = 42;
+    EditFile editor_read = 43;
+    EditFile editor_save = 44;
+    DiagnoseModel diagnose_model = 45;
+    WorkspaceRequest browse_folders = 46;
+    RequestLookup lookup_request = 47;
+    SkillPrefix suggest_skills = 48;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }
 message SessionListRequest { string cursor = 1; int32 limit = 2; }
-message HistoryRequest { int64 before = 1; int32 limit = 2; }
+message HistoryRequest { int64 before = 1; int32 limit = 2; string session_id = 3; }
 message EventReference { string session_id = 1; int64 sequence = 2; }
 message DetailRequest {
   oneof source {
@@ -42,6 +68,8 @@ message DetailRequest {
   }
   int64 offset = 4;
   int32 limit = 5;
+  string session_id = 6;
+  string revision = 7;
 }
 message ModelRequest {
   string provider = 1;
@@ -52,18 +80,21 @@ message ModelRequest {
   optional bool thinking = 5;
   optional string reasoning_effort = 6;
   bool remember = 7;
+  string session_id = 8;
 }
-message SettingsRequest { optional string permission = 1; optional bool team = 2; }
+message SettingsRequest { optional string permission = 1; optional bool team = 2; string session_id = 3; optional string language = 4; }
 message StartRequest {
   string session_id = 1;
   // Caller-generated stable key, 8..128 bytes. Reusing it never repeats work.
   string key = 2;
   string text = 3;
+  repeated string attachment_ids = 4;
+  repeated string paths = 5;
 }
 message TaskRequest { string task_id = 1; }
 message ApprovalDecision { string task_id = 1; string approval_id = 2; bool allow = 3; }
-message SteeringRequest { string task_id = 1; string text = 2; }
-message WatchRequest { string cursor = 1; }
+message SteeringRequest { string task_id = 1; string text = 2; repeated string paths = 3; }
+message WatchRequest { string cursor = 1; string task_id = 2; }
 
 // Socket clients authenticate before sending any commands or subscriptions.
 message SocketFrame {

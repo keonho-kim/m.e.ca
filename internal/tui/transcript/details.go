@@ -1,6 +1,6 @@
 // Purpose: Dispatch tool result presentation without exposing raw protocol objects.
 // Pattern: Tool-specific presentation projection.
-// Usage: Formatter.Tool uses the same projection for live and restored records.
+// Usage: PendingTool and Event use the same projection for live and restored records.
 // Related: internal/tui/transcript/file_results.go, internal/tui/transcript/process_result.go.
 package transcript
 

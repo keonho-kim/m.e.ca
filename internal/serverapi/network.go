@@ -22,9 +22,9 @@ import (
 )
 
 type Options struct {
+	UI                                 http.Handler
 	Protocol, Listen, Certificate, Key string
 	Hosts, Origins                     []string
-	OpenAI                             bool
 }
 
 func validateNetwork(options Options) error {
@@ -84,15 +84,19 @@ func ListenAndServe(ctx context.Context, api *API, token string, options Options
 		return err
 	}
 	defer transport.Close()
-	if options.OpenAI {
-		transport.enableOpenAI()
+	if options.UI != nil {
+		if err := transport.enableUI(options.UI); err != nil {
+			return err
+		}
 	}
 	protocols := new(http.Protocols)
 	protocols.SetHTTP1(true)
 	protocols.SetHTTP2(true)
 	protocols.SetUnencryptedHTTP2(options.Protocol == "grpc" && options.Certificate == "")
 	srv := &http.Server{Handler: transport, ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, Protocols: protocols, ErrorLog: diagnostics.HTTPLogger(ctx), BaseContext: func(net.Listener) context.Context { return ctx }}
-	srv.HTTP2 = &http.HTTP2Config{MaxConcurrentStreams: maxRequests}
+	// Leave protocol slots for reserved controls and one immediate rejection;
+	// ordinary work admission must not queue cancellation behind HTTP/2 limits.
+	srv.HTTP2 = &http.HTTP2Config{MaxConcurrentStreams: maxHTTP2Streams}
 	if options.Certificate != "" {
 		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{certificate}}
 	}

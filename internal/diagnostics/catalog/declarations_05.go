@@ -5,8 +5,6 @@
 package catalog
 
 const (
-	OpenaiThisParameterIsNotSupportedByMECA                   Message = "this parameter is not supported by MECA"
-	OpenaiTooManyObjectFields                                 Message = "too many object fields"
 	OsstoreAmbiguousOSEncryptionKeyPreserveTheOS              Message = "ambiguous OS encryption key; preserve the OS store"
 	OsstoreAmbiguousUnixDBusAddress                           Message = "ambiguous Unix DBus address"
 	OsstoreConfigureADefaultSecretServiceCollection           Message = "configure a default Secret Service collection"

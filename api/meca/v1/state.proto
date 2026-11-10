@@ -7,10 +7,13 @@ package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/events.proto";
 import "meca/v1/skills.proto";
+import "meca/v1/workspace.proto";
+import "meca/v1/application.proto";
 
 message Error { string code = 1; string message = 2; }
 message Reply {
   string id = 1;
+  string workspace_id = 2;
   oneof result {
     EmptyResult ok = 10;
     Error error = 11;
@@ -22,6 +25,22 @@ message Reply {
     Skills skills = 17;
     SkillDocument skill = 18;
     SkillFile skill_file = 19;
+    Capabilities capabilities = 20;
+    Providers providers = 21;
+    Models models = 22;
+    DirectoryPage directory = 23;
+    FilePreview file_preview = 24;
+    FileSelections file_selections = 25;
+    ImageMetadata image = 26;
+    DraftPage draft = 27;
+    TaskPage tasks = 28;
+    CommandStates commands = 29;
+    Resources resources = 30;
+    Workspaces workspaces = 31;
+    CommandCatalog command_catalog = 32;
+    ParsedInput parsed_input = 33;
+    EditorDocument editor = 34;
+    DiagnosticResult diagnostic = 35;
   }
 }
 message EmptyResult {}
@@ -32,9 +51,10 @@ message Session {
   string summary = 4;
   string updated = 5;
   string unavailable = 6;
+ string running_task_id = 7;
+ int32 pending_approvals = 8;
 }
 message Sessions { repeated Session items = 1; string next_cursor = 2; }
-message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; }
 message Model {
   string provider = 1;
   string endpoint = 2;
@@ -45,6 +65,10 @@ message Model {
   bool thinking_supported = 7;
   int32 context_window = 8;
   string notice = 9;
+  string image_input_state = 10;
+  bool image_input_supported = 11;
+  repeated string reasoning_levels = 12;
+  bool reasoning_off = 13;
 }
 message Draft {
   string agent = 1;
@@ -52,13 +76,20 @@ message Draft {
   string text = 3;
   string thinking = 4;
   bool truncated = 5;
+  string task_id = 6;
+  int64 text_bytes = 7;
+  int64 thinking_bytes = 8;
 }
 message Execution {
   Session session = 1;
   Model model = 2;
   bool team = 3;
+  string task_id = 4;
+  Statistics statistics = 5;
+  string started_at = 6;
 }
 message Snapshot {
+  string workspace_id = 18;
   string cursor = 1;
   Session session = 2;
   Task task = 3;
@@ -68,6 +99,14 @@ message Snapshot {
   repeated Approval approvals = 7;
   repeated Draft drafts = 8;
   Execution execution = 9;
+  repeated Task tasks = 10;
+  int64 concurrency = 11;
+  repeated Execution executions = 12;
+  string next_task = 13;
+  int64 total_tasks = 14;
+  string language = 15;
+  repeated Event activity = 16;
+  bool activity_truncated = 17;
 }
 message HistoryItem {
   int64 sequence = 1;
@@ -77,14 +116,18 @@ message HistoryItem {
   bool incomplete = 5;
   Event event = 6;
   bool truncated = 7;
+ RunOutcome outcome = 9;
+  repeated ImageMetadata images = 8;
 }
 message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; }
 message DetailPage {
-  bytes data = 1;
+  reserved 1;
+  string text = 8;
   int64 offset = 2;
   int64 next_offset = 3;
   int64 total_bytes = 4;
   string content_type = 5;
+  string revision = 6;
 }
 message Notification {
   oneof body { Reply reply = 1; Snapshot snapshot = 2; Event event = 3; }

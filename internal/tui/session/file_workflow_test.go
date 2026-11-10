@@ -21,9 +21,9 @@ import (
 	"github.com/gdamore/tcell/v3"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
-	"github.com/keonho-kim/meca/internal/tui/composer"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
@@ -103,7 +103,7 @@ func TestFileBrowserDuringAgentWork(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(a.opts.Session.ProjectRoot, "README.md"), []byte("# Active project\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	a.startRequest(composer.Capture("initial task", a.selectedPaths()))
+	a.startRequest(requestinput.Capture("initial task", a.selectedPaths()))
 	select {
 	case <-started:
 	case <-ctx.Done():

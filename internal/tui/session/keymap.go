@@ -131,7 +131,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 		}
 		controls = filtered
 	}
-	if a.chat.output.HasDetails() && (focus == focusChat || focus == focusFileInput) {
+	if a.hasToolDetails() && (focus == focusChat || focus == focusFileInput) {
 		label := "도구 접기"
 		if a.chat.output.Collapsed {
 			label = "도구 펴기"
@@ -146,6 +146,7 @@ func (a *app) screenShortcuts() []view.Shortcut {
 
 func (a *app) inputShortcuts() []view.Shortcut {
 	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "Ctrl/Cmd+↑↓", Label: "입력 기록"}}
+	controls = a.appendImageShortcuts(controls)
 	label := "전송"
 	command, err := a.inputCommand()
 	if err != nil {

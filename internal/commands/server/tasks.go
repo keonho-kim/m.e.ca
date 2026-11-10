@@ -7,7 +7,12 @@ package server
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/media"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"strings"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
@@ -16,24 +21,44 @@ import (
 )
 
 type request struct {
-	model         *conversationruntime.Model
-	conversation  *Conversation
-	task          Task
-	cancel        context.CancelFunc
-	approvals     map[string]*pendingApproval
-	steering      []string
-	steeringBytes int
-	steeringReady chan struct{}
-	drafts        map[string]*draftState
-	response      *Response
-	done          chan struct{}
+	teamEnabled      bool
+	releaseCapacity  func()
+	draftCleanup     error
+	draftGeneration  uint64
+	started          time.Time
+	activity         map[string]Event
+	completed        modelapi.TokenUsage
+	liveUsage        map[string]usageSample
+	generationMillis int64
+	outputMu         sync.Mutex
+	originals        map[string]*draftOriginal
+	sequence         uint64
+	model            *conversationruntime.Model
+	conversation     *Conversation
+	task             Task
+	cancel           context.CancelFunc
+	approvals        map[string]*pendingApproval
+	steering         []string
+	steeringBytes    int
+	steeringReady    chan struct{}
+	drafts           map[string]*draftState
 }
 
-func (s *Service) Start(ctx context.Context, session, key, text string) (Task, error) {
-	if strings.TrimSpace(text) == "" || !utf8.ValidString(text) {
+func (s *Service) Start(ctx context.Context, session, key, text string, images ...media.Image) (Task, error) {
+	return s.start(ctx, session, key, text, InputDigest(text, images), images...)
+}
+
+func (s *Service) start(ctx context.Context, session, key, text string, identity [32]byte, images ...media.Image) (Task, error) {
+	if !sessionstate.ValidID(session) {
+		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerRequestSessionIsNotTheSelectedSession)
+	}
+	if strings.TrimSpace(text) == "" && len(images) == 0 || !utf8.ValidString(text) {
 		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerAUTFPromptIsRequired)
 	}
-	if err := checkText(text, 16<<20); err != nil {
+	if err := checkText(text, MaxPromptBytes); text != "" && err != nil {
+		return Task{}, err
+	}
+	if err := media.CheckInput(images); err != nil {
 		return Task{}, err
 	}
 	if len(key) < 8 || len(key) > 128 || !utf8.ValidString(key) || strings.ContainsAny(key, "\r\n\x00") {
@@ -44,33 +69,37 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 		return Task{}, err
 	}
 	defer done()
-	s.mu.Lock()
-	err = s.requireConversation()
-	if err == nil && session != s.conversation.Runtime.Session.ID {
-		err = faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestSessionIsNotTheSelectedSession)
-	}
-	s.mu.Unlock()
-	if err != nil {
-		return Task{}, err
-	}
 	// Ledger I/O never holds the runtime publication or cancellation mutex.
-	if task, found, err := s.existingRequest(ctx, session, key, text); err != nil || found {
+	if task, found, err := s.existingRequest(ctx, session, key, identity); err != nil || found {
 		return task, err
 	}
-	change, err := s.beginChange(ctx)
+	change, err := s.beginAdmission(ctx)
 	if err != nil {
 		var busy *faults.Error
-		if errors.As(err, &busy) && busy.ErrorCode() == diagcatalog.Conflict {
-			if task, found, cause := s.existingRequest(ctx, session, key, text); cause != nil || found {
+		if errors.As(err, &busy) && (busy.ErrorCode() == diagcatalog.Conflict || busy.ErrorCode() == diagcatalog.ResourceExhausted) {
+			if task, found, cause := s.existingRequest(ctx, session, key, identity); cause != nil || found {
 				return task, cause
 			}
 		}
 		return Task{}, err
 	}
 	defer change.finish()
-	c := change.conversation
-	if c == nil || c.Runtime.Session.ID != session {
-		return Task{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerSelectedSessionChangedBeforeAdmission)
+	s.mu.Lock()
+	c := s.ownedConversation(session)
+	s.mu.Unlock()
+	change.conversation = c
+	if c == nil {
+		c, err = s.options.Open(change.ctx, session, false, change.config)
+		if err != nil {
+			return Task{}, err
+		}
+		change.conversation = c
+		s.mu.Lock()
+		s.jobs[session] = c
+		s.mu.Unlock()
+	}
+	if err := s.sessionIdle(c); err != nil {
+		return Task{}, err
 	}
 	s.mu.Lock()
 	s.admitting = TaskID(session, key)
@@ -84,11 +113,26 @@ func (s *Service) Start(ctx context.Context, session, key, text string) (Task, e
 			return Task{}, err
 		}
 	}
-	task, duplicate, err := s.options.Ledger.Admit(change.ctx, session, key, text)
+	if err := checkImageModel(c, images); err != nil {
+		return Task{}, err
+	}
+	release, available := s.options.Capacity.reserve()
+	if !available {
+		return Task{}, faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerTaskCapacity)
+	}
+	transferred := false
+	defer func() {
+		if !transferred {
+			release()
+		}
+	}()
+	task, duplicate, err := s.options.Ledger.Admit(change.ctx, session, key, identity)
 	if err != nil || duplicate {
 		return task, err
 	}
-	return s.launch(c, task, text, nil, nil)
+	value, err := s.launch(c, task, text, images, release)
+	transferred = err == nil
+	return value, err
 }
 
 func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
@@ -98,8 +142,8 @@ func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
 	}
 	defer done()
 	s.mu.Lock()
-	if s.active != nil && s.active.task.ID == id {
-		value := s.active.task
+	if r := s.active[id]; r != nil {
+		value := r.task
 		s.mu.Unlock()
 		return value, nil
 	}
@@ -110,20 +154,19 @@ func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
 	}
 	s.mu.Unlock()
 	value, err := s.options.Ledger.Get(ctx, id)
-	if errors.Is(err, ErrTaskNotFound) && s.options.Responses != nil && len(id) == 69 && strings.HasPrefix(id, "task_") {
-		response, cause := s.ResponseState(ctx, "resp_"+id[5:], false)
-		if cause == nil && response.Task == id {
-			return response.task(), nil
-		}
-		var public *faults.Error
-		if cause != nil && (!errors.As(cause, &public) || public.ErrorCode() != diagcatalog.NotFound) {
-			return Task{}, cause
-		}
-	}
 	if err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			return Task{}, faults.New(diagcatalog.NotFound, diagcatalog.WrappedCause, err)
+		}
 		return Task{}, err
 	}
-	return s.observedTask(value), nil
+	value = s.observedTask(value)
+	// Reuse bounded terminal facts already retained by the process replay log.
+	// The durable ledger deliberately stores admission, not a second run result.
+	if value.Outcome == "" {
+		value.Outcome = s.feed.outcome(s.options.WorkspaceID, id)
+	}
+	return value, nil
 }
 
 func (s *Service) Cancel(id string) error {
@@ -143,8 +186,9 @@ func (s *Service) currentRequest(id string) (*request, error) {
 	if s.closed {
 		return nil, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
 	}
-	if s.active == nil || s.active.task.ID != id {
+	r := s.active[id]
+	if r == nil {
 		return nil, faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestIsNoLongerActive)
 	}
-	return s.active, nil
+	return r, nil
 }

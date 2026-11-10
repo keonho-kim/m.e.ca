@@ -44,6 +44,10 @@ func TestSkillReadContractsAcrossTransports(t *testing.T) {
 			}), false)
 			serverSkill(t, f.project)
 			ctx, w := deadline(t), tlsWire(t, kind, f.api)
+			suggestions := call(t, ctx, w, &v1.Command{Operation: &v1.Command_SuggestSkills{SuggestSkills: &v1.SkillPrefix{Prefix: "rev"}}}).GetSkills()
+			if len(suggestions.GetItems()) != 1 || suggestions.Items[0].Name != "review" {
+				t.Fatal(suggestions)
+			}
 			page := call(t, ctx, w, &v1.Command{Operation: &v1.Command_ListSkills{ListSkills: &v1.SkillListRequest{}}}).GetSkills()
 			if len(page.GetItems()) != 1 || page.Items[0].Name != "review" || page.Items[0].Compatibility != "Requires a Git working tree" {
 				t.Fatal(page)

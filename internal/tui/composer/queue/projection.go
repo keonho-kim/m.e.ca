@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/keonho-kim/meca/internal/tui/composer"
+	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
@@ -25,7 +25,7 @@ type projectionEntry struct {
 	Block  viewport.Block
 }
 
-func (p *Projection) Prepare(messages []composer.Request, language locale.Language, version int, redact func(string) string) {
+func (p *Projection) Prepare(messages []requestinput.Request, language locale.Language, version int, redact func(string) string) {
 	p.Header.Text, p.Header.Thinking = "", true
 	if len(messages) == 0 {
 		clear(p.Entries)

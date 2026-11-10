@@ -39,9 +39,9 @@ func (r *heldReader) Reference(_ context.Context, _ policy.Settings, path string
 	return fileview.Reference{Path: path, Directory: true}, nil
 }
 
-func (r *heldReader) Directory(ctx context.Context, _ policy.Settings, path string, _, _ int) ([]fileview.Entry, bool, error) {
+func (r *heldReader) Directory(ctx context.Context, _ policy.Settings, path string, _, _ int, _ string) (fileview.DirectoryPage, error) {
 	r.read(ctx, path)
-	return nil, false, nil
+	return fileview.DirectoryPage{}, nil
 }
 
 func (r *heldReader) Preview(ctx context.Context, _ policy.Settings, path string) (fileview.Preview, error) {

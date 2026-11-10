@@ -13,7 +13,7 @@ import (
 
 var ErrProjectionBusy = faults.Errorf(diagcatalog.ProcessCommandOutputIsBeingFinalizedInspectThe)
 
-func (r *Registry) ReadProjection(id string, after [2]uint64) ([2]Capture, func(), error) {
+func (r *Registry) ReadProjection(id string, after [2]uint64, positions [2]int64) ([2]Capture, func(), error) {
 	j, err := r.lookup(id)
 	if err != nil {
 		return [2]Capture{}, nil, err
@@ -29,10 +29,10 @@ func (r *Registry) ReadProjection(id string, after [2]uint64) ([2]Capture, func(
 		j.stderr.mu.Lock()
 		var actual int64
 		if j.stdout.revision != after[0] {
-			actual += j.stdout.retainedBytesLocked()
+			actual += j.stdout.changedBytesLocked(positions[0])
 		}
 		if j.stderr.revision != after[1] {
-			actual += j.stderr.retainedBytesLocked()
+			actual += j.stderr.changedBytesLocked(positions[1])
 		}
 		if actual > required {
 			j.stderr.mu.Unlock()
@@ -41,7 +41,7 @@ func (r *Registry) ReadProjection(id string, after [2]uint64) ([2]Capture, func(
 			required = max(actual, required*2)
 			continue
 		}
-		captures := [2]Capture{j.stdout.snapshotLocked(after[0]), j.stderr.snapshotLocked(after[1])}
+		captures := [2]Capture{j.stdout.changesLocked(after[0], positions[0]), j.stderr.changesLocked(after[1], positions[1])}
 		err = errors.Join(j.stdout.failure, j.stderr.failure)
 		j.stderr.mu.Unlock()
 		j.stdout.mu.Unlock()

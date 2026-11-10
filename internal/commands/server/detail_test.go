@@ -36,13 +36,13 @@ func TestDetailLeaseReturnsOriginalAndReleasesSession(t *testing.T) {
 func TestDetailRejectsResolvedApproval(t *testing.T) {
 	s := detailFixture(&detailHistory{}, &credentials.Vault{})
 	defer s.Close()
-	s.active = &request{approvals: map[string]*pendingApproval{"approve": {value: tool.Approval{Preview: "proposal"}}}}
+	s.active = map[string]*request{"approval-task": {conversation: s.conversation, approvals: map[string]*pendingApproval{"approve": {value: tool.Approval{Preview: "proposal"}}}}}
 	read, err := s.OpenDetail(t.Context(), DetailSource{ApprovalID: "approve"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	read.Release()
-	delete(s.active.approvals, "approve")
+	delete(s.active["approval-task"].approvals, "approve")
 	if _, err := s.OpenDetail(t.Context(), DetailSource{ApprovalID: "approve"}); err == nil {
 		t.Fatal("resolved approval remained readable")
 	}
@@ -57,7 +57,7 @@ func TestDetailLeaseCanceledBeforeSessionCleanup(t *testing.T) {
 	}
 	defer read.Release()
 	closed := make(chan error, 1)
-	go func() { closed <- s.CloseSession() }()
+	go func() { closed <- s.CloseSession(t.Context(), s.State().Session.ID) }()
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 	select {

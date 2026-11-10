@@ -5,11 +5,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,7 +29,7 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/setup"
-	"github.com/keonho-kim/meca/internal/serverapi/openai"
+	"github.com/keonho-kim/meca/internal/serverapi"
 	"github.com/keonho-kim/meca/internal/storage/serverrequests"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -113,10 +112,7 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 		tb.Fatal(err)
 	}
 	app, err := server.New(ctx, server.Options{
-		Project: project, Config: cfg, Ledger: ledger, Responses: ledger,
-		ReadOutput: func(ctx context.Context, id string, after, through int64, max int, reserve func(int) error) (string, error) {
-			return sessions.ResponseOutput(ctx, project, id, after, through, max, reserve)
-		},
+		Config: cfg, Ledger: ledger,
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
 			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
 			if err == nil {
@@ -144,28 +140,72 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 			tb.Error(err)
 		}
 	})
-	mux := http.NewServeMux()
-	(&openai.Handler{Service: app, Redact: vault.Redact, Streams: make(chan struct{}, 16)}).Mount(mux)
-	body, err := json.Marshal(map[string]any{"model": "meca", "stream": true, "store": true, "input": []map[string]string{
-		{"role": "developer", "content": strings.Repeat("Immutable request context.\n", 2048)},
-		{"role": "user", "content": "Read fixture.txt for each requested observation, then return the final report."},
-	}})
-	if err != nil {
+	serveCtx, stopServe := context.WithCancel(ctx)
+	ready, done := make(chan string, 1), make(chan error, 1)
+	const token = "native-engine-workload-token-0123456789"
+	api := &serverapi.API{Service: app, Redact: vault.Redact, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion}
+	go func() {
+		done <- serverapi.ListenAndServe(serveCtx, api, token, serverapi.Options{Protocol: "sse", Listen: "127.0.0.1:0"}, func(address string) { ready <- address })
+	}()
+	var address string
+	select {
+	case address = <-ready:
+	case err := <-done:
+		stopServe()
 		tb.Fatal(err)
+	case <-ctx.Done():
+		stopServe()
+		<-done
+		tb.Fatal(ctx.Err())
 	}
+	tb.Cleanup(func() {
+		stopServe()
+		if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
+			tb.Error(err)
+		}
+	})
+	sequence := 0
 	return func() error {
 		operation, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		before := calls.Load()
-		request := httptest.NewRequestWithContext(operation, http.MethodPost, "http://meca.local/v1/responses", bytes.NewReader(body))
-		request.Header.Set("Content-Type", "application/json")
+		selected, err := app.Select(operation, "", true)
+		if err != nil {
+			return err
+		}
+		sequence++
+		text := strings.Repeat("Immutable request context.\n", 2048) + "Read fixture.txt for each requested observation, then return the final report."
+		task, err := app.Start(operation, selected.Session.ID, fmt.Sprintf("workload-%d", sequence), text)
+		if err != nil {
+			return err
+		}
+		observer, stopObserver := context.WithCancel(operation)
+		defer stopObserver()
+		request, err := http.NewRequestWithContext(observer, http.MethodGet, address+"/v1/events?cursor="+selected.Cursor, nil)
+		if err != nil {
+			return err
+		}
+		request.Header.Set("Authorization", "Bearer "+token)
+		reply, err := http.DefaultClient.Do(request)
+		if err != nil {
+			return err
+		}
+		defer reply.Body.Close()
 		output := engineStream{header: make(http.Header), status: http.StatusOK}
-		mux.ServeHTTP(&output, request)
+		buffer := make([]byte, 64<<10)
+		for !output.completed && output.err == nil {
+			n, err := reply.Body.Read(buffer)
+			_, _ = output.Write(buffer[:n])
+			if err != nil && (!errors.Is(err, io.EOF) || !output.completed) {
+				return err
+			}
+		}
+		stopObserver()
 		if output.status != http.StatusOK || !output.completed || output.err != nil {
 			return fmt.Errorf("engine workload failed: status=%d completed=%v: %w", output.status, output.completed, errors.Join(output.err, fmt.Errorf("%s", output.failure)))
 		}
-		if _, err := app.WaitResponse(ctx, output.header.Get("X-Request-ID")); err != nil {
-			return err
+		if status, err := app.TaskStatus(operation, task.ID); err != nil || status.Status != "answered" {
+			return fmt.Errorf("native workload did not finish: %s %w", status.Status, err)
 		}
 		if got := calls.Load() - before; got != engineToolRounds+1 {
 			return fmt.Errorf("engine workload made %d model calls, want %d", got, engineToolRounds+1)

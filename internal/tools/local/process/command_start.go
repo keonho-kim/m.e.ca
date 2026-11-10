@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 
+	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 	"time"
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -85,8 +86,12 @@ func (r *Registry) launch(ctx context.Context, id string, j *job, environment []
 		close(j.done)
 		r.notify()
 	}()
-	var err error
-	if admit != nil {
+	workspaceRelease, workspaceErr := workspacegate.Acquire(ctx)
+	if workspaceErr == nil {
+		defer workspaceRelease()
+	}
+	var err error = workspaceErr
+	if err == nil && admit != nil {
 		err = faults.Guard(func() error {
 			var cause error
 			release, cause = admit(ctx)

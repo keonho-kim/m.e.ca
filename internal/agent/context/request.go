@@ -17,7 +17,6 @@ type Input struct {
 	ProjectRoot               string
 	Observations              string
 	Messages                  []modelapi.Message
-	ClientContext             []modelapi.Message
 	SkillReads                []modelapi.Message
 	Redact                    func(string) string
 	MaxBytes                  int
@@ -37,7 +36,7 @@ func Build(input Input) (modelapi.Request, error) {
 func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 	// One request owns these headers. Reusing this backing array across model
 	// calls would mutate earlier requests retained by a provider or observer.
-	messages := make([]modelapi.Message, 0, len(input.Messages)+len(input.ClientContext)+len(input.SkillReads)+6)
+	messages := make([]modelapi.Message, 0, len(input.Messages)+len(input.SkillReads)+6)
 	messages = append(messages, modelapi.Message{Role: "system", Content: p.instructions(input)})
 	if input.Memory != "" {
 		messages = append(messages, modelapi.Message{Role: "user", Content: p.summary(input)})
@@ -51,20 +50,6 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 	if !present && input.Memory != "" {
 		messages = append(messages, modelapi.Message{Role: "user", Content: input.Redact(input.Objective)})
 		present = true
-	}
-	if len(input.ClientContext) > 0 {
-		if p.client == nil {
-			p.client = &Projection{}
-		}
-		clientInput := input
-		clientInput.Messages = input.ClientContext
-		var err error
-		messages, _, err = p.client.appendHistory(clientInput, messages)
-		if err != nil {
-			return modelapi.Request{}, err
-		}
-	} else {
-		p.client = nil
 	}
 	prefix := len(messages)
 	messages, bytes, err := p.appendHistory(input, messages)

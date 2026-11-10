@@ -1,7 +1,7 @@
 // Purpose: Bound simultaneous server work by reserved bytes or operation count.
 // Pattern: Cancellable admission with explicit caller-owned release.
 // Usage: Transport parsers and original-result writers share process-scoped budgets.
-// Related: internal/serverapi/transport.go, internal/serverapi/openai/result.go.
+// Related: internal/serverapi/transport.go.
 package admission
 
 import (

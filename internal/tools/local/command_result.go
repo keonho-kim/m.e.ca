@@ -28,7 +28,7 @@ func (e *Executor) encodeCommand(id string, output process.Output, runErr error,
 		if revision == 0 {
 			revision = previous.revision + 1
 		}
-		if revision != previous.revision || e.commandVersion() < 0 || previous.version != e.commandVersion() {
+		if previous.incremental || revision != previous.revision || e.commandVersion() < 0 || previous.version != e.commandVersion() {
 			previous.revision = 0
 			previous, archiveErr = e.projectLiveCapture(id, stream, previous, process.Capture{Revision: revision, Text: texts[i]})
 			projectionErr = errors.Join(projectionErr, archiveErr)

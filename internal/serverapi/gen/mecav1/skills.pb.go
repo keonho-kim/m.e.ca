@@ -334,6 +334,50 @@ func (x *SkillRequest) GetId() string {
 	return ""
 }
 
+type SkillPrefix struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prefix        string                 `protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillPrefix) Reset() {
+	*x = SkillPrefix{}
+	mi := &file_meca_v1_skills_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillPrefix) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillPrefix) ProtoMessage() {}
+
+func (x *SkillPrefix) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_skills_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillPrefix.ProtoReflect.Descriptor instead.
+func (*SkillPrefix) Descriptor() ([]byte, []int) {
+	return file_meca_v1_skills_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SkillPrefix) GetPrefix() string {
+	if x != nil {
+		return x.Prefix
+	}
+	return ""
+}
+
 type SkillDocument struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Skill         *Skill                 `protobuf:"bytes,1,opt,name=skill,proto3" json:"skill,omitempty"`
@@ -345,7 +389,7 @@ type SkillDocument struct {
 
 func (x *SkillDocument) Reset() {
 	*x = SkillDocument{}
-	mi := &file_meca_v1_skills_proto_msgTypes[5]
+	mi := &file_meca_v1_skills_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -357,7 +401,7 @@ func (x *SkillDocument) String() string {
 func (*SkillDocument) ProtoMessage() {}
 
 func (x *SkillDocument) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_skills_proto_msgTypes[5]
+	mi := &file_meca_v1_skills_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +414,7 @@ func (x *SkillDocument) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillDocument.ProtoReflect.Descriptor instead.
 func (*SkillDocument) Descriptor() ([]byte, []int) {
-	return file_meca_v1_skills_proto_rawDescGZIP(), []int{5}
+	return file_meca_v1_skills_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SkillDocument) GetSkill() *Skill {
@@ -407,7 +451,7 @@ type SkillFileRequest struct {
 
 func (x *SkillFileRequest) Reset() {
 	*x = SkillFileRequest{}
-	mi := &file_meca_v1_skills_proto_msgTypes[6]
+	mi := &file_meca_v1_skills_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -419,7 +463,7 @@ func (x *SkillFileRequest) String() string {
 func (*SkillFileRequest) ProtoMessage() {}
 
 func (x *SkillFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_skills_proto_msgTypes[6]
+	mi := &file_meca_v1_skills_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -432,7 +476,7 @@ func (x *SkillFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillFileRequest.ProtoReflect.Descriptor instead.
 func (*SkillFileRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_skills_proto_rawDescGZIP(), []int{6}
+	return file_meca_v1_skills_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SkillFileRequest) GetId() string {
@@ -485,7 +529,7 @@ type SkillFile struct {
 
 func (x *SkillFile) Reset() {
 	*x = SkillFile{}
-	mi := &file_meca_v1_skills_proto_msgTypes[7]
+	mi := &file_meca_v1_skills_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -497,7 +541,7 @@ func (x *SkillFile) String() string {
 func (*SkillFile) ProtoMessage() {}
 
 func (x *SkillFile) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_skills_proto_msgTypes[7]
+	mi := &file_meca_v1_skills_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -510,7 +554,7 @@ func (x *SkillFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillFile.ProtoReflect.Descriptor instead.
 func (*SkillFile) Descriptor() ([]byte, []int) {
-	return file_meca_v1_skills_proto_rawDescGZIP(), []int{7}
+	return file_meca_v1_skills_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SkillFile) GetText() string {
@@ -574,7 +618,7 @@ type SkillRead struct {
 
 func (x *SkillRead) Reset() {
 	*x = SkillRead{}
-	mi := &file_meca_v1_skills_proto_msgTypes[8]
+	mi := &file_meca_v1_skills_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -586,7 +630,7 @@ func (x *SkillRead) String() string {
 func (*SkillRead) ProtoMessage() {}
 
 func (x *SkillRead) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_skills_proto_msgTypes[8]
+	mi := &file_meca_v1_skills_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -599,7 +643,7 @@ func (x *SkillRead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillRead.ProtoReflect.Descriptor instead.
 func (*SkillRead) Descriptor() ([]byte, []int) {
-	return file_meca_v1_skills_proto_rawDescGZIP(), []int{8}
+	return file_meca_v1_skills_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SkillRead) GetId() string {
@@ -657,7 +701,9 @@ const file_meca_v1_skills_proto_rawDesc = "" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"\x1e\n" +
 	"\fSkillRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"%\n" +
+	"\vSkillPrefix\x12\x16\n" +
+	"\x06prefix\x18\x01 \x01(\tR\x06prefix\"e\n" +
 	"\rSkillDocument\x12$\n" +
 	"\x05skill\x18\x01 \x01(\v2\x0e.meca.v1.SkillR\x05skill\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\x12\x12\n" +
@@ -697,17 +743,18 @@ func file_meca_v1_skills_proto_rawDescGZIP() []byte {
 	return file_meca_v1_skills_proto_rawDescData
 }
 
-var file_meca_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_meca_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_meca_v1_skills_proto_goTypes = []any{
 	(*Skill)(nil),            // 0: meca.v1.Skill
 	(*SkillDiagnostic)(nil),  // 1: meca.v1.SkillDiagnostic
 	(*Skills)(nil),           // 2: meca.v1.Skills
 	(*SkillListRequest)(nil), // 3: meca.v1.SkillListRequest
 	(*SkillRequest)(nil),     // 4: meca.v1.SkillRequest
-	(*SkillDocument)(nil),    // 5: meca.v1.SkillDocument
-	(*SkillFileRequest)(nil), // 6: meca.v1.SkillFileRequest
-	(*SkillFile)(nil),        // 7: meca.v1.SkillFile
-	(*SkillRead)(nil),        // 8: meca.v1.SkillRead
+	(*SkillPrefix)(nil),      // 5: meca.v1.SkillPrefix
+	(*SkillDocument)(nil),    // 6: meca.v1.SkillDocument
+	(*SkillFileRequest)(nil), // 7: meca.v1.SkillFileRequest
+	(*SkillFile)(nil),        // 8: meca.v1.SkillFile
+	(*SkillRead)(nil),        // 9: meca.v1.SkillRead
 }
 var file_meca_v1_skills_proto_depIdxs = []int32{
 	0, // 0: meca.v1.Skills.items:type_name -> meca.v1.Skill
@@ -731,7 +778,7 @@ func file_meca_v1_skills_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meca_v1_skills_proto_rawDesc), len(file_meca_v1_skills_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

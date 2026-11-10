@@ -6,25 +6,35 @@ package session
 
 import (
 	"github.com/keonho-kim/meca/internal/tui/composer/queue"
+	"slices"
 )
 
 func (a *app) canEditPending() bool {
 	return a.page == "chat" && len(a.compose.queued.Messages) > 0 && a.compose.fileSubmission == nil && !a.work.state.stopping() && (!a.work.state.active() || a.work.state.agent())
 }
 
-func (a *app) pendingEditChanged() bool { return a.compose.queued.Changed(a.compose.editor.String()) }
+func (a *app) pendingEditChanged() bool {
+	return a.compose.queued.Changed(a.compose.editor.String(), a.compose.images...)
+}
 
 func (a *app) navigatePending(delta int) {
 	if a.compose.queued.Edit == nil && !a.canEditPending() {
 		return
 	}
 	opening := a.compose.queued.Edit == nil
+	if !opening && a.pendingEditChanged() {
+		a.stopNotice = a.language.Text("Save or cancel changes before switching queued requests")
+		return
+	}
 	switch a.compose.queued.Navigate(delta, &a.compose.editor) {
 	case queue.Focused:
 		if opening {
+			a.compose.queued.Edit.DraftImages = a.compose.images
 			a.clearSelection()
 			a.closeCommandHints()
 		}
+		a.compose.images = slices.Clone(a.compose.queued.Messages[a.compose.queued.Edit.Index].Images)
+		a.compose.imageEpoch++
 	case queue.Unsaved:
 		a.stopNotice = a.language.Text("Save or cancel changes before switching queued requests")
 	case queue.Close:
@@ -33,7 +43,7 @@ func (a *app) navigatePending(delta int) {
 }
 
 func (a *app) savePendingEdit() {
-	if !a.compose.queued.Save(a.compose.editor.String()) {
+	if !a.compose.queued.Save(a.compose.editor.String(), a.compose.images...) {
 		a.stopNotice = a.language.Text("Enter a request or use Ctrl/Cmd+Backspace to delete it from the queue")
 		return
 	}
@@ -46,7 +56,10 @@ func (a *app) restorePendingEditor() queue.Completion {
 	if a.compose.queued.Edit == nil {
 		return queue.Running
 	}
+	images := a.compose.queued.Edit.DraftImages
 	completion := a.compose.queued.RestoreEditor(&a.compose.editor)
+	a.compose.images = images
+	a.compose.imageEpoch++
 	a.clearSelection()
 	a.closeCommandHints()
 	a.stopNotice = ""

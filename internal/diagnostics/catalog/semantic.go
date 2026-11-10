@@ -16,17 +16,9 @@ func Semantic(code string) string {
 		return IntegrityFailed
 	case StorageIO:
 		return PersistenceFailed
-	case MethodNotAllowed, InvalidRequest:
-		return InvalidArgument
-	case InvalidAPIKey, Forbidden:
-		return PermissionDenied
-	case ModelNotFound:
-		return NotFound
-	case ServerError:
-		return OperationFailed
 	case CommandBlocked, AccessRejectedCode:
 		return PermissionDenied
-	case InvalidCommand, InvalidParameter:
+	case InvalidCommand:
 		return InvalidArgument
 	case StaleTarget, InstructionChanged, AmbiguousText, TextNotFound, TeamWorkConflict:
 		return Conflict
@@ -34,7 +26,7 @@ func Semantic(code string) string {
 		return DeadlineExceeded
 	case Interrupted:
 		return Canceled
-	case ProcessFailed, ExecutionFailed, BatchNotExecuted, AdmissionFailed, LogWriteFailed:
+	case ProcessFailed, ExecutionFailed, BatchNotExecuted, LogWriteFailed:
 		return OperationFailed
 	case PathNotFound:
 		return NotFound

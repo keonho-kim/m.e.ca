@@ -34,6 +34,7 @@ type Request struct {
 
 func Execute(ctx context.Context, request Request, approve run.Approver, emit func(runrecord.Event) error) (run.Result, error) {
 	runner := request.Runner
+	request.Runner = run.Runner{}
 	var err error
 	runner.PreviousRun, err = request.Store.LatestRun(ctx, runner.Session)
 	if err != nil {
@@ -52,10 +53,11 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	if err != nil {
 		return run.Result{}, err
 	}
+	session := runner.Session
 	result, err := runner.Run(ctx, request.Text, approve, emit)
 	if err != nil {
 		flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		err = errors.Join(err, recovery.Restore(flush, request.Store, runner.Session))
+		err = errors.Join(err, recovery.Restore(flush, request.Store, session))
 		cancel()
 	}
 	return result, err

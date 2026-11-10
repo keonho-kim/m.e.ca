@@ -1,4 +1,4 @@
-// Purpose: Own one database connection, its codec and only the cache lease acquired for this handle.
+// Purpose: Own one database connection, codec and handle-scoped cache/deletion leases.
 // Pattern: Repository lifecycle boundary.
 // Usage: Sessions opens a Store for the selected session; the caller closes it after workers stop.
 // Related: internal/storage/sqlite/catalog.go, internal/storage/sqlite/session.go, internal/storage/sqlite/schema.go.
@@ -23,23 +23,27 @@ import (
 )
 
 type Store struct {
-	closeOnce   sync.Once
-	closeErr    error
-	teamContent teamContentCache
-	latestEvent atomic.Int64
-	room        *Store
-	teamLease   *teamContentCache
-	codec       recordcontent.Codec
-	objective   objectiveCache
-	db          *sql.DB
-	path        string
-	session     sessionstate.Session
+	closeOnce     sync.Once
+	closeErr      error
+	deletionLease *SessionLease
+	teamContent   teamContentCache
+	latestEvent   atomic.Int64
+	room          *Store
+	teamLease     *teamContentCache
+	codec         recordcontent.Codec
+	objective     objectiveCache
+	db            *sql.DB
+	path          string
+	session       sessionstate.Session
 }
 
 func (s *Store) Session() sessionstate.Session { return s.session }
 func (s *Store) Close() error {
 	s.closeOnce.Do(func() {
 		s.closeErr = errors.Join(s.db.Close(), s.codec.Close())
+		if s.deletionLease != nil {
+			s.closeErr = errors.Join(s.closeErr, s.deletionLease.Close())
+		}
 		if s.teamLease != nil {
 			s.teamLease.release()
 			s.teamLease = nil

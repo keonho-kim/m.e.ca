@@ -6,6 +6,7 @@ package agentrequest
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
@@ -44,8 +45,7 @@ type Options struct {
 	PollSteering  func() []string
 	SteeringReady <-chan struct{}
 	Text          string
-	// ClientContext lends immutable external text to this request without journaling copies.
-	ClientContext []modelapi.Message
+	Images        []media.Image
 }
 
 func New(options Options) agentsession.Request {
@@ -61,10 +61,10 @@ func New(options Options) agentsession.Request {
 		thinking = &value
 	}
 	runner := run.Runner{
-		SkillReads:    options.SkillReads,
-		ClientContext: options.ClientContext,
-		ImageInput:    selected.Details != nil && selected.Details.ImageInput.Supported(),
-		Generator:     options.Generator, Tools: options.Tools, Journal: options.Store,
+		Images:     options.Images,
+		SkillReads: options.SkillReads,
+		ImageInput: selected.Details != nil && selected.Details.ImageInput.Supported(),
+		Generator:  options.Generator, Tools: options.Tools, Journal: options.Store,
 		Session: options.Session.ID, ProjectRoot: options.Session.ProjectRoot,
 		Model: selected.Model, Provider: selected.Connection.ID,
 		Thinking: thinking, ThinkingSupported: selected.ThinkingSupported, ReasoningEffort: selected.Effort(),

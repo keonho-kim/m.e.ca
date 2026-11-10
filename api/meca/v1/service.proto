@@ -7,9 +7,11 @@ package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/control.proto";
 import "meca/v1/state.proto";
+import "meca/v1/application.proto";
 
 service MecaService {
   rpc Call(Command) returns (Reply);
   // Closing this stream detaches the observer; use Cancel to stop a request.
   rpc WatchEvents(WatchRequest) returns (stream Notification);
+  rpc WatchFiles(FileWatchRequest) returns (stream FileChange);
 }

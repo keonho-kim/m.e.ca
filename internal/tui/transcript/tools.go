@@ -1,6 +1,6 @@
 // Purpose: Format literal tool details with redaction and explicit source-change annotations.
 // Pattern: Presentation projection.
-// Usage: Live status uses Formatter.Tool; completed and archived events retain toolBlock annotations.
+// Usage: PendingTool and Event share literal details for live tools and completed records.
 // Related: internal/agent/record/events.go, internal/tui/transcript/events.go.
 package transcript
 

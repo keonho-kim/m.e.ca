@@ -32,7 +32,8 @@ func (c *Controller) ReadDirectory(parent context.Context, sink Sink, reader Rea
 			page.Path = ref.Path
 		}
 		if page.Err == nil && ctx.Err() == nil {
-			page.Entries, page.More, page.Err = reader.Directory(ctx, settings, page.Path, page.Offset, 1000)
+			value, err := reader.Directory(ctx, settings, page.Path, page.Offset, 1000, "")
+			page.Entries, page.More, page.Err = value.Entries, value.More, err
 		}
 		if ctx.Err() != nil {
 			page.Entries, page.Err = nil, ctx.Err()

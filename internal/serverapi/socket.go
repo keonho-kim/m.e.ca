@@ -132,9 +132,10 @@ func (t *Transport) socket(w http.ResponseWriter, r *http.Request) {
 				watchCancel = done
 				watchDone = make(chan struct{})
 				cursor := op.Watch.GetCursor()
+				taskID := op.Watch.GetTaskId()
 				go func() {
 					defer close(watchDone)
-					watchErr := t.api.watch(watchCtx, cursor, send)
+					watchErr := t.api.watch(watchCtx, cursor, taskID, send)
 					if watchCtx.Err() == nil {
 						if code := faults.Code(watchErr); code != diagcatalog.DeliveryFailed && code != diagcatalog.Canceled {
 							_ = send(&v1.Notification{Body: &v1.Notification_Reply{Reply: t.api.errorReply("watch", watchErr)}})

@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
 	"sync"
 
 	"github.com/gdamore/tcell/v3"
@@ -26,6 +27,7 @@ import (
 )
 
 type Options struct {
+	ReadImage    func(context.Context) (media.Image, error)
 	Home, State  string
 	Config       config.Config
 	LoadPrompts  func() (prompt.Templates, error)
@@ -60,6 +62,7 @@ type app struct {
 	footerRows                  int
 	selectionSources            map[int]textlayout.Fragment
 	clipboardBusy               bool
+	imagePasteBusy              bool
 	selectionPage               string
 	textSelection               selection.Selection
 	stopNotice                  string

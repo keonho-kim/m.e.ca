@@ -11,7 +11,7 @@ import (
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
-func (s *Service) existingRequest(ctx context.Context, session, key, text string) (Task, bool, error) {
+func (s *Service) existingRequest(ctx context.Context, session, key string, digest [32]byte) (Task, bool, error) {
 	_, err := s.options.Ledger.Get(ctx, TaskID(session, key))
 	if errors.Is(err, ErrTaskNotFound) {
 		return Task{}, false, nil
@@ -21,7 +21,7 @@ func (s *Service) existingRequest(ctx context.Context, session, key, text string
 	}
 	// Admit checks the original digest; it must never be called for an absent
 	// record while a different request or configuration owns the idle reservation.
-	original, _, err := s.options.Ledger.Admit(ctx, session, key, text)
+	original, _, err := s.options.Ledger.Admit(ctx, session, key, digest)
 	if err != nil {
 		return Task{}, true, err
 	}
@@ -31,8 +31,8 @@ func (s *Service) existingRequest(ctx context.Context, session, key, text string
 func (s *Service) observedTask(value Task) Task {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.active != nil && s.active.task.ID == value.ID {
-		return s.active.task
+	if r := s.active[value.ID]; r != nil {
+		return r.task
 	}
 	if s.last != nil && s.last.ID == value.ID {
 		return *s.last

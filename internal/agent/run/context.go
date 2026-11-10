@@ -42,5 +42,5 @@ func (s *execution) request() (modelapi.Request, error) {
 	if err := s.reserveContext(retained + int64(len(observations))); err != nil {
 		return modelapi.Request{}, err
 	}
-	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, ClientContext: s.runner.ClientContext, SkillReads: s.skillReads, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, SkillReads: s.skillReads, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

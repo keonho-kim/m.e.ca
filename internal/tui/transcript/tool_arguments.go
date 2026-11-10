@@ -1,6 +1,6 @@
 // Purpose: Present tool targets and commands without repeating file bodies.
 // Pattern: Pure presentation projection.
-// Usage: Formatter.Tool renders parameters without repeating source bodies.
+// Usage: PendingTool and Event render display parameters without repeating source bodies.
 // Related: internal/tui/transcript/tools.go, internal/tui/transcript/file_results.go.
 package transcript
 

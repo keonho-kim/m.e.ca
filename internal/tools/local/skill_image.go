@@ -1,7 +1,7 @@
 // Purpose: Decode skill image assets using the existing vision limits and owned decoder slot.
 // Pattern: Read-only image adapter.
 // Usage: read_skill_file delegates binary images here for vision-capable requests.
-// Related: internal/tools/local/imagefile/decode.go, internal/skills/assets.go.
+// Related: internal/media/imagefile/decode.go, internal/skills/assets.go.
 package local
 
 import (
@@ -10,8 +10,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/media/imagefile"
 	"github.com/keonho-kim/meca/internal/skills"
-	"github.com/keonho-kim/meca/internal/tools/local/imagefile"
 )
 
 func (e *Executor) SetSkillImageInput(enabled bool) { e.skillImageInput.Store(enabled) }

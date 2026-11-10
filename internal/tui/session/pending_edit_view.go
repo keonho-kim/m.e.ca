@@ -31,7 +31,8 @@ func (a *app) pendingEditShortcuts() []view.Shortcut {
 	if !a.pendingEditChanged() {
 		keys = append(keys, view.Shortcut{Key: "Shift+↑↓/←→", Label: "Browse queue"})
 	}
-	if a.chat.output.HasDetails() {
+	keys = a.appendImageShortcuts(keys)
+	if a.hasToolDetails() {
 		label := "Fold tools"
 		if a.chat.output.Collapsed {
 			label = "Expand tools"
