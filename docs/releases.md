@@ -13,10 +13,10 @@
 [Release 워크플로](../.github/workflows/release.yml)는 `main` 푸시 또는 `main`에서의 수동 실행으로 시작한다. 원본 저장소에서만 게시하며 동시에 한 실행만 진행한다. 실행 중인 배포를 새 푸시로 취소하지 않고 후속 실행을 대기시킨다.
 
 1. 명시한 major·minor와 고정 GoReleaser 버전을 읽어 로컬 날짜 태그를 준비한다.
-2. UI 자산을 만들기 전에 `minimum,godbus_no_tcp`로 최소 실행 파일·시작·업데이트·설치를 검사하고 서버·WebUI가 의존성 그래프에 없는지 확인한다. 그 뒤 고정 Bun으로 full의 UI와 프론트 타입·상태 테스트를 준비한다. full은 `GOFLAGS=-tags=godbus_no_tcp`로 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
-3. GoReleaser가 minimum/full 각각 네 플랫폼, 총 여덟 아카이브를 빌드한다. 두 종류 모두 `godbus_no_tcp`, minimum에만 `minimum` 태그가 있어야 한다. SHA-256·실행 파일·Go 고지를 검사하고 WebUI 고지는 full에만 포함한다. 추출한 실행 파일의 `go version -m`으로 종류와 정확한 빌드 태그를 확인한다.
+2. UI 자산을 만들기 전에 `tui,godbus_no_tcp`로 최소 실행 파일·시작·업데이트·설치를 검사하고 서버·WebUI가 의존성 그래프에 없는지 확인한다. 그 뒤 고정 Bun으로 full의 UI와 프론트 타입·상태 테스트를 준비한다. full은 `GOFLAGS=-tags=godbus_no_tcp`로 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
+3. GoReleaser가 tui/full 각각 네 플랫폼, 총 여덟 아카이브를 빌드한다. 두 종류 모두 `godbus_no_tcp`, tui에만 `tui` 태그가 있어야 한다. SHA-256·실행 파일·Go 고지를 검사하고 WebUI 고지는 full에만 포함한다. 추출한 실행 파일의 `go version -m`으로 종류와 정확한 빌드 태그를 확인한다.
 4. 원격 `main`이 이미 더 최신 커밋이면 이번 게시를 생략한다. 준비 이후 태그가 다른 작업에 의해 바뀌었으면 오류로 중단한다.
-5. 태그를 갱신하고 배포 파일과 체크섬을 게시한다. 새 릴리스는 초안에서 업로드를 마친 뒤 공개하고, 같은 날짜에 게시된 릴리스는 파일을 교체한다. 여덟 새 파일과 체크섬의 업로드가 모두 성공한 뒤 같은 태그의 옛 이름 네 개만 삭제한다. 다른 날짜의 파일과 관련 없는 첨부는 지우지 않는다.
+5. 태그를 갱신하고 배포 파일과 체크섬을 게시한다. 새 릴리스는 초안에서 업로드를 마친 뒤 공개하고, 같은 날짜에 게시된 릴리스는 파일을 교체한다. 여덟 새 파일과 체크섬의 업로드가 모두 성공한 뒤 같은 태그에 남아 있는 종류 없는 옛 이름과 `minimum` 이름만 삭제한다. full·다른 날짜의 파일과 관련 없는 첨부는 지우지 않는다.
 
 빌드·검사·사전 확인 실패 시 원격 태그를 변경하지 않는다. 게시 중 업로드·옛 파일 정리에 실패하면 작업을 실패로 표시한다. 이 경우 태그나 일부 파일이 갱신되었을 수 있으므로 Actions에서 실패 원인을 확인하고 같은 실행을 다시 시도한다. 업로드 실패 시 옛 파일을 먼저 삭제하지 않는다. 모든 게시가 끝난 릴리스에는 여덟 아카이브와 공용 `checksums.txt`가 있어야 한다.
 
@@ -32,8 +32,8 @@
 
 | `<variant>` | 범위 |
 | --- | --- |
-| `minimum` | TUI·CLI와 모든 Provider·도구·스킬·팀. 서버 어댑터와 WebUI 자산 제외 |
-| `full` | minimum의 기능과 SSE·WebSocket·gRPC 서버·내장 WebUI |
+| `tui` | TUI·CLI와 모든 Provider·도구·스킬·팀. 서버 어댑터와 WebUI 자산 제외 |
+| `full` | tui의 기능과 SSE·WebSocket·gRPC 서버·내장 WebUI |
 
 각 종류에 아래 네 플랫폼을 제공한다. 실행 파일 이름은 둘 다 `meca`이며 한 설치 위치와 상태 형식을 공유한다.
 
@@ -60,7 +60,7 @@
 
 ```sh
 # macOS: 받은 파일의 결과가 checksums.txt의 동일 파일 항목과 같은지 확인
-shasum -a 256 meca_<version>_minimum_macos_arm64.tar.gz
+shasum -a 256 meca_<version>_tui_macos_arm64.tar.gz
 
 # Linux
 sha256sum meca_<version>_full_linux_amd64.tar.gz
@@ -70,7 +70,7 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 ## 소스 설치와 삭제
 
-[README의 소스 설치](../README.md#소스에서-설치하기)는 `./install.sh [minimum|full]`을 사용하며 기본은 full이다. full만 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. minimum은 Bun이나 프론트 자산 없이 빌드하며 `minimum` 태그를 추가한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
+[README의 소스 설치](../README.md#소스에서-설치하기)는 `./install.sh [tui|full]`을 사용하며 기본은 full이다. full만 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. tui는 Bun이나 프론트 자산 없이 빌드하며 `tui` 태그를 추가한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
 
 소스 설치도 배포본과 같은 `godbus_no_tcp` 빌드 태그를 적용한다. 저장소 `bin/meca`를 만든 뒤 호출한 작업 폴더·환경에서 설치 명령을 실행한다. 설치 위치·기본 설정·PATH 등록과 로그인 셸 전환은 릴리스 바이너리의 install과 같다.
 
@@ -80,9 +80,9 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 ## 업데이트
 
-설치된 명령에서 `meca upgrade`를 실행하면 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)로 최신 정식 릴리스를 조회한다. 실행 중인 minimum/full 종류와 현재 OS·CPU에 맞는 아카이브 및 `checksums.txt`를 받아 SHA-256을 검증한다. 같은 날짜의 태그·배포 파일도 갱신할 수 있으므로 버전 문자열만으로 건너뛰지 않는다. 다른 종류로 자동 전환하지 않으며 종류 변경은 원하는 배포본의 `meca install`로 명시한다.
+설치된 명령에서 `meca upgrade`를 실행하면 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)로 최신 정식 릴리스를 조회한다. 옵션을 생략하면 실행 중인 tui/full 종류를 유지한다. `meca upgrade --tui`는 tui 최신 버전으로, `meca upgrade --full`은 full 최신 버전으로 현재 설치 파일을 교체한다. 두 선택 옵션의 동시 사용·중복 지정은 거절한다. 선택한 종류와 현재 OS·CPU에 맞는 아카이브 및 `checksums.txt`를 받아 SHA-256을 검증한다. 같은 날짜의 태그·배포 파일도 갱신할 수 있으므로 버전 문자열만으로 건너뛰지 않는다.
 
-분리 전 바이너리는 종류를 포함한 새 파일명을 알지 못하므로 새 배포본을 직접 받아 한 번 재설치해야 한다. 옛 아카이브명 별칭이나 자동 변환 경로는 제공하지 않는다.
+새 이름·옵션을 모르는 기존 바이너리(옛 `minimum` 포함)는 최신 배포본을 직접 받아 한 번 `meca install`로 재설치해야 한다. 옛 아카이브명·빌드 태그·옵션 별칭은 제공하지 않는다.
 
 공개 릴리스는 인증 없이 조회·다운로드할 수 있다. 선택적으로 API 인증을 사용하는 경우 GH_TOKEN, GITHUB_TOKEN, 설치되어 있고 로그인된 gh의 github.com 토큰 순서로 선택한다. 토큰을 설정·세션·로그에 기록하지 않으며 다른 호스트로 리다이렉트할 때 인증 헤더를 제거한다. Go·gh·tar·curl은 업데이트의 필수 실행 의존성이 아니다.
 
@@ -96,6 +96,7 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 ```sh
 go tool -modfile=devtools/go.mod goreleaser check
+sh scripts/build-ui.sh
 go tool -modfile=devtools/go.mod goreleaser release --snapshot --clean
 ```
 
@@ -111,4 +112,4 @@ go tool -modfile=devtools/go.mod goreleaser release --snapshot --clean
 gh workflow run release.yml --ref main
 ```
 
-GoReleaser 버전은 [devtools/go.mod](../devtools/go.mod)의 고정값을 사용한다. [.goreleaser.yaml](../.goreleaser.yaml)과 워크플로는 같은 [릴리스 안내](release-notes.md)를 사용한다. 대상 저장소는 `keonho-kim/m.e.ca`이며 게시 후 태그 커밋, minimum/full 각각 네 아카이브와 공용 체크섬을 확인한다. 인증정보를 설정·로그·셸 스크립트에 기록하지 않는다.
+GoReleaser 버전은 [devtools/go.mod](../devtools/go.mod)의 고정값을 사용한다. [.goreleaser.yaml](../.goreleaser.yaml)과 워크플로는 같은 [릴리스 안내](release-notes.md)를 사용한다. 대상 저장소는 `keonho-kim/m.e.ca`이며 게시 후 태그 커밋, tui/full 각각 네 아카이브와 공용 체크섬을 확인한다. 인증정보를 설정·로그·셸 스크립트에 기록하지 않는다.

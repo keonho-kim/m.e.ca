@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Serve real embedded UI and project runtimes against a credential-free local model fixture.
 // Pattern: Opt-in browser integration fixture.

@@ -4,6 +4,8 @@
 
 이벤트는 프론트가 소비하는 작업 기록이고 운영 로그는 장애 원인을 추적하는 진단이다. 동일한 작업 식별자를 사용하지만 대화·도구 원문을 운영 로그에 다시 저장하지 않는다.
 
+tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙을 사용한다. 외부 SSE·WebSocket·gRPC 구독과 내장 WebUI는 full에서 제공하며, tui는 TUI·CLI의 기존 표시·JSON 출력·이력 조회를 사용한다. 버그 제보에는 버전과 `meca --help`의 종류를 함께 적는다.
+
 ## 이벤트
 
 native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 기존 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.

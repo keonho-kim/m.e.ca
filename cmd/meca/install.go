@@ -17,7 +17,7 @@ import (
 
 func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 	if mode.Action == startup.Upgrade {
-		return upgradeCurrent(ctx, home)
+		return upgradeCurrent(ctx, home, mode.UpgradeKind)
 	}
 	if mode.Action == startup.Uninstall {
 		if err := install.Uninstall(ctx, home, (&credentials.Vault{}).Clear); err != nil {

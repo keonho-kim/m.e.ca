@@ -2,7 +2,7 @@
 
 [← README](../README.md) · [설정과 대화 보존](configuration.md) · [모델 연결](model-connections.md) · [서버 API](server.md)
 
-기본 `meca [path]`는 TUI, `--print`·`--mode json`은 일회성 CLI, `--server`는 장기 실행 서버다. 세 방식은 선택 모델과 단일/팀 실행·저장·도구 정책을 공유한다. 이 문서의 키보드·화면 조작은 TUI에 해당하며 서버의 제어·승인은 API로 전달한다.
+tui와 full은 모두 기본 `meca [path]` TUI와 `--print`·`--mode json` CLI, 팀·스킬을 제공한다. full만 `--server` 장기 실행 서버와 `--server --ui` 내장 화면을 포함한다. `meca --help` 첫 줄에서 종류를 확인한다. 실행 방식은 선택 모델과 단일/팀 실행·저장·도구 정책을 공유한다. 이 문서의 키보드·화면 조작은 TUI에 해당하며 WebUI의 화면 동작은 [WebUI 가이드](webui-design.md), 서버 제어·승인은 [API 계약](server.md)을 따른다.
 
 설정 저장·파일 전송 확인의 `y/N`에서 `y`·`Y`는 진행, 대문자 `N`은 취소다. 소문자 `n`은 무시한다. `Esc`는 화면에 안내된 편집·입력 유지 동작을 따른다.
 
@@ -206,7 +206,10 @@ meca --print는 최종 답변만, meca --mode json은 이벤트를 stdout에 출
 
 ## 서버 실행과 연동
 
+full 배포본에서 실행한다. tui에는 서버와 WebUI가 없다.
+
 ```sh
+meca /path/to/project --server --ui
 meca /path/to/project --server --protocol sse
 meca /path/to/project --server --protocol socket
 meca /path/to/project --server --protocol grpc --concurrency 4
@@ -215,3 +218,5 @@ meca /path/to/project --server --protocol grpc --concurrency 4
 기본 주소는 `127.0.0.1:8787`, 인증 토큰은 `~/.meca/server.token`이다. native API에서 세션·모델을 설정하고 요청 키와 본문으로 작업을 접수한다. 상태·이벤트·이력을 조회하면서 승인·방향 수정·취소를 전달할 수 있다. 연결이 끊겨도 수락한 작업은 계속되며 재접속 시 마지막 커서를 사용한다.
 
 자체 API의 세션·작업·승인·이미지 업로드 계약을 사용한다. 모델 API Key와 서버 Bearer 토큰은 별개다. 5초간 데이터가 없는 스트림에는 1초마다 heartbeat를 보내고 마지막 커서로 재구독한다. 외부 바인딩은 TLS와 정확한 Host/Origin 설정이 필요하다. [전체 서버 계약](server.md)을 따른다.
+
+`--ui`는 `--server`와 함께 같은 주소의 `/ui/`에 브라우저 화면을 제공한다. 기본 URL은 `http://127.0.0.1:8787/ui/`이며 접속 화면에 서버 토큰을 입력한다. 배포본 실행에는 Bun·Node·별도 프론트 서버가 필요 없다. 프로젝트 등록과 대화 생성·전환·삭제, 팀·스킬·이미지·파일 참조·문법 강조 편집, 모델·언어·테마 설정과 작업 승인·중지·후속 예약을 화면에서 다룬다. `!new`·`!quit`는 WebUI에서 지원하지 않는다.

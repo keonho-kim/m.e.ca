@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/commands/install"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 func installedFixture(t *testing.T) string {
@@ -46,7 +47,7 @@ func TestUpgradeFailurePreservesInstallation(t *testing.T) {
 			home := installedFixture(t)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			client := releaseFixture(t, archive, func(release *release, manifest *string) {
+			client := releaseFixture(t, distribution.Name, archive, func(release *release, manifest *string) {
 				switch scenario {
 				case "checksum":
 					*manifest = strings.Repeat("0", 64) + (*manifest)[64:]
@@ -65,7 +66,7 @@ func TestUpgradeFailurePreservesInstallation(t *testing.T) {
 				}
 				return false
 			})
-			if _, err := Run(ctx, home, client); err == nil {
+			if _, err := Run(ctx, home, client, distribution.Name); err == nil {
 				t.Fatal("failed upgrade reported success")
 			}
 			body, err := os.ReadFile(install.BinaryPath(home))

@@ -10,24 +10,26 @@ import (
 	"os"
 
 	"github.com/keonho-kim/meca/internal/commands/upgrade"
+	"github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
-func upgradeCurrent(ctx context.Context, home string) error {
-	fmt.Fprintln(os.Stdout, "M.E.CA 최신 릴리스를 확인합니다…")
+func upgradeCurrent(ctx context.Context, home string, kind distribution.Kind) error {
+	fmt.Fprintln(os.Stdout, catalog.Text(catalog.UpgradeCheckingDistribution, kind))
 	client, err := upgrade.NewClient(upgrade.Credential(ctx))
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	result, err := upgrade.Run(ctx, home, client)
+	result, err := upgrade.Run(ctx, home, client, kind)
 	if err != nil {
 		return err
 	}
 	if result.AlreadyCurrent {
-		fmt.Fprintln(os.Stdout, "이미 최신 릴리스입니다:", result.Version)
+		fmt.Fprintln(os.Stdout, catalog.Text(catalog.UpgradeDistributionCurrent, kind, result.Version))
 	} else {
-		fmt.Fprintln(os.Stdout, "M.E.CA 업데이트 완료:", result.Version)
+		fmt.Fprintln(os.Stdout, catalog.Text(catalog.UpgradeDistributionComplete, kind, result.Version))
 	}
-	fmt.Fprintln(os.Stdout, "기본 프롬프트를 갱신했습니다.")
+	fmt.Fprintln(os.Stdout, catalog.Text(catalog.UpgradePromptsRefreshed))
 	return nil
 }

@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 func TestReleaseRedirectDropsCredential(t *testing.T) {
@@ -37,7 +39,7 @@ func TestReleaseRedirectDropsCredential(t *testing.T) {
 }
 
 func TestReleaseErrorsHideSignedURL(t *testing.T) {
-	client := releaseFixture(t, nil, nil, func(writer http.ResponseWriter, request *http.Request) bool {
+	client := releaseFixture(t, distribution.Name, nil, nil, func(writer http.ResponseWriter, request *http.Request) bool {
 		http.Redirect(writer, request, "http://example.invalid/asset?signed-secret=private", http.StatusFound)
 		return true
 	})

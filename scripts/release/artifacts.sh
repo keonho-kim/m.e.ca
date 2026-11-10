@@ -10,7 +10,7 @@ verify_release_artifacts() {
     local release_archive release_metadata release_members release_variant release_platform
     local -a release_archives
     release_archives=()
-    for release_variant in minimum full; do
+    for release_variant in tui full; do
         for release_platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do
             release_archives+=("meca_${release_version}_${release_variant}_${release_platform}.tar.gz")
         done
@@ -25,7 +25,7 @@ verify_release_artifacts() {
     release_assets=(dist/checksums.txt)
     for release_archive in "${release_archives[@]}"; do
         release_variant=full
-        case "$release_archive" in "meca_${release_version}_minimum_"*) release_variant=minimum ;; esac
+        case "$release_archive" in "meca_${release_version}_tui_"*) release_variant=tui ;; esac
         release_members=$(printf '%s\n' LICENSE NOTICE THIRD_PARTY_NOTICES.md meca)
         if [[ "$release_variant" == full ]]; then release_members+=$'\nWEBUI_THIRD_PARTY_NOTICES.txt'; fi
         release_members=$(LC_ALL=C sort <<< "$release_members")
@@ -43,10 +43,10 @@ verify_release_artifacts() {
                 count = split(substr($2, 7), tags, ",")
                 for (i = 1; i <= count; i++) {
                     if (tags[i] == "godbus_no_tcp") found = 1
-                    if (tags[i] == "minimum") minimum = 1
+                    if (tags[i] == "tui") tui = 1
                 }
             }
-            END { exit !found || ((variant == "minimum") != minimum) }
+            END { exit !found || ((variant == "tui") != tui) }
         ' <<< "$release_metadata"; then
             printf 'Release binary has missing or conflicting distribution build tags: %s\n' "$release_archive" >&2
             return 1

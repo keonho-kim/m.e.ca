@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Provide deterministic free model responses and controllable streaming for browser tests.
 // Pattern: Local HTTP model fixture.

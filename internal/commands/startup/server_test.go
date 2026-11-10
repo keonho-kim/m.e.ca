@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Verify server startup is explicit and cannot consume interactive or one-shot input.
 // Pattern: Startup contract tests.

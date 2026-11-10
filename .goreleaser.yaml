@@ -1,4 +1,4 @@
-# Purpose: Build minimum and full MECA archives for four macOS/Linux platform targets.
+# Purpose: Build tui and full MECA archives for four macOS/Linux platform targets.
 # Pattern: Release configuration.
 # Usage: go tool -modfile=devtools/go.mod goreleaser release --clean.
 # Related: devtools/go.mod, docs/releases.md, cmd/meca/main.go.
@@ -6,14 +6,14 @@ version: 2
 project_name: meca
 
 builds:
-  - id: minimum
+  - id: tui
     main: ./cmd/meca
     binary: meca
     env:
       - CGO_ENABLED=0
     tags:
       - godbus_no_tcp
-      - minimum
+      - tui
     goos:
       - darwin
       - linux
@@ -43,12 +43,12 @@ builds:
       - -s -w
 
 archives:
-  - id: minimum
+  - id: tui
     ids:
-      - minimum
+      - tui
     formats:
       - tar.gz
-    name_template: 'meca_{{ .Version }}_minimum_{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}'
+    name_template: 'meca_{{ .Version }}_tui_{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}'
     files:
       - LICENSE
       - NOTICE

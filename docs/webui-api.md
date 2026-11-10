@@ -2,9 +2,11 @@
 
 [서버 API](server.md) · [제품 명세](../SYSTEM.md)
 
-WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. minimum에는 서버·내장 화면이 없다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
+WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. tui에는 서버·내장 화면이 없다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
 
 구현된 화면과 상태 소유·디자인은 [WebUI 구조](webui-design.md)에 정리한다. 내장 UI는 동일 출처 fetch와 EventSource를 사용한다.
+
+사용자가 내장 화면만 쓸 때는 API를 직접 호출할 필요가 없다. [서버 기동](server.md#내장-화면으로-시작하기) 후 토큰으로 접속하고 모델을 설정한다. 커스텀 클라이언트에서 팀은 `setSettings`의 `sessionId`·`team`, 스킬은 `listSkills`·`getSkill`·`readSkillFile`, 명시 호출은 `start.text`의 `#스킬명`으로 연동한다. 스킬을 별도로 활성화하는 API는 없다. 팀의 공개 응답·도구·승인은 스트리밍하며 팀 Thinking은 개인 이력으로 유지한다.
 
 ## 화면과 API의 대응
 

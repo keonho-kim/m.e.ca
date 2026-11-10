@@ -2,13 +2,17 @@
 
 [서버 계약](server.md) · [화면별 API 연결](webui-api.md) · [제품 명세](../SYSTEM.md)
 
-full 배포본의 `meca --server --ui`는 기존 Go 서버와 같은 출처의 `/ui/`에서 React 작업공간을 제공한다. full 바이너리에 화면을 내장하며 minimum에는 서버·WebUI를 포함하지 않는다. 사용자의 실행 환경에는 Bun·Node·별도 프론트 서버가 필요 없다. 정적 파일의 소스는 `webui/`, 내장·전송은 `internal/webui`, 조립은 `cmd/meca`가 소유한다.
+full 배포본의 `meca --server --ui`는 기존 Go 서버와 같은 출처의 `/ui/`에서 React 작업공간을 제공한다. full 바이너리에 화면을 내장하며 tui에는 서버·WebUI를 포함하지 않는다. 사용자의 실행 환경에는 Bun·Node·별도 프론트 서버가 필요 없다. 정적 파일의 소스는 `webui/`, 내장·전송은 `internal/webui`, 조립은 `cmd/meca`가 소유한다.
+
+## 사용 시작
+
+```sh
+meca /path/to/project --server --ui
+```
+
+기본 `http://127.0.0.1:8787/ui/`를 열고 `~/.meca/server.token`의 서버 토큰으로 연결한다. 왼쪽에서 대화를 만들고 아래 톱니바퀴 → 모델에서 Provider·주소·API Key·모델을 설정한다. 토큰 파일과 주소를 바꾸는 옵션, 원격 접속·TLS는 [서버 기동](server.md)을 따른다. 모델 API Key와 접속용 서버 토큰은 별개다.
 
 프론트 소스는 FSD 계층과 슬라이스의 공개 API를 따른다. 앱 조립은 `app`, 화면과 화면 전용 흐름은 `pages`, 여러 화면이 공유하는 인증 동작은 `features`, 서버 세션은 `entities`, 공통 기반은 `shared`에 둔다. 계층 방향과 공개 진입점은 Steiger로 검증한다. 구체적인 소유권은 [개발 가이드](development.md#내장-webui)를 따른다.
-
-![초기 작업공간과 설정 모달의 디자인 방향 시안](assets/webui-concept.png)
-
-위 그림은 방향 검토를 위한 AI 생성 시안이다. 실제 Astryx 컴포넌트의 렌더링 결과나 제품 데이터가 아니며, 구현된 화면·동작은 아래 설명과 소스가 소유한다.
 
 ## 화면과 이동
 

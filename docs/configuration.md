@@ -4,6 +4,8 @@
 
 전역 설정은 ~/.meca/config.toml, 대화와 세션별 선택은 프로젝트별 세션 DB, API Key 암호문은 ~/.meca/credentials.db, 암호화 키는 OS 자격 증명 저장소에 보관한다.
 
+tui·full은 이 설정·대화·스킬·인증정보를 공유한다. 종류는 `meca --help`에 표시하며 config.toml에서 바꾸지 않는다. 서버·WebUI와 그 인증·접수 파일은 full에서 해당 기능을 사용할 때 준비한다. `meca upgrade --tui` 또는 `meca upgrade --full`로 종류를 바꾸고, 옵션 없는 `meca upgrade`는 현재 종류를 유지한다.
+
 | 저장 위치 | 현재 책임 |
 | --- | --- |
 | `config.toml` | 언어·승인 모드·모델 기본값·역할별 추론·실행/압축 예산 |

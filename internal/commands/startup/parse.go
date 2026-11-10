@@ -15,6 +15,7 @@ import (
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 type Mode struct {
@@ -24,6 +25,7 @@ type Mode struct {
 	NoShell                 bool
 	Output, Prompt, Session string
 	Action                  Action
+	UpgradeKind             distribution.Kind
 	Resume                  bool
 	Project, Display        string
 }
@@ -55,10 +57,24 @@ func Parse(args []string, cwd string) (Mode, error) {
 		return mode, nil
 	}
 	if len(args) > 0 && args[0] == string(Upgrade) {
-		if len(args) != 1 {
+		mode := Mode{Action: Upgrade, UpgradeKind: distribution.Name}
+		if len(args) == 1 {
+			return mode, nil
+		}
+		if len(args) != 2 {
 			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaUpgrade)
 		}
-		return Mode{Action: Upgrade}, nil
+		switch args[1] {
+		case "--tui":
+			mode.UpgradeKind = distribution.TUI
+		case "--full":
+			mode.UpgradeKind = distribution.Full
+		case "--help", "-h":
+			return Mode{Action: Help}, nil
+		default:
+			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaUpgrade)
+		}
+		return mode, nil
 	}
 	if len(args) == 1 && args[0] == string(Uninstall) {
 		return Mode{Action: Action(args[0])}, nil

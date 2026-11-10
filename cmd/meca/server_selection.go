@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Resolve persisted server models before configured defaults for reads and execution.
 // Pattern: Pure selection policy shared by the concrete session adapters.

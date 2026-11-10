@@ -1,10 +1,12 @@
 // Purpose: Name the two supported executable distributions.
-// Pattern: Compile-time distribution contract.
-// Usage: Startup, help and release selection use these names without runtime configuration.
-// Related: internal/distribution/full.go, internal/distribution/minimum.go.
+// Pattern: Distribution value contract.
+// Usage: Startup selects upgrade targets; help and ordinary upgrades use the compiled Name.
+// Related: internal/distribution/full.go, internal/distribution/tui.go.
 package distribution
 
+type Kind string
+
 const (
-	Minimum = "minimum"
-	Full    = "full"
+	TUI  Kind = "tui"
+	Full Kind = "full"
 )

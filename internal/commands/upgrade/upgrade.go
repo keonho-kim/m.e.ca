@@ -1,6 +1,6 @@
 // Purpose: Stage a verified release and hand installation to its executable with guaranteed temporary cleanup.
 // Pattern: Upgrade use case with explicit resource ownership.
-// Usage: The maintenance CLI calls Run with one authenticated release client.
+// Usage: The maintenance CLI passes its selected distribution and authenticated release client to Run.
 // Related: internal/commands/upgrade/release.go, internal/commands/install/install.go, cmd/meca/upgrade.go.
 package upgrade
 
@@ -21,6 +21,7 @@ import (
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 type Result struct {
@@ -28,7 +29,7 @@ type Result struct {
 	AlreadyCurrent bool
 }
 
-func Run(ctx context.Context, home string, client *Client) (result Result, err error) {
+func Run(ctx context.Context, home string, client *Client, kind distribution.Kind) (result Result, err error) {
 	installed := install.BinaryPath(home)
 	info, err := os.Lstat(installed)
 	if err != nil {
@@ -52,7 +53,7 @@ func Run(ctx context.Context, home string, client *Client) (result Result, err e
 		return result, err
 	}
 	defer func() { err = errors.Join(err, stage.Close()) }()
-	result.Version, err = client.fetch(ctx, stage)
+	result.Version, err = client.fetch(ctx, stage, kind)
 	if err != nil {
 		return result, err
 	}

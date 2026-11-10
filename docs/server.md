@@ -2,7 +2,9 @@
 
 [← README](../README.md) · [제품 명세](../SYSTEM.md)
 
-서버와 내장 WebUI는 `full` 배포본에서 제공한다. `minimum`은 TUI·CLI만 포함하며 서버 옵션은 full 설치 안내와 함께 거절한다. MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
+서버와 내장 WebUI는 `full` 배포본에서 제공한다. `tui`은 TUI·CLI만 포함하며 서버 옵션은 full 설치 안내와 함께 거절한다. `meca --help` 첫 줄로 종류를 확인한다. MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
+
+## 기동
 
 ```sh
 meca --server                         # SSE, 127.0.0.1:8787
@@ -14,6 +16,14 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 `socket`은 WebSocket이며 grpc는 gRPC·gRPC-Web·Connect다. 선택한 전송 방식과 공통 HTTP 제어·이벤트·첨부·작업 승인 경로를 같은 인증 경계에서 제공한다. 서버에는 TTY가 필요 없다.
+
+### 내장 화면으로 시작하기
+
+1. `meca /path/to/project --server --ui`로 기동한다. `--ui`만 지정하면 오류이며, 기본 수신 주소는 `127.0.0.1:8787`이다.
+2. `http://127.0.0.1:8787/ui/`에 접속하고 기본 토큰 파일 `~/.meca/server.token`의 값을 연결 화면에 입력한다. `--token-file`을 지정했다면 해당 파일을 사용한다.
+3. 작업공간·대화를 만들고 설정 → 모델에서 연결을 준비한 뒤 요청한다. 팀·스킬·파일 참조·이미지와 작업 승인·중지는 같은 API를 사용한다.
+
+로컬 loopback의 대화형 출력 터미널에서는 브라우저를 자동으로 연다. 원격·비대화형 실행은 출력된 URL에 직접 접속하며, 다른 컴퓨터에서 사용할 때는 TLS·Host·Origin을 아래 인증 규칙에 맞게 설정한다. 화면 사용은 [WebUI 구조와 동작](webui-design.md), 클라이언트 구현은 [연동 계약](webui-api.md)을 따른다.
 
 
 | 시작 옵션 | 기본값·의미 |
