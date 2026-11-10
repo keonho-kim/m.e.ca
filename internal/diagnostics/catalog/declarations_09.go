@@ -25,7 +25,7 @@ const (
 	StartupTlsCertAndTlsKeyMustBe                                  Message = "--tls-cert and --tls-key must be provided together"
 	StartupUsageMecaInstallNoShell                                 Message = "usage: meca install [--no-shell]"
 	StartupUsageMecaPathPrintModeJsonSession                       Message = "%w; usage: meca [path] [--print|--mode json] [--session ID] [prompt]"
-	StartupUsageMecaUpgrade                                        Message = "usage: meca upgrade"
+	StartupUsageMecaUpgrade                                        Message = "usage: meca upgrade [--tui|--full]"
 	StatefsAnotherMECAProcessIsUsingApplicationState               Message = "another MECA process is using application state; close MECA before installing or uninstalling: %w"
 	StatefsApplicationDirectoryChangedDuringInitialization         Message = "application directory changed during initialization"
 	StatefsApplicationStateLeasesRequireLinuxOrMacOS               Message = "application state leases require Linux or macOS"

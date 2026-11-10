@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Consume benchmark SSE output through the real incremental terminal renderer without accumulation.
 // Pattern: Bounded synchronous frontend fixture for the complete engine workload.

@@ -1,9 +1,9 @@
-//go:build minimum
+//go:build tui
 
-// Purpose: Verify minimum executable help and server refusal without initializing user state.
+// Purpose: Verify tui executable help and server refusal without initializing user state.
 // Pattern: Isolated executable boundary regression test.
-// Usage: GOFLAGS=-tags=minimum go test ./cmd/meca -run TestMinimumExecutable.
-// Related: cmd/meca/help.go, cmd/meca/server_minimum.go, cmd/meca/executable_test.go.
+// Usage: GOFLAGS=-tags=tui go test ./cmd/meca -run TestTUIExecutable.
+// Related: cmd/meca/help.go, cmd/meca/server_tui.go, cmd/meca/executable_test.go.
 package main
 
 import (
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TestMinimumExecutable(t *testing.T) {
+func TestTUIExecutable(t *testing.T) {
 	binary := testExecutable(t)
 	home, project := t.TempDir(), t.TempDir()
 	run := func(args ...string) (string, error) {
@@ -30,7 +30,7 @@ func TestMinimumExecutable(t *testing.T) {
 		return string(output), err
 	}
 	help, err := run("--help")
-	if err != nil || !strings.Contains(help, "M.E.CA (minimum)") || !strings.Contains(help, "--print") || strings.Contains(help, "--server") {
+	if err != nil || !strings.Contains(help, "M.E.CA (tui)") || !strings.Contains(help, "--print") || !strings.Contains(help, "upgrade [--tui|--full]") || strings.Contains(help, "--server") {
 		t.Fatal(help, err)
 	}
 	output, err := run("--server", "--ui")

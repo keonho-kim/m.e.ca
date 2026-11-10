@@ -29,7 +29,7 @@ func TestSourceInstaller(t *testing.T) {
 	}{
 		{name: "existing Go", existing: true},
 		{name: "explicit full", existing: true, variant: "full"},
-		{name: "minimum without Bun", existing: true, variant: "minimum"},
+		{name: "tui without Bun", existing: true, variant: "tui"},
 		{name: "mac arm64", os: "Darwin", arch: "arm64"},
 		{name: "mac amd64", os: "Darwin", arch: "x86_64"},
 		{name: "linux arm64", os: "Linux", arch: "aarch64"},
@@ -62,7 +62,7 @@ func TestSourceInstaller(t *testing.T) {
 				}
 				writeScriptFixture(t, filepath.Join(source, name), body)
 			}
-			if tc.variant != "minimum" {
+			if tc.variant != "tui" {
 				writeScriptFixture(t, filepath.Join(commands, "bun"), []byte("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$MECA_TEST_UI_CALL\"\n"))
 			}
 			for _, command := range []string{"sh", "dirname", "mkdir", "mktemp", "rm", "awk", "tar", "gzip", "cp", "shasum"} {
@@ -136,9 +136,9 @@ done
 			}
 			output, err := command.CombinedOutput()
 			ui, uiErr := os.ReadFile(filepath.Join(root, "ui-call"))
-			if tc.variant == "minimum" {
+			if tc.variant == "tui" {
 				if !os.IsNotExist(uiErr) {
-					t.Fatalf("minimum built the UI: %q %v", ui, uiErr)
+					t.Fatalf("tui built the UI: %q %v", ui, uiErr)
 				}
 			} else if uiErr != nil || string(ui) != "install --cwd "+filepath.Join(source, "webui")+" --frozen-lockfile --ignore-scripts\nrun --cwd "+filepath.Join(source, "webui")+" build\n" {
 				t.Fatalf("UI build: %q %v", ui, uiErr)
@@ -153,8 +153,8 @@ done
 					goroot = "unrelated-go"
 				}
 				tags := "godbus_no_tcp"
-				if tc.variant == "minimum" {
-					tags += ",minimum"
+				if tc.variant == "tui" {
+					tags += ",tui"
 				}
 				if readErr != nil || string(invocation) != source+"|build -tags="+tags+" -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
 					t.Fatalf("Go invocation = %q, %v", invocation, readErr)
@@ -175,6 +175,20 @@ done
 				t.Fatalf("temporary SDK remains: %v, %v", remaining, err)
 			}
 		})
+	}
+}
+
+func TestSourceInstallerRejectsUnsupportedDistribution(t *testing.T) {
+	script, err := filepath.Abs("../../../install.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"minimum"}, {"unknown"}, {"tui", "full"}} {
+		command := exec.Command("/bin/sh", append([]string{script}, args...)...)
+		output, err := command.CombinedOutput()
+		if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 2 || !strings.Contains(string(output), "[tui|full]") {
+			t.Fatalf("invalid distribution %v: %q, %v", args, output, err)
+		}
 	}
 }
 

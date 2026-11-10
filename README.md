@@ -4,11 +4,11 @@
 
 *A coding agent with just the essentials.*
 
-[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [서버](#서버) · [설정](#설정) · [문서](#문서)
+[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [팀 모드](#팀-모드) · [스킬](#스킬과-추가-방법) · [서버·WebUI](#서버) · [설정](#설정) · [문서](#문서)
 
 </div>
 
-**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버·내장 WebUI로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
+**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버·내장 WebUI로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 모든 진입점은 같은 도구·대화·승인 정책을 사용합니다. TUI·CLI용 tui와 서버·WebUI도 포함하는 full을 제공합니다.
 
 - Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude, Gemini 연결
 - 스트리밍 응답·Thinking, Markdown과 줄 단위 diff
@@ -28,14 +28,14 @@ Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 실행에는 G
 
 | 종류 | 포함 기능 |
 | --- | --- |
-| `minimum` | TUI·CLI, 모든 Provider·도구·스킬·팀 모드. 서버 코드와 내장 WebUI 자산 제외 |
-| `full` | minimum의 모든 기능 + SSE·WebSocket·gRPC 서버와 내장 WebUI |
+| `tui` | TUI·CLI, 모든 Provider·도구·스킬·팀 모드. 서버 코드와 내장 WebUI 자산 제외 |
+| `full` | tui의 모든 기능 + SSE·WebSocket·gRPC 서버와 내장 WebUI |
 
 두 종류의 실행 명령과 설치 위치는 모두 `meca`입니다. 원하는 종류 하나를 설치하며 설정·대화·인증정보 형식은 공유합니다. `meca --help` 첫 줄에서 종류를 확인할 수 있습니다.
 
 ### 최신 릴리스로 설치하기
 
-1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 `minimum` 또는 `full`과 운영체제·CPU에 맞는 `.tar.gz` 파일을 받습니다.
+1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 `tui` 또는 `full`과 운영체제·CPU에 맞는 `.tar.gz` 파일을 받습니다.
 2. 압축을 풀고 터미널에서 압축을 푼 폴더로 이동합니다.
 3. 아래 명령으로 설치합니다.
 
@@ -88,16 +88,21 @@ sha256sum "meca_<version>_<variant>_<platform>.tar.gz"
 실행 중인 MECA를 종료한 뒤 실행합니다.
 
 ```sh
+# 현재 종류를 유지하며 최신 버전으로 업데이트
 meca upgrade
+
+# 종류를 지정해 최신 버전으로 교체
+meca upgrade --tui
+meca upgrade --full
 ```
 
-현재 실행 중인 종류와 같은 최신 배포본을 내려받아 검증하고 설치합니다. minimum이 full로 바뀌거나 그 반대로 바뀌지 않습니다. 설정·모델 연결·대화는 유지하며, 기본 프롬프트는 배포 기본본으로 갱신합니다. 종류를 바꾸려면 원하는 압축 파일을 받아 `./meca install`을 실행하세요.
+옵션을 생략하면 현재 실행 중인 종류를 유지합니다. `--tui`는 서버·WebUI가 없는 tui 최신 버전으로, `--full`은 서버·WebUI를 포함하는 full 최신 버전으로 교체합니다. 두 옵션은 함께 사용할 수 없습니다. 파일을 내려받아 검증한 뒤 설치하며 설정·모델 연결·대화는 유지하고, 기본 프롬프트는 배포 기본본으로 갱신합니다.
 
-종류가 분리되기 전 바이너리는 새 파일명을 알지 못합니다. 새 minimum 또는 full을 직접 받아 한 번 재설치한 뒤 `meca upgrade`를 사용하세요. 예전 파일명 별칭은 제공하지 않습니다.
+새 이름·옵션을 모르는 기존 바이너리(옛 `minimum` 포함)는 최신 tui 또는 full을 직접 받아 한 번 `./meca install`로 재설치하세요. 이후 위 업데이트 명령을 사용합니다. 예전 파일명·옵션 별칭은 제공하지 않습니다.
 
 ### 소스에서 설치하기
 
-소스 빌드에는 Git·Go가 필요하며 full에는 Bun 1.4.4 이상도 필요합니다. minimum은 프론트 빌드를 하지 않습니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
+소스 빌드에는 Git·Go가 필요하며 full에는 Bun 1.4.4 이상도 필요합니다. tui는 프론트 빌드를 하지 않습니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
@@ -105,7 +110,7 @@ cd m.e.ca
 ./install.sh
 ```
 
-인자 없는 설치는 full입니다. minimum을 설치하려면 `./install.sh minimum`, full을 명시하려면 `./install.sh full`을 사용합니다.
+인자 없는 설치는 full입니다. tui를 설치하려면 `./install.sh tui`, full을 명시하려면 `./install.sh full`을 사용합니다.
 
 최신 소스로 재설치하려면 저장소에서 실행합니다.
 
@@ -119,8 +124,8 @@ git pull --ff-only
 제품 빌드는 Go 1.27.2 이상, 개발 도구는 Go 1.27.3 이상이 필요합니다. 제품과 도구의 요구 버전은 각각 [go.mod](go.mod)와 [devtools/go.mod](devtools/go.mod)가 소유합니다.
 
 ```sh
-# minimum: 서버·프론트 의존성 없이 빌드
-go build -tags=godbus_no_tcp,minimum -trimpath -o bin/meca ./cmd/meca
+# tui: 서버·프론트 의존성 없이 빌드
+go build -tags=godbus_no_tcp,tui -trimpath -o bin/meca ./cmd/meca
 
 # full: 프론트 자산을 먼저 준비
 sh scripts/build-ui.sh
@@ -188,15 +193,13 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 
 `!` 뒤에 글자를 입력하면 명령을 검색합니다. 설정 저장·파일 전송 확인에서는 `y`·`Y`로 진행하고, 대문자 `N`으로 취소합니다. 소문자 `n`은 무시합니다.
 
-스킬은 프로젝트 `.agents/skills/`, 개인 `~/.meca/skills/`, 공유 `~/.agents/skills/`에서 찾습니다. 시작·설치 시 `create-skill`·`ui-design`·`backend-design` 기본 스킬을 참고 파일과 함께 생성하며 기존 파일은 보존합니다. `#ui-design`만 호출하면 에이전트가 과업·정보 관계·빈도·위험 등 사용 맥락을 살펴 페이지·레이아웃·컴포넌트·모션을 응용합니다. 목록은 조합·변형할 수 있는 예시이며, 실제 내용에 맞는 구조·강조·문구·상태를 만드는 anti-slop 지침을 설계 전 과정에 적용합니다. Product Design의 맥락·시각적 근거·완전한 작업 흐름·실제 렌더링/상호작용 검토 원칙도 반영합니다. Skeleton Pulse/Shimmer·기본 Blur-up·Step Status와 Hamburger Morph·Side Drawer·Staggered Dropdown의 조합, 색을 맥락에 따라 결정하는 8가지 원칙을 다룹니다. 타이포·형태·밀도·이미지·전체 구성·상호작용·모션을 독립적으로 판단하는 지침과 의도한 표현을 보존하는 anti-slop 사례도 제공합니다. 외부 의존성 없는 HTML/CSS/Vanilla JS 예시는 결재·DB 워크벤치·자료 관리·예약·DB 지식 대화·AI 오피스의 여섯 앱과 예약 대안·캔버스·모션을 포함한 36페이지입니다. 동봉 예시에서 오피스는 문서·슬라이드 도구와 작업면을, Archive는 미니멀리즘·에디토리얼 구성과 역할별 포인트 색을 사용하며 Querydesk는 다크 테마입니다. 참고 지침은 선택 기준과 장단점을 설명하고, 에셋과 그 디자인 기록은 해당 사례만 설명합니다. 실제 프로젝트의 요구와 디자인 시스템이 우선하며 예시의 색·화면 수·파일 구조를 그대로 따를 필요는 없습니다. 결재·DB·지식 대화·오피스는 화면별 디자인 셸이며 실제 DB·AI·승인·문서 편집·내보내기를 구현하지 않습니다. 자료는 앱별·공통·모션·참고 캡처 폴더로 구분하며 Markdown 안내에서 필요한 파일을 직접 선택합니다. 참고 자료는 최대 세 층이며 설명은 파일별 8KiB, 코드·미디어는 1MiB까지 허용하고 512KiB 이하를 권장합니다. 서브커맨드는 없습니다. `#create-skill`은 스킬 작성을 돕고, 에이전트가 설명을 보고 필요한 스킬을 자율적으로 읽을 수도 있습니다. [스킬 형식·도구·범위 →](docs/skills.md)
-
-`#backend-design`은 설계 단계부터 CPU·메모리·저장공간·I/O·네트워크·응답 지연을 고려하도록 안내합니다. SQLite·PostgreSQL·Redis의 역할과 동시성, API·스트리밍·작업 수명, 중앙 로거/에러 계약, 고급 암호화·키 관리, 검색·벡터·메모리 최적화를 부하와 장애 조건에 맞춰 판단합니다. 기본 개발 패턴을 책임·호출 흐름·트랜잭션·자원 소유가 드러나는 일곱 실전 구성으로 확장하고, 네 가상 서비스의 설계안과 예상 비용을 비교합니다. 단일 호출에서 필요한 참고 자료만 탐색합니다. [스킬 본문](internal/config/bootstrap/defaults/backend-design/SKILL.md)과 [조사 출처](internal/config/bootstrap/defaults/backend-design/references/sources.md)를 참고하세요.
-
 | 조작 | 동작 |
 | --- | --- |
 | `Enter` / `Shift+Enter` | 요청 전송 / 줄바꿈 |
 | 작업 중 `Enter` / `Tab` | 다음 판단에 방향 수정 / 완료 후 수행할 요청 예약 |
 | `Shift+↑/←` | 마지막 예약 열기·이전 예약 선택 |
+| `Alt+V` / macOS `Ctrl+V` | 로컬 클립보드 이미지 첨부 |
+| `Alt+Backspace` | 마지막 첨부 이미지 제거 |
 | 큐 편집 중 `Shift+↓/→` | 다음 예약 선택 |
 | 큐 편집 중 `Enter`·`Tab` / `Esc` | 수정 저장 / 편집 취소 |
 | 큐 편집 중 `Ctrl/Cmd+Backspace` | 선택한 예약 삭제 |
@@ -208,8 +211,6 @@ meca resume           # 모든 프로젝트의 이전 대화에서 선택
 | 선택 후 `Ctrl/Cmd+C` | 복사 · 선택 없는 `Ctrl+C`는 종료 |
 
 후속 요청은 예약 당시 선택한 파일 경로와 함께 순서대로 실행합니다. 중지·실패 시 남은 요청은 초안으로 복구합니다. 실행 중인 도구와 완료 결과는 기본으로 접혀 있으며 첫 결과 전에도 `Ctrl+O`로 긴 명령과 상세를 펼칩니다. [전체 키맵·파일 탐색·사용량 →](docs/usage.md)
-
-`!team`을 켠 뒤 요청을 보내면 두 에이전트가 같은 프로젝트에서 시작합니다. 바로 진행할 독립 작업에 추가 인원이 필요하면 동료를 초대하거나 이전 세션을 복구합니다. 각 에이전트는 이름과 담당 파일을 공유하며, 대화와 응답은 하나의 화면에 발신자별로 표시합니다. 팀 Thinking은 개인 이력에 보관하고 화면에서는 숨깁니다. 독립 셸 명령은 에이전트별 최대 16개씩 병렬 실행하고 확인된 변경 경로의 충돌을 조율합니다. [팀 모드 →](docs/team.md)
 
 ### 승인과 실행 범위
 
@@ -230,7 +231,79 @@ meca --diagnose
 
 print는 최종 답변, JSON 모드는 순서 있는 이벤트를 출력합니다. [세션 재개·내보내기 →](docs/usage.md#도구-결과와-markdown)
 
+## 팀 모드
+
+팀 모드는 tui와 full 모두에서 사용할 수 있습니다. 같은 프로젝트를 여러 에이전트가 나누어 처리하도록 하려면 현재 대화에서 `!team`을 켜고 다음 요청을 보냅니다.
+
+```text
+!team
+API 구현, 테스트, 문서 작업을 나눠서 진행하고 결과를 함께 검토해줘.
+```
+
+- 처음에는 이름이 있는 독립 에이전트 2개가 시작하고, 필요한 동료를 초대하거나 이전 세션을 복구해 동시에 최대 8개까지 참여합니다.
+- 각 에이전트는 개인 대화·Thinking·문맥을 갖고 같은 모델 연결과 프로젝트 파일을 사용합니다. 담당 경로·공개 대화·도구 진행·결과는 발신자별로 표시합니다.
+- 모델이 업무를 나누고 담당 경로를 조율합니다. 같은 파일을 바꾸는 작업은 충돌을 검사하며, 공유 의존성 설치처럼 임의 명령의 내부 효과까지 격리하는 기능은 아닙니다.
+- 팀 선택은 현재 대화에 저장됩니다. 다시 `!team`을 입력하면 끄고, 실행 중 변경은 다음 요청부터 적용됩니다. 팀 Thinking은 개인 이력에 보관하며 공개 스트림에는 내보내지 않습니다.
+
+WebUI에서는 컴포저의 팀 버튼이나 설정에서 전환합니다. 서버 API는 `setSettings`의 `sessionId`와 `team`으로 같은 설정을 바꿉니다. `--concurrency`는 서버의 사용자 작업 수이며 팀원 수 설정이 아닙니다. [협업·담당 경로·저장·복원 →](docs/team.md)
+
+## 스킬과 추가 방법
+
+스킬은 에이전트가 필요할 때 읽는 `SKILL.md` 작업 지침입니다. tui와 full 모두 지원하며 별도 활성화 명령은 없습니다.
+
+```text
+!skills
+#ui-design 업무 대시보드의 화면과 사용 흐름을 설계해줘.
+#backend-design API와 데이터 저장 구조를 설계하고 TDD로 구현해줘.
+#create-skill 이 프로젝트의 코드 리뷰 지침을 스킬로 만들어줘.
+```
+
+`!skills`는 목록·출처·설명을 보고 본문을 미리 읽는 명령입니다. `#스킬명`은 현재 요청에 사용할 지침을 명시하며, 에이전트가 설명을 보고 필요한 스킬을 스스로 찾아 읽을 수도 있습니다. WebUI에서는 컴포저의 `+` → 스킬 목록 또는 `!skills`를 사용합니다.
+
+| 기본 스킬 | 용도 |
+| --- | --- |
+| `create-skill` | 스킬의 메타데이터·본문·참고 자료 작성과 검증 |
+| `ui-design` | WebApp/SaaS의 화면·사용성·디자인과 Playwright CLI 검증 |
+| `backend-design` | TDD, DB·API·중앙 로거/에러 처리·보안·성능을 고려한 설계 |
+
+### 내 스킬 추가하기
+
+프로젝트에서만 사용할 스킬은 아래 경로에 만듭니다.
+
+```sh
+mkdir -p .agents/skills/review
+```
+
+`.agents/skills/review/SKILL.md`:
+
+```markdown
+---
+name: review
+description: 변경한 코드의 정확성·실패 경로·회귀 위험을 검토할 때 사용한다.
+---
+
+# 코드 리뷰
+
+1. 변경 목적, git diff, 관련 호출부와 테스트를 먼저 확인한다.
+2. 재현 근거가 있는 문제를 파일과 위치를 포함해 설명한다.
+3. 검증한 결과와 확인하지 못한 부분을 구분한다.
+```
+
+추가한 뒤 `!skills`에서 확인하고 `#review 변경 사항을 검토해줘`처럼 사용합니다. 이름은 폴더명과 같은 소문자 영숫자·하이픈을 사용하고, `description`에는 어떤 상황에서 쓸지 적습니다. 긴 자료는 `references/`, 실행에 필요한 파일은 `scripts/`, 예시는 `assets/`로 나누고 본문에서 링크합니다. 스크립트가 포함돼도 스킬 읽기만으로 자동 실행하지 않습니다.
+
+| 우선순위 | 설치 위치 | 범위 |
+| --- | --- | --- |
+| 1 | `<project>/.agents/skills/<name>/SKILL.md` | 현재 프로젝트 |
+| 2 | `~/.meca/skills/<name>/SKILL.md` | 개인 MECA 환경 |
+| 3 | `~/.agents/skills/<name>/SKILL.md` | 다른 에이전트와 공유하는 개인 스킬 |
+
+동명이면 위 순서를 따르며 `#project:review`·`#meca:review`·`#shared:review`로 출처를 지정할 수 있습니다. 기본 스킬은 초기화 때 개인 MECA 경로에 생성하며 기존 사용자 파일은 덮어쓰지 않습니다. [상세 형식·호출 정책·참고 파일·보안 →](docs/skills.md)
+
 ## 서버
+
+서버 API와 내장 WebUI는 **full 배포본**에 있습니다. tui에서 서버 옵션을 사용하면 full 설치 안내를 반환합니다. `meca --help` 첫 줄로 설치한 종류를 확인하세요.
+
+### 서버 기동
 
 서버는 native 선택 대화와 작업별 대화를 소유하며 같은 코어에서 실행합니다. `--concurrency N`은 기본 1이며 양의 정수로 설정합니다. 제품이 정한 고정 상한은 없고, 메모리·입력·연결 예산은 별도로 적용합니다. 같은 세션의 중복 실행은 차단합니다. 저장 형식과 기존 데이터의 열기 제한은 [세션·서버 저장 안내](docs/configuration.md#세션-저장과-복원)를 확인하세요.
 
@@ -244,6 +317,14 @@ meca --server --concurrency 4             # 서로 다른 세션의 작업을 �
 
 기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 등록한 여러 프로젝트를 서비스하며 팀 에이전트는 각 작업 안에서 독립 실행합니다. 프로젝트의 변경·셸 실행은 공통 효과 게이트로 직렬화해 서로 다른 작업의 파일 효과가 섞이지 않게 합니다.
 
+| 옵션 | 의미 |
+| --- | --- |
+| `--server` | TUI 대신 API 서버 기동 |
+| `--ui` | 같은 서버에서 내장 WebUI·브라우저 로그인 제공. `--server`와 함께 사용 |
+| `--listen IP:port` | 수신 주소. 기본 `127.0.0.1:8787` |
+| `--concurrency N` | 프로세스 전체에서 동시에 실행할 사용자 작업 수. 기본 1 |
+| `--protocol sse\|socket\|grpc` | 전송 방식 선택. 기본 `sse` |
+
 | `--protocol` | 제어·이벤트 인터페이스 |
 | --- | --- |
 | `sse` | `POST /v1/command`와 `GET /v1/events` |
@@ -254,7 +335,19 @@ meca --server --concurrency 4             # 서로 다른 세션의 작업을 �
 
 기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
 
-내장 화면에서는 워크스페이스별 대화 생성·전환·삭제, 동시 작업·승인, 이미지 첨부, 스킬과 파일 참조, 문법 강조 텍스트 편집을 사용할 수 있습니다. 컴포저의 `+`를 누르면 이미지 첨부와 스킬 목록 패널이 위로 펼쳐집니다. 좌측 하단 설정에서 모델·승인 모드·팀·언어·테마를 바꿉니다. `!model`·`!permission`·`!team`·`!language`·`!dir`·`!skills`도 컴포저에서 사용할 수 있습니다. 서버 토큰은 접속 화면에 입력하고 브라우저 저장소에 원문을 보관하지 않습니다. [화면 구성과 동작 →](docs/webui-design.md)
+### 내장 WebUI 기동
+
+```sh
+meca /path/to/project --server --ui
+```
+
+1. 브라우저에서 `http://127.0.0.1:8787/ui/`를 엽니다. 로컬 대화형 터미널에서는 브라우저도 자동으로 엽니다. `--listen`을 바꿨다면 같은 주소·포트의 `/ui/`를 사용하세요.
+2. 연결 화면에 `~/.meca/server.token`의 서버 토큰을 입력합니다. 모델 Provider의 API Key와는 별개입니다.
+3. 왼쪽에서 프로젝트와 대화를 고르거나 새로 만들고, 왼쪽 아래 톱니바퀴에서 모델·실행·일반 설정을 변경합니다.
+
+프로젝트별 대화를 펼치고 접으며 여러 대화를 동시에 실행할 수 있습니다. 컴포저는 `!model`·`!permission`·`!team`·`!language`·`!dir`·`!skills`를 지원하고, `+`에서 이미지와 스킬을 추가합니다. 이미지 드래그 앤드 드롭·클립보드 붙여넣기도 지원합니다. `!new`·`!quit` 대신 화면의 새 대화·삭제·연결 종료를 사용합니다.
+
+답변·Thinking·도구 진행·승인은 스트리밍으로 표시하고, 스트림 일시정지·재연결과 후속 예약을 제공합니다. 파일 탭에서는 참조 선택과 문법 강조 편집·충돌 확인 저장을 사용할 수 있습니다. 기본 테마는 라이트이며 다크·시스템 테마로 바꿀 수 있습니다. 서버 토큰 원문은 브라우저 저장소에 보관하지 않습니다. [화면 구성과 동작 →](docs/webui-design.md)
 
 화면은 React·Astryx와 Astryx Neutral의 Lucide 아이콘을 사용하며 소스는 FSD 계층과 공개 API를 따릅니다. 서버 데이터 캐시는 TanStack Query, 인증·표시 설정·워크스페이스 임시 상태는 책임별 Zustand 스토어가 소유합니다. Astryx 공용 미디어 쿼리·locale·단축키 유틸리티를 사용합니다. 빌드 전에 TypeScript·Biome·Oxlint·Knip·Steiger로 타입, 코드 품질, Promise 처리, 데드코드와 계층 의존성을 검사합니다. [프론트 구성과 검증 →](docs/development.md#내장-webui)
 
@@ -295,6 +388,7 @@ M.E.CA는 미니멀함과 가벼움을 설계의 기준으로 삼습니다.
 │   ├── single/
 │   └── team/
 ├── sessions/
+├── skills/            # 기본·개인 스킬과 참고 자료
 └── logs/
 ```
 
@@ -323,10 +417,13 @@ GOFLAGS='-tags=godbus_no_tcp' go vet ./...
 | --- | --- |
 | [사용 가이드](docs/usage.md) | 키맵·파일 탐색·예약·승인·사용량 |
 | [스킬](docs/skills.md) | 설치 경로·SKILL.md·명시 지정·모델 도구·참고 자료 |
+| [기본 스킬 안내](docs/builtin-skills.md) | create-skill·ui-design·backend-design의 용도와 참고 자료 구성 |
 | [이벤트와 운영 로그](docs/diagnostics.md) | 스킬 읽기 기록·식별자·JSON 로그·보관 한도 |
 | [이미지 입력](docs/images.md) | 비전 지원 확인·이미지 도구·지원 형식 |
 | [모델 연결](docs/model-connections.md) | Provider·Thinking·서빙 설정·연결 진단 |
 | [서버 API](docs/server.md) | SSE·WebSocket·gRPC·인증·작업 제어·이미지 입력·재구독 |
+| [WebUI 사용과 구조](docs/webui-design.md) | 기동·프로젝트/대화·컴포저·설정·파일·테마 |
+| [WebUI 연동 계약](docs/webui-api.md) | 화면별 API·스트림 복원·브라우저 인증·완료/예약 처리 |
 | [설정과 대화 보존](docs/configuration.md) | 추론 인자·프롬프트·Compaction·세션 |
 | [에이전트 작동 방식](docs/runtime.md) | 모델 요청·도구·명령 수명·재개 |
 | [팀 모드](docs/team.md) | 독립 세션·공용 대화·초대·복구·작업 조율 |

@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Announce the embedded UI and open one local interactive browser.
 // Pattern: Process presentation adapter.

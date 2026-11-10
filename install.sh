@@ -1,19 +1,19 @@
 #!/bin/sh
 # Purpose: Build the selected MECA distribution with an existing or verified temporary Go toolchain.
 # Pattern: Thin command entry point.
-# Usage: ./install.sh [minimum|full]; full is the default.
+# Usage: ./install.sh [tui|full]; full is the default.
 # Related: scripts/install/go.sh, cmd/meca/install.go, internal/commands/install/install.go, README.md.
 
 set -eu
 
 if [ "$#" -gt 1 ]; then
-    printf '사용법: ./install.sh [minimum|full]\n' >&2
+    printf '사용법: ./install.sh [tui|full]\n' >&2
     exit 2
 fi
 meca_install_variant=${1:-full}
 case "$meca_install_variant" in
-    minimum|full) ;;
-    *) printf '사용법: ./install.sh [minimum|full]\n' >&2; exit 2 ;;
+    tui|full) ;;
+    *) printf '사용법: ./install.sh [tui|full]\n' >&2; exit 2 ;;
 esac
 
 meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
@@ -23,7 +23,7 @@ meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
     if [ "$meca_install_variant" = full ]; then
         sh "$meca_install_root/scripts/build-ui.sh"
     else
-        meca_go_tags="$meca_go_tags,minimum"
+        meca_go_tags="$meca_go_tags,tui"
     fi
     meca_go_stage=
     trap '[ -z "$meca_go_stage" ] || rm -rf -- "$meca_go_stage"' 0

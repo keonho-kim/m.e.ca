@@ -6,11 +6,12 @@ M.E.CA는 개인이 단독 개발·관리하며 외부 코드 기여는 받지 �
 
 [GitHub Issues](https://github.com/keonho-kim/m.e.ca/issues)에 다음 정보를 알려주세요.
 
-- 사용한 M.E.CA 버전과 운영체제·터미널
+- 사용한 M.E.CA 버전·종류(`tui`/`full`)와 운영체제·터미널. 종류는 `meca --help` 첫 줄에서 확인
 - 문제를 재현하는 순서
 - 예상한 동작과 실제 동작
 - 필요한 범위의 오류 메시지
-- Provider 종류, TUI·CLI·서버 실행 방식과 서버 전송 방식(`sse`·`socket`·`grpc`), 관련 실행 옵션
+- Provider 종류, TUI·CLI·서버·WebUI 실행 방식과 서버 전송 방식(`sse`·`socket`·`grpc`), `--ui` 등 관련 실행 옵션
+- 팀·스킬 관련 문제라면 팀 사용 여부, 스킬 출처·이름과 `!skills` 진단. 비공개 지침 원문 대신 재현에 필요한 최소 예시
 
 API Key·서버 Bearer 토큰·비밀번호·대화 원문·사용자 프로젝트의 비공개 코드는 제보에 포함하지 마세요. HTTP 헤더·환경 변수·경로나 로그에 인증정보와 개인정보가 있으면 먼저 가려주세요. 지원 계약은 [모델 연결](docs/model-connections.md)과 [서버 API](docs/server.md)에서 확인할 수 있습니다.
 

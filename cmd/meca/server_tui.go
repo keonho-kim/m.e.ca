@@ -1,6 +1,6 @@
-//go:build minimum
+//go:build tui
 
-// Purpose: Reject server dispatch without importing server adapters into minimum binaries.
+// Purpose: Reject server dispatch without importing server adapters into tui binaries.
 // Pattern: Build-selected executable boundary.
 // Usage: The shared composition root retains this guarded dispatch contract.
 // Related: cmd/meca/main.go, cmd/meca/server.go, internal/commands/startup/server.go.

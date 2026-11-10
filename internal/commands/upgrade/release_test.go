@@ -23,7 +23,7 @@ import (
 func TestFetchVerifiesAndRetriesPartialDownloads(t *testing.T) {
 	archive := tarball(t, archiveEntry{name: "meca", content: "complete executable"})
 	var requests atomic.Int32
-	client := releaseFixture(t, archive, nil, func(writer http.ResponseWriter, request *http.Request) bool {
+	client := releaseFixture(t, distribution.Name, archive, nil, func(writer http.ResponseWriter, request *http.Request) bool {
 		if request.URL.Path == "/releases/assets/2" && requests.Add(1) == 1 {
 			writer.Header().Set("Content-Length", fmt.Sprint(len(archive)))
 			_, _ = writer.Write(archive[:len(archive)/2])
@@ -32,7 +32,7 @@ func TestFetchVerifiesAndRetriesPartialDownloads(t *testing.T) {
 		return false
 	})
 	root := temporaryRoot(t)
-	version, err := client.fetch(context.Background(), root)
+	version, err := client.fetch(context.Background(), root, distribution.Name)
 	if err != nil || version != "v0.0.20261026" || requests.Load() != 2 {
 		t.Fatalf("fetch = %q, %v; download attempts %d", version, err, requests.Load())
 	}
@@ -61,17 +61,19 @@ func TestArchiveName(t *testing.T) {
 		{"darwin", "arm64", "macos_arm64"}, {"darwin", "amd64", "macos_amd64"},
 		{"linux", "arm64", "linux_arm64"}, {"linux", "amd64", "linux_amd64"},
 	} {
-		got, err := archiveName("v0.0.20261026", platform.system, platform.architecture)
-		if err != nil || got != "meca_0.0.20261026_"+distribution.Name+"_"+platform.suffix+".tar.gz" {
-			t.Fatalf("platform archive = %q, %v", got, err)
+		for _, kind := range []distribution.Kind{distribution.TUI, distribution.Full} {
+			got, err := archiveName("v0.0.20261026", kind, platform.system, platform.architecture)
+			if err != nil || got != "meca_0.0.20261026_"+string(kind)+"_"+platform.suffix+".tar.gz" {
+				t.Fatalf("platform archive = %q, %v", got, err)
+			}
 		}
 	}
 	for _, version := range []string{"v0.0.0-beta", "../../meca", "v0.0.20260230", "v00.0.20261026"} {
-		if _, err := archiveName(version, "linux", "amd64"); err == nil {
+		if _, err := archiveName(version, distribution.Name, "linux", "amd64"); err == nil {
 			t.Fatalf("accepted unsupported release %q", version)
 		}
 	}
-	if _, err := archiveName("v0.0.20261026", "windows", "amd64"); err == nil {
+	if _, err := archiveName("v0.0.20261026", distribution.Name, "windows", "amd64"); err == nil {
 		t.Fatal("accepted an unsupported operating system")
 	}
 }
@@ -88,31 +90,50 @@ func TestArchiveChecksum(t *testing.T) {
 	}
 }
 
-func TestFetchKeepsDistribution(t *testing.T) {
-	archive := tarball(t, archiveEntry{name: "meca", content: "selected distribution"})
-	other := distribution.Minimum
-	if distribution.Name == other {
-		other = distribution.Full
+func TestFetchSelectsRequestedDistribution(t *testing.T) {
+	for _, kind := range []distribution.Kind{distribution.TUI, distribution.Full} {
+		t.Run(string(kind), func(t *testing.T) {
+			archive := tarball(t, archiveEntry{name: "meca", content: string(kind)})
+			other := distribution.TUI
+			if kind == other {
+				other = distribution.Full
+			}
+			client := releaseFixture(t, kind, archive, func(latest *release, manifest *string) {
+				wrong := strings.Replace(latest.Assets[1].Name, "_"+string(kind)+"_", "_"+string(other)+"_", 1)
+				latest.Assets = append(latest.Assets, asset{ID: 3, Name: wrong, Size: int64(len(archive))})
+				*manifest += fmt.Sprintf("%x  %s\n", sha256.Sum256(archive), wrong)
+				latest.Assets[0].Size = int64(len(*manifest))
+			}, func(w http.ResponseWriter, r *http.Request) bool {
+				if r.URL.Path != "/releases/assets/3" {
+					return false
+				}
+				t.Error("updater selected the other distribution")
+				w.WriteHeader(http.StatusConflict)
+				return true
+			})
+			root := temporaryRoot(t)
+			if _, err := client.fetch(t.Context(), root, kind); err != nil {
+				t.Fatal(err)
+			}
+			body, err := os.ReadFile(filepath.Join(root.Name(), "meca"))
+			if err != nil || string(body) != string(kind) {
+				t.Fatal(string(body), err)
+			}
+		})
 	}
-	client := releaseFixture(t, archive, func(latest *release, manifest *string) {
-		wrong := strings.Replace(latest.Assets[1].Name, "_"+distribution.Name+"_", "_"+other+"_", 1)
-		latest.Assets = append(latest.Assets, asset{ID: 3, Name: wrong, Size: int64(len(archive))})
-		*manifest += fmt.Sprintf("%x  %s\n", sha256.Sum256(archive), wrong)
-		latest.Assets[0].Size = int64(len(*manifest))
-	}, func(w http.ResponseWriter, r *http.Request) bool {
-		if r.URL.Path != "/releases/assets/3" {
-			return false
-		}
-		t.Error("updater selected the other distribution")
-		w.WriteHeader(http.StatusConflict)
-		return true
+}
+
+func TestFetchRejectsUnknownDistributionBeforeNetwork(t *testing.T) {
+	client := releaseFixture(t, distribution.Name, nil, nil, func(http.ResponseWriter, *http.Request) bool {
+		t.Error("invalid distribution reached the network")
+		return false
 	})
-	root := temporaryRoot(t)
-	if _, err := client.fetch(t.Context(), root); err != nil {
-		t.Fatal(err)
-	}
-	body, err := os.ReadFile(filepath.Join(root.Name(), "meca"))
-	if err != nil || string(body) != "selected distribution" {
-		t.Fatal(string(body), err)
+	for _, kind := range []distribution.Kind{"", "minimum", "../full"} {
+		if _, err := client.fetch(t.Context(), temporaryRoot(t), kind); err == nil {
+			t.Fatalf("accepted unsupported distribution %q", kind)
+		}
+		if _, err := archiveName("v0.0.20261026", kind, "linux", "amd64"); err == nil {
+			t.Fatalf("named unsupported distribution %q", kind)
+		}
 	}
 }

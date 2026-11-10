@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Prepare an owned server model client without persisting selections or credentials.
 // Pattern: Composition root model I/O boundary.

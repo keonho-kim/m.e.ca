@@ -42,15 +42,15 @@ jobs:
         id: version
         run: bash scripts/release/prepare.sh >> "$GITHUB_OUTPUT"
 
-      - name: Verify minimum without frontend assets
+      - name: Verify tui without frontend assets
         env:
-          GOFLAGS: -tags=godbus_no_tcp,minimum
+          GOFLAGS: -tags=godbus_no_tcp,tui
         run: |
           go test ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade ./internal/commands/install
           go vet ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade
-          go list -deps ./cmd/meca > "$RUNNER_TEMP/meca-minimum-deps.txt"
-          if grep -Eq 'meca/internal/(commands/server|serverapi|webui)(/|$)' "$RUNNER_TEMP/meca-minimum-deps.txt"; then
-            printf 'The minimum executable must not import server or WebUI adapters.\n' >&2
+          go list -deps ./cmd/meca > "$RUNNER_TEMP/meca-tui-deps.txt"
+          if grep -Eq 'meca/internal/(commands/server|serverapi|webui)(/|$)' "$RUNNER_TEMP/meca-tui-deps.txt"; then
+            printf 'The tui executable must not import server or WebUI adapters.\n' >&2
             exit 1
           fi
 
@@ -94,5 +94,5 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          printf 'Published [M.E.CA %s](https://github.com/%s/releases/tag/%s): minimum/full for macOS/Linux (amd64/arm64), eight archives.\n' \
+          printf 'Published [M.E.CA %s](https://github.com/%s/releases/tag/%s): tui/full for macOS/Linux (amd64/arm64), eight archives.\n' \
             "$RELEASE_TAG" "$GITHUB_REPOSITORY" "$RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Exercise real engine, native provider, tools, journal and SSE rendering as one PGO workload.
 // Pattern: Isolated end-to-end benchmark with deterministic loopback model responses.

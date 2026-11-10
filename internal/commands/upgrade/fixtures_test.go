@@ -16,6 +16,8 @@ import (
 	"os"
 	"runtime"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 type archiveEntry struct {
@@ -55,9 +57,9 @@ func tarball(t *testing.T, entries ...archiveEntry) []byte {
 	return body.Bytes()
 }
 
-func releaseFixture(t *testing.T, archive []byte, alter func(*release, *string), intercept func(http.ResponseWriter, *http.Request) bool) *Client {
+func releaseFixture(t *testing.T, kind distribution.Kind, archive []byte, alter func(*release, *string), intercept func(http.ResponseWriter, *http.Request) bool) *Client {
 	t.Helper()
-	name, err := archiveName("v0.0.20261026", runtime.GOOS, runtime.GOARCH)
+	name, err := archiveName("v0.0.20261026", kind, runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		t.Fatal(err)
 	}

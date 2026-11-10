@@ -50,7 +50,7 @@ func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 			serverFlag = true
 		}
 	})
-	if distribution.Name == distribution.Minimum && (requested || serverFlag) {
+	if distribution.Name == distribution.TUI && (requested || serverFlag) {
 		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.DistributionFullRequired)
 	}
 	if !mode.Server && serverFlag {

@@ -18,23 +18,23 @@ import (
 )
 
 func TestPublishRelease(t *testing.T) {
-	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "minimum UI notice", "missing build tag", "lookalike build tag", "missing variant tag", "wrong variant tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure", "cleanup failure"} {
+	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "tui UI notice", "missing build tag", "lookalike build tag", "missing variant tag", "wrong variant tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure", "cleanup failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			copyReleaseScript(t, root, "publish.sh")
 			writeReleaseFile(t, root, "docs/release-notes.md", "Fixture notes\n")
 			var manifest strings.Builder
-			for _, variant := range []string{"minimum", "full"} {
+			for _, variant := range []string{"tui", "full"} {
 				for _, platform := range []string{"linux_amd64", "linux_arm64", "macos_amd64", "macos_arm64"} {
 					name := "meca_0.0.20261026_" + variant + "_" + platform + ".tar.gz"
 					metadata := "\tbuild\t-tags=godbus_no_tcp\n"
-					if variant == "minimum" {
-						metadata = "\tbuild\t-tags=godbus_no_tcp,minimum\n"
+					if variant == "tui" {
+						metadata = "\tbuild\t-tags=godbus_no_tcp,tui\n"
 					}
 					if mode == "extra build tags" {
 						metadata = "\tbuild\t-tags=first,godbus_no_tcp,last\n"
-						if variant == "minimum" {
-							metadata = "\tbuild\t-tags=first,godbus_no_tcp,minimum,last\n"
+						if variant == "tui" {
+							metadata = "\tbuild\t-tags=first,godbus_no_tcp,tui,last\n"
 						}
 					}
 					if platform == "macos_arm64" {
@@ -48,16 +48,16 @@ func TestPublishRelease(t *testing.T) {
 						case "unreadable build metadata":
 							metadata = "invalid executable\n"
 						case "missing variant tag":
-							if variant == "minimum" {
+							if variant == "tui" {
 								metadata = "\tbuild\t-tags=godbus_no_tcp\n"
 							}
 						case "wrong variant tag":
 							if variant == "full" {
-								metadata = "\tbuild\t-tags=godbus_no_tcp,minimum\n"
+								metadata = "\tbuild\t-tags=godbus_no_tcp,tui\n"
 							}
 						}
 					}
-					uiNotice := variant == "full" && mode != "missing UI notice" || variant == "minimum" && mode == "minimum UI notice"
+					uiNotice := variant == "full" && mode != "missing UI notice" || variant == "tui" && mode == "tui UI notice"
 					body := releaseArchive(t, mode != "missing notice", uiNotice, metadata)
 					writeReleaseFile(t, root, "dist/"+name, string(body))
 					fmt.Fprintf(&manifest, "%x  %s\n", sha256.Sum256(body), name)
@@ -65,7 +65,7 @@ func TestPublishRelease(t *testing.T) {
 			}
 			writeReleaseFile(t, root, "dist/checksums.txt", manifest.String())
 			if mode == "bad checksum" {
-				writeReleaseFile(t, root, "dist/meca_0.0.20261026_minimum_linux_amd64.tar.gz", "corrupted")
+				writeReleaseFile(t, root, "dist/meca_0.0.20261026_tui_linux_amd64.tar.gz", "corrupted")
 			}
 			if _, err := exec.LookPath("sha256sum"); err != nil {
 				writeReleaseFile(t, root, "commands/sha256sum", "#!/bin/sh\nexec shasum -a 256 \"$@\"\n")
@@ -116,11 +116,16 @@ func TestPublishRelease(t *testing.T) {
 					t.Fatal("verified release was not published")
 				}
 				deleted := strings.Count(string(calls), "release delete-asset")
-				if mode == "new" && deleted != 0 || mode != "new" && deleted != 4 {
+				if mode == "new" && deleted != 0 || mode != "new" && deleted != 8 {
 					t.Fatal("incorrect obsolete archive cleanup", string(calls))
 				}
 				if deleted > 0 && strings.Index(string(calls), "release delete-asset") < strings.Index(string(calls), "release upload") {
 					t.Fatal("old archives were removed before uploading both distributions")
+				}
+				for _, call := range strings.Split(string(calls), "\n") {
+					if strings.Contains(call, "release delete-asset") && (strings.Contains(call, "_full_") || strings.Contains(call, "20261025") || strings.Contains(call, "unrelated-notes")) {
+						t.Fatal("cleanup removed a current or unrelated asset", call)
+					}
 				}
 				return
 			}
@@ -193,7 +198,12 @@ const fakeReleaseGitHub = `#!/bin/sh
 if [ "$1" = api ]; then
   if [ "$4" = '.assets[].name' ]; then
     if [ "$RELEASE_TEST_MODE" != new ]; then
-      for platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do printf 'meca_0.0.20261026_%s.tar.gz\n' "$platform"; done
+      for platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do
+        printf 'meca_0.0.20261026_%s.tar.gz\n' "$platform"
+        printf 'meca_0.0.20261026_minimum_%s.tar.gz\n' "$platform"
+        printf 'meca_0.0.20261026_full_%s.tar.gz\n' "$platform"
+        printf 'meca_0.0.20261025_minimum_%s.tar.gz\n' "$platform"
+      done
       echo unrelated-notes.txt
     fi
     exit 0

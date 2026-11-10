@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Acquire exclusive server conversation resources using existing recovery and request factories.
 // Pattern: Composition root resource factory.

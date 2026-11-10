@@ -1,4 +1,4 @@
-// Purpose: Select the latest platform archive and verify its published SHA-256 before extraction.
+// Purpose: Select the requested distribution's latest platform archive and verify SHA-256 before extraction.
 // Pattern: Release download use case.
 // Usage: Run passes a private staging root to fetch.
 // Related: internal/commands/upgrade/request.go, internal/commands/upgrade/archive.go, .goreleaser.yaml.
@@ -41,7 +41,10 @@ type release struct {
 	Assets     []asset `json:"assets"`
 }
 
-func (c *Client) fetch(ctx context.Context, directory *os.Root) (string, error) {
+func (c *Client) fetch(ctx context.Context, directory *os.Root, kind distribution.Kind) (string, error) {
+	if kind != distribution.TUI && kind != distribution.Full {
+		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedDistribution)
+	}
 	var latest release
 	err := c.read(ctx, "/releases/latest", "application/vnd.github+json", func(reader io.Reader) error {
 		body, err := readInfo(reader)
@@ -57,7 +60,7 @@ func (c *Client) fetch(ctx context.Context, directory *os.Root) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	name, err := archiveName(latest.Version, runtime.GOOS, runtime.GOARCH)
+	name, err := archiveName(latest.Version, kind, runtime.GOOS, runtime.GOARCH)
 	if err != nil || latest.Draft || latest.Prerelease {
 		return "", faults.Errorf(diagcatalog.UpgradeLatestReleaseIsNotASupportedPublished)
 	}
@@ -134,7 +137,10 @@ func assetPath(asset asset) string {
 	return "/releases/assets/" + strconv.FormatInt(asset.ID, 10)
 }
 
-func archiveName(version, system, architecture string) (string, error) {
+func archiveName(version string, kind distribution.Kind, system, architecture string) (string, error) {
+	if kind != distribution.TUI && kind != distribution.Full {
+		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedDistribution)
+	}
 	parts := releaseTag.FindStringSubmatch(version)
 	if len(parts) != 4 {
 		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedReleaseVersion)
@@ -148,7 +154,7 @@ func archiveName(version, system, architecture string) (string, error) {
 	if system != "macos" && system != "linux" || architecture != "amd64" && architecture != "arm64" {
 		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedReleasePlatform)
 	}
-	return "meca_" + strings.TrimPrefix(version, "v") + "_" + distribution.Name + "_" + system + "_" + architecture + ".tar.gz", nil
+	return "meca_" + strings.TrimPrefix(version, "v") + "_" + string(kind) + "_" + system + "_" + architecture + ".tar.gz", nil
 }
 
 func archiveChecksum(manifest, name string) (string, error) {

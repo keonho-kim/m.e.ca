@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Compose one immutable project runtime with shared process budgets.
 // Pattern: Composition root.

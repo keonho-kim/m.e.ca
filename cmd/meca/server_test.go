@@ -1,4 +1,4 @@
-//go:build !minimum
+//go:build !tui
 
 // Purpose: Verify the executable serves a real project without a TTY and shuts down on SIGTERM.
 // Pattern: Executable integration test.
