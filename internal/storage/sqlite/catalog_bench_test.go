@@ -1,4 +1,4 @@
-// Purpose: Measure initial conversation discovery and grouped journal commit costs.
+// Purpose: Measure first and repeated conversation discovery and grouped journal commit costs.
 // Pattern: Synthetic storage benchmarks.
 // Usage: go test ./internal/storage/sqlite -run '^$' -bench 'Benchmark(Conversations|Journal)' -benchmem.
 // Related: internal/storage/sqlite/conversations.go, internal/storage/sqlite/commit.go.
@@ -14,16 +14,20 @@ import (
 )
 
 func BenchmarkConversations(b *testing.B) {
-	benchmarkConversations(b, context.Background())
+	benchmarkConversations(b, context.Background(), false)
+}
+
+func BenchmarkWarmConversations(b *testing.B) {
+	benchmarkConversations(b, context.Background(), true)
 }
 
 func BenchmarkCancellableConversations(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	benchmarkConversations(b, ctx)
+	benchmarkConversations(b, ctx, false)
 }
 
-func benchmarkConversations(b *testing.B, ctx context.Context) {
+func benchmarkConversations(b *testing.B, ctx context.Context, warm bool) {
 	root := b.TempDir()
 	catalog, err := OpenSessions(filepath.Join(root, "sessions"))
 	if err != nil {
@@ -35,6 +39,11 @@ func benchmarkConversations(b *testing.B, ctx context.Context) {
 			b.Fatal(err)
 		}
 		if err := s.Close(); err != nil {
+			b.Fatal(err)
+		}
+	}
+	if warm {
+		if _, err := catalog.Conversations(ctx, ""); err != nil {
 			b.Fatal(err)
 		}
 	}

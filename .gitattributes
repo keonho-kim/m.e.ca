@@ -1,0 +1,6 @@
+# Purpose: Identify generated protocol bindings and preserve their generator's EOF formatting.
+# Pattern: Path-scoped Git attributes.
+# Usage: Git checks authored whitespace while GitHub groups generated binding changes.
+# Related: api/meca/v1, internal/serverapi/gen, webui/src/shared/api/gen.
+internal/serverapi/gen/** linguist-generated=true
+webui/src/shared/api/gen/** linguist-generated=true whitespace=-blank-at-eof

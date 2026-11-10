@@ -7,11 +7,13 @@ package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 import "meca/v1/skills.proto";
 import "meca/v1/workspace.proto";
+import "meca/v1/application.proto";
 
 message Empty {}
 message Command {
   // Correlates replies on a socket. It is separate from StartRequest.key.
   string id = 1;
+  string workspace_id = 2;
   oneof operation {
     SessionListRequest list_sessions = 10;
     SelectSession select_session = 11;
@@ -41,6 +43,17 @@ message Command {
     TaskListRequest list_tasks = 35;
     CommandListRequest commands = 36;
     Empty resources = 37;
+    Empty list_workspaces = 38;
+    WorkspaceRequest add_workspace = 39;
+    SessionTarget delete_session = 40;
+    Empty command_catalog = 41;
+    ParseInput parse_input = 42;
+    EditFile editor_read = 43;
+    EditFile editor_save = 44;
+    DiagnoseModel diagnose_model = 45;
+    WorkspaceRequest browse_folders = 46;
+    RequestLookup lookup_request = 47;
+    SkillPrefix suggest_skills = 48;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }

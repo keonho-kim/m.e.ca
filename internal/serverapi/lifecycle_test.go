@@ -160,7 +160,7 @@ func TestApprovalIsSingleUseAndHistoryRetainsToolOriginal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			found = found || strings.Contains(string(page.Data), "write_file")
+			found = found || strings.Contains(page.Text, "write_file")
 		}
 	}
 	if !found {

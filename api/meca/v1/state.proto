@@ -8,10 +8,12 @@ option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;me
 import "meca/v1/events.proto";
 import "meca/v1/skills.proto";
 import "meca/v1/workspace.proto";
+import "meca/v1/application.proto";
 
 message Error { string code = 1; string message = 2; }
 message Reply {
   string id = 1;
+  string workspace_id = 2;
   oneof result {
     EmptyResult ok = 10;
     Error error = 11;
@@ -34,6 +36,11 @@ message Reply {
     TaskPage tasks = 28;
     CommandStates commands = 29;
     Resources resources = 30;
+    Workspaces workspaces = 31;
+    CommandCatalog command_catalog = 32;
+    ParsedInput parsed_input = 33;
+    EditorDocument editor = 34;
+    DiagnosticResult diagnostic = 35;
   }
 }
 message EmptyResult {}
@@ -44,6 +51,8 @@ message Session {
   string summary = 4;
   string updated = 5;
   string unavailable = 6;
+ string running_task_id = 7;
+ int32 pending_approvals = 8;
 }
 message Sessions { repeated Session items = 1; string next_cursor = 2; }
 message Model {
@@ -80,6 +89,7 @@ message Execution {
   string started_at = 6;
 }
 message Snapshot {
+  string workspace_id = 18;
   string cursor = 1;
   Session session = 2;
   Task task = 3;
@@ -106,11 +116,13 @@ message HistoryItem {
   bool incomplete = 5;
   Event event = 6;
   bool truncated = 7;
+ RunOutcome outcome = 9;
   repeated ImageMetadata images = 8;
 }
 message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; }
 message DetailPage {
-  bytes data = 1;
+  reserved 1;
+  string text = 8;
   int64 offset = 2;
   int64 next_offset = 3;
   int64 total_bytes = 4;

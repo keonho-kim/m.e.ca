@@ -1,0 +1,67 @@
+// Purpose: Derive a small lossless display image under the shared pixel-decoding budget.
+// Pattern: Cancellable codec boundary.
+// Usage: The authenticated image endpoint loads originals only on thumbnail cache misses.
+// Related: internal/serverapi/thumbnail.go, internal/processmemory/transient.go.
+package thumbnail
+
+import (
+	"bytes"
+	"context"
+	"github.com/keonho-kim/meca/internal/agent/media"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/processmemory"
+	"golang.org/x/image/draw"
+	_ "golang.org/x/image/webp"
+	"image"
+	_ "image/jpeg"
+	"image/png"
+)
+
+func Render(ctx context.Context, value media.Image) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	config, _, err := image.DecodeConfig(bytes.NewReader(value.Data))
+	if err != nil {
+		return nil, err
+	}
+	pixels := int64(config.Width) * int64(config.Height)
+	if config.Width < 1 || config.Height < 1 || config.Width > media.MaxPixels || config.Height > media.MaxPixels || pixels > media.MaxPixels {
+		return nil, fault.Errorf(diag.MediaImageExceedsThePixelDecodeBudget, media.MaxPixels)
+	}
+	release, err := processmemory.AcquireDecode(ctx, pixels*8+int64(len(value.Data))*2+2<<20)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	source, _, err := image.Decode(bytes.NewReader(value.Data))
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	width, height := config.Width, config.Height
+	if width > 256 || height > 256 {
+		if width >= height {
+			height = max(1, height*256/width)
+			width = 256
+		} else {
+			width = max(1, width*256/height)
+			height = 256
+		}
+	}
+	result := image.NewNRGBA(image.Rect(0, 0, width, height))
+	draw.ApproxBiLinear.Scale(result, result.Bounds(), source, source.Bounds(), draw.Src, nil)
+	result = orientPreview(result, displayOrientation(value.Data))
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	var output bytes.Buffer
+	encoder := png.Encoder{CompressionLevel: png.BestSpeed}
+	if err := encoder.Encode(&output, result); err != nil {
+		return nil, err
+	}
+	return output.Bytes(), ctx.Err()
+}

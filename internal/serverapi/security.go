@@ -42,6 +42,14 @@ func (t *Transport) authenticates(token string) bool {
 	return subtle.ConstantTimeCompare(got[:], t.token[:]) == 1
 }
 
+func imageQueryRoute(r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/"), "/")
+	return len(parts) == 5 && parts[0] == "sessions" && parts[2] == "images" || len(parts) == 7 && parts[0] == "workspaces" && parts[2] == "sessions" && parts[4] == "images"
+}
+
 func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -49,7 +57,7 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiHostIsNotAllowed), http.StatusForbidden)
 		return false
 	}
-	if r.URL.RawQuery != "" && r.URL.Path != "/v1/events" {
+	if r.URL.RawQuery != "" && r.URL.Path != "/v1/events" && r.URL.Path != "/v1/files/events" && !strings.HasPrefix(r.URL.Path, "/ui/") && !imageQueryRoute(r) {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiQueryParametersAreNotSupported), http.StatusBadRequest)
 		return false
 	}
@@ -78,22 +86,25 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 		}
 		for _, header := range strings.Split(r.Header.Get("Access-Control-Request-Headers"), ",") {
 			switch strings.ToLower(strings.TrimSpace(header)) {
-			case "", "authorization", "content-type", "last-event-id", "connect-protocol-version", "connect-timeout-ms", "x-grpc-web", "grpc-timeout", "x-user-agent":
+			case "", "authorization", "x-meca-ui", "x-meca-workspace", "content-type", "last-event-id", "connect-protocol-version", "connect-timeout-ms", "x-grpc-web", "grpc-timeout", "x-user-agent":
 			default:
 				http.Error(w, diagcatalog.Text(diagcatalog.ServerapiHeaderIsNotAllowed), http.StatusForbidden)
 				return false
 			}
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Last-Event-ID, Connect-Protocol-Version, Connect-Timeout-Ms, X-Grpc-Web, Grpc-Timeout, X-User-Agent")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, X-Meca-UI, X-Meca-Workspace, Content-Type, Last-Event-ID, Connect-Protocol-Version, Connect-Timeout-Ms, X-Grpc-Web, Grpc-Timeout, X-User-Agent")
 		w.WriteHeader(http.StatusNoContent)
 		return false
+	}
+	if t.ui != nil && (r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/")) && (r.Method == "GET" || r.Method == "HEAD") {
+		return true
 	}
 	// Browser WebSocket APIs cannot set Authorization. The first bounded frame
 	// authenticates that transport before any command or event is accepted.
 	if !t.socketHandshake(r) {
 		values := r.Header.Values("Authorization")
-		if len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || !t.authenticates(strings.TrimPrefix(values[0], "Bearer ")) {
+		if (len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || !t.authenticates(strings.TrimPrefix(values[0], "Bearer "))) && !t.browserAuthenticated(r) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			writeAuthError(w, r)
 			return false

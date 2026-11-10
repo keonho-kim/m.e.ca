@@ -1,122 +1,117 @@
-// Purpose: Compose server application resources and the selected network transport.
+// Purpose: Compose multi-workspace serving with shared process budgets and optional UI.
 // Pattern: Composition root.
-// Usage: main calls runServer for meca --server --protocol sse|socket|grpc.
-// Related: cmd/meca/server_session.go, internal/commands/server/service.go, internal/serverapi/network.go.
+// Usage: main runs meca --server [--ui] with the selected protocol.
+// Related: cmd/meca/server_resources.go, internal/serverapi/network.go, internal/webui/assets.go.
 package main
 
 import (
 	"context"
 	"errors"
-	"path/filepath"
-
-	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/diagnostics"
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-	"github.com/keonho-kim/meca/internal/provider/connection"
-	"github.com/keonho-kim/meca/internal/provider/setup"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/serverapi"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
-	"github.com/keonho-kim/meca/internal/skills"
-	"github.com/keonho-kim/meca/internal/storage/serverrequests"
-	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
-	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/workspacegate"
+	"github.com/keonho-kim/meca/internal/webui"
+	"net/http"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions) (err error) {
-	owner, err := sessions.LeaseServer(mode.Project)
-	if err != nil {
-		return err
+	canonical, canonicalErr := filesystem.Canonical(mode.Project)
+	if canonicalErr != nil {
+		return canonicalErr
 	}
-	defer func() { err = errors.Join(err, owner.Close()) }()
-	ledger, err := serverrequests.Open(ctx, filepath.Join(state, "server-requests"), server.ProjectScope(mode.Project))
-	if err != nil {
-		return err
+	mode.Project = canonical
+	var ui http.Handler
+	if mode.ServerOptions.UI {
+		ui, err = webui.New()
+		if err != nil {
+			return err
+		}
 	}
-	defer func() { err = errors.Join(err, ledger.Close()) }()
 	vault := &credentials.Vault{State: state}
 	ctx = diagnostics.WithRedactor(ctx, vault.Redact)
-	skillBoundary, err := filesystem.New(mode.Project, home, state)
-	if err != nil {
-		return err
-	}
-	skillReader := skills.New(mode.Project, home, skills.Options{Redact: vault.Redact, Check: skillBoundary.SkillTarget, RedactRange: vault.RedactRange, Version: vault.RedactionVersion})
 	pages := detail.NewCache()
 	defer func() { err = errors.Join(err, pages.Close()) }()
-	files, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
+	var current atomic.Value
+	current.Store(cfg)
+	snapshot := func() config.Config { return current.Load().(config.Config) }
+	var configMu sync.Mutex
+	update := func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
+		configMu.Lock()
+		defer configMu.Unlock()
+		next, err := config.Update(ctx, state, apply)
+		if err == nil {
+			current.Store(next)
+		}
+		return next, err
+	}
+	attachments := server.NewAttachmentPool()
+	boundary, err := filesystem.New(mode.Project, home, state)
 	if err != nil {
 		return err
 	}
-	defer func() { err = errors.Join(err, files.Close()) }()
-	application, err := server.New(ctx, server.Options{
-		Files: files.Files,
-		Read: func(ctx context.Context, id string) (*server.Conversation, error) {
-			store, err := sessions.OpenRead(ctx, mode.Project, id)
-			if err != nil {
-				return nil, err
-			}
-			selected, err := store.Selection(ctx, id)
-			if err != nil {
-				_ = store.Close()
-				return nil, err
-			}
-			team, err := store.TeamMode(ctx)
-			if err != nil {
-				_ = store.Close()
-				return nil, err
-			}
-			return &server.Conversation{Runtime: agentrequest.Runtime{Session: store.Session(), Selection: selected}, History: store, TeamEnabled: team, Close: store.Close}, nil
+	check := func(path string) (string, error) {
+		if path == "" {
+			path = home
+		}
+		if path == "~" {
+			path = home
+		} else if strings.HasPrefix(path, "~/") {
+			path = filepath.Join(home, path[2:])
+		}
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(mode.Project, path)
+		}
+		return boundary.ReadTarget(path)
+	}
+	feed, capacity, effects := server.NewFeed(), server.NewCapacity(mode.ServerOptions.Concurrency), &workspacegate.Gate{}
+	projects := projectDependencies{home: home, state: state, sessions: sessions, vault: vault, pages: pages, feed: feed, capacity: capacity, effects: effects, attachments: attachments, current: snapshot, update: update}
+	workspaces, err := server.NewWorkspaces(ctx, server.WorkspaceOptions{
+		Default: mode.Project, Paths: cfg.Workspaces, Check: check,
+		Save: func(ctx context.Context, path string) error {
+			_, err := update(ctx, func(value *config.Config) {
+				if !slices.Contains(value.Workspaces, path) {
+					value.Workspaces = append(value.Workspaces, path)
+				}
+			})
+
+			return err
 		},
-		Discover: func(ctx context.Context, selected connection.Selection, key string, defaults setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error) {
-			if err := vault.Remember(key); err != nil {
-				return nil, nil, err
+		Open: func(ctx context.Context, value server.Workspace) (server.WorkspaceRuntime, error) {
+			scoped := mode
+			scoped.Project = value.Path
+			scoped.Display = value.Path
+			if value.Path != mode.Project {
+				scoped.Session = ""
 			}
-			prepared, err := setup.Prepare(ctx, selected.Connection, key, selected.Model, defaults, selected, vault)
-			if prepared.Client != nil {
-				prepared.Client.Close()
-			}
-			return prepared.Models, prepared.Selection, err
-		},
-		Concurrency: mode.ServerOptions.Concurrency,
-		Config:      cfg, Ledger: ledger, Skills: skillReader,
-		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create)
-			if err != nil {
-				return nil, err
-			}
-			closeSession := c.Close
-			c.Close = func() error { return errors.Join(pages.CloseSession(c.Runtime.Session.ID), closeSession()) }
-			return c, nil
-		},
-		List: func(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
-			return sessions.ConversationPage(ctx, mode.Project, cursor, limit)
-		},
-		PrepareModel: func(ctx context.Context, selected connection.Selection, credential string, defaults setup.Defaults) (server.PreparedModel, error) {
-			return prepareServerModel(ctx, selected, credential, defaults, vault)
-		},
-		UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
-			return config.Update(ctx, state, apply)
+			return projects.open(ctx, scoped, value.ID)
 		},
 	})
 	if err != nil {
 		return err
 	}
-	defer func() { err = errors.Join(err, application.Close()) }()
-	if mode.Session != "" {
-		if _, err := application.Select(ctx, mode.Session, false); err != nil {
-			return err
-		}
+	defer func() { err = errors.Join(err, workspaces.Close()) }()
+	application, release, err := workspaces.Acquire(ctx, "")
+	if err != nil {
+		return err
 	}
+	defer release()
 	o := mode.ServerOptions
 	if o.TokenFile == "" {
 		o.TokenFile = filepath.Join(state, "server.token")
 	}
-	// Remember the server credential in the same masking vault as model keys.
 	token, err := serverapi.LoadToken(o.TokenFile)
 	if err != nil {
 		return err
@@ -124,7 +119,11 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 	if err := vault.Remember(token); err != nil {
 		return err
 	}
-	return serverapi.ListenAndServe(ctx, &serverapi.API{Service: application, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins}, func(address string) {
-		diagnostics.Log(ctx, diagcatalog.ServerListening, "component", "server", "protocol", o.Protocol, "listen", address)
+	api := &serverapi.API{ScopeID: application.State().Workspace, Service: application, Workspaces: workspaces, Remember: vault.Remember, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	return serverapi.ListenAndServe(ctx, api, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, UI: ui}, func(address string) {
+		diagnostics.Log(ctx, diag.ServerListening, "component", "server", "protocol", o.Protocol, "listen", address)
+		if o.UI {
+			announceUI(ctx, address)
+		}
 	})
 }

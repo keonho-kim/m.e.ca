@@ -42,6 +42,16 @@ jobs:
         id: version
         run: bash scripts/release/prepare.sh >> "$GITHUB_OUTPUT"
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Build and verify embedded UI
+        run: |
+          sh scripts/build-ui.sh
+          bun run --cwd webui test
+
       - name: Verify source
         env:
           GOFLAGS: -tags=godbus_no_tcp

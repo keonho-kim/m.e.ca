@@ -41,12 +41,16 @@ func (s *Service) StageImage(image media.Image) (string, error) {
 	if len(s.attachments) >= 16 || size > attachmentBytes {
 		return "", faults.New(diagcatalog.ResourceExhausted, diagcatalog.MediaAttachmentCapacity)
 	}
+	release, available := s.options.Attachments.reserve(len(image.Data))
+	if !available {
+		return "", faults.New(diagcatalog.ResourceExhausted, diagcatalog.MediaAttachmentCapacity)
+	}
 	if s.attachments == nil {
 		s.attachments = make(map[string]*attachment)
 	}
 	id := "img_" + rand.Text()
 	s.workers.Add(1)
-	a := &attachment{image: image, expires: time.Now().Add(AttachmentLifetime), done: sync.OnceFunc(s.workers.Done)}
+	a := &attachment{image: image, expires: time.Now().Add(AttachmentLifetime), done: sync.OnceFunc(func() { release(); s.workers.Done() })}
 	a.timer = time.AfterFunc(AttachmentLifetime, func() {
 		defer a.done()
 		s.mu.Lock()

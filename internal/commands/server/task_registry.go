@@ -89,7 +89,7 @@ func (s *Service) beginAdmission(ctx context.Context) (sessionChange, error) {
 	}
 	s.changing = true
 	tracked, done := s.trackLocked(ctx)
-	change := sessionChange{ctx: tracked, conversation: s.conversation, config: s.options.Config}
+	change := sessionChange{ctx: tracked, conversation: s.conversation, config: s.currentConfig()}
 	change.finish = func() {
 		s.endChange()
 		<-gate

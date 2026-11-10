@@ -79,8 +79,9 @@ func (x *Error) GetMessage() string {
 }
 
 type Reply struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkspaceId string                 `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	// Types that are valid to be assigned to Result:
 	//
 	//	*Reply_Ok
@@ -104,6 +105,11 @@ type Reply struct {
 	//	*Reply_Tasks
 	//	*Reply_Commands
 	//	*Reply_Resources
+	//	*Reply_Workspaces
+	//	*Reply_CommandCatalog
+	//	*Reply_ParsedInput
+	//	*Reply_Editor
+	//	*Reply_Diagnostic
 	Result        isReply_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -142,6 +148,13 @@ func (*Reply) Descriptor() ([]byte, []int) {
 func (x *Reply) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *Reply) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
 	}
 	return ""
 }
@@ -342,6 +355,51 @@ func (x *Reply) GetResources() *Resources {
 	return nil
 }
 
+func (x *Reply) GetWorkspaces() *Workspaces {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_Workspaces); ok {
+			return x.Workspaces
+		}
+	}
+	return nil
+}
+
+func (x *Reply) GetCommandCatalog() *CommandCatalog {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_CommandCatalog); ok {
+			return x.CommandCatalog
+		}
+	}
+	return nil
+}
+
+func (x *Reply) GetParsedInput() *ParsedInput {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_ParsedInput); ok {
+			return x.ParsedInput
+		}
+	}
+	return nil
+}
+
+func (x *Reply) GetEditor() *EditorDocument {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_Editor); ok {
+			return x.Editor
+		}
+	}
+	return nil
+}
+
+func (x *Reply) GetDiagnostic() *DiagnosticResult {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_Diagnostic); ok {
+			return x.Diagnostic
+		}
+	}
+	return nil
+}
+
 type isReply_Result interface {
 	isReply_Result()
 }
@@ -430,6 +488,26 @@ type Reply_Resources struct {
 	Resources *Resources `protobuf:"bytes,30,opt,name=resources,proto3,oneof"`
 }
 
+type Reply_Workspaces struct {
+	Workspaces *Workspaces `protobuf:"bytes,31,opt,name=workspaces,proto3,oneof"`
+}
+
+type Reply_CommandCatalog struct {
+	CommandCatalog *CommandCatalog `protobuf:"bytes,32,opt,name=command_catalog,json=commandCatalog,proto3,oneof"`
+}
+
+type Reply_ParsedInput struct {
+	ParsedInput *ParsedInput `protobuf:"bytes,33,opt,name=parsed_input,json=parsedInput,proto3,oneof"`
+}
+
+type Reply_Editor struct {
+	Editor *EditorDocument `protobuf:"bytes,34,opt,name=editor,proto3,oneof"`
+}
+
+type Reply_Diagnostic struct {
+	Diagnostic *DiagnosticResult `protobuf:"bytes,35,opt,name=diagnostic,proto3,oneof"`
+}
+
 func (*Reply_Ok) isReply_Result() {}
 
 func (*Reply_Error) isReply_Result() {}
@@ -472,6 +550,16 @@ func (*Reply_Commands) isReply_Result() {}
 
 func (*Reply_Resources) isReply_Result() {}
 
+func (*Reply_Workspaces) isReply_Result() {}
+
+func (*Reply_CommandCatalog) isReply_Result() {}
+
+func (*Reply_ParsedInput) isReply_Result() {}
+
+func (*Reply_Editor) isReply_Result() {}
+
+func (*Reply_Diagnostic) isReply_Result() {}
+
 type EmptyResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -509,15 +597,17 @@ func (*EmptyResult) Descriptor() ([]byte, []int) {
 }
 
 type Session struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectRoot   string                 `protobuf:"bytes,2,opt,name=project_root,json=projectRoot,proto3" json:"project_root,omitempty"`
-	DisplayRoot   string                 `protobuf:"bytes,3,opt,name=display_root,json=displayRoot,proto3" json:"display_root,omitempty"`
-	Summary       string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
-	Updated       string                 `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
-	Unavailable   string                 `protobuf:"bytes,6,opt,name=unavailable,proto3" json:"unavailable,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectRoot      string                 `protobuf:"bytes,2,opt,name=project_root,json=projectRoot,proto3" json:"project_root,omitempty"`
+	DisplayRoot      string                 `protobuf:"bytes,3,opt,name=display_root,json=displayRoot,proto3" json:"display_root,omitempty"`
+	Summary          string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
+	Updated          string                 `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
+	Unavailable      string                 `protobuf:"bytes,6,opt,name=unavailable,proto3" json:"unavailable,omitempty"`
+	RunningTaskId    string                 `protobuf:"bytes,7,opt,name=running_task_id,json=runningTaskId,proto3" json:"running_task_id,omitempty"`
+	PendingApprovals int32                  `protobuf:"varint,8,opt,name=pending_approvals,json=pendingApprovals,proto3" json:"pending_approvals,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Session) Reset() {
@@ -590,6 +680,20 @@ func (x *Session) GetUnavailable() string {
 		return x.Unavailable
 	}
 	return ""
+}
+
+func (x *Session) GetRunningTaskId() string {
+	if x != nil {
+		return x.RunningTaskId
+	}
+	return ""
+}
+
+func (x *Session) GetPendingApprovals() int32 {
+	if x != nil {
+		return x.PendingApprovals
+	}
+	return 0
 }
 
 type Sessions struct {
@@ -970,6 +1074,7 @@ func (x *Execution) GetStartedAt() string {
 
 type Snapshot struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
+	WorkspaceId       string                 `protobuf:"bytes,18,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	Cursor            string                 `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	Session           *Session               `protobuf:"bytes,2,opt,name=session,proto3" json:"session,omitempty"`
 	Task              *Task                  `protobuf:"bytes,3,opt,name=task,proto3" json:"task,omitempty"`
@@ -1019,6 +1124,13 @@ func (x *Snapshot) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Snapshot.ProtoReflect.Descriptor instead.
 func (*Snapshot) Descriptor() ([]byte, []int) {
 	return file_meca_v1_state_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Snapshot) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
 }
 
 func (x *Snapshot) GetCursor() string {
@@ -1149,6 +1261,7 @@ type HistoryItem struct {
 	Incomplete    bool                   `protobuf:"varint,5,opt,name=incomplete,proto3" json:"incomplete,omitempty"`
 	Event         *Event                 `protobuf:"bytes,6,opt,name=event,proto3" json:"event,omitempty"`
 	Truncated     bool                   `protobuf:"varint,7,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	Outcome       *RunOutcome            `protobuf:"bytes,9,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	Images        []*ImageMetadata       `protobuf:"bytes,8,rep,name=images,proto3" json:"images,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1233,6 +1346,13 @@ func (x *HistoryItem) GetTruncated() bool {
 	return false
 }
 
+func (x *HistoryItem) GetOutcome() *RunOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return nil
+}
+
 func (x *HistoryItem) GetImages() []*ImageMetadata {
 	if x != nil {
 		return x.Images
@@ -1294,7 +1414,7 @@ func (x *HistoryPage) GetBefore() int64 {
 
 type DetailPage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Text          string                 `protobuf:"bytes,8,opt,name=text,proto3" json:"text,omitempty"`
 	Offset        int64                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
 	NextOffset    int64                  `protobuf:"varint,3,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
 	TotalBytes    int64                  `protobuf:"varint,4,opt,name=total_bytes,json=totalBytes,proto3" json:"total_bytes,omitempty"`
@@ -1334,11 +1454,11 @@ func (*DetailPage) Descriptor() ([]byte, []int) {
 	return file_meca_v1_state_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *DetailPage) GetData() []byte {
+func (x *DetailPage) GetText() string {
 	if x != nil {
-		return x.Data
+		return x.Text
 	}
-	return nil
+	return ""
 }
 
 func (x *DetailPage) GetOffset() int64 {
@@ -1478,12 +1598,14 @@ var File_meca_v1_state_proto protoreflect.FileDescriptor
 
 const file_meca_v1_state_proto_rawDesc = "" +
 	"\n" +
-	"\x13meca/v1/state.proto\x12\ameca.v1\x1a\x14meca/v1/events.proto\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\"5\n" +
+	"\x13meca/v1/state.proto\x12\ameca.v1\x1a\x14meca/v1/events.proto\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"5\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xa7\b\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xf0\n" +
+	"\n" +
 	"\x05Reply\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12&\n" +
 	"\x02ok\x18\n" +
 	" \x01(\v2\x14.meca.v1.EmptyResultH\x00R\x02ok\x12&\n" +
 	"\x05error\x18\v \x01(\v2\x0e.meca.v1.ErrorH\x00R\x05error\x12/\n" +
@@ -1506,16 +1628,27 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"\x05draft\x18\x1b \x01(\v2\x12.meca.v1.DraftPageH\x00R\x05draft\x12)\n" +
 	"\x05tasks\x18\x1c \x01(\v2\x11.meca.v1.TaskPageH\x00R\x05tasks\x124\n" +
 	"\bcommands\x18\x1d \x01(\v2\x16.meca.v1.CommandStatesH\x00R\bcommands\x122\n" +
-	"\tresources\x18\x1e \x01(\v2\x12.meca.v1.ResourcesH\x00R\tresourcesB\b\n" +
+	"\tresources\x18\x1e \x01(\v2\x12.meca.v1.ResourcesH\x00R\tresources\x125\n" +
+	"\n" +
+	"workspaces\x18\x1f \x01(\v2\x13.meca.v1.WorkspacesH\x00R\n" +
+	"workspaces\x12B\n" +
+	"\x0fcommand_catalog\x18  \x01(\v2\x17.meca.v1.CommandCatalogH\x00R\x0ecommandCatalog\x129\n" +
+	"\fparsed_input\x18! \x01(\v2\x14.meca.v1.ParsedInputH\x00R\vparsedInput\x121\n" +
+	"\x06editor\x18\" \x01(\v2\x17.meca.v1.EditorDocumentH\x00R\x06editor\x12;\n" +
+	"\n" +
+	"diagnostic\x18# \x01(\v2\x19.meca.v1.DiagnosticResultH\x00R\n" +
+	"diagnosticB\b\n" +
 	"\x06result\"\r\n" +
-	"\vEmptyResult\"\xb5\x01\n" +
+	"\vEmptyResult\"\x8a\x02\n" +
 	"\aSession\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fproject_root\x18\x02 \x01(\tR\vprojectRoot\x12!\n" +
 	"\fdisplay_root\x18\x03 \x01(\tR\vdisplayRoot\x12\x18\n" +
 	"\asummary\x18\x04 \x01(\tR\asummary\x12\x18\n" +
 	"\aupdated\x18\x05 \x01(\tR\aupdated\x12 \n" +
-	"\vunavailable\x18\x06 \x01(\tR\vunavailable\"S\n" +
+	"\vunavailable\x18\x06 \x01(\tR\vunavailable\x12&\n" +
+	"\x0frunning_task_id\x18\a \x01(\tR\rrunningTaskId\x12+\n" +
+	"\x11pending_approvals\x18\b \x01(\x05R\x10pendingApprovals\"S\n" +
 	"\bSessions\x12&\n" +
 	"\x05items\x18\x01 \x03(\v2\x10.meca.v1.SessionR\x05items\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
@@ -1558,8 +1691,9 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"statistics\x18\x05 \x01(\v2\x13.meca.v1.StatisticsR\n" +
 	"statistics\x12\x1d\n" +
 	"\n" +
-	"started_at\x18\x06 \x01(\tR\tstartedAt\"\x86\x05\n" +
-	"\bSnapshot\x12\x16\n" +
+	"started_at\x18\x06 \x01(\tR\tstartedAt\"\xa9\x05\n" +
+	"\bSnapshot\x12!\n" +
+	"\fworkspace_id\x18\x12 \x01(\tR\vworkspaceId\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12*\n" +
 	"\asession\x18\x02 \x01(\v2\x10.meca.v1.SessionR\asession\x12!\n" +
 	"\x04task\x18\x03 \x01(\v2\r.meca.v1.TaskR\x04task\x12$\n" +
@@ -1582,7 +1716,7 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"totalTasks\x12\x1a\n" +
 	"\blanguage\x18\x0f \x01(\tR\blanguage\x12*\n" +
 	"\bactivity\x18\x10 \x03(\v2\x0e.meca.v1.EventR\bactivity\x12-\n" +
-	"\x12activity_truncated\x18\x11 \x01(\bR\x11activityTruncated\"\xf9\x01\n" +
+	"\x12activity_truncated\x18\x11 \x01(\bR\x11activityTruncated\"\xa8\x02\n" +
 	"\vHistoryItem\x12\x1a\n" +
 	"\bsequence\x18\x01 \x01(\x03R\bsequence\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
@@ -1592,21 +1726,22 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"incomplete\x18\x05 \x01(\bR\n" +
 	"incomplete\x12$\n" +
 	"\x05event\x18\x06 \x01(\v2\x0e.meca.v1.EventR\x05event\x12\x1c\n" +
-	"\ttruncated\x18\a \x01(\bR\ttruncated\x12.\n" +
+	"\ttruncated\x18\a \x01(\bR\ttruncated\x12-\n" +
+	"\aoutcome\x18\t \x01(\v2\x13.meca.v1.RunOutcomeR\aoutcome\x12.\n" +
 	"\x06images\x18\b \x03(\v2\x16.meca.v1.ImageMetadataR\x06images\"Q\n" +
 	"\vHistoryPage\x12*\n" +
 	"\x05items\x18\x01 \x03(\v2\x14.meca.v1.HistoryItemR\x05items\x12\x16\n" +
-	"\x06before\x18\x02 \x01(\x03R\x06before\"\xb9\x01\n" +
+	"\x06before\x18\x02 \x01(\x03R\x06before\"\xbf\x01\n" +
 	"\n" +
 	"DetailPage\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\x12\x16\n" +
+	"\x04text\x18\b \x01(\tR\x04text\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x03R\x06offset\x12\x1f\n" +
 	"\vnext_offset\x18\x03 \x01(\x03R\n" +
 	"nextOffset\x12\x1f\n" +
 	"\vtotal_bytes\x18\x04 \x01(\x03R\n" +
 	"totalBytes\x12!\n" +
 	"\fcontent_type\x18\x05 \x01(\tR\vcontentType\x12\x1a\n" +
-	"\brevision\x18\x06 \x01(\tR\brevision\"\x97\x01\n" +
+	"\brevision\x18\x06 \x01(\tR\brevisionJ\x04\b\x01\x10\x02\"\x97\x01\n" +
 	"\fNotification\x12&\n" +
 	"\x05reply\x18\x01 \x01(\v2\x0e.meca.v1.ReplyH\x00R\x05reply\x12/\n" +
 	"\bsnapshot\x18\x02 \x01(\v2\x11.meca.v1.SnapshotH\x00R\bsnapshot\x12&\n" +
@@ -1627,37 +1762,43 @@ func file_meca_v1_state_proto_rawDescGZIP() []byte {
 
 var file_meca_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_meca_v1_state_proto_goTypes = []any{
-	(*Error)(nil),          // 0: meca.v1.Error
-	(*Reply)(nil),          // 1: meca.v1.Reply
-	(*EmptyResult)(nil),    // 2: meca.v1.EmptyResult
-	(*Session)(nil),        // 3: meca.v1.Session
-	(*Sessions)(nil),       // 4: meca.v1.Sessions
-	(*Model)(nil),          // 5: meca.v1.Model
-	(*Draft)(nil),          // 6: meca.v1.Draft
-	(*Execution)(nil),      // 7: meca.v1.Execution
-	(*Snapshot)(nil),       // 8: meca.v1.Snapshot
-	(*HistoryItem)(nil),    // 9: meca.v1.HistoryItem
-	(*HistoryPage)(nil),    // 10: meca.v1.HistoryPage
-	(*DetailPage)(nil),     // 11: meca.v1.DetailPage
-	(*Notification)(nil),   // 12: meca.v1.Notification
-	(*Task)(nil),           // 13: meca.v1.Task
-	(*Skills)(nil),         // 14: meca.v1.Skills
-	(*SkillDocument)(nil),  // 15: meca.v1.SkillDocument
-	(*SkillFile)(nil),      // 16: meca.v1.SkillFile
-	(*Capabilities)(nil),   // 17: meca.v1.Capabilities
-	(*Providers)(nil),      // 18: meca.v1.Providers
-	(*Models)(nil),         // 19: meca.v1.Models
-	(*DirectoryPage)(nil),  // 20: meca.v1.DirectoryPage
-	(*FilePreview)(nil),    // 21: meca.v1.FilePreview
-	(*FileSelections)(nil), // 22: meca.v1.FileSelections
-	(*ImageMetadata)(nil),  // 23: meca.v1.ImageMetadata
-	(*DraftPage)(nil),      // 24: meca.v1.DraftPage
-	(*TaskPage)(nil),       // 25: meca.v1.TaskPage
-	(*CommandStates)(nil),  // 26: meca.v1.CommandStates
-	(*Resources)(nil),      // 27: meca.v1.Resources
-	(*Statistics)(nil),     // 28: meca.v1.Statistics
-	(*Approval)(nil),       // 29: meca.v1.Approval
-	(*Event)(nil),          // 30: meca.v1.Event
+	(*Error)(nil),            // 0: meca.v1.Error
+	(*Reply)(nil),            // 1: meca.v1.Reply
+	(*EmptyResult)(nil),      // 2: meca.v1.EmptyResult
+	(*Session)(nil),          // 3: meca.v1.Session
+	(*Sessions)(nil),         // 4: meca.v1.Sessions
+	(*Model)(nil),            // 5: meca.v1.Model
+	(*Draft)(nil),            // 6: meca.v1.Draft
+	(*Execution)(nil),        // 7: meca.v1.Execution
+	(*Snapshot)(nil),         // 8: meca.v1.Snapshot
+	(*HistoryItem)(nil),      // 9: meca.v1.HistoryItem
+	(*HistoryPage)(nil),      // 10: meca.v1.HistoryPage
+	(*DetailPage)(nil),       // 11: meca.v1.DetailPage
+	(*Notification)(nil),     // 12: meca.v1.Notification
+	(*Task)(nil),             // 13: meca.v1.Task
+	(*Skills)(nil),           // 14: meca.v1.Skills
+	(*SkillDocument)(nil),    // 15: meca.v1.SkillDocument
+	(*SkillFile)(nil),        // 16: meca.v1.SkillFile
+	(*Capabilities)(nil),     // 17: meca.v1.Capabilities
+	(*Providers)(nil),        // 18: meca.v1.Providers
+	(*Models)(nil),           // 19: meca.v1.Models
+	(*DirectoryPage)(nil),    // 20: meca.v1.DirectoryPage
+	(*FilePreview)(nil),      // 21: meca.v1.FilePreview
+	(*FileSelections)(nil),   // 22: meca.v1.FileSelections
+	(*ImageMetadata)(nil),    // 23: meca.v1.ImageMetadata
+	(*DraftPage)(nil),        // 24: meca.v1.DraftPage
+	(*TaskPage)(nil),         // 25: meca.v1.TaskPage
+	(*CommandStates)(nil),    // 26: meca.v1.CommandStates
+	(*Resources)(nil),        // 27: meca.v1.Resources
+	(*Workspaces)(nil),       // 28: meca.v1.Workspaces
+	(*CommandCatalog)(nil),   // 29: meca.v1.CommandCatalog
+	(*ParsedInput)(nil),      // 30: meca.v1.ParsedInput
+	(*EditorDocument)(nil),   // 31: meca.v1.EditorDocument
+	(*DiagnosticResult)(nil), // 32: meca.v1.DiagnosticResult
+	(*Statistics)(nil),       // 33: meca.v1.Statistics
+	(*Approval)(nil),         // 34: meca.v1.Approval
+	(*Event)(nil),            // 35: meca.v1.Event
+	(*RunOutcome)(nil),       // 36: meca.v1.RunOutcome
 }
 var file_meca_v1_state_proto_depIdxs = []int32{
 	2,  // 0: meca.v1.Reply.ok:type_name -> meca.v1.EmptyResult
@@ -1681,30 +1822,36 @@ var file_meca_v1_state_proto_depIdxs = []int32{
 	25, // 18: meca.v1.Reply.tasks:type_name -> meca.v1.TaskPage
 	26, // 19: meca.v1.Reply.commands:type_name -> meca.v1.CommandStates
 	27, // 20: meca.v1.Reply.resources:type_name -> meca.v1.Resources
-	3,  // 21: meca.v1.Sessions.items:type_name -> meca.v1.Session
-	3,  // 22: meca.v1.Execution.session:type_name -> meca.v1.Session
-	5,  // 23: meca.v1.Execution.model:type_name -> meca.v1.Model
-	28, // 24: meca.v1.Execution.statistics:type_name -> meca.v1.Statistics
-	3,  // 25: meca.v1.Snapshot.session:type_name -> meca.v1.Session
-	13, // 26: meca.v1.Snapshot.task:type_name -> meca.v1.Task
-	5,  // 27: meca.v1.Snapshot.model:type_name -> meca.v1.Model
-	29, // 28: meca.v1.Snapshot.approvals:type_name -> meca.v1.Approval
-	6,  // 29: meca.v1.Snapshot.drafts:type_name -> meca.v1.Draft
-	7,  // 30: meca.v1.Snapshot.execution:type_name -> meca.v1.Execution
-	13, // 31: meca.v1.Snapshot.tasks:type_name -> meca.v1.Task
-	7,  // 32: meca.v1.Snapshot.executions:type_name -> meca.v1.Execution
-	30, // 33: meca.v1.Snapshot.activity:type_name -> meca.v1.Event
-	30, // 34: meca.v1.HistoryItem.event:type_name -> meca.v1.Event
-	23, // 35: meca.v1.HistoryItem.images:type_name -> meca.v1.ImageMetadata
-	9,  // 36: meca.v1.HistoryPage.items:type_name -> meca.v1.HistoryItem
-	1,  // 37: meca.v1.Notification.reply:type_name -> meca.v1.Reply
-	8,  // 38: meca.v1.Notification.snapshot:type_name -> meca.v1.Snapshot
-	30, // 39: meca.v1.Notification.event:type_name -> meca.v1.Event
-	40, // [40:40] is the sub-list for method output_type
-	40, // [40:40] is the sub-list for method input_type
-	40, // [40:40] is the sub-list for extension type_name
-	40, // [40:40] is the sub-list for extension extendee
-	0,  // [0:40] is the sub-list for field type_name
+	28, // 21: meca.v1.Reply.workspaces:type_name -> meca.v1.Workspaces
+	29, // 22: meca.v1.Reply.command_catalog:type_name -> meca.v1.CommandCatalog
+	30, // 23: meca.v1.Reply.parsed_input:type_name -> meca.v1.ParsedInput
+	31, // 24: meca.v1.Reply.editor:type_name -> meca.v1.EditorDocument
+	32, // 25: meca.v1.Reply.diagnostic:type_name -> meca.v1.DiagnosticResult
+	3,  // 26: meca.v1.Sessions.items:type_name -> meca.v1.Session
+	3,  // 27: meca.v1.Execution.session:type_name -> meca.v1.Session
+	5,  // 28: meca.v1.Execution.model:type_name -> meca.v1.Model
+	33, // 29: meca.v1.Execution.statistics:type_name -> meca.v1.Statistics
+	3,  // 30: meca.v1.Snapshot.session:type_name -> meca.v1.Session
+	13, // 31: meca.v1.Snapshot.task:type_name -> meca.v1.Task
+	5,  // 32: meca.v1.Snapshot.model:type_name -> meca.v1.Model
+	34, // 33: meca.v1.Snapshot.approvals:type_name -> meca.v1.Approval
+	6,  // 34: meca.v1.Snapshot.drafts:type_name -> meca.v1.Draft
+	7,  // 35: meca.v1.Snapshot.execution:type_name -> meca.v1.Execution
+	13, // 36: meca.v1.Snapshot.tasks:type_name -> meca.v1.Task
+	7,  // 37: meca.v1.Snapshot.executions:type_name -> meca.v1.Execution
+	35, // 38: meca.v1.Snapshot.activity:type_name -> meca.v1.Event
+	35, // 39: meca.v1.HistoryItem.event:type_name -> meca.v1.Event
+	36, // 40: meca.v1.HistoryItem.outcome:type_name -> meca.v1.RunOutcome
+	23, // 41: meca.v1.HistoryItem.images:type_name -> meca.v1.ImageMetadata
+	9,  // 42: meca.v1.HistoryPage.items:type_name -> meca.v1.HistoryItem
+	1,  // 43: meca.v1.Notification.reply:type_name -> meca.v1.Reply
+	8,  // 44: meca.v1.Notification.snapshot:type_name -> meca.v1.Snapshot
+	35, // 45: meca.v1.Notification.event:type_name -> meca.v1.Event
+	46, // [46:46] is the sub-list for method output_type
+	46, // [46:46] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_state_proto_init() }
@@ -1715,6 +1862,7 @@ func file_meca_v1_state_proto_init() {
 	file_meca_v1_events_proto_init()
 	file_meca_v1_skills_proto_init()
 	file_meca_v1_workspace_proto_init()
+	file_meca_v1_application_proto_init()
 	file_meca_v1_state_proto_msgTypes[1].OneofWrappers = []any{
 		(*Reply_Ok)(nil),
 		(*Reply_Error)(nil),
@@ -1737,6 +1885,11 @@ func file_meca_v1_state_proto_init() {
 		(*Reply_Tasks)(nil),
 		(*Reply_Commands)(nil),
 		(*Reply_Resources)(nil),
+		(*Reply_Workspaces)(nil),
+		(*Reply_CommandCatalog)(nil),
+		(*Reply_ParsedInput)(nil),
+		(*Reply_Editor)(nil),
+		(*Reply_Diagnostic)(nil),
 	}
 	file_meca_v1_state_proto_msgTypes[5].OneofWrappers = []any{}
 	file_meca_v1_state_proto_msgTypes[12].OneofWrappers = []any{

@@ -30,8 +30,14 @@ const (
 )
 
 type Transport struct {
+	ui             http.Handler
+	uiSeed         string
+	browser        *browserSessions
 	inputs         *admission.Budget
 	mediaInputs    *admission.Budget
+	thumbnails     thumbnailCache
+	outputs        *admission.Budget
+	outputOnce     sync.Once
 	api            *API
 	protocol       string
 	handler        http.Handler
@@ -70,8 +76,10 @@ func newTransport(ctx context.Context, api *API, protocol, token string, hosts, 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/command", t.command)
 	mux.HandleFunc("GET /v1/events", t.sse)
+	mux.HandleFunc("GET /v1/files/events", t.filesWatch)
 	mux.HandleFunc("/v1/tasks/", t.taskControl)
 	mux.HandleFunc("/v1/sessions/", t.historyImage)
+	mux.HandleFunc("/v1/workspaces/", t.workspaceHTTP)
 	mux.HandleFunc("/v1/attachments", t.attachment)
 	mux.HandleFunc("/v1/attachments/", t.attachment)
 	switch protocol {
@@ -117,8 +125,12 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if t.ui != nil && (r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/")) && (r.Method == "GET" || r.Method == "HEAD") {
+		t.handler.ServeHTTP(w, r)
+		return
+	}
 	admissionSlots := t.requests
-	if strings.HasPrefix(r.URL.Path, "/v1/tasks/") {
+	if r.Method == "POST" && (strings.HasPrefix(r.URL.Path, "/v1/tasks/") || strings.HasPrefix(r.URL.Path, "/v1/workspaces/") && strings.Contains(r.URL.Path, "/tasks/")) {
 		admissionSlots = t.controls
 	}
 	select {
@@ -128,7 +140,7 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiTooManyConnections), http.StatusTooManyRequests)
 		return
 	}
-	if t.protocol == "grpc" && r.URL.Path == "/meca.v1.MecaService/WatchEvents" {
+	if t.protocol == "grpc" && (r.URL.Path == "/meca.v1.MecaService/WatchEvents" || r.URL.Path == "/meca.v1.MecaService/WatchFiles") {
 		select {
 		case t.streams <- struct{}{}:
 			defer func() { <-t.streams }()

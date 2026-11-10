@@ -38,7 +38,8 @@ CREATE TABLE requests(
  status TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',
  error_code TEXT NOT NULL DEFAULT '' CHECK(length(error_code)<=128)
-);`
+);
+CREATE INDEX requests_session_id ON requests(session,id);`
 
 type Ledger struct {
 	db              *sql.DB
@@ -131,6 +132,9 @@ func Open(ctx context.Context, directory, scope string) (ledger *Ledger, resultE
 	}
 	if err == nil {
 		_, err = db.ExecContext(ctx, "PRAGMA journal_mode=WAL")
+	}
+	if err == nil {
+		_, err = db.ExecContext(ctx, "CREATE INDEX IF NOT EXISTS requests_session_id ON requests(session,id)")
 	}
 	if err != nil {
 		return nil, errors.Join(err, db.Close())

@@ -11,6 +11,13 @@ import (
 	"slices"
 )
 
+// ServerSettings avoids constructing active tasks, drafts and activity for capabilities.
+func (s *Service) ServerSettings() (int, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.concurrency(), string(s.currentConfig().Language)
+}
+
 func (s *Service) StatePage(ctx context.Context, session, taskID, after string, limit int) (Snapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return Snapshot{}, err

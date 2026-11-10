@@ -29,7 +29,7 @@ func TestReservedControlAndReadAdmission(t *testing.T) {
 		<-transport.requests
 	}
 	waitNativeTask(t, deadline(t), f.app, task.ID, cursor)
-	release, ok := f.api.readLimit().Try(1)
+	release, ok := f.api.readLimit().Try(readCapacity)
 	if !ok {
 		t.Fatal("read capacity unexpectedly busy")
 	}

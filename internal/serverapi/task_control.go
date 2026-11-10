@@ -16,6 +16,12 @@ import (
 )
 
 func (t *Transport) taskControl(w http.ResponseWriter, r *http.Request) {
+	api, release, scopeErr := t.requestAPI(r)
+	if scopeErr != nil {
+		t.writeControlReply(w, r, t.api.errorReply("", scopeErr))
+		return
+	}
+	defer release()
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/tasks/"), "/")
 	if len(parts) == 0 || parts[0] == "" || len(parts[0]) > 128 {
 		http.NotFound(w, r)
@@ -26,19 +32,19 @@ func (t *Transport) taskControl(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "GET" && len(parts) == 1:
 		cmd.Operation = &v1.Command_TaskStatus{TaskStatus: &v1.TaskRequest{TaskId: parts[0]}}
 	case r.Method == "GET" && len(parts) == 2 && parts[1] == "approvals":
-		if _, err := t.api.Service.TaskStatus(r.Context(), parts[0]); err != nil {
-			t.writeControlReply(w, t.api.errorReply("", err))
+		if _, err := api.Service.TaskStatus(r.Context(), parts[0]); err != nil {
+			t.writeControlReply(w, r, api.errorReply("", err))
 			return
 		}
-		state, err := t.api.Service.StatePage(r.Context(), "", parts[0], "", 1)
+		state, err := api.Service.StatePage(r.Context(), "", parts[0], "", 1)
 		if err != nil {
-			t.writeControlReply(w, t.api.errorReply("", err))
+			t.writeControlReply(w, r, api.errorReply("", err))
 			return
 		}
 		n := &v1.Notification{Body: &v1.Notification_Snapshot{Snapshot: snapshot(state)}}
-		t.api.sanitize(n)
+		api.sanitize(n)
 		_ = taskSender(parts[0], func(n *v1.Notification) error {
-			t.writeControlReply(w, &v1.Reply{Result: &v1.Reply_State{State: n.GetSnapshot()}})
+			t.writeControlReply(w, r, &v1.Reply{Result: &v1.Reply_State{State: n.GetSnapshot()}})
 			return nil
 		})(n)
 		return
@@ -48,7 +54,7 @@ func (t *Transport) taskControl(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		allow, valid := readApprovalDecision(w, r)
 		if !valid {
-			t.writeControlReply(w, t.api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerApprovalDecision)))
+			t.writeControlReply(w, r, api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerApprovalDecision)))
 			return
 		}
 		cmd.Operation = &v1.Command_Approve{Approve: &v1.ApprovalDecision{TaskId: parts[0], ApprovalId: parts[2], Allow: allow}}
@@ -56,8 +62,8 @@ func (t *Transport) taskControl(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	reply, _ := t.api.Call(r.Context(), cmd)
-	t.writeControlReply(w, reply)
+	reply, _ := api.Call(r.Context(), cmd)
+	t.writeControlReply(w, r, reply)
 }
 
 func readApprovalDecision(w http.ResponseWriter, r *http.Request) (bool, bool) {

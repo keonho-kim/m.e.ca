@@ -16,7 +16,7 @@ import (
 
 type Reader interface {
 	Reference(context.Context, policy.Settings, string) (fileview.Reference, error)
-	Directory(context.Context, policy.Settings, string, int, int) ([]fileview.Entry, bool, error)
+	Directory(context.Context, policy.Settings, string, int, int, string) (fileview.DirectoryPage, error)
 	Preview(context.Context, policy.Settings, string) (fileview.Preview, error)
 }
 type Sink interface {

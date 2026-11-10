@@ -22,7 +22,7 @@ verify_release_artifacts() {
     (cd dist && sha256sum --check checksums.txt) || return
     mkdir -p .cache || return
     release_stage=$(mktemp -d .cache/release-verify.XXXXXX) || return
-    release_members=$(printf '%s\n' LICENSE NOTICE THIRD_PARTY_NOTICES.md meca | LC_ALL=C sort)
+    release_members=$(printf '%s\n' LICENSE NOTICE THIRD_PARTY_NOTICES.md WEBUI_THIRD_PARTY_NOTICES.txt meca | LC_ALL=C sort)
     release_assets=(dist/checksums.txt)
     for release_archive in "${release_archives[@]}"; do
         if [[ $(tar -tzf "dist/$release_archive" | LC_ALL=C sort) != "$release_members" ]]; then

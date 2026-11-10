@@ -1,4 +1,4 @@
-// Purpose: Define read-only file browsing independently of agent tools and terminal state.
+// Purpose: Define file-read contracts and lend guarded roots to explicit read/edit adapters.
 // Pattern: Consumer-owned filesystem I/O boundary.
 // Usage: Local tools lend their guarded roots; the TUI consumes Source.
 // Related: internal/fileview/directory.go, internal/fileview/preview.go, internal/tools/local/executor.go.
@@ -18,14 +18,15 @@ type Target struct {
 
 type Source interface {
 	Reference(context.Context, policy.Settings, string) (Reference, error)
-	Directory(context.Context, policy.Settings, string, int, int) ([]Entry, bool, error)
+	Directory(context.Context, policy.Settings, string, int, int, string) (DirectoryPage, error)
 	Preview(context.Context, policy.Settings, string) (Preview, error)
 }
 
 type Reader struct {
-	project string
-	resolve func(policy.Scope, string) (Target, error)
-	redact  func(string) string
+	directories directorySnapshots
+	project     string
+	resolve     func(policy.Scope, string) (Target, error)
+	redact      func(string) string
 }
 
 // New borrows guarded roots through resolve; their owner closes them after readers stop.

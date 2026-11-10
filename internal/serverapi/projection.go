@@ -20,12 +20,12 @@ import (
 )
 
 func task(value server.Task) *v1.Task {
-	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence}
+	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence, Outcome: value.Outcome}
 }
 
 func snapshot(value server.Snapshot) *v1.Snapshot {
 	value = server.BoundSnapshot(value)
-	s := &v1.Snapshot{Cursor: value.Cursor, Permission: value.Permission, Team: value.Team, Session: wireSession(value.Session), Model: wireModel(value.Selection), Concurrency: int64(value.Concurrency), NextTask: value.NextTask, TotalTasks: int64(value.TotalTasks), Language: value.Language, ActivityTruncated: value.ActivityTruncated}
+	s := &v1.Snapshot{WorkspaceId: value.Workspace, Cursor: value.Cursor, Permission: value.Permission, Team: value.Team, Session: wireSession(value.Session), Model: wireModel(value.Selection), Concurrency: int64(value.Concurrency), NextTask: value.NextTask, TotalTasks: int64(value.TotalTasks), Language: value.Language, ActivityTruncated: value.ActivityTruncated}
 	for _, t := range value.Tasks {
 		s.Tasks = append(s.Tasks, task(t))
 	}
@@ -75,7 +75,10 @@ func wireModel(m connection.Selection) *v1.Model {
 
 func event(value server.Event) *v1.Event {
 	e := value.Record
-	result := &v1.Event{Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
+	result := &v1.Event{WorkspaceId: value.Workspace, Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
+	if value.Outcome != nil {
+		result.Outcome = &v1.RunOutcome{Status: string(value.Outcome.Status), Reason: value.Outcome.Reason}
+	}
 	result.Status, result.Error = value.Status, value.Error
 	result.Sequence = value.Sequence
 	result.MeasuredMillis = e.MeasuredDuration.Milliseconds()
@@ -139,6 +142,9 @@ func textPreview(text string) string {
 
 func historyItem(value history.Record) *v1.HistoryItem {
 	item := &v1.HistoryItem{Sequence: value.Sequence, Kind: value.Kind}
+	if cp := value.Event.Checkpoint; cp != nil && cp.Phase == "finished" && cp.End != nil {
+		item.Outcome = &v1.RunOutcome{Status: string(cp.End.Status), Reason: textPreview(cp.End.Reason)}
+	}
 	for index, image := range value.Images {
 		item.Images = append(item.Images, wireImage(index, image))
 	}

@@ -1,0 +1,24 @@
+// Purpose: Define workspace management and explicit interactive file and model operations.
+// Pattern: Native application control contract.
+// Usage: Embedded browser and external clients use these through MecaService.Call.
+// Related: api/meca/v1/control.proto, api/meca/v1/state.proto.
+syntax = "proto3";
+package meca.v1;
+option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
+
+message WorkspaceRequest { string path = 1; int32 offset = 2; }
+message Workspace { string id = 1; string path = 2; string name = 3; int32 active_tasks = 4; string error = 5; int32 pending_approvals = 6; }
+message Workspaces { repeated Workspace items = 1; string default_id = 2; }
+message CommandDescription { string name = 1; string description = 2; }
+message CommandCatalog { repeated CommandDescription items = 1; }
+message ParseInput { string text = 1; }
+message ParsedInput { string action = 1; string argument = 2; }
+message EditFile { string path = 1; string text = 2; string revision = 3; }
+message EditorDocument { string path = 1; string text = 2; string revision = 3; bool editable = 4; string reason = 5; }
+message DiagnoseModel { string session_id = 1; string provider = 2; string endpoint = 3; string credential = 4; string model = 5; }
+message DiagnosticResult { bool chat = 1; bool reasoning = 2; bool thinking = 3; }
+message FileWatchRequest { string workspace_id = 1; string path = 2; }
+message FileChange { string path = 1; bool refresh = 2; string error = 3; }
+
+message RunOutcome { string status = 1; string reason = 2; }
+message RequestLookup { string session_id = 1; string key = 2; }

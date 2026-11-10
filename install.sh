@@ -1,5 +1,5 @@
 #!/bin/sh
-# Purpose: Install MECA from source with an existing or temporary verified Go toolchain.
+# Purpose: Build the embedded UI and install MECA with an existing or verified temporary Go toolchain.
 # Pattern: Thin command entry point.
 # Usage: ./install.sh
 # Related: scripts/install/go.sh, cmd/meca/install.go, internal/commands/install/install.go, README.md.
@@ -14,6 +14,7 @@ fi
 meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 (
     cd "$meca_install_root"
+    sh "$meca_install_root/scripts/build-ui.sh"
     meca_go_stage=
     trap '[ -z "$meca_go_stage" ] || rm -rf -- "$meca_go_stage"' 0
     trap 'exit 129' HUP

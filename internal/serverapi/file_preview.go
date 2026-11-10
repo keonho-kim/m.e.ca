@@ -83,5 +83,5 @@ func (a *API) previewFile(ctx context.Context, r *v1.FileRequest) (*v1.FilePrevi
 	for len(page) > 0 && !utf8.Valid(page) {
 		page = page[:len(page)-1]
 	}
-	return &v1.FilePreview{Path: path, Text: string(page), Offset: offset, NextOffset: offset + int64(len(page)), Truncated: truncated || offset+int64(len(page)) < total, Revision: revision + "." + token}, nil
+	return &v1.FilePreview{Path: path, Text: string(page), Offset: offset, NextOffset: offset + int64(len(page)), Truncated: truncated || offset+int64(len(page)) < total, TotalBytes: total, SourceTruncated: truncated, Revision: revision + "." + token}, nil
 }

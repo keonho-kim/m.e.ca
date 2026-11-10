@@ -12,6 +12,7 @@ import (
 )
 
 type ServerOptions struct {
+	UI                                            bool
 	Concurrency                                   int
 	Protocol, Listen, TokenFile, Certificate, Key string
 	Hosts, Origins                                []string
@@ -20,6 +21,7 @@ type ServerOptions struct {
 func serverFlags(flags *flag.FlagSet, mode *Mode) {
 	flags.BoolVar(&mode.Server, "server", false, "serve the selected project without a terminal")
 	o := &mode.ServerOptions
+	flags.BoolVar(&o.UI, "ui", false, diagcatalog.Text(diagcatalog.UIFlagHelp))
 	flags.IntVar(&o.Concurrency, "concurrency", 1, diagcatalog.Text(diagcatalog.ServerConcurrencyHelp))
 	flags.StringVar(&o.Protocol, "protocol", "sse", "server transport: sse, socket (WebSocket), grpc")
 	flags.StringVar(&o.Listen, "listen", "127.0.0.1:8787", "server TCP address")
@@ -40,7 +42,7 @@ func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 	serverFlag := false
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "protocol", "listen", "token-file", "tls-cert", "tls-key", "allow-host", "allow-origin", "concurrency":
+		case "ui", "protocol", "listen", "token-file", "tls-cert", "tls-key", "allow-host", "allow-origin", "concurrency":
 			serverFlag = true
 		}
 	})

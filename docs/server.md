@@ -6,6 +6,7 @@ MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계�
 
 ```sh
 meca --server                         # SSE, 127.0.0.1:8787
+meca --server --ui                    # 내장 React 작업공간 /ui/
 meca --server --concurrency 4          # 서로 다른 세션의 작업을 최대 4개 실행
 meca /path/to/project --server --protocol socket
 meca /path/to/project --server --protocol grpc --listen 127.0.0.1:8788
@@ -17,7 +18,8 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 | 시작 옵션 | 기본값·의미 |
 | --- | --- |
-| `--server` | 현재 프로젝트를 서비스 |
+| `--server` | 시작 프로젝트와 등록한 작업공간을 서비스 |
+| `--ui` | 내장 WebUI·브라우저 접속 인증 제공. --server에서만 사용 |
 | `--protocol sse\|socket\|grpc` | 기본 `sse`; native 전송 하나 선택 |
 | `--listen IP:port` | `127.0.0.1:8787` |
 | `--session ID` | 현재 프로젝트의 지정 대화 선택 |
@@ -27,7 +29,7 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 | `--allow-origin scheme://host:port` | 브라우저 Origin 추가. 반복 가능 |
 | `--concurrency N` | 동시 작업 수. 기본 1, 양의 정수. 제품 고정 상한 없음 |
 
-프로세스는 지정한 프로젝트 하나, native 선택 대화 하나와 작업별 실행 대화를 소유한다. 서로 다른 세션의 요청은 `--concurrency`까지 실행하며 같은 세션에는 한 작업만 허용한다. 용량이 차면 새 접수를 `429 resource_exhausted`로 거절하고 이미 접수한 같은 키는 원래 작업을 반환한다. 팀 에이전트는 각 작업의 기존 실행 루프를 사용한다. 다른 TUI나 서버가 소유한 대화는 세션 잠금으로 열기를 거부한다. 같은 프로젝트의 변경·임의 셸 실행은 준비된 효과와 살아 있는 하위 프로세스가 소유한 게이트로 직렬화한다. 효과와 프로세스가 모두 끝나면 작업의 다음 모델 응답을 기다리는 동안에도 다른 작업이 접근할 수 있다. 같은 팀의 내부 협업 규칙은 유지하며 이 게이트가 OS 샌드박스를 제공하는 것은 아니다.
+프로세스는 시작 프로젝트와 등록한 작업공간, 프로젝트별 native 선택 대화와 작업별 실행 대화를 소유한다. 모든 작업공간이 같은 실행 슬롯·첨부·이벤트·효과 게이트를 사용한다. 서로 다른 세션의 요청은 `--concurrency`까지 실행하며 같은 세션에는 한 작업만 허용한다. 용량이 차면 새 접수를 `429 resource_exhausted`로 거절하고 이미 접수한 같은 키는 원래 작업을 반환한다. 팀 에이전트는 각 작업의 기존 실행 루프를 사용한다. 다른 TUI나 서버가 소유한 대화는 세션 잠금으로 열기를 거부한다. 프로세스의 변경·임의 셸 실행은 준비된 효과와 살아 있는 하위 프로세스가 소유한 게이트로 직렬화한다. 효과와 프로세스가 모두 끝나면 작업의 다음 모델 응답을 기다리는 동안에도 다른 작업이 접근할 수 있다. 같은 팀의 내부 협업 규칙은 유지하며 이 게이트가 OS 샌드박스를 제공하는 것은 아니다.
 
 설정값은 동시 작업의 상한이며 그 수만큼 자원을 미리 할당하지 않는다. 64·128 등 더 큰 값을 사용할 수 있다. 활성 작업 수와 HTTP 요청·연결 수는 서로 다른 한도다. 메모리·저장·디코딩 예산은 작업 수 설정과 독립적으로 적용한다. snapshot의 `concurrency`는 `int64`이며 Protobuf JSON에서는 문자열로 표현한다.
 
@@ -35,7 +37,7 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 기본 토큰 파일은 `~/.meca/server.token`이다. 처음 실행할 때 원자적으로 생성하며 현재 사용자 소유의 private 일반 파일만 허용한다. `--token-file PATH`로 다른 파일을 지정할 수 있다. 상위 디렉터리는 미리 만들어야 하며 파일에는 32~256바이트의 공백 없는 ASCII 토큰을 넣는다. 시작 시 한 번 읽은 토큰을 인증과 비밀값 마스킹에 함께 사용한다. 파일을 교체한 뒤에는 서버를 다시 시작해야 적용된다. 토큰 내용은 시작 메시지에 출력하지 않는다.
 
-HTTP·SSE·RPC는 매 요청의 `Authorization: Bearer <token>` 헤더를 사용한다. URL·쿠키 인증은 지원하지 않는다. 브라우저 SSE 클라이언트는 Authorization을 넣을 수 있는 fetch 스트림을 사용한다. 기본 EventSource는 사용자 정의 Authorization 헤더를 제공하지 않는다.
+외부 HTTP·SSE·RPC 클라이언트는 `Authorization: Bearer <token>` 헤더를 사용한다. URL 토큰은 받지 않는다. `--ui`에서는 POST /v1/ui/login에 같은 토큰을 제출해 만료하는 HttpOnly·SameSite=Strict 쿠키를 발급한다. 쿠키를 쓰는 변경 요청에는 동일 Origin과 X-Meca-UI: 1이 필요하다. 내장 EventSource·저장 이미지도 같은 쿠키를 사용한다. [브라우저 인증 상세](webui-api.md#내장-브라우저-인증)를 따른다.
 
 WebSocket은 브라우저 API의 헤더 제약 때문에 연결 후 첫 텍스트 프레임으로 인증한다.
 
@@ -63,6 +65,17 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 
 | operation | 입력과 결과 |
 | --- | --- |
+| `listWorkspaces` | `{}` → `workspaces:{items,defaultId}`. id·path·name·activeTasks·pendingApprovals·error |
+| `addWorkspace` | `path` → 작업공간 등록·전역 설정 저장 후 목록. 실제 경로 기준 중복 제거 |
+| `browseFolders` | `path`, `offset` → 서버 폴더 선택용 directory. 한 번에 200개 항목을 읽고 폴더만 반환 |
+| `deleteSession` | `sessionId` → 대화와 소유 팀 내부 파일 삭제. 활성 작업·다른 소유자 잠금 거절 |
+| `commandCatalog` | `{}` → 브라우저에서 지원하는 여섯 명령·설명 |
+| `parseInput` | `text` → 공통 파서의 action·argument. !new·!quit·:q 거절 |
+| `suggestSkills` | `prefix` → 전체 메타데이터에서 최대 32개 이름-prefix 후보. 본문은 읽지 않음 |
+| `lookupRequest` | `sessionId`, `key` → 기존 접수 조회. 새 작업·효과를 실행하지 않음 |
+| `diagnoseModel` | `sessionId`, provider·endpoint·credential·model → 연결·응답 진단. 설정과 키를 저장하지 않음 |
+| `editorRead` | `path` → 전체 UTF-8 text·revision·editable·reason. 편집 상한 1MiB |
+| `editorSave` | `path`, `text`, `revision` → 현재 원본 재검사와 원자적 교체, 본문을 제외한 새 revision |
 | `listSkills` | `cursor`, `limit` → `skills:{items,nextCursor,diagnostics,diagnosticsTruncated}`. 기본·최대 32건 |
 | `getSkill` | `id` → `skill:{skill,revision,body}`. 본문 미리보기이며 모델 작업을 시작하지 않음 |
 | `readSkillFile` | `id`, 스킬 루트 기준 `path`, `offset`, `limit`, 선택적 `revision` → `skillFile:{revision,text,mediaType,offset,nextOffset,totalBytes,binary}`. offset이 0보다 크면 첫 페이지의 revision 필수 |
@@ -71,7 +84,7 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `closeSession` | `sessionId` → 해당 세션 자원 해제. 작업 중에는 거부하고 이미 닫힌 자원은 성공 처리. DB는 삭제하지 않음 |
 | `state` | 선택적 `sessionId`, `taskId`, `afterTask`, `limit` → 상태 페이지. 기본 32건·최대 100건, `nextTask`·`totalTasks` 제공 |
 | `history` | `before`, `limit`, 선택적 `sessionId` → 현재 프로젝트의 지정 대화 시간순 페이지. 메모리에 없는 대화는 읽기 전용으로 열며 생략 시 native 선택 |
-| `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 소유 대화 `sessionId` → JSON 바이트 페이지. 후속 페이지는 revision 필수. 승인 ID는 작업 대화에서 직접 찾음 |
+| `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 `sessionId` → UTF-8 JSON 원문 조각 `text`와 바이트 기준 nextOffset. 후속 페이지는 revision 필수 |
 | `setModel` | `sessionId`, `provider`, `endpoint`, `model`, 선택적 `credential`, `thinking`, `reasoningEffort`, `remember` → 상태 |
 | `setSettings` | `permission`, `team`, `language` 중 하나 → 상태. team은 `sessionId` 필수, language는 전역 UI 언어 |
 | `start` | `sessionId`, `key`, `text`, 선택적 `attachmentIds`, `paths` → 즉시 작업 ID와 상태. 이미지 전용 요청 허용 |
@@ -92,9 +105,9 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `steer` | `taskId`, `text`, 선택적 `paths` → 다음 안전한 판단 경계에 전달 |
 | `cancel` | `taskId` → 취소 요청. 실제 종료는 `request_finished`로 확인 |
 
-`setModel`은 기존 Provider 연결 준비·검증·저장과 OS 자격 증명 저장을 사용한다. 같은 연결에서 credential을 생략하면 저장된 참조를 사용한다. `remember`는 새 세션의 기본 연결도 저장한다. 기본값 저장만 실패하면 세션의 모델은 유지하고 부분 완료를 오류 메시지로 알린다. 저장된 모델은 첫 요청의 접수 전에 연결을 준비하므로 Provider나 키 저장소가 사용 불가능해도 대화 이력을 열고 모델을 다시 설정할 수 있다. 모델·팀 변경은 해당 세션의 실행 중에 거절하고 전역 permission은 활성 작업이 하나라도 있으면 변경하지 않는다. permission은 `default` 또는 `all_mighty`이며 팀 모드는 명시한 세션에 저장한다. WebUI의 탭 선택은 클라이언트가 소유하며 조회·모델·팀·참조 변경·작업 실행을 위해 전역 선택을 바꿀 필요가 없다.
+`setModel`은 기존 Provider 연결 준비·검증·저장과 OS 자격 증명 저장을 사용한다. 같은 연결에서 credential을 생략하면 저장된 참조를 사용한다. `remember`는 새 세션의 기본 연결도 저장한다. 기본값 저장만 실패하면 세션의 모델은 유지하고 부분 완료를 오류 메시지로 알린다. 저장된 모델은 첫 요청의 접수 전에 연결을 준비하므로 Provider나 키 저장소가 사용 불가능해도 대화 이력을 열고 모델을 다시 설정할 수 있다. 모델 변경은 해당 세션의 실행 중에 거절한다. 팀 모드 변경은 현재 실행이 캡처한 값을 바꾸지 않고 다음 요청부터 적용하며 전역 permission은 활성 작업이 하나라도 있으면 변경하지 않는다. permission은 `default` 또는 `all_mighty`이며 팀 모드는 명시한 세션에 저장한다. WebUI의 탭 선택은 클라이언트가 소유하며 조회·모델·팀·참조 변경·작업 실행을 위해 전역 선택을 바꿀 필요가 없다.
 
-세션·설정 변경과 접수 준비는 직렬 예약하며 네트워크·DB I/O를 상태 잠금 밖에서 처리한다. state·이벤트·taskStatus·활성 작업 취소는 계속 처리한다. 명시적 sessionId의 history/detail은 읽기 대여로 수명을 보호한다. 세션 교체 정리가 실패하면 실제 선택 상태를 확인하기 위해 snapshot/state를 다시 조회한다. 닫히는 세션의 진행 중 읽기는 취소·합류한다.
+세션·설정 변경과 접수 준비는 직렬 예약하며 네트워크·DB I/O를 상태 잠금 밖에서 처리한다. state·이벤트·taskStatus·활성 작업 취소는 계속 처리한다. 명시적 sessionId의 history/detail은 읽기 대여로 수명을 보호한다. 조회와 실행은 같은 모델 선택 규칙을 사용한다. 대화에 저장한 선택이 우선하며 없으면 현재 기본 모델을 사용하고, 조회만으로 Provider에 연결하지 않는다. 세션 교체 정리가 실패하면 실제 선택 상태를 확인하기 위해 snapshot/state를 다시 조회한다. 닫히는 세션의 진행 중 읽기는 취소·합류한다.
 
 `id`는 응답 상관관계용이다. 실제 실행 중복 방지는 `start.key`가 담당한다. 호출자가 요청마다 안정된 키를 만들고 응답을 잃었을 때 같은 세션·키·본문으로 재전송한다. 동일 키의 다른 본문은 conflict이며 기존 작업을 바꾸지 않는다. key는 8~128바이트다. `~/.meca/server-requests/<project-scope>/requests.db`는 본문 대신 해시와 작업 식별·상태만 저장한다. project-scope는 정규화 프로젝트 경로의 SHA-256이며 프로젝트 간 접수·조회가 분리된다. 실행 전에 기록하고 완료 후 상태를 확정한다. 비정상 종료되어 접수만 남은 작업은 interrupted로 조회되며 자동 재실행하지 않는다. 다시 수행하려면 실제 부분 효과를 확인한 뒤 새 키로 요청한다.
 
@@ -106,18 +119,18 @@ Task는 `code`와 `persistence`도 제공한다. `pending`은 현재 프로세�
 
 승인은 서버가 발급한 일회성 approval ID와 task ID에 묶는다. 재사용·다른 작업·이미 끝난 승인에는 conflict를 반환한다. 승인 뒤에도 기존 실행기의 대상·버전·사용자 지침 재검사가 적용된다. preview가 잘렸으면 `detail.approvalId`로 전체 근거를 확인한다. 거절·취소·실행기 마감 또는 승인 대기 5분 경과는 해당 승인을 끝낸다.
 
-SSE·socket·grpc 모두 `POST /v1/command`, `GET /v1/events`, `POST /v1/attachments`를 제공한다. `GET /v1/tasks/{taskId}`는 task Reply, `GET /v1/tasks/{taskId}/approvals`는 해당 작업의 승인만 담은 state Reply다. `POST /v1/tasks/{taskId}/approvals/{approvalId}`에 `{"allow":true}` 또는 `{"allow":false}`를 보내며 allow 생략·잘못된 타입을 거부한다. `POST /v1/tasks/{taskId}/cancel`은 취소를 요청한다. 모든 HTTP 경로에 Bearer 인증이 필요하다. 이미지 업로드·해제 형식과 한도는 [이미지 입력](images.md#사용자-이미지-첨부)을 따른다.
+SSE·socket·grpc 모두 `POST /v1/command`, `GET /v1/events`, `POST /v1/attachments`를 제공한다. `GET /v1/tasks/{taskId}`는 task Reply, `GET /v1/tasks/{taskId}/approvals`는 해당 작업의 승인만 담은 state Reply다. `POST /v1/tasks/{taskId}/approvals/{approvalId}`에 `{"allow":true}` 또는 `{"allow":false}`를 보내며 allow 생략·잘못된 타입을 거부한다. `POST /v1/tasks/{taskId}/cancel`은 취소를 요청한다. API HTTP에는 Bearer 또는 --ui의 브라우저 인증이 필요하다. /ui/ 정적 접속 화면에는 인증 정보를 포함하지 않는다. 이미지 업로드·해제 형식과 한도는 [이미지 입력](images.md#사용자-이미지-첨부)을 따른다.
 
 명령 오류는 공통 `Reply.error:{code,message}`다. HTTP 제어는 이에 맞는 4xx/5xx 상태를 함께 반환한다. RPC의 애플리케이션 오류도 같은 Reply에 담으며 인증·잘못된 프레이밍·스트림 종료 등의 전송 오류는 해당 RPC 상태를 사용한다. 클라이언트는 둘 다 확인해야 한다.
 
 ID·모델 설정 형식 오류는 invalid_argument, 없는 세션·원문은 not_found다. 취소된 제어·조회는 canceled이며 HTTP에서는 409로 반환한다. 세션 변경으로 조회가 취소되면 최신 상태를 확인한 뒤 필요한 원문만 다시 요청한다.
 
-스킬 조회는 세션 선택 전에도 가능하며 서버의 고정 프로젝트·실행 계정을 기준으로 한다. `getSkill`은 탐색 ID와 엔진에서 경로로 읽어 등록한 ID를 받고 임의 경로 입력은 받지 않는다. 참고 파일은 검증한 스킬 루트 안에서만 읽는다. 목록 페이지는 현재 파일을 다시 조회하므로 파일 변경 뒤에는 빈 cursor로 목록을 갱신한다. `start` 입력은 기존 sessionId·key·text이며 스킬은 현재 입력의 #이름 또는 에이전트의 읽기 도구로 지정한다. 형식과 한도는 [스킬 문서](skills.md)가 소유한다.
+스킬 조회는 세션 선택 전에도 가능하며 명시한 작업공간의 프로젝트·실행 계정을 기준으로 한다. `getSkill`은 탐색 ID와 엔진에서 경로로 읽어 등록한 ID를 받고 임의 경로 입력은 받지 않는다. 참고 파일은 검증한 스킬 루트 안에서만 읽는다. 목록 페이지는 현재 파일을 다시 조회하므로 파일 변경 뒤에는 빈 cursor로 목록을 갱신한다. `start` 입력은 기존 sessionId·key·text이며 스킬은 현재 입력의 #이름 또는 에이전트의 읽기 도구로 지정한다. 형식과 한도는 [스킬 문서](skills.md)가 소유한다.
 
 ## SSE
 
 - `POST /v1/command`: application/json Command → Reply
-- `GET /v1/events`: SSE Notification. 선택적 Last-Event-ID 또는 cursor query로 재개한다. 둘 다 있으면 헤더가 우선한다.
+- `GET /v1/events`: SSE Notification. Last-Event-ID 또는 cursor로 재개하며 헤더가 우선한다. workspace_id·session_id로 본문 범위를 정할 수 있고 작업·승인·generation 같은 전역 전이는 계속 받는다. 범위를 생략한 클라이언트는 전체 사건을 받는다.
 
 ```sh
 curl --no-buffer -H "Authorization: Bearer $(cat ~/.meca/server.token)" \
@@ -210,14 +223,14 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 | 상세·파일 미리보기 캐시 4건, 문서별 메모리 64KiB·압축 파일 합계 64MiB | 64KiB 독립 압축 블록에서 해당 페이지만 복원. 한도·여유 공간 부족 시 캐시 없이 페이지 수집 |
 | 이미지 업로드 예약 합계 128MiB | 큰 이미지 업로드에 사용. 일반 제어 입력의 32MiB 예산과 분리 |
 | 이미지 한 장 64MiB·64M픽셀, 요청당 8개·128MiB | 네이티브 제어는 업로드 ID를 참조. 디코더 공용 예산 768MiB |
-| 임시 이미지 16개·256MiB·5분 | 불변 바이트를 대여하며 종료 시 만료 타이머도 취소·합류 |
-| 2048건 및 8MiB | 이벤트 보관. 먼저 도달한 한도로 만료 |
+| 프로세스 전체 임시 이미지 16개·256MiB·5분 | 불변 바이트를 대여하며 종료 시 만료 타이머도 취소·합류 |
+| 2048건 및 8MiB | 모든 작업공간의 공통 이벤트 보관. 먼저 도달한 한도로 만료 |
 | 이벤트 본문·Thinking 각 16KiB | 단일 표시 이벤트. 큰 스트림 델타는 분할 |
 | 작업별 본문·Thinking 각 128KiB 메모리 접두부, 최대 16개 발신자 | 긴 실행 중 원문은 프로세스 합계 512MiB의 private 임시 파일에서 페이지 조회. reset·종료 때 해제 |
 | 16건 및 합계 1MiB | 실행 중 방향 수정 대기열 |
 | native 작업 오류 4KiB | SQLite 행에 종료 상태와 저장하며 읽기 전 필드 크기를 검사 |
 | TCP 연결 최대 64개 | HTTP 해석·TLS 처리 전에 적용하며 유휴 연결도 포함. 초과 연결은 즉시 닫음 |
-| 동시 일반 HTTP 요청 32개, 이벤트/소켓 최대 16개, 작업 제어 전용 4개 | `/v1/tasks/` 승인·취소는 일반 요청과 별도 입장. HTTP/2 연결별 37개 스트림은 일반 32·제어 4·즉시 거절 여유 1개를 포함하며 TCP 한도와 별도 |
+| 동시 일반 HTTP 요청 32개, 이벤트/파일 감시/소켓 합계 최대 16개, 작업 제어 전용 4개 | `/v1/tasks/`와 작업공간별 namespace의 승인·취소는 일반 요청과 별도 입장. HTTP/2 연결별 37개 스트림은 일반 32·제어 4·즉시 거절 여유 1개를 포함하며 TCP 한도와 별도 |
 | 헤더 5초·입력 본문/소켓 프레임 읽기 30초·쓰기 15초 | 느린 연결 점유 제한. 입력을 다 읽으면 읽기 마감 해제. WebSocket 인증은 5초이며 완료한 명령은 다음 프레임 대기 전에 해제 |
 
 세션 목록의 첫 페이지는 전체 순서를 확인하고 다음 페이지는 저장한 ID·시각에 해당하는 DB만 읽는다. 순서 참조는 현재 프로세스와 프로젝트에 묶인다. 만료·재시작 후에는 빈 커서로 다시 조회한다. 읽는 동안 갱신되거나 사라진 세션은 건너뛰며 새 목록에서 확인한다. 보관 수용량 초과는 `resource_exhausted`로 반환한다.
@@ -233,6 +246,14 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 실행 이벤트는 네트워크에 직접 쓰지 않는다. 느린 관찰자는 독립적으로 읽고 쓰기 실패는 해당 연결만 끝낸다. 연결이 끊겨도 수락한 요청은 서버 프로세스의 context로 계속된다. 명시적인 cancel이나 정상 서버 종료만 작업을 취소한다. 종료는 새 요청을 막고 모델·도구·승인 대기를 취소·합류한 뒤 executor·client·DB·잠금을 해제한다. 강제 종료 후에는 기존 복구 규칙을 사용하며 불확실한 도구 효과를 재생하지 않는다.
 
 
+서버–UI 조회는 실행 동시성과 별도 예산으로 제어한다. 원문 작업은 8단위의 가중 예산을 사용하며 작은 history·이미지 메타데이터는 1, 편집·미리보기·detail은 2, 이미지 복원·축소는 5를 사용한다. 이미지 메타데이터 예약은 픽셀 작업을 기다리기 전에 반환해 예약을 보유한 채 성장하는 교착을 피한다. 픽셀 디코딩과 원본 복원 바이트 예산도 계속 적용한다. HTTP JSON 응답은 최대 32MiB의 인코딩 예약을 전송 완료까지 보유하며 큰 응답만 협상된 gzip으로 압축한다. 메모리 부족 응답도 상관관계 ID를 제한하며 실행·저장을 재생하지 않는다.
+
+디렉터리는 inode·변경 시각에 묶인 정렬 스냅샷을 최대 8개·4MiB로 공유하고, 후속 페이지는 revision을 검증한다. 대화 목록은 DB/WAL 변경 상태를 확인하는 4MiB·4,096행 메타데이터 인덱스를 사용한다. 정렬 커서는 최대 2분·128개·합계 8MiB이며 오래된 참조를 먼저 회수한다. 만료·회수된 커서는 목록 처음부터 다시 읽는다. native 접수 DB는 지원하는 현재 schema에서 `(session,id)` 파생 인덱스를 유지하며 세션 필터와 전체 목록 SQL을 분리한다.
+
+인증된 저장 이미지의 `?thumbnail=1` 응답은 최대 변 256px의 PNG다. JPEG·PNG·WebP의 EXIF 방향을 반영하고 원본은 바꾸지 않는다. 파생 바이트는 최대 32개·4MiB로 보관하며 같은 원본의 동시 변환을 합친다. 캐시 적중에서도 현재 원본 메타데이터와 DB/WAL 상태, 작업공간·세션 접근을 확인하고 읽기 수명을 전송까지 대여한다. 응답은 원본과 같이 no-store다.
+
+동시 관찰자가 있을 때만 최대 128개·1MiB의 정제 사건과 JSON을 공유한다. 마스킹 기준 변경이나 공유 관찰 종료 시 회수한다. SSE 본문 필터가 생략한 사건은 `event: cursor`와 id로 전송 위치를 알리며, 이 프레임은 도메인 사건이나 heartbeat가 아니다. heartbeat는 기존처럼 커서를 변경하지 않는다. detail은 Base64 data 대신 UTF-8 text를 반환하고 바이트 offset과 완전한 문자 경계를 사용한다.
+
 ## 개발과 생성
 
 요청 DB는 **user_version 4**의 native 전용 형식이다. `requests` 행은 작업 ID·입력 digest·세션·상태·오류만 저장한다. native text·첨부 ID 순서·참조 경로를 접수 키에 바인딩한다. 같은 요청 재시도는 임시 첨부가 만료·해제됐거나 세션이 메모리에서 정리됐어도 기존 작업을 반환한다. 새 업로드 ID나 입력을 같은 키에 섞으면 conflict다. 결과 원문과 이미지 본문은 세션 DB가 소유한다. 버전 3과 이전 형식은 원본을 보존하고 열기를 거절하며 자동 변환·삭제·초기화하지 않는다. 모델 Provider 설정·API Key 저장 형식과 세션 DB schema 28은 이 요청 DB 변경과 별개다.
@@ -246,8 +267,8 @@ go build -modfile=devtools/go.mod -o bin/devtools/ \
   google.golang.org/protobuf/cmd/protoc-gen-go \
   connectrpc.com/connect/v2/cmd/protoc-gen-connect-go
 PATH="$PWD/bin/devtools:$PATH" protoc -I api \
-  --go_out=. --go_opt=module=github.com/keonho-kim/meca \
-  --connect-go_out=. --connect-go_opt=module=github.com/keonho-kim/meca \
+  --go_out=internal/serverapi/gen --go_opt=module=github.com/keonho-kim/meca/internal/serverapi/gen \
+  --connect-go_out=internal/serverapi/gen --connect-go_opt=module=github.com/keonho-kim/meca/internal/serverapi/gen \
   api/meca/v1/*.proto
 ```
 
@@ -255,7 +276,7 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 ## WebUI 연결과 복원
 
-내장 UI의 정적 자산·브라우저 인증 초기 화면은 프론트 구현 범위다. 현재 API는 모델 탐색, 대화·작업 목록, 설정, 파일 참조, 이미지, 승인, 팀 스트림과 상태 복원을 제공한다. [클라이언트 연결 가이드](webui-api.md)를 따른다.
+`meca --server --ui`는 같은 서버에서 내장 UI와 인증 초기 화면을 제공한다. 최상위 Command.workspaceId로 작업공간을 지정하고 생략 시 시작 프로젝트를 사용한다. 이벤트·snapshot은 workspaceId를 포함한다. HTTP 이미지·작업 namespace와 파일 감시 계약은 [연결 가이드](webui-api.md)가 소유한다. 현재 API는 모델 탐색, 대화·작업 목록, 설정, 파일 참조, 이미지, 승인, 팀 스트림과 상태 복원을 제공한다. [클라이언트 연결 가이드](webui-api.md)를 따른다.
 
 저장 이미지 GET은 `/v1/sessions/{sessionId}/images/{sequence}/{index}`이며 같은 Bearer·Host·Origin 검사를 적용한다. 해당 대화가 현재 선택되어 있을 필요는 없다. 업로드 metadata의 expires_at과 남은 lifetime_seconds는 임시 업로드 수명이며 저장된 이미지의 보존 수명과 다르다.
 
@@ -272,3 +293,10 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 초안 generation은 같은 작업의 팀원 재참여에서도 증가한다. 퇴장 전 페이지의 generation으로 복귀한 팀원의 본문을 읽을 수 없으며 conflict로 거절한다. 임시 저장소 생성·쓰기 실패는 관련 파일과 예약을 바로 반환하고 원래 모델 작업의 수명을 취소하지 않는다.
 
 `selectFile:{selected:false}`는 fileSelections에서 받은 저장 경로를 정확히 지정해 해제한다. 파일이 삭제·이동됐어도 해제할 수 있다. 이미 없는 선택 해제는 성공 처리한다. 없는 저장 이미지 sequence는 HTTP 404/not_found다.
+
+
+## 작업공간 자원과 파일 감시
+
+등록한 작업공간은 전역 설정의 workspaces 목록에 실제 절대 경로로 저장한다. 조회·실행 시 필요한 런타임만 열고, 기본 작업공간·활성 대여·실행·업로드·불확실한 저장 상태를 제외한 idle 네 개를 유지한다. 닫는 중 재개방을 기다리며 종료 호출은 모든 정리의 완료를 함께 확인한다.
+
+GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. 작업의 request_finished.outcome과 HistoryItem.outcome은 실제 실행 결과이며 접수 DB의 answered 상태와 구분한다. 저장된 접수 행에는 outcome이 없을 수 있으므로 클라이언트가 성공을 추정하지 않는다.

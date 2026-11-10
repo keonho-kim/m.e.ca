@@ -6,6 +6,7 @@ package server
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/config"
 	"sync"
 
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
@@ -35,7 +36,7 @@ type Service struct {
 	completionErr error
 	executionErr  error
 	workers       sync.WaitGroup
-	feed          eventLog
+	feed          *eventLog
 }
 
 func New(ctx context.Context, options Options) (*Service, error) {
@@ -49,5 +50,22 @@ func New(ctx context.Context, options Options) (*Service, error) {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerServerIODependenciesAreRequired)
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{ctx: ctx, cancel: cancel, options: options, closeDone: make(chan struct{}), feed: newEventLog(), active: make(map[string]*request), jobs: make(map[string]*Conversation), admissions: make(chan struct{}, 1)}, nil
+	feed := options.Feed
+	if feed == nil {
+		feed = newEventLog()
+	}
+	return &Service{ctx: ctx, cancel: cancel, options: options, closeDone: make(chan struct{}), feed: feed, active: make(map[string]*request), jobs: make(map[string]*Conversation), admissions: make(chan struct{}, 1)}, nil
+}
+
+func (s *Service) currentConfig() config.Config {
+	if s.options.CurrentConfig != nil {
+		return s.options.CurrentConfig()
+	}
+	return s.options.Config
+}
+
+func (s *Service) Busy() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.changing || len(s.active) > 0 || len(s.attachments) > 0 || s.completionErr != nil || s.executionErr != nil
 }

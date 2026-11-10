@@ -13,6 +13,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	agentsession "github.com/keonho-kim/meca/internal/agent/session"
+	"github.com/keonho-kim/meca/internal/agent/work"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/diagnostics"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -20,7 +21,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
-func (s *Service) launch(c *Conversation, task Task, text string, images []media.Image) (Task, error) {
+func (s *Service) launch(c *Conversation, task Task, text string, images []media.Image, release func()) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed || s.ctx.Err() != nil {
@@ -31,7 +32,7 @@ func (s *Service) launch(c *Conversation, task Task, text string, images []media
 		return Task{}, err
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
-	r := &request{originals: make(map[string]*draftOriginal), started: time.Now(), task: task, cancel: cancel, approvals: map[string]*pendingApproval{}, steeringReady: make(chan struct{}, 1), drafts: map[string]*draftState{}, model: model, conversation: c}
+	r := &request{releaseCapacity: release, teamEnabled: c.TeamEnabled, originals: make(map[string]*draftOriginal), started: time.Now(), task: task, cancel: cancel, approvals: map[string]*pendingApproval{}, steeringReady: make(chan struct{}, 1), drafts: map[string]*draftState{}, model: model, conversation: c}
 	r.task.Status = "running"
 	r.task.Persistence = PersistencePending
 	if s.active == nil {
@@ -43,7 +44,7 @@ func (s *Service) launch(c *Conversation, task Task, text string, images []media
 	}
 	s.bySession[task.Session] = r
 	options := agentrequest.Options{Runtime: c.Runtime, Generator: model.Generator(), Text: text, Images: images}
-	options.Config = s.options.Config
+	options.Config = s.currentConfig()
 	options.PollSteering = func() []string { return s.pollSteering(r) }
 	options.SteeringReady = r.steeringReady
 	s.publish(Event{Task: task.ID, Record: eventKind("request_started")})
@@ -54,6 +55,7 @@ func (s *Service) launch(c *Conversation, task Task, text string, images []media
 
 func (s *Service) execute(ctx context.Context, r *request, c *Conversation, options agentrequest.Options) {
 	defer s.workers.Done()
+	defer r.releaseCapacity()
 	defer func() {
 		if err := r.closeDrafts(); err != nil {
 			s.mu.Lock()
@@ -61,7 +63,11 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 			s.mu.Unlock()
 		}
 	}()
-	ctx, releaseWorkspace := workspacegate.Bind(ctx, &s.workspace)
+	gate := s.options.Effects
+	if gate == nil {
+		gate = &s.workspace
+	}
+	ctx, releaseWorkspace := workspacegate.Bind(ctx, gate)
 	defer releaseWorkspace()
 	defer r.cancel()
 	defer r.model.Close()
@@ -72,7 +78,7 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 	emit := func(e record.Event) error { s.emit(r, e); return nil }
 	var result run.Result
 	err := faults.Guard(func() error {
-		if !c.TeamEnabled {
+		if !r.teamEnabled {
 			var err error
 			input := agentrequest.New(options)
 			options.Images = nil
@@ -89,6 +95,7 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 	}
 	task := r.task
 	task.Status = string(result.Status)
+	task.Outcome = string(result.End.Status)
 	if task.Status == "" || task.Status == "running" {
 		task.Status = diagcatalog.Interrupted
 	}
@@ -120,8 +127,12 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 	s.last = &task
 	r.steering, r.approvals, r.drafts = nil, nil, nil
 	terminal := eventKind("request_finished")
+	stats := r.statistics()
+	terminal.Statistics = &stats
 	terminal.ErrorCode = task.Code
-	s.publish(Event{Session: task.Session, Task: task.ID, Status: task.Status, Error: task.Error, Record: terminal})
+	r.releaseCapacity()
+	end := &work.End{Status: result.End.Status, Reason: clipped(options.Vault.Redact(result.End.Reason), 4096)}
+	s.publish(Event{Outcome: end, Session: task.Session, Task: task.ID, Status: task.Status, Error: task.Error, Record: terminal})
 	delete(s.active, task.ID)
 	delete(s.bySession, task.Session)
 	if len(s.active) == 0 {

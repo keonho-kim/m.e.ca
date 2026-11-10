@@ -323,6 +323,9 @@ type DirectoryPage struct {
 	Items         []*FileEntry           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 	NextOffset    int32                  `protobuf:"varint,2,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
 	More          bool                   `protobuf:"varint,3,opt,name=more,proto3" json:"more,omitempty"`
+	Path          string                 `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	Parent        string                 `protobuf:"bytes,5,opt,name=parent,proto3" json:"parent,omitempty"`
+	Revision      string                 `protobuf:"bytes,6,opt,name=revision,proto3" json:"revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -378,16 +381,39 @@ func (x *DirectoryPage) GetMore() bool {
 	return false
 }
 
+func (x *DirectoryPage) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *DirectoryPage) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *DirectoryPage) GetRevision() string {
+	if x != nil {
+		return x.Revision
+	}
+	return ""
+}
+
 type FilePreview struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
-	Offset        int64                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
-	NextOffset    int64                  `protobuf:"varint,4,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
-	Truncated     bool                   `protobuf:"varint,5,opt,name=truncated,proto3" json:"truncated,omitempty"`
-	Revision      string                 `protobuf:"bytes,6,opt,name=revision,proto3" json:"revision,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Path            string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Text            string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	Offset          int64                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	NextOffset      int64                  `protobuf:"varint,4,opt,name=next_offset,json=nextOffset,proto3" json:"next_offset,omitempty"`
+	Truncated       bool                   `protobuf:"varint,5,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	Revision        string                 `protobuf:"bytes,6,opt,name=revision,proto3" json:"revision,omitempty"`
+	TotalBytes      int64                  `protobuf:"varint,7,opt,name=total_bytes,json=totalBytes,proto3" json:"total_bytes,omitempty"`
+	SourceTruncated bool                   `protobuf:"varint,8,opt,name=source_truncated,json=sourceTruncated,proto3" json:"source_truncated,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *FilePreview) Reset() {
@@ -460,6 +486,20 @@ func (x *FilePreview) GetRevision() string {
 		return x.Revision
 	}
 	return ""
+}
+
+func (x *FilePreview) GetTotalBytes() int64 {
+	if x != nil {
+		return x.TotalBytes
+	}
+	return 0
+}
+
+func (x *FilePreview) GetSourceTruncated() bool {
+	if x != nil {
+		return x.SourceTruncated
+	}
+	return false
 }
 
 type FileSelections struct {
@@ -910,6 +950,7 @@ type Task struct {
 	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
 	Code          string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`
 	Persistence   string                 `protobuf:"bytes,6,opt,name=persistence,proto3" json:"persistence,omitempty"`
+	Outcome       string                 `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -982,6 +1023,13 @@ func (x *Task) GetCode() string {
 func (x *Task) GetPersistence() string {
 	if x != nil {
 		return x.Persistence
+	}
+	return ""
+}
+
+func (x *Task) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
 	}
 	return ""
 }
@@ -1308,6 +1356,9 @@ type Capabilities struct {
 	Language        string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`
 	RequestRecords  int64                  `protobuf:"varint,11,opt,name=request_records,json=requestRecords,proto3" json:"request_records,omitempty"`
 	RequestCapacity int64                  `protobuf:"varint,12,opt,name=request_capacity,json=requestCapacity,proto3" json:"request_capacity,omitempty"`
+	EditorBytes     int64                  `protobuf:"varint,13,opt,name=editor_bytes,json=editorBytes,proto3" json:"editor_bytes,omitempty"`
+	PromptBytes     int64                  `protobuf:"varint,14,opt,name=prompt_bytes,json=promptBytes,proto3" json:"prompt_bytes,omitempty"`
+	CommandBytes    int64                  `protobuf:"varint,15,opt,name=command_bytes,json=commandBytes,proto3" json:"command_bytes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1422,6 +1473,27 @@ func (x *Capabilities) GetRequestRecords() int64 {
 func (x *Capabilities) GetRequestCapacity() int64 {
 	if x != nil {
 		return x.RequestCapacity
+	}
+	return 0
+}
+
+func (x *Capabilities) GetEditorBytes() int64 {
+	if x != nil {
+		return x.EditorBytes
+	}
+	return 0
+}
+
+func (x *Capabilities) GetPromptBytes() int64 {
+	if x != nil {
+		return x.PromptBytes
+	}
+	return 0
+}
+
+func (x *Capabilities) GetCommandBytes() int64 {
+	if x != nil {
+		return x.CommandBytes
 	}
 	return 0
 }
@@ -1785,12 +1857,15 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\bselected\x18\x03 \x01(\bR\bselected\"=\n" +
 	"\tFileEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
-	"\tdirectory\x18\x02 \x01(\bR\tdirectory\"n\n" +
+	"\tdirectory\x18\x02 \x01(\bR\tdirectory\"\xb6\x01\n" +
 	"\rDirectoryPage\x12(\n" +
 	"\x05items\x18\x01 \x03(\v2\x12.meca.v1.FileEntryR\x05items\x12\x1f\n" +
 	"\vnext_offset\x18\x02 \x01(\x05R\n" +
 	"nextOffset\x12\x12\n" +
-	"\x04more\x18\x03 \x01(\bR\x04more\"\xa8\x01\n" +
+	"\x04more\x18\x03 \x01(\bR\x04more\x12\x12\n" +
+	"\x04path\x18\x04 \x01(\tR\x04path\x12\x16\n" +
+	"\x06parent\x18\x05 \x01(\tR\x06parent\x12\x1a\n" +
+	"\brevision\x18\x06 \x01(\tR\brevision\"\xf4\x01\n" +
 	"\vFilePreview\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x16\n" +
@@ -1798,7 +1873,10 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\vnext_offset\x18\x04 \x01(\x03R\n" +
 	"nextOffset\x12\x1c\n" +
 	"\ttruncated\x18\x05 \x01(\bR\ttruncated\x12\x1a\n" +
-	"\brevision\x18\x06 \x01(\tR\brevision\"&\n" +
+	"\brevision\x18\x06 \x01(\tR\brevision\x12\x1f\n" +
+	"\vtotal_bytes\x18\a \x01(\x03R\n" +
+	"totalBytes\x12)\n" +
+	"\x10source_truncated\x18\b \x01(\bR\x0fsourceTruncated\"&\n" +
 	"\x0eFileSelections\x12\x14\n" +
 	"\x05paths\x18\x01 \x03(\tR\x05paths\"_\n" +
 	"\fImageRequest\x12\x1d\n" +
@@ -1841,7 +1919,7 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\x99\x01\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xb3\x01\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1849,7 +1927,8 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12\x12\n" +
 	"\x04code\x18\x05 \x01(\tR\x04code\x12 \n" +
-	"\vpersistence\x18\x06 \x01(\tR\vpersistence\"P\n" +
+	"\vpersistence\x18\x06 \x01(\tR\vpersistence\x12\x18\n" +
+	"\aoutcome\x18\a \x01(\tR\aoutcome\"P\n" +
 	"\bTaskPage\x12#\n" +
 	"\x05items\x18\x01 \x03(\v2\r.meca.v1.TaskR\x05items\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
@@ -1871,7 +1950,7 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x06notice\x18\b \x01(\tR\x06notice\"O\n" +
 	"\x06Models\x12-\n" +
 	"\x05items\x18\x01 \x03(\v2\x17.meca.v1.ModelCandidateR\x05items\x12\x16\n" +
-	"\x06notice\x18\x02 \x01(\tR\x06notice\"\xc2\x03\n" +
+	"\x06notice\x18\x02 \x01(\tR\x06notice\"\xad\x04\n" +
 	"\fCapabilities\x12\x1f\n" +
 	"\vapi_version\x18\x01 \x01(\tR\n" +
 	"apiVersion\x12\x1a\n" +
@@ -1888,7 +1967,10 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\blanguage\x18\n" +
 	" \x01(\tR\blanguage\x12'\n" +
 	"\x0frequest_records\x18\v \x01(\x03R\x0erequestRecords\x12)\n" +
-	"\x10request_capacity\x18\f \x01(\x03R\x0frequestCapacity\"\x99\x01\n" +
+	"\x10request_capacity\x18\f \x01(\x03R\x0frequestCapacity\x12!\n" +
+	"\feditor_bytes\x18\r \x01(\x03R\veditorBytes\x12!\n" +
+	"\fprompt_bytes\x18\x0e \x01(\x03R\vpromptBytes\x12#\n" +
+	"\rcommand_bytes\x18\x0f \x01(\x03R\fcommandBytes\"\x99\x01\n" +
 	"\n" +
 	"ModelQuery\x12\x1d\n" +
 	"\n" +

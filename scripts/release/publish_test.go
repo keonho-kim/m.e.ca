@@ -18,7 +18,7 @@ import (
 )
 
 func TestPublishRelease(t *testing.T) {
-	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing build tag", "lookalike build tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure"} {
+	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "missing build tag", "lookalike build tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			copyReleaseScript(t, root, "publish.sh")
@@ -42,7 +42,7 @@ func TestPublishRelease(t *testing.T) {
 						metadata = "invalid executable\n"
 					}
 				}
-				body := releaseArchive(t, mode != "missing notice", metadata)
+				body := releaseArchive(t, mode != "missing notice", mode != "missing UI notice", metadata)
 				writeReleaseFile(t, root, "dist/"+name, string(body))
 				fmt.Fprintf(&manifest, "%x  %s\n", sha256.Sum256(body), name)
 			}
@@ -119,13 +119,13 @@ func TestPublishRelease(t *testing.T) {
 	}
 }
 
-func releaseArchive(t *testing.T, notice bool, metadata string) []byte {
+func releaseArchive(t *testing.T, notice, uiNotice bool, metadata string) []byte {
 	t.Helper()
 	var buffer bytes.Buffer
 	gz := gzip.NewWriter(&buffer)
 	writer := tar.NewWriter(gz)
-	for _, name := range []string{"meca", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"} {
-		if name == "NOTICE" && !notice {
+	for _, name := range []string{"meca", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "WEBUI_THIRD_PARTY_NOTICES.txt"} {
+		if name == "NOTICE" && !notice || name == "WEBUI_THIRD_PARTY_NOTICES.txt" && !uiNotice {
 			continue
 		}
 		body := []byte("fixture " + name)

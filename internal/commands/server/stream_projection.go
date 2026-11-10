@@ -58,6 +58,10 @@ func (s *Service) emit(r *request, value record.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	r.observe(value)
+	if value.Usage != nil {
+		stats := r.statistics()
+		value.Statistics = &stats
+	}
 	if value.Kind != "stream" && value.Kind != "generation_started" {
 		s.publish(Event{Task: r.task.ID, Record: value})
 		if value.Kind == "team_notice" && value.Text == "left" {

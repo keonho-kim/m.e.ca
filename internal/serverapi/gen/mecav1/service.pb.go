@@ -29,24 +29,30 @@ var File_meca_v1_service_proto protoreflect.FileDescriptor
 
 const file_meca_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x15meca/v1/service.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x13meca/v1/state.proto2v\n" +
+	"\x15meca/v1/service.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x13meca/v1/state.proto\x1a\x19meca/v1/application.proto2\xb6\x01\n" +
 	"\vMecaService\x12(\n" +
 	"\x04Call\x12\x10.meca.v1.Command\x1a\x0e.meca.v1.Reply\x12=\n" +
-	"\vWatchEvents\x12\x15.meca.v1.WatchRequest\x1a\x15.meca.v1.Notification0\x01BAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
+	"\vWatchEvents\x12\x15.meca.v1.WatchRequest\x1a\x15.meca.v1.Notification0\x01\x12>\n" +
+	"\n" +
+	"WatchFiles\x12\x19.meca.v1.FileWatchRequest\x1a\x13.meca.v1.FileChange0\x01BAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
 
 var file_meca_v1_service_proto_goTypes = []any{
-	(*Command)(nil),      // 0: meca.v1.Command
-	(*WatchRequest)(nil), // 1: meca.v1.WatchRequest
-	(*Reply)(nil),        // 2: meca.v1.Reply
-	(*Notification)(nil), // 3: meca.v1.Notification
+	(*Command)(nil),          // 0: meca.v1.Command
+	(*WatchRequest)(nil),     // 1: meca.v1.WatchRequest
+	(*FileWatchRequest)(nil), // 2: meca.v1.FileWatchRequest
+	(*Reply)(nil),            // 3: meca.v1.Reply
+	(*Notification)(nil),     // 4: meca.v1.Notification
+	(*FileChange)(nil),       // 5: meca.v1.FileChange
 }
 var file_meca_v1_service_proto_depIdxs = []int32{
 	0, // 0: meca.v1.MecaService.Call:input_type -> meca.v1.Command
 	1, // 1: meca.v1.MecaService.WatchEvents:input_type -> meca.v1.WatchRequest
-	2, // 2: meca.v1.MecaService.Call:output_type -> meca.v1.Reply
-	3, // 3: meca.v1.MecaService.WatchEvents:output_type -> meca.v1.Notification
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	2, // 2: meca.v1.MecaService.WatchFiles:input_type -> meca.v1.FileWatchRequest
+	3, // 3: meca.v1.MecaService.Call:output_type -> meca.v1.Reply
+	4, // 4: meca.v1.MecaService.WatchEvents:output_type -> meca.v1.Notification
+	5, // 5: meca.v1.MecaService.WatchFiles:output_type -> meca.v1.FileChange
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -59,6 +65,7 @@ func file_meca_v1_service_proto_init() {
 	}
 	file_meca_v1_control_proto_init()
 	file_meca_v1_state_proto_init()
+	file_meca_v1_application_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -509,6 +509,8 @@ func (x *Team) GetRevision() uint64 {
 
 type Event struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
+	WorkspaceId    string                 `protobuf:"bytes,28,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	Outcome        *RunOutcome            `protobuf:"bytes,29,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	Cursor         string                 `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	TaskId         string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -568,6 +570,20 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
 	return file_meca_v1_events_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Event) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *Event) GetOutcome() *RunOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return nil
 }
 
 func (x *Event) GetCursor() string {
@@ -763,7 +779,7 @@ var File_meca_v1_events_proto protoreflect.FileDescriptor
 
 const file_meca_v1_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x14meca/v1/skills.proto\"\x88\x02\n" +
+	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x14meca/v1/skills.proto\x1a\x19meca/v1/application.proto\"\x88\x02\n" +
 	"\bApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x12\n" +
@@ -808,8 +824,10 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\bbased_on\x18\x04 \x01(\x03R\abasedOn\x12\x14\n" +
 	"\x05paths\x18\x05 \x03(\tR\x05paths\x12\x1a\n" +
 	"\bcontract\x18\x06 \x01(\tR\bcontract\x12\x1a\n" +
-	"\brevision\x18\a \x01(\x04R\brevision\"\xeb\x06\n" +
-	"\x05Event\x12\x16\n" +
+	"\brevision\x18\a \x01(\x04R\brevision\"\xbd\a\n" +
+	"\x05Event\x12!\n" +
+	"\fworkspace_id\x18\x1c \x01(\tR\vworkspaceId\x12-\n" +
+	"\aoutcome\x18\x1d \x01(\v2\x13.meca.v1.RunOutcomeR\aoutcome\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x17\n" +
@@ -869,23 +887,25 @@ var file_meca_v1_events_proto_goTypes = []any{
 	(*Team)(nil),                  // 5: meca.v1.Team
 	(*Event)(nil),                 // 6: meca.v1.Event
 	(*EventReference)(nil),        // 7: meca.v1.EventReference
-	(*SkillRead)(nil),             // 8: meca.v1.SkillRead
+	(*RunOutcome)(nil),            // 8: meca.v1.RunOutcome
+	(*SkillRead)(nil),             // 9: meca.v1.SkillRead
 }
 var file_meca_v1_events_proto_depIdxs = []int32{
-	7, // 0: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
-	2, // 1: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
-	0, // 2: meca.v1.Event.approval:type_name -> meca.v1.Approval
-	1, // 3: meca.v1.Event.tool:type_name -> meca.v1.Tool
-	2, // 4: meca.v1.Event.usage:type_name -> meca.v1.Usage
-	5, // 5: meca.v1.Event.team:type_name -> meca.v1.Team
-	3, // 6: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
-	4, // 7: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
-	8, // 8: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	7,  // 0: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
+	2,  // 1: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
+	8,  // 2: meca.v1.Event.outcome:type_name -> meca.v1.RunOutcome
+	0,  // 3: meca.v1.Event.approval:type_name -> meca.v1.Approval
+	1,  // 4: meca.v1.Event.tool:type_name -> meca.v1.Tool
+	2,  // 5: meca.v1.Event.usage:type_name -> meca.v1.Usage
+	5,  // 6: meca.v1.Event.team:type_name -> meca.v1.Team
+	3,  // 7: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
+	4,  // 8: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
+	9,  // 9: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_events_proto_init() }
@@ -895,6 +915,7 @@ func file_meca_v1_events_proto_init() {
 	}
 	file_meca_v1_control_proto_init()
 	file_meca_v1_skills_proto_init()
+	file_meca_v1_application_proto_init()
 	file_meca_v1_events_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

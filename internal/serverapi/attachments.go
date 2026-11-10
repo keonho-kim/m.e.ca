@@ -29,29 +29,35 @@ type attachmentValue struct {
 }
 
 func (t *Transport) attachment(w http.ResponseWriter, r *http.Request) {
+	api, release, scopeErr := t.requestAPI(r)
+	if scopeErr != nil {
+		t.writeControlReply(w, r, t.api.errorReply("", scopeErr))
+		return
+	}
+	defer release()
 	if r.URL.Path == "/v1/attachments" && r.Method == "POST" {
 		defer r.Body.Close()
 		kind, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || !strings.HasPrefix(kind, "image/") {
-			t.writeControlReply(w, t.api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaAttachmentType)))
+			t.writeControlReply(w, r, api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaAttachmentType)))
 			return
 		}
 		data, err := readUpload(w, r)
 		if err != nil {
-			t.writeControlReply(w, t.api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaImageDataInvalid)))
+			t.writeControlReply(w, r, api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaImageDataInvalid)))
 			return
 		}
 		image, err := imagefile.Decode(r.Context(), "uploaded-image", data)
 		if err != nil {
-			t.writeControlReply(w, t.api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaImageDataInvalid)))
+			t.writeControlReply(w, r, api.errorReply("", faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaImageDataInvalid)))
 			return
 		}
-		id, err := t.api.Service.StageImage(image)
+		id, err := api.Service.StageImage(image)
 		if err != nil {
-			t.writeControlReply(w, t.api.errorReply("", err))
+			t.writeControlReply(w, r, api.errorReply("", err))
 			return
 		}
-		t.writeAttachment(w, id, image, http.StatusCreated)
+		t.writeAttachment(w, r, api, id, image, http.StatusCreated)
 		return
 	}
 	id := strings.TrimPrefix(r.URL.Path, "/v1/attachments/")
@@ -60,30 +66,30 @@ func (t *Transport) attachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "DELETE" {
-		if err := t.api.Service.ReleaseImage(id); err != nil {
-			t.writeControlReply(w, t.api.errorReply("", err))
+		if err := api.Service.ReleaseImage(id); err != nil {
+			t.writeControlReply(w, r, api.errorReply("", err))
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if r.Method == "GET" {
-		images, err := t.api.Service.ImageAttachments([]string{id})
+		images, err := api.Service.ImageAttachments([]string{id})
 		if err != nil {
-			t.writeControlReply(w, t.api.errorReply("", err))
+			t.writeControlReply(w, r, api.errorReply("", err))
 			return
 		}
-		t.writeAttachment(w, id, images[0], http.StatusOK)
+		t.writeAttachment(w, r, api, id, images[0], http.StatusOK)
 		return
 	}
 	w.Header().Set("Allow", "GET, DELETE, POST")
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
-func (t *Transport) writeAttachment(w http.ResponseWriter, id string, image media.Image, status int) {
-	expires := t.api.Service.ImageExpiry(id)
+func (t *Transport) writeAttachment(w http.ResponseWriter, r *http.Request, api *API, id string, image media.Image, status int) {
+	expires := api.Service.ImageExpiry(id)
 	if expires.IsZero() {
-		t.writeControlReply(w, t.api.errorReply("", faults.New(diagcatalog.NotFound, diagcatalog.MediaAttachmentUnavailable)))
+		t.writeControlReply(w, r, api.errorReply("", faults.New(diagcatalog.NotFound, diagcatalog.MediaAttachmentUnavailable)))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

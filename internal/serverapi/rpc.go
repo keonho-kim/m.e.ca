@@ -31,6 +31,10 @@ func (a *API) WatchEvents(ctx context.Context, request *v1.WatchRequest, stream 
 	}
 	admission.ReleaseInput(ctx)
 	err := a.watch(ctx, request.GetCursor(), request.GetTaskId(), stream.Send)
+	return a.rpcError(err)
+}
+
+func (a *API) rpcError(err error) error {
 	if err == nil {
 		return nil
 	}

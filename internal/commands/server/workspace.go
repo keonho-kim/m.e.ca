@@ -27,20 +27,20 @@ func (s *Service) fileSettings() (fileview.Source, policy.Settings, error) {
 	if s.options.Files == nil {
 		return nil, policy.Settings{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerWorkspaceUnavailable)
 	}
-	return s.options.Files, policy.Settings{Scope: policy.System, Permission: s.options.Config.Permission}, nil
+	return s.options.Files, policy.Settings{Scope: policy.System, Permission: s.currentConfig().Permission}, nil
 }
 
-func (s *Service) Directory(ctx context.Context, path string, offset, limit int) ([]fileview.Entry, bool, error) {
+func (s *Service) Directory(ctx context.Context, path string, offset, limit int, revision string) (fileview.DirectoryPage, error) {
 	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
-		return nil, false, err
+		return fileview.DirectoryPage{}, err
 	}
 	defer done()
 	reader, settings, err := s.fileSettings()
 	if err != nil {
-		return nil, false, err
+		return fileview.DirectoryPage{}, err
 	}
-	return reader.Directory(ctx, settings, path, offset, limit)
+	return reader.Directory(ctx, settings, path, offset, limit, revision)
 }
 
 func (s *Service) Preview(ctx context.Context, path string) (fileview.Preview, error) {

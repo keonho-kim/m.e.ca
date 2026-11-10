@@ -33,6 +33,8 @@ const (
 	MecaServiceCallProcedure = "/meca.v1.MecaService/Call"
 	// MecaServiceWatchEventsProcedure is the procedure name of the MecaService's WatchEvents RPC.
 	MecaServiceWatchEventsProcedure = "/meca.v1.MecaService/WatchEvents"
+	// MecaServiceWatchFilesProcedure is the procedure name of the MecaService's WatchFiles RPC.
+	MecaServiceWatchFilesProcedure = "/meca.v1.MecaService/WatchFiles"
 )
 
 var (
@@ -50,6 +52,13 @@ var (
 			Procedure:  MecaServiceWatchEventsProcedure,
 		}
 	})
+	mecaServiceWatchFilesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     mecav1.File_meca_v1_service_proto.Services().ByName("MecaService").Methods().ByName("WatchFiles"),
+			Procedure:  MecaServiceWatchFilesProcedure,
+		}
+	})
 )
 
 // MecaServiceClient is a client for the meca.v1.MecaService service.
@@ -57,6 +66,7 @@ type MecaServiceClient interface {
 	Call(context.Context, *mecav1.Command) (*mecav1.Reply, error)
 	// Closing this stream detaches the observer; use Cancel to stop a request.
 	WatchEvents(context.Context, *mecav1.WatchRequest) (MecaServiceWatchEventsClientStream, error)
+	WatchFiles(context.Context, *mecav1.FileWatchRequest) (MecaServiceWatchFilesClientStream, error)
 }
 
 // NewMecaServiceClient constructs a client for the meca.v1.MecaService service. Multiple service
@@ -85,11 +95,32 @@ func (s MecaServiceWatchEventsClientStream) Close() error {
 	return s.stream.Close()
 }
 
+// MecaServiceWatchFilesClientStream is the client stream for the MecaService's WatchFiles RPC.
+type MecaServiceWatchFilesClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s MecaServiceWatchFilesClientStream) Receive() (*mecav1.FileChange, error) {
+	var res mecav1.FileChange
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s MecaServiceWatchFilesClientStream) Close() error {
+	return s.stream.Close()
+}
+
 // MecaServiceHandler is an implementation of the meca.v1.MecaService service.
 type MecaServiceHandler interface {
 	Call(context.Context, *mecav1.Command) (*mecav1.Reply, error)
 	// Closing this stream detaches the observer; use Cancel to stop a request.
 	WatchEvents(context.Context, *mecav1.WatchRequest, MecaServiceWatchEventsServerStream) error
+	WatchFiles(context.Context, *mecav1.FileWatchRequest, MecaServiceWatchFilesServerStream) error
 }
 
 // RegisterMecaServiceHandler registers svc as the meca.v1.MecaService implementation on server.
@@ -98,6 +129,7 @@ func RegisterMecaServiceHandler(server *connect.Server, svc MecaServiceHandler) 
 	server.Register(
 		connect.Method{Spec: mecaServiceCallSpec(), Handler: adapter.call},
 		connect.Method{Spec: mecaServiceWatchEventsSpec(), Handler: adapter.watchEvents},
+		connect.Method{Spec: mecaServiceWatchFilesSpec(), Handler: adapter.watchFiles},
 	)
 }
 
@@ -116,6 +148,21 @@ func (s MecaServiceWatchEventsServerStream) Send(res *mecav1.Notification) error
 	return s.stream.Send(res)
 }
 
+// MecaServiceWatchFilesServerStream is the server stream for the MecaService's WatchFiles RPC.
+type MecaServiceWatchFilesServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s MecaServiceWatchFilesServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s MecaServiceWatchFilesServerStream) Send(res *mecav1.FileChange) error {
+	return s.stream.Send(res)
+}
+
 // UnimplementedMecaServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMecaServiceHandler struct{}
 
@@ -125,6 +172,10 @@ func (UnimplementedMecaServiceHandler) Call(context.Context, *mecav1.Command) (*
 
 func (UnimplementedMecaServiceHandler) WatchEvents(context.Context, *mecav1.WatchRequest, MecaServiceWatchEventsServerStream) error {
 	return connect.NewError(connect.CodeUnimplemented, "meca.v1.MecaService.WatchEvents is not implemented")
+}
+
+func (UnimplementedMecaServiceHandler) WatchFiles(context.Context, *mecav1.FileWatchRequest, MecaServiceWatchFilesServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "meca.v1.MecaService.WatchFiles is not implemented")
 }
 
 type mecaServiceClient struct {
@@ -147,6 +198,14 @@ func (c *mecaServiceClient) WatchEvents(ctx context.Context, req *mecav1.WatchRe
 	return MecaServiceWatchEventsClientStream{stream: stream}, nil
 }
 
+func (c *mecaServiceClient) WatchFiles(ctx context.Context, req *mecav1.FileWatchRequest) (MecaServiceWatchFilesClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, mecaServiceWatchFilesSpec(), req)
+	if err != nil {
+		return MecaServiceWatchFilesClientStream{}, err
+	}
+	return MecaServiceWatchFilesClientStream{stream: stream}, nil
+}
+
 type mecaServiceHandler struct{ svc MecaServiceHandler }
 
 func (h mecaServiceHandler) call(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
@@ -167,4 +226,12 @@ func (h mecaServiceHandler) watchEvents(ctx context.Context, _ connect.Spec, str
 		return err
 	}
 	return h.svc.WatchEvents(ctx, &req, MecaServiceWatchEventsServerStream{stream: stream})
+}
+
+func (h mecaServiceHandler) watchFiles(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req mecav1.FileWatchRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.WatchFiles(ctx, &req, MecaServiceWatchFilesServerStream{stream: stream})
 }

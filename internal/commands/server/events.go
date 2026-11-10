@@ -5,15 +5,12 @@
 package server
 
 import (
-	"context"
 	"crypto/rand"
 	"strconv"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/record"
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 const (
@@ -28,7 +25,12 @@ type loggedEvent struct {
 	bytes    int
 	sequence uint64
 }
+type Feed = eventLog
+
+func NewFeed() *Feed { return newEventLog() }
+
 type eventLog struct {
+	mu          sync.Mutex
 	epoch       string
 	sequence    uint64
 	entries     []loggedEvent
@@ -37,14 +39,16 @@ type eventLog struct {
 	changed     chan struct{}
 }
 
-func newEventLog() eventLog { return eventLog{epoch: rand.Text()} }
-func (f *eventLog) wake() {
+func newEventLog() *eventLog { return &eventLog{epoch: rand.Text()} }
+func (f *eventLog) wake()    { f.mu.Lock(); defer f.mu.Unlock(); f.wakeLocked() }
+func (f *eventLog) wakeLocked() {
 	if f.changed != nil {
 		close(f.changed)
 		f.changed = nil
 	}
 }
-func (f *eventLog) cursor() string {
+func (f *eventLog) cursor() string { f.mu.Lock(); defer f.mu.Unlock(); return f.cursorLocked() }
+func (f *eventLog) cursorLocked() string {
 	var buffer [64]byte
 	n := copy(buffer[:], f.epoch)
 	buffer[n] = ':'
@@ -70,9 +74,12 @@ func (s *Service) publish(value Event) {
 		r.sequence++
 		value.Sequence = r.sequence
 	}
-	f := &s.feed
+	value.Workspace = s.options.WorkspaceID
+	f := s.feed
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.sequence++
-	value.Cursor = f.cursor()
+	value.Cursor = f.cursorLocked()
 	size := eventBytes(value)
 	for f.count > 0 && (f.count >= maxEvents || f.bytes+size > maxEventBytes) {
 		f.bytes -= f.entries[f.head].bytes
@@ -90,79 +97,7 @@ func (s *Service) publish(value Event) {
 	f.entries[(f.head+f.count)%len(f.entries)] = loggedEvent{value, size, f.sequence}
 	f.count++
 	f.bytes += size
-	f.wake()
-}
-
-func (s *Service) Next(ctx context.Context, cursor string) (Batch, error) {
-	return s.NextTask(ctx, cursor, "")
-}
-
-func (s *Service) NextTask(ctx context.Context, cursor, taskID string) (Batch, error) {
-	for {
-		s.mu.Lock()
-		batch, ready, err := s.readEvents(cursor, taskID)
-		if err != nil || ready {
-			s.mu.Unlock()
-			return batch, err
-		}
-		if s.closed {
-			s.mu.Unlock()
-			return Batch{}, faults.New(diagcatalog.Unavailable, diagcatalog.ServerServerIsShuttingDown)
-		}
-		if s.feed.changed == nil {
-			s.feed.changed = make(chan struct{})
-		}
-		changed := s.feed.changed
-		s.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return Batch{}, ctx.Err()
-		case <-changed:
-		}
-	}
-}
-
-// Replay validates a cursor and reads available events without waiting. SSE
-// uses it to establish response headers even when the subscriber is caught up.
-func (s *Service) Replay(cursor string) (Batch, error) { return s.ReplayTask(cursor, "") }
-
-func (s *Service) ReplayTask(cursor, taskID string) (Batch, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	batch, _, err := s.readEvents(cursor, taskID)
-	return batch, err
-}
-
-func (s *Service) readEvents(cursor, taskID string) (Batch, bool, error) {
-	f := &s.feed
-	if cursor == "" {
-		snapshot := s.snapshotPage(taskID, "", 32)
-		return Batch{Snapshot: &snapshot}, true, nil
-	}
-	epoch, raw, ok := strings.Cut(cursor, ":")
-	sequence, err := strconv.ParseUint(raw, 10, 64)
-	if !ok || err != nil || len(epoch) != 26 {
-		return Batch{}, false, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidEventCursor)
-	}
-	if epoch != f.epoch || (f.count > 0 && sequence < f.entry(0).sequence-1) {
-		snapshot := s.snapshotPage(taskID, "", 32)
-		return Batch{Snapshot: &snapshot}, true, nil
-	}
-	if sequence > f.sequence {
-		return Batch{}, false, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerEventCursorIsAheadOfThisServer)
-	}
-	if sequence == f.sequence {
-		return Batch{}, false, nil
-	}
-	// Retained sequences are contiguous, so a cursor locates its next entry
-	// directly regardless of how much older history remains in the log.
-	start := int(sequence + 1 - f.entry(0).sequence)
-	end := min(start+32, f.count)
-	values := make([]Event, end-start)
-	for i := range values {
-		values[i] = f.entry(start + i).value
-	}
-	return Batch{Events: values}, len(values) > 0, nil
+	f.wakeLocked()
 }
 
 func (f *eventLog) entry(index int) loggedEvent {

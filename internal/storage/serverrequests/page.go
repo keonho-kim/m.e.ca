@@ -28,7 +28,13 @@ func (l *Ledger) Page(ctx context.Context, session, cursor string, limit int) ([
 			return nil, "", err
 		}
 	}
-	rows, err := l.db.QueryContext(ctx, "SELECT id,"+taskColumns+" FROM requests WHERE id>? AND (?='' OR session=?) ORDER BY id LIMIT ?", after, session, session, limit+1)
+	query := "SELECT id," + taskColumns + " FROM requests WHERE id>? ORDER BY id LIMIT ?"
+	args := []any{after, limit + 1}
+	if session != "" {
+		query = "SELECT id," + taskColumns + " FROM requests WHERE session=? AND id>? ORDER BY id LIMIT ?"
+		args = []any{session, after, limit + 1}
+	}
+	rows, err := l.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, "", err
 	}

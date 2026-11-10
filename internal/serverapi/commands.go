@@ -20,6 +20,9 @@ import (
 )
 
 type API struct {
+	ScopeID          string
+	Workspaces       *server.Workspaces
+	Remember         func(string) error
 	Service          *server.Service
 	Redact           func(string) string
 	NewMask          func() func(string, bool) string
@@ -31,14 +34,29 @@ type API struct {
 	reads            *admission.Budget
 	browseOnce       sync.Once
 	browse           *admission.Budget
+	events           eventProjectionCache
 }
 
 func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, cause error) {
+	if cmd.GetWorkspaceId() != "" && (len(cmd.GetWorkspaceId()) > 128 || a.Workspaces == nil && a.ScopeID != cmd.GetWorkspaceId()) {
+		return a.errorReply(cmd.GetId(), faults.New(diagcatalog.NotFound, diagcatalog.UIWorkspaceUnknown)), nil
+	}
+	if a.Workspaces != nil && cmd.GetWorkspaceId() != "" && a.ScopeID != cmd.GetWorkspaceId() {
+		service, done, err := a.Workspaces.Acquire(ctx, cmd.GetWorkspaceId())
+		if err != nil {
+			return a.errorReply(cmd.GetId(), err), nil
+		}
+		defer done()
+		return a.scoped(service, cmd.GetWorkspaceId()).Call(ctx, cmd)
+	}
 	if err := admission.ResizeInput(ctx, int64(proto.Size(cmd))+4096); err != nil {
 		return a.errorReply(cmd.GetId(), err), nil
 	}
 	started := time.Now()
 	ctx = diagnostics.WithRedactor(ctx, a.Redact)
+	if a.ScopeID != "" {
+		ctx = diagnostics.WithFields(ctx, "workspace_id", a.ScopeID)
+	}
 	operation := "unknown"
 	if cmd != nil {
 		message := cmd.ProtoReflect()
@@ -47,6 +65,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		}
 	}
 	defer func() {
+		if result != nil {
+			result.WorkspaceId = cmd.GetWorkspaceId()
+		}
 		code := result.GetError().GetCode()
 		diagnostics.Log(ctx, diagcatalog.ControlCompleted, "component", "serverapi", "operation", operation, "duration_ms", time.Since(started).Milliseconds(), "error_code", code, "task_id", result.GetTask().GetId())
 	}()
@@ -56,13 +77,20 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 	}
 	var err error
 	switch cmd.GetOperation().(type) {
-	case *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
-		release, ok := a.readLimit().Try(1)
+	case *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
+		weight := int64(2)
+		if cmd.GetHistory() != nil {
+			weight = 1
+		}
+		if cmd.GetHistoryImage() != nil {
+			weight = 1
+		}
+		release, ok := a.readLimit().Try(weight)
 		if !ok {
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerOriginalReadBusy)), nil
 		}
 		defer release()
-	case *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels:
+	case *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels:
 		release, ok := a.browseLimit().Try(1)
 		if !ok {
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerBrowseBusy)), nil
@@ -86,7 +114,8 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		items.NextCursor = next
 		err = cause
 		for _, value := range values {
-			items.Items = append(items.Items, &v1.Session{Id: value.ID, ProjectRoot: value.ProjectRoot, DisplayRoot: value.DisplayRoot, Summary: value.Summary, Updated: value.Updated, Unavailable: value.Unavailable})
+			taskID, pending := a.Service.SessionActivity(value.ID)
+			items.Items = append(items.Items, &v1.Session{Id: value.ID, ProjectRoot: value.ProjectRoot, DisplayRoot: value.DisplayRoot, Summary: value.Summary, Updated: value.Updated, Unavailable: value.Unavailable, RunningTaskId: taskID, PendingApprovals: int32(pending)})
 		}
 		reply.Result = &v1.Reply_Sessions{Sessions: &items}
 	case *v1.Command_SelectSession:
@@ -151,7 +180,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		r := op.Steer
 		err = a.Service.SteerPaths(ctx, r.GetTaskId(), r.GetText(), r.GetPaths())
 	default:
-		reply, err = a.workspaceCall(ctx, cmd)
+		reply, err = a.applicationCall(ctx, cmd)
 	}
 	if err != nil {
 		return a.errorReply(cmd.GetId(), err), nil
@@ -161,6 +190,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 }
 
 func (a *API) errorReply(id string, err error) *v1.Reply {
+	if !validCorrelation(id) {
+		id = ""
+	}
 	code := diagcatalog.NativeCode(faults.Code(err))
 	message := faults.PublicMessage(err, a.Redact)
 	reply := &v1.Reply{Id: id, Result: &v1.Reply_Error{Error: &v1.Error{Code: code, Message: textPreview(message)}}}

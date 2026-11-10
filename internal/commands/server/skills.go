@@ -25,6 +25,18 @@ func (s *Service) ListSkills(ctx context.Context, cursor string, limit int) (ski
 	return s.options.Skills.List(ctx, cursor, limit)
 }
 
+func (s *Service) SuggestSkills(ctx context.Context, prefix string) ([]instruction.Metadata, error) {
+	ctx, done, err := s.beginOperation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	if s.options.Skills == nil {
+		return nil, faults.New(diagcatalog.Unavailable, diagcatalog.ServerSkillReaderIsUnavailable)
+	}
+	return s.options.Skills.Suggestions(ctx, prefix)
+}
+
 func (s *Service) GetSkill(ctx context.Context, id string) (instruction.Document, error) {
 	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {

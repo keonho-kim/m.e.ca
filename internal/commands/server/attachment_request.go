@@ -27,7 +27,7 @@ func (s *Service) StartAttachments(ctx context.Context, session, key, text strin
 			return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.MediaAttachmentUnavailable)
 		}
 	}
-	if !utf8.ValidString(key) || !utf8.ValidString(text) || len(text) > 16<<20 || len(paths) > 256 {
+	if !utf8.ValidString(key) || !utf8.ValidString(text) || len(text) > MaxPromptBytes || len(paths) > 256 {
 		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
 	}
 	h := sha256.New()

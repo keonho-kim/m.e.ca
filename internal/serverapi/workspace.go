@@ -6,6 +6,7 @@ package serverapi
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/processmemory"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
@@ -31,8 +32,8 @@ func (a *API) workspaceCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, er
 		if err != nil {
 			return nil, err
 		}
-		state := a.Service.State()
-		reply.Result = &v1.Reply_Capabilities{Capabilities: &v1.Capabilities{ApiVersion: "meca.v1", Features: []string{"sessions", "tasks", "approvals", "steering", "team-streams", "cursor-replay", "state-pages", "draft-pages", "model-discovery", "workspace-files", "history-images", "skills", "language", "command-activity", "resident-memory"}, ImageTypes: []string{"image/png", "image/jpeg", "image/webp", "image/gif", "image/tiff", "image/bmp"}, ImageBytes: media.MaxBytes, InputImageBytes: media.MaxInputBytes, InputImages: media.MaxImages, Concurrency: int64(state.Concurrency), StatePageSize: 100, DetailPageBytes: 64 << 10, Language: state.Language, RequestRecords: used, RequestCapacity: maximum}}
+		concurrency, language := a.Service.ServerSettings()
+		reply.Result = &v1.Reply_Capabilities{Capabilities: &v1.Capabilities{ApiVersion: "meca.v1", Features: []string{"sessions", "tasks", "approvals", "steering", "team-streams", "cursor-replay", "state-pages", "draft-pages", "model-discovery", "workspace-files", "history-images", "skills", "language", "command-activity", "resident-memory", "workspaces", "delete-session", "editor", "file-watch", "browser-commands", "model-diagnostics", "request-lookup", "skill-completion"}, ImageTypes: []string{"image/png", "image/jpeg", "image/webp", "image/gif", "image/tiff", "image/bmp"}, ImageBytes: media.MaxBytes, InputImageBytes: media.MaxInputBytes, InputImages: media.MaxImages, Concurrency: int64(concurrency), StatePageSize: 100, DetailPageBytes: 64 << 10, Language: language, RequestRecords: used, RequestCapacity: maximum, EditorBytes: fileview.EditorBytes, PromptBytes: server.MaxPromptBytes, CommandBytes: maxRequestBytes}}
 	case *v1.Command_Resources:
 		value := &v1.Resources{}
 		rss, err := processmemory.ResidentBytes()
@@ -80,12 +81,13 @@ func (a *API) workspaceCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, er
 		if limit == 0 {
 			limit = 100
 		}
-		values, more, err := a.Service.Directory(ctx, r.GetPath(), int(r.GetOffset()), limit)
+		value, err := a.Service.Directory(ctx, r.GetPath(), int(r.GetOffset()), limit, r.GetRevision())
 		if err != nil {
 			return nil, err
 		}
-		page := &v1.DirectoryPage{More: more, NextOffset: r.GetOffset() + int32(limit)}
-		for _, v := range values {
+		ref, _ := a.Service.FileReference(ctx, r.GetPath())
+		page := &v1.DirectoryPage{Path: ref, More: value.More, Revision: value.Revision, NextOffset: r.GetOffset() + int32(limit)}
+		for _, v := range value.Entries {
 			page.Items = append(page.Items, &v1.FileEntry{Name: v.Name, Directory: v.Directory})
 		}
 		reply.Result = &v1.Reply_Directory{Directory: page}

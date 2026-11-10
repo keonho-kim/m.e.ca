@@ -23,3 +23,10 @@ func (*Store) LeaseSession() (*SessionLease, error) {
 func (*SessionLease) Close() error {
 	return faults.Errorf(diagcatalog.SqliteSessionLockingRequiresLinuxOrMacOS)
 }
+
+func openConversationDeletionLock(string) (*SessionLease, error) {
+	return nil, faults.Errorf(diagcatalog.SqliteSessionLockingRequiresLinuxOrMacOS)
+}
+func openConversationReadLock(string) (*SessionLease, error) {
+	return nil, faults.Errorf(diagcatalog.SqliteSessionLockingRequiresLinuxOrMacOS)
+}

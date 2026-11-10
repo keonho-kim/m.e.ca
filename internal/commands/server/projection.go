@@ -27,6 +27,11 @@ func clipped(value string, limit int) string { return strings.Clone(prefix(value
 
 // ProjectEvent bounds and detaches visible fields for replay and saved history.
 func ProjectEvent(value Event) Event {
+	if value.Outcome != nil {
+		copy := *value.Outcome
+		copy.Reason = clipped(copy.Reason, 4096)
+		value.Outcome = &copy
+	}
 	value.Status, value.Error = clipped(value.Status, 128), clipped(value.Error, 4096)
 	e := value.Record
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
@@ -101,6 +106,10 @@ func eventBytes(value Event) int {
 	// Include every retained string; fixed overhead covers the value structs,
 	// backing slices and small allocations rather than replacing text accounting.
 	n := 1024 + len(value.Cursor) + len(value.Session) + len(value.Task) + len(value.Status) + len(value.Error) + len(value.ApprovalID)
+	n += len(value.Workspace)
+	if value.Outcome != nil {
+		n += len(value.Outcome.Status) + len(value.Outcome.Reason)
+	}
 	n += len(e.Kind) + len(e.Agent) + len(e.RunID) + len(e.Text) + len(e.Thinking) + len(e.CallID) + len(e.ApprovalSource)
 	n += len(e.OccurredAt) + len(e.ErrorCode)
 	if e.Skill != nil {

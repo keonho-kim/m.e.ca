@@ -32,7 +32,7 @@ const (
 	ServerapiLoadTLSCertificate                                       Message = "load TLS certificate: %w"
 	ServerapiNonLoopbackListenersRequireTlsCertAnd                    Message = "non-loopback listeners require --tls-cert and --tls-key"
 	ServerapiOneSupportedCommandIsRequired                            Message = "one supported command is required"
-	ServerapiOnlyOneCursorQueryParameterIsSupported                   Message = "only cursor and task_id query parameters are supported, each once"
+	ServerapiEventQueryParametersInvalid                              Message = "only cursor, task_id, workspace_id and session_id query parameters are supported, each once"
 	ServerapiServerServiceAndPrivateTokenAreRequired                  Message = "server service and private token are required"
 	ServerapiStreamClosed                                             Message = "stream_closed"
 	ServerapiTLSCertificateAndKeyAreBothRequired                      Message = "TLS certificate and key are both required"

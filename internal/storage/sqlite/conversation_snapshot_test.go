@@ -68,13 +68,22 @@ func TestConversationSnapshotExpiryAndCapacity(t *testing.T) {
 	if again, err := pages.put("project", refs); err != nil || again != first {
 		t.Fatal("unchanged ordering was duplicated", err)
 	}
-	for i := range 7 {
+	for i := range conversationSnapshots - 1 {
+		now = now.Add(time.Millisecond)
 		if _, err := pages.put(fmt.Sprint(i), refs); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := pages.put("overflow", refs); !errors.Is(err, sessionstate.ErrPageLimit) {
+	now = now.Add(time.Millisecond)
+	latest, err := pages.put("overflow", refs)
+	if err != nil || len(pages.values) != conversationSnapshots {
 		t.Fatal(err)
+	}
+	if _, err := pages.get("project", first); !errors.Is(err, sessionstate.ErrCursor) {
+		t.Fatal("oldest cursor was not evicted", err)
+	}
+	if _, err := pages.get("overflow", latest); err != nil {
+		t.Fatal("new traversal was rejected", err)
 	}
 	now = now.Add(conversationPageLifetime)
 	if _, err := pages.get("project", first); !errors.Is(err, sessionstate.ErrCursor) {

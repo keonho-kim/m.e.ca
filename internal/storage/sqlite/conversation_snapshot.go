@@ -18,6 +18,7 @@ const (
 	conversationPageLifetime  = 2 * time.Minute
 	conversationPageBytes     = 8 << 20
 	conversationSnapshotBytes = 2 << 20
+	conversationSnapshots     = 128
 )
 
 type conversationReference struct {
@@ -29,6 +30,7 @@ type conversationSnapshot struct {
 	project string
 	refs    []conversationReference
 	expires time.Time
+	used    time.Time
 }
 
 func (p conversationSnapshot) bytes() int {
@@ -65,18 +67,29 @@ func (p *conversationPages) put(project string, refs []conversationReference) (s
 	defer p.mu.Unlock()
 	now := p.clock()
 	p.prune(now)
-	value := conversationSnapshot{project: project, refs: refs, expires: now.Add(conversationPageLifetime)}
+	value := conversationSnapshot{project: project, refs: refs, expires: now.Add(conversationPageLifetime), used: now}
 	total := value.bytes()
 	for id, previous := range p.values {
 		if previous.project == project && slices.EqualFunc(previous.refs, refs, func(a, b conversationReference) bool { return a.id == b.id && a.updated.Equal(b.updated) }) {
 			previous.expires = now.Add(conversationPageLifetime)
+			previous.used = now
 			p.values[id] = previous
 			return id, nil
 		}
 		total += previous.bytes()
 	}
-	if len(p.values) >= 8 || total > conversationPageBytes {
+	if value.bytes() > conversationPageBytes {
 		return "", sessionstate.ErrPageLimit
+	}
+	for len(p.values) >= conversationSnapshots || total > conversationPageBytes {
+		var oldest string
+		for id, previous := range p.values {
+			if oldest == "" || previous.used.Before(p.values[oldest].used) {
+				oldest = id
+			}
+		}
+		total -= p.values[oldest].bytes()
+		delete(p.values, oldest)
 	}
 	if p.values == nil {
 		p.values = make(map[string]conversationSnapshot)
@@ -89,10 +102,13 @@ func (p *conversationPages) put(project string, refs []conversationReference) (s
 func (p *conversationPages) get(project, id string) ([]conversationReference, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.prune(p.clock())
+	now := p.clock()
+	p.prune(now)
 	value, ok := p.values[id]
 	if !ok || value.project != project {
 		return nil, sessionstate.ErrCursor
 	}
+	value.used = now
+	p.values[id] = value
 	return value.refs, nil
 }

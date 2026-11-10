@@ -15,6 +15,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/agent/work"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/teamrequest"
 	"github.com/keonho-kim/meca/internal/config"
@@ -26,6 +27,7 @@ import (
 	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
+	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
 type History interface {
@@ -70,21 +72,29 @@ type Ledger interface {
 }
 
 type Options struct {
-	Files       fileview.Source
-	Read        func(context.Context, string) (*Conversation, error)
-	Discover    func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
-	Concurrency int
-	Skills      *skills.Reader
-	Config      config.Config
-	Open        func(context.Context, string, bool, config.Config) (*Conversation, error)
-	List        func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
+	Attachments   *AttachmentPool
+	WorkspaceID   string
+	Feed          *Feed
+	Capacity      *Capacity
+	Effects       *workspacegate.Gate
+	CurrentConfig func() config.Config
+	Delete        func(context.Context, string) error
+	Diagnose      func(context.Context, connection.Selection, string) (connection.Capabilities, error)
+	Files         fileview.Source
+	Read          func(context.Context, string) (*Conversation, error)
+	Discover      func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
+	Concurrency   int
+	Skills        *skills.Reader
+	Config        config.Config
+	Open          func(context.Context, string, bool, config.Config) (*Conversation, error)
+	List          func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
 	// PrepareModel reads metadata and returns an owned client without saving selections or credentials.
 	PrepareModel func(context.Context, connection.Selection, string, setup.Defaults) (PreparedModel, error)
 	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Ledger       Ledger
 }
 
-type Task struct{ ID, Session, Status, Error, Code, Persistence string }
+type Task struct{ ID, Session, Status, Error, Code, Persistence, Outcome string }
 
 const (
 	PersistencePending   = "pending"
@@ -117,6 +127,7 @@ type ExecutionState struct {
 }
 
 type Snapshot struct {
+	Workspace         string
 	ActivityTruncated bool
 	Activity          []Event
 	Language          string
@@ -136,6 +147,8 @@ type Snapshot struct {
 	Drafts            []Draft
 }
 type Event struct {
+	Outcome               *work.End
+	Workspace             string
 	ApprovalExpiresAt     time.Time
 	Sequence              uint64
 	Cursor, Session, Task string

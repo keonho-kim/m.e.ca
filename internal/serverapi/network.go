@@ -22,6 +22,7 @@ import (
 )
 
 type Options struct {
+	UI                                 http.Handler
 	Protocol, Listen, Certificate, Key string
 	Hosts, Origins                     []string
 }
@@ -83,6 +84,11 @@ func ListenAndServe(ctx context.Context, api *API, token string, options Options
 		return err
 	}
 	defer transport.Close()
+	if options.UI != nil {
+		if err := transport.enableUI(options.UI); err != nil {
+			return err
+		}
+	}
 	protocols := new(http.Protocols)
 	protocols.SetHTTP1(true)
 	protocols.SetHTTP2(true)

@@ -8,7 +8,7 @@
 
 </div>
 
-**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
+**M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·서버·내장 WebUI로 실행하는 Go 코딩 에이전트입니다. 선택한 모델로 코드 작성·수정·검증을 수행하며, 세 실행 방식은 같은 도구·대화·승인 정책을 사용합니다.
 
 - Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude, Gemini 연결
 - 스트리밍 응답·Thinking, Markdown과 줄 단위 diff
@@ -18,12 +18,13 @@
 - 선택적 팀 모드: 공유 프로젝트에서 최대 8개 세션의 자율 협업과 공용 대화
 - 프로세스 메모리 사용량·실제 입력/출력 토큰·TPS, OpenRouter의 보고 비용 표시
 - 선택형 SSE·WebSocket·gRPC 서버 API와 재접속·승인·취소 제어
+- `meca --server --ui`: 다중 작업공간·대화, 파일 편집과 설정을 제공하는 내장 React WebUI
 - 공통 SKILL.md 스킬: `!skills` 조회·미리보기, `#스킬명` 지정과 에이전트의 자율 탐색
 - 스킬 읽기 이벤트와 작업 식별자로 연결되는 bounded JSON 운영 로그
 
 ## 설치
 
-Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리는 Go 설치 없이 사용할 수 있습니다.
+Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리는 Go·Bun·Node 설치 없이 TUI와 내장 WebUI를 사용할 수 있습니다.
 
 ### 최신 릴리스로 설치하기
 
@@ -87,7 +88,7 @@ meca upgrade
 
 ### 소스에서 설치하기
 
-Git과 Go로 소스에서 설치합니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
+소스 빌드에는 Git·Bun 1.4.4 이상·Go가 필요합니다. Bun으로 고정된 프론트 의존성을 설치하고 화면을 빌드한 뒤 Go 실행 파일에 포함합니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
@@ -107,6 +108,7 @@ git pull --ff-only
 제품 빌드는 Go 1.27.2 이상, 개발 도구는 Go 1.27.3 이상이 필요합니다. 제품과 도구의 요구 버전은 각각 [go.mod](go.mod)와 [devtools/go.mod](devtools/go.mod)가 소유합니다.
 
 ```sh
+sh scripts/build-ui.sh
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```
 
@@ -219,12 +221,13 @@ print는 최종 답변, JSON 모드는 순서 있는 이벤트를 출력합니�
 
 ```sh
 meca --server                            # 기본 SSE
+meca --server --ui                       # 내장 화면: http://127.0.0.1:8787/ui/
 meca /path/to/project --server --protocol socket
 meca /path/to/project --server --protocol grpc
 meca --server --concurrency 4             # 서로 다른 세션의 작업을 최대 4개 실행
 ```
 
-기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 프로젝트 하나를 서비스하며 팀 에이전트는 각 작업 안에서 독립 실행합니다. 같은 프로젝트에 대한 변경·셸 실행은 작업 단위로 직렬화해 서로 다른 작업의 파일 효과가 섞이지 않게 합니다.
+기본 주소는 `127.0.0.1:8787`입니다. TTY 없이 등록한 여러 프로젝트를 서비스하며 팀 에이전트는 각 작업 안에서 독립 실행합니다. 프로젝트의 변경·셸 실행은 공통 효과 게이트로 직렬화해 서로 다른 작업의 파일 효과가 섞이지 않게 합니다.
 
 | `--protocol` | 제어·이벤트 인터페이스 |
 | --- | --- |
@@ -235,6 +238,10 @@ meca --server --concurrency 4             # 서로 다른 세션의 작업을 �
 선택한 전송 방식과 함께 공통 HTTP 제어·이벤트·첨부·작업 승인 경로를 제공합니다. 작업은 서버 프로세스에 속하므로 스트림을 닫아 일시정지해도 계속됩니다. 마지막 커서로 다시 구독하며 안정된 요청 키로 중복 실행을 막습니다.
 
 기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
+
+내장 화면에서는 워크스페이스별 대화 생성·전환·삭제, 동시 작업·승인, 이미지 첨부, 스킬과 파일 참조, 문법 강조 텍스트 편집을 사용할 수 있습니다. 컴포저의 `+`를 누르면 이미지 첨부와 스킬 목록 패널이 위로 펼쳐집니다. 좌측 하단 설정에서 모델·승인 모드·팀·언어·테마를 바꿉니다. `!model`·`!permission`·`!team`·`!language`·`!dir`·`!skills`도 컴포저에서 사용할 수 있습니다. 서버 토큰은 접속 화면에 입력하고 브라우저 저장소에 원문을 보관하지 않습니다. [화면 구성과 동작 →](docs/webui-design.md)
+
+화면은 React·Astryx와 Astryx Neutral의 Lucide 아이콘을 사용하며 소스는 FSD 계층과 공개 API를 따릅니다. 서버 데이터 캐시는 TanStack Query, 인증·표시 설정·워크스페이스 임시 상태는 책임별 Zustand 스토어가 소유합니다. Astryx 공용 미디어 쿼리·locale·단축키 유틸리티를 사용합니다. 빌드 전에 TypeScript·Biome·Oxlint·Knip·Steiger로 타입, 코드 품질, Promise 처리, 데드코드와 계층 의존성을 검사합니다. [프론트 구성과 검증 →](docs/development.md#내장-webui)
 
 자체 API는 세션별 모델·설정 변경, provider/model 탐색, 파일 탐색·미리보기·참조 선택, 이미지 업로드·저장 이미지 조회, 작업 목록·승인·취소를 제공합니다. 여러 화면은 전역 선택을 바꾸지 않고 sessionId로 연동합니다. 긴 실행 중 응답과 상태는 페이지로 복원합니다. [WebUI 연결 계약](docs/webui-api.md)을 참고하세요. 모든 팀원의 공개 출력과 도구·승인 이벤트는 같은 스트림에서 task·agent·generation으로 구분합니다. [자체 API 계약 →](docs/server.md)
 

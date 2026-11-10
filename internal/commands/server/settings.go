@@ -1,4 +1,4 @@
-// Purpose: Prepare, durably commit and adopt idle-only model and permission changes.
+// Purpose: Commit idle model/permission changes and capture team defaults for the next request.
 // Pattern: Reserved state transition around existing configuration and model I/O use cases.
 // Usage: SetModel and Configure keep network, keyring and persistence work outside the state mutex.
 // Related: internal/commands/modelchange/commit.go, internal/commands/server/operations.go.
@@ -36,16 +36,14 @@ func (s *Service) Configure(ctx context.Context, session string, permission *str
 	}
 	defer change.finish()
 	c := change.conversation
-	if err := s.sessionIdle(c); team != nil && err != nil {
-		return Snapshot{}, err
-	}
+
 	if c == nil && team != nil {
 		return Snapshot{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerOpenASessionFirst)
 	}
 	next := change.config
 	if permission != nil {
 		s.mu.Lock()
-		busy := len(s.active) > 0
+		busy := len(s.active) > 0 || s.options.Capacity.Active() > 0
 		s.mu.Unlock()
 		if busy {
 			return Snapshot{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerPermissionTaskActive)

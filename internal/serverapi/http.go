@@ -45,7 +45,7 @@ func (t *Transport) command(w http.ResponseWriter, r *http.Request) {
 		body = nil
 		reply, _ = t.api.Call(r.Context(), &cmd)
 	}
-	t.writeControlReply(w, reply)
+	t.writeControlReply(w, r, reply)
 }
 
 func errorStatus(code string) int {
@@ -62,8 +62,8 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 	}
 	query, err := url.ParseQuery(r.URL.RawQuery)
 	for key, values := range query {
-		if (key != "cursor" && key != "task_id") || len(values) != 1 {
-			err = faults.Errorf(diagcatalog.ServerapiOnlyOneCursorQueryParameterIsSupported)
+		if (key != "cursor" && key != "task_id" && key != "workspace_id" && key != "session_id") || len(values) != 1 {
+			err = faults.Errorf(diagcatalog.ServerapiEventQueryParametersInvalid)
 		}
 	}
 	if err != nil {
@@ -79,7 +79,18 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 	if header := r.Header.Get("Last-Event-ID"); header != "" {
 		cursor = header
 	}
-	first, err := t.api.Service.ReplayTask(cursor, taskID)
+	service, scope, release, err := t.observerService(r.Context(), query)
+	if err != nil {
+		t.writeControlReply(w, r, t.api.errorReply("", err))
+		return
+	}
+	defer release()
+	stopCache := t.api.events.observe()
+	defer stopCache()
+	first, err := service.ReplayTask(cursor, taskID)
+	if err == nil {
+		first, err = scope.prepare(r.Context(), service, first, taskID)
+	}
 	if err != nil {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerInvalidEventCursor), http.StatusBadRequest)
 		return
@@ -89,8 +100,9 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	firstDelta := true
+	lastDelivered := ""
 	send := taskSender(taskID, func(n *v1.Notification) error {
-		body, err := protojson.Marshal(n)
+		body, err := t.api.notificationJSON(n)
 		if err != nil {
 			return err
 		}
@@ -101,6 +113,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		if err := writer.Send(kind, notificationCursor(n), body); err != nil {
 			return err
 		}
+		lastDelivered = notificationCursor(n)
 		if n.GetEvent().GetKind() != "assistant_delta" {
 			firstDelta = true
 			return writer.Flush()
@@ -111,13 +124,19 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 		}
 		return nil
 	})
-	if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), first, taskID, send) }); err != nil {
+	if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), scope.filter(first), taskID, send) }); err != nil {
 		return
 	}
 	if first.Snapshot != nil {
 		cursor = first.Snapshot.Cursor
 	} else if len(first.Events) > 0 {
 		cursor = first.Events[len(first.Events)-1].Cursor
+	}
+	if scope.scoped && len(first.Events) > 0 && cursor != lastDelivered {
+		if err := writer.Send("cursor", cursor, []byte("{}")); err != nil {
+			return
+		}
+		lastDelivered = cursor
 	}
 	for {
 		if r.Context().Err() != nil {
@@ -129,7 +148,7 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		poll, cancel := writer.PollContext(r.Context())
-		batch, err := t.api.Service.NextTask(poll, cursor, taskID)
+		batch, err := service.NextTask(poll, cursor, taskID)
 		cancel()
 		if err != nil {
 			if r.Context().Err() != nil {
@@ -144,13 +163,23 @@ func (t *Transport) sse(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), batch, taskID, send) }); err != nil {
+		batch, err = scope.prepare(r.Context(), service, batch, taskID)
+		if err != nil {
+			return
+		}
+		if err := writer.Batch(func() error { return t.api.sendBatch(r.Context(), scope.filter(batch), taskID, send) }); err != nil {
 			return
 		}
 		if batch.Snapshot != nil {
 			cursor = batch.Snapshot.Cursor
 		} else {
 			cursor = batch.Events[len(batch.Events)-1].Cursor
+		}
+		if scope.scoped && cursor != lastDelivered {
+			if err := writer.Send("cursor", cursor, []byte("{}")); err != nil {
+				return
+			}
+			lastDelivered = cursor
 		}
 	}
 }

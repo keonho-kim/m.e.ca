@@ -65,7 +65,8 @@ func (*Empty) Descriptor() ([]byte, []int) {
 type Command struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Correlates replies on a socket. It is separate from StartRequest.key.
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkspaceId string `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	// Types that are valid to be assigned to Operation:
 	//
 	//	*Command_ListSessions
@@ -96,6 +97,17 @@ type Command struct {
 	//	*Command_ListTasks
 	//	*Command_Commands
 	//	*Command_Resources
+	//	*Command_ListWorkspaces
+	//	*Command_AddWorkspace
+	//	*Command_DeleteSession
+	//	*Command_CommandCatalog
+	//	*Command_ParseInput
+	//	*Command_EditorRead
+	//	*Command_EditorSave
+	//	*Command_DiagnoseModel
+	//	*Command_BrowseFolders
+	//	*Command_LookupRequest
+	//	*Command_SuggestSkills
 	Operation     isCommand_Operation `protobuf_oneof:"operation"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -134,6 +146,13 @@ func (*Command) Descriptor() ([]byte, []int) {
 func (x *Command) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *Command) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
 	}
 	return ""
 }
@@ -397,6 +416,105 @@ func (x *Command) GetResources() *Empty {
 	return nil
 }
 
+func (x *Command) GetListWorkspaces() *Empty {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_ListWorkspaces); ok {
+			return x.ListWorkspaces
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetAddWorkspace() *WorkspaceRequest {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_AddWorkspace); ok {
+			return x.AddWorkspace
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetDeleteSession() *SessionTarget {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_DeleteSession); ok {
+			return x.DeleteSession
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetCommandCatalog() *Empty {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_CommandCatalog); ok {
+			return x.CommandCatalog
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetParseInput() *ParseInput {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_ParseInput); ok {
+			return x.ParseInput
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetEditorRead() *EditFile {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_EditorRead); ok {
+			return x.EditorRead
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetEditorSave() *EditFile {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_EditorSave); ok {
+			return x.EditorSave
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetDiagnoseModel() *DiagnoseModel {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_DiagnoseModel); ok {
+			return x.DiagnoseModel
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetBrowseFolders() *WorkspaceRequest {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_BrowseFolders); ok {
+			return x.BrowseFolders
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetLookupRequest() *RequestLookup {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_LookupRequest); ok {
+			return x.LookupRequest
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetSuggestSkills() *SkillPrefix {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_SuggestSkills); ok {
+			return x.SuggestSkills
+		}
+	}
+	return nil
+}
+
 type isCommand_Operation interface {
 	isCommand_Operation()
 }
@@ -513,6 +631,50 @@ type Command_Resources struct {
 	Resources *Empty `protobuf:"bytes,37,opt,name=resources,proto3,oneof"`
 }
 
+type Command_ListWorkspaces struct {
+	ListWorkspaces *Empty `protobuf:"bytes,38,opt,name=list_workspaces,json=listWorkspaces,proto3,oneof"`
+}
+
+type Command_AddWorkspace struct {
+	AddWorkspace *WorkspaceRequest `protobuf:"bytes,39,opt,name=add_workspace,json=addWorkspace,proto3,oneof"`
+}
+
+type Command_DeleteSession struct {
+	DeleteSession *SessionTarget `protobuf:"bytes,40,opt,name=delete_session,json=deleteSession,proto3,oneof"`
+}
+
+type Command_CommandCatalog struct {
+	CommandCatalog *Empty `protobuf:"bytes,41,opt,name=command_catalog,json=commandCatalog,proto3,oneof"`
+}
+
+type Command_ParseInput struct {
+	ParseInput *ParseInput `protobuf:"bytes,42,opt,name=parse_input,json=parseInput,proto3,oneof"`
+}
+
+type Command_EditorRead struct {
+	EditorRead *EditFile `protobuf:"bytes,43,opt,name=editor_read,json=editorRead,proto3,oneof"`
+}
+
+type Command_EditorSave struct {
+	EditorSave *EditFile `protobuf:"bytes,44,opt,name=editor_save,json=editorSave,proto3,oneof"`
+}
+
+type Command_DiagnoseModel struct {
+	DiagnoseModel *DiagnoseModel `protobuf:"bytes,45,opt,name=diagnose_model,json=diagnoseModel,proto3,oneof"`
+}
+
+type Command_BrowseFolders struct {
+	BrowseFolders *WorkspaceRequest `protobuf:"bytes,46,opt,name=browse_folders,json=browseFolders,proto3,oneof"`
+}
+
+type Command_LookupRequest struct {
+	LookupRequest *RequestLookup `protobuf:"bytes,47,opt,name=lookup_request,json=lookupRequest,proto3,oneof"`
+}
+
+type Command_SuggestSkills struct {
+	SuggestSkills *SkillPrefix `protobuf:"bytes,48,opt,name=suggest_skills,json=suggestSkills,proto3,oneof"`
+}
+
 func (*Command_ListSessions) isCommand_Operation() {}
 
 func (*Command_SelectSession) isCommand_Operation() {}
@@ -568,6 +730,28 @@ func (*Command_ListTasks) isCommand_Operation() {}
 func (*Command_Commands) isCommand_Operation() {}
 
 func (*Command_Resources) isCommand_Operation() {}
+
+func (*Command_ListWorkspaces) isCommand_Operation() {}
+
+func (*Command_AddWorkspace) isCommand_Operation() {}
+
+func (*Command_DeleteSession) isCommand_Operation() {}
+
+func (*Command_CommandCatalog) isCommand_Operation() {}
+
+func (*Command_ParseInput) isCommand_Operation() {}
+
+func (*Command_EditorRead) isCommand_Operation() {}
+
+func (*Command_EditorSave) isCommand_Operation() {}
+
+func (*Command_DiagnoseModel) isCommand_Operation() {}
+
+func (*Command_BrowseFolders) isCommand_Operation() {}
+
+func (*Command_LookupRequest) isCommand_Operation() {}
+
+func (*Command_SuggestSkills) isCommand_Operation() {}
 
 type SelectSession struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1496,10 +1680,11 @@ var File_meca_v1_control_proto protoreflect.FileDescriptor
 
 const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
-	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\"\a\n" +
-	"\x05Empty\"\xd7\f\n" +
+	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"\a\n" +
+	"\x05Empty\"\x9c\x12\n" +
 	"\aCommand\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12B\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12B\n" +
 	"\rlist_sessions\x18\n" +
 	" \x01(\v2\x1b.meca.v1.SessionListRequestH\x00R\flistSessions\x12?\n" +
 	"\x0eselect_session\x18\v \x01(\v2\x16.meca.v1.SelectSessionH\x00R\rselectSession\x12=\n" +
@@ -1532,7 +1717,21 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
 	"list_tasks\x18# \x01(\v2\x18.meca.v1.TaskListRequestH\x00R\tlistTasks\x129\n" +
 	"\bcommands\x18$ \x01(\v2\x1b.meca.v1.CommandListRequestH\x00R\bcommands\x12.\n" +
-	"\tresources\x18% \x01(\v2\x0e.meca.v1.EmptyH\x00R\tresourcesB\v\n" +
+	"\tresources\x18% \x01(\v2\x0e.meca.v1.EmptyH\x00R\tresources\x129\n" +
+	"\x0flist_workspaces\x18& \x01(\v2\x0e.meca.v1.EmptyH\x00R\x0elistWorkspaces\x12@\n" +
+	"\radd_workspace\x18' \x01(\v2\x19.meca.v1.WorkspaceRequestH\x00R\faddWorkspace\x12?\n" +
+	"\x0edelete_session\x18( \x01(\v2\x16.meca.v1.SessionTargetH\x00R\rdeleteSession\x129\n" +
+	"\x0fcommand_catalog\x18) \x01(\v2\x0e.meca.v1.EmptyH\x00R\x0ecommandCatalog\x126\n" +
+	"\vparse_input\x18* \x01(\v2\x13.meca.v1.ParseInputH\x00R\n" +
+	"parseInput\x124\n" +
+	"\veditor_read\x18+ \x01(\v2\x11.meca.v1.EditFileH\x00R\n" +
+	"editorRead\x124\n" +
+	"\veditor_save\x18, \x01(\v2\x11.meca.v1.EditFileH\x00R\n" +
+	"editorSave\x12?\n" +
+	"\x0ediagnose_model\x18- \x01(\v2\x16.meca.v1.DiagnoseModelH\x00R\rdiagnoseModel\x12B\n" +
+	"\x0ebrowse_folders\x18. \x01(\v2\x19.meca.v1.WorkspaceRequestH\x00R\rbrowseFolders\x12?\n" +
+	"\x0elookup_request\x18/ \x01(\v2\x16.meca.v1.RequestLookupH\x00R\rlookupRequest\x12=\n" +
+	"\x0esuggest_skills\x180 \x01(\v2\x14.meca.v1.SkillPrefixH\x00R\rsuggestSkillsB\v\n" +
 	"\toperation\"F\n" +
 	"\rSelectSession\x12\x1d\n" +
 	"\n" +
@@ -1655,6 +1854,12 @@ var file_meca_v1_control_proto_goTypes = []any{
 	(*DraftRequest)(nil),       // 24: meca.v1.DraftRequest
 	(*TaskListRequest)(nil),    // 25: meca.v1.TaskListRequest
 	(*CommandListRequest)(nil), // 26: meca.v1.CommandListRequest
+	(*WorkspaceRequest)(nil),   // 27: meca.v1.WorkspaceRequest
+	(*ParseInput)(nil),         // 28: meca.v1.ParseInput
+	(*EditFile)(nil),           // 29: meca.v1.EditFile
+	(*DiagnoseModel)(nil),      // 30: meca.v1.DiagnoseModel
+	(*RequestLookup)(nil),      // 31: meca.v1.RequestLookup
+	(*SkillPrefix)(nil),        // 32: meca.v1.SkillPrefix
 }
 var file_meca_v1_control_proto_depIdxs = []int32{
 	3,  // 0: meca.v1.Command.list_sessions:type_name -> meca.v1.SessionListRequest
@@ -1685,15 +1890,26 @@ var file_meca_v1_control_proto_depIdxs = []int32{
 	25, // 25: meca.v1.Command.list_tasks:type_name -> meca.v1.TaskListRequest
 	26, // 26: meca.v1.Command.commands:type_name -> meca.v1.CommandListRequest
 	0,  // 27: meca.v1.Command.resources:type_name -> meca.v1.Empty
-	5,  // 28: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
-	1,  // 29: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
-	13, // 30: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
-	0,  // 31: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
-	32, // [32:32] is the sub-list for method output_type
-	32, // [32:32] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	0,  // 28: meca.v1.Command.list_workspaces:type_name -> meca.v1.Empty
+	27, // 29: meca.v1.Command.add_workspace:type_name -> meca.v1.WorkspaceRequest
+	15, // 30: meca.v1.Command.delete_session:type_name -> meca.v1.SessionTarget
+	0,  // 31: meca.v1.Command.command_catalog:type_name -> meca.v1.Empty
+	28, // 32: meca.v1.Command.parse_input:type_name -> meca.v1.ParseInput
+	29, // 33: meca.v1.Command.editor_read:type_name -> meca.v1.EditFile
+	29, // 34: meca.v1.Command.editor_save:type_name -> meca.v1.EditFile
+	30, // 35: meca.v1.Command.diagnose_model:type_name -> meca.v1.DiagnoseModel
+	27, // 36: meca.v1.Command.browse_folders:type_name -> meca.v1.WorkspaceRequest
+	31, // 37: meca.v1.Command.lookup_request:type_name -> meca.v1.RequestLookup
+	32, // 38: meca.v1.Command.suggest_skills:type_name -> meca.v1.SkillPrefix
+	5,  // 39: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
+	1,  // 40: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
+	13, // 41: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
+	0,  // 42: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
+	43, // [43:43] is the sub-list for method output_type
+	43, // [43:43] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_control_proto_init() }
@@ -1703,6 +1919,7 @@ func file_meca_v1_control_proto_init() {
 	}
 	file_meca_v1_skills_proto_init()
 	file_meca_v1_workspace_proto_init()
+	file_meca_v1_application_proto_init()
 	file_meca_v1_control_proto_msgTypes[1].OneofWrappers = []any{
 		(*Command_ListSessions)(nil),
 		(*Command_SelectSession)(nil),
@@ -1732,6 +1949,17 @@ func file_meca_v1_control_proto_init() {
 		(*Command_ListTasks)(nil),
 		(*Command_Commands)(nil),
 		(*Command_Resources)(nil),
+		(*Command_ListWorkspaces)(nil),
+		(*Command_AddWorkspace)(nil),
+		(*Command_DeleteSession)(nil),
+		(*Command_CommandCatalog)(nil),
+		(*Command_ParseInput)(nil),
+		(*Command_EditorRead)(nil),
+		(*Command_EditorSave)(nil),
+		(*Command_DiagnoseModel)(nil),
+		(*Command_BrowseFolders)(nil),
+		(*Command_LookupRequest)(nil),
+		(*Command_SuggestSkills)(nil),
 	}
 	file_meca_v1_control_proto_msgTypes[6].OneofWrappers = []any{
 		(*DetailRequest_Tool)(nil),

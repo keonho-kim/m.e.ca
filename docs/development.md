@@ -70,6 +70,8 @@ processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 
 | tools/team/approval | 동결된 후보를 기준으로 요청 내 사용자 거절 기록 공유 |
 | tools/local | 준비·승인 바인딩·실행·자원 수명을 연결하는 호스트 어댑터 |
 | fileview | 도구 실행과 분리한 읽기 전용 탐색·참조 검증·미리보기 I/O, 공통 경로 정책을 적용한 루트 대여 |
+| httpencoding | 정적 자산과 API JSON이 공유하는 gzip·identity 협상 규칙 |
+| media/thumbnail | 공통 픽셀 예산 아래의 축소·EXIF 방향 보정·PNG 인코딩 |
 | tools/local/filesystem | 실제 경로·프로젝트 identity·파일 도구의 private 경로 검사 |
 | tools/local/file·textedit·textformat·diff | 파일 I/O·정확한 부분 수정·바이트 형식·변경 미리보기 |
 | tools/local/process | 호스트 셸·명령 등록부·프로세스 그룹·출력·대기·취소 |
@@ -619,3 +621,99 @@ SQLite의 청크 미리보기는 호출이 소유한 decoder를 사용한다. DB
 초안 generation은 작업 안에서 단조 증가하며 팀원이 퇴장·복귀해도 재사용하지 않는다. 스트림 상태 전이는 stream_projection.go, 순수 표시 투영과 replay 크기는 projection.go가 소유한다. 실패한 초안 spool은 파일·예약을 즉시 반환하고 종료 정리 오류는 서비스가 보존한다. 명령 상태 조회는 모드를 상태 잠금 안에서 캡처하고 읽기 대여가 끝나기 전 실행 자원이 닫히지 않게 한다.
 
 상세 캐시 정리는 대상 슬롯만 pin한 뒤 pool mutex 밖에서 파일·읽기 종료를 기다린다. 다른 세션의 문서 읽기는 그 정리에 묶지 않는다. sessionId와 taskId가 함께 주어지면 소유 관계를 확인하며 세션별 설정 응답·변경 이벤트는 다른 탭의 작업을 포함하지 않는다.
+
+## 내장 WebUI
+
+`webui/`는 Bun으로 빌드하는 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
+
+소스는 FSD의 `app → pages → features → entities → shared` 방향을 따른다. 다른 슬라이스의 내부 파일을 직접 가져오지 않고 필요한 이름만 공개 진입점에서 내보낸다. 현재 워크스페이스에서만 쓰는 실행·스트림·파일·설정 코드는 `pages/workspace` 안에 둔다. 로그인과 연결 종료처럼 여러 화면이 공유하는 동작만 `features/server-access`로 추출한다. 빈 계층이나 단순 재전달 계층은 만들지 않는다.
+
+| 위치 | 책임 |
+| --- | --- |
+| `app` | 브라우저 조립, 라우트·세션 경계, 테마 빌드 입력 |
+| `pages/connect`, `pages/workspace` | 화면과 그 화면만 사용하는 API·모델·UI |
+| `features/server-access` | 서버 인증과 명시적인 연결 종료 |
+| `entities/server-session` | 인증 상태·연결 수명·언어·안전한 오류 안내 |
+| `shared/api` | HTTP 어댑터, QueryClient, 생성한 wire 타입의 공개 API |
+| `shared/config`, `shared/i18n`, `shared/lib`, `shared/ui` | 표시 설정·번역·순수 변환·도메인에 독립적인 UI |
+
+서버 응답 캐시는 TanStack Query가 소유한다. Zustand는 서버 세션, 브라우저 표시 설정, 워크스페이스 임시 상태를 분리한다. 워크스페이스 내부는 화면·컴포저·스트림 슬라이스를 하나의 스토어로 합성하여 입력 캡처와 완료 이벤트의 원자성을 유지한다. 값이 같은 입력은 revision을 올리거나 구독자에게 알리지 않는다. 컴포저는 현재 대화의 활성 작업만 선택하며, 비활성 이력 캐시 제한 구독은 워크스페이스 페이지가 해제한다. 인증 만료는 복원을 위해 초안을 유지하고 명시적인 연결 종료는 세션 수명을 갱신해 편집기 DOM까지 해제한다.
+
+미디어 쿼리는 Astryx `useMediaQuery`, 번역의 현재 locale은 `useLocale`, 이미지 붙여넣기 단축키는 포커스 범위를 제한한 `useHotkeys`를 사용한다. 이미지 읽기·용량 검사·API 질의·요청 순서는 도메인/전송 소유자에 둔다. Astryx `useClipboard`는 텍스트 쓰기용이므로 이미지 읽기 계약을 대체하지 않는다. React 상태·수명, TanStack 질의·라우팅과 React Hook Form의 전용 훅도 각 책임에 사용한다.
+
+아이콘은 Astryx Neutral이 제공하는 Lucide 구성을 따른다. 공용 컨트롤의 기본 아이콘 29개는 그대로 상속하며 앱 전용 이름 23개만 `shared/ui/icons`에서 테마 registry에 추가한다. 화면은 Astryx Icon을 사용하고 개별 아이콘 라이브러리를 직접 가져오지 않는다. 앱 전용 아이콘에는 Astryx와 공유하는 `lucide-react`를 정확한 같은 버전의 직접 의존성으로 선언하고 필요한 glyph만 정적으로 import한다. 별도 아이콘 렌더러나 중복 registry를 두지 않는다.
+
+```sh
+sh scripts/build-ui.sh
+bun run --cwd webui verify
+go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
+```
+
+고정 npm 버전은 webui/package.json, 전이 의존성은 bun.lock이 소유한다. 변경 후 frozen 설치·타입·상태 테스트와 빌드를 확인한다. build-ui.sh는 의존성 설치 script를 실행하지 않는다. package.ts는 dist를 해시별 gzip 한 사본과 manifest로 바꾸며 internal/webui/assets의 생성물은 Git에 넣지 않는다. assets/README.txt만으로 Go 소스 빌드는 가능하지만 실제 UI bundle이 없으면 --ui가 명시적으로 실패한다. 배포와 소스 설치는 UI부터 빌드한다.
+
+TypeScript 개발 검사는 다음처럼 책임을 나눈다. 모두 개발 의존성이며 배포 번들에는 포함하지 않는다.
+
+| 명령 | 도구와 검사 범위 |
+| --- | --- |
+| `bun run --cwd webui check` | TypeScript: 엄격한 타입, 미사용 지역 변수·인자, 존재하지 않을 수 있는 인덱스 접근. 앱·테스트·빌드 스크립트·도구 설정을 함께 검사한다. |
+| `bun run --cwd webui lint` | Biome: 포맷·기본 린트와 누적 spread의 반복 복사 검사. |
+| `bun run --cwd webui lint:types` | Oxlint + oxlint-tsgolint: 처리하지 않은 Promise, 잘못된 await·async 콜백, 불필요한 조건·단언·타입과 union 분기 검사. |
+| `bun run --cwd webui deadcode` | Knip: 프로젝트 그래프의 미사용 파일·export·타입·의존성·실행 파일 검사. |
+| `bun run --cwd webui architecture` | Steiger: FSD 계층 방향과 슬라이스 공개 API 검사. |
+
+`quality`는 네 정적 분석 명령을, `verify`는 타입·정적 분석·단위 테스트를 실행한다. `build`도 타입·정적 분석을 통과해야 하므로 소스 설치와 릴리스 빌드에 같은 검사가 적용된다. 도구 버전은 정확히 고정하며 기존 TypeScript 7을 유지한다. 타입 기반 린트에는 네이티브 TypeScript를 사용하는 [Oxlint](https://oxc.rs/docs/guide/usage/linter/type-aware.html)를 사용한다. React 이벤트의 async 콜백은 허용하되 일반 함수 인자·변수의 Promise 오용 검사는 유지한다. Bun 비동기 matcher와 Promise.finally의 선언/런타임 차이는 해당 줄에서만 근거를 남긴다.
+
+[Knip](https://knip.dev/reference/configuration)의 진입점은 앱, Astryx 테마 입력, 테스트, 배포 스크립트와 도구 설정이다. 생성한 wire 타입·테마는 제외한다. 시스템 `protoc`와 그 `--plugin`으로 실행되는 `@bufbuild/protoc-gen-es`만 실행 파일·의존성 탐지의 명시적 예외로 둔다. 결과를 자동 삭제 명령으로 적용하지 않고 런타임 진입점·생성 경로·테스트 사용을 검토한다. 정적 검사는 누수나 실제 응답 속도를 보장하지 않는다. 성능 변경은 브라우저 프로파일과 재현 가능한 측정으로 확인한다.
+
+notices.ts는 실제 번들의 라이선스를 텍스트로 포함하며 CSS로 사용한 Tailwind의 고지도 포함한다. npm에서 생략된 upstream 원문은 webui/licenses에서 버전별 fallback으로 관리한다. Astryx Core canary의 fallback은 upstream main에서 확보한 MIT 원문이며 정확한 commit의 스냅샷이라고 간주하지 않는다. 빌드 시 필요한 라이선스가 없으면 실패한다. 제품 모듈은 Go 의존성을, devtools는 Go 개발 도구를, webui는 브라우저와 프론트 개발 의존성을 각각 소유한다.
+
+프로토콜을 바꾸면 저장소의 Go 생성 코드와 TypeScript JSON 타입을 함께 갱신한다. .proto가 원본이며 TS wire 타입을 수동으로 복제하지 않는다. 다음 TS 생성 명령은 시스템 `protoc`가 별도로 필요하다.
+
+```sh
+bun run --cwd webui generate:api
+```
+
+파일과 수명은 실제 경계로 나눈다. API·submission·followups·stream은 HTTP, 안정된 접수, 후속 예약과 관찰을 소유한다. store·stream-state는 제한된 화면 상태를, queries는 서버 캐시를 소유한다. chat·history-row·live-output은 배치·저장 이력·실시간 출력을 분리하되, 실시간 출력도 ChatMessageList 안에 두어 Astryx가 내용 높이와 자동 스크롤을 함께 관찰하게 한다. files·file-document·editor는 탐색·문서 전이·Astryx Lab CodeEditor 수명을 분리한다. 설정·모델 폼은 해당 대화와 전역 설정의 범위를 표시한다. 문구는 i18n.ts, 실패 표시는 errors.ts가 소유한다.
+
+workspace-toolbar·composer-actions는 작업 선택과 입력 액션의 Astryx 표현을 소유하고 실행 수명을 가져오지 않는다. attachment-panel은 +로 펼치는 이미지·스킬 접근만 담당한다. appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·Lab·CLI는 같은 canary 버전으로 고정한다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
+
+일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수를 약한 참조로 재사용하고 전체 사용량은 변경분으로 갱신한다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다.
+
+현재 대화 이력은 구간별 네 페이지를 유지하고 더 오래된 구간과 최신 구간으로 이동한다. 대화·디렉터리·스킬·예약 목록은 가상화하며 포커스 또는 편집 중인 행은 유지한다. 대화/스킬 목록은 최대 네 페이지를 보관하고 목록 처음으로 복귀할 수 있다. 디렉터리는 revision에 고정된 앞/뒤 네 페이지를 사용한다. 비활성 서버 데이터는 최근 12개와 추정 UTF-16/Blob 16MiB 예산을 함께 적용한다. 기본 GC는 60초이며 대화 목록·디렉터리·썸네일은 15초다. 캐시 회수는 관련 질의의 성공·마지막 관찰 해제 때만 수행한다. 스크롤 위치도 최근 12개로 제한한다.
+
+Markdown은 Astryx의 증분 파서를 유지하고 공개 AST transform으로 AST 표시 노드를 1,024개 이내로 제한한다. 전체 텍스트는 별도 native Popover에서 페이지로 읽는다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집기는 64KiB 또는 2,000줄을 넘으면 줄 번호 DOM을 만들지 않고 native 문법 강조·편집·revision 저장은 유지한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
+
+이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유하고 해당 이력을 갱신하며 정상 reset snapshot을 받으면 연결을 유지한 채 반영한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 작업 목록은 스트림이 정상일 때 주기적으로 재조회하지 않고 중단·복구 중에만 분산 polling을 사용한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
+
+이미지 목록은 인증된 256px PNG 썸네일을 사용하고 원본은 사용자가 열 때 요청한다. 작은 Blob 캐시와 object URL은 각각 Query와 컴포넌트가 소유하며 해제·로그아웃·삭제 시 정리한다. 서버는 원본의 현재 메타데이터·DB/WAL 변경 상태를 확인한 뒤 썸네일 캐시를 이용하며 원본 다운로드와 픽셀 디코딩에는 별도 바이트 예산을 적용한다. 카메라 EXIF 방향은 축소한 픽셀에 반영한다. 배포 자산은 gzip 한 사본을 유지하고 API JSON 응답만 크기에 따라 재사용 압축기로 처리한다.
+
+2026-11-10 macOS arm64·Apple M1 Max·Go 1.27.3·Bun 1.4.4·Chrome의 로컬 fixture에서 다음을 측정했다. 입력은 다른 대화의 초안 24MiB를 보관한 상태에서 20회 변경한 중앙값이다. 목록은 기존 200개 대화 benchmark와 같은 데이터 구성으로 반복 조회했으며 새 결과는 `-benchtime=500ms -count=3 -benchmem`이다. 최초 디스크 읽기와 장시간 실행의 메모리 누수를 이 수치로 보장하지 않는다.
+
+| 측정 | 변경 전 | 변경 후 |
+| --- | --- | --- |
+| 입력 변경 중앙값 | 31.38ms | 0.01ms 미만 |
+| 200개 대화 반복 조회 | 91.02ms/op | 1.97~2.05ms/op |
+| 대화 조회 할당 | 2,335,028B/op·29,024 allocs/op | 약 485KB/op·4,443~4,450 allocs/op |
+| 짧은 작업의 native API 호출 | 13회 | 6회 |
+| 100개 대화 목록의 표시 행 | 100개 | 14개 |
+| 1만 줄 파일 미리보기 DOM | 5,442개 | 237개 |
+| 같은 파일 편집기 DOM | 10,005개 | 4개 |
+| 최초 디렉터리 조회 | 2회 | 1회 |
+| 첨부 메뉴 10회 토글의 layout 계산 | 176회 | 15회 |
+| 초기 자산 encoded body | 605,340B | 512,241B |
+
+초기 자산은 지연 분할로 요청 수가 25개에서 34개로 늘었으며 총 전송 본문은 줄었다. 짧은 작업의 6회는 start·state·capabilities·history·listSessions·listWorkspaces 각 1회다. 최초 모델 준비의 변경 알림은 상태 조회를 요구하며 응답 본문·Thinking 갱신마다 조회하지 않는다. UI 수치는 1280×720에서 측정했고, 1440×1000·390×844 및 모션 감소는 별도 브라우저 계약으로 검증한다. 목록 캐시는 비어 있는 WAL을 변경 없음으로 취급하지만 실제 DB/WAL 쓰기는 재검사한다.
+
+실제 브라우저 검증은 사용자 HOME·프로젝트·유료 Provider를 사용하지 않는 opt-in fixture로 한다. 별도 터미널에서 연결 파일 경로를 지정해 실제 서버를 띄운다. fixture는 tmp HOME과 alpha/beta 프로젝트, 제어 가능한 로컬 모델·이미지·긴 이력을 생성한다. 연결 JSON은 private 파일이며 원문 토큰은 별도 private 파일 경로로만 제공한다.
+
+```sh
+mkdir -p /tmp/meca-ui-check
+MECA_UI_DESCRIPTOR=/tmp/meca-ui-check/connection.json \
+  go test ./cmd/meca -run '^TestUIBrowserFixture$' -v -count=1 -timeout=47m
+MECA_UI_DESCRIPTOR=/tmp/meca-ui-check/connection.json bun run --cwd webui test:e2e
+bun run --cwd webui browser -- -s=meca-ui open http://127.0.0.1:8787/ui/ --browser=chrome
+```
+
+자동 검증은 실제 설치된 Chrome을 사용한다. 수동 Playwright CLI에는 연결 파일에 기록된 실제 URL을 사용한다. 토큰을 CLI 인자·URL·스크린샷 설명·브라우저 trace에 남기지 않는다. 테스트 trace는 꺼져 있다. 검증 후 connection.json.stop 파일을 만들면 fixture와 소유한 작업이 종료되고 임시 HOME이 제거된다. 파일이 없으면 45분 뒤 종료한다. 본 프로세스의 종료와 `connection.json` 제거까지 확인한다.
+
+검증 항목은 작업공간/대화의 동시 실행·전환, 중지와 스트림 정지/재연결, 후속 예약의 단일 실행, 설정/언어/테마, 스킬과 참조, 편집/충돌, 이미지의 인증 조회, 승인, 긴 이력의 최신 복귀다. 실제 화면은 Playwright CLI로 데스크톱·좁은 화면·라이트/다크를 함께 확인한다. Go 테스트는 HTTP 인증/CSRF·새 native 명령·파일 저장/감시·삭제 잠금·작업공간 수명을 검증하며 동시성 변경에는 race 검사를 추가한다.

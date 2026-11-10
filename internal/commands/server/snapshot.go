@@ -51,7 +51,7 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 		r := s.active[id]
 		value.Tasks = append(value.Tasks, r.task)
 		if c := r.conversation; c != nil {
-			value.Executions = append(value.Executions, ExecutionState{Task: r.task.ID, Session: c.Runtime.Session, Selection: c.Runtime.Selection, Team: c.TeamEnabled, StartedAt: r.started, Statistics: r.statistics()})
+			value.Executions = append(value.Executions, ExecutionState{Task: r.task.ID, Session: c.Runtime.Session, Selection: c.Runtime.Selection, Team: r.teamEnabled, StartedAt: r.started, Statistics: r.statistics()})
 		}
 		for id, pending := range r.approvals {
 			e := ProjectEvent(Event{Record: record.Event{Approval: &pending.value}})
@@ -71,6 +71,7 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 			value.Drafts = append(value.Drafts, d)
 		}
 		for _, activity := range r.activity {
+			activity.Workspace = s.options.WorkspaceID
 			if size := eventBytes(activity); size <= activityBudget {
 				value.Activity = append(value.Activity, activity)
 				activityBudget -= size
@@ -105,7 +106,7 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 			if taskID != "" {
 				value.Session, value.Selection, value.Team = c.Runtime.Session, c.Runtime.Selection, c.TeamEnabled
 			}
-			value.Execution = &ExecutionState{Task: r.task.ID, Session: c.Runtime.Session, Selection: c.Runtime.Selection, Team: c.TeamEnabled, StartedAt: r.started, Statistics: r.statistics()}
+			value.Execution = &ExecutionState{Task: r.task.ID, Session: c.Runtime.Session, Selection: c.Runtime.Selection, Team: r.teamEnabled, StartedAt: r.started, Statistics: r.statistics()}
 		}
 		task := r.task
 		value.Task = &task

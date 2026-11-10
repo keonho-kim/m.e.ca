@@ -60,6 +60,23 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 		return nil, err
 	}
 	path := filepath.Join(directory, id+".db")
+	if _, err := os.Lstat(path); err != nil {
+		return nil, err
+	}
+	lease, err := openConversationReadLock(path + ".guard")
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if store == nil {
+			resultErr = errors.Join(resultErr, lease.Close())
+		}
+	}()
+	if _, err := os.Lstat(filepath.Join(directory, ".deleted", id)); err == nil {
+		return nil, sessionstate.ErrNotFound
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
 	db, err := connect(ctx, path, readOnly)
 	if err != nil {
 		return nil, err
@@ -76,7 +93,7 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 			return nil, errors.Join(err, db.Close())
 		}
 	}
-	return &Store{db: db, path: path, session: c.Session}, nil
+	return &Store{db: db, path: path, session: c.Session, deletionLease: lease}, nil
 }
 func (s *Sessions) Create(ctx context.Context, project, display string) (store *Store, err error) {
 	if err := sessionstate.CheckProject(project, display); err != nil {

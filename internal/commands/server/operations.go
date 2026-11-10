@@ -52,7 +52,7 @@ func (s *Service) beginChange(ctx context.Context) (sessionChange, error) {
 	}
 	s.changing = true
 	ctx, done := s.trackLocked(ctx)
-	return sessionChange{ctx: ctx, conversation: s.conversation, config: s.options.Config, finish: func() {
+	return sessionChange{ctx: ctx, conversation: s.conversation, config: s.currentConfig(), finish: func() {
 		s.endChange()
 		done()
 	}}, nil

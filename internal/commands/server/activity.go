@@ -86,5 +86,5 @@ func (r *request) statistics() record.Statistics {
 	if !r.started.IsZero() {
 		elapsed = time.Since(r.started).Milliseconds()
 	}
-	return record.Statistics{Usage: &usage, ElapsedMillis: elapsed, GenerationMillis: generationMillis, Concurrent: r.conversation != nil && r.conversation.TeamEnabled}
+	return record.Statistics{Usage: &usage, ElapsedMillis: elapsed, GenerationMillis: generationMillis, Concurrent: r.teamEnabled}
 }

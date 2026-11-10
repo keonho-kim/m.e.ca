@@ -2,7 +2,7 @@
 
 // Purpose: Hold one process owner per session database using Unix file locks.
 // Pattern: Resource lifecycle boundary.
-// Usage: cmd/meca closes the session lease after task workers stop.
+// Usage: Store closes read guards; cmd/meca releases writer leases after workers stop.
 // Related: internal/storage/sqlite/lease_test.go, internal/storage/sqlite/schema_test.go, cmd/meca/main.go.
 package sqlite
 
@@ -22,6 +22,22 @@ import (
 
 type SessionLease struct{ file *os.File }
 
+func openConversationDeletionLock(path string) (*SessionLease, error) {
+	file, err := openLock(path, syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		return nil, err
+	}
+	return &SessionLease{file: file}, nil
+}
+
+func openConversationReadLock(path string) (*SessionLease, error) {
+	file, err := openLock(path, syscall.LOCK_SH|syscall.LOCK_NB)
+	if err != nil {
+		return nil, faults.New(diagcatalog.Conflict, diagcatalog.UIDeletePending)
+	}
+	return &SessionLease{file: file}, nil
+}
+
 func (s *Sessions) LeaseServer(project string) (*SessionLease, error) {
 	directory, _, err := s.projectDirectory(project, true)
 	if err != nil {
@@ -38,6 +54,15 @@ func (s *Store) LeaseSession() (*SessionLease, error) {
 	file, err := openLock(s.path+".lock", syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
 		return nil, faults.Errorf(diagcatalog.SqliteConversationLockUnavailableAnotherMECAProcessMay, err)
+	}
+	// Opening SQLite precedes ownership acquisition. Deletion may have completed
+	// in that interval; never allow a detached handle to become a new writer.
+	info, err := os.Lstat(s.path)
+	if err != nil || !info.Mode().IsRegular() {
+		return nil, errors.Join(err, file.Close(), faults.New(diagcatalog.NotFound, diagcatalog.UIDeletePending))
+	}
+	if _, err := os.Lstat(filepath.Join(filepath.Dir(s.path), ".deleted", s.session.ID)); !errors.Is(err, os.ErrNotExist) {
+		return nil, errors.Join(err, file.Close(), faults.New(diagcatalog.NotFound, diagcatalog.UIDeletePending))
 	}
 	return &SessionLease{file: file}, nil
 }

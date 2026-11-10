@@ -3,7 +3,13 @@
 These notices cover the Go runtime and the external modules selected for the
 macOS and Linux amd64/arm64 binaries built from cmd/meca with CGO_ENABLED=0
 and the godbus_no_tcp build tag. This executable includes the TUI, CLI,
-server transports and model-provider adapters. Development tools and
+server transports, model-provider adapters and the embedded WebUI.
+Browser runtime notices are generated from the bundled modules and included as
+WEBUI_THIRD_PARTY_NOTICES.txt in release archives and at /ui/THIRD_PARTY_NOTICES.txt
+when the embedded UI is enabled. The npm package for Astryx Core 0.7.12-canary.f124c2f omits
+its root license; webui/licenses/astryx-core-0.7.12-canary.f124c2f.LICENSE preserves
+the upstream MIT license retrieved from https://github.com/meta/astryx/blob/main/LICENSE.
+The package declares MIT; the fallback is not a commit-specific license snapshot. Development tools and
 test-only clients are outside the product dependency set. M.E.CA's own license is in LICENSE.
 Third-party components retain their respective licenses. Upstream notices are
 reproduced below; they may describe additional components within each module.

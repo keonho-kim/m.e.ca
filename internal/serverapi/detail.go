@@ -6,6 +6,7 @@ package serverapi
 
 import (
 	"context"
+	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/commands/server"
@@ -32,5 +33,15 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if err != nil {
 		return nil, err
 	}
-	return &v1.DetailPage{Data: data, Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(len(data)), TotalBytes: total, ContentType: "application/json; charset=utf-8", Revision: revision}, nil
+	end := len(data)
+	for cut := 0; cut <= 3 && cut <= len(data); cut++ {
+		if utf8.Valid(data[:len(data)-cut]) {
+			end = len(data) - cut
+			break
+		}
+	}
+	if !utf8.Valid(data[:end]) || (end == 0 && len(data) > 0) {
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
+	}
+	return &v1.DetailPage{Text: string(data[:end]), Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(end), TotalBytes: total, ContentType: "application/json; charset=utf-8", Revision: revision}, nil
 }

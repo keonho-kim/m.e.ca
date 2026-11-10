@@ -21,6 +21,8 @@ import (
 )
 
 type request struct {
+	teamEnabled      bool
+	releaseCapacity  func()
 	draftCleanup     error
 	draftGeneration  uint64
 	started          time.Time
@@ -53,7 +55,7 @@ func (s *Service) start(ctx context.Context, session, key, text string, identity
 	if strings.TrimSpace(text) == "" && len(images) == 0 || !utf8.ValidString(text) {
 		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerAUTFPromptIsRequired)
 	}
-	if err := checkText(text, 16<<20); text != "" && err != nil {
+	if err := checkText(text, MaxPromptBytes); text != "" && err != nil {
 		return Task{}, err
 	}
 	if err := media.CheckInput(images); err != nil {
@@ -114,11 +116,23 @@ func (s *Service) start(ctx context.Context, session, key, text string, identity
 	if err := checkImageModel(c, images); err != nil {
 		return Task{}, err
 	}
+	release, available := s.options.Capacity.reserve()
+	if !available {
+		return Task{}, faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerTaskCapacity)
+	}
+	transferred := false
+	defer func() {
+		if !transferred {
+			release()
+		}
+	}()
 	task, duplicate, err := s.options.Ledger.Admit(change.ctx, session, key, identity)
 	if err != nil || duplicate {
 		return task, err
 	}
-	return s.launch(c, task, text, images)
+	value, err := s.launch(c, task, text, images, release)
+	transferred = err == nil
+	return value, err
 }
 
 func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
@@ -146,7 +160,13 @@ func (s *Service) TaskStatus(ctx context.Context, id string) (Task, error) {
 		}
 		return Task{}, err
 	}
-	return s.observedTask(value), nil
+	value = s.observedTask(value)
+	// Reuse bounded terminal facts already retained by the process replay log.
+	// The durable ledger deliberately stores admission, not a second run result.
+	if value.Outcome == "" {
+		value.Outcome = s.feed.outcome(s.options.WorkspaceID, id)
+	}
+	return value, nil
 }
 
 func (s *Service) Cancel(id string) error {

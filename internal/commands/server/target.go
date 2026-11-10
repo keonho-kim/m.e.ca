@@ -59,6 +59,6 @@ func (s *Service) sessionSnapshot(c *Conversation) Snapshot {
 }
 
 func (s *Service) baseSnapshot() Snapshot {
-	permission, _ := s.options.Config.Permission.MarshalText()
-	return Snapshot{Language: string(s.options.Config.Language), Cursor: s.feed.cursor(), Permission: string(permission), Concurrency: s.concurrency()}
+	permission, _ := s.currentConfig().Permission.MarshalText()
+	return Snapshot{Workspace: s.options.WorkspaceID, Language: string(s.currentConfig().Language), Cursor: s.feed.cursor(), Permission: string(permission), Concurrency: s.concurrency()}
 }

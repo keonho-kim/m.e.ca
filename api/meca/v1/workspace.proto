@@ -11,15 +11,15 @@ message StateRequest { string task_id = 1; string after_task = 2; int32 limit = 
 message FileRequest { string path = 1; int32 offset = 2; int32 limit = 3; string revision = 4; }
 message FileSelection { string session_id = 1; string path = 2; bool selected = 3; }
 message FileEntry { string name = 1; bool directory = 2; }
-message DirectoryPage { repeated FileEntry items = 1; int32 next_offset = 2; bool more = 3; }
-message FilePreview { string path = 1; string text = 2; int64 offset = 3; int64 next_offset = 4; bool truncated = 5; string revision = 6; }
+message DirectoryPage { repeated FileEntry items = 1; int32 next_offset = 2; bool more = 3; string path = 4; string parent = 5; string revision = 6; }
+message FilePreview { string path = 1; string text = 2; int64 offset = 3; int64 next_offset = 4; bool truncated = 5; string revision = 6; int64 total_bytes = 7; bool source_truncated = 8; }
 message FileSelections { repeated string paths = 1; }
 message ImageRequest { string session_id = 1; int64 sequence = 2; int32 index = 3; }
 message ImageMetadata { int32 index = 1; string path = 2; string mime = 3; int32 width = 4; int32 height = 5; string digest = 6; int64 bytes = 7; }
 message DraftRequest { string task_id = 1; string agent = 2; uint64 generation = 3; int64 offset = 4; int32 limit = 5; bool thinking = 6; optional int64 revision = 7; }
 message DraftPage { string text = 1; uint64 generation = 2; int64 offset = 3; int64 next_offset = 4; int64 total_bytes = 5; bool truncated = 6; int64 revision = 7; }
 message TaskListRequest { string session_id = 1; string cursor = 2; int32 limit = 3; }
-message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; }
+message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; string outcome = 7; }
 message TaskPage { repeated Task items = 1; string next_cursor = 2; }
 message Provider { string id = 1; string name = 2; string endpoint = 3; }
 message Providers { repeated Provider items = 1; }
@@ -38,6 +38,9 @@ message Capabilities {
   string language = 10;
   int64 request_records = 11;
   int64 request_capacity = 12;
+  int64 editor_bytes = 13;
+  int64 prompt_bytes = 14;
+  int64 command_bytes = 15;
 }
 
 message ModelQuery { string session_id = 1; string provider = 2; string endpoint = 3; string credential = 4; string model = 5; }

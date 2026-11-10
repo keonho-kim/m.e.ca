@@ -29,23 +29,40 @@ type conversationReader struct {
 }
 
 func openConversationReader(ctx context.Context) (*conversationReader, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return &conversationReader{}, nil
+}
+
+func (r *conversationReader) open(ctx context.Context) error {
+	if r.db != nil {
+		return nil
+	}
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	db.SetMaxOpenConns(1)
 	connection, err := db.Conn(ctx)
 	if err != nil {
-		return nil, errors.Join(err, db.Close())
+		return errors.Join(err, db.Close())
 	}
-	reader := &conversationReader{db: db, connection: connection}
+	r.db, r.connection = db, connection
 	if _, err := connection.ExecContext(ctx, "PRAGMA busy_timeout=5000"); err != nil {
-		return nil, errors.Join(err, reader.Close())
+		return errors.Join(err, r.Close())
 	}
-	return reader, nil
+	return nil
 }
 
-func (r *conversationReader) Close() error { return errors.Join(r.connection.Close(), r.db.Close()) }
+func (r *conversationReader) Close() error {
+	if r.db == nil {
+		return nil
+	}
+	err := errors.Join(r.connection.Close(), r.db.Close())
+	r.db, r.connection = nil, nil
+	return err
+}
 
 func (r *conversationReader) Read(ctx context.Context, file conversationFile) (conversationResult, error) {
 	var value conversationResult
@@ -62,6 +79,16 @@ func (r *conversationReader) Read(ctx context.Context, file conversationFile) (c
 	if !info.Mode().IsRegular() {
 		return value, faults.Errorf(diagcatalog.SqliteSessionDatabaseMustBeARegularFile, file.path)
 	}
+	stamp, err := conversationStamp(file.path, info)
+	if err != nil {
+		return value, err
+	}
+	if cached, ok := catalogMetadata.get(file.path, stamp, time.Now()); ok {
+		return cached, nil
+	}
+	if err := r.open(ctx); err != nil {
+		return value, err
+	}
 	endpoint := url.URL{Scheme: "file", Path: file.path}
 	query := endpoint.Query()
 	query.Set("mode", "ro")
@@ -77,6 +104,11 @@ func (r *conversationReader) Read(ctx context.Context, file conversationFile) (c
 	// bounds cleanup; the worker closes its connection on any detach failure.
 	if _, err := r.connection.ExecContext(context.WithoutCancel(ctx), "DETACH DATABASE candidate"); err != nil {
 		return value, err
+	}
+	if after, err := os.Lstat(file.path); err == nil {
+		if current, err := conversationStamp(file.path, after); err == nil && current == stamp {
+			catalogMetadata.put(file.path, stamp, value, time.Now())
+		}
 	}
 	return value, nil
 }

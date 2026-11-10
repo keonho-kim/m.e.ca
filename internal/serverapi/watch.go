@@ -33,8 +33,7 @@ func (a *API) sendBatch(ctx context.Context, batch server.Batch, taskID string, 
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		n := &v1.Notification{Body: &v1.Notification_Event{Event: event(value)}}
-		a.sanitize(n)
+		n := a.projectEvent(value)
 		if err := send(n); err != nil {
 			return err
 		}
@@ -43,6 +42,8 @@ func (a *API) sendBatch(ctx context.Context, batch server.Batch, taskID string, 
 }
 
 func (a *API) watch(ctx context.Context, cursor, taskID string, send func(*v1.Notification) error) (resultErr error) {
+	stopCache := a.events.observe()
+	defer stopCache()
 	if len(taskID) > 128 {
 		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidTaskFilter)
 	}
