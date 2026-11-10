@@ -24,11 +24,18 @@
 
 ## 설치
 
-Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 바이너리는 Go·Bun·Node 설치 없이 TUI와 내장 WebUI를 사용할 수 있습니다.
+Linux·WSL과 macOS의 amd64·arm64를 지원합니다. 릴리스 실행에는 Go·Bun·Node가 필요 없습니다. 같은 날짜 태그에 두 종류와 네 플랫폼의 압축 파일 8개를 제공합니다.
+
+| 종류 | 포함 기능 |
+| --- | --- |
+| `minimum` | TUI·CLI, 모든 Provider·도구·스킬·팀 모드. 서버 코드와 내장 WebUI 자산 제외 |
+| `full` | minimum의 모든 기능 + SSE·WebSocket·gRPC 서버와 내장 WebUI |
+
+두 종류의 실행 명령과 설치 위치는 모두 `meca`입니다. 원하는 종류 하나를 설치하며 설정·대화·인증정보 형식은 공유합니다. `meca --help` 첫 줄에서 종류를 확인할 수 있습니다.
 
 ### 최신 릴리스로 설치하기
 
-1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 운영체제와 CPU에 맞는 `.tar.gz` 파일을 받습니다.
+1. [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 `minimum` 또는 `full`과 운영체제·CPU에 맞는 `.tar.gz` 파일을 받습니다.
 2. 압축을 풀고 터미널에서 압축을 푼 폴더로 이동합니다.
 3. 아래 명령으로 설치합니다.
 
@@ -54,11 +61,11 @@ Linux의 CPU 종류는 `uname -m`으로 확인할 수 있습니다.
 
 ### 터미널에서 압축 해제하기
 
-다운로드한 폴더에서 실행합니다. `<version>`과 `<platform>`은 받은 파일명으로 바꾸세요.
+다운로드한 폴더에서 실행합니다. `<version>`·`<variant>`·`<platform>`은 받은 파일명으로 바꾸세요. 예를 들어 Apple Silicon의 full은 `meca_<version>_full_macos_arm64.tar.gz`입니다.
 
 ```sh
 mkdir meca-install
-tar -xzf "meca_<version>_<platform>.tar.gz" -C meca-install
+tar -xzf "meca_<version>_<variant>_<platform>.tar.gz" -C meca-install
 ./meca-install/meca install
 ```
 
@@ -70,10 +77,10 @@ tar -xzf "meca_<version>_<platform>.tar.gz" -C meca-install
 
 ```sh
 # macOS
-shasum -a 256 "meca_<version>_<platform>.tar.gz"
+shasum -a 256 "meca_<version>_<variant>_<platform>.tar.gz"
 
 # Linux
-sha256sum "meca_<version>_<platform>.tar.gz"
+sha256sum "meca_<version>_<variant>_<platform>.tar.gz"
 ```
 
 ### 업데이트
@@ -84,17 +91,21 @@ sha256sum "meca_<version>_<platform>.tar.gz"
 meca upgrade
 ```
 
-최신 릴리스를 내려받아 검증하고 설치합니다. 설정·모델 연결·대화는 유지하며, 기본 프롬프트는 배포 기본본으로 갱신합니다.
+현재 실행 중인 종류와 같은 최신 배포본을 내려받아 검증하고 설치합니다. minimum이 full로 바뀌거나 그 반대로 바뀌지 않습니다. 설정·모델 연결·대화는 유지하며, 기본 프롬프트는 배포 기본본으로 갱신합니다. 종류를 바꾸려면 원하는 압축 파일을 받아 `./meca install`을 실행하세요.
+
+종류가 분리되기 전 바이너리는 새 파일명을 알지 못합니다. 새 minimum 또는 full을 직접 받아 한 번 재설치한 뒤 `meca upgrade`를 사용하세요. 예전 파일명 별칭은 제공하지 않습니다.
 
 ### 소스에서 설치하기
 
-소스 빌드에는 Git·Bun 1.4.4 이상·Go가 필요합니다. Bun으로 고정된 프론트 의존성을 설치하고 화면을 빌드한 뒤 Go 실행 파일에 포함합니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
+소스 빌드에는 Git·Go가 필요하며 full에는 Bun 1.4.4 이상도 필요합니다. minimum은 프론트 빌드를 하지 않습니다. Go가 없으면 `curl`·`tar`와 `sha256sum` 또는 `shasum`을 사용해 빌드용 Go를 검증하고 임시 다운로드합니다.
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
 cd m.e.ca
 ./install.sh
 ```
+
+인자 없는 설치는 full입니다. minimum을 설치하려면 `./install.sh minimum`, full을 명시하려면 `./install.sh full`을 사용합니다.
 
 최신 소스로 재설치하려면 저장소에서 실행합니다.
 
@@ -108,6 +119,10 @@ git pull --ff-only
 제품 빌드는 Go 1.27.2 이상, 개발 도구는 Go 1.27.3 이상이 필요합니다. 제품과 도구의 요구 버전은 각각 [go.mod](go.mod)와 [devtools/go.mod](devtools/go.mod)가 소유합니다.
 
 ```sh
+# minimum: 서버·프론트 의존성 없이 빌드
+go build -tags=godbus_no_tcp,minimum -trimpath -o bin/meca ./cmd/meca
+
+# full: 프론트 자산을 먼저 준비
 sh scripts/build-ui.sh
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```

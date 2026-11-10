@@ -20,6 +20,7 @@ import (
 func TestSourceInstaller(t *testing.T) {
 	for _, tc := range []struct {
 		name, os, arch string
+		variant        string
 		existing       bool
 		corrupt        bool
 		failDownload   bool
@@ -27,6 +28,8 @@ func TestSourceInstaller(t *testing.T) {
 		wantError      string
 	}{
 		{name: "existing Go", existing: true},
+		{name: "explicit full", existing: true, variant: "full"},
+		{name: "minimum without Bun", existing: true, variant: "minimum"},
 		{name: "mac arm64", os: "Darwin", arch: "arm64"},
 		{name: "mac amd64", os: "Darwin", arch: "x86_64"},
 		{name: "linux arm64", os: "Linux", arch: "aarch64"},
@@ -59,7 +62,9 @@ func TestSourceInstaller(t *testing.T) {
 				}
 				writeScriptFixture(t, filepath.Join(source, name), body)
 			}
-			writeScriptFixture(t, filepath.Join(commands, "bun"), []byte("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$MECA_TEST_UI_CALL\"\n"))
+			if tc.variant != "minimum" {
+				writeScriptFixture(t, filepath.Join(commands, "bun"), []byte("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$MECA_TEST_UI_CALL\"\n"))
+			}
 			for _, command := range []string{"sh", "dirname", "mkdir", "mktemp", "rm", "awk", "tar", "gzip", "cp", "shasum"} {
 				path, err := exec.LookPath(command)
 				if err != nil {
@@ -119,6 +124,9 @@ done
 			call := filepath.Join(root, "go-call")
 			installCall := filepath.Join(root, "install-call")
 			command := exec.Command("/bin/sh", filepath.Join(source, "install.sh"))
+			if tc.variant != "" {
+				command.Args = append(command.Args, tc.variant)
+			}
 			command.Dir = root
 			command.Env = []string{
 				"MECA_TEST_UI_CALL=" + filepath.Join(root, "ui-call"),
@@ -128,7 +136,11 @@ done
 			}
 			output, err := command.CombinedOutput()
 			ui, uiErr := os.ReadFile(filepath.Join(root, "ui-call"))
-			if uiErr != nil || string(ui) != "install --cwd "+filepath.Join(source, "webui")+" --frozen-lockfile --ignore-scripts\nrun --cwd "+filepath.Join(source, "webui")+" build\n" {
+			if tc.variant == "minimum" {
+				if !os.IsNotExist(uiErr) {
+					t.Fatalf("minimum built the UI: %q %v", ui, uiErr)
+				}
+			} else if uiErr != nil || string(ui) != "install --cwd "+filepath.Join(source, "webui")+" --frozen-lockfile --ignore-scripts\nrun --cwd "+filepath.Join(source, "webui")+" build\n" {
 				t.Fatalf("UI build: %q %v", ui, uiErr)
 			}
 			if tc.wantError == "" && err != nil || tc.wantError != "" && (err == nil || !strings.Contains(string(output), tc.wantError)) {
@@ -140,7 +152,11 @@ done
 				if tc.existing {
 					goroot = "unrelated-go"
 				}
-				if readErr != nil || string(invocation) != source+"|build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
+				tags := "godbus_no_tcp"
+				if tc.variant == "minimum" {
+					tags += ",minimum"
+				}
+				if readErr != nil || string(invocation) != source+"|build -tags="+tags+" -trimpath -o bin/meca ./cmd/meca|"+goroot+"\n" {
 					t.Fatalf("Go invocation = %q, %v", invocation, readErr)
 				}
 			} else if !os.IsNotExist(readErr) {

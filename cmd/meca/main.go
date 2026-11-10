@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -75,7 +74,7 @@ func start(ctx context.Context) (err error) {
 		return err
 	}
 	if mode.Action == startup.Help {
-		fmt.Fprintln(os.Stdout, "Usage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose\n       meca [path] --server [--ui] [--protocol sse|socket|grpc] [--listen IP:port]\n            [--session ID] [--concurrency N] [--token-file PATH] [--tls-cert PATH --tls-key PATH]\n            [--allow-host host:port] [--allow-origin http(s)://host:port]\n       meca install [--no-shell]\n       meca resume | upgrade | uninstall")
+		printHelp()
 		return nil
 	}
 	home, err := os.UserHomeDir()

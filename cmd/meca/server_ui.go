@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Announce the embedded UI and open one local interactive browser.
 // Pattern: Process presentation adapter.
 // Usage: The server ready callback invokes announceUI after the listener is bound.

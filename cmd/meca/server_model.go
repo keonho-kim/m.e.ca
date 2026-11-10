@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Prepare an owned server model client without persisting selections or credentials.
 // Pattern: Composition root model I/O boundary.
 // Usage: Server idle-only model commands call prepareServerModel and adopt its client.

@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Compose multi-workspace serving with shared process budgets and optional UI.
 // Pattern: Composition root.
 // Usage: main runs meca --server [--ui] with the selected protocol.

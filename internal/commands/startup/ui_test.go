@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Verify the embedded UI is an explicit server-only startup mode.
 // Pattern: Startup boundary contract test.
 // Usage: go test ./internal/commands/startup -run TestUI.

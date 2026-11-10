@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Acquire exclusive server conversation resources using existing recovery and request factories.
 // Pattern: Composition root resource factory.
 // Usage: The server service adopts the returned conversation until close or replacement.

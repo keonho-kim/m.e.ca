@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Compose one immutable project runtime with shared process budgets.
 // Pattern: Composition root.
 // Usage: The workspace registry opens and closes these resources lazily.

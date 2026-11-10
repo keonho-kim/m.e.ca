@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Consume benchmark SSE output through the real incremental terminal renderer without accumulation.
 // Pattern: Bounded synchronous frontend fixture for the complete engine workload.
 // Usage: The workload handler writes framed events here; terminal events confirm successful completion.

@@ -21,6 +21,7 @@ import (
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 const maxArchiveBytes = 256 * 1024 * 1024
@@ -147,7 +148,7 @@ func archiveName(version, system, architecture string) (string, error) {
 	if system != "macos" && system != "linux" || architecture != "amd64" && architecture != "arm64" {
 		return "", faults.Errorf(diagcatalog.UpgradeUnsupportedReleasePlatform)
 	}
-	return "meca_" + strings.TrimPrefix(version, "v") + "_" + system + "_" + architecture + ".tar.gz", nil
+	return "meca_" + strings.TrimPrefix(version, "v") + "_" + distribution.Name + "_" + system + "_" + architecture + ".tar.gz", nil
 }
 
 func archiveChecksum(manifest, name string) (string, error) {

@@ -61,5 +61,13 @@ if [[ "$release_exists" == false ]]; then
     gh release create "$release_tag" --draft --verify-tag --title "M.E.CA $release_tag" --notes-file docs/release-notes.md
 fi
 gh release upload "$release_tag" "${release_assets[@]}" --clobber
+# Remove only the former names for this same tag, after all replacement files exist.
+release_names=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$release_tag" --jq '.assets[].name')
+for release_platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do
+    release_legacy="meca_${release_tag#v}_${release_platform}.tar.gz"
+    if grep -Fxq "$release_legacy" <<< "$release_names"; then
+        gh release delete-asset "$release_tag" "$release_legacy" --yes
+    fi
+done
 gh release edit "$release_tag" --draft=false --latest --title "M.E.CA $release_tag" --notes-file docs/release-notes.md
 printf 'published=true\n' >> "$GITHUB_OUTPUT"

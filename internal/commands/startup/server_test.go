@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Verify server startup is explicit and cannot consume interactive or one-shot input.
 // Pattern: Startup contract tests.
 // Usage: go test ./internal/commands/startup.

@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Resolve persisted server models before configured defaults for reads and execution.
 // Pattern: Pure selection policy shared by the concrete session adapters.
 // Usage: Read-only and writable conversation factories call this without connecting a provider.

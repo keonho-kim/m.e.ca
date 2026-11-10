@@ -153,11 +153,20 @@ agent/run의 Run은 실행 준비(start.go), 대화 입장과 정리(conversatio
 
 CLI 분기는 flag, 병렬 도구 합류는 sync.WaitGroup, 재시도 대기는 time.Timer를 사용한다. 검색은 strings·unicode로 부분일치를 우선하고 결과가 없을 때 문자 순서를 유지하는 축약 일치를 찾는다. 메타데이터 재사용은 연결 준비가 소유한 마지막 GET 응답과 선택한 Ollama 모델의 typed 응답으로 한정한다. 이 사용처에는 별도 CLI·동시성·캐시 프레임워크를 두지 않는다.
 
-Go 빌드만으로 MECA 실행 파일을 만든다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#설치)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [Release 워크플로](../.github/workflows/release.yml)와 GoReleaser 설정으로 검사·빌드 후 자동 게시한다. 명시적 major·minor와 같은 날짜의 갱신 정책은 [릴리스 가이드](releases.md)가 소유한다.
+minimum은 Go만으로 실행 파일을 만들고 full은 Bun으로 WebUI 자산을 먼저 준비한다. 제품 빌드·실행에 Docker·Bubblewrap·별도 샌드박스 설치를 요구하지 않는다. 빌드·설치·삭제 명령은 [README](../README.md#설치)를 따른다. 소스 설치 스크립트는 Go가 없을 때만 공식 SDK를 체크섬 검증 후 임시 설치하며 작업 후 정리한다. Go 최소 버전을 바꿀 때 `scripts/install/go.sha256`의 네 플랫폼 검증값도 공식 배포 정보와 함께 갱신한다. macOS·Linux 릴리스는 [Release 워크플로](../.github/workflows/release.yml)와 GoReleaser 설정으로 검사·빌드 후 자동 게시한다. 명시적 major·minor와 같은 날짜의 갱신 정책은 [릴리스 가이드](releases.md)가 소유한다.
 
 공식 빌드·소스 설치는 `godbus_no_tcp` 태그로 DBus의 TCP·nonce-TCP 구현을 제외한다. 수동 실행 파일은 `go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca`로 만든다. 아래 개발·검증 명령은 같은 셸에서 먼저 `export GOFLAGS='-tags=godbus_no_tcp'`를 설정해 실행한다. 테스트 내부의 자식 `go build`에도 전달되며 전역 Go 설정은 바꾸지 않는다. GoReleaser는 환경변수와 별개로 빌드 태그를 명시한다. 지원 범위는 [Linux 자격 증명 전송](configuration.md#linux-자격-증명-전송)을 따른다.
 
 ### 개발 도구
+
+`internal/distribution`은 컴파일된 종류 이름만 소유한다. `minimum` 태그가 있으면 cmd/meca의 서버·WebUI 조립 파일과 해당 실행 통합 fixture를 제외하며 공통 CLI·TUI·설치·업데이트 검사는 유지한다. minimum의 서버 진입은 시작 경계에서 full이 필요하다는 중앙 진단을 반환한다. 서버 패키지 자체는 full의 소스·검증을 위해 저장소에 유지한다. 런타임 설정으로 종류를 바꾸거나 비활성 서버를 메모리에 올리지 않는다.
+
+다음 검사는 UI 자산 없이 최소 실행 파일을 검증한다. `go list -deps`에 internal/commands/server·internal/serverapi·internal/webui가 없어야 한다. 업데이트 검사는 두 종류의 파일이 동시에 제공돼도 현재 종류를 선택하는지 확인한다. CI는 이 검사를 프론트 빌드 전에 실행한다.
+
+```sh
+GOFLAGS='-tags=minimum,godbus_no_tcp' go test ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade ./internal/commands/install
+go list -tags=minimum,godbus_no_tcp -deps ./cmd/meca
+```
 
 검증·배포 도구는 [devtools/go.mod](../devtools/go.mod)의 별도 모듈에 버전을 고정한다. 제품의 go.mod·go.sum과 의존성 해석을 분리하며 MECA 바이너리에 포함하지 않는다. 도구 실행에는 Go 1.27.3 이상이 필요하다. 다음 명령은 저장소 루트에서 실행한다. 최초 실행 시 Go가 필요한 도구를 내려받고 빌드 캐시에 저장하므로 전역 설치는 필요 없다.
 
@@ -624,7 +633,7 @@ SQLite의 청크 미리보기는 호출이 소유한 decoder를 사용한다. DB
 
 ## 내장 WebUI
 
-`webui/`는 Bun으로 빌드하는 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
+`webui/`는 full 배포본에만 포함하는 Bun 빌드의 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. minimum의 조립·의존성 그래프에는 내장 자산 어댑터가 없으며 자산이 이미 생성돼 있어도 포함하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
 
 소스는 FSD의 `app → pages → features → entities → shared` 방향을 따른다. 다른 슬라이스의 내부 파일을 직접 가져오지 않고 필요한 이름만 공개 진입점에서 내보낸다. 현재 워크스페이스에서만 쓰는 실행·스트림·파일·설정 코드는 `pages/workspace` 안에 둔다. 로그인과 연결 종료처럼 여러 화면이 공유하는 동작만 `features/server-access`로 추출한다. 빈 계층이나 단순 재전달 계층은 만들지 않는다.
 

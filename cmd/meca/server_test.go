@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Verify the executable serves a real project without a TTY and shuts down on SIGTERM.
 // Pattern: Executable integration test.
 // Usage: go test ./cmd/meca -run TestServerExecutable.

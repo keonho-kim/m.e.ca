@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Verify server request ownership also drives the existing team runtime and attributed events.
 // Pattern: Composition integration test using the existing scripted team model.
 // Usage: go test -race ./cmd/meca -run TestServerTeamRequest.

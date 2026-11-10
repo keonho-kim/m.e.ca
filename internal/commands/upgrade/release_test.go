@@ -7,12 +7,17 @@ package upgrade
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 func TestFetchVerifiesAndRetriesPartialDownloads(t *testing.T) {
@@ -57,7 +62,7 @@ func TestArchiveName(t *testing.T) {
 		{"linux", "arm64", "linux_arm64"}, {"linux", "amd64", "linux_amd64"},
 	} {
 		got, err := archiveName("v0.0.20261026", platform.system, platform.architecture)
-		if err != nil || got != "meca_0.0.20261026_"+platform.suffix+".tar.gz" {
+		if err != nil || got != "meca_0.0.20261026_"+distribution.Name+"_"+platform.suffix+".tar.gz" {
 			t.Fatalf("platform archive = %q, %v", got, err)
 		}
 	}
@@ -80,5 +85,34 @@ func TestArchiveChecksum(t *testing.T) {
 	}
 	if got, err := archiveChecksum(strings.ToUpper(digest)+"  meca.tar.gz\n", "meca.tar.gz"); err != nil || got != digest {
 		t.Fatalf("valid checksum = %q, %v", got, err)
+	}
+}
+
+func TestFetchKeepsDistribution(t *testing.T) {
+	archive := tarball(t, archiveEntry{name: "meca", content: "selected distribution"})
+	other := distribution.Minimum
+	if distribution.Name == other {
+		other = distribution.Full
+	}
+	client := releaseFixture(t, archive, func(latest *release, manifest *string) {
+		wrong := strings.Replace(latest.Assets[1].Name, "_"+distribution.Name+"_", "_"+other+"_", 1)
+		latest.Assets = append(latest.Assets, asset{ID: 3, Name: wrong, Size: int64(len(archive))})
+		*manifest += fmt.Sprintf("%x  %s\n", sha256.Sum256(archive), wrong)
+		latest.Assets[0].Size = int64(len(*manifest))
+	}, func(w http.ResponseWriter, r *http.Request) bool {
+		if r.URL.Path != "/releases/assets/3" {
+			return false
+		}
+		t.Error("updater selected the other distribution")
+		w.WriteHeader(http.StatusConflict)
+		return true
+	})
+	root := temporaryRoot(t)
+	if _, err := client.fetch(t.Context(), root); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(filepath.Join(root.Name(), "meca"))
+	if err != nil || string(body) != "selected distribution" {
+		t.Fatal(string(body), err)
 	}
 }

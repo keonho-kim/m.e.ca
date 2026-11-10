@@ -18,37 +18,54 @@ import (
 )
 
 func TestPublishRelease(t *testing.T) {
-	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "missing build tag", "lookalike build tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure"} {
+	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "minimum UI notice", "missing build tag", "lookalike build tag", "missing variant tag", "wrong variant tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure", "cleanup failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			copyReleaseScript(t, root, "publish.sh")
 			writeReleaseFile(t, root, "docs/release-notes.md", "Fixture notes\n")
 			var manifest strings.Builder
-			for _, platform := range []string{"linux_amd64", "linux_arm64", "macos_amd64", "macos_arm64"} {
-				name := "meca_0.0.20261026_" + platform + ".tar.gz"
-				metadata := "\tbuild\t-tags=godbus_no_tcp\n"
-				if mode == "extra build tags" {
-					metadata = "\tbuild\t-tags=first,godbus_no_tcp,last\n"
-				}
-				if platform == "macos_arm64" {
-					switch mode {
-					case "missing build tag":
-						metadata = "\tbuild\t-trimpath=true\n"
-					case "lookalike build tag":
-						metadata = "\tbuild\t-tags=prefix_godbus_no_tcp,godbus_no_tcp_suffix\n"
-					case "missing build metadata":
-						metadata = "fixture without build settings\n"
-					case "unreadable build metadata":
-						metadata = "invalid executable\n"
+			for _, variant := range []string{"minimum", "full"} {
+				for _, platform := range []string{"linux_amd64", "linux_arm64", "macos_amd64", "macos_arm64"} {
+					name := "meca_0.0.20261026_" + variant + "_" + platform + ".tar.gz"
+					metadata := "\tbuild\t-tags=godbus_no_tcp\n"
+					if variant == "minimum" {
+						metadata = "\tbuild\t-tags=godbus_no_tcp,minimum\n"
 					}
+					if mode == "extra build tags" {
+						metadata = "\tbuild\t-tags=first,godbus_no_tcp,last\n"
+						if variant == "minimum" {
+							metadata = "\tbuild\t-tags=first,godbus_no_tcp,minimum,last\n"
+						}
+					}
+					if platform == "macos_arm64" {
+						switch mode {
+						case "missing build tag":
+							metadata = "\tbuild\t-trimpath=true\n"
+						case "lookalike build tag":
+							metadata = "\tbuild\t-tags=prefix_godbus_no_tcp,godbus_no_tcp_suffix\n"
+						case "missing build metadata":
+							metadata = "fixture without build settings\n"
+						case "unreadable build metadata":
+							metadata = "invalid executable\n"
+						case "missing variant tag":
+							if variant == "minimum" {
+								metadata = "\tbuild\t-tags=godbus_no_tcp\n"
+							}
+						case "wrong variant tag":
+							if variant == "full" {
+								metadata = "\tbuild\t-tags=godbus_no_tcp,minimum\n"
+							}
+						}
+					}
+					uiNotice := variant == "full" && mode != "missing UI notice" || variant == "minimum" && mode == "minimum UI notice"
+					body := releaseArchive(t, mode != "missing notice", uiNotice, metadata)
+					writeReleaseFile(t, root, "dist/"+name, string(body))
+					fmt.Fprintf(&manifest, "%x  %s\n", sha256.Sum256(body), name)
 				}
-				body := releaseArchive(t, mode != "missing notice", mode != "missing UI notice", metadata)
-				writeReleaseFile(t, root, "dist/"+name, string(body))
-				fmt.Fprintf(&manifest, "%x  %s\n", sha256.Sum256(body), name)
 			}
 			writeReleaseFile(t, root, "dist/checksums.txt", manifest.String())
 			if mode == "bad checksum" {
-				writeReleaseFile(t, root, "dist/meca_0.0.20261026_linux_amd64.tar.gz", "corrupted")
+				writeReleaseFile(t, root, "dist/meca_0.0.20261026_minimum_linux_amd64.tar.gz", "corrupted")
 			}
 			if _, err := exec.LookPath("sha256sum"); err != nil {
 				writeReleaseFile(t, root, "commands/sha256sum", "#!/bin/sh\nexec shasum -a 256 \"$@\"\n")
@@ -86,7 +103,7 @@ func TestPublishRelease(t *testing.T) {
 			success := mode == "existing" || mode == "new" || mode == "extra build tags"
 			if success {
 				metadataCalls, readErr := os.ReadFile(filepath.Join(root, "metadata-calls"))
-				if readErr != nil || strings.Count(string(metadataCalls), "\n") != 4 {
+				if readErr != nil || strings.Count(string(metadataCalls), "\n") != 8 {
 					t.Fatal("archives were not verified exactly once", string(metadataCalls), readErr)
 				}
 				if err != nil || string(status) != "published=true\n" || !strings.Contains(string(calls), "push --force-with-lease=refs/tags/v0.0.20261026:"+previous) {
@@ -97,6 +114,13 @@ func TestPublishRelease(t *testing.T) {
 				}
 				if !strings.Contains(string(calls), "release edit") {
 					t.Fatal("verified release was not published")
+				}
+				deleted := strings.Count(string(calls), "release delete-asset")
+				if mode == "new" && deleted != 0 || mode != "new" && deleted != 4 {
+					t.Fatal("incorrect obsolete archive cleanup", string(calls))
+				}
+				if deleted > 0 && strings.Index(string(calls), "release delete-asset") < strings.Index(string(calls), "release upload") {
+					t.Fatal("old archives were removed before uploading both distributions")
 				}
 				return
 			}
@@ -109,11 +133,14 @@ func TestPublishRelease(t *testing.T) {
 			if err == nil || strings.Contains(string(status), "published=true") || strings.Contains(string(calls), "release edit") {
 				t.Fatalf("failed publication reported success: %v\n%s\n%s", err, output, calls)
 			}
-			if mode != "lease failure" && mode != "upload failure" && (strings.Contains(string(calls), "push ") || strings.Contains(string(calls), "release upload")) {
+			if mode != "lease failure" && mode != "upload failure" && mode != "cleanup failure" && (strings.Contains(string(calls), "push ") || strings.Contains(string(calls), "release upload")) {
 				t.Fatal("preflight failure moved the remote tag or uploaded assets")
 			}
 			if mode == "lease failure" && strings.Contains(string(calls), "release upload") {
 				t.Fatal("conflicting tag update still uploaded assets")
+			}
+			if mode == "upload failure" && strings.Contains(string(calls), "release delete-asset") {
+				t.Fatal("failed upload removed old archives")
 			}
 		})
 	}
@@ -164,6 +191,13 @@ esac
 
 const fakeReleaseGitHub = `#!/bin/sh
 if [ "$1" = api ]; then
+  if [ "$4" = '.assets[].name' ]; then
+    if [ "$RELEASE_TEST_MODE" != new ]; then
+      for platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do printf 'meca_0.0.20261026_%s.tar.gz\n' "$platform"; done
+      echo unrelated-notes.txt
+    fi
+    exit 0
+  fi
   case "$RELEASE_TEST_MODE" in
     new) echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
     'auth failure') echo 'gh: Unauthorized (HTTP 401)' >&2; exit 1 ;;
@@ -173,6 +207,7 @@ if [ "$1" = api ]; then
 else
   printf '%s\n' "$*" >> "$RELEASE_TEST_CALLS"
   if [ "$2" = upload ] && [ "$RELEASE_TEST_MODE" = 'upload failure' ]; then exit 1; fi
+  if [ "$2" = delete-asset ] && [ "$RELEASE_TEST_MODE" = 'cleanup failure' ]; then exit 1; fi
 fi
 `
 

@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Reject a second server composition before opening its ledger or starting a listener.
 // Pattern: Composition-root ownership regression test.
 // Usage: go test ./cmd/meca -run TestServerRejectsExistingOwner.

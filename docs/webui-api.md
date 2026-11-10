@@ -2,7 +2,7 @@
 
 [서버 API](server.md) · [제품 명세](../SYSTEM.md)
 
-WebUI는 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
+WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. minimum에는 서버·내장 화면이 없다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
 
 구현된 화면과 상태 소유·디자인은 [WebUI 구조](webui-design.md)에 정리한다. 내장 UI는 동일 출처 fetch와 EventSource를 사용한다.
 
