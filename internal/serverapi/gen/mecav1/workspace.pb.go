@@ -943,16 +943,17 @@ func (x *TaskListRequest) GetLimit() int32 {
 }
 
 type Task struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
-	Code          string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`
-	Persistence   string                 `protobuf:"bytes,6,opt,name=persistence,proto3" json:"persistence,omitempty"`
-	Outcome       string                 `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Status         string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Error          string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	Code           string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`
+	Persistence    string                 `protobuf:"bytes,6,opt,name=persistence,proto3" json:"persistence,omitempty"`
+	Outcome        string                 `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
+	SessionSummary string                 `protobuf:"bytes,8,opt,name=session_summary,json=sessionSummary,proto3" json:"session_summary,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Task) Reset() {
@@ -1030,6 +1031,13 @@ func (x *Task) GetPersistence() string {
 func (x *Task) GetOutcome() string {
 	if x != nil {
 		return x.Outcome
+	}
+	return ""
+}
+
+func (x *Task) GetSessionSummary() string {
+	if x != nil {
+		return x.SessionSummary
 	}
 	return ""
 }
@@ -1919,7 +1927,7 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xb3\x01\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xdc\x01\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1928,7 +1936,8 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12\x12\n" +
 	"\x04code\x18\x05 \x01(\tR\x04code\x12 \n" +
 	"\vpersistence\x18\x06 \x01(\tR\vpersistence\x12\x18\n" +
-	"\aoutcome\x18\a \x01(\tR\aoutcome\"P\n" +
+	"\aoutcome\x18\a \x01(\tR\aoutcome\x12'\n" +
+	"\x0fsession_summary\x18\b \x01(\tR\x0esessionSummary\"P\n" +
 	"\bTaskPage\x12#\n" +
 	"\x05items\x18\x01 \x03(\v2\r.meca.v1.TaskR\x05items\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +

@@ -3,6 +3,7 @@
 // Usage: ConnectionStatus mounts this only while execution details are open.
 // Related: webui/src/pages/workspace/model/stream-projection.ts, internal/serverapi/workspace.go.
 
+import { VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -37,7 +38,7 @@ export function Metrics({ target }: { target: Target }) {
   const tokens = Number(stats?.usage?.output ?? 0),
     generation = Number(stats?.generationMillis ?? 0);
   return (
-    <Text className="execution-metrics">
+    <VStack gap={2} className="execution-metrics">
       {elapsed > 0 && (
         <Text>
           {t('elapsed')} {(elapsed / 1000).toFixed(0)}s
@@ -59,6 +60,6 @@ export function Metrics({ target }: { target: Target }) {
           {t('memory')} {(Number(resources.data.residentBytes) / 1048576).toFixed(0)} MiB
         </Text>
       )}
-    </Text>
+    </VStack>
   );
 }

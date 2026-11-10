@@ -10,14 +10,14 @@ import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { reportError } from '@/entities/server-session';
 import { changed, stateOptions } from '@/pages/workspace/api/queries';
+import { useModelCandidates } from '@/pages/workspace/model/model-candidates';
 import { type ModelValues, modelSchema } from '@/pages/workspace/model/model-values';
 import type { Target } from '@/pages/workspace/model/store';
 import { ModelFields } from '@/pages/workspace/ui/settings/model-fields';
-import type { ModelCandidateJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
@@ -40,8 +40,8 @@ export function ModelForm({
     queryFn: async ({ signal }) =>
       (await call('', { providers: {} }, signal)).providers?.items ?? [],
   });
-  const [models, setModels] = useState<ModelCandidateJson[]>([]),
-    [busy, setBusy] = useState(false);
+  const candidates = useModelCandidates(target);
+  const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(''),
     [error, setError] = useState('');
   const controller = useRef<AbortController | null>(null);
@@ -86,35 +86,16 @@ export function ModelForm({
       });
   }, [state.data, isDirty, form.reset]);
 
-  const discover = async () => {
-    setBusy(true);
-    setStatus('');
-    setError('');
-    try {
-      const value = form.getValues();
-      const reply = await call(
-        target.workspace,
-        {
-          discoverModels: {
-            sessionId: target.session,
-            provider: value.provider,
-            endpoint: value.endpoint,
-            credential: value.credential,
-          },
-        },
-        request()
-      );
-      setModels(reply.models?.items ?? []);
-      setStatus(reply.models?.notice ?? '');
-    } catch (error) {
-      if (!controller.current?.signal.aborted) {
-        setError(describeError(error));
-        reportError(error);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
+  const [provider, endpoint, credential] = useWatch({
+    control: form.control,
+    name: ['provider', 'endpoint', 'credential'],
+  });
+  useEffect(candidates.reset, [provider, endpoint, credential, candidates.reset]);
+  const discover = () => candidates.load(form.getValues(), true);
+  const loadModels = useCallback(
+    () => candidates.load({ ...form.getValues(), provider, endpoint, credential }),
+    [candidates.load, form, provider, endpoint, credential]
+  );
   const diagnose = form.handleSubmit(async (value) => {
     setBusy(true);
     setStatus('');
@@ -190,7 +171,9 @@ export function ModelForm({
         <Text color="secondary">{t('modelRequired')}</Text>
       ) : (
         <>
-          {error && <Banner status="error" title={error} />}
+          {(error || candidates.error) && (
+            <Banner status="error" title={error || candidates.error} />
+          )}
           <Text type="supporting" color="secondary">
             {t('scope')} · {t('currentChat')}
           </Text>
@@ -198,7 +181,8 @@ export function ModelForm({
             form={form}
             providers={providers.data ?? []}
             profile={state.data?.model}
-            models={models}
+            discovering={candidates.pending}
+            loadModels={loadModels}
             busy={busy}
             onProvider={(id) => {
               form.setValue('provider', id, { shouldDirty: true });
@@ -209,7 +193,7 @@ export function ModelForm({
               const provider = providers.data?.find((v) => v.id === id);
               if (provider?.endpoint)
                 form.setValue('endpoint', provider.endpoint, { shouldDirty: true });
-              setModels([]);
+              candidates.reset();
             }}
           />
           <Button label={t('discover')} onClick={discover} isDisabled={busy} size="sm" />

@@ -31,12 +31,14 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 단일·팀 스트리밍 | SSE / WatchEvents / socket watch |
 | 실행 중 명령 카드 | `commands:{taskId}`의 task·agent·명령 상태·경과 시간 |
 | 메모리 표시 | `resources`의 서버 프로세스 RSS |
-| 작업 목록·완료 확인 | `listTasks`, `taskStatus` |
+| 작업 목록·완료 확인 | `listTasks`의 `sessionSummary`·상태·작업 ID, `taskStatus` |
 | 재접속·긴 실행 중 본문 | snapshot/state 페이지, `draft` |
 | 사용량·시간·처리량 표시 | execution의 startedAt·statistics와 usage 이벤트 |
 | 스킬 탐색 | `listSkills`(최대 32), `suggestSkills`, `getSkill`, `readSkillFile` |
 
 탭·선택 메시지·접기·스크롤·입력 초안·클립보드·예약 입력 편집은 클라이언트가 소유한다. TUI의 예약 입력도 화면 수명의 큐다. 브라우저 종료 후에도 실행해야 하는 요청은 `start`로 접수한 작업이어야 한다. 관찰을 중단해도 이미 접수한 작업은 서버에서 계속된다.
+
+파일 선택 시 `editorRead`로 전체 편집 문서를 한 번 읽으며 편집 가능한 파일에 `previewFile`을 중복 요청하지 않는다. 편집 불가 응답일 때만 `previewFile`의 읽기 전용 페이지를 사용한다. Preview/Raw와 미리보기 본문 클릭은 클라이언트 표시 상태이며 Markdown 미리보기는 현재 초안을 사용한다. 전환 자체로 서버에 저장하지 않으며 `editorSave`의 revision 검사와 저장 확인을 유지한다. `listTasks.items[].sessionSummary`는 해당 페이지에 속한 프로젝트 세션의 메타데이터에서 읽고 별도로 저장하지 않는다.
 
 ## 대상과 동시성
 
@@ -100,6 +102,8 @@ SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈
 ## 내장 브라우저 인증
 
 `--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료만 보관한다. `POST /v1/ui/logout`은 해당 쿠키를 폐기한다.
+
+GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 전용 접속 상태 조회다. 인증 전에도 Host·Origin 검사를 적용하며 보호된 명령을 실행하지 않는다. 첫 접속의 쿠키 복원과 로그인 후 쿠키 수신 확인에 사용한다. 쿠키 이름은 접속 주소별로 구분하므로 같은 호스트의 다른 포트에서 실행한 서버끼리 덮어쓰지 않는다. 서버 재시작·만료 뒤에는 다시 로그인한다.
 
 쿠키를 사용하는 POST·DELETE는 정확한 동일 Origin과 `X-Meca-UI: 1`이 필요하다. 기본 Host·Origin·TLS 경계는 그대로 적용한다. 로그인 토큰을 URL·localStorage·HTML에 넣지 않는다. 다른 클라이언트의 Bearer 인증은 계속 사용할 수 있다.
 

@@ -11,14 +11,38 @@ import { HStack, Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout
 import { List, ListItem } from '@astryxdesign/core/List';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { Text } from '@astryxdesign/core/Text';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { CommandRuns } from '@/pages/workspace/ui/inspection/command-runs';
-import type { WorkspaceJson } from '@/shared/api';
+import type { TaskJson, WorkspaceJson } from '@/shared/api';
 import { call, control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
+
+const statusLabels = {
+  accepted: 'pending',
+  running: 'running',
+  canceling: 'canceling',
+  answered: 'responseCompleted',
+  stopped: 'stopped',
+  interrupted: 'interrupted',
+} as const;
+function taskStatus(
+  task: TaskJson
+):
+  | (typeof statusLabels)[keyof typeof statusLabels]
+  | 'failed'
+  | 'resultNeedsReview'
+  | 'unknownTaskState' {
+  if (task.persistence === 'uncertain') return 'resultNeedsReview';
+  if (task.outcome === 'failed') return 'failed';
+  const value = task.status ?? '';
+  return Object.hasOwn(statusLabels, value)
+    ? statusLabels[value as keyof typeof statusLabels]
+    : 'unknownTaskState';
+}
 export default function Tasks({
   workspaces,
   navigate,
@@ -102,16 +126,22 @@ function ProjectTasks({
               key={task.id}
               label={
                 <VStack gap={1}>
-                  <Button
-                    label={task.sessionId ?? ''}
-                    variant="ghost"
-                    onClick={() => {
-                      navigate({ workspace: workspace.id ?? '', session: task.sessionId ?? '' });
-                      useWorkspaceStore.getState().set({ tasksOpen: false });
-                    }}
-                  />
+                  <Tooltip content={task.sessionSummary || t('untitled')}>
+                    <Button
+                      label={task.sessionSummary || t('untitled')}
+                      className="max-w-full"
+                      variant="ghost"
+                      onClick={() => {
+                        navigate({ workspace: workspace.id ?? '', session: task.sessionId ?? '' });
+                        useWorkspaceStore.getState().set({ tasksOpen: false });
+                      }}
+                    />
+                  </Tooltip>
                   <Text type="supporting" color="secondary">
-                    {task.status}
+                    {t(taskStatus(task))}
+                  </Text>
+                  <Text type="supporting" color="secondary" maxLines={1} hasTruncateTooltip>
+                    {task.id}
                   </Text>
                   {details === task.id && (
                     <CommandRuns

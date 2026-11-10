@@ -1,44 +1,56 @@
-// Purpose: Join adjacent compatible text deltas without crossing ordered control events.
-// Pattern: Pure batch compaction.
-// Usage: The stream reducer projects each contiguous source update once.
+// Purpose: Coalesce interleaved text deltas once per source while retaining control and generation order.
+// Pattern: Pure batch compaction with ordered barriers.
+// Usage: The stream reducer projects text after transport delivery.
 // Related: webui/src/pages/workspace/model/stream-projection.ts.
 import type { EventJson } from '@/shared/api';
 
-function compatible(left: EventJson, right: EventJson) {
-  return (
-    left.kind === 'assistant_delta' &&
-    right.kind === left.kind &&
-    left.workspaceId === right.workspaceId &&
-    left.sessionId === right.sessionId &&
-    left.taskId === right.taskId &&
-    left.agent === right.agent &&
-    left.generation === right.generation &&
-    !right.reset
-  );
+type Run = { index: number; last: EventJson; text?: string[]; thinking?: string[] };
+
+function sourceKey(event: EventJson) {
+  return `${event.workspaceId}/${event.sessionId}/${event.taskId}/${event.agent ?? ''}`;
 }
+
 export function compactDeltas(events: EventJson[]) {
+  if (events.length < 2) return events;
   const values: EventJson[] = [];
-  for (let i = 0; i < events.length; i++) {
-    const first = events[i];
-    if (!first) continue;
-    let last = first,
-      text: string[] | undefined,
-      thinking: string[] | undefined;
-    while (i + 1 < events.length) {
-      const next = events[i + 1];
-      if (!next || !compatible(last, next)) break;
-      text ??= [first.text ?? ''];
-      thinking ??= [first.thinking ?? ''];
-      text.push(next.text ?? '');
-      thinking.push(next.thinking ?? '');
-      last = next;
-      i++;
+  const active = new Map<string, Run>();
+  const runs: Run[] = [];
+  const finish = () => {
+    for (const run of runs) {
+      if (run.text) {
+        values[run.index] = {
+          ...run.last,
+          text: run.text.join(''),
+          thinking: run.thinking?.join(''),
+        };
+      }
     }
-    values.push(
-      text
-        ? { ...last, reset: first.reset, text: text.join(''), thinking: thinking?.join('') }
-        : first
-    );
+    runs.length = 0;
+    active.clear();
+  };
+  for (const event of events) {
+    // Statistics update the selected conversation in arrival order. A reset
+    // or control event observes exactly the text preceding it.
+    if (event.kind !== 'assistant_delta' || event.reset || event.statistics) {
+      finish();
+      values.push(event);
+      continue;
+    }
+    const key = sourceKey(event);
+    const previous = active.get(key);
+    if (previous && previous.last.generation === event.generation) {
+      previous.text ??= [previous.last.text ?? ''];
+      previous.thinking ??= [previous.last.thinking ?? ''];
+      previous.text.push(event.text ?? '');
+      previous.thinking.push(event.thinking ?? '');
+      previous.last = event;
+      continue;
+    }
+    const run = { index: values.length, last: event };
+    runs.push(run);
+    active.set(key, run);
+    values.push(event);
   }
+  finish();
   return values;
 }

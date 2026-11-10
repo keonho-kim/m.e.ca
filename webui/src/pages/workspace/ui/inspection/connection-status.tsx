@@ -8,10 +8,12 @@ import { HStack } from '@astryxdesign/core/Layout';
 import { Popover } from '@astryxdesign/core/Popover';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
+import { useState } from 'react';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { Metrics } from '@/pages/workspace/ui/inspection/metrics';
 import { useLocale } from '@/shared/i18n';
 export function ConnectionStatus({ target }: { target: Target }) {
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const t = useLocale(),
     status = useWorkspaceStore((s) => s.streamStatus),
     paused = useWorkspaceStore((s) => s.paused);
@@ -28,9 +30,11 @@ export function ConnectionStatus({ target }: { target: Target }) {
     <HStack gap={2} paddingInline={4} paddingBlock={1} justify="end">
       <Popover
         label={t('executionInfo')}
+        isOpen={metricsOpen}
+        onOpenChange={setMetricsOpen}
         placement="above"
         width={360}
-        content={<Metrics target={target} />}
+        content={metricsOpen ? <Metrics target={target} /> : null}
       >
         <IconButton
           label={t('executionInfo')}

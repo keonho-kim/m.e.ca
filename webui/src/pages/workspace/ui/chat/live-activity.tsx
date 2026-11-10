@@ -42,6 +42,7 @@ export const LiveActivity = memo(function LiveActivity({
   const tools = new Map<string, EventJson>();
   for (const event of entries)
     if (event.tool) tools.set(`${event.taskId}/${event.agent}/${event.tool.callId}`, event);
+  if (!entries.length && !source) return null;
   return (
     <VStack gap={3}>
       {!!tools.size && (

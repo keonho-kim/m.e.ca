@@ -57,10 +57,7 @@ export const HistoryRow = memo(function HistoryRow({
         ? t('failed')
         : t('interrupted');
   return (
-    <VStack
-      className={`history-row ${user ? 'user-message' : 'assistant-message'}`}
-      paddingBlockEnd={5}
-    >
+    <>
       {outcome ? (
         <ChatSystemMessage>
           <HStack gap={2}>
@@ -154,6 +151,6 @@ export const HistoryRow = memo(function HistoryRow({
           media={{ src: image, alt: t('attachment'), type: 'image' }}
         />
       )}
-    </VStack>
+    </>
   );
 });

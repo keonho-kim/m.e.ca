@@ -5,6 +5,7 @@
 import { Icon } from '@astryxdesign/core/Icon';
 import { List, ListItem } from '@astryxdesign/core/List';
 import { Selector } from '@astryxdesign/core/Selector';
+import { Text } from '@astryxdesign/core/Text';
 import { useLocale } from '@/shared/i18n';
 
 type Section = 'model' | 'execution' | 'general';
@@ -48,19 +49,19 @@ export function SettingsNavigation({
       {sections.map(({ id, icon }) => (
         <ListItem
           key={id}
-          label={t(id)}
+          label={<Text>{t(id)}</Text>}
           startContent={<Icon icon={icon} />}
           isSelected={tab === id}
           onClick={() => onChange(id)}
         />
       ))}
       <ListItem
-        label={t('openFiles')}
+        label={<Text>{t('openFiles')}</Text>}
         startContent={<Icon icon={'meca:folder-open'} />}
         onClick={() => shortcut('files')}
       />
       <ListItem
-        label={t('openSkills')}
+        label={<Text>{t('openSkills')}</Text>}
         startContent={<Icon icon={'meca:book'} />}
         onClick={() => shortcut('skills')}
       />

@@ -16,8 +16,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { activeTask } from '@/pages/workspace/model/task-state';
 import { HistoryRow } from '@/pages/workspace/ui/chat/history-row';
 import { LiveOutput } from '@/pages/workspace/ui/chat/live-output';
+import type { HistoryItemJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 
@@ -36,19 +38,14 @@ export function Chat({
     latestRequested = useRef(false);
   const hasLive = useWorkspaceStore(
     (s) =>
-      Object.values(s.drafts).some((d) => d.text || d.thinking) ||
-      Object.values(s.tasks).some(
-        (task) =>
-          task.workspace === target.workspace &&
-          task.session === target.session &&
-          task.status === 'running'
-      )
+      Object.values(s.drafts).some((d) => d.text || d.thinking) || !!activeTask(target, s.tasks)
   );
   const state = useQuery(stateOptions(target));
   const [before, setBefore] = useState('0');
   const history = useInfiniteQuery({
     queryKey: ['history', target.workspace, target.session, before],
     initialPageParam: before,
+    staleTime: before === '0' ? undefined : Infinity,
     queryFn: async ({ pageParam, signal }) => {
       const clientRevision = useWorkspaceStore.getState().historyRevision;
       const reply = await call(
@@ -60,14 +57,15 @@ export function Chat({
     },
     getNextPageParam: (last) => (last.before && BigInt(last.before) > 1n ? last.before : undefined),
   });
-  const items = useMemo(
-    () =>
-      history.data?.pages
-        .flatMap((p) => p.items ?? [])
-        .filter((item) => item.event?.kind !== 'run_checkpoint' || !!item.outcome)
-        .sort((a, b) => (BigInt(a.sequence ?? '0') < BigInt(b.sequence ?? '0') ? -1 : 1)) ?? [],
-    [history.data]
-  );
+  const items = useMemo(() => {
+    const result: HistoryItemJson[] = [];
+    const pages = history.data?.pages ?? [];
+    // The server orders records within a page. Only the page order is reversed.
+    for (let index = pages.length - 1; index >= 0; index--)
+      for (const item of pages[index]?.items ?? [])
+        if (item.event?.kind !== 'run_checkpoint' || item.outcome) result.push(item);
+    return result;
+  }, [history.data]);
   const getItemKey = useCallback((index: number) => items[index]?.sequence ?? index, [items]);
   const virtual = useVirtualizer({
     count: items.length,
@@ -80,22 +78,8 @@ export function Chat({
     if (!history.data || before !== '0') return;
     const seen = history.data.pages[0]?.clientRevision;
     if (seen === undefined) return;
-    const state = useWorkspaceStore.getState(),
-      drafts = { ...state.drafts };
-    if (Object.values(drafts).some((d) => d.doneRevision !== undefined && d.doneRevision > seen))
-      void history.refetch();
-    const finished = new Set<string>();
-    let changed = false;
-    for (const [key, draft] of Object.entries(drafts)) {
-      if (draft.doneRevision !== undefined && draft.doneRevision <= seen) {
-        delete drafts[key];
-        finished.add(draft.task);
-        changed = true;
-      }
-    }
-    if (changed)
-      state.set({ drafts, events: state.events.filter((e) => !finished.has(e.taskId ?? '')) });
-  }, [history.data, before, history.refetch]);
+    useWorkspaceStore.getState().acknowledgeHistory(target, seen);
+  }, [history.data, before, target]);
   useLayoutEffect(() => {
     const element = scroller;
     if (!element) return;
@@ -183,6 +167,8 @@ export function Chat({
               return (
                 <VStack
                   key={row.key}
+                  className={`history-row ${item.role === 'user' ? 'user-message' : 'assistant-message'}`}
+                  paddingBlockEnd={5}
                   data-index={row.index}
                   ref={virtual.measureElement}
                   style={{
@@ -199,11 +185,7 @@ export function Chat({
             })}
           </VStack>
           {/* Astryx must observe live content growth as part of the message list. */}
-          {before === '0' && (
-            <VStack paddingBlockStart={5}>
-              <LiveOutput target={target} />
-            </VStack>
-          )}
+          {before === '0' && <LiveOutput target={target} />}
         </ChatMessageList>
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}
       </VStack>

@@ -6,9 +6,11 @@ package session
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 	"github.com/keonho-kim/meca/internal/agent/media"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
@@ -24,8 +26,8 @@ func TestImagePasteDraftQueueAndRestore(t *testing.T) {
 		t.Fatal("image paste changed text or lost pixels")
 	}
 	a.render()
-	if rows := a.composerReferenceLines(80, 4); len(rows) == 0 {
-		t.Fatal("image metadata not visible")
+	if got := screenLine(a.screen, a.inputRegion.y, 80); !strings.Contains(got, "[IMAGE:1]") {
+		t.Fatal("image token not visible inside the input")
 	}
 	a.reserveMessage("")
 	if len(a.compose.images) != 0 || len(a.compose.queued.Messages) != 1 || len(a.compose.queued.Messages[0].Images) != 1 {
@@ -39,7 +41,7 @@ func TestImagePasteDraftQueueAndRestore(t *testing.T) {
 	if len(a.compose.images) != 1 || len(a.compose.queued.Messages) != 0 {
 		t.Fatal("interruption lost attachment")
 	}
-	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace2, "", tcell.ModAlt))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace2, "", 0))
 	if len(a.compose.images) != 0 {
 		t.Fatal("image remove retained bytes")
 	}
@@ -71,7 +73,46 @@ func TestImagePasteHintsFollowModelCapability(t *testing.T) {
 	a.connection.selection.Details = nil
 	image, _ := media.New("draft.png", "image/png", "png", 1, 1, []byte("image"))
 	a.compose.images = []media.Image{image}
-	if keys := a.appendImageShortcuts(nil); len(keys) != 1 || keys[0].Label != "Remove image" {
+	if keys := a.appendImageShortcuts(nil); len(keys) != 1 || keys[0].Key != "Backspace" || keys[0].Label != "Remove image" {
 		t.Fatal("draft attachment cannot be removed before model selection")
+	}
+}
+
+func TestImageTokensStayBlueAndOutOfEditableText(t *testing.T) {
+	a := screenFixture(t)
+	image, _ := media.New("screen.png", "image/png", "png", 2, 1, []byte("pixels"))
+	a.compose.images = []media.Image{image, image}
+	a.compose.editor.Set("한글 caption")
+	a.render()
+	row := a.inputRegion.y
+	if got := screenLine(a.screen, row, 80); !strings.Contains(got, "> [IMAGE:1] [IMAGE:2] 한글 caption") {
+		t.Fatal(got)
+	}
+	_, style, _ := a.screen.Get(2, row)
+	foreground := style.GetForeground()
+	if foreground != color.DodgerBlue {
+		t.Fatal("image token lost its blue style")
+	}
+	if a.compose.editor.String() != "한글 caption" {
+		t.Fatal("image token entered request text")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
+	if len(a.compose.images) != 2 || a.compose.editor.String() != "한글 captio" {
+		t.Fatal("backspace within the caption did not edit the caption")
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyHome, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", 0))
+	if len(a.compose.images) != 1 || a.compose.editor.String() != "한글 captio" {
+		t.Fatal("backspace at the start of the caption did not remove the last image")
+	}
+	a.render()
+	if got := screenLine(a.screen, a.inputRegion.y, 80); strings.Contains(got, "[IMAGE:2]") || !strings.Contains(got, "[IMAGE:1]") {
+		t.Fatal(got)
+	}
+	a.keyEvent(tcell.NewEventKey(tcell.KeyEnd, "", 0))
+	a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace, "", tcell.ModAlt))
+	a.render()
+	if got := screenLine(a.screen, a.inputRegion.y, 80); strings.Contains(got, "IMAGE") {
+		t.Fatal(got)
 	}
 }

@@ -20,7 +20,7 @@ import (
 )
 
 func task(value server.Task) *v1.Task {
-	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence, Outcome: value.Outcome}
+	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence, Outcome: value.Outcome, SessionSummary: value.SessionSummary}
 }
 
 func snapshot(value server.Snapshot) *v1.Snapshot {

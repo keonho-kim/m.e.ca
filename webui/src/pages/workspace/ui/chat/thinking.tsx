@@ -4,7 +4,7 @@
 // Related: webui/src/shared/ui/markdown/index.tsx, webui/src/app/styles/theme.ts.
 import { Collapsible } from '@astryxdesign/core/Collapsible';
 import { Text } from '@astryxdesign/core/Text';
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useState } from 'react';
 import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
 
@@ -18,18 +18,24 @@ export const Thinking = memo(function Thinking({
   children?: ReactNode;
 }) {
   const t = useLocale();
+  const [open, setOpen] = useState(true);
   return (
     <Collapsible
       className="thinking"
-      defaultIsOpen
+      isOpen={open}
+      onOpenChange={setOpen}
       trigger={
         <Text type="supporting" color="secondary">
           {t('thinkingLabel')}
         </Text>
       }
     >
-      <MarkdownText text={text} streaming={streaming} tone="thinking" />
-      {children}
+      {open && (
+        <>
+          <MarkdownText text={text} streaming={streaming} tone="thinking" />
+          {children}
+        </>
+      )}
     </Collapsible>
   );
 });

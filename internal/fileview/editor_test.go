@@ -12,6 +12,36 @@ import (
 	"testing"
 )
 
+func BenchmarkEditorOpen(b *testing.B) {
+	for _, sample := range []struct {
+		name string
+		size int
+	}{{"editable", EditorBytes}, {"oversized", 8 * EditorBytes}} {
+		b.Run(sample.name, func(b *testing.B) {
+			base := b.TempDir()
+			path := filepath.Join(base, "draft.txt")
+			if err := os.WriteFile(path, []byte(strings.Repeat("x", sample.size)), 0600); err != nil {
+				b.Fatal(err)
+			}
+			root, err := os.OpenRoot(base)
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.Cleanup(func() { _ = root.Close() })
+			reader := New(base, func(policy.Scope, string) (Target, error) {
+				return Target{Absolute: path, Relative: "draft.txt", Root: root}, nil
+			}, func(value string) string { return value })
+			b.ReportAllocs()
+			for b.Loop() {
+				result, err := reader.Edit(b.Context(), policy.Settings{Scope: policy.System}, path)
+				if err != nil || result.Editable != (sample.size <= EditorBytes) {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func TestEditorRevisionAndRedaction(t *testing.T) {
 	base := t.TempDir()
 	path := filepath.Join(base, "source.txt")

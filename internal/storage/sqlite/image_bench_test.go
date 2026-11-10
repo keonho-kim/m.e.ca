@@ -7,13 +7,36 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"path/filepath"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/storage/history"
 )
+
+func BenchmarkHistoryImageRead(b *testing.B) {
+	store := imageBenchmarkStore(b)
+	data := make([]byte, 1<<20)
+	_, _ = rand.NewChaCha8([32]byte{42}).Read(data)
+	image, err := media.New("shot.png", "image/png", "png", 1024, 768, data)
+	if err != nil {
+		b.Fatal(err)
+	}
+	message := modelapi.Message{Role: "user", Content: "inspect", Images: []media.Image{image, image}}
+	if err := store.AppendMessage(b.Context(), store.Session().ID, message); err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		result, err := store.HistoryImage(b.Context(), 1, 1, history.ReadBounds{MaxBytes: 4 << 20})
+		if err != nil || len(result.Data) != len(data) {
+			b.Fatal(err)
+		}
+	}
+}
 
 func imageBenchmarkStore(b *testing.B) *Store {
 	b.Helper()

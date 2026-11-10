@@ -153,3 +153,67 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     useWorkspaceStore.setState(original.state);
   }
 });
+
+test('an authoritative snapshot replaces pending deltas and releases its cached live body', async () => {
+  const original = {
+    fetch: globalThis.fetch,
+    EventSource: globalThis.EventSource,
+    state: useWorkspaceStore.getState(),
+  };
+  const target = { workspace: 'w', session: 's' };
+  let opened!: (source: Connection) => void;
+  const ready = new Promise<Connection>((resolve) => {
+    opened = resolve;
+  });
+  class Connection extends EventTarget {
+    static CLOSED = 2;
+    readyState = 1;
+    constructor() {
+      super();
+      opened(this);
+    }
+    close() {
+      this.readyState = 2;
+    }
+  }
+  let dispose: (() => void) | undefined;
+  try {
+    queries.clear();
+    useWorkspaceStore.setState({ ...useWorkspaceStore.getInitialState(), selection: target });
+    globalThis.EventSource = Connection as unknown as typeof EventSource;
+    globalThis.fetch = Object.assign(
+      async () => Response.json({ state: { cursor: '1', workspaceId: 'w' } }),
+      { preconnect: original.fetch.preconnect }
+    );
+    dispose = observe(target);
+    const source = await ready;
+    const emit = (name: string, data: object) =>
+      source.dispatchEvent(new MessageEvent(name, { data: JSON.stringify(data) }));
+    const identity = {
+      workspaceId: 'w',
+      sessionId: 's',
+      taskId: 't',
+      agent: 'main',
+      generation: '1',
+    };
+    emit('event', { event: { ...identity, kind: 'assistant_delta', text: 'first' } });
+    emit('snapshot', {
+      snapshot: {
+        cursor: '2',
+        workspaceId: 'w',
+        drafts: [{ ...identity, text: 'first' }],
+        activity: [],
+      },
+    });
+    emit('event', { event: { ...identity, kind: 'assistant_delta', text: ' second' } });
+    emit('event', { event: { ...identity, kind: 'progress' } });
+    expect(useWorkspaceStore.getState().drafts['t/main']?.text).toBe('first second');
+    expect(queries.getQueryData(['state', 'w', 's'])).toEqual({ cursor: '2', workspaceId: 'w' });
+  } finally {
+    dispose?.();
+    queries.clear();
+    globalThis.fetch = original.fetch;
+    globalThis.EventSource = original.EventSource;
+    useWorkspaceStore.setState(original.state);
+  }
+});

@@ -38,22 +38,22 @@ async function create(page:Page,workspace='alpha'){
 }
 async function send(page:Page,text:string){await input(page).fill(text);await page.getByRole('button',{name:/^(전송|보내기)$/,exact:true}).click();}
 
-test('an empty conversation has one composer with an upward image and skill accordion',async({page})=>{
+test('an empty conversation has one composer with an upward image and skill menu',async({page})=>{
  await create(page);
  await expect(page.getByRole('heading',{name:'어떤 작업을 시작할까요?',exact:true})).toBeVisible();
  await expect(input(page)).toBeEnabled();
  const composer=page.locator('.composer'),plus=composer.getByRole('button',{name:'첨부 및 스킬',exact:true});
  await expect(composer.getByRole('button',{name:/^모델 /})).toHaveCount(0);
  await expect(composer.getByRole('button',{name:/받아쓰기/})).toHaveCount(0);
- await expect(page.getByRole('button',{name:'스킬 목록 보기',exact:true})).toBeHidden();
+ await expect(page.getByRole('menuitem',{name:'스킬 목록 보기',exact:true})).toBeHidden();
  await plus.click();await expect(plus).toHaveAttribute('aria-expanded','true');
- await expect(page.getByRole('button',{name:'스킬 목록 보기',exact:true})).toBeVisible();
+ await expect(page.getByRole('menuitem',{name:'스킬 목록 보기',exact:true})).toBeVisible();
  await expect(page.locator('input[type=file]')).toHaveAttribute('accept','image/*');
  await expect.poll(()=>plus.evaluate(node=>getComputedStyle(node).transform)).toMatch(/matrix\(0, 1, -1, 0/);
  const panel=page.locator(`[id=${JSON.stringify(await plus.getAttribute('aria-controls'))}]`);
  expect((await panel.boundingBox())!.y).toBeLessThan((await plus.boundingBox())!.y);
  await page.keyboard.press('Escape');await expect(plus).toHaveAttribute('aria-expanded','false');
- await expect(page.getByRole('button',{name:'스킬 목록 보기',exact:true})).toBeHidden();
+ await expect(page.getByRole('menuitem',{name:'스킬 목록 보기',exact:true})).toBeHidden();
  await send(page,'Astryx composition contract');
  await expect(page.getByRole('heading',{name:'어떤 작업을 시작할까요?',exact:true})).toBeHidden();
  await expect(page.locator('.history-rows')).toContainText('Astryx composition contract');
@@ -90,7 +90,12 @@ test('light is the default, appearance persists and reduced motion keeps control
 test('multiple projects continue independently and one completed predecessor runs a follow-up once',async({page})=>{
  const first=await create(page);await send(page,'HOLD_FIXTURE alpha first');
  await expect(page.getByRole('button',{name:'작업 중지',exact:true})).toBeVisible();
- await input(page).fill('Captured follow-up once');await page.getByRole('button',{name:'후속 예약',exact:true}).click();
+ await input(page).fill('Captured follow-up once');
+ for(const modifier of ['ctrlKey','metaKey']) {
+  const allowed=await input(page).evaluate((node,key)=>node.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',[key]:true,bubbles:true,cancelable:true})),modifier);
+  expect(allowed).toBe(true);
+ }
+ await input(page).press('Control+Enter');
  await expect(page.getByRole('region',{name:'예약 요청'})).toBeVisible();
  await create(page);await send(page,'HOLD_FIXTURE alpha second');
  await expect(page.getByRole('button',{name:'작업 중지',exact:true})).toBeVisible();
@@ -115,7 +120,6 @@ test('files use complete revision-bound saves and skills insert canonical mentio
  await create(page);await send(page,'!dir');
  await page.getByRole('checkbox',{name:'선택 참조: sample.go',exact:true}).check();
  await page.getByRole('button',{name:'sample.go',exact:true}).click();
- await page.getByRole('button',{name:'파일 편집',exact:true}).click();
  await page.getByRole('textbox',{name:/sample\.go$/}).fill('package sample\n\nfunc Value() int { return 42 }\n');
  await page.getByRole('button',{name:'저장',exact:true}).click();
  await expect(page.getByRole('button',{name:'저장',exact:true})).toBeDisabled();
@@ -129,7 +133,7 @@ test('files use complete revision-bound saves and skills insert canonical mentio
  await page.locator('.workspace-header').getByRole('tab',{name:'스킬',exact:true}).click();
  await page.locator('.skill-entry').filter({hasText:'ui-design'}).click();
  await expect(page.locator('.skill-document')).toContainText('ui-design');
- await page.getByRole('button',{name:'입력에 스킬 넣기',exact:true}).click();
+ await page.locator('.skill-entry').filter({hasText:'ui-design'}).getByRole('button',{name:/입력에 스킬 넣기/}).click();
  await expect(input(page)).toHaveText(/#meca:ui-design/);
  await send(page,'!model');
  const modal=page.getByRole('dialog');
@@ -150,12 +154,15 @@ test('folder registration, authenticated images and task-bound approval are oper
  await page.getByRole('button',{name:'워크스페이스 추가',exact:true}).click();
  let modal=page.getByRole('dialog',{name:'워크스페이스 추가',exact:true});
  await modal.getByRole('textbox',{name:'경로',exact:true}).fill(added);
- await modal.getByRole('button',{name:'열기',exact:true}).click();
- await expect(modal.locator('.folder-current')).toContainText('gamma');
+ await modal.getByRole('textbox',{name:'경로',exact:true}).press('Enter');
+ await expect(modal.getByText(/\/gamma$/).first()).toBeVisible();
  await modal.getByRole('button',{name:'폴더 선택',exact:true}).click();
  await expect(page.locator('.workspace-name').filter({hasText:'gamma'})).toBeVisible();
  await create(page);
- await page.getByRole('button',{name:'첨부 및 스킬',exact:true}).click();await page.locator('input[type=file]').setInputFiles(join(fixture.home,'fixture.png'));
+ const choosing=page.waitForEvent('filechooser');
+ await page.getByRole('button',{name:'첨부 및 스킬',exact:true}).click();
+ await page.getByRole('menuitem',{name:'이미지 첨부',exact:true}).click();
+ await(await choosing).setFiles(join(fixture.home,'fixture.png'));
  await send(page,'Inspect the attached fixture');
  const image=page.getByRole('group',{name:'이미지 첨부',exact:true}).first();
  await expect(image).toBeVisible();
@@ -207,9 +214,9 @@ test('composer accepts image drops and native and explicit clipboard shortcuts w
   return data;
  },bytes);
  await page.locator('.composer').dispatchEvent('drop',{dataTransfer:transfer});
- await expect(page.locator('.composer').getByText('drop.png',{exact:true})).toHaveCount(1);
+ await expect(page.getByRole('group',{name:/^drop\.png/})).toHaveCount(1);
  await input(page).dispatchEvent('drop',{dataTransfer:transfer});
- await expect(page.locator('.composer').getByText('drop.png',{exact:true})).toHaveCount(2);
+ await expect(page.getByRole('group',{name:/^drop\.png/})).toHaveCount(2);
  await transfer.dispose();
  await input(page).focus();
  await input(page).evaluate((editor,bytes)=>{
@@ -217,17 +224,17 @@ test('composer accepts image drops and native and explicit clipboard shortcuts w
   data.items.add(new File([Uint8Array.from(atob(bytes),c=>c.charCodeAt(0))],'paste.png',{type:'image/png'}));
   editor.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
  },bytes);
- await expect(page.locator('.composer').getByText('paste.png',{exact:true})).toHaveCount(1);
+ await expect(page.getByRole('group',{name:/^paste\.png/})).toHaveCount(1);
  await page.evaluate(bytes=>{
   const image=new Blob([Uint8Array.from(atob(bytes),c=>c.charCodeAt(0))],{type:'image/png'});
   Object.defineProperty(navigator,'clipboard',{configurable:true,value:{read:async()=>[{types:['image/png'],getType:async()=>image}]}});
   Object.defineProperty(navigator,'platform',{configurable:true,value:'MacIntel'});
  },bytes);
  await input(page).focus();await page.keyboard.press('Alt+KeyV');
- await expect(page.locator('.composer').getByText('clipboard-1.png',{exact:true})).toHaveCount(1);
+ await expect(page.getByRole('group',{name:/^clipboard-1\.png/})).toHaveCount(1);
  await page.keyboard.press('Control+KeyV');
- await expect(page.locator('.composer').getByText('clipboard-1.png',{exact:true})).toHaveCount(2);
- await expect(page.getByRole('button',{name:'보내기',exact:true})).toBeEnabled();
+ await expect(page.getByRole('group',{name:/^clipboard-1\.png/})).toHaveCount(2);
+ await expect(page.getByRole('button',{name:'전송',exact:true})).toBeEnabled();
 });
 
 test('thinking streams as subdued Markdown and remains readable in saved history',async({page})=>{
@@ -287,7 +294,6 @@ test('long live Markdown follows the newest output after durable history has set
 test('explicit disconnect releases private editor state after the dirty-file confirmation',async({page})=>{
  await create(page);await send(page,'!dir');
  await page.getByRole('button',{name:'sample.go',exact:true}).click();
- await page.getByRole('button',{name:'파일 편집',exact:true}).click();
  await page.getByRole('textbox',{name:/sample\.go$/}).fill('private unsaved fixture');
  await page.getByRole('button',{name:'설정',exact:true}).click();
  const settings=page.getByRole('dialog',{name:'설정',exact:true});

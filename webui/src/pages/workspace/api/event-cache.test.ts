@@ -41,3 +41,20 @@ test('model changes and failed commits refresh their own state and credential av
     queries.clear();
   }
 });
+
+test('new durable records invalidate only the newest history window', () => {
+  try {
+    queries.clear();
+    const latest = ['history', 'alpha', 'one', '0'],
+      archive = ['history', 'alpha', 'one', '32'];
+    queries.setQueryData(latest, {});
+    queries.setQueryData(archive, {});
+    projectEventCache([
+      { kind: 'request_finished', workspaceId: 'alpha', sessionId: 'one', taskId: 'task' },
+    ]);
+    expect(queries.getQueryState(latest)?.isInvalidated).toBe(true);
+    expect(queries.getQueryState(archive)?.isInvalidated).toBe(false);
+  } finally {
+    queries.clear();
+  }
+});

@@ -3,7 +3,6 @@
 // Usage: The workspace keeps this composer available in chat, files and skill views.
 // Related: webui/src/pages/workspace/ui/composer/composer-actions.tsx, webui/src/pages/workspace/model/execution.ts, webui/src/pages/workspace/model/file-references.ts.
 
-import { Center } from '@astryxdesign/core/Center';
 import {
   ChatComposer,
   ChatComposerInput,
@@ -11,9 +10,11 @@ import {
   ChatSendButton,
 } from '@astryxdesign/core/Chat';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
+import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { command, settings } from '@/pages/workspace/model/commands';
@@ -29,34 +30,32 @@ import { checkSubmissionLimits } from '@/pages/workspace/model/submission-limits
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { useComposerImages } from '@/pages/workspace/model/use-composer-images';
 import { useComposerTriggers } from '@/pages/workspace/model/use-composer-triggers';
-import { AttachmentPanel } from '@/pages/workspace/ui/composer/attachment-panel';
+import { AttachmentMenu } from '@/pages/workspace/ui/composer/attachment-menu';
 import {
   ComposerActions,
   ComposerSendActions,
 } from '@/pages/workspace/ui/composer/composer-actions';
+import { ComposerImages } from '@/pages/workspace/ui/composer/composer-images';
 import { Queue } from '@/pages/workspace/ui/composer/queue';
+import { SkillPicker } from '@/pages/workspace/ui/skills/skill-picker';
 import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { failure } from '@/shared/lib/errors';
-
-const fileKeys = new WeakMap<File, string>();
-function fileKey(file: File) {
-  let key = fileKeys.get(file);
-  if (!key) {
-    key = crypto.randomUUID();
-    fileKeys.set(file, key);
-  }
-  return key;
-}
 
 export function Composer({ target }: { target: Target }) {
   const t = useLocale(),
     input = useWorkspaceStore((s) => s.inputs[targetKey(target)]) ?? emptyInput();
   const task = useWorkspaceStore((state) => activeTask(target, state.tasks));
   const editor = useRef<ChatComposerInputHandle>(null);
+  const focusInput = useCallback(() => editor.current?.focus(), []);
+  const sendLabel = useId();
   const triggers = useComposerTriggers(target.workspace);
-  const [expanded, setExpanded] = useState(false);
-  const panelId = useId();
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const previousSkillsOpen = useRef(false);
+  useEffect(() => {
+    if (previousSkillsOpen.current && !skillsOpen) editor.current?.focus();
+    previousSkillsOpen.current = skillsOpen;
+  }, [skillsOpen]);
   const [busy, setBusy] = useState(false);
   const [inputEpoch, setInputEpoch] = useState(0);
   const state = useQuery({ ...stateOptions(target), enabled: !!target.session });
@@ -115,113 +114,103 @@ export function Composer({ target }: { target: Target }) {
   };
   const images = useComposerImages(target, capabilities.data);
   return (
-    <Center width="100%">
-      <VStack width="100%" maxWidth={760} padding={4} gap={3}>
-        <Queue target={target} />
-        <ChatComposer
-          value={input.text}
-          onChange={patch}
-          onSubmit={() => {
-            void submit();
-          }}
-          isDisabled={!target.session}
-          className="composer"
-          onDragOver={images.onDragOver}
-          onDrop={images.onDrop}
-          onPasteCapture={images.onPasteCapture}
-          onFocusCapture={images.onFocusCapture}
-          onBlurCapture={images.onBlurCapture}
-          onKeyDown={(event) => {
-            if (expanded && event.key === 'Escape' && !event.defaultPrevented) {
-              event.preventDefault();
-              setExpanded(false);
-              editor.current?.focus();
-            }
-          }}
-          input={
-            <ChatComposerInput
-              key={inputEpoch}
-              handleRef={editor}
-              label={t('input')}
-              placeholder={t('placeholder')}
-              triggers={triggers}
-              hasHistory={false}
-              onFiles={images.attach}
-              onKeyDown={(event) => {
-                if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  void submit(event.ctrlKey || event.metaKey);
-                }
-              }}
-            />
-          }
-          drawer={
-            <AttachmentPanel
-              id={panelId}
-              expanded={expanded}
-              onExpandedChange={(value) => {
-                setExpanded(value);
-                if (!value) editor.current?.focus();
-              }}
+    <VStack width="100%" maxWidth={760} padding={4} gap={3} className="mx-auto">
+      <Text id={sendLabel} hidden>
+        {task ? t('steer') : t('send')}
+      </Text>
+      <Queue target={target} />
+      <ComposerImages target={target} onEmpty={focusInput} />
+      <ChatComposer
+        value={input.text}
+        onChange={patch}
+        onSubmit={() => {
+          void submit();
+        }}
+        isDisabled={!target.session}
+        className="composer"
+        onDragOver={images.onDragOver}
+        onDrop={images.onDrop}
+        onPasteCapture={images.onPasteCapture}
+        onFocusCapture={images.onFocusCapture}
+        onBlurCapture={images.onBlurCapture}
+        input={
+          // Keep the empty editable stretched when a modal restores background interactivity.
+          <ChatComposerInput
+            className="grid"
+            key={inputEpoch}
+            handleRef={editor}
+            label={t('input')}
+            placeholder={t('placeholder')}
+            triggers={triggers}
+            hasHistory={false}
+            onFiles={images.attach}
+            onKeyDown={(event) => {
+              if (
+                event.defaultPrevented ||
+                event.nativeEvent.isComposing ||
+                event.nativeEvent.keyCode === 229
+              )
+                return;
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void submit(event.ctrlKey || event.metaKey);
+              }
+            }}
+          />
+        }
+        headerActions={
+          input.paths.length ? (
+            <HStack gap={2} wrap="wrap">
+              {input.paths.map((path) => (
+                <Token
+                  key={path}
+                  label={path}
+                  onRemove={() => {
+                    void selectReference(target, path, false).catch(reportError);
+                  }}
+                />
+              ))}
+            </HStack>
+          ) : undefined
+        }
+        footerActions={
+          <HStack gap={1}>
+            <AttachmentMenu
+              disabled={!target.session}
               attach={images.attach}
+              openSkills={() => setSkillsOpen(true)}
               maxFiles={capabilities.data?.inputImages ?? 8}
               maxSize={Number(capabilities.data?.imageBytes ?? 67108864)}
             />
-          }
-          headerActions={
-            input.paths.length || input.files.length ? (
-              <HStack gap={2} wrap="wrap">
-                {input.paths.map((path) => (
-                  <Token
-                    key={path}
-                    label={path}
-                    onRemove={() => {
-                      void selectReference(target, path, false).catch(reportError);
-                    }}
-                  />
-                ))}
-                {input.files.map((file, index) => (
-                  <Token
-                    key={fileKey(file)}
-                    label={file.name}
-                    onRemove={() =>
-                      useWorkspaceStore
-                        .getState()
-                        .patchInput(target, { files: input.files.filter((_, i) => index !== i) })
-                    }
-                  />
-                ))}
-              </HStack>
-            ) : undefined
-          }
-          footerActions={
-            <ComposerActions
-              target={target}
-              teamEnabled={!!state.data?.team}
-              busy={busy}
-              expanded={expanded}
-              onExpandedChange={setExpanded}
-              panelId={panelId}
-            />
-          }
-          sendActions={
-            <HStack gap={1}>
-              <ComposerSendActions target={target} task={task?.id} busy={busy} submit={submit} />
-            </HStack>
-          }
-          sendButton={
+            <ComposerActions target={target} teamEnabled={!!state.data?.team} busy={busy} />
+          </HStack>
+        }
+        sendActions={
+          <HStack gap={1}>
+            <ComposerSendActions target={target} task={task?.id} busy={busy} submit={submit} />
+          </HStack>
+        }
+        sendButton={
+          <Tooltip content={t('sendHint')}>
             <ChatSendButton
-              aria-label={task ? t('steer') : t('send')}
+              aria-labelledby={sendLabel}
               className="send-button"
               isDisabled={busy || !target.session || (!input.text.trim() && !input.files.length)}
               onSend={() => {
                 void submit();
               }}
             />
-          }
+          </Tooltip>
+        }
+      />
+      {skillsOpen && (
+        <SkillPicker
+          target={target}
+          close={() => {
+            setSkillsOpen(false);
+          }}
         />
-      </VStack>
-    </Center>
+      )}
+    </VStack>
   );
 }

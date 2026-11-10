@@ -108,6 +108,7 @@ type Command struct {
 	//	*Command_BrowseFolders
 	//	*Command_LookupRequest
 	//	*Command_SuggestSkills
+	//	*Command_CreateFolder
 	Operation     isCommand_Operation `protobuf_oneof:"operation"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -515,6 +516,15 @@ func (x *Command) GetSuggestSkills() *SkillPrefix {
 	return nil
 }
 
+func (x *Command) GetCreateFolder() *CreateFolder {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_CreateFolder); ok {
+			return x.CreateFolder
+		}
+	}
+	return nil
+}
+
 type isCommand_Operation interface {
 	isCommand_Operation()
 }
@@ -675,6 +685,10 @@ type Command_SuggestSkills struct {
 	SuggestSkills *SkillPrefix `protobuf:"bytes,48,opt,name=suggest_skills,json=suggestSkills,proto3,oneof"`
 }
 
+type Command_CreateFolder struct {
+	CreateFolder *CreateFolder `protobuf:"bytes,49,opt,name=create_folder,json=createFolder,proto3,oneof"`
+}
+
 func (*Command_ListSessions) isCommand_Operation() {}
 
 func (*Command_SelectSession) isCommand_Operation() {}
@@ -752,6 +766,8 @@ func (*Command_BrowseFolders) isCommand_Operation() {}
 func (*Command_LookupRequest) isCommand_Operation() {}
 
 func (*Command_SuggestSkills) isCommand_Operation() {}
+
+func (*Command_CreateFolder) isCommand_Operation() {}
 
 type SelectSession struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1681,7 +1697,7 @@ var File_meca_v1_control_proto protoreflect.FileDescriptor
 const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
 	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"\a\n" +
-	"\x05Empty\"\x9c\x12\n" +
+	"\x05Empty\"\xda\x12\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12B\n" +
@@ -1731,7 +1747,8 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\x0ediagnose_model\x18- \x01(\v2\x16.meca.v1.DiagnoseModelH\x00R\rdiagnoseModel\x12B\n" +
 	"\x0ebrowse_folders\x18. \x01(\v2\x19.meca.v1.WorkspaceRequestH\x00R\rbrowseFolders\x12?\n" +
 	"\x0elookup_request\x18/ \x01(\v2\x16.meca.v1.RequestLookupH\x00R\rlookupRequest\x12=\n" +
-	"\x0esuggest_skills\x180 \x01(\v2\x14.meca.v1.SkillPrefixH\x00R\rsuggestSkillsB\v\n" +
+	"\x0esuggest_skills\x180 \x01(\v2\x14.meca.v1.SkillPrefixH\x00R\rsuggestSkills\x12<\n" +
+	"\rcreate_folder\x181 \x01(\v2\x15.meca.v1.CreateFolderH\x00R\fcreateFolderB\v\n" +
 	"\toperation\"F\n" +
 	"\rSelectSession\x12\x1d\n" +
 	"\n" +
@@ -1860,6 +1877,7 @@ var file_meca_v1_control_proto_goTypes = []any{
 	(*DiagnoseModel)(nil),      // 30: meca.v1.DiagnoseModel
 	(*RequestLookup)(nil),      // 31: meca.v1.RequestLookup
 	(*SkillPrefix)(nil),        // 32: meca.v1.SkillPrefix
+	(*CreateFolder)(nil),       // 33: meca.v1.CreateFolder
 }
 var file_meca_v1_control_proto_depIdxs = []int32{
 	3,  // 0: meca.v1.Command.list_sessions:type_name -> meca.v1.SessionListRequest
@@ -1901,15 +1919,16 @@ var file_meca_v1_control_proto_depIdxs = []int32{
 	27, // 36: meca.v1.Command.browse_folders:type_name -> meca.v1.WorkspaceRequest
 	31, // 37: meca.v1.Command.lookup_request:type_name -> meca.v1.RequestLookup
 	32, // 38: meca.v1.Command.suggest_skills:type_name -> meca.v1.SkillPrefix
-	5,  // 39: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
-	1,  // 40: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
-	13, // 41: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
-	0,  // 42: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
-	43, // [43:43] is the sub-list for method output_type
-	43, // [43:43] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	33, // 39: meca.v1.Command.create_folder:type_name -> meca.v1.CreateFolder
+	5,  // 40: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
+	1,  // 41: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
+	13, // 42: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
+	0,  // 43: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_control_proto_init() }
@@ -1960,6 +1979,7 @@ func file_meca_v1_control_proto_init() {
 		(*Command_BrowseFolders)(nil),
 		(*Command_LookupRequest)(nil),
 		(*Command_SuggestSkills)(nil),
+		(*Command_CreateFolder)(nil),
 	}
 	file_meca_v1_control_proto_msgTypes[6].OneofWrappers = []any{
 		(*DetailRequest_Tool)(nil),

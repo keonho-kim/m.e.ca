@@ -7,7 +7,10 @@ import { CodeEditor } from '@astryxdesign/lab';
 import { type Ref, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { codeLanguage } from '@/shared/lib/code-language';
 import '@astryxdesign/lab/lab.css';
-export type EditorHandle = { capture: () => { text: string; saved: () => void } };
+export type EditorHandle = {
+  capture: () => { text: string; saved: () => void };
+  focus: () => void;
+};
 export default function Editor({
   initialText,
   path,
@@ -24,6 +27,7 @@ export default function Editor({
   const [text, setText] = useState(initialText),
     current = useRef(initialText),
     saved = useRef(initialText);
+  const root = useRef<HTMLDivElement>(null);
   const notify = useRef(onDirty),
     ready = useRef(onReady);
   notify.current = onDirty;
@@ -34,6 +38,18 @@ export default function Editor({
   useImperativeHandle(
     ref,
     () => ({
+      focus: () => {
+        const editable = root.current?.querySelector<HTMLElement>('[role="textbox"]');
+        if (!editable) return;
+        editable.focus();
+        const selection = editable.ownerDocument.getSelection();
+        if (!selection || editable.contains(selection.anchorNode)) return;
+        const range = editable.ownerDocument.createRange();
+        range.selectNodeContents(editable);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      },
       capture: () => {
         const captured = current.current;
         return {
@@ -49,6 +65,7 @@ export default function Editor({
   );
   return (
     <CodeEditor
+      ref={root}
       label={path}
       className="text-editor"
       value={text}

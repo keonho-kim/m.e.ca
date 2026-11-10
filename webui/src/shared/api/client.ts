@@ -75,17 +75,29 @@ export async function upload(
     signal,
   });
   if (response.status === 401) throw failure('unauthorized');
-  const body = await response.json();
-  if (!response.ok)
-    throw new ApiError(body.error?.code ?? 'upload', body.error?.message ?? body.message ?? '');
-  return body;
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw failure('invalid_response');
+  }
+  if (!body || typeof body !== 'object') throw failure('invalid_response');
+  if (!response.ok) {
+    const error = (body as ReplyJson).error;
+    if (error?.code && error.message) throw new ApiError(error.code, error.message, true);
+    throw failure('network');
+  }
+  if (!('id' in body) || typeof body.id !== 'string' || !body.id) throw failure('invalid_response');
+  return { id: body.id };
 }
 export async function releaseUpload(workspace: string, id: string) {
-  await fetch('/v1/attachments/' + encodeURIComponent(id), {
+  const response = await fetch('/v1/attachments/' + encodeURIComponent(id), {
     method: 'DELETE',
     headers: { 'X-Meca-UI': '1', 'X-Meca-Workspace': workspace },
     credentials: 'same-origin',
+    signal: AbortSignal.timeout(5000),
   });
+  await response.body?.cancel();
 }
 export async function loadThumbnail(
   workspace: string,

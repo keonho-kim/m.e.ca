@@ -1,6 +1,6 @@
-// Purpose: Own incremental text budgets and atomic draft/follow-up mutations.
-// Pattern: Zustand workspace slice with identity-bound budget reconciliation.
-// Usage: The workspace store composes this state; external resets invalidate cached totals.
+// Purpose: Admit atomic drafts and follow-ups without retaining discarded input records.
+// Pattern: Zustand mutations with weak identity-bound byte accounting.
+// Usage: Workspace owns the live records; cached totals release them after reset or deletion.
 // Related: webui/src/pages/workspace/model/input-usage.ts, webui/src/pages/workspace/model/types.ts.
 import type { StateCreator } from 'zustand';
 import { reportError } from '@/entities/server-session';
@@ -29,26 +29,28 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
   set,
   get
 ) => {
-  let inputs: WorkspaceState['inputs'] | undefined;
-  let queues: WorkspaceState['queues'] | undefined;
-  let inputTotal = 0,
-    queueTotal = 0,
-    queueCount = 0,
-    revision = 0;
-  const reconcile = (state: WorkspaceState) => {
-    if (inputs !== state.inputs) {
-      inputs = state.inputs;
-      inputTotal = Object.values(inputs).reduce((n, value) => n + inputBytes(value), 0);
+  const inputTotals = new WeakMap<WorkspaceState['inputs'], number>();
+  const queueTotals = new WeakMap<WorkspaceState['queues'], { bytes: number; count: number }>();
+  let revision = 0;
+  const inputTotal = (inputs: WorkspaceState['inputs']) => {
+    let bytes = inputTotals.get(inputs);
+    if (bytes === undefined) {
+      bytes = Object.values(inputs).reduce((total, input) => total + inputBytes(input), 0);
+      inputTotals.set(inputs, bytes);
     }
-    if (queues !== state.queues) {
-      queues = state.queues;
-      queueTotal = 0;
-      queueCount = 0;
-      for (const list of Object.values(queues)) {
-        queueCount += list.length;
-        for (const value of list) queueTotal += inputBytes(value);
+    return bytes;
+  };
+  const queueTotal = (queues: WorkspaceState['queues']) => {
+    let usage = queueTotals.get(queues);
+    if (!usage) {
+      usage = { bytes: 0, count: 0 };
+      for (const queue of Object.values(queues)) {
+        usage.count += queue.length;
+        for (const input of queue) usage.bytes += inputBytes(input);
       }
+      queueTotals.set(queues, usage);
     }
+    return usage;
   };
   const reject = () => {
     reportError(failure('queue_limit'));
@@ -68,14 +70,13 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
         (patch.files === undefined || sameItems(patch.files, old.files))
       )
         return true;
-      reconcile(state);
       revision = Math.max(revision, old.revision) + 1;
       const next = { ...old, ...patch, revision };
       const bytes =
         patch.text === undefined || patch.text === old.text
           ? inputBytes(old)
           : utf8Bytes(next.text);
-      const total = inputTotal - inputBytes(old) + bytes;
+      const total = inputTotal(state.inputs) - inputBytes(old) + bytes;
       if (total > textLimit) return reject();
       const nextInputs = { ...state.inputs };
       if (!next.text && !next.paths.length && !next.files.length) delete nextInputs[key];
@@ -86,17 +87,16 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
       )
         return reject();
       rememberInputBytes(next, bytes);
-      inputs = nextInputs;
-      inputTotal = total;
+      inputTotals.set(nextInputs, total);
       set({ inputs: nextInputs });
       return true;
     },
     enqueue: (target, input) => {
       const key = targetKey(target),
-        state = get();
-      reconcile(state);
-      const bytes = inputBytes(input);
-      if (queueCount >= 256 || queueTotal + bytes > textLimit) return reject();
+        state = get(),
+        usage = queueTotal(state.queues),
+        bytes = inputBytes(input);
+      if (usage.count >= 256 || usage.bytes + bytes > textLimit) return reject();
       const item = {
         ...input,
         paths: [...input.paths],
@@ -115,11 +115,8 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
         else delete nextInputs[key];
       }
       if (attachmentBytes({ inputs: nextInputs, queues: nextQueues }) > imageLimit) return reject();
-      inputs = nextInputs;
-      inputTotal -= old ? inputBytes(old) : 0;
-      queues = nextQueues;
-      queueTotal += bytes;
-      queueCount++;
+      inputTotals.set(nextInputs, inputTotal(state.inputs) - (old ? inputBytes(old) : 0));
+      queueTotals.set(nextQueues, { bytes: usage.bytes + bytes, count: usage.count + 1 });
       set({ inputs: nextInputs, queues: nextQueues });
       return true;
     },
@@ -129,14 +126,15 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
         list = state.queues[key];
       const item = list?.find((value) => value.id === id);
       if (!list || !item) return;
-      reconcile(state);
+      const usage = queueTotal(state.queues);
       const next = list.filter((value) => value.id !== id),
         nextQueues = { ...state.queues };
       if (next.length) nextQueues[key] = next;
       else delete nextQueues[key];
-      queues = nextQueues;
-      queueTotal -= inputBytes(item);
-      queueCount--;
+      queueTotals.set(nextQueues, {
+        bytes: usage.bytes - inputBytes(item),
+        count: usage.count - 1,
+      });
       set({ queues: nextQueues });
     },
     updateQueue: (target, id, text) => {
@@ -144,11 +142,11 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
         key = targetKey(target),
         list = state.queues[key];
       const old = list?.find((value) => value.id === id);
-      if (!old || !list || !text.trim()) return false;
+      if (!old || !list || (!text.trim() && !old.files.length)) return false;
       if (text === old.text) return true;
-      reconcile(state);
-      const bytes = utf8Bytes(text),
-        total = queueTotal - inputBytes(old) + bytes;
+      const usage = queueTotal(state.queues),
+        bytes = utf8Bytes(text),
+        total = usage.bytes - inputBytes(old) + bytes;
       if (total > textLimit) return reject();
       const item = { ...old, text };
       rememberInputBytes(item, bytes);
@@ -156,8 +154,7 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
         ...state.queues,
         [key]: list.map((value) => (value === old ? item : value)),
       };
-      queues = nextQueues;
-      queueTotal = total;
+      queueTotals.set(nextQueues, { bytes: total, count: usage.count });
       set({ queues: nextQueues });
       return true;
     },

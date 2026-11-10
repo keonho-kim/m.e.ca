@@ -4,10 +4,12 @@
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/skills/skills.tsx.
 
 import { Button } from '@astryxdesign/core/Button';
+import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { Link } from '@astryxdesign/core/Link';
 import { Markdown } from '@astryxdesign/core/Markdown';
 import { Popover } from '@astryxdesign/core/Popover';
-import { createContext, memo, useContext, useMemo, useRef } from 'react';
+import { Text } from '@astryxdesign/core/Text';
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale } from '@/shared/i18n';
 import { CodePreview } from '@/shared/ui/code-preview';
 import { hasMarkdownWindow, markdownBudget } from '@/shared/ui/markdown/render-budget';
@@ -46,6 +48,39 @@ const components = {
     </Link>
   ),
 };
+
+function useRevealDuringBurst(text: string, enabled: boolean) {
+  const [burst, setBurst] = useState({ text, settled: !enabled });
+  if (burst.text !== text) setBurst({ text, settled: !enabled });
+  const active = enabled && !!text && (burst.text !== text || !burst.settled);
+  useEffect(() => {
+    if (!active) return;
+    // Astryx's reveal requests frames even after its text catches up. A quiet
+    // burst settles to the received text and releases the animation clock.
+    const timer = setTimeout(() => {
+      setBurst((value) => (value.text === text ? { text, settled: true } : value));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [active, text]);
+  return active;
+}
+
+const CompleteText = memo(function CompleteText({ text }: { text: string }) {
+  const t = useLocale();
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover
+      label={t('textView')}
+      placement="above"
+      width={720}
+      isOpen={open}
+      onOpenChange={setOpen}
+      content={open ? <CodePreview code={text} /> : null}
+    >
+      <Button label={t('textView')} size="sm" variant="ghost" />
+    </Popover>
+  );
+});
 export const MarkdownText = memo(function MarkdownText({
   text,
   streaming = false,
@@ -57,8 +92,9 @@ export const MarkdownText = memo(function MarkdownText({
   tone?: 'thinking';
   onReference?: (href: string) => void;
 }) {
-  const t = useLocale();
   const tail = useRef(streaming);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const reveal = useRevealDuringBurst(text, streaming && tail.current && !reducedMotion);
   const plugins = useMemo(() => [markdownBudget(tail.current)], []);
   const renderers = useMemo(
     () => ({
@@ -68,12 +104,12 @@ export const MarkdownText = memo(function MarkdownText({
           return (
             <Button
               type="button"
-              className="reference-link"
+              className="reference-link max-w-full h-auto"
               onClick={() => onReference(href)}
               label={String(children)}
               variant="ghost"
             >
-              {children}
+              <Text className="whitespace-normal break-words text-left">{children}</Text>
             </Button>
           );
         return (
@@ -89,7 +125,8 @@ export const MarkdownText = memo(function MarkdownText({
     <>
       <FollowCode value={tail.current}>
         <Markdown
-          isStreaming={streaming}
+          className="min-w-0 max-w-full overflow-x-auto"
+          isStreaming={streaming && (reveal || reducedMotion)}
           components={renderers}
           plugins={plugins}
           contentWidth="100%"
@@ -98,16 +135,7 @@ export const MarkdownText = memo(function MarkdownText({
           {text}
         </Markdown>
       </FollowCode>
-      {hasMarkdownWindow(text) && (
-        <Popover
-          label={t('textView')}
-          placement="above"
-          width={720}
-          content={<CodePreview code={text} />}
-        >
-          <Button label={t('textView')} size="sm" variant="ghost" />
-        </Popover>
-      )}
+      {hasMarkdownWindow(text) && <CompleteText text={text} />}
     </>
   );
 });

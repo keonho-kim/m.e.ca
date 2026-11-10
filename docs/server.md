@@ -80,6 +80,7 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `listWorkspaces` | `{}` → `workspaces:{items,defaultId}`. id·path·name·activeTasks·pendingApprovals·error |
 | `addWorkspace` | `path` → 작업공간 등록·전역 설정 저장 후 목록. 실제 경로 기준 중복 제거 |
 | `browseFolders` | `path`, `offset` → 서버 폴더 선택용 directory. 한 번에 200개 항목을 읽고 폴더만 반환 |
+| `createFolder` | 부모 `path`, 단일 `name` → 생성한 폴더의 directory.path·parent. 보호 경로 검사와 공통 파일 효과 잠금 적용 |
 | `deleteSession` | `sessionId` → 대화와 소유 팀 내부 파일 삭제. 활성 작업·다른 소유자 잠금 거절 |
 | `commandCatalog` | `{}` → 브라우저에서 지원하는 여섯 명령·설명 |
 | `parseInput` | `text` → 공통 파서의 action·argument. !new·!quit·:q 거절 |
@@ -111,7 +112,7 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `draft` | `taskId`, `agent`, `generation`, `offset`, `limit`, 선택적 `thinking`, 후속 페이지의 `revision` → 실행 중 원문 페이지. generation 변경은 conflict |
 | `commands` | `taskId` → 현재 실행 중인 단일/팀 명령의 ID·agent·상태·경과/마지막 출력 시간. 작업을 실행하지 않는 메타데이터 조회 |
 | `resources` | `{}` → 현재 서버 프로세스 RSS 또는 읽기 오류 코드 |
-| `listTasks` | 선택적 `sessionId`, `cursor`, `limit` → 영속 작업 목록. 기본 32·최대 100건, `nextCursor` |
+| `listTasks` | 선택적 `sessionId`, `cursor`, `limit` → 영속 작업 목록과 대화 제목 `sessionSummary`. 기본 32·최대 100건, `nextCursor`. 제목은 해당 페이지의 세션 메타데이터만 조회하며 본문은 적재하지 않음 |
 | `taskStatus` | `taskId` → 상태 |
 | `approve` | `taskId`, `approvalId`, `allow` → 처리 결과 |
 | `steer` | `taskId`, `text`, 선택적 `paths` → 다음 안전한 판단 경계에 전달 |

@@ -100,6 +100,9 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	if t.ui != nil && (r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/")) && (r.Method == "GET" || r.Method == "HEAD") {
 		return true
 	}
+	if t.ui != nil && r.Method == http.MethodGet && r.URL.Path == "/v1/ui/session" {
+		return true
+	}
 	// Browser WebSocket APIs cannot set Authorization. The first bounded frame
 	// authenticates that transport before any command or event is accepted.
 	if !t.socketHandshake(r) {

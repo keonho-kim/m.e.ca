@@ -58,6 +58,19 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 			}
 		}
 		reply.Result = &v1.Reply_Directory{Directory: page}
+	case *v1.Command_CreateFolder:
+		if a.Workspaces == nil {
+			return nil, fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)
+		}
+		parent, err := a.Workspaces.ResolvePath(op.CreateFolder.GetPath())
+		if err != nil {
+			return nil, err
+		}
+		path, err := a.Service.CreateFolder(ctx, parent, op.CreateFolder.GetName())
+		if err != nil {
+			return nil, err
+		}
+		reply.Result = &v1.Reply_Directory{Directory: &v1.DirectoryPage{Path: path, Parent: filepath.Dir(path)}}
 	case *v1.Command_DeleteSession:
 		if err := a.Service.DeleteSession(ctx, op.DeleteSession.GetSessionId()); err != nil {
 			return nil, err

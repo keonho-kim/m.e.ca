@@ -88,7 +88,7 @@ export function projectEventCache(events: EventJson[]) {
       workspaces = true;
     }
     if (started || finished || event.kind === 'draft_reset')
-      histories.set(`${workspace}/${session}`, ['history', workspace, session]);
+      histories.set(`${workspace}/${session}`, ['history', workspace, session, '0']);
     if (event.kind === 'settings_changed') settings = true;
     if (event.kind === 'model_changed' || event.kind === 'model_unavailable') {
       invalidate(stateOptions(target).queryKey);

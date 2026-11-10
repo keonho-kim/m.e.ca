@@ -1,7 +1,7 @@
-// Purpose: Compose the requested attachment expansion, team and follow-up controls through Astryx.
+// Purpose: Present team mode, follow-up reservation and active-task controls through Astryx.
 // Pattern: Application action composition over controlled native operations.
-// Usage: Composer owns expansion and supplies ChatComposer footer/send slots.
-// Related: webui/src/pages/workspace/ui/composer/composer.tsx, webui/src/pages/workspace/ui/composer/attachment-panel.tsx.
+// Usage: Composer supplies ChatComposer footer and send-action slots.
+// Related: webui/src/pages/workspace/ui/composer/composer.tsx, webui/src/pages/workspace/model/execution.ts.
 
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
@@ -18,39 +18,26 @@ export function ComposerActions({
   target,
   teamEnabled,
   busy,
-  expanded,
-  onExpandedChange,
-  panelId,
 }: {
   target: Target;
   teamEnabled: boolean;
   busy: boolean;
-  expanded: boolean;
-  onExpandedChange: (expanded: boolean) => void;
-  panelId: string;
 }) {
   const t = useLocale();
   return (
     <HStack gap={1}>
-      <IconButton
-        label={t('composerMenu')}
-        variant="attachment"
-        icon={<Icon icon={'meca:add'} />}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        isDisabled={!target.session}
-        onClick={() => onExpandedChange(!expanded)}
-      />
-      <ToggleButton
-        label={t('team')}
-        isIconOnly
-        icon={<Icon icon={'meca:users'} />}
-        isPressed={teamEnabled}
-        isDisabled={busy || !target.session}
-        onPressedChange={(value) => {
-          void team(target, value).catch(reportError);
-        }}
-      />
+      <Tooltip content={t('team')}>
+        <ToggleButton
+          label={t('team')}
+          isIconOnly
+          icon={<Icon icon={'meca:users'} />}
+          isPressed={teamEnabled}
+          isDisabled={busy || !target.session}
+          onPressedChange={(value) => {
+            void team(target, value).catch(reportError);
+          }}
+        />
+      </Tooltip>
     </HStack>
   );
 }
@@ -66,6 +53,7 @@ export function ComposerSendActions({
   submit: (reserve?: boolean) => Promise<void>;
 }) {
   const t = useLocale();
+  if (!task) return null;
   return (
     <HStack gap={1}>
       <Tooltip content={t('queue')}>

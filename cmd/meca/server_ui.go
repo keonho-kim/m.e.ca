@@ -30,9 +30,9 @@ func announceUI(ctx context.Context, address string) {
 	if runtime.GOOS == "darwin" {
 		name = "open"
 	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	launch, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if err := exec.CommandContext(ctx, name, address+"/ui/").Run(); err != nil {
-		diagnostics.Log(ctx, diag.UIOperationFailed, "component", "browser", "error_code", diag.OperationFailed)
+	if err := exec.CommandContext(launch, name, address+"/ui/").Run(); err != nil && ctx.Err() == nil {
+		diagnostics.Log(ctx, diag.BrowserLaunchFailed, "component", "browser", "operation", "open")
 	}
 }

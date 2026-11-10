@@ -1,4 +1,4 @@
-// Purpose: Keep syntax-preview DOM bounded while exposing every source character in pages.
+// Purpose: Wrap syntax previews and bound their DOM while exposing every source character in pages.
 // Pattern: Astryx code viewer with exact UTF-16 page boundaries.
 // Usage: Markdown fences, file previews and original-text dialogs share this view.
 // Related: webui/src/shared/ui/markdown/index.tsx, webui/src/pages/workspace/ui/files/file-document.tsx.
@@ -14,7 +14,7 @@ export const CodePreview = memo(function CodePreview({
   language,
   follow = false,
   className,
-  isWrapped,
+  isWrapped = true,
 }: {
   code: string;
   language?: string;
@@ -48,7 +48,7 @@ export const CodePreview = memo(function CodePreview({
   const last = boundaries.length - 2,
     index = Math.min(page, last);
   return (
-    <VStack gap={2}>
+    <VStack gap={2} className="min-w-0 max-w-full">
       <CodeBlock
         code={code.slice(boundaries[index], boundaries[index + 1])}
         language={language}

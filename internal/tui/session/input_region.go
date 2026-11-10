@@ -37,9 +37,10 @@ func (a *app) captureInputSources() {
 		return
 	}
 	for i, row := range r.window.Rows {
-		if row.Start < 2 {
-			row.Start = min(2, row.End)
-			row.Prefix = "> "
+		if row.Start < r.window.PrefixBytes {
+			end := min(r.window.PrefixBytes, row.End)
+			row.Prefix += r.window.Source[row.Start:end]
+			row.Start = end
 		}
 		row.Prefix = strings.Repeat(" ", r.x) + row.Prefix
 		a.selectionSources[r.y+i] = textlayout.Fragment{Source: r.window.Source, Row: row}

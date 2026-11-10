@@ -82,7 +82,7 @@ func RowsFrom(source string, width, start int, prefix string) iter.Seq[Row] {
 				if part == "\t" {
 					part, size = "    ", 4
 				}
-				if cells+size > width && line.Len() > 0 {
+				if cells+size > width && row.End > row.Start {
 					row.Text, row.End, row.Soft = line.String(), base+start, true
 					if !yield(row) {
 						return

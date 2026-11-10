@@ -19,6 +19,7 @@ export function LiveOutput({ target }: { target: Target }) {
   const [agent, setAgent] = useState('');
   const [original, setOriginal] = useState<DraftRequestJson | null>(null);
   const selected = useWorkspaceStore((s) => s.selection);
+  const streaming = useWorkspaceStore((s) => !s.paused && s.streamStatus === 'connected');
   const sources = useMemo(
     () =>
       selected.workspace === target.workspace && selected.session === target.session
@@ -30,8 +31,9 @@ export function LiveOutput({ target }: { target: Target }) {
     () => [...new Set(sources.map((v) => v.agent).filter(Boolean))],
     [sources]
   );
+  if (!sources.length && !events.length && !original) return null;
   return (
-    <VStack className="live-output" gap={5}>
+    <VStack className="live-output" gap={5} paddingBlockStart={5}>
       {agents.length > 1 && (
         <Selector
           label={t('agent')}
@@ -49,6 +51,7 @@ export function LiveOutput({ target }: { target: Target }) {
           <LiveSource
             key={`${d.task}/${d.agent}/${d.generation}`}
             draft={d}
+            streaming={streaming && d.doneRevision === undefined}
             onOriginal={setOriginal}
           />
         ))}
