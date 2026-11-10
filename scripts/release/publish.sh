@@ -43,12 +43,13 @@ verify_release_artifacts "$release_tag"
 
 release_error=$release_stage/api-error
 release_exists=true
-if release_immutable=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$release_tag" --jq '.immutable' 2>"$release_error"); then
+# Release view resolves drafts left by an interrupted publication.
+if release_immutable=$(gh release view "$release_tag" --json isImmutable --jq '.isImmutable' --repo "$GITHUB_REPOSITORY" 2>"$release_error"); then
     if [[ "$release_immutable" != false ]]; then
         printf 'Daily release updates require a mutable GitHub release.\n' >&2
         exit 1
     fi
-elif grep -Fq '(HTTP 404)' "$release_error"; then
+elif grep -Fxq 'release not found' "$release_error"; then
     release_exists=false
 else
     cat "$release_error" >&2
@@ -62,7 +63,7 @@ if [[ "$release_exists" == false ]]; then
 fi
 gh release upload "$release_tag" "${release_assets[@]}" --clobber
 # Remove only the former names for this same tag, after all replacement files exist.
-release_names=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$release_tag" --jq '.assets[].name')
+release_names=$(gh release view "$release_tag" --json assets --jq '.assets[].name' --repo "$GITHUB_REPOSITORY")
 for release_platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do
     for release_obsolete in "" "minimum_"; do
         release_legacy="meca_${release_tag#v}_${release_obsolete}${release_platform}.tar.gz"

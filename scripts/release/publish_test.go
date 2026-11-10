@@ -1,4 +1,4 @@
-// Purpose: Verify publication rejects stale commits, unsafe build metadata, altered artifacts and tag conflicts.
+// Purpose: Verify release publication, draft recovery and preflight failures.
 // Pattern: Offline publication adapter tests.
 // Usage: go test ./scripts/release -run TestPublish.
 // Related: scripts/release/publish.sh, scripts/release/prepare_test.go, .github/workflows/release.yml.
@@ -18,7 +18,7 @@ import (
 )
 
 func TestPublishRelease(t *testing.T) {
-	for _, mode := range []string{"existing", "new", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "tui UI notice", "missing build tag", "lookalike build tag", "missing variant tag", "wrong variant tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure", "cleanup failure"} {
+	for _, mode := range []string{"existing", "new", "resume draft", "extra build tags", "stale", "changed tag", "bad checksum", "missing notice", "missing UI notice", "tui UI notice", "missing build tag", "lookalike build tag", "missing variant tag", "wrong variant tag", "missing build metadata", "unreadable build metadata", "immutable", "auth failure", "lease failure", "upload failure", "cleanup failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			copyReleaseScript(t, root, "publish.sh")
@@ -100,7 +100,7 @@ func TestPublishRelease(t *testing.T) {
 			}
 			calls, _ := os.ReadFile(filepath.Join(root, "calls"))
 			status, _ := os.ReadFile(filepath.Join(root, "output"))
-			success := mode == "existing" || mode == "new" || mode == "extra build tags"
+			success := mode == "existing" || mode == "new" || mode == "resume draft" || mode == "extra build tags"
 			if success {
 				metadataCalls, readErr := os.ReadFile(filepath.Join(root, "metadata-calls"))
 				if readErr != nil || strings.Count(string(metadataCalls), "\n") != 8 {
@@ -109,14 +109,23 @@ func TestPublishRelease(t *testing.T) {
 				if err != nil || string(status) != "published=true\n" || !strings.Contains(string(calls), "push --force-with-lease=refs/tags/v0.0.20261026:"+previous) {
 					t.Fatalf("publish: %v\n%s\n%s", err, output, calls)
 				}
-				if mode == "new" && !(strings.Index(string(calls), "release create") < strings.Index(string(calls), "release upload")) {
-					t.Fatal("new release was not staged before uploading")
+				create := strings.Index(string(calls), "release create")
+				if mode == "new" {
+					if create < 0 || create >= strings.Index(string(calls), "release upload") {
+						t.Fatal("new release was not staged before uploading")
+					}
+				} else if create >= 0 {
+					t.Fatal("existing release was not reused", string(calls))
 				}
 				if !strings.Contains(string(calls), "release edit") {
 					t.Fatal("verified release was not published")
 				}
 				deleted := strings.Count(string(calls), "release delete-asset")
-				if mode == "new" && deleted != 0 || mode != "new" && deleted != 8 {
+				wantDeleted := 8
+				if mode == "new" || mode == "resume draft" {
+					wantDeleted = 0
+				}
+				if deleted != wantDeleted {
 					t.Fatal("incorrect obsolete archive cleanup", string(calls))
 				}
 				if deleted > 0 && strings.Index(string(calls), "release delete-asset") < strings.Index(string(calls), "release upload") {
@@ -195,9 +204,15 @@ esac
 `
 
 const fakeReleaseGitHub = `#!/bin/sh
-if [ "$1" = api ]; then
-  if [ "$4" = '.assets[].name' ]; then
-    if [ "$RELEASE_TEST_MODE" != new ]; then
+if [ "$1" = api ] && { [ "$RELEASE_TEST_MODE" = new ] || [ "$RELEASE_TEST_MODE" = 'resume draft' ]; }; then
+  echo 'gh: Not Found (HTTP 404)' >&2
+  exit 1
+fi
+if [ "$1" = api ] || [ "$1 $2" = 'release view' ]; then
+  selection=$7
+  if [ "$1" = api ]; then selection=$4; fi
+  if [ "$selection" = '.assets[].name' ]; then
+    if [ "$RELEASE_TEST_MODE" != new ] && [ "$RELEASE_TEST_MODE" != 'resume draft' ]; then
       for platform in linux_amd64 linux_arm64 macos_amd64 macos_arm64; do
         printf 'meca_0.0.20261026_%s.tar.gz\n' "$platform"
         printf 'meca_0.0.20261026_minimum_%s.tar.gz\n' "$platform"
@@ -209,7 +224,7 @@ if [ "$1" = api ]; then
     exit 0
   fi
   case "$RELEASE_TEST_MODE" in
-    new) echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
+    new) echo 'release not found' >&2; exit 1 ;;
     'auth failure') echo 'gh: Unauthorized (HTTP 401)' >&2; exit 1 ;;
     immutable) echo true ;;
     *) echo false ;;
