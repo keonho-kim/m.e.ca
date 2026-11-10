@@ -1,20 +1,30 @@
 #!/bin/sh
-# Purpose: Build the embedded UI and install MECA with an existing or verified temporary Go toolchain.
+# Purpose: Build the selected MECA distribution with an existing or verified temporary Go toolchain.
 # Pattern: Thin command entry point.
-# Usage: ./install.sh
+# Usage: ./install.sh [minimum|full]; full is the default.
 # Related: scripts/install/go.sh, cmd/meca/install.go, internal/commands/install/install.go, README.md.
 
 set -eu
 
-if [ "$#" -ne 0 ]; then
-    printf '사용법: ./install.sh\n' >&2
+if [ "$#" -gt 1 ]; then
+    printf '사용법: ./install.sh [minimum|full]\n' >&2
     exit 2
 fi
+meca_install_variant=${1:-full}
+case "$meca_install_variant" in
+    minimum|full) ;;
+    *) printf '사용법: ./install.sh [minimum|full]\n' >&2; exit 2 ;;
+esac
 
 meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 (
     cd "$meca_install_root"
-    sh "$meca_install_root/scripts/build-ui.sh"
+    meca_go_tags=godbus_no_tcp
+    if [ "$meca_install_variant" = full ]; then
+        sh "$meca_install_root/scripts/build-ui.sh"
+    else
+        meca_go_tags="$meca_go_tags,minimum"
+    fi
     meca_go_stage=
     trap '[ -z "$meca_go_stage" ] || rm -rf -- "$meca_go_stage"' 0
     trap 'exit 129' HUP
@@ -29,7 +39,7 @@ meca_install_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
     fi
 
     mkdir -p bin
-    CGO_ENABLED=0 "$meca_go_binary" build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
+    CGO_ENABLED=0 "$meca_go_binary" build -tags="$meca_go_tags" -trimpath -o bin/meca ./cmd/meca
 )
 
 exec "$meca_install_root/bin/meca" install

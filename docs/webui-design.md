@@ -2,7 +2,7 @@
 
 [서버 계약](server.md) · [화면별 API 연결](webui-api.md) · [제품 명세](../SYSTEM.md)
 
-`meca --server --ui`는 기존 Go 서버와 같은 출처의 `/ui/`에서 React 작업공간을 제공한다. 배포 바이너리에 화면을 내장하며 사용자의 실행 환경에는 Bun·Node·별도 프론트 서버가 필요 없다. 정적 파일의 소스는 `webui/`, 내장·전송은 `internal/webui`, 조립은 `cmd/meca`가 소유한다.
+full 배포본의 `meca --server --ui`는 기존 Go 서버와 같은 출처의 `/ui/`에서 React 작업공간을 제공한다. full 바이너리에 화면을 내장하며 minimum에는 서버·WebUI를 포함하지 않는다. 사용자의 실행 환경에는 Bun·Node·별도 프론트 서버가 필요 없다. 정적 파일의 소스는 `webui/`, 내장·전송은 `internal/webui`, 조립은 `cmd/meca`가 소유한다.
 
 프론트 소스는 FSD 계층과 슬라이스의 공개 API를 따른다. 앱 조립은 `app`, 화면과 화면 전용 흐름은 `pages`, 여러 화면이 공유하는 인증 동작은 `features`, 서버 세션은 `entities`, 공통 기반은 `shared`에 둔다. 계층 방향과 공개 진입점은 Steiger로 검증한다. 구체적인 소유권은 [개발 가이드](development.md#내장-webui)를 따른다.
 

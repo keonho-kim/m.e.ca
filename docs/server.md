@@ -2,7 +2,7 @@
 
 [← README](../README.md) · [제품 명세](../SYSTEM.md)
 
-MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
+서버와 내장 WebUI는 `full` 배포본에서 제공한다. `minimum`은 TUI·CLI만 포함하며 서버 옵션은 full 설치 안내와 함께 거절한다. MECA 자체 API만 제공한다. 모델 연결용 Provider와 서버 외부 계약은 분리하며, 클라이언트는 아래의 세션·작업·승인·이벤트 계약을 사용한다.
 
 ```sh
 meca --server                         # SSE, 127.0.0.1:8787

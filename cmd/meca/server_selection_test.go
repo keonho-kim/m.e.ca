@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Verify server reads and execution preserve persisted selections and validate defaults.
 // Pattern: Deterministic selection-precedence regression test.
 // Usage: go test ./cmd/meca -run TestServerSelection.

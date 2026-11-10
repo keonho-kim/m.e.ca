@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Serve real embedded UI and project runtimes against a credential-free local model fixture.
 // Pattern: Opt-in browser integration fixture.
 // Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json go test ./cmd/meca -run TestUIBrowserFixture -v.

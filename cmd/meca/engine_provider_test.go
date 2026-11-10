@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Supply deterministic native streaming model/tool responses for the complete engine workload.
 // Pattern: Loopback-only provider fixture with bounded request consumption.
 // Usage: TestEngineWorkload and BenchmarkEngineWorkload share the same real HTTP client path.

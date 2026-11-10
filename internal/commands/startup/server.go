@@ -9,6 +9,7 @@ import (
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 type ServerOptions struct {
@@ -40,12 +41,18 @@ func serverFlags(flags *flag.FlagSet, mode *Mode) {
 
 func checkServerFlags(flags *flag.FlagSet, mode Mode) error {
 	serverFlag := false
+	requested := mode.Server
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
+		case "server":
+			requested = true
 		case "ui", "protocol", "listen", "token-file", "tls-cert", "tls-key", "allow-host", "allow-origin", "concurrency":
 			serverFlag = true
 		}
 	})
+	if distribution.Name == distribution.Minimum && (requested || serverFlag) {
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.DistributionFullRequired)
+	}
 	if !mode.Server && serverFlag {
 		return faults.Errorf(diagcatalog.StartupServerOptionsRequireServer)
 	}

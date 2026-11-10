@@ -1,3 +1,5 @@
+//go:build !minimum
+
 // Purpose: Exercise real engine, native provider, tools, journal and SSE rendering as one PGO workload.
 // Pattern: Isolated end-to-end benchmark with deterministic loopback model responses.
 // Usage: BenchmarkEngineWorkload supplies synthetic CPU profiles; TestEngineWorkload validates every dialect.
