@@ -82,7 +82,7 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 설치된 명령에서 `meca upgrade`를 실행하면 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)로 최신 정식 릴리스를 조회한다. 옵션을 생략하면 실행 중인 tui/full 종류를 유지한다. `meca upgrade --tui`는 tui 최신 버전으로, `meca upgrade --full`은 full 최신 버전으로 현재 설치 파일을 교체한다. 두 선택 옵션의 동시 사용·중복 지정은 거절한다. 선택한 종류와 현재 OS·CPU에 맞는 아카이브 및 `checksums.txt`를 받아 SHA-256을 검증한다. 같은 날짜의 태그·배포 파일도 갱신할 수 있으므로 버전 문자열만으로 건너뛰지 않는다.
 
-새 이름·옵션을 모르는 기존 바이너리(옛 `minimum` 포함)는 최신 배포본을 직접 받아 한 번 `meca install`로 재설치해야 한다. 옛 아카이브명·빌드 태그·옵션 별칭은 제공하지 않는다.
+업데이트 명령을 사용할 수 없거나 배포 파일을 찾지 못하면 최신 배포본을 직접 받아 `meca install`로 재설치한다. 설치 경로와 설정·대화 보존 규칙은 일반 업데이트와 같다.
 
 공개 릴리스는 인증 없이 조회·다운로드할 수 있다. 선택적으로 API 인증을 사용하는 경우 GH_TOKEN, GITHUB_TOKEN, 설치되어 있고 로그인된 gh의 github.com 토큰 순서로 선택한다. 토큰을 설정·세션·로그에 기록하지 않으며 다른 호스트로 리다이렉트할 때 인증 헤더를 제거한다. Go·gh·tar·curl은 업데이트의 필수 실행 의존성이 아니다.
 
