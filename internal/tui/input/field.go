@@ -26,5 +26,5 @@ func (e *Editor) FieldWindow(width int, masked bool) Window {
 		row = textlayout.Row{Text: source[start:], Start: start, End: len(source)}
 		x = row.Column(source, 2+len(before))
 	}
-	return Window{Source: source, Rows: []textlayout.Row{row}, CursorX: x}
+	return Window{Source: source, Rows: []textlayout.Row{row}, CursorX: x, PrefixBytes: 2, prefixRunes: 2}
 }

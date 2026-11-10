@@ -90,3 +90,35 @@ test('inactive cache byte limits evict one oversized body without waiting for th
     stop();
   }
 });
+
+test('accounting does not retain input and queue records after an explicit reset', async () => {
+  const seed = () => {
+    const state = useWorkspaceStore.getState();
+    state.patchInput(target, {
+      text: 'discarded draft',
+      files: [new File(['pixels'], 'draft.png')],
+    });
+    state.enqueue(target, useWorkspaceStore.getState().inputs['alpha/one']!);
+    state.patchInput(target, { text: 'another draft' });
+    return {
+      inputs: new WeakRef(useWorkspaceStore.getState().inputs),
+      queues: new WeakRef(useWorkspaceStore.getState().queues),
+    };
+  };
+  const discarded = seed();
+  useWorkspaceStore.setState({ inputs: {}, queues: {} });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  Bun.gc(true);
+  expect(discarded.inputs.deref()).toBeUndefined();
+  expect(discarded.queues.deref()).toBeUndefined();
+});
+
+test('an image-bearing queued request remains valid when its text is cleared', () => {
+  const state = useWorkspaceStore.getState();
+  const image = new File(['pixels'], 'draft.png', { type: 'image/png' });
+  state.patchInput(target, { text: 'Optional caption', files: [image] });
+  state.enqueue(target, useWorkspaceStore.getState().inputs['alpha/one']!);
+  const item = useWorkspaceStore.getState().queues['alpha/one']![0]!;
+  expect(state.updateQueue(target, item.id, '')).toBe(true);
+  expect(useWorkspaceStore.getState().queues['alpha/one']![0]!.files[0]).toBe(image);
+});

@@ -22,6 +22,8 @@ skill_loaded는 본문을 읽었다는 사실과 skill의 id·name·source·revi
 
 기본 레벨은 info다. 프로세스 시작 때 환경변수 MECA_LOG_LEVEL=debug|info|warn|error로 선택한다. debug에서는 세부 도구·저장·제어·스트림 종료 기록을 볼 수 있다. 작업 시작·종료와 스킬 읽기, 승인 대기·결정, 느린 모델 호출·저장, 실패·재시도를 작은 메타데이터로 기록한다.
 
+선택적인 브라우저 자동 열기 실패는 `browser_launch_failed` 경고로 구분하며 서버 실행은 유지한다. stdout에 표시한 WebUI 주소를 직접 열 수 있다. 브라우저의 첫 방문은 공개 접속 상태 조회를 사용하므로 로그인 전이라는 이유만으로 `access_rejected`를 기록하지 않는다. 실제 보호 API의 인증·Host·Origin 거절은 계속 기록한다.
+
 주요 필드는 time·level·msg·component·operation과 request_id·session_id·task_id·run_id·agent·call_id다. 모델 호출의 generation·attempt·duration_ms, 오류 분류인 error_code를 필요한 경우 포함한다. error_code는 안전한 분류이며 raw Provider·OS·SQL 오류 전문을 뜻하지 않는다. HTTP 내부 TLS·panic 진단도 원문 대신 분류를 기록한다.
 
 저장 할당이 한도의 90% 이상이면 storage_capacity_low에 count·limit과 near_limit/full 상태를 기록한다. 이 경고는 기존 기록이나 백업의 자동 삭제를 뜻하지 않는다. 운영 로그의 원문·비밀값 제외와 집계 정책을 동일하게 적용한다.

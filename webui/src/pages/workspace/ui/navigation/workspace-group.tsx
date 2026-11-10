@@ -9,9 +9,10 @@ import { Button } from '@astryxdesign/core/Button';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Icon } from '@astryxdesign/core/Icon';
 import { HStack, Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
-import { SideNavItem } from '@astryxdesign/core/SideNav';
+import { SideNavItem, useSideNavCollapse } from '@astryxdesign/core/SideNav';
 import { Text } from '@astryxdesign/core/Text';
-import { useEffect, useState } from 'react';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { useEffect, useRef, useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { changed } from '@/pages/workspace/api/queries';
 import { forgetConversation } from '@/pages/workspace/model/deletion';
@@ -36,6 +37,8 @@ export function WorkspaceGroup({
 }) {
   const t = useLocale(),
     id = workspace.id ?? '';
+  const labelRef = useRef<HTMLElement>(null);
+  const rail = useSideNavCollapse();
   const [expanded, setExpanded] = useState(id === target.workspace),
     [deleting, setDeleting] = useState<SessionJson | null>(null);
   const [busy, setBusy] = useState(false),
@@ -72,6 +75,7 @@ export function WorkspaceGroup({
   return (
     <VStack className="workspace-group" gap={1}>
       <SideNavItem
+        ref={labelRef}
         label={workspace.name ?? ''}
         className="workspace-name"
         icon={<Icon icon={'meca:folder'} />}
@@ -111,6 +115,11 @@ export function WorkspaceGroup({
           )}
         </VStack>
       </SideNavItem>
+      <Tooltip
+        anchorRef={labelRef}
+        content={workspace.path || workspace.name}
+        isEnabled={!rail.isCollapsed}
+      />
       {deleting && (
         <Dialog
           isOpen

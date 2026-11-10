@@ -1,13 +1,14 @@
-// Purpose: Route image paste and removal keys without intercepting ordinary text-paste combinations.
+// Purpose: Route image paste and remove the last attachment at the start of the composer.
 // Pattern: Composer keyboard adapter.
 // Usage: keyEvent calls imageKey before queued-editor handling.
 // Related: internal/tui/session/image_paste.go, internal/tui/session/keys.go.
 package session
 
 import (
+	"runtime"
+
 	"github.com/gdamore/tcell/v3"
 	"github.com/keonho-kim/meca/internal/agent/media"
-	"runtime"
 )
 
 func imagePasteKey(e *tcell.EventKey, goos string) bool {
@@ -23,14 +24,18 @@ func (a *app) imageKey(e *tcell.EventKey) bool {
 		a.pasteImage()
 		return true
 	}
-	if (e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2) && e.Modifiers() == tcell.ModAlt && len(a.compose.images) > 0 {
-		i := len(a.compose.images) - 1
-		a.compose.images[i] = media.Image{}
-		a.compose.images = a.compose.images[:i]
-		if i == 0 {
-			a.compose.images = nil
-		}
-		return true
+	if e.Key() != tcell.KeyBackspace || len(a.compose.images) == 0 {
+		return false
 	}
-	return false
+	modifiers := e.Modifiers()
+	if modifiers != tcell.ModAlt && (modifiers != 0 || a.compose.editor.Cursor != 0) {
+		return false
+	}
+	last := len(a.compose.images) - 1
+	a.compose.images[last] = media.Image{}
+	a.compose.images = a.compose.images[:last]
+	if last == 0 {
+		a.compose.images = nil
+	}
+	return true
 }

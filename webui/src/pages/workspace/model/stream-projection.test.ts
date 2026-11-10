@@ -132,3 +132,68 @@ test('terminal cache eviction protects accepted and canceling work', () => {
   expect(tasks['1']?.status).toBe('canceling');
   expect(Object.keys(tasks)).toHaveLength(1024);
 });
+
+test('interleaved deltas preserve statistics and generation changes for each source', () => {
+  const state = {
+    ...useWorkspaceStore.getInitialState(),
+    selection: { workspace: 'w', session: 's' },
+  };
+  const delta = {
+    kind: 'assistant_delta',
+    workspaceId: 'w',
+    sessionId: 's',
+    taskId: 't',
+    generation: '1',
+  };
+  const result = applyEvents(state, [
+    { ...delta, agent: 'a', text: 'first', statistics: { usage: { output: '4' } } },
+    { ...delta, agent: 'a', text: ' follows' },
+    { ...delta, agent: 'b', thinking: 'inspect' },
+    { ...delta, agent: 'a', generation: '2', text: 'new' },
+    { ...delta, agent: 'b', thinking: ' safely' },
+    { ...delta, agent: 'a', generation: '1', text: 'replacement' },
+    { ...delta, agent: 'b', reset: true, thinking: 'reset' },
+    { ...delta, agent: 'a', text: ' kept' },
+  ]);
+  expect(result.statistics?.usage?.output).toBe('4');
+  expect(result.drafts?.['t/a']?.text).toBe('replacement kept');
+  expect(result.drafts?.['t/b']?.thinking).toBe('reset');
+});
+
+test('a history receipt drops settled text without discarding activity from the running request', () => {
+  const previous = useWorkspaceStore.getState();
+  const target = { workspace: 'w', session: 's' };
+  const tool = {
+    kind: 'tool_succeeded',
+    workspaceId: 'w',
+    sessionId: 's',
+    taskId: 't',
+    text: 'Current tool result',
+  };
+  try {
+    useWorkspaceStore.setState({
+      ...useWorkspaceStore.getInitialState(),
+      selection: target,
+      tasks: { t: { id: 't', ...target, status: 'running' } },
+      events: [tool],
+      drafts: {
+        't//1': {
+          task: 't',
+          agent: '',
+          generation: '1',
+          text: 'Saved response',
+          thinking: '',
+          truncated: false,
+          doneRevision: 1,
+        },
+      },
+    });
+    useWorkspaceStore.getState().acknowledgeHistory(target, 0);
+    expect(useWorkspaceStore.getState().drafts['t//1']).toBeDefined();
+    useWorkspaceStore.getState().acknowledgeHistory(target, 1);
+    expect(useWorkspaceStore.getState().drafts['t//1']).toBeUndefined();
+    expect(useWorkspaceStore.getState().events).toEqual([tool]);
+  } finally {
+    useWorkspaceStore.setState(previous);
+  }
+});

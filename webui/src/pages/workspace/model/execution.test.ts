@@ -162,3 +162,52 @@ test('conversation deletion releases its cached bodies and drafts without cleari
   expect(useWorkspaceStore.getState().inputs[targetKey(target)]).toBeUndefined();
   expect(useWorkspaceStore.getState().queues[targetKey(target)]).toBeUndefined();
 });
+
+test('removing an uncertain image request releases its known staged uploads', async () => {
+  const staging = spyOn(api, 'upload').mockResolvedValue({ id: 'staged-image' });
+  const releasing = spyOn(api, 'releaseUpload').mockResolvedValue(undefined);
+  try {
+    const imageInput = {
+      ...input('Keep this image'),
+      files: [new File(['pixels'], 'screen.png', { type: 'image/png' })],
+    };
+    invoke.mockImplementation(async () => {
+      throw new ApiError('network', 'offline');
+    });
+    const request = startRequest(target, imageInput);
+    await request.catch(() => {});
+    expect(request).rejects.toThrow('offline');
+    const { clearPendingTarget, pendingSubmission } = await import(
+      '@/pages/workspace/model/submission'
+    );
+    expect(pendingSubmission(target)).toBe(true);
+    clearPendingTarget(target);
+    expect(pendingSubmission(target)).toBe(false);
+    expect(releasing).toHaveBeenCalledWith(target.workspace, 'staged-image');
+  } finally {
+    staging.mockRestore();
+    releasing.mockRestore();
+  }
+});
+
+test('an upload completed after cancellation is released without starting a task', async () => {
+  const received = deferred<{ id: string }>();
+  const staging = spyOn(api, 'upload').mockImplementation(() => received.promise);
+  const releasing = spyOn(api, 'releaseUpload').mockResolvedValue(undefined);
+  try {
+    invoke.mockResolvedValue({ task: { id: 'should-not-start', status: 'running' } });
+    const { clearPendingTarget } = await import('@/pages/workspace/model/submission');
+    const sending = startRequest(target, {
+      ...input('Image'),
+      files: [new File(['pixels'], 'screen.png', { type: 'image/png' })],
+    });
+    clearPendingTarget(target);
+    received.resolve({ id: 'img_late' });
+    expect(await sending).toBe(false);
+    expect(invoke.mock.calls.some(([, command]) => !!command.start)).toBe(false);
+    expect(releasing).toHaveBeenCalledWith(target.workspace, 'img_late');
+  } finally {
+    staging.mockRestore();
+    releasing.mockRestore();
+  }
+});

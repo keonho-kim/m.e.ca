@@ -11,6 +11,7 @@ import { Center } from '@astryxdesign/core/Center';
 import { ChatLayout } from '@astryxdesign/core/Chat';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
+import type { SideNavControlledCollapsible } from '@astryxdesign/core/SideNav';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { useQuery } from '@tanstack/react-query';
 import { useBlocker, useNavigate, useRouterState } from '@tanstack/react-router';
@@ -89,6 +90,11 @@ export default function WorkspaceShell() {
   const [creating, setCreating] = useState(false);
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const [landing, setLanding] = useState(false);
+  const [isCollapsed, onCollapsedChange] = useState(false);
+  const collapsible = useMemo<SideNavControlledCollapsible>(
+    () => ({ isCollapsed, onCollapsedChange, hasButton: false }),
+    [isCollapsed]
+  );
   const navigation = useBlocker({
     shouldBlockFn: () => fileDirty,
     withResolver: true,
@@ -156,13 +162,18 @@ export default function WorkspaceShell() {
           target={target}
           navigate={navigate}
           create={create}
+          collapsible={collapsible}
         />
       }
       mobileNav={{ hasToggle: false }}
     >
       <Layout
         header={
-          <WorkspaceToolbar name={workspace?.name} summary={conversation.data?.session?.summary} />
+          <WorkspaceToolbar
+            name={workspace?.name}
+            summary={conversation.data?.session?.summary}
+            collapsible={collapsible}
+          />
         }
         height="fill"
         padding={0}

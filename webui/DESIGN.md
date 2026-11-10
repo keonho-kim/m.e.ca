@@ -126,13 +126,13 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 
 ## Layout
 
-AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. 상단 Toolbar는 프로젝트·대화 문맥, 가운데 TabList는 대화·파일·스킬, 우측은 작업 목록을 제공한다. 설정과 빠른 테마 전환은 탐색 하단에 둔다. 작업 흐름은 프로젝트 → 대화 → 입력 → 답변·Thinking·도구 → 완료·승인이다.
+AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. 상단 첫 줄은 대화·파일·스킬 TabList와 작업 제어이며, 프로젝트·대화 문맥은 그 아래 독립된 줄에 둔다. 긴 이름이 탭을 밀어내지 않도록 하고 전체 경로·제목은 툴팁으로 읽는다. 설정과 빠른 테마 전환은 탐색 하단에 둔다. 작업 흐름은 프로젝트 → 대화 → 입력 → 답변·Thinking·도구 → 완료·승인이다.
 
 대화와 컴포저는 같은 최대 폭 (760px)을 사용한다. 대화의 안쪽 여백은 `spacing.6`, 세로 여백은 `spacing.4`, 메시지 간 간격은 `spacing.5`다. 컴포저 바깥은 `spacing.4`, 내부는 `spacing.3`을 사용한다. 비어 있는 대화는 한 제목·보조 설명과 컴포저를 함께 읽히게 배치하고, 이력이 있으면 ChatMessageList 안에 가상 이력과 live 출력을 함께 두고 하단에 컴포저를 배치한다. 스크롤·맨 아래 이동은 ChatLayout이 소유한다.
 
 - **탐색 반응형:** AppShell의 기본 md 경계 (768px 미만)에서 SideNav가 모바일 drawer로 전환한다. 긴 프로젝트·대화 이름은 행 안에서 축약하고 선택·작업 상태를 유지한다.
-- **설정 반응형:** Dialog 요청 폭은 (840px), 넓은 화면의 탐색은 (168px)이다. (640px) 이하에서는 고정 탐색 대신 상단 Selector를 사용한다. 같은 폼을 유지해 편집 중인 값과 폼 폭을 보존한다.
-- **보조 작업:** 파일·스킬은 Layout의 컬럼·문서 위계를 사용한다. 작업 Drawer 요청 폭은 (480px), 원문 Drawer는 (760px)이며 실제 화면 가용 폭은 공식 컴포넌트가 제한한다.
+- **설정 반응형:** Dialog 요청 폭은 (1040px), 넓은 화면의 탐색은 (224px)이다. (900px) 이하에서는 상단 Selector, (480px) 이하의 테마 선택도 Selector를 사용한다. 탐색 레이블은 글자 확대 시 줄바꿈하며 같은 폼을 유지해 편집 중인 값을 보존한다.
+- **보조 작업:** 파일은 넓은 창에서 가운데 문서·오른쪽 현재 폴더 목록 하나를 두고 왼쪽 프로젝트 탐색을 유지한다. 목록 상단은 작업공간 텍스트·우측 끝 새로고침이며 폴더 이동도 목록 안에 둔다. 에디터 위의 별도 탐색 줄은 없다. 선택 즉시 Raw 편집기를 열며 Preview/Raw로 현재 초안과 원문을 전환한다. 미리보기 본문 클릭은 Raw 편집으로 돌아가되 링크·복사·텍스트 선택을 방해하지 않는다. 편집기 수명·실행 취소 이력을 보존하며 미리보기 코드 블록은 긴 단어도 줄바꿈한다. 스킬은 넓은 창에서 목록·문서, 파일·스킬 모두 (1024px) 이하에서 목록·본문 전환을 사용한다. 작업 Drawer 요청 폭은 (480px), 원문 Drawer는 (760px)이며 실제 화면 가용 폭은 공식 컴포넌트가 제한한다.
 
 간격은 공식 rem 기반 4px 리듬을 사용한다. 이 문서에 추출한 단계는 실제 앱에서 반복되는 부분집합이다. 화면을 줄일 때 조작 의미·포커스·정보 순서를 유지한다.
 
@@ -148,7 +148,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유지하고 읽기 본문·편집기까지 확장하지 않는다.
 
-모션은 공식 테마의 fast·medium·slow와 변동 비율을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 시그니처는 `+`의 회전 (90deg)과 위로 펼치는 ChatComposerDrawer이며 medium 시간·standard easing으로 함께 움직인다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
+모션은 공식 테마의 fast·medium·slow와 변동 비율을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 상태 모션은 `+`의 회전 (90deg)이며 메뉴의 진입·닫기는 공식 DropdownMenu가 소유한다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
 
 ## Shapes
 
@@ -162,7 +162,7 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 ### Chips
 
-입력에 보관한 파일과 이미지 이름은 제거 가능한 Token이다. 긴 이름은 토큰 안에서 축약하고 여러 토큰은 줄바꿈한다. 명령·스킬은 ChatComposerInput의 typeahead와 TokenElement로 표현한다. 저장된 이미지는 Thumbnail에서 Lightbox로 연다. 상태 Badge·StatusDot는 의미 토큰과 접근성 레이블을 함께 사용하며 팀은 ToggleButton의 눌림 상태로 표현한다.
+입력에 보관한 파일 경로는 제거 가능한 Token이며 긴 이름은 토큰 안에서 축약하고 줄바꿈한다. 첨부 이미지는 컴포저 위에 독립된 작은 glass 아일랜드로 표시한다. Astryx Carousel의 한 줄 가로 탐색과 64px Thumbnail을 사용하며 우측 상단 원형 X는 hover·키보드 포커스에서 나타나고 터치 환경에서는 항상 보인다. 파일명은 Thumbnail의 접근성 이름과 툴팁으로 전달한다. 명령·스킬은 ChatComposerInput의 typeahead와 TokenElement로 표현한다. 저장된 이미지는 Thumbnail에서 Lightbox로 연다. 상태 Badge·StatusDot는 의미 토큰과 접근성 레이블을 함께 사용하며 팀은 ToggleButton의 눌림 상태로 표현한다.
 
 ### Cards / Containers
 
@@ -174,11 +174,11 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 ### Navigation
 
-프로젝트는 접는 SideNavItem 그룹, 대화는 들여쓴 선택 행이다. 실제 overflow 경계를 유지해 긴 이름이 사이드바 폭을 밀어내지 않게 한다. Toolbar의 TabList는 작업 보기를, 설정의 List·Selector는 설정 위치를, SegmentedControl은 테마 선택을 표현한다. 모바일 탐색은 AppShell이 소유하고 조작 아이콘은 Astryx Icon으로 표현한다. 공용 컨트롤은 Astryx Neutral의 기본 Lucide registry를 상속하고 앱 전용 아이콘도 같은 Lucide 라이브러리로 추가한다.
+프로젝트는 접는 SideNavItem 그룹, 대화는 들여쓴 선택 행이다. 실제 overflow 경계를 유지해 긴 이름이 사이드바 폭을 밀어내지 않게 한다. 사이드바 접기 조작은 상단에 두고 설정·테마는 하단에 고정한다. Toolbar의 TabList는 작업 보기를, 설정의 List·Selector는 설정 위치를, SegmentedControl은 테마 선택을 표현한다. 모바일 탐색은 AppShell이 소유하고 조작 아이콘은 Astryx Icon으로 표현한다. 공용 컨트롤은 Astryx Neutral의 기본 Lucide registry를 상속하고 앱 전용 아이콘도 같은 Lucide 라이브러리로 추가한다.
 
 ### Composer and Thinking
 
-컴포저는 입력·참조 Token·팀 토글·후속 예약·전송을 묶는 glass 작업 표면이다. 모델은 설정과 `!model`에서 선택한다. 음성·dictation 조작은 없다. `+`를 누르면 이미지 전용 FileInput과 스킬 탐색 버튼이 입력 위로 펼쳐진다. 닫힌 패널은 inert이며 Escape·선택 완료로 닫고 입력에 포커스를 돌린다. 컴포저 전체의 이미지 드롭·붙여넣기·명시 단축키는 같은 첨부 한도를 따른다. 후보는 `!` 명령·`#` 스킬의 공식 typeahead다.
+컴포저는 입력·참조 Token·팀 토글·후속 예약·전송을 묶는 glass 작업 표면이다. 모델은 설정과 `!model`에서 선택한다. 음성·dictation 조작은 없다. `+`는 위쪽 DropdownMenu에서 이미지와 스킬을 선택한다. 이미지는 파일 선택창을, 스킬은 별도 탐색 모달을 열며 행 우측 +로 입력에 넣는다. 메뉴·모달의 Escape·선택 완료와 포커스 복귀는 공식 레이어 동작을 사용한다. 컴포저 전체의 이미지 드롭·붙여넣기·명시 단축키는 같은 첨부 한도를 따른다. 후보는 `!` 명령·`#` 스킬의 공식 typeahead다.
 
 Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. `data-tone="thinking"`의 공식 테마 확장으로 primary 텍스트를 secondary로 바꾼다. 진행 중과 저장 이력에서 같은 표현을 사용하며 제목·목록까지 회색 계층을 유지한다.
 

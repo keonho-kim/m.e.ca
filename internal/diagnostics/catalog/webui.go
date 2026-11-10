@@ -5,6 +5,9 @@
 package catalog
 
 const (
+	UIFolderNameInvalid     Message = "provide one non-empty folder name up to 255 UTF-8 bytes without path separators"
+	UIFolderExists          Message = "a file or folder already exists with that name"
+	UIFolderChanged         Message = "the parent folder changed; browse it again before creating the folder"
 	UIFlagHelp              Message = "serve the embedded browser workspace"
 	UIWorkspaceInvalid      Message = "select an existing accessible workspace directory"
 	UIWorkspaceUnknown      Message = "workspace is not registered"

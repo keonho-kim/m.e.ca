@@ -1,35 +1,31 @@
-// Purpose: Edit browser follow-up requests without changing their captured files and references.
-// Pattern: Local queue editing surface.
-// Usage: Composer displays this queue while the process-owned task continues.
-// Related: webui/src/pages/workspace/model/execution.ts, webui/src/pages/workspace/model/store.ts.
+// Purpose: Present virtualized follow-ups and bind dispatch prevention to the selected editor.
+// Pattern: Queue presentation controller with an independently mounted form.
+// Usage: Composer displays pending requests while the process-owned task continues.
+// Related: webui/src/pages/workspace/ui/composer/queue-editor.tsx, webui/src/pages/workspace/model/followups.ts.
 
 import { Button } from '@astryxdesign/core/Button';
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Icon } from '@astryxdesign/core/Icon';
-import { HStack, Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { List, ListItem } from '@astryxdesign/core/List';
 import { Text } from '@astryxdesign/core/Text';
-import { TextArea } from '@astryxdesign/core/TextArea';
 import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { queueEditing, resumeQueue } from '@/pages/workspace/model/followups';
-import {
-  type Queued,
-  type Target,
-  targetKey,
-  useWorkspaceStore,
-} from '@/pages/workspace/model/store';
+import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { QueueEditor } from '@/pages/workspace/ui/composer/queue-editor';
 import { focusedRange } from '@/pages/workspace/ui/focused-range';
 import { useLocale } from '@/shared/i18n';
 export const Queue = memo(function Queue({ target }: { target: Target }) {
   const t = useLocale(),
     entries = useWorkspaceStore((s) => s.queues[targetKey(target)]);
-  const [editing, setEditing] = useState<Queued | null>(null),
-    [text, setText] = useState('');
+  const [editing, setEditing] = useState<string | null>(null);
+  const entry = entries?.find((value) => value.id === editing);
+  const editedID = entry?.id;
   const paused = useWorkspaceStore((s) => s.pausedQueues[targetKey(target)]);
   const scroller = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(-1);
-  const editingIndex = entries?.findIndex((value) => value.id === editing?.id) ?? -1;
+  const editingIndex = entries?.findIndex((value) => value.id === editing) ?? -1;
   const rangeExtractor = useCallback(
     (range: Range) => focusedRange(range, focused, editingIndex),
     [focused, editingIndex]
@@ -44,9 +40,12 @@ export const Queue = memo(function Queue({ target }: { target: Target }) {
     rangeExtractor,
   });
   useEffect(() => {
-    queueEditing(target, !!editing);
+    if (editing && !entry) setEditing(null);
+  }, [editing, entry]);
+  useEffect(() => {
+    queueEditing(target, !!editedID);
     return () => queueEditing(target, false);
-  }, [target, editing]);
+  }, [target, editedID]);
   if (!entries?.length) return null;
   return (
     <VStack className="queued-inputs" role="region" aria-label={t('queueTitle')} gap={4}>
@@ -88,33 +87,28 @@ export const Queue = memo(function Queue({ target }: { target: Target }) {
                   transform: `translateY(${row.start}px)`,
                 }}
                 label={
-                  <HStack gap={2}>
-                    <Text maxLines={2}>
-                      {value.text.slice(0, 256)}
-                      {value.text.length > 256 ? '…' : ''}
-                    </Text>
-                    <Button
-                      type="button"
-                      className="icon-button"
+                  <Text maxLines={2} hasTruncateTooltip>
+                    {value.text.slice(0, 256) || `${t('attachedImages')} (${value.files.length})`}
+                    {value.text.length > 256 ? '…' : ''}
+                  </Text>
+                }
+                endContent={
+                  <HStack gap={1}>
+                    <IconButton
                       onClick={() => {
                         queueEditing(target, true);
-                        setEditing(value);
-                        setText(value.text);
+                        setEditing(value.id);
                       }}
                       label={t('edit')}
                       variant="ghost"
-                    >
-                      <Icon icon={'meca:edit'} size="sm" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="icon-button"
+                      icon={<Icon icon={'meca:edit'} size="sm" />}
+                    />
+                    <IconButton
                       onClick={() => useWorkspaceStore.getState().removeQueue(target, value.id)}
                       label={t('remove')}
                       variant="ghost"
-                    >
-                      <Icon icon={'close'} size="sm" />
-                    </Button>
+                      icon={<Icon icon={'close'} size="sm" />}
+                    />
                   </HStack>
                 }
               />
@@ -122,45 +116,8 @@ export const Queue = memo(function Queue({ target }: { target: Target }) {
           })}
         </List>
       </VStack>
-      {editing && (
-        <Dialog
-          isOpen={true}
-          onOpenChange={(open) => {
-            if (!open) setEditing(null);
-          }}
-          purpose="form"
-          width={760}
-          className="queue-modal"
-        >
-          <Layout
-            header={
-              <DialogHeader
-                title={t('queueTitle')}
-                onOpenChange={(open) => {
-                  if (!open) setEditing(null);
-                }}
-              />
-            }
-            content={
-              <LayoutContent padding={4}>
-                <VStack gap={4}>
-                  <TextArea label={t('input')} value={text} onChange={setText} />
-                  <HStack className="form-actions" gap={2}>
-                    <Button label={t('cancel')} onClick={() => setEditing(null)} />
-                    <Button
-                      label={t('save')}
-                      variant="primary"
-                      onClick={() => {
-                        if (useWorkspaceStore.getState().updateQueue(target, editing.id, text))
-                          setEditing(null);
-                      }}
-                    />
-                  </HStack>
-                </VStack>
-              </LayoutContent>
-            }
-          />
-        </Dialog>
+      {entry && (
+        <QueueEditor key={entry.id} target={target} entry={entry} close={() => setEditing(null)} />
       )}
     </VStack>
   );

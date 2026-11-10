@@ -8,7 +8,12 @@ import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
-import { SideNav, SideNavHeading } from '@astryxdesign/core/SideNav';
+import {
+  SideNav,
+  SideNavCollapseButton,
+  type SideNavControlledCollapsible,
+  SideNavHeading,
+} from '@astryxdesign/core/SideNav';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { WorkspaceGroup } from '@/pages/workspace/ui/navigation/workspace-group';
 import { ThemeShortcut } from '@/pages/workspace/ui/settings/theme-controls';
@@ -20,11 +25,13 @@ export function Sidebar({
   target,
   navigate,
   create,
+  collapsible,
 }: {
   workspaces: WorkspaceJson[];
   target: Target;
   navigate: (target: Target) => void;
   create: (workspace: string) => Promise<void>;
+  collapsible: SideNavControlledCollapsible;
 }) {
   const t = useLocale(),
     mobile = useAppShellMobile();
@@ -32,27 +39,31 @@ export function Sidebar({
     <SideNav
       aria-label={t('workspaceList')}
       resizable
-      collapsible
+      collapsible={collapsible}
       header={
         <SideNavHeading
           heading="MECA"
           headerEndContent={
-            <IconButton
-              label={t('addWorkspace')}
-              variant="ghost"
-              icon={<Icon icon={'meca:folder-add'} />}
-              onClick={() => {
-                mobile.closeMobileNav();
-                useWorkspaceStore.getState().set({ picker: true });
-              }}
-            />
+            <HStack gap={1}>
+              <IconButton
+                label={t('addWorkspace')}
+                variant="ghost"
+                icon={<Icon icon={'meca:folder-add'} />}
+                onClick={() => {
+                  mobile.closeMobileNav();
+                  useWorkspaceStore.getState().set({ picker: true });
+                }}
+              />
+              <SideNavCollapseButton />
+            </HStack>
           }
         />
       }
       footer={
         <VStack gap={2}>
-          <HStack justify="between">
+          <HStack justify="between" wrap="wrap">
             <Button
+              isIconOnly={collapsible.isCollapsed}
               label={t('settings')}
               variant="ghost"
               icon={<Icon icon={'meca:settings'} />}

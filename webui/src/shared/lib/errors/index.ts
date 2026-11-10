@@ -5,10 +5,14 @@
 const errors = {
   network: '서버에 연결할 수 없습니다. 연결 상태를 확인해 주세요.',
   unauthorized: '서버 토큰으로 다시 인증해 주세요.',
+  forbidden: '서버가 이 접속 주소를 허용하지 않습니다. 허용 Host·Origin 설정을 확인해 주세요.',
+  browser_cookie:
+    '토큰은 확인됐지만 브라우저 인증 쿠키가 저장되지 않았습니다. 쿠키 설정과 접속 주소를 확인해 주세요.',
   request_pending: '이전 제출 결과를 먼저 확인해 주세요.',
   invalid_response: '서버 응답을 해석할 수 없습니다.',
   no_session: '새 대화를 만들거나 기존 대화를 선택해 주세요.',
   no_model: '설정에서 모델을 선택해 주세요.',
+  invalid_model_connection: '모델 Provider와 올바른 HTTP·HTTPS 서버 주소를 입력해 주세요.',
   input_empty: '작업 내용을 입력하거나 이미지를 첨부해 주세요.',
   input_limit: '한 요청의 본문 또는 전송 크기 한도를 초과했습니다. 내용을 나누어 보내 주세요.',
   read_only: '이 파일은 읽기 전용입니다.',

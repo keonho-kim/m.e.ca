@@ -51,6 +51,18 @@ func BenchmarkLongDraft(b *testing.B) {
 					editor.Backspace()
 				}
 			})
+			b.Run("EditWindow", func(b *testing.B) {
+				var editor Editor
+				editor.Set(test.text)
+				editor.Window(80, 6)
+				b.ReportAllocs()
+				for b.Loop() {
+					editor.Insert("x")
+					editor.Window(80, 6)
+					editor.Backspace()
+					editor.Window(80, 6)
+				}
+			})
 		})
 	}
 }

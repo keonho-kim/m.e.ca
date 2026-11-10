@@ -13,9 +13,11 @@ import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
 export const LiveSource = memo(function LiveSource({
   draft: d,
+  streaming,
   onOriginal,
 }: {
   draft: Draft;
+  streaming: boolean;
   onOriginal: (request: DraftRequestJson) => void;
 }) {
   const t = useLocale();
@@ -32,14 +34,14 @@ export const LiveSource = memo(function LiveSource({
           <ChatMessageMetadata
             footer={
               d.doneRevision === undefined ? (
-                <StatusDot variant="accent" isPulsing label={t('running')} />
+                <StatusDot variant="accent" isPulsing={streaming} label={t('running')} />
               ) : undefined
             }
           />
         }
       >
         {d.thinking && (
-          <Thinking text={d.thinking} streaming={d.doneRevision === undefined}>
+          <Thinking text={d.thinking} streaming={streaming}>
             {d.truncated && (
               <Button
                 size="sm"
@@ -56,7 +58,7 @@ export const LiveSource = memo(function LiveSource({
             )}
           </Thinking>
         )}
-        <MarkdownText text={d.text} streaming={d.doneRevision === undefined} />
+        {!!d.text && <MarkdownText text={d.text} streaming={streaming} />}
         {d.truncated && (
           <Button
             size="sm"

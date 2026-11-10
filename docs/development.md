@@ -396,7 +396,7 @@ storage/content는 JSON 도구 출력과 그 JSON을 담은 메시지 문자열�
 
 저장소의 압축본·문맥 점유 표본은 세션별 최신 한 건을 유지한다. 화면 표시 투영은 숨은 payload를 복원하기 전에 필요한 필드를 선택하고 중간 JSON 변환을 줄인다. 원본 문맥과 내보내기는 전체 기록을 복원한다.
 
-입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 커서 탐색은 약 256 rune 간격의 parser 상태 체크포인트에서 재개하며 편집 위치 이후의 인덱스만 폐기한다. 큰 삭제와 초안 교체는 불필요한 인덱스 용량을 해제한다. 입력 배치는 줄별 rune 시작 위치를 한 번 기록해 커서 줄을 이진 탐색하고 그 줄 안에서만 바이트 위치와 선택 범위를 계산한다. 출력 가능한 ASCII 폭은 바이트 길이로 계산하고 나머지는 Unicode 폭 규칙을 사용한다. 이미 순회 중인 grapheme의 폭은 iterator에서 재사용한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 요청 worker는 발신자별로 표시용 텍스트와 중간 usage의 최신 미소비 mailbox를 각각 소유한다. 같은 사용량·비용 표본은 다시 알리지 않으며 중간 usage는 텍스트 병합을 끊지 않는다. 재시도·완료·승인·최종 사용량 경계에서는 두 mailbox를 함께 분리한다. 소비 후 본문 참조를 해제하며 별도 전송 goroutine을 만들지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
+입력은 grapheme 경계를 보존하고 붙여넣기를 묶어 처리한다. 커서 탐색은 약 256 rune 간격의 parser 상태 체크포인트에서 재개하며 편집 위치 이후의 인덱스만 폐기한다. 큰 삭제와 초안 교체는 불필요한 인덱스 용량을 해제한다. 입력 배치는 줄별 rune 시작 위치로 커서 줄을 이진 탐색한다. 편집 지점 직전 줄부터 뒤쪽을 다시 배치하고 앞쪽의 범위 인덱스를 재사용한다. 인덱스는 범위와 들여쓰기를 보관한다. 화면에 보이는 줄만 별도 창으로 만들어 커서·선택에 전달한다. 큰 삭제 후에는 줄 인덱스와 rune 버퍼 용량을 줄인다. 출력 가능한 ASCII 폭은 바이트 길이로 계산하고 나머지는 Unicode 폭 규칙을 사용한다. 이미 순회 중인 grapheme의 폭은 iterator에서 재사용한다. 변경되지 않은 source/width 배치와 Markdown 투영을 재사용하고 연속 화면 갱신을 합치되 순서 있는 이벤트는 버리지 않는다. 요청 worker는 발신자별로 표시용 텍스트와 중간 usage의 최신 미소비 mailbox를 각각 소유한다. 같은 사용량·비용 표본은 다시 알리지 않으며 중간 usage는 텍스트 병합을 끊지 않는다. 재시도·완료·승인·최종 사용량 경계에서는 두 mailbox를 함께 분리한다. 소비 후 본문 참조를 해제하며 별도 전송 goroutine을 만들지 않는다. 기록·파일 열·선택·뷰포트 캐시를 해제할 때 참조도 정리한다.
 
 대화 줄 인덱스는 변경되지 않은 이력의 접두사를 보존하고 추가 이력과 현재 출력만 배치한다. 폭·이력 소유 배열·prepend·잘라내기·도구 접기 상태 변경은 인덱스를 다시 구성한다. 가시 블록 목록만 비교해 화면 밖 파싱 참조를 해제한다. 자동 갱신은 60Hz 간격과 최근 그리기 비용의 3배 중 큰 시간을 기다리며 추가 대기는 최대 250ms다. 입력은 이전 프레임 시작 기준 다음 60Hz 시점에 표시할 수 있다. 느린 자동 갱신 직후의 입력은 한 번 즉시 표시하고 연속 입력 프레임은 60Hz 예산을 따른다. 입력 배치는 최대 32개이며 런타임 알림과 공정하게 처리하고 붙여넣기·종료 순서를 보존한다.
 
@@ -482,6 +482,9 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 | 현재 프로세스 RSS·표시 정밀도 내 변화·상단 부분 갱신 | internal/processmemory · internal/tui/session | BenchmarkResidentBytes · BenchmarkUnchangedMemorySample · BenchmarkRoundedMemorySample · BenchmarkMemoryRefresh |
 | 압축 자료 선택 | internal/agent/compact | BenchmarkSourceSelection |
 | 반복 본문·팀 압축·과거 개인 기록 복원 | internal/storage/sqlite | BenchmarkPayloadPages · BenchmarkTeamSharedMemory · BenchmarkTeamHistoricalReaders |
+| 초안 끝 편집과 화면 투영 | internal/tui/input | BenchmarkLongDraft의 EditWindow |
+| 편집 가능·초과 크기 파일 열기 | internal/fileview | BenchmarkEditorOpen |
+| 저장된 첨부 한 건 복원 | internal/storage/sqlite | BenchmarkHistoryImageRead |
 | 공용 대화 수신 | internal/agent/team | BenchmarkPublicHistoryFanout |
 | 현재 팀 현황·확인한 변경 검색과 정리 | internal/agent/team · internal/agent/team/contribution | BenchmarkTeamWorkContext · BenchmarkTeamCoveredContext · BenchmarkReviewedChanges |
 | 실행 근거 해시·명령 메타데이터·빈 판단 경계 | internal/agent/team · internal/tools/local/process · internal/tools/local · internal/agent/run | BenchmarkOperationEvidence · BenchmarkCommandMetadata · BenchmarkEmptyCommandCollection · BenchmarkEmptyInstructionCheck |
@@ -566,7 +569,7 @@ media/imagefile은 파일 내용의 형식 판별·디코딩·대표 프레임 �
 
 같은 코덱을 API 입력·TUI clipboard도 직접 사용한다. tui/clipboard는 로컬 플랫폼 명령·private 임시 파일·취소와 정리, tui/session/image_paste는 이벤트 루프의 첨부 소유권·초안 세대·메타데이터 표시를 담당한다. composer.Request는 이미지 바이트를 복사하지 않고 불변 스냅샷을 공유한다. 큐 편집의 원래 초안과 예약 이미지는 별도 슬라이스로 소유한다. 64MiB·64M픽셀 검사는 agent/media 한 곳이 소유하며 디코더는 예상 작업량을 processmemory의 768MiB 공용 예산에 예약한다. skills.ResourceFile의 이미지 읽기도 같은 바이트 상한을 사용한다.
 
-storage/content·sqlite는 이미지 본문을 같은 세션의 payload에 저장한다. sqlite의 RecentInputs는 사용자 텍스트만, PendingTools는 미완료 호출의 인자만 복원한다. PendingTools의 식별자 조회와 인자 선택은 별도 파일이 담당하며 부분 완료된 배치도 원래 순서를 유지한다. 모델 문맥 조회는 이미지 포함 여부를 명시하고 텍스트 연결에서는 이미지 payload를 읽지 않는다. 요약·화면 조회도 이미지 바이너리를 제외한다. 이미지 미소비 그룹은 압축 경계를 제한한다. 형식·검사·용량 계약은 [이미지 입력](images.md)을 따른다.
+storage/content·sqlite는 이미지 본문을 같은 세션의 payload에 저장한다. sqlite의 RecentInputs는 사용자 텍스트만, PendingTools는 미완료 호출의 인자만 복원한다. PendingTools의 식별자 조회와 인자 선택은 별도 파일이 담당하며 부분 완료된 배치도 원래 순서를 유지한다. 모델 문맥 조회는 이미지 포함 여부를 명시하고 텍스트 연결에서는 이미지 payload를 읽지 않는다. HistoryImage는 SQLite에서 요청한 이미지 객체를 선택하고 해당 data 참조만 복원한다. 원래 JSON 문자열 또는 문자열 참조를 직접 바이트로 디코딩하고 크기·형식·digest를 검증한다. 요약·화면 조회도 이미지 바이너리를 제외한다. 이미지 미소비 그룹은 압축 경계를 제한한다. 형식·검사·용량 계약은 [이미지 입력](images.md)을 따른다.
 
 sqlite/team_images는 개인 수신 DB에 픽셀을 재저장하지 않는 공용 이미지 참조 codec을 소유한다. 복원은 소유 공용 대화·순서·원문 해시를 검증하며 텍스트 전용 조회는 이미지 참조를 복원하지 않는다. 공용 사용자 이미지는 user 메시지로 유지하고 JSON 문자열의 설명으로 바꾸지 않는다. detail의 한 문서 스풀은 64MiB로 제한하고 초과·디스크 부족 시 요청 페이지를 수집하는 경로로 전환한다. 저장 메시지·호환 응답·상세 JSON은 불필요한 HTML 이스케이프를 제거하며 상세 원문은 마스킹과 스풀 준비까지 메모리 예약을 유지한다.
 
@@ -611,7 +614,7 @@ SQLite의 청크 미리보기는 호출이 소유한 decoder를 사용한다. DB
 
 미디어 쿼리는 Astryx `useMediaQuery`, 번역의 현재 locale은 `useLocale`, 이미지 붙여넣기 단축키는 포커스 범위를 제한한 `useHotkeys`를 사용한다. 이미지 읽기·용량 검사·API 질의·요청 순서는 도메인/전송 소유자에 둔다. Astryx `useClipboard`는 텍스트 쓰기용이므로 이미지 읽기 계약을 대체하지 않는다. React 상태·수명, TanStack 질의·라우팅과 React Hook Form의 전용 훅도 각 책임에 사용한다.
 
-아이콘은 Astryx Neutral이 제공하는 Lucide 구성을 따른다. 공용 컨트롤의 기본 아이콘 29개는 그대로 상속하며 앱 전용 이름 23개만 `shared/ui/icons`에서 테마 registry에 추가한다. 화면은 Astryx Icon을 사용하고 개별 아이콘 라이브러리를 직접 가져오지 않는다. 앱 전용 아이콘에는 Astryx와 공유하는 `lucide-react`를 정확한 같은 버전의 직접 의존성으로 선언하고 필요한 glyph만 정적으로 import한다. 별도 아이콘 렌더러나 중복 registry를 두지 않는다.
+아이콘은 Astryx Neutral이 제공하는 Lucide 구성을 따른다. 공용 컨트롤의 기본 아이콘은 그대로 상속하며 앱 전용 이름만 `shared/ui/icons`에서 테마 registry에 추가한다. 화면은 Astryx Icon을 사용하고 개별 아이콘 라이브러리를 직접 가져오지 않는다. 앱 전용 아이콘에는 Astryx와 공유하는 `lucide-react`를 정확한 같은 버전의 직접 의존성으로 선언하고 필요한 glyph만 정적으로 import한다. 별도 아이콘 렌더러나 중복 registry를 두지 않는다.
 
 ```sh
 sh scripts/build-ui.sh
@@ -645,15 +648,19 @@ bun run --cwd webui generate:api
 
 파일과 수명은 실제 경계로 나눈다. API·submission·followups·stream은 HTTP, 안정된 접수, 후속 예약과 관찰을 소유한다. store·stream-state는 제한된 화면 상태를, queries는 서버 캐시를 소유한다. chat·history-row·live-output은 배치·저장 이력·실시간 출력을 분리하되, 실시간 출력도 ChatMessageList 안에 두어 Astryx가 내용 높이와 자동 스크롤을 함께 관찰하게 한다. files·file-document·editor는 탐색·문서 전이·Astryx Lab CodeEditor 수명을 분리한다. 설정·모델 폼은 해당 대화와 전역 설정의 범위를 표시한다. 문구는 i18n.ts, 실패 표시는 errors.ts가 소유한다.
 
-workspace-toolbar·composer-actions는 작업 선택과 입력 액션의 Astryx 표현을 소유하고 실행 수명을 가져오지 않는다. attachment-panel은 +로 펼치는 이미지·스킬 접근만 담당한다. appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·Lab·CLI는 같은 canary 버전으로 고정한다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
+workspace-toolbar는 탐색 탭과 프로젝트·대화 문맥을 별도 행으로 배치하고 composer-actions는 입력 액션의 Astryx 표현을 소유한다. attachment-menu는 +의 선택 목록과 수명을 유지하는 이미지 FileInput을, composer-images는 독립된 Carousel·Thumbnail과 File별 미리보기 URL 수명을, queue-editor는 열려 있는 예약 편집 본문을, skill-picker·skill-list는 스킬 모달과 가상화한 메타데이터 목록을 소유한다. 좁은 창의 스킬 목록·본문 선택과 검색어는 Skills가 유지한다. Files는 오른쪽 현재 폴더 목록 하나와 탐색 이력을 소유한다. file-header는 제목·저장 액션·Preview/Raw 표현만 다루며 file-document는 선택 시 한 번의 editorRead·revision·저장·현재 초안 미리보기와 읽기 전용 페이지를 소유한다. 미리보기 클릭은 Astryx useClickableContainer로 중첩 컨트롤·텍스트 선택을 보존하며 Raw로 전환한다. 미리보기 중 편집기를 유지하고 Raw 복귀 시 추가 문자열 참조와 Markdown AST를 해제한다. 읽기·저장은 문서 수명에 연결한 AbortController로 종료한다. fileview는 편집 한도를 넘는 파일을 메타데이터로 분류하며, 편집 가능한 본문은 확인한 크기와 변경 감지용 한 바이트에 맞춰 읽는다. model-candidates는 설정 초안 한 건의 취소 가능한 모델 조회를 소유하며 Astryx의 비동기 검색 소스가 결과를 기다린다.
 
-일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수를 약한 참조로 재사용하고 전체 사용량은 변경분으로 갱신한다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다.
+작업 페이지의 sessionSummary는 Service.Tasks가 요청한 세션 ID에 한해 Sessions.ConversationSummaries로 조회한다. 기존 DB/WAL 메타데이터 인덱스와 단일 읽기 연결을 재사용하고 중복 ID를 제거한다. 조회 중 공유 삭제 대여를 소유하며 오류 시 SQLite 연결을 먼저 닫아 대여보다 파일 핸들이 오래 남지 않게 한다. 제목을 작업 원장에 중복 저장하거나 대화 본문을 적재하지 않는다.
 
-현재 대화 이력은 구간별 네 페이지를 유지하고 더 오래된 구간과 최신 구간으로 이동한다. 대화·디렉터리·스킬·예약 목록은 가상화하며 포커스 또는 편집 중인 행은 유지한다. 대화/스킬 목록은 최대 네 페이지를 보관하고 목록 처음으로 복귀할 수 있다. 디렉터리는 revision에 고정된 앞/뒤 네 페이지를 사용한다. 비활성 서버 데이터는 최근 12개와 추정 UTF-16/Blob 16MiB 예산을 함께 적용한다. 기본 GC는 60초이며 대화 목록·디렉터리·썸네일은 15초다. 캐시 회수는 관련 질의의 성공·마지막 관찰 해제 때만 수행한다. 스크롤 위치도 최근 12개로 제한한다.
+appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·Lab·CLI는 같은 canary 버전으로 고정한다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
 
-Markdown은 Astryx의 증분 파서를 유지하고 공개 AST transform으로 AST 표시 노드를 1,024개 이내로 제한한다. 전체 텍스트는 별도 native Popover에서 페이지로 읽는다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집기는 64KiB 또는 2,000줄을 넘으면 줄 번호 DOM을 만들지 않고 native 문법 강조·편집·revision 저장은 유지한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
+일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수와 레코드별 합계를 WeakMap으로 재사용하고 전체 사용량은 변경분으로 갱신한다. 합계 캐시가 과거 입력·큐 레코드를 강하게 보유하지 않아 삭제·로그아웃 직후 원본 참조를 회수할 수 있다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다. 첨부 미리보기는 File별로 URL 하나를 소유하고 입력 타이핑에 재생성하지 않으며 삭제·화면 종료 시 revoke한다. 미리보기는 원본을 Base64나 별도 저장소에 복제하지 않는다. 알려진 임시 업로드는 불확실한 제출을 제거할 때 해제하고 해제 HTTP는 5초로 제한하며 불필요한 응답 본문을 취소한다. 입력 TUI의 이미지 표시는 읽기 전용 접두사로 투영하고 실제 전송 본문·편집 revision에 넣지 않는다.
 
-이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유하고 해당 이력을 갱신하며 정상 reset snapshot을 받으면 연결을 유지한 채 반영한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 작업 목록은 스트림이 정상일 때 주기적으로 재조회하지 않고 중단·복구 중에만 분산 polling을 사용한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
+현재 대화 이력은 구간별 네 페이지를 유지하고 더 오래된 구간과 최신 구간으로 이동한다. 새 기록과 재접속은 최신 구간을 갱신한다. 각 페이지의 서버 순서를 재사용하며, 스트림 상태가 저장 이력의 조회 revision을 확인한 뒤 교체된 초안을 해제한다. 대화·디렉터리·스킬·예약 목록은 가상화하며 포커스 또는 편집 중인 행은 유지한다. 대화/스킬 목록은 최대 네 페이지를 보관하고 목록 처음으로 복귀할 수 있다. 디렉터리는 revision에 고정된 앞/뒤 네 페이지를 사용한다. 비활성 서버 데이터는 최근 12개와 추정 UTF-16/Blob 16MiB 예산을 함께 적용한다. 기본 GC는 60초이며 대화 목록·디렉터리·썸네일은 15초다. 캐시 회수는 관련 질의의 성공·마지막 관찰 해제 때만 수행한다. 스크롤 위치도 최근 12개로 제한한다.
+
+스트림이 표시를 갱신할 때 Astryx의 증분 파서를 사용하며 공개 AST transform으로 표시 노드를 1,024개 이내로 제한한다. 새 텍스트가 500ms 동안 오지 않으면 도착한 본문까지 표시하고 문자 애니메이션을 종료한다. 스트림 중지·연결 복구 동안에는 현재 화면에 전달된 본문을 확정한다. 접은 Thinking은 Markdown을 해제하며 전체 텍스트와 실행 정보는 팝오버가 열린 동안만 본문을 마운트한다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집기는 64KiB 또는 2,000줄을 넘으면 줄 번호 DOM을 만들지 않고 native 문법 강조·편집·revision 저장은 유지한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
+
+이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유한다. 스냅샷을 적용하면 이전 cursor의 대기 델타를 폐기하고, 스냅샷 본문과 활동은 스트림 상태에 넘긴 뒤 Query에는 메타데이터를 보관한다. 발신자가 섞인 텍스트도 소스별로 합치며 제어·통계·리셋의 순서를 보존한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 작업 목록은 스트림이 정상일 때 주기적으로 재조회하지 않고 중단·복구 중에만 분산 polling을 사용한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
 
 이미지 목록은 인증된 256px PNG 썸네일을 사용하고 원본은 사용자가 열 때 요청한다. 작은 Blob 캐시와 object URL은 각각 Query와 컴포넌트가 소유하며 해제·로그아웃·삭제 시 정리한다. 서버는 원본의 현재 메타데이터·DB/WAL 변경 상태를 확인한 뒤 썸네일 캐시를 이용하며 원본 다운로드와 픽셀 디코딩에는 별도 바이트 예산을 적용한다. 카메라 EXIF 방향은 축소한 픽셀에 반영한다. 배포 자산은 gzip 한 사본을 유지하고 API JSON 응답만 크기에 따라 재사용 압축기로 처리한다.
 

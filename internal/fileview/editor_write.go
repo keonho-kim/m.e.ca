@@ -5,6 +5,7 @@
 package fileview
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"errors"
@@ -26,7 +27,11 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 	if err != nil {
 		return doc, err
 	}
-	if e.redact(t.Absolute) != t.Absolute || len(body) > EditorBytes || !utf8.Valid(body) || strings.IndexByte(string(body), 0) >= 0 || e.redact(string(body)) != string(body) {
+	if e.redact(t.Absolute) != t.Absolute || body == nil || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 {
+		return doc, fault.New(diag.PermissionDenied, diag.UIEditorReadOnly)
+	}
+	original := string(body)
+	if e.redact(original) != original {
 		return doc, fault.New(diag.PermissionDenied, diag.UIEditorReadOnly)
 	}
 	if documentRevision(body) != revision {
@@ -35,7 +40,7 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 	if e.redact(text) != text {
 		return doc, fault.New(diag.PermissionDenied, diag.UIEditorReadOnly)
 	}
-	if text == string(body) {
+	if text == original {
 		return Document{Path: e.redact(t.Absolute), Revision: revision, Editable: true}, nil
 	}
 	tmp := filepath.Join(filepath.Dir(t.Relative), ".meca-edit-"+rand.Text())
@@ -57,7 +62,7 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 	if err != nil {
 		return doc, err
 	}
-	if current.Absolute != t.Absolute || !os.SameFile(info, currentInfo) || documentRevision(currentBody) != revision {
+	if current.Absolute != t.Absolute || !os.SameFile(info, currentInfo) || currentBody == nil || documentRevision(currentBody) != revision {
 		return doc, fault.New(diag.Conflict, diag.UIEditorChanged)
 	}
 	if err := ctx.Err(); err != nil {

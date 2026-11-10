@@ -42,7 +42,6 @@ export const mecaTheme = defineTheme({
         value: {
           components: {
             button: { 'variant:attachment': { transitionDuration: '0ms' } },
-            'chat-composer-drawer': { base: { transitionDuration: '0ms' } },
           },
         },
       },
@@ -57,6 +56,17 @@ export const mecaTheme = defineTheme({
       },
     },
     button: {
+      'variant:image-remove': {
+        position: 'absolute',
+        top: 'var(--spacing-1)',
+        right: 'var(--spacing-1)',
+        height: 'var(--spacing-6)',
+        width: 'var(--spacing-6)',
+        minWidth: 'var(--spacing-6)',
+        borderRadius: 'var(--radius-full)',
+        backgroundColor: 'var(--color-overlay)',
+        color: 'var(--color-on-dark)',
+      },
       'variant:attachment': {
         backgroundColor: 'transparent',
         color: 'var(--color-icon-primary)',
@@ -64,23 +74,6 @@ export const mecaTheme = defineTheme({
         transitionDuration: 'var(--duration-medium)',
         transitionTimingFunction: 'var(--ease-standard)',
         ':is([aria-expanded="true"])': { transform: 'rotate(90deg)' },
-      },
-    },
-    'chat-composer-drawer': {
-      base: {
-        maxHeight: '32rem',
-        transitionProperty: 'transform, opacity',
-        transitionDuration: 'var(--duration-medium)',
-        transitionTimingFunction: 'var(--ease-standard)',
-        ':is([data-menu-open="false"])': {
-          maxHeight: '0px',
-          paddingBlockStart: '0px',
-          paddingBlockEnd: '0px',
-          marginBlockEnd: '0px',
-          opacity: '0',
-          transform: 'translateY(0.5rem)',
-          pointerEvents: 'none',
-        },
       },
     },
     'app-shell': { base: { backgroundColor: 'var(--color-background-body)' } },
@@ -93,5 +86,14 @@ export const mecaTheme = defineTheme({
     'dropdown-menu': { base: { backdropFilter: 'blur(20px)' } },
     popover: { base: { backdropFilter: 'blur(20px)' } },
     'chat-composer': { base: { backdropFilter: 'blur(20px)' } },
+    carousel: {
+      base: {
+        paddingBlock: 'var(--spacing-2)',
+        backgroundColor: 'var(--color-background-popover)',
+        borderRadius: 'var(--radius-container)',
+        boxShadow: 'var(--shadow-low)',
+        backdropFilter: 'blur(20px)',
+      },
+    },
   },
 });

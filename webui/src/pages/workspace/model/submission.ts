@@ -3,6 +3,7 @@
 // Usage: Direct requests and queued follow-ups share startRequest.
 // Related: webui/src/pages/workspace/model/execution.ts, internal/commands/server/request_lookup.go.
 
+import { inputBytes, rememberInputBytes } from '@/pages/workspace/model/input-usage';
 import {
   emptyInput,
   type Input,
@@ -16,7 +17,6 @@ import { trimTasks } from '@/pages/workspace/model/task-state';
 import type { TaskJson } from '@/shared/api';
 import { type CapabilitiesJson, call, queries, releaseUpload, upload } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
-import { utf8Bytes } from '@/shared/lib/utf8';
 
 type Submission = { key: string; input: Input; target: Target; attachmentIds: string[] };
 const pending = new Map<string, Submission>(),
@@ -25,6 +25,11 @@ const controllers = new Map<string, AbortController>();
 const reading = new Map<string, Set<AbortController>>();
 const inflight = new Map<string, Promise<void>>();
 let epoch = 0;
+async function releaseAttachments(workspace: string, ids: string[]) {
+  // Transfer known IDs once; a cancelled upload may still append a late receipt.
+  const staged = ids.splice(0);
+  await Promise.allSettled(staged.map((id) => releaseUpload(workspace, id)));
+}
 export function terminal(status: string) {
   return ['answered', 'stopped', 'interrupted'].includes(status);
 }
@@ -74,9 +79,7 @@ async function forget(value: Submission, task: TaskJson, startedEpoch: number) {
   ) {
     useWorkspaceStore.getState().patchInput(value.target, { text: '', files: [] });
   }
-  await Promise.allSettled(
-    value.attachmentIds.map((id) => releaseUpload(value.target.workspace, id))
-  );
+  await releaseAttachments(value.target.workspace, value.attachmentIds);
 }
 async function lookup(value: Submission) {
   const key = targetKey(value.target),
@@ -139,7 +142,7 @@ export async function startRequest(target: Target, input: Input): Promise<boolea
     }
     if (!value) {
       const values = [...pending.values()];
-      const bytes = values.reduce((n, v) => n + utf8Bytes(v.input.text), 0) + utf8Bytes(input.text);
+      const bytes = values.reduce((n, v) => n + inputBytes(v.input), 0) + inputBytes(input);
       const files = new Set([...values.flatMap((v) => v.input.files), ...input.files]);
       if (
         values.length >= 256 ||
@@ -153,19 +156,22 @@ export async function startRequest(target: Target, input: Input): Promise<boolea
         target,
         attachmentIds: [],
       };
+      rememberInputBytes(value.input, inputBytes(input));
       pending.set(key, value);
       try {
         for (const file of input.files)
           value.attachmentIds.push((await upload(target.workspace, file, controller.signal)).id);
       } catch (error) {
         if (pending.get(key) === value) pending.delete(key);
-        await Promise.allSettled(
-          value.attachmentIds.map((id) => releaseUpload(target.workspace, id))
-        );
+        await releaseAttachments(target.workspace, value.attachmentIds);
         throw error;
       }
     }
-    if (startedEpoch !== epoch) throw failure('cancelled');
+    if (startedEpoch !== epoch || controller.signal.aborted) {
+      if (pending.get(key) === value) pending.delete(key);
+      await releaseAttachments(value.target.workspace, value.attachmentIds);
+      return false;
+    }
     let task: TaskJson | undefined;
     try {
       task = (
@@ -191,9 +197,7 @@ export async function startRequest(target: Target, input: Input): Promise<boolea
           return true;
         }
         if (pending.get(key) === value) pending.delete(key);
-        await Promise.allSettled(
-          value.attachmentIds.map((id) => releaseUpload(target.workspace, id))
-        );
+        await releaseAttachments(target.workspace, value.attachmentIds);
       }
       throw error;
     }
@@ -233,5 +237,7 @@ export function clearPendingTarget(target: Target) {
   controllers.get(key)?.abort();
   for (const controller of reading.get(key) ?? []) controller.abort();
   reading.delete(key);
+  const value = pending.get(key);
   pending.delete(key);
+  if (value) void releaseAttachments(value.target.workspace, value.attachmentIds);
 }

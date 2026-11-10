@@ -7,8 +7,9 @@ import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
-import { SideNavItem } from '@astryxdesign/core/SideNav';
+import { SideNavItem, useSideNavCollapse } from '@astryxdesign/core/SideNav';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -81,41 +82,13 @@ export const SessionList = memo(function SessionList({
                 transform: `translateY(${row.start}px)`,
               }}
             >
-              <SideNavItem
-                label={session.summary || t('untitled')}
-                className="session-link session-row"
-                icon={<Icon icon="meca:message" size="xsm" />}
-                isSelected={target.workspace === workspace && target.session === session.id}
-                onClick={() => navigate({ workspace, session: session.id ?? '' })}
-                endContent={
-                  session.runningTaskId || running.has(session.id ?? '') ? (
-                    <StatusDot variant="accent" label={t('running')} isPulsing />
-                  ) : undefined
-                }
-                actions={
-                  <HStack gap={1}>
-                    {!!session.pendingApprovals && (
-                      <Button
-                        label={`${t('approval')} ${session.summary || t('untitled')}`}
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          useWorkspaceStore
-                            .getState()
-                            .set({ reviewTarget: { workspace, session: session.id ?? '' } })
-                        }
-                        endContent={<Badge label={session.pendingApprovals} />}
-                      />
-                    )}
-                    <IconButton
-                      label={t('deleteChat')}
-                      size="sm"
-                      variant="ghost"
-                      icon={<Icon icon="meca:delete" size="xsm" />}
-                      onClick={() => remove(session)}
-                    />
-                  </HStack>
-                }
+              <SessionRow
+                session={session}
+                workspace={workspace}
+                target={target}
+                running={running.has(session.id ?? '')}
+                navigate={navigate}
+                remove={remove}
               />
             </VStack>
           );
@@ -124,3 +97,66 @@ export const SessionList = memo(function SessionList({
     </VStack>
   );
 });
+
+function SessionRow({
+  session,
+  workspace,
+  target,
+  running,
+  navigate,
+  remove,
+}: {
+  session: SessionJson;
+  workspace: string;
+  target: Target;
+  running: boolean;
+  navigate: (target: Target) => void;
+  remove: (session: SessionJson) => void;
+}) {
+  const t = useLocale(),
+    label = session.summary || t('untitled');
+  const labelRef = useRef<HTMLElement>(null);
+  const rail = useSideNavCollapse();
+  return (
+    <>
+      <SideNavItem
+        ref={labelRef}
+        label={label}
+        className="session-link session-row"
+        icon={<Icon icon="meca:message" size="xsm" />}
+        isSelected={target.workspace === workspace && target.session === session.id}
+        onClick={() => navigate({ workspace, session: session.id ?? '' })}
+        endContent={
+          session.runningTaskId || running ? (
+            <StatusDot variant="accent" label={t('running')} isPulsing />
+          ) : undefined
+        }
+        actions={
+          <HStack gap={1}>
+            {!!session.pendingApprovals && (
+              <Button
+                label={t('approval')}
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  useWorkspaceStore
+                    .getState()
+                    .set({ reviewTarget: { workspace, session: session.id ?? '' } })
+                }
+                endContent={<Badge label={session.pendingApprovals} />}
+              />
+            )}
+            <IconButton
+              label={t('deleteChat')}
+              size="sm"
+              variant="ghost"
+              icon={<Icon icon="meca:delete" size="xsm" />}
+              onClick={() => remove(session)}
+            />
+          </HStack>
+        }
+      />
+      <Tooltip anchorRef={labelRef} content={label} isEnabled={!rail.isCollapsed} />
+    </>
+  );
+}

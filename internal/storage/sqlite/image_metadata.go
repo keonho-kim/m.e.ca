@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/media"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -18,8 +17,10 @@ import (
 
 func (s *Store) HistoryImageMetadata(ctx context.Context, sequence int64, index int) (media.Metadata, string, error) {
 	var body []byte
-	path := fmt.Sprintf("$.images[%d]", index)
-	err := s.db.QueryRowContext(ctx, "SELECT json_extract(m.body,?) FROM timeline t JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence WHERE t.sequence=? AND m.role='user'", path, sequence).Scan(&body)
+	if index < 0 {
+		return media.Metadata{}, "", fault.New(diag.NotFound, diag.ServerImageMissing)
+	}
+	err := s.db.QueryRowContext(ctx, "SELECT json_extract(m.body,?)"+historyImageRow, historyImagePath(index), sequence).Scan(&body)
 	if errors.Is(err, sql.ErrNoRows) {
 		return media.Metadata{}, "", fault.New(diag.NotFound, diag.ServerImageMissing)
 	}

@@ -47,4 +47,5 @@ export interface WorkspaceState {
   updateQueue: (target: Target, id: string, text: string) => boolean;
   bootstrap: (target: Target, state: SnapshotJson) => void;
   receive: (events: EventJson[]) => void;
+  acknowledgeHistory: (target: Target, revision: number) => void;
 }

@@ -78,6 +78,58 @@ func (x *WorkspaceRequest) GetOffset() int32 {
 	return 0
 }
 
+type CreateFolder struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFolder) Reset() {
+	*x = CreateFolder{}
+	mi := &file_meca_v1_application_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFolder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFolder) ProtoMessage() {}
+
+func (x *CreateFolder) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_application_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFolder.ProtoReflect.Descriptor instead.
+func (*CreateFolder) Descriptor() ([]byte, []int) {
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreateFolder) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *CreateFolder) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type Workspace struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -92,7 +144,7 @@ type Workspace struct {
 
 func (x *Workspace) Reset() {
 	*x = Workspace{}
-	mi := &file_meca_v1_application_proto_msgTypes[1]
+	mi := &file_meca_v1_application_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -104,7 +156,7 @@ func (x *Workspace) String() string {
 func (*Workspace) ProtoMessage() {}
 
 func (x *Workspace) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[1]
+	mi := &file_meca_v1_application_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -117,7 +169,7 @@ func (x *Workspace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workspace.ProtoReflect.Descriptor instead.
 func (*Workspace) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{1}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Workspace) GetId() string {
@@ -172,7 +224,7 @@ type Workspaces struct {
 
 func (x *Workspaces) Reset() {
 	*x = Workspaces{}
-	mi := &file_meca_v1_application_proto_msgTypes[2]
+	mi := &file_meca_v1_application_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -184,7 +236,7 @@ func (x *Workspaces) String() string {
 func (*Workspaces) ProtoMessage() {}
 
 func (x *Workspaces) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[2]
+	mi := &file_meca_v1_application_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -197,7 +249,7 @@ func (x *Workspaces) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workspaces.ProtoReflect.Descriptor instead.
 func (*Workspaces) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{2}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Workspaces) GetItems() []*Workspace {
@@ -224,7 +276,7 @@ type CommandDescription struct {
 
 func (x *CommandDescription) Reset() {
 	*x = CommandDescription{}
-	mi := &file_meca_v1_application_proto_msgTypes[3]
+	mi := &file_meca_v1_application_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -236,7 +288,7 @@ func (x *CommandDescription) String() string {
 func (*CommandDescription) ProtoMessage() {}
 
 func (x *CommandDescription) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[3]
+	mi := &file_meca_v1_application_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -249,7 +301,7 @@ func (x *CommandDescription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandDescription.ProtoReflect.Descriptor instead.
 func (*CommandDescription) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{3}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CommandDescription) GetName() string {
@@ -275,7 +327,7 @@ type CommandCatalog struct {
 
 func (x *CommandCatalog) Reset() {
 	*x = CommandCatalog{}
-	mi := &file_meca_v1_application_proto_msgTypes[4]
+	mi := &file_meca_v1_application_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +339,7 @@ func (x *CommandCatalog) String() string {
 func (*CommandCatalog) ProtoMessage() {}
 
 func (x *CommandCatalog) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[4]
+	mi := &file_meca_v1_application_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +352,7 @@ func (x *CommandCatalog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandCatalog.ProtoReflect.Descriptor instead.
 func (*CommandCatalog) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{4}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CommandCatalog) GetItems() []*CommandDescription {
@@ -319,7 +371,7 @@ type ParseInput struct {
 
 func (x *ParseInput) Reset() {
 	*x = ParseInput{}
-	mi := &file_meca_v1_application_proto_msgTypes[5]
+	mi := &file_meca_v1_application_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -331,7 +383,7 @@ func (x *ParseInput) String() string {
 func (*ParseInput) ProtoMessage() {}
 
 func (x *ParseInput) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[5]
+	mi := &file_meca_v1_application_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +396,7 @@ func (x *ParseInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseInput.ProtoReflect.Descriptor instead.
 func (*ParseInput) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{5}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ParseInput) GetText() string {
@@ -364,7 +416,7 @@ type ParsedInput struct {
 
 func (x *ParsedInput) Reset() {
 	*x = ParsedInput{}
-	mi := &file_meca_v1_application_proto_msgTypes[6]
+	mi := &file_meca_v1_application_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -376,7 +428,7 @@ func (x *ParsedInput) String() string {
 func (*ParsedInput) ProtoMessage() {}
 
 func (x *ParsedInput) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[6]
+	mi := &file_meca_v1_application_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -389,7 +441,7 @@ func (x *ParsedInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParsedInput.ProtoReflect.Descriptor instead.
 func (*ParsedInput) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{6}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ParsedInput) GetAction() string {
@@ -417,7 +469,7 @@ type EditFile struct {
 
 func (x *EditFile) Reset() {
 	*x = EditFile{}
-	mi := &file_meca_v1_application_proto_msgTypes[7]
+	mi := &file_meca_v1_application_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -429,7 +481,7 @@ func (x *EditFile) String() string {
 func (*EditFile) ProtoMessage() {}
 
 func (x *EditFile) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[7]
+	mi := &file_meca_v1_application_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -442,7 +494,7 @@ func (x *EditFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditFile.ProtoReflect.Descriptor instead.
 func (*EditFile) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{7}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EditFile) GetPath() string {
@@ -479,7 +531,7 @@ type EditorDocument struct {
 
 func (x *EditorDocument) Reset() {
 	*x = EditorDocument{}
-	mi := &file_meca_v1_application_proto_msgTypes[8]
+	mi := &file_meca_v1_application_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +543,7 @@ func (x *EditorDocument) String() string {
 func (*EditorDocument) ProtoMessage() {}
 
 func (x *EditorDocument) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[8]
+	mi := &file_meca_v1_application_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +556,7 @@ func (x *EditorDocument) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditorDocument.ProtoReflect.Descriptor instead.
 func (*EditorDocument) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{8}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *EditorDocument) GetPath() string {
@@ -555,7 +607,7 @@ type DiagnoseModel struct {
 
 func (x *DiagnoseModel) Reset() {
 	*x = DiagnoseModel{}
-	mi := &file_meca_v1_application_proto_msgTypes[9]
+	mi := &file_meca_v1_application_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -567,7 +619,7 @@ func (x *DiagnoseModel) String() string {
 func (*DiagnoseModel) ProtoMessage() {}
 
 func (x *DiagnoseModel) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[9]
+	mi := &file_meca_v1_application_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -580,7 +632,7 @@ func (x *DiagnoseModel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiagnoseModel.ProtoReflect.Descriptor instead.
 func (*DiagnoseModel) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{9}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DiagnoseModel) GetSessionId() string {
@@ -629,7 +681,7 @@ type DiagnosticResult struct {
 
 func (x *DiagnosticResult) Reset() {
 	*x = DiagnosticResult{}
-	mi := &file_meca_v1_application_proto_msgTypes[10]
+	mi := &file_meca_v1_application_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -641,7 +693,7 @@ func (x *DiagnosticResult) String() string {
 func (*DiagnosticResult) ProtoMessage() {}
 
 func (x *DiagnosticResult) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[10]
+	mi := &file_meca_v1_application_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -654,7 +706,7 @@ func (x *DiagnosticResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiagnosticResult.ProtoReflect.Descriptor instead.
 func (*DiagnosticResult) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{10}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DiagnosticResult) GetChat() bool {
@@ -688,7 +740,7 @@ type FileWatchRequest struct {
 
 func (x *FileWatchRequest) Reset() {
 	*x = FileWatchRequest{}
-	mi := &file_meca_v1_application_proto_msgTypes[11]
+	mi := &file_meca_v1_application_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -700,7 +752,7 @@ func (x *FileWatchRequest) String() string {
 func (*FileWatchRequest) ProtoMessage() {}
 
 func (x *FileWatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[11]
+	mi := &file_meca_v1_application_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -713,7 +765,7 @@ func (x *FileWatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileWatchRequest.ProtoReflect.Descriptor instead.
 func (*FileWatchRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{11}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FileWatchRequest) GetWorkspaceId() string {
@@ -741,7 +793,7 @@ type FileChange struct {
 
 func (x *FileChange) Reset() {
 	*x = FileChange{}
-	mi := &file_meca_v1_application_proto_msgTypes[12]
+	mi := &file_meca_v1_application_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -753,7 +805,7 @@ func (x *FileChange) String() string {
 func (*FileChange) ProtoMessage() {}
 
 func (x *FileChange) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[12]
+	mi := &file_meca_v1_application_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -766,7 +818,7 @@ func (x *FileChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileChange.ProtoReflect.Descriptor instead.
 func (*FileChange) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{12}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *FileChange) GetPath() string {
@@ -800,7 +852,7 @@ type RunOutcome struct {
 
 func (x *RunOutcome) Reset() {
 	*x = RunOutcome{}
-	mi := &file_meca_v1_application_proto_msgTypes[13]
+	mi := &file_meca_v1_application_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -812,7 +864,7 @@ func (x *RunOutcome) String() string {
 func (*RunOutcome) ProtoMessage() {}
 
 func (x *RunOutcome) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[13]
+	mi := &file_meca_v1_application_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -825,7 +877,7 @@ func (x *RunOutcome) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunOutcome.ProtoReflect.Descriptor instead.
 func (*RunOutcome) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{13}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RunOutcome) GetStatus() string {
@@ -852,7 +904,7 @@ type RequestLookup struct {
 
 func (x *RequestLookup) Reset() {
 	*x = RequestLookup{}
-	mi := &file_meca_v1_application_proto_msgTypes[14]
+	mi := &file_meca_v1_application_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -864,7 +916,7 @@ func (x *RequestLookup) String() string {
 func (*RequestLookup) ProtoMessage() {}
 
 func (x *RequestLookup) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_application_proto_msgTypes[14]
+	mi := &file_meca_v1_application_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -877,7 +929,7 @@ func (x *RequestLookup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestLookup.ProtoReflect.Descriptor instead.
 func (*RequestLookup) Descriptor() ([]byte, []int) {
-	return file_meca_v1_application_proto_rawDescGZIP(), []int{14}
+	return file_meca_v1_application_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RequestLookup) GetSessionId() string {
@@ -901,7 +953,10 @@ const file_meca_v1_application_proto_rawDesc = "" +
 	"\x19meca/v1/application.proto\x12\ameca.v1\">\n" +
 	"\x10WorkspaceRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06offset\x18\x02 \x01(\x05R\x06offset\"\xa9\x01\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\"6\n" +
+	"\fCreateFolder\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xa9\x01\n" +
 	"\tWorkspace\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +
@@ -977,27 +1032,28 @@ func file_meca_v1_application_proto_rawDescGZIP() []byte {
 	return file_meca_v1_application_proto_rawDescData
 }
 
-var file_meca_v1_application_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_meca_v1_application_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_meca_v1_application_proto_goTypes = []any{
 	(*WorkspaceRequest)(nil),   // 0: meca.v1.WorkspaceRequest
-	(*Workspace)(nil),          // 1: meca.v1.Workspace
-	(*Workspaces)(nil),         // 2: meca.v1.Workspaces
-	(*CommandDescription)(nil), // 3: meca.v1.CommandDescription
-	(*CommandCatalog)(nil),     // 4: meca.v1.CommandCatalog
-	(*ParseInput)(nil),         // 5: meca.v1.ParseInput
-	(*ParsedInput)(nil),        // 6: meca.v1.ParsedInput
-	(*EditFile)(nil),           // 7: meca.v1.EditFile
-	(*EditorDocument)(nil),     // 8: meca.v1.EditorDocument
-	(*DiagnoseModel)(nil),      // 9: meca.v1.DiagnoseModel
-	(*DiagnosticResult)(nil),   // 10: meca.v1.DiagnosticResult
-	(*FileWatchRequest)(nil),   // 11: meca.v1.FileWatchRequest
-	(*FileChange)(nil),         // 12: meca.v1.FileChange
-	(*RunOutcome)(nil),         // 13: meca.v1.RunOutcome
-	(*RequestLookup)(nil),      // 14: meca.v1.RequestLookup
+	(*CreateFolder)(nil),       // 1: meca.v1.CreateFolder
+	(*Workspace)(nil),          // 2: meca.v1.Workspace
+	(*Workspaces)(nil),         // 3: meca.v1.Workspaces
+	(*CommandDescription)(nil), // 4: meca.v1.CommandDescription
+	(*CommandCatalog)(nil),     // 5: meca.v1.CommandCatalog
+	(*ParseInput)(nil),         // 6: meca.v1.ParseInput
+	(*ParsedInput)(nil),        // 7: meca.v1.ParsedInput
+	(*EditFile)(nil),           // 8: meca.v1.EditFile
+	(*EditorDocument)(nil),     // 9: meca.v1.EditorDocument
+	(*DiagnoseModel)(nil),      // 10: meca.v1.DiagnoseModel
+	(*DiagnosticResult)(nil),   // 11: meca.v1.DiagnosticResult
+	(*FileWatchRequest)(nil),   // 12: meca.v1.FileWatchRequest
+	(*FileChange)(nil),         // 13: meca.v1.FileChange
+	(*RunOutcome)(nil),         // 14: meca.v1.RunOutcome
+	(*RequestLookup)(nil),      // 15: meca.v1.RequestLookup
 }
 var file_meca_v1_application_proto_depIdxs = []int32{
-	1, // 0: meca.v1.Workspaces.items:type_name -> meca.v1.Workspace
-	3, // 1: meca.v1.CommandCatalog.items:type_name -> meca.v1.CommandDescription
+	2, // 0: meca.v1.Workspaces.items:type_name -> meca.v1.Workspace
+	4, // 1: meca.v1.CommandCatalog.items:type_name -> meca.v1.CommandDescription
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -1016,7 +1072,7 @@ func file_meca_v1_application_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meca_v1_application_proto_rawDesc), len(file_meca_v1_application_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

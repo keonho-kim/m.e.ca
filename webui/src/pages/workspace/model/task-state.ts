@@ -4,7 +4,7 @@
 // Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/types.ts.
 import { type Target, type TaskView, targetKey } from '@/pages/workspace/model/types';
 
-function isActiveTask(status: string) {
+export function isActiveTask(status: string) {
   return status === 'running' || status === 'accepted' || status === 'canceling';
 }
 const indices = new WeakMap<

@@ -146,6 +146,9 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 		List: func(ctx context.Context, cursor string, limit int) ([]sessionstate.Conversation, string, error) {
 			return sessions.ConversationPage(ctx, mode.Project, cursor, limit)
 		},
+		Summaries: func(ctx context.Context, ids []string) (map[string]string, error) {
+			return sessions.ConversationSummaries(ctx, mode.Project, ids)
+		},
 		PrepareModel: func(ctx context.Context, selected connection.Selection, credential string, defaults setup.Defaults) (server.PreparedModel, error) {
 			return prepareServerModel(ctx, selected, credential, defaults, vault)
 		},

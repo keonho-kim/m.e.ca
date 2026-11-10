@@ -1,14 +1,16 @@
-// Purpose: Page and virtualize one file-browser column with independent reference selection.
+// Purpose: Present workspace navigation, refresh and virtualized file reference selection.
 // Pattern: Query-backed collection view.
-// Usage: Files mounts only its visible directory columns.
+// Usage: Files mounts one current folder and owns its navigation and refresh effects.
 // Related: webui/src/pages/workspace/ui/files/files.tsx, webui/src/pages/workspace/model/file-references.ts.
 
 import { Button } from '@astryxdesign/core/Button';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack, Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMemo, useRef } from 'react';
@@ -22,11 +24,15 @@ export function DirectoryColumn({
   target,
   open,
   enabled,
+  parent,
+  refresh,
 }: {
   path: string;
   target: Target;
   open: (path: string, directory: boolean) => void;
   enabled: boolean;
+  parent?: () => void;
+  refresh: () => void;
 }) {
   const t = useLocale(),
     ref = useRef<HTMLDivElement>(null);
@@ -63,12 +69,32 @@ export function DirectoryColumn({
       height="fill"
       padding={0}
       header={
-        <HStack padding={3} gap={2}>
-          <Icon icon={'meca:folder'} />
-          <Text type="supporting" maxLines={1}>
-            {path}
-          </Text>
-        </HStack>
+        <VStack padding={3} gap={2} className="min-w-0">
+          <HStack gap={2} align="center" className="min-w-0">
+            <Text type="label" className="grow">
+              {t('fileWorkspace')}
+            </Text>
+            <IconButton
+              label={t('refresh')}
+              variant="ghost"
+              icon={<Icon icon={'meca:refresh'} />}
+              onClick={refresh}
+            />
+          </HStack>
+          {parent && (
+            <HStack gap={2} className="min-w-0">
+              <IconButton
+                label={t('parent')}
+                variant="ghost"
+                icon={<Icon icon={'meca:back'} />}
+                onClick={parent}
+              />
+              <Text type="supporting" maxLines={1} hasTruncateTooltip className="min-w-0">
+                {path}
+              </Text>
+            </HStack>
+          )}
+        </VStack>
       }
       content={
         <LayoutContent padding={0} ref={ref}>
@@ -134,15 +160,17 @@ export function DirectoryColumn({
                         void selectReference(target, reference, checked).catch(reportError);
                       }}
                     />
-                    <Button
-                      label={entry.name ?? ''}
-                      variant="ghost"
-                      icon={<Icon icon={entry.directory ? 'meca:folder' : 'meca:file'} />}
-                      endContent={
-                        entry.directory ? <Icon icon={'chevronRight'} size="xsm" /> : undefined
-                      }
-                      onClick={() => open(file, !!entry.directory)}
-                    />
+                    <Tooltip content={entry.name}>
+                      <Button
+                        label={entry.name ?? ''}
+                        variant="ghost"
+                        icon={<Icon icon={entry.directory ? 'meca:folder' : 'meca:file'} />}
+                        endContent={
+                          entry.directory ? <Icon icon={'chevronRight'} size="xsm" /> : undefined
+                        }
+                        onClick={() => open(file, !!entry.directory)}
+                      />
+                    </Tooltip>
                   </HStack>
                 );
               })}

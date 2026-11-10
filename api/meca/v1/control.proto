@@ -54,6 +54,7 @@ message Command {
     WorkspaceRequest browse_folders = 46;
     RequestLookup lookup_request = 47;
     SkillPrefix suggest_skills = 48;
+    CreateFolder create_folder = 49;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }

@@ -91,6 +91,7 @@ const (
 	SqliteSessionIdentityDoesNotMatchDatabaseFilename          Message = "session identity does not match database filename"
 	SqliteSessionLockingRequiresLinuxOrMacOS                   Message = "session locking requires Linux or macOS"
 	SqliteSessionPageLimitMustBeTo                             Message = "session page limit must be 1 to 100"
+	SqliteSessionMetadataLookupLimit                           Message = "session metadata lookup accepts at most 100 identities"
 	SqliteSessionProjectDoesNotMatchDirectory                  Message = "session project does not match directory"
 	SqliteSessionProjectDoesNotMatchItsStorage                 Message = "session project does not match its storage directory"
 	SqliteSessionProjectMustBeADirectory                       Message = "session project must be a directory"

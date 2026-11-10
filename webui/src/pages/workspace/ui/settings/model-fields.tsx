@@ -7,7 +7,7 @@ import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { FormLayout } from '@astryxdesign/core/FormLayout';
 import { Selector } from '@astryxdesign/core/Selector';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { createStaticSource, Typeahead } from '@astryxdesign/core/Typeahead';
+import { Typeahead } from '@astryxdesign/core/Typeahead';
 import { useMemo } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import type { ModelValues } from '@/pages/workspace/model/model-values';
@@ -17,22 +17,31 @@ export function ModelFields({
   form,
   providers,
   profile,
-  models,
   busy,
   onProvider,
+  discovering,
+  loadModels,
 }: {
   form: UseFormReturn<ModelValues>;
   providers: ProviderJson[];
   profile: SnapshotJson['model'];
-  models: ModelCandidateJson[];
   busy: boolean;
   onProvider: (id: string) => void;
+  discovering: boolean;
+  loadModels: () => Promise<ModelCandidateJson[]>;
 }) {
   const t = useLocale();
-  const source = useMemo(
-    () => createStaticSource(models.filter((v) => v.id).map((v) => ({ id: v.id!, label: v.id! }))),
-    [models]
-  );
+  const source = useMemo(() => {
+    const items = async () =>
+      (await loadModels()).flatMap((value) =>
+        value.id ? [{ id: value.id, label: value.id }] : []
+      );
+    return {
+      bootstrap: items,
+      search: async (query: string) =>
+        (await items()).filter((item) => item.label.toLowerCase().includes(query.toLowerCase())),
+    };
+  }, [loadModels]);
   const error = (key: keyof ModelValues) => {
     const message = form.formState.errors[key]?.message;
     return message ? { type: 'error' as const, message } : undefined;
@@ -63,7 +72,10 @@ export function ModelFields({
             isDisabled={busy}
             autoComplete="off"
             onChange={(value) => {
-              if (value !== field.value) form.setValue('credential', '', { shouldDirty: true });
+              if (value !== field.value) {
+                form.setValue('credential', '', { shouldDirty: true });
+                form.setValue('model', '', { shouldDirty: true });
+              }
               field.onChange(value);
             }}
             onBlur={field.onBlur}
@@ -101,6 +113,7 @@ export function ModelFields({
             isDisabled={busy}
             status={error('model')}
             hasEntriesOnFocus
+            description={discovering ? t('loading') : undefined}
           />
         )}
       />

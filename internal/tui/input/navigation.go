@@ -41,16 +41,20 @@ func (e *Editor) MoveVertical(delta, width int) {
 	row, x := e.position()
 	if !e.vertical {
 		e.column = x
-		if e.layout.rows[row].Start == 0 {
-			e.column -= 2
-		}
+		e.column -= e.prefixColumns(row)
 	}
 	row = max(0, min(len(e.layout.rows)-1, row+delta))
 	x = e.column
-	if e.layout.rows[row].Start == 0 {
-		x += 2
-	}
+	x += e.prefixColumns(row)
 	offset := e.layout.rows[row].Offset(e.layout.source, x, false)
-	e.Cursor = max(0, e.layout.runeStarts[row]+utf8.RuneCountInString(e.layout.source[e.layout.rows[row].Start:offset])-2)
+	e.Cursor = max(0, e.layout.runeStarts[row]+utf8.RuneCountInString(e.layout.source[e.layout.rows[row].Start:offset])-e.layout.prefixRunes)
 	e.vertical = true
+}
+
+func (e *Editor) prefixColumns(index int) int {
+	row := e.layout.rows[index]
+	if row.Start >= e.layout.prefixBytes {
+		return 0
+	}
+	return row.Column(e.layout.source, min(row.End, e.layout.prefixBytes))
 }

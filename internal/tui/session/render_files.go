@@ -55,8 +55,8 @@ func (a *app) renderFiles(w, h int) {
 			return
 		}
 	}
-	display.Input = a.compose.editor.Window(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
-	display.References = a.composerReferenceLines(display.BrowserWidth, h-len(display.Input.Rows)-4)
+	display.Input = a.composerWindow(display.BrowserWidth, min(a.opts.Config.UI.InputMaxLines, max(1, h-4)))
+	display.References = a.selectedReferenceLines(display.BrowserWidth, h-len(display.Input.Rows)-4)
 	display.Layout = view.Composer(len(display.Input.Rows), h, view.Candidates{}, display.Status, len(display.References))
 	display.InputFocused = a.files.browser.Input && !a.files.fileSendConfirm
 	entryRows := max(0, display.Layout.ReferenceY-4)

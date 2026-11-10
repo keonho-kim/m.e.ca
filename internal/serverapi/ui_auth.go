@@ -7,6 +7,8 @@ package serverapi
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"sync"
@@ -17,6 +19,11 @@ import (
 
 const uiCookie = "meca_ui"
 const uiLifetime = 8 * time.Hour
+
+func browserCookieName(r *http.Request) string {
+	identity := sha256.Sum256([]byte(strings.ToLower(r.Host)))
+	return uiCookie + "_" + hex.EncodeToString(identity[:6])
+}
 
 type browserSessions struct {
 	mu     sync.Mutex
@@ -44,7 +51,15 @@ func (t *Transport) enableUI(handler http.Handler) error {
 	})
 	mux.HandleFunc("POST /v1/ui/login", t.uiLogin)
 	mux.HandleFunc("POST /v1/ui/logout", t.uiLogout)
+	mux.HandleFunc("GET /v1/ui/session", t.uiSession)
 	return nil
+}
+
+func (t *Transport) uiSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(struct {
+		Authenticated bool `json:"authenticated"`
+	}{Authenticated: t.browserAuthenticated(r)})
 }
 
 func (t *Transport) uiLogin(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +78,7 @@ func (t *Transport) uiLogin(w http.ResponseWriter, r *http.Request) {
 			delete(t.browser.values, key)
 		}
 	}
-	if old, err := r.Cookie(uiCookie); err == nil {
+	if old, err := r.Cookie(browserCookieName(r)); err == nil {
 		delete(t.browser.values, sha256.Sum256([]byte(old.Value)))
 	}
 	if len(t.browser.values) >= 64 {
@@ -73,7 +88,7 @@ func (t *Transport) uiLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	t.browser.values[sha256.Sum256([]byte(value))] = now.Add(uiLifetime)
 	t.browser.mu.Unlock()
-	http.SetCookie(w, &http.Cookie{Name: uiCookie, Value: value, Path: "/v1", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode, MaxAge: int(uiLifetime.Seconds())})
+	http.SetCookie(w, &http.Cookie{Name: browserCookieName(r), Value: value, Path: "/v1", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode, MaxAge: int(uiLifetime.Seconds())})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -81,7 +96,7 @@ func (t *Transport) browserAuthenticated(r *http.Request) bool {
 	if t.browser == nil {
 		return false
 	}
-	cookie, err := r.Cookie(uiCookie)
+	cookie, err := r.Cookie(browserCookieName(r))
 	if err != nil || len(cookie.Value) < 26 || len(cookie.Value) > 128 {
 		return false
 	}
@@ -109,11 +124,11 @@ func (t *Transport) browserAuthenticated(r *http.Request) bool {
 }
 
 func (t *Transport) uiLogout(w http.ResponseWriter, r *http.Request) {
-	if cookie, err := r.Cookie(uiCookie); err == nil {
+	if cookie, err := r.Cookie(browserCookieName(r)); err == nil {
 		t.browser.mu.Lock()
 		delete(t.browser.values, sha256.Sum256([]byte(cookie.Value)))
 		t.browser.mu.Unlock()
 	}
-	http.SetCookie(w, &http.Cookie{Name: uiCookie, Path: "/v1", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: browserCookieName(r), Path: "/v1", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	w.WriteHeader(http.StatusNoContent)
 }

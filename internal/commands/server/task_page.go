@@ -26,10 +26,26 @@ func (s *Service) Tasks(ctx context.Context, session, cursor string, limit int) 
 		return nil, "", faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerWorkspaceUnavailable)
 	}
 	values, next, err := store.Page(ctx, session, cursor, limit)
+	if err != nil {
+		return nil, "", err
+	}
 	for i := range values {
 		values[i] = s.observedTask(values[i])
 	}
-	return values, next, err
+	if s.options.Summaries != nil && len(values) != 0 {
+		ids := make([]string, len(values))
+		for i := range values {
+			ids[i] = values[i].Session
+		}
+		titles, err := s.options.Summaries(ctx, ids)
+		if err != nil {
+			return nil, "", err
+		}
+		for i := range values {
+			values[i].SessionSummary = titles[values[i].Session]
+		}
+	}
+	return values, next, nil
 }
 
 func (s *Service) StorageUsage(ctx context.Context) (int64, int64, error) {

@@ -8,6 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { onlineManager } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { establishSession, useServerSession } from '@/entities/server-session';
+import { hasBrowserSession } from '@/features/server-access';
 import { Login } from '@/pages/connect';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
@@ -25,8 +26,12 @@ export function App() {
   }, [connected, logoutRevision]);
   useEffect(() => {
     const controller = new AbortController();
-    void call('', { capabilities: {} }, controller.signal)
+    void hasBrowserSession(controller.signal)
+      .then((authenticated) =>
+        authenticated ? call('', { capabilities: {} }, controller.signal) : null
+      )
       .then((reply) => {
+        if (!reply) return;
         if (!controller.signal.aborted && reply.capabilities)
           queries.setQueryData(['capabilities'], reply.capabilities);
         if (!controller.signal.aborted) establishSession(reply.capabilities?.language ?? 'auto');

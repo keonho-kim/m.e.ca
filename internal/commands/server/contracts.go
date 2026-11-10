@@ -88,13 +88,15 @@ type Options struct {
 	Config        config.Config
 	Open          func(context.Context, string, bool, config.Config) (*Conversation, error)
 	List          func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
+	// Summaries reads task-page titles without opening conversation runtimes.
+	Summaries func(context.Context, []string) (map[string]string, error)
 	// PrepareModel reads metadata and returns an owned client without saving selections or credentials.
 	PrepareModel func(context.Context, connection.Selection, string, setup.Defaults) (PreparedModel, error)
 	UpdateConfig func(context.Context, func(*config.Config)) (config.Config, error)
 	Ledger       Ledger
 }
 
-type Task struct{ ID, Session, Status, Error, Code, Persistence, Outcome string }
+type Task struct{ ID, Session, Status, Error, Code, Persistence, Outcome, SessionSummary string }
 
 const (
 	PersistencePending   = "pending"

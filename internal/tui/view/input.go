@@ -1,4 +1,4 @@
-// Purpose: Render a bounded multiline editor and its visible terminal cursor.
+// Purpose: Render editable text, blue display-only attachment tokens and the terminal cursor.
 // Pattern: Presentation renderer.
 // Usage: Chat and files use Input; setting values use InputAt with their column offset.
 // Related: internal/tui/input/layout.go, internal/tui/view/cells.go.
@@ -6,6 +6,7 @@ package view
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 	"github.com/keonho-kim/meca/internal/tui/input"
 )
 
@@ -19,6 +20,11 @@ func InputAt(screen tcell.Screen, window input.Window, x, y, width int) {
 	}
 	for row, line := range window.Rows {
 		Text(screen, x, y+row, width, line.Text, tcell.StyleDefault)
+		start, end := max(line.Start, 2), min(line.End, window.PrefixBytes)
+		if start < end {
+			column := line.Column(window.Source, start)
+			Text(screen, x+column, y+row, width-column, window.Source[start:end], tcell.StyleDefault.Foreground(color.DodgerBlue))
+		}
 	}
 	screen.ShowCursor(x+min(width-1, window.CursorX), y+window.CursorRow)
 }

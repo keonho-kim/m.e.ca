@@ -16,7 +16,7 @@ import {
   useWorkspaceStore,
 } from '@/pages/workspace/model/store';
 import { recordTask, terminal } from '@/pages/workspace/model/submission';
-import type { EventJson, NotificationJson } from '@/shared/api';
+import type { EventJson, NotificationJson, SnapshotJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
 
@@ -29,25 +29,36 @@ export function observe(target: Target) {
     connecting = false;
   const controller = new AbortController();
   const isClosed = () => controller.signal.aborted;
-  const flush = () => {
+  const discardBatch = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
-    if (!batch.length) return;
-    const values = batch;
     batch = [];
+  };
+  const flush = (control?: EventJson) => {
+    const values = batch;
+    discardBatch();
+    if (control) values.push(control);
+    if (!values.length) return;
     useWorkspaceStore.getState().receive(values);
-    projectEventCache(values);
-    for (const e of values) {
-      if (e.kind === 'session_deleted')
-        forgetConversation({ workspace: e.workspaceId ?? '', session: e.sessionId ?? '' });
-      if (e.kind === 'request_finished')
-        completed(
-          { workspace: e.workspaceId ?? '', session: e.sessionId ?? '' },
-          e.taskId ?? '',
-          e.outcome?.status ?? '',
-          e.errorCode ?? ''
-        );
-    }
+    if (!control) return;
+    projectEventCache([control]);
+    const owner = { workspace: control.workspaceId ?? '', session: control.sessionId ?? '' };
+    if (control.kind === 'session_deleted') forgetConversation(owner);
+    if (control.kind === 'request_finished')
+      completed(
+        owner,
+        control.taskId ?? '',
+        control.outcome?.status ?? '',
+        control.errorCode ?? ''
+      );
+  };
+  const acceptSnapshot = (snapshot: SnapshotJson) => {
+    // The new cursor already accounts for buffered events from the old base.
+    discardBatch();
+    useWorkspaceStore.getState().bootstrap(target, snapshot);
+    const { drafts: _drafts, activity: _activity, ...metadata } = snapshot;
+    queries.setQueryData(stateOptions(target).queryKey, metadata);
+    if (target.session) invalidate(['history', target.workspace, target.session, '0']);
   };
   async function connect() {
     if (isClosed() || connecting || (source && source.readyState !== EventSource.CLOSED)) return;
@@ -73,8 +84,7 @@ export function observe(target: Target) {
       const snapshot = await queries.fetchQuery({ ...stateOptions(target), staleTime: 0 });
       if (isClosed()) return;
       if (!snapshot.cursor) throw failure('invalid_response');
-      useWorkspaceStore.getState().bootstrap(target, snapshot);
-      if (target.session) invalidate(['history', target.workspace, target.session]);
+      acceptSnapshot(snapshot);
       const cursor = snapshot.cursor;
       const events = new EventSource(
         `/v1/events?cursor=${encodeURIComponent(cursor)}&workspace_id=${encodeURIComponent(target.workspace)}&session_id=${encodeURIComponent(target.session)}`
@@ -114,12 +124,8 @@ export function observe(target: Target) {
           const snapshot = (JSON.parse(raw.data) as NotificationJson).snapshot;
           if (!snapshot?.cursor || snapshot.workspaceId !== target.workspace)
             throw failure('invalid_response');
-          useWorkspaceStore.getState().bootstrap(target, snapshot);
-          queries.setQueryData(stateOptions(target).queryKey, snapshot);
-          void queries.invalidateQueries({ queryKey: ['workspaces'] });
-          void queries.invalidateQueries({
-            queryKey: ['history', target.workspace, target.session],
-          });
+          acceptSnapshot(snapshot);
+          invalidate(['workspaces']);
         } catch (error) {
           reportError(error);
           events.close();
@@ -142,8 +148,12 @@ export function observe(target: Target) {
           (e.workspaceId !== target.workspace || e.sessionId !== target.session)
         )
           return;
+        if (e.kind !== 'assistant_delta') {
+          flush(e);
+          return;
+        }
         batch.push(e);
-        if (e.kind !== 'assistant_delta' || batch.length >= 128) flush();
+        if (batch.length >= 128) flush();
         else if (!timer)
           timer = setTimeout(flush, typeof document !== 'undefined' && document.hidden ? 200 : 33);
       });
@@ -179,7 +189,6 @@ export function observe(target: Target) {
     controller.abort();
     source?.close();
     if (retry) clearTimeout(retry);
-    if (timer) clearTimeout(timer);
-    batch = [];
+    discardBatch();
   };
 }

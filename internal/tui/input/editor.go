@@ -5,6 +5,7 @@
 package input
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -23,6 +24,7 @@ type Editor struct {
 	column     int
 	vertical   bool
 	boundaries []boundaryPoint
+	prefix     string
 }
 
 func (e *Editor) String() string {
@@ -40,7 +42,11 @@ func (e *Editor) Before() string {
 	return string(e.runes[:e.Cursor])
 }
 func (e *Editor) Set(s string) {
-	e.runes, e.Cursor = []rune(s), utf8.RuneCountInString(s)
+	e.runes = []rune(s)
+	if !utf8.ValidString(s) {
+		s = string(e.runes)
+	}
+	e.Cursor = len(e.runes)
 	e.text, e.bytes, e.dirty = s, len(s), false
 	e.revision++
 	e.vertical = false
@@ -60,12 +66,26 @@ func (e *Editor) Insert(s string) {
 	e.replace(e.Cursor, e.Cursor, s)
 }
 func (e *Editor) replace(start, end int, s string) {
-	e.invalidateBoundaries(start)
-	r := []rune(s)
-	for _, value := range e.runes[start:end] {
-		e.bytes -= utf8.RuneLen(value)
+	if start == end && s == "" {
+		return
 	}
-	e.bytes += len(s)
+	e.invalidateBoundaries(start)
+	e.invalidateLayout(start)
+	r := []rune(s)
+	removed := 0
+	for _, value := range e.runes[start:end] {
+		removed += utf8.RuneLen(value)
+	}
+	if !e.dirty && end == len(e.runes) {
+		oldSize := len(e.text)
+		e.text = e.text[:e.bytes-removed] + s
+		if len(e.text) < oldSize/4 {
+			e.text = strings.Clone(e.text)
+		}
+	} else {
+		e.text, e.dirty = "", true
+	}
+	e.bytes += len(s) - removed
 	old := len(e.runes)
 	next := old - (end - start) + len(r)
 	if next > old {
@@ -75,10 +95,14 @@ func (e *Editor) replace(start, end int, s string) {
 	copy(e.runes[start:], r)
 	clear(e.runes[next:])
 	e.runes = e.runes[:next]
+	if next == 0 {
+		e.runes = nil
+	} else if cap(e.runes) > 4*max(1024, next) {
+		e.runes = slices.Clone(e.runes)
+	}
 	e.Cursor = start + len(r)
-	e.dirty, e.vertical = true, false
+	e.vertical = false
 	e.revision++
-	e.layout = editorLayout{}
 }
 func (e *Editor) Home() {
 	e.vertical = false

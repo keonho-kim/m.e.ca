@@ -1,0 +1,146 @@
+// Purpose: Verify image islands, native hover removal and preview URL cleanup across drafts.
+// Pattern: Browser-to-engine composer resource contracts.
+// Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
+// Related: webui/src/pages/workspace/ui/composer/composer.tsx, cmd/meca/ui_browser_test.go.
+import { readFile } from 'node:fs/promises';
+import { expect, type Page, test } from '@playwright/test';
+let fixture: { url: string; tokenFile: string };
+const png = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+  'base64'
+);
+async function create(page: Page) {
+  const previous = page.url();
+  await page
+    .locator('.workspace-group')
+    .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
+    .getByRole('button', { name: '새 대화', exact: true })
+    .click();
+  await page.waitForURL((url) => url.href !== previous && url.pathname.includes('/c/session_'));
+  await expect(page.getByRole('combobox', { name: '작업 입력', exact: true })).toBeEnabled();
+}
+test.beforeAll(async () => {
+  const path = process.env.MECA_UI_DESCRIPTOR;
+  test.skip(!path, 'start the isolated fixture first');
+  if (path) fixture = JSON.parse(await readFile(path, 'utf8'));
+});
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const create = URL.createObjectURL.bind(URL),
+      revoke = URL.revokeObjectURL.bind(URL);
+    const live = new Set<string>();
+    let created = 0;
+    Object.assign(window, { previewUsage: () => ({ live: live.size, created }) });
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      live.add(url);
+      created++;
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      live.delete(url);
+      revoke(url);
+    };
+  });
+  await page.goto(`${fixture.url}/ui/`);
+  await page
+    .getByRole('textbox', { name: '서버 토큰', exact: true })
+    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
+  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await create(page);
+});
+const usage = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { previewUsage: () => { live: number; created: number } }).previewUsage()
+  );
+async function attach(page: Page, count: number) {
+  await page.locator('input[type=file]').setInputFiles(
+    Array.from({ length: count }, (_, i) => ({
+      name: `screen-${i + 1}.png`,
+      mimeType: 'image/png',
+      buffer: png,
+    }))
+  );
+}
+test('images form one native carousel above the composer with hover and keyboard removal', async ({
+  page,
+}) => {
+  await attach(page, 8);
+  const carousel = page.getByRole('region', { name: '첨부 이미지', exact: true });
+  await expect(carousel).toBeVisible();
+  await expect(carousel.locator('.astryx-thumbnail')).toHaveCount(8);
+  const thumbs = await carousel.locator('.astryx-thumbnail').all();
+  const first = (await thumbs[0]!.boundingBox())!;
+  for (const thumb of thumbs) {
+    const rect = (await thumb.boundingBox())!;
+    expect(rect.width).toBeLessThanOrEqual(80);
+    expect(Math.abs(rect.y - first.y)).toBeLessThan(2);
+  }
+  const frame = (await carousel.boundingBox())!,
+    composer = (await page.locator('.composer').boundingBox())!;
+  expect(frame.y + frame.height).toBeLessThanOrEqual(composer.y);
+  const cards = await carousel.locator('.composer-image').all();
+  expect(cards).toHaveLength(8);
+  for (const direction of ['ltr', 'rtl']) {
+    await carousel.evaluate((element, dir) => element.setAttribute('dir', dir), direction);
+    for (const card of cards) {
+      const thumbnail = (await card.locator('.astryx-thumbnail').boundingBox())!;
+      const action = (await card.getByRole('button').boundingBox())!;
+      const topInset = action.y - thumbnail.y;
+      const rightInset = thumbnail.x + thumbnail.width - action.x - action.width;
+      expect(topInset).toBeGreaterThanOrEqual(0);
+      expect(topInset).toBeLessThan(action.height / 2);
+      expect(rightInset).toBeGreaterThanOrEqual(0);
+      expect(rightInset).toBeLessThan(action.width / 2);
+    }
+  }
+  await carousel.evaluate((element) => element.removeAttribute('dir'));
+  const image = carousel.getByRole('group', { name: /^screen-1\.png/ });
+  await image.hover();
+  const remove = carousel.getByRole('button', { name: /screen-1\.png/ });
+  await expect(remove).toBeVisible();
+  const circle = await remove.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      radius: parseFloat(getComputedStyle(element).borderTopLeftRadius),
+    };
+  });
+  expect(circle.width).toBe(circle.height);
+  expect(circle.radius).toBeGreaterThanOrEqual(circle.width / 2);
+  await remove.click();
+  await expect(carousel.locator('.astryx-thumbnail')).toHaveCount(7);
+  const next = carousel.getByRole('button', { name: /screen-2\.png/ });
+  await next.focus();
+  await expect(next).toBeVisible();
+  await next.press('Enter');
+  await expect(carousel.locator('.astryx-thumbnail')).toHaveCount(6);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+test('typing reuses previews and switching drafts or disconnecting revokes every URL', async ({
+  page,
+}) => {
+  const conversation = page.url();
+  await attach(page, 2);
+  await expect.poll(() => usage(page)).toEqual({ live: 2, created: 2 });
+  await page
+    .getByRole('combobox', { name: '작업 입력', exact: true })
+    .fill('Keep the image previews stable');
+  expect(await usage(page)).toEqual({ live: 2, created: 2 });
+  await create(page);
+  await expect.poll(async () => (await usage(page)).live).toBe(0);
+  await page.goBack();
+  await page.waitForURL(conversation);
+  await expect(
+    page.getByRole('region', { name: '첨부 이미지', exact: true }).locator('.astryx-thumbnail')
+  ).toHaveCount(2);
+  await expect.poll(async () => (await usage(page)).live).toBe(2);
+  await page.getByRole('button', { name: '설정', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: '설정', exact: true });
+  await settings.getByRole('button', { name: '일반', exact: true }).click();
+  await settings.getByRole('button', { name: '연결 종료', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: '서버 토큰', exact: true })).toBeVisible();
+  await expect.poll(async () => (await usage(page)).live).toBe(0);
+});

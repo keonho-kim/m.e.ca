@@ -1,17 +1,13 @@
-// Purpose: Preserve the TUI directory/reference workflow in a scoped browser work area.
-// Pattern: Column navigator with a cancellable active-directory observer.
+// Purpose: Show one current-directory list to the right of the active file document.
+// Pattern: Master/detail navigator with a cancellable directory observer.
 // Usage: Header, settings shortcut and !dir open this surface.
 // Related: webui/src/pages/workspace/ui/files/directory-column.tsx, webui/src/pages/workspace/ui/files/file-document.tsx.
 
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
-import { useAppShellMobile } from '@astryxdesign/core/AppShell';
 import { Banner } from '@astryxdesign/core/Banner';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { HStack, Layout, LayoutContent, LayoutPanel } from '@astryxdesign/core/Layout';
-import { Text } from '@astryxdesign/core/Text';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
+import { useMediaQuery } from '@astryxdesign/core/hooks';
+import { Layout, LayoutContent, LayoutPanel } from '@astryxdesign/core/Layout';
 import { useEffect, useState } from 'react';
 import { reportError, useServerSession } from '@/entities/server-session';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -31,7 +27,7 @@ export default function Files({ target }: { target: Target }) {
   const current = columns.at(-1) ?? '.';
   const watchKey = `${target.workspace}/${current}/${watchEpoch}`;
   const [watched, setWatched] = useState('');
-  const mobile = useAppShellMobile();
+  const compact = useMediaQuery('(max-width: 1024px)');
   const [pending, setPending] = useState<{ run: () => void } | null>(null);
   const navigate = (run: () => void) => {
     if (useWorkspaceStore.getState().fileDirty) setPending({ run });
@@ -83,89 +79,67 @@ export default function Files({ target }: { target: Target }) {
     source.onopen = () => setWatchError('');
     return () => source.close();
   }, [current, target.workspace, t, connected, watchKey]);
-  const open = (path: string, directory: boolean, index: number) => {
+  const open = (path: string, directory: boolean) => {
     useWorkspaceStore.getState().set({ fileDirty: false });
     if (directory) {
-      setColumns([...columns.slice(0, index + 1), path]);
+      setColumns([...columns, path]);
       setFile('');
     } else setFile(path);
   };
+  const listing = (
+    <DirectoryColumn
+      path={current}
+      enabled={watched === watchKey}
+      target={target}
+      parent={
+        columns.length > 1
+          ? () =>
+              navigate(() => {
+                setColumns(columns.slice(0, -1));
+                setFile('');
+              })
+          : undefined
+      }
+      refresh={() => {
+        setWatchEpoch((value) => value + 1);
+        setRevision((value) => value + 1);
+      }}
+      open={(next, directory) => {
+        if (!directory && next === file) return;
+        navigate(() => open(next, directory));
+      }}
+    />
+  );
   return (
     <>
       <Layout
         height="fill"
         padding={0}
         className="files-workspace"
-        header={
-          <Toolbar
-            label={t('files')}
-            startContent={
-              <IconButton
-                label={t('parent')}
-                variant="ghost"
-                icon={<Icon icon={'meca:back'} />}
-                onClick={() =>
-                  navigate(() => {
-                    if (columns.length > 1) setColumns(columns.slice(0, -1));
-                    setFile('');
-                  })
-                }
-              />
-            }
-            centerContent={
-              <Text type="supporting" maxLines={1} hasTruncateTooltip>
-                {current}
-              </Text>
-            }
-            endContent={
-              <IconButton
-                label={t('refresh')}
-                variant="ghost"
-                icon={<Icon icon={'meca:refresh'} />}
-                onClick={() => {
-                  setWatchEpoch((v) => v + 1);
-                  setRevision((v) => v + 1);
-                }}
-              />
-            }
-          />
-        }
         content={
-          <LayoutContent padding={0} isScrollable={false}>
+          <LayoutContent padding={0} isScrollable={false} className="min-w-0">
             {watchError && <Banner status="warning" title={watchError} />}
-            <HStack height="100%" gap={0}>
-              {columns
-                .map((path, index) => ({ path, index }))
-                .slice(mobile.isMobile ? -1 : -2)
-                .map(({ path, index }) => (
-                  <LayoutPanel
-                    key={path}
-                    width={mobile.isMobile ? 160 : 200}
-                    padding={0}
-                    isScrollable={false}
-                  >
-                    <DirectoryColumn
-                      path={path}
-                      enabled={watched === watchKey}
-                      target={target}
-                      open={(next, directory) => navigate(() => open(next, directory, index))}
-                    />
-                  </LayoutPanel>
-                ))}
-              <LayoutContent padding={0} isScrollable={false}>
-                {file ? (
-                  <FileDocument
-                    key={`${target.workspace}/${file}`}
-                    target={target}
-                    path={file}
-                    externalRevision={revision}
-                  />
-                ) : (
-                  <EmptyState title={t('fileUnavailable')} />
-                )}
-              </LayoutContent>
-            </HStack>
+            {file ? (
+              <FileDocument
+                key={`${target.workspace}/${file}`}
+                target={target}
+                path={file}
+                externalRevision={revision}
+                showFiles={compact ? () => navigate(() => setFile('')) : undefined}
+              />
+            ) : compact ? (
+              listing
+            ) : (
+              <EmptyState title={t('fileUnavailable')} />
+            )}
           </LayoutContent>
+        }
+        end={
+          !compact ? (
+            <LayoutPanel width={260} padding={0} isScrollable={false}>
+              {listing}
+            </LayoutPanel>
+          ) : undefined
         }
       />
       <AlertDialog

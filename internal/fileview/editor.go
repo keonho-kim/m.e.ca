@@ -1,17 +1,17 @@
-// Purpose: Read complete editable text and commit revision-checked file replacements.
+// Purpose: Read an editor-sized file with stable identity and classify oversized files from metadata.
 // Pattern: Guarded filesystem adapter.
 // Usage: Native editor operations borrow Reader roots under the server's workspace effect lease.
 // Related: internal/fileview/reader.go, internal/fileview/editor_write.go.
 package fileview
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"io"
 	"os"
-	"strings"
 	"syscall"
 	"unicode/utf8"
 
@@ -48,7 +48,17 @@ func (e *Reader) editSource(ctx context.Context, settings policy.Settings, path 
 	if err != nil || !info.Mode().IsRegular() {
 		return t, nil, nil, errors.Join(err, f.Close(), fault.New(diag.InvalidArgument, diag.UIEditorReadOnly))
 	}
-	body, err := io.ReadAll(io.LimitReader(f, EditorBytes+1))
+	var body []byte
+	if info.Size() >= 0 && info.Size() <= EditorBytes {
+		// One extra byte distinguishes a concurrent extension from the recorded size.
+		body = make([]byte, int(info.Size())+1)
+		var n int
+		n, err = io.ReadFull(f, body)
+		body = body[:n]
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+			err = nil
+		}
+	}
 	after, statErr := f.Stat()
 	err = errors.Join(err, statErr, f.Close(), ctx.Err())
 	if err != nil {
@@ -62,7 +72,7 @@ func (e *Reader) editSource(ctx context.Context, settings policy.Settings, path 
 	if err != nil {
 		return t, nil, nil, err
 	}
-	if current.Absolute != t.Absolute || !os.SameFile(info, entry) || info.Size() != after.Size() || !info.ModTime().Equal(after.ModTime()) || !info.ModTime().Equal(entry.ModTime()) || info.Size() != entry.Size() {
+	if current.Absolute != t.Absolute || !os.SameFile(info, entry) || info.Size() != after.Size() || !info.ModTime().Equal(after.ModTime()) || !info.ModTime().Equal(entry.ModTime()) || info.Size() != entry.Size() || (body != nil && int64(len(body)) != info.Size()) {
 		return t, nil, nil, fault.New(diag.Conflict, diag.UIEditorChanged)
 	}
 	return t, body, info, nil
@@ -79,12 +89,13 @@ func (e *Reader) Edit(ctx context.Context, settings policy.Settings, path string
 		return Document{}, err
 	}
 	doc := Document{Path: e.redact(t.Absolute)}
-	if len(body) > EditorBytes || !utf8.Valid(body) || strings.IndexByte(string(body), 0) >= 0 {
+	if body == nil || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 {
 		doc.Reason = diag.Text(diag.UIEditorReadOnly)
 		return doc, nil
 	}
-	doc.Text = e.redact(string(body))
-	doc.Editable = doc.Text == string(body) && doc.Path == t.Absolute
+	text := string(body)
+	doc.Text = e.redact(text)
+	doc.Editable = doc.Text == text && doc.Path == t.Absolute
 	if !doc.Editable {
 		doc.Reason = diag.Text(diag.UIEditorReadOnly)
 		return doc, nil

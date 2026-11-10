@@ -31,7 +31,7 @@ import { describeError } from '@/shared/lib/errors';
 export default function Settings() {
   const settings = useWorkspaceStore((s) => s.settings)!,
     t = useLocale();
-  const compact = useMediaQuery('(max-width: 640px)');
+  const compact = useMediaQuery('(max-width: 900px)');
   const [tab, setTab] = useState(settings.tab),
     [dirty, setDirty] = useState(false),
     [discard, setDiscard] = useState(false);
@@ -121,7 +121,7 @@ export default function Settings() {
         onOpenChange={(open) => {
           if (!open) close();
         }}
-        width={840}
+        width={1040}
         purpose="form"
         className="settings-modal"
       >
@@ -142,7 +142,7 @@ export default function Settings() {
           }
           start={
             compact ? undefined : (
-              <LayoutPanel width={168} padding={2}>
+              <LayoutPanel width={224} padding={2}>
                 <SettingsNavigation tab={tab} onChange={setTab} shortcut={shortcut} />
               </LayoutPanel>
             )
@@ -203,9 +203,6 @@ export default function Settings() {
                     { value: 'en', label: 'English' },
                   ]}
                 />
-                <Text type="label" weight="semibold">
-                  {t('theme')}
-                </Text>
                 <ThemeChoice />
                 <Button label={t('logout')} onClick={() => disconnect()} />
               </VStack>
@@ -217,7 +214,7 @@ export default function Settings() {
         isOpen={discard}
         onOpenChange={setDiscard}
         title={t('dirty')}
-        description={t('unsavedFile')}
+        description={t('unsavedModel')}
         cancelLabel={t('keepEditing')}
         actionLabel={t('discard')}
         isActionLoading={busy || modelBusy}
