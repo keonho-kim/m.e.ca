@@ -3,8 +3,10 @@
 # Usage: Read by Git when inspecting this project.
 # Related: go.mod, README.md.
 
-# Local agent instructions
+# Local agent instructions and design-tool state
 AGENTS.md
+.hallmark/
+.impeccable/
 
 # Go build and release output
 /bin/
@@ -25,9 +27,9 @@ AGENTS.md
 /coverage*.txt
 /cover.out
 /cover.html
-/*.coverprofile
-/*.pprof
-/*.prof
+*.coverprofile
+*.pprof
+*.prof
 
 # Local Go workspace overrides and caches; commit go.mod and go.sum
 /go.work
@@ -38,9 +40,11 @@ AGENTS.md
 # Embedded UI source dependencies and reproducible build output
 /webui/node_modules/
 /webui/dist/
-/webui/tsconfig.tsbuildinfo
+*.tsbuildinfo
+/webui/coverage/
 /webui/test-results/
 /webui/playwright-report/
+/webui/blob-report/
 /webui/.playwright-cli/
 /.playwright-cli/
 /internal/webui/assets/*.gz
@@ -109,8 +113,5 @@ ehthumbs_vista.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Frontend design review captures (the design system sources remain reviewable)
-webui/.impeccable/review/
-
 # Built Astryx theme descriptors are regenerated before browser type checks and builds.
-webui/src/app/styles/generated/
+/webui/src/app/styles/generated/

@@ -2,9 +2,9 @@
 
 These notices cover the Go runtime and the external modules selected for the
 macOS and Linux amd64/arm64 binaries built from cmd/meca with CGO_ENABLED=0
-and the godbus_no_tcp build tag. Both minimum and full distributions include the
-TUI, CLI and model-provider adapters. The minimum build additionally uses the
-minimum tag to exclude server adapters and WebUI assets; full adds both.
+and the godbus_no_tcp build tag. Both tui and full distributions include the
+TUI, CLI and model-provider adapters. The tui build additionally uses the
+tui tag to exclude server adapters and WebUI assets; full adds both.
 Browser runtime notices are generated from the bundled modules and included as
 WEBUI_THIRD_PARTY_NOTICES.txt in full release archives and at /ui/THIRD_PARTY_NOTICES.txt
 when the embedded UI is enabled. The npm package for Astryx Core 0.7.12-canary.f124c2f omits

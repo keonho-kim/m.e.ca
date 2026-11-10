@@ -66,7 +66,7 @@ components:
 
 ## Overview
 
-**Creative North Star: "Operate 작업대"**
+**디자인 방향: 읽기와 실행에 집중하는 작업대**
 
 흑백 중심의 표면과 얇은 glass로 읽기와 실행에 집중하는 작업대다. 프로젝트에서 대화를 고르고, 입력한 뒤 답변·Thinking·도구 진행을 읽는 흐름이 화면의 중심이다. 넓은 읽기 영역과 밀도 있는 탐색·설정의 차이로 위계를 만들며, 색은 의미가 있는 상태에 사용한다.
 
@@ -82,7 +82,7 @@ Astryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약�
 
 ## Colors
 
-frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 값이 라이트, 둘째가 다크다. `accent`·표면·본문·보조 잉크는 MECA 확장이고, 상태·경계·중성 조작은 공식 Neutral에서 상속한다. CSS 사용자 정의 속성 이름은 같은 이름 앞에 `--color-`를 붙이며 `sidebar`만 SideNav의 공식 컴포넌트 확장 값이다. Sidecar의 색군 견본은 배포된 공식 팔레트에서 고른 값이며 새 앱 색 단계가 아니다.
+frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 값이 라이트, 둘째가 다크다. `accent`·표면·본문·보조 잉크는 MECA 확장이고, 상태·경계·중성 조작은 공식 Neutral에서 상속한다. CSS 사용자 정의 속성 이름은 같은 이름 앞에 `--color-`를 붙이며 `sidebar`만 SideNav의 공식 컴포넌트 확장 값이다. 실제 색상 값은 `src/app/styles/theme.ts`와 상속한 Neutral 테마가 소유한다.
 
 ### Primary
 
@@ -101,7 +101,7 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 - **본문 / 보조 잉크** (`text-primary`, `text-secondary`): 답변과 메타데이터·Thinking의 위계.
 - **중성 조작 / 경계 / 강조 경계** (`neutral`, `border`, `border-emphasized`): 보조 버튼·선택 행·폼 경계. Hover·press는 공식 overlay를 따른다.
 
-**The Semantic Pair Rule.** 상태는 공식 의미 토큰과 글자·아이콘·접근성 상태를 함께 사용한다. 주요 동작과 팀 선택은 중성 체계를 유지한다.
+상태는 공식 의미 토큰과 글자·아이콘·접근성 상태를 함께 사용한다. 주요 동작과 팀 선택은 중성 체계를 유지한다.
 
 코드의 문법 의미색은 Neutral·Lab의 공식 syntax 토큰을 상속한다. 이를 팀색이나 chrome 장식색으로 사용하지 않는다.
 
@@ -122,7 +122,7 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 
 크기는 rem 기반의 실제 기본 역할 값이다. Astryx의 dynamic type·입력 환경 적응을 유지하며, Markdown과 에디터 전체에 단일 글자 크기를 덮어쓰지 않는다.
 
-**The Reading Rhythm Rule.** 긴 답변과 조작 영역의 밀도를 구분한다. Thinking의 본문과 제목은 같은 secondary 의미색으로 읽히게 한다.
+긴 답변과 조작 영역의 밀도를 구분한다. Thinking의 본문과 제목은 같은 secondary 의미색으로 읽히게 한다.
 
 ## Layout
 
@@ -138,7 +138,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 ## Elevation & Depth
 
-읽기·파일 영역은 불투명 중성 표면과 얇은 경계로 구분한다. 겹친 Dialog·Popover·컴포저에 기능적 glass를 사용한다. Dialog blur는 (24px), DropdownMenu·Popover·컴포저 blur는 (20px)이며, 불투명 fallback 등 환경 적응은 공식 Astryx 동작을 유지한다. 그림자 값은 sidecar가 기록하며 별도 앱 CSS 그림자를 추가하지 않는다.
+읽기·파일 영역은 불투명 중성 표면과 얇은 경계로 구분한다. 겹친 Dialog·Popover·컴포저에 기능적 glass를 사용한다. Dialog blur는 (24px), DropdownMenu·Popover·컴포저 blur는 (20px)이며, 불투명 fallback 등 환경 적응은 공식 Astryx 동작을 유지한다. 그림자는 Neutral의 공식 토큰을 사용한다.
 
 ### Shadow Vocabulary
 
@@ -146,7 +146,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 - **Medium** (`--shadow-med`): 컴포저 hover·focus와 더 높은 표면의 강조.
 - **High** (`--shadow-high`): Dialog 등 공식 overlay의 더 깊은 층위. Neutral의 상속 값이다.
 
-**The Overlap Rule.** Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유지하고 읽기 본문·편집기까지 확장하지 않는다.
+Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유지하고 읽기 본문·편집기까지 확장하지 않는다.
 
 모션은 공식 테마의 fast·medium·slow와 변동 비율을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 시그니처는 `+`의 회전 (90deg)과 위로 펼치는 ChatComposerDrawer이며 medium 시간·standard easing으로 함께 움직인다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
 
@@ -182,7 +182,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. `data-tone="thinking"`의 공식 테마 확장으로 primary 텍스트를 secondary로 바꾼다. 진행 중과 저장 이력에서 같은 표현을 사용하며 제목·목록까지 회색 계층을 유지한다.
 
-하단에는 SSE 연결 상태를 한 곳에 둔다. 정상 연결은 녹색 점, 최초 연결·복구·일시정지는 각 레이블로 구분한다. 실행 지표는 열었을 때만 Popover에 표시한다. Sidecar의 HTML/CSS는 실제 토큰을 쓰는 독립 시각 견본이며 앱의 Astryx 동작 구현을 대체하지 않는다.
+하단에는 SSE 연결 상태를 한 곳에 둔다. 정상 연결은 녹색 점, 최초 연결·복구·일시정지는 각 레이블로 구분한다. 실행 지표는 열었을 때만 Popover에 표시한다.
 
 ## Do's and Don'ts
 
