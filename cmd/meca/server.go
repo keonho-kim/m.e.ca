@@ -9,12 +9,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/diagnostics"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/serverapi"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -22,6 +24,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 	"github.com/keonho-kim/meca/internal/webui"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -122,10 +125,20 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 		return err
 	}
 	api := &serverapi.API{ScopeID: application.State().Workspace, Service: application, Workspaces: workspaces, Remember: vault.Remember, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
-	return serverapi.ListenAndServe(ctx, api, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, UI: ui}, func(address string) {
+	serveCtx, cancelServer := context.WithCancel(ctx)
+	defer cancelServer()
+	var startupErr error
+	err = serverapi.ListenAndServe(serveCtx, api, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, UI: ui}, func(address string) {
+		// Startup stdout is the explicit credential handoff to the user.
+		if _, outputErr := fmt.Fprintln(os.Stdout, diag.Text(diag.ServerTokenReady, token)); outputErr != nil {
+			startupErr = fault.New(diag.DeliveryFailed, diag.ServerStartupOutputFailed, outputErr)
+			cancelServer()
+			return
+		}
 		diagnostics.Log(ctx, diag.ServerListening, "component", "server", "protocol", o.Protocol, "listen", address)
 		if o.UI {
 			announceUI(ctx, address)
 		}
 	})
+	return errors.Join(err, startupErr)
 }

@@ -333,7 +333,7 @@ meca --server --concurrency 4             # 서로 다른 세션의 작업을 �
 
 선택한 전송 방식과 함께 공통 HTTP 제어·이벤트·첨부·작업 승인 경로를 제공합니다. 작업은 서버 프로세스에 속하므로 스트림을 닫아 일시정지해도 계속됩니다. 마지막 커서로 다시 구독하며 안정된 요청 키로 중복 실행을 막습니다.
 
-기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
+기본 토큰 파일 `~/.meca/server.token`은 서버 시작 시 준비합니다. 서버가 준비되면 `Server token: …`을 stdout에 한 번 표시합니다. 이 값을 복사해 WebUI에 입력하거나 API 인증에 사용합니다. HTTP·SSE·RPC는 Bearer 헤더, WebSocket은 첫 프레임으로 인증합니다. `--listen`, `--token-file`, `--tls-cert`, `--tls-key`, `--allow-host`, `--allow-origin`으로 배치를 설정합니다. 외부 바인딩에는 TLS가 필요합니다. [서버 실행·인증·API 계약 →](docs/server.md)
 
 ### 내장 WebUI 기동
 
@@ -342,7 +342,7 @@ meca /path/to/project --server --ui
 ```
 
 1. 브라우저에서 `http://127.0.0.1:8787/ui/`를 엽니다. 로컬 대화형 터미널에서는 브라우저도 자동으로 엽니다. `--listen`을 바꿨다면 같은 주소·포트의 `/ui/`를 사용하세요.
-2. 연결 화면에 `~/.meca/server.token`의 서버 토큰을 입력합니다. 모델 Provider의 API Key와는 별개입니다.
+2. 서버를 실행한 터미널에 한 번 표시된 `Server token: …`의 값을 연결 화면에 입력합니다. 모델 Provider의 API Key와는 별개입니다.
 3. 왼쪽에서 프로젝트와 대화를 고르거나 새로 만들고, 왼쪽 아래 톱니바퀴에서 모델·실행·일반 설정을 변경합니다.
 
 프로젝트별 대화를 펼치고 접으며 여러 대화를 동시에 실행할 수 있습니다. 컴포저는 `!model`·`!permission`·`!team`·`!language`·`!dir`·`!skills`를 지원하고, `+`에서 이미지와 스킬을 추가합니다. 이미지 드래그 앤드 드롭·클립보드 붙여넣기도 지원합니다. `!new`·`!quit` 대신 화면의 새 대화·삭제·연결 종료를 사용합니다.

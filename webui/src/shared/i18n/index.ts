@@ -93,8 +93,8 @@ const copy = {
   token: ['서버 토큰', 'Server token'],
   login: ['연결', 'Connect'],
   loginHelp: [
-    '서버의 server.token 값을 입력하세요. 원문은 브라우저에 저장하지 않습니다.',
-    'Enter the server.token value. The original token is not stored in the browser.',
+    '서버를 실행한 터미널에 표시된 서버 토큰을 입력하세요. 원문은 브라우저에 저장하지 않습니다.',
+    'Enter the server token shown in the terminal where MECA is running. The original token is not stored in the browser.',
   ],
   logout: ['연결 종료', 'Disconnect'],
   connected: ['연결됨', 'Connected'],

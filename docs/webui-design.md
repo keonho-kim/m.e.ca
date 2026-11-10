@@ -10,7 +10,7 @@ full 배포본의 `meca --server --ui`는 기존 Go 서버와 같은 출처의 `
 meca /path/to/project --server --ui
 ```
 
-기본 `http://127.0.0.1:8787/ui/`를 열고 `~/.meca/server.token`의 서버 토큰으로 연결한다. 왼쪽에서 대화를 만들고 아래 톱니바퀴 → 모델에서 Provider·주소·API Key·모델을 설정한다. 토큰 파일과 주소를 바꾸는 옵션, 원격 접속·TLS는 [서버 기동](server.md)을 따른다. 모델 API Key와 접속용 서버 토큰은 별개다.
+기본 `http://127.0.0.1:8787/ui/`를 열고 서버 시작 터미널에 한 번 표시한 `Server token: …`의 값으로 연결한다. 왼쪽에서 대화를 만들고 아래 톱니바퀴 → 모델에서 Provider·주소·API Key·모델을 설정한다. 토큰 파일과 주소를 바꾸는 옵션, 원격 접속·TLS는 [서버 기동](server.md)을 따른다. 모델 API Key와 접속용 서버 토큰은 별개다.
 
 프론트 소스는 FSD 계층과 슬라이스의 공개 API를 따른다. 앱 조립은 `app`, 화면과 화면 전용 흐름은 `pages`, 여러 화면이 공유하는 인증 동작은 `features`, 서버 세션은 `entities`, 공통 기반은 `shared`에 둔다. 계층 방향과 공개 진입점은 Steiger로 검증한다. 구체적인 소유권은 [개발 가이드](development.md#내장-webui)를 따른다.
 
