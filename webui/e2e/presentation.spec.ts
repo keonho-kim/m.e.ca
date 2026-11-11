@@ -47,7 +47,7 @@ test('settings names remain visible at double text size and compact theme choice
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
-  for (const label of ['모델', '실행', '일반', '파일 탐색 열기', '스킬 탐색 열기']) {
+  for (const label of ['모델', '실행', '일반']) {
     const button = dialog.getByRole('button', { name: label, exact: true });
     await expect(button).toBeVisible();
     expect(

@@ -128,7 +128,7 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 
 AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. 상단에는 대화·파일·스킬 TabList와 접힌 사이드바를 다시 여는 버튼을 배치한다. 긴 이름이 탭을 밀어내지 않도록 하고 전체 경로·제목은 툴팁으로 읽는다. 설정과 빠른 테마 전환은 탐색 하단에 둔다. 작업 흐름은 프로젝트 → 대화 → 입력 → 답변·Thinking·도구 → 완료·승인이다.
 
-대화와 컴포저는 각 채팅 컨테이너 폭의 80%를 사용한다. 대화의 안쪽 여백은 `spacing.4`, 세로 여백은 `spacing.4`, 메시지 간 간격은 `spacing.5`다. 컴포저 바깥은 `spacing.4`, 내부는 `spacing.3`을 사용한다. 비어 있는 대화는 한 제목·보조 설명과 컴포저를 함께 읽히게 배치하고, 이력이 있으면 ChatMessageList 안에 가상 이력과 live 출력을 함께 두고 하단에 컴포저를 배치한다. 새 요청이 시작되면 대화 하단으로 이동하고 이후의 높이 변화와 위로 스크롤한 뒤의 읽기 위치는 ChatLayout이 관리한다.
+대화와 컴포저는 각 채팅 컨테이너 폭의 80%를 사용한다. 대화의 좌우 여백은 ChatMessageList가 소유하며 바깥 래퍼에 중복 적용하지 않는다. 세로 여백은 `spacing.4`, 메시지 간 간격은 `spacing.5`다. 컴포저 바깥은 `spacing.4`, 내부는 `spacing.3`을 사용한다. 비어 있는 대화는 한 제목·보조 설명과 컴포저를 함께 읽히게 배치하고, 이력이 있으면 ChatMessageList 안에 가상 이력과 live 출력을 함께 두고 하단에 컴포저를 배치한다. 새 요청이 시작되면 대화 하단으로 이동하고 이후의 높이 변화와 위로 스크롤한 뒤의 읽기 위치는 ChatLayout이 관리한다.
 
 - **탐색 반응형:** AppShell의 기본 md 경계 (768px 미만)에서 SideNav가 모바일 drawer로 전환한다. 긴 프로젝트·대화 이름은 행 안에서 축약하고 선택·작업 상태를 유지한다.
 - **설정 반응형:** Dialog 요청 폭은 (1040px), 넓은 화면의 탐색은 (224px)이다. (900px) 이하에서는 상단 Selector, (480px) 이하의 테마 선택도 Selector를 사용한다. 탐색 레이블은 글자 확대 시 줄바꿈하며 같은 폼을 유지해 편집 중인 값을 보존한다.
@@ -162,15 +162,15 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 ### Chips
 
-입력에 보관한 파일 경로는 제거 가능한 Token이며 긴 이름은 토큰 안에서 축약하고 줄바꿈한다. 첨부 이미지는 컴포저 위에 독립된 작은 glass 아일랜드로 표시한다. Astryx Carousel의 한 줄 가로 탐색과 64px Thumbnail을 사용하며 우측 상단 원형 X는 hover·키보드 포커스에서 나타나고 터치 환경에서는 항상 보인다. 파일명은 Thumbnail의 접근성 이름과 툴팁으로 전달한다. 명령·스킬은 ChatComposerInput의 typeahead와 TokenElement로 표현한다. 저장된 이미지는 Thumbnail에서 Lightbox로 연다. 상태 Badge·StatusDot는 의미 토큰과 접근성 레이블을 함께 사용하며 팀은 ToggleButton의 눌림 상태로 표현한다.
+파일·폴더·스킬 참조는 아이콘을 포함한 ChatComposerTokenElement·ChatTokenizedText로 입력과 전송한 메시지에 표시한다. 긴 경로는 줄바꿈하고 툴팁으로 전체 경로를 제공한다. 참조를 추가하면 현재 파일·스킬 보기를 유지하고 메시지를 전송한 뒤 대화로 이동한다. 첨부 이미지는 컴포저 위에 독립된 작은 glass 아일랜드로 표시한다. Astryx Carousel의 한 줄 가로 탐색과 64px Thumbnail을 사용하며 우측 상단 원형 X는 hover·키보드 포커스에서 나타나고 터치 환경에서는 항상 보인다. 파일명은 Thumbnail의 접근성 이름과 툴팁으로 전달한다. 명령·스킬은 ChatComposerInput의 typeahead로 선택한다. 저장된 이미지는 Thumbnail에서 Lightbox로 연다. 상태 Badge·StatusDot는 의미 토큰과 접근성 레이블을 함께 사용하며 팀은 ToggleButton의 눌림 상태로 표현한다.
 
 ### Cards / Containers
 
-사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 도구는 ChatToolCalls, 완료 정보는 ChatSystemMessage·ChatMessageMetadata를 사용한다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
+사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 답변·Thinking·ChatToolCalls는 할당된 채팅 열의 전체 너비를 유지하며 내용 길이에 따라 폭을 바꾸지 않는다. Markdown·코드·표는 영역 안에서 줄바꿈해 가로 스크롤을 만들지 않는다. 완료 정보는 마지막 출력 뒤 ChatSystemMessage·ChatMessageMetadata로 표시하며 중간 응답이나 완료 표시용 녹색 점을 넣지 않는다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실·설정 저장 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
 
 ### Inputs / Fields
 
-설정 폼은 FormLayout·TextInput·Selector·Switch·CheckboxInput을 사용한다. 레이블·설명·오류·저장 상태를 같은 폼 문맥에서 읽히게 한다. 필드는 중성 표면·강조 경계에서 accent 포커스로 전환하며 공식 inset 피드백과 disabled 처리를 유지한다. 모바일 글자 크기·키보드 환경 적응도 공식 컴포넌트가 소유한다. 편집기는 react-simple-code-editor와 Core의 공개 tokenizer·syntax 토큰을 사용하는 예외이며, 나머지 UI는 Astryx 컴포넌트를 사용한다.
+설정 폼은 FormLayout·TextInput·Selector·Switch·CheckboxInput을 사용한다. 레이블·설명·오류·저장 상태를 같은 폼 문맥에서 읽히게 한다. 저장 버튼은 확인 모달을 열고, 네를 선택해 저장이 성공하면 설정 창을 닫는다. 실패하면 편집 값과 오류를 유지한다. 필드는 중성 표면·강조 경계에서 accent 포커스로 전환하며 공식 inset 피드백과 disabled 처리를 유지한다. 모바일 글자 크기·키보드 환경 적응도 공식 컴포넌트가 소유한다. 편집기는 react-simple-code-editor와 Core의 공개 tokenizer·syntax 토큰을 사용하는 예외이며, 나머지 UI는 Astryx 컴포넌트를 사용한다.
 
 ### Navigation
 
@@ -182,7 +182,7 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. `data-tone="thinking"`의 공식 테마 확장으로 primary 텍스트를 secondary로 바꾼다. 진행 중과 저장 이력에서 같은 표현을 사용하며 제목·목록까지 회색 계층을 유지한다.
 
-하단에는 SSE 연결 상태를 한 곳에 둔다. 정상 연결은 녹색 점, 최초 연결·복구·일시정지는 각 레이블로 구분한다. 실행 지표는 열었을 때만 Popover에 표시한다.
+컴포저 하단 한 줄에는 메모리·입력/출력 토큰·소요시간·TPS 등 실행 지표를 표시한다. 대기·실행·압축 같은 상태 문구나 SSE 조작은 배치하지 않으며 좁은 화면에서는 지표를 줄바꿈한다.
 
 ## Do's and Don'ts
 

@@ -7,6 +7,10 @@ import { useLocale as useAstryxLocale } from '@astryxdesign/core/i18n';
 import { useCallback } from 'react';
 
 const copy = {
+  saveConfirm: ['저장하시겠습니까?', 'Save these settings?'],
+  saveConfirmHelp: ['저장하면 설정 창이 닫힙니다.', 'The settings window closes after saving.'],
+  yes: ['네', 'Yes'],
+  no: ['아니오', 'No'],
   executionInfo: ['실행 정보', 'Execution details'],
   composerMenu: ['첨부 및 스킬', 'Attachments and skills'],
   fileWatchReconnecting: ['파일 변경 감시 연결 복구 중', 'Reconnecting file change notifications'],

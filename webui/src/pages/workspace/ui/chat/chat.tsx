@@ -13,8 +13,9 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
+import { historyRows } from '@/pages/workspace/model/history-rows';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { HistoryRow } from '@/pages/workspace/ui/chat/history-row';
@@ -68,15 +69,22 @@ export function Chat({
         if (item.event?.kind !== 'run_checkpoint' || item.outcome) result.push(item);
     return result;
   }, [history.data]);
-  const getItemKey = useCallback((index: number) => items[index]?.sequence ?? index, [items]);
+  const rows = useMemo(() => historyRows(items), [items]);
+  const last = rows.at(-1);
+  const completion = !taskId && last?.item.outcome ? last : undefined;
+  const visibleRows = completion ? rows.slice(0, -1) : rows;
+  const getItemKey = useCallback(
+    (index: number) => visibleRows[index]?.item.sequence ?? index,
+    [visibleRows]
+  );
   const virtual = useVirtualizer({
-    count: items.length,
+    count: visibleRows.length,
     getScrollElement: () => scroller,
     estimateSize: () => 140,
     overscan: 5,
     getItemKey,
   });
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!history.data || before !== '0') return;
     const seen = history.data.pages[0]?.clientRevision;
     if (seen === undefined) return;
@@ -115,8 +123,8 @@ export function Chat({
     }
   }, [before, history.isFetching, scroller]);
   return (
-    <Center width="100%">
-      <VStack width={chatWidth} paddingInline={4} paddingBlock={4} gap={5} className="chat-content">
+    <Center width="100%" className="min-w-0">
+      <VStack width={chatWidth} paddingBlock={4} gap={5} className="chat-content min-w-0">
         {empty && (
           <VStack gap={3} paddingBlock={6}>
             <Heading level={1} type="display-2">
@@ -164,14 +172,20 @@ export function Chat({
         {history.error && (
           <Button label={`${t('readError')} · ${t('retry')}`} onClick={() => history.refetch()} />
         )}
-        <ChatMessageList align="top" gap={0}>
+        <ChatMessageList
+          align="top"
+          gap={0}
+          style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
+        >
           <VStack
+            width="100%"
             className="history-rows"
             style={{ height: virtual.getTotalSize(), position: 'relative' }}
           >
             {virtual.getVirtualItems().map((row) => {
-              const item = items[row.index];
-              if (!item) return null;
+              const value = visibleRows[row.index];
+              if (!value) return null;
+              const item = value.item;
               return (
                 <VStack
                   key={row.key}
@@ -187,13 +201,14 @@ export function Chat({
                     transform: `translateY(${row.start}px)`,
                   }}
                 >
-                  <HistoryRow item={item} target={target} />
+                  <HistoryRow item={item} thinking={value.thinking} target={target} />
                 </VStack>
               );
             })}
           </VStack>
           {/* Astryx must observe live content growth as part of the message list. */}
           {before === '0' && <LiveOutput target={target} />}
+          {completion && <HistoryRow item={completion.item} target={target} />}
         </ChatMessageList>
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}
       </VStack>

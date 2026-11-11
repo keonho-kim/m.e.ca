@@ -276,6 +276,7 @@ test('mobile settings discover, diagnose and save the global model before openin
  for(const [label,key] of [['연결 진단','diagnoseModel'],['저장','setModel']] as const){
   const reply=page.waitForResponse(response=>response.url().endsWith('/v1/command')&&response.request().postDataJSON()?.[key]!==undefined);
   await dialog.getByRole('button',{name:label,exact:true}).click();
+  if(key==='setModel')await page.getByRole('alertdialog').getByRole('button',{name:'네',exact:true}).click();
   const response=await reply;
   expect(response.request().postDataJSON()[key].sessionId).toBeUndefined();
   expect((await response.json()).error).toBeUndefined();

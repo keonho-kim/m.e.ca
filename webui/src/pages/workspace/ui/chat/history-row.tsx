@@ -5,12 +5,10 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import {
-  ChatComposerTokenElement,
   ChatMessage,
   ChatMessageBubble,
   ChatMessageMetadata,
   ChatSystemMessage,
-  ChatTokenizedText,
   ChatToolCalls,
 } from '@astryxdesign/core/Chat';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
@@ -18,6 +16,7 @@ import { Lightbox } from '@astryxdesign/core/Lightbox';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { memo, useState } from 'react';
+import { messageContent } from '@/pages/workspace/model/message-content';
 import type { Target } from '@/pages/workspace/model/store';
 import { toolStatus } from '@/pages/workspace/model/tool-status';
 import { AttachmentImage } from '@/pages/workspace/ui/chat/attachment-image';
@@ -28,13 +27,16 @@ import type { DetailRequestJson, HistoryItemJson } from '@/shared/api';
 import { imageURL } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
+import { ReferenceText, ReferenceToken } from '@/shared/ui/reference-token';
 
 export const HistoryRow = memo(function HistoryRow({
   item,
   target,
+  thinking,
 }: {
   item: HistoryItemJson;
   target: Target;
+  thinking?: HistoryItemJson;
 }) {
   const t = useLocale(),
     [source, setSource] = useState<DetailRequestJson | null>(null),
@@ -45,11 +47,7 @@ export const HistoryRow = memo(function HistoryRow({
     setSource(
       event?.tool?.reference ? { tool: event.tool.reference } : { historySequence: item.sequence }
     );
-  const matches = user ? ((item.text ?? '').match(/(?:#[\w:.-]+|^![\w-]+)/g) ?? []) : [];
-  const tokens = [...new Set(matches.length <= 128 ? matches : [])].slice(0, 32).map((value) => ({
-    value,
-    render: () => <ChatComposerTokenElement token={{ value, label: value, variant: 'neutral' }} />,
-  }));
+  const content = user ? messageContent(item.text ?? '') : undefined;
   const outcome = item.outcome;
   const outcomeLabel =
     outcome?.status === 'completed'
@@ -60,18 +58,14 @@ export const HistoryRow = memo(function HistoryRow({
   return (
     <>
       {outcome ? (
-        <ChatSystemMessage>
+        <ChatSystemMessage className="completion-row min-w-0">
           <HStack gap={2}>
-            <StatusDot
-              variant={
-                outcome.status === 'completed'
-                  ? 'success'
-                  : outcome.status === 'failed'
-                    ? 'error'
-                    : 'warning'
-              }
-              label={outcomeLabel}
-            />
+            {outcome.status !== 'completed' && (
+              <StatusDot
+                variant={outcome.status === 'failed' ? 'error' : 'warning'}
+                label={outcomeLabel}
+              />
+            )}
             <Text type="supporting" color="secondary">
               {outcomeLabel}
             </Text>
@@ -81,14 +75,22 @@ export const HistoryRow = memo(function HistoryRow({
               {completionSummary(event.statistics, t)}
             </Text>
           )}
-          {outcome.reason && <Text color="secondary">{outcome.reason}</Text>}
+          {outcome.status !== 'completed' && outcome.reason && (
+            <Text color="secondary">{outcome.reason}</Text>
+          )}
         </ChatSystemMessage>
       ) : event?.thinking ? (
-        <Thinking text={event.thinking}>
-          {event.truncated && <Button label={t('moreOriginal')} size="sm" onClick={detail} />}
-        </Thinking>
+        <ChatMessage sender="assistant" name={event.agent || 'MECA'} className="min-w-0 w-full">
+          <ChatMessageBubble variant="ghost" width="100%">
+            <Thinking text={event.thinking}>
+              {event.truncated && <Button label={t('moreOriginal')} size="sm" onClick={detail} />}
+            </Thinking>
+          </ChatMessageBubble>
+        </ChatMessage>
       ) : event?.tool ? (
         <ChatToolCalls
+          className="tool-calls"
+          style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
           calls={[
             {
               key: event.tool.callId || item.sequence,
@@ -107,18 +109,42 @@ export const HistoryRow = memo(function HistoryRow({
       ) : item.text || item.images?.length ? (
         <ChatMessage
           sender={user ? 'user' : 'assistant'}
+          style={{ width: '100%', minWidth: 0 }}
           name={user ? undefined : event?.agent || 'MECA'}
         >
           <ChatMessageBubble
+            width={user ? undefined : '100%'}
             variant={user ? 'filled' : 'ghost'}
             metadata={
               item.incomplete ? <ChatMessageMetadata footer={t('interrupted')} /> : undefined
             }
           >
             {user ? (
-              <ChatTokenizedText tokens={tokens}>{item.text ?? ''}</ChatTokenizedText>
+              <VStack className="min-w-0 max-w-full" gap={2}>
+                <ReferenceText text={content?.text ?? ''} />
+                {!!content?.paths.length && (
+                  <HStack gap={2} wrap="wrap" className="min-w-0">
+                    {content.paths.map((path) => (
+                      <ReferenceToken key={path} value={path} />
+                    ))}
+                  </HStack>
+                )}
+              </VStack>
             ) : (
-              <MarkdownText text={item.text ?? ''} showCompleteText={false} />
+              <>
+                {thinking?.event?.thinking && (
+                  <Thinking text={thinking.event.thinking}>
+                    {thinking.truncated && (
+                      <Button
+                        label={t('moreOriginal')}
+                        size="sm"
+                        onClick={() => setSource({ historySequence: thinking.sequence })}
+                      />
+                    )}
+                  </Thinking>
+                )}
+                <MarkdownText text={item.text ?? ''} showCompleteText={false} />
+              </>
             )}
             {!!item.images?.length && (
               <HStack gap={2} wrap="wrap">

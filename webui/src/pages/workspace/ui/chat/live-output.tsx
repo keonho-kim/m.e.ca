@@ -33,7 +33,7 @@ export function LiveOutput({ target }: { target: Target }) {
   );
   if (!sources.length && !events.length && !original) return null;
   return (
-    <VStack className="live-output" gap={5} paddingBlockStart={5}>
+    <VStack width="100%" className="live-output" gap={5} paddingBlockStart={5}>
       {agents.length > 1 && (
         <Selector
           label={t('agent')}
@@ -46,7 +46,7 @@ export function LiveOutput({ target }: { target: Target }) {
         />
       )}
       {sources
-        .filter((v) => !agent || v.agent === agent)
+        .filter((v) => (v.text || v.thinking) && (!agent || v.agent === agent))
         .map((d) => (
           <LiveSource
             key={`${d.task}/${d.agent}/${d.generation}`}

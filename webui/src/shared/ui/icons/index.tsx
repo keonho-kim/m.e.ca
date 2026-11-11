@@ -27,11 +27,13 @@ import {
   Sun,
   Trash2,
   Users,
+  X,
 } from 'lucide-react';
 
 const iconProps = { size: '1em', 'aria-hidden': true as const };
 
 export const mecaIcons = {
+  'meca:close': <X {...iconProps} />,
   'meca:play': <Play {...iconProps} />,
   'meca:file': <File {...iconProps} />,
   'meca:folder': <Folder {...iconProps} />,

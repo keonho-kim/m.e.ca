@@ -60,7 +60,7 @@ test('sidebar controls, settings labels and skill insertion stay in their work a
   await settings.click();
   const dialog = page.getByRole('dialog', { name: '설정', exact: true });
   expect((await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(950);
-  for (const label of ['모델', '실행', '일반', '파일 탐색 열기', '스킬 탐색 열기']) {
+  for (const label of ['모델', '실행', '일반']) {
     const item = dialog.getByRole('button', { name: label, exact: true });
     await expect(item).toBeVisible();
     expect(
@@ -173,10 +173,8 @@ test('LM Studio supplies Ornith candidates on model focus and accepts the select
     });
     await page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true }).click();
     await dialog.getByRole('button', { name: '저장', exact: true }).click();
-    await expect(
-      dialog.locator('.astryx-field-status').filter({ hasText: '저장했습니다' })
-    ).toBeVisible({ timeout: 30000 });
-    await dialog.getByRole('button', { name: '닫기', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: '네', exact: true }).click();
+    await expect(dialog).toHaveCount(0, { timeout: 30000 });
     const started = page.waitForResponse(
       (response) =>
         response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.start

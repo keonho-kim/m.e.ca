@@ -17,7 +17,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { reportError, setServerLanguage, useServerSession } from '@/entities/server-session';
 import { disconnect as disconnectServer } from '@/features/server-access';
 import { changed, stateOptions } from '@/pages/workspace/api/queries';
-import { view } from '@/pages/workspace/model/commands';
 import { clearSubmissions } from '@/pages/workspace/model/execution';
 import { cancelSelections } from '@/pages/workspace/model/file-references';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -27,6 +26,7 @@ import { ThemeChoice } from '@/pages/workspace/ui/settings/theme-controls';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
+import { SaveConfirmation } from '@/shared/ui/save-confirmation';
 
 export default function Settings() {
   const settings = useWorkspaceStore((s) => s.settings)!,
@@ -38,6 +38,8 @@ export default function Settings() {
   const [busy, setBusy] = useState(false),
     [permission, setPermission] = useState('default');
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [confirmSave, setConfirmSave] = useState(false);
+  const onSaved = useCallback(() => useWorkspaceStore.getState().set({ settings: null }), []);
   const [modelBusy, setModelBusy] = useState(false),
     [error, setError] = useState('');
   const target = settings.target,
@@ -63,7 +65,10 @@ export default function Settings() {
     if (dirty) setDiscard(true);
     else useWorkspaceStore.getState().set({ settings: null });
   };
-  const configure = async (value: { permission?: string; team?: boolean; language?: string }) => {
+  const configure = async (
+    value: { permission?: string; team?: boolean; language?: string },
+    closeAfter = false
+  ) => {
     setBusy(true);
     setError('');
     try {
@@ -75,19 +80,13 @@ export default function Settings() {
       });
       if (value.language) setServerLanguage(value.language);
       changed(target);
+      if (closeAfter) onSaved();
     } catch (error) {
       setError(describeError(error));
       reportError(error);
     } finally {
       setBusy(false);
     }
-  };
-  const shortcut = (mode: 'files' | 'skills') => {
-    if (dirty) {
-      setDiscard(true);
-      return;
-    }
-    if (view(mode)) useWorkspaceStore.getState().set({ settings: null });
   };
   const disconnect = async (discardFile = false) => {
     if (useWorkspaceStore.getState().fileDirty && !discardFile) {
@@ -134,7 +133,7 @@ export default function Settings() {
               <DialogHeader title={t('settings')} onOpenChange={() => close()} />
               {compact && (
                 <VStack paddingInline={4} paddingBlockEnd={3}>
-                  <SettingsNavigation compact tab={tab} onChange={setTab} shortcut={shortcut} />
+                  <SettingsNavigation compact tab={tab} onChange={setTab} />
                 </VStack>
               )}
             </VStack>
@@ -142,14 +141,19 @@ export default function Settings() {
           start={
             compact ? undefined : (
               <LayoutPanel width={224} padding={2}>
-                <SettingsNavigation tab={tab} onChange={setTab} shortcut={shortcut} />
+                <SettingsNavigation tab={tab} onChange={setTab} />
               </LayoutPanel>
             )
           }
           content={
             <LayoutContent padding={0}>
               {error && <Banner status="error" title={error} />}
-              <ModelForm active={tab === 'model'} onDirty={onDirty} onBusy={setModelBusy} />
+              <ModelForm
+                active={tab === 'model'}
+                onDirty={onDirty}
+                onBusy={setModelBusy}
+                onSaved={onSaved}
+              />
               <VStack hidden={tab !== 'execution'} padding={6} gap={5}>
                 <Text type="label" weight="semibold">
                   {t('permission')} · {t('global')}
@@ -167,7 +171,10 @@ export default function Settings() {
                 />
                 <Button
                   label={t('save')}
-                  onClick={() => configure({ permission })}
+                  onClick={() => {
+                    setError('');
+                    setConfirmSave(true);
+                  }}
                   isDisabled={busy}
                 />
                 <Text type="label" weight="semibold">
@@ -204,6 +211,15 @@ export default function Settings() {
           }
         />
       </Dialog>
+      <SaveConfirmation
+        open={confirmSave}
+        busy={busy}
+        error={error}
+        close={() => setConfirmSave(false)}
+        save={() => {
+          void configure({ permission }, true);
+        }}
+      />
       <AlertDialog
         isOpen={discard}
         onOpenChange={setDiscard}

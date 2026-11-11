@@ -27,7 +27,19 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 	var expandOnce sync.Once
 	expandThinking, finishThinking := make(chan struct{}), make(chan struct{})
 	var expandThinkingOnce, finishThinkingOnce sync.Once
+	startTool, finishTool := make(chan struct{}), make(chan struct{})
+	var startToolOnce, finishToolOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/test/start-tool" {
+			startToolOnce.Do(func() { close(startTool) })
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.URL.Path == "/test/finish-tool" {
+			finishToolOnce.Do(func() { close(finishTool) })
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		if r.URL.Path == "/test/release" {
 			once.Do(func() { close(release) })
 			w.WriteHeader(http.StatusNoContent)
@@ -120,6 +132,33 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{field: value}, "finish_reason": finish}}})
 			fmt.Fprintf(w, "data: %s\n\n", body)
 			_ = http.NewResponseController(w).Flush()
+		}
+		if strings.Contains(text, "TOOL_CYCLE_FIXTURE") {
+			hasTool := false
+			for _, message := range request.Messages {
+				hasTool = hasTool || message.Role == "tool"
+			}
+			if !hasTool {
+				chunk("reasoning", "Stable initial tool reasoning", nil)
+				select {
+				case <-startTool:
+				case <-r.Context().Done():
+					return
+				}
+				fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"fixture-read\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"sample.go\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
+				_ = http.NewResponseController(w).Flush()
+				return
+			}
+			chunk("reasoning", "Stable subsequent reasoning\n\n"+strings.Repeat("long_identifier_", 160), nil)
+			chunk("content", "Intermediate response before final completion.\n\n```text\n"+strings.Repeat("unbroken_code_", 160)+"\n```", nil)
+			select {
+			case <-finishTool:
+			case <-r.Context().Done():
+				return
+			}
+			chunk("content", "\n\nFinal tool-cycle answer.", "stop")
+			fmt.Fprint(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":32,\"completion_tokens\":64}}\n\ndata: [DONE]\n\n")
+			return
 		}
 		if strings.Contains(text, "LONG_THINKING_FIXTURE") {
 			chunk("reasoning", strings.Repeat("Initial reasoning paragraph\n\n", 64)+"First reasoning tail\n\n", nil)

@@ -50,9 +50,10 @@ export const CodePreview = memo(function CodePreview({
   return (
     <VStack gap={2} className="min-w-0 max-w-full">
       <CodeBlock
+        width="100%"
         code={code.slice(boundaries[index], boundaries[index + 1])}
         language={language}
-        className={className}
+        className={`meca-code min-w-0 max-w-full ${className ?? ''}`}
         isWrapped={isWrapped}
       />
       {last > 0 && (

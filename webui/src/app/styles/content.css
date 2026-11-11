@@ -1,0 +1,21 @@
+/* Purpose: Keep rich text, chat and code within their allocated content column.
+ * Pattern: Public component layout constraints.
+ * Usage: The app stylesheet imports these wrapping rules after Astryx utilities.
+ * Related: webui/src/shared/ui/markdown/index.tsx, webui/src/shared/ui/code-preview/index.tsx. */
+@layer utilities {
+  .chat-content, .live-output, .history-row, .thinking, .meca-prose {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .meca-prose pre, .meca-prose code, .meca-code, .meca-code code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .meca-prose pre, .meca-code { overflow-x: hidden; }
+  .meca-prose table { width: 100%; table-layout: fixed; }
+  .meca-prose th, .meca-prose td { overflow-wrap: anywhere; }
+}

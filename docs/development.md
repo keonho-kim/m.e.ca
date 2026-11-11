@@ -599,6 +599,10 @@ SQLite의 청크 미리보기는 호출이 소유한 decoder를 사용한다. DB
 
 ## 내장 WebUI
 
+사용자 메시지의 엔진 참조 블록은 message-content의 표시 투영에서 분리한다. 파일·폴더 참조와 스킬의 토큰 정의는 shared/ui/reference-token이 소유한다. 스킬 탐색의 추가 액션은 WorkspaceShell이 Composer의 좁은 imperative 계약에 연결하며, 실제 입력 변경은 Astryx ChatComposerInputHandle.insertToken이 수행한다. 스킬 삽입이 보기 전환을 소유하지 않는다.
+
+history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영한다. Chat은 저장 이력 확인을 layout effect에서 반영하고 마지막 완료 행을 실시간 출력 뒤에 배치한다. LiveActivity는 종료한 작업의 중간 활동을 다시 표시하지 않는다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
+
 `webui/`는 full 배포본에만 포함하는 Bun 빌드의 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. tui의 조립·의존성 그래프에는 내장 자산 어댑터가 없으며 자산이 이미 생성돼 있어도 포함하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
 
 소스는 FSD의 `app → pages → features → entities → shared` 방향을 따른다. 다른 슬라이스의 내부 파일을 직접 가져오지 않고 필요한 이름만 공개 진입점에서 내보낸다. 현재 워크스페이스에서만 쓰는 실행·스트림·파일·설정 코드는 `pages/workspace` 안에 둔다. 로그인과 연결 종료처럼 여러 화면이 공유하는 동작만 `features/server-access`로 추출한다. 빈 계층이나 단순 재전달 계층은 만들지 않는다.

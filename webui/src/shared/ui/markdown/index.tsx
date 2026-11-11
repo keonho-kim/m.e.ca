@@ -126,7 +126,7 @@ export const MarkdownText = memo(function MarkdownText({
     <>
       <FollowCode value={tail.current}>
         <Markdown
-          className="min-w-0 max-w-full overflow-x-auto"
+          className="meca-prose min-w-0 max-w-full [overflow-wrap:anywhere]"
           isStreaming={streaming && (reveal || reducedMotion)}
           components={renderers}
           plugins={plugins}

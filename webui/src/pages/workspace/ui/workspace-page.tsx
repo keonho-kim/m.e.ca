@@ -15,7 +15,16 @@ import type { SideNavControlledCollapsible } from '@astryxdesign/core/SideNav';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { useQuery } from '@tanstack/react-query';
 import { useBlocker, useNavigate, useRouterState } from '@tanstack/react-router';
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   dismissNotice,
   reportError,
@@ -26,7 +35,7 @@ import { observeConversationCache } from '@/pages/workspace/api/cache-policy';
 import { observe } from '@/pages/workspace/api/events';
 import { capabilitiesOptions, changed, workspaceOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
-import { Composer } from '@/pages/workspace/ui/composer/composer';
+import { Composer, type ComposerHandle } from '@/pages/workspace/ui/composer/composer';
 import { Approval } from '@/pages/workspace/ui/inspection/approval';
 import { Sidebar } from '@/pages/workspace/ui/navigation/sidebar';
 import { WorkspaceToolbar } from '@/pages/workspace/ui/navigation/workspace-toolbar';
@@ -42,6 +51,7 @@ const Skills = lazy(() => import('@/pages/workspace/ui/skills/skills'));
 const FolderPicker = lazy(() => import('@/pages/workspace/ui/navigation/folder-picker'));
 
 export default function WorkspaceShell() {
+  const composerInput = useRef<ComposerHandle>(null);
   useEffect(observeConversationCache, []);
   const t = useLocale(),
     route = useNavigate();
@@ -140,6 +150,7 @@ export default function WorkspaceShell() {
   };
   const composer = (
     <Composer
+      ref={composerInput}
       key={`${composerTarget.workspace}/${composerTarget.session}`}
       target={composerTarget}
       showStatus={mode === 'chat'}
@@ -184,7 +195,7 @@ export default function WorkspaceShell() {
                   className="workspace-body"
                   density="balanced"
                   composer={composer}
-                  style={{ height: landing ? 'auto' : '100%' }}
+                  style={{ height: landing ? 'auto' : '100%', width: '100%', minWidth: 0 }}
                 >
                   <Suspense
                     fallback={
@@ -228,7 +239,14 @@ export default function WorkspaceShell() {
                         </Center>
                       }
                     >
-                      {mode === 'files' ? <Files target={target} /> : <Skills target={target} />}
+                      {mode === 'files' ? (
+                        <Files target={target} />
+                      ) : (
+                        <Skills
+                          target={target}
+                          onInsert={(mention) => composerInput.current?.insertSkill(mention)}
+                        />
+                      )}
                     </Suspense>
                   </LayoutContent>
                 }

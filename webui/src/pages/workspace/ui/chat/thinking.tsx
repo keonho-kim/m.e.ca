@@ -22,6 +22,7 @@ export const Thinking = memo(function Thinking({
   return (
     <Collapsible
       className="thinking"
+      style={{ width: '100%', minWidth: 0 }}
       isOpen={open}
       onOpenChange={setOpen}
       trigger={

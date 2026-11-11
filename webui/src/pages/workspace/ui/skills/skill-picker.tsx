@@ -10,7 +10,15 @@ import type { Target } from '@/pages/workspace/model/store';
 import { useLocale } from '@/shared/i18n';
 
 const Skills = lazy(() => import('@/pages/workspace/ui/skills/skills'));
-export function SkillPicker({ target, close }: { target: Target; close: () => void }) {
+export function SkillPicker({
+  target,
+  close,
+  onInsert,
+}: {
+  target: Target;
+  close: () => void;
+  onInsert: (mention: string) => void;
+}) {
   const t = useLocale();
   return (
     <Dialog
@@ -32,7 +40,13 @@ export function SkillPicker({ target, close }: { target: Target; close: () => vo
           <LayoutContent padding={0} isScrollable={false}>
             <VStack height="60dvh" gap={0} className="min-h-0">
               <Suspense fallback={<Spinner label={t('loading')} />}>
-                <Skills target={target} onInsert={close} />
+                <Skills
+                  target={target}
+                  onInsert={(mention) => {
+                    onInsert(mention);
+                    close();
+                  }}
+                />
               </Suspense>
             </VStack>
           </LayoutContent>

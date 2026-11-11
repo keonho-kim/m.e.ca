@@ -1,6 +1,6 @@
 // Purpose: Present the settings sections as a desktop list or compact top selector.
 // Pattern: Responsive Astryx navigation composition.
-// Usage: Settings owns the selected section and shortcut actions.
+// Usage: Settings owns the selected section and its edit state.
 // Related: webui/src/pages/workspace/ui/settings/settings.tsx, webui/src/shared/i18n/index.ts.
 import { Icon } from '@astryxdesign/core/Icon';
 import { List, ListItem } from '@astryxdesign/core/List';
@@ -19,12 +19,10 @@ export function SettingsNavigation({
   compact = false,
   tab,
   onChange,
-  shortcut,
 }: {
   compact?: boolean;
   tab: Section;
   onChange: (value: Section) => void;
-  shortcut: (value: 'files' | 'skills') => void;
 }) {
   const t = useLocale();
   if (compact)
@@ -32,15 +30,9 @@ export function SettingsNavigation({
       <Selector
         label={t('settingsSection')}
         value={tab}
-        options={[
-          ...sections.map(({ id }) => ({ value: id, label: t(id) })),
-          { value: 'files', label: t('openFiles') },
-          { value: 'skills', label: t('openSkills') },
-        ]}
+        options={[...sections.map(({ id }) => ({ value: id, label: t(id) }))]}
         onChange={(value) => {
-          if (value === 'files' || value === 'skills') shortcut(value);
-          else if (value === 'model' || value === 'execution' || value === 'general')
-            onChange(value);
+          if (value === 'model' || value === 'execution' || value === 'general') onChange(value);
         }}
       />
     );
@@ -55,16 +47,6 @@ export function SettingsNavigation({
           onClick={() => onChange(id)}
         />
       ))}
-      <ListItem
-        label={<Text>{t('openFiles')}</Text>}
-        startContent={<Icon icon={'meca:folder-open'} />}
-        onClick={() => shortcut('files')}
-      />
-      <ListItem
-        label={<Text>{t('openSkills')}</Text>}
-        startContent={<Icon icon={'meca:book'} />}
-        onClick={() => shortcut('skills')}
-      />
     </List>
   );
 }

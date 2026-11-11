@@ -25,11 +25,12 @@ export const LiveSource = memo(function LiveSource({
     <ChatMessage
       sender="assistant"
       className="assistant-message"
-      key={`${d.task}/${d.agent}/${d.generation}`}
+      style={{ width: '100%', minWidth: 0 }}
       name={d.agent || 'MECA'}
     >
       <ChatMessageBubble
         variant="ghost"
+        width="100%"
         metadata={
           <ChatMessageMetadata
             footer={
