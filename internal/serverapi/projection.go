@@ -42,7 +42,7 @@ func snapshot(value server.Snapshot) *v1.Snapshot {
 		s.Approvals = append(s.Approvals, event(server.Event{Task: p.Task, ApprovalID: p.ID, ApprovalExpiresAt: p.ExpiresAt, Record: p.Value, Truncated: p.Truncated}).Approval)
 	}
 	for _, d := range value.Drafts {
-		s.Drafts = append(s.Drafts, &v1.Draft{TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes})
+		s.Drafts = append(s.Drafts, &v1.Draft{TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
 	}
 	for _, e := range value.Activity {
 		s.Activity = append(s.Activity, event(e))

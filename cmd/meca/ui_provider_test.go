@@ -3,7 +3,7 @@
 // Purpose: Provide deterministic free model responses and controllable streaming for browser tests.
 // Pattern: Local HTTP model fixture.
 // Usage: UI browser integration starts this server instead of contacting a real provider.
-// Related: cmd/meca/ui_browser_test.go.
+// Related: cmd/meca/ui_browser_test.go, cmd/meca/ui_tool_provider_test.go.
 package main
 
 import (
@@ -19,6 +19,7 @@ import (
 )
 
 func uiProvider(t *testing.T, home string) *httptest.Server {
+	sequence := newUIToolSequence()
 	release := make(chan struct{})
 	var once sync.Once
 	releaseThinking := make(chan struct{})
@@ -30,6 +31,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 	startTool, finishTool := make(chan struct{}), make(chan struct{})
 	var startToolOnce, finishToolOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sequence.control(w, r) {
+			return
+		}
 		if r.URL.Path == "/test/start-tool" {
 			startToolOnce.Do(func() { close(startTool) })
 			w.WriteHeader(http.StatusNoContent)
@@ -121,6 +125,16 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			return
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
+		if strings.Contains(text, "REPEATED_TOOL_FIXTURE") {
+			tools := 0
+			for _, message := range request.Messages {
+				if message.Role == "tool" {
+					tools++
+				}
+			}
+			sequence.reply(w, r, tools)
+			return
+		}
 		if needsApproval {
 			arguments, _ := json.Marshal(map[string]string{"path": filepath.Join(home, "approval-written.txt"), "content": "approved fixture\n"})
 			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": "fixture-write", "type": "function", "function": map[string]any{"name": "write_file", "arguments": string(arguments)}}}}, "finish_reason": "tool_calls"}}})

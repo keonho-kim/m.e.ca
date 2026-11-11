@@ -1,4 +1,4 @@
-// Purpose: Reduce live tool, participant and usage state for bounded reconnect snapshots.
+// Purpose: Track committed drafts, live tools, participants and usage for bounded reconnect snapshots.
 // Pattern: Request-owned state projection.
 // Usage: emit records state under the service mutex; snapshots copy immutable public values.
 // Related: internal/commands/server/projection.go, internal/commands/server/snapshot.go.
@@ -17,6 +17,11 @@ type usageSample struct {
 }
 
 func (r *request) observe(value record.Event) {
+	if value.Kind == "progress" || value.Kind == "team_progress" || value.Kind == "tool_started" {
+		if draft := r.drafts[value.Agent]; draft != nil {
+			draft.Committed = true
+		}
+	}
 	if value.Kind == "team_notice" && value.Text == "left" {
 		for key := range r.activity {
 			if strings.HasPrefix(key, value.Agent+"/") {

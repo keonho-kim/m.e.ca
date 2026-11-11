@@ -8,6 +8,7 @@ import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { mecaIcons } from '@/shared/ui/icons';
 
 const font = 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+const thinkingInk = 'light-dark(#5c5c5c, #b7b7b7)';
 export const mecaTheme = defineTheme({
   name: 'meca',
   extends: neutralTheme,
@@ -48,6 +49,18 @@ export const mecaTheme = defineTheme({
     ],
   },
   components: {
+    collapsible: {
+      base: {
+        ':is([data-tone="thinking"])': {
+          backgroundColor: 'var(--color-background-muted)',
+          borderRadius: 'var(--radius-container)',
+          padding: 'var(--spacing-4)',
+          marginBlockEnd: 'var(--spacing-4)',
+          '--color-text-primary': thinkingInk,
+          '--color-text-secondary': thinkingInk,
+        },
+      },
+    },
     markdown: {
       base: {
         ':is([data-tone="thinking"])': {

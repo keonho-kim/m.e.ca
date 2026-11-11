@@ -209,6 +209,8 @@ SSE 작성기는 이미 도착한 연속 델타의 flush를 묶는다. 첫 애�
 
 현재 초안 snapshot은 출처별 본문·Thinking 각 4KiB, 전체 본문 합계 512KiB로 제한하며 truncated와 원문 textBytes·thinkingBytes로 알린다. 실행 중 원문은 draft로 페이지 조회하고, 완료 뒤에는 history/detail을 사용한다. draft의 같은 task·agent·generation만 합치며 재시도/reset 때 이전 페이지를 폐기한다. history 표시 필드도 잘릴 수 있다. 완료된 본문은 historySequence, 도구 결과는 tool reference로 detail을 읽는다. detail의 data를 같은 revision과 offset 순서로 합치면 JSON 원문이 된다. 서버·원문·마스킹 기준이 달라진 revision은 conflict다. history의 images에는 index·경로·MIME·크기·digest를 제공하며 pixels는 포함하지 않는다. bytes는 알려진 경우에만 양수다. 공개 표시 필드만 반환하며 Provider native continuation·이미지 원본·capture·자격 증명은 반환하지 않는다.
 
+snapshot draft의 committed는 현재 generation의 출력이 이미 이력에 저장됐음을 나타낸다. progress·team_progress·tool_started에서 해당 발신자만 표시하고 다음 generation에서 초기화한다. 클라이언트는 새 이력 조회를 확인할 때까지 이 초안을 유지해 화면 공백을 막고, 확인 후에는 저장 이력과 중복 표시하지 않는다.
+
 상세 JSON은 API가 정의한 문서이며 내부 Go·DB 구조체 형식과 독립적이다. 필드명은 lowerCamelCase이고, 본문은 다음 형태 중 하나다.
 
 | kind | 공개 본문 |

@@ -70,6 +70,8 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 5. draft 페이지와 스냅샷의 generation이 달라지면 기존 조립 내용을 폐기한다. reset은 새 generation의 시작이며 같은 팀원이 퇴장 후 복귀해도 이전 generation을 재사용하지 않는다. draft 조회가 작업 종료와 겹치면 taskStatus와 history/detail로 전환한다.
 6. 완료된 대화는 history로 읽는다. 메시지 sequence와 도구 reference가 원문 조회 키다. 확정 이력과 진행 초안을 중복 표시하지 않는다.
 
+snapshot draft의 committed는 해당 generation의 출력이 이력에 저장됐음을 뜻한다. 작업 전체가 끝났다는 뜻은 아니다. 새 history 조회로 저장 출력을 확인한 뒤 해당 draft를 해제한다. progress·team_progress·tool_started도 이력으로 넘기는 경계이며 progress·팀 공개 응답을 완료 통계나 별도 시스템 문장으로 다시 표시하지 않는다. 같은 runId·agent·tool.callId의 상태와 저장 결과는 하나의 도구 실행으로 표시한다.
+
 `usage`·`usage_progress`·`request_finished` 이벤트의 statistics는 서버가 집계한 최신 측정이다. 브라우저는 완료 뒤 live 사건을 정리해도 마지막 통계를 별도 작은 값으로 유지한다.
 
 `activity`는 현재 도구·팀·진행·재시도의 제한된 복원 상태다. activityTruncated이면 해당 task의 state로 좁혀 조회한다. 확정된 사건 전체는 history/detail이 소유한다. `execution.statistics`는 완료 사용량과 현재 보고된 진행 표본을 합산하므로 같은 usage를 다시 더하지 않는다. 비용 미보고와 0을 구분한다.

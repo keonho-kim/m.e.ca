@@ -4,6 +4,7 @@
 // Related: webui/src/pages/workspace/api/events.ts, webui/src/pages/workspace/api/cache-refresh.ts.
 import { invalidate } from '@/pages/workspace/api/cache-refresh';
 import { stateOptions } from '@/pages/workspace/api/queries';
+import { isHistoryBoundary, isResponseEvent } from '@/pages/workspace/model/chat-events';
 import type { EventJson, SnapshotJson } from '@/shared/api';
 import { queries } from '@/shared/api';
 
@@ -67,7 +68,13 @@ export function projectEventCache(events: EventJson[]) {
       sessions.add(workspace);
       workspaces = true;
     }
-    if (started || finished || event.kind === 'draft_reset')
+    if (
+      started ||
+      finished ||
+      event.kind === 'draft_reset' ||
+      isHistoryBoundary(event) ||
+      isResponseEvent(event)
+    )
       histories.set(`${workspace}/${session}`, ['history', workspace, session, '0']);
     if (finished || event.kind === 'usage') invalidate(['session-usage', workspace, session]);
     if (event.kind === 'settings_changed') settings = true;

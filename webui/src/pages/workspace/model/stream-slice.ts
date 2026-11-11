@@ -42,8 +42,10 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
         };
     }
     trimTasks(tasks);
+    const revision = get().historyRevision + 1;
     set({
-      drafts: target.session ? snapshotDrafts(snapshot) : {},
+      historyRevision: revision,
+      drafts: target.session ? snapshotDrafts(snapshot, revision) : {},
       statistics: snapshot.execution?.statistics ?? null,
       tasks,
       events: snapshot.activity ?? [],

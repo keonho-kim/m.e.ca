@@ -81,6 +81,8 @@ message Draft {
   string task_id = 6;
   int64 text_bytes = 7;
   int64 thinking_bytes = 8;
+  // The generation has durable history; retain it only until that history is read.
+  bool committed = 9;
 }
 message Execution {
   Session session = 1;
