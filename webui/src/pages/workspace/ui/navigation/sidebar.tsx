@@ -37,6 +37,7 @@ export function Sidebar({
     mobile = useAppShellMobile();
   return (
     <SideNav
+      id="workspace-navigation"
       aria-label={t('workspaceList')}
       resizable
       collapsible={collapsible}
@@ -54,7 +55,7 @@ export function Sidebar({
                   useWorkspaceStore.getState().set({ picker: true });
                 }}
               />
-              <SideNavCollapseButton />
+              {!collapsible.isCollapsed && <SideNavCollapseButton />}
             </HStack>
           }
         />

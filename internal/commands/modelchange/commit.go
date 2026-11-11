@@ -42,27 +42,14 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 	}
 	credential = strings.Trim(credential, " \t")
 	if credential != "" {
-		current, readErr := store.Selection(ctx, session)
-		if ctx.Err() != nil {
-			return Committed{}, ctx.Err()
+		current, err := store.Selection(ctx, session)
+		if err != nil {
+			current = connection.Selection{}
 		}
-		reuse := ""
-		if readErr == nil && current.Connection.ID == next.Connection.ID && current.Connection.CredentialRef != "" {
-			saved, err := vault.Get(ctx, current.Connection.CredentialRef, next.Connection.CredentialScope())
-			if ctx.Err() != nil {
-				return Committed{}, ctx.Err()
-			}
-			if err == nil && subtle.ConstantTimeCompare([]byte(saved), []byte(credential)) == 1 {
-				reuse = current.Connection.CredentialRef
-			}
+		next, err = BindCredential(ctx, vault, current, next, credential)
+		if err != nil {
+			return Committed{}, err
 		}
-		if reuse == "" {
-			reuse = "credential_" + rand.Text()
-			if err := vault.Set(ctx, reuse, next.Connection.CredentialScope(), credential); err != nil {
-				return Committed{}, err
-			}
-		}
-		next.Connection.CredentialRef = reuse
 	}
 	if err := store.SaveSelection(ctx, session, next); err != nil {
 		if errors.Is(err, sessionstate.ErrForeignSession) {
@@ -87,4 +74,34 @@ func Commit(ctx context.Context, store SelectionStore, vault CredentialWriter, s
 		}
 	}
 	return result, nil
+}
+
+// BindCredential returns the immutable reference to commit with the selected model.
+func BindCredential(ctx context.Context, vault CredentialWriter, current, next connection.Selection, credential string) (connection.Selection, error) {
+	if err := ctx.Err(); err != nil {
+		return connection.Selection{}, err
+	}
+	if credential == "" {
+		return next, nil
+	}
+	if vault == nil {
+		return connection.Selection{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.SetupCredentialStoreIsRequiredForSavedConnection)
+	}
+	scope := next.Connection.CredentialScope()
+	if ref := current.Connection.CredentialRef; current.Connection.ID == next.Connection.ID && ref != "" {
+		saved, err := vault.Get(ctx, ref, scope)
+		if ctx.Err() != nil {
+			return connection.Selection{}, ctx.Err()
+		}
+		if err == nil && subtle.ConstantTimeCompare([]byte(saved), []byte(credential)) == 1 {
+			next.Connection.CredentialRef = ref
+			return next, nil
+		}
+	}
+	ref := "credential_" + rand.Text()
+	if err := vault.Set(ctx, ref, scope, credential); err != nil {
+		return connection.Selection{}, err
+	}
+	next.Connection.CredentialRef = ref
+	return next, nil
 }

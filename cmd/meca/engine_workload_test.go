@@ -118,6 +118,7 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
 			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
 			if err == nil {
+				c.InheritsModel = false
 				c.Runtime.Selection = selected
 				c.Model = conversationruntime.NewModel(client, nil)
 			}

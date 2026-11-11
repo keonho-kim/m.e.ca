@@ -11,12 +11,15 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/diagnostics"
+	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
@@ -88,7 +91,8 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 	cleanup = append(cleanup, files.Close)
 	application, err := server.New(ctx, server.Options{
 		Attachments: attachments, WorkspaceID: workspaceID, Feed: feed, Capacity: capacity, Effects: effects, CurrentConfig: current,
-		Delete: func(ctx context.Context, id string) error { return sessions.DeleteConversation(ctx, mode.Project, id) },
+		ModelCredentials: vault,
+		Delete:           func(ctx context.Context, id string) error { return sessions.DeleteConversation(ctx, mode.Project, id) },
 		Diagnose: func(ctx context.Context, selected connection.Selection, key string) (connection.Capabilities, error) {
 			if err := vault.Remember(key); err != nil {
 				return connection.Capabilities{}, err
@@ -103,6 +107,12 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 			return diagnostic.Check(ctx, prepared.Client, selected.Model, prepared.Selection.ThinkingSupported, native, &settings)
 		},
 		Files: files.Files,
+		Usage: func(ctx context.Context, id string) (model.TokenUsage, error) {
+			return sessions.TokenUsage(ctx, mode.Project, id)
+		},
+		MutateEntry: func(ctx context.Context, settings policy.Settings, change fileview.EntryMutation) (string, error) {
+			return files.Files.MutateEntry(ctx, settings, change, skillBoundary.CheckEntryMutation)
+		},
 		Read: func(ctx context.Context, id string) (*server.Conversation, error) {
 			store, err := sessions.OpenRead(ctx, mode.Project, id)
 			if err != nil {
@@ -112,6 +122,7 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 			if err != nil {
 				return nil, errors.Join(err, store.Close())
 			}
+			inheritsModel := selected.Model == ""
 			selected, err = serverSelection(selected, current().Model)
 			if err != nil {
 				return nil, errors.Join(err, store.Close())
@@ -120,7 +131,7 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 			if err != nil {
 				return nil, errors.Join(err, store.Close())
 			}
-			return &server.Conversation{Runtime: agentrequest.Runtime{Session: store.Session(), Selection: selected}, History: store, TeamEnabled: team, Close: store.Close}, nil
+			return &server.Conversation{Runtime: agentrequest.Runtime{Session: store.Session(), Selection: selected}, History: store, TeamEnabled: team, InheritsModel: inheritsModel, Close: store.Close}, nil
 		},
 		Discover: func(ctx context.Context, selected connection.Selection, key string, defaults setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error) {
 			if err := vault.Remember(key); err != nil {

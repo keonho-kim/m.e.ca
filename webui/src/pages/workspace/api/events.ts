@@ -1,12 +1,13 @@
 // Purpose: Own one resumable event connection and batch only visible text updates.
 // Pattern: Native EventSource lifecycle with urgent application event delivery.
-// Usage: App reconnects from a freshly scoped snapshot when selection or pause state changes.
+// Usage: App reconnects from a freshly scoped snapshot when selection or connectivity changes.
 // Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/execution.ts.
 
 import { reportError } from '@/entities/server-session';
 import { invalidate } from '@/pages/workspace/api/cache-refresh';
 import { projectEventCache } from '@/pages/workspace/api/event-cache';
 import { stateOptions } from '@/pages/workspace/api/queries';
+import { readSnapshot, snapshotMetadata } from '@/pages/workspace/api/snapshots';
 import { forgetConversation } from '@/pages/workspace/model/deletion';
 import { completed } from '@/pages/workspace/model/followups';
 import {
@@ -56,9 +57,11 @@ export function observe(target: Target) {
     // The new cursor already accounts for buffered events from the old base.
     discardBatch();
     useWorkspaceStore.getState().bootstrap(target, snapshot);
-    const { drafts: _drafts, activity: _activity, ...metadata } = snapshot;
-    queries.setQueryData(stateOptions(target).queryKey, metadata);
-    if (target.session) invalidate(['history', target.workspace, target.session, '0']);
+    queries.setQueryData(stateOptions(target).queryKey, snapshotMetadata(snapshot));
+    if (target.session) {
+      invalidate(['history', target.workspace, target.session, '0']);
+      invalidate(['session-usage', target.workspace, target.session]);
+    }
   };
   async function connect() {
     if (isClosed() || connecting || (source && source.readyState !== EventSource.CLOSED)) return;
@@ -81,7 +84,7 @@ export function observe(target: Target) {
     }
     try {
       useWorkspaceStore.getState().set({ streamStatus: 'connecting' });
-      const snapshot = await queries.fetchQuery({ ...stateOptions(target), staleTime: 0 });
+      const snapshot = await readSnapshot(target, controller.signal);
       if (isClosed()) return;
       if (!snapshot.cursor) throw failure('invalid_response');
       acceptSnapshot(snapshot);

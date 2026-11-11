@@ -10,7 +10,6 @@ import (
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
 type folderCreator interface {
@@ -30,13 +29,7 @@ func (s *Service) CreateFolder(ctx context.Context, parent, name string) (string
 	if !ok {
 		return "", fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)
 	}
-	gate := s.options.Effects
-	if gate == nil {
-		gate = &s.workspace
-	}
-	ctx, end := workspacegate.Bind(ctx, gate)
-	defer end()
-	release, err := workspacegate.Acquire(ctx)
+	ctx, release, err := s.beginFileEffect(ctx, settings, parent)
 	if err != nil {
 		return "", err
 	}

@@ -15,7 +15,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 작업공간 목록·폴더 선택·등록 | `listWorkspaces`, `browseFolders`, `addWorkspace` |
 | 명령 후보·해석 | `commandCatalog`, `parseInput`; 브라우저에서 !new·!quit는 거절 |
 | 시작·지원 기능·한도 확인 | `capabilities` |
-| provider·모델 선택 화면 | `providers`, `discoverModels`, `diagnoseModel`, `setModel` |
+| 전역 모델 설정 | `state:{defaultModel:true}`, `providers`, `discoverModels`, `diagnoseModel`, `setModel:{defaultModel:true,...}` |
 | 대화 목록·새 대화 | `listSessions`, `selectSession:{create:true}` |
 | 대화 열람 | `state:{sessionId}`, `history:{sessionId}`, `detail:{sessionId,...}` |
 | 대화 삭제 | `deleteSession:{sessionId}`. 활성 작업을 거절하며 대화 DB·해당 팀 내부 데이터만 삭제 |
@@ -29,27 +29,30 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 실행·추가 지시·취소 | `start`, `steer`, `cancel` |
 | 승인 대화상자 | snapshot/event의 approval, `detail:{approvalId}`, `approve` |
 | 단일·팀 스트리밍 | SSE / WatchEvents / socket watch |
-| 실행 중 명령 카드 | `commands:{taskId}`의 task·agent·명령 상태·경과 시간 |
-| 메모리 표시 | `resources`의 서버 프로세스 RSS |
-| 작업 목록·완료 확인 | `listTasks`의 `sessionSummary`·상태·작업 ID, `taskStatus` |
+| 컴포저 상태 | `resources`의 서버 RSS, `sessionUsage:{sessionId}`의 누적 토큰, 스트림 실행 상태 |
+| 작업 완료 확인 | `taskStatus` |
 | 재접속·긴 실행 중 본문 | snapshot/state 페이지, `draft` |
 | 사용량·시간·처리량 표시 | execution의 startedAt·statistics와 usage 이벤트 |
 | 스킬 탐색 | `listSkills`(최대 32), `suggestSkills`, `getSkill`, `readSkillFile` |
 
 탭·선택 메시지·접기·스크롤·입력 초안·클립보드·예약 입력 편집은 클라이언트가 소유한다. TUI의 예약 입력도 화면 수명의 큐다. 브라우저 종료 후에도 실행해야 하는 요청은 `start`로 접수한 작업이어야 한다. 관찰을 중단해도 이미 접수한 작업은 서버에서 계속된다.
 
-파일 선택 시 `editorRead`로 전체 편집 문서를 한 번 읽으며 편집 가능한 파일에 `previewFile`을 중복 요청하지 않는다. 편집 불가 응답일 때만 `previewFile`의 읽기 전용 페이지를 사용한다. Preview/Raw와 미리보기 본문 클릭은 클라이언트 표시 상태이며 Markdown 미리보기는 현재 초안을 사용한다. 전환 자체로 서버에 저장하지 않으며 `editorSave`의 revision 검사와 저장 확인을 유지한다. `listTasks.items[].sessionSummary`는 해당 페이지에 속한 프로젝트 세션의 메타데이터에서 읽고 별도로 저장하지 않는다.
+파일 선택 시 `editorRead`로 전체 편집 문서를 한 번 읽으며 편집 가능한 파일에 `previewFile`을 중복 요청하지 않는다. 편집 불가 응답일 때만 `previewFile`의 읽기 전용 페이지를 사용한다. Preview/Raw와 미리보기 본문 클릭은 클라이언트 표시 상태이며 Markdown 미리보기는 현재 초안을 사용한다. 전환 자체로 서버에 저장하지 않으며 `editorSave`의 revision 검사와 저장 확인을 유지한다.
+
+파일 이름 변경·이동·삭제는 `mutateFile`을 사용한다. 목록에서 받은 부모 디렉터리 `revision`과 참조를 갱신할 대화의 `sessionId`를 함께 보낸다. 서버는 작업공간 경로와 보호 항목을 확인하고 참조 변경을 한 DB 트랜잭션으로 저장한다. 응답의 `path`는 이동 결과, `paths`는 해당 대화의 확정 참조 목록이다. `referencesReady`가 참일 때 전송 입력에 반영한다. `errorCode`·`errorMessage`가 있으면 부분 완료 여부를 확인하며 파일 효과를 무조건 재실행하지 않는다. 파일시스템과 DB는 하나의 원자적 트랜잭션이 아니며, 참조 저장을 확인하지 못하면 전송을 막고 경로를 다시 확인한다. 같은 이름의 별도 대상은 덮어쓰지 않고 대소문자만 바꾸는 이름 변경은 지원한다. 폴더 삭제는 하위 항목을 포함하고 항목 사이에서 취소를 확인하므로 중단 시 일부 항목이 이미 삭제되었을 수 있다.
+
+`sessionUsage`는 저장된 사용량 이벤트의 누적 합계다. 사용량 이벤트·요청 완료·재연결 snapshot에서 다시 조회하며 대화 삭제 시 해당 캐시도 제거한다. 전역 모델 폼은 전역 기본 모델만 조회하고 변경되지 않은 값은 저장하지 않는다.
 
 ## 대상과 동시성
 
-`listWorkspaces`의 id와 대화 생성 응답의 `session.id`를 화면에 보관한다. 프로젝트별 명령에는 최상위 `workspaceId`를 지정하며 생략 시 시작 프로젝트를 사용한다. 잘못된 workspaceId를 다른 프로젝트로 대체하지 않는다. `--concurrency`는 모든 프로젝트를 합친 프로세스 상한이다. 모델·팀 변경과 세션 닫기에는 `sessionId`를 명시한다. state에 taskId도 지정할 때는 같은 세션의 작업이어야 한다. 권한·언어는 전역 설정이다. 전역 `selectSession`을 탭 전환마다 호출하지 않는다. 미선택 대화의 읽기와 작업 시작도 sessionId로 직접 수행한다.
+`listWorkspaces`의 id와 대화 생성 응답의 `session.id`를 화면에 보관한다. 프로젝트별 명령에는 최상위 `workspaceId`를 지정하며 생략 시 시작 프로젝트를 사용한다. 잘못된 workspaceId를 다른 프로젝트로 대체하지 않는다. `--concurrency`는 모든 프로젝트를 합친 프로세스 상한이다. 대화별 모델·팀 변경과 세션 닫기에는 `sessionId`를 명시한다. 전역 기본 모델의 조회·저장은 `defaultModel:true`로 요청한다. state에 taskId도 지정할 때는 같은 세션의 작업이어야 한다. 권한·언어는 전역 설정이다. 전역 `selectSession`을 탭 전환마다 호출하지 않는다. 미선택 대화의 읽기와 작업 시작도 sessionId로 직접 수행한다.
 
 ```json
-{"id":"models","discoverModels":{"sessionId":"session_XXXXXXXXXXXXXXXXXXXXXXXXXX","provider":"ollama"}}
+{"id":"models","discoverModels":{"provider":"ollama"}}
 ```
 
 ```json
-{"id":"model-save","setModel":{"sessionId":"session_XXXXXXXXXXXXXXXXXXXXXXXXXX","provider":"ollama","model":"model-id"}}
+{"id":"model-save","setModel":{"defaultModel":true,"provider":"ollama","model":"model-id"}}
 ```
 
 ```json
@@ -113,4 +116,4 @@ GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 �
 
 `request_finished.outcome`과 저장 이력의 `HistoryItem.outcome`은 실제 작업 결과다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 현재 런타임에서 확인한 경우에만 제공하며 이전 영속 접수 행에는 없을 수 있다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
 
-`editorRead:{path}`는 전체 문서·revision·editable·reason을 반환한다. `editorSave:{path,text,revision}`는 전체 텍스트를 받아 현재 파일을 다시 확인한다. UTF-8 일반 파일 최대 1MiB만 편집하며 마스킹된 내용·경로, 바이너리·잘못된 UTF-8은 저장하지 않는다. 저장 응답은 본문을 다시 적재하지 않고 새 revision을 반환한다. 같은 본문은 파일을 다시 쓰지 않는다. 미리보기 페이지를 편집 원본으로 저장하지 않는다.
+`editorRead:{path}`는 전체 문서·revision·editable·reason을 반환한다. `editorSave:{path,text,revision}`는 전체 텍스트를 받아 현재 파일을 다시 확인한다. UTF-8 일반 파일 최대 2MiB만 편집하며 마스킹된 내용·경로, 바이너리·잘못된 UTF-8은 저장하지 않는다. 브라우저도 `capabilities.editorBytes`의 같은 UTF-8 바이트 한도를 입력·붙여넣기 전에 적용한다. 저장 응답은 본문을 다시 적재하지 않고 새 revision을 반환한다. 같은 본문은 파일을 다시 쓰지 않는다. 미리보기 페이지를 편집 원본으로 저장하지 않는다.

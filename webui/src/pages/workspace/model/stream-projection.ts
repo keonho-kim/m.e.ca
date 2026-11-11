@@ -48,6 +48,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
     }
     if (e.workspaceId !== state.selection.workspace || e.sessionId !== state.selection.session)
       continue;
+    if (e.kind === 'request_started') statistics = null;
     if (e.statistics) statistics = e.statistics;
     if (e.kind === 'draft_reset') {
       historyRevision++;

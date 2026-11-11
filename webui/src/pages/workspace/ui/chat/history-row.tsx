@@ -21,6 +21,7 @@ import { memo, useState } from 'react';
 import type { Target } from '@/pages/workspace/model/store';
 import { toolStatus } from '@/pages/workspace/model/tool-status';
 import { AttachmentImage } from '@/pages/workspace/ui/chat/attachment-image';
+import { completionSummary } from '@/pages/workspace/ui/chat/format-statistics';
 import { Thinking } from '@/pages/workspace/ui/chat/thinking';
 import { Original } from '@/pages/workspace/ui/inspection/original';
 import type { DetailRequestJson, HistoryItemJson } from '@/shared/api';
@@ -75,6 +76,11 @@ export const HistoryRow = memo(function HistoryRow({
               {outcomeLabel}
             </Text>
           </HStack>
+          {event?.statistics && (
+            <Text type="supporting" color="secondary" className="completion-summary">
+              {completionSummary(event.statistics, t)}
+            </Text>
+          )}
           {outcome.reason && <Text color="secondary">{outcome.reason}</Text>}
         </ChatSystemMessage>
       ) : event?.thinking ? (
@@ -91,7 +97,7 @@ export const HistoryRow = memo(function HistoryRow({
               node: event.agent,
               resultDetail: (
                 <VStack gap={3}>
-                  {item.text && <MarkdownText text={item.text} />}
+                  {item.text && <MarkdownText text={item.text} showCompleteText={false} />}
                   <Button label={t('details')} size="sm" onClick={detail} />
                 </VStack>
               ),
@@ -112,7 +118,7 @@ export const HistoryRow = memo(function HistoryRow({
             {user ? (
               <ChatTokenizedText tokens={tokens}>{item.text ?? ''}</ChatTokenizedText>
             ) : (
-              <MarkdownText text={item.text ?? ''} />
+              <MarkdownText text={item.text ?? ''} showCompleteText={false} />
             )}
             {!!item.images?.length && (
               <HStack gap={2} wrap="wrap">

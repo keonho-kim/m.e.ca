@@ -27,8 +27,6 @@ export interface WorkspaceState {
   mode: 'chat' | 'files' | 'skills';
   folder: string;
   picker: boolean;
-  tasksOpen: boolean;
-  paused: boolean;
   streamStatus: string;
   reviewTarget: Target | null;
   removedTarget: Target | null;

@@ -1,4 +1,4 @@
-// Purpose: Edit and diagnose one explicitly targeted conversation's model configuration.
+// Purpose: Edit and diagnose the server's global default model.
 // Pattern: React Hook Form with Zod validation and native API mutations.
 // Usage: Settings keeps one model draft until it is saved or discarded.
 // Related: webui/src/pages/workspace/ui/settings/settings.tsx, api/meca/v1/control.proto.
@@ -13,34 +13,34 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { reportError } from '@/entities/server-session';
-import { changed, stateOptions } from '@/pages/workspace/api/queries';
+import { invalidate } from '@/pages/workspace/api/cache-refresh';
+import { defaultModelOptions, stateOptions } from '@/pages/workspace/api/queries';
 import { useModelCandidates } from '@/pages/workspace/model/model-candidates';
 import { type ModelValues, modelSchema } from '@/pages/workspace/model/model-values';
-import type { Target } from '@/pages/workspace/model/store';
+import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { ModelFields } from '@/pages/workspace/ui/settings/model-fields';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
 
 export function ModelForm({
-  target,
   active,
   onDirty,
   onBusy,
 }: {
-  target: Target;
   active: boolean;
   onDirty: (dirty: boolean) => void;
   onBusy: (busy: boolean) => void;
 }) {
   const t = useLocale(),
-    state = useQuery({ ...stateOptions(target), enabled: !!target.session });
+    state = useQuery({ ...defaultModelOptions, enabled: active });
   const providers = useQuery({
     queryKey: ['providers'],
+    enabled: active,
     queryFn: async ({ signal }) =>
       (await call('', { providers: {} }, signal)).providers?.items ?? [],
   });
-  const candidates = useModelCandidates(target);
+  const candidates = useModelCandidates();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(''),
     [error, setError] = useState('');
@@ -64,7 +64,6 @@ export function ModelForm({
       credential: '',
       thinking: 'default',
       effort: '',
-      remember: false,
     },
   });
   const { isDirty } = form.formState;
@@ -82,30 +81,31 @@ export function ModelForm({
         credential: '',
         thinking: model.thinking === undefined ? 'default' : model.thinking ? 'on' : 'off',
         effort: model.reasoningEffort ?? '',
-        remember: false,
       });
   }, [state.data, isDirty, form.reset]);
 
-  const [provider, endpoint, credential] = useWatch({
+  const [provider, endpoint, credential, model] = useWatch({
     control: form.control,
-    name: ['provider', 'endpoint', 'credential'],
+    name: ['provider', 'endpoint', 'credential', 'model'],
   });
   useEffect(candidates.reset, [provider, endpoint, credential, candidates.reset]);
-  const discover = () => candidates.load(form.getValues(), true);
   const loadModels = useCallback(
-    () => candidates.load({ ...form.getValues(), provider, endpoint, credential }),
-    [candidates.load, form, provider, endpoint, credential]
+    () => candidates.load({ provider, endpoint, credential }),
+    [candidates.load, provider, endpoint, credential]
   );
+  const saved = state.data?.model;
+  const profile = saved?.provider === provider && saved.endpoint === endpoint ? saved : undefined;
+  const candidate = candidates.models.find((item) => item.id === model);
+  const ready = state.isSuccess && providers.isSuccess;
   const diagnose = form.handleSubmit(async (value) => {
     setBusy(true);
     setStatus('');
     setError('');
     try {
       await call(
-        target.workspace,
+        '',
         {
           diagnoseModel: {
-            sessionId: target.session,
             provider: value.provider,
             endpoint: value.endpoint,
             credential: value.credential,
@@ -125,29 +125,30 @@ export function ModelForm({
     }
   });
   const save = form.handleSubmit(async (value) => {
+    if (busy || !isDirty) return;
     setBusy(true);
     setStatus('');
     setError('');
     try {
       const reply = await call(
-        target.workspace,
+        '',
         {
           setModel: {
-            sessionId: target.session,
+            defaultModel: true,
             provider: value.provider,
             endpoint: value.endpoint,
             model: value.model,
             credential: value.credential,
             ...(value.thinking === 'default' ? {} : { thinking: value.thinking === 'on' }),
             ...(value.effort ? { reasoningEffort: value.effort } : {}),
-            remember: value.remember,
           },
         },
         request()
       );
-      if (reply.state) queries.setQueryData(stateOptions(target).queryKey, reply.state);
-      form.reset({ ...value, credential: '', remember: false });
-      changed(target);
+      if (reply.state) queries.setQueryData(defaultModelOptions.queryKey, reply.state);
+      form.reset({ ...value, credential: '' });
+      const selected = useWorkspaceStore.getState().selection;
+      if (selected.session) invalidate(stateOptions(selected).queryKey);
       setStatus(t('saved'));
     } catch (error) {
       if (!controller.current?.signal.aborted) {
@@ -167,43 +168,53 @@ export function ModelForm({
       padding={6}
       onSubmit={save}
     >
-      {!target.session ? (
-        <Text color="secondary">{t('modelRequired')}</Text>
-      ) : (
+      {(state.error || providers.error) && (
         <>
-          {(error || candidates.error) && (
-            <Banner status="error" title={error || candidates.error} />
-          )}
-          <Text type="supporting" color="secondary">
-            {t('scope')} · {t('currentChat')}
-          </Text>
-          <ModelFields
-            form={form}
-            providers={providers.data ?? []}
-            profile={state.data?.model}
-            discovering={candidates.pending}
-            loadModels={loadModels}
-            busy={busy}
-            onProvider={(id) => {
-              form.setValue('provider', id, { shouldDirty: true });
-              form.setValue('credential', '', { shouldDirty: true });
-              form.setValue('model', '', { shouldDirty: true });
-              form.setValue('thinking', 'default', { shouldDirty: true });
-              form.setValue('effort', '', { shouldDirty: true });
-              const provider = providers.data?.find((v) => v.id === id);
-              if (provider?.endpoint)
-                form.setValue('endpoint', provider.endpoint, { shouldDirty: true });
-              candidates.reset();
+          <Banner status="error" title={describeError(state.error ?? providers.error)} />
+          <Button
+            label={t('retry')}
+            size="sm"
+            onClick={() => {
+              if (state.error) void state.refetch();
+              if (providers.error) void providers.refetch();
             }}
           />
-          <Button label={t('discover')} onClick={discover} isDisabled={busy} size="sm" />
-          {status && <FieldStatus type="success" message={status} />}
-          <HStack gap={3} justify="between" className="form-actions" wrap="wrap">
-            <Button label={t('diagnose')} onClick={() => diagnose()} isDisabled={busy} />
-            <Button label={t('save')} type="submit" variant="primary" isLoading={busy} />
-          </HStack>
         </>
       )}
+      {(error || candidates.error) && <Banner status="error" title={error || candidates.error} />}
+      <Text type="supporting" color="secondary">
+        {t('defaultModelHelp')}
+      </Text>
+      <ModelFields
+        form={form}
+        providers={providers.data ?? []}
+        profile={profile}
+        candidate={candidate}
+        discovering={candidates.pending}
+        loadModels={loadModels}
+        busy={busy || !ready}
+        onProvider={(id) => {
+          form.setValue('provider', id, { shouldDirty: true });
+          form.setValue('credential', '', { shouldDirty: true });
+          form.setValue('model', '', { shouldDirty: true });
+          form.setValue('thinking', 'default', { shouldDirty: true });
+          form.setValue('effort', '', { shouldDirty: true });
+          const provider = providers.data?.find((v) => v.id === id);
+          if (provider?.endpoint)
+            form.setValue('endpoint', provider.endpoint, { shouldDirty: true });
+        }}
+      />
+      {status && <FieldStatus type="success" message={status} />}
+      <HStack gap={3} justify="between" className="form-actions" wrap="wrap">
+        <Button label={t('diagnose')} onClick={() => diagnose()} isDisabled={busy || !ready} />
+        <Button
+          label={t('save')}
+          type="submit"
+          variant="primary"
+          isLoading={busy}
+          isDisabled={busy || !ready || !isDirty}
+        />
+      </HStack>
     </VStack>
   );
 }

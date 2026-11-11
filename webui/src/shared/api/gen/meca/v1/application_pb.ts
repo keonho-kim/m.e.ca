@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/application.proto.
  */
 export const file_meca_v1_application: GenFile = /*@__PURE__*/
-  fileDesc("ChltZWNhL3YxL2FwcGxpY2F0aW9uLnByb3RvEgdtZWNhLnYxIjAKEFdvcmtzcGFjZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIOCgZvZmZzZXQYAiABKAUiKgoMQ3JlYXRlRm9sZGVyEgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCSJzCglXb3Jrc3BhY2USCgoCaWQYASABKAkSDAoEcGF0aBgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDGFjdGl2ZV90YXNrcxgEIAEoBRINCgVlcnJvchgFIAEoCRIZChFwZW5kaW5nX2FwcHJvdmFscxgGIAEoBSJDCgpXb3Jrc3BhY2VzEiEKBWl0ZW1zGAEgAygLMhIubWVjYS52MS5Xb3Jrc3BhY2USEgoKZGVmYXVsdF9pZBgCIAEoCSI3ChJDb21tYW5kRGVzY3JpcHRpb24SDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCSI8Cg5Db21tYW5kQ2F0YWxvZxIqCgVpdGVtcxgBIAMoCzIbLm1lY2EudjEuQ29tbWFuZERlc2NyaXB0aW9uIhoKClBhcnNlSW5wdXQSDAoEdGV4dBgBIAEoCSIvCgtQYXJzZWRJbnB1dBIOCgZhY3Rpb24YASABKAkSEAoIYXJndW1lbnQYAiABKAkiOAoIRWRpdEZpbGUSDAoEcGF0aBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCHJldmlzaW9uGAMgASgJImAKDkVkaXRvckRvY3VtZW50EgwKBHBhdGgYASABKAkSDAoEdGV4dBgCIAEoCRIQCghyZXZpc2lvbhgDIAEoCRIQCghlZGl0YWJsZRgEIAEoCBIOCgZyZWFzb24YBSABKAkiagoNRGlhZ25vc2VNb2RlbBISCgpzZXNzaW9uX2lkGAEgASgJEhAKCHByb3ZpZGVyGAIgASgJEhAKCGVuZHBvaW50GAMgASgJEhIKCmNyZWRlbnRpYWwYBCABKAkSDQoFbW9kZWwYBSABKAkiRQoQRGlhZ25vc3RpY1Jlc3VsdBIMCgRjaGF0GAEgASgIEhEKCXJlYXNvbmluZxgCIAEoCBIQCgh0aGlua2luZxgDIAEoCCI2ChBGaWxlV2F0Y2hSZXF1ZXN0EhQKDHdvcmtzcGFjZV9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIjoKCkZpbGVDaGFuZ2USDAoEcGF0aBgBIAEoCRIPCgdyZWZyZXNoGAIgASgIEg0KBWVycm9yGAMgASgJIiwKClJ1bk91dGNvbWUSDgoGc3RhdHVzGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIwCg1SZXF1ZXN0TG9va3VwEhIKCnNlc3Npb25faWQYASABKAkSCwoDa2V5GAIgASgJQkFaP2dpdGh1Yi5jb20va2VvbmhvLWtpbS9tZWNhL2ludGVybmFsL3NlcnZlcmFwaS9nZW4vbWVjYXYxO21lY2F2MWIGcHJvdG8z");
+  fileDesc("ChltZWNhL3YxL2FwcGxpY2F0aW9uLnByb3RvEgdtZWNhLnYxIjAKEFdvcmtzcGFjZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIOCgZvZmZzZXQYAiABKAUiKgoMQ3JlYXRlRm9sZGVyEgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCSKAAQoMRmlsZU11dGF0aW9uEgwKBHBhdGgYASABKAkSEAoIcmV2aXNpb24YAiABKAkSDgoEbmFtZRgDIAEoCUgAEhAKBmZvbGRlchgEIAEoCUgAEhAKBnJlbW92ZRgFIAEoCEgAEhIKCnNlc3Npb25faWQYBiABKAlCCAoGY2hhbmdlInYKEkZpbGVNdXRhdGlvblJlc3VsdBIMCgRwYXRoGAEgASgJEg0KBXBhdGhzGAIgAygJEhgKEHJlZmVyZW5jZXNfcmVhZHkYAyABKAgSEgoKZXJyb3JfY29kZRgEIAEoCRIVCg1lcnJvcl9tZXNzYWdlGAUgASgJInMKCVdvcmtzcGFjZRIKCgJpZBgBIAEoCRIMCgRwYXRoGAIgASgJEgwKBG5hbWUYAyABKAkSFAoMYWN0aXZlX3Rhc2tzGAQgASgFEg0KBWVycm9yGAUgASgJEhkKEXBlbmRpbmdfYXBwcm92YWxzGAYgASgFIkMKCldvcmtzcGFjZXMSIQoFaXRlbXMYASADKAsyEi5tZWNhLnYxLldvcmtzcGFjZRISCgpkZWZhdWx0X2lkGAIgASgJIjcKEkNvbW1hbmREZXNjcmlwdGlvbhIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJIjwKDkNvbW1hbmRDYXRhbG9nEioKBWl0ZW1zGAEgAygLMhsubWVjYS52MS5Db21tYW5kRGVzY3JpcHRpb24iGgoKUGFyc2VJbnB1dBIMCgR0ZXh0GAEgASgJIi8KC1BhcnNlZElucHV0Eg4KBmFjdGlvbhgBIAEoCRIQCghhcmd1bWVudBgCIAEoCSI4CghFZGl0RmlsZRIMCgRwYXRoGAEgASgJEgwKBHRleHQYAiABKAkSEAoIcmV2aXNpb24YAyABKAkiYAoORWRpdG9yRG9jdW1lbnQSDAoEcGF0aBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCHJldmlzaW9uGAMgASgJEhAKCGVkaXRhYmxlGAQgASgIEg4KBnJlYXNvbhgFIAEoCSJqCg1EaWFnbm9zZU1vZGVsEhIKCnNlc3Npb25faWQYASABKAkSEAoIcHJvdmlkZXIYAiABKAkSEAoIZW5kcG9pbnQYAyABKAkSEgoKY3JlZGVudGlhbBgEIAEoCRINCgVtb2RlbBgFIAEoCSJFChBEaWFnbm9zdGljUmVzdWx0EgwKBGNoYXQYASABKAgSEQoJcmVhc29uaW5nGAIgASgIEhAKCHRoaW5raW5nGAMgASgIIjYKEEZpbGVXYXRjaFJlcXVlc3QSFAoMd29ya3NwYWNlX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiOgoKRmlsZUNoYW5nZRIMCgRwYXRoGAEgASgJEg8KB3JlZnJlc2gYAiABKAgSDQoFZXJyb3IYAyABKAkiLAoKUnVuT3V0Y29tZRIOCgZzdGF0dXMYASABKAkSDgoGcmVhc29uGAIgASgJIjAKDVJlcXVlc3RMb29rdXASEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNrZXkYAiABKAlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM");
 
 /**
  * @generated from message meca.v1.WorkspaceRequest
@@ -92,6 +92,162 @@ export const CreateFolderSchema: GenMessage<CreateFolder, {jsonType: CreateFolde
   messageDesc(file_meca_v1_application, 1);
 
 /**
+ * @generated from message meca.v1.FileMutation
+ */
+export type FileMutation = Message<"meca.v1.FileMutation"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: string revision = 2;
+   */
+  revision: string;
+
+  /**
+   * @generated from oneof meca.v1.FileMutation.change
+   */
+  change: {
+    /**
+     * @generated from field: string name = 3;
+     */
+    value: string;
+    case: "name";
+  } | {
+    /**
+     * @generated from field: string folder = 4;
+     */
+    value: string;
+    case: "folder";
+  } | {
+    /**
+     * @generated from field: bool remove = 5;
+     */
+    value: boolean;
+    case: "remove";
+  } | { case: undefined; value?: undefined };
+
+  /**
+   * @generated from field: string session_id = 6;
+   */
+  sessionId: string;
+};
+
+/**
+ * @generated from message meca.v1.FileMutation
+ */
+export type FileMutationJson = {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path?: string;
+
+  /**
+   * @generated from field: string revision = 2;
+   */
+  revision?: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: string folder = 4;
+   */
+  folder?: string;
+
+  /**
+   * @generated from field: bool remove = 5;
+   */
+  remove?: boolean;
+
+  /**
+   * @generated from field: string session_id = 6;
+   */
+  sessionId?: string;
+};
+
+/**
+ * Describes the message meca.v1.FileMutation.
+ * Use `create(FileMutationSchema)` to create a new message.
+ */
+export const FileMutationSchema: GenMessage<FileMutation, {jsonType: FileMutationJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_application, 2);
+
+/**
+ * Inspect error_code before reporting success; effects may have partially completed.
+ *
+ * @generated from message meca.v1.FileMutationResult
+ */
+export type FileMutationResult = Message<"meca.v1.FileMutationResult"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: repeated string paths = 2;
+   */
+  paths: string[];
+
+  /**
+   * @generated from field: bool references_ready = 3;
+   */
+  referencesReady: boolean;
+
+  /**
+   * @generated from field: string error_code = 4;
+   */
+  errorCode: string;
+
+  /**
+   * @generated from field: string error_message = 5;
+   */
+  errorMessage: string;
+};
+
+/**
+ * Inspect error_code before reporting success; effects may have partially completed.
+ *
+ * @generated from message meca.v1.FileMutationResult
+ */
+export type FileMutationResultJson = {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path?: string;
+
+  /**
+   * @generated from field: repeated string paths = 2;
+   */
+  paths?: string[];
+
+  /**
+   * @generated from field: bool references_ready = 3;
+   */
+  referencesReady?: boolean;
+
+  /**
+   * @generated from field: string error_code = 4;
+   */
+  errorCode?: string;
+
+  /**
+   * @generated from field: string error_message = 5;
+   */
+  errorMessage?: string;
+};
+
+/**
+ * Describes the message meca.v1.FileMutationResult.
+ * Use `create(FileMutationResultSchema)` to create a new message.
+ */
+export const FileMutationResultSchema: GenMessage<FileMutationResult, {jsonType: FileMutationResultJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_application, 3);
+
+/**
  * @generated from message meca.v1.Workspace
  */
 export type Workspace = Message<"meca.v1.Workspace"> & {
@@ -166,7 +322,7 @@ export type WorkspaceJson = {
  * Use `create(WorkspaceSchema)` to create a new message.
  */
 export const WorkspaceSchema: GenMessage<Workspace, {jsonType: WorkspaceJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 2);
+  messageDesc(file_meca_v1_application, 4);
 
 /**
  * @generated from message meca.v1.Workspaces
@@ -203,7 +359,7 @@ export type WorkspacesJson = {
  * Use `create(WorkspacesSchema)` to create a new message.
  */
 export const WorkspacesSchema: GenMessage<Workspaces, {jsonType: WorkspacesJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 3);
+  messageDesc(file_meca_v1_application, 5);
 
 /**
  * @generated from message meca.v1.CommandDescription
@@ -240,7 +396,7 @@ export type CommandDescriptionJson = {
  * Use `create(CommandDescriptionSchema)` to create a new message.
  */
 export const CommandDescriptionSchema: GenMessage<CommandDescription, {jsonType: CommandDescriptionJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 4);
+  messageDesc(file_meca_v1_application, 6);
 
 /**
  * @generated from message meca.v1.CommandCatalog
@@ -267,7 +423,7 @@ export type CommandCatalogJson = {
  * Use `create(CommandCatalogSchema)` to create a new message.
  */
 export const CommandCatalogSchema: GenMessage<CommandCatalog, {jsonType: CommandCatalogJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 5);
+  messageDesc(file_meca_v1_application, 7);
 
 /**
  * @generated from message meca.v1.ParseInput
@@ -294,7 +450,7 @@ export type ParseInputJson = {
  * Use `create(ParseInputSchema)` to create a new message.
  */
 export const ParseInputSchema: GenMessage<ParseInput, {jsonType: ParseInputJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 6);
+  messageDesc(file_meca_v1_application, 8);
 
 /**
  * @generated from message meca.v1.ParsedInput
@@ -331,7 +487,7 @@ export type ParsedInputJson = {
  * Use `create(ParsedInputSchema)` to create a new message.
  */
 export const ParsedInputSchema: GenMessage<ParsedInput, {jsonType: ParsedInputJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 7);
+  messageDesc(file_meca_v1_application, 9);
 
 /**
  * @generated from message meca.v1.EditFile
@@ -378,7 +534,7 @@ export type EditFileJson = {
  * Use `create(EditFileSchema)` to create a new message.
  */
 export const EditFileSchema: GenMessage<EditFile, {jsonType: EditFileJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 8);
+  messageDesc(file_meca_v1_application, 10);
 
 /**
  * @generated from message meca.v1.EditorDocument
@@ -445,7 +601,7 @@ export type EditorDocumentJson = {
  * Use `create(EditorDocumentSchema)` to create a new message.
  */
 export const EditorDocumentSchema: GenMessage<EditorDocument, {jsonType: EditorDocumentJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 9);
+  messageDesc(file_meca_v1_application, 11);
 
 /**
  * @generated from message meca.v1.DiagnoseModel
@@ -512,7 +668,7 @@ export type DiagnoseModelJson = {
  * Use `create(DiagnoseModelSchema)` to create a new message.
  */
 export const DiagnoseModelSchema: GenMessage<DiagnoseModel, {jsonType: DiagnoseModelJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 10);
+  messageDesc(file_meca_v1_application, 12);
 
 /**
  * @generated from message meca.v1.DiagnosticResult
@@ -559,7 +715,7 @@ export type DiagnosticResultJson = {
  * Use `create(DiagnosticResultSchema)` to create a new message.
  */
 export const DiagnosticResultSchema: GenMessage<DiagnosticResult, {jsonType: DiagnosticResultJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 11);
+  messageDesc(file_meca_v1_application, 13);
 
 /**
  * @generated from message meca.v1.FileWatchRequest
@@ -596,7 +752,7 @@ export type FileWatchRequestJson = {
  * Use `create(FileWatchRequestSchema)` to create a new message.
  */
 export const FileWatchRequestSchema: GenMessage<FileWatchRequest, {jsonType: FileWatchRequestJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 12);
+  messageDesc(file_meca_v1_application, 14);
 
 /**
  * @generated from message meca.v1.FileChange
@@ -643,7 +799,7 @@ export type FileChangeJson = {
  * Use `create(FileChangeSchema)` to create a new message.
  */
 export const FileChangeSchema: GenMessage<FileChange, {jsonType: FileChangeJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 13);
+  messageDesc(file_meca_v1_application, 15);
 
 /**
  * @generated from message meca.v1.RunOutcome
@@ -680,7 +836,7 @@ export type RunOutcomeJson = {
  * Use `create(RunOutcomeSchema)` to create a new message.
  */
 export const RunOutcomeSchema: GenMessage<RunOutcome, {jsonType: RunOutcomeJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 14);
+  messageDesc(file_meca_v1_application, 16);
 
 /**
  * @generated from message meca.v1.RequestLookup
@@ -717,5 +873,5 @@ export type RequestLookupJson = {
  * Use `create(RequestLookupSchema)` to create a new message.
  */
 export const RequestLookupSchema: GenMessage<RequestLookup, {jsonType: RequestLookupJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 15);
+  messageDesc(file_meca_v1_application, 17);
 

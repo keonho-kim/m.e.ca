@@ -22,6 +22,7 @@ import (
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/fileview"
+	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/skills"
@@ -38,16 +39,17 @@ type History interface {
 
 // Conversation transfers its resources to Service only after Open succeeds.
 type Conversation struct {
-	Runtime     agentrequest.Runtime
-	History     History
-	Models      modelchange.SelectionStore
-	Team        *teamrequest.Service
-	TeamEnabled bool
-	Close       func() error
-	Model       *conversationruntime.Model
-	readers     sync.WaitGroup
-	readContext context.Context
-	stopReaders context.CancelFunc
+	Runtime       agentrequest.Runtime
+	History       History
+	Models        modelchange.SelectionStore
+	Team          *teamrequest.Service
+	TeamEnabled   bool
+	Close         func() error
+	Model         *conversationruntime.Model
+	InheritsModel bool
+	readers       sync.WaitGroup
+	readContext   context.Context
+	stopReaders   context.CancelFunc
 }
 
 type ModelSettings struct {
@@ -56,6 +58,7 @@ type ModelSettings struct {
 	Thinking                             *bool
 	Effort                               *string
 	Remember                             bool
+	DefaultModel                         bool
 }
 
 type PreparedModel struct {
@@ -72,22 +75,25 @@ type Ledger interface {
 }
 
 type Options struct {
-	Attachments   *AttachmentPool
-	WorkspaceID   string
-	Feed          *Feed
-	Capacity      *Capacity
-	Effects       *workspacegate.Gate
-	CurrentConfig func() config.Config
-	Delete        func(context.Context, string) error
-	Diagnose      func(context.Context, connection.Selection, string) (connection.Capabilities, error)
-	Files         fileview.Source
-	Read          func(context.Context, string) (*Conversation, error)
-	Discover      func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
-	Concurrency   int
-	Skills        *skills.Reader
-	Config        config.Config
-	Open          func(context.Context, string, bool, config.Config) (*Conversation, error)
-	List          func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
+	Attachments      *AttachmentPool
+	WorkspaceID      string
+	Feed             *Feed
+	Capacity         *Capacity
+	Effects          *workspacegate.Gate
+	CurrentConfig    func() config.Config
+	ModelCredentials modelchange.CredentialWriter
+	Delete           func(context.Context, string) error
+	Diagnose         func(context.Context, connection.Selection, string) (connection.Capabilities, error)
+	Files            fileview.Source
+	MutateEntry      func(context.Context, policy.Settings, fileview.EntryMutation) (string, error)
+	Read             func(context.Context, string) (*Conversation, error)
+	Usage            func(context.Context, string) (model.TokenUsage, error)
+	Discover         func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
+	Concurrency      int
+	Skills           *skills.Reader
+	Config           config.Config
+	Open             func(context.Context, string, bool, config.Config) (*Conversation, error)
+	List             func(context.Context, string, int) ([]sessionstate.Conversation, string, error)
 	// Summaries reads task-page titles without opening conversation runtimes.
 	Summaries func(context.Context, []string) (map[string]string, error)
 	// PrepareModel reads metadata and returns an owned client without saving selections or credentials.

@@ -3,7 +3,6 @@
 // Usage: ModelForm supplies provider metadata, current capabilities and native mutation state.
 // Related: webui/src/pages/workspace/ui/settings/model-form.tsx, webui/src/pages/workspace/model/model-values.ts.
 
-import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { FormLayout } from '@astryxdesign/core/FormLayout';
 import { Selector } from '@astryxdesign/core/Selector';
 import { TextInput } from '@astryxdesign/core/TextInput';
@@ -17,6 +16,7 @@ export function ModelFields({
   form,
   providers,
   profile,
+  candidate,
   busy,
   onProvider,
   discovering,
@@ -25,21 +25,33 @@ export function ModelFields({
   form: UseFormReturn<ModelValues>;
   providers: ProviderJson[];
   profile: SnapshotJson['model'];
+  candidate: ModelCandidateJson | undefined;
   busy: boolean;
   onProvider: (id: string) => void;
   discovering: boolean;
   loadModels: () => Promise<ModelCandidateJson[]>;
 }) {
   const t = useLocale();
+  const effortLevels = candidate?.reasoningLevels ?? profile?.reasoningLevels ?? [];
   const source = useMemo(() => {
-    const items = async () =>
-      (await loadModels()).flatMap((value) =>
-        value.id ? [{ id: value.id, label: value.id }] : []
-      );
+    let catalog: ModelCandidateJson[] | undefined;
+    let entries: { id: string; label: string; search: string }[] = [];
+    const items = async () => {
+      const models = await loadModels();
+      if (catalog !== models) {
+        catalog = models;
+        entries = models.flatMap((value) =>
+          value.id ? [{ id: value.id, label: value.id, search: value.id.toLowerCase() }] : []
+        );
+      }
+      return entries;
+    };
     return {
       bootstrap: items,
-      search: async (query: string) =>
-        (await items()).filter((item) => item.label.toLowerCase().includes(query.toLowerCase())),
+      search: async (query: string) => {
+        const normalized = query.toLowerCase();
+        return (await items()).filter((item) => item.search.includes(normalized));
+      },
     };
   }, [loadModels]);
   const error = (key: keyof ModelValues) => {
@@ -106,7 +118,11 @@ export function ModelFields({
         render={({ field }) => (
           <Typeahead
             label={t('modelId')}
-            value={field.value ? { id: field.value, label: field.value } : null}
+            value={
+              field.value
+                ? { id: field.value, label: field.value, search: field.value.toLowerCase() }
+                : null
+            }
             searchSource={source}
             onChange={(item) => field.onChange(item?.id ?? '')}
             onChangeQuery={field.onChange}
@@ -128,7 +144,11 @@ export function ModelFields({
             options={[
               { value: 'default', label: t('default') },
               { value: 'on', label: t('on') },
-              { value: 'off', label: t('off'), disabled: profile?.reasoningOff === false },
+              {
+                value: 'off',
+                label: t('off'),
+                disabled: (candidate?.reasoningOff ?? profile?.reasoningOff) === false,
+              },
             ]}
             onChange={field.onChange}
           />
@@ -144,20 +164,11 @@ export function ModelFields({
             isDisabled={busy}
             options={[
               { value: '', label: t('default') },
-              ...(profile?.reasoningLevels ?? []).map((value) => ({ value, label: value })),
+              ...effortLevels.map((value) => ({ value, label: value })),
+              ...(field.value && !effortLevels.includes(field.value)
+                ? [{ value: field.value, label: field.value }]
+                : []),
             ]}
-            onChange={field.onChange}
-          />
-        )}
-      />
-      <Controller
-        control={form.control}
-        name="remember"
-        render={({ field }) => (
-          <CheckboxInput
-            label={t('remember')}
-            value={field.value}
-            isDisabled={busy}
             onChange={field.onChange}
           />
         )}

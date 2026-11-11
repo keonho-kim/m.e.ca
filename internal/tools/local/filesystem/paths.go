@@ -63,3 +63,13 @@ func (b *Boundary) ReadTarget(path string) (string, error) {
 	}
 	return absolute, nil
 }
+
+// CheckEntryMutation also protects state nested inside an entry that would be moved or removed.
+func (b *Boundary) CheckEntryMutation(path string) error {
+	for _, secret := range b.protected {
+		if Within(path, secret) || Within(secret, path) {
+			return faults.Errorf(diagcatalog.FilesystemProtectedPath, path)
+		}
+	}
+	return nil
+}

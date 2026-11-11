@@ -41,7 +41,10 @@ export default function Settings() {
   const [modelBusy, setModelBusy] = useState(false),
     [error, setError] = useState('');
   const target = settings.target,
-    state = useQuery({ ...stateOptions(target), enabled: !!target.workspace });
+    state = useQuery({
+      ...stateOptions(target),
+      enabled: tab === 'execution' && !!target.workspace,
+    });
   const language = useServerSession((s) => s.language);
   const onDirty = useCallback((value: boolean) => setDirty(value), []);
   useEffect(() => {
@@ -128,11 +131,7 @@ export default function Settings() {
         <Layout
           header={
             <VStack gap={0}>
-              <DialogHeader
-                title={t('settings')}
-                subtitle={t('currentChat')}
-                onOpenChange={() => close()}
-              />
+              <DialogHeader title={t('settings')} onOpenChange={() => close()} />
               {compact && (
                 <VStack paddingInline={4} paddingBlockEnd={3}>
                   <SettingsNavigation compact tab={tab} onChange={setTab} shortcut={shortcut} />
@@ -150,12 +149,7 @@ export default function Settings() {
           content={
             <LayoutContent padding={0}>
               {error && <Banner status="error" title={error} />}
-              <ModelForm
-                target={target}
-                active={tab === 'model'}
-                onDirty={onDirty}
-                onBusy={setModelBusy}
-              />
+              <ModelForm active={tab === 'model'} onDirty={onDirty} onBusy={setModelBusy} />
               <VStack hidden={tab !== 'execution'} padding={6} gap={5}>
                 <Text type="label" weight="semibold">
                   {t('permission')} · {t('global')}

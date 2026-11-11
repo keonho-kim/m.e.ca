@@ -32,6 +32,8 @@ type Store struct {
 	teamLease     *teamContentCache
 	codec         recordcontent.Codec
 	objective     objectiveCache
+	usage         *usageProjection
+	localUsage    usageProjection
 	db            *sql.DB
 	path          string
 	session       sessionstate.Session

@@ -58,7 +58,7 @@ export const LiveSource = memo(function LiveSource({
             )}
           </Thinking>
         )}
-        {!!d.text && <MarkdownText text={d.text} streaming={streaming} />}
+        {!!d.text && <MarkdownText text={d.text} streaming={streaming} showCompleteText={false} />}
         {d.truncated && (
           <Button
             size="sm"

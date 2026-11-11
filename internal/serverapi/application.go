@@ -10,6 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/server"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/fileview"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"path/filepath"
 )
@@ -71,6 +72,27 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 			return nil, err
 		}
 		reply.Result = &v1.Reply_Directory{Directory: &v1.DirectoryPage{Path: path, Parent: filepath.Dir(path)}}
+	case *v1.Command_MutateFile:
+		request := op.MutateFile
+		value, err := a.Service.MutateEntry(ctx, request.GetSessionId(), fileview.EntryMutation{
+			Path: request.GetPath(), Revision: request.GetRevision(), Name: request.GetName(),
+			Folder: request.GetFolder(), Remove: request.GetRemove(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		result := &v1.FileMutationResult{Path: value.Path, Paths: value.Paths, ReferencesReady: value.ReferencesReady}
+		if value.Failure != nil {
+			result.ErrorCode = diag.NativeCode(fault.Code(value.Failure))
+			result.ErrorMessage = fault.PublicMessage(value.Failure, a.Redact)
+		}
+		reply.Result = &v1.Reply_FileMutation{FileMutation: result}
+	case *v1.Command_SessionUsage:
+		total, err := a.Service.SessionUsage(ctx, op.SessionUsage.GetSessionId())
+		if err != nil {
+			return nil, err
+		}
+		reply.Result = &v1.Reply_Usage{Usage: &v1.Usage{Input: total.Input, Output: total.Output, Cost: total.Cost}}
 	case *v1.Command_DeleteSession:
 		if err := a.Service.DeleteSession(ctx, op.DeleteSession.GetSessionId()); err != nil {
 			return nil, err

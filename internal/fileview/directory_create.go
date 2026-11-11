@@ -9,8 +9,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
-	"unicode/utf8"
 
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -24,7 +22,7 @@ func (e *Reader) CreateDirectory(ctx context.Context, settings policy.Settings, 
 	if err := settings.Check(); err != nil {
 		return "", err
 	}
-	if len(name) > 255 || !utf8.ValidString(name) || strings.TrimSpace(name) == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\\x00\r\n") {
+	if !validEntryName(name) {
 		return "", fault.New(diag.InvalidArgument, diag.UIFolderNameInvalid)
 	}
 	target, err := e.resolve(settings.Scope, parent)

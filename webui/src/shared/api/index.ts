@@ -3,7 +3,11 @@
 // Usage: Features, entities and workspace code import transport contracts here.
 // Related: webui/src/shared/api/client.ts, api/meca/v1.
 export { call, control, imageURL, loadThumbnail, releaseUpload, upload } from '@/shared/api/client';
-export type { EditorDocumentJson, WorkspaceJson } from '@/shared/api/gen/meca/v1/application_pb';
+export type {
+  EditorDocumentJson,
+  FileMutationJson,
+  WorkspaceJson,
+} from '@/shared/api/gen/meca/v1/application_pb';
 export type { CommandJson, DetailRequestJson } from '@/shared/api/gen/meca/v1/control_pb';
 export type { EventJson, StatisticsJson } from '@/shared/api/gen/meca/v1/events_pb';
 export type {
@@ -19,6 +23,5 @@ export type {
   ModelCandidateJson,
   ProviderJson,
   TaskJson,
-  TaskPageJson,
 } from '@/shared/api/gen/meca/v1/workspace_pb';
 export { queries } from '@/shared/api/query-client';

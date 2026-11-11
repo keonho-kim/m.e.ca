@@ -3,6 +3,7 @@
 // Usage: Direct requests and queued follow-ups share startRequest.
 // Related: webui/src/pages/workspace/model/execution.ts, internal/commands/server/request_lookup.go.
 
+import { waitSelections } from '@/pages/workspace/model/file-references';
 import { inputBytes, rememberInputBytes } from '@/pages/workspace/model/input-usage';
 import {
   emptyInput,
@@ -140,6 +141,9 @@ export async function startRequest(target: Target, input: Input): Promise<boolea
         value = undefined;
       } else if (!sameInput(value.input, input)) throw failure('request_pending');
     }
+    await waitSelections(target);
+    controller.signal.throwIfAborted();
+    if (startedEpoch !== epoch) return false;
     if (!value) {
       const values = [...pending.values()];
       const bytes = values.reduce((n, v) => n + inputBytes(v.input), 0) + inputBytes(input);

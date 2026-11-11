@@ -55,6 +55,8 @@ message Command {
     RequestLookup lookup_request = 47;
     SkillPrefix suggest_skills = 48;
     CreateFolder create_folder = 49;
+    FileMutation mutate_file = 50;
+    SessionTarget session_usage = 51;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }
@@ -82,6 +84,8 @@ message ModelRequest {
   optional string reasoning_effort = 6;
   bool remember = 7;
   string session_id = 8;
+  // Explicitly updates the global default. Mutually exclusive with session_id.
+  bool default_model = 9;
 }
 message SettingsRequest { optional string permission = 1; optional bool team = 2; string session_id = 3; optional string language = 4; }
 message StartRequest {

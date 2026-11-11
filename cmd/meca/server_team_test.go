@@ -58,6 +58,7 @@ func TestServerTeamRequest(t *testing.T) {
 				return nil, err
 			}
 			c.Model = conversationruntime.NewModel(model, nil)
+			c.InheritsModel = false
 			c.Runtime.Selection = connection.Selection{Connection: conn, Model: "test-model"}
 			return c, nil
 		},

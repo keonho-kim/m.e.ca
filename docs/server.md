@@ -39,7 +39,7 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 | `--allow-origin scheme://host:port` | 브라우저 Origin 추가. 반복 가능 |
 | `--concurrency N` | 동시 작업 수. 기본 1, 양의 정수. 제품 고정 상한 없음 |
 
-프로세스는 시작 프로젝트와 등록한 작업공간, 프로젝트별 native 선택 대화와 작업별 실행 대화를 소유한다. 모든 작업공간이 같은 실행 슬롯·첨부·이벤트·효과 게이트를 사용한다. 서로 다른 세션의 요청은 `--concurrency`까지 실행하며 같은 세션에는 한 작업만 허용한다. 용량이 차면 새 접수를 `429 resource_exhausted`로 거절하고 이미 접수한 같은 키는 원래 작업을 반환한다. 팀 에이전트는 각 작업의 기존 실행 루프를 사용한다. 다른 TUI나 서버가 소유한 대화는 세션 잠금으로 열기를 거부한다. 프로세스의 변경·임의 셸 실행은 준비된 효과와 살아 있는 하위 프로세스가 소유한 게이트로 직렬화한다. 효과와 프로세스가 모두 끝나면 작업의 다음 모델 응답을 기다리는 동안에도 다른 작업이 접근할 수 있다. 같은 팀의 내부 협업 규칙은 유지하며 이 게이트가 OS 샌드박스를 제공하는 것은 아니다.
+프로세스는 시작 프로젝트와 등록한 작업공간, 프로젝트별 native 선택 대화와 작업별 실행 대화를 소유한다. 모든 작업공간이 같은 실행 슬롯·첨부·이벤트·효과 게이트를 사용한다. 서로 다른 세션의 요청은 `--concurrency`까지 실행하며 같은 세션에는 한 작업만 허용한다. 용량이 차면 새 접수를 `429 resource_exhausted`로 거절하고 이미 접수한 같은 키는 원래 작업을 반환한다. 팀 에이전트는 각 작업의 기존 실행 루프를 사용한다. 다른 TUI나 서버가 소유한 대화는 세션 잠금으로 열기를 거부한다. 편집·폴더 생성·이름 변경·삭제는 canonical 경로를 잠금 전후에 확인하고 겹치는 경로와 상위·하위 경로만 직렬화한다. 영향 범위를 확정할 수 없는 에이전트·셸 효과는 준비된 효과와 살아 있는 하위 프로세스가 전체 범위를 소유한다. 충돌 범위의 대기는 FIFO이며 취소 시 제거한다. 효과와 프로세스가 모두 끝나면 작업의 다음 모델 응답을 기다리는 동안에도 다른 작업이 접근할 수 있다. 같은 팀의 내부 협업 규칙은 유지하며 이 게이트가 OS 샌드박스를 제공하는 것은 아니다.
 
 설정값은 동시 작업의 상한이며 그 수만큼 자원을 미리 할당하지 않는다. 64·128 등 더 큰 값을 사용할 수 있다. 활성 작업 수와 HTTP 요청·연결 수는 서로 다른 한도다. 메모리·저장·디코딩 예산은 작업 수 설정과 독립적으로 적용한다. snapshot의 `concurrency`는 `int64`이며 Protobuf JSON에서는 문자열로 표현한다.
 
@@ -81,13 +81,15 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `addWorkspace` | `path` → 작업공간 등록·전역 설정 저장 후 목록. 실제 경로 기준 중복 제거 |
 | `browseFolders` | `path`, `offset` → 서버 폴더 선택용 directory. 한 번에 200개 항목을 읽고 폴더만 반환 |
 | `createFolder` | 부모 `path`, 단일 `name` → 생성한 폴더의 directory.path·parent. 보호 경로 검사와 공통 파일 효과 잠금 적용 |
+| `mutateFile` | `path`, 원본 목록 `revision`, 참조 대상 `sessionId`, `name`·`folder`·`remove:true` 중 하나 → `path`·`paths`·`referencesReady`·부분 실패 코드 |
+| `sessionUsage` | `sessionId` → 저장된 누적 입출력 토큰과 보고된 비용 |
 | `deleteSession` | `sessionId` → 대화와 소유 팀 내부 파일 삭제. 활성 작업·다른 소유자 잠금 거절 |
 | `commandCatalog` | `{}` → 브라우저에서 지원하는 여섯 명령·설명 |
 | `parseInput` | `text` → 공통 파서의 action·argument. !new·!quit·:q 거절 |
 | `suggestSkills` | `prefix` → 전체 메타데이터에서 최대 32개 이름-prefix 후보. 본문은 읽지 않음 |
 | `lookupRequest` | `sessionId`, `key` → 기존 접수 조회. 새 작업·효과를 실행하지 않음 |
-| `diagnoseModel` | `sessionId`, provider·endpoint·credential·model → 연결·응답 진단. 설정과 키를 저장하지 않음 |
-| `editorRead` | `path` → 전체 UTF-8 text·revision·editable·reason. 편집 상한 1MiB |
+| `diagnoseModel` | 선택적 `sessionId`, provider·endpoint·credential·model → 연결·응답 진단. 설정과 키를 저장하지 않음 |
+| `editorRead` | `path` → 전체 UTF-8 text·revision·editable·reason. 편집 상한 2MiB |
 | `editorSave` | `path`, `text`, `revision` → 현재 원본 재검사와 원자적 교체, 본문을 제외한 새 revision |
 | `listSkills` | `cursor`, `limit` → `skills:{items,nextCursor,diagnostics,diagnosticsTruncated}`. 기본·최대 32건 |
 | `getSkill` | `id` → `skill:{skill,revision,body}`. 본문 미리보기이며 모델 작업을 시작하지 않음 |
@@ -95,15 +97,15 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `listSessions` | 선택적 `cursor`, `limit` → 현재 프로젝트의 목록 페이지와 `nextCursor`. 기본 50건, 최대 100건. 미지원 DB는 `unavailable`에 사유를 표시 |
 | `selectSession` | `{"create":true}` 또는 `{"sessionId":"…"}` → 상태 |
 | `closeSession` | `sessionId` → 해당 세션 자원 해제. 작업 중에는 거부하고 이미 닫힌 자원은 성공 처리. DB는 삭제하지 않음 |
-| `state` | 선택적 `sessionId`, `taskId`, `afterTask`, `limit` → 상태 페이지. 기본 32건·최대 100건, `nextTask`·`totalTasks` 제공 |
+| `state` | 선택적 `sessionId`, `taskId`, `afterTask`, `limit` → 상태 페이지. 기본 32건·최대 100건. `defaultModel:true`는 전역 기본 모델만 읽음 |
 | `history` | `before`, `limit`, 선택적 `sessionId` → 현재 프로젝트의 지정 대화 시간순 페이지. 메모리에 없는 대화는 읽기 전용으로 열며 생략 시 native 선택 |
 | `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 `sessionId` → UTF-8 JSON 원문 조각 `text`와 바이트 기준 nextOffset. 후속 페이지는 revision 필수 |
-| `setModel` | `sessionId`, `provider`, `endpoint`, `model`, 선택적 `credential`, `thinking`, `reasoningEffort`, `remember` → 상태 |
+| `setModel` | `sessionId` 또는 `defaultModel:true`, `provider`, `endpoint`, `model`, 선택적 `credential`, `thinking`, `reasoningEffort` → 상태. `remember`는 대화별 모델 저장에서 사용 |
 | `setSettings` | `permission`, `team`, `language` 중 하나 → 상태. team은 `sessionId` 필수, language는 전역 UI 언어 |
 | `start` | `sessionId`, `key`, `text`, 선택적 `attachmentIds`, `paths` → 즉시 작업 ID와 상태. 이미지 전용 요청 허용 |
 | `capabilities` | `{}` → API 버전·기능 목록·이미지/상태/상세 한도·동시성·언어·접수 기록 할당량 |
 | `providers` | `{}` → provider ID·이름·기본 endpoint |
-| `discoverModels` | `sessionId`, `provider`, 선택적 endpoint·credential·model → 모델 목록 또는 해당 모델의 이미지·추론 옵션·context·진단 notice. 설정과 Key를 저장하지 않음 |
+| `discoverModels` | 선택적 `sessionId`, `provider`, 선택적 endpoint·credential·model → 모델 목록 또는 해당 모델의 이미지·추론 옵션·context·진단 notice. 설정과 Key를 저장하지 않음 |
 | `directory` | `path`, `offset`, `limit` → 파일 목록과 다음 offset. 기본 100건 |
 | `previewFile` | `path`, `offset`, `limit`, `revision` → 마스킹한 UTF-8 파일 페이지. 기본/최대 64KiB. 후속 페이지에는 revision 필수 |
 | `fileSelections` | `sessionId` → 저장된 참조 경로 |
@@ -118,9 +120,9 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `steer` | `taskId`, `text`, 선택적 `paths` → 다음 안전한 판단 경계에 전달 |
 | `cancel` | `taskId` → 취소 요청. 실제 종료는 `request_finished`로 확인 |
 
-`setModel`은 기존 Provider 연결 준비·검증·저장과 OS 자격 증명 저장을 사용한다. 같은 연결에서 credential을 생략하면 저장된 참조를 사용한다. `remember`는 새 세션의 기본 연결도 저장한다. 기본값 저장만 실패하면 세션의 모델은 유지하고 부분 완료를 오류 메시지로 알린다. 저장된 모델은 첫 요청의 접수 전에 연결을 준비하므로 Provider나 키 저장소가 사용 불가능해도 대화 이력을 열고 모델을 다시 설정할 수 있다. 모델 변경은 해당 세션의 실행 중에 거절한다. 팀 모드 변경은 현재 실행이 캡처한 값을 바꾸지 않고 다음 요청부터 적용하며 전역 permission은 활성 작업이 하나라도 있으면 변경하지 않는다. permission은 `default` 또는 `all_mighty`이며 팀 모드는 명시한 세션에 저장한다. WebUI의 탭 선택은 클라이언트가 소유하며 조회·모델·팀·참조 변경·작업 실행을 위해 전역 선택을 바꿀 필요가 없다.
+`setModel`은 기존 Provider 연결 준비·검증·저장과 OS 자격 증명 저장을 사용한다. 같은 연결에서 credential을 생략하면 저장된 참조를 사용한다. `defaultModel:true`는 전역 모델을 저장한다. 대화별 저장의 `remember`는 전역 기본값도 저장한다. 기본값 저장만 실패하면 세션의 모델은 유지하고 부분 완료를 오류 메시지로 알린다. 저장된 모델은 첫 요청의 접수 전에 연결을 준비하므로 Provider나 키 저장소가 사용 불가능해도 대화 이력을 열고 모델을 다시 설정할 수 있다. 모델 변경은 해당 세션의 실행 중에 거절한다. 팀 모드 변경은 현재 실행이 캡처한 값을 바꾸지 않고 다음 요청부터 적용하며 전역 permission은 활성 작업이 하나라도 있으면 변경하지 않는다. permission은 `default` 또는 `all_mighty`이며 팀 모드는 명시한 세션에 저장한다. WebUI의 탭 선택은 클라이언트가 소유하며 조회·모델·팀·참조 변경·작업 실행을 위해 전역 선택을 바꿀 필요가 없다.
 
-세션·설정 변경과 접수 준비는 직렬 예약하며 네트워크·DB I/O를 상태 잠금 밖에서 처리한다. state·이벤트·taskStatus·활성 작업 취소는 계속 처리한다. 명시적 sessionId의 history/detail은 읽기 대여로 수명을 보호한다. 조회와 실행은 같은 모델 선택 규칙을 사용한다. 대화에 저장한 선택이 우선하며 없으면 현재 기본 모델을 사용하고, 조회만으로 Provider에 연결하지 않는다. 세션 교체 정리가 실패하면 실제 선택 상태를 확인하기 위해 snapshot/state를 다시 조회한다. 닫히는 세션의 진행 중 읽기는 취소·합류한다.
+세션·설정 변경과 접수 준비는 직렬 예약하며 네트워크·DB I/O를 상태 잠금 밖에서 처리한다. state·이벤트·taskStatus·활성 작업 취소는 계속 처리한다. 명시적 sessionId의 history/detail은 읽기 대여로 수명을 보호한다. 조회와 실행은 같은 모델 선택 규칙을 사용한다. 대화에 저장한 모델이 우선한다. 모델을 지정하지 않은 대화는 요청 접수 시 현재 전역 기본값을 적용한다. 모델 상태 조회는 저장된 메타데이터를 읽는다. 세션 교체 정리가 실패하면 실제 선택 상태를 확인하기 위해 snapshot/state를 다시 조회한다. 닫히는 세션의 진행 중 읽기는 취소·합류한다.
 
 `id`는 응답 상관관계용이다. 실제 실행 중복 방지는 `start.key`가 담당한다. 호출자가 요청마다 안정된 키를 만들고 응답을 잃었을 때 같은 세션·키·본문으로 재전송한다. 동일 키의 다른 본문은 conflict이며 기존 작업을 바꾸지 않는다. key는 8~128바이트다. `~/.meca/server-requests/<project-scope>/requests.db`는 본문 대신 해시와 작업 식별·상태만 저장한다. project-scope는 정규화 프로젝트 경로의 SHA-256이며 프로젝트 간 접수·조회가 분리된다. 실행 전에 기록하고 완료 후 상태를 확정한다. 비정상 종료되어 접수만 남은 작업은 interrupted로 조회되며 자동 재실행하지 않는다. 다시 수행하려면 실제 부분 효과를 확인한 뒤 새 키로 요청한다.
 

@@ -21,13 +21,13 @@ function retainedBytes(value: unknown, seen = new Set<object>()): number {
 const kinds = new Set([
   'history',
   'state',
+  'session-usage',
   'sessions',
   'directory',
   'skills',
   'skill',
   'preview',
   'original',
-  'task-list',
   'thumbnail',
 ]);
 export function observeConversationCache() {

@@ -69,6 +69,9 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 			result.WorkspaceId = cmd.GetWorkspaceId()
 		}
 		code := result.GetError().GetCode()
+		if code == "" {
+			code = result.GetFileMutation().GetErrorCode()
+		}
 		diagnostics.Log(ctx, diagcatalog.ControlCompleted, "component", "serverapi", "operation", operation, "duration_ms", time.Since(started).Milliseconds(), "error_code", code, "task_id", result.GetTask().GetId())
 	}()
 	reply := &v1.Reply{Id: cmd.GetId(), Result: &v1.Reply_Ok{Ok: &v1.EmptyResult{}}}
@@ -90,7 +93,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerOriginalReadBusy)), nil
 		}
 		defer release()
-	case *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels:
+	case *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels, *v1.Command_SessionUsage:
 		release, ok := a.browseLimit().Try(1)
 		if !ok {
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerBrowseBusy)), nil
@@ -125,8 +128,17 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 	case *v1.Command_CloseSession:
 		err = a.Service.CloseSession(ctx, op.CloseSession.GetSessionId())
 	case *v1.Command_State:
-		value, cause := a.Service.StatePage(ctx, op.State.GetSessionId(), op.State.GetTaskId(), op.State.GetAfterTask(), int(op.State.GetLimit()))
-		err = cause
+		request := op.State
+		var value server.Snapshot
+		if request.GetDefaultModel() {
+			if request.GetSessionId() != "" || request.GetTaskId() != "" || request.GetAfterTask() != "" || request.GetLimit() != 0 {
+				err = faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
+				break
+			}
+			value, err = a.Service.DefaultModel(ctx)
+		} else {
+			value, err = a.Service.StatePage(ctx, request.GetSessionId(), request.GetTaskId(), request.GetAfterTask(), int(request.GetLimit()))
+		}
 		reply.Result = &v1.Reply_State{State: snapshot(value)}
 	case *v1.Command_History:
 		limit := int(op.History.GetLimit())

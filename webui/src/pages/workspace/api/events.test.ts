@@ -101,6 +101,8 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     clearPending();
     const historyKey = ['history', target.workspace, target.session, '0'];
     queries.setQueryData(historyKey, { items: [] });
+    const usageKey = ['session-usage', target.workspace, target.session];
+    queries.setQueryData(usageKey, { input: '0', output: '0' });
     useWorkspaceStore.setState({
       queues: {},
       pausedQueues: {},
@@ -143,6 +145,7 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     await awaitSubmission(target);
     expect(starts).toEqual(['captured']);
     expect(queries.getQueryState(historyKey)?.isInvalidated).toBe(true);
+    expect(queries.getQueryState(usageKey)?.isInvalidated).toBe(true);
   } finally {
     cleanup?.();
     clearFollowups();

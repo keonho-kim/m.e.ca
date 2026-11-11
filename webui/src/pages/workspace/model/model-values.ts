@@ -13,6 +13,5 @@ export const modelSchema = z.object({
     .refine((v) => !/[\r\n\0]/.test(v)),
   thinking: z.enum(['default', 'on', 'off']),
   effort: z.string(),
-  remember: z.boolean(),
 });
 export type ModelValues = z.infer<typeof modelSchema>;

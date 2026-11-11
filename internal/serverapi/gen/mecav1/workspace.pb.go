@@ -71,11 +71,13 @@ func (x *SessionTarget) GetSessionId() string {
 }
 
 type StateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	AfterTask     string                 `protobuf:"bytes,2,opt,name=after_task,json=afterTask,proto3" json:"after_task,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	SessionId     string                 `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TaskId    string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	AfterTask string                 `protobuf:"bytes,2,opt,name=after_task,json=afterTask,proto3" json:"after_task,omitempty"`
+	Limit     int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	SessionId string                 `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// Selects the global model projection without a task or session filter.
+	DefaultModel  bool `protobuf:"varint,5,opt,name=default_model,json=defaultModel,proto3" json:"default_model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -136,6 +138,13 @@ func (x *StateRequest) GetSessionId() string {
 		return x.SessionId
 	}
 	return ""
+}
+
+func (x *StateRequest) GetDefaultModel() bool {
+	if x != nil {
+		return x.DefaultModel
+	}
+	return false
 }
 
 type FileRequest struct {
@@ -1845,14 +1854,15 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x17meca/v1/workspace.proto\x12\ameca.v1\".\n" +
 	"\rSessionTarget\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"{\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\xa0\x01\n" +
 	"\fStateRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n" +
 	"\n" +
 	"after_task\x18\x02 \x01(\tR\tafterTask\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x04 \x01(\tR\tsessionId\"k\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\x12#\n" +
+	"\rdefault_model\x18\x05 \x01(\bR\fdefaultModel\"k\n" +
 	"\vFileRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x14\n" +

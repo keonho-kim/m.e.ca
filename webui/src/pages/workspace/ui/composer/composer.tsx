@@ -16,7 +16,7 @@ import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { reportError } from '@/entities/server-session';
-import { stateOptions } from '@/pages/workspace/api/queries';
+import { capabilitiesOptions, stateOptions } from '@/pages/workspace/api/queries';
 import { command, settings } from '@/pages/workspace/model/commands';
 import { send } from '@/pages/workspace/model/execution';
 import { selectReference, waitSelections } from '@/pages/workspace/model/file-references';
@@ -30,22 +30,27 @@ import { checkSubmissionLimits } from '@/pages/workspace/model/submission-limits
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { useComposerImages } from '@/pages/workspace/model/use-composer-images';
 import { useComposerTriggers } from '@/pages/workspace/model/use-composer-triggers';
+import { chatWidth } from '@/pages/workspace/ui/chat/layout';
 import { AttachmentMenu } from '@/pages/workspace/ui/composer/attachment-menu';
 import {
   ComposerActions,
-  ComposerSendActions,
+  ComposerQueueAction,
 } from '@/pages/workspace/ui/composer/composer-actions';
 import { ComposerImages } from '@/pages/workspace/ui/composer/composer-images';
+import { ExecutionStatus } from '@/pages/workspace/ui/composer/execution-status';
 import { Queue } from '@/pages/workspace/ui/composer/queue';
 import { SkillPicker } from '@/pages/workspace/ui/skills/skill-picker';
-import { call } from '@/shared/api';
+import { call, control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { failure } from '@/shared/lib/errors';
 
-export function Composer({ target }: { target: Target }) {
+export function Composer({ target, showStatus }: { target: Target; showStatus: boolean }) {
   const t = useLocale(),
     input = useWorkspaceStore((s) => s.inputs[targetKey(target)]) ?? emptyInput();
   const task = useWorkspaceStore((state) => activeTask(target, state.tasks));
+  const hasInput = !!(input.text.trim() || input.files.length);
+  const showStop = !!task && !hasInput;
+  const queueShortcut = /Mac|iPad|iPhone/.test(navigator.userAgent) ? '⌘↵' : 'Ctrl+↵';
   const editor = useRef<ChatComposerInputHandle>(null);
   const focusInput = useCallback(() => editor.current?.focus(), []);
   const sendLabel = useId();
@@ -59,10 +64,7 @@ export function Composer({ target }: { target: Target }) {
   const [busy, setBusy] = useState(false);
   const [inputEpoch, setInputEpoch] = useState(0);
   const state = useQuery({ ...stateOptions(target), enabled: !!target.session });
-  const capabilities = useQuery({
-    queryKey: ['capabilities'],
-    queryFn: async ({ signal }) => (await call('', { capabilities: {} }, signal)).capabilities!,
-  });
+  const capabilities = useQuery(capabilitiesOptions);
   useEffect(() => {
     const controller = new AbortController();
     if (target.session)
@@ -90,7 +92,7 @@ export function Composer({ target }: { target: Target }) {
       setInputEpoch((value) => value + 1);
   };
   const submit = async (reserve = false) => {
-    if (busy || !target.session) return;
+    if (busy || !target.session || !hasInput) return;
     setBusy(true);
     try {
       if (input.text.trimStart().startsWith('!')) {
@@ -114,9 +116,9 @@ export function Composer({ target }: { target: Target }) {
   };
   const images = useComposerImages(target, capabilities.data);
   return (
-    <VStack width="100%" maxWidth={760} padding={4} gap={3} className="mx-auto">
+    <VStack width={chatWidth} padding={4} gap={3} className="mx-auto">
       <Text id={sendLabel} hidden>
-        {task ? t('steer') : t('send')}
+        {t(showStop ? 'stop' : task ? 'steer' : 'send')}
       </Text>
       <Queue target={target} />
       <ComposerImages target={target} onEmpty={focusInput} />
@@ -186,23 +188,34 @@ export function Composer({ target }: { target: Target }) {
           </HStack>
         }
         sendActions={
-          <HStack gap={1}>
-            <ComposerSendActions target={target} task={task?.id} busy={busy} submit={submit} />
-          </HStack>
+          task ? <ComposerQueueAction disabled={busy || !hasInput} submit={submit} /> : undefined
         }
         sendButton={
-          <Tooltip content={t('sendHint')}>
+          <Tooltip
+            content={showStop ? t('stop') : t('sendHint').replace('{shortcut}', queueShortcut)}
+          >
             <ChatSendButton
               aria-labelledby={sendLabel}
               className="send-button"
-              isDisabled={busy || !target.session || (!input.text.trim() && !input.files.length)}
+              isStopShown={showStop}
+              isDisabled={
+                busy || !target.session || (showStop ? task.status === 'canceling' : !hasInput)
+              }
               onSend={() => {
                 void submit();
+              }}
+              onStop={() => {
+                if (!task || busy) return;
+                setBusy(true);
+                void control(target.workspace, task.id, 'cancel')
+                  .catch(reportError)
+                  .finally(() => setBusy(false));
               }}
             />
           </Tooltip>
         }
       />
+      {showStatus && <ExecutionStatus target={target} />}
       {skillsOpen && (
         <SkillPicker
           target={target}

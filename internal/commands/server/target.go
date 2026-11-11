@@ -52,7 +52,7 @@ func (s *Service) sessionSnapshot(c *Conversation) Snapshot {
 		copy := *s.last
 		value.Task = &copy
 	}
-	value.Session, value.Selection, value.Team = c.Runtime.Session, c.Runtime.Selection, c.TeamEnabled
+	value.Session, value.Selection, value.Team = c.Runtime.Session, s.observedModel(c), c.TeamEnabled
 	value.TotalTasks = len(value.Tasks)
 	value.NextTask = ""
 	return value

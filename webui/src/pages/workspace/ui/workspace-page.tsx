@@ -24,11 +24,10 @@ import {
 } from '@/entities/server-session';
 import { observeConversationCache } from '@/pages/workspace/api/cache-policy';
 import { observe } from '@/pages/workspace/api/events';
-import { changed, stateOptions, workspaceOptions } from '@/pages/workspace/api/queries';
+import { capabilitiesOptions, changed, workspaceOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { Composer } from '@/pages/workspace/ui/composer/composer';
 import { Approval } from '@/pages/workspace/ui/inspection/approval';
-import { ConnectionStatus } from '@/pages/workspace/ui/inspection/connection-status';
 import { Sidebar } from '@/pages/workspace/ui/navigation/sidebar';
 import { WorkspaceToolbar } from '@/pages/workspace/ui/navigation/workspace-toolbar';
 import { call } from '@/shared/api';
@@ -41,7 +40,6 @@ const Chat = lazy(() =>
 const Files = lazy(() => import('@/pages/workspace/ui/files/files'));
 const Skills = lazy(() => import('@/pages/workspace/ui/skills/skills'));
 const FolderPicker = lazy(() => import('@/pages/workspace/ui/navigation/folder-picker'));
-const Tasks = lazy(() => import('@/pages/workspace/ui/inspection/tasks'));
 
 export default function WorkspaceShell() {
   useEffect(observeConversationCache, []);
@@ -56,7 +54,6 @@ export default function WorkspaceShell() {
     [params.workspaceId, params.sessionId]
   );
   const workspaces = useQuery(workspaceOptions());
-  const conversation = useQuery({ ...stateOptions(target), enabled: !!target.session });
   const review = useWorkspaceStore((s) => s.reviewTarget);
   const removed = useWorkspaceStore((s) => s.removedTarget);
   const approvalTarget = review ?? target;
@@ -74,13 +71,10 @@ export default function WorkspaceShell() {
   const mode = useWorkspaceStore((s) => s.mode),
     settings = useWorkspaceStore((s) => s.settings),
     picker = useWorkspaceStore((s) => s.picker);
-  const tasksOpen = useWorkspaceStore((s) => s.tasksOpen),
-    notice = useServerSession((s) => s.notice),
-    paused = useWorkspaceStore((s) => s.paused);
+  const notice = useServerSession((s) => s.notice);
   const connected = useServerSession((s) => s.connected);
   const capabilities = useQuery({
-    queryKey: ['capabilities'],
-    queryFn: async ({ signal }) => (await call('', { capabilities: {} }, signal)).capabilities!,
+    ...capabilitiesOptions,
     enabled: connected,
   });
   useEffect(() => {
@@ -121,9 +115,9 @@ export default function WorkspaceShell() {
       .set({ selection: target, drafts: {}, events: [], statistics: null, mode: 'chat' });
   }, [target]);
   useEffect(() => {
-    if (!target.workspace || paused || !connected) return;
+    if (!target.workspace || !connected) return;
     return observe(target);
-  }, [target, paused, connected]);
+  }, [target, connected]);
   useEffect(() => {
     if (removed?.workspace === target.workspace && removed.session === target.session && !fileDirty)
       navigate({ workspace: target.workspace, session: '' });
@@ -144,11 +138,11 @@ export default function WorkspaceShell() {
       setCreating(false);
     }
   };
-  const workspace = workspaces.data?.items?.find((v) => v.id === target.workspace);
   const composer = (
     <Composer
       key={`${composerTarget.workspace}/${composerTarget.session}`}
       target={composerTarget}
+      showStatus={mode === 'chat'}
     />
   );
   return (
@@ -168,13 +162,7 @@ export default function WorkspaceShell() {
       mobileNav={{ hasToggle: false }}
     >
       <Layout
-        header={
-          <WorkspaceToolbar
-            name={workspace?.name}
-            summary={conversation.data?.session?.summary}
-            collapsible={collapsible}
-          />
-        }
+        header={<WorkspaceToolbar collapsible={collapsible} />}
         height="fill"
         padding={0}
         content={
@@ -191,6 +179,7 @@ export default function WorkspaceShell() {
             {mode === 'chat' ? (
               <Center height="100%" width="100%">
                 <ChatLayout
+                  key={`${target.workspace}/${target.session}`}
                   ref={setScroller}
                   className="workspace-body"
                   density="balanced"
@@ -205,12 +194,7 @@ export default function WorkspaceShell() {
                     }
                   >
                     {target.session ? (
-                      <Chat
-                        key={`${target.workspace}/${target.session}`}
-                        target={target}
-                        scroller={scroller}
-                        onEmpty={setLanding}
-                      />
+                      <Chat target={target} scroller={scroller} onEmpty={setLanding} />
                     ) : (
                       <Center padding={8}>
                         <EmptyState
@@ -253,12 +237,10 @@ export default function WorkspaceShell() {
             )}
           </LayoutContent>
         }
-        footer={<ConnectionStatus target={target} />}
       />
       <Suspense fallback={null}>
         {settings && <Settings />}
         {picker && <FolderPicker navigate={navigate} />}
-        {tasksOpen && <Tasks workspaces={workspaces.data?.items ?? []} navigate={navigate} />}
       </Suspense>
       {approvalTarget.session && (
         <Approval

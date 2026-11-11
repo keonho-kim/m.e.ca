@@ -11,7 +11,6 @@ import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { reportError } from '@/entities/server-session';
 import { team } from '@/pages/workspace/model/commands';
 import type { Target } from '@/pages/workspace/model/store';
-import { control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 
 export function ComposerActions({
@@ -41,40 +40,23 @@ export function ComposerActions({
     </HStack>
   );
 }
-export function ComposerSendActions({
-  target,
-  task,
-  busy,
+export function ComposerQueueAction({
+  disabled,
   submit,
 }: {
-  target: Target;
-  task?: string;
-  busy: boolean;
+  disabled: boolean;
   submit: (reserve?: boolean) => Promise<void>;
 }) {
   const t = useLocale();
-  if (!task) return null;
   return (
-    <HStack gap={1}>
-      <Tooltip content={t('queue')}>
-        <IconButton
-          label={t('queue')}
-          variant="ghost"
-          icon={<Icon icon={'meca:queue'} />}
-          isDisabled={busy || !target.session}
-          onClick={() => submit(true)}
-        />
-      </Tooltip>
-      {task && (
-        <IconButton
-          label={t('stop')}
-          variant="ghost"
-          icon={<Icon icon={'stop'} />}
-          onClick={() => {
-            void control(target.workspace, task, 'cancel').catch(reportError);
-          }}
-        />
-      )}
-    </HStack>
+    <Tooltip content={t('queue')}>
+      <IconButton
+        label={t('queue')}
+        variant="ghost"
+        icon={<Icon icon="meca:queue" />}
+        isDisabled={disabled}
+        onClick={() => submit(true)}
+      />
+    </Tooltip>
   );
 }

@@ -18,6 +18,7 @@ import { stateOptions } from '@/pages/workspace/api/queries';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { HistoryRow } from '@/pages/workspace/ui/chat/history-row';
+import { chatWidth } from '@/pages/workspace/ui/chat/layout';
 import { LiveOutput } from '@/pages/workspace/ui/chat/live-output';
 import type { HistoryItemJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
@@ -36,10 +37,11 @@ export function Chat({
   const t = useLocale(),
     previousSize = useRef<number | null>(null),
     latestRequested = useRef(false);
-  const hasLive = useWorkspaceStore(
-    (s) =>
-      Object.values(s.drafts).some((d) => d.text || d.thinking) || !!activeTask(target, s.tasks)
+  const taskId = useWorkspaceStore((s) => activeTask(target, s.tasks)?.id);
+  const hasOutput = useWorkspaceStore((s) =>
+    Object.values(s.drafts).some((draft) => draft.text || draft.thinking)
   );
+  const followedTask = useRef<string | undefined>(undefined);
   const state = useQuery(stateOptions(target));
   const [before, setBefore] = useState('0');
   const history = useInfiniteQuery({
@@ -98,8 +100,14 @@ export function Chat({
       previousSize.current = null;
     }
   }, [items.length, virtual, scroller]);
-  const empty = history.isSuccess && items.length === 0 && !hasLive;
+  const empty = history.isSuccess && items.length === 0 && !taskId && !hasOutput;
   useLayoutEffect(() => onEmpty(empty), [empty, onEmpty]);
+  useLayoutEffect(() => {
+    if (!taskId || !scroller || before !== '0' || followedTask.current === taskId) return;
+    followedTask.current = taskId;
+    // A new turn returns to the newest content even after the prior turn was reviewed.
+    scroller.scrollTop = scroller.scrollHeight;
+  }, [taskId, scroller, before]);
   useLayoutEffect(() => {
     if (latestRequested.current && before === '0' && !history.isFetching && scroller) {
       scroller.scrollTop = scroller.scrollHeight;
@@ -108,7 +116,7 @@ export function Chat({
   }, [before, history.isFetching, scroller]);
   return (
     <Center width="100%">
-      <VStack width="100%" maxWidth={760} paddingInline={6} paddingBlock={4} gap={5}>
+      <VStack width={chatWidth} paddingInline={4} paddingBlock={4} gap={5} className="chat-content">
         {empty && (
           <VStack gap={3} paddingBlock={6}>
             <Heading level={1} type="display-2">

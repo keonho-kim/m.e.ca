@@ -82,7 +82,7 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 	}
 	sort.Slice(value.Tasks, func(i, j int) bool { return value.Tasks[i].ID < value.Tasks[j].ID })
 	if c := s.conversation; c != nil {
-		value.Session, value.Selection, value.Team = c.Runtime.Session, c.Runtime.Selection, c.TeamEnabled
+		value.Session, value.Selection, value.Team = c.Runtime.Session, s.observedModel(c), c.TeamEnabled
 	}
 	if s.last != nil {
 		task := *s.last

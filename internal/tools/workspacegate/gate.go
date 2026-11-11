@@ -1,11 +1,12 @@
-// Purpose: Serialize prepared workspace effects and live subprocesses while allowing idle tasks to progress.
-// Pattern: Cancellable cohort leases with FIFO admission and explicit effect-owned release.
-// Usage: Server binds a cohort; local preparation and process launch acquire scoped holds.
+// Purpose: Serialize overlapping file effects and unrestricted subprocesses with cancellable ownership.
+// Pattern: Cohort leases with FIFO admission among conflicting scopes.
+// Usage: Server binds canonical file scopes; agent preparation and processes use unrestricted cohorts.
 // Related: internal/tools/local/prepare.go, internal/tools/local/process/command_start.go.
 package workspacegate
 
 import (
 	"context"
+	"path/filepath"
 	"slices"
 	"sync"
 )
@@ -13,7 +14,7 @@ import (
 type key struct{}
 type Gate struct {
 	mu      sync.Mutex
-	owner   *lease
+	owners  map[*lease]struct{}
 	changed chan struct{}
 	waiting []*waiter
 }
@@ -21,18 +22,29 @@ type lease struct {
 	gate   *Gate
 	closed bool
 	holds  int
+	paths  []string
 }
 type waiter struct{ owner *lease }
 
 func Bind(ctx context.Context, gate *Gate) (context.Context, func()) {
-	l := &lease{gate: gate}
+	return BindPaths(ctx, gate, nil)
+}
+
+// BindPaths requires canonical absolute paths checked again at the effect boundary.
+// Empty or invalid scopes reserve the whole filesystem, as unrestricted commands do.
+func BindPaths(ctx context.Context, gate *Gate, paths []string) (context.Context, func()) {
+	for _, path := range paths {
+		if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+			paths = nil
+			break
+		}
+	}
+	l := &lease{gate: gate, paths: slices.Clone(paths)}
 	return context.WithValue(ctx, key{}, l), sync.OnceFunc(func() {
 		gate.mu.Lock()
 		defer gate.mu.Unlock()
 		l.closed = true
-		if gate.owner == l {
-			gate.owner = nil
-		}
+		delete(gate.owners, l)
 		gate.wake()
 	})
 }
@@ -72,16 +84,19 @@ func Acquire(ctx context.Context) (func(), error) {
 			remove()
 			return nil, context.Canceled
 		}
-		if g.owner == l || g.owner == nil && (len(g.waiting) == 0 || g.waiting[0] == ticket) {
+		if g.available(l, ticket) {
 			remove()
-			g.owner = l
+			if g.owners == nil {
+				g.owners = make(map[*lease]struct{})
+			}
+			g.owners[l] = struct{}{}
 			l.holds++
 			return sync.OnceFunc(func() {
 				g.mu.Lock()
 				defer g.mu.Unlock()
 				l.holds--
-				if g.owner == l && l.holds == 0 {
-					g.owner = nil
+				if l.holds == 0 {
+					delete(g.owners, l)
 					g.wake()
 				}
 			}), nil
@@ -101,4 +116,43 @@ func Acquire(ctx context.Context) (func(), error) {
 		}
 		g.mu.Lock()
 	}
+}
+
+func (g *Gate) available(owner *lease, ticket *waiter) bool {
+	if _, held := g.owners[owner]; held {
+		return true
+	}
+	for active := range g.owners {
+		if overlaps(owner.paths, active.paths) {
+			return false
+		}
+	}
+	for _, waiting := range g.waiting {
+		if waiting == ticket {
+			break
+		}
+		if overlaps(owner.paths, waiting.owner.paths) {
+			return false
+		}
+	}
+	return true
+}
+
+func overlaps(first, second []string) bool {
+	if len(first) == 0 || len(second) == 0 {
+		return true
+	}
+	for _, a := range first {
+		for _, b := range second {
+			relative, err := filepath.Rel(a, b)
+			if err == nil && filepath.IsLocal(relative) {
+				return true
+			}
+			relative, err = filepath.Rel(b, a)
+			if err == nil && filepath.IsLocal(relative) {
+				return true
+			}
+		}
+	}
+	return false
 }

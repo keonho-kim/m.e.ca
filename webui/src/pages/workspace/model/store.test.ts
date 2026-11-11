@@ -15,6 +15,19 @@ beforeEach(() => {
 afterEach(() => queries.clear());
 const target = { workspace: 'alpha', session: 'one' };
 
+test('repeated view values notify subscribers only when a value changes', () => {
+  let notifications = 0;
+  const stop = useWorkspaceStore.subscribe(() => notifications++);
+  try {
+    for (let i = 0; i < 100; i++) useWorkspaceStore.getState().set({ fileDirty: true });
+    expect(notifications).toBe(1);
+    useWorkspaceStore.getState().set({ fileDirty: false });
+    expect(notifications).toBe(2);
+  } finally {
+    stop();
+  }
+});
+
 test('an unchanged input does not invalidate a pending request revision or notify subscribers', () => {
   useWorkspaceStore.getState().patchInput(target, { text: 'original' });
   const before = useWorkspaceStore.getState();

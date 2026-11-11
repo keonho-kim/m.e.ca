@@ -104,14 +104,8 @@ func (s *Service) start(ctx context.Context, session, key, text string, identity
 	s.mu.Lock()
 	s.admitting = TaskID(session, key)
 	s.mu.Unlock()
-	if c.Model == nil {
-		selected := c.Runtime.Selection
-		if selected.Model == "" {
-			return Task{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSelectAModelBeforeStartingARequest)
-		}
-		if err := s.selectModel(change, ModelSettings{Provider: string(selected.Connection.Kind), Endpoint: selected.Connection.Endpoint, Name: selected.Model, Thinking: selected.Thinking, Effort: selected.ReasoningEffort}); err != nil {
-			return Task{}, err
-		}
+	if err := s.prepareRequestModel(change); err != nil {
+		return Task{}, err
 	}
 	if err := checkImageModel(c, images); err != nil {
 		return Task{}, err

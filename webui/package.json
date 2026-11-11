@@ -22,28 +22,30 @@
     "generate:api": "protoc -I ../api --plugin=protoc-gen-es=node_modules/.bin/protoc-gen-es --es_out=src/shared/api/gen --es_opt=target=ts,json_types=true ../api/meca/v1/*.proto"
   },
   "dependencies": {
-    "@astryxdesign/core": "0.7.12-canary.f124c2f",
-    "@astryxdesign/lab": "0.7.12-canary.f124c2f",
-    "@astryxdesign/theme-neutral": "0.7.12-canary.f124c2f",
+    "@astryxdesign/core": "0.7.13",
+    "@astryxdesign/theme-neutral": "0.7.13",
+    "@dnd-kit/dom": "0.5.3",
+    "@dnd-kit/react": "0.5.3",
     "@hookform/resolvers": "7.0.5",
     "@stylexjs/stylex": "0.19.1",
     "@tanstack/react-query": "5.107.1",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-virtual": "3.14.26",
-    "lucide-react": "1.70.0",
+    "lucide-react": "1.71.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.91.0",
+    "react-simple-code-editor": "0.14.1",
     "zod": "4.6.7",
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "0.7.12-canary.f124c2f",
+    "@astryxdesign/cli": "0.7.13",
     "@biomejs/biome": "2.6.6",
     "@bufbuild/protobuf": "2.17.0",
     "@bufbuild/protoc-gen-es": "2.17.0",
     "@feature-sliced/steiger-plugin": "0.8.2",
-    "@playwright/cli": "0.1.23",
+    "@playwright/cli": "0.1.24",
     "@playwright/test": "1.65.0",
     "@tailwindcss/vite": "4.3.5",
     "@types/bun": "1.4.4",
@@ -51,15 +53,18 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
-    "knip": "6.44.2",
+    "knip": "6.45.0",
     "oxlint": "1.93.0",
     "oxlint-tsgolint": "7.0.2006",
     "steiger": "0.10.0",
     "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
-    "vite": "8.3.7"
+    "vite": "8.3.8"
   },
   "imports": {
     "#build/notices": "./scripts/notices.ts"
+  },
+  "patchedDependencies": {
+    "react-simple-code-editor@0.14.1": "patches/react-simple-code-editor@0.14.1.patch"
   }
 }

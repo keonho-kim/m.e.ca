@@ -47,8 +47,9 @@ AGENTS.md
 /webui/blob-report/
 /webui/.playwright-cli/
 /.playwright-cli/
-/internal/webui/assets/*.gz
-/internal/webui/assets/manifest.json
+/internal/webui/bundle_generated.go
+/internal/webui/.meca-ui-*.tmp
+/webui/.cache/
 
 # Temporary directories and runtime diagnostics
 /real-world-test/

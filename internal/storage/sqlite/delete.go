@@ -76,6 +76,7 @@ func (s *Sessions) DeleteConversation(ctx context.Context, project, id string) (
 			return err
 		}
 	}
+	s.usage.forget(filepath.Join(directory, id+".db"))
 	if err := root.RemoveAll(filepath.Join(".team", id)); err != nil {
 		return err
 	}

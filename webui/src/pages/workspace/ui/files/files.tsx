@@ -8,12 +8,13 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { Layout, LayoutContent, LayoutPanel } from '@astryxdesign/core/Layout';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { reportError, useServerSession } from '@/entities/server-session';
+import { mutateFile } from '@/pages/workspace/model/file-references';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { DirectoryColumn } from '@/pages/workspace/ui/files/directory-column';
 import { FileDocument } from '@/pages/workspace/ui/files/file-document';
-import { queries } from '@/shared/api';
+import { type FileMutationJson, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 export default function Files({ target }: { target: Target }) {
   const t = useLocale(),
@@ -29,6 +30,8 @@ export default function Files({ target }: { target: Target }) {
   const [watched, setWatched] = useState('');
   const compact = useMediaQuery('(max-width: 1024px)');
   const [pending, setPending] = useState<{ run: () => void } | null>(null);
+  const [mutating, setMutating] = useState(false);
+  const mutation = useRef(false);
   const navigate = (run: () => void) => {
     if (useWorkspaceStore.getState().fileDirty) setPending({ run });
     else run();
@@ -86,11 +89,50 @@ export default function Files({ target }: { target: Target }) {
       setFile('');
     } else setFile(path);
   };
+  const mutate = (change: FileMutationJson) => {
+    const source = change.path;
+    if (!source || mutation.current) return;
+    const affectsFile = file === source || file.startsWith(`${source}/`);
+    const run = async () => {
+      if (mutation.current) return;
+      mutation.current = true;
+      setMutating(true);
+      try {
+        const destination = await mutateFile(target, change);
+        if (affectsFile) {
+          useWorkspaceStore.getState().set({ fileDirty: false });
+          setFile(destination ? destination + file.slice(source.length) : '');
+        }
+        await queries.invalidateQueries({
+          queryKey: ['directory', target.workspace],
+          refetchType: 'none',
+        });
+        if (watchError)
+          void queries.resetQueries({
+            queryKey: ['directory', target.workspace, current],
+            exact: true,
+          });
+      } catch (error) {
+        reportError(error);
+      } finally {
+        mutation.current = false;
+        setMutating(false);
+      }
+    };
+    if (affectsFile)
+      navigate(() => {
+        void run();
+      });
+    else void run();
+  };
   const listing = (
     <DirectoryColumn
       path={current}
       enabled={watched === watchKey}
       target={target}
+      busy={mutating}
+      mutate={mutate}
+      parentPath={columns.at(-2)}
       parent={
         columns.length > 1
           ? () =>
@@ -105,6 +147,7 @@ export default function Files({ target }: { target: Target }) {
         setRevision((value) => value + 1);
       }}
       open={(next, directory) => {
+        if (mutation.current) return;
         if (!directory && next === file) return;
         navigate(() => open(next, directory));
       }}
@@ -117,7 +160,7 @@ export default function Files({ target }: { target: Target }) {
         padding={0}
         className="files-workspace"
         content={
-          <LayoutContent padding={0} isScrollable={false} className="min-w-0">
+          <LayoutContent padding={0} isScrollable={false} className="min-w-0" inert={mutating}>
             {watchError && <Banner status="warning" title={watchError} />}
             {file ? (
               <FileDocument

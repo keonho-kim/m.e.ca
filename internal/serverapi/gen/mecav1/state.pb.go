@@ -110,6 +110,8 @@ type Reply struct {
 	//	*Reply_ParsedInput
 	//	*Reply_Editor
 	//	*Reply_Diagnostic
+	//	*Reply_FileMutation
+	//	*Reply_Usage
 	Result        isReply_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -400,6 +402,24 @@ func (x *Reply) GetDiagnostic() *DiagnosticResult {
 	return nil
 }
 
+func (x *Reply) GetFileMutation() *FileMutationResult {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_FileMutation); ok {
+			return x.FileMutation
+		}
+	}
+	return nil
+}
+
+func (x *Reply) GetUsage() *Usage {
+	if x != nil {
+		if x, ok := x.Result.(*Reply_Usage); ok {
+			return x.Usage
+		}
+	}
+	return nil
+}
+
 type isReply_Result interface {
 	isReply_Result()
 }
@@ -508,6 +528,14 @@ type Reply_Diagnostic struct {
 	Diagnostic *DiagnosticResult `protobuf:"bytes,35,opt,name=diagnostic,proto3,oneof"`
 }
 
+type Reply_FileMutation struct {
+	FileMutation *FileMutationResult `protobuf:"bytes,36,opt,name=file_mutation,json=fileMutation,proto3,oneof"`
+}
+
+type Reply_Usage struct {
+	Usage *Usage `protobuf:"bytes,37,opt,name=usage,proto3,oneof"`
+}
+
 func (*Reply_Ok) isReply_Result() {}
 
 func (*Reply_Error) isReply_Result() {}
@@ -559,6 +587,10 @@ func (*Reply_ParsedInput) isReply_Result() {}
 func (*Reply_Editor) isReply_Result() {}
 
 func (*Reply_Diagnostic) isReply_Result() {}
+
+func (*Reply_FileMutation) isReply_Result() {}
+
+func (*Reply_Usage) isReply_Result() {}
 
 type EmptyResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1601,8 +1633,7 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"\x13meca/v1/state.proto\x12\ameca.v1\x1a\x14meca/v1/events.proto\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"5\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xf0\n" +
-	"\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xdc\v\n" +
 	"\x05Reply\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12&\n" +
@@ -1637,7 +1668,9 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"\x06editor\x18\" \x01(\v2\x17.meca.v1.EditorDocumentH\x00R\x06editor\x12;\n" +
 	"\n" +
 	"diagnostic\x18# \x01(\v2\x19.meca.v1.DiagnosticResultH\x00R\n" +
-	"diagnosticB\b\n" +
+	"diagnostic\x12B\n" +
+	"\rfile_mutation\x18$ \x01(\v2\x1b.meca.v1.FileMutationResultH\x00R\ffileMutation\x12&\n" +
+	"\x05usage\x18% \x01(\v2\x0e.meca.v1.UsageH\x00R\x05usageB\b\n" +
 	"\x06result\"\r\n" +
 	"\vEmptyResult\"\x8a\x02\n" +
 	"\aSession\x12\x0e\n" +
@@ -1762,43 +1795,45 @@ func file_meca_v1_state_proto_rawDescGZIP() []byte {
 
 var file_meca_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_meca_v1_state_proto_goTypes = []any{
-	(*Error)(nil),            // 0: meca.v1.Error
-	(*Reply)(nil),            // 1: meca.v1.Reply
-	(*EmptyResult)(nil),      // 2: meca.v1.EmptyResult
-	(*Session)(nil),          // 3: meca.v1.Session
-	(*Sessions)(nil),         // 4: meca.v1.Sessions
-	(*Model)(nil),            // 5: meca.v1.Model
-	(*Draft)(nil),            // 6: meca.v1.Draft
-	(*Execution)(nil),        // 7: meca.v1.Execution
-	(*Snapshot)(nil),         // 8: meca.v1.Snapshot
-	(*HistoryItem)(nil),      // 9: meca.v1.HistoryItem
-	(*HistoryPage)(nil),      // 10: meca.v1.HistoryPage
-	(*DetailPage)(nil),       // 11: meca.v1.DetailPage
-	(*Notification)(nil),     // 12: meca.v1.Notification
-	(*Task)(nil),             // 13: meca.v1.Task
-	(*Skills)(nil),           // 14: meca.v1.Skills
-	(*SkillDocument)(nil),    // 15: meca.v1.SkillDocument
-	(*SkillFile)(nil),        // 16: meca.v1.SkillFile
-	(*Capabilities)(nil),     // 17: meca.v1.Capabilities
-	(*Providers)(nil),        // 18: meca.v1.Providers
-	(*Models)(nil),           // 19: meca.v1.Models
-	(*DirectoryPage)(nil),    // 20: meca.v1.DirectoryPage
-	(*FilePreview)(nil),      // 21: meca.v1.FilePreview
-	(*FileSelections)(nil),   // 22: meca.v1.FileSelections
-	(*ImageMetadata)(nil),    // 23: meca.v1.ImageMetadata
-	(*DraftPage)(nil),        // 24: meca.v1.DraftPage
-	(*TaskPage)(nil),         // 25: meca.v1.TaskPage
-	(*CommandStates)(nil),    // 26: meca.v1.CommandStates
-	(*Resources)(nil),        // 27: meca.v1.Resources
-	(*Workspaces)(nil),       // 28: meca.v1.Workspaces
-	(*CommandCatalog)(nil),   // 29: meca.v1.CommandCatalog
-	(*ParsedInput)(nil),      // 30: meca.v1.ParsedInput
-	(*EditorDocument)(nil),   // 31: meca.v1.EditorDocument
-	(*DiagnosticResult)(nil), // 32: meca.v1.DiagnosticResult
-	(*Statistics)(nil),       // 33: meca.v1.Statistics
-	(*Approval)(nil),         // 34: meca.v1.Approval
-	(*Event)(nil),            // 35: meca.v1.Event
-	(*RunOutcome)(nil),       // 36: meca.v1.RunOutcome
+	(*Error)(nil),              // 0: meca.v1.Error
+	(*Reply)(nil),              // 1: meca.v1.Reply
+	(*EmptyResult)(nil),        // 2: meca.v1.EmptyResult
+	(*Session)(nil),            // 3: meca.v1.Session
+	(*Sessions)(nil),           // 4: meca.v1.Sessions
+	(*Model)(nil),              // 5: meca.v1.Model
+	(*Draft)(nil),              // 6: meca.v1.Draft
+	(*Execution)(nil),          // 7: meca.v1.Execution
+	(*Snapshot)(nil),           // 8: meca.v1.Snapshot
+	(*HistoryItem)(nil),        // 9: meca.v1.HistoryItem
+	(*HistoryPage)(nil),        // 10: meca.v1.HistoryPage
+	(*DetailPage)(nil),         // 11: meca.v1.DetailPage
+	(*Notification)(nil),       // 12: meca.v1.Notification
+	(*Task)(nil),               // 13: meca.v1.Task
+	(*Skills)(nil),             // 14: meca.v1.Skills
+	(*SkillDocument)(nil),      // 15: meca.v1.SkillDocument
+	(*SkillFile)(nil),          // 16: meca.v1.SkillFile
+	(*Capabilities)(nil),       // 17: meca.v1.Capabilities
+	(*Providers)(nil),          // 18: meca.v1.Providers
+	(*Models)(nil),             // 19: meca.v1.Models
+	(*DirectoryPage)(nil),      // 20: meca.v1.DirectoryPage
+	(*FilePreview)(nil),        // 21: meca.v1.FilePreview
+	(*FileSelections)(nil),     // 22: meca.v1.FileSelections
+	(*ImageMetadata)(nil),      // 23: meca.v1.ImageMetadata
+	(*DraftPage)(nil),          // 24: meca.v1.DraftPage
+	(*TaskPage)(nil),           // 25: meca.v1.TaskPage
+	(*CommandStates)(nil),      // 26: meca.v1.CommandStates
+	(*Resources)(nil),          // 27: meca.v1.Resources
+	(*Workspaces)(nil),         // 28: meca.v1.Workspaces
+	(*CommandCatalog)(nil),     // 29: meca.v1.CommandCatalog
+	(*ParsedInput)(nil),        // 30: meca.v1.ParsedInput
+	(*EditorDocument)(nil),     // 31: meca.v1.EditorDocument
+	(*DiagnosticResult)(nil),   // 32: meca.v1.DiagnosticResult
+	(*FileMutationResult)(nil), // 33: meca.v1.FileMutationResult
+	(*Usage)(nil),              // 34: meca.v1.Usage
+	(*Statistics)(nil),         // 35: meca.v1.Statistics
+	(*Approval)(nil),           // 36: meca.v1.Approval
+	(*Event)(nil),              // 37: meca.v1.Event
+	(*RunOutcome)(nil),         // 38: meca.v1.RunOutcome
 }
 var file_meca_v1_state_proto_depIdxs = []int32{
 	2,  // 0: meca.v1.Reply.ok:type_name -> meca.v1.EmptyResult
@@ -1827,31 +1862,33 @@ var file_meca_v1_state_proto_depIdxs = []int32{
 	30, // 23: meca.v1.Reply.parsed_input:type_name -> meca.v1.ParsedInput
 	31, // 24: meca.v1.Reply.editor:type_name -> meca.v1.EditorDocument
 	32, // 25: meca.v1.Reply.diagnostic:type_name -> meca.v1.DiagnosticResult
-	3,  // 26: meca.v1.Sessions.items:type_name -> meca.v1.Session
-	3,  // 27: meca.v1.Execution.session:type_name -> meca.v1.Session
-	5,  // 28: meca.v1.Execution.model:type_name -> meca.v1.Model
-	33, // 29: meca.v1.Execution.statistics:type_name -> meca.v1.Statistics
-	3,  // 30: meca.v1.Snapshot.session:type_name -> meca.v1.Session
-	13, // 31: meca.v1.Snapshot.task:type_name -> meca.v1.Task
-	5,  // 32: meca.v1.Snapshot.model:type_name -> meca.v1.Model
-	34, // 33: meca.v1.Snapshot.approvals:type_name -> meca.v1.Approval
-	6,  // 34: meca.v1.Snapshot.drafts:type_name -> meca.v1.Draft
-	7,  // 35: meca.v1.Snapshot.execution:type_name -> meca.v1.Execution
-	13, // 36: meca.v1.Snapshot.tasks:type_name -> meca.v1.Task
-	7,  // 37: meca.v1.Snapshot.executions:type_name -> meca.v1.Execution
-	35, // 38: meca.v1.Snapshot.activity:type_name -> meca.v1.Event
-	35, // 39: meca.v1.HistoryItem.event:type_name -> meca.v1.Event
-	36, // 40: meca.v1.HistoryItem.outcome:type_name -> meca.v1.RunOutcome
-	23, // 41: meca.v1.HistoryItem.images:type_name -> meca.v1.ImageMetadata
-	9,  // 42: meca.v1.HistoryPage.items:type_name -> meca.v1.HistoryItem
-	1,  // 43: meca.v1.Notification.reply:type_name -> meca.v1.Reply
-	8,  // 44: meca.v1.Notification.snapshot:type_name -> meca.v1.Snapshot
-	35, // 45: meca.v1.Notification.event:type_name -> meca.v1.Event
-	46, // [46:46] is the sub-list for method output_type
-	46, // [46:46] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	33, // 26: meca.v1.Reply.file_mutation:type_name -> meca.v1.FileMutationResult
+	34, // 27: meca.v1.Reply.usage:type_name -> meca.v1.Usage
+	3,  // 28: meca.v1.Sessions.items:type_name -> meca.v1.Session
+	3,  // 29: meca.v1.Execution.session:type_name -> meca.v1.Session
+	5,  // 30: meca.v1.Execution.model:type_name -> meca.v1.Model
+	35, // 31: meca.v1.Execution.statistics:type_name -> meca.v1.Statistics
+	3,  // 32: meca.v1.Snapshot.session:type_name -> meca.v1.Session
+	13, // 33: meca.v1.Snapshot.task:type_name -> meca.v1.Task
+	5,  // 34: meca.v1.Snapshot.model:type_name -> meca.v1.Model
+	36, // 35: meca.v1.Snapshot.approvals:type_name -> meca.v1.Approval
+	6,  // 36: meca.v1.Snapshot.drafts:type_name -> meca.v1.Draft
+	7,  // 37: meca.v1.Snapshot.execution:type_name -> meca.v1.Execution
+	13, // 38: meca.v1.Snapshot.tasks:type_name -> meca.v1.Task
+	7,  // 39: meca.v1.Snapshot.executions:type_name -> meca.v1.Execution
+	37, // 40: meca.v1.Snapshot.activity:type_name -> meca.v1.Event
+	37, // 41: meca.v1.HistoryItem.event:type_name -> meca.v1.Event
+	38, // 42: meca.v1.HistoryItem.outcome:type_name -> meca.v1.RunOutcome
+	23, // 43: meca.v1.HistoryItem.images:type_name -> meca.v1.ImageMetadata
+	9,  // 44: meca.v1.HistoryPage.items:type_name -> meca.v1.HistoryItem
+	1,  // 45: meca.v1.Notification.reply:type_name -> meca.v1.Reply
+	8,  // 46: meca.v1.Notification.snapshot:type_name -> meca.v1.Snapshot
+	37, // 47: meca.v1.Notification.event:type_name -> meca.v1.Event
+	48, // [48:48] is the sub-list for method output_type
+	48, // [48:48] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_state_proto_init() }
@@ -1890,6 +1927,8 @@ func file_meca_v1_state_proto_init() {
 		(*Reply_ParsedInput)(nil),
 		(*Reply_Editor)(nil),
 		(*Reply_Diagnostic)(nil),
+		(*Reply_FileMutation)(nil),
+		(*Reply_Usage)(nil),
 	}
 	file_meca_v1_state_proto_msgTypes[5].OneofWrappers = []any{}
 	file_meca_v1_state_proto_msgTypes[12].OneofWrappers = []any{

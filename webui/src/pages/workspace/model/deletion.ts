@@ -3,11 +3,13 @@
 // Usage: Sidebar receipts and server deletion events share this idempotent cleanup.
 // Related: webui/src/pages/workspace/api/queries.ts, webui/src/pages/workspace/model/store.ts, webui/src/pages/workspace/model/submission.ts.
 
+import { cancelReferenceTarget } from '@/pages/workspace/model/file-references';
 import { clearFollowupsTarget } from '@/pages/workspace/model/followups';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { clearPendingTarget } from '@/pages/workspace/model/submission';
 import { queries } from '@/shared/api';
 export function forgetConversation(target: Target) {
+  cancelReferenceTarget(target);
   clearPendingTarget(target);
   clearFollowupsTarget(target);
   const state = useWorkspaceStore.getState(),
@@ -40,7 +42,9 @@ export function forgetConversation(target: Target) {
   });
   queries.removeQueries({
     predicate: (query) =>
-      ['history', 'state', 'original', 'thumbnail'].includes(String(query.queryKey[0])) &&
+      ['history', 'state', 'original', 'thumbnail', 'session-usage'].includes(
+        String(query.queryKey[0])
+      ) &&
       query.queryKey[1] === target.workspace &&
       query.queryKey[2] === target.session,
   });

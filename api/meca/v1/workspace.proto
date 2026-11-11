@@ -7,7 +7,14 @@ package meca.v1;
 option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1";
 
 message SessionTarget { string session_id = 1; }
-message StateRequest { string task_id = 1; string after_task = 2; int32 limit = 3; string session_id = 4; }
+message StateRequest {
+  string task_id = 1;
+  string after_task = 2;
+  int32 limit = 3;
+  string session_id = 4;
+  // Selects the global model projection without a task or session filter.
+  bool default_model = 5;
+}
 message FileRequest { string path = 1; int32 offset = 2; int32 limit = 3; string revision = 4; }
 message FileSelection { string session_id = 1; string path = 2; bool selected = 3; }
 message FileEntry { string name = 1; bool directory = 2; }

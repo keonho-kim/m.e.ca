@@ -5,7 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; home: string };
+let fixture: { url: string; tokenFile: string; home: string; provider: string };
 test.beforeAll(async () => {
   const path = process.env.MECA_UI_DESCRIPTOR;
   test.skip(!path, 'start the isolated UI fixture first');
@@ -121,9 +121,10 @@ test('workspace folder creation and explicit selection work without a clipped op
   await expect(dialog).toBeHidden();
 });
 
-test('changing a model server replaces previously loaded model candidates', async ({ page }) => {
+test('global model candidates follow the server address before a conversation is selected', async ({
+  page,
+}) => {
   await login(page);
-  await createChat(page);
   await page.route('**/v1/command', async (route) => {
     const command = route.request().postDataJSON();
     if (!command?.discoverModels) return route.continue();
@@ -136,6 +137,8 @@ test('changing a model server replaces previously loaded model candidates', asyn
   const dialog = page.getByRole('dialog', { name: '설정', exact: true });
   const address = dialog.getByRole('textbox', { name: 'Base URL', exact: true });
   const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
+  await expect(address).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '모델 조회', exact: true })).toHaveCount(0);
   await address.fill('http://127.0.0.1:10001');
   await model.click();
   await expect(page.getByRole('option', { name: 'catalog-first', exact: true })).toBeVisible();
@@ -154,50 +157,65 @@ test('LM Studio supplies Ornith candidates on model focus and accepts the select
   );
   test.setTimeout(120000);
   await login(page);
-  await createChat(page);
-  await page.getByRole('button', { name: '설정', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '설정', exact: true });
-  await dialog.getByRole('combobox', { name: 'Provider', exact: true }).click();
-  await page.getByRole('option', { name: 'LM Studio', exact: true }).click();
-  await dialog
-    .getByRole('textbox', { name: 'Base URL', exact: true })
-    .fill(process.env.MECA_LMSTUDIO_URL!);
-  const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
-  await model.click();
-  await expect(page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true })).toBeVisible({
-    timeout: 15000,
-  });
-  await page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true }).click();
-  await dialog.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(
-    dialog.locator('.astryx-field-status').filter({ hasText: '저장했습니다' })
-  ).toBeVisible({ timeout: 30000 });
-  await dialog.getByRole('button', { name: '닫기', exact: true }).click();
-  const started = page.waitForResponse(
-    (response) =>
-      response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.start
-  );
-  await page
-    .getByRole('combobox', { name: '작업 입력', exact: true })
-    .fill(
-      '도구를 사용하지 마세요. 영문 대문자 O 다음에 영문 대문자 K를 붙여서 두 글자로만 답하세요.'
+  try {
+    await createChat(page);
+    await page.getByRole('button', { name: '설정', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '설정', exact: true });
+    await dialog.getByRole('combobox', { name: 'Provider', exact: true }).click();
+    await page.getByRole('option', { name: 'LM Studio', exact: true }).click();
+    await dialog
+      .getByRole('textbox', { name: 'Base URL', exact: true })
+      .fill(process.env.MECA_LMSTUDIO_URL!);
+    const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
+    await model.click();
+    await expect(page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true })).toBeVisible({
+      timeout: 15000,
+    });
+    await page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true }).click();
+    await dialog.getByRole('button', { name: '저장', exact: true }).click();
+    await expect(
+      dialog.locator('.astryx-field-status').filter({ hasText: '저장했습니다' })
+    ).toBeVisible({ timeout: 30000 });
+    await dialog.getByRole('button', { name: '닫기', exact: true }).click();
+    const started = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.start
     );
-  await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
-  const task = (await (await started).json()).task;
-  expect(task?.id).toBeTruthy();
-  await expect
-    .poll(
-      async () =>
-        page.evaluate(async (id) => {
-          const response = await fetch('/v1/command', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Meca-UI': '1' },
-            body: JSON.stringify({ taskStatus: { taskId: id } }),
-          });
-          return (await response.json()).task?.status;
-        }, task.id),
-      { timeout: 90000 }
-    )
-    .toBe('answered');
-  await expect(page.locator('.history-rows')).toContainText('OK');
+    await page
+      .getByRole('combobox', { name: '작업 입력', exact: true })
+      .fill(
+        '도구를 사용하지 마세요. 영문 대문자 O 다음에 영문 대문자 K를 붙여서 두 글자로만 답하세요.'
+      );
+    await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
+    const task = (await (await started).json()).task;
+    expect(task?.id).toBeTruthy();
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(async (id) => {
+            const response = await fetch('/v1/command', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Meca-UI': '1' },
+              body: JSON.stringify({ taskStatus: { taskId: id } }),
+            });
+            return (await response.json()).task?.status;
+          }, task.id),
+        { timeout: 90000 }
+      )
+      .toBe('answered');
+    await expect(page.locator('.history-rows')).toContainText('OK');
+  } finally {
+    const restored = await page.request.post(`${fixture.url}/v1/command`, {
+      headers: { Origin: fixture.url, 'X-Meca-UI': '1' },
+      data: {
+        setModel: {
+          defaultModel: true,
+          provider: 'vllm',
+          endpoint: fixture.provider,
+          model: 'fixture-model',
+        },
+      },
+    });
+    expect((await restored.json()).error).toBeUndefined();
+  }
 });

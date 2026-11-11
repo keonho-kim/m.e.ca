@@ -1,12 +1,11 @@
 // Purpose: Discover model metadata without adopting settings or persisting supplied credentials.
-// Pattern: Session read use case at the provider I/O boundary.
+// Pattern: Scoped configuration read at the provider I/O boundary.
 // Usage: Native model dialogs query candidates before setModel commits a selection.
 // Related: internal/provider/setup/setup.go, internal/commands/server/settings.go.
 package server
 
 import (
 	"context"
-	"strings"
 
 	"github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/config"
@@ -20,31 +19,29 @@ func (s *Service) Discover(ctx context.Context, value ModelSettings) ([]connecti
 	if s.options.Discover == nil {
 		return nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerModelDiscoveryUnavailable)
 	}
-	c, ctx, done, err := s.beginSessionRead(ctx, value.Session)
+	credential, err := parseModelCredential(value.Credential)
 	if err != nil {
 		return nil, err
 	}
-	defer done()
-	if len(value.Credential) > 2048 || strings.ContainsAny(value.Credential, "\r\n\x00") {
-		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidCredential)
+	lookup, err := s.beginModelLookup(ctx, value.Session)
+	if err != nil {
+		return nil, err
 	}
-	selected, err := (config.SavedModel{Provider: connection.ProviderKind(value.Provider), Endpoint: value.Endpoint, Name: value.Name}).Selection()
+	defer lookup.finish()
+	var selected connection.Selection
 	// An empty model requests the provider catalog, so parse only its connection.
 	if value.Name == "" {
 		selected.Connection, err = connection.New(connection.ProviderKind(value.Provider), value.Endpoint)
-		selected.Model = ""
+	} else {
+		selected, err = value.selection()
 	}
 	if err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
-	previous := c.Runtime.Selection
-	defaults := s.options.Config
-	s.mu.Unlock()
-	if selected.Connection.ID == previous.Connection.ID {
-		selected.Connection.CredentialRef = previous.Connection.CredentialRef
+	if selected.Connection.ID == lookup.previous.Connection.ID {
+		selected.Connection.CredentialRef = lookup.previous.Connection.CredentialRef
 	}
-	values, prepared, err := s.options.Discover(ctx, selected, value.Credential, setup.Defaults{ContextLength: defaults.ContextLength})
+	values, prepared, err := s.options.Discover(lookup.ctx, selected, credential, setup.Defaults{ContextLength: lookup.contextLength})
 	if err != nil {
 		return nil, err
 	}

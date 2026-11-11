@@ -62,7 +62,13 @@ func TestCaptureFileRejectsTampering(t *testing.T) {
 	if _, err = file.WriteAt([]byte("tail"), captureBlock); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = file.file.WriteAt([]byte{42}, int64(file.aead.NonceSize()+10)); err != nil {
+	offset := int64(file.aead.NonceSize() + 10)
+	var corrupted [1]byte
+	if _, err = file.file.ReadAt(corrupted[:], offset); err != nil {
+		t.Fatal(err)
+	}
+	corrupted[0] ^= 1
+	if _, err = file.file.WriteAt(corrupted[:], offset); err != nil {
 		t.Fatal(err)
 	}
 	for range 2 {

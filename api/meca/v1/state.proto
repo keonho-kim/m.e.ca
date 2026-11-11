@@ -41,6 +41,8 @@ message Reply {
     ParsedInput parsed_input = 33;
     EditorDocument editor = 34;
     DiagnosticResult diagnostic = 35;
+    FileMutationResult file_mutation = 36;
+    Usage usage = 37;
   }
 }
 message EmptyResult {}

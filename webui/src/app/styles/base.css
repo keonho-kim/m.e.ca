@@ -1,4 +1,4 @@
-/* Purpose: Load the official Astryx reset, components, Lab and token-backed utilities.
+/* Purpose: Load the stable Astryx reset, components and token-backed utilities.
  * Pattern: Stylesheet composition root without component overrides.
  * Usage: main imports this before the generated MECA theme.
  * Related: webui/src/app/styles/theme.ts, webui/vite.config.ts. */

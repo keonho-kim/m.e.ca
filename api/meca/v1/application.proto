@@ -8,6 +8,24 @@ option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;me
 
 message WorkspaceRequest { string path = 1; int32 offset = 2; }
 message CreateFolder { string path = 1; string name = 2; }
+message FileMutation {
+  string path = 1;
+  string revision = 2;
+  oneof change {
+    string name = 3;
+    string folder = 4;
+    bool remove = 5;
+  }
+  string session_id = 6;
+}
+// Inspect error_code before reporting success; effects may have partially completed.
+message FileMutationResult {
+  string path = 1;
+  repeated string paths = 2;
+  bool references_ready = 3;
+  string error_code = 4;
+  string error_message = 5;
+}
 message Workspace { string id = 1; string path = 2; string name = 3; int32 active_tasks = 4; string error = 5; int32 pending_approvals = 6; }
 message Workspaces { repeated Workspace items = 1; string default_id = 2; }
 message CommandDescription { string name = 1; string description = 2; }

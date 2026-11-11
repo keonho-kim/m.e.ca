@@ -6,7 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test, type Page, type Response } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; projectA: string };
+let fixture: { url: string; tokenFile: string; projectA: string; provider: string; archiveSession: string };
 test.beforeAll(async () => {
   test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated Go UI fixture first');
   fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
@@ -54,7 +54,7 @@ test('many-line files open directly with bounded DOM and without a duplicate pre
   });
   await page.getByRole('tab', { name: '파일', exact: true }).click();
   await page.getByRole('button', { name: 'many-lines.ts', exact: true }).click();
-  await expect(page.getByRole('textbox', { name: /many-lines.ts$/ })).toContainText('line 9999');
+  await expect(page.getByRole('textbox', { name: /many-lines.ts$/ })).toHaveValue(/line 9999/);
   expect(await page.locator('.file-document').locator('*').count()).toBeLessThan(2000);
   expect(directories).toBe(1);
   expect(editorReads).toBe(1);
@@ -126,10 +126,12 @@ test('a short task avoids repeated state and metadata refreshes', async ({ page 
   expect(counts.start).toBe(1);
   // Lazy model preparation emits one model change; text and completion reuse event facts.
   expect(counts.state ?? 0).toBeLessThanOrEqual(1);
-  expect(Object.values(counts).reduce((sum, value) => sum + value, 0)).toBeLessThanOrEqual(8);
+  expect(counts.sessionUsage ?? 0).toBeLessThanOrEqual(1);
+  expect(Object.entries(counts).filter(([key]) => key !== 'sessionUsage')
+    .reduce((sum, [, value]) => sum + value, 0)).toBeLessThanOrEqual(8);
 });
 
-test('execution metrics own no DOM or resource reads while closed', async ({ page }) => {
+test('the composer status line reads resources once and displays completed usage', async ({ page }) => {
   let resources = 0;
   page.on('request', (request) => {
     if (request.url().endsWith('/v1/command') && request.postDataJSON()?.resources) resources++;
@@ -137,12 +139,45 @@ test('execution metrics own no DOM or resource reads while closed', async ({ pag
   await page.reload();
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   await create(page);
-  expect(resources).toBe(0);
-  await page.getByRole('button', { name: '실행 정보', exact: true }).click();
-  await expect(page.locator('.execution-metrics')).toBeVisible();
+  await expect(page.locator('.execution-status')).toBeVisible();
+  await expect(page.locator('.execution-status')).toContainText(/입력 0.*출력 0/);
   await expect.poll(() => resources).toBe(1);
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.execution-metrics')).toHaveCount(0);
+  await page.getByLabel('작업 입력', { exact: true }).fill('METRICS_FIXTURE');
+  await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
+  await expect(page.locator('.completion-summary')).toContainText(/소요 시간 \d{2}:\d{2}:\d{2}.*입력 13.*출력 7/);
+  await expect(page.locator('.execution-status')).toContainText(/입력 13.*출력 7/);
+  expect(resources).toBe(1);
+});
+
+test('long Thinking follows the newest output and respects an upward scroll', async ({ page }) => {
+  await create(page);
+  const active = new URL(page.url());
+  const archive = active.pathname.replace(/session_[^/]+$/, fixture.archiveSession);
+  await page.goto(new URL(archive, active).href);
+  await expect(page.locator('.history-rows')).toContainText('Archive message 299');
+  const body = page.locator('.workspace-body');
+  await body.hover();
+  await page.mouse.wheel(0, -600);
+  await expect.poll(() => body.evaluate((node) =>
+    node.scrollHeight - node.scrollTop - node.clientHeight)).toBeGreaterThan(100);
+  await page.getByLabel('작업 입력', { exact: true }).fill('LONG_THINKING_FIXTURE');
+  await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
+  const reasoning = page.locator('.live-output .thinking');
+  const gap = () => body.evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight);
+  await expect(reasoning).toContainText('First reasoning tail');
+  await expect.poll(gap).toBeLessThan(12);
+  await page.request.post(`${fixture.provider}/test/expand-thinking`);
+  await expect(reasoning).toContainText('Second reasoning tail');
+  await expect.poll(gap).toBeLessThan(12);
+  await expect(reasoning.getByRole('button', { name: '전체 텍스트 보기', exact: true })).toHaveCount(0);
+  await body.hover();
+  await page.mouse.wheel(0, -600);
+  await expect.poll(gap).toBeGreaterThan(100);
+  const previous = await body.evaluate((node) => node.scrollTop);
+  await page.request.post(`${fixture.provider}/test/finish-thinking`);
+  await expect(reasoning).toContainText('Third reasoning tail');
+  await expect.poll(() => body.evaluate((node) => node.scrollTop)).toBeCloseTo(previous, 0);
+  await page.getByRole('button', { name: '작업 중지', exact: true }).click();
 });
 
 test('collapsed reasoning removes its Markdown while the request continues', async ({ page }) => {

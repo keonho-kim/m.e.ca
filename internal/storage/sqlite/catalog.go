@@ -22,6 +22,7 @@ import (
 type Sessions struct {
 	directory string
 	pages     conversationPages
+	usage     usageProjections
 }
 
 func OpenSessions(directory string) (*Sessions, error) {
@@ -93,7 +94,11 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 			return nil, errors.Join(err, db.Close())
 		}
 	}
-	return &Store{db: db, path: path, session: c.Session, deletionLease: lease}, nil
+	identity, err := os.Stat(path)
+	if err != nil {
+		return nil, errors.Join(err, db.Close())
+	}
+	return &Store{db: db, path: path, session: c.Session, deletionLease: lease, usage: s.usage.forFile(path, identity)}, nil
 }
 func (s *Sessions) Create(ctx context.Context, project, display string) (store *Store, err error) {
 	if err := sessionstate.CheckProject(project, display); err != nil {

@@ -1,0 +1,273 @@
+diff --git a/lib/index.d.ts b/lib/index.d.ts
+index 0876142c80dd2ca04686276b978a196a236d0944..6e69b1bc9ea61452224ad80621acf1864ea28467 100644
+--- a/lib/index.d.ts
++++ b/lib/index.d.ts
+@@ -20,6 +20,8 @@ declare const Editor: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLD
+     highlight: (value: string) => string | React.ReactNode;
+     ignoreTabKey?: boolean | undefined;
+     insertSpaces?: boolean | undefined;
++    acceptValue?: (value: string) => boolean;
++    plain?: boolean;
+     onValueChange: (value: string) => void;
+     padding?: Padding<string | number> | undefined;
+     style?: React.CSSProperties | undefined;
+@@ -43,6 +45,8 @@ declare const Editor: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLD
+     textareaId?: string | undefined;
+     preClassName?: string | undefined;
+ } & React.RefAttributes<{
++    closeHistoryGroup: () => void;
++    replaceSelection: (text: string) => void;
+     session: {
+         history: History;
+     };
+diff --git a/package.json b/package.json
+index 151add726c9636213e9e828ebcea9d105f44e496..0264b7eaf497cfc227c928d13bb6fe45a12aab9a 100644
+--- a/package.json
++++ b/package.json
+@@ -20,6 +20,7 @@
+     "registry": "https://registry.npmjs.org/"
+   },
+   "main": "lib/index.js",
++  "module": "src/index.tsx",
+   "types": "lib/index.d.ts",
+   "files": [
+     "lib/",
+diff --git a/src/index.tsx b/src/index.tsx
+index 64c924d1496cd8e1cc46ed188bc791b6c41a4f81..2f18fbe0769306f9877ffa2600c6547f61196df7 100644
+--- a/src/index.tsx
++++ b/src/index.tsx
+@@ -7,6 +7,8 @@ type Props = React.HTMLAttributes<HTMLDivElement> & {
+   highlight: (value: string) => string | React.ReactNode;
+   ignoreTabKey?: boolean;
+   insertSpaces?: boolean;
++  acceptValue?: (value: string) => boolean;
++  plain?: boolean;
+   onValueChange: (value: string) => void;
+   padding?: Padding<number | string>;
+   style?: React.CSSProperties;
+@@ -98,9 +100,11 @@ const cssText = /* CSS */ `
+ 
+ const Editor = React.forwardRef(function Editor(
+   props: Props,
+-  ref: React.Ref<null | { session: { history: History } }>
++  ref: React.Ref<null | { session: { history: History }; closeHistoryGroup: () => void; replaceSelection: (text: string) => void }>
+ ) {
+   const {
++    acceptValue,
++    plain = false,
+     autoFocus,
+     disabled,
+     form,
+@@ -134,6 +138,8 @@ const Editor = React.forwardRef(function Editor(
+     offset: -1,
+   });
+   const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
++  const composing = React.useRef(false);
++  const mergeHistory = React.useRef(false);
+   const [capture, setCapture] = React.useState(true);
+   const contentStyle = {
+     paddingTop: typeof padding === 'object' ? padding.top : padding,
+@@ -141,26 +147,34 @@ const Editor = React.forwardRef(function Editor(
+     paddingBottom: typeof padding === 'object' ? padding.bottom : padding,
+     paddingLeft: typeof padding === 'object' ? padding.left : padding,
+   };
+-  const highlighted = highlight(value);
++  const highlighted = plain ? null : highlight(value);
+ 
+   const getLines = (text: string, position: number) =>
+     text.substring(0, position).split('\n');
++  const getLine = (text: string, position: number) =>
++    text.slice(position > 0 ? text.lastIndexOf('\n', position - 1) + 1 : 0, position);
+ 
+   const recordChange = React.useCallback(
+     (record: Record, overwrite: boolean = false) => {
+       const { stack, offset } = historyRef.current;
++      const existing = stack[offset];
++      if (existing?.value === record.value) {
++        existing.selectionStart = record.selectionStart;
++        existing.selectionEnd = record.selectionEnd;
++        return;
++      }
+ 
+       if (stack.length && offset > -1) {
+         // When something updates, drop the redo operations
+-        historyRef.current.stack = stack.slice(0, offset + 1);
++        stack.splice(offset + 1);
+ 
+         // Limit the number of operations to 100
+         const count = historyRef.current.stack.length;
+ 
+-        if (count > HISTORY_LIMIT) {
+-          const extras = count - HISTORY_LIMIT;
++        if (count >= HISTORY_LIMIT) {
++          const extras = count - HISTORY_LIMIT + 1;
+ 
+-          historyRef.current.stack = stack.slice(extras, count);
++          stack.splice(0, extras);
+           historyRef.current.offset = Math.max(
+             historyRef.current.offset - extras,
+             0
+@@ -170,24 +184,20 @@ const Editor = React.forwardRef(function Editor(
+ 
+       const timestamp = Date.now();
+ 
+-      if (overwrite) {
++      if (overwrite && mergeHistory.current) {
+         const last = historyRef.current.stack[historyRef.current.offset];
+ 
+         if (last && timestamp - last.timestamp < HISTORY_TIME_GAP) {
+           // A previous entry exists and was in short interval
+ 
+           // Match the last word in the line
+-          const re = /[^a-z0-9]([a-z0-9]+)$/i;
++          const re = /(?:^|[^a-z0-9])([a-z0-9]+)$/i;
+ 
+           // Get the previous line
+-          const previous = getLines(last.value, last.selectionStart)
+-            .pop()
+-            ?.match(re);
++          const previous = getLine(last.value, last.selectionStart).match(re);
+ 
+           // Get the current line
+-          const current = getLines(record.value, record.selectionStart)
+-            .pop()
+-            ?.match(re);
++          const current = getLine(record.value, record.selectionStart).match(re);
+ 
+           if (previous?.[1] && current?.[1]?.startsWith(previous[1])) {
+             // The last word of the previous line and current line match
+@@ -205,6 +215,7 @@ const Editor = React.forwardRef(function Editor(
+       // Add the new operation to the stack
+       historyRef.current.stack.push({ ...record, timestamp });
+       historyRef.current.offset++;
++      mergeHistory.current = overwrite;
+     },
+     []
+   );
+@@ -238,6 +249,7 @@ const Editor = React.forwardRef(function Editor(
+   };
+ 
+   const applyEdits = (record: Record) => {
++    if (acceptValue?.(record.value) === false) return;
+     // Save last selection state
+     const input = inputRef.current;
+     const last = historyRef.current.stack[historyRef.current.offset];
+@@ -254,6 +266,8 @@ const Editor = React.forwardRef(function Editor(
+     recordChange(record);
+     updateInput(record);
+   };
++  const editsRef = React.useRef(applyEdits);
++  editsRef.current = applyEdits;
+ 
+   const undoEdit = () => {
+     const { stack, offset } = historyRef.current;
+@@ -265,6 +279,7 @@ const Editor = React.forwardRef(function Editor(
+       // Apply the changes and update the offset
+       updateInput(record);
+       historyRef.current.offset = Math.max(offset - 1, 0);
++      mergeHistory.current = false;
+     }
+   };
+ 
+@@ -278,10 +293,12 @@ const Editor = React.forwardRef(function Editor(
+       // Apply the changes and update the offset
+       updateInput(record);
+       historyRef.current.offset = Math.min(offset + 1, stack.length - 1);
++      mergeHistory.current = false;
+     }
+   };
+ 
+   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
++    if (composing.current || e.nativeEvent.isComposing || e.keyCode === 229) return;
+     if (onKeyDown) {
+       onKeyDown(e);
+ 
+@@ -402,7 +419,7 @@ const Editor = React.forwardRef(function Editor(
+       // Ignore selections
+       if (selectionStart === selectionEnd) {
+         // Get the current line
+-        const line = getLines(value, selectionStart).pop();
++        const line = getLine(value, selectionStart);
+         const matches = line?.match(/^\s+/);
+ 
+         if (matches?.[0]) {
+@@ -506,8 +523,14 @@ const Editor = React.forwardRef(function Editor(
+ 
+   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+     const { value, selectionStart, selectionEnd } = e.currentTarget;
++    if (acceptValue?.(value) === false) {
++      const caret = Math.max(0, selectionStart - Math.max(0, value.length - props.value.length));
++      e.currentTarget.value = props.value;
++      e.currentTarget.setSelectionRange(caret, caret);
++      return;
++    }
+ 
+-    recordChange(
++    if (!composing.current) recordChange(
+       {
+         value,
+         selectionStart,
+@@ -527,6 +550,18 @@ const Editor = React.forwardRef(function Editor(
+     ref,
+     () => {
+       return {
++        closeHistoryGroup: () => { mergeHistory.current = false; },
++        replaceSelection: (text: string) => {
++          const input = inputRef.current;
++          if (!input) return;
++          const { value, selectionStart, selectionEnd } = input;
++          const caret = selectionStart + text.length;
++          editsRef.current({
++            value: value.slice(0, selectionStart) + text + value.slice(selectionEnd),
++            selectionStart: caret,
++            selectionEnd: caret,
++          });
++        },
+         get session() {
+           return {
+             history: historyRef.current,
+@@ -541,21 +576,24 @@ const Editor = React.forwardRef(function Editor(
+   );
+ 
+   return (
+-    <div {...rest} style={{ ...styles.container, ...style }}>
+-      <pre
++    <div {...rest} style={{ ...styles.container, ...(plain ? { height: '100%', contain: 'layout paint' } : {}), ...style }}>
++      {!plain && <pre
++        key="highlight"
+         className={preClassName}
+         aria-hidden="true"
+         style={{ ...styles.editor, ...styles.highlight, ...contentStyle }}
+         {...(typeof highlighted === 'string'
+           ? { dangerouslySetInnerHTML: { __html: highlighted + '<br />' } }
+           : { children: highlighted })}
+-      />
++      />}
+       <textarea
++        key="input"
+         ref={(c) => (inputRef.current = c)}
+         style={{
+           ...styles.editor,
+           ...styles.textarea,
+           ...contentStyle,
++          ...(plain ? { overflow: 'auto', WebkitTextFillColor: 'inherit' } : {}),
+         }}
+         className={
+           className + (textareaClassName ? ` ${textareaClassName}` : '')
+@@ -563,6 +601,16 @@ const Editor = React.forwardRef(function Editor(
+         id={textareaId}
+         value={value}
+         onChange={handleChange}
++        onCompositionStart={() => {
++          recordCurrentState();
++          composing.current = true;
++          mergeHistory.current = false;
++        }}
++        onCompositionEnd={() => {
++          composing.current = false;
++          recordCurrentState();
++          mergeHistory.current = false;
++        }}
+         onKeyDown={handleKeyDown}
+         onClick={onClick}
+         onKeyUp={onKeyUp}

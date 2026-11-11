@@ -50,15 +50,14 @@ const components = {
 };
 
 function useRevealDuringBurst(text: string, enabled: boolean) {
-  const [burst, setBurst] = useState({ text, settled: !enabled });
-  if (burst.text !== text) setBurst({ text, settled: !enabled });
-  const active = enabled && !!text && (burst.text !== text || !burst.settled);
+  const [settledText, setSettledText] = useState(enabled ? '' : text);
+  const active = enabled && !!text && settledText !== text;
   useEffect(() => {
     if (!active) return;
     // Astryx's reveal requests frames even after its text catches up. A quiet
     // burst settles to the received text and releases the animation clock.
     const timer = setTimeout(() => {
-      setBurst((value) => (value.text === text ? { text, settled: true } : value));
+      setSettledText(text);
     }, 500);
     return () => clearTimeout(timer);
   }, [active, text]);
@@ -84,11 +83,13 @@ const CompleteText = memo(function CompleteText({ text }: { text: string }) {
 export const MarkdownText = memo(function MarkdownText({
   text,
   streaming = false,
+  showCompleteText = true,
   tone,
   onReference,
 }: {
   text: string;
   streaming?: boolean;
+  showCompleteText?: boolean;
   tone?: 'thinking';
   onReference?: (href: string) => void;
 }) {
@@ -135,7 +136,7 @@ export const MarkdownText = memo(function MarkdownText({
           {text}
         </Markdown>
       </FollowCode>
-      {hasMarkdownWindow(text) && <CompleteText text={text} />}
+      {showCompleteText && hasMarkdownWindow(text) && <CompleteText text={text} />}
     </>
   );
 });

@@ -102,8 +102,6 @@ test('multiple projects continue independently and one completed predecessor run
  await create(page,'beta');await send(page,'HOLD_FIXTURE beta first');
  await expect(page.getByRole('button',{name:'작업 중지',exact:true})).toBeVisible();
  expect((await rpc(page,{listWorkspaces:{}})).workspaces?.items?.reduce((n,w)=>n+(w.activeTasks??0),0)).toBe(3);
- await page.getByRole('button',{name:'스트림 일시정지',exact:true}).click();
- await page.getByRole('button',{name:'스트림 재연결',exact:true}).click();
  await expect(page.locator('.live-output')).toContainText('Fixture');
  await page.getByRole('button',{name:'작업 중지',exact:true}).click();
  await expect(page.getByRole('button',{name:'작업 중지',exact:true})).toBeHidden();
@@ -118,7 +116,8 @@ test('multiple projects continue independently and one completed predecessor run
 test('files use complete revision-bound saves and skills insert canonical mentions',async({page})=>{
  await writeFile(join(fixture.projectA,'sample.go'),'package sample\n\nfunc Value() int { return 1 }\n');
  await create(page);await send(page,'!dir');
- await page.getByRole('checkbox',{name:'선택 참조: sample.go',exact:true}).check();
+ await page.getByRole('button',{name:'파일 작업 · sample.go',exact:true}).click();
+ await page.getByRole('menuitem',{name:'추가하기',exact:true}).click();
  await page.getByRole('button',{name:'sample.go',exact:true}).click();
  await page.getByRole('textbox',{name:/sample\.go$/}).fill('package sample\n\nfunc Value() int { return 42 }\n');
  await page.getByRole('button',{name:'저장',exact:true}).click();
@@ -260,18 +259,28 @@ test('thinking streams as subdued Markdown and remains readable in saved history
  await page.reload();await expect(page.locator('.history-rows .thinking')).toContainText('and verify the result.');
 });
 
-test('mobile settings give the model form full width and keep discovery diagnosis and save usable',async({page})=>{
- await create(page);await page.setViewportSize({width:390,height:844});
+test('mobile settings discover, diagnose and save the global model before opening a conversation',async({page})=>{
+ await expect(page).toHaveURL(/\/w\/[^/]+$/);
+ await page.setViewportSize({width:390,height:844});
  await page.getByRole('button',{name:'열기',exact:true}).click();
  await page.getByRole('button',{name:'설정',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'설정',exact:true});
  await expect(dialog.getByRole('combobox',{name:'설정 항목',exact:true})).toBeVisible();
  await expect.poll(async()=>(await dialog.getByRole('textbox',{name:'Base URL',exact:true}).boundingBox())?.width??0).toBeGreaterThan(280);
- for(const [label,key] of [['모델 조회','discoverModels'],['연결 진단','diagnoseModel'],['저장','setModel']] as const){
+ await expect(dialog.getByRole('button',{name:'모델 조회',exact:true})).toHaveCount(0);
+ await dialog.getByRole('textbox',{name:'Base URL',exact:true}).fill(fixture.provider+'/');
+ const catalog=page.waitForResponse(response=>response.url().endsWith('/v1/command')&&!!response.request().postDataJSON()?.discoverModels);
+ await dialog.getByRole('combobox',{name:'모델 ID',exact:true}).click();
+ expect((await(await catalog).json()).error).toBeUndefined();
+ await page.getByRole('option',{name:'fixture-model',exact:true}).click();
+ for(const [label,key] of [['연결 진단','diagnoseModel'],['저장','setModel']] as const){
   const reply=page.waitForResponse(response=>response.url().endsWith('/v1/command')&&response.request().postDataJSON()?.[key]!==undefined);
   await dialog.getByRole('button',{name:label,exact:true}).click();
-  expect((await(await reply).json()).error).toBeUndefined();
+  const response=await reply;
+  expect(response.request().postDataJSON()[key].sessionId).toBeUndefined();
+  expect((await response.json()).error).toBeUndefined();
  }
+ expect((await rpc(page,{state:{defaultModel:true}})).state?.model?.model).toBe('fixture-model');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 

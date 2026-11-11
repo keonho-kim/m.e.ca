@@ -4,7 +4,7 @@
 // Related: webui/src/pages/workspace/api/events.ts, webui/src/pages/workspace/api/cache-refresh.ts.
 import { invalidate } from '@/pages/workspace/api/cache-refresh';
 import { stateOptions } from '@/pages/workspace/api/queries';
-import type { EventJson, SnapshotJson, TaskPageJson } from '@/shared/api';
+import type { EventJson, SnapshotJson } from '@/shared/api';
 import { queries } from '@/shared/api';
 
 export function projectEventCache(events: EventJson[]) {
@@ -63,32 +63,13 @@ export function projectEventCache(events: EventJson[]) {
         };
       });
     }
-    if (started || finished) {
-      queries.setQueriesData<TaskPageJson>({ queryKey: ['task-list', workspace] }, (page) =>
-        page
-          ? {
-              ...page,
-              items: page.items?.map((task) =>
-                task.id === event.taskId
-                  ? {
-                      ...task,
-                      status: event.status,
-                      outcome: event.outcome?.status,
-                      code: event.errorCode,
-                    }
-                  : task
-              ),
-            }
-          : page
-      );
-      invalidate(['task-list', workspace]);
-    }
     if (started || finished || approval || lifecycle) {
       sessions.add(workspace);
       workspaces = true;
     }
     if (started || finished || event.kind === 'draft_reset')
       histories.set(`${workspace}/${session}`, ['history', workspace, session, '0']);
+    if (finished || event.kind === 'usage') invalidate(['session-usage', workspace, session]);
     if (event.kind === 'settings_changed') settings = true;
     if (event.kind === 'model_changed' || event.kind === 'model_unavailable') {
       invalidate(stateOptions(target).queryKey);

@@ -19,7 +19,7 @@ export function LiveOutput({ target }: { target: Target }) {
   const [agent, setAgent] = useState('');
   const [original, setOriginal] = useState<DraftRequestJson | null>(null);
   const selected = useWorkspaceStore((s) => s.selection);
-  const streaming = useWorkspaceStore((s) => !s.paused && s.streamStatus === 'connected');
+  const streaming = useWorkspaceStore((s) => s.streamStatus === 'connected');
   const sources = useMemo(
     () =>
       selected.workspace === target.workspace && selected.session === target.session

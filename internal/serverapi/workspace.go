@@ -18,7 +18,7 @@ import (
 )
 
 func modelSettings(r *v1.ModelRequest) server.ModelSettings {
-	return server.ModelSettings{Session: r.GetSessionId(), Provider: r.GetProvider(), Endpoint: r.GetEndpoint(), Name: r.GetModel(), Credential: r.GetCredential(), Thinking: r.Thinking, Effort: r.ReasoningEffort, Remember: r.GetRemember()}
+	return server.ModelSettings{Session: r.GetSessionId(), Provider: r.GetProvider(), Endpoint: r.GetEndpoint(), Name: r.GetModel(), Credential: r.GetCredential(), Thinking: r.Thinking, Effort: r.ReasoningEffort, Remember: r.GetRemember(), DefaultModel: r.GetDefaultModel()}
 }
 func wireImage(index int, image media.Metadata) *v1.ImageMetadata {
 	return &v1.ImageMetadata{Index: int32(index), Path: image.Path, Mime: image.MIME, Width: int32(image.Width), Height: int32(image.Height), Digest: image.Digest, Bytes: image.Bytes}

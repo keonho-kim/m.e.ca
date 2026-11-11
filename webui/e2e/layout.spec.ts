@@ -63,13 +63,16 @@ test('the empty composer accepts pointer typing after settings closes', async ({
   await input.pressSequentially('Pointer typing works');
   await expect(input).toHaveText('Pointer typing works');
 });
-test('work area tabs occupy a row above the project and conversation title', async ({ page }) => {
-  const tabs = await page.getByRole('tablist', { name: '작업 화면', exact: true }).boundingBox();
-  const context = await page
-    .locator('.workspace-header')
-    .getByText('alpha', { exact: true })
-    .boundingBox();
-  expect(tabs!.y + tabs!.height).toBeLessThanOrEqual(context!.y);
+test('the header contains navigation and chat content uses 80 percent of its container', async ({ page }) => {
+  const header = page.locator('.workspace-header');
+  await expect(header.getByRole('button', { name: '작업', exact: true })).toHaveCount(0);
+  await expect(header.getByRole('tablist', { name: '작업 화면', exact: true }).getByRole('tab')).toHaveCount(3);
+  await expect(header.getByText('alpha', { exact: true })).toHaveCount(0);
+  const body = await page.locator('.workspace-body').boundingBox();
+  const chat = await page.locator('.chat-content').boundingBox();
+  expect(chat!.width / body!.width).toBeCloseTo(0.8, 1);
+  const composer = await page.locator('.composer').locator('..').boundingBox();
+  expect(composer!.width / body!.width).toBeCloseTo(0.8, 1);
 });
 test('long code stays inside its document and leaves file controls reachable', async ({ page }) => {
   await openFile(page);
@@ -128,10 +131,13 @@ test('a narrow skill dialog shows a readable document and can return to its list
   await page.getByRole('button', { name: '첨부 및 스킬', exact: true }).click();
   await page.getByRole('menuitem', { name: '스킬 목록 보기', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '스킬', exact: true });
-  const frame = await dialog.boundingBox();
-  const title = await dialog.getByRole('heading', { name: '스킬', exact: true }).boundingBox();
-  expect(title!.x - frame!.x).toBeGreaterThan(8);
-  expect(title!.y - frame!.y).toBeGreaterThan(8);
+  // Measure the title and frame in one browser turn while the native dialog animates.
+  await expect.poll(() => dialog.getByRole('heading', { name: '스킬', exact: true }).evaluate((title) => {
+    const frame = title.closest('dialog,[role="dialog"]');
+    if (!frame) throw new Error('Missing skill dialog frame');
+    const outer = frame.getBoundingClientRect(), inner = title.getBoundingClientRect();
+    return Math.min(inner.x - outer.x, inner.y - outer.y);
+  })).toBeGreaterThan(8);
   await dialog
     .locator('.skill-entry')
     .filter({ hasText: 'ui-design' })
@@ -163,19 +169,14 @@ test('long queued requests leave edit and remove actions visible to a pointer', 
       expect(await hitTarget(action)).toBe(true);
     }
     await input.fill('Steer the active task');
-    await expect(page.getByRole('button', { name: '방향 수정', exact: true })).toBeEnabled();
-    await page.getByRole('button', { name: '작업', exact: true }).click();
-    const drawer = page.getByRole('dialog', { name: '작업', exact: true });
-    const running = drawer.getByRole('listitem').filter({ hasText: '실행 중' });
-    await expect(
-      running.getByRole('button', { name: 'HOLD_FIXTURE layout queue', exact: true })
-    ).toBeVisible();
-    await expect(running.getByText('실행 중', { exact: true })).toBeVisible();
-    await drawer.getByRole('button', { name: '닫기', exact: true }).click();
+    const steer = page.getByRole('button', { name: '방향 수정', exact: true });
+    await expect(steer).toBeEnabled();
+    await steer.hover();
+    await expect(page.getByRole('tooltip')).toContainText(/(?:⌘|Ctrl\+)↵/);
+    await expect(stop).toHaveCount(0);
+    await input.fill('');
+    await expect(stop).toBeVisible();
   } finally {
-    const drawer = page.getByRole('dialog', { name: '작업', exact: true });
-    if (await drawer.count())
-      await drawer.getByRole('button', { name: '닫기', exact: true }).click();
     if (await stop.count()) {
       await stop.click();
       await expect(stop).toBeHidden();

@@ -22,7 +22,7 @@ import (
 
 // Complete documents remain small enough for syntax parsing and every transport frame.
 // Larger files retain paged preview access.
-const EditorBytes = 1 << 20
+const EditorBytes = 2 << 20
 
 type Document struct {
 	Path, Text, Revision, Reason string

@@ -6,19 +6,18 @@ import type { IconEntry } from '@astryxdesign/core/Icon';
 import {
   ArrowLeft,
   BookOpen,
+  EllipsisVertical,
   File,
   Folder,
   FolderOpen,
   FolderPlus,
   ImagePlus,
-  Layers,
   ListOrdered,
   MessageSquare,
   Monitor,
   Moon,
   Package,
   PanelLeft,
-  Pause,
   Play,
   Plus,
   RefreshCw,
@@ -33,14 +32,12 @@ import {
 const iconProps = { size: '1em', 'aria-hidden': true as const };
 
 export const mecaIcons = {
-  'meca:pause': <Pause {...iconProps} />,
   'meca:play': <Play {...iconProps} />,
   'meca:file': <File {...iconProps} />,
   'meca:folder': <Folder {...iconProps} />,
   'meca:back': <ArrowLeft {...iconProps} />,
   'meca:book': <BookOpen {...iconProps} />,
   'meca:folder-open': <FolderOpen {...iconProps} />,
-  'meca:layers': <Layers {...iconProps} />,
   'meca:message': <MessageSquare {...iconProps} />,
   'meca:sidebar': <PanelLeft {...iconProps} />,
   'meca:refresh': <RefreshCw {...iconProps} />,
@@ -56,5 +53,6 @@ export const mecaIcons = {
   'meca:moon': <Moon {...iconProps} />,
   'meca:sun': <Sun {...iconProps} />,
   'meca:edit': <SquarePen {...iconProps} />,
+  'meca:file-actions': <EllipsisVertical {...iconProps} />,
   'meca:delete': <Trash2 {...iconProps} />,
 } satisfies Record<`meca:${string}`, IconEntry>;

@@ -2,7 +2,7 @@
 // Pattern: Browser-to-engine file workflow contracts.
 // Usage: Run with MECA_UI_DESCRIPTOR against the isolated embedded UI fixture.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/files/files.tsx.
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
@@ -20,7 +20,7 @@ test.beforeAll(async () => {
   await writeFile(join(fixture.projectA, filename), source);
   await mkdir(join(fixture.projectA, 'files-one', 'nested'), { recursive: true });
   await writeFile(join(fixture.projectA, 'files-one', 'nested', 'inside.txt'), 'Nested file');
-  await writeFile(join(fixture.projectA, 'large-readonly.txt'), 'bounded text\n'.repeat(100000));
+  await writeFile(join(fixture.projectA, 'large-readonly.txt'), 'bounded text\n'.repeat(200000));
 });
 test.beforeEach(async ({ page }) => {
   await page.goto(`${fixture.url}/ui/`);
@@ -130,7 +130,7 @@ test('oversized files retain bounded read-only viewing without an edit action', 
   await expect(page.locator('.file-document pre code').first()).toContainText('bounded text');
   await writeFile(
     join(fixture.projectA, 'large-readonly.txt'),
-    'Changed read-only page\n' + 'bounded text\n'.repeat(100000)
+    'Changed read-only page\n' + 'bounded text\n'.repeat(200000)
   );
   await page
     .locator('.file-document')
@@ -139,4 +139,38 @@ test('oversized files retain bounded read-only viewing without an edit action', 
   await expect(page.locator('.file-document pre code').first()).toContainText(
     'Changed read-only page'
   );
+});
+
+test('entry menus add references, rename, drag into a folder and delete', async ({ page }) => {
+  const directory = 'drag-destination';
+  const source = 'drag-source.txt';
+  const renamed = 'drag-renamed.txt';
+  await mkdir(join(fixture.projectA, directory), { recursive: true });
+  await writeFile(join(fixture.projectA, source), 'Move this file\n');
+  const listing = page.locator('.directory-column');
+  const menu = (name: string) => listing.getByRole('button', { name: `파일 작업 · ${name}`, exact: true });
+  await menu(source).click();
+  await page.getByRole('menuitem', { name: '추가하기', exact: true }).click();
+  await expect(page.locator('.composer')).toContainText(source);
+  await menu(source).click();
+  await page.getByRole('menuitem', { name: '이름 바꾸기', exact: true }).click();
+  const rename = page.getByRole('dialog', { name: '이름 바꾸기', exact: true });
+  await rename.getByRole('textbox', { name: '이름', exact: true }).fill(renamed);
+  await rename.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(menu(renamed)).toBeVisible();
+  await expect(page.locator('.composer')).toContainText(renamed);
+  const from = await listing.getByRole('button', { name: renamed, exact: true }).boundingBox();
+  const to = await listing.getByRole('button', { name: directory, exact: true }).boundingBox();
+  await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to!.x + to!.width / 2, to!.y + to!.height / 2, { steps: 15 });
+  await page.mouse.up();
+  const moved = join(fixture.projectA, directory, renamed);
+  await expect.poll(() => readFile(moved, 'utf8').catch(() => '')).toBe('Move this file\n');
+  await listing.getByRole('button', { name: directory, exact: true }).click();
+  await menu(renamed).click();
+  await page.getByRole('menuitem', { name: '삭제하기', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '삭제하기', exact: true }).click();
+  await expect.poll(() => stat(moved).then(() => true, () => false)).toBe(false);
+  await expect(page.locator('.composer')).not.toContainText(renamed);
 });

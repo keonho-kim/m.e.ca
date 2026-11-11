@@ -8,7 +8,7 @@
 
 서버의 native 계약은 contracts.go, 작업·입력 식별자는 identity.go, 접수와 제어는 tasks.go·controls.go가 소유한다. 세션은 lifecycle.go·job.go가, 완료 확인은 completion.go가, 원문 대여는 detail.go가 소유한다. 전송 형식을 명령 계층에 넣지 않는다.
 
-server/task_registry.go는 동시 실행 슬롯·세션별 단일 작업과 준비 예약, operations.go는 예약 종료까지 빌린 자원 보호와 idle 대화 정리를 소유한다. attachments.go는 임시 이미지와 만료 타이머, state_page.go는 작업별 상태 페이지와 전송 예산을 소유한다. tools/workspacegate는 준비된 효과와 실행 중 프로세스의 참조 수명 동안 작업 간 임의 파일 효과를 직렬화한다. 팀 하위 context는 같은 cohort를 공유하고 FIFO 대기는 취소 시 제거한다. serverapi/task_control.go·attachments.go는 이 유스케이스의 HTTP 어댑터다. watch.go·http.go는 동일한 커서·snapshot 계약으로 구독을 재개한다. 실행 수명을 구독 context로 옮기지 않는다.
+server/task_registry.go는 동시 실행 슬롯·세션별 단일 작업과 준비 예약, operations.go는 예약 종료까지 빌린 자원 보호와 idle 대화 정리를 소유한다. attachments.go는 임시 이미지와 만료 타이머, state_page.go는 작업별 상태 페이지와 전송 예산을 소유한다. tools/workspacegate는 프로세스 공통 효과 게이트다. server/file_effect.go가 경로가 확정된 작업의 canonical 경로를 잠금 전후에 확인한다. 겹치는 경로와 상위·하위 경로를 직렬화하고 독립된 경로는 병행한다. 준비된 에이전트 효과와 실행 중 프로세스는 전체 범위의 참조 수명을 소유한다. 팀 하위 context는 같은 cohort를 공유하고 충돌 범위의 FIFO 대기는 취소 시 제거한다. serverapi/task_control.go·attachments.go는 이 유스케이스의 HTTP 어댑터다. watch.go·http.go는 동일한 커서·snapshot 계약으로 구독을 재개한다. 실행 수명을 구독 context로 옮기지 않는다.
 
 processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 누적 응답을 보유한 채 대기하지 않는 예약을 소유한다. 이미지 픽셀·인코딩 크기를 메모리 가중치로 바꾸는 규칙은 media/imagefile/decode.go에서 계산하고 processmemory에는 바이트만 전달한다. 같은 예산·취소·반환 경계를 사용하며 추가 worker나 버퍼를 만들지 않는다.
 
@@ -131,9 +131,9 @@ agent/run의 Run은 실행 준비(start.go), 대화 입장과 정리(conversatio
 
 Git에는 제품·개발 도구의 소스, 고정 의존성 목록, 빌드 설정, 테스트 fixture와 기본 스킬 자료를 보관한다. 실행 파일·프런트 빌드 결과·테마 생성물·캐시·테스트 보고서·프로파일과 로컬 디자인 도구 상태는 [.gitignore](../.gitignore)로 제외한다. WebUI의 디자인 원본은 `webui/DESIGN.md`와 `webui/src/app/styles/theme.ts`다.
 
-제품은 [go.mod](../go.mod)의 Go 1.27.2 이상, 개발 도구는 [devtools/go.mod](../devtools/go.mod)의 Go 1.27.3 이상을 사용한다. 프로젝트 라이선스는 [Apache License 2.0](../LICENSE), 저작권 고지는 [NOTICE](../NOTICE), 외부 구성요소는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다. 관리자가 단독으로 개발·병합·배포하며 외부 코드 기여는 [기여 정책](../CONTRIBUTING.md)에 따라 받지 않는다.
+제품은 [go.mod](../go.mod)의 Go 1.27.4 이상, 개발 도구는 [devtools/go.mod](../devtools/go.mod)의 Go 1.27.4 이상을 사용한다. 프로젝트 라이선스는 [Apache License 2.0](../LICENSE), 저작권 고지는 [NOTICE](../NOTICE), 외부 구성요소는 [외부 소프트웨어 고지](../THIRD_PARTY_NOTICES.md)를 따른다. 관리자가 단독으로 개발·병합·배포하며 외부 코드 기여는 [기여 정책](../CONTRIBUTING.md)에 따라 받지 않는다.
 
-배포 의존성을 갱신할 때 macOS·Linux의 amd64·arm64 대상으로 `go list -deps -json ./cmd/meca`를 확인하고, 선택된 모듈의 LICENSE·COPYING·NOTICE·AUTHORS·PATENTS와 추가 라이선스 고지를 함께 갱신한다. Go 런타임의 라이선스도 포함한다. 개발 도구와 테스트 전용 모듈은 제품 실행 파일의 의존성 목록과 구분한다.
+배포 의존성을 갱신할 때 macOS·Linux의 amd64·arm64 대상으로 `go list -deps -json ./cmd/meca`를 확인하고, 선택된 모듈의 LICENSE·COPYING·NOTICE·AUTHORS·PATENTS와 추가 라이선스 고지를 함께 갱신한다. Go 런타임의 라이선스도 포함한다. 개발 도구와 테스트 전용 모듈은 제품 실행 파일의 의존성 목록과 구분한다. modernc.org/libc는 SQLite 드라이버가 요구하는 ABI 버전을 정확히 맞춘다. 개발 도구도 상위 도구가 검증한 전이 의존성 조합을 유지하며, 삭제된 API를 요구하는 버전으로 강제 갱신하지 않는다.
 
 | 의존성 | 용도 |
 | --- | --- |
@@ -173,7 +173,7 @@ go list -tags=tui,godbus_no_tcp -deps ./cmd/meca
 
 ### 개발 도구
 
-검증·배포 도구는 [devtools/go.mod](../devtools/go.mod)의 별도 모듈에 버전을 고정한다. 제품의 go.mod·go.sum과 의존성 해석을 분리하며 MECA 바이너리에 포함하지 않는다. 도구 실행에는 Go 1.27.3 이상이 필요하다. 다음 명령은 저장소 루트에서 실행한다. 최초 실행 시 Go가 필요한 도구를 내려받고 빌드 캐시에 저장하므로 전역 설치는 필요 없다.
+검증·배포 도구는 [devtools/go.mod](../devtools/go.mod)의 별도 모듈에 버전을 고정한다. 제품의 go.mod·go.sum과 의존성 해석을 분리하며 MECA 바이너리에 포함하지 않는다. 도구 실행에는 Go 1.27.4 이상이 필요하다. 다음 명령은 저장소 루트에서 실행한다. 최초 실행 시 Go가 필요한 도구를 내려받고 빌드 캐시에 저장하므로 전역 설치는 필요 없다.
 
 | 도구 | 역할 | 실행 |
 | --- | --- | --- |
@@ -256,6 +256,8 @@ Start는 조회 뒤 변경 상태 예약에 실패하면 이미 확정된 동일
 이벤트 조회는 보관된 연속 sequence로 시작 위치를 계산하고 필요한 페이지만 복사한다. 알림 채널은 실제 대기자가 생겼을 때 생성한다. 전송 투영의 마스킹은 구독자가 소유한 배열·선택 값만 수정하며 공통 보관 이벤트를 변경하지 않는다. 상세 조회 벤치마크는 1MiB 원문을 64KiB 페이지로 끝까지 읽는 동안의 시간·할당·원문 복원 횟수를 측정한다. 상세·파일 미리보기는 네 독립 캐시 항목과 합계 64MiB의 압축 임시 파일을 사용한다. 각 64KiB 블록의 인덱스로 페이지를 직접 읽으며 세션·source·마스킹 revision이 다른 원문은 섞지 않는다.
 
 ### 서버 데이터와 자원 소유권
+
+작업 페이지의 sessionSummary는 Service.Tasks가 요청한 세션 ID에 한해 Sessions.ConversationSummaries로 조회한다. 기존 DB/WAL 메타데이터 인덱스와 단일 읽기 연결을 재사용하고 중복 ID를 제거한다. 조회 중 공유 삭제 대여를 소유하며 오류 시 SQLite 연결을 먼저 닫아 대여보다 파일 핸들이 오래 남지 않게 한다. 제목을 작업 원장에 중복 저장하거나 대화 본문을 적재하지 않는다.
 
 신규 영속 할당은 request-owned Reservation을 받는다. 세션의 최종 link, 접수 트랜잭션 Commit, OS 키 Set 직전에 Publish로 예약을 확정한다. 그 전에 끝난 작업은 독립된 최대 5초 정리로 슬롯을 한 번 반환한다. 카운터 쓰기가 불확실하면 반환도 반복하지 않는다. 프로세스 중단·게시 시도 후 오류·은퇴 키의 예약은 자동 재조정하지 않는다. 할당 90%부터 중앙 storage_capacity_low에 count·limit을 남긴다. allocated를 임의로 삭제/재설정하거나 백업 키를 일괄 삭제하지 않는다. 임의 시점의 DB 백업 보존과 과거 OS 키의 자동 회수는 함께 보장할 수 없으므로 보존 정책 변경은 별도 운영 결정이다.
 
@@ -622,7 +624,7 @@ bun run --cwd webui verify
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```
 
-고정 npm 버전은 webui/package.json, 전이 의존성은 bun.lock이 소유한다. 변경 후 frozen 설치·타입·상태 테스트와 빌드를 확인한다. build-ui.sh는 의존성 설치 script를 실행하지 않는다. package.ts는 dist를 해시별 gzip 한 사본과 manifest로 바꾸며 internal/webui/assets의 생성물은 Git에 넣지 않는다. assets/README.txt만으로 Go 소스 빌드는 가능하지만 실제 UI bundle이 없으면 --ui가 명시적으로 실패한다. 배포와 소스 설치는 UI부터 빌드한다.
+고정 npm 버전은 webui/package.json, 전이 의존성은 bun.lock이 소유한다. 변경 후 frozen 설치·타입·상태 테스트와 빌드를 확인한다. build-ui.sh는 의존성 설치 script를 실행하지 않는다. package.ts는 Go 표준 라이브러리의 devtools/cmd/uiassets를 호출한다. 각 자산의 gzip 한 사본과 manifest를 무압축 ZIP Store로 묶고 internal/webui/bundle_generated.go 한 파일을 원자적으로 교체한다. 실행 파일의 불변 문자열을 ZIP reader가 직접 읽어 bundle 전체를 힙에 복제하지 않는다. 변경 없는 자산은 webui/.cache/assets의 gzip을 검증해 재사용하고 이전 해시를 회수한다. 동일 bundle은 생성 Go 파일도 다시 쓰지 않는다. 생성물과 캐시는 Git에 넣지 않는다. 생성 파일이 없는 소스 checkout도 Go 빌드는 가능하며 --ui만 명시적으로 실패한다. 배포와 소스 설치는 UI부터 빌드한다. 패키저는 go -C devtools test -race ./cmd/uiassets로 재현성·캐시 손상·발행 실패·동시 읽기를 확인한다.
 
 TypeScript 개발 검사는 다음처럼 책임을 나눈다. 모두 개발 의존성이며 배포 번들에는 포함하지 않는다.
 
@@ -638,7 +640,7 @@ TypeScript 개발 검사는 다음처럼 책임을 나눈다. 모두 개발 의�
 
 [Knip](https://knip.dev/reference/configuration)의 진입점은 앱, Astryx 테마 입력, 테스트, 배포 스크립트와 도구 설정이다. 생성한 wire 타입·테마는 제외한다. 시스템 `protoc`와 그 `--plugin`으로 실행되는 `@bufbuild/protoc-gen-es`만 실행 파일·의존성 탐지의 명시적 예외로 둔다. 결과를 자동 삭제 명령으로 적용하지 않고 런타임 진입점·생성 경로·테스트 사용을 검토한다. 정적 검사는 누수나 실제 응답 속도를 보장하지 않는다. 성능 변경은 브라우저 프로파일과 재현 가능한 측정으로 확인한다.
 
-notices.ts는 실제 번들의 라이선스를 텍스트로 포함하며 CSS로 사용한 Tailwind의 고지도 포함한다. npm에서 생략된 upstream 원문은 webui/licenses에서 버전별 fallback으로 관리한다. Astryx Core canary의 fallback은 upstream main에서 확보한 MIT 원문이며 정확한 commit의 스냅샷이라고 간주하지 않는다. 빌드 시 필요한 라이선스가 없으면 실패한다. 제품 모듈은 Go 의존성을, devtools는 Go 개발 도구를, webui는 브라우저와 프론트 개발 의존성을 각각 소유한다.
+notices.ts는 실제 번들의 라이선스를 텍스트로 포함하며 CSS로 사용한 Tailwind의 고지도 포함한다. npm에서 생략된 upstream 원문은 webui/licenses에서 버전별 fallback으로 관리한다. Astryx Core의 fallback은 해당 배포의 소스 commit에 고정한 MIT 원문이다. 빌드 시 필요한 라이선스가 없으면 실패한다. 제품 모듈은 Go 의존성을, devtools는 Go 개발 도구를, webui는 브라우저와 프론트 개발 의존성을 각각 소유한다.
 
 프로토콜을 바꾸면 저장소의 Go 생성 코드와 TypeScript JSON 타입을 함께 갱신한다. .proto가 원본이며 TS wire 타입을 수동으로 복제하지 않는다. 다음 TS 생성 명령은 시스템 `protoc`가 별도로 필요하다.
 
@@ -646,21 +648,23 @@ notices.ts는 실제 번들의 라이선스를 텍스트로 포함하며 CSS로 
 bun run --cwd webui generate:api
 ```
 
-파일과 수명은 실제 경계로 나눈다. API·submission·followups·stream은 HTTP, 안정된 접수, 후속 예약과 관찰을 소유한다. store·stream-state는 제한된 화면 상태를, queries는 서버 캐시를 소유한다. chat·history-row·live-output은 배치·저장 이력·실시간 출력을 분리하되, 실시간 출력도 ChatMessageList 안에 두어 Astryx가 내용 높이와 자동 스크롤을 함께 관찰하게 한다. files·file-document·editor는 탐색·문서 전이·Astryx Lab CodeEditor 수명을 분리한다. 설정·모델 폼은 해당 대화와 전역 설정의 범위를 표시한다. 문구는 i18n.ts, 실패 표시는 errors.ts가 소유한다.
+파일과 수명은 실제 경계로 나눈다. API·submission·followups·stream은 HTTP, 안정된 접수, 후속 예약과 관찰을 소유한다. store·stream-state는 제한된 화면 상태를, queries는 서버 캐시를 소유한다. chat·history-row·live-output은 배치·저장 이력·실시간 출력을 분리하되, 실시간 출력도 ChatMessageList 안에 두어 Astryx가 내용 높이와 자동 스크롤을 함께 관찰하게 한다. files·file-document·editor는 탐색·문서 전이·기본 편집기와 문법 강조 수명을 분리한다. 모델 폼은 전역 기본 연결을 편집하고 팀 설정은 대상 대화에 연결한다. 문구는 i18n.ts, 실패 표시는 errors.ts가 소유한다.
 
-workspace-toolbar는 탐색 탭과 프로젝트·대화 문맥을 별도 행으로 배치하고 composer-actions는 입력 액션의 Astryx 표현을 소유한다. attachment-menu는 +의 선택 목록과 수명을 유지하는 이미지 FileInput을, composer-images는 독립된 Carousel·Thumbnail과 File별 미리보기 URL 수명을, queue-editor는 열려 있는 예약 편집 본문을, skill-picker·skill-list는 스킬 모달과 가상화한 메타데이터 목록을 소유한다. 좁은 창의 스킬 목록·본문 선택과 검색어는 Skills가 유지한다. Files는 오른쪽 현재 폴더 목록 하나와 탐색 이력을 소유한다. file-header는 제목·저장 액션·Preview/Raw 표현만 다루며 file-document는 선택 시 한 번의 editorRead·revision·저장·현재 초안 미리보기와 읽기 전용 페이지를 소유한다. 미리보기 클릭은 Astryx useClickableContainer로 중첩 컨트롤·텍스트 선택을 보존하며 Raw로 전환한다. 미리보기 중 편집기를 유지하고 Raw 복귀 시 추가 문자열 참조와 Markdown AST를 해제한다. 읽기·저장은 문서 수명에 연결한 AbortController로 종료한다. fileview는 편집 한도를 넘는 파일을 메타데이터로 분류하며, 편집 가능한 본문은 확인한 크기와 변경 감지용 한 바이트에 맞춰 읽는다. model-candidates는 설정 초안 한 건의 취소 가능한 모델 조회를 소유하며 Astryx의 비동기 검색 소스가 결과를 기다린다.
+workspace-toolbar는 탐색 탭과 프로젝트·대화 문맥을 별도 행으로 배치하고 composer-actions는 입력 액션의 Astryx 표현을 소유한다. attachment-menu는 +의 선택 목록과 수명을 유지하는 이미지 FileInput을, composer-images는 독립된 Carousel·Thumbnail과 File별 미리보기 URL 수명을, queue-editor는 열려 있는 예약 편집 본문을, skill-picker·skill-list는 스킬 모달과 가상화한 메타데이터 목록을 소유한다. 좁은 창의 스킬 목록·본문 선택과 검색어는 Skills가 유지한다. Files는 오른쪽 현재 폴더 목록 하나와 탐색 이력을 소유한다. file-header는 제목·저장 액션·Preview/Raw 표현만 다루며 FileDocument는 표시 모드와 확인 창을 소유하고 model/file-document가 선택 시 한 번의 editorRead·revision·저장·취소 수명을 소유한다. model/file-preview는 읽기 전용 페이지를, file-preview는 본문과 하단 페이지 액션의 표현을 소유한다. 미리보기 클릭은 Astryx useClickableContainer로 중첩 컨트롤·텍스트 선택을 보존하며 Raw로 전환한다. 미리보기 중 편집기를 유지하고 Raw 복귀 시 추가 문자열 참조와 Markdown AST를 해제한다. 읽기·저장은 문서 수명에 연결한 AbortController로 종료한다. fileview는 편집 한도를 넘는 파일을 메타데이터로 분류하며, 편집 가능한 본문은 확인한 크기와 변경 감지용 한 바이트에 맞춰 읽는다. model-candidates는 설정 초안 한 건의 취소 가능한 모델 조회를 소유하며 Astryx의 비동기 검색 소스가 결과를 기다린다.
 
-작업 페이지의 sessionSummary는 Service.Tasks가 요청한 세션 ID에 한해 Sessions.ConversationSummaries로 조회한다. 기존 DB/WAL 메타데이터 인덱스와 단일 읽기 연결을 재사용하고 중복 ID를 제거한다. 조회 중 공유 삭제 대여를 소유하며 오류 시 SQLite 연결을 먼저 닫아 대여보다 파일 핸들이 오래 남지 않게 한다. 제목을 작업 원장에 중복 저장하거나 대화 본문을 적재하지 않는다.
-
-appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·Lab·CLI는 같은 canary 버전으로 고정한다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
+appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·CLI는 같은 안정 버전으로 고정하고 Lab은 사용하지 않는다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
 
 일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수와 레코드별 합계를 WeakMap으로 재사용하고 전체 사용량은 변경분으로 갱신한다. 합계 캐시가 과거 입력·큐 레코드를 강하게 보유하지 않아 삭제·로그아웃 직후 원본 참조를 회수할 수 있다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다. 첨부 미리보기는 File별로 URL 하나를 소유하고 입력 타이핑에 재생성하지 않으며 삭제·화면 종료 시 revoke한다. 미리보기는 원본을 Base64나 별도 저장소에 복제하지 않는다. 알려진 임시 업로드는 불확실한 제출을 제거할 때 해제하고 해제 HTTP는 5초로 제한하며 불필요한 응답 본문을 취소한다. 입력 TUI의 이미지 표시는 읽기 전용 접두사로 투영하고 실제 전송 본문·편집 revision에 넣지 않는다.
 
+세션 사용량은 append-only tool_events의 검증된 합계와 마지막 usage sequence만 보관하고 새 꼬리만 집계한다. Sessions는 DB 파일 identity에 연결된 최근 128개 projection을 재사용하며 DB handle·이벤트 본문을 보관하지 않는다. 최초 조회는 전체 검증을 수행하고 실패한 꼬리는 커서를 전진시키지 않는다. DB 교체·삭제는 해당 projection의 재사용을 막는다.
+
 현재 대화 이력은 구간별 네 페이지를 유지하고 더 오래된 구간과 최신 구간으로 이동한다. 새 기록과 재접속은 최신 구간을 갱신한다. 각 페이지의 서버 순서를 재사용하며, 스트림 상태가 저장 이력의 조회 revision을 확인한 뒤 교체된 초안을 해제한다. 대화·디렉터리·스킬·예약 목록은 가상화하며 포커스 또는 편집 중인 행은 유지한다. 대화/스킬 목록은 최대 네 페이지를 보관하고 목록 처음으로 복귀할 수 있다. 디렉터리는 revision에 고정된 앞/뒤 네 페이지를 사용한다. 비활성 서버 데이터는 최근 12개와 추정 UTF-16/Blob 16MiB 예산을 함께 적용한다. 기본 GC는 60초이며 대화 목록·디렉터리·썸네일은 15초다. 캐시 회수는 관련 질의의 성공·마지막 관찰 해제 때만 수행한다. 스크롤 위치도 최근 12개로 제한한다.
 
-스트림이 표시를 갱신할 때 Astryx의 증분 파서를 사용하며 공개 AST transform으로 표시 노드를 1,024개 이내로 제한한다. 새 텍스트가 500ms 동안 오지 않으면 도착한 본문까지 표시하고 문자 애니메이션을 종료한다. 스트림 중지·연결 복구 동안에는 현재 화면에 전달된 본문을 확정한다. 접은 Thinking은 Markdown을 해제하며 전체 텍스트와 실행 정보는 팝오버가 열린 동안만 본문을 마운트한다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집기는 64KiB 또는 2,000줄을 넘으면 줄 번호 DOM을 만들지 않고 native 문법 강조·편집·revision 저장은 유지한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
+스트림이 표시를 갱신할 때 Astryx의 증분 파서를 사용하며 공개 AST transform으로 표시 노드를 1,024개 이내로 제한한다. 새 텍스트가 500ms 동안 오지 않으면 도착한 본문까지 표시하고 문자 애니메이션을 종료한다. 스트림 연결 복구 동안에는 현재 화면에 전달된 본문을 확정한다. 접은 Thinking은 Markdown을 해제한다. 컴포저 아래 실행 상태는 현재 요청의 시간과 처리량을 표시하고, 누적 토큰 조회는 사용량 이벤트·요청 완료·재연결 snapshot에서 갱신한다. 대화 삭제 시 사용량 캐시도 회수한다. 상태 조회의 진행 중 네트워크 요청은 공유하며 live 본문은 query 캐시에 저장하지 않는다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집 입력은 capabilities.editorBytes의 2MiB UTF-8 예산을 따른다. 편집기는 작은 문서만 textarea와 plain pre를 겹치고 큰 문서는 같은 라이브러리의 고정 높이 textarea로 표시한다. 줄 번호나 토큰 DOM은 만들지 않는다. 문법 강조는 65,536 UTF-16 code unit·2,000줄·줄당 8,192 code unit·4,096개 Range 이내로 제한하며 초과해도 원문 편집·revision 저장은 유지한다. 강조는 80ms 동안 입력을 합치며 IME 조합 중에는 분석하지 않는다. Astryx tokenizeStreaming의 배치마다 4,096개 토큰 예산을 확인하고 초과 시 분석을 중단한다. 작업은 취소 가능하고 Preview 전환·문서 종료 때 Range를 제거한다. undo 본문은 추정 UTF-16 8MiB, 메타데이터는 라이브러리의 100개 기록으로 제한한다. 현재 위치는 유지하며 예산 내에서 초기·저장 경계와 조합 단위 이력을 보관한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
 
-이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유한다. 스냅샷을 적용하면 이전 cursor의 대기 델타를 폐기하고, 스냅샷 본문과 활동은 스트림 상태에 넘긴 뒤 Query에는 메타데이터를 보관한다. 발신자가 섞인 텍스트도 소스별로 합치며 제어·통계·리셋의 순서를 보존한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 작업 목록은 스트림이 정상일 때 주기적으로 재조회하지 않고 중단·복구 중에만 분산 polling을 사용한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
+react-simple-code-editor의 고정 버전은 Bun patchedDependencies로 적용한 패치를 사용한다. 패치가 배포 원본의 ESM 진입점을 지정하므로 Vite에 패키지 내부 경로 alias를 두지 않는다. 입력 승인·IME 트랜잭션·명시적 이력 묶음 경계·고정 높이 모드는 라이브러리 경계에서 처리한다. 타이핑 병합과 Enter는 문서 앞부분을 split하지 않고 현재 줄만 찾는다. 붙여넣기와 대량 beforeinput은 하나의 값 교체로 처리해 브라우저의 줄별 대량 삽입을 피한다. Preview는 이력을 바꾸지 않는 text()로 조회하고 capture()만 저장 경계를 확정한다. dirty 값이 달라질 때만 전역 스토어에 전달하며 같은 표시 패치는 구독 알림을 발생시키지 않는다. 저장 응답이 늦어도 이후 편집을 미저장 상태로 유지한다. 문법 강조는 HTML 문자열을 삽입하지 않는다. 키보드 undo/redo는 편집기 자체 이력을 사용하며 브라우저 우클릭 메뉴의 undo/redo는 지원하지 않는다.
+
+이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유한다. 스냅샷을 적용하면 이전 cursor의 대기 델타를 폐기하고, 스냅샷 본문과 활동은 스트림 상태에 넘긴 뒤 Query에는 메타데이터를 보관한다. 발신자가 섞인 텍스트도 소스별로 합치며 제어·통계·리셋의 순서를 보존한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
 
 이미지 목록은 인증된 256px PNG 썸네일을 사용하고 원본은 사용자가 열 때 요청한다. 작은 Blob 캐시와 object URL은 각각 Query와 컴포넌트가 소유하며 해제·로그아웃·삭제 시 정리한다. 서버는 원본의 현재 메타데이터·DB/WAL 변경 상태를 확인한 뒤 썸네일 캐시를 이용하며 원본 다운로드와 픽셀 디코딩에는 별도 바이트 예산을 적용한다. 카메라 EXIF 방향은 축소한 픽셀에 반영한다. 배포 자산은 gzip 한 사본을 유지하고 API JSON 응답만 크기에 따라 재사용 압축기로 처리한다.
 
@@ -676,4 +680,4 @@ bun run --cwd webui browser -- -s=meca-ui open http://127.0.0.1:8787/ui/ --brows
 
 자동 검증은 실제 설치된 Chrome을 사용한다. 수동 Playwright CLI에는 연결 파일에 기록된 실제 URL을 사용한다. 토큰을 CLI 인자·URL·스크린샷 설명·브라우저 trace에 남기지 않는다. 테스트 trace는 꺼져 있다. 검증 후 connection.json.stop 파일을 만들면 fixture와 소유한 작업이 종료되고 임시 HOME이 제거된다. 파일이 없으면 45분 뒤 종료한다. 본 프로세스의 종료와 `connection.json` 제거까지 확인한다.
 
-검증 항목은 작업공간/대화의 동시 실행·전환, 중지와 스트림 정지/재연결, 후속 예약의 단일 실행, 설정/언어/테마, 스킬과 참조, 편집/충돌, 이미지의 인증 조회, 승인, 긴 이력의 최신 복귀다. 실제 화면은 Playwright CLI로 데스크톱·좁은 화면·라이트/다크를 함께 확인한다. Go 테스트는 HTTP 인증/CSRF·새 native 명령·파일 저장/감시·삭제 잠금·작업공간 수명을 검증하며 동시성 변경에는 race 검사를 추가한다.
+검증 항목은 작업공간/대화의 동시 실행·전환, 작업 중지와 스트림 재연결, 후속 예약의 단일 실행, 설정/언어/테마, 스킬과 참조, 편집/충돌, 이미지의 인증 조회, 승인, 긴 이력의 최신 복귀다. 실제 화면은 Playwright CLI로 데스크톱·좁은 화면·라이트/다크를 함께 확인한다. Go 테스트는 HTTP 인증/CSRF·새 native 명령·파일 저장/감시·삭제 잠금·작업공간 수명을 검증하며 동시성 변경에는 race 검사를 추가한다.

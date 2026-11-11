@@ -11,7 +11,6 @@ import (
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
-	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
 type editor interface {
@@ -40,13 +39,7 @@ func (s *Service) Editor(ctx context.Context, path, text, revision string, save 
 	if !save {
 		return files.Edit(ctx, settings, path)
 	}
-	gate := s.options.Effects
-	if gate == nil {
-		gate = &s.workspace
-	}
-	ctx, end := workspacegate.Bind(ctx, gate)
-	defer end()
-	release, err := workspacegate.Acquire(ctx)
+	ctx, release, err := s.beginFileEffect(ctx, settings, path)
 	if err != nil {
 		return fileview.Document{}, err
 	}

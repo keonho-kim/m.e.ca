@@ -192,7 +192,11 @@ test('removing an uncertain image request releases its known staged uploads', as
 
 test('an upload completed after cancellation is released without starting a task', async () => {
   const received = deferred<{ id: string }>();
-  const staging = spyOn(api, 'upload').mockImplementation(() => received.promise);
+  const uploading = deferred<void>();
+  const staging = spyOn(api, 'upload').mockImplementation(() => {
+    uploading.resolve();
+    return received.promise;
+  });
   const releasing = spyOn(api, 'releaseUpload').mockResolvedValue(undefined);
   try {
     invoke.mockResolvedValue({ task: { id: 'should-not-start', status: 'running' } });
@@ -201,6 +205,7 @@ test('an upload completed after cancellation is released without starting a task
       ...input('Image'),
       files: [new File(['pixels'], 'screen.png', { type: 'image/png' })],
     });
+    await uploading.promise;
     clearPendingTarget(target);
     received.resolve({ id: 'img_late' });
     expect(await sending).toBe(false);

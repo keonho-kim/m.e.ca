@@ -55,6 +55,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
+	inheritsModel := selected.Model == ""
 	selected, err = serverSelection(selected, cfg.Model)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault), TeamEnabled: team,
+	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault), TeamEnabled: team, InheritsModel: inheritsModel,
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working

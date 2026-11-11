@@ -109,6 +109,8 @@ type Command struct {
 	//	*Command_LookupRequest
 	//	*Command_SuggestSkills
 	//	*Command_CreateFolder
+	//	*Command_MutateFile
+	//	*Command_SessionUsage
 	Operation     isCommand_Operation `protobuf_oneof:"operation"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -525,6 +527,24 @@ func (x *Command) GetCreateFolder() *CreateFolder {
 	return nil
 }
 
+func (x *Command) GetMutateFile() *FileMutation {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_MutateFile); ok {
+			return x.MutateFile
+		}
+	}
+	return nil
+}
+
+func (x *Command) GetSessionUsage() *SessionTarget {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_SessionUsage); ok {
+			return x.SessionUsage
+		}
+	}
+	return nil
+}
+
 type isCommand_Operation interface {
 	isCommand_Operation()
 }
@@ -689,6 +709,14 @@ type Command_CreateFolder struct {
 	CreateFolder *CreateFolder `protobuf:"bytes,49,opt,name=create_folder,json=createFolder,proto3,oneof"`
 }
 
+type Command_MutateFile struct {
+	MutateFile *FileMutation `protobuf:"bytes,50,opt,name=mutate_file,json=mutateFile,proto3,oneof"`
+}
+
+type Command_SessionUsage struct {
+	SessionUsage *SessionTarget `protobuf:"bytes,51,opt,name=session_usage,json=sessionUsage,proto3,oneof"`
+}
+
 func (*Command_ListSessions) isCommand_Operation() {}
 
 func (*Command_SelectSession) isCommand_Operation() {}
@@ -768,6 +796,10 @@ func (*Command_LookupRequest) isCommand_Operation() {}
 func (*Command_SuggestSkills) isCommand_Operation() {}
 
 func (*Command_CreateFolder) isCommand_Operation() {}
+
+func (*Command_MutateFile) isCommand_Operation() {}
+
+func (*Command_SessionUsage) isCommand_Operation() {}
 
 type SelectSession struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1126,8 +1158,10 @@ type ModelRequest struct {
 	ReasoningEffort *string `protobuf:"bytes,6,opt,name=reasoning_effort,json=reasoningEffort,proto3,oneof" json:"reasoning_effort,omitempty"`
 	Remember        bool    `protobuf:"varint,7,opt,name=remember,proto3" json:"remember,omitempty"`
 	SessionId       string  `protobuf:"bytes,8,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Explicitly updates the global default. Mutually exclusive with session_id.
+	DefaultModel  bool `protobuf:"varint,9,opt,name=default_model,json=defaultModel,proto3" json:"default_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ModelRequest) Reset() {
@@ -1214,6 +1248,13 @@ func (x *ModelRequest) GetSessionId() string {
 		return x.SessionId
 	}
 	return ""
+}
+
+func (x *ModelRequest) GetDefaultModel() bool {
+	if x != nil {
+		return x.DefaultModel
+	}
+	return false
 }
 
 type SettingsRequest struct {
@@ -1697,7 +1738,7 @@ var File_meca_v1_control_proto protoreflect.FileDescriptor
 const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
 	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"\a\n" +
-	"\x05Empty\"\xda\x12\n" +
+	"\x05Empty\"\xd3\x13\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12B\n" +
@@ -1748,7 +1789,10 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\x0ebrowse_folders\x18. \x01(\v2\x19.meca.v1.WorkspaceRequestH\x00R\rbrowseFolders\x12?\n" +
 	"\x0elookup_request\x18/ \x01(\v2\x16.meca.v1.RequestLookupH\x00R\rlookupRequest\x12=\n" +
 	"\x0esuggest_skills\x180 \x01(\v2\x14.meca.v1.SkillPrefixH\x00R\rsuggestSkills\x12<\n" +
-	"\rcreate_folder\x181 \x01(\v2\x15.meca.v1.CreateFolderH\x00R\fcreateFolderB\v\n" +
+	"\rcreate_folder\x181 \x01(\v2\x15.meca.v1.CreateFolderH\x00R\fcreateFolder\x128\n" +
+	"\vmutate_file\x182 \x01(\v2\x15.meca.v1.FileMutationH\x00R\n" +
+	"mutateFile\x12=\n" +
+	"\rsession_usage\x183 \x01(\v2\x16.meca.v1.SessionTargetH\x00R\fsessionUsageB\v\n" +
 	"\toperation\"F\n" +
 	"\rSelectSession\x12\x1d\n" +
 	"\n" +
@@ -1776,7 +1820,7 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x06 \x01(\tR\tsessionId\x12\x1a\n" +
 	"\brevision\x18\a \x01(\tR\brevisionB\b\n" +
-	"\x06source\"\xaa\x02\n" +
+	"\x06source\"\xcf\x02\n" +
 	"\fModelRequest\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x1a\n" +
 	"\bendpoint\x18\x02 \x01(\tR\bendpoint\x12\x14\n" +
@@ -1788,7 +1832,8 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\x10reasoning_effort\x18\x06 \x01(\tH\x01R\x0freasoningEffort\x88\x01\x01\x12\x1a\n" +
 	"\bremember\x18\a \x01(\bR\bremember\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\b \x01(\tR\tsessionIdB\v\n" +
+	"session_id\x18\b \x01(\tR\tsessionId\x12#\n" +
+	"\rdefault_model\x18\t \x01(\bR\fdefaultModelB\v\n" +
 	"\t_thinkingB\x13\n" +
 	"\x11_reasoning_effort\"\xb4\x01\n" +
 	"\x0fSettingsRequest\x12#\n" +
@@ -1878,6 +1923,7 @@ var file_meca_v1_control_proto_goTypes = []any{
 	(*RequestLookup)(nil),      // 31: meca.v1.RequestLookup
 	(*SkillPrefix)(nil),        // 32: meca.v1.SkillPrefix
 	(*CreateFolder)(nil),       // 33: meca.v1.CreateFolder
+	(*FileMutation)(nil),       // 34: meca.v1.FileMutation
 }
 var file_meca_v1_control_proto_depIdxs = []int32{
 	3,  // 0: meca.v1.Command.list_sessions:type_name -> meca.v1.SessionListRequest
@@ -1920,15 +1966,17 @@ var file_meca_v1_control_proto_depIdxs = []int32{
 	31, // 37: meca.v1.Command.lookup_request:type_name -> meca.v1.RequestLookup
 	32, // 38: meca.v1.Command.suggest_skills:type_name -> meca.v1.SkillPrefix
 	33, // 39: meca.v1.Command.create_folder:type_name -> meca.v1.CreateFolder
-	5,  // 40: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
-	1,  // 41: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
-	13, // 42: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
-	0,  // 43: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
-	44, // [44:44] is the sub-list for method output_type
-	44, // [44:44] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	34, // 40: meca.v1.Command.mutate_file:type_name -> meca.v1.FileMutation
+	15, // 41: meca.v1.Command.session_usage:type_name -> meca.v1.SessionTarget
+	5,  // 42: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
+	1,  // 43: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
+	13, // 44: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
+	0,  // 45: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
+	46, // [46:46] is the sub-list for method output_type
+	46, // [46:46] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_control_proto_init() }
@@ -1980,6 +2028,8 @@ func file_meca_v1_control_proto_init() {
 		(*Command_LookupRequest)(nil),
 		(*Command_SuggestSkills)(nil),
 		(*Command_CreateFolder)(nil),
+		(*Command_MutateFile)(nil),
+		(*Command_SessionUsage)(nil),
 	}
 	file_meca_v1_control_proto_msgTypes[6].OneofWrappers = []any{
 		(*DetailRequest_Tool)(nil),

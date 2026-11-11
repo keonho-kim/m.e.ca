@@ -32,7 +32,12 @@ export const Thinking = memo(function Thinking({
     >
       {open && (
         <>
-          <MarkdownText text={text} streaming={streaming} tone="thinking" />
+          <MarkdownText
+            text={text}
+            streaming={streaming}
+            tone="thinking"
+            showCompleteText={false}
+          />
           {children}
         </>
       )}

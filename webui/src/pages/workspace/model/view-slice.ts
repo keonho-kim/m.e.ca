@@ -12,8 +12,6 @@ type ViewSlice = Pick<
   | 'mode'
   | 'folder'
   | 'picker'
-  | 'tasksOpen'
-  | 'paused'
   | 'streamStatus'
   | 'reviewTarget'
   | 'removedTarget'
@@ -26,12 +24,15 @@ export const createViewSlice: StateCreator<WorkspaceState, [], [], ViewSlice> = 
   mode: 'chat',
   folder: '.',
   picker: false,
-  tasksOpen: false,
-  paused: false,
   streamStatus: 'connecting',
   reviewTarget: null,
   removedTarget: null,
   settings: null,
   fileDirty: false,
-  set,
+  set: (patch) =>
+    set((state) => {
+      for (const key of Object.keys(patch) as (keyof WorkspaceState)[])
+        if (!Object.is(state[key], patch[key])) return patch;
+      return state;
+    }),
 });

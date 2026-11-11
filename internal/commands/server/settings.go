@@ -81,6 +81,12 @@ func (s *Service) Configure(ctx context.Context, session string, permission *str
 }
 
 func (s *Service) SetModel(ctx context.Context, value ModelSettings) (Snapshot, error) {
+	if value.DefaultModel {
+		if value.Session != "" || value.Remember {
+			return Snapshot{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChangeExactlyOneSettingPerCommand)
+		}
+		return s.setDefaultModel(ctx, value)
+	}
 	change, err := s.beginTargetChange(ctx, value.Session)
 	if err != nil {
 		return Snapshot{}, err
@@ -102,21 +108,19 @@ func (s *Service) selectModel(change sessionChange, value ModelSettings) error {
 	if c.Models == nil || c.Runtime.Vault == nil {
 		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerSessionModelPersistenceIsUnavailable)
 	}
-	if len(value.Credential) > 2048 || strings.ContainsAny(value.Credential, "\r\n\x00") {
-		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidCredential)
+	credential, err := parseModelCredential(value.Credential)
+	if err != nil {
+		return err
 	}
-	value.Credential = strings.Trim(value.Credential, " \t")
+	value.Credential = credential
 	if err := c.Runtime.Vault.Remember(value.Credential); err != nil {
 		return err
 	}
-	selected, err := (config.SavedModel{Provider: connection.ProviderKind(value.Provider), Endpoint: value.Endpoint, Name: value.Name, Thinking: value.Thinking, ReasoningEffort: value.Effort}).Selection()
+	previousSelection, err := c.modelSelection(change.config.Model)
 	if err != nil {
-		return faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
+		return err
 	}
-	if value.Credential == "" && c.Runtime.Selection.Connection.ID == selected.Connection.ID {
-		selected.Connection.CredentialRef = c.Runtime.Selection.Connection.CredentialRef
-	}
-	prepared, err := s.options.PrepareModel(change.ctx, selected, value.Credential, setup.Defaults{ContextLength: change.config.ContextLength, Thinking: change.config.Thinking})
+	prepared, err := s.prepareModelChange(change.ctx, change.config, value, previousSelection)
 	if err != nil {
 		return err
 	}
@@ -146,6 +150,7 @@ func (s *Service) selectModel(change sessionChange, value ModelSettings) error {
 			s.mu.Lock()
 			previous := c.Model
 			c.Model, c.Runtime.Selection = nil, connection.Selection{}
+			c.InheritsModel = false
 			s.publish(Event{Session: c.Runtime.Session.ID, Record: eventKind("model_unavailable")})
 			s.mu.Unlock()
 			previous.Close()
@@ -153,14 +158,48 @@ func (s *Service) selectModel(change sessionChange, value ModelSettings) error {
 		return err
 	}
 	s.mu.Lock()
-	previous := c.Model
-	c.Runtime.Selection, c.Model = committed.Selection, conversationruntime.NewModel(prepared.Generator, prepared.Close)
+	c.InheritsModel = false
 	if value.Remember && committed.DefaultError == nil {
 		s.options.Config = next
+		s.publish(Event{Record: eventKind("settings_changed")})
 	}
-	s.publish(Event{Session: c.Runtime.Session.ID, Record: eventKind("model_changed")})
+	previous := s.installModel(c, prepared, committed.Selection)
 	s.mu.Unlock()
 	adopted = true
 	previous.Close()
 	return committed.DefaultError
+}
+
+func parseModelCredential(value string) (string, error) {
+	if len(value) > 2048 || strings.ContainsAny(value, "\r\n\x00") {
+		return "", faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerInvalidCredential)
+	}
+	return strings.Trim(value, " \t"), nil
+}
+
+func (value ModelSettings) selection() (connection.Selection, error) {
+	return (config.SavedModel{Provider: connection.ProviderKind(value.Provider), Endpoint: value.Endpoint, Name: value.Name, Thinking: value.Thinking, ReasoningEffort: value.Effort}).Selection()
+}
+
+func (s *Service) prepareModelChange(ctx context.Context, cfg config.Config, value ModelSettings, previous connection.Selection) (PreparedModel, error) {
+	selected, err := value.selection()
+	if err != nil {
+		return PreparedModel{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.WrappedCause, err)
+	}
+	if value.Credential == "" && previous.Connection.ID == selected.Connection.ID {
+		selected.Connection.CredentialRef = previous.Connection.CredentialRef
+	}
+	return s.options.PrepareModel(ctx, selected, value.Credential, modelDefaults(cfg))
+}
+
+func modelDefaults(cfg config.Config) setup.Defaults {
+	return setup.Defaults{ContextLength: cfg.ContextLength, Thinking: cfg.Thinking}
+}
+
+// installModel transfers a prepared client while the caller holds s.mu.
+func (s *Service) installModel(c *Conversation, prepared PreparedModel, selected connection.Selection) *conversationruntime.Model {
+	previous := c.Model
+	c.Runtime.Selection, c.Model = selected, conversationruntime.NewModel(prepared.Generator, prepared.Close)
+	s.publish(Event{Session: c.Runtime.Session.ID, Record: eventKind("model_changed")})
+	return previous
 }

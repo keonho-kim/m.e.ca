@@ -1,12 +1,11 @@
 // Purpose: Serve immutable precompressed frontend assets directly from the executable.
 // Pattern: Embedded HTTP adapter.
 // Usage: Server startup constructs this handler only for --server --ui.
-// Related: webui/scripts/package.ts, internal/httpencoding/accept.go.
+// Related: internal/webui/bundle.go, devtools/cmd/uiassets/bundle.go, internal/httpencoding/accept.go.
 package webui
 
 import (
 	"compress/gzip"
-	"embed"
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/httpencoding"
 	"io"
@@ -21,9 +20,6 @@ import (
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-//go:embed assets
-var bundle embed.FS
-
 type Asset struct {
 	File  string `json:"file"`
 	Type  string `json:"type"`
@@ -36,7 +32,7 @@ type Handler struct {
 }
 
 func New() (http.Handler, error) {
-	files, err := fs.Sub(bundle, "assets")
+	files, err := bundledFiles()
 	if err != nil {
 		return nil, err
 	}

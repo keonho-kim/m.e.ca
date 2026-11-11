@@ -25,6 +25,8 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 	var thinkingOnce sync.Once
 	expandStream := make(chan struct{})
 	var expandOnce sync.Once
+	expandThinking, finishThinking := make(chan struct{}), make(chan struct{})
+	var expandThinkingOnce, finishThinkingOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/test/release" {
 			once.Do(func() { close(release) })
@@ -38,6 +40,16 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 		}
 		if r.URL.Path == "/test/expand-stream" {
 			expandOnce.Do(func() { close(expandStream) })
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.URL.Path == "/test/expand-thinking" {
+			expandThinkingOnce.Do(func() { close(expandThinking) })
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.URL.Path == "/test/finish-thinking" {
+			finishThinkingOnce.Do(func() { close(finishThinking) })
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -109,6 +121,23 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			fmt.Fprintf(w, "data: %s\n\n", body)
 			_ = http.NewResponseController(w).Flush()
 		}
+		if strings.Contains(text, "LONG_THINKING_FIXTURE") {
+			chunk("reasoning", strings.Repeat("Initial reasoning paragraph\n\n", 64)+"First reasoning tail\n\n", nil)
+			select {
+			case <-expandThinking:
+			case <-r.Context().Done():
+				return
+			}
+			chunk("reasoning", strings.Repeat("Continued reasoning paragraph\n\n", 64)+"Second reasoning tail\n\n", nil)
+			select {
+			case <-finishThinking:
+			case <-r.Context().Done():
+				return
+			}
+			chunk("reasoning", strings.Repeat("Final reasoning paragraph\n\n", 64)+"Third reasoning tail", nil)
+			<-r.Context().Done()
+			return
+		}
 		if strings.Contains(text, "THINKING_FIXTURE") {
 			chunk("reasoning", "## Plan\n\n**Inspect** the workspace", nil)
 			select {
@@ -147,6 +176,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			}
 		}
 		chunk("content", "Completed: "+text, "stop")
+		if strings.Contains(text, "METRICS_FIXTURE") {
+			fmt.Fprint(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":13,\"completion_tokens\":7}}\n\n")
+		}
 		fmt.Fprint(w, "data: [DONE]\n\n")
 		_ = http.NewResponseController(w).Flush()
 	}))

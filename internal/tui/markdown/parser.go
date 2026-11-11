@@ -1,5 +1,5 @@
 // Purpose: Share immutable Markdown grammar configuration across independent documents.
-// Pattern: Shared read-only parser configuration with per-call parsing contexts.
+// Pattern: Parser-owned extension instances with per-call parsing contexts.
 // Usage: Full and streamed rendering parse with a fresh document/context on each call.
 // Related: internal/tui/markdown/render.go, internal/tui/markdown/stream.go.
 package markdown
@@ -17,5 +17,9 @@ var documentParser = parser.New(
 		util.Prioritized[parser.BlockParser](compactCodeParser{native: parser.NewCodeBlockParser()}, 499),
 		util.Prioritized[parser.BlockParser](compactCodeParser{native: parser.NewFencedCodeBlockParser()}, 699),
 	),
-	parser.WithExtensions(extension.TableParser, extension.TaskListItemParser, extension.LinkifyParser),
+	parser.WithExtensions(
+		extension.NewTableParser(),
+		extension.NewTaskListItemParser(),
+		extension.NewLinkifyParser(),
+	),
 )
