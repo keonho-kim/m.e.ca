@@ -20,11 +20,13 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/server"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	"github.com/keonho-kim/meca/internal/skills"
+	"github.com/keonho-kim/meca/internal/storage/filemutations"
 	"github.com/keonho-kim/meca/internal/storage/serverrequests"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -67,6 +69,15 @@ func newFixture(t *testing.T, g model.Generator, approval bool, concurrency ...i
 			t.Error(err)
 		}
 	})
+	mutations, err := filemutations.Open(t.Context(), filepath.Join(state, "file-mutations"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := mutations.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	vault := &credentials.Vault{State: state}
 	vault.Remember(testToken)
 	pages := detail.NewCache()
@@ -100,7 +111,10 @@ func newFixture(t *testing.T, g model.Generator, approval bool, concurrency ...i
 	}
 	t.Cleanup(func() { _ = files.Close() })
 	f.app, err = server.New(t.Context(), server.Options{
-		Files: files.Files,
+		Files: files.Files, Mutations: mutations, References: sqlite.ProjectReferences{Sessions: sessions, Project: project},
+		MutateEntry: func(ctx context.Context, settings policy.Settings, change fileview.EntryMutation) (string, error) {
+			return files.Files.MutateEntry(ctx, settings, change, func(string) error { return nil })
+		},
 		Read: func(ctx context.Context, id string) (*server.Conversation, error) {
 			store, err := sessions.OpenRead(ctx, project, id)
 			if err != nil {

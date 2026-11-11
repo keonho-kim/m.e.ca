@@ -1,4 +1,6 @@
-/* Purpose: Keep rich text, chat and code within their allocated content column.
+/* Hallmark · v2.0.0 · shape: app screen · theme: Lumen/Ribbon dark, Cobalt/Refract light (by request) · built: Astryx
+ * critique: P4 H4 E4 S4 R4 V3 · preserve the workbench; enforce readable in-column content
+ * Purpose: Keep rich text, chat and code within their allocated content column.
  * Pattern: Public component layout constraints.
  * Usage: The app stylesheet imports these wrapping rules after Astryx utilities.
  * Related: webui/src/shared/ui/markdown/index.tsx, webui/src/shared/ui/code-preview/index.tsx. */
@@ -15,7 +17,17 @@
     min-width: 0;
     max-width: 100%;
   }
-  .meca-prose pre, .meca-code { overflow-x: hidden; }
+  .meca-prose pre, .meca-code { overflow-x: clip; }
   .meca-prose table { width: 100%; table-layout: fixed; }
   .meca-prose th, .meca-prose td { overflow-wrap: anywhere; }
+}
+
+@layer utilities {
+ html, body { overflow-x: clip; }
+ @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [data-astryx-theme="meca"] { --meca-glass-filter: none; --meca-glass-surface: var(--color-background-card); }
+ }
+ @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  [data-astryx-theme="meca"] { --meca-glass-filter: none; --meca-glass-surface: var(--color-background-card); --meca-glass-edge: none; }
+ }
 }

@@ -98,7 +98,7 @@ func (s *Sessions) open(ctx context.Context, project, id string, readOnly bool) 
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
-	return &Store{db: db, path: path, session: c.Session, deletionLease: lease, usage: s.usage.forFile(path, identity)}, nil
+	return &Store{db: db, path: path, session: c.Session, deletionLease: lease, usagePool: &s.usage, usageIdentity: identity}, nil
 }
 func (s *Sessions) Create(ctx context.Context, project, display string) (store *Store, err error) {
 	if err := sessionstate.CheckProject(project, display); err != nil {

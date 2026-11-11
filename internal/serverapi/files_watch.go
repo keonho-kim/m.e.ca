@@ -12,6 +12,7 @@ import (
 	"connectrpc.com/connect/v2"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/serverapi/admission"
 	"github.com/keonho-kim/meca/internal/serverapi/eventstream"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
@@ -33,7 +34,9 @@ func (a *API) WatchFiles(ctx context.Context, r *v1.FileWatchRequest, stream mec
 		defer done()
 		api = a.scoped(s, r.GetWorkspaceId())
 	}
-	return api.rpcError(api.Service.WatchFiles(ctx, r.GetPath(), func(refresh bool) error { return stream.Send(&v1.FileChange{Refresh: refresh}) }))
+	return api.rpcError(api.Service.WatchFiles(ctx, r.GetPath(), func(change fileview.FileChange) error {
+		return stream.Send(&v1.FileChange{Path: r.GetPath(), Refresh: change.Refresh, ChangedNames: change.Names, Rescan: change.Rescan})
+	}))
 }
 
 func (t *Transport) filesWatch(w http.ResponseWriter, r *http.Request) {
@@ -67,8 +70,8 @@ func (t *Transport) filesWatch(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	err = api.Service.WatchFiles(r.Context(), query.Get("path"), func(refresh bool) error {
-		body, err := protojson.Marshal(&v1.FileChange{Refresh: refresh})
+	err = api.Service.WatchFiles(r.Context(), query.Get("path"), func(change fileview.FileChange) error {
+		body, err := protojson.Marshal(&v1.FileChange{Path: query.Get("path"), Refresh: change.Refresh, ChangedNames: change.Names, Rescan: change.Rescan})
 		if err != nil {
 			return err
 		}
@@ -78,7 +81,7 @@ func (t *Transport) filesWatch(w http.ResponseWriter, r *http.Request) {
 		return writer.Flush()
 	})
 	if err != nil && r.Context().Err() == nil {
-		body, _ := protojson.Marshal(&v1.FileChange{Error: fault.PublicMessage(err, api.Redact)})
+		body, _ := protojson.Marshal(&v1.FileChange{Error: fault.PublicMessage(err, api.Redact), ErrorCode: string(fault.Code(err))})
 		_ = writer.Send("change", "", body)
 		_ = writer.Flush()
 	}

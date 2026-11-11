@@ -41,7 +41,7 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 		return doc, fault.New(diag.PermissionDenied, diag.UIEditorReadOnly)
 	}
 	if text == original {
-		return Document{Path: e.redact(t.Absolute), Revision: revision, Editable: true}, nil
+		return Document{Path: e.redact(t.Absolute), Revision: revision, WatchRevision: directoryRevision(info), Editable: true}, nil
 	}
 	tmp := filepath.Join(filepath.Dir(t.Relative), ".meca-edit-"+rand.Text())
 	f, err := t.Root.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
@@ -54,7 +54,9 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 		}
 	}()
 	_, writeErr := f.WriteString(text)
-	err = errors.Join(writeErr, f.Chmod(info.Mode().Perm()), f.Sync(), f.Close())
+	modeErr, syncErr := f.Chmod(info.Mode().Perm()), f.Sync()
+	written, statErr := f.Stat()
+	err = errors.Join(writeErr, modeErr, syncErr, statErr, f.Close())
 	if err != nil {
 		return doc, err
 	}
@@ -78,5 +80,12 @@ func (e *Reader) Save(ctx context.Context, settings policy.Settings, path, text,
 	if err := errors.Join(dir.Sync(), dir.Close()); err != nil {
 		return doc, err
 	}
-	return Document{Path: e.redact(t.Absolute), Text: text, Revision: documentRevision([]byte(text)), Editable: true}, nil
+	watchRevision := ""
+	// Rename changes ctime. Acknowledge the published entry, rather than the
+	// temporary inode's pre-rename metadata. Concurrent external replacement
+	// leaves no metadata shortcut; the next probe verifies the actual contents.
+	if published, err := t.Root.Stat(t.Relative); err == nil && os.SameFile(written, published) && written.Size() == published.Size() && written.ModTime().Equal(published.ModTime()) {
+		watchRevision = directoryRevision(published)
+	}
+	return Document{Path: e.redact(t.Absolute), Text: text, Revision: documentRevision([]byte(text)), WatchRevision: watchRevision, Editable: true}, nil
 }

@@ -1,6 +1,6 @@
 // Purpose: Read revision-bound original history or tool text in bounded display pages.
 // Pattern: Explicit paged detail viewer.
-// Usage: Truncated messages and tool summaries open this modal.
+// Usage: Failure and approval inspection opens this bounded original-data drawer.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, internal/serverapi/detail.go.
 
 import { Button } from '@astryxdesign/core/Button';
@@ -10,38 +10,26 @@ import { Text } from '@astryxdesign/core/Text';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { Target } from '@/pages/workspace/model/store';
-import type { DetailRequestJson, DraftRequestJson } from '@/shared/api';
+import type { DetailRequestJson } from '@/shared/api';
 import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { CodePreview } from '@/shared/ui/code-preview';
 export function Original({
   target,
   source,
-  draft,
   onClose,
 }: {
   target: Target;
   source?: DetailRequestJson;
-  draft?: DraftRequestJson;
   onClose: () => void;
 }) {
   const t = useLocale(),
     [offset, setOffset] = useState('0'),
     [revision, setRevision] = useState('');
   const page = useQuery({
-    queryKey: ['original', target.workspace, target.session, source, draft, offset, revision],
+    queryKey: ['original', target.workspace, target.session, source, offset, revision],
     gcTime: 0,
     queryFn: async ({ signal }) => {
-      if (draft) {
-        const value = (
-          await call(
-            target.workspace,
-            { draft: { ...draft, offset, limit: 65536, ...(offset === '0' ? {} : { revision }) } },
-            signal
-          )
-        ).draft!;
-        return { ...value, revision: String(value.revision ?? '') };
-      }
       return (
         await call(
           target.workspace,

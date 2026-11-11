@@ -21,9 +21,20 @@ const (
 )
 
 type Call struct {
-	ID        string          `json:"id"`
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
+	// ExecutionID is assigned by the runtime, separately from the provider's ID.
+	ExecutionID string          `json:"execution_id,omitempty"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Arguments   json.RawMessage `json:"arguments"`
+}
+
+// ExecutionKey uses the admitted execution identity. Candidates that never reach
+// admission still have their provider identity for local validation feedback.
+func (call Call) ExecutionKey() string {
+	if call.ExecutionID != "" {
+		return call.ExecutionID
+	}
+	return call.ID
 }
 
 // CheckIdentity validates call routing and byte bounds; schema parsing owns the argument object.

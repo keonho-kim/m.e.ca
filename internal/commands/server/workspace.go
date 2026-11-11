@@ -16,11 +16,6 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
-type FileStore interface {
-	FileSelections(context.Context, string) ([]string, error)
-	SelectFile(context.Context, string, string, bool) error
-}
-
 func (s *Service) fileSettings() (fileview.Source, policy.Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -57,43 +52,46 @@ func (s *Service) Preview(ctx context.Context, path string) (fileview.Preview, e
 }
 
 func (s *Service) FileSelections(ctx context.Context, id string) ([]string, error) {
-	c, ctx, done, err := s.beginSessionRead(ctx, id)
+	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer done()
-	store, ok := c.History.(FileStore)
-	if !ok {
+	if s.options.References == nil {
 		return nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerWorkspaceUnavailable)
 	}
-	return store.FileSelections(ctx, id)
+	return s.options.References.List(ctx, id)
 }
 
 func (s *Service) SelectFile(ctx context.Context, id, path string, selected bool) error {
 	if path == "" || len(path) > 4096 || !utf8.ValidString(path) || strings.ContainsRune(path, 0) {
 		return faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
 	}
-	change, err := s.beginTargetChange(ctx, id)
+	ctx, done, err := s.beginOperation(ctx)
 	if err != nil {
 		return err
 	}
-	defer change.finish()
-	store, ok := change.conversation.History.(FileStore)
-	if !ok {
+	defer done()
+	if s.options.References == nil {
 		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerWorkspaceUnavailable)
 	}
 	if !selected {
-		return store.SelectFile(change.ctx, id, path, false)
+		return s.options.References.Select(ctx, id, path, false)
 	}
-	reader, settings, err := s.fileSettings()
+	files, settings, err := s.fileSettings()
 	if err != nil {
 		return err
 	}
-	reference, err := reader.Reference(change.ctx, settings, path)
+	ctx, release, err := s.beginFileEffect(ctx, settings, path)
 	if err != nil {
 		return err
 	}
-	return store.SelectFile(change.ctx, id, reference.Path, selected)
+	defer release()
+	reference, err := files.Reference(ctx, settings, path)
+	if err != nil {
+		return err
+	}
+	return s.options.References.Select(ctx, id, reference.Path, true)
 }
 
 func (s *Service) resolvePaths(ctx context.Context, text string, paths []string) (string, error) {

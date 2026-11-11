@@ -18,7 +18,7 @@ import { reportError, setServerLanguage, useServerSession } from '@/entities/ser
 import { disconnect as disconnectServer } from '@/features/server-access';
 import { changed, stateOptions } from '@/pages/workspace/api/queries';
 import { clearSubmissions } from '@/pages/workspace/model/execution';
-import { cancelSelections } from '@/pages/workspace/model/file-references';
+import { cancelSelections } from '@/pages/workspace/model/reference-queue';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { ModelForm } from '@/pages/workspace/ui/settings/model-form';
 import { SettingsNavigation } from '@/pages/workspace/ui/settings/settings-navigation';

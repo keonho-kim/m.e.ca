@@ -75,7 +75,7 @@ func wireModel(m connection.Selection) *v1.Model {
 
 func event(value server.Event) *v1.Event {
 	e := value.Record
-	result := &v1.Event{WorkspaceId: value.Workspace, Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
+	result := &v1.Event{MutationKey: value.MutationKey, WorkspaceId: value.Workspace, Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
 	if value.Outcome != nil {
 		result.Outcome = &v1.RunOutcome{Status: string(value.Outcome.Status), Reason: value.Outcome.Reason}
 	}
@@ -92,6 +92,7 @@ func event(value server.Event) *v1.Event {
 	if e.Call != nil || e.Reference != nil || e.CallID != "" {
 		result.Tool = &v1.Tool{CallId: e.CallID}
 		if e.Call != nil {
+			result.Tool.ExecutionId = e.Call.ExecutionID
 			result.Tool.CallId = e.Call.ID
 			result.Tool.Name = e.Call.Name
 			result.Tool.ArgumentsJson = e.Call.Arguments
@@ -142,8 +143,9 @@ func textPreview(text string) string {
 
 func historyItem(value history.Record) *v1.HistoryItem {
 	item := &v1.HistoryItem{Sequence: value.Sequence, Kind: value.Kind}
-	if cp := value.Event.Checkpoint; cp != nil && cp.Phase == "finished" && cp.End != nil {
-		item.Outcome = &v1.RunOutcome{Status: string(cp.End.Status), Reason: textPreview(cp.End.Reason)}
+	if completion := historyCompletion(value.Event); value.Kind == "event" && completion != nil {
+		item.Kind, item.Completion = "completion", completion
+		return item
 	}
 	for index, image := range value.Images {
 		item.Images = append(item.Images, wireImage(index, image))

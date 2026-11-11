@@ -77,6 +77,26 @@ test('a streamed draft releases text beyond the display window', () => {
   expect(result.drafts?.['t/']?.truncated).toBe(true);
 });
 
+test('display limits never retain one half of a Unicode surrogate pair', () => {
+  const state = {
+    ...useWorkspaceStore.getInitialState(),
+    selection: { workspace: 'w', session: 's' },
+  };
+  const result = applyEvents(state, [
+    {
+      workspaceId: 'w',
+      sessionId: 's',
+      taskId: 't',
+      kind: 'assistant_delta',
+      text: 'x😀' + 'a'.repeat(128 * 1024 - 1),
+      thinking: 'x😀' + 'b'.repeat(128 * 1024 - 1),
+    },
+  ]);
+  const draft = result.drafts?.['t/'];
+  expect(draft?.text).toBe('a'.repeat(128 * 1024 - 1));
+  expect(draft?.thinking).toBe('b'.repeat(128 * 1024 - 1));
+});
+
 test('final usage remains available after durable history releases live activity', () => {
   const state = {
     selection: { workspace: 'w', session: 's' },

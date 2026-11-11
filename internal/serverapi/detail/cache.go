@@ -1,4 +1,4 @@
-// Purpose: Page one masked public JSON document without reloading its original for every request.
+// Purpose: Page one masked public detail document without reloading its original for every request.
 // Pattern: Revision-bound document slot with bounded memory and indexed compressed blocks.
 // Usage: The cache pool lends a slot; session cleanup releases its retained document.
 // Related: internal/serverapi/detail/document.go, internal/commands/server/detail.go.
@@ -131,7 +131,7 @@ func loadDocument(ctx context.Context, spool *documentSpool, request Request) er
 	if err != nil {
 		return err
 	}
-	return writeDocument(ctx, spool, original, request.NewMask)
+	return writeView(ctx, spool, original, request.Source.View, request.NewMask)
 }
 
 func memoryPage(body []byte, offset int64, limit int) ([]byte, int64, error) {

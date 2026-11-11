@@ -2,13 +2,18 @@
 // Pattern: Event-to-query projection.
 // Usage: The ordered event observer projects each batch after the workspace reducer.
 // Related: webui/src/pages/workspace/api/events.ts, webui/src/pages/workspace/api/cache-refresh.ts.
+import { reportError } from '@/entities/server-session';
 import { invalidate } from '@/pages/workspace/api/cache-refresh';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { isHistoryBoundary, isResponseEvent } from '@/pages/workspace/model/chat-events';
+import { refreshReferences } from '@/pages/workspace/model/file-references';
+import { consumeMutation } from '@/pages/workspace/model/mutation-correlation';
+import { targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import type { EventJson, SnapshotJson } from '@/shared/api';
 import { queries } from '@/shared/api';
 
 export function projectEventCache(events: EventJson[]) {
+  const references = new Map<string, { workspace: string; session: string }>();
   const sessions = new Set<string>(),
     histories = new Map<string, string[]>();
   let workspaces = false,
@@ -19,6 +24,11 @@ export function projectEventCache(events: EventJson[]) {
     const target = { workspace, session },
       started = event.kind === 'request_started',
       finished = event.kind === 'request_finished';
+    if (event.kind === 'file_references_changed' && !consumeMutation(target, event.mutationKey)) {
+      const state = useWorkspaceStore.getState();
+      if (state.inputs[targetKey(target)] || targetKey(state.selection) === targetKey(target))
+        references.set(targetKey(target), target);
+    }
     const approval = event.kind === 'approval_required' || event.kind === 'approval_closed';
     const lifecycle = ['session_opened', 'session_closed', 'session_deleted'].includes(
       event.kind ?? ''
@@ -83,6 +93,7 @@ export function projectEventCache(events: EventJson[]) {
       invalidate(['capabilities']);
     }
   }
+  for (const target of references.values()) void refreshReferences(target).catch(reportError);
   for (const workspace of sessions) invalidate(['sessions', workspace]);
   for (const key of histories.values()) invalidate(key);
   if (workspaces) invalidate(['workspaces']);

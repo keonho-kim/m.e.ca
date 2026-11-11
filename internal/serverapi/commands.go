@@ -80,7 +80,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 	}
 	var err error
 	switch cmd.GetOperation().(type) {
-	case *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
+	case *v1.Command_EditorProbe, *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
 		weight := int64(2)
 		if cmd.GetHistory() != nil {
 			weight = 1
@@ -93,7 +93,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerOriginalReadBusy)), nil
 		}
 		defer release()
-	case *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels, *v1.Command_SessionUsage:
+	case *v1.Command_LookupMutation, *v1.Command_SuggestSkills, *v1.Command_BrowseFolders, *v1.Command_DiagnoseModel, *v1.Command_ListSessions, *v1.Command_ListTasks, *v1.Command_ListSkills, *v1.Command_GetSkill, *v1.Command_ReadSkillFile, *v1.Command_Directory, *v1.Command_DiscoverModels, *v1.Command_SessionUsage:
 		release, ok := a.browseLimit().Try(1)
 		if !ok {
 			return a.errorReply(cmd.GetId(), faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerBrowseBusy)), nil

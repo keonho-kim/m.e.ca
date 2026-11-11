@@ -74,19 +74,20 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 		reply.Result = &v1.Reply_Directory{Directory: &v1.DirectoryPage{Path: path, Parent: filepath.Dir(path)}}
 	case *v1.Command_MutateFile:
 		request := op.MutateFile
-		value, err := a.Service.MutateEntry(ctx, request.GetSessionId(), fileview.EntryMutation{
+		value, err := a.Service.MutateEntry(ctx, request.GetSessionId(), request.GetKey(), fileview.EntryMutation{
 			Path: request.GetPath(), Revision: request.GetRevision(), Name: request.GetName(),
 			Folder: request.GetFolder(), Remove: request.GetRemove(),
 		})
 		if err != nil {
 			return nil, err
 		}
-		result := &v1.FileMutationResult{Path: value.Path, Paths: value.Paths, ReferencesReady: value.ReferencesReady}
-		if value.Failure != nil {
-			result.ErrorCode = diag.NativeCode(fault.Code(value.Failure))
-			result.ErrorMessage = fault.PublicMessage(value.Failure, a.Redact)
+		reply.Result = &v1.Reply_FileMutation{FileMutation: a.fileMutation(value)}
+	case *v1.Command_LookupMutation:
+		value, err := a.Service.LookupMutation(ctx, op.LookupMutation.GetSessionId(), op.LookupMutation.GetKey())
+		if err != nil {
+			return nil, err
 		}
-		reply.Result = &v1.Reply_FileMutation{FileMutation: result}
+		reply.Result = &v1.Reply_FileMutation{FileMutation: a.fileMutation(value)}
 	case *v1.Command_SessionUsage:
 		total, err := a.Service.SessionUsage(ctx, op.SessionUsage.GetSessionId())
 		if err != nil {
@@ -109,6 +110,12 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 			return nil, err
 		}
 		reply.Result = &v1.Reply_ParsedInput{ParsedInput: &v1.ParsedInput{Action: action, Argument: argument}}
+	case *v1.Command_EditorProbe:
+		value, err := a.Service.EditorProbe(ctx, op.EditorProbe.GetPath(), op.EditorProbe.GetWatchRevision())
+		if err != nil {
+			return nil, err
+		}
+		reply.Result = &v1.Reply_EditorVersion{EditorVersion: &v1.EditorVersion{Revision: value.Revision, WatchRevision: value.WatchRevision, Unchanged: value.Unchanged, Missing: value.Missing}}
 	case *v1.Command_EditorRead, *v1.Command_EditorSave:
 		r, save := cmd.GetEditorRead(), false
 		if op, ok := op.(*v1.Command_EditorSave); ok {
@@ -121,7 +128,7 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 		if save {
 			value.Text = ""
 		}
-		reply.Result = &v1.Reply_Editor{Editor: &v1.EditorDocument{Path: value.Path, Text: value.Text, Revision: value.Revision, Editable: value.Editable, Reason: value.Reason}}
+		reply.Result = &v1.Reply_Editor{Editor: &v1.EditorDocument{Path: value.Path, Text: value.Text, Revision: value.Revision, WatchRevision: value.WatchRevision, Editable: value.Editable, Reason: value.Reason}}
 	case *v1.Command_LookupRequest:
 		value, err := a.Service.LookupRequest(ctx, op.LookupRequest.GetSessionId(), op.LookupRequest.GetKey())
 		if err != nil {
@@ -149,4 +156,13 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 		return a.workspaceCall(ctx, cmd)
 	}
 	return reply, nil
+}
+
+func (a *API) fileMutation(value server.FileMutationResult) *v1.FileMutationResult {
+	result := &v1.FileMutationResult{Key: value.Key, State: value.State, Path: value.Path, Paths: value.Paths, ReferencesReady: value.ReferencesReady}
+	if value.Failure != nil {
+		result.ErrorCode = diag.NativeCode(fault.Code(value.Failure))
+		result.ErrorMessage = fault.PublicMessage(value.Failure, a.Redact)
+	}
+	return result
 }

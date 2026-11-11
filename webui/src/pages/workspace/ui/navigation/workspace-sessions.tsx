@@ -3,6 +3,7 @@
 // Usage: WorkspaceGroup mounts this only while its project is expanded.
 // Related: webui/src/pages/workspace/ui/navigation/session-list.tsx, webui/src/pages/workspace/api/queries.ts.
 import { Button } from '@astryxdesign/core/Button';
+import { useEntryAnimation } from '@astryxdesign/core/hooks';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ export function WorkspaceSessions({
   navigate: (target: Target) => void;
   remove: (session: SessionJson) => void;
 }) {
+  const entry = useEntryAnimation('slideDown');
   const t = useLocale(),
     tasks = useWorkspaceStore((state) => workspaceTasks(workspace, state.tasks));
   const sessions = useInfiniteQuery({
@@ -41,7 +43,7 @@ export function WorkspaceSessions({
   );
   const running = useMemo(() => new Set(tasks.map((task) => task.session)), [tasks]);
   return (
-    <VStack gap={1}>
+    <VStack gap={1} xstyle={entry}>
       {sessions.isPending && (
         <VStack padding={3} gap={3}>
           <Skeleton height={14} />

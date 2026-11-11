@@ -1,6 +1,6 @@
-// Purpose: Bind a validated conversation read lease to the API-owned JSON document cache and byte pages.
+// Purpose: Bind an authorized detail view to the API-owned cache and UTF-8 byte pages.
 // Pattern: Detail wire boundary adapter.
-// Usage: API.Call dispatches detail requests here; callers receive only the stable public JSON schema.
+// Usage: API.Call dispatches detail requests here; callers receive the selected public projection.
 // Related: internal/commands/server/detail.go, internal/serverapi/detail/cache.go.
 package serverapi
 
@@ -24,7 +24,10 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if r.GetOffset() < 0 || r.GetOffset() > 0 && r.GetRevision() == "" || len(r.GetRevision()) > 64 || limit < 1 || limit > 64<<10 {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.DetailDetailOffsetMustBeNonnegativeAndLimit)
 	}
-	read, err := a.Service.OpenDetail(ctx, server.DetailSource{Session: r.GetSessionId(), Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
+	if r.GetView() < v1.DetailRequest_DOCUMENT || r.GetView() > v1.DetailRequest_THINKING {
+		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
+	}
+	read, err := a.Service.OpenDetail(ctx, server.DetailSource{View: server.DetailView(r.GetView()), Session: r.GetSessionId(), Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
 	if err != nil {
 		return nil, err
 	}
@@ -43,5 +46,12 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if !utf8.Valid(data[:end]) || (end == 0 && len(data) > 0) {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
 	}
-	return &v1.DetailPage{Text: string(data[:end]), Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(end), TotalBytes: total, ContentType: "application/json; charset=utf-8", Revision: revision}, nil
+	return &v1.DetailPage{Text: string(data[:end]), Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(end), TotalBytes: total, ContentType: detailContentType(r.GetView()), Revision: revision}, nil
+}
+
+func detailContentType(view v1.DetailRequest_View) string {
+	if view == v1.DetailRequest_TEXT || view == v1.DetailRequest_THINKING {
+		return "text/plain; charset=utf-8"
+	}
+	return "application/json; charset=utf-8"
 }

@@ -3,8 +3,8 @@
 // Usage: Direct requests and queued follow-ups share startRequest.
 // Related: webui/src/pages/workspace/model/execution.ts, internal/commands/server/request_lookup.go.
 
-import { waitSelections } from '@/pages/workspace/model/file-references';
 import { inputBytes, rememberInputBytes } from '@/pages/workspace/model/input-usage';
+import { waitSelections } from '@/pages/workspace/model/reference-queue';
 import {
   emptyInput,
   type Input,

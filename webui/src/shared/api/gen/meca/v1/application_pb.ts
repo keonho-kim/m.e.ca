@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/application.proto.
  */
 export const file_meca_v1_application: GenFile = /*@__PURE__*/
-  fileDesc("ChltZWNhL3YxL2FwcGxpY2F0aW9uLnByb3RvEgdtZWNhLnYxIjAKEFdvcmtzcGFjZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIOCgZvZmZzZXQYAiABKAUiKgoMQ3JlYXRlRm9sZGVyEgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCSKAAQoMRmlsZU11dGF0aW9uEgwKBHBhdGgYASABKAkSEAoIcmV2aXNpb24YAiABKAkSDgoEbmFtZRgDIAEoCUgAEhAKBmZvbGRlchgEIAEoCUgAEhAKBnJlbW92ZRgFIAEoCEgAEhIKCnNlc3Npb25faWQYBiABKAlCCAoGY2hhbmdlInYKEkZpbGVNdXRhdGlvblJlc3VsdBIMCgRwYXRoGAEgASgJEg0KBXBhdGhzGAIgAygJEhgKEHJlZmVyZW5jZXNfcmVhZHkYAyABKAgSEgoKZXJyb3JfY29kZRgEIAEoCRIVCg1lcnJvcl9tZXNzYWdlGAUgASgJInMKCVdvcmtzcGFjZRIKCgJpZBgBIAEoCRIMCgRwYXRoGAIgASgJEgwKBG5hbWUYAyABKAkSFAoMYWN0aXZlX3Rhc2tzGAQgASgFEg0KBWVycm9yGAUgASgJEhkKEXBlbmRpbmdfYXBwcm92YWxzGAYgASgFIkMKCldvcmtzcGFjZXMSIQoFaXRlbXMYASADKAsyEi5tZWNhLnYxLldvcmtzcGFjZRISCgpkZWZhdWx0X2lkGAIgASgJIjcKEkNvbW1hbmREZXNjcmlwdGlvbhIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJIjwKDkNvbW1hbmRDYXRhbG9nEioKBWl0ZW1zGAEgAygLMhsubWVjYS52MS5Db21tYW5kRGVzY3JpcHRpb24iGgoKUGFyc2VJbnB1dBIMCgR0ZXh0GAEgASgJIi8KC1BhcnNlZElucHV0Eg4KBmFjdGlvbhgBIAEoCRIQCghhcmd1bWVudBgCIAEoCSI4CghFZGl0RmlsZRIMCgRwYXRoGAEgASgJEgwKBHRleHQYAiABKAkSEAoIcmV2aXNpb24YAyABKAkiYAoORWRpdG9yRG9jdW1lbnQSDAoEcGF0aBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCHJldmlzaW9uGAMgASgJEhAKCGVkaXRhYmxlGAQgASgIEg4KBnJlYXNvbhgFIAEoCSJqCg1EaWFnbm9zZU1vZGVsEhIKCnNlc3Npb25faWQYASABKAkSEAoIcHJvdmlkZXIYAiABKAkSEAoIZW5kcG9pbnQYAyABKAkSEgoKY3JlZGVudGlhbBgEIAEoCRINCgVtb2RlbBgFIAEoCSJFChBEaWFnbm9zdGljUmVzdWx0EgwKBGNoYXQYASABKAgSEQoJcmVhc29uaW5nGAIgASgIEhAKCHRoaW5raW5nGAMgASgIIjYKEEZpbGVXYXRjaFJlcXVlc3QSFAoMd29ya3NwYWNlX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiOgoKRmlsZUNoYW5nZRIMCgRwYXRoGAEgASgJEg8KB3JlZnJlc2gYAiABKAgSDQoFZXJyb3IYAyABKAkiLAoKUnVuT3V0Y29tZRIOCgZzdGF0dXMYASABKAkSDgoGcmVhc29uGAIgASgJIjAKDVJlcXVlc3RMb29rdXASEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNrZXkYAiABKAlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM");
+  fileDesc("ChltZWNhL3YxL2FwcGxpY2F0aW9uLnByb3RvEgdtZWNhLnYxIjAKEFdvcmtzcGFjZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIOCgZvZmZzZXQYAiABKAUiKgoMQ3JlYXRlRm9sZGVyEgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCSKNAQoMRmlsZU11dGF0aW9uEgwKBHBhdGgYASABKAkSEAoIcmV2aXNpb24YAiABKAkSDgoEbmFtZRgDIAEoCUgAEhAKBmZvbGRlchgEIAEoCUgAEhAKBnJlbW92ZRgFIAEoCEgAEhIKCnNlc3Npb25faWQYBiABKAkSCwoDa2V5GAcgASgJQggKBmNoYW5nZSKSAQoSRmlsZU11dGF0aW9uUmVzdWx0EgwKBHBhdGgYASABKAkSDQoFcGF0aHMYAiADKAkSGAoQcmVmZXJlbmNlc19yZWFkeRgDIAEoCBISCgplcnJvcl9jb2RlGAQgASgJEhUKDWVycm9yX21lc3NhZ2UYBSABKAkSCwoDa2V5GAYgASgJEg0KBXN0YXRlGAcgASgJInMKCVdvcmtzcGFjZRIKCgJpZBgBIAEoCRIMCgRwYXRoGAIgASgJEgwKBG5hbWUYAyABKAkSFAoMYWN0aXZlX3Rhc2tzGAQgASgFEg0KBWVycm9yGAUgASgJEhkKEXBlbmRpbmdfYXBwcm92YWxzGAYgASgFIkMKCldvcmtzcGFjZXMSIQoFaXRlbXMYASADKAsyEi5tZWNhLnYxLldvcmtzcGFjZRISCgpkZWZhdWx0X2lkGAIgASgJIjcKEkNvbW1hbmREZXNjcmlwdGlvbhIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJIjwKDkNvbW1hbmRDYXRhbG9nEioKBWl0ZW1zGAEgAygLMhsubWVjYS52MS5Db21tYW5kRGVzY3JpcHRpb24iGgoKUGFyc2VJbnB1dBIMCgR0ZXh0GAEgASgJIi8KC1BhcnNlZElucHV0Eg4KBmFjdGlvbhgBIAEoCRIQCghhcmd1bWVudBgCIAEoCSI4CghFZGl0RmlsZRIMCgRwYXRoGAEgASgJEgwKBHRleHQYAiABKAkSEAoIcmV2aXNpb24YAyABKAkieAoORWRpdG9yRG9jdW1lbnQSDAoEcGF0aBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCHJldmlzaW9uGAMgASgJEhAKCGVkaXRhYmxlGAQgASgIEg4KBnJlYXNvbhgFIAEoCRIWCg53YXRjaF9yZXZpc2lvbhgGIAEoCSIzCgtFZGl0b3JQcm9iZRIMCgRwYXRoGAEgASgJEhYKDndhdGNoX3JldmlzaW9uGAIgASgJIl0KDUVkaXRvclZlcnNpb24SEAoIcmV2aXNpb24YASABKAkSFgoOd2F0Y2hfcmV2aXNpb24YAiABKAkSEQoJdW5jaGFuZ2VkGAMgASgIEg8KB21pc3NpbmcYBCABKAgiagoNRGlhZ25vc2VNb2RlbBISCgpzZXNzaW9uX2lkGAEgASgJEhAKCHByb3ZpZGVyGAIgASgJEhAKCGVuZHBvaW50GAMgASgJEhIKCmNyZWRlbnRpYWwYBCABKAkSDQoFbW9kZWwYBSABKAkiRQoQRGlhZ25vc3RpY1Jlc3VsdBIMCgRjaGF0GAEgASgIEhEKCXJlYXNvbmluZxgCIAEoCBIQCgh0aGlua2luZxgDIAEoCCI2ChBGaWxlV2F0Y2hSZXF1ZXN0EhQKDHdvcmtzcGFjZV9pZBgBIAEoCRIMCgRwYXRoGAIgASgJInUKCkZpbGVDaGFuZ2USDAoEcGF0aBgBIAEoCRIPCgdyZWZyZXNoGAIgASgIEg0KBWVycm9yGAMgASgJEhUKDWNoYW5nZWRfbmFtZXMYBCADKAkSDgoGcmVzY2FuGAUgASgIEhIKCmVycm9yX2NvZGUYBiABKAkiLAoKUnVuT3V0Y29tZRIOCgZzdGF0dXMYASABKAkSDgoGcmVhc29uGAIgASgJIjAKDVJlcXVlc3RMb29rdXASEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNrZXkYAiABKAlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM");
 
 /**
  * @generated from message meca.v1.WorkspaceRequest
@@ -132,6 +132,11 @@ export type FileMutation = Message<"meca.v1.FileMutation"> & {
    * @generated from field: string session_id = 6;
    */
   sessionId: string;
+
+  /**
+   * @generated from field: string key = 7;
+   */
+  key: string;
 };
 
 /**
@@ -167,6 +172,11 @@ export type FileMutationJson = {
    * @generated from field: string session_id = 6;
    */
   sessionId?: string;
+
+  /**
+   * @generated from field: string key = 7;
+   */
+  key?: string;
 };
 
 /**
@@ -206,6 +216,16 @@ export type FileMutationResult = Message<"meca.v1.FileMutationResult"> & {
    * @generated from field: string error_message = 5;
    */
   errorMessage: string;
+
+  /**
+   * @generated from field: string key = 6;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string state = 7;
+   */
+  state: string;
 };
 
 /**
@@ -238,6 +258,16 @@ export type FileMutationResultJson = {
    * @generated from field: string error_message = 5;
    */
   errorMessage?: string;
+
+  /**
+   * @generated from field: string key = 6;
+   */
+  key?: string;
+
+  /**
+   * @generated from field: string state = 7;
+   */
+  state?: string;
 };
 
 /**
@@ -564,6 +594,11 @@ export type EditorDocument = Message<"meca.v1.EditorDocument"> & {
    * @generated from field: string reason = 5;
    */
   reason: string;
+
+  /**
+   * @generated from field: string watch_revision = 6;
+   */
+  watchRevision: string;
 };
 
 /**
@@ -594,6 +629,11 @@ export type EditorDocumentJson = {
    * @generated from field: string reason = 5;
    */
   reason?: string;
+
+  /**
+   * @generated from field: string watch_revision = 6;
+   */
+  watchRevision?: string;
 };
 
 /**
@@ -602,6 +642,100 @@ export type EditorDocumentJson = {
  */
 export const EditorDocumentSchema: GenMessage<EditorDocument, {jsonType: EditorDocumentJson}> = /*@__PURE__*/
   messageDesc(file_meca_v1_application, 11);
+
+/**
+ * @generated from message meca.v1.EditorProbe
+ */
+export type EditorProbe = Message<"meca.v1.EditorProbe"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: string watch_revision = 2;
+   */
+  watchRevision: string;
+};
+
+/**
+ * @generated from message meca.v1.EditorProbe
+ */
+export type EditorProbeJson = {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path?: string;
+
+  /**
+   * @generated from field: string watch_revision = 2;
+   */
+  watchRevision?: string;
+};
+
+/**
+ * Describes the message meca.v1.EditorProbe.
+ * Use `create(EditorProbeSchema)` to create a new message.
+ */
+export const EditorProbeSchema: GenMessage<EditorProbe, {jsonType: EditorProbeJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_application, 12);
+
+/**
+ * @generated from message meca.v1.EditorVersion
+ */
+export type EditorVersion = Message<"meca.v1.EditorVersion"> & {
+  /**
+   * @generated from field: string revision = 1;
+   */
+  revision: string;
+
+  /**
+   * @generated from field: string watch_revision = 2;
+   */
+  watchRevision: string;
+
+  /**
+   * @generated from field: bool unchanged = 3;
+   */
+  unchanged: boolean;
+
+  /**
+   * @generated from field: bool missing = 4;
+   */
+  missing: boolean;
+};
+
+/**
+ * @generated from message meca.v1.EditorVersion
+ */
+export type EditorVersionJson = {
+  /**
+   * @generated from field: string revision = 1;
+   */
+  revision?: string;
+
+  /**
+   * @generated from field: string watch_revision = 2;
+   */
+  watchRevision?: string;
+
+  /**
+   * @generated from field: bool unchanged = 3;
+   */
+  unchanged?: boolean;
+
+  /**
+   * @generated from field: bool missing = 4;
+   */
+  missing?: boolean;
+};
+
+/**
+ * Describes the message meca.v1.EditorVersion.
+ * Use `create(EditorVersionSchema)` to create a new message.
+ */
+export const EditorVersionSchema: GenMessage<EditorVersion, {jsonType: EditorVersionJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_application, 13);
 
 /**
  * @generated from message meca.v1.DiagnoseModel
@@ -668,7 +802,7 @@ export type DiagnoseModelJson = {
  * Use `create(DiagnoseModelSchema)` to create a new message.
  */
 export const DiagnoseModelSchema: GenMessage<DiagnoseModel, {jsonType: DiagnoseModelJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 12);
+  messageDesc(file_meca_v1_application, 14);
 
 /**
  * @generated from message meca.v1.DiagnosticResult
@@ -715,7 +849,7 @@ export type DiagnosticResultJson = {
  * Use `create(DiagnosticResultSchema)` to create a new message.
  */
 export const DiagnosticResultSchema: GenMessage<DiagnosticResult, {jsonType: DiagnosticResultJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 13);
+  messageDesc(file_meca_v1_application, 15);
 
 /**
  * @generated from message meca.v1.FileWatchRequest
@@ -752,7 +886,7 @@ export type FileWatchRequestJson = {
  * Use `create(FileWatchRequestSchema)` to create a new message.
  */
 export const FileWatchRequestSchema: GenMessage<FileWatchRequest, {jsonType: FileWatchRequestJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 14);
+  messageDesc(file_meca_v1_application, 16);
 
 /**
  * @generated from message meca.v1.FileChange
@@ -772,6 +906,21 @@ export type FileChange = Message<"meca.v1.FileChange"> & {
    * @generated from field: string error = 3;
    */
   error: string;
+
+  /**
+   * @generated from field: repeated string changed_names = 4;
+   */
+  changedNames: string[];
+
+  /**
+   * @generated from field: bool rescan = 5;
+   */
+  rescan: boolean;
+
+  /**
+   * @generated from field: string error_code = 6;
+   */
+  errorCode: string;
 };
 
 /**
@@ -792,6 +941,21 @@ export type FileChangeJson = {
    * @generated from field: string error = 3;
    */
   error?: string;
+
+  /**
+   * @generated from field: repeated string changed_names = 4;
+   */
+  changedNames?: string[];
+
+  /**
+   * @generated from field: bool rescan = 5;
+   */
+  rescan?: boolean;
+
+  /**
+   * @generated from field: string error_code = 6;
+   */
+  errorCode?: string;
 };
 
 /**
@@ -799,7 +963,7 @@ export type FileChangeJson = {
  * Use `create(FileChangeSchema)` to create a new message.
  */
 export const FileChangeSchema: GenMessage<FileChange, {jsonType: FileChangeJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 15);
+  messageDesc(file_meca_v1_application, 17);
 
 /**
  * @generated from message meca.v1.RunOutcome
@@ -836,7 +1000,7 @@ export type RunOutcomeJson = {
  * Use `create(RunOutcomeSchema)` to create a new message.
  */
 export const RunOutcomeSchema: GenMessage<RunOutcome, {jsonType: RunOutcomeJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 16);
+  messageDesc(file_meca_v1_application, 18);
 
 /**
  * @generated from message meca.v1.RequestLookup
@@ -873,5 +1037,5 @@ export type RequestLookupJson = {
  * Use `create(RequestLookupSchema)` to create a new message.
  */
 export const RequestLookupSchema: GenMessage<RequestLookup, {jsonType: RequestLookupJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_application, 17);
+  messageDesc(file_meca_v1_application, 19);
 

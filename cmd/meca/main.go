@@ -1,7 +1,8 @@
 // Purpose: Compose maintenance, headless, server and terminal startup with owned session transitions.
 // Pattern: Composition Root.
 // Usage: meca --help lists maintenance, interactive, headless and server invocations.
-// Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go, internal/tui/session/app.go, cmd/meca/conversation.go.
+// Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go,
+// internal/tui/session/app.go, cmd/meca/conversation.go, internal/tui/clipboard/worker.go.
 package main
 
 import (
@@ -25,11 +26,15 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tui/clipboard"
 	tuisession "github.com/keonho-kim/meca/internal/tui/session"
 	"golang.org/x/term"
 )
 
 func main() {
+	if handled, code := clipboard.RunWorker(os.Args); handled {
+		os.Exit(code)
+	}
 	if handled, code := diagnostics.RunStderrRelay(os.Args); handled {
 		os.Exit(code)
 	}

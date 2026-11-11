@@ -28,7 +28,7 @@ func Test128CommandsRunAndJoinWithoutGlobalQueue(t *testing.T) {
 		r := &registries[i]
 		r.Begin(ctx, time.Now().Add(time.Minute))
 		for range 16 {
-			if _, err := r.Start(ctx, root, "sleep 60", os.Environ(), "call"); err != nil {
+			if _, err := r.Start(ctx, root, "sleep 60", os.Environ(), CallIdentity{CallID: "call"}); err != nil {
 				t.Fatal(err)
 			}
 		}

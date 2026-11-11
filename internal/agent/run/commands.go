@@ -39,7 +39,7 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 			status = "tool_failed"
 		}
 		arguments, _ := json.Marshal(map[string]string{"command": finished.Command})
-		call := toolapi.Call{ID: finished.CallID, Name: "execute_command", Arguments: arguments}
+		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, Name: "execute_command", Arguments: arguments}
 		op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: finished.CallID, Name: "execute_command", Command: finished.Command, Started: result.Started, Status: status, Process: result.Process, Failure: result.Failure, Result: result.Summary, Revision: s.checkpoint.ChangeRevision}
 		s.checkpoint.Work.Observe(op)
 		s.checkpoint.Observation = result.Summary

@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/events.proto.
  */
 export const file_meca_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJImkKBFRvb2wSDwoHY2FsbF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhYKDmFyZ3VtZW50c19qc29uGAMgASgMEioKCXJlZmVyZW5jZRgEIAEoCzIXLm1lY2EudjEuRXZlbnRSZWZlcmVuY2UiQgoFVXNhZ2USDQoFaW5wdXQYASABKAMSDgoGb3V0cHV0GAIgASgDEhEKBGNvc3QYAyABKAFIAIgBAUIHCgVfY29zdCJyCgpTdGF0aXN0aWNzEhIKCmNvbmN1cnJlbnQYASABKAgSFgoOZWxhcHNlZF9taWxsaXMYAiABKAMSGQoRZ2VuZXJhdGlvbl9taWxsaXMYAyABKAMSHQoFdXNhZ2UYBCABKAsyDi5tZWNhLnYxLlVzYWdlInMKFUdlbmVyYXRpb25NZWFzdXJlbWVudBIKCgJpZBgBIAEoCRIMCgRyb2xlGAIgASgJEg8KB2F0dGVtcHQYAyABKAUSFgoOZWxhcHNlZF9taWxsaXMYBCABKAMSFwoPbWVhc3VyZWRfbWlsbGlzGAUgASgDIoUBCgRUZWFtEhAKCHJlcGx5X3RvGAEgASgDEhQKDHJlcGx5X2F1dGhvchgCIAEoCRIQCghtZW50aW9ucxgDIAMoCRIQCghiYXNlZF9vbhgEIAEoAxINCgVwYXRocxgFIAMoCRIQCghjb250cmFjdBgGIAEoCRIQCghyZXZpc2lvbhgHIAEoBCKqBQoFRXZlbnQSFAoMd29ya3NwYWNlX2lkGBwgASgJEiQKB291dGNvbWUYHSABKAsyEy5tZWNhLnYxLlJ1bk91dGNvbWUSDgoGY3Vyc29yGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSDwoHdGFza19pZBgDIAEoCRINCgVhZ2VudBgEIAEoCRIOCgZydW5faWQYBSABKAkSEgoKZ2VuZXJhdGlvbhgGIAEoBBIMCgRraW5kGAcgASgJEgwKBHRleHQYCCABKAkSEAoIdGhpbmtpbmcYCSABKAkSDQoFcmVzZXQYCiABKAgSEQoJdHJ1bmNhdGVkGAsgASgIEg0KBWZpbmFsGAwgASgIEiMKCGFwcHJvdmFsGA0gASgLMhEubWVjYS52MS5BcHByb3ZhbBITCgthcHByb3ZhbF9pZBgOIAEoCRIbCgR0b29sGA8gASgLMg0ubWVjYS52MS5Ub29sEh0KBXVzYWdlGBAgASgLMg4ubWVjYS52MS5Vc2FnZRIbCgR0ZWFtGBEgASgLMg0ubWVjYS52MS5UZWFtEhcKD2FwcHJvdmFsX3NvdXJjZRgSIAEoCRIOCgZzdGF0dXMYEyABKAkSDQoFZXJyb3IYFCABKAkSJwoKc3RhdGlzdGljcxgVIAEoCzITLm1lY2EudjEuU3RhdGlzdGljcxIzCgttZWFzdXJlbWVudBgWIAEoCzIeLm1lY2EudjEuR2VuZXJhdGlvbk1lYXN1cmVtZW50EhMKC29jY3VycmVkX2F0GBcgASgJEhIKCmVycm9yX2NvZGUYGCABKAkSIQoFc2tpbGwYGSABKAsyEi5tZWNhLnYxLlNraWxsUmVhZBIQCghzZXF1ZW5jZRgaIAEoBBIXCg9tZWFzdXJlZF9taWxsaXMYGyABKANCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application]);
+  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJIn8KBFRvb2wSFAoMZXhlY3V0aW9uX2lkGAUgASgJEg8KB2NhbGxfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIWCg5hcmd1bWVudHNfanNvbhgDIAEoDBIqCglyZWZlcmVuY2UYBCABKAsyFy5tZWNhLnYxLkV2ZW50UmVmZXJlbmNlIkIKBVVzYWdlEg0KBWlucHV0GAEgASgDEg4KBm91dHB1dBgCIAEoAxIRCgRjb3N0GAMgASgBSACIAQFCBwoFX2Nvc3QicgoKU3RhdGlzdGljcxISCgpjb25jdXJyZW50GAEgASgIEhYKDmVsYXBzZWRfbWlsbGlzGAIgASgDEhkKEWdlbmVyYXRpb25fbWlsbGlzGAMgASgDEh0KBXVzYWdlGAQgASgLMg4ubWVjYS52MS5Vc2FnZSJzChVHZW5lcmF0aW9uTWVhc3VyZW1lbnQSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCRIPCgdhdHRlbXB0GAMgASgFEhYKDmVsYXBzZWRfbWlsbGlzGAQgASgDEhcKD21lYXN1cmVkX21pbGxpcxgFIAEoAyKFAQoEVGVhbRIQCghyZXBseV90bxgBIAEoAxIUCgxyZXBseV9hdXRob3IYAiABKAkSEAoIbWVudGlvbnMYAyADKAkSEAoIYmFzZWRfb24YBCABKAMSDQoFcGF0aHMYBSADKAkSEAoIY29udHJhY3QYBiABKAkSEAoIcmV2aXNpb24YByABKAQiwAUKBUV2ZW50EhQKDG11dGF0aW9uX2tleRgeIAEoCRIUCgx3b3Jrc3BhY2VfaWQYHCABKAkSJAoHb3V0Y29tZRgdIAEoCzITLm1lY2EudjEuUnVuT3V0Y29tZRIOCgZjdXJzb3IYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEg0KBWFnZW50GAQgASgJEg4KBnJ1bl9pZBgFIAEoCRISCgpnZW5lcmF0aW9uGAYgASgEEgwKBGtpbmQYByABKAkSDAoEdGV4dBgIIAEoCRIQCgh0aGlua2luZxgJIAEoCRINCgVyZXNldBgKIAEoCBIRCgl0cnVuY2F0ZWQYCyABKAgSDQoFZmluYWwYDCABKAgSIwoIYXBwcm92YWwYDSABKAsyES5tZWNhLnYxLkFwcHJvdmFsEhMKC2FwcHJvdmFsX2lkGA4gASgJEhsKBHRvb2wYDyABKAsyDS5tZWNhLnYxLlRvb2wSHQoFdXNhZ2UYECABKAsyDi5tZWNhLnYxLlVzYWdlEhsKBHRlYW0YESABKAsyDS5tZWNhLnYxLlRlYW0SFwoPYXBwcm92YWxfc291cmNlGBIgASgJEg4KBnN0YXR1cxgTIAEoCRINCgVlcnJvchgUIAEoCRInCgpzdGF0aXN0aWNzGBUgASgLMhMubWVjYS52MS5TdGF0aXN0aWNzEjMKC21lYXN1cmVtZW50GBYgASgLMh4ubWVjYS52MS5HZW5lcmF0aW9uTWVhc3VyZW1lbnQSEwoLb2NjdXJyZWRfYXQYFyABKAkSEgoKZXJyb3JfY29kZRgYIAEoCRIhCgVza2lsbBgZIAEoCzISLm1lY2EudjEuU2tpbGxSZWFkEhAKCHNlcXVlbmNlGBogASgEEhcKD21lYXN1cmVkX21pbGxpcxgbIAEoA0JBWj9naXRodWIuY29tL2tlb25oby1raW0vbWVjYS9pbnRlcm5hbC9zZXJ2ZXJhcGkvZ2VuL21lY2F2MTttZWNhdjFiBnByb3RvMw", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application]);
 
 /**
  * @generated from message meca.v1.Approval
@@ -145,6 +145,11 @@ export const ApprovalSchema: GenMessage<Approval, {jsonType: ApprovalJson}> = /*
  */
 export type Tool = Message<"meca.v1.Tool"> & {
   /**
+   * @generated from field: string execution_id = 5;
+   */
+  executionId: string;
+
+  /**
    * @generated from field: string call_id = 1;
    */
   callId: string;
@@ -171,6 +176,11 @@ export type Tool = Message<"meca.v1.Tool"> & {
  * @generated from message meca.v1.Tool
  */
 export type ToolJson = {
+  /**
+   * @generated from field: string execution_id = 5;
+   */
+  executionId?: string;
+
   /**
    * @generated from field: string call_id = 1;
    */
@@ -464,6 +474,13 @@ export const TeamSchema: GenMessage<Team, {jsonType: TeamJson}> = /*@__PURE__*/
  */
 export type Event = Message<"meca.v1.Event"> & {
   /**
+   * Correlates reference-change notices with an explicit file mutation reply.
+   *
+   * @generated from field: string mutation_key = 30;
+   */
+  mutationKey: string;
+
+  /**
    * @generated from field: string workspace_id = 28;
    */
   workspaceId: string;
@@ -613,6 +630,13 @@ export type Event = Message<"meca.v1.Event"> & {
  * @generated from message meca.v1.Event
  */
 export type EventJson = {
+  /**
+   * Correlates reference-change notices with an explicit file mutation reply.
+   *
+   * @generated from field: string mutation_key = 30;
+   */
+  mutationKey?: string;
+
   /**
    * @generated from field: string workspace_id = 28;
    */

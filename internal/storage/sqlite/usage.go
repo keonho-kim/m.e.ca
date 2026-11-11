@@ -28,17 +28,31 @@ func (s *Store) TokenUsage(ctx context.Context, session string) (modelapi.TokenU
 	if err := s.checkSession(session); err != nil {
 		return modelapi.TokenUsage{}, err
 	}
-	projection := s.usage
-	if projection == nil {
-		projection = &s.localUsage
+	if err := ctx.Err(); err != nil {
+		return modelapi.TokenUsage{}, err
 	}
-	projection.mu.Lock()
-	defer projection.mu.Unlock()
+	// Most handles only read messages or file references. Bind an aggregate on its
+	// first actual usage read, then keep it pinned for this handle's lifetime.
+	s.usageOnce.Do(func() {
+		if s.usagePool != nil {
+			s.usage = s.usagePool.forFile(s.path, s.usageIdentity)
+		} else {
+			s.usage = &s.localUsage
+		}
+		s.usagePool = nil
+		s.usageIdentity = nil
+	})
+	projection := s.usage
+	release, err := projection.acquire(ctx)
+	if err != nil {
+		return modelapi.TokenUsage{}, err
+	}
+	defer release()
 	var delta modelapi.TokenUsage
 	var cost sql.NullFloat64
 	var invalid int
 	var sequence int64
-	err := s.db.QueryRowContext(ctx, `SELECT
+	err = s.db.QueryRowContext(ctx, `SELECT
 	 COALESCE(MAX(sequence),?),
 	 COALESCE(SUM(json_extract(body,'$.usage.input')),0),
 	 COALESCE(SUM(json_extract(body,'$.usage.output')),0),

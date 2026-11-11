@@ -47,3 +47,9 @@ export function describeError(error: unknown) {
   if (error instanceof Error) return error.message;
   return errors.network;
 }
+
+// Browser-owned request cancellation is expected. A server "canceled" result
+// can describe partial filesystem effects and must still reach the user.
+export function isCancelled(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}

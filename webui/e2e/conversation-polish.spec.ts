@@ -169,60 +169,62 @@ test('model save keeps the confirmation open on rejection and closes after a suc
 test('thinking and tool cells hold the same width through persistence and completion', async ({
   page,
 }) => {
-  await send(page, 'TOOL_CYCLE_FIXTURE');
-  await expect(page.locator('.thinking')).toContainText('Stable initial tool reasoning');
-  const width = (await page.locator('.thinking').first().boundingBox())!.width;
-  const contentWidth = (await page.locator('.chat-content').boundingBox())!.width;
-  const areaWidth = (await page.locator('#meca-work-area').boundingBox())!.width;
-  expect(contentWidth / areaWidth).toBeGreaterThan(0.75);
-  expect(width / contentWidth).toBeGreaterThan(0.9);
-  await page.evaluate(() => {
-    const frames: boolean[] = [];
-    let id = 0;
-    const sample = () => {
-      frames.push(
-        [...document.querySelectorAll('.thinking')].some(
-          (node) =>
-            node.getClientRects().length > 0 &&
-            node.textContent.includes('Stable initial tool reasoning')
-        )
+  try {
+    await send(page, 'TOOL_CYCLE_FIXTURE');
+    await expect(page.locator('.thinking')).toContainText('Stable initial tool reasoning');
+    const width = (await page.locator('.thinking').first().boundingBox())!.width;
+    const contentWidth = (await page.locator('.chat-content').boundingBox())!.width;
+    const areaWidth = (await page.locator('#meca-work-area').boundingBox())!.width;
+    expect(contentWidth / areaWidth).toBeGreaterThan(0.75);
+    expect(width / contentWidth).toBeGreaterThan(0.9);
+    await page.evaluate(() => {
+      const frames: boolean[] = [];
+      let id = 0;
+      const sample = () => {
+        frames.push(
+          [...document.querySelectorAll('.thinking')].some(
+            (node) =>
+              node.getClientRects().length > 0 &&
+              node.textContent.includes('Stable initial tool reasoning')
+          )
+        );
+        id = requestAnimationFrame(sample);
+      };
+      Object.assign(window, { cellFrames: frames, stopCellFrames: () => cancelAnimationFrame(id) });
+      sample();
+    });
+    await page.request.get(fixture.provider + '/test/start-tool');
+    await expect(page.locator('.thinking').last()).toContainText('Stable subsequent reasoning');
+    await expect(page.locator('.tool-calls').first()).toBeVisible();
+    expect(
+      Math.abs((await page.locator('.tool-entry').first().boundingBox())!.width - width)
+    ).toBeLessThan(2);
+    expect(
+      Math.abs((await page.locator('.thinking').first().boundingBox())!.width - width)
+    ).toBeLessThan(2);
+    await page.setViewportSize({ width: 480, height: 900 });
+    expect(await noOverflow(page, '.chat-content')).toEqual([]);
+    await page.request.get(fixture.provider + '/test/finish-tool');
+    await expect(page.locator('.completion-summary')).toBeVisible();
+    await expect(page.locator('.completion-row')).not.toContainText('Intermediate response');
+    await expect(page.locator('.completion-row').locator('[role=img]')).toHaveCount(0);
+    expect(await noOverflow(page, '.chat-content')).toEqual([]);
+    const order = await page.locator('.chat-content').evaluate((root) => {
+      const summary = root.querySelector('.completion-summary');
+      return [...root.querySelectorAll('.thinking, .tool-calls')].every(
+        (node) => !!(node.compareDocumentPosition(summary!) & Node.DOCUMENT_POSITION_FOLLOWING)
       );
-      id = requestAnimationFrame(sample);
-    };
-    Object.assign(window, { cellFrames: frames, stopCellFrames: () => cancelAnimationFrame(id) });
-    sample();
-  });
-  await page.request.get(fixture.provider + '/test/start-tool');
-  await expect(page.locator('.thinking').last()).toContainText('Stable subsequent reasoning');
-  await expect(page.locator('.tool-calls').first()).toBeVisible();
-  const assistantWidth = await page.locator('.thinking').first().evaluate((node) =>
-    node.closest('article')!.getBoundingClientRect().width
-  );
-  expect(
-    Math.abs((await page.locator('.tool-calls').first().boundingBox())!.width - assistantWidth)
-  ).toBeLessThan(2);
-  expect(
-    Math.abs((await page.locator('.thinking').first().boundingBox())!.width - width)
-  ).toBeLessThan(2);
-  await page.setViewportSize({ width: 480, height: 900 });
-  expect(await noOverflow(page, '.chat-content')).toEqual([]);
-  await page.request.get(fixture.provider + '/test/finish-tool');
-  await expect(page.locator('.completion-summary')).toBeVisible();
-  await expect(page.locator('.completion-row')).not.toContainText('Intermediate response');
-  await expect(page.locator('.completion-row').locator('[role=img]')).toHaveCount(0);
-  expect(await noOverflow(page, '.chat-content')).toEqual([]);
-  const order = await page.locator('.chat-content').evaluate((root) => {
-    const summary = root.querySelector('.completion-summary');
-    return [...root.querySelectorAll('.thinking, .tool-calls')].every(
-      (node) => !!(node.compareDocumentPosition(summary!) & Node.DOCUMENT_POSITION_FOLLOWING)
-    );
-  });
-  expect(order).toBe(true);
-  const visible = await page.evaluate(() => {
-    const state = window as unknown as { cellFrames: boolean[]; stopCellFrames: () => void };
-    state.stopCellFrames();
-    return state.cellFrames;
-  });
-  expect(visible.length).toBeGreaterThan(1);
-  expect(visible.every(Boolean)).toBe(true);
+    });
+    expect(order).toBe(true);
+    const visible = await page.evaluate(() => {
+      const state = window as unknown as { cellFrames: boolean[]; stopCellFrames: () => void };
+      state.stopCellFrames();
+      return state.cellFrames;
+    });
+    expect(visible.length).toBeGreaterThan(1);
+    expect(visible.every(Boolean)).toBe(true);
+  } finally {
+    await page.request.get(fixture.provider + '/test/start-tool');
+    await page.request.get(fixture.provider + '/test/finish-tool');
+  }
 });

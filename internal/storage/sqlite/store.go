@@ -32,6 +32,9 @@ type Store struct {
 	teamLease     *teamContentCache
 	codec         recordcontent.Codec
 	objective     objectiveCache
+	usageOnce     sync.Once
+	usagePool     *usageProjections
+	usageIdentity os.FileInfo
 	usage         *usageProjection
 	localUsage    usageProjection
 	db            *sql.DB

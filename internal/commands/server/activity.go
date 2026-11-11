@@ -50,13 +50,13 @@ func (r *request) observe(value record.Event) {
 	case "tool_started":
 		id := value.CallID
 		if value.Call != nil {
-			id = value.Call.ID
+			id = value.Call.ExecutionKey()
 		}
 		key = value.Agent + "/tool/" + id
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied":
 		id := value.CallID
 		if value.Call != nil {
-			id = value.Call.ID
+			id = value.Call.ExecutionKey()
 		}
 		delete(r.activity, value.Agent+"/tool/"+id)
 	case "team_notice", "team_work", "progress", "team_progress", "retry", "compaction_started", "compaction_finished":

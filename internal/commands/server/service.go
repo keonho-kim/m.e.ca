@@ -16,6 +16,7 @@ import (
 )
 
 type Service struct {
+	fileMutations map[string]chan struct{}
 	workspace     workspacegate.Gate
 	mu            sync.Mutex
 	ctx           context.Context

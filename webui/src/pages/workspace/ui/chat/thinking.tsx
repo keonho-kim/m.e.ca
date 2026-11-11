@@ -32,17 +32,7 @@ export const Thinking = memo(function Thinking({
         </Text>
       }
     >
-      {open && (
-        <>
-          <MarkdownText
-            text={text}
-            streaming={streaming}
-            tone="thinking"
-            showCompleteText={false}
-          />
-          {children}
-        </>
-      )}
+      {open && (children ?? <MarkdownText text={text} streaming={streaming} tone="thinking" />)}
     </Collapsible>
   );
 });

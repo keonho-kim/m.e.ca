@@ -15,7 +15,11 @@ func (s *State) Commands(agent string, commands []toolapi.CommandRun, f transcri
 		id := commandKey(agent, command.ID)
 		block, found := s.tools[id]
 		if !found {
-			pending := toolCallKey(agent, command.CallID)
+			identity := command.CallID
+			if command.ExecutionID != "" {
+				identity = command.ExecutionID
+			}
+			pending := toolCallKey(agent, identity)
 			block, found = s.tools[pending]
 			if found {
 				delete(s.tools, pending)

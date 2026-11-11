@@ -16,7 +16,9 @@ import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
 import {
+  lazy,
   type Ref,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -28,7 +30,8 @@ import { reportError } from '@/entities/server-session';
 import { capabilitiesOptions, stateOptions } from '@/pages/workspace/api/queries';
 import { command, settings, view } from '@/pages/workspace/model/commands';
 import { send } from '@/pages/workspace/model/execution';
-import { selectReference, waitSelections } from '@/pages/workspace/model/file-references';
+import { selectReference } from '@/pages/workspace/model/file-references';
+import { waitSelections } from '@/pages/workspace/model/reference-queue';
 import {
   emptyInput,
   type Target,
@@ -45,14 +48,19 @@ import {
   ComposerActions,
   ComposerQueueAction,
 } from '@/pages/workspace/ui/composer/composer-actions';
-import { ComposerImages } from '@/pages/workspace/ui/composer/composer-images';
 import { ExecutionStatus } from '@/pages/workspace/ui/composer/execution-status';
 import { Queue } from '@/pages/workspace/ui/composer/queue';
 import { SkillPicker } from '@/pages/workspace/ui/skills/skill-picker';
-import { call, control } from '@/shared/api';
+import { control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { failure } from '@/shared/lib/errors';
 import { ReferenceToken, referenceToken } from '@/shared/ui/reference-token';
+
+const ComposerImages = lazy(() =>
+  import('@/pages/workspace/ui/composer/composer-images').then((module) => ({
+    default: module.ComposerImages,
+  }))
+);
 
 export type ComposerHandle = { insertSkill: (mention: string) => void };
 export function Composer({
@@ -89,28 +97,6 @@ export function Composer({
   const [inputEpoch, setInputEpoch] = useState(0);
   const state = useQuery({ ...stateOptions(target), enabled: !!target.session });
   const capabilities = useQuery(capabilitiesOptions);
-  useEffect(() => {
-    const controller = new AbortController();
-    if (target.session)
-      void waitSelections(target)
-        .then(() =>
-          call(
-            target.workspace,
-            { fileSelections: { sessionId: target.session } },
-            controller.signal
-          )
-        )
-        .then((reply) => {
-          if (!controller.signal.aborted)
-            useWorkspaceStore
-              .getState()
-              .patchInput(target, { paths: reply.fileSelections?.paths ?? [] });
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted) reportError(error);
-        });
-    return () => controller.abort();
-  }, [target]);
   const patch = (text: string) => {
     if (!useWorkspaceStore.getState().patchInput(target, { text }))
       setInputEpoch((value) => value + 1);
@@ -146,7 +132,11 @@ export function Composer({
         {t(showStop ? 'stop' : task ? 'steer' : 'send')}
       </Text>
       <Queue target={target} />
-      <ComposerImages target={target} onEmpty={focusInput} />
+      {!!input.files.length && (
+        <Suspense fallback={null}>
+          <ComposerImages target={target} onEmpty={focusInput} />
+        </Suspense>
+      )}
       <ChatComposer
         value={input.text}
         onChange={patch}

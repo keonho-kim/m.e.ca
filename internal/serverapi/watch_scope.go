@@ -20,7 +20,7 @@ type bodyScope struct {
 
 func globalEvent(kind string) bool {
 	switch kind {
-	case "request_started", "request_finished", "draft_reset", "session_deleted", "session_opened", "session_closed", "settings_changed", "approval_required", "approval_closed", "usage", "usage_progress":
+	case "file_references_changed", "request_started", "request_finished", "draft_reset", "session_deleted", "session_opened", "session_closed", "settings_changed", "approval_required", "approval_closed", "usage", "usage_progress":
 		return true
 	default:
 		return false

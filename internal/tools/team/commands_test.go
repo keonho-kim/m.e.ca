@@ -29,7 +29,7 @@ func TestCommandLeaseAdmissionIsObservableAndShutdownReleasesTargets(t *testing.
 	r.Begin(ctx, time.Now().Add(time.Minute))
 	defer r.End()
 	entered := make(chan struct{})
-	id, err := r.StartAdmitted(ctx, t.TempDir(), "printf done", os.Environ(), "call", func(ctx context.Context) (func(), error) {
+	id, err := r.StartAdmitted(ctx, t.TempDir(), "printf done", os.Environ(), process.CallIdentity{CallID: "call"}, func(ctx context.Context) (func(), error) {
 		held, err := w.ReserveCommand(ctx, paths, nil, func() error { close(entered); return nil })
 		if err != nil {
 			return nil, err
@@ -65,7 +65,7 @@ func TestCommandLeaseCancellationDoesNotReleaseAnotherCommand(t *testing.T) {
 	var r process.Registry
 	r.Begin(ctx, time.Now().Add(time.Minute))
 	entered := make(chan struct{})
-	_, err := r.StartAdmitted(ctx, t.TempDir(), "printf never", os.Environ(), "call", func(ctx context.Context) (func(), error) {
+	_, err := r.StartAdmitted(ctx, t.TempDir(), "printf never", os.Environ(), process.CallIdentity{CallID: "call"}, func(ctx context.Context) (func(), error) {
 		held, err := w.ReserveCommand(ctx, []string{path}, nil, func() error { close(entered); return nil })
 		if err != nil {
 			return nil, err

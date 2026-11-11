@@ -11,7 +11,7 @@ import (
 
 // Completion contains only fields needed to locate and commit an archived result.
 type Completion struct {
-	ID, CallID, Command, Error string
+	ID, CallID, ExecutionID, Command, Error string
 }
 
 // HasCommands includes running jobs and terminal results not yet acknowledged.
@@ -31,7 +31,7 @@ func (r *Registry) AppendCompleted(dst []Completion) []Completion {
 		select {
 		case <-j.done:
 			state := &j.state
-			dst = append(dst, Completion{state.ID, state.CallID, state.Command, state.Error})
+			dst = append(dst, Completion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, Command: state.Command, Error: state.Error})
 		default:
 		}
 	}

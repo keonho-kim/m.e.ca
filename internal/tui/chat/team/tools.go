@@ -27,7 +27,7 @@ func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output 
 			return
 		}
 	}
-	id := toolCallKey(event.Agent, event.Call.ID)
+	id := toolCallKey(event.Agent, event.Call.ExecutionKey())
 	if s.tools == nil {
 		s.tools = make(map[string]toolDisplay)
 	}
@@ -40,7 +40,7 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 	if event.Call == nil || catalog.IsTool(event.Call.Name) {
 		return
 	}
-	id := toolCallKey(event.Agent, event.Call.ID)
+	id := toolCallKey(event.Agent, event.Call.ExecutionKey())
 	command := event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.CommandID != ""
 	if command {
 		owned := commandKey(event.Agent, event.Operation.Process.CommandID)

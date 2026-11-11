@@ -1,0 +1,27 @@
+/* Purpose: Explain pane changes, modal arrival and explicit reveals without changing layout or opacity.
+ * Pattern: Token-timed CSS motion on existing Astryx roots.
+ * Usage: The theme owns dialog motion; pane and reveal classes mark conditional content.
+ * Related: webui/src/app/styles/theme.ts, webui/src/app/styles/base.css. */
+@keyframes meca-pane-enter {
+  from { transform: translateY(var(--spacing-2)); }
+  to { transform: translateY(0); }
+}
+@keyframes meca-dialog-enter {
+  from { transform: translateY(var(--spacing-3)); }
+  to { transform: translateY(0); }
+}
+@keyframes meca-content-reveal {
+  from { transform: translateY(var(--spacing-1)); }
+  to { transform: translateY(0); }
+}
+@layer utilities {
+  .meca-pane-enter {
+    animation: meca-pane-enter var(--duration-fast-max) var(--ease-entrance) backwards;
+  }
+  .meca-content-reveal {
+    animation: meca-content-reveal var(--duration-fast-max) var(--ease-entrance) backwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .meca-pane-enter, .meca-content-reveal { animation: none; }
+  }
+}

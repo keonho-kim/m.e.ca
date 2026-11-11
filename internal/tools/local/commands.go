@@ -42,7 +42,7 @@ func (e *Executor) CommandActivity() []toolapi.CommandRun {
 	}
 	out := make([]toolapi.CommandRun, 0, len(states))
 	for _, state := range states {
-		run := toolapi.CommandRun{CallID: state.CallID, ID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
+		run := toolapi.CommandRun{ExecutionID: state.ExecutionID, CallID: state.CallID, ID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
 		if !toolapi.CommandActive(state.Status) {
 			code := state.ExitCode
 			run.ExitCode = &code
@@ -69,7 +69,7 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 		}
 		command := e.commandLabel(state.ID, state.Command)
 		result.Process.Command = command
-		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, Command: command, Result: result})
+		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, Command: command, Result: result})
 	}
 	return completed, nil
 }

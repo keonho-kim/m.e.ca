@@ -4,7 +4,7 @@
 // Related: webui/src/shared/lib/errors/index.ts.
 
 import { create } from 'zustand';
-import { ApiError, describeError } from '@/shared/lib/errors';
+import { ApiError, describeError, isCancelled } from '@/shared/lib/errors';
 
 interface ServerSession {
   connected: boolean;
@@ -35,6 +35,7 @@ export function dismissNotice() {
   useServerSession.setState({ notice: '' });
 }
 export function reportError(error: unknown) {
+  if (isCancelled(error)) return;
   useServerSession.setState({
     notice: describeError(error),
     ...(error instanceof ApiError && error.code === 'unauthorized' ? { connected: false } : {}),

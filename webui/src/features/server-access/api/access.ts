@@ -3,11 +3,11 @@
 // Usage: Server-access actions call these endpoints.
 // Related: internal/serverapi/ui_auth.go.
 
+import { nativeJSON, nativeRequest } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
 export async function hasBrowserSession(signal?: AbortSignal): Promise<boolean> {
-  const response = await fetch('/v1/ui/session', { credentials: 'same-origin', signal });
+  const { response, body: value } = await nativeJSON('/v1/ui/session', { signal });
   if (!response.ok) throw failure('network');
-  const value: unknown = await response.json();
   if (
     typeof value !== 'object' ||
     value === null ||
@@ -23,22 +23,18 @@ export async function login(token: string) {
     .trim()
     .replace(/^Server token:\s*/, '')
     .trim();
-  const response = await fetch('/v1/ui/login', {
+  const response = await nativeRequest('/v1/ui/login', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${value}`, 'X-Meca-UI': '1' },
-    credentials: 'same-origin',
+    headers: { Authorization: `Bearer ${value}` },
   });
-  if (!response.ok)
-    throw failure(
-      response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'network'
-    );
+  await response.body?.cancel();
+  if (!response.ok) throw failure(response.status === 403 ? 'forbidden' : 'network');
   if (!(await hasBrowserSession())) throw failure('browser_cookie');
 }
 export async function logout() {
-  const response = await fetch('/v1/ui/logout', {
+  const response = await nativeRequest('/v1/ui/logout', {
     method: 'POST',
-    headers: { 'X-Meca-UI': '1' },
-    credentials: 'same-origin',
   });
+  await response.body?.cancel();
   if (!response.ok) throw failure('network');
 }

@@ -14,6 +14,8 @@ processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 
 
 제품은 단일 Go 모듈과 cmd/meca 합성 루트를 사용한다. 기능은 internal 아래에 두고 실제 소유 패키지를 직접 참조한다. 소비자 소유의 작은 I/O 계약과 함수·struct를 우선하며 패키지는 한 기능, 파일은 그 안의 한 책임을 담당한다.
 
+`third_party/clipboard`는 MIT 라이선스 외부 의존성을 로컬 교체한 소스로, 제품 모듈이 아니다. 버전·원본 커밋·변경 범위·갱신 검증은 [의존성 안내](../third_party/clipboard/MECA.md)가 소유한다. 변경·추가한 코드는 파일 크기와 헤더 규칙을 적용하고, 변경하지 않은 upstream 코드는 원래 구성을 보존한다.
+
 | 위치 | 책임 |
 | --- | --- |
 | cmd/meca | CLI 분기·어댑터 조립·프로세스와 터미널 수명 |
@@ -37,7 +39,7 @@ processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 
 | serverapi/admission | 입력 바이트·큰 원문 작업의 동시 입장·취소·해제 |
 | serverapi/detail | 공개 필드만 가진 상세 JSON·마스킹·바이트 페이지·세션별 최근 문서와 private spool 수명 |
 | serverapi/eventstream | 5초 무출력 이후 1초 heartbeat 시계·SSE 기록·flush. 실행 이력과 독립 |
-| tui/clipboard | 로컬 플랫폼 클립보드·private 스풀·취소·정리 |
+| tui/clipboard | 공통 네이티브 클립보드·WSL 호스트 브리지·크기 제한·취소·자식 종료 수집 |
 | storage/serverrequests | native 접수·입력 digest·종료 상태·중복 방지의 트랜잭션과 SQLite 수명 |
 | storage/capacity | 프로세스 공통 할당 상한·지속적인 예약 횟수·새 할당 전 여유 공간 검사 |
 | storage/credentialstore | Provider/endpoint에 인증된 API Key 암호문·독립 난수 암호화 키의 OS 저장 계약·원자적 SQLite 저장과 복구 실패 보존 |
@@ -569,7 +571,7 @@ agent/media는 이미지 스냅샷의 값·수용 한도, provider/connection은
 
 media/imagefile은 파일 내용의 형식 판별·디코딩·대표 프레임 변환을 담당하고 local/image는 기존 경로 경계와 취소 가능한 단일 디코딩 수용량을 적용한다. local/image_read는 알려진 크기의 스냅샷 읽기와 크기 변경 검사를, imagefile/png는 PNG 청크 기반 애니메이션 판별을 담당한다. 이미지 본문은 model 메시지에만 보존하며 TUI 이벤트에는 작은 메타데이터를 전달한다.
 
-같은 코덱을 API 입력·TUI clipboard도 직접 사용한다. tui/clipboard는 로컬 플랫폼 명령·private 임시 파일·취소와 정리, tui/session/image_paste는 이벤트 루프의 첨부 소유권·초안 세대·메타데이터 표시를 담당한다. composer.Request는 이미지 바이트를 복사하지 않고 불변 스냅샷을 공유한다. 큐 편집의 원래 초안과 예약 이미지는 별도 슬라이스로 소유한다. 64MiB·64M픽셀 검사는 agent/media 한 곳이 소유하며 디코더는 예상 작업량을 processmemory의 768MiB 공용 예산에 예약한다. skills.ResourceFile의 이미지 읽기도 같은 바이트 상한을 사용한다.
+같은 코덱을 API 입력·TUI clipboard도 직접 사용한다. tui/clipboard는 요청 단위 공통 라이브러리 읽기·로컬 파일 스냅샷·WSL Windows 브리지·길이 제한 파이프·취소와 자식 종료 수집, tui/session/image_paste는 이벤트 루프의 첨부 소유권·초안 세대·메타데이터 표시를 담당한다. composer.Request는 이미지 바이트를 복사하지 않고 불변 스냅샷을 공유한다. 큐 편집의 원래 초안과 예약 이미지는 별도 슬라이스로 소유한다. 64MiB·64M픽셀 검사는 agent/media 한 곳이 소유하며 디코더는 예상 작업량을 processmemory의 768MiB 공용 예산에 예약한다. skills.ResourceFile의 이미지 읽기도 같은 바이트 상한을 사용한다.
 
 storage/content·sqlite는 이미지 본문을 같은 세션의 payload에 저장한다. sqlite의 RecentInputs는 사용자 텍스트만, PendingTools는 미완료 호출의 인자만 복원한다. PendingTools의 식별자 조회와 인자 선택은 별도 파일이 담당하며 부분 완료된 배치도 원래 순서를 유지한다. 모델 문맥 조회는 이미지 포함 여부를 명시하고 텍스트 연결에서는 이미지 payload를 읽지 않는다. HistoryImage는 SQLite에서 요청한 이미지 객체를 선택하고 해당 data 참조만 복원한다. 원래 JSON 문자열 또는 문자열 참조를 직접 바이트로 디코딩하고 크기·형식·digest를 검증한다. 요약·화면 조회도 이미지 바이너리를 제외한다. 이미지 미소비 그룹은 압축 경계를 제한한다. 형식·검사·용량 계약은 [이미지 입력](images.md)을 따른다.
 
@@ -597,11 +599,28 @@ SQLite의 청크 미리보기는 호출이 소유한 decoder를 사용한다. DB
 
 상세 캐시 정리는 대상 슬롯만 pin한 뒤 pool mutex 밖에서 파일·읽기 종료를 기다린다. 다른 세션의 문서 읽기는 그 정리에 묶지 않는다. sessionId와 taskId가 함께 주어지면 소유 관계를 확인하며 세션별 설정 응답·변경 이벤트는 다른 탭의 작업을 포함하지 않는다.
 
+### 클립보드 플랫폼 검증
+
+공통 라이브러리의 `ReadImage` 확장은 디코딩 전 바이트 한도·취소·요청 소유 연결을 제공한다. Linux는 Wayland 데이터 제어를 우선하며 사용할 수 없는 경우 X11로 연결한다. X11 INCR은 전송 누적 크기를 검사하고 Wayland는 메타데이터·descriptor·이미지 파이프를 함께 정리한다. macOS AppKit은 실제 자식 읽기에서만 초기화하며 부모 시작 경로는 프레임워크를 로드하지 않는다. WSL은 native Linux 선택보다 먼저 판별하며 `powershell.exe`를 프로필 없이 STA로 실행한다. 사용자 정의 클립보드 객체 역직렬화는 사용하지 않는다. 제한과 상태 코드는 Go 소유 상수로 스크립트에 전달한다. 취소·잘못된 프레임은 먼저 interrupt를 전달하고 최대 1초 뒤 강제 종료하며, 시작한 자식과 강제 종료 타이머를 합류한다. WSL은 interrupt로 상호운용 채널을 닫을 기회를 주며 Linux 중계 프로세스만 즉시 강제 종료하지 않는다.
+
+```sh
+go test -race ./internal/tui/clipboard ./internal/tui/session
+go test -C third_party/clipboard -race ./...
+```
+
+macOS 검사는 이름이 있는 전용 pasteboard를 사용해 개인 클립보드를 바꾸지 않는다. Linux 라이브러리 검사는 전용 Unix 소켓에서 Wayland offer·실제 descriptor 전달·초과·취소를 확인한다. X11 실전송 검사는 별도 Xvfb display에 합성 PNG를 넣고 `MECA_CLIPBOARD_FIXTURE`를 해당 파일로 지정해 `go test ./internal/tui/clipboard -run '^TestFixture'`를 실행한다. 작은 직접 전송과 큰 INCR 전송을 각각 검증한다. 이때 `xclip`은 테스트 생산자일 뿐 제품 실행 의존성이 아니다. 같은 fixture 검사의 WSL 경로는 모의 `powershell.exe`로 바이너리 파이프를 검증한다.
+
+모의 Windows 프로세스와 교차 빌드 성공은 실제 WSL 실행 검증과 구분한다. Windows 호스트에서는 WSLg 없는 WSL과 Windows PATH 가져오기를 끈 환경에서 화면 캡처·복사한 이미지 파일·빈 클립보드·초과 입력·취소를 별도로 확인한다. Windows 실행 상호운용 비활성화는 지원 불가능한 환경으로 명시적인 오류를 확인한다.
+
 ## 내장 WebUI
 
 사용자 메시지의 엔진 참조 블록은 message-content의 표시 투영에서 분리한다. 파일·폴더 참조와 스킬의 토큰 정의는 shared/ui/reference-token이 소유한다. 스킬 탐색의 추가 액션은 WorkspaceShell이 Composer의 좁은 imperative 계약에 연결하며, 실제 입력 변경은 Astryx ChatComposerInputHandle.insertToken이 수행한다. 스킬 삽입이 보기 전환을 소유하지 않는다.
 
-history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영한다. Chat은 저장 이력 확인을 layout effect에서 반영하고 마지막 완료 행을 실시간 출력 뒤에 배치한다. LiveActivity는 종료한 작업의 중간 활동을 다시 표시하지 않는다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
+history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영하며, 완료 측정은 메시지와 구별한 union 항목으로 반환한다. serverapi/history_completion은 finished checkpoint의 상태·통계만 투영하고 자유 본문을 보내지 않는다. history-row는 메시지·도구·이미지를, completion-row는 고정 상태 라벨과 검증한 숫자 통계만 표현한다. 종료 사유는 명시적인 상세 조회로 분리한다. Chat은 저장 이력 확인을 layout effect에서 반영하고 마지막 완료 행을 실시간 출력 뒤에 배치한다. LiveActivity는 종료한 작업의 중간 활동을 다시 표시하지 않는다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
+
+툴 결과 표현은 chat/tool-call·tool-value가, 요청 전용 모달 수명은 model/inspection·inspection/tool-request가 소유한다. model/detail-pages는 revision에 묶인 32KiB 페이지와 취소·gcTime 0 질의를 공용으로 제공한다. 원문을 스토어에 다시 쌓지 않으며 긴 저장 답변·Thinking도 같은 위치에서 페이지로 읽는다. history 가상화의 마운트된 행은 일반 문서 흐름에 두고 위·아래 spacer만 측정 좌표로 조절한다. 툴 결과의 비동기 높이 변경 때 오래된 absolute 좌표가 다음 행과 겹치는 것을 막으며 화면 밖 행은 계속 해제한다.
+
+serverapi/detail/view는 `DetailRequest.View`별 공개 표현을 직렬화한다. commands/server는 source·view 조합과 읽기 lease를 소유하고 SQLite는 ToolRequest에서 요청 payload만, ToolEvent에서 결과와 제한된 표시 인자만 복원한다. API cache는 view도 키·revision에 포함하며 마스킹·읽기·저장 예산과 취소 수명을 기존 소유자에게 둔다.
 
 `webui/`는 full 배포본에만 포함하는 Bun 빌드의 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. tui의 조립·의존성 그래프에는 내장 자산 어댑터가 없으며 자산이 이미 생성돼 있어도 포함하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
 
@@ -615,6 +634,12 @@ history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영한�
 | `entities/server-session` | 인증 상태·연결 수명·언어·안전한 오류 안내 |
 | `shared/api` | HTTP 어댑터, QueryClient, 생성한 wire 타입의 공개 API |
 | `shared/config`, `shared/i18n`, `shared/lib`, `shared/ui` | 표시 설정·번역·순수 변환·도메인에 독립적인 UI |
+
+React Compiler 1.0.0은 @vitejs/plugin-react의 공식 preset과 @rolldown/plugin-babel로 앱 소스를 빌드할 때 실행한다. React 19의 기존 runtime을 사용하며 별도 JavaScript 서버를 배포하지 않는다. 스트리밍 순서·요청 수명·승인 판단 같은 도메인 로직을 컴파일러에 맡기지 않는다. IO 효과에 필요한 안정된 식별자와 가상화 행의 memo 경계는 유지하고, 순수 표시 계산의 반복적인 캐시는 컴파일러가 담당한다. 모델 폼은 기존 Zod 패키지의 zod/mini로 검증하며 React Hook Form resolver와 같은 스키마를 공유한다.
+
+공통 same-origin 요청·JSON 해석·취소·401 본문 정리는 shared/api/http가 소유한다. client는 native 명령/첨부 변환을, server-access는 인증 사용 사례를, reply는 단일 결과·요청 식별·오류 스키마를 소유한다. HTTP 어댑터는 작업 변경을 자동 재전송하지 않으며 원본 File을 JSON/Base64로 중복 변환하지 않는다.
+
+지연 로드 경계는 코드 크기와 첫 표시 비용을 함께 확인한다. 빈 대화에서 본문 렌더러를 불러오지 않고 이미지·상세·승인 UI는 실제 표시할 때 로드한다. 승인 컨트롤러는 활성 승인과 제어 수명을 그대로 유지한다. 초기 필수 의존성만 Rolldown의 initial 태그로 묶는다. React·React DOM·scheduler는 하나의 우선 그룹으로 유지해 공통 UI 모듈과 React 초기화의 순환을 막고, 지연 기능의 코드는 초기 묶음에 넣지 않는다. 분석 보고서는 `bun run --cwd webui analyze`로 `.cache/bundle-analysis.html`에 생성하며 내장 배포 자산에 넣지 않는다. [React Compiler 구성](https://react.dev/learn/react-compiler/installation), [Zod Mini](https://zod.dev/packages/mini), [Rolldown 코드 분할](https://rolldown.rs/in-depth/manual-code-splitting)의 공식 계약을 사용한다.
 
 서버 응답 캐시는 TanStack Query가 소유한다. Zustand는 서버 세션, 브라우저 표시 설정, 워크스페이스 임시 상태를 분리한다. 워크스페이스 내부는 화면·컴포저·스트림 슬라이스를 하나의 스토어로 합성하여 입력 캡처와 완료 이벤트의 원자성을 유지한다. 값이 같은 입력은 revision을 올리거나 구독자에게 알리지 않는다. 컴포저는 현재 대화의 활성 작업만 선택하며, 비활성 이력 캐시 제한 구독은 워크스페이스 페이지가 해제한다. 인증 만료는 복원을 위해 초안을 유지하고 명시적인 연결 종료는 세션 수명을 갱신해 편집기 DOM까지 해제한다.
 
@@ -660,11 +685,11 @@ appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된
 
 일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수와 레코드별 합계를 WeakMap으로 재사용하고 전체 사용량은 변경분으로 갱신한다. 합계 캐시가 과거 입력·큐 레코드를 강하게 보유하지 않아 삭제·로그아웃 직후 원본 참조를 회수할 수 있다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다. 첨부 미리보기는 File별로 URL 하나를 소유하고 입력 타이핑에 재생성하지 않으며 삭제·화면 종료 시 revoke한다. 미리보기는 원본을 Base64나 별도 저장소에 복제하지 않는다. 알려진 임시 업로드는 불확실한 제출을 제거할 때 해제하고 해제 HTTP는 5초로 제한하며 불필요한 응답 본문을 취소한다. 입력 TUI의 이미지 표시는 읽기 전용 접두사로 투영하고 실제 전송 본문·편집 revision에 넣지 않는다.
 
-세션 사용량은 append-only tool_events의 검증된 합계와 마지막 usage sequence만 보관하고 새 꼬리만 집계한다. Sessions는 DB 파일 identity에 연결된 최근 128개 projection을 재사용하며 DB handle·이벤트 본문을 보관하지 않는다. 최초 조회는 전체 검증을 수행하고 실패한 꼬리는 커서를 전진시키지 않는다. DB 교체·삭제는 해당 projection의 재사용을 막는다.
+세션 사용량은 append-only tool_events의 검증된 합계와 마지막 usage sequence만 보관하고 새 꼬리만 집계한다. Sessions는 DB 파일 identity에 연결된 최근 128개 projection을 재사용하며 DB handle·이벤트 본문을 보관하지 않는다. 실제 TokenUsage 호출 때만 projection을 연결하므로 파일 참조나 이력 조회가 사용량 캐시를 채우거나 축출하지 않는다. 열린 handle은 최초 연결한 projection을 유지한다. 최초 조회는 전체 검증을 수행하고 실패한 꼬리는 커서를 전진시키지 않는다. DB 교체·삭제는 해당 projection의 재사용을 막는다.
 
 현재 대화 이력은 구간별 네 페이지를 유지하고 더 오래된 구간과 최신 구간으로 이동한다. 새 기록과 재접속은 최신 구간을 갱신한다. 각 페이지의 서버 순서를 재사용하며, 스트림 상태가 저장 이력의 조회 revision을 확인한 뒤 교체된 초안을 해제한다. 대화·디렉터리·스킬·예약 목록은 가상화하며 포커스 또는 편집 중인 행은 유지한다. 대화/스킬 목록은 최대 네 페이지를 보관하고 목록 처음으로 복귀할 수 있다. 디렉터리는 revision에 고정된 앞/뒤 네 페이지를 사용한다. 비활성 서버 데이터는 최근 12개와 추정 UTF-16/Blob 16MiB 예산을 함께 적용한다. 기본 GC는 60초이며 대화 목록·디렉터리·썸네일은 15초다. 캐시 회수는 관련 질의의 성공·마지막 관찰 해제 때만 수행한다. 스크롤 위치도 최근 12개로 제한한다.
 
-스트림이 표시를 갱신할 때 Astryx의 증분 파서를 사용하며 공개 AST transform으로 표시 노드를 1,024개 이내로 제한한다. 새 텍스트가 500ms 동안 오지 않으면 도착한 본문까지 표시하고 문자 애니메이션을 종료한다. 스트림 연결 복구 동안에는 현재 화면에 전달된 본문을 확정한다. 접은 Thinking은 Markdown을 해제한다. 컴포저 아래 실행 상태는 현재 요청의 시간과 처리량을 표시하고, 누적 토큰 조회는 사용량 이벤트·요청 완료·재연결 snapshot에서 갱신한다. 대화 삭제 시 사용량 캐시도 회수한다. 상태 조회의 진행 중 네트워크 요청은 공유하며 live 본문은 query 캐시에 저장하지 않는다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집 입력은 capabilities.editorBytes의 2MiB UTF-8 예산을 따른다. 편집기는 작은 문서만 textarea와 plain pre를 겹치고 큰 문서는 같은 라이브러리의 고정 높이 textarea로 표시한다. 줄 번호나 토큰 DOM은 만들지 않는다. 문법 강조는 65,536 UTF-16 code unit·2,000줄·줄당 8,192 code unit·4,096개 Range 이내로 제한하며 초과해도 원문 편집·revision 저장은 유지한다. 강조는 80ms 동안 입력을 합치며 IME 조합 중에는 분석하지 않는다. Astryx tokenizeStreaming의 배치마다 4,096개 토큰 예산을 확인하고 초과 시 분석을 중단한다. 작업은 취소 가능하고 Preview 전환·문서 종료 때 Range를 제거한다. undo 본문은 추정 UTF-16 8MiB, 메타데이터는 라이브러리의 100개 기록으로 제한한다. 현재 위치는 유지하며 예산 내에서 초기·저장 경계와 조합 단위 이력을 보관한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
+스트림이 표시를 갱신할 때 Astryx의 증분 파서를 사용하며 공개 AST transform은 본문 노드 768개를 기준으로 페이지를 나누고 경계의 상위 구조와 작은 표 머리글을 보존한다. 같은 응답 안의 본문 페이지 조작으로 전체 내용을 읽으며 버린 꼬리를 별도 팝오버로 조회하지 않는다. 순서 있는 목록의 번호를 이어가고 사용자가 과거 페이지를 선택하면 그 페이지의 문자 애니메이션을 멈춘다. 별도 Markdown 재파서를 추가하지 않는다. 새 텍스트가 500ms 동안 오지 않으면 도착한 본문까지 표시하고 문자 애니메이션을 종료한다. 스트림 연결 복구 동안에는 현재 화면에 전달된 본문을 확정한다. 접은 Thinking은 Markdown을 해제한다. 컴포저 아래 실행 상태는 현재 요청의 시간과 처리량을 표시하고, 누적 토큰 조회는 사용량 이벤트·요청 완료·재연결 snapshot에서 갱신한다. 대화 삭제 시 사용량 캐시도 회수한다. 상태 조회의 진행 중 네트워크 요청은 공유하며 live 본문은 query 캐시에 저장하지 않는다. 코드·원문 미리보기는 160줄 또는 8,192 UTF-16 code unit마다 나누며 서로게이트 쌍을 자르지 않는다. 편집 입력은 capabilities.editorBytes의 2MiB UTF-8 예산을 따른다. 편집기는 작은 문서만 textarea와 plain pre를 겹치고 큰 문서는 같은 라이브러리의 고정 높이 textarea로 표시한다. 줄 번호나 토큰 DOM은 만들지 않는다. 문법 강조는 65,536 UTF-16 code unit·2,000줄·줄당 8,192 code unit·4,096개 Range 이내로 제한하며 초과해도 원문 편집·revision 저장은 유지한다. 강조는 80ms 동안 입력을 합치며 IME 조합 중에는 분석하지 않는다. Astryx tokenizeStreaming의 배치마다 4,096개 토큰 예산을 확인하고 초과 시 분석을 중단한다. 작업은 취소 가능하고 Preview 전환·문서 종료 때 Range를 제거한다. undo 본문은 추정 UTF-16 8MiB, 메타데이터는 라이브러리의 100개 기록으로 제한한다. 현재 위치는 유지하며 예산 내에서 초기·저장 경계와 조합 단위 이력을 보관한다. 예약 본문은 256자 요약과 편집을 분리한다. live 소스와 도구 활동의 렌더링을 분리하며 변경 없는 스토어 배치는 구독 알림을 발생시키지 않는다.
 
 react-simple-code-editor의 고정 버전은 Bun patchedDependencies로 적용한 패치를 사용한다. 패치가 배포 원본의 ESM 진입점을 지정하므로 Vite에 패키지 내부 경로 alias를 두지 않는다. 입력 승인·IME 트랜잭션·명시적 이력 묶음 경계·고정 높이 모드는 라이브러리 경계에서 처리한다. 타이핑 병합과 Enter는 문서 앞부분을 split하지 않고 현재 줄만 찾는다. 붙여넣기와 대량 beforeinput은 하나의 값 교체로 처리해 브라우저의 줄별 대량 삽입을 피한다. Preview는 이력을 바꾸지 않는 text()로 조회하고 capture()만 저장 경계를 확정한다. dirty 값이 달라질 때만 전역 스토어에 전달하며 같은 표시 패치는 구독 알림을 발생시키지 않는다. 저장 응답이 늦어도 이후 편집을 미저장 상태로 유지한다. 문법 강조는 HTML 문자열을 삽입하지 않는다. 키보드 undo/redo는 편집기 자체 이력을 사용하며 브라우저 우클릭 메뉴의 undo/redo는 지원하지 않는다.
 
@@ -685,3 +710,13 @@ bun run --cwd webui browser -- -s=meca-ui open http://127.0.0.1:8787/ui/ --brows
 자동 검증은 실제 설치된 Chrome을 사용한다. 수동 Playwright CLI에는 연결 파일에 기록된 실제 URL을 사용한다. 토큰을 CLI 인자·URL·스크린샷 설명·브라우저 trace에 남기지 않는다. 테스트 trace는 꺼져 있다. 검증 후 connection.json.stop 파일을 만들면 fixture와 소유한 작업이 종료되고 임시 HOME이 제거된다. 파일이 없으면 45분 뒤 종료한다. 본 프로세스의 종료와 `connection.json` 제거까지 확인한다.
 
 검증 항목은 작업공간/대화의 동시 실행·전환, 작업 중지와 스트림 재연결, 후속 예약의 단일 실행, 설정/언어/테마, 스킬과 참조, 편집/충돌, 이미지의 인증 조회, 승인, 긴 이력의 최신 복귀다. 실제 화면은 Playwright CLI로 데스크톱·좁은 화면·라이트/다크를 함께 확인한다. Go 테스트는 HTTP 인증/CSRF·새 native 명령·파일 저장/감시·삭제 잠금·작업공간 수명을 검증하며 동시성 변경에는 race 검사를 추가한다.
+
+작업 실행 식별자는 agent/run이 검증 후 부여하고 이벤트·명령 registry·완료 수집까지 보존한다. Provider call ID는 모델 프로토콜의 연결에만 사용한다. 가상화된 도구 행은 실행 식별자를 key로 사용하므로 시작→완료 전환이 별도 실행을 덮거나 행을 다시 만들지 않는다. 원문·초안·이미지 상세 상태는 대화 수명의 inspection 모델과 단일 호스트가 소유한다. 가상 행이나 실시간 출력이 제거돼도 상세창은 닫히지 않으며 본문 대신 조회 참조만 보관한다.
+
+shared/api/event-stream은 EventSource·세대 검사·취소·단일 재연결 타이머를 소유한다. task observer는 순서·델타 묶음·후속 예약만, file-events는 현재 디렉터리 알림만 소유한다. 오류 후 재연결의 상태 조회가 실패해도 다음 연결을 예약하며 잘못된 JSON도 연결을 영구 중단시키지 않는다. 파일 감시는 문서 전환에 재구독하지 않고 관련 파일 이름이나 rescan일 때만 editorProbe를 요청한다. 편집기 메타데이터 힌트는 저장 승인을 대신하지 않는다.
+
+reference-queue는 파일 선택과 변경의 취소·직렬화·전송 장벽을 소유한다. file-references는 참조 저장·복원, file-mutations는 고유 키와 결과 조회를 소유한다. server.FileReferences는 모델 runtime 복원 없이 SQLite 선택만 다루며, 프로젝트 참조 변경은 디렉터리 ID를 128개씩 읽고 대화 DB 하나씩 열어 처리한다. storage/filemutations는 별도 형식의 접수 기록·원자적 공개·상수 크기 예산 카운터를 관리한다. 지원하지 않는 DB는 쓰기 연결 전에 거절한다. TokenUsage의 projection admission은 context 취소가 가능한 permit으로 보호하며 SQL과 커서 변경을 함께 직렬화한다.
+
+파일 참조 변경 이벤트의 mutationKey는 해당 대화의 변경 응답과 연결한다. 브라우저는 아직 이벤트를 소비하지 않은 최근 128개 키·대화 식별자만 보유하며 자기 응답으로 확정할 참조의 중복 조회를 생략한다. 다른 대화·클라이언트의 변경은 다시 조회한다. 이벤트 소비·실패·대화 삭제·로그아웃은 해당 식별자를 회수하며 파일 본문이나 경로 목록을 별도 복제하지 않는다. 읽기 전용 문서도 본문 대신 읽기 시점의 버전 참조를 보유해 실제 문서 변경만 확인한다.
+
+초기 파일 참조 조회는 컴포저가 아니라 대화 전환 수명의 useFileReferences가 소유한다. 파일/대화 탭에서 컴포저 배치가 달라져도 참조를 다시 조회하지 않는다. 관찰 연결의 재접속·snapshot reset은 현재 대화의 참조를 복원한다. file_references_changed는 본문이 없는 전역 제어 이벤트이므로 다른 대화의 보유 입력에도 전달한다.

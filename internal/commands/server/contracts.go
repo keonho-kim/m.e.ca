@@ -86,6 +86,8 @@ type Options struct {
 	Diagnose         func(context.Context, connection.Selection, string) (connection.Capabilities, error)
 	Files            fileview.Source
 	MutateEntry      func(context.Context, policy.Settings, fileview.EntryMutation) (string, error)
+	Mutations        FileMutationLedger
+	References       FileReferences
 	Read             func(context.Context, string) (*Conversation, error)
 	Usage            func(context.Context, string) (model.TokenUsage, error)
 	Discover         func(context.Context, connection.Selection, string, setup.Defaults) ([]connection.ModelInfo, *connection.Selection, error)
@@ -156,6 +158,7 @@ type Snapshot struct {
 	Drafts            []Draft
 }
 type Event struct {
+	MutationKey           string
 	Outcome               *work.End
 	Workspace             string
 	ApprovalExpiresAt     time.Time

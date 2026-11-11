@@ -56,6 +56,8 @@ message Command {
     SkillPrefix suggest_skills = 48;
     CreateFolder create_folder = 49;
     FileMutation mutate_file = 50;
+    EditorProbe editor_probe = 52;
+    RequestLookup lookup_mutation = 53;
     SessionTarget session_usage = 51;
   }
 }
@@ -64,6 +66,14 @@ message SessionListRequest { string cursor = 1; int32 limit = 2; }
 message HistoryRequest { int64 before = 1; int32 limit = 2; string session_id = 3; }
 message EventReference { string session_id = 1; int64 sequence = 2; }
 message DetailRequest {
+  enum View {
+    DOCUMENT = 0;
+    TOOL_REQUEST = 1;
+    TOOL_RESULT = 2;
+    TEXT = 3;
+    THINKING = 4;
+  }
+  View view = 8;
   oneof source {
     EventReference tool = 1;
     string approval_id = 2;

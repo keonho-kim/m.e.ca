@@ -39,7 +39,9 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 
 파일 선택 시 `editorRead`로 전체 편집 문서를 한 번 읽으며 편집 가능한 파일에 `previewFile`을 중복 요청하지 않는다. 편집 불가 응답일 때만 `previewFile`의 읽기 전용 페이지를 사용한다. Preview/Raw와 미리보기 본문 클릭은 클라이언트 표시 상태이며 Markdown 미리보기는 현재 초안을 사용한다. 전환 자체로 서버에 저장하지 않으며 `editorSave`의 revision 검사와 저장 확인을 유지한다.
 
-파일 이름 변경·이동·삭제는 `mutateFile`을 사용한다. 목록에서 받은 부모 디렉터리 `revision`과 참조를 갱신할 대화의 `sessionId`를 함께 보낸다. 서버는 작업공간 경로와 보호 항목을 확인하고 참조 변경을 한 DB 트랜잭션으로 저장한다. 응답의 `path`는 이동 결과, `paths`는 해당 대화의 확정 참조 목록이다. `referencesReady`가 참일 때 전송 입력에 반영한다. `errorCode`·`errorMessage`가 있으면 부분 완료 여부를 확인하며 파일 효과를 무조건 재실행하지 않는다. 파일시스템과 DB는 하나의 원자적 트랜잭션이 아니며, 참조 저장을 확인하지 못하면 전송을 막고 경로를 다시 확인한다. 같은 이름의 별도 대상은 덮어쓰지 않고 대소문자만 바꾸는 이름 변경은 지원한다. 폴더 삭제는 하위 항목을 포함하고 항목 사이에서 취소를 확인하므로 중단 시 일부 항목이 이미 삭제되었을 수 있다.
+파일 이름 변경·이동·삭제는 `mutateFile`을 사용한다. 호출마다 고유한 `key`(8..128바이트), 목록에서 받은 부모 디렉터리 `revision`, 현재 대화의 `sessionId`를 보낸다. 서버는 파일 효과 전에 작업 의도를 영구 접수한다. 같은 키·의도는 기존 결과만 조회하고 다른 의도에 키를 재사용하면 거절한다. 응답 유실 시 `lookupMutation {sessionId,key}`로 확인하며 파일 효과를 재전송하지 않는다. `state`는 `pending`·`applied`·`rejected`·`partial`·`uncertain`이다. 중단된 서버가 완료를 기록하지 못한 작업은 `uncertain`으로 반환하므로 실제 파일 상태를 확인해야 한다.
+
+서버는 해당 작업공간의 모든 대화에서 영향을 받은 참조를 각 DB의 트랜잭션으로 바꾼다. 변경한 대화에는 원인 `mutationKey`를 포함한 `file_references_changed` 이벤트를 보내며 클라이언트는 보유한 입력의 참조만 다시 조회한다. 응답 `path`는 이동 결과, `paths`는 현재 대화의 확정 참조다. `referencesReady`가 참일 때 전송 입력에 반영한다. `errorCode`·`errorMessage`가 있으면 부분 완료 여부를 확인한다. 파일시스템과 여러 대화 DB는 하나의 원자적 트랜잭션이 아니며, 확인하지 못한 참조를 사용한 전송은 차단한다. 같은 이름의 별도 대상은 덮어쓰지 않는다. 폴더 삭제는 항목 사이에서 취소를 확인하므로 일부 항목만 삭제될 수 있다.
 
 `sessionUsage`는 저장된 사용량 이벤트의 누적 합계다. 사용량 이벤트·요청 완료·재연결 snapshot에서 다시 조회하며 대화 삭제 시 해당 캐시도 제거한다. 전역 모델 폼은 전역 기본 모델만 조회하고 변경되지 않은 값은 저장하지 않는다.
 
@@ -70,7 +72,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 5. draft 페이지와 스냅샷의 generation이 달라지면 기존 조립 내용을 폐기한다. reset은 새 generation의 시작이며 같은 팀원이 퇴장 후 복귀해도 이전 generation을 재사용하지 않는다. draft 조회가 작업 종료와 겹치면 taskStatus와 history/detail로 전환한다.
 6. 완료된 대화는 history로 읽는다. 메시지 sequence와 도구 reference가 원문 조회 키다. 확정 이력과 진행 초안을 중복 표시하지 않는다.
 
-snapshot draft의 committed는 해당 generation의 출력이 이력에 저장됐음을 뜻한다. 작업 전체가 끝났다는 뜻은 아니다. 새 history 조회로 저장 출력을 확인한 뒤 해당 draft를 해제한다. progress·team_progress·tool_started도 이력으로 넘기는 경계이며 progress·팀 공개 응답을 완료 통계나 별도 시스템 문장으로 다시 표시하지 않는다. 같은 runId·agent·tool.callId의 상태와 저장 결과는 하나의 도구 실행으로 표시한다.
+snapshot draft의 committed는 해당 generation의 출력이 이력에 저장됐음을 뜻한다. 작업 전체가 끝났다는 뜻은 아니다. 새 history 조회로 저장 출력을 확인한 뒤 해당 draft를 해제한다. progress·team_progress·tool_started도 이력으로 넘기는 경계이며 progress·팀 공개 응답을 완료 통계나 별도 시스템 문장으로 다시 표시하지 않는다. 같은 runId·agent·tool.executionId의 상태와 저장 결과는 하나의 도구 실행으로 표시한다. provider가 callId를 재사용해도 서로 다른 실행을 합치지 않는다.
 
 `usage`·`usage_progress`·`request_finished` 이벤트의 statistics는 서버가 집계한 최신 측정이다. 브라우저는 완료 뒤 live 사건을 정리해도 마지막 통계를 별도 작은 값으로 유지한다.
 
@@ -94,11 +96,15 @@ capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인
 
 상세 원문 detail도 offset 0에서 받은 revision을 후속 페이지에 넣는다. 서버 재시작·source 변경·비밀값 마스킹 revision 변경은 conflict이며 기존 페이지를 폐기하고 다시 읽는다. 원문 페이지를 서로 다른 revision으로 합치지 않는다.
 
-detail 응답은 UTF-8 JSON 원문 조각인 `text`와 바이트 기준 `offset`·`nextOffset`·`totalBytes`를 사용한다. 이전 Base64 `data` 필드는 제거됐다. `nextOffset`은 완전한 UTF-8 문자 끝을 가리키며 요청한 limit 안에서 진행 가능한 문자가 없으면 invalid_argument다. 클라이언트는 문자열 길이로 offset을 계산하지 않는다.
+detail 응답은 UTF-8 원문 조각인 `text`와 바이트 기준 `offset`·`nextOffset`·`totalBytes`를 사용한다. `nextOffset`은 완전한 UTF-8 문자 끝을 가리키며 요청한 limit 안에서 진행 가능한 문자가 없으면 invalid_argument다. 클라이언트는 문자열 길이로 offset을 계산하지 않는다.
+
+`detail.view`는 선택한 원문의 표현을 지정한다. 생략 또는 `DOCUMENT`는 기존 JSON 문서를 반환한다. `TOOL_REQUEST`·`TOOL_RESULT`는 `tool` 참조가 필요하며 각각 인자 JSON과 결과 JSON만 반환한다. `TEXT`·`THINKING`은 `historySequence`가 필요하며 해당 본문만 `text/plain; charset=utf-8`로 반환한다. approval 참조는 `DOCUMENT`만 허용한다. view도 revision과 캐시 키의 일부이므로 다른 view의 revision을 재사용하지 않는다. 요청 조회는 결과 payload를, 결과 조회는 원본 인자 payload를 복원하지 않는다. JSON 페이지는 문서의 조각이므로 각 페이지가 독립적인 JSON임을 가정하지 않는다.
+
+내장 UI는 필요한 view를 32KiB씩 읽고 툴 펼침·모달을 닫으면 페이지 질의를 취소하고 캐시를 해제한다. 후속 페이지가 conflict이면 첫 페이지에서 다시 읽어 revision을 갱신한다. API 자체의 페이지 최대값 64KiB와 원문 복원 예산은 유지한다.
 
 디렉터리 목록은 첫 응답의 `revision`을 후속 `directory` 요청에 전달한다. 정렬된 목록이 바뀌면 conflict이며 첫 페이지에서 다시 시작한다. 목록 캐시가 적중해도 현재 정책·경로와 각 표시 항목을 확인한다. 파일 감시의 첫 refresh 뒤 조회를 시작하면 최초 목록을 중복 조회하지 않는다.
 
-SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 브라우저 EventSource가 id를 보관하고, 앱은 이 프레임을 본문으로 렌더링하지 않는다.
+SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation·파일 참조 변경 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 브라우저 EventSource가 id를 보관하고, 앱은 이 프레임을 본문으로 렌더링하지 않는다.
 
 저장 이미지 GET에 `?thumbnail=1`을 붙이면 최대 변 256px의 PNG를 반환한다. 원본과 동일한 인증·작업공간·세션 읽기 경계를 사용하며 Cache-Control은 no-store다. 원본을 요청할 때는 query를 생략한다. capabilities의 `promptBytes`와 `commandBytes`는 단일 UTF-8 본문과 JSON 전송 한도이며 브라우저의 전체 초안 보관 예산과 다르다.
 
@@ -116,6 +122,10 @@ GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 �
 
 ## 완료·예약·편집
 
-`request_finished.outcome`과 저장 이력의 `HistoryItem.outcome`은 실제 작업 결과다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 현재 런타임에서 확인한 경우에만 제공하며 이전 영속 접수 행에는 없을 수 있다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
+`request_finished.outcome`과 저장 이력의 `HistoryItem.completion`은 실제 작업 결과다. 완료 이력은 본문 없는 전용 RunCompletion이며 상태 enum과 statistics만 받는다. 메시지·추론·종료 사유 본문을 통계 컴포넌트에 전달하지 않고, 실패 상세는 history sequence를 지정한 원문 조회로 연다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 현재 런타임에서 확인한 경우에만 제공하며 이전 영속 접수 행에는 없을 수 있다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
 
 `editorRead:{path}`는 전체 문서·revision·editable·reason을 반환한다. `editorSave:{path,text,revision}`는 전체 텍스트를 받아 현재 파일을 다시 확인한다. UTF-8 일반 파일 최대 2MiB만 편집하며 마스킹된 내용·경로, 바이너리·잘못된 UTF-8은 저장하지 않는다. 브라우저도 `capabilities.editorBytes`의 같은 UTF-8 바이트 한도를 입력·붙여넣기 전에 적용한다. 저장 응답은 본문을 다시 적재하지 않고 새 revision을 반환한다. 같은 본문은 파일을 다시 쓰지 않는다. 미리보기 페이지를 편집 원본으로 저장하지 않는다.
+
+파일 감시 `FileChange`는 변경된 직접 자식 이름 `changedNames`와 전체 재확인이 필요한 `rescan`을 보낸다. 이것은 변경 힌트다. 편집 문서의 실제 충돌 여부는 `editorProbe {path,watchRevision}`로 확인한다. 읽기·저장 응답의 `watchRevision`을 전달하면 같은 파일 버전은 본문 없이 확인하며, 변경 시에만 내용 revision을 비교한다. 저장의 최종 충돌 방지는 실제 원본 바이트 검사로 수행한다.
+
+도구 이벤트의 `tool.executionId`는 엔진이 실행마다 정한 식별자이며 Provider의 `tool.callId`와 구분한다. 시작·완료·백그라운드 명령은 같은 실행 식별자로 연결한다. Provider가 다음 응답에 같은 call ID를 사용해도 서로 다른 실행이다. HTTP 응답은 해당 명령의 단일 결과와 요청·작업공간 식별자를 확인한 뒤 상태에 반영한다.

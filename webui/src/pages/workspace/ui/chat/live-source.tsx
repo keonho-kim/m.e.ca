@@ -1,24 +1,21 @@
 // Purpose: Render one generation without re-rendering unchanged team sources.
 // Pattern: Memoized native Chat presentation.
-// Usage: LiveOutput passes immutable draft values and one stable original-view action.
+// Usage: LiveOutput passes immutable draft values and the current stream status.
 // Related: webui/src/pages/workspace/ui/chat/live-output.tsx.
-import { Button } from '@astryxdesign/core/Button';
 import { ChatMessage, ChatMessageBubble, ChatMessageMetadata } from '@astryxdesign/core/Chat';
+import { VStack } from '@astryxdesign/core/Layout';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { memo } from 'react';
 import type { Draft } from '@/pages/workspace/model/types';
 import { Thinking } from '@/pages/workspace/ui/chat/thinking';
-import type { DraftRequestJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
 export const LiveSource = memo(function LiveSource({
   draft: d,
   streaming,
-  onOriginal,
 }: {
   draft: Draft;
   streaming: boolean;
-  onOriginal: (request: DraftRequestJson) => void;
 }) {
   const t = useLocale();
   return (
@@ -41,32 +38,10 @@ export const LiveSource = memo(function LiveSource({
           />
         }
       >
-        {d.thinking && (
-          <Thinking text={d.thinking} streaming={streaming}>
-            {d.truncated && (
-              <Button
-                size="sm"
-                label={t('moreOriginal')}
-                onClick={() =>
-                  onOriginal({
-                    taskId: d.task,
-                    agent: d.agent,
-                    generation: d.generation,
-                    thinking: true,
-                  })
-                }
-              />
-            )}
-          </Thinking>
-        )}
-        {!!d.text && <MarkdownText text={d.text} streaming={streaming} showCompleteText={false} />}
-        {d.truncated && (
-          <Button
-            size="sm"
-            label={t('moreOriginal')}
-            onClick={() => onOriginal({ taskId: d.task, agent: d.agent, generation: d.generation })}
-          />
-        )}
+        <VStack gap={6} width="100%" className="response-content">
+          {d.thinking && <Thinking text={d.thinking} streaming={streaming} />}
+          {!!d.text && <MarkdownText text={d.text} streaming={streaming} />}
+        </VStack>
       </ChatMessageBubble>
     </ChatMessage>
   );
