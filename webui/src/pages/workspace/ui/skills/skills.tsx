@@ -95,7 +95,7 @@ export default function Skills({
   );
   return (
     <Layout
-      className="skills-workspace min-w-0"
+      className="skills-workspace meca-pane-enter min-w-0"
       height="fill"
       padding={0}
       start={

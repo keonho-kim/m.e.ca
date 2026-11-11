@@ -18,6 +18,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 	if err != nil {
 		return s.returnToolFeedback(ctx, reply, err.Error())
 	}
+	v.call = s.identifyCall(v.call)
 	call, definition := v.call, v.definition
 	s.checkpoint.Iteration = s.usage.ToolCalls
 	s.checkpoint.Tool = definition.Name

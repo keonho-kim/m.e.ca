@@ -2,14 +2,14 @@
 // Pattern: Controlled native-command lifecycle regression tests.
 // Usage: bun test src/pages/workspace/model/file-references.test.ts.
 // Related: webui/src/pages/workspace/model/file-references.ts.
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
+import { mutateFile } from '@/pages/workspace/model/file-mutations';
+import { refreshReferences, selectReference } from '@/pages/workspace/model/file-references';
 import {
   cancelReferenceTarget,
   cancelSelections,
-  mutateFile,
-  selectReference,
   waitSelections,
-} from '@/pages/workspace/model/file-references';
+} from '@/pages/workspace/model/reference-queue';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import type { CommandJson } from '@/shared/api';
 
@@ -18,8 +18,19 @@ const originalState = useWorkspaceStore.getState();
 const target: Target = { workspace: 'files', session: 'session-one' };
 function respond(run: (command: CommandJson) => Response | Promise<Response>) {
   globalThis.fetch = Object.assign(
-    async (_url: string | URL | Request, options?: RequestInit) =>
-      run(JSON.parse(String(options?.body))),
+    async (_url: string | URL | Request, options?: RequestInit) => {
+      const command: CommandJson = JSON.parse(String(options?.body));
+      const response = await run(command);
+      const body = await response.json();
+      // Echo the server-owned receipt identity for delayed and immediate replies.
+      if (body.fileMutation)
+        body.fileMutation = {
+          key: command.mutateFile?.key ?? command.lookupMutation?.key,
+          state: body.fileMutation.referencesReady ? 'applied' : 'partial',
+          ...body.fileMutation,
+        };
+      return Response.json(body, { status: response.status });
+    },
     { preconnect: originalFetch.preconnect }
   );
 }
@@ -27,6 +38,19 @@ afterEach(() => {
   cancelSelections();
   globalThis.fetch = originalFetch;
   useWorkspaceStore.setState(originalState);
+});
+
+test('an authoritative later mutation releases uncertainty from an earlier failure', async () => {
+  respond(() => Promise.reject(new Error('connection lost')));
+  const uncertain = await mutateFile(target, { path: 'old', name: 'next', revision: 'r' }).catch(
+    (error: unknown) => error
+  );
+  expect(uncertain).toBeDefined();
+  respond(() =>
+    Response.json({ fileMutation: { path: 'final', referencesReady: true, paths: ['final'] } })
+  );
+  await mutateFile(target, { path: 'next', name: 'final', revision: 'r2' });
+  expect(await waitSelections(target)).toBeUndefined();
 });
 
 test('send waits through a delayed filesystem reply and consumes one authoritative batch', async () => {
@@ -159,4 +183,83 @@ test('deleting a target cancels its pending mutation without retaining a blocked
   release(Response.json({ fileMutation: { path: 'new', paths: ['new'], referencesReady: true } }));
   expect((await Promise.allSettled([mutation]))[0].status).toBe('rejected');
   await waitSelections(target);
+});
+
+test('a lost file reply is recovered by receipt lookup without a second mutation', async () => {
+  let mutations = 0,
+    lookups = 0;
+  respond((command) => {
+    if (command.mutateFile) {
+      mutations++;
+      return Promise.reject(new Error('reply lost after rename'));
+    }
+    lookups++;
+    expect(command.lookupMutation?.key).toBeTruthy();
+    return Response.json({
+      fileMutation: { path: 'renamed', referencesReady: true, paths: ['renamed'] },
+    });
+  });
+  await mutateFile(target, { path: 'original', name: 'renamed' });
+  expect(mutations).toBe(1);
+  expect(lookups).toBe(1);
+  expect(await waitSelections(target)).toBeUndefined();
+});
+
+test('deleting a target stops pending receipt polling and releases its timer', async () => {
+  const original = setTimeout;
+  let armed!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    armed = resolve;
+  });
+  let poll: ReturnType<typeof setTimeout> | undefined;
+  const schedule = spyOn(globalThis, 'setTimeout').mockImplementation(((
+    handler: () => void,
+    delay?: number
+  ) => {
+    const timer = original(handler, delay);
+    if (delay === 500) {
+      poll = timer;
+      armed();
+    }
+    return timer;
+  }) as typeof setTimeout);
+  const clear = spyOn(globalThis, 'clearTimeout');
+  try {
+    respond((command) =>
+      command.mutateFile
+        ? Promise.reject(new Error('lost'))
+        : Response.json({ fileMutation: { state: 'pending' } })
+    );
+    const mutation = mutateFile(target, { path: 'before', name: 'after' });
+    await waiting;
+    cancelReferenceTarget(target);
+    const [result] = await Promise.allSettled([mutation]);
+    expect(result.status).toBe('rejected');
+    expect(clear.mock.calls.some((args) => args[0] === poll)).toBe(true);
+    expect(await waitSelections(target)).toBeUndefined();
+  } finally {
+    schedule.mockRestore();
+    clear.mockRestore();
+  }
+});
+
+test('canceling a notification refresh releases its target without publishing a stale failure', async () => {
+  let entered!: () => void, release!: (response: Response) => void;
+  const requested = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const response = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  respond(() => {
+    entered();
+    return response;
+  });
+  const refresh = refreshReferences(target);
+  await requested;
+  cancelReferenceTarget(target);
+  release(Response.json({ fileSelections: { paths: ['stale'] } }));
+  await refresh;
+  expect(useWorkspaceStore.getState().inputs[targetKey(target)]).toBeUndefined();
+  expect(await waitSelections(target)).toBeUndefined();
 });

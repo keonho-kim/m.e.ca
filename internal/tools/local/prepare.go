@@ -63,6 +63,7 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 	}
 	initialize := func(op *operation) {
 		op.executor, op.settings, op.spec, op.input, op.callID = executor, settings, spec, input, call.ID
+		op.executionID = call.ExecutionID
 		op.approval = toolapi.Approval{ID: "operation_" + rand.Text(), Name: spec.Label}
 	}
 	if spec.Effect == policy.Change && executor.ActiveCommand() != "" {

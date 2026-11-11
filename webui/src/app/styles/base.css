@@ -1,7 +1,9 @@
-/* Purpose: Load the stable Astryx reset, components and token-backed utilities.
- * Pattern: Stylesheet composition root without component overrides.
+/* Hallmark · v2.0.0 · shape: app screen · theme: Lumen/Ribbon dark, Cobalt/Refract light (by request) · surface: absolute · built: Astryx
+ * critique: P4 H4 E4 S4 R4 V3 · weakest: V, preserve the existing workbench while clarifying reasoning and tool detail
+ * Purpose: Load Astryx and the token-backed monochrome glass surface system.
+ * Pattern: Stylesheet composition root.
  * Usage: main imports this before the generated MECA theme.
- * Related: webui/src/app/styles/theme.ts, webui/vite.config.ts. */
+ * Related: webui/src/app/styles/theme.ts, webui/src/app/styles/content.css. */
 @layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
@@ -11,3 +13,4 @@
 @import '@astryxdesign/core/tailwind-theme.css';
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import '@/app/styles/content.css';
+@import '@/app/styles/motion.css';

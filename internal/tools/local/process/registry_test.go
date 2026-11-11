@@ -24,7 +24,7 @@ func TestRegistryDoneWaitsForArchiveAndSurvivesAcknowledgement(t *testing.T) {
 	unblock := func() { once.Do(func() { close(release) }) }
 	t.Cleanup(func() { unblock(); registry.End() })
 	registry.Save = func(string, string, Output, error) error { close(archiving); <-release; return nil }
-	id, err := registry.Start(ctx, t.TempDir(), "printf finished", os.Environ(), "call")
+	id, err := registry.Start(ctx, t.TempDir(), "printf finished", os.Environ(), CallIdentity{CallID: "call"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestRegistryWaitDoesNotCancel(t *testing.T) {
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
 	t.Cleanup(func() { registry.End() })
 	registry.Save = func(string, string, Output, error) error { return nil }
-	id, err := registry.Start(context.Background(), root, "printf started; while [ ! -f release ]; do sleep 0.02; done; printf finished", os.Environ(), "call_1")
+	id, err := registry.Start(context.Background(), root, "printf started; while [ ! -f release ]; do sleep 0.02; done; printf finished", os.Environ(), CallIdentity{CallID: "call_1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,11 +108,11 @@ func TestRegistryOwnsCancellationAndCapacity(t *testing.T) {
 	registry.Save = func(string, string, Output, error) error { return nil }
 	t.Cleanup(func() { registry.End() })
 	for range 16 {
-		if _, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), "call"); err != nil {
+		if _, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), CallIdentity{CallID: "call"}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := registry.Start(context.Background(), t.TempDir(), "true", os.Environ(), "extra"); err == nil {
+	if _, err := registry.Start(context.Background(), t.TempDir(), "true", os.Environ(), CallIdentity{CallID: "extra"}); err == nil {
 		t.Fatal("unbounded commands accepted")
 	}
 	if _, err := registry.Wait(context.Background(), "1", 0); err == nil {
@@ -137,7 +137,7 @@ func TestRegistryWatcherCancellationLeavesCommandRunning(t *testing.T) {
 	registry.Begin(context.Background(), time.Now().Add(time.Minute))
 	registry.Save = func(string, string, Output, error) error { return nil }
 	t.Cleanup(func() { registry.End() })
-	id, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), "call")
+	id, err := registry.Start(context.Background(), t.TempDir(), "sleep 60", os.Environ(), CallIdentity{CallID: "call"})
 	if err != nil {
 		t.Fatal(err)
 	}

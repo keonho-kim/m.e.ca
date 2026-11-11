@@ -7,12 +7,11 @@ import { Button } from '@astryxdesign/core/Button';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { Link } from '@astryxdesign/core/Link';
 import { Markdown } from '@astryxdesign/core/Markdown';
-import { Popover } from '@astryxdesign/core/Popover';
 import { Text } from '@astryxdesign/core/Text';
-import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, memo, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '@/shared/i18n';
 import { CodePreview } from '@/shared/ui/code-preview';
-import { hasMarkdownWindow, markdownBudget } from '@/shared/ui/markdown/render-budget';
+import { markdownBudget } from '@/shared/ui/markdown/pagination';
 
 function safeLink(href: string) {
   try {
@@ -64,39 +63,23 @@ function useRevealDuringBurst(text: string, enabled: boolean) {
   return active;
 }
 
-const CompleteText = memo(function CompleteText({ text }: { text: string }) {
-  const t = useLocale();
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover
-      label={t('textView')}
-      placement="above"
-      width={720}
-      isOpen={open}
-      onOpenChange={setOpen}
-      content={open ? <CodePreview code={text} /> : null}
-    >
-      <Button label={t('textView')} size="sm" variant="ghost" />
-    </Popover>
-  );
-});
 export const MarkdownText = memo(function MarkdownText({
   text,
   streaming = false,
-  showCompleteText = true,
   tone,
   onReference,
 }: {
   text: string;
   streaming?: boolean;
-  showCompleteText?: boolean;
   tone?: 'thinking';
   onReference?: (href: string) => void;
 }) {
-  const tail = useRef(streaming);
+  const [tail] = useState(streaming);
+  const [page, setPage] = useState(tail ? Number.MAX_SAFE_INTEGER : 0);
+  const follow = tail && page === Number.MAX_SAFE_INTEGER;
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const reveal = useRevealDuringBurst(text, streaming && tail.current && !reducedMotion);
-  const plugins = useMemo(() => [markdownBudget(tail.current)], []);
+  const reveal = useRevealDuringBurst(text, streaming && follow && !reducedMotion);
+  const plugins = useMemo(() => [markdownBudget(page, setPage)], [page]);
   const renderers = useMemo(
     () => ({
       ...components,
@@ -123,20 +106,17 @@ export const MarkdownText = memo(function MarkdownText({
     [onReference]
   );
   return (
-    <>
-      <FollowCode value={tail.current}>
-        <Markdown
-          className="meca-prose min-w-0 max-w-full [overflow-wrap:anywhere]"
-          isStreaming={streaming && (reveal || reducedMotion)}
-          components={renderers}
-          plugins={plugins}
-          contentWidth="100%"
-          data-tone={tone}
-        >
-          {text}
-        </Markdown>
-      </FollowCode>
-      {showCompleteText && hasMarkdownWindow(text) && <CompleteText text={text} />}
-    </>
+    <FollowCode value={follow}>
+      <Markdown
+        className="meca-prose min-w-0 max-w-full [overflow-wrap:anywhere]"
+        isStreaming={streaming && follow && (reveal || reducedMotion)}
+        components={renderers}
+        plugins={plugins}
+        contentWidth="100%"
+        data-tone={tone}
+      >
+        {text}
+      </Markdown>
+    </FollowCode>
   );
 });

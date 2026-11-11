@@ -5,6 +5,7 @@
 package sqlite
 
 import (
+	"context"
 	"os"
 	"sync"
 
@@ -12,10 +13,30 @@ import (
 )
 
 type usageProjection struct {
-	mu       sync.Mutex
-	identity os.FileInfo
-	sequence int64
-	total    model.TokenUsage
+	initialize sync.Once
+	permit     chan struct{}
+	identity   os.FileInfo
+	sequence   int64
+	total      model.TokenUsage
+}
+
+// The permit covers SQL and the cursor update; a waiting caller still owns its
+// cancellation. No background query or database handle is retained by the cache.
+func (p *usageProjection) acquire(ctx context.Context) (func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	p.initialize.Do(func() { p.permit = make(chan struct{}, 1) })
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case p.permit <- struct{}{}:
+		if err := ctx.Err(); err != nil {
+			<-p.permit
+			return nil, err
+		}
+		return func() { <-p.permit }, nil
+	}
 }
 
 type usageProjections struct {

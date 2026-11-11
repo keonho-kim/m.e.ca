@@ -17,7 +17,18 @@ import (
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 )
 
+type DetailView uint8
+
+const (
+	DetailDocument DetailView = iota
+	DetailToolRequest
+	DetailToolResult
+	DetailText
+	DetailThinking
+)
+
 type DetailSource struct {
+	View            DetailView
 	Session         string
 	Tool            record.EventReference
 	ApprovalID      string
@@ -41,6 +52,9 @@ type DetailRead struct {
 }
 
 func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRead, error) {
+	if (source.View == DetailToolRequest || source.View == DetailToolResult) && source.Tool.Sequence == 0 || (source.View == DetailText || source.View == DetailThinking) && source.HistorySequence == 0 {
+		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
+	}
 	choices := 0
 	if source.Tool.Sequence != 0 {
 		choices++
@@ -51,7 +65,7 @@ func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRe
 	if source.HistorySequence != 0 {
 		choices++
 	}
-	if choices != 1 || source.Tool.Sequence < 0 || source.HistorySequence < 0 || source.HistorySequence == 1<<63-1 || source.Tool.Session != "" && !sessionstate.ValidID(source.Tool.Session) || source.Session != "" && !sessionstate.ValidID(source.Session) {
+	if source.View > DetailThinking || source.View != DetailDocument && source.ApprovalID != "" || choices != 1 || source.Tool.Sequence < 0 || source.HistorySequence < 0 || source.HistorySequence == 1<<63-1 || source.Tool.Session != "" && !sessionstate.ValidID(source.Tool.Session) || source.Session != "" && !sessionstate.ValidID(source.Session) {
 		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
 	}
 	c, ctx, done, pending, err := s.beginDetailRead(ctx, source)
@@ -111,7 +125,20 @@ func (c *Conversation) loadDetail(ctx context.Context, source DetailSource, pend
 		return DetailOriginal{Approval: &pending.value}, nil
 	}
 	if source.Tool.Sequence != 0 {
-		value, err := c.History.ToolEvent(ctx, source.Tool, history.ReadBounds{MaxBytes: MaxOriginalBytes, Reserve: reserve})
+		var value record.Event
+		var err error
+		bounds := history.ReadBounds{MaxBytes: MaxOriginalBytes, Reserve: reserve}
+		if source.View == DetailToolRequest {
+			reader, ok := c.History.(interface {
+				ToolRequest(context.Context, record.EventReference, history.ReadBounds) (record.Event, error)
+			})
+			if !ok {
+				return DetailOriginal{}, faults.New(diagcatalog.FailedPrecondition, diagcatalog.ServerWorkspaceUnavailable)
+			}
+			value, err = reader.ToolRequest(ctx, source.Tool, bounds)
+		} else {
+			value, err = c.History.ToolEvent(ctx, source.Tool, bounds)
+		}
 		if errors.Is(err, history.ErrNotFound) || errors.Is(err, sessionstate.ErrNotFound) {
 			return DetailOriginal{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerToolDetailWasNotFound)
 		}

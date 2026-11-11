@@ -9,6 +9,7 @@ import { projectEventCache } from '@/pages/workspace/api/event-cache';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { readSnapshot, snapshotMetadata } from '@/pages/workspace/api/snapshots';
 import { forgetConversation } from '@/pages/workspace/model/deletion';
+import { refreshReferences } from '@/pages/workspace/model/file-references';
 import { completed } from '@/pages/workspace/model/followups';
 import {
   type Target,
@@ -18,18 +19,13 @@ import {
 } from '@/pages/workspace/model/store';
 import { recordTask, terminal } from '@/pages/workspace/model/submission';
 import type { EventJson, NotificationJson, SnapshotJson } from '@/shared/api';
-import { call, queries } from '@/shared/api';
+import { call, queries, subscribeEventStream } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
 
 export function observe(target: Target) {
-  let source: EventSource | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let batch: EventJson[] = [];
-  let retry: ReturnType<typeof setTimeout> | undefined,
-    probing = false,
-    connecting = false;
-  const controller = new AbortController();
-  const isClosed = () => controller.signal.aborted;
+  let initialized = false;
   const discardBatch = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
@@ -54,144 +50,94 @@ export function observe(target: Target) {
       );
   };
   const acceptSnapshot = (snapshot: SnapshotJson) => {
-    // The new cursor already accounts for buffered events from the old base.
     discardBatch();
     useWorkspaceStore.getState().bootstrap(target, snapshot);
     queries.setQueryData(stateOptions(target).queryKey, snapshotMetadata(snapshot));
+    if (initialized && target.session) void refreshReferences(target).catch(reportError);
+    initialized = true;
     if (target.session) {
       invalidate(['history', target.workspace, target.session, '0']);
       invalidate(['session-usage', target.workspace, target.session]);
     }
   };
-  async function connect() {
-    if (isClosed() || connecting || (source && source.readyState !== EventSource.CLOSED)) return;
-    if (retry) {
-      clearTimeout(retry);
-      retry = undefined;
+  const acceptEvent = (raw: string) => {
+    const event = (JSON.parse(raw) as NotificationJson).event;
+    if (!event || event.kind === 'heartbeat') return;
+    if (event.kind !== 'assistant_delta') {
+      flush(event);
+      return;
     }
-    connecting = true;
-    probing = false;
-    const state = useWorkspaceStore.getState(),
-      queueTasks = new Map<string, TaskView>();
-    for (const task of Object.values(state.tasks)) {
-      const key = targetKey(task),
-        previous = queueTasks.get(key);
-      if (!state.queues[key]?.length) continue;
-      // An interrupted reconciliation may already have observed a terminal snapshot.
-      // Prefer an active task; otherwise confirm the newest known predecessor.
-      if (!previous || terminal(previous.status) || !terminal(task.status))
-        queueTasks.set(key, task);
-    }
-    try {
-      useWorkspaceStore.getState().set({ streamStatus: 'connecting' });
-      const snapshot = await readSnapshot(target, controller.signal);
-      if (isClosed()) return;
-      if (!snapshot.cursor) throw failure('invalid_response');
+    if (event.workspaceId !== target.workspace || event.sessionId !== target.session) return;
+    batch.push(event);
+    if (batch.length >= 128) flush();
+    else if (!timer)
+      timer = setTimeout(flush, typeof document !== 'undefined' && document.hidden ? 200 : 33);
+  };
+  const close = subscribeEventStream({
+    connect: async (signal) => {
+      const pending = queuedPredecessors();
+      const snapshot = await readSnapshot(target, signal);
+      signal.throwIfAborted();
+      if (!snapshot.cursor || snapshot.workspaceId !== target.workspace)
+        throw failure('invalid_response');
       acceptSnapshot(snapshot);
-      const cursor = snapshot.cursor;
-      const events = new EventSource(
-        `/v1/events?cursor=${encodeURIComponent(cursor)}&workspace_id=${encodeURIComponent(target.workspace)}&session_id=${encodeURIComponent(target.session)}`
+      void reconcileQueues(pending, signal);
+      return {
+        url: `/v1/events?cursor=${encodeURIComponent(snapshot.cursor)}&workspace_id=${encodeURIComponent(target.workspace)}&session_id=${encodeURIComponent(target.session)}`,
+        events: {
+          event: acceptEvent,
+          snapshot: (raw: string) => {
+            const next = (JSON.parse(raw) as NotificationJson).snapshot;
+            if (!next?.cursor || next.workspaceId !== target.workspace)
+              throw failure('invalid_response');
+            acceptSnapshot(next);
+            invalidate(['workspaces']);
+          },
+        },
+      };
+    },
+    status: (streamStatus) => useWorkspaceStore.getState().set({ streamStatus }),
+    failed: (error) => {
+      reportError(error);
+      return (
+        !(error instanceof ApiError) ||
+        ['network', 'unavailable', 'resource_exhausted', 'invalid_response'].includes(error.code)
       );
-      source = events;
-      events.onopen = () => {
-        if (isClosed() || source !== events) return;
-        useWorkspaceStore.getState().set({ streamStatus: 'connected' });
-      };
-      events.onerror = () => {
-        if (isClosed() || source !== events) return;
-        useWorkspaceStore.getState().set({ streamStatus: 'reconnecting' });
-        if (!probing) {
-          probing = true;
-          void call('', { capabilities: {} }, controller.signal)
-            .then(() => {
-              if (events.readyState === EventSource.CLOSED && !isClosed() && source === events)
-                retry = setTimeout(() => void connect(), 3000);
-            })
-            .catch((error) => {
-              if (
-                !isClosed() &&
-                source === events &&
-                error instanceof ApiError &&
-                error.code === 'unauthorized'
-              )
-                reportError(error);
-            })
-            .finally(() => {
-              if (source === events) probing = false;
-            });
-        }
-      };
-      events.addEventListener('snapshot', (raw) => {
-        if (isClosed()) return;
-        try {
-          const snapshot = (JSON.parse(raw.data) as NotificationJson).snapshot;
-          if (!snapshot?.cursor || snapshot.workspaceId !== target.workspace)
-            throw failure('invalid_response');
-          acceptSnapshot(snapshot);
-          invalidate(['workspaces']);
-        } catch (error) {
-          reportError(error);
-          events.close();
-        }
-      });
-      events.addEventListener('event', (raw) => {
-        if (isClosed()) return;
-        let n: NotificationJson;
-        try {
-          n = JSON.parse(raw.data) as NotificationJson;
-        } catch (error) {
-          reportError(error);
-          events.close();
-          return;
-        }
-        const e = n.event;
-        if (!e || e.kind === 'heartbeat') return;
-        if (
-          e.kind === 'assistant_delta' &&
-          (e.workspaceId !== target.workspace || e.sessionId !== target.session)
-        )
-          return;
-        if (e.kind !== 'assistant_delta') {
-          flush(e);
-          return;
-        }
-        batch.push(e);
-        if (batch.length >= 128) flush();
-        else if (!timer)
-          timer = setTimeout(flush, typeof document !== 'undefined' && document.hidden ? 200 : 33);
-      });
-      for (const previous of queueTasks.values()) {
-        if (isClosed()) return;
-        await call(previous.workspace, { taskStatus: { taskId: previous.id } }, controller.signal)
-          .then((value) => {
-            if (isClosed() || !value.task) return;
-            recordTask(previous, value.task);
-            if (terminal(value.task.status ?? ''))
-              completed(previous, previous.id, value.task.outcome ?? '', value.task.code ?? '');
-          })
-          .catch((error) => {
-            if (!isClosed()) reportError(error);
-          });
-      }
-    } catch (error) {
-      if (!isClosed()) {
-        useWorkspaceStore.getState().set({ streamStatus: 'reconnecting' });
-        reportError(error);
-        if (
-          !(error instanceof ApiError) ||
-          ['network', 'unavailable', 'resource_exhausted'].includes(error.code)
-        )
-          retry = setTimeout(() => void connect(), 3000);
-      }
-    } finally {
-      connecting = false;
-    }
-  }
-  void connect();
+    },
+  });
   return () => {
-    controller.abort();
-    source?.close();
-    if (retry) clearTimeout(retry);
+    close();
     discardBatch();
   };
+}
+
+function queuedPredecessors() {
+  const state = useWorkspaceStore.getState(),
+    tasks = new Map<string, TaskView>();
+  for (const task of Object.values(state.tasks)) {
+    const key = targetKey(task),
+      previous = tasks.get(key);
+    if (
+      state.queues[key]?.length &&
+      (!previous || terminal(previous.status) || !terminal(task.status))
+    )
+      tasks.set(key, task);
+  }
+  return [...tasks.values()];
+}
+
+async function reconcileQueues(tasks: TaskView[], signal: AbortSignal) {
+  const stopped = () => signal.aborted;
+  for (const previous of tasks) {
+    if (stopped()) return;
+    try {
+      const reply = await call(previous.workspace, { taskStatus: { taskId: previous.id } }, signal);
+      if (stopped() || !reply.task) continue;
+      recordTask(previous, reply.task);
+      if (terminal(reply.task.status ?? ''))
+        completed(previous, previous.id, reply.task.outcome ?? '', reply.task.code ?? '');
+    } catch (error) {
+      if (!stopped()) reportError(error);
+    }
+  }
 }

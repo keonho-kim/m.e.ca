@@ -20,7 +20,7 @@ func TestCommandWaveUsesRemainingCapacity(t *testing.T) {
 	e.BeginCommands(t.Context(), time.Now().Add(time.Minute))
 	defer e.StopCommands()
 	for range process.MaxActive - 1 {
-		if _, err := e.commands.Start(t.Context(), e.project, "sleep 60", os.Environ(), "active"); err != nil {
+		if _, err := e.commands.Start(t.Context(), e.project, "sleep 60", os.Environ(), process.CallIdentity{CallID: "active"}); err != nil {
 			t.Fatal(err)
 		}
 	}

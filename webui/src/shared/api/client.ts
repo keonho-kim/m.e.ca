@@ -1,41 +1,29 @@
-// Purpose: Send native typed commands and authenticate without retaining server credentials.
+// Purpose: Expose native commands and attachment operations through the shared HTTP adapter.
 // Pattern: Same-origin HTTP adapter.
 // Usage: Query functions, mutations and explicit image uploads call this module.
 // Related: api/meca/v1/control.proto, webui/src/shared/lib/errors/index.ts.
 
 import type { CommandJson, ReplyJson } from '@/shared/api';
-import { ApiError, failure } from '@/shared/lib/errors';
+import { nativeJSON, nativeRequest, readNativeJSON } from '@/shared/api/http';
+import { commandResult, parseReply, replyFailure } from '@/shared/api/reply';
+import { failure } from '@/shared/lib/errors';
 export async function call(
   workspace: string,
   operation: CommandJson,
   signal?: AbortSignal
 ): Promise<ReplyJson> {
-  let response: Response;
-  try {
-    response = await fetch('/v1/command', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-Meca-UI': '1' },
-      body: JSON.stringify({
-        ...operation,
-        id: crypto.randomUUID(),
-        ...(workspace ? { workspaceId: workspace } : {}),
-      }),
-      signal,
-    });
-  } catch (error) {
-    if (signal?.aborted) throw error;
-    throw failure('network');
-  }
-  if (response.status === 401) throw failure('unauthorized');
-  let reply: ReplyJson;
-  try {
-    reply = (await response.json()) as ReplyJson;
-  } catch {
-    throw failure('invalid_response');
-  }
-  if (reply.error)
-    throw new ApiError(reply.error.code ?? 'internal', reply.error.message ?? '', true);
+  const expected = commandResult(operation),
+    id = crypto.randomUUID();
+  const { response, body } = await nativeJSON('/v1/command', {
+    method: 'POST',
+    json: {
+      ...operation,
+      id,
+      ...(workspace ? { workspaceId: workspace } : {}),
+    },
+    signal,
+  });
+  const reply = parseReply(body, expected, workspace, id);
   if (!response.ok) throw failure('network');
   return reply;
 }
@@ -46,19 +34,15 @@ export async function control(
   allow?: boolean,
   approvalId?: string
 ) {
-  const response = await fetch(
+  const { response, body } = await nativeJSON(
     `/v1/workspaces/${encodeURIComponent(workspace)}/tasks/${encodeURIComponent(task)}/${operation === 'approve' ? 'approvals/' + encodeURIComponent(approvalId ?? '') : operation}`,
     {
       method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-Meca-UI': '1' },
-      ...(operation === 'approve' ? { body: JSON.stringify({ allow }) } : {}),
+      headers: { 'Content-Type': 'application/json' },
+      ...(operation === 'approve' ? { json: { allow } } : {}),
     }
   );
-  if (response.status === 401) throw failure('unauthorized');
-  const reply = (await response.json()) as ReplyJson;
-  if (reply.error)
-    throw new ApiError(reply.error.code ?? 'internal', reply.error.message ?? '', true);
+  const reply = parseReply(body, 'ok', workspace);
   if (!response.ok) throw failure('network');
   return reply;
 }
@@ -67,34 +51,21 @@ export async function upload(
   file: File,
   signal?: AbortSignal
 ): Promise<{ id: string; expiresAt?: string }> {
-  const response = await fetch('/v1/attachments', {
+  const { response, body } = await nativeJSON('/v1/attachments', {
     method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': file.type, 'X-Meca-UI': '1', 'X-Meca-Workspace': workspace },
+    headers: { 'Content-Type': file.type, 'X-Meca-Workspace': workspace },
     body: file,
     signal,
   });
-  if (response.status === 401) throw failure('unauthorized');
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    throw failure('invalid_response');
-  }
   if (!body || typeof body !== 'object') throw failure('invalid_response');
-  if (!response.ok) {
-    const error = (body as ReplyJson).error;
-    if (error?.code && error.message) throw new ApiError(error.code, error.message, true);
-    throw failure('network');
-  }
+  if (!response.ok) throw replyFailure(body);
   if (!('id' in body) || typeof body.id !== 'string' || !body.id) throw failure('invalid_response');
   return { id: body.id };
 }
 export async function releaseUpload(workspace: string, id: string) {
-  const response = await fetch('/v1/attachments/' + encodeURIComponent(id), {
+  const response = await nativeRequest('/v1/attachments/' + encodeURIComponent(id), {
     method: 'DELETE',
-    headers: { 'X-Meca-UI': '1', 'X-Meca-Workspace': workspace },
-    credentials: 'same-origin',
+    headers: { 'X-Meca-Workspace': workspace },
     signal: AbortSignal.timeout(5000),
   });
   await response.body?.cancel();
@@ -106,14 +77,14 @@ export async function loadThumbnail(
   index: number,
   signal: AbortSignal
 ) {
-  const response = await fetch(imageURL(workspace, session, sequence, index) + '?thumbnail=1', {
-    credentials: 'same-origin',
-    signal,
-  });
-  if (response.status === 401) throw failure('unauthorized');
+  const response = await nativeRequest(
+    imageURL(workspace, session, sequence, index) + '?thumbnail=1',
+    {
+      signal,
+    }
+  );
   if (!response.ok) {
-    const reply = (await response.json()) as ReplyJson;
-    throw new ApiError(reply.error?.code ?? 'network', reply.error?.message ?? '');
+    throw replyFailure(await readNativeJSON(response, signal));
   }
   const body = await response.blob();
   if (body.type !== 'image/png' || body.size > 1024 * 1024) throw failure('invalid_response');

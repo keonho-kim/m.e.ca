@@ -17,6 +17,7 @@ message FileMutation {
     bool remove = 5;
   }
   string session_id = 6;
+  string key = 7;
 }
 // Inspect error_code before reporting success; effects may have partially completed.
 message FileMutationResult {
@@ -25,6 +26,8 @@ message FileMutationResult {
   bool references_ready = 3;
   string error_code = 4;
   string error_message = 5;
+  string key = 6;
+  string state = 7;
 }
 message Workspace { string id = 1; string path = 2; string name = 3; int32 active_tasks = 4; string error = 5; int32 pending_approvals = 6; }
 message Workspaces { repeated Workspace items = 1; string default_id = 2; }
@@ -33,11 +36,13 @@ message CommandCatalog { repeated CommandDescription items = 1; }
 message ParseInput { string text = 1; }
 message ParsedInput { string action = 1; string argument = 2; }
 message EditFile { string path = 1; string text = 2; string revision = 3; }
-message EditorDocument { string path = 1; string text = 2; string revision = 3; bool editable = 4; string reason = 5; }
+message EditorDocument { string path = 1; string text = 2; string revision = 3; bool editable = 4; string reason = 5; string watch_revision = 6; }
+message EditorProbe { string path = 1; string watch_revision = 2; }
+message EditorVersion { string revision = 1; string watch_revision = 2; bool unchanged = 3; bool missing = 4; }
 message DiagnoseModel { string session_id = 1; string provider = 2; string endpoint = 3; string credential = 4; string model = 5; }
 message DiagnosticResult { bool chat = 1; bool reasoning = 2; bool thinking = 3; }
 message FileWatchRequest { string workspace_id = 1; string path = 2; }
-message FileChange { string path = 1; bool refresh = 2; string error = 3; }
+message FileChange { string path = 1; bool refresh = 2; string error = 3; repeated string changed_names = 4; bool rescan = 5; string error_code = 6; }
 
 message RunOutcome { string status = 1; string reason = 2; }
 message RequestLookup { string session_id = 1; string key = 2; }

@@ -7,6 +7,20 @@ import { useLocale as useAstryxLocale } from '@astryxdesign/core/i18n';
 import { useCallback } from 'react';
 
 const copy = {
+  toolRequest: ['요청 내용', 'Request details'],
+  toolCommand: ['명령', 'Command'],
+  toolPath: ['경로', 'Path'],
+  toolContent: ['내용', 'Content'],
+  toolStdout: ['표준 출력', 'Standard output'],
+  toolStderr: ['표준 오류', 'Standard error'],
+  toolOutput: ['출력', 'Output'],
+  toolExitCode: ['종료 코드', 'Exit code'],
+  toolStatus: ['상태', 'Status'],
+  toolDirectory: ['작업 폴더', 'Working directory'],
+  toolPattern: ['패턴', 'Pattern'],
+  toolQuery: ['검색어', 'Query'],
+  toolChanges: ['변경 내용', 'Changes'],
+  requestPending: ['요청 내용을 준비하고 있습니다', 'Request details are being prepared'],
   saveConfirm: ['저장하시겠습니까?', 'Save these settings?'],
   saveConfirmHelp: ['저장하면 설정 창이 닫힙니다.', 'The settings window closes after saving.'],
   yes: ['네', 'Yes'],
@@ -23,6 +37,8 @@ const copy = {
   queueResume: ['예약 계속', 'Continue queue'],
   pageNext: ['다음 페이지', 'Next page'],
   pagePrevious: ['이전 페이지', 'Previous page'],
+  contentPages: ['본문 페이지', 'Content pages'],
+  sourceRange: ['원문 범위', 'Source range'],
   back: ['이전', 'Back'],
   settings: ['설정', 'Settings'],
   model: ['모델', 'Model'],
@@ -139,7 +155,6 @@ const copy = {
   loadMore: ['이전 이력 더 보기', 'Load earlier history'],
   listStart: ['목록 처음으로', 'Back to list start'],
   conversations: ['대화 목록', 'Conversations'],
-  textView: ['전체 텍스트 보기', 'View complete text'],
   noSkills: ['사용 가능한 스킬이 없습니다', 'No skills available'],
   source: ['출처', 'Source'],
   preview: ['Preview', 'Preview'],
@@ -170,8 +185,8 @@ const copy = {
   interrupted: ['중단됨', 'Interrupted'],
   readonly: ['읽기 전용', 'Read only'],
   externalChange: [
-    '이 폴더에 변경 알림이 있습니다. 새로고침으로 현재 파일을 확인하세요.',
-    'This folder has changed. Refresh to inspect the current file.',
+    '파일이 외부에서 변경되었습니다. 새로고침으로 현재 내용을 확인하세요.',
+    'This file changed externally. Refresh to inspect its current contents.',
   ],
   unsavedFile: [
     '파일 변경을 저장하거나 버린 뒤 이동하세요.',

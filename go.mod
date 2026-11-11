@@ -18,6 +18,7 @@ require (
 	github.com/yuin/goldmark/v2 v2.1.15
 	go.uber.org/goleak v1.3.0
 	go.yaml.in/yaml/v3 v3.0.6
+	golang.design/x/clipboard v0.11.0
 	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
@@ -33,6 +34,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.2 // indirect
@@ -42,6 +44,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	golang.design/x/x11 v0.2.0 // indirect
 	golang.org/x/arch v0.33.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	// Match the libc ABI required by modernc.org/sqlite.
@@ -49,3 +52,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+replace golang.design/x/clipboard => ./third_party/clipboard

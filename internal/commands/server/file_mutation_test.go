@@ -43,15 +43,28 @@ func TestEntryMutationReconcilesReferencesAfterClientCancellation(t *testing.T) 
 	defer s.Close()
 	s.conversation.Runtime.Session = store.Session()
 	s.options.Files = files.Files
+	s.options.References = sqlite.ProjectReferences{Sessions: sessions, Project: project}
+	receipts := &pausedMutationLedger{mutationLedgerFixture: &mutationLedgerFixture{values: make(map[string]FileMutationResult)}, admitted: make(chan struct{}), release: make(chan struct{})}
+	s.options.Mutations = receipts
 	id := store.Session().ID
 	for _, path := range []string{"old/", "old/one.txt", "other.txt"} {
 		if err := store.SelectFile(t.Context(), id, path, true); err != nil {
 			t.Fatal(err)
 		}
 	}
+	other, err := sessions.Create(t.Context(), project, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	if err := other.SelectFile(t.Context(), other.Session().ID, "old/one.txt", true); err != nil {
+		t.Fatal(err)
+	}
+	effects := 0
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	s.options.MutateEntry = func(ctx context.Context, settings policy.Settings, change fileview.EntryMutation) (string, error) {
+		effects++
 		path, err := files.Files.MutateEntry(ctx, settings, change, func(string) error { return nil })
 		cancel()
 		return path, err
@@ -60,13 +73,37 @@ func TestEntryMutationReconcilesReferencesAfterClientCancellation(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := s.MutateEntry(ctx, id, fileview.EntryMutation{Path: "old", Name: "new", Revision: page.Revision})
+	type mutationReply struct {
+		value FileMutationResult
+		err   error
+	}
+	replies := make(chan mutationReply, 1)
+	go func() {
+		value, err := s.MutateEntry(ctx, id, "test-key-one", fileview.EntryMutation{Path: "old", Name: "new", Revision: page.Revision})
+		replies <- mutationReply{value, err}
+	}()
+	<-receipts.admitted
+	pending, err := s.LookupMutation(t.Context(), id, "test-key-one")
+	if err != nil || pending.State != "pending" {
+		t.Fatalf("visible admission lost its owner: %+v %v", pending, err)
+	}
+	close(receipts.release)
+	reply := <-replies
+	result, err := reply.value, reply.err
 	if err != nil || result.Failure != nil || !result.ReferencesReady {
 		t.Fatalf("client cancellation interrupted reconciliation after rename: %+v %v", result, err)
 	}
 	want := []string{"new/", "new/one.txt", "other.txt"}
 	if !reflect.DeepEqual(result.Paths, want) {
 		t.Fatalf("authoritative references: %v, want %v", result.Paths, want)
+	}
+	replay, err := s.MutateEntry(t.Context(), id, "test-key-one", fileview.EntryMutation{Path: "old", Name: "new", Revision: page.Revision})
+	if err != nil || replay.State != "applied" || effects != 1 {
+		t.Fatalf("file effect repeated: %+v effects=%d err=%v", replay, effects, err)
+	}
+	others, err := other.FileSelections(t.Context(), other.Session().ID)
+	if err != nil || !reflect.DeepEqual(others, []string{"new/one.txt"}) {
+		t.Fatalf("other conversation retained stale references: %v %v", others, err)
 	}
 	actual, err := store.FileSelections(t.Context(), id)
 	if err != nil || !reflect.DeepEqual(actual, want) {

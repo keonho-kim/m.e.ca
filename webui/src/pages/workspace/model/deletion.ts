@@ -3,8 +3,8 @@
 // Usage: Sidebar receipts and server deletion events share this idempotent cleanup.
 // Related: webui/src/pages/workspace/api/queries.ts, webui/src/pages/workspace/model/store.ts, webui/src/pages/workspace/model/submission.ts.
 
-import { cancelReferenceTarget } from '@/pages/workspace/model/file-references';
 import { clearFollowupsTarget } from '@/pages/workspace/model/followups';
+import { cancelReferenceTarget } from '@/pages/workspace/model/reference-queue';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { clearPendingTarget } from '@/pages/workspace/model/submission';
 import { queries } from '@/shared/api';

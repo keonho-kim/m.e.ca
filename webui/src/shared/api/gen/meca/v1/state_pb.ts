@@ -7,15 +7,15 @@
 // @generated from file meca/v1/state.proto (package meca.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Approval, ApprovalJson, Event, EventJson, Statistics, StatisticsJson, Usage, UsageJson } from "./events_pb";
 import { file_meca_v1_events } from "./events_pb";
 import type { SkillDocument, SkillDocumentJson, SkillFile, SkillFileJson, Skills, SkillsJson } from "./skills_pb";
 import { file_meca_v1_skills } from "./skills_pb";
 import type { Capabilities, CapabilitiesJson, CommandStates, CommandStatesJson, DirectoryPage, DirectoryPageJson, DraftPage, DraftPageJson, FilePreview, FilePreviewJson, FileSelections, FileSelectionsJson, ImageMetadata, ImageMetadataJson, Models, ModelsJson, Providers, ProvidersJson, Resources, ResourcesJson, Task, TaskJson, TaskPage, TaskPageJson } from "./workspace_pb";
 import { file_meca_v1_workspace } from "./workspace_pb";
-import type { CommandCatalog, CommandCatalogJson, DiagnosticResult, DiagnosticResultJson, EditorDocument, EditorDocumentJson, FileMutationResult, FileMutationResultJson, ParsedInput, ParsedInputJson, RunOutcome, RunOutcomeJson, Workspaces, WorkspacesJson } from "./application_pb";
+import type { CommandCatalog, CommandCatalogJson, DiagnosticResult, DiagnosticResultJson, EditorDocument, EditorDocumentJson, EditorVersion, EditorVersionJson, FileMutationResult, FileMutationResultJson, ParsedInput, ParsedInputJson, Workspaces, WorkspacesJson } from "./application_pb";
 import { file_meca_v1_application } from "./application_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -23,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/state.proto.
  */
 export const file_meca_v1_state: GenFile = /*@__PURE__*/
-  fileDesc("ChNtZWNhL3YxL3N0YXRlLnByb3RvEgdtZWNhLnYxIiYKBUVycm9yEgwKBGNvZGUYASABKAkSDwoHbWVzc2FnZRgCIAEoCSK5CQoFUmVwbHkSCgoCaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEiIKAm9rGAogASgLMhQubWVjYS52MS5FbXB0eVJlc3VsdEgAEh8KBWVycm9yGAsgASgLMg4ubWVjYS52MS5FcnJvckgAEiUKCHNlc3Npb25zGAwgASgLMhEubWVjYS52MS5TZXNzaW9uc0gAEiIKBXN0YXRlGA0gASgLMhEubWVjYS52MS5TbmFwc2hvdEgAEicKB2hpc3RvcnkYDiABKAsyFC5tZWNhLnYxLkhpc3RvcnlQYWdlSAASJQoGZGV0YWlsGA8gASgLMhMubWVjYS52MS5EZXRhaWxQYWdlSAASHQoEdGFzaxgQIAEoCzINLm1lY2EudjEuVGFza0gAEiEKBnNraWxscxgRIAEoCzIPLm1lY2EudjEuU2tpbGxzSAASJwoFc2tpbGwYEiABKAsyFi5tZWNhLnYxLlNraWxsRG9jdW1lbnRIABIoCgpza2lsbF9maWxlGBMgASgLMhIubWVjYS52MS5Ta2lsbEZpbGVIABItCgxjYXBhYmlsaXRpZXMYFCABKAsyFS5tZWNhLnYxLkNhcGFiaWxpdGllc0gAEicKCXByb3ZpZGVycxgVIAEoCzISLm1lY2EudjEuUHJvdmlkZXJzSAASIQoGbW9kZWxzGBYgASgLMg8ubWVjYS52MS5Nb2RlbHNIABIrCglkaXJlY3RvcnkYFyABKAsyFi5tZWNhLnYxLkRpcmVjdG9yeVBhZ2VIABIsCgxmaWxlX3ByZXZpZXcYGCABKAsyFC5tZWNhLnYxLkZpbGVQcmV2aWV3SAASMgoPZmlsZV9zZWxlY3Rpb25zGBkgASgLMhcubWVjYS52MS5GaWxlU2VsZWN0aW9uc0gAEicKBWltYWdlGBogASgLMhYubWVjYS52MS5JbWFnZU1ldGFkYXRhSAASIwoFZHJhZnQYGyABKAsyEi5tZWNhLnYxLkRyYWZ0UGFnZUgAEiIKBXRhc2tzGBwgASgLMhEubWVjYS52MS5UYXNrUGFnZUgAEioKCGNvbW1hbmRzGB0gASgLMhYubWVjYS52MS5Db21tYW5kU3RhdGVzSAASJwoJcmVzb3VyY2VzGB4gASgLMhIubWVjYS52MS5SZXNvdXJjZXNIABIpCgp3b3Jrc3BhY2VzGB8gASgLMhMubWVjYS52MS5Xb3Jrc3BhY2VzSAASMgoPY29tbWFuZF9jYXRhbG9nGCAgASgLMhcubWVjYS52MS5Db21tYW5kQ2F0YWxvZ0gAEiwKDHBhcnNlZF9pbnB1dBghIAEoCzIULm1lY2EudjEuUGFyc2VkSW5wdXRIABIpCgZlZGl0b3IYIiABKAsyFy5tZWNhLnYxLkVkaXRvckRvY3VtZW50SAASLwoKZGlhZ25vc3RpYxgjIAEoCzIZLm1lY2EudjEuRGlhZ25vc3RpY1Jlc3VsdEgAEjQKDWZpbGVfbXV0YXRpb24YJCABKAsyGy5tZWNhLnYxLkZpbGVNdXRhdGlvblJlc3VsdEgAEh8KBXVzYWdlGCUgASgLMg4ubWVjYS52MS5Vc2FnZUgAQggKBnJlc3VsdCINCgtFbXB0eVJlc3VsdCKsAQoHU2Vzc2lvbhIKCgJpZBgBIAEoCRIUCgxwcm9qZWN0X3Jvb3QYAiABKAkSFAoMZGlzcGxheV9yb290GAMgASgJEg8KB3N1bW1hcnkYBCABKAkSDwoHdXBkYXRlZBgFIAEoCRITCgt1bmF2YWlsYWJsZRgGIAEoCRIXCg9ydW5uaW5nX3Rhc2tfaWQYByABKAkSGQoRcGVuZGluZ19hcHByb3ZhbHMYCCABKAUiQAoIU2Vzc2lvbnMSHwoFaXRlbXMYASADKAsyEC5tZWNhLnYxLlNlc3Npb24SEwoLbmV4dF9jdXJzb3IYAiABKAki2wIKBU1vZGVsEhAKCHByb3ZpZGVyGAEgASgJEhAKCGVuZHBvaW50GAIgASgJEg0KBW1vZGVsGAMgASgJEhgKEGNyZWRlbnRpYWxfc2F2ZWQYBCABKAgSFQoIdGhpbmtpbmcYBSABKAhIAIgBARIdChByZWFzb25pbmdfZWZmb3J0GAYgASgJSAGIAQESGgoSdGhpbmtpbmdfc3VwcG9ydGVkGAcgASgIEhYKDmNvbnRleHRfd2luZG93GAggASgFEg4KBm5vdGljZRgJIAEoCRIZChFpbWFnZV9pbnB1dF9zdGF0ZRgKIAEoCRIdChVpbWFnZV9pbnB1dF9zdXBwb3J0ZWQYCyABKAgSGAoQcmVhc29uaW5nX2xldmVscxgMIAMoCRIVCg1yZWFzb25pbmdfb2ZmGA0gASgIQgsKCV90aGlua2luZ0ITChFfcmVhc29uaW5nX2VmZm9ydCKtAQoFRHJhZnQSDQoFYWdlbnQYASABKAkSEgoKZ2VuZXJhdGlvbhgCIAEoBBIMCgR0ZXh0GAMgASgJEhAKCHRoaW5raW5nGAQgASgJEhEKCXRydW5jYXRlZBgFIAEoCBIPCgd0YXNrX2lkGAYgASgJEhIKCnRleHRfYnl0ZXMYByABKAMSFgoOdGhpbmtpbmdfYnl0ZXMYCCABKAMSEQoJY29tbWl0dGVkGAkgASgIIqkBCglFeGVjdXRpb24SIQoHc2Vzc2lvbhgBIAEoCzIQLm1lY2EudjEuU2Vzc2lvbhIdCgVtb2RlbBgCIAEoCzIOLm1lY2EudjEuTW9kZWwSDAoEdGVhbRgDIAEoCBIPCgd0YXNrX2lkGAQgASgJEicKCnN0YXRpc3RpY3MYBSABKAsyEy5tZWNhLnYxLlN0YXRpc3RpY3MSEgoKc3RhcnRlZF9hdBgGIAEoCSLxAwoIU25hcHNob3QSFAoMd29ya3NwYWNlX2lkGBIgASgJEg4KBmN1cnNvchgBIAEoCRIhCgdzZXNzaW9uGAIgASgLMhAubWVjYS52MS5TZXNzaW9uEhsKBHRhc2sYAyABKAsyDS5tZWNhLnYxLlRhc2sSHQoFbW9kZWwYBCABKAsyDi5tZWNhLnYxLk1vZGVsEhIKCnBlcm1pc3Npb24YBSABKAkSDAoEdGVhbRgGIAEoCBIkCglhcHByb3ZhbHMYByADKAsyES5tZWNhLnYxLkFwcHJvdmFsEh4KBmRyYWZ0cxgIIAMoCzIOLm1lY2EudjEuRHJhZnQSJQoJZXhlY3V0aW9uGAkgASgLMhIubWVjYS52MS5FeGVjdXRpb24SHAoFdGFza3MYCiADKAsyDS5tZWNhLnYxLlRhc2sSEwoLY29uY3VycmVuY3kYCyABKAMSJgoKZXhlY3V0aW9ucxgMIAMoCzISLm1lY2EudjEuRXhlY3V0aW9uEhEKCW5leHRfdGFzaxgNIAEoCRITCgt0b3RhbF90YXNrcxgOIAEoAxIQCghsYW5ndWFnZRgPIAEoCRIgCghhY3Rpdml0eRgQIAMoCzIOLm1lY2EudjEuRXZlbnQSGgoSYWN0aXZpdHlfdHJ1bmNhdGVkGBEgASgIIt0BCgtIaXN0b3J5SXRlbRIQCghzZXF1ZW5jZRgBIAEoAxIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkSDAoEdGV4dBgEIAEoCRISCgppbmNvbXBsZXRlGAUgASgIEh0KBWV2ZW50GAYgASgLMg4ubWVjYS52MS5FdmVudBIRCgl0cnVuY2F0ZWQYByABKAgSJAoHb3V0Y29tZRgJIAEoCzITLm1lY2EudjEuUnVuT3V0Y29tZRImCgZpbWFnZXMYCCADKAsyFi5tZWNhLnYxLkltYWdlTWV0YWRhdGEiQgoLSGlzdG9yeVBhZ2USIwoFaXRlbXMYASADKAsyFC5tZWNhLnYxLkhpc3RvcnlJdGVtEg4KBmJlZm9yZRgCIAEoAyKCAQoKRGV0YWlsUGFnZRIMCgR0ZXh0GAggASgJEg4KBm9mZnNldBgCIAEoAxITCgtuZXh0X29mZnNldBgDIAEoAxITCgt0b3RhbF9ieXRlcxgEIAEoAxIUCgxjb250ZW50X3R5cGUYBSABKAkSEAoIcmV2aXNpb24YBiABKAlKBAgBEAIifwoMTm90aWZpY2F0aW9uEh8KBXJlcGx5GAEgASgLMg4ubWVjYS52MS5SZXBseUgAEiUKCHNuYXBzaG90GAIgASgLMhEubWVjYS52MS5TbmFwc2hvdEgAEh8KBWV2ZW50GAMgASgLMg4ubWVjYS52MS5FdmVudEgAQgYKBGJvZHlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM", [file_meca_v1_events, file_meca_v1_skills, file_meca_v1_workspace, file_meca_v1_application]);
+  fileDesc("ChNtZWNhL3YxL3N0YXRlLnByb3RvEgdtZWNhLnYxIiYKBUVycm9yEgwKBGNvZGUYASABKAkSDwoHbWVzc2FnZRgCIAEoCSLrCQoFUmVwbHkSCgoCaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEiIKAm9rGAogASgLMhQubWVjYS52MS5FbXB0eVJlc3VsdEgAEh8KBWVycm9yGAsgASgLMg4ubWVjYS52MS5FcnJvckgAEiUKCHNlc3Npb25zGAwgASgLMhEubWVjYS52MS5TZXNzaW9uc0gAEiIKBXN0YXRlGA0gASgLMhEubWVjYS52MS5TbmFwc2hvdEgAEicKB2hpc3RvcnkYDiABKAsyFC5tZWNhLnYxLkhpc3RvcnlQYWdlSAASJQoGZGV0YWlsGA8gASgLMhMubWVjYS52MS5EZXRhaWxQYWdlSAASHQoEdGFzaxgQIAEoCzINLm1lY2EudjEuVGFza0gAEiEKBnNraWxscxgRIAEoCzIPLm1lY2EudjEuU2tpbGxzSAASJwoFc2tpbGwYEiABKAsyFi5tZWNhLnYxLlNraWxsRG9jdW1lbnRIABIoCgpza2lsbF9maWxlGBMgASgLMhIubWVjYS52MS5Ta2lsbEZpbGVIABItCgxjYXBhYmlsaXRpZXMYFCABKAsyFS5tZWNhLnYxLkNhcGFiaWxpdGllc0gAEicKCXByb3ZpZGVycxgVIAEoCzISLm1lY2EudjEuUHJvdmlkZXJzSAASIQoGbW9kZWxzGBYgASgLMg8ubWVjYS52MS5Nb2RlbHNIABIrCglkaXJlY3RvcnkYFyABKAsyFi5tZWNhLnYxLkRpcmVjdG9yeVBhZ2VIABIsCgxmaWxlX3ByZXZpZXcYGCABKAsyFC5tZWNhLnYxLkZpbGVQcmV2aWV3SAASMgoPZmlsZV9zZWxlY3Rpb25zGBkgASgLMhcubWVjYS52MS5GaWxlU2VsZWN0aW9uc0gAEicKBWltYWdlGBogASgLMhYubWVjYS52MS5JbWFnZU1ldGFkYXRhSAASIwoFZHJhZnQYGyABKAsyEi5tZWNhLnYxLkRyYWZ0UGFnZUgAEiIKBXRhc2tzGBwgASgLMhEubWVjYS52MS5UYXNrUGFnZUgAEioKCGNvbW1hbmRzGB0gASgLMhYubWVjYS52MS5Db21tYW5kU3RhdGVzSAASJwoJcmVzb3VyY2VzGB4gASgLMhIubWVjYS52MS5SZXNvdXJjZXNIABIpCgp3b3Jrc3BhY2VzGB8gASgLMhMubWVjYS52MS5Xb3Jrc3BhY2VzSAASMgoPY29tbWFuZF9jYXRhbG9nGCAgASgLMhcubWVjYS52MS5Db21tYW5kQ2F0YWxvZ0gAEiwKDHBhcnNlZF9pbnB1dBghIAEoCzIULm1lY2EudjEuUGFyc2VkSW5wdXRIABIpCgZlZGl0b3IYIiABKAsyFy5tZWNhLnYxLkVkaXRvckRvY3VtZW50SAASLwoKZGlhZ25vc3RpYxgjIAEoCzIZLm1lY2EudjEuRGlhZ25vc3RpY1Jlc3VsdEgAEjQKDWZpbGVfbXV0YXRpb24YJCABKAsyGy5tZWNhLnYxLkZpbGVNdXRhdGlvblJlc3VsdEgAEh8KBXVzYWdlGCUgASgLMg4ubWVjYS52MS5Vc2FnZUgAEjAKDmVkaXRvcl92ZXJzaW9uGCYgASgLMhYubWVjYS52MS5FZGl0b3JWZXJzaW9uSABCCAoGcmVzdWx0Ig0KC0VtcHR5UmVzdWx0IqwBCgdTZXNzaW9uEgoKAmlkGAEgASgJEhQKDHByb2plY3Rfcm9vdBgCIAEoCRIUCgxkaXNwbGF5X3Jvb3QYAyABKAkSDwoHc3VtbWFyeRgEIAEoCRIPCgd1cGRhdGVkGAUgASgJEhMKC3VuYXZhaWxhYmxlGAYgASgJEhcKD3J1bm5pbmdfdGFza19pZBgHIAEoCRIZChFwZW5kaW5nX2FwcHJvdmFscxgIIAEoBSJACghTZXNzaW9ucxIfCgVpdGVtcxgBIAMoCzIQLm1lY2EudjEuU2Vzc2lvbhITCgtuZXh0X2N1cnNvchgCIAEoCSLbAgoFTW9kZWwSEAoIcHJvdmlkZXIYASABKAkSEAoIZW5kcG9pbnQYAiABKAkSDQoFbW9kZWwYAyABKAkSGAoQY3JlZGVudGlhbF9zYXZlZBgEIAEoCBIVCgh0aGlua2luZxgFIAEoCEgAiAEBEh0KEHJlYXNvbmluZ19lZmZvcnQYBiABKAlIAYgBARIaChJ0aGlua2luZ19zdXBwb3J0ZWQYByABKAgSFgoOY29udGV4dF93aW5kb3cYCCABKAUSDgoGbm90aWNlGAkgASgJEhkKEWltYWdlX2lucHV0X3N0YXRlGAogASgJEh0KFWltYWdlX2lucHV0X3N1cHBvcnRlZBgLIAEoCBIYChByZWFzb25pbmdfbGV2ZWxzGAwgAygJEhUKDXJlYXNvbmluZ19vZmYYDSABKAhCCwoJX3RoaW5raW5nQhMKEV9yZWFzb25pbmdfZWZmb3J0Iq0BCgVEcmFmdBINCgVhZ2VudBgBIAEoCRISCgpnZW5lcmF0aW9uGAIgASgEEgwKBHRleHQYAyABKAkSEAoIdGhpbmtpbmcYBCABKAkSEQoJdHJ1bmNhdGVkGAUgASgIEg8KB3Rhc2tfaWQYBiABKAkSEgoKdGV4dF9ieXRlcxgHIAEoAxIWCg50aGlua2luZ19ieXRlcxgIIAEoAxIRCgljb21taXR0ZWQYCSABKAgiqQEKCUV4ZWN1dGlvbhIhCgdzZXNzaW9uGAEgASgLMhAubWVjYS52MS5TZXNzaW9uEh0KBW1vZGVsGAIgASgLMg4ubWVjYS52MS5Nb2RlbBIMCgR0ZWFtGAMgASgIEg8KB3Rhc2tfaWQYBCABKAkSJwoKc3RhdGlzdGljcxgFIAEoCzITLm1lY2EudjEuU3RhdGlzdGljcxISCgpzdGFydGVkX2F0GAYgASgJIvEDCghTbmFwc2hvdBIUCgx3b3Jrc3BhY2VfaWQYEiABKAkSDgoGY3Vyc29yGAEgASgJEiEKB3Nlc3Npb24YAiABKAsyEC5tZWNhLnYxLlNlc3Npb24SGwoEdGFzaxgDIAEoCzINLm1lY2EudjEuVGFzaxIdCgVtb2RlbBgEIAEoCzIOLm1lY2EudjEuTW9kZWwSEgoKcGVybWlzc2lvbhgFIAEoCRIMCgR0ZWFtGAYgASgIEiQKCWFwcHJvdmFscxgHIAMoCzIRLm1lY2EudjEuQXBwcm92YWwSHgoGZHJhZnRzGAggAygLMg4ubWVjYS52MS5EcmFmdBIlCglleGVjdXRpb24YCSABKAsyEi5tZWNhLnYxLkV4ZWN1dGlvbhIcCgV0YXNrcxgKIAMoCzINLm1lY2EudjEuVGFzaxITCgtjb25jdXJyZW5jeRgLIAEoAxImCgpleGVjdXRpb25zGAwgAygLMhIubWVjYS52MS5FeGVjdXRpb24SEQoJbmV4dF90YXNrGA0gASgJEhMKC3RvdGFsX3Rhc2tzGA4gASgDEhAKCGxhbmd1YWdlGA8gASgJEiAKCGFjdGl2aXR5GBAgAygLMg4ubWVjYS52MS5FdmVudBIaChJhY3Rpdml0eV90cnVuY2F0ZWQYESABKAgi0AEKDVJ1bkNvbXBsZXRpb24SLQoGc3RhdHVzGAEgASgOMh0ubWVjYS52MS5SdW5Db21wbGV0aW9uLlN0YXR1cxInCgpzdGF0aXN0aWNzGAIgASgLMhMubWVjYS52MS5TdGF0aXN0aWNzImcKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABINCglDT01QTEVURUQQARIKCgZGQUlMRUQQAhIPCgtJTlRFUlJVUFRFRBADEgoKBkRFTklFRBAEEg0KCUVYSEFVU1RFRBAFIvIBCgtIaXN0b3J5SXRlbRIQCghzZXF1ZW5jZRgBIAEoAxIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkSDAoEdGV4dBgEIAEoCRISCgppbmNvbXBsZXRlGAUgASgIEh0KBWV2ZW50GAYgASgLMg4ubWVjYS52MS5FdmVudBIRCgl0cnVuY2F0ZWQYByABKAgSJgoGaW1hZ2VzGAggAygLMhYubWVjYS52MS5JbWFnZU1ldGFkYXRhEioKCmNvbXBsZXRpb24YCiABKAsyFi5tZWNhLnYxLlJ1bkNvbXBsZXRpb25KBAgJEApSB291dGNvbWUiQgoLSGlzdG9yeVBhZ2USIwoFaXRlbXMYASADKAsyFC5tZWNhLnYxLkhpc3RvcnlJdGVtEg4KBmJlZm9yZRgCIAEoAyKCAQoKRGV0YWlsUGFnZRIMCgR0ZXh0GAggASgJEg4KBm9mZnNldBgCIAEoAxITCgtuZXh0X29mZnNldBgDIAEoAxITCgt0b3RhbF9ieXRlcxgEIAEoAxIUCgxjb250ZW50X3R5cGUYBSABKAkSEAoIcmV2aXNpb24YBiABKAlKBAgBEAIifwoMTm90aWZpY2F0aW9uEh8KBXJlcGx5GAEgASgLMg4ubWVjYS52MS5SZXBseUgAEiUKCHNuYXBzaG90GAIgASgLMhEubWVjYS52MS5TbmFwc2hvdEgAEh8KBWV2ZW50GAMgASgLMg4ubWVjYS52MS5FdmVudEgAQgYKBGJvZHlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM", [file_meca_v1_events, file_meca_v1_skills, file_meca_v1_workspace, file_meca_v1_application]);
 
 /**
  * @generated from message meca.v1.Error
@@ -247,6 +247,12 @@ export type Reply = Message<"meca.v1.Reply"> & {
      */
     value: Usage;
     case: "usage";
+  } | {
+    /**
+     * @generated from field: meca.v1.EditorVersion editor_version = 38;
+     */
+    value: EditorVersion;
+    case: "editorVersion";
   } | { case: undefined; value?: undefined };
 };
 
@@ -403,6 +409,11 @@ export type ReplyJson = {
    * @generated from field: meca.v1.Usage usage = 37;
    */
   usage?: UsageJson;
+
+  /**
+   * @generated from field: meca.v1.EditorVersion editor_version = 38;
+   */
+  editorVersion?: EditorVersionJson;
 };
 
 /**
@@ -1098,6 +1109,93 @@ export const SnapshotSchema: GenMessage<Snapshot, {jsonType: SnapshotJson}> = /*
   messageDesc(file_meca_v1_state, 8);
 
 /**
+ * A completion contains measurements and a closed status, never agent narrative.
+ *
+ * @generated from message meca.v1.RunCompletion
+ */
+export type RunCompletion = Message<"meca.v1.RunCompletion"> & {
+  /**
+   * @generated from field: meca.v1.RunCompletion.Status status = 1;
+   */
+  status: RunCompletion_Status;
+
+  /**
+   * @generated from field: meca.v1.Statistics statistics = 2;
+   */
+  statistics?: Statistics | undefined;
+};
+
+/**
+ * A completion contains measurements and a closed status, never agent narrative.
+ *
+ * @generated from message meca.v1.RunCompletion
+ */
+export type RunCompletionJson = {
+  /**
+   * @generated from field: meca.v1.RunCompletion.Status status = 1;
+   */
+  status?: RunCompletion_StatusJson;
+
+  /**
+   * @generated from field: meca.v1.Statistics statistics = 2;
+   */
+  statistics?: StatisticsJson;
+};
+
+/**
+ * Describes the message meca.v1.RunCompletion.
+ * Use `create(RunCompletionSchema)` to create a new message.
+ */
+export const RunCompletionSchema: GenMessage<RunCompletion, {jsonType: RunCompletionJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_state, 9);
+
+/**
+ * @generated from enum meca.v1.RunCompletion.Status
+ */
+export enum RunCompletion_Status {
+  /**
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  STATUS_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: COMPLETED = 1;
+   */
+  COMPLETED = 1,
+
+  /**
+   * @generated from enum value: FAILED = 2;
+   */
+  FAILED = 2,
+
+  /**
+   * @generated from enum value: INTERRUPTED = 3;
+   */
+  INTERRUPTED = 3,
+
+  /**
+   * @generated from enum value: DENIED = 4;
+   */
+  DENIED = 4,
+
+  /**
+   * @generated from enum value: EXHAUSTED = 5;
+   */
+  EXHAUSTED = 5,
+}
+
+/**
+ * @generated from enum meca.v1.RunCompletion.Status
+ */
+export type RunCompletion_StatusJson = "STATUS_UNSPECIFIED" | "COMPLETED" | "FAILED" | "INTERRUPTED" | "DENIED" | "EXHAUSTED";
+
+/**
+ * Describes the enum meca.v1.RunCompletion.Status.
+ */
+export const RunCompletion_StatusSchema: GenEnum<RunCompletion_Status, RunCompletion_StatusJson> = /*@__PURE__*/
+  enumDesc(file_meca_v1_state, 9, 0);
+
+/**
  * @generated from message meca.v1.HistoryItem
  */
 export type HistoryItem = Message<"meca.v1.HistoryItem"> & {
@@ -1137,14 +1235,14 @@ export type HistoryItem = Message<"meca.v1.HistoryItem"> & {
   truncated: boolean;
 
   /**
-   * @generated from field: meca.v1.RunOutcome outcome = 9;
-   */
-  outcome?: RunOutcome | undefined;
-
-  /**
    * @generated from field: repeated meca.v1.ImageMetadata images = 8;
    */
   images: ImageMetadata[];
+
+  /**
+   * @generated from field: meca.v1.RunCompletion completion = 10;
+   */
+  completion?: RunCompletion | undefined;
 };
 
 /**
@@ -1187,14 +1285,14 @@ export type HistoryItemJson = {
   truncated?: boolean;
 
   /**
-   * @generated from field: meca.v1.RunOutcome outcome = 9;
-   */
-  outcome?: RunOutcomeJson;
-
-  /**
    * @generated from field: repeated meca.v1.ImageMetadata images = 8;
    */
   images?: ImageMetadataJson[];
+
+  /**
+   * @generated from field: meca.v1.RunCompletion completion = 10;
+   */
+  completion?: RunCompletionJson;
 };
 
 /**
@@ -1202,7 +1300,7 @@ export type HistoryItemJson = {
  * Use `create(HistoryItemSchema)` to create a new message.
  */
 export const HistoryItemSchema: GenMessage<HistoryItem, {jsonType: HistoryItemJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_state, 9);
+  messageDesc(file_meca_v1_state, 10);
 
 /**
  * @generated from message meca.v1.HistoryPage
@@ -1239,7 +1337,7 @@ export type HistoryPageJson = {
  * Use `create(HistoryPageSchema)` to create a new message.
  */
 export const HistoryPageSchema: GenMessage<HistoryPage, {jsonType: HistoryPageJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_state, 10);
+  messageDesc(file_meca_v1_state, 11);
 
 /**
  * @generated from message meca.v1.DetailPage
@@ -1316,7 +1414,7 @@ export type DetailPageJson = {
  * Use `create(DetailPageSchema)` to create a new message.
  */
 export const DetailPageSchema: GenMessage<DetailPage, {jsonType: DetailPageJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_state, 11);
+  messageDesc(file_meca_v1_state, 12);
 
 /**
  * @generated from message meca.v1.Notification
@@ -1371,5 +1469,5 @@ export type NotificationJson = {
  * Use `create(NotificationSchema)` to create a new message.
  */
 export const NotificationSchema: GenMessage<Notification, {jsonType: NotificationJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_state, 12);
+  messageDesc(file_meca_v1_state, 13);
 

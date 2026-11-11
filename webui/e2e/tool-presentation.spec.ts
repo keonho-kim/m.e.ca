@@ -5,6 +5,15 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
+test.afterEach(async ({ page }) => {
+  const path = process.env.MECA_UI_DESCRIPTOR;
+  if (!path) return;
+  const fixture = JSON.parse(await readFile(path, 'utf8'));
+  // A failed assertion must not leave this suite's held task in other tests.
+  for (const step of [1, 2, 3])
+    await page.request.get(fixture.provider + '/test/tool-sequence/' + step);
+});
+
 test('repeated commands never duplicate messages or become completion metadata', async ({
   page,
 }) => {
@@ -29,14 +38,14 @@ test('repeated commands never duplicate messages or become completion metadata',
   await expect(page.getByText('Before first command.', { exact: true })).toBeVisible();
   await page.request.get(fixture.provider + '/test/tool-sequence/1');
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /execute_command/ })).toHaveCount(1);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
   await expect(page.getByText('Before first command.', { exact: true })).toHaveCount(1);
   await page.reload();
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /execute_command/ })).toHaveCount(1);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
   await page.request.get(fixture.provider + '/test/tool-sequence/2');
   await expect(page.getByText('Final response outside statistics.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /execute_command/ })).toHaveCount(2);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(2);
   await expect(page.getByText('Before second command.', { exact: true })).toHaveCount(1);
   await page.request.get(fixture.provider + '/test/tool-sequence/3');
   await expect(page.locator('.completion-summary')).toContainText('입력 32');

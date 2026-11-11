@@ -22,7 +22,7 @@ func TestDisplayProjectionDoesNotReadHiddenArguments(t *testing.T) {
 	}
 	defer s.Close()
 	ctx, id := context.Background(), s.Session().ID
-	call := toolapi.Call{ID: "call_test", Name: "write_file", Arguments: json.RawMessage(`{"path":"file.txt","content":"` + strings.Repeat("x", 100000) + `"}`)}
+	call := toolapi.Call{ExecutionID: strings.Repeat("e", 64), ID: "call_test", Name: "write_file", Arguments: json.RawMessage(`{"path":"file.txt","content":"` + strings.Repeat("x", 100000) + `"}`)}
 	if err = s.RecordEvent(ctx, id, runrecord.Event{Kind: "tool_succeeded", CallID: call.ID, Call: &call, Text: "Written"}); err != nil {
 		t.Fatal(err)
 	}
@@ -32,6 +32,9 @@ func TestDisplayProjectionDoesNotReadHiddenArguments(t *testing.T) {
 	rows, _, err := s.Timeline(ctx, id, 0, 100)
 	if err != nil || len(rows) != 1 || rows[0].Event.Call == nil {
 		t.Fatalf("hidden payload was hydrated: %v", err)
+	}
+	if rows[0].Event.Call.ExecutionID != call.ExecutionID {
+		t.Fatalf("display dropped execution identity: %q", rows[0].Event.Call.ExecutionID)
 	}
 	args, err := toolapi.DisplayArgs(rows[0].Event.Call.Arguments)
 	if err != nil || args.Path != "file.txt" || len(rows[0].Event.Call.Arguments) > 128 {

@@ -10,6 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
@@ -26,12 +27,12 @@ func TestWatchRefreshAndCancellation(t *testing.T) {
 	}, func(v string) string { return v })
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
-	notifications := make(chan struct{}, 2)
+	notifications := make(chan FileChange, 2)
 	done := make(chan error, 1)
 	go func() {
-		done <- reader.Watch(ctx, policy.Settings{Scope: policy.System}, ".", func(refresh bool) error {
-			if refresh {
-				notifications <- struct{}{}
+		done <- reader.Watch(ctx, policy.Settings{Scope: policy.System}, ".", func(change FileChange) error {
+			if change.Refresh {
+				notifications <- change
 			}
 			return nil
 		})
@@ -45,7 +46,10 @@ func TestWatchRefreshAndCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	select {
-	case <-notifications:
+	case change := <-notifications:
+		if change.Rescan || !slices.Contains(change.Names, "changed.txt") {
+			t.Fatalf("unscoped file change: %+v", change)
+		}
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}

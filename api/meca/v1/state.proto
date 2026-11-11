@@ -43,6 +43,7 @@ message Reply {
     DiagnosticResult diagnostic = 35;
     FileMutationResult file_mutation = 36;
     Usage usage = 37;
+    EditorVersion editor_version = 38;
   }
 }
 message EmptyResult {}
@@ -112,7 +113,22 @@ message Snapshot {
   repeated Event activity = 16;
   bool activity_truncated = 17;
 }
+// A completion contains measurements and a closed status, never agent narrative.
+message RunCompletion {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    COMPLETED = 1;
+    FAILED = 2;
+    INTERRUPTED = 3;
+    DENIED = 4;
+    EXHAUSTED = 5;
+  }
+  Status status = 1;
+  Statistics statistics = 2;
+}
 message HistoryItem {
+  reserved 9;
+  reserved "outcome";
   int64 sequence = 1;
   string kind = 2;
   string role = 3;
@@ -120,8 +136,8 @@ message HistoryItem {
   bool incomplete = 5;
   Event event = 6;
   bool truncated = 7;
- RunOutcome outcome = 9;
   repeated ImageMetadata images = 8;
+  RunCompletion completion = 10;
 }
 message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; }
 message DetailPage {

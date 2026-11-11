@@ -3,7 +3,35 @@
 // Usage: bun test src/shared/api/client.test.ts.
 // Related: webui/src/shared/api/client.ts, webui/src/shared/lib/errors/index.ts.
 import { expect, spyOn, test } from 'bun:test';
-import { releaseUpload, upload } from '@/shared/api/client';
+import { control, releaseUpload, upload } from '@/shared/api/client';
+
+test('control failures use the safe network catalog and unauthorized bodies are released', async () => {
+  const request = spyOn(globalThis, 'fetch');
+  try {
+    request.mockRejectedValueOnce(new TypeError('private transport detail'));
+    expect(await control('project', 'task', 'cancel').catch((error) => error)).toMatchObject({
+      code: 'network',
+    });
+    let cancelled = false;
+    request.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          cancel: () => {
+            cancelled = true;
+          },
+        }),
+        { status: 401 }
+      )
+    );
+    expect(await control('project', 'task', 'cancel').catch((error) => error)).toMatchObject({
+      code: 'unauthorized',
+    });
+    expect(cancelled).toBe(true);
+    expect(request.mock.calls).toHaveLength(2);
+  } finally {
+    request.mockRestore();
+  }
+});
 
 test('image uploads reject malformed and empty identifiers before a start request can use them', async () => {
   const request = spyOn(globalThis, 'fetch');

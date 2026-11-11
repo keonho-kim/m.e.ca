@@ -1,6 +1,6 @@
-// Purpose: Read one original tool result for user-requested expansion of a compact transcript block.
+// Purpose: Read original tool arguments or results without hydrating unrelated large payloads.
 // Pattern: On-demand repository projection.
-// Usage: Terminal and server detail readers call ToolEvent outside their state locks.
+// Usage: Terminal and server detail readers select bounded originals outside their state locks.
 // Related: internal/storage/sqlite/team_references.go, internal/commands/server/detail.go, internal/tui/session/tool_details.go.
 package sqlite
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	json "github.com/goccy/go-json"
 
 	"io/fs"
 
@@ -18,7 +19,16 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
 
-func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds) (result runrecord.Event, resultErr error) {
+func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds) (runrecord.Event, error) {
+	return s.toolDetail(ctx, ref, bounds, false)
+}
+
+// ToolRequest selects the original arguments without hydrating the result body.
+func (s *Store) ToolRequest(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds) (runrecord.Event, error) {
+	return s.toolDetail(ctx, ref, bounds, true)
+}
+
+func (s *Store) toolDetail(ctx context.Context, ref runrecord.EventReference, bounds history.ReadBounds, requestOnly bool) (result runrecord.Event, resultErr error) {
 	if ref.Sequence < 1 {
 		return result, faults.Errorf(diagcatalog.SqliteInvalidToolDetailReference)
 	}
@@ -57,8 +67,16 @@ func (s *Store) ToolEvent(ctx context.Context, ref runrecord.EventReference, bou
 		return result, err
 	}
 	payloads := pagePayloads{store: source, ctx: ctx, budget: budget}
-	body, err := payloads.unpack(0, record, history.DisplayFields("event"))
+	fields := history.DisplayFields("event")
+	if requestOnly {
+		fields = map[string]bool{"call": true, "kind": true, "agent": true, "run_id": true, "call_id": true, "occurred_at": true}
+	}
+	body, err := payloads.unpack(0, record, fields)
 	if err != nil {
+		return result, err
+	}
+	if requestOnly {
+		err := json.Unmarshal(body, &result)
 		return result, err
 	}
 	projected, err := history.Display(0, "event", body, record.body, arguments)

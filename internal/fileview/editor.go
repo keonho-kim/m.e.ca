@@ -25,8 +25,8 @@ import (
 const EditorBytes = 2 << 20
 
 type Document struct {
-	Path, Text, Revision, Reason string
-	Editable                     bool
+	Path, Text, Revision, WatchRevision, Reason string
+	Editable                                    bool
 }
 
 func (e *Reader) editSource(ctx context.Context, settings policy.Settings, path string) (Target, []byte, os.FileInfo, error) {
@@ -84,11 +84,11 @@ func documentRevision(body []byte) string {
 }
 
 func (e *Reader) Edit(ctx context.Context, settings policy.Settings, path string) (Document, error) {
-	t, body, _, err := e.editSource(ctx, settings, path)
+	t, body, info, err := e.editSource(ctx, settings, path)
 	if err != nil {
 		return Document{}, err
 	}
-	doc := Document{Path: e.redact(t.Absolute)}
+	doc := Document{Path: e.redact(t.Absolute), WatchRevision: directoryRevision(info)}
 	if body == nil || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 {
 		doc.Reason = diag.Text(diag.UIEditorReadOnly)
 		return doc, nil

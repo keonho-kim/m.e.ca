@@ -16,6 +16,8 @@ export function useDocument(target: Target, path: string, externalRevision: numb
     mounted = useRef(false);
   const reading = useRef<AbortController | null>(null),
     saving = useRef<AbortController | null>(null);
+  const checking = useRef<AbortController | null>(null);
+  const baseline = useRef<{ revision?: string; watchRevision?: string } | null>(null);
   const [doc, setDoc] = useState<EditorDocumentJson | null>(null);
   const [busy, setBusy] = useState(true),
     [readonly, setReadonly] = useState(false);
@@ -32,6 +34,7 @@ export function useDocument(target: Target, path: string, externalRevision: numb
     reading.current = controller;
     setBusy(true);
     setDoc(null);
+    baseline.current = null;
     setReadonly(false);
     setProblem('');
     setReason('');
@@ -47,6 +50,10 @@ export function useDocument(target: Target, path: string, externalRevision: numb
       if (!mounted.current || controller.signal.aborted) return;
       if (!reply.editor) throw failure('invalid_response');
       setMaxBytes(limit);
+      baseline.current = {
+        revision: reply.editor.revision,
+        watchRevision: reply.editor.watchRevision,
+      };
       if (reply.editor.editable) {
         if (!reply.editor.revision) throw failure('invalid_response');
         setDoc(reply.editor);
@@ -74,15 +81,38 @@ export function useDocument(target: Target, path: string, externalRevision: numb
       mounted.current = false;
       reading.current?.abort();
       saving.current?.abort();
+      checking.current?.abort();
       markDirty(false);
     };
   }, [read]);
   useEffect(() => {
-    if (externalRevision !== observed.current) {
-      observed.current = externalRevision;
-      setChanged(true);
-    }
-  }, [externalRevision]);
+    const original = baseline.current;
+    if (externalRevision === observed.current || busy || !original) return;
+    observed.current = externalRevision;
+    checking.current?.abort();
+    const controller = new AbortController();
+    checking.current = controller;
+    void call(
+      target.workspace,
+      { editorProbe: { path, watchRevision: original.watchRevision } },
+      controller.signal
+    )
+      .then((reply) => {
+        if (controller.signal.aborted || !mounted.current) return;
+        const version = reply.editorVersion;
+        if (!version) throw failure('invalid_response');
+        const changed =
+          !!version.missing ||
+          (!version.unchanged && (!version.revision || version.revision !== original.revision));
+        setChanged(changed);
+        if (!changed && version.watchRevision && baseline.current === original)
+          baseline.current = { ...original, watchRevision: version.watchRevision };
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted && mounted.current) reportError(error);
+      });
+    return () => controller.abort();
+  }, [externalRevision, busy, doc, target.workspace, path]);
   const save = async () => {
     if (!doc || !editor.current || busy || saving.current) return;
     const controller = new AbortController();
@@ -99,7 +129,19 @@ export function useDocument(target: Target, path: string, externalRevision: numb
       );
       if (!mounted.current || controller.signal.aborted) return;
       if (!reply.editor?.revision) throw failure('invalid_response');
-      setDoc((value) => (value ? { ...value, revision: reply.editor?.revision } : value));
+      baseline.current = {
+        revision: reply.editor.revision,
+        watchRevision: reply.editor.watchRevision,
+      };
+      setDoc((value) =>
+        value
+          ? {
+              ...value,
+              revision: reply.editor?.revision,
+              watchRevision: reply.editor?.watchRevision,
+            }
+          : value
+      );
       captured.saved();
       setChanged(false);
     } catch (error) {

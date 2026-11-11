@@ -81,7 +81,9 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `addWorkspace` | `path` → 작업공간 등록·전역 설정 저장 후 목록. 실제 경로 기준 중복 제거 |
 | `browseFolders` | `path`, `offset` → 서버 폴더 선택용 directory. 한 번에 200개 항목을 읽고 폴더만 반환 |
 | `createFolder` | 부모 `path`, 단일 `name` → 생성한 폴더의 directory.path·parent. 보호 경로 검사와 공통 파일 효과 잠금 적용 |
-| `mutateFile` | `path`, 원본 목록 `revision`, 참조 대상 `sessionId`, `name`·`folder`·`remove:true` 중 하나 → `path`·`paths`·`referencesReady`·부분 실패 코드 |
+| `mutateFile` | 고유 `key`, `path`, 원본 목록 `revision`, 현재 `sessionId`, `name`·`folder`·`remove:true` 중 하나 → 접수 키·상태·결과 경로·확정 참조·부분 실패 코드 |
+| `lookupMutation` | `sessionId`, `key` → 저장된 파일 작업 결과; 파일 효과 재실행 없음 |
+| `editorProbe` | `path`, 읽기·저장 응답의 `watchRevision` → 변경 여부·내용 revision; 본문 전송 없음 |
 | `sessionUsage` | `sessionId` → 저장된 누적 입출력 토큰과 보고된 비용 |
 | `deleteSession` | `sessionId` → 대화와 소유 팀 내부 파일 삭제. 활성 작업·다른 소유자 잠금 거절 |
 | `commandCatalog` | `{}` → 브라우저에서 지원하는 여섯 명령·설명 |
@@ -99,7 +101,7 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `closeSession` | `sessionId` → 해당 세션 자원 해제. 작업 중에는 거부하고 이미 닫힌 자원은 성공 처리. DB는 삭제하지 않음 |
 | `state` | 선택적 `sessionId`, `taskId`, `afterTask`, `limit` → 상태 페이지. 기본 32건·최대 100건. `defaultModel:true`는 전역 기본 모델만 읽음 |
 | `history` | `before`, `limit`, 선택적 `sessionId` → 현재 프로젝트의 지정 대화 시간순 페이지. 메모리에 없는 대화는 읽기 전용으로 열며 생략 시 native 선택 |
-| `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 `sessionId` → UTF-8 JSON 원문 조각 `text`와 바이트 기준 nextOffset. 후속 페이지는 revision 필수 |
+| `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 `sessionId`·`view` → UTF-8 JSON 또는 텍스트 조각 `text`와 바이트 기준 nextOffset. 후속 페이지는 revision 필수 |
 | `setModel` | `sessionId` 또는 `defaultModel:true`, `provider`, `endpoint`, `model`, 선택적 `credential`, `thinking`, `reasoningEffort` → 상태. `remember`는 대화별 모델 저장에서 사용 |
 | `setSettings` | `permission`, `team`, `language` 중 하나 → 상태. team은 `sessionId` 필수, language는 전역 UI 언어 |
 | `start` | `sessionId`, `key`, `text`, 선택적 `attachmentIds`, `paths` → 즉시 작업 ID와 상태. 이미지 전용 요청 허용 |
@@ -226,7 +228,7 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 {"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"path":"result.txt","content":"written"}},"output":{"ok":true}}}
 ```
 
-같은 상세의 연속 페이지는 선택 세션에 보관한 최근 문서 한 건을 재사용한다. 공개 DTO를 증분 JSON으로 인코딩하고 문자열을 조각별로 마스킹하여 완성 JSON 전체를 메모리에 만들지 않는다. 64KiB 이하는 메모리, 큰 문서는 private 임시 파일에 두고 파일 경로를 즉시 제거한다. 다른 원문이나 마스킹 revision으로 바뀌면 이전 문서를 먼저 해제한다. 세션 교체·닫기·프로세스 종료에서도 자원을 해제한다. 끝난 승인은 보관 여부와 무관하게 조회를 거부한다. 임시 보관을 사용할 수 없으면 현재 페이지만 수집해 반환하고 다음 조회에서 다시 준비하며 `detail_cache_bypassed`로 진단한다. 파일 정리 실패는 오류로 반환한다. 첫 조회의 저장 원문 복원과 이스케이프된 JSON 값 해석 비용까지 페이지 크기로 제한되는 것은 아니다.
+같은 상세의 연속 페이지는 선택 세션에 보관한 최근 문서 한 건을 재사용한다. 공개 DTO를 증분 JSON으로 인코딩하고 문자열을 조각별로 마스킹하여 완성 JSON 전체를 메모리에 만들지 않는다. 64KiB 이하는 메모리, 큰 문서는 private 임시 파일에 두고 파일 경로를 즉시 제거한다. 다른 원문이나 마스킹 revision으로 바뀌면 이전 문서를 먼저 해제한다. 세션 교체·닫기·프로세스 종료에서도 자원을 해제한다. 끝난 승인은 보관 여부와 무관하게 조회를 거부한다. 임시 보관을 사용할 수 없으면 현재 페이지만 수집해 반환하고 다음 조회에서 다시 준비하며 `detail_cache_bypassed`로 진단한다. 파일 정리 실패는 오류로 반환한다. 첫 조회의 저장 원문 복원과 이스케이프된 JSON 값 해석 비용까지 페이지 크기로 제한되는 것은 아니다. `view`는 DOCUMENT(기본 JSON), TOOL_REQUEST·TOOL_RESULT(도구 참조의 인자·결과 JSON), TEXT·THINKING(이력 sequence의 본문 텍스트) 중 하나다. 승인 원문은 DOCUMENT만 허용하며 revision은 view도 구분한다. 요청과 결과는 서로의 큰 payload를 복원하지 않는다.
 
 | 한도 | 소유 범위 |
 | --- | --- |
@@ -316,4 +318,8 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 등록한 작업공간은 전역 설정의 workspaces 목록에 실제 절대 경로로 저장한다. 조회·실행 시 필요한 런타임만 열고, 기본 작업공간·활성 대여·실행·업로드·불확실한 저장 상태를 제외한 idle 네 개를 유지한다. 닫는 중 재개방을 기다리며 종료 호출은 모든 정리의 완료를 함께 확인한다.
 
-GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. 작업의 request_finished.outcome과 HistoryItem.outcome은 실제 실행 결과이며 접수 DB의 answered 상태와 구분한다. 저장된 접수 행에는 outcome이 없을 수 있으므로 클라이언트가 성공을 추정하지 않는다.
+GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. 작업의 request_finished.outcome과 HistoryItem.completion은 실제 실행 결과이며 접수 DB의 answered 상태와 구분한다. 저장된 접수 행에는 outcome이 없을 수 있으므로 클라이언트가 성공을 추정하지 않는다.
+
+완료 이력은 kind가 completion이며 RunCompletion의 상태 enum(COMPLETED·FAILED·INTERRUPTED·DENIED·EXHAUSTED)과 statistics만 제공한다. 텍스트·추론·일반 이벤트·이미지·자유 형식 종료 사유를 같은 항목에 넣지 않는다. 종료 사유 원문은 해당 history sequence의 상세 조회로 확인한다. 이 구조는 SSE·WebSocket·RPC의 공통 이력 응답에 적용한다.
+
+파일 작업 접수 기록은 작업공간별 private DB에 저장한다. 참조·파일 본문을 이중 저장하지 않고 경로와 공개 결과만 보관한다. 기록은 최대 100,000개·본문과 처리 중 예약분 합계 32MiB, DB 파일은 최대 64MiB다. 처리 전에 결과 공간을 예약하며 용량이 부족하면 파일 효과를 시작하지 않는다. 진행 중 기록이 서버 재시작 뒤 남으면 실제 효과를 추측하거나 재실행하지 않고 불확실 상태로 반환한다.

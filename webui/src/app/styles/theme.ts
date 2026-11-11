@@ -8,7 +8,6 @@ import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { mecaIcons } from '@/shared/ui/icons';
 
 const font = 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-const thinkingInk = 'light-dark(#5c5c5c, #b7b7b7)';
 export const mecaTheme = defineTheme({
   name: 'meca',
   extends: neutralTheme,
@@ -17,21 +16,35 @@ export const mecaTheme = defineTheme({
     body: { family: 'system-ui', fallbacks: font },
     heading: { family: 'system-ui', fallbacks: font },
   },
-  motion: { fast: 130, medium: 220, slow: 360, ratio: 0.8 },
+  motion: { fast: 130, medium: 220, slow: 360, ratio: 0.8, character: 'crisp' },
+  localTokens: {
+    '--meca-glass-surface': ['rgb(255 255 255 / 78%)', 'rgb(23 25 31 / 84%)'],
+    '--meca-glass-filter': 'blur(18px) saturate(115%)',
+    '--meca-glass-edge': [
+      'inset 0 1px 0 rgb(255 255 255 / 94%), inset 0 0 0 1px rgb(20 27 40 / 8%)',
+      'inset 0 1px 0 rgb(255 255 255 / 11%), inset 0 0 0 1px rgb(255 255 255 / 6%)',
+    ],
+    '--meca-glass-shadow': [
+      '0 12px 28px -16px rgb(20 27 40 / 20%)',
+      '0 16px 40px -20px rgb(0 0 0 / 65%)',
+    ],
+    '--meca-thinking-surface': ['rgb(235 238 242 / 70%)', 'rgb(31 34 41 / 84%)'],
+    '--meca-thinking-ink': ['#606774', '#b4bac5'],
+  },
   tokens: {
     '--font-family-body': font,
     '--font-family-heading': font,
-    '--color-background-body': ['#f5f5f5', '#0b0b0b'],
-    '--color-background-surface': ['#ffffff', '#141414'],
-    '--color-background-card': ['#ffffff', '#191919'],
-    '--color-background-popover': ['rgb(255 255 255 / 88%)', 'rgb(28 28 28 / 92%)'],
-    '--color-background-muted': ['#f5f5f5', '#202020'],
-    '--color-accent': ['#171717', '#f5f5f5'],
-    '--color-on-accent': ['#ffffff', '#171717'],
+    '--color-background-body': ['#f2f4f7', '#0d0f13'],
+    '--color-background-surface': ['#fcfdff', '#121419'],
+    '--color-background-card': ['#ffffff', '#1a1d23'],
+    '--color-background-popover': ['rgb(255 255 255 / 88%)', 'rgb(26 29 35 / 92%)'],
+    '--color-background-muted': ['#edf0f4', '#1e2128'],
+    '--color-accent': ['#191d24', '#eef0f5'],
+    '--color-on-accent': ['#ffffff', '#191d24'],
     '--color-accent-muted': ['rgb(0 0 0 / 6%)', 'rgb(255 255 255 / 10%)'],
-    '--color-text-primary': ['#171717', '#f5f5f5'],
-    '--color-text-secondary': ['#666666', '#aaaaaa'],
-    '--focus-outline-color': 'var(--color-accent)',
+    '--color-text-primary': ['#191d24', '#eef0f5'],
+    '--color-text-secondary': ['#616876', '#adb3bf'],
+    '--focus-outline-color': 'light-dark(#285ba2, #b6c7e2)',
     '--radius-chat': '24px',
     '--shadow-low': '0 2px 12px light-dark(#0000000c, #00000040)',
     '--shadow-med': '0 12px 36px light-dark(#00000014, #00000070)',
@@ -39,36 +52,62 @@ export const mecaTheme = defineTheme({
   adaptations: {
     rules: [
       {
+        when: { pointer: 'coarse' },
+        value: {
+          components: {
+            'collapsible-trigger': { base: { minHeight: 'var(--spacing-12)' } },
+          },
+        },
+      },
+      {
         when: { motion: 'reduce' },
         value: {
           components: {
             button: { 'variant:attachment': { transitionDuration: '0ms' } },
+            dialog: { base: { animationName: 'none' } },
           },
         },
       },
     ],
   },
   components: {
+    'collapsible-trigger': { base: { minHeight: 'var(--size-element-md)' } },
     collapsible: {
       base: {
+        ':is([data-tone="tool"])': {
+          backgroundColor: 'transparent',
+          borderWidth: '0',
+          boxShadow: 'none',
+          padding: '0',
+          width: '100%',
+          minWidth: '0',
+        },
         ':is([data-tone="thinking"])': {
-          backgroundColor: 'var(--color-background-muted)',
+          backgroundColor: 'var(--meca-thinking-surface)',
           borderRadius: 'var(--radius-container)',
           padding: 'var(--spacing-4)',
-          marginBlockEnd: 'var(--spacing-4)',
-          '--color-text-primary': thinkingInk,
-          '--color-text-secondary': thinkingInk,
+          '--color-text-primary': 'var(--meca-thinking-ink)',
+          '--color-text-secondary': 'var(--meca-thinking-ink)',
         },
       },
     },
     markdown: {
       base: {
+        fontSize: 'var(--text-body-size)',
+        lineHeight: '1.7',
         ':is([data-tone="thinking"])': {
           '--color-text-primary': 'var(--color-text-secondary)',
         },
       },
     },
     button: {
+      'variant:tool-request': {
+        position: 'absolute',
+        insetBlockStart: '0',
+        insetInlineEnd: '0',
+        backgroundColor: 'transparent',
+        color: 'var(--color-icon-primary)',
+      },
       'variant:image-remove': {
         position: 'absolute',
         top: 'var(--spacing-1)',
@@ -91,21 +130,98 @@ export const mecaTheme = defineTheme({
     },
     'app-shell': { base: { backgroundColor: 'var(--color-background-body)' } },
     'side-nav': {
-      base: { backgroundColor: 'light-dark(rgb(250 250 250 / 82%), rgb(18 18 18 / 86%))' },
+      base: {
+        backgroundColor: 'var(--meca-glass-surface)',
+        backdropFilter: 'var(--meca-glass-filter)',
+        WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        boxShadow: 'var(--meca-glass-edge)',
+      },
     },
     dialog: {
-      base: { backdropFilter: 'blur(24px)', backgroundColor: 'var(--color-background-popover)' },
+      base: {
+        animationName: 'meca-dialog-enter',
+        animationDuration: 'var(--duration-medium)',
+        animationTimingFunction: 'var(--ease-entrance)',
+        backgroundColor: 'var(--color-background-card)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        boxShadow: 'var(--shadow-high)',
+      },
     },
-    'dropdown-menu': { base: { backdropFilter: 'blur(20px)' } },
-    popover: { base: { backdropFilter: 'blur(20px)' } },
-    'chat-composer': { base: { backdropFilter: 'blur(20px)' } },
+    drawer: {
+      base: {
+        backgroundColor: 'var(--color-background-card)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      },
+    },
+    'alert-dialog': {
+      base: {
+        backgroundColor: 'var(--color-background-card)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+      },
+    },
+    lightbox: {
+      base: {
+        backgroundColor: 'var(--color-on-light)',
+        backdropFilter: 'none',
+        '::backdrop': { backdropFilter: 'none' },
+      },
+    },
+    'dropdown-menu': {
+      base: {
+        backdropFilter: 'var(--meca-glass-filter)',
+        WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
+      },
+    },
+    popover: {
+      base: {
+        backdropFilter: 'var(--meca-glass-filter)',
+        WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
+      },
+    },
+    'chat-composer': {
+      base: {
+        borderRadius: 'var(--radius-chat)',
+        backdropFilter: 'var(--meca-glass-filter)',
+        WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backgroundColor: 'var(--meca-glass-surface)',
+        boxShadow: 'var(--meca-glass-edge), var(--meca-glass-shadow)',
+      },
+    },
+    toolbar: {
+      base: {
+        ':is(.workspace-header)': {
+          backgroundColor: 'var(--meca-glass-surface)',
+          backdropFilter: 'var(--meca-glass-filter)',
+          WebkitBackdropFilter: 'var(--meca-glass-filter)',
+          boxShadow: 'var(--meca-glass-edge)',
+        },
+      },
+    },
+    'chat-tool-calls': {
+      base: {
+        width: '100%',
+        minWidth: '0',
+        backgroundColor: 'transparent',
+        '--color-overlay-hover': 'transparent',
+        textDecorationLine: 'underline',
+        textDecorationColor: 'var(--color-border-emphasized)',
+        textUnderlineOffset: '0.25em',
+        textDecorationThickness: 'var(--border-thin)',
+      },
+    },
     carousel: {
       base: {
         paddingBlock: 'var(--spacing-2)',
         backgroundColor: 'var(--color-background-popover)',
         borderRadius: 'var(--radius-container)',
         boxShadow: 'var(--shadow-low)',
-        backdropFilter: 'blur(20px)',
+        backdropFilter: 'var(--meca-glass-filter)',
+        WebkitBackdropFilter: 'var(--meca-glass-filter)',
       },
     },
   },

@@ -1,45 +1,53 @@
-// Purpose: Bound rendered Markdown nodes through Astryx's immutable AST plugin contract.
-// Pattern: Bounded presentation projection preserving source syntax and node provenance.
-// Usage: MarkdownText uses this after Astryx's existing incremental parse.
-// Related: webui/src/shared/ui/markdown/index.tsx.
-import { createMarkdownPlugin } from '@astryxdesign/core/Markdown/plugins';
-
-type Branch = { readonly type: string; readonly children?: readonly Branch[] };
-export function markdownBudget(tail: boolean) {
-  return createMarkdownPlugin({
-    name: 'meca-render-window',
-    apiVersion: 1,
-    transform(document, context) {
-      if (context.display !== 'block') return document;
-      if (!hasMarkdownWindow(context.source)) return document;
-      let remaining = 1024;
-      function bound<T extends Branch>(node: T): T | undefined {
-        if (remaining-- <= 0) return undefined;
-        if (!node.children) return node;
-        const result: Branch[] = [],
-          children = node.children;
-        for (let index = 0; index < children.length && remaining > 0; index++) {
-          const child = children[tail ? children.length - 1 - index : index];
-          if (!child) continue;
-          const value = bound(child);
-          if (value) result.push(value);
-        }
-        if (tail) result.reverse();
-        if (
-          result.length === children.length &&
-          result.every((child, index) => child === children[index])
-        )
-          return node;
-        // Filtering children preserves the concrete node's content kinds and provenance.
-        return { ...node, children: result };
-      }
-      return bound(document) ?? { ...document, children: [] };
-    },
-  });
+// Purpose: Page immutable Markdown nodes without dropping source content or losing container context.
+// Pattern: Pure bounded AST projection over Astryx's existing parse.
+// Usage: The pagination plugin renders one window and native inline page controls.
+// Related: webui/src/shared/ui/markdown/pagination.tsx, webui/src/shared/ui/markdown/render-budget.test.ts.
+type Branch = {
+  readonly type: string;
+  readonly children?: readonly Branch[];
+  readonly ordered?: boolean;
+  readonly start?: number;
+};
+// Leave room for repeated ancestor paths, a small table header and page controls.
+const pageNodes = 768;
+function count(node: Branch): number {
+  return 1 + (node.children?.reduce((sum, child) => sum + count(child), 0) ?? 0);
 }
-export function hasMarkdownWindow(text: string) {
-  if (text.length > 1024) return true;
-  let lines = 0;
-  for (const char of text) if (char === '\n' && ++lines > 48) return true;
-  return false;
+export function markdownWindow<T extends Branch>(document: T, requested: number) {
+  const pages = Math.ceil(Math.max(1, count(document) - 1) / pageNodes);
+  const index = Math.min(Math.max(0, requested), pages - 1);
+  if (pages === 1) return { document, pages, index };
+  const start = 1 + index * pageNodes,
+    end = start + pageNodes;
+  let cursor = 0;
+  function select<N extends Branch>(node: N): N | undefined {
+    if (cursor >= end) return undefined;
+    const position = cursor++;
+    if (!node.children) return position >= start ? node : undefined;
+    const children: Branch[] = [];
+    let first = -1;
+    for (let child = 0; child < node.children.length && cursor < end; child++) {
+      const source = node.children[child];
+      if (!source) continue;
+      const selected = select(source);
+      if (selected) {
+        if (first < 0) first = child;
+        children.push(selected);
+      }
+    }
+    if (!children.length) return undefined;
+    if (node.type === 'table' && first > 0) {
+      const header = node.children[0];
+      if (header && count(header) <= 128) children.unshift(header);
+    }
+    return {
+      ...node,
+      children,
+      ...(node.type === 'list' && node.ordered && first > 0
+        ? // The continuation container is synthetic; its children retain source provenance.
+          { start: (node.start ?? 1) + first, position: undefined }
+        : {}),
+    };
+  }
+  return { document: select(document) ?? { ...document, children: [] }, pages, index };
 }

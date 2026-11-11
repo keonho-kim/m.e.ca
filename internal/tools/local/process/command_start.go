@@ -18,8 +18,8 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (r *Registry) Start(ctx context.Context, directory, command string, environment []string, callID string) (string, error) {
-	id, j, err := r.register(ctx, directory, command, environment, callID, nil, true)
+func (r *Registry) Start(ctx context.Context, directory, command string, environment []string, identity CallIdentity) (string, error) {
+	id, j, err := r.register(ctx, directory, command, environment, identity, nil, true)
 	if err != nil {
 		return id, err
 	}
@@ -28,12 +28,12 @@ func (r *Registry) Start(ctx context.Context, directory, command string, environ
 }
 
 // StartAdmitted includes resource admission in the observable command lifetime.
-func (r *Registry) StartAdmitted(ctx context.Context, directory, command string, environment []string, callID string, admit func(context.Context) (func(), error)) (string, error) {
-	id, _, err := r.register(ctx, directory, command, environment, callID, admit, false)
+func (r *Registry) StartAdmitted(ctx context.Context, directory, command string, environment []string, identity CallIdentity, admit func(context.Context) (func(), error)) (string, error) {
+	id, _, err := r.register(ctx, directory, command, environment, identity, admit, false)
 	return id, err
 }
 
-func (r *Registry) register(ctx context.Context, directory, command string, environment []string, callID string, admit func(context.Context) (func(), error), waitStart bool) (string, *job, error) {
+func (r *Registry) register(ctx context.Context, directory, command string, environment []string, identity CallIdentity, admit func(context.Context) (func(), error), waitStart bool) (string, *job, error) {
 	if err := ctx.Err(); err != nil {
 		return "", nil, err
 	}
@@ -53,7 +53,7 @@ func (r *Registry) register(ctx context.Context, directory, command string, envi
 	child, cancelCause := context.WithCancelCause(owner)
 	cancel := func() { cancelCause(context.Cause(owner)) }
 	id := "cmd_" + rand.Text()
-	j := &job{state: State{ID: id, CallID: callID, Command: command, Directory: directory, Status: "waiting"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
+	j := &job{state: State{ID: id, CallID: identity.CallID, ExecutionID: identity.ExecutionID, Command: command, Directory: directory, Status: "waiting"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
 	if waitStart {
 		j.launched = make(chan struct{})
 	}

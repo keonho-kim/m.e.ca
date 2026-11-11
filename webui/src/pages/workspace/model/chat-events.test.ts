@@ -10,7 +10,7 @@ const started: EventJson = {
   runId: 'r',
   agent: 'a',
   kind: 'tool_started',
-  tool: { callId: '1', name: 'execute_command' },
+  tool: { callId: '1', executionId: 'execution-1', name: 'execute_command' },
 };
 const result: EventJson = { ...started, kind: 'tool_succeeded', text: 'done' };
 
@@ -22,9 +22,14 @@ test('same-named tools from other runs, agents and calls remain independent', ()
   const others = [
     { ...result, agent: 'b' },
     { ...result, runId: 'other' },
-    { ...result, tool: { ...result.tool, callId: '2' } },
+    { ...result, tool: { ...result.tool, callId: '2', executionId: 'execution-2' } },
   ];
   expect(liveActivity([result, ...others], [{ event: result }])).toEqual(others);
+});
+
+test('reused provider call IDs never hide a later independent execution', () => {
+  const next = { ...started, tool: { ...started.tool, executionId: 'execution-2' } };
+  expect(liveActivity([next], [{ event: result }])).toEqual([next]);
 });
 test('response text never returns to the metadata activity area', () => {
   expect(

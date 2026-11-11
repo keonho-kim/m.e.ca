@@ -13,8 +13,8 @@ export function isHistoryBoundary(event: EventJson) {
   return ['progress', 'team_progress', 'tool_started'].includes(event.kind ?? '');
 }
 export function toolIdentity(event: EventJson) {
-  return event.runId && event.tool?.callId
-    ? JSON.stringify([event.runId, event.agent ?? '', event.tool.callId])
+  return event.runId && event.tool?.executionId
+    ? JSON.stringify([event.runId, event.agent ?? '', event.tool.executionId])
     : undefined;
 }
 export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {

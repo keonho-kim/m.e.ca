@@ -7,13 +7,13 @@
 // @generated from file meca/v1/control.proto (package meca.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { SkillFileRequest, SkillFileRequestJson, SkillListRequest, SkillListRequestJson, SkillPrefix, SkillPrefixJson, SkillRequest, SkillRequestJson } from "./skills_pb";
 import { file_meca_v1_skills } from "./skills_pb";
 import type { CommandListRequest, CommandListRequestJson, DraftRequest, DraftRequestJson, FileRequest, FileRequestJson, FileSelection, FileSelectionJson, ImageRequest, ImageRequestJson, ModelQuery, ModelQueryJson, SessionTarget, SessionTargetJson, StateRequest, StateRequestJson, TaskListRequest, TaskListRequestJson } from "./workspace_pb";
 import { file_meca_v1_workspace } from "./workspace_pb";
-import type { CreateFolder, CreateFolderJson, DiagnoseModel, DiagnoseModelJson, EditFile, EditFileJson, FileMutation, FileMutationJson, ParseInput, ParseInputJson, RequestLookup, RequestLookupJson, WorkspaceRequest, WorkspaceRequestJson } from "./application_pb";
+import type { CreateFolder, CreateFolderJson, DiagnoseModel, DiagnoseModelJson, EditFile, EditFileJson, EditorProbe, EditorProbeJson, FileMutation, FileMutationJson, ParseInput, ParseInputJson, RequestLookup, RequestLookupJson, WorkspaceRequest, WorkspaceRequestJson } from "./application_pb";
 import { file_meca_v1_application } from "./application_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/control.proto.
  */
 export const file_meca_v1_control: GenFile = /*@__PURE__*/
-  fileDesc("ChVtZWNhL3YxL2NvbnRyb2wucHJvdG8SB21lY2EudjEiBwoFRW1wdHkiwQ8KB0NvbW1hbmQSCgoCaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEjQKDWxpc3Rfc2Vzc2lvbnMYCiABKAsyGy5tZWNhLnYxLlNlc3Npb25MaXN0UmVxdWVzdEgAEjAKDnNlbGVjdF9zZXNzaW9uGAsgASgLMhYubWVjYS52MS5TZWxlY3RTZXNzaW9uSAASLwoNY2xvc2Vfc2Vzc2lvbhgMIAEoCzIWLm1lY2EudjEuU2Vzc2lvblRhcmdldEgAEiYKBXN0YXRlGA0gASgLMhUubWVjYS52MS5TdGF0ZVJlcXVlc3RIABIqCgdoaXN0b3J5GA4gASgLMhcubWVjYS52MS5IaXN0b3J5UmVxdWVzdEgAEigKBmRldGFpbBgPIAEoCzIWLm1lY2EudjEuRGV0YWlsUmVxdWVzdEgAEioKCXNldF9tb2RlbBgQIAEoCzIVLm1lY2EudjEuTW9kZWxSZXF1ZXN0SAASMAoMc2V0X3NldHRpbmdzGBEgASgLMhgubWVjYS52MS5TZXR0aW5nc1JlcXVlc3RIABImCgVzdGFydBgSIAEoCzIVLm1lY2EudjEuU3RhcnRSZXF1ZXN0SAASKwoLdGFza19zdGF0dXMYEyABKAsyFC5tZWNhLnYxLlRhc2tSZXF1ZXN0SAASJgoGY2FuY2VsGBQgASgLMhQubWVjYS52MS5UYXNrUmVxdWVzdEgAEiwKB2FwcHJvdmUYFSABKAsyGS5tZWNhLnYxLkFwcHJvdmFsRGVjaXNpb25IABIpCgVzdGVlchgWIAEoCzIYLm1lY2EudjEuU3RlZXJpbmdSZXF1ZXN0SAASMAoLbGlzdF9za2lsbHMYFyABKAsyGS5tZWNhLnYxLlNraWxsTGlzdFJlcXVlc3RIABIqCglnZXRfc2tpbGwYGCABKAsyFS5tZWNhLnYxLlNraWxsUmVxdWVzdEgAEjQKD3JlYWRfc2tpbGxfZmlsZRgZIAEoCzIZLm1lY2EudjEuU2tpbGxGaWxlUmVxdWVzdEgAEiYKDGNhcGFiaWxpdGllcxgaIAEoCzIOLm1lY2EudjEuRW1wdHlIABIjCglwcm92aWRlcnMYGyABKAsyDi5tZWNhLnYxLkVtcHR5SAASLgoPZGlzY292ZXJfbW9kZWxzGBwgASgLMhMubWVjYS52MS5Nb2RlbFF1ZXJ5SAASKQoJZGlyZWN0b3J5GB0gASgLMhQubWVjYS52MS5GaWxlUmVxdWVzdEgAEiwKDHByZXZpZXdfZmlsZRgeIAEoCzIULm1lY2EudjEuRmlsZVJlcXVlc3RIABIxCg9maWxlX3NlbGVjdGlvbnMYHyABKAsyFi5tZWNhLnYxLlNlc3Npb25UYXJnZXRIABItCgtzZWxlY3RfZmlsZRggIAEoCzIWLm1lY2EudjEuRmlsZVNlbGVjdGlvbkgAEi4KDWhpc3RvcnlfaW1hZ2UYISABKAsyFS5tZWNhLnYxLkltYWdlUmVxdWVzdEgAEiYKBWRyYWZ0GCIgASgLMhUubWVjYS52MS5EcmFmdFJlcXVlc3RIABIuCgpsaXN0X3Rhc2tzGCMgASgLMhgubWVjYS52MS5UYXNrTGlzdFJlcXVlc3RIABIvCghjb21tYW5kcxgkIAEoCzIbLm1lY2EudjEuQ29tbWFuZExpc3RSZXF1ZXN0SAASIwoJcmVzb3VyY2VzGCUgASgLMg4ubWVjYS52MS5FbXB0eUgAEikKD2xpc3Rfd29ya3NwYWNlcxgmIAEoCzIOLm1lY2EudjEuRW1wdHlIABIyCg1hZGRfd29ya3NwYWNlGCcgASgLMhkubWVjYS52MS5Xb3Jrc3BhY2VSZXF1ZXN0SAASMAoOZGVsZXRlX3Nlc3Npb24YKCABKAsyFi5tZWNhLnYxLlNlc3Npb25UYXJnZXRIABIpCg9jb21tYW5kX2NhdGFsb2cYKSABKAsyDi5tZWNhLnYxLkVtcHR5SAASKgoLcGFyc2VfaW5wdXQYKiABKAsyEy5tZWNhLnYxLlBhcnNlSW5wdXRIABIoCgtlZGl0b3JfcmVhZBgrIAEoCzIRLm1lY2EudjEuRWRpdEZpbGVIABIoCgtlZGl0b3Jfc2F2ZRgsIAEoCzIRLm1lY2EudjEuRWRpdEZpbGVIABIwCg5kaWFnbm9zZV9tb2RlbBgtIAEoCzIWLm1lY2EudjEuRGlhZ25vc2VNb2RlbEgAEjMKDmJyb3dzZV9mb2xkZXJzGC4gASgLMhkubWVjYS52MS5Xb3Jrc3BhY2VSZXF1ZXN0SAASMAoObG9va3VwX3JlcXVlc3QYLyABKAsyFi5tZWNhLnYxLlJlcXVlc3RMb29rdXBIABIuCg5zdWdnZXN0X3NraWxscxgwIAEoCzIULm1lY2EudjEuU2tpbGxQcmVmaXhIABIuCg1jcmVhdGVfZm9sZGVyGDEgASgLMhUubWVjYS52MS5DcmVhdGVGb2xkZXJIABIsCgttdXRhdGVfZmlsZRgyIAEoCzIVLm1lY2EudjEuRmlsZU11dGF0aW9uSAASLwoNc2Vzc2lvbl91c2FnZRgzIAEoCzIWLm1lY2EudjEuU2Vzc2lvblRhcmdldEgAQgsKCW9wZXJhdGlvbiIzCg1TZWxlY3RTZXNzaW9uEhIKCnNlc3Npb25faWQYASABKAkSDgoGY3JlYXRlGAIgASgIIjMKElNlc3Npb25MaXN0UmVxdWVzdBIOCgZjdXJzb3IYASABKAkSDQoFbGltaXQYAiABKAUiQwoOSGlzdG9yeVJlcXVlc3QSDgoGYmVmb3JlGAEgASgDEg0KBWxpbWl0GAIgASgFEhIKCnNlc3Npb25faWQYAyABKAkiNgoORXZlbnRSZWZlcmVuY2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghzZXF1ZW5jZRgCIAEoAyK6AQoNRGV0YWlsUmVxdWVzdBInCgR0b29sGAEgASgLMhcubWVjYS52MS5FdmVudFJlZmVyZW5jZUgAEhUKC2FwcHJvdmFsX2lkGAIgASgJSAASGgoQaGlzdG9yeV9zZXF1ZW5jZRgDIAEoA0gAEg4KBm9mZnNldBgEIAEoAxINCgVsaW1pdBgFIAEoBRISCgpzZXNzaW9uX2lkGAYgASgJEhAKCHJldmlzaW9uGAcgASgJQggKBnNvdXJjZSLqAQoMTW9kZWxSZXF1ZXN0EhAKCHByb3ZpZGVyGAEgASgJEhAKCGVuZHBvaW50GAIgASgJEg0KBW1vZGVsGAMgASgJEhIKCmNyZWRlbnRpYWwYBCABKAkSFQoIdGhpbmtpbmcYBSABKAhIAIgBARIdChByZWFzb25pbmdfZWZmb3J0GAYgASgJSAGIAQESEAoIcmVtZW1iZXIYByABKAgSEgoKc2Vzc2lvbl9pZBgIIAEoCRIVCg1kZWZhdWx0X21vZGVsGAkgASgIQgsKCV90aGlua2luZ0ITChFfcmVhc29uaW5nX2VmZm9ydCKNAQoPU2V0dGluZ3NSZXF1ZXN0EhcKCnBlcm1pc3Npb24YASABKAlIAIgBARIRCgR0ZWFtGAIgASgISAGIAQESEgoKc2Vzc2lvbl9pZBgDIAEoCRIVCghsYW5ndWFnZRgEIAEoCUgCiAEBQg0KC19wZXJtaXNzaW9uQgcKBV90ZWFtQgsKCV9sYW5ndWFnZSJkCgxTdGFydFJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNrZXkYAiABKAkSDAoEdGV4dBgDIAEoCRIWCg5hdHRhY2htZW50X2lkcxgEIAMoCRINCgVwYXRocxgFIAMoCSIeCgtUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIkcKEEFwcHJvdmFsRGVjaXNpb24SDwoHdGFza19pZBgBIAEoCRITCgthcHByb3ZhbF9pZBgCIAEoCRINCgVhbGxvdxgDIAEoCCI/Cg9TdGVlcmluZ1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIMCgR0ZXh0GAIgASgJEg0KBXBhdGhzGAMgAygJIi8KDFdhdGNoUmVxdWVzdBIOCgZjdXJzb3IYASABKAkSDwoHdGFza19pZBgCIAEoCSKdAQoLU29ja2V0RnJhbWUSFgoMYXV0aGVudGljYXRlGAEgASgJSAASIwoHY29tbWFuZBgCIAEoCzIQLm1lY2EudjEuQ29tbWFuZEgAEiYKBXdhdGNoGAMgASgLMhUubWVjYS52MS5XYXRjaFJlcXVlc3RIABIhCgd1bndhdGNoGAQgASgLMg4ubWVjYS52MS5FbXB0eUgAQgYKBGJvZHlCQVo/Z2l0aHViLmNvbS9rZW9uaG8ta2ltL21lY2EvaW50ZXJuYWwvc2VydmVyYXBpL2dlbi9tZWNhdjE7bWVjYXYxYgZwcm90bzM", [file_meca_v1_skills, file_meca_v1_workspace, file_meca_v1_application]);
+  fileDesc("ChVtZWNhL3YxL2NvbnRyb2wucHJvdG8SB21lY2EudjEiBwoFRW1wdHkiohAKB0NvbW1hbmQSCgoCaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEjQKDWxpc3Rfc2Vzc2lvbnMYCiABKAsyGy5tZWNhLnYxLlNlc3Npb25MaXN0UmVxdWVzdEgAEjAKDnNlbGVjdF9zZXNzaW9uGAsgASgLMhYubWVjYS52MS5TZWxlY3RTZXNzaW9uSAASLwoNY2xvc2Vfc2Vzc2lvbhgMIAEoCzIWLm1lY2EudjEuU2Vzc2lvblRhcmdldEgAEiYKBXN0YXRlGA0gASgLMhUubWVjYS52MS5TdGF0ZVJlcXVlc3RIABIqCgdoaXN0b3J5GA4gASgLMhcubWVjYS52MS5IaXN0b3J5UmVxdWVzdEgAEigKBmRldGFpbBgPIAEoCzIWLm1lY2EudjEuRGV0YWlsUmVxdWVzdEgAEioKCXNldF9tb2RlbBgQIAEoCzIVLm1lY2EudjEuTW9kZWxSZXF1ZXN0SAASMAoMc2V0X3NldHRpbmdzGBEgASgLMhgubWVjYS52MS5TZXR0aW5nc1JlcXVlc3RIABImCgVzdGFydBgSIAEoCzIVLm1lY2EudjEuU3RhcnRSZXF1ZXN0SAASKwoLdGFza19zdGF0dXMYEyABKAsyFC5tZWNhLnYxLlRhc2tSZXF1ZXN0SAASJgoGY2FuY2VsGBQgASgLMhQubWVjYS52MS5UYXNrUmVxdWVzdEgAEiwKB2FwcHJvdmUYFSABKAsyGS5tZWNhLnYxLkFwcHJvdmFsRGVjaXNpb25IABIpCgVzdGVlchgWIAEoCzIYLm1lY2EudjEuU3RlZXJpbmdSZXF1ZXN0SAASMAoLbGlzdF9za2lsbHMYFyABKAsyGS5tZWNhLnYxLlNraWxsTGlzdFJlcXVlc3RIABIqCglnZXRfc2tpbGwYGCABKAsyFS5tZWNhLnYxLlNraWxsUmVxdWVzdEgAEjQKD3JlYWRfc2tpbGxfZmlsZRgZIAEoCzIZLm1lY2EudjEuU2tpbGxGaWxlUmVxdWVzdEgAEiYKDGNhcGFiaWxpdGllcxgaIAEoCzIOLm1lY2EudjEuRW1wdHlIABIjCglwcm92aWRlcnMYGyABKAsyDi5tZWNhLnYxLkVtcHR5SAASLgoPZGlzY292ZXJfbW9kZWxzGBwgASgLMhMubWVjYS52MS5Nb2RlbFF1ZXJ5SAASKQoJZGlyZWN0b3J5GB0gASgLMhQubWVjYS52MS5GaWxlUmVxdWVzdEgAEiwKDHByZXZpZXdfZmlsZRgeIAEoCzIULm1lY2EudjEuRmlsZVJlcXVlc3RIABIxCg9maWxlX3NlbGVjdGlvbnMYHyABKAsyFi5tZWNhLnYxLlNlc3Npb25UYXJnZXRIABItCgtzZWxlY3RfZmlsZRggIAEoCzIWLm1lY2EudjEuRmlsZVNlbGVjdGlvbkgAEi4KDWhpc3RvcnlfaW1hZ2UYISABKAsyFS5tZWNhLnYxLkltYWdlUmVxdWVzdEgAEiYKBWRyYWZ0GCIgASgLMhUubWVjYS52MS5EcmFmdFJlcXVlc3RIABIuCgpsaXN0X3Rhc2tzGCMgASgLMhgubWVjYS52MS5UYXNrTGlzdFJlcXVlc3RIABIvCghjb21tYW5kcxgkIAEoCzIbLm1lY2EudjEuQ29tbWFuZExpc3RSZXF1ZXN0SAASIwoJcmVzb3VyY2VzGCUgASgLMg4ubWVjYS52MS5FbXB0eUgAEikKD2xpc3Rfd29ya3NwYWNlcxgmIAEoCzIOLm1lY2EudjEuRW1wdHlIABIyCg1hZGRfd29ya3NwYWNlGCcgASgLMhkubWVjYS52MS5Xb3Jrc3BhY2VSZXF1ZXN0SAASMAoOZGVsZXRlX3Nlc3Npb24YKCABKAsyFi5tZWNhLnYxLlNlc3Npb25UYXJnZXRIABIpCg9jb21tYW5kX2NhdGFsb2cYKSABKAsyDi5tZWNhLnYxLkVtcHR5SAASKgoLcGFyc2VfaW5wdXQYKiABKAsyEy5tZWNhLnYxLlBhcnNlSW5wdXRIABIoCgtlZGl0b3JfcmVhZBgrIAEoCzIRLm1lY2EudjEuRWRpdEZpbGVIABIoCgtlZGl0b3Jfc2F2ZRgsIAEoCzIRLm1lY2EudjEuRWRpdEZpbGVIABIwCg5kaWFnbm9zZV9tb2RlbBgtIAEoCzIWLm1lY2EudjEuRGlhZ25vc2VNb2RlbEgAEjMKDmJyb3dzZV9mb2xkZXJzGC4gASgLMhkubWVjYS52MS5Xb3Jrc3BhY2VSZXF1ZXN0SAASMAoObG9va3VwX3JlcXVlc3QYLyABKAsyFi5tZWNhLnYxLlJlcXVlc3RMb29rdXBIABIuCg5zdWdnZXN0X3NraWxscxgwIAEoCzIULm1lY2EudjEuU2tpbGxQcmVmaXhIABIuCg1jcmVhdGVfZm9sZGVyGDEgASgLMhUubWVjYS52MS5DcmVhdGVGb2xkZXJIABIsCgttdXRhdGVfZmlsZRgyIAEoCzIVLm1lY2EudjEuRmlsZU11dGF0aW9uSAASLAoMZWRpdG9yX3Byb2JlGDQgASgLMhQubWVjYS52MS5FZGl0b3JQcm9iZUgAEjEKD2xvb2t1cF9tdXRhdGlvbhg1IAEoCzIWLm1lY2EudjEuUmVxdWVzdExvb2t1cEgAEi8KDXNlc3Npb25fdXNhZ2UYMyABKAsyFi5tZWNhLnYxLlNlc3Npb25UYXJnZXRIAEILCglvcGVyYXRpb24iMwoNU2VsZWN0U2Vzc2lvbhISCgpzZXNzaW9uX2lkGAEgASgJEg4KBmNyZWF0ZRgCIAEoCCIzChJTZXNzaW9uTGlzdFJlcXVlc3QSDgoGY3Vyc29yGAEgASgJEg0KBWxpbWl0GAIgASgFIkMKDkhpc3RvcnlSZXF1ZXN0Eg4KBmJlZm9yZRgBIAEoAxINCgVsaW1pdBgCIAEoBRISCgpzZXNzaW9uX2lkGAMgASgJIjYKDkV2ZW50UmVmZXJlbmNlEhIKCnNlc3Npb25faWQYASABKAkSEAoIc2VxdWVuY2UYAiABKAMitgIKDURldGFpbFJlcXVlc3QSKQoEdmlldxgIIAEoDjIbLm1lY2EudjEuRGV0YWlsUmVxdWVzdC5WaWV3EicKBHRvb2wYASABKAsyFy5tZWNhLnYxLkV2ZW50UmVmZXJlbmNlSAASFQoLYXBwcm92YWxfaWQYAiABKAlIABIaChBoaXN0b3J5X3NlcXVlbmNlGAMgASgDSAASDgoGb2Zmc2V0GAQgASgDEg0KBWxpbWl0GAUgASgFEhIKCnNlc3Npb25faWQYBiABKAkSEAoIcmV2aXNpb24YByABKAkiTwoEVmlldxIMCghET0NVTUVOVBAAEhAKDFRPT0xfUkVRVUVTVBABEg8KC1RPT0xfUkVTVUxUEAISCAoEVEVYVBADEgwKCFRISU5LSU5HEARCCAoGc291cmNlIuoBCgxNb2RlbFJlcXVlc3QSEAoIcHJvdmlkZXIYASABKAkSEAoIZW5kcG9pbnQYAiABKAkSDQoFbW9kZWwYAyABKAkSEgoKY3JlZGVudGlhbBgEIAEoCRIVCgh0aGlua2luZxgFIAEoCEgAiAEBEh0KEHJlYXNvbmluZ19lZmZvcnQYBiABKAlIAYgBARIQCghyZW1lbWJlchgHIAEoCBISCgpzZXNzaW9uX2lkGAggASgJEhUKDWRlZmF1bHRfbW9kZWwYCSABKAhCCwoJX3RoaW5raW5nQhMKEV9yZWFzb25pbmdfZWZmb3J0Io0BCg9TZXR0aW5nc1JlcXVlc3QSFwoKcGVybWlzc2lvbhgBIAEoCUgAiAEBEhEKBHRlYW0YAiABKAhIAYgBARISCgpzZXNzaW9uX2lkGAMgASgJEhUKCGxhbmd1YWdlGAQgASgJSAKIAQFCDQoLX3Blcm1pc3Npb25CBwoFX3RlYW1CCwoJX2xhbmd1YWdlImQKDFN0YXJ0UmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEgsKA2tleRgCIAEoCRIMCgR0ZXh0GAMgASgJEhYKDmF0dGFjaG1lbnRfaWRzGAQgAygJEg0KBXBhdGhzGAUgAygJIh4KC1Rhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkiRwoQQXBwcm92YWxEZWNpc2lvbhIPCgd0YXNrX2lkGAEgASgJEhMKC2FwcHJvdmFsX2lkGAIgASgJEg0KBWFsbG93GAMgASgIIj8KD1N0ZWVyaW5nUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEgwKBHRleHQYAiABKAkSDQoFcGF0aHMYAyADKAkiLwoMV2F0Y2hSZXF1ZXN0Eg4KBmN1cnNvchgBIAEoCRIPCgd0YXNrX2lkGAIgASgJIp0BCgtTb2NrZXRGcmFtZRIWCgxhdXRoZW50aWNhdGUYASABKAlIABIjCgdjb21tYW5kGAIgASgLMhAubWVjYS52MS5Db21tYW5kSAASJgoFd2F0Y2gYAyABKAsyFS5tZWNhLnYxLldhdGNoUmVxdWVzdEgAEiEKB3Vud2F0Y2gYBCABKAsyDi5tZWNhLnYxLkVtcHR5SABCBgoEYm9keUJBWj9naXRodWIuY29tL2tlb25oby1raW0vbWVjYS9pbnRlcm5hbC9zZXJ2ZXJhcGkvZ2VuL21lY2F2MTttZWNhdjFiBnByb3RvMw", [file_meca_v1_skills, file_meca_v1_workspace, file_meca_v1_application]);
 
 /**
  * @generated from message meca.v1.Empty
@@ -309,6 +309,18 @@ export type Command = Message<"meca.v1.Command"> & {
     case: "mutateFile";
   } | {
     /**
+     * @generated from field: meca.v1.EditorProbe editor_probe = 52;
+     */
+    value: EditorProbe;
+    case: "editorProbe";
+  } | {
+    /**
+     * @generated from field: meca.v1.RequestLookup lookup_mutation = 53;
+     */
+    value: RequestLookup;
+    case: "lookupMutation";
+  } | {
+    /**
      * @generated from field: meca.v1.SessionTarget session_usage = 51;
      */
     value: SessionTarget;
@@ -538,6 +550,16 @@ export type CommandJson = {
   mutateFile?: FileMutationJson;
 
   /**
+   * @generated from field: meca.v1.EditorProbe editor_probe = 52;
+   */
+  editorProbe?: EditorProbeJson;
+
+  /**
+   * @generated from field: meca.v1.RequestLookup lookup_mutation = 53;
+   */
+  lookupMutation?: RequestLookupJson;
+
+  /**
    * @generated from field: meca.v1.SessionTarget session_usage = 51;
    */
   sessionUsage?: SessionTargetJson;
@@ -713,6 +735,11 @@ export const EventReferenceSchema: GenMessage<EventReference, {jsonType: EventRe
  */
 export type DetailRequest = Message<"meca.v1.DetailRequest"> & {
   /**
+   * @generated from field: meca.v1.DetailRequest.View view = 8;
+   */
+  view: DetailRequest_View;
+
+  /**
    * @generated from oneof meca.v1.DetailRequest.source
    */
   source: {
@@ -761,6 +788,11 @@ export type DetailRequest = Message<"meca.v1.DetailRequest"> & {
  */
 export type DetailRequestJson = {
   /**
+   * @generated from field: meca.v1.DetailRequest.View view = 8;
+   */
+  view?: DetailRequest_ViewJson;
+
+  /**
    * @generated from field: meca.v1.EventReference tool = 1;
    */
   tool?: EventReferenceJson;
@@ -802,6 +834,47 @@ export type DetailRequestJson = {
  */
 export const DetailRequestSchema: GenMessage<DetailRequest, {jsonType: DetailRequestJson}> = /*@__PURE__*/
   messageDesc(file_meca_v1_control, 6);
+
+/**
+ * @generated from enum meca.v1.DetailRequest.View
+ */
+export enum DetailRequest_View {
+  /**
+   * @generated from enum value: DOCUMENT = 0;
+   */
+  DOCUMENT = 0,
+
+  /**
+   * @generated from enum value: TOOL_REQUEST = 1;
+   */
+  TOOL_REQUEST = 1,
+
+  /**
+   * @generated from enum value: TOOL_RESULT = 2;
+   */
+  TOOL_RESULT = 2,
+
+  /**
+   * @generated from enum value: TEXT = 3;
+   */
+  TEXT = 3,
+
+  /**
+   * @generated from enum value: THINKING = 4;
+   */
+  THINKING = 4,
+}
+
+/**
+ * @generated from enum meca.v1.DetailRequest.View
+ */
+export type DetailRequest_ViewJson = "DOCUMENT" | "TOOL_REQUEST" | "TOOL_RESULT" | "TEXT" | "THINKING";
+
+/**
+ * Describes the enum meca.v1.DetailRequest.View.
+ */
+export const DetailRequest_ViewSchema: GenEnum<DetailRequest_View, DetailRequest_ViewJson> = /*@__PURE__*/
+  enumDesc(file_meca_v1_control, 6, 0);
 
 /**
  * @generated from message meca.v1.ModelRequest

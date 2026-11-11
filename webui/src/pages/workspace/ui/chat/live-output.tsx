@@ -1,41 +1,42 @@
 // Purpose: Render generation-scoped live responses and bounded task activity independently of history layout.
 // Pattern: Fine-grained live presentation subscriber.
 // Usage: Chat mounts this for its selected conversation.
-// Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/ui/inspection/original.tsx, webui/src/pages/workspace/ui/chat/live-activity.tsx.
+// Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/inspection.ts, webui/src/pages/workspace/ui/chat/live-activity.tsx.
 
 import { VStack } from '@astryxdesign/core/Layout';
 import { Selector } from '@astryxdesign/core/Selector';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { liveActivity } from '@/pages/workspace/model/chat-events';
+import type { InspectionActions } from '@/pages/workspace/model/inspection';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { LiveActivity } from '@/pages/workspace/ui/chat/live-activity';
 import { LiveSource } from '@/pages/workspace/ui/chat/live-source';
-import { Original } from '@/pages/workspace/ui/inspection/original';
-import type { DraftRequestJson, HistoryItemJson } from '@/shared/api';
+import type { HistoryItemJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
-export function LiveOutput({ target, history }: { target: Target; history: HistoryItemJson[] }) {
+export function LiveOutput({
+  target,
+  history,
+  inspect,
+}: {
+  target: Target;
+  history: HistoryItemJson[];
+  inspect: InspectionActions;
+}) {
   const t = useLocale(),
     drafts = useWorkspaceStore((s) => s.drafts),
     events = useWorkspaceStore((s) => s.events);
   const [agent, setAgent] = useState('');
-  const [original, setOriginal] = useState<DraftRequestJson | null>(null);
   const selected = useWorkspaceStore((s) => s.selection);
   const streaming = useWorkspaceStore((s) => s.streamStatus === 'connected');
-  const sources = useMemo(
-    () =>
-      selected.workspace === target.workspace && selected.session === target.session
-        ? Object.values(drafts)
-        : [],
-    [drafts, selected, target]
-  );
-  const agents = useMemo(
-    () => [...new Set(sources.map((v) => v.agent).filter(Boolean))],
-    [sources]
-  );
-  const activity = useMemo(() => liveActivity(events, history), [events, history]);
-  if (!sources.length && !events.length && !original) return null;
+  const sources =
+    selected.workspace === target.workspace && selected.session === target.session
+      ? Object.values(drafts)
+      : [];
+  const agents = [...new Set(sources.map((value) => value.agent).filter(Boolean))];
+  const activity = liveActivity(events, history);
+  if (!sources.length && !events.length) return null;
   return (
-    <VStack width="100%" className="live-output" gap={5} paddingBlockStart={5}>
+    <VStack width="100%" className="live-output" gap={8} paddingBlockStart={8}>
       {agents.length > 1 && (
         <Selector
           label={t('agent')}
@@ -54,11 +55,9 @@ export function LiveOutput({ target, history }: { target: Target; history: Histo
             key={`${d.task}/${d.agent}/${d.generation}`}
             draft={d}
             streaming={streaming && d.doneRevision === undefined}
-            onOriginal={setOriginal}
           />
         ))}
-      <LiveActivity target={target} events={activity} />
-      {original && <Original target={target} draft={original} onClose={() => setOriginal(null)} />}
+      <LiveActivity target={target} events={activity} inspect={inspect} />
     </VStack>
   );
 }

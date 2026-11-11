@@ -32,6 +32,7 @@ func ProjectEvent(value Event) Event {
 		copy.Reason = clipped(copy.Reason, 4096)
 		value.Outcome = &copy
 	}
+	value.MutationKey = clipped(value.MutationKey, 128)
 	value.Status, value.Error = clipped(value.Status, 128), clipped(value.Error, 4096)
 	e := value.Record
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
@@ -46,7 +47,7 @@ func ProjectEvent(value Event) Event {
 		p.Reference = &copy
 	}
 	if e.Call != nil {
-		p.Call = &tool.Call{ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
+		p.Call = &tool.Call{ExecutionID: clipped(e.Call.ExecutionID, 128), ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
 		value.Truncated = value.Truncated || len(e.Call.Arguments) > maxTextBytes
 	}
 	if e.Approval != nil {
@@ -106,7 +107,7 @@ func eventBytes(value Event) int {
 	// Include every retained string; fixed overhead covers the value structs,
 	// backing slices and small allocations rather than replacing text accounting.
 	n := 1024 + len(value.Cursor) + len(value.Session) + len(value.Task) + len(value.Status) + len(value.Error) + len(value.ApprovalID)
-	n += len(value.Workspace)
+	n += len(value.Workspace) + len(value.MutationKey)
 	if value.Outcome != nil {
 		n += len(value.Outcome.Status) + len(value.Outcome.Reason)
 	}
@@ -119,7 +120,7 @@ func eventBytes(value Event) int {
 		n += len(e.Reference.Session)
 	}
 	if e.Call != nil {
-		n += len(e.Call.ID) + len(e.Call.Name) + len(e.Call.Arguments)
+		n += len(e.Call.ExecutionID) + len(e.Call.ID) + len(e.Call.Name) + len(e.Call.Arguments)
 	}
 	if e.Approval != nil {
 		n += len(e.Approval.ID) + len(e.Approval.Name) + len(e.Approval.Preview) + len(e.Approval.Target)

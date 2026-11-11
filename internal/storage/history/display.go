@@ -31,12 +31,17 @@ func Display(sequence int64, kind string, body, envelope, arguments []byte) (Rec
 	if err := json.Unmarshal(body, &record.Event); err != nil {
 		return Record{}, err
 	}
-	var call struct{ Call *struct{ ID, Name string } }
+	var call struct {
+		Call *struct {
+			ID, Name    string
+			ExecutionID string `json:"execution_id"`
+		}
+	}
 	if err := json.Unmarshal(envelope, &call); err != nil {
 		return Record{}, err
 	}
 	if call.Call != nil {
-		record.Event.Call = &toolapi.Call{ID: call.Call.ID, Name: call.Call.Name, Arguments: arguments}
+		record.Event.Call = &toolapi.Call{ExecutionID: call.Call.ExecutionID, ID: call.Call.ID, Name: call.Call.Name, Arguments: arguments}
 	}
 	return record, nil
 }

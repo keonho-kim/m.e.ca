@@ -24,6 +24,7 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	"github.com/keonho-kim/meca/internal/skills"
+	"github.com/keonho-kim/meca/internal/storage/filemutations"
 	"github.com/keonho-kim/meca/internal/storage/serverrequests"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -78,6 +79,12 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 		return
 	}
 	cleanup = append(cleanup, ledger.Close)
+	mutationLedger, err := filemutations.Open(ctx, filepath.Join(state, "file-mutations", server.ProjectScope(mode.Project)))
+	if err != nil {
+		return
+	}
+	cleanup = append(cleanup, mutationLedger.Close)
+
 	ctx = diagnostics.WithFields(diagnostics.WithRedactor(ctx, vault.Redact), "workspace_id", workspaceID)
 	skillBoundary, err := filesystem.New(mode.Project, home, state)
 	if err != nil {
@@ -144,7 +151,7 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 			return prepared.Models, prepared.Selection, err
 		},
 		Concurrency: mode.ServerOptions.Concurrency,
-		Config:      cfg, Ledger: ledger, Skills: skillReader,
+		Config:      cfg, Ledger: ledger, Skills: skillReader, Mutations: mutationLedger, References: sqlite.ProjectReferences{Sessions: sessions, Project: mode.Project},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
 			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create)
 			if err != nil {

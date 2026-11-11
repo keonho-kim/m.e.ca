@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Settings,
   SlidersHorizontal,
+  SquareArrowOutUpRight,
   SquarePen,
   Sun,
   Trash2,
@@ -33,6 +34,7 @@ import {
 const iconProps = { size: '1em', 'aria-hidden': true as const };
 
 export const mecaIcons = {
+  'meca:request': <SquareArrowOutUpRight {...iconProps} />,
   'meca:close': <X {...iconProps} />,
   'meca:play': <Play {...iconProps} />,
   'meca:file': <File {...iconProps} />,

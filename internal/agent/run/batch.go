@@ -33,6 +33,7 @@ func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve 
 		if err != nil {
 			return s.returnToolFeedback(ctx, reply, "Batch validation failed; nothing executed: "+err.Error())
 		}
+		value.call = s.identifyCall(value.call)
 		calls[i] = value
 	}
 	s.checkpoint.Iteration = s.usage.ToolCalls

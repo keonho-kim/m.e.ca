@@ -19,37 +19,21 @@ import (
 )
 
 type FileMutationResult struct {
+	Key, State      string
+	Source          string
 	Path            string
-	Paths           []string
+	Paths           []string `json:"-"`
 	ReferencesReady bool
-	Failure         error
+	Failure         *fault.Failure
 }
 
-type fileSelectionChanges interface {
-	FileStore
-	ChangeFileSelections(context.Context, string, map[string]string) ([]string, error)
-}
-
-func (s *Service) MutateEntry(ctx context.Context, session string, change fileview.EntryMutation) (FileMutationResult, error) {
-	ctx, done, err := s.beginOperation(ctx)
-	if err != nil {
-		return FileMutationResult{}, err
-	}
-	defer done()
-	if s.options.MutateEntry == nil {
+func (s *Service) mutateEntry(ctx context.Context, session, key string, change fileview.EntryMutation) (FileMutationResult, error) {
+	if s.options.MutateEntry == nil || s.options.References == nil || s.options.Files == nil {
 		return FileMutationResult{}, fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)
 	}
-	var store fileSelectionChanges
 	if session != "" {
-		reservation, err := s.beginTargetChange(ctx, session)
-		if err != nil {
+		if _, err := s.options.References.List(ctx, session); err != nil {
 			return FileMutationResult{}, err
-		}
-		defer reservation.finish()
-		var ok bool
-		store, ok = reservation.conversation.History.(fileSelectionChanges)
-		if !ok || s.options.Files == nil {
-			return FileMutationResult{}, fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)
 		}
 	}
 	s.mu.Lock()
@@ -64,57 +48,69 @@ func (s *Service) MutateEntry(ctx context.Context, session string, change filevi
 		return FileMutationResult{}, err
 	}
 	defer release()
-	var before []string
-	var source string
-	if store != nil {
-		reference, err := s.options.Files.Reference(ctx, settings, change.Path)
-		if err != nil {
-			return FileMutationResult{}, err
-		}
-		source = strings.TrimSuffix(reference.Path, "/")
-		before, err = store.FileSelections(ctx, session)
-		if err != nil {
-			return FileMutationResult{}, err
-		}
+	source, err := s.options.Files.Reference(ctx, settings, change.Path)
+	if err != nil {
+		return FileMutationResult{}, err
 	}
 	path, mutationErr := s.options.MutateEntry(ctx, settings, change)
-	result := FileMutationResult{Path: path, Failure: mutationErr, ReferencesReady: store == nil}
-	if store == nil {
-		return result, nil
+	if mutationErr != nil && path == "" && !change.Remove {
+		return FileMutationResult{}, mutationErr
 	}
-	// Filesystem effects cannot roll back with SQL. Finish reference reconciliation
-	// even when the browser disconnects, and report incomplete effects explicitly.
-	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	result := FileMutationResult{Key: key, Path: path, Source: strings.TrimSuffix(source.Path, "/"), Failure: fileMutationFailure(mutationErr)}
+	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
+	err = s.reconcileFileReferences(cleanup, session, settings, &result)
+	result.Failure = fileMutationFailure(errors.Join(mutationErr, err))
+	return result, nil
+}
+
+func (s *Service) reconcileFileReferences(ctx context.Context, session string, settings policy.Settings, result *FileMutationResult) error {
 	destination := ""
-	if path != "" {
-		reference, err := s.options.Files.Reference(cleanup, settings, path)
+	if result.Path != "" {
+		reference, err := s.options.Files.Reference(ctx, settings, result.Path)
 		if err != nil {
-			result.Failure = errors.Join(mutationErr, err)
-			return result, nil
+			return err
 		}
 		destination = strings.TrimSuffix(reference.Path, "/")
 	}
-	changes := make(map[string]string)
-	for _, selected := range before {
-		if selected != source && !strings.HasPrefix(selected, source+"/") {
-			continue
+	err := s.options.References.Rewrite(ctx, func(ctx context.Context, path string) (string, error) {
+		if path != result.Source && !strings.HasPrefix(path, result.Source+"/") {
+			return path, nil
 		}
-		if mutationErr == nil || destination != "" {
-			changes[selected] = ""
-			if destination != "" {
-				changes[selected] = destination + strings.TrimPrefix(selected, source)
-			}
-		} else if _, err := s.options.Files.Reference(cleanup, settings, selected); errors.Is(err, os.ErrNotExist) {
-			// A canceled recursive removal may have removed only some children.
-			changes[selected] = ""
-		} else if err != nil {
-			result.Failure = errors.Join(mutationErr, err)
-			return result, nil
+		if destination != "" {
+			return destination + strings.TrimPrefix(path, result.Source), nil
 		}
+		if result.Failure == nil {
+			return "", nil
+		}
+		_, err := s.options.Files.Reference(ctx, settings, path)
+		if errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
+		return path, err
+	}, func(id string, paths []string) {
+		if id == session {
+			result.Paths = paths
+		}
+		s.mu.Lock()
+		s.publish(Event{MutationKey: result.Key, Session: id, Record: eventKind("file_references_changed")})
+		s.mu.Unlock()
+	})
+	if err != nil {
+		return err
 	}
-	result.Paths, err = store.ChangeFileSelections(cleanup, session, changes)
-	result.ReferencesReady = err == nil
-	result.Failure = errors.Join(mutationErr, err)
-	return result, nil
+	result.ReferencesReady = true
+	if session != "" {
+		result.Paths, err = s.options.References.List(ctx, session)
+	}
+	return err
+}
+
+// Receipts retain registered public diagnostics only, never raw filesystem causes.
+func fileMutationFailure(err error) *fault.Failure {
+	if err == nil {
+		return nil
+	}
+	code := fault.Code(err)
+	return &fault.Failure{Code: code, Detail: diag.Text(diag.PublicMessage(code))}
 }

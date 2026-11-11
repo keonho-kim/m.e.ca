@@ -4,8 +4,8 @@
 // Related: webui/src/pages/workspace/model/submission.ts, webui/src/pages/workspace/model/followups.ts.
 
 import { changed } from '@/pages/workspace/api/queries';
-import { waitSelections } from '@/pages/workspace/model/file-references';
 import { clearFollowups } from '@/pages/workspace/model/followups';
+import { waitSelections } from '@/pages/workspace/model/reference-queue';
 import {
   emptyInput,
   type Input,

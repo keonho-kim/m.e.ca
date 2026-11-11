@@ -126,9 +126,9 @@ export function DirectoryColumn({
               />
             </HStack>
             {parent && parentPath && (
-              <HStack gap={2} className="min-w-0">
+              <HStack gap={2} align="center" className="directory-location min-w-0">
                 <ParentFolderButton path={parentPath} open={parent} busy={busy} />
-                <Text type="body" maxLines={1} hasTruncateTooltip className="min-w-0 grow">
+                <Text type="label" maxLines={1} hasTruncateTooltip className="min-w-0 grow">
                   {path}
                 </Text>
               </HStack>

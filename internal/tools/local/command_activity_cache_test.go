@@ -5,6 +5,7 @@
 package local
 
 import (
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 	"os"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ func TestCommandActivityMaskTracksVaultRevision(t *testing.T) {
 	e, _ := testExecutor(t)
 	e.BeginCommands(t.Context(), time.Now().Add(time.Minute))
 	defer e.StopCommands()
-	id, err := e.commands.Start(t.Context(), e.project, "sleep 60 # private", os.Environ(), "call")
+	id, err := e.commands.Start(t.Context(), e.project, "sleep 60 # private", os.Environ(), process.CallIdentity{CallID: "call"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func BenchmarkCommandActivityCached(b *testing.B) {
 	e.redactionVersion = func() int { return 0 }
 	e.BeginCommands(b.Context(), time.Now().Add(time.Minute))
 	for range 4 {
-		if _, err := e.commands.Start(b.Context(), project, "sleep 60 # "+strings.Repeat("details ", 8192), os.Environ(), "call"); err != nil {
+		if _, err := e.commands.Start(b.Context(), project, "sleep 60 # "+strings.Repeat("details ", 8192), os.Environ(), process.CallIdentity{CallID: "call"}); err != nil {
 			b.Fatal(err)
 		}
 	}

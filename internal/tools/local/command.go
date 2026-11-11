@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
 
 func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error) {
@@ -18,9 +19,9 @@ func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error)
 		if _, err = op.admitCommand(ctx); err != nil {
 			return toolapi.Result{}, err
 		}
-		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, op.callID)
+		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID})
 	} else {
-		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, op.callID, op.admitCommand)
+		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID}, op.admitCommand)
 	}
 	if err != nil {
 		if id != "" {

@@ -35,6 +35,7 @@ import { observeConversationCache } from '@/pages/workspace/api/cache-policy';
 import { observe } from '@/pages/workspace/api/events';
 import { capabilitiesOptions, changed, workspaceOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { useFileReferences } from '@/pages/workspace/model/use-file-references';
 import { Composer, type ComposerHandle } from '@/pages/workspace/ui/composer/composer';
 import { Approval } from '@/pages/workspace/ui/inspection/approval';
 import { Sidebar } from '@/pages/workspace/ui/navigation/sidebar';
@@ -63,6 +64,7 @@ export default function WorkspaceShell() {
     () => ({ workspace: params.workspaceId ?? '', session: params.sessionId ?? '' }),
     [params.workspaceId, params.sessionId]
   );
+  useFileReferences(target);
   const workspaces = useQuery(workspaceOptions());
   const review = useWorkspaceStore((s) => s.reviewTarget);
   const removed = useWorkspaceStore((s) => s.removedTarget);

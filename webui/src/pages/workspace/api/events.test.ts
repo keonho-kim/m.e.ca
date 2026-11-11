@@ -5,6 +5,7 @@
 import { expect, test } from 'bun:test';
 import { observe } from '@/pages/workspace/api/events';
 import { clearFollowups } from '@/pages/workspace/model/followups';
+import { waitSelections } from '@/pages/workspace/model/reference-queue';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { awaitSubmission, clearPending } from '@/pages/workspace/model/submission';
 import { queries } from '@/shared/api';
@@ -44,7 +45,7 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
     useWorkspaceStore.setState({ queues: {}, tasks: {} });
     globalThis.EventSource = Connection as unknown as typeof EventSource;
     globalThis.fetch = Object.assign(
-      async () => Response.json({ state: { cursor: 'idle-cursor', tasks: [] } }),
+      async () => Response.json({ state: { cursor: 'idle-cursor', workspaceId: 'w', tasks: [] } }),
       { preconnect: original.fetch.preconnect }
     );
     globalThis.setInterval = ((callback: () => void) => {
@@ -118,6 +119,7 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
         if (command.state)
           return Response.json({
             state: {
+              workspaceId: 'w',
               cursor: 'after-completion',
               task: { id: 'previous', sessionId: target.session, status: 'answered' },
             },
@@ -185,7 +187,12 @@ test('an authoritative snapshot replaces pending deltas and releases its cached 
     useWorkspaceStore.setState({ ...useWorkspaceStore.getInitialState(), selection: target });
     globalThis.EventSource = Connection as unknown as typeof EventSource;
     globalThis.fetch = Object.assign(
-      async () => Response.json({ state: { cursor: '1', workspaceId: 'w' } }),
+      async (_url: string | URL | Request, options?: RequestInit) =>
+        Response.json(
+          JSON.parse(String(options?.body)).fileSelections
+            ? { fileSelections: { paths: [] } }
+            : { state: { cursor: '1', workspaceId: 'w' } }
+        ),
       { preconnect: original.fetch.preconnect }
     );
     dispose = observe(target);
@@ -212,6 +219,7 @@ test('an authoritative snapshot replaces pending deltas and releases its cached 
     emit('event', { event: { ...identity, kind: 'progress' } });
     expect(useWorkspaceStore.getState().drafts['t/main']?.text).toBe('first second');
     expect(queries.getQueryData(['state', 'w', 's'])).toEqual({ cursor: '2', workspaceId: 'w' });
+    await waitSelections(target);
   } finally {
     dispose?.();
     queries.clear();

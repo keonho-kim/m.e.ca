@@ -2,6 +2,7 @@
 // Pattern: Isolated status subscriber with terminal-event refresh of durable totals.
 // Usage: The chat composer mounts this below the input.
 // Related: internal/commands/server/session_usage.go, webui/src/pages/workspace/ui/chat/format-statistics.ts.
+import { HStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -57,19 +58,21 @@ export function ExecutionStatus({ target }: { target: Target }) {
     resident > 0 ? `${t('memory')} ${memory}` : '',
     ...tokenSummary(usage.data, t, data?.model?.provider === 'openrouter'),
     throughput(stats),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  ].filter(Boolean);
   return (
-    <Text
-      as="p"
-      type="supporting"
-      color="secondary"
+    <HStack
+      gap={3}
+      align="center"
+      wrap="wrap"
       role="group"
       aria-label={t('executionInfo')}
       className="execution-status min-w-0 whitespace-normal [overflow-wrap:anywhere]"
     >
-      {summary}
-    </Text>
+      {summary.map((value, index) => (
+        <Text key={index} type="supporting" color="secondary" className="whitespace-nowrap">
+          {value}
+        </Text>
+      ))}
+    </HStack>
   );
 }

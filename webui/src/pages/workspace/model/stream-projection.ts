@@ -8,6 +8,7 @@ import { compactDeltas } from '@/pages/workspace/model/delta-batch';
 import { trimTasks } from '@/pages/workspace/model/task-state';
 import type { Draft, WorkspaceState } from '@/pages/workspace/model/types';
 import type { EventJson, SnapshotJson } from '@/shared/api';
+import { textTail } from '@/shared/lib/utf8';
 
 const windowChars = 128 * 1024;
 const totalChars = 4 * 1024 * 1024;
@@ -95,8 +96,8 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
         thinking = value.thinking + (e.thinking ?? '');
       drafts[key] = {
         ...value,
-        text: text.slice(-windowChars),
-        thinking: thinking.slice(-windowChars),
+        text: textTail(text, windowChars),
+        thinking: textTail(thinking, windowChars),
         truncated: value.truncated || text.length > windowChars || thinking.length > windowChars,
       };
     } else if (!isResponseEvent(e)) {
@@ -113,8 +114,8 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       for (const [key, d] of all)
         drafts[key] = {
           ...d,
-          text: d.text.slice(-limit),
-          thinking: d.thinking.slice(-limit),
+          text: textTail(d.text, limit),
+          thinking: textTail(d.thinking, limit),
           truncated: true,
         };
     }

@@ -22,6 +22,7 @@ message Approval {
   string expires_at = 10;
 }
 message Tool {
+  string execution_id = 5;
   string call_id = 1;
   string name = 2;
   // Visible arguments only. Truncated arguments are not valid executable JSON.
@@ -52,6 +53,8 @@ message Team {
   uint64 revision = 7;
 }
 message Event {
+  // Correlates reference-change notices with an explicit file mutation reply.
+  string mutation_key = 30;
   string workspace_id = 28;
  RunOutcome outcome = 29;
   string cursor = 1;

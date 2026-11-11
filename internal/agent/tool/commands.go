@@ -19,6 +19,7 @@ func CommandActive(status string) bool {
 }
 
 type CommandRun struct {
+	ExecutionID      string `json:"-"`
 	CallID           string "json:\"-\""
 	ID               string "json:\"command_id\""
 	Command          string "json:\"command\""
@@ -29,8 +30,8 @@ type CommandRun struct {
 }
 
 type CommandCompletion struct {
-	ID, CallID, Command string
-	Result              Result
+	ID, CallID, ExecutionID, Command string
+	Result                           Result
 }
 
 type CommandExecutor interface {

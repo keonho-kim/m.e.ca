@@ -9,25 +9,24 @@ import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { Layout, LayoutContent, LayoutPanel } from '@astryxdesign/core/Layout';
 import { useEffect, useRef, useState } from 'react';
-import { reportError, useServerSession } from '@/entities/server-session';
-import { mutateFile } from '@/pages/workspace/model/file-references';
+import { reportError } from '@/entities/server-session';
+import { useFileEvents } from '@/pages/workspace/model/file-events';
+import { mutateFile } from '@/pages/workspace/model/file-mutations';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { DirectoryColumn } from '@/pages/workspace/ui/files/directory-column';
 import { FileDocument } from '@/pages/workspace/ui/files/file-document';
 import { type FileMutationJson, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
+import { ApiError } from '@/shared/lib/errors';
 export default function Files({ target }: { target: Target }) {
   const t = useLocale(),
     folder = useWorkspaceStore((s) => s.folder);
-  const connected = useServerSession((s) => s.connected);
   const [columns, setColumns] = useState([folder]),
     [file, setFile] = useState('');
-  const [revision, setRevision] = useState(0),
-    [watchError, setWatchError] = useState('');
   const [watchEpoch, setWatchEpoch] = useState(0);
   const current = columns.at(-1) ?? '.';
-  const watchKey = `${target.workspace}/${current}/${watchEpoch}`;
-  const [watched, setWatched] = useState('');
+  const watcher = useFileEvents(target.workspace, current, file, watchEpoch);
+  const watchError = watcher.error;
   const compact = useMediaQuery('(max-width: 1024px)');
   const [pending, setPending] = useState<{ run: () => void } | null>(null);
   const [mutating, setMutating] = useState(false);
@@ -40,48 +39,6 @@ export default function Files({ target }: { target: Target }) {
     setColumns([folder]);
     setFile('');
   }, [folder]);
-  useEffect(() => {
-    if (!connected) return;
-    setWatchError('');
-    let first = true;
-    const source = new EventSource(
-      `/v1/files/events?workspace_id=${encodeURIComponent(target.workspace)}&path=${encodeURIComponent(current)}`
-    );
-    source.addEventListener('change', (raw) => {
-      try {
-        const event = JSON.parse(raw.data) as {
-          refresh?: boolean;
-          error?: string;
-        };
-        if (event.error) {
-          setWatchError(event.error);
-          setWatched(watchKey);
-          source.close();
-          return;
-        }
-        if (event.refresh) {
-          if (!first || queries.getQueryState(['directory', target.workspace, current])?.data) {
-            void queries.resetQueries({
-              queryKey: ['directory', target.workspace, current],
-              exact: true,
-            });
-          }
-          setWatched(watchKey);
-          if (!first) setRevision((value) => value + 1);
-        }
-        first = false;
-      } catch (error) {
-        reportError(error);
-        source.close();
-      }
-    });
-    source.onerror = () => {
-      setWatchError(t('fileWatchReconnecting'));
-      setWatched(watchKey);
-    };
-    source.onopen = () => setWatchError('');
-    return () => source.close();
-  }, [current, target.workspace, t, connected, watchKey]);
   const open = (path: string, directory: boolean) => {
     useWorkspaceStore.getState().set({ fileDirty: false });
     if (directory) {
@@ -98,7 +55,8 @@ export default function Files({ target }: { target: Target }) {
       mutation.current = true;
       setMutating(true);
       try {
-        const destination = await mutateFile(target, change);
+        const result = await mutateFile(target, change);
+        const destination = result.path;
         if (affectsFile) {
           useWorkspaceStore.getState().set({ fileDirty: false });
           setFile(destination ? destination + file.slice(source.length) : '');
@@ -107,6 +65,8 @@ export default function Files({ target }: { target: Target }) {
           queryKey: ['directory', target.workspace],
           refetchType: 'none',
         });
+        if (result.errorCode)
+          reportError(new ApiError(result.errorCode, result.errorMessage ?? ''));
         if (watchError)
           void queries.resetQueries({
             queryKey: ['directory', target.workspace, current],
@@ -128,7 +88,7 @@ export default function Files({ target }: { target: Target }) {
   const listing = (
     <DirectoryColumn
       path={current}
-      enabled={watched === watchKey}
+      enabled={watcher.ready}
       target={target}
       busy={mutating}
       mutate={mutate}
@@ -144,7 +104,6 @@ export default function Files({ target }: { target: Target }) {
       }
       refresh={() => {
         setWatchEpoch((value) => value + 1);
-        setRevision((value) => value + 1);
       }}
       open={(next, directory) => {
         if (mutation.current) return;
@@ -158,7 +117,7 @@ export default function Files({ target }: { target: Target }) {
       <Layout
         height="fill"
         padding={0}
-        className="files-workspace"
+        className="files-workspace meca-pane-enter"
         content={
           <LayoutContent padding={0} isScrollable={false} className="min-w-0" inert={mutating}>
             {watchError && <Banner status="warning" title={watchError} />}
@@ -167,7 +126,7 @@ export default function Files({ target }: { target: Target }) {
                 key={`${target.workspace}/${file}`}
                 target={target}
                 path={file}
-                externalRevision={revision}
+                externalRevision={watcher.revision}
                 showFiles={compact ? () => navigate(() => setFile('')) : undefined}
               />
             ) : compact ? (

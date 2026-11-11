@@ -2,16 +2,16 @@
 name: MECA Embedded WebUI
 description: Astryx Neutral의 흑백 표면과 기능적 glass로 읽고 실행하는 Operate 작업대.
 colors:
-  accent: "light-dark(#171717, #f5f5f5)"
-  on-accent: "light-dark(#ffffff, #171717)"
-  background-body: "light-dark(#f5f5f5, #0b0b0b)"
-  background-surface: "light-dark(#ffffff, #141414)"
-  background-card: "light-dark(#ffffff, #191919)"
-  background-popover: "light-dark(rgb(255 255 255 / 88%), rgb(28 28 28 / 92%))"
-  background-muted: "light-dark(#f5f5f5, #202020)"
-  sidebar: "light-dark(rgb(250 250 250 / 82%), rgb(18 18 18 / 86%))"
-  text-primary: "light-dark(#171717, #f5f5f5)"
-  text-secondary: "light-dark(#666666, #aaaaaa)"
+  accent: "light-dark(#191d24, #eef0f5)"
+  on-accent: "light-dark(#ffffff, #191d24)"
+  background-body: "light-dark(#f2f4f7, #0d0f13)"
+  background-surface: "light-dark(#fcfdff, #121419)"
+  background-card: "light-dark(#ffffff, #1a1d23)"
+  background-popover: "light-dark(rgb(255 255 255 / 88%), rgb(26 29 35 / 92%))"
+  background-muted: "light-dark(#edf0f4, #1e2128)"
+  sidebar: "light-dark(rgb(255 255 255 / 78%), rgb(23 25 31 / 84%))"
+  text-primary: "light-dark(#191d24, #eef0f5)"
+  text-secondary: "light-dark(#616876, #adb3bf)"
   accent-muted: "light-dark(rgb(0 0 0 / 6%), rgb(255 255 255 / 10%))"
   neutral: "light-dark(#0000000F, #ffffff1A)"
   border: "light-dark(#00000014, #ffffff1A)"
@@ -59,7 +59,7 @@ components:
   reference-token: {"backgroundColor": "{colors.neutral}", "textColor": "{colors.text-primary}", "typography": "{typography.supporting}", "rounded": "{rounded.inner}", "padding": "0 0.5rem", "height": "24px"}
   message-filled: {"backgroundColor": "{colors.neutral}", "textColor": "{colors.text-primary}", "typography": "{typography.body}", "rounded": "{rounded.chat}", "padding": "0.75rem 1rem"}
   composer: {"backgroundColor": "{colors.background-popover}", "textColor": "{colors.text-primary}", "typography": "{typography.body}", "rounded": "{rounded.chat}", "padding": "0.75rem"}
-  thinking: {"backgroundColor": "transparent", "textColor": "{colors.text-secondary}", "typography": "{typography.body}"}
+  thinking: {"backgroundColor": "light-dark(rgb(235 238 242 / 70%), rgb(31 34 41 / 84%))", "textColor": "light-dark(#606774, #b4bac5)", "typography": "{typography.body}"}
 ---
 
 # Design System: MECA Embedded WebUI
@@ -138,7 +138,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 ## Elevation & Depth
 
-읽기·파일 영역은 불투명 중성 표면과 얇은 경계로 구분한다. 겹친 Dialog·Popover·컴포저에 기능적 glass를 사용한다. Dialog blur는 (24px), DropdownMenu·Popover·컴포저 blur는 (20px)이며, 불투명 fallback 등 환경 적응은 공식 Astryx 동작을 유지한다. 그림자는 Neutral의 공식 토큰을 사용한다.
+읽기·파일 영역은 불투명 중성 표면을 사용한다. Glass는 SideNav·고정 헤더·컴포저·Popover·DropdownMenu처럼 겹침의 관계를 설명하는 비모달 표면에만 적용한다. blur는 18px이며 얇은 안쪽 빛과 절제된 그림자로 경계를 구분한다. Dialog·AlertDialog·Drawer·Lightbox의 본문 표면은 항상 불투명하며 backdrop blur를 적용하지 않는다. Dialog 진입의 opacity 애니메이션도 사용하지 않는다. 배경을 어둡게 하는 scrim과 모달 본문의 불투명도는 구분한다.
 
 ### Shadow Vocabulary
 
@@ -146,9 +146,9 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 - **Medium** (`--shadow-med`): 컴포저 hover·focus와 더 높은 표면의 강조.
 - **High** (`--shadow-high`): Dialog 등 공식 overlay의 더 깊은 층위. Neutral의 상속 값이다.
 
-Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유지하고 읽기 본문·편집기까지 확장하지 않는다.
+라이트는 Cobalt/Refract의 명료한 모서리와 차가운 빛을, 다크는 Lumen/Ribbon의 어두운 재질과 가는 반사를 참고한다. 흑백 중심의 기존 제품 정체성과 의미별 상태색을 유지하며 크림색·누런 바탕이나 장식용 광채를 추가하지 않는다. blur 미지원·reduced-transparency·forced-colors에서는 불투명 표면으로 전환한다.
 
-모션은 공식 테마의 fast·medium·slow와 변동 비율을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 상태 모션은 `+`의 회전 (90deg)이며 메뉴의 진입·닫기는 공식 DropdownMenu가 소유한다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
+모션은 공식 테마의 fast·medium·slow와 변동 비율, overshoot 없는 crisp 성향을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 상태 모션은 `+`의 회전(90deg), 작업 탭의 8px slide-in, Dialog의 12px slide-in, 상세 본문의 4px 진입이다. 진입은 ease-entrance의 감속 곡선을 사용하며 Dialog는 220ms, 탭·상세는 fast-max로 동작한다. 모든 모달과 툴 본문은 애니메이션 중에도 불투명도를 유지한다. 예약 목록의 조작을 가리는 클리핑 효과는 사용하지 않는다. 프로젝트 대화 목록은 Astryx useEntryAnimation의 slideDown, 메뉴의 진입·닫기는 공식 DropdownMenu가 소유한다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
 
 ## Shapes
 
@@ -166,7 +166,13 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 ### Cards / Containers
 
-사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 답변·Thinking·ChatToolCalls는 할당된 채팅 열의 전체 너비를 유지하며 내용 길이에 따라 폭을 바꾸지 않는다. Markdown·코드·표는 영역 안에서 줄바꿈해 가로 스크롤을 만들지 않는다. 완료 정보는 마지막 출력 뒤 ChatSystemMessage·ChatMessageMetadata로 표시하며 중간 응답이나 완료 표시용 녹색 점을 넣지 않는다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실·설정 저장 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
+사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 답변·Thinking·ChatToolCalls는 할당된 채팅 열의 전체 너비를 유지하며 내용 길이에 따라 폭을 바꾸지 않는다. Markdown·코드·표는 영역 안에서 줄바꿈해 가로 스크롤을 만들지 않는다. 완료 정보는 본문 없는 RunCompletion API와 전용 CompletionRow를 사용해 마지막 출력 뒤 ChatSystemMessage로 표시한다. 고정 상태 라벨과 검증한 토큰·TPS·시간·비용만 받으며 응답·추론·종료 사유나 완료 표시용 녹색 점을 넣지 않는다. 실패 원문은 별도 상세 창으로 연다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실·설정 저장 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
+
+### Tool disclosures and long responses
+
+툴콜은 배경·외곽선·카드 없는 Astryx Collapsible이며 툴 이름 밑줄과 상태 아이콘만 표시한다. 같은 행의 별도 새 창 모양 아이콘은 요청 인자만 읽기 좋은 레이블·코드로 보여주는 불투명 Dialog를 연다. 결과는 아코디언 안에서만 펼치며 stdout·본문·diff를 먼저, 실행 식별자 등 기술 메타데이터를 접힌 보조 영역에 표시한다. 일반 결과 표면에는 glass를 사용하지 않는다.
+
+답변·Thinking에 전체 텍스트 팝오버나 원문 보기 버튼을 붙이지 않는다. 표시 접두부보다 긴 저장 본문은 같은 위치에서 원문 범위별로 읽는다. 노드가 많은 목록·표는 별도 본문 페이지로 읽으며 끝부분을 삭제하지 않는다. 툴 결과와 요청은 펼치거나 요청 아이콘을 선택할 때만 조회하고 닫으면 브라우저 페이지 캐시를 해제한다. 가상화한 저장 행은 일반 문서 흐름에 배치해 비동기 결과가 커지는 즉시 다음 행이 아래로 밀려나게 한다. 위·아래 spacer와 제한된 마운트 수로 긴 이력의 DOM을 제한한다.
 
 ### Inputs / Fields
 
@@ -180,7 +186,7 @@ Glass는 겹친 표면의 층위를 설명한다. 농도와 blur를 함께 유�
 
 컴포저는 입력·참조 Token·팀 토글·후속 예약·전송을 묶는 glass 작업 표면이다. 모델은 설정과 `!model`에서 선택한다. 음성·dictation 조작은 없다. `+`는 위쪽 DropdownMenu에서 이미지와 스킬을 선택한다. 이미지는 파일 선택창을, 스킬은 별도 탐색 모달을 열며 행 우측 +로 입력에 넣는다. 메뉴·모달의 Escape·선택 완료와 포커스 복귀는 공식 레이어 동작을 사용한다. 컴포저 전체의 이미지 드롭·붙여넣기·명시 단축키는 같은 첨부 한도를 따른다. 후보는 `!` 명령·`#` 스킬의 공식 typeahead다.
 
-Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. 공식 테마의 muted 배경·container 반경·spacing.4 안쪽 여백을 사용하고 답변 앞에 spacing.4 간격을 둔다. `data-tone="thinking"`의 테마 확장으로 본문·제목·목록·트리거에 라이트 #5c5c5c, 다크 #b7b7b7의 중성 잉크를 적용한다. 진행 중과 저장 이력에서 같은 표현을 유지하며 답변은 별도 기본 본문색으로 읽는다.
+Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. 차분한 중성 배경·container 반경·spacing.4 안쪽 여백을 사용하고 답변 앞에는 spacing.6(24px)을 둔다. `data-tone="thinking"`의 테마 확장으로 라이트 #606774, 다크 #b4bac5의 보조 잉크를 적용한다. 각 저장 응답 그룹 뒤에는 spacing.8(32px)을 둔다. 진행 중과 저장 이력에서 같은 표현을 유지하며 답변은 별도 기본 본문색과 1.7 행간으로 읽는다. 아코디언 트리거는 데스크톱에서 최소 32px, coarse pointer에서 최소 48px의 조작 높이를 확보한다.
 
 컴포저 하단 한 줄에는 메모리·입력/출력 토큰·소요시간·TPS 등 실행 지표를 표시한다. 대기·실행·압축 같은 상태 문구나 SSE 조작은 배치하지 않으며 좁은 화면에서는 지표를 줄바꿈한다.
 
