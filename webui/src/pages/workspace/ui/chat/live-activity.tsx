@@ -7,7 +7,8 @@ import { ChatSystemMessage, ChatToolCalls } from '@astryxdesign/core/Chat';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { memo, useState } from 'react';
-import type { Target } from '@/pages/workspace/model/store';
+import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { isActiveTask } from '@/pages/workspace/model/task-state';
 import { toolStatus } from '@/pages/workspace/model/tool-status';
 import { Original } from '@/pages/workspace/ui/inspection/original';
 import type { DetailRequestJson, EventJson } from '@/shared/api';
@@ -21,9 +22,11 @@ export const LiveActivity = memo(function LiveActivity({
 }) {
   const t = useLocale(),
     [source, setSource] = useState<DetailRequestJson | null>(null);
+  const tasks = useWorkspaceStore((state) => state.tasks);
   const entries = events
     .filter(
       (e) =>
+        (!e.taskId || !tasks[e.taskId] || isActiveTask(tasks[e.taskId]?.status ?? 'running')) &&
         e.workspaceId === target.workspace &&
         e.sessionId === target.session &&
         (e.tool ||
@@ -47,6 +50,8 @@ export const LiveActivity = memo(function LiveActivity({
     <VStack gap={3}>
       {!!tools.size && (
         <ChatToolCalls
+          className="tool-calls"
+          style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
           calls={[...tools].map(([key, event]) => ({
             key,
             name: event.tool?.name ?? t('toolResult'),

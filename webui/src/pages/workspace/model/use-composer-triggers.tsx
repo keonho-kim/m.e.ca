@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { reportError } from '@/entities/server-session';
 import { call } from '@/shared/api';
+import { referenceToken } from '@/shared/ui/reference-token';
 export function useComposerTriggers(workspace: string): ChatComposerTrigger[] {
   const catalog = useQuery({
     queryKey: ['command-catalog'],
@@ -70,7 +71,7 @@ export function useComposerTriggers(workspace: string): ChatComposerTrigger[] {
         character: '#',
         searchSource: skills,
         renderItem,
-        onSelect: (item) => ({ value: `#${item.id}`, label: `#${item.label}`, variant: 'neutral' }),
+        onSelect: (item) => referenceToken(`#${item.id}`, `#${item.label}`),
       },
     ];
   }, [commands, skills]);

@@ -17,17 +17,18 @@ import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { reportError } from '@/entities/server-session';
-import {
-  emptyInput,
-  type Target,
-  targetKey,
-  useWorkspaceStore,
-} from '@/pages/workspace/model/store';
+import type { Target } from '@/pages/workspace/model/store';
 import { SkillList } from '@/pages/workspace/ui/skills/skill-list';
 import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
-export default function Skills({ target, onInsert }: { target: Target; onInsert?: () => void }) {
+export default function Skills({
+  target,
+  onInsert,
+}: {
+  target: Target;
+  onInsert: (mention: string) => void;
+}) {
   const t = useLocale(),
     [id, setId] = useState('');
   const compact = useMediaQuery('(max-width: 1024px)');
@@ -35,11 +36,7 @@ export default function Skills({ target, onInsert }: { target: Target; onInsert?
     [query, search] = useState('');
   const insert = (mention: string) => {
     if (!mention || !target.session) return;
-    const store = useWorkspaceStore.getState();
-    const input = store.inputs[targetKey(target)] ?? emptyInput();
-    store.patchInput(target, { text: `${input.text}${input.text ? ' ' : ''}#${mention} ` });
-    if (onInsert) onInsert();
-    else store.set({ mode: 'chat' });
+    onInsert(mention);
   };
   const [file, setFile] = useState(''),
     [offset, setOffset] = useState('0'),

@@ -4,7 +4,7 @@
 // Related: internal/commands/server/session_usage.go, webui/src/pages/workspace/ui/chat/format-statistics.ts.
 import { Text } from '@astryxdesign/core/Text';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
@@ -16,7 +16,6 @@ export function ExecutionStatus({ target }: { target: Target }) {
   const t = useLocale();
   const task = useWorkspaceStore((s) => activeTask(target, s.tasks));
   const latest = useWorkspaceStore((s) => s.statistics);
-  const events = useWorkspaceStore((s) => s.events);
   const { data } = useQuery({ ...stateOptions(target), enabled: !!target.session });
   const usage = useQuery({
     queryKey: ['session-usage', target.workspace, target.session],
@@ -45,16 +44,6 @@ export function ExecutionStatus({ target }: { target: Target }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [started]);
-  const compacting = useMemo(() => {
-    if (!task) return false;
-    const owners = new Set<string>();
-    for (const event of events) {
-      if (event.taskId !== task.id) continue;
-      if (event.kind === 'compaction_started') owners.add(event.agent ?? '');
-      if (event.kind === 'compaction_finished') owners.delete(event.agent ?? '');
-    }
-    return owners.size > 0;
-  }, [events, task]);
   const stats = latest ?? execution?.statistics;
   const resident = Number(resources.data?.residentBytes ?? 0);
   const memory =
@@ -62,11 +51,9 @@ export function ExecutionStatus({ target }: { target: Target }) {
       ? `${(resident / 1073741824).toFixed(2)} GiB`
       : `${(resident / 1048576).toFixed(1)} MiB`;
   const summary = [
-    t(task ? 'running' : 'idle'),
     task
       ? `${t('elapsed')} ${duration(Number.isFinite(started) ? now - started : Number(stats?.elapsedMillis ?? 0))}`
       : '',
-    compacting ? t('compacting') : '',
     resident > 0 ? `${t('memory')} ${memory}` : '',
     ...tokenSummary(usage.data, t, data?.model?.provider === 'openrouter'),
     throughput(stats),
@@ -80,7 +67,7 @@ export function ExecutionStatus({ target }: { target: Target }) {
       color="secondary"
       role="group"
       aria-label={t('executionInfo')}
-      className="execution-status min-w-0 whitespace-nowrap overflow-x-auto"
+      className="execution-status min-w-0 whitespace-normal [overflow-wrap:anywhere]"
     >
       {summary}
     </Text>

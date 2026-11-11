@@ -22,15 +22,18 @@ import { ModelFields } from '@/pages/workspace/ui/settings/model-fields';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
+import { SaveConfirmation } from '@/shared/ui/save-confirmation';
 
 export function ModelForm({
   active,
   onDirty,
   onBusy,
+  onSaved,
 }: {
   active: boolean;
   onDirty: (dirty: boolean) => void;
   onBusy: (busy: boolean) => void;
+  onSaved: () => void;
 }) {
   const t = useLocale(),
     state = useQuery({ ...defaultModelOptions, enabled: active });
@@ -42,6 +45,7 @@ export function ModelForm({
   });
   const candidates = useModelCandidates();
   const [busy, setBusy] = useState(false);
+  const [proposed, setProposed] = useState<ModelValues | null>(null);
   const [status, setStatus] = useState(''),
     [error, setError] = useState('');
   const controller = useRef<AbortController | null>(null);
@@ -124,7 +128,7 @@ export function ModelForm({
       setBusy(false);
     }
   });
-  const save = form.handleSubmit(async (value) => {
+  const save = async (value: ModelValues) => {
     if (busy || !isDirty) return;
     setBusy(true);
     setStatus('');
@@ -150,6 +154,8 @@ export function ModelForm({
       const selected = useWorkspaceStore.getState().selection;
       if (selected.session) invalidate(stateOptions(selected).queryKey);
       setStatus(t('saved'));
+      setProposed(null);
+      onSaved();
     } catch (error) {
       if (!controller.current?.signal.aborted) {
         setError(describeError(error));
@@ -158,7 +164,7 @@ export function ModelForm({
     } finally {
       setBusy(false);
     }
-  });
+  };
   return (
     <VStack
       as="form"
@@ -166,8 +172,20 @@ export function ModelForm({
       className="settings-form"
       gap={5}
       padding={6}
-      onSubmit={save}
+      onSubmit={form.handleSubmit((value) => {
+        setError('');
+        setProposed(value);
+      })}
     >
+      <SaveConfirmation
+        open={!!proposed}
+        busy={busy}
+        error={error}
+        close={() => setProposed(null)}
+        save={() => {
+          if (proposed) void save(proposed);
+        }}
+      />
       {(state.error || providers.error) && (
         <>
           <Banner status="error" title={describeError(state.error ?? providers.error)} />

@@ -9,15 +9,24 @@ import {
   type ChatComposerInputHandle,
   ChatSendButton,
 } from '@astryxdesign/core/Chat';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
-import { Token } from '@astryxdesign/core/Token';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import {
+  type Ref,
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import { reportError } from '@/entities/server-session';
 import { capabilitiesOptions, stateOptions } from '@/pages/workspace/api/queries';
-import { command, settings } from '@/pages/workspace/model/commands';
+import { command, settings, view } from '@/pages/workspace/model/commands';
 import { send } from '@/pages/workspace/model/execution';
 import { selectReference, waitSelections } from '@/pages/workspace/model/file-references';
 import {
@@ -43,8 +52,18 @@ import { SkillPicker } from '@/pages/workspace/ui/skills/skill-picker';
 import { call, control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { failure } from '@/shared/lib/errors';
+import { ReferenceToken, referenceToken } from '@/shared/ui/reference-token';
 
-export function Composer({ target, showStatus }: { target: Target; showStatus: boolean }) {
+export type ComposerHandle = { insertSkill: (mention: string) => void };
+export function Composer({
+  target,
+  showStatus,
+  ref,
+}: {
+  target: Target;
+  showStatus: boolean;
+  ref: Ref<ComposerHandle>;
+}) {
   const t = useLocale(),
     input = useWorkspaceStore((s) => s.inputs[targetKey(target)]) ?? emptyInput();
   const task = useWorkspaceStore((state) => activeTask(target, state.tasks));
@@ -52,6 +71,11 @@ export function Composer({ target, showStatus }: { target: Target; showStatus: b
   const showStop = !!task && !hasInput;
   const queueShortcut = /Mac|iPad|iPhone/.test(navigator.userAgent) ? '⌘↵' : 'Ctrl+↵';
   const editor = useRef<ChatComposerInputHandle>(null);
+  const insertSkill = (mention: string) => {
+    editor.current?.focus();
+    editor.current?.insertToken(referenceToken(`#${mention}`));
+  };
+  useImperativeHandle(ref, () => ({ insertSkill }), []);
   const focusInput = useCallback(() => editor.current?.focus(), []);
   const sendLabel = useId();
   const triggers = useComposerTriggers(target.workspace);
@@ -98,6 +122,7 @@ export function Composer({ target, showStatus }: { target: Target; showStatus: b
       if (input.text.trimStart().startsWith('!')) {
         if (await command(target, input.text)) patch('');
       } else {
+        if (useWorkspaceStore.getState().fileDirty) throw failure('draft_changed');
         if (!state.data?.model?.model) {
           settings('model', target);
           return;
@@ -106,7 +131,7 @@ export function Composer({ target, showStatus }: { target: Target; showStatus: b
         const captured = useWorkspaceStore.getState().inputs[targetKey(target)] ?? input;
         if (!capabilities.data) throw failure('invalid_response');
         checkSubmissionLimits(captured, capabilities.data);
-        await send(target, captured, reserve);
+        if (await send(target, captured, reserve)) view('chat');
       }
     } catch (error) {
       reportError(error);
@@ -164,13 +189,18 @@ export function Composer({ target, showStatus }: { target: Target; showStatus: b
           input.paths.length ? (
             <HStack gap={2} wrap="wrap">
               {input.paths.map((path) => (
-                <Token
-                  key={path}
-                  label={path}
-                  onRemove={() => {
-                    void selectReference(target, path, false).catch(reportError);
-                  }}
-                />
+                <HStack key={path} gap={0} className="min-w-0 max-w-full">
+                  <ReferenceToken value={path} />
+                  <IconButton
+                    size="sm"
+                    variant="ghost"
+                    label={`${t('removeReference')} · ${path}`}
+                    icon={<Icon icon="meca:close" />}
+                    onClick={() => {
+                      void selectReference(target, path, false).catch(reportError);
+                    }}
+                  />
+                </HStack>
               ))}
             </HStack>
           ) : undefined
@@ -219,6 +249,7 @@ export function Composer({ target, showStatus }: { target: Target; showStatus: b
       {skillsOpen && (
         <SkillPicker
           target={target}
+          onInsert={insertSkill}
           close={() => {
             setSkillsOpen(false);
           }}
