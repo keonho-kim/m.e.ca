@@ -207,7 +207,7 @@ export function Chat({
             })}
           </VStack>
           {/* Astryx must observe live content growth as part of the message list. */}
-          {before === '0' && <LiveOutput target={target} />}
+          {before === '0' && <LiveOutput target={target} history={items} />}
           {completion && <HistoryRow item={completion.item} target={target} />}
         </ChatMessageList>
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}

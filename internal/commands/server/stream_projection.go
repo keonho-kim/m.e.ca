@@ -84,6 +84,7 @@ func (s *Service) emit(r *request, value record.Event) {
 		draft.Generation = generation
 		draft.textBytes, draft.thinkingBytes = 0, 0
 		draft.Text, draft.Thinking, draft.Truncated = "", "", false
+		draft.Committed = false
 		draft.text.Reset()
 		draft.thinking.Reset()
 		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Reset: true, Record: record.Event{Kind: "draft_reset", Agent: value.Agent, RunID: value.RunID}})

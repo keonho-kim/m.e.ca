@@ -24,3 +24,26 @@ test('different agents and non-adjacent thoughts never merge', () => {
     ])
   ).toHaveLength(2);
 });
+
+test('one saved tool result replaces its started and proposed records', () => {
+  const tool = { callId: 'command', name: 'execute_command' };
+  const event = { runId: 'run', agent: 'peer', tool };
+  const finished = { sequence: '3', event: { ...event, kind: 'tool_succeeded' } };
+  expect(
+    historyRows([
+      { sequence: '1', event: { ...event, kind: 'tool_proposed' } },
+      { sequence: '2', event: { ...event, kind: 'tool_started' } },
+      finished,
+    ])
+  ).toEqual([{ item: finished }]);
+});
+
+test('public team responses are messages rather than system metadata', () => {
+  const item = {
+    sequence: '9',
+    event: { kind: 'team_progress', agent: 'peer', text: 'My answer' },
+  };
+  expect(historyRows([item])).toEqual([
+    { item: { ...item, role: 'assistant', text: 'My answer' } },
+  ]);
+});

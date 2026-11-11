@@ -1,8 +1,9 @@
-// Purpose: Project ordered stream events into bounded live text and task indicators.
+// Purpose: Project ordered events into bounded drafts, durable-history handoffs and task indicators.
 // Pattern: Pure presentation reducer.
 // Usage: Zustand applies batches without subscribing the whole application to each token.
 // Related: webui/src/pages/workspace/model/store.ts, webui/src/pages/workspace/api/events.ts.
 
+import { isHistoryBoundary, isResponseEvent } from '@/pages/workspace/model/chat-events';
 import { compactDeltas } from '@/pages/workspace/model/delta-batch';
 import { trimTasks } from '@/pages/workspace/model/task-state';
 import type { Draft, WorkspaceState } from '@/pages/workspace/model/types';
@@ -11,7 +12,7 @@ import type { EventJson, SnapshotJson } from '@/shared/api';
 const windowChars = 128 * 1024;
 const totalChars = 4 * 1024 * 1024;
 
-export function snapshotDrafts(snapshot: SnapshotJson) {
+export function snapshotDrafts(snapshot: SnapshotJson, revision: number) {
   const values: Record<string, Draft> = {};
   for (const d of snapshot.drafts ?? []) {
     if (d.taskId)
@@ -22,6 +23,7 @@ export function snapshotDrafts(snapshot: SnapshotJson) {
         text: d.text ?? '',
         thinking: d.thinking ?? '',
         truncated: !!d.truncated,
+        ...(d.committed ? { doneRevision: revision } : {}),
       };
   }
   return values;
@@ -50,6 +52,15 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       continue;
     if (e.kind === 'request_started') statistics = null;
     if (e.statistics) statistics = e.statistics;
+    if (isHistoryBoundary(e)) {
+      historyRevision++;
+      const key = `${e.taskId}/${e.agent ?? ''}`,
+        draft = drafts[key];
+      if (draft && draft.doneRevision === undefined) {
+        if (drafts === state.drafts) drafts = { ...drafts };
+        drafts[key] = { ...draft, doneRevision: historyRevision };
+      }
+    }
     if (e.kind === 'draft_reset') {
       historyRevision++;
       if (drafts === state.drafts) drafts = { ...drafts };
@@ -88,7 +99,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
         thinking: thinking.slice(-windowChars),
         truncated: value.truncated || text.length > windowChars || thinking.length > windowChars,
       };
-    } else {
+    } else if (!isResponseEvent(e)) {
       if (events === state.events) events = [...events];
       events.push(e);
     }

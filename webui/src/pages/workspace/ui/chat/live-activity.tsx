@@ -1,5 +1,5 @@
 // Purpose: Present bounded native tool and skill activity using Astryx ChatToolCalls and notices.
-// Pattern: Latest-call projection with explicit paged original lookup.
+// Pattern: Native activity renderer with explicit paged original lookup.
 // Usage: LiveOutput supplies only the selected conversation's activity.
 // Related: webui/src/pages/workspace/ui/inspection/original.tsx, webui/src/pages/workspace/model/tool-status.ts.
 import { Button } from '@astryxdesign/core/Button';
@@ -7,6 +7,7 @@ import { ChatSystemMessage, ChatToolCalls } from '@astryxdesign/core/Chat';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { memo, useState } from 'react';
+import { toolIdentity } from '@/pages/workspace/model/chat-events';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { isActiveTask } from '@/pages/workspace/model/task-state';
 import { toolStatus } from '@/pages/workspace/model/tool-status';
@@ -34,26 +35,22 @@ export const LiveActivity = memo(function LiveActivity({
           [
             'team_notice',
             'team_work',
-            'progress',
-            'team_progress',
             'retry',
             'compaction_started',
             'compaction_finished',
           ].includes(e.kind ?? ''))
     )
     .slice(-12);
-  const tools = new Map<string, EventJson>();
-  for (const event of entries)
-    if (event.tool) tools.set(`${event.taskId}/${event.agent}/${event.tool.callId}`, event);
+  const tools = entries.filter((event) => event.tool);
   if (!entries.length && !source) return null;
   return (
     <VStack gap={3}>
-      {!!tools.size && (
+      {!!tools.length && (
         <ChatToolCalls
           className="tool-calls"
           style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
-          calls={[...tools].map(([key, event]) => ({
-            key,
+          calls={tools.map((event) => ({
+            key: toolIdentity(event) ?? `${event.taskId}/${event.agent}/${event.sequence}`,
             name: event.tool?.name ?? t('toolResult'),
             status: toolStatus(event.kind),
             node: event.agent,

@@ -124,6 +124,7 @@ type Draft struct {
 	Generation               uint64
 	Text, Thinking           string
 	Truncated                bool
+	Committed                bool
 }
 type ExecutionState struct {
 	StartedAt  time.Time

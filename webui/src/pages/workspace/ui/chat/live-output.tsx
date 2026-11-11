@@ -6,13 +6,14 @@
 import { VStack } from '@astryxdesign/core/Layout';
 import { Selector } from '@astryxdesign/core/Selector';
 import { useMemo, useState } from 'react';
+import { liveActivity } from '@/pages/workspace/model/chat-events';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { LiveActivity } from '@/pages/workspace/ui/chat/live-activity';
 import { LiveSource } from '@/pages/workspace/ui/chat/live-source';
 import { Original } from '@/pages/workspace/ui/inspection/original';
-import type { DraftRequestJson } from '@/shared/api';
+import type { DraftRequestJson, HistoryItemJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
-export function LiveOutput({ target }: { target: Target }) {
+export function LiveOutput({ target, history }: { target: Target; history: HistoryItemJson[] }) {
   const t = useLocale(),
     drafts = useWorkspaceStore((s) => s.drafts),
     events = useWorkspaceStore((s) => s.events);
@@ -31,6 +32,7 @@ export function LiveOutput({ target }: { target: Target }) {
     () => [...new Set(sources.map((v) => v.agent).filter(Boolean))],
     [sources]
   );
+  const activity = useMemo(() => liveActivity(events, history), [events, history]);
   if (!sources.length && !events.length && !original) return null;
   return (
     <VStack width="100%" className="live-output" gap={5} paddingBlockStart={5}>
@@ -55,7 +57,7 @@ export function LiveOutput({ target }: { target: Target }) {
             onOriginal={setOriginal}
           />
         ))}
-      <LiveActivity target={target} events={events} />
+      <LiveActivity target={target} events={activity} />
       {original && <Original target={target} draft={original} onClose={() => setOriginal(null)} />}
     </VStack>
   );
