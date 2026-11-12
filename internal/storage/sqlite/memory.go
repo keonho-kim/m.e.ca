@@ -30,7 +30,7 @@ func (s *Store) AddContextTokens(ctx context.Context, session string, count comp
 	default:
 		return faults.Errorf(diagcatalog.SqliteInvalidConversationTokenSource)
 	}
-	_, err := s.db.ExecContext(ctx, "INSERT INTO conversation_tokens(singleton,amount,estimated,kind,through_timeline) SELECT 1,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE true ON CONFLICT(singleton) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", count.Amount, count.Estimated, count.Kind)
+	_, err := s.execWrite(ctx, "INSERT INTO conversation_tokens(singleton,amount,estimated,kind,through_timeline) SELECT 1,?,?,?,COALESCE(MAX(sequence),0) FROM timeline WHERE true ON CONFLICT(singleton) DO UPDATE SET sequence=excluded.sequence,amount=excluded.amount,estimated=excluded.estimated,kind=excluded.kind,through_timeline=excluded.through_timeline", count.Amount, count.Estimated, count.Kind)
 	return err
 }
 func (s *Store) Memory(ctx context.Context, session string) (compact.Memory, error) {
@@ -85,7 +85,7 @@ func (s *Store) InstallMemory(ctx context.Context, session string, expected int,
 			codec, stored = 2, encoded
 		}
 	}
-	result, err := s.db.ExecContext(ctx, `INSERT INTO memories(singleton,revision,through_timeline,through_usage,body,codec,digest,raw_bytes,created_at)
+	result, err := s.execWrite(ctx, `INSERT INTO memories(singleton,revision,through_timeline,through_usage,body,codec,digest,raw_bytes,created_at)
 SELECT 1,?,?,?,?,?,?,?,? WHERE ?=0 OR EXISTS(SELECT 1 FROM memories WHERE singleton=1 AND revision=?)
 ON CONFLICT(singleton) DO UPDATE SET revision=excluded.revision,through_timeline=excluded.through_timeline,through_usage=excluded.through_usage,body=excluded.body,codec=excluded.codec,digest=excluded.digest,raw_bytes=excluded.raw_bytes,created_at=excluded.created_at
 WHERE memories.revision=? AND memories.through_timeline<excluded.through_timeline AND memories.through_usage<=excluded.through_usage`, next.Revision, next.Through, next.UsageThrough, stored, codec, recordcontent.ID(body), len(body), time.Now().UTC().Format(time.RFC3339Nano), expected, expected, expected)

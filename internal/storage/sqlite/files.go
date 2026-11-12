@@ -38,9 +38,9 @@ func (s *Store) SelectFile(ctx context.Context, session, path string, selected b
 		return faults.Errorf(diagcatalog.SqliteInvalidSelectedPath)
 	}
 	if selected {
-		_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO file_selections(path) VALUES(?)", path)
+		_, err := s.execWrite(ctx, "INSERT OR IGNORE INTO file_selections(path) VALUES(?)", path)
 		return err
 	}
-	_, err := s.db.ExecContext(ctx, "DELETE FROM file_selections WHERE path=?", path)
+	_, err := s.execWrite(ctx, "DELETE FROM file_selections WHERE path=?", path)
 	return err
 }

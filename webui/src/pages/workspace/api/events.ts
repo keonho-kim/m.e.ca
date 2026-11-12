@@ -1,4 +1,4 @@
-// Purpose: Own one resumable event connection and batch only visible text updates.
+// Purpose: Coalesce live text and usage while delivering task control events immediately.
 // Pattern: Native EventSource lifecycle with urgent application event delivery.
 // Usage: App reconnects from a freshly scoped snapshot when selection or connectivity changes.
 // Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/execution.ts.
@@ -11,6 +11,10 @@ import { readSnapshot, snapshotMetadata } from '@/pages/workspace/api/snapshots'
 import { forgetConversation } from '@/pages/workspace/model/deletion';
 import { refreshReferences } from '@/pages/workspace/model/file-references';
 import { completed } from '@/pages/workspace/model/followups';
+import {
+  chatPresentationBlocked,
+  observeChatPresentation,
+} from '@/pages/workspace/model/presentation';
 import {
   type Target,
   type TaskView,
@@ -25,11 +29,13 @@ import { ApiError, failure } from '@/shared/lib/errors';
 export function observe(target: Target) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let batch: EventJson[] = [];
+  let batchBytes = 0;
   let initialized = false;
   const discardBatch = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
     batch = [];
+    batchBytes = 0;
   };
   const flush = (control?: EventJson) => {
     const values = batch;
@@ -63,16 +69,19 @@ export function observe(target: Target) {
   const acceptEvent = (raw: string) => {
     const event = (JSON.parse(raw) as NotificationJson).event;
     if (!event || event.kind === 'heartbeat') return;
-    if (event.kind !== 'assistant_delta') {
+    if (event.kind !== 'assistant_delta' && event.kind !== 'usage_progress') {
       flush(event);
       return;
     }
     if (event.workspaceId !== target.workspace || event.sessionId !== target.session) return;
     batch.push(event);
-    if (batch.length >= 128) flush();
-    else if (!timer)
-      timer = setTimeout(flush, typeof document !== 'undefined' && document.hidden ? 200 : 33);
+    batchBytes += 2 * ((event.text?.length ?? 0) + (event.thinking?.length ?? 0));
+    if (batch.length >= 128 || batchBytes >= 256 * 1024) flush();
+    else if (!timer) timer = setTimeout(flush, chatPresentationBlocked() ? 250 : 33);
   };
+  const releasePresentation = observeChatPresentation(() => {
+    if (!chatPresentationBlocked()) flush();
+  });
   const close = subscribeEventStream({
     connect: async (signal) => {
       const pending = queuedPredecessors();
@@ -107,6 +116,7 @@ export function observe(target: Target) {
   });
   return () => {
     close();
+    releasePresentation();
     discardBatch();
   };
 }

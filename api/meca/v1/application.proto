@@ -30,7 +30,7 @@ message FileMutationResult {
   string state = 7;
 }
 message Workspace { string id = 1; string path = 2; string name = 3; int32 active_tasks = 4; string error = 5; int32 pending_approvals = 6; }
-message Workspaces { repeated Workspace items = 1; string default_id = 2; }
+message Workspaces { repeated Workspace items = 1; string default_id = 2; string selected_id = 3; }
 message CommandDescription { string name = 1; string description = 2; }
 message CommandCatalog { repeated CommandDescription items = 1; }
 message ParseInput { string text = 1; }

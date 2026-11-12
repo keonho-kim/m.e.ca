@@ -186,7 +186,7 @@ func newFixture(t *testing.T, g model.Generator, approval bool, concurrency ...i
 			t.Error(err)
 		}
 	})
-	f.api = &API{Service: f.app, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	f.api = &API{Service: f.app, Remember: vault.Remember, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
 	return f
 }
 

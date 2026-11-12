@@ -17,6 +17,11 @@ func Write(directory, name string, content []byte) (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
+	return Replace(root, name, content)
+}
+
+// Replace publishes one complete private file relative to an already-owned root.
+func Replace(root *os.Root, name string, content []byte) (err error) {
 	temporary := ".pending-" + rand.Text()
 	file, err := root.OpenFile(temporary, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {

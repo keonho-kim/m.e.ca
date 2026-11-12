@@ -2,28 +2,24 @@
 // Pattern: Browser-to-engine presentation regression.
 // Usage: Run with the isolated TestUIBrowserFixture descriptor.
 // Related: cmd/meca/ui_tool_provider_test.go, webui/src/pages/workspace/ui/chat/live-activity.tsx.
-import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+
+import { expect } from '@playwright/test';
+import { browserFixture, connectBrowser, test } from '#e2e/fixture';
 
 test.afterEach(async ({ page }) => {
   const path = process.env.MECA_UI_DESCRIPTOR;
   if (!path) return;
-  const fixture = JSON.parse(await readFile(path, 'utf8'));
+  const fixture = await browserFixture();
   // A failed assertion must not leave this suite's held task in other tests.
   for (const step of [1, 2, 3])
-    await page.request.get(fixture.provider + '/test/tool-sequence/' + step);
+    await page.request.get(`${fixture.provider}/test/tool-sequence/${step}`);
 });
 
 test('repeated commands never duplicate messages or become completion metadata', async ({
   page,
 }) => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  const fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  const fixture = await browserFixture();
+  await connectBrowser(page, fixture);
   const previous = page.url();
   await page
     .locator('.workspace-group')
@@ -36,18 +32,18 @@ test('repeated commands never duplicate messages or become completion metadata',
     .fill('REPEATED_TOOL_FIXTURE');
   await page.locator('.composer').getByRole('button', { name: '전송', exact: true }).click();
   await expect(page.getByText('Before first command.', { exact: true })).toBeVisible();
-  await page.request.get(fixture.provider + '/test/tool-sequence/1');
+  await page.request.get(`${fixture.provider}/test/tool-sequence/1`);
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
   await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
   await expect(page.getByText('Before first command.', { exact: true })).toHaveCount(1);
   await page.reload();
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
   await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
-  await page.request.get(fixture.provider + '/test/tool-sequence/2');
+  await page.request.get(`${fixture.provider}/test/tool-sequence/2`);
   await expect(page.getByText('Final response outside statistics.', { exact: true })).toBeVisible();
   await expect(page.locator('.tool-disclosure > button')).toHaveCount(2);
   await expect(page.getByText('Before second command.', { exact: true })).toHaveCount(1);
-  await page.request.get(fixture.provider + '/test/tool-sequence/3');
+  await page.request.get(`${fixture.provider}/test/tool-sequence/3`);
   await expect(page.locator('.completion-summary')).toContainText('입력 32');
   await expect(page.locator('.completion-row')).not.toContainText('command.');
   await expect(page.locator('.completion-row')).not.toContainText('Final response');
@@ -61,7 +57,8 @@ test('repeated commands never duplicate messages or become completion metadata',
   const answer = page.getByText('Final response outside statistics.', { exact: true });
   const thought = page.locator('.thinking').last();
   const gap = await answer.evaluate((node) => {
-    const thinking = node.closest('article')!.querySelector('.thinking')!;
+    const thinking = node.closest('article')?.querySelector('.thinking');
+    if (!thinking) throw Error('reasoning is missing from its response');
     return node.getBoundingClientRect().top - thinking.getBoundingClientRect().bottom;
   });
   expect(gap).toBeGreaterThanOrEqual(12);

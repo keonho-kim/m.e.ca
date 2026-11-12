@@ -43,6 +43,7 @@ type Edit struct {
 type State struct {
 	Messages []requestinput.Request
 	Edit     *Edit
+	Paused   bool
 }
 
 func (s *State) Changed(text string, images ...media.Image) bool {
@@ -101,6 +102,7 @@ func (s *State) DeleteSelected() {
 	s.Messages = s.Messages[:len(s.Messages)-1]
 	if len(s.Messages) == 0 {
 		s.Messages = nil
+		s.Paused = false
 	}
 }
 
@@ -114,33 +116,11 @@ func (s *State) RestoreEditor(editor *input.Editor) Completion {
 	return edit.Completion
 }
 
-func (s *State) Drain(editor *input.Editor, draftImages ...media.Image) []media.Image {
-	if len(s.Messages) == 0 {
-		return draftImages
-	}
-	var body strings.Builder
-	var images []media.Image
-	for i, request := range s.Messages {
-		if i > 0 {
-			body.WriteString("\n\n")
-		}
-		body.WriteString(request.Body())
-		images = append(images, request.Images...)
-	}
-	text := body.String()
-	if draft := editor.String(); draft != "" {
-		text += "\n\n" + draft
-	}
-	editor.Set(text)
-	clear(s.Messages)
-	s.Messages = nil
-	return append(images, draftImages...)
-}
-
 func (s *State) Shift() {
 	s.Messages[0] = requestinput.Request{}
 	s.Messages = s.Messages[1:]
 	if len(s.Messages) == 0 {
 		s.Messages = nil
+		s.Paused = false
 	}
 }

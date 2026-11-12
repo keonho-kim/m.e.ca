@@ -18,7 +18,7 @@ import SimpleEditor from 'react-simple-code-editor';
 import { codeLanguage } from '@/shared/lib/code-language';
 import { failure } from '@/shared/lib/errors';
 import { type SimpleEditorHandle, trimEditorHistory } from '@/shared/ui/code-editor/history';
-import { fitsEditorText } from '@/shared/ui/code-editor/input';
+import { editorTextAdmission } from '@/shared/ui/code-editor/input';
 import { canHighlight, paintSyntax, syntaxClasses } from '@/shared/ui/code-editor/syntax';
 
 export type EditorHandle = {
@@ -84,14 +84,15 @@ const Editor = memo(function Editor({
       if (library.current) trimEditorHistory(library.current.session.history);
     });
   }, []);
+  const fits = useMemo(() => editorTextAdmission(maxBytes), [maxBytes]);
   const accept = useCallback(
     (value: string) => {
-      const valid = fitsEditorText(value, maxBytes);
+      const valid = fits(value);
       if (!valid && !rejected.current) failed.current(failure('editor_limit'));
       rejected.current = !valid;
       return valid;
     },
-    [maxBytes]
+    [fits]
   );
   useEffect(() => {
     root.current?.querySelector('textarea')?.setAttribute('aria-label', path);
@@ -185,6 +186,7 @@ const Editor = memo(function Editor({
         acceptValue={accept}
         maxLength={maxBytes}
         className="text-editor min-h-full font-mono text-sm leading-relaxed"
+        style={{ flex: plain ? '1 1 0%' : '0 0 auto', minWidth: 0, width: '100%' }}
         preClassName={syntaxClasses}
         textareaClassName="focus-visible:outline-2 focus-visible:outline-(--focus-outline-color) focus-visible:-outline-offset-2"
         padding="var(--spacing-5)"

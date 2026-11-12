@@ -19,7 +19,7 @@ func TestPendingEditFailurePreservesChangesAndUndeliveredSteering(t *testing.T) 
 		a := screenFixture(t)
 		a.work.state = workerAgent
 		a.compose.queued.Messages = queuedRequests("first", "second")
-		a.compose.steeringDrafts = []string{"undelivered direction"}
+		a.compose.steeringDrafts = queuedRequests("undelivered direction")
 		a.compose.editor.Set("unsent draft")
 		pendingArrow(a, tcell.KeyLeft)
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, " revised", 0))

@@ -21,6 +21,22 @@ func (s *Service) SessionUsage(ctx context.Context, session string) (model.Token
 	if !sessionstate.ValidID(session) {
 		return model.TokenUsage{}, fault.New(diag.InvalidArgument, diag.ServerExplicitSession)
 	}
+	// The selected or running conversation already owns a reader lease. Reuse
+	// that handle; only inactive sessions need the lightweight usage-only opener.
+	s.mu.Lock()
+	owned := s.ownedConversation(session)
+	if owned != nil && !s.closed && ctx.Err() == nil {
+		if reader, ok := owned.History.(usageReader); ok {
+			_, readContext, release, err := s.borrowReadLocked(ctx, owned)
+			s.mu.Unlock()
+			if err != nil {
+				return model.TokenUsage{}, err
+			}
+			defer release()
+			return reader.TokenUsage(readContext, session)
+		}
+	}
+	s.mu.Unlock()
 	if s.options.Usage != nil {
 		ctx, done, err := s.beginOperation(ctx)
 		if err != nil {

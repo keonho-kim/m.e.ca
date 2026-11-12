@@ -6,6 +6,16 @@ import type { StatisticsJson } from '@/shared/api';
 import type { useLocale } from '@/shared/i18n';
 
 type Translate = ReturnType<typeof useLocale>;
+const counts = new Intl.NumberFormat('en-US');
+const rates = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function displayCount(value: unknown) {
+  const parsed = count(value);
+  return parsed === undefined ? '—' : counts.format(BigInt(parsed));
+}
 
 export function duration(millis: number) {
   const seconds = Number.isFinite(millis) ? Math.max(0, Math.floor(millis / 1000)) : 0;
@@ -16,8 +26,8 @@ export function duration(millis: number) {
 
 export function tokenSummary(usage: StatisticsJson['usage'], t: Translate, showCost = true) {
   const parts = [
-    `${t('inputTokens')} ${usage ? (count(usage.input) ?? '—') : '—'}`,
-    `${t('outputTokens')} ${usage ? (count(usage.output) ?? '—') : '—'}`,
+    `${t('inputTokens')} ${usage ? displayCount(usage.input) : '—'}`,
+    `${t('outputTokens')} ${usage ? displayCount(usage.output) : '—'}`,
   ];
   if (showCost && typeof usage?.cost === 'number' && Number.isFinite(usage.cost) && usage.cost >= 0)
     parts.push(`${t('cost')} $${usage.cost.toFixed(4)}`);
@@ -29,7 +39,7 @@ export function throughput(stats: StatisticsJson | undefined | null) {
   const millis = Number(count(stats.generationMillis)),
     output = Number(count(stats.usage.output));
   return Number.isSafeInteger(millis) && millis > 0 && Number.isSafeInteger(output) && output >= 0
-    ? `${((1000 * output) / millis).toFixed(1)} tok/s`
+    ? `${rates.format((1000 * output) / millis)} tok/s`
     : '';
 }
 

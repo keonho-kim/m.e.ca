@@ -28,6 +28,7 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
   events: [],
   bootstrap: (target, snapshot) => {
     if (snapshot.language) setServerLanguage(snapshot.language);
+    const revision = get().historyRevision + 1;
     const tasks = { ...get().tasks };
     for (const [id, task] of Object.entries(tasks))
       if (target.session && task.workspace === target.workspace && task.session === target.session)
@@ -39,10 +40,10 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
           workspace: target.workspace,
           session: task.sessionId ?? target.session,
           status: task.status ?? 'running',
+          ...(!isActiveTask(task.status ?? 'running') ? { doneRevision: revision } : {}),
         };
     }
     trimTasks(tasks);
-    const revision = get().historyRevision + 1;
     set({
       historyRevision: revision,
       drafts: target.session ? snapshotDrafts(snapshot, revision) : {},
@@ -60,7 +61,18 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
     )
       return;
     let drafts = state.drafts;
-    const finished = new Set<string>();
+    const finished = new Set(
+      Object.values(state.tasks)
+        .filter(
+          (task) =>
+            task.workspace === target.workspace &&
+            task.session === target.session &&
+            !isActiveTask(task.status) &&
+            task.doneRevision !== undefined &&
+            task.doneRevision <= revision
+        )
+        .map((task) => task.id)
+    );
     for (const [key, draft] of Object.entries(drafts)) {
       if (draft.doneRevision === undefined || draft.doneRevision > revision) continue;
       if (drafts === state.drafts) drafts = { ...drafts };
@@ -68,12 +80,10 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
       const task = state.tasks[draft.task];
       if (task && !isActiveTask(task.status)) finished.add(draft.task);
     }
-    if (drafts !== state.drafts)
-      set({
-        drafts,
-        events: finished.size
-          ? state.events.filter((event) => !finished.has(event.taskId ?? ''))
-          : state.events,
-      });
+    const events =
+      finished.size && state.events.some((event) => finished.has(event.taskId ?? ''))
+        ? state.events.filter((event) => !finished.has(event.taskId ?? ''))
+        : state.events;
+    if (drafts !== state.drafts || events !== state.events) set({ drafts, events });
   },
 });

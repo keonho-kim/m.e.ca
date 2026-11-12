@@ -22,12 +22,24 @@ message Approval {
   string expires_at = 10;
 }
 message Tool {
+  ToolPhase phase = 7;
   string execution_id = 5;
+  // Set for one independent parallel wave planned by the runtime.
+  string batch_id = 6;
   string call_id = 1;
   string name = 2;
   // Visible arguments only. Truncated arguments are not valid executable JSON.
   bytes arguments_json = 3;
   EventReference reference = 4;
+}
+enum ToolPhase {
+  TOOL_PHASE_UNSPECIFIED = 0;
+  TOOL_PHASE_PENDING = 1;
+  TOOL_PHASE_RUNNING = 2;
+  TOOL_PHASE_SUCCEEDED = 3;
+  TOOL_PHASE_FAILED = 4;
+  TOOL_PHASE_INTERRUPTED = 5;
+  TOOL_PHASE_SKIPPED = 6;
 }
 message Usage { int64 input = 1; int64 output = 2; optional double cost = 3; }
 message Statistics {

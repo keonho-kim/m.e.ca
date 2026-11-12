@@ -1,32 +1,45 @@
 // Purpose: Reload localized terminal history and route scrolling to the older-history worker.
 // Pattern: Presentation projection over paged repository data.
-// Usage: Restoration and language changes reload history; scrolling requests older pages separately.
+// Usage: Initial restoration reads directly; the settings worker prepares localized history for event-loop adoption.
 // Related: internal/storage/sqlite/timeline.go, internal/tui/viewport/viewport.go, internal/tui/view/chat.go, internal/tui/session/keys.go, internal/tui/session/events.go.
 package session
 
 import (
+	"context"
+	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/view"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 func (a *app) loadHistory() error {
-	a.cancelToolDetail()
-	a.chat.historyRevision++
-	a.chat.historyLoading = false
-	records, cursor, err := terminalHistory(a.ctx, a.opts.Store, a.opts.Session.ID, 0, 100)
+	page, err := readLocalizedHistory(a.ctx, a.opts.Store, a.opts.Session.ID, a.language, a.opts.Vault.Redact)
 	if err != nil {
 		return err
 	}
-	formatter := transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}
+	a.applyHistory(page)
+	return nil
+}
+
+func readLocalizedHistory(ctx context.Context, store Store, id string, language locale.Language, redact func(string) string) (*historyPage, error) {
+	records, cursor, err := terminalHistory(ctx, store, id, 0, 100)
+	if err != nil {
+		return nil, err
+	}
+	return &historyPage{cursor: cursor, blocks: (transcript.Formatter{Language: language, Redact: redact}).History(records)}, nil
+}
+
+func (a *app) applyHistory(page *historyPage) {
+	a.cancelToolDetail()
+	a.chat.historyRevision++
+	a.chat.historyLoading = false
 	output := viewport.View{Follow: true, Collapsed: a.chat.output.Collapsed}
-	for _, block := range formatter.History(records) {
+	for _, block := range page.blocks {
 		output.AppendBlock(block)
 	}
 	a.chat.output = output
-	a.chat.historyCursor = cursor
-	a.chat.historyEnd = len(records) == 0 || cursor == 0
-	return nil
+	a.chat.historyCursor = page.cursor
+	a.chat.historyEnd = page.cursor == 0
 }
 func (a *app) scroll(n, w, h int) {
 	transcript := a.chatLayout(view.TranscriptWidth(w))

@@ -8,11 +8,10 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { Text } from '@astryxdesign/core/Text';
 import { useLocale } from '@/shared/i18n';
 
-type Section = 'model' | 'execution' | 'general';
+type Section = 'model' | 'execution';
 const sections = [
   { id: 'model', icon: 'meca:package' },
   { id: 'execution', icon: 'meca:play' },
-  { id: 'general', icon: 'meca:sliders' },
 ] as const;
 
 export function SettingsNavigation({
@@ -32,7 +31,7 @@ export function SettingsNavigation({
         value={tab}
         options={[...sections.map(({ id }) => ({ value: id, label: t(id) }))]}
         onChange={(value) => {
-          if (value === 'model' || value === 'execution' || value === 'general') onChange(value);
+          if (value === 'model' || value === 'execution') onChange(value);
         }}
       />
     );

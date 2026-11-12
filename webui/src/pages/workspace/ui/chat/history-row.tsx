@@ -11,6 +11,7 @@ import {
 } from '@astryxdesign/core/Chat';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { memo } from 'react';
+import { eventNotice } from '@/pages/workspace/model/event-notice';
 import type { HistoryMessageItem } from '@/pages/workspace/model/history-rows';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
 import { messageContent } from '@/pages/workspace/model/message-content';
@@ -18,7 +19,7 @@ import type { Target } from '@/pages/workspace/model/store';
 import { AttachmentImage } from '@/pages/workspace/ui/chat/attachment-image';
 import { DetailContent } from '@/pages/workspace/ui/chat/detail-content';
 import { Thinking } from '@/pages/workspace/ui/chat/thinking';
-import { ToolCall } from '@/pages/workspace/ui/chat/tool-call';
+import { ToolCalls } from '@/pages/workspace/ui/chat/tool-call';
 import { imageURL } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { MarkdownText } from '@/shared/ui/markdown';
@@ -29,16 +30,19 @@ export const HistoryRow = memo(function HistoryRow({
   target,
   thinking,
   inspect,
+  tools,
 }: {
   inspect: InspectionActions;
   item: HistoryMessageItem;
   target: Target;
   thinking?: HistoryMessageItem;
+  tools?: HistoryMessageItem[];
 }) {
   const t = useLocale();
   const user = item.role === 'user',
     event = item.event;
   const content = user ? messageContent(item.text ?? '') : undefined;
+  const notice = event ? eventNotice(event, t) : undefined;
   return (
     <>
       {event?.thinking ? (
@@ -57,7 +61,12 @@ export const HistoryRow = memo(function HistoryRow({
           </ChatMessageBubble>
         </ChatMessage>
       ) : event?.tool ? (
-        <ToolCall target={target} event={event} inspect={inspect} />
+        <ToolCalls
+          target={target}
+          events={tools?.flatMap((item) => (item.event ? [item.event] : [])) ?? [event]}
+          saved
+          inspect={inspect}
+        />
       ) : item.text || item.images?.length ? (
         <ChatMessage
           sender={user ? 'user' : 'assistant'}
@@ -131,8 +140,8 @@ export const HistoryRow = memo(function HistoryRow({
             )}
           </ChatMessageBubble>
         </ChatMessage>
-      ) : event ? (
-        <ChatSystemMessage>{event.skill?.name || event.kind}</ChatSystemMessage>
+      ) : notice ? (
+        <ChatSystemMessage>{notice}</ChatSystemMessage>
       ) : null}
     </>
   );

@@ -1,11 +1,13 @@
 // Purpose: Stage, confirm and save the Default or All Mighty approval mode.
-// Pattern: Event-loop settings use case.
+// Pattern: Event-loop settings presentation with owned background persistence.
 // Usage: !permission opens the shared settings screen; changes apply to future requests.
-// Related: internal/commands/settings/permission.go, internal/tui/view/settings.go, internal/tui/session/confirmation.go.
+// Related: internal/commands/settings/permission.go, internal/tui/view/settings.go, internal/tui/session/settings_save.go.
 package session
 
 import (
+	"context"
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/config"
 
 	settingcmd "github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/policy"
@@ -45,18 +47,10 @@ func (a *app) permissionKey(e *tcell.EventKey) {
 }
 
 func (a *app) savePermission() {
-	if a.work.state.active() {
-		a.status = a.language.Text("Stop the current task before changing settings")
-		return
-	}
-	next, err := settingcmd.Permission(a.ctx, a.opts.Config, policy.Permission(a.choice), a.opts.UpdateConfig)
-	if err != nil {
-		a.fail(err)
-		return
-	}
-	a.opts.Config = next
-	a.settings.Permission = next.Permission
-	a.page, a.status = "chat", ""
+	current, value, update := a.opts.Config, policy.Permission(a.choice), a.opts.UpdateConfig
+	a.startSettingsSave("permission", func(ctx context.Context) (config.Config, error) {
+		return settingcmd.Permission(ctx, current, value, update)
+	})
 }
 
 func (a *app) permissionShortcuts() []view.Shortcut {

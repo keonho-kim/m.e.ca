@@ -49,6 +49,9 @@ func (a *app) restorePending() {
 }
 
 func (a *app) finishPending(success bool) {
+	if a.compose.queued.Paused {
+		return
+	}
 	if a.compose.queued.Edit != nil {
 		a.compose.queued.Edit.Completion = queue.Stopped
 		if success && !a.exit && a.ctx.Err() == nil {

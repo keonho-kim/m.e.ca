@@ -2,14 +2,14 @@
 // Pattern: Browser contract over Astryx's public Markdown extension renderer.
 // Usage: Run with MECA_UI_DESCRIPTOR pointing at TestUIBrowserFixture.
 // Related: webui/src/shared/ui/markdown/pagination.tsx, webui/src/shared/ui/markdown/render-budget.ts.
-import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+
+import { expect } from '@playwright/test';
+import { browserFixture, connectBrowser, test } from '#e2e/fixture';
 
 test('dense ordered responses expose their last entry inline with bounded rendered nodes', async ({
   page,
 }) => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  const fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  const fixture = await browserFixture();
   const source = Array.from({ length: 600 }, (_, index) => `${index + 7}. Entry **${index}**`).join(
     '\n'
   );
@@ -26,11 +26,7 @@ test('dense ordered responses expose their last entry inline with bounded render
       });
     else await route.continue();
   });
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await page
     .locator('.workspace-group')
     .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })

@@ -2,27 +2,25 @@
 // Pattern: Embedded-browser performance contracts using the isolated free Go fixture.
 // Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/navigation/session-list.tsx.
-import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { expect, test, type Page, type Response } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; projectA: string; provider: string; archiveSession: string };
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, type Page, type Response } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 test.beforeAll(async () => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated Go UI fixture first');
-  fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  fixture = await browserFixture();
 });
 test.beforeEach(async ({ page }) => {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).waitFor();
 });
 const operation = (response: Response, key: string) =>
   response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.[key];
 async function create(page: Page) {
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).click();
+  const usage = page.waitForResponse((response) => operation(response, 'sessionUsage'));
   const sessions = page.waitForResponse((response) => operation(response, 'listSessions'));
   const workspaces = page.waitForResponse((response) => operation(response, 'listWorkspaces'));
   await page
@@ -33,7 +31,11 @@ async function create(page: Page) {
   await expect(
     page.getByRole('heading', { name: '어떤 작업을 시작할까요?', exact: true })
   ).toBeVisible();
-  await Promise.all([(await sessions).finished(), (await workspaces).finished()]);
+  await Promise.all([
+    (await sessions).finished(),
+    (await workspaces).finished(),
+    (await usage).finished(),
+  ]);
 }
 
 test('many-line files open directly with bounded DOM and without a duplicate preview read', async ({
@@ -127,11 +129,16 @@ test('a short task avoids repeated state and metadata refreshes', async ({ page 
   // Lazy model preparation emits one model change; text and completion reuse event facts.
   expect(counts.state ?? 0).toBeLessThanOrEqual(1);
   expect(counts.sessionUsage ?? 0).toBeLessThanOrEqual(1);
-  expect(Object.entries(counts).filter(([key]) => key !== 'sessionUsage')
-    .reduce((sum, [, value]) => sum + value, 0)).toBeLessThanOrEqual(8);
+  expect(
+    Object.entries(counts)
+      .filter(([key]) => key !== 'sessionUsage')
+      .reduce((sum, [, value]) => sum + value, 0)
+  ).toBeLessThanOrEqual(8);
 });
 
-test('the composer status line reads resources once and displays completed usage', async ({ page }) => {
+test('the composer status line reads resources once and displays completed usage', async ({
+  page,
+}) => {
   let resources = 0;
   page.on('request', (request) => {
     if (request.url().endsWith('/v1/command') && request.postDataJSON()?.resources) resources++;
@@ -144,7 +151,9 @@ test('the composer status line reads resources once and displays completed usage
   await expect.poll(() => resources).toBe(1);
   await page.getByLabel('작업 입력', { exact: true }).fill('METRICS_FIXTURE');
   await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
-  await expect(page.locator('.completion-summary')).toContainText(/소요 시간 \d{2}:\d{2}:\d{2}.*입력 13.*출력 7/);
+  await expect(page.locator('.completion-summary')).toContainText(
+    /소요 시간 \d{2}:\d{2}:\d{2}.*입력 13.*출력 7/
+  );
   await expect(page.locator('.execution-status')).toContainText(/입력 13.*출력 7/);
   expect(resources).toBe(1);
 });
@@ -158,8 +167,9 @@ test('long Thinking follows the newest output and respects an upward scroll', as
   const body = page.locator('.workspace-body');
   await body.hover();
   await page.mouse.wheel(0, -600);
-  await expect.poll(() => body.evaluate((node) =>
-    node.scrollHeight - node.scrollTop - node.clientHeight)).toBeGreaterThan(100);
+  await expect
+    .poll(() => body.evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight))
+    .toBeGreaterThan(100);
   await page.getByLabel('작업 입력', { exact: true }).fill('LONG_THINKING_FIXTURE');
   await page.getByRole('button', { name: /^(전송|보내기)$/, exact: true }).click();
   const reasoning = page.locator('.live-output .thinking');
@@ -169,7 +179,9 @@ test('long Thinking follows the newest output and respects an upward scroll', as
   await page.request.post(`${fixture.provider}/test/expand-thinking`);
   await expect(reasoning).toContainText('Second reasoning tail');
   await expect.poll(gap).toBeLessThan(12);
-  await expect(reasoning.getByRole('button', { name: '전체 텍스트 보기', exact: true })).toHaveCount(0);
+  await expect(
+    reasoning.getByRole('button', { name: '전체 텍스트 보기', exact: true })
+  ).toHaveCount(0);
   await body.hover();
   await page.mouse.wheel(0, -600);
   await expect.poll(gap).toBeGreaterThan(100);

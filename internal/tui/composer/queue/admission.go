@@ -14,19 +14,15 @@ import (
 const MaxTextBytes = 32 << 20
 
 func (s *State) checkText(candidate requestinput.Request, replace int) error {
-	size := len(candidate.Text)
-	for _, path := range candidate.Paths {
-		size += len(path)
-	}
+	size := candidate.TextBytes()
+	previous := 0
 	for i, request := range s.Messages {
+		previous += request.TextBytes()
 		if i != replace {
-			size += len(request.Text)
-			for _, path := range request.Paths {
-				size += len(path)
-			}
+			size += request.TextBytes()
 		}
 	}
-	if size > MaxTextBytes {
+	if size > MaxTextBytes && (!s.Paused || size > previous) {
 		return faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerQueueBytes)
 	}
 	return nil

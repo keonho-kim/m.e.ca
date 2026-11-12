@@ -71,10 +71,35 @@ export const mecaTheme = defineTheme({
     ],
   },
   components: {
+    center: {
+      base: {
+        ':is(.startup-screen)': {
+          backgroundImage:
+            'linear-gradient(145deg, var(--color-background-surface), var(--color-background-body))',
+        },
+      },
+    },
+    stack: {
+      base: {
+        ':is(.composer-send-hint)': {
+          '--color-text-primary': 'currentColor',
+          '--color-neutral': 'color-mix(in srgb, currentColor 12%, transparent)',
+          '--color-border-emphasized': 'color-mix(in srgb, currentColor 30%, transparent)',
+        },
+        ':is(.startup-surface)': {
+          backgroundColor: 'var(--meca-glass-surface)',
+          WebkitBackdropFilter: 'var(--meca-glass-filter)',
+          backdropFilter: 'var(--meca-glass-filter)',
+          borderRadius: 'var(--radius-container)',
+          boxShadow: 'var(--meca-glass-edge), var(--meca-glass-shadow)',
+        },
+      },
+    },
     'collapsible-trigger': { base: { minHeight: 'var(--size-element-md)' } },
     collapsible: {
       base: {
         ':is([data-tone="tool"])': {
+          display: 'contents',
           backgroundColor: 'transparent',
           borderWidth: '0',
           boxShadow: 'none',
@@ -102,9 +127,9 @@ export const mecaTheme = defineTheme({
     },
     button: {
       'variant:tool-request': {
-        position: 'absolute',
-        insetBlockStart: '0',
-        insetInlineEnd: '0',
+        gridColumn: '2',
+        gridRow: '1',
+        justifySelf: 'start',
         backgroundColor: 'transparent',
         color: 'var(--color-icon-primary)',
       },
@@ -132,8 +157,8 @@ export const mecaTheme = defineTheme({
     'side-nav': {
       base: {
         backgroundColor: 'var(--meca-glass-surface)',
-        backdropFilter: 'var(--meca-glass-filter)',
         WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backdropFilter: 'var(--meca-glass-filter)',
         boxShadow: 'var(--meca-glass-edge)',
       },
     },
@@ -143,23 +168,23 @@ export const mecaTheme = defineTheme({
         animationDuration: 'var(--duration-medium)',
         animationTimingFunction: 'var(--ease-entrance)',
         backgroundColor: 'var(--color-background-card)',
-        backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
+        backdropFilter: 'none',
         boxShadow: 'var(--shadow-high)',
       },
     },
     drawer: {
       base: {
         backgroundColor: 'var(--color-background-card)',
-        backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
+        backdropFilter: 'none',
       },
     },
     'alert-dialog': {
       base: {
         backgroundColor: 'var(--color-background-card)',
-        backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
+        backdropFilter: 'none',
       },
     },
     lightbox: {
@@ -171,23 +196,23 @@ export const mecaTheme = defineTheme({
     },
     'dropdown-menu': {
       base: {
-        backdropFilter: 'var(--meca-glass-filter)',
         WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backdropFilter: 'var(--meca-glass-filter)',
         boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
       },
     },
     popover: {
       base: {
-        backdropFilter: 'var(--meca-glass-filter)',
         WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backdropFilter: 'var(--meca-glass-filter)',
         boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
       },
     },
     'chat-composer': {
       base: {
         borderRadius: 'var(--radius-chat)',
-        backdropFilter: 'var(--meca-glass-filter)',
         WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backdropFilter: 'var(--meca-glass-filter)',
         backgroundColor: 'var(--meca-glass-surface)',
         boxShadow: 'var(--meca-glass-edge), var(--meca-glass-shadow)',
       },
@@ -196,8 +221,8 @@ export const mecaTheme = defineTheme({
       base: {
         ':is(.workspace-header)': {
           backgroundColor: 'var(--meca-glass-surface)',
-          backdropFilter: 'var(--meca-glass-filter)',
           WebkitBackdropFilter: 'var(--meca-glass-filter)',
+          backdropFilter: 'var(--meca-glass-filter)',
           boxShadow: 'var(--meca-glass-edge)',
         },
       },
@@ -220,8 +245,8 @@ export const mecaTheme = defineTheme({
         backgroundColor: 'var(--color-background-popover)',
         borderRadius: 'var(--radius-container)',
         boxShadow: 'var(--shadow-low)',
-        backdropFilter: 'var(--meca-glass-filter)',
         WebkitBackdropFilter: 'var(--meca-glass-filter)',
+        backdropFilter: 'var(--meca-glass-filter)',
       },
     },
   },

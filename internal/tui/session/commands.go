@@ -36,6 +36,14 @@ func (a *app) inputCommand() (commands.Command, error) {
 
 func (a *app) submitCommand(command commands.Command) {
 	if command.Kind == commands.Empty {
+		if a.page == "chat" && a.compose.queued.Paused && !a.work.state.active() && len(a.compose.queued.Messages) > 0 {
+			if a.connection.client == nil || a.connection.selection.Model == "" {
+				a.status = a.language.Text("Select a model using !model")
+				return
+			}
+			a.compose.queued.Paused = false
+			a.finishPending(true)
+		}
 		return
 	}
 	if command.Kind == commands.Exit {

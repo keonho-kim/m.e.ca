@@ -23,6 +23,7 @@ type Source interface {
 }
 
 type Reader struct {
+	watches     directoryWatches
 	directories directorySnapshots
 	project     string
 	resolve     func(policy.Scope, string) (Target, error)

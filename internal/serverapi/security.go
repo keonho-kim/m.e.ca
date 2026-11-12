@@ -106,12 +106,16 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	// Browser WebSocket APIs cannot set Authorization. The first bounded frame
 	// authenticates that transport before any command or event is accepted.
 	if !t.socketHandshake(r) {
-		values := r.Header.Values("Authorization")
-		if (len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || !t.authenticates(strings.TrimPrefix(values[0], "Bearer "))) && !t.browserAuthenticated(r) {
+		if !t.bearerAuthenticated(r) && !t.browserAuthenticated(r) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			writeAuthError(w, r)
 			return false
 		}
 	}
 	return true
+}
+
+func (t *Transport) bearerAuthenticated(r *http.Request) bool {
+	values := r.Header.Values("Authorization")
+	return len(values) == 1 && strings.HasPrefix(values[0], "Bearer ") && t.authenticates(strings.TrimPrefix(values[0], "Bearer "))
 }

@@ -22,10 +22,12 @@ const (
 
 type Call struct {
 	// ExecutionID is assigned by the runtime, separately from the provider's ID.
-	ExecutionID string          `json:"execution_id,omitempty"`
-	ID          string          `json:"id"`
-	Name        string          `json:"name"`
-	Arguments   json.RawMessage `json:"arguments"`
+	ExecutionID string `json:"execution_id,omitempty"`
+	// BatchID identifies one parallel execution wave planned by the runtime, never provider ordering.
+	BatchID   string          `json:"batch_id,omitempty"`
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Arguments json.RawMessage `json:"arguments"`
 }
 
 // ExecutionKey uses the admitted execution identity. Candidates that never reach

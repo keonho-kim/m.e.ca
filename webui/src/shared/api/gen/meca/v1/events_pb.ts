@@ -7,8 +7,8 @@
 // @generated from file meca/v1/events.proto (package meca.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { EventReference, EventReferenceJson } from "./control_pb";
 import { file_meca_v1_control } from "./control_pb";
 import type { SkillRead, SkillReadJson } from "./skills_pb";
@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meca/v1/events.proto.
  */
 export const file_meca_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJIn8KBFRvb2wSFAoMZXhlY3V0aW9uX2lkGAUgASgJEg8KB2NhbGxfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIWCg5hcmd1bWVudHNfanNvbhgDIAEoDBIqCglyZWZlcmVuY2UYBCABKAsyFy5tZWNhLnYxLkV2ZW50UmVmZXJlbmNlIkIKBVVzYWdlEg0KBWlucHV0GAEgASgDEg4KBm91dHB1dBgCIAEoAxIRCgRjb3N0GAMgASgBSACIAQFCBwoFX2Nvc3QicgoKU3RhdGlzdGljcxISCgpjb25jdXJyZW50GAEgASgIEhYKDmVsYXBzZWRfbWlsbGlzGAIgASgDEhkKEWdlbmVyYXRpb25fbWlsbGlzGAMgASgDEh0KBXVzYWdlGAQgASgLMg4ubWVjYS52MS5Vc2FnZSJzChVHZW5lcmF0aW9uTWVhc3VyZW1lbnQSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCRIPCgdhdHRlbXB0GAMgASgFEhYKDmVsYXBzZWRfbWlsbGlzGAQgASgDEhcKD21lYXN1cmVkX21pbGxpcxgFIAEoAyKFAQoEVGVhbRIQCghyZXBseV90bxgBIAEoAxIUCgxyZXBseV9hdXRob3IYAiABKAkSEAoIbWVudGlvbnMYAyADKAkSEAoIYmFzZWRfb24YBCABKAMSDQoFcGF0aHMYBSADKAkSEAoIY29udHJhY3QYBiABKAkSEAoIcmV2aXNpb24YByABKAQiwAUKBUV2ZW50EhQKDG11dGF0aW9uX2tleRgeIAEoCRIUCgx3b3Jrc3BhY2VfaWQYHCABKAkSJAoHb3V0Y29tZRgdIAEoCzITLm1lY2EudjEuUnVuT3V0Y29tZRIOCgZjdXJzb3IYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEg0KBWFnZW50GAQgASgJEg4KBnJ1bl9pZBgFIAEoCRISCgpnZW5lcmF0aW9uGAYgASgEEgwKBGtpbmQYByABKAkSDAoEdGV4dBgIIAEoCRIQCgh0aGlua2luZxgJIAEoCRINCgVyZXNldBgKIAEoCBIRCgl0cnVuY2F0ZWQYCyABKAgSDQoFZmluYWwYDCABKAgSIwoIYXBwcm92YWwYDSABKAsyES5tZWNhLnYxLkFwcHJvdmFsEhMKC2FwcHJvdmFsX2lkGA4gASgJEhsKBHRvb2wYDyABKAsyDS5tZWNhLnYxLlRvb2wSHQoFdXNhZ2UYECABKAsyDi5tZWNhLnYxLlVzYWdlEhsKBHRlYW0YESABKAsyDS5tZWNhLnYxLlRlYW0SFwoPYXBwcm92YWxfc291cmNlGBIgASgJEg4KBnN0YXR1cxgTIAEoCRINCgVlcnJvchgUIAEoCRInCgpzdGF0aXN0aWNzGBUgASgLMhMubWVjYS52MS5TdGF0aXN0aWNzEjMKC21lYXN1cmVtZW50GBYgASgLMh4ubWVjYS52MS5HZW5lcmF0aW9uTWVhc3VyZW1lbnQSEwoLb2NjdXJyZWRfYXQYFyABKAkSEgoKZXJyb3JfY29kZRgYIAEoCRIhCgVza2lsbBgZIAEoCzISLm1lY2EudjEuU2tpbGxSZWFkEhAKCHNlcXVlbmNlGBogASgEEhcKD21lYXN1cmVkX21pbGxpcxgbIAEoA0JBWj9naXRodWIuY29tL2tlb25oby1raW0vbWVjYS9pbnRlcm5hbC9zZXJ2ZXJhcGkvZ2VuL21lY2F2MTttZWNhdjFiBnByb3RvMw", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application]);
+  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJIrQBCgRUb29sEiEKBXBoYXNlGAcgASgOMhIubWVjYS52MS5Ub29sUGhhc2USFAoMZXhlY3V0aW9uX2lkGAUgASgJEhAKCGJhdGNoX2lkGAYgASgJEg8KB2NhbGxfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIWCg5hcmd1bWVudHNfanNvbhgDIAEoDBIqCglyZWZlcmVuY2UYBCABKAsyFy5tZWNhLnYxLkV2ZW50UmVmZXJlbmNlIkIKBVVzYWdlEg0KBWlucHV0GAEgASgDEg4KBm91dHB1dBgCIAEoAxIRCgRjb3N0GAMgASgBSACIAQFCBwoFX2Nvc3QicgoKU3RhdGlzdGljcxISCgpjb25jdXJyZW50GAEgASgIEhYKDmVsYXBzZWRfbWlsbGlzGAIgASgDEhkKEWdlbmVyYXRpb25fbWlsbGlzGAMgASgDEh0KBXVzYWdlGAQgASgLMg4ubWVjYS52MS5Vc2FnZSJzChVHZW5lcmF0aW9uTWVhc3VyZW1lbnQSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCRIPCgdhdHRlbXB0GAMgASgFEhYKDmVsYXBzZWRfbWlsbGlzGAQgASgDEhcKD21lYXN1cmVkX21pbGxpcxgFIAEoAyKFAQoEVGVhbRIQCghyZXBseV90bxgBIAEoAxIUCgxyZXBseV9hdXRob3IYAiABKAkSEAoIbWVudGlvbnMYAyADKAkSEAoIYmFzZWRfb24YBCABKAMSDQoFcGF0aHMYBSADKAkSEAoIY29udHJhY3QYBiABKAkSEAoIcmV2aXNpb24YByABKAQiwAUKBUV2ZW50EhQKDG11dGF0aW9uX2tleRgeIAEoCRIUCgx3b3Jrc3BhY2VfaWQYHCABKAkSJAoHb3V0Y29tZRgdIAEoCzITLm1lY2EudjEuUnVuT3V0Y29tZRIOCgZjdXJzb3IYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEg0KBWFnZW50GAQgASgJEg4KBnJ1bl9pZBgFIAEoCRISCgpnZW5lcmF0aW9uGAYgASgEEgwKBGtpbmQYByABKAkSDAoEdGV4dBgIIAEoCRIQCgh0aGlua2luZxgJIAEoCRINCgVyZXNldBgKIAEoCBIRCgl0cnVuY2F0ZWQYCyABKAgSDQoFZmluYWwYDCABKAgSIwoIYXBwcm92YWwYDSABKAsyES5tZWNhLnYxLkFwcHJvdmFsEhMKC2FwcHJvdmFsX2lkGA4gASgJEhsKBHRvb2wYDyABKAsyDS5tZWNhLnYxLlRvb2wSHQoFdXNhZ2UYECABKAsyDi5tZWNhLnYxLlVzYWdlEhsKBHRlYW0YESABKAsyDS5tZWNhLnYxLlRlYW0SFwoPYXBwcm92YWxfc291cmNlGBIgASgJEg4KBnN0YXR1cxgTIAEoCRINCgVlcnJvchgUIAEoCRInCgpzdGF0aXN0aWNzGBUgASgLMhMubWVjYS52MS5TdGF0aXN0aWNzEjMKC21lYXN1cmVtZW50GBYgASgLMh4ubWVjYS52MS5HZW5lcmF0aW9uTWVhc3VyZW1lbnQSEwoLb2NjdXJyZWRfYXQYFyABKAkSEgoKZXJyb3JfY29kZRgYIAEoCRIhCgVza2lsbBgZIAEoCzISLm1lY2EudjEuU2tpbGxSZWFkEhAKCHNlcXVlbmNlGBogASgEEhcKD21lYXN1cmVkX21pbGxpcxgbIAEoAyq8AQoJVG9vbFBoYXNlEhoKFlRPT0xfUEhBU0VfVU5TUEVDSUZJRUQQABIWChJUT09MX1BIQVNFX1BFTkRJTkcQARIWChJUT09MX1BIQVNFX1JVTk5JTkcQAhIYChRUT09MX1BIQVNFX1NVQ0NFRURFRBADEhUKEVRPT0xfUEhBU0VfRkFJTEVEEAQSGgoWVE9PTF9QSEFTRV9JTlRFUlJVUFRFRBAFEhYKElRPT0xfUEhBU0VfU0tJUFBFRBAGQkFaP2dpdGh1Yi5jb20va2VvbmhvLWtpbS9tZWNhL2ludGVybmFsL3NlcnZlcmFwaS9nZW4vbWVjYXYxO21lY2F2MWIGcHJvdG8z", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application]);
 
 /**
  * @generated from message meca.v1.Approval
@@ -145,9 +145,21 @@ export const ApprovalSchema: GenMessage<Approval, {jsonType: ApprovalJson}> = /*
  */
 export type Tool = Message<"meca.v1.Tool"> & {
   /**
+   * @generated from field: meca.v1.ToolPhase phase = 7;
+   */
+  phase: ToolPhase;
+
+  /**
    * @generated from field: string execution_id = 5;
    */
   executionId: string;
+
+  /**
+   * Set for one independent parallel wave planned by the runtime.
+   *
+   * @generated from field: string batch_id = 6;
+   */
+  batchId: string;
 
   /**
    * @generated from field: string call_id = 1;
@@ -177,9 +189,21 @@ export type Tool = Message<"meca.v1.Tool"> & {
  */
 export type ToolJson = {
   /**
+   * @generated from field: meca.v1.ToolPhase phase = 7;
+   */
+  phase?: ToolPhaseJson;
+
+  /**
    * @generated from field: string execution_id = 5;
    */
   executionId?: string;
+
+  /**
+   * Set for one independent parallel wave planned by the runtime.
+   *
+   * @generated from field: string batch_id = 6;
+   */
+  batchId?: string;
 
   /**
    * @generated from field: string call_id = 1;
@@ -789,4 +813,55 @@ export type EventJson = {
  */
 export const EventSchema: GenMessage<Event, {jsonType: EventJson}> = /*@__PURE__*/
   messageDesc(file_meca_v1_events, 6);
+
+/**
+ * @generated from enum meca.v1.ToolPhase
+ */
+export enum ToolPhase {
+  /**
+   * @generated from enum value: TOOL_PHASE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_RUNNING = 2;
+   */
+  RUNNING = 2,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_SUCCEEDED = 3;
+   */
+  SUCCEEDED = 3,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_FAILED = 4;
+   */
+  FAILED = 4,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_INTERRUPTED = 5;
+   */
+  INTERRUPTED = 5,
+
+  /**
+   * @generated from enum value: TOOL_PHASE_SKIPPED = 6;
+   */
+  SKIPPED = 6,
+}
+
+/**
+ * @generated from enum meca.v1.ToolPhase
+ */
+export type ToolPhaseJson = "TOOL_PHASE_UNSPECIFIED" | "TOOL_PHASE_PENDING" | "TOOL_PHASE_RUNNING" | "TOOL_PHASE_SUCCEEDED" | "TOOL_PHASE_FAILED" | "TOOL_PHASE_INTERRUPTED" | "TOOL_PHASE_SKIPPED";
+
+/**
+ * Describes the enum meca.v1.ToolPhase.
+ */
+export const ToolPhaseSchema: GenEnum<ToolPhase, ToolPhaseJson> = /*@__PURE__*/
+  enumDesc(file_meca_v1_events, 0);
 

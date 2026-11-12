@@ -33,7 +33,7 @@ func (s *Store) SaveSelection(ctx context.Context, session string, selection mod
 	if len(body) > 16*1024*1024 {
 		return faults.Errorf(diagcatalog.SqliteModelSelectionExceedsLimit)
 	}
-	result, err := s.db.ExecContext(ctx, "UPDATE sessions SET selection=? WHERE id=?", body, session)
+	result, err := s.execWrite(ctx, "UPDATE sessions SET selection=? WHERE id=?", body, session)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
-import { call, queries } from '@/shared/api';
+import { registerWorkspace } from '@/pages/workspace/model/workspace-picker';
+import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError, failure } from '@/shared/lib/errors';
 
@@ -52,11 +53,7 @@ export default function FolderPicker({ navigate }: { navigate: (target: Target) 
     setBusy(true);
     setError('');
     try {
-      const reply = await call('', { addWorkspace: { path: value } });
-      queries.setQueryData(['workspaces'], reply.workspaces);
-      const workspace = reply.workspaces?.items?.find((v) => v.path === value);
-      if (!workspace?.id) throw failure('invalid_response');
-      navigate({ workspace: workspace.id, session: '' });
+      navigate(await registerWorkspace(value));
       useWorkspaceStore.getState().set({ picker: false });
     } catch (error) {
       setError(describeError(error));

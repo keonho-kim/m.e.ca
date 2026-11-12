@@ -8,6 +8,7 @@ import "time"
 
 type State struct {
 	ExecutionID      string `json:"-"`
+	BatchID          string `json:"-"`
 	ID               string "json:\"command_id\""
 	CallID           string "json:\"-\""
 	Command          string "json:\"command\""
@@ -21,7 +22,7 @@ type State struct {
 }
 
 // CallIdentity keeps the runtime execution separate from a provider's reusable call ID.
-type CallIdentity struct{ CallID, ExecutionID string }
+type CallIdentity struct{ CallID, ExecutionID, BatchID string }
 
 func (j *job) snapshot() State {
 	j.mu.Lock()

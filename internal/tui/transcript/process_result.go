@@ -32,6 +32,9 @@ func (f Formatter) processOutput(event runrecord.Event, fields map[string]json.R
 		}
 	}
 	status := processStatus(event.Kind, fields)
+	if commandOriginalUnavailable(event) {
+		status = "Command output unavailable"
+	}
 	if status != "" {
 		text += indentTool(f.Language.Text(status))
 		if diagnostic := f.processDiagnostic(event); diagnostic != "" {
@@ -42,6 +45,12 @@ func (f Formatter) processOutput(event runrecord.Event, fields map[string]json.R
 }
 
 func processStatus(kind string, fields map[string]json.RawMessage) string {
+	if raw, exists := fields["output_unavailable"]; exists {
+		var unavailable bool
+		if json.Unmarshal(raw, &unavailable) == nil && unavailable {
+			return "Command output unavailable"
+		}
+	}
 	var status string
 	if raw, ok := fields["Status"]; ok && json.Unmarshal(raw, &status) != nil {
 		return ""
@@ -71,6 +80,10 @@ func processStatus(kind string, fields map[string]json.RawMessage) string {
 	default:
 		return ""
 	}
+}
+
+func commandOriginalUnavailable(event runrecord.Event) bool {
+	return event.Operation != nil && event.Operation.Failure != nil && diagcatalog.Semantic(event.Operation.Failure.Code) == diagcatalog.PersistenceFailed
 }
 
 func (f Formatter) processDiagnostic(event runrecord.Event) string {

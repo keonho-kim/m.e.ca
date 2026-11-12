@@ -5,12 +5,13 @@
 import { ChatSystemMessage } from '@astryxdesign/core/Chat';
 import { VStack } from '@astryxdesign/core/Layout';
 import { memo } from 'react';
-import { toolIdentity } from '@/pages/workspace/model/chat-events';
+import { toolBatchIdentity, toolGroups, toolIdentity } from '@/pages/workspace/model/chat-events';
+import { eventNotice } from '@/pages/workspace/model/event-notice';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
-import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
-import { isActiveTask } from '@/pages/workspace/model/task-state';
-import { ToolCall } from '@/pages/workspace/ui/chat/tool-call';
+import type { Target } from '@/pages/workspace/model/store';
+import { ToolCalls } from '@/pages/workspace/ui/chat/tool-call';
 import type { EventJson } from '@/shared/api';
+import { useLocale } from '@/shared/i18n';
 export const LiveActivity = memo(function LiveActivity({
   target,
   events,
@@ -20,43 +21,44 @@ export const LiveActivity = memo(function LiveActivity({
   target: Target;
   events: EventJson[];
 }) {
-  const tasks = useWorkspaceStore((state) => state.tasks);
-  const entries = events
-    .filter(
-      (e) =>
-        (!e.taskId || !tasks[e.taskId] || isActiveTask(tasks[e.taskId]?.status ?? 'running')) &&
-        e.workspaceId === target.workspace &&
-        e.sessionId === target.session &&
-        (e.tool ||
-          e.skill ||
-          [
-            'team_notice',
-            'team_work',
-            'retry',
-            'compaction_started',
-            'compaction_finished',
-          ].includes(e.kind ?? ''))
-    )
-    .slice(-12);
+  const t = useLocale();
+  const entries = events.filter(
+    (e) =>
+      e.workspaceId === target.workspace &&
+      e.sessionId === target.session &&
+      (e.tool ||
+        e.skill ||
+        ['team_work', 'retry', 'compaction_started', 'compaction_finished'].includes(e.kind ?? ''))
+  );
   const tools = entries.filter((event) => event.tool);
   if (!entries.length) return null;
   return (
     <VStack gap={3}>
-      {tools.map((event) => (
-        <ToolCall
-          key={toolIdentity(event) ?? `${event.taskId}/${event.sequence}`}
-          target={target}
-          event={event}
-          inspect={inspect}
-        />
-      ))}
+      {toolGroups(tools)
+        .slice(-12)
+        .map((events) => (
+          <ToolCalls
+            key={
+              toolBatchIdentity(events[0]) ??
+              toolIdentity(events[0]) ??
+              `${events[0]?.taskId}/${events[0]?.sequence}`
+            }
+            target={target}
+            events={events}
+            inspect={inspect}
+          />
+        ))}
       {entries
         .filter((event) => !event.tool)
-        .map((event) => (
-          <ChatSystemMessage key={`${event.taskId}/${event.sequence}/${event.agent}`}>
-            {event.agent || 'MECA'} · {event.skill?.name || event.kind} {event.text?.slice(0, 1024)}
-          </ChatSystemMessage>
-        ))}
+        .slice(-12)
+        .map((event) => {
+          const notice = eventNotice(event, t);
+          return notice ? (
+            <ChatSystemMessage key={`${event.taskId}/${event.sequence}/${event.agent}`}>
+              {event.agent || 'MECA'} · {notice}
+            </ChatSystemMessage>
+          ) : null;
+        })}
     </VStack>
   );
 });

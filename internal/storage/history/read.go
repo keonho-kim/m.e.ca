@@ -1,6 +1,6 @@
 // Purpose: Distinguish original restoration budgets from visible text preview lengths.
 // Pattern: Consumer-owned history read bounds.
-// Usage: Server reads supply both bounds; terminal reads use their existing zero-value policy.
+// Usage: Server previews and terminal tool reads supply operation-specific byte bounds and reservations.
 // Related: internal/storage/sqlite/timeline.go, internal/commands/server/snapshot.go.
 package history
 

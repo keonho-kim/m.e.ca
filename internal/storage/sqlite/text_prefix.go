@@ -32,11 +32,16 @@ func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudge
 		}
 		return content.StringPrefix(raw, limit)
 	}
+	// Encoded text cannot decode to more bytes than its authenticated raw size.
+	// Small prefixes must not reserve the caller's entire remaining window.
+	limit = min(limit, value.size)
 	if !budget.previewScratch {
 		budget.scratch = content.PreviewScratchBytes
 		budget.previewScratch = true
 	}
-	if err := budget.take(limit); err != nil {
+	// The validator may retain six encoded bytes per visible byte (\u0000).
+	// Charge its actual raw-size bound, rather than assuming an ASCII prefix.
+	if err := budget.take(min(value.size, 6*limit+16)); err != nil {
 		return "", false, err
 	}
 	reader := &payloadChunks{ctx: ctx, store: s, id: id, size: stored}

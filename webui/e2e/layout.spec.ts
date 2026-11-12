@@ -2,21 +2,20 @@
 // Pattern: Browser-to-engine regression contracts over the isolated UI fixture.
 // Usage: Run with MECA_UI_DESCRIPTOR after rebuilding the embedded UI.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/files/file-document.tsx.
+
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: { url: string; tokenFile: string; projectA: string };
+let fixture: BrowserFixture;
 const file = 'layout-review.md';
 const original =
   '# Layout review\n\n```sql\nSELECT ' +
   'customer_revenue_column, '.repeat(60) +
   'id FROM reports;\n```\n';
 test.beforeAll(async () => {
-  const descriptor = process.env.MECA_UI_DESCRIPTOR;
-  test.skip(!descriptor, 'start the isolated UI fixture first');
-  if (!descriptor) return;
-  fixture = JSON.parse(await readFile(descriptor, 'utf8'));
+  fixture = await browserFixture();
   await writeFile(join(fixture.projectA, file), original);
 });
 async function create(page: Page) {
@@ -29,11 +28,7 @@ async function create(page: Page) {
   await expect(page.getByRole('combobox', { name: '작업 입력', exact: true })).toBeEnabled();
 }
 test.beforeEach(async ({ page }) => {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   await create(page);
 });
@@ -58,28 +53,34 @@ test('the empty composer accepts pointer typing after settings closes', async ({
   const settings = page.getByRole('dialog', { name: '설정', exact: true });
   await expect(settings.getByRole('combobox', { name: 'Provider', exact: true })).toBeVisible();
   await settings.getByRole('button', { name: '닫기', exact: true }).click();
-  await expect.poll(async () => (await input.boundingBox())?.height ?? 0).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await input.boundingBox().then(required)).height)
+    .toBeGreaterThan(0);
   await input.click();
   await input.pressSequentially('Pointer typing works');
   await expect(input).toHaveText('Pointer typing works');
 });
-test('the header contains navigation and chat content uses 80 percent of its container', async ({ page }) => {
+test('the header contains navigation and chat content uses 80 percent of its container', async ({
+  page,
+}) => {
   const header = page.locator('.workspace-header');
   await expect(header.getByRole('button', { name: '작업', exact: true })).toHaveCount(0);
-  await expect(header.getByRole('tablist', { name: '작업 화면', exact: true }).getByRole('tab')).toHaveCount(3);
+  await expect(
+    header.getByRole('tablist', { name: '작업 화면', exact: true }).getByRole('tab')
+  ).toHaveCount(3);
   await expect(header.getByText('alpha', { exact: true })).toHaveCount(0);
-  const body = await page.locator('.workspace-body').boundingBox();
-  const chat = await page.locator('.chat-content').boundingBox();
-  expect(chat!.width / body!.width).toBeCloseTo(0.8, 1);
-  const composer = await page.locator('.composer').locator('..').boundingBox();
-  expect(composer!.width / body!.width).toBeCloseTo(0.8, 1);
+  const body = await page.locator('.workspace-body').boundingBox().then(required);
+  const chat = await page.locator('.chat-content').boundingBox().then(required);
+  expect(chat.width / body.width).toBeCloseTo(0.8, 1);
+  const composer = await page.locator('.composer').locator('..').boundingBox().then(required);
+  expect(composer.width / body.width).toBeCloseTo(0.8, 1);
 });
 test('long code stays inside its document and leaves file controls reachable', async ({ page }) => {
   await openFile(page);
   const preview = page.getByRole('radio', { name: 'Preview', exact: true });
   expect(await hitTarget(preview)).toBe(true);
-  const bounds = await preview.boundingBox();
-  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  const bounds = await preview.boundingBox().then(required);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(required(page.viewportSize()).width);
   await expect(page.getByRole('radio', { name: 'Raw', exact: true })).toBeChecked();
   await preview.click();
   await expect(preview).toBeChecked();
@@ -87,11 +88,16 @@ test('long code stays inside its document and leaves file controls reachable', a
   await expect(page.getByRole('radio', { name: 'Raw', exact: true })).toBeChecked();
   expect(await hitTarget(preview)).toBe(true);
   await page.setViewportSize({ width: 320, height: 844 });
-  await expect.poll(async () => {
-    const selector = await page.getByRole('radiogroup', { name: '파일 보기', exact: true }).boundingBox();
-    const panel = await page.locator('.file-document').boundingBox();
-    return panel!.x + panel!.width - selector!.x - selector!.width;
-  }).toBeLessThan(20);
+  await expect
+    .poll(async () => {
+      const selector = await page
+        .getByRole('radiogroup', { name: '파일 보기', exact: true })
+        .boundingBox()
+        .then(required);
+      const panel = await page.locator('.file-document').boundingBox().then(required);
+      return panel.x + panel.width - selector.x - selector.width;
+    })
+    .toBeLessThan(20);
   expect(await hitTarget(preview)).toBe(true);
 });
 test('Markdown preview reads unsaved edits and preserves editor undo and redo', async ({
@@ -132,12 +138,17 @@ test('a narrow skill dialog shows a readable document and can return to its list
   await page.getByRole('menuitem', { name: '스킬 목록 보기', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '스킬', exact: true });
   // Measure the title and frame in one browser turn while the native dialog animates.
-  await expect.poll(() => dialog.getByRole('heading', { name: '스킬', exact: true }).evaluate((title) => {
-    const frame = title.closest('dialog,[role="dialog"]');
-    if (!frame) throw new Error('Missing skill dialog frame');
-    const outer = frame.getBoundingClientRect(), inner = title.getBoundingClientRect();
-    return Math.min(inner.x - outer.x, inner.y - outer.y);
-  })).toBeGreaterThan(8);
+  await expect
+    .poll(() =>
+      dialog.getByRole('heading', { name: '스킬', exact: true }).evaluate((title) => {
+        const frame = title.closest('dialog,[role="dialog"]');
+        if (!frame) throw new Error('Missing skill dialog frame');
+        const outer = frame.getBoundingClientRect(),
+          inner = title.getBoundingClientRect();
+        return Math.min(inner.x - outer.x, inner.y - outer.y);
+      })
+    )
+    .toBeGreaterThan(8);
   await dialog
     .locator('.skill-entry')
     .filter({ hasText: 'ui-design' })
@@ -146,7 +157,7 @@ test('a narrow skill dialog shows a readable document and can return to its list
     .click();
   const document = dialog.locator('.skill-document');
   await expect(document.getByRole('heading', { name: 'UI DESIGN', exact: true })).toBeVisible();
-  expect((await document.boundingBox())!.width).toBeGreaterThan(280);
+  expect((await document.boundingBox().then(required)).width).toBeGreaterThan(280);
   await dialog.getByRole('button', { name: '스킬 목록으로', exact: true }).click();
   await expect(dialog.getByRole('textbox', { name: '스킬 검색', exact: true })).toBeVisible();
 });

@@ -4,7 +4,6 @@
 // Related: webui/src/pages/workspace/model/submission.ts, webui/src/pages/workspace/model/followups.ts.
 
 import { changed } from '@/pages/workspace/api/queries';
-import { clearFollowups } from '@/pages/workspace/model/followups';
 import { waitSelections } from '@/pages/workspace/model/reference-queue';
 import {
   emptyInput,
@@ -13,7 +12,7 @@ import {
   targetKey,
   useWorkspaceStore,
 } from '@/pages/workspace/model/store';
-import { clearPending, startRequest } from '@/pages/workspace/model/submission';
+import { startRequest } from '@/pages/workspace/model/submission';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { call } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
@@ -35,8 +34,4 @@ export async function send(target: Target, input: Input, reserve = false): Promi
     return true;
   }
   return startRequest(target, input);
-}
-export function clearSubmissions() {
-  clearPending();
-  clearFollowups();
 }

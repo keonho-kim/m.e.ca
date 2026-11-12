@@ -43,8 +43,26 @@ func (e *Editor) SetPrefix(prefix string) {
 		return
 	}
 	e.prefix = prefix
+	e.display = ""
 	e.layout = editorLayout{}
 	e.vertical = false
+}
+
+func (e *Editor) prompt() string {
+	if e.prefix != "" {
+		return e.prefix
+	}
+	return "> "
+}
+
+func (e *Editor) displaySource() string {
+	if e.display == "" {
+		prefix := e.prompt()
+		e.display = prefix + e.String()
+		e.text = e.display[len(prefix):]
+		e.textCapacity = len(e.display)
+	}
+	return e.display
 }
 
 func (l *editorLayout) rowAt(position int) int {
@@ -75,11 +93,8 @@ func (e *Editor) prepareLayout(width int) {
 	if l.width == width && l.rows != nil && !l.dirty {
 		return
 	}
-	prefix := e.prefix
-	if prefix == "" {
-		prefix = "> "
-	}
-	source := prefix + e.String()
+	prefix := e.prompt()
+	source := e.displaySource()
 	start, position := 0, 0
 	indent := ""
 	if l.width == width && l.dirty {

@@ -26,6 +26,14 @@ const copy = {
   yes: ['네', 'Yes'],
   no: ['아니오', 'No'],
   executionInfo: ['실행 정보', 'Execution details'],
+  requestMeasurements: [
+    '이번 응답의 토큰·생성 속도·총 소요 시간',
+    'Tokens, generation speed and elapsed time for this response',
+  ],
+  conversationUsage: [
+    '입력·출력·비용은 대화 누적값 · 경과·속도는 현재 또는 마지막 작업',
+    'Input, output and cost are conversation totals; elapsed time and speed describe the current or last request.',
+  ],
   composerMenu: ['첨부 및 스킬', 'Attachments and skills'],
   fileWatchReconnecting: ['파일 변경 감시 연결 복구 중', 'Reconnecting file change notifications'],
   browseSkills: ['스킬 목록 보기', 'Browse skills'],
@@ -134,10 +142,9 @@ const copy = {
   reconnecting: ['연결 복구 중', 'Reconnecting'],
   stop: ['작업 중지', 'Stop task'],
   send: ['전송', 'Send'],
-  sendHint: [
-    '↵ 전송·방향 수정 · {shortcut} 후속 예약',
-    '↵ Send or steer · {shortcut} Queue follow-up',
-  ],
+  sendIdle: ['전송 · 대기 중', 'Send · idle'],
+  steerActive: ['방향 수정 · 응답 중', 'Steer · running'],
+  queueActive: ['후속 예약 · 응답 중', 'Queue · running'],
   steer: ['방향 수정', 'Steer'],
   queue: ['후속 예약', 'Queue follow-up'],
   queueTitle: ['예약 요청', 'Queued requests'],
@@ -151,7 +158,10 @@ const copy = {
   noSessions: ['아직 대화가 없습니다', 'No conversations yet'],
   noWorkspace: ['워크스페이스를 추가하세요', 'Add a workspace'],
   untitled: ['새 대화', 'New conversation'],
+  openConversation: ['대화 열기', 'Open conversation'],
   loading: ['불러오는 중', 'Loading'],
+  checkingSession: ['서버 연결을 확인하고 있습니다.', 'Checking your server connection.'],
+  preparingWorkspace: ['작업 공간을 준비하고 있습니다.', 'Preparing your workspace.'],
   loadMore: ['이전 이력 더 보기', 'Load earlier history'],
   listStart: ['목록 처음으로', 'Back to list start'],
   conversations: ['대화 목록', 'Conversations'],
@@ -180,7 +190,6 @@ const copy = {
   deny: ['거절', 'Deny'],
   expires: ['만료', 'Expires'],
   running: ['실행 중', 'Running'],
-  completed: ['완료', 'Completed'],
   failed: ['실패', 'Failed'],
   interrupted: ['중단됨', 'Interrupted'],
   readonly: ['읽기 전용', 'Read only'],
@@ -216,6 +225,10 @@ const copy = {
   cost: ['비용', 'Cost'],
   idle: ['대기 중', 'Idle'],
   compacting: ['문맥 압축 중', 'Compacting context'],
+  contextCompacted: ['문맥 압축됨', 'Context compacted'],
+  retrying: ['연결 재시도 중', 'Retrying connection'],
+  skillLoaded: ['스킬 읽음', 'Skill read'],
+  teamUpdate: ['팀 작업', 'Team activity'],
   workedFor: ['소요 시간', 'Worked for'],
   readError: ['불러오지 못했습니다', 'Could not load'],
   retry: ['다시 확인', 'Check again'],
@@ -252,7 +265,7 @@ export function languageCode(value: string) {
       : 'en'
     : value;
 }
-export function useLocale() {
+export function useLocale(): (key: CopyKey) => string {
   const language = useAstryxLocale();
   return useCallback(
     (key: CopyKey) => copy[key][language.toLowerCase().startsWith('ko') ? 0 : 1],

@@ -14,6 +14,6 @@ func (s *Store) TeamMode(ctx context.Context) (bool, error) {
 	return enabled, err
 }
 func (s *Store) SetTeamMode(ctx context.Context, enabled bool) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE sessions SET team_enabled=? WHERE singleton=1", enabled)
+	_, err := s.execWrite(ctx, "UPDATE sessions SET team_enabled=? WHERE singleton=1", enabled)
 	return err
 }

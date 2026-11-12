@@ -4,8 +4,10 @@
 // Related: internal/tui/session/tool_activity.go, internal/tui/session/keys.go, internal/tui/viewport/details.go.
 package session
 
+import "github.com/keonho-kim/meca/internal/tui/transcript"
+
 func (a *app) hasToolDetails() bool {
-	return a.chat.output.HasDetails() || a.chat.toolActivity.hasDetails()
+	return a.chat.output.HasDetails() || a.chat.toolActivity.hasDetails() || a.team.view.HasPendingTools()
 }
 
 func (a *app) toggleToolDetails() {
@@ -14,6 +16,7 @@ func (a *app) toggleToolDetails() {
 		return
 	}
 	a.chat.output.ToggleDetails()
+	a.team.view.RefreshPending(transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact, RedactionVersion: a.opts.Vault.RedactionVersion}, &a.chat.output)
 	// Live activity is outside history, so its anchor needs the same reset as a
 	// historical detail block when explicit folding changes the source rows.
 	if tools := &a.chat.chatProjection.tools; tools.Text != "" && a.chat.output.AnchorID == tools.ID {

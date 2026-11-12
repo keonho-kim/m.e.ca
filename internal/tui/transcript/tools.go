@@ -1,6 +1,6 @@
 // Purpose: Format literal tool details with redaction and explicit source-change annotations.
 // Pattern: Presentation projection.
-// Usage: PendingTool and Event share literal details for live tools and completed records.
+// Usage: ToolBlock formats summary or requested detail; Event projects completed tool records.
 // Related: internal/agent/record/events.go, internal/tui/transcript/events.go.
 package transcript
 
@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
@@ -15,11 +16,23 @@ func (f Formatter) Tool(event runrecord.Event) string {
 	return f.toolBlock(event).Text
 }
 
-// PendingTool keeps in-flight arguments foldable without inventing an output section.
-func (f Formatter) PendingTool(event runrecord.Event) viewport.Block {
-	block := f.toolBlock(event)
+// ToolBlock parses display arguments once for the selected summary/detail representation.
+func (f Formatter) ToolBlock(event runrecord.Event, expanded bool) viewport.Block {
+	if event.Call == nil {
+		return viewport.Block{}
+	}
+	args, err := toolapi.DisplayArgs(event.Call.Arguments)
+	summary := f.toolSummaryWithArguments(event, args, err)
+	if !expanded {
+		return viewport.Block{Text: summary, Summary: summary}
+	}
+	arguments := indentTool(f.Language.Text("인자 형식 확인 필요"))
+	if err == nil {
+		arguments = f.displayArguments(args)
+	}
+	block := f.toolBlockWithArguments(event, arguments)
 	if block.Text != "" {
-		block.Summary, block.Details = f.toolSummary(event), block.Text
+		block.Summary, block.Details = summary, block.Text
 	}
 	return block
 }
@@ -28,6 +41,10 @@ func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 	if event.Call == nil {
 		return viewport.Block{}
 	}
+	return f.toolBlockWithArguments(event, f.arguments(*event.Call))
+}
+
+func (f Formatter) toolBlockWithArguments(event runrecord.Event, arguments string) viewport.Block {
 	var text strings.Builder
 	var changes []viewport.ChangeRange
 	label := f.Language.Text(event.Call.Name)
@@ -36,10 +53,10 @@ func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 		if event.Kind == "tool_waiting" {
 			status = "실행 대기"
 		}
-		return viewport.Block{Text: "\n  " + label + " · " + f.Language.Text(status) + "…\n" + f.arguments(*event.Call)}
+		return viewport.Block{Text: "\n  " + label + " · " + f.Language.Text(status) + "…\n" + arguments}
 	}
 	text.WriteString("\n  " + label + "\n\n")
-	text.WriteString(f.arguments(*event.Call))
+	text.WriteString(arguments)
 	if event.Call.Name != "execute_command" && event.Operation != nil && event.Operation.Process != nil && event.Operation.Process.Command != "" {
 		text.WriteString(indentTool(f.Redact(event.Operation.Process.Command)))
 	}

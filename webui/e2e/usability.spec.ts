@@ -2,15 +2,14 @@
 // Pattern: Browser-to-engine usability regression contracts.
 // Usage: Run with MECA_UI_DESCRIPTOR and optional MECA_LMSTUDIO_URL against the isolated UI fixture.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/navigation/folder-picker.tsx.
-import { readFile } from 'node:fs/promises';
-import { test, expect, type Page } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; home: string; provider: string };
+import { readFile } from 'node:fs/promises';
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 test.beforeAll(async () => {
-  const path = process.env.MECA_UI_DESCRIPTOR;
-  test.skip(!path, 'start the isolated UI fixture first');
-  if (!path) return;
-  fixture = JSON.parse(await readFile(path, 'utf8'));
+  fixture = await browserFixture();
 });
 async function login(page: Page, entireLine = false) {
   await page.goto(`${fixture.url}/ui/`);
@@ -46,21 +45,23 @@ test('an anonymous first visit does not call protected APIs and the printed toke
 test('sidebar controls, settings labels and skill insertion stay in their work area', async ({
   page,
 }) => {
-  await login(page);
+  await connectBrowser(page, fixture);
   await createChat(page);
   const collapse = page.getByRole('button', { name: '사이드바 접기', exact: true });
-  expect((await collapse.boundingBox())?.y ?? 999).toBeLessThan(80);
+  expect((await collapse.boundingBox().then(required)).y).toBeLessThan(80);
   const settings = page.getByRole('button', { name: '설정', exact: true });
-  expect((await settings.boundingBox())?.y ?? 0).toBeGreaterThan(page.viewportSize()!.height - 100);
+  expect((await settings.boundingBox().then(required)).y).toBeGreaterThan(
+    required(page.viewportSize()).height - 100
+  );
   await collapse.click();
   await page
-    .getByRole('toolbar', { name: '작업 화면' })
+    .getByRole('navigation', { name: '워크스페이스', exact: true })
     .getByRole('button', { name: '사이드바 펼치기', exact: true })
     .click();
   await settings.click();
   const dialog = page.getByRole('dialog', { name: '설정', exact: true });
-  expect((await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(950);
-  for (const label of ['모델', '실행', '일반']) {
+  expect((await dialog.boundingBox().then(required)).width).toBeGreaterThan(950);
+  for (const label of ['모델', '실행']) {
     const item = dialog.getByRole('button', { name: label, exact: true });
     await expect(item).toBeVisible();
     expect(
@@ -101,10 +102,10 @@ test('workspace folder creation and explicit selection work without a clipped op
   page,
 }) => {
   const name = `workspace-${crypto.randomUUID()}`;
-  await login(page);
+  await connectBrowser(page, fixture);
   await page.getByRole('button', { name: '워크스페이스 추가', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '워크스페이스 추가', exact: true });
-  expect((await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(850);
+  expect((await dialog.boundingBox().then(required)).width).toBeGreaterThan(850);
   await dialog.getByRole('textbox', { name: '경로', exact: true }).fill(fixture.home);
   await dialog.getByRole('textbox', { name: '경로', exact: true }).press('Enter');
   await dialog.getByRole('button', { name: '새 폴더', exact: true }).click();
@@ -124,7 +125,7 @@ test('workspace folder creation and explicit selection work without a clipped op
 test('global model candidates follow the server address before a conversation is selected', async ({
   page,
 }) => {
-  await login(page);
+  await connectBrowser(page, fixture);
   await page.route('**/v1/command', async (route) => {
     const command = route.request().postDataJSON();
     if (!command?.discoverModels) return route.continue();
@@ -156,7 +157,7 @@ test('LM Studio supplies Ornith candidates on model focus and accepts the select
     'requires the explicitly requested local LM Studio model'
   );
   test.setTimeout(120000);
-  await login(page);
+  await connectBrowser(page, fixture);
   try {
     await createChat(page);
     await page.getByRole('button', { name: '설정', exact: true }).click();
@@ -168,9 +169,11 @@ test('LM Studio supplies Ornith candidates on model focus and accepts the select
       .fill(process.env.MECA_LMSTUDIO_URL!);
     const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
     await model.click();
-    await expect(page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true })).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true })).toBeVisible(
+      {
+        timeout: 15000,
+      }
+    );
     await page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true }).click();
     await dialog.getByRole('button', { name: '저장', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: '네', exact: true }).click();

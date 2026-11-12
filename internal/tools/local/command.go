@@ -19,9 +19,9 @@ func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error)
 		if _, err = op.admitCommand(ctx); err != nil {
 			return toolapi.Result{}, err
 		}
-		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID})
+		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID})
 	} else {
-		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID}, op.admitCommand)
+		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID}, op.admitCommand)
 	}
 	if err != nil {
 		if id != "" {

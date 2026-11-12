@@ -122,6 +122,7 @@ function SessionRow({
       <SideNavItem
         ref={labelRef}
         label={label}
+        aria-label={`${t('openConversation')}: ${label}`}
         className="session-link session-row"
         icon={<Icon icon="meca:message" size="xsm" />}
         isSelected={target.workspace === workspace && target.session === session.id}

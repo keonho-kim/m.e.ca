@@ -20,6 +20,7 @@ import (
 )
 
 type API struct {
+	PickFolder       func(context.Context) (string, error)
 	ScopeID          string
 	Workspaces       *server.Workspaces
 	Remember         func(string) error

@@ -20,6 +20,14 @@
   .meca-prose pre, .meca-code { overflow-x: clip; }
   .meca-prose table { width: 100%; table-layout: fixed; }
   .meca-prose th, .meca-prose td { overflow-wrap: anywhere; }
+  .tool-entry {
+    display: grid;
+    grid-template-columns: fit-content(calc(100% - var(--spacing-12))) minmax(0, 1fr);
+    column-gap: var(--spacing-2);
+    align-items: start;
+  }
+  .tool-disclosure > .astryx-collapsible-trigger { grid-column: 1; grid-row: 1; min-width: 0; }
+  .tool-disclosure > .astryx-collapsible-content { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
 }
 
 @layer utilities {

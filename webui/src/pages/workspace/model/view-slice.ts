@@ -12,6 +12,7 @@ type ViewSlice = Pick<
   | 'mode'
   | 'folder'
   | 'picker'
+  | 'languageMenu'
   | 'streamStatus'
   | 'reviewTarget'
   | 'removedTarget'
@@ -24,6 +25,7 @@ export const createViewSlice: StateCreator<WorkspaceState, [], [], ViewSlice> = 
   mode: 'chat',
   folder: '.',
   picker: false,
+  languageMenu: false,
   streamStatus: 'connecting',
   reviewTarget: null,
   removedTarget: null,

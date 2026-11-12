@@ -2,14 +2,14 @@
 // Pattern: Isolated server fixture with a deliberately malformed read response.
 // Usage: MECA_UI_DESCRIPTOR=... bun run test:e2e e2e/completion-boundary.spec.ts.
 // Related: webui/src/pages/workspace/ui/chat/completion-row.tsx, cmd/meca/ui_browser_test.go.
-import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+
+import { expect } from '@playwright/test';
+import { browserFixture, connectBrowser, required, test } from '#e2e/fixture';
 
 test('completion metadata cannot render response, thinking or invalid numeric strings', async ({
   page,
 }) => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  const fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  const fixture = await browserFixture();
   const reason = 'Terminal reason explicitly requested.';
   let append = false;
   await page.route('**/v1/command', async (route) => {
@@ -57,11 +57,7 @@ test('completion metadata cannot render response, thinking or invalid numeric st
       },
     });
   });
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await page
     .locator('.workspace-group')
     .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
@@ -73,9 +69,12 @@ test('completion metadata cannot render response, thinking or invalid numeric st
   await expect(completion).toContainText('00:00:09');
   await expect(completion).toContainText('10.0 tok/s');
   await expect(page.getByText(/LEAKED_/)).toHaveCount(0);
-  const answer = await page.getByText('The actual response.', { exact: true }).boundingBox();
-  const summary = await completion.boundingBox();
-  expect(answer && summary && answer.y + answer.height <= summary.y).toBeTruthy();
+  const answer = await page
+    .getByText('The actual response.', { exact: true })
+    .boundingBox()
+    .then(required);
+  const summary = await completion.boundingBox().then(required);
+  expect(answer.y + answer.height <= summary.y).toBeTruthy();
   await completion.getByRole('button').click();
   await expect(page.locator('.original-text')).toContainText(reason);
   expect(

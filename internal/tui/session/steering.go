@@ -5,23 +5,33 @@
 package session
 
 import (
-	"strings"
-
 	requestinput "github.com/keonho-kim/meca/internal/commands/input"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/tui/composer/queue"
 )
 
 func (a *app) steerInput(text string) {
 	if a.work.state.stopping() {
 		return
 	}
+	request := requestinput.Capture(text, a.selectedPaths())
+	bytes := request.TextBytes()
+	for _, pending := range a.compose.steeringDrafts {
+		bytes += pending.TextBytes()
+	}
+	if bytes > queue.MaxTextBytes {
+		a.fail(fault.New(diag.ResourceExhausted, diag.ServerQueueBytes))
+		return
+	}
 	select {
-	case a.compose.steering <- requestinput.Capture(text, a.selectedPaths()):
+	case a.compose.steering <- request:
 		select {
 		case a.compose.steeringReady <- struct{}{}:
 		default:
 		}
 		a.chat.output.Follow = true
-		a.compose.steeringDrafts = append(a.compose.steeringDrafts, text)
+		a.compose.steeringDrafts = append(a.compose.steeringDrafts, request)
 		a.compose.editor.Set("")
 		a.status = a.language.Text("현재 작업의 다음 판단에 반영합니다")
 	default:
@@ -34,13 +44,16 @@ func (a *app) restoreSteering() {
 	if a.compose.queued.Edit != nil {
 		editor = &a.compose.queued.Edit.Draft
 	}
-	if len(a.compose.steeringDrafts) > 0 {
-		text := strings.Join(a.compose.steeringDrafts, "\n\n")
-		if draft := editor.String(); draft != "" {
-			text += "\n\n" + draft
-		}
-		editor.Set(text)
+	if !queue.RestoreText(editor, a.compose.steeringDrafts) {
+		a.compose.queued.Recover(a.compose.steeringDrafts)
 	}
 	a.compose.steering, a.compose.steeringDrafts = nil, nil
 	a.compose.steeringReady = nil
+}
+
+func (r *requestState) acknowledgeSteering() {
+	if len(r.steeringDrafts) > 0 {
+		r.steeringDrafts[0] = requestinput.Request{}
+		r.steeringDrafts = r.steeringDrafts[1:]
+	}
 }

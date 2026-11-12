@@ -25,10 +25,11 @@ func (s *Store) ChangeFileSelections(ctx context.Context, session string, change
 			return nil, fault.Errorf(diag.SqliteInvalidSelectedPath)
 		}
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, releaseWrite, err := s.beginWrite(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer releaseWrite()
 	defer func() {
 		if resultErr != nil {
 			resultErr = errors.Join(resultErr, tx.Rollback())

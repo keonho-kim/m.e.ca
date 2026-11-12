@@ -77,6 +77,9 @@ func (a *app) shutdown() {
 	for {
 		select {
 		case notice := <-a.events:
+			if notice.Detail != nil {
+				notice.Detail.close()
+			}
 			if notice.FileWatch != nil && notice.FileWatch.Watcher != nil {
 				_ = notice.FileWatch.Watcher.Close()
 			}

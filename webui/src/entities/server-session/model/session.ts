@@ -8,25 +8,16 @@ import { ApiError, describeError, isCancelled } from '@/shared/lib/errors';
 
 interface ServerSession {
   connected: boolean;
-  logoutRevision: number;
   language: string;
   notice: string;
 }
 export const useServerSession = create<ServerSession>(() => ({
   connected: false,
-  logoutRevision: 0,
   language: 'auto',
   notice: '',
 }));
 export function establishSession(language?: string) {
   useServerSession.setState({ connected: true, notice: '', ...(language ? { language } : {}) });
-}
-export function endSession() {
-  useServerSession.setState((state) => ({
-    connected: false,
-    logoutRevision: state.logoutRevision + 1,
-    notice: '',
-  }));
 }
 export function setServerLanguage(language: string) {
   useServerSession.setState({ language });

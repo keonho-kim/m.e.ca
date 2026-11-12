@@ -4,6 +4,8 @@
 // Related: internal/diagnostics/fault/classify.go, internal/diagnostics/catalog/semantic.go.
 package catalog
 
+const StorageWALPressure Message = "session WAL is waiting for an older reader; no new write was started"
+
 const (
 	StorageBusy                    = "storage_busy"
 	StorageReadOnly                = "storage_read_only"

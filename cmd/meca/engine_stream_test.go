@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"strings"
 
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
@@ -18,29 +17,19 @@ import (
 )
 
 type engineStream struct {
-	header    http.Header
-	status    int
 	buffer    []byte
 	text      strings.Builder
 	render    markdown.Stream
 	err       error
-	failure   string
 	completed bool
 }
 
-func (s *engineStream) Header() http.Header    { return s.header }
-func (s *engineStream) WriteHeader(status int) { s.status = status }
-func (s *engineStream) Flush()                 {}
 func (s *engineStream) Write(body []byte) (int, error) {
 	if s.err != nil {
 		return len(body), nil
 	}
 	if len(s.buffer)+len(body) > 1<<20 {
 		s.err = fmt.Errorf("fixture stream frame exceeded its bound")
-		return len(body), nil
-	}
-	if s.status >= 400 {
-		s.failure = string(body[:min(len(body), 4096)])
 		return len(body), nil
 	}
 	s.buffer = append(s.buffer, body...)

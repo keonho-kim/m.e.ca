@@ -7,6 +7,7 @@ import { ChatSystemMessage } from '@astryxdesign/core/Chat';
 import { HStack } from '@astryxdesign/core/Layout';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { memo } from 'react';
 import { completionMeasurements } from '@/pages/workspace/ui/chat/format-statistics';
 import type { RunCompletionJson } from '@/shared/api';
@@ -24,21 +25,30 @@ export const CompletionRow = memo(function CompletionRow({
   const t = useLocale();
   const completed = completion.status === 'COMPLETED',
     failed = completion.status === 'FAILED';
-  const label = completed ? t('completed') : failed ? t('failed') : t('interrupted');
+  const label = failed ? t('failed') : t('interrupted');
   return (
-    <ChatSystemMessage className="completion-row min-w-0">
+    <ChatSystemMessage className="completion-row min-w-0" aria-label={t('requestMeasurements')}>
       <HStack gap={2} wrap="wrap">
         {!completed && <StatusDot variant={failed ? 'error' : 'warning'} label={label} />}
-        <HStack gap={3} align="center" wrap="wrap" className="completion-summary min-w-0">
-          {[
-            label,
-            ...(completion.statistics ? completionMeasurements(completion.statistics, t) : []),
-          ].map((value, index) => (
-            <Text key={index} type="supporting" color="secondary" className="whitespace-nowrap">
-              {value}
-            </Text>
-          ))}
-        </HStack>
+        <Tooltip content={t('requestMeasurements')}>
+          <HStack gap={3} align="center" wrap="wrap" className="completion-summary min-w-0">
+            {[
+              ...(!completed ? [label] : []),
+              ...(completion.statistics ? completionMeasurements(completion.statistics, t) : []),
+            ].map((value, index) => (
+              <Text
+                key={index}
+                type="supporting"
+                size="base"
+                hasTabularNumbers
+                color="secondary"
+                className="min-w-0 whitespace-normal [overflow-wrap:anywhere]"
+              >
+                {value}
+              </Text>
+            ))}
+          </HStack>
+        </Tooltip>
         {!completed && sequence && (
           <Button label={t('details')} size="sm" onClick={() => onDetails(sequence)} />
         )}

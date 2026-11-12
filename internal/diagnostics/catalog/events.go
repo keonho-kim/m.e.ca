@@ -28,6 +28,7 @@ const (
 	ApprovalDecided        Event = Event(RunApprovalDecided)
 	UIOperationFailed      Event = Event(SessionUiOperationFailed)
 	BrowserLaunchFailed    Event = "browser_launch_failed"
+	FolderSelectionFailed  Event = "folder_selection_failed"
 	HTTPServerError        Event = "http_server_error"
 	ResponseDeliveryFailed Event = "response_delivery_failed"
 	DetailCacheBypassed    Event = "detail_cache_bypassed"
@@ -41,7 +42,7 @@ func Level(event Event) (slog.Level, bool) {
 	switch event {
 	case StorageCommitFailed, CompletionSaveFailed, HTTPServerError, ProcessFailedEvent, ReporterFailed:
 		return slog.LevelError, true
-	case StorageCommitSlow, StorageWriterWait, StorageCapacityLow, AccessRejected, RotationDeferred, UIOperationFailed, BrowserLaunchFailed, ResponseDeliveryFailed, ReporterMissing, DetailCacheBypassed:
+	case StorageCommitSlow, StorageWriterWait, StorageCapacityLow, AccessRejected, RotationDeferred, UIOperationFailed, BrowserLaunchFailed, FolderSelectionFailed, ResponseDeliveryFailed, ReporterMissing, DetailCacheBypassed:
 		return slog.LevelWarn, true
 	case RunStarted, RunFinished, RequestStarted, RequestFinished, ServerListening, ApprovalWaiting, ApprovalDecided, ReporterSummary:
 		return slog.LevelInfo, true

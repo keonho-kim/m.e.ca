@@ -5,7 +5,6 @@
 
 export {
   dismissNotice,
-  endSession,
   establishSession,
   reportError,
   setServerLanguage,

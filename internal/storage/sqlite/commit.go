@@ -71,13 +71,14 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 		receipt = &journalReceipt{}
 	}
 	waitStarted := time.Now()
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, releaseWrite, err := s.beginWrite(ctx)
 	if waited := time.Since(waitStarted).Milliseconds(); waited >= 100 {
 		diagnostics.Log(ctx, diagcatalog.StorageWriterWait, "component", "storage", "session_id", session, "duration_ms", waited)
 	}
 	if err != nil {
 		return err
 	}
+	defer releaseWrite()
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	var firstUser *string
 	hasMessage := false

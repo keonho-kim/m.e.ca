@@ -1,6 +1,6 @@
 // Purpose: Present tool targets and commands without repeating file bodies.
 // Pattern: Pure presentation projection.
-// Usage: PendingTool and Event render display parameters without repeating source bodies.
+// Usage: ToolBlock and Event render display parameters without repeating source bodies.
 // Related: internal/tui/transcript/tools.go, internal/tui/transcript/file_results.go.
 package transcript
 
@@ -16,6 +16,10 @@ func (f Formatter) arguments(call tool.Call) string {
 	if err != nil {
 		return indentTool(f.Language.Text("인자 형식 확인 필요"))
 	}
+	return f.displayArguments(args)
+}
+
+func (f Formatter) displayArguments(args tool.DisplayArguments) string {
 	var text strings.Builder
 	for _, field := range []struct{ value, label string }{{args.Path, "경로"}, {args.Command, "명령"}, {args.CommandID, "Command ID"}} {
 		if field.value != "" {

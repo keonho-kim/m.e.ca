@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/diagnostics"
@@ -30,6 +31,7 @@ const (
 )
 
 type Transport struct {
+	pickerBusy     atomic.Bool
 	ui             http.Handler
 	uiSeed         string
 	browser        *browserSessions
@@ -118,13 +120,19 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer stop()
 	defer cancel()
 	r = r.WithContext(ctx)
-	w = &deadlineWriter{ResponseWriter: w, ctx: ctx}
 	if !t.authorize(w, r) {
 		if r.Method != "OPTIONS" {
 			diagnostics.Log(ctx, diagcatalog.AccessRejected, "error_code", diagcatalog.AccessRejectedCode)
 		}
 		return
 	}
+	r, releaseAuth, authorized := t.browserRequest(r)
+	if !authorized {
+		writeAuthError(w, r)
+		return
+	}
+	defer releaseAuth()
+	w = &deadlineWriter{ResponseWriter: w, ctx: r.Context()}
 	if t.ui != nil && (r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/")) && (r.Method == "GET" || r.Method == "HEAD") {
 		t.handler.ServeHTTP(w, r)
 		return

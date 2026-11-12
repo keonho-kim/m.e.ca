@@ -54,6 +54,7 @@ func TestLanguageMenuAppliesAndPersists(t *testing.T) {
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+	a.receive(<-a.events)
 	if a.page != "chat" || a.language != locale.English || a.opts.Config.Language != config.LanguageEnglish || a.compose.editor.String() != "preserved draft" || !a.chat.output.Collapsed {
 		t.Fatal("language did not apply without changing unrelated state")
 	}
@@ -117,6 +118,7 @@ func TestLanguageFailureAndCancelPreserveSelection(t *testing.T) {
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyEnter, "", 0))
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+	a.receive(<-a.events)
 	if a.page != "language" || a.language != locale.English || a.opts.Config.Language != config.LanguageAuto || !strings.Contains(a.status, "config write failed") || a.chat.output.Blocks[0].Text != "preserved output" {
 		t.Fatal("failed save changed the active language or history")
 	}

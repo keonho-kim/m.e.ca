@@ -26,19 +26,27 @@ func brief(text string) string {
 }
 
 func (f Formatter) toolSummary(event runrecord.Event) string {
+	args, err := tool.DisplayArgs(event.Call.Arguments)
+	return f.toolSummaryWithArguments(event, args, err)
+}
+
+func (f Formatter) toolSummaryWithArguments(event runrecord.Event, args tool.DisplayArguments, argsErr error) string {
 	status := ""
-	switch event.Kind {
-	case "tool_started":
+	switch event.ToolPhase() {
+	case runrecord.ToolRunning:
 		status = "Running"
-	case "tool_waiting":
+	case runrecord.ToolPending:
 		status = "실행 대기"
-	case "tool_succeeded":
+	case runrecord.ToolSucceeded:
 		status = "완료"
-	case "tool_failed":
+	case runrecord.ToolFailed:
 		status = "실패"
-	case "tool_interrupted":
+	case runrecord.ToolInterrupted:
 		status = "중단"
-	case "denied":
+	case runrecord.ToolSkipped:
+		status = "중단"
+	}
+	if event.Kind == "denied" {
 		status = "거부"
 	}
 	commandStatus, commandSummary := "", ""
@@ -56,6 +64,9 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		}
 		if valid {
 			commandStatus = processStatus(event.Kind, fields)
+			if commandOriginalUnavailable(event) {
+				commandStatus = "Command output unavailable"
+			}
 			if commandStatus != "" {
 				status = commandStatus
 				commandSummary = f.processSummary(event, fields)
@@ -63,7 +74,6 @@ func (f Formatter) toolSummary(event runrecord.Event) string {
 		}
 	}
 	text := "\n  " + f.Language.Text(event.Call.Name) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
-	args, argsErr := tool.DisplayArgs(event.Call.Arguments)
 	if argsErr == nil {
 		target := args.Path
 		if args.CommandID != "" {

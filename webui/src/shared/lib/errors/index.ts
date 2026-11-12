@@ -25,6 +25,11 @@ const errors = {
   clipboard_empty: '클립보드에 이미지가 없습니다.',
   clipboard_unavailable:
     '클립보드 이미지를 읽을 수 없습니다. 브라우저 권한을 확인하거나 +에서 이미지를 선택해 주세요.',
+  folder_picker: 'OS 폴더 선택창을 열지 못했습니다. 작업 공간 탐색기에서 폴더를 선택해 주세요.',
+  folder_picker_timeout:
+    'OS 폴더 선택 시간이 초과되었습니다. 작업 공간 탐색기에서 폴더를 선택해 주세요.',
+  folder_picker_busy:
+    'OS 폴더 선택창이 이미 열려 있습니다. 기존 창에서 선택하거나 작업 공간 탐색기를 사용해 주세요.',
   queue_limit: '입력 대기열의 메모리 한도를 초과했습니다.',
   draft_changed: '작성 중인 내용을 저장하거나 버린 뒤 이동해 주세요.',
   cancelled: '요청을 취소했습니다.',

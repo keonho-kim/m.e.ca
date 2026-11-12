@@ -4,3 +4,4 @@
 // Related: webui/src/pages/connect/ui/connect-page.tsx.
 
 export { Login } from '@/pages/connect/ui/connect-page';
+export { ConnectionLoading } from '@/pages/connect/ui/connection-loading';

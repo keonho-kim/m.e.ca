@@ -53,7 +53,7 @@ func (r *Registry) register(ctx context.Context, directory, command string, envi
 	child, cancelCause := context.WithCancelCause(owner)
 	cancel := func() { cancelCause(context.Cause(owner)) }
 	id := "cmd_" + rand.Text()
-	j := &job{state: State{ID: id, CallID: identity.CallID, ExecutionID: identity.ExecutionID, Command: command, Directory: directory, Status: "waiting"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
+	j := &job{state: State{ID: id, CallID: identity.CallID, ExecutionID: identity.ExecutionID, BatchID: identity.BatchID, Command: command, Directory: directory, Status: "waiting"}, started: time.Now(), done: make(chan struct{}), cancel: cancel}
 	if waitStart {
 		j.launched = make(chan struct{})
 	}

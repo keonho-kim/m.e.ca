@@ -73,6 +73,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       }
     } else if (e.kind === 'request_finished') {
       historyRevision++;
+      tasks[e.taskId] = { ...tasks[e.taskId]!, doneRevision: historyRevision };
       if (drafts === state.drafts) drafts = { ...drafts };
       for (const [key, draft] of Object.entries(drafts))
         if (draft.task === e.taskId) drafts[key] = { ...draft, doneRevision: historyRevision };

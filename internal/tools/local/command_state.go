@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
@@ -18,8 +17,13 @@ func (e *Executor) commandResult(state process.State) (toolapi.Result, error) {
 		return e.runningCommand(state)
 	}
 	result, err := e.readCommandResult(state.ID)
-	if state.Error != "" {
-		err = errors.Join(err, faults.Errorf(diagcatalog.LocalCommandResultArchiveFailedFor, state.ID, state.Error))
+	if state.Error != "" || err != nil {
+		detail := state.Error
+		if detail == "" {
+			detail = err.Error()
+		}
+		result = e.unavailableCommandResult(state.ID, state.Command, state.Status, state.ExitCode, state.Failure == nil, detail)
+		return result, result.Failure
 	}
 	err = errors.Join(err, state.Failure)
 	if result.Process == nil {

@@ -441,6 +441,7 @@ type Workspaces struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*Workspace           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 	DefaultId     string                 `protobuf:"bytes,2,opt,name=default_id,json=defaultId,proto3" json:"default_id,omitempty"`
+	SelectedId    string                 `protobuf:"bytes,3,opt,name=selected_id,json=selectedId,proto3" json:"selected_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -485,6 +486,13 @@ func (x *Workspaces) GetItems() []*Workspace {
 func (x *Workspaces) GetDefaultId() string {
 	if x != nil {
 		return x.DefaultId
+	}
+	return ""
+}
+
+func (x *Workspaces) GetSelectedId() string {
+	if x != nil {
+		return x.SelectedId
 	}
 	return ""
 }
@@ -1357,12 +1365,14 @@ const file_meca_v1_application_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12!\n" +
 	"\factive_tasks\x18\x04 \x01(\x05R\vactiveTasks\x12\x14\n" +
 	"\x05error\x18\x05 \x01(\tR\x05error\x12+\n" +
-	"\x11pending_approvals\x18\x06 \x01(\x05R\x10pendingApprovals\"U\n" +
+	"\x11pending_approvals\x18\x06 \x01(\x05R\x10pendingApprovals\"v\n" +
 	"\n" +
 	"Workspaces\x12(\n" +
 	"\x05items\x18\x01 \x03(\v2\x12.meca.v1.WorkspaceR\x05items\x12\x1d\n" +
 	"\n" +
-	"default_id\x18\x02 \x01(\tR\tdefaultId\"J\n" +
+	"default_id\x18\x02 \x01(\tR\tdefaultId\x12\x1f\n" +
+	"\vselected_id\x18\x03 \x01(\tR\n" +
+	"selectedId\"J\n" +
 	"\x12CommandDescription\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\"C\n" +

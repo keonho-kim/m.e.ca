@@ -34,6 +34,7 @@ func TestPermissionSaveAndKeymap(t *testing.T) {
 			t.Fatal("confirmation keymap did not replace the selector", labels)
 		}
 		a.keyEvent(tcell.NewEventKey(tcell.KeyRune, "y", 0))
+		a.receive(<-a.events)
 		saved, err := config.Load(a.opts.State)
 		if err != nil || a.page != "chat" || a.opts.Config.Permission != policy.PermissionAllMighty || saved.Permission != policy.PermissionAllMighty || a.compose.editor.String() != "draft" {
 			t.Fatalf("permission not saved or draft lost: mode=%v saved=%v error=%v", a.opts.Config.Permission, saved.Permission, err)
@@ -69,6 +70,7 @@ func TestPermissionCancelFailureAndActiveTask(t *testing.T) {
 	a.openPermission()
 	a.choice = 1
 	a.savePermission()
+	a.receive(<-a.events)
 	if a.page != "permission" || a.opts.Config.Permission != policy.PermissionDefault || !strings.Contains(a.status, "write failed") {
 		t.Fatal("failed save applied the mode")
 	}

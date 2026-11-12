@@ -112,27 +112,35 @@ func TestSocketAuthenticationPrecedesCommands(t *testing.T) {
 	}
 }
 
-func TestTokenPrivateAtomicAndStable(t *testing.T) {
+func TestTokenPrivateAtomicAndRotates(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.token")
-	first, err := LoadToken(path)
-	if err != nil || !validToken(first) {
+	first := NewToken()
+	if err := PublishToken(path, first); err != nil || !validToken(first) {
 		t.Fatal(err)
 	}
-	again, err := LoadToken(path)
-	if err != nil || again != first {
-		t.Fatal("token changed", err)
+	again := NewToken()
+	if err := PublishToken(path, again); err != nil || again == first {
+		t.Fatal("server startup reused its previous token", err)
+	}
+	stored, err := os.ReadFile(path)
+	if err != nil || strings.TrimSuffix(string(stored), "\n") != again {
+		t.Fatal("published credential does not match this startup", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm() != 0600 {
+		t.Fatal("published credential is not private", err)
 	}
 	if err := os.Chmod(path, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadToken(path); err == nil {
+	if err := PublishToken(path, NewToken()); err == nil {
 		t.Fatal("public token accepted")
 	}
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(path, link); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadToken(link); err == nil {
+	if err := PublishToken(link, NewToken()); err == nil {
 		t.Fatal("token symlink accepted")
 	}
 }

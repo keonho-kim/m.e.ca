@@ -158,6 +158,7 @@ type Snapshot struct {
 	Drafts            []Draft
 }
 type Event struct {
+	ToolPhase             record.ToolPhase
 	MutationKey           string
 	Outcome               *work.End
 	Workspace             string

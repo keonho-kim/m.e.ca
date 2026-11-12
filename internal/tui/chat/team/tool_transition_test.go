@@ -25,6 +25,7 @@ func TestToolTransitionPreservesFoldPreferenceAndBodyIdentity(t *testing.T) {
 		t.Fatal("team tool start exposed its full command")
 	}
 	output.ToggleDetails()
+	state.RefreshPending(f, &output)
 	if !strings.Contains(output.Blocks[1].Text, "COMMAND_TAIL") {
 		t.Fatal("explicit expansion lost pending arguments")
 	}

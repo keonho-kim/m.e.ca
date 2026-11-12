@@ -1,15 +1,11 @@
-// Purpose: Establish or explicitly end an authenticated browser session.
+// Purpose: Establish an authenticated browser session.
 // Pattern: Authentication use cases.
-// Usage: ConnectPage and workspace Settings share these actions.
+// Usage: ConnectPage submits the explicit token handoff.
 // Related: webui/src/features/server-access/api/access.ts.
 
-import { endSession, establishSession } from '@/entities/server-session';
-import { login, logout } from '@/features/server-access/api/access';
+import { establishSession } from '@/entities/server-session';
+import { login } from '@/features/server-access/api/access';
 export async function authenticate(token: string) {
   await login(token);
   establishSession();
-}
-export async function disconnect() {
-  await logout();
-  endSession();
 }

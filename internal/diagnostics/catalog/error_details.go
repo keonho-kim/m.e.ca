@@ -12,6 +12,7 @@ const (
 	InterruptedBatchRecovery   Message = "Execution was interrupted or its budget ended. Inspect saved outcomes and any partial effects before resuming only work the user still requires."
 	IndexedEditFailure         Message = "%s edits[%d]: %s"
 	CommandCaptureUnavailable  Message = "command effects may have completed but its output could not be finalized; inspect saved state and partial effects before retrying"
+	CommandCaptureFailed       Message = "command %s output could not be preserved: %s"
 	UnexpectedFailure          Message = "an unexpected internal failure interrupted work; inspect recorded effects before restarting"
 	ContextMemoryLimit         Message = "simultaneous model contexts exceed the process memory budget; inspect active work before retrying"
 	DetailMaskChanged          Message = "protected credentials changed while preparing detail; retry the read"

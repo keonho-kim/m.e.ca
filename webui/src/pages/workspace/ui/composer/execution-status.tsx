@@ -4,6 +4,7 @@
 // Related: internal/commands/server/session_usage.go, webui/src/pages/workspace/ui/chat/format-statistics.ts.
 import { HStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
@@ -60,19 +61,28 @@ export function ExecutionStatus({ target }: { target: Target }) {
     throughput(stats),
   ].filter(Boolean);
   return (
-    <HStack
-      gap={3}
-      align="center"
-      wrap="wrap"
-      role="group"
-      aria-label={t('executionInfo')}
-      className="execution-status min-w-0 whitespace-normal [overflow-wrap:anywhere]"
-    >
-      {summary.map((value, index) => (
-        <Text key={index} type="supporting" color="secondary" className="whitespace-nowrap">
-          {value}
-        </Text>
-      ))}
-    </HStack>
+    <Tooltip content={t('conversationUsage')}>
+      <HStack
+        gap={3}
+        align="center"
+        wrap="wrap"
+        role="group"
+        aria-label={t('executionInfo')}
+        className="execution-status min-w-0 whitespace-normal [overflow-wrap:anywhere]"
+      >
+        {summary.map((value, index) => (
+          <Text
+            key={index}
+            type="supporting"
+            size="base"
+            hasTabularNumbers
+            color="secondary"
+            className="min-w-0 whitespace-normal [overflow-wrap:anywhere]"
+          >
+            {value}
+          </Text>
+        ))}
+      </HStack>
+    </Tooltip>
   );
 }

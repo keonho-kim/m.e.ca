@@ -1,7 +1,7 @@
 // Purpose: Read the Windows host clipboard from a local WSL session without Linux clipboard tools.
 // Pattern: Windows PowerShell binary-pipe adapter.
 // Usage: WSL detection precedes Wayland/X11 selection; no resident bridge is started.
-// Related: internal/tui/clipboard/wsl_path.go, internal/tui/clipboard/process.go.
+// Related: internal/host/wsl/discovery.go, internal/tui/clipboard/process.go.
 package clipboard
 
 import (
@@ -12,6 +12,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/media"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/host/wsl"
 	"github.com/keonho-kim/meca/internal/processmemory"
 	native "golang.design/x/clipboard"
 )
@@ -24,7 +25,7 @@ func readWSL(ctx context.Context) (native.Image, error) {
 		return native.Image{}, err
 	}
 	defer release()
-	path, err := findPowerShell(exec.LookPath, readWSLMounts)
+	path, err := wsl.PowerShell()
 	if err != nil {
 		return native.Image{}, faults.New(diag.Unavailable, diag.ClipboardImageWSLUnavailable)
 	}

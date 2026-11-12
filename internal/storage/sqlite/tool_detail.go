@@ -52,7 +52,19 @@ func (s *Store) toolDetail(ctx context.Context, ref runrecord.EventReference, bo
 	if maxBytes == 0 {
 		maxBytes = content.MaxBytes
 	}
-	err := source.db.QueryRowContext(ctx, "SELECT CASE WHEN length(body)<=? THEN body END,refs,raw_bytes,display_args FROM tool_events WHERE sequence=?", maxBytes, ref.Sequence).Scan(&record.body, &record.refs, &record.size, &arguments)
+	display := "display_args"
+	if requestOnly {
+		display = "'{}'"
+	}
+	// These columns are fixed adapter choices. Request-only reads never borrow
+	// the public argument copy, and every selected envelope is bounded in SQL.
+	query := `WITH original AS (
+ SELECT body,refs,raw_bytes,` + display + ` AS arguments FROM tool_events WHERE sequence=?
+), bounded AS (
+ SELECT *,length(body)+length(refs)+length(arguments)<=? AS admitted FROM original
+) SELECT CASE WHEN admitted THEN body END,CASE WHEN admitted THEN refs END,raw_bytes,
+ CASE WHEN admitted THEN arguments END FROM bounded`
+	err := source.db.QueryRowContext(ctx, query, ref.Sequence, maxBytes).Scan(&record.body, &record.refs, &record.size, &arguments)
 	if errors.Is(err, sql.ErrNoRows) {
 		return result, history.ErrNotFound
 	}
@@ -63,7 +75,7 @@ func (s *Store) toolDetail(ctx context.Context, ref runrecord.EventReference, bo
 		return result, history.ErrReadLimit
 	}
 	budget := newReadBudget(bounds.MaxBytes, bounds.Reserve)
-	if err := budget.take(len(record.body)); err != nil {
+	if err := budget.take(len(record.body) + len(record.refs) + len(arguments)); err != nil {
 		return result, err
 	}
 	payloads := pagePayloads{store: source, ctx: ctx, budget: budget}

@@ -175,7 +175,7 @@ export default function WorkspaceShell() {
       mobileNav={{ hasToggle: false }}
     >
       <Layout
-        header={<WorkspaceToolbar collapsible={collapsible} />}
+        header={<WorkspaceToolbar />}
         height="fill"
         padding={0}
         content={

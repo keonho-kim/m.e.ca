@@ -1,8 +1,8 @@
 // Purpose: Verify WSL mount-based discovery without requiring a Windows host.
 // Pattern: Pure path selection contracts.
-// Usage: go test ./internal/tui/clipboard -run TestPowerShell.
-// Related: internal/tui/clipboard/wsl_path.go.
-package clipboard
+// Usage: go test ./internal/host/wsl -run TestPowerShell.
+// Related: internal/host/wsl/discovery.go.
+package wsl
 
 import (
 	"os"

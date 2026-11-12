@@ -1,13 +1,15 @@
 // Purpose: Locate Windows PowerShell when WSL's imported Windows PATH is absent.
 // Pattern: Bounded mount-table path discovery.
-// Usage: The WSL image adapter prefers PATH, then mounted Windows system directories.
-// Related: internal/tui/clipboard/wsl.go.
-package clipboard
+// Usage: Clipboard input and desktop folder selection share this Windows host discovery.
+// Related: internal/tui/clipboard/wsl.go, internal/desktop/folderpicker/picker_linux.go.
+package wsl
 
 import (
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -58,4 +60,19 @@ func powerShellCandidates(mounts string) []string {
 		paths = append(paths, filepath.Join(root, "Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
 	}
 	return paths
+}
+
+// PowerShell finds the built-in Windows runtime without requiring imported Windows PATH.
+func PowerShell() (string, error) { return findPowerShell(exec.LookPath, readWSLMounts) }
+
+// Available identifies the Windows-hosted Linux environment without starting a subprocess.
+func Available() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	if os.Getenv("WSL_INTEROP") != "" || os.Getenv("WSL_DISTRO_NAME") != "" {
+		return true
+	}
+	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	return err == nil && strings.Contains(strings.ToLower(string(data)), "microsoft")
 }

@@ -10,6 +10,9 @@ import (
 
 func (a *app) composerNotice() string {
 	if a.compose.queued.Edit == nil {
+		if a.compose.queued.Paused {
+			return a.language.Text("Recovered requests paused; edit the queue or press Enter with an empty draft to resume")
+		}
 		return a.stopNotice
 	}
 	text := a.language.Format("Editing queued request %d / %d", a.compose.queued.Edit.Index+1, len(a.compose.queued.Messages))

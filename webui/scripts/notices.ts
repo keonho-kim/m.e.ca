@@ -43,6 +43,11 @@ export function runtimeNotices(): Plugin {
       const missing: string[] = [];
       const cssRoot = fileURLToPath(new URL('../node_modules/tailwindcss/', import.meta.url));
       packages.set(cssRoot, JSON.parse(await readFile(join(cssRoot, 'package.json'), 'utf8')));
+      // Material glyphs are compiled to local SVG; retain their upstream notice.
+      const iconRoot = fileURLToPath(
+        new URL('../node_modules/@mui/icons-material/', import.meta.url)
+      );
+      packages.set(iconRoot, JSON.parse(await readFile(join(iconRoot, 'package.json'), 'utf8')));
       const sections = ['MECA embedded WebUI — third-party runtime notices\n'];
       for (const [path, pkg] of [...packages].sort((a, b) => a[1].name.localeCompare(b[1].name))) {
         const texts = (await readdir(path)).filter((name) =>

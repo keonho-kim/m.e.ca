@@ -44,10 +44,7 @@ func TestListenerTLSAndLoopbackHTTP2(t *testing.T) {
 			defer cancel()
 			directory := t.TempDir()
 			options := Options{Protocol: "grpc", Listen: "127.0.0.1:0"}
-			token, err := LoadToken(filepath.Join(directory, "token"))
-			if err != nil {
-				t.Fatal(err)
-			}
+			token := NewToken()
 			transport := &http.Transport{Protocols: new(http.Protocols)}
 			transport.Protocols.SetHTTP2(true)
 			if encrypted {

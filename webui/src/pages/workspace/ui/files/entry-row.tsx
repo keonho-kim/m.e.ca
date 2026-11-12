@@ -11,6 +11,7 @@ import { HStack } from '@astryxdesign/core/Layout';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useDraggable, useDroppable } from '@dnd-kit/react';
 import { useLocale } from '@/shared/i18n';
+import { FileIcon } from '@/shared/ui/file-icon';
 
 export type DirectoryEntry = { path: string; name: string; revision: string; directory: boolean };
 export type EntryAction = { entry: DirectoryEntry; kind: 'rename' | 'delete' };
@@ -58,8 +59,14 @@ export function EntryRow({
           label={name}
           className="grow min-w-0 justify-start cursor-grab"
           variant={drop.isDropTarget ? 'primary' : 'ghost'}
-          icon={<Icon icon={directory ? 'meca:folder' : 'meca:file'} />}
-          endContent={directory ? <Icon icon="chevronRight" size="xsm" /> : undefined}
+          icon={directory ? <Icon icon="meca:folder" /> : <FileIcon path={path} />}
+          endContent={
+            directory ? (
+              <HStack align="center" justify="center" className="self-center shrink-0">
+                <Icon icon="chevronRight" size="sm" />
+              </HStack>
+            ) : undefined
+          }
           isDisabled={busy}
           onClick={() => open(path, directory)}
         />

@@ -34,10 +34,14 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 	event.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
 	commands, ownsCommands := r.Tools.(toolapi.CommandExecutor)
 	completedCommand := ownsCommands && outcome.Process != nil && outcome.Process.CommandID != "" && !toolapi.CommandActive(outcome.Process.Status)
-	if completedCommand && len(outcome.Capture) == 0 {
+	if completedCommand && len(outcome.Capture) == 0 && !commandOutputUnavailable(outcome) {
 		capture, err := commands.CommandCapture(recordCtx, outcome.Process.CommandID)
 		if err != nil {
-			return outcome, errors.Join(errRuntimeRecord, err)
+			outcome, err = s.failedCommandCapture(outcome, outcome.Process.CommandID, err)
+			if err != nil {
+				return outcome, errors.Join(errRuntimeRecord, err)
+			}
+			runErr = outcome.Failure
 		}
 		outcome.Capture = capture
 	}
@@ -94,6 +98,9 @@ func (s *execution) recordExecution(ctx context.Context, v validatedCall, ready 
 	event.Capture = nil // Original captures are durable, never copied into live presentation events.
 	if err := emit(event); err != nil && !(ctx.Err() != nil && errors.Is(err, ctx.Err())) {
 		return outcome, errors.Join(errRuntimeRecord, err)
+	}
+	if completedCommand && commandOutputUnavailable(outcome) {
+		return outcome, errors.Join(errRuntimeRecord, outcome.Failure)
 	}
 	return outcome, runErr
 }

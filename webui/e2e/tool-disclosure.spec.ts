@@ -2,20 +2,16 @@
 // Pattern: Isolated browser contracts with controlled native detail responses.
 // Usage: Run against TestUIBrowserFixture through MECA_UI_DESCRIPTOR.
 // Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/chat/chat.tsx.
-import { readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string };
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 test.beforeAll(async () => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  fixture = await browserFixture();
 });
 async function openConversation(page: Page) {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await page
     .locator('.workspace-group')
     .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
@@ -67,9 +63,10 @@ test('async results stay inline, wrap and push later rows immediately in both th
                 kind: 'event',
                 role: 'assistant',
                 event: {
-                  kind: 'tool_completed',
+                  kind: 'tool_succeeded',
                   agent: 'reviewer',
                   tool: {
+                    phase: 'TOOL_PHASE_SUCCEEDED',
                     name: 'execute_command',
                     reference: {
                       sessionId: command.history.sessionId,
@@ -118,6 +115,10 @@ test('async results stay inline, wrap and push later rows immediately in both th
     const tool = page.locator('.tool-entry');
     const trigger = tool.locator('.tool-disclosure > button');
     await expect(trigger).toHaveCount(1);
+    const triggerBounds = await trigger.boundingBox().then(required);
+    const requestBounds = await tool.locator('.tool-request-action').boundingBox().then(required);
+    expect(requestBounds.x - triggerBounds.x - triggerBounds.width).toBeGreaterThanOrEqual(0);
+    expect(requestBounds.x - triggerBounds.x - triggerBounds.width).toBeLessThanOrEqual(12);
     await expect(page.locator('.tool-message')).toHaveAccessibleName('reviewer');
     expect(views).toEqual([]);
     await trigger.focus();
@@ -162,13 +163,14 @@ test('async results stay inline, wrap and push later rows immediately in both th
       const dialog = page.getByRole('dialog');
       await expect(dialog).toContainText('printf requested-command');
       await expect(dialog).not.toContainText(stdout);
-      const title = await dialog.getByRole('heading').boundingBox();
-      const label = await dialog.getByText('명령', { exact: true }).boundingBox();
-      expect(title && label && Math.abs(title.x - label.x)).toBeLessThan(2);
-      const subtitle = await dialog.getByText('요청 내용', { exact: true }).boundingBox();
-      expect(subtitle && label && label.y - subtitle.y - subtitle.height).toBeGreaterThanOrEqual(
-        16
-      );
+      const title = await dialog.getByRole('heading').boundingBox().then(required);
+      const label = await dialog.getByText('명령', { exact: true }).boundingBox().then(required);
+      expect(Math.abs(title.x - label.x)).toBeLessThan(2);
+      const subtitle = await dialog
+        .getByText('요청 내용', { exact: true })
+        .boundingBox()
+        .then(required);
+      expect(label.y - subtitle.y - subtitle.height).toBeGreaterThanOrEqual(16);
       const material = await dialog.evaluate((node) => {
         const style = getComputedStyle(node);
         return {
@@ -208,7 +210,7 @@ test('async results stay inline, wrap and push later rows immediately in both th
 test('long saved narratives page inline and virtual history keeps a bounded mounted window', async ({
   page,
 }) => {
-  const prefix = 'Stored narrative page one.\n\n' + 'paragraph words '.repeat(1500);
+  const prefix = `Stored narrative page one.\n\n${'paragraph words '.repeat(1500)}`;
   const suffix = 'Stored narrative page two ends here.';
   const offset = String(Buffer.byteLength(prefix));
   let expire = true;
@@ -225,7 +227,7 @@ test('long saved narratives page inline and virtual history keeps a bounded moun
               text:
                 index === 31
                   ? 'Stored narrative excerpt.'
-                  : `History ${index}. ` + 'history words '.repeat(100),
+                  : `History ${index}. ${'history words '.repeat(100)}`,
               truncated: index === 31,
             })),
           },

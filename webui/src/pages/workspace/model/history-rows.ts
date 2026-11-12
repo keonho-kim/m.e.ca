@@ -2,15 +2,20 @@
 // Pattern: Pure chronological history projection.
 // Usage: Chat virtualizes these groups rather than switching presentation at tool boundaries.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/history-row.tsx.
-import { isResponseEvent, toolIdentity } from '@/pages/workspace/model/chat-events';
+import {
+  isResponseEvent,
+  toolBatchIdentity,
+  toolIdentity,
+} from '@/pages/workspace/model/chat-events';
 import type { HistoryItemJson, RunCompletionJson } from '@/shared/api';
 export type HistoryMessageItem = Omit<HistoryItemJson, 'completion'>;
 export type HistoryRowValue =
-  | { item: HistoryMessageItem; thinking?: HistoryMessageItem }
+  | { item: HistoryMessageItem; thinking?: HistoryMessageItem; tools?: HistoryMessageItem[] }
   | { sequence?: string; completion: RunCompletionJson };
 export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
   const result: HistoryRowValue[] = [];
-  const tools = new Map<string, number>();
+  const tools = new Map<string, { row: number; member?: number }>();
+  const batches = new Map<string, number>();
   for (const original of items) {
     const { completion, ...message } = original;
     if (completion) {
@@ -18,19 +23,44 @@ export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
       continue;
     }
     const event = message.event;
-    if (event?.kind === 'tool_proposed' || event?.kind === 'approved') continue;
+    if (
+      event?.kind === 'tool_proposed' ||
+      event?.kind === 'approved' ||
+      event?.kind === 'team_notice'
+    )
+      continue;
     const item =
       event && isResponseEvent(event)
         ? { ...message, role: event.agent === 'user' ? 'user' : 'assistant', text: event.text }
         : message;
     const key = event && toolIdentity(event);
     if (key) {
-      const index = tools.get(key);
-      if (index !== undefined) {
-        result[index] = { item };
+      const position = tools.get(key);
+      if (position) {
+        const row = result[position.row];
+        if (row && 'item' in row && row.tools && position.member !== undefined) {
+          row.tools[position.member] = item;
+          row.item = row.tools[0]!;
+        } else result[position.row] = { item };
         continue;
       }
-      tools.set(key, result.length);
+      const batch = toolBatchIdentity(event);
+      const index = batch && batches.get(batch);
+      if (typeof index === 'number') {
+        const row = result[index];
+        if (row && 'item' in row && row.tools) {
+          tools.set(key, { row: index, member: row.tools.length });
+          row.tools.push(item);
+          continue;
+        }
+      }
+      if (batch) {
+        batches.set(batch, result.length);
+        tools.set(key, { row: result.length, member: 0 });
+        result.push({ item, tools: [item] });
+        continue;
+      }
+      tools.set(key, { row: result.length });
     }
     const previous = result.at(-1);
     if (

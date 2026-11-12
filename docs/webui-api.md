@@ -65,6 +65,10 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 
 ## 상태와 스트림 복원
 
+`tool.batchId`는 같은 run·agent 안에서 코어가 계획한 하나의 병렬 wave를 식별한다. 개별 `executionId`는 유지하며 저장 결과와 실시간 멤버를 합칠 때 사용한다. 단일·직렬 실행을 호출 시각이나 이름만으로 병렬 묶음에 합치지 않는다. 팀 입·퇴장 이벤트는 제어 정보이며 사용자 응답·통계 행으로 표시하지 않는다.
+
+`tool.phase`의 값은 `TOOL_PHASE_PENDING`·`TOOL_PHASE_RUNNING`·`TOOL_PHASE_SUCCEEDED`·`TOOL_PHASE_FAILED`·`TOOL_PHASE_INTERRUPTED`·`TOOL_PHASE_SKIPPED`이며 코어가 결정한다. 기본값은 `TOOL_PHASE_UNSPECIFIED`다. `tool_succeeded`는 도구 호출이 관측 결과를 반환했음을 뜻하므로 백그라운드 명령이 계속 실행 중이면 phase는 `TOOL_PHASE_RUNNING`이다. 프론트는 이벤트 이름에서 성공을 추정하지 않는다. 저장 이력과 실시간 관측을 합칠 때 같은 원본 참조의 sequence를 비교하고, 더 오래된 관측이나 순서를 확인할 수 없는 관측이 확정 상태를 덮어쓰지 않게 한다.
+
 1. 최초 snapshot으로 현재 커서를 확보한다. `nextTask`가 있으면 `state.afterTask`로 후속 페이지를 읽는다. 이 페이지들은 조회 시점의 상태이며 하나의 원자적인 전체 작업 목록은 아니다. 중간 이벤트를 같은 커서 구독에서 함께 반영하고 task ID로 병합한다.
 2. task별 화면은 `state.taskId`와 스트림의 taskId 필터를 사용한다. 다른 작업의 draft·승인·모델이 섞이지 않는다.
 3. 스트림 순서는 cursor와 작업별 sequence를 따른다. heartbeat는 커서를 갱신하지 않는다. source는 taskId·agent·generation으로 식별한다.
@@ -112,7 +116,11 @@ SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈
 
 ## 내장 브라우저 인증
 
-`--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료만 보관한다. `POST /v1/ui/logout`은 해당 쿠키를 폐기한다.
+`--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료·취소 수명을 보관한다. 로그아웃·쿠키 교체·만료·서버 종료는 이미 접수한 쿠키 인증 SSE·파일 감시 등 HTTP 관찰도 취소한다. 이미 접수한 엔진 작업과 별도 Bearer 인증 클라이언트의 수명은 유지한다.
+
+로컬 브라우저는 POST `/v1/ui/pick-folder`로 OS 폴더 선택창을 연다. 동일 출처 쿠키와 loopback Host·peer가 필요하다. 성공 시 `{"path":"절대 경로"}`, 취소 시 `{"path":""}`를 반환한다. 데스크톱 선택창을 쓸 수 없으면 503이며 기존 폴더 모달을 연다. 동시에 하나만 실행하며 다른 요청은 409로 거절한다. 원격 접속은 이 API를 호출하지 않고 기존 모달에서 서버 폴더를 탐색한다. 선택 후 `addWorkspace`가 정책 검사·중복 제거·저장을 수행하며 정규화한 등록 항목의 `workspaces.selectedId`를 반환한다.
+
+선택창 실행 실패는 500, 2분 시간 초과는 504다. 서버는 원시 OS 오류나 경로를 기록하지 않고 `folder_selection_failed` 진단과 오류 코드를 남긴다. 브라우저는 실패 안내와 기존 폴더 모달을 제공한다. 브라우저 연결 해제·로그아웃·서버 종료는 선택창 작업을 취소한다.
 
 GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 전용 접속 상태 조회다. 인증 전에도 Host·Origin 검사를 적용하며 보호된 명령을 실행하지 않는다. 첫 접속의 쿠키 복원과 로그인 후 쿠키 수신 확인에 사용한다. 쿠키 이름은 접속 주소별로 구분하므로 같은 호스트의 다른 포트에서 실행한 서버끼리 덮어쓰지 않는다. 서버 재시작·만료 뒤에는 다시 로그인한다.
 

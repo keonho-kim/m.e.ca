@@ -2,9 +2,11 @@
 // Pattern: Browser-to-engine composer resource contracts.
 // Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
 // Related: webui/src/pages/workspace/ui/composer/composer.tsx, cmd/meca/ui_browser_test.go.
-import { readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
-let fixture: { url: string; tokenFile: string };
+
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
   'base64'
@@ -20,9 +22,7 @@ async function create(page: Page) {
   await expect(page.getByRole('combobox', { name: '작업 입력', exact: true })).toBeEnabled();
 }
 test.beforeAll(async () => {
-  const path = process.env.MECA_UI_DESCRIPTOR;
-  test.skip(!path, 'start the isolated fixture first');
-  if (path) fixture = JSON.parse(await readFile(path, 'utf8'));
+  fixture = await browserFixture();
 });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -42,11 +42,7 @@ test.beforeEach(async ({ page }) => {
       revoke(url);
     };
   });
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await create(page);
 });
 const usage = (page: Page) =>
@@ -70,22 +66,22 @@ test('images form one native carousel above the composer with hover and keyboard
   await expect(carousel).toBeVisible();
   await expect(carousel.locator('.astryx-thumbnail')).toHaveCount(8);
   const thumbs = await carousel.locator('.astryx-thumbnail').all();
-  const first = (await thumbs[0]!.boundingBox())!;
+  const first = (await thumbs[0]?.boundingBox().then(required))!;
   for (const thumb of thumbs) {
-    const rect = (await thumb.boundingBox())!;
+    const rect = await thumb.boundingBox().then(required);
     expect(rect.width).toBeLessThanOrEqual(80);
     expect(Math.abs(rect.y - first.y)).toBeLessThan(2);
   }
-  const frame = (await carousel.boundingBox())!,
-    composer = (await page.locator('.composer').boundingBox())!;
+  const frame = await carousel.boundingBox().then(required),
+    composer = await page.locator('.composer').boundingBox().then(required);
   expect(frame.y + frame.height).toBeLessThanOrEqual(composer.y);
   const cards = await carousel.locator('.composer-image').all();
   expect(cards).toHaveLength(8);
   for (const direction of ['ltr', 'rtl']) {
     await carousel.evaluate((element, dir) => element.setAttribute('dir', dir), direction);
     for (const card of cards) {
-      const thumbnail = (await card.locator('.astryx-thumbnail').boundingBox())!;
-      const action = (await card.getByRole('button').boundingBox())!;
+      const thumbnail = await card.locator('.astryx-thumbnail').boundingBox().then(required);
+      const action = await card.getByRole('button').boundingBox().then(required);
       const topInset = action.y - thumbnail.y;
       const rightInset = thumbnail.x + thumbnail.width - action.x - action.width;
       expect(topInset).toBeGreaterThanOrEqual(0);
@@ -119,7 +115,7 @@ test('images form one native carousel above the composer with hover and keyboard
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
-test('typing reuses previews and switching drafts or disconnecting revokes every URL', async ({
+test('typing reuses previews and switching drafts releases inactive preview URLs', async ({
   page,
 }) => {
   const conversation = page.url();
@@ -137,10 +133,4 @@ test('typing reuses previews and switching drafts or disconnecting revokes every
     page.getByRole('region', { name: '첨부 이미지', exact: true }).locator('.astryx-thumbnail')
   ).toHaveCount(2);
   await expect.poll(async () => (await usage(page)).live).toBe(2);
-  await page.getByRole('button', { name: '설정', exact: true }).click();
-  const settings = page.getByRole('dialog', { name: '설정', exact: true });
-  await settings.getByRole('button', { name: '일반', exact: true }).click();
-  await settings.getByRole('button', { name: '연결 종료', exact: true }).click();
-  await expect(page.getByRole('textbox', { name: '서버 토큰', exact: true })).toBeVisible();
-  await expect.poll(async () => (await usage(page)).live).toBe(0);
 });

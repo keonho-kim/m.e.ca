@@ -11,8 +11,6 @@ import (
 	"time"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 	resultfmt "github.com/keonho-kim/meca/internal/tools/result"
 )
@@ -42,7 +40,7 @@ func (e *Executor) CommandActivity() []toolapi.CommandRun {
 	}
 	out := make([]toolapi.CommandRun, 0, len(states))
 	for _, state := range states {
-		run := toolapi.CommandRun{ExecutionID: state.ExecutionID, CallID: state.CallID, ID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
+		run := toolapi.CommandRun{ExecutionID: state.ExecutionID, BatchID: state.BatchID, CallID: state.CallID, ID: state.ID, Command: e.commandLabel(state.ID, state.Command), Status: state.Status, ElapsedMillis: state.ElapsedMillis, LastOutputMillis: state.LastOutputMillis}
 		if !toolapi.CommandActive(state.Status) {
 			code := state.ExitCode
 			run.ExitCode = &code
@@ -60,16 +58,17 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 	}
 	completed := make([]toolapi.CommandCompletion, 0, len(states))
 	for _, state := range states {
-		if state.Error != "" {
-			return nil, faults.Errorf(diagcatalog.LocalCommandResultArchiveFailed, state.Error)
-		}
 		result, err := e.readCommandResult(state.ID)
-		if err != nil {
-			return nil, err
+		if state.Error != "" || err != nil {
+			detail := state.Error
+			if err != nil && detail == "" {
+				detail = err.Error()
+			}
+			result = e.unavailableCommandResult(state.ID, state.Command, state.Status, state.ExitCode, state.Started, detail)
 		}
 		command := e.commandLabel(state.ID, state.Command)
 		result.Process.Command = command
-		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, Command: command, Result: result})
+		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, BatchID: state.BatchID, Command: command, Result: result})
 	}
 	return completed, nil
 }

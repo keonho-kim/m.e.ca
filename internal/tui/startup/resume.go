@@ -71,6 +71,9 @@ func Select(ctx context.Context, screen tcell.Screen, load Conversations, newCon
 			c := conversations[i]
 			style := view.SelectionStyle(i == index)
 			title := strings.ReplaceAll(c.Summary, "\n", " ")
+			if title == "" {
+				title = lang.Text("새 대화")
+			}
 			if c.Unavailable != "" {
 				title = "[Unavailable] " + title
 			}

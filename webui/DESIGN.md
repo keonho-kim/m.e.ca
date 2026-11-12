@@ -117,7 +117,7 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 - **Title** (`heading-2`): Dialog·Drawer 등 표면의 제목.
 - **Body** (`body`): 답변·입력·폼 본문. Markdown의 제목·목록·코드 위계는 공식 컴포넌트가 소유한다.
 - **Label** (`label`): 버튼·탐색·폼 이름. 필요 시 공식 `weight`로 강조한다.
-- **Supporting** (`supporting`): 발신자·완료 정보·Thinking 트리거·연결 복구 안내.
+- **Supporting** (`supporting`): 발신자·Thinking 트리거·연결 복구 안내. 완료 측정과 컴포저 사용량은 `size="base"`인 14px 캡션과 `hasTabularNumbers`를 사용한다. 횟수는 세 자리씩 묶고 이번 응답과 대화 누적값의 범위를 툴팁·접근성 이름으로 구별한다.
 - **Code** (`code`): 공식 CodeBlock·기본 텍스트 편집기와 경로·수치.
 
 크기는 rem 기반의 실제 기본 역할 값이다. Astryx의 dynamic type·입력 환경 적응을 유지하며, Markdown과 에디터 전체에 단일 글자 크기를 덮어쓰지 않는다.
@@ -180,9 +180,15 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 ### Navigation
 
-프로젝트는 접는 SideNavItem 그룹, 대화는 들여쓴 선택 행이다. 실제 overflow 경계를 유지해 긴 이름이 사이드바 폭을 밀어내지 않게 한다. 사이드바 접기 조작은 상단에 두고 설정·테마는 하단에 고정한다. Toolbar의 TabList는 작업 보기를, 설정의 List·Selector는 설정 위치를, SegmentedControl은 테마 선택을 표현한다. 모바일 탐색은 AppShell이 소유하고 조작 아이콘은 Astryx Icon으로 표현한다. 공용 컨트롤은 Astryx Neutral의 기본 Lucide registry를 상속하고 앱 전용 아이콘도 같은 Lucide 라이브러리로 추가한다.
+프로젝트는 접는 SideNavItem 그룹, 대화는 들여쓴 선택 행이다. 사이드바 접기·펼치기는 레일 상단에, 설정·테마는 하단에 둔다. Toolbar의 TabList는 작업 보기, 끝의 DropdownMenu는 언어를 선택하고 현재 언어를 체크 표시로 구별한다. 테마는 하단 IconButton으로 전환한다. 모바일 탐색은 AppShell이 소유한다. 공용 컨트롤은 Astryx Neutral의 Lucide registry를 상속하며 파일 형식 glyph만 공통 32종 카탈로그의 MUI Material 아이콘을 사용한다.
+
+디렉터리 경로는 Astryx Breadcrumbs로 위치 행의 80%를 사용한다. 마지막 세 단계까지 표시하고 너비가 모자라면 앞쪽부터 … 메뉴로 접는다. 모달 본문은 불투명을 유지하며 테마 색상 전환은 사이드바의 너비 애니메이션을 덮어쓰지 않는다. 모션 감소 설정에서는 추가 전환을 생략한다.
 
 ### Composer and Thinking
+
+전송 버튼의 툴팁은 전송(대기 중)·방향 수정(응답 중)·후속 예약(응답 중)을 각각 한 행에 표시한다. 키 표시는 Astryx Kbd가 소유하며 Enter와 `mod+enter`를 사용해 플랫폼에 맞는 Control·Command 키를 보여준다. 키보드 입력 처리는 컴포저가 계속 소유한다. 키캡의 잉크·바탕·밑선은 툴팁의 전경색을 기준으로 파생해 두 테마에서 대비를 유지한다.
+
+접속 확인에서 작업 화면으로 넘어가는 시작 상태는 단일 glass 표면과 Spinner로 표현한다. MECA 이름과 실제 연결/작업 공간 준비 안내를 보여주고 진행률·장식용 스켈레톤·최소 대기 시간을 추가하지 않는다. 시작 화면의 재질은 기존 glass 토큰을 사용하며 모달의 불투명 규칙과 구분한다.
 
 컴포저는 입력·참조 Token·팀 토글·후속 예약·전송을 묶는 glass 작업 표면이다. 모델은 설정과 `!model`에서 선택한다. 음성·dictation 조작은 없다. `+`는 위쪽 DropdownMenu에서 이미지와 스킬을 선택한다. 이미지는 파일 선택창을, 스킬은 별도 탐색 모달을 열며 행 우측 +로 입력에 넣는다. 메뉴·모달의 Escape·선택 완료와 포커스 복귀는 공식 레이어 동작을 사용한다. 컴포저 전체의 이미지 드롭·붙여넣기·명시 단축키는 같은 첨부 한도를 따른다. 후보는 `!` 명령·`#` 스킬의 공식 typeahead다.
 

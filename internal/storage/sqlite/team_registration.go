@@ -35,10 +35,11 @@ func (s *Store) CreateTeamAgent(ctx context.Context) (member teamidentity.Member
 		return member, err
 	}
 	// Filesystem preparation never holds the public journal's sole DB connection.
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, releaseWrite, err := s.beginWrite(ctx)
 	if err != nil {
 		return member, err
 	}
+	defer releaseWrite()
 	defer tx.Rollback()
 	var ordinal int
 	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(ordinal),-1)+1 FROM team_members").Scan(&ordinal); err != nil {
@@ -92,7 +93,7 @@ func (s *Store) DiscardTeamAgent(ctx context.Context, member teamidentity.Member
 	if used {
 		return faults.Errorf(diagcatalog.SqliteCannotDiscardATeamSessionContainingRecorded)
 	}
-	result, err := s.db.ExecContext(ctx, "DELETE FROM team_members WHERE agent_id=? AND session_id=? AND summary=''", member.ID, member.Session)
+	result, err := s.execWrite(ctx, "DELETE FROM team_members WHERE agent_id=? AND session_id=? AND summary=''", member.ID, member.Session)
 	if err != nil {
 		return err
 	}

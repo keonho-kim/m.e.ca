@@ -18,6 +18,7 @@ func (g repeatedIDs) Generate(ctx context.Context, request modelapi.Request, emi
 	return g.source.Generate(ctx, request, func(event modelapi.Event) error {
 		for i := range event.Calls {
 			event.Calls[i].ID = "reused-provider-id"
+			event.Calls[i].BatchID = "provider-supplied"
 		}
 		return emit(event)
 	})
@@ -30,6 +31,9 @@ func TestExecutionIdentityAcrossGenerations(t *testing.T) {
 	_, err := r.Run(t.Context(), "Inspect both files.", approve, func(event record.Event) error {
 		if event.Call == nil {
 			return nil
+		}
+		if event.Call.BatchID != "" {
+			t.Fatal("serial calls were mislabeled as parallel")
 		}
 		if event.Kind == "tool_started" {
 			started = append(started, event.Call.ExecutionID)

@@ -8,9 +8,9 @@
     "dev": "bun --bun vite --host 127.0.0.1",
     "analyze": "bun run check && bun --bun vite build --mode analyze",
     "build": "bun run check && bun run quality && bun --bun vite build && bun scripts/package.ts",
-    "check": "bun run theme && tsc -b --pretty false",
+    "check": "bun run icons && bun run theme && tsc -b --pretty false",
     "test": "bun test src",
-    "lint": "biome check src scripts *.ts",
+    "lint": "biome check src scripts e2e *.ts",
     "browser": "playwright-cli",
     "test:e2e": "playwright test",
     "astryx": "bun --bun node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
@@ -20,7 +20,8 @@
     "deadcode": "bun --bun node_modules/knip/bin/knip.js --no-progress",
     "quality": "bun run lint && bun run lint:types && bun run deadcode && bun run architecture",
     "verify": "bun run check && bun run quality && bun run test",
-    "generate:api": "protoc -I ../api --plugin=protoc-gen-es=node_modules/.bin/protoc-gen-es --es_out=src/shared/api/gen --es_opt=target=ts,json_types=true ../api/meca/v1/*.proto"
+    "generate:api": "protoc -I ../api --plugin=protoc-gen-es=node_modules/.bin/protoc-gen-es --es_out=src/shared/api/gen --es_opt=target=ts,json_types=true ../api/meca/v1/*.proto",
+    "icons": "bun scripts/file-icons.ts"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.13",
@@ -65,9 +66,14 @@
     "steiger": "0.10.0",
     "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
-    "vite": "8.3.8"
+    "vite": "8.3.8",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1"
   },
   "imports": {
+    "#e2e/fixture": "./e2e/fixture.ts",
     "#build/notices": "./scripts/notices.ts"
   },
   "patchedDependencies": {

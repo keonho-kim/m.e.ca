@@ -17,6 +17,7 @@ import { useMemo, useRef, useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { selectReference } from '@/pages/workspace/model/file-references';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { DirectoryBreadcrumbs } from '@/pages/workspace/ui/files/directory-breadcrumbs';
 import { EntryDialog } from '@/pages/workspace/ui/files/entry-dialog';
 import {
   type EntryAction,
@@ -125,14 +126,16 @@ export function DirectoryColumn({
                 onClick={refresh}
               />
             </HStack>
-            {parent && parentPath && (
-              <HStack gap={2} align="center" className="directory-location min-w-0">
+            <HStack gap={2} align="center" className="directory-location min-w-0">
+              {parent && parentPath && (
                 <ParentFolderButton path={parentPath} open={parent} busy={busy} />
-                <Text type="label" maxLines={1} hasTruncateTooltip className="min-w-0 grow">
-                  {path}
-                </Text>
-              </HStack>
-            )}
+              )}
+              <DirectoryBreadcrumbs
+                path={page.data?.pages[0]?.path ?? path}
+                open={(path) => open(path, true)}
+                busy={busy}
+              />
+            </HStack>
           </VStack>
         }
         content={
@@ -147,7 +150,7 @@ export function DirectoryColumn({
                     exact: true,
                   })
                 }
-                label={String(t('readError')) + ' ' + '\u00B7' + ' ' + String(t('retry'))}
+                label={`${String(t('readError'))} \u00B7 ${String(t('retry'))}`}
                 variant="ghost"
               >
                 {t('readError')} · {t('retry')}

@@ -7,13 +7,12 @@ package clipboard
 import (
 	"context"
 	"errors"
-	"os"
 	"runtime"
-	"strings"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/host/wsl"
 	native "golang.design/x/clipboard"
 )
 
@@ -39,21 +38,10 @@ func readLocalImage(ctx context.Context) ([]byte, error) {
 }
 
 func nativeSelection(ctx context.Context) (native.Image, error) {
-	if isWSL() {
+	if wsl.Available() {
 		return readWSL(ctx)
 	}
 	return native.ReadImage(ctx, media.MaxBytes)
-}
-
-func isWSL() bool {
-	if runtime.GOOS != "linux" {
-		return false
-	}
-	if os.Getenv("WSL_INTEROP") != "" || os.Getenv("WSL_DISTRO_NAME") != "" {
-		return true
-	}
-	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
-	return err == nil && strings.Contains(strings.ToLower(string(data)), "microsoft")
 }
 
 func clipboardError(err error) error {

@@ -19,6 +19,7 @@ import (
 )
 
 type notice struct {
+	Settings        *settingsResult
 	ImagePaste      *imagePasteNotice
 	ApprovalPreview *approvalPreviewNotice
 	Skills          *skillNotice
@@ -59,6 +60,10 @@ func (a *app) post(ctx context.Context, n notice) error {
 	}
 }
 func (a *app) receive(n notice) {
+	if n.Settings != nil {
+		a.receiveSettings(n.Settings)
+		return
+	}
 	if n.ImagePaste != nil {
 		a.receiveImagePaste(n.ImagePaste)
 		return

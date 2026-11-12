@@ -259,6 +259,14 @@ Start는 조회 뒤 변경 상태 예약에 실패하면 이미 확정된 동일
 
 ### 서버 데이터와 자원 소유권
 
+브라우저 인증 세션은 쿠키 해시와 만료 context를 소유하고, 쿠키로 접수한 HTTP 관찰은 그 취소 수명을 빌린다. 로그아웃·재로그인 교체·만료는 열린 이벤트/파일 스트림에도 전파한다. 실행 작업은 Service의 수명으로 유지한다. 서버 시작의 토큰 발행은 경로별 파일 대여로 직렬화하고, 같은 파일을 쓰려는 두 번째 서버는 발행 전에 거절한다.
+
+sessionUsage는 선택되거나 실행 중인 대화의 기존 History 읽기 대여를 우선 사용한다. 비활성 대화만 사용량 전용 opener를 사용하며 새 장기 연결 캐시를 만들지 않는다. 이벤트 투영 캐시는 짧은 registry 잠금과 이벤트별 한 번의 계산을 분리한다. 마스킹·proto 크기 계산·JSON 직렬화는 전체 캐시 잠금을 잡지 않는다. 마스킹 revision·128개/1MiB·관찰자 수명 경계는 유지하고 캐시에서 분리된 과거 투영도 전송 직전 다시 마스킹한다.
+
+RecentInputs는 최대 200개의 선택 ID와 envelope 크기를 먼저 읽고 실제 envelope와 복원 텍스트에 맞춰 공용 메모리를 예약한다. 빈 이력·짧은 입력에 최대 16MiB 입력 창의 배수를 먼저 예약하지 않는다. 읽는 ID와 envelope 크기를 고정해 동시 append나 교체가 예약을 늘리지 못하게 한다. JSON escape 때문에 visible prefix보다 큰 검증 버퍼가 필요할 수 있으므로 prefix 읽기는 원본 크기로 제한한 encoded 길이도 계산한다. 16MiB는 반환하는 완전한 입력 텍스트의 합계이며 작업용 버퍼의 메모리 예약량과 다르다.
+
+fileview.Reader는 정규화된 활성 디렉터리마다 하나의 fsnotify watcher와 묶음 타이머를 공유한다. 구독자마다 대기 알림은 하나로 합치고, 마지막 구독 해제는 watcher 종료를 기다린다. 경로 정책과 비밀정보 검사는 각 구독자의 변경 전달 경계에서 수행한다. 변화 없는 heartbeat는 파일 참조를 다시 읽지 않는다.
+
 작업 페이지의 sessionSummary는 Service.Tasks가 요청한 세션 ID에 한해 Sessions.ConversationSummaries로 조회한다. 기존 DB/WAL 메타데이터 인덱스와 단일 읽기 연결을 재사용하고 중복 ID를 제거한다. 조회 중 공유 삭제 대여를 소유하며 오류 시 SQLite 연결을 먼저 닫아 대여보다 파일 핸들이 오래 남지 않게 한다. 제목을 작업 원장에 중복 저장하거나 대화 본문을 적재하지 않는다.
 
 신규 영속 할당은 request-owned Reservation을 받는다. 세션의 최종 link, 접수 트랜잭션 Commit, OS 키 Set 직전에 Publish로 예약을 확정한다. 그 전에 끝난 작업은 독립된 최대 5초 정리로 슬롯을 한 번 반환한다. 카운터 쓰기가 불확실하면 반환도 반복하지 않는다. 프로세스 중단·게시 시도 후 오류·은퇴 키의 예약은 자동 재조정하지 않는다. 할당 90%부터 중앙 storage_capacity_low에 count·limit을 남긴다. allocated를 임의로 삭제/재설정하거나 백업 키를 일괄 삭제하지 않는다. 임의 시점의 DB 백업 보존과 과거 OS 키의 자동 회수는 함께 보장할 수 없으므로 보존 정책 변경은 별도 운영 결정이다.
@@ -274,7 +282,7 @@ Start는 조회 뒤 변경 상태 예약에 실패하면 이미 확정된 동일
 
 `storage/capacity`는 private 할당 카운터와 독점 lease를 소유한다. 새 세션·접수·OS 암호화 키 할당 전에 카운터를 확정하며 불확실한 부작용은 예약을 반환하지 않는다. 프로젝트당 대화 4096개, 전체 서버 접수 100000개, 새 암호화 키 버전 65536개를 허용한다. 카운터 최초 생성 시 현재 DB·파일의 해당 항목 수를 포함하며 이미 보존된 과거 OS 키의 전체 개수를 추측하지 않는다. 자격 증명 DB의 현재 참조는 256개로 제한하고 SQLite 문장 하나가 경쟁 삽입에도 상한을 유지한다. 새 할당에는 여유 공간 1GiB를 요구한다. 기존 조회·중복 확인·완료 기록과 백업 키는 자동 삭제하지 않는다.
 
-세션 DB의 512MiB 상한은 실제 파일 헤더의 페이지 크기에서 계산해 DSN에 넣으므로 연결이 교체되어도 유지된다. 이미 더 큰 파일은 기존 페이지 수 아래로 줄이지 않는다. WAL은 256페이지마다 자동 checkpoint를 시도하고 정리 후 journal 보관은 16MiB로 제한한다. 활성 읽기 중 WAL 성장과 외부 프로그램의 디스크 사용은 별도다.
+세션 DB의 512MiB 상한은 실제 파일 헤더의 페이지 크기에서 계산해 DSN에 넣으므로 연결이 교체되어도 유지된다. 이미 더 큰 파일은 기존 페이지 수 아래로 줄이지 않는다. WAL은 256페이지마다 자동 checkpoint를 시도하고 정리 후 journal 보관은 16MiB로 제한한다. 쓰기 경계는 BEGIN IMMEDIATE로 쓰기 소유권을 잡은 뒤 WAL 크기를 검사한다. 16MiB 이상이면 효과를 시작하기 전에 passive checkpoint를 확인하며, 오래 열린 읽기가 정리를 막으면 resource_exhausted로 거절한다. 읽기가 끝나면 쓰기를 재개한다. 다른 쓰기는 파일 상태와 SQLite data_version으로 checkpoint 허가를 무효화한다. 이미 커밋한 효과에 압력 오류를 돌려 재실행시키지 않는다. 한 번의 큰 트랜잭션과 외부 프로그램의 쓰기는 임계치를 넘을 수 있으므로 WAL 임계치는 절대 디스크 할당량이 아니다.
 
 storage/serverrequests는 프로젝트별 SQLite 연결 하나와 native 접수·종료를 소유한다. 입력 digest와 세션·키를 접수 트랜잭션에서 결합하고 확정된 종료 값은 재변경하지 않는다. 입력 본문과 결과 사본을 보관하지 않으며 schema 4·application ID·프로젝트 소유 scope를 확인한다. schema 3과 이전 파일은 원본을 보존하고 거절한다. 모델 연결은 대화·작업이 각자의 핸들을 해제한다.
 
@@ -365,6 +373,16 @@ GOFLAGS='-tags=godbus_no_tcp' go test ./internal/provider/protocol ./internal/pr
 이벤트 링·서버 draft·상세 원본 spool·페이지 payload·팀 공유 텍스트·TUI 표시 캐시는 각 소유자의 용량·수명 경계를 따른다. 서명된 원문과 표시/실행용 값은 서로 다른 소비 계약이므로 한쪽을 제거하지 않는다. 보관한 암호화 키 버전과 알려진 비밀값은 각각 DB 백업 복원과 이후 출력의 마스킹에 필요하다. 메모리 회수는 소유권 해제에 따른다. 강제 GC·전역 응답 캐시·별도 DB 연결 풀은 사용하지 않는다. 실제 Provider의 대형 서명 응답, 다중 구독자의 대형 최종 응답, Linux 런타임의 장시간 RSS는 별도 부하 측정 대상이다.
 
 ## 성능과 장시간 수명
+
+터미널 입력 이력의 보관 정책은 storage/history의 200건·16MiB 한 곳이 소유한다. SQLite는 보관 예산 안의 메타데이터를 먼저 선택하고 검증된 텍스트 prefix로 완전한 입력만 복원하며, event-loop 입력 이력도 같은 예산으로 오래된 참조를 회수한다. 요청 수용·모델 문맥·편집·이력 보관 예산은 별개다.
+
+queue/recovery는 문자열을 만들기 전에 참조 안내·구분자·현재 초안을 포함한 크기를 계산한다. 편집 한도를 넘는 복원은 불변 요청 값을 보류 큐에 남기고 빈 입력 Enter로만 재개한다. 저장 데이터나 입력을 잘라 맞추지 않는다. 보류 큐가 일반 접수 예산보다 큰 경우 편집은 총량을 늘리지 않는 변경만 허용한다. 목록 투영은 항목당 2KiB·12줄 미리보기만 별도로 만든다.
+
+단일·팀 도구 표시의 연결 키는 engine execution ID다. 접힌 실행은 작은 요약과 빌린 호출만 보유하고 명시적 펼침에서 상세를 포맷한다. 도구 원문 worker는 최대 1MiB 복원과 16MiB 포맷 예산을 사용하며, payload lease를 복원 전부터 결과의 event-loop 수용 또는 종료 큐 정리까지 소유한다. 표시 한도 오류는 원본 DB와 조회 참조를 변경하지 않는다.
+
+명령 아카이브·원문 조회 실패는 실제 실행 식별자·시작 여부·관측 종료 상태를 보존한 persistence_failed 결과다. run은 실패 결과와 체크포인트를 확정한 뒤만 명령을 acknowledge하고 현재 요청을 중단한다. 저널 쓰기 실패 시에는 acknowledge하지 않는다. 프로세스나 부수 효과를 재실행해 복구하지 않는다.
+
+settings_save는 언어·권한 저장과 지역화된 이력 읽기의 취소·합류를 소유하고 notice 수신만 터미널 상태를 바꾼다. 입력 편집기는 본문과 접두사 배치가 불변 backing string을 공유하며, 접미 삭제의 누적 축소도 실제 보유 크기를 기준으로 회수한다. 이미 배포한 Window 원문은 이후 편집에서 바뀌지 않는다.
 
 큰 중첩 JSON의 복원은 참조 경로 trie를 만들어 각 부모 객체/배열을 한 번 decode·encode한다. 같은 payload는 한 번 읽고 큰 정수를 RawMessage로 보존한다. 겹치거나 비정규적인 배열 경로는 거부한다. 문맥 복원 메타데이터는 최대 256개 payload ID씩 batch 조회하여 필드별 N+1 읽기를 없앤다. 512바이트 이상 Thinking의 이벤트/메시지 사본과 비동기 명령의 JSON 문자열/구조화 출력은 같은 canonical payload를 공유한다.
 
@@ -477,6 +495,8 @@ storage/sqlite의 페이지별 본문 복원은 최대 256개 항목의 마지�
 실행 중 명령 조회는 출력 본문을 복사하지 않고 상태와 시각을 확인한다. 스트림별 변경 번호 또는 마스킹 revision이 바뀐 경우만 본문을 복사·마스킹하고 큰 로그를 갱신한다. 캐시는 작은 발췌·경로·변경 번호만 유지하고 명령별 표시 계산을 독립적으로 수행한다. 정제 로그·결과의 게시·회수만 실행기 예산 잠금으로 직렬화하고 완성 파일을 원자적으로 교체한다. 보관은 256MiB·256건으로 제한하며 DB 확정 뒤 acknowledge한 결과만 회수한다. 미확정 자료는 공간이 없어도 버리지 않는다. 결과 수집·요청 종료·Executor 종료에서 캐시 참조를 해제한다.
 
 ### 최적화 측정
+
+입력 스냅샷은 `go test ./internal/tui/input -run '^$' -bench BenchmarkDraftSnapshots -benchmem`으로 측정한다. ASCII 1MiB·8MiB 초안의 grapheme 인덱스를 먼저 준비하고 삽입·가시 창 갱신·삭제·가시 창 갱신 한 사이클을 비교한다. 전체 TUI 지연이나 첫 입력의 인덱스 생성 비용과 구분한다.
 
 변경한 경로의 벤치마크를 같은 입력·환경에서 반복 실행하고 시간과 호출당 할당량을 비교한다. 아래 명령에서 해당 패키지와 이름을 골라 사용한다.
 
@@ -614,6 +634,10 @@ macOS 검사는 이름이 있는 전용 pasteboard를 사용해 개인 클립보
 
 ## 내장 WebUI
 
+채팅 표현의 숨김 여부는 페이지 모드·document visibility·불투명 HTML dialog에서 판단한다. 보이는 본문 델타·사용량 진행 정보는 33ms, 가려진 본문·진행 정보는 250ms 단위로 반영하며 대기 묶음은 128개 또는 UTF-16 추정 256KiB에서 즉시 비운다. 승인·완료 등 제어 사건은 먼저 본문을 비우고 즉시 전달한다. SSE·엔진 실행을 중단하지 않으며 화면 복귀 시 남은 델타를 바로 반영한다. 가려진 Markdown은 타이핑 reveal 시계를 돌리지 않는다. 실패 작업은 draft 유무에 관계없이 이력 revision 확인 후 임시 재시도/활동 기록을 해제한다.
+
+코드 편집기의 UTF-8 입력 검사는 편집기 수명의 native TextEncoder와 최대 64KiB scratch를 재사용한다. 문자열 길이로 판정할 수 있는 경우는 인코딩하지 않고, 나머지는 encodeInto로 검사한다. 전체 문서 크기의 byte 배열을 매 입력마다 만들지 않으며 서버의 2MiB 저장 경계와 같은 바이트 수를 판정한다.
+
 사용자 메시지의 엔진 참조 블록은 message-content의 표시 투영에서 분리한다. 파일·폴더 참조와 스킬의 토큰 정의는 shared/ui/reference-token이 소유한다. 스킬 탐색의 추가 액션은 WorkspaceShell이 Composer의 좁은 imperative 계약에 연결하며, 실제 입력 변경은 Astryx ChatComposerInputHandle.insertToken이 수행한다. 스킬 삽입이 보기 전환을 소유하지 않는다.
 
 history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영하며, 완료 측정은 메시지와 구별한 union 항목으로 반환한다. serverapi/history_completion은 finished checkpoint의 상태·통계만 투영하고 자유 본문을 보내지 않는다. history-row는 메시지·도구·이미지를, completion-row는 고정 상태 라벨과 검증한 숫자 통계만 표현한다. 종료 사유는 명시적인 상세 조회로 분리한다. Chat은 저장 이력 확인을 layout effect에서 반영하고 마지막 완료 행을 실시간 출력 뒤에 배치한다. LiveActivity는 종료한 작업의 중간 활동을 다시 표시하지 않는다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
@@ -624,13 +648,13 @@ serverapi/detail/view는 `DetailRequest.View`별 공개 표현을 직렬화한�
 
 `webui/`는 full 배포본에만 포함하는 Bun 빌드의 React·TypeScript·Vite SPA다. Astryx 공식 CSS와 neutral theme·Tailwind bridge를 사용한다. UI 런타임은 브라우저이며 배포 Go 바이너리에 JavaScript 서버를 실행하지 않는다. tui의 조립·의존성 그래프에는 내장 자산 어댑터가 없으며 자산이 이미 생성돼 있어도 포함하지 않는다. 상세 화면·상태 설계는 [WebUI 구조](webui-design.md), 외부 계약은 [연결 가이드](webui-api.md)가 소유한다.
 
-소스는 FSD의 `app → pages → features → entities → shared` 방향을 따른다. 다른 슬라이스의 내부 파일을 직접 가져오지 않고 필요한 이름만 공개 진입점에서 내보낸다. 현재 워크스페이스에서만 쓰는 실행·스트림·파일·설정 코드는 `pages/workspace` 안에 둔다. 로그인과 연결 종료처럼 여러 화면이 공유하는 동작만 `features/server-access`로 추출한다. 빈 계층이나 단순 재전달 계층은 만들지 않는다.
+소스는 FSD의 `app → pages → features → entities → shared` 방향을 따른다. 다른 슬라이스의 내부 파일을 직접 가져오지 않고 필요한 이름만 공개 진입점에서 내보낸다. 현재 워크스페이스에서만 쓰는 실행·스트림·파일·설정 코드는 `pages/workspace` 안에 둔다. 서버 인증처럼 여러 화면이 공유하는 동작만 `features/server-access`로 추출한다. 빈 계층이나 단순 재전달 계층은 만들지 않는다.
 
 | 위치 | 책임 |
 | --- | --- |
 | `app` | 브라우저 조립, 라우트·세션 경계, 테마 빌드 입력 |
 | `pages/connect`, `pages/workspace` | 화면과 그 화면만 사용하는 API·모델·UI |
-| `features/server-access` | 서버 인증과 명시적인 연결 종료 |
+| `features/server-access` | 서버 인증과 쿠키 세션 확인 |
 | `entities/server-session` | 인증 상태·연결 수명·언어·안전한 오류 안내 |
 | `shared/api` | HTTP 어댑터, QueryClient, 생성한 wire 타입의 공개 API |
 | `shared/config`, `shared/i18n`, `shared/lib`, `shared/ui` | 표시 설정·번역·순수 변환·도메인에 독립적인 UI |
@@ -641,11 +665,17 @@ React Compiler 1.0.0은 @vitejs/plugin-react의 공식 preset과 @rolldown/plugi
 
 지연 로드 경계는 코드 크기와 첫 표시 비용을 함께 확인한다. 빈 대화에서 본문 렌더러를 불러오지 않고 이미지·상세·승인 UI는 실제 표시할 때 로드한다. 승인 컨트롤러는 활성 승인과 제어 수명을 그대로 유지한다. 초기 필수 의존성만 Rolldown의 initial 태그로 묶는다. React·React DOM·scheduler는 하나의 우선 그룹으로 유지해 공통 UI 모듈과 React 초기화의 순환을 막고, 지연 기능의 코드는 초기 묶음에 넣지 않는다. 분석 보고서는 `bun run --cwd webui analyze`로 `.cache/bundle-analysis.html`에 생성하며 내장 배포 자산에 넣지 않는다. [React Compiler 구성](https://react.dev/learn/react-compiler/installation), [Zod Mini](https://zod.dev/packages/mini), [Rolldown 코드 분할](https://rolldown.rs/in-depth/manual-code-splitting)의 공식 계약을 사용한다.
 
-서버 응답 캐시는 TanStack Query가 소유한다. Zustand는 서버 세션, 브라우저 표시 설정, 워크스페이스 임시 상태를 분리한다. 워크스페이스 내부는 화면·컴포저·스트림 슬라이스를 하나의 스토어로 합성하여 입력 캡처와 완료 이벤트의 원자성을 유지한다. 값이 같은 입력은 revision을 올리거나 구독자에게 알리지 않는다. 컴포저는 현재 대화의 활성 작업만 선택하며, 비활성 이력 캐시 제한 구독은 워크스페이스 페이지가 해제한다. 인증 만료는 복원을 위해 초안을 유지하고 명시적인 연결 종료는 세션 수명을 갱신해 편집기 DOM까지 해제한다.
+서버 응답 캐시는 TanStack Query가 소유한다. Zustand는 서버 세션, 브라우저 표시 설정, 워크스페이스 임시 상태를 분리한다. 워크스페이스 내부는 화면·컴포저·스트림 슬라이스를 하나의 스토어로 합성하여 입력 캡처와 완료 이벤트의 원자성을 유지한다. 값이 같은 입력은 revision을 올리거나 구독자에게 알리지 않는다. 컴포저는 현재 대화의 활성 작업만 선택하며 비활성 이력 캐시 제한 구독은 워크스페이스 페이지가 해제한다. 인증 만료는 재접속 복원을 위해 초안을 유지한다.
 
 미디어 쿼리는 Astryx `useMediaQuery`, 번역의 현재 locale은 `useLocale`, 이미지 붙여넣기 단축키는 포커스 범위를 제한한 `useHotkeys`를 사용한다. 이미지 읽기·용량 검사·API 질의·요청 순서는 도메인/전송 소유자에 둔다. Astryx `useClipboard`는 텍스트 쓰기용이므로 이미지 읽기 계약을 대체하지 않는다. React 상태·수명, TanStack 질의·라우팅과 React Hook Form의 전용 훅도 각 책임에 사용한다.
 
-아이콘은 Astryx Neutral이 제공하는 Lucide 구성을 따른다. 공용 컨트롤의 기본 아이콘은 그대로 상속하며 앱 전용 이름만 `shared/ui/icons`에서 테마 registry에 추가한다. 화면은 Astryx Icon을 사용하고 개별 아이콘 라이브러리를 직접 가져오지 않는다. 앱 전용 아이콘에는 Astryx와 공유하는 `lucide-react`를 정확한 같은 버전의 직접 의존성으로 선언하고 필요한 glyph만 정적으로 import한다. 별도 아이콘 렌더러나 중복 registry를 두지 않는다.
+공용 컨트롤은 Astryx Neutral의 Lucide 구성을 상속하며 앱 전용 이름만 `shared/ui/icons`에서 테마 registry에 추가한다. 일반 화면 제어는 Astryx Icon을 사용한다. 파일 형식은 `shared/ui/file-icon`에서 공통 32종 언어 카탈로그와 Material glyph를 연결한다. `scripts/file-icons.ts`가 고정한 MUI glyph를 정적 SVG 컴포넌트로 생성하고 Astryx Icon으로 렌더링한다. MUI·Emotion은 빌드 전용 의존성이며 배포 브라우저 런타임에는 포함하지 않는다. 생성 모듈은 추적하지 않고 `check`·`build`에서 재생성하며 upstream 아이콘 라이선스는 배포 고지에 포함한다.
+
+네이티브 폴더 선택은 `internal/desktop/folderpicker`가 소유하고 full 조립 루트가 UI 함수로 주입한다. macOS는 osascript, Linux는 XDG Desktop Portal, WSL은 Windows 폴더 선택창을 사용한다. `internal/host/wsl`은 클립보드와 폴더 선택의 호스트 탐색을 공유한다. UI HTTP 경계는 동일 출처 쿠키·loopback Host/peer·동시 선택창 한 개·2분 마감과 취소를 적용한다. SSH 환경과 원격 접속은 기존 서버 폴더 모달을 유지한다. 선택창은 경로만 반환하며 등록·정책·영속화는 addWorkspace가 소유한다.
+
+병렬 wave 식별자는 코어가 계획한 독립 실행 묶음에 부여한다. 실행 ID와 별도로 저장 이력·명령 완료·이벤트의 `tool.batchId`에 유지한다. WebUI는 run·agent·batch가 같은 도구만 묶고 개별 결과는 펼칠 때 읽는다. 저장 이력과 live 멤버를 실행 ID로 합쳐 인계 중에도 이름과 결과를 중복하지 않는다. 도구 구독은 이벤트 배열이 바뀔 때만 계산하고 텍스트 토큰 갱신에는 재계산하지 않는다. 팀 입·퇴장 제어 이벤트는 채팅 행에서만 숨긴다.
+
+브라우저 테스트는 `e2e/fixture.ts`의 인증·디스크립터 도우미를 공유한다. 인증 UI 검사는 별도로 유지하며 각 테스트의 자동 fixture가 `/v1` 쿠키를 해제한다. 삭제한 일반·연결 종료 화면 검사는 언어 메뉴·원격 모달·로컬 선택·스크롤·병렬 도구 계약으로 대체한다. E2E 소스도 Biome·Oxlint·TypeScript 검사에 포함한다.
 
 ```sh
 sh scripts/build-ui.sh
@@ -683,7 +713,7 @@ workspace-toolbar는 탐색 탭과 프로젝트·대화 문맥을 별도 행으�
 
 appearance는 운영체제 테마 구독·해석을, theme-controls는 저장된 표시 선택을 다룬다. theme.ts가 공식 neutral 테마의 토큰·컴포넌트 재질·모션 감소를 확장하고 CLI가 생성 CSS·모듈을 만든다. Core·Neutral·CLI는 같은 안정 버전으로 고정하고 Lab은 사용하지 않는다. 기본 테마는 라이트이며 선택 저장·즉시 전환·시스템 변경과 모션 감소는 실제 브라우저 통합 검증에 포함한다. 스트림 연결은 브라우저 EventSource가 소유하며 comment heartbeat를 메시지 유휴 타이머로 무효화하지 않는다.
 
-일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수와 레코드별 합계를 WeakMap으로 재사용하고 전체 사용량은 변경분으로 갱신한다. 합계 캐시가 과거 입력·큐 레코드를 강하게 보유하지 않아 삭제·로그아웃 직후 원본 참조를 회수할 수 있다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다. 첨부 미리보기는 File별로 URL 하나를 소유하고 입력 타이핑에 재생성하지 않으며 삭제·화면 종료 시 revoke한다. 미리보기는 원본을 Base64나 별도 저장소에 복제하지 않는다. 알려진 임시 업로드는 불확실한 제출을 제거할 때 해제하고 해제 HTTP는 5초로 제한하며 불필요한 응답 본문을 취소한다. 입력 TUI의 이미지 표시는 읽기 전용 접두사로 투영하고 실제 전송 본문·편집 revision에 넣지 않는다.
+일반 입력과 예약 본문은 각각 UTF-8 32MiB, 예약은 256개까지다. 서버의 단일 prompt 16MiB와 HTTP command 17MiB는 별도 한도이며 capabilities가 전달한다. 전송 전 UTF-8·JSON 이스케이프 크기를 검사해 유효하지 않은 요청의 이미지 업로드를 피한다. 입력별 바이트 수와 레코드별 합계를 WeakMap으로 재사용하고 전체 사용량은 변경분으로 갱신한다. 합계 캐시가 과거 입력·큐 레코드를 강하게 보유하지 않아 삭제·초안 초기화 직후 원본 참조를 회수할 수 있다. 외부 초기화에서는 합계를 다시 맞추며 빈 입력·큐 키를 제거하고 revision은 재사용하지 않는다. 미전송 입력/예약 이미지의 고유 File 참조 합계는 128MiB다. 불확실한 제출의 별도 256개·본문 32MiB·이미지 128MiB 보관 한도와 접수 확인 계약도 유지한다. live는 소스별 128K UTF-16 code unit·전체 4M code unit을 보관하며 완료 초안을 회수한다. 입력 수용·보관·표시 예산을 동일시하지 않는다. 첨부 미리보기는 File별로 URL 하나를 소유하고 입력 타이핑에 재생성하지 않으며 삭제·화면 종료 시 revoke한다. 미리보기는 원본을 Base64나 별도 저장소에 복제하지 않는다. 알려진 임시 업로드는 불확실한 제출을 제거할 때 해제하고 해제 HTTP는 5초로 제한하며 불필요한 응답 본문을 취소한다. 입력 TUI의 이미지 표시는 읽기 전용 접두사로 투영하고 실제 전송 본문·편집 revision에 넣지 않는다.
 
 세션 사용량은 append-only tool_events의 검증된 합계와 마지막 usage sequence만 보관하고 새 꼬리만 집계한다. Sessions는 DB 파일 identity에 연결된 최근 128개 projection을 재사용하며 DB handle·이벤트 본문을 보관하지 않는다. 실제 TokenUsage 호출 때만 projection을 연결하므로 파일 참조나 이력 조회가 사용량 캐시를 채우거나 축출하지 않는다. 열린 handle은 최초 연결한 projection을 유지한다. 최초 조회는 전체 검증을 수행하고 실패한 꼬리는 커서를 전진시키지 않는다. DB 교체·삭제는 해당 projection의 재사용을 막는다.
 
@@ -695,7 +725,7 @@ react-simple-code-editor의 고정 버전은 Bun patchedDependencies로 적용�
 
 이벤트의 작업·승인 사실은 Query에 즉시 반영하고 필요한 조회만 페이지 소유의 50ms 갱신 묶음으로 처리한다. 이전 조회가 끝나더라도 이후 무효화가 사라지지 않도록 한다. 스트림 연결 시 상태 조회를 Query와 공유한다. 스냅샷을 적용하면 이전 cursor의 대기 델타를 폐기하고, 스냅샷 본문과 활동은 스트림 상태에 넘긴 뒤 Query에는 메타데이터를 보관한다. 발신자가 섞인 텍스트도 소스별로 합치며 제어·통계·리셋의 순서를 보존한다. 재연결 중 이미 terminal snapshot을 받은 예약도 최신 선행 작업의 실제 outcome을 확인한 뒤 진행한다. 본문 표시 갱신은 전경 33ms·백그라운드 200ms이며 승인·종료·예약 전이는 즉시 처리한다. 읽기 재시도는 제한된 jitter를 적용하며 Provider의 1초·3초·5초 재시도와 구분한다.
 
-이미지 목록은 인증된 256px PNG 썸네일을 사용하고 원본은 사용자가 열 때 요청한다. 작은 Blob 캐시와 object URL은 각각 Query와 컴포넌트가 소유하며 해제·로그아웃·삭제 시 정리한다. 서버는 원본의 현재 메타데이터·DB/WAL 변경 상태를 확인한 뒤 썸네일 캐시를 이용하며 원본 다운로드와 픽셀 디코딩에는 별도 바이트 예산을 적용한다. 카메라 EXIF 방향은 축소한 픽셀에 반영한다. 배포 자산은 gzip 한 사본을 유지하고 API JSON 응답만 크기에 따라 재사용 압축기로 처리한다.
+이미지 목록은 인증된 256px PNG 썸네일을 사용하고 원본은 사용자가 열 때 요청한다. 작은 Blob 캐시와 object URL은 각각 Query와 컴포넌트가 소유하며 해제·화면 종료·삭제 시 정리한다. 서버는 원본의 현재 메타데이터·DB/WAL 변경 상태를 확인한 뒤 썸네일 캐시를 이용하며 원본 다운로드와 픽셀 디코딩에는 별도 바이트 예산을 적용한다. 카메라 EXIF 방향은 축소한 픽셀에 반영한다. 배포 자산은 gzip 한 사본을 유지하고 API JSON 응답만 크기에 따라 재사용 압축기로 처리한다.
 
 실제 브라우저 검증은 사용자 HOME·프로젝트·유료 Provider를 사용하지 않는 opt-in fixture로 한다. 별도 터미널에서 연결 파일 경로를 지정해 실제 서버를 띄운다. fixture는 tmp HOME과 alpha/beta 프로젝트, 제어 가능한 로컬 모델·이미지·긴 이력을 생성한다. 연결 JSON은 private 파일이며 원문 토큰은 별도 private 파일 경로로만 제공한다.
 

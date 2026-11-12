@@ -14,6 +14,9 @@ The package declares MIT; the fallback is pinned to its release source commit. D
 test-only clients are outside the product dependency set. M.E.CA's own license is in LICENSE.
 react-simple-code-editor 0.14.1 includes the local Bun patch documented in
 webui/patches/README.md; its upstream MIT license remains included in browser notices.
+Selected MUI Material file glyphs are compiled to static SVG components. Their MIT
+license is included in the generated browser notices; MUI/Emotion are build-time
+dependencies. The glyphs do not add an external font or icon CDN.
 Third-party components retain their respective licenses. Upstream notices are
 reproduced below; they may describe additional components within each module.
 

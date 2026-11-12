@@ -2,21 +2,19 @@
 // Pattern: Real browser and isolated filesystem observer regression.
 // Usage: MECA_UI_DESCRIPTOR=... bun run test:e2e e2e/editor-watch.spec.ts.
 // Related: webui/src/pages/workspace/model/file-events.ts, webui/src/pages/workspace/model/file-document.ts.
-import { readFile, writeFile } from 'node:fs/promises';
+
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+
 test('one watcher follows documents without full reads or false conflict banners', async ({
   page,
 }) => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  const fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  const fixture = await browserFixture();
   const name = 'watch-document.txt';
   await writeFile(join(fixture.projectA, name), 'original');
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   const previous = page.url();
   await page
     .locator('.workspace-group')

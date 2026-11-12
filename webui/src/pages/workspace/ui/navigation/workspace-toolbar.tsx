@@ -1,4 +1,4 @@
-// Purpose: Present work-area tabs and the collapsed navigation's reopen control.
+// Purpose: Present work-area tabs, mobile navigation and the global language menu.
 // Pattern: Astryx toolbar composition.
 // Usage: WorkspaceShell supplies this as the working area's Layout header.
 // Related: webui/src/pages/workspace/model/commands.ts, webui/src/pages/workspace/ui/workspace-page.tsx.
@@ -6,16 +6,13 @@
 import { useAppShellMobile } from '@astryxdesign/core/AppShell';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import {
-  SideNavCollapseButton,
-  type SideNavControlledCollapsible,
-} from '@astryxdesign/core/SideNav';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { view } from '@/pages/workspace/model/commands';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
+import { LanguageMenu } from '@/pages/workspace/ui/navigation/language-menu';
 import { useLocale } from '@/shared/i18n';
-export function WorkspaceToolbar({ collapsible }: { collapsible: SideNavControlledCollapsible }) {
+export function WorkspaceToolbar() {
   const t = useLocale(),
     mode = useWorkspaceStore((s) => s.mode),
     mobile = useAppShellMobile();
@@ -34,10 +31,9 @@ export function WorkspaceToolbar({ collapsible }: { collapsible: SideNavControll
             aria-controls={mobile.mobileNavId}
             onClick={mobile.toggleMobileNav}
           />
-        ) : collapsible.isCollapsed ? (
-          <SideNavCollapseButton collapsible={collapsible} aria-controls="workspace-navigation" />
         ) : undefined
       }
+      endContent={<LanguageMenu />}
       centerContent={
         <TabList
           value={mode}

@@ -5,9 +5,10 @@
 
 import { VStack } from '@astryxdesign/core/Layout';
 import { Selector } from '@astryxdesign/core/Selector';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { liveActivity } from '@/pages/workspace/model/chat-events';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
+import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { LiveActivity } from '@/pages/workspace/ui/chat/live-activity';
 import { LiveSource } from '@/pages/workspace/ui/chat/live-source';
@@ -27,13 +28,14 @@ export function LiveOutput({
     events = useWorkspaceStore((s) => s.events);
   const [agent, setAgent] = useState('');
   const selected = useWorkspaceStore((s) => s.selection);
+  const blocked = useChatPresentationBlocked();
   const streaming = useWorkspaceStore((s) => s.streamStatus === 'connected');
   const sources =
     selected.workspace === target.workspace && selected.session === target.session
       ? Object.values(drafts)
       : [];
   const agents = [...new Set(sources.map((value) => value.agent).filter(Boolean))];
-  const activity = liveActivity(events, history);
+  const activity = useMemo(() => liveActivity(events, history), [events, history]);
   if (!sources.length && !events.length) return null;
   return (
     <VStack width="100%" className="live-output" gap={8} paddingBlockStart={8}>
@@ -54,7 +56,7 @@ export function LiveOutput({
           <LiveSource
             key={`${d.task}/${d.agent}/${d.generation}`}
             draft={d}
-            streaming={streaming && d.doneRevision === undefined}
+            streaming={!blocked && streaming && d.doneRevision === undefined}
           />
         ))}
       <LiveActivity target={target} events={activity} inspect={inspect} />

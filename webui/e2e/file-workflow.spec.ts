@@ -2,32 +2,27 @@
 // Pattern: Browser-to-engine file workflow contracts.
 // Usage: Run with MECA_UI_DESCRIPTOR against the isolated embedded UI fixture.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/files/files.tsx.
+
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: { url: string; tokenFile: string; projectA: string };
+let fixture: BrowserFixture;
 const filename = 'inline-edit.md';
 const source =
   '# Click to edit\n\nCurrent document.\n\n```text\n' +
   'unbrokenIdentifier_'.repeat(100) +
   '\n```\n';
 test.beforeAll(async () => {
-  const descriptor = process.env.MECA_UI_DESCRIPTOR;
-  test.skip(!descriptor, 'start the isolated UI fixture first');
-  if (!descriptor) return;
-  fixture = JSON.parse(await readFile(descriptor, 'utf8'));
+  fixture = await browserFixture();
   await writeFile(join(fixture.projectA, filename), source);
   await mkdir(join(fixture.projectA, 'files-one', 'nested'), { recursive: true });
   await writeFile(join(fixture.projectA, 'files-one', 'nested', 'inside.txt'), 'Nested file');
   await writeFile(join(fixture.projectA, 'large-readonly.txt'), 'bounded text\n'.repeat(200000));
 });
 test.beforeEach(async ({ page }) => {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   const previous = page.url();
   await page
@@ -44,9 +39,9 @@ test('folder navigation keeps one file list to the right of the document', async
   await expect(page.locator('.directory-column')).toHaveCount(1);
   await page.getByRole('button', { name: 'inside.txt', exact: true }).click();
   await expect(page.getByRole('textbox', { name: /inside\.txt$/ })).toBeVisible();
-  const files = await page.locator('.directory-column').boundingBox();
-  const document = await page.locator('.file-document').boundingBox();
-  expect(files!.x).toBeGreaterThanOrEqual(document!.x + document!.width - 1);
+  const files = await page.locator('.directory-column').boundingBox().then(required);
+  const document = await page.locator('.file-document').boundingBox().then(required);
+  expect(files.x).toBeGreaterThanOrEqual(document.x + document.width - 1);
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   await expect(
     page.locator('.files-workspace').getByRole('toolbar', { name: '파일', exact: true })
@@ -55,8 +50,8 @@ test('folder navigation keeps one file list to the right of the document', async
   const refresh = listing.getByRole('button', { name: '새로고침', exact: true });
   await expect(listing.getByText('작업공간', { exact: true })).toBeVisible();
   await expect(refresh).toBeVisible();
-  const bounds = await refresh.boundingBox();
-  expect(files!.x + files!.width - bounds!.x - bounds!.width).toBeLessThan(20);
+  const bounds = await refresh.boundingBox().then(required);
+  expect(files.x + files.width - bounds.x - bounds.width).toBeLessThan(20);
   const refreshed = page.waitForResponse(
     (response) =>
       response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.directory
@@ -130,7 +125,7 @@ test('oversized files retain bounded read-only viewing without an edit action', 
   await expect(page.locator('.file-document pre code').first()).toContainText('bounded text');
   await writeFile(
     join(fixture.projectA, 'large-readonly.txt'),
-    'Changed read-only page\n' + 'bounded text\n'.repeat(200000)
+    `Changed read-only page\n${'bounded text\n'.repeat(200000)}`
   );
   await page
     .locator('.file-document')
@@ -148,7 +143,8 @@ test('entry menus add references, rename, drag into a folder and delete', async 
   await mkdir(join(fixture.projectA, directory), { recursive: true });
   await writeFile(join(fixture.projectA, source), 'Move this file\n');
   const listing = page.locator('.directory-column');
-  const menu = (name: string) => listing.getByRole('button', { name: `파일 작업 · ${name}`, exact: true });
+  const menu = (name: string) =>
+    listing.getByRole('button', { name: `파일 작업 · ${name}`, exact: true });
   await menu(source).click();
   await page.getByRole('menuitem', { name: '추가하기', exact: true }).click();
   await expect(page.locator('.composer')).toContainText(source);
@@ -159,18 +155,34 @@ test('entry menus add references, rename, drag into a folder and delete', async 
   await rename.getByRole('button', { name: '저장', exact: true }).click();
   await expect(menu(renamed)).toBeVisible();
   await expect(page.locator('.composer')).toContainText(renamed);
-  const from = await listing.getByRole('button', { name: renamed, exact: true }).boundingBox();
-  const to = await listing.getByRole('button', { name: directory, exact: true }).boundingBox();
-  await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2);
+  const from = await listing
+    .getByRole('button', { name: renamed, exact: true })
+    .boundingBox()
+    .then(required);
+  const to = await listing
+    .getByRole('button', { name: directory, exact: true })
+    .boundingBox()
+    .then(required);
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
-  await page.mouse.move(to!.x + to!.width / 2, to!.y + to!.height / 2, { steps: 15 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 });
   await page.mouse.up();
   const moved = join(fixture.projectA, directory, renamed);
   await expect.poll(() => readFile(moved, 'utf8').catch(() => '')).toBe('Move this file\n');
   await listing.getByRole('button', { name: directory, exact: true }).click();
   await menu(renamed).click();
   await page.getByRole('menuitem', { name: '삭제하기', exact: true }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: '삭제하기', exact: true }).click();
-  await expect.poll(() => stat(moved).then(() => true, () => false)).toBe(false);
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: '삭제하기', exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      stat(moved).then(
+        () => true,
+        () => false
+      )
+    )
+    .toBe(false);
   await expect(page.locator('.composer')).not.toContainText(renamed);
 });

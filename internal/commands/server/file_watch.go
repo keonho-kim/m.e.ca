@@ -1,4 +1,4 @@
-// Purpose: Recheck current workspace access before each file notification.
+// Purpose: Recheck current workspace access before publishing filesystem changes.
 // Pattern: Consumer-owned observation contract.
 // Usage: Native file streams own WatchFiles until their context is canceled.
 // Related: internal/fileview/watch.go, internal/serverapi/files_watch.go.
@@ -35,8 +35,10 @@ func (s *Service) WatchFiles(ctx context.Context, path string, notify func(filev
 		if err != nil {
 			return err
 		}
-		if _, err := files.Reference(ctx, current, path); err != nil {
-			return err
+		if change.Refresh {
+			if _, err := files.Reference(ctx, current, path); err != nil {
+				return err
+			}
 		}
 		return notify(change)
 	})

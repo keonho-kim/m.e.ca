@@ -1,13 +1,12 @@
-// Purpose: Atomically create or read a private server token without exposing its contents.
+// Purpose: Generate credentials and atomically publish them only after listener preparation.
 // Pattern: Credential filesystem boundary.
-// Usage: cmd/meca loads one token for both masking and listener authentication.
+// Usage: cmd/meca prepares one token for masking and publishes it after a successful bind.
 // Related: cmd/meca/server.go, internal/config/statefs/files.go.
 package serverapi
 
 import (
 	"crypto/rand"
 	"errors"
-
 	"io"
 	"os"
 	"path/filepath"
@@ -31,49 +30,50 @@ func validToken(token string) bool {
 	return true
 }
 
-func LoadToken(path string) (token string, resultErr error) {
+func NewToken() string { return rand.Text() + rand.Text() }
+
+func PublishToken(path, token string) (resultErr error) {
+	if !validToken(token) {
+		return faults.Errorf(diagcatalog.ServerapiTokenFileMustContainToPrintableNon)
+	}
 	root, err := os.OpenRoot(filepath.Dir(path))
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer func() { resultErr = errors.Join(resultErr, root.Close()) }()
 	name := filepath.Base(path)
-	if _, err := root.Lstat(name); errors.Is(err, os.ErrNotExist) {
-		if err := statefs.PublishMissing(root, name, []byte(rand.Text()+rand.Text()+"\n")); err != nil {
-			return "", err
-		}
-	} else if err != nil {
-		return "", err
-	}
 	before, err := root.Lstat(name)
-	if err != nil {
-		return "", err
+	if errors.Is(err, os.ErrNotExist) {
+		return statefs.Replace(root, name, []byte(token+"\n"))
+	} else if err != nil {
+		return err
 	}
 	if !before.Mode().IsRegular() || before.Mode().Perm()&0077 != 0 {
-		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustBeAPrivateRegular)
+		return faults.Errorf(diagcatalog.ServerapiTokenFileMustBeAPrivateRegular)
 	}
 	if stat, ok := before.Sys().(*syscall.Stat_t); !ok || stat.Uid != uint32(os.Geteuid()) {
-		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustBeOwnedByThe)
+		return faults.Errorf(diagcatalog.ServerapiTokenFileMustBeOwnedByThe)
 	}
 	file, err := root.Open(name)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer func() { resultErr = errors.Join(resultErr, file.Close()) }()
 	after, err := file.Stat()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if !os.SameFile(before, after) {
-		return "", faults.Errorf(diagcatalog.ServerapiTokenFileChangedWhileOpening)
+		return faults.Errorf(diagcatalog.ServerapiTokenFileChangedWhileOpening)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, 258))
 	if err != nil {
-		return "", err
+		return err
 	}
-	token = strings.TrimSuffix(string(body), "\n")
-	if !validToken(token) {
-		return "", faults.Errorf(diagcatalog.ServerapiTokenFileMustContainToPrintableNon)
+	if !validToken(strings.TrimSuffix(string(body), "\n")) {
+		return faults.Errorf(diagcatalog.ServerapiTokenFileMustContainToPrintableNon)
 	}
-	return token, nil
+	// Never reinterpret an unrelated existing private file as a token target.
+	// Keep the old token intact until the replacement is complete and synced.
+	return statefs.Replace(root, name, []byte(token+"\n"))
 }

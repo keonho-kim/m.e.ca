@@ -55,7 +55,7 @@ func readMember(row interface{ Scan(...any) error }) (teamidentity.Member, error
 	return member, nil
 }
 func (s *Store) SetTeamSummary(ctx context.Context, id, summary string) error {
-	result, err := s.db.ExecContext(ctx, "UPDATE team_members SET summary=? WHERE agent_id=?", summary, id)
+	result, err := s.execWrite(ctx, "UPDATE team_members SET summary=? WHERE agent_id=?", summary, id)
 	if err != nil {
 		return err
 	}

@@ -90,9 +90,14 @@ func event(value server.Event) *v1.Event {
 		result.Approval = &v1.Approval{ExpiresAt: wireTime(value.ApprovalExpiresAt), TaskId: value.Task, Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
 	}
 	if e.Call != nil || e.Reference != nil || e.CallID != "" {
-		result.Tool = &v1.Tool{CallId: e.CallID}
+		phase := value.ToolPhase
+		if phase == "" {
+			phase = e.ToolPhase()
+		}
+		result.Tool = &v1.Tool{CallId: e.CallID, Phase: wireToolPhase(phase)}
 		if e.Call != nil {
 			result.Tool.ExecutionId = e.Call.ExecutionID
+			result.Tool.BatchId = e.Call.BatchID
 			result.Tool.CallId = e.Call.ID
 			result.Tool.Name = e.Call.Name
 			result.Tool.ArgumentsJson = e.Call.Arguments

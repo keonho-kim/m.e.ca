@@ -24,7 +24,7 @@ type requestState struct {
 	commandIndex   int
 	steering       chan requestinput.Request
 	steeringReady  chan struct{}
-	steeringDrafts []string
+	steeringDrafts []requestinput.Request
 	queued         queue.State
 	fileSubmission *fileSubmission
 }

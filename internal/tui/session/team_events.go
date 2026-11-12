@@ -15,10 +15,7 @@ func (a *app) receiveTeam(event *runrecord.Event) {
 			a.team.skipInitial = false
 			return
 		}
-		if len(a.compose.steeringDrafts) > 0 {
-			a.compose.steeringDrafts[0] = ""
-			a.compose.steeringDrafts = a.compose.steeringDrafts[1:]
-		}
+		a.compose.acknowledgeSteering()
 		a.chat.output.Append("> "+event.Text+"\n\n", false)
 		a.compose.rememberInput(event.Text)
 		return

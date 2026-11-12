@@ -2,11 +2,13 @@
 // Pattern: Browser-to-engine synchronization regression tests.
 // Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e.
 // Related: webui/src/pages/workspace/model/file-references.ts, webui/src/pages/workspace/api/events.ts.
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; projectA: string };
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 type Reply = { task?: { id: string; status: string }; error?: { code: string } };
 const invoke = (page: Page, command: object) =>
   page.evaluate(async (value) => {
@@ -20,8 +22,7 @@ const invoke = (page: Page, command: object) =>
     return reply as Reply;
   }, command);
 test.beforeAll(async () => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated Go fixture first');
-  fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  fixture = await browserFixture();
 });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -35,11 +36,7 @@ test.beforeEach(async ({ page }) => {
       }
     };
   });
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   const previous = page.url();
   await page
     .locator('.workspace-group')
@@ -128,8 +125,7 @@ test('returning to a conversation refreshes usage missed while its EventSource w
 }) => {
   const owner = target(page);
   await page.evaluate(() => {
-    for (const stream of Reflect.get(window, 'testStreams') as EventSource[])
-      stream.close();
+    for (const stream of Reflect.get(window, 'testStreams') as EventSource[]) stream.close();
   });
   const prompt = `METRICS_FIXTURE reconnect-${crypto.randomUUID()}`;
   const started = await invoke(page, {
@@ -142,7 +138,7 @@ test('returning to a conversation refreshes usage missed while its EventSource w
         (
           await invoke(page, {
             workspaceId: owner.workspaceId,
-            taskStatus: { taskId: started.task!.id },
+            taskStatus: { taskId: started.task?.id },
           })
         ).task?.status
     )

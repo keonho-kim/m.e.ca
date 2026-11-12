@@ -116,3 +116,6 @@ $RECYCLE.BIN/
 
 # Built Astryx theme descriptors are regenerated before browser type checks and builds.
 /webui/src/app/styles/generated/
+
+# Generated Material glyphs are compiled from the pinned build dependency.
+/webui/src/shared/ui/file-icon/generated.tsx

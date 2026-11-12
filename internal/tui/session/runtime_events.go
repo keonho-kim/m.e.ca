@@ -22,10 +22,7 @@ func (a *app) receiveRuntime(e *runrecord.Event) {
 		a.status = a.language.Text("Image input is unavailable for this connection")
 		return
 	case "user_message":
-		if len(a.compose.steeringDrafts) > 0 {
-			a.compose.steeringDrafts[0] = ""
-			a.compose.steeringDrafts = a.compose.steeringDrafts[1:]
-		}
+		a.compose.acknowledgeSteering()
 		a.chat.output.Append((transcript.Formatter{Language: a.language, Redact: a.opts.Vault.Redact}).User(e.Text), false)
 		a.compose.rememberInput(e.Text)
 		return

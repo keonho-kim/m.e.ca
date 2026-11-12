@@ -20,6 +20,7 @@ import (
 
 func uiProvider(t *testing.T, home string) *httptest.Server {
 	sequence := newUIToolSequence()
+	burst := &uiTextBurst{}
 	release := make(chan struct{})
 	var once sync.Once
 	releaseThinking := make(chan struct{})
@@ -31,6 +32,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 	startTool, finishTool := make(chan struct{}), make(chan struct{})
 	var startToolOnce, finishToolOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if burst.control(w, r) {
+			return
+		}
 		if sequence.control(w, r) {
 			return
 		}
@@ -125,6 +129,14 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			return
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
+		if strings.Contains(text, "PARALLEL_FIXTURE") {
+			completed := false
+			for _, message := range request.Messages {
+				completed = completed || message.Role == "tool"
+			}
+			uiParallelReply(w, completed)
+			return
+		}
 		if strings.Contains(text, "REPEATED_TOOL_FIXTURE") {
 			tools := 0
 			for _, message := range request.Messages {
@@ -146,6 +158,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{field: value}, "finish_reason": finish}}})
 			fmt.Fprintf(w, "data: %s\n\n", body)
 			_ = http.NewResponseController(w).Flush()
+		}
+		if burst.reply(w, r, text, chunk) {
+			return
 		}
 		if strings.Contains(text, "TOOL_CYCLE_FIXTURE") {
 			hasTool := false

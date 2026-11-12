@@ -2,16 +2,17 @@
 // Pattern: Browser-to-engine editor replacement contracts.
 // Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e editor.spec.ts.
 // Related: webui/src/shared/ui/code-editor/index.tsx, webui/src/shared/ui/code-editor/syntax.ts.
+
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: { url: string; tokenFile: string; projectA: string };
+let fixture: BrowserFixture;
 const source = 'const answer = 42;\nconst result = answer';
 const large = '// bounded source line\n'.repeat(44000);
 test.beforeAll(async () => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated Go fixture first');
-  fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  fixture = await browserFixture();
   for (const [name, text] of Object.entries({
     'editor-word.js': source,
     'editor-save.js': source,
@@ -21,11 +22,7 @@ test.beforeAll(async () => {
     await writeFile(join(fixture.projectA, name), text);
 });
 test.beforeEach(async ({ page }) => {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   const previous = page.url();
   await page
     .locator('.workspace-group')
@@ -55,9 +52,9 @@ test('syntax uses ranges without token DOM and the first word edit remains undoa
 }) => {
   const editor = await open(page, 'editor-word.js');
   await expect(editor).toHaveValue(source);
-  const inputBounds = await editor.boundingBox(),
-    documentBounds = await page.locator('.file-document').boundingBox();
-  expect(inputBounds!.height / documentBounds!.height).toBeGreaterThan(0.75);
+  const inputBounds = await editor.boundingBox().then(required),
+    documentBounds = await page.locator('.file-document').boundingBox().then(required);
+  expect(inputBounds.height / documentBounds.height).toBeGreaterThan(0.75);
   await expect
     .poll(() =>
       page.locator('.text-editor pre').evaluate((pre) => {

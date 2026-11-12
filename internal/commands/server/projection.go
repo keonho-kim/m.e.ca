@@ -35,6 +35,9 @@ func ProjectEvent(value Event) Event {
 	value.MutationKey = clipped(value.MutationKey, 128)
 	value.Status, value.Error = clipped(value.Status, 128), clipped(value.Error, 4096)
 	e := value.Record
+	if value.ToolPhase == "" {
+		value.ToolPhase = e.ToolPhase()
+	}
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
 	p.Kind, p.OccurredAt, p.ErrorCode = clipped(e.PublicKind(), 128), clipped(e.OccurredAt, 35), clipped(e.ErrorCode, 128)
 	p.MeasuredDuration = e.MeasuredDuration
@@ -47,7 +50,7 @@ func ProjectEvent(value Event) Event {
 		p.Reference = &copy
 	}
 	if e.Call != nil {
-		p.Call = &tool.Call{ExecutionID: clipped(e.Call.ExecutionID, 128), ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
+		p.Call = &tool.Call{ExecutionID: clipped(e.Call.ExecutionID, 128), BatchID: clipped(e.Call.BatchID, 128), ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
 		value.Truncated = value.Truncated || len(e.Call.Arguments) > maxTextBytes
 	}
 	if e.Approval != nil {

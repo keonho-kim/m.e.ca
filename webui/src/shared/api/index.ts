@@ -26,5 +26,5 @@ export type {
   ProviderJson,
   TaskJson,
 } from '@/shared/api/gen/meca/v1/workspace_pb';
-export { nativeJSON, nativeRequest } from '@/shared/api/http';
+export { nativeJSON, nativeRequest, readNativeJSON } from '@/shared/api/http';
 export { queries } from '@/shared/api/query-client';

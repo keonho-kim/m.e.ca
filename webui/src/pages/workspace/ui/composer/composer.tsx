@@ -50,6 +50,7 @@ import {
 } from '@/pages/workspace/ui/composer/composer-actions';
 import { ExecutionStatus } from '@/pages/workspace/ui/composer/execution-status';
 import { Queue } from '@/pages/workspace/ui/composer/queue';
+import { ComposerSendHint } from '@/pages/workspace/ui/composer/send-hint';
 import { SkillPicker } from '@/pages/workspace/ui/skills/skill-picker';
 import { control } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
@@ -77,7 +78,6 @@ export function Composer({
   const task = useWorkspaceStore((state) => activeTask(target, state.tasks));
   const hasInput = !!(input.text.trim() || input.files.length);
   const showStop = !!task && !hasInput;
-  const queueShortcut = /Mac|iPad|iPhone/.test(navigator.userAgent) ? '⌘↵' : 'Ctrl+↵';
   const editor = useRef<ChatComposerInputHandle>(null);
   const insertSkill = (mention: string) => {
     editor.current?.focus();
@@ -211,9 +211,7 @@ export function Composer({
           task ? <ComposerQueueAction disabled={busy || !hasInput} submit={submit} /> : undefined
         }
         sendButton={
-          <Tooltip
-            content={showStop ? t('stop') : t('sendHint').replace('{shortcut}', queueShortcut)}
-          >
+          <Tooltip content={showStop ? t('stop') : <ComposerSendHint />}>
             <ChatSendButton
               aria-labelledby={sendLabel}
               className="send-button"

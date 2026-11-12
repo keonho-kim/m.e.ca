@@ -42,7 +42,10 @@ export default function Files({ target }: { target: Target }) {
   const open = (path: string, directory: boolean) => {
     useWorkspaceStore.getState().set({ fileDirty: false });
     if (directory) {
-      setColumns([...columns, path]);
+      setColumns((values) => {
+        const index = values.indexOf(path);
+        return index >= 0 ? values.slice(0, index + 1) : [...values.slice(-63), path];
+      });
       setFile('');
     } else setFile(path);
   };

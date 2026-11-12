@@ -16,7 +16,13 @@ export type Draft = {
   truncated: boolean;
   doneRevision?: number;
 };
-export type TaskView = { id: string; workspace: string; session: string; status: string };
+export type TaskView = {
+  id: string;
+  workspace: string;
+  session: string;
+  status: string;
+  doneRevision?: number;
+};
 export const targetKey = (t: Target) => `${t.workspace}/${t.session}`;
 export const emptyInput = (): Input => ({ text: '', paths: [], files: [], revision: 0 });
 
@@ -27,10 +33,11 @@ export interface WorkspaceState {
   mode: 'chat' | 'files' | 'skills';
   folder: string;
   picker: boolean;
+  languageMenu: boolean;
   streamStatus: string;
   reviewTarget: Target | null;
   removedTarget: Target | null;
-  settings: null | { tab: 'model' | 'execution' | 'general'; target: Target };
+  settings: null | { tab: 'model' | 'execution'; target: Target };
   inputs: Record<string, Input>;
   queues: Record<string, Queued[]>;
   pausedQueues: Record<string, boolean>;

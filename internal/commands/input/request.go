@@ -17,6 +17,20 @@ type Request struct {
 	Images []media.Image
 }
 
+const pathReferencesPrefix = "\nSelected path references (read only as needed):\n"
+
+// TextBytes counts the resolved textual envelope without constructing it.
+func (r Request) TextBytes() int {
+	bytes := len(r.Text)
+	if len(r.Paths) > 0 {
+		bytes += len(pathReferencesPrefix) + len(r.Paths) - 1
+		for _, path := range r.Paths {
+			bytes += len(path)
+		}
+	}
+	return bytes
+}
+
 func Capture(text string, paths []string, images ...media.Image) Request {
 	return Request{Text: text, Paths: slices.Clone(paths), Images: slices.Clone(images)}
 }
@@ -42,7 +56,7 @@ func (r Request) Resolve(ctx context.Context, exists func(context.Context, strin
 
 func withPaths(text string, paths []string) string {
 	if len(paths) > 0 {
-		text += "\nSelected path references (read only as needed):\n" + strings.Join(paths, "\n")
+		text += pathReferencesPrefix + strings.Join(paths, "\n")
 	}
 	return text
 }

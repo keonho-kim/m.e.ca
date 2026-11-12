@@ -21,6 +21,12 @@ func (s *execution) batchWave(ctx context.Context, calls []validatedCall, prepar
 	ctx, cancel := context.WithDeadline(ctx, s.usage.deadline)
 	defer cancel()
 	instructionRevision := s.instructionRevision
+	if len(calls) > 1 {
+		batchID := "batch_" + calls[0].call.ExecutionID
+		for i := range calls {
+			calls[i].call.BatchID = batchID
+		}
+	}
 	ready, index, outcome, err := s.freezeWave(ctx, calls, preparation)
 	if err != nil {
 		return true, errors.Join(s.rejectWave(ctx, calls, index, outcome, err), fatalBatchError(ctx, err))

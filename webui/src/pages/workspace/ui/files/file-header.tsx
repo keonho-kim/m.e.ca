@@ -9,6 +9,7 @@ import { HStack } from '@astryxdesign/core/Layout';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Text } from '@astryxdesign/core/Text';
 import { useLocale } from '@/shared/i18n';
+import { FileIcon } from '@/shared/ui/file-icon';
 
 export function FileHeader({
   path,
@@ -49,6 +50,7 @@ export function FileHeader({
       wrap="wrap"
     >
       <HStack gap={2} className="min-w-0 grow basis-48">
+        <FileIcon path={path} />
         {showFiles && (
           <IconButton
             label={t('backToFiles')}

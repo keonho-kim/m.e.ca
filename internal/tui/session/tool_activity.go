@@ -31,6 +31,9 @@ type toolActivity struct {
 }
 
 func toolCallID(event *runrecord.Event) string {
+	if event.Call != nil && event.Call.ExecutionID != "" {
+		return event.Call.ExecutionID
+	}
 	if event.CallID != "" || event.Call == nil {
 		return event.CallID
 	}
@@ -48,7 +51,7 @@ func (t *toolActivity) start(event *runrecord.Event, formatter transcript.Format
 	if id := transcript.PendingCommand(*event.Call); id != "" && slices.ContainsFunc(t.commands, func(run toolapi.CommandRun) bool { return run.ID == id }) {
 		return
 	}
-	block := formatter.PendingTool(*event)
+	block := formatter.ToolBlock(*event, false)
 	entry := pendingTool{callID: toolCallID(event), kind: event.Kind, call: *event.Call, summary: block.Summary, details: block.Details}
 	if index := slices.IndexFunc(t.pending, func(p pendingTool) bool { return p.callID == entry.callID }); index >= 0 {
 		t.pending[index] = entry
@@ -83,10 +86,16 @@ func (t *toolActivity) render(f transcript.Formatter, collapsed bool) string {
 	if !t.dirty && t.collapsed == collapsed && version >= 0 && t.maskVersion == version {
 		return t.text
 	}
-	if version < 0 || t.maskVersion != version {
-		for i := range t.pending {
-			pending := &t.pending[i]
-			block := f.PendingTool(runrecord.Event{Kind: pending.kind, Call: &pending.call})
+	for i := range t.pending {
+		pending := &t.pending[i]
+		if version < 0 || t.maskVersion != version {
+			block := f.ToolBlock(runrecord.Event{Kind: pending.kind, Call: &pending.call}, false)
+			pending.summary, pending.details = block.Summary, ""
+		}
+		if collapsed {
+			pending.details = ""
+		} else if pending.details == "" {
+			block := f.ToolBlock(runrecord.Event{Kind: pending.kind, Call: &pending.call}, true)
 			pending.summary, pending.details = block.Summary, block.Details
 		}
 	}
@@ -102,7 +111,7 @@ func (t *toolActivity) render(f transcript.Formatter, collapsed bool) string {
 	for _, pending := range t.pending {
 		// A running command snapshot replaces its start row without duplicating it.
 		index := slices.IndexFunc(t.commands, func(run toolapi.CommandRun) bool {
-			return pending.callID != "" && run.CallID == pending.callID && toolapi.CommandActive(run.Status)
+			return pending.callID != "" && commandExecutionKey(run) == pending.callID && toolapi.CommandActive(run.Status)
 		})
 		if index >= 0 {
 			text.WriteString(t.commandText(t.commands[index], f, collapsed))
@@ -115,13 +124,22 @@ func (t *toolActivity) render(f transcript.Formatter, collapsed bool) string {
 		}
 	}
 	for _, run := range t.commands {
-		if !slices.ContainsFunc(t.pending, func(p pendingTool) bool { return run.CallID != "" && p.callID == run.CallID }) {
+		if !slices.ContainsFunc(t.pending, func(p pendingTool) bool {
+			return commandExecutionKey(run) != "" && p.callID == commandExecutionKey(run)
+		}) {
 			text.WriteString(t.commandText(run, f, collapsed))
 		}
 	}
 	t.text, t.dirty = text.String(), false
 	t.collapsed, t.maskVersion = collapsed, version
 	return t.text
+}
+
+func commandExecutionKey(run toolapi.CommandRun) string {
+	if run.ExecutionID != "" {
+		return run.ExecutionID
+	}
+	return run.CallID
 }
 
 func (t *toolActivity) commandText(run toolapi.CommandRun, f transcript.Formatter, collapsed bool) string {

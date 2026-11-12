@@ -1,4 +1,4 @@
-// Purpose: Own deterministic Unicode input editing.
+// Purpose: Own deterministic Unicode input editing and shared immutable text/display snapshots.
 // Pattern: Simple Module (deterministic input state).
 // Usage: The terminal event loop owns and mutates one editor per input field.
 // Related: internal/tui/input/navigation.go, internal/tui/input/layout.go, internal/tui/session/keys.go.
@@ -14,22 +14,25 @@ import (
 const MaxBytes = 16 * 1024 * 1024
 
 type Editor struct {
-	runes      []rune
-	Cursor     int
-	bytes      int
-	text       string
-	dirty      bool
-	revision   uint64
-	layout     editorLayout
-	column     int
-	vertical   bool
-	boundaries []boundaryPoint
-	prefix     string
+	runes        []rune
+	Cursor       int
+	bytes        int
+	text         string
+	display      string // Immutable prefixed snapshot sharing the body backing string.
+	textCapacity int    // Backing snapshot size, including prefixes, before suffix deletions.
+	dirty        bool
+	revision     uint64
+	layout       editorLayout
+	column       int
+	vertical     bool
+	boundaries   []boundaryPoint
+	prefix       string
 }
 
 func (e *Editor) String() string {
 	if e.dirty {
 		e.text, e.dirty = string(e.runes), false
+		e.textCapacity = len(e.text)
 	}
 	return e.text
 }
@@ -48,6 +51,8 @@ func (e *Editor) Set(s string) {
 	}
 	e.Cursor = len(e.runes)
 	e.text, e.bytes, e.dirty = s, len(s), false
+	e.textCapacity = len(s)
+	e.display = ""
 	e.revision++
 	e.vertical = false
 	e.layout = editorLayout{}
@@ -77,13 +82,25 @@ func (e *Editor) replace(start, end int, s string) {
 		removed += utf8.RuneLen(value)
 	}
 	if !e.dirty && end == len(e.runes) {
-		oldSize := len(e.text)
-		e.text = e.text[:e.bytes-removed] + s
-		if len(e.text) < oldSize/4 {
+		prefix := e.prompt()
+		if s == "" {
+			e.text = e.text[:e.bytes-removed]
+			if e.display != "" {
+				e.display = e.display[:len(prefix)+len(e.text)]
+			}
+		} else {
+			e.display = prefix + e.text[:e.bytes-removed] + s
+			e.text = e.display[len(prefix):]
+			e.textCapacity = len(e.display)
+		}
+		if len(e.text) == 0 || e.textCapacity > 4*max(1024, len(e.text)) {
 			e.text = strings.Clone(e.text)
+			e.display = ""
+			e.textCapacity = len(e.text)
 		}
 	} else {
 		e.text, e.dirty = "", true
+		e.display = ""
 	}
 	e.bytes += len(s) - removed
 	old := len(e.runes)

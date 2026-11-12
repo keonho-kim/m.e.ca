@@ -5,6 +5,10 @@
 package locale
 
 var messages = []translation{
+	{"", "Command output unavailable", "명령 출력 저장 실패"},
+	{"", "Recovered requests paused; edit the queue or press Enter with an empty draft to resume", "복원 요청 보류 중 · 예약을 편집하거나 빈 입력에서 Enter로 재개하세요"},
+	{"", "Resume recovered requests", "복원 요청 재개"},
+	{"", "[Preview; edit the queued request to read the complete text]", "[미리보기 · 예약을 편집하면 전체 내용을 볼 수 있습니다]"},
 	{"", "Paste image", "이미지 붙여넣기"},
 	{"", "Remove image", "이미지 제거"},
 	{"", "image attached", "이미지를 첨부했습니다"},

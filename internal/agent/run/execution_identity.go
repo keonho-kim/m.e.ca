@@ -16,5 +16,7 @@ func (s *execution) identifyCall(call tool.Call) tool.Call {
 	value := s.checkpoint.ID + "\x00" + strconv.Itoa(s.usage.ToolCalls) + "\x00" + call.ID
 	sum := sha256.Sum256([]byte(value))
 	call.ExecutionID = hex.EncodeToString(sum[:])
+	// Only the runtime scheduler may assign a parallel cohort.
+	call.BatchID = ""
 	return call
 }

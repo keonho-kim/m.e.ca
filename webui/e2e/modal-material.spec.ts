@@ -2,8 +2,9 @@
 // Pattern: Rendered material contracts across native Astryx modal primitives.
 // Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
 // Related: webui/src/app/styles/theme.ts, webui/src/pages/workspace/ui/inspection/conversation-inspector.tsx.
-import { readFile } from 'node:fs/promises';
-import { expect, type Locator, test } from '@playwright/test';
+
+import { expect, type Locator } from '@playwright/test';
+import { browserFixture, connectBrowser, test } from '#e2e/fixture';
 
 async function opaque(layer: Locator) {
   await expect(layer).toBeVisible();
@@ -22,8 +23,7 @@ async function opaque(layer: Locator) {
 test('service modals keep solid surfaces rather than revealing the underlying page', async ({
   page,
 }) => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  const fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  const fixture = await browserFixture();
   const image = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
     'base64'
@@ -50,11 +50,7 @@ test('service modals keep solid surfaces rather than revealing the underlying pa
   await page.route('**/images/1/0*', (route) =>
     route.fulfill({ body: image, contentType: 'image/png' })
   );
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   await page
     .locator('.workspace-group')
     .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })

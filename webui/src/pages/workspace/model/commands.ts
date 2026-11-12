@@ -8,7 +8,7 @@ import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { call } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
 
-export function settings(tab: 'model' | 'execution' | 'general', target: Target) {
+export function settings(tab: 'model' | 'execution', target: Target) {
   useWorkspaceStore.getState().set({ settings: { tab, target } });
 }
 export function view(mode: 'chat' | 'files' | 'skills', path?: string) {
@@ -33,7 +33,7 @@ export async function command(target: Target, text: string) {
       settings('model', target);
       break;
     case 'language':
-      settings('general', target);
+      useWorkspaceStore.getState().set({ languageMenu: true });
       break;
     case 'permission':
       settings('execution', target);

@@ -1,10 +1,11 @@
 // Purpose: Stage and confirm the terminal language preference before persisting and applying it.
-// Pattern: Event-loop settings use case.
+// Pattern: Event-loop settings presentation with owned background persistence.
 // Usage: !language opens settings; arrow keys select and y confirms saving after Enter.
-// Related: internal/commands/settings/language.go, internal/tui/session/confirmation.go, internal/tui/session/render_language.go.
+// Related: internal/commands/settings/language.go, internal/tui/session/settings_save.go, internal/tui/session/render_language.go.
 package session
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
@@ -13,7 +14,6 @@ import (
 	settingcmd "github.com/keonho-kim/meca/internal/commands/settings"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/tui/input"
-	"github.com/keonho-kim/meca/internal/tui/locale"
 	"github.com/keonho-kim/meca/internal/tui/view"
 )
 
@@ -96,23 +96,8 @@ func (a *app) languageShortcuts() []view.Shortcut {
 }
 
 func (a *app) saveLanguage() {
-	if a.work.state.active() {
-		a.status = a.language.Text("Stop the current task before changing settings")
-		return
-	}
-	next, err := settingcmd.Language(a.ctx, a.opts.Config, languageChoices[a.choice].value, a.opts.UpdateConfig)
-	if err != nil {
-		a.fail(err)
-		return
-	}
-	a.opts.Config = next
-	a.settings.Permission = next.Permission
-	a.language = locale.Resolve(a.ctx, next.Language)
-	a.clearSelection()
-	a.chat.chatProjection = chatProjection{}
-	a.scrollbar = scrollbarState{}
-	a.stopNotice, a.status = "", ""
-	a.menuInput.Set("")
-	a.page = "chat"
-	a.fail(a.loadHistory())
+	current, value, update := a.opts.Config, languageChoices[a.choice].value, a.opts.UpdateConfig
+	a.startSettingsSave("language", func(ctx context.Context) (config.Config, error) {
+		return settingcmd.Language(ctx, current, value, update)
+	})
 }

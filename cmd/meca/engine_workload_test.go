@@ -194,7 +194,11 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 			return err
 		}
 		defer reply.Body.Close()
-		output := engineStream{header: make(http.Header), status: http.StatusOK}
+		if reply.StatusCode != http.StatusOK {
+			body, readErr := io.ReadAll(io.LimitReader(reply.Body, 4096))
+			return fmt.Errorf("engine stream returned HTTP %d: %s: %v", reply.StatusCode, body, readErr)
+		}
+		output := engineStream{}
 		buffer := make([]byte, 64<<10)
 		for !output.completed && output.err == nil {
 			n, err := reply.Body.Read(buffer)
@@ -204,8 +208,8 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 			}
 		}
 		stopObserver()
-		if output.status != http.StatusOK || !output.completed || output.err != nil {
-			return fmt.Errorf("engine workload failed: status=%d completed=%v: %w", output.status, output.completed, errors.Join(output.err, fmt.Errorf("%s", output.failure)))
+		if !output.completed || output.err != nil {
+			return fmt.Errorf("engine workload failed: completed=%v: %v", output.completed, output.err)
 		}
 		if status, err := app.TaskStatus(operation, task.ID); err != nil || status.Status != "answered" {
 			return fmt.Errorf("native workload did not finish: %s %w", status.Status, err)

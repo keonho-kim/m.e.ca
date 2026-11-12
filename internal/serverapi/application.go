@@ -36,10 +36,16 @@ func (a *API) applicationCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, 
 		if a.Workspaces == nil {
 			return nil, fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)
 		}
-		if _, err := a.Workspaces.Add(ctx, op.AddWorkspace.GetPath()); err != nil {
+		selected, err := a.Workspaces.Add(ctx, op.AddWorkspace.GetPath())
+		if err != nil {
 			return nil, err
 		}
-		return a.applicationCall(ctx, &v1.Command{Id: cmd.GetId(), Operation: &v1.Command_ListWorkspaces{ListWorkspaces: &v1.Empty{}}})
+		result, err := a.applicationCall(ctx, &v1.Command{Id: cmd.GetId(), Operation: &v1.Command_ListWorkspaces{ListWorkspaces: &v1.Empty{}}})
+		if err != nil {
+			return nil, err
+		}
+		result.GetWorkspaces().SelectedId = selected.ID
+		return result, nil
 	case *v1.Command_BrowseFolders:
 		if a.Workspaces == nil {
 			return nil, fault.New(diag.FailedPrecondition, diag.ServerWorkspaceUnavailable)

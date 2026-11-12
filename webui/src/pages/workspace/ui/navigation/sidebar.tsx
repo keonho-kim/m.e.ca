@@ -15,6 +15,7 @@ import {
   SideNavHeading,
 } from '@astryxdesign/core/SideNav';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { useWorkspacePicker } from '@/pages/workspace/model/workspace-picker';
 import { WorkspaceGroup } from '@/pages/workspace/ui/navigation/workspace-group';
 import { ThemeShortcut } from '@/pages/workspace/ui/settings/theme-controls';
 import type { WorkspaceJson } from '@/shared/api';
@@ -34,7 +35,8 @@ export function Sidebar({
   collapsible: SideNavControlledCollapsible;
 }) {
   const t = useLocale(),
-    mobile = useAppShellMobile();
+    mobile = useAppShellMobile(),
+    picker = useWorkspacePicker(navigate);
   return (
     <SideNav
       id="workspace-navigation"
@@ -42,23 +44,32 @@ export function Sidebar({
       resizable
       collapsible={collapsible}
       header={
-        <SideNavHeading
-          heading="MECA"
-          headerEndContent={
-            <HStack gap={1}>
-              <IconButton
-                label={t('addWorkspace')}
-                variant="ghost"
-                icon={<Icon icon={'meca:folder-add'} />}
-                onClick={() => {
-                  mobile.closeMobileNav();
-                  useWorkspaceStore.getState().set({ picker: true });
-                }}
-              />
-              {!collapsible.isCollapsed && <SideNavCollapseButton />}
-            </HStack>
-          }
-        />
+        collapsible.isCollapsed ? (
+          <SideNavCollapseButton>
+            <Icon icon="meca:expand" />
+          </SideNavCollapseButton>
+        ) : (
+          <SideNavHeading
+            heading="MECA"
+            headerEndContent={
+              <HStack gap={1}>
+                <IconButton
+                  label={t('addWorkspace')}
+                  isDisabled={picker.busy}
+                  variant="ghost"
+                  icon={<Icon icon={'meca:folder-add'} />}
+                  onClick={() => {
+                    mobile.closeMobileNav();
+                    void picker.open();
+                  }}
+                />
+                <SideNavCollapseButton>
+                  <Icon icon="meca:collapse" />
+                </SideNavCollapseButton>
+              </HStack>
+            }
+          />
+        )
       }
       footer={
         <VStack gap={2}>

@@ -126,7 +126,7 @@ func (r *conversationReader) readAttached(ctx context.Context, id, group string)
 		return conversationResult{conversation: sessionstate.Conversation{Session: sessionstate.Session{ID: id, DisplayRoot: group}, Summary: "Unavailable saved conversation", Updated: at.Format(time.RFC3339Nano), Unavailable: fmt.Sprintf("unsupported saved schema %d; required %d; original preserved", version, schemaVersion)}, updated: at}, nil
 	}
 
-	c, err := parseConversation(r.connection.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,COALESCE(summary,'New conversation') FROM candidate.sessions WHERE singleton=1`), id)
+	c, err := parseConversation(r.connection.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,COALESCE(summary,'') FROM candidate.sessions WHERE singleton=1`), id)
 	if err != nil {
 		return conversationResult{}, err
 	}

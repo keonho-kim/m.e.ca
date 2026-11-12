@@ -2,14 +2,15 @@
 // Pattern: Browser-to-engine presentation regression contracts.
 // Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e conversation-polish.spec.ts.
 // Related: cmd/meca/ui_provider_test.go, webui/src/pages/workspace/ui/chat/chat.tsx.
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
 
-let fixture: { url: string; tokenFile: string; projectA: string; provider: string };
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, type Page } from '@playwright/test';
+import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+
+let fixture: BrowserFixture;
 test.beforeAll(async () => {
-  test.skip(!process.env.MECA_UI_DESCRIPTOR, 'start the isolated browser fixture first');
-  fixture = JSON.parse(await readFile(process.env.MECA_UI_DESCRIPTOR!, 'utf8'));
+  fixture = await browserFixture();
   await mkdir(join(fixture.projectA, 'polish-folder'), { recursive: true });
   await writeFile(
     join(fixture.projectA, 'polish-folder', 'wrap.md'),
@@ -21,11 +22,7 @@ test.beforeAll(async () => {
   );
 });
 test.beforeEach(async ({ page }) => {
-  await page.goto(`${fixture.url}/ui/`);
-  await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
-    .fill((await readFile(fixture.tokenFile, 'utf8')).trim());
-  await page.getByRole('button', { name: '연결', exact: true }).click();
+  await connectBrowser(page, fixture);
   const previous = page.url();
   await page
     .locator('.workspace-group')
@@ -144,7 +141,7 @@ test('model save keeps the confirmation open on rejection and closes after a suc
   const modal = page.getByRole('dialog');
   await modal
     .getByRole('textbox', { name: 'Base URL', exact: true })
-    .fill(fixture.provider + '/v1');
+    .fill(`${fixture.provider}/v1`);
   await modal.getByRole('combobox', { name: '모델 ID', exact: true }).click();
   await page.getByRole('option', { name: 'fixture-model', exact: true }).click();
   let reject = true;
@@ -172,9 +169,9 @@ test('thinking and tool cells hold the same width through persistence and comple
   try {
     await send(page, 'TOOL_CYCLE_FIXTURE');
     await expect(page.locator('.thinking')).toContainText('Stable initial tool reasoning');
-    const width = (await page.locator('.thinking').first().boundingBox())!.width;
-    const contentWidth = (await page.locator('.chat-content').boundingBox())!.width;
-    const areaWidth = (await page.locator('#meca-work-area').boundingBox())!.width;
+    const width = (await page.locator('.thinking').first().boundingBox().then(required)).width;
+    const contentWidth = (await page.locator('.chat-content').boundingBox().then(required)).width;
+    const areaWidth = (await page.locator('#meca-work-area').boundingBox().then(required)).width;
     expect(contentWidth / areaWidth).toBeGreaterThan(0.75);
     expect(width / contentWidth).toBeGreaterThan(0.9);
     await page.evaluate(() => {
@@ -193,18 +190,20 @@ test('thinking and tool cells hold the same width through persistence and comple
       Object.assign(window, { cellFrames: frames, stopCellFrames: () => cancelAnimationFrame(id) });
       sample();
     });
-    await page.request.get(fixture.provider + '/test/start-tool');
+    await page.request.get(`${fixture.provider}/test/start-tool`);
     await expect(page.locator('.thinking').last()).toContainText('Stable subsequent reasoning');
     await expect(page.locator('.tool-calls').first()).toBeVisible();
     expect(
-      Math.abs((await page.locator('.tool-entry').first().boundingBox())!.width - width)
+      Math.abs(
+        (await page.locator('.tool-entry').first().boundingBox().then(required)).width - width
+      )
     ).toBeLessThan(2);
     expect(
-      Math.abs((await page.locator('.thinking').first().boundingBox())!.width - width)
+      Math.abs((await page.locator('.thinking').first().boundingBox().then(required)).width - width)
     ).toBeLessThan(2);
     await page.setViewportSize({ width: 480, height: 900 });
     expect(await noOverflow(page, '.chat-content')).toEqual([]);
-    await page.request.get(fixture.provider + '/test/finish-tool');
+    await page.request.get(`${fixture.provider}/test/finish-tool`);
     await expect(page.locator('.completion-summary')).toBeVisible();
     await expect(page.locator('.completion-row')).not.toContainText('Intermediate response');
     await expect(page.locator('.completion-row').locator('[role=img]')).toHaveCount(0);
@@ -224,7 +223,7 @@ test('thinking and tool cells hold the same width through persistence and comple
     expect(visible.length).toBeGreaterThan(1);
     expect(visible.every(Boolean)).toBe(true);
   } finally {
-    await page.request.get(fixture.provider + '/test/start-tool');
-    await page.request.get(fixture.provider + '/test/finish-tool');
+    await page.request.get(`${fixture.provider}/test/start-tool`);
+    await page.request.get(`${fixture.provider}/test/finish-tool`);
   }
 });

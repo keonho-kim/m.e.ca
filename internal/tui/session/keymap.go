@@ -148,6 +148,9 @@ func (a *app) inputShortcuts() []view.Shortcut {
 	controls := []view.Shortcut{{Key: "Shift+Enter", Label: "줄바꿈"}, {Key: "Ctrl/Cmd+↑↓", Label: "입력 기록"}}
 	controls = a.appendImageShortcuts(controls)
 	label := "전송"
+	if a.compose.queued.Paused && !a.work.state.active() && a.compose.editor.Len() == 0 && len(a.compose.images) == 0 {
+		label = "Resume recovered requests"
+	}
 	command, err := a.inputCommand()
 	if err != nil {
 		return controls

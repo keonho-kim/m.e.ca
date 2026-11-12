@@ -38,7 +38,7 @@ func TestCompletionMetadataExcludesRunningAndArchivingJobs(t *testing.T) {
 	var expected []Completion
 	for i := 0; i < MaxActive; i += 2 {
 		id := fmt.Sprint(i)
-		outcome := Completion{ID: id, CallID: "call_" + id, Command: "check"}
+		outcome := Completion{ID: id, CallID: "call_" + id, Command: "check", Status: "exited", Started: true}
 		if i == 2 {
 			outcome.Error = "archive failed"
 		}

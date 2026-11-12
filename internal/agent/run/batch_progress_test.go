@@ -53,7 +53,18 @@ func TestParallelPublishesReadyResults(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	visible := false
+	batch := ""
+	counts := map[string]int{}
 	result, err := r.Run(ctx, "read documents and run checks independently", approve, func(event runrecord.Event) error {
+		if event.Call != nil && (event.Kind == "tool_started" || event.Kind == "tool_succeeded") {
+			if batch == "" {
+				batch = event.Call.BatchID
+			}
+			if batch == "" || event.Call.BatchID != batch {
+				t.Fatal("parallel lifecycle lost its shared batch identity")
+			}
+			counts[event.Kind]++
+		}
 		if event.Kind == "tool_succeeded" && event.CallID == "read" && !visible {
 			visible = true
 			close(held.release)
@@ -62,6 +73,9 @@ func TestParallelPublishesReadyResults(t *testing.T) {
 	})
 	if err != nil || result.Status != runrecord.Answered || !visible || ctx.Err() != nil {
 		t.Fatalf("first result waited for its blocked sibling: result=%+v visible=%v error=%v", result, visible, err)
+	}
+	if counts["tool_started"] != 2 || counts["tool_succeeded"] != 2 {
+		t.Fatal(counts)
 	}
 	var paired []string
 	for _, message := range journal.messages {

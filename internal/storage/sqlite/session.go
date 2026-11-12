@@ -22,7 +22,7 @@ func readConversation(ctx context.Context, db *sql.DB, id string) (sessionstate.
 		return c, err
 	}
 	return parseConversation(db.QueryRowContext(ctx, `SELECT id,project_root,display_root,updated_at,
- COALESCE(summary,'New conversation')
+ COALESCE(summary,'')
  FROM sessions WHERE singleton=1`), id)
 }
 

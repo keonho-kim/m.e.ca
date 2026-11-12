@@ -14,6 +14,7 @@ import (
 
 type toolDisplay struct {
 	messageDisplay
+	pending     *runrecord.Event
 	status      string
 	maskVersion int
 }
@@ -32,8 +33,10 @@ func (s *State) startTool(event runrecord.Event, f transcript.Formatter, output 
 		s.tools = make(map[string]toolDisplay)
 	}
 	block := s.tools[id]
+	copy := event
+	block.pending = &copy
 	block.maskVersion = commandMaskVersion(f)
-	block.show(event.Agent, false, f.PendingTool(event), f, output)
+	block.show(event.Agent, false, f.ToolBlock(event, !output.Collapsed), f, output)
 	s.tools[id] = block
 }
 func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output *viewport.View) {
@@ -54,6 +57,7 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 		}
 	}
 	block := s.tools[id]
+	block.pending = nil
 	if command && toolapi.CommandActive(event.Operation.Process.Status) && block.status != "" && !toolapi.CommandActive(block.status) {
 		return
 	}
@@ -76,6 +80,25 @@ func (s *State) finishTool(event runrecord.Event, f transcript.Formatter, output
 		output.Update(block.header, f.TeamHeader(agent, false))
 		delete(s.tools, id)
 	}
+}
+
+// RefreshPending formats borrowed originals only at an explicit fold transition.
+func (s *State) RefreshPending(f transcript.Formatter, output *viewport.View) {
+	for id, block := range s.tools {
+		if block.pending != nil {
+			block.show(block.pending.Agent, false, f.ToolBlock(*block.pending, !output.Collapsed), f, output)
+			s.tools[id] = block
+		}
+	}
+}
+
+func (s *State) HasPendingTools() bool {
+	for _, block := range s.tools {
+		if block.pending != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func toolCallKey(agent, call string) string { return agent + "/call:" + call }

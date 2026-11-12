@@ -14,6 +14,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 )
 
 func (s *execution) collectCommands(ctx context.Context) (bool, error) {
@@ -28,18 +29,24 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, errors.Join(errRuntimeRecord, err)
 	}
+	var terminal error
 	for _, finished := range completed {
 		result := finished.Result
-		result.Capture, err = commands.CommandCapture(ctx, finished.ID)
-		if err != nil {
-			return false, errors.Join(errRuntimeRecord, err)
+		if !commandOutputUnavailable(result) {
+			result.Capture, err = commands.CommandCapture(ctx, finished.ID)
+			if err != nil {
+				result, err = s.failedCommandCapture(result, finished.ID, err)
+				if err != nil {
+					return false, errors.Join(errRuntimeRecord, err)
+				}
+			}
 		}
 		status := "tool_succeeded"
 		if result.Failed {
 			status = "tool_failed"
 		}
 		arguments, _ := json.Marshal(map[string]string{"command": finished.Command})
-		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, Name: "execute_command", Arguments: arguments}
+		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, BatchID: finished.BatchID, Name: "execute_command", Arguments: arguments}
 		op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: finished.CallID, Name: "execute_command", Command: finished.Command, Started: result.Started, Status: status, Process: result.Process, Failure: result.Failure, Result: result.Summary, Revision: s.checkpoint.ChangeRevision}
 		s.checkpoint.Work.Observe(op)
 		s.checkpoint.Observation = result.Summary
@@ -67,8 +74,15 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		if err := s.emit(event); err != nil && !errors.Is(err, context.Canceled) && ctx.Err() == nil {
 			return false, err
 		}
+		if commandOutputUnavailable(result) {
+			terminal = errors.Join(terminal, errRuntimeRecord, result.Failure)
+		}
 	}
-	return len(completed) > 0, nil
+	return len(completed) > 0, terminal
+}
+
+func commandOutputUnavailable(result toolapi.Result) bool {
+	return result.Failure != nil && diag.Semantic(result.Failure.Code) == diag.PersistenceFailed
 }
 
 func (s *execution) pendingCommands(ctx context.Context) (bool, error) {

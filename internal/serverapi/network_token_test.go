@@ -7,6 +7,7 @@ package serverapi
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,14 +22,17 @@ func TestListenerKeepsPreparedCredential(t *testing.T) {
 	if err := os.WriteFile(path, []byte(testToken), 0600); err != nil {
 		t.Fatal(err)
 	}
-	token, err := LoadToken(path)
-	if err != nil {
+	token := NewToken()
+	if err := PublishToken(path, token); err != nil {
 		t.Fatal(err)
 	}
 	// The fixture remembers this token before networking starts, as runServer
 	// does. A later file replacement must not split authentication and masking.
-	if token != testToken {
-		t.Fatal("unexpected prepared credential")
+	if token == testToken {
+		t.Fatal("startup reused the old credential")
+	}
+	if err := f.api.Remember(token); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, []byte(strings.Repeat("new-token", 8)), 0600); err != nil {
 		t.Fatal(err)
@@ -79,5 +83,32 @@ func TestListenerKeepsPreparedCredential(t *testing.T) {
 	}
 	if strings.Contains(string(data), token) || !strings.Contains(string(data), "[redacted]") {
 		t.Fatal("authenticated credential was not masked in the reply")
+	}
+}
+
+// A failed second listener must not invalidate the running listener's disk credential.
+func TestFailedListenerDoesNotPublishCredential(t *testing.T) {
+	f := newFixture(t, generateFunc(idleGenerator), false)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	path := filepath.Join(t.TempDir(), "server.token")
+	if err := PublishToken(path, testToken); err != nil {
+		t.Fatal(err)
+	}
+	token := NewToken()
+	err = ListenAndServe(deadline(t), f.api, token, Options{Protocol: "sse", Listen: listener.Addr().String()}, func(string) {
+		if err := PublishToken(path, token); err != nil {
+			t.Error(err)
+		}
+	})
+	if err == nil {
+		t.Fatal("occupied address accepted")
+	}
+	body, err := os.ReadFile(path)
+	if err != nil || strings.TrimSpace(string(body)) != testToken {
+		t.Fatal("failed startup replaced active token", err)
 	}
 }

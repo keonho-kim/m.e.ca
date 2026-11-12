@@ -8,6 +8,7 @@ import (
 	"context"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	"github.com/keonho-kim/meca/internal/processmemory"
 	"github.com/keonho-kim/meca/internal/storage/history"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
@@ -18,10 +19,20 @@ type detailRead struct {
 	abandoned bool
 }
 type detailResult struct {
+	memory       *processmemory.PayloadLease
 	id, revision int
 	reference    runrecord.EventReference
 	block        viewport.Block
 	err          error
+}
+
+const terminalDetailReadBytes = 1 << 20
+const terminalDetailDisplayBytes = 16 << 20
+
+func (r *detailResult) close() {
+	if r != nil && r.memory != nil {
+		r.memory.Close()
+	}
 }
 
 func (a *app) loadToolDetail(layout *viewport.Transcript) {
@@ -46,7 +57,15 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 	go func() {
 		defer a.workers.Done()
 		defer cancel()
-		event, err := store.ToolEvent(ctx, result.reference, history.ReadBounds{})
+		result.memory = processmemory.NewPayloadLease()
+		reserve := func(bytes int) error {
+			return result.memory.Resize(4*max(terminalDetailReadBytes, bytes) + terminalDetailDisplayBytes)
+		}
+		err := reserve(0)
+		var event runrecord.Event
+		if err == nil {
+			event, err = store.ToolEvent(ctx, result.reference, history.ReadBounds{MaxBytes: terminalDetailReadBytes, Reserve: reserve})
+		}
 		if err == nil {
 			err = ctx.Err()
 		}
@@ -57,15 +76,21 @@ func (a *app) loadToolDetail(layout *viewport.Transcript) {
 			blocks := (transcript.Formatter{Language: language, Redact: redact}).Event(event)
 			if len(blocks) > 0 {
 				result.block = blocks[0]
+				if len(result.block.Text) > terminalDetailDisplayBytes {
+					result.err, result.block = history.ErrReadLimit, viewport.Block{}
+				}
 			}
 		}
 		if err := ctx.Err(); err != nil {
 			result.err, result.block = err, viewport.Block{}
 		}
-		a.post(a.ctx, notice{Detail: &result})
+		if a.post(a.ctx, notice{Detail: &result}) != nil {
+			result.close()
+		}
 	}()
 }
 func (a *app) receiveToolDetail(result *detailResult) {
+	defer result.close()
 	read := a.chat.details
 	a.chat.details = detailRead{}
 	if read.cancel == nil || read.abandoned || result.revision != a.chat.historyRevision || a.chat.output.Collapsed {

@@ -14,6 +14,7 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
+	"github.com/keonho-kim/meca/internal/desktop/folderpicker"
 	"github.com/keonho-kim/meca/internal/diagnostics"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -38,6 +39,15 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 		return canonicalErr
 	}
 	mode.Project = canonical
+	o := mode.ServerOptions
+	if o.TokenFile == "" {
+		o.TokenFile = filepath.Join(state, "server.token")
+	}
+	tokenLease, leaseErr := serverapi.LeaseTokenFile(o.TokenFile)
+	if leaseErr != nil {
+		return leaseErr
+	}
+	defer func() { err = errors.Join(err, tokenLease.Close()) }()
 	var ui http.Handler
 	if mode.ServerOptions.UI {
 		ui, err = webui.New()
@@ -113,22 +123,20 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 		return err
 	}
 	defer release()
-	o := mode.ServerOptions
-	if o.TokenFile == "" {
-		o.TokenFile = filepath.Join(state, "server.token")
-	}
-	token, err := serverapi.LoadToken(o.TokenFile)
-	if err != nil {
-		return err
-	}
+	token := serverapi.NewToken()
 	if err := vault.Remember(token); err != nil {
 		return err
 	}
-	api := &serverapi.API{ScopeID: application.State().Workspace, Service: application, Workspaces: workspaces, Remember: vault.Remember, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
+	api := &serverapi.API{PickFolder: folderpicker.Pick, ScopeID: application.State().Workspace, Service: application, Workspaces: workspaces, Remember: vault.Remember, Redact: vault.Redact, RedactRange: vault.RedactRange, NewMask: vault.NewChunkMask, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }, RedactionVersion: vault.RedactionVersion, Details: pages}
 	serveCtx, cancelServer := context.WithCancel(ctx)
 	defer cancelServer()
 	var startupErr error
 	err = serverapi.ListenAndServe(serveCtx, api, token, serverapi.Options{Protocol: o.Protocol, Listen: o.Listen, Certificate: o.Certificate, Key: o.Key, Hosts: o.Hosts, Origins: o.Origins, UI: ui}, func(address string) {
+		if publishErr := serverapi.PublishToken(o.TokenFile, token); publishErr != nil {
+			startupErr = publishErr
+			cancelServer()
+			return
+		}
 		// Startup stdout is the explicit credential handoff to the user.
 		if _, outputErr := fmt.Fprintln(os.Stdout, diag.Text(diag.ServerTokenReady, token)); outputErr != nil {
 			startupErr = fault.New(diag.DeliveryFailed, diag.ServerStartupOutputFailed, outputErr)

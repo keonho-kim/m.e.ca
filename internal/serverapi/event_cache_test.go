@@ -40,6 +40,12 @@ func TestEventProjectionCacheRevisionAndRelease(t *testing.T) {
 	if event.Record.Text != "later-secret" {
 		t.Fatal("cache changed the shared replay record")
 	}
+	// Another observer has already advanced the registry. A detached old
+	// notification must still be re-masked rather than trusting that registry.
+	masked, err = api.notificationJSON(notification)
+	if err != nil || bytes.Contains(masked, []byte("later-secret")) {
+		t.Fatal("detached projection crossed credential revision", err)
+	}
 	first()
 	if api.events.bytes != 0 || len(api.events.values) != 0 {
 		t.Fatal("last shared observer retained event encodings")

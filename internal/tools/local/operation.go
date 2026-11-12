@@ -19,6 +19,7 @@ import (
 type operation struct {
 	callID      string
 	executionID string
+	batchID     string
 	executor    *Executor
 	settings    policy.Settings
 	spec        toolcatalog.Specification

@@ -26,6 +26,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ToolPhase int32
+
+const (
+	ToolPhase_TOOL_PHASE_UNSPECIFIED ToolPhase = 0
+	ToolPhase_TOOL_PHASE_PENDING     ToolPhase = 1
+	ToolPhase_TOOL_PHASE_RUNNING     ToolPhase = 2
+	ToolPhase_TOOL_PHASE_SUCCEEDED   ToolPhase = 3
+	ToolPhase_TOOL_PHASE_FAILED      ToolPhase = 4
+	ToolPhase_TOOL_PHASE_INTERRUPTED ToolPhase = 5
+	ToolPhase_TOOL_PHASE_SKIPPED     ToolPhase = 6
+)
+
+// Enum value maps for ToolPhase.
+var (
+	ToolPhase_name = map[int32]string{
+		0: "TOOL_PHASE_UNSPECIFIED",
+		1: "TOOL_PHASE_PENDING",
+		2: "TOOL_PHASE_RUNNING",
+		3: "TOOL_PHASE_SUCCEEDED",
+		4: "TOOL_PHASE_FAILED",
+		5: "TOOL_PHASE_INTERRUPTED",
+		6: "TOOL_PHASE_SKIPPED",
+	}
+	ToolPhase_value = map[string]int32{
+		"TOOL_PHASE_UNSPECIFIED": 0,
+		"TOOL_PHASE_PENDING":     1,
+		"TOOL_PHASE_RUNNING":     2,
+		"TOOL_PHASE_SUCCEEDED":   3,
+		"TOOL_PHASE_FAILED":      4,
+		"TOOL_PHASE_INTERRUPTED": 5,
+		"TOOL_PHASE_SKIPPED":     6,
+	}
+)
+
+func (x ToolPhase) Enum() *ToolPhase {
+	p := new(ToolPhase)
+	*p = x
+	return p
+}
+
+func (x ToolPhase) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ToolPhase) Descriptor() protoreflect.EnumDescriptor {
+	return file_meca_v1_events_proto_enumTypes[0].Descriptor()
+}
+
+func (ToolPhase) Type() protoreflect.EnumType {
+	return &file_meca_v1_events_proto_enumTypes[0]
+}
+
+func (x ToolPhase) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ToolPhase.Descriptor instead.
+func (ToolPhase) EnumDescriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{0}
+}
+
 type Approval struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -144,9 +205,12 @@ func (x *Approval) GetExpiresAt() string {
 
 type Tool struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
+	Phase       ToolPhase              `protobuf:"varint,7,opt,name=phase,proto3,enum=meca.v1.ToolPhase" json:"phase,omitempty"`
 	ExecutionId string                 `protobuf:"bytes,5,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
-	CallId      string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
-	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Set for one independent parallel wave planned by the runtime.
+	BatchId string `protobuf:"bytes,6,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	CallId  string `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Visible arguments only. Truncated arguments are not valid executable JSON.
 	ArgumentsJson []byte          `protobuf:"bytes,3,opt,name=arguments_json,json=argumentsJson,proto3" json:"arguments_json,omitempty"`
 	Reference     *EventReference `protobuf:"bytes,4,opt,name=reference,proto3" json:"reference,omitempty"`
@@ -184,9 +248,23 @@ func (*Tool) Descriptor() ([]byte, []int) {
 	return file_meca_v1_events_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *Tool) GetPhase() ToolPhase {
+	if x != nil {
+		return x.Phase
+	}
+	return ToolPhase_TOOL_PHASE_UNSPECIFIED
+}
+
 func (x *Tool) GetExecutionId() string {
 	if x != nil {
 		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *Tool) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
 	}
 	return ""
 }
@@ -809,9 +887,11 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\atask_id\x18\t \x01(\tR\x06taskId\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\n" +
-	" \x01(\tR\texpiresAt\"\xb4\x01\n" +
-	"\x04Tool\x12!\n" +
-	"\fexecution_id\x18\x05 \x01(\tR\vexecutionId\x12\x17\n" +
+	" \x01(\tR\texpiresAt\"\xf9\x01\n" +
+	"\x04Tool\x12(\n" +
+	"\x05phase\x18\a \x01(\x0e2\x12.meca.v1.ToolPhaseR\x05phase\x12!\n" +
+	"\fexecution_id\x18\x05 \x01(\tR\vexecutionId\x12\x19\n" +
+	"\bbatch_id\x18\x06 \x01(\tR\abatchId\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
 	"\x0earguments_json\x18\x03 \x01(\fR\rargumentsJson\x125\n" +
@@ -882,7 +962,15 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"error_code\x18\x18 \x01(\tR\terrorCode\x12(\n" +
 	"\x05skill\x18\x19 \x01(\v2\x12.meca.v1.SkillReadR\x05skill\x12\x1a\n" +
 	"\bsequence\x18\x1a \x01(\x04R\bsequence\x12'\n" +
-	"\x0fmeasured_millis\x18\x1b \x01(\x03R\x0emeasuredMillisBAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
+	"\x0fmeasured_millis\x18\x1b \x01(\x03R\x0emeasuredMillis*\xbc\x01\n" +
+	"\tToolPhase\x12\x1a\n" +
+	"\x16TOOL_PHASE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12TOOL_PHASE_PENDING\x10\x01\x12\x16\n" +
+	"\x12TOOL_PHASE_RUNNING\x10\x02\x12\x18\n" +
+	"\x14TOOL_PHASE_SUCCEEDED\x10\x03\x12\x15\n" +
+	"\x11TOOL_PHASE_FAILED\x10\x04\x12\x1a\n" +
+	"\x16TOOL_PHASE_INTERRUPTED\x10\x05\x12\x16\n" +
+	"\x12TOOL_PHASE_SKIPPED\x10\x06BAZ?github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;mecav1b\x06proto3"
 
 var (
 	file_meca_v1_events_proto_rawDescOnce sync.Once
@@ -896,35 +984,38 @@ func file_meca_v1_events_proto_rawDescGZIP() []byte {
 	return file_meca_v1_events_proto_rawDescData
 }
 
+var file_meca_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_meca_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_meca_v1_events_proto_goTypes = []any{
-	(*Approval)(nil),              // 0: meca.v1.Approval
-	(*Tool)(nil),                  // 1: meca.v1.Tool
-	(*Usage)(nil),                 // 2: meca.v1.Usage
-	(*Statistics)(nil),            // 3: meca.v1.Statistics
-	(*GenerationMeasurement)(nil), // 4: meca.v1.GenerationMeasurement
-	(*Team)(nil),                  // 5: meca.v1.Team
-	(*Event)(nil),                 // 6: meca.v1.Event
-	(*EventReference)(nil),        // 7: meca.v1.EventReference
-	(*RunOutcome)(nil),            // 8: meca.v1.RunOutcome
-	(*SkillRead)(nil),             // 9: meca.v1.SkillRead
+	(ToolPhase)(0),                // 0: meca.v1.ToolPhase
+	(*Approval)(nil),              // 1: meca.v1.Approval
+	(*Tool)(nil),                  // 2: meca.v1.Tool
+	(*Usage)(nil),                 // 3: meca.v1.Usage
+	(*Statistics)(nil),            // 4: meca.v1.Statistics
+	(*GenerationMeasurement)(nil), // 5: meca.v1.GenerationMeasurement
+	(*Team)(nil),                  // 6: meca.v1.Team
+	(*Event)(nil),                 // 7: meca.v1.Event
+	(*EventReference)(nil),        // 8: meca.v1.EventReference
+	(*RunOutcome)(nil),            // 9: meca.v1.RunOutcome
+	(*SkillRead)(nil),             // 10: meca.v1.SkillRead
 }
 var file_meca_v1_events_proto_depIdxs = []int32{
-	7,  // 0: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
-	2,  // 1: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
-	8,  // 2: meca.v1.Event.outcome:type_name -> meca.v1.RunOutcome
-	0,  // 3: meca.v1.Event.approval:type_name -> meca.v1.Approval
-	1,  // 4: meca.v1.Event.tool:type_name -> meca.v1.Tool
-	2,  // 5: meca.v1.Event.usage:type_name -> meca.v1.Usage
-	5,  // 6: meca.v1.Event.team:type_name -> meca.v1.Team
-	3,  // 7: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
-	4,  // 8: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
-	9,  // 9: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	0,  // 0: meca.v1.Tool.phase:type_name -> meca.v1.ToolPhase
+	8,  // 1: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
+	3,  // 2: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
+	9,  // 3: meca.v1.Event.outcome:type_name -> meca.v1.RunOutcome
+	1,  // 4: meca.v1.Event.approval:type_name -> meca.v1.Approval
+	2,  // 5: meca.v1.Event.tool:type_name -> meca.v1.Tool
+	3,  // 6: meca.v1.Event.usage:type_name -> meca.v1.Usage
+	6,  // 7: meca.v1.Event.team:type_name -> meca.v1.Team
+	4,  // 8: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
+	5,  // 9: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
+	10, // 10: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_events_proto_init() }
@@ -941,13 +1032,14 @@ func file_meca_v1_events_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meca_v1_events_proto_rawDesc), len(file_meca_v1_events_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_meca_v1_events_proto_goTypes,
 		DependencyIndexes: file_meca_v1_events_proto_depIdxs,
+		EnumInfos:         file_meca_v1_events_proto_enumTypes,
 		MessageInfos:      file_meca_v1_events_proto_msgTypes,
 	}.Build()
 	File_meca_v1_events_proto = out.File

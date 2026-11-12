@@ -16,7 +16,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
-import { toolIdentity } from '@/pages/workspace/model/chat-events';
+import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
 import { historyRows } from '@/pages/workspace/model/history-rows';
 import { useConversationInspection } from '@/pages/workspace/model/inspection';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -91,7 +91,9 @@ export function Chat({
       return (
         (row &&
           ('item' in row
-            ? (row.item.event && toolIdentity(row.item.event)) || row.item.sequence
+            ? (row.item.event &&
+                (toolBatchIdentity(row.item.event) || toolIdentity(row.item.event))) ||
+              row.item.sequence
             : row.sequence)) ??
         index
       );
@@ -227,6 +229,7 @@ export function Chat({
                       <HistoryRow
                         item={value.item}
                         thinking={value.thinking}
+                        tools={value.tools}
                         target={target}
                         inspect={inspector.actions}
                       />

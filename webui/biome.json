@@ -5,9 +5,11 @@
       "src/**/*.ts",
       "src/**/*.tsx",
       "scripts/**/*.ts",
+      "e2e/**/*.ts",
       "*.ts",
-      "!src/shared/api/gen/**",
-      "!src/app/styles/generated/**"
+      "!src/shared/api/gen",
+      "!src/app/styles/generated",
+      "!src/shared/ui/file-icon/generated.tsx"
     ]
   },
   "formatter": {

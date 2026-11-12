@@ -31,10 +31,3 @@ export async function login(token: string) {
   if (!response.ok) throw failure(response.status === 403 ? 'forbidden' : 'network');
   if (!(await hasBrowserSession())) throw failure('browser_cookie');
 }
-export async function logout() {
-  const response = await nativeRequest('/v1/ui/logout', {
-    method: 'POST',
-  });
-  await response.body?.cancel();
-  if (!response.ok) throw failure('network');
-}

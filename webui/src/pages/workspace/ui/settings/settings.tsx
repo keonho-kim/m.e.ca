@@ -14,16 +14,12 @@ import { Switch } from '@astryxdesign/core/Switch';
 import { Text } from '@astryxdesign/core/Text';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
-import { reportError, setServerLanguage, useServerSession } from '@/entities/server-session';
-import { disconnect as disconnectServer } from '@/features/server-access';
+import { reportError } from '@/entities/server-session';
 import { changed, stateOptions } from '@/pages/workspace/api/queries';
-import { clearSubmissions } from '@/pages/workspace/model/execution';
-import { cancelSelections } from '@/pages/workspace/model/reference-queue';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { ModelForm } from '@/pages/workspace/ui/settings/model-form';
 import { SettingsNavigation } from '@/pages/workspace/ui/settings/settings-navigation';
-import { ThemeChoice } from '@/pages/workspace/ui/settings/theme-controls';
-import { call, queries } from '@/shared/api';
+import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
 import { SaveConfirmation } from '@/shared/ui/save-confirmation';
@@ -37,7 +33,6 @@ export default function Settings() {
     [discard, setDiscard] = useState(false);
   const [busy, setBusy] = useState(false),
     [permission, setPermission] = useState('default');
-  const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [confirmSave, setConfirmSave] = useState(false);
   const onSaved = useCallback(() => useWorkspaceStore.getState().set({ settings: null }), []);
   const [modelBusy, setModelBusy] = useState(false),
@@ -47,7 +42,6 @@ export default function Settings() {
       ...stateOptions(target),
       enabled: tab === 'execution' && !!target.workspace,
     });
-  const language = useServerSession((s) => s.language);
   const onDirty = useCallback((value: boolean) => setDirty(value), []);
   useEffect(() => {
     setPermission(state.data?.permission ?? 'default');
@@ -65,10 +59,7 @@ export default function Settings() {
     if (dirty) setDiscard(true);
     else useWorkspaceStore.getState().set({ settings: null });
   };
-  const configure = async (
-    value: { permission?: string; team?: boolean; language?: string },
-    closeAfter = false
-  ) => {
+  const configure = async (value: { permission?: string; team?: boolean }, closeAfter = false) => {
     setBusy(true);
     setError('');
     try {
@@ -78,7 +69,6 @@ export default function Settings() {
           ...(value.team === undefined ? {} : { sessionId: target.session }),
         },
       });
-      if (value.language) setServerLanguage(value.language);
       changed(target);
       if (closeAfter) onSaved();
     } catch (error) {
@@ -86,34 +76,6 @@ export default function Settings() {
       reportError(error);
     } finally {
       setBusy(false);
-    }
-  };
-  const disconnect = async (discardFile = false) => {
-    if (useWorkspaceStore.getState().fileDirty && !discardFile) {
-      setLogoutConfirm(true);
-      return;
-    }
-
-    try {
-      await disconnectServer();
-      clearSubmissions();
-      cancelSelections();
-      queries.clear();
-      useWorkspaceStore.getState().set({
-        settings: null,
-        inputs: {},
-        queues: {},
-        drafts: {},
-        tasks: {},
-        events: [],
-        mode: 'chat',
-        fileDirty: false,
-        pausedQueues: {},
-        reviewTarget: null,
-      });
-    } catch (error) {
-      setError(describeError(error));
-      reportError(error);
     }
   };
   return (
@@ -190,23 +152,6 @@ export default function Settings() {
                   }}
                 />
               </VStack>
-              <VStack hidden={tab !== 'general'} padding={6} gap={6}>
-                <Selector
-                  label={t('language')}
-                  value={language}
-                  isDisabled={busy}
-                  onChange={(language) => {
-                    void configure({ language });
-                  }}
-                  options={[
-                    { value: 'auto', label: t('system') },
-                    { value: 'ko', label: '한국어' },
-                    { value: 'en', label: 'English' },
-                  ]}
-                />
-                <ThemeChoice />
-                <Button label={t('logout')} onClick={() => disconnect()} />
-              </VStack>
             </LayoutContent>
           }
         />
@@ -230,18 +175,6 @@ export default function Settings() {
         isActionLoading={busy || modelBusy}
         onAction={() => {
           if (!busy && !modelBusy) useWorkspaceStore.getState().set({ settings: null });
-        }}
-      />
-      <AlertDialog
-        isOpen={logoutConfirm}
-        title={t('dirty')}
-        description={t('unsavedFile')}
-        cancelLabel={t('keepEditing')}
-        actionLabel={t('logout')}
-        onOpenChange={setLogoutConfirm}
-        onAction={() => {
-          setLogoutConfirm(false);
-          void disconnect(true);
         }}
       />
     </>

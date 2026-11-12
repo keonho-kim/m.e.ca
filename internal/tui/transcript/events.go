@@ -42,8 +42,7 @@ func (f Formatter) Event(event runrecord.Event) []viewport.Block {
 			summary := f.toolSummary(event)
 			return []viewport.Block{{Text: summary, Summary: summary, DetailRef: event.Reference}}
 		}
-		if block := f.toolBlock(event); block.Text != "" {
-			block.Summary, block.Details = f.toolSummary(event), block.Text
+		if block := f.ToolBlock(event, true); block.Text != "" {
 			return []viewport.Block{block}
 		}
 		return nil
