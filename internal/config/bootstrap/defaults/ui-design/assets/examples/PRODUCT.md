@@ -1,5 +1,4 @@
 # Fictional application study scope
-<!-- impeccable:product-schema 1 -->
 
 This record describes assets/examples only. It is context for inspecting these studies, not the product brief or design authority of an application using the skill.
 

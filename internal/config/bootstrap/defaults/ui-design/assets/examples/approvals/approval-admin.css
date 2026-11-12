@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass / forest (by request) · redesign: full · v2.0.0
- * pre-emit critique: Reports, lanes and rule definitions retain their own data hierarchy under shared organization chrome.
- * Purpose: Present stage comparison, source-backed reports, roles and review-rule settings.
+/* Purpose: Present stage comparison, source-backed reports, roles and review-rule settings.
  * Pattern: App-owned presentation.
  * Usage: approvals application pages.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/approvals/reports.html. */

@@ -105,7 +105,7 @@ const ToolEntry = memo(function ToolEntry({
             />
           ) : (
             <Text type="supporting" color="secondary">
-              {event.text || t('running')}
+              {event.tool?.summary || t('running')}
             </Text>
           ))}
       </Collapsible>

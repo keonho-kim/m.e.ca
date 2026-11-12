@@ -151,6 +151,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 		page := &v1.HistoryPage{Before: cursor}
 		for _, value := range values {
 			page.Items = append(page.Items, historyItem(value))
+			page.Through = max(page.Through, value.Sequence)
 		}
 		reply.Result = &v1.Reply_History{History: page}
 	case *v1.Command_Detail:

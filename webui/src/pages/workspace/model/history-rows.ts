@@ -2,13 +2,18 @@
 // Pattern: Pure chronological history projection.
 // Usage: Chat virtualizes these groups rather than switching presentation at tool boundaries.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/history-row.tsx.
-import {
-  isResponseEvent,
-  toolBatchIdentity,
-  toolIdentity,
-} from '@/pages/workspace/model/chat-events';
-import type { HistoryItemJson, RunCompletionJson } from '@/shared/api';
-export type HistoryMessageItem = Omit<HistoryItemJson, 'completion'>;
+import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
+import type { HistoryItemJson, RunCompletionJson, TranscriptMessageJson } from '@/shared/api';
+export type HistoryMessageItem = Omit<HistoryItemJson, 'completion' | 'message'> &
+  TranscriptMessageJson;
+export function historyMessage(item: HistoryItemJson): HistoryMessageItem {
+  return {
+    sequence: item.sequence,
+    truncated: item.truncated,
+    event: item.event,
+    ...(item.message ?? item.event?.message),
+  };
+}
 export type HistoryRowValue =
   | { item: HistoryMessageItem; thinking?: HistoryMessageItem; tools?: HistoryMessageItem[] }
   | { sequence?: string; completion: RunCompletionJson };
@@ -17,22 +22,15 @@ export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
   const tools = new Map<string, { row: number; member?: number }>();
   const batches = new Map<string, number>();
   for (const original of items) {
-    const { completion, ...message } = original;
+    const { completion } = original;
+    const item = historyMessage(original);
     if (completion) {
       result.push({ sequence: original.sequence, completion });
       continue;
     }
-    const event = message.event;
-    if (
-      event?.kind === 'tool_proposed' ||
-      event?.kind === 'approved' ||
-      event?.kind === 'team_notice'
-    )
-      continue;
-    const item =
-      event && isResponseEvent(event)
-        ? { ...message, role: event.agent === 'user' ? 'user' : 'assistant', text: event.text }
-        : message;
+    const event = item.event;
+    if (event && !event.message && !event.work && !event.notice && !event.tool) continue;
+    if (!event && !original.message) continue;
     const key = event && toolIdentity(event);
     if (key) {
       const position = tools.get(key);
@@ -67,7 +65,7 @@ export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
       item.role === 'assistant' &&
       previous &&
       'item' in previous &&
-      previous.item.event?.thinking &&
+      previous.item.event?.message?.thinking &&
       !previous.thinking &&
       (previous.item.event.agent ?? '') === (item.event?.agent ?? '')
     ) {

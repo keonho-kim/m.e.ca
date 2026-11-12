@@ -133,7 +133,7 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 		wake(live)
 	}
 	r.mu.Unlock()
-	event := runrecord.Event{Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}
+	event := runrecord.Event{HistorySequence: value.Sequence, Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}
 	r.queuePublic(event)
 	return value, nil
 }

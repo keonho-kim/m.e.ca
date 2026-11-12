@@ -11,6 +11,7 @@ import { readSnapshot, snapshotMetadata } from '@/pages/workspace/api/snapshots'
 import { forgetConversation } from '@/pages/workspace/model/deletion';
 import { refreshReferences } from '@/pages/workspace/model/file-references';
 import { completed } from '@/pages/workspace/model/followups';
+import { orderedEvents } from '@/pages/workspace/model/history-handoff';
 import {
   chatPresentationBlocked,
   observeChatPresentation,
@@ -22,8 +23,8 @@ import {
   useWorkspaceStore,
 } from '@/pages/workspace/model/store';
 import { recordTask, terminal } from '@/pages/workspace/model/submission';
-import type { EventJson, NotificationJson, SnapshotJson } from '@/shared/api';
-import { call, queries, subscribeEventStream } from '@/shared/api';
+import type { EventJson, SnapshotJson } from '@/shared/api';
+import { call, parseNotification, queries, subscribeEventStream } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
 
 export function observe(target: Target) {
@@ -41,9 +42,10 @@ export function observe(target: Target) {
     const values = batch;
     discardBatch();
     if (control) values.push(control);
-    if (!values.length) return;
-    useWorkspaceStore.getState().receive(values);
-    if (!control) return;
+    const accepted = orderedEvents(values, useWorkspaceStore.getState().replayCursor).events;
+    if (!accepted.length) return;
+    useWorkspaceStore.getState().receive(accepted);
+    if (!control || accepted.at(-1) !== control) return;
     projectEventCache([control]);
     const owner = { workspace: control.workspaceId ?? '', session: control.sessionId ?? '' };
     if (control.kind === 'session_deleted') forgetConversation(owner);
@@ -67,7 +69,7 @@ export function observe(target: Target) {
     }
   };
   const acceptEvent = (raw: string) => {
-    const event = (JSON.parse(raw) as NotificationJson).event;
+    const event = parseNotification(JSON.parse(raw)).event;
     if (!event || event.kind === 'heartbeat') return;
     if (event.kind !== 'assistant_delta' && event.kind !== 'usage_progress') {
       flush(event);
@@ -75,7 +77,7 @@ export function observe(target: Target) {
     }
     if (event.workspaceId !== target.workspace || event.sessionId !== target.session) return;
     batch.push(event);
-    batchBytes += 2 * ((event.text?.length ?? 0) + (event.thinking?.length ?? 0));
+    batchBytes += 2 * ((event.message?.text?.length ?? 0) + (event.message?.thinking?.length ?? 0));
     if (batch.length >= 128 || batchBytes >= 256 * 1024) flush();
     else if (!timer) timer = setTimeout(flush, chatPresentationBlocked() ? 250 : 33);
   };
@@ -96,7 +98,7 @@ export function observe(target: Target) {
         events: {
           event: acceptEvent,
           snapshot: (raw: string) => {
-            const next = (JSON.parse(raw) as NotificationJson).snapshot;
+            const next = parseNotification(JSON.parse(raw)).snapshot;
             if (!next?.cursor || next.workspaceId !== target.workspace)
               throw failure('invalid_response');
             acceptSnapshot(next);

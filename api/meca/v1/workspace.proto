@@ -26,7 +26,7 @@ message ImageMetadata { int32 index = 1; string path = 2; string mime = 3; int32
 message DraftRequest { string task_id = 1; string agent = 2; uint64 generation = 3; int64 offset = 4; int32 limit = 5; bool thinking = 6; optional int64 revision = 7; }
 message DraftPage { string text = 1; uint64 generation = 2; int64 offset = 3; int64 next_offset = 4; int64 total_bytes = 5; bool truncated = 6; int64 revision = 7; }
 message TaskListRequest { string session_id = 1; string cursor = 2; int32 limit = 3; }
-message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; string outcome = 7; string session_summary = 8; }
+message Task { string id = 1; string session_id = 2; string status = 3; string error = 4; string code = 5; string persistence = 6; string outcome = 7; string session_summary = 8; int64 history_through = 9; }
 message TaskPage { repeated Task items = 1; string next_cursor = 2; }
 message Provider { string id = 1; string name = 2; string endpoint = 3; }
 message Providers { repeated Provider items = 1; }

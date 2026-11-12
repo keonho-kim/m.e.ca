@@ -3,21 +3,17 @@
 // Usage: Chat renders only the virtualized durable history window.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/model/inspection.ts.
 
-import {
-  ChatMessage,
-  ChatMessageBubble,
-  ChatMessageMetadata,
-  ChatSystemMessage,
-} from '@astryxdesign/core/Chat';
+import { ChatMessage, ChatMessageBubble, ChatMessageMetadata } from '@astryxdesign/core/Chat';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { memo } from 'react';
-import { eventNotice } from '@/pages/workspace/model/event-notice';
 import type { HistoryMessageItem } from '@/pages/workspace/model/history-rows';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
 import { messageContent } from '@/pages/workspace/model/message-content';
 import type { Target } from '@/pages/workspace/model/store';
 import { AttachmentImage } from '@/pages/workspace/ui/chat/attachment-image';
 import { DetailContent } from '@/pages/workspace/ui/chat/detail-content';
+import { NoticeRow } from '@/pages/workspace/ui/chat/notice-row';
+import { TeamWorkRow } from '@/pages/workspace/ui/chat/team-work-row';
 import { Thinking } from '@/pages/workspace/ui/chat/thinking';
 import { ToolCalls } from '@/pages/workspace/ui/chat/tool-call';
 import { imageURL } from '@/shared/api';
@@ -42,24 +38,31 @@ export const HistoryRow = memo(function HistoryRow({
   const user = item.role === 'user',
     event = item.event;
   const content = user ? messageContent(item.text ?? '') : undefined;
-  const notice = event ? eventNotice(event, t) : undefined;
   return (
     <>
-      {event?.thinking ? (
+      {event?.message?.thinking ? (
         <ChatMessage sender="assistant" name={event.agent || 'MECA'} className="min-w-0 w-full">
           <ChatMessageBubble variant="ghost" width="100%">
-            <Thinking text={event.thinking}>
+            <Thinking text={event.message.thinking}>
               {item.truncated ? (
                 <DetailContent
                   target={target}
                   source={{ historySequence: item.sequence, view: 'THINKING' }}
                   narrative
-                  fallback={event.thinking}
+                  fallback={event.message.thinking}
                 />
               ) : undefined}
             </Thinking>
           </ChatMessageBubble>
         </ChatMessage>
+      ) : event?.work ? (
+        <TeamWorkRow
+          work={event.work}
+          agent={event.agent}
+          target={target}
+          sequence={item.sequence}
+          truncated={item.truncated}
+        />
       ) : event?.tool ? (
         <ToolCalls
           target={target}
@@ -93,14 +96,14 @@ export const HistoryRow = memo(function HistoryRow({
               </VStack>
             ) : (
               <VStack gap={6} width="100%" className="response-content">
-                {thinking?.event?.thinking && (
-                  <Thinking text={thinking.event.thinking}>
+                {thinking?.event?.message?.thinking && (
+                  <Thinking text={thinking.event.message.thinking}>
                     {thinking.truncated ? (
                       <DetailContent
                         target={target}
                         source={{ historySequence: thinking.sequence, view: 'THINKING' }}
                         narrative
-                        fallback={thinking.event.thinking}
+                        fallback={thinking.event.message.thinking}
                       />
                     ) : undefined}
                   </Thinking>
@@ -140,8 +143,8 @@ export const HistoryRow = memo(function HistoryRow({
             )}
           </ChatMessageBubble>
         </ChatMessage>
-      ) : notice ? (
-        <ChatSystemMessage>{notice}</ChatSystemMessage>
+      ) : event?.notice ? (
+        <NoticeRow notice={event.notice} />
       ) : null}
     </>
   );

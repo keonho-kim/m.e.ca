@@ -1,6 +1,6 @@
-// Purpose: Page ordered message and tool-event references for terminal history without duplicating bodies.
+// Purpose: Read visible transcript pages and their durable boundary without duplicating stored bodies.
 // Pattern: Repository projection.
-// Usage: Used by session restoration and scrolling into older history.
+// Usage: Session restoration and server history handoffs share this storage projection.
 // Related: internal/storage/sqlite/timeline_test.go, internal/tui/session/history.go.
 package sqlite
 
@@ -17,6 +17,16 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/history"
 )
+
+// TimelineHead reads the committed visible transcript boundary without restoring bodies.
+func (s *Store) TimelineHead(ctx context.Context, session string) (int64, error) {
+	if err := s.checkSession(session); err != nil {
+		return 0, err
+	}
+	var sequence int64
+	err := s.db.QueryRowContext(ctx, "SELECT COALESCE((SELECT t.sequence "+visibleHistoryJoin+" WHERE "+visibleHistoryPredicate+" ORDER BY t.sequence DESC LIMIT 1),0)").Scan(&sequence)
+	return sequence, err
+}
 
 func (s *Store) Timeline(ctx context.Context, session string, before int64, limit int) (records []history.Record, cursor int64, err error) {
 	if err := s.checkSession(session); err != nil {
@@ -157,6 +167,9 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 			bytes += extra
 		}
 		if compact && tool {
+			r.Event.Reference = &runrecord.EventReference{Session: s.session.ID, Sequence: entry.source}
+		}
+		if compact && r.Event.PublicKind() == "skill_loaded" && r.Event.Reference == nil {
 			r.Event.Reference = &runrecord.EventReference{Session: s.session.ID, Sequence: entry.source}
 		}
 		cursor = record.sequence

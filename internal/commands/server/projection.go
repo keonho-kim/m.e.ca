@@ -40,6 +40,7 @@ func ProjectEvent(value Event) Event {
 	}
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
 	p.Kind, p.OccurredAt, p.ErrorCode = clipped(e.PublicKind(), 128), clipped(e.OccurredAt, 35), clipped(e.ErrorCode, 128)
+	p.HistorySequence = e.HistorySequence
 	p.MeasuredDuration = e.MeasuredDuration
 	if e.Skill != nil {
 		p.Skill = &record.SkillRead{ID: clipped(e.Skill.ID, 512), Name: clipped(e.Skill.Name, 64), Source: clipped(e.Skill.Source, 32), Revision: clipped(e.Skill.Revision, 64)}

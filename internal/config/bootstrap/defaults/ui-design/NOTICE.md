@@ -2,7 +2,7 @@
 
 Copyright 2026 Keonho Kim
 
-These original MECA instructions organize desktop WebApp/SaaS scenarios, page maps, substantial layout regions, Korean desktop UX, visual themes, loading/progress techniques, component and motion variations, interaction contracts and observable verification. User-supplied educational notes informed layout terminology, scenarios, component distinctions and animation vocabulary; the source documents and images are not redistributed.
+These original MECA instructions organize desktop WebApp/SaaS scenarios, page maps, substantial layout regions, Korean desktop UX, visual themes, loading/progress techniques, component and motion variations, interaction contracts and observable verification.
 
 Selected design principles and review approaches were informed by:
 
@@ -19,13 +19,13 @@ Usability, component, motion and asynchronous-feedback decisions also consult pu
 
 The bundled instructions are distributed under Apache-2.0; see LICENSE.txt.
 
-The practical HTML/CSS/Vanilla JS, app-specific roles and fictional application identities are original MECA reference work. The two local studio images were created with built-in ImageGen; low-resolution previews were derived from the selected originals. They depict fictional spaces. Their generation briefs and processing are recorded in references/example-provenance.md. No external font, image CDN, API credential or upstream page implementation is included.
+The practical HTML/CSS/Vanilla JS, app-specific roles and fictional application identities are original MECA reference work. The two local studio images were created with built-in ImageGen; low-resolution previews were derived from the selected originals. They depict fictional spaces. Their files, dimensions and use are recorded in references/example-provenance.md. No external font, image CDN, API credential or upstream page implementation is included.
 
 The local SVG sprite contains 39 Lucide path definitions pinned at revision 53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c, packaged into symbols. They retain the upstream ISC and inherited Feather MIT notices in assets/examples/shared/icons-LICENSE.txt. This is static licensed artwork, not an external runtime dependency. Preserve its license when redistributing the sprite.
 
 Product Design's context, visual grounding, complete-flow implementation and rendered/interaction review principles informed an independent workflow synthesis. No Product Design plugin, tool contract, framework starter or mandatory approval/publishing flow is bundled. Apple, Meta/Instagram and Google primary guidance informs service-craft principles with the source and platform limits stated in references/service-craft.md.
 
-The resource-layout and service-craft studies inspect Nutlope/hallmark at revision 407fa689f4a276f2fd389208d271d0fef08f5058 and its public Studio example for placement and practical composition. The Hallmark instructions, commands, scripts, full theme files, fonts and photographs are not bundled or required. The commercial example refinement uses independently adapted app/material guidance from installed Hallmark v2.0.0, including Dusk lit-edge glass, and Google Docs/Slides tool relationships; no upstream UI implementation, brand artwork or font is copied. Corporate glass is the user’s direction, not a claimed catalog theme. The Agent Skills specification informs folder conventions; 8KiB instruction and 1MiB asset budgets are local choices.
+Composition references include Nutlope/hallmark at revision 407fa689f4a276f2fd389208d271d0fef08f5058 and its public Studio example, material guidance on bounded glass surfaces, and Google Docs/Slides tool relationships. The examples use original application identities, layouts and source. No upstream page implementation, brand artwork, fonts or photographs are bundled. Applicable palette-adaptation terms appear below. Agent Skills defines the supporting-resource roles; the 8KiB instruction and 1MiB asset budgets are local bundle conventions.
 
 The visual-diversity studies and rendered preview captures are original reference work. They demonstrate alternative compositions over a shared local booking domain and a bounded page-local review canvas. Capture provenance is recorded in references/example-provenance.md. No additional font package, design runtime, external library or upstream visual implementation is distributed.
 

@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: minimal editorial with role accents (by request) · redesign: restyle · v2.0.0
- * pre-emit critique: let type, rules and source objects carry the interface; distribute accents by action, selection, content and real state.
- * Purpose: Own Archive navigation, native controls and the minimal library with role-based color.
+/* Purpose: Own Archive navigation, native controls and the minimal library with role-based color.
  * Pattern: App-owned material and library presentation.
  * Usage: All four Archive routes load this base; three details also load archive-editorial.css.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive.js, internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive-editorial.css. */

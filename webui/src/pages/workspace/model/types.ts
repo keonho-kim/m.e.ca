@@ -3,7 +3,7 @@
 // Usage: Workspace model slices and presentation use these types.
 // Related: webui/src/pages/workspace/model/store.ts.
 
-import type { EventJson, SnapshotJson, StatisticsJson } from '@/shared/api';
+import type { EventJson, HistoryPageJson, SnapshotJson, StatisticsJson } from '@/shared/api';
 export type Target = { workspace: string; session: string };
 export type Input = { text: string; paths: string[]; files: File[]; revision: number };
 export type Queued = Input & { id: string };
@@ -15,8 +15,10 @@ export type Draft = {
   thinking: string;
   truncated: boolean;
   doneRevision?: number;
+  doneThrough?: string;
 };
 export type TaskView = {
+  historyThrough?: string;
   id: string;
   workspace: string;
   session: string;
@@ -27,6 +29,8 @@ export const targetKey = (t: Target) => `${t.workspace}/${t.session}`;
 export const emptyInput = (): Input => ({ text: '', paths: [], files: [], revision: 0 });
 
 export interface WorkspaceState {
+  completionThrough: string | null;
+  replayCursor: string;
   historyRevision: number;
   statistics: StatisticsJson | null;
   selection: Target;
@@ -52,5 +56,5 @@ export interface WorkspaceState {
   updateQueue: (target: Target, id: string, text: string) => boolean;
   bootstrap: (target: Target, state: SnapshotJson) => void;
   receive: (events: EventJson[]) => void;
-  acknowledgeHistory: (target: Target, revision: number) => void;
+  acknowledgeHistory: (target: Target, revision: number, page: HistoryPageJson) => void;
 }

@@ -42,6 +42,12 @@ export async function connectBrowser(page: Page, fixture: BrowserFixture) {
 }
 
 export const input = (page: Page) => page.getByLabel('작업 입력', { exact: true });
+export function historyPage(items: import('@/shared/api').HistoryItemJson[], before = '0') {
+  let through = 0n;
+  for (const item of items)
+    if (BigInt(item.sequence ?? '0') > through) through = BigInt(item.sequence ?? '0');
+  return { items, before, through: String(through) };
+}
 export async function create(page: Page, workspace = 'alpha') {
   const group = page
     .locator('.workspace-group')

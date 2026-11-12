@@ -8,6 +8,7 @@ option go_package = "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1;me
 import "meca/v1/control.proto";
 import "meca/v1/skills.proto";
 import "meca/v1/application.proto";
+import "meca/v1/workspace.proto";
 
 message Approval {
   string id = 1;
@@ -22,6 +23,8 @@ message Approval {
   string expires_at = 10;
 }
 message Tool {
+  SkillRead skill = 9;
+  string summary = 8;
   ToolPhase phase = 7;
   string execution_id = 5;
   // Set for one independent parallel wave planned by the runtime.
@@ -64,7 +67,54 @@ message Team {
   string contract = 6;
   uint64 revision = 7;
 }
+// Rendering bodies are exclusive; control events have no content.
+message TranscriptMessage {
+  string role = 1;
+  string text = 2;
+  string thinking = 3;
+  bool incomplete = 4;
+  repeated ImageMetadata images = 5;
+  Team team = 6;
+}
+message TeamContribution { string summary = 1; Team details = 2; }
+message Notice {
+  enum Code {
+    CODE_UNSPECIFIED = 0;
+    RETRYING = 1;
+    COMPACTION_STARTED = 2;
+    COMPACTION_FINISHED = 3;
+    SKILL_READ = 4;
+  }
+  Code code = 1;
+  SkillRead skill = 2;
+}
+message RunCompletion {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    COMPLETED = 1;
+    FAILED = 2;
+    INTERRUPTED = 3;
+    DENIED = 4;
+    EXHAUSTED = 5;
+  }
+  Status status = 1;
+  Statistics statistics = 2;
+}
 message Event {
+  reserved 8, 9, 17, 25;
+  reserved "text", "thinking", "team", "skill";
+  oneof content {
+    TranscriptMessage message = 31;
+    TeamContribution work = 32;
+    Notice notice = 33;
+    Tool tool = 15;
+    RunCompletion completion = 36;
+  }
+  // Durable transcript identity, distinct from replay cursor and task sequence.
+  int64 history_sequence = 35;
+  EventReference original_reference = 37;
+  // Terminal task publication confirms this committed timeline position.
+  int64 history_through = 34;
   // Correlates reference-change notices with an explicit file mutation reply.
   string mutation_key = 30;
   string workspace_id = 28;
@@ -76,16 +126,12 @@ message Event {
   string run_id = 5;
   uint64 generation = 6;
   string kind = 7;
-  string text = 8;
-  string thinking = 9;
   bool reset = 10;
   bool truncated = 11;
   bool final = 12;
   Approval approval = 13;
   string approval_id = 14;
-  Tool tool = 15;
   Usage usage = 16;
-  Team team = 17;
   string approval_source = 18;
   string status = 19;
   string error = 20;
@@ -93,7 +139,6 @@ message Event {
   GenerationMeasurement measurement = 22;
   string occurred_at = 23;
   string error_code = 24;
-  SkillRead skill = 25;
   uint64 sequence = 26;
   int64 measured_millis = 27;
 }

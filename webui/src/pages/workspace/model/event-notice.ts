@@ -1,19 +1,20 @@
 // Purpose: Translate user-visible lifecycle notices without exposing internal protocol identifiers.
 // Pattern: Pure presentation projection.
-// Usage: Stored history and live activity share the same narrow notice vocabulary.
-// Related: webui/src/pages/workspace/ui/chat/history-row.tsx, webui/src/pages/workspace/ui/chat/live-activity.tsx.
-import type { EventJson } from '@/shared/api';
+// Usage: NoticeRow translates the validated notice body with the active locale.
+// Related: webui/src/pages/workspace/ui/chat/notice-row.tsx.
+import type { NoticeJson } from '@/shared/api';
 import type { useLocale } from '@/shared/i18n';
 
-export function eventNotice(event: EventJson, t: ReturnType<typeof useLocale>) {
-  if (event.skill?.name) return `${t('skillLoaded')} · ${event.skill.name}`;
+export function eventNotice(notice: NoticeJson | undefined, t: ReturnType<typeof useLocale>) {
+  if (!notice) return undefined;
+  if (notice.code === 'SKILL_READ')
+    return notice.skill?.name ? t('skillLoaded') + ' · ' + notice.skill.name : undefined;
   const labels = {
-    retry: 'retrying',
-    compaction_started: 'compacting',
-    compaction_finished: 'contextCompacted',
-    team_work: 'teamUpdate',
+    RETRYING: 'retrying',
+    COMPACTION_STARTED: 'compacting',
+    COMPACTION_FINISHED: 'contextCompacted',
   } as const;
-  if (!event.kind || !Object.hasOwn(labels, event.kind)) return undefined;
-  const label = labels[event.kind as keyof typeof labels];
-  return [t(label), event.text?.slice(0, 1024)].filter(Boolean).join(' · ');
+  return notice.code && Object.hasOwn(labels, notice.code)
+    ? t(labels[notice.code as keyof typeof labels])
+    : undefined;
 }

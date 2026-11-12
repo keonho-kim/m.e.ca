@@ -12,7 +12,11 @@ const started: EventJson = {
   kind: 'tool_started',
   tool: { callId: '1', executionId: 'execution-1', name: 'execute_command' },
 };
-const result: EventJson = { ...started, kind: 'tool_succeeded', text: 'done' };
+const result: EventJson = {
+  ...started,
+  kind: 'tool_succeeded',
+  tool: { ...started.tool, summary: 'done' },
+};
 
 test('a saved command result takes over from all live states of that call', () => {
   expect(liveActivity([started, result], [{ event: result }])).toEqual([]);
@@ -31,14 +35,12 @@ test('reused provider call IDs never hide a later independent execution', () => 
   const next = { ...started, tool: { ...started.tool, executionId: 'execution-2' } };
   expect(liveActivity([next], [{ event: result }])).toEqual([next]);
 });
-test('response text never returns to the metadata activity area', () => {
-  expect(
-    liveActivity(
-      ['progress', 'team_progress', 'team_message', 'team_discussion'].map((kind) => ({
-        kind,
-        text: 'answer',
-      })),
-      []
-    )
-  ).toEqual([]);
+test('streamed progress stays with its draft and direct team speech retains a message body', () => {
+  const events = ['progress', 'team_progress', 'team_message', 'team_discussion'].map((kind) => ({
+    kind,
+    message: { role: 'assistant', text: 'answer' },
+  }));
+  const visible = liveActivity(events, []);
+  expect(visible.map((event) => event.kind)).toEqual(['team_message', 'team_discussion']);
+  expect(visible.every((event) => event.message?.text === 'answer' && !event.notice)).toBe(true);
 });

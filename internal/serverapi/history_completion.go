@@ -1,7 +1,7 @@
 // Purpose: Project finished checkpoints into measurement-only public history entries.
 // Pattern: Pure adapter with an explicit terminal-status mapping.
 // Usage: historyItem returns this payload before considering any narrative fields.
-// Related: internal/serverapi/projection.go, api/meca/v1/state.proto, internal/serverapi/state_values.go.
+// Related: internal/serverapi/history_content.go, api/meca/v1/events.proto, internal/serverapi/state_values.go.
 package serverapi
 
 import (

@@ -5,7 +5,6 @@
 package serverapi
 
 import (
-	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -13,14 +12,13 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/redaction"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
-	"github.com/keonho-kim/meca/internal/storage/history"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func task(value server.Task) *v1.Task {
-	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence, Outcome: value.Outcome, SessionSummary: value.SessionSummary}
+	return &v1.Task{Id: value.ID, SessionId: value.Session, Status: value.Status, Error: value.Error, Code: value.Code, Persistence: value.Persistence, Outcome: value.Outcome, SessionSummary: value.SessionSummary, HistoryThrough: value.HistoryThrough}
 }
 
 func snapshot(value server.Snapshot) *v1.Snapshot {
@@ -42,7 +40,7 @@ func snapshot(value server.Snapshot) *v1.Snapshot {
 		s.Approvals = append(s.Approvals, event(server.Event{Task: p.Task, ApprovalID: p.ID, ApprovalExpiresAt: p.ExpiresAt, Record: p.Value, Truncated: p.Truncated}).Approval)
 	}
 	for _, d := range value.Drafts {
-		s.Drafts = append(s.Drafts, &v1.Draft{TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
+		s.Drafts = append(s.Drafts, &v1.Draft{HistorySequence: d.HistorySequence, TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
 	}
 	for _, e := range value.Activity {
 		s.Activity = append(s.Activity, event(e))
@@ -75,7 +73,7 @@ func wireModel(m connection.Selection) *v1.Model {
 
 func event(value server.Event) *v1.Event {
 	e := value.Record
-	result := &v1.Event{MutationKey: value.MutationKey, WorkspaceId: value.Workspace, Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Text: e.Text, Thinking: e.Thinking, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
+	result := &v1.Event{MutationKey: value.MutationKey, WorkspaceId: value.Workspace, Cursor: value.Cursor, SessionId: value.Session, TaskId: value.Task, Agent: e.Agent, RunId: e.RunID, Generation: value.Generation, Kind: e.Kind, Reset_: value.Reset, Truncated: value.Truncated, Final: e.Final, ApprovalId: value.ApprovalID, ApprovalSource: e.ApprovalSource}
 	if value.Outcome != nil {
 		result.Outcome = &v1.RunOutcome{Status: string(value.Outcome.Status), Reason: value.Outcome.Reason}
 	}
@@ -83,28 +81,8 @@ func event(value server.Event) *v1.Event {
 	result.Sequence = value.Sequence
 	result.MeasuredMillis = e.MeasuredDuration.Milliseconds()
 	result.OccurredAt, result.ErrorCode = e.OccurredAt, e.ErrorCode
-	if e.Skill != nil {
-		result.Skill = &v1.SkillRead{Id: e.Skill.ID, Name: e.Skill.Name, Source: e.Skill.Source, Revision: e.Skill.Revision}
-	}
 	if a := e.Approval; a != nil {
 		result.Approval = &v1.Approval{ExpiresAt: wireTime(value.ApprovalExpiresAt), TaskId: value.Task, Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
-	}
-	if e.Call != nil || e.Reference != nil || e.CallID != "" {
-		phase := value.ToolPhase
-		if phase == "" {
-			phase = e.ToolPhase()
-		}
-		result.Tool = &v1.Tool{CallId: e.CallID, Phase: wireToolPhase(phase)}
-		if e.Call != nil {
-			result.Tool.ExecutionId = e.Call.ExecutionID
-			result.Tool.BatchId = e.Call.BatchID
-			result.Tool.CallId = e.Call.ID
-			result.Tool.Name = e.Call.Name
-			result.Tool.ArgumentsJson = e.Call.Arguments
-		}
-		if e.Reference != nil {
-			result.Tool.Reference = &v1.EventReference{SessionId: e.Reference.Session, Sequence: e.Reference.Sequence}
-		}
 	}
 	if e.Usage != nil {
 		result.Usage = &v1.Usage{Input: e.Usage.Input, Output: e.Usage.Output, Cost: e.Usage.Cost}
@@ -121,16 +99,9 @@ func event(value server.Event) *v1.Event {
 		g := e.Generation
 		result.Measurement = &v1.GenerationMeasurement{Id: g.ID, Role: string(g.Role), Attempt: int32(g.Attempt), ElapsedMillis: g.ElapsedMillis, MeasuredMillis: g.MeasuredMillis}
 	}
-	if t := e.Team; t != nil {
-		// Sanitization mutates the outgoing message. Each subscriber owns its
-		// list backing arrays; retained domain events stay immutable.
-		result.Team = &v1.Team{ReplyTo: t.ReplyTo, ReplyAuthor: t.ReplyAuthor, Mentions: slices.Clone(t.Mentions), BasedOn: t.BasedOn}
-		if t.Work != nil {
-			result.Team.Paths = slices.Clone(t.Work.Paths)
-			result.Team.Contract = t.Work.Contract
-			result.Team.Revision = t.Work.Revision
-		}
-	}
+	result.HistorySequence = e.HistorySequence
+	result.HistoryThrough = value.HistoryThrough
+	eventContent(result, value)
 	return result
 }
 
@@ -146,51 +117,31 @@ func textPreview(text string) string {
 	return text[:n]
 }
 
-func historyItem(value history.Record) *v1.HistoryItem {
-	item := &v1.HistoryItem{Sequence: value.Sequence, Kind: value.Kind}
-	if completion := historyCompletion(value.Event); value.Kind == "event" && completion != nil {
-		item.Kind, item.Completion = "completion", completion
-		return item
-	}
-	for index, image := range value.Images {
-		item.Images = append(item.Images, wireImage(index, image))
-	}
-	if value.Kind == "message" {
-		item.Role = value.Message.Role
-		item.Text = strings.Clone(textPreview(value.Message.Content))
-		item.Truncated = value.Truncated || len(item.Text) < len(value.Message.Content)
-		item.Incomplete = value.Message.Incomplete
-	} else {
-		item.Event = event(server.ProjectEvent(server.Event{Record: value.Event}))
-	}
-	return item
-}
-
 func (a *API) sanitize(value proto.Message) {
 	if a.Redact == nil {
 		return
 	}
-	var visit func(protoreflect.Message)
-	visit = func(m protoreflect.Message) {
-		clipped := false
+	var visit func(protoreflect.Message, bool)
+	visit = func(m protoreflect.Message, inherited bool) {
+		clipped := inherited
 		if field := m.Descriptor().Fields().ByName("truncated"); field != nil {
-			clipped = m.Get(field).Bool()
+			clipped = clipped || m.Get(field).Bool()
 		}
 		m.Range(func(f protoreflect.FieldDescriptor, v protoreflect.Value) bool {
 			if f.IsList() {
 				list := v.List()
 				for i := 0; i < list.Len(); i++ {
 					if f.Kind() == protoreflect.MessageKind {
-						visit(list.Get(i).Message())
+						visit(list.Get(i).Message(), clipped)
 					} else if f.Kind() == protoreflect.StringKind {
 						list.Set(i, protoreflect.ValueOfString(a.Redact(list.Get(i).String())))
 					}
 				}
 			} else if f.Kind() == protoreflect.MessageKind {
-				visit(v.Message())
+				visit(v.Message(), clipped)
 			} else if f.Kind() == protoreflect.StringKind {
 				redact := a.Redact
-				if clipped && a.RedactPreview != nil && (f.Name() == "text" || f.Name() == "thinking" || f.Name() == "preview" || f.Name() == "diff") {
+				if clipped && a.RedactPreview != nil && (f.Name() == "text" || f.Name() == "thinking" || f.Name() == "preview" || f.Name() == "diff" || f.Name() == "summary" || f.Name() == "contract") {
 					redact = a.RedactPreview
 				}
 				m.Set(f, protoreflect.ValueOfString(redact(v.String())))
@@ -205,7 +156,7 @@ func (a *API) sanitize(value proto.Message) {
 			return true
 		})
 	}
-	visit(value.ProtoReflect())
+	visit(value.ProtoReflect(), false)
 }
 
 func notificationCursor(n *v1.Notification) string {

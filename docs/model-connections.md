@@ -6,7 +6,7 @@
 
 tui·full 모두 같은 아홉 Provider와 모델 설정을 사용한다. TUI의 `!model`에서 Provider·주소·API 키·서빙 모델 ID를 선택한다. full WebUI는 설정 → 모델, 서버 연동은 `setModel`을 사용한다. 실제 요청에는 선택한 ID를 그대로 사용하며, 연결 기능과 한도는 모델 서버 메타데이터와 Provider API 규약으로 결정한다. 여기서 모델 서버와 full의 MECA 자체 API 서버는 별개다.
 
-지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 자체 서버 API의 `setModel`에도 같은 식별값을 사용한다. OpenAI Provider는 모델 연결 기능으로 유지한다.
+지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 자체 서버 API의 `setModel`에도 같은 식별값을 사용한다.
 
 설정 화면은 저장된 Thinking·강도 또는 서버가 공개한 기본값을 표시한다. 확인된 기본값은 구체적인 ON/OFF·강도로 표시하고, 공개되지 않은 값만 DEFAULT로 둔다. DEFAULT는 think·reasoning·reasoning_effort·chat_template_kwargs의 해당 제어 필드 생략을 뜻한다. 역할별 temperature·출력 예산·컨텍스트 예산은 [설정 문서](configuration.md)의 독립된 설정이다.
 

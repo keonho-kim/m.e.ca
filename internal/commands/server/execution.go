@@ -109,6 +109,11 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 	saveErr := s.options.Ledger.Finish(flush, task)
 	cancel()
 	saveErr = s.confirmCompletion(ctx, task, saveErr)
+	if saveErr == nil {
+		read, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		task.HistoryThrough, saveErr = c.History.TimelineHead(read, task.Session)
+		stop()
+	}
 	task.Persistence = PersistenceConfirmed
 	if saveErr != nil {
 		task.Persistence = PersistenceUncertain
@@ -132,7 +137,7 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 	terminal.ErrorCode = task.Code
 	r.releaseCapacity()
 	end := &work.End{Status: result.End.Status, Reason: clipped(options.Vault.Redact(result.End.Reason), 4096)}
-	s.publish(Event{Outcome: end, Session: task.Session, Task: task.ID, Status: task.Status, Error: task.Error, Record: terminal})
+	s.publish(Event{HistoryThrough: task.HistoryThrough, Outcome: end, Session: task.Session, Task: task.ID, Status: task.Status, Error: task.Error, Record: terminal})
 	delete(s.active, task.ID)
 	delete(s.bySession, task.Session)
 	if len(s.active) == 0 {

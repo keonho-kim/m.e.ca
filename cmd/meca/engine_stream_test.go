@@ -67,7 +67,7 @@ func (s *engineStream) consume(frame []byte) {
 			s.text.Reset()
 			s.render = markdown.Stream{}
 		case "assistant_delta":
-			s.text.WriteString(event.Text)
+			s.text.WriteString(event.GetMessage().GetText())
 			rows := s.render.Render(s.text.String(), 100)
 			for _, row := range rows[max(0, len(rows)-24):] {
 				for range row.RowsFrom(100, 0, "") {

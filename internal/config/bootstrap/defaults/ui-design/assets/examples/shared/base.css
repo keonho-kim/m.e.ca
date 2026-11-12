@@ -1,13 +1,8 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: project palettes (preserved) · redesign: full · v2.0.0
- * pre-emit critique: native controls, legible text and app-owned work planes take priority over repeated chrome.
- * Purpose: Own native typography and shared layout primitives without a default app navigation.
+/* Purpose: Own native typography and shared layout primitives without a default app navigation.
  * Pattern: Shared presentation foundation.
  * Usage: Every practical example loads this before its application stylesheet.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/shared/components.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js.
  */
-/* Hallmark · waive 24b · optical icon gaps below eight pixels · compact control padding preserves alignment while app work zones use a four-pixel rhythm. */
-/* Hallmark · dropped ../shared/preview.js · screens without native tab groups no longer load the tab-only controller; actual tab screens retain the same script and deep links. */
-/* Hallmark · finish-review: subagent · two suite findings resolved; Archive editorial ship · gap: none. */
 :root {
   --bg:#f8f8f6; --surface:#fff; --raised:#fff; --soft:#efefed; --text:#20242c; --muted:#586270;
   --line:#e1e5eb; --control:#8d96a3; --accent:#353b38; --on-accent:#fff; --accent-soft:#e8f2ec;

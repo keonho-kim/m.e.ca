@@ -4,9 +4,9 @@
 // Related: webui/src/pages/workspace/ui/chat/completion-row.tsx, cmd/meca/ui_browser_test.go.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { browserFixture, connectBrowser, create, historyPage, required, test } from '#e2e/fixture';
 
-test('completion metadata cannot render response, thinking or invalid numeric strings', async ({
+test('typed completion measurements keep failure details outside the summary through later updates', async ({
   page,
 }) => {
   const fixture = await browserFixture();
@@ -31,29 +31,23 @@ test('completion metadata cannot render response, thinking or invalid numeric st
     if (!command.history) return route.continue();
     await route.fulfill({
       json: {
-        history: {
-          items: [
-            { sequence: '1', kind: 'message', role: 'assistant', text: 'The actual response.' },
-            {
-              sequence: '2',
-              kind: 'completion',
-              role: 'assistant',
-              text: 'LEAKED_AGENT_TEXT',
-              event: { kind: 'progress', text: 'LEAKED_EVENT_TEXT', thinking: 'LEAKED_THINKING' },
-              completion: {
-                status: 'FAILED',
-                statistics: {
-                  elapsedMillis: '9000',
-                  generationMillis: '3000',
-                  usage: { input: 'LEAKED_TOKEN_TEXT', output: '30' },
-                },
+        history: historyPage([
+          { sequence: '1', message: { role: 'assistant', text: 'The actual response.' } },
+          {
+            sequence: '2',
+            completion: {
+              status: 'FAILED',
+              statistics: {
+                elapsedMillis: '9000',
+                generationMillis: '3000',
+                usage: { input: '32', output: '30' },
               },
             },
-            ...(append
-              ? [{ sequence: '3', kind: 'message', role: 'user', text: 'A later message.' }]
-              : []),
-          ],
-        },
+          },
+          ...(append
+            ? [{ sequence: '3', message: { role: 'user', text: 'A later message.' } }]
+            : []),
+        ]),
       },
     });
   });
@@ -98,4 +92,35 @@ test('completion metadata cannot render response, thinking or invalid numeric st
   expect((await started.json()).task?.id).toBeTruthy();
   await expect(page.getByText('A later message.', { exact: true })).toBeVisible();
   await expect(page.locator('.original-text')).toContainText(reason);
+});
+
+// Invalid transport content must never fall back to a system-message row.
+test('mixed completion and authored text are rejected at the browser receive boundary', async ({
+  page,
+}) => {
+  await page.route('**/v1/command', async (route) => {
+    if (route.request().postDataJSON().history)
+      await route.fulfill({
+        json: {
+          history: {
+            through: '1',
+            items: [
+              {
+                sequence: '1',
+                completion: { status: 'COMPLETED' },
+                message: { role: 'assistant', text: 'INVALID_BODY_CANARY' },
+              },
+            ],
+          },
+        },
+      });
+    else await route.continue();
+  });
+  await connectBrowser(page, await browserFixture());
+  await create(page);
+  await expect(
+    page.locator('.chat-content').getByRole('button', { name: /다시 확인/ })
+  ).toBeVisible();
+  await expect(page.getByText(/INVALID_BODY_CANARY/)).toHaveCount(0);
+  await expect(page.locator('.completion-row')).toHaveCount(0);
 });

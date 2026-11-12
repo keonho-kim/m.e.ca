@@ -15,13 +15,15 @@ import type { SkillRead, SkillReadJson } from "./skills_pb";
 import { file_meca_v1_skills } from "./skills_pb";
 import type { RunOutcome, RunOutcomeJson } from "./application_pb";
 import { file_meca_v1_application } from "./application_pb";
+import type { ImageMetadata, ImageMetadataJson } from "./workspace_pb";
+import { file_meca_v1_workspace } from "./workspace_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file meca/v1/events.proto.
  */
 export const file_meca_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJIrQBCgRUb29sEiEKBXBoYXNlGAcgASgOMhIubWVjYS52MS5Ub29sUGhhc2USFAoMZXhlY3V0aW9uX2lkGAUgASgJEhAKCGJhdGNoX2lkGAYgASgJEg8KB2NhbGxfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIWCg5hcmd1bWVudHNfanNvbhgDIAEoDBIqCglyZWZlcmVuY2UYBCABKAsyFy5tZWNhLnYxLkV2ZW50UmVmZXJlbmNlIkIKBVVzYWdlEg0KBWlucHV0GAEgASgDEg4KBm91dHB1dBgCIAEoAxIRCgRjb3N0GAMgASgBSACIAQFCBwoFX2Nvc3QicgoKU3RhdGlzdGljcxISCgpjb25jdXJyZW50GAEgASgIEhYKDmVsYXBzZWRfbWlsbGlzGAIgASgDEhkKEWdlbmVyYXRpb25fbWlsbGlzGAMgASgDEh0KBXVzYWdlGAQgASgLMg4ubWVjYS52MS5Vc2FnZSJzChVHZW5lcmF0aW9uTWVhc3VyZW1lbnQSCgoCaWQYASABKAkSDAoEcm9sZRgCIAEoCRIPCgdhdHRlbXB0GAMgASgFEhYKDmVsYXBzZWRfbWlsbGlzGAQgASgDEhcKD21lYXN1cmVkX21pbGxpcxgFIAEoAyKFAQoEVGVhbRIQCghyZXBseV90bxgBIAEoAxIUCgxyZXBseV9hdXRob3IYAiABKAkSEAoIbWVudGlvbnMYAyADKAkSEAoIYmFzZWRfb24YBCABKAMSDQoFcGF0aHMYBSADKAkSEAoIY29udHJhY3QYBiABKAkSEAoIcmV2aXNpb24YByABKAQiwAUKBUV2ZW50EhQKDG11dGF0aW9uX2tleRgeIAEoCRIUCgx3b3Jrc3BhY2VfaWQYHCABKAkSJAoHb3V0Y29tZRgdIAEoCzITLm1lY2EudjEuUnVuT3V0Y29tZRIOCgZjdXJzb3IYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEg0KBWFnZW50GAQgASgJEg4KBnJ1bl9pZBgFIAEoCRISCgpnZW5lcmF0aW9uGAYgASgEEgwKBGtpbmQYByABKAkSDAoEdGV4dBgIIAEoCRIQCgh0aGlua2luZxgJIAEoCRINCgVyZXNldBgKIAEoCBIRCgl0cnVuY2F0ZWQYCyABKAgSDQoFZmluYWwYDCABKAgSIwoIYXBwcm92YWwYDSABKAsyES5tZWNhLnYxLkFwcHJvdmFsEhMKC2FwcHJvdmFsX2lkGA4gASgJEhsKBHRvb2wYDyABKAsyDS5tZWNhLnYxLlRvb2wSHQoFdXNhZ2UYECABKAsyDi5tZWNhLnYxLlVzYWdlEhsKBHRlYW0YESABKAsyDS5tZWNhLnYxLlRlYW0SFwoPYXBwcm92YWxfc291cmNlGBIgASgJEg4KBnN0YXR1cxgTIAEoCRINCgVlcnJvchgUIAEoCRInCgpzdGF0aXN0aWNzGBUgASgLMhMubWVjYS52MS5TdGF0aXN0aWNzEjMKC21lYXN1cmVtZW50GBYgASgLMh4ubWVjYS52MS5HZW5lcmF0aW9uTWVhc3VyZW1lbnQSEwoLb2NjdXJyZWRfYXQYFyABKAkSEgoKZXJyb3JfY29kZRgYIAEoCRIhCgVza2lsbBgZIAEoCzISLm1lY2EudjEuU2tpbGxSZWFkEhAKCHNlcXVlbmNlGBogASgEEhcKD21lYXN1cmVkX21pbGxpcxgbIAEoAyq8AQoJVG9vbFBoYXNlEhoKFlRPT0xfUEhBU0VfVU5TUEVDSUZJRUQQABIWChJUT09MX1BIQVNFX1BFTkRJTkcQARIWChJUT09MX1BIQVNFX1JVTk5JTkcQAhIYChRUT09MX1BIQVNFX1NVQ0NFRURFRBADEhUKEVRPT0xfUEhBU0VfRkFJTEVEEAQSGgoWVE9PTF9QSEFTRV9JTlRFUlJVUFRFRBAFEhYKElRPT0xfUEhBU0VfU0tJUFBFRBAGQkFaP2dpdGh1Yi5jb20va2VvbmhvLWtpbS9tZWNhL2ludGVybmFsL3NlcnZlcmFwaS9nZW4vbWVjYXYxO21lY2F2MWIGcHJvdG8z", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application]);
+  fileDesc("ChRtZWNhL3YxL2V2ZW50cy5wcm90bxIHbWVjYS52MSKzAQoIQXBwcm92YWwSCgoCaWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnRhcmdldBgEIAEoCRIPCgdwcmV2aWV3GAUgASgJEgwKBGRpZmYYBiABKAgSFQoNdXNlcl9yZXF1aXJlZBgHIAEoCBIRCgl0cnVuY2F0ZWQYCCABKAgSDwoHdGFza19pZBgJIAEoCRISCgpleHBpcmVzX2F0GAogASgJIugBCgRUb29sEiEKBXNraWxsGAkgASgLMhIubWVjYS52MS5Ta2lsbFJlYWQSDwoHc3VtbWFyeRgIIAEoCRIhCgVwaGFzZRgHIAEoDjISLm1lY2EudjEuVG9vbFBoYXNlEhQKDGV4ZWN1dGlvbl9pZBgFIAEoCRIQCghiYXRjaF9pZBgGIAEoCRIPCgdjYWxsX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSFgoOYXJndW1lbnRzX2pzb24YAyABKAwSKgoJcmVmZXJlbmNlGAQgASgLMhcubWVjYS52MS5FdmVudFJlZmVyZW5jZSJCCgVVc2FnZRINCgVpbnB1dBgBIAEoAxIOCgZvdXRwdXQYAiABKAMSEQoEY29zdBgDIAEoAUgAiAEBQgcKBV9jb3N0InIKClN0YXRpc3RpY3MSEgoKY29uY3VycmVudBgBIAEoCBIWCg5lbGFwc2VkX21pbGxpcxgCIAEoAxIZChFnZW5lcmF0aW9uX21pbGxpcxgDIAEoAxIdCgV1c2FnZRgEIAEoCzIOLm1lY2EudjEuVXNhZ2UicwoVR2VuZXJhdGlvbk1lYXN1cmVtZW50EgoKAmlkGAEgASgJEgwKBHJvbGUYAiABKAkSDwoHYXR0ZW1wdBgDIAEoBRIWCg5lbGFwc2VkX21pbGxpcxgEIAEoAxIXCg9tZWFzdXJlZF9taWxsaXMYBSABKAMihQEKBFRlYW0SEAoIcmVwbHlfdG8YASABKAMSFAoMcmVwbHlfYXV0aG9yGAIgASgJEhAKCG1lbnRpb25zGAMgAygJEhAKCGJhc2VkX29uGAQgASgDEg0KBXBhdGhzGAUgAygJEhAKCGNvbnRyYWN0GAYgASgJEhAKCHJldmlzaW9uGAcgASgEIpoBChFUcmFuc2NyaXB0TWVzc2FnZRIMCgRyb2xlGAEgASgJEgwKBHRleHQYAiABKAkSEAoIdGhpbmtpbmcYAyABKAkSEgoKaW5jb21wbGV0ZRgEIAEoCBImCgZpbWFnZXMYBSADKAsyFi5tZWNhLnYxLkltYWdlTWV0YWRhdGESGwoEdGVhbRgGIAEoCzINLm1lY2EudjEuVGVhbSJDChBUZWFtQ29udHJpYnV0aW9uEg8KB3N1bW1hcnkYASABKAkSHgoHZGV0YWlscxgCIAEoCzINLm1lY2EudjEuVGVhbSK8AQoGTm90aWNlEiIKBGNvZGUYASABKA4yFC5tZWNhLnYxLk5vdGljZS5Db2RlEiEKBXNraWxsGAIgASgLMhIubWVjYS52MS5Ta2lsbFJlYWQiawoEQ29kZRIUChBDT0RFX1VOU1BFQ0lGSUVEEAASDAoIUkVUUllJTkcQARIWChJDT01QQUNUSU9OX1NUQVJURUQQAhIXChNDT01QQUNUSU9OX0ZJTklTSEVEEAMSDgoKU0tJTExfUkVBRBAEItABCg1SdW5Db21wbGV0aW9uEi0KBnN0YXR1cxgBIAEoDjIdLm1lY2EudjEuUnVuQ29tcGxldGlvbi5TdGF0dXMSJwoKc3RhdGlzdGljcxgCIAEoCzITLm1lY2EudjEuU3RhdGlzdGljcyJnCgZTdGF0dXMSFgoSU1RBVFVTX1VOU1BFQ0lGSUVEEAASDQoJQ09NUExFVEVEEAESCgoGRkFJTEVEEAISDwoLSU5URVJSVVBURUQQAxIKCgZERU5JRUQQBBINCglFWEhBVVNURUQQBSK1BwoFRXZlbnQSLQoHbWVzc2FnZRgfIAEoCzIaLm1lY2EudjEuVHJhbnNjcmlwdE1lc3NhZ2VIABIpCgR3b3JrGCAgASgLMhkubWVjYS52MS5UZWFtQ29udHJpYnV0aW9uSAASIQoGbm90aWNlGCEgASgLMg8ubWVjYS52MS5Ob3RpY2VIABIdCgR0b29sGA8gASgLMg0ubWVjYS52MS5Ub29sSAASLAoKY29tcGxldGlvbhgkIAEoCzIWLm1lY2EudjEuUnVuQ29tcGxldGlvbkgAEhgKEGhpc3Rvcnlfc2VxdWVuY2UYIyABKAMSMwoSb3JpZ2luYWxfcmVmZXJlbmNlGCUgASgLMhcubWVjYS52MS5FdmVudFJlZmVyZW5jZRIXCg9oaXN0b3J5X3Rocm91Z2gYIiABKAMSFAoMbXV0YXRpb25fa2V5GB4gASgJEhQKDHdvcmtzcGFjZV9pZBgcIAEoCRIkCgdvdXRjb21lGB0gASgLMhMubWVjYS52MS5SdW5PdXRjb21lEg4KBmN1cnNvchgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB3Rhc2tfaWQYAyABKAkSDQoFYWdlbnQYBCABKAkSDgoGcnVuX2lkGAUgASgJEhIKCmdlbmVyYXRpb24YBiABKAQSDAoEa2luZBgHIAEoCRINCgVyZXNldBgKIAEoCBIRCgl0cnVuY2F0ZWQYCyABKAgSDQoFZmluYWwYDCABKAgSIwoIYXBwcm92YWwYDSABKAsyES5tZWNhLnYxLkFwcHJvdmFsEhMKC2FwcHJvdmFsX2lkGA4gASgJEh0KBXVzYWdlGBAgASgLMg4ubWVjYS52MS5Vc2FnZRIXCg9hcHByb3ZhbF9zb3VyY2UYEiABKAkSDgoGc3RhdHVzGBMgASgJEg0KBWVycm9yGBQgASgJEicKCnN0YXRpc3RpY3MYFSABKAsyEy5tZWNhLnYxLlN0YXRpc3RpY3MSMwoLbWVhc3VyZW1lbnQYFiABKAsyHi5tZWNhLnYxLkdlbmVyYXRpb25NZWFzdXJlbWVudBITCgtvY2N1cnJlZF9hdBgXIAEoCRISCgplcnJvcl9jb2RlGBggASgJEhAKCHNlcXVlbmNlGBogASgEEhcKD21lYXN1cmVkX21pbGxpcxgbIAEoA0IJCgdjb250ZW50SgQICBAJSgQICRAKSgQIERASSgQIGRAaUgR0ZXh0Ugh0aGlua2luZ1IEdGVhbVIFc2tpbGwqvAEKCVRvb2xQaGFzZRIaChZUT09MX1BIQVNFX1VOU1BFQ0lGSUVEEAASFgoSVE9PTF9QSEFTRV9QRU5ESU5HEAESFgoSVE9PTF9QSEFTRV9SVU5OSU5HEAISGAoUVE9PTF9QSEFTRV9TVUNDRUVERUQQAxIVChFUT09MX1BIQVNFX0ZBSUxFRBAEEhoKFlRPT0xfUEhBU0VfSU5URVJSVVBURUQQBRIWChJUT09MX1BIQVNFX1NLSVBQRUQQBkJBWj9naXRodWIuY29tL2tlb25oby1raW0vbWVjYS9pbnRlcm5hbC9zZXJ2ZXJhcGkvZ2VuL21lY2F2MTttZWNhdjFiBnByb3RvMw", [file_meca_v1_control, file_meca_v1_skills, file_meca_v1_application, file_meca_v1_workspace]);
 
 /**
  * @generated from message meca.v1.Approval
@@ -145,6 +147,16 @@ export const ApprovalSchema: GenMessage<Approval, {jsonType: ApprovalJson}> = /*
  */
 export type Tool = Message<"meca.v1.Tool"> & {
   /**
+   * @generated from field: meca.v1.SkillRead skill = 9;
+   */
+  skill?: SkillRead | undefined;
+
+  /**
+   * @generated from field: string summary = 8;
+   */
+  summary: string;
+
+  /**
    * @generated from field: meca.v1.ToolPhase phase = 7;
    */
   phase: ToolPhase;
@@ -188,6 +200,16 @@ export type Tool = Message<"meca.v1.Tool"> & {
  * @generated from message meca.v1.Tool
  */
 export type ToolJson = {
+  /**
+   * @generated from field: meca.v1.SkillRead skill = 9;
+   */
+  skill?: SkillReadJson;
+
+  /**
+   * @generated from field: string summary = 8;
+   */
+  summary?: string;
+
   /**
    * @generated from field: meca.v1.ToolPhase phase = 7;
    */
@@ -494,9 +516,342 @@ export const TeamSchema: GenMessage<Team, {jsonType: TeamJson}> = /*@__PURE__*/
   messageDesc(file_meca_v1_events, 5);
 
 /**
+ * Rendering bodies are exclusive; control events have no content.
+ *
+ * @generated from message meca.v1.TranscriptMessage
+ */
+export type TranscriptMessage = Message<"meca.v1.TranscriptMessage"> & {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role: string;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text: string;
+
+  /**
+   * @generated from field: string thinking = 3;
+   */
+  thinking: string;
+
+  /**
+   * @generated from field: bool incomplete = 4;
+   */
+  incomplete: boolean;
+
+  /**
+   * @generated from field: repeated meca.v1.ImageMetadata images = 5;
+   */
+  images: ImageMetadata[];
+
+  /**
+   * @generated from field: meca.v1.Team team = 6;
+   */
+  team?: Team | undefined;
+};
+
+/**
+ * Rendering bodies are exclusive; control events have no content.
+ *
+ * @generated from message meca.v1.TranscriptMessage
+ */
+export type TranscriptMessageJson = {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role?: string;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text?: string;
+
+  /**
+   * @generated from field: string thinking = 3;
+   */
+  thinking?: string;
+
+  /**
+   * @generated from field: bool incomplete = 4;
+   */
+  incomplete?: boolean;
+
+  /**
+   * @generated from field: repeated meca.v1.ImageMetadata images = 5;
+   */
+  images?: ImageMetadataJson[];
+
+  /**
+   * @generated from field: meca.v1.Team team = 6;
+   */
+  team?: TeamJson;
+};
+
+/**
+ * Describes the message meca.v1.TranscriptMessage.
+ * Use `create(TranscriptMessageSchema)` to create a new message.
+ */
+export const TranscriptMessageSchema: GenMessage<TranscriptMessage, {jsonType: TranscriptMessageJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_events, 6);
+
+/**
+ * @generated from message meca.v1.TeamContribution
+ */
+export type TeamContribution = Message<"meca.v1.TeamContribution"> & {
+  /**
+   * @generated from field: string summary = 1;
+   */
+  summary: string;
+
+  /**
+   * @generated from field: meca.v1.Team details = 2;
+   */
+  details?: Team | undefined;
+};
+
+/**
+ * @generated from message meca.v1.TeamContribution
+ */
+export type TeamContributionJson = {
+  /**
+   * @generated from field: string summary = 1;
+   */
+  summary?: string;
+
+  /**
+   * @generated from field: meca.v1.Team details = 2;
+   */
+  details?: TeamJson;
+};
+
+/**
+ * Describes the message meca.v1.TeamContribution.
+ * Use `create(TeamContributionSchema)` to create a new message.
+ */
+export const TeamContributionSchema: GenMessage<TeamContribution, {jsonType: TeamContributionJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_events, 7);
+
+/**
+ * @generated from message meca.v1.Notice
+ */
+export type Notice = Message<"meca.v1.Notice"> & {
+  /**
+   * @generated from field: meca.v1.Notice.Code code = 1;
+   */
+  code: Notice_Code;
+
+  /**
+   * @generated from field: meca.v1.SkillRead skill = 2;
+   */
+  skill?: SkillRead | undefined;
+};
+
+/**
+ * @generated from message meca.v1.Notice
+ */
+export type NoticeJson = {
+  /**
+   * @generated from field: meca.v1.Notice.Code code = 1;
+   */
+  code?: Notice_CodeJson;
+
+  /**
+   * @generated from field: meca.v1.SkillRead skill = 2;
+   */
+  skill?: SkillReadJson;
+};
+
+/**
+ * Describes the message meca.v1.Notice.
+ * Use `create(NoticeSchema)` to create a new message.
+ */
+export const NoticeSchema: GenMessage<Notice, {jsonType: NoticeJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_events, 8);
+
+/**
+ * @generated from enum meca.v1.Notice.Code
+ */
+export enum Notice_Code {
+  /**
+   * @generated from enum value: CODE_UNSPECIFIED = 0;
+   */
+  CODE_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: RETRYING = 1;
+   */
+  RETRYING = 1,
+
+  /**
+   * @generated from enum value: COMPACTION_STARTED = 2;
+   */
+  COMPACTION_STARTED = 2,
+
+  /**
+   * @generated from enum value: COMPACTION_FINISHED = 3;
+   */
+  COMPACTION_FINISHED = 3,
+
+  /**
+   * @generated from enum value: SKILL_READ = 4;
+   */
+  SKILL_READ = 4,
+}
+
+/**
+ * @generated from enum meca.v1.Notice.Code
+ */
+export type Notice_CodeJson = "CODE_UNSPECIFIED" | "RETRYING" | "COMPACTION_STARTED" | "COMPACTION_FINISHED" | "SKILL_READ";
+
+/**
+ * Describes the enum meca.v1.Notice.Code.
+ */
+export const Notice_CodeSchema: GenEnum<Notice_Code, Notice_CodeJson> = /*@__PURE__*/
+  enumDesc(file_meca_v1_events, 8, 0);
+
+/**
+ * @generated from message meca.v1.RunCompletion
+ */
+export type RunCompletion = Message<"meca.v1.RunCompletion"> & {
+  /**
+   * @generated from field: meca.v1.RunCompletion.Status status = 1;
+   */
+  status: RunCompletion_Status;
+
+  /**
+   * @generated from field: meca.v1.Statistics statistics = 2;
+   */
+  statistics?: Statistics | undefined;
+};
+
+/**
+ * @generated from message meca.v1.RunCompletion
+ */
+export type RunCompletionJson = {
+  /**
+   * @generated from field: meca.v1.RunCompletion.Status status = 1;
+   */
+  status?: RunCompletion_StatusJson;
+
+  /**
+   * @generated from field: meca.v1.Statistics statistics = 2;
+   */
+  statistics?: StatisticsJson;
+};
+
+/**
+ * Describes the message meca.v1.RunCompletion.
+ * Use `create(RunCompletionSchema)` to create a new message.
+ */
+export const RunCompletionSchema: GenMessage<RunCompletion, {jsonType: RunCompletionJson}> = /*@__PURE__*/
+  messageDesc(file_meca_v1_events, 9);
+
+/**
+ * @generated from enum meca.v1.RunCompletion.Status
+ */
+export enum RunCompletion_Status {
+  /**
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  STATUS_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: COMPLETED = 1;
+   */
+  COMPLETED = 1,
+
+  /**
+   * @generated from enum value: FAILED = 2;
+   */
+  FAILED = 2,
+
+  /**
+   * @generated from enum value: INTERRUPTED = 3;
+   */
+  INTERRUPTED = 3,
+
+  /**
+   * @generated from enum value: DENIED = 4;
+   */
+  DENIED = 4,
+
+  /**
+   * @generated from enum value: EXHAUSTED = 5;
+   */
+  EXHAUSTED = 5,
+}
+
+/**
+ * @generated from enum meca.v1.RunCompletion.Status
+ */
+export type RunCompletion_StatusJson = "STATUS_UNSPECIFIED" | "COMPLETED" | "FAILED" | "INTERRUPTED" | "DENIED" | "EXHAUSTED";
+
+/**
+ * Describes the enum meca.v1.RunCompletion.Status.
+ */
+export const RunCompletion_StatusSchema: GenEnum<RunCompletion_Status, RunCompletion_StatusJson> = /*@__PURE__*/
+  enumDesc(file_meca_v1_events, 9, 0);
+
+/**
  * @generated from message meca.v1.Event
  */
 export type Event = Message<"meca.v1.Event"> & {
+  /**
+   * @generated from oneof meca.v1.Event.content
+   */
+  content: {
+    /**
+     * @generated from field: meca.v1.TranscriptMessage message = 31;
+     */
+    value: TranscriptMessage;
+    case: "message";
+  } | {
+    /**
+     * @generated from field: meca.v1.TeamContribution work = 32;
+     */
+    value: TeamContribution;
+    case: "work";
+  } | {
+    /**
+     * @generated from field: meca.v1.Notice notice = 33;
+     */
+    value: Notice;
+    case: "notice";
+  } | {
+    /**
+     * @generated from field: meca.v1.Tool tool = 15;
+     */
+    value: Tool;
+    case: "tool";
+  } | {
+    /**
+     * @generated from field: meca.v1.RunCompletion completion = 36;
+     */
+    value: RunCompletion;
+    case: "completion";
+  } | { case: undefined; value?: undefined };
+
+  /**
+   * Durable transcript identity, distinct from replay cursor and task sequence.
+   *
+   * @generated from field: int64 history_sequence = 35;
+   */
+  historySequence: bigint;
+
+  /**
+   * @generated from field: meca.v1.EventReference original_reference = 37;
+   */
+  originalReference?: EventReference | undefined;
+
+  /**
+   * Terminal task publication confirms this committed timeline position.
+   *
+   * @generated from field: int64 history_through = 34;
+   */
+  historyThrough: bigint;
+
   /**
    * Correlates reference-change notices with an explicit file mutation reply.
    *
@@ -550,16 +905,6 @@ export type Event = Message<"meca.v1.Event"> & {
   kind: string;
 
   /**
-   * @generated from field: string text = 8;
-   */
-  text: string;
-
-  /**
-   * @generated from field: string thinking = 9;
-   */
-  thinking: string;
-
-  /**
    * @generated from field: bool reset = 10;
    */
   reset: boolean;
@@ -585,19 +930,9 @@ export type Event = Message<"meca.v1.Event"> & {
   approvalId: string;
 
   /**
-   * @generated from field: meca.v1.Tool tool = 15;
-   */
-  tool?: Tool | undefined;
-
-  /**
    * @generated from field: meca.v1.Usage usage = 16;
    */
   usage?: Usage | undefined;
-
-  /**
-   * @generated from field: meca.v1.Team team = 17;
-   */
-  team?: Team | undefined;
 
   /**
    * @generated from field: string approval_source = 18;
@@ -635,11 +970,6 @@ export type Event = Message<"meca.v1.Event"> & {
   errorCode: string;
 
   /**
-   * @generated from field: meca.v1.SkillRead skill = 25;
-   */
-  skill?: SkillRead | undefined;
-
-  /**
    * @generated from field: uint64 sequence = 26;
    */
   sequence: bigint;
@@ -654,6 +984,50 @@ export type Event = Message<"meca.v1.Event"> & {
  * @generated from message meca.v1.Event
  */
 export type EventJson = {
+  /**
+   * @generated from field: meca.v1.TranscriptMessage message = 31;
+   */
+  message?: TranscriptMessageJson;
+
+  /**
+   * @generated from field: meca.v1.TeamContribution work = 32;
+   */
+  work?: TeamContributionJson;
+
+  /**
+   * @generated from field: meca.v1.Notice notice = 33;
+   */
+  notice?: NoticeJson;
+
+  /**
+   * @generated from field: meca.v1.Tool tool = 15;
+   */
+  tool?: ToolJson;
+
+  /**
+   * @generated from field: meca.v1.RunCompletion completion = 36;
+   */
+  completion?: RunCompletionJson;
+
+  /**
+   * Durable transcript identity, distinct from replay cursor and task sequence.
+   *
+   * @generated from field: int64 history_sequence = 35;
+   */
+  historySequence?: string;
+
+  /**
+   * @generated from field: meca.v1.EventReference original_reference = 37;
+   */
+  originalReference?: EventReferenceJson;
+
+  /**
+   * Terminal task publication confirms this committed timeline position.
+   *
+   * @generated from field: int64 history_through = 34;
+   */
+  historyThrough?: string;
+
   /**
    * Correlates reference-change notices with an explicit file mutation reply.
    *
@@ -707,16 +1081,6 @@ export type EventJson = {
   kind?: string;
 
   /**
-   * @generated from field: string text = 8;
-   */
-  text?: string;
-
-  /**
-   * @generated from field: string thinking = 9;
-   */
-  thinking?: string;
-
-  /**
    * @generated from field: bool reset = 10;
    */
   reset?: boolean;
@@ -742,19 +1106,9 @@ export type EventJson = {
   approvalId?: string;
 
   /**
-   * @generated from field: meca.v1.Tool tool = 15;
-   */
-  tool?: ToolJson;
-
-  /**
    * @generated from field: meca.v1.Usage usage = 16;
    */
   usage?: UsageJson;
-
-  /**
-   * @generated from field: meca.v1.Team team = 17;
-   */
-  team?: TeamJson;
 
   /**
    * @generated from field: string approval_source = 18;
@@ -792,11 +1146,6 @@ export type EventJson = {
   errorCode?: string;
 
   /**
-   * @generated from field: meca.v1.SkillRead skill = 25;
-   */
-  skill?: SkillReadJson;
-
-  /**
    * @generated from field: uint64 sequence = 26;
    */
   sequence?: string;
@@ -812,7 +1161,7 @@ export type EventJson = {
  * Use `create(EventSchema)` to create a new message.
  */
 export const EventSchema: GenMessage<Event, {jsonType: EventJson}> = /*@__PURE__*/
-  messageDesc(file_meca_v1_events, 6);
+  messageDesc(file_meca_v1_events, 10);
 
 /**
  * @generated from enum meca.v1.ToolPhase

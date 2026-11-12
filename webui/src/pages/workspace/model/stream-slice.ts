@@ -5,12 +5,16 @@
 
 import type { StateCreator } from 'zustand';
 import { setServerLanguage } from '@/entities/server-session';
+import { eventIdentities } from '@/pages/workspace/model/chat-events';
+import { reached } from '@/pages/workspace/model/history-handoff';
 import { applyEvents, snapshotDrafts } from '@/pages/workspace/model/stream-projection';
 import { isActiveTask, trimTasks } from '@/pages/workspace/model/task-state';
 import type { WorkspaceState } from '@/pages/workspace/model/types';
 
 type StreamSlice = Pick<
   WorkspaceState,
+  | 'replayCursor'
+  | 'completionThrough'
   | 'historyRevision'
   | 'statistics'
   | 'drafts'
@@ -21,6 +25,8 @@ type StreamSlice = Pick<
   | 'acknowledgeHistory'
 >;
 export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice> = (set, get) => ({
+  replayCursor: '',
+  completionThrough: '0',
   historyRevision: 0,
   statistics: null,
   drafts: {},
@@ -40,12 +46,18 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
           workspace: target.workspace,
           session: task.sessionId ?? target.session,
           status: task.status ?? 'running',
+          historyThrough: task.historyThrough,
           ...(!isActiveTask(task.status ?? 'running') ? { doneRevision: revision } : {}),
         };
     }
     trimTasks(tasks);
     set({
       historyRevision: revision,
+      replayCursor: snapshot.cursor ?? '',
+      completionThrough:
+        snapshot.task?.code === 'completion_not_saved'
+          ? null
+          : (snapshot.task?.historyThrough ?? '0'),
       drafts: target.session ? snapshotDrafts(snapshot, revision) : {},
       statistics: snapshot.execution?.statistics ?? null,
       tasks,
@@ -53,7 +65,7 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
     });
   },
   receive: (batch) => set(applyEvents(get(), batch)),
-  acknowledgeHistory: (target, revision) => {
+  acknowledgeHistory: (target, revision, page) => {
     const state = get();
     if (
       state.selection.workspace !== target.workspace ||
@@ -69,21 +81,38 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
             task.session === target.session &&
             !isActiveTask(task.status) &&
             task.doneRevision !== undefined &&
-            task.doneRevision <= revision
+            task.doneRevision <= revision &&
+            reached(page.through, task.historyThrough)
         )
         .map((task) => task.id)
     );
     for (const [key, draft] of Object.entries(drafts)) {
-      if (draft.doneRevision === undefined || draft.doneRevision > revision) continue;
+      if (
+        draft.doneRevision === undefined ||
+        draft.doneRevision > revision ||
+        !reached(page.through, draft.doneThrough)
+      )
+        continue;
       if (drafts === state.drafts) drafts = { ...drafts };
       delete drafts[key];
       const task = state.tasks[draft.task];
-      if (task && !isActiveTask(task.status)) finished.add(draft.task);
+      if (task && !isActiveTask(task.status) && reached(page.through, task.historyThrough))
+        finished.add(draft.task);
     }
-    const events =
-      finished.size && state.events.some((event) => finished.has(event.taskId ?? ''))
-        ? state.events.filter((event) => !finished.has(event.taskId ?? ''))
-        : state.events;
+    const represented = new Set(
+      (page.items ?? []).flatMap((item) => (item.event ? eventIdentities(item.event) : []))
+    );
+    const retained = state.events.filter(
+      (event) =>
+        !finished.has(event.taskId ?? '') &&
+        !(
+          (event.historySequence &&
+            event.historySequence !== '0' &&
+            reached(page.through, event.historySequence)) ||
+          eventIdentities(event).some((id) => represented.has(id))
+        )
+    );
+    const events = retained.length === state.events.length ? state.events : retained;
     if (drafts !== state.drafts || events !== state.events) set({ drafts, events });
   },
 });

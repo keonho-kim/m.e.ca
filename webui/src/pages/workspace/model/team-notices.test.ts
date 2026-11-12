@@ -7,10 +7,17 @@ import { historyRows } from '@/pages/workspace/model/history-rows';
 
 test('team lifecycle remains control data while the answer and aggregate measurements remain visible', () => {
   const rows = historyRows([
-    { sequence: '1', event: { kind: 'team_notice', agent: 'Hana', text: 'joined' } },
-    { sequence: '2', event: { kind: 'team_notice', agent: 'Ren', text: 'joined' } },
-    { sequence: '3', event: { kind: 'team_progress', agent: 'Hana', text: 'Actual answer' } },
-    { sequence: '4', event: { kind: 'team_notice', agent: 'Ren', text: 'left' } },
+    { sequence: '1', event: { kind: 'team_notice', agent: 'Hana' } },
+    { sequence: '2', event: { kind: 'team_notice', agent: 'Ren' } },
+    {
+      sequence: '3',
+      event: {
+        kind: 'team_progress',
+        agent: 'Hana',
+        message: { role: 'assistant', text: 'Actual answer' },
+      },
+    },
+    { sequence: '4', event: { kind: 'team_notice', agent: 'Ren' } },
     { sequence: '5', completion: { status: 'COMPLETED', statistics: { elapsedMillis: '1000' } } },
   ]);
   expect(rows).toHaveLength(2);

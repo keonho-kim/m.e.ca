@@ -20,6 +20,7 @@ func (r *request) observe(value record.Event) {
 	if value.Kind == "progress" || value.Kind == "team_progress" || value.Kind == "tool_started" {
 		if draft := r.drafts[value.Agent]; draft != nil {
 			draft.Committed = true
+			draft.HistorySequence = value.HistorySequence
 		}
 	}
 	if value.Kind == "team_notice" && value.Text == "left" {

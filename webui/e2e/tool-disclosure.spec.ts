@@ -4,7 +4,14 @@
 // Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/chat/chat.tsx.
 
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import {
+  type BrowserFixture,
+  browserFixture,
+  connectBrowser,
+  historyPage,
+  required,
+  test,
+} from '#e2e/fixture';
 
 let fixture: BrowserFixture;
 test.beforeAll(async () => {
@@ -55,38 +62,32 @@ test('async results stay inline, wrap and push later rows immediately in both th
     if (command.history) {
       await route.fulfill({
         json: {
-          history: {
-            items: [
-              { sequence: '1', kind: 'message', role: 'assistant', text: 'Before the tool.' },
-              {
-                sequence: '2',
-                kind: 'event',
-                role: 'assistant',
-                event: {
-                  kind: 'tool_succeeded',
-                  agent: 'reviewer',
-                  tool: {
-                    phase: 'TOOL_PHASE_SUCCEEDED',
-                    name: 'execute_command',
-                    reference: {
-                      sessionId: command.history.sessionId,
-                      sequence: '2',
-                    },
+          history: historyPage([
+            { sequence: '1', message: { role: 'assistant', text: 'Before the tool.' } },
+            {
+              sequence: '2',
+              event: {
+                kind: 'tool_succeeded',
+                agent: 'reviewer',
+                tool: {
+                  phase: 'TOOL_PHASE_SUCCEEDED',
+                  name: 'execute_command',
+                  reference: {
+                    sessionId: command.history.sessionId,
+                    sequence: '2',
                   },
                 },
               },
-              {
-                sequence: '3',
-                kind: 'event',
-                role: 'assistant',
-                event: {
-                  kind: 'thinking',
-                  thinking: 'Reasoning after the tool.',
-                },
+            },
+            {
+              sequence: '3',
+              event: {
+                kind: 'thinking',
+                message: { role: 'assistant', thinking: 'Reasoning after the tool.' },
               },
-              { sequence: '4', kind: 'message', role: 'assistant', text: 'Answer after the tool.' },
-            ],
-          },
+            },
+            { sequence: '4', message: { role: 'assistant', text: 'Answer after the tool.' } },
+          ]),
         },
       });
     } else if (command.detail) {
@@ -219,18 +220,19 @@ test('long saved narratives page inline and virtual history keeps a bounded moun
     if (command.history)
       await route.fulfill({
         json: {
-          history: {
-            items: Array.from({ length: 32 }, (_, index) => ({
+          history: historyPage(
+            Array.from({ length: 32 }, (_, index) => ({
               sequence: String(index + 1),
-              kind: 'message',
-              role: 'assistant',
-              text:
-                index === 31
-                  ? 'Stored narrative excerpt.'
-                  : `History ${index}. ${'history words '.repeat(100)}`,
               truncated: index === 31,
-            })),
-          },
+              message: {
+                role: 'assistant',
+                text:
+                  index === 31
+                    ? 'Stored narrative excerpt.'
+                    : `History ${index}. ${'history words '.repeat(100)}`,
+              },
+            }))
+          ),
         },
       });
     else if (command.detail) {

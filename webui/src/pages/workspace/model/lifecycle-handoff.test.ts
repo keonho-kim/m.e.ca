@@ -35,12 +35,12 @@ test('a failed request without a draft releases activity after durable history c
   useWorkspaceStore.setState({ selection: target });
   useWorkspaceStore.getState().receive([
     { workspaceId: 'w', sessionId: 's', taskId: 't', kind: 'request_started', status: 'running' },
-    { workspaceId: 'w', sessionId: 's', taskId: 't', kind: 'retry', text: 'retrying' },
+    { workspaceId: 'w', sessionId: 's', taskId: 't', kind: 'retry', notice: { code: 'RETRYING' } },
     { workspaceId: 'w', sessionId: 's', taskId: 't', kind: 'request_finished', status: 'failed' },
   ]);
   const revision = useWorkspaceStore.getState().historyRevision;
-  useWorkspaceStore.getState().acknowledgeHistory(target, revision - 1);
-  expect(useWorkspaceStore.getState().events).toHaveLength(2);
-  useWorkspaceStore.getState().acknowledgeHistory(target, revision);
+  useWorkspaceStore.getState().acknowledgeHistory(target, revision - 1, { through: '0' });
+  expect(useWorkspaceStore.getState().events).toHaveLength(1);
+  useWorkspaceStore.getState().acknowledgeHistory(target, revision, { through: '0' });
   expect(useWorkspaceStore.getState().events).toEqual([]);
 });

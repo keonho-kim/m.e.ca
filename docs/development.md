@@ -4,14 +4,6 @@
 
 ## 책임과 의존성
 
-스킬 문서 값과 파일시스템 어댑터는 다른 의존성 경계다. agent/tool과 agent/run은 skills/instruction의 순수 값만 참조하고, 요청 코어는 소비자 소유 SkillLoader 인터페이스로 본문을 읽는다. commands/agentrequest가 실제 skills.Reader를 연결하며 없는 리더는 nil 인터페이스로 유지한다. 메타데이터의 직렬화 크기는 문서 DTO에 넣지 않고 reader의 catalogEntry에 한 번 계산해 보관한다. 공개 문서 값은 크기 캐시와 별개로 전달한다.
-
-서버의 native 계약은 contracts.go, 작업·입력 식별자는 identity.go, 접수와 제어는 tasks.go·controls.go가 소유한다. 세션은 lifecycle.go·job.go가, 완료 확인은 completion.go가, 원문 대여는 detail.go가 소유한다. 전송 형식을 명령 계층에 넣지 않는다.
-
-server/task_registry.go는 동시 실행 슬롯·세션별 단일 작업과 준비 예약, operations.go는 예약 종료까지 빌린 자원 보호와 idle 대화 정리를 소유한다. attachments.go는 임시 이미지와 만료 타이머, state_page.go는 작업별 상태 페이지와 전송 예산을 소유한다. tools/workspacegate는 프로세스 공통 효과 게이트다. server/file_effect.go가 경로가 확정된 작업의 canonical 경로를 잠금 전후에 확인한다. 겹치는 경로와 상위·하위 경로를 직렬화하고 독립된 경로는 병행한다. 준비된 에이전트 효과와 실행 중 프로세스는 전체 범위의 참조 수명을 소유한다. 팀 하위 context는 같은 cohort를 공유하고 충돌 범위의 FIFO 대기는 취소 시 제거한다. serverapi/task_control.go·attachments.go는 이 유스케이스의 HTTP 어댑터다. watch.go·http.go는 동일한 커서·snapshot 계약으로 구독을 재개한다. 실행 수명을 구독 context로 옮기지 않는다.
-
-processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 누적 응답을 보유한 채 대기하지 않는 예약을 소유한다. 이미지 픽셀·인코딩 크기를 메모리 가중치로 바꾸는 규칙은 media/imagefile/decode.go에서 계산하고 processmemory에는 바이트만 전달한다. 같은 예산·취소·반환 경계를 사용하며 추가 worker나 버퍼를 만들지 않는다.
-
 제품은 단일 Go 모듈과 cmd/meca 합성 루트를 사용한다. 기능은 internal 아래에 두고 실제 소유 패키지를 직접 참조한다. 소비자 소유의 작은 I/O 계약과 함수·struct를 우선하며 패키지는 한 기능, 파일은 그 안의 한 책임을 담당한다.
 
 `third_party/clipboard`는 MIT 라이선스 외부 의존성을 로컬 교체한 소스로, 제품 모듈이 아니다. 버전·원본 커밋·변경 범위·갱신 검증은 [의존성 안내](../third_party/clipboard/MECA.md)가 소유한다. 변경·추가한 코드는 파일 크기와 헤더 규칙을 적용하고, 변경하지 않은 upstream 코드는 원래 구성을 보존한다.
@@ -96,6 +88,16 @@ processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 
 | tui/viewport | 이력과 현재 출력의 증분 줄 인덱스·가시 구간·스크롤 위치 |
 | tui/markdown | 응답·Thinking·파일 뷰어의 Markdown 파싱·스타일·증분 표시 |
 | searchmatch | 명령·모델 후보의 Unicode 축약 검색 |
+
+### 실행과 어댑터 경계
+
+스킬 문서 값과 파일시스템 어댑터는 다른 의존성 경계다. agent/tool과 agent/run은 skills/instruction의 순수 값만 참조하고, 요청 코어는 소비자 소유 SkillLoader 인터페이스로 본문을 읽는다. commands/agentrequest가 실제 skills.Reader를 연결하며 없는 리더는 nil 인터페이스로 유지한다. 메타데이터의 직렬화 크기는 문서 DTO에 넣지 않고 reader의 catalogEntry에 한 번 계산해 보관한다. 공개 문서 값은 크기 캐시와 별개로 전달한다.
+
+서버의 native 계약은 contracts.go, 작업·입력 식별자는 identity.go, 접수와 제어는 tasks.go·controls.go가 소유한다. 세션은 lifecycle.go·job.go가, 완료 확인은 completion.go가, 원문 대여는 detail.go가 소유한다. 전송 형식을 명령 계층에 넣지 않는다.
+
+server/task_registry.go는 동시 실행 슬롯·세션별 단일 작업과 준비 예약, operations.go는 예약 종료까지 빌린 자원 보호와 idle 대화 정리를 소유한다. attachments.go는 임시 이미지와 만료 타이머, state_page.go는 작업별 상태 페이지와 전송 예산을 소유한다. tools/workspacegate는 프로세스 공통 효과 게이트다. server/file_effect.go가 경로가 확정된 작업의 canonical 경로를 잠금 전후에 확인한다. 겹치는 경로와 상위·하위 경로를 직렬화하고 독립된 경로는 병행한다. 준비된 에이전트 효과와 실행 중 프로세스는 전체 범위의 참조 수명을 소유한다. 팀 하위 context는 같은 cohort를 공유하고 충돌 범위의 FIFO 대기는 취소 시 제거한다. serverapi/task_control.go·attachments.go는 이 유스케이스의 HTTP 어댑터다. watch.go·http.go는 동일한 커서·snapshot 계약으로 구독을 재개한다. 실행 수명을 구독 context로 옮기지 않는다.
+
+processmemory/transient.go는 취소 가능한 바이트 입장을, reply.go는 누적 응답을 보유한 채 대기하지 않는 예약을 소유한다. 이미지 픽셀·인코딩 크기를 메모리 가중치로 바꾸는 규칙은 media/imagefile/decode.go에서 계산하고 processmemory에는 바이트만 전달한다. 같은 예산·취소·반환 경계를 사용하며 추가 worker나 버퍼를 만들지 않는다.
 
 tui/session의 app은 대화 표시(chatState), 입력·예약(requestState), 파일 탐색(fileBrowserState), 연결(connectionState), 작업 시계(workerActivity)를 값으로 구성한다. 본문·토큰, 입력 기록, 탐색·선택 결과, 클라이언트 교체와 타이머 전이는 해당 상태가 소유한다. 세션은 I/O 시작·결과 전달·포커스 전환을 조율한다. 키 입력·키맵·화면 렌더링은 focusKind의 같은 판정을 사용하고 전역 선택·종료 입력의 우선순위를 유지한다.
 
@@ -577,7 +579,7 @@ go test -tags=godbus_no_tcp -pgo="$PWD/bin/pgo/default.pgo" ./cmd/meca -run '^$'
 
 진단 stderr의 실제 블로킹 쓰기는 같은 바이너리의 전용 중계 프로세스가 수행한다. 상속된 descriptor의 O_NONBLOCK 변경은 stdout·부모 프로세스까지 영향을 줄 수 있어 사용하지 않는다. 부모는 소유한 비차단 파이프와 Wait worker를, 중계 프로세스는 입력 복사와 부모 생존 확인을 소유한다. 부모 종료에서 배출·필요 시 Kill·Wait를 완료한다. 중계 모드는 cmd/meca의 프로세스 조립부에서 정상 시작 전에 분기하며 모델·설정·DB를 초기화하지 않는다.
 
-Provider 수신은 바이트 idle과 생성 진전 idle을 분리한다. 요청별 ContentWatch는 텍스트·Thinking·새 도구 조각·continuation 진전을 관찰하고 소비자 콜백 동안 시간을 정지한다. keepalive·빈 조각·사용량만의 이벤트는 생성 진전으로 취급하지 않는다. 취소 cause를 protocol 경계에서 유지해 deadline이 단순 context canceled로 사라지지 않도록 한다. metadata 교환은 시도 전체에 DefaultIdleTimeout을 적용한다. 재시도 간격은 transport/retry.go의 1초·3초·5초 배열 한 곳에서 정하며 최초 요청을 포함한 최대 시도 수 4회도 이 배열에서 계산한다. 더 긴 Retry-After는 기존 최대 30초 범위에서 우선한다. 재시도는 모델 호출과 전체 작업 예산을 다시 확인한다. Thinking·중단 메시지의 취소 독립 flush와 recovery.Restore에는 5초 마감을 둔다.
+Provider 수신은 바이트 idle과 생성 진전 idle을 분리한다. 요청별 ContentWatch는 텍스트·Thinking·새 도구 조각·continuation 진전을 관찰하고 소비자 콜백 동안 시간을 정지한다. keepalive·빈 조각·사용량만의 이벤트는 생성 진전으로 취급하지 않는다. 취소 cause를 protocol 경계에서 유지해 deadline이 단순 context canceled로 사라지지 않도록 한다. metadata 교환은 시도 전체에 DefaultIdleTimeout을 적용한다. 재시도 간격은 transport/retry.go의 1초·3초·5초 배열 한 곳에서 정하며 최초 요청을 포함한 최대 시도 수 4회도 이 배열에서 계산한다. 더 긴 Retry-After는 최대 30초 범위에서 우선한다. 재시도는 모델 호출과 전체 작업 예산을 다시 확인한다. Thinking·중단 메시지의 취소 독립 flush와 recovery.Restore에는 5초 마감을 둔다.
 
 OpenRouter의 빈 추론 조각과 직전과 동일한 opaque 조각은 진전으로 세지 않는다. opaque data는 문자열을 별도로 복제하지 않고 내용 유무와 지문을 확인한다. Responses에서는 새로 완료된 추론 항목을 한 번 진전으로 알리며 동일 완료 항목의 재전송은 시간을 늘리지 않는다. 역사적 reasoning을 요청으로 변환할 때에는 스트림 감시용 지문을 다시 계산하지 않는다.
 
@@ -634,13 +636,15 @@ macOS 검사는 이름이 있는 전용 pasteboard를 사용해 개인 클립보
 
 ## 내장 WebUI
 
-채팅 표현의 숨김 여부는 페이지 모드·document visibility·불투명 HTML dialog에서 판단한다. 보이는 본문 델타·사용량 진행 정보는 33ms, 가려진 본문·진행 정보는 250ms 단위로 반영하며 대기 묶음은 128개 또는 UTF-16 추정 256KiB에서 즉시 비운다. 승인·완료 등 제어 사건은 먼저 본문을 비우고 즉시 전달한다. SSE·엔진 실행을 중단하지 않으며 화면 복귀 시 남은 델타를 바로 반영한다. 가려진 Markdown은 타이핑 reveal 시계를 돌리지 않는다. 실패 작업은 draft 유무에 관계없이 이력 revision 확인 후 임시 재시도/활동 기록을 해제한다.
+채팅 표현의 숨김 여부는 페이지 모드·document visibility·불투명 HTML dialog에서 판단한다. 보이는 본문 델타·사용량 진행 정보는 33ms, 가려진 본문·진행 정보는 250ms 단위로 반영하며 대기 묶음은 128개 또는 UTF-16 추정 256KiB에서 즉시 비운다. 승인·완료 등 제어 사건은 먼저 본문을 비우고 즉시 전달한다. SSE·엔진 실행을 중단하지 않으며 화면 복귀 시 남은 델타를 바로 반영한다. 가려진 Markdown은 타이핑 reveal 시계를 돌리지 않는다. 실패 작업도 draft 유무에 관계없이 이력 revision과 확정 저장 위치를 확인한 뒤 임시 재시도/활동 기록을 해제한다.
 
 코드 편집기의 UTF-8 입력 검사는 편집기 수명의 native TextEncoder와 최대 64KiB scratch를 재사용한다. 문자열 길이로 판정할 수 있는 경우는 인코딩하지 않고, 나머지는 encodeInto로 검사한다. 전체 문서 크기의 byte 배열을 매 입력마다 만들지 않으며 서버의 2MiB 저장 경계와 같은 바이트 수를 판정한다.
 
 사용자 메시지의 엔진 참조 블록은 message-content의 표시 투영에서 분리한다. 파일·폴더 참조와 스킬의 토큰 정의는 shared/ui/reference-token이 소유한다. 스킬 탐색의 추가 액션은 WorkspaceShell이 Composer의 좁은 imperative 계약에 연결하며, 실제 입력 변경은 Astryx ChatComposerInputHandle.insertToken이 수행한다. 스킬 삽입이 보기 전환을 소유하지 않는다.
 
-history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영하며, 완료 측정은 메시지와 구별한 union 항목으로 반환한다. serverapi/history_completion은 finished checkpoint의 상태·통계만 투영하고 자유 본문을 보내지 않는다. history-row는 메시지·도구·이미지를, completion-row는 고정 상태 라벨과 검증한 숫자 통계만 표현한다. 종료 사유는 명시적인 상세 조회로 분리한다. Chat은 저장 이력 확인을 layout effect에서 반영하고 마지막 완료 행을 실시간 출력 뒤에 배치한다. LiveActivity는 종료한 작업의 중간 활동을 다시 표시하지 않는다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
+serverapi/event_content·history_content가 공개 표시 본문과 이력 entry의 배타적 union을 소유한다. history_completion은 finished checkpoint의 상태·통계만 투영하며 자유 본문을 보내지 않는다. shared/api/transcript-contract는 생성한 JSON 타입의 배타성을 표현하고 transcript·transcript-values는 HTTP·SSE·snapshot 수신 값을 복사 없이 검사한다. history-rows는 인접한 저장 추론과 답변을 한 메시지로 투영한다. history-row는 명시된 본문 종류로만 분기하고, team-work-row는 작성자·기여 요약·경로·계약을, notice-row는 Notice의 고정 번역만 표시한다. completion-row는 RunCompletion의 검증한 토큰·TPS·소요 시간·비용을 표시하고 실패·중단에만 고정된 상태 라벨을 붙인다. 종료 사유는 명시적인 상세 조회로 분리한다.
+
+model/history-handoff는 replay cursor와 저장 위치의 비교를 소유한다. commands/server는 완료 저장을 확인하고 SQLite의 TimelineHead로 표시 이력 경계를 읽은 뒤 종료를 게시한다. SQLite는 마지막 표시 가능한 sequence만 읽고 숨겨진 문맥 기록을 경계로 삼지 않는다. 경계를 확인할 수 없으면 완료 저장 불확실 경로를 사용한다. Chat은 조회 시작 revision과 이력 through가 해당 작업·초안의 확정 위치에 도달한 것을 확인한 뒤 layout effect로 live 참조를 해제하고 마지막 완료 행을 표시한다. 팀 사건·스킬 읽기는 저장 위치나 원본 참조로 중복을 제거한다. 수신 경계는 재전송을 델타 결합·캐시 갱신·후속 예약 처리 전에 제거하고 종료 작업에 늦게 온 본문을 무시한다. ChatLayout의 폭, ChatMessageBubble의 명시적 폭과 CodeBlock의 100% 폭이 내용 크기에 따른 셀 축소를 막으며 공용 content.css는 공개 콘텐츠 표면의 줄바꿈을 담당한다.
 
 툴 결과 표현은 chat/tool-call·tool-value가, 요청 전용 모달 수명은 model/inspection·inspection/tool-request가 소유한다. model/detail-pages는 revision에 묶인 32KiB 페이지와 취소·gcTime 0 질의를 공용으로 제공한다. 원문을 스토어에 다시 쌓지 않으며 긴 저장 답변·Thinking도 같은 위치에서 페이지로 읽는다. history 가상화의 마운트된 행은 일반 문서 흐름에 두고 위·아래 spacer만 측정 좌표로 조절한다. 툴 결과의 비동기 높이 변경 때 오래된 absolute 좌표가 다음 행과 겹치는 것을 막으며 화면 밖 행은 계속 해제한다.
 
@@ -669,13 +673,13 @@ React Compiler 1.0.0은 @vitejs/plugin-react의 공식 preset과 @rolldown/plugi
 
 미디어 쿼리는 Astryx `useMediaQuery`, 번역의 현재 locale은 `useLocale`, 이미지 붙여넣기 단축키는 포커스 범위를 제한한 `useHotkeys`를 사용한다. 이미지 읽기·용량 검사·API 질의·요청 순서는 도메인/전송 소유자에 둔다. Astryx `useClipboard`는 텍스트 쓰기용이므로 이미지 읽기 계약을 대체하지 않는다. React 상태·수명, TanStack 질의·라우팅과 React Hook Form의 전용 훅도 각 책임에 사용한다.
 
-공용 컨트롤은 Astryx Neutral의 Lucide 구성을 상속하며 앱 전용 이름만 `shared/ui/icons`에서 테마 registry에 추가한다. 일반 화면 제어는 Astryx Icon을 사용한다. 파일 형식은 `shared/ui/file-icon`에서 공통 32종 언어 카탈로그와 Material glyph를 연결한다. `scripts/file-icons.ts`가 고정한 MUI glyph를 정적 SVG 컴포넌트로 생성하고 Astryx Icon으로 렌더링한다. MUI·Emotion은 빌드 전용 의존성이며 배포 브라우저 런타임에는 포함하지 않는다. 생성 모듈은 추적하지 않고 `check`·`build`에서 재생성하며 upstream 아이콘 라이선스는 배포 고지에 포함한다.
+공용 컨트롤은 Astryx Neutral의 Lucide 구성을 상속하며 앱 전용 이름만 `shared/ui/icons`에서 테마 registry에 추가한다. 일반 화면 제어는 Astryx Icon을 사용한다. 파일 형식은 `shared/ui/file-icon`에서 공통 32종 언어 카탈로그와 Material glyph를 연결한다. `webui/scripts/file-icons.ts`가 고정한 MUI glyph를 정적 SVG 컴포넌트로 생성하고 Astryx Icon으로 렌더링한다. MUI·Emotion은 빌드 전용 의존성이며 배포 브라우저 런타임에는 포함하지 않는다. 생성 모듈은 추적하지 않고 `check`·`build`에서 재생성하며 upstream 아이콘 라이선스는 배포 고지에 포함한다.
 
-네이티브 폴더 선택은 `internal/desktop/folderpicker`가 소유하고 full 조립 루트가 UI 함수로 주입한다. macOS는 osascript, Linux는 XDG Desktop Portal, WSL은 Windows 폴더 선택창을 사용한다. `internal/host/wsl`은 클립보드와 폴더 선택의 호스트 탐색을 공유한다. UI HTTP 경계는 동일 출처 쿠키·loopback Host/peer·동시 선택창 한 개·2분 마감과 취소를 적용한다. SSH 환경과 원격 접속은 기존 서버 폴더 모달을 유지한다. 선택창은 경로만 반환하며 등록·정책·영속화는 addWorkspace가 소유한다.
+네이티브 폴더 선택은 `internal/desktop/folderpicker`가 소유하고 full 조립 루트가 UI 함수로 주입한다. macOS는 osascript, Linux는 XDG Desktop Portal, WSL은 Windows 폴더 선택창을 사용한다. `internal/host/wsl`은 클립보드와 폴더 선택의 호스트 탐색을 공유한다. UI HTTP 경계는 동일 출처 쿠키·loopback Host/peer·동시 선택창 한 개·2분 마감과 취소를 적용한다. SSH 환경과 원격 접속은 서버 폴더 탐색 모달을 사용한다. 선택창은 경로만 반환하며 등록·정책·영속화는 addWorkspace가 소유한다.
 
 병렬 wave 식별자는 코어가 계획한 독립 실행 묶음에 부여한다. 실행 ID와 별도로 저장 이력·명령 완료·이벤트의 `tool.batchId`에 유지한다. WebUI는 run·agent·batch가 같은 도구만 묶고 개별 결과는 펼칠 때 읽는다. 저장 이력과 live 멤버를 실행 ID로 합쳐 인계 중에도 이름과 결과를 중복하지 않는다. 도구 구독은 이벤트 배열이 바뀔 때만 계산하고 텍스트 토큰 갱신에는 재계산하지 않는다. 팀 입·퇴장 제어 이벤트는 채팅 행에서만 숨긴다.
 
-브라우저 테스트는 `e2e/fixture.ts`의 인증·디스크립터 도우미를 공유한다. 인증 UI 검사는 별도로 유지하며 각 테스트의 자동 fixture가 `/v1` 쿠키를 해제한다. 삭제한 일반·연결 종료 화면 검사는 언어 메뉴·원격 모달·로컬 선택·스크롤·병렬 도구 계약으로 대체한다. E2E 소스도 Biome·Oxlint·TypeScript 검사에 포함한다.
+브라우저 테스트는 `e2e/fixture.ts`의 인증·디스크립터 도우미를 공유한다. 인증 UI는 별도 테스트로 검사하며 각 테스트의 자동 fixture가 `/v1` 쿠키를 해제한다. 화면 검증은 언어 메뉴·폴더 선택·스크롤·병렬 도구·테마 대비·로딩·모달의 동작 계약을 확인한다. E2E 소스도 Biome·Oxlint·TypeScript 검사에 포함한다.
 
 ```sh
 sh scripts/build-ui.sh

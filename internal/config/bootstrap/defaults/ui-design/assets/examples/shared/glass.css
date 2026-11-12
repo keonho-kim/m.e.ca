@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass (by request) · redesign: full · v2.0.0
- * pre-emit critique: material must separate real work planes without making text or data translucent.
- * Purpose: Render bounded glass surfaces with opaque accessibility and feature fallbacks.
+/* Purpose: Render bounded glass surfaces with opaque accessibility and feature fallbacks.
  * Pattern: Shared material primitive with app-owned tokens.
  * Usage: Non-office example chrome and workspace owners opt into glass-surface.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/shared/base.css. */

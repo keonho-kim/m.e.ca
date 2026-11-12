@@ -1,11 +1,8 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass (by request; Dusk material consulted) · redesign: full · v2.0.0
- * pre-emit critique: keep each booking job distinct; frost chrome and photo choices while making forms, totals and timetable opaque.
- * Purpose: Present space, schedule and quick reservation jobs with app-owned corporate glass.
+/* Purpose: Present space, schedule and quick reservation jobs with app-owned corporate glass.
  * Pattern: App-owned visual directions over a shared behavior contract.
  * Usage: Alternate Morrow booking pages load this after native components and motion.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/booking/booking-views.js, internal/config/bootstrap/defaults/ui-design/references/design-directions.md.
  */
-/* Hallmark · waive 39b · timetable cells contain time and availability · schedule choices are information-bearing selection regions rather than single-line command buttons. */
 :root {--paper-shadow:#2437470d;--schedule-header:#17345f;--schedule-header-ink:#f4f7ff;--schedule-active:#ffffff1f;--schedule-header-rule:#c1cee1;}
 
 .study-header {padding:24px 4vw;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:24px}

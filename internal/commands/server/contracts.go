@@ -32,6 +32,7 @@ import (
 )
 
 type History interface {
+	TimelineHead(context.Context, string) (int64, error)
 	TimelineSummaries(context.Context, string, int64, int, history.ReadBounds) ([]history.Record, int64, error)
 	ToolEvent(context.Context, record.EventReference, history.ReadBounds) (record.Event, error)
 	SetTeamMode(context.Context, bool) error
@@ -104,7 +105,10 @@ type Options struct {
 	Ledger       Ledger
 }
 
-type Task struct{ ID, Session, Status, Error, Code, Persistence, Outcome, SessionSummary string }
+type Task struct {
+	ID, Session, Status, Error, Code, Persistence, Outcome, SessionSummary string
+	HistoryThrough                                                         int64
+}
 
 const (
 	PersistencePending   = "pending"
@@ -120,6 +124,7 @@ type Approval struct {
 	Value     record.Event
 }
 type Draft struct {
+	HistorySequence          int64
 	TextBytes, ThinkingBytes int64
 	Task                     string
 	Agent                    string
@@ -158,6 +163,7 @@ type Snapshot struct {
 	Drafts            []Draft
 }
 type Event struct {
+	HistoryThrough        int64
 	ToolPhase             record.ToolPhase
 	MutationKey           string
 	Outcome               *work.End

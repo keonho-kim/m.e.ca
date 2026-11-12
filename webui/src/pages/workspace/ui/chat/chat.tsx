@@ -17,6 +17,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
+import { reached } from '@/pages/workspace/model/history-handoff';
 import { historyRows } from '@/pages/workspace/model/history-rows';
 import { useConversationInspection } from '@/pages/workspace/model/inspection';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -49,6 +50,7 @@ export function Chat({
     previousSize = useRef<number | null>(null),
     latestRequested = useRef(false);
   const taskId = useWorkspaceStore((s) => activeTask(target, s.tasks)?.id);
+  const completionThrough = useWorkspaceStore((s) => s.completionThrough);
   const hasActivity = useWorkspaceStore((s) => s.events.length > 0);
   const hasOutput = useWorkspaceStore((s) =>
     Object.values(s.drafts).some((draft) => draft.text || draft.thinking)
@@ -77,13 +79,12 @@ export function Chat({
     const pages = history.data?.pages ?? [];
     // The server orders records within a page. Only the page order is reversed.
     for (let index = pages.length - 1; index >= 0; index--)
-      for (const item of pages[index]?.items ?? [])
-        if (item.event?.kind !== 'run_checkpoint' || item.completion) result.push(item);
+      for (const item of pages[index]?.items ?? []) result.push(item);
     return result;
   }, [history.data]);
   const rows = useMemo(() => historyRows(items), [items]);
   const last = rows.at(-1);
-  const completion = !taskId && last && 'completion' in last ? last : undefined;
+  const completion = before === '0' && last && 'completion' in last ? last : undefined;
   const visibleRows = completion ? rows.slice(0, -1) : rows;
   const getItemKey = useCallback(
     (index: number) => {
@@ -111,8 +112,10 @@ export function Chat({
     if (!history.data || before !== '0') return;
     const seen = history.data.pages[0]?.clientRevision;
     if (seen === undefined) return;
-    useWorkspaceStore.getState().acknowledgeHistory(target, seen);
-  }, [history.data, before, target]);
+    useWorkspaceStore
+      .getState()
+      .acknowledgeHistory(target, seen, { through: history.data.pages[0]?.through, items });
+  }, [history.data, before, target, items]);
   useLayoutEffect(() => {
     const element = scroller;
     if (!element) return;
@@ -254,13 +257,18 @@ export function Chat({
               <LiveOutput target={target} history={items} inspect={inspector.actions} />
             </Suspense>
           )}
-          {completion && (
-            <CompletionRow
-              completion={completion.completion}
-              sequence={completion.sequence}
-              onDetails={inspector.actions.history}
-            />
-          )}
+          {completion &&
+            !taskId &&
+            !hasOutput &&
+            !hasActivity &&
+            completionThrough !== null &&
+            reached(history.data?.pages[0]?.through, completionThrough) && (
+              <CompletionRow
+                completion={completion.completion}
+                sequence={completion.sequence}
+                onDetails={inspector.actions.history}
+              />
+            )}
         </ChatMessageList>
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}
         <ConversationInspector value={inspector.value} target={target} close={inspector.close} />

@@ -81,7 +81,7 @@ func TestSkillReadContractsAcrossTransports(t *testing.T) {
 				if e := n.GetEvent(); e != nil {
 					if e.Kind == "skill_loaded" {
 						reads++
-						if e.Skill.GetName() != "review" || e.OccurredAt == "" || e.RunId == "" || strings.Contains(e.Text, "Unique-skill-instructions") {
+						if e.GetNotice().GetSkill().GetName() != "review" || e.OccurredAt == "" || e.RunId == "" || strings.Contains(e.GetMessage().GetText(), "Unique-skill-instructions") {
 							t.Fatal(e)
 						}
 					}
@@ -96,7 +96,7 @@ func TestSkillReadContractsAcrossTransports(t *testing.T) {
 			history := call(t, ctx, w, &v1.Command{Operation: &v1.Command_History{History: &v1.HistoryRequest{Limit: 100}}}).GetHistory()
 			found := false
 			for _, item := range history.Items {
-				found = found || item.GetEvent().GetSkill().GetName() == "review"
+				found = found || item.GetEvent().GetNotice().GetSkill().GetName() == "review"
 			}
 			if !found {
 				t.Fatal("skill read missing from reconnect history", history)

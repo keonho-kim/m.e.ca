@@ -87,6 +87,119 @@ func (ToolPhase) EnumDescriptor() ([]byte, []int) {
 	return file_meca_v1_events_proto_rawDescGZIP(), []int{0}
 }
 
+type Notice_Code int32
+
+const (
+	Notice_CODE_UNSPECIFIED    Notice_Code = 0
+	Notice_RETRYING            Notice_Code = 1
+	Notice_COMPACTION_STARTED  Notice_Code = 2
+	Notice_COMPACTION_FINISHED Notice_Code = 3
+	Notice_SKILL_READ          Notice_Code = 4
+)
+
+// Enum value maps for Notice_Code.
+var (
+	Notice_Code_name = map[int32]string{
+		0: "CODE_UNSPECIFIED",
+		1: "RETRYING",
+		2: "COMPACTION_STARTED",
+		3: "COMPACTION_FINISHED",
+		4: "SKILL_READ",
+	}
+	Notice_Code_value = map[string]int32{
+		"CODE_UNSPECIFIED":    0,
+		"RETRYING":            1,
+		"COMPACTION_STARTED":  2,
+		"COMPACTION_FINISHED": 3,
+		"SKILL_READ":          4,
+	}
+)
+
+func (x Notice_Code) Enum() *Notice_Code {
+	p := new(Notice_Code)
+	*p = x
+	return p
+}
+
+func (x Notice_Code) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Notice_Code) Descriptor() protoreflect.EnumDescriptor {
+	return file_meca_v1_events_proto_enumTypes[1].Descriptor()
+}
+
+func (Notice_Code) Type() protoreflect.EnumType {
+	return &file_meca_v1_events_proto_enumTypes[1]
+}
+
+func (x Notice_Code) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Notice_Code.Descriptor instead.
+func (Notice_Code) EnumDescriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{8, 0}
+}
+
+type RunCompletion_Status int32
+
+const (
+	RunCompletion_STATUS_UNSPECIFIED RunCompletion_Status = 0
+	RunCompletion_COMPLETED          RunCompletion_Status = 1
+	RunCompletion_FAILED             RunCompletion_Status = 2
+	RunCompletion_INTERRUPTED        RunCompletion_Status = 3
+	RunCompletion_DENIED             RunCompletion_Status = 4
+	RunCompletion_EXHAUSTED          RunCompletion_Status = 5
+)
+
+// Enum value maps for RunCompletion_Status.
+var (
+	RunCompletion_Status_name = map[int32]string{
+		0: "STATUS_UNSPECIFIED",
+		1: "COMPLETED",
+		2: "FAILED",
+		3: "INTERRUPTED",
+		4: "DENIED",
+		5: "EXHAUSTED",
+	}
+	RunCompletion_Status_value = map[string]int32{
+		"STATUS_UNSPECIFIED": 0,
+		"COMPLETED":          1,
+		"FAILED":             2,
+		"INTERRUPTED":        3,
+		"DENIED":             4,
+		"EXHAUSTED":          5,
+	}
+)
+
+func (x RunCompletion_Status) Enum() *RunCompletion_Status {
+	p := new(RunCompletion_Status)
+	*p = x
+	return p
+}
+
+func (x RunCompletion_Status) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RunCompletion_Status) Descriptor() protoreflect.EnumDescriptor {
+	return file_meca_v1_events_proto_enumTypes[2].Descriptor()
+}
+
+func (RunCompletion_Status) Type() protoreflect.EnumType {
+	return &file_meca_v1_events_proto_enumTypes[2]
+}
+
+func (x RunCompletion_Status) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RunCompletion_Status.Descriptor instead.
+func (RunCompletion_Status) EnumDescriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{9, 0}
+}
+
 type Approval struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -205,6 +318,8 @@ func (x *Approval) GetExpiresAt() string {
 
 type Tool struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
+	Skill       *SkillRead             `protobuf:"bytes,9,opt,name=skill,proto3" json:"skill,omitempty"`
+	Summary     string                 `protobuf:"bytes,8,opt,name=summary,proto3" json:"summary,omitempty"`
 	Phase       ToolPhase              `protobuf:"varint,7,opt,name=phase,proto3,enum=meca.v1.ToolPhase" json:"phase,omitempty"`
 	ExecutionId string                 `protobuf:"bytes,5,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
 	// Set for one independent parallel wave planned by the runtime.
@@ -246,6 +361,20 @@ func (x *Tool) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Tool.ProtoReflect.Descriptor instead.
 func (*Tool) Descriptor() ([]byte, []int) {
 	return file_meca_v1_events_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Tool) GetSkill() *SkillRead {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
+func (x *Tool) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
 }
 
 func (x *Tool) GetPhase() ToolPhase {
@@ -593,8 +722,262 @@ func (x *Team) GetRevision() uint64 {
 	return 0
 }
 
+// Rendering bodies are exclusive; control events have no content.
+type TranscriptMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	Thinking      string                 `protobuf:"bytes,3,opt,name=thinking,proto3" json:"thinking,omitempty"`
+	Incomplete    bool                   `protobuf:"varint,4,opt,name=incomplete,proto3" json:"incomplete,omitempty"`
+	Images        []*ImageMetadata       `protobuf:"bytes,5,rep,name=images,proto3" json:"images,omitempty"`
+	Team          *Team                  `protobuf:"bytes,6,opt,name=team,proto3" json:"team,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TranscriptMessage) Reset() {
+	*x = TranscriptMessage{}
+	mi := &file_meca_v1_events_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TranscriptMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TranscriptMessage) ProtoMessage() {}
+
+func (x *TranscriptMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_events_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TranscriptMessage.ProtoReflect.Descriptor instead.
+func (*TranscriptMessage) Descriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *TranscriptMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *TranscriptMessage) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *TranscriptMessage) GetThinking() string {
+	if x != nil {
+		return x.Thinking
+	}
+	return ""
+}
+
+func (x *TranscriptMessage) GetIncomplete() bool {
+	if x != nil {
+		return x.Incomplete
+	}
+	return false
+}
+
+func (x *TranscriptMessage) GetImages() []*ImageMetadata {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+func (x *TranscriptMessage) GetTeam() *Team {
+	if x != nil {
+		return x.Team
+	}
+	return nil
+}
+
+type TeamContribution struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summary       string                 `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	Details       *Team                  `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TeamContribution) Reset() {
+	*x = TeamContribution{}
+	mi := &file_meca_v1_events_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TeamContribution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TeamContribution) ProtoMessage() {}
+
+func (x *TeamContribution) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_events_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TeamContribution.ProtoReflect.Descriptor instead.
+func (*TeamContribution) Descriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *TeamContribution) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *TeamContribution) GetDetails() *Team {
+	if x != nil {
+		return x.Details
+	}
+	return nil
+}
+
+type Notice struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          Notice_Code            `protobuf:"varint,1,opt,name=code,proto3,enum=meca.v1.Notice_Code" json:"code,omitempty"`
+	Skill         *SkillRead             `protobuf:"bytes,2,opt,name=skill,proto3" json:"skill,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Notice) Reset() {
+	*x = Notice{}
+	mi := &file_meca_v1_events_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Notice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Notice) ProtoMessage() {}
+
+func (x *Notice) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_events_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Notice.ProtoReflect.Descriptor instead.
+func (*Notice) Descriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Notice) GetCode() Notice_Code {
+	if x != nil {
+		return x.Code
+	}
+	return Notice_CODE_UNSPECIFIED
+}
+
+func (x *Notice) GetSkill() *SkillRead {
+	if x != nil {
+		return x.Skill
+	}
+	return nil
+}
+
+type RunCompletion struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        RunCompletion_Status   `protobuf:"varint,1,opt,name=status,proto3,enum=meca.v1.RunCompletion_Status" json:"status,omitempty"`
+	Statistics    *Statistics            `protobuf:"bytes,2,opt,name=statistics,proto3" json:"statistics,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunCompletion) Reset() {
+	*x = RunCompletion{}
+	mi := &file_meca_v1_events_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunCompletion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunCompletion) ProtoMessage() {}
+
+func (x *RunCompletion) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_events_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunCompletion.ProtoReflect.Descriptor instead.
+func (*RunCompletion) Descriptor() ([]byte, []int) {
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RunCompletion) GetStatus() RunCompletion_Status {
+	if x != nil {
+		return x.Status
+	}
+	return RunCompletion_STATUS_UNSPECIFIED
+}
+
+func (x *RunCompletion) GetStatistics() *Statistics {
+	if x != nil {
+		return x.Statistics
+	}
+	return nil
+}
+
 type Event struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Content:
+	//
+	//	*Event_Message
+	//	*Event_Work
+	//	*Event_Notice
+	//	*Event_Tool
+	//	*Event_Completion
+	Content isEvent_Content `protobuf_oneof:"content"`
+	// Durable transcript identity, distinct from replay cursor and task sequence.
+	HistorySequence   int64           `protobuf:"varint,35,opt,name=history_sequence,json=historySequence,proto3" json:"history_sequence,omitempty"`
+	OriginalReference *EventReference `protobuf:"bytes,37,opt,name=original_reference,json=originalReference,proto3" json:"original_reference,omitempty"`
+	// Terminal task publication confirms this committed timeline position.
+	HistoryThrough int64 `protobuf:"varint,34,opt,name=history_through,json=historyThrough,proto3" json:"history_through,omitempty"`
 	// Correlates reference-change notices with an explicit file mutation reply.
 	MutationKey    string                 `protobuf:"bytes,30,opt,name=mutation_key,json=mutationKey,proto3" json:"mutation_key,omitempty"`
 	WorkspaceId    string                 `protobuf:"bytes,28,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
@@ -606,16 +989,12 @@ type Event struct {
 	RunId          string                 `protobuf:"bytes,5,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	Generation     uint64                 `protobuf:"varint,6,opt,name=generation,proto3" json:"generation,omitempty"`
 	Kind           string                 `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"`
-	Text           string                 `protobuf:"bytes,8,opt,name=text,proto3" json:"text,omitempty"`
-	Thinking       string                 `protobuf:"bytes,9,opt,name=thinking,proto3" json:"thinking,omitempty"`
 	Reset_         bool                   `protobuf:"varint,10,opt,name=reset,proto3" json:"reset,omitempty"`
 	Truncated      bool                   `protobuf:"varint,11,opt,name=truncated,proto3" json:"truncated,omitempty"`
 	Final          bool                   `protobuf:"varint,12,opt,name=final,proto3" json:"final,omitempty"`
 	Approval       *Approval              `protobuf:"bytes,13,opt,name=approval,proto3" json:"approval,omitempty"`
 	ApprovalId     string                 `protobuf:"bytes,14,opt,name=approval_id,json=approvalId,proto3" json:"approval_id,omitempty"`
-	Tool           *Tool                  `protobuf:"bytes,15,opt,name=tool,proto3" json:"tool,omitempty"`
 	Usage          *Usage                 `protobuf:"bytes,16,opt,name=usage,proto3" json:"usage,omitempty"`
-	Team           *Team                  `protobuf:"bytes,17,opt,name=team,proto3" json:"team,omitempty"`
 	ApprovalSource string                 `protobuf:"bytes,18,opt,name=approval_source,json=approvalSource,proto3" json:"approval_source,omitempty"`
 	Status         string                 `protobuf:"bytes,19,opt,name=status,proto3" json:"status,omitempty"`
 	Error          string                 `protobuf:"bytes,20,opt,name=error,proto3" json:"error,omitempty"`
@@ -623,7 +1002,6 @@ type Event struct {
 	Measurement    *GenerationMeasurement `protobuf:"bytes,22,opt,name=measurement,proto3" json:"measurement,omitempty"`
 	OccurredAt     string                 `protobuf:"bytes,23,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
 	ErrorCode      string                 `protobuf:"bytes,24,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
-	Skill          *SkillRead             `protobuf:"bytes,25,opt,name=skill,proto3" json:"skill,omitempty"`
 	Sequence       uint64                 `protobuf:"varint,26,opt,name=sequence,proto3" json:"sequence,omitempty"`
 	MeasuredMillis int64                  `protobuf:"varint,27,opt,name=measured_millis,json=measuredMillis,proto3" json:"measured_millis,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -632,7 +1010,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_meca_v1_events_proto_msgTypes[6]
+	mi := &file_meca_v1_events_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -644,7 +1022,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_events_proto_msgTypes[6]
+	mi := &file_meca_v1_events_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -657,7 +1035,80 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_meca_v1_events_proto_rawDescGZIP(), []int{6}
+	return file_meca_v1_events_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Event) GetContent() isEvent_Content {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *Event) GetMessage() *TranscriptMessage {
+	if x != nil {
+		if x, ok := x.Content.(*Event_Message); ok {
+			return x.Message
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetWork() *TeamContribution {
+	if x != nil {
+		if x, ok := x.Content.(*Event_Work); ok {
+			return x.Work
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetNotice() *Notice {
+	if x != nil {
+		if x, ok := x.Content.(*Event_Notice); ok {
+			return x.Notice
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetTool() *Tool {
+	if x != nil {
+		if x, ok := x.Content.(*Event_Tool); ok {
+			return x.Tool
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetCompletion() *RunCompletion {
+	if x != nil {
+		if x, ok := x.Content.(*Event_Completion); ok {
+			return x.Completion
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetHistorySequence() int64 {
+	if x != nil {
+		return x.HistorySequence
+	}
+	return 0
+}
+
+func (x *Event) GetOriginalReference() *EventReference {
+	if x != nil {
+		return x.OriginalReference
+	}
+	return nil
+}
+
+func (x *Event) GetHistoryThrough() int64 {
+	if x != nil {
+		return x.HistoryThrough
+	}
+	return 0
 }
 
 func (x *Event) GetMutationKey() string {
@@ -730,20 +1181,6 @@ func (x *Event) GetKind() string {
 	return ""
 }
 
-func (x *Event) GetText() string {
-	if x != nil {
-		return x.Text
-	}
-	return ""
-}
-
-func (x *Event) GetThinking() string {
-	if x != nil {
-		return x.Thinking
-	}
-	return ""
-}
-
 func (x *Event) GetReset_() bool {
 	if x != nil {
 		return x.Reset_
@@ -779,23 +1216,9 @@ func (x *Event) GetApprovalId() string {
 	return ""
 }
 
-func (x *Event) GetTool() *Tool {
-	if x != nil {
-		return x.Tool
-	}
-	return nil
-}
-
 func (x *Event) GetUsage() *Usage {
 	if x != nil {
 		return x.Usage
-	}
-	return nil
-}
-
-func (x *Event) GetTeam() *Team {
-	if x != nil {
-		return x.Team
 	}
 	return nil
 }
@@ -849,13 +1272,6 @@ func (x *Event) GetErrorCode() string {
 	return ""
 }
 
-func (x *Event) GetSkill() *SkillRead {
-	if x != nil {
-		return x.Skill
-	}
-	return nil
-}
-
 func (x *Event) GetSequence() uint64 {
 	if x != nil {
 		return x.Sequence
@@ -870,11 +1286,45 @@ func (x *Event) GetMeasuredMillis() int64 {
 	return 0
 }
 
+type isEvent_Content interface {
+	isEvent_Content()
+}
+
+type Event_Message struct {
+	Message *TranscriptMessage `protobuf:"bytes,31,opt,name=message,proto3,oneof"`
+}
+
+type Event_Work struct {
+	Work *TeamContribution `protobuf:"bytes,32,opt,name=work,proto3,oneof"`
+}
+
+type Event_Notice struct {
+	Notice *Notice `protobuf:"bytes,33,opt,name=notice,proto3,oneof"`
+}
+
+type Event_Tool struct {
+	Tool *Tool `protobuf:"bytes,15,opt,name=tool,proto3,oneof"`
+}
+
+type Event_Completion struct {
+	Completion *RunCompletion `protobuf:"bytes,36,opt,name=completion,proto3,oneof"`
+}
+
+func (*Event_Message) isEvent_Content() {}
+
+func (*Event_Work) isEvent_Content() {}
+
+func (*Event_Notice) isEvent_Content() {}
+
+func (*Event_Tool) isEvent_Content() {}
+
+func (*Event_Completion) isEvent_Content() {}
+
 var File_meca_v1_events_proto protoreflect.FileDescriptor
 
 const file_meca_v1_events_proto_rawDesc = "" +
 	"\n" +
-	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x14meca/v1/skills.proto\x1a\x19meca/v1/application.proto\"\x88\x02\n" +
+	"\x14meca/v1/events.proto\x12\ameca.v1\x1a\x15meca/v1/control.proto\x1a\x14meca/v1/skills.proto\x1a\x19meca/v1/application.proto\x1a\x17meca/v1/workspace.proto\"\x88\x02\n" +
 	"\bApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x12\n" +
@@ -887,8 +1337,10 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\atask_id\x18\t \x01(\tR\x06taskId\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\n" +
-	" \x01(\tR\texpiresAt\"\xf9\x01\n" +
+	" \x01(\tR\texpiresAt\"\xbd\x02\n" +
 	"\x04Tool\x12(\n" +
+	"\x05skill\x18\t \x01(\v2\x12.meca.v1.SkillReadR\x05skill\x12\x18\n" +
+	"\asummary\x18\b \x01(\tR\asummary\x12(\n" +
 	"\x05phase\x18\a \x01(\x0e2\x12.meca.v1.ToolPhaseR\x05phase\x12!\n" +
 	"\fexecution_id\x18\x05 \x01(\tR\vexecutionId\x12\x19\n" +
 	"\bbatch_id\x18\x06 \x01(\tR\abatchId\x12\x17\n" +
@@ -922,8 +1374,55 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\bbased_on\x18\x04 \x01(\x03R\abasedOn\x12\x14\n" +
 	"\x05paths\x18\x05 \x03(\tR\x05paths\x12\x1a\n" +
 	"\bcontract\x18\x06 \x01(\tR\bcontract\x12\x1a\n" +
-	"\brevision\x18\a \x01(\x04R\brevision\"\xe0\a\n" +
-	"\x05Event\x12!\n" +
+	"\brevision\x18\a \x01(\x04R\brevision\"\xca\x01\n" +
+	"\x11TranscriptMessage\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1a\n" +
+	"\bthinking\x18\x03 \x01(\tR\bthinking\x12\x1e\n" +
+	"\n" +
+	"incomplete\x18\x04 \x01(\bR\n" +
+	"incomplete\x12.\n" +
+	"\x06images\x18\x05 \x03(\v2\x16.meca.v1.ImageMetadataR\x06images\x12!\n" +
+	"\x04team\x18\x06 \x01(\v2\r.meca.v1.TeamR\x04team\"U\n" +
+	"\x10TeamContribution\x12\x18\n" +
+	"\asummary\x18\x01 \x01(\tR\asummary\x12'\n" +
+	"\adetails\x18\x02 \x01(\v2\r.meca.v1.TeamR\adetails\"\xc9\x01\n" +
+	"\x06Notice\x12(\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x14.meca.v1.Notice.CodeR\x04code\x12(\n" +
+	"\x05skill\x18\x02 \x01(\v2\x12.meca.v1.SkillReadR\x05skill\"k\n" +
+	"\x04Code\x12\x14\n" +
+	"\x10CODE_UNSPECIFIED\x10\x00\x12\f\n" +
+	"\bRETRYING\x10\x01\x12\x16\n" +
+	"\x12COMPACTION_STARTED\x10\x02\x12\x17\n" +
+	"\x13COMPACTION_FINISHED\x10\x03\x12\x0e\n" +
+	"\n" +
+	"SKILL_READ\x10\x04\"\xe4\x01\n" +
+	"\rRunCompletion\x125\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1d.meca.v1.RunCompletion.StatusR\x06status\x123\n" +
+	"\n" +
+	"statistics\x18\x02 \x01(\v2\x13.meca.v1.StatisticsR\n" +
+	"statistics\"g\n" +
+	"\x06Status\x12\x16\n" +
+	"\x12STATUS_UNSPECIFIED\x10\x00\x12\r\n" +
+	"\tCOMPLETED\x10\x01\x12\n" +
+	"\n" +
+	"\x06FAILED\x10\x02\x12\x0f\n" +
+	"\vINTERRUPTED\x10\x03\x12\n" +
+	"\n" +
+	"\x06DENIED\x10\x04\x12\r\n" +
+	"\tEXHAUSTED\x10\x05\"\x8f\n" +
+	"\n" +
+	"\x05Event\x126\n" +
+	"\amessage\x18\x1f \x01(\v2\x1a.meca.v1.TranscriptMessageH\x00R\amessage\x12/\n" +
+	"\x04work\x18  \x01(\v2\x19.meca.v1.TeamContributionH\x00R\x04work\x12)\n" +
+	"\x06notice\x18! \x01(\v2\x0f.meca.v1.NoticeH\x00R\x06notice\x12#\n" +
+	"\x04tool\x18\x0f \x01(\v2\r.meca.v1.ToolH\x00R\x04tool\x128\n" +
+	"\n" +
+	"completion\x18$ \x01(\v2\x16.meca.v1.RunCompletionH\x00R\n" +
+	"completion\x12)\n" +
+	"\x10history_sequence\x18# \x01(\x03R\x0fhistorySequence\x12F\n" +
+	"\x12original_reference\x18% \x01(\v2\x17.meca.v1.EventReferenceR\x11originalReference\x12'\n" +
+	"\x0fhistory_through\x18\" \x01(\x03R\x0ehistoryThrough\x12!\n" +
 	"\fmutation_key\x18\x1e \x01(\tR\vmutationKey\x12!\n" +
 	"\fworkspace_id\x18\x1c \x01(\tR\vworkspaceId\x12-\n" +
 	"\aoutcome\x18\x1d \x01(\v2\x13.meca.v1.RunOutcomeR\aoutcome\x12\x16\n" +
@@ -936,19 +1435,15 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\n" +
 	"generation\x18\x06 \x01(\x04R\n" +
 	"generation\x12\x12\n" +
-	"\x04kind\x18\a \x01(\tR\x04kind\x12\x12\n" +
-	"\x04text\x18\b \x01(\tR\x04text\x12\x1a\n" +
-	"\bthinking\x18\t \x01(\tR\bthinking\x12\x14\n" +
+	"\x04kind\x18\a \x01(\tR\x04kind\x12\x14\n" +
 	"\x05reset\x18\n" +
 	" \x01(\bR\x05reset\x12\x1c\n" +
 	"\ttruncated\x18\v \x01(\bR\ttruncated\x12\x14\n" +
 	"\x05final\x18\f \x01(\bR\x05final\x12-\n" +
 	"\bapproval\x18\r \x01(\v2\x11.meca.v1.ApprovalR\bapproval\x12\x1f\n" +
 	"\vapproval_id\x18\x0e \x01(\tR\n" +
-	"approvalId\x12!\n" +
-	"\x04tool\x18\x0f \x01(\v2\r.meca.v1.ToolR\x04tool\x12$\n" +
-	"\x05usage\x18\x10 \x01(\v2\x0e.meca.v1.UsageR\x05usage\x12!\n" +
-	"\x04team\x18\x11 \x01(\v2\r.meca.v1.TeamR\x04team\x12'\n" +
+	"approvalId\x12$\n" +
+	"\x05usage\x18\x10 \x01(\v2\x0e.meca.v1.UsageR\x05usage\x12'\n" +
 	"\x0fapproval_source\x18\x12 \x01(\tR\x0eapprovalSource\x12\x16\n" +
 	"\x06status\x18\x13 \x01(\tR\x06status\x12\x14\n" +
 	"\x05error\x18\x14 \x01(\tR\x05error\x123\n" +
@@ -959,10 +1454,11 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\x17 \x01(\tR\n" +
 	"occurredAt\x12\x1d\n" +
 	"\n" +
-	"error_code\x18\x18 \x01(\tR\terrorCode\x12(\n" +
-	"\x05skill\x18\x19 \x01(\v2\x12.meca.v1.SkillReadR\x05skill\x12\x1a\n" +
+	"error_code\x18\x18 \x01(\tR\terrorCode\x12\x1a\n" +
 	"\bsequence\x18\x1a \x01(\x04R\bsequence\x12'\n" +
-	"\x0fmeasured_millis\x18\x1b \x01(\x03R\x0emeasuredMillis*\xbc\x01\n" +
+	"\x0fmeasured_millis\x18\x1b \x01(\x03R\x0emeasuredMillisB\t\n" +
+	"\acontentJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
+	"J\x04\b\x11\x10\x12J\x04\b\x19\x10\x1aR\x04textR\bthinkingR\x04teamR\x05skill*\xbc\x01\n" +
 	"\tToolPhase\x12\x1a\n" +
 	"\x16TOOL_PHASE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12TOOL_PHASE_PENDING\x10\x01\x12\x16\n" +
@@ -984,38 +1480,56 @@ func file_meca_v1_events_proto_rawDescGZIP() []byte {
 	return file_meca_v1_events_proto_rawDescData
 }
 
-var file_meca_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meca_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_meca_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_meca_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_meca_v1_events_proto_goTypes = []any{
 	(ToolPhase)(0),                // 0: meca.v1.ToolPhase
-	(*Approval)(nil),              // 1: meca.v1.Approval
-	(*Tool)(nil),                  // 2: meca.v1.Tool
-	(*Usage)(nil),                 // 3: meca.v1.Usage
-	(*Statistics)(nil),            // 4: meca.v1.Statistics
-	(*GenerationMeasurement)(nil), // 5: meca.v1.GenerationMeasurement
-	(*Team)(nil),                  // 6: meca.v1.Team
-	(*Event)(nil),                 // 7: meca.v1.Event
-	(*EventReference)(nil),        // 8: meca.v1.EventReference
-	(*RunOutcome)(nil),            // 9: meca.v1.RunOutcome
-	(*SkillRead)(nil),             // 10: meca.v1.SkillRead
+	(Notice_Code)(0),              // 1: meca.v1.Notice.Code
+	(RunCompletion_Status)(0),     // 2: meca.v1.RunCompletion.Status
+	(*Approval)(nil),              // 3: meca.v1.Approval
+	(*Tool)(nil),                  // 4: meca.v1.Tool
+	(*Usage)(nil),                 // 5: meca.v1.Usage
+	(*Statistics)(nil),            // 6: meca.v1.Statistics
+	(*GenerationMeasurement)(nil), // 7: meca.v1.GenerationMeasurement
+	(*Team)(nil),                  // 8: meca.v1.Team
+	(*TranscriptMessage)(nil),     // 9: meca.v1.TranscriptMessage
+	(*TeamContribution)(nil),      // 10: meca.v1.TeamContribution
+	(*Notice)(nil),                // 11: meca.v1.Notice
+	(*RunCompletion)(nil),         // 12: meca.v1.RunCompletion
+	(*Event)(nil),                 // 13: meca.v1.Event
+	(*SkillRead)(nil),             // 14: meca.v1.SkillRead
+	(*EventReference)(nil),        // 15: meca.v1.EventReference
+	(*ImageMetadata)(nil),         // 16: meca.v1.ImageMetadata
+	(*RunOutcome)(nil),            // 17: meca.v1.RunOutcome
 }
 var file_meca_v1_events_proto_depIdxs = []int32{
-	0,  // 0: meca.v1.Tool.phase:type_name -> meca.v1.ToolPhase
-	8,  // 1: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
-	3,  // 2: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
-	9,  // 3: meca.v1.Event.outcome:type_name -> meca.v1.RunOutcome
-	1,  // 4: meca.v1.Event.approval:type_name -> meca.v1.Approval
-	2,  // 5: meca.v1.Event.tool:type_name -> meca.v1.Tool
-	3,  // 6: meca.v1.Event.usage:type_name -> meca.v1.Usage
-	6,  // 7: meca.v1.Event.team:type_name -> meca.v1.Team
-	4,  // 8: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
-	5,  // 9: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
-	10, // 10: meca.v1.Event.skill:type_name -> meca.v1.SkillRead
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	14, // 0: meca.v1.Tool.skill:type_name -> meca.v1.SkillRead
+	0,  // 1: meca.v1.Tool.phase:type_name -> meca.v1.ToolPhase
+	15, // 2: meca.v1.Tool.reference:type_name -> meca.v1.EventReference
+	5,  // 3: meca.v1.Statistics.usage:type_name -> meca.v1.Usage
+	16, // 4: meca.v1.TranscriptMessage.images:type_name -> meca.v1.ImageMetadata
+	8,  // 5: meca.v1.TranscriptMessage.team:type_name -> meca.v1.Team
+	8,  // 6: meca.v1.TeamContribution.details:type_name -> meca.v1.Team
+	1,  // 7: meca.v1.Notice.code:type_name -> meca.v1.Notice.Code
+	14, // 8: meca.v1.Notice.skill:type_name -> meca.v1.SkillRead
+	2,  // 9: meca.v1.RunCompletion.status:type_name -> meca.v1.RunCompletion.Status
+	6,  // 10: meca.v1.RunCompletion.statistics:type_name -> meca.v1.Statistics
+	9,  // 11: meca.v1.Event.message:type_name -> meca.v1.TranscriptMessage
+	10, // 12: meca.v1.Event.work:type_name -> meca.v1.TeamContribution
+	11, // 13: meca.v1.Event.notice:type_name -> meca.v1.Notice
+	4,  // 14: meca.v1.Event.tool:type_name -> meca.v1.Tool
+	12, // 15: meca.v1.Event.completion:type_name -> meca.v1.RunCompletion
+	15, // 16: meca.v1.Event.original_reference:type_name -> meca.v1.EventReference
+	17, // 17: meca.v1.Event.outcome:type_name -> meca.v1.RunOutcome
+	3,  // 18: meca.v1.Event.approval:type_name -> meca.v1.Approval
+	5,  // 19: meca.v1.Event.usage:type_name -> meca.v1.Usage
+	6,  // 20: meca.v1.Event.statistics:type_name -> meca.v1.Statistics
+	7,  // 21: meca.v1.Event.measurement:type_name -> meca.v1.GenerationMeasurement
+	22, // [22:22] is the sub-list for method output_type
+	22, // [22:22] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_events_proto_init() }
@@ -1026,14 +1540,22 @@ func file_meca_v1_events_proto_init() {
 	file_meca_v1_control_proto_init()
 	file_meca_v1_skills_proto_init()
 	file_meca_v1_application_proto_init()
+	file_meca_v1_workspace_proto_init()
 	file_meca_v1_events_proto_msgTypes[2].OneofWrappers = []any{}
+	file_meca_v1_events_proto_msgTypes[10].OneofWrappers = []any{
+		(*Event_Message)(nil),
+		(*Event_Work)(nil),
+		(*Event_Notice)(nil),
+		(*Event_Tool)(nil),
+		(*Event_Completion)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meca_v1_events_proto_rawDesc), len(file_meca_v1_events_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      3,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

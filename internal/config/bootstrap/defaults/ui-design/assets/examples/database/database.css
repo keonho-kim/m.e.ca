@@ -1,10 +1,8 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: custom Corporate (by request) · redesign: full · v2.0.0
- * pre-emit critique: distinguish global destinations, open objects and result tabs; smoke glass surrounds opaque SQL and readable rows.
- * Purpose: Own Querydesk's charcoal workspace, object navigation and readable database inspection surfaces.
+/* Purpose: Own Querydesk's charcoal workspace, object navigation and readable database inspection surfaces.
  * Pattern: Task-owned workspace composition with one material plane and opaque content wells.
  * Usage: The four Querydesk HTML routes load this after shared controls and shared/glass.css.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/shared/glass.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/preview.js.
- * Hallmark · material: Dusk lit-edge smoke studied, palette custom neutral/amber · signature: SQL gutter above aligned results · posture: restrained. */
+ */
 :root[data-theme=database] {
  --bg:oklch(16% .003 80); --surface:oklch(22% .004 80); --raised:oklch(28% .004 80); --soft:oklch(26% .004 80);
  --text:oklch(94% .006 80); --muted:oklch(73% .005 80); --line:oklch(35% .004 80); --control:oklch(56% .006 80);

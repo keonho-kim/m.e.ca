@@ -20,8 +20,8 @@ func TestToolPhaseProjectionPreservesActiveCommand(t *testing.T) {
 	}
 	for range 2 {
 		wire := event(projected)
-		if wire.Tool.GetPhase() != v1.ToolPhase_TOOL_PHASE_RUNNING {
-			t.Fatal("running process reported completion", wire.Tool)
+		if wire.GetTool().GetPhase() != v1.ToolPhase_TOOL_PHASE_RUNNING {
+			t.Fatal("running process reported completion", wire.GetTool())
 		}
 		projected = server.ProjectEvent(projected)
 	}
@@ -37,7 +37,7 @@ func TestToolPhaseProjectionPreservesCommandCompletion(t *testing.T) {
 		value := server.Event{Record: record.Event{Kind: "command_finished", Call: &tool.Call{ID: "call", Name: "execute_command"}, Operation: &tool.Operation{Status: tc.status, Process: &tool.ProcessOutcome{Status: "exited"}}}}
 		for range 2 {
 			value = server.ProjectEvent(value)
-			if phase := event(value).Tool.GetPhase(); phase != tc.phase {
+			if phase := event(value).GetTool().GetPhase(); phase != tc.phase {
 				t.Fatal(tc.status, phase)
 			}
 		}

@@ -1,6 +1,4 @@
-/* Hallmark · v2.0.0 · shape: app screen · theme: Lumen/Ribbon dark, Cobalt/Refract light (by request) · surface: absolute · built: Astryx
- * critique: P4 H4 E4 S4 R4 V3 · weakest: V, preserve the existing workbench while clarifying reasoning and tool detail
- * Purpose: Load Astryx and the token-backed monochrome glass surface system.
+/* Purpose: Load Astryx and the token-backed monochrome glass surface system.
  * Pattern: Stylesheet composition root.
  * Usage: main imports this before the generated MECA theme.
  * Related: webui/src/app/styles/theme.ts, webui/src/app/styles/content.css. */

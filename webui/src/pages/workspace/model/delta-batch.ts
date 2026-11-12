@@ -17,11 +17,14 @@ export function compactDeltas(events: EventJson[]) {
   const runs: Run[] = [];
   const finish = () => {
     for (const run of runs) {
-      if (run.text) {
+      if (run.text && run.last.message) {
         values[run.index] = {
           ...run.last,
-          text: run.text.join(''),
-          thinking: run.thinking?.join(''),
+          message: {
+            ...run.last.message,
+            text: run.text.join(''),
+            thinking: run.thinking?.join(''),
+          },
         };
       }
     }
@@ -31,7 +34,7 @@ export function compactDeltas(events: EventJson[]) {
   for (const event of events) {
     // Statistics update the selected conversation in arrival order. A reset
     // or control event observes exactly the text preceding it.
-    if (event.kind !== 'assistant_delta' || event.reset || event.statistics) {
+    if (event.kind !== 'assistant_delta' || !event.message || event.reset || event.statistics) {
       finish();
       values.push(event);
       continue;
@@ -39,10 +42,10 @@ export function compactDeltas(events: EventJson[]) {
     const key = sourceKey(event);
     const previous = active.get(key);
     if (previous && previous.last.generation === event.generation) {
-      previous.text ??= [previous.last.text ?? ''];
-      previous.thinking ??= [previous.last.thinking ?? ''];
-      previous.text.push(event.text ?? '');
-      previous.thinking.push(event.thinking ?? '');
+      previous.text ??= [previous.last.message?.text ?? ''];
+      previous.thinking ??= [previous.last.message?.thinking ?? ''];
+      previous.text.push(event.message.text ?? '');
+      previous.thinking.push(event.message.thinking ?? '');
       previous.last = event;
       continue;
     }

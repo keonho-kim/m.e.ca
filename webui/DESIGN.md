@@ -70,7 +70,7 @@ components:
 
 흑백 중심의 표면과 얇은 glass로 읽기와 실행에 집중하는 작업대다. 프로젝트에서 대화를 고르고, 입력한 뒤 답변·Thinking·도구 진행을 읽는 흐름이 화면의 중심이다. 넓은 읽기 영역과 밀도 있는 탐색·설정의 차이로 위계를 만들며, 색은 의미가 있는 상태에 사용한다.
 
-Astryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약은 [SYSTEM.md](../SYSTEM.md), 화면 계약은 [내장 WebUI 구조와 디자인](../docs/webui-design.md)이 소유한다. 시각 값과 공식 컴포넌트 확장은 [theme.ts](src/app/styles/theme.ts), 스타일 조합은 [base.css](src/app/styles/base.css), 테마 적용은 [main.tsx](src/app/main.tsx)가 소유한다. 공식 ai-chat·ai-chat-landing의 구성 언어를 따르며 장식 이미지·외부 글꼴을 추가하지 않는다. 브랜드 아이콘은 승인한 흑백 ME/CA 2-B 기하학 모노그램을 사용한다. `public/favicon.svg`의 단일 벡터 도형을 브라우저 파비콘과 사이드바의 Astryx `Icon`이 공유한다. 로그인·시작 화면은 파비콘 없이 `shared/ui/wordmark`의 가로형 MECA 글자를 사용하며 기하학 도형과 접근성 제목을 공유하고 현재 본문색을 따른다.
+Astryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약은 [SYSTEM.md](../SYSTEM.md), 화면 계약은 [내장 WebUI 구조와 디자인](../docs/webui-design.md)이 소유한다. 시각 값과 공식 컴포넌트 확장은 [theme.ts](src/app/styles/theme.ts), 스타일 조합은 [base.css](src/app/styles/base.css), 테마 적용은 [main.tsx](src/app/main.tsx)가 소유한다. 공식 ai-chat·ai-chat-landing의 구성 언어를 따르며 장식 이미지·외부 글꼴을 추가하지 않는다. 브랜드 아이콘은 흑백 ME/CA 기하학 모노그램을 사용한다. `public/favicon.svg`의 단일 벡터 도형을 브라우저 파비콘과 사이드바의 Astryx `Icon`이 공유한다. 로그인·시작 화면은 파비콘 없이 `shared/ui/wordmark`의 가로형 MECA 글자를 사용하며 기하학 도형과 접근성 제목을 공유하고 현재 본문색을 따른다.
 
 **Key Characteristics:**
 
@@ -146,7 +146,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 - **Medium** (`--shadow-med`): 컴포저 hover·focus와 더 높은 표면의 강조.
 - **High** (`--shadow-high`): Dialog 등 공식 overlay의 더 깊은 층위. Neutral의 상속 값이다.
 
-라이트는 Cobalt/Refract의 명료한 모서리와 차가운 빛을, 다크는 Lumen/Ribbon의 어두운 재질과 가는 반사를 참고한다. 흑백 중심의 기존 제품 정체성과 의미별 상태색을 유지하며 크림색·누런 바탕이나 장식용 광채를 추가하지 않는다. blur 미지원·reduced-transparency·forced-colors에서는 불투명 표면으로 전환한다.
+라이트는 차가운 중성 바탕과 명료한 경계, 다크는 어두운 중성 바탕과 얇은 반사를 사용한다. 흑백 중심의 동작·선택과 의미별 상태색으로 위계를 구분한다. blur 미지원·reduced-transparency·forced-colors에서는 불투명 표면으로 전환한다.
 
 모션은 공식 테마의 fast·medium·slow와 변동 비율, overshoot 없는 crisp 성향을 사용한다. 버튼·탭·Switch·Tooltip·Drawer·Skeleton·Spinner의 내재 모션은 Astryx가 소유한다. 추가한 상태 모션은 `+`의 회전(90deg), 작업 탭의 8px slide-in, Dialog의 12px slide-in, 상세 본문의 4px 진입이다. 진입은 ease-entrance의 감속 곡선을 사용하며 Dialog는 220ms, 탭·상세는 fast-max로 동작한다. 모든 모달과 툴 본문은 애니메이션 중에도 불투명도를 유지한다. 예약 목록의 조작을 가리는 클리핑 효과는 사용하지 않는다. 프로젝트 대화 목록은 Astryx useEntryAnimation의 slideDown, 메뉴의 진입·닫기는 공식 DropdownMenu가 소유한다. 응답 토큰마다 진입을 재시작하거나 임의의 목록 stagger를 추가하지 않는다. `prefers-reduced-motion`에서는 공식 적응을 유지하고 추가한 회전·펼침의 시간도 즉시 전환한다.
 
@@ -166,7 +166,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 ### Cards / Containers
 
-사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 답변·Thinking·ChatToolCalls는 할당된 채팅 열의 전체 너비를 유지하며 내용 길이에 따라 폭을 바꾸지 않는다. Markdown·코드·표는 영역 안에서 줄바꿈해 가로 스크롤을 만들지 않는다. 완료 정보는 본문 없는 RunCompletion API와 전용 CompletionRow를 사용해 마지막 출력 뒤 ChatSystemMessage로 표시한다. 고정 상태 라벨과 검증한 토큰·TPS·시간·비용만 받으며 응답·추론·종료 사유나 완료 표시용 녹색 점을 넣지 않는다. 실패 원문은 별도 상세 창으로 연다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실·설정 저장 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
+사용자 메시지는 채워진 ChatMessageBubble, 답변은 ghost bubble과 Markdown으로 구분한다. 답변·Thinking·ChatToolCalls는 할당된 채팅 열의 전체 너비를 유지하며 내용 길이에 따라 폭을 바꾸지 않는다. Markdown·코드·표는 영역 안에서 줄바꿈해 가로 스크롤을 만들지 않는다. 완료 정보는 본문 없는 RunCompletion API와 전용 CompletionRow를 사용해 마지막 출력 뒤 ChatSystemMessage로 표시한다. 토큰·TPS·시간·비용을 표시하고 실패·중단은 고정된 UI 문구로 구분한다. 응답·추론·자유 형식 종료 사유나 성공 완료 라벨·녹색 점은 넣지 않는다. 실패 원문은 별도 상세 창으로 연다. 팀 기여는 작성자·요약·경로·계약을 가진 본문으로 표시한다. 재시도·요약·스킬 읽기 알림은 고정 코드에서 만든 왼쪽 정렬 보조 문구이며 완료 행과 표시 컴포넌트를 공유하지 않는다. 실시간 출력은 해당 작업의 저장 경계와 조회 revision을 확인한 뒤 이력으로 넘긴다. 대화 전체를 장식 카드로 감싸지 않는다. 작업·원문은 Drawer, 승인·설정은 Dialog, 편집 손실·설정 저장 확인은 AlertDialog가 표시·포커스·Escape 수명을 소유한다.
 
 ### Tool disclosures and long responses
 
@@ -188,7 +188,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 전송 버튼의 툴팁은 전송(대기 중)·방향 수정(응답 중)·후속 예약(응답 중)을 각각 한 행에 표시한다. 키 표시는 Astryx Kbd가 소유하며 Enter와 `mod+enter`를 사용해 플랫폼에 맞는 Control·Command 키를 보여준다. 키보드 입력 처리는 컴포저가 계속 소유한다. 키캡의 잉크·바탕·밑선은 툴팁의 전경색을 기준으로 파생해 두 테마에서 대비를 유지한다.
 
-접속 확인에서 작업 화면으로 넘어가는 시작 상태는 단일 glass 표면과 Spinner로 표현한다. MECA 이름과 실제 연결/작업 공간 준비 안내를 보여주고 진행률·장식용 스켈레톤·최소 대기 시간을 추가하지 않는다. 시작 화면의 재질은 기존 glass 토큰을 사용하며 모달의 불투명 규칙과 구분한다.
+접속 확인에서 작업 화면으로 넘어가는 시작 상태는 단일 glass 표면과 Spinner로 표현한다. MECA 이름과 실제 연결/작업 공간 준비 안내를 보여주고 진행률·장식용 스켈레톤·최소 대기 시간을 추가하지 않는다. 시작 화면의 재질은 공통 glass 토큰을 사용하며 모달의 불투명 규칙과 구분한다.
 
 컴포저는 입력·참조 Token·팀 토글·후속 예약·전송을 묶는 glass 작업 표면이다. 모델은 설정과 `!model`에서 선택한다. 음성·dictation 조작은 없다. `+`는 위쪽 DropdownMenu에서 이미지와 스킬을 선택한다. 이미지는 파일 선택창을, 스킬은 별도 탐색 모달을 열며 행 우측 +로 입력에 넣는다. 메뉴·모달의 Escape·선택 완료와 포커스 복귀는 공식 레이어 동작을 사용한다. 컴포저 전체의 이미지 드롭·붙여넣기·명시 단축키는 같은 첨부 한도를 따른다. 후보는 `!` 명령·`#` 스킬의 공식 typeahead다.
 
@@ -196,20 +196,13 @@ Thinking은 기본 펼침 Collapsible과 스트리밍 Markdown의 조합이다. 
 
 컴포저 하단 한 줄에는 메모리·입력/출력 토큰·소요시간·TPS 등 실행 지표를 표시한다. 대기·실행·압축 같은 상태 문구나 SSE 조작은 배치하지 않으며 좁은 화면에서는 지표를 줄바꿈한다.
 
-## Do's and Don'ts
+## 적용 원칙
 
-### Do:
-
-- **Do** 의미 토큰으로 두 테마를 연결하고 상태의 글자·아이콘·바탕을 함께 확인한다.
-- **Do** Astryx의 실제 포커스·선택·모달·reduced-motion 동작을 유지한다.
-- **Do** 긴 탐색 레이블을 행 안에서 줄이고 선택 항목과 실제 조작을 보이게 한다.
-- **Do** 스트리밍과 저장 이력에서 답변·Thinking·도구의 같은 위계를 유지한다.
-- **Do** 좁은 설정에서는 상단 Selector와 폼의 사용 가능한 폭을 함께 확인한다.
-
-### Don't:
-
-- **Don't** 녹색 주요 버튼·보라색 팀 전용 팔레트·임의 회색 단계를 추가한다.
-- **Don't** 위젯 내부 DOM이나 직접 만든 textarea·select·checkbox·modal CSS로 공식 조작을 대체한다.
-- **Don't** 컴포저에 모델 선택·음성 입력을 되돌리거나 !명령을 slash 명령으로 바꾼다.
-- **Don't** 색만으로 상태를 전달하거나 reduced-motion에서 추가한 회전·펼침 전환을 유지한다.
-- **Don't** 대화 작업 영역을 장식 카드·지표 대시보드로 채우거나 fixture 문구를 제품 문구의 기준으로 취급한다.
+- 두 테마는 공통 의미 토큰으로 연결하며 상태의 글자·아이콘·바탕과 대비를 함께 확인한다.
+- 조작과 포커스·선택·모달 수명은 Astryx 컴포넌트가 소유한다. 코드 편집기에는 명시한 예외 계약을 적용한다.
+- 긴 탐색 레이블은 행 안에서 줄이고 선택 항목·핵심 조작과 전체 이름의 툴팁을 제공한다.
+- 스트리밍과 저장 이력은 답변·Thinking·도구의 같은 정보 위계를 사용한다.
+- 좁은 설정은 상단 Selector로 탐색하고 폼에 필요한 폭을 확보한다.
+- 모델 선택은 설정과 `!model`, 이미지·스킬 추가는 컴포저의 `+`에서 제공한다. 입력 명령은 `!`로 시작한다.
+- 상태는 색과 글자·모양을 함께 사용하며 축소 모션에서는 추가 공간 전환을 생략한다.
+- 읽기와 입력이 대화 화면의 중심이다. 제품 문구와 상태는 실제 사용 흐름과 서버 결과를 따른다.

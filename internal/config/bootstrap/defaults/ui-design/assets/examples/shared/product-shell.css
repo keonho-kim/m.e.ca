@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: app-owned profiles · redesign: full · v2.0.0
- * pre-emit critique: Shared structure must not force the research and office applications into one identity.
- * Purpose: Share basic controls and document geometry without imposing an application palette.
+/* Purpose: Share basic controls and document geometry without imposing an application palette.
  * Pattern: App-owned presentation.
  * Usage: shared application pages.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/shared/interaction.js. */

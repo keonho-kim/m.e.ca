@@ -25,10 +25,10 @@ func TestProjectionMasksCredentialAtTruncatedBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := &API{Redact: vault.Redact, RedactPreview: func(text string) string { return vault.NewStreamMask()(text, true) }}
-	item := &v1.HistoryItem{Text: "text private-ke", Truncated: true}
+	item := &v1.HistoryItem{Entry: &v1.HistoryItem_Message{Message: &v1.TranscriptMessage{Text: "text private-ke"}}, Truncated: true}
 	a.sanitize(item)
-	if item.Text != "text [redacted]" {
-		t.Fatal("credential prefix leaked at preview boundary", item.Text)
+	if item.GetMessage().Text != "text [redacted]" {
+		t.Fatal("credential prefix leaked at preview boundary", item.GetMessage().Text)
 	}
 }
 
@@ -36,10 +36,10 @@ func TestProjectionDoesNotModifyReplayEvents(t *testing.T) {
 	vault := &credentials.Vault{}
 	vault.Remember("private-key")
 	a := &API{Redact: vault.Redact}
-	shared := server.Event{Record: record.Event{Team: &record.TeamNote{Mentions: []string{"private-key"}, Work: &record.TeamWork{Paths: []string{"private-key/file"}}}}}
+	shared := server.Event{Record: record.Event{Kind: "team_work", Team: &record.TeamNote{Mentions: []string{"private-key"}, Work: &record.TeamWork{Paths: []string{"private-key/file"}}}}}
 	projected := event(shared)
 	a.sanitize(projected)
-	if projected.Team.Mentions[0] != "[redacted]" || projected.Team.Paths[0] != "[redacted]/file" {
+	if projected.GetWork().Details.Mentions[0] != "[redacted]" || projected.GetWork().Details.Paths[0] != "[redacted]/file" {
 		t.Fatal(projected)
 	}
 	if shared.Record.Team.Mentions[0] != "private-key" || shared.Record.Team.Work.Paths[0] != "private-key/file" {
@@ -50,7 +50,7 @@ func TestProjectionDoesNotModifyReplayEvents(t *testing.T) {
 func TestProjectionConcurrentSubscribers(t *testing.T) {
 	vault := &credentials.Vault{}
 	a := &API{Redact: vault.Redact}
-	shared := server.Event{Record: record.Event{Team: &record.TeamNote{Mentions: []string{"Hana"}, Work: &record.TeamWork{Paths: []string{"file.go"}}}}}
+	shared := server.Event{Record: record.Event{Kind: "team_work", Team: &record.TeamNote{Mentions: []string{"Hana"}, Work: &record.TeamWork{Paths: []string{"file.go"}}}}}
 	effort := "high"
 	settings := server.Snapshot{Selection: connection.Selection{Model: "fixture", ReasoningEffort: &effort}}
 	start := make(chan struct{})
@@ -86,9 +86,9 @@ func TestProjectionDoesNotModifySelectedModel(t *testing.T) {
 
 func TestProjectionHistoryBoundsToolArguments(t *testing.T) {
 	args := []byte(`{"command":"` + strings.Repeat("界", 128<<10) + `"}`)
-	item := historyItem(history.Record{Kind: "event", Event: record.Event{Call: &tool.Call{ID: "command", Name: "execute_command", Arguments: args}}})
-	projected := item.Event.GetTool().GetArgumentsJson()
-	if !item.Event.Truncated || len(projected) > 16<<10 || !utf8.Valid(projected) {
+	item := historyItem(history.Record{Kind: "event", Event: record.Event{Kind: "tool_succeeded", Call: &tool.Call{ID: "command", Name: "execute_command", Arguments: args}}})
+	projected := item.GetEvent().GetTool().GetArgumentsJson()
+	if !item.GetEvent().Truncated || len(projected) > 16<<10 || !utf8.Valid(projected) {
 		t.Fatal("invalid bounded argument preview")
 	}
 	args[0] = '!'
@@ -102,8 +102,8 @@ func TestProjectionHistoryMarksTruncatedTeamPaths(t *testing.T) {
 	for i := range paths {
 		paths[i] = "file.go"
 	}
-	item := historyItem(history.Record{Kind: "event", Event: record.Event{Team: &record.TeamNote{Work: &record.TeamWork{Paths: paths}}}})
-	if !item.Event.Truncated || len(item.Event.Team.Paths) != 32 {
+	item := historyItem(history.Record{Kind: "event", Event: record.Event{Kind: "team_work", Team: &record.TeamNote{Work: &record.TeamWork{Paths: paths}}}})
+	if !item.GetEvent().Truncated || len(item.GetEvent().GetWork().Details.Paths) != 32 {
 		t.Fatal(item)
 	}
 }

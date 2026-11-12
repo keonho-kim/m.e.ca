@@ -88,12 +88,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			return
 		}
 		var request struct {
-			Stream   bool            `json:"stream"`
-			Template map[string]bool `json:"chat_template_kwargs"`
-			Messages []struct {
-				Role    string          `json:"role"`
-				Content json.RawMessage `json:"content"`
-			} `json:"messages"`
+			Stream   bool               `json:"stream"`
+			Template map[string]bool    `json:"chat_template_kwargs"`
+			Messages []uiFixtureMessage `json:"messages"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			http.Error(w, err.Error(), 400)
@@ -126,6 +123,10 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 				message["reasoning"] = "Fixture reasoning"
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}})
+			return
+		}
+		if strings.Contains(stringMustMessages(request.Messages), "TEAM_PRESENTATION_FIXTURE") {
+			uiTeamPresentationReply(w, request.Messages)
 			return
 		}
 		w.Header().Set("Content-Type", "text/event-stream")

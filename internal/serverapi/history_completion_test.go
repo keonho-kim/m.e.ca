@@ -27,11 +27,11 @@ func TestHistoryCompletionExcludesNarrative(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if value.Event != nil || value.Text != "" || len(value.Images) != 0 || strings.Contains(string(body), narrative) {
+			if value.GetEvent() != nil || value.GetMessage() != nil || strings.Contains(string(body), narrative) {
 				t.Fatal("completion metadata carries message content", string(body))
 			}
 			completion := value.GetCompletion()
-			if value.Kind != "completion" || completion.GetStatus().String() != strings.ToUpper(string(status)) ||
+			if completion.GetStatus().String() != strings.ToUpper(string(status)) ||
 				completion.GetStatistics().GetElapsedMillis() != 9000 || completion.GetStatistics().GetGenerationMillis() != 3000 {
 				t.Fatal("terminal status or measurements were lost", string(body))
 			}

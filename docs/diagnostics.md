@@ -4,17 +4,19 @@
 
 이벤트는 프론트가 소비하는 작업 기록이고 운영 로그는 장애 원인을 추적하는 진단이다. 동일한 작업 식별자를 사용하지만 대화·도구 원문을 운영 로그에 다시 저장하지 않는다.
 
-tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙을 사용한다. 외부 SSE·WebSocket·gRPC 구독과 내장 WebUI는 full에서 제공하며, tui는 TUI·CLI의 기존 표시·JSON 출력·이력 조회를 사용한다. 버그 제보에는 버전과 `meca --help`의 종류를 함께 적는다.
+tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙을 사용한다. 외부 SSE·WebSocket·gRPC 구독과 내장 WebUI는 full에서 제공하며, tui는 터미널 표시·JSON 출력·이력 조회를 제공한다. 버그 제보에는 버전과 `meca --help`의 종류를 함께 적는다.
 
 ## 이벤트
 
-native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 기존 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
+native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
 
-새 실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 과거 기록에 없던 시각을 조회 시각으로 소급 생성하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
+실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 발생 시각이 없는 기록은 조회 시각으로 대체하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
 
-skill_loaded는 본문을 읽었다는 사실과 skill의 id·name·source·revision을 제공한다. 일반 load_skill의 성공한 도구 기록도 같은 공개 종류로 투영하며 별도 본문 사본을 저장하지 않는다. 프론트는 기존 이력 조회로 사용 내역을 복원한다. 전용 활성 상태는 없다.
+skill_loaded는 본문을 읽었다는 사실을 제공한다. 명시 호출은 `notice.code=SKILL_READ`와 `notice.skill`의 id·name·source·revision을, 일반 load_skill의 성공은 `tool.skill`과 도구 참조를 제공한다. 별도 본문 사본을 저장하지 않으며 프론트는 이력 조회로 사용 내역을 복원한다. 전용 활성 상태는 없다.
 
-영속 사건은 기존 기록 확정 뒤 전달한다. 토큰 델타와 heartbeat는 별도 영속 로그로 쌓지 않는다. heartbeat의 5초 무출력 후 1초 간격, 느린 구독자 분리와 bounded replay 정책은 [서버 문서](server.md#이벤트재접속수명)를 따른다.
+팀 발언·기여 선언은 작성자 본문으로, 재시도·요약·스킬 읽기는 고정 코드의 알림으로 투영한다. 제어 사건과 완료 측정에는 임의 본문을 복사하지 않는다. 공개 본문 union과 저장 경계는 [서버 계약](server.md#작업공간-자원과-파일-감시)이 소유한다.
+
+영속 사건은 저장 확정 뒤 전달한다. 토큰 델타와 heartbeat는 별도 영속 로그로 쌓지 않는다. heartbeat의 5초 무출력 후 1초 간격, 느린 구독자 분리와 bounded replay 정책은 [서버 문서](server.md#이벤트재접속수명)를 따른다.
 
 ## 운영 로그
 

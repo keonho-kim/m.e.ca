@@ -3,6 +3,7 @@
 // Usage: The HTTP command client checks exactly one expected result without copying large bodies.
 // Related: api/meca/v1/control.proto, api/meca/v1/state.proto, webui/src/shared/api/client.ts.
 import type { CommandJson, ReplyJson } from '@/shared/api';
+import { parseHistory, parseSnapshot } from '@/shared/api/transcript';
 import { ApiError, failure } from '@/shared/lib/errors';
 
 const results = {
@@ -90,5 +91,7 @@ export function parseReply(
     throw nativeError(payload);
   }
   if (key !== expected) throw failure('invalid_response');
+  if (key === 'history') parseHistory(payload);
+  if (key === 'state') parseSnapshot(payload);
   return body;
 }

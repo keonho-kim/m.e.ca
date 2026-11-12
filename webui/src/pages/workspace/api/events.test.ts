@@ -45,7 +45,7 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
     useWorkspaceStore.setState({ queues: {}, tasks: {} });
     globalThis.EventSource = Connection as unknown as typeof EventSource;
     globalThis.fetch = Object.assign(
-      async () => Response.json({ state: { cursor: 'idle-cursor', workspaceId: 'w', tasks: [] } }),
+      async () => Response.json({ state: { cursor: 'epoch:0', workspaceId: 'w', tasks: [] } }),
       { preconnect: original.fetch.preconnect }
     );
     globalThis.setInterval = ((callback: () => void) => {
@@ -120,7 +120,7 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
           return Response.json({
             state: {
               workspaceId: 'w',
-              cursor: 'after-completion',
+              cursor: 'epoch:1',
               task: { id: 'previous', sessionId: target.session, status: 'answered' },
             },
           });
@@ -191,7 +191,7 @@ test('an authoritative snapshot replaces pending deltas and releases its cached 
         Response.json(
           JSON.parse(String(options?.body)).fileSelections
             ? { fileSelections: { paths: [] } }
-            : { state: { cursor: '1', workspaceId: 'w' } }
+            : { state: { cursor: 'epoch:1', workspaceId: 'w' } }
         ),
       { preconnect: original.fetch.preconnect }
     );
@@ -206,19 +206,40 @@ test('an authoritative snapshot replaces pending deltas and releases its cached 
       agent: 'main',
       generation: '1',
     };
-    emit('event', { event: { ...identity, kind: 'assistant_delta', text: 'first' } });
+    emit('event', {
+      event: {
+        ...identity,
+        kind: 'assistant_delta',
+        message: { role: 'assistant', text: 'first' },
+      },
+    });
     emit('snapshot', {
       snapshot: {
-        cursor: '2',
+        cursor: 'epoch:2',
         workspaceId: 'w',
         drafts: [{ ...identity, text: 'first' }],
         activity: [],
       },
     });
-    emit('event', { event: { ...identity, kind: 'assistant_delta', text: ' second' } });
-    emit('event', { event: { ...identity, kind: 'progress' } });
+    emit('event', {
+      event: {
+        ...identity,
+        kind: 'assistant_delta',
+        message: { role: 'assistant', text: ' second' },
+      },
+    });
+    emit('event', {
+      event: {
+        ...identity,
+        kind: 'progress',
+        message: { role: 'assistant', text: 'first second' },
+      },
+    });
     expect(useWorkspaceStore.getState().drafts['t/main']?.text).toBe('first second');
-    expect(queries.getQueryData(['state', 'w', 's'])).toEqual({ cursor: '2', workspaceId: 'w' });
+    expect(queries.getQueryData(['state', 'w', 's'])).toEqual({
+      cursor: 'epoch:2',
+      workspaceId: 'w',
+    });
     await waitSelections(target);
   } finally {
     dispose?.();

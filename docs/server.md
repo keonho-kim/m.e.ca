@@ -273,11 +273,11 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 
 인증된 저장 이미지의 `?thumbnail=1` 응답은 최대 변 256px의 PNG다. JPEG·PNG·WebP의 EXIF 방향을 반영하고 원본은 바꾸지 않는다. 파생 바이트는 최대 32개·4MiB로 보관하며 같은 원본의 동시 변환을 합친다. 캐시 적중에서도 현재 원본 메타데이터와 DB/WAL 상태, 작업공간·세션 접근을 확인하고 읽기 수명을 전송까지 대여한다. 응답은 원본과 같이 no-store다.
 
-동시 관찰자가 있을 때만 최대 128개·1MiB의 정제 사건과 JSON을 공유한다. 마스킹 기준 변경이나 공유 관찰 종료 시 회수한다. SSE 본문 필터가 생략한 사건은 `event: cursor`와 id로 전송 위치를 알리며, 이 프레임은 도메인 사건이나 heartbeat가 아니다. heartbeat는 기존처럼 커서를 변경하지 않는다. detail은 Base64 data 대신 UTF-8 text를 반환하고 바이트 offset과 완전한 문자 경계를 사용한다.
+동시 관찰자가 있을 때만 최대 128개·1MiB의 정제 사건과 JSON을 공유한다. 마스킹 기준 변경이나 공유 관찰 종료 시 회수한다. SSE 본문 필터가 생략한 사건은 `event: cursor`와 id로 전송 위치를 알리며, 이 프레임은 도메인 사건이나 heartbeat가 아니다. heartbeat는 커서를 변경하지 않는다. detail은 UTF-8 text를 반환하고 바이트 offset과 완전한 문자 경계를 사용한다.
 
 ## 개발과 생성
 
-요청 DB는 **user_version 4**의 native 전용 형식이다. `requests` 행은 작업 ID·입력 digest·세션·상태·오류만 저장한다. native text·첨부 ID 순서·참조 경로를 접수 키에 바인딩한다. 같은 요청 재시도는 임시 첨부가 만료·해제됐거나 세션이 메모리에서 정리됐어도 기존 작업을 반환한다. 새 업로드 ID나 입력을 같은 키에 섞으면 conflict다. 결과 원문과 이미지 본문은 세션 DB가 소유한다. 버전 3과 이전 형식은 원본을 보존하고 열기를 거절하며 자동 변환·삭제·초기화하지 않는다. 모델 Provider 설정·API Key 저장 형식과 세션 DB schema 28은 이 요청 DB 변경과 별개다.
+요청 DB는 **user_version 4**의 native 전용 형식이다. `requests` 행은 작업 ID·입력 digest·세션·상태·오류만 저장한다. native text·첨부 ID 순서·참조 경로를 접수 키에 바인딩한다. 같은 요청 재시도는 임시 첨부가 만료·해제됐거나 세션이 메모리에서 정리됐어도 기존 작업을 반환한다. 새 업로드 ID나 입력을 같은 키에 섞으면 conflict다. 결과 원문과 이미지 본문은 세션 DB가 소유한다. 지원하지 않는 user_version은 원본을 보존하고 열기를 거절하며 자동 변환·삭제·초기화하지 않는다. 모델 설정·API Key·세션 DB는 각 저장 형식을 따른다.
 
 `internal/commands/server`는 자체 작업·선택/실행 세션·승인·이벤트 보관·원본 읽기 대여 수명, `internal/serverapi`는 인증·전송·공개 투영, `internal/serverapi/eventstream`은 heartbeat와 SSE 작성기, `internal/serverapi/detail`은 원본 마스킹·페이지 캐시, `internal/storage/serverrequests`는 native 접수·종료 기록을 소유한다. 실행·저장·표현의 책임을 합치지 않는다.
 
@@ -297,7 +297,7 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 ## WebUI 연결과 복원
 
-`meca --server --ui`는 같은 서버에서 내장 UI와 인증 초기 화면을 제공한다. 최상위 Command.workspaceId로 작업공간을 지정하고 생략 시 시작 프로젝트를 사용한다. 이벤트·snapshot은 workspaceId를 포함한다. HTTP 이미지·작업 namespace와 파일 감시 계약은 [연결 가이드](webui-api.md)가 소유한다. 현재 API는 모델 탐색, 대화·작업 목록, 설정, 파일 참조, 이미지, 승인, 팀 스트림과 상태 복원을 제공한다. [클라이언트 연결 가이드](webui-api.md)를 따른다.
+`meca --server --ui`는 같은 서버에서 내장 UI와 인증 초기 화면을 제공한다. 최상위 Command.workspaceId로 작업공간을 지정하고 생략 시 시작 프로젝트를 사용한다. 이벤트·snapshot은 workspaceId를 포함한다. HTTP 이미지·작업 namespace와 파일 감시 계약은 [연결 가이드](webui-api.md)가 소유한다. API는 모델 탐색, 대화·작업 목록, 설정, 파일 참조, 이미지, 승인, 팀 스트림과 상태 복원을 제공한다.
 
 저장 이미지 GET은 `/v1/sessions/{sessionId}/images/{sequence}/{index}`이며 같은 Bearer·Host·Origin 검사를 적용한다. 해당 대화가 현재 선택되어 있을 필요는 없다. 업로드 metadata의 expires_at과 남은 lifetime_seconds는 임시 업로드 수명이며 저장된 이미지의 보존 수명과 다르다.
 
@@ -305,7 +305,7 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 모델·스킬·세션/작업 목록·파일 탐색은 별도 조회 입장 4건을 사용하며 여유가 없으면 즉시 resource_exhausted다. `commands`는 TUI와 같은 실행 자원의 동기화된 메타데이터를 읽고 `resources`는 같은 RSS 측정기를 사용한다. 명령 문자열이 길면 truncated로 알리고 짧은 접두부를 제공한다.
 
-요청 DB 버전 4는 임시 첨부가 사라져도 중복 요청을 확인할 수 있는 native 참조 입력 식별 계약이다. 버전 3의 이전 입력 digest를 새 계약으로 해석하지 않으며 원본 DB를 보존한 채 거부한다.
+요청 입력 digest는 native 텍스트·첨부 ID 순서·참조 경로를 식별한다. 임시 첨부가 만료·해제돼도 같은 접수 키와 입력으로 원래 작업을 조회할 수 있다.
 
 ## 동시 읽기와 세션 귀속
 
@@ -322,6 +322,10 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. 작업의 request_finished.outcome과 HistoryItem.completion은 실제 실행 결과이며 접수 DB의 answered 상태와 구분한다. 저장된 접수 행에는 outcome이 없을 수 있으므로 클라이언트가 성공을 추정하지 않는다.
 
-완료 이력은 kind가 completion이며 RunCompletion의 상태 enum(COMPLETED·FAILED·INTERRUPTED·DENIED·EXHAUSTED)과 statistics만 제공한다. 텍스트·추론·일반 이벤트·이미지·자유 형식 종료 사유를 같은 항목에 넣지 않는다. 종료 사유 원문은 해당 history sequence의 상세 조회로 확인한다. 이 구조는 SSE·WebSocket·RPC의 공통 이력 응답에 적용한다.
+`HistoryItem`은 `sequence`·`truncated`와 함께 `message`·`event`·`completion` 중 한 항목만 제공한다. `message`는 사용자·에이전트 본문과 이미지 메타데이터이며, `event`는 의미가 정해진 공개 사건이다. `completion`은 RunCompletion의 상태 enum(COMPLETED·FAILED·INTERRUPTED·DENIED·EXHAUSTED)과 statistics만 제공한다. 종료 사유 원문은 해당 history sequence의 상세 조회로 확인한다.
+
+공개 `Event`의 표시 본문도 `message`·`work`·`notice`·`tool`·`completion` 중 하나다. 팀 발언은 `message`, 기여 선언은 `work.summary`와 `work.details`로 전달한다. `notice`는 RETRYING·COMPACTION_STARTED·COMPACTION_FINISHED·SKILL_READ 코드와 스킬 읽기 메타데이터만 허용하며 임의 본문을 담지 않는다. 팀 입·퇴장과 작업·사용량·승인 전이는 표시 본문 없는 제어 사건이다. 이 공통 계약은 HTTP JSON·SSE·WebSocket·RPC에 적용하며 클라이언트는 같은 proto 정의를 사용한다.
+
+`request_finished.historyThrough`와 `Task.historyThrough`는 확정된 표시 이력의 경계다. `HistoryPage.through`가 그 위치에 도달하면 완료 출력으로 전환할 수 있다. `historySequence`는 공개 타임라인의 저장 위치이며 `originalReference`는 원본 사건의 소유 대화와 순서를 식별한다. 네트워크 replay의 cursor와 저장 이력 위치를 혼용하지 않는다.
 
 파일 작업 접수 기록은 작업공간별 private DB에 저장한다. 참조·파일 본문을 이중 저장하지 않고 경로와 공개 결과만 보관한다. 기록은 최대 100,000개·본문과 처리 중 예약분 합계 32MiB, DB 파일은 최대 64MiB다. 처리 전에 결과 공간을 예약하며 용량이 부족하면 파일 효과를 시작하지 않는다. 진행 중 기록이 서버 재시작 뒤 남으면 실제 효과를 추측하거나 재실행하지 않고 불확실 상태로 반환한다.

@@ -6,36 +6,33 @@ import { expect, test } from 'bun:test';
 import { historyRows } from '@/pages/workspace/model/history-rows';
 
 test('reasoning and adjacent assistant text form one bubble without swallowing tools or outcomes', () => {
-  const thought = { sequence: '1', event: { kind: 'thinking', thinking: 'Reason' } };
-  const answer = { sequence: '2', role: 'assistant', text: 'Answer' };
+  const thought = {
+    sequence: '1',
+    event: { kind: 'thinking', message: { role: 'assistant', thinking: 'Reason' } },
+  };
+  const answer = { sequence: '2', message: { role: 'assistant', text: 'Answer' } };
   const tool = { sequence: '3', event: { kind: 'tool_succeeded', tool: { name: 'read_file' } } };
   const completion = { sequence: '4', completion: { status: 'COMPLETED' as const } };
-  expect(historyRows([thought, answer, tool, completion])).toEqual([
-    { item: answer, thinking: thought },
-    { item: tool },
-    { sequence: '4', completion: completion.completion },
-  ]);
+  const rows = historyRows([thought, answer, tool, completion]);
+  expect(rows).toHaveLength(3);
+  const first = rows[0];
+  expect(first && 'item' in first && first.item.text).toBe('Answer');
+  expect(first && 'item' in first && first.thinking?.thinking).toBe('Reason');
+  expect(rows[1] && 'item' in rows[1] && rows[1].item.event?.tool?.name).toBe('read_file');
+  expect(rows[2]).toEqual({ sequence: '4', completion: completion.completion });
 });
 
-test('completion rows discard every mixed message field before rendering', () => {
-  const completion = { status: 'FAILED' as const, statistics: { elapsedMillis: '7000' } };
-  expect(
-    historyRows([
-      {
-        sequence: '8',
-        text: 'AGENT RESPONSE',
-        role: 'assistant',
-        event: { kind: 'progress', text: 'AGENT EVENT', thinking: 'AGENT THOUGHT' },
-        completion,
-      },
-    ])
-  ).toEqual([{ sequence: '8', completion }]);
-});
 test('different agents and non-adjacent thoughts never merge', () => {
   expect(
     historyRows([
-      { event: { thinking: 'private', agent: 'peer' } },
-      { role: 'assistant', text: 'other' },
+      {
+        event: {
+          agent: 'peer',
+          kind: 'thinking',
+          message: { role: 'assistant', thinking: 'private' },
+        },
+      },
+      { message: { role: 'assistant', text: 'other' } },
     ])
   ).toHaveLength(2);
 });
@@ -56,10 +53,22 @@ test('one saved tool result replaces its started and proposed records', () => {
 test('public team responses are messages rather than system metadata', () => {
   const item = {
     sequence: '9',
-    event: { kind: 'team_progress', agent: 'peer', text: 'My answer' },
+    event: {
+      kind: 'team_progress',
+      agent: 'peer',
+      message: { role: 'assistant', text: 'My answer' },
+    },
   };
   expect(historyRows([item])).toEqual([
-    { item: { ...item, role: 'assistant', text: 'My answer' } },
+    {
+      item: {
+        sequence: '9',
+        event: item.event,
+        role: 'assistant',
+        text: 'My answer',
+        truncated: undefined,
+      },
+    },
   ]);
 });
 

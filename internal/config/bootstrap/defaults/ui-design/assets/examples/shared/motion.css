@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: project palettes (preserved) · redesign: full · v2.0.0
- * pre-emit critique: tiny secondary text and excess chrome; strengthen reading and flatten redundant frames.
- * Purpose: Compose functional motion, skeletons and real image readiness without delaying work.
+/* Purpose: Compose functional motion, skeletons and real image readiness without delaying work.
  * Pattern: State-driven progressive presentation.
  * Usage: interaction.js adds bounded entry order only after content is available.
  * Related: internal/config/bootstrap/defaults/ui-design/references/motion/composition-patterns.md, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/media.js.

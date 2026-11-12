@@ -7,8 +7,8 @@ import { terminalTool } from '@/pages/workspace/model/tool-status';
 import type { EventJson, HistoryItemJson } from '@/shared/api';
 
 export function isResponseEvent(event: EventJson) {
-  return ['progress', 'team_progress', 'team_message', 'team_discussion'].includes(
-    event.kind ?? ''
+  return (
+    !!event.work || (!!event.message && !['assistant_delta', 'thinking'].includes(event.kind ?? ''))
   );
 }
 export function isHistoryBoundary(event: EventJson) {
@@ -84,13 +84,26 @@ export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {
     const key = toolIdentity(event);
     if (key) latest.set(key, event);
   }
+  const represented = new Set(
+    history.flatMap((item) => (item.event ? eventIdentities(item.event) : []))
+  );
   return events.filter((event) => {
-    if (isResponseEvent(event) || event.kind === 'tool_proposed' || event.kind === 'approved')
+    if (['assistant_delta', 'thinking', 'progress', 'team_progress'].includes(event.kind ?? ''))
       return false;
-    const key = toolIdentity(event);
-    const batch = toolBatchIdentity(event);
+    if (!event.tool && !event.work && !event.notice && !event.message) return false;
+    if (eventIdentities(event).some((id) => represented.has(id))) return false;
+    const key = toolIdentity(event),
+      batch = toolBatchIdentity(event);
     return (
       (!batch || !batches.has(batch)) && (!key || (!saved.has(key) && latest.get(key) === event))
     );
   });
+}
+export function eventIdentities(event: EventJson) {
+  const values: string[] = [];
+  if (event.historySequence && event.historySequence !== '0')
+    values.push('timeline/' + event.historySequence);
+  const ref = event.originalReference;
+  if (ref?.sessionId && ref.sequence) values.push('original/' + ref.sessionId + '/' + ref.sequence);
+  return values;
 }

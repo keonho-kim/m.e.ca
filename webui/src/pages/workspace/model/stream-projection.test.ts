@@ -24,7 +24,7 @@ test('a completed draft remains visible until durable history takes over', () =>
         sessionId: 's',
         taskId: 't',
         kind: 'assistant_delta',
-        text: 'final answer',
+        message: { role: 'assistant', text: 'final answer' },
       },
     ]),
   };
@@ -50,7 +50,7 @@ test('a completed draft remains visible until durable history takes over', () =>
         sessionId: 's',
         taskId: 'other',
         kind: 'assistant_delta',
-        text: 'never retain',
+        message: { role: 'assistant', text: 'never retain' },
       },
     ]),
   };
@@ -70,7 +70,7 @@ test('a streamed draft releases text beyond the display window', () => {
       sessionId: 's',
       taskId: 't',
       kind: 'assistant_delta',
-      text: 'a'.repeat(256 * 1024),
+      message: { role: 'assistant', text: 'a'.repeat(256 * 1024) },
     },
   ]);
   expect(result.drafts?.['t/']?.text.length).toBe(128 * 1024);
@@ -88,8 +88,11 @@ test('display limits never retain one half of a Unicode surrogate pair', () => {
       sessionId: 's',
       taskId: 't',
       kind: 'assistant_delta',
-      text: 'x😀' + 'a'.repeat(128 * 1024 - 1),
-      thinking: 'x😀' + 'b'.repeat(128 * 1024 - 1),
+      message: {
+        role: 'assistant',
+        text: 'x😀' + 'a'.repeat(128 * 1024 - 1),
+        thinking: 'x😀' + 'b'.repeat(128 * 1024 - 1),
+      },
     },
   ]);
   const draft = result.drafts?.['t/'];
@@ -126,11 +129,31 @@ test('delta compaction preserves generation reset ordering', () => {
   };
   const base = { workspaceId: 'w', sessionId: 's', taskId: 't' };
   const result = applyEvents(state, [
-    { ...base, kind: 'assistant_delta', generation: '1', text: 'a' },
-    { ...base, kind: 'assistant_delta', generation: '1', text: 'b' },
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '1',
+      message: { role: 'assistant', text: 'a' },
+    },
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '1',
+      message: { role: 'assistant', text: 'b' },
+    },
     { ...base, kind: 'draft_reset', generation: '2' },
-    { ...base, kind: 'assistant_delta', generation: '2', text: 'c' },
-    { ...base, kind: 'assistant_delta', generation: '2', text: 'd' },
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '2',
+      message: { role: 'assistant', text: 'c' },
+    },
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '2',
+      message: { role: 'assistant', text: 'd' },
+    },
   ]);
   expect(result.drafts?.['t//1']?.text).toBe('ab');
   expect(result.drafts?.['t/']?.text).toBe('cd');
@@ -166,14 +189,19 @@ test('interleaved deltas preserve statistics and generation changes for each sou
     generation: '1',
   };
   const result = applyEvents(state, [
-    { ...delta, agent: 'a', text: 'first', statistics: { usage: { output: '4' } } },
-    { ...delta, agent: 'a', text: ' follows' },
-    { ...delta, agent: 'b', thinking: 'inspect' },
-    { ...delta, agent: 'a', generation: '2', text: 'new' },
-    { ...delta, agent: 'b', thinking: ' safely' },
-    { ...delta, agent: 'a', generation: '1', text: 'replacement' },
-    { ...delta, agent: 'b', reset: true, thinking: 'reset' },
-    { ...delta, agent: 'a', text: ' kept' },
+    {
+      ...delta,
+      agent: 'a',
+      message: { role: 'assistant', text: 'first' },
+      statistics: { usage: { output: '4' } },
+    },
+    { ...delta, agent: 'a', message: { role: 'assistant', text: ' follows' } },
+    { ...delta, agent: 'b', message: { role: 'assistant', thinking: 'inspect' } },
+    { ...delta, agent: 'a', generation: '2', message: { role: 'assistant', text: 'new' } },
+    { ...delta, agent: 'b', message: { role: 'assistant', thinking: ' safely' } },
+    { ...delta, agent: 'a', generation: '1', message: { role: 'assistant', text: 'replacement' } },
+    { ...delta, agent: 'b', reset: true, message: { role: 'assistant', thinking: 'reset' } },
+    { ...delta, agent: 'a', message: { role: 'assistant', text: ' kept' } },
   ]);
   expect(result.statistics?.usage?.output).toBe('4');
   expect(result.drafts?.['t/a']?.text).toBe('replacement kept');
@@ -183,13 +211,7 @@ test('interleaved deltas preserve statistics and generation changes for each sou
 test('a history receipt drops settled text without discarding activity from the running request', () => {
   const previous = useWorkspaceStore.getState();
   const target = { workspace: 'w', session: 's' };
-  const tool = {
-    kind: 'tool_succeeded',
-    workspaceId: 'w',
-    sessionId: 's',
-    taskId: 't',
-    text: 'Current tool result',
-  };
+  const tool = { kind: 'tool_succeeded', workspaceId: 'w', sessionId: 's', taskId: 't' };
   try {
     useWorkspaceStore.setState({
       ...useWorkspaceStore.getInitialState(),
@@ -208,9 +230,9 @@ test('a history receipt drops settled text without discarding activity from the 
         },
       },
     });
-    useWorkspaceStore.getState().acknowledgeHistory(target, 0);
+    useWorkspaceStore.getState().acknowledgeHistory(target, 0, { through: '0' });
     expect(useWorkspaceStore.getState().drafts['t//1']).toBeDefined();
-    useWorkspaceStore.getState().acknowledgeHistory(target, 1);
+    useWorkspaceStore.getState().acknowledgeHistory(target, 1, { through: '0' });
     expect(useWorkspaceStore.getState().drafts['t//1']).toBeUndefined();
     expect(useWorkspaceStore.getState().events).toEqual([tool]);
   } finally {

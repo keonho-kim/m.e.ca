@@ -37,15 +37,15 @@ test('one canceled subscriber leaves the shared metadata and stream read alive',
     finish(
       Response.json({
         state: {
-          cursor: 'one',
+          cursor: 'epoch:0',
           drafts: [{ text: 'live body' }],
-          activity: [{ text: 'live event' }],
+          activity: [{ kind: 'team_message', message: { role: 'assistant', text: 'live event' } }],
         },
       })
     );
     expect((await stream).drafts?.[0]?.text).toBe('live body');
-    expect(await metadata).toEqual({ cursor: 'one' });
-    expect(queries.getQueryData(stateOptions(target).queryKey)).toEqual({ cursor: 'one' });
+    expect(await metadata).toEqual({ cursor: 'epoch:0' });
+    expect(queries.getQueryData(stateOptions(target).queryKey)).toEqual({ cursor: 'epoch:0' });
     expect(requests).toBe(1);
   } finally {
     first.abort();

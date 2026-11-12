@@ -60,13 +60,13 @@ func TestTeamFullStreamIncludesPeersImagesAndResume(t *testing.T) {
 				if event == nil {
 					continue
 				}
-				if event.Thinking != "" {
+				if event.GetMessage().GetThinking() != "" {
 					t.Fatal("private team reasoning exposed")
 				}
 				if event.Cursor != "" {
 					cursor = event.Cursor
 				}
-				if event.TaskId == task.ID && event.Kind == "assistant_delta" && event.Agent != "" && event.Text != "" {
+				if event.TaskId == task.ID && event.Kind == "assistant_delta" && event.Agent != "" && event.GetMessage().GetText() != "" {
 					agents[event.Agent] = true
 				}
 			}
@@ -93,7 +93,7 @@ func TestTeamFullStreamIncludesPeersImagesAndResume(t *testing.T) {
 				if event == nil || event.TaskId != task.ID {
 					continue
 				}
-				if event.Kind == "user_message" && event.Text == "continue after observer resume" {
+				if event.Kind == "user_message" && event.GetMessage().GetText() == "continue after observer resume" {
 					break
 				}
 			}

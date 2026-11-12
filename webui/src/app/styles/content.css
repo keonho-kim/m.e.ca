@@ -1,6 +1,4 @@
-/* Hallmark · v2.0.0 · shape: app screen · theme: Lumen/Ribbon dark, Cobalt/Refract light (by request) · built: Astryx
- * critique: P4 H4 E4 S4 R4 V3 · preserve the workbench; enforce readable in-column content
- * Purpose: Keep rich text, chat and code within their allocated content column.
+/* Purpose: Keep rich text, chat and code within their allocated content column.
  * Pattern: Public component layout constraints.
  * Usage: The app stylesheet imports these wrapping rules after Astryx utilities.
  * Related: webui/src/shared/ui/markdown/index.tsx, webui/src/shared/ui/code-preview/index.tsx. */

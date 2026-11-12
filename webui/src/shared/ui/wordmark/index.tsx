@@ -1,6 +1,6 @@
 // Purpose: Present MECA's geometric lettering as an accessible connection-screen heading.
 // Pattern: Shared brand presentation with font-independent vector artwork.
-// Usage: Login and connection loading render this instead of repeating an icon and title.
+// Usage: Login and connection loading share this accessible heading.
 // Related: webui/src/pages/connect/ui/connect-page.tsx, webui/src/pages/connect/ui/connection-loading.tsx.
 import { Heading } from '@astryxdesign/core/Heading';
 

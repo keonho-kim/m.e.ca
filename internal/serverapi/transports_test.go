@@ -56,7 +56,7 @@ func TestTransportStreamingApprovalAndReconnect(t *testing.T) {
 			cursor := ""
 			for cursor == "" {
 				n := next(t, watch)
-				if n.GetEvent().GetKind() == "assistant_delta" && strings.HasPrefix(n.GetEvent().GetText(), "before tool") {
+				if n.GetEvent().GetKind() == "assistant_delta" && strings.HasPrefix(n.GetEvent().GetMessage().GetText(), "before tool") {
 					cursor = n.GetEvent().Cursor
 				}
 			}

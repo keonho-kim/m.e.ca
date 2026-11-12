@@ -961,6 +961,7 @@ type Task struct {
 	Persistence    string                 `protobuf:"bytes,6,opt,name=persistence,proto3" json:"persistence,omitempty"`
 	Outcome        string                 `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	SessionSummary string                 `protobuf:"bytes,8,opt,name=session_summary,json=sessionSummary,proto3" json:"session_summary,omitempty"`
+	HistoryThrough int64                  `protobuf:"varint,9,opt,name=history_through,json=historyThrough,proto3" json:"history_through,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1049,6 +1050,13 @@ func (x *Task) GetSessionSummary() string {
 		return x.SessionSummary
 	}
 	return ""
+}
+
+func (x *Task) GetHistoryThrough() int64 {
+	if x != nil {
+		return x.HistoryThrough
+	}
+	return 0
 }
 
 type TaskPage struct {
@@ -1937,7 +1945,7 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xdc\x01\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\x85\x02\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1947,7 +1955,8 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x04code\x18\x05 \x01(\tR\x04code\x12 \n" +
 	"\vpersistence\x18\x06 \x01(\tR\vpersistence\x12\x18\n" +
 	"\aoutcome\x18\a \x01(\tR\aoutcome\x12'\n" +
-	"\x0fsession_summary\x18\b \x01(\tR\x0esessionSummary\"P\n" +
+	"\x0fsession_summary\x18\b \x01(\tR\x0esessionSummary\x12'\n" +
+	"\x0fhistory_through\x18\t \x01(\x03R\x0ehistoryThrough\"P\n" +
 	"\bTaskPage\x12#\n" +
 	"\x05items\x18\x01 \x03(\v2\r.meca.v1.TaskR\x05items\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +

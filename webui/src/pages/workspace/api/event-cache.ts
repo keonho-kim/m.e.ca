@@ -41,6 +41,7 @@ export function projectEventCache(events: EventJson[]) {
           sessionId: session,
           status: event.status ?? (started ? 'running' : 'answered'),
           outcome: event.outcome?.status,
+          historyThrough: event.historyThrough,
           code: event.errorCode,
         };
         const id = event.approvalId ?? event.approval?.id;

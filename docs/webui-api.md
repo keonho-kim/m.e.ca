@@ -12,7 +12,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 
 | 화면 기능 | 서버 계약 |
 | --- | --- |
-| 작업공간 목록·폴더 선택·등록 | `listWorkspaces`, `browseFolders`, `addWorkspace` |
+| 작업공간 목록·폴더 선택·생성·등록 | `listWorkspaces`, `browseFolders`, `createFolder`, `addWorkspace` |
 | 명령 후보·해석 | `commandCatalog`, `parseInput`; 브라우저에서 !new·!quit는 거절 |
 | 시작·지원 기능·한도 확인 | `capabilities` |
 | 전역 모델 설정 | `state:{defaultModel:true}`, `providers`, `discoverModels`, `diagnoseModel`, `setModel:{defaultModel:true,...}` |
@@ -22,17 +22,18 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 대화 자원 닫기 | `closeSession:{sessionId}`. 기록 삭제가 아님 |
 | 권한·팀·언어 설정 | `setSettings`. 한 번에 항목 하나 |
 | 파일 목록·미리보기·감시 | `directory`, `previewFile`, `/v1/files/events` / RPC `WatchFiles` |
+| 파일·폴더 변경 | `mutateFile`, `lookupMutation`; 이름 변경·이동·삭제와 접수 결과 조회 |
 | 전체 문서 편집 | `editorRead`, `editorSave`; 전체 UTF-8·revision 검사와 원자적 교체 |
 | 선택 참조 보존·전송 | `fileSelections`, `selectFile`, `start.paths`, `steer.paths` |
 | 이미지 붙여넣기·파일 첨부 | HTTP `/v1/attachments`, `start.attachmentIds` |
-| 저장 첨부 표시 | `history.items[].images`, `historyImage`, 인증된 이미지 GET |
+| 저장 첨부 표시 | `history.items[].message.images`, `historyImage`, 인증된 이미지 GET |
 | 실행·추가 지시·취소 | `start`, `steer`, `cancel` |
 | 승인 대화상자 | snapshot/event의 approval, `detail:{approvalId}`, `approve` |
 | 단일·팀 스트리밍 | SSE / WatchEvents / socket watch |
 | 컴포저 상태 | `resources`의 서버 RSS, `sessionUsage:{sessionId}`의 누적 토큰, 스트림 실행 상태 |
 | 작업 완료 확인 | `taskStatus` |
 | 재접속·긴 실행 중 본문 | snapshot/state 페이지, `draft` |
-| 사용량·시간·처리량 표시 | execution의 startedAt·statistics와 usage 이벤트 |
+| 사용량·시간·처리량 표시 | `execution.startedAt`·`execution.statistics`, usage 이벤트와 `HistoryItem.completion.statistics` |
 | 스킬 탐색 | `listSkills`(최대 32), `suggestSkills`, `getSkill`, `readSkillFile` |
 
 탭·선택 메시지·접기·스크롤·입력 초안·클립보드·예약 입력 편집은 클라이언트가 소유한다. TUI의 예약 입력도 화면 수명의 큐다. 브라우저 종료 후에도 실행해야 하는 요청은 `start`로 접수한 작업이어야 한다. 관찰을 중단해도 이미 접수한 작업은 서버에서 계속된다.
@@ -65,6 +66,8 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 
 ## 상태와 스트림 복원
 
+이력 항목은 `message`·`event`·`completion` 중 하나만 읽는다. 공개 사건의 표시 본문은 `message`·`work`·`notice`·`tool`·`completion`으로 구분한다. 팀 발언과 작업 선언을 일반 시스템 문장으로 변환하지 않으며, 본문이 없는 제어 사건은 렌더링하지 않는다. `notice.code`는 고정된 번역 문구를 선택하고 `completion`은 상태와 숫자 측정만 표시한다. 내장 화면은 HTTP 응답·스트림·snapshot의 수신 경계에서 혼합 본문과 잘못된 측정값을 거절한다. 필드 정의는 [서버 계약](server.md#작업공간-자원과-파일-감시)과 `api/meca/v1`의 proto가 소유한다.
+
 `tool.batchId`는 같은 run·agent 안에서 코어가 계획한 하나의 병렬 wave를 식별한다. 개별 `executionId`는 유지하며 저장 결과와 실시간 멤버를 합칠 때 사용한다. 단일·직렬 실행을 호출 시각이나 이름만으로 병렬 묶음에 합치지 않는다. 팀 입·퇴장 이벤트는 제어 정보이며 사용자 응답·통계 행으로 표시하지 않는다.
 
 `tool.phase`의 값은 `TOOL_PHASE_PENDING`·`TOOL_PHASE_RUNNING`·`TOOL_PHASE_SUCCEEDED`·`TOOL_PHASE_FAILED`·`TOOL_PHASE_INTERRUPTED`·`TOOL_PHASE_SKIPPED`이며 코어가 결정한다. 기본값은 `TOOL_PHASE_UNSPECIFIED`다. `tool_succeeded`는 도구 호출이 관측 결과를 반환했음을 뜻하므로 백그라운드 명령이 계속 실행 중이면 phase는 `TOOL_PHASE_RUNNING`이다. 프론트는 이벤트 이름에서 성공을 추정하지 않는다. 저장 이력과 실시간 관측을 합칠 때 같은 원본 참조의 sequence를 비교하고, 더 오래된 관측이나 순서를 확인할 수 없는 관측이 확정 상태를 덮어쓰지 않게 한다.
@@ -74,9 +77,11 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 3. 스트림 순서는 cursor와 작업별 sequence를 따른다. heartbeat는 커서를 갱신하지 않는다. source는 taskId·agent·generation으로 식별한다.
 4. snapshot의 draft는 작은 접두부다. `textBytes`·`thinkingBytes`가 실제 수신 길이를 알리고, `truncated`면 `draft`로 원문을 읽는다. offset·limit은 소스 바이트 기준이며 기본/최대 페이지는 64KiB다. draft 첫 페이지의 revision도 후속 요청에 넣는다. 마스킹으로 text 길이가 달라질 수 있으므로 text 길이가 아닌 nextOffset으로 진행한다. UTF-8 경계를 자르지 않으므로 다음 offset을 그대로 사용한다.
 5. draft 페이지와 스냅샷의 generation이 달라지면 기존 조립 내용을 폐기한다. reset은 새 generation의 시작이며 같은 팀원이 퇴장 후 복귀해도 이전 generation을 재사용하지 않는다. draft 조회가 작업 종료와 겹치면 taskStatus와 history/detail로 전환한다.
-6. 완료된 대화는 history로 읽는다. 메시지 sequence와 도구 reference가 원문 조회 키다. 확정 이력과 진행 초안을 중복 표시하지 않는다.
+6. 완료된 대화는 history로 읽는다. 메시지 sequence와 도구 reference가 원문 조회 키다. 종료 사건의 `historyThrough`에 이력 페이지의 `through`가 도달한 뒤 해당 작업의 초안·활동을 해제하고 마지막 완료 측정을 표시한다. 조회 시작 시의 이력 revision도 확인해 더 오래된 요청의 응답으로 최신 초안을 지우지 않는다.
 
-snapshot draft의 committed는 해당 generation의 출력이 이력에 저장됐음을 뜻한다. 작업 전체가 끝났다는 뜻은 아니다. 새 history 조회로 저장 출력을 확인한 뒤 해당 draft를 해제한다. progress·team_progress·tool_started도 이력으로 넘기는 경계이며 progress·팀 공개 응답을 완료 통계나 별도 시스템 문장으로 다시 표시하지 않는다. 같은 runId·agent·tool.executionId의 상태와 저장 결과는 하나의 도구 실행으로 표시한다. provider가 callId를 재사용해도 서로 다른 실행을 합치지 않는다.
+snapshot draft의 committed는 해당 generation의 출력이 이력에 저장됐음을 뜻한다. 작업 전체가 끝났다는 뜻은 아니다. 새 history 조회로 저장 출력을 확인한 뒤 해당 draft를 해제하며 `historySequence`가 있으면 그 위치까지 확인한다. progress·team_progress·tool_started도 이력으로 넘기는 경계이며 progress·팀 공개 응답을 완료 통계나 별도 시스템 문장으로 다시 표시하지 않는다. 공개 팀 사건은 `historySequence`, 스킬 읽기는 `originalReference`로 실시간 표시와 저장 표시를 합친다. 같은 runId·agent·tool.executionId의 상태와 저장 결과는 하나의 도구 실행으로 표시한다. provider가 callId를 재사용해도 서로 다른 실행을 합치지 않는다.
+
+같은 epoch의 이미 처리한 cursor와 다른 epoch의 지연 프레임은 델타 결합 전에 버린다. 같은 검사를 캐시 갱신·후속 예약 처리에도 적용하며 종료 작업의 늦은 본문을 다시 초안으로 만들지 않는다. 새 snapshot은 수신 커서를 해당 서버 상태로 바꾼다.
 
 `usage`·`usage_progress`·`request_finished` 이벤트의 statistics는 서버가 집계한 최신 측정이다. 브라우저는 완료 뒤 live 사건을 정리해도 마지막 통계를 별도 작은 값으로 유지한다.
 
@@ -102,7 +107,7 @@ capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인
 
 detail 응답은 UTF-8 원문 조각인 `text`와 바이트 기준 `offset`·`nextOffset`·`totalBytes`를 사용한다. `nextOffset`은 완전한 UTF-8 문자 끝을 가리키며 요청한 limit 안에서 진행 가능한 문자가 없으면 invalid_argument다. 클라이언트는 문자열 길이로 offset을 계산하지 않는다.
 
-`detail.view`는 선택한 원문의 표현을 지정한다. 생략 또는 `DOCUMENT`는 기존 JSON 문서를 반환한다. `TOOL_REQUEST`·`TOOL_RESULT`는 `tool` 참조가 필요하며 각각 인자 JSON과 결과 JSON만 반환한다. `TEXT`·`THINKING`은 `historySequence`가 필요하며 해당 본문만 `text/plain; charset=utf-8`로 반환한다. approval 참조는 `DOCUMENT`만 허용한다. view도 revision과 캐시 키의 일부이므로 다른 view의 revision을 재사용하지 않는다. 요청 조회는 결과 payload를, 결과 조회는 원본 인자 payload를 복원하지 않는다. JSON 페이지는 문서의 조각이므로 각 페이지가 독립적인 JSON임을 가정하지 않는다.
+`detail.view`는 선택한 원문의 표현을 지정한다. 생략 또는 `DOCUMENT`는 구조화된 JSON 문서를 반환한다. `TOOL_REQUEST`·`TOOL_RESULT`는 `tool` 참조가 필요하며 각각 인자 JSON과 결과 JSON만 반환한다. `TEXT`·`THINKING`은 `historySequence`가 필요하며 해당 본문만 `text/plain; charset=utf-8`로 반환한다. approval 참조는 `DOCUMENT`만 허용한다. view도 revision과 캐시 키의 일부이므로 다른 view의 revision을 재사용하지 않는다. 요청 조회는 결과 payload를, 결과 조회는 원본 인자 payload를 복원하지 않는다. JSON 페이지는 문서의 조각이므로 각 페이지가 독립적인 JSON임을 가정하지 않는다.
 
 내장 UI는 필요한 view를 32KiB씩 읽고 툴 펼침·모달을 닫으면 페이지 질의를 취소하고 캐시를 해제한다. 후속 페이지가 conflict이면 첫 페이지에서 다시 읽어 revision을 갱신한다. API 자체의 페이지 최대값 64KiB와 원문 복원 예산은 유지한다.
 
@@ -118,19 +123,19 @@ SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈
 
 `--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료·취소 수명을 보관한다. 로그아웃·쿠키 교체·만료·서버 종료는 이미 접수한 쿠키 인증 SSE·파일 감시 등 HTTP 관찰도 취소한다. 이미 접수한 엔진 작업과 별도 Bearer 인증 클라이언트의 수명은 유지한다.
 
-로컬 브라우저는 POST `/v1/ui/pick-folder`로 OS 폴더 선택창을 연다. 동일 출처 쿠키와 loopback Host·peer가 필요하다. 성공 시 `{"path":"절대 경로"}`, 취소 시 `{"path":""}`를 반환한다. 데스크톱 선택창을 쓸 수 없으면 503이며 기존 폴더 모달을 연다. 동시에 하나만 실행하며 다른 요청은 409로 거절한다. 원격 접속은 이 API를 호출하지 않고 기존 모달에서 서버 폴더를 탐색한다. 선택 후 `addWorkspace`가 정책 검사·중복 제거·저장을 수행하며 정규화한 등록 항목의 `workspaces.selectedId`를 반환한다.
+로컬 브라우저는 POST `/v1/ui/pick-folder`로 OS 폴더 선택창을 연다. 동일 출처 쿠키와 loopback Host·peer가 필요하다. 성공 시 `{"path":"절대 경로"}`, 취소 시 `{"path":""}`를 반환한다. 데스크톱 선택창을 쓸 수 없으면 503이며 폴더 탐색 모달을 연다. 동시에 하나만 실행하며 다른 요청은 409로 거절한다. 원격 접속은 폴더 탐색 모달에서 서버 폴더를 탐색한다. 선택 후 `addWorkspace`가 정책 검사·중복 제거·저장을 수행하며 정규화한 등록 항목의 `workspaces.selectedId`를 반환한다.
 
-선택창 실행 실패는 500, 2분 시간 초과는 504다. 서버는 원시 OS 오류나 경로를 기록하지 않고 `folder_selection_failed` 진단과 오류 코드를 남긴다. 브라우저는 실패 안내와 기존 폴더 모달을 제공한다. 브라우저 연결 해제·로그아웃·서버 종료는 선택창 작업을 취소한다.
+선택창 실행 실패는 500, 2분 시간 초과는 504다. 서버는 원시 OS 오류나 경로를 기록하지 않고 `folder_selection_failed` 진단과 오류 코드를 남긴다. 브라우저는 실패 안내와 폴더 탐색 모달을 제공한다. 브라우저 연결 해제·로그아웃·서버 종료는 선택창 작업을 취소한다.
 
 GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 전용 접속 상태 조회다. 인증 전에도 Host·Origin 검사를 적용하며 보호된 명령을 실행하지 않는다. 첫 접속의 쿠키 복원과 로그인 후 쿠키 수신 확인에 사용한다. 쿠키 이름은 접속 주소별로 구분하므로 같은 호스트의 다른 포트에서 실행한 서버끼리 덮어쓰지 않는다. 서버 재시작·만료 뒤에는 다시 로그인한다.
 
-쿠키를 사용하는 POST·DELETE는 정확한 동일 Origin과 `X-Meca-UI: 1`이 필요하다. 기본 Host·Origin·TLS 경계는 그대로 적용한다. 로그인 토큰을 URL·localStorage·HTML에 넣지 않는다. 다른 클라이언트의 Bearer 인증은 계속 사용할 수 있다.
+쿠키를 사용하는 POST·DELETE는 정확한 동일 Origin과 `X-Meca-UI: 1`이 필요하다. Host·Origin·TLS 검사도 적용한다. 로그인 토큰을 URL·localStorage·HTML에 넣지 않는다. 다른 클라이언트의 Bearer 인증은 계속 사용할 수 있다.
 
 업로드·해제와 기본 작업 제어/이미지 HTTP에 `X-Meca-Workspace`를 지정할 수 있다. 이미지·작업 전용 namespace URL은 경로의 작업공간을 사용한다. 파일 감시는 GET `/v1/files/events?workspace_id=...&path=...`이며 change 이벤트의 refresh가 true이면 해당 폴더 목록을 다시 읽는다. 감시는 재귀 트리 저장이나 파일 본문 스트림이 아니다.
 
 ## 완료·예약·편집
 
-`request_finished.outcome`과 저장 이력의 `HistoryItem.completion`은 실제 작업 결과다. 완료 이력은 본문 없는 전용 RunCompletion이며 상태 enum과 statistics만 받는다. 메시지·추론·종료 사유 본문을 통계 컴포넌트에 전달하지 않고, 실패 상세는 history sequence를 지정한 원문 조회로 연다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 현재 런타임에서 확인한 경우에만 제공하며 이전 영속 접수 행에는 없을 수 있다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
+`request_finished.outcome`과 저장 이력의 `HistoryItem.completion`은 실제 작업 결과다. 완료 이력은 본문 없는 전용 RunCompletion이며 상태 enum과 statistics만 받는다. 메시지·추론·종료 사유 본문을 통계 컴포넌트에 전달하지 않고, 실패 상세는 history sequence를 지정한 원문 조회로 연다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 런타임에서 실제 결과를 확인한 경우에만 제공한다. 영속 접수 상태만으로 성공을 판단하지 않는다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
 
 `editorRead:{path}`는 전체 문서·revision·editable·reason을 반환한다. `editorSave:{path,text,revision}`는 전체 텍스트를 받아 현재 파일을 다시 확인한다. UTF-8 일반 파일 최대 2MiB만 편집하며 마스킹된 내용·경로, 바이너리·잘못된 UTF-8은 저장하지 않는다. 브라우저도 `capabilities.editorBytes`의 같은 UTF-8 바이트 한도를 입력·붙여넣기 전에 적용한다. 저장 응답은 본문을 다시 적재하지 않고 새 revision을 반환한다. 같은 본문은 파일을 다시 쓰지 않는다. 미리보기 페이지를 편집 원본으로 저장하지 않는다.
 

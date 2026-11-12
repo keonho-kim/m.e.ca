@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: editorial · theme: minimal editorial with role accents (by request) · redesign: restyle · v2.0.0
- * pre-emit critique: retain the photo and reading rhythm; use content, selection and completion colors only where those roles exist.
- * Purpose: Compose Archive image, guide and lesson details as readable editorial surfaces.
+/* Purpose: Compose Archive image, guide and lesson details as readable editorial surfaces.
  * Pattern: Detail-owned typography, figures and reading layouts.
  * Usage: archive-asset.html, archive-guide.html and archive-lesson.html load this after archive.css.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive.css, internal/config/bootstrap/defaults/ui-design/assets/examples/archive/archive.js. */

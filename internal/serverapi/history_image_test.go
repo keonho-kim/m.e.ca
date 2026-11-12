@@ -36,8 +36,8 @@ func TestStoredImageSurvivesSessionSelectionAndUploadExpiry(t *testing.T) {
 	history := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_History{History: &v1.HistoryRequest{SessionId: id}}})
 	var sequence int64
 	for _, item := range history.GetHistory().GetItems() {
-		if item.GetRole() == "user" {
-			if len(item.GetImages()) != 1 {
+		if item.GetMessage().GetRole() == "user" {
+			if len(item.GetMessage().GetImages()) != 1 {
 				t.Fatal(item)
 			}
 			sequence = item.GetSequence()

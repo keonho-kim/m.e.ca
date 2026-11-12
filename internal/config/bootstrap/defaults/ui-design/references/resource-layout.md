@@ -37,8 +37,8 @@ No overview gallery, per-folder browsing app, theme selector or extra invocation
 
 Applications built with the skill follow their own architecture, tooling, budgets and supported platforms. These local limits do not authorize splitting their code mechanically, forbidding an established framework or adding MECA-style file headers.
 
-## Standard and inspected precedent
+## Supporting resources
 
 The [Agent Skills specification](https://agentskills.io/specification) requires a frontmatter-bearing SKILL.md and permits supporting files. `references`, `assets` and `scripts` are recommended roles for documentation, static resources and executable automation, not universal names or these byte limits. Keep supporting material focused and load it as needed.
 
-The pinned [Hallmark tree](https://github.com/Nutlope/hallmark/tree/407fa689f4a276f2fd389208d271d0fef08f5058) was inspected as a precedent: theme notes/images and code snippets in references, tooling/fixtures in scripts and public completed examples outside the installed skill. That observed layout is not an instruction to mirror it. Here complete studies stay inside assets so installation preserves their portability. [Provenance](example-provenance.md) owns source and distribution facts.
+Complete studies belong in assets with their relative style, behavior and media dependencies. Installation preserves those paths so a selected screen remains portable. [Provenance](example-provenance.md) records the bundled media, authorship and distribution terms.

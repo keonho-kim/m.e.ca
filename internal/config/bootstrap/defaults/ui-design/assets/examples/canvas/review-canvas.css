@@ -1,6 +1,4 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass / spatial (by request) · redesign: full · v2.0.0
- * pre-emit critique: Opaque artifacts and a frosted inspector separate direct manipulation from object details.
- * Purpose: Give visual review a full work surface, compact tool rail and persistent inspector.
+/* Purpose: Give visual review a full work surface, compact tool rail and persistent inspector.
  * Pattern: Spatial application composition with explicit coordinates and quiet editorial notes.
  * Usage: review-canvas.html keeps its board scroll and local placement independent of page navigation.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/canvas/review-canvas.js, internal/config/bootstrap/defaults/ui-design/references/composition-decisions.md.

@@ -15,12 +15,27 @@ test('committed progress settles only its agent draft without adding a system re
   const streamed = {
     ...initial,
     ...applyEvents(initial, [
-      { ...base, kind: 'assistant_delta', agent: 'a', text: 'Before command' },
-      { ...base, kind: 'assistant_delta', agent: 'b', text: 'Another agent' },
+      {
+        ...base,
+        kind: 'assistant_delta',
+        agent: 'a',
+        message: { role: 'assistant', text: 'Before command' },
+      },
+      {
+        ...base,
+        kind: 'assistant_delta',
+        agent: 'b',
+        message: { role: 'assistant', text: 'Another agent' },
+      },
     ]),
   };
   const result = applyEvents(streamed, [
-    { ...base, kind: 'team_progress', agent: 'a', text: 'Before command' },
+    {
+      ...base,
+      kind: 'team_progress',
+      agent: 'a',
+      message: { role: 'assistant', text: 'Before command' },
+    },
   ]);
   expect(result.drafts?.['t/a']?.doneRevision).toBe(1);
   expect(result.drafts?.['t/b']?.doneRevision).toBeUndefined();
@@ -39,9 +54,9 @@ test('reconnect keeps committed output until fresh history confirms it', () => {
       ],
     });
     const revision = useWorkspaceStore.getState().historyRevision;
-    useWorkspaceStore.getState().acknowledgeHistory(target, revision - 1);
+    useWorkspaceStore.getState().acknowledgeHistory(target, revision - 1, { through: '0' });
     expect(useWorkspaceStore.getState().drafts['t/a']?.text).toBe('Saved');
-    useWorkspaceStore.getState().acknowledgeHistory(target, revision);
+    useWorkspaceStore.getState().acknowledgeHistory(target, revision, { through: '0' });
     expect(useWorkspaceStore.getState().drafts['t/a']).toBeUndefined();
     expect(useWorkspaceStore.getState().drafts['t/b']?.text).toBe('Streaming');
   } finally {

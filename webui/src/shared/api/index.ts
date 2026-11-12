@@ -11,15 +11,14 @@ export type {
   WorkspaceJson,
 } from '@/shared/api/gen/meca/v1/application_pb';
 export type { CommandJson, DetailRequestJson } from '@/shared/api/gen/meca/v1/control_pb';
-export type { EventJson, StatisticsJson } from '@/shared/api/gen/meca/v1/events_pb';
 export type {
-  HistoryItemJson,
-  NotificationJson,
-  ReplyJson,
+  NoticeJson,
   RunCompletionJson,
-  SessionJson,
-  SnapshotJson,
-} from '@/shared/api/gen/meca/v1/state_pb';
+  StatisticsJson,
+  TeamContributionJson,
+  TranscriptMessageJson,
+} from '@/shared/api/gen/meca/v1/events_pb';
+export type { SessionJson } from '@/shared/api/gen/meca/v1/state_pb';
 export type {
   CapabilitiesJson,
   ModelCandidateJson,
@@ -28,3 +27,13 @@ export type {
 } from '@/shared/api/gen/meca/v1/workspace_pb';
 export { nativeJSON, nativeRequest, readNativeJSON } from '@/shared/api/http';
 export { queries } from '@/shared/api/query-client';
+export { parseEvent, parseNotification } from '@/shared/api/transcript';
+
+export type {
+  EventJson,
+  HistoryItemJson,
+  HistoryPageJson,
+  NotificationJson,
+  ReplyJson,
+  SnapshotJson,
+} from '@/shared/api/transcript-contract';

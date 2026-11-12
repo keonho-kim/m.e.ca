@@ -74,6 +74,7 @@ message Model {
   bool reasoning_off = 13;
 }
 message Draft {
+  int64 history_sequence = 10;
   string agent = 1;
   uint64 generation = 2;
   string text = 3;
@@ -113,33 +114,18 @@ message Snapshot {
   repeated Event activity = 16;
   bool activity_truncated = 17;
 }
-// A completion contains measurements and a closed status, never agent narrative.
-message RunCompletion {
-  enum Status {
-    STATUS_UNSPECIFIED = 0;
-    COMPLETED = 1;
-    FAILED = 2;
-    INTERRUPTED = 3;
-    DENIED = 4;
-    EXHAUSTED = 5;
-  }
-  Status status = 1;
-  Statistics statistics = 2;
-}
 message HistoryItem {
-  reserved 9;
-  reserved "outcome";
+  reserved 2, 3, 4, 5, 8, 9;
+  reserved "kind", "role", "text", "incomplete", "images", "outcome";
   int64 sequence = 1;
-  string kind = 2;
-  string role = 3;
-  string text = 4;
-  bool incomplete = 5;
-  Event event = 6;
   bool truncated = 7;
-  repeated ImageMetadata images = 8;
-  RunCompletion completion = 10;
+  oneof entry {
+    TranscriptMessage message = 11;
+    Event event = 6;
+    RunCompletion completion = 10;
+  }
 }
-message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; }
+message HistoryPage { repeated HistoryItem items = 1; int64 before = 2; int64 through = 3; }
 message DetailPage {
   reserved 1;
   string text = 8;

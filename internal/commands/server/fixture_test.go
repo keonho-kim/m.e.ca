@@ -28,7 +28,8 @@ func (h *detailHistory) ToolEvent(context.Context, record.EventReference, histor
 func (*detailHistory) TimelineSummaries(context.Context, string, int64, int, history.ReadBounds) ([]history.Record, int64, error) {
 	return nil, 0, nil
 }
-func (*detailHistory) SetTeamMode(context.Context, bool) error { return nil }
+func (*detailHistory) SetTeamMode(context.Context, bool) error             { return nil }
+func (*detailHistory) TimelineHead(context.Context, string) (int64, error) { return 0, nil }
 
 type selectionStore struct {
 	selected connection.Selection

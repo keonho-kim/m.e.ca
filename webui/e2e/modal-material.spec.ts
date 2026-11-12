@@ -4,7 +4,7 @@
 // Related: webui/src/app/styles/theme.ts, webui/src/pages/workspace/ui/inspection/conversation-inspector.tsx.
 
 import { expect, type Locator } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { browserFixture, connectBrowser, historyPage, test } from '#e2e/fixture';
 
 async function opaque(layer: Locator) {
   await expect(layer).toBeVisible();
@@ -32,17 +32,12 @@ test('service modals keep solid surfaces rather than revealing the underlying pa
     if (route.request().postDataJSON().history)
       await route.fulfill({
         json: {
-          history: {
-            items: [
-              {
-                sequence: '1',
-                kind: 'message',
-                role: 'user',
-                text: 'Image sample.',
-                images: [{ index: 0 }],
-              },
-            ],
-          },
+          history: historyPage([
+            {
+              sequence: '1',
+              message: { role: 'user', text: 'Image sample.', images: [{ index: 0 }] },
+            },
+          ]),
         },
       });
     else await route.continue();

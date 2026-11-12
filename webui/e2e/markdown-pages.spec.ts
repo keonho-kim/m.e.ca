@@ -4,7 +4,7 @@
 // Related: webui/src/shared/ui/markdown/pagination.tsx, webui/src/shared/ui/markdown/render-budget.ts.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { browserFixture, connectBrowser, historyPage, test } from '#e2e/fixture';
 
 test('dense ordered responses expose their last entry inline with bounded rendered nodes', async ({
   page,
@@ -21,7 +21,7 @@ test('dense ordered responses expose their last entry inline with bounded render
     if (route.request().postDataJSON().history)
       await route.fulfill({
         json: {
-          history: { items: [{ sequence: '1', kind: 'message', role: 'assistant', text: source }] },
+          history: historyPage([{ sequence: '1', message: { role: 'assistant', text: source } }]),
         },
       });
     else await route.continue();

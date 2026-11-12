@@ -1,11 +1,7 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: corporate glass / forest (by request) · redesign: full · v2.0.0
- * pre-emit critique: Organization chrome lifts above the desk; request rows stay opaque, aligned and immediately readable.
- * Purpose: Own the organization header, request table, form groups and approval identity.
+/* Purpose: Own the organization header, request table, form groups and approval identity.
  * Pattern: App-owned presentation.
  * Usage: approvals application pages.
  * Related: internal/config/bootstrap/defaults/ui-design/assets/examples/approvals/inbox.js. */
-/* Hallmark · waive 49b · full request names may occupy two lines on the board · these are object titles, not compact command labels, and the document identity stays readable. */
-/* Hallmark · dropped all-panel, all-tab, done-panel, done-tab, progress-panel, progress-tab, review-panel, review-tab, assets/examples/approvals/inbox.html [data-tabs] · one native status fieldset filters one six-row request table instead of duplicating panels. */
 :root[data-theme=approvals] {--bg:#e8ece8;--surface:#fff;--raised:#fff;--soft:#eff3ee;--text:#202c26;--muted:#4e5f53;--line:#dbe1d9;--control:#78887b;--accent:#20563e;--on-accent:#fff;--accent-soft:#e8eee7;--focus:#20563e;--success:#276345;--warning:#805719;--danger:#9f3e38;--approval-nav:#16372b;--approval-nav-ink:#f1f5ed;--approval-nav-muted:#c0d0c4;--approval-nav-active:#315244;--approval-review:#805719;--approval-review-soft:#f5edda;--approval-progress:#2c587a;--approval-progress-soft:#e8eff5;--approval-blocked:#934b3a;--approval-blocked-soft:#f6e9e3;--approval-shadow:0 10px 32px #1d312510;--radius:8px;--approval-desk-edge:#f6f8f3;--approval-nav-glass:#16372bec;--approval-nav-shadow:inset 0 1px 0 #a9c2ad5c,0 12px 28px -18px #15271b80;--approval-plane-shadow:0 14px 36px -28px #203e3159;--dialog-from:translateY(8px) scale(.975)}
 body {font-size:16px;line-height:1.65;background:linear-gradient(130deg,var(--approval-desk-edge),var(--bg))}
 h1,h2 {min-width:0;overflow-wrap:break-word;text-wrap:balance;word-break:keep-all}
