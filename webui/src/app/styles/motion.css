@@ -1,4 +1,4 @@
-/* Purpose: Explain pane changes and modal arrival while leaving sidebar layout motion to Astryx's compositor.
+/* Purpose: Animate pane and dialog arrival while keeping palette changes atomic and sidebar motion with Astryx.
  * Pattern: Token-timed CSS motion on existing Astryx roots.
  * Usage: The theme owns dialog motion; pane and reveal classes mark conditional content.
  * Related: webui/src/app/styles/theme.ts, webui/src/app/styles/base.css. */
@@ -15,15 +15,6 @@
   to { transform: translateY(0); }
 }
 @layer utilities {
-  @media (prefers-reduced-motion: no-preference) {
-    body, [data-astryx-theme="meca"], .astryx-app-shell, .astryx-side-nav,
-    .astryx-layout, .astryx-toolbar, .astryx-chat-composer, .astryx-dropdown-menu,
-    .astryx-popover, .astryx-dialog {
-      transition-property: background-color, color, border-color, box-shadow;
-      transition-duration: var(--duration-slow);
-      transition-timing-function: var(--ease-standard);
-    }
-  }
   .meca-pane-enter {
     animation: meca-pane-enter var(--duration-fast-max) var(--ease-entrance) backwards;
   }

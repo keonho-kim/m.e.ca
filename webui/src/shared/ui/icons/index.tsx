@@ -1,7 +1,7 @@
-// Purpose: Add MECA-specific Lucide icons to Astryx Neutral's built-in icon registry.
+// Purpose: Add the shared brand artwork and MECA-specific Lucide icons to Astryx Neutral.
 // Pattern: Theme icon-registry extension.
 // Usage: The app theme adds these names while inheriting Neutral's common icons.
-// Related: webui/src/app/styles/theme.ts.
+// Related: webui/src/app/styles/theme.ts, webui/public/favicon.svg.
 import type { IconEntry } from '@astryxdesign/core/Icon';
 import {
   ArrowLeft,
@@ -37,6 +37,18 @@ import {
 const iconProps = { size: '1em', 'aria-hidden': true as const };
 
 export const mecaIcons = {
+  'meca:brand': (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 628 628"
+      width="1em"
+      height="1em"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <use href="/ui/favicon.svg#meca-mark" />
+    </svg>
+  ),
   'meca:request': <SquareArrowOutUpRight {...iconProps} />,
   'meca:close': <X {...iconProps} />,
   'meca:play': <Play {...iconProps} />,

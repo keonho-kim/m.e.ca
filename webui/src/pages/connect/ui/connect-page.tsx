@@ -1,12 +1,11 @@
 // Purpose: Authenticate once without persisting the server bearer token in browser storage.
 // Pattern: Scoped authentication form.
 // Usage: App shows Login until a browser cookie is accepted by the native API.
-// Related: internal/serverapi/ui_auth.go, webui/src/shared/api/client.ts.
+// Related: internal/serverapi/ui_auth.go, webui/src/shared/api/client.ts, webui/src/shared/ui/wordmark/index.tsx.
 
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Center } from '@astryxdesign/core/Center';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -14,6 +13,7 @@ import { useState } from 'react';
 import { authenticate } from '@/features/server-access';
 import { useLocale } from '@/shared/i18n';
 import { describeError } from '@/shared/lib/errors';
+import { Wordmark } from '@/shared/ui/wordmark';
 
 export function Login() {
   const t = useLocale(),
@@ -23,9 +23,7 @@ export function Login() {
   return (
     <Center height="100dvh" padding={6}>
       <VStack maxWidth={440} width="100%" gap={6}>
-        <Heading level={1} type="display-3">
-          MECA
-        </Heading>
+        <Wordmark />
         <Text color="secondary">{t('loginHelp')}</Text>
         <VStack
           as="form"

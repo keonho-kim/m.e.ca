@@ -9,7 +9,7 @@ import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture
 test.beforeEach(async ({ page }) => {
   await connectBrowser(page, await browserFixture());
 });
-test('light is the default and both theme directions transition without opacity changes', async ({
+test('light is the default and theme changes preserve opacity and the saved preference', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'no-preference' });
@@ -18,17 +18,9 @@ test('light is the default and both theme directions transition without opacity 
   for (const mode of ['dark', 'light']) {
     await theme.click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', mode);
-    const transition = await page.locator('.astryx-app-shell').evaluate((node) => {
-      const style = getComputedStyle(node);
-      return {
-        duration: style.transitionDuration,
-        property: style.transitionProperty,
-        opacity: style.opacity,
-      };
-    });
-    expect(transition.duration).not.toBe('0s');
-    expect(transition.property).toContain('background-color');
-    expect(transition.opacity).toBe('1');
+    expect(
+      await page.locator('.astryx-app-shell').evaluate((node) => getComputedStyle(node).opacity)
+    ).toBe('1');
   }
   await theme.click();
   await page.reload();

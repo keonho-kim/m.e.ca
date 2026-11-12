@@ -1,5 +1,11 @@
-<!-- Purpose: Provide the product's local browser icon without a network dependency.
-Pattern: Geometric wordmark initial.
-Usage: The HTML entry links this favicon.
-Related: webui/index.html. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#126b50"/><path d="M8 24V8l8 10 8-10v16" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+<!-- Purpose: Own the approved MECA 2-B monogram for browser and application branding.
+Pattern: Shared vector artwork with a reusable fragment.
+Usage: The HTML favicon and Astryx's meca:brand icon use this local asset.
+Related: webui/index.html, webui/src/shared/ui/icons/index.tsx. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 628 628">
+  <g id="meca-mark">
+    <path fill="#000" d="M0 0h628v628H0z"/>
+    <path fill="#fff" d="M62 68h49l117 121L345 68h221v65H394v35h172v61H394v38h172v62H393l-38 56H179l-47 48v77h138l-43 65H62V397l70-71h193V194l-97 96-96-97v116l-70 70z"/>
+    <path fill="#fff" fill-rule="evenodd" d="m433 329 157 246h-76l-26-40H346l-26 40h-79l165-246zm-14 94-41 61h80z"/>
+  </g>
+</svg>

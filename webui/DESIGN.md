@@ -70,7 +70,7 @@ components:
 
 흑백 중심의 표면과 얇은 glass로 읽기와 실행에 집중하는 작업대다. 프로젝트에서 대화를 고르고, 입력한 뒤 답변·Thinking·도구 진행을 읽는 흐름이 화면의 중심이다. 넓은 읽기 영역과 밀도 있는 탐색·설정의 차이로 위계를 만들며, 색은 의미가 있는 상태에 사용한다.
 
-Astryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약은 [SYSTEM.md](../SYSTEM.md), 화면 계약은 [내장 WebUI 구조와 디자인](../docs/webui-design.md)이 소유한다. 시각 값과 공식 컴포넌트 확장은 [theme.ts](src/app/styles/theme.ts), 스타일 조합은 [base.css](src/app/styles/base.css), 테마 적용은 [main.tsx](src/app/main.tsx)가 소유한다. 공식 ai-chat·ai-chat-landing의 구성 언어를 따르며 새로운 브랜드·장식 이미지·외부 글꼴을 추가하지 않는다.
+Astryx 공식 Neutral을 확장한 현재 구현을 기록한다. 제품 계약은 [SYSTEM.md](../SYSTEM.md), 화면 계약은 [내장 WebUI 구조와 디자인](../docs/webui-design.md)이 소유한다. 시각 값과 공식 컴포넌트 확장은 [theme.ts](src/app/styles/theme.ts), 스타일 조합은 [base.css](src/app/styles/base.css), 테마 적용은 [main.tsx](src/app/main.tsx)가 소유한다. 공식 ai-chat·ai-chat-landing의 구성 언어를 따르며 장식 이미지·외부 글꼴을 추가하지 않는다. 브랜드 아이콘은 승인한 흑백 ME/CA 2-B 기하학 모노그램을 사용한다. `public/favicon.svg`의 단일 벡터 도형을 브라우저 파비콘과 사이드바의 Astryx `Icon`이 공유한다. 로그인·시작 화면은 파비콘 없이 `shared/ui/wordmark`의 가로형 MECA 글자를 사용하며 기하학 도형과 접근성 제목을 공유하고 현재 본문색을 따른다.
 
 **Key Characteristics:**
 
@@ -182,7 +182,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 프로젝트는 접는 SideNavItem 그룹, 대화는 들여쓴 선택 행이다. 사이드바 접기·펼치기는 레일 상단에, 설정·테마는 하단에 둔다. Toolbar의 TabList는 작업 보기, 끝의 DropdownMenu는 언어를 선택하고 현재 언어를 체크 표시로 구별한다. 테마는 하단 IconButton으로 전환한다. 모바일 탐색은 AppShell이 소유한다. 공용 컨트롤은 Astryx Neutral의 Lucide registry를 상속하며 파일 형식 glyph만 공통 32종 카탈로그의 MUI Material 아이콘을 사용한다.
 
-디렉터리 경로는 Astryx Breadcrumbs로 위치 행의 80%를 사용한다. 마지막 세 단계까지 표시하고 너비가 모자라면 앞쪽부터 … 메뉴로 접는다. 모달 본문은 불투명을 유지하며 테마 색상 전환은 사이드바의 너비 애니메이션을 덮어쓰지 않는다. 모션 감소 설정에서는 추가 전환을 생략한다.
+디렉터리 경로는 Astryx Breadcrumbs로 위치 행의 80%를 사용한다. 마지막 세 단계까지 표시하고 너비가 모자라면 앞쪽부터 … 메뉴로 접는다. 모달 본문은 불투명을 유지하며 테마 팔레트는 배경과 글자색을 함께 즉시 바꿔 중간 회색에서 대비가 낮아지는 현상을 막는다. 사이드바의 너비 애니메이션은 Astryx가 계속 소유하며 모션 감소 설정에서는 추가 전환을 생략한다.
 
 ### Composer and Thinking
 

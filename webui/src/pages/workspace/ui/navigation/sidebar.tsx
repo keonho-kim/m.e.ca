@@ -50,6 +50,7 @@ export function Sidebar({
           </SideNavCollapseButton>
         ) : (
           <SideNavHeading
+            icon={<Icon icon="meca:brand" size="lg" />}
             heading="MECA"
             headerEndContent={
               <HStack gap={1}>
