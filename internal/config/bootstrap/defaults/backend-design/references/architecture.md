@@ -17,4 +17,4 @@ Separate three questions: what is authoritative, which code owns the rule, and w
 
 For a proposed boundary, identify its real consumer and benefit: independent scaling, isolation, security, deployment or transaction ownership. Add the new network hop, timeout, deployment skew and operational ownership to the comparison. A directory named after a pattern does not establish a boundary.
 
-Use the [research record](sources.md) to distinguish source guarantees from this bundle's synthesis. Company scale and component count are not evidence of suitability.
+Use the [primary source index](sources.md) to distinguish source guarantees from this bundle's synthesis. Company scale and component count are not evidence of suitability.

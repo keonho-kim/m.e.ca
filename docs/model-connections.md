@@ -6,37 +6,45 @@
 
 tui·full 모두 같은 아홉 Provider와 모델 설정을 사용한다. TUI의 `!model`에서 Provider·주소·API 키·서빙 모델 ID를 선택한다. full WebUI는 설정 → 모델, 서버 연동은 `setModel`을 사용한다. 실제 요청에는 선택한 ID를 그대로 사용하며, 연결 기능과 한도는 모델 서버 메타데이터와 Provider API 규약으로 결정한다. 여기서 모델 서버와 full의 MECA 자체 API 서버는 별개다.
 
-지원 Provider는 `ollama`, `vllm`, `sglang`, `lm-studio`, `litellm`, `openrouter`, `openai`, `claude`, `gemini`다. 기본 주소와 생성 API는 [README의 Provider 목록](../README.md#지원-provider)을 따른다. 자체 서버 API의 `setModel`에도 같은 식별값을 사용한다.
+기본 연결 값은 다음과 같다. 자체 서버 API의 `setModel.provider`에도 같은 식별값을 사용한다. Base URL에는 생성 API 경로를 덧붙이지 않는다.
+
+| Provider | 식별값 | 기본 Base URL | 생성 API |
+| --- | --- | --- | --- |
+| Ollama | `ollama` | `http://localhost:11434` | Ollama Chat |
+| vLLM | `vllm` | `http://localhost:8000/v1` | Chat Completions |
+| SGLang | `sglang` | `http://localhost:8000/v1` | Chat Completions |
+| LM Studio | `lm-studio` | `http://localhost:1234` | Responses |
+| LiteLLM | `litellm` | `http://localhost:4000/v1` | Chat Completions |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | Chat Completions |
+| OpenAI | `openai` | `https://api.openai.com/v1` | Responses |
+| Claude | `claude` | `https://api.anthropic.com/v1` | Messages |
+| Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta` | GenerateContent |
+
+OpenAI·Claude·Gemini는 공급자의 API Key를 사용한다. 인증이 설정된 모델 서버·게이트웨이에는 해당 Key를 입력하고 인증 없는 로컬 서버에서는 비워 둔다. 저장한 API Key는 암호화해 보관한다. 코딩 작업에는 native tool calling을 지원하는 모델·서버 설정이 필요하다.
 
 설정 화면은 저장된 Thinking·강도 또는 서버가 공개한 기본값을 표시한다. 확인된 기본값은 구체적인 ON/OFF·강도로 표시하고, 공개되지 않은 값만 DEFAULT로 둔다. DEFAULT는 think·reasoning·reasoning_effort·chat_template_kwargs의 해당 제어 필드 생략을 뜻한다. 역할별 temperature·출력 예산·컨텍스트 예산은 [설정 문서](configuration.md)의 독립된 설정이다.
 
 연결 준비는 메타데이터를 조회하고 클라이언트를 구성한다. [이미지 입력](images.md)의 지원 정보가 없는 OpenRouter 외 모델에는 작은 PNG로 입력 수용을 검사한다. 일반 응답과 Thinking 진단은 !model → 연결 진단 또는 meca --diagnose에서 수행한다. 메타데이터 조회 실패는 원인을 남기고 일반 연결을 준비하며 사용자 취소는 즉시 전파한다.
 
-한 연결 준비 안에서는 마지막 GET 결과 한 개를 재사용한다. 동일한 목록에서 원본 식별과 서빙 한도를 각각 읽을 때 HTTP 요청을 반복하지 않으며, 각 해석 결과는 독립된 값이다. 최종 전송 실패도 준비 작업 안에서 공유하되 타입 변환 오류는 다른 해석을 막지 않는다. 취소한 context는 재사용보다 먼저 검사한다. Ollama의 선택 모델 /api/show 응답도 식별·설정 조회에서 하나의 typed 스냅샷으로 재사용한다. 응답 보존은 16MiB 수용 한도와 준비 작업의 수명에 한정한다. 새 연결 준비·목록 새로고침은 다시 서버를 조회한다.
-
 ## OpenAI, Claude, Gemini
 
 `!model`에서 공급자를 고르고 각 공급자가 발급한 API Key·모델 ID를 입력한다. 서버의 `setModel.provider` 값은 각각 `openai`, `claude`, `gemini`다. 별도 SDK나 로컬 모델 서버가 필요하지 않으며 API Key 보관은 [암호화와 복구](configuration.md#api-key-암호화와-복구)를 따른다.
 
-| Provider | 기본 Base URL | 생성 API | 인증 |
-| --- | --- | --- | --- |
-| OpenAI | https://api.openai.com/v1 | /responses, store:false | Authorization: Bearer |
-| Claude | https://api.anthropic.com/v1 | /messages | x-api-key, anthropic-version:2026-10-21 |
-| Gemini | https://generativelanguage.googleapis.com/v1beta | /models/{model}:streamGenerateContent?alt=sse | x-goog-api-key |
+| Provider | 생성 경로·옵션 | 인증 |
+| --- | --- | --- |
+| OpenAI | /responses, store:false | Authorization: Bearer |
+| Claude | /messages | x-api-key, anthropic-version:2026-10-21 |
+| Gemini | /models/{model}:streamGenerateContent?alt=sse | x-goog-api-key |
 
 Claude는 workspace에 연결된 API Key를 사용한다. workspace 선택 헤더·OAuth·Bedrock·Vertex AI 인증은 이 연결에 포함하지 않는다. Gemini는 Google AI API Key를 사용하며 OpenAI 호환 URL을 Base URL로 넣지 않는다. 인증된 원격 HTTP와 다른 origin으로의 redirect는 차단한다. 모델 API Key를 URL query에 넣지 않는다.
 
 OpenAI는 Models API 목록을 사용하며 한도·추론·sampling 기능을 모델명으로 추정하지 않는다. 모델 API가 한도를 공개하지 않으면 설정한 context length와 API 오류를 따른다. OpenAI·Claude의 temperature는 보내지 않고 공급자 sampling 기본값을 사용한다. Claude의 선택 모델 API가 광고한 max_input_tokens·max_tokens·이미지 수용·adaptive Thinking·disabled·effort를 적용한다. 수동 Thinking 토큰 예산 UI는 추가하지 않는다. Gemini는 생성 가능한 모델의 목록과 inputTokenLimit·outputTokenLimit를 읽고 Thinking은 모델 기본값을 유지한다. 모델 목록 페이지는 100페이지·10000개로 제한하고 반복 cursor를 거부한다.
 
-세 Provider 모두 본문과 Thinking을 스트리밍하며 함수 인자를 완성·검사하고 정상 종료를 확인한 뒤에만 실행기에 도구 호출을 넘긴다. 실패·토큰 상한·끊긴 스트림의 부분 호출은 실행하지 않는다. OpenAI의 reasoning output, Claude의 signed thinking, Gemini의 thoughtSignature는 같은 연결·모델의 완료된 후속 요청에만 보존한다. 서명된 빈 text/thinking 필드도 보존하며 Gemini의 본문·서명된 인자·로컬 호출 ID와 현재 메시지 이력이 달라지면 재사용을 거부한다. 원격 대화 ID에 의존하지 않는다.
+OpenAI·Claude·Gemini는 답변·Thinking과 native 도구 호출을 지원한다. 미완성 호출은 실행하지 않으며 후속 요청에 필요한 Provider 상태는 MECA가 관리한다. 사용자가 원격 대화 ID나 서명 상태를 직접 구성하지 않는다.
 
-OpenAI의 `reasoning.summary=auto`, Gemini의 `thinkingConfig.includeThoughts=true`로 표시 가능한 추론 요약을 요청한다. 추론 깊이나 budget의 기본값은 바꾸지 않는다. Gemini 메타데이터의 `thinking=false`는 이 옵션을 생략한다. 공급자가 자동 요약 옵션을 지원하지 않는다고 명확히 400 오류를 반환하면 그 옵션만 제거해 한 번 요청하고, 같은 클라이언트·모델에서는 관측한 미지원을 재사용한다. 다른 인자·인증 오류와 안전 필터·거절·문맥/출력 한도 종료는 같은 요청으로 반복하지 않는다. OpenAI 거절 텍스트는 정상 응답의 본문으로 표시한다.
-
-Claude와 OpenAI의 응답은 원래 text/message·tool 블록 경계와 순서를 유지한다. Claude continuation version 1에는 system·tools·앞선 메시지의 지문을 함께 보관한다. 압축·팀 관측 갱신·지침/도구 변경으로 지문이 달라지면 해당 응답의 thinking·redacted_thinking만 전송에서 제외하고 관측 텍스트·완료된 도구 호출은 유지한다. 지원 버전·유효한 지문·본문과 도구 이력을 확인할 수 없는 상태는 원본 기록을 보존하고 거부한다. JSON과 그 안에 직렬화된 JSON의 비밀값도 저장·전송 전에 검사하며 서명 바이트를 마스킹해서 재사용하지 않는다.
+표시 가능한 Thinking은 Provider가 제공하는 추론 요약에 의존한다. 지원되는 요약을 요청하되 추론 깊이의 기본값을 임의로 바꾸지 않는다. 공급자가 지원하지 않는 옵션은 해당 연결의 지원 범위에 맞춰 처리하며 실제 실패를 숨기지 않는다.
 
 사용량은 OpenAI의 input/output_tokens, Claude의 input·cache_creation·cache_read와 output_tokens, Gemini의 promptTokenCount와 candidatesTokenCount+thoughtsTokenCount를 사용한다. 공급자가 보고하지 않은 값을 0으로 추정하지 않는다.
-
-Claude의 누적 usage는 보고된 필드만 갱신하고 생략된 캐시 카운터를 유지한다. Gemini의 usageMetadata가 있으면 protobuf 규약에 따라 생략된 scalar 카운터는 0이다. 따라서 답변 없이 추론만 생성해도 thoughtsTokenCount를 수집한다. usageMetadata 자체가 없으면 미보고로 유지한다. 모든 Provider의 SSE 프레임·NDJSON 한 줄과 Claude의 숨은 block payload에 256MiB 응답 한도를 적용한다.
 
 규약 근거: [OpenAI stateless reasoning](https://developers.openai.com/api/docs/guides/reasoning#keeping-reasoning-items-in-context), [Claude 스트리밍](https://platform.claude.com/docs/en/build-with-claude/streaming), [Claude 모델 정보](https://platform.claude.com/docs/en/api/models/retrieve), [Gemini GenerateContent](https://ai.google.dev/api/generate-content), [Gemini 모델 정보](https://ai.google.dev/api/models).
 

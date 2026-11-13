@@ -7,6 +7,7 @@ package detail
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"reflect"
 
@@ -25,7 +26,8 @@ func viewEvent(original server.DetailOriginal) *record.Event {
 	}
 	return nil
 }
-func writeView(ctx context.Context, out io.Writer, original server.DetailOriginal, view server.DetailView, mask func() func(string, bool) string) error {
+func writeView(ctx context.Context, out io.Writer, original server.DetailOriginal, source server.DetailSource, mask func() func(string, bool) string) error {
+	view := source.View
 	if mask == nil {
 		return fault.Errorf(diag.DetailMaskFactoryRequired)
 	}
@@ -65,6 +67,24 @@ func writeView(ctx context.Context, out io.Writer, original server.DetailOrigina
 		}
 	default:
 		return fault.New(diag.InvalidArgument, diag.ServerChooseExactlyOneValidDetailReference)
+	}
+	if source.Field != "" || source.ListFields {
+		var err error
+		value, err = selectToolField(ctx, value, source.Field, source.ListFields)
+		if err != nil {
+			return err
+		}
+		if source.ListFields {
+			for _, key := range value.([]string) {
+				if mask()(key, true) != key {
+					value = []string{}
+					break
+				}
+			}
+		}
+		if raw, ok := value.(json.RawMessage); ok && len(raw) > 0 && raw[0] == '"' {
+			return writeJSONText(ctx, out, raw, mask)
+		}
 	}
 	buffer := bufio.NewWriterSize(out, 32<<10)
 	writer := documentWriter{ctx: ctx, output: buffer, newMask: mask}

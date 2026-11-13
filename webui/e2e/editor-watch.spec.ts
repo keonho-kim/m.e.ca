@@ -12,6 +12,21 @@ test('one watcher follows documents without full reads or false conflict banners
   page,
 }) => {
   const fixture = await browserFixture();
+  let watchers = 0;
+  page.on('websocket', (socket) => {
+    if (!socket.url().endsWith('/v1/ui/events')) return;
+    socket.on('framesent', ({ payload }) => {
+      const frame: unknown = JSON.parse(String(payload));
+      if (
+        frame &&
+        typeof frame === 'object' &&
+        'url' in frame &&
+        typeof frame.url === 'string' &&
+        frame.url.startsWith('/v1/files/events?')
+      )
+        watchers++;
+    });
+  });
   const name = 'watch-document.txt';
   await writeFile(join(fixture.projectA, name), 'original');
   await connectBrowser(page, fixture);
@@ -22,16 +37,15 @@ test('one watcher follows documents without full reads or false conflict banners
     .getByRole('button', { name: '새 대화', exact: true })
     .click();
   await page.waitForURL((url) => url.href !== previous && url.pathname.includes('/c/session_'));
-  let watchers = 0,
-    reads = 0;
+  let reads = 0;
   page.on('request', (request) => {
-    if (request.url().includes('/v1/files/events?')) watchers++;
     if (request.url().endsWith('/v1/command') && request.postDataJSON()?.editorRead) reads++;
   });
   await page.getByRole('tab', { name: '파일', exact: true }).click();
   await page.getByRole('button', { name, exact: true }).click();
   const editor = page.getByRole('textbox', { name: /watch-document\.txt$/ });
   await expect(editor).toHaveValue('original');
+  await expect.poll(() => watchers).toBe(1);
   const baselineWatchers = watchers,
     baselineReads = reads;
   // Observe the resulting directory refresh instead of sleeping for fsnotify.

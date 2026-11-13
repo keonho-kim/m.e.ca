@@ -4,7 +4,7 @@
 
 WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. tui에는 서버·내장 화면이 없다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
 
-구현된 화면과 상태 소유·디자인은 [WebUI 구조](webui-design.md)에 정리한다. 내장 UI는 동일 출처 fetch와 EventSource를 사용한다.
+구현된 화면과 상태 소유·디자인은 [WebUI 구조](webui-design.md)에 정리한다. 내장 UI는 동일 출처 fetch와 쿠키 인증 WebSocket 관찰 연결을 사용한다. 외부 클라이언트의 SSE·socket·RPC 계약과 구분한다.
 
 사용자가 내장 화면만 쓸 때는 API를 직접 호출할 필요가 없다. [서버 기동](server.md#내장-화면으로-시작하기) 후 토큰으로 접속하고 모델을 설정한다. 커스텀 클라이언트에서 팀은 `setSettings`의 `sessionId`·`team`, 스킬은 `listSkills`·`getSkill`·`readSkillFile`, 명시 호출은 `start.text`의 `#스킬명`으로 연동한다. 스킬을 별도로 활성화하는 API는 없다. 팀의 공개 응답·도구·승인은 스트리밍하며 팀 Thinking은 개인 이력으로 유지한다.
 
@@ -17,6 +17,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 시작·지원 기능·한도 확인 | `capabilities` |
 | 전역 모델 설정 | `state:{defaultModel:true}`, `providers`, `discoverModels`, `diagnoseModel`, `setModel:{defaultModel:true,...}` |
 | 대화 목록·새 대화 | `listSessions`, `selectSession:{create:true}` |
+| 저장 대화 검색 | `searchHistory:{sessionId,query,cursor}`; 저장 메시지·추론의 일치 위치 조회 |
 | 대화 열람 | `state:{sessionId}`, `history:{sessionId}`, `detail:{sessionId,...}` |
 | 대화 삭제 | `deleteSession:{sessionId}`. 활성 작업을 거절하며 대화 DB·해당 팀 내부 데이터만 삭제 |
 | 대화 자원 닫기 | `closeSession:{sessionId}`. 기록 삭제가 아님 |
@@ -64,6 +65,32 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 
 응답을 잃으면 `lookupRequest:{sessionId,key}`로 기존 작업부터 조회한다. 같은 논리 요청을 재시도할 때 key와 입력을 그대로 보낸다. 첨부를 다시 업로드한 새 ID는 새 입력이므로 새 key를 사용한다. 만료·해제된 업로드 ID라도 이미 접수된 동일 요청의 중복 확인은 가능하다. 모델 작업과 파일 효과를 새 key로 무조건 재실행하지 않는다.
 
+## 내장 브라우저 인증
+
+`--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료·취소 수명을 보관한다. 로그아웃·쿠키 교체·만료·서버 종료는 이미 접수한 쿠키 인증 SSE·파일 감시·UI WebSocket 관찰도 취소한다. 이미 접수한 엔진 작업과 별도 Bearer 인증 클라이언트의 수명은 유지한다.
+
+로컬 브라우저는 POST `/v1/ui/pick-folder`로 OS 폴더 선택창을 연다. 동일 출처 쿠키와 loopback Host·peer가 필요하다. 성공 시 `{"path":"절대 경로"}`, 취소 시 `{"path":""}`를 반환한다. 데스크톱 선택창을 쓸 수 없으면 503이며 폴더 탐색 모달을 연다. 동시에 하나만 실행하며 다른 요청은 409로 거절한다. 원격 접속은 폴더 탐색 모달에서 서버 폴더를 탐색한다. 선택 후 `addWorkspace`가 정책 검사·중복 제거·저장을 수행하며 정규화한 등록 항목의 `workspaces.selectedId`를 반환한다.
+
+선택창 실행 실패는 500, 2분 시간 초과는 504다. 서버는 원시 OS 오류나 경로를 기록하지 않고 `folder_selection_failed` 진단과 오류 코드를 남긴다. 브라우저는 실패 안내와 폴더 탐색 모달을 제공한다. 브라우저 연결 해제·로그아웃·서버 종료는 선택창 작업을 취소한다.
+
+GET `/v1/ui/session`은 `{"authenticated":true|false,"buildId":"..."}`를 반환하는 읽기 전용 접속 상태 조회다. 인증 전에도 Host·Origin 검사를 적용하며 보호된 명령을 실행하지 않는다. 첫 접속의 쿠키 복원과 로그인 후 쿠키 수신 확인에 사용한다. 쿠키 이름은 접속 주소별로 구분하므로 같은 호스트의 다른 포트에서 실행한 서버끼리 덮어쓰지 않는다. 서버 재시작·만료 뒤에는 다시 로그인한다.
+
+쿠키를 사용하는 POST·DELETE는 정확한 동일 Origin과 `X-Meca-UI: 1`이 필요하다. Host·Origin·TLS 검사도 적용한다. 로그인 토큰을 URL·localStorage·HTML에 넣지 않는다. 다른 클라이언트의 Bearer 인증은 계속 사용할 수 있다.
+
+업로드·해제와 기본 작업 제어/이미지 HTTP에 `X-Meca-Workspace`를 지정할 수 있다. 이미지·작업 전용 namespace URL은 경로의 작업공간을 사용한다. 파일 감시는 GET `/v1/files/events?workspace_id=...&path=...`이며 change 이벤트의 refresh가 true이면 해당 폴더 목록을 다시 읽는다. 감시는 재귀 트리 저장이나 파일 본문 스트림이 아니다.
+
+## 내장 UI 관찰과 복구
+
+`--ui`는 외부 `--protocol` 선택과 무관하게 `/v1/ui/events` WebSocket을 제공한다. 정확한 동일 Origin과 브라우저 쿠키가 필요하며 Bearer 첫 프레임 인증을 사용하는 외부 `/v1/socket`과 별도 경계다. 한 페이지가 작업·파일 관찰을 한 연결로 합쳐 HTTP/1 일반 요청 슬롯을 점유하지 않는다. 연결마다 구독은 최대 두 개다.
+
+클라이언트는 `{"id":"observer_1","url":"/v1/events?workspace_id=...&session_id=...&cursor=..."}` 또는 `/v1/files/events?workspace_id=...&path=...`를 보낸다. 같은 id는 이전 구독을 취소·합류한 뒤 교체하고 `{"id":"observer_1"}`은 해제한다. 서버 프레임은 `{"id":"observer_1","messages":[{"event":"event","payload":{...}}]}`다. payload는 native Notification 또는 FileChange이며 `snapshot`·`heartbeat`·`error`도 같은 봉투로 전달한다. error payload는 native Error다.
+
+프레임을 처리하거나 해제된 구독의 프레임을 버린 뒤 `{"id":"ack","ack":true}`로 확인한다. 서버는 미확인 프레임 네 개까지만 전송한다. 델타는 최대 128건·약 256KiB 단위로 묶고 제어 사건은 즉시 전달한다. 단일 native 메시지가 이 목표 크기를 넘을 수 있으며 원본 메시지를 자르지 않는다. 원본 저장 순서·승인·완료 계약은 바꾸지 않는다. 구독 종료·로그아웃·연결 종료는 읽기와 쓰기를 취소하고 합류한다.
+
+페이지 이탈·offline 때 관찰을 닫고 pageshow·online에서 인증 확인과 최신 snapshot으로 재동기화한다. 브라우저 관찰 재접속에는 1~5초 기준의 ±25% 분산을 사용한다. 모델 연결의 1·3·5초 재시도와 별개다. 일반 읽기는 15초, 인증 확인과 WebSocket handshake는 10초 제한이며 이미 접수한 명령을 다시 제출하지 않는다. Query의 네트워크 상태와 인증 상태를 혼용하지 않는다.
+
+JS 모듈 로딩 실패 화면은 실패한 모듈을 import하지 않는다. 서버 buildId와 현재 번들 ID를 비교해 갱신 여부를 안내하고 문서 재로드로 복구한다. 입력·미저장 파일이 있을 때만 이탈 경고를 등록한다. 미저장 파일은 메모리에 한 건만 유지하며 복구 화면에서 내려받거나 명시적으로 버릴 수 있다. 인증 만료는 API Key 입력·보호된 조회 캐시·관찰·진행 중 읽기를 정리하되 미전송 입력과 편집 초안은 유지한다.
+
 ## 상태와 스트림 복원
 
 이력 항목은 `message`·`event`·`completion` 중 하나만 읽는다. 공개 사건의 표시 본문은 `message`·`work`·`notice`·`tool`·`completion`으로 구분한다. 팀 발언과 작업 선언을 일반 시스템 문장으로 변환하지 않으며, 본문이 없는 제어 사건은 렌더링하지 않는다. `notice.code`는 고정된 번역 문구를 선택하고 `completion`은 상태와 숫자 측정만 표시한다. 내장 화면은 HTTP 응답·스트림·snapshot의 수신 경계에서 혼합 본문과 잘못된 측정값을 거절한다. 필드 정의는 [서버 계약](server.md#작업공간-자원과-파일-감시)과 `api/meca/v1`의 proto가 소유한다.
@@ -87,6 +114,8 @@ snapshot draft의 committed는 해당 generation의 출력이 이력에 저장�
 
 `activity`는 현재 도구·팀·진행·재시도의 제한된 복원 상태다. activityTruncated이면 해당 task의 state로 좁혀 조회한다. 확정된 사건 전체는 history/detail이 소유한다. `execution.statistics`는 완료 사용량과 현재 보고된 진행 표본을 합산하므로 같은 usage를 다시 더하지 않는다. 비용 미보고와 0을 구분한다.
 
+SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation·파일 참조 변경 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 외부 EventSource 클라이언트는 id를 보관하고 이 프레임을 본문으로 렌더링하지 않는다. 내장 UI는 매 재연결에서 새 snapshot을 읽는다.
+
 ## 파일·이미지 페이지
 
 파일 목록은 반환된 nextOffset과 more를 사용한다. 파일 미리보기 첫 요청은 offset 0이며 revision을 받는다. 다음 페이지에 같은 path와 revision을 전달한다. revision은 원문과 마스킹 기준을 함께 고정하는 불투명 토큰이다. 캐시는 원문이 바뀌어도 해당 revision의 불변 미리보기를 반환할 수 있다. 캐시가 없고 현재 파일이 달라졌거나 마스킹 기준이 바뀌었으면 conflict이며 첫 페이지부터 새로 읽는다. 파일 접근 정책은 캐시 적중에서도 다시 검사한다.
@@ -95,13 +124,13 @@ snapshot draft의 committed는 해당 generation의 출력이 이력에 저장�
 
 저장 첨부는 history의 이미지 index로 GET `/v1/workspaces/{workspaceId}/sessions/{sessionId}/images/{sequence}/{index}`를 호출한다. 응답은 실제 이미지 MIME의 바이너리이고 인증이 필요하다. 메타데이터는 픽셀을 포함하지 않으며 알려지지 않은 bytes 값은 0이다.
 
-## 승인과 운영 상태
+디렉터리 목록은 첫 응답의 `revision`을 후속 `directory` 요청에 전달한다. 정렬된 목록이 바뀌면 conflict이며 첫 페이지에서 다시 시작한다. 목록 캐시가 적중해도 현재 정책·경로와 각 표시 항목을 확인한다. 파일 감시의 첫 refresh 뒤 조회를 시작하면 최초 목록을 중복 조회하지 않는다.
 
-approval의 expiresAt으로 만료 안내를 표시한다. `approve`는 taskId와 approvalId에 바인딩되며 이미 결정·만료된 승인은 conflict다. `approval_closed.status`는 approved·denied·expired·canceled·failed 중 하나다. 승인 응답 성공을 파일 효과 완료로 해석하지 않는다.
+저장 이미지 GET에 `?thumbnail=1`을 붙이면 최대 변 256px의 PNG를 반환한다. 원본과 동일한 인증·작업공간·세션 읽기 경계를 사용하며 Cache-Control은 no-store다. 원본을 요청할 때는 query를 생략한다. capabilities의 `promptBytes`와 `commandBytes`는 단일 UTF-8 본문과 JSON 전송 한도이며 브라우저의 전체 초안 보관 예산과 다르다.
 
-큰 원문 읽기는 자원 부족 시 즉시 resource_exhausted를 반환한다. 프론트는 사용자가 보고 있는 읽기 하나를 우선하고, 화면 전환 시 이전 요청을 취소하며 무제한 재시도 큐를 만들지 않는다. 작업 제어 REST는 일반 HTTP 요청과 별도 입장을 사용한다. 내장 UI는 `/v1/workspaces/{workspaceId}/tasks/{taskId}/cancel`과 `/approvals/{approvalId}`를 사용한다.
+저장한 참조를 해제할 때는 fileSelections가 반환한 경로를 selected:false로 보낸다. 실제 파일이 사라졌더라도 저장된 선택은 제거할 수 있다.
 
-capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인 접수 기록 할당량이다. 90%부터 운영 로그에 용량 안내가 기록되며 한도에 도달하면 새 할당만 거절한다. 기존 작업 조회·중복 확인·완료 기록은 유지한다. 운영 백업은 세션·접수 DB·필요한 복구 자원을 함께 보존해야 하며 counter나 중복 방지 기록을 임의로 삭제하지 않는다.
+## 의미 단위 원문과 검색
 
 상세 원문 detail도 offset 0에서 받은 revision을 후속 페이지에 넣는다. 서버 재시작·source 변경·비밀값 마스킹 revision 변경은 conflict이며 기존 페이지를 폐기하고 다시 읽는다. 원문 페이지를 서로 다른 revision으로 합치지 않는다.
 
@@ -111,27 +140,17 @@ detail 응답은 UTF-8 원문 조각인 `text`와 바이트 기준 `offset`·`ne
 
 내장 UI는 필요한 view를 32KiB씩 읽고 툴 펼침·모달을 닫으면 페이지 질의를 취소하고 캐시를 해제한다. 후속 페이지가 conflict이면 첫 페이지에서 다시 읽어 revision을 갱신한다. API 자체의 페이지 최대값 64KiB와 원문 복원 예산은 유지한다.
 
-디렉터리 목록은 첫 응답의 `revision`을 후속 `directory` 요청에 전달한다. 정렬된 목록이 바뀌면 conflict이며 첫 페이지에서 다시 시작한다. 목록 캐시가 적중해도 현재 정책·경로와 각 표시 항목을 확인한다. 파일 감시의 첫 refresh 뒤 조회를 시작하면 최초 목록을 중복 조회하지 않는다.
+`detail.listFields:true`는 TOOL_REQUEST/TOOL_RESULT JSON의 최상위 필드명을 반환한다. `detail.field:"stdout"`은 해당 필드만 페이지로 읽는다. field 응답의 Content-Type은 text/plain이다. 문자열 값은 디코딩한 텍스트, 다른 값은 JSON 텍스트로 표현한다. 목록은 최대 64개·이름 합계 4096바이트이고 필드명은 512바이트 이하이다. 중복 키·마스킹으로 바뀐 키·표현 불가능한 목록은 빈 목록으로 반환하므로 전체 원문 페이지를 사용한다. field와 listFields는 함께 사용할 수 없으며 선택 필드도 revision의 일부다. UI는 큰 도구 결과에 이 계약을 사용하고 동시에 펼친 필드는 네 개까지만 유지한다.
 
-SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation·파일 참조 변경 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 브라우저 EventSource가 id를 보관하고, 앱은 이 프레임을 본문으로 렌더링하지 않는다.
+`searchHistory`는 저장된 메시지와 추론에서 부분 문자열을 찾는다. query는 UTF-8 1~256바이트이며 대소문자를 구분하지 않는다. 도구 원문은 검색 대상이 아니다. 요청당 최대 16개 이력·512KiB를 검사하고 후속 cursor를 반환하므로 결과가 비어 있어도 cursor가 있으면 계속할 수 있다. cursor는 작업공간·대화·검색어·원문 revision에 묶인다. 마스킹한 내용만 검색하며 별도 색인 DB나 원문 사본을 저장하지 않는다. 결과의 sequence·thinking·offset·revision을 detail로 넘겨 DOM에 없는 기록으로 이동한다.
 
-저장 이미지 GET에 `?thumbnail=1`을 붙이면 최대 변 256px의 PNG를 반환한다. 원본과 동일한 인증·작업공간·세션 읽기 경계를 사용하며 Cache-Control은 no-store다. 원본을 요청할 때는 query를 생략한다. capabilities의 `promptBytes`와 `commandBytes`는 단일 UTF-8 본문과 JSON 전송 한도이며 브라우저의 전체 초안 보관 예산과 다르다.
+## 승인과 운영 상태
 
-저장한 참조를 해제할 때는 fileSelections가 반환한 경로를 selected:false로 보낸다. 실제 파일이 사라졌더라도 저장된 선택은 제거할 수 있다.
+approval의 expiresAt으로 만료 안내를 표시한다. `approve`는 taskId와 approvalId에 바인딩되며 이미 결정·만료된 승인은 conflict다. `approval_closed.status`는 approved·denied·expired·canceled·failed 중 하나다. 승인 응답 성공을 파일 효과 완료로 해석하지 않는다.
 
-## 내장 브라우저 인증
+큰 원문 읽기는 자원 부족 시 즉시 resource_exhausted를 반환한다. 프론트는 사용자가 보고 있는 읽기 하나를 우선하고, 화면 전환 시 이전 요청을 취소하며 무제한 재시도 큐를 만들지 않는다. 작업 제어 REST는 일반 HTTP 요청과 별도 입장을 사용한다. 내장 UI는 `/v1/workspaces/{workspaceId}/tasks/{taskId}/cancel`과 `/approvals/{approvalId}`를 사용한다.
 
-`--ui`에서 GET `/ui/`는 정적 접속 화면이다. 서버 토큰을 `POST /v1/ui/login`의 Bearer 헤더로 한 번 전달하면 8시간 HttpOnly·SameSite=Strict 쿠키를 발급한다. TLS 연결에서는 Secure도 설정한다. 쿠키는 `/v1`에만 전송하며 서버는 최대 64개 세션의 해시·만료·취소 수명을 보관한다. 로그아웃·쿠키 교체·만료·서버 종료는 이미 접수한 쿠키 인증 SSE·파일 감시 등 HTTP 관찰도 취소한다. 이미 접수한 엔진 작업과 별도 Bearer 인증 클라이언트의 수명은 유지한다.
-
-로컬 브라우저는 POST `/v1/ui/pick-folder`로 OS 폴더 선택창을 연다. 동일 출처 쿠키와 loopback Host·peer가 필요하다. 성공 시 `{"path":"절대 경로"}`, 취소 시 `{"path":""}`를 반환한다. 데스크톱 선택창을 쓸 수 없으면 503이며 폴더 탐색 모달을 연다. 동시에 하나만 실행하며 다른 요청은 409로 거절한다. 원격 접속은 폴더 탐색 모달에서 서버 폴더를 탐색한다. 선택 후 `addWorkspace`가 정책 검사·중복 제거·저장을 수행하며 정규화한 등록 항목의 `workspaces.selectedId`를 반환한다.
-
-선택창 실행 실패는 500, 2분 시간 초과는 504다. 서버는 원시 OS 오류나 경로를 기록하지 않고 `folder_selection_failed` 진단과 오류 코드를 남긴다. 브라우저는 실패 안내와 폴더 탐색 모달을 제공한다. 브라우저 연결 해제·로그아웃·서버 종료는 선택창 작업을 취소한다.
-
-GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 전용 접속 상태 조회다. 인증 전에도 Host·Origin 검사를 적용하며 보호된 명령을 실행하지 않는다. 첫 접속의 쿠키 복원과 로그인 후 쿠키 수신 확인에 사용한다. 쿠키 이름은 접속 주소별로 구분하므로 같은 호스트의 다른 포트에서 실행한 서버끼리 덮어쓰지 않는다. 서버 재시작·만료 뒤에는 다시 로그인한다.
-
-쿠키를 사용하는 POST·DELETE는 정확한 동일 Origin과 `X-Meca-UI: 1`이 필요하다. Host·Origin·TLS 검사도 적용한다. 로그인 토큰을 URL·localStorage·HTML에 넣지 않는다. 다른 클라이언트의 Bearer 인증은 계속 사용할 수 있다.
-
-업로드·해제와 기본 작업 제어/이미지 HTTP에 `X-Meca-Workspace`를 지정할 수 있다. 이미지·작업 전용 namespace URL은 경로의 작업공간을 사용한다. 파일 감시는 GET `/v1/files/events?workspace_id=...&path=...`이며 change 이벤트의 refresh가 true이면 해당 폴더 목록을 다시 읽는다. 감시는 재귀 트리 저장이나 파일 본문 스트림이 아니다.
+capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인 접수 기록 할당량이다. 90%부터 운영 로그에 용량 안내가 기록되며 한도에 도달하면 새 할당만 거절한다. 기존 작업 조회·중복 확인·완료 기록은 유지한다. 운영 백업은 세션·접수 DB·필요한 복구 자원을 함께 보존해야 하며 counter나 중복 방지 기록을 임의로 삭제하지 않는다.
 
 ## 완료·예약·편집
 
@@ -142,3 +161,9 @@ GET `/v1/ui/session`은 `{"authenticated":true|false}`만 반환하는 읽기 �
 파일 감시 `FileChange`는 변경된 직접 자식 이름 `changedNames`와 전체 재확인이 필요한 `rescan`을 보낸다. 이것은 변경 힌트다. 편집 문서의 실제 충돌 여부는 `editorProbe {path,watchRevision}`로 확인한다. 읽기·저장 응답의 `watchRevision`을 전달하면 같은 파일 버전은 본문 없이 확인하며, 변경 시에만 내용 revision을 비교한다. 저장의 최종 충돌 방지는 실제 원본 바이트 검사로 수행한다.
 
 도구 이벤트의 `tool.executionId`는 엔진이 실행마다 정한 식별자이며 Provider의 `tool.callId`와 구분한다. 시작·완료·백그라운드 명령은 같은 실행 식별자로 연결한다. Provider가 다음 응답에 같은 call ID를 사용해도 서로 다른 실행이다. HTTP 응답은 해당 명령의 단일 결과와 요청·작업공간 식별자를 확인한 뒤 상태에 반영한다.
+
+## 첨부 미리보기와 정적 자산
+
+capabilities의 imagePixels(64Mi 픽셀)·previewDecodePixels(8Mi 픽셀)·thumbnailEdge(256px)와 imageTypes를 함께 사용한다. 브라우저는 헤더를 확인하고 작은 입력만 직렬로 축소·디코딩한다. 크거나 지원되지 않는 형식은 인증된 `POST /v1/ui/thumbnail`에 원본 바이너리를 보내 최대 256px PNG를 받는다. 이 요청은 DB에 첨부를 저장하지 않으며 서버 픽셀·메모리 입장 한도를 따른다. 애니메이션은 대표 프레임으로 표시하고 실제 모델 전송용 원본 File은 보존한다. 카드가 사라지면 표시용 URL을 해제한다.
+
+해시가 있는 `/ui/assets/`만 immutable 캐시를 사용한다. index·favicon·build 메타데이터는 재검증한다. 정적 UI는 object-src 차단·동일 출처 CORP·기능별 Permissions-Policy를 적용한다. Trusted Types는 보고 전용 정책이며 강제하지 않는다. 외부 보고 endpoint나 prompt·키·파일 내용을 포함한 보고를 전송하지 않는다. 쿠키/Origin·CSP와 외부 API의 Bearer 계약을 독립적으로 유지한다.

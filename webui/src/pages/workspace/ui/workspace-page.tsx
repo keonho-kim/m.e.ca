@@ -39,9 +39,12 @@ import { useFileReferences } from '@/pages/workspace/model/use-file-references';
 import { Composer, type ComposerHandle } from '@/pages/workspace/ui/composer/composer';
 import { Approval } from '@/pages/workspace/ui/inspection/approval';
 import { Sidebar } from '@/pages/workspace/ui/navigation/sidebar';
+import { WorkspaceHeading } from '@/pages/workspace/ui/navigation/workspace-heading';
 import { WorkspaceToolbar } from '@/pages/workspace/ui/navigation/workspace-toolbar';
 import { call } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
+import { discardRecoveryFile, setReloadWarning } from '@/shared/lib/reload';
+import { FeatureBoundary } from '@/shared/ui/recovery';
 
 const Settings = lazy(() => import('@/pages/workspace/ui/settings/settings'));
 const Chat = lazy(() =>
@@ -54,6 +57,20 @@ const FolderPicker = lazy(() => import('@/pages/workspace/ui/navigation/folder-p
 export default function WorkspaceShell() {
   const composerInput = useRef<ComposerHandle>(null);
   useEffect(observeConversationCache, []);
+  useEffect(() => {
+    const update = () => {
+      const state = useWorkspaceStore.getState();
+      setReloadWarning(
+        state.fileDirty ||
+          Object.values(state.inputs).some(
+            (input) => input.text.length > 0 || input.files.length > 0
+          ) ||
+          Object.values(state.queues).some((queue) => queue.length > 0)
+      );
+    };
+    update();
+    return useWorkspaceStore.subscribe(update);
+  }, []);
   const t = useLocale(),
     route = useNavigate();
   const params = useRouterState({ select: (state) => state.matches.at(-1)?.params }) as {
@@ -85,6 +102,17 @@ export default function WorkspaceShell() {
     picker = useWorkspaceStore((s) => s.picker);
   const notice = useServerSession((s) => s.notice);
   const connected = useServerSession((s) => s.connected);
+  useEffect(() => {
+    if (!connected)
+      useWorkspaceStore.getState().set({
+        settings: null,
+        picker: false,
+        reviewTarget: null,
+        drafts: {},
+        events: [],
+        statistics: null,
+      });
+  }, [connected]);
   const capabilities = useQuery({
     ...capabilitiesOptions,
     enabled: connected,
@@ -104,7 +132,8 @@ export default function WorkspaceShell() {
   const navigation = useBlocker({
     shouldBlockFn: () => fileDirty,
     withResolver: true,
-    enableBeforeUnload: fileDirty,
+    // Root owns document-exit warnings for files, composer drafts and queues.
+    enableBeforeUnload: false,
   });
   const navigate = useCallback(
     (next: Target) => {
@@ -185,6 +214,11 @@ export default function WorkspaceShell() {
             role="tabpanel"
             aria-labelledby={`meca-tab-${mode}`}
           >
+            <WorkspaceHeading
+              target={target}
+              mode={mode}
+              workspaces={workspaces.data?.items ?? []}
+            />
             {notice && (
               <Banner status="error" title={notice} isDismissable onDismiss={dismissNotice} />
             )}
@@ -199,33 +233,35 @@ export default function WorkspaceShell() {
                   composer={composer}
                   style={{ height: landing ? 'auto' : '100%', width: '100%', minWidth: 0 }}
                 >
-                  <Suspense
-                    fallback={
-                      <Center padding={6}>
-                        <Spinner label={t('loading')} />
-                      </Center>
-                    }
-                  >
-                    {target.session ? (
-                      <Chat target={target} scroller={scroller} onEmpty={setLanding} />
-                    ) : (
-                      <Center padding={8}>
-                        <EmptyState
-                          title={t('emptyTitle')}
-                          description={t('emptyHelp')}
-                          actions={
-                            <Button
-                              label={t('newChat')}
-                              variant="primary"
-                              isDisabled={!target.workspace}
-                              isLoading={creating}
-                              onClick={() => create(target.workspace)}
-                            />
-                          }
-                        />
-                      </Center>
-                    )}
-                  </Suspense>
+                  <FeatureBoundary key={`chat:${target.workspace}/${target.session}`}>
+                    <Suspense
+                      fallback={
+                        <Center padding={6}>
+                          <Spinner label={t('loading')} />
+                        </Center>
+                      }
+                    >
+                      {target.session ? (
+                        <Chat target={target} scroller={scroller} onEmpty={setLanding} />
+                      ) : (
+                        <Center padding={8}>
+                          <EmptyState
+                            title={t('emptyTitle')}
+                            description={t('emptyHelp')}
+                            actions={
+                              <Button
+                                label={t('newChat')}
+                                variant="primary"
+                                isDisabled={!target.workspace}
+                                isLoading={creating}
+                                onClick={() => create(target.workspace)}
+                              />
+                            }
+                          />
+                        </Center>
+                      )}
+                    </Suspense>
+                  </FeatureBoundary>
                 </ChatLayout>
               </Center>
             ) : (
@@ -234,22 +270,24 @@ export default function WorkspaceShell() {
                 padding={0}
                 content={
                   <LayoutContent padding={0}>
-                    <Suspense
-                      fallback={
-                        <Center padding={6}>
-                          <Spinner label={t('loading')} />
-                        </Center>
-                      }
-                    >
-                      {mode === 'files' ? (
-                        <Files target={target} />
-                      ) : (
-                        <Skills
-                          target={target}
-                          onInsert={(mention) => composerInput.current?.insertSkill(mention)}
-                        />
-                      )}
-                    </Suspense>
+                    <FeatureBoundary key={mode}>
+                      <Suspense
+                        fallback={
+                          <Center padding={6}>
+                            <Spinner label={t('loading')} />
+                          </Center>
+                        }
+                      >
+                        {mode === 'files' ? (
+                          <Files target={target} />
+                        ) : (
+                          <Skills
+                            target={target}
+                            onInsert={(mention) => composerInput.current?.insertSkill(mention)}
+                          />
+                        )}
+                      </Suspense>
+                    </FeatureBoundary>
                   </LayoutContent>
                 }
                 footer={composer}
@@ -259,8 +297,16 @@ export default function WorkspaceShell() {
         }
       />
       <Suspense fallback={null}>
-        {settings && <Settings />}
-        {picker && <FolderPicker navigate={navigate} />}
+        {settings && (
+          <FeatureBoundary>
+            <Settings />
+          </FeatureBoundary>
+        )}
+        {picker && (
+          <FeatureBoundary>
+            <FolderPicker navigate={navigate} />
+          </FeatureBoundary>
+        )}
       </Suspense>
       {approvalTarget.session && (
         <Approval
@@ -279,7 +325,10 @@ export default function WorkspaceShell() {
           onOpenChange={(open) => {
             if (!open) navigation.reset();
           }}
-          onAction={() => navigation.proceed()}
+          onAction={() => {
+            discardRecoveryFile();
+            navigation.proceed();
+          }}
         />
       )}
     </AppShell>

@@ -3,15 +3,21 @@
 // Usage: FileDocument owns display modes; its editor owns text and undo transactions.
 // Related: webui/src/pages/workspace/api/queries.ts, webui/src/pages/workspace/ui/files/file-document.tsx.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { reportError } from '@/entities/server-session';
+import { reportError, useServerSession } from '@/entities/server-session';
 import { capabilitiesOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { call, type EditorDocumentJson, queries } from '@/shared/api';
-import { describeError, failure } from '@/shared/lib/errors';
+import { describeError, failure, isCancelled } from '@/shared/lib/errors';
+import { discardRecoveryFile, keepRecoveryFile, recoveryFile } from '@/shared/lib/reload';
 import type { EditorHandle } from '@/shared/ui/code-editor';
 
-const markDirty = (fileDirty: boolean) => useWorkspaceStore.getState().set({ fileDirty });
+const markDirty = (fileDirty: boolean) => {
+  useWorkspaceStore.getState().set({ fileDirty });
+  if (!fileDirty) discardRecoveryFile();
+};
 export function useDocument(target: Target, path: string, externalRevision: number) {
+  const connected = useServerSession((state) => state.connected);
+  const connection = useRef(connected);
   const editor = useRef<EditorHandle>(null),
     mounted = useRef(false);
   const reading = useRef<AbortController | null>(null),
@@ -63,7 +69,7 @@ export function useDocument(target: Target, path: string, externalRevision: numb
       }
       setChanged(false);
     } catch (error) {
-      if (mounted.current && !controller.signal.aborted) {
+      if (mounted.current && !controller.signal.aborted && !isCancelled(error)) {
         setProblem(describeError(error));
         reportError(error);
       }
@@ -82,9 +88,18 @@ export function useDocument(target: Target, path: string, externalRevision: numb
       reading.current?.abort();
       saving.current?.abort();
       checking.current?.abort();
-      markDirty(false);
+      if (!recoveryFile()) markDirty(false);
     };
   }, [read]);
+  useEffect(() => {
+    const restored = connected && !connection.current;
+    connection.current = connected;
+    if (!connected) {
+      reading.current?.abort();
+      saving.current?.abort();
+      checking.current?.abort();
+    } else if (restored && !doc && !readonly) void read();
+  }, [connected, doc, readonly, read]);
   useEffect(() => {
     const original = baseline.current;
     if (externalRevision === observed.current || busy || !original) return;
@@ -157,6 +172,11 @@ export function useDocument(target: Target, path: string, externalRevision: numb
     setDoc((value) => (value ? { ...value, text: undefined } : value));
     setReady(true);
   }, []);
+  const onDraft = useCallback(
+    (text: string) =>
+      keepRecoveryFile(path, text, () => useWorkspaceStore.getState().set({ fileDirty: false })),
+    [path]
+  );
   return {
     editor,
     doc,
@@ -171,6 +191,7 @@ export function useDocument(target: Target, path: string, externalRevision: numb
     read,
     save,
     onReady,
+    onDraft,
     onDirty: markDirty,
   };
 }

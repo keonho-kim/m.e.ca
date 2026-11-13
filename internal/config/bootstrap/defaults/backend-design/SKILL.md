@@ -46,7 +46,7 @@ Use the [composition map](references/compositions.md) to derive collaborators, c
 | Encryption boundaries, key lifecycle and advanced privacy | [Security](references/security.md) |
 | Retrieval, scheduling, runtime/memory/I/O and measurement | [Performance](references/performance.md) |
 | Diagnostic contracts, observability, invariants and recovery | [Operations](references/operations.md) |
-| Source scope, versions and pattern provenance | [Research record](references/sources.md) |
+| Source scope, versions and pattern provenance | [Primary source index](references/sources.md) |
 
 ## Preserve ownership and guarantees
 

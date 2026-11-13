@@ -139,10 +139,8 @@ test('model save keeps the confirmation open on rejection and closes after a suc
 }) => {
   await page.getByRole('button', { name: '설정', exact: true }).click();
   const modal = page.getByRole('dialog');
-  await modal
-    .getByRole('textbox', { name: 'Base URL', exact: true })
-    .fill(`${fixture.provider}/v1`);
-  await modal.getByRole('combobox', { name: '모델 ID', exact: true }).click();
+  await modal.getByRole('textbox', { name: /^Base URL/ }).fill(`${fixture.provider}/v1`);
+  await modal.getByRole('combobox', { name: /^모델 ID/ }).click();
   await page.getByRole('option', { name: 'fixture-model', exact: true }).click();
   let reject = true;
   await page.route('**/v1/command', async (route) => {

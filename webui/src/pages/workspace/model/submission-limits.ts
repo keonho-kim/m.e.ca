@@ -1,41 +1,41 @@
-// Purpose: Reject oversized logical or JSON-escaped requests before staging attachments.
-// Pattern: Cached boundary preflight using server-owned capabilities.
-// Usage: Composer and submission apply these limits to immutable captured input.
-// Related: webui/src/pages/workspace/model/input-usage.ts, api/meca/v1/workspace.proto.
+// Purpose: Reject oversized logical or escaped requests before staging attachments without blocking input.
+// Pattern: Weak immutable preflight cache with cooperative, cancellable large-text scanning.
+// Usage: Composer and submission use asynchronous admission; boundary tests also exercise the pure path.
+// Related: webui/src/pages/workspace/model/input-usage.ts, webui/src/shared/lib/scheduling/index.ts.
 import { inputBytes } from '@/pages/workspace/model/input-usage';
 import type { Input } from '@/pages/workspace/model/types';
 import type { CapabilitiesJson } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
+import { yieldToInput } from '@/shared/lib/scheduling';
 
 const wireSizes = new WeakMap<Input, number>();
-function encodedTextBytes(input: Input) {
-  const known = wireSizes.get(input);
-  if (known !== undefined) return known;
+function* escapedChunks(text: string) {
   let extra = 0;
-  for (let i = 0; i < input.text.length; i++) {
-    const char = input.text.charCodeAt(i);
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
     if (char === 34 || char === 92) extra++;
-    else if (char < 32) extra += [8, 9, 10, 12, 13].includes(char) ? 1 : 5;
+    else if (char < 32)
+      extra += char === 8 || char === 9 || char === 10 || char === 12 || char === 13 ? 1 : 5;
     else if (char >= 0xd800 && char <= 0xdfff) {
-      if (
-        char <= 0xdbff &&
-        input.text.charCodeAt(i + 1) >= 0xdc00 &&
-        input.text.charCodeAt(i + 1) <= 0xdfff
-      )
+      if (char <= 0xdbff && text.charCodeAt(i + 1) >= 0xdc00 && text.charCodeAt(i + 1) <= 0xdfff)
         i++;
       else extra += 3;
     }
+    if ((i & 65535) === 65535) yield extra;
   }
-  const bytes = inputBytes(input) + extra;
-  wireSizes.set(input, bytes);
-  return bytes;
+  yield extra;
 }
-export function checkSubmissionLimits(input: Input, capabilities: CapabilitiesJson) {
+function textBudget(input: Input, capabilities: CapabilitiesJson) {
   const prompt = Number(capabilities.promptBytes ?? 0),
     command = Number(capabilities.commandBytes ?? 0);
-  if (prompt <= 0 || command <= 0) throw failure('invalid_response');
+  if (
+    !Number.isSafeInteger(prompt) ||
+    !Number.isSafeInteger(command) ||
+    prompt <= 0 ||
+    command <= 0
+  )
+    throw failure('invalid_response');
   if (inputBytes(input) > prompt) throw failure('input_limit');
-  // Only the small envelope is serialized here; the large text is measured without copying it.
   const envelope = JSON.stringify({
     start: {
       sessionId: 'session_'.padEnd(34, 'x'),
@@ -47,6 +47,45 @@ export function checkSubmissionLimits(input: Input, capabilities: CapabilitiesJs
     id: ''.padEnd(36, 'x'),
     workspaceId: 'workspace_'.padEnd(74, 'x'),
   });
-  if (encodedTextBytes(input) + new TextEncoder().encode(envelope).length > command)
-    throw failure('input_limit');
+  return command - new TextEncoder().encode(envelope).length;
+}
+export function checkSubmissionLimits(input: Input, capabilities: CapabilitiesJson) {
+  const limit = textBudget(input, capabilities),
+    base = inputBytes(input),
+    known = wireSizes.get(input);
+  if (known !== undefined) {
+    if (known > limit) throw failure('input_limit');
+    return;
+  }
+  let bytes = base;
+  for (const extra of escapedChunks(input.text)) {
+    bytes = base + extra;
+    if (bytes > limit) throw failure('input_limit');
+  }
+  wireSizes.set(input, bytes);
+}
+export async function admitSubmission(
+  input: Input,
+  capabilities: CapabilitiesJson,
+  signal?: AbortSignal
+) {
+  signal?.throwIfAborted();
+  if (input.text.length < 65536 || wireSizes.has(input)) {
+    checkSubmissionLimits(input, capabilities);
+    return;
+  }
+  const limit = textBudget(input, capabilities),
+    base = inputBytes(input);
+  let bytes = base,
+    deadline = performance.now() + 4;
+  for (const extra of escapedChunks(input.text)) {
+    bytes = base + extra;
+    if (bytes > limit) throw failure('input_limit');
+    if (performance.now() >= deadline) {
+      await yieldToInput(signal);
+      deadline = performance.now() + 4;
+    }
+  }
+  signal?.throwIfAborted();
+  wireSizes.set(input, bytes);
 }

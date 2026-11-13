@@ -1,8 +1,9 @@
 // Purpose: Verify that application silence does not close a healthy native SSE connection.
 // Pattern: Deterministic transport lifecycle regression test.
-// Usage: bun test src/pages/workspace/api/events.test.ts with a fake EventSource and clock.
+// Usage: bun test src/pages/workspace/api/events.test.ts with a fake WebSocket and clock.
 // Related: webui/src/pages/workspace/api/events.ts, internal/serverapi/eventstream/writer.go.
 import { expect, test } from 'bun:test';
+import { TestSocket as Connection, streamFetch } from '#test/event-stream';
 import { observe } from '@/pages/workspace/api/events';
 import { clearFollowups } from '@/pages/workspace/model/followups';
 import { waitSelections } from '@/pages/workspace/model/reference-queue';
@@ -10,10 +11,10 @@ import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { awaitSubmission, clearPending } from '@/pages/workspace/model/submission';
 import { queries } from '@/shared/api';
 
-test('an idle EventSource remains open when comment heartbeats produce no JavaScript message', async () => {
+test('an idle observer remains open without application updates', async () => {
   const original = {
     fetch: globalThis.fetch,
-    EventSource: globalThis.EventSource,
+    WebSocket: globalThis.WebSocket,
     setInterval: globalThis.setInterval,
     clearInterval: globalThis.clearInterval,
     now: Date.now,
@@ -21,32 +22,16 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
   };
   const ticks: Array<() => void> = [];
   let now = 1000;
-  let created!: (value: Connection) => void;
   const ready = new Promise<Connection>((resolve) => {
-    created = resolve;
+    Connection.ready = resolve;
   });
-  class Connection {
-    static CLOSED = 2;
-    readyState = 1;
-    closed = false;
-    onopen: (() => void) | null = null;
-    onerror: (() => void) | null = null;
-    constructor() {
-      created(this);
-    }
-    addEventListener() {}
-    close() {
-      this.closed = true;
-      this.readyState = 2;
-    }
-  }
+
   let cleanup: (() => void) | undefined;
   try {
     useWorkspaceStore.setState({ queues: {}, tasks: {} });
-    globalThis.EventSource = Connection as unknown as typeof EventSource;
-    globalThis.fetch = Object.assign(
-      async () => Response.json({ state: { cursor: 'epoch:0', workspaceId: 'w', tasks: [] } }),
-      { preconnect: original.fetch.preconnect }
+    globalThis.WebSocket = Connection as unknown as typeof WebSocket;
+    globalThis.fetch = streamFetch(async () =>
+      Response.json({ state: { cursor: 'epoch:0', workspaceId: 'w', tasks: [] } })
     );
     globalThis.setInterval = ((callback: () => void) => {
       ticks.push(callback);
@@ -56,7 +41,6 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
     Date.now = () => now;
     cleanup = observe({ workspace: 'w', session: 's' });
     const source = await ready;
-    source.onopen?.();
     now += 120000;
     for (const tick of ticks) tick();
     expect(source.closed).toBe(false);
@@ -68,7 +52,7 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
     cleanup?.();
     Date.now = original.now;
     globalThis.fetch = original.fetch;
-    globalThis.EventSource = original.EventSource;
+    globalThis.WebSocket = original.WebSocket;
     globalThis.setInterval = original.setInterval;
     globalThis.clearInterval = original.clearInterval;
     useWorkspaceStore.setState(original.state);
@@ -78,7 +62,7 @@ test('an idle EventSource remains open when comment heartbeats produce no JavaSc
 test('reconnecting reconciles a queued predecessor already made terminal by an interrupted snapshot', async () => {
   const original = {
     fetch: globalThis.fetch,
-    EventSource: globalThis.EventSource,
+    WebSocket: globalThis.WebSocket,
     state: useWorkspaceStore.getState(),
   };
   const target = { workspace: 'w', session: 'queued' };
@@ -87,14 +71,7 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     started = resolve;
   });
   const starts: string[] = [];
-  class Connection {
-    static CLOSED = 2;
-    readyState = 1;
-    addEventListener() {}
-    close() {
-      this.readyState = 2;
-    }
-  }
+
   let cleanup: (() => void) | undefined;
   try {
     queries.clear();
@@ -112,36 +89,33 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     useWorkspaceStore
       .getState()
       .enqueue(target, { text: 'captured', paths: [], files: [], revision: 0 });
-    globalThis.EventSource = Connection as unknown as typeof EventSource;
-    globalThis.fetch = Object.assign(
-      async (_url: string | URL | Request, options?: RequestInit) => {
-        const command = JSON.parse(String(options?.body));
-        if (command.state)
-          return Response.json({
-            state: {
-              workspaceId: 'w',
-              cursor: 'epoch:1',
-              task: { id: 'previous', sessionId: target.session, status: 'answered' },
-            },
-          });
-        if (command.taskStatus)
-          return Response.json({
-            task: {
-              id: 'previous',
-              sessionId: target.session,
-              status: 'answered',
-              outcome: 'completed',
-            },
-          });
-        if (command.start) {
-          starts.push(command.start.text);
-          started();
-          return Response.json({ task: { id: 'next', status: 'running' } });
-        }
-        throw new Error('Unexpected fixture command');
-      },
-      { preconnect: original.fetch.preconnect }
-    );
+    globalThis.WebSocket = Connection as unknown as typeof WebSocket;
+    globalThis.fetch = streamFetch(async (_url: string | URL | Request, options?: RequestInit) => {
+      const command = JSON.parse(String(options?.body));
+      if (command.state)
+        return Response.json({
+          state: {
+            workspaceId: 'w',
+            cursor: 'epoch:1',
+            task: { id: 'previous', sessionId: target.session, status: 'answered' },
+          },
+        });
+      if (command.taskStatus)
+        return Response.json({
+          task: {
+            id: 'previous',
+            sessionId: target.session,
+            status: 'answered',
+            outcome: 'completed',
+          },
+        });
+      if (command.start) {
+        starts.push(command.start.text);
+        started();
+        return Response.json({ task: { id: 'next', status: 'running' } });
+      }
+      throw new Error('Unexpected fixture command');
+    });
     cleanup = observe(target);
     await ready;
     await awaitSubmission(target);
@@ -154,7 +128,7 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
     clearPending();
     queries.clear();
     globalThis.fetch = original.fetch;
-    globalThis.EventSource = original.EventSource;
+    globalThis.WebSocket = original.WebSocket;
     useWorkspaceStore.setState(original.state);
   }
 });
@@ -162,38 +136,25 @@ test('reconnecting reconciles a queued predecessor already made terminal by an i
 test('an authoritative snapshot replaces pending deltas and releases its cached live body', async () => {
   const original = {
     fetch: globalThis.fetch,
-    EventSource: globalThis.EventSource,
+    WebSocket: globalThis.WebSocket,
     state: useWorkspaceStore.getState(),
   };
   const target = { workspace: 'w', session: 's' };
-  let opened!: (source: Connection) => void;
   const ready = new Promise<Connection>((resolve) => {
-    opened = resolve;
+    Connection.ready = resolve;
   });
-  class Connection extends EventTarget {
-    static CLOSED = 2;
-    readyState = 1;
-    constructor() {
-      super();
-      opened(this);
-    }
-    close() {
-      this.readyState = 2;
-    }
-  }
+
   let dispose: (() => void) | undefined;
   try {
     queries.clear();
     useWorkspaceStore.setState({ ...useWorkspaceStore.getInitialState(), selection: target });
-    globalThis.EventSource = Connection as unknown as typeof EventSource;
-    globalThis.fetch = Object.assign(
-      async (_url: string | URL | Request, options?: RequestInit) =>
-        Response.json(
-          JSON.parse(String(options?.body)).fileSelections
-            ? { fileSelections: { paths: [] } }
-            : { state: { cursor: 'epoch:1', workspaceId: 'w' } }
-        ),
-      { preconnect: original.fetch.preconnect }
+    globalThis.WebSocket = Connection as unknown as typeof WebSocket;
+    globalThis.fetch = streamFetch(async (_url: string | URL | Request, options?: RequestInit) =>
+      Response.json(
+        JSON.parse(String(options?.body)).fileSelections
+          ? { fileSelections: { paths: [] } }
+          : { state: { cursor: 'epoch:1', workspaceId: 'w' } }
+      )
     );
     dispose = observe(target);
     const source = await ready;
@@ -245,7 +206,7 @@ test('an authoritative snapshot replaces pending deltas and releases its cached 
     dispose?.();
     queries.clear();
     globalThis.fetch = original.fetch;
-    globalThis.EventSource = original.EventSource;
+    globalThis.WebSocket = original.WebSocket;
     useWorkspaceStore.setState(original.state);
   }
 });

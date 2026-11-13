@@ -12,8 +12,8 @@ import { Text } from '@astryxdesign/core/Text';
 import { PointerActivationConstraints } from '@dnd-kit/dom';
 import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { useMemo, useRef, useState } from 'react';
+import { type Range, useVirtualizer } from '@tanstack/react-virtual';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { selectReference } from '@/pages/workspace/model/file-references';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -24,6 +24,7 @@ import {
   EntryRow,
   ParentFolderButton,
 } from '@/pages/workspace/ui/files/entry-row';
+import { focusedRange } from '@/pages/workspace/ui/focused-range';
 import { call, type FileMutationJson, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 
@@ -64,6 +65,9 @@ export function DirectoryColumn({
   const selected = useWorkspaceStore((s) => s.inputs[targetKey(target)]?.paths);
   const [action, setAction] = useState<EntryAction | null>(null);
   const dragged = useRef<{ path: string; revision: string } | null>(null);
+  const [focused, setFocused] = useState(''),
+    [draggedName, setDraggedName] = useState(''),
+    [menuName, setMenuName] = useState('');
   const page = useInfiniteQuery({
     queryKey: ['directory', target.workspace, path],
     initialPageParam: { offset: 0, revision: '' },
@@ -82,11 +86,24 @@ export function DirectoryColumn({
   });
   const entries = useMemo(() => page.data?.pages.flatMap((v) => v.items ?? []) ?? [], [page.data]);
   const selectedPaths = useMemo(() => new Set(selected), [selected]);
+  const rangeExtractor = useCallback(
+    (range: Range) =>
+      focusedRange(
+        range,
+        ...[focused, draggedName, menuName].map((name) =>
+          entries.findIndex((entry) => entry.name === name)
+        )
+      ),
+    [focused, draggedName, menuName, entries]
+  );
+  const getItemKey = useCallback((index: number) => entries[index]?.name ?? index, [entries]);
   const virtual = useVirtualizer({
     count: entries.length,
     getScrollElement: () => ref.current,
     estimateSize: () => 36,
     overscan: 8,
+    rangeExtractor,
+    getItemKey,
   });
   const base = page.data?.pages[0]?.path?.replace(/\/$/, '') || path.replace(/\/$/, '');
   const join = (name: string) => `${base}/${name}`.replace(/^\.\//, '');
@@ -99,10 +116,14 @@ export function DirectoryColumn({
           typeof source?.path === 'string' && typeof source.revision === 'string'
             ? { path: source.path, revision: source.revision }
             : null;
+        setDraggedName(
+          entries.find((entry) => join(entry.name ?? '') === dragged.current?.path)?.name ?? ''
+        );
       }}
       onDragEnd={({ operation, canceled }) => {
         const source = dragged.current;
         dragged.current = null;
+        setDraggedName('');
         const folder = operation.target?.data.folder;
         if (canceled || busy || !source || typeof folder !== 'string' || folder === source.path)
           return;
@@ -139,7 +160,13 @@ export function DirectoryColumn({
           </VStack>
         }
         content={
-          <LayoutContent padding={0} ref={ref}>
+          <LayoutContent
+            padding={0}
+            ref={ref}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget) && !action) setFocused('');
+            }}
+          >
             {page.error && (
               <Button
                 type="button"
@@ -184,6 +211,10 @@ export function DirectoryColumn({
                   return (
                     <EntryRow
                       key={file}
+                      index={row.index}
+                      measure={virtual.measureElement}
+                      onFocus={() => setFocused(entry.name ?? '')}
+                      onMenuChange={(open) => setMenuName(open ? (entry.name ?? '') : '')}
                       entry={{
                         path: file,
                         name: entry.name,

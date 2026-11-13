@@ -1,6 +1,6 @@
 # Pattern and verification provenance
 
-Checked 2026-11-09. The compositions are original backend arrangements extending MECA's default development guidance. The repository sources are `internal/agent/prompt/defaults/development.md` and `team-development.md`; they are not runtime dependencies or files the target project must contain.
+The compositions are original backend arrangements extending MECA's default development guidance. The repository sources are `internal/agent/prompt/defaults/development.md` and `team-development.md`; they are not runtime dependencies or files the target project must contain.
 
 The shared principles are direct functions/modules first, actual consumer-owned boundaries, native language facilities, explicit effects/state/cleanup, and measured resource decisions. The skill preserves the prompt's specific exclusion of Strategy hierarchies. The general prompt owns pattern definitions; this bundle owns their practical backend compositions, conditional examples and cost analysis.
 

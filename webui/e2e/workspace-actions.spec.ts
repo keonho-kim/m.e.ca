@@ -131,19 +131,19 @@ test('mobile settings discover, diagnose and save the global model before openin
       async () =>
         (
           await dialog
-            .getByRole('textbox', { name: 'Base URL', exact: true })
+            .getByRole('textbox', { name: /^Base URL/ })
             .boundingBox()
             .then(required)
         ).width
     )
     .toBeGreaterThan(280);
   await expect(dialog.getByRole('button', { name: '모델 조회', exact: true })).toHaveCount(0);
-  await dialog.getByRole('textbox', { name: 'Base URL', exact: true }).fill(`${fixture.provider}/`);
+  await dialog.getByRole('textbox', { name: /^Base URL/ }).fill(`${fixture.provider}/`);
   const catalog = page.waitForResponse(
     (response) =>
       response.url().endsWith('/v1/command') && !!response.request().postDataJSON()?.discoverModels
   );
-  await dialog.getByRole('combobox', { name: '모델 ID', exact: true }).click();
+  await dialog.getByRole('combobox', { name: /^모델 ID/ }).click();
   expect((await (await catalog).json()).error).toBeUndefined();
   await page.getByRole('option', { name: 'fixture-model', exact: true }).click();
   for (const [label, key] of [

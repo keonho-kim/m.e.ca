@@ -5,7 +5,7 @@
 
 import { VStack } from '@astryxdesign/core/Layout';
 import { Selector } from '@astryxdesign/core/Selector';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { liveActivity } from '@/pages/workspace/model/chat-events';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
 import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation';
@@ -24,8 +24,8 @@ export function LiveOutput({
   inspect: InspectionActions;
 }) {
   const t = useLocale(),
-    drafts = useWorkspaceStore((s) => s.drafts),
-    events = useWorkspaceStore((s) => s.events);
+    visible = useVisibleOutput();
+  const { drafts, events } = visible;
   const [agent, setAgent] = useState('');
   const selected = useWorkspaceStore((s) => s.selection);
   const blocked = useChatPresentationBlocked();
@@ -62,4 +62,26 @@ export function LiveOutput({
       <LiveActivity target={target} events={activity} inspect={inspect} />
     </VStack>
   );
+}
+
+// Keep one immutable projection while covered. The canonical store continues
+// processing approvals, completion and queues; no copied transcript is retained.
+function useVisibleOutput() {
+  const blocked = useChatPresentationBlocked();
+  const [owner] = useState(() => {
+    const initial = useWorkspaceStore.getState();
+    let previous = { drafts: initial.drafts, events: initial.events };
+    return {
+      read: (paused: boolean) => {
+        const next = useWorkspaceStore.getState();
+        if (
+          (!paused || (!Object.keys(next.drafts).length && !next.events.length)) &&
+          (next.drafts !== previous.drafts || next.events !== previous.events)
+        )
+          previous = { drafts: next.drafts, events: next.events };
+        return previous;
+      },
+    };
+  });
+  return useSyncExternalStore(useWorkspaceStore.subscribe, () => owner.read(blocked));
 }

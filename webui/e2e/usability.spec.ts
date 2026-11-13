@@ -15,7 +15,7 @@ async function login(page: Page, entireLine = false) {
   await page.goto(`${fixture.url}/ui/`);
   const token = (await readFile(fixture.tokenFile, 'utf8')).trim();
   await page
-    .getByRole('textbox', { name: '서버 토큰', exact: true })
+    .getByRole('textbox', { name: /^서버 토큰/ })
     .fill(entireLine ? `Server token: ${token}` : token);
   await page.getByRole('button', { name: '연결', exact: true }).click();
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
@@ -136,8 +136,8 @@ test('global model candidates follow the server address before a conversation is
   });
   await page.getByRole('button', { name: '설정', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '설정', exact: true });
-  const address = dialog.getByRole('textbox', { name: 'Base URL', exact: true });
-  const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
+  const address = dialog.getByRole('textbox', { name: /^Base URL/ });
+  const model = dialog.getByRole('combobox', { name: /^모델 ID/ });
   await expect(address).toBeVisible();
   await expect(dialog.getByRole('button', { name: '모델 조회', exact: true })).toHaveCount(0);
   await address.fill('http://127.0.0.1:10001');
@@ -164,10 +164,8 @@ test('LM Studio supplies Ornith candidates on model focus and accepts the select
     const dialog = page.getByRole('dialog', { name: '설정', exact: true });
     await dialog.getByRole('combobox', { name: 'Provider', exact: true }).click();
     await page.getByRole('option', { name: 'LM Studio', exact: true }).click();
-    await dialog
-      .getByRole('textbox', { name: 'Base URL', exact: true })
-      .fill(process.env.MECA_LMSTUDIO_URL!);
-    const model = dialog.getByRole('combobox', { name: '모델 ID', exact: true });
+    await dialog.getByRole('textbox', { name: /^Base URL/ }).fill(process.env.MECA_LMSTUDIO_URL!);
+    const model = dialog.getByRole('combobox', { name: /^모델 ID/ });
     await model.click();
     await expect(page.getByRole('option', { name: 'ornith-1.5-35b-a3b', exact: true })).toBeVisible(
       {

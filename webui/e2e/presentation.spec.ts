@@ -26,7 +26,7 @@ test('closing a dirty model draft describes model settings rather than file chan
 }) => {
   await page.getByRole('button', { name: '설정', exact: true }).click();
   const settings = page.getByRole('dialog', { name: '설정', exact: true });
-  const address = settings.getByRole('textbox', { name: 'Base URL', exact: true });
+  const address = settings.getByRole('textbox', { name: /^Base URL/ });
   await address.fill(`${await address.inputValue()}/draft`);
   await settings.getByRole('button', { name: '닫기', exact: true }).click();
   await expect(

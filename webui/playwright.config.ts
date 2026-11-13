@@ -9,8 +9,21 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 60000,
   reporter: 'line',
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium', channel: 'chrome' } },
+    {
+      name: 'firefox',
+      use: { browserName: 'firefox' },
+      testMatch: /browser-(contracts|quality|features|policy)\.spec\.ts/,
+    },
+    {
+      name: 'webkit',
+      use: { browserName: 'webkit' },
+      testMatch: /browser-(contracts|quality|features|policy)\.spec\.ts/,
+    },
+  ],
   use: {
-    channel: 'chrome',
+    ignoreHTTPSErrors: process.env.MECA_UI_TLS === '1',
     locale: 'ko-KR',
     viewport: { width: 1440, height: 1000 },
     trace: 'off',

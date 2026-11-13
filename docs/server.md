@@ -51,9 +51,9 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 서버를 기동할 때마다 리스너 준비 완료 후 현재 토큰을 `Server token: …` 형식으로 stdout에 한 번 출력한다. `--ui` 유무와 전송 방식에 관계없이 적용하며 리스너 준비 전에 실패하면 표시하지 않는다. 토큰은 stderr의 JSON 운영 로그·API 이벤트·URL에는 포함하지 않는다. stdout에 쓸 수 없으면 서버를 종료하고 출력 오류를 반환한다.
 
-외부 HTTP·SSE·RPC 클라이언트는 `Authorization: Bearer <token>` 헤더를 사용한다. URL 토큰은 받지 않는다. `--ui`에서는 POST /v1/ui/login에 같은 토큰을 제출해 만료하는 HttpOnly·SameSite=Strict 쿠키를 발급한다. 쿠키를 쓰는 변경 요청에는 동일 Origin과 X-Meca-UI: 1이 필요하다. 내장 EventSource·저장 이미지도 같은 쿠키를 사용한다. [브라우저 인증 상세](webui-api.md#내장-브라우저-인증)를 따른다.
+외부 HTTP·SSE·RPC 클라이언트는 `Authorization: Bearer <token>` 헤더를 사용한다. URL 토큰은 받지 않는다. `--ui`에서는 POST /v1/ui/login에 같은 토큰을 제출해 만료하는 HttpOnly·SameSite=Strict 쿠키를 발급한다. 쿠키를 쓰는 변경 요청에는 동일 Origin과 X-Meca-UI: 1이 필요하다. 내장 UI 관찰 WebSocket·저장 이미지도 같은 쿠키를 사용한다. [브라우저 인증 상세](webui-api.md#내장-브라우저-인증)를 따른다.
 
-WebSocket은 브라우저 API의 헤더 제약 때문에 연결 후 첫 텍스트 프레임으로 인증한다.
+외부 `/v1/socket` WebSocket은 연결 후 첫 텍스트 프레임으로 인증한다. 내장 UI의 `/v1/ui/events`는 동일 출처 쿠키로 인증하며 [브라우저 관찰 계약](webui-api.md#내장-ui-관찰과-복구)을 따른다.
 
 ```json
 {"authenticate":"<token>"}
@@ -103,6 +103,7 @@ Loopback 외 바인딩은 인증서와 개인키가 모두 필요하다. TLS는 
 | `closeSession` | `sessionId` → 해당 세션 자원 해제. 작업 중에는 거부하고 이미 닫힌 자원은 성공 처리. DB는 삭제하지 않음 |
 | `state` | 선택적 `sessionId`, `taskId`, `afterTask`, `limit` → 상태 페이지. 기본 32건·최대 100건. `defaultModel:true`는 전역 기본 모델만 읽음 |
 | `history` | `before`, `limit`, 선택적 `sessionId` → 현재 프로젝트의 지정 대화 시간순 페이지. 메모리에 없는 대화는 읽기 전용으로 열며 생략 시 native 선택 |
+| `searchHistory` | `sessionId`, UTF-8 1~256바이트 `query`, 선택적 `cursor` → 저장 메시지·추론의 일치 위치와 후속 커서. 마스킹 후 검색하며 도구 원문은 제외 |
 | `detail` | 원문 source 하나와 `offset`, `limit`, `revision`, 선택적 `sessionId`·`view` → UTF-8 JSON 또는 텍스트 조각 `text`와 바이트 기준 nextOffset. 후속 페이지는 revision 필수 |
 | `setModel` | `sessionId` 또는 `defaultModel:true`, `provider`, `endpoint`, `model`, 선택적 `credential`, `thinking`, `reasoningEffort` → 상태. `remember`는 대화별 모델 저장에서 사용 |
 | `setSettings` | `permission`, `team`, `language` 중 하나 → 상태. team은 `sessionId` 필수, language는 전역 UI 언어 |
@@ -197,9 +198,11 @@ grpc 모드는 [Connect-Go](https://connectrpc.com/docs/go/grpc-compatibility/) 
 
 ## 스트리밍과 heartbeat
 
-모든 서버 스트림은 마지막 애플리케이션 출력 후 5초가 지나면 heartbeat를 보내고, 출력이 재개될 때까지 1초마다 반복한다. 데이터가 나오면 다시 5초를 기다린다. SSE는 `: heartbeat` 주석과 빈 줄을 flush한다. WebSocket·gRPC·gRPC-Web·Connect는 `event.kind="heartbeat"`인 Notification을 보낸다. heartbeat에는 cursor가 없으며 이력·재생 로그·사용량에 넣지 않는다. 클라이언트는 heartbeat로 마지막 커서를 덮어쓰지 않는다. 구독 취소·완료·쓰기 실패 시 해당 관찰자의 대기와 타이머도 끝난다.
+작업 이벤트 스트림은 마지막 애플리케이션 출력 후 5초가 지나면 heartbeat를 보내고, 출력이 재개될 때까지 1초마다 반복한다. 데이터가 나오면 다시 5초를 기다린다. SSE는 `: heartbeat` 주석과 빈 줄을 flush한다. 외부 WebSocket·gRPC·gRPC-Web·Connect의 작업 이벤트 구독은 `event.kind="heartbeat"`인 Notification을 보낸다. heartbeat에는 cursor가 없으며 이력·재생 로그·사용량에 넣지 않는다. 클라이언트는 heartbeat로 마지막 커서를 덮어쓰지 않는다. 구독 취소·완료·쓰기 실패 시 해당 관찰자의 대기와 타이머도 끝난다.
 
 SSE 작성기는 이미 도착한 연속 델타의 flush를 묶는다. 첫 애플리케이션 출력과 첫 델타·제어 이벤트·완료·heartbeat는 즉시 전송하고, 나머지는 받은 묶음의 끝이나 누적 약 64KiB에서 flush한다. 별도의 대기 타이머·전송 큐를 만들지 않으며 이벤트 순서·커서·sequence·본문은 유지한다.
+
+내장 UI 관찰은 작업 구독의 heartbeat를 `event:"heartbeat", payload:{}` 메시지로 전송하고 같은 WebSocket에서 파일 알림도 전달한다. 파일 감시의 `FileChange`에는 heartbeat 필드가 없으며 변경·재조회 알림만 제공한다.
 
 ## 이벤트·재접속·수명
 
@@ -264,12 +267,12 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 
 재조회용 정제 명령 로그·결과는 실행기당 256MiB·256건까지 보관한다. 상한에 도달하면 원본을 DB에 확정한 오래된 결과부터 회수한다. 미확정 결과는 지우지 않으며 여유가 없으면 오류를 반환한다. 원자적 교체에는 현재 쓰는 한 파일 크기만큼 추가 공간을 사용할 수 있다. 활성 원문 캡처는 별도 스트림별 수집 한도를 따르며 새 블록으로 커질 때에도 여유 공간 1GiB를 검사한다. 임시 파일의 만료는 DB 원본과 export를 삭제하지 않는다.
 
-실행 이벤트는 네트워크에 직접 쓰지 않는다. 느린 관찰자는 독립적으로 읽고 쓰기 실패는 해당 연결만 끝낸다. 연결이 끊겨도 수락한 요청은 서버 프로세스의 context로 계속된다. 명시적인 cancel이나 정상 서버 종료만 작업을 취소한다. 종료는 새 요청을 막고 모델·도구·승인 대기를 취소·합류한 뒤 executor·client·DB·잠금을 해제한다. 강제 종료 후에는 기존 복구 규칙을 사용하며 불확실한 도구 효과를 재생하지 않는다.
+실행 이벤트는 네트워크에 직접 쓰지 않는다. 느린 관찰자는 독립적으로 읽고 쓰기 실패는 해당 연결만 끝낸다. 연결이 끊겨도 수락한 요청은 서버 프로세스의 context로 계속된다. 명시적인 cancel이나 정상 서버 종료만 작업을 취소한다. 종료는 새 요청을 막고 모델·도구·승인 대기를 취소·합류한 뒤 executor·client·DB·잠금을 해제한다. 강제 종료 후에는 저장된 실행 상태를 확인하며 불확실한 도구 효과를 재생하지 않는다.
 
 
 서버–UI 조회는 실행 동시성과 별도 예산으로 제어한다. 원문 작업은 8단위의 가중 예산을 사용하며 작은 history·이미지 메타데이터는 1, 편집·미리보기·detail은 2, 이미지 복원·축소는 5를 사용한다. 이미지 메타데이터 예약은 픽셀 작업을 기다리기 전에 반환해 예약을 보유한 채 성장하는 교착을 피한다. 픽셀 디코딩과 원본 복원 바이트 예산도 계속 적용한다. HTTP JSON 응답은 최대 32MiB의 인코딩 예약을 전송 완료까지 보유하며 큰 응답만 협상된 gzip으로 압축한다. 메모리 부족 응답도 상관관계 ID를 제한하며 실행·저장을 재생하지 않는다.
 
-디렉터리는 inode·변경 시각에 묶인 정렬 스냅샷을 최대 8개·4MiB로 공유하고, 후속 페이지는 revision을 검증한다. 대화 목록은 DB/WAL 변경 상태를 확인하는 4MiB·4,096행 메타데이터 인덱스를 사용한다. 정렬 커서는 최대 2분·128개·합계 8MiB이며 오래된 참조를 먼저 회수한다. 만료·회수된 커서는 목록 처음부터 다시 읽는다. native 접수 DB는 지원하는 현재 schema에서 `(session,id)` 파생 인덱스를 유지하며 세션 필터와 전체 목록 SQL을 분리한다.
+디렉터리·대화 목록은 제한된 페이지와 revision·cursor를 사용한다. 만료되거나 변경된 목록은 처음부터 다시 읽는다. 원문 조회는 현재 접근 정책과 소유 대화의 수명 안에서 수행하며 자원 부족 시 명시적인 오류를 반환한다.
 
 인증된 저장 이미지의 `?thumbnail=1` 응답은 최대 변 256px의 PNG다. JPEG·PNG·WebP의 EXIF 방향을 반영하고 원본은 바꾸지 않는다. 파생 바이트는 최대 32개·4MiB로 보관하며 같은 원본의 동시 변환을 합친다. 캐시 적중에서도 현재 원본 메타데이터와 DB/WAL 상태, 작업공간·세션 접근을 확인하고 읽기 수명을 전송까지 대여한다. 응답은 원본과 같이 no-store다.
 
@@ -277,7 +280,7 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 
 ## 개발과 생성
 
-요청 DB는 **user_version 4**의 native 전용 형식이다. `requests` 행은 작업 ID·입력 digest·세션·상태·오류만 저장한다. native text·첨부 ID 순서·참조 경로를 접수 키에 바인딩한다. 같은 요청 재시도는 임시 첨부가 만료·해제됐거나 세션이 메모리에서 정리됐어도 기존 작업을 반환한다. 새 업로드 ID나 입력을 같은 키에 섞으면 conflict다. 결과 원문과 이미지 본문은 세션 DB가 소유한다. 지원하지 않는 user_version은 원본을 보존하고 열기를 거절하며 자동 변환·삭제·초기화하지 않는다. 모델 설정·API Key·세션 DB는 각 저장 형식을 따른다.
+접수 기록은 요청 키·입력 식별·세션·작업 상태를 보존한다. 같은 키와 입력은 원래 작업을 조회하며 다른 입력으로 재사용하면 conflict다. 지원하지 않는 저장 형식은 원본을 보존하고 거절한다. 기록을 삭제해 중복 방지를 우회하지 않는다.
 
 `internal/commands/server`는 자체 작업·선택/실행 세션·승인·이벤트 보관·원본 읽기 대여 수명, `internal/serverapi`는 인증·전송·공개 투영, `internal/serverapi/eventstream`은 heartbeat와 SSE 작성기, `internal/serverapi/detail`은 원본 마스킹·페이지 캐시, `internal/storage/serverrequests`는 native 접수·종료 기록을 소유한다. 실행·저장·표현의 책임을 합치지 않는다.
 
@@ -329,3 +332,10 @@ GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변�
 `request_finished.historyThrough`와 `Task.historyThrough`는 확정된 표시 이력의 경계다. `HistoryPage.through`가 그 위치에 도달하면 완료 출력으로 전환할 수 있다. `historySequence`는 공개 타임라인의 저장 위치이며 `originalReference`는 원본 사건의 소유 대화와 순서를 식별한다. 네트워크 replay의 cursor와 저장 이력 위치를 혼용하지 않는다.
 
 파일 작업 접수 기록은 작업공간별 private DB에 저장한다. 참조·파일 본문을 이중 저장하지 않고 경로와 공개 결과만 보관한다. 기록은 최대 100,000개·본문과 처리 중 예약분 합계 32MiB, DB 파일은 최대 64MiB다. 처리 전에 결과 공간을 예약하며 용량이 부족하면 파일 효과를 시작하지 않는다. 진행 중 기록이 서버 재시작 뒤 남으면 실제 효과를 추측하거나 재실행하지 않고 불확실 상태로 반환한다.
+
+
+## 브라우저 전용 관찰·읽기 계약
+
+`--ui`에서는 외부 프로토콜과 별개로 쿠키 인증 `/v1/ui/events` WebSocket과 임시 이미지 축소 `/v1/ui/thumbnail`을 제공한다. 관찰 연결은 작업·파일 두 구독을 합치고 네 프레임 ACK window로 느린 브라우저의 수신 적재를 제한한다. UI 배치는 native 이벤트 순서를 보존하며 실행 이벤트 저장과 독립된 전송 경계다. 인증 세션 종료는 관찰을 취소하고 이미 접수한 작업은 계속 실행한다.
+
+capabilities는 imagePixels·previewDecodePixels·thumbnailEdge로 이미지 정책을, `ui/session`은 buildId로 배포 자산 identity를 알린다. `detail.field/listFields`는 도구 JSON의 의미 단위 페이지, `searchHistory`는 저장된 메시지·추론의 마스킹된 부분 문자열 검색을 제공한다. 검색은 요청당 이력 16건·512KiB와 query에 묶인 커서를 사용하며 새로운 색인 저장소를 만들지 않는다. 구체적인 봉투·후속 페이지·복구·보안 계약은 [WebUI 연결 가이드](webui-api.md#내장-ui-관찰과-복구)를 따른다.

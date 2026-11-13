@@ -8,7 +8,7 @@ tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙
 
 ## 이벤트
 
-native SSE·WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 커서는 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
+native SSE·외부 WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 내장 UI WebSocket은 같은 공개 사건을 구독별 봉투와 제한된 배치로 전달하며 ACK·연결 상태를 실행 이력에 저장하지 않는다. 커서는 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
 
 실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 발생 시각이 없는 기록은 조회 시각으로 대체하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
 
@@ -30,7 +30,7 @@ skill_loaded는 본문을 읽었다는 사실을 제공한다. 명시 호출은 
 
 저장 할당이 한도의 90% 이상이면 storage_capacity_low에 count·limit과 near_limit/full 상태를 기록한다. 이 경고는 기존 기록이나 백업의 자동 삭제를 뜻하지 않는다. 운영 로그의 원문·비밀값 제외와 집계 정책을 동일하게 적용한다.
 
-인증 헤더·API Key·요청/응답·Thinking·셸 출력·스킬 본문은 운영 로그에 넣지 않는다. 허용된 메타데이터만 인코딩하고 현재 요청의 자격 증명 마스킹을 적용한 뒤 필드 길이를 제한한다. 본문 원본과 상세 도구 결과는 기존 세션 저장소가 소유한다.
+인증 헤더·API Key·요청/응답·Thinking·셸 출력·스킬 본문은 운영 로그에 넣지 않는다. 허용된 메타데이터만 인코딩하고 현재 요청의 자격 증명 마스킹을 적용한 뒤 필드 길이를 제한한다. 본문 원본과 상세 도구 결과는 세션 저장소가 소유한다.
 
 ## 중앙 소유권과 오류
 

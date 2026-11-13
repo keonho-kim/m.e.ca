@@ -1,6 +1,6 @@
 # Performance primary sources
 
-Checked 2026-11-09. Repository/default-branch documentation moves; record an exact package/extension revision when implementing. Published benchmark results belong to their workloads. These sources support the [performance map](../performance.md).
+Repository/default-branch documentation moves; record an exact package/extension revision when implementing. Published benchmark results belong to their workloads. These sources support the [performance map](../performance.md).
 
 ## Retrieval and representations
 

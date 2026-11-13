@@ -13,6 +13,7 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/server"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/media/thumbnail"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
@@ -33,7 +34,7 @@ func (a *API) workspaceCall(ctx context.Context, cmd *v1.Command) (*v1.Reply, er
 			return nil, err
 		}
 		concurrency, language := a.Service.ServerSettings()
-		reply.Result = &v1.Reply_Capabilities{Capabilities: &v1.Capabilities{ApiVersion: "meca.v1", Features: []string{"sessions", "tasks", "approvals", "steering", "team-streams", "cursor-replay", "state-pages", "draft-pages", "model-discovery", "workspace-files", "history-images", "skills", "language", "command-activity", "resident-memory", "workspaces", "delete-session", "editor", "file-watch", "browser-commands", "model-diagnostics", "request-lookup", "skill-completion", "tool-execution-identity", "completion-measurements", "editor-probe", "file-mutation-receipts", "workspace-reference-events"}, ImageTypes: []string{"image/png", "image/jpeg", "image/webp", "image/gif", "image/tiff", "image/bmp"}, ImageBytes: media.MaxBytes, InputImageBytes: media.MaxInputBytes, InputImages: media.MaxImages, Concurrency: int64(concurrency), StatePageSize: 100, DetailPageBytes: 64 << 10, Language: language, RequestRecords: used, RequestCapacity: maximum, EditorBytes: fileview.EditorBytes, PromptBytes: server.MaxPromptBytes, CommandBytes: maxRequestBytes}}
+		reply.Result = &v1.Reply_Capabilities{Capabilities: &v1.Capabilities{ApiVersion: "meca.v1", Features: []string{"sessions", "tasks", "approvals", "steering", "team-streams", "cursor-replay", "state-pages", "draft-pages", "model-discovery", "workspace-files", "history-images", "skills", "language", "command-activity", "resident-memory", "workspaces", "delete-session", "editor", "file-watch", "browser-commands", "model-diagnostics", "request-lookup", "skill-completion", "tool-execution-identity", "completion-measurements", "editor-probe", "file-mutation-receipts", "workspace-reference-events", "history-search", "detail-fields"}, ImageTypes: []string{"image/png", "image/jpeg", "image/webp", "image/gif", "image/tiff", "image/bmp"}, ImagePixels: media.MaxPixels, PreviewDecodePixels: 8 << 20, ThumbnailEdge: thumbnail.Edge, ImageBytes: media.MaxBytes, InputImageBytes: media.MaxInputBytes, InputImages: media.MaxImages, Concurrency: int64(concurrency), StatePageSize: 100, DetailPageBytes: 64 << 10, Language: language, RequestRecords: used, RequestCapacity: maximum, EditorBytes: fileview.EditorBytes, PromptBytes: server.MaxPromptBytes, CommandBytes: maxRequestBytes}}
 	case *v1.Command_Resources:
 		value := &v1.Resources{}
 		rss, err := processmemory.ResidentBytes()

@@ -59,11 +59,13 @@ message Command {
     EditorProbe editor_probe = 52;
     RequestLookup lookup_mutation = 53;
     SessionTarget session_usage = 51;
+    HistorySearch search_history = 54;
   }
 }
 message SelectSession { string session_id = 1; bool create = 2; }
 message SessionListRequest { string cursor = 1; int32 limit = 2; }
 message HistoryRequest { int64 before = 1; int32 limit = 2; string session_id = 3; }
+message HistorySearch { string session_id = 1; string query = 2; string cursor = 3; }
 message EventReference { string session_id = 1; int64 sequence = 2; }
 message DetailRequest {
   enum View {
@@ -83,6 +85,8 @@ message DetailRequest {
   int32 limit = 5;
   string session_id = 6;
   string revision = 7;
+  string field = 9;
+  bool list_fields = 10;
 }
 message ModelRequest {
   string provider = 1;

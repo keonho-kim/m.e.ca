@@ -1,6 +1,6 @@
 # Security primary sources
 
-Checked 2026-11-09. Inspect publication status, errata, library versions and actual cryptographic-module validation before adopting a policy. These pointers support the [security map](../security.md); no algorithms, sample secrets or implementation code are copied into the bundle.
+Inspect publication status, errata, library versions and actual cryptographic-module validation before adopting a policy. These pointers support the [security map](../security.md); no algorithms, sample secrets or implementation code are copied into the bundle.
 
 ## Primitives and key custody
 

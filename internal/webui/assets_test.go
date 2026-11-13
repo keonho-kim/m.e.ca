@@ -73,3 +73,32 @@ func TestEmbeddedAssetDelivery(t *testing.T) {
 		t.Fatal("HEAD body")
 	}
 }
+
+func TestMutableAssetRevalidatesAndUIHeadersRestrictUnusedCapabilities(t *testing.T) {
+	var compressed bytes.Buffer
+	writer := gzip.NewWriter(&compressed)
+	_, _ = writer.Write([]byte("icon"))
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	manifest, _ := json.Marshal(map[string]Asset{
+		"index.html":         {File: "body.gz", Bytes: 4},
+		"favicon.svg":        {File: "body.gz", Bytes: 4},
+		"assets/app-hash.js": {File: "body.gz", Bytes: 4},
+	})
+	handler, err := newHandler(fstest.MapFS{"manifest.json": {Data: manifest}, "body.gz": {Data: compressed.Bytes()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"favicon.svg", "assets/app-hash.js"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest("GET", "/ui/"+path, nil))
+		immutable := strings.Contains(response.Header().Get("Cache-Control"), "immutable")
+		if immutable != strings.HasPrefix(path, "assets/") {
+			t.Fatal("mutable asset cached forever", path)
+		}
+		if !strings.Contains(response.Header().Get("Content-Security-Policy"), "object-src 'none'") || response.Header().Get("Permissions-Policy") == "" {
+			t.Fatal("browser policy missing")
+		}
+	}
+}

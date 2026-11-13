@@ -4,6 +4,7 @@
 // Related: webui/src/pages/workspace/model/store.ts, webui/src/pages/workspace/api/cache-policy.ts.
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { observeConversationCache } from '@/pages/workspace/api/cache-policy';
+import { inputBytes } from '@/pages/workspace/model/input-usage';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { queries } from '@/shared/api';
@@ -14,6 +15,31 @@ beforeEach(() => {
 });
 afterEach(() => queries.clear());
 const target = { workspace: 'alpha', session: 'one' };
+
+test('native edit accounting rejects stale revisions and preserves exact Unicode bytes', () => {
+  const state = useWorkspaceStore.getState();
+  state.patchInput(target, { text: 'x'.repeat(80000) });
+  const previous = useWorkspaceStore.getState().inputs['alpha/one']!;
+  state.patchInput(
+    target,
+    { text: previous.text },
+    { start: 40000, end: 40001, inserted: 'x', revision: previous.revision }
+  );
+  expect(useWorkspaceStore.getState().inputs['alpha/one']).toBe(previous);
+  state.patchInput(
+    target,
+    { text: `${previous.text.slice(0, 40000)}한${previous.text.slice(40001)}` },
+    { start: 40000, end: 40001, inserted: '한', revision: previous.revision }
+  );
+  const changed = useWorkspaceStore.getState().inputs['alpha/one']!;
+  expect(inputBytes(changed)).toBe(80002);
+  state.patchInput(
+    target,
+    { text: '😀' },
+    { start: 0, end: 80000, inserted: '😀', revision: previous.revision }
+  );
+  expect(inputBytes(useWorkspaceStore.getState().inputs['alpha/one']!)).toBe(4);
+});
 
 test('repeated view values notify subscribers only when a value changes', () => {
   let notifications = 0;

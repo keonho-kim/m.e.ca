@@ -18,6 +18,7 @@ import { FileDocument } from '@/pages/workspace/ui/files/file-document';
 import { type FileMutationJson, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { ApiError } from '@/shared/lib/errors';
+import { discardRecoveryFile } from '@/shared/lib/reload';
 export default function Files({ target }: { target: Target }) {
   const t = useLocale(),
     folder = useWorkspaceStore((s) => s.folder);
@@ -147,20 +148,23 @@ export default function Files({ target }: { target: Target }) {
           ) : undefined
         }
       />
-      <AlertDialog
-        isOpen={!!pending}
-        title={t('dirty')}
-        description={t('unsavedFile')}
-        onOpenChange={(open) => {
-          if (!open) setPending(null);
-        }}
-        cancelLabel={t('keepEditing')}
-        actionLabel={t('discard')}
-        onAction={() => {
-          pending?.run();
-          setPending(null);
-        }}
-      />
+      {pending && (
+        <AlertDialog
+          isOpen={!!pending}
+          title={t('dirty')}
+          description={t('unsavedFile')}
+          onOpenChange={(open) => {
+            if (!open) setPending(null);
+          }}
+          cancelLabel={t('keepEditing')}
+          actionLabel={t('discard')}
+          onAction={() => {
+            discardRecoveryFile();
+            pending.run();
+            setPending(null);
+          }}
+        />
+      )}
     </>
   );
 }

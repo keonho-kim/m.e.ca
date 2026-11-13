@@ -12,6 +12,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"os"
 	"testing"
 )
 
@@ -65,5 +66,20 @@ func TestRenderPreservesCameraOrientation(t *testing.T) {
 	config, _, err := image.DecodeConfig(bytes.NewReader(body))
 	if err != nil || config.Width != 2 || config.Height != 4 {
 		t.Fatal("camera orientation lost", config, err)
+	}
+}
+
+func TestRenderAnimatedWebP(t *testing.T) {
+	body, err := os.ReadFile("../imagefile/testdata/animated.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := Render(t.Context(), media.Image{Data: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, format, err := image.DecodeConfig(bytes.NewReader(rendered))
+	if err != nil || format != "png" || config.Width != 8 || config.Height != 8 {
+		t.Fatal(config, format, err)
 	}
 }

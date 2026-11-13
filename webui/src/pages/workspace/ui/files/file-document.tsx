@@ -5,6 +5,7 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
+import { Heading } from '@astryxdesign/core/Heading';
 import { useClickableContainer } from '@astryxdesign/core/hooks';
 import { Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
 import { Spinner } from '@astryxdesign/core/Spinner';
@@ -32,6 +33,14 @@ export function FileDocument({
   showFiles?: () => void;
 }) {
   const t = useLocale();
+  useEffect(() => {
+    const previous = document.title;
+    const title = `${path} · ${previous}`;
+    document.title = title;
+    return () => {
+      if (document.title === title) document.title = previous;
+    };
+  }, [path]);
   const content = useRef<HTMLDivElement>(null);
   const state = useDocument(target, path, externalRevision);
   const {
@@ -87,6 +96,9 @@ export function FileDocument({
   });
   return (
     <>
+      <Heading level={2} className="sr-only">
+        {path}
+      </Heading>
       <Layout
         height="fill"
         padding={0}
@@ -137,6 +149,7 @@ export function FileDocument({
                     onError={reportError}
                     onReady={state.onReady}
                     onDirty={state.onDirty}
+                    onDraft={state.onDraft}
                   />
                 </Suspense>
               </VStack>
@@ -164,18 +177,20 @@ export function FileDocument({
         }
         footer={readonly ? <FilePages state={preview} /> : undefined}
       />
-      <AlertDialog
-        isOpen={discard}
-        onOpenChange={setDiscard}
-        title={t('dirty')}
-        description={t('unsavedFile')}
-        cancelLabel={t('keepEditing')}
-        actionLabel={t('discard')}
-        onAction={() => {
-          setDiscard(false);
-          void read();
-        }}
-      />
+      {discard && (
+        <AlertDialog
+          isOpen={discard}
+          onOpenChange={setDiscard}
+          title={t('dirty')}
+          description={t('unsavedFile')}
+          cancelLabel={t('keepEditing')}
+          actionLabel={t('discard')}
+          onAction={() => {
+            setDiscard(false);
+            void read();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -67,7 +67,7 @@ func (t *Transport) browserAuthenticated(r *http.Request) bool { return t.browse
 func (t *Transport) browserRequest(r *http.Request) (*http.Request, func(), bool) {
 	path := r.URL.Path
 	public := r.Method == "OPTIONS" || path == "/" || path == "/ui" || strings.HasPrefix(path, "/ui/") || path == "/v1/ui/session" || path == "/v1/ui/login" || path == "/v1/ui/logout"
-	if public || t.socketHandshake(r) || t.bearerAuthenticated(r) {
+	if public || t.socketHandshake(r) || t.bearerAuthenticated(r) && path != "/v1/ui/events" {
 		return r, func() {}, true
 	}
 	session := t.browserSession(r)

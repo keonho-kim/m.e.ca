@@ -81,7 +81,7 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 	}
 	var err error
 	switch cmd.GetOperation().(type) {
-	case *v1.Command_EditorProbe, *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
+	case *v1.Command_EditorProbe, *v1.Command_EditorRead, *v1.Command_EditorSave, *v1.Command_History, *v1.Command_SearchHistory, *v1.Command_Detail, *v1.Command_HistoryImage, *v1.Command_PreviewFile:
 		weight := int64(2)
 		if cmd.GetHistory() != nil {
 			weight = 1
@@ -154,6 +154,10 @@ func (a *API) Call(ctx context.Context, cmd *v1.Command) (result *v1.Reply, caus
 			page.Through = max(page.Through, value.Sequence)
 		}
 		reply.Result = &v1.Reply_History{History: page}
+	case *v1.Command_SearchHistory:
+		page, cause := a.searchHistory(ctx, op.SearchHistory)
+		err = cause
+		reply.Result = &v1.Reply_HistoryMatches{HistoryMatches: page}
 	case *v1.Command_Detail:
 		page, cause := a.readDetail(ctx, op.Detail)
 		err = cause

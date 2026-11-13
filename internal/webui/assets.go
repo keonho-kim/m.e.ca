@@ -27,9 +27,12 @@ type Asset struct {
 	Bytes int64  `json:"bytes"`
 }
 type Handler struct {
-	files  fs.FS
-	assets map[string]Asset
+	files   fs.FS
+	assets  map[string]Asset
+	buildID string
 }
+
+func (h *Handler) BuildID() string { return h.buildID }
 
 func New() (http.Handler, error) {
 	files, err := bundledFiles()
@@ -62,7 +65,27 @@ func newHandler(files fs.FS) (*Handler, error) {
 			return nil, err
 		}
 	}
-	return &Handler{files: files, assets: assets}, nil
+	h := &Handler{files: files, assets: assets}
+	if build, ok := assets["build.json"]; ok {
+		file, err := files.Open(build.File)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		reader, err := gzip.NewReader(file)
+		if err != nil {
+			return nil, err
+		}
+		defer reader.Close()
+		var value struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(io.LimitReader(reader, 4096)).Decode(&value); err != nil {
+			return nil, err
+		}
+		h.buildID = value.ID
+	}
+	return h, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -83,13 +106,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	browserHeaders(w)
 	w.Header().Add("Vary", "Accept-Encoding")
 	w.Header().Set("ETag", a.ETag)
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	if name == "index.html" {
+	if !strings.HasPrefix(name, "assets/") {
 		w.Header().Set("Cache-Control", "no-cache")
 	}
 	compressed, identity := httpencoding.Accept(r.Header.Get("Accept-Encoding"))

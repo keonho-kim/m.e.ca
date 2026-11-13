@@ -9,9 +9,13 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { mergeProps } from '@astryxdesign/core/utils';
+import { useQuery } from '@tanstack/react-query';
 import { memo, useCallback, useEffect, useState } from 'react';
+import { reportError } from '@/entities/server-session';
+import { capabilitiesOptions } from '@/pages/workspace/api/queries';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { useLocale } from '@/shared/i18n';
+import { imagePreview } from '@/shared/lib/image-preview';
 
 const keys = new WeakMap<File, string>();
 function fileKey(file: File) {
@@ -34,11 +38,29 @@ const ImagePreview = memo(function ImagePreview({
   const t = useLocale();
   const { getContainerProps, getContentRevealProps } = useContainerReveal();
   const [src, setSrc] = useState('');
+  const caps = useQuery(capabilitiesOptions).data;
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (!caps) return;
+    const controller = new AbortController();
+    let url: string | undefined;
+    void imagePreview(file, caps, controller.signal)
+      .then((blob) => {
+        if (controller.signal.aborted) return;
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setFailed(true);
+          reportError(error);
+        }
+      });
+    return () => {
+      controller.abort();
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [file, caps]);
   return (
     <VStack
       {...mergeProps(getContainerProps(), { className: 'composer-image relative' })}
@@ -49,7 +71,7 @@ const ImagePreview = memo(function ImagePreview({
         src={src || undefined}
         label={file.name}
         alt={t('imagePreview')}
-        isLoading={!src}
+        isLoading={!src && !failed}
       />
       <IconButton
         {...getContentRevealProps({ isLayoutPreserved: true })}

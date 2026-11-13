@@ -96,11 +96,14 @@ func (w *documentWriter) raw(body []byte) error {
 			return err
 		}
 		if escaped {
-			var text string
-			if err := json.Unmarshal(body[start:i+1], &text); err != nil {
+			if err := w.literal("\""); err != nil {
 				return err
 			}
-			if err := w.text(text); err != nil {
+			mask := w.newMask()
+			if err := walkJSONString(w.ctx, body[start:i+1], func(text string, final bool) error { return w.quotedPart(mask(text, final)) }); err != nil {
+				return err
+			}
+			if err := w.literal("\""); err != nil {
 				return err
 			}
 		} else if err := w.byteText(body[start+1 : i]); err != nil {

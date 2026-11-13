@@ -1,9 +1,9 @@
-// Purpose: Prevent async tool disclosures from overlapping responses or opening translucent result modals.
+// Purpose: Keep nested requests and async results inline, aligned and independently controlled.
 // Pattern: Isolated browser contracts with controlled native detail responses.
 // Usage: Run against TestUIBrowserFixture through MECA_UI_DESCRIPTOR.
 // Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/chat/chat.tsx.
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import {
   type BrowserFixture,
   browserFixture,
@@ -47,6 +47,16 @@ const detailPage = (text: string) => ({
     contentType: 'application/json',
   },
 });
+
+async function alignedContent(tool: Locator) {
+  const row = await tool.boundingBox().then(required);
+  const result = await tool.locator('.tool-content > .detail-content').boundingBox().then(required);
+  const request = await tool.locator('.tool-request').boundingBox().then(required);
+  for (const box of [result, request]) {
+    expect(Math.abs(row.x - box.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(row.width - box.width)).toBeLessThanOrEqual(1);
+  }
+}
 
 test('async results stay inline, wrap and push later rows immediately in both themes', async ({
   page,
@@ -116,10 +126,8 @@ test('async results stay inline, wrap and push later rows immediately in both th
     const tool = page.locator('.tool-entry');
     const trigger = tool.locator('.tool-disclosure > button');
     await expect(trigger).toHaveCount(1);
-    const triggerBounds = await trigger.boundingBox().then(required);
-    const requestBounds = await tool.locator('.tool-request-action').boundingBox().then(required);
-    expect(requestBounds.x - triggerBounds.x - triggerBounds.width).toBeGreaterThanOrEqual(0);
-    expect(requestBounds.x - triggerBounds.x - triggerBounds.width).toBeLessThanOrEqual(12);
+    await expect(tool.locator('.tool-request-action')).toHaveCount(0);
+    await expect(tool.getByRole('button', { name: '요청 원문', exact: true })).toHaveCount(0);
     await expect(page.locator('.tool-message')).toHaveAccessibleName('reviewer');
     expect(views).toEqual([]);
     await trigger.focus();
@@ -141,6 +149,12 @@ test('async results stay inline, wrap and push later rows immediately in both th
     expect(focus.height).toBeGreaterThanOrEqual(32);
     await trigger.press('Enter');
     await expect(tool.locator('.detail-content')).toBeVisible();
+    await alignedContent(tool);
+    await expect(tool.getByRole('button', { name: '요청 원문', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(views).toEqual(['TOOL_RESULT']);
     expect(await orderedRows(page)).toBe(true);
     release();
     await expect(tool.locator('.meca-code')).toContainText(stdout);
@@ -160,35 +174,32 @@ test('async results stay inline, wrap and push later rows immediately in both th
       });
       expect(chrome.background).toBe('rgba(0, 0, 0, 0)');
       expect(chrome.decoration).toContain('underline');
-      await tool.getByRole('button', { name: /요청 내용/ }).click();
-      const dialog = page.getByRole('dialog');
-      await expect(dialog).toContainText('printf requested-command');
-      await expect(dialog).not.toContainText(stdout);
-      const title = await dialog.getByRole('heading').boundingBox().then(required);
-      const label = await dialog.getByText('명령', { exact: true }).boundingBox().then(required);
-      expect(Math.abs(title.x - label.x)).toBeLessThan(2);
-      const subtitle = await dialog
-        .getByText('요청 내용', { exact: true })
-        .boundingBox()
-        .then(required);
-      expect(label.y - subtitle.y - subtitle.height).toBeGreaterThanOrEqual(16);
-      const material = await dialog.evaluate((node) => {
+      const requestToggle = tool.getByRole('button', { name: '요청 원문', exact: true });
+      await requestToggle.focus();
+      await requestToggle.press('Enter');
+      const request = tool.locator('.tool-request-content');
+      await expect(request).toContainText('printf requested-command');
+      await expect(request).not.toContainText(stdout);
+      await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await alignedContent(tool);
+      const material = await request.evaluate((node) => {
         const style = getComputedStyle(node);
         return {
           background: style.backgroundColor,
           filter: style.backdropFilter,
           opacity: style.opacity,
-          animation: style.animationName,
         };
       });
       expect(material.background).toMatch(/^rgb\(/);
       expect(material.filter).toBe('none');
       expect(material.opacity).toBe('1');
-      expect(['none', 'meca-dialog-enter']).toContain(material.animation);
-      await page.keyboard.press('Escape');
+      await requestToggle.press('Enter');
+      await expect(request).toHaveCount(0);
     }
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
+      await alignedContent(tool);
       expect(await orderedRows(page)).toBe(true);
       expect(await tool.evaluate((node) => node.scrollWidth <= node.clientWidth + 2)).toBe(true);
       expect(

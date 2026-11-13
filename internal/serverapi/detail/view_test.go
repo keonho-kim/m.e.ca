@@ -31,7 +31,7 @@ func TestViewNarrativesContainOnlyTheSelectedMaskedText(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var output bytes.Buffer
-			if err := writeView(t.Context(), &output, test.original, test.view, vault.NewChunkMask); err != nil {
+			if err := writeView(t.Context(), &output, test.original, server.DetailSource{View: test.view}, vault.NewChunkMask); err != nil {
 				t.Fatal(err)
 			}
 			if actual := output.String(); actual != "한글 [redacted]" || strings.Contains(actual, "other-field") {
@@ -45,10 +45,10 @@ func TestViewRejectsInvalidResultAndMissingMask(t *testing.T) {
 	vault := &credentials.Vault{}
 	original := server.DetailOriginal{Tool: &record.Event{Text: "fallback must not hide corruption", Output: json.RawMessage(`{"broken"`)}}
 	var output bytes.Buffer
-	if err := writeView(t.Context(), &output, original, server.DetailToolResult, vault.NewChunkMask); err == nil {
+	if err := writeView(t.Context(), &output, original, server.DetailSource{View: server.DetailToolResult}, vault.NewChunkMask); err == nil {
 		t.Fatal("invalid result was silently replaced with a display summary")
 	}
-	if err := writeView(t.Context(), &output, original, server.DetailToolResult, nil); err == nil {
+	if err := writeView(t.Context(), &output, original, server.DetailSource{View: server.DetailToolResult}, nil); err == nil {
 		t.Fatal("detail accepted a missing redaction boundary")
 	}
 }

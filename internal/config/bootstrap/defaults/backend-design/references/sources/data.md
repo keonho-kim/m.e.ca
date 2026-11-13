@@ -1,6 +1,6 @@
 # Database primary sources
 
-Checked 2026-11-09. Vendor manuals describe their configured product, not a generic SQL guarantee. PostgreSQL `current` resolved to 18 at this reading; use the actual deployment's manual when implementing. These pointers support the [storage map](../storage.md).
+Vendor manuals describe their configured product, not a generic SQL guarantee. Use the manual for the actual deployment version; a moving `current` alias does not pin behavior. These pointers support the [storage map](../storage.md).
 
 ## SQLite
 

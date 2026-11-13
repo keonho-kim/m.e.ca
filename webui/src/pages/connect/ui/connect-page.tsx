@@ -46,6 +46,7 @@ export function Login() {
           <TextInput
             label={t('token')}
             type="password"
+            isRequired
             value={token}
             onChange={setToken}
             autoComplete="off"

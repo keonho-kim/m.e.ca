@@ -8,6 +8,7 @@ import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { Text } from '@astryxdesign/core/Text';
 import { memo, useMemo, useState } from 'react';
 import { useLocale } from '@/shared/i18n';
+import { codePages } from '@/shared/ui/code-preview/pages';
 
 export const CodePreview = memo(function CodePreview({
   code,
@@ -24,27 +25,8 @@ export const CodePreview = memo(function CodePreview({
 }) {
   const t = useLocale(),
     [page, setPage] = useState(follow ? Number.MAX_SAFE_INTEGER : 0);
-  const boundaries = useMemo(() => {
-    const result = [0];
-    let lines = 0,
-      start = 0;
-    for (let i = 0; i < code.length; i++) {
-      if (code.charCodeAt(i) === 10) lines++;
-      if (lines < 160 && i + 1 - start < 8192) continue;
-      if (
-        code.charCodeAt(i) >= 0xd800 &&
-        code.charCodeAt(i) <= 0xdbff &&
-        code.charCodeAt(i + 1) >= 0xdc00 &&
-        code.charCodeAt(i + 1) <= 0xdfff
-      )
-        i++;
-      start = i + 1;
-      result.push(start);
-      lines = 0;
-    }
-    if (result.at(-1) !== code.length || result.length === 1) result.push(code.length);
-    return result;
-  }, [code]);
+  const [indexPages] = useState(codePages);
+  const boundaries = useMemo(() => indexPages(code), [code, indexPages]);
   const last = boundaries.length - 2,
     index = Math.min(page, last);
   return (

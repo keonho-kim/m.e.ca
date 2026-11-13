@@ -44,9 +44,12 @@ message Reply {
     FileMutationResult file_mutation = 36;
     Usage usage = 37;
     EditorVersion editor_version = 38;
+    HistoryMatches history_matches = 39;
   }
 }
 message EmptyResult {}
+message HistoryMatch { int64 sequence = 1; string excerpt = 2; bool thinking = 3; int64 offset = 4; string revision = 5; }
+message HistoryMatches { repeated HistoryMatch items = 1; string cursor = 2; }
 message Session {
   string id = 1;
   string project_root = 2;

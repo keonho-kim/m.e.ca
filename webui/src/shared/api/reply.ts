@@ -4,6 +4,7 @@
 // Related: api/meca/v1/control.proto, api/meca/v1/state.proto, webui/src/shared/api/client.ts.
 import type { CommandJson, ReplyJson } from '@/shared/api';
 import { parseHistory, parseSnapshot } from '@/shared/api/transcript';
+import { boolean, integer, text } from '@/shared/api/transcript-values';
 import { ApiError, failure } from '@/shared/lib/errors';
 
 const results = {
@@ -12,6 +13,7 @@ const results = {
   closeSession: 'ok',
   state: 'state',
   history: 'history',
+  searchHistory: 'historyMatches',
   detail: 'detail',
   setModel: 'state',
   setSettings: 'state',
@@ -93,5 +95,22 @@ export function parseReply(
   if (key !== expected) throw failure('invalid_response');
   if (key === 'history') parseHistory(payload);
   if (key === 'state') parseSnapshot(payload);
+  if (key === 'historyMatches') {
+    text(payload.cursor, 1024);
+    if (Object.keys(payload).some((key) => key !== 'items' && key !== 'cursor'))
+      throw failure('invalid_response');
+    if (payload.items !== undefined) {
+      if (!Array.isArray(payload.items) || payload.items.length > 32)
+        throw failure('invalid_response');
+      for (const item of payload.items) {
+        if (!object(item)) throw failure('invalid_response');
+        integer(item.sequence);
+        integer(item.offset);
+        boolean(item.thinking);
+        text(item.excerpt, 2048);
+        text(item.revision, 64);
+      }
+    }
+  }
   return body;
 }

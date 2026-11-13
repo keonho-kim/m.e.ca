@@ -3,7 +3,13 @@
 // Usage: Chat virtualizes these groups rather than switching presentation at tool boundaries.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/history-row.tsx.
 import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
-import type { HistoryItemJson, RunCompletionJson, TranscriptMessageJson } from '@/shared/api';
+import type {
+  DetailRequestJson,
+  HistoryItemJson,
+  RunCompletionJson,
+  TranscriptMessageJson,
+} from '@/shared/api';
+export type HistoryJump = { source: DetailRequestJson; serial: number };
 export type HistoryMessageItem = Omit<HistoryItemJson, 'completion' | 'message'> &
   TranscriptMessageJson;
 export function historyMessage(item: HistoryItemJson): HistoryMessageItem {

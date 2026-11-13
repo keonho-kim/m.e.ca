@@ -10,11 +10,12 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack } from '@astryxdesign/core/Layout';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useDraggable, useDroppable } from '@dnd-kit/react';
+import type { Ref } from 'react';
 import { useLocale } from '@/shared/i18n';
 import { FileIcon } from '@/shared/ui/file-icon';
 
 export type DirectoryEntry = { path: string; name: string; revision: string; directory: boolean };
-export type EntryAction = { entry: DirectoryEntry; kind: 'rename' | 'delete' };
+export type EntryAction = { entry: DirectoryEntry; kind: 'rename' | 'delete' | 'move' };
 
 export function EntryRow({
   entry,
@@ -25,6 +26,10 @@ export function EntryRow({
   open,
   reference,
   selectAction,
+  measure,
+  index,
+  onFocus,
+  onMenuChange,
 }: {
   entry: DirectoryEntry;
   top: number;
@@ -34,6 +39,10 @@ export function EntryRow({
   open: (path: string, directory: boolean) => void;
   reference: (path: string, selected: boolean) => void;
   selectAction: (action: EntryAction) => void;
+  measure: Ref<HTMLDivElement>;
+  index: number;
+  onFocus: () => void;
+  onMenuChange: (open: boolean) => void;
 }) {
   const t = useLocale();
   const { path, name, directory, revision } = entry;
@@ -43,10 +52,12 @@ export function EntryRow({
     data: { folder: path },
     disabled: busy || !directory,
   });
-  const ref = useMergedRefs(drag.ref, drop.ref);
+  const ref = useMergedRefs(drag.ref, drop.ref, measure);
   return (
     <HStack
       ref={ref}
+      data-index={index}
+      onFocusCapture={onFocus}
       className="directory-row"
       style={{ position: 'absolute', width: '100%', top }}
       align="center"
@@ -72,6 +83,7 @@ export function EntryRow({
         />
       </Tooltip>
       <DropdownMenu
+        onOpenChange={onMenuChange}
         alignment="end"
         renderTrigger={(props) => (
           <IconButton
@@ -95,6 +107,12 @@ export function EntryRow({
           icon="meca:edit"
           isDisabled={!revision}
           onClick={() => selectAction({ entry, kind: 'rename' })}
+        />
+        <DropdownMenuItem
+          label={t('moveEntry')}
+          icon="meca:folder"
+          isDisabled={!revision}
+          onClick={() => selectAction({ entry, kind: 'move' })}
         />
         <DropdownMenuItem
           label={t('deleteEntry')}

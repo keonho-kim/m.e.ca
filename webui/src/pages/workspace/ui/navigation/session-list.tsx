@@ -126,7 +126,19 @@ function SessionRow({
         className="session-link session-row"
         icon={<Icon icon="meca:message" size="xsm" />}
         isSelected={target.workspace === workspace && target.session === session.id}
-        onClick={() => navigate({ workspace, session: session.id ?? '' })}
+        href={`/ui/w/${encodeURIComponent(workspace)}/c/${encodeURIComponent(session.id ?? '')}`}
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          event.preventDefault();
+          navigate({ workspace, session: session.id ?? '' });
+        }}
         endContent={
           session.runningTaskId || running ? (
             <StatusDot variant="accent" label={t('running')} isPulsing />

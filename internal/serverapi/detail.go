@@ -27,7 +27,7 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if r.GetView() < v1.DetailRequest_DOCUMENT || r.GetView() > v1.DetailRequest_THINKING {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
 	}
-	read, err := a.Service.OpenDetail(ctx, server.DetailSource{View: server.DetailView(r.GetView()), Session: r.GetSessionId(), Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence()})
+	read, err := a.Service.OpenDetail(ctx, server.DetailSource{View: server.DetailView(r.GetView()), Session: r.GetSessionId(), Tool: record.EventReference{Session: r.GetTool().GetSessionId(), Sequence: r.GetTool().GetSequence()}, ApprovalID: r.GetApprovalId(), HistorySequence: r.GetHistorySequence(), Field: r.GetField(), ListFields: r.GetListFields()})
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,11 @@ func (a *API) readDetail(ctx context.Context, r *v1.DetailRequest) (*v1.DetailPa
 	if !utf8.Valid(data[:end]) || (end == 0 && len(data) > 0) {
 		return nil, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
 	}
-	return &v1.DetailPage{Text: string(data[:end]), Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(end), TotalBytes: total, ContentType: detailContentType(r.GetView()), Revision: revision}, nil
+	kind := detailContentType(r.GetView())
+	if r.GetField() != "" {
+		kind = "text/plain; charset=utf-8"
+	}
+	return &v1.DetailPage{Text: string(data[:end]), Offset: r.GetOffset(), NextOffset: r.GetOffset() + int64(end), TotalBytes: total, ContentType: kind, Revision: revision}, nil
 }
 
 func detailContentType(view v1.DetailRequest_View) string {

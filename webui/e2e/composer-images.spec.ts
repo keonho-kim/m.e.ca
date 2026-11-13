@@ -8,7 +8,7 @@ import { type BrowserFixture, browserFixture, connectBrowser, required, test } f
 
 let fixture: BrowserFixture;
 const png = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMQMgn7DwAClAGcHVtGXwAAAABJRU5ErkJggg==',
   'base64'
 );
 async function create(page: Page) {

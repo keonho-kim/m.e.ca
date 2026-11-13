@@ -1,6 +1,6 @@
 # Redis and cache primary sources
 
-Checked 2026-11-09. `latest` documentation and Redis product names cover several deployment variants. Confirm commands, persistence, clustering and client support in the selected version/tier. These sources support [Redis/cache design](../storage/redis.md).
+`latest` documentation and Redis product names cover several deployment variants. Confirm commands, persistence, clustering and client support in the selected version/tier. These sources support [Redis/cache design](../storage/redis.md).
 
 | Source | Use for |
 | --- | --- |

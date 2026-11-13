@@ -160,7 +160,7 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !t.socketHandshake(r) && r.Body != nil && r.Body != http.NoBody {
 		budget := t.inputs
 		limit := int64(maxRequestBytes)
-		if r.Method == "POST" && r.URL.Path == "/v1/attachments" {
+		if r.Method == "POST" && (r.URL.Path == "/v1/attachments" || r.URL.Path == "/v1/ui/thumbnail") {
 			budget = t.mediaInputs
 			limit = media.MaxBytes
 		}

@@ -41,7 +41,7 @@ export const LiveActivity = memo(function LiveActivity({
             event.cursor ??
             JSON.stringify([event.taskId, event.sequence, event.agent]);
           return event.tool ? (
-            <ToolCalls key={key} target={target} events={events} inspect={inspect} />
+            <ToolCalls key={key} target={target} events={events} />
           ) : (
             <HistoryRow
               key={key}

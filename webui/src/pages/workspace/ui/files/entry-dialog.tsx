@@ -1,4 +1,4 @@
-// Purpose: Confirm deletion or collect a new name for the selected entry.
+// Purpose: Dispatch the selected entry's rename, move or delete confirmation.
 // Pattern: One Astryx dialog for the active file action.
 // Usage: DirectoryColumn opens the dialog from a virtualized entry menu.
 // Related: webui/src/pages/workspace/ui/files/entry-row.tsx, internal/fileview/entry_mutation.go.
@@ -9,6 +9,7 @@ import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useState } from 'react';
 import type { EntryAction } from '@/pages/workspace/ui/files/entry-row';
+import { MoveDialog } from '@/pages/workspace/ui/files/move-dialog';
 import type { FileMutationJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 
@@ -28,6 +29,8 @@ export function EntryDialog({
     close();
     mutate(change);
   };
+  if (action.kind === 'move')
+    return <MoveDialog entry={action.entry} close={close} submit={submit} />;
   if (action.kind === 'delete')
     return (
       <AlertDialog

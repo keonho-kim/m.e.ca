@@ -118,6 +118,8 @@ func TestUIBrowserFixture(t *testing.T) {
 	defer sink.Close()
 	ctx = diagnostics.WithSink(ctx, sink)
 	mode := startup.Mode{Project: projectA, Display: projectA, Server: true, ServerOptions: startup.ServerOptions{UI: true, Listen: "127.0.0.1:0", Protocol: "sse", Concurrency: 4}}
+	mode.ServerOptions.Certificate = os.Getenv("MECA_UI_CERTIFICATE")
+	mode.ServerOptions.Key = os.Getenv("MECA_UI_KEY")
 	done := make(chan error, 1)
 	go func() { done <- runServer(ctx, mode, cfg, home, state, sessions) }()
 	var address string

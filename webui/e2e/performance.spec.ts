@@ -176,8 +176,28 @@ test('long Thinking follows the newest output and respects an upward scroll', as
   const gap = () => body.evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight);
   await expect(reasoning).toContainText('First reasoning tail');
   await expect.poll(gap).toBeLessThan(12);
+  await reasoning.evaluate((node) => {
+    const state = {
+      rewound: false,
+      observer: new MutationObserver(() => {
+        if (!node.textContent.includes('First reasoning tail')) state.rewound = true;
+      }),
+    };
+    state.observer.observe(node, { childList: true, characterData: true, subtree: true });
+    Object.assign(window, { reasoningReveal: state });
+  });
   await page.request.post(`${fixture.provider}/test/expand-thinking`);
   await expect(reasoning).toContainText('Second reasoning tail');
+  expect(
+    await page.evaluate(() => {
+      const state = Reflect.get(window, 'reasoningReveal') as {
+        rewound: boolean;
+        observer: MutationObserver;
+      };
+      state.observer.disconnect();
+      return state.rewound;
+    })
+  ).toBe(false);
   await expect.poll(gap).toBeLessThan(12);
   await expect(
     reasoning.getByRole('button', { name: '전체 텍스트 보기', exact: true })

@@ -38,10 +38,11 @@ import {
   targetKey,
   useWorkspaceStore,
 } from '@/pages/workspace/model/store';
-import { checkSubmissionLimits } from '@/pages/workspace/model/submission-limits';
+import { admitSubmission } from '@/pages/workspace/model/submission-limits';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { useComposerImages } from '@/pages/workspace/model/use-composer-images';
 import { useComposerTriggers } from '@/pages/workspace/model/use-composer-triggers';
+import { useInputEdit } from '@/pages/workspace/model/use-input-edit';
 import { chatWidth } from '@/pages/workspace/ui/chat/layout';
 import { AttachmentMenu } from '@/pages/workspace/ui/composer/attachment-menu';
 import {
@@ -79,6 +80,7 @@ export function Composer({
   const hasInput = !!(input.text.trim() || input.files.length);
   const showStop = !!task && !hasInput;
   const editor = useRef<ChatComposerInputHandle>(null);
+  const inputEdit = useInputEdit(target);
   const insertSkill = (mention: string) => {
     editor.current?.focus();
     editor.current?.insertToken(referenceToken(`#${mention}`));
@@ -98,7 +100,7 @@ export function Composer({
   const state = useQuery({ ...stateOptions(target), enabled: !!target.session });
   const capabilities = useQuery(capabilitiesOptions);
   const patch = (text: string) => {
-    if (!useWorkspaceStore.getState().patchInput(target, { text }))
+    if (!useWorkspaceStore.getState().patchInput(target, { text }, inputEdit.take()))
       setInputEpoch((value) => value + 1);
   };
   const submit = async (reserve = false) => {
@@ -116,7 +118,7 @@ export function Composer({
         await waitSelections(target);
         const captured = useWorkspaceStore.getState().inputs[targetKey(target)] ?? input;
         if (!capabilities.data) throw failure('invalid_response');
-        checkSubmissionLimits(captured, capabilities.data);
+        await admitSubmission(captured, capabilities.data);
         if (await send(target, captured, reserve)) view('chat');
       }
     } catch (error) {
@@ -153,6 +155,7 @@ export function Composer({
         input={
           // Keep the empty editable stretched when a modal restores background interactivity.
           <ChatComposerInput
+            ref={inputEdit.attach}
             className="grid"
             key={inputEpoch}
             handleRef={editor}

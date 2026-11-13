@@ -20,6 +20,8 @@ test('model forms keep their parsed ID and accept a bounded private API key', ()
 test('invalid endpoints, blank model IDs and unsafe credential characters cannot reach a save', () => {
   for (const patch of [
     { endpoint: 'not a URL' },
+    { endpoint: 'javascript:alert(1)' },
+    { endpoint: 'mailto:private@example.com' },
     { provider: '' },
     { model: '  ' },
     { credential: 'k'.repeat(2049) },

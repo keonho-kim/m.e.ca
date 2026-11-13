@@ -7,7 +7,40 @@ import { useLocale as useAstryxLocale } from '@astryxdesign/core/i18n';
 import { useCallback } from 'react';
 
 const copy = {
-  toolRequest: ['요청 내용', 'Request details'],
+  downloadDraft: ['미저장 파일 다운로드', 'Download unsaved file'],
+  discardReload: ['변경 버리고 다시 불러오기', 'Discard changes and reload'],
+  invalidEndpoint: [
+    '올바른 HTTP 또는 HTTPS 서버 주소를 입력해 주세요.',
+    'Enter a valid HTTP or HTTPS server URL.',
+  ],
+  invalidModel: ['사용할 모델 ID를 입력해 주세요.', 'Enter the model ID to use.'],
+  invalidCredential: [
+    'API Key의 길이와 줄바꿈 문자를 확인해 주세요.',
+    'Check the API key length and remove line breaks.',
+  ],
+  invalidProvider: ['모델 Provider를 선택해 주세요.', 'Select a model provider.'],
+  searchConversation: ['대화 검색', 'Search conversation'],
+  search: ['검색', 'Search'],
+  searchResults: ['검색 결과', 'Search results'],
+  searchScope: [
+    '저장된 메시지와 추론 전체를 검색합니다. 도구 원문은 각 도구에서 확인하세요.',
+    'Search complete saved messages and reasoning. Inspect tool originals in their disclosures.',
+  ],
+  searchContinue: ['다음 구간 검색', 'Search next section'],
+  searchEmpty: ['일치하는 내용이 없습니다.', 'No matching content.'],
+  moveEntry: ['이동…', 'Move…'],
+  moveDestination: ['대상 폴더', 'Destination folder'],
+  moveHelp: [
+    '프로젝트 기준 경로나 절대 경로를 입력하세요.',
+    'Enter a project-relative or absolute folder path.',
+  ],
+  reloadApp: ['화면 다시 불러오기', 'Reload application'],
+  updatedApp: ['새 버전의 화면이 준비되었습니다.', 'A new application version is available.'],
+  failedApp: [
+    '화면 파일을 불러오지 못했습니다. 연결을 확인한 뒤 다시 불러오세요.',
+    'Could not load the application. Check the connection and reload.',
+  ],
+  toolRequest: ['요청 원문', 'Request source'],
   toolCommand: ['명령', 'Command'],
   toolPath: ['경로', 'Path'],
   toolContent: ['내용', 'Content'],

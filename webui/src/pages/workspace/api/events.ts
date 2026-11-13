@@ -1,11 +1,12 @@
 // Purpose: Coalesce live text and usage while delivering task control events immediately.
-// Pattern: Native EventSource lifecycle with urgent application event delivery.
+// Pattern: Multiplexed browser observer lifecycle with urgent application event delivery.
 // Usage: App reconnects from a freshly scoped snapshot when selection or connectivity changes.
 // Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/execution.ts.
 
 import { reportError } from '@/entities/server-session';
 import { invalidate } from '@/pages/workspace/api/cache-refresh';
 import { projectEventCache } from '@/pages/workspace/api/event-cache';
+import { subscribeEventStream } from '@/pages/workspace/api/observer';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { readSnapshot, snapshotMetadata } from '@/pages/workspace/api/snapshots';
 import { forgetConversation } from '@/pages/workspace/model/deletion';
@@ -24,7 +25,7 @@ import {
 } from '@/pages/workspace/model/store';
 import { recordTask, terminal } from '@/pages/workspace/model/submission';
 import type { EventJson, SnapshotJson } from '@/shared/api';
-import { call, parseNotification, queries, subscribeEventStream } from '@/shared/api';
+import { call, parseNotification, queries } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
 
 export function observe(target: Target) {
@@ -61,15 +62,21 @@ export function observe(target: Target) {
     discardBatch();
     useWorkspaceStore.getState().bootstrap(target, snapshot);
     queries.setQueryData(stateOptions(target).queryKey, snapshotMetadata(snapshot));
-    if (initialized && target.session) void refreshReferences(target).catch(reportError);
+    if (initialized) {
+      invalidate(['capabilities']);
+      invalidate(['workspaces']);
+      invalidate(['sessions']);
+      invalidate(['state', 'default-model']);
+      if (target.session) void refreshReferences(target).catch(reportError);
+    }
     initialized = true;
     if (target.session) {
       invalidate(['history', target.workspace, target.session, '0']);
       invalidate(['session-usage', target.workspace, target.session]);
     }
   };
-  const acceptEvent = (raw: string) => {
-    const event = parseNotification(JSON.parse(raw)).event;
+  const acceptEvent = (raw: unknown) => {
+    const event = parseNotification(raw).event;
     if (!event || event.kind === 'heartbeat') return;
     if (event.kind !== 'assistant_delta' && event.kind !== 'usage_progress') {
       flush(event);
@@ -97,8 +104,8 @@ export function observe(target: Target) {
         url: `/v1/events?cursor=${encodeURIComponent(snapshot.cursor)}&workspace_id=${encodeURIComponent(target.workspace)}&session_id=${encodeURIComponent(target.session)}`,
         events: {
           event: acceptEvent,
-          snapshot: (raw: string) => {
-            const next = parseNotification(JSON.parse(raw)).snapshot;
+          snapshot: (raw: unknown) => {
+            const next = parseNotification(raw).snapshot;
             if (!next?.cursor || next.workspaceId !== target.workspace)
               throw failure('invalid_response');
             acceptSnapshot(next);
@@ -112,7 +119,13 @@ export function observe(target: Target) {
       reportError(error);
       return (
         !(error instanceof ApiError) ||
-        ['network', 'unavailable', 'resource_exhausted', 'invalid_response'].includes(error.code)
+        [
+          'network',
+          'unavailable',
+          'resource_exhausted',
+          'invalid_response',
+          'read_timeout',
+        ].includes(error.code)
       );
     },
   });

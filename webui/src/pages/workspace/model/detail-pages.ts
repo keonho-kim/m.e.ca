@@ -1,15 +1,17 @@
 // Purpose: Own revision-bound native detail pages without retaining complete tool or response documents.
 // Pattern: Cancellable query lifecycle with explicit page navigation.
-// Usage: Inline tool results, request dialogs and long saved responses share these bounded reads.
-// Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/inspection/tool-request.tsx.
+// Usage: Inline tool results, nested requests and long saved responses share these bounded reads.
+// Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/chat/tool-request.tsx.
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { Target } from '@/pages/workspace/model/store';
 import { call, type DetailRequestJson } from '@/shared/api';
 import { ApiError, failure } from '@/shared/lib/errors';
 export function useDetailPage(target: Target, source: DetailRequestJson) {
-  const [positions, setPositions] = useState(['0']),
-    [revision, setRevision] = useState('');
+  const [positions, setPositions] = useState(
+      source.offset && source.offset !== '0' ? ['0', source.offset] : ['0']
+    ),
+    [revision, setRevision] = useState(source.revision ?? '');
   const offset = positions.at(-1) ?? '0';
   const page = useQuery({
     queryKey: ['detail-page', target.workspace, target.session, source, offset, revision],
@@ -23,7 +25,7 @@ export function useDetailPage(target: Target, source: DetailRequestJson) {
             sessionId: target.session,
             offset,
             limit: 32768,
-            ...(offset === '0' ? {} : { revision }),
+            revision: offset === '0' ? undefined : revision,
           },
         },
         signal

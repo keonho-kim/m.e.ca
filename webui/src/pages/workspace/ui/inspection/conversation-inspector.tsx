@@ -15,11 +15,6 @@ const Original = lazy(() =>
     default: module.Original,
   }))
 );
-const ToolRequest = lazy(() =>
-  import('@/pages/workspace/ui/inspection/tool-request').then((module) => ({
-    default: module.ToolRequest,
-  }))
-);
 export const ConversationInspector = memo(function ConversationInspector({
   value,
   target,
@@ -41,19 +36,12 @@ export const ConversationInspector = memo(function ConversationInspector({
           }}
           media={{ src: value.url, alt: t('attachment'), type: 'image' }}
         />
-      ) : value.kind === 'original' ? (
+      ) : (
         <Original
           key={JSON.stringify(value.source)}
           target={target}
           source={value.source}
           onClose={close}
-        />
-      ) : (
-        <ToolRequest
-          key={JSON.stringify(value.request.reference ?? value.request.name)}
-          value={value.request}
-          target={target}
-          close={close}
         />
       )}
     </Suspense>

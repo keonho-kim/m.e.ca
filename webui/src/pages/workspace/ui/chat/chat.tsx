@@ -13,27 +13,33 @@ import { VStack } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useServerSession } from '@/entities/server-session';
 import { stateOptions } from '@/pages/workspace/api/queries';
 import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
 import { reached } from '@/pages/workspace/model/history-handoff';
-import { historyRows } from '@/pages/workspace/model/history-rows';
+import { type HistoryJump, historyRows } from '@/pages/workspace/model/history-rows';
 import { useConversationInspection } from '@/pages/workspace/model/inspection';
+import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation';
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { CompletionRow } from '@/pages/workspace/ui/chat/completion-row';
+import { HistoryWindow } from '@/pages/workspace/ui/chat/history-window';
 import { chatWidth } from '@/pages/workspace/ui/chat/layout';
+import { focusedRange } from '@/pages/workspace/ui/focused-range';
 import { ConversationInspector } from '@/pages/workspace/ui/inspection/conversation-inspector';
 import type { HistoryItemJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 
-const HistoryRow = lazy(() =>
-  import('@/pages/workspace/ui/chat/history-row').then((module) => ({ default: module.HistoryRow }))
-);
 const LiveOutput = lazy(() =>
   import('@/pages/workspace/ui/chat/live-output').then((module) => ({ default: module.LiveOutput }))
+);
+const HistorySearch = lazy(() =>
+  import('@/pages/workspace/ui/chat/history-search').then((module) => ({
+    default: module.HistorySearch,
+  }))
 );
 
 const positions = new Map<string, number>();
@@ -46,6 +52,8 @@ export function Chat({
   scroller: HTMLDivElement | null;
   onEmpty: (empty: boolean) => void;
 }) {
+  const blocked = useChatPresentationBlocked();
+  const connected = useServerSession((state) => state.connected);
   const t = useLocale(),
     previousSize = useRef<number | null>(null),
     latestRequested = useRef(false);
@@ -58,6 +66,10 @@ export function Chat({
   const followedTask = useRef<string | undefined>(undefined);
   const state = useQuery(stateOptions(target));
   const [before, setBefore] = useState('0');
+  const [focused, setFocused] = useState(-1);
+  const [searchOpen, setSearchOpen] = useState(false),
+    [match, setMatch] = useState<HistoryJump>();
+  const searchRequested = useRef(false);
   const inspector = useConversationInspection();
   const history = useInfiniteQuery({
     queryKey: ['history', target.workspace, target.session, before],
@@ -101,12 +113,14 @@ export function Chat({
     },
     [visibleRows]
   );
+  const rangeExtractor = useCallback((range: Range) => focusedRange(range, focused), [focused]);
   const virtual = useVirtualizer({
     count: visibleRows.length,
     getScrollElement: () => scroller,
     estimateSize: () => 140,
     overscan: 5,
     getItemKey,
+    rangeExtractor,
   });
   useLayoutEffect(() => {
     if (!history.data || before !== '0') return;
@@ -135,6 +149,12 @@ export function Chat({
     }
   }, [items.length, virtual, scroller]);
   const empty = history.isSuccess && items.length === 0 && !taskId && !hasOutput;
+  useLayoutEffect(() => {
+    if (searchRequested.current && history.isSuccess && !history.isFetching) {
+      searchRequested.current = false;
+      virtual.scrollToIndex(Math.max(0, visibleRows.length - 1), { align: 'start' });
+    }
+  }, [history.isSuccess, history.isFetching, virtual, visibleRows.length]);
   useLayoutEffect(() => onEmpty(empty), [empty, onEmpty]);
   useLayoutEffect(() => {
     if (!taskId || !scroller || before !== '0' || followedTask.current === taskId) return;
@@ -151,9 +171,29 @@ export function Chat({
   return (
     <Center width="100%" className="meca-pane-enter min-w-0">
       <VStack width={chatWidth} paddingBlock={4} gap={5} className="chat-content min-w-0">
+        <Button
+          label={t('searchConversation')}
+          variant="ghost"
+          size="sm"
+          className="self-end"
+          onClick={() => setSearchOpen(true)}
+        />
+        {searchOpen && (
+          <Suspense fallback={null}>
+            <HistorySearch
+              target={target}
+              close={() => setSearchOpen(false)}
+              select={(source) => {
+                setMatch((previous) => ({ source, serial: (previous?.serial ?? 0) + 1 }));
+                setBefore(String(BigInt(source.historySequence ?? '0') + 1n));
+                searchRequested.current = true;
+              }}
+            />
+          </Suspense>
+        )}
         {empty && (
           <VStack gap={3} paddingBlock={6}>
-            <Heading level={1} type="display-2">
+            <Heading level={2} type="display-2">
               {t('emptyTitle')}
             </Heading>
             <Text color="secondary">{t('emptyHelp')}</Text>
@@ -199,58 +239,22 @@ export function Chat({
           <Button label={`${t('readError')} · ${t('retry')}`} onClick={() => history.refetch()} />
         )}
         <ChatMessageList
+          isStreaming={!!taskId}
           align="top"
           gap={0}
           style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
         >
-          <VStack width="100%" gap={0} className="history-rows">
-            <VStack
-              height={virtual.getVirtualItems()[0]?.start ?? 0}
-              className="shrink-0"
-              aria-hidden
-              gap={0}
-            />
-            {virtual.getVirtualItems().map((row) => {
-              const value = visibleRows[row.index];
-              if (!value) return null;
-              return (
-                <VStack
-                  key={row.key}
-                  className={`history-row ${'item' in value && value.item.role === 'user' ? 'user-message' : 'assistant-message'}`}
-                  paddingBlockEnd={8}
-                  data-index={row.index}
-                  ref={virtual.measureElement}
-                >
-                  {'completion' in value ? (
-                    <CompletionRow
-                      completion={value.completion}
-                      sequence={value.sequence}
-                      onDetails={inspector.actions.history}
-                    />
-                  ) : (
-                    <Suspense fallback={<Skeleton height={80} />}>
-                      <HistoryRow
-                        item={value.item}
-                        thinking={value.thinking}
-                        tools={value.tools}
-                        target={target}
-                        inspect={inspector.actions}
-                      />
-                    </Suspense>
-                  )}
-                </VStack>
-              );
-            })}
-            <VStack
-              height={Math.max(
-                0,
-                virtual.getTotalSize() - (virtual.getVirtualItems().at(-1)?.end ?? 0)
-              )}
-              className="shrink-0"
-              aria-hidden
-              gap={0}
-            />
-          </VStack>
+          <HistoryWindow
+            rows={visibleRows}
+            window={virtual.getVirtualItems()}
+            total={virtual.getTotalSize()}
+            measure={virtual.measureElement}
+            target={target}
+            inspect={inspector.actions}
+            match={match}
+            setFocused={setFocused}
+            blocked={blocked && connected}
+          />
           {/* Astryx must observe live content growth as part of the message list. */}
           {before === '0' && (taskId || hasOutput || hasActivity) && (
             <Suspense fallback={<Skeleton height={80} />}>

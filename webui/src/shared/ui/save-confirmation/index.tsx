@@ -18,6 +18,7 @@ export function SaveConfirmation({
   save: () => void;
 }) {
   const t = useLocale();
+  if (!open) return null;
   return (
     <AlertDialog
       isOpen={open}

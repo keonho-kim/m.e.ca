@@ -29,7 +29,7 @@ for (const dark of [false, true])
       else {
         await page.goto(`${fixture.url}/ui/`);
         const token = (await readFile(fixture.tokenFile, 'utf8')).trim();
-        await page.getByRole('textbox', { name: '서버 토큰', exact: true }).fill(token);
+        await page.getByRole('textbox', { name: /^서버 토큰/ }).fill(token);
         await page.getByRole('button', { name: '연결', exact: true }).click();
       }
       await entering;

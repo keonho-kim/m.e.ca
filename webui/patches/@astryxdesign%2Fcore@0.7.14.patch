@@ -1,0 +1,239 @@
+diff --git a/dist/Markdown/Markdown.d.ts b/dist/Markdown/Markdown.d.ts
+index edc22fbfd32ae1031cafb9a5efb272c81bb05b66..dd62c90108e40dde7b1c414fdfb77d81ae57c1b3 100644
+--- a/dist/Markdown/Markdown.d.ts
++++ b/dist/Markdown/Markdown.d.ts
+@@ -120,6 +120,8 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+      */
+     headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+     isStreaming?: boolean;
++    /** Controls character reveal independently of incremental parsing. */
++    isRevealing?: boolean;
+     onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void | false;
+     /**
+      * Citation sources keyed by ID. When provided, `[id]` and `【id】` markers
+@@ -199,7 +201,7 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+  * </Markdown>
+  * ```
+  */
+-export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
++export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, isRevealing, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
+ export declare namespace Markdown {
+     var displayName: string;
+ }
+diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
+index e0497e9e58f797804a740f40b6e4bed7dce0e810..28b76651df5236f4905b7800d23cded952f09de7 100644
+--- a/dist/Markdown/Markdown.js
++++ b/dist/Markdown/Markdown.js
+@@ -1406,6 +1406,7 @@ export function Markdown({
+   density = 'default',
+   headingLevelStart = 1,
+   isStreaming = false,
++  isRevealing = true,
+   onLinkClick,
+   sources,
+   citationStyle = 'label',
+@@ -1471,7 +1472,7 @@ export function Markdown({
+ 
+   // Smooth bursty streamed chunks into a steady character-by-character reveal.
+   // When not streaming, the hook returns children unchanged (no-op).
+-  const smoothedText = useStreamingText(children, isStreaming);
++  const smoothedText = useStreamingText(children, isStreaming, {speed: isRevealing ? 'natural' : 'instant'});
+   const incrementalStateRef = useRef(createIncrementalState());
+   // Reset incremental cache when parser-affecting component options toggle —
+   // cached settled blocks were parsed with the previous setting.
+@@ -1496,7 +1497,7 @@ export function Markdown({
+       return (hasMathRenderer ? parseMarkdownAstIncremental(input, incrementalStateRef.current, mathParseOptions) : parseMarkdownAstIncremental(input, incrementalStateRef.current, legacyParseOptions)).children;
+     }
+     return (hasMathRenderer ? parseMarkdownAst(children, mathParseOptions) : parseMarkdownAst(children, legacyParseOptions)).children;
+-  }, [display, smoothedText, children, isStreaming, hasMathRenderer, mathParseOptions, legacyParseOptions]);
++  }, [display, smoothedText, children, isStreaming, isRevealing, hasMathRenderer, mathParseOptions, legacyParseOptions]);
+   const transformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
+   const blocks = useMemo(() => applyMarkdownTransforms({
+     type: 'root',
+@@ -1522,7 +1523,7 @@ export function Markdown({
+     const options = hasMathRenderer ? mathParseOptions : legacyParseOptions;
+     const input = isStreaming ? trimStreamingArtifacts(smoothedText, options) : children;
+     return hasMathRenderer ? parseInlineAst(input, mathParseOptions) : parseInlineAst(input, legacyParseOptions);
+-  }, [display, smoothedText, children, isStreaming, hasMathRenderer, mathParseOptions, legacyParseOptions]);
++  }, [display, smoothedText, children, isStreaming, isRevealing, hasMathRenderer, mathParseOptions, legacyParseOptions]);
+   const inlineTransformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
+   const inlineNodes = useMemo(() => {
+     if (display !== 'inline') {
+@@ -1579,7 +1580,7 @@ export function Markdown({
+     const blockCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming
++      active: isStreaming && isRevealing
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const blockCitationCtx = sources ? {
+@@ -1592,12 +1593,12 @@ export function Markdown({
+       provider: direction,
+       around: direction
+     }));
+-  }, [display, blocks, boundaries, isStreaming, sources, citationStyle, density, headingLevelStart, stableOnLinkClick, contentWidthValue, contentAlign, LinkComponent, inlinePlugins, components, preparedPlugins, t, headingProjection, codeLanguages, direction]);
++  }, [display, blocks, boundaries, isStreaming, isRevealing, sources, citationStyle, density, headingLevelStart, stableOnLinkClick, contentWidthValue, contentAlign, LinkComponent, inlinePlugins, components, preparedPlugins, t, headingProjection, codeLanguages, direction]);
+   if (display === 'inline') {
+     const cursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming
++      active: isStreaming && isRevealing
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const citationCtx = sources ? {
+diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
+index 99b35b8993a757735ebe1277d323bad96e8a9f2a..0cda8e726ec9dc9b0de3ad80157225399f4ea787 100644
+--- a/dist/hooks/useStreamingText.js
++++ b/dist/hooks/useStreamingText.js
+@@ -158,6 +158,14 @@ export function useStreamingText(targetText, isStreaming, options) {
+   // useMediaQuery follows a preference change mid-stream.
+   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+ 
++  // An instant catch-up is already visible. Resume animation from that
++  // boundary instead of replaying or briefly hiding the displayed prefix.
++  const instant = !isStreaming || speed === 'instant' || prefersReducedMotion;
++  const wasInstant = useRef(instant);
++  if (instant) displayedLenRef.current = targetText.length;
++  else if (wasInstant.current) setDisplayedLen(displayedLenRef.current);
++  wasInstant.current = instant;
++
+   // Syncs the revealed text with an animation-frame clock while the text
+   // streams.
+   useEffect(() => {
+@@ -176,7 +184,7 @@ export function useStreamingText(targetText, isStreaming, options) {
+           setDisplayedLen(nextLen);
+         }
+       }
+-      rafRef.current = requestAnimationFrame(tick);
++      rafRef.current = displayedLenRef.current < targetRef.current.length ? requestAnimationFrame(tick) : null;
+     }
+     rafRef.current = requestAnimationFrame(tick);
+     return () => {
+@@ -185,7 +193,7 @@ export function useStreamingText(targetText, isStreaming, options) {
+         rafRef.current = null;
+       }
+     };
+-  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion]);
++  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, targetText]);
+   if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
+     return targetText;
+   }
+diff --git a/src/Markdown/Markdown.tsx b/src/Markdown/Markdown.tsx
+index bfdaa07cddee596b875881d2c8d13523cfe36bd1..5233bb77347585d89f7f90247b669ba2dd011bea 100644
+--- a/src/Markdown/Markdown.tsx
++++ b/src/Markdown/Markdown.tsx
+@@ -277,6 +277,8 @@ export interface MarkdownProps<
+    */
+   headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+   isStreaming?: boolean;
++  /** Controls character reveal independently of incremental parsing. */
++  isRevealing?: boolean;
+   onLinkClick?: (
+     href: string,
+     event: React.MouseEvent<HTMLAnchorElement>,
+@@ -2240,6 +2242,7 @@ export function Markdown<
+   density = 'default',
+   headingLevelStart = 1,
+   isStreaming = false,
++  isRevealing = true,
+   onLinkClick,
+   sources,
+   citationStyle = 'label',
+@@ -2316,7 +2319,7 @@ export function Markdown<
+ 
+   // Smooth bursty streamed chunks into a steady character-by-character reveal.
+   // When not streaming, the hook returns children unchanged (no-op).
+-  const smoothedText = useStreamingText(children, isStreaming);
++  const smoothedText = useStreamingText(children, isStreaming, {speed: isRevealing ? 'natural' : 'instant'});
+ 
+   const incrementalStateRef = useRef<IncrementalState<boolean>>(
+     createIncrementalState<boolean>(),
+@@ -2369,6 +2372,7 @@ export function Markdown<
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2421,6 +2425,7 @@ export function Markdown<
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2456,6 +2461,7 @@ export function Markdown<
+     preparedPlugins,
+     inlineTransformSource,
+     isStreaming,
++    isRevealing,
+   ]);
+ 
+   // Track recent boundaries for stacked fade-in animation.
+@@ -2505,7 +2511,7 @@ export function Markdown<
+     const blockCursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const blockCitationCtx: CitationContext | null = sources
+@@ -2539,6 +2545,7 @@ export function Markdown<
+     blocks,
+     boundaries,
+     isStreaming,
++    isRevealing,
+     sources,
+     citationStyle,
+     density,
+@@ -2560,7 +2567,7 @@ export function Markdown<
+     const cursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const citationCtx: CitationContext | null = sources
+diff --git a/src/hooks/useStreamingText.ts b/src/hooks/useStreamingText.ts
+index 432f6bf59dfd4efba8472bb69574d44650c737bb..7e452dcfde2b75fd03d7ac4f605eda09a759352d 100644
+--- a/src/hooks/useStreamingText.ts
++++ b/src/hooks/useStreamingText.ts
+@@ -178,6 +178,14 @@ export function useStreamingText(
+     '(prefers-reduced-motion: reduce)',
+   );
+ 
++  // An instant catch-up is already visible. Resume animation from that
++  // boundary instead of replaying or briefly hiding the displayed prefix.
++  const instant = !isStreaming || speed === 'instant' || prefersReducedMotion;
++  const wasInstant = useRef(instant);
++  if (instant) displayedLenRef.current = targetText.length;
++  else if (wasInstant.current) setDisplayedLen(displayedLenRef.current);
++  wasInstant.current = instant;
++
+   // Syncs the revealed text with an animation-frame clock while the text
+   // streams.
+   useEffect(() => {
+@@ -200,7 +208,7 @@ export function useStreamingText(
+         }
+       }
+ 
+-      rafRef.current = requestAnimationFrame(tick);
++      rafRef.current = displayedLenRef.current < targetRef.current.length ? requestAnimationFrame(tick) : null;
+     }
+ 
+     rafRef.current = requestAnimationFrame(tick);
+@@ -210,7 +218,7 @@ export function useStreamingText(
+         rafRef.current = null;
+       }
+     };
+-  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion]);
++  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, targetText]);
+ 
+   if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
+     return targetText;

@@ -1,10 +1,11 @@
 // Purpose: Observe one directory and revalidate only its affected open document.
 // Pattern: Hook-owned SSE lifecycle with bounded filename notifications.
 // Usage: Files owns navigation; this hook owns watcher readiness, errors and dirty hints.
-// Related: webui/src/shared/api/event-stream.ts, internal/serverapi/files_watch.go.
+// Related: webui/src/pages/workspace/api/observer.ts, internal/serverapi/files_watch.go.
 import { useEffect, useRef, useState } from 'react';
 import { useServerSession } from '@/entities/server-session';
-import { queries, subscribeEventStream } from '@/shared/api';
+import { subscribeEventStream } from '@/pages/workspace/api/observer';
+import { queries } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 import { ApiError, describeError } from '@/shared/lib/errors';
 
@@ -25,7 +26,7 @@ export function useFileEvents(workspace: string, folder: string, file: string, e
         url: `/v1/files/events?workspace_id=${encodeURIComponent(workspace)}&path=${encodeURIComponent(folder)}`,
         events: {
           change: (raw) => {
-            const event = JSON.parse(raw) as {
+            const event = raw as {
               refresh?: boolean;
               error?: string;
               errorCode?: string;
@@ -56,7 +57,13 @@ export function useFileEvents(workspace: string, folder: string, file: string, e
         setError(describeError(value));
         return (
           !(value instanceof ApiError) ||
-          ['network', 'unavailable', 'resource_exhausted', 'invalid_response'].includes(value.code)
+          [
+            'network',
+            'unavailable',
+            'resource_exhausted',
+            'invalid_response',
+            'read_timeout',
+          ].includes(value.code)
         );
       },
     });

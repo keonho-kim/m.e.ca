@@ -11,7 +11,7 @@ import {
 } from '@/pages/workspace/model/input-usage';
 import { emptyInput, targetKey, type WorkspaceState } from '@/pages/workspace/model/types';
 import { failure } from '@/shared/lib/errors';
-import { utf8Bytes } from '@/shared/lib/utf8';
+import { editedBytes } from '@/shared/lib/utf8';
 
 type ComposerSlice = Pick<
   WorkspaceState,
@@ -60,12 +60,16 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
     inputs: {},
     queues: {},
     pausedQueues: {},
-    patchInput: (target, patch) => {
+    patchInput: (target, patch, edit) => {
       const key = targetKey(target),
         state = get(),
         old = state.inputs[key] ?? emptyInput();
       if (
-        (patch.text === undefined || patch.text === old.text) &&
+        (patch.text === undefined ||
+          (!edit && patch.text === old.text) ||
+          (edit?.revision === old.revision &&
+            patch.text.length === old.text.length &&
+            old.text.slice(edit.start, edit.end) === edit.inserted)) &&
         (patch.paths === undefined || sameItems(patch.paths, old.paths)) &&
         (patch.files === undefined || sameItems(patch.files, old.files))
       )
@@ -73,9 +77,14 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
       revision = Math.max(revision, old.revision) + 1;
       const next = { ...old, ...patch, revision };
       const bytes =
-        patch.text === undefined || patch.text === old.text
+        patch.text === undefined || (!edit && patch.text === old.text)
           ? inputBytes(old)
-          : utf8Bytes(next.text);
+          : editedBytes(
+              old.text,
+              next.text,
+              inputBytes(old),
+              edit?.revision === old.revision ? edit : undefined
+            );
       const total = inputTotal(state.inputs) - inputBytes(old) + bytes;
       if (total > textLimit) return reject();
       const nextInputs = { ...state.inputs };
@@ -145,7 +154,7 @@ export const createComposerSlice: StateCreator<WorkspaceState, [], [], ComposerS
       if (!old || !list || (!text.trim() && !old.files.length)) return false;
       if (text === old.text) return true;
       const usage = queueTotal(state.queues),
-        bytes = utf8Bytes(text),
+        bytes = editedBytes(old.text, text, inputBytes(old)),
         total = usage.bytes - inputBytes(old) + bytes;
       if (total > textLimit) return reject();
       const item = { ...old, text };

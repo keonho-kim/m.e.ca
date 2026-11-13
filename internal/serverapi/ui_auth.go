@@ -47,14 +47,21 @@ func (t *Transport) enableUI(handler http.Handler) error {
 	mux.HandleFunc("POST /v1/ui/pick-folder", t.pickFolder)
 	mux.HandleFunc("POST /v1/ui/logout", t.uiLogout)
 	mux.HandleFunc("GET /v1/ui/session", t.uiSession)
+	mux.HandleFunc("GET /v1/ui/events", t.uiObserver)
+	mux.HandleFunc("POST /v1/ui/thumbnail", t.uiThumbnail)
 	return nil
 }
 
 func (t *Transport) uiSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	buildID := ""
+	if build, ok := t.ui.(interface{ BuildID() string }); ok {
+		buildID = build.BuildID()
+	}
 	_ = json.NewEncoder(w).Encode(struct {
-		Authenticated bool `json:"authenticated"`
-	}{Authenticated: t.browserAuthenticated(r)})
+		Authenticated bool   `json:"authenticated"`
+		BuildID       string `json:"buildId,omitempty"`
+	}{Authenticated: t.browserAuthenticated(r), BuildID: buildID})
 }
 
 func (t *Transport) uiLogin(w http.ResponseWriter, r *http.Request) {

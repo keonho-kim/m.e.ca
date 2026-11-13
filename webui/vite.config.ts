@@ -9,46 +9,61 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
+import { browserBuildID } from '#build/build-id';
 import { runtimeNotices } from '#build/notices';
-export default defineConfig(({ mode }) => ({
-  base: '/ui/',
-  plugins: [
-    react(),
-    babel({ presets: [reactCompilerPreset({ target: '19' })] }),
-    tailwindcss(),
-    runtimeNotices(),
-    mode === 'analyze' &&
-      visualizer({
-        filename: '.cache/bundle-analysis.html',
-        gzipSize: true,
-        open: false,
-      }),
-  ],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  server: { proxy: { '/v1': 'http://127.0.0.1:8787' } },
-  build: {
-    target: 'es2022',
-    sourcemap: false,
-    assetsInlineLimit: 0,
-    rolldownOptions: {
-      output: {
-        codeSplitting: {
-          groups: [
-            {
-              name: 'react',
-              test: /node_modules\/(?:react|react-dom|scheduler)\//,
-              tags: ['$initial'],
-              priority: 1,
-            },
-            {
-              name: 'initial-deps',
-              test: /node_modules/,
-              // Merge only the dependency closure already required by the application entry.
-              tags: ['$initial'],
-            },
-          ],
+export default defineConfig(({ mode }) => {
+  const buildID = browserBuildID();
+  return {
+    base: '/ui/',
+    define: { __MECA_UI_BUILD__: JSON.stringify(buildID) },
+    plugins: [
+      {
+        name: 'meca-build-id',
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'build.json',
+            source: JSON.stringify({ id: buildID }),
+          });
+        },
+      },
+      react(),
+      babel({ presets: [reactCompilerPreset({ target: '19' })] }),
+      tailwindcss(),
+      runtimeNotices(),
+      mode === 'analyze' &&
+        visualizer({
+          filename: '.cache/bundle-analysis.html',
+          gzipSize: true,
+          open: false,
+        }),
+    ],
+    resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+    server: { proxy: { '/v1': 'http://127.0.0.1:8787' } },
+    build: {
+      target: 'es2022',
+      sourcemap: false,
+      assetsInlineLimit: 0,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react',
+                test: /node_modules\/(?:react|react-dom|scheduler)\//,
+                tags: ['$initial'],
+                priority: 1,
+              },
+              {
+                name: 'initial-deps',
+                test: /node_modules/,
+                // Merge only the dependency closure already required by the application entry.
+                tags: ['$initial'],
+              },
+            ],
+          },
         },
       },
     },
-  },
-}));
+  };
+});

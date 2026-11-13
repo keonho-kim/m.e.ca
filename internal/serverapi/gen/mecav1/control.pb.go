@@ -78,7 +78,7 @@ func (x DetailRequest_View) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DetailRequest_View.Descriptor instead.
 func (DetailRequest_View) EnumDescriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{6, 0}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{7, 0}
 }
 
 type Empty struct {
@@ -168,6 +168,7 @@ type Command struct {
 	//	*Command_EditorProbe
 	//	*Command_LookupMutation
 	//	*Command_SessionUsage
+	//	*Command_SearchHistory
 	Operation     isCommand_Operation `protobuf_oneof:"operation"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -620,6 +621,15 @@ func (x *Command) GetSessionUsage() *SessionTarget {
 	return nil
 }
 
+func (x *Command) GetSearchHistory() *HistorySearch {
+	if x != nil {
+		if x, ok := x.Operation.(*Command_SearchHistory); ok {
+			return x.SearchHistory
+		}
+	}
+	return nil
+}
+
 type isCommand_Operation interface {
 	isCommand_Operation()
 }
@@ -800,6 +810,10 @@ type Command_SessionUsage struct {
 	SessionUsage *SessionTarget `protobuf:"bytes,51,opt,name=session_usage,json=sessionUsage,proto3,oneof"`
 }
 
+type Command_SearchHistory struct {
+	SearchHistory *HistorySearch `protobuf:"bytes,54,opt,name=search_history,json=searchHistory,proto3,oneof"`
+}
+
 func (*Command_ListSessions) isCommand_Operation() {}
 
 func (*Command_SelectSession) isCommand_Operation() {}
@@ -887,6 +901,8 @@ func (*Command_EditorProbe) isCommand_Operation() {}
 func (*Command_LookupMutation) isCommand_Operation() {}
 
 func (*Command_SessionUsage) isCommand_Operation() {}
+
+func (*Command_SearchHistory) isCommand_Operation() {}
 
 type SelectSession struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1052,6 +1068,66 @@ func (x *HistoryRequest) GetSessionId() string {
 	return ""
 }
 
+type HistorySearch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Query         string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HistorySearch) Reset() {
+	*x = HistorySearch{}
+	mi := &file_meca_v1_control_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HistorySearch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HistorySearch) ProtoMessage() {}
+
+func (x *HistorySearch) ProtoReflect() protoreflect.Message {
+	mi := &file_meca_v1_control_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HistorySearch.ProtoReflect.Descriptor instead.
+func (*HistorySearch) Descriptor() ([]byte, []int) {
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *HistorySearch) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *HistorySearch) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *HistorySearch) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
 type EventReference struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -1062,7 +1138,7 @@ type EventReference struct {
 
 func (x *EventReference) Reset() {
 	*x = EventReference{}
-	mi := &file_meca_v1_control_proto_msgTypes[5]
+	mi := &file_meca_v1_control_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1074,7 +1150,7 @@ func (x *EventReference) String() string {
 func (*EventReference) ProtoMessage() {}
 
 func (x *EventReference) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[5]
+	mi := &file_meca_v1_control_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,7 +1163,7 @@ func (x *EventReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventReference.ProtoReflect.Descriptor instead.
 func (*EventReference) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{5}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *EventReference) GetSessionId() string {
@@ -1117,13 +1193,15 @@ type DetailRequest struct {
 	Limit         int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	SessionId     string                 `protobuf:"bytes,6,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Revision      string                 `protobuf:"bytes,7,opt,name=revision,proto3" json:"revision,omitempty"`
+	Field         string                 `protobuf:"bytes,9,opt,name=field,proto3" json:"field,omitempty"`
+	ListFields    bool                   `protobuf:"varint,10,opt,name=list_fields,json=listFields,proto3" json:"list_fields,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DetailRequest) Reset() {
 	*x = DetailRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[6]
+	mi := &file_meca_v1_control_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1135,7 +1213,7 @@ func (x *DetailRequest) String() string {
 func (*DetailRequest) ProtoMessage() {}
 
 func (x *DetailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[6]
+	mi := &file_meca_v1_control_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1148,7 +1226,7 @@ func (x *DetailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetailRequest.ProtoReflect.Descriptor instead.
 func (*DetailRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{6}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DetailRequest) GetView() DetailRequest_View {
@@ -1220,6 +1298,20 @@ func (x *DetailRequest) GetRevision() string {
 	return ""
 }
 
+func (x *DetailRequest) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *DetailRequest) GetListFields() bool {
+	if x != nil {
+		return x.ListFields
+	}
+	return false
+}
+
 type isDetailRequest_Source interface {
 	isDetailRequest_Source()
 }
@@ -1261,7 +1353,7 @@ type ModelRequest struct {
 
 func (x *ModelRequest) Reset() {
 	*x = ModelRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[7]
+	mi := &file_meca_v1_control_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1273,7 +1365,7 @@ func (x *ModelRequest) String() string {
 func (*ModelRequest) ProtoMessage() {}
 
 func (x *ModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[7]
+	mi := &file_meca_v1_control_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1286,7 +1378,7 @@ func (x *ModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelRequest.ProtoReflect.Descriptor instead.
 func (*ModelRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{7}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ModelRequest) GetProvider() string {
@@ -1364,7 +1456,7 @@ type SettingsRequest struct {
 
 func (x *SettingsRequest) Reset() {
 	*x = SettingsRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[8]
+	mi := &file_meca_v1_control_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1376,7 +1468,7 @@ func (x *SettingsRequest) String() string {
 func (*SettingsRequest) ProtoMessage() {}
 
 func (x *SettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[8]
+	mi := &file_meca_v1_control_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1389,7 +1481,7 @@ func (x *SettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettingsRequest.ProtoReflect.Descriptor instead.
 func (*SettingsRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{8}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SettingsRequest) GetPermission() string {
@@ -1434,7 +1526,7 @@ type StartRequest struct {
 
 func (x *StartRequest) Reset() {
 	*x = StartRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[9]
+	mi := &file_meca_v1_control_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1538,7 @@ func (x *StartRequest) String() string {
 func (*StartRequest) ProtoMessage() {}
 
 func (x *StartRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[9]
+	mi := &file_meca_v1_control_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1551,7 @@ func (x *StartRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRequest.ProtoReflect.Descriptor instead.
 func (*StartRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{9}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *StartRequest) GetSessionId() string {
@@ -1506,7 +1598,7 @@ type TaskRequest struct {
 
 func (x *TaskRequest) Reset() {
 	*x = TaskRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[10]
+	mi := &file_meca_v1_control_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1518,7 +1610,7 @@ func (x *TaskRequest) String() string {
 func (*TaskRequest) ProtoMessage() {}
 
 func (x *TaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[10]
+	mi := &file_meca_v1_control_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1531,7 +1623,7 @@ func (x *TaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskRequest.ProtoReflect.Descriptor instead.
 func (*TaskRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{10}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TaskRequest) GetTaskId() string {
@@ -1552,7 +1644,7 @@ type ApprovalDecision struct {
 
 func (x *ApprovalDecision) Reset() {
 	*x = ApprovalDecision{}
-	mi := &file_meca_v1_control_proto_msgTypes[11]
+	mi := &file_meca_v1_control_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1564,7 +1656,7 @@ func (x *ApprovalDecision) String() string {
 func (*ApprovalDecision) ProtoMessage() {}
 
 func (x *ApprovalDecision) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[11]
+	mi := &file_meca_v1_control_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1577,7 +1669,7 @@ func (x *ApprovalDecision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApprovalDecision.ProtoReflect.Descriptor instead.
 func (*ApprovalDecision) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{11}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ApprovalDecision) GetTaskId() string {
@@ -1612,7 +1704,7 @@ type SteeringRequest struct {
 
 func (x *SteeringRequest) Reset() {
 	*x = SteeringRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[12]
+	mi := &file_meca_v1_control_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1624,7 +1716,7 @@ func (x *SteeringRequest) String() string {
 func (*SteeringRequest) ProtoMessage() {}
 
 func (x *SteeringRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[12]
+	mi := &file_meca_v1_control_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1637,7 +1729,7 @@ func (x *SteeringRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SteeringRequest.ProtoReflect.Descriptor instead.
 func (*SteeringRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{12}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SteeringRequest) GetTaskId() string {
@@ -1671,7 +1763,7 @@ type WatchRequest struct {
 
 func (x *WatchRequest) Reset() {
 	*x = WatchRequest{}
-	mi := &file_meca_v1_control_proto_msgTypes[13]
+	mi := &file_meca_v1_control_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1683,7 +1775,7 @@ func (x *WatchRequest) String() string {
 func (*WatchRequest) ProtoMessage() {}
 
 func (x *WatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[13]
+	mi := &file_meca_v1_control_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1696,7 +1788,7 @@ func (x *WatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRequest.ProtoReflect.Descriptor instead.
 func (*WatchRequest) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{13}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *WatchRequest) GetCursor() string {
@@ -1729,7 +1821,7 @@ type SocketFrame struct {
 
 func (x *SocketFrame) Reset() {
 	*x = SocketFrame{}
-	mi := &file_meca_v1_control_proto_msgTypes[14]
+	mi := &file_meca_v1_control_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1741,7 +1833,7 @@ func (x *SocketFrame) String() string {
 func (*SocketFrame) ProtoMessage() {}
 
 func (x *SocketFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_meca_v1_control_proto_msgTypes[14]
+	mi := &file_meca_v1_control_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1754,7 +1846,7 @@ func (x *SocketFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SocketFrame.ProtoReflect.Descriptor instead.
 func (*SocketFrame) Descriptor() ([]byte, []int) {
-	return file_meca_v1_control_proto_rawDescGZIP(), []int{14}
+	return file_meca_v1_control_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SocketFrame) GetBody() isSocketFrame_Body {
@@ -1833,7 +1925,7 @@ var File_meca_v1_control_proto protoreflect.FileDescriptor
 const file_meca_v1_control_proto_rawDesc = "" +
 	"\n" +
 	"\x15meca/v1/control.proto\x12\ameca.v1\x1a\x14meca/v1/skills.proto\x1a\x17meca/v1/workspace.proto\x1a\x19meca/v1/application.proto\"\a\n" +
-	"\x05Empty\"\xd1\x14\n" +
+	"\x05Empty\"\x92\x15\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12B\n" +
@@ -1889,7 +1981,8 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"mutateFile\x129\n" +
 	"\feditor_probe\x184 \x01(\v2\x14.meca.v1.EditorProbeH\x00R\veditorProbe\x12A\n" +
 	"\x0flookup_mutation\x185 \x01(\v2\x16.meca.v1.RequestLookupH\x00R\x0elookupMutation\x12=\n" +
-	"\rsession_usage\x183 \x01(\v2\x16.meca.v1.SessionTargetH\x00R\fsessionUsageB\v\n" +
+	"\rsession_usage\x183 \x01(\v2\x16.meca.v1.SessionTargetH\x00R\fsessionUsage\x12?\n" +
+	"\x0esearch_history\x186 \x01(\v2\x16.meca.v1.HistorySearchH\x00R\rsearchHistoryB\v\n" +
 	"\toperation\"F\n" +
 	"\rSelectSession\x12\x1d\n" +
 	"\n" +
@@ -1902,11 +1995,16 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\x06before\x18\x01 \x01(\x03R\x06before\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x03 \x01(\tR\tsessionId\"K\n" +
+	"session_id\x18\x03 \x01(\tR\tsessionId\"\\\n" +
+	"\rHistorySearch\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x14\n" +
+	"\x05query\x18\x02 \x01(\tR\x05query\x12\x16\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"K\n" +
 	"\x0eEventReference\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1a\n" +
-	"\bsequence\x18\x02 \x01(\x03R\bsequence\"\x83\x03\n" +
+	"\bsequence\x18\x02 \x01(\x03R\bsequence\"\xba\x03\n" +
 	"\rDetailRequest\x12/\n" +
 	"\x04view\x18\b \x01(\x0e2\x1b.meca.v1.DetailRequest.ViewR\x04view\x12-\n" +
 	"\x04tool\x18\x01 \x01(\v2\x17.meca.v1.EventReferenceH\x00R\x04tool\x12!\n" +
@@ -1917,7 +2015,11 @@ const file_meca_v1_control_proto_rawDesc = "" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x06 \x01(\tR\tsessionId\x12\x1a\n" +
-	"\brevision\x18\a \x01(\tR\brevision\"O\n" +
+	"\brevision\x18\a \x01(\tR\brevision\x12\x14\n" +
+	"\x05field\x18\t \x01(\tR\x05field\x12\x1f\n" +
+	"\vlist_fields\x18\n" +
+	" \x01(\bR\n" +
+	"listFields\"O\n" +
 	"\x04View\x12\f\n" +
 	"\bDOCUMENT\x10\x00\x12\x10\n" +
 	"\fTOOL_REQUEST\x10\x01\x12\x0f\n" +
@@ -1992,7 +2094,7 @@ func file_meca_v1_control_proto_rawDescGZIP() []byte {
 }
 
 var file_meca_v1_control_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meca_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_meca_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_meca_v1_control_proto_goTypes = []any{
 	(DetailRequest_View)(0),    // 0: meca.v1.DetailRequest.View
 	(*Empty)(nil),              // 1: meca.v1.Empty
@@ -2000,93 +2102,95 @@ var file_meca_v1_control_proto_goTypes = []any{
 	(*SelectSession)(nil),      // 3: meca.v1.SelectSession
 	(*SessionListRequest)(nil), // 4: meca.v1.SessionListRequest
 	(*HistoryRequest)(nil),     // 5: meca.v1.HistoryRequest
-	(*EventReference)(nil),     // 6: meca.v1.EventReference
-	(*DetailRequest)(nil),      // 7: meca.v1.DetailRequest
-	(*ModelRequest)(nil),       // 8: meca.v1.ModelRequest
-	(*SettingsRequest)(nil),    // 9: meca.v1.SettingsRequest
-	(*StartRequest)(nil),       // 10: meca.v1.StartRequest
-	(*TaskRequest)(nil),        // 11: meca.v1.TaskRequest
-	(*ApprovalDecision)(nil),   // 12: meca.v1.ApprovalDecision
-	(*SteeringRequest)(nil),    // 13: meca.v1.SteeringRequest
-	(*WatchRequest)(nil),       // 14: meca.v1.WatchRequest
-	(*SocketFrame)(nil),        // 15: meca.v1.SocketFrame
-	(*SessionTarget)(nil),      // 16: meca.v1.SessionTarget
-	(*StateRequest)(nil),       // 17: meca.v1.StateRequest
-	(*SkillListRequest)(nil),   // 18: meca.v1.SkillListRequest
-	(*SkillRequest)(nil),       // 19: meca.v1.SkillRequest
-	(*SkillFileRequest)(nil),   // 20: meca.v1.SkillFileRequest
-	(*ModelQuery)(nil),         // 21: meca.v1.ModelQuery
-	(*FileRequest)(nil),        // 22: meca.v1.FileRequest
-	(*FileSelection)(nil),      // 23: meca.v1.FileSelection
-	(*ImageRequest)(nil),       // 24: meca.v1.ImageRequest
-	(*DraftRequest)(nil),       // 25: meca.v1.DraftRequest
-	(*TaskListRequest)(nil),    // 26: meca.v1.TaskListRequest
-	(*CommandListRequest)(nil), // 27: meca.v1.CommandListRequest
-	(*WorkspaceRequest)(nil),   // 28: meca.v1.WorkspaceRequest
-	(*ParseInput)(nil),         // 29: meca.v1.ParseInput
-	(*EditFile)(nil),           // 30: meca.v1.EditFile
-	(*DiagnoseModel)(nil),      // 31: meca.v1.DiagnoseModel
-	(*RequestLookup)(nil),      // 32: meca.v1.RequestLookup
-	(*SkillPrefix)(nil),        // 33: meca.v1.SkillPrefix
-	(*CreateFolder)(nil),       // 34: meca.v1.CreateFolder
-	(*FileMutation)(nil),       // 35: meca.v1.FileMutation
-	(*EditorProbe)(nil),        // 36: meca.v1.EditorProbe
+	(*HistorySearch)(nil),      // 6: meca.v1.HistorySearch
+	(*EventReference)(nil),     // 7: meca.v1.EventReference
+	(*DetailRequest)(nil),      // 8: meca.v1.DetailRequest
+	(*ModelRequest)(nil),       // 9: meca.v1.ModelRequest
+	(*SettingsRequest)(nil),    // 10: meca.v1.SettingsRequest
+	(*StartRequest)(nil),       // 11: meca.v1.StartRequest
+	(*TaskRequest)(nil),        // 12: meca.v1.TaskRequest
+	(*ApprovalDecision)(nil),   // 13: meca.v1.ApprovalDecision
+	(*SteeringRequest)(nil),    // 14: meca.v1.SteeringRequest
+	(*WatchRequest)(nil),       // 15: meca.v1.WatchRequest
+	(*SocketFrame)(nil),        // 16: meca.v1.SocketFrame
+	(*SessionTarget)(nil),      // 17: meca.v1.SessionTarget
+	(*StateRequest)(nil),       // 18: meca.v1.StateRequest
+	(*SkillListRequest)(nil),   // 19: meca.v1.SkillListRequest
+	(*SkillRequest)(nil),       // 20: meca.v1.SkillRequest
+	(*SkillFileRequest)(nil),   // 21: meca.v1.SkillFileRequest
+	(*ModelQuery)(nil),         // 22: meca.v1.ModelQuery
+	(*FileRequest)(nil),        // 23: meca.v1.FileRequest
+	(*FileSelection)(nil),      // 24: meca.v1.FileSelection
+	(*ImageRequest)(nil),       // 25: meca.v1.ImageRequest
+	(*DraftRequest)(nil),       // 26: meca.v1.DraftRequest
+	(*TaskListRequest)(nil),    // 27: meca.v1.TaskListRequest
+	(*CommandListRequest)(nil), // 28: meca.v1.CommandListRequest
+	(*WorkspaceRequest)(nil),   // 29: meca.v1.WorkspaceRequest
+	(*ParseInput)(nil),         // 30: meca.v1.ParseInput
+	(*EditFile)(nil),           // 31: meca.v1.EditFile
+	(*DiagnoseModel)(nil),      // 32: meca.v1.DiagnoseModel
+	(*RequestLookup)(nil),      // 33: meca.v1.RequestLookup
+	(*SkillPrefix)(nil),        // 34: meca.v1.SkillPrefix
+	(*CreateFolder)(nil),       // 35: meca.v1.CreateFolder
+	(*FileMutation)(nil),       // 36: meca.v1.FileMutation
+	(*EditorProbe)(nil),        // 37: meca.v1.EditorProbe
 }
 var file_meca_v1_control_proto_depIdxs = []int32{
 	4,  // 0: meca.v1.Command.list_sessions:type_name -> meca.v1.SessionListRequest
 	3,  // 1: meca.v1.Command.select_session:type_name -> meca.v1.SelectSession
-	16, // 2: meca.v1.Command.close_session:type_name -> meca.v1.SessionTarget
-	17, // 3: meca.v1.Command.state:type_name -> meca.v1.StateRequest
+	17, // 2: meca.v1.Command.close_session:type_name -> meca.v1.SessionTarget
+	18, // 3: meca.v1.Command.state:type_name -> meca.v1.StateRequest
 	5,  // 4: meca.v1.Command.history:type_name -> meca.v1.HistoryRequest
-	7,  // 5: meca.v1.Command.detail:type_name -> meca.v1.DetailRequest
-	8,  // 6: meca.v1.Command.set_model:type_name -> meca.v1.ModelRequest
-	9,  // 7: meca.v1.Command.set_settings:type_name -> meca.v1.SettingsRequest
-	10, // 8: meca.v1.Command.start:type_name -> meca.v1.StartRequest
-	11, // 9: meca.v1.Command.task_status:type_name -> meca.v1.TaskRequest
-	11, // 10: meca.v1.Command.cancel:type_name -> meca.v1.TaskRequest
-	12, // 11: meca.v1.Command.approve:type_name -> meca.v1.ApprovalDecision
-	13, // 12: meca.v1.Command.steer:type_name -> meca.v1.SteeringRequest
-	18, // 13: meca.v1.Command.list_skills:type_name -> meca.v1.SkillListRequest
-	19, // 14: meca.v1.Command.get_skill:type_name -> meca.v1.SkillRequest
-	20, // 15: meca.v1.Command.read_skill_file:type_name -> meca.v1.SkillFileRequest
+	8,  // 5: meca.v1.Command.detail:type_name -> meca.v1.DetailRequest
+	9,  // 6: meca.v1.Command.set_model:type_name -> meca.v1.ModelRequest
+	10, // 7: meca.v1.Command.set_settings:type_name -> meca.v1.SettingsRequest
+	11, // 8: meca.v1.Command.start:type_name -> meca.v1.StartRequest
+	12, // 9: meca.v1.Command.task_status:type_name -> meca.v1.TaskRequest
+	12, // 10: meca.v1.Command.cancel:type_name -> meca.v1.TaskRequest
+	13, // 11: meca.v1.Command.approve:type_name -> meca.v1.ApprovalDecision
+	14, // 12: meca.v1.Command.steer:type_name -> meca.v1.SteeringRequest
+	19, // 13: meca.v1.Command.list_skills:type_name -> meca.v1.SkillListRequest
+	20, // 14: meca.v1.Command.get_skill:type_name -> meca.v1.SkillRequest
+	21, // 15: meca.v1.Command.read_skill_file:type_name -> meca.v1.SkillFileRequest
 	1,  // 16: meca.v1.Command.capabilities:type_name -> meca.v1.Empty
 	1,  // 17: meca.v1.Command.providers:type_name -> meca.v1.Empty
-	21, // 18: meca.v1.Command.discover_models:type_name -> meca.v1.ModelQuery
-	22, // 19: meca.v1.Command.directory:type_name -> meca.v1.FileRequest
-	22, // 20: meca.v1.Command.preview_file:type_name -> meca.v1.FileRequest
-	16, // 21: meca.v1.Command.file_selections:type_name -> meca.v1.SessionTarget
-	23, // 22: meca.v1.Command.select_file:type_name -> meca.v1.FileSelection
-	24, // 23: meca.v1.Command.history_image:type_name -> meca.v1.ImageRequest
-	25, // 24: meca.v1.Command.draft:type_name -> meca.v1.DraftRequest
-	26, // 25: meca.v1.Command.list_tasks:type_name -> meca.v1.TaskListRequest
-	27, // 26: meca.v1.Command.commands:type_name -> meca.v1.CommandListRequest
+	22, // 18: meca.v1.Command.discover_models:type_name -> meca.v1.ModelQuery
+	23, // 19: meca.v1.Command.directory:type_name -> meca.v1.FileRequest
+	23, // 20: meca.v1.Command.preview_file:type_name -> meca.v1.FileRequest
+	17, // 21: meca.v1.Command.file_selections:type_name -> meca.v1.SessionTarget
+	24, // 22: meca.v1.Command.select_file:type_name -> meca.v1.FileSelection
+	25, // 23: meca.v1.Command.history_image:type_name -> meca.v1.ImageRequest
+	26, // 24: meca.v1.Command.draft:type_name -> meca.v1.DraftRequest
+	27, // 25: meca.v1.Command.list_tasks:type_name -> meca.v1.TaskListRequest
+	28, // 26: meca.v1.Command.commands:type_name -> meca.v1.CommandListRequest
 	1,  // 27: meca.v1.Command.resources:type_name -> meca.v1.Empty
 	1,  // 28: meca.v1.Command.list_workspaces:type_name -> meca.v1.Empty
-	28, // 29: meca.v1.Command.add_workspace:type_name -> meca.v1.WorkspaceRequest
-	16, // 30: meca.v1.Command.delete_session:type_name -> meca.v1.SessionTarget
+	29, // 29: meca.v1.Command.add_workspace:type_name -> meca.v1.WorkspaceRequest
+	17, // 30: meca.v1.Command.delete_session:type_name -> meca.v1.SessionTarget
 	1,  // 31: meca.v1.Command.command_catalog:type_name -> meca.v1.Empty
-	29, // 32: meca.v1.Command.parse_input:type_name -> meca.v1.ParseInput
-	30, // 33: meca.v1.Command.editor_read:type_name -> meca.v1.EditFile
-	30, // 34: meca.v1.Command.editor_save:type_name -> meca.v1.EditFile
-	31, // 35: meca.v1.Command.diagnose_model:type_name -> meca.v1.DiagnoseModel
-	28, // 36: meca.v1.Command.browse_folders:type_name -> meca.v1.WorkspaceRequest
-	32, // 37: meca.v1.Command.lookup_request:type_name -> meca.v1.RequestLookup
-	33, // 38: meca.v1.Command.suggest_skills:type_name -> meca.v1.SkillPrefix
-	34, // 39: meca.v1.Command.create_folder:type_name -> meca.v1.CreateFolder
-	35, // 40: meca.v1.Command.mutate_file:type_name -> meca.v1.FileMutation
-	36, // 41: meca.v1.Command.editor_probe:type_name -> meca.v1.EditorProbe
-	32, // 42: meca.v1.Command.lookup_mutation:type_name -> meca.v1.RequestLookup
-	16, // 43: meca.v1.Command.session_usage:type_name -> meca.v1.SessionTarget
-	0,  // 44: meca.v1.DetailRequest.view:type_name -> meca.v1.DetailRequest.View
-	6,  // 45: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
-	2,  // 46: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
-	14, // 47: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
-	1,  // 48: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	30, // 32: meca.v1.Command.parse_input:type_name -> meca.v1.ParseInput
+	31, // 33: meca.v1.Command.editor_read:type_name -> meca.v1.EditFile
+	31, // 34: meca.v1.Command.editor_save:type_name -> meca.v1.EditFile
+	32, // 35: meca.v1.Command.diagnose_model:type_name -> meca.v1.DiagnoseModel
+	29, // 36: meca.v1.Command.browse_folders:type_name -> meca.v1.WorkspaceRequest
+	33, // 37: meca.v1.Command.lookup_request:type_name -> meca.v1.RequestLookup
+	34, // 38: meca.v1.Command.suggest_skills:type_name -> meca.v1.SkillPrefix
+	35, // 39: meca.v1.Command.create_folder:type_name -> meca.v1.CreateFolder
+	36, // 40: meca.v1.Command.mutate_file:type_name -> meca.v1.FileMutation
+	37, // 41: meca.v1.Command.editor_probe:type_name -> meca.v1.EditorProbe
+	33, // 42: meca.v1.Command.lookup_mutation:type_name -> meca.v1.RequestLookup
+	17, // 43: meca.v1.Command.session_usage:type_name -> meca.v1.SessionTarget
+	6,  // 44: meca.v1.Command.search_history:type_name -> meca.v1.HistorySearch
+	0,  // 45: meca.v1.DetailRequest.view:type_name -> meca.v1.DetailRequest.View
+	7,  // 46: meca.v1.DetailRequest.tool:type_name -> meca.v1.EventReference
+	2,  // 47: meca.v1.SocketFrame.command:type_name -> meca.v1.Command
+	15, // 48: meca.v1.SocketFrame.watch:type_name -> meca.v1.WatchRequest
+	1,  // 49: meca.v1.SocketFrame.unwatch:type_name -> meca.v1.Empty
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_meca_v1_control_proto_init() }
@@ -2142,15 +2246,16 @@ func file_meca_v1_control_proto_init() {
 		(*Command_EditorProbe)(nil),
 		(*Command_LookupMutation)(nil),
 		(*Command_SessionUsage)(nil),
+		(*Command_SearchHistory)(nil),
 	}
-	file_meca_v1_control_proto_msgTypes[6].OneofWrappers = []any{
+	file_meca_v1_control_proto_msgTypes[7].OneofWrappers = []any{
 		(*DetailRequest_Tool)(nil),
 		(*DetailRequest_ApprovalId)(nil),
 		(*DetailRequest_HistorySequence)(nil),
 	}
-	file_meca_v1_control_proto_msgTypes[7].OneofWrappers = []any{}
 	file_meca_v1_control_proto_msgTypes[8].OneofWrappers = []any{}
-	file_meca_v1_control_proto_msgTypes[14].OneofWrappers = []any{
+	file_meca_v1_control_proto_msgTypes[9].OneofWrappers = []any{}
+	file_meca_v1_control_proto_msgTypes[15].OneofWrappers = []any{
 		(*SocketFrame_Authenticate)(nil),
 		(*SocketFrame_Command)(nil),
 		(*SocketFrame_Watch)(nil),
@@ -2162,7 +2267,7 @@ func file_meca_v1_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meca_v1_control_proto_rawDesc), len(file_meca_v1_control_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

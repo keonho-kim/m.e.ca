@@ -46,3 +46,30 @@ export function toolFields(value: Record<string, unknown>, request: boolean) {
     ),
   };
 }
+
+const labels = {
+  command: 'toolCommand',
+  path: 'toolPath',
+  content: 'toolContent',
+  stdout: 'toolStdout',
+  stderr: 'toolStderr',
+  output: 'toolOutput',
+  text: 'toolContent',
+  exit_code: 'toolExitCode',
+  exitcode: 'toolExitCode',
+  status: 'toolStatus',
+  directory: 'toolDirectory',
+  working_directory: 'toolDirectory',
+  pattern: 'toolPattern',
+  query: 'toolQuery',
+  patch: 'toolChanges',
+  diff: 'toolChanges',
+} as const;
+export function toolFieldName(
+  key: string,
+  translate: (key: (typeof labels)[keyof typeof labels]) => string
+) {
+  return Object.hasOwn(labels, key.toLowerCase())
+    ? translate(labels[key.toLowerCase() as keyof typeof labels])
+    : key.replaceAll('_', ' ');
+}

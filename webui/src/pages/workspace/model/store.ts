@@ -22,8 +22,3 @@ export const useWorkspaceStore = create<WorkspaceState>()((...args) => ({
   ...createComposerSlice(...args),
   ...createStreamSlice(...args),
 }));
-export function resetWorkspaceView() {
-  useWorkspaceStore
-    .getState()
-    .set({ mode: 'chat', settings: null, picker: false, languageMenu: false });
-}

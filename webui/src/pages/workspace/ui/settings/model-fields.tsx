@@ -12,6 +12,7 @@ import { Controller, type UseFormReturn } from 'react-hook-form';
 import type { ModelValues } from '@/pages/workspace/model/model-values';
 import type { ModelCandidateJson, ProviderJson, SnapshotJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
+import { describeValidation } from '@/shared/lib/errors';
 export function ModelFields({
   form,
   providers,
@@ -56,7 +57,7 @@ export function ModelFields({
   }, [loadModels]);
   const error = (key: keyof ModelValues) => {
     const message = form.formState.errors[key]?.message;
-    return message ? { type: 'error' as const, message } : undefined;
+    return message ? { type: 'error' as const, message: describeValidation(key, t) } : undefined;
   };
   return (
     <FormLayout direction="vertical">
@@ -79,6 +80,14 @@ export function ModelFields({
         name="endpoint"
         render={({ field }) => (
           <TextInput
+            ref={field.ref}
+            htmlName={field.name}
+            type="url"
+            inputMode="url"
+            isRequired
+            hasAutoCorrect={false}
+            hasSpellCheck={false}
+            autoCapitalize="none"
             label={t('endpoint')}
             value={field.value}
             isDisabled={busy}
@@ -100,6 +109,8 @@ export function ModelFields({
         name="credential"
         render={({ field }) => (
           <TextInput
+            ref={field.ref}
+            htmlName={field.name}
             label={t('apiKey')}
             value={field.value}
             type="password"
@@ -117,6 +128,9 @@ export function ModelFields({
         name="model"
         render={({ field }) => (
           <Typeahead
+            ref={field.ref}
+            isRequired
+            onBlur={field.onBlur}
             label={t('modelId')}
             value={
               field.value

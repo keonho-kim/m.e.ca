@@ -8,6 +8,7 @@ import {
   BookOpen,
   EllipsisVertical,
   File,
+  FileText,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -26,7 +27,6 @@ import {
   RefreshCw,
   Settings,
   SlidersHorizontal,
-  SquareArrowOutUpRight,
   SquarePen,
   Sun,
   Trash2,
@@ -49,7 +49,7 @@ export const mecaIcons = {
       <use href="/ui/favicon.svg#meca-mark" />
     </svg>
   ),
-  'meca:request': <SquareArrowOutUpRight {...iconProps} />,
+  'meca:request': <FileText {...iconProps} />,
   'meca:close': <X {...iconProps} />,
   'meca:play': <Play {...iconProps} />,
   'meca:file': <File {...iconProps} />,

@@ -3,6 +3,7 @@
 // Usage: bun test src/pages/workspace/api/events-replay.test.ts.
 // Related: webui/src/pages/workspace/api/events.ts, webui/src/pages/workspace/model/history-handoff.ts.
 import { expect, test } from 'bun:test';
+import { TestSocket as Connection, streamFetch } from '#test/event-stream';
 import { observe } from '@/pages/workspace/api/events';
 import { useWorkspaceStore } from '@/pages/workspace/model/store';
 import type { EventJson, SnapshotJson } from '@/shared/api';
@@ -11,33 +12,21 @@ import { queries } from '@/shared/api';
 test('duplicate and old-epoch controls cannot overwrite a completed task in the query cache', async () => {
   const original = {
     fetch: globalThis.fetch,
-    EventSource: globalThis.EventSource,
+    WebSocket: globalThis.WebSocket,
     state: useWorkspaceStore.getState(),
   };
   const target = { workspace: 'w', session: 's' };
-  let opened!: (source: Connection) => void;
   const ready = new Promise<Connection>((resolve) => {
-    opened = resolve;
+    Connection.ready = resolve;
   });
-  class Connection extends EventTarget {
-    static CLOSED = 2;
-    readyState = 1;
-    constructor() {
-      super();
-      opened(this);
-    }
-    close() {
-      this.readyState = 2;
-    }
-  }
+
   let dispose: (() => void) | undefined;
   try {
     queries.clear();
     useWorkspaceStore.setState({ ...useWorkspaceStore.getInitialState(), selection: target });
-    globalThis.EventSource = Connection as unknown as typeof EventSource;
-    globalThis.fetch = Object.assign(
-      async () => Response.json({ state: { cursor: 'epoch:1', workspaceId: 'w' } }),
-      { preconnect: original.fetch.preconnect }
+    globalThis.WebSocket = Connection as unknown as typeof WebSocket;
+    globalThis.fetch = streamFetch(async () =>
+      Response.json({ state: { cursor: 'epoch:1', workspaceId: 'w' } })
     );
     dispose = observe(target);
     const source = await ready;
@@ -56,7 +45,7 @@ test('duplicate and old-epoch controls cannot overwrite a completed task in the 
     dispose?.();
     queries.clear();
     globalThis.fetch = original.fetch;
-    globalThis.EventSource = original.EventSource;
+    globalThis.WebSocket = original.WebSocket;
     useWorkspaceStore.setState(original.state);
   }
 });

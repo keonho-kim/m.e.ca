@@ -1,6 +1,6 @@
-# Research record
+# Primary source index
 
-Primary sources checked on **2026-11-09**. The topic references are original engineering synthesis; linked manuals, papers and articles are not copied into this bundle. Read the relevant original before depending on a version-specific guarantee or implementing cryptographic policy.
+The topic references are original engineering synthesis; linked manuals, papers and articles are not copied into this bundle. Read the relevant original before depending on a version-specific guarantee or implementing cryptographic policy.
 
 | Source family | What it supports |
 | --- | --- |
@@ -21,8 +21,6 @@ Primary sources checked on **2026-11-09**. The topic references are original eng
 
 The [composition map](compositions.md) turns relevant development-pattern principles into concrete roles and execution paths. The [design studies](design-studies.md) use fictional workloads and arithmetic; neither is evidence of measured production performance. The [evaluation cases](operations/skill-evaluation.md) specify a reasoning assessment, not a report that model evaluation has already run.
 
-At this reading, PostgreSQL's `/docs/current/` pages identified PostgreSQL 18; OpenAPI's `latest` identified 3.2.1. Those observations are research context, not requirements to install or upgrade. OpenTelemetry's general recording-errors convention was marked **Development**; confirm the status of conventions and language SDKs before freezing a public telemetry contract.
+Confirm specification maturity, errata and SDK support for the versions used by the target service. Moving documentation aliases do not define deployment requirements.
 
-For cryptographic material, inspect current errata, algorithm limitations and maintained implementation guidance. A source's publication date and this check date have different meanings. NIST's final ML-KEM page includes a potential-errata note. Do not infer that a library using an algorithm is a validated cryptographic module.
-
-The FIPS 204/205 detail pages and the publisher-hosted full text of *The Tail at Scale* were unavailable in this environment. Post-quantum scope is supported by NIST's accessible announcement and ML-KEM publication; the Tail entry is publication metadata only. The skill does not treat those inaccessible full texts as reviewed implementation evidence.
+For cryptographic material, inspect algorithm limitations, maintained implementation guidance and applicable module validation. A library's use of an algorithm does not by itself establish a validated cryptographic module. Publication metadata and announcements identify source scope; read the full specification or paper before treating it as implementation evidence.

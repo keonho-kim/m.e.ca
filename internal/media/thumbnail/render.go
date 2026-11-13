@@ -10,6 +10,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/media"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/media/imagefile"
 	"github.com/keonho-kim/meca/internal/processmemory"
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
@@ -18,11 +19,14 @@ import (
 	"image/png"
 )
 
+// Edge is the maximum display-preview dimension advertised by capabilities.
+const Edge = 256
+
 func Render(ctx context.Context, value media.Image) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	config, _, err := image.DecodeConfig(bytes.NewReader(value.Data))
+	config, format, err := image.DecodeConfig(bytes.NewReader(value.Data))
 	if err != nil {
 		return nil, err
 	}
@@ -35,21 +39,28 @@ func Render(ctx context.Context, value media.Image) ([]byte, error) {
 		return nil, err
 	}
 	defer release()
-	source, _, err := image.Decode(bytes.NewReader(value.Data))
+	input := value.Data
+	if format == "webp" && len(input) > 20 && string(input[12:16]) == "VP8X" && input[20]&2 != 0 {
+		input, err = imagefile.FirstWebPFrame(input, config.Width, config.Height)
+		if err != nil {
+			return nil, err
+		}
+	}
+	source, _, err := image.Decode(bytes.NewReader(input))
 	if err != nil {
 		return nil, err
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	width, height := config.Width, config.Height
-	if width > 256 || height > 256 {
+	width, height := source.Bounds().Dx(), source.Bounds().Dy()
+	if width > Edge || height > Edge {
 		if width >= height {
-			height = max(1, height*256/width)
-			width = 256
+			height = max(1, height*Edge/width)
+			width = Edge
 		} else {
-			width = max(1, width*256/height)
-			height = 256
+			width = max(1, width*Edge/height)
+			height = Edge
 		}
 	}
 	result := image.NewNRGBA(image.Rect(0, 0, width, height))

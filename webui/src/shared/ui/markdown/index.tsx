@@ -53,8 +53,8 @@ function useRevealDuringBurst(text: string, enabled: boolean) {
   const active = enabled && !!text && settledText !== text;
   useEffect(() => {
     if (!active) return;
-    // Astryx's reveal requests frames even after its text catches up. A quiet
-    // burst settles to the received text and releases the animation clock.
+    // A quiet burst catches up immediately so a long chunk does not leave
+    // the received tail hidden behind a slow character reveal.
     const timer = setTimeout(() => {
       setSettledText(text);
     }, 500);
@@ -109,7 +109,9 @@ export const MarkdownText = memo(function MarkdownText({
     <FollowCode value={follow}>
       <Markdown
         className="meca-prose min-w-0 max-w-full [overflow-wrap:anywhere]"
-        isStreaming={streaming && follow && (reveal || reducedMotion)}
+        isStreaming={streaming}
+        isRevealing={follow && reveal && !reducedMotion}
+        headingLevelStart={2}
         components={renderers}
         plugins={plugins}
         contentWidth="100%"

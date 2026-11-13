@@ -5,7 +5,7 @@
 import * as z from 'zod/mini';
 export const modelSchema = z.object({
   provider: z.string().check(z.minLength(1)),
-  endpoint: z.url(),
+  endpoint: z.url().check(z.refine((value) => /^https?:\/\//i.test(value))),
   model: z.string().check(z.trim(), z.minLength(1)),
   credential: z.string().check(
     z.maxLength(2048),

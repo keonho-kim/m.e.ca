@@ -1,12 +1,16 @@
 # Purpose: Exclude generated artifacts, private local state and editor/OS files.
 # Pattern: Repository Configuration.
 # Usage: Read by Git when inspecting this project.
-# Related: go.mod, README.md.
+# Related: docs/development.md, webui/playwright.config.ts, scripts/build-ui.sh.
 
 # Local agent instructions and design-tool state
 AGENTS.md
 .hallmark/
 .impeccable/
+/.codex/
+/.claude/
+/.local/
+/docs/internal/
 
 # Go build and release output
 /bin/
@@ -38,18 +42,33 @@ AGENTS.md
 /.gocache/
 
 # Embedded UI source dependencies and reproducible build output
+/node_modules/
 /webui/node_modules/
+/webui/.vite/
 /webui/dist/
 *.tsbuildinfo
 /webui/coverage/
 /webui/test-results/
 /webui/playwright-report/
 /webui/blob-report/
+/test-results/
+/playwright-report/
+/blob-report/
 /webui/.playwright-cli/
 /.playwright-cli/
 /internal/webui/bundle_generated.go
 /internal/webui/.meca-ui-*.tmp
 /webui/.cache/
+
+# Browser authentication snapshots are private, not test fixtures.
+/playwright/.auth/
+/webui/playwright/.auth/
+/webui/.auth/
+/.auth/
+/auth.json
+/storage-state.json
+/webui/auth.json
+/webui/storage-state.json
 
 # Temporary directories and runtime diagnostics
 /real-world-test/
@@ -59,6 +78,10 @@ AGENTS.md
 /logs/
 /*.log
 /*.pid
+/*.tmp
+/webui/*.tmp
+/webui/*.log
+/webui/*.pid
 
 # Private application state and accidental copies of user credentials
 /.meca/
@@ -71,6 +94,23 @@ AGENTS.md
 /credentials.key
 /.secrets/
 /config.local.toml
+/config.local.toml.*
+!/config.local.toml.example
+!/config.local.toml.sample
+/server.token
+/credentials.db
+/credentials.db-*
+/connection.json
+/connection.json.stop
+/webui/connection.json
+/webui/connection.json.stop
+# Root-level local TLS/signing material; fixture directories stay trackable.
+/*.key
+/*.pem
+/*.p12
+/*.pfx
+/webui/*.key
+/webui/*.pem
 .env
 .env.*
 !.env.example

@@ -1,17 +1,20 @@
 // Purpose: Extract one validated animated WebP frame for the standard WebP decoder.
 // Pattern: RIFF container adapter; image decoding stays with golang.org/x/image.
-// Usage: Decode normalizes animated WebP into a static PNG snapshot.
-// Related: internal/media/imagefile/decode.go.
+// Usage: Decode and thumbnail.Render share representative-frame extraction.
+// Related: internal/media/imagefile/decode.go, internal/media/thumbnail/render.go.
 package imagefile
 
 import (
+	"bytes"
 	"encoding/binary"
+	"image"
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func firstWebPFrame(data []byte, canvasWidth, canvasHeight int) ([]byte, error) {
+// FirstWebPFrame returns one frame after validating its dimensions against the container.
+func FirstWebPFrame(data []byte, canvasWidth, canvasHeight int) ([]byte, error) {
 	if len(data) < 12 || string(data[:4]) != "RIFF" || string(data[8:12]) != "WEBP" || uint64(binary.LittleEndian.Uint32(data[4:8]))+8 != uint64(len(data)) {
 		return nil, faults.Errorf(diagcatalog.ImagefileInvalidAnimatedWebPContainer)
 	}
@@ -45,6 +48,10 @@ func firstWebPFrame(data []byte, canvasWidth, canvasHeight int) ([]byte, error) 
 			copy(out[8:], "WEBP")
 			copy(out[12:], header)
 			copy(out[12+len(header):], chunks)
+			decoded, _, err := image.DecodeConfig(bytes.NewReader(out))
+			if err != nil || decoded.Width != read24(width)+1 || decoded.Height != read24(height)+1 {
+				return nil, faults.Errorf(diagcatalog.ImagefileInvalidOrExcessiveImageFrameDimensions)
+			}
 			return out, nil
 		}
 		offset = int(end + size%2)

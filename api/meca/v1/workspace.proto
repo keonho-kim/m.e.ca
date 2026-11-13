@@ -48,6 +48,9 @@ message Capabilities {
   int64 editor_bytes = 13;
   int64 prompt_bytes = 14;
   int64 command_bytes = 15;
+  int64 image_pixels = 16;
+  int64 preview_decode_pixels = 17;
+  int32 thumbnail_edge = 18;
 }
 
 message ModelQuery { string session_id = 1; string provider = 2; string endpoint = 3; string credential = 4; string model = 5; }

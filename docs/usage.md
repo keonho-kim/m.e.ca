@@ -22,7 +22,7 @@ tui와 full은 모두 기본 `meca [path]` TUI와 `--print`·`--mode json` CLI, 
 
 언어·권한 설정 저장과 언어 변경 후 이력 구성은 백그라운드에서 처리한다. 저장 대기 중에도 종료·화면 입력을 처리하며, 확정된 설정은 후속 이력 조회가 실패하더라도 실제 저장 결과에 맞춰 적용한다. 이력 조회 실패는 기존 표시를 보존하고 원인을 알린다.
 
-설치·삭제 명령은 [README](../README.md#설치)를 따른다. 첫 실행은 ~/.meca의 누락된 기본 파일을 준비한다. 일반 시작은 현재 프로젝트의 대화 목록을 표시하고 맨 위의 새 대화를 선택한다. meca resume은 모든 프로젝트를 표시한다.
+설치·삭제 명령은 [설치 가이드](releases.md#다운로드와-설치)를 따른다. 첫 실행은 ~/.meca의 누락된 기본 파일을 준비한다. 일반 시작은 현재 프로젝트의 대화 목록을 표시하고 맨 위의 새 대화를 선택한다. meca resume은 모든 프로젝트를 표시한다.
 
 !model은 Provider·Base URL·API Key·모델 ID·Thinking·추론 강도·저장 범위를 한 화면에 배치한다. ↑↓로 항목을 이동하고 →로 텍스트 편집을 시작하거나 다음 값을 선택한다. Base URL·API Key·모델 ID는 값이 보이던 같은 행에서 편집하며 별도 입력줄을 만들지 않는다. 긴 값은 값 영역 안에서 가로 스크롤하고 API Key는 마스킹한다. 선택형 항목은 ←로 이전 값도 고를 수 있다. 편집 중에는 커서가 표시되고 Esc로 편집을 마치며 Tab으로 다음 항목에 이동한다. 지원 Provider는 Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude와 Gemini다. OpenRouter의 기본 주소는 https://openrouter.ai/api/v1이며 API Key와 해당 서비스의 모델 ID를 사용한다. OpenAI·Claude·Gemini도 해당 공급자의 API Key와 모델 ID를 사용하며 기본 URL과 API 형식은 [모델 연결](model-connections.md#openai-claude-gemini)에 정리한다. 주소 입력의 Ctrl+U는 전체 내용을 지우며, HTTP 어댑터가 필요한 API 경로를 조립한다. 목록 조회를 지원하지 않는 서버에는 모델 ID를 직접 입력할 수 있다.
 

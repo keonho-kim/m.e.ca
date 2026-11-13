@@ -5,18 +5,19 @@
   "type": "module",
   "packageManager": "bun@1.4.4",
   "scripts": {
+    "bundle:budget": "bun scripts/bundle-budget.ts",
     "dev": "bun --bun vite --host 127.0.0.1",
     "analyze": "bun run check && bun --bun vite build --mode analyze",
     "build": "bun run check && bun run quality && bun --bun vite build && bun scripts/package.ts",
     "check": "bun run icons && bun run theme && tsc -b --pretty false",
     "test": "bun test src",
-    "lint": "biome check src scripts e2e *.ts",
+    "lint": "biome check src scripts e2e tests *.ts",
     "browser": "playwright-cli",
     "test:e2e": "playwright test",
     "astryx": "bun --bun node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
     "theme": "bun run astryx theme build src/app/styles/theme.ts --out src/app/styles/generated/meca.css",
     "architecture": "bun --bun node_modules/steiger/dist/cli.mjs ./src",
-    "lint:types": "bun --bun node_modules/oxlint/bin/oxlint --type-aware src scripts e2e *.ts",
+    "lint:types": "bun --bun node_modules/oxlint/bin/oxlint --type-aware src scripts e2e tests *.ts",
     "deadcode": "bun --bun node_modules/knip/bin/knip.js --no-progress",
     "quality": "bun run lint && bun run lint:types && bun run deadcode && bun run architecture",
     "verify": "bun run check && bun run quality && bun run test",
@@ -24,8 +25,8 @@
     "icons": "bun scripts/file-icons.ts"
   },
   "dependencies": {
-    "@astryxdesign/core": "0.7.13",
-    "@astryxdesign/theme-neutral": "0.7.13",
+    "@astryxdesign/core": "0.7.14",
+    "@astryxdesign/theme-neutral": "0.7.14",
     "@dnd-kit/dom": "0.5.3",
     "@dnd-kit/react": "0.5.3",
     "@hookform/resolvers": "7.0.5",
@@ -42,12 +43,17 @@
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "0.7.13",
+    "@astryxdesign/cli": "0.7.14",
+    "@axe-core/playwright": "4.14.0",
     "@babel/core": "7.29.7",
     "@biomejs/biome": "2.6.6",
     "@bufbuild/protobuf": "2.17.0",
     "@bufbuild/protoc-gen-es": "2.17.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
     "@feature-sliced/steiger-plugin": "0.8.2",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
     "@playwright/cli": "0.1.24",
     "@playwright/test": "1.65.0",
     "@rolldown/plugin-babel": "0.3.1",
@@ -67,16 +73,16 @@
     "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
     "vite": "8.3.8",
-    "@mui/icons-material": "9.5.0",
-    "@mui/material": "9.5.0",
-    "@emotion/react": "11.14.0",
-    "@emotion/styled": "11.14.1"
+    "web-vitals": "6.2.3"
   },
   "imports": {
+    "#test/event-stream": "./tests/event-stream.ts",
+    "#build/build-id": "./scripts/build-id.ts",
     "#e2e/fixture": "./e2e/fixture.ts",
     "#build/notices": "./scripts/notices.ts"
   },
   "patchedDependencies": {
-    "react-simple-code-editor@0.14.1": "patches/react-simple-code-editor@0.14.1.patch"
+    "react-simple-code-editor@0.14.1": "patches/react-simple-code-editor@0.14.1.patch",
+    "@astryxdesign/core@0.7.14": "patches/@astryxdesign%2Fcore@0.7.14.patch"
   }
 }

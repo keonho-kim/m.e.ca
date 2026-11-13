@@ -33,6 +33,8 @@ type DetailSource struct {
 	Tool            record.EventReference
 	ApprovalID      string
 	HistorySequence int64
+	Field           string
+	ListFields      bool
 }
 
 type DetailOriginal struct {
@@ -52,6 +54,9 @@ type DetailRead struct {
 }
 
 func (s *Service) OpenDetail(ctx context.Context, source DetailSource) (DetailRead, error) {
+	if (source.Field != "" || source.ListFields) && source.View != DetailToolRequest && source.View != DetailToolResult || source.ListFields && source.Field != "" || len(source.Field) > 512 {
+		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
+	}
 	if (source.View == DetailToolRequest || source.View == DetailToolResult) && source.Tool.Sequence == 0 || (source.View == DetailText || source.View == DetailThinking) && source.HistorySequence == 0 {
 		return DetailRead{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerChooseExactlyOneValidDetailReference)
 	}

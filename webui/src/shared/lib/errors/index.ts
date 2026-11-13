@@ -21,7 +21,7 @@ const errors = {
   editor_limit: '편집기 크기 한도를 초과했습니다. 붙여넣을 내용을 줄여 주세요.',
   conflict: '다른 작업이 내용을 변경했습니다. 현재 내용을 다시 확인해 주세요.',
   image_limit: '이미지 개수 또는 전체 크기 한도를 초과했습니다.',
-  image_type: '현재는 이미지 파일만 첨부할 수 있습니다.',
+  image_type: 'PNG·JPEG·WebP·GIF·TIFF·BMP 이미지를 선택해 주세요.',
   clipboard_empty: '클립보드에 이미지가 없습니다.',
   clipboard_unavailable:
     '클립보드 이미지를 읽을 수 없습니다. 브라우저 권한을 확인하거나 +에서 이미지를 선택해 주세요.',
@@ -33,6 +33,9 @@ const errors = {
   queue_limit: '입력 대기열의 메모리 한도를 초과했습니다.',
   draft_changed: '작성 중인 내용을 저장하거나 버린 뒤 이동해 주세요.',
   cancelled: '요청을 취소했습니다.',
+  read_timeout: '조회 시간이 초과되었습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.',
+  image_pixels: '이미지의 해상도가 허용 픽셀 한도를 초과했습니다.',
+  image_preview: '이미지 미리보기를 만들 수 없습니다. 지원하는 이미지 파일을 선택해 주세요.',
 } as const;
 export type ErrorCode = keyof typeof errors;
 export class ApiError extends Error {
@@ -51,6 +54,17 @@ export function failure(code: ErrorCode) {
 export function describeError(error: unknown) {
   if (error instanceof Error) return error.message;
   return errors.network;
+}
+export function describeValidation(
+  field: string,
+  translate: (
+    key: 'invalidEndpoint' | 'invalidModel' | 'invalidCredential' | 'invalidProvider'
+  ) => string
+) {
+  if (field === 'endpoint') return translate('invalidEndpoint');
+  if (field === 'model') return translate('invalidModel');
+  if (field === 'credential') return translate('invalidCredential');
+  return translate('invalidProvider');
 }
 
 // Browser-owned request cancellation is expected. A server "canceled" result

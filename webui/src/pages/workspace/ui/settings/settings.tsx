@@ -165,18 +165,20 @@ export default function Settings() {
           void configure({ permission }, true);
         }}
       />
-      <AlertDialog
-        isOpen={discard}
-        onOpenChange={setDiscard}
-        title={t('dirty')}
-        description={t('unsavedModel')}
-        cancelLabel={t('keepEditing')}
-        actionLabel={t('discard')}
-        isActionLoading={busy || modelBusy}
-        onAction={() => {
-          if (!busy && !modelBusy) useWorkspaceStore.getState().set({ settings: null });
-        }}
-      />
+      {discard && (
+        <AlertDialog
+          isOpen={discard}
+          onOpenChange={setDiscard}
+          title={t('dirty')}
+          description={t('unsavedModel')}
+          cancelLabel={t('keepEditing')}
+          actionLabel={t('discard')}
+          isActionLoading={busy || modelBusy}
+          onAction={() => {
+            if (!busy && !modelBusy) useWorkspaceStore.getState().set({ settings: null });
+          }}
+        />
+      )}
     </>
   );
 }

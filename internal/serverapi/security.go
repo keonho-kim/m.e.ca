@@ -53,6 +53,17 @@ func imageQueryRoute(r *http.Request) bool {
 func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	uiRequest := r.URL.Path == "/" || r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/v1/ui/") || r.Header.Get("X-Meca-UI") == "1" && r.Header.Get("Authorization") == ""
+	if uiRequest {
+		w.Header().Add("Vary", "Sec-Fetch-Site")
+		w.Header().Add("Vary", "Sec-Fetch-Mode")
+		w.Header().Add("Vary", "Sec-Fetch-Dest")
+		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+		if r.Header.Get("Sec-Fetch-Site") == "cross-site" && !(r.Method == "GET" && r.Header.Get("Sec-Fetch-Mode") == "navigate" && r.Header.Get("Sec-Fetch-Dest") == "document") {
+			http.Error(w, diagcatalog.Text(diagcatalog.ServerapiOriginIsNotAllowed), http.StatusForbidden)
+			return false
+		}
+	}
 	if !t.hosts[strings.ToLower(r.Host)] {
 		http.Error(w, diagcatalog.Text(diagcatalog.ServerapiHostIsNotAllowed), http.StatusForbidden)
 		return false
@@ -71,7 +82,7 @@ func (t *Transport) authorize(w http.ResponseWriter, r *http.Request) bool {
 			return false
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Vary", "Origin")
+		w.Header().Add("Vary", "Origin")
 		w.Header().Set("Access-Control-Expose-Headers", "Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin")
 	}
 	if r.Method == http.MethodOptions {

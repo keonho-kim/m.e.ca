@@ -1,6 +1,6 @@
 # API and execution primary sources
 
-Checked 2026-11-09. Protocol standards, provider policies and deployment research have different scopes. Follow the [API map](../api.md) for the design synthesis.
+Protocol standards, provider policies and deployment research have different scopes. Follow the [API map](../api.md) for the design synthesis.
 
 ## Protocol and description
 

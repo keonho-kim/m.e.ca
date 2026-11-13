@@ -1368,24 +1368,27 @@ func (x *Models) GetNotice() string {
 }
 
 type Capabilities struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	ApiVersion      string                 `protobuf:"bytes,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
-	Features        []string               `protobuf:"bytes,2,rep,name=features,proto3" json:"features,omitempty"`
-	ImageTypes      []string               `protobuf:"bytes,3,rep,name=image_types,json=imageTypes,proto3" json:"image_types,omitempty"`
-	ImageBytes      int64                  `protobuf:"varint,4,opt,name=image_bytes,json=imageBytes,proto3" json:"image_bytes,omitempty"`
-	InputImageBytes int64                  `protobuf:"varint,5,opt,name=input_image_bytes,json=inputImageBytes,proto3" json:"input_image_bytes,omitempty"`
-	InputImages     int32                  `protobuf:"varint,6,opt,name=input_images,json=inputImages,proto3" json:"input_images,omitempty"`
-	Concurrency     int64                  `protobuf:"varint,7,opt,name=concurrency,proto3" json:"concurrency,omitempty"`
-	StatePageSize   int32                  `protobuf:"varint,8,opt,name=state_page_size,json=statePageSize,proto3" json:"state_page_size,omitempty"`
-	DetailPageBytes int32                  `protobuf:"varint,9,opt,name=detail_page_bytes,json=detailPageBytes,proto3" json:"detail_page_bytes,omitempty"`
-	Language        string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`
-	RequestRecords  int64                  `protobuf:"varint,11,opt,name=request_records,json=requestRecords,proto3" json:"request_records,omitempty"`
-	RequestCapacity int64                  `protobuf:"varint,12,opt,name=request_capacity,json=requestCapacity,proto3" json:"request_capacity,omitempty"`
-	EditorBytes     int64                  `protobuf:"varint,13,opt,name=editor_bytes,json=editorBytes,proto3" json:"editor_bytes,omitempty"`
-	PromptBytes     int64                  `protobuf:"varint,14,opt,name=prompt_bytes,json=promptBytes,proto3" json:"prompt_bytes,omitempty"`
-	CommandBytes    int64                  `protobuf:"varint,15,opt,name=command_bytes,json=commandBytes,proto3" json:"command_bytes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ApiVersion          string                 `protobuf:"bytes,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	Features            []string               `protobuf:"bytes,2,rep,name=features,proto3" json:"features,omitempty"`
+	ImageTypes          []string               `protobuf:"bytes,3,rep,name=image_types,json=imageTypes,proto3" json:"image_types,omitempty"`
+	ImageBytes          int64                  `protobuf:"varint,4,opt,name=image_bytes,json=imageBytes,proto3" json:"image_bytes,omitempty"`
+	InputImageBytes     int64                  `protobuf:"varint,5,opt,name=input_image_bytes,json=inputImageBytes,proto3" json:"input_image_bytes,omitempty"`
+	InputImages         int32                  `protobuf:"varint,6,opt,name=input_images,json=inputImages,proto3" json:"input_images,omitempty"`
+	Concurrency         int64                  `protobuf:"varint,7,opt,name=concurrency,proto3" json:"concurrency,omitempty"`
+	StatePageSize       int32                  `protobuf:"varint,8,opt,name=state_page_size,json=statePageSize,proto3" json:"state_page_size,omitempty"`
+	DetailPageBytes     int32                  `protobuf:"varint,9,opt,name=detail_page_bytes,json=detailPageBytes,proto3" json:"detail_page_bytes,omitempty"`
+	Language            string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`
+	RequestRecords      int64                  `protobuf:"varint,11,opt,name=request_records,json=requestRecords,proto3" json:"request_records,omitempty"`
+	RequestCapacity     int64                  `protobuf:"varint,12,opt,name=request_capacity,json=requestCapacity,proto3" json:"request_capacity,omitempty"`
+	EditorBytes         int64                  `protobuf:"varint,13,opt,name=editor_bytes,json=editorBytes,proto3" json:"editor_bytes,omitempty"`
+	PromptBytes         int64                  `protobuf:"varint,14,opt,name=prompt_bytes,json=promptBytes,proto3" json:"prompt_bytes,omitempty"`
+	CommandBytes        int64                  `protobuf:"varint,15,opt,name=command_bytes,json=commandBytes,proto3" json:"command_bytes,omitempty"`
+	ImagePixels         int64                  `protobuf:"varint,16,opt,name=image_pixels,json=imagePixels,proto3" json:"image_pixels,omitempty"`
+	PreviewDecodePixels int64                  `protobuf:"varint,17,opt,name=preview_decode_pixels,json=previewDecodePixels,proto3" json:"preview_decode_pixels,omitempty"`
+	ThumbnailEdge       int32                  `protobuf:"varint,18,opt,name=thumbnail_edge,json=thumbnailEdge,proto3" json:"thumbnail_edge,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Capabilities) Reset() {
@@ -1519,6 +1522,27 @@ func (x *Capabilities) GetPromptBytes() int64 {
 func (x *Capabilities) GetCommandBytes() int64 {
 	if x != nil {
 		return x.CommandBytes
+	}
+	return 0
+}
+
+func (x *Capabilities) GetImagePixels() int64 {
+	if x != nil {
+		return x.ImagePixels
+	}
+	return 0
+}
+
+func (x *Capabilities) GetPreviewDecodePixels() int64 {
+	if x != nil {
+		return x.PreviewDecodePixels
+	}
+	return 0
+}
+
+func (x *Capabilities) GetThumbnailEdge() int32 {
+	if x != nil {
+		return x.ThumbnailEdge
 	}
 	return 0
 }
@@ -1978,7 +2002,7 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x06notice\x18\b \x01(\tR\x06notice\"O\n" +
 	"\x06Models\x12-\n" +
 	"\x05items\x18\x01 \x03(\v2\x17.meca.v1.ModelCandidateR\x05items\x12\x16\n" +
-	"\x06notice\x18\x02 \x01(\tR\x06notice\"\xad\x04\n" +
+	"\x06notice\x18\x02 \x01(\tR\x06notice\"\xab\x05\n" +
 	"\fCapabilities\x12\x1f\n" +
 	"\vapi_version\x18\x01 \x01(\tR\n" +
 	"apiVersion\x12\x1a\n" +
@@ -1998,7 +2022,10 @@ const file_meca_v1_workspace_proto_rawDesc = "" +
 	"\x10request_capacity\x18\f \x01(\x03R\x0frequestCapacity\x12!\n" +
 	"\feditor_bytes\x18\r \x01(\x03R\veditorBytes\x12!\n" +
 	"\fprompt_bytes\x18\x0e \x01(\x03R\vpromptBytes\x12#\n" +
-	"\rcommand_bytes\x18\x0f \x01(\x03R\fcommandBytes\"\x99\x01\n" +
+	"\rcommand_bytes\x18\x0f \x01(\x03R\fcommandBytes\x12!\n" +
+	"\fimage_pixels\x18\x10 \x01(\x03R\vimagePixels\x122\n" +
+	"\x15preview_decode_pixels\x18\x11 \x01(\x03R\x13previewDecodePixels\x12%\n" +
+	"\x0ethumbnail_edge\x18\x12 \x01(\x05R\rthumbnailEdge\"\x99\x01\n" +
 	"\n" +
 	"ModelQuery\x12\x1d\n" +
 	"\n" +

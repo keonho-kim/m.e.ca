@@ -3,9 +3,6 @@
 // Usage: The static HTML entry imports this module.
 // Related: webui/src/app/routes/application.tsx, webui/src/app/styles/theme.ts, webui/vite.config.ts.
 
-import { Button } from '@astryxdesign/core/Button';
-import { Center } from '@astryxdesign/core/Center';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { InternationalizationProvider } from '@astryxdesign/core/i18n';
 import korean from '@astryxdesign/core/locales/ko-KR.generated.js';
 import { Theme } from '@astryxdesign/core/theme';
@@ -15,40 +12,18 @@ import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/routes/application';
 import { mecaTheme } from '@/app/styles/generated/meca';
-import { reportError, useServerSession } from '@/entities/server-session';
+import { useServerSession } from '@/entities/server-session';
 import { queries } from '@/shared/api';
 import { useAppearance, useResolvedTheme } from '@/shared/config';
-import { languageCode, useLocale } from '@/shared/i18n';
+import { languageCode } from '@/shared/i18n';
+import { watchReload } from '@/shared/lib/reload';
+import { Recovery } from '@/shared/ui/recovery';
 import '@/app/styles/base.css';
 import '@/app/styles/generated/meca.css';
 
 const coreMessages = { 'ko-KR': korean };
 
-function Recover({ reset }: { reset: () => void }) {
-  const t = useLocale();
-  return (
-    <Center height="100dvh" padding={6}>
-      <EmptyState
-        title="MECA"
-        description={t('readError')}
-        actions={
-          <Button
-            label={t('retry')}
-            onClick={() => {
-              void import('@/pages/workspace')
-                .then((page) => {
-                  page.resetWorkspaceView();
-                  reset();
-                })
-                .catch(reportError);
-            }}
-          />
-        }
-      />
-    </Center>
-  );
-}
-const rootRoute = createRootRoute({ component: App, errorComponent: Recover });
+const rootRoute = createRootRoute({ component: App, errorComponent: Recovery });
 const home = createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => null });
 const workspace = createRoute({
   getParentRoute: () => rootRoute,
@@ -73,6 +48,7 @@ declare module '@tanstack/react-router' {
 }
 
 function Root() {
+  useEffect(watchReload, []);
   const mode = useAppearance((s) => s.theme),
     language = useServerSession((s) => s.language);
   const resolvedTheme = useResolvedTheme(mode);

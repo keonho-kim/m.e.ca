@@ -40,6 +40,7 @@ const Editor = memo(function Editor({
   onDirty,
   onReady,
   onError,
+  onDraft,
   visible,
   ref,
 }: {
@@ -49,6 +50,7 @@ const Editor = memo(function Editor({
   onDirty: (dirty: boolean) => void;
   onReady: () => void;
   onError: (error: unknown) => void;
+  onDraft: (value: string) => void;
   visible: boolean;
   ref: Ref<EditorHandle>;
 }) {
@@ -195,6 +197,7 @@ const Editor = memo(function Editor({
         onValueChange={(value) => {
           current.current = value;
           setText(value);
+          if (value !== saved.current) onDraft(value);
           updateDirty();
           trimHistory();
         }}

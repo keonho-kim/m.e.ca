@@ -13,7 +13,7 @@ import {
   targetKey,
   useWorkspaceStore,
 } from '@/pages/workspace/model/store';
-import { checkSubmissionLimits } from '@/pages/workspace/model/submission-limits';
+import { admitSubmission } from '@/pages/workspace/model/submission-limits';
 import { trimTasks } from '@/pages/workspace/model/task-state';
 import type { TaskJson } from '@/shared/api';
 import { type CapabilitiesJson, call, queries, releaseUpload, upload } from '@/shared/api';
@@ -116,7 +116,6 @@ export async function reconcile(target: Target, taskID?: string) {
 export async function startRequest(target: Target, input: Input): Promise<boolean> {
   if (!target.session) throw failure('no_session');
   const capabilities = queries.getQueryData<CapabilitiesJson>(['capabilities']);
-  if (capabilities) checkSubmissionLimits(input, capabilities);
   const key = targetKey(target);
   if (sending.has(key)) return false;
   sending.add(key);
@@ -130,6 +129,7 @@ export async function startRequest(target: Target, input: Input): Promise<boolea
   controllers.set(key, controller);
   let value = pending.get(key);
   try {
+    if (capabilities) await admitSubmission(input, capabilities, controller.signal);
     if (value) {
       const receipt = await lookup(value);
       if (controller.signal.aborted) return false;

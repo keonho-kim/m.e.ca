@@ -7,9 +7,9 @@ TUI, CLI and model-provider adapters. The tui build additionally uses the
 tui tag to exclude server adapters and WebUI assets; full adds both.
 Browser runtime notices are generated from the bundled modules and included as
 WEBUI_THIRD_PARTY_NOTICES.txt in full release archives and at /ui/THIRD_PARTY_NOTICES.txt
-when the embedded UI is enabled. The npm package for Astryx Core 0.7.13 omits
-its root license; webui/licenses/astryx-core-0.7.13.LICENSE preserves
-the upstream MIT license retrieved from https://github.com/meta/astryx/blob/7a298e616fa241b9858670757c8b3fa99abdf5f7/LICENSE.
+when the embedded UI is enabled. The npm package for Astryx Core 0.7.14 omits
+its root license; webui/licenses/astryx-core-0.7.14.LICENSE preserves
+the upstream MIT license retrieved from https://github.com/meta/astryx/blob/c6ca304086b60102563a83d1a27df49a260b3c69/LICENSE.
 The package declares MIT; the fallback is pinned to its release source commit. Development tools and
 test-only clients are outside the product dependency set. M.E.CA's own license is in LICENSE.
 react-simple-code-editor 0.14.1 includes the local Bun patch documented in

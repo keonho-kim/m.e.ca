@@ -131,7 +131,7 @@ func loadDocument(ctx context.Context, spool *documentSpool, request Request) er
 	if err != nil {
 		return err
 	}
-	return writeView(ctx, spool, original, request.Source.View, request.NewMask)
+	return writeView(ctx, spool, original, request.Source, request.NewMask)
 }
 
 func memoryPage(body []byte, offset int64, limit int) ([]byte, int64, error) {

@@ -4,6 +4,8 @@
 // Related: webui/src/pages/workspace/model/store.ts.
 
 import type { EventJson, HistoryPageJson, SnapshotJson, StatisticsJson } from '@/shared/api';
+import type { TextEdit } from '@/shared/lib/utf8';
+export type InputEdit = TextEdit & { revision: number };
 export type Target = { workspace: string; session: string };
 export type Input = { text: string; paths: string[]; files: File[]; revision: number };
 export type Queued = Input & { id: string };
@@ -50,7 +52,7 @@ export interface WorkspaceState {
   events: EventJson[];
   fileDirty: boolean;
   set: (value: Partial<WorkspaceState>) => void;
-  patchInput: (target: Target, patch: Partial<Input>) => boolean;
+  patchInput: (target: Target, patch: Partial<Input>, edit?: InputEdit) => boolean;
   enqueue: (target: Target, input: Input) => boolean;
   removeQueue: (target: Target, id: string) => void;
   updateQueue: (target: Target, id: string, text: string) => boolean;

@@ -25,7 +25,7 @@ test('service modals keep solid surfaces rather than revealing the underlying pa
 }) => {
   const fixture = await browserFixture();
   const image = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMQMgn7DwAClAGcHVtGXwAAAABJRU5ErkJggg==',
     'base64'
   );
   await page.route('**/v1/command', async (route) => {

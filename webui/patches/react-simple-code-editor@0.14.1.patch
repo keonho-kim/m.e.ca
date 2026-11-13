@@ -20,6 +20,19 @@ index 0876142c80dd2ca04686276b978a196a236d0944..6e69b1bc9ea61452224ad80621acf186
      session: {
          history: History;
      };
+diff --git a/lib/index.js b/lib/index.js
+index 2870aa54b831f155136c236357ff50cfc17ef0a6..e2634f872c7f56890a9c339b7a213a46125fb725 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -398,7 +398,7 @@ var Editor = React.forwardRef(function Editor(props, ref) {
+             ? { dangerouslySetInnerHTML: { __html: highlighted + '<br />' } }
+             : { children: highlighted }))),
+         React.createElement("textarea", { ref: function (c) { return (inputRef.current = c); }, style: __assign(__assign(__assign({}, styles.editor), styles.textarea), contentStyle), className: className + (textareaClassName ? " ".concat(textareaClassName) : ''), id: textareaId, value: value, onChange: handleChange, onKeyDown: handleKeyDown, onClick: onClick, onKeyUp: onKeyUp, onFocus: onFocus, onBlur: onBlur, disabled: disabled, form: form, maxLength: maxLength, minLength: minLength, name: name, placeholder: placeholder, readOnly: readOnly, required: required, autoFocus: autoFocus, autoCapitalize: "off", autoComplete: "off", autoCorrect: "off", spellCheck: false, "data-gramm": false }),
+-        React.createElement("style", { dangerouslySetInnerHTML: { __html: cssText } })));
++        React.createElement("style", null, cssText)));
+ });
+ var styles = {
+     container: {
 diff --git a/package.json b/package.json
 index 151add726c9636213e9e828ebcea9d105f44e496..0264b7eaf497cfc227c928d13bb6fe45a12aab9a 100644
 --- a/package.json
@@ -33,7 +46,7 @@ index 151add726c9636213e9e828ebcea9d105f44e496..0264b7eaf497cfc227c928d13bb6fe45
    "files": [
      "lib/",
 diff --git a/src/index.tsx b/src/index.tsx
-index 64c924d1496cd8e1cc46ed188bc791b6c41a4f81..2f18fbe0769306f9877ffa2600c6547f61196df7 100644
+index 64c924d1496cd8e1cc46ed188bc791b6c41a4f81..b024ecddf97ea0b099a5703195f5c1af7d4c4e59 100644
 --- a/src/index.tsx
 +++ b/src/index.tsx
 @@ -7,6 +7,8 @@ type Props = React.HTMLAttributes<HTMLDivElement> & {
@@ -271,3 +284,12 @@ index 64c924d1496cd8e1cc46ed188bc791b6c41a4f81..2f18fbe0769306f9877ffa2600c6547f
          onKeyDown={handleKeyDown}
          onClick={onClick}
          onKeyUp={onKeyUp}
+@@ -584,7 +632,7 @@ const Editor = React.forwardRef(function Editor(
+         data-gramm={false}
+       />
+       {/* eslint-disable-next-line react/no-danger */}
+-      <style dangerouslySetInnerHTML={{ __html: cssText }} />
++      <style>{cssText}</style>
+     </div>
+   );
+ });

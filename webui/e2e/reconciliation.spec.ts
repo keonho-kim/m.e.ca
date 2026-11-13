@@ -25,17 +25,6 @@ test.beforeAll(async () => {
   fixture = await browserFixture();
 });
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const streams: EventSource[] = [];
-    Object.assign(window, { testStreams: streams });
-    const Native = EventSource;
-    window.EventSource = class extends Native {
-      constructor(url: string | URL, options?: EventSourceInit) {
-        super(url, options);
-        streams.push(this);
-      }
-    };
-  });
   await connectBrowser(page, fixture);
   const previous = page.url();
   await page
@@ -120,12 +109,12 @@ test('one batch rename reconciles 24 references before a queued send can start',
   }
 });
 
-test('returning to a conversation refreshes usage missed while its EventSource was closed', async ({
+test('page restoration refreshes usage missed while observation was suspended', async ({
   page,
 }) => {
   const owner = target(page);
   await page.evaluate(() => {
-    for (const stream of Reflect.get(window, 'testStreams') as EventSource[]) stream.close();
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
   });
   const prompt = `METRICS_FIXTURE reconnect-${crypto.randomUUID()}`;
   const started = await invoke(page, {
@@ -144,12 +133,9 @@ test('returning to a conversation refreshes usage missed while its EventSource w
     )
     .toBe('answered');
   await expect(page.locator('.execution-status')).toContainText(/입력 0.*출력 0/);
-  await page
-    .locator('.workspace-group')
-    .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
-    .getByRole('button', { name: '새 대화', exact: true })
-    .click();
-  await page.locator('.session-row').filter({ hasText: prompt }).click();
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+  });
   await expect(page.locator('.execution-status')).toContainText(/입력 13.*출력 7/);
   await expect(page.locator('.completion-summary')).toContainText(/입력 13.*출력 7/);
 });

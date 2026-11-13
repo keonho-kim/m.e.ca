@@ -4,6 +4,7 @@
 // Related: webui/src/shared/lib/errors/index.ts.
 
 import { create } from 'zustand';
+import { queries, requestAccessAllowed, setRequestAccess } from '@/shared/api';
 import { ApiError, describeError, isCancelled } from '@/shared/lib/errors';
 
 interface ServerSession {
@@ -17,7 +18,10 @@ export const useServerSession = create<ServerSession>(() => ({
   notice: '',
 }));
 export function establishSession(language?: string) {
+  const restoring = !requestAccessAllowed();
+  setRequestAccess(true);
   useServerSession.setState({ connected: true, notice: '', ...(language ? { language } : {}) });
+  if (restoring) void queries.resetQueries();
 }
 export function setServerLanguage(language: string) {
   useServerSession.setState({ language });
@@ -27,6 +31,11 @@ export function dismissNotice() {
 }
 export function reportError(error: unknown) {
   if (isCancelled(error)) return;
+  if (error instanceof ApiError && error.code === 'unauthorized' && requestAccessAllowed()) {
+    setRequestAccess(false);
+    void queries.cancelQueries();
+    queries.clear();
+  }
   useServerSession.setState({
     notice: describeError(error),
     ...(error instanceof ApiError && error.code === 'unauthorized' ? { connected: false } : {}),

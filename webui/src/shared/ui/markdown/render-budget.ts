@@ -10,8 +10,14 @@ type Branch = {
 };
 // Leave room for repeated ancestor paths, a small table header and page controls.
 const pageNodes = 768;
+const sizes = new WeakMap<Branch, number>();
 function count(node: Branch): number {
-  return 1 + (node.children?.reduce((sum, child) => sum + count(child), 0) ?? 0);
+  if (!node.children?.length) return 1;
+  const known = sizes.get(node);
+  if (known !== undefined) return known;
+  const size = 1 + node.children.reduce((sum, child) => sum + count(child), 0);
+  sizes.set(node, size);
+  return size;
 }
 export function markdownWindow<T extends Branch>(document: T, requested: number) {
   const pages = Math.ceil(Math.max(1, count(document) - 1) / pageNodes);
@@ -22,6 +28,15 @@ export function markdownWindow<T extends Branch>(document: T, requested: number)
   let cursor = 0;
   function select<N extends Branch>(node: N): N | undefined {
     if (cursor >= end) return undefined;
+    const size = count(node);
+    if (cursor + size <= start) {
+      cursor += size;
+      return undefined;
+    }
+    if (cursor >= start && cursor + size <= end) {
+      cursor += size;
+      return node;
+    }
     const position = cursor++;
     if (!node.children) return position >= start ? node : undefined;
     const children: Branch[] = [];

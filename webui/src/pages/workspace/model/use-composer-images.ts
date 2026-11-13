@@ -27,7 +27,14 @@ export function useComposerImages(target: Target, caps?: CapabilitiesJson) {
   const attach = (files: File[]) => {
     if (!target.session || !files.length) return;
     const state = useWorkspaceStore.getState();
-    if (files.some((file) => !file.type.startsWith('image/'))) {
+    if (
+      files.some(
+        (file) =>
+          !file.type.startsWith('image/') ||
+          (!!caps?.imageTypes?.length &&
+            !caps.imageTypes.includes(file.type.replace('image/x-ms-bmp', 'image/bmp')))
+      )
+    ) {
       reportError(failure('image_type'));
       return;
     }

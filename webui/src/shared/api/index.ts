@@ -2,8 +2,9 @@
 // Pattern: FSD shared API public entry.
 // Usage: Features, entities and workspace code import transport contracts here.
 // Related: webui/src/shared/api/client.ts, api/meca/v1.
+
+export { requestAccessAllowed, setRequestAccess } from '@/shared/api/access-lifetime';
 export { call, control, imageURL, loadThumbnail, releaseUpload, upload } from '@/shared/api/client';
-export { subscribeEventStream } from '@/shared/api/event-stream';
 export type {
   EditorDocumentJson,
   FileMutationJson,

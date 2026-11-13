@@ -1,6 +1,6 @@
 # 릴리스
 
-[← README](../README.md) · [개발 가이드](development.md) · [현재 제공 기능](release-notes.md)
+[← README](../README.md) · [개발 가이드](development.md) · [릴리즈 노트](release-notes.md)
 
 ## 버전 규칙
 
@@ -15,14 +15,14 @@
 1. 명시한 major·minor와 고정 GoReleaser 버전을 읽어 로컬 날짜 태그를 준비한다.
 2. UI 자산을 만들기 전에 `tui,godbus_no_tcp`로 최소 실행 파일·시작·업데이트·설치를 검사하고 서버·WebUI가 의존성 그래프에 없는지 확인한다. 그 뒤 고정 Bun으로 full의 UI와 프론트 타입·상태 테스트를 준비한다. full은 `GOFLAGS=-tags=godbus_no_tcp`로 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
 3. GoReleaser가 tui/full 각각 네 플랫폼, 총 여덟 아카이브를 빌드한다. 두 종류 모두 `godbus_no_tcp`, tui에만 `tui` 태그가 있어야 한다. SHA-256·실행 파일·Go 고지를 검사하고 WebUI 고지는 full에만 포함한다. 추출한 실행 파일의 `go version -m`으로 종류와 정확한 빌드 태그를 확인한다.
-4. 원격 `main`이 이미 더 최신 커밋이면 이번 게시를 생략한다. 준비 이후 태그가 다른 작업에 의해 바뀌었으면 오류로 중단한다.
+4. 원격 `main`이 이미 더 최신 커밋이면 해당 게시를 생략한다. 준비 이후 태그가 다른 작업에 의해 바뀌었으면 오류로 중단한다.
 5. 태그를 갱신하고 배포 파일과 체크섬을 게시한다. 새 릴리스는 초안에서 업로드를 마친 뒤 공개하고, 같은 날짜에 게시된 릴리스는 파일을 교체한다. 초안에서 게시가 중단됐다면 다음 실행이 해당 초안을 찾아 검증한 파일을 다시 업로드하고 공개한다. 배포 파일과 체크섬의 업로드가 모두 성공한 뒤 같은 태그의 배포 파일 집합을 정리한다. 다른 날짜의 파일과 관련 없는 첨부는 보존한다.
 
 빌드·검사·사전 확인 실패 시 원격 태그를 변경하지 않는다. 게시 중 업로드·파일 정리에 실패하면 작업을 실패로 표시한다. 이 경우 태그나 일부 파일이 갱신되었을 수 있으므로 Actions에서 실패 원인을 확인하고 같은 실행을 다시 시도한다. 대체 파일의 업로드가 확인되기 전에는 배포 파일을 삭제하지 않는다. 모든 게시가 끝난 릴리스에는 여덟 아카이브와 공용 `checksums.txt`가 있어야 한다.
 
 게시 사전 검사는 타 플랫폼 실행 파일을 실행하지 않고 빌드 메타데이터만 읽는다. 메타데이터 판독 실패·태그 누락·비슷한 이름의 태그는 원격 태그 변경·업로드 전에 거절하며, 추출한 임시 파일은 성공·실패 모두 정리한다. 이 검사는 빌드 옵션 누락을 막으며 바이너리의 무결성 증명이나 의존성의 악성 행위 탐지를 대신하지 않는다.
 
-로컬 파일 검증은 [artifacts.sh](../scripts/release/artifacts.sh)의 verify_release_artifacts가, 원격 main·태그 lease 확인과 GitHub 게시는 [publish.sh](../scripts/release/publish.sh)가 소유한다. 검증 모듈은 같은 셸에서 source하므로 프로세스·검증 패스를 추가하지 않는다. publish.sh가 임시 디렉터리 정리를 소유하고 검증된 release_assets만 게시한다. 여덟 아카이브의 빌드 메타데이터는 한 번씩만 확인하며 테스트에서도 그 횟수를 검사한다.
+로컬 파일 검증은 [artifacts.sh](../scripts/release/artifacts.sh)의 verify_release_artifacts가, 원격 main·태그 lease 확인과 GitHub 게시는 [publish.sh](../scripts/release/publish.sh)가 소유한다. 검증 모듈은 같은 셸에서 source하므로 프로세스·검증 패스를 추가하지 않는다. publish.sh가 임시 디렉터리 정리를 소유하고 검증된 release_assets만 게시한다. 여덟 아카이브의 빌드 메타데이터는 한 번씩 확인하고 검증된 결과를 게시 단계에서 재사용한다.
 
 기본 `GITHUB_TOKEN`의 `contents: write` 권한을 게시 작업에 부여하며 별도 PAT나 사용자 인증정보를 등록할 필요는 없다. 같은 날짜의 갱신을 위해 릴리스는 수정 가능해야 한다. GitHub의 immutable release가 적용되어 있으면 태그를 바꾸기 전에 오류로 중단한다.
 
@@ -50,7 +50,15 @@
 
 ## 다운로드와 설치
 
-[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 OS·CPU에 맞는 아카이브를 내려받아 압축을 푼다. 압축을 푼 폴더에서 `./meca install`을 실행하면 된다. 공개 릴리스이므로 GitHub 로그인·토큰이 필요하지 않다. 파일 선택표와 터미널 명령은 [README의 설치 안내](../README.md#최신-릴리스로-설치하기)를 따른다.
+[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 OS·CPU에 맞는 아카이브를 내려받아 압축을 푼다. 압축을 푼 폴더에서 `./meca install`을 실행하면 된다. 공개 릴리스이므로 GitHub 로그인·토큰이 필요하지 않다. 파일 종류와 플랫폼은 [배포 파일](#배포-파일)의 표를 따른다. Linux의 CPU는 `uname -m`으로 확인한다.
+
+터미널에서 압축을 풀고 설치하려면 다운로드한 폴더에서 실행한다. `<version>`·`<variant>`·`<platform>`은 실제 받은 파일명에 맞춘다.
+
+```sh
+mkdir meca-install
+tar -xzf "meca_<version>_<variant>_<platform>.tar.gz" -C meca-install
+./meca-install/meca install
+```
 
 설치하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 로그인 셸로 전환하며, 이 셸을 종료하면 설치를 호출한 셸로 돌아간다. PATH가 이미 반영되어 있거나 비대화형 실행이면 전환하지 않는다. 자동화에서는 `./meca install --no-shell`로 전환을 명시적으로 끌 수 있다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
 
@@ -70,7 +78,15 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 ## 소스 설치와 삭제
 
-[README의 소스 설치](../README.md#소스에서-설치하기)는 `./install.sh [tui|full]`을 사용하며 기본은 full이다. full만 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. tui는 Bun이나 프론트 자산 없이 빌드하며 `tui` 태그를 추가한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
+소스 설치는 Git과 `./install.sh [tui|full]`을 사용하며 기본은 full이다. full만 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. tui는 Bun이나 프론트 자산 없이 빌드하며 `tui` 태그를 추가한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
+
+```sh
+git clone https://github.com/keonho-kim/m.e.ca.git
+cd m.e.ca
+./install.sh          # full
+```
+
+tui는 `./install.sh tui`, full을 명시하려면 `./install.sh full`을 사용한다. 저장소를 갱신해 재설치할 때는 `git pull --ff-only` 뒤 같은 설치 명령을 실행한다. Go가 없을 때의 SDK 준비에는 `curl`·`tar`와 `sha256sum` 또는 `shasum`이 필요하다. 설치 없이 실행 파일만 만들려면 [소스 빌드](development.md#소스-빌드)를 따른다.
 
 소스 설치도 배포본과 같은 `godbus_no_tcp` 빌드 태그를 적용한다. 저장소 `bin/meca`를 만든 뒤 호출한 작업 폴더·환경에서 설치 명령을 실행한다. 설치 위치·기본 설정·PATH 등록과 로그인 셸 전환은 릴리스 바이너리의 install과 같다.
 

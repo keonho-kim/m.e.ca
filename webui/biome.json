@@ -6,6 +6,7 @@
       "src/**/*.tsx",
       "scripts/**/*.ts",
       "e2e/**/*.ts",
+      "tests/**/*.ts",
       "*.ts",
       "!src/shared/api/gen",
       "!src/app/styles/generated",

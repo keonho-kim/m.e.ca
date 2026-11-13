@@ -55,14 +55,11 @@ func Decode(ctx context.Context, path string, data []byte) (media.Image, error) 
 	}
 	animatedWebP := format == "webp" && len(data) > 20 && string(data[12:16]) == "VP8X" && data[20]&2 != 0
 	if animatedWebP {
-		input, err = firstWebPFrame(data, config.Width, config.Height)
+		input, err = FirstWebPFrame(data, config.Width, config.Height)
 		if err != nil {
 			return media.Image{}, err
 		}
-		frame, _, err := image.DecodeConfig(bytes.NewReader(input))
-		if err != nil || frame.Width < 1 || frame.Height < 1 || frame.Width > media.MaxPixels || frame.Height > media.MaxPixels || int64(frame.Width)*int64(frame.Height) > media.MaxPixels {
-			return media.Image{}, faults.Errorf(diagcatalog.ImagefileInvalidOrExcessiveImageFrameDimensions)
-		}
+
 	}
 	decoded, _, err := image.Decode(contextReader{ctx, bytes.NewReader(input)})
 	if err != nil {

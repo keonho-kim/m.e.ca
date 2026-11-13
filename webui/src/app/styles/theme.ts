@@ -98,8 +98,7 @@ export const mecaTheme = defineTheme({
     'collapsible-trigger': { base: { minHeight: 'var(--size-element-md)' } },
     collapsible: {
       base: {
-        ':is([data-tone="tool"])': {
-          display: 'contents',
+        ':is([data-tone="tool"], [data-tone="request"])': {
           backgroundColor: 'transparent',
           borderWidth: '0',
           boxShadow: 'none',
@@ -116,6 +115,14 @@ export const mecaTheme = defineTheme({
         },
       },
     },
+    'scrollable-area': {
+      base: {
+        ':is(.tool-request-content)': {
+          maxHeight: 'min(40dvh, calc(var(--spacing-8) * 10))',
+          backgroundColor: 'var(--color-background-surface)',
+        },
+      },
+    },
     markdown: {
       base: {
         fontSize: 'var(--text-body-size)',
@@ -126,13 +133,6 @@ export const mecaTheme = defineTheme({
       },
     },
     button: {
-      'variant:tool-request': {
-        gridColumn: '2',
-        gridRow: '1',
-        justifySelf: 'start',
-        backgroundColor: 'transparent',
-        color: 'var(--color-icon-primary)',
-      },
       'variant:image-remove': {
         position: 'absolute',
         top: 'var(--spacing-1)',
@@ -231,6 +231,7 @@ export const mecaTheme = defineTheme({
       base: {
         width: '100%',
         minWidth: '0',
+        marginBlockStart: '0',
         backgroundColor: 'transparent',
         '--color-overlay-hover': 'transparent',
         textDecorationLine: 'underline',
