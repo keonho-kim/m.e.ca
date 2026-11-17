@@ -81,6 +81,7 @@ func (s *Service) emit(r *request, value record.Event) {
 	}
 	reset := draft.Generation != generation
 	if reset {
+		draft.StartSequence = r.sequence + 1
 		draft.Generation = generation
 		draft.textBytes, draft.thinkingBytes = 0, 0
 		draft.Text, draft.Thinking, draft.Truncated = "", "", false

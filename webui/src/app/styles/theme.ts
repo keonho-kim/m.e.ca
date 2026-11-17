@@ -37,7 +37,7 @@ export const mecaTheme = defineTheme({
     '--color-background-body': ['#f2f4f7', '#0d0f13'],
     '--color-background-surface': ['#fcfdff', '#121419'],
     '--color-background-card': ['#ffffff', '#1a1d23'],
-    '--color-background-popover': ['rgb(255 255 255 / 88%)', 'rgb(26 29 35 / 92%)'],
+    '--color-background-popover': ['#ffffff', '#1a1d23'],
     '--color-background-muted': ['#edf0f4', '#1e2128'],
     '--color-accent': ['#191d24', '#eef0f5'],
     '--color-on-accent': ['#ffffff', '#191d24'],
@@ -196,15 +196,17 @@ export const mecaTheme = defineTheme({
     },
     'dropdown-menu': {
       base: {
-        WebkitBackdropFilter: 'var(--meca-glass-filter)',
-        backdropFilter: 'var(--meca-glass-filter)',
+        backgroundColor: 'var(--color-background-popover)',
+        WebkitBackdropFilter: 'none',
+        backdropFilter: 'none',
         boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
       },
     },
     popover: {
       base: {
-        WebkitBackdropFilter: 'var(--meca-glass-filter)',
-        backdropFilter: 'var(--meca-glass-filter)',
+        backgroundColor: 'var(--color-background-popover)',
+        WebkitBackdropFilter: 'none',
+        backdropFilter: 'none',
         boxShadow: 'var(--meca-glass-edge), var(--shadow-med)',
       },
     },

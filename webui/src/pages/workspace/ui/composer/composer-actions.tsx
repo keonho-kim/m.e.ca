@@ -8,21 +8,26 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { HStack } from '@astryxdesign/core/Layout';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { useState } from 'react';
 import { reportError } from '@/entities/server-session';
 import { team } from '@/pages/workspace/model/commands';
 import type { Target } from '@/pages/workspace/model/store';
+import type { PrepareSession } from '@/pages/workspace/model/use-composer-session';
 import { useLocale } from '@/shared/i18n';
 
 export function ComposerActions({
   target,
+  prepareSession,
   teamEnabled,
   busy,
 }: {
   target: Target;
+  prepareSession: PrepareSession;
   teamEnabled: boolean;
   busy: boolean;
 }) {
   const t = useLocale();
+  const [pending, setPending] = useState(false);
   return (
     <HStack gap={1}>
       <Tooltip content={t('team')}>
@@ -31,9 +36,12 @@ export function ComposerActions({
           isIconOnly
           icon={<Icon icon={'meca:users'} />}
           isPressed={teamEnabled}
-          isDisabled={busy || !target.session}
+          isDisabled={busy || pending || !target.workspace}
           onPressedChange={(value) => {
-            void team(target, value).catch(reportError);
+            setPending(true);
+            void prepareSession((next) => team(next, value))
+              .catch(reportError)
+              .finally(() => setPending(false));
           }}
         />
       </Tooltip>

@@ -5,8 +5,8 @@
     "": {
       "name": "meca-webui",
       "dependencies": {
-        "@astryxdesign/core": "0.7.14",
-        "@astryxdesign/theme-neutral": "0.7.14",
+        "@astryxdesign/core": "0.7.16",
+        "@astryxdesign/theme-neutral": "0.7.16",
         "@dnd-kit/dom": "0.5.3",
         "@dnd-kit/react": "0.5.3",
         "@hookform/resolvers": "7.0.5",
@@ -23,7 +23,7 @@
         "zustand": "5.1.0",
       },
       "devDependencies": {
-        "@astryxdesign/cli": "0.7.14",
+        "@astryxdesign/cli": "0.7.16",
         "@axe-core/playwright": "4.14.0",
         "@babel/core": "7.29.7",
         "@biomejs/biome": "2.6.6",
@@ -58,15 +58,15 @@
     },
   },
   "patchedDependencies": {
-    "@astryxdesign/core@0.7.14": "patches/@astryxdesign%2Fcore@0.7.14.patch",
     "react-simple-code-editor@0.14.1": "patches/react-simple-code-editor@0.14.1.patch",
+    "@astryxdesign/core@0.7.16": "patches/@astryxdesign%2Fcore@0.7.16.patch",
   },
   "packages": {
-    "@astryxdesign/cli": ["@astryxdesign/cli@0.7.14", "", { "dependencies": { "@babel/core": "7.29.7", "@babel/parser": "7.29.8", "@babel/plugin-transform-typescript": "7.29.7", "@babel/types": "7.29.8", "@stylexjs/babel-plugin": "^0.19.1", "ast-types": "0.16.3", "commander": "^12.1.0", "ignore": "^7.0.14", "jiti": "^2.7.0", "jscodeshift": "^17.4.0", "linkedom": "^0.18.15", "node-diff3": "3.2.1", "postcss": "^8.5.23", "postcss-selector-parser": "^7.1.6", "recast": "0.23.21", "zod": "^4.6.7" }, "peerDependencies": { "@astryxdesign/core": "*" }, "optionalPeers": ["@astryxdesign/core"], "hasInstallScript": true, "bin": { "cli": "./clients/cli/bin/astryx.mjs", "astryx": "./clients/cli/bin/astryx.mjs" } }, "sha512-gOTskkep8h0IyeFKCl/vSs/H8CGF8zusiK3hEPWu2naxUzt4fU50OCEhsNpkyJi/0QcOMp9PjfRHlT7wn17mrA=="],
+    "@astryxdesign/cli": ["@astryxdesign/cli@0.7.16", "", { "dependencies": { "@babel/core": "7.29.7", "@babel/parser": "7.29.8", "@babel/plugin-transform-typescript": "7.29.7", "@babel/types": "7.29.8", "@csstools/css-syntax-patches-for-csstree": "1.1.6", "@stylexjs/babel-plugin": "^0.19.1", "ast-types": "0.16.3", "commander": "^12.1.0", "css-tree": "3.2.1", "ignore": "^7.0.14", "jiti": "^2.7.0", "jscodeshift": "^17.4.0", "linkedom": "^0.18.15", "node-diff3": "3.2.1", "postcss": "^8.5.23", "postcss-selector-parser": "^7.1.6", "recast": "0.23.21", "zod": "^4.6.7" }, "peerDependencies": { "@astryxdesign/core": "*" }, "optionalPeers": ["@astryxdesign/core"], "hasInstallScript": true, "bin": { "cli": "./clients/cli/bin/astryx.mjs", "astryx": "./clients/cli/bin/astryx.mjs" } }, "sha512-lksV0SdKjlE+Mi12VD1loDN3KE65NYnO7RqhLZ+tXaxQuUi+ccND2vLcLTZex3X/6j1FOH1cdZlhQc+LJIo73g=="],
 
-    "@astryxdesign/core": ["@astryxdesign/core@0.7.14", "", { "dependencies": { "intl-messageformat": "^11.2.9" }, "peerDependencies": { "@stylexjs/stylex": "^0.19.0", "react": ">=19.0.0", "react-dom": ">=19.0.0" }, "hasInstallScript": true }, "sha512-MSRNyl8/t+0Uo3dmdPZfQi7WNktRZS1UBTicHbQdVIXX3DuCmQ5pPTOHi0OW4jPKszcifV5b6v/mFArjs9oVbA=="],
+    "@astryxdesign/core": ["@astryxdesign/core@0.7.16", "", { "dependencies": { "intl-messageformat": "^11.2.9" }, "peerDependencies": { "@stylexjs/stylex": "^0.19.0", "react": ">=19.0.0", "react-dom": ">=19.0.0" }, "hasInstallScript": true }, "sha512-3FFQGIOiRVczlrBtRH/Pm4TQwl6FVTCkMhGfljVcxjGBY1AJ4yhx6fRFnP7Nw/Wjaic1vne2TbJ7HW00d3vK2Q=="],
 
-    "@astryxdesign/theme-neutral": ["@astryxdesign/theme-neutral@0.7.14", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.14", "react": ">=19" } }, "sha512-YK5y5KgaHdnl13oxBuCinxADgXDvfcCC7q3jn57Igw5Uw54SauFKGN1OUM3JslKsUGFJmofyCBOslqVbWMSgKg=="],
+    "@astryxdesign/theme-neutral": ["@astryxdesign/theme-neutral@0.7.16", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.16", "react": ">=19" } }, "sha512-4tjVvrL9VM2jpfTceORnYWnR9fiSj93ssAUo786YmODlOHoZIs1b/aCcmClxr0VUdGVha4y33DpCqoutmwF8DQ=="],
 
     "@axe-core/playwright": ["@axe-core/playwright@4.14.0", "", { "dependencies": { "axe-core": "~4.14.0" }, "peerDependencies": { "playwright-core": ">= 1.0.0" } }, "sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ=="],
 
@@ -175,6 +175,8 @@
     "@clack/core": ["@clack/core@0.4.1", "", { "dependencies": { "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-Pxhij4UXg8KSr7rPek6Zowm+5M22rbd2g1nfojHJkxp5YkFqiZ2+YLEM/XGVIzvGOcM0nqjIFxrpDwWRZYWYjA=="],
 
     "@clack/prompts": ["@clack/prompts@0.9.1", "", { "dependencies": { "@clack/core": "0.4.1", "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-JIpyaboYZeWYlyP0H+OoPPxd6nqueG/CmN6ixBiNFsIDHREevjIf0n0Ohh5gr5C8pEDknzgvz+pIJ8dMhzWIeg=="],
+
+    "@csstools/css-syntax-patches-for-csstree": ["@csstools/css-syntax-patches-for-csstree@1.1.6", "", { "peerDependencies": { "css-tree": "^3.2.1" }, "optionalPeers": ["css-tree"] }, "sha512-TcJCWFbXLPpJYq6z7bfOyjWYJDiDg2/I4gyUC9pqPNqHFRIey0EB0q0L5cSnQDfWJg8Jd6VadakxdIez/3zkqQ=="],
 
     "@dnd-kit/abstract": ["@dnd-kit/abstract@0.5.3", "", { "dependencies": { "@dnd-kit/geometry": "^0.5.3", "@dnd-kit/state": "^0.5.3", "tslib": "^2.6.2" } }, "sha512-KZQ2vftkO9BHupVzlUqB5d7JETL7ITlvslx3hrj4aObwjliAzuzV/n5wCpQllNd0Hxvg7FaQtLekJ8dplqKwbA=="],
 
@@ -624,6 +626,8 @@
 
     "css-select": ["css-select@7.0.0", "", { "dependencies": { "boolbase": "^2.0.0", "css-what": "^8.0.0", "domhandler": "^6.0.1", "domutils": "^4.0.2", "nth-check": "^3.0.1" } }, "sha512-snmjEVXy+1LnwXdxhYvTMj1d9tOh4HxkA1YmoayVBeeyR2C14Pum7fcxJIm4SswYspVy866eYNwlH6xC3/VH5g=="],
 
+    "css-tree": ["css-tree@3.2.1", "", { "dependencies": { "mdn-data": "2.27.1", "source-map-js": "^1.2.1" } }, "sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA=="],
+
     "css-what": ["css-what@8.0.0", "", {}, "sha512-DH0Bqq3DNp5tdOReuNyAA+Ev4Y2GS5FMbZpeTLP6C4CDi0h5nL0BmUPChXw3o/qbHLDWHl49sbNqQVY7bMSDdw=="],
 
     "cssomnom": ["cssomnom@0.1.11", "", {}, "sha512-P4RkO1Sq2Ual77xypEmAc4MkM5k2Ha4UwtBPCOpJmXculGCYPgzsU/xnOCy084esZaPePgGkkJg4Il/HE7GS5A=="],
@@ -821,6 +825,8 @@
     "magic-string": ["magic-string@1.4.5", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.6.0" } }, "sha512-oLLC2+YvQUfAa+vxoufE/yc1icb87M9iXIRqAoR/2EhE/8cb3SF/+Gi0c2By1B+5Vz2e2vQtUvHiu1+63Znh+w=="],
 
     "make-dir": ["make-dir@2.1.0", "", { "dependencies": { "pify": "^4.0.1", "semver": "^5.6.0" } }, "sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA=="],
+
+    "mdn-data": ["mdn-data@2.27.1", "", {}, "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ=="],
 
     "merge2": ["merge2@1.4.1", "", {}, "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="],
 

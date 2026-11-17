@@ -28,6 +28,9 @@ test('thinking streams as subdued Markdown and remains readable in saved history
   await expect(thinking.getByRole('heading', { name: 'Plan', exact: true })).toBeVisible();
   await expect(thinking.locator('strong')).toHaveText('Inspect');
   await expect(thinking).toContainText('the workspace');
+  await expect(page.locator('.live-output .astryx-status-dot')).toHaveCount(0);
+  await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.getByRole('button', { name: '작업 중지', exact: true })).toBeVisible();
   await expect(page.locator('.history-rows')).not.toContainText('Completed: THINKING_FIXTURE');
   for (const theme of ['light', 'dark']) {
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);

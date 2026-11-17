@@ -9,8 +9,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Center } from '@astryxdesign/core/Center';
 import { ChatLayout } from '@astryxdesign/core/Chat';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
+import { Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
 import type { SideNavControlledCollapsible } from '@astryxdesign/core/SideNav';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { useQuery } from '@tanstack/react-query';
@@ -36,6 +35,8 @@ import { observe } from '@/pages/workspace/api/events';
 import { capabilitiesOptions, changed, workspaceOptions } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { useFileReferences } from '@/pages/workspace/model/use-file-references';
+import { EmptyChat } from '@/pages/workspace/ui/chat/empty-chat';
+import { chatWidth } from '@/pages/workspace/ui/chat/layout';
 import { Composer, type ComposerHandle } from '@/pages/workspace/ui/composer/composer';
 import { Approval } from '@/pages/workspace/ui/inspection/approval';
 import { Sidebar } from '@/pages/workspace/ui/navigation/sidebar';
@@ -110,6 +111,7 @@ export default function WorkspaceShell() {
         reviewTarget: null,
         drafts: {},
         events: [],
+        approvals: [],
         statistics: null,
       });
   }, [connected]);
@@ -151,9 +153,14 @@ export default function WorkspaceShell() {
       navigate({ workspace: workspaces.data.defaultId, session: '' });
   }, [target.workspace, workspaces.data?.defaultId, navigate]);
   useLayoutEffect(() => {
-    useWorkspaceStore
-      .getState()
-      .set({ selection: target, drafts: {}, events: [], statistics: null, mode: 'chat' });
+    useWorkspaceStore.getState().set({
+      selection: target,
+      drafts: {},
+      events: [],
+      approvals: [],
+      statistics: null,
+      mode: 'chat',
+    });
   }, [target]);
   useEffect(() => {
     if (!target.workspace || !connected) return;
@@ -184,6 +191,7 @@ export default function WorkspaceShell() {
       ref={composerInput}
       key={`${composerTarget.workspace}/${composerTarget.session}`}
       target={composerTarget}
+      onCreated={navigate}
       showStatus={mode === 'chat'}
     />
   );
@@ -231,7 +239,11 @@ export default function WorkspaceShell() {
                   className="workspace-body"
                   density="balanced"
                   composer={composer}
-                  style={{ height: landing ? 'auto' : '100%', width: '100%', minWidth: 0 }}
+                  style={{
+                    height: !target.session || landing ? 'auto' : '100%',
+                    width: '100%',
+                    minWidth: 0,
+                  }}
                 >
                   <FeatureBoundary key={`chat:${target.workspace}/${target.session}`}>
                     <Suspense
@@ -244,20 +256,10 @@ export default function WorkspaceShell() {
                       {target.session ? (
                         <Chat target={target} scroller={scroller} onEmpty={setLanding} />
                       ) : (
-                        <Center padding={8}>
-                          <EmptyState
-                            title={t('emptyTitle')}
-                            description={t('emptyHelp')}
-                            actions={
-                              <Button
-                                label={t('newChat')}
-                                variant="primary"
-                                isDisabled={!target.workspace}
-                                isLoading={creating}
-                                onClick={() => create(target.workspace)}
-                              />
-                            }
-                          />
+                        <Center width="100%" className="min-w-0">
+                          <VStack width={chatWidth} paddingBlock={4} gap={5} className="min-w-0">
+                            <EmptyChat hasWorkspace={!!target.workspace} />
+                          </VStack>
                         </Center>
                       )}
                     </Suspense>

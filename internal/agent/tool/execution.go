@@ -17,6 +17,7 @@ import (
 )
 
 type Approval struct {
+	Reasons   []string
 	Candidate *Candidate
 	Command   *CommandApproval
 	ID        string

@@ -3,7 +3,6 @@
 // Usage: Approval mounts this after the selected conversation has an actionable approval.
 // Related: webui/src/pages/workspace/ui/inspection/approval.tsx, webui/src/pages/workspace/ui/inspection/original.tsx.
 import { Button } from '@astryxdesign/core/Button';
-import { Code } from '@astryxdesign/core/Code';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack, Layout, LayoutContent, VStack } from '@astryxdesign/core/Layout';
@@ -12,7 +11,6 @@ import { lazy, Suspense, useState } from 'react';
 import type { Target } from '@/pages/workspace/model/store';
 import type { EventJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
-import { CodePreview } from '@/shared/ui/code-preview';
 
 const Original = lazy(() =>
   import('@/pages/workspace/ui/inspection/original').then((module) => ({
@@ -61,16 +59,29 @@ export default function ApprovalDialog({
                 <Heading level={3} type="display-3">
                   {approval.name}
                 </Heading>
-                <Code>{approval.target}</Code>
-                <CodePreview code={approval.preview ?? ''} language="plaintext" isWrapped={true} />
+                <Text color="secondary" className="break-words whitespace-pre-wrap">
+                  {Array.from(approval.target ?? '')
+                    .slice(0, 240)
+                    .join('')}
+                  {(approval.target?.length ?? 0) > 240 ? '…' : ''}
+                </Text>
+                <VStack gap={2}>
+                  {[
+                    ...new Set(
+                      approval.reasons?.length
+                        ? approval.reasons
+                        : [t(approval.userRequired ? 'approvalDirectReason' : 'approvalReason')]
+                    ),
+                  ].map((reason) => (
+                    <Text key={reason}>{reason}</Text>
+                  ))}
+                </VStack>
                 {approval.expiresAt && (
                   <Text className="muted" as="p">
                     {t('expires')}: {new Date(approval.expiresAt).toLocaleString()}
                   </Text>
                 )}
-                {approval.truncated && (
-                  <Button label={t('moreOriginal')} onClick={() => setFull(true)} />
-                )}
+                <Button label={t('moreOriginal')} variant="ghost" onClick={() => setFull(true)} />
               </VStack>
               <HStack className="form-actions" gap={2}>
                 <Button label={t('deny')} isDisabled={busy} onClick={() => decide(false)} />

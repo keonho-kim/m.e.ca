@@ -47,6 +47,18 @@ func TestProjectionDoesNotModifyReplayEvents(t *testing.T) {
 	}
 }
 
+func TestProjectionApprovalReasonsDoNotAliasReplay(t *testing.T) {
+	vault := &credentials.Vault{}
+	vault.Remember("private-key")
+	a := &API{Redact: vault.Redact}
+	shared := server.Event{Record: record.Event{Approval: &tool.Approval{Reasons: []string{"private-key"}}}}
+	projected := event(shared)
+	a.sanitize(projected)
+	if projected.Approval.Reasons[0] != "[redacted]" || shared.Record.Approval.Reasons[0] != "private-key" {
+		t.Fatal("approval reason redaction changed the shared original")
+	}
+}
+
 func TestProjectionConcurrentSubscribers(t *testing.T) {
 	vault := &credentials.Vault{}
 	a := &API{Redact: vault.Redact}

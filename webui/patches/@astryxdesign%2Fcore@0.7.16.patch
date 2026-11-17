@@ -1,0 +1,714 @@
+diff --git a/src/Chat/ChatLayout.tsx b/src/Chat/ChatLayout.tsx
+--- a/src/Chat/ChatLayout.tsx
++++ b/src/Chat/ChatLayout.tsx
+@@ -385,7 +385,7 @@
+ 
+   const defaultScrollButton = (
+     <ChatLayoutScrollButton
+-      isVisible={scroll.isScrolledUp || newMsgs.hasNewMessages}
++      isVisible={!scroll.isLocked && (scroll.isScrolledUp || newMsgs.hasNewMessages)}
+       label={
+         newMsgs.hasNewMessages ? t('@astryx.chatLayout.newMessages') : undefined
+       }
+diff --git a/dist/Chat/ChatLayout.js b/dist/Chat/ChatLayout.js
+--- a/dist/Chat/ChatLayout.js
++++ b/dist/Chat/ChatLayout.js
+@@ -310,7 +310,7 @@
+   const dockRef = useMergedRefs(keyboard.dockRef, observeDock);
+   const endRoom = keyboard.lift + (isSelfScrolling ? 0 : dockHeight);
+   const defaultScrollButton = /*#__PURE__*/_jsx(ChatLayoutScrollButton, {
+-    isVisible: scroll.isScrolledUp || newMsgs.hasNewMessages,
++    isVisible: !scroll.isLocked && (scroll.isScrolledUp || newMsgs.hasNewMessages),
+     label: newMsgs.hasNewMessages ? t('@astryx.chatLayout.newMessages') : undefined,
+     onClick: () => {
+       newMsgs.dismiss();
+diff --git a/src/Chat/useChatStreamScroll.ts b/src/Chat/useChatStreamScroll.ts
+--- a/src/Chat/useChatStreamScroll.ts
++++ b/src/Chat/useChatStreamScroll.ts
+@@ -386,13 +386,36 @@
+     // viewport's, which is what the reader sees.
+     const shownHeight = () => (isPage ? el.clientHeight : el.offsetHeight);
+ 
++    let previousScrollHeight = el.scrollHeight;
++    let previousClientHeight = el.clientHeight;
++    let pointerActive = false;
++    const onPointerDown = () => { pointerActive = true; };
++    const onPointerEnd = () => { pointerActive = false; };
++    const onWheel = (event: WheelEvent) => {
++      if (event.deltaY < 0) {
++        setLocked(false);
++        animatingRef.current = false;
++      }
++    };
++    const onKeyDown = (event: KeyboardEvent) => {
++      const target = event.target;
++      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
++          (target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select')))) return;
++      if (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey)) {
++        setLocked(false);
++        animatingRef.current = false;
++      }
++    };
+     const onScroll = () => {
+       const {scrollTop, scrollHeight} = el;
+       const dist = scrollHeight - scrollTop - shownHeight();
+ 
+-      // Button visibility
+-      setIsScrolledUp(dist > buttonThreshold);
+-
++
++      // Virtual history handoff may clamp the position before the replacement
++      // height is measured. A layout-only move is not a reader scroll.
++      const geometryChanged = previousScrollHeight !== scrollHeight || previousClientHeight !== el.clientHeight;
++      previousScrollHeight = scrollHeight;
++      previousClientHeight = el.clientHeight;
+       const isScrollingUp = scrollTop < lastScrollTopRef.current;
+       lastScrollTopRef.current = scrollTop;
+ 
+@@ -402,16 +425,18 @@
+       // includes borders and a horizontal scrollbar.)
+       const landedAtBottom = scrollHeight - scrollTop - el.clientHeight < 1;
+ 
+-      if (isScrollingUp && !landedAtBottom && lockedRef.current) {
++      if (isScrollingUp && !landedAtBottom && lockedRef.current && (!geometryChanged || pointerActive)) {
+         setLocked(false);
+         animatingRef.current = false;
+       }
++      setIsScrolledUp(!lockedRef.current && dist > buttonThreshold);
+     };
+ 
+     const onScrollEnd = () => {
+       const dist = el.scrollHeight - el.scrollTop - shownHeight();
+       if (dist <= lockThreshold) {
+         setLocked(true);
++        setIsScrolledUp(false);
+       }
+     };
+ 
+@@ -434,8 +459,14 @@
+       el.addEventListener('scrollend', onScrollEnd);
+     }
+ 
++    el.addEventListener('keydown', onKeyDown);
++    el.addEventListener('wheel', onWheel, {passive: true});
++    el.addEventListener('pointerdown', onPointerDown, {passive: true});
++    doc.defaultView?.addEventListener('pointerup', onPointerEnd);
++    doc.defaultView?.addEventListener('pointercancel', onPointerEnd);
++
+     // Initial scroll to bottom — content already present at mount.
+-    requestAnimationFrame(() => {
++    const initialFrame = requestAnimationFrame(() => {
+       if (el.scrollHeight > el.clientHeight) {
+         el.scrollTop = el.scrollHeight - el.clientHeight;
+         lastScrollTopRef.current = el.scrollTop;
+@@ -444,11 +475,19 @@
+     });
+ 
+     return () => {
++      cancelAnimationFrame(initialFrame);
++      cancelAnimationFrame(rafRef.current);
++      animatingRef.current = false;
+       for (const stop of stopPageListeners) {
+         stop();
+       }
+       el.removeEventListener('scroll', onScroll);
+       el.removeEventListener('scrollend', onScrollEnd);
++      el.removeEventListener('keydown', onKeyDown);
++      el.removeEventListener('wheel', onWheel);
++      el.removeEventListener('pointerdown', onPointerDown);
++      doc.defaultView?.removeEventListener('pointerup', onPointerEnd);
++      doc.defaultView?.removeEventListener('pointercancel', onPointerEnd);
+       markFollowing(el, false);
+     };
+   }, [scrollRef, enabled, lockThreshold, buttonThreshold, setLocked]);
+diff --git a/dist/Chat/useChatStreamScroll.js b/dist/Chat/useChatStreamScroll.js
+--- a/dist/Chat/useChatStreamScroll.js
++++ b/dist/Chat/useChatStreamScroll.js
+@@ -263,6 +263,26 @@
+     // The root's offsetHeight is the page's height. Its clientHeight is the
+     // viewport's, which is what the reader sees.
+     const shownHeight = () => isPage ? el.clientHeight : el.offsetHeight;
++    let previousScrollHeight = el.scrollHeight;
++    let previousClientHeight = el.clientHeight;
++    let pointerActive = false;
++    const onPointerDown = () => { pointerActive = true; };
++    const onPointerEnd = () => { pointerActive = false; };
++    const onWheel = (event) => {
++      if (event.deltaY < 0) {
++        setLocked(false);
++        animatingRef.current = false;
++      }
++    };
++    const onKeyDown = (event) => {
++      const target = event.target;
++      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
++          (target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select')))) return;
++      if (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey)) {
++        setLocked(false);
++        animatingRef.current = false;
++      }
++    };
+     const onScroll = () => {
+       const {
+         scrollTop,
+@@ -270,8 +290,11 @@
+       } = el;
+       const dist = scrollHeight - scrollTop - shownHeight();
+ 
+-      // Button visibility
+-      setIsScrolledUp(dist > buttonThreshold);
++      // Virtual history handoff may clamp the position before the replacement
++      // height is measured. A layout-only move is not a reader scroll.
++      const geometryChanged = previousScrollHeight !== scrollHeight || previousClientHeight !== el.clientHeight;
++      previousScrollHeight = scrollHeight;
++      previousClientHeight = el.clientHeight;
+       const isScrollingUp = scrollTop < lastScrollTopRef.current;
+       lastScrollTopRef.current = scrollTop;
+ 
+@@ -280,15 +303,17 @@
+       // scrolling up never lands there. (clientHeight, not dist: offsetHeight
+       // includes borders and a horizontal scrollbar.)
+       const landedAtBottom = scrollHeight - scrollTop - el.clientHeight < 1;
+-      if (isScrollingUp && !landedAtBottom && lockedRef.current) {
++      if (isScrollingUp && !landedAtBottom && lockedRef.current && (!geometryChanged || pointerActive)) {
+         setLocked(false);
+         animatingRef.current = false;
+       }
++      setIsScrolledUp(!lockedRef.current && dist > buttonThreshold);
+     };
+     const onScrollEnd = () => {
+       const dist = el.scrollHeight - el.scrollTop - shownHeight();
+       if (dist <= lockThreshold) {
+         setLocked(true);
++        setIsScrolledUp(false);
+       }
+     };
+ 
+@@ -311,7 +336,12 @@
+     }
+ 
+     // Initial scroll to bottom — content already present at mount.
+-    requestAnimationFrame(() => {
++    el.addEventListener('keydown', onKeyDown);
++    el.addEventListener('wheel', onWheel, {passive: true});
++    el.addEventListener('pointerdown', onPointerDown, {passive: true});
++    doc.defaultView?.addEventListener('pointerup', onPointerEnd);
++    doc.defaultView?.addEventListener('pointercancel', onPointerEnd);
++    const initialFrame = requestAnimationFrame(() => {
+       if (el.scrollHeight > el.clientHeight) {
+         el.scrollTop = el.scrollHeight - el.clientHeight;
+         lastScrollTopRef.current = el.scrollTop;
+@@ -319,11 +349,19 @@
+       }
+     });
+     return () => {
++      cancelAnimationFrame(initialFrame);
++      cancelAnimationFrame(rafRef.current);
++      animatingRef.current = false;
+       for (const stop of stopPageListeners) {
+         stop();
+       }
+       el.removeEventListener('scroll', onScroll);
+       el.removeEventListener('scrollend', onScrollEnd);
++      el.removeEventListener('keydown', onKeyDown);
++      el.removeEventListener('wheel', onWheel);
++      el.removeEventListener('pointerdown', onPointerDown);
++      doc.defaultView?.removeEventListener('pointerup', onPointerEnd);
++      doc.defaultView?.removeEventListener('pointercancel', onPointerEnd);
+       markFollowing(el, false);
+     };
+   }, [scrollRef, enabled, lockThreshold, buttonThreshold, setLocked]);
+diff --git a/src/Markdown/Markdown.tsx b/src/Markdown/Markdown.tsx
+--- a/src/Markdown/Markdown.tsx
++++ b/src/Markdown/Markdown.tsx
+@@ -277,6 +277,8 @@
+    */
+   headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+   isStreaming?: boolean;
++    /** Controls reveal independently of incremental parsing. */
++    isRevealing?: boolean;
+   onLinkClick?: (
+     href: string,
+     event: React.MouseEvent<HTMLAnchorElement>,
+@@ -2242,6 +2244,7 @@
+   density = 'default',
+   headingLevelStart = 1,
+   isStreaming = false,
++  isRevealing = true,
+   onLinkClick,
+   sources,
+   citationStyle = 'label',
+@@ -2318,7 +2321,7 @@
+ 
+   // Smooth bursty streamed chunks into a steady character-by-character reveal.
+   // When not streaming, the hook returns children unchanged (no-op).
+-  const smoothedText = useStreamingText(children, isStreaming);
++  const smoothedText = useStreamingText(children, isStreaming, isRevealing, {speed: isRevealing ? 'natural' : 'instant'});
+ 
+   // A discarded render can change this cache, as it can change the option
+   // flags below. The parser reuses settled blocks only while the input starts
+@@ -2375,6 +2378,7 @@
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2427,6 +2431,7 @@
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2462,6 +2467,7 @@
+     preparedPlugins,
+     inlineTransformSource,
+     isStreaming,
++    isRevealing,
+   ]);
+ 
+   // Track recent boundaries for stacked fade-in animation.
+@@ -2516,7 +2522,7 @@
+     const blockCursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const blockCitationCtx: CitationContext | null = sources
+@@ -2550,6 +2556,7 @@
+     blocks,
+     boundaries,
+     isStreaming,
++    isRevealing,
+     sources,
+     citationStyle,
+     density,
+@@ -2571,7 +2578,7 @@
+     const cursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const citationCtx: CitationContext | null = sources
+diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
+--- a/dist/Markdown/Markdown.js
++++ b/dist/Markdown/Markdown.js
+@@ -1408,6 +1408,7 @@
+   density = 'default',
+   headingLevelStart = 1,
+   isStreaming = false,
++  isRevealing = true,
+   onLinkClick,
+   sources,
+   citationStyle = 'label',
+@@ -1473,7 +1474,7 @@
+ 
+   // Smooth bursty streamed chunks into a steady character-by-character reveal.
+   // When not streaming, the hook returns children unchanged (no-op).
+-  const smoothedText = useStreamingText(children, isStreaming);
++  const smoothedText = useStreamingText(children, isStreaming, isRevealing, {speed: isRevealing ? 'natural' : 'instant'});
+ 
+   // A discarded render can change this cache, as it can change the option
+   // flags below. The parser reuses settled blocks only while the input starts
+@@ -1503,7 +1504,7 @@
+       return (hasMathRenderer ? parseMarkdownAstIncremental(input, incrementalStateRef.current, mathParseOptions) : parseMarkdownAstIncremental(input, incrementalStateRef.current, legacyParseOptions)).children;
+     }
+     return (hasMathRenderer ? parseMarkdownAst(children, mathParseOptions) : parseMarkdownAst(children, legacyParseOptions)).children;
+-  }, [display, smoothedText, children, isStreaming, hasMathRenderer, mathParseOptions, legacyParseOptions]);
++  }, [display, smoothedText, children, isStreaming, isRevealing, hasMathRenderer, mathParseOptions, legacyParseOptions]);
+   const transformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
+   const blocks = useMemo(() => applyMarkdownTransforms({
+     type: 'root',
+@@ -1529,7 +1530,7 @@
+     const options = hasMathRenderer ? mathParseOptions : legacyParseOptions;
+     const input = isStreaming ? trimStreamingArtifacts(smoothedText, options) : children;
+     return hasMathRenderer ? parseInlineAst(input, mathParseOptions) : parseInlineAst(input, legacyParseOptions);
+-  }, [display, smoothedText, children, isStreaming, hasMathRenderer, mathParseOptions, legacyParseOptions]);
++  }, [display, smoothedText, children, isStreaming, isRevealing, hasMathRenderer, mathParseOptions, legacyParseOptions]);
+   const inlineTransformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
+   const inlineNodes = useMemo(() => {
+     if (display !== 'inline') {
+@@ -1592,7 +1593,7 @@
+     const blockCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming
++      active: isStreaming && isRevealing
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const blockCitationCtx = sources ? {
+@@ -1605,12 +1606,12 @@
+       provider: direction,
+       around: direction
+     }));
+-  }, [display, blocks, boundaries, isStreaming, sources, citationStyle, density, headingLevelStart, stableOnLinkClick, contentWidthValue, contentAlign, LinkComponent, inlinePlugins, components, preparedPlugins, t, headingProjection, codeLanguages, direction]);
++  }, [display, blocks, boundaries, isStreaming, isRevealing, sources, citationStyle, density, headingLevelStart, stableOnLinkClick, contentWidthValue, contentAlign, LinkComponent, inlinePlugins, components, preparedPlugins, t, headingProjection, codeLanguages, direction]);
+   if (display === 'inline') {
+     const cursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming
++      active: isStreaming && isRevealing
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const citationCtx = sources ? {
+diff --git a/dist/Markdown/Markdown.d.ts b/dist/Markdown/Markdown.d.ts
+--- a/dist/Markdown/Markdown.d.ts
++++ b/dist/Markdown/Markdown.d.ts
+@@ -120,6 +120,8 @@
+      */
+     headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+     isStreaming?: boolean;
++    /** Controls reveal independently of incremental parsing. */
++    isRevealing?: boolean;
+     onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void | false;
+     /**
+      * Citation sources keyed by ID. When provided, `[id]` and `【id】` markers
+@@ -199,7 +201,7 @@
+  * </Markdown>
+  * ```
+  */
+-export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
++export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, isRevealing, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
+ export declare namespace Markdown {
+     var displayName: string;
+ }
+diff --git a/src/hooks/useStreamingText.ts b/src/hooks/useStreamingText.ts
+--- a/src/hooks/useStreamingText.ts
++++ b/src/hooks/useStreamingText.ts
+@@ -144,6 +144,14 @@
+     const tick = speed === 'fast' ? base / 20 : base / 10;
+     return Math.max(4, Math.round(tick));
+   }, [token, speed]);
++
++  // Reduced motion skips the progressive reveal and shows the full text.
++  // useMediaQuery follows a preference change mid-stream.
++  const prefersReducedMotion = useMediaQuery(
++    '(prefers-reduced-motion: reduce)',
++  );
++
++  const instant = !isStreaming || speed === 'instant' || prefersReducedMotion;
+ 
+   // Where the reveal restarts: at 0 on a clear (a new message), at the whole
+   // text on a stream's end. Adjusted during render, and only then, never per
+@@ -163,49 +171,31 @@
+   if (targetText.length === 0 && displayedLen !== 0) {
+     setRestart(previous => ({epoch: previous.epoch + 1, len: 0}));
+   }
+-  const [wasStreaming, setWasStreaming] = useState(isStreaming);
+-  if (isStreaming !== wasStreaming) {
+-    setWasStreaming(isStreaming);
+-    if (!isStreaming && targetText.length > 0) {
+-      setRestart(previous => ({
+-        epoch: previous.epoch + 1,
+-        len: targetText.length,
+-      }));
+-    }
+-  }
+-
+-  // Reduced motion skips the progressive reveal and shows the full text.
+-  // useMediaQuery follows a preference change mid-stream.
+-  const prefersReducedMotion = useMediaQuery(
+-    '(prefers-reduced-motion: reduce)',
+-  );
++  // Commit visible catch-up as state so discarded renders cannot rewind it.
++  if (instant && displayedLen !== targetText.length) {
++    setRestart(previous => ({epoch: previous.epoch + 1, len: targetText.length}));
++  }
+ 
+   // Syncs the revealed text with an animation-frame clock while the text
+   // streams.
+   useEffect(() => {
+-    if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
++    if (instant) {
+       return;
+     }
+ 
++    let position = displayedLen;
+     function tick(now: number) {
+       const elapsed = now - lastTickRef.current;
+       if (elapsed >= tickMs) {
+         lastTickRef.current = now;
+         const target = targetRef.current;
+-        setRevealed(previous => {
+-          const currentLen =
+-            previous.epoch === restart.epoch ? previous.len : restart.len;
+-          if (currentLen >= target.length) {
+-            return previous;
+-          }
+-          return {
+-            epoch: restart.epoch,
+-            len: Math.min(currentLen + charsPerTick, target.length),
+-          };
+-        });
++        if (position < target.length) {
++          position = Math.min(position + charsPerTick, target.length);
++          setRevealed({epoch: restart.epoch, len: position});
++        }
+       }
+ 
+-      rafRef.current = requestAnimationFrame(tick);
++      rafRef.current = position < targetRef.current.length ? requestAnimationFrame(tick) : null;
+     }
+ 
+     rafRef.current = requestAnimationFrame(tick);
+@@ -215,7 +205,7 @@
+         rafRef.current = null;
+       }
+     };
+-  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, restart]);
++  }, [instant, charsPerTick, tickMs, restart, targetText]);
+ 
+   if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
+     return targetText;
+diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
+--- a/dist/hooks/useStreamingText.js
++++ b/dist/hooks/useStreamingText.js
+@@ -1,37 +1,12 @@
+ // Copyright (c) Meta Platforms, Inc. and affiliates.
+ 
+-'use client';
++"use client";
+ 
+-/**
+- * @file useStreamingText.ts
+- * @input React state, effects and refs; useMediaQuery; useTheme
+- * @output useStreamingText hook for smooth text streaming
+- * @position Core hook; smooths bursty streamed text into a steady reveal.
+- *   Timing comes from the motion tokens, with defaults outside a theme.
+- *
+- * SYNC: When modified, update:
+- * - /packages/core/src/hooks/index.ts (exports)
+- * - /packages/core/src/hooks/useStreamingText.test.ts (tests)
+- */
+-import { useEffect, useMemo, useRef, useState } from 'react';
++import { useEffect, useMemo, useRef, useState } from "react";
+ import { useMediaQuery } from "./useMediaQuery.js";
+ import { useTheme } from "../theme/useTheme.js";
+-
+-/**
+- * Speed presets for streaming text reveal.
+- * - `'natural'` — steady character-by-character reveal (~2 chars/frame)
+- * - `'fast'` — faster reveal, scales with backlog (~4 chars/frame)
+- * - `'instant'` — no animation, returns full text immediately
+- */
+-
+-// Fallback values when no Theme provider is present
+-const FALLBACK_TICK_MS = 50;
+-const FALLBACK_TICK_MS_FAST = 8;
+-
+-/**
+- * Parse a CSS duration string (e.g. "175ms", "0.15s") to milliseconds.
+- * Returns null if unparseable.
+- */
++var FALLBACK_TICK_MS = 50;
++var FALLBACK_TICK_MS_FAST = 8;
+ function parseDuration(value) {
+   const ms = value.match(/^([\d.]+)ms$/);
+   if (ms) {
+@@ -43,155 +18,70 @@
+   }
+   return null;
+ }
+-const CHARS_PER_TICK = {
++var CHARS_PER_TICK = {
+   natural: 10,
+   fast: 4,
+   instant: Infinity
+ };
+-
+-// One shared segmenter. The granularity is fixed, and the locale does not
+-// change grapheme boundaries.
+-const graphemeSegmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, {
+-  granularity: 'grapheme'
+-}) : null;
++var graphemeSegmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : null;
+ function isLowSurrogate(codeUnit) {
+-  return codeUnit >= 0xdc00 && codeUnit <= 0xdfff;
++  return codeUnit >= 56320 && codeUnit <= 57343;
+ }
+-
+-/**
+- * Snap a UTF-16 code-unit offset down to the start of the grapheme cluster
+- * it falls inside, so slicing `text` at the returned offset never splits a
+- * surrogate pair, flag sequence, or ZWJ emoji mid-glyph. Offsets at the
+- * start/end of the string are returned unchanged (nothing to snap).
+- *
+- * Falls back to snapping off a lone low surrogate when `Intl.Segmenter` is
+- * unavailable — narrower than full grapheme-cluster awareness (a ZWJ
+- * sequence or flag pair can still split in that path), but it's what's
+- * achievable without a full grapheme-aware dependency, and it's strictly
+- * better than the unguarded default of never checking at all.
+- */
+-export function snapToGraphemeBoundary(text, offset) {
++function snapToGraphemeBoundary(text, offset) {
+   if (offset <= 0 || offset >= text.length) {
+     return offset;
+   }
+   if (graphemeSegmenter) {
+-    // The guard above keeps offset in range, so `containing` is defined. The
+-    // `??` satisfies the wider type.
+     return graphemeSegmenter.segment(text).containing(offset)?.index ?? offset;
+   }
+   return isLowSurrogate(text.charCodeAt(offset)) ? offset - 1 : offset;
+ }
+-
+-/**
+- * Smooths bursty streamed text into a steady character-by-character reveal.
+- *
+- * Returns a string that grows steadily toward `targetText`. When `isStreaming`
+- * is false, returns the full `targetText` immediately. When the user prefers
+- * reduced motion, the progressive reveal is skipped entirely and the full
+- * `targetText` is returned immediately.
+- *
+- * The reveal cadence itself advances by a fixed number of UTF-16 code units
+- * per tick, not on word or markdown-syntax boundaries — but the rendered
+- * slice is always snapped back to the nearest grapheme cluster boundary, so
+- * a tick landing mid-surrogate-pair or mid-emoji-sequence never renders a
+- * broken glyph.
+- *
+- * @example
+- * ```
+- * const displayed = useStreamingText(rawText, isStreaming);
+- * return <Markdown>{displayed}</Markdown>;
+- * ```
+- *
+- * @example
+- * ```
+- * const displayed = useStreamingText(rawText, isStreaming, { speed: 'fast' });
+- * ```
+- */
+-export function useStreamingText(targetText, isStreaming, options) {
+-  const speed = options?.speed ?? 'natural';
++function useStreamingText(targetText, isStreaming, options) {
++  const speed = options?.speed ?? "natural";
+   const charsPerTick = CHARS_PER_TICK[speed];
+-
+-  // Tick timing comes from the motion tokens: natural uses
+-  // --duration-fast-min, and fast uses half of it, at least 4ms.
+-  const {
+-    token
+-  } = useTheme();
++  const { token } = useTheme();
+   const tickMs = useMemo(() => {
+-    if (speed === 'instant') {
++    if (speed === "instant") {
+       return 0;
+     }
+-    const base = parseDuration(token('--duration-fast-min'));
++    const base = parseDuration(token("--duration-fast-min"));
+     if (base == null) {
+-      return speed === 'fast' ? FALLBACK_TICK_MS_FAST : FALLBACK_TICK_MS;
++      return speed === "fast" ? FALLBACK_TICK_MS_FAST : FALLBACK_TICK_MS;
+     }
+-    // The per-frame tick is about 1/10 of the fast-min duration, so a 130ms
+-    // token gives a 13ms tick (natural) or a 6.5ms tick (fast).
+-    const tick = speed === 'fast' ? base / 20 : base / 10;
++    const tick = speed === "fast" ? base / 20 : base / 10;
+     return Math.max(4, Math.round(tick));
+   }, [token, speed]);
+-
+-  // Where the reveal restarts: at 0 on a clear (a new message), at the whole
+-  // text on a stream's end. Adjusted during render, and only then, never per
+-  // chunk. State, not refs: a render React discards takes its adjustment with
+-  // it. The frame clock alone advances `revealed`, which counts only within
+-  // its restart's epoch.
+-  const [restart, setRestart] = useState({
+-    epoch: 0,
+-    len: 0
+-  });
+-  const [revealed, setRevealed] = useState({
+-    epoch: 0,
+-    len: 0
+-  });
++  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
++  const instant = !isStreaming || speed === "instant" || prefersReducedMotion;
++  const [restart, setRestart] = useState({ epoch: 0, len: 0 });
++  const [revealed, setRevealed] = useState({ epoch: 0, len: 0 });
+   const displayedLen = revealed.epoch === restart.epoch ? revealed.len : restart.len;
+   const targetRef = useRef(targetText);
+   const lastTickRef = useRef(0);
+   const rafRef = useRef(null);
+   targetRef.current = targetText;
+   if (targetText.length === 0 && displayedLen !== 0) {
+-    setRestart(previous => ({
+-      epoch: previous.epoch + 1,
+-      len: 0
+-    }));
++    setRestart((previous) => ({ epoch: previous.epoch + 1, len: 0 }));
+   }
+-  const [wasStreaming, setWasStreaming] = useState(isStreaming);
+-  if (isStreaming !== wasStreaming) {
+-    setWasStreaming(isStreaming);
+-    if (!isStreaming && targetText.length > 0) {
+-      setRestart(previous => ({
+-        epoch: previous.epoch + 1,
+-        len: targetText.length
+-      }));
+-    }
++  if (instant && displayedLen !== targetText.length) {
++    setRestart((previous) => ({ epoch: previous.epoch + 1, len: targetText.length }));
+   }
+-
+-  // Reduced motion skips the progressive reveal and shows the full text.
+-  // useMediaQuery follows a preference change mid-stream.
+-  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+-
+-  // Syncs the revealed text with an animation-frame clock while the text
+-  // streams.
+   useEffect(() => {
+-    if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
++    if (instant) {
+       return;
+     }
++    let position = displayedLen;
+     function tick(now) {
+       const elapsed = now - lastTickRef.current;
+       if (elapsed >= tickMs) {
+         lastTickRef.current = now;
+         const target = targetRef.current;
+-        setRevealed(previous => {
+-          const currentLen = previous.epoch === restart.epoch ? previous.len : restart.len;
+-          if (currentLen >= target.length) {
+-            return previous;
+-          }
+-          return {
+-            epoch: restart.epoch,
+-            len: Math.min(currentLen + charsPerTick, target.length)
+-          };
+-        });
++        if (position < target.length) {
++          position = Math.min(position + charsPerTick, target.length);
++          setRevealed({ epoch: restart.epoch, len: position });
++        }
+       }
+-      rafRef.current = requestAnimationFrame(tick);
++      rafRef.current = position < targetRef.current.length ? requestAnimationFrame(tick) : null;
+     }
+     rafRef.current = requestAnimationFrame(tick);
+     return () => {
+@@ -200,9 +90,13 @@
+         rafRef.current = null;
+       }
+     };
+-  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, restart]);
+-  if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
++  }, [instant, charsPerTick, tickMs, restart, targetText]);
++  if (!isStreaming || speed === "instant" || prefersReducedMotion) {
+     return targetText;
+   }
+   return targetText.slice(0, snapToGraphemeBoundary(targetText, displayedLen));
+-}
+\ No newline at end of file
++}
++export {
++  snapToGraphemeBoundary,
++  useStreamingText
++};

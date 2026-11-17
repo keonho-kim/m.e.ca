@@ -5,6 +5,7 @@
 package serverapi
 
 import (
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -40,7 +41,7 @@ func snapshot(value server.Snapshot) *v1.Snapshot {
 		s.Approvals = append(s.Approvals, event(server.Event{Task: p.Task, ApprovalID: p.ID, ApprovalExpiresAt: p.ExpiresAt, Record: p.Value, Truncated: p.Truncated}).Approval)
 	}
 	for _, d := range value.Drafts {
-		s.Drafts = append(s.Drafts, &v1.Draft{HistorySequence: d.HistorySequence, TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
+		s.Drafts = append(s.Drafts, &v1.Draft{StartSequence: d.StartSequence, HistorySequence: d.HistorySequence, TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
 	}
 	for _, e := range value.Activity {
 		s.Activity = append(s.Activity, event(e))
@@ -82,7 +83,7 @@ func event(value server.Event) *v1.Event {
 	result.MeasuredMillis = e.MeasuredDuration.Milliseconds()
 	result.OccurredAt, result.ErrorCode = e.OccurredAt, e.ErrorCode
 	if a := e.Approval; a != nil {
-		result.Approval = &v1.Approval{ExpiresAt: wireTime(value.ApprovalExpiresAt), TaskId: value.Task, Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
+		result.Approval = &v1.Approval{Reasons: slices.Clone(a.Reasons), ExpiresAt: wireTime(value.ApprovalExpiresAt), TaskId: value.Task, Id: value.ApprovalID, CallId: a.ID, Name: a.Name, Target: a.Target, Preview: a.Preview, Diff: a.Diff, UserRequired: a.UserRequired, Truncated: value.Truncated}
 	}
 	if e.Usage != nil {
 		result.Usage = &v1.Usage{Input: e.Usage.Input, Output: e.Usage.Output, Cost: e.Usage.Cost}

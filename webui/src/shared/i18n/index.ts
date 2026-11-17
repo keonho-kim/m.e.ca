@@ -187,6 +187,18 @@ const copy = {
   input: ['작업 입력', 'Task input'],
   placeholder: ['메시지 입력 · ! 명령 · # 스킬', 'Message · ! commands · # skills'],
   emptyTitle: ['어떤 작업을 시작할까요?', 'What would you like to work on?'],
+  selectWorkspace: [
+    '왼쪽에서 작업공간을 선택하면 입력할 수 있습니다.',
+    'Select a workspace on the left to start typing.',
+  ],
+  approvalReason: [
+    '이 작업은 실행 전 승인이 필요합니다.',
+    'This action requires approval before execution.',
+  ],
+  approvalDirectReason: [
+    '이 작업은 사용자의 직접 승인이 필요합니다.',
+    'This action requires your direct approval.',
+  ],
   emptyHelp: ['이미지와 스킬은 +에서 추가할 수 있습니다.', 'Add images and browse skills with +.'],
   noSessions: ['아직 대화가 없습니다', 'No conversations yet'],
   noWorkspace: ['워크스페이스를 추가하세요', 'Add a workspace'],

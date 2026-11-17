@@ -22,6 +22,7 @@ export function snapshotDrafts(snapshot: SnapshotJson, revision: number) {
         task: d.taskId,
         agent: d.agent ?? '',
         generation: d.generation ?? '0',
+        startSequence: d.startSequence ?? '0',
         text: d.text ?? '',
         thinking: d.thinking ?? '',
         truncated: !!d.truncated,
@@ -32,7 +33,7 @@ export function snapshotDrafts(snapshot: SnapshotJson, revision: number) {
 }
 
 export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<WorkspaceState> {
-  let { drafts, tasks, events, historyRevision, statistics, completionThrough } = state;
+  let { drafts, tasks, events, approvals, historyRevision, statistics, completionThrough } = state;
   const ordered = orderedEvents(batch, state.replayCursor);
   for (const e of compactDeltas(ordered.events)) {
     if (
@@ -54,6 +55,13 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
     }
     if (e.workspaceId !== state.selection.workspace || e.sessionId !== state.selection.session)
       continue;
+    if (e.kind === 'approval_required' || e.kind === 'approval_closed') {
+      const id = e.approvalId ?? e.approval?.id;
+      approvals = approvals.filter((approval) => approval.id !== id);
+      if (e.kind === 'approval_required' && e.approval) approvals.push(e.approval);
+    }
+    if (e.kind === 'request_finished')
+      approvals = approvals.filter((approval) => approval.taskId !== e.taskId);
     if (e.kind === 'request_started') {
       statistics = null;
       completionThrough = '0';
@@ -80,6 +88,15 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
         drafts[`${key}/${old.generation}`] = { ...old, doneRevision: historyRevision };
         delete drafts[key];
       }
+      drafts[key] = {
+        task: e.taskId,
+        agent: e.agent ?? '',
+        generation: e.generation ?? '0',
+        startSequence: e.sequence ?? '0',
+        text: '',
+        thinking: '',
+        truncated: false,
+      };
     } else if (e.kind === 'request_finished') {
       historyRevision++;
       tasks[e.taskId] = { ...tasks[e.taskId]!, doneRevision: historyRevision };
@@ -99,6 +116,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
               task: e.taskId,
               agent: e.agent ?? '',
               generation,
+              startSequence: e.sequence ?? '0',
               text: '',
               thinking: '',
               truncated: false,
@@ -142,6 +160,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
     drafts === state.drafts &&
     tasks === state.tasks &&
     events === state.events &&
+    approvals === state.approvals &&
     historyRevision === state.historyRevision &&
     statistics === state.statistics &&
     completionThrough === state.completionThrough &&
@@ -152,6 +171,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
     drafts,
     tasks,
     events,
+    approvals,
     historyRevision,
     statistics,
     completionThrough,

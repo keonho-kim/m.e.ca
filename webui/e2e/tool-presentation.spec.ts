@@ -1,7 +1,7 @@
 // Purpose: Verify one row per real command and distinct reasoning, response and completion surfaces.
 // Pattern: Browser-to-engine presentation regression.
 // Usage: Run with the isolated TestUIBrowserFixture descriptor.
-// Related: cmd/meca/ui_tool_provider_test.go, webui/src/pages/workspace/ui/chat/live-activity.tsx.
+// Related: cmd/meca/ui_tool_provider_test.go, webui/src/pages/workspace/model/live-timeline.ts.
 
 import { expect } from '@playwright/test';
 import { browserFixture, connectBrowser, test } from '#e2e/fixture';

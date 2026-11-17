@@ -113,7 +113,16 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 	}
 	sort.Slice(value.Approvals, func(i, j int) bool { return value.Approvals[i].ID < value.Approvals[j].ID })
 	sort.Slice(value.Drafts, func(i, j int) bool {
-		return value.Drafts[i].Task+value.Drafts[i].Agent < value.Drafts[j].Task+value.Drafts[j].Agent
+		if value.Drafts[i].Task != value.Drafts[j].Task {
+			return value.Drafts[i].Task < value.Drafts[j].Task
+		}
+		return value.Drafts[i].StartSequence < value.Drafts[j].StartSequence
+	})
+	sort.Slice(value.Activity, func(i, j int) bool {
+		if value.Activity[i].Task != value.Activity[j].Task {
+			return value.Activity[i].Task < value.Activity[j].Task
+		}
+		return value.Activity[i].Sequence < value.Activity[j].Sequence
 	})
 	sort.Slice(value.Executions, func(i, j int) bool { return value.Executions[i].Task < value.Executions[j].Task })
 	return value

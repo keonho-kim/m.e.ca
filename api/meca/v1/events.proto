@@ -21,6 +21,7 @@ message Approval {
   bool truncated = 8;
   string task_id = 9;
   string expires_at = 10;
+  repeated string reasons = 11;
 }
 message Tool {
   SkillRead skill = 9;

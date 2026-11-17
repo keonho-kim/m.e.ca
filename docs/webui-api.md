@@ -112,7 +112,7 @@ snapshot draft의 committed는 해당 generation의 출력이 이력에 저장�
 
 `usage`·`usage_progress`·`request_finished` 이벤트의 statistics는 서버가 집계한 최신 측정이다. 브라우저는 완료 뒤 live 사건을 정리해도 마지막 통계를 별도 작은 값으로 유지한다.
 
-`activity`는 현재 도구·팀·진행·재시도의 제한된 복원 상태다. activityTruncated이면 해당 task의 state로 좁혀 조회한다. 확정된 사건 전체는 history/detail이 소유한다. `execution.statistics`는 완료 사용량과 현재 보고된 진행 표본을 합산하므로 같은 usage를 다시 더하지 않는다. 비용 미보고와 0을 구분한다.
+`activity`는 현재 도구·팀·진행·재시도의 제한된 복원 상태다. 같은 작업의 `draft.startSequence`와 `activity.sequence`는 작업 내 발행 순서를 공유한다. 현재 추론·답변과 도구·알림을 이 순서로 섞어 표시하고, 도구 완료는 시작 행을 갱신한다. 서로 다른 작업의 sequence는 직접 비교하지 않는다. activityTruncated이면 해당 task의 state로 좁혀 조회한다. 확정된 사건 전체는 history/detail이 소유한다. `execution.statistics`는 완료 사용량과 현재 보고된 진행 표본을 합산하므로 같은 usage를 다시 더하지 않는다. 비용 미보고와 0을 구분한다.
 
 SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation·파일 참조 변경 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 외부 EventSource 클라이언트는 id를 보관하고 이 프레임을 본문으로 렌더링하지 않는다. 내장 UI는 매 재연결에서 새 snapshot을 읽는다.
 
@@ -146,7 +146,7 @@ detail 응답은 UTF-8 원문 조각인 `text`와 바이트 기준 `offset`·`ne
 
 ## 승인과 운영 상태
 
-approval의 expiresAt으로 만료 안내를 표시한다. `approve`는 taskId와 approvalId에 바인딩되며 이미 결정·만료된 승인은 conflict다. `approval_closed.status`는 approved·denied·expired·canceled·failed 중 하나다. 승인 응답 성공을 파일 효과 완료로 해석하지 않는다.
+approval의 `reasons`는 표시용 승인 사유이며 최대 16개, 항목별 512바이트로 제한된다. 작업명·대상·사유를 기본 안내에 쓰고, 상세 명령·diff는 `detail:{approvalId}`로 필요할 때 조회한다. expiresAt으로 만료 안내를 표시한다. `approve`는 taskId와 approvalId에 바인딩되며 이미 결정·만료된 승인은 conflict다. `approval_closed.status`는 approved·denied·expired·canceled·failed 중 하나다. 승인 응답 성공을 파일 효과 완료로 해석하지 않는다.
 
 큰 원문 읽기는 자원 부족 시 즉시 resource_exhausted를 반환한다. 프론트는 사용자가 보고 있는 읽기 하나를 우선하고, 화면 전환 시 이전 요청을 취소하며 무제한 재시도 큐를 만들지 않는다. 작업 제어 REST는 일반 HTTP 요청과 별도 입장을 사용한다. 내장 UI는 `/v1/workspaces/{workspaceId}/tasks/{taskId}/cancel`과 `/approvals/{approvalId}`를 사용한다.
 

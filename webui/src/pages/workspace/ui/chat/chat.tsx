@@ -8,10 +8,8 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Center } from '@astryxdesign/core/Center';
 import { ChatMessageList } from '@astryxdesign/core/Chat';
-import { Heading } from '@astryxdesign/core/Heading';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
-import { Text } from '@astryxdesign/core/Text';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -25,6 +23,7 @@ import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation
 import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { CompletionRow } from '@/pages/workspace/ui/chat/completion-row';
+import { EmptyChat } from '@/pages/workspace/ui/chat/empty-chat';
 import { HistoryWindow } from '@/pages/workspace/ui/chat/history-window';
 import { chatWidth } from '@/pages/workspace/ui/chat/layout';
 import { focusedRange } from '@/pages/workspace/ui/focused-range';
@@ -171,13 +170,15 @@ export function Chat({
   return (
     <Center width="100%" className="meca-pane-enter min-w-0">
       <VStack width={chatWidth} paddingBlock={4} gap={5} className="chat-content min-w-0">
-        <Button
-          label={t('searchConversation')}
-          variant="ghost"
-          size="sm"
-          className="self-end"
-          onClick={() => setSearchOpen(true)}
-        />
+        {items.length > 0 && (
+          <Button
+            label={t('searchConversation')}
+            variant="ghost"
+            size="sm"
+            className="self-end"
+            onClick={() => setSearchOpen(true)}
+          />
+        )}
         {searchOpen && (
           <Suspense fallback={null}>
             <HistorySearch
@@ -191,14 +192,7 @@ export function Chat({
             />
           </Suspense>
         )}
-        {empty && (
-          <VStack gap={3} paddingBlock={6}>
-            <Heading level={2} type="display-2">
-              {t('emptyTitle')}
-            </Heading>
-            <Text color="secondary">{t('emptyHelp')}</Text>
-          </VStack>
-        )}
+        {empty && <EmptyChat />}
         {before !== '0' && (
           <Button
             size="sm"
@@ -238,42 +232,44 @@ export function Chat({
         {history.error && (
           <Button label={`${t('readError')} · ${t('retry')}`} onClick={() => history.refetch()} />
         )}
-        <ChatMessageList
-          isStreaming={!!taskId}
-          align="top"
-          gap={0}
-          style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
-        >
-          <HistoryWindow
-            rows={visibleRows}
-            window={virtual.getVirtualItems()}
-            total={virtual.getTotalSize()}
-            measure={virtual.measureElement}
-            target={target}
-            inspect={inspector.actions}
-            match={match}
-            setFocused={setFocused}
-            blocked={blocked && connected}
-          />
-          {/* Astryx must observe live content growth as part of the message list. */}
-          {before === '0' && (taskId || hasOutput || hasActivity) && (
-            <Suspense fallback={<Skeleton height={80} />}>
-              <LiveOutput target={target} history={items} inspect={inspector.actions} />
-            </Suspense>
-          )}
-          {completion &&
-            !taskId &&
-            !hasOutput &&
-            !hasActivity &&
-            completionThrough !== null &&
-            reached(history.data?.pages[0]?.through, completionThrough) && (
-              <CompletionRow
-                completion={completion.completion}
-                sequence={completion.sequence}
-                onDetails={inspector.actions.history}
-              />
+        {(!empty || hasActivity) && (
+          <ChatMessageList
+            isStreaming={!!taskId}
+            align="top"
+            gap={0}
+            style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
+          >
+            <HistoryWindow
+              rows={visibleRows}
+              window={virtual.getVirtualItems()}
+              total={virtual.getTotalSize()}
+              measure={virtual.measureElement}
+              target={target}
+              inspect={inspector.actions}
+              match={match}
+              setFocused={setFocused}
+              blocked={blocked && connected}
+            />
+            {/* Astryx must observe live content growth as part of the message list. */}
+            {before === '0' && (taskId || hasOutput || hasActivity) && (
+              <Suspense fallback={<Skeleton height={80} />}>
+                <LiveOutput target={target} history={items} inspect={inspector.actions} />
+              </Suspense>
             )}
-        </ChatMessageList>
+            {completion &&
+              !taskId &&
+              !hasOutput &&
+              !hasActivity &&
+              completionThrough !== null &&
+              reached(history.data?.pages[0]?.through, completionThrough) && (
+                <CompletionRow
+                  completion={completion.completion}
+                  sequence={completion.sequence}
+                  onDetails={inspector.actions.history}
+                />
+              )}
+          </ChatMessageList>
+        )}
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}
         <ConversationInspector value={inspector.value} target={target} close={inspector.close} />
       </VStack>

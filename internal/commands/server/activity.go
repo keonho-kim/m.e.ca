@@ -73,7 +73,7 @@ func (r *request) observe(value record.Event) {
 		return
 	}
 	value.Text, value.Thinking = clipped(value.Text, 1024), ""
-	projected := ProjectEvent(Event{Task: r.task.ID, Session: r.task.Session, Record: value})
+	projected := ProjectEvent(Event{Task: r.task.ID, Session: r.task.Session, Sequence: r.sequence + 1, Record: value})
 	if eventBytes(projected) > 8192 {
 		projected.Record.Call = nil
 		projected.Truncated = true

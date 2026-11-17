@@ -63,6 +63,9 @@ func (op *commandOperation) prepareCommand(ctx context.Context) error {
 		return err
 	}
 	op.approval.Required = len(op.shell.decision.Reasons) > 0
+	for _, reason := range op.shell.decision.Reasons {
+		op.approval.Reasons = append(op.approval.Reasons, op.executor.redact(reason))
+	}
 	op.approval.UserRequired = op.shell.decision.UserRequired
 	op.approval.Command = &toolapi.CommandApproval{Directory: op.executor.redact(op.executor.project)}
 	op.approval.Command.MutationTargets = op.shell.decision.Targets

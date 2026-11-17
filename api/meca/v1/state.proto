@@ -77,6 +77,8 @@ message Model {
   bool reasoning_off = 13;
 }
 message Draft {
+  // Request-local publication sequence at generation start; stable across reconnects.
+  uint64 start_sequence = 11;
   int64 history_sequence = 10;
   string agent = 1;
   uint64 generation = 2;

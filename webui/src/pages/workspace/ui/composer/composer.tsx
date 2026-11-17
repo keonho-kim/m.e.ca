@@ -27,7 +27,11 @@ import {
   useState,
 } from 'react';
 import { reportError } from '@/entities/server-session';
-import { capabilitiesOptions, stateOptions } from '@/pages/workspace/api/queries';
+import {
+  capabilitiesOptions,
+  defaultModelOptions,
+  stateOptions,
+} from '@/pages/workspace/api/queries';
 import { command, settings, view } from '@/pages/workspace/model/commands';
 import { send } from '@/pages/workspace/model/execution';
 import { selectReference } from '@/pages/workspace/model/file-references';
@@ -41,6 +45,7 @@ import {
 import { admitSubmission } from '@/pages/workspace/model/submission-limits';
 import { activeTask } from '@/pages/workspace/model/task-state';
 import { useComposerImages } from '@/pages/workspace/model/use-composer-images';
+import { useComposerSession } from '@/pages/workspace/model/use-composer-session';
 import { useComposerTriggers } from '@/pages/workspace/model/use-composer-triggers';
 import { useInputEdit } from '@/pages/workspace/model/use-input-edit';
 import { chatWidth } from '@/pages/workspace/ui/chat/layout';
@@ -68,12 +73,15 @@ export type ComposerHandle = { insertSkill: (mention: string) => void };
 export function Composer({
   target,
   showStatus,
+  onCreated,
   ref,
 }: {
   target: Target;
   showStatus: boolean;
+  onCreated: (next: Target) => void;
   ref: Ref<ComposerHandle>;
 }) {
+  const prepareSession = useComposerSession(target, onCreated);
   const t = useLocale(),
     input = useWorkspaceStore((s) => s.inputs[targetKey(target)]) ?? emptyInput();
   const task = useWorkspaceStore((state) => activeTask(target, state.tasks));
@@ -98,20 +106,22 @@ export function Composer({
   const [busy, setBusy] = useState(false);
   const [inputEpoch, setInputEpoch] = useState(0);
   const state = useQuery({ ...stateOptions(target), enabled: !!target.session });
+  const defaultModel = useQuery({ ...defaultModelOptions, enabled: !target.session });
   const capabilities = useQuery(capabilitiesOptions);
   const patch = (text: string) => {
     if (!useWorkspaceStore.getState().patchInput(target, { text }, inputEdit.take()))
       setInputEpoch((value) => value + 1);
   };
   const submit = async (reserve = false) => {
-    if (busy || !target.session || !hasInput) return;
+    if (busy || !target.workspace || !hasInput) return;
     setBusy(true);
     try {
       if (input.text.trimStart().startsWith('!')) {
-        if (await command(target, input.text)) patch('');
+        const commandTarget = await command(target, input.text, prepareSession);
+        if (commandTarget) useWorkspaceStore.getState().patchInput(commandTarget, { text: '' });
       } else {
         if (useWorkspaceStore.getState().fileDirty) throw failure('draft_changed');
-        if (!state.data?.model?.model) {
+        if (!(target.session ? state.data : defaultModel.data)?.model?.model) {
           settings('model', target);
           return;
         }
@@ -119,7 +129,8 @@ export function Composer({
         const captured = useWorkspaceStore.getState().inputs[targetKey(target)] ?? input;
         if (!capabilities.data) throw failure('invalid_response');
         await admitSubmission(captured, capabilities.data);
-        if (await send(target, captured, reserve)) view('chat');
+        const destination = await prepareSession();
+        if (await send(destination, captured, reserve)) view('chat');
       }
     } catch (error) {
       reportError(error);
@@ -145,7 +156,7 @@ export function Composer({
         onSubmit={() => {
           void submit();
         }}
-        isDisabled={!target.session}
+        isDisabled={!target.workspace || (busy && !target.session)}
         className="composer"
         onDragOver={images.onDragOver}
         onDrop={images.onDrop}
@@ -153,10 +164,8 @@ export function Composer({
         onFocusCapture={images.onFocusCapture}
         onBlurCapture={images.onBlurCapture}
         input={
-          // Keep the empty editable stretched when a modal restores background interactivity.
           <ChatComposerInput
             ref={inputEdit.attach}
-            className="grid"
             key={inputEpoch}
             handleRef={editor}
             label={t('input')}
@@ -201,13 +210,18 @@ export function Composer({
         footerActions={
           <HStack gap={1}>
             <AttachmentMenu
-              disabled={!target.session}
+              disabled={!target.workspace || busy}
               attach={images.attach}
               openSkills={() => setSkillsOpen(true)}
               maxFiles={capabilities.data?.inputImages ?? 8}
               maxSize={Number(capabilities.data?.imageBytes ?? 67108864)}
             />
-            <ComposerActions target={target} teamEnabled={!!state.data?.team} busy={busy} />
+            <ComposerActions
+              target={target}
+              prepareSession={prepareSession}
+              teamEnabled={!!target.session && !!state.data?.team}
+              busy={busy}
+            />
           </HStack>
         }
         sendActions={
@@ -220,7 +234,7 @@ export function Composer({
               className="send-button"
               isStopShown={showStop}
               isDisabled={
-                busy || !target.session || (showStop ? task.status === 'canceling' : !hasInput)
+                busy || !target.workspace || (showStop ? task.status === 'canceling' : !hasInput)
               }
               onSend={() => {
                 void submit();

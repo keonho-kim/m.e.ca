@@ -10,6 +10,7 @@ export type Target = { workspace: string; session: string };
 export type Input = { text: string; paths: string[]; files: File[]; revision: number };
 export type Queued = Input & { id: string };
 export type Draft = {
+  startSequence?: string;
   task: string;
   agent: string;
   generation: string;
@@ -31,6 +32,7 @@ export const targetKey = (t: Target) => `${t.workspace}/${t.session}`;
 export const emptyInput = (): Input => ({ text: '', paths: [], files: [], revision: 0 });
 
 export interface WorkspaceState {
+  approvals: NonNullable<EventJson['approval']>[];
   completionThrough: string | null;
   replayCursor: string;
   historyRevision: number;

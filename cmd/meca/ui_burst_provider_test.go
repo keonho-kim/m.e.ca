@@ -7,6 +7,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -55,6 +56,11 @@ func (b *uiTextBurst) reply(w http.ResponseWriter, r *http.Request, text string,
 	}
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
+	content := "Background presentation update. "
+	if strings.Contains(text, "SCROLL_BURST_FIXTURE") {
+		content = strings.Repeat(content, 16) + "\n\n"
+	}
+	encoded, _ := json.Marshal(content)
 	for index := range 60 {
 		select {
 		case <-ticker.C:
@@ -62,7 +68,7 @@ func (b *uiTextBurst) reply(w http.ResponseWriter, r *http.Request, text string,
 			return true
 		}
 		// Changing usage beside text must not bypass the UI's presentation budget.
-		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Background presentation update. \"},\"finish_reason\":null}],\"usage\":{\"prompt_tokens\":12000,\"completion_tokens\":%d}}\n\n", index+1)
+		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":%s},\"finish_reason\":null}],\"usage\":{\"prompt_tokens\":12000,\"completion_tokens\":%d}}\n\n", encoded, index+1)
 		_ = http.NewResponseController(w).Flush()
 	}
 	chunk("content", "\n\nCompleted burst.", "stop")

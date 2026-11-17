@@ -7,7 +7,7 @@ colors:
   background-body: "light-dark(#f2f4f7, #0d0f13)"
   background-surface: "light-dark(#fcfdff, #121419)"
   background-card: "light-dark(#ffffff, #1a1d23)"
-  background-popover: "light-dark(rgb(255 255 255 / 88%), rgb(26 29 35 / 92%))"
+  background-popover: "light-dark(#ffffff, #1a1d23)"
   background-muted: "light-dark(#edf0f4, #1e2128)"
   sidebar: "light-dark(rgb(255 255 255 / 78%), rgb(23 25 31 / 84%))"
   text-primary: "light-dark(#191d24, #eef0f5)"
@@ -97,7 +97,7 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 ### Neutral
 
 - **바깥 바탕 / 읽기 표면 / 카드 / 보조면** (`background-body`, `background-surface`, `background-card`, `background-muted`): 화면과 콘텐츠 층위를 조용히 구분한다.
-- **떠 있는 표면 / 탐색 재질** (`background-popover`, `sidebar`): 겹침에 쓰는 반투명 표면.
+- **떠 있는 표면 / 탐색 재질** (`background-popover`, `sidebar`): 메뉴·선택 목록은 불투명 표면, 탐색은 반투명 표면.
 - **본문 / 보조 잉크** (`text-primary`, `text-secondary`): 답변과 메타데이터·Thinking의 위계.
 - **중성 조작 / 경계 / 강조 경계** (`neutral`, `border`, `border-emphasized`): 보조 버튼·선택 행·폼 경계. Hover·press는 공식 overlay를 따른다.
 
@@ -126,6 +126,8 @@ frontmatter는 실제 생성 CSS의 `light-dark()` 표기를 유지한다. 첫 �
 
 ## Layout
 
+작업공간 미선택·세션 미생성·빈 대화는 동일한 시작 화면을 사용한다. 작업공간이 없으면 선택 안내와 비활성 입력을 표시한다. 선택된 작업공간에서는 첫 전송 때 세션을 생성해 초안·첨부를 넘기며, 대화 검색은 저장된 내용이 있을 때만 표시한다.
+
 AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. 상단에는 대화·파일·스킬 TabList와 접힌 사이드바를 다시 여는 버튼을 배치한다. 긴 이름이 탭을 밀어내지 않도록 하고 전체 경로·제목은 툴팁으로 읽는다. 설정과 빠른 테마 전환은 탐색 하단에 둔다. 작업 흐름은 프로젝트 → 대화 → 입력 → 답변·Thinking·도구 → 완료·승인이다.
 
 대화와 컴포저는 각 채팅 컨테이너 폭의 80%를 사용한다. 대화의 좌우 여백은 ChatMessageList가 소유하며 바깥 래퍼에 중복 적용하지 않는다. 세로 여백은 `spacing.4`, 메시지 간 간격은 `spacing.5`다. 컴포저 바깥은 `spacing.4`, 내부는 `spacing.3`을 사용한다. 비어 있는 대화는 한 제목·보조 설명과 컴포저를 함께 읽히게 배치하고, 이력이 있으면 ChatMessageList 안에 가상 이력과 live 출력을 함께 두고 하단에 컴포저를 배치한다. 새 요청이 시작되면 대화 하단으로 이동하고 이후의 높이 변화와 위로 스크롤한 뒤의 읽기 위치는 ChatLayout이 관리한다.
@@ -138,7 +140,7 @@ AppShell의 surface 구성 안에서 SideNav와 유동 Layout을 결합한다. �
 
 ## Elevation & Depth
 
-읽기·파일 영역은 불투명 중성 표면을 사용한다. Glass는 SideNav·고정 헤더·컴포저·Popover·DropdownMenu처럼 겹침의 관계를 설명하는 비모달 표면에만 적용한다. blur는 18px이며 얇은 안쪽 빛과 절제된 그림자로 경계를 구분한다. Dialog·AlertDialog·Drawer·Lightbox의 본문 표면은 항상 불투명하며 backdrop blur를 적용하지 않는다. Dialog 진입의 opacity 애니메이션도 사용하지 않는다. 배경을 어둡게 하는 scrim과 모달 본문의 불투명도는 구분한다.
+읽기·파일 영역은 불투명 중성 표면을 사용한다. Glass는 SideNav·고정 헤더·컴포저에 적용한다. blur는 18px이며 얇은 안쪽 빛과 절제된 그림자로 경계를 구분한다. Popover·DropdownMenu·Selector·Typeahead의 선택 표면과 Dialog·AlertDialog·Drawer·Lightbox의 본문 표면은 항상 불투명하며 backdrop blur를 적용하지 않는다. Dialog 진입의 opacity 애니메이션도 사용하지 않는다. 배경을 어둡게 하는 scrim과 모달 본문의 불투명도는 구분한다.
 
 ### Shadow Vocabulary
 

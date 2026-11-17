@@ -20,6 +20,7 @@ type StreamSlice = Pick<
   | 'drafts'
   | 'tasks'
   | 'events'
+  | 'approvals'
   | 'bootstrap'
   | 'receive'
   | 'acknowledgeHistory'
@@ -32,6 +33,7 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
   drafts: {},
   tasks: {},
   events: [],
+  approvals: [],
   bootstrap: (target, snapshot) => {
     if (snapshot.language) setServerLanguage(snapshot.language);
     const revision = get().historyRevision + 1;
@@ -62,6 +64,7 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
       statistics: snapshot.execution?.statistics ?? null,
       tasks,
       events: snapshot.activity ?? [],
+      approvals: target.session ? (snapshot.approvals ?? []) : [],
     });
   },
   receive: (batch) => set(applyEvents(get(), batch)),

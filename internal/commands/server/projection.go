@@ -57,6 +57,9 @@ func ProjectEvent(value Event) Event {
 	if e.Approval != nil {
 		a := e.Approval
 		p.Approval = &tool.Approval{ID: clipped(a.ID, 128), Name: clipped(a.Name, 256), Target: clipped(a.Target, 4096), Preview: clipped(a.Preview, maxTextBytes), Diff: a.Diff, Required: a.Required, UserRequired: a.UserRequired}
+		for _, reason := range a.Reasons[:min(len(a.Reasons), 16)] {
+			p.Approval.Reasons = append(p.Approval.Reasons, clipped(reason, 512))
+		}
 		value.Truncated = value.Truncated || len(a.Preview) > maxTextBytes
 	}
 	if e.Usage != nil {
@@ -128,6 +131,9 @@ func eventBytes(value Event) int {
 	}
 	if e.Approval != nil {
 		n += len(e.Approval.ID) + len(e.Approval.Name) + len(e.Approval.Preview) + len(e.Approval.Target)
+		for _, reason := range e.Approval.Reasons {
+			n += len(reason)
+		}
 	}
 	if e.Generation != nil {
 		n += len(e.Generation.ID) + len(e.Generation.Role)

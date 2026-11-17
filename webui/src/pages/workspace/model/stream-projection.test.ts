@@ -14,6 +14,7 @@ test('a completed draft remains visible until durable history takes over', () =>
     drafts: {},
     tasks: {},
     events: [],
+    approvals: [],
     historyRevision: 0,
   } as unknown as WorkspaceState;
   state = {
@@ -62,6 +63,7 @@ test('a streamed draft releases text beyond the display window', () => {
     drafts: {},
     tasks: {},
     events: [],
+    approvals: [],
     historyRevision: 0,
   } as unknown as WorkspaceState;
   const result = applyEvents(state, [
@@ -106,6 +108,7 @@ test('final usage remains available after durable history releases live activity
     drafts: {},
     tasks: {},
     events: [],
+    approvals: [],
     historyRevision: 0,
     statistics: null,
   } as unknown as WorkspaceState;

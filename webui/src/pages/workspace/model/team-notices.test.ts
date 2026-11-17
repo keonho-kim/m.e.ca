@@ -1,7 +1,7 @@
 // Purpose: Keep internal team join/leave lifecycle frames out of the visible conversation transcript.
 // Pattern: Native history presentation boundary regression.
 // Usage: bun test src/pages/workspace/model/team-notices.test.ts.
-// Related: webui/src/pages/workspace/model/history-rows.ts, webui/src/pages/workspace/ui/chat/live-activity.tsx.
+// Related: webui/src/pages/workspace/model/history-rows.ts, webui/src/pages/workspace/model/live-timeline.ts.
 import { expect, test } from 'bun:test';
 import { historyRows } from '@/pages/workspace/model/history-rows';
 

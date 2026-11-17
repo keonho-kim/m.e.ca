@@ -15,7 +15,7 @@ export function useComposerImages(target: Target, caps?: CapabilitiesJson) {
   const pending = useRef<AbortController | null>(null);
   const [focused, setFocused] = useState(false);
   useEffect(() => {
-    if (!target.workspace || !target.session) return;
+    if (!target.workspace) return;
     return () => {
       pending.current?.abort();
       pending.current = null;
@@ -25,7 +25,7 @@ export function useComposerImages(target: Target, caps?: CapabilitiesJson) {
     fileLimit = Number(caps?.imageBytes ?? 67108864),
     totalLimit = Number(caps?.inputImageBytes ?? 134217728);
   const attach = (files: File[]) => {
-    if (!target.session || !files.length) return;
+    if (!target.workspace || !files.length) return;
     const state = useWorkspaceStore.getState();
     if (
       files.some(
@@ -50,7 +50,7 @@ export function useComposerImages(target: Target, caps?: CapabilitiesJson) {
     state.patchInput(target, { files: images });
   };
   const readClipboard = async () => {
-    if (pending.current || !target.session) return;
+    if (pending.current || !target.workspace) return;
     const controller = new AbortController();
     const isAborted = () => controller.signal.aborted;
     pending.current = controller;
@@ -84,7 +84,7 @@ export function useComposerImages(target: Target, caps?: CapabilitiesJson) {
       if (pending.current === controller) pending.current = null;
     }
   };
-  const disabled = !focused || !target.session;
+  const disabled = !focused || !target.workspace;
   useHotkeys([
     {
       keys: 'alt+v',

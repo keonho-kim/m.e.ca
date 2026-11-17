@@ -1,7 +1,7 @@
 // Purpose: Project native tool lifecycle events into Astryx's supported call states.
 // Pattern: Deterministic presentation adapter.
 // Usage: Saved history and live activity use the same status meanings.
-// Related: webui/src/pages/workspace/ui/chat/history-row.tsx, webui/src/pages/workspace/ui/chat/live-activity.tsx.
+// Related: webui/src/pages/workspace/ui/chat/history-row.tsx, webui/src/pages/workspace/model/live-timeline.ts.
 import type { ChatToolCallStatus } from '@astryxdesign/core/Chat';
 import type { EventJson } from '@/shared/api';
 

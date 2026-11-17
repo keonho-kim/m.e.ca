@@ -5,6 +5,7 @@
 import { reportError } from '@/entities/server-session';
 import { changed } from '@/pages/workspace/api/queries';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import type { PrepareSession } from '@/pages/workspace/model/use-composer-session';
 import { call } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
 
@@ -25,9 +26,14 @@ export async function team(target: Target, value: boolean) {
   await call(target.workspace, { setSettings: { sessionId: target.session, team: value } });
   changed(target);
 }
-export async function command(target: Target, text: string) {
+export async function command(
+  target: Target,
+  text: string,
+  prepareSession: PrepareSession
+): Promise<Target | false> {
   const reply = await call(target.workspace, { parseInput: { text } });
   const parsed = reply.parsedInput;
+  let destination = target;
   switch (parsed?.action) {
     case 'model':
       settings('model', target);
@@ -39,16 +45,18 @@ export async function command(target: Target, text: string) {
       settings('execution', target);
       break;
     case 'dir':
-      return view('files', parsed.argument || '.');
+      return view('files', parsed.argument || '.') ? target : false;
     case 'skills':
-      return view('skills');
+      return view('skills') ? target : false;
     case 'team': {
-      const state = await call(target.workspace, { state: { sessionId: target.session } });
-      await team(target, !state.state?.team);
+      destination = await prepareSession(async (next) => {
+        const state = await call(next.workspace, { state: { sessionId: next.session } });
+        await team(next, !state.state?.team);
+      });
       break;
     }
     default:
       return false;
   }
-  return true;
+  return destination;
 }

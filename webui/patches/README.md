@@ -12,11 +12,17 @@ Contracts: `e2e/editor.spec.ts`, `e2e/editor-boundaries.spec.ts` and `e2e/browse
 
 ## Streaming Markdown
 
-`@astryxdesign%2Fcore@0.7.14.patch` separates Astryx incremental parsing (`isStreaming`) from character reveal (`isRevealing`). The animation frame stops when text catches up. Resuming reveal after an instant catch-up or a reduced-motion change preserves the displayed prefix. Source, published runtime and declarations carry the same contract.
+`@astryxdesign%2Fcore@0.7.16.patch` separates Astryx incremental parsing (`isStreaming`) from character reveal (`isRevealing`). The animation frame stops when text catches up. Resuming reveal after an instant catch-up or a reduced-motion change preserves the displayed prefix. Source, published runtime and declarations carry the same contract.
 
 The application uses Astryx's parser and AST transform plugin. Covered-content projection belongs to the workspace presentation model; a second parser or an unsupported AST-input prop is not part of this adapter.
 
 Contracts: `e2e/performance.spec.ts` and `e2e/presentation-budget.spec.ts`.
+
+## Chat scroll ownership
+
+The Astryx patch keeps the jump button hidden while automatic following is locked. Stream growth and virtual-history height replacement do not imply reader intent; upward wheel, keyboard and pointer scrolls can release the lock. Returning to the bottom clears the affordance, and unmount cancels pending animation frames and input listeners.
+
+Contract: `e2e/chat-stream-order.spec.ts`, including normal motion and history handoff in Chromium, Firefox and WebKit.
 
 ## Maintenance boundaries
 

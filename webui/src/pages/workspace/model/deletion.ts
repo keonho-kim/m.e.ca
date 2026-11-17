@@ -33,7 +33,7 @@ export function forgetConversation(target: Target) {
     pausedQueues,
     reviewTarget,
     removedTarget: target,
-    ...(selected ? { drafts: {}, events: [], statistics: null } : {}),
+    ...(selected ? { drafts: {}, events: [], approvals: [], statistics: null } : {}),
     tasks: Object.fromEntries(
       Object.entries(state.tasks).filter(
         ([, task]) => task.workspace !== target.workspace || task.session !== target.session
