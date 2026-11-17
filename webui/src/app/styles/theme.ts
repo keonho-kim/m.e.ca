@@ -71,6 +71,16 @@ export const mecaTheme = defineTheme({
     ],
   },
   components: {
+    'trigger-menu': {
+      base: {
+        width: 'min(28rem, calc(100vw - var(--spacing-8)))',
+        minWidth: '0',
+        maxHeight: 'min(40dvh, calc(var(--spacing-12) * 5))',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+      },
+    },
     center: {
       base: {
         ':is(.startup-screen)': {

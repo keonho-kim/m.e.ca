@@ -84,9 +84,7 @@ export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {
     const key = toolIdentity(event);
     if (key) latest.set(key, event);
   }
-  const represented = new Set(
-    history.flatMap((item) => (item.event ? eventIdentities(item.event) : []))
-  );
+  const represented = new Set(history.flatMap(historyIdentities));
   return events.filter((event) => {
     if (['assistant_delta', 'thinking', 'progress', 'team_progress'].includes(event.kind ?? ''))
       return false;
@@ -101,9 +99,17 @@ export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {
 }
 export function eventIdentities(event: EventJson) {
   const values: string[] = [];
+  if (event.kind === 'user_message' && event.presentation)
+    values.push('user/' + event.presentation);
   if (event.historySequence && event.historySequence !== '0')
     values.push('timeline/' + event.historySequence);
   const ref = event.originalReference ?? event.tool?.reference;
   if (ref?.sessionId && ref.sequence) values.push('original/' + ref.sessionId + '/' + ref.sequence);
+  return values;
+}
+
+export function historyIdentities(item: HistoryItemJson) {
+  const values = item.event ? eventIdentities(item.event) : [];
+  if (item.message?.role === 'user' && item.presentation) values.push('user/' + item.presentation);
   return values;
 }

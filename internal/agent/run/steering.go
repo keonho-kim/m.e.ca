@@ -61,7 +61,8 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 		if len(text) > 64*1024*1024 {
 			return faults.Errorf(diagcatalog.RunUserInstructionExceedsMiB)
 		}
-		if err := s.save(ctx, modelapi.Message{Role: "user", Content: text}); err != nil {
+		position := s.order.Next()
+		if err := s.save(ctx, modelapi.Message{Presentation: position, Role: "user", Content: text}); err != nil {
 			return err
 		}
 		s.instructionRevision++
@@ -69,7 +70,7 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.checkpoint.Objective = s.runner.Redact(text)
-		if err := s.emit(runrecord.Event{Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
+		if err := s.emit(runrecord.Event{Presentation: position, Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
 			return err
 		}
 	}

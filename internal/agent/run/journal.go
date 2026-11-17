@@ -17,7 +17,7 @@ import (
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
 	if m.Role == "assistant" {
 		m.Presentation = s.presentation
-	} else if m.Role == "user" {
+	} else if m.Role == "user" && m.Presentation == "" {
 		m.Presentation = s.order.Next()
 	}
 	m.Content = s.runner.Redact(m.Content)

@@ -24,7 +24,13 @@ func TestSteeringAfterToolOutcomeAndBeforeFinal(t *testing.T) {
 		}
 		return nil
 	}
-	result, err := r.Run(context.Background(), "Implement a", approve, emit)
+	var published string
+	result, err := r.Run(context.Background(), "Implement a", approve, func(e runrecord.Event) error {
+		if e.Kind == "user_message" {
+			published = e.Presentation
+		}
+		return nil
+	})
 	if err != nil || result.Status != runrecord.Answered {
 		t.Fatalf("%+v %v", result, err)
 	}
@@ -39,6 +45,9 @@ func TestSteeringAfterToolOutcomeAndBeforeFinal(t *testing.T) {
 		if m.Content == "Also include the endpoint" {
 			user = i
 		}
+	}
+	if published == "" || published != j.messages[user].Presentation {
+		t.Fatal("steer lost its stored display identity")
 	}
 	if user <= tool {
 		t.Fatal("steering preceded the completed tool result")

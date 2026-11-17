@@ -52,3 +52,18 @@ test('original tool references deduplicate rejected calls without an execution i
   };
   expect(liveActivity([rejected], [{ sequence: '5', event: rejected }])).toEqual([]);
 });
+
+test('stored steer removes its live echo without hiding an identical later instruction', () => {
+  const first = {
+    kind: 'user_message',
+    presentation: 'scope.00000000000000000001',
+    message: { role: 'user', text: 'Again' },
+  };
+  const second = { ...first, presentation: 'scope.00000000000000000002' };
+  expect(
+    liveActivity(
+      [first, second],
+      [{ sequence: '8', presentation: first.presentation, message: first.message }]
+    )
+  ).toEqual([second]);
+});

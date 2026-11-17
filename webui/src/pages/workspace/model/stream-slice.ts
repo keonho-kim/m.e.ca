@@ -5,7 +5,7 @@
 
 import type { StateCreator } from 'zustand';
 import { setServerLanguage } from '@/entities/server-session';
-import { eventIdentities } from '@/pages/workspace/model/chat-events';
+import { eventIdentities, historyIdentities } from '@/pages/workspace/model/chat-events';
 import { reached } from '@/pages/workspace/model/history-handoff';
 import { presentationGroup } from '@/pages/workspace/model/presentation-order';
 import { applyEvents, snapshotDrafts } from '@/pages/workspace/model/stream-projection';
@@ -116,9 +116,7 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
       if (task && !isActiveTask(task.status) && reached(page.through, task.historyThrough))
         finished.add(draft.task);
     }
-    const represented = new Set(
-      (page.items ?? []).flatMap((item) => (item.event ? eventIdentities(item.event) : []))
-    );
+    const represented = new Set((page.items ?? []).flatMap(historyIdentities));
     const retained = state.events.filter(
       (event) =>
         !finished.has(event.taskId ?? '') &&

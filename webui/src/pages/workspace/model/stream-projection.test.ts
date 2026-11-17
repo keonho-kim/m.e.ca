@@ -319,3 +319,30 @@ test('redaction replacement keeps only one draft for the same display identity',
   ]);
   expect(Object.values(result.drafts ?? {}).map((d) => d.text)).toEqual(['Masked projection']);
 });
+
+test('history acknowledgement releases a steer echo while the task keeps running', () => {
+  const previous = useWorkspaceStore.getState();
+  const target = { workspace: 'w', session: 's' };
+  const event = {
+    kind: 'user_message',
+    taskId: 't',
+    presentation: 'scope.00000000000000000001',
+    message: { role: 'user', text: 'Steer' },
+  };
+  try {
+    useWorkspaceStore.setState({
+      ...useWorkspaceStore.getInitialState(),
+      selection: target,
+      events: [event],
+      tasks: { t: { id: 't', workspace: 'w', session: 's', status: 'running' } },
+    });
+    useWorkspaceStore.getState().acknowledgeHistory(target, 0, {
+      through: '8',
+      items: [{ sequence: '8', presentation: event.presentation, message: event.message }],
+    });
+    expect(useWorkspaceStore.getState().events).toEqual([]);
+    expect(useWorkspaceStore.getState().tasks.t?.status).toBe('running');
+  } finally {
+    useWorkspaceStore.setState(previous, true);
+  }
+});

@@ -4,6 +4,7 @@
 // Related: webui/src/shared/api/client.ts, webui/src/pages/workspace/ui/composer/composer.tsx.
 
 import type { ChatComposerTrigger } from '@astryxdesign/core/Chat';
+import { VStack } from '@astryxdesign/core/Layout';
 import {
   createStaticSource,
   type SearchableItem,
@@ -55,10 +56,12 @@ export function useComposerTriggers(workspace: string): ChatComposerTrigger[] {
   useEffect(() => () => skills.cancel?.(), [skills]);
   return useMemo(() => {
     const renderItem = (item: SearchableItem) => (
-      <TypeaheadItem
-        item={item}
-        description={typeof item.auxiliaryData === 'string' ? item.auxiliaryData : undefined}
-      />
+      <VStack width="100%" gap={0} className="min-w-0">
+        <TypeaheadItem
+          item={item}
+          description={typeof item.auxiliaryData === 'string' ? item.auxiliaryData : undefined}
+        />
+      </VStack>
     );
     return [
       {
