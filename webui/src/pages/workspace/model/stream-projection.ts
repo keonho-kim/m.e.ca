@@ -6,6 +6,7 @@
 import { isHistoryBoundary } from '@/pages/workspace/model/chat-events';
 import { compactDeltas } from '@/pages/workspace/model/delta-batch';
 import { orderedEvents } from '@/pages/workspace/model/history-handoff';
+import { presentationGroup } from '@/pages/workspace/model/presentation-order';
 import { trimTasks } from '@/pages/workspace/model/task-state';
 import type { Draft, WorkspaceState } from '@/pages/workspace/model/types';
 import type { EventJson, SnapshotJson } from '@/shared/api';
@@ -22,6 +23,7 @@ export function snapshotDrafts(snapshot: SnapshotJson, revision: number) {
         task: d.taskId,
         agent: d.agent ?? '',
         generation: d.generation ?? '0',
+        presentation: d.presentation,
         startSequence: d.startSequence ?? '0',
         text: d.text ?? '',
         thinking: d.thinking ?? '',
@@ -51,6 +53,13 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
         session: e.sessionId ?? '',
         status: e.status ?? 'running',
         historyThrough: e.historyThrough,
+      };
+    }
+    if (e.presentation && tasks[e.taskId] && !tasks[e.taskId]?.presentationGroup) {
+      if (tasks === state.tasks) tasks = { ...tasks };
+      tasks[e.taskId] = {
+        ...tasks[e.taskId]!,
+        presentationGroup: presentationGroup(e.presentation),
       };
     }
     if (e.workspaceId !== state.selection.workspace || e.sessionId !== state.selection.session)
@@ -85,13 +94,18 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       const key = `${e.taskId}/${e.agent ?? ''}`,
         old = drafts[key];
       if (old) {
-        drafts[`${key}/${old.generation}`] = { ...old, doneRevision: historyRevision };
+        if (
+          (e.measurement?.attempt ?? 1) <= 1 &&
+          (!e.presentation || e.presentation !== old.presentation)
+        )
+          drafts[`${key}/${old.generation}`] = { ...old, doneRevision: historyRevision };
         delete drafts[key];
       }
       drafts[key] = {
         task: e.taskId,
         agent: e.agent ?? '',
         generation: e.generation ?? '0',
+        presentation: e.presentation,
         startSequence: e.sequence ?? '0',
         text: '',
         thinking: '',
@@ -116,6 +130,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
               task: e.taskId,
               agent: e.agent ?? '',
               generation,
+              presentation: e.presentation,
               startSequence: e.sequence ?? '0',
               text: '',
               thinking: '',

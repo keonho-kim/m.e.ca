@@ -17,13 +17,19 @@ import (
 func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 	r := testRoom(t)
 	announced := make(chan struct{})
+	const position = "request.00000000000000000003"
+	var publishedPosition string
 	r.options.Emit = func(event runrecord.Event) error {
 		if event.Kind == "team_progress" && event.Agent == "Hana" {
+			publishedPosition = event.Presentation
 			close(announced)
 		}
 		return nil
 	}
 	peer := &Peer{ID: "Hana", room: r}
+	if err := peer.Emit(runrecord.Event{Kind: "generation_started", Presentation: position}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := r.publish(channel.Message{From: "Ren", Text: "I will update api/router.go."}); err != nil {
 		t.Fatal(err)
 	}
@@ -43,6 +49,9 @@ func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 	}()
 	// Wait for publication before cancelling the idle run; consumed hints never restart it.
 	<-announced
+	if publishedPosition != position {
+		t.Errorf("public answer moved from %q to %q", position, publishedPosition)
+	}
 	cancel()
 	if err := <-done; !errors.Is(err, context.Canceled) {
 		t.Fatal(err)

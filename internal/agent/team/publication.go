@@ -7,6 +7,7 @@ package team
 import (
 	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 	"strings"
 	"time"
 
@@ -41,6 +42,10 @@ func (r *Room) appendPublic(message channel.Message) (channel.Message, error) {
 
 // storePublic requires logMu and freezes caller-owned metadata before durable publication.
 func (r *Room) storePublic(message channel.Message) (channel.Message, error) {
+	if message.Presentation == "" {
+		_, order := presentation.Scope(r.ctx)
+		message.Presentation = order.Next()
+	}
 	message.Note = message.Note.Clone()
 	if r.options.Redact != nil {
 		message.Text = r.options.Redact(message.Text)
@@ -133,7 +138,7 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 		wake(live)
 	}
 	r.mu.Unlock()
-	event := runrecord.Event{HistorySequence: value.Sequence, Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}
+	event := runrecord.Event{Presentation: value.Presentation, HistorySequence: value.Sequence, Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}
 	r.queuePublic(event)
 	return value, nil
 }

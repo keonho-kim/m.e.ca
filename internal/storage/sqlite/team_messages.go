@@ -26,15 +26,15 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	message.Note = message.Note.Clone()
 	var records []runrecord.Entry
 	if message.From == "user" {
-		records = []runrecord.Entry{{Message: &modelapi.Message{ID: "team-user", Role: "user", Content: message.Text, Images: message.Images}}}
+		records = []runrecord.Entry{{Message: &modelapi.Message{Presentation: message.Presentation, ID: "team-user", Role: "user", Content: message.Text, Images: message.Images}}}
 	} else {
 		if !teamidentity.ValidName(message.From) {
 			return message, faults.Errorf(diagcatalog.SqliteInvalidPublicSender)
 		}
-		event := runrecord.Event{Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text, Team: message.Note}
+		event := runrecord.Event{Presentation: message.Presentation, Kind: message.Kind(), Agent: message.From, Final: message.Final, Text: message.Text, Team: message.Note}
 		records = []runrecord.Entry{{Event: &event}}
 		if message.Final {
-			records = append([]runrecord.Entry{{Message: &modelapi.Message{ID: "team-report", Role: "assistant", Content: message.Text}}}, records...)
+			records = append([]runrecord.Entry{{Message: &modelapi.Message{Presentation: message.Presentation, ID: "team-report", Role: "assistant", Content: message.Text}}}, records...)
 		}
 	}
 	if message.Reference != nil {

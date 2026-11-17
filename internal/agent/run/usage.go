@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/inference"
@@ -22,12 +23,16 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return err
 	}
+	if s.order == nil {
+		_, s.order = presentation.Scope(ctx)
+	}
 	request.IdleTimeout = time.Duration(s.limits.MaxModelSeconds) * time.Second
 	var usage *modelapi.TokenUsage
 	var measured time.Duration
 	started := time.Now()
 	generation := runrecord.Generation{ID: "generation_" + rand.Text(), Role: role, Attempt: 1}
 	emitStart := func() error {
+		s.presentation = s.order.Next()
 		copy := generation
 		copy.ElapsedMillis, copy.MeasuredMillis = 0, 0
 		return s.emit(runrecord.Event{Kind: "generation_started", Generation: &copy})

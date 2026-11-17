@@ -67,7 +67,7 @@ func (s *execution) saveSkillRead(ctx context.Context, doc instruction.Document,
 	if err := s.checkInstruction("skill:"+doc.ID, "", message); err != nil {
 		return err
 	}
-	event := runrecord.Event{Kind: "skill_loaded", Skill: skillReadMetadata(doc), Text: "Read skill " + doc.Name}
+	event := runrecord.Event{Presentation: s.order.Next(), Kind: "skill_loaded", Skill: skillReadMetadata(doc), Text: "Read skill " + doc.Name}
 	event.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
 	if err := s.save(ctx, message, event); err != nil {
 		return err

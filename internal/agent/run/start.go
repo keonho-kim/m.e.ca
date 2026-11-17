@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -84,6 +85,15 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 		}
 	}
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
+	_, s.order = presentation.Scope(ctx)
+	send := s.emit
+	s.emit = func(event runrecord.Event) error {
+		event = s.present(event)
+		if event.Presentation == "" && (event.Kind == "retry" || event.Kind == "compaction_started" || event.Kind == "compaction_finished") {
+			event.Presentation = s.order.Next()
+		}
+		return send(event)
+	}
 	s.usage.begin(limits)
 	if !r.Deadline.IsZero() {
 		s.usage.deadline = r.Deadline

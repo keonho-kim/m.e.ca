@@ -1,4 +1,4 @@
-// Purpose: Keep failed completion metadata independent of mixed response payloads in a real browser.
+// Purpose: Keep terminal status and measurements visible without original-detail actions.
 // Pattern: Isolated server fixture with a deliberately malformed read response.
 // Usage: MECA_UI_DESCRIPTOR=... bun run test:e2e e2e/completion-boundary.spec.ts.
 // Related: webui/src/pages/workspace/ui/chat/completion-row.tsx, cmd/meca/ui_browser_test.go.
@@ -6,37 +6,28 @@
 import { expect } from '@playwright/test';
 import { browserFixture, connectBrowser, create, historyPage, required, test } from '#e2e/fixture';
 
-test('typed completion measurements keep failure details outside the summary through later updates', async ({
+test('completion rows preserve status without detail actions through later updates', async ({
   page,
 }) => {
   const fixture = await browserFixture();
-  const reason = 'Terminal reason explicitly requested.';
+  let status: 'FAILED' | 'INTERRUPTED' | 'COMPLETED' = 'INTERRUPTED';
+  let detailReads = 0;
   let append = false;
   await page.route('**/v1/command', async (route) => {
     const command = route.request().postDataJSON();
-    if (command.detail?.historySequence === '2') {
-      await route.fulfill({
-        json: {
-          detail: {
-            text: reason,
-            totalBytes: String(reason.length),
-            nextOffset: String(reason.length),
-            revision: '1'.repeat(64),
-            contentType: 'text/plain',
-          },
-        },
-      });
-      return;
-    }
+    if (command.detail?.historySequence) detailReads++;
     if (!command.history) return route.continue();
     await route.fulfill({
       json: {
         history: historyPage([
-          { sequence: '1', message: { role: 'assistant', text: 'The actual response.' } },
+          {
+            sequence: '1',
+            message: { role: 'assistant', text: 'The actual response.', incomplete: true },
+          },
           {
             sequence: '2',
             completion: {
-              status: 'FAILED',
+              status,
               statistics: {
                 elapsedMillis: '9000',
                 generationMillis: '3000',
@@ -69,29 +60,34 @@ test('typed completion measurements keep failure details outside the summary thr
     .then(required);
   const summary = await completion.boundingBox().then(required);
   expect(answer.y + answer.height <= summary.y).toBeTruthy();
-  await completion.getByRole('button').click();
-  await expect(page.locator('.original-text')).toContainText(reason);
-  expect(
-    await page.locator('.original-modal').evaluate((node) => getComputedStyle(node).backgroundColor)
-  ).toMatch(/^rgb\(/);
-  await expect(completion).not.toContainText(reason);
+  await expect(completion.getByRole('button')).toHaveCount(0);
+  await expect(completion).toContainText('중단됨');
+  for (const next of ['FAILED', 'COMPLETED'] as const) {
+    status = next;
+    await page.reload();
+    await expect(completion).toContainText('10.0 tok/s');
+    await expect(completion.getByRole('button')).toHaveCount(0);
+    if (next === 'FAILED') await expect(completion).toContainText('실패');
+    else await expect(completion).not.toContainText(/중단됨|실패/);
+  }
   append = true;
   const parts = new URL(page.url()).pathname.split('/');
   const started = await page.request.post(`${fixture.url}/v1/command`, {
     headers: { 'X-Meca-UI': '1', Origin: fixture.url },
     data: {
-      id: 'completion-inspection-lifetime',
+      id: 'completion-measurements-lifetime',
       workspaceId: parts[parts.indexOf('w') + 1],
       start: {
         sessionId: parts[parts.indexOf('c') + 1],
-        key: 'completion-inspection-lifetime',
-        text: 'Verify inspector lifetime.',
+        key: 'completion-measurements-lifetime',
+        text: 'Verify measurements lifetime.',
       },
     },
   });
   expect((await started.json()).task?.id).toBeTruthy();
   await expect(page.getByText('A later message.', { exact: true })).toBeVisible();
-  await expect(page.locator('.original-text')).toContainText(reason);
+  await expect(completion.getByRole('button')).toHaveCount(0);
+  expect(detailReads).toBe(0);
 });
 
 // Invalid transport content must never fall back to a system-message row.

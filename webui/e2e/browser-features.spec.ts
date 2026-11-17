@@ -27,6 +27,10 @@ test('search reaches saved messages outside the mounted transcript', async ({ pa
   }
   expect(found).toBe(true);
   await page.goto(`${fixture.url}/ui/w/${workspace}/c/${fixture.archiveSession}`);
+  const scroller = page.locator('.workspace-body');
+  await scroller.hover();
+  await page.mouse.wheel(0, -100000);
+  await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBe(0);
   await page.getByRole('button', { name: '대화 검색', exact: true }).click();
   await page.getByRole('searchbox', { name: /^대화 검색/ }).fill('Archive message 299');
   await page.getByRole('button', { name: '검색', exact: true }).click();

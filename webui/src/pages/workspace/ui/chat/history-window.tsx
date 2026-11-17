@@ -60,11 +60,7 @@ export const HistoryWindow = memo(
                 ref={measure}
               >
                 {'completion' in value ? (
-                  <CompletionRow
-                    completion={value.completion}
-                    sequence={value.sequence}
-                    onDetails={inspect.history}
-                  />
+                  <CompletionRow completion={value.completion} />
                 ) : (
                   <Suspense fallback={<Skeleton height={80} />}>
                     <HistoryRow

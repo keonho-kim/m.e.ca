@@ -13,12 +13,13 @@ import (
 )
 
 func historyItem(value history.Record) *v1.HistoryItem {
-	item := &v1.HistoryItem{Sequence: value.Sequence, Truncated: value.Truncated}
+	item := &v1.HistoryItem{Presentation: value.Event.Presentation, Sequence: value.Sequence, Truncated: value.Truncated}
 	if completion := historyCompletion(value.Event); value.Kind == "event" && completion != nil {
 		item.Entry = &v1.HistoryItem_Completion{Completion: completion}
 		return item
 	}
 	if value.Kind == "message" {
+		item.Presentation = value.Message.Presentation
 		m := &v1.TranscriptMessage{Role: value.Message.Role, Text: strings.Clone(textPreview(value.Message.Content)), Incomplete: value.Message.Incomplete}
 		item.Truncated = item.Truncated || len(m.Text) < len(value.Message.Content)
 		for index, image := range value.Images {

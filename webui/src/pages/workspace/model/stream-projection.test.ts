@@ -242,3 +242,80 @@ test('a history receipt drops settled text without discarding activity from the 
     useWorkspaceStore.setState(previous);
   }
 });
+
+test('an active request keeps its display group between generations and after live tool handoff', () => {
+  let state = {
+    selection: { workspace: 'w', session: 's' },
+    drafts: {},
+    tasks: {},
+    events: [],
+    approvals: [],
+    historyRevision: 0,
+  } as unknown as WorkspaceState;
+  const base = { workspaceId: 'w', sessionId: 's', taskId: 't' };
+  state = {
+    ...state,
+    ...applyEvents(state, [
+      { ...base, kind: 'request_started' },
+      { ...base, kind: 'draft_reset', generation: '1', presentation: 'scope.00000000000000000001' },
+    ]),
+  };
+  expect(state.tasks.t?.presentationGroup).toBe('scope');
+  const next = applyEvents(state, [
+    {
+      ...base,
+      kind: 'tool_started',
+      presentation: 'scope.00000000000000000002',
+      tool: { executionId: 'call', name: 'inspect' },
+    },
+  ]);
+  expect((next.tasks ?? state.tasks).t?.presentationGroup).toBe('scope');
+});
+
+test('a provider retry replaces its unfinished draft instead of retaining an unsaved attempt', () => {
+  const state = {
+    ...useWorkspaceStore.getInitialState(),
+    selection: { workspace: 'w', session: 's' },
+  };
+  const base = { workspaceId: 'w', sessionId: 's', taskId: 't' };
+  const result = applyEvents(state, [
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '1',
+      message: { role: 'assistant', text: 'Abandoned' },
+    },
+    { ...base, kind: 'draft_reset', generation: '2', measurement: { attempt: 2 } },
+  ]);
+  expect(result.drafts?.['t//1']).toBeUndefined();
+  expect(result.drafts?.['t/']?.text).toBe('');
+});
+
+test('redaction replacement keeps only one draft for the same display identity', () => {
+  const state = {
+    ...useWorkspaceStore.getInitialState(),
+    selection: { workspace: 'w', session: 's' },
+  };
+  const base = {
+    workspaceId: 'w',
+    sessionId: 's',
+    taskId: 't',
+    presentation: 'scope.00000000000000000001',
+  };
+  const result = applyEvents(state, [
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '1',
+      message: { role: 'assistant', text: 'Old projection' },
+    },
+    { ...base, kind: 'draft_reset', generation: '2' },
+    {
+      ...base,
+      kind: 'assistant_delta',
+      generation: '2',
+      message: { role: 'assistant', text: 'Masked projection' },
+    },
+  ]);
+  expect(Object.values(result.drafts ?? {}).map((d) => d.text)).toEqual(['Masked projection']);
+});

@@ -12,7 +12,7 @@ import (
 
 func TestPresentationOrderSurvivesSnapshots(t *testing.T) {
 	s, r := projectionFixture()
-	s.emit(r, record.Event{Kind: "generation_started", Agent: "z"})
+	s.emit(r, record.Event{Presentation: "request.00000000000000000001", Kind: "generation_started", Agent: "z"})
 	s.emit(r, record.Event{Kind: "stream", Agent: "z", Thinking: "first"})
 	first := s.State().Drafts[0].StartSequence
 	s.emit(r, record.Event{Kind: "tool_started", Agent: "z", Call: &tool.Call{ExecutionID: "one", Name: "load_skill"}})
@@ -26,7 +26,7 @@ func TestPresentationOrderSurvivesSnapshots(t *testing.T) {
 		if d.Agent == "a" && d.StartSequence <= snapshot.Activity[0].Sequence {
 			t.Fatalf("new generation precedes tool: %+v", d)
 		}
-		if d.Agent == "z" && d.StartSequence != first {
+		if d.Agent == "z" && (d.StartSequence != first || d.Presentation != "request.00000000000000000001") {
 			t.Fatal("content growth changed start sequence")
 		}
 	}

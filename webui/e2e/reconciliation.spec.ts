@@ -113,6 +113,14 @@ test('page restoration refreshes usage missed while observation was suspended', 
   page,
 }) => {
   const owner = target(page);
+  let restored = false;
+  // Synthetic pagehide does not freeze timers like bfcache. Keep reads stale
+  // until restoration so pending initial refreshes cannot update this fixture.
+  await page.route('**/v1/command', (route) => {
+    if (!restored && route.request().postDataJSON().sessionUsage)
+      return route.fulfill({ json: { usage: { input: '0', output: '0' } } });
+    return route.continue();
+  });
   await page.evaluate(() => {
     window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
   });
@@ -133,6 +141,7 @@ test('page restoration refreshes usage missed while observation was suspended', 
     )
     .toBe('answered');
   await expect(page.locator('.execution-status')).toContainText(/입력 0.*출력 0/);
+  restored = true;
   await page.evaluate(() => {
     window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
   });

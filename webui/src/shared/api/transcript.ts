@@ -54,9 +54,20 @@ function cursor(value: unknown) {
   if (!match) throw failure('invalid_response');
   integer(match[2], 18446744073709551615n);
 }
+function presentation(value: unknown) {
+  if (value === undefined || value === '') return;
+  if (
+    typeof value !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,32}\.\d{20}$/.test(value) ||
+    BigInt(value.split('.')[1]!) === 0n ||
+    BigInt(value.split('.')[1]!) > 18446744073709551615n
+  )
+    throw failure('invalid_response');
+}
 export function parseEvent(value: unknown): EventJson {
   object(value);
   cursor(value.cursor);
+  presentation(value.presentation);
   text(value.kind, 128);
   if (!value.kind || ['text', 'thinking', 'team', 'skill'].some((key) => Object.hasOwn(value, key)))
     throw failure('invalid_response');
@@ -148,7 +159,8 @@ export function parseHistory(value: unknown) {
   let through = 0n;
   for (const item of value.items) {
     object(item);
-    only(item, ['sequence', 'truncated', 'message', 'event', 'completion']);
+    only(item, ['sequence', 'presentation', 'truncated', 'message', 'event', 'completion']);
+    presentation(item.presentation);
     integer(item.sequence);
     boolean(item.truncated);
     if (!item.sequence || item.sequence === '0') throw failure('invalid_response');
@@ -173,6 +185,7 @@ export function parseSnapshot(value: unknown) {
       text(draft.thinking);
       text(draft.agent, 128);
       text(draft.taskId, 128);
+      presentation(draft.presentation);
       integer(draft.historySequence);
       integer(draft.generation, 18446744073709551615n);
       boolean(draft.committed);

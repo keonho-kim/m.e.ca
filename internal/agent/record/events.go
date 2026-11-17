@@ -17,6 +17,7 @@ import (
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
+	Presentation string `json:"presentation,omitempty"`
 	// HistorySequence is a committed public timeline receipt, never persisted again.
 	HistorySequence  int64                `json:"-"`
 	Skill            *SkillRead           `json:"skill,omitempty"`

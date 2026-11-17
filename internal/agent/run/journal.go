@@ -15,6 +15,11 @@ import (
 )
 
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
+	if m.Role == "assistant" {
+		m.Presentation = s.presentation
+	} else if m.Role == "user" {
+		m.Presentation = s.order.Next()
+	}
 	m.Content = s.runner.Redact(m.Content)
 	m.Reasoning = s.runner.Redact(m.Reasoning)
 	m.Images = slices.Clone(m.Images)
@@ -28,6 +33,7 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 	}
 	records := []runrecord.Entry{{Message: &m}}
 	for i := range events {
+		events[i] = s.present(events[i])
 		events[i].RunID = s.checkpoint.ID
 		if events[i].OccurredAt == "" {
 			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
@@ -62,6 +68,7 @@ func (s *execution) persist(ctx context.Context, events ...runrecord.Event) erro
 	events = append([]runrecord.Event{checkpoint}, events...)
 	records := make([]runrecord.Entry, len(events))
 	for i := range events {
+		events[i] = s.present(events[i])
 		events[i].RunID = s.checkpoint.ID
 		if events[i].OccurredAt == "" {
 			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)

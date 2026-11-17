@@ -13,6 +13,7 @@ export type BrowserFixture = {
   home: string;
   provider: string;
   archiveSession: string;
+  scrollSessions: string[];
 };
 
 export async function browserFixture(): Promise<BrowserFixture> {

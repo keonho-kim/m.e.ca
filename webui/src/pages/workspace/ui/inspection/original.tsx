@@ -1,6 +1,6 @@
 // Purpose: Read revision-bound original history or tool text in bounded display pages.
 // Pattern: Explicit paged detail viewer.
-// Usage: Failure and approval inspection opens this bounded original-data drawer.
+// Usage: Approval inspection opens this bounded original-data drawer.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, internal/serverapi/detail.go.
 
 import { Button } from '@astryxdesign/core/Button';

@@ -7,6 +7,7 @@ import type { StateCreator } from 'zustand';
 import { setServerLanguage } from '@/entities/server-session';
 import { eventIdentities } from '@/pages/workspace/model/chat-events';
 import { reached } from '@/pages/workspace/model/history-handoff';
+import { presentationGroup } from '@/pages/workspace/model/presentation-order';
 import { applyEvents, snapshotDrafts } from '@/pages/workspace/model/stream-projection';
 import { isActiveTask, trimTasks } from '@/pages/workspace/model/task-state';
 import type { WorkspaceState } from '@/pages/workspace/model/types';
@@ -52,6 +53,11 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
           ...(!isActiveTask(task.status ?? 'running') ? { doneRevision: revision } : {}),
         };
     }
+    for (const value of [...(snapshot.drafts ?? []), ...(snapshot.activity ?? [])]) {
+      const task = value.taskId && tasks[value.taskId];
+      if (task && value.taskId && value.presentation)
+        tasks[value.taskId] = { ...task, presentationGroup: presentationGroup(value.presentation) };
+    }
     trimTasks(tasks);
     set({
       historyRevision: revision,
@@ -96,6 +102,14 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
         !reached(page.through, draft.doneThrough)
       )
         continue;
+      if (draft.presentation && !finished.has(draft.task)) {
+        const represented = page.items?.some(
+          (item) =>
+            (item.presentation ?? item.event?.presentation) === draft.presentation &&
+            (!draft.text || !!(item.message?.text ?? item.event?.message?.text))
+        );
+        if (!represented) continue;
+      }
       if (drafts === state.drafts) drafts = { ...drafts };
       delete drafts[key];
       const task = state.tasks[draft.task];

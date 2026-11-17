@@ -124,6 +124,7 @@ type Approval struct {
 	Value     record.Event
 }
 type Draft struct {
+	Presentation             string
 	StartSequence            uint64
 	HistorySequence          int64
 	TextBytes, ThinkingBytes int64

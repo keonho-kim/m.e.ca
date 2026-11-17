@@ -1,19 +1,20 @@
-diff --git a/src/Chat/ChatLayout.tsx b/src/Chat/ChatLayout.tsx
---- a/src/Chat/ChatLayout.tsx
-+++ b/src/Chat/ChatLayout.tsx
-@@ -385,7 +385,7 @@
- 
-   const defaultScrollButton = (
-     <ChatLayoutScrollButton
--      isVisible={scroll.isScrolledUp || newMsgs.hasNewMessages}
-+      isVisible={!scroll.isLocked && (scroll.isScrolledUp || newMsgs.hasNewMessages)}
-       label={
-         newMsgs.hasNewMessages ? t('@astryx.chatLayout.newMessages') : undefined
-       }
+diff --git a/dist/Chat/ChatContext.d.ts b/dist/Chat/ChatContext.d.ts
+index 0551cc4..f80599e 100644
+--- a/dist/Chat/ChatContext.d.ts
++++ b/dist/Chat/ChatContext.d.ts
+@@ -57,6 +57,7 @@ export interface ChatComposerContextValue {
+ export declare const ChatComposerContext: import("react").Context<ChatComposerContextValue | null>;
+ export declare function useChatComposerContext(): ChatComposerContextValue | null;
+ export interface ChatLayoutContextValue {
++  scroll: Pick<import('./useChatStreamScroll').UseChatStreamScrollReturn, 'isFollowing' | 'scrollToBottom' | 'unlock'>;
+     /** Ref to the scrollable container element that wraps the message area. */
+     scrollContainerRef: React.RefObject<HTMLElement | null>;
+     /** Callback ref for the message list content element — layout observes it for size changes. */
 diff --git a/dist/Chat/ChatLayout.js b/dist/Chat/ChatLayout.js
+index bc4c4c8..ea00160 100644
 --- a/dist/Chat/ChatLayout.js
 +++ b/dist/Chat/ChatLayout.js
-@@ -310,7 +310,7 @@
+@@ -310,7 +310,7 @@ export function ChatLayout({
    const dockRef = useMergedRefs(keyboard.dockRef, observeDock);
    const endRoom = keyboard.lift + (isSelfScrolling ? 0 : dockHeight);
    const defaultScrollButton = /*#__PURE__*/_jsx(ChatLayoutScrollButton, {
@@ -22,183 +23,403 @@ diff --git a/dist/Chat/ChatLayout.js b/dist/Chat/ChatLayout.js
      label: newMsgs.hasNewMessages ? t('@astryx.chatLayout.newMessages') : undefined,
      onClick: () => {
        newMsgs.dismiss();
-diff --git a/src/Chat/useChatStreamScroll.ts b/src/Chat/useChatStreamScroll.ts
---- a/src/Chat/useChatStreamScroll.ts
-+++ b/src/Chat/useChatStreamScroll.ts
-@@ -386,13 +386,36 @@
-     // viewport's, which is what the reader sees.
-     const shownHeight = () => (isPage ? el.clientHeight : el.offsetHeight);
+@@ -321,8 +321,9 @@ export function ChatLayout({
+   // --- Layout context ---
+   const layoutContext = useMemo(() => ({
+     scrollContainerRef,
+-    contentRef: newMsgs.contentRef
+-  }), [scrollContainerRef, newMsgs.contentRef]);
++    contentRef: newMsgs.contentRef,
++    scroll: {isFollowing: scroll.isFollowing, scrollToBottom: scroll.scrollToBottom, unlock: scroll.unlock}
++  }), [scrollContainerRef, newMsgs.contentRef, scroll.isFollowing, scroll.scrollToBottom, scroll.unlock]);
  
-+    let previousScrollHeight = el.scrollHeight;
-+    let previousClientHeight = el.clientHeight;
-+    let pointerActive = false;
-+    const onPointerDown = () => { pointerActive = true; };
-+    const onPointerEnd = () => { pointerActive = false; };
-+    const onWheel = (event: WheelEvent) => {
-+      if (event.deltaY < 0) {
-+        setLocked(false);
-+        animatingRef.current = false;
-+      }
-+    };
-+    const onKeyDown = (event: KeyboardEvent) => {
-+      const target = event.target;
-+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
-+          (target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select')))) return;
-+      if (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey)) {
-+        setLocked(false);
-+        animatingRef.current = false;
-+      }
-+    };
-     const onScroll = () => {
-       const {scrollTop, scrollHeight} = el;
-       const dist = scrollHeight - scrollTop - shownHeight();
- 
--      // Button visibility
--      setIsScrolledUp(dist > buttonThreshold);
--
-+
-+      // Virtual history handoff may clamp the position before the replacement
-+      // height is measured. A layout-only move is not a reader scroll.
-+      const geometryChanged = previousScrollHeight !== scrollHeight || previousClientHeight !== el.clientHeight;
-+      previousScrollHeight = scrollHeight;
-+      previousClientHeight = el.clientHeight;
-       const isScrollingUp = scrollTop < lastScrollTopRef.current;
-       lastScrollTopRef.current = scrollTop;
- 
-@@ -402,16 +425,18 @@
-       // includes borders and a horizontal scrollbar.)
-       const landedAtBottom = scrollHeight - scrollTop - el.clientHeight < 1;
- 
--      if (isScrollingUp && !landedAtBottom && lockedRef.current) {
-+      if (isScrollingUp && !landedAtBottom && lockedRef.current && (!geometryChanged || pointerActive)) {
-         setLocked(false);
-         animatingRef.current = false;
-       }
-+      setIsScrolledUp(!lockedRef.current && dist > buttonThreshold);
-     };
- 
-     const onScrollEnd = () => {
-       const dist = el.scrollHeight - el.scrollTop - shownHeight();
-       if (dist <= lockThreshold) {
-         setLocked(true);
-+        setIsScrolledUp(false);
-       }
-     };
- 
-@@ -434,8 +459,14 @@
-       el.addEventListener('scrollend', onScrollEnd);
-     }
- 
-+    el.addEventListener('keydown', onKeyDown);
-+    el.addEventListener('wheel', onWheel, {passive: true});
-+    el.addEventListener('pointerdown', onPointerDown, {passive: true});
-+    doc.defaultView?.addEventListener('pointerup', onPointerEnd);
-+    doc.defaultView?.addEventListener('pointercancel', onPointerEnd);
-+
-     // Initial scroll to bottom — content already present at mount.
--    requestAnimationFrame(() => {
-+    const initialFrame = requestAnimationFrame(() => {
-       if (el.scrollHeight > el.clientHeight) {
-         el.scrollTop = el.scrollHeight - el.clientHeight;
-         lastScrollTopRef.current = el.scrollTop;
-@@ -444,11 +475,19 @@
-     });
- 
-     return () => {
-+      cancelAnimationFrame(initialFrame);
-+      cancelAnimationFrame(rafRef.current);
-+      animatingRef.current = false;
-       for (const stop of stopPageListeners) {
-         stop();
-       }
-       el.removeEventListener('scroll', onScroll);
-       el.removeEventListener('scrollend', onScrollEnd);
-+      el.removeEventListener('keydown', onKeyDown);
-+      el.removeEventListener('wheel', onWheel);
-+      el.removeEventListener('pointerdown', onPointerDown);
-+      doc.defaultView?.removeEventListener('pointerup', onPointerEnd);
-+      doc.defaultView?.removeEventListener('pointercancel', onPointerEnd);
-       markFollowing(el, false);
-     };
-   }, [scrollRef, enabled, lockThreshold, buttonThreshold, setLocked]);
+   // --- Derived styles ---
+   const showEmpty = !hasVisibleContent(children);
+diff --git a/dist/Chat/useChatStreamScroll.d.ts b/dist/Chat/useChatStreamScroll.d.ts
+index bb7b0ce..72018ce 100644
+--- a/dist/Chat/useChatStreamScroll.d.ts
++++ b/dist/Chat/useChatStreamScroll.d.ts
+@@ -49,6 +49,7 @@ export interface UseChatStreamScrollOptions {
+     mass?: number;
+ }
+ export interface UseChatStreamScrollReturn {
++    isFollowing: () => boolean;
+     /** Whether the user has scrolled up past buttonThreshold. */
+     isScrolledUp: boolean;
+     /** Whether auto-scroll is locked (following content). */
 diff --git a/dist/Chat/useChatStreamScroll.js b/dist/Chat/useChatStreamScroll.js
+index e4e326a..2f110a4 100644
 --- a/dist/Chat/useChatStreamScroll.js
 +++ b/dist/Chat/useChatStreamScroll.js
-@@ -263,6 +263,26 @@
-     // The root's offsetHeight is the page's height. Its clientHeight is the
-     // viewport's, which is what the reader sees.
+@@ -1,67 +1,21 @@
+ // Copyright (c) Meta Platforms, Inc. and affiliates.
+ 
+-'use client';
+-
+-/**
+- * @file useChatStreamScroll.ts
+- * @input Uses React refs, state, callbacks, useMediaQuery, the page-scroller
+- *   rules, and the input stream's document scroll events when the page itself
+- *   scrolls
+- * @output Exports useChatStreamScroll hook for AI chat scroll behavior
+- * @position Utility hook — used by ChatLayout, also usable standalone
+- *
+- * Spring-based scroll-to-bottom with lock/unlock:
+- * - Locked (default): content growth auto-scrolls to bottom via rAF spring
+- * - Scrolling up (any source): unlocks immediately
+- * - Scrolling settles at bottom: re-locks on scrollend
+- * - The first fill positions instantly (whether content is present at
+- *   mount or arrives async); only subsequent growth springs
+- * - `scrollToBottom({behavior: 'instant'})` jumps in one frame, no animation
+- * - Under `prefers-reduced-motion`, every spring path falls back to the
+- *   same instant jump — following still works, it just doesn't animate
+- * - Fractional spring position is retained between frames so browsers that
+- *   round scrollTop do not strand the animation short of the bottom
+- *
+- * Reads user intent from position: a scroll that lands above the last
+- * position this hook set or saw is the reader — wheel, touch, scrollbar
+- * drag, keyboard, everything, including a move the spring's next frame
+- * would otherwise outrun. While following, the hook owns the position:
+- * it disables scroll anchoring on the container, so the only move the
+- * browser makes on its own is a resize clamp onto the bottom.
+- *
+- * SYNC: When modified, update:
+- * - /packages/core/src/Chat/index.ts (exports)
+- */
+-import { useCallback, useEffect, useRef, useState } from 'react';
++"use client";
++import { useCallback, useEffect, useRef, useState } from "react";
+ import { useMediaQuery } from "../hooks/useMediaQuery.js";
+ import { setScrollAnchoringOff } from "../privateAttributes/scrollAnchoring.stylex.js";
+ import { subscribeInput } from "../utils/inputStream.js";
+-import { scrollEventTarget, scrollportTop, scrollsPage } from "../utils/pageScroller.js";
+-
+-// =============================================================================
+-// Types
+-// =============================================================================
+-
+-// =============================================================================
+-// Hook
+-// =============================================================================
+-
+-const SIXTY_FPS_MS = 1000 / 60;
+-
+-// The scrollers whose hook follows the newest message now, kept in step with
+-// each hook's lock.
+-const following = new WeakSet();
++import {
++  scrollEventTarget,
++  scrollportTop,
++  scrollsPage
++} from "../utils/pageScroller.js";
+ 
+-/**
+- * Whether the stream scroll on `scroller` follows its newest message now, as
+- * its lock says. Internal to Chat.
+- */
+-export function isFollowingNewest(scroller) {
++var SIXTY_FPS_MS = 1000 / 60;
++var following = new WeakSet;
++function isFollowingNewest(scroller) {
+   return following.has(scroller);
+ }
+-
+-// The lock's marks on the scroller: anchoring off while the hook follows, and
+-// the state `isFollowingNewest` reads.
+ function markFollowing(el, locked) {
+   setScrollAnchoringOff(el, locked);
+   if (locked) {
+@@ -70,7 +24,7 @@ function markFollowing(el, locked) {
+     following.delete(el);
+   }
+ }
+-export function useChatStreamScroll({
++function useChatStreamScroll({
+   scrollRef,
+   enabled = true,
+   lockThreshold = 10,
+@@ -82,27 +36,14 @@ export function useChatStreamScroll({
+   const [isScrolledUp, setIsScrolledUp] = useState(false);
+   const [isLocked, setIsLocked] = useState(true);
+   const lockedRef = useRef(true);
+-  // True until the initial fill has been positioned — consumed by the first
+-  // scrollIfLocked that sees scrollable content.
+   const initialFillPendingRef = useRef(true);
+   const velocityRef = useRef(0);
+   const springPositionRef = useRef(undefined);
+   const animatingRef = useRef(false);
+   const lastTickRef = useRef(undefined);
+-  // The spring's pending frame, so a jump can cancel it for real.
+   const rafRef = useRef(0);
+-  // The last position this hook set or saw. Updated by every write of ours
+-  // (spring frame, jump, scrollToMessage) as well as by every scroll event,
+-  // so a reader's move that lands between two spring frames still shows as
+-  // "above where we put it" even when the next frame's write outran it.
+   const lastScrollTopRef = useRef(0);
+-
+-  // While following, this hook is the only thing that should move the
+-  // container: scroll anchoring is off, so the browser's one remaining move
+-  // is the resize clamp onto the bottom, and every other upward move is the
+-  // reader. Unlocked, the element's own anchoring applies again — a reader up
+-  // in the history wants it when content above them changes.
+-  const setLocked = useCallback(locked => {
++  const setLocked = useCallback((locked) => {
+     lockedRef.current = locked;
+     setIsLocked(locked);
+     const el = scrollRef.current;
+@@ -110,9 +51,7 @@ export function useChatStreamScroll({
+       markFollowing(el, locked);
+     }
+   }, [scrollRef]);
+-
+-  // --- Spring animation ---
+-
++  const isFollowing = useCallback(() => lockedRef.current, []);
+   const animate = useCallback(() => {
+     const el = scrollRef.current;
+     if (!el || !lockedRef.current) {
+@@ -131,7 +70,6 @@ export function useChatStreamScroll({
+     const position = Math.max(0, Math.min(target, springPositionRef.current ?? el.scrollTop));
+     const diff = target - position;
+     if (Math.abs(diff) < 0.5 && Math.abs(velocityRef.current) < 0.1) {
+-      // eslint-disable-next-line react-compiler/react-compiler -- imperative DOM: scrollTop assignment
+       el.scrollTop = target;
+       animatingRef.current = false;
+       lastTickRef.current = undefined;
+@@ -147,9 +85,6 @@ export function useChatStreamScroll({
+     lastScrollTopRef.current = el.scrollTop;
+     rafRef.current = requestAnimationFrame(animate);
+   }, [scrollRef, damping, stiffness, mass]);
+-
+-  // Jump to the bottom in a single frame — cancels any in-flight spring so
+-  // a later animation tick can't fight the assignment.
+   const jumpToBottom = useCallback(() => {
+     const el = scrollRef.current;
+     if (!el) {
+@@ -162,10 +97,7 @@ export function useChatStreamScroll({
+     el.scrollTop = el.scrollHeight - el.clientHeight;
+     lastScrollTopRef.current = el.scrollTop;
+   }, [scrollRef]);
+-  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+-
+-  // Every spring entry point (scrollToBottom, lock, scrollIfLocked growth
+-  // follow) funnels through here, so this one branch covers them all.
++  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+   const startAnimation = useCallback(() => {
+     if (!lockedRef.current) {
+       return;
+@@ -181,30 +113,24 @@ export function useChatStreamScroll({
+       rafRef.current = requestAnimationFrame(animate);
+     }
+   }, [animate, jumpToBottom, prefersReducedMotion, scrollRef]);
+-
+-  // --- Public API ---
+-
+-  const scrollToBottom = useCallback(options => {
++  const scrollToBottom = useCallback((options) => {
+     setLocked(true);
+     setIsScrolledUp(false);
+     initialFillPendingRef.current = false;
+-    if (options?.behavior === 'instant') {
++    if (options?.behavior === "instant") {
+       jumpToBottom();
+       return;
+     }
+     startAnimation();
+   }, [setLocked, startAnimation, jumpToBottom]);
+-  const scrollToMessage = useCallback(el => {
++  const scrollToMessage = useCallback((el) => {
+     const container = scrollRef.current;
+     if (!container) {
+       return;
+     }
+     const top = scrollportTop(container);
+     const offset = el.getBoundingClientRect().top - top + container.scrollTop;
+-    container.scrollTo({
+-      top: offset,
+-      behavior: 'instant'
+-    });
++    container.scrollTo({ top: offset, behavior: "instant" });
+     lastScrollTopRef.current = container.scrollTop;
+   }, [scrollRef]);
+   const scrollToLastMessage = useCallback(() => {
+@@ -212,7 +138,7 @@ export function useChatStreamScroll({
+     if (!container) {
+       return;
+     }
+-    const messages = container.getElementsByClassName('astryx-chat-message');
++    const messages = container.getElementsByClassName("astryx-chat-message");
+     const last = messages[messages.length - 1];
+     if (last instanceof HTMLElement) {
+       scrollToMessage(last);
+@@ -225,6 +151,7 @@ export function useChatStreamScroll({
+   }, [setLocked, startAnimation]);
+   const unlock = useCallback(() => {
+     setLocked(false);
++    cancelAnimationFrame(rafRef.current);
+     animatingRef.current = false;
+   }, [setLocked]);
+   const scrollIfLocked = useCallback(() => {
+@@ -234,10 +161,6 @@ export function useChatStreamScroll({
+     if (!lockedRef.current) {
+       return;
+     }
+-    // Initial fill: content appearing for the first time (e.g. an
+-    // async-loaded conversation) positions in one frame instead of
+-    // spring-flying from the top. Stays pending through empty/loading
+-    // resizes until the container is actually scrollable.
+     const el = scrollRef.current;
+     if (initialFillPendingRef.current && el && el.scrollHeight > el.clientHeight) {
+       initialFillPendingRef.current = false;
+@@ -246,11 +169,6 @@ export function useChatStreamScroll({
+     }
+     startAnimation();
+   }, [enabled, startAnimation, jumpToBottom, scrollRef]);
+-
+-  // --- Event listeners ---
+-
+-  // Syncs the scroll and scrollend listeners with `enabled`: the stream
+-  // container's own, or the document's when the container scrolls the page.
+   useEffect(() => {
+     const el = scrollRef.current;
+     if (!el || !enabled) {
+@@ -260,74 +178,131 @@ export function useChatStreamScroll({
+     markFollowing(el, lockedRef.current);
+     const doc = el.ownerDocument;
+     const isPage = scrollsPage(el);
+-    // The root's offsetHeight is the page's height. Its clientHeight is the
+-    // viewport's, which is what the reader sees.
      const shownHeight = () => isPage ? el.clientHeight : el.offsetHeight;
-+    let previousScrollHeight = el.scrollHeight;
-+    let previousClientHeight = el.clientHeight;
 +    let pointerActive = false;
-+    const onPointerDown = () => { pointerActive = true; };
-+    const onPointerEnd = () => { pointerActive = false; };
-+    const onWheel = (event) => {
-+      if (event.deltaY < 0) {
-+        setLocked(false);
-+        animatingRef.current = false;
++    let upwardIntent = false;
++    let touchY;
++    const onPointerDown = (event) => {
++      pointerActive = event.target === el && event.offsetX >= el.clientWidth;
++      touchY = event.pointerType === "touch" ? event.clientY : undefined;
++    };
++    const releaseFollowing = () => {
++      upwardIntent = true;
++      setLocked(false);
++      cancelAnimationFrame(rafRef.current);
++      animatingRef.current = false;
++    };
++    const nestedScroller = (target) => {
++      for (let node = target instanceof Element ? target : null;node && node !== el; node = node.parentElement) {
++        if (node.scrollTop > 0 && node.scrollHeight > node.clientHeight && /auto|scroll/.test(getComputedStyle(node).overflowY))
++          return true;
 +      }
++      return false;
++    };
++    const onPointerMove = (event) => {
++      if (touchY !== undefined && !nestedScroller(event.target)) {
++        if (event.clientY > touchY)
++          releaseFollowing();
++        else if (event.clientY < touchY)
++          upwardIntent = false;
++      }
++      if (touchY !== undefined)
++        touchY = event.clientY;
++    };
++    const onPointerEnd = () => {
++      pointerActive = false;
++      touchY = undefined;
++    };
++    const onWheel = (event) => {
++      if (event.defaultPrevented || event.ctrlKey || nestedScroller(event.target))
++        return;
++      if (event.deltaY < 0)
++        releaseFollowing();
++      else if (event.deltaY > 0)
++        upwardIntent = false;
++    };
++    const onFocusIn = (event) => {
++      const target = event.target;
++      if (target instanceof HTMLElement && target !== el && !target.closest(".astryx-chat-composer, .composer"))
++        releaseFollowing();
 +    };
 +    const onKeyDown = (event) => {
 +      const target = event.target;
-+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
-+          (target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select')))) return;
-+      if (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey)) {
-+        setLocked(false);
-+        animatingRef.current = false;
-+      }
++      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select")))
++        return;
++      if (["ArrowDown", "PageDown", "End"].includes(event.key) || event.key === " " && !event.shiftKey)
++        upwardIntent = false;
++      if (!nestedScroller(event.target) && (["ArrowUp", "PageUp", "Home"].includes(event.key) || event.key === " " && event.shiftKey))
++        releaseFollowing();
 +    };
      const onScroll = () => {
-       const {
-         scrollTop,
-@@ -270,8 +290,11 @@
-       } = el;
+-      const {
+-        scrollTop,
+-        scrollHeight
+-      } = el;
++      const { scrollTop, scrollHeight } = el;
        const dist = scrollHeight - scrollTop - shownHeight();
- 
+-
 -      // Button visibility
 -      setIsScrolledUp(dist > buttonThreshold);
-+      // Virtual history handoff may clamp the position before the replacement
-+      // height is measured. A layout-only move is not a reader scroll.
-+      const geometryChanged = previousScrollHeight !== scrollHeight || previousClientHeight !== el.clientHeight;
-+      previousScrollHeight = scrollHeight;
-+      previousClientHeight = el.clientHeight;
        const isScrollingUp = scrollTop < lastScrollTopRef.current;
++      if (pointerActive && scrollTop > lastScrollTopRef.current)
++        upwardIntent = false;
        lastScrollTopRef.current = scrollTop;
- 
-@@ -280,15 +303,17 @@
-       // scrolling up never lands there. (clientHeight, not dist: offsetHeight
-       // includes borders and a horizontal scrollbar.)
+-
+-      // With anchoring off, the browser only ever moves a following
+-      // container up to clamp it onto a new, smaller bottom, and a reader
+-      // scrolling up never lands there. (clientHeight, not dist: offsetHeight
+-      // includes borders and a horizontal scrollbar.)
        const landedAtBottom = scrollHeight - scrollTop - el.clientHeight < 1;
 -      if (isScrollingUp && !landedAtBottom && lockedRef.current) {
-+      if (isScrollingUp && !landedAtBottom && lockedRef.current && (!geometryChanged || pointerActive)) {
-         setLocked(false);
-         animatingRef.current = false;
-       }
+-        setLocked(false);
+-        animatingRef.current = false;
+-      }
++      if (isScrollingUp && !landedAtBottom && lockedRef.current && pointerActive)
++        releaseFollowing();
 +      setIsScrolledUp(!lockedRef.current && dist > buttonThreshold);
      };
      const onScrollEnd = () => {
        const dist = el.scrollHeight - el.scrollTop - shownHeight();
-       if (dist <= lockThreshold) {
+-      if (dist <= lockThreshold) {
++      if (dist <= lockThreshold && !upwardIntent) {
          setLocked(true);
 +        setIsScrolledUp(false);
        }
      };
- 
-@@ -311,7 +336,12 @@
+-
+-    // A scroll of the page fires at the document, not at its root element.
+     const eventTarget = scrollEventTarget(el);
+     const view = eventTarget === doc ? doc.defaultView : null;
+     const stopPageListeners = [];
+     if (view != null) {
+-      const atDocument = listener => event => {
++      const atDocument = (listener) => (event) => {
+         if (event.target === eventTarget) {
+           listener();
+         }
+       };
+-      stopPageListeners.push(subscribeInput(view, 'scroll', atDocument(onScroll)), subscribeInput(view, 'scrollend', atDocument(onScrollEnd)));
++      stopPageListeners.push(subscribeInput(view, "scroll", atDocument(onScroll)), subscribeInput(view, "scrollend", atDocument(onScrollEnd)));
+     } else {
+-      el.addEventListener('scroll', onScroll, {
+-        passive: true
+-      });
+-      el.addEventListener('scrollend', onScrollEnd);
++      el.addEventListener("scroll", onScroll, { passive: true });
++      el.addEventListener("scrollend", onScrollEnd);
      }
- 
-     // Initial scroll to bottom — content already present at mount.
+-
+-    // Initial scroll to bottom — content already present at mount.
 -    requestAnimationFrame(() => {
-+    el.addEventListener('keydown', onKeyDown);
-+    el.addEventListener('wheel', onWheel, {passive: true});
-+    el.addEventListener('pointerdown', onPointerDown, {passive: true});
-+    doc.defaultView?.addEventListener('pointerup', onPointerEnd);
-+    doc.defaultView?.addEventListener('pointercancel', onPointerEnd);
+-      if (el.scrollHeight > el.clientHeight) {
++    el.addEventListener("focusin", onFocusIn);
++    el.addEventListener("keydown", onKeyDown);
++    el.addEventListener("wheel", onWheel, { passive: true });
++    el.addEventListener("pointerdown", onPointerDown, { passive: true });
++    el.addEventListener("pointermove", onPointerMove, { passive: true });
++    doc.defaultView?.addEventListener("pointerup", onPointerEnd);
++    doc.defaultView?.addEventListener("pointercancel", onPointerEnd);
 +    const initialFrame = requestAnimationFrame(() => {
-       if (el.scrollHeight > el.clientHeight) {
++      if (lockedRef.current && el.scrollHeight > el.clientHeight) {
          el.scrollTop = el.scrollHeight - el.clientHeight;
          lastScrollTopRef.current = el.scrollTop;
-@@ -319,11 +349,19 @@
+         initialFillPendingRef.current = false;
        }
      });
      return () => {
@@ -208,99 +429,63 @@ diff --git a/dist/Chat/useChatStreamScroll.js b/dist/Chat/useChatStreamScroll.js
        for (const stop of stopPageListeners) {
          stop();
        }
-       el.removeEventListener('scroll', onScroll);
-       el.removeEventListener('scrollend', onScrollEnd);
-+      el.removeEventListener('keydown', onKeyDown);
-+      el.removeEventListener('wheel', onWheel);
-+      el.removeEventListener('pointerdown', onPointerDown);
-+      doc.defaultView?.removeEventListener('pointerup', onPointerEnd);
-+      doc.defaultView?.removeEventListener('pointercancel', onPointerEnd);
+-      el.removeEventListener('scroll', onScroll);
+-      el.removeEventListener('scrollend', onScrollEnd);
++      el.removeEventListener("scroll", onScroll);
++      el.removeEventListener("scrollend", onScrollEnd);
++      el.removeEventListener("focusin", onFocusIn);
++      el.removeEventListener("keydown", onKeyDown);
++      el.removeEventListener("wheel", onWheel);
++      el.removeEventListener("pointerdown", onPointerDown);
++      el.removeEventListener("pointermove", onPointerMove);
++      doc.defaultView?.removeEventListener("pointerup", onPointerEnd);
++      doc.defaultView?.removeEventListener("pointercancel", onPointerEnd);
        markFollowing(el, false);
      };
    }, [scrollRef, enabled, lockThreshold, buttonThreshold, setLocked]);
-diff --git a/src/Markdown/Markdown.tsx b/src/Markdown/Markdown.tsx
---- a/src/Markdown/Markdown.tsx
-+++ b/src/Markdown/Markdown.tsx
-@@ -277,6 +277,8 @@
-    */
-   headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
-   isStreaming?: boolean;
+   return {
++    isFollowing,
+     isScrolledUp,
+     isLocked,
+     scrollToBottom,
+@@ -337,4 +312,8 @@ export function useChatStreamScroll({
+     scrollIfLocked,
+     scrollToLastMessage
+   };
+-}
+\ No newline at end of file
++}
++export {
++  isFollowingNewest,
++  useChatStreamScroll
++};
+diff --git a/dist/Markdown/Markdown.d.ts b/dist/Markdown/Markdown.d.ts
+index edc22fb..7fa1f54 100644
+--- a/dist/Markdown/Markdown.d.ts
++++ b/dist/Markdown/Markdown.d.ts
+@@ -120,6 +120,8 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+      */
+     headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+     isStreaming?: boolean;
 +    /** Controls reveal independently of incremental parsing. */
 +    isRevealing?: boolean;
-   onLinkClick?: (
-     href: string,
-     event: React.MouseEvent<HTMLAnchorElement>,
-@@ -2242,6 +2244,7 @@
-   density = 'default',
-   headingLevelStart = 1,
-   isStreaming = false,
-+  isRevealing = true,
-   onLinkClick,
-   sources,
-   citationStyle = 'label',
-@@ -2318,7 +2321,7 @@
- 
-   // Smooth bursty streamed chunks into a steady character-by-character reveal.
-   // When not streaming, the hook returns children unchanged (no-op).
--  const smoothedText = useStreamingText(children, isStreaming);
-+  const smoothedText = useStreamingText(children, isStreaming, isRevealing, {speed: isRevealing ? 'natural' : 'instant'});
- 
-   // A discarded render can change this cache, as it can change the option
-   // flags below. The parser reuses settled blocks only while the input starts
-@@ -2375,6 +2378,7 @@
-     smoothedText,
-     children,
-     isStreaming,
-+    isRevealing,
-     hasMathRenderer,
-     mathParseOptions,
-     legacyParseOptions,
-@@ -2427,6 +2431,7 @@
-     smoothedText,
-     children,
-     isStreaming,
-+    isRevealing,
-     hasMathRenderer,
-     mathParseOptions,
-     legacyParseOptions,
-@@ -2462,6 +2467,7 @@
-     preparedPlugins,
-     inlineTransformSource,
-     isStreaming,
-+    isRevealing,
-   ]);
- 
-   // Track recent boundaries for stacked fade-in animation.
-@@ -2516,7 +2522,7 @@
-     const blockCursor: StreamingCursor = {
-       offset: 0,
-       boundaries,
--      active: isStreaming,
-+      active: isStreaming && isRevealing,
-     };
-     // Numbers are assigned in encounter order during rendering.
-     const blockCitationCtx: CitationContext | null = sources
-@@ -2550,6 +2556,7 @@
-     blocks,
-     boundaries,
-     isStreaming,
-+    isRevealing,
-     sources,
-     citationStyle,
-     density,
-@@ -2571,7 +2578,7 @@
-     const cursor: StreamingCursor = {
-       offset: 0,
-       boundaries,
--      active: isStreaming,
-+      active: isStreaming && isRevealing,
-     };
-     // Numbers are assigned in encounter order during rendering.
-     const citationCtx: CitationContext | null = sources
+     onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void | false;
+     /**
+      * Citation sources keyed by ID. When provided, `[id]` and `【id】` markers
+@@ -199,7 +201,7 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+  * </Markdown>
+  * ```
+  */
+-export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
++export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, isRevealing, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
+ export declare namespace Markdown {
+     var displayName: string;
+ }
 diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
+index 77ab512..669a811 100644
 --- a/dist/Markdown/Markdown.js
 +++ b/dist/Markdown/Markdown.js
-@@ -1408,6 +1408,7 @@
+@@ -1408,6 +1408,7 @@ export function Markdown({
    density = 'default',
    headingLevelStart = 1,
    isStreaming = false,
@@ -308,7 +493,7 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
    onLinkClick,
    sources,
    citationStyle = 'label',
-@@ -1473,7 +1474,7 @@
+@@ -1473,7 +1474,7 @@ export function Markdown({
  
    // Smooth bursty streamed chunks into a steady character-by-character reveal.
    // When not streaming, the hook returns children unchanged (no-op).
@@ -317,7 +502,7 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
  
    // A discarded render can change this cache, as it can change the option
    // flags below. The parser reuses settled blocks only while the input starts
-@@ -1503,7 +1504,7 @@
+@@ -1503,7 +1504,7 @@ export function Markdown({
        return (hasMathRenderer ? parseMarkdownAstIncremental(input, incrementalStateRef.current, mathParseOptions) : parseMarkdownAstIncremental(input, incrementalStateRef.current, legacyParseOptions)).children;
      }
      return (hasMathRenderer ? parseMarkdownAst(children, mathParseOptions) : parseMarkdownAst(children, legacyParseOptions)).children;
@@ -326,7 +511,7 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
    const transformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
    const blocks = useMemo(() => applyMarkdownTransforms({
      type: 'root',
-@@ -1529,7 +1530,7 @@
+@@ -1529,7 +1530,7 @@ export function Markdown({
      const options = hasMathRenderer ? mathParseOptions : legacyParseOptions;
      const input = isStreaming ? trimStreamingArtifacts(smoothedText, options) : children;
      return hasMathRenderer ? parseInlineAst(input, mathParseOptions) : parseInlineAst(input, legacyParseOptions);
@@ -335,7 +520,7 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
    const inlineTransformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
    const inlineNodes = useMemo(() => {
      if (display !== 'inline') {
-@@ -1592,7 +1593,7 @@
+@@ -1592,7 +1593,7 @@ export function Markdown({
      const blockCursor = {
        offset: 0,
        boundaries,
@@ -344,7 +529,7 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
      };
      // Numbers are assigned in encounter order during rendering.
      const blockCitationCtx = sources ? {
-@@ -1605,12 +1606,12 @@
+@@ -1605,12 +1606,12 @@ export function Markdown({
        provider: direction,
        around: direction
      }));
@@ -359,116 +544,8 @@ diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
      };
      // Numbers are assigned in encounter order during rendering.
      const citationCtx = sources ? {
-diff --git a/dist/Markdown/Markdown.d.ts b/dist/Markdown/Markdown.d.ts
---- a/dist/Markdown/Markdown.d.ts
-+++ b/dist/Markdown/Markdown.d.ts
-@@ -120,6 +120,8 @@
-      */
-     headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
-     isStreaming?: boolean;
-+    /** Controls reveal independently of incremental parsing. */
-+    isRevealing?: boolean;
-     onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void | false;
-     /**
-      * Citation sources keyed by ID. When provided, `[id]` and `【id】` markers
-@@ -199,7 +201,7 @@
-  * </Markdown>
-  * ```
-  */
--export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
-+export declare function Markdown<const Plugins extends ReadonlyArray<MarkdownPluginEntry> = readonly []>({ ref, children, display, density, headingLevelStart, isStreaming, isRevealing, onLinkClick, sources, citationStyle, contentWidth, contentAlign, components, plugins, inlinePlugins, autolink, codeLanguages: codeLanguagesProp, xstyle, className, style, id: rootId, 'data-testid': testId, ...props }: MarkdownProps<Plugins>): React.ReactElement;
- export declare namespace Markdown {
-     var displayName: string;
- }
-diff --git a/src/hooks/useStreamingText.ts b/src/hooks/useStreamingText.ts
---- a/src/hooks/useStreamingText.ts
-+++ b/src/hooks/useStreamingText.ts
-@@ -144,6 +144,14 @@
-     const tick = speed === 'fast' ? base / 20 : base / 10;
-     return Math.max(4, Math.round(tick));
-   }, [token, speed]);
-+
-+  // Reduced motion skips the progressive reveal and shows the full text.
-+  // useMediaQuery follows a preference change mid-stream.
-+  const prefersReducedMotion = useMediaQuery(
-+    '(prefers-reduced-motion: reduce)',
-+  );
-+
-+  const instant = !isStreaming || speed === 'instant' || prefersReducedMotion;
- 
-   // Where the reveal restarts: at 0 on a clear (a new message), at the whole
-   // text on a stream's end. Adjusted during render, and only then, never per
-@@ -163,49 +171,31 @@
-   if (targetText.length === 0 && displayedLen !== 0) {
-     setRestart(previous => ({epoch: previous.epoch + 1, len: 0}));
-   }
--  const [wasStreaming, setWasStreaming] = useState(isStreaming);
--  if (isStreaming !== wasStreaming) {
--    setWasStreaming(isStreaming);
--    if (!isStreaming && targetText.length > 0) {
--      setRestart(previous => ({
--        epoch: previous.epoch + 1,
--        len: targetText.length,
--      }));
--    }
--  }
--
--  // Reduced motion skips the progressive reveal and shows the full text.
--  // useMediaQuery follows a preference change mid-stream.
--  const prefersReducedMotion = useMediaQuery(
--    '(prefers-reduced-motion: reduce)',
--  );
-+  // Commit visible catch-up as state so discarded renders cannot rewind it.
-+  if (instant && displayedLen !== targetText.length) {
-+    setRestart(previous => ({epoch: previous.epoch + 1, len: targetText.length}));
-+  }
- 
-   // Syncs the revealed text with an animation-frame clock while the text
-   // streams.
-   useEffect(() => {
--    if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
-+    if (instant) {
-       return;
-     }
- 
-+    let position = displayedLen;
-     function tick(now: number) {
-       const elapsed = now - lastTickRef.current;
-       if (elapsed >= tickMs) {
-         lastTickRef.current = now;
-         const target = targetRef.current;
--        setRevealed(previous => {
--          const currentLen =
--            previous.epoch === restart.epoch ? previous.len : restart.len;
--          if (currentLen >= target.length) {
--            return previous;
--          }
--          return {
--            epoch: restart.epoch,
--            len: Math.min(currentLen + charsPerTick, target.length),
--          };
--        });
-+        if (position < target.length) {
-+          position = Math.min(position + charsPerTick, target.length);
-+          setRevealed({epoch: restart.epoch, len: position});
-+        }
-       }
- 
--      rafRef.current = requestAnimationFrame(tick);
-+      rafRef.current = position < targetRef.current.length ? requestAnimationFrame(tick) : null;
-     }
- 
-     rafRef.current = requestAnimationFrame(tick);
-@@ -215,7 +205,7 @@
-         rafRef.current = null;
-       }
-     };
--  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, restart]);
-+  }, [instant, charsPerTick, tickMs, restart, targetText]);
- 
-   if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
-     return targetText;
 diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
+index 46c7eb2..9e59e8f 100644
 --- a/dist/hooks/useStreamingText.js
 +++ b/dist/hooks/useStreamingText.js
 @@ -1,37 +1,12 @@
@@ -513,7 +590,7 @@ diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
  function parseDuration(value) {
    const ms = value.match(/^([\d.]+)ms$/);
    if (ms) {
-@@ -43,155 +18,70 @@
+@@ -43,155 +18,70 @@ function parseDuration(value) {
    }
    return null;
  }
@@ -694,7 +771,7 @@ diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
      }
      rafRef.current = requestAnimationFrame(tick);
      return () => {
-@@ -200,9 +90,13 @@
+@@ -200,9 +90,13 @@ export function useStreamingText(targetText, isStreaming, options) {
          rafRef.current = null;
        }
      };
@@ -712,3 +789,368 @@ diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
 +  snapToGraphemeBoundary,
 +  useStreamingText
 +};
+diff --git a/src/Chat/ChatContext.tsx b/src/Chat/ChatContext.tsx
+index c457cc4..db9b040 100644
+--- a/src/Chat/ChatContext.tsx
++++ b/src/Chat/ChatContext.tsx
+@@ -108,6 +108,7 @@ export function useChatComposerContext(): ChatComposerContextValue | null {
+ // =============================================================================
+ 
+ export interface ChatLayoutContextValue {
++  scroll: Pick<import('./useChatStreamScroll').UseChatStreamScrollReturn, 'isFollowing' | 'scrollToBottom' | 'unlock'>;
+   /** Ref to the scrollable container element that wraps the message area. */
+   scrollContainerRef: React.RefObject<HTMLElement | null>;
+   /** Callback ref for the message list content element — layout observes it for size changes. */
+diff --git a/src/Chat/ChatLayout.tsx b/src/Chat/ChatLayout.tsx
+index b2c2b32..47b492c 100644
+--- a/src/Chat/ChatLayout.tsx
++++ b/src/Chat/ChatLayout.tsx
+@@ -385,7 +385,7 @@ export function ChatLayout({
+ 
+   const defaultScrollButton = (
+     <ChatLayoutScrollButton
+-      isVisible={scroll.isScrolledUp || newMsgs.hasNewMessages}
++      isVisible={!scroll.isLocked && (scroll.isScrolledUp || newMsgs.hasNewMessages)}
+       label={
+         newMsgs.hasNewMessages ? t('@astryx.chatLayout.newMessages') : undefined
+       }
+@@ -398,8 +398,8 @@ export function ChatLayout({
+ 
+   // --- Layout context ---
+   const layoutContext = useMemo(
+-    () => ({scrollContainerRef, contentRef: newMsgs.contentRef}),
+-    [scrollContainerRef, newMsgs.contentRef],
++    () => ({scrollContainerRef, contentRef: newMsgs.contentRef, scroll: {isFollowing: scroll.isFollowing, scrollToBottom: scroll.scrollToBottom, unlock: scroll.unlock}}),
++    [scrollContainerRef, newMsgs.contentRef, scroll.isFollowing, scroll.scrollToBottom, scroll.unlock],
+   );
+ 
+   // --- Derived styles ---
+diff --git a/src/Chat/useChatStreamScroll.ts b/src/Chat/useChatStreamScroll.ts
+index 342408d..145369e 100644
+--- a/src/Chat/useChatStreamScroll.ts
++++ b/src/Chat/useChatStreamScroll.ts
+@@ -109,6 +109,9 @@ export interface UseChatStreamScrollReturn {
+   /** Whether the user has scrolled up past buttonThreshold. */
+   isScrolledUp: boolean;
+ 
++  /** Current imperative ownership, including changes before the next React commit. */
++  isFollowing: () => boolean;
++
+   /** Whether auto-scroll is locked (following content). */
+   isLocked: boolean;
+ 
+@@ -205,6 +208,8 @@ export function useChatStreamScroll({
+     [scrollRef],
+   );
+ 
++  const isFollowing = useCallback(() => lockedRef.current, []);
++
+   // --- Spring animation ---
+ 
+   const animate = useCallback(() => {
+@@ -341,6 +346,7 @@ export function useChatStreamScroll({
+ 
+   const unlock = useCallback(() => {
+     setLocked(false);
++    cancelAnimationFrame(rafRef.current);
+     animatingRef.current = false;
+   }, [setLocked]);
+ 
+@@ -386,14 +392,58 @@ export function useChatStreamScroll({
+     // viewport's, which is what the reader sees.
+     const shownHeight = () => (isPage ? el.clientHeight : el.offsetHeight);
+ 
++    let pointerActive = false;
++    let upwardIntent = false;
++    let touchY: number | undefined;
++    const onPointerDown = (event: PointerEvent) => {
++      // Only a scrollbar drag owns subsequent scroll events; clicking a tool
++      // or selecting text must not turn a layout correction into reader intent.
++      pointerActive = event.target === el && event.offsetX >= el.clientWidth;
++      touchY = event.pointerType === 'touch' ? event.clientY : undefined;
++    };
++    const releaseFollowing = () => {
++      upwardIntent = true;
++      setLocked(false);
++      cancelAnimationFrame(rafRef.current);
++      animatingRef.current = false;
++    };
++    const nestedScroller = (target: EventTarget | null) => {
++      for (let node = target instanceof Element ? target : null; node && node !== el; node = node.parentElement) {
++        if (node.scrollTop > 0 && node.scrollHeight > node.clientHeight && /auto|scroll/.test(getComputedStyle(node).overflowY)) return true;
++      }
++      return false;
++    };
++    const onPointerMove = (event: PointerEvent) => {
++      if (touchY !== undefined && !nestedScroller(event.target)) {
++        if (event.clientY > touchY) releaseFollowing();
++        else if (event.clientY < touchY) upwardIntent = false;
++      }
++      if (touchY !== undefined) touchY = event.clientY;
++    };
++    const onPointerEnd = () => { pointerActive = false; touchY = undefined; };
++    const onWheel = (event: WheelEvent) => {
++      if (event.defaultPrevented || event.ctrlKey || nestedScroller(event.target)) return;
++      if (event.deltaY < 0) releaseFollowing();
++      else if (event.deltaY > 0) upwardIntent = false;
++    };
++    const onFocusIn = (event: FocusEvent) => {
++      const target = event.target;
++      if (target instanceof HTMLElement && target !== el && !target.closest('.astryx-chat-composer, .composer')) releaseFollowing();
++    };
++    const onKeyDown = (event: KeyboardEvent) => {
++      const target = event.target;
++      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
++          (target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select')))) return;
++      if (['ArrowDown', 'PageDown', 'End'].includes(event.key) || (event.key === ' ' && !event.shiftKey)) upwardIntent = false;
++      if (!nestedScroller(event.target) && (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey))) releaseFollowing();
++    };
+     const onScroll = () => {
+       const {scrollTop, scrollHeight} = el;
+       const dist = scrollHeight - scrollTop - shownHeight();
+ 
+-      // Button visibility
+-      setIsScrolledUp(dist > buttonThreshold);
+ 
+       const isScrollingUp = scrollTop < lastScrollTopRef.current;
++      if (pointerActive && scrollTop > lastScrollTopRef.current) upwardIntent = false;
+       lastScrollTopRef.current = scrollTop;
+ 
+       // With anchoring off, the browser only ever moves a following
+@@ -402,16 +452,15 @@ export function useChatStreamScroll({
+       // includes borders and a horizontal scrollbar.)
+       const landedAtBottom = scrollHeight - scrollTop - el.clientHeight < 1;
+ 
+-      if (isScrollingUp && !landedAtBottom && lockedRef.current) {
+-        setLocked(false);
+-        animatingRef.current = false;
+-      }
++      if (isScrollingUp && !landedAtBottom && lockedRef.current && pointerActive) releaseFollowing();
++      setIsScrolledUp(!lockedRef.current && dist > buttonThreshold);
+     };
+ 
+     const onScrollEnd = () => {
+       const dist = el.scrollHeight - el.scrollTop - shownHeight();
+-      if (dist <= lockThreshold) {
++      if (dist <= lockThreshold && !upwardIntent) {
+         setLocked(true);
++        setIsScrolledUp(false);
+       }
+     };
+ 
+@@ -434,9 +483,17 @@ export function useChatStreamScroll({
+       el.addEventListener('scrollend', onScrollEnd);
+     }
+ 
++    el.addEventListener('focusin', onFocusIn);
++    el.addEventListener('keydown', onKeyDown);
++    el.addEventListener('wheel', onWheel, {passive: true});
++    el.addEventListener('pointerdown', onPointerDown, {passive: true});
++    el.addEventListener('pointermove', onPointerMove, {passive: true});
++    doc.defaultView?.addEventListener('pointerup', onPointerEnd);
++    doc.defaultView?.addEventListener('pointercancel', onPointerEnd);
++
+     // Initial scroll to bottom — content already present at mount.
+-    requestAnimationFrame(() => {
+-      if (el.scrollHeight > el.clientHeight) {
++    const initialFrame = requestAnimationFrame(() => {
++      if (lockedRef.current && el.scrollHeight > el.clientHeight) {
+         el.scrollTop = el.scrollHeight - el.clientHeight;
+         lastScrollTopRef.current = el.scrollTop;
+         initialFillPendingRef.current = false;
+@@ -444,16 +501,27 @@ export function useChatStreamScroll({
+     });
+ 
+     return () => {
++      cancelAnimationFrame(initialFrame);
++      cancelAnimationFrame(rafRef.current);
++      animatingRef.current = false;
+       for (const stop of stopPageListeners) {
+         stop();
+       }
+       el.removeEventListener('scroll', onScroll);
+       el.removeEventListener('scrollend', onScrollEnd);
++      el.removeEventListener('focusin', onFocusIn);
++      el.removeEventListener('keydown', onKeyDown);
++      el.removeEventListener('wheel', onWheel);
++      el.removeEventListener('pointerdown', onPointerDown);
++      el.removeEventListener('pointermove', onPointerMove);
++      doc.defaultView?.removeEventListener('pointerup', onPointerEnd);
++      doc.defaultView?.removeEventListener('pointercancel', onPointerEnd);
+       markFollowing(el, false);
+     };
+   }, [scrollRef, enabled, lockThreshold, buttonThreshold, setLocked]);
+ 
+   return {
++    isFollowing,
+     isScrolledUp,
+     isLocked,
+     scrollToBottom,
+diff --git a/src/Markdown/Markdown.tsx b/src/Markdown/Markdown.tsx
+index 0e82ef2..4520423 100644
+--- a/src/Markdown/Markdown.tsx
++++ b/src/Markdown/Markdown.tsx
+@@ -277,6 +277,8 @@ export interface MarkdownProps<
+    */
+   headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
+   isStreaming?: boolean;
++    /** Controls reveal independently of incremental parsing. */
++    isRevealing?: boolean;
+   onLinkClick?: (
+     href: string,
+     event: React.MouseEvent<HTMLAnchorElement>,
+@@ -2242,6 +2244,7 @@ export function Markdown<
+   density = 'default',
+   headingLevelStart = 1,
+   isStreaming = false,
++  isRevealing = true,
+   onLinkClick,
+   sources,
+   citationStyle = 'label',
+@@ -2318,7 +2321,7 @@ export function Markdown<
+ 
+   // Smooth bursty streamed chunks into a steady character-by-character reveal.
+   // When not streaming, the hook returns children unchanged (no-op).
+-  const smoothedText = useStreamingText(children, isStreaming);
++  const smoothedText = useStreamingText(children, isStreaming, isRevealing, {speed: isRevealing ? 'natural' : 'instant'});
+ 
+   // A discarded render can change this cache, as it can change the option
+   // flags below. The parser reuses settled blocks only while the input starts
+@@ -2375,6 +2378,7 @@ export function Markdown<
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2427,6 +2431,7 @@ export function Markdown<
+     smoothedText,
+     children,
+     isStreaming,
++    isRevealing,
+     hasMathRenderer,
+     mathParseOptions,
+     legacyParseOptions,
+@@ -2462,6 +2467,7 @@ export function Markdown<
+     preparedPlugins,
+     inlineTransformSource,
+     isStreaming,
++    isRevealing,
+   ]);
+ 
+   // Track recent boundaries for stacked fade-in animation.
+@@ -2516,7 +2522,7 @@ export function Markdown<
+     const blockCursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const blockCitationCtx: CitationContext | null = sources
+@@ -2550,6 +2556,7 @@ export function Markdown<
+     blocks,
+     boundaries,
+     isStreaming,
++    isRevealing,
+     sources,
+     citationStyle,
+     density,
+@@ -2571,7 +2578,7 @@ export function Markdown<
+     const cursor: StreamingCursor = {
+       offset: 0,
+       boundaries,
+-      active: isStreaming,
++      active: isStreaming && isRevealing,
+     };
+     // Numbers are assigned in encounter order during rendering.
+     const citationCtx: CitationContext | null = sources
+diff --git a/src/hooks/useStreamingText.ts b/src/hooks/useStreamingText.ts
+index acc340c..f47f3cc 100644
+--- a/src/hooks/useStreamingText.ts
++++ b/src/hooks/useStreamingText.ts
+@@ -145,6 +145,14 @@ export function useStreamingText(
+     return Math.max(4, Math.round(tick));
+   }, [token, speed]);
+ 
++  // Reduced motion skips the progressive reveal and shows the full text.
++  // useMediaQuery follows a preference change mid-stream.
++  const prefersReducedMotion = useMediaQuery(
++    '(prefers-reduced-motion: reduce)',
++  );
++
++  const instant = !isStreaming || speed === 'instant' || prefersReducedMotion;
++
+   // Where the reveal restarts: at 0 on a clear (a new message), at the whole
+   // text on a stream's end. Adjusted during render, and only then, never per
+   // chunk. State, not refs: a render React discards takes its adjustment with
+@@ -163,49 +171,31 @@ export function useStreamingText(
+   if (targetText.length === 0 && displayedLen !== 0) {
+     setRestart(previous => ({epoch: previous.epoch + 1, len: 0}));
+   }
+-  const [wasStreaming, setWasStreaming] = useState(isStreaming);
+-  if (isStreaming !== wasStreaming) {
+-    setWasStreaming(isStreaming);
+-    if (!isStreaming && targetText.length > 0) {
+-      setRestart(previous => ({
+-        epoch: previous.epoch + 1,
+-        len: targetText.length,
+-      }));
+-    }
++  // Commit visible catch-up as state so discarded renders cannot rewind it.
++  if (instant && displayedLen !== targetText.length) {
++    setRestart(previous => ({epoch: previous.epoch + 1, len: targetText.length}));
+   }
+ 
+-  // Reduced motion skips the progressive reveal and shows the full text.
+-  // useMediaQuery follows a preference change mid-stream.
+-  const prefersReducedMotion = useMediaQuery(
+-    '(prefers-reduced-motion: reduce)',
+-  );
+-
+   // Syncs the revealed text with an animation-frame clock while the text
+   // streams.
+   useEffect(() => {
+-    if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
++    if (instant) {
+       return;
+     }
+ 
++    let position = displayedLen;
+     function tick(now: number) {
+       const elapsed = now - lastTickRef.current;
+       if (elapsed >= tickMs) {
+         lastTickRef.current = now;
+         const target = targetRef.current;
+-        setRevealed(previous => {
+-          const currentLen =
+-            previous.epoch === restart.epoch ? previous.len : restart.len;
+-          if (currentLen >= target.length) {
+-            return previous;
+-          }
+-          return {
+-            epoch: restart.epoch,
+-            len: Math.min(currentLen + charsPerTick, target.length),
+-          };
+-        });
++        if (position < target.length) {
++          position = Math.min(position + charsPerTick, target.length);
++          setRevealed({epoch: restart.epoch, len: position});
++        }
+       }
+ 
+-      rafRef.current = requestAnimationFrame(tick);
++      rafRef.current = position < targetRef.current.length ? requestAnimationFrame(tick) : null;
+     }
+ 
+     rafRef.current = requestAnimationFrame(tick);
+@@ -215,7 +205,7 @@ export function useStreamingText(
+         rafRef.current = null;
+       }
+     };
+-  }, [isStreaming, charsPerTick, tickMs, speed, prefersReducedMotion, restart]);
++  }, [instant, charsPerTick, tickMs, restart, targetText]);
+ 
+   if (!isStreaming || speed === 'instant' || prefersReducedMotion) {
+     return targetText;

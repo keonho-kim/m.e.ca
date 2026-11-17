@@ -15,6 +15,7 @@ import (
 const PageBytes = 16 * 1024 * 1024
 
 type Message struct {
+	Presentation string                    `json:"presentation,omitempty"`
 	Images       []media.Image             `json:"images,omitempty"`
 	Session      string                    `json:"-"`
 	Prefix       *string                   `json:"-"`

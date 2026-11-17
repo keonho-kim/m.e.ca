@@ -83,6 +83,11 @@ test('focused tool rows stay mounted while distant history is visible', async ({
   });
   await connectBrowser(page, await browserFixture());
   await create(page);
+  await expect
+    .poll(() =>
+      page.locator('.workspace-body').evaluate((node) => node.scrollHeight > node.clientHeight)
+    )
+    .toBe(true);
   const trigger = page.locator('.tool-disclosure > button').first();
   const name = await trigger.evaluate((node) => {
     node.focus();

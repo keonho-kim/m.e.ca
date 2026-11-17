@@ -11,22 +11,21 @@ import { ChatMessageList } from '@astryxdesign/core/Chat';
 import { VStack } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { type Range, useVirtualizer } from '@tanstack/react-virtual';
-import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useServerSession } from '@/entities/server-session';
 import { stateOptions } from '@/pages/workspace/api/queries';
-import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
 import { reached } from '@/pages/workspace/model/history-handoff';
 import { type HistoryJump, historyRows } from '@/pages/workspace/model/history-rows';
 import { useConversationInspection } from '@/pages/workspace/model/inspection';
 import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation';
-import { type Target, targetKey, useWorkspaceStore } from '@/pages/workspace/model/store';
-import { activeTask } from '@/pages/workspace/model/task-state';
+import { presentationGroup } from '@/pages/workspace/model/presentation-order';
+import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import { activeTask, isActiveTask } from '@/pages/workspace/model/task-state';
 import { CompletionRow } from '@/pages/workspace/ui/chat/completion-row';
 import { EmptyChat } from '@/pages/workspace/ui/chat/empty-chat';
 import { HistoryWindow } from '@/pages/workspace/ui/chat/history-window';
 import { chatWidth } from '@/pages/workspace/ui/chat/layout';
-import { focusedRange } from '@/pages/workspace/ui/focused-range';
+import { useHistoryViewport } from '@/pages/workspace/ui/chat/use-history-viewport';
 import { ConversationInspector } from '@/pages/workspace/ui/inspection/conversation-inspector';
 import type { HistoryItemJson } from '@/shared/api';
 import { call, queries } from '@/shared/api';
@@ -41,7 +40,6 @@ const HistorySearch = lazy(() =>
   }))
 );
 
-const positions = new Map<string, number>();
 export function Chat({
   target,
   scroller,
@@ -51,6 +49,26 @@ export function Chat({
   scroller: HTMLDivElement | null;
   onEmpty: (empty: boolean) => void;
 }) {
+  const liveGroups = useWorkspaceStore((state) =>
+    [
+      ...new Set(
+        [
+          ...Object.values(state.tasks)
+            .filter(
+              (task) =>
+                task.workspace === target.workspace &&
+                task.session === target.session &&
+                isActiveTask(task.status)
+            )
+            .map((task) => task.presentationGroup ?? ''),
+          ...Object.values(state.drafts).map((draft) => presentationGroup(draft.presentation)),
+          ...state.events.map((event) => presentationGroup(event.presentation)),
+        ].filter(Boolean)
+      ),
+    ]
+      .sort()
+      .join(',')
+  );
   const blocked = useChatPresentationBlocked();
   const connected = useServerSession((state) => state.connected);
   const t = useLocale(),
@@ -65,7 +83,6 @@ export function Chat({
   const followedTask = useRef<string | undefined>(undefined);
   const state = useQuery(stateOptions(target));
   const [before, setBefore] = useState('0');
-  const [focused, setFocused] = useState(-1);
   const [searchOpen, setSearchOpen] = useState(false),
     [match, setMatch] = useState<HistoryJump>();
   const searchRequested = useRef(false);
@@ -93,34 +110,21 @@ export function Chat({
       for (const item of pages[index]?.items ?? []) result.push(item);
     return result;
   }, [history.data]);
-  const rows = useMemo(() => historyRows(items), [items]);
+  const split = useMemo(() => {
+    if (before !== '0' || !liveGroups) return { prefix: items, tail: [] };
+    const groups = new Set(liveGroups.split(','));
+    const first = items.findIndex((item) =>
+      groups.has(presentationGroup(item.presentation ?? item.event?.presentation))
+    );
+    return first < 0
+      ? { prefix: items, tail: [] }
+      : { prefix: items.slice(0, first), tail: items.slice(first) };
+  }, [items, before, liveGroups]);
+  const rows = useMemo(() => historyRows(split.prefix), [split.prefix]);
   const last = rows.at(-1);
   const completion = before === '0' && last && 'completion' in last ? last : undefined;
   const visibleRows = completion ? rows.slice(0, -1) : rows;
-  const getItemKey = useCallback(
-    (index: number) => {
-      const row = visibleRows[index];
-      return (
-        (row &&
-          ('item' in row
-            ? (row.item.event &&
-                (toolBatchIdentity(row.item.event) || toolIdentity(row.item.event))) ||
-              row.item.sequence
-            : row.sequence)) ??
-        index
-      );
-    },
-    [visibleRows]
-  );
-  const rangeExtractor = useCallback((range: Range) => focusedRange(range, focused), [focused]);
-  const virtual = useVirtualizer({
-    count: visibleRows.length,
-    getScrollElement: () => scroller,
-    estimateSize: () => 140,
-    overscan: 5,
-    getItemKey,
-    rangeExtractor,
-  });
+  const { virtual, scroll, setFocused } = useHistoryViewport(visibleRows, scroller, target);
   useLayoutEffect(() => {
     if (!history.data || before !== '0') return;
     const seen = history.data.pages[0]?.clientRevision;
@@ -129,18 +133,6 @@ export function Chat({
       .getState()
       .acknowledgeHistory(target, seen, { through: history.data.pages[0]?.through, items });
   }, [history.data, before, target, items]);
-  useLayoutEffect(() => {
-    const element = scroller;
-    if (!element) return;
-    const saved = positions.get(targetKey(target));
-    if (saved !== undefined) {
-      element.scrollTop = saved;
-    }
-    return () => {
-      positions.set(targetKey(target), element.scrollTop);
-      if (positions.size > 12) positions.delete(positions.keys().next().value!);
-    };
-  }, [target, scroller]);
   useLayoutEffect(() => {
     if (items.length > 0 && previousSize.current !== null && scroller) {
       scroller.scrollTop += virtual.getTotalSize() - previousSize.current;
@@ -151,22 +143,33 @@ export function Chat({
   useLayoutEffect(() => {
     if (searchRequested.current && history.isSuccess && !history.isFetching) {
       searchRequested.current = false;
-      virtual.scrollToIndex(Math.max(0, visibleRows.length - 1), { align: 'start' });
+      scroll?.unlock();
+      const sequence = match?.source.historySequence;
+      const selected = visibleRows.findIndex(
+        (row) =>
+          'item' in row &&
+          (row.item.sequence === sequence ||
+            row.thinking?.sequence === sequence ||
+            row.tools?.some((tool) => tool.sequence === sequence))
+      );
+      virtual.scrollToIndex(selected < 0 ? Math.max(0, visibleRows.length - 1) : selected, {
+        align: 'start',
+      });
     }
-  }, [history.isSuccess, history.isFetching, virtual, visibleRows.length]);
+  }, [history.isSuccess, history.isFetching, virtual, visibleRows, match, scroll]);
   useLayoutEffect(() => onEmpty(empty), [empty, onEmpty]);
   useLayoutEffect(() => {
     if (!taskId || !scroller || before !== '0' || followedTask.current === taskId) return;
     followedTask.current = taskId;
     // A new turn returns to the newest content even after the prior turn was reviewed.
-    scroller.scrollTop = scroller.scrollHeight;
-  }, [taskId, scroller, before]);
+    scroll?.scrollToBottom({ behavior: 'instant' });
+  }, [taskId, scroller, before, scroll]);
   useLayoutEffect(() => {
     if (latestRequested.current && before === '0' && !history.isFetching && scroller) {
-      scroller.scrollTop = scroller.scrollHeight;
+      scroll?.scrollToBottom({ behavior: 'instant' });
       latestRequested.current = false;
     }
-  }, [before, history.isFetching, scroller]);
+  }, [before, history.isFetching, scroller, scroll]);
   return (
     <Center width="100%" className="meca-pane-enter min-w-0">
       <VStack width={chatWidth} paddingBlock={4} gap={5} className="chat-content min-w-0">
@@ -176,6 +179,8 @@ export function Chat({
             variant="ghost"
             size="sm"
             className="self-end"
+            onFocus={() => scroll?.unlock()}
+            onPointerDown={() => scroll?.unlock()}
             onClick={() => setSearchOpen(true)}
           />
         )}
@@ -253,7 +258,7 @@ export function Chat({
             {/* Astryx must observe live content growth as part of the message list. */}
             {before === '0' && (taskId || hasOutput || hasActivity) && (
               <Suspense fallback={<Skeleton height={80} />}>
-                <LiveOutput target={target} history={items} inspect={inspector.actions} />
+                <LiveOutput target={target} history={split.tail} inspect={inspector.actions} />
               </Suspense>
             )}
             {completion &&
@@ -262,16 +267,12 @@ export function Chat({
               !hasActivity &&
               completionThrough !== null &&
               reached(history.data?.pages[0]?.through, completionThrough) && (
-                <CompletionRow
-                  completion={completion.completion}
-                  sequence={completion.sequence}
-                  onDetails={inspector.actions.history}
-                />
+                <CompletionRow completion={completion.completion} />
               )}
           </ChatMessageList>
         )}
         {state.data?.task?.error && <Banner status="error" title={state.data.task.error} />}
-        <ConversationInspector value={inspector.value} target={target} close={inspector.close} />
+        <ConversationInspector value={inspector.value} close={inspector.close} />
       </VStack>
     </Center>
   );

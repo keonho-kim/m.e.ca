@@ -2,7 +2,9 @@
 // Pattern: Pure chronological history projection.
 // Usage: Chat virtualizes these groups rather than switching presentation at tool boundaries.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/history-row.tsx.
+
 import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
+import { orderPresentation } from '@/pages/workspace/model/presentation-order';
 import type {
   DetailRequestJson,
   HistoryItemJson,
@@ -14,6 +16,7 @@ export type HistoryMessageItem = Omit<HistoryItemJson, 'completion' | 'message'>
   TranscriptMessageJson;
 export function historyMessage(item: HistoryItemJson): HistoryMessageItem {
   return {
+    presentation: item.presentation,
     sequence: item.sequence,
     truncated: item.truncated,
     event: item.event,
@@ -27,7 +30,10 @@ export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
   const result: HistoryRowValue[] = [];
   const tools = new Map<string, { row: number; member?: number }>();
   const batches = new Map<string, number>();
-  for (const original of items) {
+  for (const original of orderPresentation(
+    items,
+    (item) => item.presentation ?? item.event?.presentation
+  )) {
     const { completion } = original;
     const item = historyMessage(original);
     if (completion) {

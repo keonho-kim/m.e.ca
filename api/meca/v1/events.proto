@@ -102,6 +102,8 @@ message RunCompletion {
   Statistics statistics = 2;
 }
 message Event {
+  // Stable request-scoped display identity, independent of delivery and persistence.
+  string presentation = 38;
   reserved 8, 9, 17, 25;
   reserved "text", "thinking", "team", "skill";
   oneof content {

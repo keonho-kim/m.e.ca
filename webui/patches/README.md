@@ -20,7 +20,7 @@ Contracts: `e2e/performance.spec.ts` and `e2e/presentation-budget.spec.ts`.
 
 ## Chat scroll ownership
 
-The Astryx patch keeps the jump button hidden while automatic following is locked. Stream growth and virtual-history height replacement do not imply reader intent; upward wheel, keyboard and pointer scrolls can release the lock. Returning to the bottom clears the affordance, and unmount cancels pending animation frames and input listeners.
+The Astryx patch keeps the jump button hidden while automatic following is locked. Stream growth, virtual-history measurement and programmatic position changes do not imply reader intent. Upward wheel/keyboard input, touch movement and scrollbar dragging can release the lock; nested scrolling keeps its own input. Focusing transcript controls pauses following. An outstanding upward-reading intent prevents a late scrollend from re-locking before the user scrolls back down. The public layout context exposes the imperative follow state and navigation actions so the virtualizer disables competing corrections while following. Returning to the bottom clears the affordance, and unmount cancels pending animation frames and input listeners.
 
 Contract: `e2e/chat-stream-order.spec.ts`, including normal motion and history handoff in Chromium, Firefox and WebKit.
 

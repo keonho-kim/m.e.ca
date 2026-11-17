@@ -41,7 +41,7 @@ func snapshot(value server.Snapshot) *v1.Snapshot {
 		s.Approvals = append(s.Approvals, event(server.Event{Task: p.Task, ApprovalID: p.ID, ApprovalExpiresAt: p.ExpiresAt, Record: p.Value, Truncated: p.Truncated}).Approval)
 	}
 	for _, d := range value.Drafts {
-		s.Drafts = append(s.Drafts, &v1.Draft{StartSequence: d.StartSequence, HistorySequence: d.HistorySequence, TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
+		s.Drafts = append(s.Drafts, &v1.Draft{Presentation: d.Presentation, StartSequence: d.StartSequence, HistorySequence: d.HistorySequence, TaskId: d.Task, Agent: d.Agent, Generation: d.Generation, Text: d.Text, Thinking: d.Thinking, Truncated: d.Truncated, TextBytes: d.TextBytes, ThinkingBytes: d.ThinkingBytes, Committed: d.Committed})
 	}
 	for _, e := range value.Activity {
 		s.Activity = append(s.Activity, event(e))
@@ -100,6 +100,7 @@ func event(value server.Event) *v1.Event {
 		g := e.Generation
 		result.Measurement = &v1.GenerationMeasurement{Id: g.ID, Role: string(g.Role), Attempt: int32(g.Attempt), ElapsedMillis: g.ElapsedMillis, MeasuredMillis: g.MeasuredMillis}
 	}
+	result.Presentation = e.Presentation
 	result.HistorySequence = e.HistorySequence
 	result.HistoryThrough = value.HistoryThrough
 	eventContent(result, value)

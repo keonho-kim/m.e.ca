@@ -1081,7 +1081,8 @@ func (x *Model) GetReasoningOff() bool {
 }
 
 type Draft struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Presentation string                 `protobuf:"bytes,12,opt,name=presentation,proto3" json:"presentation,omitempty"`
 	// Request-local publication sequence at generation start; stable across reconnects.
 	StartSequence   uint64 `protobuf:"varint,11,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
 	HistorySequence int64  `protobuf:"varint,10,opt,name=history_sequence,json=historySequence,proto3" json:"history_sequence,omitempty"`
@@ -1127,6 +1128,13 @@ func (x *Draft) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Draft.ProtoReflect.Descriptor instead.
 func (*Draft) Descriptor() ([]byte, []int) {
 	return file_meca_v1_state_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Draft) GetPresentation() string {
+	if x != nil {
+		return x.Presentation
+	}
+	return ""
 }
 
 func (x *Draft) GetStartSequence() uint64 {
@@ -1471,9 +1479,10 @@ func (x *Snapshot) GetActivityTruncated() bool {
 }
 
 type HistoryItem struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Sequence  int64                  `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	Truncated bool                   `protobuf:"varint,7,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Presentation string                 `protobuf:"bytes,12,opt,name=presentation,proto3" json:"presentation,omitempty"`
+	Sequence     int64                  `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	Truncated    bool                   `protobuf:"varint,7,opt,name=truncated,proto3" json:"truncated,omitempty"`
 	// Types that are valid to be assigned to Entry:
 	//
 	//	*HistoryItem_Message
@@ -1512,6 +1521,13 @@ func (x *HistoryItem) ProtoReflect() protoreflect.Message {
 // Deprecated: Use HistoryItem.ProtoReflect.Descriptor instead.
 func (*HistoryItem) Descriptor() ([]byte, []int) {
 	return file_meca_v1_state_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *HistoryItem) GetPresentation() string {
+	if x != nil {
+		return x.Presentation
+	}
+	return ""
 }
 
 func (x *HistoryItem) GetSequence() int64 {
@@ -1913,8 +1929,9 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"\x10reasoning_levels\x18\f \x03(\tR\x0freasoningLevels\x12#\n" +
 	"\rreasoning_off\x18\r \x01(\bR\freasoningOffB\v\n" +
 	"\t_thinkingB\x13\n" +
-	"\x11_reasoning_effort\"\xda\x02\n" +
-	"\x05Draft\x12%\n" +
+	"\x11_reasoning_effort\"\xfe\x02\n" +
+	"\x05Draft\x12\"\n" +
+	"\fpresentation\x18\f \x01(\tR\fpresentation\x12%\n" +
 	"\x0estart_sequence\x18\v \x01(\x04R\rstartSequence\x12)\n" +
 	"\x10history_sequence\x18\n" +
 	" \x01(\x03R\x0fhistorySequence\x12\x14\n" +
@@ -1964,8 +1981,9 @@ const file_meca_v1_state_proto_rawDesc = "" +
 	"totalTasks\x12\x1a\n" +
 	"\blanguage\x18\x0f \x01(\tR\blanguage\x12*\n" +
 	"\bactivity\x18\x10 \x03(\v2\x0e.meca.v1.EventR\bactivity\x12-\n" +
-	"\x12activity_truncated\x18\x11 \x01(\bR\x11activityTruncated\"\xbd\x02\n" +
-	"\vHistoryItem\x12\x1a\n" +
+	"\x12activity_truncated\x18\x11 \x01(\bR\x11activityTruncated\"\xe1\x02\n" +
+	"\vHistoryItem\x12\"\n" +
+	"\fpresentation\x18\f \x01(\tR\fpresentation\x12\x1a\n" +
 	"\bsequence\x18\x01 \x01(\x03R\bsequence\x12\x1c\n" +
 	"\ttruncated\x18\a \x01(\bR\ttruncated\x126\n" +
 	"\amessage\x18\v \x01(\v2\x1a.meca.v1.TranscriptMessageH\x00R\amessage\x12&\n" +

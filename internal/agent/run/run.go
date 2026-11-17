@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 
 	"time"
 
@@ -20,6 +21,8 @@ import (
 )
 
 type execution struct {
+	order               *presentation.Sequence
+	presentation        string
 	contextMemory       *processmemory.ContextLease
 	replyMemory         *processmemory.ReplyLease
 	projection          contextbuild.Projection
@@ -49,6 +52,7 @@ type execution struct {
 }
 
 func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(runrecord.Event) error) (result Result, err error) {
+	ctx, _ = presentation.Scope(ctx)
 	started := time.Now()
 	ctx = diagnostics.WithRedactor(ctx, r.Redact)
 	if approve == nil || emit == nil {

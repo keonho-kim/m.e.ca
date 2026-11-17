@@ -40,6 +40,7 @@ func ProjectEvent(value Event) Event {
 	}
 	p := record.Event{Kind: clipped(e.Kind, 128), Agent: clipped(e.Agent, 128), RunID: clipped(e.RunID, 128), Final: e.Final, Text: clipped(e.Text, maxTextBytes), Thinking: clipped(e.Thinking, maxTextBytes), CallID: clipped(e.CallID, 128), ApprovalSource: clipped(e.ApprovalSource, 128)}
 	p.Kind, p.OccurredAt, p.ErrorCode = clipped(e.PublicKind(), 128), clipped(e.OccurredAt, 35), clipped(e.ErrorCode, 128)
+	p.Presentation = clipped(e.Presentation, 64)
 	p.HistorySequence = e.HistorySequence
 	p.MeasuredDuration = e.MeasuredDuration
 	if e.Skill != nil {
@@ -118,7 +119,7 @@ func eventBytes(value Event) int {
 	if value.Outcome != nil {
 		n += len(value.Outcome.Status) + len(value.Outcome.Reason)
 	}
-	n += len(e.Kind) + len(e.Agent) + len(e.RunID) + len(e.Text) + len(e.Thinking) + len(e.CallID) + len(e.ApprovalSource)
+	n += len(e.Presentation) + len(e.Kind) + len(e.Agent) + len(e.RunID) + len(e.Text) + len(e.Thinking) + len(e.CallID) + len(e.ApprovalSource)
 	n += len(e.OccurredAt) + len(e.ErrorCode)
 	if e.Skill != nil {
 		n += len(e.Skill.ID) + len(e.Skill.Name) + len(e.Skill.Source) + len(e.Skill.Revision)

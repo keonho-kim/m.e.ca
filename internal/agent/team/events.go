@@ -13,6 +13,9 @@ import (
 
 func (p *Peer) Emit(event runrecord.Event) error {
 	r := p.room
+	if event.Kind == "generation_started" {
+		p.presentation = event.Presentation
+	}
 	if event.Kind == "response" || event.Kind == "thinking" {
 		return nil
 	}
@@ -26,7 +29,7 @@ func (p *Peer) Emit(event runrecord.Event) error {
 		r.mu.Lock()
 		basedOn := p.DecisionCursor
 		r.mu.Unlock()
-		_, err := r.publish(channel.Message{From: p.ID, Text: event.Text, FromStream: true, Note: &runrecord.TeamNote{BasedOn: basedOn}})
+		_, err := r.publish(channel.Message{Presentation: event.Presentation, From: p.ID, Text: event.Text, FromStream: true, Note: &runrecord.TeamNote{BasedOn: basedOn}})
 		return err
 	}
 	if event.Statistics != nil {

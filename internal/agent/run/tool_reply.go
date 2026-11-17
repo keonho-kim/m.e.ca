@@ -16,11 +16,12 @@ import (
 )
 
 func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Response, detail string) error {
-	calls := reply.Calls
+	calls := append([]toolapi.Call(nil), reply.Calls...)
 	if len(calls) == 0 || len(calls) > toolapi.MaxCalls {
 		return faults.Errorf(diagcatalog.RunInvalidNativeCallCount)
 	}
-	for _, call := range calls {
+	for i, call := range calls {
+		calls[i] = s.identifyCall(call)
 		if err := call.Check(); err != nil {
 			return err
 		}

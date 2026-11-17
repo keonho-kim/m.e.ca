@@ -13,9 +13,9 @@ import (
 // DisplayFields owns presentation policy; adapters retain ownership of payload I/O.
 func DisplayFields(kind string) map[string]bool {
 	if kind == "message" {
-		return map[string]bool{"id": true, "role": true, "content": true, "incomplete": true}
+		return map[string]bool{"presentation": true, "id": true, "role": true, "content": true, "incomplete": true}
 	}
-	return map[string]bool{"agent": true, "final": true, "reference": true, "kind": true, "text": true, "team": true, "thinking": true, "call_id": true, "output": true, "operation": true, "change_preview": true, "checkpoint": true, "statistics": true, "skill": true, "occurred_at": true, "error_code": true, "run_id": true}
+	return map[string]bool{"presentation": true, "agent": true, "final": true, "reference": true, "kind": true, "text": true, "team": true, "thinking": true, "call_id": true, "output": true, "operation": true, "change_preview": true, "checkpoint": true, "statistics": true, "skill": true, "occurred_at": true, "error_code": true, "run_id": true}
 }
 
 // Display restores visible values from hydrated body and a small original envelope.

@@ -973,6 +973,8 @@ func (x *RunCompletion) GetStatistics() *Statistics {
 
 type Event struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable request-scoped display identity, independent of delivery and persistence.
+	Presentation string `protobuf:"bytes,38,opt,name=presentation,proto3" json:"presentation,omitempty"`
 	// Types that are valid to be assigned to Content:
 	//
 	//	*Event_Message
@@ -1044,6 +1046,13 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
 	return file_meca_v1_events_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Event) GetPresentation() string {
+	if x != nil {
+		return x.Presentation
+	}
+	return ""
 }
 
 func (x *Event) GetContent() isEvent_Content {
@@ -1419,9 +1428,10 @@ const file_meca_v1_events_proto_rawDesc = "" +
 	"\vINTERRUPTED\x10\x03\x12\n" +
 	"\n" +
 	"\x06DENIED\x10\x04\x12\r\n" +
-	"\tEXHAUSTED\x10\x05\"\x8f\n" +
+	"\tEXHAUSTED\x10\x05\"\xb3\n" +
 	"\n" +
-	"\x05Event\x126\n" +
+	"\x05Event\x12\"\n" +
+	"\fpresentation\x18& \x01(\tR\fpresentation\x126\n" +
 	"\amessage\x18\x1f \x01(\v2\x1a.meca.v1.TranscriptMessageH\x00R\amessage\x12/\n" +
 	"\x04work\x18  \x01(\v2\x19.meca.v1.TeamContributionH\x00R\x04work\x12)\n" +
 	"\x06notice\x18! \x01(\v2\x0f.meca.v1.NoticeH\x00R\x06notice\x12#\n" +

@@ -77,5 +77,5 @@ func (p *Peer) answerMessage(text string, final bool) channel.Message {
 	p.room.mu.Lock()
 	basedOn := p.DecisionCursor
 	p.room.mu.Unlock()
-	return channel.Message{From: p.ID, Text: text, FromStream: true, Final: final, Note: &runrecord.TeamNote{BasedOn: basedOn}}
+	return channel.Message{Presentation: p.presentation, From: p.ID, Text: text, FromStream: true, Final: final, Note: &runrecord.TeamNote{BasedOn: basedOn}}
 }

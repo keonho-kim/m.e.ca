@@ -44,3 +44,11 @@ test('streamed progress stays with its draft and direct team speech retains a me
   expect(visible.map((event) => event.kind)).toEqual(['team_message', 'team_discussion']);
   expect(visible.every((event) => event.message?.text === 'answer' && !event.notice)).toBe(true);
 });
+
+test('original tool references deduplicate rejected calls without an execution identity', () => {
+  const rejected = {
+    kind: 'tool_failed',
+    tool: { name: 'unknown', reference: { sessionId: 's', sequence: '3' } },
+  };
+  expect(liveActivity([rejected], [{ sequence: '5', event: rejected }])).toEqual([]);
+});

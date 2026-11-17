@@ -1,4 +1,4 @@
-// Purpose: Render generation-scoped live responses and bounded task activity independently of history layout.
+// Purpose: Merge saved and streaming rows for active requests without changing their display positions.
 // Pattern: Fine-grained live presentation subscriber.
 // Usage: Chat mounts this for its selected conversation.
 // Related: webui/src/pages/workspace/model/stream-projection.ts, webui/src/pages/workspace/model/inspection.ts, webui/src/pages/workspace/model/live-timeline.ts.
@@ -6,14 +6,12 @@
 import { VStack } from '@astryxdesign/core/Layout';
 import { Selector } from '@astryxdesign/core/Selector';
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { historyMessage } from '@/pages/workspace/model/history-rows';
+import { historyMessage, historyRows } from '@/pages/workspace/model/history-rows';
 import type { InspectionActions } from '@/pages/workspace/model/inspection';
 import { liveTimeline } from '@/pages/workspace/model/live-timeline';
 import { useChatPresentationBlocked } from '@/pages/workspace/model/presentation';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
 import { HistoryRow } from '@/pages/workspace/ui/chat/history-row';
-import { LiveSource } from '@/pages/workspace/ui/chat/live-source';
-import { ToolCalls } from '@/pages/workspace/ui/chat/tool-call';
 import type { HistoryItemJson } from '@/shared/api';
 import { useLocale } from '@/shared/i18n';
 export function LiveOutput({
@@ -37,6 +35,7 @@ export function LiveOutput({
       ? Object.values(drafts)
       : [];
   const agents = [...new Set(sources.map((value) => value.agent).filter(Boolean))];
+  const savedRows = useMemo(() => historyRows(history), [history]);
   const timeline = useMemo(
     () =>
       liveTimeline(
@@ -45,9 +44,10 @@ export function LiveOutput({
           (event) => event.workspaceId === target.workspace && event.sessionId === target.session
         ),
         history,
-        Object.keys(visible.tasks)
+        Object.keys(visible.tasks),
+        savedRows
       ),
-    [sources, events, history, target, visible.tasks]
+    [sources, events, history, target, visible.tasks, savedRows]
   );
   if (!sources.length && !events.length) return null;
   return (
@@ -68,26 +68,54 @@ export function LiveOutput({
           const d = entry.draft;
           if (agent && d.agent !== agent) return null;
           return (
-            <LiveSource
+            <HistoryRow
               key={entry.key}
-              draft={d}
+              target={target}
+              inspect={inspect}
               streaming={!blocked && streaming && d.doneRevision === undefined}
+              item={{
+                presentation: d.presentation,
+                role: 'assistant',
+                text: d.text,
+                event: { kind: 'assistant_delta', agent: d.agent },
+              }}
+              thinking={
+                d.thinking
+                  ? {
+                      event: {
+                        kind: 'thinking',
+                        agent: d.agent,
+                        message: { role: 'assistant', thinking: d.thinking },
+                      },
+                    }
+                  : undefined
+              }
             />
           );
         }
+        if (entry.kind === 'history') {
+          const row = entry.row;
+          if ('completion' in row) return null; // Completion is released by Chat after durable handoff.
+          if (agent && row.item.event?.agent !== agent) return null;
+          return <HistoryRow key={entry.key} target={target} inspect={inspect} {...row} />;
+        }
         const event = entry.events[0];
         if (!event || (agent && event.agent !== agent)) return null;
-        return event.tool ? (
-          <ToolCalls key={entry.key} target={target} events={entry.events} />
-        ) : (
+        const values = entry.events.map((event) =>
+          historyMessage({
+            sequence: event.historySequence,
+            presentation: event.presentation,
+            event,
+            truncated: event.truncated,
+          })
+        );
+        return (
           <HistoryRow
             key={entry.key}
             target={target}
-            item={historyMessage({
-              sequence: event.historySequence,
-              event,
-              truncated: event.truncated,
-            })}
+            item={values[0]!}
+            tools={event.tool ? values : undefined}
+            saved={false}
             inspect={inspect}
           />
         );

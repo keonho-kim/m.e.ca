@@ -10,6 +10,7 @@ export type Target = { workspace: string; session: string };
 export type Input = { text: string; paths: string[]; files: File[]; revision: number };
 export type Queued = Input & { id: string };
 export type Draft = {
+  presentation?: string;
   startSequence?: string;
   task: string;
   agent: string;
@@ -21,6 +22,7 @@ export type Draft = {
   doneThrough?: string;
 };
 export type TaskView = {
+  presentationGroup?: string;
   historyThrough?: string;
   id: string;
   workspace: string;

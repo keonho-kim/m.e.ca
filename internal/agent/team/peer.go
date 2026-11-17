@@ -7,6 +7,7 @@ package team
 import "time"
 
 type Peer struct {
+	presentation         string
 	ID                   string
 	Cursor               int64
 	UserSequence         int64

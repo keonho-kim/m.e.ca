@@ -90,9 +90,10 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 			var visible history.Record
 			visible.Sequence, visible.Kind = record.sequence, record.kind
 			var envelope struct {
-				ID, Role   string
-				Incomplete bool
-				Images     []struct {
+				ID, Role     string
+				Presentation string
+				Incomplete   bool
+				Images       []struct {
 					Path, MIME, Digest string
 					Width, Height      int
 					Data               json.RawMessage
@@ -101,6 +102,7 @@ func (s *Store) timeline(ctx context.Context, session string, before int64, limi
 			if err := json.Unmarshal(record.body, &envelope); err != nil {
 				return nil, 0, err
 			}
+			visible.Message.Presentation = envelope.Presentation
 			visible.Message.ID, visible.Message.Role, visible.Message.Incomplete = envelope.ID, envelope.Role, envelope.Incomplete
 			for _, image := range envelope.Images {
 				var imageBytes int64

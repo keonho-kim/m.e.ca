@@ -108,6 +108,24 @@ func TestUIBrowserFixture(t *testing.T) {
 	if err := archived.Close(); err != nil {
 		t.Fatal(err)
 	}
+	// Each browser owns a mutable long conversation; search fixtures stay immutable.
+	scrollSessions := make([]string, 0, 3)
+	for range 3 {
+		store, err := sessions.Create(t.Context(), projectA, projectA)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := store.Session().ID
+		err = store.Commit(t.Context(), id, records)
+		closeErr := store.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if closeErr != nil {
+			t.Fatal(closeErr)
+		}
+		scrollSessions = append(scrollSessions, id)
+	}
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	log := &uiFixtureLog{ready: make(chan string, 1)}
@@ -138,7 +156,7 @@ func TestUIBrowserFixture(t *testing.T) {
 	if err := watcher.Add(filepath.Dir(descriptor)); err != nil {
 		t.Fatal(err)
 	}
-	data, err := json.Marshal(map[string]string{"url": address, "tokenFile": filepath.Join(state, "server.token"), "projectA": projectA, "projectB": projectB, "home": home, "provider": provider.URL, "archiveSession": archiveID})
+	data, err := json.Marshal(map[string]any{"scrollSessions": scrollSessions, "url": address, "tokenFile": filepath.Join(state, "server.token"), "projectA": projectA, "projectB": projectB, "home": home, "provider": provider.URL, "archiveSession": archiveID})
 	if err != nil {
 		t.Fatal(err)
 	}

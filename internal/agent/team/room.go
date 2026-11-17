@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 
 	"sync"
 	"time"
@@ -76,6 +77,7 @@ type Room struct {
 }
 
 func Run(ctx context.Context, options Options, text string) (Result, error) {
+	ctx, _ = presentation.Scope(ctx)
 	if options.Store == nil || options.Execute == nil || options.Emit == nil || options.MaxModelCalls < 1 || options.MaxSeconds < 1 {
 		return Result{}, faults.Errorf(diagcatalog.TeamTeamDependenciesAndRequestLimitsAreRequired)
 	}

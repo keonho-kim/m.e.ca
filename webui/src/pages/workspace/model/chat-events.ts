@@ -103,7 +103,7 @@ export function eventIdentities(event: EventJson) {
   const values: string[] = [];
   if (event.historySequence && event.historySequence !== '0')
     values.push('timeline/' + event.historySequence);
-  const ref = event.originalReference;
+  const ref = event.originalReference ?? event.tool?.reference;
   if (ref?.sessionId && ref.sequence) values.push('original/' + ref.sessionId + '/' + ref.sequence);
   return values;
 }

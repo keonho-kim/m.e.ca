@@ -28,7 +28,11 @@ export const HistoryRow = memo(function HistoryRow({
   inspect,
   tools,
   match,
+  streaming = false,
+  saved = true,
 }: {
+  streaming?: boolean;
+  saved?: boolean;
   inspect: InspectionActions;
   item: HistoryMessageItem;
   target: Target;
@@ -80,9 +84,9 @@ export const HistoryRow = memo(function HistoryRow({
         <ToolCalls
           target={target}
           events={tools?.flatMap((item) => (item.event ? [item.event] : [])) ?? [event]}
-          saved
+          saved={saved}
         />
-      ) : item.text || item.images?.length ? (
+      ) : item.text || item.images?.length || thinking ? (
         <ChatMessage
           sender={user ? 'user' : 'assistant'}
           style={{ width: '100%', minWidth: 0 }}
@@ -119,7 +123,7 @@ export const HistoryRow = memo(function HistoryRow({
             ) : (
               <VStack gap={6} width="100%" className="response-content">
                 {thinking?.event?.message?.thinking && (
-                  <Thinking text={thinking.event.message.thinking}>
+                  <Thinking text={thinking.event.message.thinking} streaming={streaming}>
                     {thinking.truncated ? (
                       <DetailContent
                         target={target}
@@ -140,7 +144,7 @@ export const HistoryRow = memo(function HistoryRow({
                     fallback={item.text ?? ''}
                   />
                 ) : (
-                  <MarkdownText text={item.text ?? ''} />
+                  <MarkdownText text={item.text ?? ''} streaming={streaming} />
                 )}
               </VStack>
             )}

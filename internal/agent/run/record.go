@@ -19,6 +19,7 @@ func (s *execution) record(ctx context.Context, event runrecord.Event) error {
 func (s *execution) recordEvents(ctx context.Context, events []runrecord.Event) error {
 	records := make([]runrecord.Entry, len(events))
 	for i := range events {
+		events[i] = s.present(events[i])
 		events[i].RunID = s.checkpoint.ID
 		if events[i].OccurredAt == "" {
 			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)

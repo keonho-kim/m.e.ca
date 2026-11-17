@@ -81,6 +81,7 @@ func (s *Service) emit(r *request, value record.Event) {
 	}
 	reset := draft.Generation != generation
 	if reset {
+		draft.Presentation = value.Presentation
 		draft.StartSequence = r.sequence + 1
 		draft.Generation = generation
 		draft.textBytes, draft.thinkingBytes = 0, 0
@@ -89,7 +90,7 @@ func (s *Service) emit(r *request, value record.Event) {
 		draft.HistorySequence = 0
 		draft.text.Reset()
 		draft.thinking.Reset()
-		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Reset: true, Record: record.Event{Kind: "draft_reset", Agent: value.Agent, RunID: value.RunID}})
+		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Reset: true, Record: record.Event{Generation: value.Generation, Presentation: draft.Presentation, Kind: "draft_reset", Agent: value.Agent, RunID: value.RunID}})
 	}
 	draft.maskVersion, draft.runID = maskVersion, value.RunID
 	if value.Kind == "generation_started" {
@@ -105,6 +106,6 @@ func (s *Service) emit(r *request, value record.Event) {
 		// publish makes the one detached copy retained by the replay log.
 		t, h := prefix(text, maxTextBytes), prefix(thinking, maxTextBytes)
 		text, thinking = text[len(t):], thinking[len(h):]
-		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Record: record.Event{Kind: "assistant_delta", Agent: value.Agent, RunID: value.RunID, Text: t, Thinking: h}})
+		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Record: record.Event{Presentation: draft.Presentation, Kind: "assistant_delta", Agent: value.Agent, RunID: value.RunID, Text: t, Thinking: h}})
 	}
 }
