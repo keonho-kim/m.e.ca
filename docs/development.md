@@ -15,6 +15,7 @@
 | `internal/commands` | 사용자 명령, 설정·대화·서버 작업의 사용 사례 |
 | `internal/provider` | 모델 탐색·연결, Provider별 요청·스트림 변환 |
 | `internal/tools` | 도구 계약, 후보 준비, 실행과 결과 수집 |
+| `internal/tools/browser` · `browser/runtime` | 브라우저 세션·관찰 페이지, 도우미·Stable Chrome의 지연 준비와 설치 잠금 |
 | `internal/policy` | 경로·명령·승인 판단 |
 | `internal/storage` | 대화·접수 기록·자격 증명의 영속 저장 |
 | `internal/config` | 설정·초기화·프롬프트·기본 스킬 |
@@ -40,7 +41,7 @@
 
 ## 의존성과 배포
 
-제품 Go 버전·의존성은 [go.mod](../go.mod), 개발 도구는 [devtools/go.mod](../devtools/go.mod), 브라우저는 [webui/package.json](../webui/package.json)과 `bun.lock`이 소유한다. 제품과 개발 도구의 의존성을 분리하고 직접 의존성 버전을 고정한다.
+제품 Go 버전·의존성은 [go.mod](../go.mod), 개발 도구는 [devtools/go.mod](../devtools/go.mod), WebUI는 [webui/package.json](../webui/package.json)과 `bun.lock`이 소유한다. 제품과 개발 도구의 의존성을 분리하고 직접 의존성 버전을 고정한다. 브라우저 도우미의 고정 버전·SHA-256과 플랫폼 경로는 `internal/tools/browser/runtime/assets.go`, Chrome Stable 조회·관리 설치본 선택은 같은 패키지의 `stable.go`·`managed.go`가 소유한다.
 
 변경 시 유지보수 상태·라이선스·실행 비용·지원 플랫폼을 검토하고 관련 고지를 갱신한다. `third_party/clipboard`의 수정 범위와 배포 조건은 [의존성 안내](../third_party/clipboard/MECA.md)를 따른다. WebUI 패치는 [패치 계약](../webui/patches/README.md), 라이선스 입력은 [고지 안내](../webui/licenses/README.md)가 소유한다.
 
@@ -122,6 +123,7 @@ macOS·Linux와 WSL의 실제 동작, 교차 빌드와 모의 전송 검사는 �
 | `internal/processmemory` | 입장 예산·취소·예약 반환, 실제 보유량과 논리 예산의 구분 |
 | `internal/agent/context` · `compact` | 문맥 선택·압축과 원본 이력 보존 |
 | `internal/provider/protocol` | 실행별 인코딩 재사용·모델 변경 시 무효화·완료 시 회수 |
+| `internal/tools/browser` | 작업별 세션 격리·외부 브라우저 입장과 종료 확인, 관찰 중복 판정·이미지 전달 예약·임시 파일 회수, 중단 후 부작용 확인 |
 | `internal/storage/content` · `sqlite` | 원문 중복 방지·트랜잭션·선택 복원·읽기 수명 |
 | `internal/serverapi/admission` · `detail` | 제한된 입력·원문 조회, 페이지와 revision의 일치 |
 | `internal/tui` | 이벤트 순서·입력 우선 처리·표시 예산·화면 밖 자원 회수 |

@@ -14,6 +14,18 @@ import (
 )
 
 type Arguments struct {
+	Action       string          `json:"action"`
+	URL          string          `json:"url"`
+	Target       string          `json:"target"`
+	Value        string          `json:"value"`
+	Direction    string          `json:"direction"`
+	View         string          `json:"view"`
+	Selector     string          `json:"selector"`
+	ResultID     string          `json:"result_id"`
+	Width        int             `json:"width"`
+	Height       int             `json:"height"`
+	Pixels       int             `json:"pixels"`
+	Depth        int             `json:"depth"`
 	Revision     string          `json:"revision"`
 	SkillID      string          `json:"id"`
 	Cursor       string          `json:"cursor"`

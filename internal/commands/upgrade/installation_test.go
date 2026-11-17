@@ -56,20 +56,24 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 		}
 		client := releaseFixture(t, kind, tarball(t, archiveEntry{name: "meca", content: string(body)}), nil, nil)
 		for pass := 0; pass < 2; pass++ {
-			for _, name := range []string{"system.md", "development.md", "compaction.md"} {
-				if err := os.WriteFile(filepath.Join(home, ".meca/prompts/single", name), []byte("user edit"), 0600); err != nil {
-					t.Fatal(err)
+			for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+				for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+					if err := os.WriteFile(filepath.Join(home, ".meca/prompts", string(profile), name), []byte("user edit"), 0600); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 			result, err := Run(ctx, home, client, kind)
 			if err != nil || result.Version != "v0.0.20261026" || result.AlreadyCurrent != (pass == 1) {
 				t.Fatalf("upgrade %d: %+v, %v", pass, result, err)
 			}
-			defaults := prompt.Defaults()
-			for name, expected := range defaults.Files() {
-				got, err := os.ReadFile(filepath.Join(home, ".meca/prompts/single", name))
-				if err != nil || string(got) != *expected {
-					t.Fatalf("upgrade did not refresh %s: %v", name, err)
+			for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+				defaults := prompt.DefaultsFor(profile)
+				for name, expected := range defaults.Files() {
+					got, err := os.ReadFile(filepath.Join(home, ".meca/prompts", string(profile), name))
+					if err != nil || string(got) != *expected {
+						t.Fatalf("upgrade did not refresh %s: %v", name, err)
+					}
 				}
 			}
 			after, err := os.ReadFile(configuration)

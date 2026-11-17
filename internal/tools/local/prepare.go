@@ -52,7 +52,7 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 			}
 		}()
 	}
-	texts := []string{input.Content, input.Command}
+	texts := []string{input.Content, input.Command, input.URL, input.Value, input.Target, input.Selector}
 	for _, edit := range input.Edits {
 		texts = append(texts, edit.OldText, edit.NewText)
 	}
@@ -73,6 +73,13 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 	case "list_skills", "load_skill", "read_skill_file":
 		op := &skillOperation{}
 		initialize(&op.operation)
+		return op, nil
+	case "browser_action", "browser_inspect":
+		op := &browserOperation{}
+		initialize(&op.operation)
+		if err := op.prepareBrowser(); err != nil {
+			return nil, err
+		}
 		return op, nil
 	case "execute_command":
 		op := &commandOperation{admit: admit}

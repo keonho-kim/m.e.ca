@@ -38,6 +38,9 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	if len(calls) == 0 {
 		return plan(0, nil)
 	}
+	if calls[0].Name == "browser_action" || calls[0].Name == "browser_inspect" {
+		return plan(1, nil)
+	}
 	if commandControl(calls[0].Name) {
 		_, _, err := e.parsedCall(calls[0])
 		return plan(1, err)

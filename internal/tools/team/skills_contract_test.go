@@ -29,7 +29,7 @@ func TestTeamSkillDelivery(t *testing.T) {
 		expected[d.Name] = d
 	}
 	team := (&Executor{Local: executor}).Definitions()
-	for _, name := range []string{"list_skills", "load_skill", "read_skill_file"} {
+	for _, name := range []string{"list_skills", "load_skill", "read_skill_file", "browser_action", "browser_inspect"} {
 		found := 0
 		for _, d := range team {
 			if d.Name == name {

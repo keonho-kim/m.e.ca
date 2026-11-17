@@ -5,7 +5,9 @@
 package local
 
 import (
+	"context"
 	"errors"
+	"github.com/keonho-kim/meca/internal/tools/browser"
 
 	"os"
 	"path/filepath"
@@ -22,6 +24,7 @@ import (
 )
 
 type Executor struct {
+	browser                 *browser.Session
 	arguments               argumentCache
 	skills                  *skills.Reader
 	skillImageInput         atomic.Bool
@@ -85,16 +88,20 @@ func NewExecutor(project, home, private string, redact func(string) string, opti
 	if err != nil {
 		return nil, errors.Join(err, executor.Close())
 	}
+	executor.browser = browser.New(private, executor.artifacts, redact, executor.redactionVersion)
 	executor.commands.CaptureDirectory = executor.artifacts
 	return executor, nil
 }
 
 func (executor *Executor) Close() error {
+	cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	browserErr := executor.EndBrowser(cleanup)
 	executor.arguments.clear()
 	executor.liveOutputs.releaseProjections()
 	executor.commands.End()
 	executor.liveOutputs.clear()
-	err := errors.Join(executor.projectRoot.Close(), executor.systemRoot.Close())
+	err := errors.Join(browserErr, executor.projectRoot.Close(), executor.systemRoot.Close())
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))
 	}

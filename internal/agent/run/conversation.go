@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
@@ -49,5 +50,10 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 
 func (s *execution) close(ctx context.Context, cause error) error {
 	cause = errors.Join(cause, s.stopCommands(ctx))
+	if browser, ok := s.runner.Tools.(interface{ EndBrowser(context.Context) error }); ok {
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		cause = errors.Join(cause, browser.EndBrowser(cleanup))
+		cancel()
+	}
 	return s.settle(ctx, cause)
 }

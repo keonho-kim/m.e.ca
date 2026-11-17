@@ -30,9 +30,12 @@ TUI·CLI·서버·WebUI는 같은 모델 요청·도구·승인·저장 흐름�
 | `list_command_runs`, `wait_command`, `cancel_command` | 장기 명령의 조회·대기·취소 |
 | `create_directory`, `write_file`, `edit_file` | 승인과 원본 검사를 거친 파일 변경 |
 | `view_image` | 비전 지원 모델에 이미지 스냅샷 전달 |
+| `browser_action`, `browser_inspect` | 격리된 브라우저의 조작·캡처와 제한된 관찰 페이지 조회 |
 | `list_skills`, `load_skill`, `read_skill_file` | 스킬 목록·지침·참고 자료 읽기 |
 
 조회·검색·패키지 작업은 호스트 도구를 사용한다. 파일 변경은 현재 대상과 승인한 내용을 다시 확인하고, 호출·결과의 연결을 보존한다. 팀 전용 도구는 [팀 모드](team.md#대화와-도구), 이미지 형식과 조건은 [이미지 입력](images.md)을 따른다.
+
+브라우저 실행 의존성은 첫 사용 시 준비하며 작업 종료·취소 시 해당 세션을 닫는다. 설치 조건과 승인·출력 범위는 [브라우저 도구](browser.md)를 따른다.
 
 ## 오래 실행되는 명령
 

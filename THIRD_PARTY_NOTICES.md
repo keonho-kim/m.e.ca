@@ -5,7 +5,7 @@ macOS and Linux amd64/arm64 binaries built from cmd/meca with CGO_ENABLED=0
 and the godbus_no_tcp build tag. Both tui and full distributions include the
 TUI, CLI and model-provider adapters. The tui build additionally uses the
 tui tag to exclude server adapters and WebUI assets; full adds both.
-Browser runtime notices are generated from the bundled modules and included as
+WebUI dependency notices are generated from the bundled modules and included as
 WEBUI_THIRD_PARTY_NOTICES.txt in full release archives and at /ui/THIRD_PARTY_NOTICES.txt
 when the embedded UI is enabled. The npm package for Astryx Core 0.7.16 omits
 its root license; webui/licenses/astryx-core-0.7.16.LICENSE preserves
@@ -5718,3 +5718,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Optional browser execution
+
+Browser tools download the pinned [agent-browser](https://github.com/vercel-labs/agent-browser) native helper on first use. It is licensed under Apache-2.0; the managed installation includes its LICENSE. Chrome for Testing, when needed, is downloaded separately and retains the notices in its distribution. Neither executable is embedded in MECA release archives.

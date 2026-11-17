@@ -103,3 +103,11 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 	prepared.operation, prepared.paths = op, paths
 	return prepared, nil
 }
+
+// EndBrowser releases the participant's isolated browser at request termination.
+func (e *Executor) EndBrowser(ctx context.Context) error {
+	if local, ok := e.Local.(interface{ EndBrowser(context.Context) error }); ok {
+		return local.EndBrowser(ctx)
+	}
+	return nil
+}

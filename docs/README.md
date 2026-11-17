@@ -14,6 +14,7 @@
 | [WebUI](webui-design.md) | 접속·대화·편집·설정 |
 | [설정과 대화 보존](configuration.md) | 설정·프롬프트·백업·복구 |
 | [실행 경계](execution-boundary.md) | 호스트 권한과 승인 범위 |
+| [브라우저 도구](browser.md) | 필요 시 준비되는 브라우저와 제한된 관찰·조작 |
 
 ## 서버 연동과 운영
 

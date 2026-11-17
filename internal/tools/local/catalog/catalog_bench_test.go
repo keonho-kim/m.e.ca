@@ -24,7 +24,7 @@ func BenchmarkCatalog(b *testing.B) {
 	b.Run("definitions", func(b *testing.B) {
 		b.ReportAllocs()
 		for b.Loop() {
-			if len(Definitions()) != 8 {
+			if len(Definitions()) != 13 {
 				b.Fatal("incomplete catalog")
 			}
 		}

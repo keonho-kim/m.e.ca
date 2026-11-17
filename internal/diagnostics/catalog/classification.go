@@ -6,6 +6,17 @@ package catalog
 
 func MessageCode(message Message) string {
 	switch message {
+	case BrowserInput:
+		return InvalidArgument
+	case BrowserScope, BrowserImage, BrowserClosed, BrowserResult, BrowserStale:
+		return FailedPrecondition
+	case BrowserLimit:
+		return ResourceExhausted
+	case BrowserIntegrity, BrowserArchive:
+		return IntegrityFailed
+	case BrowserUnsupported, BrowserRuntime:
+		return Unavailable
+
 	case SkillsInvalidSkillRequest, SessionInvalidOrExpiredSessionPageCursorRefresh:
 		return InvalidArgument
 	case SkillsSkillNotFound, ServerHistoryRecordWasNotFound, SessionSessionWasNotFound, ServerRequestWasNotFound, OsstoreOSCredentialWasNotFound:
