@@ -29,9 +29,6 @@ func (c *Client) NewRunGeneratorWithBudget(bytes int) (modelapi.Generator, func(
 }
 
 func (g *runGenerator) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	if request.TransientHistory {
-		return g.client.generate(ctx, request, emit, false, nil)
-	}
 	return g.client.generate(ctx, request, emit, false, &g.encoder)
 }
 

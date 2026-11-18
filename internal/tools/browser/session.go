@@ -7,7 +7,6 @@ package browser
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -29,8 +28,9 @@ type Session struct {
 	version                                  func() int
 	prepare                                  func(context.Context, string) (runtime.Paths, error)
 	results                                  []storedResult
+	snapshot                                 snapshotBaseline
 	releaseBrowser                           func()
-	stopped                                  bool
+	helperStarted, stopped                   bool
 }
 
 func New(state, base string, redact func(string) string, version func() int) *Session {
@@ -39,7 +39,7 @@ func New(state, base string, redact func(string) string, version func() int) *Se
 func (s *Session) Current() string         { s.mu.Lock(); defer s.mu.Unlock(); return s.address }
 func (s *Session) setAddress(value string) { s.mu.Lock(); s.address = value; s.mu.Unlock() }
 
-func (s *Session) start(ctx context.Context) error {
+func (s *Session) start(ctx context.Context) (err error) {
 	if s.work != "" {
 		return nil
 	}
@@ -57,6 +57,11 @@ func (s *Session) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if !started {
+			err = errors.Join(err, paths.Close())
+		}
+	}()
 	work, err := os.MkdirTemp(s.base, "browser-")
 	if err != nil {
 		return err
@@ -74,6 +79,7 @@ func (s *Session) start(ctx context.Context) error {
 		return err
 	}
 	s.paths, s.work, s.sockets, s.config, s.name = paths, work, sockets, config, "meca-"+rand.Text()
+	s.helperStarted = false
 	s.stopped = false
 	s.releaseBrowser = release
 	started = true
@@ -89,6 +95,9 @@ func (s *Session) Run(ctx context.Context, r Request, expectedURL string) (out P
 		defer func() { <-s.gate }()
 	case <-ctx.Done():
 		return out, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return out, err
 	}
 	fresh := s.work == ""
 	defer func() {
@@ -115,33 +124,31 @@ func (s *Session) Run(ctx context.Context, r Request, expectedURL string) (out P
 	if err := s.start(ctx); err != nil {
 		return out, err
 	}
-	if r.Action != "open" {
+	if r.View != "" {
+		return s.inspect(ctx, r)
+	}
+	if r.Interaction() {
 		address, err := s.url(ctx)
 		if err != nil {
 			return out, err
 		}
-		if r.Interaction() && address != expectedURL {
+		if address != expectedURL {
 			return out, fault.Errorf(diag.BrowserStale)
 		}
 	}
-	var data captured
-	if r.View == "screenshot" {
-		return s.screenshot(ctx)
+	if r.Action == "open" || r.Action == "reload" || r.Action == "back" || r.Action == "forward" {
+		s.snapshot = snapshotBaseline{}
 	}
-	data, err = s.invoke(ctx, r.args()...)
+	data, err := s.invoke(ctx, r.args()...)
 	if err != nil {
 		return out, err
 	}
 
-	defer data.Close()
-	if r.Action != "" {
-		if _, err := s.url(ctx); err != nil {
-			return out, err
-		}
-		// Actions report only their receipt. DOM inspection is a separate explicit read.
-		return Page{URL: s.redact(s.Current()), Text: diag.Text(diag.BrowserActionCompleted)}, nil
+	data.Close()
+	if _, err := s.url(ctx); err != nil {
+		return out, err
 	}
-	return s.store(data.data, r.Limit)
+	return Page{URL: s.redact(s.Current()), Text: diag.Text(diag.BrowserActionCompleted)}, nil
 }
 func (s *Session) url(ctx context.Context) (string, error) {
 	data, err := s.invoke(ctx, "get", "url")
@@ -149,17 +156,11 @@ func (s *Session) url(ctx context.Context) (string, error) {
 		return "", err
 	}
 	defer data.Close()
-	var value struct {
-		URL string `json:"url"`
+	address, err := responseURL(data.data)
+	if err == nil {
+		s.setAddress(address)
 	}
-	if err := json.Unmarshal(data.data, &value); err != nil {
-		return "", err
-	}
-	if value.URL == "" {
-		return "", fault.Errorf(diag.BrowserFailed, diag.Text(diag.BrowserInvalidResponse))
-	}
-	s.setAddress(value.URL)
-	return value.URL, nil
+	return address, err
 }
 
 func (s *Session) Close(ctx context.Context) error {
@@ -176,26 +177,29 @@ func (s *Session) closeLocked(ctx context.Context) error {
 		return nil
 	}
 	if !s.stopped {
-		receipt, err := s.invoke(ctx, "close")
-		if err != nil {
-			return fault.Errorf(diag.BrowserClose, err)
+		if s.helperStarted {
+			receipt, err := s.invoke(ctx, "close")
+			if err != nil {
+				return fault.Errorf(diag.BrowserClose, err)
+			}
+			receipt.Close()
 		}
-		receipt.Close()
 		s.stopped = true
+		s.results = nil
+		s.snapshot = snapshotBaseline{}
+		s.setAddress("")
 		if s.releaseBrowser != nil {
 			s.releaseBrowser()
 			s.releaseBrowser = nil
 		}
 	}
-	err := errors.Join(os.RemoveAll(s.work), os.RemoveAll(s.sockets))
+	err := errors.Join(s.paths.Close(), os.RemoveAll(s.work), os.RemoveAll(s.sockets))
 	if err != nil {
 		return err
 	}
 	s.work, s.sockets, s.config, s.name = "", "", "", ""
 	s.paths = runtime.Paths{}
-	s.results = nil
-	s.setAddress("")
-	return err
+	return nil
 }
 
 func (s *Session) maskVersion() int {

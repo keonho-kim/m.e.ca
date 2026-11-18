@@ -74,18 +74,22 @@ func TestManagedStableUpdatesAndRollback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer first.close()
 	fixture.change("157.0.8103.79", "", true)
 	cached, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(time.Hour))
-	if err != nil || cached != first || fixture.metadata != 1 {
+	defer cached.close()
+	if err != nil || cached.path != first.path || fixture.metadata != 1 {
 		t.Fatal("warm cache fetched network", cached, err)
 	}
 	offline, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(25*time.Hour))
-	if err != nil || offline != first {
+	defer offline.close()
+	if err != nil || offline.path != first.path {
 		t.Fatal("offline update lost working browser", err)
 	}
 	fixture.change("157.0.8103.79", "wrong-version", false)
 	failed, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(50*time.Hour))
-	if err != nil || failed != first {
+	defer failed.close()
+	if err != nil || failed.path != first.path {
 		t.Fatal("failed executable replaced working browser", err)
 	}
 	value, _ := chromeAsset("linux", "arm64", "157.0.8103.79")
@@ -94,10 +98,11 @@ func TestManagedStableUpdatesAndRollback(t *testing.T) {
 	}
 	fixture.change("157.0.8103.79", "", false)
 	updated, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(75*time.Hour))
-	if err != nil || updated == first {
+	defer updated.close()
+	if err != nil || updated.path == first.path {
 		t.Fatal("new stable not selected", updated, err)
 	}
-	if !executable(first) {
+	if !executable(first.path) {
 		t.Fatal("running version removed")
 	}
 	if err := os.WriteFile(filepath.Join(directory, "chrome", "current.json"), []byte(`{"Version":"../../outside"}`), 0600); err != nil {
@@ -116,7 +121,11 @@ func TestConcurrentStableInstall(t *testing.T) {
 	var group sync.WaitGroup
 	for range 8 {
 		group.Go(func() {
-			if _, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now); err != nil {
+			use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now)
+			if err != nil {
+				t.Error(err)
+			}
+			if err := use.close(); err != nil {
 				t.Error(err)
 			}
 		})

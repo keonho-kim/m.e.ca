@@ -1,30 +1,25 @@
-// Purpose: Retire delivered browser text from live model history while preserving the native tool response and unread cursor.
+// Purpose: Retire delivered browser evidence and expose the browser's current unread cursors.
 // Pattern: Execution-owned acknowledgement at a completed model decision.
-// Usage: Context loading replays durable acknowledgements and drive advances the boundary on success.
+// Usage: A completed decision releases its observations; each request gets the live cursor state.
 // Related: internal/agent/run/loop.go, internal/agent/run/context_memory.go, internal/tools/browser/paging.go.
 package run
 
 import (
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"context"
+	"encoding/json"
 
-	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func browserTextPage(m modelapi.Message) bool {
-	return m.Role == "tool" && m.ToolName == "browser_inspect" && len(m.Images) == 0
-}
-
-func (s *execution) acknowledgeBrowserPages(through int) {
+func (s *execution) acknowledgeBrowserObservations(through int) {
 	for i := s.browserReadThrough; i < through; i++ {
 		m := &s.messages[i]
-		if !browserTextPage(*m) {
+		if !m.TransientObservation {
 			continue
 		}
-		receipt, ok := toolapi.ReadBrowserPage(m.Content)
-		if !ok {
-			continue
-		}
-		m.Content = receipt
+		m.Content = toolapi.BrowserObservationRead
+		m.Images = nil
+		m.TransientObservation = false
 		s.projection.ForgetMessage(i)
 	}
 	s.browserReadThrough = through
@@ -35,8 +30,24 @@ func (s *execution) restoreBrowserReads() {
 	for i := len(s.messages) - 1; i >= 0; i-- {
 		m := s.messages[i]
 		if m.Role == "assistant" && !m.Incomplete {
-			s.acknowledgeBrowserPages(i)
+			s.acknowledgeBrowserObservations(i)
 			return
 		}
 	}
+}
+
+func (s *execution) browserContinuations(ctx context.Context) (string, error) {
+	source, ok := s.runner.Tools.(toolapi.BrowserCursorSource)
+	if !ok {
+		return "", nil
+	}
+	cursors, err := source.BrowserCursors(ctx)
+	if err != nil || len(cursors) == 0 {
+		return "", err
+	}
+	body, err := json.Marshal(cursors)
+	if err != nil {
+		return "", err
+	}
+	return "Unread browser observations. Continue only if needed using result_id, revision and next_offset as offset:\n" + string(body), nil
 }

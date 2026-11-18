@@ -35,7 +35,7 @@ func TestRepeatedSkillRevisionRetainedOnce(t *testing.T) {
 	}
 	s.messages = nil
 	s.memoryContext = "Older history was compacted"
-	request, err := s.request()
+	request, err := s.request(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}

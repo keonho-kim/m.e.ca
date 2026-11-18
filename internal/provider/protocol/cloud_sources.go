@@ -39,6 +39,7 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 	previous := e.cloudGroups
 	e.cloudGroups, e.cloudSourceBytes = e.cloudGroups[:0], 0
 	out := make([]Message, 0, len(source))
+	cacheable := true
 	for index, groupIndex := 0, 0; index < len(source); groupIndex++ {
 		end := index + 1
 		if source[index].Role == "tool" {
@@ -46,8 +47,9 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 				end++
 			}
 		}
+		cacheable = cacheable && stableGroup(source[index:end])
 		var group *cloudSourceGroup
-		if groupIndex < len(previous) && sameSource(previous[groupIndex].keys, source[index:end]) {
+		if cacheable && groupIndex < len(previous) && sameSource(previous[groupIndex].keys, source[index:end]) {
 			group = previous[groupIndex]
 		}
 		var converted []Message
@@ -61,7 +63,20 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 				return nil, err
 			}
 		}
-		weight := cloudGroupBytes(source[index:end], converted)
+		if !cacheable {
+			for i := range converted {
+				converted[i].transient = true
+			}
+			out = append(out, converted...)
+			index = end
+			continue
+		}
+		weight := 0
+		if group == nil {
+			weight = cloudGroupBytes(source[index:end], converted)
+		} else {
+			weight = group.bytes
+		}
 		if groupIndex == len(e.cloudGroups) && e.cloudSourceBytes+weight <= e.limit()/2 {
 			if group == nil {
 				group = &cloudSourceGroup{keys: make([]sourceIdentity, end-index), messages: snapshotCloudMessages(converted), bytes: weight}

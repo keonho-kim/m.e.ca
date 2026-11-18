@@ -53,7 +53,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		supplied := len(s.messages)
 		reply, askErr := s.askResponse(ctx)
 		if askErr == nil {
-			s.acknowledgeBrowserPages(supplied)
+			s.acknowledgeBrowserObservations(supplied)
 			s.capacityRecovery = false
 		}
 		if askErr != nil {

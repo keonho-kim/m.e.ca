@@ -15,6 +15,10 @@ import (
 )
 
 func (s *Store) recordPage(ctx context.Context, query string, args ...any) (records []storedRecord, err error) {
+	return s.readRecordPage(ctx, false, query, args...)
+}
+
+func (s *Store) readRecordPage(ctx context.Context, classifyBrowser bool, query string, args ...any) (records []storedRecord, err error) {
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -22,7 +26,11 @@ func (s *Store) recordPage(ctx context.Context, query string, args ...any) (reco
 	defer func() { err = errors.Join(err, rows.Close()) }()
 	for rows.Next() {
 		var r storedRecord
-		if err := rows.Scan(&r.sequence, &r.kind, &r.body, &r.refs, &r.size); err != nil {
+		values := []any{&r.sequence, &r.kind, &r.body, &r.refs, &r.size}
+		if classifyBrowser {
+			values = append(values, &r.browserObservation)
+		}
+		if err := rows.Scan(values...); err != nil {
 			return nil, err
 		}
 		if r.body == nil {

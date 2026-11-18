@@ -14,51 +14,73 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
+	"github.com/keonho-kim/meca/internal/diagnostics"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
 type chromeSelection struct {
-	Version string
-	Checked time.Time
+	Version  string
+	Previous string `json:",omitempty"`
+	Checked  time.Time
 }
 
-func managedChrome(ctx context.Context, client *http.Client, directory, goos, arch string, now time.Time) (path string, err error) {
+func (s chromeSelection) fresh(now time.Time) bool {
+	return s.Version != "" && !now.Before(s.Checked) && now.Sub(s.Checked) < 24*time.Hour
+}
+
+func managedChrome(ctx context.Context, client *http.Client, directory, goos, arch string, now time.Time) (use chromeUse, err error) {
 	root, err := statefs.Open(filepath.Join(directory, "chrome"))
 	if err != nil {
-		return "", err
+		return use, err
 	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, use.close())
+			use = chromeUse{}
+		}
+	}()
 	defer func() { err = errors.Join(err, root.Close()) }()
-	lease, err := statefs.Lock(ctx, root)
-	if err != nil {
-		return "", err
-	}
-	defer func() { err = errors.Join(err, lease.Close()) }()
 	selected, err := readSelection(root)
 	if err != nil {
-		return "", err
+		return use, err
+	}
+	if selected.fresh(now) {
+		return leaseSelected(ctx, root, goos, arch, nil)
+	}
+	// The update lock spans network and extraction. Readers acquire a separate
+	// short lock for the selected version while an update is still in progress.
+	updates, err := statefs.Open(filepath.Join(root.Name(), "updates"))
+	if err != nil {
+		return use, err
+	}
+	defer func() { err = errors.Join(err, updates.Close()) }()
+	update, err := statefs.Lease(updates, true)
+	if errors.Is(err, syscall.EWOULDBLOCK) {
+		if selected.Version != "" {
+			return leaseSelected(ctx, root, goos, arch, nil)
+		}
+		update, err = statefs.Lock(ctx, updates)
+	}
+	if err != nil {
+		return use, err
+	}
+	defer func() { err = errors.Join(err, update.Close()) }()
+	selected, err = readSelection(root)
+	if err != nil {
+		return use, err
+	}
+	if selected.fresh(now) {
+		return leaseSelected(ctx, root, goos, arch, nil)
 	}
 	versions := filepath.Join(root.Name(), "versions")
 	if selected.Version != "" {
-		value, e := chromeAsset(goos, arch, selected.Version)
-		if e != nil {
-			return "", e
-		}
-		// Cache reads never redownload or repair missing/corrupted installations.
-		path = filepath.Join(versions, value.name, value.executable)
-		info, e := os.Lstat(filepath.Join(versions, value.name))
-		if e != nil {
-			return "", e
-		}
-		stamp, e := os.ReadFile(filepath.Join(versions, value.name, "installed.version"))
-		if e != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || string(stamp) != value.version || !executable(path) {
-			return "", fault.Errorf(diag.BrowserIntegrity)
-		}
-		if !now.Before(selected.Checked) && now.Sub(selected.Checked) < 24*time.Hour {
-			return path, nil
+		if _, _, err := selectedChrome(ctx, versions, goos, arch, selected); err != nil {
+			return use, err
 		}
 	}
 	next, updateErr := latestStable(ctx, client, goos, arch)
@@ -67,25 +89,26 @@ func managedChrome(ctx context.Context, client *http.Client, directory, goos, ar
 	}
 	if updateErr != nil {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return use, ctx.Err()
 		}
-		if path == "" {
-			return "", updateErr
+		if selected.Version == "" {
+			return use, updateErr
 		}
 		// Preserve the working version and avoid repeated downloads on each request.
-		selected.Checked = now
-	} else {
-		selected = chromeSelection{Version: next.version, Checked: now}
-		path = filepath.Join(versions, next.name, next.executable)
+	} else if selected.Version != next.version {
+		selected.Previous, selected.Version = selected.Version, next.version
 	}
-	body, err := json.Marshal(selected)
+	selected.Checked = now
+	use, err = leaseSelected(ctx, root, goos, arch, &selected)
 	if err != nil {
-		return "", err
+		return use, err
 	}
-	if err := statefs.Write(root.Name(), "current.json", body); err != nil {
-		return "", err
+	if updateErr == nil {
+		if err := pruneChrome(ctx, root, goos, arch); err != nil && ctx.Err() == nil {
+			diagnostics.Log(ctx, diag.BrowserRuntimeCleanupFailed, "error", err)
+		}
 	}
-	return path, nil
+	return use, nil
 }
 
 func readSelection(root *os.Root) (chromeSelection, error) {
@@ -109,7 +132,8 @@ func readSelection(root *os.Root) (chromeSelection, error) {
 	if err != nil {
 		return selected, err
 	}
-	if json.Unmarshal(body, &selected) != nil || !validVersion(selected.Version) || selected.Checked.IsZero() {
+	if json.Unmarshal(body, &selected) != nil || !validVersion(selected.Version) || selected.Checked.IsZero() ||
+		selected.Previous != "" && (!validVersion(selected.Previous) || selected.Previous == selected.Version) {
 		return selected, fault.Errorf(diag.BrowserStableMetadata)
 	}
 	return selected, nil

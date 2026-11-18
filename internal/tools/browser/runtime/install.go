@@ -1,4 +1,4 @@
-// Purpose: Prepare a verified helper and browser once under a process-shared installation lease.
+// Purpose: Prepare a verified helper and browser, serializing only unpublished installations.
 // Pattern: Lazy runtime provisioning with atomic directory publication.
 // Usage: Browser sessions call Ensure at first open; MECA startup never downloads anything.
 // Related: internal/tools/browser/runtime/download.go, internal/config/statefs/lock.go.
@@ -26,7 +26,13 @@ import (
 //go:embed agent-browser.LICENSE
 var helperLicense []byte
 
-type Paths struct{ Agent, Browser string }
+type Paths struct {
+	Agent, Browser string
+	chrome         chromeUse
+}
+
+// Close releases the managed version after the owning browser confirms shutdown.
+func (p Paths) Close() error { return p.chrome.close() }
 
 func Ensure(ctx context.Context, state string) (Paths, error) {
 	directory := filepath.Join(state, "browser", "runtime")
@@ -42,13 +48,15 @@ func Ensure(ctx context.Context, state string) (Paths, error) {
 	if err != nil {
 		return Paths{}, preparationFailure(err)
 	}
+	paths := Paths{Agent: agent, Browser: browser}
 	if browser == "" {
-		browser, err = managedChrome(ctx, downloadClient, directory, runtime.GOOS, runtime.GOARCH, time.Now())
+		paths.chrome, err = managedChrome(ctx, downloadClient, directory, runtime.GOOS, runtime.GOARCH, time.Now())
 		if err != nil {
 			return Paths{}, preparationFailure(err)
 		}
+		paths.Browser = paths.chrome.path
 	}
-	return Paths{agent, browser}, nil
+	return paths, nil
 }
 
 // Preserve actionable catalog messages, including loader diagnostics, at the CLI boundary.
@@ -92,45 +100,20 @@ func install(ctx context.Context, client *http.Client, parent string, value asse
 		return "", err
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
+	if path, err := installed(ctx, parent, value); path != "" || err != nil {
+		return path, err
+	}
 	lease, err := statefs.Lock(ctx, root)
 	if err != nil {
 		return "", err
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
+	if path, err := installed(ctx, parent, value); path != "" || err != nil {
+		return path, err
+	}
 
 	destination := filepath.Join(parent, value.name)
 	path = filepath.Join(destination, value.executable)
-	if info, statErr := os.Lstat(destination); statErr == nil {
-		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return "", fault.Errorf(diag.BrowserIntegrity)
-		}
-		marker, expected := "verified.sha256", value.digest
-		if value.zip {
-			marker, expected = "installed.version", value.version
-		}
-		stamp, readErr := os.ReadFile(filepath.Join(destination, marker))
-		if readErr != nil || string(stamp) != expected || !executable(path) {
-			return "", fault.Errorf(diag.BrowserIntegrity)
-		}
-		if !value.zip {
-			file, err := os.Open(path)
-			if err != nil {
-				return "", err
-			}
-			hash := sha256.New()
-			_, readErr := io.Copy(hash, file)
-			closeErr := file.Close()
-			if readErr != nil || closeErr != nil {
-				return "", errors.Join(readErr, closeErr)
-			}
-			if hex.EncodeToString(hash.Sum(nil)) != value.digest {
-				return "", fault.Errorf(diag.BrowserIntegrity)
-			}
-		}
-		return path, nil
-	} else if !errors.Is(statErr, os.ErrNotExist) {
-		return "", statErr
-	}
 	stage, err := os.MkdirTemp(parent, ".preparing-")
 	if err != nil {
 		return "", err
@@ -169,6 +152,9 @@ func install(ctx context.Context, client *http.Client, parent string, value asse
 			return "", err
 		}
 		marker, stamp = "installed.version", value.version
+		if err := os.WriteFile(filepath.Join(stage, leaseAwareMarker), []byte(value.version), 0600); err != nil {
+			return "", err
+		}
 	}
 	if err := os.WriteFile(filepath.Join(stage, marker), []byte(stamp), 0600); err != nil {
 		return "", err
@@ -180,4 +166,63 @@ func install(ctx context.Context, client *http.Client, parent string, value asse
 		return "", err
 	}
 	return path, nil
+}
+
+// Published assets are immutable to the installer. Warm reads can validate
+// concurrently while still checking the entire helper against its pinned hash.
+func installed(ctx context.Context, parent string, value asset) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	directory := filepath.Join(parent, value.name)
+	info, err := os.Lstat(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return "", fault.Errorf(diag.BrowserIntegrity)
+	}
+	path := filepath.Join(directory, value.executable)
+	marker, expected := "verified.sha256", value.digest
+	if value.zip {
+		marker, expected = "installed.version", value.version
+	}
+	stamp, err := readRuntimeMarker(filepath.Join(directory, marker))
+	if err != nil || stamp != expected || !executable(path) {
+		return "", fault.Errorf(diag.BrowserIntegrity)
+	}
+	if !value.zip {
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+		hash := sha256.New()
+		_, readErr := io.Copy(hash, file)
+		if err := errors.Join(readErr, file.Close()); err != nil {
+			return "", err
+		}
+		if hex.EncodeToString(hash.Sum(nil)) != value.digest {
+			return "", fault.Errorf(diag.BrowserIntegrity)
+		}
+	}
+	return path, ctx.Err()
+}
+
+func readRuntimeMarker(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() || info.Size() > 64 {
+		return "", fault.Errorf(diag.BrowserIntegrity)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	body, readErr := io.ReadAll(io.LimitReader(file, 65))
+	return string(body), errors.Join(readErr, file.Close())
 }

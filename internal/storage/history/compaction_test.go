@@ -73,7 +73,7 @@ func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
 
 func TestCompactionDoesNotReplayBrowserPages(t *testing.T) {
 	rows := []Record{
-		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "tool", ToolName: "browser_inspect", Content: `{"text":"consumed detail","result_id":"id"}`}},
+		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "tool", ToolName: tool.BrowserInspect, Content: `{"text":"consumed detail","result_id":"id"}`, TransientObservation: true}},
 		{Sequence: 2, Kind: "message", Message: modelapi.Message{Role: "assistant", Content: "Relevant finding"}},
 		{Sequence: 3, Kind: "message", Message: modelapi.Message{Role: "tool", ToolName: "read_file", Content: `{"text":"file details"}`}},
 	}

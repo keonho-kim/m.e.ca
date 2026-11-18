@@ -5,11 +5,12 @@
 package run
 
 import (
+	"context"
+	"unicode/utf8"
+
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-
-	"unicode/utf8"
 )
 
 func excerpt(text string, limit int) string {
@@ -22,7 +23,7 @@ func excerpt(text string, limit int) string {
 	}
 	return text[:end] + "\n[excerpt; full record retained]"
 }
-func (s *execution) request() (modelapi.Request, error) {
+func (s *execution) request(ctx context.Context) (modelapi.Request, error) {
 	var retained int64
 	for _, message := range s.messages {
 		retained += int64(message.ContextBytes())
@@ -35,18 +36,16 @@ func (s *execution) request() (modelapi.Request, error) {
 		return modelapi.Request{}, err
 	}
 	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions})
-	for _, m := range s.messages[s.browserReadThrough:] {
-		if browserTextPage(m) {
-			request.TransientHistory = true
-			break
-		}
-	}
 	observations := ""
 	if s.runner.ContextObservations != nil {
 		observations = s.runner.ContextObservations(s.messages)
 	}
-	if err := s.reserveContext(retained + int64(len(observations))); err != nil {
+	browser, err := s.browserContinuations(ctx)
+	if err != nil {
 		return modelapi.Request{}, err
 	}
-	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, SkillReads: s.skillReads, Observations: observations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	if err := s.reserveContext(retained + int64(len(observations)+len(browser))); err != nil {
+		return modelapi.Request{}, err
+	}
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, SkillReads: s.skillReads, Observations: observations, BrowserContinuations: browser, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

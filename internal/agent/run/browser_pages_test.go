@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
@@ -38,7 +39,7 @@ func TestBrowserPageDeliveredOnce(t *testing.T) {
 	if _, err := r.Run(t.Context(), "Inspect", approve, emit); err != nil {
 		t.Fatal(err)
 	}
-	if len(g.requests) != 3 || !containsPage(g.requests[1].Messages, "first body") || containsPage(g.requests[2].Messages, "first body") || !containsPage(g.requests[2].Messages, "second body") || !g.requests[1].TransientHistory {
+	if len(g.requests) != 3 || !containsPage(g.requests[1].Messages, "first body") || containsPage(g.requests[2].Messages, "first body") || !containsPage(g.requests[2].Messages, "second body") {
 		t.Fatal("page acknowledgement broke delivery")
 	}
 	if !containsPage(j.messages, "first body") || !containsPage(j.messages, "second body") {
@@ -49,15 +50,34 @@ func TestBrowserPageDeliveredOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	restored := g.requests[len(g.requests)-1]
-	if containsPage(restored.Messages, "first body") || containsPage(restored.Messages, "second body") || restored.TransientHistory {
+	if containsPage(restored.Messages, "first body") || containsPage(restored.Messages, "second body") {
 		t.Fatal("consumed page rehydrated into model request")
 	}
 }
 
 func TestBrowserPageUnacknowledgedOnIncompleteReply(t *testing.T) {
-	s := &execution{messages: []modelapi.Message{{Role: "tool", ToolName: "browser_inspect", Content: `{"result_id":"id","text":"pending page"}`}, {Role: "assistant", Incomplete: true, Content: "partial"}}}
+	s := &execution{messages: []modelapi.Message{
+		{Role: "tool", ToolName: toolapi.BrowserInspect, Content: `{"result_id":"id","text":"pending page"}`, TransientObservation: true},
+		{Role: "assistant", Incomplete: true, Content: "partial"},
+	}}
 	s.restoreBrowserReads()
 	if !containsPage(s.messages, "pending page") {
 		t.Fatal("interrupted generation consumed unread page")
+	}
+}
+
+func TestBrowserScreenshotDeliveredOnce(t *testing.T) {
+	images := []media.Image{{Data: []byte("pixels")}}
+	s := &execution{messages: []modelapi.Message{
+		{Role: "user", Images: images},
+		{Role: "tool", ToolName: "view_image", Images: images},
+		{Role: "tool", ToolName: toolapi.BrowserInspect, Content: "screenshot", Images: images, TransientObservation: true},
+	}}
+	s.acknowledgeBrowserObservations(len(s.messages))
+	if m := s.messages[2]; len(m.Images) != 0 || m.TransientObservation || m.Content != toolapi.BrowserObservationRead {
+		t.Fatal("delivered browser screenshot still occupies model context")
+	}
+	if len(s.messages[0].Images) != 1 || len(s.messages[1].Images) != 1 {
+		t.Fatal("browser acknowledgement affected other vision inputs")
 	}
 }

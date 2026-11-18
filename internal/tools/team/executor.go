@@ -111,3 +111,10 @@ func (e *Executor) EndBrowser(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (e *Executor) BrowserCursors(ctx context.Context) ([]toolapi.BrowserCursor, error) {
+	if local, ok := e.Local.(toolapi.BrowserCursorSource); ok {
+		return local.BrowserCursors(ctx)
+	}
+	return nil, nil
+}

@@ -41,6 +41,9 @@ func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[stri
 		if len(message.Reasoning) >= recordcontent.SharedThreshold {
 			sharedField = "reasoning"
 		}
+		if message.TransientObservation {
+			sharedField = "content"
+		}
 		packed, refs, err := p.pack(body, sharedField)
 		return packed, refs, len(body), err
 	}

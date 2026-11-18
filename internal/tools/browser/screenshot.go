@@ -29,7 +29,7 @@ func (s *Session) screenshot(ctx context.Context) (out Page, err error) {
 	}
 	path := filepath.Join(s.work, "viewport.png")
 	defer os.Remove(path)
-	receipt, err := s.invoke(ctx, "screenshot", path)
+	receipt, err := s.inspectWithURL(ctx, 32<<10, []string{"screenshot", path})
 	receipt.Close()
 	if err != nil {
 		return Page{}, err

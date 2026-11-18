@@ -12,10 +12,11 @@ import (
 )
 
 type storedRecord struct {
-	sequence   int64
-	kind       string
-	body, refs []byte
-	size       int
+	sequence           int64
+	kind               string
+	body, refs         []byte
+	size               int
+	browserObservation bool
 }
 
 func (s *Store) unpackRecord(ctx context.Context, record storedRecord, fields map[string]bool) ([]byte, error) {

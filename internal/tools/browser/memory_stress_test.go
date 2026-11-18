@@ -7,7 +7,9 @@ package browser
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/metrics"
 	"strings"
@@ -43,12 +45,19 @@ func TestBrowserMemoryRetention(t *testing.T) {
 		t.Fatal(err)
 	}
 	var bytes int64
-	for _, file := range files {
+	err = filepath.WalkDir(s.work, func(_ string, file fs.DirEntry, err error) error {
+		if err != nil || file.IsDir() {
+			return err
+		}
 		info, err := file.Info()
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 		bytes += info.Size()
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	if len(files) != 10 || len(s.results) != len(files) || bytes != 10*((3<<20)-(2<<10)) {
 		t.Fatal("retained artifact budget exceeded", len(files), bytes)

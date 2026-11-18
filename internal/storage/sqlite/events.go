@@ -51,6 +51,9 @@ func (p *journalEncoder) event(value *preparedRecord) error {
 	if event.Kind == "thinking" && len(event.Thinking) >= recordcontent.SharedThreshold {
 		sharedField = "thinking"
 	}
+	if event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == toolapi.BrowserInspect {
+		sharedField = "output"
+	}
 	packed, refs, err := p.pack(body, sharedField)
 	if err != nil {
 		return err

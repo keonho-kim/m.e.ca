@@ -40,7 +40,7 @@ func TestSkillReferenceSurvivesCompactionAndReplacesChangedPages(t *testing.T) {
 	read("two", "current-reference-canary", 0)
 	s.messages = nil
 	s.memoryContext = "Earlier records were compacted"
-	request, err := s.request()
+	request, err := s.request(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}

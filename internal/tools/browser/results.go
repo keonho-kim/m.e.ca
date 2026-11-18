@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -59,6 +58,7 @@ type storedResult struct {
 	rawDigest               [32]byte
 	id, revision, path, url string
 	size, start, next       int
+	blocks                  []int
 	mask                    int
 }
 
@@ -97,6 +97,10 @@ func (s *Session) store(raw json.RawMessage, limit int) (Page, error) {
 	} else {
 		return Page{}, fault.Errorf(diag.BrowserFailed, diag.Text(diag.BrowserInvalidResponse))
 	}
+	return s.storeText(text, address, mask, rawDigest, limit)
+}
+
+func (s *Session) storeText(text, address string, mask int, rawDigest [32]byte, limit int) (Page, error) {
 	text = s.redact(text)
 	if mask != s.maskVersion() {
 		return Page{}, fault.Errorf(diag.BrowserResult)
@@ -135,32 +139,21 @@ func (s *Session) store(raw json.RawMessage, limit int) (Page, error) {
 	}
 	for len(s.results) > 0 && (len(s.results) >= 16 || retained > 32<<20) {
 		old := s.results[0]
-		if old.path != "" {
-			if err := os.Remove(old.path); err != nil {
-				return Page{}, err
-			}
-		}
 		retained -= old.storedBytes()
+		if err := old.discard(); err != nil {
+			return Page{}, err
+		}
 		s.results = slices.Delete(s.results, 0, 1)
 	}
 	if end < len(text) {
 		result.path = filepath.Join(s.work, id)
-		file, err := os.OpenFile(result.path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-		if err != nil {
+		if err := result.spool(text); err != nil {
 			return Page{}, err
-		}
-		_, writeErr := file.WriteString(text[end:])
-		if err := errors.Join(writeErr, file.Close()); err != nil {
-			return Page{}, errors.Join(err, os.Remove(result.path))
 		}
 		result.next = end
 	}
 	if mask != s.maskVersion() {
-		err := fault.Errorf(diag.BrowserResult)
-		if result.path != "" {
-			return Page{}, errors.Join(err, os.Remove(result.path))
-		}
-		return Page{}, err
+		return Page{}, errors.Join(fault.Errorf(diag.BrowserResult), result.discard())
 	}
 	s.results = append(s.results, result)
 	// Never pin a multi-megabyte observation through its small first page.

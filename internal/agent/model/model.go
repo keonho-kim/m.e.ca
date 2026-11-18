@@ -37,19 +37,20 @@ type Message struct {
 	ProviderID      string         `json:"provider_id,omitempty"`
 	ModelID         string         `json:"model_id,omitempty"`
 	Thinking        *bool          `json:"thinking,omitempty"`
+
+	// TransientObservation is a browser result for the next completed model decision.
+	TransientObservation bool `json:"transient_observation,omitempty"`
 }
 
 type Request struct {
-	// TransientHistory marks input that must not enter a cross-decision encoding cache.
-	TransientHistory bool `json:"-"`
-	Tools            []toolapi.Definition
-	Temperature      *float64
-	IdleTimeout      time.Duration
-	ReasoningEffort  string
-	ModelID          string
-	Messages         []Message
-	MaxOutput        int
-	Thinking         *bool
+	Tools           []toolapi.Definition
+	Temperature     *float64
+	IdleTimeout     time.Duration
+	ReasoningEffort string
+	ModelID         string
+	Messages        []Message
+	MaxOutput       int
+	Thinking        *bool
 }
 
 type Response struct {

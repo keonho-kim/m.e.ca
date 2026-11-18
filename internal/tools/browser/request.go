@@ -107,11 +107,7 @@ func (r Request) Validate() error {
 
 func (r Request) args() []string {
 	if r.View == "snapshot" {
-		depth := r.Depth
-		if depth == 0 {
-			depth = 5
-		}
-		args := []string{"snapshot", "-c", "-d", strconv.Itoa(depth)}
+		args := []string{"snapshot", "-c", "-d", strconv.Itoa(r.snapshotDepth())}
 		if r.Selector != "" {
 			args = append(args, "-s", r.Selector)
 		}
@@ -149,6 +145,13 @@ func (r Request) args() []string {
 	default:
 		return []string{r.Action}
 	}
+}
+
+func (r Request) snapshotDepth() int {
+	if r.Depth == 0 {
+		return 5
+	}
+	return r.Depth
 }
 
 func (r Request) Interaction() bool {

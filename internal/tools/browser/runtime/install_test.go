@@ -16,6 +16,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 func TestConcurrentInstallAndTamper(t *testing.T) {
@@ -42,6 +45,21 @@ func TestConcurrentInstallAndTamper(t *testing.T) {
 		t.Fatal("duplicate downloads", calls.Load())
 	}
 	path := filepath.Join(parent, a.name, a.executable)
+	root, err := statefs.Open(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	lock, err := statefs.Lock(t.Context(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	warm, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	if cached, err := install(warm, server.Client(), parent, a); err != nil || cached != path {
+		t.Fatal("warm verification waited for an install writer", err)
+	}
 	if err := os.WriteFile(path, []byte("changed"), 0700); err != nil {
 		t.Fatal(err)
 	}

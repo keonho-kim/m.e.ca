@@ -58,6 +58,16 @@ func TestNativeBrowser(t *testing.T) {
 	if !strings.Contains(snapshot.Text, "Browser fixture") || !strings.Contains(snapshot.Text, "ref=") {
 		t.Fatal(snapshot.Text)
 	}
+	unchanged := invoke(Request{View: "snapshot", Depth: 5})
+	if !unchanged.Unchanged || unchanged.ResultID != snapshot.ResultID || unchanged.Text != "" {
+		t.Fatal("unchanged native snapshot was replayed", unchanged)
+	}
+	invoke(Request{Action: "fill", Target: "#entry", Value: "Second status"})
+	invoke(Request{Action: "click", Target: "button"})
+	changed := invoke(Request{View: "snapshot"})
+	if changed.Unchanged || !strings.Contains(changed.Text, "Second status") || changed.ResultID == snapshot.ResultID {
+		t.Fatal("native snapshot failed to reflect changed state", changed)
+	}
 	large := invoke(Request{View: "text", Selector: "main"})
 	if len(large.Text) > 8192 || large.NextOffset == 0 {
 		t.Fatal("unbounded or missing next page", large)

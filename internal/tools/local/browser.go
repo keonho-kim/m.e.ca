@@ -103,3 +103,10 @@ func (e *Executor) EndBrowser(ctx context.Context) error {
 	}
 	return e.browser.Close(ctx)
 }
+
+func (e *Executor) BrowserCursors(ctx context.Context) ([]tool.BrowserCursor, error) {
+	if e.browser == nil {
+		return nil, nil
+	}
+	return e.browser.Cursors(ctx)
+}

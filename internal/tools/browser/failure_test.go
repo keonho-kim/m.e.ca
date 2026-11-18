@@ -5,6 +5,7 @@
 package browser
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/processmemory"
+	browserruntime "github.com/keonho-kim/meca/internal/tools/browser/runtime"
 )
 
 func TestFailedObservationWriteReleasesMemory(t *testing.T) {
@@ -50,9 +52,31 @@ func TestFailedObservationWriteReleasesMemory(t *testing.T) {
 	}
 }
 
+func TestBrowserFailedExecNeverOccupiesSessionSlot(t *testing.T) {
+	slots, err := browserCapacity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := t.TempDir()
+	missing := filepath.Join(base, "missing-helper")
+	for range cap(slots) + 1 {
+		s := New("", base, func(text string) string { return text }, nil)
+		s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
+			return browserruntime.Paths{Agent: missing}, nil
+		}
+		if _, err := s.Run(t.Context(), Request{Action: "open", URL: "http://localhost"}, ""); err == nil {
+			t.Fatal("missing executable accepted")
+		}
+		if len(slots) != 0 || s.work != "" || s.sockets != "" {
+			t.Fatal("failed exec retained a slot or session directories")
+		}
+	}
+}
+
 func TestFailedShutdownCanRetry(t *testing.T) {
 	s := New("", "", func(text string) string { return text }, nil)
 	s.work, s.sockets = t.TempDir(), t.TempDir()
+	s.helperStarted = true
 	s.paths.Agent = filepath.Join(t.TempDir(), "missing-helper")
 	released := 0
 	s.releaseBrowser = func() { released++ }

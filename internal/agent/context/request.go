@@ -16,6 +16,7 @@ type Input struct {
 	System, Memory, Objective string
 	ProjectRoot               string
 	Observations              string
+	BrowserContinuations      string
 	Messages                  []modelapi.Message
 	SkillReads                []modelapi.Message
 	Redact                    func(string) string
@@ -83,6 +84,11 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 		bytes += message.ContextBytes()
 	} else {
 		p.work = summarySnapshot{}
+	}
+	if input.BrowserContinuations != "" {
+		message := modelapi.Message{Role: "user", Content: input.BrowserContinuations}
+		messages = append(messages, message)
+		bytes += message.ContextBytes()
 	}
 	if bytes > input.MaxBytes {
 		return modelapi.Request{}, faults.Errorf(diagcatalog.ContextFullConversationContextExceedsBytesNoMessages, input.MaxBytes)

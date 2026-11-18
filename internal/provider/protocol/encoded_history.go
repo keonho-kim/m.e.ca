@@ -18,7 +18,7 @@ type encodedMessage struct {
 func (e *Encoder) appendHistory(parts [][]byte, messages []Message) ([][]byte, int, error) {
 	previous := e.history
 	unchanged := 0
-	for unchanged < min(len(previous), len(messages)) && previous[unchanged].matches(messages[unchanged]) {
+	for unchanged < min(len(previous), len(messages)) && !messages[unchanged].transient && previous[unchanged].matches(messages[unchanged]) {
 		unchanged++
 	}
 	if unchanged == len(messages) && unchanged == len(previous) && e.retained+e.tools.bytes <= e.limit() {
@@ -52,10 +52,12 @@ func (e *Encoder) appendHistory(parts [][]byte, messages []Message) ([][]byte, i
 				return nil, 0, err
 			}
 			entry.json = content
-			if message.source != nil {
-				entry.source, entry.hasSource = *message.source, true
-			} else {
-				entry.key = identifyWire(message)
+			if !message.transient && i == len(e.history) {
+				if message.source != nil {
+					entry.source, entry.hasSource = *message.source, true
+				} else {
+					entry.key = identifyWire(message)
+				}
 			}
 		}
 		if len(entry.json) > 0 {
@@ -68,7 +70,7 @@ func (e *Encoder) appendHistory(parts [][]byte, messages []Message) ([][]byte, i
 			count++
 		}
 		// Once the prefix fills, overflow belongs only to the replayable Body.
-		if i == len(e.history) && e.retained+entry.retainedBytes()+e.tools.bytes <= e.limit() {
+		if !message.transient && i == len(e.history) && e.retained+entry.retainedBytes()+e.tools.bytes <= e.limit() {
 			e.history = append(e.history, entry)
 			e.retained += entry.retainedBytes()
 		}

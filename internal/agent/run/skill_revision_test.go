@@ -31,7 +31,7 @@ func TestSupersededSkillRetention(t *testing.T) {
 	}
 	s.messages = nil
 	s.memoryContext = "Old source history was compacted"
-	req, err := s.request()
+	req, err := s.request(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}

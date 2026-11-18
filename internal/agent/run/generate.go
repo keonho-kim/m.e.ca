@@ -29,7 +29,7 @@ func (s *execution) askResponse(ctx context.Context) (modelapi.Response, error) 
 	if s.runner.BeforeDecision != nil {
 		s.runner.BeforeDecision()
 	}
-	request, err := s.request()
+	request, err := s.request(ctx)
 	if err != nil {
 		return modelapi.Response{}, err
 	}

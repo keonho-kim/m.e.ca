@@ -54,22 +54,27 @@ func (c *captured) Close() {
 }
 
 type response struct {
+	Index   *int
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
 	Error   string          `json:"error"`
 }
 
 func (s *Session) invoke(ctx context.Context, args ...string) (out captured, err error) {
+	limit := 32 << 10
+	if len(args) > 0 && (args[0] == "snapshot" || args[0] == "errors" || len(args) > 1 && args[0] == "get" && args[1] == "text") {
+		limit = maxCapture
+	}
+	return s.capture(ctx, nil, limit, args...)
+}
+
+func (s *Session) capture(ctx context.Context, input []byte, captureLimit int, args ...string) (out captured, err error) {
 	memory := processmemory.NewPayloadLease()
 	defer func() {
 		if err != nil {
 			memory.Close()
 		}
 	}()
-	captureLimit := 32 << 10
-	if len(args) > 0 && (args[0] == "snapshot" || args[0] == "errors" || len(args) > 1 && args[0] == "get" && args[1] == "text") {
-		captureLimit = maxCapture
-	}
 	// Shutdown must remain available even when observation admission is exhausted.
 	if len(args) == 0 || args[0] != "close" {
 		if err := memory.Resize(captureLimit * 3); err != nil {
@@ -78,23 +83,37 @@ func (s *Session) invoke(ctx context.Context, args ...string) (out captured, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 40*time.Second)
 	defer cancel()
-	all := []string{"--json", "--no-webmcp", "--config", s.config, "--session", s.name, "--executable-path", s.paths.Browser, "--idle-timeout", "5m"}
+	all := []string{"--json", "--no-webmcp", "--pin-tab", "--config", s.config, "--session", s.name, "--executable-path", s.paths.Browser, "--idle-timeout", "5m"}
 	all = append(all, args...)
 	command := exec.CommandContext(ctx, s.paths.Agent, all...)
 	command.Dir = s.work
 	command.Env = environment(s.sockets)
+	if input != nil {
+		command.Stdin = bytes.NewReader(input)
+	}
 	command.WaitDelay = 2 * time.Second
 	output := &boundedBuffer{remaining: captureLimit}
 	stderr := &boundedBuffer{remaining: 8192}
 	command.Stdout, command.Stderr = output, stderr
 	err = command.Run()
+	s.helperStarted = s.helperStarted || command.Process != nil
 	if output.limited || stderr.limited {
 		return captured{}, fault.Errorf(diag.BrowserLimit)
 	}
 	if ctx.Err() != nil {
 		return captured{}, ctx.Err()
 	}
-	result, parseErr := parseResponse(output.Bytes())
+	var result response
+	var address string
+	var parseErr error
+	if input == nil {
+		result, parseErr = parseResponse(output.Bytes())
+	} else {
+		result, address, parseErr = parseReadBatch(output.Bytes())
+		if address != "" {
+			s.setAddress(address)
+		}
+	}
 	if parseErr != nil {
 		if err != nil {
 			if dependency := runtime.MissingLibrary(stderr.Bytes()); dependency != nil {

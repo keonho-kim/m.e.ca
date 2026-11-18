@@ -9,25 +9,13 @@ import (
 	"database/sql"
 )
 
-func (s *Store) unreadObservationBoundary(ctx context.Context, through int64) (int64, error) {
-	// Only a completed model decision acknowledges delivery. An interrupted draft
-	// can follow an unread result without having consumed it.
-	var completed int64
-	err := s.db.QueryRowContext(ctx, `
- SELECT t.sequence FROM timeline t JOIN messages m ON m.sequence=t.source_sequence
- WHERE t.kind='message' AND t.sequence<=? AND m.role='assistant'
- AND COALESCE(json_extract(m.body,'$.incomplete'),0)=0
- ORDER BY t.sequence DESC LIMIT 1`, through).Scan(&completed)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
-	}
-
+func (s *Store) unreadObservationBoundary(ctx context.Context, through, completed int64) (int64, error) {
 	var first int64
-	err = s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRowContext(ctx, `
  SELECT t.sequence FROM timeline t JOIN messages m ON m.sequence=t.source_sequence
  WHERE t.kind='message' AND t.sequence>? AND t.sequence<=? AND m.role IN ('user','tool')
  AND (json_array_length(m.body,'$.images')>0 OR json_type(m.body,'$.images')='null'
-      OR (m.role='tool' AND json_extract(m.body,'$.tool_name')='browser_inspect'))
+      OR (`+browserObservationSQL+`))
  ORDER BY t.sequence LIMIT 1`, completed, through).Scan(&first)
 	if err == sql.ErrNoRows {
 		return through, nil

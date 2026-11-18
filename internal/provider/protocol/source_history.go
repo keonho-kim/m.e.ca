@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"hash"
+	"slices"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -56,6 +57,7 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 	out := make([]Message, 0, max(len(source), len(e.history)))
 	previous := e.groups
 	e.groups = e.groups[:0]
+	cacheable := true
 	for i := 0; i < len(source); {
 		end := i + 1
 		if source[i].Role == "tool" {
@@ -63,9 +65,10 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 				end++
 			}
 		}
+		cacheable = cacheable && stableGroup(source[i:end])
 		groupIndex := len(e.groups)
 		var group *sourceGroup
-		if groupIndex < len(previous) {
+		if cacheable && groupIndex < len(previous) {
 			p := previous[groupIndex]
 			if p.matches(source[i:end]) && p.from+p.count <= len(e.history) && e.history[p.from].source.group == p {
 				group = p
@@ -87,6 +90,14 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 			e.Clear()
 			return nil, err
 		}
+		if !cacheable {
+			for j := range converted {
+				converted[j].transient = true
+			}
+			out = append(out, converted...)
+			i = end
+			continue
+		}
 		keys := make([]sourceIdentity, end-i)
 		for at := i; at < end; at++ {
 			keys[at-i] = identifySource(source[at])
@@ -106,6 +117,10 @@ func (e *Encoder) Messages(kind connection.ProviderKind, model string, source []
 		clear(previous[len(e.groups):])
 	}
 	return out, nil
+}
+
+func stableGroup(messages []modelapi.Message) bool {
+	return !slices.ContainsFunc(messages, func(m modelapi.Message) bool { return m.TransientObservation })
 }
 
 func sourceHistoryBytes(source []modelapi.Message) int {

@@ -13,6 +13,55 @@ import (
 	"unicode/utf8"
 )
 
+func TestBrowserPaginationReclaimsConsumedBlocks(t *testing.T) {
+	s := New("", "", func(text string) string { return text }, nil)
+	s.work = t.TempDir()
+	text := strings.Repeat("x界😀", 96<<10)
+	raw, _ := json.Marshal(map[string]string{"text": text})
+	first, err := s.store(raw, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := strings.Builder{}
+	out.WriteString(first.Text)
+	req := Request{ResultID: first.ResultID, Revision: first.Revision, Offset: first.NextOffset, Limit: 16381}
+	for req.Offset < len(text)*9/10 {
+		old := req
+		p, err := s.Run(t.Context(), req, "")
+		if err != nil || !utf8.ValidString(p.Text) || p.NextOffset <= req.Offset {
+			t.Fatal("bad page following a block boundary", p.NextOffset, req.Offset, err)
+		}
+		out.WriteString(p.Text)
+		req.Offset = p.NextOffset
+		if _, err := s.Run(t.Context(), old, ""); err == nil {
+			t.Fatal("page replay succeeded")
+		}
+	}
+	result := s.results[0]
+	if result.start < req.Offset-resultBlockBytes || result.storedBytes() > len(text)-req.Offset+resultBlockBytes {
+		t.Fatal("consumed bytes retained", result.storedBytes())
+	}
+	if _, err := os.Stat(result.blockPath(first.NextOffset)); !os.IsNotExist(err) {
+		t.Fatal("the first disk block still exists", err)
+	}
+	cursors, err := s.Cursors(t.Context())
+	if err != nil || len(cursors) != 1 || cursors[0].NextOffset != req.Offset {
+		t.Fatal("cursor diverged from committed page", cursors, err)
+	}
+	for req.Offset != 0 {
+		p, err := s.Run(t.Context(), req, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		out.WriteString(p.Text)
+		req.Offset = p.NextOffset
+	}
+	cursors, err = s.Cursors(t.Context())
+	if out.String() != text || err != nil || len(cursors) != 0 {
+		t.Fatal("final page or cursor lifetime differs", len(cursors), err)
+	}
+}
+
 func TestPagedObservations(t *testing.T) {
 	s := New(t.TempDir(), t.TempDir(), func(text string) string { return strings.ReplaceAll(text, "secret", "masked") }, nil)
 	s.work = t.TempDir()

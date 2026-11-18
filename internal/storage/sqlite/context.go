@@ -7,6 +7,7 @@ package sqlite
 import (
 	"bytes"
 	"context"
+	"math"
 
 	json "github.com/goccy/go-json"
 
@@ -22,9 +23,13 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 	if after < 0 || maxBytes < 1 {
 		return nil, faults.Errorf(diagcatalog.SqliteInvalidConversationContextBounds)
 	}
+	completed, err := s.lastCompletedDecision(ctx, math.MaxInt64)
+	if err != nil {
+		return nil, err
+	}
 	total := 0
 	for {
-		page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.sequence>? ORDER BY t.sequence LIMIT 64", after)
+		page, err := s.decisionPage(ctx, completed, after, false)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +45,6 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 					return nil, err
 				}
 			}
-
 		}
 		sizes, sizeErr := s.contextReadSizes(ctx, page, selectedFields)
 		if sizeErr != nil {
@@ -60,16 +64,7 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 
 		var shared map[string]string
 		if s.room != nil {
-			selected := page
-			size := total
-			for i, record := range page {
-				size += record.size
-				if size > maxBytes {
-					selected = page[:i]
-					break
-				}
-			}
-			shared, err = s.sharedContext(ctx, selected)
+			shared, err = s.sharedContext(ctx, page)
 			if err != nil {
 				return nil, err
 			}
@@ -84,6 +79,7 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 			if err != nil {
 				return nil, err
 			}
+			message.TransientObservation = record.browserObservation
 			size := record.size
 			if fields != nil {
 				message.Content += modelapi.ImageOmissionNotice

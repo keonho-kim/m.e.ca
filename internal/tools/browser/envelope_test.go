@@ -27,3 +27,27 @@ func TestResponseEnvelope(t *testing.T) {
 		}
 	}
 }
+
+func TestReadBatchEnvelope(t *testing.T) {
+	for _, body := range []string{
+		`[{"index":0,"success":true,"result":{"url":"http://localhost"}},{"index":1,"success":true,"result":{"text":"ready"}}]`,
+		`[{"index":0,"success":true,"result":{"url":"http://localhost"}},{"index":1,"success":false,"error":"absent"}]`,
+		`[{"index":0,"success":false,"error":"closed"}]`,
+	} {
+		raw := []byte(body)
+		value, address, err := parseReadBatch(raw)
+		if err != nil || value.Success && (address != "http://localhost" || !bytes.Contains(value.Data, []byte("ready"))) {
+			t.Fatal("invalid batch projection", address, err)
+		}
+	}
+	for _, body := range []string{
+		`[{"index":0,"success":true,"result":{"url":"http://localhost"}}]`,
+		`[{"index":0,"success":true,"result":{"url":"http://localhost"}},{"index":0,"success":true,"result":{}}]`,
+		`[{"index":0,"success":false,"error":"closed"},{"index":1,"success":true,"result":{}}]`,
+		`[{"index":0,"success":false,"error":"closed"}]{}`,
+	} {
+		if _, _, err := parseReadBatch([]byte(body)); err == nil {
+			t.Fatal("accepted out-of-order or incomplete helper batch", body)
+		}
+	}
+}

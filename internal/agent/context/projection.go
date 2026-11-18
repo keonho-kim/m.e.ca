@@ -112,7 +112,7 @@ func (p *Projection) appendHistory(input Input, messages []modelapi.Message) ([]
 }
 
 func sameMessage(a, b modelapi.Message) bool {
-	return samePublicSource(a, b) && sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
+	return samePublicSource(a, b) && sameImages(a.Images, b.Images) && a.ID == b.ID && a.Role == b.Role && a.Content == b.Content && a.TransientObservation == b.TransientObservation && a.Reasoning == b.Reasoning && a.Incomplete == b.Incomplete && a.ToolCallID == b.ToolCallID && a.ToolName == b.ToolName && a.ProviderID == b.ProviderID && a.ModelID == b.ModelID && bytes.Equal(a.ReasoningState, b.ReasoningState) && slices.EqualFunc(a.Calls, b.Calls, func(a, b toolapi.Call) bool {
 		return a.ID == b.ID && a.Name == b.Name && bytes.Equal(a.Arguments, b.Arguments)
 	})
 }

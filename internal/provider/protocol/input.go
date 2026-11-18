@@ -19,6 +19,7 @@ type Message struct {
 	source           *sourceIdentity
 	sourceBytes      int
 	hasImages        bool
+	transient        bool
 	continuation     json.RawMessage
 	nativeCalls      []toolapi.Call
 	ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`

@@ -18,7 +18,7 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
-func checkCloudSources(t *testing.T, encoder *Encoder, kind connection.ProviderKind, source []modelapi.Message) Body {
+func checkPreparedSource(t *testing.T, encoder *Encoder, kind connection.ProviderKind, source []modelapi.Message) Body {
 	t.Helper()
 	request := modelapi.Request{ModelID: "model", MaxOutput: 32}
 	plain, err := Messages(kind, source)
@@ -67,14 +67,14 @@ func TestCloudSourcesDetectBorrowedArgumentChanges(t *testing.T) {
 		var encoder Encoder
 		arguments := json.RawMessage(`{"content":"` + strings.Repeat("x", 128<<10) + `"}`)
 		source := []modelapi.Message{{Role: "assistant", Calls: []toolapi.Call{{ID: "call", Name: "write_file", Arguments: arguments}}}, {Role: "tool", ToolCallID: "call", ToolName: "write_file", Content: "done"}}
-		previous := checkCloudSources(t, &encoder, kind, source)
+		previous := checkPreparedSource(t, &encoder, kind, source)
 		before, err := io.ReadAll(previous.Reader())
 		if err != nil {
 			t.Fatal(err)
 		}
-		checkCloudSources(t, &encoder, kind, source)
+		checkPreparedSource(t, &encoder, kind, source)
 		arguments[20] = 'y'
-		checkCloudSources(t, &encoder, kind, source)
+		checkPreparedSource(t, &encoder, kind, source)
 		after, err := io.ReadAll(previous.Reader())
 		if err != nil || !bytes.Equal(before, after) {
 			t.Fatal("source mutation changed a replayable request", err)
@@ -101,12 +101,12 @@ func TestCloudSourcesPreserveToolImageGroups(t *testing.T) {
 			{Role: "user", Content: "continue"},
 		}
 		for range 2 {
-			checkCloudSources(t, &encoder, kind, source)
+			checkPreparedSource(t, &encoder, kind, source)
 		}
 		source[2].Content = "changed observation"
-		checkCloudSources(t, &encoder, kind, source)
+		checkPreparedSource(t, &encoder, kind, source)
 		source = source[:2]
-		checkCloudSources(t, &encoder, kind, source)
+		checkPreparedSource(t, &encoder, kind, source)
 		encoder.Clear()
 		if encoder.cloudGroups != nil || encoder.cloud != nil || encoder.cloudSourceBytes != 0 {
 			t.Fatal("cleanup retained native source groups")

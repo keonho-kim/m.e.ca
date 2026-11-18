@@ -28,13 +28,32 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
 
-type inspectTools struct{ *executor }
+type inspectTools struct {
+	*executor
+	otherTool bool
+}
 
 func (e inspectTools) Definitions() []toolapi.Definition {
-	return catalog.Definitions("browser_inspect")
+	return catalog.Definitions(toolapi.BrowserInspect, "list_skills")
+}
+
+func (e inspectTools) BrowserCursors(context.Context) ([]toolapi.BrowserCursor, error) {
+	page := e.executed
+	if e.otherTool && page >= 3 {
+		page--
+	}
+	if page == 0 || page > 2 {
+		return nil, nil
+	}
+	return []toolapi.BrowserCursor{{ResultID: "result_test", Revision: "revision", NextOffset: page * 256}}, nil
 }
 
 func TestBrowserCompactionFlow(t *testing.T) {
+	t.Run("unread", func(t *testing.T) { testBrowserCompaction(t, false) })
+	t.Run("after unrelated tool", func(t *testing.T) { testBrowserCompaction(t, true) })
+}
+
+func testBrowserCompaction(t *testing.T, otherTool bool) {
 	ctx := t.Context()
 	project, home := t.TempDir(), t.TempDir()
 	sessions, err := sqlite.OpenSessions(filepath.Join(home, "sessions"))
@@ -62,6 +81,10 @@ func TestBrowserCompactionFlow(t *testing.T) {
 	var pending string
 	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		step++
+		phase := step
+		if otherTool && step > 3 {
+			phase--
+		}
 		var req struct {
 			Max      int `json:"max_tokens"`
 			Messages []struct{ Role, Content string }
@@ -73,6 +96,7 @@ func TestBrowserCompactionFlow(t *testing.T) {
 			return
 		}
 		toolResult := ""
+		var live []toolapi.BrowserCursor
 		for _, m := range req.Messages {
 			if strings.Contains(m.Content, "NEVER_REQUESTED_SUFFIX") {
 				t.Errorf("step %d received the whole source", step)
@@ -83,20 +107,33 @@ func TestBrowserCompactionFlow(t *testing.T) {
 			if step >= 3 && strings.Contains(m.Content, "PAGE_ONE_BODY") {
 				t.Errorf("step %d replayed consumed page one", step)
 			}
+			if strings.HasPrefix(m.Content, "Unread browser observations.") {
+				_, data, _ := strings.Cut(m.Content, "\n")
+				if err := json.Unmarshal([]byte(data), &live); err != nil {
+					t.Error(err)
+				}
+			}
 		}
 		answer := func(text string) {
 			fmt.Fprintf(w, `{"choices":[{"message":{"content":%q},"finish_reason":"stop"}]}`, text)
 		}
-		call := func(args map[string]any) {
+		call := func(name string, args map[string]any) {
 			b, _ := json.Marshal(args)
-			fmt.Fprintf(w, `{"choices":[{"message":{"tool_calls":[{"id":"call_%d","type":"function","function":{"name":"browser_inspect","arguments":%q}}]},"finish_reason":"tool_calls"}]}`, step, string(b))
+			fmt.Fprintf(w, `{"choices":[{"message":{"tool_calls":[{"id":"call_%d","type":"function","function":{"name":%q,"arguments":%q}}]},"finish_reason":"tool_calls"}]}`, step, name, string(b))
 		}
 		next := func() {
-			call(map[string]any{"result_id": pinned.ResultID, "revision": pinned.Revision, "offset": pinned.Next, "limit": 256})
+			call(toolapi.BrowserInspect, map[string]any{"result_id": pinned.ResultID, "revision": pinned.Revision, "offset": pinned.Next, "limit": 256})
 		}
-		switch step {
+		if otherTool && step == 3 {
+			if !strings.Contains(toolResult, "PAGE_TWO_BODY") {
+				t.Error("missing observation before unrelated tool")
+			}
+			call("list_skills", map[string]any{})
+			return
+		}
+		switch phase {
 		case 1:
-			call(map[string]any{"view": "text", "selector": "#proof", "limit": 256})
+			call(toolapi.BrowserInspect, map[string]any{"view": "text", "selector": "#proof", "limit": 256})
 		case 2:
 			if err := json.Unmarshal([]byte(toolResult), &pinned); err != nil || len(pinned.Text) != 256 || !strings.Contains(pinned.Text, "PAGE_ONE_BODY") || pinned.Next != 256 {
 				t.Errorf("invalid first page: %v", err)
@@ -104,7 +141,7 @@ func TestBrowserCompactionFlow(t *testing.T) {
 			next()
 		case 3:
 			pending = toolResult
-			if !strings.Contains(pending, "PAGE_TWO_BODY") {
+			if !otherTool && !strings.Contains(pending, "PAGE_TWO_BODY") {
 				t.Error("missing current page")
 			}
 			w.WriteHeader(400)
@@ -123,8 +160,17 @@ func TestBrowserCompactionFlow(t *testing.T) {
 			if req.Max != 196608 || toolResult != pending {
 				t.Error("lost or changed the pending page or output policy")
 			}
-			if err := json.Unmarshal([]byte(toolResult), &pinned); err != nil || pinned.Next != 512 {
-				t.Error("lost continuation cursor")
+			if len(live) != 1 || live[0].NextOffset != 512 {
+				t.Errorf("lost live continuation cursor: %+v", live)
+			} else {
+				pinned.ResultID, pinned.Revision, pinned.Next = live[0].ResultID, live[0].Revision, live[0].NextOffset
+			}
+			if otherTool {
+				for _, m := range req.Messages {
+					if m.Role == "tool" && strings.Contains(m.Content, `"result_id"`) {
+						t.Error("older browser result survived the compaction boundary")
+					}
+				}
 			}
 			next()
 		case 6:
@@ -150,16 +196,24 @@ func TestBrowserCompactionFlow(t *testing.T) {
 	redact := func(s string) string { return s }
 	runner := Runner{Generator: model, Journal: db, Session: id, Model: "fixture", Provider: conn.ID, ProjectRoot: project, Redact: redact, Settings: policy.Settings{Scope: policy.System},
 		Memory: &compact.Controller{Repository: db, Session: id, Model: "fixture", Prompt: prompt.Defaults().Compaction, Settings: compact.Defaults(), Redact: redact}}
+	wantCalls, wantSteps := 3, 6
+	if otherTool {
+		runner.Memory.Settings.KeepRecentTokens = 1
+		wantCalls, wantSteps = 4, 7
+	}
 	var body strings.Builder
 	pages := []string{"PAGE_ONE_BODY", "PAGE_TWO_BODY", "PAGE_THREE_BODY"}
 	ex := &executor{}
 	for i, marker := range pages {
+		if i == 2 && otherTool {
+			ex.outcomes = append(ex.outcomes, toolapi.Result{Content: json.RawMessage(`{"Content":"A separate fact."}`)})
+		}
 		text := marker + strings.Repeat("x", 256-len(marker))
 		body.WriteString(text)
 		result, _ := json.Marshal(map[string]any{"text": text, "result_id": "result_test", "revision": "revision", "offset": i * 256, "next_offset": (i + 1) * 256})
 		ex.outcomes = append(ex.outcomes, toolapi.Result{Content: result})
 	}
-	runner.Tools = inspectTools{ex}
+	runner.Tools = inspectTools{executor: ex, otherTool: otherTool}
 	if os.Getenv("MECA_TEST_NATIVE_COMPACTION") == "1" {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
@@ -193,7 +247,7 @@ func TestBrowserCompactionFlow(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil || result.Text != "done" || step != 6 || summaries != 1 || inspections != 3 {
+	if err != nil || result.Text != "done" || step != wantSteps || summaries != 1 || inspections != wantCalls {
 		t.Fatalf("steps=%d summaries=%d inspections=%d err=%v", step, summaries, inspections, err)
 	}
 }

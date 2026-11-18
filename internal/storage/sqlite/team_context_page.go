@@ -33,7 +33,7 @@ func (s *Store) sharedContext(ctx context.Context, page []storedRecord) (map[str
 		if err := json.Unmarshal(r.refs, &refs); err != nil {
 			return nil, err
 		}
-		if id := refs[`["content"]`]; id != "" && !ids[id] {
+		if id, quoted := recordcontent.Reference(refs[`["content"]`]); id != "" && !quoted && !ids[id] {
 			ids[id] = true
 			args = append(args, id)
 		}

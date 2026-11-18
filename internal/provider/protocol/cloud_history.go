@@ -39,8 +39,15 @@ func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request
 		e.cloudGroups = nil
 		e.cloudSourceBytes = 0
 	}
-	size, text := textHistorySize(messages)
-	for _, message := range messages {
+	stable := messages
+	for i, message := range messages {
+		if message.transient {
+			stable = messages[:i]
+			break
+		}
+	}
+	size, text := textHistorySize(stable)
+	for _, message := range stable {
 		if message.Role != "system" && message.Role != "user" && message.Role != "assistant" && message.Role != "tool" {
 			text = false
 			break
@@ -64,7 +71,7 @@ func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request
 	previous := e.cloud
 	unchanged := 0
 	if e.cloudInitial == native.initial {
-		for unchanged < min(len(previous), len(messages)) && previous[unchanged].matches(messages[unchanged]) {
+		for unchanged < min(len(previous), len(stable)) && previous[unchanged].matches(messages[unchanged]) {
 			unchanged++
 		}
 	}
@@ -99,7 +106,7 @@ func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request
 			e.Clear()
 			return "", Body{}, err
 		}
-		if index == len(e.cloud) {
+		if index < len(stable) && index == len(e.cloud) {
 			if index >= unchanged {
 				entry.source = message.cloudSource
 				if entry.source == nil {

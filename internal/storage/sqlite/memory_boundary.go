@@ -21,7 +21,11 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 	if through < 0 || keepBytes < 0 {
 		return 0, faults.Errorf(diagcatalog.SqliteInvalidCompactionTailBounds)
 	}
-	pin, pinErr := s.unreadObservationBoundary(ctx, through)
+	completed, err := s.lastCompletedDecision(ctx, through)
+	if err != nil {
+		return 0, err
+	}
+	pin, pinErr := s.unreadObservationBoundary(ctx, through, completed)
 	if pinErr != nil {
 		return 0, pinErr
 	}
@@ -34,9 +38,10 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 		return through, nil
 	}
 	selection := history.TailSelection{Target: keepBytes}
+	fields := map[string]bool{"role": true, "calls": true, "tool_call_id": true, "tool_name": true, "incomplete": true}
 	before := through + 1
 	for {
-		page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,m.raw_bytes FROM timeline t JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence WHERE t.sequence<? ORDER BY t.sequence DESC LIMIT 64", before)
+		page, err := s.decisionPage(ctx, completed, before, true)
 		if err != nil {
 			return 0, err
 		}
@@ -44,13 +49,22 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 			return 0, nil
 		}
 		for _, record := range page {
-			body, err := s.unpackRecord(ctx, record, map[string]bool{"role": true, "content": true, "calls": true, "tool_call_id": true, "tool_name": true, "incomplete": true})
+			body, err := s.unpackRecord(ctx, record, fields)
 			if err != nil {
 				return 0, err
 			}
 			var message modelapi.Message
 			if err := json.Unmarshal(body, &message); err != nil {
 				return 0, err
+			}
+			if message.ToolName == "edit_file" {
+				body, err := s.unpackRecord(ctx, record, map[string]bool{"content": true})
+				if err != nil {
+					return 0, err
+				}
+				if err := json.Unmarshal(body, &message); err != nil {
+					return 0, err
+				}
 			}
 			if boundary, ready := selection.Keep(record.sequence, record.size, message); ready {
 				return boundary, nil
