@@ -35,6 +35,12 @@ func (s *execution) request() (modelapi.Request, error) {
 		return modelapi.Request{}, err
 	}
 	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions})
+	for _, m := range s.messages[s.browserReadThrough:] {
+		if browserTextPage(m) {
+			request.TransientHistory = true
+			break
+		}
+	}
 	observations := ""
 	if s.runner.ContextObservations != nil {
 		observations = s.runner.ContextObservations(s.messages)

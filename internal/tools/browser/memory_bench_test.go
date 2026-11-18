@@ -74,13 +74,25 @@ func BenchmarkBrowserMemory(b *testing.B) {
 					if err != nil {
 						b.Fatal(err)
 					}
-					r := Request{ResultID: first.ResultID, Revision: first.Revision, Limit: 8192}
+					r := Request{ResultID: first.ResultID, Revision: first.Revision, Offset: first.NextOffset, Limit: 8192}
 					b.ReportAllocs()
 					b.ResetTimer()
-					for b.Loop() {
-						if _, err := s.page(r); err != nil {
+					for i := 0; i < b.N; i++ {
+						if r.Offset == 0 {
+							b.StopTimer()
+							s.setAddress(fmt.Sprint(i))
+							first, err = s.store(raw, 0)
+							if err != nil {
+								b.Fatal(err)
+							}
+							r.ResultID, r.Revision, r.Offset = first.ResultID, first.Revision, first.NextOffset
+							b.StartTimer()
+						}
+						page, err := s.page(r)
+						if err != nil {
 							b.Fatal(err)
 						}
+						r.Offset = page.NextOffset
 					}
 				})
 			}

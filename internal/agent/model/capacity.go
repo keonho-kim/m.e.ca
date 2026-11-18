@@ -10,7 +10,9 @@ import (
 
 type ContextLimitError struct {
 	Input, Capacity int
-	Cause           error
+	// Partial means generation already produced output before the failure.
+	Partial bool
+	Cause   error
 }
 
 func (e *ContextLimitError) Error() string {

@@ -41,7 +41,6 @@ const (
 	BrowserInvalidViewport   Message = "viewport must be 320–2560 by 240–1600"
 	BrowserUnknownAction     Message = "unknown browser action"
 	BrowserUnexpectedURL     Message = "url is only accepted by open"
-	BrowserInvalidOffset     Message = "offset must be a UTF-8 boundary"
 	BrowserInvalidRedirect   Message = "invalid download redirect"
 	BrowserInvalidExecutable Message = "MECA_BROWSER_EXECUTABLE must name an executable absolute path"
 	BrowserWrongTool         Message = "wrong browser tool"
@@ -61,3 +60,5 @@ const BrowserMemoryObservation Message = "cannot check browser memory admission:
 
 const BrowserStableMetadata Message = "invalid Chrome Stable release metadata"
 const BrowserStableVerification Message = "Chrome executable did not report the selected Stable version"
+
+const BrowserInvalidCursor Message = "continue with the exact result_id, revision and next_offset from the latest page"

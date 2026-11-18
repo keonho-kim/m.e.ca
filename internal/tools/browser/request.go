@@ -39,6 +39,9 @@ func (r Request) Validate() error {
 		return invalid(diag.Text(diag.BrowserInvalidBounds))
 	}
 	if r.ResultID != "" {
+		if r.Offset == 0 || r.Revision == "" {
+			return invalid(diag.Text(diag.BrowserInvalidCursor))
+		}
 		if r.Action != "" || r.View != "" || r.URL != "" || r.Target != "" || r.Value != "" || r.Selector != "" || r.Depth != 0 || r.Width != 0 || r.Height != 0 || r.Pixels != 0 || r.Direction != "" || len(r.ResultID) > 64 || len(r.Revision) > 64 {
 			return invalid(diag.Text(diag.BrowserInvalidResultRead))
 		}

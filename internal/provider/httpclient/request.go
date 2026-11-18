@@ -76,6 +76,7 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	}
 	// The probe exercises image acceptance directly, without requiring a separate
 	// tokenizer endpoint that may be unavailable or unable to process media.
+	canReduce := !probe && request.MaxOutput == 0
 	if !probe {
 		request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools, encoder)
 	}
@@ -102,11 +103,14 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	if idle <= 0 {
 		idle = transport.DefaultIdleTimeout
 	}
-	return client.transport.Attempts(ctx, func() (err error) {
+	attempt := 0
+	generationStarted := false
+	err = client.transport.Attempts(ctx, func() (err error) {
 		progress := transport.WatchContent(ctx, idle)
 		defer progress.Close()
 		attemptCtx := progress.Context()
 		for {
+			attempt++
 			httpRequest, buildErr := client.transport.NewRequest(attemptCtx, http.MethodPost, endpoint, content.Reader())
 			if buildErr != nil {
 				return &transport.ConsumerError{Cause: buildErr}
@@ -118,33 +122,47 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 			response, sendErr := client.transport.SendOnce(httpRequest, idle)
 			if sendErr != nil {
 				if !controls.OmitThinkingSummary && transport.ThinkingSummaryUnsupported(sendErr, client.connection.Kind) {
-					// A permanent 400 rejects the option before generation. Observe this
-					// model's capability once without changing explicit reasoning effort.
 					controls.OmitThinkingSummary = true
 					client.summaryUnsupportedModel.Store(new(request.ModelID))
-					// Rebuild only on this rejected option. Keeping converted DTOs
-					// in the attempt closure would pin their base64 images and native
-					// histories throughout a potentially long streaming response.
-					messages, convertErr := encoder.Messages(client.connection.Kind, request.ModelID, history)
-					if convertErr != nil {
-						return &transport.ConsumerError{Cause: convertErr}
+				} else {
+					if probe {
+						return sendErr
 					}
-					endpoint, content, err = encoder.Encode(client.connection.Kind, client.connection.APIBase(), info, request, messages, controls)
-					if err != nil {
+					next, failure := rejectedBudget(sendErr, request.MaxOutput, info.ContextWindow, canReduce)
+					if failure != nil {
+						return failure
+					}
+					canReduce = false
+					reason := diagcatalog.Text(diagcatalog.ProviderReducedOutput, request.MaxOutput, next)
+					if err := emit(modelapi.Event{Retry: &modelapi.Retry{Attempt: attempt + 1, MaxAttempts: attempt + 1, Reason: reason}}); err != nil {
 						return &transport.ConsumerError{Cause: err}
 					}
-					if !hasImages {
-						if err := emit(modelapi.Event{InputBytes: int64(content.Len())}); err != nil {
-							return &transport.ConsumerError{Cause: err}
-						}
-					}
-					continue
+					request.MaxOutput = next
 				}
-				return sendErr
+				// Rebuild the same immutable history only after confirmed rejection.
+				retryMessages, err := encoder.Messages(client.connection.Kind, request.ModelID, history)
+				if err != nil {
+					return &transport.ConsumerError{Cause: err}
+				}
+				endpoint, content, err = encoder.Encode(client.connection.Kind, client.connection.APIBase(), info, request, retryMessages, controls)
+				if err != nil {
+					return &transport.ConsumerError{Cause: err}
+				}
+				if content.Len() > modelapi.MaxResponseBytes {
+					return &transport.ConsumerError{Cause: faults.Errorf(diagcatalog.HttpclientModelContextExceedsRequestSizeLimit)}
+				}
+				if !hasImages {
+					if err := emit(modelapi.Event{InputBytes: int64(content.Len())}); err != nil {
+						return &transport.ConsumerError{Cause: err}
+					}
+				}
+				continue
 			}
+			canReduce = false
 			defer func() { err = errors.Join(err, response.Body.Close()) }()
 			return protocol.ReadResponse(attemptCtx, response, client.connection.Kind, func(event modelapi.Event) error {
 				if event.Progress || event.Delta != "" || event.Thinking != "" || len(event.Calls) > 0 || event.Done {
+					generationStarted = true
 					progress.Activity()
 				}
 				if event.Progress && event.Delta == "" && event.Thinking == "" && len(event.Calls) == 0 && !event.Done && event.Usage == nil {
@@ -163,5 +181,20 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 				return nil
 			})
 		}
-	}, func(retry modelapi.Retry) error { return emit(modelapi.Event{Retry: &retry}) })
+	}, func(retry modelapi.Retry) error {
+		// A failed exchange may have reached the model. Do not start a budget correction after that.
+		canReduce = false
+		remaining := retry.MaxAttempts - retry.Attempt
+		retry.Attempt = attempt + 1
+		retry.MaxAttempts = retry.Attempt + remaining
+		return emit(modelapi.Event{Retry: &retry})
+	})
+	var capacity *modelapi.ContextLimitError
+	if generationStarted && errors.As(err, &capacity) {
+		observed := *capacity
+		observed.Partial = true
+		observed.Cause = err
+		return &observed
+	}
+	return err
 }

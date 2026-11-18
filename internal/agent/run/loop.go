@@ -50,8 +50,10 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		}
 		commandRevision := s.commandRevision
 		instructionRevision := s.instructionRevision
+		supplied := len(s.messages)
 		reply, askErr := s.askResponse(ctx)
 		if askErr == nil {
+			s.acknowledgeBrowserPages(supplied)
 			s.capacityRecovery = false
 		}
 		if askErr != nil {
@@ -62,7 +64,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 				continue
 			}
 			var capacity *modelapi.ContextLimitError
-			if !s.capacityRecovery && errors.As(askErr, &capacity) {
+			if !s.capacityRecovery && errors.As(askErr, &capacity) && !capacity.Partial {
 				s.capacityRecovery = true
 				if m := s.runner.Memory; m != nil && capacity.Capacity > 0 && (m.ContextWindow == 0 || capacity.Capacity < m.ContextWindow) {
 					m.ContextWindow = capacity.Capacity

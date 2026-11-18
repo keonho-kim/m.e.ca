@@ -35,6 +35,13 @@ type Projection struct {
 	work    summarySnapshot
 }
 
+// ForgetMessage releases a retired tool page while keeping the unaffected prefix reusable.
+func (p *Projection) ForgetMessage(index int) {
+	if index < len(p.entries) {
+		p.entries[index] = projectedMessage{}
+	}
+}
+
 func (p *Projection) build(input Input) (modelapi.Request, error) {
 	for range 2 {
 		version := input.RedactionVersion()

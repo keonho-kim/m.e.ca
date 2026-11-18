@@ -93,3 +93,5 @@ const (
 	ServerRequestStarted                                     Message = "request_started"
 	ServerRequestWasNotFound                                 Message = "request was not found"
 )
+
+const ProviderReducedOutput Message = "provider rejected the requested output budget; reducing it from %d to %d tokens"

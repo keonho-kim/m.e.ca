@@ -50,7 +50,7 @@ func TestBrowserMemoryRetention(t *testing.T) {
 		}
 		bytes += info.Size()
 	}
-	if len(files) != 10 || len(s.results) != len(files) || bytes != 30<<20 {
+	if len(files) != 10 || len(s.results) != len(files) || bytes != 10*((3<<20)-(2<<10)) {
 		t.Fatal("retained artifact budget exceeded", len(files), bytes)
 	}
 }

@@ -22,7 +22,7 @@ func (c *Controller) summarizeSources(ctx context.Context, generate Generate, pr
 			return text, nil
 		}
 		var capacity *modelapi.ContextLimitError
-		if attempt != 0 || !errors.As(err, &capacity) || capacity.Input <= 0 || capacity.Capacity <= 0 || ctx.Err() != nil {
+		if attempt != 0 || !errors.As(err, &capacity) || capacity.Partial || capacity.Input <= 0 || capacity.Capacity <= 0 || ctx.Err() != nil {
 			return "", err
 		}
 		packetBytes := 0

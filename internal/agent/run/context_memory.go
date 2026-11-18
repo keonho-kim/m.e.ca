@@ -38,5 +38,6 @@ func (s *execution) loadContext(ctx context.Context, through int64) error {
 		return err
 	}
 	s.messages = messages
+	s.restoreBrowserReads()
 	return nil
 }

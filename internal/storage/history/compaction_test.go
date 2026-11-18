@@ -70,3 +70,15 @@ func TestCompactionDistinguishesUnfinishedClaimsFromOutcomes(t *testing.T) {
 		t.Fatal("unfinished thinking reached compaction")
 	}
 }
+
+func TestCompactionDoesNotReplayBrowserPages(t *testing.T) {
+	rows := []Record{
+		{Sequence: 1, Kind: "message", Message: modelapi.Message{Role: "tool", ToolName: "browser_inspect", Content: `{"text":"consumed detail","result_id":"id"}`}},
+		{Sequence: 2, Kind: "message", Message: modelapi.Message{Role: "assistant", Content: "Relevant finding"}},
+		{Sequence: 3, Kind: "message", Message: modelapi.Message{Role: "tool", ToolName: "read_file", Content: `{"text":"file details"}`}},
+	}
+	records, err := Compaction(rows)
+	if err != nil || len(records) != 2 || records[0].Text != "Relevant finding" || !strings.Contains(records[1].Text, "file details") {
+		t.Fatal(records, err)
+	}
+}

@@ -26,6 +26,7 @@ type execution struct {
 	contextMemory       *processmemory.ContextLease
 	replyMemory         *processmemory.ReplyLease
 	projection          contextbuild.Projection
+	browserReadThrough  int
 	historyLoaded       bool
 	runner              Runner
 	limits              Limits

@@ -40,14 +40,16 @@ type Message struct {
 }
 
 type Request struct {
-	Tools           []toolapi.Definition
-	Temperature     *float64
-	IdleTimeout     time.Duration
-	ReasoningEffort string
-	ModelID         string
-	Messages        []Message
-	MaxOutput       int
-	Thinking        *bool
+	// TransientHistory marks input that must not enter a cross-decision encoding cache.
+	TransientHistory bool `json:"-"`
+	Tools            []toolapi.Definition
+	Temperature      *float64
+	IdleTimeout      time.Duration
+	ReasoningEffort  string
+	ModelID          string
+	Messages         []Message
+	MaxOutput        int
+	Thinking         *bool
 }
 
 type Response struct {

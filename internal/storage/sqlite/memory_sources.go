@@ -68,7 +68,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 			return nil, cursor, err
 		}
 	}
-	fields := map[string]bool{"source": true, "id": true, "role": true, "content": true, "incomplete": true}
+	fields := map[string]bool{"source": true, "id": true, "role": true, "tool_name": true, "content": true, "incomplete": true}
 	var sequences []any
 	for _, e := range page {
 		if e.public > 0 {

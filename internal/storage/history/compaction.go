@@ -32,6 +32,11 @@ func Compaction(page []Record) ([]compact.Record, error) {
 						role = "unfinished_assistant_draft"
 					}
 				case "tool":
+					if m.ToolName == "browser_inspect" {
+						if _, page := tool.ReadBrowserPage(m.Content); page {
+							continue
+						}
+					}
 					role, text = "observation", toolExcerpt(m.Content)
 				}
 			}

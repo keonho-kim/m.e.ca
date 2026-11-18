@@ -5,8 +5,10 @@
 package local
 
 import (
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/policy"
@@ -29,16 +31,14 @@ func TestBrowserPreparation(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(e.home, ".meca/browser")); !os.IsNotExist(err) {
 		t.Fatal("preparation eagerly created browser installation", err)
 	}
-	op, err := e.Prepare(t.Context(), policy.Settings{Scope: policy.System, Permission: policy.PermissionAllMighty}, call("browser_action", `{"action":"fill","target":"#entry","value":"plain"}`))
-	if err != nil {
-		t.Fatal(err)
+	_, err = e.Prepare(t.Context(), policy.Settings{Scope: policy.System, Permission: policy.PermissionAllMighty}, call("browser_action", `{"action":"fill","target":"#entry","value":"plain"}`))
+	if err == nil || !strings.Contains(err.Error(), diag.Text(diag.BrowserClosed)) {
+		t.Fatal("interaction before open should fail before prompting", err)
 	}
-	if !op.Approval().UserRequired {
-		t.Fatal("external interaction bypassed direct approval")
+	if _, err := remote.Execute(t.Context(), false); err == nil {
+		t.Fatal("unapproved remote navigation executed")
 	}
-	if _, err := op.Execute(t.Context(), false); err == nil {
-		t.Fatal("unapproved browser interaction executed")
-	}
+
 	if _, err := e.Prepare(t.Context(), settings, call("browser_action", `{"action":"fill","target":"#entry","value":"provider-secret"}`)); err == nil {
 		t.Fatal("credential passed to browser")
 	}
@@ -48,5 +48,37 @@ func TestBrowserPreparation(t *testing.T) {
 	}
 	if _, err := screenshot.Execute(t.Context(), true); err == nil {
 		t.Fatal("vision requirement ignored")
+	}
+}
+
+func TestBrowserApprovalByOperation(t *testing.T) {
+	for _, tc := range []struct {
+		action   string
+		interact bool
+	}{
+		{"click", true}, {"fill", true}, {"press", true}, {"select", true}, {"check", true}, {"uncheck", true}, {"hover", true}, {"back", true}, {"forward", true}, {"reload", true},
+		{"open", false}, {"wait", false}, {"scroll", false}, {"viewport", false}, {"close", false}, {"", false},
+	} {
+		for _, url := range []string{"http://127.0.0.1", "https://example.com"} {
+			for _, mode := range []policy.Permission{policy.PermissionDefault, policy.PermissionAllMighty} {
+				op := browserOperation{address: url}
+				op.settings.Permission = mode
+				op.request.Action = tc.action
+				if tc.action == "open" {
+					op.request.URL = url
+				}
+				if tc.action == "" {
+					op.request.View = "snapshot"
+				}
+				if err := op.browserApproval(); err != nil {
+					t.Fatal(err)
+				}
+				direct := url == "https://example.com" && (tc.interact || tc.action == "open")
+				prompt := direct || tc.interact && mode == policy.PermissionDefault
+				if (op.approval.Required || op.approval.UserRequired) != prompt || op.approval.UserRequired != direct {
+					t.Errorf("action=%q url=%s mode=%v prompt=%v direct=%v approval=%+v", tc.action, url, mode, prompt, direct, op.approval)
+				}
+			}
+		}
 	}
 }

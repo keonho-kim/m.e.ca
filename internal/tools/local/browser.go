@@ -45,12 +45,8 @@ func (op *browserOperation) prepareBrowser() error {
 	if in.Action == "open" {
 		op.approval.Target = op.executor.redact(in.URL)
 	}
-	op.approval.Required = op.request.Interaction() && op.settings.Permission != policy.PermissionAllMighty
-	if op.request.Interaction() && browser.External(op.address) || in.Action == "open" && browser.External(in.URL) {
-		op.approval.UserRequired = true
-		op.approval.Reasons = []string{diag.Text(diag.BrowserTransfer)}
-	} else if op.approval.Required {
-		op.approval.Reasons = []string{diag.Text(diag.BrowserInteraction)}
+	if err := op.browserApproval(); err != nil {
+		return err
 	}
 	preview, err := json.Marshal(struct {
 		Action, URL, Target, Value, Direction string
@@ -62,6 +58,22 @@ func (op *browserOperation) prepareBrowser() error {
 	op.approval.Preview = op.executor.redact(string(preview))
 	return nil
 }
+
+// browserApproval binds interactions to the page observed during preparation.
+func (op *browserOperation) browserApproval() error {
+	if op.request.Interaction() && op.address == "" {
+		return fault.Errorf(diag.BrowserClosed)
+	}
+	op.approval.Required = op.request.Interaction() && op.settings.Permission != policy.PermissionAllMighty
+	if op.request.Interaction() && browser.External(op.address) || op.request.Action == "open" && browser.External(op.request.URL) {
+		op.approval.UserRequired = true
+		op.approval.Reasons = []string{diag.Text(diag.BrowserTransfer)}
+	} else if op.approval.Required {
+		op.approval.Reasons = []string{diag.Text(diag.BrowserInteraction)}
+	}
+	return nil
+}
+
 func (op *browserOperation) Execute(ctx context.Context, approved bool) (tool.Result, error) {
 	if err := op.claim(ctx, approved); err != nil {
 		return tool.Result{}, err
@@ -82,7 +94,7 @@ func (op *browserOperation) Execute(ctx context.Context, approved bool) (tool.Re
 		}
 		result.Images = append(result.Images, image)
 	}
-	result.Content, err = json.Marshal(page)
+	result.Content, err = page.ToolContent()
 	return result, err
 }
 func (e *Executor) EndBrowser(ctx context.Context) error {
