@@ -23,7 +23,7 @@ const (
 	StartupServerOptionsRequireServer                              Message = "server options require --server"
 	StartupTerminal                                                Message = "terminal: %w"
 	StartupTlsCertAndTlsKeyMustBe                                  Message = "--tls-cert and --tls-key must be provided together"
-	StartupUsageMecaInstallNoShell                                 Message = "usage: meca install [--no-shell]"
+	StartupUsageMecaInstall                                        Message = "usage: meca install [--no-shell] [--ext browser]"
 	StartupUsageMecaPathPrintModeJsonSession                       Message = "%w; usage: meca [path] [--print|--mode json] [--session ID] [prompt]"
 	StartupUsageMecaUpgrade                                        Message = "usage: meca upgrade [--tui|--full]"
 	StatefsAnotherMECAProcessIsUsingApplicationState               Message = "another MECA process is using application state; close MECA before installing or uninstalling: %w"

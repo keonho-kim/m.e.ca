@@ -7,6 +7,8 @@ package compact
 import (
 	"context"
 
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -23,6 +25,7 @@ type Controller struct {
 	ActiveRequest          string
 	memory                 Memory
 	loaded                 bool
+	rejectedOutput         int
 }
 
 func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
@@ -30,6 +33,16 @@ func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 }
 func (c *Controller) Refresh(ctx context.Context, started func() error, generate Generate) (bool, error) {
 	return c.refresh(ctx, started, generate, false)
+}
+
+// ObserveCapacity remembers the serving window and actual rejected output reservation for this execution.
+func (c *Controller) ObserveCapacity(failure *modelapi.ContextLimitError) {
+	if failure.Capacity > 0 && (c.ContextWindow == 0 || failure.Capacity < c.ContextWindow) {
+		c.ContextWindow = failure.Capacity
+	}
+	if failure.RequestedOutput > 0 {
+		c.rejectedOutput = failure.RequestedOutput
+	}
 }
 
 // Compact responds to a confirmed context-capacity failure at a safe boundary.
@@ -64,7 +77,7 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	}
 	window := c.contextWindow()
 	reserve := min(int(c.Settings.ReserveTokens), max(1, window/4))
-	threshold := max(1, window-reserve)
+	threshold := max(1, window-max(reserve, c.rejectedOutput))
 	if !force && mark.Tokens < int64(threshold) {
 		return false, nil
 	}
@@ -73,7 +86,16 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 			return false, err
 		}
 	}
-	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, min(c.Settings.KeepRecentTokens, window/4)*int(bytesPerToken))
+	keep := min(c.Settings.KeepRecentTokens, window/4)
+	if c.rejectedOutput > 0 {
+		keep = min(keep, max(1, threshold/2))
+	}
+	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, keep*int(bytesPerToken))
+	// A rejected request can be shorter than the preferred recent tail in bytes.
+	// Keep the newest complete group, then compact only the eligible prefix.
+	if err == nil && force && boundary <= c.memory.Through && keep > 0 {
+		boundary, err = c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, 1)
+	}
 	if err != nil {
 		return false, err
 	}

@@ -23,11 +23,12 @@ func TestRejectedOutputEvidence(t *testing.T) {
 		{400, 75, "", "Wrong tool arguments: " + lower, false},
 	} {
 		body, _ := json.Marshal(map[string]any{"error": map[string]string{"message": tc.msg, "code": tc.code}})
-		evidence, ok := RejectedOutput(ParseError(tc.status, body, ""), tc.sent)
+		evidence := OutputCapacityError(ParseError(tc.status, body, ""), tc.sent)
+		ok := evidence != nil
 		if ok != tc.want {
 			t.Errorf("status=%d code=%q sent=%d matched=%t", tc.status, tc.code, tc.sent, ok)
 		}
-		if ok && (evidence.Input != 50 || evidence.LowerBound != (tc.msg == lower) || tc.msg == exact && evidence.Capacity != 100) {
+		if ok && (evidence.RequestedOutput != tc.sent || tc.msg == lower && evidence.Input != 0 || tc.msg == exact && (evidence.Capacity != 100 || evidence.Input != 50)) {
 			t.Fatal(evidence)
 		}
 	}

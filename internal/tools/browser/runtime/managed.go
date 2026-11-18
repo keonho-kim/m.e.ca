@@ -123,6 +123,12 @@ func verifyChrome(ctx context.Context, path, version string) error {
 	output := &versionOutput{}
 	command.Stdout, command.Stderr = output, output
 	if err := command.Run(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if dependency := MissingLibrary(output.body); dependency != nil {
+			return dependency
+		}
 		return err
 	}
 	if output.exceeded {

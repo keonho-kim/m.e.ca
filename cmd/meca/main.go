@@ -90,7 +90,7 @@ func start(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	if mode.Action != "" {
+	if mode.Action != "" && mode.Action != startup.InstallBrowser {
 		return maintenance(ctx, mode, home)
 	}
 	if err := startup.CheckAgentUser(os.Geteuid()); err != nil {
@@ -123,6 +123,9 @@ func start(ctx context.Context) (err error) {
 	defer func() { err = errors.Join(err, lease.Close()) }()
 	if err := install.CheckReady(home); err != nil {
 		return err
+	}
+	if mode.Action == startup.InstallBrowser {
+		return installBrowserExtension(ctx, root.Name())
 	}
 	configuration, err := bootstrap.Initialize(home)
 	if err != nil {

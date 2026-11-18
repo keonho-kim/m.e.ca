@@ -33,10 +33,11 @@ type Mode struct {
 type Action string
 
 const (
-	Help      Action = "help"
-	Install   Action = "install"
-	Uninstall Action = "uninstall"
-	Upgrade   Action = "upgrade"
+	Help           Action = "help"
+	Install        Action = "install"
+	InstallBrowser Action = "install-browser"
+	Uninstall      Action = "uninstall"
+	Upgrade        Action = "upgrade"
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
@@ -45,6 +46,13 @@ func Parse(args []string, cwd string) (Mode, error) {
 		flags := flag.NewFlagSet("meca install", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
 		flags.BoolVar(&mode.NoShell, "no-shell", false, "install without activating a login shell")
+		flags.Func("ext", "prepare an optional extension", func(name string) error {
+			if name != "browser" || mode.Action != Install {
+				return faults.Errorf(diagcatalog.StartupUsageMecaInstall)
+			}
+			mode.Action = InstallBrowser
+			return nil
+		})
 		if err := flags.Parse(args[1:]); err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return Mode{Action: Help}, nil
@@ -52,7 +60,7 @@ func Parse(args []string, cwd string) (Mode, error) {
 			return Mode{}, err
 		}
 		if flags.NArg() != 0 {
-			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaInstallNoShell)
+			return Mode{}, faults.Errorf(diagcatalog.StartupUsageMecaInstall)
 		}
 		return mode, nil
 	}

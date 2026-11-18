@@ -14,7 +14,7 @@ func MessageCode(message Message) string {
 		return ResourceExhausted
 	case BrowserIntegrity, BrowserArchive:
 		return IntegrityFailed
-	case BrowserUnsupported, BrowserRuntime:
+	case BrowserUnsupported, BrowserRuntime, BrowserLibraryMissing, BrowserProcessFailed:
 		return Unavailable
 
 	case SkillsInvalidSkillRequest, SessionInvalidOrExpiredSessionPageCursorRefresh:

@@ -149,3 +149,21 @@ func TestSummaryFormattingIsGuidanceOnly(t *testing.T) {
 		})
 	}
 }
+
+func TestReportedOutputReservationTriggersLaterCompaction(t *testing.T) {
+	repo := &repository{mark: Watermark{Timeline: 2, Tokens: 5999}, records: []Record{{Sequence: 1, Role: "user", Text: "continue reading"}}}
+	c := Controller{Session: "test", Model: "fixture", ContextWindow: 16000, Repository: repo, Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
+	c.ObserveCapacity(&modelapi.ContextLimitError{Capacity: 14000, RequestedOutput: 8000})
+	generate := func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+		return emit(modelapi.Event{Done: true, Delta: "Continue with the current page."})
+	}
+	changed, err := c.Refresh(t.Context(), nil, generate)
+	if err != nil || changed {
+		t.Fatalf("compressed before input budget was reached: %v", err)
+	}
+	repo.mark.Tokens++
+	changed, err = c.Refresh(t.Context(), nil, generate)
+	if err != nil || !changed {
+		t.Fatalf("ignored observed output reservation: %v", err)
+	}
+}

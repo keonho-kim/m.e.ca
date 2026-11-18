@@ -17,6 +17,7 @@ import (
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/processmemory"
+	"github.com/keonho-kim/meca/internal/tools/browser/runtime"
 )
 
 const maxCapture = 4 << 20
@@ -95,10 +96,19 @@ func (s *Session) invoke(ctx context.Context, args ...string) (out captured, err
 	}
 	result, parseErr := parseResponse(output.Bytes())
 	if parseErr != nil {
+		if err != nil {
+			if dependency := runtime.MissingLibrary(stderr.Bytes()); dependency != nil {
+				return captured{}, dependency
+			}
+			return captured{}, fault.Errorf(diag.BrowserProcessFailed, boundedError(s.redact(err.Error())))
+		}
 		return captured{}, parseErr
 	}
 	if err != nil || !result.Success {
 		message := result.Error
+		if dependency := runtime.MissingLibrary([]byte(message)); dependency != nil {
+			return captured{}, dependency
+		}
 		if message == "" {
 			message = diag.Text(diag.BrowserHelperExited)
 		}

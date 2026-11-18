@@ -21,7 +21,7 @@ func (s *Store) CompactionBoundary(ctx context.Context, session string, through 
 	if through < 0 || keepBytes < 0 {
 		return 0, faults.Errorf(diagcatalog.SqliteInvalidCompactionTailBounds)
 	}
-	pin, pinErr := s.unreadImageBoundary(ctx, session, through)
+	pin, pinErr := s.unreadObservationBoundary(ctx, through)
 	if pinErr != nil {
 		return 0, pinErr
 	}

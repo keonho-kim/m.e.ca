@@ -12,6 +12,8 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config/credentials"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	"github.com/keonho-kim/meca/internal/tools/browser"
 	"golang.org/x/term"
 )
 
@@ -45,4 +47,14 @@ func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 		fmt.Fprintln(os.Stdout, "meca 명령으로 시작하세요.")
 	}
 	return nil
+}
+
+func installBrowserExtension(ctx context.Context, state string) error {
+	fmt.Fprintln(os.Stderr, diag.Text(diag.BrowserInstallPreparing))
+	paths, err := browser.PrepareAndCheck(ctx, state)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(os.Stdout, diag.Text(diag.BrowserInstallReady, paths.Agent, paths.Browser))
+	return err
 }

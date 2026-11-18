@@ -76,7 +76,6 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 	}
 	// The probe exercises image acceptance directly, without requiring a separate
 	// tokenizer endpoint that may be unavailable or unable to process media.
-	canReduce := !probe && request.MaxOutput == 0
 	if !probe {
 		request.MaxOutput, err = client.contextOutput(ctx, request.ModelID, messages, controls, request.MaxOutput, request.Tools, encoder)
 	}
@@ -121,24 +120,16 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 			}
 			response, sendErr := client.transport.SendOnce(httpRequest, idle)
 			if sendErr != nil {
-				if !controls.OmitThinkingSummary && transport.ThinkingSummaryUnsupported(sendErr, client.connection.Kind) {
-					controls.OmitThinkingSummary = true
-					client.summaryUnsupportedModel.Store(new(request.ModelID))
-				} else {
-					if probe {
-						return sendErr
+				if !probe {
+					if capacity := transport.OutputCapacityError(sendErr, request.MaxOutput); capacity != nil {
+						return capacity
 					}
-					next, failure := rejectedBudget(sendErr, request.MaxOutput, info.ContextWindow, canReduce)
-					if failure != nil {
-						return failure
-					}
-					canReduce = false
-					reason := diagcatalog.Text(diagcatalog.ProviderReducedOutput, request.MaxOutput, next)
-					if err := emit(modelapi.Event{Retry: &modelapi.Retry{Attempt: attempt + 1, MaxAttempts: attempt + 1, Reason: reason}}); err != nil {
-						return &transport.ConsumerError{Cause: err}
-					}
-					request.MaxOutput = next
 				}
+				if controls.OmitThinkingSummary || !transport.ThinkingSummaryUnsupported(sendErr, client.connection.Kind) {
+					return sendErr
+				}
+				controls.OmitThinkingSummary = true
+				client.summaryUnsupportedModel.Store(new(request.ModelID))
 				// Rebuild the same immutable history only after confirmed rejection.
 				retryMessages, err := encoder.Messages(client.connection.Kind, request.ModelID, history)
 				if err != nil {
@@ -158,7 +149,6 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 				}
 				continue
 			}
-			canReduce = false
 			defer func() { err = errors.Join(err, response.Body.Close()) }()
 			return protocol.ReadResponse(attemptCtx, response, client.connection.Kind, func(event modelapi.Event) error {
 				if event.Progress || event.Delta != "" || event.Thinking != "" || len(event.Calls) > 0 || event.Done {
@@ -182,8 +172,6 @@ func (client *Client) generate(ctx context.Context, request modelapi.Request, em
 			})
 		}
 	}, func(retry modelapi.Retry) error {
-		// A failed exchange may have reached the model. Do not start a budget correction after that.
-		canReduce = false
 		remaining := retry.MaxAttempts - retry.Attempt
 		retry.Attempt = attempt + 1
 		retry.MaxAttempts = retry.Attempt + remaining

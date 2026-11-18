@@ -66,8 +66,8 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			var capacity *modelapi.ContextLimitError
 			if !s.capacityRecovery && errors.As(askErr, &capacity) && !capacity.Partial {
 				s.capacityRecovery = true
-				if m := s.runner.Memory; m != nil && capacity.Capacity > 0 && (m.ContextWindow == 0 || capacity.Capacity < m.ContextWindow) {
-					m.ContextWindow = capacity.Capacity
+				if m := s.runner.Memory; m != nil {
+					m.ObserveCapacity(capacity)
 				}
 				if err = s.refreshMemory(ctx, true); err != nil {
 					return errors.Join(askErr, err)

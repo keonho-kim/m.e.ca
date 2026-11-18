@@ -62,3 +62,10 @@ const BrowserStableMetadata Message = "invalid Chrome Stable release metadata"
 const BrowserStableVerification Message = "Chrome executable did not report the selected Stable version"
 
 const BrowserInvalidCursor Message = "continue with the exact result_id, revision and next_offset from the latest page"
+
+const BrowserInstallPreparing Message = "MECA 브라우저 도구를 준비하고 실행을 확인합니다."
+const BrowserInstallReady Message = "브라우저 준비 완료 (페이지 열기·관찰·종료 확인)\n도우미: %s\n브라우저: %s"
+const BrowserProbeFailed Message = "browser runtime check failed: %s"
+const BrowserProbePage Message = "browser check did not reach its blank page"
+const BrowserLibraryMissing Message = "browser runtime requires the Linux shared library %s; install the distribution package providing this library and run meca install --ext browser again"
+const BrowserProcessFailed Message = "browser helper failed before returning a result: %s"

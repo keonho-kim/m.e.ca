@@ -58,3 +58,17 @@ func TestUpgradeRejectsArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestBrowserExtensionInstall(t *testing.T) {
+	for _, args := range [][]string{{"install", "--ext", "browser"}, {"install", "--ext=browser"}} {
+		mode, err := Parse(args, "/missing/project")
+		if err != nil || string(mode.Action) != "install-browser" || mode.Project != "" {
+			t.Fatalf("%v: %+v %v", args, mode, err)
+		}
+	}
+	for _, args := range [][]string{{"install", "--ext"}, {"install", "--ext", "other"}, {"install", "--ext="}, {"install", "--ext", "browser", "extra"}, {"install", "--ext", "browser", "--ext", "browser"}} {
+		if _, err := Parse(args, "/missing/project"); err == nil {
+			t.Fatalf("accepted %v", args)
+		}
+	}
+}

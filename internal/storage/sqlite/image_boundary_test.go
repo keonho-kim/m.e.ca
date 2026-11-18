@@ -61,3 +61,34 @@ func TestUnreadImageBoundaryUsesCompletedGenerations(t *testing.T) {
 		t.Fatalf("completed response did not release the image: %d %v", boundary, err)
 	}
 }
+
+func TestUnreadBrowserPagePinsCallDuringCompaction(t *testing.T) {
+	s, err := newTestStore(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.Close() })
+	ctx, id := t.Context(), s.Session().ID
+	call := toolapi.Call{ID: "read-page", Name: "browser_inspect", Arguments: json.RawMessage(`{"view":"snapshot"}`)}
+	for _, m := range []modelapi.Message{
+		{Role: "user", Content: "inspect"},
+		{Role: "assistant", Calls: []toolapi.Call{call}},
+		{Role: "tool", ToolName: call.Name, ToolCallID: call.ID, Content: `{"result_id":"result_A","revision":"r","next_offset":2048,"text":"first page"}`},
+		{Role: "assistant", Incomplete: true, Content: "partial"},
+	} {
+		if err := s.AppendMessage(ctx, id, m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	through, err := s.CompactionBoundary(ctx, id, 4, 0)
+	if err != nil || through != 1 {
+		t.Fatalf("archived unread page or native call: through=%d err=%v", through, err)
+	}
+	if err := s.AppendMessage(ctx, id, modelapi.Message{Role: "assistant", Content: "read"}); err != nil {
+		t.Fatal(err)
+	}
+	through, err = s.CompactionBoundary(ctx, id, 5, 0)
+	if err != nil || through != 5 {
+		t.Fatalf("acknowledged page pinned: %d %v", through, err)
+	}
+}

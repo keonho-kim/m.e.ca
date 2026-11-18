@@ -40,15 +40,24 @@ func Ensure(ctx context.Context, state string) (Paths, error) {
 	}
 	agent, err := install(ctx, downloadClient, directory, helper)
 	if err != nil {
-		return Paths{}, fault.Errorf(diag.BrowserRuntime, err)
+		return Paths{}, preparationFailure(err)
 	}
 	if browser == "" {
 		browser, err = managedChrome(ctx, downloadClient, directory, runtime.GOOS, runtime.GOARCH, time.Now())
 		if err != nil {
-			return Paths{}, fault.Errorf(diag.BrowserRuntime, err)
+			return Paths{}, preparationFailure(err)
 		}
 	}
 	return Paths{agent, browser}, nil
+}
+
+// Preserve actionable catalog messages, including loader diagnostics, at the CLI boundary.
+func preparationFailure(err error) error {
+	var known *fault.Error
+	if errors.As(err, &known) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return fault.Errorf(diag.BrowserRuntime, err)
 }
 
 func findBrowser() (string, error) {
