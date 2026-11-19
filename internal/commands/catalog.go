@@ -24,6 +24,7 @@ var catalog = []struct {
 	{"!quit", "앱 종료", Exit},
 	{"!team", "팀 모드 전환", Team},
 	{"!skills", "스킬 목록 · 설명 · 본문", Skills},
+	{compactCommand, "대화 문맥 압축", Compact},
 }
 
 func Suggestions(input string, describe func(string) string) []Suggestion {

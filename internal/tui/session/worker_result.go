@@ -10,6 +10,7 @@ import (
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/tui/transcript"
 )
 
@@ -43,6 +44,13 @@ func (a *app) finishWorker(n notice) {
 	a.status = ""
 	if n.Err != nil && !(stopped && errors.Is(n.Err, context.Canceled)) {
 		a.status = a.opts.Vault.Redact(n.Err.Error())
+	}
+	if n.CompactOnly {
+		if n.Err == nil {
+			a.status = a.language.Text(diag.Text(diag.ManualCompactionDone))
+		} else {
+			a.status = a.language.Text(a.status)
+		}
 	}
 	if stopped && errors.Is(n.Err, context.Canceled) && a.page == "chat" {
 		a.stopNotice = a.language.Text("중지했습니다. 다음 입력으로 이어갈 수 있습니다")

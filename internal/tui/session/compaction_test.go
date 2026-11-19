@@ -125,3 +125,51 @@ func TestCompactionContext(t *testing.T) {
 		t.Fatal("usage not restored with conversation")
 	}
 }
+
+func TestManualCompactionCommand(t *testing.T) {
+	a := fixture(t)
+	ctx := t.Context()
+	a.ctx = ctx
+	t.Cleanup(a.workers.Wait)
+	if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []runrecord.Entry{
+		{Message: &modelapi.Message{Role: "user", Content: "Keep the blue file."}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var calls atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		var body struct{ Messages []modelapi.Message }
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+			return
+		}
+		if len(body.Messages) != 2 || !strings.Contains(body.Messages[0].Content, "# Summarize work for continuation") ||
+			!strings.Contains(body.Messages[1].Content, "Keep the blue file.") {
+			t.Error("manual command did not send a summary-only request")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"choices":[{"message":{"content":"Preserve the blue file."},"finish_reason":"stop"}]}`)
+	}))
+	t.Cleanup(server.Close)
+	connection, err := modelconn.New(modelconn.VLLM, server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.connection.client, err = httpclient.NewClient(connection, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(a.connection.client.Close)
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: "fixture"}
+	a.compose.editor.Set("!compact")
+	a.submit()
+	drainTask(t, a, false)
+	memory, err := a.opts.Store.Memory(ctx, a.opts.Session.ID)
+	if err != nil || memory.Revision != 1 || memory.Markdown != "Preserve the blue file." {
+		t.Fatalf("memory = %+v, error %v", memory, err)
+	}
+	if calls.Load() != 1 || a.compose.editor.String() != "" || a.status != a.language.Text("Conversation context compacted.") {
+		t.Fatalf("command status=%q, draft=%q, provider calls=%d", a.status, a.compose.editor.String(), calls.Load())
+	}
+}

@@ -21,6 +21,15 @@ type Limits struct {
 func DefaultLimits() Limits {
 	return Limits{MaxModelCalls: 1024, MaxSeconds: 14400, MaxModelSeconds: 600, MaxContextBytes: 256 * 1024 * 1024, MaxArgumentBytes: toolapi.MaxArgumentsBytes}
 }
+
+func (r Runner) checkedLimits() (Limits, error) {
+	limits := r.Limits
+	if limits == (Limits{}) {
+		limits = DefaultLimits()
+	}
+	return limits, limits.Check()
+}
+
 func (l Limits) Check() error {
 	if l.MaxModelCalls < 1 || l.MaxModelCalls > 16384 || l.MaxSeconds < 1 || l.MaxSeconds > 86400 || l.MaxModelSeconds < 1 || l.MaxModelSeconds > 3600 || l.MaxContextBytes < 8192 || l.MaxContextBytes > 256*1024*1024 || l.MaxArgumentBytes < 1024 || l.MaxArgumentBytes > toolapi.MaxArgumentsBytes {
 		return faults.Errorf(diagcatalog.RunInvalidExecutionLimits)

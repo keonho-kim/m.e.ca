@@ -17,6 +17,16 @@ import (
 )
 
 func (s *execution) settle(ctx context.Context, runErr error) error {
+	s.finishState(runErr)
+	if err := s.result.Facts.Check(); err != nil {
+		runErr = errors.Join(runErr, err)
+	}
+	flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	return errors.Join(runErr, s.persist(flush))
+}
+
+func (s *execution) finishState(runErr error) {
 	if runErr != nil {
 		end := work.End{Status: work.Failed, Reason: s.runner.Redact(runErr.Error())}
 		s.checkpoint.Status = runrecord.Stopped
@@ -48,12 +58,6 @@ func (s *execution) settle(ctx context.Context, runErr error) error {
 	if runErr != nil {
 		s.result.Text = "작업을 중단했습니다.\n" + s.result.Facts.Describe() + "- 종료 사유: " + s.checkpoint.End.Reason
 	}
-	if err := s.result.Facts.Check(); err != nil {
-		runErr = errors.Join(runErr, err)
-	}
-	flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer cancel()
-	return errors.Join(runErr, s.persist(flush))
 }
 
 func (s *execution) stopBudget(ctx context.Context, reason string) error {

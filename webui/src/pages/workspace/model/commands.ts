@@ -4,7 +4,13 @@
 // Related: internal/commands/browser.go, webui/src/pages/workspace/model/store.ts.
 import { reportError } from '@/entities/server-session';
 import { changed } from '@/pages/workspace/api/queries';
-import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
+import {
+  emptyInput,
+  type Target,
+  targetKey,
+  useWorkspaceStore,
+} from '@/pages/workspace/model/store';
+import { startRequest } from '@/pages/workspace/model/submission';
 import type { PrepareSession } from '@/pages/workspace/model/use-composer-session';
 import { call } from '@/shared/api';
 import { failure } from '@/shared/lib/errors';
@@ -48,6 +54,16 @@ export async function command(
       return view('files', parsed.argument || '.') ? target : false;
     case 'skills':
       return view('skills') ? target : false;
+    case 'compact': {
+      if (!target.session) throw failure('no_session');
+      const state = useWorkspaceStore.getState();
+      if (state.fileDirty) throw failure('draft_changed');
+      const draft = state.inputs[targetKey(target)];
+      const compact = { ...emptyInput(), text: '!compact', revision: draft?.revision ?? 0 };
+      if (!(await startRequest(target, compact))) return false;
+      if (targetKey(useWorkspaceStore.getState().selection) === targetKey(target)) view('chat');
+      return target;
+    }
     case 'team': {
       destination = await prepareSession(async (next) => {
         const state = await call(next.workspace, { state: { sessionId: next.session } });

@@ -103,6 +103,9 @@ func (s *Service) Steer(task, text string) error {
 	if r.task.Status != "running" {
 		return faults.New(diagcatalog.Conflict, diagcatalog.ServerRequestIsCanceling)
 	}
+	if r.compactOnly {
+		return faults.New(diagcatalog.Conflict, diagcatalog.ManualCompactionSteering)
+	}
 	if len(r.steering) >= 16 || r.steeringBytes+len(text) > 1<<20 {
 		return faults.New(diagcatalog.ResourceExhausted, diagcatalog.ServerSteeringQueueIsFull)
 	}

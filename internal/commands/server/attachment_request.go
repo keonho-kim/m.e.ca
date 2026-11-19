@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/commands"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
@@ -29,6 +30,9 @@ func (s *Service) StartAttachments(ctx context.Context, session, key, text strin
 	}
 	if !utf8.ValidString(key) || !utf8.ValidString(text) || len(text) > MaxPromptBytes || len(paths) > 256 {
 		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
+	}
+	if (len(ids) != 0 || len(paths) != 0) && commands.IsCompaction(text) {
+		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ManualCompactionInput)
 	}
 	h := sha256.New()
 	var buffer [4096]byte

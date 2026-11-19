@@ -21,7 +21,7 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
-func (s *Service) launch(c *Conversation, task Task, text string, images []media.Image, release func()) (Task, error) {
+func (s *Service) launch(c *Conversation, task Task, text string, images []media.Image, compactOnly bool, release func()) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed || s.ctx.Err() != nil {
@@ -32,7 +32,7 @@ func (s *Service) launch(c *Conversation, task Task, text string, images []media
 		return Task{}, err
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
-	r := &request{releaseCapacity: release, teamEnabled: c.TeamEnabled, originals: make(map[string]*draftOriginal), started: time.Now(), task: task, cancel: cancel, approvals: map[string]*pendingApproval{}, steeringReady: make(chan struct{}, 1), drafts: map[string]*draftState{}, model: model, conversation: c}
+	r := &request{releaseCapacity: release, teamEnabled: c.TeamEnabled && !compactOnly, compactOnly: compactOnly, originals: make(map[string]*draftOriginal), started: time.Now(), task: task, cancel: cancel, approvals: map[string]*pendingApproval{}, steeringReady: make(chan struct{}, 1), drafts: map[string]*draftState{}, model: model, conversation: c}
 	r.task.Status = "running"
 	r.task.Persistence = PersistencePending
 	if s.active == nil {
@@ -43,7 +43,7 @@ func (s *Service) launch(c *Conversation, task Task, text string, images []media
 		s.bySession = make(map[string]*request)
 	}
 	s.bySession[task.Session] = r
-	options := agentrequest.Options{Runtime: c.Runtime, Generator: model.Generator(), Text: text, Images: images}
+	options := agentrequest.Options{Runtime: c.Runtime, Generator: model.Generator(), Text: text, Images: images, CompactOnly: compactOnly}
 	options.Config = s.currentConfig()
 	options.PollSteering = func() []string { return s.pollSteering(r) }
 	options.SteeringReady = r.steeringReady

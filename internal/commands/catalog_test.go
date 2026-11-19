@@ -6,9 +6,19 @@ package commands
 
 import "testing"
 
+func TestCompactionBrowserCommand(t *testing.T) {
+	action, argument, err := BrowserInput(" !compact ")
+	if err != nil || action != "compact" || argument != "" {
+		t.Fatalf("compaction command = %q %q, %v", action, argument, err)
+	}
+	if _, _, err := BrowserInput("!compact more"); err == nil {
+		t.Fatal("compaction accepted an argument")
+	}
+}
+
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!", describeCommand)
-	if len(all) != 8 {
+	if len(all) != 9 {
 		t.Fatalf("commands = %v", all)
 	}
 	for _, suggestion := range all {

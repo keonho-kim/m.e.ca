@@ -25,7 +25,6 @@ import (
 
 func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Event) error, started time.Time) (*execution, func(), error) {
 	var err error
-	release := func() {}
 	if r.Generator == nil || r.Tools == nil || r.Journal == nil || r.Redact == nil || emit == nil {
 		return nil, nil, faults.Errorf(diagcatalog.RunExecutionDependenciesAreRequired)
 	}
@@ -42,11 +41,8 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 			return nil, nil, err
 		}
 	}
-	limits := r.Limits
-	if limits == (Limits{}) {
-		limits = DefaultLimits()
-	}
-	if err = limits.Check(); err != nil {
+	limits, err := r.checkedLimits()
+	if err != nil {
 		return nil, nil, err
 	}
 	templates := prompt.Defaults()
@@ -60,8 +56,6 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	if len(input) > 64*1024*1024 {
 		return nil, nil, faults.Errorf(diagcatalog.RunObjectiveExceedsMiB)
 	}
-	id := "run_" + rand.Text()
-	emit = newRunEmitter(ctx, r.Journal, r.Session, id, emit)
 	if support, ok := r.Generator.(interface{ ImageInputSupported() bool }); ok {
 		r.ImageInput = r.ImageInput && support.ImageInputSupported()
 	}
@@ -71,13 +65,7 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	if len(r.Images) > 0 && !r.ImageInput {
 		return nil, nil, faults.New(diagcatalog.FailedPrecondition, diagcatalog.MediaImageInputUnavailable)
 	}
-	if scoped, ok := r.Generator.(interface {
-		NewRunGenerator() (modelapi.Generator, func())
-	}); ok {
-		generator, releaseScope := scoped.NewRunGenerator()
-		release = releaseScope
-		r.Generator = generator
-	}
+	release := r.scopeGenerator()
 	definitions := imageDefinitions(r.Tools.Definitions(), r.ImageInput)
 	setSkillImageInput(r.Tools, r.ImageInput)
 	guidance := make([]string, 1, 4)
@@ -93,23 +81,11 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 		}
 	}
 	system = strings.Join(guidance, "")
-	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
-	_, s.order = presentation.Scope(ctx)
-	send := s.emit
-	s.emit = func(event runrecord.Event) error {
-		event = s.present(event)
-		if event.Presentation == "" && (event.Kind == "retry" || event.Kind == "compaction_started" || event.Kind == "compaction_finished") {
-			event.Presentation = s.order.Next()
-		}
-		return send(event)
-	}
-	s.usage.begin(limits)
-	if !r.Deadline.IsZero() {
-		s.usage.deadline = r.Deadline
-	}
-
+	s := r.newExecution(ctx, limits, emit, started)
+	s.system, s.definitions = system, definitions
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
-	s.checkpoint = runrecord.Checkpoint{ID: id, Objective: r.Redact(input), Status: runrecord.Running, Phase: "decision", InstructionsDigest: fmt.Sprintf("%x", digest)}
+	s.checkpoint.Objective = r.Redact(input)
+	s.checkpoint.InstructionsDigest = fmt.Sprintf("%x", digest)
 	if r.PreviousRun != nil {
 		for _, file := range r.PreviousRun.Work.Files {
 			file.Changed = false
@@ -124,6 +100,36 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 		release()
 		return nil, nil, err
 	}
-	releaseScope := release
-	return s, func() { s.contextMemory.Close(); s.replyMemory.Close(); releaseScope() }, nil
+	return s, func() { s.contextMemory.Close(); s.replyMemory.Close(); release() }, nil
+}
+
+func (r Runner) newExecution(ctx context.Context, limits Limits, emit func(runrecord.Event) error, started time.Time) *execution {
+	id := "run_" + rand.Text()
+	s := &execution{runner: r, limits: limits, statistics: runStatistics{started: started},
+		checkpoint: runrecord.Checkpoint{ID: id, Status: runrecord.Running, Phase: "decision"}}
+	_, s.order = presentation.Scope(ctx)
+	send := newRunEmitter(ctx, r.Journal, r.Session, id, emit)
+	s.emit = func(event runrecord.Event) error {
+		event = s.present(event)
+		if event.Presentation == "" && (event.Kind == "retry" || event.Kind == "compaction_started" || event.Kind == "compaction_finished") {
+			event.Presentation = s.order.Next()
+		}
+		return send(event)
+	}
+	s.usage.begin(limits)
+	if !r.Deadline.IsZero() {
+		s.usage.deadline = r.Deadline
+	}
+	return s
+}
+
+func (r *Runner) scopeGenerator() func() {
+	if scoped, ok := r.Generator.(interface {
+		NewRunGenerator() (modelapi.Generator, func())
+	}); ok {
+		generator, release := scoped.NewRunGenerator()
+		r.Generator = generator
+		return release
+	}
+	return func() {}
 }

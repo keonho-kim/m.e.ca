@@ -32,6 +32,7 @@ type notice struct {
 	FormRevision    int
 	ModelForm       bool
 	Diagnostic      bool
+	CompactOnly     bool
 	History         *historyPage
 	Directory       *controller.DirectoryPage
 	FileSelection   *fileSelectionResult

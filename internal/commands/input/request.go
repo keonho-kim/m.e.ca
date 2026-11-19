@@ -12,9 +12,10 @@ import (
 )
 
 type Request struct {
-	Text   string
-	Paths  []string
-	Images []media.Image
+	Text        string
+	Paths       []string
+	Images      []media.Image
+	CompactOnly bool
 }
 
 const pathReferencesPrefix = "\nSelected path references (read only as needed):\n"

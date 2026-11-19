@@ -53,20 +53,7 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 		compressing = true
 		return nil
 	}
-	changed, err := refresh(ctx, started, func(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-		if !s.modelCall() {
-			return faults.Errorf(diagcatalog.RunCompaction, errModelBudget)
-		}
-		s.checkpoint.ModelCalls = s.usage.ModelCalls
-		request.Thinking = s.runner.Thinking
-		request.ReasoningEffort = s.runner.ReasoningEffort
-		parameters, err := inference.Resolve(s.runner.Inference, inference.Compaction)
-		if err != nil {
-			return err
-		}
-		request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
-		return s.generate(ctx, request, inference.Compaction, emit)
-	})
+	changed, err := refresh(ctx, started, s.generateCompaction)
 	if err != nil {
 		return err
 	}
@@ -85,10 +72,25 @@ func (s *execution) refreshMemory(ctx context.Context, force bool) (resultErr er
 	}
 	if changed {
 		event := runrecord.Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
-		if err = s.record(ctx, event); err != nil {
+		if err := s.record(ctx, event); err != nil {
 			return err
 		}
 		return s.emit(event)
 	}
 	return nil
+}
+
+func (s *execution) generateCompaction(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+	if !s.modelCall() {
+		return faults.Errorf(diagcatalog.RunCompaction, errModelBudget)
+	}
+	s.checkpoint.ModelCalls = s.usage.ModelCalls
+	request.Thinking = s.runner.Thinking
+	request.ReasoningEffort = s.runner.ReasoningEffort
+	parameters, err := inference.Resolve(s.runner.Inference, inference.Compaction)
+	if err != nil {
+		return err
+	}
+	request = parameters.ApplyThinking(request, s.runner.ThinkingSupported)
+	return s.generate(ctx, request, inference.Compaction, emit)
 }

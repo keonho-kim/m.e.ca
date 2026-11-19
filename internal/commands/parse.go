@@ -28,9 +28,13 @@ const (
 	Permission
 	Team
 	Skills
+	Compact
 )
 
 const MaxInputBytes = 16 * 1024 * 1024
+const compactCommand = "!compact"
+
+func IsCompaction(text string) bool { return strings.TrimSpace(text) == compactCommand }
 
 type Command struct {
 	Kind     Kind

@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/keonho-kim/meca/internal/commands"
 	conversationruntime "github.com/keonho-kim/meca/internal/commands/conversation"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -22,6 +23,7 @@ import (
 
 type request struct {
 	teamEnabled      bool
+	compactOnly      bool
 	releaseCapacity  func()
 	draftCleanup     error
 	draftGeneration  uint64
@@ -60,6 +62,10 @@ func (s *Service) start(ctx context.Context, session, key, text string, identity
 	}
 	if err := media.CheckInput(images); err != nil {
 		return Task{}, err
+	}
+	compactOnly := commands.IsCompaction(text)
+	if compactOnly && len(images) != 0 {
+		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ManualCompactionInput)
 	}
 	if len(key) < 8 || len(key) > 128 || !utf8.ValidString(key) || strings.ContainsAny(key, "\r\n\x00") {
 		return Task{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerRequestKeyMustContainToUTFBytes)
@@ -124,7 +130,7 @@ func (s *Service) start(ctx context.Context, session, key, text string, identity
 	if err != nil || duplicate {
 		return task, err
 	}
-	value, err := s.launch(c, task, text, images, release)
+	value, err := s.launch(c, task, text, images, compactOnly, release)
 	transferred = err == nil
 	return value, err
 }

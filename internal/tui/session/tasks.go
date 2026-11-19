@@ -18,11 +18,14 @@ func (a *app) startRequest(input requestinput.Request) {
 	if a.work.state.active() {
 		return
 	}
-	if a.team.enabled && a.opts.Team == nil {
+	teamMode := a.team.enabled && !input.CompactOnly
+	if teamMode && a.opts.Team == nil {
 		a.status = a.language.Text("팀 실행 구성이 준비되지 않았습니다")
 		return
 	}
-	a.team.begin()
+	if teamMode {
+		a.team.begin()
+	}
 	a.chat.output.Follow = true
 	a.chat.stream, a.chat.thinking = "", ""
 	a.chat.resetThroughput()
@@ -35,11 +38,14 @@ func (a *app) startRequest(input requestinput.Request) {
 	a.status = ""
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.work.cancel = cancel
-	a.decision = make(chan bool, 1)
-	steering := make(chan requestinput.Request, 16)
+	var steering chan requestinput.Request
+	if !input.CompactOnly {
+		a.decision = make(chan bool, 1)
+		steering = make(chan requestinput.Request, 16)
+	}
 	a.compose.steering = steering
 	var steeringReady chan struct{}
-	if a.team.active {
+	if teamMode {
 		steeringReady = make(chan struct{}, 1)
 	}
 	a.compose.steeringReady = steeringReady
@@ -50,7 +56,7 @@ func (a *app) startRequest(input requestinput.Request) {
 	}
 	options := agentrequest.Options{Runtime: agentrequest.Runtime{Config: a.opts.Config, Selection: a.connection.selection, Session: a.opts.Session,
 		Tools: a.opts.Tools, Skills: a.opts.Skills, Store: a.opts.Store, Vault: a.opts.Vault,
-		LoadPrompts: a.opts.LoadPrompts}, SteeringReady: steeringReady,
+		LoadPrompts: a.opts.LoadPrompts}, SteeringReady: steeringReady, CompactOnly: input.CompactOnly,
 		PollSteering: func() []string {
 			var out []string
 			for {
@@ -64,7 +70,6 @@ func (a *app) startRequest(input requestinput.Request) {
 		}, Generator: a.connection.client,
 	}
 	decisions := a.decision
-	teamMode := a.team.active
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
@@ -93,6 +98,6 @@ func (a *app) startRequest(input requestinput.Request) {
 		}
 		request := agentrequest.New(options)
 		result, err := tasksession.Execute(ctx, request, approve, emit)
-		delivery.post(a.ctx, a.events, notice{Done: true, Err: err, RunStatus: result.Status})
+		delivery.post(a.ctx, a.events, notice{Done: true, CompactOnly: input.CompactOnly, Err: err, RunStatus: result.Status})
 	}()
 }

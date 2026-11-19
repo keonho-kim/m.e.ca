@@ -118,7 +118,11 @@ export function Composer({
     try {
       if (input.text.trimStart().startsWith('!')) {
         const commandTarget = await command(target, input.text, prepareSession);
-        if (commandTarget) useWorkspaceStore.getState().patchInput(commandTarget, { text: '' });
+        if (commandTarget) {
+          const store = useWorkspaceStore.getState();
+          if (store.inputs[targetKey(commandTarget)]?.text === input.text)
+            store.patchInput(commandTarget, { text: '' });
+        }
       } else {
         if (useWorkspaceStore.getState().fileDirty) throw failure('draft_changed');
         if (!(target.session ? state.data : defaultModel.data)?.model?.model) {

@@ -18,7 +18,7 @@ func TestApplicationCommandsAndEditor(t *testing.T) {
 	f := newFixture(t, nil, false)
 	transport := nativeTransport(t, f, "sse")
 	catalog := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_CommandCatalog{CommandCatalog: &v1.Empty{}}}).GetCommandCatalog()
-	if len(catalog.GetItems()) != 6 {
+	if len(catalog.GetItems()) != 7 {
 		t.Fatal(catalog)
 	}
 	for _, text := range []string{"!new", "!quit", ":q"} {

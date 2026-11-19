@@ -28,6 +28,7 @@ type Request struct {
 	LoadPrompts         func() (prompt.Templates, error)
 	ContextWindow       int
 	Compaction          compact.Settings
+	CompactOnly         bool
 	ProjectInstructions func(context.Context) (string, error)
 	Text                string
 }
@@ -36,9 +37,11 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	runner := request.Runner
 	request.Runner = run.Runner{}
 	var err error
-	runner.PreviousRun, err = request.Store.LatestRun(ctx, runner.Session)
-	if err != nil {
-		return run.Result{}, err
+	if !request.CompactOnly {
+		runner.PreviousRun, err = request.Store.LatestRun(ctx, runner.Session)
+		if err != nil {
+			return run.Result{}, err
+		}
 	}
 	templates, err := request.LoadPrompts()
 	if err != nil {
@@ -49,6 +52,9 @@ func Execute(ctx context.Context, request Request, approve run.Approver, emit fu
 	}
 	runner.Prompts = &templates
 	runner.Memory = &compact.Controller{ContextWindow: request.ContextWindow, Inference: runner.Inference, Repository: request.Store, Session: runner.Session, Model: runner.Model, Prompt: templates.Compaction, Settings: request.Compaction, Redact: runner.Redact}
+	if request.CompactOnly {
+		return runner.CompactNow(ctx, emit)
+	}
 	runner.ProjectInstructions, err = request.ProjectInstructions(ctx)
 	if err != nil {
 		return run.Result{}, err

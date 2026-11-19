@@ -46,6 +46,7 @@ type Options struct {
 	SteeringReady <-chan struct{}
 	Text          string
 	Images        []media.Image
+	CompactOnly   bool
 }
 
 func New(options Options) agentsession.Request {
@@ -78,6 +79,6 @@ func New(options Options) agentsession.Request {
 	return agentsession.Request{
 		Runner: runner, Store: options.Store, Text: options.Text, ContextWindow: window,
 		Compaction: options.Config.Compaction.Settings, LoadPrompts: options.LoadPrompts,
-		ProjectInstructions: options.Tools.ProjectInstructions,
+		CompactOnly: options.CompactOnly, ProjectInstructions: options.Tools.ProjectInstructions,
 	}
 }

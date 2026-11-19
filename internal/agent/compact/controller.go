@@ -28,11 +28,19 @@ type Controller struct {
 	rejectedOutput         int
 }
 
+type compactionMode uint8
+
+const (
+	thresholdCompaction compactionMode = iota
+	capacityCompaction
+	manualCompaction
+)
+
 func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 	return c.Repository.AddContextTokens(ctx, c.Session, count)
 }
 func (c *Controller) Refresh(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, false)
+	return c.refresh(ctx, started, generate, thresholdCompaction)
 }
 
 // ObserveCapacity remembers the serving window and actual rejected output reservation for this execution.
@@ -47,10 +55,15 @@ func (c *Controller) ObserveCapacity(failure *modelapi.ContextLimitError) {
 
 // Compact responds to a confirmed context-capacity failure at a safe boundary.
 func (c *Controller) Compact(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, true)
+	return c.refresh(ctx, started, generate, capacityCompaction)
 }
 
-func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, force bool) (bool, error) {
+// CompactNow summarizes eligible history on an idle conversation's explicit request.
+func (c *Controller) CompactNow(ctx context.Context, started func() error, generate Generate) (bool, error) {
+	return c.refresh(ctx, started, generate, manualCompaction)
+}
+
+func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, mode compactionMode) (bool, error) {
 	if err := c.Settings.Check(); err != nil {
 		return false, err
 	}
@@ -78,22 +91,20 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	window := c.contextWindow()
 	reserve := min(int(c.Settings.ReserveTokens), max(1, window/4))
 	threshold := max(1, window-max(reserve, c.rejectedOutput))
-	if !force && mark.Tokens < int64(threshold) {
+	if mode == thresholdCompaction && mark.Tokens < int64(threshold) {
 		return false, nil
 	}
-	if started != nil {
-		if err := started(); err != nil {
-			return false, err
+	keep := 0
+	if mode != manualCompaction {
+		keep = min(c.Settings.KeepRecentTokens, window/4)
+		if c.rejectedOutput > 0 {
+			keep = min(keep, max(1, threshold/2))
 		}
-	}
-	keep := min(c.Settings.KeepRecentTokens, window/4)
-	if c.rejectedOutput > 0 {
-		keep = min(keep, max(1, threshold/2))
 	}
 	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, keep*int(bytesPerToken))
 	// A rejected request can be shorter than the preferred recent tail in bytes.
 	// Keep the newest complete group, then compact only the eligible prefix.
-	if err == nil && force && boundary <= c.memory.Through && keep > 0 {
+	if err == nil && mode == capacityCompaction && boundary <= c.memory.Through && keep > 0 {
 		boundary, err = c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, 1)
 	}
 	if err != nil {
@@ -104,6 +115,11 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	}
 	if boundary <= c.memory.Through {
 		return false, nil
+	}
+	if started != nil {
+		if err := started(); err != nil {
+			return false, err
+		}
 	}
 	next := c.memory
 	previous := c.Redact(next.Markdown)

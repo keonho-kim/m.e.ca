@@ -100,6 +100,12 @@ func (a *app) submitCommand(command commands.Command) {
 		a.openPermission()
 	case commands.Directory:
 		a.openFiles(command.Argument)
+	case commands.Compact:
+		if a.connection.client == nil || a.connection.selection.Model == "" {
+			a.status = a.language.Text("Select a model using !model")
+			return
+		}
+		a.startRequest(requestinput.Request{CompactOnly: true})
 	case commands.Message:
 		if a.connection.client == nil || a.connection.selection.Model == "" {
 			a.status = a.language.Text("Select a model using !model")

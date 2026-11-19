@@ -15,7 +15,7 @@ import (
 const visibleHistoryJoin = `FROM timeline t LEFT JOIN messages m ON t.kind='message' AND t.source_sequence=m.sequence
 LEFT JOIN tool_events e ON t.kind='event' AND t.source_sequence=e.sequence`
 const visibleHistoryPredicate = `(m.role IN ('user','assistant') AND (m.content_bytes>0 OR json_array_length(m.body,'$.images')>0 OR json_type(m.body,'$.images')='null')) OR
- e.kind IN ('thinking','progress','skill_loaded','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference')`
+ e.kind IN ('thinking','progress','skill_loaded','compaction_finished','tool_succeeded','tool_failed','tool_interrupted','denied','command_finished','run_checkpoint','team_message','team_progress','team_work','team_discussion','team_notice','team_reference')`
 
 type displayRecord struct {
 	eventKind string

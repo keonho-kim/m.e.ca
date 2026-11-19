@@ -101,6 +101,8 @@ export function eventIdentities(event: EventJson) {
   const values: string[] = [];
   if (event.kind === 'user_message' && event.presentation)
     values.push('user/' + event.presentation);
+  if (event.kind === 'compaction_finished' && event.presentation)
+    values.push(`compaction/${event.presentation}`);
   if (event.historySequence && event.historySequence !== '0')
     values.push('timeline/' + event.historySequence);
   const ref = event.originalReference ?? event.tool?.reference;
