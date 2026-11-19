@@ -29,7 +29,7 @@ tui와 full에 같은 기본 스킬을 제공한다. 최초 초기화와 설치 
 
 [참고 지도](../internal/config/bootstrap/defaults/ui-design/SKILL.md)는 필요한 지침과 앱별 HTML/CSS/Vanilla JS 예시를 연결한다. 예시는 구성과 조작을 참고하는 자료이며 대상 프로젝트의 팔레트·화면 수·기술 구성을 지정하지 않는다. 결재·DB 워크벤치·지식 대화·오피스 예시는 정적 디자인 화면으로 실제 DB·AI·승인·문서 저장 서비스를 제공하지 않는다.
 
-구현 확인에는 **Playwright CLI (`playwright-cli`)**를 사용한다. [브라우저 검증 지침](../internal/config/bootstrap/defaults/ui-design/references/browser-tools.md)은 실제 화면·상호작용·콘솔·네트워크 확인과 선택적인 레이아웃·모션 검사를 안내한다. 검증 도구는 개발 환경에서 실행하며 MECA나 생성 앱의 런타임 의존성이 아니다.
+사용 가능한 경우 MECA 호스트에서 `browser_action`과 `browser_inspect`로 실제 화면과 조작을 확인한다. 추가 진단이 필요하거나 내장 도구를 사용할 수 없으면 Playwright CLI(`playwright-cli`)를 사용한다. 화면·콘솔·네트워크 확인과 레이아웃·모션 검사 방법은 [스킬의 브라우저 검증 지침](../internal/config/bootstrap/defaults/ui-design/references/browser-tools.md), 내장 도구 준비는 [브라우저 도구](browser.md)를 따른다.
 
 ## 백엔드 설계
 

@@ -24,7 +24,7 @@ skill_loaded는 본문을 읽었다는 사실을 제공한다. 명시 호출은 
 
 기본 레벨은 info다. 프로세스 시작 때 환경변수 MECA_LOG_LEVEL=debug|info|warn|error로 선택한다. debug에서는 세부 도구·저장·제어·스트림 종료 기록을 볼 수 있다. 작업 시작·종료와 스킬 읽기, 승인 대기·결정, 느린 모델 호출·저장, 실패·재시도를 작은 메타데이터로 기록한다.
 
-선택적인 브라우저 자동 열기 실패는 `browser_launch_failed` 경고로 구분하며 서버 실행은 유지한다. stdout에 표시한 WebUI 주소를 직접 열 수 있다. 브라우저의 첫 방문은 공개 접속 상태 조회를 사용하므로 로그인 전이라는 이유만으로 `access_rejected`를 기록하지 않는다. 실제 보호 API의 인증·Host·Origin 거절은 계속 기록한다.
+WebUI 자동 열기에서 실패하면 `browser_launch_failed` 경고를 기록한다. 서버는 stdout에 표시한 주소에서 계속 접속을 받는다. 브라우저의 첫 방문은 공개 접속 상태 조회를 사용하므로 로그인 전이라는 이유만으로 `access_rejected`를 기록하지 않는다. 실제 보호 API의 인증·Host·Origin 거절은 기록한다. 브라우저 도구의 관리형 Chrome 설치본 정리 실패는 `browser_runtime_cleanup_failed` 경고로 기록하며 이미 선택한 버전은 계속 사용한다.
 
 주요 필드는 time·level·msg·component·operation과 request_id·session_id·task_id·run_id·agent·call_id다. 모델 호출의 generation·attempt·duration_ms, 오류 분류인 error_code를 필요한 경우 포함한다. error_code는 안전한 분류이며 raw Provider·OS·SQL 오류 전문을 뜻하지 않는다. HTTP 내부 TLS·panic 진단도 원문 대신 분류를 기록한다.
 
@@ -51,3 +51,5 @@ skill_loaded는 본문을 읽었다는 사실을 제공한다. 명시 호출은 
 - 시작 시 종료된 과거 실행 디렉터리 8개를 남기고 오래된 디렉터리를 정리한 뒤 여유 공간을 검사한다. 회전 중 중단되어 current.jsonl이 없는 디렉터리도 MECA 파일만 있으면 정리 대상이다. 알 수 없는 파일이나 살아 있는 프로세스의 디렉터리는 보존한다. 전체 활성 프로세스에 대한 전역 디스크 quota는 아니다.
 
 운영 로그는 제한된 진단 수단이다. 실행 결과의 영속 원본과 접수 중복 방지 기록을 대신하지 않으며, 로그 실패를 이유로 이미 수행한 작업을 자동 재실행하지 않는다.
+
+큐·반복 경고 집계·writer 종료의 담당 코드는 [운영 로그 구현 전략](optimization-strategies.md#운영-로그)에서 확인한다.

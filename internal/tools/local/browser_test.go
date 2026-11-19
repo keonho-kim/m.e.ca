@@ -24,9 +24,12 @@ func TestBrowserPreparation(t *testing.T) {
 	if _, err := e.Prepare(t.Context(), settings, open); err != nil {
 		t.Fatal(err)
 	}
-	remote, err := e.Prepare(t.Context(), policy.Settings{Scope: policy.System, Permission: policy.PermissionAllMighty}, call("browser_action", `{"action":"open","url":"https://example.com"}`))
-	if err != nil || !remote.Approval().UserRequired {
-		t.Fatal("external navigation bypassed approval", err)
+	remote, err := e.Prepare(t.Context(), settings, call("browser_action", `{"action":"open","url":"https://example.com/docs?q=browser#intro"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if approval := remote.Approval(); approval.Required || approval.UserRequired || len(approval.Reasons) != 0 {
+		t.Fatal("opening an external URL should not prompt", approval)
 	}
 	if _, err := os.Stat(filepath.Join(e.home, ".meca/browser")); !os.IsNotExist(err) {
 		t.Fatal("preparation eagerly created browser installation", err)
@@ -35,12 +38,14 @@ func TestBrowserPreparation(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), diag.Text(diag.BrowserClosed)) {
 		t.Fatal("interaction before open should fail before prompting", err)
 	}
-	if _, err := remote.Execute(t.Context(), false); err == nil {
-		t.Fatal("unapproved remote navigation executed")
-	}
-
-	if _, err := e.Prepare(t.Context(), settings, call("browser_action", `{"action":"fill","target":"#entry","value":"provider-secret"}`)); err == nil {
-		t.Fatal("credential passed to browser")
+	for _, args := range []string{
+		`{"action":"open","url":"https://example.com/?key=provider-secret"}`,
+		`{"action":"open","url":"https://user:password@example.com"}`,
+		`{"action":"fill","target":"#entry","value":"provider-secret"}`,
+	} {
+		if _, err := e.Prepare(t.Context(), settings, call("browser_action", args)); err == nil {
+			t.Fatal("credential passed to browser")
+		}
 	}
 	screenshot, err := e.Prepare(t.Context(), settings, call("browser_inspect", `{"view":"screenshot"}`))
 	if err != nil {
@@ -73,7 +78,7 @@ func TestBrowserApprovalByOperation(t *testing.T) {
 				if err := op.browserApproval(); err != nil {
 					t.Fatal(err)
 				}
-				direct := url == "https://example.com" && (tc.interact || tc.action == "open")
+				direct := url == "https://example.com" && tc.interact
 				prompt := direct || tc.interact && mode == policy.PermissionDefault
 				if (op.approval.Required || op.approval.UserRequired) != prompt || op.approval.UserRequired != direct {
 					t.Errorf("action=%q url=%s mode=%v prompt=%v direct=%v approval=%+v", tc.action, url, mode, prompt, direct, op.approval)

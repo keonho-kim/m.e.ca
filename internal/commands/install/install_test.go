@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
@@ -118,6 +119,29 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 	}
 	if err := Uninstall(ctx, o.Home, nil); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestInstallPreparesExtensionAfterBaseWithStateLease(t *testing.T) {
+	o := options(t, "/bin/sh")
+	prepared := false
+	o.PrepareExtension = func(ctx context.Context, state string) error {
+		if state != filepath.Join(o.Home, statefs.DirectoryName) {
+			t.Fatalf("unexpected extension state: %s", state)
+		}
+		for _, name := range []string{BinaryPath(o.Home), filepath.Join(state, receiptName), filepath.Join(o.Home, ".profile")} {
+			if _, err := os.Stat(name); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := Uninstall(ctx, o.Home, nil); !errors.Is(err, syscall.EWOULDBLOCK) {
+			t.Fatalf("uninstall during extension preparation: %v", err)
+		}
+		prepared = true
+		return nil
+	}
+	if _, err := Install(t.Context(), o); err != nil || !prepared {
+		t.Fatalf("extension preparation completed=%t: %v", prepared, err)
 	}
 }
 

@@ -32,11 +32,33 @@ func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 	if err != nil {
 		return err
 	}
-	result, err := install.Install(ctx, install.Options{Home: home, Executable: executable, Shell: os.Getenv("SHELL"), Path: os.Getenv("PATH")})
+	options := install.Options{Home: home, Executable: executable, Shell: os.Getenv("SHELL"), Path: os.Getenv("PATH")}
+	var extensionMessage string
+	if mode.BrowserExtension {
+		if err := startup.CheckAgentUser(os.Geteuid()); err != nil {
+			return err
+		}
+		options.PrepareExtension = func(ctx context.Context, state string) error {
+			fmt.Fprintln(os.Stderr, diag.Text(diag.BrowserInstallPreparing))
+			paths, err := browser.PrepareAndCheck(ctx, state)
+			if err == nil {
+				extensionMessage = diag.Text(diag.BrowserInstallReady, paths.Agent, paths.Browser)
+			}
+			return err
+		}
+	}
+	result, err := install.Install(ctx, options)
+	if result.Binary != "" {
+		fmt.Fprintln(os.Stdout, "MECA 설치 완료:", result.Binary)
+	}
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stdout, "MECA 설치 완료:", result.Binary)
+	if extensionMessage != "" {
+		if _, err := fmt.Fprintln(os.Stdout, extensionMessage); err != nil {
+			return err
+		}
+	}
 	if result.RestartShell {
 		if !mode.NoShell && term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd())) && term.IsTerminal(int(os.Stderr.Fd())) {
 			fmt.Fprintln(os.Stdout, "PATH 적용을 위해 로그인 셸을 시작합니다.")
@@ -47,14 +69,4 @@ func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 		fmt.Fprintln(os.Stdout, "meca 명령으로 시작하세요.")
 	}
 	return nil
-}
-
-func installBrowserExtension(ctx context.Context, state string) error {
-	fmt.Fprintln(os.Stderr, diag.Text(diag.BrowserInstallPreparing))
-	paths, err := browser.PrepareAndCheck(ctx, state)
-	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprintln(os.Stdout, diag.Text(diag.BrowserInstallReady, paths.Agent, paths.Browser))
-	return err
 }

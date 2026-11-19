@@ -16,8 +16,14 @@ import (
 	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
-type Options struct{ Home, Executable, Shell, Path string }
+type Options struct {
+	Home, Executable, Shell, Path string
+	// PrepareExtension runs after the base installation succeeds while its state is still leased.
+	PrepareExtension func(context.Context, string) error
+}
+
 type Installed struct {
+	// Binary is set after the base installation succeeds, even if an extension fails.
 	Binary       string
 	RestartShell bool
 }
@@ -63,13 +69,13 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 	if err != nil {
 		return result, err
 	}
-	result.Binary = BinaryPath(options.Home)
-	result.RestartShell = !slices.Contains(filepath.SplitList(options.Path), filepath.Dir(result.Binary))
+	binary := BinaryPath(options.Home)
+	restartShell := !slices.Contains(filepath.SplitList(options.Path), filepath.Dir(binary))
 	var names []string
 	for _, r := range previous.Profiles {
 		names = append(names, r.Name)
 	}
-	if result.RestartShell {
+	if restartShell {
 		selected, err := profileNames(root, options.Shell)
 		if err != nil {
 			return result, err
@@ -108,6 +114,10 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 		if err := writeProfile(root, profile, false); err != nil {
 			return result, err
 		}
+	}
+	result = Installed{Binary: binary, RestartShell: restartShell}
+	if options.PrepareExtension != nil {
+		return result, options.PrepareExtension(ctx, state.Name())
 	}
 	return result, nil
 }

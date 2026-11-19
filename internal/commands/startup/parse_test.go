@@ -41,7 +41,7 @@ func TestMaintenanceDoesNotRequireProjectDirectory(t *testing.T) {
 
 func TestInstallNoShell(t *testing.T) {
 	mode, err := Parse([]string{"install", "--no-shell"}, "/missing/project")
-	if err != nil || mode.Action != Install || !mode.NoShell {
+	if err != nil || mode.Action != Install || !mode.NoShell || mode.BrowserExtension {
 		t.Fatalf("mode=%+v err=%v", mode, err)
 	}
 	for _, args := range [][]string{{"install", "extra"}, {"install", "--unknown"}, {"--no-shell"}} {
@@ -60,10 +60,18 @@ func TestUpgradeRejectsArguments(t *testing.T) {
 }
 
 func TestBrowserExtensionInstall(t *testing.T) {
-	for _, args := range [][]string{{"install", "--ext", "browser"}, {"install", "--ext=browser"}} {
-		mode, err := Parse(args, "/missing/project")
-		if err != nil || string(mode.Action) != "install-browser" || mode.Project != "" {
-			t.Fatalf("%v: %+v %v", args, mode, err)
+	for _, tc := range []struct {
+		args    []string
+		noShell bool
+	}{
+		{args: []string{"install", "--ext", "browser"}},
+		{args: []string{"install", "--ext=browser"}},
+		{args: []string{"install", "--ext", "browser", "--no-shell"}, noShell: true},
+		{args: []string{"install", "--no-shell", "--ext=browser"}, noShell: true},
+	} {
+		mode, err := Parse(tc.args, "/missing/project")
+		if err != nil || mode.Action != Install || !mode.BrowserExtension || mode.NoShell != tc.noShell || mode.Project != "" {
+			t.Fatalf("%v: %+v %v", tc.args, mode, err)
 		}
 	}
 	for _, args := range [][]string{{"install", "--ext"}, {"install", "--ext", "other"}, {"install", "--ext="}, {"install", "--ext", "browser", "extra"}, {"install", "--ext", "browser", "--ext", "browser"}} {

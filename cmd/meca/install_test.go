@@ -73,3 +73,36 @@ func checkInstallation(t *testing.T, ctx context.Context, binary, home string) {
 		t.Fatalf("uninstall changed the user's shell settings: %q %v", body, err)
 	}
 }
+
+func TestInstallWithBrowserKeepsBaseOnExtensionFailure(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("browser tools require a non-root user")
+	}
+	binary := testExecutable(t)
+	installHome := t.TempDir()
+	ctx := t.Context()
+	run := func(program string, args ...string) ([]byte, error) {
+		command := exec.CommandContext(ctx, program, args...)
+		command.Env = append(os.Environ(),
+			"HOME="+installHome, "SHELL=/bin/sh", "PATH=/usr/bin:/bin",
+			"MECA_BROWSER_EXECUTABLE="+filepath.Join(installHome, "missing-browser"))
+		return command.CombinedOutput()
+	}
+	output, err := run(binary, "install", "--ext", "browser", "--no-shell")
+	if err == nil || !strings.Contains(string(output), "MECA_BROWSER_EXECUTABLE") || !strings.Contains(string(output), "MECA 설치 완료:") {
+		t.Fatalf("expected completed base installation and browser setup failure: %v\n%s", err, output)
+	}
+	for _, name := range []string{".meca/config.toml", ".meca/installation.json", ".meca/prompts/single/system.md", ".meca/prompts/team/system.md"} {
+		if _, err := os.Stat(filepath.Join(installHome, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	profile, err := os.ReadFile(filepath.Join(installHome, ".profile"))
+	if err != nil || strings.Count(string(profile), "# >>> meca PATH >>>") != 1 {
+		t.Fatalf("PATH registration: %q %v", profile, err)
+	}
+	output, err = run(filepath.Join(installHome, ".local/bin/meca"), "--help")
+	if err != nil || !strings.Contains(string(output), "Usage: meca [path]") {
+		t.Fatalf("installed command is unusable: %v\n%s", err, output)
+	}
+}

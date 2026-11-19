@@ -73,4 +73,4 @@ meca /path/to/project --server --ui
 
 ## 빌드·자원·검증
 
-프론트 제작 규칙은 [디자인 원본](../webui/DESIGN.md), 소스 빌드·모듈 책임·브라우저 검증은 [개발 가이드](development.md#내장-webui)가 소유한다. 사용자 조작과 외부 클라이언트의 전송 계약은 별도로 관리한다.
+프론트 제작 규칙은 [디자인 원본](../webui/DESIGN.md), 소스 빌드·모듈 책임·브라우저 검증은 [개발 가이드](development.md#내장-webui)가 소유한다. 상태·가상화·렌더링의 담당 코드는 [WebUI 구현 전략](optimization-strategies.md#webui-상태와-렌더링)에서 확인한다.

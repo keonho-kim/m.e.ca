@@ -17,7 +17,7 @@ const (
 	BrowserStale       Message = "browser page changed after preparation; inspect the current page and prepare the action again"
 	BrowserResult      Message = "browser result is unavailable or expired; inspect the current page again"
 	BrowserScope       Message = "browser tools require system scope"
-	BrowserTransfer    Message = "Opening or interacting with this external page can send data or change remote state; direct approval is required"
+	BrowserTransfer    Message = "This interaction can send data or change remote state. Direct approval is required."
 	BrowserInteraction Message = "Browser interaction may change application state"
 	BrowserImage       Message = "browser screenshots require a vision-capable model; use snapshot or text inspection otherwise"
 	BrowserClose       Message = "could not confirm browser shutdown: %w"

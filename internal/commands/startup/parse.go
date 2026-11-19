@@ -23,6 +23,7 @@ type Mode struct {
 	Server                  bool
 	ServerOptions           ServerOptions
 	NoShell                 bool
+	BrowserExtension        bool
 	Output, Prompt, Session string
 	Action                  Action
 	UpgradeKind             distribution.Kind
@@ -33,11 +34,10 @@ type Mode struct {
 type Action string
 
 const (
-	Help           Action = "help"
-	Install        Action = "install"
-	InstallBrowser Action = "install-browser"
-	Uninstall      Action = "uninstall"
-	Upgrade        Action = "upgrade"
+	Help      Action = "help"
+	Install   Action = "install"
+	Uninstall Action = "uninstall"
+	Upgrade   Action = "upgrade"
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
@@ -46,11 +46,11 @@ func Parse(args []string, cwd string) (Mode, error) {
 		flags := flag.NewFlagSet("meca install", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
 		flags.BoolVar(&mode.NoShell, "no-shell", false, "install without activating a login shell")
-		flags.Func("ext", "prepare an optional extension", func(name string) error {
-			if name != "browser" || mode.Action != Install {
+		flags.Func("ext", "prepare a browser extension as part of installation", func(name string) error {
+			if name != "browser" || mode.BrowserExtension {
 				return faults.Errorf(diagcatalog.StartupUsageMecaInstall)
 			}
-			mode.Action = InstallBrowser
+			mode.BrowserExtension = true
 			return nil
 		})
 		if err := flags.Parse(args[1:]); err != nil {

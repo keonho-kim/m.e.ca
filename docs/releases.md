@@ -48,6 +48,8 @@
 
 모든 배포본은 `godbus_no_tcp`를 적용한다. Linux DBus의 TCP·nonce-TCP 전송 구현을 제외하고 Unix 소켓과 macOS Keychain을 유지한다. 모델 API·셸의 네트워크 기능은 영향을 받지 않는다. 보장 범위와 수동 빌드 옵션은 [설정 가이드](configuration.md#linux-자격-증명-전송)를 따른다.
 
+내장 WebUI의 코드 분할·압축·캐시 정책은 [빌드와 정적 자산 구현 전략](optimization-strategies.md#빌드와-정적-자산)에서 확인한다.
+
 ## 다운로드와 설치
 
 [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 OS·CPU에 맞는 아카이브를 내려받아 압축을 푼다. 압축을 푼 폴더에서 `./meca install`을 실행하면 된다. 공개 릴리스이므로 GitHub 로그인·토큰이 필요하지 않다. 파일 종류와 플랫폼은 [배포 파일](#배포-파일)의 표를 따른다. Linux의 CPU는 `uname -m`으로 확인한다.
@@ -61,6 +63,8 @@ tar -xzf "meca_<version>_<variant>_<platform>.tar.gz" -C meca-install
 ```
 
 설치하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 로그인 셸로 전환하며, 이 셸을 종료하면 설치를 호출한 셸로 돌아간다. PATH가 이미 반영되어 있거나 비대화형 실행이면 전환하지 않는다. 자동화에서는 `./meca install --no-shell`로 전환을 명시적으로 끌 수 있다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
+
+`./meca install --ext browser`는 본체 설치 뒤 브라우저 도구 준비와 실행 확인까지 진행한다. `--no-shell`을 함께 사용할 수 있다. [브라우저 설치 요구사항](browser.md#첫-실행과-설치)
 
 ### 체크섬 확인 (선택)
 

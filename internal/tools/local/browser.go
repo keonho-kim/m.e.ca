@@ -61,11 +61,14 @@ func (op *browserOperation) prepareBrowser() error {
 
 // browserApproval binds interactions to the page observed during preparation.
 func (op *browserOperation) browserApproval() error {
-	if op.request.Interaction() && op.address == "" {
+	if !op.request.Interaction() {
+		return nil
+	}
+	if op.address == "" {
 		return fault.Errorf(diag.BrowserClosed)
 	}
-	op.approval.Required = op.request.Interaction() && op.settings.Permission != policy.PermissionAllMighty
-	if op.request.Interaction() && browser.External(op.address) || op.request.Action == "open" && browser.External(op.request.URL) {
+	op.approval.Required = op.settings.Permission != policy.PermissionAllMighty
+	if browser.External(op.address) {
 		op.approval.UserRequired = true
 		op.approval.Reasons = []string{diag.Text(diag.BrowserTransfer)}
 	} else if op.approval.Required {

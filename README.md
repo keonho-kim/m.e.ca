@@ -32,7 +32,7 @@ macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·No
 ./meca install
 ```
 
-브라우저 도구를 미리 준비하고 실행을 확인하려면 `meca install --ext browser`를 사용합니다. [브라우저 도구 안내](docs/browser.md)
+브라우저 도구까지 한 번에 설치하고 실행을 확인하려면 `./meca install --ext browser`를 사용합니다. [브라우저 도구 안내](docs/browser.md)
 
 설치 후 `meca`를 실행합니다.
 

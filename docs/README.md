@@ -33,6 +33,7 @@
 | [제품 명세](../SYSTEM.md) | 제품 범위와 아키텍처 경계 |
 | [에이전트 작동 방식](runtime.md) | 모델·도구·실행 상태의 관계 |
 | [개발 가이드](development.md) | 빌드·모듈 책임·검증·추적 파일 정책 |
+| [기능별 최적화](optimization.md) · [구현 전략](optimization-strategies.md) | 적용 기법, 담당 코드, 재사용과 자원 반환 조건 |
 | [UI 디자인](../webui/DESIGN.md) · [패치 계약](../webui/patches/README.md) | 프론트 제작과 의존성 유지보수 |
 | [기여 정책](../CONTRIBUTING.md) | 버그·기능 제안과 코드 기여 범위 |
 | [보안 제보](../SECURITY.md) | 취약점 보고 경로 |

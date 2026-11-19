@@ -339,3 +339,5 @@ GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변�
 `--ui`에서는 외부 프로토콜과 별개로 쿠키 인증 `/v1/ui/events` WebSocket과 임시 이미지 축소 `/v1/ui/thumbnail`을 제공한다. 관찰 연결은 작업·파일 두 구독을 합치고 네 프레임 ACK window로 느린 브라우저의 수신 적재를 제한한다. UI 배치는 native 이벤트 순서를 보존하며 실행 이벤트 저장과 독립된 전송 경계다. 인증 세션 종료는 관찰을 취소하고 이미 접수한 작업은 계속 실행한다.
 
 capabilities는 imagePixels·previewDecodePixels·thumbnailEdge로 이미지 정책을, `ui/session`은 buildId로 배포 자산 identity를 알린다. `detail.field/listFields`는 도구 JSON의 의미 단위 페이지, `searchHistory`는 저장된 메시지·추론의 마스킹된 부분 문자열 검색을 제공한다. 검색은 요청당 이력 16건·512KiB와 query에 묶인 커서를 사용하며 새로운 색인 저장소를 만들지 않는다. 구체적인 봉투·후속 페이지·복구·보안 계약은 [WebUI 연결 가이드](webui-api.md#내장-ui-관찰과-복구)를 따른다.
+
+공용 전송과 원문 조회의 담당 코드는 [서버 이벤트 구현 전략](optimization-strategies.md#서버-이벤트와-원문-조회)에서 확인한다. 에이전트가 조작하는 브라우저 세션의 사용법은 [브라우저 도구](browser.md)에 있다.
