@@ -5,17 +5,21 @@
 package session
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v3"
+
+	"github.com/keonho-kim/meca/internal/commands"
 )
 
 func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	a := screenFixture(t)
 	typeInput(a, "!")
-	if len(a.compose.commandHints) != 8 {
-		t.Fatal("initial command list missing")
+	initial := slices.Clone(a.compose.commandHints)
+	if !slices.ContainsFunc(initial, func(hint commands.Suggestion) bool { return hint.Name == "!compact" }) {
+		t.Fatalf("manual compaction missing from the command list: %v", initial)
 	}
 	typeInput(a, "odel")
 	a.render()
@@ -38,7 +42,7 @@ func TestCommandSearchFiltersAsYouType(t *testing.T) {
 	for range "unknown" {
 		a.keyEvent(tcell.NewEventKey(tcell.KeyBackspace2, "", 0))
 	}
-	if a.compose.editor.String() != "!" || len(a.compose.commandHints) != 8 {
+	if a.compose.editor.String() != "!" || !slices.Equal(a.compose.commandHints, initial) {
 		t.Fatal("deletion did not restore candidates")
 	}
 	typeInput(a, "모델")
