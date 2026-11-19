@@ -137,7 +137,7 @@ Task는 `code`와 `persistence`도 제공한다. `pending`은 현재 프로세�
 
 접수 조회 뒤 다른 호출이 먼저 같은 키를 확정한 경우에도 원래 작업을 반환한다. 현재 프로세스가 접수 확정 후 실행 인계를 진행 중이면 accepted, 실행 중이면 running/canceling으로 조회되며, 주인 없는 이전 프로세스의 접수만 interrupted로 복원한다.
 
-승인은 서버가 발급한 일회성 approval ID와 task ID에 묶는다. 재사용·다른 작업·이미 끝난 승인에는 conflict를 반환한다. 승인 뒤에도 기존 실행기의 대상·버전·사용자 지침 재검사가 적용된다. preview가 잘렸으면 `detail.approvalId`로 전체 근거를 확인한다. 거절·취소·실행기 마감 또는 승인 대기 5분 경과는 해당 승인을 끝낸다.
+사용자 승인은 서버가 발급한 일회성 approval ID와 task ID에 묶는다. 재사용·다른 작업·이미 끝난 승인에는 conflict를 반환한다. All Mighty에서는 실행기가 자동 승인하므로 `approval_required`를 발행하지 않으며 승인 출처는 `all_mighty`다. 실행 시 대상·버전·사용자 지침을 검사한다. preview가 잘렸으면 `detail.approvalId`로 전체 근거를 확인한다. 거절·취소·실행기 마감 또는 승인 대기 5분 경과는 해당 승인을 끝낸다.
 
 SSE·socket·grpc 모두 `POST /v1/command`, `GET /v1/events`, `POST /v1/attachments`를 제공한다. `GET /v1/tasks/{taskId}`는 task Reply, `GET /v1/tasks/{taskId}/approvals`는 해당 작업의 승인만 담은 state Reply다. `POST /v1/tasks/{taskId}/approvals/{approvalId}`에 `{"allow":true}` 또는 `{"allow":false}`를 보내며 allow 생략·잘못된 타입을 거부한다. `POST /v1/tasks/{taskId}/cancel`은 취소를 요청한다. API HTTP에는 Bearer 또는 --ui의 브라우저 인증이 필요하다. /ui/ 정적 접속 화면에는 인증 정보를 포함하지 않는다. 이미지 업로드·해제 형식과 한도는 [이미지 입력](images.md#사용자-이미지-첨부)을 따른다.
 

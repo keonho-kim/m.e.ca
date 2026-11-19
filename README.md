@@ -17,17 +17,37 @@ macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·No
 | `tui` | TUI·CLI, 모든 Provider·도구·팀·스킬 |
 | `full` | tui의 모든 기능 + 서버 API·내장 WebUI |
 
-종류와 플랫폼에 맞는 파일을 받아 압축을 푼 폴더에서 실행합니다. [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
+종류와 플랫폼에 맞는 파일을 받아 압축을 푼 폴더에서 아래 명령 중 하나를 실행합니다. [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
 
 ```sh
-./meca install
+./meca install  # 기본 설치
 ```
 
-브라우저까지 준비하려면 `./meca install --ext browser`를 사용합니다. Chrome·Chromium과 `agent-browser` 도우미가 준비된 환경에서 에이전트가 브라우저 도구를 사용합니다. `--no-shell`은 설치 후 로그인 셸로 전환하는 단계를 생략합니다. [설치 옵션](docs/releases.md#다운로드와-설치) · [브라우저 도구](docs/browser.md)
+```sh
+./meca install --ext browser  # MECA 본체와 브라우저 도구 설치
+```
+
+```sh
+./meca install --no-shell  # 로그인 셸 전환 없이 설치
+```
+
+Chrome·Chromium과 `agent-browser` 도우미가 준비된 환경에서 에이전트가 브라우저 도구를 사용합니다. [설치 옵션](docs/releases.md#다운로드와-설치) · [브라우저 도구](docs/browser.md)
 
 ### 업데이트
 
-실행 중인 MECA를 종료한 뒤 `meca upgrade`를 실행합니다. 설치한 종류를 유지하며, `--tui` 또는 `--full`로 다른 종류를 선택할 수 있습니다. [업데이트 안내](docs/releases.md#업데이트)
+실행 중인 MECA를 종료한 뒤 아래 명령 중 하나를 실행합니다. [업데이트 안내](docs/releases.md#업데이트)
+
+```sh
+meca upgrade  # 현재 배포 종류로 업데이트
+```
+
+```sh
+meca upgrade --tui  # 최신 tui로 업데이트
+```
+
+```sh
+meca upgrade --full  # 최신 full로 업데이트
+```
 
 ## 지원 Provider
 

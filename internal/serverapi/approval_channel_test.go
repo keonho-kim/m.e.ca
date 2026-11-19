@@ -1,4 +1,4 @@
-// Purpose: Resolve native task approvals exactly once through the shared HTTP channel on every protocol.
+// Purpose: Validate manual and automatic task approval through the native API.
 // Pattern: Controlled engine and authenticated HTTP integration test.
 // Usage: go test -race ./internal/serverapi -run TestNativeApprovalChannel.
 // Related: internal/serverapi/task_control.go, internal/commands/server/controls.go.
@@ -12,6 +12,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/agent/work"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -76,5 +77,56 @@ func TestNativeApprovalChannel(t *testing.T) {
 				t.Fatal(task, f.executed.Load())
 			}
 		})
+	}
+}
+
+func TestNativeAllMightyApprovalDoesNotWaitForUser(t *testing.T) {
+	var calls atomic.Int32
+	f := newFixture(t, generateFunc(func(_ context.Context, _ model.Request, emit func(model.Event) error) error {
+		if calls.Add(1) > 1 {
+			return emit(model.Event{Delta: "done", Done: true})
+		}
+		return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"approved.txt","content":"approved"}`)}}, Done: true})
+	}), true)
+	transport := nativeTransport(t, f, "sse")
+	state := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{Create: true}}}).GetState()
+	permission := "all_mighty"
+	if reply := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_SetSettings{SetSettings: &v1.SettingsRequest{Permission: &permission}}}); reply.GetError() != nil {
+		t.Fatal(reply.GetError())
+	}
+	started := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_Start{Start: &v1.StartRequest{SessionId: state.GetSession().GetId(), Key: "automatic-approval", Text: "write"}}}).GetTask()
+	if started == nil {
+		t.Fatal("native task was not admitted")
+	}
+	ctx, cursor := deadline(t), state.Cursor
+	approved := false
+	for {
+		batch, err := f.app.Next(ctx, cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if batch.Snapshot != nil {
+			cursor = batch.Snapshot.Cursor
+			if len(batch.Snapshot.Approvals) != 0 {
+				t.Fatal("All Mighty exposed pending approval in the snapshot", batch.Snapshot.Approvals)
+			}
+		}
+		for _, e := range batch.Events {
+			cursor = e.Cursor
+			if e.Task != started.Id {
+				continue
+			}
+			switch e.Record.Kind {
+			case "approval_required":
+				t.Fatal("All Mighty issued a user approval request")
+			case "approved":
+				approved = e.Record.ApprovalSource == "all_mighty"
+			case "request_finished":
+				if !approved || e.Outcome == nil || e.Outcome.Status != work.Completed || f.executed.Load() != 1 {
+					t.Fatal(approved, e.Outcome, f.executed.Load())
+				}
+				return
+			}
+		}
 	}
 }

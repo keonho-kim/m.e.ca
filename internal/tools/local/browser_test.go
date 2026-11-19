@@ -99,9 +99,8 @@ func TestBrowserApprovalByOperation(t *testing.T) {
 					t.Fatal(err)
 				}
 				direct := url == "https://example.com" && tc.interact
-				prompt := direct || tc.interact && mode == policy.PermissionDefault
-				if (op.approval.Required || op.approval.UserRequired) != prompt || op.approval.UserRequired != direct {
-					t.Errorf("action=%q url=%s mode=%v prompt=%v direct=%v approval=%+v", tc.action, url, mode, prompt, direct, op.approval)
+				if op.approval.Required != tc.interact || op.approval.UserRequired != direct {
+					t.Errorf("action=%q url=%s mode=%v approval=%+v", tc.action, url, mode, op.approval)
 				}
 			}
 		}

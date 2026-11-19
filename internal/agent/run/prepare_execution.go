@@ -81,7 +81,8 @@ func (s *execution) approveExecution(ctx context.Context, ready *readyExecution,
 	waitedForUser := false
 	if proposal.Required {
 		source := "user"
-		if s.runner.Settings.Permission == policy.PermissionAllMighty && !proposal.UserRequired {
+		if s.runner.Settings.Permission == policy.PermissionAllMighty {
+			proposal.UserRequired = false
 			approved, source = true, "all_mighty"
 		} else {
 			waitedForUser = true

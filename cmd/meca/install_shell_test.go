@@ -22,8 +22,7 @@ import (
 
 func TestInstallShellExecutable(t *testing.T) {
 	binary := testExecutable(t)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	const installTimeout = time.Minute
 	for _, tc := range []struct {
 		name                       string
 		terminal, disabled, inPath bool
@@ -39,7 +38,12 @@ func TestInstallShellExecutable(t *testing.T) {
 				t.Fatal(err)
 			}
 			shell := filepath.Join(t.TempDir(), "sh")
-			probe := "#!/bin/sh\nset -eu\nprintf 'LOGIN_ARGS:%s\\nLOGIN_PID:%s\\n' \"$*\" \"$$\"\ncommand -v meca\n\"$HOME/.local/bin/meca\" install --no-shell\n"
+			probe := `#!/bin/sh
+set -eu
+printf 'LOGIN_ARGS:%s\nLOGIN_PID:%s\n' "$*" "$$"
+command -v meca
+exec "$HOME/.local/bin/meca" install --no-shell
+`
 			if err := os.WriteFile(shell, []byte(probe), 0755); err != nil {
 				t.Fatal(err)
 			}
@@ -51,6 +55,8 @@ func TestInstallShellExecutable(t *testing.T) {
 			if tc.disabled {
 				args = append(args, "--no-shell")
 			}
+			ctx, cancel := context.WithTimeout(t.Context(), installTimeout)
+			defer cancel()
 			command := exec.CommandContext(ctx, binary, args...)
 			command.Env = append(os.Environ(), "HOME="+home, "SHELL="+shell, "PATH="+path)
 			var output []byte
@@ -66,6 +72,9 @@ func TestInstallShellExecutable(t *testing.T) {
 				output, err = command.CombinedOutput()
 			}
 			if err != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					t.Fatalf("install timed out after %s\n%s", installTimeout, output)
+				}
 				t.Fatalf("install: %v\n%s", err, output)
 			}
 			active := strings.Contains(string(output), "LOGIN_ARGS:-l")

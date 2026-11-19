@@ -16,7 +16,7 @@ import (
 type Safety struct {
 	Reasons      []string
 	Targets      []string
-	UserRequired bool // Direct consent cannot be replaced by automatic approval.
+	UserRequired bool // Marks effects for direct user review in Default mode.
 }
 
 func (s *Safety) Ask(reason string) {

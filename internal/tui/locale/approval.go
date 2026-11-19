@@ -21,7 +21,7 @@ var approval = []translation{
 	{"", "Mutation outside the project requires approval", "프로젝트 밖 변경은 승인이 필요합니다"},
 	{"", "Destructive Git operation requires approval", "파괴적인 Git 작업은 승인이 필요합니다"},
 	{"", "Remote Git mutation requires approval", "원격 Git 변경은 승인이 필요합니다"},
-	{"", "Outbound data transfer requires approval", "외부 데이터 전송은 모든 승인 모드에서 직접 승인이 필요합니다"},
+	{"", "Outbound data transfer requires approval", "외부 데이터 전송은 승인이 필요합니다"},
 	{"", "Custom Git execution settings require approval", "Git 실행 설정 변경은 승인이 필요합니다"},
 	{"", "Dynamic Git operation requires approval", "동적으로 결정되는 Git 작업은 승인이 필요합니다"},
 	{"", "Mutation target cannot be resolved statically", "변경 대상을 확정할 수 없어 승인이 필요합니다"},

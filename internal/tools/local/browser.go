@@ -67,11 +67,11 @@ func (op *browserOperation) browserApproval() error {
 	if op.address == "" {
 		return fault.Errorf(diag.BrowserClosed)
 	}
-	op.approval.Required = op.settings.Permission != policy.PermissionAllMighty
+	op.approval.Required = true
 	if browser.External(op.address) {
 		op.approval.UserRequired = true
 		op.approval.Reasons = []string{diag.Text(diag.BrowserTransfer)}
-	} else if op.approval.Required {
+	} else {
 		op.approval.Reasons = []string{diag.Text(diag.BrowserInteraction)}
 	}
 	return nil

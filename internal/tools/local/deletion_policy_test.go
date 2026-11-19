@@ -99,7 +99,7 @@ func TestDeletionPolicyChangedAliasRequiresPreparation(t *testing.T) {
 	if err := os.Symlink(inside, alias); err != nil {
 		t.Fatal(err)
 	}
-	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System}, call("execute_command", `{"command":"rm alias/file"}`))
+	op, err := e.Prepare(context.Background(), policy.Settings{Scope: policy.System, Permission: policy.PermissionAllMighty}, call("execute_command", `{"command":"rm alias/file"}`))
 	if err != nil || op.Approval().Required {
 		t.Fatalf("project deletion did not prepare automatically: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestDeletionPolicyChangedAliasRequiresPreparation(t *testing.T) {
 	if err := os.Symlink(outside, alias); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := op.Execute(context.Background(), false); err == nil {
+	if _, err := op.Execute(context.Background(), true); err == nil {
 		t.Fatal("changed deletion target executed")
 	}
 	for _, directory := range []string{inside, outside} {
