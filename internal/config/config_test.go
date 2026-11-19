@@ -62,18 +62,17 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 	}
 }
 
-func TestCompactionThresholdIsConfigurable(t *testing.T) {
+func TestLoadRejectsRemovedCompactionReserve(t *testing.T) {
 	directory := t.TempDir()
-	configuration := Defaults()
-	if configuration.Compaction.ReserveTokens != 16384 {
-		t.Fatal("wrong default token threshold")
-	}
-	configuration.Compaction.ReserveTokens = 128000
-	if err := Save(directory, configuration); err != nil {
+	path := filepath.Join(directory, Filename)
+	original := "[compaction]\nreserve_tokens = 16384\n"
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := Load(directory)
-	if err != nil || loaded.Compaction.ReserveTokens != 128000 {
-		t.Fatalf("threshold override: %+v %v", loaded, err)
+	if _, err := Load(directory); err == nil || !strings.Contains(err.Error(), "remove [compaction].reserve_tokens") {
+		t.Fatalf("missing guidance for the removed setting: %v", err)
+	}
+	if body, err := os.ReadFile(path); err != nil || string(body) != original {
+		t.Fatalf("loading changed the existing configuration: %v", err)
 	}
 }

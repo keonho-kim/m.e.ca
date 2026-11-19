@@ -13,7 +13,7 @@ Both originals are 1448×1086 JPEGs under 1MiB. Their matching 40px preview imag
 
 ## Icons
 
-The local sprite contains 39 unmodified paths from [Lucide revision 53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c](https://github.com/lucide-icons/lucide/tree/53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c). `assets/examples/shared/icons-LICENSE.txt` contains the ISC and Feather-derived MIT notices. Preserve those notices when redistributing the sprite.
+The local sprite contains 39 unmodified paths from Lucide revision 53fab88ff9d1b48f4704b5b5b560d6b4d560bf4c. `assets/examples/shared/icons-LICENSE.txt` contains the ISC and Feather-derived MIT notices. Preserve those notices when redistributing the sprite.
 
 The examples use local symbols without an icon package or CDN. An application with an established icon system should use that system.
 
@@ -27,6 +27,6 @@ Approval, database, research and office examples are design shells. Archive and 
 
 The collection's palettes, framework-free code and DESIGN/PRODUCT files describe these examples. The target project's requirements and design system determine its application architecture and visual identity.
 
-The skill's NOTICE.md and focused source guides record external references and applicable licenses. Preserve attribution for copied licensed material. Bundled examples run with local HTML, CSS, Vanilla JS and media; no external font, image service or design plugin is required.
+The skill's NOTICE.md and focused guides record source names and applicable licenses. Preserve attribution for copied licensed material. Bundled examples use local HTML, CSS, Vanilla JS and media.
 
 Markdown maps provide access to individual files. The three reading levels, documentation budgets and source-header conventions apply to this MECA bundle. Applications built with the skill follow their own project rules.

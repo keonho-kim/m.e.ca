@@ -28,7 +28,7 @@ func (s *Store) readRecordPage(ctx context.Context, classifyBrowser bool, query 
 		var r storedRecord
 		values := []any{&r.sequence, &r.kind, &r.body, &r.refs, &r.size}
 		if classifyBrowser {
-			values = append(values, &r.browserObservation)
+			values = append(values, &r.transientObservation)
 		}
 		if err := rows.Scan(values...); err != nil {
 			return nil, err

@@ -70,7 +70,8 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.checkpoint.Objective = s.runner.Redact(text)
-		if err := s.emit(runrecord.Event{Presentation: position, Kind: "user_message", Text: s.runner.Redact(text)}); err != nil {
+		s.webFetchUserInput = s.checkpoint.Objective
+		if err := s.emit(runrecord.Event{Presentation: position, Kind: "user_message", Text: s.checkpoint.Objective}); err != nil {
 			return err
 		}
 	}

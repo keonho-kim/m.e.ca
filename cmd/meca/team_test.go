@@ -133,7 +133,7 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 
 func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
-	configuration, err := bootstrap.Initialize(home)
+	configuration, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 	}
 	defer store.Close()
 	vault := &credentials.Vault{State: state}
-	service := teamService(store, home, state, vault)
+	service := teamService(store, home, state, vault, nil)
 	local, err := service.NewTools(teamrequest.LocalOptions{})
 	if err != nil {
 		t.Fatal(err)

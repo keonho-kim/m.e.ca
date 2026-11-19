@@ -10,5 +10,5 @@ import (
 )
 
 func (e *Executor) Definitions() []toolapi.Definition {
-	return toolcatalog.AvailableDefinitions(e.browser.Available())
+	return toolcatalog.AvailableDefinitions(e.browser.AvailableTools())
 }

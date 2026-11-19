@@ -16,7 +16,7 @@ type browserExecutor struct {
 	bounded  bool
 }
 
-func (e *browserExecutor) EndBrowser(ctx context.Context) error {
+func (e *browserExecutor) EndObservations(ctx context.Context) error {
 	e.closed = true
 	e.canceled = ctx.Err() != nil
 	_, e.bounded = ctx.Deadline()

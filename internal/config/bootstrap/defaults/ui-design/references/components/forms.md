@@ -4,6 +4,21 @@ Start from the selected editing/settings layout. Group related decisions with a 
 
 Determine which decisions must be compared, entered together or depend on earlier input. Adapt grouping and summary around that relationship; shorter screens or fewer visible fields do not justify additional steps, repeated navigation or hidden consequences.
 
+## Choose the commitment model
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Staged form | Related edits share Save and Cancel. Keep the draft and saved value distinguishable and protect useful work on close. |
+| Autosave field | A local edit persists independently. Show the actual saving and saved version near the field. Preserve failed input and expose recovery. |
+| Apply filters | Several criteria make one new query. Retain visible draft and applied conditions. Make Apply and Reset effects explicit. |
+| Dependent fields | Enabling an option reveals eligible fields. Retain unrelated input and explain values invalidated by the change. |
+| Review before commitment | Give a stable summary of the actual consequence. Offer edit and an explicit final action, and report confirmation from its result. |
+
+## Compose inline validation
+
+Keep the visible label, input, decisive hint and field error associated. For initial format errors, show feedback after meaningful interaction, such as editing then leaving the field, or on a submit attempt. Use the platform constraint or the project's validation mechanism. Keep `aria-invalid` and linked error text aligned with the actual field error, and clear them when the value is corrected.
+
+Write specific corrective text and keep it near the input. On failed submission, focus the first invalid field or a meaningful error summary, reveal collapsed content as needed, and preserve all valid input. Remote checks belong to the current field value. Show a pending or retry message when a check cannot finish and avoid announcing the same error on every keystroke. Keep focus, the input and action placement stable when a message appears.
 
 ## Establish a readable decision sequence
 
@@ -18,7 +33,7 @@ Use accent to identify the actual commitment, selected choice and errors with th
 | Possible treatment | Useful task | Motion and constraint |
 | --- | --- | --- |
 | Grouped Editor | Related values in a focused task | Quiet group boundaries; no compulsory entrance on every field |
-| Aligned Settings | Dense Korean desktop label/value work | Consistent label track and readable controls; long labels wrap without crushing input |
+| Aligned Settings | Dense label/value work | Consistent label track and readable controls with room for long labels to wrap |
 | Progressive Dependency | One answer genuinely unlocks another group | Reveal dependent fields from real state; preserve valid work and mark invalidated values |
 | Sticky Commit | A long editor needs reachable Save/Cancel | Reserve action-bar space and avoid covering final errors/fields; appearance does not change persistence |
 | Review Summary | Consequential commitment benefits from checking input | Stable summary plus real submitting/result region; no fake checkmarks |
@@ -37,8 +52,8 @@ Keep client/server validation consistent and timing useful. Use field errors nea
 
 Display local formats but preserve actual service meaning: date-only versus instant, timezone, precision, inclusive/exclusive range and unavailable values. Do not invent booking or recurrence rules. Provide a useful typed/keyboard path beside a calendar when suitable, and preserve valid selection after a conflict.
 
-Files need a keyboard chooser beside drag/drop, supported service types/limits, real file identity and applicable per-file result/removal. Reserve preview geometry and release object URLs/readers. Transfer at 100% may still require processing; keep successes after partial failure and retry only supported failed work. Sensitive input, credentials and file contents cannot become debug/demo logs.
+For [file drop](../interactions/drag-and-drop.md#file-drop), provide a named chooser and keep the same service limits and per-file results. Reserve preview geometry and release object URLs and readers. Track actual readiness after transfer. Keep successes after partial failure and retry only eligible failed work. Keep sensitive input, credentials and file contents out of debug and demo logs.
 
-Reduced motion uses immediate dependent groups and static pending/result cues. Test invalid/unknown responses, concurrent edits, unsaved close, dependent changes, timezone/range boundaries, failed previews and partial upload. Check keyboard/IME, long Korean text and zoom; inspect cleanup of requests, previews and observers. A frontend-only fixture cannot establish server authorization or transaction safety.
+Reduced motion uses immediate changes to dependent groups and static pending and result cues. Test invalid or unknown responses, concurrent edits, unsaved close, dependent changes, timezone and range boundaries, failed previews and partial upload. Check keyboard operation, text composition, long text and zoom. Inspect cleanup of requests, previews and observers. Verify server authorization and transaction behavior at the integration boundary when in scope.
 
-Sources: [WAI forms notifications](https://www.w3.org/WAI/tutorials/forms/notifications/) and [WAI forms grouping](https://www.w3.org/WAI/tutorials/forms/grouping/). Reuse the application's existing form library or native controls before adding a dependency.
+Sources: WAI forms notifications and WAI forms grouping. Reuse the application's existing form library or native controls before adding a dependency.

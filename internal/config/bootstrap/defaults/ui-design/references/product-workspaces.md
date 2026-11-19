@@ -45,4 +45,4 @@ Their shared files demonstrate stable mechanics with app-owned expression. Reuse
 
 Optional captures: [answer/evidence](../assets/examples/previews/study-chat.jpg), [document](../assets/examples/previews/study-document.jpg), [slides](../assets/examples/previews/study-slides.jpg). They show one viewport and sample state; actual HTML and interaction checks establish current behavior.
 
-Familiar file/tool/content relationships were studied from Google's [web hierarchy](https://workspaceupdates.googleblog.com/2023/03/refreshed-ui-google-drive-docs-sheets-slides.html), [document structure](https://support.google.com/docs/answer/15499791) and [Slides regions](https://support.google.com/docs/answer/1634140). Transfer the useful relationship, not exact branding, colors or service implementation.
+Familiar file/tool/content relationships were studied from Google's web hierarchy, document structure and Slides regions. Transfer the useful relationship, not exact branding, colors or service implementation.

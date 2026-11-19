@@ -32,7 +32,7 @@ func BenchmarkBrowserMemory(b *testing.B) {
 							mode = "unchanged"
 						}
 						b.Run(mode, func(b *testing.B) {
-							s := New("", "", func(text string) string { return text }, nil)
+							s := New("", "", func(text string) string { return text }, nil, nil)
 							s.work = b.TempDir()
 							s.setAddress("http://fixture/initial")
 							if _, err := s.store(raw, 0); err != nil {
@@ -68,7 +68,7 @@ func BenchmarkBrowserMemory(b *testing.B) {
 					}
 				})
 				b.Run(name+"/page", func(b *testing.B) {
-					s := New("", "", func(text string) string { return text }, nil)
+					s := New("", "", func(text string) string { return text }, nil, nil)
 					s.work = b.TempDir()
 					first, err := s.store(raw, 0)
 					if err != nil {

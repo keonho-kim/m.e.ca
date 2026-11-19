@@ -79,7 +79,7 @@ func TestUIBrowserFixture(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "fixture.png"), encoded.Bytes(), 0600); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := bootstrap.Initialize(home)
+	cfg, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestUIBrowserFixture(t *testing.T) {
 	mode.ServerOptions.Certificate = os.Getenv("MECA_UI_CERTIFICATE")
 	mode.ServerOptions.Key = os.Getenv("MECA_UI_KEY")
 	done := make(chan error, 1)
-	go func() { done <- runServer(ctx, mode, cfg, home, state, sessions) }()
+	go func() { done <- runServer(ctx, mode, cfg, home, state, sessions, nil) }()
 	var address string
 	select {
 	case address = <-log.ready:

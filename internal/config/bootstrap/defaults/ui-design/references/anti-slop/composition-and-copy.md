@@ -20,7 +20,7 @@ Choose operational inspection versus editorial reading from what must be visible
 
 The source flags generic marketing phrases, repeated manufactured contrasts, saturated em-dash cadence, decorative eyebrows, numbered section labels and dismissive “theater” phrasing. Diagnose repetition and missing meaning, not punctuation alone.
 
-Write product nouns and concrete action verbs. Headings introduce content; labels identify something useful. Numbering is justified by a real sequence or reference system. Repeated decorative kickers cannot replace hierarchy. Korean action labels should state what happens rather than use 확인 for every operation.
+Write product nouns and action labels that describe the outcome. Use headings to introduce content and numbering for a real sequence or reference system. Build hierarchy through the content and its structure.
 
 Do not invent customers, revenue, usage, security claims, testimonials, integration support or success. Fixtures remain illustrative. Factual gaps are unresolved input, not spaces to fill with impressive claims.
 

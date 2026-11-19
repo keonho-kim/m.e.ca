@@ -1,15 +1,12 @@
-// Purpose: Verify the compaction reserve default and UTF-8 byte fallback.
+// Purpose: Verify the UTF-8 byte fallback for estimating context occupancy.
 // Pattern: Usage contract tests.
-// Usage: go test ./internal/agent/compact -run TestCompactionReserve.
+// Usage: go test ./internal/agent/compact -run TestCompactionByteEstimate.
 // Related: internal/agent/compact/usage.go.
 package compact
 
 import "testing"
 
-func TestCompactionReserveAndByteFallback(t *testing.T) {
-	if Defaults().ReserveTokens != 16384 {
-		t.Fatal("wrong reserve")
-	}
+func TestCompactionByteEstimate(t *testing.T) {
 	for _, tc := range []struct{ bytes, tokens int64 }{{0, 0}, {1, 1}, {3, 1}, {4, 2}, {600000, 200000}} {
 		count := EstimateBytes(tc.bytes)
 		if count.Amount != tc.tokens || !count.Estimated || count.Kind != "request" {

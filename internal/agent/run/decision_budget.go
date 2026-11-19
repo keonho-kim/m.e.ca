@@ -20,18 +20,21 @@ func (s *execution) modelCall() bool {
 	return s.runner.AdmitModel == nil || s.runner.AdmitModel()
 }
 
-func (s *execution) prepareDecision(ctx context.Context) (bool, error) {
+func (s *execution) prepareDecision(ctx context.Context, hasDraft bool) (bool, error) {
 	if s.result.Departed {
 		s.checkpoint.Status = "answered"
 		return true, nil
 	}
 	if err := s.checkTimeBudget(ctx); err != nil {
-		if ctx.Err() != nil {
-			return true, ctx.Err()
+		if ctx.Err() != nil || hasDraft {
+			return true, err
 		}
 		return true, s.stopBudget(ctx, err.Error())
 	}
 	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
+		if hasDraft {
+			return true, errModelBudget
+		}
 		return true, s.stopBudget(ctx, "model call budget exhausted")
 	}
 	return false, nil

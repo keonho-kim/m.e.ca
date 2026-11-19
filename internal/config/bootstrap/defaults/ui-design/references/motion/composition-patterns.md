@@ -37,7 +37,7 @@ Specify trigger → logical target → rendered motion → interruption → fina
 
 The motion lab provides explicit presentation previews and real local loading; it labels the difference. The practical apps use the same rules on actual local operations. Service examples inform purpose and hierarchy, not proof that a brand implements each named effect.
 
-Sources: [Apple motion](https://developer.apple.com/design/human-interface-guidelines/motion), [Material motion](https://m3.material.io/styles/motion), [WAI disclosure](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/), [menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/), [MDN reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion).
+Sources: Apple motion, Material motion, WAI disclosure, menu button, MDN reduced motion.
 
 ## Choose a cue from the actual change
 

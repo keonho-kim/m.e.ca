@@ -1,7 +1,7 @@
-// Purpose: Collect completed commands on the runtime owner while a model request is in flight.
+// Purpose: Collect completed commands on the runtime owner during provider preparation and generation.
 // Pattern: Joined I/O worker with synchronous event handoff.
-// Usage: generate uses this boundary when commands may outlive their initial wait.
-// Related: internal/agent/run/commands.go, internal/agent/run/usage.go.
+// Usage: Preparation and generation use this boundary while commands can finish independently.
+// Related: internal/agent/run/commands.go, internal/agent/run/decision_request.go, internal/agent/run/usage.go.
 package run
 
 import (
@@ -15,35 +15,35 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-func (s *execution) generateObserved(ctx context.Context, generator modelapi.Generator, request modelapi.Request, consume func(modelapi.Event) error) error {
+func (s *execution) observeModelIO(ctx context.Context, send modelapi.Stream, consume func(modelapi.Event) error) error {
 	commands, ok := s.runner.Tools.(toolapi.CommandExecutor)
 	if !ok || !commands.HasCommands() {
-		return generator.Generate(ctx, request, consume)
+		return send(ctx, consume)
 	}
 	child, cancel := context.WithCancel(ctx)
 	defer cancel()
-	// Provider callbacks are serial. Reuse one acknowledgement across events;
-	// its reply preserves backpressure and error ordering without per-token channels.
-	events := make(chan modelapi.Event)
-	reply := make(chan error, 1)
+	var events chan modelapi.Event
+	var reply chan error
+	var emit func(modelapi.Event) error
+	if consume != nil {
+		// A single acknowledgement preserves serial backpressure and error ordering.
+		events, reply = make(chan modelapi.Event), make(chan error, 1)
+		emit = func(event modelapi.Event) error {
+			select {
+			case events <- event:
+			case <-child.Done():
+				return child.Err()
+			}
+			select {
+			case err := <-reply:
+				return err
+			case <-child.Done():
+				return child.Err()
+			}
+		}
+	}
 	done := make(chan error, 1)
-	go func() {
-		done <- faults.Guard(func() error {
-			return generator.Generate(child, request, func(event modelapi.Event) error {
-				select {
-				case events <- event:
-				case <-child.Done():
-					return child.Err()
-				}
-				select {
-				case err := <-reply:
-					return err
-				case <-child.Done():
-					return child.Err()
-				}
-			})
-		})
-	}()
+	go func() { done <- faults.Guard(func() error { return send(child, emit) }) }()
 	var updates <-chan struct{}
 	if source, ok := s.runner.Tools.(toolapi.CommandNotifier); ok {
 		updates = source.CommandUpdates()
@@ -71,7 +71,7 @@ func (s *execution) generateObserved(ctx context.Context, generator modelapi.Gen
 			}
 		case <-ticks:
 			if failure == nil {
-				_, failure = s.collectCommands(ctx)
+				failure = observe()
 				if failure != nil {
 					cancel()
 				}

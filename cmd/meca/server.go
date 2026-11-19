@@ -22,6 +22,7 @@ import (
 	"github.com/keonho-kim/meca/internal/serverapi/detail"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 	"github.com/keonho-kim/meca/internal/webui"
 	"net/http"
@@ -33,7 +34,7 @@ import (
 	"sync/atomic"
 )
 
-func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions) (err error) {
+func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, web *webfetch.Client) (err error) {
 	canonical, canonicalErr := filesystem.Canonical(mode.Project)
 	if canonicalErr != nil {
 		return canonicalErr
@@ -92,7 +93,7 @@ func runServer(ctx context.Context, mode startup.Mode, cfg config.Config, home, 
 		return boundary.ReadTarget(path)
 	}
 	feed, capacity, effects := server.NewFeed(), server.NewCapacity(mode.ServerOptions.Concurrency), &workspacegate.Gate{}
-	projects := projectDependencies{home: home, state: state, sessions: sessions, vault: vault, pages: pages, feed: feed, capacity: capacity, effects: effects, attachments: attachments, current: snapshot, update: update}
+	projects := projectDependencies{webFetch: web, home: home, state: state, sessions: sessions, vault: vault, pages: pages, feed: feed, capacity: capacity, effects: effects, attachments: attachments, current: snapshot, update: update}
 	workspaces, err := server.NewWorkspaces(ctx, server.WorkspaceOptions{
 		Default: mode.Project, Paths: cfg.Workspaces, Check: check,
 		Save: func(ctx context.Context, path string) error {

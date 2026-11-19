@@ -19,6 +19,7 @@ import (
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/processmemory"
+	"github.com/keonho-kim/meca/internal/tools/observation"
 )
 
 type Page struct {
@@ -55,11 +56,10 @@ func (p *Page) Close() {
 }
 
 type storedResult struct {
-	rawDigest               [32]byte
-	id, revision, path, url string
-	size, start, next       int
-	blocks                  []int
-	mask                    int
+	rawDigest         [32]byte
+	id, revision, url string
+	body              observation.Body
+	mask              int
 }
 
 func (s *Session) store(raw json.RawMessage, limit int) (Page, error) {
@@ -127,41 +127,35 @@ func (s *Session) storeText(text, address string, mask int, rawDigest [32]byte, 
 	if limit == 0 {
 		limit = 2 << 10
 	}
-	end := min(limit, len(text))
-	for end > 0 && end < len(text) && !utf8.RuneStart(text[end]) {
-		end--
-	}
+	end := observation.End(text, limit)
 	id := "result_" + rand.Text()
-	result := storedResult{rawDigest: rawDigest, id: id, revision: revision, url: address, size: len(text), start: end, mask: mask}
+	result := storedResult{rawDigest: rawDigest, id: id, revision: revision, url: address, mask: mask}
 	retained := len(text) - end
 	for _, item := range s.results {
-		retained += item.storedBytes()
+		retained += item.body.Retained()
 	}
 	for len(s.results) > 0 && (len(s.results) >= 16 || retained > 32<<20) {
-		old := s.results[0]
-		retained -= old.storedBytes()
-		if err := old.discard(); err != nil {
+		old := &s.results[0]
+		retained -= old.body.Retained()
+		if err := old.body.Discard(); err != nil {
 			return Page{}, err
 		}
 		s.results = slices.Delete(s.results, 0, 1)
 	}
-	if end < len(text) {
-		result.path = filepath.Join(s.work, id)
-		if err := result.spool(text); err != nil {
-			return Page{}, err
-		}
-		result.next = end
+	body, err := observation.Store(filepath.Join(s.work, id), text, end)
+	if err != nil {
+		return Page{}, err
 	}
+	result.body = body
 	if mask != s.maskVersion() {
-		return Page{}, errors.Join(fault.Errorf(diag.BrowserResult), result.discard())
+		return Page{}, errors.Join(fault.Errorf(diag.BrowserResult), result.body.Discard())
 	}
 	s.results = append(s.results, result)
 	// Never pin a multi-megabyte observation through its small first page.
-	body := text
 	if end < len(text) {
-		body = strings.Clone(text[:end])
+		text = strings.Clone(text[:end])
 	}
-	return result.receipt(0, body), nil
+	return result.receipt(0, text), nil
 }
 
 type readerOnly struct{ io.Reader }

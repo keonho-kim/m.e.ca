@@ -6,6 +6,14 @@ For stage-based work, expose the owning workflow's [Step Status](step-status.md)
 
 Derive sequencing from actual dependencies and recovery needs. Independent settings may work better as grouped sections with a summary, while a genuine ordered commitment can benefit from stages. Do not add artificial steps or completed-looking markers to make a simple task appear substantial.
 
+## Choose how stages can be visited
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Linear wizard | Show the current stage label, Back and Continue, with the actual final action at the end. Validate on Continue and keep input on Back. |
+| Revisitable steps | Make reachable stages operable by their names. Mark stages affected by earlier edits for review and preserve unaffected work. |
+| Independent checklist | Show status and links for tasks that can be finished in any order. Let people reopen an incomplete or completed task when allowed. |
+| Read-only tracker | Show stage names, real outcomes and applicable recovery controls. Use a progress indicator when measured work also matters. |
 
 ## Represent the dependency rather than symmetry
 
@@ -23,7 +31,7 @@ Parallel modes or outputs should stay parallel. Do not make document, slides and
 | Segment Bar | Discrete stages with little vertical space | Highlight labeled segments; equal widths do not imply equal duration or percentages |
 | Order Tracking | Read-only shipment/request/service status | Show acknowledged events, timestamps and exceptions; reveal confirmed history without fabricated ETA |
 | Breadcrumb Arrow | Ordered wizard stages needing broad labels | Arrow-shaped stage blocks with restrained active fill; shape does not create ancestor navigation |
-| Vertical Detail | Long Korean labels or substantial explanations | Keep a side/vertical sequence and expand current detail rather than shrink a horizontal strip |
+| Vertical Detail | Long labels or substantial explanations | Use a vertical sequence with room to expand current details |
 | Checklist Setup | Independent setup requirements people revisit | Show real completion and navigation; skipped optional work is distinct from complete |
 | Review and Result | A consequential final commitment | Preserve a summary; submitting and confirmed result are different states |
 
@@ -47,4 +55,4 @@ Reduced motion keeps immediate stage changes and static current/done cues. Execu
 
 Test invalid continue, optional skip, changed dependency, failed commitment, browser back, draft resume, late status and reversal. Check desktop width, long labels and zoom before selecting horizontal/vertical geometry.
 
-Sources: [MUI Stepper](https://mui.com/material-ui/react-stepper/) and [WAI-ARIA current state](https://www.w3.org/TR/wai-aria-1.2/#aria-current). These are compositions; MUI support does not imply a universal current Material requirement.
+Sources: MUI Stepper and WAI-ARIA current state. These are compositions; MUI support does not imply a universal current Material requirement.

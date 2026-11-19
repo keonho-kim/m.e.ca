@@ -6,7 +6,7 @@ Use this alongside the existing detector analysis when review is flattening a de
 
 | Expression | When it has a real role | Fix the defect while retaining the idea |
 | --- | --- | --- |
-| Large or contrasting display type | A clear subject, editorial opening, deliberate document hierarchy | Improve Hangul wrapping, scale at narrow widths and proximity to a useful action; retain the earned typographic contrast |
+| Large or contrasting display type | A clear subject, editorial opening, deliberate document hierarchy | Check wrapping, scale at narrow widths and proximity to a useful action. Preserve the typographic contrast that establishes hierarchy. |
 | A strong field of brand color | A principal choice, recognizable navigation or an explicit expressive identity | Check on-color text, focus and selected/error meanings; preserve the deliberate emphasis instead of bleaching the whole product |
 | Hard shadow or sharp border | A raised sheet, tool layer or a coherent graphic language | Reduce ambiguous or repeated elevation; keep the meaningful boundary where it explains the layer |
 | Gradient or translucent material | A genuine continuous value, controlled media overlay or contextual tool layer | Fix composite contrast, legibility and fallback; do not assume every gradient or glass layer is a defect |
@@ -26,7 +26,7 @@ When a result feels flat or generic, inspect the working object, reading order, 
 
 ## Describe a useful correction
 
-Record the location and observed user cost, the actual cause, the smallest correction, the expression being retained and the relevant check. For example: an editorial Korean title breaks into isolated syllables at a narrow width → improve phrase wrapping and scale → retain serif hierarchy and the image-led layout → inspect the same content/width again.
+Record the location and observed user cost, the actual cause, the smallest correction, the expression being retained and the relevant check. If an editorial title wraps awkwardly at a narrow width, adjust wrapping and scale, preserve the serif hierarchy and image-led layout, then recheck the same content at that width.
 
 A second example: a dense schedule gives selected slots and ordinary rows the same treatment → make actual selection explicit with text, boundary and functional emphasis → retain aligned compact rows and tabular time → test selection and keyboard access, including unavailable choices.
 
@@ -53,4 +53,4 @@ Inspect whether a proposed correction improves the identified cost while keeping
 
 The same-brief studies illustrate choices, not trained-model performance or user preference. Use realistic requests and compare actual outputs when evaluating whether a skill produces better decisions. Do not add a score database or invoke independent reviewers without authorization.
 
-Sources: the pinned Impeccable sources and classifications remain in the anti-slop map. [Google's context discussion](https://design.google/library/expressive-material-design-google-research) supports expressive hierarchy while retaining learned operation; [Apple motion](https://developer.apple.com/design/human-interface-guidelines/motion) informs purposeful temporal behavior. These are independent interpretations, not redistributed upstream commands or code.
+Sources: the pinned Impeccable sources and classifications remain in the anti-slop map. Google's context discussion supports expressive hierarchy while retaining learned operation; Apple motion informs purposeful temporal behavior. These are independent interpretations, not redistributed upstream commands or code.

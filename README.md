@@ -67,13 +67,15 @@ meca --mode json "요청한 파일을 만들어줘"
 
 `!model`로 모델을 연결하고 `!dir`에서 파일을 참조합니다. TUI에서 응답 중 `Enter`는 방향 수정, `Tab`은 후속 요청 예약, `Esc`는 작업 중지입니다. [명령과 키보드](docs/usage.md) · [이미지 첨부](docs/images.md) · [실행과 승인](docs/execution-boundary.md)
 
+`web_fetch`는 URL로 웹 문서의 본문을 읽습니다. HTML은 설치된 Chromium에서 렌더링합니다. [브라우저 준비와 이어 읽기](docs/web-fetch.md)
+
 ## 팀 모드
 
 현재 대화에서 `!team`을 켜면 최대 8개 에이전트가 같은 프로젝트에서 협업합니다. WebUI에서는 입력창의 팀 버튼이나 설정에서 전환합니다. [팀 모드](docs/team.md)
 
 ## 스킬과 추가 방법
 
-스킬은 에이전트가 읽는 `SKILL.md` 작업 지침입니다. `!skills`로 찾아보고 `#스킬명`으로 호출합니다. 기본으로 `create-skill`·`ui-design`·`backend-design`을 제공합니다.
+스킬은 에이전트가 읽는 `SKILL.md` 작업 지침입니다. `!skills`로 찾아보고 `#스킬명`으로 호출합니다. 기본으로 `create-skill`·`ui-design`·`backend-design`·`application-best-dev-practices`를 제공합니다.
 
 프로젝트의 `.agents/skills/review/SKILL.md`를 다음처럼 만듭니다. 개인 스킬은 `~/.meca/skills/`에 같은 구조로 둡니다.
 

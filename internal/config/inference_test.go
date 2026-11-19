@@ -45,7 +45,7 @@ func TestSupportingRolesUseTopLevelTables(t *testing.T) {
 			t.Fatalf("expected one %s section: %s", section, body)
 		}
 	}
-	content := "[compaction]\ntemperature=0.0\nmax_output_tokens=4321\nreserve_tokens=123456\nkeep_recent_tokens=2048\nmax_input_bytes=1048576\nmax_summary_bytes=1048576\n\n[diagnostics]\ntemperature=0.0\nmax_output_tokens=2345\n"
+	content := "[compaction]\ntemperature=0.0\nmax_output_tokens=4321\nkeep_recent_tokens=2048\nmax_input_bytes=1048576\nmax_summary_bytes=1048576\n\n[diagnostics]\ntemperature=0.0\nmax_output_tokens=2345\n"
 	if err := os.WriteFile(filepath.Join(directory, Filename), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestSupportingRolesUseTopLevelTables(t *testing.T) {
 	if parameters.Compaction.Temperature != 0 || parameters.Compaction.MaxOutputTokens != 4321 || parameters.Compaction.Thinking != "off_if_supported" || parameters.Diagnostic.Temperature != 0 || parameters.Diagnostic.MaxOutputTokens != 2345 {
 		t.Fatalf("top-level role overrides lost: %+v", parameters)
 	}
-	if loaded.Compaction.ReserveTokens != 123456 || loaded.Compaction.KeepRecentTokens != 2048 || loaded.Compaction.MaxInputBytes != 1048576 || loaded.Compaction.MaxSummaryBytes != 1048576 {
+	if loaded.Compaction.KeepRecentTokens != 2048 || loaded.Compaction.MaxInputBytes != 1048576 || loaded.Compaction.MaxSummaryBytes != 1048576 {
 		t.Fatalf("compaction policy lost: %+v", loaded.Compaction)
 	}
 	if err := Save(directory, loaded); err != nil {
@@ -90,12 +90,9 @@ func TestInferenceDefaultsAndOverrides(t *testing.T) {
 	settings := loaded.InferenceSettings()
 	for _, role := range []inference.Role{inference.Agent, inference.Compaction, inference.Diagnostic} {
 		parameters, err := inference.Resolve(&settings, role)
-		want := 12800
-		if role == inference.Agent {
-			want = 0
-		}
-		if role == inference.Compaction {
-			want = 8192
+		want := 0
+		if role == inference.Diagnostic {
+			want = 12800
 		}
 		if err != nil || parameters.MaxOutputTokens != want {
 			t.Fatalf("persisted %s default=%+v, want %d: %v", role, parameters, want, err)

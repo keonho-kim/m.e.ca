@@ -35,7 +35,7 @@ func TestUsageProgressKeepsCostChangesAndOneFinal(t *testing.T) {
 		}
 		return nil
 	}}
-	if err := s.generate(context.Background(), modelapi.Request{}, inference.Agent, func(modelapi.Event) error { consumed++; return nil }); err != nil {
+	if err := s.generate(context.Background(), modelapi.Request{}, inference.Agent, nil, func(modelapi.Event) error { consumed++; return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if len(progress) != 3 || finals != 1 || consumed != 5 || progress[0].Cost != nil || progress[1].Cost == nil || *progress[1].Cost != 0 || *progress[2].Cost != charge {

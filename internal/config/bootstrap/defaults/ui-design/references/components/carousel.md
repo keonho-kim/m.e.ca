@@ -6,6 +6,17 @@ Anatomy: named region/group, identifiable slides, previous/next, useful position
 
 If all items must be found or compared, consider a visible collection rather than serially hiding them. Use a carousel only when its exploration/presentation benefit fits the content; do not conceal essential product facts merely to add movement or fill a hero.
 
+## Choose how items are reached
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Finite manual track | Show named Previous and Next controls, current position and actual endpoints. Keep focus usable when a boundary control becomes unavailable. |
+| Wrapping track | Use when revisiting the start naturally follows the end. Keep stable slide identities and position labels, and preserve meaningful reading and focus order. |
+| Thumbnail picker | Show the current image or slide beside named direct choices. Update caption and selected thumbnail together. |
+| Automatic rotation | Provide a visible stop/start control before the rotating content in keyboard order. Stop on focus entry and retain that pause until the user chooses to resume. Respect reduced motion. |
+| Visible gallery | When finding or comparing dominates, make the set visible with stable captions and direct navigation to each item. |
+
+Use the actual settled position for slide feedback. Announce meaningful manual changes politely and keep named controls available during loading, media failure or reduced motion.
 
 ## Let the set determine presentation
 
@@ -35,7 +46,7 @@ Provide buttons and optional direct selection with meaningful names. Repeated ne
 
 Manual navigation is the baseline. If automatic rotation serves the brief, offer a discoverable stop/start control; stop on focus entry and hover, and do not restart after focus interruption without an explicit request. Do not advance essential copy, forms or a slide holding focus automatically. Reduced motion disables automatic rotation and retains a complete static/manual path.
 
-Use the established accessible pattern rather than inventing `role="carousel"`. Inactive slides cannot retain controls in the tab sequence. Announce meaningful manual changes without continuous automatic live updates. Do not mix tabbed and button-picker keyboard models.
+Use the established accessible pattern and its keyboard model. For a design that replaces the active slide, keep hidden slides out of the focus order. For a scrollable track, focus on an item brings it into view. Keep announcements tied to manual changes and follow either the tabbed or button-picker model.
 
 ## Delivery, reversal and checks
 
@@ -45,4 +56,4 @@ Rapid navigation re-targets visual state without leaving the logical index behin
 
 Test finite ends, one item, long captions, failed/lazy media, focused content during next, canceled drag, resize, route return and pause/resume. Controls over real images need legible backgrounds and keyboard discovery, not hover-only arrows.
 
-Source: [WAI APG carousel](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/). Visual recipe names are choices, not new accessibility roles.
+Source: WAI APG carousel. Visual recipe names are choices, not new accessibility roles.

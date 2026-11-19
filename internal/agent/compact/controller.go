@@ -25,7 +25,6 @@ type Controller struct {
 	ActiveRequest          string
 	memory                 Memory
 	loaded                 bool
-	rejectedOutput         int
 }
 
 type compactionMode uint8
@@ -39,66 +38,80 @@ const (
 func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 	return c.Repository.AddContextTokens(ctx, c.Session, count)
 }
-func (c *Controller) Refresh(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, thresholdCompaction)
+
+// Refresh checks the current input when tokenization is available and otherwise uses the saved estimate.
+func (c *Controller) Refresh(ctx context.Context, budget modelapi.InputBudget, started func() error, generate Generate) (bool, error) {
+	c.observeWindow(budget.Window)
+	return c.refresh(ctx, started, generate, thresholdCompaction, budget.InputTokens, 0)
 }
 
-// ObserveCapacity remembers the serving window and actual rejected output reservation for this execution.
-func (c *Controller) ObserveCapacity(failure *modelapi.ContextLimitError) {
-	if failure.Capacity > 0 && (c.ContextWindow == 0 || failure.Capacity < c.ContextWindow) {
-		c.ContextWindow = failure.Capacity
-	}
-	if failure.RequestedOutput > 0 {
-		c.rejectedOutput = failure.RequestedOutput
+func (c *Controller) observeWindow(window int) {
+	if window > 0 && (c.ContextWindow == 0 || window < c.ContextWindow) {
+		c.ContextWindow = window
 	}
 }
 
 // Compact responds to a confirmed context-capacity failure at a safe boundary.
-func (c *Controller) Compact(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, capacityCompaction)
+func (c *Controller) Compact(ctx context.Context, failure modelapi.ContextLimitError, started func() error, generate Generate) (bool, error) {
+	c.observeWindow(failure.Capacity)
+	return c.refresh(ctx, started, generate, capacityCompaction, 0, failure.RequestedOutput)
 }
 
 // CompactNow summarizes eligible history on an idle conversation's explicit request.
 func (c *Controller) CompactNow(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, manualCompaction)
+	return c.refresh(ctx, started, generate, manualCompaction, 0, 0)
 }
 
-func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, mode compactionMode) (bool, error) {
-	if err := c.Settings.Check(); err != nil {
-		return false, err
+// Load restores the last summary before the agent assembles a request.
+func (c *Controller) Load(ctx context.Context) error {
+	if c.loaded {
+		return nil
 	}
-	if c.Repository == nil || c.Redact == nil || generate == nil {
-		return false, faults.Errorf(diagcatalog.CompactCompactionDependenciesAreRequired)
+	if err := c.Settings.Check(); err != nil {
+		return err
+	}
+	if c.Repository == nil || c.Redact == nil {
+		return faults.Errorf(diagcatalog.CompactCompactionDependenciesAreRequired)
 	}
 	if err := prompt.CheckTemplate(c.Prompt); err != nil {
+		return err
+	}
+	memory, err := c.Repository.Memory(ctx, c.Session)
+	if err != nil {
+		return err
+	}
+	if err := memory.Check(c.Settings.MaxSummaryBytes); err != nil {
+		return err
+	}
+	c.memory, c.loaded = memory, true
+	return nil
+}
+
+func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, mode compactionMode, inputTokens, rejectedOutput int) (bool, error) {
+	if generate == nil {
+		return false, faults.Errorf(diagcatalog.CompactCompactionDependenciesAreRequired)
+	}
+	if err := c.Load(ctx); err != nil {
 		return false, err
 	}
-	if !c.loaded {
-		memory, err := c.Repository.Memory(ctx, c.Session)
-		if err != nil {
-			return false, err
-		}
-		if err = memory.Check(c.Settings.MaxSummaryBytes); err != nil {
-			return false, err
-		}
-		c.memory = memory
-		c.loaded = true
+	window := c.contextWindow()
+	// Use the first whole token count at or above 75 percent.
+	threshold := window - window/4
+	if mode == thresholdCompaction && inputTokens > 0 && inputTokens < threshold {
+		return false, nil
 	}
 	mark, err := c.Repository.MemoryWatermark(ctx, c.Session, c.memory.UsageThrough)
 	if err != nil {
 		return false, err
 	}
-	window := c.contextWindow()
-	reserve := min(int(c.Settings.ReserveTokens), max(1, window/4))
-	threshold := max(1, window-max(reserve, c.rejectedOutput))
-	if mode == thresholdCompaction && mark.Tokens < int64(threshold) {
+	if mode == thresholdCompaction && inputTokens <= 0 && mark.Tokens < int64(threshold) {
 		return false, nil
 	}
 	keep := 0
 	if mode != manualCompaction {
 		keep = min(c.Settings.KeepRecentTokens, window/4)
-		if c.rejectedOutput > 0 {
-			keep = min(keep, max(1, threshold/2))
+		if rejectedOutput > 0 {
+			keep = min(keep, max(1, (window-rejectedOutput)/2))
 		}
 	}
 	boundary, err := c.Repository.CompactionBoundary(ctx, c.Session, mark.Timeline, keep*int(bytesPerToken))

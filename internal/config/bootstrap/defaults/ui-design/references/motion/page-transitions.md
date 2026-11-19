@@ -45,4 +45,4 @@ For an ordinary SaaS queue, direct change or quiet fade may be sufficient. A rea
 
 Test back/forward, direct/deep link, slow/error destination, rapid A→B→C, focused outgoing control, changed account, resize/zoom and reduced motion. Inspect interaction and memory with actual content, not only a final frame.
 
-Source: [MDN View Transition API usage](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API/Using). The effect recipes are original adaptations; no router or animation library is required by this skill.
+Source: MDN View Transition API usage. The effect recipes are original adaptations; no router or animation library is required by this skill.

@@ -46,7 +46,7 @@ func TestCatalogAdvertisesSupportedTools(t *testing.T) {
 		names = append(names, definition.Name)
 	}
 	slices.Sort(names)
-	want := []string{"browser_action", "browser_inspect", "cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "list_skills", "load_skill", "read_skill_file", "view_image", "wait_command", "write_file"}
+	want := []string{"browser_action", "browser_inspect", "cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "list_skills", "load_skill", "read_skill_file", "view_image", "wait_command", "web_fetch", "write_file"}
 	if !slices.Equal(names, want) {
 		t.Fatalf("advertised tools = %v; want %v", names, want)
 	}

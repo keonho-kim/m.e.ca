@@ -5,17 +5,27 @@
 package run
 
 import (
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
-
 	"context"
 	"errors"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
+	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (s *execution) drive(ctx context.Context, approve Approver) error {
+func (s *execution) drive(ctx context.Context, approve Approver) (resultErr error) {
 	var err error
+	var draft replyDraft
+	defer func() {
+		if resultErr != nil && draft.output.bytes() != 0 {
+			s.presentation = draft.presentation
+			resultErr = errors.Join(resultErr, s.recordReply(ctx, draft.output.text, draft.output.thinking, true))
+		}
+	}()
+	compactionAttempted := false
+	correctedToolCall := false
 	for {
 		if _, err = s.collectCommands(ctx); err != nil {
 			return err
@@ -23,7 +33,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		if _, err = s.admitInstructions(ctx); err != nil {
 			return err
 		}
-		if finished, decisionErr := s.prepareDecision(ctx); finished || decisionErr != nil {
+		if finished, decisionErr := s.prepareDecision(ctx, draft.output.bytes() != 0); finished || decisionErr != nil {
 			return decisionErr
 		}
 		s.checkpoint.Iteration = s.usage.ToolCalls
@@ -33,30 +43,47 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 		if err = s.persist(ctx); err != nil {
 			return err
 		}
-		if err = s.refreshMemory(ctx, false); err != nil {
-			return err
-		}
-		// Compaction can take time; admit instructions received during it before
-		// generating another answer or proposing effects from the earlier request.
-		if changed, steerErr := s.steer(ctx); steerErr != nil {
-			return steerErr
-		} else if changed {
-			if err = s.persist(ctx); err != nil {
-				return err
-			}
-		}
-		if _, err = s.admitContext(ctx); err != nil {
-			return err
-		}
-		commandRevision := s.commandRevision
-		instructionRevision := s.instructionRevision
-		supplied := len(s.messages)
-		reply, askErr := s.askResponse(ctx)
+		decision, askErr := s.prepareAgentRequest(ctx)
+		var reply modelapi.Response
 		if askErr == nil {
-			s.acknowledgeBrowserObservations(supplied)
+			if current, err := s.preparedCurrent(ctx, decision); err != nil {
+				return err
+			} else if !current {
+				continue
+			}
+			if !compactionAttempted {
+				err := s.compactMemory(ctx, decision.prepared.Budget, nil, func() {
+					compactionAttempted = true
+					decision = decisionRequest{}
+				})
+				if err != nil {
+					return err
+				}
+				if compactionAttempted {
+					// Re-admit changes and measure the committed compacted context.
+					continue
+				}
+			}
+			reply, askErr = s.askResponse(ctx, decision.request, decision.prepared.Send, &draft)
+			decision.request, decision.prepared = modelapi.Request{}, modelapi.PreparedGeneration{}
+			compactionAttempted = false
+		}
+		if askErr == nil {
+			s.acknowledgeObservations(decision.supplied)
 			s.capacityRecovery = false
+			correctedToolCall = false
 		}
 		if askErr != nil {
+			if ctx.Err() != nil || errors.Is(askErr, errRuntimeRecord) {
+				return askErr
+			}
+			var malformed *modelapi.ToolCallError
+			if errors.As(askErr, &malformed) {
+				s.result.HadToolFailure = true
+			}
+			if malformed == nil && draft.output.bytes() != 0 {
+				return askErr
+			}
 			if handled, imageErr := s.recoverImages(ctx, askErr); handled {
 				if imageErr != nil {
 					return imageErr
@@ -66,26 +93,26 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			var capacity *modelapi.ContextLimitError
 			if !s.capacityRecovery && errors.As(askErr, &capacity) && !capacity.Partial {
 				s.capacityRecovery = true
-				if m := s.runner.Memory; m != nil {
-					m.ObserveCapacity(capacity)
-				}
-				if err = s.refreshMemory(ctx, true); err != nil {
+				decision = decisionRequest{}
+				if err = s.compactMemory(ctx, modelapi.InputBudget{}, capacity, nil); err != nil {
 					return errors.Join(askErr, err)
 				}
+				compactionAttempted = true
 				continue
 			}
-			var malformed *modelapi.ToolCallError
-			var truncated *modelapi.OutputLimitError
-			if !errors.As(askErr, &malformed) && !errors.As(askErr, &truncated) {
+			if malformed == nil || correctedToolCall {
 				return askErr
 			}
-			s.result.HadToolFailure = true
-			s.checkpoint.Observation = "Model response failed before execution: " + s.runner.Redact(askErr.Error())
+			correctedToolCall = true
+			s.checkpoint.Observation = "Correct the native tool call using the declared schema and continue the task. Validation error: " + s.runner.Redact(askErr.Error())
 			if err := s.save(ctx, modelapi.Message{Role: "system", Content: s.checkpoint.Observation}); err != nil {
 				return err
 			}
+			if err := s.emit(runrecord.Event{Kind: "retry", Text: diagcatalog.Text(diagcatalog.RunRetryInvalidToolCall)}); err != nil {
+				return err
+			}
 		} else if len(reply.Calls) > 0 {
-			if err = s.checkInstructions(ctx, instructionRevision); err != nil {
+			if err = s.checkInstructions(ctx, decision.instructionRevision); err != nil {
 				var failure *faults.Failure
 				if errors.As(err, &failure) && failure.Code == diagcatalog.InstructionChanged {
 					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request."); err != nil {
@@ -96,10 +123,14 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 				return err
 			}
 
+			callCtx := ctx
+			if s.webFetchAllowance >= 0 {
+				callCtx = toolapi.WithWebFetchDecision(ctx, s.webFetchAllowance, s.webFetchUserInput)
+			}
 			if len(reply.Calls) > 1 {
-				err = s.batch(ctx, reply, approve)
+				err = s.batch(callCtx, reply, approve)
 			} else {
-				err = s.action(ctx, reply, approve)
+				err = s.action(callCtx, reply, approve)
 			}
 			if err != nil {
 				return err
@@ -116,7 +147,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) error {
 			} else if queued {
 				continue
 			}
-			if commandRevision != s.commandRevision {
+			if decision.commandRevision != s.commandRevision {
 				continue
 			}
 			if pending, pendingErr := s.pendingCommands(ctx); pendingErr != nil {

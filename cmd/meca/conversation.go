@@ -16,10 +16,11 @@ import (
 	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 	tuisession "github.com/keonho-kim/meca/internal/tui/session"
 )
 
-func runConversation(ctx context.Context, screen tcell.Screen, configuration config.Config, home, state string, store *sqlite.Store) (action tuisession.Action, err error) {
+func runConversation(ctx context.Context, screen tcell.Screen, configuration config.Config, home, state string, store *sqlite.Store, web *webfetch.Client) (action tuisession.Action, err error) {
 	session := store.Session()
 	defer func() { err = errors.Join(err, store.Close()) }()
 	lease, leaseErr := store.LeaseSession()
@@ -31,12 +32,12 @@ func runConversation(ctx context.Context, screen tcell.Screen, configuration con
 		return tuisession.Exit, err
 	}
 	vault := &credentials.Vault{State: state}
-	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
+	executor, err := local.NewExecutor(session.ProjectRoot, home, state, vault.Redact, local.Options{WebFetch: web, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return tuisession.Exit, err
 	}
 	defer func() { err = errors.Join(err, executor.Close()) }()
-	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Skills: executor.Skills(), Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
+	return tuisession.Run(ctx, screen, tuisession.Options{Home: home, State: state, Config: configuration, Store: store, Session: session, Tools: executor, Skills: executor.Skills(), Files: executor.Files, Vault: vault, Team: teamService(store, home, state, vault, web), LoadTeamMode: store.TeamMode, SaveTeamMode: store.SetTeamMode, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }, UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
 		return config.Update(ctx, state, apply)
 	}})
 }

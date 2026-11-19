@@ -59,7 +59,7 @@ ctx.putImageData(pixels, 0, 0); canvas.style.position = 'fixed'; canvas.style.in
 	var roots []int
 	var ownedPaths []string
 	for i := range 3 {
-		s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil)
+		s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil, nil)
 		s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
 			return browserruntime.Paths{Agent: agent, Browser: chrome}, nil
 		}

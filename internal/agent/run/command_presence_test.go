@@ -33,15 +33,29 @@ func TestGenerationPresenceDoesNotMaterializeCommandLists(t *testing.T) {
 		r := fixture(&generator{}, e.executor, &journal{})
 		r.Tools = e
 		s := execution{runner: r}
-		g := boundaryModel(func(_ context.Context, _ model.Request, send func(model.Event) error) error {
-			return send(model.Event{Done: true})
-		})
-		if err := s.generateObserved(context.Background(), g, model.Request{}, func(model.Event) error { return nil }); err != nil {
+		send := func(_ context.Context, emit func(model.Event) error) error {
+			return emit(model.Event{Done: true})
+		}
+		if err := s.observeModelIO(context.Background(), send, func(model.Event) error { return nil }); err != nil {
 			t.Fatal(err)
 		}
 		if e.snapshots != 0 || pending && e.collections != 1 || !pending && e.collections != 0 {
 			t.Fatal("presence lost a completion or materialized display metadata", pending, e.snapshots, e.collections)
 		}
+	}
+}
+
+func TestPreparationObservesCommandsWithoutStreamEvents(t *testing.T) {
+	e := &countedCommandQueries{commandFixture: &commandFixture{executor: &executor{}, completed: true}}
+	s := execution{runner: Runner{Tools: e}}
+	err := s.observeModelIO(t.Context(), func(_ context.Context, emit func(model.Event) error) error {
+		if emit != nil {
+			t.Error("preparation received a stream emitter")
+		}
+		return nil
+	}, nil)
+	if err != nil || e.collections != 1 || e.snapshots != 0 {
+		t.Fatalf("collections=%d snapshots=%d error=%v", e.collections, e.snapshots, err)
 	}
 }
 

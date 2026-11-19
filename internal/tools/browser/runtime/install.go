@@ -38,6 +38,22 @@ func OpenInstalled(ctx context.Context, state string) (Paths, error) {
 	return prepareRuntime(ctx, state, false)
 }
 
+// OpenChrome pins the already-installed executable for a read-only renderer.
+func OpenChrome(ctx context.Context, state string) (Paths, error) {
+	browser, err := findBrowser()
+	if err != nil {
+		return Paths{}, err
+	}
+	if browser != "" {
+		return Paths{Browser: browser}, nil
+	}
+	use, err := managedChrome(ctx, downloadClient, runtimeDirectory(state), runtime.GOOS, runtime.GOARCH, time.Now(), false)
+	if err != nil {
+		return Paths{}, preparationFailure(err)
+	}
+	return Paths{Browser: use.path, chrome: use}, nil
+}
+
 func Install(ctx context.Context, state string) (Paths, error) {
 	return prepareRuntime(ctx, state, true)
 }

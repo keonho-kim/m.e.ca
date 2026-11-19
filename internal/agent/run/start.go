@@ -78,6 +78,8 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 			guidance = append(guidance, prompt.BrowserAction)
 		case toolapi.BrowserInspect:
 			guidance = append(guidance, prompt.BrowserObservation)
+		case toolapi.WebFetch:
+			guidance = append(guidance, prompt.WebFetch)
 		}
 	}
 	system = strings.Join(guidance, "")

@@ -39,7 +39,7 @@ func TestUIDesignBrowserDiagnostics(t *testing.T) {
 		t.Fatal("Playwright CLI is required for this browser test:", err)
 	}
 	home, workdir := t.TempDir(), t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

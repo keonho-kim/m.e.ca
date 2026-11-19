@@ -26,6 +26,7 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	sessionstate "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 	"github.com/keonho-kim/meca/internal/tui/clipboard"
 	tuisession "github.com/keonho-kim/meca/internal/tui/session"
 	"golang.org/x/term"
@@ -124,9 +125,13 @@ func start(ctx context.Context) (err error) {
 	if err := install.CheckReady(home); err != nil {
 		return err
 	}
-	configuration, err := bootstrap.Initialize(home)
+	configuration, err := bootstrap.Initialize(ctx, home)
 	if err != nil {
 		return faults.Errorf(diagcatalog.MecaBootstrapConfiguration, err)
+	}
+	var web *webfetch.Client
+	if !mode.Export && !mode.Diagnose {
+		web = webfetch.NewClient()
 	}
 	state := filepath.Join(home, statefs.DirectoryName)
 	ctx, closeLogs, err := loggingContext(ctx, state, mode)
@@ -143,10 +148,10 @@ func start(ctx context.Context) (err error) {
 		return faults.Errorf(diagcatalog.MecaOpenSessionDirectory, err)
 	}
 	if mode.Print {
-		return runHeadless(ctx, mode, configuration, home, state, sessions)
+		return runHeadless(ctx, mode, configuration, home, state, sessions, web)
 	}
 	if mode.Server {
-		return runServer(ctx, mode, configuration, home, state, sessions)
+		return runServer(ctx, mode, configuration, home, state, sessions, web)
 	}
 	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
 		return faults.Errorf(diagcatalog.MecaUsePrintOrModeJsonWithoutAn)
@@ -166,7 +171,7 @@ func start(ctx context.Context) (err error) {
 	var session sessionstate.Session
 	for {
 		session = store.Session()
-		action, runErr := runConversation(ctx, screen, configuration, home, state, store)
+		action, runErr := runConversation(ctx, screen, configuration, home, state, store, web)
 		if runErr != nil {
 			return runErr
 		}

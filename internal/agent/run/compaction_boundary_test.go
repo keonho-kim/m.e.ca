@@ -23,6 +23,51 @@ func (f boundaryModel) Generate(ctx context.Context, request modelapi.Request, e
 	return f(ctx, request, emit)
 }
 
+type preparingModel struct {
+	boundaryModel
+	prepare func(context.Context, modelapi.Request) (modelapi.PreparedGeneration, error)
+}
+
+func (g preparingModel) Prepare(ctx context.Context, request modelapi.Request) (modelapi.PreparedGeneration, error) {
+	return g.prepare(ctx, request)
+}
+
+func TestPreparedRequestRebuildsAfterSteering(t *testing.T) {
+	j := &journal{}
+	r := fixture(&generator{}, &executor{}, j)
+	preparations, generations := 0, 0
+	var pending []string
+	r.PollSteering = func() []string {
+		messages := pending
+		pending = nil
+		return messages
+	}
+	r.Generator = preparingModel{
+		boundaryModel: func(context.Context, modelapi.Request, func(modelapi.Event) error) error {
+			t.Fatal("prepared request was generated through the unprepared path")
+			return nil
+		},
+		prepare: func(_ context.Context, request modelapi.Request) (modelapi.PreparedGeneration, error) {
+			preparations++
+			if preparations == 1 {
+				pending = []string{"Use the updated request"}
+			}
+			return modelapi.PreparedGeneration{Send: func(_ context.Context, emit func(modelapi.Event) error) error {
+				generations++
+				last := request.Messages[len(request.Messages)-1]
+				if last.Content != "Use the updated request" {
+					t.Fatalf("stale prepared request sent: %q", last.Content)
+				}
+				return emit(modelapi.Event{Delta: "done", Done: true})
+			}}, nil
+		},
+	}
+	_, err := r.Run(t.Context(), "Original request", approve, emit)
+	if err != nil || preparations != 2 || generations != 1 || recordedModelCalls(j) != 1 {
+		t.Fatalf("preparations=%d generations=%d calls=%d err=%v", preparations, generations, recordedModelCalls(j), err)
+	}
+}
+
 func TestCompactionBoundaryAppliesSteeringBeforeNextGeneration(t *testing.T) {
 	store := &activityRepository{}
 	store.messages = []modelapi.Message{{Role: "user", Content: "old requirement"}}

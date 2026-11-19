@@ -55,15 +55,15 @@ func buildSpecifications() []Specification {
 
 // Definitions copies all tools, or only named tools, without allocating discarded schemas.
 func Definitions(names ...string) []toolapi.Definition {
-	return definitions(true, names)
+	return definitions(true, true, names)
 }
 
-// AvailableDefinitions copies the tool schema for the installed runtime.
-func AvailableDefinitions(browser bool) []toolapi.Definition {
-	return definitions(browser, nil)
+// AvailableDefinitions copies the tool schema for the configured runtime.
+func AvailableDefinitions(browser, webFetch bool) []toolapi.Definition {
+	return definitions(browser, webFetch, nil)
 }
 
-func definitions(browser bool, names []string) []toolapi.Definition {
+func definitions(browser, webFetch bool, names []string) []toolapi.Definition {
 	capacity := len(catalog)
 	if len(names) > 0 {
 		capacity = min(capacity, len(names))
@@ -71,6 +71,9 @@ func definitions(browser bool, names []string) []toolapi.Definition {
 	out := make([]toolapi.Definition, 0, capacity)
 	for _, spec := range catalog {
 		if !browser && (spec.Name == toolapi.BrowserAction || spec.Name == toolapi.BrowserInspect) {
+			continue
+		}
+		if !webFetch && spec.Name == toolapi.WebFetch {
 			continue
 		}
 		if len(names) > 0 && !slices.Contains(names, spec.Name) {

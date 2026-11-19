@@ -11,16 +11,12 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/prompts"
 )
 
 func TestProfilesBootstrapAndLoadSeparately(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	state := filepath.Join(home, ".meca")
+	root := promptRoot(t)
+	state := root.Name()
 	singleDefaults, teamDefaults := prompt.Defaults(), prompt.DefaultsFor(prompt.Team)
 	if teamDefaults.Development == singleDefaults.Development || !strings.HasPrefix(teamDefaults.Development, "# Team development workflow\n") {
 		t.Fatal("team development did not select its independent workflow default")
@@ -51,20 +47,12 @@ func TestProfilesBootstrapAndLoadSeparately(t *testing.T) {
 }
 
 func TestRefreshUsesIndependentTeamDevelopmentDefault(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	state := filepath.Join(home, ".meca")
+	root := promptRoot(t)
+	state := root.Name()
 	path := filepath.Join(state, "prompts", "team", "development.md")
 	if err := os.WriteFile(path, []byte("Team custom development"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	root, err := os.OpenRoot(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer root.Close()
 	if err := prompts.Refresh(root); err != nil {
 		t.Fatal(err)
 	}

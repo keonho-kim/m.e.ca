@@ -32,4 +32,8 @@ func (g *runGenerator) Generate(ctx context.Context, request modelapi.Request, e
 	return g.client.generate(ctx, request, emit, false, &g.encoder)
 }
 
+func (g *runGenerator) Prepare(ctx context.Context, request modelapi.Request) (modelapi.PreparedGeneration, error) {
+	return g.client.prepare(ctx, request, false, &g.encoder)
+}
+
 func (g *runGenerator) ImageInputSupported() bool { return g.client.ImageInputSupported() }

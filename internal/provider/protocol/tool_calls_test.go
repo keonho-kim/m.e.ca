@@ -7,6 +7,7 @@ package protocol
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -31,6 +32,42 @@ func TestNativeChatCallsAssembleAfterCompletion(t *testing.T) {
 	})
 	if err != nil || len(calls) != 1 || calls[0].ID != "call_1" || !json.Valid(calls[0].Arguments) {
 		t.Fatalf("calls=%+v err=%v", calls, err)
+	}
+}
+
+func TestNativeChatToolFinishAtEOF(t *testing.T) {
+	for _, tc := range []struct {
+		name, delta string
+		wantCall    bool
+	}{
+		{
+			name:     "complete call",
+			delta:    "{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"function\":{\"name\":\"inspect_fixture\",\"arguments\":\"{\\\"path\\\":\\\"a\\\"}\"}}]}",
+			wantCall: true,
+		},
+		{name: "missing call", delta: "{}"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := "data: {\"choices\":[{\"delta\":" + tc.delta + ",\"finish_reason\":\"tool_calls\"}]}\n\n"
+			response := &http.Response{Header: http.Header{"Content-Type": {"text/event-stream"}}, Body: io.NopCloser(strings.NewReader(body))}
+			var final modelapi.Event
+			err := ReadResponse(t.Context(), response, connection.VLLM, func(event modelapi.Event) error {
+				if event.Done {
+					final = event
+				}
+				return nil
+			})
+			if tc.wantCall {
+				if err != nil || len(final.Calls) != 1 || final.Calls[0].ID != "call_1" {
+					t.Fatalf("terminal native call lost: %+v %v", final.Calls, err)
+				}
+				return
+			}
+			var invalid *modelapi.ToolCallError
+			if !errors.As(err, &invalid) || final.Done {
+				t.Fatalf("missing tool call was accepted: %+v %v", final, err)
+			}
+		})
 	}
 }
 

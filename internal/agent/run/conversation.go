@@ -33,6 +33,7 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 		if err := s.save(ctx, modelapi.Message{Role: "user", Content: input, Images: r.Images}); err != nil {
 			return err
 		}
+		s.webFetchUserInput = s.checkpoint.Objective
 	}
 	s.runner.Images = nil
 	for _, doc := range r.SkillReads {
@@ -50,9 +51,9 @@ func (s *execution) startConversation(ctx context.Context, input string) error {
 
 func (s *execution) close(ctx context.Context, cause error) error {
 	cause = errors.Join(cause, s.stopCommands(ctx))
-	if browser, ok := s.runner.Tools.(interface{ EndBrowser(context.Context) error }); ok {
+	if owner, ok := s.runner.Tools.(interface{ EndObservations(context.Context) error }); ok {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
-		cause = errors.Join(cause, browser.EndBrowser(cleanup))
+		cause = errors.Join(cause, owner.EndObservations(cleanup))
 		cancel()
 	}
 	return s.settle(ctx, cause)

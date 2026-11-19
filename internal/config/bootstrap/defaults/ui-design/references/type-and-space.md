@@ -8,9 +8,9 @@ A file title or toolbar can stay compact while the authored page, slide or edito
 
 | Role | Design decision | Check |
 | --- | --- | --- |
-| UI labels/actions | Clear familiar family, stable weight, adequate target and spacing | Long labels, Hangul coverage and focus/state visibility |
+| UI labels/actions | Clear familiar family, stable weight, adequate target and spacing | Long labels, glyph coverage and focus/state visibility |
 | Content title | Scale/weight or an earned contrasting family | Subject clarity, phrase wrapping and proportion to the object |
-| Reading body | Comfortable measure, leading and paragraph rhythm | Real prose and sustained reading, not a Latin specimen alone |
+| Reading body | Comfortable measure, leading and paragraph rhythm | Real prose and sustained reading at representative widths |
 | Supporting metadata | Secondary emphasis without disappearing | Relevant facts still readable on selected/material backgrounds |
 | Data/code | Comparable alignment, units and meaningful technical typography | Tabular figures where useful; mono for actual code/identifiers |
 
@@ -18,9 +18,9 @@ A readable UI family can carry the product. A contrasting display or serif role 
 
 ## Work with real text
 
-Use actual Korean and mixed Latin/numerals, dates, prices, identifiers, help and failure copy. Tune size, weight, leading, width and wrapping together. Desktop operating text often starts around 14–16px, but actual font and audience decide; this is not a WCAG size requirement. Small metadata must not become an excuse to hide essential information.
+Use representative text from supported locales, including dates, prices, identifiers, help and failure copy. Tune size, weight, leading, width and wrapping together. Set the operating text size from the actual typeface and audience. Keep essential information readable.
 
-Latin `ch` measures do not directly describe Hangul reading length. Inspect real lines instead of mechanically enforcing a prose width everywhere. Word-aware Korean wrapping can preserve phrases; provide a safe escape for long identifiers/URLs. Avoid extreme tracking or squeezing text to reproduce a reference silhouette.
+Inspect actual line lengths with the chosen fonts and scripts. Choose wrapping that preserves readable phrases and allows long identifiers and URLs to break when space is limited.
 
 Keep command labels concise. Object names and article titles may need wrapping and a useful full-content path. If space requires separate summary/navigation actions, retain the complete identity and give the action a specific name. Do not truncate decisive information merely to pass a generic line-wrap detector.
 
@@ -38,4 +38,4 @@ Use grouping, fewer redundant labels and aligned columns before reducing type or
 
 Inspect laptop height, a wider desktop, resized windows, zoom and long content. Ensure fixed/sticky regions and nested scrollers do not cover text or focus. Keep shared roles with their system owner and local content exceptions with the relevant page; no token framework is needed merely to name one value.
 
-Sources: [MDN font-family](https://developer.mozilla.org/en-US/docs/Web/CSS/font-family), [WCAG resize text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html), [IBM grid reasoning](https://www.carbondesignsystem.com/building-blocks/foundations/2x-grid/overview).
+Sources: MDN font-family, WCAG resize text, IBM grid reasoning.

@@ -16,7 +16,8 @@ import (
 )
 
 func TestSummaryBudgetReservesOutputAndFixedInput(t *testing.T) {
-	for _, window := range []int{16384, 32768} {
+	for _, tc := range []struct{ window, output int }{{16384, 1146}, {32768, 2293}} {
+		window := tc.window
 		repo := &repository{memory: Memory{Revision: 1, Through: 1, Markdown: "Keep the agreed API."}, mark: Watermark{Timeline: 102, Usage: 10, Tokens: 250000}}
 		repo.records = append(repo.records, Record{Sequence: 2, Role: "user", Text: "Preserve all user constraints."})
 		for i := 3; i <= 102; i++ {
@@ -24,8 +25,11 @@ func TestSummaryBudgetReservesOutputAndFixedInput(t *testing.T) {
 		}
 		c := Controller{ContextWindow: window, Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), ActiveRequest: "Finish the current request", Redact: func(s string) string { return s }}
 		calls := 0
-		changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+		changed, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 			calls++
+			if request.MaxOutput != tc.output {
+				t.Errorf("summary for %d-token context reserves %d output tokens, want %d", window, request.MaxOutput, tc.output)
+			}
 			size := 0
 			for _, message := range request.Messages {
 				size += len(message.Content)
@@ -60,7 +64,7 @@ func TestSummaryBudgetPreservesUnfittableRequiredInformation(t *testing.T) {
 		settings.Compaction.MaxOutputTokens = 1024
 		c := Controller{ContextWindow: 8192, Inference: &settings, Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 		calls := 0
-		_, err := c.Refresh(context.Background(), nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+		_, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 			calls++
 			return emit(modelapi.Event{Delta: "short summary", Done: true})
 		})
@@ -76,7 +80,7 @@ func TestSummaryBudgetKeepsLargeFailureExcerpt(t *testing.T) {
 		{Sequence: 2, Role: "failure", Text: "main.go:42 failure\n" + strings.Repeat("<&> log\n", 30000) + "\nFinal cause: missing import"},
 	}}
 	c := Controller{ContextWindow: 16384, Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		for _, detail := range []string{"main.go:42 failure", "Final cause: missing import"} {
 			if !strings.Contains(request.Messages[1].Content, detail) {
 				t.Errorf("large failure lost its useful excerpt: %s", detail)

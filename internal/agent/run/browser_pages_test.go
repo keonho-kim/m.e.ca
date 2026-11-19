@@ -1,7 +1,7 @@
 // Purpose: Verify a model sees each observed page once across decisions and restored history.
 // Pattern: Scripted agent with browser page fixtures and a durable journal.
 // Usage: go test ./internal/agent/run -run TestBrowserPage.
-// Related: internal/agent/run/browser_pages.go, internal/agent/run/context_memory.go.
+// Related: internal/agent/run/observation_pages.go, internal/agent/run/context_memory.go.
 package run
 
 import (
@@ -60,7 +60,7 @@ func TestBrowserPageUnacknowledgedOnIncompleteReply(t *testing.T) {
 		{Role: "tool", ToolName: toolapi.BrowserInspect, Content: `{"result_id":"id","text":"pending page"}`, TransientObservation: true},
 		{Role: "assistant", Incomplete: true, Content: "partial"},
 	}}
-	s.restoreBrowserReads()
+	s.restoreObservationReads()
 	if !containsPage(s.messages, "pending page") {
 		t.Fatal("interrupted generation consumed unread page")
 	}
@@ -73,8 +73,8 @@ func TestBrowserScreenshotDeliveredOnce(t *testing.T) {
 		{Role: "tool", ToolName: "view_image", Images: images},
 		{Role: "tool", ToolName: toolapi.BrowserInspect, Content: "screenshot", Images: images, TransientObservation: true},
 	}}
-	s.acknowledgeBrowserObservations(len(s.messages))
-	if m := s.messages[2]; len(m.Images) != 0 || m.TransientObservation || m.Content != toolapi.BrowserObservationRead {
+	s.acknowledgeObservations(len(s.messages))
+	if m := s.messages[2]; len(m.Images) != 0 || m.TransientObservation || m.Content != toolapi.ObservationRead {
 		t.Fatal("delivered browser screenshot still occupies model context")
 	}
 	if len(s.messages[0].Images) != 1 || len(s.messages[1].Images) != 1 {

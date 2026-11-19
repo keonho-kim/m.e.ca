@@ -99,7 +99,7 @@ func (g *workTeamModel) Generate(ctx context.Context, request modelapi.Request, 
 
 func TestTeamRecoversFromDuplicateScopeAndSharesActualResult(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
-	cfg, err := bootstrap.Initialize(home)
+	cfg, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestTeamRecoversFromDuplicateScopeAndSharesActualResult(t *testing.T) {
 	}
 	g := &workTeamModel{names: names, steps: map[string]int{}, claimed: make(chan struct{}), conflict: make(chan struct{}), changed: make(chan struct{})}
 	vault := &credentials.Vault{State: state}
-	service := teamService(store, home, state, vault)
+	service := teamService(store, home, state, vault, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	writes, conflicts := 0, 0

@@ -47,9 +47,9 @@ Treat tool findings as scoped evidence. Inspect the real inherited/composited st
 
 ## Sources inspected
 
-Revision `687bc381bc9091bf252c0a05303640561014a425`:
+Impeccable revision `687bc381bc9091bf252c0a05303640561014a425`
 
-- Catalog: https://github.com/pbakaus/impeccable/blob/687bc381bc9091bf252c0a05303640561014a425/crates/live/assets/antipatterns.json
-- Craft floor: https://github.com/pbakaus/impeccable/blob/687bc381bc9091bf252c0a05303640561014a425/skill/reference/craft-floor.md
-- Operate: https://github.com/pbakaus/impeccable/blob/687bc381bc9091bf252c0a05303640561014a425/skill/reference/operate.md
-- Refinement: https://github.com/pbakaus/impeccable/blob/687bc381bc9091bf252c0a05303640561014a425/skill/reference/polish.md
+- Detector catalog in `crates/live/assets/antipatterns.json`.
+- Craft floor in `skill/reference/craft-floor.md`.
+- Operate guidance in `skill/reference/operate.md`.
+- Refinement guidance in `skill/reference/polish.md`.

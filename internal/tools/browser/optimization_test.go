@@ -21,7 +21,8 @@ func TestUnchangedObservationSkipsBodyProjection(t *testing.T) {
 			calls++
 		}
 		return text
-	}, func() int { return version })
+	}, func() int { return version }, nil)
+
 	s.work = t.TempDir()
 	raw := json.RawMessage(`{"text":"body"}`)
 	for range 4 {
@@ -53,7 +54,7 @@ func TestBrowserAdmissionReleasesFailedStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
 		return browserruntime.Paths{}, errors.New("fixture failure")
 	}

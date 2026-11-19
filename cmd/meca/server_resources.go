@@ -30,12 +30,14 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 
 	"github.com/keonho-kim/meca/internal/provider/diagnostic"
 	"github.com/keonho-kim/meca/internal/tools/workspacegate"
 )
 
 type projectDependencies struct {
+	webFetch    *webfetch.Client
 	home, state string
 	sessions    *sqlite.Sessions
 	vault       *credentials.Vault
@@ -153,7 +155,7 @@ func (d projectDependencies) open(ctx context.Context, mode startup.Mode, worksp
 		Concurrency: mode.ServerOptions.Concurrency,
 		Config:      cfg, Ledger: ledger, Skills: skillReader, Mutations: mutationLedger, References: sqlite.ProjectReferences{Sessions: sessions, Project: mode.Project},
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create)
+			c, err := openServerSession(ctx, mode, defaults, home, state, sessions, vault, skillReader, id, create, d.webFetch)
 			if err != nil {
 				return nil, err
 			}

@@ -6,6 +6,15 @@ Anatomy: named dialog/surface, search input, meaningful grouped results, current
 
 Judge the palette by real command volume and repeated-work needs. It can accelerate learned tasks while visible routes still support discovery; do not invent commands, shortcuts or a global search service just to reproduce a polished application shell.
 
+## Choose what a result does
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Global commands | A named trigger and optional shortcut open a search field and grouped commands. Move the active candidate with arrows and explicitly activate it to execute. |
+| Contextual commands | Show the current target and scope alongside the query. If the target changes, refresh or dismiss the candidates before activation. |
+| Object switcher or search | Show distinguishing record metadata. Selecting a destination follows normal navigation. Selecting a field value uses a picker and its commit path. |
+
+Keep the caret and input editing keys available in a searchable surface. A listbox suggestion popup can expose the active option while focus stays in the input. When results contain independent controls, choose a pattern that lets people reach those controls.
 
 ## Keep the palette supplementary and scoped
 
@@ -25,8 +34,8 @@ Let the target system own dialog, search and keyboard behavior. Accent can ident
 
 Use existing dialog plus command/suggestion primitives with their actual focus/keyboard model. Opening has a visible entry as well as an optional supported shortcut. Escape closes the intended layer and focus returns logically. Keyboard movement changes the candidate, and explicit selection executes; typing/composition cannot run commands.
 
-Preserve Korean IME and input caret through result changes. Query response identity, unavailable choices and a removed selected record require real guards. Do not expose commands or sensitive data merely to populate the palette. Do not execute a command just because it becomes the first search result.
+Preserve active text composition and the input caret through result changes. Guard against obsolete responses, unavailable choices and a removed selected record. Scope commands and results to relevant, authorized choices. Execute a command on deliberate activation.
 
 Reduced motion gives immediate open/result state. Rapid open-close or context change cancels stale visual callbacks and queries without restoring old results. Release timers, requests, focus/scroll locks and event handlers on every exit. Test shortcut conflicts, keyboard selection, IME Enter, no matches, failed lookup, permission change and removed opener.
 
-Sources: [WAI APG modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) and [combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/). Use the actual palette primitive's semantics rather than adding one universal invented command-palette role.
+Sources: WAI APG modal dialog and combobox. Use the actual palette primitive's semantics rather than adding one universal invented command-palette role.

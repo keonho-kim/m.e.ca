@@ -23,6 +23,9 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 	if after < 0 || maxBytes < 1 {
 		return nil, faults.Errorf(diagcatalog.SqliteInvalidConversationContextBounds)
 	}
+	overBudget := func() error {
+		return &modelapi.ContextLimitError{Cause: faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)}
+	}
 	completed, err := s.lastCompletedDecision(ctx, math.MaxInt64)
 	if err != nil {
 		return nil, err
@@ -52,7 +55,7 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 		}
 		for _, size := range sizes {
 			if size > maxBytes-needed {
-				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
+				return nil, overBudget()
 			}
 			needed += size
 		}
@@ -72,14 +75,14 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 		for i, record := range page {
 			fields := selectedFields[i]
 			if fields == nil && total+record.size > maxBytes {
-				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
+				return nil, overBudget()
 			}
 
 			message, bodyBytes, err := s.contextRecord(ctx, record, fields, shared)
 			if err != nil {
 				return nil, err
 			}
-			message.TransientObservation = record.browserObservation
+			message.TransientObservation = record.transientObservation
 			size := record.size
 			if fields != nil {
 				message.Content += modelapi.ImageOmissionNotice
@@ -87,7 +90,7 @@ func (s *Store) ContextMessages(ctx context.Context, session string, after int64
 			}
 			total += size
 			if total > maxBytes {
-				return nil, faults.Errorf(diagcatalog.SqliteUncompactedConversationExceedsBytesNoMessagesWere, maxBytes)
+				return nil, overBudget()
 			}
 			if err := message.Check(); err != nil {
 				return nil, err

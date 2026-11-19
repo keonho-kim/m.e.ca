@@ -4,18 +4,19 @@ Identify the current resource/action, whether useful content exists, what work c
 
 | Situation | Possible treatment | Design boundary |
 | --- | --- | --- |
-| First content with predictable shape | Local Skeleton Pulse or Shimmer | Reserve useful geometry, not fabricated data/counts |
+| Skeleton loading | Static shapes, quiet pulse or shimmer for a predictable initial layout | Reserve useful geometry and keep the pending region named. Clear on the real outcome. |
 | Work with little predictable content shape | Named waiting status/indicator | Explain the pending task without several competing spinners |
 | Save/send/local commitment | Inline or action-level pending | Retain input and context; motion cannot confirm success |
 | Same-resource refresh | Retain correct content with refreshing scope | Old results must not look like a newly applied query |
-| Measurable work | Linear/circular determinate display | Name the actual numerator/denominator and phase |
-| Unknown amount | Indeterminate cue with meaningful status | No guessed percentage, countdown or permanent 99% |
+| Determinate progress indicator | Named linear bar or ring | Show the actual amount, total and phase. Keep actions beside the indicator. |
+| Indeterminate progress indicator | Named activity cue while the amount is unknown | Change to determinate when measurement exists. Keep status understandable with motion reduced. |
 | Actual stages | Step Status with phase progress if available | Stage count is not total work or duration |
 | Independent regions | Show useful content as ready | Do not block everything on the slowest secondary fetch |
 | Meaningful raster imagery | Matching Blur-up preview and reserved ratio | Ready/cached media appears directly; provide failure alternatives |
 | Continuation | Feedback at the collection boundary | Keep existing rows, applied scope and return position |
 | Reversible reconciliable mutation | Explicit pending optimistic presentation | Confirmation, rollback and uncertainty follow the real contract |
 | Existing capacity/quantity | Meter or labeled value | A bounded quantity is not execution progress |
+| Empty state | A confirmed empty collection or a query with zero matches | Show which scope is empty and the useful next action. |
 
 ## Read the relevant family
 

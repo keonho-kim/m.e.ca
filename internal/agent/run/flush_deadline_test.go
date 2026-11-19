@@ -44,7 +44,11 @@ func TestThinkingFlushDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer release()
-	if _, err := s.askResponse(ctx); err != nil {
+	decision, err := s.prepareAgentRequest(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.askResponse(ctx, decision.request, decision.prepared.Send, &replyDraft{}); err != nil {
 		t.Fatal(err)
 	}
 	if !j.seen {

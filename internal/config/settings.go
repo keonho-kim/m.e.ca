@@ -31,7 +31,7 @@ type Config struct {
 	UI            UI                   `toml:"ui"`
 }
 
-// Compaction stores trigger policy and generation parameters in one TOML table.
+// Compaction stores history budgets and generation parameters in one TOML table.
 type Compaction struct {
 	compact.Settings
 	inference.Parameters

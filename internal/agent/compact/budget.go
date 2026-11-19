@@ -1,7 +1,7 @@
 // Purpose: Reserve summary output and fixed instructions before selecting older conversation sources.
 // Pattern: Pure context-budget calculation.
 // Usage: Controller uses one budget for source selection and the final summary request.
-// Related: internal/agent/compact/controller.go, internal/agent/compact/summarize.go, internal/agent/compact/usage.go.
+// Related: internal/agent/compact/controller.go, internal/agent/compact/summarize.go, internal/agent/model/output.go.
 package compact
 
 import (
@@ -13,6 +13,7 @@ import (
 
 type summaryBudget struct {
 	inputBytes, sourceBytes, outputTokens int
+	outputContextPercent                  uint8
 }
 
 func (c *Controller) contextWindow() int {
@@ -28,7 +29,11 @@ func (c *Controller) budget(previous string) (summaryBudget, error) {
 		return summaryBudget{}, err
 	}
 	window := c.contextWindow()
-	output, err := modelapi.OutputBudget(parameters.MaxOutputTokens, window, 0, 0)
+	limits := modelapi.Request{MaxOutput: parameters.MaxOutputTokens}
+	if limits.MaxOutput == 0 {
+		limits.OutputContextPercent = 7
+	}
+	output, err := limits.OutputBudget(window, 0, 0)
 	if err != nil {
 		return summaryBudget{}, err
 	}
@@ -46,11 +51,15 @@ func (c *Controller) budget(previous string) (summaryBudget, error) {
 	if remaining <= 0 {
 		return summaryBudget{}, faults.Errorf(diagcatalog.CompactCompactionInstructionsCurrentRequestAndPreviousMemory, input, window, output)
 	}
-	return summaryBudget{inputBytes: input, sourceBytes: remaining, outputTokens: output}, nil
+	return summaryBudget{inputBytes: input, sourceBytes: remaining, outputTokens: output, outputContextPercent: limits.OutputContextPercent}, nil
 }
 
 func (b summaryBudget) fitObserved(packetBytes int, capacity *modelapi.ContextLimitError) (summaryBudget, error) {
-	output := min(b.outputTokens, capacity.Capacity-1)
+	limits := modelapi.Request{MaxOutput: b.outputTokens, OutputContextPercent: b.outputContextPercent}
+	output, err := limits.OutputBudget(capacity.Capacity, 0, 0)
+	if err != nil {
+		return summaryBudget{}, err
+	}
 	// Actual input occupancy provides a packet-specific ratio. Leave extra
 	// room for template framing and changed source selection density.
 	available := capacity.Capacity - output
@@ -59,5 +68,6 @@ func (b summaryBudget) fitObserved(packetBytes int, capacity *modelapi.ContextLi
 	if remaining <= 0 {
 		return summaryBudget{}, faults.Errorf(diagcatalog.CompactCompactionFixedInputCannotFitTheMeasured)
 	}
-	return summaryBudget{inputBytes: input, sourceBytes: remaining, outputTokens: output}, nil
+	b.inputBytes, b.sourceBytes, b.outputTokens = input, remaining, output
+	return b, nil
 }

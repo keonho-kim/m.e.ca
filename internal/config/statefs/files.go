@@ -42,24 +42,50 @@ func Replace(root *os.Root, name string, content []byte) (err error) {
 	if err = root.Rename(temporary, name); err != nil {
 		return err
 	}
-	directoryFile, err := root.Open(".")
-	if err != nil {
-		return err
-	}
-	return errors.Join(directoryFile.Sync(), directoryFile.Close())
+	return SyncDirectory(root)
 }
 
 // PublishMissing exposes only complete content and never replaces an existing file.
-func PublishMissing(root *os.Root, name string, content []byte) (err error) {
+func PublishMissing(root *os.Root, name string, content []byte) error {
+	added, err := publishMissing(root, name, func() ([]byte, error) { return content, nil })
+	if added {
+		err = errors.Join(err, SyncDirectory(root))
+	}
+	return err
+}
+
+// PublishMissingFiles publishes files in one directory and flushes its entries
+// once. directoryChanged records child directories already created by the caller.
+func PublishMissingFiles(root *os.Root, names []string, read func(string) ([]byte, error), directoryChanged bool) (err error) {
+	defer func() {
+		if directoryChanged {
+			err = errors.Join(err, SyncDirectory(root))
+		}
+	}()
+	for _, name := range names {
+		added, err := publishMissing(root, name, func() ([]byte, error) { return read(name) })
+		directoryChanged = directoryChanged || added
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func publishMissing(root *os.Root, name string, read func() ([]byte, error)) (added bool, err error) {
 	if _, err := root.Lstat(name); err == nil {
-		return nil
+		return false, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
+		return false, err
+	}
+	content, err := read()
+	if err != nil {
+		return false, err
 	}
 	temporary := ".bootstrap-" + rand.Text()
 	file, err := root.OpenFile(temporary, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() {
 		removeErr := root.Remove(temporary)
@@ -68,15 +94,20 @@ func PublishMissing(root *os.Root, name string, content []byte) (err error) {
 		}
 	}()
 	_, writeErr := file.Write(content)
-	if err = errors.Join(writeErr, file.Sync(), file.Close()); err != nil {
-		return err
+	if writeErr == nil {
+		writeErr = file.Sync()
+	}
+	if err = errors.Join(writeErr, file.Close()); err != nil {
+		return false, err
 	}
 	if err = root.Link(temporary, name); errors.Is(err, os.ErrExist) {
-		return nil
+		return false, nil
 	}
-	if err != nil {
-		return err
-	}
+	return err == nil, err
+}
+
+// SyncDirectory commits changes to the entries of an already-owned directory.
+func SyncDirectory(root *os.Root) error {
 	directory, err := root.Open(".")
 	if err != nil {
 		return err

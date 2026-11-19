@@ -20,6 +20,7 @@ type repository struct {
 	mark      Watermark
 	records   []Record
 	installed int
+	keepBytes int
 }
 
 func (*repository) AddContextTokens(context.Context, string, TokenCount) error { return nil }
@@ -27,7 +28,8 @@ func (r *repository) Memory(context.Context, string) (Memory, error)           {
 func (r *repository) MemoryWatermark(context.Context, string, int64) (Watermark, error) {
 	return r.mark, nil
 }
-func (r *repository) CompactionBoundary(_ context.Context, _ string, through int64, _ int) (int64, error) {
+func (r *repository) CompactionBoundary(_ context.Context, _ string, through int64, keepBytes int) (int64, error) {
+	r.keepBytes = keepBytes
 	return through, nil
 }
 func (r *repository) MemoryRecords(_ context.Context, _ string, after, through int64) ([]Record, int64, error) {
@@ -49,7 +51,7 @@ func (r *repository) InstallMemory(_ context.Context, _ string, expected int, ne
 }
 func summary() string { return "Preserve task state and source references." }
 func TestThresholdPublishesSummaryOnly(t *testing.T) {
-	repo := &repository{mark: Watermark{Tokens: 245759, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}, {Sequence: 2, Role: "outcome", Text: "edit_file tool_succeeded src/auth.go"}}}
+	repo := &repository{mark: Watermark{Tokens: 196607, Usage: 10, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}, {Sequence: 2, Role: "outcome", Text: "edit_file tool_succeeded src/auth.go"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	starts := 0
@@ -64,12 +66,12 @@ func TestThresholdPublishesSummaryOnly(t *testing.T) {
 		}
 		return emit(modelapi.Event{Done: true})
 	}
-	changed, err := controller.Refresh(context.Background(), started, generate)
+	changed, err := controller.Refresh(context.Background(), modelapi.InputBudget{}, started, generate)
 	if err != nil || changed || calls != 0 || starts != 0 {
 		t.Fatalf("early trigger: %v %v", changed, err)
 	}
-	repo.mark.Tokens = 245760
-	changed, err = controller.Refresh(context.Background(), started, generate)
+	repo.mark.Tokens = 196608
+	changed, err = controller.Refresh(context.Background(), modelapi.InputBudget{}, started, generate)
 	if err != nil || !changed || repo.installed != 1 || starts != 1 {
 		t.Fatalf("trigger: %v %v", changed, err)
 	}
@@ -88,7 +90,7 @@ func TestThresholdPublishesSummaryOnly(t *testing.T) {
 func TestEmptySummaryPreservesPreviousMemory(t *testing.T) {
 	repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 245760, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "goal"}}}
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-	_, err := controller.Refresh(context.Background(), nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+	_, err := controller.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		if err := emit(modelapi.Event{Delta: "   \n"}); err != nil {
 			return err
 		}
@@ -104,7 +106,7 @@ func TestCancellationDoesNotAdvanceMemoryWatermark(t *testing.T) {
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, err := controller.Refresh(ctx, nil, func(ctx context.Context, _ modelapi.Request, _ func(modelapi.Event) error) error {
+	_, err := controller.Refresh(ctx, modelapi.InputBudget{}, nil, func(ctx context.Context, _ modelapi.Request, _ func(modelapi.Event) error) error {
 		cancel()
 		return ctx.Err()
 	})
@@ -117,7 +119,7 @@ func TestThresholdCollectsSourceRecordsOnce(t *testing.T) {
 	repo := &repository{mark: Watermark{Tokens: 245760, Usage: 2, Timeline: 2}, records: []Record{{Sequence: 1, Role: "user", Text: "first instruction"}, {Sequence: 2, Role: "assistant", Text: "second observation"}}}
 	c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
-	changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
+	changed, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		if !strings.Contains(r.Messages[1].Content, "first instruction") || !strings.Contains(r.Messages[1].Content, "second observation") {
 			t.Fatal("source missing from batch")
@@ -140,7 +142,7 @@ func TestSummaryFormattingIsGuidanceOnly(t *testing.T) {
 		t.Run(text, func(t *testing.T) {
 			repo := &repository{memory: Memory{Revision: 1, Markdown: summary()}, mark: Watermark{Tokens: 245760, Usage: 2, Timeline: 1}, records: []Record{{Sequence: 1, Role: "user", Text: "fix parser"}}}
 			c := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-			changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+			changed, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 				return emit(modelapi.Event{Delta: text, Done: true})
 			})
 			if err != nil || !changed || repo.installed != 1 || repo.memory.Markdown != text {
@@ -150,20 +152,25 @@ func TestSummaryFormattingIsGuidanceOnly(t *testing.T) {
 	}
 }
 
-func TestReportedOutputReservationTriggersLaterCompaction(t *testing.T) {
-	repo := &repository{mark: Watermark{Timeline: 2, Tokens: 5999}, records: []Record{{Sequence: 1, Role: "user", Text: "continue reading"}}}
+func TestCapacityRecoveryKeepsFixedAutomaticThreshold(t *testing.T) {
+	repo := &repository{mark: Watermark{Timeline: 1, Tokens: 6000}, records: []Record{{Sequence: 1, Role: "user", Text: "continue reading"}}}
 	c := Controller{Session: "test", Model: "fixture", ContextWindow: 16000, Repository: repo, Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
-	c.ObserveCapacity(&modelapi.ContextLimitError{Capacity: 14000, RequestedOutput: 8000})
 	generate := func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 		return emit(modelapi.Event{Done: true, Delta: "Continue with the current page."})
 	}
-	changed, err := c.Refresh(t.Context(), nil, generate)
+	changed, err := c.Compact(t.Context(), modelapi.ContextLimitError{Capacity: 14000, RequestedOutput: 8000}, nil, generate)
+	if err != nil || !changed || repo.keepBytes != 9000 {
+		t.Fatalf("recovery changed=%v retained bytes=%d: %v", changed, repo.keepBytes, err)
+	}
+	repo.mark = Watermark{Timeline: 2, Tokens: 10499}
+	repo.records = append(repo.records, Record{Sequence: 2, Role: "user", Text: "next page"})
+	changed, err = c.Refresh(t.Context(), modelapi.InputBudget{}, nil, generate)
 	if err != nil || changed {
 		t.Fatalf("compressed before input budget was reached: %v", err)
 	}
 	repo.mark.Tokens++
-	changed, err = c.Refresh(t.Context(), nil, generate)
-	if err != nil || !changed {
-		t.Fatalf("ignored observed output reservation: %v", err)
+	changed, err = c.Refresh(t.Context(), modelapi.InputBudget{}, nil, generate)
+	if err != nil || !changed || repo.keepBytes != 10500 {
+		t.Fatalf("75 percent threshold changed=%v retained bytes=%d: %v", changed, repo.keepBytes, err)
 	}
 }

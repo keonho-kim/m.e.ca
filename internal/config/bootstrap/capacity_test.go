@@ -13,7 +13,7 @@ import (
 
 func TestCompactionCapacityDefaultsPersist(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	settings, err := config.Load(filepath.Join(home, ".meca"))

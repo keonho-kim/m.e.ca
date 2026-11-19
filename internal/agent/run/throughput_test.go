@@ -72,7 +72,7 @@ func TestThroughputMeasuredPerAttempt(t *testing.T) {
 				want = 5
 				count = 2
 			}
-			if len(progress) != 2 || progress[0] != 10 || progress[1] != want || starts != count || len(final) != count || final[len(final)-1] != want {
+			if len(progress) != 2 || progress[0] != 10 || progress[1] != want || starts != 1 || len(final) != count || final[len(final)-1] != want {
 				t.Fatalf("starts=%d progress=%v final=%v", starts, progress, final)
 			}
 			for _, event := range j.events {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -56,7 +57,7 @@ func TestRecoveryStreamAcceptsLargeFrame(t *testing.T) {
 	}
 }
 
-func TestRecoveryPartialStreamRestartsWithoutConcatenating(t *testing.T) {
+func TestRecoveryRetriesInterruptedStream(t *testing.T) {
 	var calls atomic.Int32
 	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -69,7 +70,30 @@ func TestRecoveryPartialStreamRestartsWithoutConcatenating(t *testing.T) {
 	answer, retries := "", 0
 	err := client.Generate(context.Background(), recoveryRequest(), func(e modelapi.Event) error {
 		if e.Retry != nil {
+			retries++
 			answer = ""
+		}
+		answer += e.Delta
+		return nil
+	})
+	if err != nil || answer != "recovered" || retries != 1 || calls.Load() != 2 {
+		t.Fatalf("answer=%q retries=%d calls=%d err=%v", answer, retries, calls.Load(), err)
+	}
+}
+
+func TestRecoveryRetriesBeforeOutput(t *testing.T) {
+	var calls atomic.Int32
+	client := mockClient(t, connection.VLLM, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		if calls.Add(1) == 1 {
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"}}]}\n\n")
+			return
+		}
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"recovered\"}}]}\n\ndata: [DONE]\n\n")
+	})
+	answer, retries := "", 0
+	err := client.Generate(t.Context(), recoveryRequest(), func(e modelapi.Event) error {
+		if e.Retry != nil {
 			retries++
 		}
 		answer += e.Delta
@@ -77,6 +101,44 @@ func TestRecoveryPartialStreamRestartsWithoutConcatenating(t *testing.T) {
 	})
 	if err != nil || answer != "recovered" || retries != 1 || calls.Load() != 2 {
 		t.Fatalf("answer=%q retries=%d calls=%d err=%v", answer, retries, calls.Load(), err)
+	}
+}
+
+type failingCloseBody struct{ io.Reader }
+
+func (failingCloseBody) Close() error { return io.ErrUnexpectedEOF }
+
+func TestRecoveryCompletedReplySurvivesBodyCloseFailure(t *testing.T) {
+	conn, err := connection.New(connection.VLLM, "http://localhost:8000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewClient(conn, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(client.Close)
+	requests, completions := 0, 0
+	client.transport.HTTP.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		requests++
+		stream := strings.NewReader("data: {\"choices\":[{\"delta\":{\"content\":\"answer\"}}]}\n\ndata: [DONE]\n\n")
+		return &http.Response{
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": {"text/event-stream"}},
+			Body:       failingCloseBody{stream},
+		}, nil
+	})
+	err = client.Generate(t.Context(), recoveryRequest(), func(e modelapi.Event) error {
+		if e.Retry != nil {
+			t.Fatal("completed output was eligible for another request")
+		}
+		if e.Done {
+			completions++
+		}
+		return nil
+	})
+	if err != nil || requests != 1 || completions != 1 {
+		t.Fatalf("requests=%d completions=%d err=%v", requests, completions, err)
 	}
 }
 

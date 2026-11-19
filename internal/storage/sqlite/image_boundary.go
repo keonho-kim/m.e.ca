@@ -15,7 +15,7 @@ func (s *Store) unreadObservationBoundary(ctx context.Context, through, complete
  SELECT t.sequence FROM timeline t JOIN messages m ON m.sequence=t.source_sequence
  WHERE t.kind='message' AND t.sequence>? AND t.sequence<=? AND m.role IN ('user','tool')
  AND (json_array_length(m.body,'$.images')>0 OR json_type(m.body,'$.images')='null'
-      OR (`+browserObservationSQL+`))
+      OR (`+transientObservationSQL+`))
  ORDER BY t.sequence LIMIT 1`, completed, through).Scan(&first)
 	if err == sql.ErrNoRows {
 		return through, nil

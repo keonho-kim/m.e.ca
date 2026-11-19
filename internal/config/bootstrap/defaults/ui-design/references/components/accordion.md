@@ -1,9 +1,20 @@
 # Accordion: disclosure with several compositions
 
-Use an accordion when revealing related sections helps the task. Anatomy: section heading with a real disclosure button, clear expanded state, associated content, optional summary and separate secondary actions. Short content may need only a heading. Long Korean headings must wrap without hiding the trigger.
+Use an accordion when revealing related sections helps the task. Give each section a heading with a disclosure button, clear expanded state and associated content. Add a summary or separate secondary actions when useful. Short content may need only a heading. Let long headings wrap while keeping the trigger visible.
 
 Decide what people must see together before hiding sections. Occasional detail can be disclosed; information essential to the current decision may need visible rows, open groups or another composition. A Price Breakdown recipe alone does not justify concealing prices or inventing line items.
 
+## Choose how disclosure opens
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Single disclosure | Use a meaningful summary and one content region. Native `details` and `summary` can supply keyboard and expanded behavior for a simple case. |
+| Independent sections | Keep each section's state independent so users can compare several open sections. Give every trigger a distinct name. |
+| Single-open group | Use when only one explanation should occupy the available space. Opening another closes the previous section. Keep the newly opened trigger and its content in view. |
+| Required open section | Keep one open only when the layout depends on it. Expose the unavailability of closing the active section while keeping focus usable. |
+| Expand or collapse all | In a multi-open group, name the group action and derive its label from the true open state. From a mixed state, Expand all opens all eligible sections. |
+
+Use a heading containing a separate button when headings need to be navigable as headings. Enter and Space toggle the trigger and Tab reaches expanded content in reading order. Preserve typed input when collapsing, and reveal the appropriate section when validation sends focus to a field. When intrinsic-size animation is unavailable, expand or collapse directly with the same state and focus behavior.
 
 ## Give disclosure a content reason
 
@@ -43,4 +54,4 @@ A collapsed body cannot leave invisible fields in the tab sequence. If collapse 
 
 Reduced motion gives immediate expansion with static expanded/selected cues. Test expand-all mixed state, rapid reversal, late content, long labels, nested focus, validation navigation, partial loading and route exit. In every theme preserve text, boundary and focus legibility; chevron rotation or an accent cannot carry the only meaning.
 
-Sources: [WAI APG accordion](https://www.w3.org/WAI/ARIA/apg/patterns/accordion/) and [Radix content-size animation](https://www.radix-ui.com/primitives/docs/components/accordion#animating-content-size). Named compositions are original recipes, not standards or required library APIs.
+Sources: WAI APG accordion and Radix content-size animation. Named compositions are original recipes, not standards or required library APIs.

@@ -31,7 +31,7 @@ func TestServerTeamRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	home, project := t.TempDir(), t.TempDir()
-	cfg, err := bootstrap.Initialize(home)
+	cfg, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestServerTeamRequest(t *testing.T) {
 	}
 	app, err := server.New(ctx, server.Options{Config: cfg, Ledger: ledger,
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
+			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create, nil)
 			if err != nil {
 				return nil, err
 			}

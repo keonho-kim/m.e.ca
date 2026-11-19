@@ -1,4 +1,4 @@
-// Purpose: Verify bounded ui-design discovery, installed code assets and preserved user edits.
+// Purpose: Verify local-only ui-design resources, bounded discovery and preserved user edits.
 // Pattern: Installed skill contract tests through the real reader.
 // Usage: Bootstrap and concurrent-initialization tests read the published ui-design skill here.
 // Related: internal/config/bootstrap/skills.go, internal/config/bootstrap/defaults/ui-design/scripts, internal/skills/reader.go, internal/skills/resources.go.
@@ -52,9 +52,6 @@ func readUIDesignSkill(t *testing.T, home string) map[string]int {
 		}
 		for _, link := range links.FindAllStringSubmatch(body, -1) {
 			target := strings.SplitN(link[1], "#", 2)[0]
-			if strings.Contains(target, "://") {
-				continue
-			}
 			target = path.Clean(path.Join(path.Dir(name), target))
 			if target != "SKILL.md" && !strings.HasPrefix(target, "references/") && !strings.HasPrefix(target, "assets/examples/") && !strings.HasPrefix(target, "scripts/") {
 				t.Fatalf("instruction link leaves the reference tree: %s -> %s", name, target)
@@ -106,12 +103,21 @@ func readUIDesignResource(t *testing.T, r *skills.Reader, id, home, name string)
 	if err != nil || info.Mode().Perm() != 0600 || !info.Mode().IsRegular() {
 		t.Fatal(name, info, err)
 	}
-	return body.String()
+	content := body.String()
+	linkText := content
+	if name == "assets/examples/shared/icons.svg" {
+		// The SVG namespace identifies the vocabulary used by the sprite.
+		linkText = strings.Replace(linkText, `xmlns="http://www.w3.org/2000/svg"`, "", 1)
+	}
+	if externalSkillLink.MatchString(linkText) {
+		t.Fatalf("ui-design resource %s contains an external link", name)
+	}
+	return content
 }
 
 func TestUIDesignSkillReadsPagedExample(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	name := filepath.Join(home, ".meca/skills/ui-design/assets/examples/shared/base.css")
@@ -124,7 +130,7 @@ func TestUIDesignSkillReadsPagedExample(t *testing.T) {
 
 func TestBootstrapPublishesUIDesignSkill(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	depths := readUIDesignSkill(t, home)
@@ -170,7 +176,7 @@ func TestBootstrapPreservesAndRestoresUIDesignResources(t *testing.T) {
 	if err := os.WriteFile(previous, userSkill, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	directory := filepath.Join(home, ".meca/skills/ui-design")
@@ -192,7 +198,7 @@ func TestBootstrapPreservesAndRestoresUIDesignResources(t *testing.T) {
 	if err := os.Remove(missingScript); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	if body, err := os.ReadFile(path); err != nil || string(body) != string(custom) {

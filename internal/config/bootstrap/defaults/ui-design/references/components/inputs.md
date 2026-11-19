@@ -4,6 +4,16 @@ Choose text, textarea, numeric value or search behavior from the actual field me
 
 Use actual values, edit behavior and error risks to determine field size, format guidance and help. A compact or animated field can increase effort if it hides its label, unit or recovery. More decorative feedback cannot compensate for an unclear question.
 
+## Match the field to the value
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Short text or identifier | Use a persistent label, useful hint and text input. Preserve leading zeros and pasted text where they are part of the value. |
+| Multiline text | Use a textarea with usable resize or a bounded growing area. Enter inserts a line break under the documented interaction. Provide a separate submit action. |
+| Quantity | Show units, valid range and useful precision. Preserve partial edits while typing and validate the numeric value at commitment. |
+| Search field | Show scope and a named clear action when useful. Keep the current input and applied query distinct. Preserve input focus on clear and announce meaningful results. |
+| Password field | Use a labeled field supporting paste and autofill. Give a reveal control its own state and keep caret and value when visibility changes. |
+| Read-only value | Keep the label and actual text available to inspect or copy where useful. Explain inactive controls separately when prerequisites matter. |
 
 ## Fit the question and value
 
@@ -26,11 +36,11 @@ Keep the caret, composition and partially entered value stable. Help/error chang
 | Search Expansion | A compact search affordance becomes a real input | Expand a reserved region with persistent label and focus; never replace arbitrary page navigation |
 | Growing Textarea | Variable prose input | Grow to an intentional bound, then scroll; retain caret/reading position and avoid resize loops |
 
-Do not animate typed characters, caret location or value transforms as decorative output. Avoid shake as the only error message; ordinary field correction should not require a moving target. Keep icons, suffix units, clear/password controls and long Korean labels from colliding.
+Keep typed characters, caret and value stable as the user edits. Explain errors with readable text near a stable field. Leave room for icons, suffix units, clear and password controls and long labels.
 
 ## Editing and validation contract
 
-Preserve selection, caret, composition and input across re-render/animation. Enter completing Korean IME composition must not also submit search or choose an option. The project's multiline submit/line-break behavior must be explicit; do not copy a chat shortcut into every textarea.
+Preserve selection, caret, composition and input across rendering and animation. Let Enter finish active text composition. Use a subsequent deliberate action to submit search or choose an option. Make the input's multiline and submit behavior clear.
 
 Parse transport values according to actual units, locale and precision. Formatting on every keystroke can destroy partial valid input or move the caret; separate edit representation from committed value where required. Support the existing autofill/password-manager and autocomplete contract, with accessible named clear/reveal actions for sensitive fields when used.
 
@@ -40,4 +50,4 @@ Remote checks need current field identity and pending/error handling. Debounce r
 
 Reduced motion keeps direct focus/state changes and static help. Cleanup owns resize observers, validation requests, debounce timers and effects. Test autofill, prefilled values, long help, null/zero, invalid server response, IME, rapid edits, paste, zoom and forced colors. A beautiful floating label cannot establish a working save or usable screen-reader label.
 
-Sources: [WAI forms labels](https://www.w3.org/WAI/tutorials/forms/labels/) and [MDN input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input). Rich remote choice behavior belongs to the dropdown recipe, not a second suggestion engine inside this field.
+Sources: WAI forms labels and MDN input. Rich remote choice behavior belongs to the dropdown recipe, not a second suggestion engine inside this field.

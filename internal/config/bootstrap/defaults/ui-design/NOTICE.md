@@ -2,20 +2,18 @@
 
 Copyright 2026 Keonho Kim
 
-These original MECA instructions organize desktop WebApp/SaaS scenarios, page maps, substantial layout regions, Korean desktop UX, visual themes, loading/progress techniques, component and motion variations, interaction contracts and observable verification.
+These original MECA instructions guide component selection, interaction states, animation and observable verification for web interfaces. The bundle includes layout, visual design, loading and progress references, along with fictional interface studies.
 
-Selected design principles and review approaches were informed by:
+Selected design principles and review approaches draw on these sources.
 
-- Anthropic's `frontend-design`: https://github.com/anthropics/skills/blob/2c5958ecac7cee2b583967a2c4981d0f4a75c579/skills/frontend-design/SKILL.md
-- Paul Bakaus's `Impeccable`: https://github.com/pbakaus/impeccable/blob/687bc381bc9091bf252c0a05303640561014a425/skill/SKILL.src.md
+- Anthropic's `frontend-design`, revision `2c5958ecac7cee2b583967a2c4981d0f4a75c579`, in `skills/frontend-design/SKILL.md`.
+- Paul Bakaus's `Impeccable`, revision `687bc381bc9091bf252c0a05303640561014a425`, in `skill/SKILL.src.md`.
 
 The anti-slop analysis also reviews Impeccable's 62-entry detector catalog, craft floor, Operate guidance and refinement workflow at that revision. Its original synthesis distinguishes defects, contextual warnings and intentional themes; no upstream detector or command system is bundled.
 
-Korean desktop considerations were informed by KRDS's public layout/typography guidance and Toss's desktop-tools design account. Their links and scope are recorded in references/korean-desktop.md. They do not imply one universal Korean aesthetic or endorsement by those organizations.
-
 The two upstream skill projects listed above publish their referenced materials under Apache-2.0. This skill rewrites the guidance for MECA rather than packaging either upstream skill, command system, executable, hook or asset collection. It does not imply endorsement by their authors.
 
-Usability, component, motion and asynchronous-feedback decisions also consult public GOV.UK, Nielsen Norman Group, Carbon, MUI, W3C/WAI, MDN, Radix and web.dev guidance. Relevant references link to those subjects. External materials retain their own terms; they are not all covered by the two skill projects' licenses. Names such as Price Breakdown, Blinds and Depth Stack describe original application examples rather than formal standards or required APIs. The examples are open-ended and do not replace contextual design judgment. No upstream component implementation or external documentation bundle is redistributed. The separately licensed local Lucide symbols are identified below; no external UI runtime is required.
+Usability, component, motion and asynchronous-feedback decisions also consult guidance from GOV.UK, Nielsen Norman Group, Carbon, MUI, W3C/WAI, MDN, Radix and Google. The relevant references name their sources. External materials retain their own terms; they are not all covered by the two skill projects' licenses. Names such as Price Breakdown, Blinds and Depth Stack describe original application examples rather than formal standards or required APIs. The examples are open-ended and do not replace contextual design judgment. No upstream component implementation or external documentation bundle is redistributed. The separately licensed local Lucide symbols are identified below; no external UI runtime is required.
 
 The bundled instructions are distributed under Apache-2.0; see LICENSE.txt.
 
@@ -29,7 +27,7 @@ Composition references include Nutlope/hallmark at revision 407fa689f4a276f2fd38
 
 The visual-diversity studies and rendered preview captures are original reference work. They demonstrate alternative compositions over a shared local booking domain and a bounded page-local review canvas. Capture provenance is recorded in references/example-provenance.md. No additional font package, design runtime, external library or upstream visual implementation is distributed.
 
-The optional Playwright CLI diagnostics and product-demonstration guidance adapt geometry and recording-coverage ideas from Benji Taylor's Stageshow at revision 299140fafd08df55a9c234e610c3f64af3f45531: https://github.com/benjitaylor/skills/tree/299140fafd08df55a9c234e610c3f64af3f45531/stageshow. They do not bundle its React kit, examples, third-party artwork or filming runner. The upstream MIT notice follows.
+The optional Playwright CLI diagnostics and product-demonstration guidance adapt geometry and recording-coverage ideas from Benji Taylor's Stageshow, revision `299140fafd08df55a9c234e610c3f64af3f45531`. They do not bundle its React kit, examples, third-party artwork or filming runner. The upstream MIT notice follows.
 
 MIT License
 

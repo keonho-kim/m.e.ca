@@ -38,7 +38,7 @@ func (e inspectTools) Definitions() []toolapi.Definition {
 	return catalog.Definitions(toolapi.BrowserInspect, "list_skills")
 }
 
-func (e inspectTools) BrowserCursors(context.Context) ([]toolapi.BrowserCursor, error) {
+func (e inspectTools) ObservationCursors(context.Context) ([]toolapi.ObservationCursor, error) {
 	page := e.executed
 	if e.otherTool && page >= 3 {
 		page--
@@ -46,7 +46,7 @@ func (e inspectTools) BrowserCursors(context.Context) ([]toolapi.BrowserCursor, 
 	if page == 0 || page > 2 {
 		return nil, nil
 	}
-	return []toolapi.BrowserCursor{{ResultID: "result_test", Revision: "revision", NextOffset: page * 256}}, nil
+	return []toolapi.ObservationCursor{{Tool: toolapi.BrowserInspect, ResultID: "result_test", Revision: "revision", NextOffset: page * 256}}, nil
 }
 
 func TestBrowserCompactionFlow(t *testing.T) {
@@ -97,7 +97,7 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 			return
 		}
 		toolResult := ""
-		var live []toolapi.BrowserCursor
+		var live []toolapi.ObservationCursor
 		for _, m := range req.Messages {
 			if strings.Contains(m.Content, "NEVER_REQUESTED_SUFFIX") {
 				t.Errorf("step %d received the whole source", step)
@@ -108,7 +108,7 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 			if step >= 3 && strings.Contains(m.Content, "PAGE_ONE_BODY") {
 				t.Errorf("step %d replayed consumed page one", step)
 			}
-			if strings.HasPrefix(m.Content, "Unread browser observations.") {
+			if strings.HasPrefix(m.Content, "Unread observations.") {
 				_, data, _ := strings.Cut(m.Content, "\n")
 				if err := json.Unmarshal([]byte(data), &live); err != nil {
 					t.Error(err)

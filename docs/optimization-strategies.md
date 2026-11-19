@@ -10,11 +10,15 @@
 
 문맥 투영은 같은 실행의 변화 없는 메시지를 재사용한다. 모델 선택·마스킹 기준·메시지와 도구 짝이 달라진 구간은 다시 구성한다. Provider 인코더는 변경되지 않은 앞부분의 직렬화 결과를 제한된 용량으로 보유한다. 아직 모델이 읽지 않은 브라우저 관찰 앞에서 재사용 범위를 끝내고 실행이 끝나면 캐시를 해제한다. [런타임의 모델 요청](runtime.md#모델-요청-준비) · [문맥 투영](../internal/agent/context/projection.go) · [인코딩 재사용](../internal/provider/protocol/source_history.go)
 
+vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 입력 토큰 수와 컨텍스트 한도를 추출한다. 사용하지 않는 토큰 ID 배열은 건너뛴다. 압축은 마스킹·발췌한 레코드를 직렬화하기 전에 마지막 선택 항목과 비교하고, 선택한 항목의 순서와 사용자 지시는 보존한다. [토큰화 응답](../internal/provider/httpclient/context.go) · [압축 원본 선택](../internal/agent/compact/source.go)
+
 ## 대화 저장과 SQLite
 
 저널은 준비 버퍼 범위에서 레코드를 쓰기 트랜잭션 전에 인코딩한다. 큰 본문이나 공유 대상은 참조 가능한 페이로드로 저장하고, 본문과 이를 참조하는 기록은 한 트랜잭션으로 확정한다. 브라우저 텍스트 결과의 모델용 문자열과 화면용 JSON은 같은 본문을 참조할 수 있다. 복원 시 참조·길이·무결성을 확인한다. [쓰기 준비](../internal/storage/sqlite/prepare.go) · [페이로드 분리](../internal/storage/content/pack.go) · [참조 복원](../internal/storage/sqlite/record_codec.go)
 
 모델 문맥, 화면 이력, 원문은 각자 필요한 필드만 요청한다. 화면 조회는 페이로드 메타데이터로 예산을 확인한 뒤 본문을 읽는다. 같은 이력 페이지에서 여러 번 참조하는 본문은 제한된 용량 안에서 재사용하고 마지막 참조가 지나면 해제한다. [세션 저장 계약](configuration.md#세션-저장과-복원) · [이력 투영](../internal/storage/sqlite/timeline.go) · [페이지 단위 복원](../internal/storage/sqlite/page_payloads.go)
+
+단일 텍스트 본문을 참조하는 로컬 모델 메시지는 원본의 길이와 해시, 저장된 메시지의 참조 위치를 확인한 뒤 본문을 직접 채운다. [메시지 본문 복원](../internal/storage/sqlite/context_record.go)
 
 ## 팀 실행과 공용 기록
 
@@ -30,6 +34,8 @@
 
 ## 스킬 목록과 참고 파일
 
+기본 스킬을 배포할 때는 현재 스킬 디렉터리를 잠그고 내장 묶음의 디렉터리 충돌을 먼저 검사한다. 누락한 파일만 임시 파일에 쓰고 동기화한 뒤 기존 이름과 충돌하지 않을 때 공개한다. 디렉터리의 항목 변경은 묶음 단위로 동기화한다. [기본 스킬 배포](../internal/config/bootstrap/skills.go) · [원자적 파일 공개](../internal/config/statefs/files.go)
+
 목록 조회는 이름·설명 등 메타데이터를 읽는다. 후속 페이지는 같은 목록 스냅샷을 사용한다. 스냅샷은 마스킹 기준이 바뀌거나 보유 시간·용량 한도에 도달하면 회수한다. 참고 파일은 리비전을 확인한 열린 파일에서 필요한 바이트 범위만 읽고 UTF-8 경계를 맞춘다. [스킬 조회](skills.md#사용자-호출과-모델-도구) · [목록 읽기](../internal/skills/catalog.go) · [목록 보유](../internal/skills/catalog_retention.go) · [부분 읽기](../internal/skills/resources.go)
 
 읽은 지침은 현재 실행이 보유한다. 원래 읽기 결과가 요청에 있으면 다시 넣지 않고, 압축으로 사라진 필요한 지침을 문맥에 연결한다. [문맥과 기록](skills.md#문맥과-기록) · [지침 문맥](../internal/agent/context/skill_reads.go)
@@ -41,6 +47,12 @@
 세션은 UTF-8 경계에 맞춘 임시 블록과 현재 이어 읽기 위치를 소유한다. 정확한 결과 ID·리비전·offset으로 읽을 때만 커서를 전진시키고 다 읽은 블록을 삭제한다. 모델 응답이 완료되면 해당 관찰을 짧은 열람 표시로 바꾼다. SQLite는 복원하기 전에 같은 경계를 적용하고, 실행은 현재 세션에서 받은 커서를 압축 뒤에도 별도로 전달한다. [임시 관찰](../internal/tools/browser/paging.go) · [실행 문맥](../internal/agent/run/browser_pages.go) · [SQLite 복원](../internal/storage/sqlite/browser_context.go)
 
 도구 목록을 만들 때는 설치 표시와 실행 경로만 확인하고, 모델 사용 지침은 제공한 도구에 맞춰 구성한다. 세션을 열 때 도우미의 무결성을 검사한다. 관리 Chrome 갱신은 다운로드 잠금과 버전 선택 잠금을 분리하고, 사용 중인 버전은 세션 종료가 확인될 때까지 보호한다. [설치 확인](../internal/tools/browser/runtime/availability.go) · [모델 요청 구성](../internal/agent/run/start.go) · [세션 수명](../internal/tools/browser/session.go) · [관리 설치본](../internal/tools/browser/runtime/managed.go) · [사용 기록](../internal/tools/browser/runtime/chrome_use.go)
+
+### 웹 문서 조회
+
+문서 URL의 DNS 응답을 검사하고 승인된 IP를 같은 출처의 연결과 렌더링 리소스에 재사용한다. HTML은 단독 임시 Chromium에서 읽고, DevTools 파이프로 받은 DOM을 한 번 파싱해 Markdown으로 만든다. 텍스트·Markdown이나 기존 커서는 바로 읽는다. 문서 처리가 끝나면 연결과 브라우저 자원을 반환한다. 연결과 렌더링은 응답·리소스·프로세스 예산을 사용한다. [HTTP 연결](../internal/tools/browser/webfetch/client.go) · [Chromium 수명](../internal/tools/browser/chromium/process_unix.go) · [문서 읽기](../internal/tools/browser/webfetch/document.go)
+
+도구 호출 묶음은 남은 모델 문맥을 나눠 사용한다. 즉시 제공하는 페이지와 읽지 않은 임시 블록의 수명이 다르며, 읽은 페이지는 다음 모델 요청에서 짧은 표시로 바뀐다. 브라우저와 같은 블록 판독 및 정리 구현을 사용한다. [페이지 예산](../internal/agent/run/webfetch_budget.go) · [블록 저장과 회수](../internal/tools/observation/body.go) · [WebFetch 계약](web-fetch.md#이어-읽기)
 
 ## 이미지와 미리보기
 

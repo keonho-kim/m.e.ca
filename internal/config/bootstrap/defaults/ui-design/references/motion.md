@@ -1,14 +1,27 @@
-# Motion between application regions and states
+# Choose motion for component and layout changes
 
-Use motion to explain navigation, context, selection and actual work. Derive the cue from what the person needs to understand, not an effect name. The families below are examples to adapt or omit; a new composition can use the same state and accessibility rules without matching a listed recipe.
-
-For the selected task, ask what the effect clarifies and what it costs in waiting, attention or interruption. Repeated operational actions and an occasional explanatory moment may need different treatment. Preserve a requested expressive identity while keeping content truthful and controls direct. Motion that only disguises empty content, fake activity or a poor workflow needs a structural correction.
+Name the change the user needs to notice. Choose the smallest cue that explains it while preserving attention, focus and useful work. Use a static update when the new state is clear on its own. Choose stronger motion for a meaningful spatial relationship or an expressive brief.
 
 ## Establish a temporal hierarchy
 
-Choose the intensity from frequency, relationship and attention. Direct manipulation follows the input; repeated operational actions settle quickly; a new contextual layer explains origin; an occasional editorial introduction can earn more rhythm. Those differences can coexist without giving each route a different animation personality.
+Match intensity to frequency and travel. Frequent controls benefit from quick or immediate feedback. Contextual layers can show their origin. A substantial change can use a short transition to support orientation. Keep useful content and focus available from the moment the action takes effect.
 
-Keep useful content and focus available immediately. A small accent in color or shape can acknowledge a real state without moving the whole region. If changing values are already clear, another toast, pulse or transition may add noise. Variety means choosing different useful cues, not cycling every recipe across the application.
+## Choose a cue for the actual change
+
+| Change | Useful cue | Preserve |
+| --- | --- | --- |
+| Hover, focus or press | Immediate outline, fill or local press feedback | Visible keyboard focus and a stable hit area |
+| Checkbox, switch or tab selection | Immediate mark or short indicator movement | Actual selection and independent focus, including rapid changes |
+| Open or dismiss an anchored menu or popover | Short fade or small translation from the resolved anchor | Placement, keyboard entry and return focus. The first item is usable when opened. |
+| Expand or collapse inline content | Immediate reflow or a short size change | Reading position, heading and usable adjacent controls |
+| Open or dismiss a dialog or drawer | Quiet fade for a dialog or translation from a meaningful edge | Modality, dirty input and focus. A reopened surface follows the latest action. |
+| Change page, panel or selected object | Direct replacement, short crossfade or shared-element continuity when identity persists | History, active content, selection and return context |
+| Drag, reorder or resize | Follow input directly, with optional settling on release | Position, target, reading or tab order and a non-drag path |
+| Refresh results or show work progressing | Retain useful in-scope content and show observed pending or measured progress | Applied conditions, accepted result identity and the actual outcome |
+| Deliver feedback or a result | Immediate local status or a short reveal | Persistent recovery where needed and announcements at meaningful changes |
+| Explain an occasional public story | A bounded reveal, stagger or other purposeful effect | Immediately reachable content and the actual next action |
+
+Specify target, trigger, duration or physical behavior, final state and reduced-motion alternative. Match timing to the component's own rhythm and distance. Use the [timing and lifecycle guide](motion/timing-and-lifecycle.md).
 
 ## Read one relevant motion family
 
@@ -24,20 +37,6 @@ This map is level 2; each selected recipe is level 3. Component-specific variant
 
 Recipe names describe alternatives rather than standards or new APIs. Conventional replacement is a complete valid baseline. Choose expressive motion for a real relationship or explicit brief, while retaining direct operation and a useful static/reduced-motion form.
 
-## Select the transition by region
-
-| Change | Useful cue | Preserve |
-| --- | --- | --- |
-| Page destination | Short continuity when it helps orientation | History, destination identity and appropriate focus |
-| List to detail | A related transition or restrained shared element | Actual object and retained collection context |
-| Inspector/drawer | Spatial origin and understandable layer | Modal policy, focus, dirty input and close behavior |
-| Workspace resize or view switch | A clear reorganization | Readable data, selection and useful minimum widths |
-| Query/refresh | Stable useful content and truthful pending feedback | Applied conditions and stale-response protection |
-| Work progressing | Measured or properly indeterminate feedback | Real lifecycle, cancellation and completion semantics |
-| Public product reveal | One purposeful explanatory or expressive moment | Content visibility, useful opening and actual action |
-
-Specify target, trigger, effect, timing/physical behavior, final state and reduced-motion alternative. Small feedback might start near 100–180ms, a panel near 180–260ms and navigation near 200–350ms. Tune to distance, device and task; these are examples, not standards.
-
 ## Keep state authoritative
 
 Set the logical target state when the action occurs. Animation presents the change. Its completion callback must not be the sole mechanism that saves data, enables a control or marks work complete.
@@ -52,7 +51,7 @@ Use spring, bounce, parallax or stagger when the actual brief earns it. Bound to
 
 ## Access, performance and cleanup
 
-Honor reduced motion with the same final information and static feedback. Keyboard and pointer input remain usable; no critical action depends on hover or a moving hit area.
+Honor reduced motion with the same final information and static feedback. Keep keyboard and pointer input usable and hit areas stable.
 
 Start with transform and opacity when they express the intended change. Measure layout, paint, compositing and interaction before selecting expensive effects or adding optimization. Apply will-change only for an observed need and release it appropriately.
 

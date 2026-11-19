@@ -19,6 +19,8 @@
 
 MECA는 일반 시작과 설치에서 누락된 기본 스킬 파일을 생성한다. 로그 레벨은 `MECA_LOG_LEVEL`로 지정한다. [기본 스킬과 초기화](skills.md#기본-스킬과-초기화) · [이벤트와 운영 로그](diagnostics.md)
 
+Chromium이 설치된 호스트에서는 작업 요청에 URL을 넣어 WebFetch를 사용한다. [브라우저 준비와 조회 범위](web-fetch.md)
+
 ## 화면 언어
 
 최상위 `language`의 기본값은 `"auto"`다. `"ko"`·`"en"`은 시스템 로캘보다 우선하는 한국어·영어 설정이며 다른 값은 거절한다. !language에서 ←→로 선택한 뒤 Enter의 저장 확인에서 y를 누르면 전역 파일에 저장하고 현재 TUI에 즉시 적용한다. 저장 전에는 적용 중인 설정을 유지한다. 직접 파일을 수정하면 재시작 후 적용한다. 새 대화·이전 대화 선택 화면에도 이 값을 사용하며 모델 응답 언어는 사용자 요청을 따른다. 자동 선택 기준과 메뉴 조작은 [사용 가이드](usage.md#화면-언어)를 따른다.
@@ -59,8 +61,7 @@ max_output_tokens = 0
 [compaction]
 thinking = "off_if_supported"
 temperature = 0.2
-max_output_tokens = 8192
-reserve_tokens = 16384
+max_output_tokens = 0
 keep_recent_tokens = 20000
 max_summary_bytes = 16777216
 max_input_bytes = 16777216
@@ -73,13 +74,13 @@ max_output_tokens = 12800
 
 | 역할 | 용도 | temperature | 기본 출력 상한 |
 | --- | --- | ---: | ---: |
-| agent | 직접 도구 실행·대화·최종 응답 | 1.0 | context의 75% |
-| compaction | 단일 호출 대화 요약 | 0.2 | 8192 |
+| agent | 직접 도구 실행·대화·최종 응답 | 1.0 | 유효 컨텍스트 창의 75% |
+| compaction | 단일 호출 대화 요약 | 0.2 | 유효 컨텍스트 창의 7% |
 | diagnostics | 모델 연결·Thinking·effort 진단 | 0.2 | 12800 |
 
-temperature는 유한한 0~2이며 지원되는 Provider에는 명시한 0도 전송한다. OpenAI·Claude는 모델마다 sampling 지원이 달라 이 값을 전송하지 않고 공급자 기본값을 사용한다. Gemini는 generationConfig.temperature를 사용한다. max_output_tokens는 0~1073741824다. agent·compaction·diagnostics의 0은 유효 context length의 75%를 내림 계산하는 자동 모드이며 양수는 수동 상한이다. 서버가 공개한 context·출력 한도와 남은 입력 공간도 적용한다. 서버가 제시한 한도와 설정한 상한을 함께 지키며 모델 출력 한도 초과를 명시적으로 보고한다.
+temperature는 유한한 0~2이며 지원되는 Provider에는 명시한 0도 전송한다. OpenAI·Claude는 모델마다 sampling 지원이 달라 이 값을 전송하지 않고 공급자 기본값을 사용한다. Gemini는 generationConfig.temperature를 사용한다. `max_output_tokens`는 0~1073741824다. 양수는 수동 상한이다. `0`이면 유효 컨텍스트 창에서 `compaction`은 7%, `agent`와 `diagnostics`는 75%를 내림한 값을 사용한다. Provider의 출력 상한과 남은 컨텍스트 공간도 적용한다. 모델 출력 한도 초과를 명시적으로 보고한다.
 
-Provider가 생성 전 HTTP 400·422에서 요청과 일치하는 토큰 예산 거절을 보고하거나 컨텍스트 초과 코드를 반환하면, 에이전트는 해당 결정을 중단하고 압축 가능한 이전 이력을 요약한다. 요약과 최근 대화로 문맥을 다시 만든 뒤 원래 출력 설정으로 작업을 이어간다. 해당 실행에서는 확인된 출력 예약량도 다음 압축 시점을 결정할 때 반영한다. 연속된 용량 거절에는 한 번만 복구하며, 압축 가능한 이력이 없으면 이유를 표시한다.
+Provider가 생성 전 HTTP 400·422에서 요청과 일치하는 토큰 예산 거절을 보고하거나 컨텍스트 초과 코드를 반환하면, 에이전트는 해당 결정을 중단하고 압축 가능한 이전 이력을 요약한다. 확인된 출력 예약량은 해당 거절에서 복구할 때 최근 원문 보존량을 줄이는 데 사용한다. 요약과 최근 대화로 문맥을 다시 만든 뒤 원래 출력 설정으로 작업을 이어간다. 연속된 용량 거절에는 한 번만 복구하며, 압축 가능한 이력이 없으면 이유를 표시한다.
 
 메인 에이전트는 사용자의 Thinking/effort를 계승한다. Compaction은 서버 메타데이터 또는 Provider API에 OFF 요청 규약이 있는 연결에서 Thinking을 끄며, 제어 규약이 없으면 사용자 선택을 유지한다. 실제 OFF 동작은 명시적 연결 진단으로 확인한다. 연결 진단은 사용자가 !model의 연결 진단 또는 meca --diagnose를 선택했을 때 ON/OFF·effort를 대조한다. 출력 상한과 전체 실행 예산은 별도다. Ollama에는 options.temperature, 호환 Chat·LM Studio Responses에는 temperature를 전송한다.
 
@@ -124,7 +125,9 @@ max_model_seconds는 에이전트·압축 호출에서 데이터가 수신되지
 
 실행 중 수정한 프롬프트는 다음 요청에서 다시 읽는다. **install·upgrade는 사용자 수정 여부와 관계없이 배포 기본 프롬프트로 교체**하므로 필요한 수정본은 별도로 보관한다. 일반 실행은 수정본을 유지하고 기본 스킬의 사용자 수정본도 덮어쓰지 않는다.
 
-Compaction은 현재 문맥 점유와 다음 응답에 필요한 여유를 기준으로 수행한다. `reserve_tokens`는 응답 여유, `keep_recent_tokens`는 최근 원문 보존, `max_input_bytes`·`max_summary_bytes`는 압축 입력·요약의 바이트 예산이다. 모델의 실제 context·출력 한도도 함께 적용한다.
+현재 문맥 점유가 유효 컨텍스트 창의 75%에 도달하면 압축 가능한 이전 이력을 요약한다. 262,144토큰 창의 발동선은 196,608토큰이다. `keep_recent_tokens`는 최근 원문 보존량, `max_input_bytes`·`max_summary_bytes`는 압축 입력·요약의 바이트 예산이다. 기존 `config.toml`의 `[compaction]`에 `reserve_tokens`가 있으면 해당 줄을 제거한다.
+
+자동 압축은 다음 모델 요청을 보내기 전에 판단한다. vLLM에서 현재 텍스트 요청의 토큰 수를 확인할 수 있으면 그 수치와 서버의 유효 컨텍스트 창을 사용한다. 현재 토큰 수를 확인할 수 없으면 마지막 요청의 사용량 또는 추정값에 이후에 추가된 문맥의 추정치를 더한다. 압축을 결정하면 요약을 저장하고 새 문맥으로 요청을 다시 준비한다.
 
 `!compact`는 현재 대화가 유휴 상태일 때 수동으로 실행한다. 자동 압축의 발동 기준과 최근 원문 보존 예산을 적용하지 않고, 요약 가능한 이력을 현재 모델로 압축한다. 다음 요청부터 저장한 요약을 사용한다. 아직 모델이 읽지 않은 이미지·브라우저 관찰과 연결된 도구 호출은 원문 문맥에 보전한다. 팀 모드에서는 선택한 대화의 문맥을 압축하며 팀원은 각자의 문맥을 관리한다. 압축할 새 이력이 없으면 모델을 호출하기 전에 알린다.
 

@@ -19,6 +19,7 @@ import (
 	"github.com/keonho-kim/meca/internal/fileview"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/skills"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 	"github.com/keonho-kim/meca/internal/tools/local/filesystem"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
 )
@@ -45,6 +46,7 @@ type Executor struct {
 }
 
 type Options struct {
+	WebFetch         *webfetch.Client
 	Skills           *skills.Reader
 	Images           chan struct{}
 	RedactRange      func(string, int, int) (string, error)
@@ -88,7 +90,7 @@ func NewExecutor(project, home, private string, redact func(string) string, opti
 	if err != nil {
 		return nil, errors.Join(err, executor.Close())
 	}
-	executor.browser = browser.New(private, executor.artifacts, redact, executor.redactionVersion)
+	executor.browser = browser.New(private, executor.artifacts, redact, executor.redactionVersion, options.WebFetch)
 	executor.commands.CaptureDirectory = executor.artifacts
 	return executor, nil
 }
@@ -96,12 +98,12 @@ func NewExecutor(project, home, private string, redact func(string) string, opti
 func (executor *Executor) Close() error {
 	cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	browserErr := executor.EndBrowser(cleanup)
+	observationErr := executor.EndObservations(cleanup)
 	executor.arguments.clear()
 	executor.liveOutputs.releaseProjections()
 	executor.commands.End()
 	executor.liveOutputs.clear()
-	err := errors.Join(browserErr, executor.projectRoot.Close(), executor.systemRoot.Close())
+	err := errors.Join(observationErr, executor.projectRoot.Close(), executor.systemRoot.Close())
 	if executor.artifacts != "" {
 		err = errors.Join(err, os.RemoveAll(executor.artifacts))
 	}

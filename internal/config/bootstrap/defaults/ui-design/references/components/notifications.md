@@ -4,7 +4,25 @@ Match scope and persistence. A toast/snackbar gives brief acknowledgement; field
 
 Anatomy: real operation/condition, concise message, meaningful severity, actual action/recovery when supported, appropriate dismissal and a durable route when necessary. Use more than color. Do not make a disappearing toast the only carrier of important recovery or a required action.
 
-Choose feedback from what the person must remember or act on. Repeated autosave may need a quiet local status rather than repeated toasts; consequential failure or uncertainty needs a lasting recovery path. More acknowledgement is not automatically more usable.
+## Choose the surface and its parts
+
+| Pattern | Choose when | Composition and behavior |
+| --- | --- | --- |
+| Local status | Frequent updates such as autosave belong beside a control | Use a short status label near the field or action. Update in place and retain focus. |
+| Toast | Brief supplemental acknowledgement can coexist with work | Use concise outcome text and a visible × close button on every toast. Add one optional action when it is a useful shortcut. |
+| Undo toast | The system can reverse an already completed action | Name the outcome and target. Show Undo and keep the × button separate. Give a useful reversal window and a durable route for essential recovery. |
+| Inline alert | A task, section or item needs explanation or recovery | Place a title or message beside the affected region. Include the relevant correction, retry or result link and keep it visible while useful. |
+| Banner alert | A condition affects the whole page, workspace or service | Keep scope and impact visible in a stable banner position. Offer only relevant actions. Allow dismissal when people can safely continue and find the information again. |
+| Blocking alert | A time-sensitive decision must interrupt work | Use a dialog with a named action and safe exit under its focus contract. |
+| Result or history | A partial, important or uncertain outcome needs later inspection | Show actual target, confirmed and unresolved items, and supported next actions. Link records where people return to work. |
+
+## Make each toast dismissible
+
+Always include a visible × close button, including on timed toasts and toasts with actions. Use a real button with an accessible name such as “Dismiss notification” and a reachable hit area. Keep it visible on touch and keyboard focus. Activating it dismisses immediately. A short optional exit fade can follow the logical close.
+
+Keep the caller's focus when the toast appears. Leave action-bearing toasts available long enough to use, and pause automatic dismissal while a toast control has focus or the pointer is over it. If the close button has focus, move focus to the next available notification control or back to a logical task control before removing the toast. Clicking elsewhere can continue the task while the toast remains available. Use inline feedback inside an active modal so feedback is reachable within its focus scope.
+
+An inline alert stays near its related operation while correction or recovery is useful. A page or workspace banner stays in a stable position across the affected context. Leave focus where people are working for routine updates. Announce meaningful results politely, and reserve interrupting announcements or dialogs for genuinely time-sensitive situations.
 
 
 ## Give feedback an appropriate weight
@@ -37,6 +55,6 @@ Undo requires a supported reversal, target identity and availability window. Han
 
 Empty/result regions need useful task-specific text and actions rather than a generic illustration. Retry is for a retryable cause; create/reset/return depends on the state. Do not replace an otherwise usable app because a secondary region failed.
 
-Reduced motion keeps static messages and immediate stack changes. Release expiry timers, subscriptions and animation handles on dismissal/teardown. Test notification bursts, changed targets, focus during dismissal, failed Undo, duplicate events, long Korean copy, zoom and connection recovery. Do not claim a toast confirms persistence unless the actual operation does.
+Reduced motion keeps static messages and immediate stack changes. Release expiry timers, subscriptions and animation handles on dismissal and teardown. Test notification bursts, changed targets, focus during dismissal, failed Undo, duplicate events, long messages, zoom and connection recovery. Report persistence once the actual operation confirms it.
 
-Sources: [WAI APG alert](https://www.w3.org/WAI/ARIA/apg/patterns/alert/) and [Radix Toast](https://www.radix-ui.com/primitives/docs/components/toast). Reuse the project's current accessible notification implementation; these recipes do not require a new library.
+Sources: WAI APG alert and Radix Toast. Reuse the project's current accessible notification implementation; these recipes do not require a new library.

@@ -7,6 +7,7 @@ require (
 	github.com/bytedance/sonic v1.15.5
 	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
+	github.com/ebitengine/purego v0.10.1
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gdamore/tcell/v3 v3.6.0
 	github.com/goccy/go-json v0.12.0
@@ -20,6 +21,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.design/x/clipboard v0.11.0
 	golang.org/x/image v0.48.0
+	golang.org/x/net v0.62.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
 	google.golang.org/protobuf v1.36.12
@@ -34,7 +36,6 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
-	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.2 // indirect

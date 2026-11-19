@@ -43,7 +43,7 @@ func TestNewConversationReleasesLeaseAndRetainsGlobalModel(t *testing.T) {
 	}))
 	defer server.Close()
 	home, project := t.TempDir(), t.TempDir()
-	cfg, err := bootstrap.Initialize(home)
+	cfg, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestNewConversationReleasesLeaseAndRetainsGlobalModel(t *testing.T) {
 		}
 		finished := make(chan result, 1)
 		go func() {
-			action, err := runConversation(ctx, screen, cfg, home, state, store)
+			action, err := runConversation(ctx, screen, cfg, home, state, store, nil)
 			finished <- result{action, err}
 		}()
 		ticker := time.NewTicker(10 * time.Millisecond)

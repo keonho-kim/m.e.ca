@@ -4,6 +4,22 @@ Use a button for an action and a real link for a destination. Anatomy: specific 
 
 Place actions where the task needs them: near a local decision, in a stable repeated toolbar or persistently available across a long canvas. A floating action should earn its attention and space; do not add competing primaries simply because a recipe supports them.
 
+## Choose what activation does
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Command or submit button | Use a verb that states the result. A form's primary submit can trigger validation. Secondary buttons inside the form keep their own action. |
+| Icon button | Use a recognizable icon with a stable target and accessible name. Add a text label when the command is unfamiliar or consequential. |
+| Split button | Give the default command and menu opener separate operable targets and names. Primary activation runs the default once. The menu trigger only opens the related alternatives. |
+| Toggle button | Keep the action's name stable and expose its pressed state when it switches a mode, such as Bold. |
+| Async action | Keep the control and target recognizable while working. Give pending, confirmed and failed outcomes actual text or status. |
+| Floating action | Use one stable target for a frequent action needed while scrolling. Give a group its own named trigger and dismissal behavior when several commands are warranted. |
+
+## Compose a destructive action
+
+Name the consequence on the button and show the affected item or count before it runs. Keep routine navigation, Cancel and dismissal visually distinct. Use a supported Undo when reversal is reliable and quick. Use a dialog with a clear consequence, specific confirm label and reachable safe choice for a costly or irreversible decision. For bulk work, show the selected scope and preserve that target through confirmation. While pending, stop accidental duplicate activation and keep enough context to report partial or unknown results.
+
+Use native Enter and Space activation for buttons. Keep the target available during focus and press styling. A destructive confirmation has a specific action such as “Delete 3 files” and an independent Cancel path. When a confirmed deletion removes the focused item, move focus to the next or previous item, then to the collection heading if the list is empty.
 
 ## Establish action hierarchy
 
@@ -38,6 +54,6 @@ Pending identifies the actual operation, preserves input and prevents accidental
 
 Use standard focus/pressed/selected roles on the actual theme. Prefer visual decoration inside a stable target rather than translating the entire hit region. A FAB hiding on scroll cannot disappear while focused or while its action list is in use. Do not install a global pointer/wheel listener simply to copy a demo; measure the need and clean up owned listeners, captures and frames.
 
-Reduced motion uses static press/selection cues, immediate action-list reveal and no magnetic movement. Keyboard activation cannot require hover, drag or a custom cursor. Test fast double interaction, pending reversal, lost response, speed-dial escape/focus return, long Korean labels, scroll/zoom occlusion and route exit. Check focus does not land on an exiting invisible action.
+Reduced motion uses static press and selection cues and immediate action-list reveal. Provide direct keyboard activation. Test fast double interaction, pending reversal, lost response, Escape and focus return in the speed dial, long labels, scroll and zoom occlusion and route exit. Keep focus on an available control during exit.
 
-Sources: [WAI APG button](https://www.w3.org/WAI/ARIA/apg/patterns/button/), [menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/) and [MUI floating action button](https://mui.com/material-ui/react-floating-action-button/). Recipes do not require MUI or an animation framework.
+Sources: WAI APG button, menu button and MUI floating action button. Recipes do not require MUI or an animation framework.

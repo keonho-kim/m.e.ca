@@ -28,7 +28,7 @@ func TestServerRejectsExistingOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer owner.Close()
-	err = runServer(t.Context(), startup.Mode{Project: project}, config.Defaults(), home, state, sessions)
+	err = runServer(t.Context(), startup.Mode{Project: project}, config.Defaults(), home, state, sessions, nil)
 	if err == nil || !strings.Contains(err.Error(), "server ownership") {
 		t.Fatal("second server composition was admitted", err)
 	}

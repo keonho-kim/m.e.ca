@@ -2,7 +2,7 @@
 
 [문서 목록](README.md) · [에이전트 작동 방식](runtime.md)
 
-에이전트는 `browser_action`과 `browser_inspect`로 웹 페이지를 조작·검증한다. TUI와 서버에서 솔로·팀이 같은 도구를 사용한다. 서버 모드에서는 서버가 실행되는 컴퓨터에서 브라우저 세션을 연다.
+에이전트는 `browser_action`과 `browser_inspect`로 웹 페이지를 조작·검증하고, `web_fetch`로 URL에 있는 문서의 렌더링된 본문을 읽는다. TUI와 서버에서 솔로·팀이 같은 도구를 사용한다. 서버 모드에서는 서버가 실행되는 컴퓨터에서 브라우저 세션을 연다. [웹 문서 조회](web-fetch.md)
 
 ## 첫 실행과 설치
 
@@ -16,7 +16,7 @@
 
 확장 설치는 본체를 준비한 뒤 `agent-browser`를 `~/.meca/browser/runtime/`에 설치한다. 기존 Chrome·Chromium을 재사용하거나 관리형 Chrome for Testing Stable을 받는다. 전용 빈 페이지에서 열기·스냅샷·종료를 확인한 뒤 실행 경로를 출력한다. 브라우저 준비가 실패하면 설치된 MECA를 사용할 수 있으며 원인을 해결한 뒤 같은 명령으로 다시 시도한다.
 
-MECA는 요청을 시작할 때 설치 상태와 실행 경로를 확인한다. **도우미와 브라우저가 모두 준비된 요청에만** 도구와 사용 지침을 모델에 전달한다. 일반 `install`과 `upgrade`로 본체를 준비하고, 브라우저 의존성의 최초 설치는 `--ext browser`로 수행한다. 내장 WebUI에는 사용자 브라우저로 접속한다. [WebUI 사용법](webui-design.md)
+요청을 시작할 때 설치 상태와 실행 경로를 확인한다. `browser_action`과 `browser_inspect`는 도우미와 브라우저가 준비될 때 제공한다. `web_fetch`는 설치된 Chromium으로 URL을 입력받아 문서를 읽는다. 일반 `install`과 `upgrade`로 본체를 준비하고, 브라우저 의존성의 최초 설치는 `--ext browser`로 수행한다. 내장 WebUI에는 사용자 브라우저로 접속한다. [WebUI 사용법](webui-design.md) · [WebFetch 활성화](web-fetch.md#활성화)
 
 - 사용자가 준비한 브라우저는 `MECA_BROWSER_EXECUTABLE`에 실행 파일의 절대 경로로 지정한다.
 - macOS·Linux·WSL의 amd64·arm64에서 브라우저 설치를 지원한다. Linux·WSL에는 Chrome의 시스템 라이브러리가 필요하다. Docker에서는 `--init` 등 자식 프로세스를 회수하는 init을 사용한다. 도우미의 실행 설정에 따라 Chrome 샌드박스가 비활성화될 수 있다. [호스트 실행과 승인](execution-boundary.md)

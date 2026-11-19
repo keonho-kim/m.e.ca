@@ -31,14 +31,20 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 	if m.Thinking != nil && *m.Thinking {
 		m.ReasoningEffort = s.runner.ReasoningEffort
 	}
-	records := []runrecord.Entry{{Message: &m}}
+	records := make([]runrecord.Entry, len(events)+1)
+	messageIndex, eventIndex := 0, 1
+	if m.Incomplete {
+		// An interrupted reply's Thinking precedes its text in the transcript.
+		messageIndex, eventIndex = len(events), 0
+	}
+	records[messageIndex] = runrecord.Entry{Message: &m}
 	for i := range events {
 		events[i] = s.present(events[i])
 		events[i].RunID = s.checkpoint.ID
 		if events[i].OccurredAt == "" {
 			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
 		}
-		records = append(records, runrecord.Entry{Event: &events[i]})
+		records[eventIndex+i] = runrecord.Entry{Event: &events[i]}
 	}
 	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
 		return errors.Join(errRuntimeRecord, err)

@@ -95,7 +95,7 @@ func readBackendSkill(t *testing.T, home string) {
 
 func TestBootstrapPublishesBackendSkill(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	readBackendSkill(t, home)
@@ -103,7 +103,7 @@ func TestBootstrapPublishesBackendSkill(t *testing.T) {
 
 func TestBootstrapPreservesAndRestoresBackendReferences(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	directory := filepath.Join(home, ".meca/skills/backend-design")
@@ -116,7 +116,7 @@ func TestBootstrapPreservesAndRestoresBackendReferences(t *testing.T) {
 	if err := os.Remove(missing); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	if body, err := os.ReadFile(customPath); err != nil || string(body) != string(custom) {

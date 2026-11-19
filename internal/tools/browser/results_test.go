@@ -8,13 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/keonho-kim/meca/internal/tools/observation"
 )
 
 func TestBrowserPaginationReclaimsConsumedBlocks(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	text := strings.Repeat("x界😀", 96<<10)
 	raw, _ := json.Marshal(map[string]string{"text": text})
@@ -38,10 +42,10 @@ func TestBrowserPaginationReclaimsConsumedBlocks(t *testing.T) {
 		}
 	}
 	result := s.results[0]
-	if result.start < req.Offset-resultBlockBytes || result.storedBytes() > len(text)-req.Offset+resultBlockBytes {
-		t.Fatal("consumed bytes retained", result.storedBytes())
+	if len(text)-result.body.Retained() < req.Offset-observation.BlockBytes || result.body.Retained() > len(text)-req.Offset+observation.BlockBytes {
+		t.Fatal("consumed bytes retained", result.body.Retained())
 	}
-	if _, err := os.Stat(result.blockPath(first.NextOffset)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(s.work, result.id, strconv.Itoa(first.NextOffset))); !os.IsNotExist(err) {
 		t.Fatal("the first disk block still exists", err)
 	}
 	cursors, err := s.Cursors(t.Context())
@@ -63,7 +67,7 @@ func TestBrowserPaginationReclaimsConsumedBlocks(t *testing.T) {
 }
 
 func TestPagedObservations(t *testing.T) {
-	s := New(t.TempDir(), t.TempDir(), func(text string) string { return strings.ReplaceAll(text, "secret", "masked") }, nil)
+	s := New(t.TempDir(), t.TempDir(), func(text string) string { return strings.ReplaceAll(text, "secret", "masked") }, nil, nil)
 	s.work = t.TempDir()
 	s.setAddress("https://original.example/")
 	raw, _ := json.Marshal(map[string]string{"text": strings.Repeat("界😀secret", 2000)})
@@ -122,7 +126,8 @@ func TestCredentialRevisionExpiresObservation(t *testing.T) {
 			return strings.ReplaceAll(text, "secret", "masked")
 		}
 		return text
-	}, func() int { return version })
+	}, func() int { return version }, nil)
+
 	s.work = t.TempDir()
 	first, err := s.store(json.RawMessage(`{"text":"secret"}`), 0)
 	if err != nil {
@@ -139,7 +144,7 @@ func TestCredentialRevisionExpiresObservation(t *testing.T) {
 }
 
 func TestObservationDeliveryBudget(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	s.setAddress("https://local.example/")
 	store := func(body string, limit int) Page {
@@ -202,7 +207,7 @@ func TestObservationDeliveryBudget(t *testing.T) {
 }
 
 func TestObserveErrorsExcludesHelperMetadata(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	errors := `[{"text":"bad","url":"fixture.js","line":3,"column":2}]`
 	page, err := s.store(json.RawMessage(`{"errors":`+errors+`,"internal":"fixture-secret"}`), 0)
@@ -215,7 +220,7 @@ func TestObserveErrorsExcludesHelperMetadata(t *testing.T) {
 }
 
 func TestConsumePageOnce(t *testing.T) {
-	s := New("", "", func(v string) string { return v }, nil)
+	s := New("", "", func(v string) string { return v }, nil, nil)
 	s.work = t.TempDir()
 	raw := json.RawMessage(`{"text":"abcd世界xy"}`)
 	first, err := s.store(raw, 4)
@@ -261,7 +266,7 @@ func TestConsumePageOnce(t *testing.T) {
 }
 
 func TestConcurrentContinuationHasOneConsumer(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	first, err := s.store(json.RawMessage(`{"text":"abcdefgh"}`), 4)
 	if err != nil {

@@ -4,6 +4,17 @@ Use a table to compare repeated fields, a list to scan identity with short conte
 
 Derive fields and arrangement from the comparison or exploration people actually need. Data volume, repeated use and retained context can justify a dense table or a visual collection; a template count of cards, columns or badges cannot.
 
+## Choose the collection's interaction model
+
+| Variant | Composition and behavior |
+| --- | --- |
+| List or card collection | Give each item a name and distinct inspect and command targets. Keep Tab order aligned with the items. Use cards where preview content has decision value. |
+| Sortable table | Keep a table caption and semantic headers. Use buttons in sortable headers and expose the current single-column sort with `aria-sort`. Keep focus on the activated header and update the actual row order. |
+| Selectable or expandable row | Give selection and disclosure separate controls. Keep the selected ID, expanded detail and next action distinct. Keep an explicit link for a destination. |
+| Editable grid | Give cells an arrow-key navigation model. Use the chosen primitive's Enter or F2 edit path. Inside an editor, standard editing keys operate it. Define commit, cancellation and return to cell focus. |
+| [Reorderable list](../interactions/drag-and-drop.md) | Use a handle when row controls or text coexist with drag. Show the proposed insertion point and request a move on a valid drop. Provide named Move controls reachable by keyboard and single pointer, retain focus on the moved item and announce its confirmed position. Escape cancels an active move. |
+
+Preserve object identity through sort and reorder. Keep visual, reading and focus order aligned. Apply any optional move animation after the new order is accepted. For a pending or rejected reorder, make the saved order and recovery clear. The WCAG 2.2 Dragging Movements criterion informs the single-pointer alternative.
 
 ## Choose hierarchy inside the collection
 
@@ -27,7 +38,7 @@ Keep selection actions, row navigation and embedded controls distinct. A saved c
 
 ## Data and interaction
 
-Establish field priority, readable Korean names, units, numeric alignment and intentional widths. Sorting needs actual direction, scope and accessible state. Wide tables need deliberate horizontal scrolling/sticky behavior; hiding overflow or shrinking text is not a solution. Use semantic tables by default; an interactive grid needs real cell-level interaction and the corresponding keyboard model, not just selectable rows.
+Establish field priority, readable names, units, numeric alignment and intentional widths. Sorting needs actual direction, scope and accessible state. Give wide tables deliberate horizontal scrolling and sticky behavior where needed. Use semantic tables by default. Choose an interactive grid when the task needs cell-level interaction and the corresponding keyboard model.
 
 Keep row navigation distinct from checkbox/menu actions. Whole-card links cannot contain conflicting interactive elements. Selected, focused, unread, pending and error are different meanings, not random badge colors. Sticky regions must leave focused controls and the last row reachable.
 
@@ -41,4 +52,4 @@ Virtualize only for measured rendering volume, preserving selection, focus, rest
 
 Logical selection/query/state stays authoritative during effects. Reduced motion keeps direct state and layout changes. Test stale results, long text, null/large values, deletion on the last page, partial batch result, selection after refresh, focused offscreen rows and return from detail. Cleanup owns observers, requests, retained collections and animation handles.
 
-Sources: [Carbon data table](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines), [WAI APG table](https://www.w3.org/WAI/ARIA/apg/patterns/table/) and [grid](https://www.w3.org/WAI/ARIA/apg/patterns/grid/).
+Sources: Carbon data table, WAI APG table and grid.

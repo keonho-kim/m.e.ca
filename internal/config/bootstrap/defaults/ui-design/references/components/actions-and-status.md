@@ -4,6 +4,18 @@ Use overflow/context menus for genuine secondary actions, grouped controls for r
 
 Prioritize the actual next decision and supported state vocabulary. Keep frequent actions discoverable, suppress unnecessary repeated acknowledgements and use status to explain a real condition. Empty badges, color variety and generic action menus cannot substitute for task structure.
 
+## Choose the control or indicator
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Toolbar | Group related, named commands with their stable scope. Keep common actions available and move secondary commands into labeled overflow when needed. Use normal Tab order for a simple group. A composite toolbar needs one Tab stop and arrow movement through the group, with native editing keys available inside the controls that use them. |
+| Filter chip | Show the condition's label and applied state. Use a toggle or the relevant selection control. Keep the applied query consistent with the visible chip. |
+| Action chip | Use a short, named command such as “Add date filter”. Activate the described action and show any resulting state at its owner. |
+| Input chip or removable token | Show the chosen value and a separate named control such as “Remove North region”. Move focus to a nearby token or back to the picker after removal. |
+| Badge or tag | Show the category, count or status with useful text or an accessible equivalent. Define the count scope and make an unknown count distinguishable from zero. Use a separate action if people need to filter or open details. |
+| Bulk action toolbar | Show the selected count and scope alongside actual available actions. Keep pending and partial results tied to those item identities. |
+
+Keep focus movement in a toolbar separate from running a command. A filter chip is keyboard-operable and shows the same applied state after focus leaves. Removing a value uses its named action and moves focus to the next token, previous token or picker. A passive badge stays in reading order as part of the relevant item.
 
 ## Distinguish meanings that share a shape
 
@@ -35,6 +47,6 @@ Verify current target, permissions and destructive consequence at execution. Cli
 
 Bulk scope is current page, explicit IDs or all matching records according to the actual contract. Partial failure is not full success. Retry/Undo uses the supported reconciliation/reversal path, preserves identities and does not overwrite unrelated newer changes.
 
-Motion stays local to meaningful change. Reduced motion retains direct labels and selection. After token removal choose a logical neighboring control rather than losing focus; a pending item cannot disappear into a decorative collapse without an outcome. Test scope changes, late results, nested-menu escape, removed target, long Korean status and repeated live events. Bound notifications and release transient listeners/effects.
+Motion stays local to meaningful change. Reduced motion retains direct labels and selection. After token removal move focus to a logical neighboring control. Keep the outcome of pending work available. Test scope changes, late results, nested-menu Escape, removed targets, long status text and repeated live events. Bound notifications and release transient listeners and effects.
 
-Sources: [WAI APG menu button](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/), [toolbar](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/) and [button](https://www.w3.org/WAI/ARIA/apg/patterns/button/).
+Sources: WAI APG menu button, toolbar and button.

@@ -4,7 +4,7 @@ Use these for a selected explanatory/creative moment or explicit brief. Routine 
 
 | Recipe | Potential purpose | Guardrail and static form |
 | --- | --- | --- |
-| Text Fade / Split Reveal | A short subject-led public introduction | Keep one coherent accessible text; respect Hangul graphemes/wrapping and reveal immediately without motion |
+| Text Fade / Split Reveal | A short subject-led public introduction | Keep coherent accessible text, preserve grapheme boundaries and wrapping, and show it immediately when motion is reduced |
 | Typewriter / Scramble | An explicit illustrative language/system motif | Only deliberate decorative/illustrative text; no fake AI stream, reasoning, field caret or essential delayed copy |
 | Line Drawing | A real explanatory connection/diagram | Reveal a stable meaningful path; never imply measured progress or relationships unsupported by data |
 | Clip / Mask Reveal | Actual media benefits from a composed introduction | One visual layer with final content visible if skipped; no arbitrary pictorial filler or inaccessible masked actions |
@@ -25,7 +25,7 @@ Reserve higher intensity for the subject or an earned outcome. Actions, navigati
 
 ## Content, accessibility and timing
 
-Separate real streamed output from presentation effects. AI text appears from actual data; there is no second fake typing buffer delaying delivery. A changing number must show the right units/scope and cannot be announced at every frame. Split text should not fragment the spoken sentence or copy/paste text; do not reveal individual bytes/code units of Hangul as if they were characters.
+Render streamed output from actual data as it arrives. Show accurate units and scope for changing numbers and announce meaningful changes. A split reveal should preserve whole grapheme clusters, the spoken sentence and the text copied by the user.
 
 Do not attach custom cursor, parallax, tilt, bounce or confetti to every control. Any moving hit area, autoplay or scroll manipulation needs its real purpose and user control. Preserve focus, selection, links, reading position, reduced-motion preference and the user's chosen theme. A futuristic brief permits expression, not fake telemetry or persistent distraction.
 
@@ -33,6 +33,6 @@ Do not attach custom cursor, parallax, tilt, bounce or confetti to every control
 
 Reuse current tools; choose CSS/static media before a new runtime when sufficient. Bound particles, layered masks, retained frames and repeated timers. Stop offscreen/background decorative work and release observers/listeners/animation handles on teardown. Large blur and repeated full-viewport effects need measurement, not assumed GPU speed.
 
-For reduced motion, replace movement with the same final content, diagram and actual status. Test missing media, long Korean headings, zoom, effect interruption, route exit, preference change and low frame rate. Verify content is visible at rest if script or animation fails. A public effect cannot silently enter an administrative screen as a new default.
+For reduced motion, provide the same final content, diagram and actual status. Test missing media, long headings, zoom, effect interruption, route exit, preference change and low frame rate. Verify that the resting state is visible when script or animation fails. Choose expressive effects for the surface and task they serve.
 
-Sources: [MDN CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_animations) and [reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion). The source educational notes inform vocabulary; no media or executable effects pack is redistributed.
+Sources: MDN CSS animations and reduced motion. The source educational notes inform vocabulary; no media or executable effects pack is redistributed.

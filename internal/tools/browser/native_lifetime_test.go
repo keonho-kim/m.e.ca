@@ -28,7 +28,7 @@ func TestNativeBrowserLifetime(t *testing.T) {
 		w.Write([]byte("<html><body>Lifetime fixture</body></html>"))
 	}))
 	defer server.Close()
-	s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil)
+	s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil, nil)
 	s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
 		return browserruntime.Paths{Agent: agent, Browser: chrome}, nil
 	}

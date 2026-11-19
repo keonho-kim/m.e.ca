@@ -28,10 +28,12 @@ Shared elements/snapshots represent one object visually; they do not own draft s
 
 ## Reordering and direct manipulation
 
+Use [Drag and drop](../interactions/drag-and-drop.md) and [Direct manipulation](../interactions/direct-manipulation.md) for input, cancellation and equivalent controls.
+
 Use stable IDs rather than row indexes. During drag/resize, keep controls and pointer capture coherent; an expressive spring cannot make values lag far behind direct input. Separate transient position from actual committed order and follow the server's conflict/partial-failure semantics. Animation cannot determine successful persistence.
 
 For a layout/view switch, keep relevant query, selection and return context. Do not animate hundreds of offscreen items, replay entrances on virtualized mounts or keep both whole collections in memory solely for a morph. Measure large-data rendering before adding more choreography.
 
 Reduced motion keeps final layout and meaningful selection with direct changes. Clean up observers, captures, frame callbacks, snapshots and retained source references. Test scrolling during transition, resize, changed data, removed source, rapid reversal, keyboard reorder and error recovery. Inspect actual desktop geometry and input responsiveness; a smoothly moving demo card does not verify a data workspace.
 
-Sources: [MDN View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API) and [web.dev animation performance](https://web.dev/articles/animations-guide). FLIP and other names identify optional techniques, not product dependencies.
+Sources include MDN's View Transition API reference and Google's animation performance guidance. FLIP and the other named techniques are optional.

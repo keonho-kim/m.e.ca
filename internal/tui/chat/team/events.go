@@ -46,6 +46,10 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 		peer.current = modelapi.TokenUsage{}
 	case "stream":
 		peer := s.peer(event.Agent)
+		if event.Text == "" {
+			peer.message.discard(output)
+			return
+		}
 		peer.message.show(event.Agent, false, viewport.Block{Text: event.Text, Markdown: true, Streaming: true}, f, output)
 	case "team_progress":
 		body := f.TeamBody(event.Text)

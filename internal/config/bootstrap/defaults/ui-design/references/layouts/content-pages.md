@@ -20,7 +20,7 @@ Choose editor/preview or assistance panes when concurrent consultation matters. 
 
 Keep environment/project/object identity, useful configuration or query input, actual result context and recovery clear. A schema tree can earn width because it expresses real hierarchy. Distinguish global destinations, open objects and result views instead of styling all three as one navigation strip.
 
-Use typography and stable aligned data before decorative instrumentation. Mono belongs to code/identifiers or measurements; explanatory Korean text still needs readable roles. Technical work can be light or dark according to actual use and the brief.
+Use typography and stable aligned data to organize the page. Use monospace for code, identifiers or measurements. Give explanations a readable text role. Choose a light or dark surface according to the task and brief.
 
 Credentials, history, logs and destructive actions require their real service and access semantics when in scope. A code-styled area is not evidence that an operation ran. Keep sensitive values out of frontend examples and diagnostic output.
 

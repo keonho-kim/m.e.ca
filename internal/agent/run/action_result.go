@@ -74,7 +74,7 @@ func (s *execution) acceptResult(ctx context.Context, v validatedCall, outcome t
 	}
 	events = append(events, event)
 	message := modelapi.Message{Source: outcome.Source, Role: "tool", Content: result, Images: outcome.Images, ToolCallID: v.call.ID, ToolName: v.call.Name}
-	message.TransientObservation = v.call.Name == toolapi.BrowserInspect && !failed && toolErr == nil
+	message.TransientObservation = toolapi.IsPagedObservation(v.call.Name) && !failed && toolErr == nil
 	if (outcome.Skill != nil || outcome.SkillFile != nil) && !failed && toolErr == nil {
 		message.ID = "skill_" + rand.Text()
 	}

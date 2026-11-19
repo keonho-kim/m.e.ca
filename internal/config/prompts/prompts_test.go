@@ -11,16 +11,13 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/prompts"
+	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 func TestPromptBootstrap(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	directory := filepath.Join(home, ".meca")
+	root := promptRoot(t)
+	directory := root.Name()
 	entries, err := os.ReadDir(filepath.Join(directory, "prompts"))
 	if err != nil || len(entries) != 2 {
 		t.Fatalf("expected two prompt profiles: %v %v", entries, err)
@@ -45,7 +42,7 @@ func TestPromptBootstrap(t *testing.T) {
 	if err := os.WriteFile(path, []byte("# My prompt\nKeep responses concise.\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := bootstrap.Initialize(home); err != nil {
+	if err := prompts.Bootstrap(root); err != nil {
 		t.Fatal(err)
 	}
 	templates, err := prompts.Load(directory)
@@ -55,21 +52,35 @@ func TestPromptBootstrap(t *testing.T) {
 }
 
 func TestDevelopmentPromptEditsSurviveLoad(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	directory := filepath.Join(home, ".meca")
+	root := promptRoot(t)
+	directory := root.Name()
 	for _, name := range []string{"development.md"} {
 		if err := os.WriteFile(filepath.Join(directory, "prompts", "single", name), []byte("Custom "+name), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := bootstrap.Initialize(home); err != nil {
+	if err := prompts.Bootstrap(root); err != nil {
 		t.Fatal(err)
 	}
 	templates, err := prompts.Load(directory)
 	if err != nil || templates.Development != "Custom development.md" {
 		t.Fatalf("role prompts lost: %+v %v", templates, err)
 	}
+}
+
+func promptRoot(t *testing.T) *os.Root {
+	t.Helper()
+	root, err := statefs.Open(filepath.Join(t.TempDir(), statefs.DirectoryName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := root.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := prompts.Bootstrap(root); err != nil {
+		t.Fatal(err)
+	}
+	return root
 }

@@ -26,10 +26,11 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/setup"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 	"golang.org/x/term"
 )
 
-func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions) (err error) {
+func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, web *webfetch.Client) (err error) {
 	text := mode.Prompt
 	if !mode.Export && !mode.Diagnose {
 		if !term.IsTerminal(int(os.Stdin.Fd())) {
@@ -115,7 +116,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		}
 		return err
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{WebFetch: web, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func runHeadless(ctx context.Context, mode startup.Mode, cfg config.Config, home
 		return err
 	}
 	if teamMode {
-		return headless.RunTeam(ctx, teamService(store, home, state, vault), options, os.Stdout, mode.Output == "json")
+		return headless.RunTeam(ctx, teamService(store, home, state, vault, web), options, os.Stdout, mode.Output == "json")
 	}
 	return headless.Run(ctx, agentrequest.New(options), os.Stdout, mode.Output == "json")
 }

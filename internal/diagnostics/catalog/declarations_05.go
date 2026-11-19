@@ -72,6 +72,7 @@ const (
 	ProtocolReadModelStream                                   Message = "read model stream: %w"
 	ProtocolRequestModelDiffersFromPreparedModel              Message = "request model differs from prepared model"
 	ProtocolResponseExceedsSizeLimit                          Message = "response exceeds size limit"
+	ProtocolToolFinishWithoutCalls                            Message = "tool call completion contained no calls"
 	ProtocolThinkingChoiceIsUnavailableForThisClaude          Message = "thinking choice is unavailable for this Claude model"
 	ProtocolThinkingChoiceIsUnavailableForThisConnection      Message = "thinking choice is unavailable for this connection"
 	ProtocolThinkingChoiceIsUnavailableForThisOpenRouter      Message = "thinking choice is unavailable for this OpenRouter model"

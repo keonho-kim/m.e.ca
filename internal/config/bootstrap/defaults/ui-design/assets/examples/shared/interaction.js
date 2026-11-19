@@ -4,7 +4,7 @@
 // Related: internal/config/bootstrap/defaults/ui-design/assets/examples/shared/components.css, internal/config/bootstrap/defaults/ui-design/assets/examples/shared/motion.css.
 (() => {
   const owner=new AbortController(), options={signal:owner.signal};
-  const leave=new Set(),timers=new Set(),toasts=new Map(),entered=new WeakSet(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const leave=new Set(),toasts=new Map(),entered=new WeakSet(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const stack=document.querySelector('[data-toasts]');
   let menu=null;
   const motions=new Map();
@@ -76,16 +76,102 @@
     if(reduced.matches||entered.has(root)||!root.closest('[data-app="motion"]'))return;entered.add(root);document.documentElement.classList.add('motion-ready');
     [...root.querySelectorAll('[data-enter]')].slice(0,10).forEach((el,i)=>{el.style.setProperty('--i',Math.min(i,5));el.classList.add('stagger-item');});
   }
-  function toast(message,undo){
-    if(!stack)return;while(stack.children.length>=3){const stale=[...stack.children].find(el=>!el.contains(document.activeElement));toasts.get(stale||stack.firstElementChild)?.();}
-    const node=document.createElement('div');node.className='toast';node.setAttribute('role','status');
-    const text=document.createElement('span');text.textContent=message;node.append(text);
-    const button=document.createElement('button');button.type='button';button.textContent=undo?'되돌리기':'닫기';
-    let timer=null;
-    const dispose=()=>{button.removeEventListener('click',act);if(timer!==null){clearTimeout(timer);timers.delete(timer);}toasts.delete(node);node.remove();};
-    const act=()=>{try{if(undo)undo();dispose();}catch(cause){error(cause.message);}};
-    button.addEventListener('click',act);node.append(button);stack.append(node);toasts.set(node,dispose);
-    if(!undo){timer=setTimeout(()=>{timers.delete(timer);if(!node.contains(document.activeElement))dispose();},5000);timers.add(timer);}
+  function toast(message, undo) {
+    if (!stack) return;
+    if (toasts.size >= 3) {
+      for (const [notice, remove] of toasts) {
+        if (notice.matches(':hover, :focus-within')) continue;
+        remove();
+        break;
+      }
+      if (toasts.size >= 3) return;
+    }
+
+    const opener = document.activeElement;
+    const node = document.createElement('div');
+    node.className = 'toast';
+    const status = document.createElement('span');
+    status.setAttribute('role', 'status');
+    node.append(status);
+
+    const dismissButton = document.createElement('button');
+    dismissButton.type = 'button';
+    dismissButton.className = 'toast-close';
+    dismissButton.textContent = '×';
+    dismissButton.setAttribute('aria-label', '알림 닫기');
+
+    let timer = null;
+    let pointerInside = false;
+    let focusInside = false;
+
+    function clearDismissal() {
+      clearTimeout(timer);
+      timer = null;
+    }
+
+    function dispose(restoreFocus = false) {
+      toasts.delete(node);
+      clearDismissal();
+      if (restoreFocus && node.contains(document.activeElement)) {
+        const neighbor = node.nextElementSibling ?? node.previousElementSibling;
+        const target = neighbor?.querySelector('.toast-close') ?? opener;
+        if (target?.isConnected) target.focus({ preventScroll: true });
+        if (node.contains(document.activeElement)) {
+          const main = document.querySelector('main');
+          if (main && !main.hasAttribute('tabindex')) main.tabIndex = -1;
+          main?.focus({ preventScroll: true });
+        }
+      }
+      node.remove();
+    }
+
+    function updateDismissal() {
+      if (!toasts.has(node) || undo) return;
+      if (pointerInside || focusInside) {
+        clearDismissal();
+      } else if (timer === null) {
+        timer = setTimeout(dispose, 5000);
+      }
+    }
+
+    if (undo) {
+      const undoButton = document.createElement('button');
+      undoButton.type = 'button';
+      undoButton.textContent = '되돌리기';
+      undoButton.addEventListener('click', () => {
+        try {
+          undo();
+          dispose(true);
+        } catch (cause) {
+          error(cause.message);
+        }
+      });
+      node.append(undoButton);
+    }
+
+    dismissButton.addEventListener('click', () => dispose(true));
+    node.addEventListener('pointerenter', () => {
+      pointerInside = true;
+      updateDismissal();
+    });
+    node.addEventListener('pointerleave', () => {
+      pointerInside = false;
+      updateDismissal();
+    });
+    node.addEventListener('focusin', () => {
+      focusInside = true;
+      updateDismissal();
+    });
+    node.addEventListener('focusout', event => {
+      focusInside = node.contains(event.relatedTarget);
+      updateDismissal();
+    });
+
+    node.append(dismissButton);
+    stack.append(node);
+    toasts.set(node, dispose);
+    status.textContent = message;
+    updateDismissal();
   }
   function error(message){
     closeMenu(false);const node=document.querySelector('[data-page-error]');if(node){node.textContent=message;node.hidden=false;}
@@ -101,7 +187,7 @@
   document.addEventListener('error',event=>{if(event.target instanceof HTMLScriptElement&&event.target.dataset.required)error('화면 자료를 불러오지 못했습니다. 페이지를 다시 열어주세요.');},{capture:true,signal:owner.signal});
   window.addEventListener('pagehide',event=>{
     for(const callback of leave){try{callback();}catch{/* A failed local write must not claim success. */}}
-    stopMotion();closeMenu(false);for(const dispose of toasts.values())dispose();for(const timer of timers)clearTimeout(timer);timers.clear();stack?.replaceChildren();
+    stopMotion();closeMenu(false);for(const dispose of toasts.values())dispose();stack?.replaceChildren();
     if(event.persisted)return;leave.clear();owner.abort();
   },options);
   menus();window.ExampleUI=Object.freeze({signal:owner.signal,motion,enter,toast,error,confirm,menus,onLeave:callback=>leave.add(callback)});

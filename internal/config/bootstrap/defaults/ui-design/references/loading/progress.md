@@ -36,6 +36,8 @@ For AI output, distinguish waiting for the first content, receiving content, dis
 
 Prefer the project's accessible primitive or native `progress`/`meter` when suitable. A custom progressbar needs an accessible name, real `aria-valuenow` when determinate, and `aria-valuemin`/`aria-valuemax` when the default 0–100 range does not apply; omit `aria-valuenow` when the amount is unknown. Clarify units or phase with visible text and `aria-valuetext` when needed. Put cancellation controls next to the indicator, not inside progressbar semantics. Announce meaningful phase/result changes without speaking every animation frame or token.
 
+Use a named indicator, visible task or phase text and actual values where measured. A native `<progress>` has a `value` while determinate and omits it while indeterminate. A compact spinner or ring can fit near a local task label. Keep completion, cancellation and retry text available when the indicator disappears. Leave focus on working controls and use a polite announcement for meaningful background completion.
+
 A delayed-indicator timer may avoid flicker only under an established policy; it cannot delay ready content, confirmation or recovery. Cancel it on completion/teardown. Clear busy state on all terminal paths. Bound timers, subscriptions and retained event/output buffers with their actual owner.
 
-Sources: [Carbon progress bar](https://www.carbondesignsystem.com/building-blocks/core/components/progress-bar/guidelines), [MUI Progress](https://mui.com/material-ui/react-progress/) and [WAI-ARIA progressbar](https://www.w3.org/TR/wai-aria-1.2/#progressbar).
+Sources: Carbon progress bar, MUI Progress and WAI-ARIA progressbar.

@@ -29,16 +29,20 @@ Logical open/selected/route state changes from the event or actual data, indepen
 
 For rapid open-close-open or A→B→A, cancel/re-target the current visual work or use the existing stateful primitive. Older callbacks must not close the latest surface, restore focus to a stale opener or commit an obsolete selected item. Avoid unbounded queues of entrances that replay outdated states.
 
-Presence during exit is a rendering choice, not permission for invisible interaction. Keep inactive layers out of focus/hit testing using the actual primitive while retaining appropriate exit visuals. Restore focus/inert/scroll-lock state through an owner that handles interruption and route exit, not only a fixed timeout.
+An inactive layer can remain visible while exiting. Use the component primitive to keep it out of focus and hit testing. Restore focus, inert state and scroll state through an owner that handles interruption and route exit. Finish any deferred visual cleanup on cancellation and when an effect is skipped or has zero duration.
 
 Cancellation of animation differs from cancellation of the task or network operation. Native canceled animation promises can reject; handle the expected cancellation path so it does not produce an unhandled failure or roll back confirmed domain state. If reduced-motion preference changes mid-effect, settle to the current logical target rather than restarting the old effect.
 
 ## Implementation selection
 
-Prefer existing tokens/primitives and CSS transitions/keyframes for simple property changes. Use an existing animation library or Web Animations API when controllable sequencing/reversal genuinely needs it. Do not introduce a motion dependency for one opacity transition. Intrinsic-size/layout effects need feature detection or measured fallback, not a blanket assumption about browser support.
+Reuse the project's timing tokens and primitives. Use CSS transitions for simple state changes and keyframes for a bounded sequence. Use an existing animation library or the Web Animations API when an interaction needs explicit sequencing, cancellation or retargeting. Check support for intrinsic-size and layout effects according to the target browsers.
+
+For native top-layer dialogs and popovers, `@starting-style` can supply entry values. A CSS exit that stays in the top layer requires discrete transitions of `display` and `overlay`. Set `transition-behavior: allow-discrete` after the transition shorthand. Check both behaviors in supported browsers. Where the enhancement is unavailable, immediate close with correct focus, dismissal and final state is a functional fallback.
+
+Render complete resting states for every preference. Enable optional movement under `prefers-reduced-motion: no-preference`. If a subtler effect still helps, use a short fade or a non-spatial cue and keep selection, focus and status visible under `reduce`.
 
 Start with transform/opacity when they express the change. Measure necessary size, clipping, filter, shadow or layout effects on representative hardware; compositor-friendly properties still have memory/paint cost. Avoid per-frame layout read/write loops, large blur layers and permanent `will-change` on every control.
 
 Cleanup owns animation handles, timer/frame callbacks, observers, listeners, pointer capture and retained snapshots. Hidden/background views do not keep decorative loops. Test reversal, Escape, back, route unmount, slow data, reduced-motion change, dropped frames and failed work. A static image or generic duration token is not evidence of correct timing.
 
-Sources: [MDN Animation.cancel](https://developer.mozilla.org/en-US/docs/Web/API/Animation/cancel), [reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) and [web.dev animation performance](https://web.dev/articles/animations-guide).
+Sources include MDN's reference entries for `Animation.cancel()`, `@starting-style`, `overlay` and `prefers-reduced-motion`, and Google's animation performance guidance.

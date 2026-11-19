@@ -33,8 +33,13 @@ func Available(state string) bool {
 	if err != nil || path == "" {
 		return false
 	}
+	return ChromeAvailable(state)
+}
+
+// ChromeAvailable inventories the renderer without requiring the interactive helper.
+func ChromeAvailable(state string) bool {
 	browser, err := findBrowser()
-	return err == nil && (browser != "" || availableManagedChrome(directory, runtime.GOOS, runtime.GOARCH))
+	return err == nil && (browser != "" || availableManagedChrome(runtimeDirectory(state), runtime.GOOS, runtime.GOARCH))
 }
 
 func availableManagedChrome(directory, goos, arch string) bool {

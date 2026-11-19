@@ -93,7 +93,7 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 	if err := prompts.Refresh(state); err != nil {
 		return result, err
 	}
-	if _, err := bootstrap.Initialize(options.Home); err != nil {
+	if _, err := bootstrap.Initialize(ctx, options.Home); err != nil {
 		return result, err
 	}
 	next := receipt{Digest: digest}

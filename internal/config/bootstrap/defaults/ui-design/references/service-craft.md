@@ -36,10 +36,10 @@ The [case maps](code-examples.md) illustrate some interpretations. They are loca
 
 ## Sources and scope of inference
 
-[Apple motion](https://developer.apple.com/design/human-interface-guidelines/motion), [sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars), [materials](https://developer.apple.com/design/human-interface-guidelines/materials) and [color](https://developer.apple.com/design/human-interface-guidelines/color) inform relationship and platform questions. HIG does not prescribe every web application's material.
+Apple motion, sidebars, materials and color inform relationship and platform questions. HIG does not prescribe every web application's material.
 
-[Meta's Instagram Lite case](https://www.meta.com/design-at-meta/blog/instagram-lite-a-global-collaboration-between-research-and-design/) is a 2022 mobile study, useful for thinking about content, visible alternatives and constrained conditions; it is not a current desktop benchmark.
+Meta's Instagram Lite case is a 2022 mobile study, useful for thinking about content, visible alternatives and constrained conditions; it is not a current desktop benchmark.
 
-[Google's expressive research](https://design.google/library/expressive-material-design-google-research), [paper](https://research.google/pubs/usability-hasnt-peaked-exploring-how-expressive-design-overcomes-the-usability-plateau/) and [motion guidance](https://m3.material.io/styles/motion) inform hierarchy and learned operation, not a guarantee of this app's performance.
+Google's expressive research, paper and motion guidance inform hierarchy and learned operation, not a guarantee of this app's performance.
 
-[Studio](https://www.usehallmark.com/themes/studio/) and its [source study](https://github.com/Nutlope/hallmark/blob/407fa689f4a276f2fd389208d271d0fef08f5058/site/made/cobalt-database-client/index.html) provide composition references for a database workspace. Apply the working-object hierarchy to the target product's content and design system. Verification follows evidence → complete path → render/interact → refine; the target project owns its tooling and publication process.
+Studio and its source study provide composition references for a database workspace. Apply the working-object hierarchy to the target product's content and design system. Verification follows evidence → complete path → render/interact → refine; the target project owns its tooling and publication process.

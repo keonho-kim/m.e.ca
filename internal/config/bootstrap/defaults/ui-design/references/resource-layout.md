@@ -39,6 +39,8 @@ Applications built with the skill follow their own architecture, tooling, budget
 
 ## Supporting resources
 
-The [Agent Skills specification](https://agentskills.io/specification) requires a frontmatter-bearing SKILL.md and permits supporting files. `references`, `assets` and `scripts` are recommended roles for documentation, static resources and executable automation, not universal names or these byte limits. Keep supporting material focused and load it as needed.
+The Agent Skills specification requires a frontmatter-bearing SKILL.md and permits supporting files. `references`, `assets` and `scripts` are recommended roles for documentation, static resources and executable automation, not universal names or these byte limits. Keep supporting material focused and load it as needed.
+
+Use bundle-relative links for instructions, examples and assets. Record external sources as plain text with their titles, authors and revisions where relevant.
 
 Complete studies belong in assets with their relative style, behavior and media dependencies. Installation preserves those paths so a selected screen remains portable. [Provenance](example-provenance.md) records the bundled media, authorship and distribution terms.

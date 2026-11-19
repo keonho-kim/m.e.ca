@@ -2,10 +2,21 @@
 
 Tabs switch peer panels in one context. A segmented choice represents a short exclusive value/view set, using radio/toggle/tab semantics according to its job. Real route destinations keep navigation semantics; a decorative underline does not turn every header into ARIA tabs.
 
-Anatomy: named set, readable labels, selected state, separate keyboard focus, corresponding content/value and a useful overflow strategy. Retain real panel/query/draft identity. Use select or another layout when long Korean labels no longer fit; tiny icon pills cannot rescue an unsuitable option set.
+Provide a named set, readable labels, selected state, separate keyboard focus and corresponding content or value. Retain real panel, query and draft identity. For long labels, use an appropriate vertical rail or a scrollable tab row that keeps the selected tab visible and exposes overflow.
 
 If the task requires comparing facts across panels, consider concurrent views, a retained summary or another arrangement that reduces memory burden. Tabs can serve independent peer views; they are not a default way to make every dense page look cleaner.
 
+## Choose the activation model
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Automatically activated tabs | When the panels are ready, arrows can move focus and select the panel in one step. Expose the selected tab and panel relationship. |
+| Manually activated tabs | For fetched or costly content, arrows move focus. Enter or Space activates the focused tab. Distinguish focused and selected tabs until then. |
+| Document tabs | Label each open document and provide an operable close action. Handle dirty documents and move selection and focus to a suitable neighbor after closure. |
+| Segmented filter or view control | Use one named selection group and show its selected option. Change the filter or display mode in place while retaining the query scope. |
+| Destinations styled as tabs | Use navigation links and mark the current route. Preserve normal link actions and browser history. |
+
+When tabs no longer fit, keep the current selection visible and the other labels discoverable. A scrollable row or vertical tablist preserves the underlying activation model.
 
 ## Separate scope and visual emphasis
 
@@ -31,7 +42,7 @@ An animated indicator is not the current keyboard focus. Disabled or unavailable
 
 ## Activation and panel lifecycle
 
-Use the existing accessible tablist/tab/tabpanel relationships and keyboard model. Automatic activation can suit readily available panels; manual activation avoids costly requests on each arrow focus. Segmented radios or toggles keep their respective selection model; do not copy tab roles solely for a pill appearance.
+Use the existing accessible tablist/tab/tabpanel relationships and keyboard model. For panels that appear immediately and have no side effects, activation can follow arrow-key focus. For slow or consequential changes, let arrows move focus and activate the panel on Enter or Space. Segmented radios or toggles keep their respective selection model.
 
 Keep per-panel draft/query and intentional scroll state. Define whether inactive content remains mounted from real persistence/resource needs, not an animation library default. Hidden panels cannot retain keyboard targets. Do not duplicate the same form with live IDs in outgoing and incoming layers to crossfade it.
 
@@ -41,4 +52,4 @@ Set selected state independently of the effect. On rapid changes, retarget the i
 
 Test arrow/focus versus selection, manual activation, long labels, overflow at zoom, lazy/failed panels, quick A→B→A, dirty content and route return. Inspect actual theme contrast: a faint or translucent selected pill cannot be the sole signal.
 
-Source: [WAI APG tabs](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/). Visual recipes do not change the chosen semantic pattern.
+Source: WAI APG tabs. Visual recipes do not change the chosen semantic pattern.

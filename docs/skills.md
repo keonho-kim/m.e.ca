@@ -8,8 +8,9 @@
 
 ```text
 !skills
-#ui-design 업무 앱의 화면과 사용 흐름을 설계해줘.
+#ui-design 목록의 작업 메뉴와 상세 패널을 고르고 열기·닫기 동작을 설계해줘.
 #backend-design API·DB 구조를 설계하고 TDD로 구현해줘.
+#application-best-dev-practices 게시판과 예약을 조합한 소모임 기능의 참가 흐름과 실패 처리를 설계해줘.
 #create-skill 이 프로젝트의 작업 지침을 새 스킬로 만들어줘.
 ```
 
@@ -64,11 +65,11 @@ disable-model-invocation: true와 선택적인 agents/openai.yaml의 policy.allo
 
 ## 기본 스킬과 초기화
 
-일반 시작과 install·upgrade의 Bootstrap은 `~/.meca/skills/`에 기본 스킬을 생성한다. `create-skill`은 작성 지침을, `ui-design`은 본문·참고 파일·선택적 검증 스크립트·라이선스·고지를, `backend-design`은 본문·설계 지침·조사 출처를 함께 배포한다. 디렉터리는 0700, 새 파일은 0600이며 기존 파일은 덮어쓰지 않는다. 누락한 기본 파일은 다음 초기화에서 다시 생성한다. 프로젝트·공유 스킬 경로는 자동 생성하지 않는다.
+일반 시작과 install·upgrade의 Bootstrap은 `~/.meca/skills/`에 기본 스킬을 생성한다. `create-skill`은 작성 지침을, `ui-design`은 본문·참고 파일·선택적 검증 스크립트·라이선스·고지를, `backend-design`은 본문·설계 지침·조사 출처를 함께 배포한다. `application-best-dev-practices`는 앱 유형별 가이드, Do & Don’t, 구현 Q&A를 배포한다. 디렉터리는 0700, 새 파일은 0600이며 기존 파일은 덮어쓰지 않는다. 누락한 기본 파일은 다음 초기화에서 다시 생성한다. 프로젝트·공유 스킬 경로는 자동 생성하지 않는다.
 
 `#create-skill`은 [Agent Skills 표준](https://agentskills.io/specification)에 맞는 스킬 작성·수정 지침을 읽는다. 스킬 이름은 소문자 영숫자와 하이픈으로 작성한다. 기본 지침은 필수 YAML 메타데이터, 최소 예시, 참고 자료·스크립트·에셋 구성과 검증 방법을 담는다. 사용자가 경로를 지정하지 않으면 새 스킬은 프로젝트 `.agents/skills/`에 작성하도록 안내한다. 배포 원본은 [기본 SKILL.md](../internal/config/bootstrap/defaults/create-skill/SKILL.md)이며 설치된 수정본은 재설치 때도 보존한다.
 
-UI·백엔드 기본 스킬의 참고 자료 구성과 적용 범위는 [기본 스킬 안내](builtin-skills.md)를 따른다. 설치된 스킬의 설명·본문은 `!skills`에서 확인한다.
+기본 스킬의 참고 자료 구성과 적용 범위는 [기본 스킬 안내](builtin-skills.md)를 따른다. 설치된 스킬의 설명·본문은 `!skills`에서 확인한다.
 
 ## 사용자 호출과 모델 도구
 

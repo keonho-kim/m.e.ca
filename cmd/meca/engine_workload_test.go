@@ -69,7 +69,7 @@ func TestEngineWorkload(t *testing.T) {
 func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.ProviderKind) func() error {
 	tb.Helper()
 	home, project := tb.TempDir(), tb.TempDir()
-	cfg, err := bootstrap.Initialize(home)
+	cfg, err := bootstrap.Initialize(ctx, home)
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func newEngineWorkload(tb testing.TB, ctx context.Context, kind connection.Provi
 	app, err := server.New(ctx, server.Options{
 		Config: cfg, Ledger: ledger,
 		Open: func(ctx context.Context, id string, create bool, defaults config.Config) (*server.Conversation, error) {
-			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create)
+			c, err := openServerSession(ctx, startup.Mode{Project: project, Display: project}, defaults, home, state, sessions, vault, nil, id, create, nil)
 			if err == nil {
 				c.InheritsModel = false
 				c.Runtime.Selection = selected

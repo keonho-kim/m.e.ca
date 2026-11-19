@@ -31,7 +31,7 @@ Choose light/dark from the request and usage evidence: ambient conditions, susta
 
 ## Verify actual pairings
 
-WCAG text contrast normally requires 4.5:1, with 3:1 for qualifying large text. Meaningful non-text control/state cues generally need 3:1 against adjacent colors; not every decorative line or button outline is an essential cue. Apply the actual criteria and exceptions, without rounding a failed value into a pass. See [text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) and [non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html).
+WCAG text contrast normally requires 4.5:1, with 3:1 for qualifying large text. Meaningful non-text control or state cues generally need 3:1 against adjacent colors. Apply the criteria and exceptions for Contrast (Minimum) and Non-text Contrast to the cues required to identify controls and states. Evaluate the measured values before rounding.
 
 Check on-action, muted, selected, focus, invalid and overlay pairs in every intended material/mode. Glass requires the composited background, controls retain legible state without decorative effects, and charts need labels/legends plus suitable non-color distinctions. Inspect conditional theme inheritance in the real browser when a static estimate is ambiguous.
 

@@ -15,6 +15,21 @@ Use this when a design depends on changing content, input, selection or work. Re
 
 Use only states the feature can encounter. A design shell can show representative arrangements; it need not build a service or simulate background activity. A functional frontend must follow the actual contract rather than leave a polished control pretending to work.
 
+## Interactive states
+
+| State | What to show and preserve |
+| --- | --- |
+| Rest and hover | Make the label, purpose and target identifiable at rest. Hover can add local emphasis. Reveal hover actions on keyboard focus and provide them directly on touch. |
+| Keyboard focus | Keep a visible `:focus-visible` cue or the native ring. It survives hover, pressed, selected and error styling and remains clear at zoom and in forced colors. |
+| Pressed and dragging | Give immediate contact feedback in a stable hit area. Press feedback lasts for the gesture. A drag shows the real target or insertion point and has a cancellation and non-drag path. |
+| Selected, checked or pressed toggle | Show the current value with a mark, boundary or text as well as color. Expose the state that matches the control's semantics and preserve an independent focus indicator. |
+| Expanded or current | Mirror the actual open region or current destination. Keep labels and content reachable, and restore useful focus when a region closes. |
+| Disabled or read-only | Explain a consequential prerequisite. Disabled prevents activation. Where a focusable `aria-disabled` control is appropriate, block activation in behavior too. Keep a read-only value available to inspect or copy where useful. |
+| Pending, success or uncertain | Name the affected action. Keep the last confirmed value and pending intent legible. Show confirmation from the outcome and give uncertainty a recovery path. |
+| Invalid or failed | Show specific text near the cause with a next step. Keep the user's current focus or deliberately move it after a failed submit. Preserve recoverable input. |
+
+Use combinations the feature can encounter. For example, a selected row with a pending change still shows its selection and focused control. A state cue can appear immediately with its final geometry. Motion may reinforce it while focus, selection and announcements continue to reflect actual state.
+
 ## Collections and evidence
 
 Distinguish edited search/filter values from the conditions that produced current results. Several dimensions may narrow the same collection independently: workspace, saved scope, category, query and sort. Keep the relevant context instead of resetting another dimension accidentally.

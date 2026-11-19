@@ -27,7 +27,7 @@ func TestNativeBrowser(t *testing.T) {
 		w.Write([]byte(`<html><head><title>Fixture</title></head><body><h1>Browser fixture</h1><input id="entry" aria-label="Entry"><button onclick="document.querySelector('#status').textContent=document.querySelector('#entry').value">Apply</button><p id="status">Ready</p><main>` + strings.Repeat(`<p>Bounded output 😀 paragraph</p>`, 800) + `</main></body></html>`))
 	}))
 	defer server.Close()
-	session := New(t.TempDir(), t.TempDir(), func(s string) string { return strings.ReplaceAll(s, "SECRET", "MASKED") }, nil)
+	session := New(t.TempDir(), t.TempDir(), func(s string) string { return strings.ReplaceAll(s, "SECRET", "MASKED") }, nil, nil)
 	session.prepare = func(context.Context, string) (runtime.Paths, error) {
 		return runtime.Paths{Agent: agent, Browser: chrome}, nil
 	}
@@ -81,7 +81,7 @@ func TestNativeBrowser(t *testing.T) {
 	if len(image.Image) < 8 || string(image.Image[:8]) != "\x89PNG\r\n\x1a\n" {
 		t.Fatal("not a real PNG")
 	}
-	other := New(t.TempDir(), t.TempDir(), func(s string) string { return s }, nil)
+	other := New(t.TempDir(), t.TempDir(), func(s string) string { return s }, nil, nil)
 	other.prepare = session.prepare
 	if _, err := other.Run(t.Context(), Request{Action: "open", URL: server.URL}, ""); err != nil {
 		t.Fatal(err)

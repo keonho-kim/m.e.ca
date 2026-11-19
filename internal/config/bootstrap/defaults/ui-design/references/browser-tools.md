@@ -6,13 +6,13 @@ Large observations return `result_id`, `revision` and `next_offset`. Read each n
 
 Use Playwright CLI for additional diagnostics or when native browser tools are unavailable. Inspect `playwright-cli --help` or the configured project-local CLI for available commands. Do not fetch a CLI implicitly when checking whether it is installed.
 
-If an additional CLI diagnostic is required and no usable Playwright CLI is installed, ask the user in their language to install it **because it is needed to run the UI layout and motion verification tools**. Link the [official installation instructions](https://github.com/microsoft/playwright-cli#installation); `npm install -g @playwright/cli@latest` is an example the user can run. Do not install or upgrade it automatically. Honor an explicit user request to perform installation under the project's existing policies. Continue independent work, but mark browser and diagnostic checks as not run until the tool is available.
+If an additional CLI diagnostic is required and no usable Playwright CLI is installed, ask the user in their language to install it **because it is needed to run the UI layout and motion verification tools**. Give `npm install -g @playwright/cli@latest` as an example the user can run. Do not install or upgrade it automatically. Honor an explicit user request to perform installation under the project's existing policies. Continue independent work, but mark browser and diagnostic checks as not run until the tool is available.
 
-Start the target project's dev/static server and confirm its actual HTTP URL. Choose a task-unique session; the following name, URL and dimensions are illustrative:
+Start the target project's dev/static server and assign its actual local address to the shell variable `meca_ui_preview_url`. Choose a task-unique session. The following name and dimensions are illustrative.
 
 ```sh
 playwright-cli --help
-playwright-cli -s=ui-review open http://127.0.0.1:3000
+playwright-cli -s=ui-review open "$meca_ui_preview_url"
 playwright-cli -s=ui-review resize 1440 900
 playwright-cli -s=ui-review snapshot
 # Exercise the relevant flow using current snapshot references before capturing.

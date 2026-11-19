@@ -21,9 +21,10 @@ import (
 	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 )
 
-func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, vault *credentials.Vault, skillReader *skills.Reader, id string, create bool) (value *server.Conversation, resultErr error) {
+func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, vault *credentials.Vault, skillReader *skills.Reader, id string, create bool, web *webfetch.Client) (value *server.Conversation, resultErr error) {
 	var store *sqlite.Store
 	var err error
 	if create {
@@ -60,7 +61,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
+	executor, err := local.NewExecutor(mode.Project, home, state, vault.Redact, local.Options{WebFetch: web, Skills: skillReader, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 	if err != nil {
 		return nil, err
 	}
-	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault), TeamEnabled: team, InheritsModel: inheritsModel,
+	c := &server.Conversation{Runtime: agentrequest.Runtime{Config: cfg, Selection: selected, Session: store.Session(), Tools: executor, Skills: executor.Skills(), Store: store, Vault: vault, LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) }}, History: store, Models: store, Team: teamService(store, home, state, vault, web), TeamEnabled: team, InheritsModel: inheritsModel,
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working

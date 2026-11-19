@@ -32,13 +32,13 @@ Inspect the distinction between global destinations, open task objects and resul
 | How do columns, values and relationships retain one identity? | [Object detail](../assets/examples/database/table.html) |
 | What context makes prior work recoverable? | [History](../assets/examples/database/history.html) |
 
-[DB styles](../assets/examples/database/database.css) show the chosen hierarchy. These views contain no DB driver, SQL execution or collected history. DBeaver's [navigator](https://dbeaver.com/docs/dbeaver/Database-Navigator/), [SQL](https://dbeaver.com/docs/dbeaver/SQL-Editor/) and [data](https://dbeaver.com/docs/dbeaver/Data-Editor/) task distinctions informed reasoning, not copied implementation.
+[DB styles](../assets/examples/database/database.css) show the chosen hierarchy. These views contain no DB driver, SQL execution or collected history. DBeaver's navigator, SQL and data task distinctions informed reasoning, not copied implementation.
 
 ## Discovery, reading and a considered choice
 
 | Study | Question and tradeoff | Direct sources |
 | --- | --- | --- |
-| Archive | Minimal collection tools and editorial detail give objects scale; image-first detail moves metadata lower and increases scrolling | [Collection](../assets/examples/archive/archive-library.html), [asset](../assets/examples/archive/archive-asset.html), [guide](../assets/examples/archive/archive-guide.html), [lesson](../assets/examples/archive/archive-lesson.html) |
+| Archive | Minimal collection tools and editorial detail give objects scale. Image-first detail moves metadata lower and increases scrolling. | [Collection](../assets/examples/archive/archive-library.html), [asset](../assets/examples/archive/archive-asset.html), [guide](../assets/examples/archive/archive-guide.html), [lesson](../assets/examples/archive/archive-lesson.html), [capture](../assets/examples/previews/study-archive.jpg) |
 | Morrow | Photography and conditions help first-time selection; repeat users may prefer less discovery before input | [Introduction](../assets/examples/morrow/atelier-home.html), [space](../assets/examples/morrow/atelier-space.html), [reservation](../assets/examples/morrow/atelier-booking.html), [result](../assets/examples/morrow/atelier-confirmation.html) |
 | Motion study | Explicit previews separate an effect demonstration from actual loading/state | [Lab](../assets/examples/motion/motion-lab.html) |
 

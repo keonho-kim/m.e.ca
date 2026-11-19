@@ -70,6 +70,13 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 		return nil, faults.Errorf(diagcatalog.LocalCommandsAreStillRunningWaitCommandOr)
 	}
 	switch spec.Name {
+	case toolapi.WebFetch:
+		op := &webFetchOperation{}
+		initialize(&op.operation)
+		if err := op.prepare(); err != nil {
+			return nil, err
+		}
+		return op, nil
 	case "list_skills", "load_skill", "read_skill_file":
 		op := &skillOperation{}
 		initialize(&op.operation)

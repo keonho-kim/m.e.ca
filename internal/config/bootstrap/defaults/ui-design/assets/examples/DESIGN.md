@@ -25,7 +25,7 @@ The 36 routes share familiar native controls while retaining different tasks and
 
 ## Typography and color
 
-Local Korean/system sans serves UI and reading; mono serves code/identifiers/measurements. Selected subject/wordmark roles use native serif. No font is fetched by these studies. Titles, authored content, metadata and operating labels have different roles; visual size does not mechanically follow HTML heading level.
+Local sans-serif fonts with coverage for the sample text serve UI and reading. Monospace serves code, identifiers and measurements. Selected subjects and wordmarks use native serif. The studies use locally available fonts. Titles, authored content, metadata and operating labels have distinct visual roles.
 
 Each app defines its own ink/surface, boundaries, action, selected context, focus and actual status. Archive illustrates a neutral base with rust action, cobalt selection/focus, plum content and forest saved/completed cues. These are role examples, not a palette for every project. Text/marks accompany state, and supporting facts retain readable contrast.
 

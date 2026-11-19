@@ -21,7 +21,7 @@ func BenchmarkUsageFallback(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		store.counts = store.counts[:0]
-		if err := s.countRequest(context.Background(), request, nil, 0, 0); err != nil {
+		if err := s.countRequest(context.Background(), request, nil, 0, 0, 0); err != nil {
 			b.Fatal(err)
 		}
 	}

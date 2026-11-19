@@ -1,6 +1,6 @@
 // Purpose: Resolve output budgets from serving limits and exact vLLM chat tokenization.
 // Pattern: HTTP preflight adapter.
-// Usage: Prepared vLLM generation calls contextOutput before encoding the generation request.
+// Usage: HTTP generation resolves effective limits before encoding the request.
 // Related: internal/agent/model/output.go, internal/provider/httpclient/request.go.
 package httpclient
 
@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -21,17 +20,23 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/transport"
 )
 
-func (c *Client) contextOutput(ctx context.Context, model string, messages []protocol.Message, controls protocol.Controls, output int, definitions []toolapi.Definition, encoder *protocol.Encoder) (int, error) {
+func (c *Client) contextOutput(ctx context.Context, request modelapi.Request, messages []protocol.Message, controls protocol.Controls, encoder *protocol.Encoder) (modelapi.InputBudget, error) {
 	info := c.effectiveModel()
+	budget := modelapi.InputBudget{Window: info.ContextWindow}
+	resolve := func() (modelapi.InputBudget, error) {
+		value, err := request.OutputBudget(budget.Window, info.MaxOutput, budget.InputTokens)
+		budget.OutputTokens = value
+		return budget, err
+	}
 	// Image preprocessing contributes model-specific tokens. A text-only tokenizer
 	// count is not an exact multimodal count; use server generation limits instead.
 	for _, message := range messages {
 		if message.HasImages() {
-			return modelapi.OutputBudget(output, info.ContextWindow, info.MaxOutput, 0)
+			return resolve()
 		}
 	}
 	if c.connection.Kind != connection.VLLM || c.modelInfo == nil || c.modelInfo.ContextWindow == 0 {
-		return modelapi.OutputBudget(output, info.ContextWindow, info.MaxOutput, 0)
+		return resolve()
 	}
 	kwargs := maps.Clone(controls.Template)
 	if kwargs == nil {
@@ -42,32 +47,32 @@ func (c *Client) contextOutput(ctx context.Context, model string, messages []pro
 	if controls.ReasoningEffort != "" {
 		kwargs["reasoning_effort"] = controls.ReasoningEffort
 	}
-	tools, err := encoder.EncodedTools(connection.VLLM, definitions)
+	tools, err := encoder.EncodedTools(connection.VLLM, request.Tools)
 	if err != nil {
-		return 0, err
+		return budget, err
 	}
 	body, err := protocol.TokenizerBody(messages, struct {
 		Tools      json.RawMessage `json:"tools,omitempty"`
 		Model      string          `json:"model"`
 		Template   map[string]any  `json:"chat_template_kwargs"`
 		Generation bool            `json:"add_generation_prompt"`
-	}{tools, model, kwargs, true})
+	}{tools, request.ModelID, kwargs, true})
 	if err != nil {
-		return 0, err
+		return budget, err
 	}
 	if body.Len() > modelapi.MaxResponseBytes {
-		return 0, faults.Errorf(diagcatalog.HttpclientTokenizerRequestExceedsContextSizeLimit)
+		return budget, &modelapi.ContextLimitError{Cause: faults.Errorf(diagcatalog.HttpclientTokenizerRequestExceedsContextSizeLimit)}
 	}
 	var count struct {
 		Count *int `json:"count"`
 		Limit int  `json:"max_model_len"`
 	}
-	if err := transport.ReadMetadata(ctx, c.transport, http.MethodPost, strings.TrimSuffix(c.connection.APIBase(), "/v1")+"/tokenize", body.Reader(), 16*1024*1024, &count); err != nil {
-		return 0, faults.Errorf(diagcatalog.HttpclientModelContextTokenization, err)
+	if err := transport.ReadStreamingMetadata(ctx, c.transport, http.MethodPost, strings.TrimSuffix(c.connection.APIBase(), "/v1")+"/tokenize", body.Reader(), 16*1024*1024, &count); err != nil {
+		return budget, faults.Errorf(diagcatalog.HttpclientModelContextTokenization, err)
 	}
 	if count.Count == nil || *count.Count < 0 || count.Limit <= 0 || count.Limit > 1<<40 {
-		return 0, faults.Errorf(diagcatalog.HttpclientInvalidTokenizerContextLimits)
+		return budget, faults.Errorf(diagcatalog.HttpclientInvalidTokenizerContextLimits)
 	}
-	limit := min(info.ContextWindow, count.Limit)
-	return modelapi.OutputBudget(output, limit, info.MaxOutput, *count.Count)
+	budget.Window, budget.InputTokens = min(info.ContextWindow, count.Limit), *count.Count
+	return resolve()
 }

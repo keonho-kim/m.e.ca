@@ -16,14 +16,14 @@ import (
 func TestBootstrap(t *testing.T) {
 	home := t.TempDir()
 	directory := filepath.Join(home, ".meca")
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	content := []byte("[ui]\ncolumn_width=32\n")
 	if err := os.WriteFile(filepath.Join(directory, config.Filename), content, 0600); err != nil {
 		t.Fatal(err)
 	}
-	c, err := Initialize(home)
+	c, err := Initialize(t.Context(), home)
 	if err != nil || c.UI.ColumnWidth != 32 {
 		t.Fatalf("overwrote configuration: %+v %v", c, err)
 	}
@@ -31,7 +31,7 @@ func TestBootstrap(t *testing.T) {
 	if err := os.Symlink(directory, filepath.Join(other, ".meca")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Initialize(other); err == nil {
+	if _, err := Initialize(t.Context(), other); err == nil {
 		t.Fatal("accepted symlink state")
 	}
 }
@@ -40,7 +40,7 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 	home := t.TempDir()
 	results := make(chan error, 8)
 	for n := 0; n < 8; n++ {
-		go func() { _, err := Initialize(home); results <- err }()
+		go func() { _, err := Initialize(t.Context(), home); results <- err }()
 	}
 	for n := 0; n < 8; n++ {
 		if err := <-results; err != nil {
@@ -58,7 +58,7 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 
 func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	root := filepath.Join(home, ".meca")
@@ -75,14 +75,14 @@ func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
 	if err := os.Symlink(t.TempDir(), filepath.Join(root, "sessions")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Initialize(home); err == nil {
+	if _, err := Initialize(t.Context(), home); err == nil {
 		t.Fatal("accepted symlink session directory")
 	}
 }
 
 func TestBootstrapRecordsRoleDefaults(t *testing.T) {
 	home := t.TempDir()
-	if _, err := Initialize(home); err != nil {
+	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
 	}
 	content, err := os.ReadFile(filepath.Join(home, ".meca", config.Filename))

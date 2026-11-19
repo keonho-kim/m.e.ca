@@ -20,10 +20,10 @@ func (p *Peer) Emit(event runrecord.Event) error {
 		return nil
 	}
 	if event.Kind == "stream" {
-		event.Thinking = ""
-		if event.Text == "" {
+		if event.Text == "" && event.Thinking != "" {
 			return nil
 		}
+		event.Thinking = ""
 	}
 	if event.Kind == "progress" && strings.TrimSpace(event.Text) != "" {
 		r.mu.Lock()

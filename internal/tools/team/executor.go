@@ -104,17 +104,17 @@ func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call t
 	return prepared, nil
 }
 
-// EndBrowser releases the participant's isolated browser at request termination.
-func (e *Executor) EndBrowser(ctx context.Context) error {
-	if local, ok := e.Local.(interface{ EndBrowser(context.Context) error }); ok {
-		return local.EndBrowser(ctx)
+// EndObservations releases the participant's isolated browser and document pages.
+func (e *Executor) EndObservations(ctx context.Context) error {
+	if local, ok := e.Local.(interface{ EndObservations(context.Context) error }); ok {
+		return local.EndObservations(ctx)
 	}
 	return nil
 }
 
-func (e *Executor) BrowserCursors(ctx context.Context) ([]toolapi.BrowserCursor, error) {
-	if local, ok := e.Local.(toolapi.BrowserCursorSource); ok {
-		return local.BrowserCursors(ctx)
+func (e *Executor) ObservationCursors(ctx context.Context) ([]toolapi.ObservationCursor, error) {
+	if local, ok := e.Local.(toolapi.ObservationCursorSource); ok {
+		return local.ObservationCursors(ctx)
 	}
 	return nil, nil
 }

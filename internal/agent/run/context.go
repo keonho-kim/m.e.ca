@@ -40,12 +40,12 @@ func (s *execution) request(ctx context.Context) (modelapi.Request, error) {
 	if s.runner.ContextObservations != nil {
 		observations = s.runner.ContextObservations(s.messages)
 	}
-	browser, err := s.browserContinuations(ctx)
+	continuations, err := s.observationContinuations(ctx)
 	if err != nil {
 		return modelapi.Request{}, err
 	}
-	if err := s.reserveContext(retained + int64(len(observations)+len(browser))); err != nil {
+	if err := s.reserveContext(retained + int64(len(observations)+len(continuations))); err != nil {
 		return modelapi.Request{}, err
 	}
-	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, SkillReads: s.skillReads, Observations: observations, BrowserContinuations: browser, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
+	return contextbuild.Build(contextbuild.Input{Request: request, ImageInput: s.runner.ImageInput, System: s.system, ProjectRoot: s.runner.ProjectRoot, Memory: s.memoryContext, Objective: s.checkpoint.Objective, Messages: s.messages, SkillReads: s.skillReads, Observations: observations, ObservationContinuations: continuations, Redact: s.runner.Redact, MaxBytes: s.limits.MaxContextBytes, Projection: &s.projection, RedactionVersion: s.runner.RedactionVersion})
 }

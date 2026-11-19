@@ -38,7 +38,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	if len(calls) == 0 {
 		return plan(0, nil)
 	}
-	if calls[0].Name == "browser_action" || calls[0].Name == "browser_inspect" {
+	if toolapi.IsBrowserTool(calls[0].Name) {
 		return plan(1, nil)
 	}
 	if commandControl(calls[0].Name) {
@@ -77,7 +77,7 @@ func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, 
 	defer func() { err = errors.Join(err, e.boundary.Check()) }()
 	end := min(len(calls), maximum)
 	for i, call := range calls[:end] {
-		if call.Name == "view_image" {
+		if call.Name == "view_image" || toolapi.IsBrowserTool(call.Name) {
 			return plan(max(1, i), nil)
 		}
 		if err := ctx.Err(); err != nil {

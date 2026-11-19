@@ -6,7 +6,7 @@ Read only the relevant findings; preserve intentional themes and the actual prod
 
 The source critiques reflex font choices, flat hierarchy, oversized/italic display heroes, crushed tracking, excessive capitals, poor wrapping and tiny functional text. Its thresholds are not a universal type scale: operations and public introductions need different roles.
 
-Define page, section, body, label, data and support roles. Use actual Hangul coverage for Korean work. Test real text, mixed identifiers, units and fallback fonts. Keep display expression separate from operating labels; do not impose Latin tracking or uppercase habits on Korean copy.
+Define page, section, body, label, data and support roles. Test real copy, mixed identifiers, units and font fallbacks. Choose glyph coverage, spacing and casing for the scripts in use. Keep display expression separate from operating labels.
 
 Reading measure and table width are different decisions. Fix heading rhythm and meaningful wrapping without forcing all content into identical containers. Do not shrink text or hide overflow just to fit a screenshot.
 

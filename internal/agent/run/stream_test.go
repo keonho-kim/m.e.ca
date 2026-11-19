@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -88,5 +89,28 @@ func TestStreamingCancellationPreservesOnlyMaskedBody(t *testing.T) {
 	last := j.messages[len(j.messages)-1]
 	if last.Role != "assistant" || last.Content != partial || !last.Incomplete {
 		t.Fatalf("interrupted body not preserved: %+v", last)
+	}
+}
+
+func TestStreamingOutputLimitKeepsOnePartialReply(t *testing.T) {
+	j := &journal{}
+	r := fixture(&generator{}, &executor{}, j)
+	r.Limits = DefaultLimits()
+	r.Limits.MaxModelCalls = 3
+	limit := &modelapi.OutputLimitError{Reason: "output token limit"}
+	calls := 0
+	r.Generator = boundaryModel(func(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
+		calls++
+		if err := emit(modelapi.Event{Thinking: "reasoning", Delta: "partial", Streaming: true}); err != nil {
+			return err
+		}
+		return limit
+	})
+	result, err := r.Run(t.Context(), "answer", approve, emit)
+	if !errors.Is(err, limit) || result.Status != runrecord.Stopped || calls != 1 {
+		t.Fatalf("calls=%d result=%s error=%v", calls, result.Status, err)
+	}
+	if len(j.messages) != 2 || !j.messages[1].Incomplete || j.messages[1].Content != "partial" {
+		t.Fatalf("partial reply was lost or recorded multiple times: %+v", j.messages)
 	}
 }

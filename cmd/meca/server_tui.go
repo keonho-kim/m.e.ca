@@ -14,8 +14,9 @@ import (
 	"github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 )
 
-func runServer(context.Context, startup.Mode, config.Config, string, string, *sqlite.Sessions) error {
+func runServer(context.Context, startup.Mode, config.Config, string, string, *sqlite.Sessions, *webfetch.Client) error {
 	return fault.New(catalog.FailedPrecondition, catalog.DistributionFullRequired)
 }

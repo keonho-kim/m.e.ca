@@ -43,4 +43,4 @@ Walk a representative path with real content and applicable failure, keyboard/IM
 
 An agent walkthrough is heuristic evidence. Measure time, errors or interaction counts only when actually observed and useful. A screenshot establishes presentation, not a successful save or user preference. Revise the choice when its assumptions change.
 
-Sources informing this synthesis: [GOV.UK design principles](https://www.gov.uk/guidance/government-design-principles) and [usability heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/). Apply their reasoning to the present context rather than transplanting a service's conventions.
+Sources informing this synthesis: GOV.UK design principles and usability heuristics. Apply their reasoning to the present context rather than transplanting a service's conventions.

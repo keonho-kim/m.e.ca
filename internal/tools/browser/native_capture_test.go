@@ -31,7 +31,7 @@ func TestNativeBrowserCaptureLimit(t *testing.T) {
 		fmt.Fprint(w, body)
 	}))
 	defer server.Close()
-	s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil)
+	s := New(t.TempDir(), t.TempDir(), func(text string) string { return text }, nil, nil)
 	s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
 		return browserruntime.Paths{Agent: agent, Browser: chrome}, nil
 	}

@@ -16,9 +16,10 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	teamtools "github.com/keonho-kim/meca/internal/tools/team"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 )
 
-func teamService(root *sqlite.Store, home, state string, vault *credentials.Vault) *teamrequest.Service {
+func teamService(root *sqlite.Store, home, state string, vault *credentials.Vault, web *webfetch.Client) *teamrequest.Service {
 	return &teamrequest.Service{
 		Repository: root,
 		Open: func(ctx context.Context, id string) (teamrequest.Child, error) {
@@ -33,7 +34,7 @@ func teamService(root *sqlite.Store, home, state string, vault *credentials.Vaul
 			return teamrequest.Child{Store: store, Session: store.Session(), Close: func() error { return errors.Join(store.Close(), lease.Close()) }}, nil
 		},
 		NewTools: func(options teamrequest.LocalOptions) (teamtools.Local, error) {
-			executor, err := local.NewExecutor(root.Session().ProjectRoot, home, state, vault.Redact, local.Options{Skills: options.Skills, Images: options.Images, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
+			executor, err := local.NewExecutor(root.Session().ProjectRoot, home, state, vault.Redact, local.Options{WebFetch: web, Skills: options.Skills, Images: options.Images, RedactRange: vault.RedactRange, RedactionVersion: vault.RedactionVersion, NewChunkMask: vault.NewChunkMask})
 			return executor, err
 		},
 		LoadPrompts: func() (prompt.Templates, error) { return prompts.LoadProfile(state, prompt.Team) },

@@ -2,7 +2,20 @@
 
 Choose the relationship: breadcrumb for real ancestors, sidebar for work destinations, tree for genuine nested objects, timeline for chronology and paging for result continuation. Do not mix stage, location and history merely because they can all use arrows or dots.
 
-Derive destinations and hierarchy from real recurring work. Keep the context people need while minimizing unnecessary travel; a sidebar, breadcrumb or extra rail is not required merely because another SaaS product has one.
+## Choose the navigation pattern
+
+| Pattern | Choose when | Composition and behavior |
+| --- | --- | --- |
+| Breadcrumb | The current destination has useful ancestors | Use a named navigation landmark and an ordered trail of ancestor links with decorative separators. Give the current page a distinct cue and `aria-current="page"` when linked. At narrow widths, keep the current page and parent visible and give collapsed ancestors a named opener. |
+| Hamburger menu | Primary navigation needs a compact entry | Use a real button labeled for navigation with an expanded state. Open a named navigation disclosure or drawer containing real links. Escape or Close returns focus. Choosing a link uses the destination's focus and history behavior. |
+| Navigation disclosure | A modest hierarchy groups destination links | Use one expand button and separate links when both actions exist. Keep the normal Tab sequence and show the current link inside its branch. |
+| Object tree | Users repeatedly explore nested objects | Keep focus, expansion and selection distinct. Up and Down move among visible nodes. Right expands or enters a branch and Left collapses or returns to the parent in the established pattern. Define what activation opens. |
+| Numbered pagination | Known pages can be revisited or linked | Show Previous, Next and useful page numbers with a named current page. Keep ellipses passive unless they open a named picker. Disable unavailable boundaries or omit them consistently. Preserve query, sort and browser return context. |
+| Load more or cursor continuation | People need more of a useful existing result set | Append confirmed items through a reachable control and retain scroll and selection. Announce meaningful counts and keep an intelligible end state. For automatic loading, keep a usable continuation and return path. |
+
+A navigation trigger carries real state across entry and dismissal. When a hamburger drawer becomes persistent navigation at a breakpoint, clear modal blocking and keep a sensible focus location. Keep menu entry, close and all destinations reachable without swiping. Use the [drawer and scrim guidance](dialogs-and-drawers.md).
+
+For an in-place page change, keep focus on the pagination control if it stays available and announce the resulting page or range. If the control disappears, use an available neighboring control or the results heading. Apply the new current-page cue only when the corresponding results are shown. A route-based page selection follows the target route's normal focus and browser history.
 
 
 ## Make each scope recognizable
@@ -41,6 +54,6 @@ Choose paging, load-more or infinite continuation by revisiting, comparison and 
 
 Current location updates independently of a moving marker. Open branches cannot strand focus in collapsed content; route changes restore appropriate destination focus and scroll. A late lazy-child response cannot attach children to a different branch. Reduced motion keeps static location and immediate disclosure/continuation.
 
-Test deep links/back, group collapse while focused, long Korean labels, account/permission changes, failed lazy branch, stale query, invalid last page and return from detail. Reuse existing router and navigation primitives rather than a second history model. Release observers, subscriptions, retained pages and effects with their owner.
+Test deep links and back navigation, group collapse while focused, long labels, account and permission changes, failed lazy branches, stale queries, invalid last pages and return from detail. Reuse the existing router and navigation primitives. Release observers, subscriptions, retained pages and effects with their owner.
 
-Sources: [WAI APG breadcrumb](https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/) and [tree view](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/).
+Sources: WAI APG breadcrumb and tree view.

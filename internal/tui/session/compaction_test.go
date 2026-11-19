@@ -38,7 +38,7 @@ func TestCompactionContext(t *testing.T) {
 	if err := a.opts.Store.Commit(ctx, a.opts.Session.ID, []runrecord.Entry{{Message: &modelapi.Message{Role: "user", Content: "Earlier goal: update src/auth.go"}}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 245760, Kind: "request"}); err != nil {
+	if err := a.opts.Store.AddContextTokens(ctx, a.opts.Session.ID, compact.TokenCount{Amount: 196608, Kind: "request"}); err != nil {
 		t.Fatal(err)
 	}
 	const summaryMemo = "- Request: Update src/auth.go.\n- Result: No code changes yet.\n- Next: Continue the requested implementation."
@@ -138,11 +138,21 @@ func TestManualCompactionCommand(t *testing.T) {
 	}
 	var calls atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/tokenize" {
+			fmt.Fprint(w, `{"count":1200,"max_model_len":32768}`)
+			return
+		}
 		calls.Add(1)
-		var body struct{ Messages []modelapi.Message }
+		var body struct {
+			Messages  []modelapi.Message
+			MaxTokens int `json:"max_tokens"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
 			return
+		}
+		if body.MaxTokens != 2293 {
+			t.Errorf("summary requested %d output tokens, want 2293 for the serving context", body.MaxTokens)
 		}
 		if len(body.Messages) != 2 || !strings.Contains(body.Messages[0].Content, "# Summarize work for continuation") ||
 			!strings.Contains(body.Messages[1].Content, "Keep the blue file.") {
@@ -161,7 +171,11 @@ func TestManualCompactionCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(a.connection.client.Close)
-	a.connection.selection = modelconn.Selection{Connection: connection, Model: "fixture"}
+	model := modelconn.ModelInfo{ID: "fixture", ContextWindow: 65536}
+	if err := a.connection.client.BindModel(model); err != nil {
+		t.Fatal(err)
+	}
+	a.connection.selection = modelconn.Selection{Connection: connection, Model: model.ID, Details: &model}
 	a.compose.editor.Set("!compact")
 	a.submit()
 	drainTask(t, a, false)

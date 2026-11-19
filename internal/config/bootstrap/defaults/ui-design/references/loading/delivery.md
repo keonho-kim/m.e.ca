@@ -43,4 +43,4 @@ A preview/image replacement must not restart layout, duplicate spoken content or
 
 Reduced motion uses immediate media/reveal changes. Do not lazy-load critical first-screen media by habit, create a cache without invalidation or retain every preview to avoid a placeholder. Release image observers, object URLs, requests and animation handles on teardown. Measure loading waterfalls, layout shift and memory before adding a new prefetch or cache layer.
 
-Source: [MDN lazy loading](https://developer.mozilla.org/en-US/docs/Web/Performance/Guides/Lazy_loading). These are delivery/composition decisions, not a requirement for a new data-fetching dependency.
+Source: MDN lazy loading. These are delivery/composition decisions, not a requirement for a new data-fetching dependency.

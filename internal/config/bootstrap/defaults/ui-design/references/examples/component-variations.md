@@ -2,6 +2,10 @@
 
 Use these contrasting situations to decide what changes when use changes. They are not mappings from a domain to a mandatory component or copied asset. Infer the user's real task, state assumptions and adapt reliable primitives. The catalog does not need to contain the resulting arrangement or give it a name.
 
+## The same dropdown shape, different actions
+
+An Export menu groups secondary commands such as Download CSV and can close once a command is activated. A compact Format field with familiar values can use a native select and hold its draft until Save. Show format radios and short explanations when people need to compare what each export preserves. A Project combobox can search a large assignment list and keep the current project visible while results change. Test Enter and Escape in each control, including dismissing a query while retaining the chosen project.
+
 ## The same prices, different decisions
 
 **Occasional inspection:** a person checks a total and sometimes consults its explanation. A stable total with optional line-item disclosure may fit; Price Breakdown is one possible expression.

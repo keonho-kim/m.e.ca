@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"errors"
 
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 )
@@ -27,6 +28,24 @@ func (s *execution) reserveContext(bytes int64) error {
 	return s.contextMemory.Resize(3 * (bytes + s.contextBaseBytes()))
 }
 
+func (s *execution) restoreHistory(ctx context.Context) error {
+	if s.historyLoaded {
+		return nil
+	}
+	var through int64
+	if memory := s.runner.Memory; memory != nil {
+		if err := memory.Load(ctx); err != nil {
+			return err
+		}
+		s.memoryContext, through = memory.Context()
+	}
+	if err := s.loadContext(ctx, through); err != nil {
+		return err
+	}
+	s.historyLoaded = true
+	return nil
+}
+
 func (s *execution) loadContext(ctx context.Context, through int64) error {
 	s.messages = nil
 	s.projection = contextbuild.Projection{}
@@ -35,9 +54,9 @@ func (s *execution) loadContext(ctx context.Context, through int64) error {
 	}
 	messages, err := s.runner.Journal.ContextMessages(ctx, s.runner.Session, through, s.limits.MaxContextBytes, s.runner.ImageInput, func(bytes int) error { return s.reserveContext(int64(bytes)) })
 	if err != nil {
-		return err
+		return errors.Join(err, s.reserveContext(0))
 	}
 	s.messages = messages
-	s.restoreBrowserReads()
+	s.restoreObservationReads()
 	return nil
 }

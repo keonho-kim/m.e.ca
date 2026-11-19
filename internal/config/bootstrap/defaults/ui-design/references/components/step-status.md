@@ -29,7 +29,14 @@ These are UI meanings to map from the existing service, not a new required API e
 
 ## Adapt the representation
 
-Use vertical detail for long Korean labels or recovery, compact rows for an operational list, or a segment/connector form when it clarifies sequence. Include text beyond color. An order tracker can show actual chronological events; an editable wizard can show local prerequisites alongside its navigation. Do not add stages just to create a balanced graphic.
+| Variant | Composition and behavior |
+| --- | --- |
+| Ordered stage status | Show named stages, visible state text and actual current stage. Provide Retry or detail at the affected stage when supported. |
+| Event timeline | Show occurred events and timestamps in the intended order. Label planned milestones explicitly. |
+| Named activity or measured progress | Use a waiting label for unknown work and a determinate indicator for measured work. Keep the phase and task outcome distinguishable. |
+| Background task summary | Show a stable task label and concise state with a route to results, cancellation or recovery when available. |
+
+Use vertical detail for long labels or recovery, compact rows for an operational list, or a connector when it clarifies sequence. Include text beyond color. An order tracker can show actual chronological events. An editable wizard can show local prerequisites alongside its navigation. Give each displayed stage a basis in actual work.
 
 An ordered list with appropriate `aria-current="step"` is often sufficient. Non-navigable status should not become dead buttons. Report meaningful state/result changes politely without announcing every animation frame or streamed token. Keep cancel/retry controls separate, scoped and truthful.
 

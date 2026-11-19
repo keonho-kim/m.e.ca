@@ -24,7 +24,7 @@ type Settings struct {
 func Defaults() Settings {
 	return Settings{
 		Agent:      Parameters{Thinking: "inherit", Temperature: 1.0, MaxOutputTokens: 0},
-		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 8192},
+		Compaction: Parameters{Thinking: "off_if_supported", Temperature: 0.2, MaxOutputTokens: 0},
 		Diagnostic: Parameters{Thinking: "inherit", Temperature: 0.2, MaxOutputTokens: 12800},
 	}
 }

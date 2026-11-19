@@ -40,4 +40,4 @@ Use cards for independent items, weighted grids for unequal importance and ordin
 
 Authored navigation and copy appear directly. Reserve real image geometry and use a matching derivative where Blur-up is appropriate. Prioritize critical opening media; a loading effect cannot compensate for deferred useful content. Apply [loading](../loading-and-progress.md), a justified [disclosure](../components/accordion.md) or a real [form](../components/forms.md) only where needed.
 
-Inspect the actual next action, long Korean headings, missing media, keyboard access, submission/recovery and relevant resized/zoomed conditions. A design reference shows one possible composition, not proof of brand truth, user preference or production behavior.
+Inspect the actual next action, long headings, missing media, keyboard access, submission and recovery at relevant widths and zoom levels. Treat a design reference as one possible composition and verify the actual behavior in the target project.

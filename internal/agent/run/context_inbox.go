@@ -17,8 +17,9 @@ type ContextBatch struct {
 	Messages     []modelapi.Message
 	Cursor       int64
 	UserSequence int64
-	Objective    string
-	Reconsider   bool
+	// Objective is the latest user-authored instruction admitted by the inbox.
+	Objective  string
+	Reconsider bool
 }
 
 type contextJournal interface {
@@ -73,6 +74,7 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	s.observeUserSequence(batch.UserSequence)
 	if batch.Objective != "" {
 		s.checkpoint.Objective = s.runner.Redact(batch.Objective)
+		s.webFetchUserInput = s.checkpoint.Objective
 		if err := s.readMentions(ctx, batch.Objective); err != nil {
 			return false, err
 		}

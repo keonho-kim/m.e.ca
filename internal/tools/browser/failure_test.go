@@ -18,7 +18,7 @@ import (
 
 func TestFailedObservationWriteReleasesMemory(t *testing.T) {
 	directory := os.Getenv("MECA_BROWSER_DISK_TEST_DIR")
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	if directory == "" {
 		s.work = filepath.Join(t.TempDir(), "not-a-directory")
 		if err := os.WriteFile(s.work, nil, 0600); err != nil {
@@ -60,7 +60,7 @@ func TestBrowserFailedExecNeverOccupiesSessionSlot(t *testing.T) {
 	base := t.TempDir()
 	missing := filepath.Join(base, "missing-helper")
 	for range cap(slots) + 1 {
-		s := New("", base, func(text string) string { return text }, nil)
+		s := New("", base, func(text string) string { return text }, nil, nil)
 		s.prepare = func(context.Context, string) (browserruntime.Paths, error) {
 			return browserruntime.Paths{Agent: missing}, nil
 		}
@@ -74,7 +74,7 @@ func TestBrowserFailedExecNeverOccupiesSessionSlot(t *testing.T) {
 }
 
 func TestFailedShutdownCanRetry(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work, s.sockets = t.TempDir(), t.TempDir()
 	s.helperStarted = true
 	s.paths.Agent = filepath.Join(t.TempDir(), "missing-helper")

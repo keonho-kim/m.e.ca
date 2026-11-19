@@ -94,7 +94,7 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 
 func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 	home, project := t.TempDir(), t.TempDir()
-	configuration, err := bootstrap.Initialize(home)
+	configuration, err := bootstrap.Initialize(t.Context(), home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 	}
 	defer store.Close()
 	vault := &credentials.Vault{State: state}
-	service := teamService(store, home, state, vault)
+	service := teamService(store, home, state, vault, nil)
 	var names []string
 	for range 2 {
 		member, err := store.CreateTeamAgent(context.Background())

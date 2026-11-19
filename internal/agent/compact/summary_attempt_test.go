@@ -23,15 +23,21 @@ func TestSummaryMeasuredCapacityRefitsOnce(t *testing.T) {
 		}
 		c := Controller{ContextWindow: 65536, Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 		calls, firstBytes := 0, 0
-		changed, err := c.Refresh(context.Background(), nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
+		changed, err := c.Refresh(context.Background(), modelapi.InputBudget{}, nil, func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 			calls++
 			size := 0
 			for _, m := range request.Messages {
 				size += len(m.Content)
 			}
 			if calls == 1 {
+				if request.MaxOutput != 4587 {
+					t.Errorf("first output budget=%d, want 4587", request.MaxOutput)
+				}
 				firstBytes = size
 				return &modelapi.ContextLimitError{Input: size, Capacity: 32768}
+			}
+			if request.MaxOutput != 2293 {
+				t.Errorf("refitted output budget=%d, want 2293", request.MaxOutput)
 			}
 			if size >= firstBytes || size+request.MaxOutput > 32768 {
 				t.Errorf("packet still exceeds measured budget: bytes=%d output=%d", size, request.MaxOutput)

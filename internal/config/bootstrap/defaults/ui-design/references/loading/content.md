@@ -43,6 +43,19 @@ For known first-load structure, consider **Skeleton Pulse** as a quiet opacity v
 
 Pulse changes opacity without resizing text/rows. Shimmer moves a highlight within the reserved shape rather than animating layout. Both stop on real content, empty, denied or failed outcome. Reduced motion and forced-color needs receive a static readable placeholder/status. Never delay already-ready content for a full animation cycle or use motion as the only sign of pending work.
 
+## Empty states
+
+Keep the relevant heading, query and collection controls available. Give the empty region a specific message and one useful action when available. Use an illustration only when it explains the task or destination.
+
+| What happened | What to compose |
+| --- | --- |
+| No items yet | Name the collection and offer a supported first action such as Create or Import. |
+| No matches | Keep the query and applied filters visible. Offer an edit, clear or reset path. |
+| All items were processed | Confirm the actual outcome and offer a return or next queue if relevant. |
+| Access denied or read failed | Keep access instructions or recovery visible in an inline alert or result region. |
+
+Replace the pending composition when the outcome is known. Keep focus on the current control when filtering finishes. If an activated item was removed, move focus to a visible neighboring action or the collection's appropriate heading.
+
 An optional [loading study](../../assets/examples/motion/motion-lab.html) contains both variants; [motion CSS](../../assets/examples/shared/motion.css) defines their animation and reduced-motion rules. Study its geometry and terminal states, then use the target project’s primitive and data lifecycle. Its selectors and timing are not a reusable specification.
 
 ## Accessibility and material
@@ -53,4 +66,4 @@ Use the theme's neutral surface and feedback roles. Skeletons should resemble wi
 
 Avoid full-page waves and flashing regions. Check forced colors, contrast, zoom and overlay backgrounds. Stop animations, timers and observers when content resolves or the region leaves. Measure expensive blur, large animated gradients and repeated placeholders before adding more visual work.
 
-Sources: [Carbon loading](https://www.carbondesignsystem.com/building-blocks/core/patterns/loading) and [MUI Skeleton](https://mui.com/material-ui/react-skeleton/). Static, pulse and shimmer are alternatives; decoration must not extend the pending state.
+Sources: Carbon loading and MUI Skeleton. Static, pulse and shimmer are alternatives; decoration must not extend the pending state.

@@ -38,7 +38,7 @@ type Message struct {
 	ModelID         string         `json:"model_id,omitempty"`
 	Thinking        *bool          `json:"thinking,omitempty"`
 
-	// TransientObservation is a browser result for the next completed model decision.
+	// TransientObservation supplies detailed evidence for the next completed model decision.
 	TransientObservation bool `json:"transient_observation,omitempty"`
 }
 
@@ -51,6 +51,9 @@ type Request struct {
 	Messages        []Message
 	MaxOutput       int
 	Thinking        *bool
+
+	// OutputContextPercent further bounds output using the effective context window.
+	OutputContextPercent uint8
 }
 
 type Response struct {
@@ -72,6 +75,7 @@ type Event struct {
 	Progress bool
 	// InputBytes is transient text-request size from the transport, never token usage.
 	InputBytes     int64
+	InputBudget    *InputBudget
 	ReasoningState []byte
 	Retry          *Retry
 	Delta          string
@@ -82,7 +86,28 @@ type Event struct {
 	Usage          *TokenUsage
 }
 
-// Retry begins a fresh generation attempt; consumers discard its previous partial answer.
+// HasOutput reports response content or completion delivered by a generation.
+func (e Event) HasOutput() bool {
+	return e.Delta != "" || e.Thinking != "" || len(e.Calls) > 0 || e.Done
+}
+
+// InputBudget describes the context and output reservation used by the adapter.
+// InputTokens is zero when the provider did not tokenize the request.
+type InputBudget struct {
+	Window, InputTokens, OutputTokens int
+}
+
+// Stream sends one request whose input and model settings have already been bound.
+type Stream func(context.Context, func(Event) error) error
+
+// PreparedGeneration measures a request without starting generation. Send
+// owns that request and must be used or discarded before preparing another.
+type PreparedGeneration struct {
+	Budget InputBudget
+	Send   Stream
+}
+
+// Retry begins a fresh attempt at an incomplete generation. Deltas after it start at offset zero.
 type Retry struct {
 	Attempt, MaxAttempts int
 	Reason               string

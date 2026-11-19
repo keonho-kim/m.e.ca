@@ -4,7 +4,7 @@ Use the product's actual systems, content or imaginative brief to create a coher
 
 ## Keep the instrument meaningful
 
-Let real relationships determine lines, geometry, grouping, notation and density. A grid can serve coordinates, a map, a diagram or measurement; it need not sit behind ordinary settings. Code typography serves code/identifiers, while Korean labels and explanations retain readable text roles.
+Let real relationships determine lines, geometry, grouping, notation and density. A grid can serve coordinates, a map, a diagram or measurement. Reserve code typography for code and identifiers. Set labels and explanations in readable text roles.
 
 Choose light/dark, neutral temperature and accent from the usage scene and requested identity. A light precise system, graphite with warm signals or an explicitly expressive palette can each work. Category and process state keep separate meanings.
 
@@ -24,4 +24,4 @@ Preserve the same content and ordinary operation when movement/effects are reduc
 
 A public story, AI artifact workspace, technical inspector and data overview need different information priority. The [object/history study](../../assets/examples/database/history.html) and [DB styles](../../assets/examples/database/database.css) can inform technical hierarchy and scope. Their dark workbench is an implementation case, not a complete futuristic preset.
 
-Check real/empty/failed data, long Hangul, readable code, focus, zoom and actual task completion. A detector score or convincing science-fiction silhouette cannot establish that the interface works.
+Check actual data, empty and failed states, long labels, readable code, focus, zoom and task completion.

@@ -21,10 +21,24 @@ type sourceEntry struct {
 	mandatory bool
 	important bool
 }
+
+type sourcePayload struct{ Role, Text string }
+
+func (p sourcePayload) matches(other sourcePayload) bool {
+	if p.Role != other.Role || len(p.Text) != len(other.Text) {
+		return false
+	}
+	// Reject different endings before scanning a potentially long common prefix.
+	suffixStart := max(0, len(p.Text)-8)
+	return p.Text[suffixStart:] == other.Text[suffixStart:] && p.Text == other.Text
+}
+
 type sourceBuffer struct {
 	entries                         list.List
 	normal, important               []*list.Element
 	bytes, required, limit, omitted int
+	lastInput                       sourcePayload
+	lastAvailable                   int
 }
 
 func (b *sourceBuffer) add(record Record, redact func(string) string) error {
@@ -44,7 +58,11 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 		}
 		text = sourceExcerpt(text, limit)
 	}
-	payload := struct{ Role, Text string }{record.Role, redact(text)}
+	input := sourcePayload{record.Role, redact(text)}
+	if !mandatory && b.lastAvailable > 0 && b.lastAvailable == available && b.lastInput.matches(input) {
+		return nil
+	}
+	payload := input
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -87,6 +105,9 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 			b.omitted++
 			return nil
 		}
+		if remove == b.entries.Back() {
+			b.lastInput, b.lastAvailable = sourcePayload{}, 0
+		}
 		b.bytes -= len(entry.encoded) + 1
 		(*queue)[0] = nil
 		*queue = (*queue)[1:]
@@ -98,6 +119,11 @@ func (b *sourceBuffer) add(record Record, redact func(string) string) error {
 	}
 	if mandatory {
 		b.required += size
+	}
+	// Keep only the last optional input, bounded by its retained encoding.
+	b.lastInput, b.lastAvailable = sourcePayload{}, 0
+	if !mandatory && len(input.Text) <= len(encoded) {
+		b.lastInput, b.lastAvailable = input, available
 	}
 	entry := b.entries.PushBack(sourceEntry{encoded, mandatory, important})
 	if !mandatory {

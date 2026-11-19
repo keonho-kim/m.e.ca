@@ -14,10 +14,8 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/config"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/credentials/credentialtest"
-	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/policy"
 	storagesession "github.com/keonho-kim/meca/internal/storage/session"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
@@ -42,7 +40,7 @@ func fixture(t testing.TB) *app {
 	t.Helper()
 	home, root := t.TempDir(), t.TempDir()
 	state := filepath.Join(home, ".meca")
-	configuration, err := bootstrap.Initialize(home)
+	configuration, err := config.Load(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +70,7 @@ func fixture(t testing.TB) *app {
 	return terminalFixture(t, Options{
 		Home: home, State: state, Config: configuration,
 		Store: store, Session: store.Session(), Tools: tools, Skills: tools.Skills(), Files: tools.Files, Vault: vault,
-		LoadPrompts: func() (prompt.Templates, error) { return prompts.Load(state) },
+		LoadPrompts: func() (prompt.Templates, error) { return prompt.Defaults(), nil },
 		UpdateConfig: func(ctx context.Context, apply func(*config.Config)) (config.Config, error) {
 			return config.Update(ctx, state, apply)
 		},

@@ -1,6 +1,6 @@
 // Purpose: Bind browser operations to native approval, credential redaction and vision contracts.
 // Pattern: Prepared local tool adapter over a session-owned browser.
-// Usage: Executor.Prepare dispatches browser calls here; runner cleanup calls EndBrowser.
+// Usage: Executor.Prepare dispatches approved browser calls here.
 // Related: internal/tools/browser/session.go, internal/tools/local/catalog/browser.go.
 package local
 
@@ -99,17 +99,4 @@ func (op *browserOperation) Execute(ctx context.Context, approved bool) (tool.Re
 	}
 	result.Content, err = page.ToolContent()
 	return result, err
-}
-func (e *Executor) EndBrowser(ctx context.Context) error {
-	if e.browser == nil {
-		return nil
-	}
-	return e.browser.Close(ctx)
-}
-
-func (e *Executor) BrowserCursors(ctx context.Context) ([]tool.BrowserCursor, error) {
-	if e.browser == nil {
-		return nil, nil
-	}
-	return e.browser.Cursors(ctx)
 }

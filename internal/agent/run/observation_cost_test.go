@@ -31,15 +31,15 @@ func TestObservationDoesNotPollCommandsPerToken(t *testing.T) {
 	r := fixture(&generator{}, e.executor, j)
 	r.Tools = e
 	s := execution{runner: r}
-	g := statisticsModel(func(_ context.Context, _ modelapi.Request, send func(modelapi.Event) error) error {
+	send := func(_ context.Context, emit func(modelapi.Event) error) error {
 		for range 1000 {
-			if err := send(modelapi.Event{Delta: "x", Streaming: true}); err != nil {
+			if err := emit(modelapi.Event{Delta: "x", Streaming: true}); err != nil {
 				return err
 			}
 		}
-		return send(modelapi.Event{Done: true})
-	})
-	if err := s.generateObserved(ctx, g, modelapi.Request{}, func(modelapi.Event) error { return nil }); err != nil {
+		return emit(modelapi.Event{Done: true})
+	}
+	if err := s.observeModelIO(ctx, send, func(modelapi.Event) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if e.polls != 1 {

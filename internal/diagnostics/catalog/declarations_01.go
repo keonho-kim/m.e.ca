@@ -71,6 +71,7 @@ const (
 	CompactInvalidCompactionSourceBoundary                         Message = "invalid compaction source boundary"
 	CompactInvalidCompactionSourceCursor                           Message = "invalid compaction source cursor"
 	ConfigColumnWidthMustBeBetweenAnd                              Message = "column_width must be between 8 and 80"
+	ConfigCompactionReserveRemoved                                 Message = "remove [compaction].reserve_tokens from config.toml. Automatic compaction uses 75% of the effective context window."
 	ConfigConfigurationExceedsMiB                                  Message = "configuration exceeds 16 MiB"
 	ConfigInputMaxLinesMustBeBetweenAnd                            Message = "input_max_lines must be between 1 and 5"
 	ConfigInvalidSavedModelNameOrCredentialReference               Message = "invalid saved model name or credential reference"

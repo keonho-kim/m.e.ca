@@ -21,10 +21,11 @@ import (
 type streamState struct {
 	router chat.ReasoningState
 	native.State
-	responses responses.Decoder
-	provider  modelconn.ProviderKind
-	claude    claude.Decoder
-	gemini    gemini.Decoder
+	responses  responses.Decoder
+	provider   modelconn.ProviderKind
+	chatFinish string
+	claude     claude.Decoder
+	gemini     gemini.Decoder
 }
 
 func (state *streamState) consume(content []byte, single bool, emit func(modelapi.Event) error) error {
@@ -70,7 +71,11 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 		state.Finished = *frame.Done
 	}
 	if frame.Reason != nil {
-		if reasonErr := sanitizeReason(*frame.Reason); reasonErr != nil {
+		reason := *frame.Reason
+		if !isOllama && reason != "" {
+			state.chatFinish = reason
+		}
+		if reasonErr := sanitizeReason(reason); reasonErr != nil {
 			state.Failure = reasonErr
 		}
 	}
@@ -112,11 +117,18 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 	if state.Failure != nil {
 		return state.EmitFailedUsage(state.Failure, emit)
 	}
-	if !state.Finished || !state.Received {
+	// Chat Completions may report final usage after finish_reason and then
+	// close cleanly. Keep reading until the SSE terminator or EOF.
+	finished := state.Finished || state.chatFinish == "stop" || state.chatFinish == "tool_calls"
+	if !finished || !state.Received {
 		return faults.Transient(faults.Errorf(diagcatalog.ProtocolModelStreamEndedBeforeCompletion))
 	}
 	calls, err := state.Calls.Complete()
 	if err != nil {
+		return state.EmitFailedUsage(err, emit)
+	}
+	if state.chatFinish == "tool_calls" && len(calls) == 0 {
+		err := &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ProtocolToolFinishWithoutCalls)}
 		return state.EmitFailedUsage(err, emit)
 	}
 	continuation := state.Continuation

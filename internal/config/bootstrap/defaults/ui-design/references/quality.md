@@ -12,7 +12,7 @@ Can a person identify the object/task, find decisive facts, make the needed comp
 
 Inspect proportion, type, density, alignment, image contribution, material, color and motion together. A palette swap cannot repair weak hierarchy. Minimalism still needs functional emphasis; multiple accents need stable meanings; editorial scale can deliberately trade first-viewport metadata density for reading/image focus.
 
-Use real representative content: long Korean/mixed-script titles, missing media, null/large values and meaningful volume. Compare alternatives with task/data/state/viewport held stable. Treat expected benefit as a hypothesis until observed; an agent walkthrough is not user research.
+Use representative content with long titles, missing media, absent and large values, and realistic volume. Compare alternatives with task, data, state and viewport held stable. Record the source of the evidence and treat expected benefits as hypotheses until observed.
 
 ## Inspect painted states
 
@@ -20,9 +20,9 @@ Check relevant laptop/wide dimensions and viewport heights, resized width, zoom 
 
 Verify actual fonts, image/SVG loading, inherited/conditional theme roles and composited backgrounds. If a capture looks wrong, establish whether the failure is source behavior, missing resources, file-origin restrictions or capture geometry before changing the design to match an artifact.
 
-Check text and meaningful control/state contrast using the [actual criteria](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) and [non-text guidance](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html). Distinguish decoration from a cue required to identify a control or state.
+Check text and meaningful control or state contrast using WCAG 2.2 Contrast (Minimum) and Non-text Contrast. Distinguish decoration from a cue required to identify a control or state.
 
-Pointer targets follow the supported input and applicable criterion. WCAG 2.2 AA [target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) generally uses 24×24 CSS px with specified alternatives/exceptions; 44×44 is the enhanced criterion, not a universal AA minimum. Larger targets can be useful without making every dense desktop control a mobile-sized tile.
+Pointer targets follow the supported input and applicable criterion. WCAG 2.2 AA target size generally uses 24×24 CSS px with specified alternatives/exceptions; 44×44 is the enhanced criterion, not a universal AA minimum. Larger targets can be useful without making every dense desktop control a mobile-sized tile.
 
 ## Exercise the behavior that exists
 
@@ -30,6 +30,7 @@ Pointer targets follow the supported input and applicable criterion. WCAG 2.2 AA
 | --- | --- |
 | Navigation/objects/views | Deep link, browser back, changed selection and coherent return scope |
 | Query/facets | Later response cannot replace the current query; independent filter dimensions remain independent |
+| Selection controls | Compare visible choices with a compact picker where useful. Check the focus, draft, committed value and recovery with representative options. |
 | Input/form | IME, caret, validation and failure preserve useful work |
 | Commitment | Confirmed, partial and unknown outcomes differ; uncertain side effects are not blindly replayed |
 | Detail/overlay | Correct target, keyboard entry/exit, removed opener, dirty/pending close and focus return |
@@ -37,7 +38,7 @@ Pointer targets follow the supported input and applicable criterion. WCAG 2.2 AA
 | Media | Matching preview, cached-ready image, missing/decode failure and stable geometry |
 | Stages/progress/stream | Location, measured phase, observer connection and actual outcome remain distinct |
 | Direct manipulation | Stable identity, non-drag alternative, interrupted movement and usable scale |
-| Motion | Rapid reversal, selection changes, route exit and reduced preference settle to current state |
+| Motion | Rapid reversal, selection changes, route exit and reduced motion preserve the current state. Check focus and the final state when an optional effect is unavailable. |
 | Feedback | Important recovery persists; repeated events do not flood toasts or live announcements |
 
 Choose applicable failure states rather than implementing every row for a small change. Use existing accessible primitives; source ARIA attributes alone do not establish correct assistive behavior. State which keyboard, screen-reader and reduced-effects checks were actually run.

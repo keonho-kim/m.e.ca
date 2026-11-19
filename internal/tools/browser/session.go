@@ -16,6 +16,7 @@ import (
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/tools/browser/runtime"
+	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
 )
 
 type Session struct {
@@ -28,17 +29,22 @@ type Session struct {
 	version                                  func() int
 	prepare                                  func(context.Context, string) (runtime.Paths, error)
 	results                                  []storedResult
+	documents                                *webfetch.Documents
 	snapshot                                 snapshotBaseline
 	releaseBrowser                           func()
 	helperStarted, stopped                   bool
 }
 
-func New(state, base string, redact func(string) string, version func() int) *Session {
-	return &Session{gate: make(chan struct{}, 1), state: state, base: base, redact: redact, version: version, prepare: runtime.OpenInstalled}
+func New(state, base string, redact func(string) string, version func() int, access *webfetch.Client) *Session {
+	return &Session{gate: make(chan struct{}, 1), state: state, base: base, redact: redact, version: version, prepare: runtime.OpenInstalled,
+		documents: webfetch.NewDocuments(access, base, redact, version)}
 }
 
-// Available reports whether the session's browser dependencies are installed.
-func (s *Session) Available() bool { return s != nil && runtime.Available(s.state) }
+// AvailableTools reports the installed capabilities without opening a browser.
+func (s *Session) AvailableTools() (interactive, fetch bool) {
+	interactive = runtime.Available(s.state)
+	return interactive, s.documents != nil && (interactive || runtime.ChromeAvailable(s.state))
+}
 
 func (s *Session) Current() string         { s.mu.Lock(); defer s.mu.Unlock(); return s.address }
 func (s *Session) setAddress(value string) { s.mu.Lock(); s.address = value; s.mu.Unlock() }
@@ -174,7 +180,11 @@ func (s *Session) Close(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	return s.closeLocked(ctx)
+	var documentsErr error
+	if s.documents != nil {
+		documentsErr = s.documents.Close()
+	}
+	return errors.Join(documentsErr, s.closeLocked(ctx))
 }
 func (s *Session) closeLocked(ctx context.Context) error {
 	if s.work == "" {

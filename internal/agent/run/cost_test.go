@@ -79,7 +79,7 @@ func TestCostCompactionUsesSameAccounting(t *testing.T) {
 	s := execution{runner: r, limits: DefaultLimits(), usage: requestBudget{}, emit: emit, statistics: runStatistics{started: time.Now()}}
 	s.usage.begin(s.limits)
 	for _, role := range []inference.Role{inference.Agent, inference.Compaction} {
-		if err := s.generate(context.Background(), modelapi.Request{}, role, func(modelapi.Event) error { return nil }); err != nil {
+		if err := s.generate(context.Background(), modelapi.Request{}, role, nil, func(modelapi.Event) error { return nil }); err != nil {
 			t.Fatal(err)
 		}
 	}

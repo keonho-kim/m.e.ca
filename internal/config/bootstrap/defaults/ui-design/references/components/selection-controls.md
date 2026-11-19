@@ -1,11 +1,21 @@
 # Checkbox, radio, switch and range
 
-Choose by meaning: checkbox for independent inclusion/consent, radio for one of a visible option set, switch for a binary setting, range/slider for continuous adjustment. A switch must make immediate versus saved-with-form application clear. Show actual units and an exact-value path when precision matters.
+Use a checkbox for inclusion, consent or a value staged with other form edits. Use radios for an exclusive group that benefits from visible comparison. A switch fits a recognizable on/off setting and should show when the effect takes hold. If the setting is staged, make Save and the draft state visible. Use a pressed toggle button for a tool mode such as bold text. Use a slider for continuous adjustment and offer an exact-value path with units where precision matters.
 
 Anatomy: accessible label, operable target, visible current state, useful help/group legend and applicable pending/error. Make focus distinct from checked/selected and do not rely on color alone. Native controls or the established accessible primitive remain the behavior owner.
 
 The decision model comes first: one choice, independent choices, immediate setting or precise range. Choose visible comparison and grouping from actual option content. An attractive selection card or animated mark cannot justify changing those semantics or adding unnecessary choices.
 
+## Compose the selection control
+
+| Variant | Composition and behavior |
+| --- | --- |
+| Checkbox | Pair a persistent label with the check. Space changes inclusion. Use an explicit form action for staged changes. |
+| Mixed-state parent | Label the affected group and show checked, unchecked or mixed from eligible children. Define what activating from mixed does, including across pages. |
+| Radio group or selection cards | Show a group question and all useful option labels and explanations. Use the platform's one-of-many keyboard model. A whole card can label one choice. |
+| Switch | Give the setting a stable label and clear on/off state. State when applying it affects the system. Keep pending and confirmed values distinct. |
+| Toggle button | Give the mode a stable name and accessible pressed state. Pressing Bold again releases it while the editor keeps its selection. |
+| Slider with precise entry | Give the range a label, units, limits and current value. Let keys make predictable steps and offer exact entry when precision or non-drag operation matters. |
 
 ## Make the choice model visible
 
@@ -38,6 +48,6 @@ Respect native Space/arrow behavior for the selected pattern. Do not make a chec
 
 For server-backed settings, show submitting/confirmed/failed/unknown as relevant. Reconcile rapid toggles using the actual API ordering/identity; an older failure cannot roll back a newer confirmed value. Preserve prior confirmed state and pending intent separately when needed. If changes apply only on Save, do not pretend the switch persisted immediately.
 
-Reduced motion retains static marks and direct thumb/value updates. Stop stale selection animations on reversal, unmount or changed group. Test keyboard, long Korean option text, mixed→all→none, disabled members, server failure, rapid toggles, range endpoints and forced colors. Hidden decorative marks cannot replace the input's accessible state.
+Reduced motion retains static marks and direct thumb/value updates. Stop stale selection animations on reversal, unmount or changed group. Test keyboard, long option labels, mixed→all→none, disabled members, server failure, rapid toggles, range endpoints and forced colors. Hidden decorative marks cannot replace the input's accessible state.
 
-Sources: [WAI APG checkbox](https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/), [radio](https://www.w3.org/WAI/ARIA/apg/patterns/radio/), [switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/) and [slider](https://www.w3.org/WAI/ARIA/apg/patterns/slider/).
+Sources: WAI APG checkbox, radio, switch and slider.

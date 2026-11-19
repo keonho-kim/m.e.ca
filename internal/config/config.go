@@ -43,6 +43,15 @@ func Load(directory string) (configuration Config, err error) {
 		return configuration, faults.Errorf(diagcatalog.ConfigConfigurationExceedsMiB)
 	}
 	if err = toml.NewDecoder(bytes.NewReader(content)).DisallowUnknownFields().Decode(&configuration); err != nil {
+		var missing *toml.StrictMissingError
+		if errors.As(err, &missing) {
+			for _, field := range missing.Errors {
+				key := field.Key()
+				if len(key) == 2 && key[0] == "compaction" && key[1] == "reserve_tokens" {
+					return configuration, faults.New(diagcatalog.InvalidArgument, diagcatalog.ConfigCompactionReserveRemoved)
+				}
+			}
+		}
 		return configuration, faults.Errorf(diagcatalog.ConfigParseConfiguration, err)
 	}
 	return configuration, check(configuration)

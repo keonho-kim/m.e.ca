@@ -32,4 +32,4 @@ Authentication, onboarding, plan/billing and administration belong only when the
 
 Known creation labels should appear directly; unresolved fetched values need honest local loading. Submission retains the form and shows feedback near the commitment, rather than skeletonizing input. Use [forms](../components/forms.md) for the selected controls.
 
-Walk inspect → edit → fail → correct → confirm → return where functional behavior exists. Check long Korean labels, IME, dirty close, dependency changes, focus and uncertain outcomes. A design shell can illustrate these arrangements; it must not claim a real save, authorization or transaction from appearance alone.
+Walk inspect → edit → fail → correct → confirm → return where functional behavior exists. Check long labels, text composition, closing with unsaved changes, dependency changes, focus and uncertain outcomes. Describe a design shell's illustrated states according to what it demonstrates.

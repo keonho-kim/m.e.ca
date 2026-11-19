@@ -33,6 +33,7 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, messages 
 	done := false
 	request := parameters.Apply(modelapi.Request{ModelID: c.Model, Messages: messages})
 	request.MaxOutput = budget.outputTokens
+	request.OutputContextPercent = budget.outputContextPercent
 	err = generate(ctx, request, func(event modelapi.Event) error {
 		if event.Retry != nil {
 			reply.Reset()

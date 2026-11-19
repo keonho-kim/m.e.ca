@@ -5,6 +5,7 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 
 	"os"
@@ -19,7 +20,10 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-func Initialize(home string) (configuration config.Config, err error) {
+func Initialize(ctx context.Context, home string) (configuration config.Config, err error) {
+	if err := ctx.Err(); err != nil {
+		return configuration, err
+	}
 	directory := filepath.Join(home, statefs.DirectoryName)
 	root, err := statefs.Open(directory)
 	if err != nil {
@@ -41,7 +45,7 @@ func Initialize(home string) (configuration config.Config, err error) {
 		return configuration, faults.Errorf(diagcatalog.BootstrapConfigurationMustBeARegularFile)
 	}
 	for _, name := range []string{"logs", "sessions"} {
-		directory, err := openPrivateDirectory(root, name)
+		directory, _, err := openPrivateDirectory(root, name)
 		if err != nil {
 			return configuration, err
 		}
@@ -52,37 +56,47 @@ func Initialize(home string) (configuration config.Config, err error) {
 	if err = prompts.Bootstrap(root); err != nil {
 		return configuration, err
 	}
-	if err = bootstrapSkills(root); err != nil {
+	if err = bootstrapSkills(ctx, root); err != nil {
 		return configuration, err
 	}
 	return config.Load(directory)
 }
 
-func openPrivateDirectory(parent *os.Root, name string) (*os.Root, error) {
-	if err := parent.Mkdir(name, 0700); err != nil && !errors.Is(err, os.ErrExist) {
-		return nil, err
-	}
+func openPrivateDirectory(parent *os.Root, name string) (*os.Root, bool, error) {
 	before, err := parent.Lstat(name)
+	created := false
+	if errors.Is(err, os.ErrNotExist) {
+		mkdirErr := parent.Mkdir(name, 0700)
+		if mkdirErr != nil && !errors.Is(mkdirErr, os.ErrExist) {
+			return nil, false, mkdirErr
+		}
+		created = mkdirErr == nil
+		before, err = parent.Lstat(name)
+	}
 	if err != nil {
-		return nil, err
+		return nil, created, err
 	}
 	if !before.IsDir() || before.Mode()&os.ModeSymlink != 0 {
-		return nil, faults.Errorf(diagcatalog.BootstrapMustBeARealDirectory, name)
+		return nil, created, faults.Errorf(diagcatalog.BootstrapMustBeARealDirectory, name)
 	}
 	directory, err := parent.OpenRoot(name)
 	if err != nil {
-		return nil, err
+		return nil, created, err
 	}
 	file, err := directory.Open(".")
 	if err != nil {
-		return nil, errors.Join(err, directory.Close())
+		return nil, created, errors.Join(err, directory.Close())
 	}
 	after, err := file.Stat()
 	if err != nil || !os.SameFile(before, after) {
-		return nil, errors.Join(faults.Errorf(diagcatalog.BootstrapChangedDuringInitialization, name), err, file.Close(), directory.Close())
+		return nil, created, errors.Join(faults.Errorf(diagcatalog.BootstrapChangedDuringInitialization, name), err, file.Close(), directory.Close())
 	}
-	if err := errors.Join(file.Chmod(0700), file.Close()); err != nil {
-		return nil, errors.Join(err, directory.Close())
+	const permissionBits = os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky
+	if after.Mode()&permissionBits != 0700 {
+		err = file.Chmod(0700)
 	}
-	return directory, nil
+	if err := errors.Join(err, file.Close()); err != nil {
+		return nil, created, errors.Join(err, directory.Close())
+	}
+	return directory, created, nil
 }

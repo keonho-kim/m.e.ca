@@ -10,23 +10,13 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
-	"github.com/keonho-kim/meca/internal/config/bootstrap"
 	"github.com/keonho-kim/meca/internal/config/prompts"
-	"github.com/keonho-kim/meca/internal/config/statefs"
 )
 
 func TestRefreshReplacesEditsAndSkipsIdenticalFiles(t *testing.T) {
 	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
 		t.Run(string(profile), func(t *testing.T) {
-			home := t.TempDir()
-			if _, err := bootstrap.Initialize(home); err != nil {
-				t.Fatal(err)
-			}
-			root, err := statefs.Open(filepath.Join(home, ".meca"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer root.Close()
+			root := promptRoot(t)
 			path := filepath.Join(root.Name(), "prompts", string(profile), "system.md")
 			before, err := os.Stat(path)
 			if err != nil {
@@ -54,15 +44,7 @@ func TestRefreshReplacesEditsAndSkipsIdenticalFiles(t *testing.T) {
 }
 
 func TestRefreshRefusesLinkedPrompt(t *testing.T) {
-	home := t.TempDir()
-	if _, err := bootstrap.Initialize(home); err != nil {
-		t.Fatal(err)
-	}
-	root, err := statefs.Open(filepath.Join(home, ".meca"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer root.Close()
+	root := promptRoot(t)
 	outside := filepath.Join(t.TempDir(), "user-file")
 	if err := os.WriteFile(outside, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)

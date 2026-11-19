@@ -6,7 +6,7 @@ Use this level-2 map when choosing or refining identity. The target product's es
 | --- | --- |
 | Composition, type, geometry, density, imagery and motion as a direction | [Design directions](design-directions.md) |
 | Whole-frame alternatives and their visibility costs | [Composition decisions](composition-decisions.md) |
-| Hangul/mixed-script hierarchy, rhythm and readable density | [Type and space](type-and-space.md) |
+| Type hierarchy, rhythm and readable density | [Type and space](type-and-space.md) |
 | Neutral foundation, multiple accents, data/state and light/dark | [Color principles](color-systems.md) |
 | Expressive choices worth preserving during review | [Expressive craft](expressive-craft.md) |
 | Translucent layers with opaque working content | [Glass](themes/glassmorphism.md) |
@@ -35,7 +35,7 @@ Professional clarity does not require one corporate palette or a global sidebar.
 
 Use the project's token/component mechanism for canvas, working/raised/overlay surfaces, primary/supporting ink, rules, interactive boundaries, action/paired ink, selection, focus and real status. Define only roles with consumers. Typography, spacing, radii and elevation should describe the same relationships across views.
 
-Keep prose measure separate from data width. Align repeated rows and related actions. An editorial title or authored page can have more scale than its surrounding file toolbar. Dense controls can remain compact while their hit areas and labels stay usable. Inspect actual Korean copy and fallback fonts.
+Keep prose measure separate from data width. Align repeated rows and related actions. An editorial title or authored page can have more scale than its surrounding file toolbar. Dense controls can remain compact while their hit areas and labels stay usable. Inspect representative copy and font fallbacks.
 
 A neutral base may carry several recognizable accents, distributed where actions, categories and state need distinction. Their meanings and contrast matter more than equal area or a fixed color count. Dark/light decisions follow the use scene and intended support, not the app category.
 

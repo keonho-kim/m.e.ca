@@ -21,7 +21,7 @@ import (
 )
 
 func TestBrowserMemoryRetention(t *testing.T) {
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	raw, _ := json.Marshal(map[string]string{"text": strings.Repeat("x", 3<<20)})
 	first, err := s.store(raw, 0)
@@ -70,7 +70,7 @@ func TestBrowserMemoryAdmission(t *testing.T) {
 	if err := blocker.Resize(int(processmemory.PayloadBytes)); err != nil {
 		t.Fatal(err)
 	}
-	s := New("", "", func(text string) string { return text }, nil)
+	s := New("", "", func(text string) string { return text }, nil, nil)
 	s.work = t.TempDir()
 	raw := json.RawMessage(`{"text":"bounded"}`)
 	if _, err := s.store(raw, 0); err == nil {
@@ -106,7 +106,7 @@ func TestBrowserMemoryProbe(t *testing.T) {
 			raw, _ := json.Marshal(map[string]string{"text": strings.Repeat("x", 3<<20)})
 			sessions := make([]*Session, workers)
 			for i := range sessions {
-				sessions[i] = New("", "", func(text string) string { return text }, nil)
+				sessions[i] = New("", "", func(text string) string { return text }, nil, nil)
 				sessions[i].work = t.TempDir()
 			}
 			// Drain encoding/json's setup pools before taking the baseline.

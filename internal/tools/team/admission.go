@@ -29,7 +29,7 @@ func (e *Executor) reserve(ctx context.Context, call toolapi.Call) (*workspace.L
 			Next:   diagcatalog.Text(diagcatalog.TeamInYourPublicResponseStateWhatYou),
 		}
 	}
-	if call.Name == "view_image" || call.Name == "browser_action" || call.Name == "browser_inspect" {
+	if call.Name == "view_image" || toolapi.IsBrowserTool(call.Name) {
 		return nil, nil, nil
 	}
 	if call.Name == "execute_command" {

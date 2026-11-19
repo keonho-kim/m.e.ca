@@ -18,7 +18,7 @@ func (s *Store) MemoryRecords(ctx context.Context, session string, after, throug
 	if err := s.checkSession(session); err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,e.memory_role,e.memory_text,COALESCE(m.content_bytes,e.memory_bytes,0),COALESCE(e.memory_source,0) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? AND t.sequence<=? AND NOT ("+browserObservationSQL+") ORDER BY t.sequence LIMIT 64", after, through)
+	rows, err := s.db.QueryContext(ctx, "SELECT t.sequence,t.kind,m.body,m.refs,e.memory_role,e.memory_text,COALESCE(m.content_bytes,e.memory_bytes,0),COALESCE(e.memory_source,0) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? AND t.sequence<=? AND NOT ("+transientObservationSQL+") ORDER BY t.sequence LIMIT 64", after, through)
 	if err != nil {
 		return nil, after, err
 	}

@@ -1,7 +1,7 @@
 // Purpose: Verify browser originals share storage and consumed observations do not hydrate into model context.
 // Pattern: SQLite journal contract regression with a bounded restoration budget.
 // Usage: go test ./internal/storage/sqlite -run TestBrowserObservation.
-// Related: internal/storage/sqlite/browser_context.go, internal/storage/sqlite/memory_sources.go.
+// Related: internal/storage/sqlite/observation_context.go, internal/storage/sqlite/memory_sources.go.
 package sqlite
 
 import (
@@ -80,7 +80,7 @@ func TestBrowserObservationRetiresBeforeRestoration(t *testing.T) {
 		t.Fatalf("context messages=%d charged=%d: %v", len(messages), charged, err)
 	}
 	for _, m := range messages {
-		if m.Role == "tool" && (m.Content != toolapi.BrowserObservationRead || len(m.Images) != 0 || m.TransientObservation) {
+		if m.Role == "tool" && (m.Content != toolapi.ObservationRead || len(m.Images) != 0 || m.TransientObservation) {
 			t.Fatal("consumed observation retained its body")
 		}
 	}
