@@ -9,13 +9,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"github.com/keonho-kim/meca/internal/agent/media"
-	"github.com/keonho-kim/meca/internal/agent/presentation"
+	"strings"
 	"time"
 
+	"github.com/keonho-kim/meca/internal/agent/media"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/presentation"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/processmemory"
@@ -78,12 +80,19 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	}
 	definitions := imageDefinitions(r.Tools.Definitions(), r.ImageInput)
 	setSkillImageInput(r.Tools, r.ImageInput)
+	guidance := make([]string, 1, 4)
+	guidance[0] = system
 	for _, definition := range definitions {
-		if definition.Name == "list_skills" {
-			system += prompt.SkillTools
-			break
+		switch definition.Name {
+		case "list_skills":
+			guidance = append(guidance, prompt.SkillTools)
+		case toolapi.BrowserAction:
+			guidance = append(guidance, prompt.BrowserAction)
+		case toolapi.BrowserInspect:
+			guidance = append(guidance, prompt.BrowserObservation)
 		}
 	}
+	system = strings.Join(guidance, "")
 	s := &execution{runner: r, limits: limits, system: system, emit: emit, definitions: definitions, statistics: runStatistics{started: started}}
 	_, s.order = presentation.Scope(ctx)
 	send := s.emit

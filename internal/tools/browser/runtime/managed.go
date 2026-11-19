@@ -1,6 +1,6 @@
 // Purpose: Select a verified managed Chrome version without replacing running sessions' executable paths.
 // Pattern: Process-shared installation transaction with a bounded current-version record.
-// Usage: Ensure uses the managed browser when no system browser was selected.
+// Usage: The runtime uses the managed browser when no system browser was selected.
 // Related: internal/tools/browser/runtime/stable.go, internal/tools/browser/runtime/install.go.
 package runtime
 
@@ -33,8 +33,14 @@ func (s chromeSelection) fresh(now time.Time) bool {
 	return s.Version != "" && !now.Before(s.Checked) && now.Sub(s.Checked) < 24*time.Hour
 }
 
-func managedChrome(ctx context.Context, client *http.Client, directory, goos, arch string, now time.Time) (use chromeUse, err error) {
-	root, err := statefs.Open(filepath.Join(directory, "chrome"))
+func managedChrome(ctx context.Context, client *http.Client, directory, goos, arch string, now time.Time, installMissing bool) (use chromeUse, err error) {
+	path := filepath.Join(directory, "chrome")
+	if !installMissing {
+		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+			return use, fault.New(diag.FailedPrecondition, diag.BrowserRuntimeMissing)
+		}
+	}
+	root, err := statefs.Open(path)
 	if err != nil {
 		return use, err
 	}
@@ -45,7 +51,14 @@ func managedChrome(ctx context.Context, client *http.Client, directory, goos, ar
 		}
 	}()
 	defer func() { err = errors.Join(err, root.Close()) }()
-	selected, err := readSelection(root)
+	current := func() (chromeSelection, error) {
+		selected, err := readSelection(root)
+		if err == nil && selected.Version == "" && !installMissing {
+			return selected, fault.New(diag.FailedPrecondition, diag.BrowserRuntimeMissing)
+		}
+		return selected, err
+	}
+	selected, err := current()
 	if err != nil {
 		return use, err
 	}
@@ -70,7 +83,7 @@ func managedChrome(ctx context.Context, client *http.Client, directory, goos, ar
 		return use, err
 	}
 	defer func() { err = errors.Join(err, update.Close()) }()
-	selected, err = readSelection(root)
+	selected, err = current()
 	if err != nil {
 		return use, err
 	}

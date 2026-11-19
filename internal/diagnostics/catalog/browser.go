@@ -64,6 +64,7 @@ const BrowserStableVerification Message = "Chrome executable did not report the 
 const BrowserInvalidCursor Message = "continue with the exact result_id, revision and next_offset from the latest page"
 
 const BrowserInstallPreparing Message = "MECA 브라우저 도구를 준비하고 실행을 확인합니다."
+const BrowserRuntimeMissing Message = "browser dependencies are missing. Run meca install --ext browser"
 const BrowserInstallReady Message = "브라우저 준비 완료 (페이지 열기·관찰·종료 확인)\n도우미: %s\n브라우저: %s"
 const BrowserProbeFailed Message = "browser runtime check failed: %s"
 const BrowserProbePage Message = "browser check did not reach its blank page"

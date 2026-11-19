@@ -1,6 +1,6 @@
 // Purpose: Protect a managed Chrome version until its owning session confirms shutdown.
 // Pattern: On-disk use marker and short selection lock shared by all MECA processes.
-// Usage: Ensure pins the selected managed version and Session.Close removes the pin.
+// Usage: Runtime preparation pins the selected version and Session.Close removes the pin.
 // Related: internal/tools/browser/runtime/managed.go, internal/tools/browser/session.go.
 package runtime
 

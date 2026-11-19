@@ -16,6 +16,7 @@ import (
 
 func PrepareAndCheck(ctx context.Context, state string) (runtime.Paths, error) {
 	session := New(state, "", func(text string) string { return text }, nil)
+	session.prepare = runtime.Install
 	if err := session.start(ctx); err != nil {
 		return runtime.Paths{}, err
 	}

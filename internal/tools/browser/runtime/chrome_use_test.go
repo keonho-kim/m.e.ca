@@ -17,7 +17,7 @@ func TestManagedChromeReadersDuringUpdate(t *testing.T) {
 	fixture := &stableTransport{version: "157.0.8103.78"}
 	directory := t.TempDir()
 	now := time.Now()
-	first, err := managedChrome(t.Context(), &http.Client{Transport: fixture}, directory, "linux", "arm64", now)
+	first, err := managedChrome(t.Context(), &http.Client{Transport: fixture}, directory, "linux", "arm64", now, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestManagedChromeReadersDuringUpdate(t *testing.T) {
 		return fixture.RoundTrip(r)
 	})}
 	go func() {
-		use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(25*time.Hour))
+		use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(25*time.Hour), false)
 		if err == nil && use.path == first.path {
 			t.Error("update did not select the verified new version")
 		}
@@ -53,7 +53,7 @@ func TestManagedChromeReadersDuringUpdate(t *testing.T) {
 		t.Fatalf("update did not reach Stable lookup: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
-	warm, warmErr := managedChrome(ctx, client, directory, "linux", "arm64", now.Add(25*time.Hour))
+	warm, warmErr := managedChrome(ctx, client, directory, "linux", "arm64", now.Add(25*time.Hour), false)
 	cancel()
 	close(waiting)
 	if err := <-done; err != nil {
@@ -73,7 +73,7 @@ func TestManagedChromeRetiresOnlyReleasedTrackedVersions(t *testing.T) {
 	selectVersion := func(version string, days int) chromeUse {
 		t.Helper()
 		fixture.change(version, "", false)
-		use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(time.Duration(days)*25*time.Hour))
+		use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(time.Duration(days)*25*time.Hour), days == 0)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -2,11 +2,9 @@
 
 [서버 API](server.md) · [제품 명세](../SYSTEM.md)
 
-WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 모든 서버 protocol에서 제공하며 WebSocket 또는 gRPC-Web·Connect도 같은 명령을 사용한다. `meca --server --ui`로 내장 화면을 켜면 정적 자산과 브라우저 접속용 인증도 제공한다. tui에는 서버·내장 화면이 없다. 서버 토큰을 HTML·URL·로그에 포함하지 않는다.
+내장 WebUI는 동일 출처 HTTP JSON과 쿠키 인증 WebSocket을 사용한다. 이 문서는 브라우저 인증·작업 관찰·조회·복구를 설명한다. [기동과 외부 클라이언트 계약](server.md) · [화면 사용](webui-design.md)
 
-구현된 화면과 상태 소유·디자인은 [WebUI 구조](webui-design.md)에 정리한다. 내장 UI는 동일 출처 fetch와 쿠키 인증 WebSocket 관찰 연결을 사용한다. 외부 클라이언트의 SSE·socket·RPC 계약과 구분한다.
-
-사용자가 내장 화면만 쓸 때는 API를 직접 호출할 필요가 없다. [서버 기동](server.md#내장-화면으로-시작하기) 후 토큰으로 접속하고 모델을 설정한다. 커스텀 클라이언트에서 팀은 `setSettings`의 `sessionId`·`team`, 스킬은 `listSkills`·`getSkill`·`readSkillFile`, 명시 호출은 `start.text`의 `#스킬명`으로 연동한다. 스킬을 별도로 활성화하는 API는 없다. 팀의 공개 응답·도구·승인은 스트리밍하며 팀 Thinking은 개인 이력으로 유지한다.
+팀의 공개 응답·도구·승인은 스트리밍하고 팀원별 Thinking은 개인 이력에 보관한다. 명시적 스킬 호출은 `start.text`에 `#스킬명`으로 보낸다. [팀 실행](team.md) · [스킬 호출](skills.md#사용자-호출과-모델-도구)
 
 ## 화면과 API의 대응
 
@@ -22,7 +20,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 대화 삭제 | `deleteSession:{sessionId}`. 활성 작업을 거절하며 대화 DB·해당 팀 내부 데이터만 삭제 |
 | 대화 자원 닫기 | `closeSession:{sessionId}`. 기록 삭제가 아님 |
 | 권한·팀·언어 설정 | `setSettings`. 한 번에 항목 하나 |
-| 파일 목록·미리보기·감시 | `directory`, `previewFile`, `/v1/files/events` / RPC `WatchFiles` |
+| 파일 목록·미리보기·감시 | `directory`, `previewFile`, 내장 UI 관찰의 `/v1/files/events` 구독 |
 | 파일·폴더 변경 | `mutateFile`, `lookupMutation`; 이름 변경·이동·삭제와 접수 결과 조회 |
 | 전체 문서 편집 | `editorRead`, `editorSave`; 전체 UTF-8·revision 검사와 원자적 교체 |
 | 선택 참조 보존·전송 | `fileSelections`, `selectFile`, `start.paths`, `steer.paths` |
@@ -30,7 +28,7 @@ WebUI는 full 배포본의 MECA 자체 API를 사용한다. HTTP JSON·SSE는 �
 | 저장 첨부 표시 | `history.items[].message.images`, `historyImage`, 인증된 이미지 GET |
 | 실행·추가 지시·취소 | `start`, `steer`, `cancel` |
 | 승인 대화상자 | snapshot/event의 approval, `detail:{approvalId}`, `approve` |
-| 단일·팀 스트리밍 | SSE / WatchEvents / socket watch |
+| 단일·팀 스트리밍 | `/v1/ui/events`의 작업 구독 |
 | 컴포저 상태 | `resources`의 서버 RSS, `sessionUsage:{sessionId}`의 누적 토큰, 스트림 실행 상태 |
 | 작업 완료 확인 | `taskStatus` |
 | 재접속·긴 실행 중 본문 | snapshot/state 페이지, `draft` |
@@ -93,7 +91,7 @@ JS 모듈 로딩 실패 화면은 실패한 모듈을 import하지 않는다. �
 
 ## 상태와 스트림 복원
 
-이력 항목은 `message`·`event`·`completion` 중 하나만 읽는다. 공개 사건의 표시 본문은 `message`·`work`·`notice`·`tool`·`completion`으로 구분한다. 팀 발언과 작업 선언을 일반 시스템 문장으로 변환하지 않으며, 본문이 없는 제어 사건은 렌더링하지 않는다. `notice.code`는 고정된 번역 문구를 선택하고 `completion`은 상태와 숫자 측정만 표시한다. 내장 화면은 HTTP 응답·스트림·snapshot의 수신 경계에서 혼합 본문과 잘못된 측정값을 거절한다. 필드 정의는 [서버 계약](server.md#작업공간-자원과-파일-감시)과 `api/meca/v1`의 proto가 소유한다.
+내장 화면은 HTTP 응답·스트림·snapshot 수신 시 본문 종류와 통계를 검증한다. `notice.code`로 번역 문구를 선택하고 `completion`에는 상태와 통계를 표시한다. [공개 이력과 표시 사건](server.md#공개-이력과-표시-사건)
 
 `tool.batchId`는 같은 run·agent 안에서 코어가 계획한 하나의 병렬 wave를 식별한다. 개별 `executionId`는 유지하며 저장 결과와 실시간 멤버를 합칠 때 사용한다. 단일·직렬 실행을 호출 시각이나 이름만으로 병렬 묶음에 합치지 않는다. 팀 입·퇴장 이벤트는 제어 정보이며 사용자 응답·통계 행으로 표시하지 않는다.
 

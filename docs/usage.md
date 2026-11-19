@@ -2,7 +2,7 @@
 
 [← README](../README.md) · [설정과 대화 보존](configuration.md) · [모델 연결](model-connections.md) · [서버 API](server.md)
 
-tui와 full은 모두 기본 `meca [path]` TUI와 `--print`·`--mode json` CLI, 팀·스킬을 제공한다. full만 `--server` 장기 실행 서버와 `--server --ui` 내장 화면을 포함한다. `meca --help` 첫 줄에서 종류를 확인한다. 실행 방식은 선택 모델과 단일/팀 실행·저장·도구 정책을 공유한다. 이 문서의 키보드·화면 조작은 TUI에 해당하며 WebUI의 화면 동작은 [WebUI 가이드](webui-design.md), 서버 제어·승인은 [API 계약](server.md)을 따른다.
+이 문서는 TUI와 비대화형 CLI의 사용법을 설명한다. 설치한 종류와 실행 옵션은 `meca --help`에서 확인한다. [배포 종류](releases.md#배포-파일) · [WebUI 가이드](webui-design.md)
 
 설정 저장·파일 전송 확인의 `y/N`에서 `y`·`Y`는 진행, 대문자 `N`은 취소다. 소문자 `n`은 무시한다. `Esc`는 화면에 안내된 편집·입력 유지 동작을 따른다.
 
@@ -24,7 +24,7 @@ tui와 full은 모두 기본 `meca [path]` TUI와 `--print`·`--mode json` CLI, 
 
 설치·삭제 명령은 [설치 가이드](releases.md#다운로드와-설치)를 따른다. 첫 실행은 ~/.meca의 누락된 기본 파일을 준비한다. 일반 시작은 현재 프로젝트의 대화 목록을 표시하고 맨 위의 새 대화를 선택한다. meca resume은 모든 프로젝트를 표시한다.
 
-!model은 Provider·Base URL·API Key·모델 ID·Thinking·추론 강도·저장 범위를 한 화면에 배치한다. ↑↓로 항목을 이동하고 →로 텍스트 편집을 시작하거나 다음 값을 선택한다. Base URL·API Key·모델 ID는 값이 보이던 같은 행에서 편집하며 별도 입력줄을 만들지 않는다. 긴 값은 값 영역 안에서 가로 스크롤하고 API Key는 마스킹한다. 선택형 항목은 ←로 이전 값도 고를 수 있다. 편집 중에는 커서가 표시되고 Esc로 편집을 마치며 Tab으로 다음 항목에 이동한다. 지원 Provider는 Ollama, vLLM, SGLang, LM Studio, LiteLLM, OpenRouter, OpenAI, Claude와 Gemini다. OpenRouter의 기본 주소는 https://openrouter.ai/api/v1이며 API Key와 해당 서비스의 모델 ID를 사용한다. OpenAI·Claude·Gemini도 해당 공급자의 API Key와 모델 ID를 사용하며 기본 URL과 API 형식은 [모델 연결](model-connections.md#openai-claude-gemini)에 정리한다. 주소 입력의 Ctrl+U는 전체 내용을 지우며, HTTP 어댑터가 필요한 API 경로를 조립한다. 목록 조회를 지원하지 않는 서버에는 모델 ID를 직접 입력할 수 있다.
+`!model`에서 Provider·Base URL·API Key·모델 ID·Thinking·추론 강도·저장 범위를 설정한다. `↑`·`↓`로 이동하고 `→`로 편집을 시작하거나 다음 값을 선택한다. `←`는 이전 선택값으로 이동한다. `Esc`는 편집 종료, `Tab`은 다음 항목, 주소 입력에서 `Ctrl+U`는 전체 지우기다. API Key는 마스킹한다. [Provider별 주소와 인증](model-connections.md#연결과-기본값)
 
 모델 ID 행에서 →로 편집을 시작할 때마다 목록을 자동 조회하고, 값 바로 아래의 같은 열에 후보를 표시한다. 대소문자를 구분하지 않는 부분일치로 검색하며 결과가 없으면 입력한 문자가 같은 순서로 나타나는 축약 검색을 적용한다. 예를 들어 q38로 Qwen-3.8을 찾을 수 있다. 후보가 열려 있을 때 ↑↓로 고르고 Tab으로 ID를 채운다. 일치 후보가 없거나 조회에 실패해도 직접 입력할 수 있다. 편집을 마친 뒤 다시 →로 들어가면 목록을 갱신하며 타이핑 중에는 이미 받은 목록을 사용한다.
 
@@ -94,7 +94,7 @@ Thinking 기본값을 서버가 공개했거나 ON 전용으로 선언하면 실
 
 한국어 상단 한 줄의 왼쪽은 `상태 대기` 또는 `상태 작업 중 HH : mm : ss`, 오른쪽은 `MEM 42.1 MiB · 입력 12345 · 출력 678 · 초당 토큰 42.1`이다. OpenRouter 연결에서는 OUTPUT과 TPS 사이에 총 비용을 표시한다. 영어 화면은 STATUS IDLE/RUNNING과 INPUT/OUTPUT/TOTAL COST/TPS를 사용하며 메모리 표기는 언어와 관계없이 `MEM`다. 다른 Provider에는 비용 항목을 표시하지 않는다. 작업 시간에는 승인 대기·도구·압축이 포함된다. 압축이 필요하다고 판단하면 자료 준비부터 요약·저장·대화 재구성까지 `메모리 압축 중`(영어: Compress Memory)과 1~3개의 점을 표시한다. 좁은 창에서는 메모리·TPS·비용 등 들어가지 않는 항목을 숨기고, 압축 중에는 문구와 점을 우선 남긴다. 토큰 숫자도 함께 넣을 수 없으면 압축 상태만 표시한다.
 
-MEM는 현재 MECA 프로세스의 상주 메모리(RSS)다. 시작할 때 한 번 읽고 작업 중에는 250ms, 대기 중에는 1초마다 확인한다. 설정·파일 화면에서도 같은 주기를 사용하며 표시 숫자가 바뀔 때만 갱신한다. 팀 세션은 같은 프로세스의 사용량에 포함하며 셸 자식 프로세스·모델 서버·GPU 메모리는 합산하지 않는다. 1GiB 미만은 MiB로 소수점 한 자리, 그 이상은 GiB로 두 자리까지 표시한다. 경과 시간·명령 상태 표시는 초 단위를 유지한다. 측정할 수 없으면 `—`를 표시하고 과거 값이나 Go 힙 추정으로 대체하지 않는다. 이 값은 화면에만 보관하며 대화·사용량 기록·모델 문맥에 저장하지 않는다.
+`MEM`은 팀 세션을 포함한 현재 MECA 프로세스의 상주 메모리(RSS)다. 셸 자식 프로세스·모델 서버·GPU 메모리는 계산 범위 밖이다. 읽을 수 없으면 `—`를 표시한다.
 
 INPUT/OUTPUT은 Provider가 실제 전송한 누적 usage만 사용한다. 수신 전에는 마지막 수신 숫자를 유지하고 수신한 적이 없으면 0이다. 호출 중 최신값으로 교체하고 종료·취소 시 마지막 값을 한 번 합산한다. Thinking이 포함된 출력 합계를 중복 계산하지 않는다. 일반 생성·도구 인자·Compaction을 포함하고 연결 진단은 제외한다. 이어하기에서는 저장된 사용량을 복구한다.
 
@@ -214,17 +214,4 @@ meca --print는 최종 답변만, meca --mode json은 이벤트를 stdout에 출
 
 ## 서버 실행과 연동
 
-full 배포본에서 실행한다. tui에는 서버와 WebUI가 없다.
-
-```sh
-meca /path/to/project --server --ui
-meca /path/to/project --server --protocol sse
-meca /path/to/project --server --protocol socket
-meca /path/to/project --server --protocol grpc --concurrency 4
-```
-
-기본 주소는 `127.0.0.1:8787`, 인증 토큰은 `~/.meca/server.token`이다. native API에서 세션·모델을 설정하고 요청 키와 본문으로 작업을 접수한다. 상태·이벤트·이력을 조회하면서 승인·방향 수정·취소를 전달할 수 있다. 연결이 끊겨도 수락한 작업은 계속되며 재접속 시 마지막 커서를 사용한다.
-
-자체 API의 세션·작업·승인·이미지 업로드 계약을 사용한다. 모델 API Key와 서버 Bearer 토큰은 별개다. 5초간 데이터가 없는 스트림에는 1초마다 heartbeat를 보내고 마지막 커서로 재구독한다. 외부 바인딩은 TLS와 정확한 Host/Origin 설정이 필요하다. [전체 서버 계약](server.md)을 따른다.
-
-`--ui`는 `--server`와 함께 같은 주소의 `/ui/`에 브라우저 화면을 제공한다. 기본 URL은 `http://127.0.0.1:8787/ui/`이며 접속 화면에 서버 토큰을 입력한다. 배포본 실행에는 Bun·Node·별도 프론트 서버가 필요 없다. 프로젝트 등록과 대화 생성·전환·삭제, 팀·스킬·이미지·파일 참조·문법 강조 편집, 모델·언어·테마 설정과 작업 승인·중지·후속 예약을 화면에서 다룬다. `!new`·`!quit`는 WebUI에서 지원하지 않는다.
+full 배포본에서 `meca --server --ui`로 화면을 열거나 `meca --server --protocol sse`로 API 서버를 실행한다. 서버가 시작할 때 터미널에 출력한 토큰으로 접속한다. [서버 기동과 인증](server.md#기동) · [WebUI 사용법](webui-design.md)

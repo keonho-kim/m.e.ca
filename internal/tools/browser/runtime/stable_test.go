@@ -70,24 +70,24 @@ func TestManagedStableUpdatesAndRollback(t *testing.T) {
 	client := &http.Client{Transport: fixture}
 	directory := t.TempDir()
 	now := time.Now()
-	first, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now)
+	first, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer first.close()
 	fixture.change("157.0.8103.79", "", true)
-	cached, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(time.Hour))
+	cached, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(time.Hour), false)
 	defer cached.close()
 	if err != nil || cached.path != first.path || fixture.metadata != 1 {
 		t.Fatal("warm cache fetched network", cached, err)
 	}
-	offline, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(25*time.Hour))
+	offline, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(25*time.Hour), false)
 	defer offline.close()
 	if err != nil || offline.path != first.path {
 		t.Fatal("offline update lost working browser", err)
 	}
 	fixture.change("157.0.8103.79", "wrong-version", false)
-	failed, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(50*time.Hour))
+	failed, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(50*time.Hour), false)
 	defer failed.close()
 	if err != nil || failed.path != first.path {
 		t.Fatal("failed executable replaced working browser", err)
@@ -97,7 +97,7 @@ func TestManagedStableUpdatesAndRollback(t *testing.T) {
 		t.Fatal("unverified version published", err)
 	}
 	fixture.change("157.0.8103.79", "", false)
-	updated, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(75*time.Hour))
+	updated, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now.Add(75*time.Hour), false)
 	defer updated.close()
 	if err != nil || updated.path == first.path {
 		t.Fatal("new stable not selected", updated, err)
@@ -108,7 +108,7 @@ func TestManagedStableUpdatesAndRollback(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(directory, "chrome", "current.json"), []byte(`{"Version":"../../outside"}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now); err == nil {
+	if _, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now, true); err == nil {
 		t.Fatal("corrupt selection silently replaced")
 	}
 }
@@ -121,7 +121,7 @@ func TestConcurrentStableInstall(t *testing.T) {
 	var group sync.WaitGroup
 	for range 8 {
 		group.Go(func() {
-			use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now)
+			use, err := managedChrome(t.Context(), client, directory, "linux", "arm64", now, true)
 			if err != nil {
 				t.Error(err)
 			}

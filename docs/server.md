@@ -145,7 +145,7 @@ SSE·socket·grpc 모두 `POST /v1/command`, `GET /v1/events`, `POST /v1/attachm
 
 ID·모델 설정 형식 오류는 invalid_argument, 없는 세션·원문은 not_found다. 취소된 제어·조회는 canceled이며 HTTP에서는 409로 반환한다. 세션 변경으로 조회가 취소되면 최신 상태를 확인한 뒤 필요한 원문만 다시 요청한다.
 
-스킬 조회는 세션 선택 전에도 가능하며 명시한 작업공간의 프로젝트·실행 계정을 기준으로 한다. `getSkill`은 탐색 ID와 엔진에서 경로로 읽어 등록한 ID를 받고 임의 경로 입력은 받지 않는다. 참고 파일은 검증한 스킬 루트 안에서만 읽는다. 목록 페이지는 현재 파일을 다시 조회하므로 파일 변경 뒤에는 빈 cursor로 목록을 갱신한다. `start` 입력은 기존 sessionId·key·text이며 스킬은 현재 입력의 #이름 또는 에이전트의 읽기 도구로 지정한다. 형식과 한도는 [스킬 문서](skills.md)가 소유한다.
+스킬 조회는 세션 선택 전에도 가능하며 지정한 작업공간의 프로젝트와 실행 계정을 기준으로 한다. `listSkills`의 첫 페이지에서 목록 스냅샷을 만들고 후속 커서로 같은 목록을 읽는다. 파일 변경을 반영하거나 커서가 만료되면 첫 페이지부터 다시 조회한다. `getSkill`은 등록된 스킬 ID로, `readSkillFile`은 검증된 스킬 루트 기준 상대 경로로 읽는다. `start.text`의 `#스킬명`으로 스킬을 지정할 수 있다. [스킬 탐색과 페이지 계약](skills.md#사용자-호출과-모델-도구)
 
 ## SSE
 
@@ -206,7 +206,7 @@ SSE 작성기는 이미 도착한 연속 델타의 flush를 묶는다. 첫 애�
 
 ## 이벤트·재접속·수명
 
-새 사건은 `occurredAt`과 가능한 `errorCode`를 포함한다. 순서는 시각 대신 커서를 따른다. `skill_loaded`의 `skill:{id,name,source,revision}`은 본문 읽기 성공을 나타내며 모델의 지침 준수나 작업 완료를 뜻하지 않는다. 본문은 이벤트에 반복해서 넣지 않는다. 재접속 시 기존 history/detail의 같은 메타데이터로 읽기 기록을 복원한다. 별도 활성 스킬 snapshot이나 활성화 명령은 없다. [운영 로그](diagnostics.md)는 동일한 작업 식별자로 장애 추적 정보를 제공한다.
+새 사건은 `occurredAt`과 가능한 `errorCode`를 포함한다. 순서는 커서를 따른다. [공개 표시 사건](#공개-이력과-표시-사건) · [운영 로그](diagnostics.md)
 
 커서는 프로세스 epoch와 단조 증가 번호의 조합이다. 재시작하면 새 epoch를 사용하며 선택 세션 변경은 커서를 초기화하지 않는다. 이벤트는 실제 session·task·agent·run·generation과 작업별 `sequence`를 제공한다. 기본 snapshot의 session·model·team은 native 선택이며 `tasks`·`executions`는 활성 작업의 첫 페이지다. taskId 필터가 있으면 해당 작업 대화의 상태만 구성한다. 후속 상태는 `state.afterTask=nextTask`로 조회한다. 단일 `task`·`execution`은 선택 대화의 작업 또는 대표 작업이며 execution에도 taskId가 있다. approvals·drafts도 taskId로 구분한다. 클라이언트는 task·agent·generation을 묶어 초안을 갱신한다. assistant_delta는 추가 본문, draft_reset은 해당 초안 교체다. progress·response·thinking은 완성된 내용이므로 델타로 다시 덧붙이지 않는다. 도구 참조·usage·최종 checkpoint·request_finished의 의미는 같다.
 
@@ -214,7 +214,7 @@ SSE 작성기는 이미 도착한 연속 델타의 flush를 묶는다. 첫 애�
 
 첫 구독이나 만료된/다른 epoch 커서에는 현재 상태의 snapshot을 보낸다. 보관 중인 커서라면 그 이후 이벤트만 순서대로 전송한다. snapshot을 받으면 그 커서까지 반영된 상태로 바꾸고 저장 이력은 history로 별도 조회한다. 과거 이력은 페이지별 시간순이며 다음 요청에는 응답의 before를 전달하고 빈 페이지에서 끝낸다. history/detail 조회는 모델·도구를 실행하지 않는다.
 
-현재 초안 snapshot은 출처별 본문·Thinking 각 4KiB, 전체 본문 합계 512KiB로 제한하며 truncated와 원문 textBytes·thinkingBytes로 알린다. 실행 중 원문은 draft로 페이지 조회하고, 완료 뒤에는 history/detail을 사용한다. draft의 같은 task·agent·generation만 합치며 재시도/reset 때 이전 페이지를 폐기한다. history 표시 필드도 잘릴 수 있다. 완료된 본문은 historySequence, 도구 결과는 tool reference로 detail을 읽는다. detail의 data를 같은 revision과 offset 순서로 합치면 JSON 원문이 된다. 서버·원문·마스킹 기준이 달라진 revision은 conflict다. history의 images에는 index·경로·MIME·크기·digest를 제공하며 pixels는 포함하지 않는다. bytes는 알려진 경우에만 양수다. 공개 표시 필드만 반환하며 Provider native continuation·이미지 원본·capture·자격 증명은 반환하지 않는다.
+현재 초안 snapshot은 출처별 본문·Thinking 각 4KiB, 전체 본문 합계 512KiB로 제한하며 `truncated`와 `textBytes`·`thinkingBytes`로 알린다. 실행 중 원문은 `draft`로 조회하고 같은 task·agent·generation의 페이지를 합친다. 재시도나 reset 때 이전 페이지를 폐기한다. 완료 뒤에는 `history` 응답의 항목 `sequence`를 `detail.historySequence`에 넣거나 `detail.tool`에 도구 참조를 전달한다. `detail.text`는 UTF-8 조각이며 같은 revision에서 `nextOffset`을 따라 조립한다. 서버·원문·마스킹 기준이 바뀌면 `conflict`를 반환한다. [원문 페이지 계약](webui-api.md#의미-단위-원문과-검색) · [저장 첨부](images.md#서버-이력의-첨부)
 
 snapshot draft의 committed는 현재 generation의 출력이 이미 이력에 저장됐음을 나타낸다. progress·team_progress·tool_started에서 해당 발신자만 표시하고 다음 generation에서 초기화한다. 클라이언트는 새 이력 조회를 확인할 때까지 이 초안을 유지해 화면 공백을 막고, 확인 후에는 저장 이력과 중복 표시하지 않는다.
 
@@ -233,7 +233,7 @@ event는 kind·agent·final·runId·text·thinking·callId·approvalSource·chan
 {"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"path":"result.txt","content":"written"}},"output":{"ok":true}}}
 ```
 
-같은 상세의 연속 페이지는 선택 세션에 보관한 최근 문서 한 건을 재사용한다. 공개 DTO를 증분 JSON으로 인코딩하고 문자열을 조각별로 마스킹하여 완성 JSON 전체를 메모리에 만들지 않는다. 64KiB 이하는 메모리, 큰 문서는 private 임시 파일에 두고 파일 경로를 즉시 제거한다. 다른 원문이나 마스킹 revision으로 바뀌면 이전 문서를 먼저 해제한다. 세션 교체·닫기·프로세스 종료에서도 자원을 해제한다. 끝난 승인은 보관 여부와 무관하게 조회를 거부한다. 임시 보관을 사용할 수 없으면 현재 페이지만 수집해 반환하고 다음 조회에서 다시 준비하며 `detail_cache_bypassed`로 진단한다. 파일 정리 실패는 오류로 반환한다. 첫 조회의 저장 원문 복원과 이스케이프된 JSON 값 해석 비용까지 페이지 크기로 제한되는 것은 아니다. `view`는 DOCUMENT(기본 JSON), TOOL_REQUEST·TOOL_RESULT(도구 참조의 인자·결과 JSON), TEXT·THINKING(이력 sequence의 본문 텍스트) 중 하나다. 승인 원문은 DOCUMENT만 허용하며 revision은 view도 구분한다. 요청과 결과는 서로의 큰 payload를 복원하지 않는다.
+`view`는 `DOCUMENT`(기본 JSON), `TOOL_REQUEST`·`TOOL_RESULT`(인자·결과 JSON), `TEXT`·`THINKING`(이력 본문) 중 하나다. 승인 원문은 유효한 승인 요청에서 `DOCUMENT`로 읽는다. revision은 view까지 구분한다. 연속 페이지는 공용 캐시의 같은 원문을 재사용하며 상한은 아래 표를 따른다. [상세 조회 구현](optimization-strategies.md#서버-이벤트와-원문-조회)
 
 | 한도 | 소유 범위 |
 | --- | --- |
@@ -323,21 +323,15 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 등록한 작업공간은 전역 설정의 workspaces 목록에 실제 절대 경로로 저장한다. 조회·실행 시 필요한 런타임만 열고, 기본 작업공간·활성 대여·실행·업로드·불확실한 저장 상태를 제외한 idle 네 개를 유지한다. 닫는 중 재개방을 기다리며 종료 호출은 모든 정리의 완료를 함께 확인한다.
 
-GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. 작업의 request_finished.outcome과 HistoryItem.completion은 실제 실행 결과이며 접수 DB의 answered 상태와 구분한다. 저장된 접수 행에는 outcome이 없을 수 있으므로 클라이언트가 성공을 추정하지 않는다.
+GET `/v1/files/events`와 RPC `WatchFiles`는 활성 디렉터리 하나의 변경을 알린다. 파일 감시도 공통 관찰 스트림 한도를 사용하며 취소 시 watcher와 작업공간 대여를 반환한다. [내장 UI 관찰](webui-api.md#내장-ui-관찰과-복구)
+
+파일 작업 접수 기록은 작업공간별 DB에 경로와 공개 결과를 보관한다. 최대 100,000건이며 본문과 처리 중 예약분은 합계 32MiB, DB 파일은 최대 64MiB다. 결과 저장 공간을 확보한 뒤 실행한다. 서버 재시작 시 완료 여부를 확인하지 못한 작업은 `uncertain`을 반환한다. [파일 변경과 접수 확인](webui-api.md#화면과-api의-대응)
+
+## 공개 이력과 표시 사건
 
 `HistoryItem`은 `sequence`·`truncated`와 함께 `message`·`event`·`completion` 중 한 항목만 제공한다. `message`는 사용자·에이전트 본문과 이미지 메타데이터이며, `event`는 의미가 정해진 공개 사건이다. `completion`은 RunCompletion의 상태 enum(COMPLETED·FAILED·INTERRUPTED·DENIED·EXHAUSTED)과 statistics만 제공한다. 종료 사유 원문은 해당 history sequence의 상세 조회로 확인한다.
 
 공개 `Event`의 표시 본문도 `message`·`work`·`notice`·`tool`·`completion` 중 하나다. 팀 발언은 `message`, 기여 선언은 `work.summary`와 `work.details`로 전달한다. `notice`는 RETRYING·COMPACTION_STARTED·COMPACTION_FINISHED·SKILL_READ 코드와 스킬 읽기 메타데이터만 허용하며 임의 본문을 담지 않는다. 팀 입·퇴장과 작업·사용량·승인 전이는 표시 본문 없는 제어 사건이다. 이 공통 계약은 HTTP JSON·SSE·WebSocket·RPC에 적용하며 클라이언트는 같은 proto 정의를 사용한다.
 
 `request_finished.historyThrough`와 `Task.historyThrough`는 확정된 표시 이력의 경계다. `HistoryPage.through`가 그 위치에 도달하면 완료 출력으로 전환할 수 있다. `historySequence`는 공개 타임라인의 저장 위치이며 `originalReference`는 원본 사건의 소유 대화와 순서를 식별한다. 네트워크 replay의 cursor와 저장 이력 위치를 혼용하지 않는다.
-
-파일 작업 접수 기록은 작업공간별 private DB에 저장한다. 참조·파일 본문을 이중 저장하지 않고 경로와 공개 결과만 보관한다. 기록은 최대 100,000개·본문과 처리 중 예약분 합계 32MiB, DB 파일은 최대 64MiB다. 처리 전에 결과 공간을 예약하며 용량이 부족하면 파일 효과를 시작하지 않는다. 진행 중 기록이 서버 재시작 뒤 남으면 실제 효과를 추측하거나 재실행하지 않고 불확실 상태로 반환한다.
-
-
-## 브라우저 전용 관찰·읽기 계약
-
-`--ui`에서는 외부 프로토콜과 별개로 쿠키 인증 `/v1/ui/events` WebSocket과 임시 이미지 축소 `/v1/ui/thumbnail`을 제공한다. 관찰 연결은 작업·파일 두 구독을 합치고 네 프레임 ACK window로 느린 브라우저의 수신 적재를 제한한다. UI 배치는 native 이벤트 순서를 보존하며 실행 이벤트 저장과 독립된 전송 경계다. 인증 세션 종료는 관찰을 취소하고 이미 접수한 작업은 계속 실행한다.
-
-capabilities는 imagePixels·previewDecodePixels·thumbnailEdge로 이미지 정책을, `ui/session`은 buildId로 배포 자산 identity를 알린다. `detail.field/listFields`는 도구 JSON의 의미 단위 페이지, `searchHistory`는 저장된 메시지·추론의 마스킹된 부분 문자열 검색을 제공한다. 검색은 요청당 이력 16건·512KiB와 query에 묶인 커서를 사용하며 새로운 색인 저장소를 만들지 않는다. 구체적인 봉투·후속 페이지·복구·보안 계약은 [WebUI 연결 가이드](webui-api.md#내장-ui-관찰과-복구)를 따른다.
-
-공용 전송과 원문 조회의 담당 코드는 [서버 이벤트 구현 전략](optimization-strategies.md#서버-이벤트와-원문-조회)에서 확인한다. 에이전트가 조작하는 브라우저 세션의 사용법은 [브라우저 도구](browser.md)에 있다.
+`request_finished.outcome`과 `HistoryItem.completion`은 실행 결과를 제공한다. 접수 DB의 `answered`는 종료 기록 상태이며 결과를 모르는 경우 `outcome`은 생략된다.

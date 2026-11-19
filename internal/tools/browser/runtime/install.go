@@ -1,6 +1,6 @@
-// Purpose: Prepare a verified helper and browser, serializing only unpublished installations.
-// Pattern: Lazy runtime provisioning with atomic directory publication.
-// Usage: Browser sessions call Ensure at first open; MECA startup never downloads anything.
+// Purpose: Verify installed browser dependencies and provision missing ones on explicit setup.
+// Pattern: Runtime provisioning with atomic directory publication.
+// Usage: Tool sessions open installed dependencies; the extension installer may provision them.
 // Related: internal/tools/browser/runtime/download.go, internal/config/statefs/lock.go.
 package runtime
 
@@ -34,8 +34,16 @@ type Paths struct {
 // Close releases the managed version after the owning browser confirms shutdown.
 func (p Paths) Close() error { return p.chrome.close() }
 
-func Ensure(ctx context.Context, state string) (Paths, error) {
-	directory := filepath.Join(state, "browser", "runtime")
+func OpenInstalled(ctx context.Context, state string) (Paths, error) {
+	return prepareRuntime(ctx, state, false)
+}
+
+func Install(ctx context.Context, state string) (Paths, error) {
+	return prepareRuntime(ctx, state, true)
+}
+
+func prepareRuntime(ctx context.Context, state string, installMissing bool) (Paths, error) {
+	directory := runtimeDirectory(state)
 	helper, err := hostAgent()
 	if err != nil {
 		return Paths{}, err
@@ -44,19 +52,42 @@ func Ensure(ctx context.Context, state string) (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
-	agent, err := install(ctx, downloadClient, directory, helper)
+	var agent string
+	if installMissing {
+		agent, err = install(ctx, downloadClient, directory, helper)
+	} else {
+		agent, err = openInstalledAgent(ctx, directory, helper)
+	}
 	if err != nil {
 		return Paths{}, preparationFailure(err)
 	}
+	if agent == "" {
+		return Paths{}, fault.New(diag.FailedPrecondition, diag.BrowserRuntimeMissing)
+	}
 	paths := Paths{Agent: agent, Browser: browser}
 	if browser == "" {
-		paths.chrome, err = managedChrome(ctx, downloadClient, directory, runtime.GOOS, runtime.GOARCH, time.Now())
+		paths.chrome, err = managedChrome(ctx, downloadClient, directory, runtime.GOOS, runtime.GOARCH, time.Now(), installMissing)
 		if err != nil {
 			return Paths{}, preparationFailure(err)
 		}
 		paths.Browser = paths.chrome.path
 	}
 	return paths, nil
+}
+
+func openInstalledAgent(ctx context.Context, directory string, helper asset) (string, error) {
+	if _, err := os.Lstat(directory); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
+		return "", err
+	}
+	root, err := statefs.Open(directory)
+	if err != nil {
+		return "", err
+	}
+	path, err := installed(ctx, root.Name(), helper)
+	return path, errors.Join(err, root.Close())
 }
 
 // Preserve actionable catalog messages, including loader diagnostics, at the CLI boundary.
@@ -174,25 +205,9 @@ func installed(ctx context.Context, parent string, value asset) (string, error) 
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	directory := filepath.Join(parent, value.name)
-	info, err := os.Lstat(directory)
-	if errors.Is(err, os.ErrNotExist) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", fault.Errorf(diag.BrowserIntegrity)
-	}
-	path := filepath.Join(directory, value.executable)
-	marker, expected := "verified.sha256", value.digest
-	if value.zip {
-		marker, expected = "installed.version", value.version
-	}
-	stamp, err := readRuntimeMarker(filepath.Join(directory, marker))
-	if err != nil || stamp != expected || !executable(path) {
-		return "", fault.Errorf(diag.BrowserIntegrity)
+	path, err := installedPath(parent, value)
+	if err != nil || path == "" {
+		return path, err
 	}
 	if !value.zip {
 		file, err := os.Open(path)

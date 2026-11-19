@@ -29,7 +29,12 @@ func TestTeamSkillDelivery(t *testing.T) {
 		expected[d.Name] = d
 	}
 	team := (&Executor{Local: executor}).Definitions()
-	for _, name := range []string{"list_skills", "load_skill", "read_skill_file", "browser_action", "browser_inspect"} {
+	for _, definition := range team {
+		if definition.Name == toolapi.BrowserAction || definition.Name == toolapi.BrowserInspect {
+			t.Fatalf("team advertised an uninstalled browser tool: %s", definition.Name)
+		}
+	}
+	for _, name := range []string{"list_skills", "load_skill", "read_skill_file"} {
 		found := 0
 		for _, d := range team {
 			if d.Name == name {

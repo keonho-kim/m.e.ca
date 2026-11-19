@@ -12,9 +12,9 @@ native SSE·외부 WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약
 
 실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 발생 시각이 없는 기록은 조회 시각으로 대체하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
 
-skill_loaded는 본문을 읽었다는 사실을 제공한다. 명시 호출은 `notice.code=SKILL_READ`와 `notice.skill`의 id·name·source·revision을, 일반 load_skill의 성공은 `tool.skill`과 도구 참조를 제공한다. 별도 본문 사본을 저장하지 않으며 프론트는 이력 조회로 사용 내역을 복원한다. 전용 활성 상태는 없다.
+스킬 읽기 기록은 명시 호출에서 `notice.code=SKILL_READ`와 `notice.skill`로, `load_skill` 성공에서는 `tool.skill`과 도구 참조로 제공한다. 사용 내역은 이력 조회로 복원한다.
 
-팀 발언·기여 선언은 작성자 본문으로, 재시도·요약·스킬 읽기는 고정 코드의 알림으로 투영한다. 제어 사건과 완료 측정에는 임의 본문을 복사하지 않는다. 공개 본문 union과 저장 경계는 [서버 계약](server.md#작업공간-자원과-파일-감시)이 소유한다.
+팀 발언·기여 선언은 작성자 본문으로, 재시도·요약·스킬 읽기는 고정 코드의 알림으로 투영한다. 제어 사건과 완료 통계는 각각의 형식으로 제공한다. [공개 이력과 표시 사건](server.md#공개-이력과-표시-사건)
 
 영속 사건은 저장 확정 뒤 전달한다. 토큰 델타와 heartbeat는 별도 영속 로그로 쌓지 않는다. heartbeat의 5초 무출력 후 1초 간격, 느린 구독자 분리와 bounded replay 정책은 [서버 문서](server.md#이벤트재접속수명)를 따른다.
 

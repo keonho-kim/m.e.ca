@@ -11,8 +11,28 @@ import (
 	"strings"
 	"testing"
 
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 )
+
+func TestBrowserToolsOmittedWithoutInstallation(t *testing.T) {
+	e, _ := testExecutor(t)
+	var commands bool
+	for _, definition := range e.Definitions() {
+		switch definition.Name {
+		case toolapi.BrowserAction, toolapi.BrowserInspect:
+			t.Errorf("browser is uninstalled, yet %s was advertised", definition.Name)
+		case "execute_command":
+			commands = true
+		}
+	}
+	if !commands {
+		t.Fatal("browser availability changed the shell catalog")
+	}
+	if _, err := os.Lstat(filepath.Join(e.home, ".meca/browser")); !os.IsNotExist(err) {
+		t.Fatalf("loading definitions touched browser state: %v", err)
+	}
+}
 
 func TestBrowserPreparation(t *testing.T) {
 	e, _ := testExecutor(t)

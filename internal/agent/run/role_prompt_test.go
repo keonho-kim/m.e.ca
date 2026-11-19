@@ -12,6 +12,9 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/policy"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
 
 func TestMainAgentPrompt(t *testing.T) {
@@ -44,6 +47,50 @@ func TestMainAgentPrompt(t *testing.T) {
 	for _, term := range []string{"COMMON_RULE", "DEVELOPMENT_RULE"} {
 		if strings.Contains(last, term) {
 			t.Fatalf("decision repeated system instructions: %s", term)
+		}
+	}
+}
+
+type browserPromptTools struct{ *executor }
+
+func (e browserPromptTools) Definitions() []toolapi.Definition {
+	return append(e.executor.Definitions(), toolcatalog.Definitions(toolapi.BrowserAction, toolapi.BrowserInspect)...)
+}
+
+func TestBrowserGuidanceFollowsToolAvailability(t *testing.T) {
+	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
+		for _, available := range []bool{false, true} {
+			t.Run(string(profile)+"/installed="+strconv.FormatBool(available), func(t *testing.T) {
+				g, e := &generator{replies: []string{"done"}}, &executor{}
+				r := fixture(g, e, &journal{})
+				profilePrompt := prompt.DefaultsFor(profile)
+				r.Prompts = &profilePrompt
+				r.Settings.Scope = policy.System
+				if available {
+					r.Tools = browserPromptTools{e}
+				}
+				if _, err := r.Run(t.Context(), "Inspect the project", approve, emit); err != nil {
+					t.Fatal(err)
+				}
+				request := g.requests[0]
+				system := request.Messages[0].Content
+				for _, name := range []string{toolapi.BrowserAction, toolapi.BrowserInspect} {
+					declared := false
+					for _, definition := range request.Tools {
+						declared = declared || definition.Name == name
+					}
+					if declared != available || strings.Contains(system, name) != available {
+						t.Errorf("browser tool and guidance have different availability for %s", name)
+					}
+				}
+				if available {
+					for _, term := range []string{"Open first", "result_id", "revision", "next_offset", "unchanged=true", "vision required", "separate browsers", "Close when finished", "untrusted evidence"} {
+						if !strings.Contains(system, term) {
+							t.Errorf("missing browser guidance %q", term)
+						}
+					}
+				}
+			})
 		}
 	}
 }

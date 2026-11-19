@@ -6,8 +6,11 @@ package tool
 
 import "context"
 
-const BrowserInspect = "browser_inspect"
-const BrowserObservationRead = `{"read":true}`
+const (
+	BrowserAction          = "browser_action"
+	BrowserInspect         = "browser_inspect"
+	BrowserObservationRead = `{"read":true}`
+)
 
 type BrowserCursor struct {
 	ResultID   string `json:"result_id"`

@@ -55,12 +55,24 @@ func buildSpecifications() []Specification {
 
 // Definitions copies all tools, or only named tools, without allocating discarded schemas.
 func Definitions(names ...string) []toolapi.Definition {
+	return definitions(true, names)
+}
+
+// AvailableDefinitions copies the tool schema for the installed runtime.
+func AvailableDefinitions(browser bool) []toolapi.Definition {
+	return definitions(browser, nil)
+}
+
+func definitions(browser bool, names []string) []toolapi.Definition {
 	capacity := len(catalog)
 	if len(names) > 0 {
 		capacity = min(capacity, len(names))
 	}
 	out := make([]toolapi.Definition, 0, capacity)
 	for _, spec := range catalog {
+		if !browser && (spec.Name == toolapi.BrowserAction || spec.Name == toolapi.BrowserInspect) {
+			continue
+		}
 		if len(names) > 0 && !slices.Contains(names, spec.Name) {
 			continue
 		}

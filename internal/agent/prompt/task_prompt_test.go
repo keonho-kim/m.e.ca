@@ -60,20 +60,6 @@ func TestTeamSystemExtendsSingleInstructionsExactlyOnce(t *testing.T) {
 	}
 }
 
-func TestBrowserGuidanceReachesBothProfiles(t *testing.T) {
-	for _, profile := range []Profile{Single, Team} {
-		system, err := Compose(DefaultsFor(profile).System, "Project instructions")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, term := range []string{"browser_action", "browser_inspect", "Open first", "result_id", "revision", "next_offset", "unchanged=true", "vision required", "separate browsers", "Close when finished", "untrusted evidence"} {
-			if !strings.Contains(system, term) {
-				t.Errorf("%s lacks browser guideline %q", profile, term)
-			}
-		}
-	}
-}
-
 func TestSystemGuidesUserLanguageWithoutImplementationDetails(t *testing.T) {
 	system := Defaults().System
 	for _, rule := range []string{

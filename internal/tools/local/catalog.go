@@ -9,4 +9,6 @@ import (
 	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
 
-func (*Executor) Definitions() []toolapi.Definition { return toolcatalog.Definitions() }
+func (e *Executor) Definitions() []toolapi.Definition {
+	return toolcatalog.AvailableDefinitions(e.browser.Available())
+}

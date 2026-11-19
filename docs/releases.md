@@ -1,30 +1,21 @@
 # 릴리스
 
-[← README](../README.md) · [개발 가이드](development.md) · [릴리즈 노트](release-notes.md)
+[← README](../README.md) · [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest) · [개발 가이드](development.md)
 
 ## 버전 규칙
 
-태그는 `v<major>.<minor>.<YYYYMMDD>` 형식을 사용한다. major·minor는 저장소 루트의 [.release-version](../.release-version)에 `0.0`처럼 직접 지정한다. 사용자가 명시적으로 요청한 경우에만 이 파일의 major·minor를 변경하며 자동 증가·태그에서의 추측·누락 시 기본값 대체는 하지 않는다.
-
-자동 배포 날짜는 한국 시간(Asia/Seoul)의 실행 당일로 계산한다. 같은 날짜의 후속 푸시는 **그 날짜의 태그와 배포 파일을 최신 검증 커밋으로 갱신**한다. 다른 날짜의 릴리스는 보존한다. 날짜를 명시한 별도 배포는 사용자의 지정값을 따르며 자동 배포는 항상 당일 날짜를 쓴다.
+태그는 `v<major>.<minor>.<YYYYMMDD>` 형식을 사용한다. major·minor는 사용자가 명시적으로 요청할 때 [.release-version](../.release-version)에서 변경한다. 자동 배포는 한국 시간(Asia/Seoul)의 실행 당일을 사용한다. 같은 날 다시 배포하면 당일 태그와 파일을 최신 검증 커밋 기준으로 갱신한다.
 
 ## 자동 배포
 
-[Release 워크플로](../.github/workflows/release.yml)는 `main` 푸시 또는 `main`에서의 수동 실행으로 시작한다. 원본 저장소에서만 게시하며 동시에 한 실행만 진행한다. 실행 중인 배포를 새 푸시로 취소하지 않고 후속 실행을 대기시킨다.
+원본 저장소의 `main` 푸시 또는 수동 실행으로 시작한다. 후속 실행은 진행 중인 배포가 끝날 때까지 대기한다. [Release 워크플로](../.github/workflows/release.yml)
 
-1. 명시한 major·minor와 고정 GoReleaser 버전을 읽어 로컬 날짜 태그를 준비한다.
-2. UI 자산을 만들기 전에 `tui,godbus_no_tcp`로 최소 실행 파일·시작·업데이트·설치를 검사하고 서버·WebUI가 의존성 그래프에 없는지 확인한다. 그 뒤 고정 Bun으로 full의 UI와 프론트 타입·상태 테스트를 준비한다. full은 `GOFLAGS=-tags=godbus_no_tcp`로 `go test ./...`, `go vet ./...`, `go mod verify`를 실행한다. 테스트의 자식 빌드에도 같은 태그를 전달한다.
-3. GoReleaser가 tui/full 각각 네 플랫폼, 총 여덟 아카이브를 빌드한다. 두 종류 모두 `godbus_no_tcp`, tui에만 `tui` 태그가 있어야 한다. SHA-256·실행 파일·Go 고지를 검사하고 WebUI 고지는 full에만 포함한다. 추출한 실행 파일의 `go version -m`으로 종류와 정확한 빌드 태그를 확인한다.
-4. 원격 `main`이 이미 더 최신 커밋이면 해당 게시를 생략한다. 준비 이후 태그가 다른 작업에 의해 바뀌었으면 오류로 중단한다.
-5. 태그를 갱신하고 배포 파일과 체크섬을 게시한다. 새 릴리스는 초안에서 업로드를 마친 뒤 공개하고, 같은 날짜에 게시된 릴리스는 파일을 교체한다. 초안에서 게시가 중단됐다면 다음 실행이 해당 초안을 찾아 검증한 파일을 다시 업로드하고 공개한다. 배포 파일과 체크섬의 업로드가 모두 성공한 뒤 같은 태그의 배포 파일 집합을 정리한다. 다른 날짜의 파일과 관련 없는 첨부는 보존한다.
+1. WebUI 빌드 전에 tui의 실행·설치·업데이트와 서버 의존성 제외를 확인한다.
+2. full의 내장 UI를 빌드하고 프론트·Go 검사를 실행한다.
+3. 두 종류의 아카이브를 빌드하고 SHA-256·파일 구성·실행 파일의 빌드 메타데이터를 검사한다. [아카이브 검증](../scripts/release/artifacts.sh)
+4. 원격 `main`과 태그가 게시 조건을 만족하면 파일을 게시한다. 새 릴리스는 초안의 업로드가 완료되면 공개한다. 같은 날의 파일은 교체본 업로드를 확인한 후 정리한다. [게시 스크립트](../scripts/release/publish.sh)
 
-빌드·검사·사전 확인 실패 시 원격 태그를 변경하지 않는다. 게시 중 업로드·파일 정리에 실패하면 작업을 실패로 표시한다. 이 경우 태그나 일부 파일이 갱신되었을 수 있으므로 Actions에서 실패 원인을 확인하고 같은 실행을 다시 시도한다. 대체 파일의 업로드가 확인되기 전에는 배포 파일을 삭제하지 않는다. 모든 게시가 끝난 릴리스에는 여덟 아카이브와 공용 `checksums.txt`가 있어야 한다.
-
-게시 사전 검사는 타 플랫폼 실행 파일을 실행하지 않고 빌드 메타데이터만 읽는다. 메타데이터 판독 실패·태그 누락·비슷한 이름의 태그는 원격 태그 변경·업로드 전에 거절하며, 추출한 임시 파일은 성공·실패 모두 정리한다. 이 검사는 빌드 옵션 누락을 막으며 바이너리의 무결성 증명이나 의존성의 악성 행위 탐지를 대신하지 않는다.
-
-로컬 파일 검증은 [artifacts.sh](../scripts/release/artifacts.sh)의 verify_release_artifacts가, 원격 main·태그 lease 확인과 GitHub 게시는 [publish.sh](../scripts/release/publish.sh)가 소유한다. 검증 모듈은 같은 셸에서 source하므로 프로세스·검증 패스를 추가하지 않는다. publish.sh가 임시 디렉터리 정리를 소유하고 검증된 release_assets만 게시한다. 여덟 아카이브의 빌드 메타데이터는 한 번씩 확인하고 검증된 결과를 게시 단계에서 재사용한다.
-
-기본 `GITHUB_TOKEN`의 `contents: write` 권한을 게시 작업에 부여하며 별도 PAT나 사용자 인증정보를 등록할 필요는 없다. 같은 날짜의 갱신을 위해 릴리스는 수정 가능해야 한다. GitHub의 immutable release가 적용되어 있으면 태그를 바꾸기 전에 오류로 중단한다.
+사전 검사 실패는 원격 태그 변경 전에 중단된다. 게시 도중 실패하면 태그나 일부 파일이 바뀔 수 있으므로 Actions에서 원인을 확인한 뒤 다시 실행한다. 당일 갱신을 위해 수정 가능한 릴리스와 `GITHUB_TOKEN`의 `contents: write` 권한을 사용한다.
 
 ## 배포 파일
 
@@ -44,27 +35,13 @@
 | `linux_arm64.tar.gz` | Linux arm64 |
 | `linux_amd64.tar.gz` | Linux·WSL x86-64 |
 
-각 아카이브에는 `meca` 실행 파일과 `LICENSE`·`NOTICE`·`THIRD_PARTY_NOTICES.md`가 들어 있고 full에만 `WEBUI_THIRD_PARTY_NOTICES.txt`를 추가한다. 두 종류 모두 9개 Provider 어댑터를 제공한다. M.E.CA는 Apache License 2.0을 따르며 외부 구성요소의 라이선스는 각 고지를 따른다. 실행·설치에는 Go·Bun이나 개발 도구가 필요하지 않다. 모든 대상은 `CGO_ENABLED=0`으로 빌드한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다.
-
-모든 배포본은 `godbus_no_tcp`를 적용한다. Linux DBus의 TCP·nonce-TCP 전송 구현을 제외하고 Unix 소켓과 macOS Keychain을 유지한다. 모델 API·셸의 네트워크 기능은 영향을 받지 않는다. 보장 범위와 수동 빌드 옵션은 [설정 가이드](configuration.md#linux-자격-증명-전송)를 따른다.
-
-내장 WebUI의 코드 분할·압축·캐시 정책은 [빌드와 정적 자산 구현 전략](optimization-strategies.md#빌드와-정적-자산)에서 확인한다.
+각 아카이브에는 `meca`와 라이선스 고지가 들어 있다. full은 `WEBUI_THIRD_PARTY_NOTICES.txt`도 포함한다. 모든 실행 파일은 `CGO_ENABLED=0`과 `godbus_no_tcp`로 빌드하며 tui에는 `tui` 빌드 태그를 추가한다. macOS 배포본에는 Apple Developer ID 서명·공증이 적용되어 있지 않다. [배포별 빌드 경계](development.md#배포-종류와-빌드-경계)
 
 ## 다운로드와 설치
 
-[최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest)에서 OS·CPU에 맞는 아카이브를 내려받아 압축을 푼다. 압축을 푼 폴더에서 `./meca install`을 실행하면 된다. 공개 릴리스이므로 GitHub 로그인·토큰이 필요하지 않다. 파일 종류와 플랫폼은 [배포 파일](#배포-파일)의 표를 따른다. Linux의 CPU는 `uname -m`으로 확인한다.
+운영체제와 CPU에 맞는 아카이브를 받아 압축을 푼 폴더에서 `./meca install`을 실행한다. `~/.local/bin/meca`와 PATH, 기본 설정을 준비한다. [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
 
-터미널에서 압축을 풀고 설치하려면 다운로드한 폴더에서 실행한다. `<version>`·`<variant>`·`<platform>`은 실제 받은 파일명에 맞춘다.
-
-```sh
-mkdir meca-install
-tar -xzf "meca_<version>_<variant>_<platform>.tar.gz" -C meca-install
-./meca-install/meca install
-```
-
-설치하면 `~/.local/bin/meca`, PATH 등록과 기본 설정이 준비된다. 대화형 터미널에서 PATH 반영이 필요하면 설치 프로세스를 로그인 셸로 전환하며, 이 셸을 종료하면 설치를 호출한 셸로 돌아간다. PATH가 이미 반영되어 있거나 비대화형 실행이면 전환하지 않는다. 자동화에서는 `./meca install --no-shell`로 전환을 명시적으로 끌 수 있다. 삭제는 `meca uninstall`을 사용한다. 내려받은 아카이브와 압축을 푼 원본은 사용자가 보관하거나 지운다.
-
-`./meca install --ext browser`는 본체 설치 뒤 브라우저 도구 준비와 실행 확인까지 진행한다. `--no-shell`을 함께 사용할 수 있다. [브라우저 설치 요구사항](browser.md#첫-실행과-설치)
+대화형 설치에서 PATH를 새로 반영해야 하면 로그인 셸을 연다. 자동화에서는 `./meca install --no-shell`로 현재 셸을 유지할 수 있다. 본체와 브라우저 도구를 한 번에 준비하려면 `./meca install --ext browser`를 사용한다. 두 옵션은 함께 사용할 수 있다. [브라우저 설치 요구사항](browser.md#첫-실행과-설치)
 
 ### 체크섬 확인 (선택)
 
@@ -82,7 +59,7 @@ sha256sum meca_<version>_full_linux_amd64.tar.gz
 
 ## 소스 설치와 삭제
 
-소스 설치는 Git과 `./install.sh [tui|full]`을 사용하며 기본은 full이다. full만 Bun 1.4.4 이상으로 UI와 라이선스 고지를 먼저 생성한다. tui는 Bun이나 프론트 자산 없이 빌드하며 `tui` 태그를 추가한다. 배포 바이너리 실행에는 Bun·Node가 필요 없다. 설치된 Go가 있으면 사용하고 없으면 go.mod의 최소 버전에 맞는 공식 macOS·Linux amd64·arm64 SDK를 고정 SHA-256으로 검증해 임시 사용한다. 임시 SDK는 저장소 `.cache`에 두고 빌드 성공·실패 모두 정리한다. 공용 Go 모듈·빌드 캐시와 시스템 Go는 유지한다.
+저장소를 복제하고 `./install.sh`를 실행하면 full을 빌드해 설치한다. `./install.sh tui`는 TUI·CLI만 빌드한다. full 빌드는 Bun 1.4.4 이상이 필요하다. Go가 없으면 스크립트가 체크섬을 검증한 공식 SDK를 임시 사용한다. SDK 다운로드에는 `curl`·`tar`와 `sha256sum` 또는 `shasum`이 필요하다. [소스 빌드](development.md#소스-빌드)
 
 ```sh
 git clone https://github.com/keonho-kim/m.e.ca.git
@@ -90,25 +67,13 @@ cd m.e.ca
 ./install.sh          # full
 ```
 
-tui는 `./install.sh tui`, full을 명시하려면 `./install.sh full`을 사용한다. 저장소를 갱신해 재설치할 때는 `git pull --ff-only` 뒤 같은 설치 명령을 실행한다. Go가 없을 때의 SDK 준비에는 `curl`·`tar`와 `sha256sum` 또는 `shasum`이 필요하다. 설치 없이 실행 파일만 만들려면 [소스 빌드](development.md#소스-빌드)를 따른다.
-
-소스 설치도 배포본과 같은 `godbus_no_tcp` 빌드 태그를 적용한다. 저장소 `bin/meca`를 만든 뒤 호출한 작업 폴더·환경에서 설치 명령을 실행한다. 설치 위치·기본 설정·PATH 등록과 로그인 셸 전환은 릴리스 바이너리의 install과 같다.
-
-`meca uninstall`은 설치된 `~/.local/bin/meca`, MECA가 등록한 PATH 블록, `~/.meca` 전체와 저장한 OS 자격 증명을 제거한다. 실행 중인 에이전트를 종료한 뒤 사용한다. 사용자 프로젝트·다른 셸 설정·소스 저장소·공용 캐시는 유지하며 정리에 실패하면 원인을 반환한다.
-
-제거 전에 필요한 대화와 [자격 증명을 백업](configuration.md#api-key-암호화와-복구)한다. OS 인증정보 정리에 실패하면 `meca uninstall`을 다시 실행해 완료한다. 정리가 끝날 때까지 일반 시작·설치는 차단된다.
+`meca uninstall`은 실행 파일·MECA의 PATH 등록·`~/.meca` 전체·저장한 OS 자격 증명을 제거한다. 실행 중인 MECA를 종료하고 필요한 데이터와 자격 증명을 먼저 백업한다. 자격 증명 정리에 실패하면 `meca uninstall`을 다시 실행해 정리를 완료한다. [대화 복원](configuration.md#세션-저장과-복원) · [자격 증명 복구](configuration.md#api-key-암호화와-복구)
 
 ## 업데이트
 
-설치된 명령에서 `meca upgrade`를 실행하면 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)로 최신 정식 릴리스를 조회한다. 옵션을 생략하면 실행 중인 tui/full 종류를 유지한다. `meca upgrade --tui`는 tui 최신 버전으로, `meca upgrade --full`은 full 최신 버전으로 현재 설치 파일을 교체한다. 두 선택 옵션의 동시 사용·중복 지정은 거절한다. 선택한 종류와 현재 OS·CPU에 맞는 아카이브 및 `checksums.txt`를 받아 SHA-256을 검증한다. 같은 날짜의 태그·배포 파일도 갱신할 수 있으므로 버전 문자열만으로 건너뛰지 않는다.
+실행 중인 MECA를 종료한 뒤 `meca upgrade`를 실행한다. 현재 tui/full 종류를 유지하며 `--tui` 또는 `--full`로 전환할 수 있다. 최신 정식 릴리스에서 맞는 아카이브를 받아 SHA-256을 검증한다. 같은 날짜의 배포라도 파일 변경을 적용한다. GitHub 인증은 선택 사항이며 필요할 경우 `GH_TOKEN`, `GITHUB_TOKEN`, 로그인된 `gh`의 인증을 순서대로 사용한다.
 
-업데이트 명령을 사용할 수 없거나 배포 파일을 찾지 못하면 최신 배포본을 직접 받아 `meca install`로 재설치한다. 설치 경로와 설정·대화 보존 규칙은 일반 업데이트와 같다.
-
-공개 릴리스는 인증 없이 조회·다운로드할 수 있다. 선택적으로 API 인증을 사용하는 경우 GH_TOKEN, GITHUB_TOKEN, 설치되어 있고 로그인된 gh의 github.com 토큰 순서로 선택한다. 토큰을 설정·세션·로그에 기록하지 않으며 다른 호스트로 리다이렉트할 때 인증 헤더를 제거한다. Go·gh·tar·curl은 업데이트의 필수 실행 의존성이 아니다.
-
-임시 자료는 ~/.meca의 비공개 디렉터리에 저장하고 성공·오류·취소 시 정리한다. 메타데이터·체크섬은 각각 16MiB, 압축 파일·실행 파일은 각각 256MiB, 압축을 푼 전체 데이터는 512MiB로 제한한다. 파일명·SHA-256·실행 파일 엔트리를 확인한 뒤 검증된 바이너리의 install --no-shell을 실행한다. 아카이브의 링크·경로를 따라 외부 파일을 쓰지 않으며 다운로드·검증 실패 시 설치 상태를 변경하지 않는다. 일시적인 연결·읽기 오류와 HTTP 429·5xx는 최대 3회 시도하고 이후 원인을 반환한다.
-
-설치는 실행 중인 MECA와 설치 작업의 충돌을 막는 전용 잠금과 원자적 바이너리 교체를 사용한다. 설정·모델 연결·인증정보·대화는 유지하고 `~/.meca/prompts/single/`과 `~/.meca/prompts/team/`의 system.md·development.md·compaction.md는 사용자 수정 여부와 관계없이 배포 기본본으로 교체한다. 팀 시스템 기본본에는 단일 모드의 공통 원문 전체와 협업 보강이 포함된다. 바이너리가 이미 같아도 프롬프트 동기화는 수행하며 동일한 프롬프트 파일은 다시 쓰지 않는다. 일반 실행 중의 프롬프트 편집은 다음 설치·업데이트 전까지 유지한다.
+업데이트를 실행할 수 없거나 배포 파일을 찾지 못하면 최신 아카이브를 받아 압축을 푼 폴더에서 `./meca install --no-shell`을 실행한다. 설치와 업데이트는 설정·모델 연결·인증정보·대화를 보존하고 사용자 편집을 포함한 기본 프롬프트 파일을 배포본으로 갱신한다. [프롬프트 설정](configuration.md#프롬프트와-compaction)
 
 ## 로컬 검증
 
@@ -122,7 +87,7 @@ go tool -modfile=devtools/go.mod goreleaser release --snapshot --clean
 
 스냅샷은 GitHub에 게시하지 않으며 `dist/`에 검증용 배포 파일을 만든다. `--clean`은 `dist/`의 출력물을 지우므로 보관할 산출물은 먼저 다른 경로에 둔다. 일반 코드·보안 검사 외에 아카이브 내용·SHA-256·해당 호스트 실행 파일의 `--help`, 임시 HOME에서 install/uninstall을 확인한다. 교차 빌드 성공은 다른 OS에서 실제 실행한 결과와 구분한다.
 
-`go test ./scripts/release -run TestPublishRelease`는 모의 Git·GitHub 경계에서 여덟 아카이브의 종류·태그·고지 검사, 실패 시 게시 중단·임시 파일 정리, 대체 파일 업로드 확인 뒤 같은 태그의 정리 대상을 삭제하는 순서를 확인한다. 실행 전 개발 가이드의 `GOFLAGS`를 설정한다. 실제 산출물의 빌드 메타데이터 검사는 게시 스크립트가 수행한다.
+게시 경계의 실패·임시 파일 정리·교체 순서는 `go test ./scripts/release -run TestPublishRelease`로 확인한다. [검증 환경](development.md#변경-검증)
 
 ## GitHub 게시
 
@@ -132,4 +97,4 @@ go tool -modfile=devtools/go.mod goreleaser release --snapshot --clean
 gh workflow run release.yml --ref main
 ```
 
-GoReleaser 버전은 [devtools/go.mod](../devtools/go.mod)의 고정값을 사용한다. [.goreleaser.yaml](../.goreleaser.yaml)과 워크플로는 같은 [릴리스 안내](release-notes.md)를 사용한다. 대상 저장소는 `keonho-kim/m.e.ca`이며 게시 후 태그 커밋, tui/full 각각 네 아카이브와 공용 체크섬을 확인한다. 인증정보를 설정·로그·셸 스크립트에 기록하지 않는다.
+게시 설명은 [릴리스 노트](release-notes.md)에서 가져온다. 게시 후 대상 태그의 커밋과 tui/full 각 네 개의 아카이브, 공용 `checksums.txt`를 확인한다.

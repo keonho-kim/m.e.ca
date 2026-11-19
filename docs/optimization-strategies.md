@@ -40,7 +40,7 @@
 
 세션은 UTF-8 경계에 맞춘 임시 블록과 현재 이어 읽기 위치를 소유한다. 정확한 결과 ID·리비전·offset으로 읽을 때만 커서를 전진시키고 다 읽은 블록을 삭제한다. 모델 응답이 완료되면 해당 관찰을 짧은 열람 표시로 바꾼다. SQLite는 복원하기 전에 같은 경계를 적용하고, 실행은 현재 세션에서 받은 커서를 압축 뒤에도 별도로 전달한다. [임시 관찰](../internal/tools/browser/paging.go) · [실행 문맥](../internal/agent/run/browser_pages.go) · [SQLite 복원](../internal/storage/sqlite/browser_context.go)
 
-브라우저를 처음 열 때 도우미와 실행 환경을 준비한다. Stable 갱신은 다운로드 잠금과 버전 선택 잠금을 분리한다. 세션이 사용하는 관리 버전은 종료가 확인될 때까지 사용 기록으로 보호한다. 도우미 시작 전 실패에서는 확보한 실행 슬롯을 반환한다. [설치와 갱신](browser.md#stable-갱신) · [세션 수명](../internal/tools/browser/session.go) · [관리 설치본](../internal/tools/browser/runtime/managed.go) · [사용 기록](../internal/tools/browser/runtime/chrome_use.go)
+도구 목록을 만들 때는 설치 표시와 실행 경로만 확인하고, 모델 사용 지침은 제공한 도구에 맞춰 구성한다. 세션을 열 때 도우미의 무결성을 검사한다. 관리 Chrome 갱신은 다운로드 잠금과 버전 선택 잠금을 분리하고, 사용 중인 버전은 세션 종료가 확인될 때까지 보호한다. [설치 확인](../internal/tools/browser/runtime/availability.go) · [모델 요청 구성](../internal/agent/run/start.go) · [세션 수명](../internal/tools/browser/session.go) · [관리 설치본](../internal/tools/browser/runtime/managed.go) · [사용 기록](../internal/tools/browser/runtime/chrome_use.go)
 
 ## 이미지와 미리보기
 

@@ -24,6 +24,7 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
+	nativebrowser "github.com/keonho-kim/meca/internal/tools/browser"
 	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
@@ -220,7 +221,11 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 			fmt.Fprintf(w, "<pre id='proof'>%s%sNEVER_REQUESTED_SUFFIX</pre>", body.String(), strings.Repeat("x", 128<<10))
 		}))
 		defer server.Close()
-		browser, err := local.NewExecutor(project, home, filepath.Join(home, ".meca"), redact, local.Options{})
+		state := filepath.Join(home, ".meca")
+		if _, err := nativebrowser.PrepareAndCheck(ctx, state); err != nil {
+			t.Fatal(err)
+		}
+		browser, err := local.NewExecutor(project, home, state, redact, local.Options{})
 		if err != nil {
 			t.Fatal(err)
 		}

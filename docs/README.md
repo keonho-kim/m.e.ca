@@ -14,7 +14,7 @@
 | [WebUI](webui-design.md) | 접속·대화·편집·설정 |
 | [설정과 대화 보존](configuration.md) | 설정·프롬프트·백업·복구 |
 | [실행 경계](execution-boundary.md) | 호스트 권한과 승인 범위 |
-| [브라우저 도구](browser.md) | 필요 시 준비되는 브라우저와 제한된 관찰·조작 |
+| [브라우저 도구](browser.md) | 실행 환경 설치와 요청별 관찰·조작 |
 
 ## 서버 연동과 운영
 
@@ -24,7 +24,7 @@
 | [WebUI 연동 계약](webui-api.md) | 브라우저 인증·복구·원문 페이지 |
 | [이벤트와 운영 로그](diagnostics.md) | 사건·오류 분류와 진단 |
 | [설치와 배포](releases.md) | 다운로드·업데이트·소스 설치·릴리스 |
-| [릴리즈 노트](release-notes.md) | 해당 릴리즈의 변경 사항 |
+| [최신 릴리스](https://github.com/keonho-kim/m.e.ca/releases/latest) | 다운로드와 해당 버전의 변경 사항 |
 
 ## 개발과 프로젝트 정책
 
@@ -38,5 +38,3 @@
 | [기여 정책](../CONTRIBUTING.md) | 버그·기능 제안과 코드 기여 범위 |
 | [보안 제보](../SECURITY.md) | 취약점 보고 경로 |
 | [라이선스](../LICENSE) · [고지](../NOTICE) · [외부 소프트웨어](../THIRD_PARTY_NOTICES.md) | 사용·재배포 조건 |
-
-문서는 현재 사용과 계약을 설명한다. 개인 작업 기록과 생성 산출물은 공개 문서에 포함하지 않는다. [문서 관리 기준](development.md#문서-작성과-갱신)을 따른다.

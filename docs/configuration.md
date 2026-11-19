@@ -2,9 +2,7 @@
 
 [← README](../README.md) · [모델 연결](model-connections.md) · [서버 API](server.md)
 
-전역 설정은 ~/.meca/config.toml, 대화와 세션별 선택은 프로젝트별 세션 DB, API Key 암호문은 ~/.meca/credentials.db, 암호화 키는 OS 자격 증명 저장소에 보관한다.
-
-tui·full은 이 설정·대화·스킬·인증정보를 공유한다. 종류는 `meca --help`에 표시하며 config.toml에서 바꾸지 않는다. 서버·WebUI와 그 인증·접수 파일은 full에서 해당 기능을 사용할 때 준비한다. `meca upgrade --tui` 또는 `meca upgrade --full`로 종류를 바꾸고, 옵션 없는 `meca upgrade`는 현재 종류를 유지한다.
+아래 경로는 `~/.meca` 기준이다. tui와 full은 설정·대화·스킬·모델 인증정보를 공유한다. full의 서버 파일은 해당 기능을 사용할 때 준비한다. [배포 종류 변경](releases.md#업데이트)
 
 | 저장 위치 | 현재 책임 |
 | --- | --- |
@@ -17,13 +15,9 @@ tui·full은 이 설정·대화·스킬·인증정보를 공유한다. 종류는
 | `logs/` | 로컬 진단 로그 |
 | `skills/<name>/SKILL.md` | 개인 스킬. 프로젝트·공유 경로와의 우선순위는 [스킬 문서](skills.md) |
 
-이 경로는 `~/.meca` 기준이며 기능을 사용할 때 필요한 파일을 만든다. 서버의 listen·protocol·TLS·Host·Origin은 config.toml에 저장하지 않고 시작 옵션으로 전달한다. 서버 토큰과 모델 API Key는 서로 다른 인증정보다.
+언어·승인 모드·기본 모델을 저장할 때는 최신 설정에서 선택한 항목만 바꾼다. 서버의 listen·protocol·TLS·Host·Origin은 시작 옵션으로 전달한다. [서버 설정과 한도](server.md)
 
-일반 시작과 설치의 Bootstrap은 `skills/`에 `create-skill`·`ui-design`·`backend-design` 기본 스킬을 생성한다. 레이아웃·테마 등 중첩된 참고 파일·라이선스·고지도 함께 배포한다. 누락한 파일만 생성하고 이미 있는 스킬 파일은 재설치 때도 덮어쓰지 않는다. [기본 스킬과 초기화](skills.md#기본-스킬과-초기화)를 참고한다.
-
-언어·승인 모드·기본 모델을 저장할 때는 프로세스 공통 잠금 안에서 최신 설정의 해당 항목만 바꾼다. 저장 상한과 할당 기록은 내부에서 관리하며, 한도에 도달해도 기존 대화·자격 증명·백업을 자동 삭제하지 않는다. [서버 한도](server.md)를 따른다.
-
-로그 레벨은 시작 환경변수 `MECA_LOG_LEVEL`로 선택한다. TUI 파일 보관과 서버·CLI의 JSON stderr는 [이벤트와 운영 로그](diagnostics.md)를 따른다. 스킬은 기존 세션 기록에 보존한다. 지원하지 않는 저장 형식은 원본을 보존하고 열기를 거부한다. 자동 변환·삭제·재생성하지 않으며 서버 접수 DB를 제거해 이미 실행된 요청을 다시 접수하는 방식으로 해결하지 않는다.
+MECA는 일반 시작과 설치에서 누락된 기본 스킬 파일을 생성한다. 로그 레벨은 `MECA_LOG_LEVEL`로 지정한다. [기본 스킬과 초기화](skills.md#기본-스킬과-초기화) · [이벤트와 운영 로그](diagnostics.md)
 
 ## 화면 언어
 
@@ -45,11 +39,7 @@ WebUI의 설정 → 모델은 대화를 열기 전에도 전역 `[model]`을 조
 
 ### Linux 자격 증명 전송
 
-공식 릴리스와 `install.sh`는 `godbus_no_tcp` 태그를 적용한다. Linux Secret Service의 DBus 연결에서 `tcp:`와 `nonce-tcp:` 전송 구현 및 nonce 파일 전송을 빌드에서 제외하고 `unix:` 연결을 유지한다. macOS Keychain과 모델 API·OpenRouter·셸 네트워크 동작은 유지한다.
-
-보장 범위는 공식 MECA 바이너리의 DBus 의존성이 TCP 전송을 제공하지 않는다는 것이다. OS 전체의 외부 통신을 차단하거나 연결한 Unix 소켓의 서비스 신뢰성까지 보장하지 않는다. 태그 없는 일반 `go build`도 가능하므로 [수동 빌드](development.md#소스-빌드)에는 명시적 옵션이 필요하다. Linux에서 API Key를 저장하려면 접근 가능한 Unix 세션 버스와 Secret Service가 필요하며, 저장소를 사용할 수 없으면 오류를 반환한다.
-
-Linux에서는 사용 중인 데스크톱 세션의 Unix DBus와 Secret Service에 접근할 수 있어야 한다. MECA가 세션 버스나 키 저장소를 자동 설치·기동하지 않는다.
+Linux에서 API Key를 저장하려면 실행 계정이 Unix DBus 세션과 Secret Service에 접근할 수 있어야 한다. 공식 릴리스와 `install.sh`는 `godbus_no_tcp` 태그로 DBus의 `tcp:`·`nonce-tcp:` 전송을 제외한다. 소스에서 직접 빌드하면 태그를 지정한다. [소스 빌드](development.md#소스-빌드)
 
 ## 메인 에이전트와 보조 역할의 추론 설정
 
@@ -152,7 +142,7 @@ Provider가 생성 시작 전에 문맥 한도 오류를 반환하면 압축으�
 
 ## 본문 한도
 
-TOML 파서는 알 수 없는 키·잘못된 타입을 거절하고 각 설정 소유자가 값의 범위를 검사한다. 프롬프트 편집은 일반 실행 중 유지하며 install·upgrade를 실행하면 배포 기본본으로 갱신한다. 모델 연결과 나머지 설정·대화는 프롬프트 갱신으로 변경하지 않는다.
+TOML 설정은 정의된 키·타입·범위에 맞아야 한다.
 
 프로젝트 지침·프롬프트·압축 입력·요약은 각각 16MiB다. 모델 응답·실행 문맥·인자는 기본 256MiB, 중첩 JSON 저장 이벤트는 512MiB 수용 한도를 둔다. 이는 미리 할당하는 크기나 모델에 매번 보내는 양이 아니다. 경로·ID·열거값·배열 개수와 화면 발췌 예산은 별도다. 실제 모델 context·출력 한도와 바이트 수용 상한을 혼동하지 않는다.
 

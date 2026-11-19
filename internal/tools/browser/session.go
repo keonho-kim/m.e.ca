@@ -34,8 +34,12 @@ type Session struct {
 }
 
 func New(state, base string, redact func(string) string, version func() int) *Session {
-	return &Session{gate: make(chan struct{}, 1), state: state, base: base, redact: redact, version: version, prepare: runtime.Ensure}
+	return &Session{gate: make(chan struct{}, 1), state: state, base: base, redact: redact, version: version, prepare: runtime.OpenInstalled}
 }
+
+// Available reports whether the session's browser dependencies are installed.
+func (s *Session) Available() bool { return s != nil && runtime.Available(s.state) }
+
 func (s *Session) Current() string         { s.mu.Lock(); defer s.mu.Unlock(); return s.address }
 func (s *Session) setAddress(value string) { s.mu.Lock(); s.address = value; s.mu.Unlock() }
 
