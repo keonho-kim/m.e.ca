@@ -49,7 +49,7 @@ func TestStreamingResponseDoesNotReplay(t *testing.T) {
 		{
 			name:        "output limit",
 			finalFrames: "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n",
-			failure:     "output token limit",
+			recover:     true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestStreamingResponseDoesNotReplay(t *testing.T) {
 				wantAttempts++
 				wantAnswer += continuation
 			}
-			if tc.correctTool {
+			if tc.correctTool || tc.name == "output limit" {
 				wantMeasurements++
 			}
 			if !visible || attempts.Load() != wantAttempts || measurements.Load() != wantMeasurements ||

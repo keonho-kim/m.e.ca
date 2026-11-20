@@ -57,7 +57,7 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 		content = bytes.TrimSpace(content)
 		if bytes.Equal(content, []byte("[DONE]")) {
 			if (modelconn.UsesResponses(provider) || provider == modelconn.Claude || provider == modelconn.Gemini) && !state.Finished {
-				return faults.Errorf(diagcatalog.ProtocolModelResponsesStreamEndedWithoutACompleted)
+				return state.interrupted(faults.Errorf(diagcatalog.ProtocolModelResponsesStreamEndedWithoutACompleted), emit)
 			}
 			state.Finished = true
 			return nil
@@ -76,7 +76,7 @@ func readResponse(ctx context.Context, response *http.Response, provider modelco
 	for {
 		line, readErr := reader.next(ctx)
 		if readErr != nil && readErr != io.EOF {
-			return faults.Errorf(diagcatalog.ProtocolReadModelStream, readErr)
+			return state.interrupted(faults.Errorf(diagcatalog.ProtocolReadModelStream, readErr), emit)
 		}
 		if readErr == io.EOF && len(line) == 0 {
 			break

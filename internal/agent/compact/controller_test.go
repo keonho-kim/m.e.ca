@@ -55,7 +55,7 @@ func TestThresholdPublishesSummaryOnly(t *testing.T) {
 	controller := Controller{Repository: repo, Session: "s", Model: "m", Prompt: prompt.Defaults().Compaction, Settings: Defaults(), Redact: func(s string) string { return s }}
 	calls := 0
 	starts := 0
-	started := func() error { starts++; return nil }
+	started := func(modelapi.ContextMeasurement) error { starts++; return nil }
 	generate := func(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 		calls++
 		if len(r.Messages) != 2 {

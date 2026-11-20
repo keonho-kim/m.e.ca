@@ -19,7 +19,7 @@ func (d *Decoder) finish(state *native.State, emit func(modelapi.Event) error) e
 	switch d.reason {
 	case "end_turn", "stop_sequence", "tool_use":
 	case "max_tokens", "model_context_window_exceeded":
-		return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Claude output token limit"}, emit)
+		return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Claude output token limit", TokenLimit: true}, emit)
 	default:
 		return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.ClaudeClaudeResponseDidNotComplete, d.reason)}, emit)
 	}

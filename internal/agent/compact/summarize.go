@@ -43,10 +43,13 @@ func (c *Controller) summarize(ctx context.Context, generate Generate, messages 
 		if len(event.Calls) > 0 {
 			return faults.Errorf(diagcatalog.CompactCompactionCannotCallTools)
 		}
-		reply.WriteString(event.Delta)
-		if reply.Len() > c.Settings.MaxSummaryBytes {
+		if event.ReplaceOutput {
+			reply.Reset()
+		}
+		if len(event.Delta) > c.Settings.MaxSummaryBytes-reply.Len() {
 			return faults.Errorf(diagcatalog.CompactCompactionOutputExceedsLimit)
 		}
+		reply.WriteString(event.Delta)
 		if event.Done {
 			done = true
 		}

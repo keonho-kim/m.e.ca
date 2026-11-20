@@ -4,7 +4,10 @@
 // Related: internal/provider/protocol/chat/decode.go, internal/provider/protocol/ollama/decode.go.
 package native
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Message struct {
 	ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`
@@ -19,9 +22,10 @@ type Message struct {
 }
 
 type Frame struct {
-	Message       Message
-	Input, Output *int64
-	Cost          *float64
-	Reason        *string
-	Done          *bool
+	DecodeDuration time.Duration
+	Message        Message
+	Input, Output  *int64
+	Cost           *float64
+	Reason         *string
+	Done           *bool
 }

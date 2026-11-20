@@ -1,4 +1,4 @@
-// Purpose: Format run duration and the bounded compaction header indicator.
+// Purpose: Format run duration, compaction status and the active model attempt’s timing.
 // Pattern: Pure presentation values.
 // Usage: Session projects its worker state into every view through Activity.
 // Related: internal/tui/view/tokens.go, internal/tui/view/input.go.
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/locale"
 )
 
@@ -16,7 +17,8 @@ type Activity struct {
 	Language             locale.Language
 	MemoryUsage          string
 	Elapsed              time.Duration
-	TokensPerSecond      *float64
+	Timing               *record.ModelActivity
+	TimingAgent          string
 	Running, Compressing bool
 	ShowCost             bool
 	Dots                 int
@@ -44,4 +46,25 @@ func (a Activity) indicatorLabel() string {
 	dots := strings.Repeat(".", max(1, min(3, a.Dots)))
 	label := a.Language.Text("Compress Memory")
 	return fmt.Sprintf("%s %-3s", label, dots)
+}
+
+func (a Activity) speedLabel(now time.Time) string {
+	m := a.Timing
+	if m == nil {
+		return ""
+	}
+	label := a.Language.Text("TPS") + " —"
+	if m.FirstOutput.IsZero() && !m.Finished {
+		label = fmt.Sprintf("%s %ds", a.Language.Text("Waiting for output"), max(0, int(now.Sub(m.Started).Seconds())))
+	} else if rate := m.Speed.Rate(); rate != nil {
+		source := "Received TPS"
+		if m.Speed.Source == "provider" {
+			source = "Generation TPS"
+		}
+		label = fmt.Sprintf("%s %.1f", a.Language.Text(source), *rate)
+	}
+	if a.TimingAgent != "" {
+		label = a.TimingAgent + " " + label
+	}
+	return " · " + label
 }

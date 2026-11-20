@@ -6,6 +6,8 @@
 package protocol
 
 import (
+	"errors"
+
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -61,6 +63,7 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 			return err
 		}
 		observed = state.Usage
+		state.Completion.DecodeDuration = frame.DecodeDuration
 	}
 	if err != nil {
 		return state.EmitFailedUsage(err, emit)
@@ -108,7 +111,7 @@ func (state *streamState) consume(content []byte, single bool, emit func(modelap
 	}
 	progress := state.Calls.Bytes() > beforeCalls || opaqueProgress
 	if message.Content != "" || reason != "" || observed != nil || progress {
-		return emit(modelapi.Event{Progress: progress, Delta: message.Content, Thinking: reason, Streaming: state.Streaming, Usage: observed})
+		return emit(modelapi.Event{DecodeDuration: frame.DecodeDuration, Progress: progress, Delta: message.Content, Thinking: reason, Streaming: state.Streaming, Usage: observed})
 	}
 	return nil
 }
@@ -121,7 +124,7 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 	// close cleanly. Keep reading until the SSE terminator or EOF.
 	finished := state.Finished || state.chatFinish == "stop" || state.chatFinish == "tool_calls"
 	if !finished || !state.Received {
-		return faults.Transient(faults.Errorf(diagcatalog.ProtocolModelStreamEndedBeforeCompletion))
+		return state.interrupted(faults.Transient(faults.Errorf(diagcatalog.ProtocolModelStreamEndedBeforeCompletion)), emit)
 	}
 	calls, err := state.Calls.Complete()
 	if err != nil {
@@ -138,5 +141,17 @@ func (state *streamState) complete(emit func(modelapi.Event) error) error {
 			return err
 		}
 	}
-	return emit(modelapi.Event{Done: true, Streaming: state.Streaming, Usage: state.Usage, Calls: calls, ReasoningState: continuation})
+	event := state.Completion
+	event.Done, event.Streaming, event.Usage = true, state.Streaming, state.Usage
+	event.Calls, event.ReasoningState = calls, continuation
+	return emit(event)
+}
+
+func (state *streamState) interrupted(cause error, emit func(modelapi.Event) error) error {
+	if modelconn.UsesResponses(state.provider) {
+		if err := state.responses.EmitPartial(state.Streaming, emit); err != nil {
+			return errors.Join(cause, err)
+		}
+	}
+	return cause
 }

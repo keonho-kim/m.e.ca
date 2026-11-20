@@ -33,7 +33,7 @@ func TestConnectionSaveFailure(t *testing.T) {
 	defer candidate.Close()
 	a.connection.client = old
 	a.connection.selection = connection.Selection{Connection: conn, Model: "old"}
-	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Activity: testAttempt(20, time.Second, true), Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.opts.Session.ID = "missing-session"
 	next := connection.Selection{Connection: conn, Model: "new"}
 	a.startModelCommit(notice{Client: candidate, Selection: &next})
@@ -41,7 +41,7 @@ func TestConnectionSaveFailure(t *testing.T) {
 	if a.connection.client != old || a.connection.selection.Model != "old" || a.status == "" {
 		t.Fatalf("failed save applied: model=%s status=%s", a.connection.selection.Model, a.status)
 	}
-	if a.chat.tokensPerSecond == nil || *a.chat.tokensPerSecond != 20 {
+	if a.activity().Timing == nil || *a.activity().Timing.Speed.Rate() != 20 {
 		t.Fatal("failed connection replacement discarded the active model's measured TPS")
 	}
 }
@@ -63,13 +63,13 @@ func TestConnectionCredentialDoesNotOverwriteSavedKey(t *testing.T) {
 	}
 	defer candidate.Close()
 	next := connection.Selection{Connection: conn, Model: "alias"}
-	a.receiveRuntime(&runrecord.Event{Kind: "usage", Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
+	a.receiveRuntime(&runrecord.Event{Kind: "usage", Activity: testAttempt(20, time.Second, true), Usage: &modelapi.TokenUsage{Output: 20}, MeasuredDuration: time.Second})
 	a.startModelCommit(notice{Client: candidate, Selection: &next, credential: "new-key"})
 	finishModelChange(t, a)
 	if a.status != "" {
 		t.Fatal(a.status)
 	}
-	if a.chat.tokensPerSecond != nil {
+	if a.activity().Timing != nil {
 		t.Fatal("new connection reused throughput measured for the previous model")
 	}
 	if a.connection.selection.Connection.CredentialRef == conn.CredentialRef {

@@ -40,9 +40,9 @@ func (c *Controller) Observe(ctx context.Context, count TokenCount) error {
 }
 
 // Refresh checks the current input when tokenization is available and otherwise uses the saved estimate.
-func (c *Controller) Refresh(ctx context.Context, budget modelapi.InputBudget, started func() error, generate Generate) (bool, error) {
+func (c *Controller) Refresh(ctx context.Context, budget modelapi.InputBudget, started func(modelapi.ContextMeasurement) error, generate Generate) (bool, error) {
 	c.observeWindow(budget.Window)
-	return c.refresh(ctx, started, generate, thresholdCompaction, budget.InputTokens, 0)
+	return c.refresh(ctx, started, generate, thresholdCompaction, modelapi.ContextMeasurement{Input: int64(budget.InputTokens), Source: "tokenizer", OutputBudget: budget.OutputTokens})
 }
 
 func (c *Controller) observeWindow(window int) {
@@ -52,14 +52,18 @@ func (c *Controller) observeWindow(window int) {
 }
 
 // Compact responds to a confirmed context-capacity failure at a safe boundary.
-func (c *Controller) Compact(ctx context.Context, failure modelapi.ContextLimitError, started func() error, generate Generate) (bool, error) {
+func (c *Controller) Compact(ctx context.Context, failure modelapi.ContextLimitError, started func(modelapi.ContextMeasurement) error, generate Generate) (bool, error) {
 	c.observeWindow(failure.Capacity)
-	return c.refresh(ctx, started, generate, capacityCompaction, 0, failure.RequestedOutput)
+	source := "provider"
+	if failure.Tokenized {
+		source = "tokenizer"
+	}
+	return c.refresh(ctx, started, generate, capacityCompaction, modelapi.ContextMeasurement{Input: int64(failure.Input), Source: source, OutputBudget: failure.RequestedOutput})
 }
 
 // CompactNow summarizes eligible history on an idle conversation's explicit request.
-func (c *Controller) CompactNow(ctx context.Context, started func() error, generate Generate) (bool, error) {
-	return c.refresh(ctx, started, generate, manualCompaction, 0, 0)
+func (c *Controller) CompactNow(ctx context.Context, started func(modelapi.ContextMeasurement) error, generate Generate) (bool, error) {
+	return c.refresh(ctx, started, generate, manualCompaction, modelapi.ContextMeasurement{})
 }
 
 // Load restores the last summary before the agent assembles a request.
@@ -87,7 +91,7 @@ func (c *Controller) Load(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) refresh(ctx context.Context, started func() error, generate Generate, mode compactionMode, inputTokens, rejectedOutput int) (bool, error) {
+func (c *Controller) refresh(ctx context.Context, started func(modelapi.ContextMeasurement) error, generate Generate, mode compactionMode, input modelapi.ContextMeasurement) (bool, error) {
 	if generate == nil {
 		return false, faults.Errorf(diagcatalog.CompactCompactionDependenciesAreRequired)
 	}
@@ -97,20 +101,20 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 	window := c.contextWindow()
 	// Use the first whole token count at or above 75 percent.
 	threshold := window - window/4
-	if mode == thresholdCompaction && inputTokens > 0 && inputTokens < threshold {
+	if mode == thresholdCompaction && input.Input > 0 && input.Input < int64(threshold) {
 		return false, nil
 	}
 	mark, err := c.Repository.MemoryWatermark(ctx, c.Session, c.memory.UsageThrough)
 	if err != nil {
 		return false, err
 	}
-	if mode == thresholdCompaction && inputTokens <= 0 && mark.Tokens < int64(threshold) {
+	if mode == thresholdCompaction && input.Input <= 0 && mark.Tokens < int64(threshold) {
 		return false, nil
 	}
 	keep := 0
 	if mode != manualCompaction {
 		keep = min(c.Settings.KeepRecentTokens, window/4)
-		if rejectedOutput > 0 {
+		if rejectedOutput := input.OutputBudget; mode == capacityCompaction && rejectedOutput > 0 {
 			keep = min(keep, max(1, (window-rejectedOutput)/2))
 		}
 	}
@@ -130,7 +134,14 @@ func (c *Controller) refresh(ctx context.Context, started func() error, generate
 		return false, nil
 	}
 	if started != nil {
-		if err := started(); err != nil {
+		input.Window = window
+		if input.Input <= 0 {
+			input.Input, input.Source = mark.Tokens, "watermark"
+			if mark.Estimated {
+				input.Source = "watermark_estimate"
+			}
+		}
+		if err := started(input); err != nil {
 			return false, err
 		}
 	}

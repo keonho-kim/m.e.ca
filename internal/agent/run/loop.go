@@ -15,6 +15,8 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
+var errEmptyReply = faults.Errorf(diagcatalog.RunEmptyReply)
+
 func (s *execution) drive(ctx context.Context, approve Approver) (resultErr error) {
 	var err error
 	var draft replyDraft
@@ -25,13 +27,19 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 		}
 	}()
 	compactionAttempted := false
-	correctedToolCall := false
+	correctedReply := false
 	for {
 		if _, err = s.collectCommands(ctx); err != nil {
 			return err
 		}
 		if _, err = s.admitInstructions(ctx); err != nil {
 			return err
+		}
+		if tail := draft.continuation; tail != nil && tail.revision != s.instructionRevision {
+			// The new instruction needs an ordinary tool-enabled decision.
+			// Keep the visible draft until that decision produces a validated replacement.
+			draft.continuation, draft.truncatedText = nil, false
+			correctedReply = false
 		}
 		if finished, decisionErr := s.prepareDecision(ctx, draft.output.bytes() != 0); finished || decisionErr != nil {
 			return decisionErr
@@ -43,7 +51,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 		if err = s.persist(ctx); err != nil {
 			return err
 		}
-		decision, askErr := s.prepareAgentRequest(ctx)
+		decision, askErr := s.prepareAgentRequest(ctx, draft.continuation)
 		var reply modelapi.Response
 		if askErr == nil {
 			if current, err := s.preparedCurrent(ctx, decision); err != nil {
@@ -64,24 +72,49 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 					continue
 				}
 			}
+			if tail := draft.continuation; tail != nil {
+				if !tail.fits(decision.prepared.Budget, s.instructionRevision) {
+					return tail.cause
+				}
+				if err := s.emit(runrecord.Event{Kind: "retry", Text: diagcatalog.Text(diagcatalog.RunContinueAnswer)}); err != nil {
+					return err
+				}
+			}
 			reply, askErr = s.askResponse(ctx, decision.request, decision.prepared.Send, &draft)
-			decision.request, decision.prepared = modelapi.Request{}, modelapi.PreparedGeneration{}
+			decision.prepared.Send = nil
+			decision.request.Messages, decision.request.Tools = nil, nil
 			compactionAttempted = false
 		}
 		if askErr == nil {
 			s.acknowledgeObservations(decision.supplied)
 			s.capacityRecovery = false
-			correctedToolCall = false
+			correctedReply = false
 		}
 		if askErr != nil {
 			if ctx.Err() != nil || errors.Is(askErr, errRuntimeRecord) {
+				return askErr
+			}
+			if tail := draft.continuation; tail != nil {
+				if errors.Is(askErr, tail.cause) {
+					return askErr
+				}
+				return errors.Join(tail.cause, askErr)
+			}
+			if draft.truncatedText && decision.request.MaxOutput == 0 && decision.prepared.Budget.InputTokens > 0 &&
+				s.usage.ModelCalls < s.limits.MaxModelCalls {
+				draft.continuation = &textContinuation{text: draft.output.text, revision: decision.instructionRevision, cause: askErr}
+				continue
+			}
+			var limit *modelapi.OutputLimitError
+			if errors.As(askErr, &limit) {
 				return askErr
 			}
 			var malformed *modelapi.ToolCallError
 			if errors.As(askErr, &malformed) {
 				s.result.HadToolFailure = true
 			}
-			if malformed == nil && draft.output.bytes() != 0 {
+			empty := errors.Is(askErr, errEmptyReply)
+			if !empty && malformed == nil && draft.output.bytes() != 0 {
 				return askErr
 			}
 			if handled, imageErr := s.recoverImages(ctx, askErr); handled {
@@ -100,15 +133,23 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 				compactionAttempted = true
 				continue
 			}
-			if malformed == nil || correctedToolCall {
+			if (!empty && malformed == nil) || correctedReply {
 				return askErr
 			}
-			correctedToolCall = true
+			if s.usage.ModelCalls >= s.limits.MaxModelCalls {
+				return errors.Join(askErr, errModelBudget)
+			}
+			correctedReply = true
+			notice := diagcatalog.RunRetryInvalidToolCall
 			s.checkpoint.Observation = "Correct the native tool call using the declared schema and continue the task. Validation error: " + s.runner.Redact(askErr.Error())
+			if empty {
+				notice = diagcatalog.RunRetryEmptyReply
+				s.checkpoint.Observation = "The previous decision ended without an answer or tool call. Provide the final answer or the native tool call needed for the current task."
+			}
 			if err := s.save(ctx, modelapi.Message{Role: "system", Content: s.checkpoint.Observation}); err != nil {
 				return err
 			}
-			if err := s.emit(runrecord.Event{Kind: "retry", Text: diagcatalog.Text(diagcatalog.RunRetryInvalidToolCall)}); err != nil {
+			if err := s.emit(runrecord.Event{Kind: "retry", Text: diagcatalog.Text(notice)}); err != nil {
 				return err
 			}
 		} else if len(reply.Calls) > 0 {

@@ -10,6 +10,8 @@ import (
 
 type ContextLimitError struct {
 	Input, Capacity int
+	// Tokenized identifies an exact preflight input that already fills the window.
+	Tokenized bool
 	// RequestedOutput is known only for a server rejection correlated with the sent generation.
 	RequestedOutput int
 	// Partial means generation already produced output before the failure.

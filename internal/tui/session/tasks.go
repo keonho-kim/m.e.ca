@@ -28,7 +28,7 @@ func (a *app) startRequest(input requestinput.Request) {
 	}
 	a.chat.output.Follow = true
 	a.chat.stream, a.chat.thinking = "", ""
-	a.chat.resetThroughput()
+	clear(a.chat.attempts)
 	a.chat.runSummary = nil
 	a.chat.retry = retryNotice{}
 	a.stopNotice = ""

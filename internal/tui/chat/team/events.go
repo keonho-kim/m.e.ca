@@ -42,7 +42,6 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 	case "generation_started":
 		peer := s.peer(event.Agent)
 		peer.message.discard(output)
-		peer.measured = runrecord.Throughput{}
 		peer.current = modelapi.TokenUsage{}
 	case "stream":
 		peer := s.peer(event.Agent)
@@ -74,13 +73,10 @@ func (s *State) Apply(event runrecord.Event, f transcript.Formatter, output *vie
 		if event.Usage != nil {
 			peer := s.peer(event.Agent)
 			peer.current = event.Usage.Clone()
-			peer.measured = runrecord.MeasuredThroughput(event)
 		}
 	case "usage":
-		s.measured = s.measured.Add(runrecord.MeasuredThroughput(event))
 		peer := s.peer(event.Agent)
 		peer.current = modelapi.TokenUsage{}
-		peer.measured = runrecord.Throughput{}
 	case "tool_started", "tool_waiting":
 		s.startTool(event, f, output)
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished":

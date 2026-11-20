@@ -71,6 +71,10 @@ func (e *ToolCallError) Error() string {
 }
 
 type Event struct {
+	// DecodeDuration is the provider-reported duration for the accompanying output count.
+	DecodeDuration time.Duration
+	// ReplaceOutput carries both authoritative channels when completion corrects earlier deltas.
+	ReplaceOutput bool
 	// Progress marks validated non-display tool or continuation bytes, never a keepalive.
 	Progress bool
 	// InputBytes is transient text-request size from the transport, never token usage.
@@ -89,12 +93,6 @@ type Event struct {
 // HasOutput reports response content or completion delivered by a generation.
 func (e Event) HasOutput() bool {
 	return e.Delta != "" || e.Thinking != "" || len(e.Calls) > 0 || e.Done
-}
-
-// InputBudget describes the context and output reservation used by the adapter.
-// InputTokens is zero when the provider did not tokenize the request.
-type InputBudget struct {
-	Window, InputTokens, OutputTokens int
 }
 
 // Stream sends one request whose input and model settings have already been bound.

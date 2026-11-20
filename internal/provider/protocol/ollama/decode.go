@@ -6,6 +6,7 @@ package ollama
 
 import (
 	"encoding/json"
+	"time"
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
@@ -15,17 +16,21 @@ import (
 
 func Decode(content []byte) (native.Frame, error) {
 	var wire struct {
-		Message native.Message  `json:"message"`
-		Done    *bool           `json:"done"`
-		Reason  string          `json:"done_reason"`
-		Input   *int64          `json:"prompt_eval_count"`
-		Output  *int64          `json:"eval_count"`
-		Error   json.RawMessage `json:"error"`
+		Duration time.Duration   `json:"eval_duration"`
+		Message  native.Message  `json:"message"`
+		Done     *bool           `json:"done"`
+		Reason   string          `json:"done_reason"`
+		Input    *int64          `json:"prompt_eval_count"`
+		Output   *int64          `json:"eval_count"`
+		Error    json.RawMessage `json:"error"`
 	}
 	if err := json.Unmarshal(content, &wire); err != nil {
 		return native.Frame{}, faults.Errorf(diagcatalog.ChatInvalidModelStream, err)
 	}
-	value := native.Frame{Message: wire.Message, Input: wire.Input, Output: wire.Output, Done: wire.Done, Reason: &wire.Reason}
+	if wire.Duration < 0 {
+		return native.Frame{}, faults.Errorf(diagcatalog.ProtocolInvalidProviderTokenUsage)
+	}
+	value := native.Frame{DecodeDuration: wire.Duration, Message: wire.Message, Input: wire.Input, Output: wire.Output, Done: wire.Done, Reason: &wire.Reason}
 	if len(wire.Error) > 0 && string(wire.Error) != "null" && string(wire.Error) != `""` {
 		return value, transport.ParseError(0, content, "")
 	}

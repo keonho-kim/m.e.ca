@@ -25,6 +25,9 @@ func appendDraft(builder *strings.Builder, delta string) string {
 }
 
 func (s *Service) emit(r *request, value record.Event) {
+	if value.Kind == "model_activity" {
+		return
+	}
 	r.outputMu.Lock()
 	defer r.outputMu.Unlock()
 	maskVersion := 0

@@ -21,6 +21,7 @@ import (
 )
 
 type execution struct {
+	beforeCompaction       *modelapi.ContextMeasurement
 	order                  *presentation.Sequence
 	presentation           string
 	contextMemory          *processmemory.ContextLease

@@ -33,10 +33,12 @@ func (client *Client) sendPrepared(ctx context.Context, prepared preparedRequest
 	if err != nil {
 		return err
 	}
+	measurement := modelapi.Event{InputBudget: &prepared.budget}
 	if !prepared.hasImages {
-		if err := emit(modelapi.Event{InputBytes: int64(content.Len()), InputBudget: &prepared.budget}); err != nil {
-			return err
-		}
+		measurement.InputBytes = int64(content.Len())
+	}
+	if err := emit(measurement); err != nil {
+		return err
 	}
 	idle := prepared.request.IdleTimeout
 	if idle <= 0 {
@@ -45,6 +47,7 @@ func (client *Client) sendPrepared(ctx context.Context, prepared preparedRequest
 	attempt := 0
 	generationStarted := false
 	err = client.transport.Attempts(ctx, func() (err error) {
+		firstOutput := true
 		progress := transport.WatchContent(ctx, idle)
 		defer progress.Close()
 		attemptCtx := progress.Context()
@@ -95,8 +98,11 @@ func (client *Client) sendPrepared(ctx context.Context, prepared preparedRequest
 					generationStarted = true
 					progress.Activity()
 				}
-				if event.Progress && !output && event.Usage == nil {
+				if event.Progress && !output && event.Usage == nil && !firstOutput {
 					return nil
+				}
+				if event.Progress || output {
+					firstOutput = false
 				}
 				if event.Done {
 					var err error

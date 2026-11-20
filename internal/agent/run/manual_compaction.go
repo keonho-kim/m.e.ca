@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/presentation"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/diagnostics"
@@ -41,7 +42,7 @@ func (r Runner) CompactNow(ctx context.Context, emit func(runrecord.Event) error
 		result = s.result
 		diagnostics.Log(ctx, diag.RunFinished, "status", string(result.Status), "duration_ms", time.Since(started).Milliseconds(), "error_code", diagnostics.Code(err))
 	}()
-	changed, err := r.Memory.CompactNow(ctx, func() error {
+	changed, err := r.Memory.CompactNow(ctx, func(modelapi.ContextMeasurement) error {
 		return s.emit(runrecord.Event{Kind: "compaction_started"})
 	}, s.generateCompaction)
 	if err != nil {

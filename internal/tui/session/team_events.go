@@ -33,11 +33,7 @@ func (a *app) receiveTeam(event *runrecord.Event) {
 		if event.Kind == "usage" && event.Usage != nil {
 			a.chat.tokenTotal = a.chat.tokenTotal.Add(*event.Usage)
 		}
-		current, rate := a.team.view.CurrentUsage()
-		a.chat.tokenCurrent = current
-		if rate != nil {
-			a.chat.tokensPerSecond = rate
-		}
+		a.chat.tokenCurrent = a.team.view.CurrentUsage()
 	case "image_input_unavailable":
 		a.connection.rejectImages()
 	}

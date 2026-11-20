@@ -18,8 +18,7 @@ type chatState struct {
 	chatVisible, selectedTranscript []viewport.Line
 	historyLoading, historyEnd      bool
 	chatProjection                  chatProjection
-	tokensPerSecond                 *float64
-	measured, currentMeasurement    runrecord.Throughput
+	attempts                        map[string]runrecord.ModelActivity
 	tokenTotal, tokenCurrent        modelapi.TokenUsage
 	runSummary                      *viewport.Block
 	output                          viewport.View

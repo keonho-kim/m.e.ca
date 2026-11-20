@@ -113,6 +113,15 @@ func TestCompactionBoundaryAppliesSteeringBeforeNextGeneration(t *testing.T) {
 	if err != nil || result.Status != runrecord.Answered || calls != 1 {
 		t.Fatalf("calls=%d status=%s error=%v", calls, result.Status, err)
 	}
+	for _, event := range store.events {
+		if g := event.Generation; g != nil && g.BeforeCompaction != nil {
+			if g.BeforeCompaction.Input != 245760 || g.BeforeCompaction.Source != "watermark" || g.Context.Source != "estimate" {
+				t.Fatalf("before=%+v after=%+v", g.BeforeCompaction, g.Context)
+			}
+			return
+		}
+	}
+	t.Fatal("missing persisted compaction measurement")
 }
 
 func TestCapacityRecoveryResetsAfterSuccessfulResponse(t *testing.T) {

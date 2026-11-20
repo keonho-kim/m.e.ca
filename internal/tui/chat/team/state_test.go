@@ -34,9 +34,9 @@ func TestStateAggregatesOnlyReportedUsage(t *testing.T) {
 	measured := 2 * time.Second
 	state.Apply(runrecord.Event{Kind: "usage", Agent: "Hana", Usage: &modelapi.TokenUsage{Input: 100, Output: 20}, Generation: &runrecord.Generation{MeasuredMillis: 1000}}, f, &output)
 	state.Apply(runrecord.Event{Kind: "usage_progress", Agent: "Ren", Usage: &modelapi.TokenUsage{Input: 200, Output: 40}, MeasuredDuration: measured}, f, &output)
-	usage, tps := state.CurrentUsage()
-	if usage.Input != 200 || usage.Output != 40 || tps == nil || *tps != 20 {
-		t.Fatalf("usage=%+v tps=%v", usage, tps)
+	usage := state.CurrentUsage()
+	if usage.Input != 200 || usage.Output != 40 {
+		t.Fatalf("usage=%+v", usage)
 	}
 	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "Hana"}, f, &output)
 	state.Apply(runrecord.Event{Kind: "compaction_started", Agent: "Ren"}, f, &output)
@@ -70,7 +70,7 @@ func TestStatePreservesStreamsAndReleasesOwnedReferences(t *testing.T) {
 		t.Fatal(text.String())
 	}
 	state.Finish(&output)
-	if state.peers != nil || state.tools != nil || state.measured != (runrecord.Throughput{}) {
+	if state.peers != nil || state.tools != nil {
 		t.Fatal("closed projection retained per-request data")
 	}
 	for _, block := range output.Blocks {

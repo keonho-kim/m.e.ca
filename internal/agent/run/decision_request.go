@@ -22,7 +22,7 @@ type decisionRequest struct {
 	supplied                             int
 }
 
-func (s *execution) prepareAgentRequest(ctx context.Context) (decisionRequest, error) {
+func (s *execution) prepareAgentRequest(ctx context.Context, tail *textContinuation) (decisionRequest, error) {
 	if err := s.restoreHistory(ctx); err != nil {
 		return decisionRequest{}, err
 	}
@@ -32,6 +32,11 @@ func (s *execution) prepareAgentRequest(ctx context.Context) (decisionRequest, e
 	request, err := s.request(ctx)
 	if err != nil {
 		return decisionRequest{}, err
+	}
+	if tail != nil {
+		if err := tail.prepare(s, &request); err != nil {
+			return decisionRequest{}, err
+		}
 	}
 	request.IdleTimeout = s.modelIdleTimeout()
 	decision := decisionRequest{

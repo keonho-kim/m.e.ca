@@ -18,8 +18,10 @@ func (o replyOutput) visible(hideThinking bool) replyOutput {
 }
 
 type replyDraft struct {
-	presentation string
-	output       replyOutput
+	truncatedText bool
+	continuation  *textContinuation
+	presentation  string
+	output        replyOutput
 }
 
 type replyReplay struct{ catchingUp, different bool }

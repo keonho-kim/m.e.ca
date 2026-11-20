@@ -40,7 +40,7 @@ func (o *output) begin(session, project string) error {
 	}{"session", session, o.redact(project)})
 }
 func (o *output) emit(event runrecord.Event) error {
-	if !o.jsonMode {
+	if !o.jsonMode || event.Kind == "model_activity" {
 		return nil
 	}
 	event.Kind = event.PublicKind()

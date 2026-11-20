@@ -19,13 +19,13 @@ func TestGenerationTokenSnapshotsAndFinals(t *testing.T) {
 	}
 	update("usage_progress", 100, 10)
 	update("usage_progress", 100, 15)
-	if got := a.chat.displayTokens(); got.Input != 100 || got.Output != 15 || *a.chat.tokensPerSecond != 5 {
+	if got := a.chat.displayTokens(); got.Input != 100 || got.Output != 15 {
 		t.Fatalf("snapshots duplicated: %+v", got)
 	}
 	update("usage", 100, 15)
 	a.receiveRuntime(&runrecord.Event{Kind: "generation_started"})
-	if a.chat.tokensPerSecond == nil || *a.chat.tokensPerSecond != 5 {
-		t.Fatal("generation boundary cleared measured request throughput")
+	if a.activity().Timing != nil {
+		t.Fatal("a new generation displayed an old attempt")
 	}
 	update("usage_progress", 200, 25)
 	update("usage", 200, 25)

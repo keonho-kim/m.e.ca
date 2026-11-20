@@ -50,17 +50,46 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 	}
 	var outputBytes int64
 	var inputBytes int64
-	var inputTokens int
+	var budget modelapi.InputBudget
+	var metrics attemptMetrics
+	startAttempt := func() error {
+		metrics = attemptMetrics{activity: runrecord.ModelActivity{Started: started, Role: role}}
+		copy := metrics.activity
+		return s.emit(runrecord.Event{Kind: "model_activity", Activity: &copy})
+	}
+	if err := startAttempt(); err != nil {
+		return err
+	}
+	if role == inference.Agent {
+		generation.BeforeCompaction = s.beforeCompaction
+		s.beforeCompaction = nil
+	}
+	open := true
 	received, completed := false, false
 	flush := func() error {
+		if !open {
+			return nil
+		}
+		open = false
 		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		generation.ElapsedMillis = time.Since(started).Milliseconds()
 		generation.MeasuredMillis = measured.Milliseconds()
 		s.statistics.add(usage, measured)
-		err := s.recordUsage(flushCtx, usage, measured, generation)
+		generation.Context = measuredContext(request, budget, inputBytes, usage)
+		generation.FirstOutputMillis = nil
+		if !metrics.activity.FirstOutput.IsZero() {
+			generation.FirstOutputMillis = new(metrics.activity.FirstOutput.Sub(started).Milliseconds())
+		}
+		generation.Speed = nil
+		if metrics.activity.Speed.Source != "" {
+			generation.Speed = new(metrics.activity.Speed)
+		}
+		activity := metrics.activity
+		activity.Finished = true
+		err := s.recordUsage(flushCtx, usage, measured, generation, &activity)
 		if role == inference.Agent && (usage != nil || received) {
-			err = errors.Join(err, s.countRequest(flushCtx, request, usage, inputTokens, inputBytes, outputBytes))
+			err = errors.Join(err, s.countRequest(flushCtx, request, usage, budget.InputTokens, inputBytes, outputBytes))
 		}
 		usage = nil
 		measured = 0
@@ -73,7 +102,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			inputBytes = event.InputBytes
 		}
 		if event.InputBudget != nil {
-			inputTokens = event.InputBudget.InputTokens
+			budget = *event.InputBudget
 		}
 		if event.Retry != nil {
 			reason := s.runner.Redact(event.Retry.Reason)
@@ -96,7 +125,29 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			}
 			started = time.Now()
 			generation.Attempt++
+			open = true
+			if err := startAttempt(); err != nil {
+				return err
+			}
 			return consume(event)
+		}
+		if event.Usage != nil {
+			if err := event.Usage.Check(); err != nil {
+				return err
+			}
+		}
+		var now time.Time
+		if metrics.activity.FirstOutput.IsZero() || event.Usage != nil {
+			now = time.Now()
+			if metrics.observe(event, now) {
+				copy := metrics.activity
+				if err := s.emit(runrecord.Event{Kind: "model_activity", Activity: &copy}); err != nil {
+					return err
+				}
+			}
+		}
+		if event.ReplaceOutput {
+			outputBytes = 0
 		}
 		if event.HasOutput() {
 			received = true
@@ -107,9 +158,6 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			outputBytes += int64(len(call.ID) + len(call.Name) + len(call.Arguments))
 		}
 		if event.Usage != nil {
-			if err := event.Usage.Check(); err != nil {
-				return err
-			}
 			if usage != nil && usage.Equal(*event.Usage) {
 				return consume(event)
 			}
@@ -117,10 +165,11 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			// Identical output counts, including completion or cost-only updates,
 			// do not extend the interval in which those tokens were observed.
 			if usage == nil || usage.Output != snapshot.Output {
-				measured = time.Since(started)
+				measured = now.Sub(started)
 			}
 			usage = &snapshot
-			if err := s.emit(runrecord.Event{Kind: "usage_progress", Usage: usage, MeasuredDuration: measured}); err != nil {
+			activity := metrics.activity
+			if err := s.emit(runrecord.Event{Activity: &activity, Kind: "usage_progress", Usage: usage, MeasuredDuration: measured}); err != nil {
 				return err
 			}
 		}
@@ -129,7 +178,7 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 	return errors.Join(err, flush())
 }
 
-func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, measured time.Duration, generation runrecord.Generation) error {
+func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage, measured time.Duration, generation runrecord.Generation, activity *runrecord.ModelActivity) error {
 	// Preserve the last received count even if the call ends without another report.
 	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
@@ -142,6 +191,7 @@ func (s *execution) recordUsage(ctx context.Context, usage *modelapi.TokenUsage,
 	if saveErr := s.runner.Journal.RecordEvent(flushCtx, s.runner.Session, final); saveErr != nil {
 		return errors.Join(errRuntimeRecord, saveErr)
 	}
+	final.Activity = activity
 	final.MeasuredDuration = measured
 	return s.emit(final)
 }

@@ -24,13 +24,15 @@ func (s *execution) compactMemory(ctx context.Context, budget modelapi.InputBudg
 		return nil
 	}
 	compressing := false
+	var before modelapi.ContextMeasurement
 	defer func() {
 		if compressing {
 			resultErr = errors.Join(resultErr, s.emit(runrecord.Event{Kind: "compaction_finished"}))
 		}
 	}()
 	memory.ActiveRequest = s.checkpoint.Objective
-	started := func() error {
+	started := func(input modelapi.ContextMeasurement) error {
+		before = input
 		if discard != nil {
 			discard()
 		}
@@ -62,6 +64,7 @@ func (s *execution) compactMemory(ctx context.Context, budget modelapi.InputBudg
 		return err
 	}
 	s.historyLoaded = true
+	s.beforeCompaction = &before
 	event := runrecord.Event{Kind: "compaction", Text: "Compacted conversation memory; original records retained"}
 	if err := s.record(ctx, event); err != nil {
 		return err

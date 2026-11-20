@@ -11,6 +11,7 @@ import (
 )
 
 type State struct {
+	Completion                    modelapi.Event
 	Calls                         Calls
 	Usage                         *modelapi.TokenUsage
 	Finished, Streaming, Received bool
@@ -19,6 +20,12 @@ type State struct {
 }
 
 func (s *State) EmitFailedUsage(err error, emit func(modelapi.Event) error) error {
+	var limit *modelapi.OutputLimitError
+	if s.Calls.Count() > 0 && errors.As(err, &limit) {
+		copy := *limit
+		copy.PartialTool = true
+		err = &copy
+	}
 	if s.Usage != nil {
 		return errors.Join(err, emit(modelapi.Event{Usage: s.Usage, Streaming: s.Streaming}))
 	}

@@ -127,7 +127,7 @@ func (d *Decoder) Consume(content []byte, _ bool, state *native.State, emit func
 			}
 			state.Finished = true
 		case "MAX_TOKENS":
-			return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Gemini output token limit"}, emit)
+			return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: "Gemini output token limit", TokenLimit: true}, emit)
 		default:
 			return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.GeminiGeminiResponseDidNotComplete, candidate.Finish)}, emit)
 		}

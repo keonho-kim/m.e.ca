@@ -26,6 +26,9 @@ func checkChat(ctx context.Context, client modelapi.Generator, parameters infere
 			caps = modelconn.Capabilities{}
 			return ctx.Err()
 		}
+		if event.ReplaceOutput {
+			received, answer, reasoning = 0, false, false
+		}
 		received += len(event.Delta) + len(event.Thinking)
 		if received > modelapi.MaxResponseBytes {
 			return faults.Errorf(diagcatalog.DiagnosticConnectionDiagnosticResponseExceedsTheResponseLimit)

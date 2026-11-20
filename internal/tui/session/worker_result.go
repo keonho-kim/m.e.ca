@@ -24,7 +24,11 @@ func (a *app) finishWorker(n notice) {
 	}()
 	a.team.finish(&a.chat.output)
 	a.chat.tokenCurrent = modelapi.TokenUsage{}
-	a.chat.currentMeasurement = runrecord.Throughput{}
+	for agent, attempt := range a.chat.attempts {
+		if !attempt.Finished {
+			delete(a.chat.attempts, agent)
+		}
+	}
 	stopped := a.work.state.stopping()
 	a.work.state = workerIdle
 	a.stopCompression()

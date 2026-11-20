@@ -5,7 +5,10 @@
 package responses
 
 import (
+	"bytes"
 	"encoding/json"
+	"encoding/json/jsontext"
+	"errors"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -27,8 +30,8 @@ type response struct {
 	Output json.RawMessage `json:"output"`
 }
 
-func (s *Decoder) finish(response response, kind string, single bool, state *native.State, emit func(modelapi.Event) error) error {
-	defer func() { s.items, s.output, s.bytes = nil, nil, 0 }()
+func (s *Decoder) finish(response response, kind string, state *native.State, emit func(modelapi.Event) error) error {
+	defer func() { *s = Decoder{Retain: s.Retain} }()
 	if response.Usage != nil {
 		input, output := response.Usage.Input, response.Usage.Output
 		if input != nil && (*input < 0 || *input > modelapi.MaxCallTokens) || output != nil && (*output < 0 || *output > modelapi.MaxCallTokens) {
@@ -50,68 +53,110 @@ func (s *Decoder) finish(response response, kind string, single bool, state *nat
 			detail = cause.Error()
 		}
 		if response.Incomplete.Reason == "max_output_tokens" {
-			return state.EmitFailedUsage(&modelapi.OutputLimitError{Reason: detail}, emit)
+			// A truncated response can deliver its only text or partial tool in the terminal frame.
+			limit := &modelapi.OutputLimitError{Reason: detail, TokenLimit: true}
+			if err := s.finishOutput(response.Output, state, true); err != nil {
+				// Unparseable terminal output cannot establish a safe text continuation.
+				limit.TokenLimit = false
+				return state.EmitFailedUsage(errors.Join(limit, err), emit)
+			}
+			if err := s.EmitPartial(state.Streaming, emit); err != nil {
+				return err
+			}
+			return state.EmitFailedUsage(limit, emit)
 		}
 		if cause != nil {
 			return state.EmitFailedUsage(faults.Errorf(diagcatalog.ResponsesResponses, cause), emit)
 		}
 		return state.EmitFailedUsage(&transport.PermanentError{Cause: faults.Errorf(diagcatalog.ResponsesResponses2, detail)}, emit)
 	}
-	if err := s.finishOutput(response.Output, single, state, emit); err != nil {
+	if err := s.finishOutput(response.Output, state, false); err != nil {
 		return state.EmitFailedUsage(err, emit)
 	}
 	if err := s.retain(response.Output, state); err != nil {
 		return err
 	}
+	state.Completion = s.text.completion()
 	state.Finished = true
 	return nil
 }
 
-func (s *Decoder) finishOutput(raw json.RawMessage, single bool, state *native.State, emit func(modelapi.Event) error) error {
-	if len(raw) == 0 {
+func (s *Decoder) finishOutput(raw json.RawMessage, state *native.State, partial bool) error {
+	if len(raw) == 0 || string(raw) == "null" {
 		return nil
 	}
-	// Streaming text has already been emitted. Decode only function identities
-	// there, leaving large message/summary/encrypted fields in the raw array.
-	var items []functionItem
-	var complete []outputItem
-	if single {
-		if err := json.Unmarshal(raw, &complete); err != nil {
-			return err
-		}
-		for _, item := range complete {
-			items = append(items, item.functionItem)
-		}
-	} else if err := json.Unmarshal(raw, &items); err != nil {
+	// bytes.Buffer lets jsontext borrow each item's wire bytes until the next read.
+	reader := jsontext.NewDecoder(bytes.NewBuffer(raw))
+	open, err := reader.ReadToken()
+	if err != nil {
 		return err
 	}
-	for index, item := range items {
-		if item.Type == "function_call" {
-			if err := s.call(state, index, item, true); err != nil {
+	if open.Kind() != '[' {
+		return faults.Errorf(diagcatalog.ResponsesUnsupportedResponsesOutputType)
+	}
+	count, confirmedCalls := 0, 0
+	for reader.PeekKind() != ']' {
+		if count >= 1024 {
+			return faults.Errorf(diagcatalog.ResponsesInvalidResponsesOutputIndex)
+		}
+		wire, err := reader.ReadValue()
+		if err != nil {
+			return err
+		}
+		if state.Calls.HasIndex(count) || !bytes.Equal(s.output[count], wire) {
+			call, err := s.finishItem(count, wire, state, partial)
+			if err != nil {
 				return err
 			}
-			continue
-		}
-		if item.Type != "message" && item.Type != "reasoning" {
-			return faults.Errorf(diagcatalog.ResponsesUnsupportedResponsesOutputType)
-		}
-		if !single {
-			continue
-		}
-		for _, part := range complete[index].Content {
-			event := modelapi.Event{Delta: part.Text + part.Refusal}
-			if item.Type == "reasoning" {
-				event.Delta, event.Thinking = "", part.Text
-			}
-			if err := emit(event); err != nil {
-				return err
+			if call {
+				confirmedCalls++
 			}
 		}
-		for _, summary := range complete[index].Summary {
-			if err := emit(modelapi.Event{Thinking: summary.Text}); err != nil {
-				return err
+		count++
+	}
+	if _, err := reader.ReadToken(); err != nil {
+		return err
+	}
+	if !partial {
+		for index := range s.text.items {
+			if index >= count {
+				s.text.removeParts(index, func(k partKey) bool { return k.kind == answerPart })
 			}
+		}
+		if state.Calls.Count() != confirmedCalls {
+			return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesIncompleteResponsesFunctionIdentity)}
 		}
 	}
 	return nil
+}
+
+func (s *Decoder) finishItem(index int, wire []byte, state *native.State, partial bool) (bool, error) {
+	var item outputItem
+	if err := json.Unmarshal(wire, &item); err != nil {
+		return false, err
+	}
+	if item.ID != "" {
+		if err := s.bindItem(index, item.ID); err != nil {
+			return false, err
+		}
+	}
+	// A terminal message owns its body. A reasoning item may include only opaque state.
+	if !partial && item.Type != "message" {
+		s.text.removeParts(index, func(k partKey) bool { return k.kind == answerPart })
+	}
+	switch item.Type {
+	case "message", "reasoning":
+		if partial && len(item.Content) == 0 && len(item.Summary) == 0 {
+			return false, nil
+		}
+		return false, s.text.observeItem(index, item)
+	case "function_call":
+		if partial {
+			_, err := state.Calls.At(index)
+			return false, err
+		}
+		return true, s.call(state, index, item.functionItem, true)
+	default:
+		return false, faults.Errorf(diagcatalog.ResponsesUnsupportedResponsesOutputType)
+	}
 }

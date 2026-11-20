@@ -8,42 +8,34 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
 type functionItem struct {
-	Type      string                                      `json:"type"`
-	ID        string                                      `json:"id"`
-	CallID    string                                      `json:"call_id"`
-	Name      string                                      `json:"name"`
-	Arguments string                                      `json:"arguments"`
-	Summary   []struct{ Type, Text skippedText }          `json:"summary"`
-	Content   []struct{ Type, Text, Refusal skippedText } `json:"content"`
+	Type      string `json:"type"`
+	ID        string `json:"id"`
+	CallID    string `json:"call_id"`
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
-// Validate repeated text fields without allocating their already-streamed
-// contents. encoding/json has checked token syntax before calling this method.
-type skippedText struct{}
+type contentPart struct {
+	Type    string `json:"type"`
+	Text    string `json:"text"`
+	Refusal string `json:"refusal"`
+}
 
-func (*skippedText) UnmarshalJSON(raw []byte) error {
-	if len(raw) > 0 && (raw[0] == '"' || string(raw) == "null") {
-		return nil
+func (p contentPart) value() string {
+	if p.Type == "refusal" {
+		return p.Refusal
 	}
-	return faults.Errorf(diagcatalog.ResponsesResponsesOutputTextMustBeAString)
+	return p.Text
 }
 
 type outputItem struct {
 	functionItem
-	Summary []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"summary"`
-	Content []struct {
-		Type    string `json:"type"`
-		Text    string `json:"text"`
-		Refusal string `json:"refusal"`
-	} `json:"content"`
+	Summary []contentPart `json:"summary"`
+	Content []contentPart `json:"content"`
 }
 
 func (s *Decoder) call(state *native.State, index int, item functionItem, final bool) error {
@@ -51,7 +43,9 @@ func (s *Decoder) call(state *native.State, index int, item functionItem, final 
 		s.items = make(map[string]int)
 	}
 	if previous, ok := s.items[item.ID]; ok && item.ID != "" {
-		index = previous
+		if previous != index {
+			return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesResponsesFunctionIdentityChanged)}
+		}
 	} else if item.ID != "" && len(s.items) >= toolapi.MaxCalls {
 		return &modelapi.ToolCallError{Detail: diagcatalog.Text(diagcatalog.ResponsesTooManyResponsesFunctionIdentities)}
 	}

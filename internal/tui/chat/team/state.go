@@ -6,22 +6,19 @@ package team
 
 import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
-	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/tui/viewport"
 )
 
 type peerDisplay struct {
 	message             messageDisplay
 	current             modelapi.TokenUsage
-	measured            runrecord.Throughput
 	compressing, active bool
 }
 type State struct {
-	peers    map[string]*peerDisplay
-	tools    map[string]toolDisplay
-	measured runrecord.Throughput
-	members  []string
-	names    string
+	peers   map[string]*peerDisplay
+	tools   map[string]toolDisplay
+	members []string
+	names   string
 }
 
 func (s *State) Begin() {
@@ -64,12 +61,10 @@ func (s *State) Compressing() bool {
 	}
 	return false
 }
-func (s *State) CurrentUsage() (modelapi.TokenUsage, *float64) {
+func (s *State) CurrentUsage() modelapi.TokenUsage {
 	var current modelapi.TokenUsage
-	measured := s.measured
 	for _, peer := range s.peers {
 		current = current.Add(peer.current)
-		measured = measured.Add(peer.measured)
 	}
-	return current, measured.Rate()
+	return current
 }

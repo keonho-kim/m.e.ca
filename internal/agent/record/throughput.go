@@ -1,14 +1,14 @@
 // Purpose: Calculate weighted output throughput from actual counts and their measured intervals.
 // Pattern: Small immutable value reducer.
-// Usage: Single/team displays and final summaries share Throughput without retaining usage payloads.
+// Usage: Live model timing and task statistics use counts with their own measurement interval.
 // Related: internal/agent/record/events.go, internal/tui/session/tokens.go, internal/tui/chat/team/state.go.
 package record
 
 import "time"
 
 type Throughput struct {
-	Output   int64
-	Duration time.Duration
+	Output   int64         `json:"output_tokens"`
+	Duration time.Duration `json:"duration_ns"`
 }
 
 // MeasuredThroughput selects only reported output with a matching observation interval.

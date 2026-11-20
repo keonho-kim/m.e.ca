@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -23,13 +24,18 @@ func TestDirectAnswer(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			g := &generator{replies: []string{test.answer}}
+			expectedCalls := 1
+			if test.answer == "" {
+				g.replies = append(g.replies, "")
+				expectedCalls++
+			}
 			e := &executor{}
 			result, err := fixture(g, e, &journal{}).Run(context.Background(), test.request, approve, emit)
-			if len(g.requests) != 1 || e.prepared != 0 || e.executed != 0 || test.answer != "" && result.Text != test.answer {
+			if len(g.requests) != expectedCalls || e.prepared != 0 || e.executed != 0 || test.answer != "" && result.Text != test.answer {
 				t.Fatalf("result=%+v requests=%d prepared=%d executed=%d err=%v", result, len(g.requests), e.prepared, e.executed, err)
 			}
 			if test.answer == "" {
-				if err == nil || !strings.Contains(err.Error(), "empty") || result.Status != runrecord.Stopped {
+				if !errors.Is(err, errEmptyReply) || result.Status != runrecord.Stopped {
 					t.Fatalf("empty reply result=%+v err=%v", result, err)
 				}
 			} else if err != nil || result.Status != runrecord.Answered {

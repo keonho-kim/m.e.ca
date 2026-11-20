@@ -52,6 +52,8 @@ func allowed(key string) bool {
 	switch key {
 	case "component", "operation", "request_id", "session_id", "task_id", "run_id", "agent", "call_id", "generation", "attempt", "status", "error_code", "duration_ms", "bytes", "count", "dropped", "skill_id", "skill", "provider", "model", "protocol":
 		return true
+	case "role", "input_tokens", "input_source", "context_window", "output_budget", "before_compact_tokens", "before_compact_source", "first_output_ms", "rate_source", "timed_tokens", "timed_ns":
+		return true
 	case "listen", "persistence", "limit", "workspace_id":
 		return true
 	}

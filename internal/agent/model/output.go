@@ -32,7 +32,7 @@ func (r Request) OutputBudget(capacity, serverOutput, input int) (int, error) {
 		return 0, faults.Errorf(diagcatalog.ModelInvalidModelCapacity)
 	}
 	if input >= capacity {
-		return 0, &ContextLimitError{Input: input, Capacity: capacity}
+		return 0, &ContextLimitError{Input: input, Capacity: capacity, Tokenized: true}
 	}
 	output := r.MaxOutput
 	if output == 0 {

@@ -6,6 +6,7 @@ package view
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gdamore/tcell/v3"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -15,10 +16,7 @@ import (
 // Header replaces the top row, retaining unchanged cells and clearing only unused padding.
 func Header(screen tcell.Screen, title string, usage modelapi.TokenUsage, width int, activity Activity) {
 	tokens := fmt.Sprintf("%s %d · %s %d", activity.Language.Text("INPUT"), usage.Input, activity.Language.Text("OUTPUT"), usage.Output)
-	rate := ""
-	if activity.TokensPerSecond != nil {
-		rate = fmt.Sprintf(" · %s %.1f", activity.Language.Text("TPS"), *activity.TokensPerSecond)
-	}
+	rate := activity.speedLabel(time.Now())
 	label := activity.Label()
 	withMemory := tokens
 	if activity.MemoryUsage != "" {

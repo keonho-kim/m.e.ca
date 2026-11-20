@@ -143,3 +143,6 @@ func (s *Calls) Complete() ([]toolapi.Call, error) {
 	}
 	return calls, nil
 }
+
+func (s *Calls) Count() int              { return len(s.values) }
+func (s *Calls) HasIndex(index int) bool { return s.values[index] != nil }

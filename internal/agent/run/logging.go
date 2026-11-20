@@ -18,8 +18,20 @@ func logEvent(ctx context.Context, e runrecord.Event, session string) {
 		return
 	}
 	fields := []any{"component", "agent", "session_id", session, "run_id", e.RunID, "call_id", e.CallID, "error_code", e.ErrorCode}
-	if e.Generation != nil {
-		fields = append(fields, "generation", e.Generation.ID, "attempt", e.Generation.Attempt, "duration_ms", e.Generation.ElapsedMillis)
+	if g := e.Generation; g != nil {
+		fields = append(fields, "generation", g.ID, "attempt", g.Attempt, "duration_ms", g.ElapsedMillis, "role", string(g.Role))
+		if g.Context != nil {
+			fields = append(fields, "input_tokens", g.Context.Input, "input_source", g.Context.Source, "context_window", g.Context.Window, "output_budget", g.Context.OutputBudget)
+		}
+		if g.BeforeCompaction != nil {
+			fields = append(fields, "before_compact_tokens", g.BeforeCompaction.Input, "before_compact_source", g.BeforeCompaction.Source)
+		}
+		if g.FirstOutputMillis != nil {
+			fields = append(fields, "first_output_ms", *g.FirstOutputMillis)
+		}
+		if g.Speed != nil {
+			fields = append(fields, "rate_source", g.Speed.Source, "timed_tokens", g.Speed.Output, "timed_ns", g.Speed.Duration.Nanoseconds())
+		}
 	}
 	if e.Call != nil {
 		fields = append(fields, "operation", e.Call.Name)

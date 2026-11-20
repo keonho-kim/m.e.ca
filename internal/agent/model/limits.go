@@ -6,7 +6,11 @@ package model
 
 import diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
-type OutputLimitError struct{ Reason string }
+type OutputLimitError struct {
+	Reason      string
+	TokenLimit  bool
+	PartialTool bool
+}
 
 func (e *OutputLimitError) Error() string {
 	return diagcatalog.Text(diagcatalog.ModelOutputTruncated, e.Reason)

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -27,6 +28,7 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 		return modelapi.Response{}, errModelBudget
 	}
 	s.checkpoint.ModelCalls = s.usage.ModelCalls
+	draft.truncatedText = false
 	s.presentation = draft.presentation
 	hideThinking := s.runner.HideThinking
 	var reply, thinking strings.Builder
@@ -90,12 +92,22 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 			measuredUsage = *e.Usage
 		}
 		if e.Retry != nil {
-			if err := capture(snapshot(true), true); err != nil {
-				return err
+			if draft.continuation == nil {
+				if err := capture(snapshot(true), true); err != nil {
+					return err
+				}
 			}
 			measuredUsage = modelapi.TokenUsage{}
 			calls, continuation, done = nil, nil, false
 			return beginAttempt()
+		}
+		if e.ReplaceOutput {
+			reply.Reset()
+			thinking.Reset()
+			maskReply, maskThinking = s.streamMask(), nil
+			if !hideThinking {
+				maskThinking = s.streamMask()
+			}
 		}
 		if len(e.Calls) > 0 {
 			if len(request.Tools) == 0 || !e.Done || len(calls) != 0 || len(e.Calls) > toolapi.MaxCalls {
@@ -128,7 +140,7 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 		if e.Done {
 			done = true
 		}
-		if e.Streaming && (e.Delta != "" || !hideThinking && e.Thinking != "") {
+		if draft.continuation == nil && e.Streaming && !e.ReplaceOutput && (e.Delta != "" || !hideThinking && e.Thinking != "") {
 			if err := capture(snapshot(false), false); err != nil {
 				return err
 			}
@@ -144,8 +156,21 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 			err = s.checkReply(reply.String(), continuation, calls)
 		}
 	}
+	answer := reply.String()
+	if tail := draft.continuation; tail != nil {
+		output, err = tail.finish(ctx, s, draft, output, err)
+		if err != nil {
+			return modelapi.Response{}, err
+		}
+		answer, continuation = output.text, nil
+		attemptBytes = output.bytes()
+	}
 	if err != nil {
-		return modelapi.Response{}, errors.Join(err, capture(output, true))
+		captureErr := capture(output, true)
+		if captureErr == nil && textTokenLimit(err) && len(calls) == 0 {
+			draft.truncatedText = output.text == draft.output.text && strings.TrimSpace(output.text) != ""
+		}
+		return modelapi.Response{}, errors.Join(err, captureErr)
 	}
 	if s.replyMemory != nil {
 		// Completion releases the previous attempt's held snapshot.
@@ -168,7 +193,7 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 			return modelapi.Response{}, err
 		}
 	}
-	response := modelapi.Response{Text: reply.String(), Reasoning: output.thinking, ReasoningState: continuation, Calls: calls}
+	response := modelapi.Response{Text: answer, Reasoning: output.thinking, ReasoningState: continuation, Calls: calls}
 	s.webFetchAllowance = s.pageAllowance(request, response, inputBudget, measuredUsage, wireBytes)
 	return response, nil
 }
@@ -194,6 +219,12 @@ func (s *execution) recordReply(ctx context.Context, text, thinking string, inte
 }
 
 func (s *execution) checkReply(text string, continuation []byte, calls []toolapi.Call) error {
+	if len(calls) == 0 && strings.TrimSpace(text) == "" {
+		return errEmptyReply
+	}
+	if !utf8.ValidString(text) {
+		return faults.Errorf(diagcatalog.RunModelCompletedWithAnEmptyOrInvalid)
+	}
 	if s.runner.Redact(text) != text {
 		return faults.Errorf(diagcatalog.RunModelReplyContainsAProtectedCredentialOr)
 	}

@@ -14,7 +14,7 @@ import (
 
 func sanitizeReason(reason string) error {
 	if reason == "length" {
-		return &modelapi.OutputLimitError{Reason: "output token limit"}
+		return &modelapi.OutputLimitError{Reason: "output token limit", TokenLimit: true}
 	}
 	if reason == "content_filter" || reason == "error" || reason == "abort" {
 		return faults.Errorf(diagcatalog.ProtocolModelResponseStopped, strings.ReplaceAll(reason, "\n", ""))

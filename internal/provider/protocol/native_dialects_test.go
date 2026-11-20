@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -103,5 +104,78 @@ func TestNativeContextLimitSignalSurvivesResponseFailure(t *testing.T) {
 	var capacity *modelapi.ContextLimitError
 	if !errors.As(err, &capacity) {
 		t.Fatalf("capacity signal lost: %v", err)
+	}
+}
+
+func TestAuthoritativeResponseCannotReleaseUnconfirmedCall(t *testing.T) {
+	for _, provider := range []connection.ProviderKind{connection.OpenAI, connection.LMStudio} {
+		for _, output := range []string{`[]`, `[{"type":"message","content":[]}]`} {
+			s := streamState{provider: provider}
+			emit := func(e modelapi.Event) error {
+				if len(e.Calls) > 0 {
+					t.Fatal("orphan tool call released")
+				}
+				return nil
+			}
+			add := `{"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","id":"item","call_id":"call","name":"write_file","arguments":"{}"}}`
+			if err := s.consume([]byte(add), false, emit); err != nil {
+				t.Fatal(err)
+			}
+			last := `{"type":"response.completed","response":{"status":"completed","output":` + output + `}}`
+			var malformed *modelapi.ToolCallError
+			if err := s.consume([]byte(last), false, emit); !errors.As(err, &malformed) || s.Finished {
+				t.Fatalf("%s output=%s err=%v", provider, output, err)
+			}
+		}
+	}
+}
+
+func TestTruncationCanReportPartialTextAndToolOnlyAtCompletion(t *testing.T) {
+	for _, tool := range []string{"", `,{"type":"function_call","arguments":"{"}`} {
+		s := streamState{provider: connection.OpenAI}
+		last := `{"type":"response.incomplete","response":{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output":[{"type":"message","content":[{"type":"output_text","text":"Partial"}]}` + tool + `]}}`
+		text := ""
+		err := s.consume([]byte(last), false, func(e modelapi.Event) error {
+			if e.Done || len(e.Calls) > 0 {
+				t.Fatal("released incomplete output as completed")
+			}
+			text += e.Delta
+			return nil
+		})
+		var limit *modelapi.OutputLimitError
+		if !errors.As(err, &limit) || !limit.TokenLimit || limit.PartialTool != (tool != "") || text != "Partial" {
+			t.Fatalf("err=%v limit=%+v text=%q", err, limit, text)
+		}
+	}
+}
+
+func TestOllamaDecodeThroughputUsesEvalDuration(t *testing.T) {
+	body := `{"message":{"content":"답"},"done":true,"prompt_eval_count":200,"eval_count":40,"eval_duration":500000000,"total_duration":4500000000}`
+	response := &http.Response{Header: http.Header{"Content-Type": {"application/x-ndjson"}}, Body: io.NopCloser(strings.NewReader(body))}
+	var completed modelapi.Event
+	if err := ReadResponse(t.Context(), response, connection.Ollama, func(e modelapi.Event) error {
+		if e.Done {
+			completed = e
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if completed.Usage == nil || completed.Usage.Output != 40 || completed.DecodeDuration != 500*time.Millisecond {
+		t.Fatalf("completion=%+v", completed)
+	}
+}
+
+func TestFunctionArgumentsCannotChangeOutputIndex(t *testing.T) {
+	s := streamState{provider: connection.OpenAI}
+	ignore := func(modelapi.Event) error { return nil }
+	add := `{"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"item","call_id":"call","name":"write_file"}}`
+	if err := s.consume([]byte(add), false, ignore); err != nil {
+		t.Fatal(err)
+	}
+	argument := `{"type":"response.function_call_arguments.delta","item_id":"item","output_index":1,"delta":"{}"}`
+	var malformed *modelapi.ToolCallError
+	if err := s.consume([]byte(argument), false, ignore); !errors.As(err, &malformed) {
+		t.Fatalf("mismatched call index: %v", err)
 	}
 }

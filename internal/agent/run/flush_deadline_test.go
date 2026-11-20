@@ -44,7 +44,7 @@ func TestThinkingFlushDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer release()
-	decision, err := s.prepareAgentRequest(ctx)
+	decision, err := s.prepareAgentRequest(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

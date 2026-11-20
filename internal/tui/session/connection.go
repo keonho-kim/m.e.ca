@@ -38,6 +38,6 @@ func (a *app) adoptConnection(n notice) (adopted bool, err error) {
 		a.settings.Permission = n.Config.Permission
 	}
 	a.connection.adopt(n.Client, n.Commit.Selection)
-	a.chat.resetThroughput()
+	clear(a.chat.attempts)
 	return true, n.Commit.DefaultError
 }

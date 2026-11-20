@@ -24,6 +24,9 @@ func probeThinking(ctx context.Context, c modelapi.Generator, model, effort stri
 			reasoning, answer, done = false, false, false
 			return ctx.Err()
 		}
+		if event.ReplaceOutput {
+			reasoning, answer = false, false
+		}
 		reasoning = reasoning || event.Thinking != ""
 		answer = answer || event.Delta != ""
 		done = done || event.Done

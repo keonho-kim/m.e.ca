@@ -28,6 +28,10 @@ WebUI 자동 열기에서 실패하면 `browser_launch_failed` 경고를 기록�
 
 주요 필드는 time·level·msg·component·operation과 request_id·session_id·task_id·run_id·agent·call_id다. 모델 호출의 generation·attempt·duration_ms, 오류 분류인 error_code를 필요한 경우 포함한다. error_code는 안전한 분류이며 raw Provider·OS·SQL 오류 전문을 뜻하지 않는다. HTTP 내부 TLS·panic 진단도 원문 대신 분류를 기록한다.
 
+debug 레벨의 `usage`·`generation_finished` 기록에서 `duration_ms`는 시도 전체 경과 시간이며 `first_output_ms`는 첫 출력까지 걸린 시간이다. `input_tokens`의 출처는 `input_source`로 확인한다. `usage`는 Provider 보고값, `tokenizer`는 요청 전 실측, `estimate`는 요청 바이트 기반 추정이다. `context_window`와 `output_budget`은 해당 요청에 적용한 토큰 예산이다. 자동 압축 직후에는 `before_compact_tokens`와 `before_compact_source`도 함께 기록한다. `watermark`와 `watermark_estimate`는 입력 사전 측정이 없을 때 압축 판단에 사용한 저장 점유량을 뜻하며, 후자는 바이트 추정을 포함한다. `provider`는 용량 거절 시 알려준 입력 수다.
+
+속도를 측정할 수 있으면 `rate_source`, `timed_tokens`, `timed_ns`를 남긴다. `provider`는 모델 서버의 생성 시간, `received`는 첫 출력 뒤 수신한 토큰 수의 차이와 관측 간격이다. 호출별 기록은 세션 원문 내보내기의 `generation`에서도 확인할 수 있다. [사용량 표시](usage.md#화면과-사용량)
+
 저장 할당이 한도의 90% 이상이면 storage_capacity_low에 count·limit과 near_limit/full 상태를 기록한다. 이 경고는 기존 기록이나 백업의 자동 삭제를 뜻하지 않는다. 운영 로그의 원문·비밀값 제외와 집계 정책을 동일하게 적용한다.
 
 인증 헤더·API Key·요청/응답·Thinking·셸 출력·스킬 본문은 운영 로그에 넣지 않는다. 허용된 메타데이터만 인코딩하고 현재 요청의 자격 증명 마스킹을 적용한 뒤 필드 길이를 제한한다. 본문 원본과 상세 도구 결과는 세션 저장소가 소유한다.

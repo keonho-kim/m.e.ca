@@ -66,6 +66,11 @@ func (event Event) Check() error {
 		if event.Kind != "usage" && event.Kind != "generation_finished" && event.Kind != "generation_started" || !work.ValidID(g.ID) || g.Attempt < 1 || g.ElapsedMillis < 0 || g.MeasuredMillis < 0 || g.MeasuredMillis > g.ElapsedMillis {
 			return faults.Errorf(diagcatalog.RecordInvalidGenerationProvenance)
 		}
+		if !g.Context.Valid() || !g.BeforeCompaction.Valid() ||
+			g.FirstOutputMillis != nil && (*g.FirstOutputMillis < 0 || *g.FirstOutputMillis > g.ElapsedMillis) ||
+			g.Speed != nil && (g.Speed.Source != "provider" && g.Speed.Source != "received" || g.Speed.Output <= 0 || g.Speed.Duration <= 0) {
+			return faults.Errorf(diagcatalog.RecordInvalidGenerationProvenance)
+		}
 		switch g.Role {
 		case inference.Agent, inference.Compaction, inference.Diagnostic:
 		default:
@@ -86,7 +91,7 @@ func (event Event) Check() error {
 		}
 	}
 
-	if event.MeasuredDuration != 0 {
+	if event.MeasuredDuration != 0 || event.Activity != nil {
 		return faults.Errorf(diagcatalog.RecordTransientMeasurementDurationCannotBePersisted)
 	}
 	if event.Kind == "usage" {

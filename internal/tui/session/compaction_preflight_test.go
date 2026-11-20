@@ -5,9 +5,11 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -22,6 +24,7 @@ import (
 	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	modelconn "github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
+	"github.com/keonho-kim/meca/internal/storage/sqlite"
 )
 
 func TestCompactionUsesPreparedInput(t *testing.T) {
@@ -134,6 +137,37 @@ func TestCompactionUsesPreparedInput(t *testing.T) {
 				t.Errorf("provider calls=%v, want %v", trace, tc.want)
 			}
 			mu.Unlock()
+			var exported bytes.Buffer
+			if err := store.(*sqlite.Store).Export(ctx, session, &exported); err != nil {
+				t.Fatal(err)
+			}
+			decoder := json.NewDecoder(&exported)
+			var agent *runrecord.Generation
+			for {
+				var entry struct{ Body runrecord.Event }
+				if err := decoder.Decode(&entry); err == io.EOF {
+					break
+				} else if err != nil {
+					t.Fatal(err)
+				}
+				if g := entry.Body.Generation; g != nil && g.Role == "agent" && entry.Body.Kind == "generation_finished" {
+					agent = g
+				}
+			}
+			if agent == nil || agent.Context == nil || agent.Context.Source != "tokenizer" || agent.Context.Window != tc.window || agent.Context.OutputBudget <= 0 {
+				t.Fatalf("missing current request budget: %+v", agent)
+			}
+			if slices.Contains(tc.want, "send summary") {
+				before := agent.BeforeCompaction
+				if before == nil || before.Window != tc.window && tc.maxBytes == 0 || agent.Context.Input != 30000 {
+					t.Fatalf("compaction accounting: before=%+v after=%+v", before, agent.Context)
+				}
+				if tc.input > 0 && (before.Source != "tokenizer" || before.Input != int64(tc.input)) {
+					t.Fatalf("compaction trigger=%+v want %d", before, tc.input)
+				}
+			} else if agent.BeforeCompaction != nil || agent.Context.Input != int64(tc.input) {
+				t.Fatalf("unexpected compaction accounting: %+v", agent)
+			}
 			checkpoint, err := store.LatestRun(ctx, session)
 			wantCalls := 1
 			if slices.Contains(tc.want, "send summary") {

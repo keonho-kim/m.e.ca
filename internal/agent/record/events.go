@@ -17,7 +17,8 @@ import (
 const MaxChangePreviewBytes = 16 * 1024 * 1024
 
 type Event struct {
-	Presentation string `json:"presentation,omitempty"`
+	Activity     *ModelActivity `json:"-"`
+	Presentation string         `json:"presentation,omitempty"`
 	// HistorySequence is a committed public timeline receipt, never persisted again.
 	HistorySequence  int64                `json:"-"`
 	Skill            *SkillRead           `json:"skill,omitempty"`
@@ -48,11 +49,15 @@ type Event struct {
 }
 
 type Generation struct {
-	ID             string         `json:"id"`
-	Role           inference.Role `json:"role"`
-	Attempt        int            `json:"attempt"`
-	ElapsedMillis  int64          `json:"elapsed_millis"`
-	MeasuredMillis int64          `json:"measured_millis,omitempty"`
+	Context           *modelapi.ContextMeasurement `json:"context,omitempty"`
+	BeforeCompaction  *modelapi.ContextMeasurement `json:"before_compaction,omitempty"`
+	FirstOutputMillis *int64                       `json:"first_output_millis,omitempty"`
+	Speed             *OutputSpeed                 `json:"output_speed,omitempty"`
+	ID                string                       `json:"id"`
+	Role              inference.Role               `json:"role"`
+	Attempt           int                          `json:"attempt"`
+	ElapsedMillis     int64                        `json:"elapsed_millis"`
+	MeasuredMillis    int64                        `json:"measured_millis,omitempty"`
 }
 
 // Entry belongs to one durability boundary; exactly one payload must be set.
