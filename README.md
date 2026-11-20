@@ -2,7 +2,7 @@
 
 <img src="webui/public/favicon.svg" alt="MECA" width="96" height="96">
 
-[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [팀 모드](#팀-모드) · [스킬](#스킬과-추가-방법) · [서버·WebUI](#서버) · [문서](#문서)
+[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [팀 모드](#팀-모드) · [스킬](#스킬) · [서버·WebUI](#서버) · [문서](#문서)
 
 </div>
 
@@ -31,7 +31,7 @@ macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·No
 ./meca install --no-shell  # 로그인 셸 전환 없이 설치
 ```
 
-Chrome·Chromium과 `agent-browser` 도우미가 준비된 환경에서 에이전트가 브라우저 도구를 사용합니다. [설치 옵션](docs/releases.md#다운로드와-설치) · [브라우저 도구](docs/browser.md)
+브라우저 기능의 제공 조건과 관리형 Chrome 갱신은 도구 문서에서 확인할 수 있습니다. [설치 옵션](docs/releases.md#다운로드와-설치) · [브라우저 설치와 갱신](docs/tools.md#설치와-갱신)
 
 ### 업데이트
 
@@ -67,30 +67,15 @@ meca --mode json "요청한 파일을 만들어줘"
 
 `!model`로 모델을 연결하고 `!dir`에서 파일을 참조합니다. TUI에서 응답 중 `Enter`는 방향 수정, `Tab`은 후속 요청 예약, `Esc`는 작업 중지입니다. [명령과 키보드](docs/usage.md) · [이미지 첨부](docs/images.md) · [실행과 승인](docs/execution-boundary.md)
 
-`web_fetch`는 URL로 웹 문서의 본문을 읽습니다. HTML은 설치된 Chromium에서 렌더링합니다. [브라우저 준비와 이어 읽기](docs/web-fetch.md)
+파일·셸·브라우저·웹 문서 조회 등 모델이 사용할 수 있는 도구는 한 곳에서 확인할 수 있습니다. [전체 도구 목록](docs/tools.md#도구-목록)
 
 ## 팀 모드
 
 현재 대화에서 `!team`을 켜면 최대 8개 에이전트가 같은 프로젝트에서 협업합니다. WebUI에서는 입력창의 팀 버튼이나 설정에서 전환합니다. [팀 모드](docs/team.md)
 
-## 스킬과 추가 방법
+## 스킬
 
-스킬은 에이전트가 읽는 `SKILL.md` 작업 지침입니다. `!skills`로 찾아보고 `#스킬명`으로 호출합니다. 기본으로 `create-skill`·`ui-design`·`backend-design`·`application-best-dev-practices`를 제공합니다.
-
-프로젝트의 `.agents/skills/review/SKILL.md`를 다음처럼 만듭니다. 개인 스킬은 `~/.meca/skills/`에 같은 구조로 둡니다.
-
-```markdown
----
-name: review
-description: 코드 변경의 정확성과 회귀 위험을 검토한다.
----
-
-# 코드 리뷰
-
-변경과 관련 테스트를 검토하고, 발견한 문제의 근거와 파일 위치를 기록한다.
-```
-
-`#review 변경 사항을 검토해줘`처럼 호출합니다. [스킬 작성법](docs/skills.md) · [기본 스킬](docs/builtin-skills.md)
+스킬은 에이전트가 읽는 `SKILL.md` 작업 지침입니다. `!skills`로 찾아보고 `#스킬명`으로 호출합니다. [스킬 사용과 작성](docs/skills.md) · [배포 기본 스킬](docs/builtin-skills.md)
 
 ## 서버
 
@@ -105,7 +90,7 @@ WebUI는 기본 주소 `http://127.0.0.1:8787/ui/`에서 열고 서버 터미널
 
 ## 문서
 
-[전체 문서](docs/README.md) · [설정과 백업](docs/configuration.md) · [제품 명세](SYSTEM.md) · [기능별 최적화](docs/optimization.md)
+[전체 문서](docs/README.md) · [설정과 백업](docs/configuration.md) · [제품 명세](SYSTEM.md) · [기능별 최적화](docs/optimization-strategies.md)
 
 ## 개발
 

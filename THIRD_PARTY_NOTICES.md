@@ -5787,4 +5787,4 @@ SOFTWARE.
 
 ## Optional browser execution
 
-Browser tools download the pinned [agent-browser](https://github.com/vercel-labs/agent-browser) native helper on first use. It is licensed under Apache-2.0; the managed installation includes its LICENSE. Chrome for Testing, when needed, is downloaded separately and retains the notices in its distribution. Neither executable is embedded in MECA release archives.
+The optional `meca install --ext browser` command installs the pinned [agent-browser](https://github.com/vercel-labs/agent-browser) native helper. The managed installation includes its Apache-2.0 LICENSE. The setup uses an installed Chrome or Chromium when available. If it downloads Chrome for Testing, it retains the notices from that distribution. Browser runtime files are provisioned separately from MECA release archives.

@@ -112,7 +112,7 @@ snapshot draft의 committed는 해당 generation의 출력이 이력에 저장�
 
 `presentation`은 `Event`·`Draft`·`HistoryItem`에 전달되는 표시 식별자다. 요청 범위의 불투명 ID와 20자리 십진 순번을 점으로 구분하며, 한 요청의 팀 참여자가 같은 순번 발급기를 공유한다. 추론·답변 세대와 도구 후보를 만들 때 발급하고 저장·완료·재연결에서도 유지한다. 같은 요청 내 표시 순서는 이 값을 사용하며 서로 다른 요청은 대화 이력 순서를 따른다. 커서와 history sequence는 전달·조회·확정 확인에 사용하므로 표시 순번으로 대체하지 않는다. 표시 식별자가 없는 기록은 이력 순서를 유지한다.
 
-`activity`는 현재 도구·팀·진행·재시도의 제한된 복원 상태다. 작업 내 `draft.startSequence`와 `activity.sequence`는 발행 순서이며 서로 다른 작업끼리 비교하지 않는다. 진행 중 요청의 저장된 행과 실시간 행을 공통 표시 순서로 합치고, 도구 완료는 시작 행을 갱신한다. activityTruncated이면 해당 task의 state로 좁혀 조회한다. 확정된 사건 전체는 history/detail이 소유한다. `execution.statistics`는 완료 사용량과 현재 보고된 진행 표본을 합산하므로 같은 usage를 다시 더하지 않는다. 비용 미보고와 0을 구분한다.
+작업 내 `draft.startSequence`와 `activity.sequence`로 발행 순서를 확인한다. 진행 중 요청의 저장된 행과 실시간 행을 공통 표시 순서로 합치고, 도구 완료는 시작 행을 갱신한다. `activityTruncated`이면 해당 작업의 `state`로 좁혀 조회한다. 사용량은 서버가 집계한 `execution.statistics`를 사용하고 비용 미보고와 0을 구분한다. [상태 응답 계약](server.md#요청-상태와-복원)
 
 SSE의 `workspace_id`·`session_id`는 표시할 본문 범위를 정한다. 빈 session_id를 명시하면 본문을 구독하지 않는다. 작업 시작·완료·승인·사용량·설정·삭제·generation·파일 참조 변경 전이는 전역으로 수신한다. 선택 범위의 본문을 생략한 구간은 `event: cursor`와 SSE id로 재접속 위치를 알리며 도메인 사건·heartbeat가 아니다. 외부 EventSource 클라이언트는 id를 보관하고 이 프레임을 본문으로 렌더링하지 않는다. 내장 UI는 매 재연결에서 새 snapshot을 읽는다.
 
@@ -154,7 +154,7 @@ capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인
 
 ## 완료·예약·편집
 
-`request_finished.outcome`과 저장 이력의 `HistoryItem.completion`은 실제 작업 결과다. 완료 이력은 본문 없는 전용 RunCompletion이며 상태 enum과 statistics만 받는다. 메시지·추론·종료 사유 본문을 통계 컴포넌트에 전달하지 않고, 종료 사유 원문은 history sequence를 지정한 API 조회로 제공한다. task.status는 접수·종료 저장 상태를 뜻하므로 answered를 성공으로 간주하지 않는다. Task의 outcome은 런타임에서 실제 결과를 확인한 경우에만 제공한다. 영속 접수 상태만으로 성공을 판단하지 않는다. 재연결 후 성공을 확인하지 못하면 후속 예약을 멈춘다.
+완료 통계에는 `HistoryItem.completion`의 상태와 통계만 사용한다. 종료 사유가 필요하면 해당 이력 sequence를 지정해 원문을 조회한다. 후속 예약은 `request_finished.outcome` 또는 복원한 작업의 `outcome`으로 실제 성공을 확인한 뒤 제출한다. 재연결 후 성공을 확인하지 못하면 예약을 멈춘다. [공개 완료 계약](server.md#공개-이력과-표시-사건)
 
 `editorRead:{path}`는 전체 문서·revision·editable·reason을 반환한다. `editorSave:{path,text,revision}`는 전체 텍스트를 받아 현재 파일을 다시 확인한다. UTF-8 일반 파일 최대 2MiB만 편집하며 마스킹된 내용·경로, 바이너리·잘못된 UTF-8은 저장하지 않는다. 브라우저도 `capabilities.editorBytes`의 같은 UTF-8 바이트 한도를 입력·붙여넣기 전에 적용한다. 저장 응답은 본문을 다시 적재하지 않고 새 revision을 반환한다. 같은 본문은 파일을 다시 쓰지 않는다. 미리보기 페이지를 편집 원본으로 저장하지 않는다.
 

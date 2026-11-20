@@ -6,5 +6,6 @@
 - **문맥과 저장 처리**에서 인코딩된 모델 요청을 재사용하고, 메타데이터를 스트리밍으로 읽으며, 필요한 SQLite 본문과 웹 관찰 페이지만 가져옵니다. 작업 중 아직 읽지 않은 관찰은 압축 뒤에도 이어 볼 수 있습니다.
 - **기본 스킬**에 `#application-best-dev-practices`를 추가했습니다. 18개 앱 유형의 구현 흐름, 권한, 상태, 실패 복구를 다룹니다. `#ui-design`에는 컴포넌트 선택, 직접 조작, 모션, 로딩·오류 피드백 지침을 보강했습니다.
 - **설정 초기화**가 작업 취소를 반영하고 기본 스킬을 저장할 때 디렉터리와 파일의 대상을 검사합니다.
+- **문서 개편**으로 공통 도구 14종과 팀 전용 도구 6종의 역할·사용 조건을 한곳에서 확인할 수 있습니다. 도구 등록부터 승인·실행·결과 저장까지의 코어 흐름과 브라우저 조작·WebFetch의 연결 경로를 정리했습니다. 스킬 사용·작성과 배포 기본 스킬의 구성·초기화를 각각의 문서에서 다룹니다.
 
-[웹 문서 조회](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/web-fetch.md) · [문맥 압축](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/configuration.md#프롬프트와-compaction) · [Provider 복구](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/usage.md#provider-스트림과-복구) · [기본 스킬](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/builtin-skills.md)
+[문서 목차](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/README.md) · [전체 도구](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/tools.md#도구-목록) · [웹 문서 조회](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/tools.md#웹-문서-조회) · [문맥 압축](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/configuration.md#프롬프트와-compaction) · [스트림 복구](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/runtime.md#모델-스트림과-복구) · [기본 스킬](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261120/docs/builtin-skills.md)

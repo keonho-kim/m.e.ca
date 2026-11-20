@@ -1,6 +1,6 @@
-# 최적화 구현 전략
+# 기능별 최적화
 
-[문서 목록](README.md) · [기능별 최적화](optimization.md) · [개발 가이드](development.md)
+[문서 목록](README.md) · [개발 가이드](development.md)
 
 현재 동작을 담당 코드와 연결한다. 설정값과 공개 계약은 각 기능 가이드에서 확인한다.
 
@@ -28,7 +28,7 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 ## 셸과 파일 작업
 
-명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출의 병렬 준비는 결과의 원래 순서와 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](runtime.md#오래-실행되는-명령) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)
+명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출의 병렬 준비는 결과의 원래 순서와 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](tools.md#셸과-파일-작업) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)
 
 파일 시스템 감시는 같은 디렉터리의 활성 구독이 공유하고 마지막 구독에서 반환한다. 편집기의 변경 확인은 감시 리비전이 같으면 메타데이터에서 끝내고, 달라졌을 때 내용의 리비전을 비교한다. 저장 시에는 원본을 다시 검사한다. [편집 계약](webui-api.md#완료예약편집) · [공유 감시](../internal/fileview/watch_pool.go) · [변경 확인](../internal/fileview/editor_probe.go)
 
@@ -36,15 +36,15 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 기본 스킬을 배포할 때는 현재 스킬 디렉터리를 잠그고 내장 묶음의 디렉터리 충돌을 먼저 검사한다. 누락한 파일만 임시 파일에 쓰고 동기화한 뒤 기존 이름과 충돌하지 않을 때 공개한다. 디렉터리의 항목 변경은 묶음 단위로 동기화한다. [기본 스킬 배포](../internal/config/bootstrap/skills.go) · [원자적 파일 공개](../internal/config/statefs/files.go)
 
-목록 조회는 이름·설명 등 메타데이터를 읽는다. 후속 페이지는 같은 목록 스냅샷을 사용한다. 스냅샷은 마스킹 기준이 바뀌거나 보유 시간·용량 한도에 도달하면 회수한다. 참고 파일은 리비전을 확인한 열린 파일에서 필요한 바이트 범위만 읽고 UTF-8 경계를 맞춘다. [스킬 조회](skills.md#사용자-호출과-모델-도구) · [목록 읽기](../internal/skills/catalog.go) · [목록 보유](../internal/skills/catalog_retention.go) · [부분 읽기](../internal/skills/resources.go)
+이름 목록과 자동완성은 메타데이터를 1초 동안 재사용한다. 설치 루트의 항목 변경·교체가 확인되면 다시 탐색한다. 후속 페이지의 스냅샷은 마스킹 기준·수명·용량에 따라 회수한다. 참고 파일의 형식 확인과 부분 읽기는 검증한 같은 파일 핸들을 사용한다. 텍스트는 UTF-8 경계를 맞추고 이미지 디코딩 슬롯은 이미지 처리 시에만 사용한다. [스킬 조회](skills.md#사용자-호출과-모델-도구) · [목록 읽기](../internal/skills/catalog.go) · [목록 보유](../internal/skills/catalog_retention.go) · [부분 읽기](../internal/skills/resources.go)
 
 읽은 지침은 현재 실행이 보유한다. 원래 읽기 결과가 요청에 있으면 다시 넣지 않고, 압축으로 사라진 필요한 지침을 문맥에 연결한다. [문맥과 기록](skills.md#문맥과-기록) · [지침 문맥](../internal/agent/context/skill_reads.go)
 
 ## 브라우저 관찰과 세션
 
-도우미의 스냅샷 변경 추적을 이용한다. 도우미가 변경 없음을 보고하고 기준 리비전·조회 조건·주소·마스킹 기준이 일치하면 기존 결과 ID와 현재 커서를 돌려준다. 변경분만 받았거나 기준을 다시 맞춰야 할 때는 전체 스냅샷을 요청한다. 텍스트·오류·스크린샷은 브라우저 주소 확인과 한 호출로 묶는다. [관찰 계약](browser.md#관찰과-컨텍스트) · [도우미 관찰](../internal/tools/browser/inspect.go)
+도우미의 스냅샷 변경 추적을 이용한다. 도우미가 변경 없음을 보고하고 기준 리비전·조회 조건·주소·마스킹 기준이 일치하면 기존 결과 ID와 현재 커서를 돌려준다. 변경분만 받았거나 기준을 다시 맞춰야 할 때는 전체 스냅샷을 요청한다. 텍스트·오류·스크린샷은 브라우저 주소 확인과 한 호출로 묶는다. [관찰 계약](tools.md#관찰-결과와-이어-읽기) · [도우미 관찰](../internal/tools/browser/inspect.go)
 
-세션은 UTF-8 경계에 맞춘 임시 블록과 현재 이어 읽기 위치를 소유한다. 정확한 결과 ID·리비전·offset으로 읽을 때만 커서를 전진시키고 다 읽은 블록을 삭제한다. 모델 응답이 완료되면 해당 관찰을 짧은 열람 표시로 바꾼다. SQLite는 복원하기 전에 같은 경계를 적용하고, 실행은 현재 세션에서 받은 커서를 압축 뒤에도 별도로 전달한다. [임시 관찰](../internal/tools/browser/paging.go) · [실행 문맥](../internal/agent/run/browser_pages.go) · [SQLite 복원](../internal/storage/sqlite/browser_context.go)
+세션은 UTF-8 경계에 맞춘 임시 블록과 현재 이어 읽기 위치를 소유한다. 확인한 커서로 읽은 블록을 반환하고, 완료된 판단이 읽은 관찰은 다음 요청에서 짧은 열람 표시로 바꾼다. SQLite는 본문을 읽기 전에 같은 경계를 적용한다. [임시 관찰](../internal/tools/browser/paging.go) · [실행 문맥](../internal/agent/run/observation_pages.go) · [SQLite 복원](../internal/storage/sqlite/observation_context.go)
 
 도구 목록을 만들 때는 설치 표시와 실행 경로만 확인하고, 모델 사용 지침은 제공한 도구에 맞춰 구성한다. 세션을 열 때 도우미의 무결성을 검사한다. 관리 Chrome 갱신은 다운로드 잠금과 버전 선택 잠금을 분리하고, 사용 중인 버전은 세션 종료가 확인될 때까지 보호한다. [설치 확인](../internal/tools/browser/runtime/availability.go) · [모델 요청 구성](../internal/agent/run/start.go) · [세션 수명](../internal/tools/browser/session.go) · [관리 설치본](../internal/tools/browser/runtime/managed.go) · [사용 기록](../internal/tools/browser/runtime/chrome_use.go)
 
@@ -52,7 +52,7 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 문서 URL의 DNS 응답을 검사하고 승인된 IP를 같은 출처의 연결과 렌더링 리소스에 재사용한다. HTML은 단독 임시 Chromium에서 읽고, DevTools 파이프로 받은 DOM을 한 번 파싱해 Markdown으로 만든다. 텍스트·Markdown이나 기존 커서는 바로 읽는다. 문서 처리가 끝나면 연결과 브라우저 자원을 반환한다. 연결과 렌더링은 응답·리소스·프로세스 예산을 사용한다. [HTTP 연결](../internal/tools/browser/webfetch/client.go) · [Chromium 수명](../internal/tools/browser/chromium/process_unix.go) · [문서 읽기](../internal/tools/browser/webfetch/document.go)
 
-도구 호출 묶음은 남은 모델 문맥을 나눠 사용한다. 즉시 제공하는 페이지와 읽지 않은 임시 블록의 수명이 다르며, 읽은 페이지는 다음 모델 요청에서 짧은 표시로 바뀐다. 브라우저와 같은 블록 판독 및 정리 구현을 사용한다. [페이지 예산](../internal/agent/run/webfetch_budget.go) · [블록 저장과 회수](../internal/tools/observation/body.go) · [WebFetch 계약](web-fetch.md#이어-읽기)
+도구 호출 묶음은 남은 모델 문맥을 나눠 사용한다. 즉시 제공하는 페이지와 읽지 않은 임시 블록의 수명이 다르며, 브라우저와 같은 블록 판독 및 정리 구현을 사용한다. [페이지 예산](../internal/agent/run/webfetch_budget.go) · [블록 저장과 회수](../internal/tools/observation/body.go) · [관찰 결과와 이어 읽기](tools.md#관찰-결과와-이어-읽기)
 
 ## 이미지와 미리보기
 
@@ -74,7 +74,7 @@ WebUI는 작고 지원되는 첨부를 로컬에서 순차 축소하고 나머�
 
 ## WebUI 상태와 렌더링
 
-서버 데이터는 TanStack Query에 캐시하고 초안·선택·진행 중 표시 상태는 Zustand에 둔다. 이벤트를 대상과 커서에 맞춰 적용하며, 저장 이력이 완료 경계에 도달할 때 실시간 본문을 교체한다. 숨겨진 채팅은 본문 갱신을 멈추고 승인·완료·예약을 계속 처리한다. 비활성 조회는 개수와 보유 바이트 기준으로 정리한다. [WebUI 상태 책임](webui-design.md#상태동시성저장-책임) · [이력 인계](../webui/src/pages/workspace/model/history-handoff.ts) · [표시 수명](../webui/src/pages/workspace/model/presentation.ts) · [조회 캐시](../webui/src/pages/workspace/api/cache-policy.ts)
+서버 데이터는 TanStack Query에 캐시하고 초안·선택·진행 중 표시 상태는 Zustand에 둔다. 이벤트를 대상과 커서에 맞춰 적용하며, 저장 이력이 완료 경계에 도달할 때 실시간 본문을 교체한다. 숨겨진 채팅은 본문 갱신을 멈추고 승인·완료·예약을 계속 처리한다. 비활성 조회는 개수와 보유 바이트 기준으로 정리한다. [WebUI 상태 복원](webui-api.md#상태와-스트림-복원) · [이력 인계](../webui/src/pages/workspace/model/history-handoff.ts) · [표시 수명](../webui/src/pages/workspace/model/presentation.ts) · [조회 캐시](../webui/src/pages/workspace/api/cache-policy.ts)
 
 대화와 파일 목록은 해당 화면 구간만 렌더링하며 포커스·드래그 중에 필요한 행을 보존한다. Markdown에는 별도 표시 예산을 둔다. 컴포저는 정상적인 텍스트 변경 범위의 UTF-8 바이트 차이를 적용하고, IME·붙여넣기처럼 범위를 확인할 수 없는 입력은 전체를 검산한다. [대화 가상화](../webui/src/pages/workspace/ui/chat/use-history-viewport.ts) · [파일 가상화](../webui/src/pages/workspace/ui/files/directory-column.tsx) · [Markdown 표시](../webui/src/shared/ui/markdown/render-budget.ts) · [입력 변경 범위](../webui/src/pages/workspace/model/use-input-edit.ts)
 

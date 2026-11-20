@@ -1,8 +1,8 @@
 # 기본 스킬 안내
 
-[← README](../README.md) · [스킬 사용·추가·형식](skills.md)
+[문서 목록](README.md) · [스킬 사용과 형식](skills.md)
 
-tui와 full에 같은 기본 스킬을 제공한다. 최초 초기화와 설치 시 `~/.meca/skills/`에 누락한 파일을 생성하고 기존 사용자 수정본은 보존한다. 스킬은 에이전트가 읽는 지침이며 별도 앱이나 실행 모드가 아니다.
+tui와 full에 포함된 기본 스킬은 아래 네 가지다.
 
 | 호출 | 용도 | 배포 원본 |
 | --- | --- | --- |
@@ -11,11 +11,13 @@ tui와 full에 같은 기본 스킬을 제공한다. 최초 초기화와 설치 
 | `#backend-design` | TDD와 자원·DB·API·진단·보안·검색 설계 | [SKILL.md](../internal/config/bootstrap/defaults/backend-design/SKILL.md) |
 | `#application-best-dev-practices` | 앱 유형과 기능을 조합한 구현 흐름·권한·상태·실패 복구 | [SKILL.md](../internal/config/bootstrap/defaults/application-best-dev-practices/SKILL.md) |
 
-호출 뒤에 원하는 작업을 자연어로 적는다. 서브커맨드나 필수 인자는 없으며 에이전트가 프로젝트와 요청을 읽고 필요한 참고 파일을 선택한다. `!skills`에서 설치된 스킬의 설명·출처·본문을 확인할 수 있다.
+## 배포와 초기화
+
+일반 시작과 설치·업그레이드에서 Bootstrap이 `~/.meca/skills/`의 누락 파일을 생성한다. 기존 파일과 수정한 본문은 보존한다. 생성 디렉터리는 0700, 새 파일은 0600이다. Bootstrap이 관리하는 스킬 루트와 기본 스킬·참고 자료의 디렉터리는 실제 디렉터리여야 한다. [기본 스킬 설치 구현](../internal/config/bootstrap/skills.go)
 
 ## 스킬 작성
 
-`#create-skill`은 SKILL.md의 이름·설명·본문, `references/`·`scripts/`·`assets/`의 역할과 검증 방법을 안내한다. 기본 작성 위치는 프로젝트 `.agents/skills/`다. 파일 배치·이름·호출 정책은 [스킬 추가와 형식](skills.md#스킬-추가하기)을 따른다.
+`#create-skill 프로젝트 코드 리뷰용 스킬을 만들어줘`처럼 스킬의 작성·수정 작업에 적용한다. 이 스킬은 Agent Skills 표준에 맞춘 지침·최소 예시·참고 자료의 구성과 검증을 안내한다. 사용자가 경로를 지정하지 않으면 프로젝트 `.agents/skills/`에 작성하도록 안내한다. [배포 지침](../internal/config/bootstrap/defaults/create-skill/SKILL.md) · [파일 형식](skills.md#파일-형식)
 
 ## UI 설계
 
@@ -28,7 +30,7 @@ tui와 full에 같은 기본 스킬을 제공한다. 최초 초기화와 설치 
 
 화면 전체를 다룰 때는 레이아웃·시각 체계와 HTML/CSS/Vanilla JS 예제를 필요한 만큼 읽는다. 예제는 각 화면의 구성과 조작을 검토하는 자료다. 대상 프로젝트의 요구와 디자인 시스템을 적용한다. [참고 지도](../internal/config/bootstrap/defaults/ui-design/SKILL.md)
 
-사용 가능한 경우 MECA 호스트에서 `browser_action`과 `browser_inspect`로 실제 화면과 조작을 확인한다. 추가 진단이 필요하거나 내장 도구를 사용할 수 없으면 Playwright CLI(`playwright-cli`)를 사용한다. 화면·콘솔·네트워크 확인과 레이아웃·모션 검사 방법은 [스킬의 브라우저 검증 지침](../internal/config/bootstrap/defaults/ui-design/references/browser-tools.md), 내장 도구 준비는 [브라우저 도구](browser.md)를 따른다.
+이 스킬은 실제 화면·조작·콘솔·네트워크에 맞는 검증 경로를 안내한다. 브라우저의 설치와 제공 조건은 코어 도구가 소유한다. [스킬의 브라우저 검증 지침](../internal/config/bootstrap/defaults/ui-design/references/browser-tools.md) · [브라우저 연동](tools.md#브라우저-연동)
 
 ## 백엔드 설계
 
@@ -48,8 +50,8 @@ tui와 full에 같은 기본 스킬을 제공한다. 최초 초기화와 설치 
 
 주된 사용자 과업에 맞는 가이드를 읽고, 다른 유형에서 필요한 기능을 함께 적용한다. 예를 들어 소모임 앱은 게시판의 대화, 캘린더의 일정, 예약의 정원 확정 규칙을 조합한다. 대표 서비스가 제공하는 기능을 참고하고, 결합한 기능의 정보 공개 범위, 변경 권한, 확정 시점과 복구 동작을 대상 앱에서 정한다.
 
-## 자료 사용
+## 배포 자료
 
 참고 자료는 **본문 → 지도 → 선택 자료**의 최대 세 층으로 구성하며 필요한 파일만 읽는다. 기본 스킬의 설명 Markdown은 파일별 8KiB, 코드·미디어는 1MiB 이하이며 512KiB 이하를 권장한다. 이 작성 기준과 엔진의 참고 파일 페이지 한도는 구분한다.
 
-외부 자료의 출처와 배포 조건은 각 스킬에 동봉한 고지·출처 문서를 따른다. 기본 스킬을 읽어도 외부 서비스·DB·개발 도구를 자동 설치하거나 실행하지 않는다. 실제 프로젝트의 요구·기존 시스템·보안 정책을 우선한다.
+각 묶음에는 해당 지침과 참고 예시를 포함한다. 외부 자료의 출처와 배포 조건은 스킬에 동봉한 고지·출처 문서에서 확인한다.

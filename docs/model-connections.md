@@ -127,6 +127,6 @@ Ollama에는 확인된 context를 num_ctx로 지정하지만 공개 Chat API만�
 
 ## Native tool calling
 
-MECA는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio·OpenAI Responses의 `function_call`·`function_call_output`, Claude의 `tool_use`·`tool_result`, Gemini의 `functionCall`·`functionResponse`를 사용한다. 완성된 인자와 정상 종료를 확인한 뒤 실행기에 넘기며 일반 답변의 JSON은 실행하지 않는다. 서버가 도구를 지원하지 않거나 parser 설정이 틀리면 native 호출을 생성할 수 없다.
+MECA는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio·OpenAI Responses의 `function_call`·`function_call_output`, Claude의 `tool_use`·`tool_result`, Gemini의 `functionCall`·`functionResponse`를 사용한다. 사용할 수 있는 호출은 모델과 서버 parser의 native tool 지원에 따라 결정된다. [도구 등록과 실행](tools.md#코어-등록과-실행)
 
 vLLM은 자동 도구 선택에 --enable-auto-tool-choice와 모델에 맞는 --tool-call-parser가 필요하다. Reasoning parser는 별도 설정이며 서빙 모델의 공식 권장 구성을 따른다. 서빙 별칭만으로 parser를 추측하지 않는다. [vLLM Tool Calling](https://docs.vllm.ai/en/latest/features/tool_calling/), [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling).

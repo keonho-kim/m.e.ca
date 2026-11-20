@@ -8,7 +8,7 @@ tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙
 
 ## 이벤트
 
-native SSE·외부 WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약을 사용한다. 내장 UI WebSocket은 같은 공개 사건을 구독별 봉투와 제한된 배치로 전달하며 ACK·연결 상태를 실행 이력에 저장하지 않는다. 커서는 프로세스 epoch와 sequence이며 같은 커서의 재전송을 중복 적용하지 않는다. 보관 범위를 벗어나면 snapshot과 history로 복구한다.
+공개 전송의 커서·재전송·스냅샷 복원은 서버 API에 정의한다. 내장 UI의 관찰 ACK와 연결 상태는 작업 실행 이력과 별개다. [서버 이벤트 계약](server.md#이벤트재접속수명) · [브라우저 관찰](webui-api.md#내장-ui-관찰과-복구)
 
 실행 이벤트는 occurredAt과 가능한 errorCode를 제공한다. 시각은 표시용이며 순서 판단에는 커서를 사용한다. 발생 시각이 없는 기록은 조회 시각으로 대체하지 않는다. sessionId·taskId·agent·runId·generation·도구 callId를 해당 사건의 범위에 맞게 사용한다.
 
@@ -16,7 +16,7 @@ native SSE·외부 WebSocket·gRPC·gRPC-Web·Connect는 공통 이벤트 계약
 
 팀 발언·기여 선언은 작성자 본문으로, 재시도·요약·스킬 읽기는 고정 코드의 알림으로 투영한다. 제어 사건과 완료 통계는 각각의 형식으로 제공한다. [공개 이력과 표시 사건](server.md#공개-이력과-표시-사건)
 
-영속 사건은 저장 확정 뒤 전달한다. 토큰 델타와 heartbeat는 별도 영속 로그로 쌓지 않는다. heartbeat의 5초 무출력 후 1초 간격, 느린 구독자 분리와 bounded replay 정책은 [서버 문서](server.md#이벤트재접속수명)를 따른다.
+영속 사건은 저장 확정 뒤 전달한다. 토큰 델타와 heartbeat는 연결 수명의 메시지로 처리한다.
 
 ## 운영 로그
 

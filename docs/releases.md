@@ -41,7 +41,7 @@
 
 운영체제와 CPU에 맞는 아카이브를 받아 압축을 푼 폴더에서 `./meca install`을 실행한다. `~/.local/bin/meca`와 PATH, 기본 설정을 준비한다. [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
 
-대화형 설치에서 PATH를 새로 반영해야 하면 로그인 셸을 연다. 자동화에서는 `./meca install --no-shell`로 현재 셸을 유지할 수 있다. 본체와 브라우저 도구를 한 번에 준비하려면 `./meca install --ext browser`를 사용한다. 두 옵션은 함께 사용할 수 있다. [브라우저 설치 요구사항](browser.md#첫-실행과-설치)
+대화형 설치에서 PATH를 새로 반영해야 하면 로그인 셸을 연다. 자동화에서는 `./meca install --no-shell`로 현재 셸을 유지할 수 있다. 브라우저 도구를 함께 설치하는 옵션은 도구 문서에서 확인한다. `--no-shell`과 브라우저 설치 옵션은 함께 사용할 수 있다. [브라우저 설치와 갱신](tools.md#설치와-갱신)
 
 ### 체크섬 확인 (선택)
 

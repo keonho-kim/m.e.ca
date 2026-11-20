@@ -17,14 +17,7 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 `socket`은 WebSocket이며 grpc는 gRPC·gRPC-Web·Connect다. 선택한 전송 방식과 공통 HTTP 제어·이벤트·첨부·작업 승인 경로를 같은 인증 경계에서 제공한다. 서버에는 TTY가 필요 없다.
 
-### 내장 화면으로 시작하기
-
-1. `meca /path/to/project --server --ui`로 기동한다. `--ui`만 지정하면 오류이며, 기본 수신 주소는 `127.0.0.1:8787`이다.
-2. `http://127.0.0.1:8787/ui/`에 접속하고 서버 시작 터미널의 `Server token: …` 값을 연결 화면에 입력한다. `--token-file`을 지정한 경우에도 실제 인증에 사용하는 토큰을 표시한다.
-3. 작업공간·대화를 만들고 설정 → 모델에서 연결을 준비한 뒤 요청한다. 팀·스킬·파일 참조·이미지와 작업 승인·중지는 같은 API를 사용한다.
-
-로컬 loopback의 대화형 출력 터미널에서는 브라우저를 자동으로 연다. 원격·비대화형 실행은 출력된 URL에 직접 접속하며, 다른 컴퓨터에서 사용할 때는 TLS·Host·Origin을 아래 인증 규칙에 맞게 설정한다. 화면 사용은 [WebUI 구조와 동작](webui-design.md), 클라이언트 구현은 [연동 계약](webui-api.md)을 따른다.
-
+내장 화면을 선택하면 같은 서버의 `/ui/`에서 접속한다. 대화형 loopback 기동에서는 브라우저를 자동으로 열고, 원격·비대화형 기동에서는 출력한 주소를 사용한다. [WebUI 사용 시작](webui-design.md#사용-시작) · [WebUI 연동 계약](webui-api.md)
 
 | 시작 옵션 | 기본값·의미 |
 | --- | --- |
@@ -300,13 +293,13 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 
 `internal/serverapi/gen`의 생성물은 descriptor·메시지·RPC 계약을 함께 재생성해야 한다. 수동 분할은 generator 출력과 descriptor 관계를 손상시키므로 생성 파일에 350줄 제한을 적용하지 않는다. 수정 원본은 `.proto`이며 생성물은 직접 고치지 않는다.
 
-## WebUI 연결과 복원
+## 요청 상태와 복원
 
-`meca --server --ui`는 같은 서버에서 내장 UI와 인증 초기 화면을 제공한다. 최상위 Command.workspaceId로 작업공간을 지정하고 생략 시 시작 프로젝트를 사용한다. 이벤트·snapshot은 workspaceId를 포함한다. HTTP 이미지·작업 namespace와 파일 감시 계약은 [연결 가이드](webui-api.md)가 소유한다. API는 모델 탐색, 대화·작업 목록, 설정, 파일 참조, 이미지, 승인, 팀 스트림과 상태 복원을 제공한다.
+최상위 `Command.workspaceId`로 작업공간을 지정하며 생략 시 시작 프로젝트를 사용한다. 이벤트와 스냅샷에는 실제 `workspaceId`가 포함된다. 화면의 API 호출과 복원 절차는 [WebUI 연동](webui-api.md#상태와-스트림-복원)을 따른다.
 
 저장 이미지 GET은 `/v1/sessions/{sessionId}/images/{sequence}/{index}`이며 같은 Bearer·Host·Origin 검사를 적용한다. 해당 대화가 현재 선택되어 있을 필요는 없다. 업로드 metadata의 expires_at과 남은 lifetime_seconds는 임시 업로드 수명이며 저장된 이미지의 보존 수명과 다르다.
 
-`execution.statistics`는 현재 작업의 완료 usage와 최신 진행 표본을 중복 없이 합산한다. startedAt·누적 시간·출력 토큰으로 처리량을 계산할 수 있다. 진행 usage 이벤트의 measuredMillis도 같은 측정 구간을 제공한다. snapshot.activity에는 현재 도구·팀·진행·재시도 표시를 제한된 크기로 제공하며 확정 원문은 history/detail에서 읽는다. approval.expiresAt과 approval_closed의 status(approved·denied·expired·canceled·failed)로 승인 UI를 정리한다.
+`execution.statistics`는 현재 작업의 완료 사용량과 최신 진행 표본을 합산한다. `startedAt`·누적 시간·출력 토큰과 진행 사용량 이벤트의 `measuredMillis`로 처리량을 계산할 수 있다. 스냅샷의 `activity`는 도구·팀·진행·재시도의 제한된 상태를 제공하며 확정 원문은 `history`·`detail`로 조회한다.
 
 모델·스킬·세션/작업 목록·파일 탐색은 별도 조회 입장 4건을 사용하며 여유가 없으면 즉시 resource_exhausted다. `commands`는 TUI와 같은 실행 자원의 동기화된 메타데이터를 읽고 `resources`는 같은 RSS 측정기를 사용한다. 명령 문자열이 길면 truncated로 알리고 짧은 접두부를 제공한다.
 
