@@ -193,12 +193,16 @@ func TestLongRequestRetainsActionsAndHistory(t *testing.T) {
 }
 func TestModelBudgetStopsWithoutReportingSuccess(t *testing.T) {
 	g := &generator{native: true}
-	r := fixture(g, &executor{}, &journal{})
+	e, j := &executor{}, &journal{}
+	r := fixture(g, e, j)
 	r.Limits = DefaultLimits()
 	r.Limits.MaxModelCalls = 2
 	result, err := r.Run(context.Background(), "work", approve, emit)
 	if err != nil || !strings.Contains(result.Text, "budget") || result.Status != runrecord.Stopped {
 		t.Fatalf("stop: %+v %v", result, err)
+	}
+	if len(g.requests) != 2 || e.prepared != 0 || e.executed != 0 {
+		t.Fatalf("model calls=%d tool preparations=%d executions=%d", len(g.requests), e.prepared, e.executed)
 	}
 }
 func TestRequestsHaveIndependentCallBudgets(t *testing.T) {

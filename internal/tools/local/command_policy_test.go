@@ -17,12 +17,16 @@ import (
 func TestCommandContractUsesAutomaticApproval(t *testing.T) {
 	executor, root := testExecutor(t)
 	for _, definition := range executor.Definitions() {
-		if definition.Name == "execute_command" && (len(definition.Parameters) != 1 || definition.Parameters[0].Name != "command") {
-			t.Fatalf("unexpected command fields: %+v", definition.Parameters)
+		if definition.Name != "execute_command" {
+			continue
+		}
+		fields := definition.Parameters
+		if len(fields) != 2 || fields[0].Name != "reason" || fields[1].Name != "command" {
+			t.Fatalf("unexpected command fields: %+v", fields)
 		}
 	}
 	ctx := context.Background()
-	command := call("execute_command", `{"command":"git init"}`)
+	command := call("execute_command", `{"reason":"Initialize test repository","command":"git init"}`)
 	if _, err := executor.Prepare(ctx, policy.Settings{Scope: policy.Directory}, command); err == nil {
 		t.Fatal("host shell accepted a directory-confinement contract")
 	}

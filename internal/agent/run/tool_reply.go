@@ -34,7 +34,8 @@ func (s *execution) rejectInvalidCalls(ctx context.Context, reply modelapi.Respo
 		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.RunToolArgumentCorrectionExhausted, maxArgumentCorrections, s.runner.Redact(first))
 	}
 	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
-		return errModelBudget
+		// The decision loop owns budget termination. There is no retry to announce.
+		return nil
 	}
 	return s.emit(runrecord.Event{Kind: "retry", Text: diagcatalog.Text(diagcatalog.RunRetryInvalidToolCall)})
 }

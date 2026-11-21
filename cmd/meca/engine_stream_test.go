@@ -73,6 +73,9 @@ func (s *engineStream) consume(frame []byte) {
 				for range row.RowsFrom(100, 0, "") {
 				}
 			}
+		case "tool_failed":
+			s.err = fmt.Errorf("native fixture tool failed: %s", event.GetTool().GetSummary())
+			return
 		case "request_finished":
 			s.completed = true
 			if event.Status != "answered" {

@@ -46,8 +46,9 @@ func engineProvider(w http.ResponseWriter, r *http.Request, kind connection.Prov
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	frames := engineFrames{writer: w}
-	arguments := map[string]string{"path": "fixture.txt"}
-	call := map[string]any{"id": fmt.Sprintf("bench_call_%d", step), "name": "read_file", "args": arguments}
+	const toolName = "execute_command"
+	toolID := fmt.Sprintf("bench_call_%d", step)
+	arguments := map[string]string{"reason": "Read fixture observation", "command": "cat fixture.txt"}
 	text := "# Verified\n\n```go\n" + strings.Repeat("fmt.Println(\"observed\")\n", 1024) + "```\n\nCompleted."
 	var chunks []string
 	for offset := 0; offset < len(text); offset += 1024 {
@@ -60,7 +61,7 @@ func engineProvider(w http.ResponseWriter, r *http.Request, kind connection.Prov
 		block := map[string]any{"type": "text", "text": ""}
 		reason := "end_turn"
 		if tool {
-			block = map[string]any{"type": "tool_use", "id": call["id"], "name": "read_file", "input": map[string]any{}}
+			block = map[string]any{"type": "tool_use", "id": toolID, "name": toolName, "input": map[string]any{}}
 			reason = "tool_use"
 		}
 		frames.send("content_block_start", map[string]any{"type": "content_block_start", "index": 0, "content_block": block})
@@ -79,8 +80,9 @@ func engineProvider(w http.ResponseWriter, r *http.Request, kind connection.Prov
 		frames.send("message_delta", map[string]any{"type": "message_delta", "delta": map[string]string{"stop_reason": reason}, "usage": map[string]int{"output_tokens": 64}})
 		frames.send("message_stop", map[string]string{"type": "message_stop"})
 	case connection.Gemini:
-		parts := []map[string]any{{"functionCall": call, "thoughtSignature": "benchmark-signature"}}
 		if tool {
+			call := map[string]any{"id": toolID, "name": toolName, "args": arguments}
+			parts := []map[string]any{{"functionCall": call, "thoughtSignature": "benchmark-signature"}}
 			frames.send("", engineGeminiFrame(parts, true))
 		} else {
 			for index, chunk := range chunks {
@@ -93,7 +95,7 @@ func engineProvider(w http.ResponseWriter, r *http.Request, kind connection.Prov
 			if err != nil {
 				return
 			}
-			frames.send("", map[string]any{"choices": []any{map[string]any{"index": 0, "delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": call["id"], "type": "function", "function": map[string]any{"name": "read_file", "arguments": string(encoded)}}}}, "finish_reason": "tool_calls"}}})
+			frames.send("", map[string]any{"choices": []any{map[string]any{"index": 0, "delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": toolID, "type": "function", "function": map[string]any{"name": toolName, "arguments": string(encoded)}}}}, "finish_reason": "tool_calls"}}})
 		} else {
 			for index, chunk := range chunks {
 				var reason any
