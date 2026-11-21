@@ -55,6 +55,7 @@ const (
 	ModelPublicProvenanceRequiresAnObservationOrUser          Message = "public provenance requires an observation or user message"
 	ModelTemperatureMustBeAFiniteNumberBetween                Message = "temperature must be a finite number between 0 and 2"
 	ModelUnfinishedDraftsMustBeAssistantMessagesWithout       Message = "unfinished drafts must be assistant messages without native tool calls or results"
+	ModelPreserveObservationsRequiresAssistant                Message = "preserving observations requires an assistant message"
 	ModelchangeConnectionSavedForThisSessionButSaving         Message = "connection saved for this session, but saving the default for new sessions failed: %w"
 	ModelchangeSaveModelConnectionExistingCredentialsRetained Message = "save model connection; existing credentials retained: %w"
 	NativeArgumentNestingExceedsLimit                         Message = "argument nesting exceeds limit"

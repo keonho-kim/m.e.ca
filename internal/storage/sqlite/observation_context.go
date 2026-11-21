@@ -28,6 +28,7 @@ func (s *Store) lastCompletedDecision(ctx context.Context, through int64) (int64
  SELECT t.sequence FROM timeline t JOIN messages m ON m.sequence=t.source_sequence
  WHERE t.kind='message' AND t.sequence<=? AND m.role='assistant'
  AND COALESCE(json_extract(m.body,'$.incomplete'),0)=0
+	 AND COALESCE(json_extract(m.body,'$.preserve_observations'),0)=0
  ORDER BY t.sequence DESC LIMIT 1`, through).Scan(&sequence)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil

@@ -40,7 +40,7 @@ func TestTransportStreamingApprovalAndReconnect(t *testing.T) {
 					return ctx.Err()
 				case <-release:
 				}
-				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"transport.txt","content":"same result"}`)}}, Done: true})
+				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save transport fixture","path":"transport.txt","content":"same result"}`)}}, Done: true})
 			}), true)
 			w := tlsWire(t, kind, f.api)
 			state := call(t, ctx, w, &v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{Create: true}}}).GetState()

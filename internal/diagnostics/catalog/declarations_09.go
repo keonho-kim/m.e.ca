@@ -95,6 +95,7 @@ const (
 	ToolRequiresAValidString                                       Message = "%s requires a valid string"
 	ToolRequiresAnIntegerFromTo                                    Message = "%s requires an integer from 0 to %d"
 	ToolRequiresOneLiteralPathWithoutLineBreaks                    Message = "%s requires one literal path without line breaks"
+	ToolRequiresShortLine                                          Message = "%s requires a visible phrase on one line of up to %d characters"
 	ToolRequiresTextWithinBytes                                    Message = "%s requires text within %d bytes"
 	ToolRequiresToObjects                                          Message = "%s requires 1 to %d objects"
 	ToolTrailingToolArguments                                      Message = "trailing tool arguments"

@@ -32,8 +32,8 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 	}
 	e.kind, e.model = kind, model
 	if sourceHistoryBytes(source) < cacheThreshold {
-		e.Clear()
-		e.kind, e.model = kind, model
+		e.cloudGroups, e.cloudSourceBytes = nil, 0
+		e.cloud, e.cloudInitial, e.cloudRetained = nil, "", 0
 		return Messages(kind, source)
 	}
 	previous := e.cloudGroups
@@ -77,7 +77,7 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 		} else {
 			weight = group.bytes
 		}
-		if groupIndex == len(e.cloudGroups) && e.cloudSourceBytes+weight <= e.limit()/2 {
+		if groupIndex == len(e.cloudGroups) && e.cloudSourceBytes+weight <= min(e.limit()/2, e.limit()-e.tools.bytes) {
 			if group == nil {
 				group = &cloudSourceGroup{keys: make([]sourceIdentity, end-index), messages: snapshotCloudMessages(converted), bytes: weight}
 				for at := index; at < end; at++ {
@@ -111,7 +111,7 @@ func (e *Encoder) cloudMessages(kind connection.ProviderKind, model string, sour
 	} else if cap(e.cloudGroups) > max(16, 2*len(e.cloudGroups)) {
 		e.cloudGroups = append([]*cloudSourceGroup(nil), e.cloudGroups...)
 	}
-	for len(e.cloud) > 0 && e.cloudRetained > e.limit()-e.cloudSourceBytes {
+	for len(e.cloud) > 0 && e.cloudRetained > e.limit()-e.cloudSourceBytes-e.tools.bytes {
 		last := len(e.cloud) - 1
 		e.cloudRetained -= e.cloud[last].retainedBytes()
 		e.cloud[last] = cloudEntry{}

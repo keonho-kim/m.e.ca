@@ -225,7 +225,7 @@ snapshot draft의 committed는 현재 generation의 출력이 이미 이력에 �
 event는 kind·agent·final·runId·text·thinking·callId·approvalSource·changePreview와, 존재하는 call·output·operation·reference·usage·statistics·team을 포함한다. call은 id·name·arguments, reference는 sessionId·sequence다. arguments와 output은 원래 JSON 값이며 byte 필드의 base64 문자열로 다시 감싸지 않는다. operation에는 실행 식별·상태·명령·결과·실패·프로세스·파일 변경의 공개 관측만 담는다. checkpoint·provider/model continuation·캡처·실행 판정용 대상 목록은 내보내지 않는다. sequence·토큰·시간·팀 순서와 revision의 64비트 정수는 JSON 문자열이다. 사용자 도구 결과 안의 숫자는 원래 JSON 표현을 유지한다.
 
 ```json
-{"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"path":"result.txt","content":"written"}},"output":{"ok":true}}}
+{"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"reason":"Save verified result","path":"result.txt","content":"written"}},"output":{"ok":true}}}
 ```
 
 `view`는 `DOCUMENT`(기본 JSON), `TOOL_REQUEST`·`TOOL_RESULT`(인자·결과 JSON), `TEXT`·`THINKING`(이력 본문) 중 하나다. 승인 원문은 유효한 승인 요청에서 `DOCUMENT`로 읽는다. revision은 view까지 구분한다. 연속 페이지는 공용 캐시의 같은 원문을 재사용하며 상한은 아래 표를 따른다. [상세 조회 구현](optimization-strategies.md#서버-이벤트와-원문-조회)

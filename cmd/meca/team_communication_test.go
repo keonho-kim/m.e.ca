@@ -70,7 +70,7 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 	var args any
 	switch {
 	case id == g.names[0] && step == 0:
-		name, args = "execute_command", map[string]string{"command": "printf unannounced > silent.txt"}
+		name, args = "execute_command", map[string]string{"reason": "Record team contribution", "command": "printf unannounced > silent.txt"}
 	case id == g.names[0] && step == 1:
 		name, args = "set_work", map[string]any{"summary": "Implement a.txt alongside " + g.names[1], "paths": []string{"a.txt"}}
 		text = g.names[1] + " is implementing b.txt; I will implement a.txt and keep b.txt unchanged."
@@ -78,11 +78,11 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 		name, args = "set_work", map[string]any{"summary": "Implement b.txt", "paths": []string{"b.txt"}}
 		text = "I will implement b.txt. " + g.names[0] + " can handle a.txt independently."
 	case id == g.names[0] && step == 2:
-		name, args = "write_file", map[string]string{"path": "a.txt", "content": "A contribution\n"}
+		name, args = "write_file", map[string]string{"reason": "Record team contribution", "path": "a.txt", "content": "A contribution\n"}
 	case id == g.names[1] && step == 1:
 		name, args = "discuss", map[string]any{"message": "The locked-account response is 423.", "mentions": []string{g.names[0]}}
 	case id == g.names[1] && step == 2:
-		name, args = "write_file", map[string]string{"path": "b.txt", "content": "B contribution\n"}
+		name, args = "write_file", map[string]string{"reason": "Record team contribution", "path": "b.txt", "content": "B contribution\n"}
 	case id == g.names[0] && step == 3 || id == g.names[1] && step == 3:
 		name, args = "leave_team", map[string]string{"message": id + " completed its independent file."}
 	default:

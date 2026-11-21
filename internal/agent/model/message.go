@@ -28,6 +28,9 @@ func (message Message) Check() error {
 	if message.Incomplete && (message.Role != "assistant" || len(message.Calls) != 0 || message.ToolCallID != "" || message.ToolName != "") {
 		return faults.Errorf(diagcatalog.ModelUnfinishedDraftsMustBeAssistantMessagesWithout)
 	}
+	if message.PreserveObservations && message.Role != "assistant" {
+		return faults.Errorf(diagcatalog.ModelPreserveObservationsRequiresAssistant)
+	}
 	if len(message.ReasoningState) > 0 && (message.Role != "assistant" || message.Incomplete) {
 		return faults.Errorf(diagcatalog.ModelContinuationStateRequiresACompletedAssistantMessage)
 	}
@@ -52,6 +55,10 @@ func (message Message) Check() error {
 		return faults.Errorf(diagcatalog.ModelInvalidToolResultID)
 	}
 	return nil
+}
+
+func (message Message) AcknowledgesObservations() bool {
+	return message.Role == "assistant" && !message.Incomplete && !message.PreserveObservations
 }
 
 // ContextBytes measures retained model content without serializing native state

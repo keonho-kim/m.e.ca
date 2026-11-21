@@ -29,7 +29,7 @@ func (s *execution) restoreObservationReads() {
 	s.observationReadThrough = 0
 	for i := len(s.messages) - 1; i >= 0; i-- {
 		m := s.messages[i]
-		if m.Role == "assistant" && !m.Incomplete {
+		if m.AcknowledgesObservations() {
 			s.acknowledgeObservations(i)
 			return
 		}

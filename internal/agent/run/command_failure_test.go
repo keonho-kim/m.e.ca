@@ -32,7 +32,7 @@ func TestCommandFailureReachesModel(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "printf progress; printf 'missing dependency' >&2; exit 7"}), "Need to resolve the missing dependency", "Cannot verify until the dependency is available"}}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"reason": "Verify command outcome", "command": "printf progress; printf 'missing dependency' >&2; exit 7"}), "Need to resolve the missing dependency", "Cannot verify until the dependency is available"}}
 	j := &journal{}
 	r := fixture(g, &executor{}, j)
 	r.Tools = tools
@@ -76,7 +76,7 @@ func TestNoMatchSearchFinishesWithoutCorrectionOrRetry(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "app.txt"), []byte("done\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"command": "grep TODO app.txt"}), "No TODO matches were found; grep exited with code 1."}}
+	g := &generator{replies: []string{nativeCall("execute_command", map[string]any{"reason": "Verify command outcome", "command": "grep TODO app.txt"}), "No TODO matches were found; grep exited with code 1."}}
 	r.Generator = g
 	result, err := r.Run(context.Background(), "Search app.txt for TODO and report whether it occurs", approve, emit)
 	if err != nil || result.Status != runrecord.Answered || len(g.requests) != 2 {

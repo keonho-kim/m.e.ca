@@ -25,7 +25,7 @@ func TestNativeApprovalChannel(t *testing.T) {
 				if calls.Add(1) > 1 {
 					return emit(model.Event{Delta: "approved", Done: true})
 				}
-				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"approved.txt","content":"approved"}`)}}, Done: true})
+				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save approved output","path":"approved.txt","content":"approved"}`)}}, Done: true})
 			}), true)
 			transport := nativeTransport(t, f, protocol)
 			selected := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{Create: true}}}).GetState()
@@ -86,7 +86,7 @@ func TestNativeAllMightyApprovalDoesNotWaitForUser(t *testing.T) {
 		if calls.Add(1) > 1 {
 			return emit(model.Event{Delta: "done", Done: true})
 		}
-		return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"approved.txt","content":"approved"}`)}}, Done: true})
+		return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save approved output","path":"approved.txt","content":"approved"}`)}}, Done: true})
 	}), true)
 	transport := nativeTransport(t, f, "sse")
 	state := nativeCommand(t, transport, &v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{Create: true}}}).GetState()

@@ -17,7 +17,7 @@ func TestAppliedEffectSurvivesResultDeliveryFailure(t *testing.T) {
 	for _, interrupt := range []bool{false, true} {
 		ctx, cancel := context.WithCancel(context.Background())
 		r, _, _, _, _ := realBatchRunner(t, nil)
-		r.Generator = &generator{replies: []string{nativeCall("write_file", map[string]any{"path": "a", "content": "written"})}}
+		r.Generator = &generator{replies: []string{nativeCall("write_file", map[string]any{"reason": "Write fixture file", "path": "a", "content": "written"})}}
 		sentinel := errors.New("display failed")
 		result, err := r.Run(ctx, "write a", approve, func(e runrecord.Event) error {
 			if e.Kind == "tool_succeeded" {

@@ -36,8 +36,8 @@ func (op approvalOperation) Release() { tool.Release(op.Execution) }
 
 func TestSteeringStopsRemainingWaveApprovalsBeforeEffects(t *testing.T) {
 	calls := []tool.Call{
-		batchCall("a", "write_file", map[string]any{"path": "a", "content": "obsolete"}),
-		batchCall("b", "write_file", map[string]any{"path": "b", "content": "obsolete"}),
+		batchCall("a", "write_file", map[string]any{"reason": "Exercise approval state", "path": "a", "content": "obsolete"}),
+		batchCall("b", "write_file", map[string]any{"reason": "Exercise approval state", "path": "b", "content": "obsolete"}),
 	}
 	r, tools, root, _, g := realBatchRunner(t, calls)
 	r.Tools = approvalTools{tools}

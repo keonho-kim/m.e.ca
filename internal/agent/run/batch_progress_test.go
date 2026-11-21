@@ -44,8 +44,8 @@ func (op progressOperation) Execute(ctx context.Context, approved bool) (toolapi
 
 func TestParallelPublishesReadyResults(t *testing.T) {
 	calls := []toolapi.Call{
-		batchCall("read", "execute_command", map[string]any{"command": "printf document-read"}),
-		batchCall("checks", "execute_command", map[string]any{"command": "printf checks-finished"}),
+		batchCall("read", "execute_command", map[string]any{"reason": "Observe command completion", "command": "printf document-read"}),
+		batchCall("checks", "execute_command", map[string]any{"reason": "Observe command completion", "command": "printf checks-finished"}),
 	}
 	r, tools, _, journal, _ := realBatchRunner(t, calls)
 	held := &progressTools{Executor: tools, release: make(chan struct{})}

@@ -61,7 +61,7 @@ func (e *commandFixture) CollectCommands() ([]toolapi.CommandCompletion, error) 
 	if !e.completed {
 		return nil, nil
 	}
-	return []toolapi.CommandCompletion{{ID: "cmd_owned", CallID: "call_original", Command: "test", Result: toolapi.Result{
+	return []toolapi.CommandCompletion{{ID: "cmd_owned", CallID: "call_original", ExecutionID: "owned_execution", Command: "test", Reason: "Verify command output", Result: toolapi.Result{
 		Started: true, Summary: "observed final output", Content: json.RawMessage("{\"Status\":\"exited\",\"ExitCode\":0,\"Stdout\":\"actual result\"}"),
 		Process: &toolapi.ProcessOutcome{CommandID: "cmd_owned", Command: "test", Status: "exited", ExitCode: 0},
 	}}}, nil
@@ -129,6 +129,9 @@ func TestCommandLifecycleRechecksResultsBeforeFinalAnswer(t *testing.T) {
 	for _, event := range j.events {
 		if event.Kind == "command_finished" {
 			count++
+			if event.Call == nil || event.Call.ExecutionID != "owned_execution" || !strings.Contains(string(event.Call.Arguments), `"reason":"Verify command output"`) {
+				t.Fatal("completion lost its original reason or execution identity", event.Call)
+			}
 		}
 	}
 	if count != 1 {
@@ -183,7 +186,7 @@ func TestCommandLifecycleIndependentCommandsStartTogether(t *testing.T) {
 		"printf ready > a.started; while [ ! -f b.started ]; do sleep 0.01; done",
 		"printf ready > b.started; while [ ! -f a.started ]; do sleep 0.01; done",
 	} {
-		body, _ := json.Marshal(map[string]string{"command": command})
+		body, _ := json.Marshal(map[string]string{"reason": "Run independent check", "command": command})
 		calls = append(calls, toolapi.Call{ID: []string{"call_a", "call_b"}[index], Name: "execute_command", Arguments: body})
 	}
 	r, _, _, j, _ := realBatchRunner(t, calls)

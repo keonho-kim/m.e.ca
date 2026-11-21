@@ -16,7 +16,7 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
+func (s *execution) finish(ctx context.Context, reply modelapi.Response, observedThrough int) error {
 	text := strings.TrimSpace(reply.Text)
 	if text == "" || !utf8.ValidString(text) {
 		return faults.Errorf(diagcatalog.RunModelCompletedWithAnEmptyOrInvalid)
@@ -28,8 +28,15 @@ func (s *execution) finish(ctx context.Context, reply modelapi.Response) error {
 	}
 	s.checkpoint.Status = runrecord.Answered
 	s.result.Text = text
-	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {
-		return err
+	if s.checkpoint.Phase == "reporting" {
+		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: text, PreserveObservations: true}); err != nil {
+			return err
+		}
+	} else {
+		reply.Text = text
+		if err := s.saveDecision(ctx, reply, observedThrough); err != nil {
+			return err
+		}
 	}
 	return s.emit(runrecord.Event{Kind: "response", Text: text})
 }

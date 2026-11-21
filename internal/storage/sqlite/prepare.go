@@ -47,7 +47,7 @@ func checkJournal(ctx context.Context, records []runrecord.Entry) error {
 			return err
 		}
 		switch {
-		case entry.Message != nil && entry.Event == nil:
+		case entry.Message != nil && entry.Event == nil && entry.Receipt == nil:
 			if err := entry.Message.Check(); err != nil {
 				return err
 			}

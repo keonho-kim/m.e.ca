@@ -33,6 +33,18 @@ func testExecutor(t *testing.T) (*Executor, string) {
 }
 
 func call(name, arguments string) toolapi.Call {
+	switch name {
+	case "edit_file", "write_file", "execute_command":
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(arguments), &fields); err == nil && fields != nil && fields["reason"] == nil {
+			fields["reason"] = json.RawMessage(`"Exercise tool behavior"`)
+			body, err := json.Marshal(fields)
+			if err != nil {
+				panic(err)
+			}
+			arguments = string(body)
+		}
+	}
 	return toolapi.Call{ID: "call_1", Name: name, Arguments: json.RawMessage(arguments)}
 }
 
@@ -138,6 +150,7 @@ func TestFileToolsRejectEscapesSecretsAndInvalidArguments(t *testing.T) {
 		call("write_file", `{"path":"linked","content":"unsafe"}`),
 		call("write_file", `{"path":"auth.go","content":"new","approved":true}`),
 		call("write_file", `{"path":"auth.go","content":"provider-secret"}`),
+		call("write_file", `{"reason":"provider-secret","path":"auth.go","content":"new"}`),
 	} {
 		if _, err := executor.Prepare(context.Background(), settings, invocation); err == nil {
 			t.Errorf("accepted unsafe call: %+v", invocation)

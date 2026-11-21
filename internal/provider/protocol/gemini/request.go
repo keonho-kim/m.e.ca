@@ -10,23 +10,18 @@ import (
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
-func Base(request modelapi.Request, system []string, thinking any, omitSummary bool) Request {
+func Base(request modelapi.Request, system []string, thinking any, omitSummary bool, tools json.RawMessage) Request {
 	body := Request{Config: Generation{MaxOutput: request.MaxOutput, Temperature: request.Temperature, Thinking: thinking}}
 	if !omitSummary && body.Config.Thinking == nil {
 		body.Config.Thinking = map[string]bool{"includeThoughts": true}
 	}
-	if len(request.Tools) > 0 {
-		tool := Tool{}
-		for _, d := range request.Tools {
-			tool.Functions = append(tool.Functions, Declaration{Name: d.Name, Description: d.Description, Schema: d.JSONSchema()})
-		}
-		body.Tools = []Tool{tool}
-	}
+	body.Tools = tools
 	for _, text := range system {
 		if body.System == nil {
 			body.System = &Content{}
@@ -35,6 +30,15 @@ func Base(request modelapi.Request, system []string, thinking any, omitSummary b
 	}
 
 	return body
+}
+
+// Tools builds Gemini's native declarations for the protocol encoder.
+func Tools(definitions []toolapi.Definition) []Tool {
+	tool := Tool{Functions: make([]Declaration, 0, len(definitions))}
+	for _, d := range definitions {
+		tool.Functions = append(tool.Functions, Declaration{Name: d.Name, Description: d.Description, Schema: d.JSONSchema()})
+	}
+	return []Tool{tool}
 }
 
 func EncodeMessage(message native.Input, wireIDs map[string]string) (string, []Part, error) {

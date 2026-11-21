@@ -6,19 +6,41 @@ package local
 
 import (
 	"encoding/json"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"testing"
 	"time"
+
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
+
+func TestArgumentAdmissionSharesOnlyMatchingCatalogValidation(t *testing.T) {
+	e := &Executor{}
+	definition := toolcatalog.Definitions("write_file")[0]
+	call := toolapi.Call{ID: "call_one", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Update local fixture","path":"a","content":"old"}`)}
+	if err := e.ValidateCallArguments(call, definition); err != nil {
+		t.Fatal(err)
+	}
+	if len(e.arguments.values) != 1 {
+		t.Fatal("admission did not populate the preparation cache")
+	}
+	_, parsed, err := e.parsedCall(call)
+	if err != nil || parsed.Reason != "Update local fixture" || len(e.arguments.values) != 1 {
+		t.Fatalf("preparation did not reuse admission: %+v %v", parsed, err)
+	}
+	definition.Parameters[0].Max = 5
+	if err := e.ValidateCallArguments(call, definition); err == nil {
+		t.Fatal("cached local arguments bypassed the advertised reason limit")
+	}
+}
 
 func TestParsedArgumentsRecheckChangedBytes(t *testing.T) {
 	e := &Executor{}
-	call := toolapi.Call{ID: "call_one", Name: "write_file", Arguments: json.RawMessage(`{"path":"a","content":"old"}`)}
+	call := toolapi.Call{ID: "call_one", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Replace fixture data","path":"a","content":"old"}`)}
 	_, first, err := e.parsedCall(call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	copy(call.Arguments, json.RawMessage(`{"path":"b","content":"new"}`))
+	copy(call.Arguments, json.RawMessage(`{"reason":"Replace fixture data","path":"b","content":"new"}`))
 	_, second, err := e.parsedCall(call)
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +57,7 @@ func TestParsedArgumentsRecheckChangedBytes(t *testing.T) {
 func TestParsedArgumentsReleasedWhenRequestStops(t *testing.T) {
 	e := &Executor{}
 	e.BeginCommands(t.Context(), time.Now().Add(time.Minute))
-	call := toolapi.Call{ID: "call_request", Name: "write_file", Arguments: json.RawMessage(`{"path":"a","content":"temporary request source"}`)}
+	call := toolapi.Call{ID: "call_request", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Create temporary fixture","path":"a","content":"temporary request source"}`)}
 	if _, _, err := e.parsedCall(call); err != nil {
 		t.Fatal(err)
 	}

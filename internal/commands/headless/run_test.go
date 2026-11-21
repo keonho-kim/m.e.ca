@@ -32,7 +32,7 @@ type script struct {
 func (g *script) Generate(_ context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 	g.calls++
 	if g.calls == 1 {
-		body, err := json.Marshal(map[string]string{"path": g.path, "content": "hello\n"})
+		body, err := json.Marshal(map[string]string{"reason": "Save greeting fixture", "path": g.path, "content": "hello\n"})
 		if err != nil {
 			return err
 		}

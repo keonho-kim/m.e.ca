@@ -26,7 +26,7 @@ func (g *commandBatchModel) Generate(_ context.Context, _ modelapi.Request, emit
 	}
 	calls := make([]toolapi.Call, commandsPerPeer)
 	for i := range calls {
-		body, _ := json.Marshal(map[string]string{"command": fmt.Sprintf("printf 'command-%d\\n'", i)})
+		body, _ := json.Marshal(map[string]string{"reason": "Run independent teammate check", "command": fmt.Sprintf("printf 'command-%d\\n'", i)})
 		calls[i] = toolapi.Call{ID: fmt.Sprint(i), Name: "execute_command", Arguments: body}
 	}
 	return emit(modelapi.Event{Calls: calls, Done: true})

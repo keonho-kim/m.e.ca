@@ -31,8 +31,8 @@ type CommandRun struct {
 }
 
 type CommandCompletion struct {
-	ID, CallID, ExecutionID, BatchID, Command string
-	Result                                    Result
+	ID, CallID, ExecutionID, BatchID, Command, Reason string
+	Result                                            Result
 }
 
 type CommandExecutor interface {

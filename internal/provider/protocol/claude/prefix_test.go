@@ -7,14 +7,8 @@ package claude
 import "testing"
 
 func TestPrefixMatchesWireGroupingAndKeepsBlockBoundaries(t *testing.T) {
-	left, err := NewPrefix("rules", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	right, err := NewPrefix("rules", []Tool{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	left := NewPrefix("rules", nil)
+	right := NewPrefix("rules", []byte("null"))
 	for _, text := range []string{"one", "two"} {
 		if err := left.Append("user", []Block{{Type: "text", Text: text}}); err != nil {
 			t.Fatal(err)
@@ -26,14 +20,14 @@ func TestPrefixMatchesWireGroupingAndKeepsBlockBoundaries(t *testing.T) {
 	if left.Value() != right.Value() {
 		t.Fatal("identical wire grouping had different prefixes")
 	}
-	coalesced, _ := NewPrefix("rules", nil)
+	coalesced := NewPrefix("rules", nil)
 	if err := coalesced.Append("user", []Block{{Type: "text", Text: "onetwo"}}); err != nil {
 		t.Fatal(err)
 	}
 	if coalesced.Value() == left.Value() {
 		t.Fatal("text block boundaries were discarded")
 	}
-	other, _ := NewPrefix("rules", nil)
+	other := NewPrefix("rules", nil)
 	if err := other.Append("assistant", []Block{{Type: "text", Text: "one"}, {Type: "text", Text: "two"}}); err != nil {
 		t.Fatal(err)
 	}

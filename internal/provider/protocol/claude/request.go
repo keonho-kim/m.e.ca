@@ -5,25 +5,32 @@
 package claude
 
 import (
+	"encoding/json"
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 )
 
-func Base(request modelapi.Request, system string, thinking any, effort string) (Request, *Prefix, error) {
+func Base(request modelapi.Request, system string, thinking any, effort string, tools json.RawMessage) (Request, *Prefix) {
 	body := Request{Model: request.ModelID, MaxTokens: request.MaxOutput, Stream: true, Thinking: thinking}
 	if effort != "" {
 		body.OutputConfig = map[string]string{"effort": effort}
 	}
-	for _, d := range request.Tools {
-		body.Tools = append(body.Tools, Tool{Name: d.Name, Description: d.Description, Schema: d.JSONSchema()})
+	body.System, body.Tools = system, tools
+	return body, NewPrefix(system, tools)
+}
+
+// Tools builds Claude's native declarations for the protocol encoder.
+func Tools(definitions []toolapi.Definition) []Tool {
+	tools := make([]Tool, 0, len(definitions))
+	for _, d := range definitions {
+		tools = append(tools, Tool{Name: d.Name, Description: d.Description, Schema: d.JSONSchema()})
 	}
-	body.System = system
-	prefix, err := NewPrefix(body.System, body.Tools)
-	return body, prefix, err
+	return tools
 }
 
 func EncodeMessage(message native.Input, prefix string) (string, []Block, error) {

@@ -35,12 +35,12 @@ type Tool struct {
 	Schema      map[string]any `json:"input_schema"`
 }
 type Request struct {
-	Model        string    `json:"model"`
-	System       string    `json:"system,omitempty"`
-	Messages     []Message `json:"messages"`
-	Tools        []Tool    `json:"tools,omitempty"`
-	MaxTokens    int       `json:"max_tokens"`
-	Stream       bool      `json:"stream"`
-	Thinking     any       `json:"thinking,omitempty"`
-	OutputConfig any       `json:"output_config,omitempty"`
+	Model        string          `json:"model"`
+	System       string          `json:"system,omitempty"`
+	Messages     []Message       `json:"messages"`
+	Tools        json.RawMessage `json:"tools,omitempty"`
+	MaxTokens    int             `json:"max_tokens"`
+	Stream       bool            `json:"stream"`
+	Thinking     any             `json:"thinking,omitempty"`
+	OutputConfig any             `json:"output_config,omitempty"`
 }

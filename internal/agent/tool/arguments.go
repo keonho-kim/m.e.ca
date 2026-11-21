@@ -7,15 +7,26 @@ package tool
 import (
 	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 
 	"io"
 	"slices"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
+
+// ArgumentError identifies a declared field that needs correction.
+type ArgumentError struct {
+	Name  string
+	cause error
+}
+
+func (e *ArgumentError) Error() string { return e.cause.Error() }
+func (e *ArgumentError) Unwrap() error { return e.cause }
 
 func argumentObject(body json.RawMessage) (map[string]json.RawMessage, error) {
 	decoder := json.NewDecoder(bytes.NewReader(body))
@@ -67,12 +78,12 @@ func ValidateArguments(definition Definition, body json.RawMessage) (map[string]
 		value, present := fields[parameter.Name]
 		if !present {
 			if parameter.Required {
-				return nil, faults.Errorf(diagcatalog.ToolMissingArgument, parameter.Name)
+				return nil, &ArgumentError{Name: parameter.Name, cause: faults.Errorf(diagcatalog.ToolMissingArgument, parameter.Name)}
 			}
 			continue
 		}
 		if err := validateValue(parameter, value); err != nil {
-			return nil, err
+			return nil, &ArgumentError{Name: parameter.Name, cause: err}
 		}
 	}
 	return fields, nil
@@ -114,17 +125,24 @@ func validateValue(p Parameter, value json.RawMessage) error {
 		return nil
 	}
 	var text string
-	if err := json.Unmarshal(value, &text); err != nil || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
-		return faults.Errorf(diagcatalog.ToolRequiresAValidString, p.Name)
-	}
-	if len(text) > p.MaxBytes || !p.AllowEmpty && strings.TrimSpace(text) == "" {
-		return faults.Errorf(diagcatalog.ToolRequiresTextWithinBytes, p.Name, p.MaxBytes)
+	if p.Kind == SingleLineText {
+		// A supplementary code point can occupy two escaped UTF-16 code units.
+		if len(value) > 2+12*p.Max || jsonv2.Unmarshal(value, &text) != nil || !validShortLine(text, p.Max, p.AllowEmpty) {
+			return faults.Errorf(diagcatalog.ToolRequiresShortLine, p.Name, p.Max)
+		}
+	} else {
+		if err := json.Unmarshal(value, &text); err != nil || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
+			return faults.Errorf(diagcatalog.ToolRequiresAValidString, p.Name)
+		}
+		if len(text) > p.MaxBytes || !p.AllowEmpty && strings.TrimSpace(text) == "" {
+			return faults.Errorf(diagcatalog.ToolRequiresTextWithinBytes, p.Name, p.MaxBytes)
+		}
 	}
 	if len(p.Values) > 0 && !slices.Contains(p.Values, text) {
 		return faults.Errorf(diagcatalog.ToolMustBeOneOf, p.Name, strings.Join(p.Values, ", "))
 	}
 	switch p.Kind {
-	case Text:
+	case Text, SingleLineText:
 	case LiteralPath:
 		if strings.ContainsAny(text, "\r\n") {
 			return faults.Errorf(diagcatalog.ToolRequiresOneLiteralPathWithoutLineBreaks, p.Name)
@@ -133,4 +151,16 @@ func validateValue(p Parameter, value json.RawMessage) error {
 		return faults.Errorf(diagcatalog.ToolUnsupportedParameterKind)
 	}
 	return nil
+}
+
+func validShortLine(text string, maxCharacters int, allowEmpty bool) bool {
+	visible, count := false, 0
+	for _, character := range text {
+		count++
+		if count > maxCharacters || unicode.IsControl(character) || unicode.In(character, unicode.Zl, unicode.Zp, unicode.Bidi_Control) {
+			return false
+		}
+		visible = visible || unicode.In(character, unicode.L, unicode.N, unicode.P, unicode.S)
+	}
+	return visible || allowEmpty && text == ""
 }

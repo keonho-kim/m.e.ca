@@ -53,7 +53,7 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		return e.encodeCloud(kind, baseURL, request, messages, controls)
 	}
 	if e == nil {
-		return singleBody(kind, baseURL, info, request, messages, controls)
+		return e.singleBody(kind, baseURL, info, request, messages, controls)
 	}
 	if e.kind != kind || e.model != request.ModelID {
 		e.Clear()
@@ -65,7 +65,7 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 		e.clearHistory()
 		if len(request.Tools) == 0 {
 			e.tools = toolSnapshot{}
-			return singleBody(kind, baseURL, info, request, messages, controls)
+			return e.singleBody(kind, baseURL, info, request, messages, controls)
 		}
 		return e.encodeWhole(kind, baseURL, info, request, messages, controls)
 	}
@@ -91,10 +91,14 @@ func (e *Encoder) Encode(kind connection.ProviderKind, baseURL string, info *con
 	return endpoint, Body{parts: append(parts, end), size: headerBytes + historyBytes + len(end)}, nil
 }
 
-func singleBody(kind connection.ProviderKind, baseURL string, info *connection.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {
+func (e *Encoder) singleBody(kind connection.ProviderKind, baseURL string, info *connection.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {
 	if kind == connection.Claude {
-		endpoint, content, prefix, err := claudeRequest(baseURL, request, messages, controls)
+		endpoint, content, prefix, err := e.claudeRequest(baseURL, request, messages, controls)
 		return endpoint, Body{single: content, size: len(content), bind: claudeContinuation(prefix)}, err
+	}
+	if kind == connection.Gemini {
+		endpoint, content, err := e.geminiRequest(baseURL, request, messages, controls)
+		return endpoint, Body{single: content, size: len(content)}, err
 	}
 	endpoint, content, err := Encode(kind, baseURL, info, request, messages, controls)
 	return endpoint, Body{single: content, size: len(content)}, err

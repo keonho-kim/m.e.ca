@@ -28,12 +28,18 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 	}()
 	compactionAttempted := false
 	correctedReply := false
+	argumentCorrections := 0
+	var correctionRevision uint64
 	for {
 		if _, err = s.collectCommands(ctx); err != nil {
 			return err
 		}
 		if _, err = s.admitInstructions(ctx); err != nil {
 			return err
+		}
+		if correctionRevision != s.instructionRevision {
+			correctionRevision = s.instructionRevision
+			argumentCorrections = 0
 		}
 		if tail := draft.continuation; tail != nil && tail.revision != s.instructionRevision {
 			// The new instruction needs an ordinary tool-enabled decision.
@@ -86,7 +92,6 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			compactionAttempted = false
 		}
 		if askErr == nil {
-			s.acknowledgeObservations(decision.supplied)
 			s.capacityRecovery = false
 			correctedReply = false
 		}
@@ -156,7 +161,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			if err = s.checkInstructions(ctx, decision.instructionRevision); err != nil {
 				var failure *faults.Failure
 				if errors.As(err, &failure) && failure.Code == diagcatalog.InstructionChanged {
-					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request."); err != nil {
+					if err = s.returnToolFeedback(ctx, reply, "A new user instruction arrived before execution. Nothing in this response executed. Reconsider the candidates using the latest user request.", nil); err != nil {
 						return err
 					}
 					continue
@@ -164,26 +169,36 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 				return err
 			}
 
+			s.usage.recordTools(len(reply.Calls))
+			calls, problems := s.validateCalls(reply.Calls)
+			if problems != nil {
+				if err := s.rejectInvalidCalls(ctx, reply, problems, argumentCorrections); err != nil {
+					return err
+				}
+				argumentCorrections++
+				continue
+			}
+			argumentCorrections = 0
 			callCtx := ctx
 			if s.webFetchAllowance >= 0 {
 				callCtx = toolapi.WithWebFetchDecision(ctx, s.webFetchAllowance, s.webFetchUserInput)
 			}
 			if len(reply.Calls) > 1 {
-				err = s.batch(callCtx, reply, approve)
+				err = s.batch(callCtx, reply, calls, decision.supplied, approve)
 			} else {
-				err = s.action(callCtx, reply, approve)
+				err = s.action(callCtx, reply, calls[0], decision.supplied, approve)
 			}
 			if err != nil {
 				return err
 			}
 
 		} else {
-			if changed, err := s.continueContext(ctx, reply); err != nil {
+			if changed, err := s.continueContext(ctx, reply, decision.supplied); err != nil {
 				return err
 			} else if changed {
 				continue
 			}
-			if queued, err := s.continueSteered(ctx, reply); err != nil {
+			if queued, err := s.continueSteered(ctx, reply, decision.supplied); err != nil {
 				return err
 			} else if queued {
 				continue
@@ -196,9 +211,10 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			} else if pending {
 				continue
 			}
-			if err := s.finish(ctx, reply); err != nil {
+			if err := s.finish(ctx, reply, decision.supplied); err != nil {
 				return err
 			}
+			argumentCorrections = 0
 			if s.runner.OnAnswer == nil {
 				return nil
 			}

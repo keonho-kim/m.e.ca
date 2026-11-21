@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
 )
 
-func claudeRequest(base string, request modelapi.Request, messages []Message, controls Controls) (string, []byte, string, error) {
-	body, prefix, err := claudeBase(request, messages, controls)
+func (e *Encoder) claudeRequest(base string, request modelapi.Request, messages []Message, controls Controls) (string, []byte, string, error) {
+	body, prefix, err := e.claudeBase(request, messages, controls)
 	if err != nil {
 		return "", nil, "", err
 	}
@@ -42,7 +43,7 @@ func claudeRequest(base string, request modelapi.Request, messages []Message, co
 	return base + "/messages", encoded, prefix.Value(), err
 }
 
-func claudeBase(request modelapi.Request, messages []Message, controls Controls) (claude.Request, *claude.Prefix, error) {
+func (e *Encoder) claudeBase(request modelapi.Request, messages []Message, controls Controls) (claude.Request, *claude.Prefix, error) {
 	var system []string
 	for _, message := range messages {
 		if message.Role == "system" {
@@ -50,7 +51,12 @@ func claudeBase(request modelapi.Request, messages []Message, controls Controls)
 			system = append(system, text)
 		}
 	}
-	return claude.Base(request, strings.Join(system, "\n\n"), controls.Think, controls.ReasoningEffort)
+	tools, err := e.EncodedTools(connection.Claude, request.Tools)
+	if err != nil {
+		return claude.Request{}, nil, err
+	}
+	body, prefix := claude.Base(request, strings.Join(system, "\n\n"), controls.Think, controls.ReasoningEffort, tools)
+	return body, prefix, nil
 }
 func claudeMessage(message Message, prefix string) (string, []claude.Block, error) {
 	input, err := nativeMessage(message)

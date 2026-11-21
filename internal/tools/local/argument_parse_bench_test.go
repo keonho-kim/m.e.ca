@@ -12,7 +12,7 @@ import (
 )
 
 func BenchmarkRepeatedArguments(b *testing.B) {
-	body, _ := json.Marshal(map[string]string{"path": "fixture.go", "content": strings.Repeat("source line\n", 40000)})
+	body, _ := json.Marshal(map[string]string{"reason": "Create large fixture", "path": "fixture.go", "content": strings.Repeat("source line\n", 40000)})
 	call := toolapi.Call{ID: "call_fixture", Name: "write_file", Arguments: body}
 	e := &Executor{}
 	if _, _, err := e.parsedCall(call); err != nil {

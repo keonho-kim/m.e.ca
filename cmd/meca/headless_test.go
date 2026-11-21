@@ -48,7 +48,7 @@ func TestHeadlessExecutable(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if calls.Load() == 1 {
-			fmt.Fprint(w, `{"choices":[{"message":{"tool_calls":[{"id":"write","type":"function","function":{"name":"write_file","arguments":"{\"path\":\"README.md\",\"content\":\"# Example\\n\"}"}}]},"finish_reason":"tool_calls"}]}`)
+			fmt.Fprint(w, `{"choices":[{"message":{"tool_calls":[{"id":"write","type":"function","function":{"name":"write_file","arguments":"{\"reason\":\"Document the project\",\"path\":\"README.md\",\"content\":\"# Example\\n\"}"}}]},"finish_reason":"tool_calls"}]}`)
 		} else {
 			fmt.Fprint(w, `{"choices":[{"message":{"content":"Created README.md"},"finish_reason":"stop"}]}`)
 		}

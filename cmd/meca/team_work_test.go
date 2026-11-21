@@ -66,7 +66,7 @@ func (g *workTeamModel) Generate(ctx context.Context, request modelapi.Request, 
 			if err := wait(g.conflict); err != nil {
 				return err
 			}
-			name, args = "write_file", map[string]string{"path": "shared.txt", "content": "one implementation\n"}
+			name, args = "write_file", map[string]string{"reason": "Record team contribution", "path": "shared.txt", "content": "one implementation\n"}
 		case 2:
 			name, args = "leave_team", map[string]string{"message": "shared.txt is ready; preserve it and finish the independent checks."}
 		}
@@ -85,7 +85,7 @@ func (g *workTeamModel) Generate(ctx context.Context, request modelapi.Request, 
 			}
 			name, args = "read_team_messages", map[string]any{}
 		case 3:
-			name, args = "write_file", map[string]string{"path": "checks.txt", "content": "independent checks\n"}
+			name, args = "write_file", map[string]string{"reason": "Record team contribution", "path": "checks.txt", "content": "independent checks\n"}
 		case 4:
 			name, args = "leave_team", map[string]string{"message": "checks.txt is complete; shared.txt was preserved."}
 		}

@@ -23,9 +23,21 @@ func TestCommandWaitArgument(t *testing.T) {
 		if definition.Name != "wait_command" {
 			continue
 		}
-		properties := definition.JSONSchema()["properties"].(map[string]any)
-		field := properties["wait_seconds"].(map[string]any)
-		if field["type"] != "integer" || field["minimum"] != 0 || field["maximum"] != 86400 {
+		body, err := json.Marshal(definition.JSONSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var schema struct {
+			Properties map[string]struct {
+				Type             string
+				Minimum, Maximum *int
+			}
+		}
+		if err := json.Unmarshal(body, &schema); err != nil {
+			t.Fatal(err)
+		}
+		field := schema.Properties["wait_seconds"]
+		if field.Type != "integer" || field.Minimum == nil || *field.Minimum != 0 || field.Maximum == nil || *field.Maximum != 86400 {
 			t.Fatal(field)
 		}
 	}

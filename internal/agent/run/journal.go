@@ -15,6 +15,52 @@ import (
 )
 
 func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runrecord.Event) error {
+	records := make([]runrecord.Entry, len(events)+1)
+	messageIndex, eventIndex := 0, 1
+	if m.Incomplete {
+		// An interrupted reply's Thinking precedes its text in the transcript.
+		messageIndex, eventIndex = len(events), 0
+	}
+	records[messageIndex] = runrecord.Entry{Message: &m}
+	for i := range events {
+		records[eventIndex+i] = runrecord.Entry{Event: &events[i]}
+	}
+	return s.saveEntries(ctx, records)
+}
+
+func (s *execution) saveDecision(ctx context.Context, reply modelapi.Response, observedThrough int) error {
+	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
+		return err
+	}
+	s.acknowledgeObservations(observedThrough)
+	return nil
+}
+
+func (s *execution) saveEntries(ctx context.Context, records []runrecord.Entry) error {
+	for _, record := range records {
+		if m := record.Message; m != nil {
+			s.setMessageProvenance(m)
+		}
+		if event := record.Event; event != nil {
+			*event = s.present(*event)
+			event.RunID = s.checkpoint.ID
+			if event.OccurredAt == "" {
+				event.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
+			}
+		}
+	}
+	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
+		return errors.Join(errRuntimeRecord, err)
+	}
+	for _, record := range records {
+		if record.Message != nil {
+			s.messages = append(s.messages, *record.Message)
+		}
+	}
+	return nil
+}
+
+func (s *execution) setMessageProvenance(m *modelapi.Message) {
 	if m.Role == "assistant" {
 		m.Presentation = s.presentation
 	} else if m.Role == "user" && m.Presentation == "" {
@@ -31,26 +77,6 @@ func (s *execution) save(ctx context.Context, m modelapi.Message, events ...runr
 	if m.Thinking != nil && *m.Thinking {
 		m.ReasoningEffort = s.runner.ReasoningEffort
 	}
-	records := make([]runrecord.Entry, len(events)+1)
-	messageIndex, eventIndex := 0, 1
-	if m.Incomplete {
-		// An interrupted reply's Thinking precedes its text in the transcript.
-		messageIndex, eventIndex = len(events), 0
-	}
-	records[messageIndex] = runrecord.Entry{Message: &m}
-	for i := range events {
-		events[i] = s.present(events[i])
-		events[i].RunID = s.checkpoint.ID
-		if events[i].OccurredAt == "" {
-			events[i].OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
-		}
-		records[eventIndex+i] = runrecord.Entry{Event: &events[i]}
-	}
-	if err := s.runner.Journal.Commit(ctx, s.runner.Session, records); err != nil {
-		return errors.Join(errRuntimeRecord, err)
-	}
-	s.messages = append(s.messages, m)
-	return nil
 }
 
 func (s *execution) checkpointEvent() (runrecord.Event, error) {

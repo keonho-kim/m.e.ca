@@ -1,6 +1,6 @@
 // Purpose: Reuse one bounded tool-schema encoding without trusting mutable caller slices.
 // Pattern: Execution-owned immutable snapshot with structural invalidation.
-// Usage: Generation headers and exact vLLM tokenization share Encoder.EncodedTools.
+// Usage: Generation headers, Claude prefix binding and exact vLLM tokenization share Encoder.EncodedTools.
 // Related: internal/provider/protocol/encoder.go, internal/provider/protocol/header.go.
 package protocol
 
@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
+	"github.com/keonho-kim/meca/internal/provider/protocol/gemini"
 	"github.com/keonho-kim/meca/internal/provider/protocol/native"
 	"github.com/keonho-kim/meca/internal/provider/protocol/responses"
 
@@ -40,7 +42,14 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 		e.tools = toolSnapshot{}
 	}
 	var value any
-	if connection.UsesResponses(kind) {
+	encode := wireJSON.Marshal
+	switch {
+	case kind == connection.Claude:
+		// Claude's persisted prefix binding uses the canonical standard JSON bytes.
+		value, encode = claude.Tools(definitions), json.Marshal
+	case kind == connection.Gemini:
+		value = gemini.Tools(definitions)
+	case connection.UsesResponses(kind):
 		body := responses.Header("", 0, "", nil, definitions)
 		if kind == connection.OpenAI {
 			for _, tool := range body.Tools {
@@ -48,10 +57,10 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 			}
 		}
 		value = body.Tools
-	} else {
+	default:
 		value = native.Tools(definitions)
 	}
-	encoded, err := wireJSON.Marshal(value)
+	encoded, err := encode(value)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +71,7 @@ func (e *Encoder) EncodedTools(kind connection.ProviderKind, definitions []toola
 	for _, definition := range definitions {
 		retained += 128 + len(definition.Name) + len(definition.Description) + parameterBytes(definition.Parameters)
 	}
-	if e != nil && retained <= min(toolCacheCapacity, e.limit()) {
+	if retained <= min(toolCacheCapacity, e.limit()-e.cloudSourceBytes) {
 		owned := slices.Clone(definitions)
 		for i := range owned {
 			owned[i].Parameters = copyParameters(owned[i].Parameters)

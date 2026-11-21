@@ -149,7 +149,7 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 			return
 		}
 		if needsApproval {
-			arguments, _ := json.Marshal(map[string]string{"path": filepath.Join(home, "approval-written.txt"), "content": "approved fixture\n"})
+			arguments, _ := json.Marshal(map[string]string{"reason": "Save approved fixture", "path": filepath.Join(home, "approval-written.txt"), "content": "approved fixture\n"})
 			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": "fixture-write", "type": "function", "function": map[string]any{"name": "write_file", "arguments": string(arguments)}}}}, "finish_reason": "tool_calls"}}})
 			fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", body)
 			_ = http.NewResponseController(w).Flush()

@@ -10,6 +10,8 @@
 
 문맥 투영은 같은 실행의 변화 없는 메시지를 재사용한다. 모델 선택·마스킹 기준·메시지와 도구 짝이 달라진 구간은 다시 구성한다. Provider 인코더는 변경되지 않은 앞부분의 직렬화 결과를 제한된 용량으로 보유한다. 아직 모델이 읽지 않은 브라우저 관찰 앞에서 재사용 범위를 끝내고 실행이 끝나면 캐시를 해제한다. [런타임의 모델 요청](runtime.md#모델-요청-준비) · [문맥 투영](../internal/agent/context/projection.go) · [인코딩 재사용](../internal/provider/protocol/source_history.go)
 
+도구 정의가 같으면 Provider 인코더가 직렬화한 스키마를 재사용한다. vLLM의 토큰화와 Claude의 서명된 문맥 식별에도 같은 스키마 바이트를 사용한다. 로컬 도구는 공용 스키마와 일치하고 캐시에 들어가는 인자의 파싱 결과를 검증·계획·준비에서 함께 사용한다. [스키마 재사용](../internal/provider/protocol/tool_snapshot.go) · [로컬 인자 재사용](../internal/tools/local/argument_cache.go)
+
 vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 입력 토큰 수와 컨텍스트 한도를 추출한다. 사용하지 않는 토큰 ID 배열은 건너뛴다. 압축은 마스킹·발췌한 레코드를 직렬화하기 전에 마지막 선택 항목과 비교하고, 선택한 항목의 순서와 사용자 지시는 보존한다. [토큰화 응답](../internal/provider/httpclient/context.go) · [압축 원본 선택](../internal/agent/compact/source.go)
 
 ## 대화 저장과 SQLite

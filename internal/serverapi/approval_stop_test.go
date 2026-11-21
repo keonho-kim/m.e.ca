@@ -20,7 +20,7 @@ func TestPendingApprovalStopsWithoutEffect(t *testing.T) {
 		t.Run(action, func(t *testing.T) {
 			ctx := deadline(t)
 			f := newFixture(t, generateFunc(func(_ context.Context, _ model.Request, emit func(model.Event) error) error {
-				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"unapproved.txt","content":"must not run"}`)}}, Done: true})
+				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Prepare file for approval","path":"unapproved.txt","content":"must not run"}`)}}, Done: true})
 			}), true)
 			state, err := f.app.Select(ctx, "", true)
 			if err != nil {

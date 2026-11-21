@@ -16,6 +16,7 @@ import (
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/provider/connection"
+	toolcatalog "github.com/keonho-kim/meca/internal/tools/local/catalog"
 )
 
 func TestNativeChatCallsAssembleAfterCompletion(t *testing.T) {
@@ -87,5 +88,23 @@ func TestNativeToolsAreEncoded(t *testing.T) {
 	}
 	if err := json.Unmarshal(body, &payload); err != nil || len(payload.Tools) != 1 || payload.Tools[0].Function.Name != "inspect_fixture" || payload.Tools[0].Function.Parameters["additionalProperties"] != false {
 		t.Fatalf("body=%s err=%v", body, err)
+	}
+}
+
+func TestActionReasonIsFirstInWireSchema(t *testing.T) {
+	definitions := toolcatalog.Definitions("edit_file", "write_file", "execute_command")
+	request := modelapi.Request{ModelID: "m", Tools: definitions}
+	for _, kind := range []connection.ProviderKind{connection.VLLM, connection.LMStudio, connection.Claude, connection.Gemini} {
+		t.Run(string(kind), func(t *testing.T) {
+			_, body, err := Encode(kind, "http://server/v1", nil, request, nil, Controls{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range []string{`"properties":{"reason":{`, `"required":["reason",`} {
+				if count := strings.Count(string(body), field); count != 3 {
+					t.Fatalf("%s appeared %d times, want 3", field, count)
+				}
+			}
+		})
 	}
 }

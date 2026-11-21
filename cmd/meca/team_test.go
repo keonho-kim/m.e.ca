@@ -108,10 +108,10 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 			arguments = map[string]any{"summary": "Create my independent file", "paths": []string{id + ".txt"}}
 		case 2:
 			name = "write_file"
-			arguments = map[string]string{"path": id + ".txt", "content": "A verified local contribution\n"}
+			arguments = map[string]string{"reason": "Record local contribution", "path": id + ".txt", "content": "A verified local contribution\n"}
 			if id == names[1] {
 				name = "execute_command"
-				arguments = map[string]string{"command": "printf 'A verified local contribution\\n' > " + id + ".txt"}
+				arguments = map[string]string{"reason": "Record local contribution", "command": "printf 'A verified local contribution\\n' > " + id + ".txt"}
 			}
 		case 3:
 			name = "leave_team"

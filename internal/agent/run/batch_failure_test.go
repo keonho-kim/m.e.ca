@@ -13,8 +13,8 @@ import (
 
 func TestBatchFailureHasOneEventPerCall(t *testing.T) {
 	calls := []toolapi.Call{
-		batchCall("missing", "edit_file", map[string]any{"path": "missing", "edits": []map[string]any{{"old_text": "before", "new_text": "after"}}}),
-		batchCall("other", "write_file", map[string]any{"path": "other", "content": "new"}),
+		batchCall("missing", "edit_file", map[string]any{"reason": "Exercise batch outcome handling", "path": "missing", "edits": []map[string]any{{"old_text": "before", "new_text": "after"}}}),
+		batchCall("other", "write_file", map[string]any{"reason": "Exercise batch outcome handling", "path": "other", "content": "new"}),
 	}
 	r, _, _, j, _ := realBatchRunner(t, calls)
 	if _, err := r.Run(context.Background(), "inspect files", approve, emit); err != nil {

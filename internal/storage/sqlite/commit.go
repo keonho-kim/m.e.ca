@@ -81,6 +81,7 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 	defer releaseWrite()
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	var firstUser *string
+	var eventSequences []int64
 	hasMessage := false
 	for index, record := range records {
 		var value preparedRecord
@@ -94,16 +95,22 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 				return errors.Join(err, tx.Rollback())
 			}
 		}
-		err = value.write(ctx, s, tx, session, now, receipt)
+		previousEvent := receipt.event
+		if err := value.write(ctx, s, tx, session, now, receipt); err != nil {
+			return errors.Join(err, tx.Rollback())
+		}
+		if record.Receipt != nil && receipt.event > previousEvent {
+			if eventSequences == nil {
+				eventSequences = make([]int64, len(records))
+			}
+			eventSequences[index] = receipt.event
+		}
 		if record.Message != nil {
 			hasMessage = true
 			if firstUser == nil && record.Message.Role == "user" {
 				summary := conversationSummary(record.Message.Content)
 				firstUser = &summary
 			}
-		}
-		if err != nil {
-			return errors.Join(err, tx.Rollback())
 		}
 	}
 	if receipt.public != nil {
@@ -123,6 +130,11 @@ func (s *Store) commit(ctx context.Context, session string, records []runrecord.
 	}
 	if err := tx.Commit(); err != nil {
 		return faults.New(diagcatalog.PersistenceFailed, diagcatalog.WrappedCause, err)
+	}
+	for i, sequence := range eventSequences {
+		if sequence > 0 {
+			*records[i].Receipt = runrecord.EventReference{Session: session, Sequence: sequence}
+		}
 	}
 	for old := s.latestEvent.Load(); receipt.event > old; old = s.latestEvent.Load() {
 		if s.latestEvent.CompareAndSwap(old, receipt.event) {

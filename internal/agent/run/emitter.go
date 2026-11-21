@@ -22,7 +22,7 @@ func newRunEmitter(ctx context.Context, journal Journal, session, runID string, 
 		}
 		if references, ok := journal.(interface {
 			LatestEventReference(context.Context) (*runrecord.EventReference, error)
-		}); ok {
+		}); ok && event.Reference == nil {
 			switch event.Kind {
 			case "tool_succeeded", "tool_failed", "tool_interrupted", "command_finished", "denied", "skill_loaded":
 				flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)

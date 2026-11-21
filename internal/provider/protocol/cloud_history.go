@@ -29,7 +29,7 @@ type cloudRequest struct {
 
 func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request modelapi.Request, messages []Message, controls Controls) (string, Body, error) {
 	if e == nil {
-		return singleBody(kind, base, nil, request, messages, controls)
+		return e.singleBody(kind, base, nil, request, messages, controls)
 	}
 	if e.kind != kind || e.model != request.ModelID {
 		e.Clear()
@@ -55,14 +55,14 @@ func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request
 	}
 	if !text || size < cacheThreshold {
 		e.cloud, e.cloudInitial, e.cloudRetained = nil, "", 0
-		return singleBody(kind, base, nil, request, messages, controls)
+		return e.singleBody(kind, base, nil, request, messages, controls)
 	}
 	var native cloudRequest
 	var err error
 	if kind == connection.Claude {
-		native, err = newClaudeCloud(base, request, messages, controls)
+		native, err = e.newClaudeCloud(base, request, messages, controls)
 	} else {
-		native, err = newGeminiCloud(base, request, messages, controls)
+		native, err = e.newGeminiCloud(base, request, messages, controls)
 	}
 	if err != nil {
 		e.Clear()
@@ -114,7 +114,7 @@ func (e *Encoder) encodeCloud(kind connection.ProviderKind, base string, request
 				}
 			}
 			weight := entry.retainedBytes()
-			if e.cloudRetained+weight <= e.limit()-e.cloudSourceBytes {
+			if e.cloudRetained+weight <= e.limit()-e.cloudSourceBytes-e.tools.bytes {
 				if native.prefix != nil && index >= unchanged {
 					state, stateErr := native.prefix.State()
 					if stateErr != nil {

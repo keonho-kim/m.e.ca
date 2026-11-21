@@ -66,7 +66,7 @@ func TestCommandCaptureFailureDrainsEveryCompletedCommand(t *testing.T) {
 }
 
 func TestCommandCaptureFailureImmediateOutcomeRemainsDurable(t *testing.T) {
-	calls := []tool.Call{batchCall("missing", "execute_command", map[string]any{"command": "printf harmless"})}
+	calls := []tool.Call{batchCall("missing", "execute_command", map[string]any{"reason": "Capture command result", "command": "printf harmless"})}
 	r, tools, _, journal, _ := realBatchRunner(t, calls)
 	r.Tools = &missingCaptureExecutor{tools}
 	_, err := r.Run(t.Context(), "Inspect output", approve, emit)

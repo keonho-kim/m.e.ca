@@ -24,20 +24,9 @@ type parallelExecutor interface {
 	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
 }
 
-func (s *execution) batch(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	s.usage.recordTools(len(reply.Calls))
-	calls := make([]validatedCall, len(reply.Calls))
-	for i, call := range reply.Calls {
-
-		value, err := s.validateCall(call)
-		if err != nil {
-			return s.returnToolFeedback(ctx, reply, "Batch validation failed; nothing executed: "+err.Error())
-		}
-		value.call = s.identifyCall(value.call)
-		calls[i] = value
-	}
+func (s *execution) batch(ctx context.Context, reply modelapi.Response, calls []validatedCall, observedThrough int, approve Approver) error {
 	s.checkpoint.Iteration = s.usage.ToolCalls
-	if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
+	if err := s.saveDecision(ctx, reply, observedThrough); err != nil {
 		return err
 	}
 	if reply.Text != "" {

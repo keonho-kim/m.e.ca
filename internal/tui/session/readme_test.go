@@ -53,7 +53,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 		}
 		message := map[string]any{"content": reply}
 		if toolName != "" {
-			arguments := map[string]any{"path": "README.md", "content": "# Project\n"}
+			arguments := map[string]any{"reason": "Document project purpose", "path": "README.md", "content": "# Project\n"}
 			encoded, err := json.Marshal(arguments)
 			if err != nil {
 				t.Error(err)

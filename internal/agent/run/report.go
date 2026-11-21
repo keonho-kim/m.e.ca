@@ -21,7 +21,7 @@ func (s *execution) stopReport(ctx context.Context, reason string) error {
 	if err := s.persist(ctx); err != nil {
 		return err
 	}
-	if err := s.finish(ctx, modelapi.Response{Text: s.stopFacts()}); err != nil {
+	if err := s.finish(ctx, modelapi.Response{Text: s.stopFacts()}, 0); err != nil {
 		return err
 	}
 	s.checkpoint.Status = runrecord.Stopped

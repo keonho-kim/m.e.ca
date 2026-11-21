@@ -63,7 +63,7 @@ func TestCloudEncoderClaudeInvalidatesSignedPrefix(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, full, err := singleBody(connection.Claude, "https://model.test", nil, request, messages, Controls{})
+			_, full, err := (*Encoder)(nil).singleBody(connection.Claude, "https://model.test", nil, request, messages, Controls{})
 			probe := []byte(`[{"type":"text","text":"probe"}]`)
 			cachedState, cachedErr := cached.BindContinuation(probe)
 			fullState, fullErr := full.BindContinuation(probe)

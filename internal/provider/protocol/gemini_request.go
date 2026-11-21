@@ -9,11 +9,15 @@ import (
 	"strings"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/protocol/gemini"
 )
 
-func geminiRequest(base string, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
-	body := geminiBase(request, messages, controls)
+func (e *Encoder) geminiRequest(base string, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
+	body, err := e.geminiBase(request, messages, controls)
+	if err != nil {
+		return "", nil, err
+	}
 	wireIDs := map[string]string{}
 	for _, message := range messages {
 		role, parts, err := geminiMessage(message, wireIDs)
@@ -38,7 +42,7 @@ func geminiEndpoint(base, model string) string {
 	return base + "/models/" + url.PathEscape(strings.TrimPrefix(model, "models/")) + ":streamGenerateContent?alt=sse"
 }
 
-func geminiBase(request modelapi.Request, messages []Message, controls Controls) gemini.Request {
+func (e *Encoder) geminiBase(request modelapi.Request, messages []Message, controls Controls) (gemini.Request, error) {
 	var system []string
 	for _, message := range messages {
 		if message.Role == "system" {
@@ -46,7 +50,11 @@ func geminiBase(request modelapi.Request, messages []Message, controls Controls)
 			system = append(system, text)
 		}
 	}
-	return gemini.Base(request, system, controls.Think, controls.OmitThinkingSummary)
+	tools, err := e.EncodedTools(connection.Gemini, request.Tools)
+	if err != nil {
+		return gemini.Request{}, err
+	}
+	return gemini.Base(request, system, controls.Think, controls.OmitThinkingSummary, tools), nil
 }
 func geminiMessage(message Message, wireIDs map[string]string) (string, []gemini.Part, error) {
 	input, err := nativeMessage(message)

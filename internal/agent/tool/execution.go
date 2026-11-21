@@ -82,6 +82,11 @@ type Executor interface {
 	Prepare(context.Context, policy.Settings, Call) (Execution, error)
 }
 
+// CallArgumentValidator can reuse decoding during argument-only admission.
+type CallArgumentValidator interface {
+	ValidateCallArguments(Call, Definition) error
+}
+
 // BatchPlan bounds effect execution separately from temporary candidate preparation.
 type BatchPlan struct {
 	Count                  int

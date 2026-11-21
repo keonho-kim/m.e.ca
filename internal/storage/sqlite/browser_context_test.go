@@ -100,6 +100,55 @@ func TestBrowserObservationRetiresBeforeRestoration(t *testing.T) {
 	t.Logf("%d completed text pages and one screenshot accounted for %d bytes of decision context", pages, charged)
 }
 
+func TestRejectedCallsKeepObservationAndCommitIndividualReceipts(t *testing.T) {
+	store, err := newTestStore(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	ctx, id := t.Context(), store.Session().ID
+	inspect := toolapi.Call{ID: "page", Name: toolapi.BrowserInspect, Arguments: json.RawMessage(`{"view":"text"}`)}
+	edit := toolapi.Call{ID: "edit", Name: "edit_file", Arguments: json.RawMessage(`{"path":"note.txt"}`)}
+	write := toolapi.Call{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"other.txt","reason":"Save the result","content":"text"}`)}
+	const evidence = "Exact content needed for the corrected edit"
+	var editRef, writeRef runrecord.EventReference
+	if err := store.Commit(ctx, id, []runrecord.Entry{
+		{Message: &model.Message{Role: "user", Content: "Apply the observed changes."}},
+		{Message: &model.Message{Role: "assistant", Calls: []toolapi.Call{inspect}}},
+		{Message: &model.Message{Role: "tool", ToolCallID: inspect.ID, ToolName: inspect.Name, Content: evidence, TransientObservation: true}},
+		{Message: &model.Message{Role: "assistant", Calls: []toolapi.Call{edit, write}, PreserveObservations: true}},
+		{Message: &model.Message{Role: "tool", ToolCallID: edit.ID, ToolName: edit.Name, Content: "missing reason"}},
+		{Event: &runrecord.Event{Kind: "tool_failed", CallID: edit.ID, Call: &edit}, Receipt: &editRef},
+		{Message: &model.Message{Role: "tool", ToolCallID: write.ID, ToolName: write.Name, Content: "skipped"}},
+		{Event: &runrecord.Event{Kind: "tool_failed", CallID: write.ID, Call: &write}, Receipt: &writeRef},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, receipt := range []struct {
+		ref runrecord.EventReference
+		id  string
+	}{{editRef, edit.ID}, {writeRef, write.ID}} {
+		event, err := store.ToolRequest(ctx, receipt.ref, history.ReadBounds{})
+		if err != nil || event.Call == nil || event.Call.ID != receipt.id {
+			t.Fatalf("receipt=%+v event=%+v err=%v", receipt, event, err)
+		}
+	}
+	messages, err := store.ContextMessages(ctx, id, 0, 1<<20, true, nil)
+	if err != nil || len(messages) != 6 || messages[2].Content != evidence || !messages[2].TransientObservation || !messages[3].PreserveObservations {
+		t.Fatalf("restored correction lost its input: %+v %v", messages, err)
+	}
+	if boundary, err := store.CompactionBoundary(ctx, id, 8, 0); err != nil || boundary != 1 {
+		t.Fatalf("unread observation is not protected: boundary=%d err=%v", boundary, err)
+	}
+	if err := store.AppendMessage(ctx, id, model.Message{Role: "assistant", Content: "Corrected edit complete."}); err != nil {
+		t.Fatal(err)
+	}
+	messages, err = store.ContextMessages(ctx, id, 0, 1<<20, true, nil)
+	if err != nil || len(messages) != 7 || messages[2].Content != toolapi.ObservationRead || messages[2].TransientObservation {
+		t.Fatalf("validated decision did not release prior input: %+v %v", messages, err)
+	}
+}
+
 func TestBrowserObservationMessageAndEventShareMediumBody(t *testing.T) {
 	store, err := newTestStore(t)
 	if err != nil {

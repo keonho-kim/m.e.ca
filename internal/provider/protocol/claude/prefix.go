@@ -18,19 +18,16 @@ type Prefix struct {
 	frame  [9]byte
 }
 
-func NewPrefix(system string, tools []Tool) (*Prefix, error) {
+// NewPrefix consumes the canonical encoding of the tool declarations in the request.
+func NewPrefix(system string, tools json.RawMessage) *Prefix {
 	if len(tools) == 0 {
-		tools = nil
-	}
-	encoded, err := json.Marshal(tools)
-	if err != nil {
-		return nil, err
+		tools = json.RawMessage("null")
 	}
 	p := &Prefix{digest: sha256.New()}
 	_, _ = p.digest.Write([]byte("meca-claude-prefix-v1\x00"))
 	p.part(1, []byte(system))
-	p.part(2, encoded)
-	return p, nil
+	p.part(2, tools)
+	return p
 }
 
 func (p *Prefix) part(kind byte, body []byte) {

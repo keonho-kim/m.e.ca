@@ -13,7 +13,7 @@ import (
 )
 
 func TestCommandCaptureCommitsBeforeAcknowledgement(t *testing.T) {
-	calls := []toolapi.Call{batchCall("capture", "execute_command", map[string]any{"command": "head -c 4194304 /dev/zero"})}
+	calls := []toolapi.Call{batchCall("capture", "execute_command", map[string]any{"reason": "Capture large command output", "command": "head -c 4194304 /dev/zero"})}
 	r, tools, _, journal, _ := realBatchRunner(t, calls)
 	result, err := r.Run(context.Background(), "Inspect the output", approve, emit)
 	if err != nil || result.Status != runrecord.Answered {

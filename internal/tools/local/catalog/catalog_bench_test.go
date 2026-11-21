@@ -13,7 +13,7 @@ import (
 
 func BenchmarkCatalog(b *testing.B) {
 	b.Run("arguments", func(b *testing.B) {
-		invocation := toolapi.Call{ID: "call_catalog", Name: "edit_file", Arguments: json.RawMessage(`{"path":"a","edits":[{"old_text":"old","new_text":"new"}]}`)}
+		invocation := toolapi.Call{ID: "call_catalog", Name: "edit_file", Arguments: json.RawMessage(`{"reason":"Replace stale text","path":"a","edits":[{"old_text":"old","new_text":"new"}]}`)}
 		b.ReportAllocs()
 		for b.Loop() {
 			if _, _, err := Parse(invocation); err != nil {

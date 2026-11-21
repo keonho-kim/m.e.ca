@@ -20,9 +20,9 @@ func TestExactEditDialogue(t *testing.T) {
 		t.Fatal(err)
 	}
 	script := &generator{replies: []string{
-		nativeCall("execute_command", map[string]any{"command": "cat a"}),
-		nativeCall("edit_file", map[string]any{"path": "a", "edits": []map[string]any{{"old_text": "second\n", "new_text": "second changed\n"}}}),
-		nativeCall("execute_command", map[string]any{"command": "test -f a"}), "Updated a at line 2 and checked it",
+		nativeCall("execute_command", map[string]any{"reason": "Inspect or update selected range", "command": "cat a"}),
+		nativeCall("edit_file", map[string]any{"reason": "Inspect or update selected range", "path": "a", "edits": []map[string]any{{"old_text": "second\n", "new_text": "second changed\n"}}}),
+		nativeCall("execute_command", map[string]any{"reason": "Inspect or update selected range", "command": "test -f a"}), "Updated a at line 2 and checked it",
 	}}
 	r.Generator = script
 

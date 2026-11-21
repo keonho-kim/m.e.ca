@@ -9,8 +9,11 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/protocol/gemini"
 )
 
-func newGeminiCloud(base string, request modelapi.Request, messages []Message, controls Controls) (cloudRequest, error) {
-	body := geminiBase(request, messages, controls)
+func (e *Encoder) newGeminiCloud(base string, request modelapi.Request, messages []Message, controls Controls) (cloudRequest, error) {
+	body, err := e.geminiBase(request, messages, controls)
+	if err != nil {
+		return cloudRequest{}, err
+	}
 	type fields gemini.Request
 	header, err := wireJSON.Marshal(struct {
 		fields

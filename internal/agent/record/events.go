@@ -64,6 +64,8 @@ type Generation struct {
 type Entry struct {
 	Message *modelapi.Message
 	Event   *Event
+	// Receipt, when provided for an event, receives its reference after commit.
+	Receipt *EventReference
 }
 
 // EventReference points to one committed original in the current or a private team session.

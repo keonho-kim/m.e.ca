@@ -16,7 +16,7 @@ import (
 )
 
 func TestToolSnapshotReuseMutationAndReplay(t *testing.T) {
-	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.VLLM, connection.SGLang, connection.LiteLLM, connection.Ollama, connection.LMStudio} {
+	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.VLLM, connection.SGLang, connection.LiteLLM, connection.Ollama, connection.LMStudio, connection.Claude, connection.Gemini} {
 		t.Run(string(kind), func(t *testing.T) {
 			var encoder Encoder
 			defer encoder.Clear()

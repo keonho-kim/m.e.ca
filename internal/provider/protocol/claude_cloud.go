@@ -9,8 +9,8 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/protocol/claude"
 )
 
-func newClaudeCloud(base string, request modelapi.Request, messages []Message, controls Controls) (cloudRequest, error) {
-	body, prefix, err := claudeBase(request, messages, controls)
+func (e *Encoder) newClaudeCloud(base string, request modelapi.Request, messages []Message, controls Controls) (cloudRequest, error) {
+	body, prefix, err := e.claudeBase(request, messages, controls)
 	if err != nil {
 		return cloudRequest{}, err
 	}

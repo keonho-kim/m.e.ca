@@ -20,7 +20,7 @@ func uiParallelReply(w http.ResponseWriter, completed bool) {
 		finish = "tool_calls"
 		calls := []any{}
 		for index, command := range []string{"printf parallel-first", "printf parallel-second"} {
-			arguments, _ := json.Marshal(map[string]string{"command": command})
+			arguments, _ := json.Marshal(map[string]string{"reason": "Run fixture check", "command": command})
 			calls = append(calls, map[string]any{"index": index, "id": fmt.Sprintf("parallel-%d", index), "type": "function", "function": map[string]string{"name": "execute_command", "arguments": string(arguments)}})
 		}
 		delta["tool_calls"] = calls

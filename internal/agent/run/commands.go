@@ -45,7 +45,13 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		if result.Failed {
 			status = "tool_failed"
 		}
-		arguments, _ := json.Marshal(map[string]string{"command": finished.Command})
+		arguments, err := json.Marshal(struct {
+			Reason  string `json:"reason,omitempty"`
+			Command string `json:"command"`
+		}{Reason: s.runner.Redact(finished.Reason), Command: finished.Command})
+		if err != nil {
+			return false, errors.Join(errRuntimeRecord, err)
+		}
 		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, BatchID: finished.BatchID, Name: "execute_command", Arguments: arguments}
 		op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: finished.CallID, Name: "execute_command", Command: finished.Command, Started: result.Started, Status: status, Process: result.Process, Failure: result.Failure, Result: result.Summary, Revision: s.checkpoint.ChangeRevision}
 		s.checkpoint.Work.Observe(op)

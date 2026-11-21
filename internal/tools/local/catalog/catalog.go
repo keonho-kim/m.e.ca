@@ -26,6 +26,13 @@ func textField(name, description string, empty bool) toolapi.Parameter {
 	return toolapi.Parameter{Name: name, Description: description, Kind: toolapi.Text, Required: true, AllowEmpty: empty, MaxBytes: toolapi.MaxArgumentsBytes}
 }
 
+func actionReason() toolapi.Parameter {
+	return toolapi.Parameter{
+		Name: "reason", Kind: toolapi.SingleLineText, Required: true, Max: 64,
+		Description: "Call once the next action is clear. Put reason first. Use one short phrase for the immediate purpose. On a repeat, name what changed or what to verify.",
+	}
+}
+
 // The private catalog is immutable after package initialization.
 var (
 	commandCapacityDescription = fmt.Sprintf("Each agent may own up to %d active commands, including path waits, execution and output finalization. ", process.MaxActive)
@@ -37,9 +44,9 @@ func buildSpecifications() []Specification {
 		{"view_image", "Viewing image", "View the pixels of a local raster image with the current vision model. Use execute_command with cat or sed to read source code, scripts, Markdown and other text files. Supports PNG/APNG, JPEG/JPG, WebP, GIF, BMP and TIFF by file content. Animated images and multipage TIFF use a representative first frame/page, not the complete animation. Returns dimensions, format and an immutable image snapshot. Paths are absolute or relative to project_root; shell cd does not change the base. This tool does not modify files.", []toolapi.Parameter{filePath()}, policy.Read},
 
 		{"create_directory", "Creating", "Create one or more directories and missing parents (mkdir -p). Existing directories succeed without changes. File collisions are rejected. Returns created paths and preserves partial results if interrupted.", []toolapi.Parameter{{Name: "paths", Description: "Absolute directory paths or paths relative to project_root. One or more paths; shared parents are created once.", Kind: toolapi.TextList, Required: true, Max: 64, MaxBytes: 4096}}, policy.Change},
-		{"write_file", "Writing", "Create a UTF-8 file or replace its entire content; missing parents are created. Inspect an existing file before replacing it. Empty content creates or empties the file. Returns the applied change and file size. Use edit_file for partial changes.", []toolapi.Parameter{filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
+		{"write_file", "Writing", "Create a UTF-8 file or replace its entire content; missing parents are created. Inspect an existing file before replacing it. Empty content creates or empties the file. Returns the applied change and file size. Use edit_file for partial changes.", []toolapi.Parameter{actionReason(), filePath(), textField("content", "Complete file content. Preserve whitespace; do not add wrapping code fences.", true)}, policy.Change},
 		editSpecification(),
-		{"execute_command", "Running", CommandDescription("Independent commands in the same tool batch may run together."), []toolapi.Parameter{textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
+		{"execute_command", "Running", CommandDescription("Independent commands in the same tool batch may run together."), []toolapi.Parameter{actionReason(), textField("command", "Complete POSIX shell command. Quote literal paths. This call starts in project_root; a previous call's cd has no effect.", false)}, policy.Command},
 	}
 	specs = append(specs, commandSpecifications()...)
 	specs = append(specs, skillSpecifications()...)

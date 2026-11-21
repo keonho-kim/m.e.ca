@@ -6,6 +6,7 @@ package catalog
 
 import (
 	"encoding/json"
+	"reflect"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -35,23 +36,33 @@ type Arguments struct {
 	WaitSeconds  *int            "json:\"wait_seconds,omitempty\""
 	Paths        []string        `json:"paths"`
 	FormatPolicy string          `json:"format_policy,omitempty"`
+	Reason       string          `json:"reason"`
 	Path         string          `json:"path"`
 	Content      string          `json:"content"`
 	Edits        []textedit.Edit `json:"edits"`
 	Command      string          `json:"command"`
 }
 
+func specification(name string) Specification {
+	for _, candidate := range catalog {
+		if candidate.Name == name {
+			return candidate
+		}
+	}
+	return Specification{}
+}
+
+// MatchesParameters reports whether local parsing also validates the advertised fields.
+func MatchesParameters(definition toolapi.Definition) bool {
+	spec := specification(definition.Name)
+	return spec.Name != "" && reflect.DeepEqual(spec.fields, definition.Parameters)
+}
+
 func Parse(call toolapi.Call) (Specification, Arguments, error) {
 	if err := call.CheckIdentity(); err != nil {
 		return Specification{}, Arguments{}, err
 	}
-	var spec Specification
-	for _, candidate := range catalog {
-		if candidate.Name == call.Name {
-			spec = candidate
-			break
-		}
-	}
+	spec := specification(call.Name)
 	if spec.Name == "" {
 		return spec, Arguments{}, faults.Errorf(diagcatalog.CatalogUnknownTool, call.Name)
 	}

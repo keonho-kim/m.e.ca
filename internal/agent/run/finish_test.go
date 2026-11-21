@@ -16,7 +16,7 @@ func TestFinalResponseReleasesDiscardedPadding(t *testing.T) {
 	raw := strings.Repeat(" ", 1<<20) + "answer\n"
 	j := &journal{}
 	s := execution{runner: fixture(&generator{}, &executor{}, j), emit: emit}
-	if err := s.finish(t.Context(), modelapi.Response{Text: raw}); err != nil {
+	if err := s.finish(t.Context(), modelapi.Response{Text: raw}, 0); err != nil {
 		t.Fatal(err)
 	}
 	if s.result.Text != "answer" || len(j.messages) != 1 || j.messages[0].Content != "answer" {

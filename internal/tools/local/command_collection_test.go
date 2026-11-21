@@ -15,7 +15,8 @@ func TestCompletionCollectionSanitizesCommandOnce(t *testing.T) {
 	e.BeginCommands(context.Background(), time.Now().Add(time.Minute))
 	defer e.StopCommands()
 	command := "printf checked"
-	result := commandTool(t, e, "execute_command", map[string]any{"command": command})
+	const reason = "Verify command output"
+	result := commandTool(t, e, "execute_command", map[string]any{"command": command, "reason": reason})
 	if result.Process == nil || result.Process.Status != "exited" {
 		t.Fatal("local command did not finish", result)
 	}
@@ -30,6 +31,9 @@ func TestCompletionCollectionSanitizesCommandOnce(t *testing.T) {
 	completed, err := e.CollectCommands()
 	if err != nil || len(completed) != 1 {
 		t.Fatal("completion was lost", completed, err)
+	}
+	if completed[0].Reason != reason {
+		t.Fatal("completed command lost its reason", completed)
 	}
 	if redactions != 1 || completed[0].Command != "sanitized command" || completed[0].Result.Process.Command != completed[0].Command {
 		t.Fatal("command was scanned twice or results used different values", redactions, completed)

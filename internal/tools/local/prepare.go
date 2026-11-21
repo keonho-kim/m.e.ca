@@ -52,7 +52,7 @@ func (executor *Executor) prepare(ctx context.Context, settings policy.Settings,
 			}
 		}()
 	}
-	texts := []string{input.Content, input.Command, input.URL, input.Value, input.Target, input.Selector}
+	texts := []string{input.Content, input.Command, input.Reason, input.URL, input.Value, input.Target, input.Selector}
 	for _, edit := range input.Edits {
 		texts = append(texts, edit.OldText, edit.NewText)
 	}

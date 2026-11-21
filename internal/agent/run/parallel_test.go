@@ -146,8 +146,8 @@ func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
 func TestParallelSerializesDependentTargets(t *testing.T) {
 	calls := []toolapi.Call{
 		batchCall("parent", "create_directory", map[string]any{"paths": []string{"dir"}}),
-		batchCall("first", "write_file", map[string]any{"path": "dir/a", "content": "one"}),
-		batchCall("second", "write_file", map[string]any{"path": "dir/a", "content": "two"}),
+		batchCall("first", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": "dir/a", "content": "one"}),
+		batchCall("second", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": "dir/a", "content": "two"}),
 	}
 	r, _, root, _, _ := realBatchRunner(t, calls)
 	result, err := r.Run(context.Background(), "create then update", approve, emit)
@@ -224,7 +224,7 @@ func TestParallelApprovalDenialPreventsWaveEffects(t *testing.T) {
 
 func TestParallelRechecksAliasesAfterApproval(t *testing.T) {
 	root := t.TempDir()
-	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": filepath.Join(root, "a"), "content": "changed"}), batchCall("b", "write_file", map[string]any{"path": filepath.Join(root, "b"), "content": "changed"})}
+	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": filepath.Join(root, "a"), "content": "changed"}), batchCall("b", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": filepath.Join(root, "b"), "content": "changed"})}
 	r, _, _, _, _ := realBatchRunner(t, calls)
 	for _, name := range []string{"a", "b"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("original"), 0600); err != nil {
@@ -256,7 +256,7 @@ func TestParallelRechecksAliasesAfterApproval(t *testing.T) {
 
 func TestParallelWritesKeepIndividualApprovals(t *testing.T) {
 	root := t.TempDir()
-	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"path": filepath.Join(root, "a"), "content": "first"}), batchCall("b", "write_file", map[string]any{"path": filepath.Join(root, "b"), "content": "second"})}
+	calls := []toolapi.Call{batchCall("a", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": filepath.Join(root, "a"), "content": "first"}), batchCall("b", "write_file", map[string]any{"reason": "Update file under parallel scheduling", "path": filepath.Join(root, "b"), "content": "second"})}
 	r, tools, _, _, _ := realBatchRunner(t, calls)
 
 	held := &heldTools{Executor: tools, entered: make(chan string, 2), release: make(chan struct{})}

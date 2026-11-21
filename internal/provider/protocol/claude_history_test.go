@@ -18,7 +18,7 @@ import (
 func TestClaudeHistoryBindsPrefixAndKeepsBlocks(t *testing.T) {
 	request := modelapi.Request{ModelID: "alias", MaxOutput: 32}
 	first := []Message{{Role: "system", Content: "rules"}, {Role: "user", Content: "objective"}, {Role: "user", Content: "temporary team observation"}}
-	_, body, err := singleBody(connection.Claude, "https://example.com/v1", nil, request, first, Controls{})
+	_, body, err := (*Encoder)(nil).singleBody(connection.Claude, "https://example.com/v1", nil, request, first, Controls{})
 	if err != nil {
 		t.Fatal(err)
 	}

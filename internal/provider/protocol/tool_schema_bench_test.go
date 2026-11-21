@@ -14,7 +14,7 @@ import (
 )
 
 func BenchmarkToolSchemaEncoding(b *testing.B) {
-	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.LMStudio, connection.Ollama} {
+	for _, kind := range []connection.ProviderKind{connection.OpenRouter, connection.LMStudio, connection.Ollama, connection.Claude, connection.Gemini} {
 		for _, size := range []int{100, 64 * 1024} {
 			name := "small"
 			if size > 100 {

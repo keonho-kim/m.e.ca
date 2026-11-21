@@ -1,4 +1,4 @@
-// Purpose: Validate one native tool call and orchestrate approval and execution.
+// Purpose: Admit one validated native tool call and orchestrate approval and execution.
 // Pattern: Native tool execution use case.
 // Usage: Invoked once per complete native tool call, before the existing approval/execution boundary.
 // Related: internal/agent/tool/arguments.go, internal/agent/run/execute.go.
@@ -12,13 +12,7 @@ import (
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 )
 
-func (s *execution) action(ctx context.Context, reply modelapi.Response, approve Approver) error {
-	s.usage.recordTools(1)
-	v, err := s.validateCall(reply.Calls[0])
-	if err != nil {
-		return s.returnToolFeedback(ctx, reply, err.Error())
-	}
-	v.call = s.identifyCall(v.call)
+func (s *execution) action(ctx context.Context, reply modelapi.Response, v validatedCall, observedThrough int, approve Approver) error {
 	call, definition := v.call, v.definition
 	s.checkpoint.Iteration = s.usage.ToolCalls
 	s.checkpoint.Tool = definition.Name
@@ -27,7 +21,7 @@ func (s *execution) action(ctx context.Context, reply modelapi.Response, approve
 		return err
 	}
 	// The compiled call enters the audit transcript only after every argument is valid.
-	if err = s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState, Calls: reply.Calls}); err != nil {
+	if err := s.saveDecision(ctx, reply, observedThrough); err != nil {
 		return err
 	}
 	if reply.Text != "" {

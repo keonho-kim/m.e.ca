@@ -103,7 +103,7 @@ func TestApprovalIsSingleUseAndHistoryRetainsToolOriginal(t *testing.T) {
 	var calls atomic.Int32
 	f := newFixture(t, generateFunc(func(_ context.Context, _ model.Request, emit func(model.Event) error) error {
 		if calls.Add(1) == 1 {
-			return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"path":"result.txt","content":"written"}`)}}, Done: true})
+			return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save task result","path":"result.txt","content":"written"}`)}}, Done: true})
 		}
 		return emit(model.Event{Delta: "done", Done: true})
 	}), true)

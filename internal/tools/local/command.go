@@ -15,13 +15,14 @@ import (
 func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error) {
 	var id string
 	var err error
+	identity := process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID, Reason: op.input.Reason}
 	if op.admit == nil {
 		if _, err = op.admitCommand(ctx); err != nil {
 			return toolapi.Result{}, err
 		}
-		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID})
+		id, err = op.executor.commands.Start(ctx, op.executor.project, op.input.Command, op.environment, identity)
 	} else {
-		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID}, op.admitCommand)
+		id, err = op.executor.commands.StartAdmitted(ctx, op.executor.project, op.input.Command, op.environment, identity, op.admitCommand)
 	}
 	if err != nil {
 		if id != "" {

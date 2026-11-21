@@ -14,12 +14,13 @@ import (
 )
 
 func Encode(kind modelconn.ProviderKind, baseURL string, info *modelconn.ModelInfo, request modelapi.Request, messages []Message, controls Controls) (string, []byte, error) {
+	var uncached *Encoder
 	if kind == modelconn.Claude {
-		endpoint, body, _, err := claudeRequest(baseURL, request, messages, controls)
+		endpoint, body, _, err := uncached.claudeRequest(baseURL, request, messages, controls)
 		return endpoint, body, err
 	}
 	if kind == modelconn.Gemini {
-		return geminiRequest(baseURL, request, messages, controls)
+		return uncached.geminiRequest(baseURL, request, messages, controls)
 	}
 	if modelconn.UsesResponses(kind) {
 		input, err := responseInput(messages)

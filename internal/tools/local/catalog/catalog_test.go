@@ -7,6 +7,7 @@ package catalog
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -35,7 +36,7 @@ func TestCatalogDefinitionsDoNotExposePrivateSchema(t *testing.T) {
 	if err != nil || string(before) != string(after) {
 		t.Fatal("returned definitions exposed shared mutable schemas")
 	}
-	if _, _, err := Parse(toolapi.Call{ID: "call_catalog", Name: "edit_file", Arguments: json.RawMessage(`{"path":"a","edits":[{"old_text":"old","new_text":"new"}],"format_policy":"preserve"}`)}); err != nil {
+	if _, _, err := Parse(toolapi.Call{ID: "call_catalog", Name: "edit_file", Arguments: json.RawMessage(`{"reason":"Replace stale text","path":"a","edits":[{"old_text":"old","new_text":"new"}],"format_policy":"preserve"}`)}); err != nil {
 		t.Fatal("a caller changed private argument validation:", err)
 	}
 }
@@ -49,5 +50,34 @@ func TestCatalogAdvertisesSupportedTools(t *testing.T) {
 	want := []string{"browser_action", "browser_inspect", "cancel_command", "create_directory", "edit_file", "execute_command", "list_command_runs", "list_skills", "load_skill", "read_skill_file", "view_image", "wait_command", "web_fetch", "write_file"}
 	if !slices.Equal(names, want) {
 		t.Fatalf("advertised tools = %v; want %v", names, want)
+	}
+}
+
+func TestActionReasonContract(t *testing.T) {
+	reason := strings.Repeat("한", 64)
+	for _, tc := range []struct {
+		name, arguments string
+	}{
+		{"execute_command", `"command":"pwd"`},
+		{"write_file", `"path":"note.txt","content":"ready"`},
+		{"edit_file", `"path":"note.txt","edits":[{"old_text":"ready","new_text":"done"}]`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			call := toolapi.Call{ID: "call_reason", Name: tc.name}
+			for _, value := range []string{"", `null`, `""`, `"   "`, `"line\nbreak"`, `"line\u2028break"`, `"escape\u001b"`, `"\u200b"`, `"\ud800"`, `"\u202eCheck"`, `"` + strings.Repeat("한", 65) + `"`} {
+				body := tc.arguments
+				if value != "" {
+					body += `,"reason":` + value
+				}
+				call.Arguments = json.RawMessage("{" + body + "}")
+				if _, _, err := Parse(call); err == nil || !strings.Contains(err.Error(), "reason") {
+					t.Fatalf("invalid reason %q returned %v", value, err)
+				}
+			}
+			call.Arguments = json.RawMessage("{" + tc.arguments + `,"reason":"` + reason + `"}`)
+			if _, _, err := Parse(call); err != nil {
+				t.Fatalf("rejected valid reason placed last: %v", err)
+			}
+		})
 	}
 }

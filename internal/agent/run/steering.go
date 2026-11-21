@@ -78,7 +78,7 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 	return nil
 }
 
-func (s *execution) continueSteered(ctx context.Context, reply modelapi.Response) (bool, error) {
+func (s *execution) continueSteered(ctx context.Context, reply modelapi.Response, observedThrough int) (bool, error) {
 	if s.runner.PollSteering == nil {
 		return false, nil
 	}
@@ -87,7 +87,7 @@ func (s *execution) continueSteered(ctx context.Context, reply modelapi.Response
 		return false, nil
 	}
 	if reply.Text != "" {
-		if err := s.save(ctx, modelapi.Message{Role: "assistant", Content: reply.Text, Reasoning: reply.Reasoning, ReasoningState: reply.ReasoningState}); err != nil {
+		if err := s.saveDecision(ctx, reply, observedThrough); err != nil {
 			return false, err
 		}
 		if err := s.emit(runrecord.Event{Kind: "progress", Text: reply.Text}); err != nil {

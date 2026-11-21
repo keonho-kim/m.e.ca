@@ -1,7 +1,7 @@
 // Purpose: Declare native tool parameter types and fixed tool definitions.
 // Pattern: Tool schema.
 // Usage: Provider adapters use the same parameters as the local tool catalog.
-// Related: internal/agent/tool/arguments.go, internal/tools/local/catalog.go.
+// Related: internal/agent/tool/arguments.go, internal/tools/local/catalog/catalog.go.
 
 package tool
 
@@ -11,11 +11,12 @@ import "github.com/keonho-kim/meca/internal/policy"
 type ParameterKind string
 
 const (
-	Text        ParameterKind = "text"
-	TextList    ParameterKind = "text_list"
-	LiteralPath ParameterKind = "literal_path"
-	ObjectList  ParameterKind = "object_list"
-	Integer     ParameterKind = "integer"
+	Text           ParameterKind = "text"
+	SingleLineText ParameterKind = "single_line_text"
+	TextList       ParameterKind = "text_list"
+	LiteralPath    ParameterKind = "literal_path"
+	ObjectList     ParameterKind = "object_list"
+	Integer        ParameterKind = "integer"
 )
 
 type Parameter struct {
@@ -24,7 +25,9 @@ type Parameter struct {
 	Name, Description    string
 	Kind                 ParameterKind
 	Required, AllowEmpty bool
-	Max, MaxBytes        int
+	// Max is the numeric, item or character limit for the parameter kind.
+	Max      int
+	MaxBytes int
 }
 type Definition struct {
 	Name, Description string

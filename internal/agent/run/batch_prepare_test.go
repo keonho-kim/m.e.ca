@@ -53,7 +53,7 @@ func TestParallelPreparationBoundsFailureAndCancellation(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			var calls []toolapi.Call
 			for i := range 8 {
-				calls = append(calls, batchCall(fmt.Sprint(i), "write_file", map[string]any{"path": fmt.Sprintf("file%d", i), "content": "body"}))
+				calls = append(calls, batchCall(fmt.Sprint(i), "write_file", map[string]any{"reason": "Create independent file fixture", "path": fmt.Sprintf("file%d", i), "content": "body"}))
 			}
 			r, tools, root, journal, _ := realBatchRunner(t, calls)
 			preparing := &preparingTools{Executor: tools, entered: make(chan string, 8), release: make(chan struct{}), fail: mode == "failure"}

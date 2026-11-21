@@ -18,7 +18,7 @@ func TestAutomaticBatchInstructionChecksDoNotScaleWithFileCount(t *testing.T) {
 		calls := make([]tool.Call, 0, count)
 		for i := range count {
 			path := fmt.Sprint(i)
-			calls = append(calls, batchCall(path, "write_file", map[string]any{"path": path, "content": "content"}))
+			calls = append(calls, batchCall(path, "write_file", map[string]any{"reason": "Create independent file fixture", "path": path, "content": "content"}))
 		}
 		r, _, _, _, _ := realBatchRunner(t, calls)
 		polls := 0

@@ -5,6 +5,7 @@
 package catalog
 
 import (
+	"encoding/json"
 	"testing"
 
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
@@ -26,8 +27,17 @@ func TestWorkReleaseAndNamedRestorationArguments(t *testing.T) {
 		t.Fatal("work release weakened directory arguments")
 	}
 	definition, _ := definition("set_work")
-	schema := definition.JSONSchema()["properties"].(map[string]any)["paths"].(map[string]any)
-	if schema["minItems"] != 0 {
+	body, err := json.Marshal(definition.JSONSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Properties map[string]struct{ MinItems *int }
+	}
+	if err := json.Unmarshal(body, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if minItems := schema.Properties["paths"].MinItems; minItems == nil || *minItems != 0 {
 		t.Fatal("provider schema rejects scope release")
 	}
 }

@@ -61,6 +61,17 @@ func (e *Executor) Definitions() []toolapi.Definition {
 	}
 	return append(definitions, catalog.Definitions()...)
 }
+
+func (e *Executor) ValidateCallArguments(call toolapi.Call, definition toolapi.Definition) error {
+	if !catalog.IsTool(call.Name) {
+		if validator, ok := e.Local.(toolapi.CallArgumentValidator); ok {
+			return validator.ValidateCallArguments(call, definition)
+		}
+	}
+	_, err := toolapi.ValidateArguments(definition, call.Arguments)
+	return err
+}
+
 func (e *Executor) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
 	if catalog.IsTool(call.Name) {
 		input, err := catalog.Parse(call)

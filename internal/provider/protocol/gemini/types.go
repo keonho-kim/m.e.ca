@@ -46,10 +46,10 @@ type Generation struct {
 	Thinking    any      `json:"thinkingConfig,omitempty"`
 }
 type Request struct {
-	Contents []Content  `json:"contents"`
-	System   *Content   `json:"systemInstruction,omitempty"`
-	Tools    []Tool     `json:"tools,omitempty"`
-	Config   Generation `json:"generationConfig"`
+	Contents []Content       `json:"contents"`
+	System   *Content        `json:"systemInstruction,omitempty"`
+	Tools    json.RawMessage `json:"tools,omitempty"`
+	Config   Generation      `json:"generationConfig"`
 }
 type Continuation struct {
 	Parts   []Part   `json:"parts"`
