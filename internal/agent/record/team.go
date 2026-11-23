@@ -7,6 +7,7 @@ package record
 import (
 	"slices"
 
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
@@ -20,9 +21,10 @@ type TeamNote struct {
 }
 
 type TeamWork struct {
-	Paths    []string `json:"paths"`
-	Contract string   `json:"contract,omitempty"`
-	Revision uint64   `json:"revision"`
+	Paths    []string            `json:"paths"`
+	Contract string              `json:"contract,omitempty"`
+	Revision uint64              `json:"revision"`
+	Domains  []source.WorkDomain `json:"domains,omitzero"`
 }
 
 // Clone transfers ownership at the public append boundary; readers share the frozen result.
@@ -37,6 +39,7 @@ func (n *TeamNote) Clone() *TeamNote {
 	if n.Work != nil {
 		work := *n.Work
 		work.Paths = slices.Clone(n.Work.Paths)
+		work.Domains = slices.Clone(n.Work.Domains)
 		copy.Work = &work
 	}
 	return &copy
@@ -54,6 +57,17 @@ func (n *TeamNote) Check(kind string) error {
 	}
 	if n.Work != nil && (kind != "team_work" || n.Work.Revision == 0) {
 		return faults.Errorf(diagcatalog.RecordWorkMetadataRequiresAVersionedSelfDeclaration)
+	}
+	if n.Work != nil {
+		if len(n.Work.Domains) > source.MaxWorkDomains {
+			return faults.Errorf(diagcatalog.RecordWorkMetadataRequiresAVersionedSelfDeclaration)
+		}
+		for _, value := range n.Work.Domains {
+			work, err := source.ParseWorkDomain(value)
+			if err != nil || work != value {
+				return faults.Errorf(diagcatalog.RecordWorkMetadataRequiresAVersionedSelfDeclaration)
+			}
+		}
 	}
 	return nil
 }

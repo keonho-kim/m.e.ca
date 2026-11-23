@@ -33,7 +33,13 @@ func (m Message) metadataBytes() int {
 			for _, path := range work.Paths {
 				size += len(path) + 16
 			}
+			for _, domain := range work.Domains {
+				size += len(domain.Domain) + 24
+			}
 		}
+	}
+	for _, image := range m.Images {
+		size += cap(image.Data) + len(image.Path) + len(image.MIME) + len(image.Format) + len(image.Digest) + 128
 	}
 	return size
 }
@@ -79,7 +85,7 @@ func (h *History) Append(message Message, previous int64) {
 		h.reset(previous)
 	}
 	// Cache admission precedes the potentially large attribution allocation.
-	if message.ContextBytes()+message.metadataBytes() > historyBytes {
+	if message.contextTextBytes()+message.metadataBytes() > historyBytes {
 		h.reset(message.Sequence)
 		h.values = nil
 		return
@@ -88,12 +94,18 @@ func (h *History) Append(message Message, previous int64) {
 }
 
 // cached requires mu and copies only receiver-owned message headers.
-func (h *History) cached(after, through int64, limit int) ([]Entry, bool) {
+func (h *History) cached(after, through int64, budget PageBudget) ([]Entry, bool) {
 	if after >= h.after && after < h.through {
 		first := slices.IndexFunc(h.values, func(v Entry) bool { return v.Message.Sequence > after })
 		if first >= 0 {
 			end := first
-			for end < len(h.values) && end-first < limit && h.values[end].Message.Sequence <= through {
+			used := 0
+			for end < len(h.values) && h.values[end].Message.Sequence <= through {
+				cost := h.values[end].Message.ContextBytes()
+				if !budget.Fits(end-first, used, cost) {
+					break
+				}
+				used += cost
 				end++
 			}
 			return slices.Clone(h.values[first:end]), true

@@ -20,6 +20,12 @@ import (
 )
 
 func TestRunGeneratorHTTPReplay(t *testing.T) {
+	t.Run("cached", func(t *testing.T) { testRunGeneratorHTTPReplay(t, true) })
+	t.Run("uncached", func(t *testing.T) { testRunGeneratorHTTPReplay(t, false) })
+}
+
+func testRunGeneratorHTTPReplay(t *testing.T, cache bool) {
+	t.Helper()
 	var mu sync.Mutex
 	var original []byte
 	redirects := 0
@@ -48,7 +54,13 @@ func TestRunGeneratorHTTPReplay(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
 	})
-	generator, release := client.NewRunGenerator()
+	var generator modelapi.Generator
+	var release func()
+	if cache {
+		generator, release = client.NewRunGenerator()
+	} else {
+		generator, release = client.NewRunGeneratorWithBudget(0)
+	}
 	defer release()
 	request := modelapi.Request{ModelID: "model", MaxOutput: 100, Messages: []modelapi.Message{{Role: "system", Content: strings.Repeat("x", 70*1024)}, {Role: "user", Content: "hello"}}}
 	answer, retries := "", 0

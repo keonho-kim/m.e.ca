@@ -24,8 +24,8 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return modelapi.Response{}, err
 	}
-	if !s.modelCall() {
-		return modelapi.Response{}, errModelBudget
+	if err := s.modelCall(ctx); err != nil {
+		return modelapi.Response{}, err
 	}
 	s.checkpoint.ModelCalls = s.usage.ModelCalls
 	draft.truncatedText = false

@@ -14,10 +14,10 @@ func TestPublicHistoryOlderReadPreservesLatestWindow(t *testing.T) {
 	reader := &publicReader{values: []Message{{Sequence: 1, From: "user", Text: "old"}, {Sequence: 2, From: "user", Text: "latest"}}}
 	var h History
 	h.Append(reader.values[1], 1)
-	if _, err := h.Read(context.Background(), reader, 0, 1, 100); err != nil {
+	if _, err := h.Read(context.Background(), reader, 0, 1, PublicPage(100)); err != nil {
 		t.Fatal(err)
 	}
-	if values, err := h.Read(context.Background(), reader, 1, 2, 100); err != nil || len(values) != 1 || values[0].Message.Text != "latest" {
+	if values, err := h.Read(context.Background(), reader, 1, 2, PublicPage(100)); err != nil || len(values) != 1 || values[0].Message.Text != "latest" {
 		t.Fatal("latest window lost", err)
 	}
 	if reader.calls.Load() != 1 {
@@ -29,7 +29,7 @@ type blockedPublicReader struct {
 	entered, release chan struct{}
 }
 
-func (r blockedPublicReader) TeamMessages(context.Context, int64, int64, int) ([]Message, error) {
+func (r blockedPublicReader) TeamMessages(context.Context, int64, int64, PageBudget) ([]Message, error) {
 	close(r.entered)
 	<-r.release
 	return []Message{{Sequence: 1, From: "user", Text: "old"}}, nil
@@ -39,7 +39,7 @@ func TestPublicHistoryPublicationDoesNotWaitForHistoricalIO(t *testing.T) {
 	reader := blockedPublicReader{entered: make(chan struct{}), release: make(chan struct{})}
 	var h History
 	loaded := make(chan error, 1)
-	go func() { _, err := h.Read(context.Background(), reader, 0, 1, 100); loaded <- err }()
+	go func() { _, err := h.Read(context.Background(), reader, 0, 1, PublicPage(100)); loaded <- err }()
 	<-reader.entered
 	published := make(chan struct{})
 	go func() { h.Append(Message{Sequence: 2, From: "user", Text: "new"}, 1); close(published) }()

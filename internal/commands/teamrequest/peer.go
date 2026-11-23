@@ -22,6 +22,11 @@ import (
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
 )
 
+const (
+	teamEncodingCacheBytes = 16 << 20
+	peerEncodingCacheBytes = 2 << 20
+)
+
 func (r *request) execute(ctx context.Context, member identity.Member, input string, peer *team.Peer) (result run.Result, resultErr error) {
 	ctx = diagnostics.WithFields(ctx, "agent", member.ID)
 	child, err := r.service.Open(ctx, member.Session)
@@ -53,7 +58,14 @@ func (r *request) execute(ctx context.Context, member identity.Member, input str
 	if scoped, ok := own.Generator.(interface {
 		NewRunGeneratorWithBudget(int) (modelapi.Generator, func())
 	}); ok {
-		generator, release := scoped.NewRunGeneratorWithBudget(16 * 1024 * 1024 / team.MaxActive)
+		cacheBytes := 0
+		select {
+		case r.encodingCaches <- struct{}{}:
+			cacheBytes = peerEncodingCacheBytes
+			defer func() { <-r.encodingCaches }()
+		default:
+		}
+		generator, release := scoped.NewRunGeneratorWithBudget(cacheBytes)
 		own.Generator = generator
 		defer release()
 	}

@@ -7,9 +7,6 @@ package team
 import runrecord "github.com/keonho-kim/meca/internal/agent/record"
 
 func (r *Room) queuePublic(event runrecord.Event) {
-	if r.pendingPublic == nil {
-		r.pendingPublic = make([]runrecord.Event, 0, MaxActive+1)
-	}
 	if len(r.pendingPublic) == cap(r.pendingPublic) && r.publicHead > 0 {
 		count := copy(r.pendingPublic, r.pendingPublic[r.publicHead:])
 		clear(r.pendingPublic[count:])

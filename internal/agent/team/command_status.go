@@ -6,7 +6,6 @@ package team
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
@@ -19,9 +18,12 @@ type commandStatus struct {
 	sequence   int64
 }
 
-func writeCommandStatuses(out *strings.Builder, statuses []commandStatus) {
+func writeCommandStatuses(out *overviewBuffer, statuses []commandStatus) {
 	heading := false
 	for _, status := range statuses {
+		if out.shortened {
+			break
+		}
 		if status.sequence == 0 {
 			continue
 		}

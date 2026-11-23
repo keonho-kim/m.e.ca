@@ -15,7 +15,7 @@ func TestDiscussionIsPublicAndDoesNotAssignWork(t *testing.T) {
 	r := testRoom(t)
 	third := identity.Member{ID: "Arjun", Session: "session_third"}
 	r.options.Store.(*memoryRoom).members = append(r.options.Store.(*memoryRoom).members, third)
-	r.reserve(third)
+	r.reserve(third, nil)
 	hana, ren, arjun := &Peer{ID: "Hana", room: r}, &Peer{ID: "Ren", room: r}, &Peer{ID: "Arjun", room: r}
 	work, err := hana.SetWork("Login errors", []string{"/project/auth"}, "Return 403 for locked accounts", 0)
 	if err != nil {

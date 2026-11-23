@@ -8,10 +8,13 @@ func (p *Projection) observations(input Input) string {
 	if p.work.text != "" && p.work.source == input.Observations {
 		return p.work.text
 	}
-	text := "Current team work (observed facts):\n" + input.Redact(input.Observations)
+	text := input.Redact(input.Observations)
 	p.work = summarySnapshot{}
 	if len(text) <= 256*1024 {
 		p.work = summarySnapshot{source: input.Observations, text: text}
 	}
 	return text
 }
+
+// ReleaseObservations discards the last derived view before a team worker waits.
+func (p *Projection) ReleaseObservations() { p.work = summarySnapshot{} }

@@ -89,16 +89,14 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 		// when an earlier operation produced the same resulting fingerprint.
 		notifyEvidence = fresh || len(value.ChangedPaths) > 0
 	}
-	var notify [MaxActive]*participant
-	n := 0
 	for id, live := range r.active {
 		if notifyEvidence && !live.closed && !live.leaving && r.needsAttentionLocked(value, id, work) {
-			notify[n] = live
-			n++
+			live.attention = value.Sequence
+			wake(live)
 		}
 	}
 	if work != nil {
-		if !r.work.SameCoordination(*work) && (len(work.Paths) > 0 || r.work.ContractChanged(*work) || !r.work.HasPaths(work.Member, nil)) {
+		if !r.work.SameCoordination(*work) && (len(work.Paths) > 0 || r.work.ContractChanged(*work) || r.work.DomainsChanged(*work) || !r.work.HasPaths(work.Member, nil)) {
 			r.recordProgress(work.ProgressKey())
 		}
 		work.Paths = value.Note.Work.Paths
@@ -132,10 +130,6 @@ func (r *Room) acceptPublic(value channel.Message, effect publicEffect) (channel
 	}
 	if live := r.active[value.From]; live != nil && (value.FromStream || value.Discussion) && strings.TrimSpace(value.Text) != "" {
 		live.spoke = true
-	}
-	for _, live := range notify[:n] {
-		live.attention = value.Sequence
-		wake(live)
 	}
 	r.mu.Unlock()
 	event := runrecord.Event{Presentation: value.Presentation, HistorySequence: value.Sequence, Kind: value.Kind(), Agent: value.From, Final: value.Final, Text: value.Text, Team: value.Note}

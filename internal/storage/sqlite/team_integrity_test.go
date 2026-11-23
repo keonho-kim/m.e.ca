@@ -77,7 +77,7 @@ func TestTeamConcurrentPublicationsReturnOwnSequence(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			page, err := root.TeamMessages(ctx, value.Sequence-1, value.Sequence, 1)
+			page, err := root.TeamMessages(ctx, value.Sequence-1, value.Sequence, teamchannel.PublicPage(1))
 			if err != nil || len(page) != 1 || page[0].Text != text {
 				t.Errorf("incorrect publication receipt: %v %v", page, err)
 			}

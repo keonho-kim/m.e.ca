@@ -8,30 +8,38 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
-	"strings"
+	"sync"
 
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 )
 
 type workContextKey struct {
-	names            [MaxActive]string
-	count, available int
-	revision         uint64
-	status           int64
-	discussion       int64
+	membership uint64
+	revision   uint64
+	status     int64
+	discussion int64
+}
+type workMember struct {
+	name    string
+	invited source.WorkDomain
 }
 type workBase struct {
-	key    workContextKey
-	scopes []contribution.Scope
-	text   string
+	key     workContextKey
+	members []workMember
+	scopes  []contribution.Scope
+	sizes   []int
+	roster  overviewPart
 }
 type workProjection struct {
 	base        *workBase
 	key         workContextKey
 	text        string
+	renderOnce  sync.Once
 	scopes      []contribution.Scope
 	statuses    []commandStatus
-	discussions [MaxActive]discussionPreview
+	discussions []discussionPreview
+	sources     map[int64]int
 }
 type decisionSnapshot struct {
 	view    *workProjection
@@ -39,19 +47,14 @@ type decisionSnapshot struct {
 }
 
 // Caller holds room state; inactive work must not remain in either cache.
-func (r *Room) invalidateWorkLocked() { r.workView, r.workBase = nil, nil }
+func (r *Room) invalidateWorkLocked() {
+	r.membershipRevision++
+	r.workView, r.workBase = nil, nil
+}
 
 // workKeyLocked captures membership and contributions at the same boundary.
 func (r *Room) workKeyLocked() workContextKey {
-	key := workContextKey{available: MaxActive - r.countLocked(), revision: r.work.Revision(), status: r.latestStatus, discussion: r.latestDiscussion}
-	for name, live := range r.active {
-		if !live.closed && !live.leaving {
-			key.names[key.count] = name
-			key.count++
-		}
-	}
-	slices.Sort(key.names[:key.count])
-	return key
+	return workContextKey{membership: r.membershipRevision, revision: r.work.Revision(), status: r.latestStatus, discussion: r.latestDiscussion}
 }
 
 func (r *Room) workSnapshot() decisionSnapshot {
@@ -78,12 +81,19 @@ func (r *Room) workSnapshot() decisionSnapshot {
 	baseKey.status, baseKey.discussion = 0, 0
 	base := r.workBase
 	if base == nil || base.key != baseKey {
-		base = &workBase{key: baseKey, scopes: r.work.Snapshot()}
+		members := make([]workMember, 0, len(r.active))
+		for name, live := range r.active {
+			if !live.closed && !live.leaving {
+				members = append(members, workMember{name, live.invited})
+			}
+		}
+		slices.SortFunc(members, func(a, b workMember) int { return cmp.Compare(a.name, b.name) })
+		base = &workBase{key: baseKey, members: members, scopes: r.work.Snapshot()}
 	}
 	var statuses []commandStatus
-	var discussions [MaxActive]discussionPreview
-	for i, name := range key.names[:key.count] {
-		live := r.active[name]
+	var discussions []discussionPreview
+	for _, member := range base.members {
+		live := r.active[member.name]
 		if len(live.statuses) > 0 {
 			for _, status := range live.statuses {
 				statuses = append(statuses, status)
@@ -91,15 +101,29 @@ func (r *Room) workSnapshot() decisionSnapshot {
 		} else if live.status.sequence != 0 {
 			statuses = append(statuses, live.status)
 		}
-		discussions[i] = live.discussion
+		if live.discussion.sequence != 0 {
+			discussions = append(discussions, live.discussion)
+		}
 	}
 	slices.SortFunc(statuses, func(a, b commandStatus) int { return cmp.Compare(a.sequence, b.sequence) })
 	r.mu.Unlock()
-	if base.text == "" {
-		base.text = base.render(0)
+	if base.roster.text == "" {
+		base.roster = base.renderRoster()
+		base.sizes = make([]int, len(base.scopes))
+		for i, scope := range base.scopes {
+			base.sizes[i] = contribution.ContextSize(scope)
+		}
 	}
 	view := &workProjection{key: key, base: base, scopes: base.scopes, statuses: statuses, discussions: discussions}
-	view.text = view.render(0)
+	if len(view.scopes)+len(view.discussions) > 0 {
+		view.sources = make(map[int64]int, len(view.scopes)+len(view.discussions))
+		for i, scope := range view.scopes {
+			view.sources[scope.Sequence] = i
+		}
+		for i, note := range view.discussions {
+			view.sources[note.sequence] = len(view.scopes) + i
+		}
+	}
 	r.mu.Lock()
 	// A slow formatter never replaces a newer snapshot made by another peer.
 	if r.workKeyLocked() == key {
@@ -110,11 +134,42 @@ func (r *Room) workSnapshot() decisionSnapshot {
 	return decisionSnapshot{view, through}
 }
 
-func (b *workBase) render(covered uint16) string {
-	var out strings.Builder
-	fmt.Fprintf(&out, "Active teammates: %s\nAvailable places: %d\nCurrent contributions:\n", strings.Join(b.key.names[:b.key.count], ", "), b.key.available)
-	for i, scope := range b.scopes {
-		contribution.WriteContext(&out, scope, covered&(1<<i) != 0)
+func (b *workBase) renderRoster() overviewPart {
+	var out overviewBuffer
+	out.WriteString("Active teammates: ")
+	for i, member := range b.members {
+		if out.shortened {
+			break
+		}
+		if i > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(member.name)
 	}
-	return out.String()
+	out.WriteByte('\n')
+	for _, member := range b.members {
+		if out.shortened {
+			break
+		}
+		if member.invited.Domain != "" {
+			fmt.Fprintf(&out, "%s joined for domain %s\n", member.name, member.invited)
+		}
+	}
+	if len(b.scopes) > 0 {
+		out.WriteString("Current work references:\n")
+	}
+	for _, scope := range b.scopes {
+		if out.shortened {
+			break
+		}
+		fmt.Fprintf(&out, "%s: current work #%d, revision %d", scope.Member, scope.Sequence, scope.Revision)
+		for _, domain := range scope.Domains {
+			if out.shortened {
+				break
+			}
+			fmt.Fprintf(&out, " · %s", domain)
+		}
+		out.WriteByte('\n')
+	}
+	return out.part()
 }

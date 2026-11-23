@@ -65,7 +65,7 @@ func (s *Service) snapshotPage(taskID, after string, limit int) Snapshot {
 			d := draft.Draft
 			d.Task = r.task.ID
 			d.TextBytes, d.ThinkingBytes = int64(draft.textBytes), int64(draft.thinkingBytes)
-			d.Text, d.Thinking = prefix(d.Text, min(4096, draftBudget)), prefix(d.Thinking, min(4096, max(0, draftBudget-len(d.Text))))
+			d.Text, d.Thinking = prefix(d.Text, min(draftPreviewBytes, draftBudget)), prefix(d.Thinking, min(draftPreviewBytes, max(0, draftBudget-len(d.Text))))
 			draftBudget -= len(d.Text) + len(d.Thinking)
 			d.Truncated = d.Truncated || int64(len(d.Text)) < d.TextBytes || int64(len(d.Thinking)) < d.ThinkingBytes
 			value.Drafts = append(value.Drafts, d)

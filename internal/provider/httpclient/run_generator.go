@@ -13,27 +13,35 @@ import (
 
 type runGenerator struct {
 	client  *Client
-	encoder protocol.Encoder
+	encoder *protocol.Encoder
 }
 
 // NewRunGenerator shares the connection, but never cached conversation state,
 // with other user requests. Its owner calls release after all Generate calls end.
 func (c *Client) NewRunGenerator() (modelapi.Generator, func()) {
-	return c.NewRunGeneratorWithBudget(0)
+	return c.newCachedRunGenerator(0)
 }
 
 // NewRunGeneratorWithBudget shares the transport while bounding this peer's retained encodings.
+// A zero budget runs without retaining an encoding cache.
 func (c *Client) NewRunGeneratorWithBudget(bytes int) (modelapi.Generator, func()) {
-	g := &runGenerator{client: c, encoder: protocol.NewEncoder(bytes)}
-	return g, g.encoder.Clear
+	if bytes <= 0 {
+		return &runGenerator{client: c}, func() {}
+	}
+	return c.newCachedRunGenerator(bytes)
+}
+
+func (c *Client) newCachedRunGenerator(bytes int) (modelapi.Generator, func()) {
+	encoder := protocol.NewEncoder(bytes)
+	return &runGenerator{client: c, encoder: &encoder}, encoder.Clear
 }
 
 func (g *runGenerator) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	return g.client.generate(ctx, request, emit, false, &g.encoder)
+	return g.client.generate(ctx, request, emit, false, g.encoder)
 }
 
 func (g *runGenerator) Prepare(ctx context.Context, request modelapi.Request) (modelapi.PreparedGeneration, error) {
-	return g.client.prepare(ctx, request, false, &g.encoder)
+	return g.client.prepare(ctx, request, false, g.encoder)
 }
 
 func (g *runGenerator) ImageInputSupported() bool { return g.client.ImageInputSupported() }

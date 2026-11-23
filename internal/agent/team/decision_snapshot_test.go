@@ -19,9 +19,9 @@ type snapshotRoom struct {
 	entered, release chan struct{}
 }
 
-func (s *snapshotRoom) TeamMessages(ctx context.Context, after, through int64, limit int) ([]channel.Message, error) {
+func (s *snapshotRoom) TeamMessages(ctx context.Context, after, through int64, budget channel.PageBudget) ([]channel.Message, error) {
 	s.once.Do(func() { close(s.entered); <-s.release })
-	return s.memoryRoom.TeamMessages(ctx, after, through, limit)
+	return s.memoryRoom.TeamMessages(ctx, after, through, budget)
 }
 
 func TestDecisionSnapshotDoesNotIncludeLaterWork(t *testing.T) {

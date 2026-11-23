@@ -21,10 +21,3 @@ func (u *requestBudget) begin(l Limits) {
 func (u *requestBudget) recordTools(n int) {
 	u.ToolCalls += n
 }
-func (u *requestBudget) model(limit int) bool {
-	if u.ModelCalls >= limit {
-		return false
-	}
-	u.ModelCalls++
-	return true
-}

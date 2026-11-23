@@ -19,6 +19,7 @@ const (
 	StorageCommitted       Event = Event(SqliteStorageCommitted)
 	StorageWriterWait      Event = Event(SqliteStorageWriterWait)
 	StorageCapacityLow     Event = "storage_capacity_low"
+	TeamInvitationPhase    Event = "team_invitation_phase"
 	ControlCompleted       Event = Event(ServerapiControlCompleted)
 	StreamClosed           Event = Event(ServerapiStreamClosed)
 	AccessRejected         Event = Event(ServerapiHttpRejected)
@@ -46,7 +47,7 @@ func Level(event Event) (slog.Level, bool) {
 		return slog.LevelWarn, true
 	case RunStarted, RunFinished, RequestStarted, RequestFinished, ServerListening, ApprovalWaiting, ApprovalDecided, ReporterSummary:
 		return slog.LevelInfo, true
-	case StorageCommitted, ControlCompleted, StreamClosed:
+	case StorageCommitted, ControlCompleted, StreamClosed, TeamInvitationPhase:
 		return slog.LevelDebug, true
 	case "skill_loaded", "approved", "approval_required":
 		return slog.LevelInfo, true

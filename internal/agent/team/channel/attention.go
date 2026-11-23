@@ -14,8 +14,11 @@ func (m Message) Attention(member string) bool {
 	if m.From == member || m.Passive || m.FromStream {
 		return false
 	}
-	if !m.Discussion || m.Note == nil {
+	if m.Note == nil {
 		return true
+	}
+	if !m.Discussion {
+		return len(m.Note.Mentions) == 0 || slices.Contains(m.Note.Mentions, member)
 	}
 	if m.Note.ReplyAuthor == member || slices.Contains(m.Note.Mentions, member) {
 		return true

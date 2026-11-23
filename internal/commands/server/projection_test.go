@@ -21,6 +21,16 @@ func projectionFixture() (*Service, *request) {
 	return s, r
 }
 
+func cleanupDraftFixture(t testing.TB, r *request) {
+	t.Helper()
+	for _, draft := range r.drafts {
+		draft.clearPreviews()
+	}
+	if err := r.closeDrafts(); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestReplayBoundsAndExpiredCursorSnapshot(t *testing.T) {
 	s, r := projectionFixture()
 	old := s.State().Cursor
@@ -54,6 +64,7 @@ func TestReplayBoundsAndExpiredCursorSnapshot(t *testing.T) {
 
 func TestDeltaRetryAndBorrowedToolBuffers(t *testing.T) {
 	s, r := projectionFixture()
+	t.Cleanup(func() { cleanupDraftFixture(t, r) })
 	cursor := s.State().Cursor
 	s.emit(r, record.Event{Kind: "generation_started", Agent: "Hana"})
 	s.emit(r, record.Event{Kind: "stream", Agent: "Hana", Text: "hello", Thinking: "plan"})
@@ -81,11 +92,12 @@ func TestDeltaRetryAndBorrowedToolBuffers(t *testing.T) {
 
 func TestLargeDraftDoesNotRetainFullSnapshots(t *testing.T) {
 	s, r := projectionFixture()
+	t.Cleanup(func() { cleanupDraftFixture(t, r) })
 	text := strings.Repeat("界", 100000)
 	s.emit(r, record.Event{Kind: "generation_started"})
 	s.emit(r, record.Event{Kind: "stream", Text: text, Thinking: text})
 	state := s.State()
-	if len(state.Drafts) != 1 || !state.Drafts[0].Truncated || len(state.Drafts[0].Text) > maxDraftBytes || s.feed.bytes > maxEventBytes {
+	if len(state.Drafts) != 1 || !state.Drafts[0].Truncated || len(state.Drafts[0].Text) > draftPreviewBytes || s.feed.bytes > maxEventBytes {
 		t.Fatal(state.Drafts, s.feed.bytes)
 	}
 }
@@ -116,5 +128,6 @@ func BenchmarkStreamProjection(b *testing.B) {
 		for n := 4096; n <= len(text); n += 4096 {
 			s.emit(r, record.Event{Kind: "stream", Text: text[:n]})
 		}
+		cleanupDraftFixture(b, r)
 	}
 }

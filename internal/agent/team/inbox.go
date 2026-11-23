@@ -46,7 +46,10 @@ func (p *Peer) Inbox(ctx context.Context) (run.ContextBatch, error) {
 	bytes := 0
 receive:
 	for p.Cursor < through {
-		messages, err := r.public.Read(ctx, r.options.Store, p.Cursor, through, 100)
+		page := channel.PublicPage(100)
+		page.Bytes -= bytes
+		page.AllowOversizedFirst = len(batch.Messages) == 0
+		messages, err := r.public.Read(ctx, r.options.Store, p.Cursor, through, page)
 		if err != nil {
 			return batch, err
 		}
@@ -57,11 +60,12 @@ receive:
 			message := observation.Message
 			if !message.Passive && (message.From != p.ID || message.OwnContext()) {
 				value := observation.Context
-				if bytes > 0 && bytes+len(value.Content) > channel.PageBytes {
+				cost := message.ContextBytes()
+				if len(batch.Messages) > 0 && cost > channel.PageBytes-bytes {
 					break receive
 				}
 				batch.Messages = append(batch.Messages, value)
-				bytes += len(value.Content)
+				bytes += cost
 				if message.From == "user" {
 					batch.Objective = message.Text
 					p.UserSequence = message.Sequence
@@ -79,7 +83,7 @@ receive:
 		p.receivedView = view
 	} else {
 		// A bounded receive page cannot use a newer snapshot as if its intervening notes were seen.
-		p.receivedView = decisionSnapshot{through: p.Cursor, view: &workProjection{text: fmt.Sprintf("Public notes received through #%d. More recent notes remain available with read_team_messages; list_team_members provides current contributions.", p.Cursor)}}
+		p.receivedView = decisionSnapshot{through: p.Cursor, view: &workProjection{text: teamOverviewTitle + fmt.Sprintf("Public notes received through #%d. More recent notes remain available with read_team_messages; list_team_members provides current contributions.", p.Cursor)}}
 		batch.Reconsider = true
 	}
 	if live := r.active[p.ID]; live != nil {
@@ -97,7 +101,7 @@ func (p *Peer) ReadMessages(ctx context.Context, after int64) ([]channel.Message
 	r.mu.Lock()
 	through := r.latestPublic
 	r.mu.Unlock()
-	values, err := r.public.Read(ctx, r.options.Store, after, through, 100)
+	values, err := r.public.Read(ctx, r.options.Store, after, through, channel.PublicPage(100))
 	if err != nil {
 		return nil, err
 	}

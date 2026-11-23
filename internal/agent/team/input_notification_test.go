@@ -22,9 +22,9 @@ type readCountingRoom struct {
 	reads atomic.Int64
 }
 
-func (s *readCountingRoom) TeamMessages(ctx context.Context, after, through int64, limit int) ([]channel.Message, error) {
+func (s *readCountingRoom) TeamMessages(ctx context.Context, after, through int64, budget channel.PageBudget) ([]channel.Message, error) {
 	s.reads.Add(1)
-	return s.memoryRoom.TeamMessages(ctx, after, through, limit)
+	return s.memoryRoom.TeamMessages(ctx, after, through, budget)
 }
 
 func TestTeamInputNotificationDeliversWhileAllWorkersAreIdle(t *testing.T) {
@@ -57,7 +57,7 @@ func TestTeamInputNotificationDeliversWhileAllWorkersAreIdle(t *testing.T) {
 		pending = []string{"A new user instruction"}
 		ready <- struct{}{}
 		synctest.Wait()
-		values, _ := store.TeamMessages(ctx, 0, 0, 10)
+		values, _ := store.TeamMessages(ctx, 0, 0, channel.PublicPage(10))
 		if len(values) != 2 || values[1].Text != "A new user instruction" || polls.Load() != 1 {
 			t.Fatal("input notification lost or duplicated the instruction", values, polls.Load())
 		}

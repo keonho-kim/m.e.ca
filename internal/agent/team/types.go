@@ -18,12 +18,22 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/work"
 )
 
-const MaxActive = 8
+const MaxMentions = 8
+
+// Invitation proposes one independent contribution for a new or restored peer.
+type Invitation struct {
+	Member  string
+	Domain  string
+	Message string
+	WorkRef int64
+}
 
 type MemberStatus struct {
 	ID      string              `json:"member_name"`
 	Summary string              `json:"summary,omitempty"`
 	Active  bool                `json:"active"`
+	Domain  string              `json:"domain,omitempty"`
+	WorkRef int64               `json:"work_ref,omitempty"`
 	Work    *contribution.Scope `json:"work,omitempty"`
 }
 type MemberPage struct {
@@ -42,17 +52,18 @@ type Repository interface {
 
 type Execute func(context.Context, identity.Member, string, *Peer) (run.Result, error)
 type Options struct {
-	Images        []media.Image
-	Store         Repository
-	Execute       Execute
-	Emit          func(runrecord.Event) error
-	Record        func(context.Context, runrecord.Event) error
-	PollSteering  func() []string
-	SteeringReady <-chan struct{}
-	Redact        func(string) string
-	MaxModelCalls int
-	MaxSeconds    int
-	ProjectRoot   string
+	Images         []media.Image
+	Store          Repository
+	Execute        Execute
+	MemoryPressure func() (bool, error)
+	Emit           func(runrecord.Event) error
+	Record         func(context.Context, runrecord.Event) error
+	PollSteering   func() []string
+	SteeringReady  <-chan struct{}
+	Redact         func(string) string
+	MaxModelCalls  int
+	MaxSeconds     int
+	ProjectRoot    string
 }
 type Result struct {
 	End         work.End

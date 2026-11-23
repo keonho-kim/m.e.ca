@@ -49,7 +49,7 @@ func BenchmarkFilteredState(b *testing.B) {
 func TestRejoinedAgentRejectsOldDraftGeneration(t *testing.T) {
 	s, r := projectionFixture()
 	r.originals = map[string]*draftOriginal{}
-	defer r.closeDrafts()
+	t.Cleanup(func() { cleanupDraftFixture(t, r) })
 	s.emit(r, record.Event{Kind: "generation_started", Agent: "Hana", RunID: "old"})
 	s.emit(r, record.Event{Kind: "stream", Agent: "Hana", RunID: "old", Text: strings.Repeat("old", 100)})
 	previous := r.drafts["Hana"].Generation

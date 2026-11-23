@@ -41,12 +41,12 @@ func BenchmarkPublicHistoryFanout(b *testing.B) {
 					for i := 0; i < b.N; i++ {
 						for range 8 {
 							if shared {
-								values, err := history.Read(context.Background(), store, message.Sequence-1, message.Sequence, 100)
+								values, err := history.Read(context.Background(), store, message.Sequence-1, message.Sequence, channel.PublicPage(100))
 								if err != nil || len(values) != 1 {
 									b.Fatal(err)
 								}
 							} else {
-								values, err := store.TeamMessages(context.Background(), message.Sequence-1, message.Sequence, 100)
+								values, err := store.TeamMessages(context.Background(), message.Sequence-1, message.Sequence, channel.PublicPage(100))
 								if err != nil || len(values) != 1 || values[0].Context().Content == "" {
 									b.Fatal(err)
 								}

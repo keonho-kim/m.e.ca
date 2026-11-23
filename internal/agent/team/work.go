@@ -5,16 +5,20 @@
 package team
 
 import (
+	"cmp"
+	"context"
 	"errors"
+	"slices"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64) (result contribution.Scope, resultErr error) {
+func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo int64, domains ...source.WorkDomain) (result contribution.Scope, resultErr error) {
 	r := p.room
 	if err := r.admitUser(); err != nil {
 		return contribution.Scope{}, err
@@ -26,7 +30,11 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 	if r.options.Redact != nil {
 		summary, contract = r.options.Redact(summary), r.options.Redact(contract)
 	}
-	requested := contribution.Describe(contribution.Scope{Member: p.ID, Summary: summary, Paths: paths, Contract: contract, ReplyTo: replyTo})
+	domains, err = r.parseWorkDomains(domains)
+	if err != nil {
+		return contribution.Scope{}, err
+	}
+	requested := contribution.Describe(contribution.Scope{Member: p.ID, Summary: summary, Paths: paths, Contract: contract, ReplyTo: replyTo, Domains: domains})
 	r.logMu.Lock()
 	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
 	if err := r.ctx.Err(); err != nil {
@@ -43,6 +51,14 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 		return contribution.Scope{}, err
 	}
 	candidate, err := r.work.Prepare(requested)
+	if err == nil {
+		for _, domain := range candidate.Domains {
+			if owner := r.domainOwnerLocked(domain, p.ID); owner != "" {
+				err = faults.Errorf(diagcatalog.TeamWorkDomainAlreadyHeld, owner, domain)
+				break
+			}
+		}
+	}
 	if err == nil && r.work.Matches(candidate) {
 		value := r.work.Scope(p.ID)
 		r.mu.Unlock()
@@ -53,7 +69,7 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 		return contribution.Scope{}, &faults.Failure{Code: diagcatalog.TeamWorkConflict, Detail: err.Error(), Next: diagcatalog.Text(diagcatalog.TeamReadTheNamedTeammateSWorkAgree)}
 	}
 	r.mu.Unlock()
-	note.Work = &runrecord.TeamWork{Paths: candidate.Paths, Contract: contract, Revision: candidate.Revision}
+	note.Work = &runrecord.TeamWork{Paths: candidate.Paths, Contract: contract, Revision: candidate.Revision, Domains: candidate.Domains}
 	value, err := r.storePublic(channel.Message{From: p.ID, Text: summary, Declaration: true, Note: note})
 	if err != nil {
 		return contribution.Scope{}, err
@@ -65,6 +81,39 @@ func (p *Peer) SetWork(summary string, paths []string, contract string, replyTo 
 	current := r.work.Scope(p.ID)
 	r.mu.Unlock()
 	return current, nil
+}
+
+func (r *Room) parseWorkDomains(domains []source.WorkDomain) ([]source.WorkDomain, error) {
+	if len(domains) > source.MaxWorkDomains {
+		return nil, faults.Errorf(diagcatalog.ToolRequiresToObjects, "domains", 0, source.MaxWorkDomains)
+	}
+	values := slices.Clone(domains)
+	for i, domain := range values {
+		value, _, err := r.parseWorkDomain(r.ctx, domain)
+		if err != nil {
+			return nil, err
+		}
+		for _, previous := range values[:i] {
+			if previous.Matches(value) {
+				return nil, faults.Errorf(diagcatalog.TeamWorkDomainsMustBeDistinct)
+			}
+		}
+		values[i] = value
+	}
+	slices.SortFunc(values, func(a, b source.WorkDomain) int { return cmp.Compare(a.Domain, b.Domain) })
+	return values, nil
+}
+
+func (r *Room) parseWorkDomain(ctx context.Context, value source.WorkDomain) (source.WorkDomain, channel.Metadata, error) {
+	if r.options.Redact != nil {
+		value.Domain = r.options.Redact(value.Domain)
+	}
+	value, err := source.ParseWorkDomain(value)
+	if err != nil {
+		return source.WorkDomain{}, channel.Metadata{}, err
+	}
+	reference, err := r.workReference(ctx, value.WorkRef)
+	return value, reference, err
 }
 
 // BeginDecision captures the last conversation actually admitted to this model call.
@@ -82,9 +131,14 @@ func (p *Peer) BeginDecision() {
 	if p.contextView != p.decisionView.view {
 		p.contextView, p.contextText = nil, ""
 	}
-	through := p.Cursor
+	r.pruneChangesLocked()
+}
+
+// Idle peers without active commands refresh their inbox before making another decision.
+func (r *Room) pruneChangesLocked() {
+	through := r.latestPublic
 	for _, live := range r.active {
-		if !live.closed && !live.leaving {
+		if !live.closed && !live.leaving && (!live.waiting || len(live.statuses) != 0) {
 			through = min(through, live.reviewed)
 		}
 	}

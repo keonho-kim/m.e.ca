@@ -14,6 +14,21 @@ import (
 // PageBytes bounds a receive page, independently of the accepted size of one record.
 const PageBytes = 16 * 1024 * 1024
 
+// PageBudget admits originals without splitting the only record in an empty receive batch.
+type PageBudget struct {
+	Entries             int
+	Bytes               int
+	AllowOversizedFirst bool
+}
+
+func PublicPage(entries int) PageBudget {
+	return PageBudget{Entries: entries, Bytes: PageBytes, AllowOversizedFirst: true}
+}
+
+func (p PageBudget) Fits(entries, used, cost int) bool {
+	return entries < p.Entries && (p.AllowOversizedFirst && entries == 0 || cost <= p.Bytes-used)
+}
+
 type Message struct {
 	Presentation string                    `json:"presentation,omitempty"`
 	Images       []media.Image             `json:"images,omitempty"`
@@ -39,10 +54,14 @@ func (m Message) ContextBytes() int {
 	for _, image := range m.Images {
 		imageBytes += len(image.Data)*4/3 + 4096
 	}
+	return m.contextTextBytes() + imageBytes
+}
+
+func (m Message) contextTextBytes() int {
 	if m.Prefix != nil {
-		return len(m.Text) + len(*m.Prefix) + imageBytes
+		return len(m.Text) + len(*m.Prefix)
 	}
-	size := len(m.Text) + len(m.From) + 512 + imageBytes
+	size := len(m.Text) + len(m.From) + 512
 	if n := m.Note; n != nil {
 		size += len(n.ReplyAuthor)
 		for _, name := range n.Mentions {
@@ -52,6 +71,9 @@ func (m Message) ContextBytes() int {
 			size += len(w.Contract)
 			for _, path := range w.Paths {
 				size += len(path) + 2
+			}
+			for _, work := range w.Domains {
+				size += len(work.Domain) + 32
 			}
 		}
 	}
@@ -79,7 +101,7 @@ func (m Message) Kind() string {
 }
 
 type Reader interface {
-	TeamMessages(context.Context, int64, int64, int) ([]Message, error)
+	TeamMessages(context.Context, int64, int64, PageBudget) ([]Message, error)
 }
 
 // Metadata identifies a public record without restoring its potentially large body.

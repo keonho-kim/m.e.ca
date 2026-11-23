@@ -79,11 +79,11 @@ func (p *Projection) buildOnce(input Input) (modelapi.Request, error) {
 		bytes += message.ContextBytes()
 	}
 	if input.Observations != "" {
-		message := modelapi.Message{Role: "user", Content: p.observations(input)}
+		message := modelapi.Message{Role: "user", Content: p.observations(input), TransientObservation: true}
 		messages = append(messages, message)
 		bytes += message.ContextBytes()
 	} else {
-		p.work = summarySnapshot{}
+		p.ReleaseObservations()
 	}
 	if input.ObservationContinuations != "" {
 		message := modelapi.Message{Role: "user", Content: input.ObservationContinuations}

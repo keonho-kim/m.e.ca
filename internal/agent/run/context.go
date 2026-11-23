@@ -24,10 +24,7 @@ func excerpt(text string, limit int) string {
 	return text[:end] + "\n[excerpt; full record retained]"
 }
 func (s *execution) request(ctx context.Context) (modelapi.Request, error) {
-	var retained int64
-	for _, message := range s.messages {
-		retained += int64(message.ContextBytes())
-	}
+	retained := contextMessageBytes(s.messages)
 	if err := s.reserveContext(retained); err != nil {
 		return modelapi.Request{}, err
 	}

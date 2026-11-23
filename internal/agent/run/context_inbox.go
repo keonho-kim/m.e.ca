@@ -46,6 +46,11 @@ func (s *execution) admitContext(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, faults.Errorf(diagcatalog.RunCooperativeContextRequiresAnAtomicReceiveCursor)
 	}
+	if len(batch.Messages) != 0 {
+		if err := s.reserveContext(contextMessageBytes(s.messages) + contextMessageBytes(batch.Messages)); err != nil {
+			return false, err
+		}
+	}
 	entries := make([]runrecord.Entry, len(batch.Messages))
 	for i := range batch.Messages {
 		message := &batch.Messages[i]

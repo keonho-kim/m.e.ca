@@ -13,11 +13,21 @@ import (
 
 var errModelBudget = faults.Errorf(diagcatalog.RunModelCallBudgetExhausted)
 
-func (s *execution) modelCall() bool {
-	if !s.usage.model(s.limits.MaxModelCalls) {
-		return false
+func (s *execution) modelCall(ctx context.Context) error {
+	if s.usage.ModelCalls >= s.limits.MaxModelCalls {
+		return errModelBudget
 	}
-	return s.runner.AdmitModel == nil || s.runner.AdmitModel()
+	if s.runner.AdmitModel != nil {
+		admitted, err := s.runner.AdmitModel(ctx)
+		if err != nil {
+			return err
+		}
+		if !admitted {
+			return errModelBudget
+		}
+	}
+	s.usage.ModelCalls++
+	return nil
 }
 
 func (s *execution) prepareDecision(ctx context.Context, hasDraft bool) (bool, error) {

@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 )
 
 func (s *execution) contextBaseBytes() int64 {
@@ -17,6 +18,14 @@ func (s *execution) contextBaseBytes() int64 {
 		bytes += int64(read.ContextBytes())
 	}
 	return bytes
+}
+
+func contextMessageBytes(messages []modelapi.Message) int64 {
+	var total int64
+	for _, message := range messages {
+		total += int64(message.ContextBytes())
+	}
+	return total
 }
 
 func (s *execution) reserveContext(bytes int64) error {

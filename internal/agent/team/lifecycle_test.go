@@ -71,8 +71,12 @@ func TestSharedDeliveryFailureStopsTheWholeRequest(t *testing.T) {
 func TestModelAdmissionBudgetIsShared(t *testing.T) {
 	var admitted atomic.Int32
 	result, err := Run(context.Background(), Options{Store: &memoryRoom{}, Emit: quiet, MaxModelCalls: 1, MaxSeconds: 5,
-		Execute: func(_ context.Context, _ identity.Member, _ string, peer *Peer) (run.Result, error) {
-			if peer.AdmitModel() {
+		Execute: func(ctx context.Context, _ identity.Member, _ string, peer *Peer) (run.Result, error) {
+			allowed, err := peer.AdmitModel(ctx)
+			if err != nil {
+				return run.Result{}, err
+			}
+			if allowed {
 				admitted.Add(1)
 			}
 			return run.Result{Status: runrecord.Stopped, End: work.End{Reason: "model call budget exhausted"}}, nil
@@ -99,7 +103,7 @@ func TestConcurrentRestorationStartsOnePrivateSession(t *testing.T) {
 	var workers sync.WaitGroup
 	for range 20 {
 		workers.Go(func() {
-			if _, err := p.AddMember(r.ctx, "Arjun", "Check the remaining work"); err != nil {
+			if _, err := p.AddMember(r.ctx, Invitation{Member: "Arjun", Domain: "remaining-work", Message: "Check the remaining work"}); err != nil {
 				t.Error(err)
 			}
 		})

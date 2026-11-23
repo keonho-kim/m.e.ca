@@ -99,6 +99,31 @@ func TestActualChangesInvalidateOnlyRelatedOlderCandidates(t *testing.T) {
 	}
 }
 
+func TestPathFactBudgetKeepsStaleWriteFence(t *testing.T) {
+	var s State
+	if err := setScope(&s, "Ren", "review output", []string{"/p"}); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 2048 {
+		path := fmt.Sprintf("/p/%d/%s", i, strings.Repeat("x", 900))
+		s.Record("Hana", []string{path}, int64(i+1))
+	}
+	if s.discardedThrough == 0 || s.changeBytes > pathFactBytes {
+		t.Fatalf("path facts were not bounded: bytes=%d discarded=%d", s.changeBytes, s.discardedThrough)
+	}
+	target := []string{"/p/0/" + strings.Repeat("x", 900)}
+	if err := s.Check("Ren", target, 0); err == nil {
+		t.Fatal("eviction accepted a stale write")
+	}
+	if err := s.Check("Ren", target, s.latest); err != nil {
+		t.Fatal("a fresh decision could not continue", err)
+	}
+	s.Prune(s.latest)
+	if s.changes != nil || s.changeBytes != 0 {
+		t.Fatal("reviewed path facts retain their allocation")
+	}
+}
+
 func TestConsumedFactsAndReleasedScopesDropReferences(t *testing.T) {
 	var s State
 	setScope(&s, "Hana", "current work", []string{"/p/file"})

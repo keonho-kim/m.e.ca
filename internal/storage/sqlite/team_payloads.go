@@ -79,7 +79,7 @@ func (s *Store) roomPayload(ctx context.Context, id string, size int, body []byt
 	if err := json.Unmarshal(body, &reference); err != nil || reference.Sequence < 1 {
 		return nil, faults.Errorf(diagcatalog.SqliteInvalidPublicConversationReference)
 	}
-	messages, err := s.room.TeamMessages(ctx, reference.Sequence-1, reference.Sequence, 1)
+	messages, err := s.room.TeamMessages(ctx, reference.Sequence-1, reference.Sequence, channel.PublicPage(1))
 	if err != nil {
 		return nil, err
 	}

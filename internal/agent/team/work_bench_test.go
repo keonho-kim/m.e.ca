@@ -18,7 +18,7 @@ import (
 
 func BenchmarkTeamWorkContext(b *testing.B) {
 	r := &Room{active: make(map[string]*participant)}
-	for i := range MaxActive {
+	for i := range 8 {
 		name := identity.Name(i)
 		r.active[name] = &participant{}
 		value, err := r.work.Prepare(contribution.Describe(contribution.Scope{Member: name, Summary: "Implement the independent contribution", Paths: []string{fmt.Sprintf("/project/part%d", i)}}))
@@ -38,7 +38,7 @@ func BenchmarkTeamWorkContext(b *testing.B) {
 func BenchmarkTeamCoveredContext(b *testing.B) {
 	r := &Room{active: make(map[string]*participant)}
 	var history []model.Message
-	for i := range MaxActive {
+	for i := range 8 {
 		name := identity.Name(i)
 		r.active[name] = &participant{}
 		summary, contract := strings.Repeat("summary ", 128), strings.Repeat("contract ", 128)

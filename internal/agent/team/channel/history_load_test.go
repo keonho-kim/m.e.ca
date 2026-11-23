@@ -21,7 +21,7 @@ type sharedLargeReader struct {
 	body             string
 }
 
-func (r *sharedLargeReader) TeamMessages(ctx context.Context, _, _ int64, _ int) ([]Message, error) {
+func (r *sharedLargeReader) TeamMessages(ctx context.Context, _, _ int64, _ PageBudget) ([]Message, error) {
 	if r.calls.Add(1) == 1 {
 		close(r.entered)
 	}
@@ -42,7 +42,7 @@ func TestOversizedConcurrentReadSharesOnlyItsInflightBody(t *testing.T) {
 	}
 	out := make(chan result, 8)
 	for range 8 {
-		go func() { v, e := h.Read(context.Background(), r, 0, 1, 100); out <- result{v, e} }()
+		go func() { v, e := h.Read(context.Background(), r, 0, 1, PublicPage(100)); out <- result{v, e} }()
 	}
 	<-r.entered
 	deadline := time.Now().Add(3 * time.Second)
@@ -69,7 +69,7 @@ func TestOversizedConcurrentReadSharesOnlyItsInflightBody(t *testing.T) {
 	if r.calls.Load() != 1 || h.loading != nil || len(h.values) != 0 {
 		t.Fatal("oversized body was copied or retained", r.calls.Load())
 	}
-	if _, err := h.Read(context.Background(), r, 0, 1, 100); err != nil || r.calls.Load() != 2 {
+	if _, err := h.Read(context.Background(), r, 0, 1, PublicPage(100)); err != nil || r.calls.Load() != 2 {
 		t.Fatal("completed oversized load was retained", err)
 	}
 }
@@ -78,11 +78,11 @@ func TestCancelledWaiterDoesNotCancelSharedRead(t *testing.T) {
 	r := &sharedLargeReader{entered: make(chan struct{}), release: make(chan struct{}), body: "text"}
 	var h History
 	owner := make(chan error, 1)
-	go func() { _, err := h.Read(context.Background(), r, 0, 1, 100); owner <- err }()
+	go func() { _, err := h.Read(context.Background(), r, 0, 1, PublicPage(100)); owner <- err }()
 	<-r.entered
 	ctx, cancel := context.WithCancel(context.Background())
 	waiter := make(chan error, 1)
-	go func() { _, err := h.Read(ctx, r, 0, 1, 100); waiter <- err }()
+	go func() { _, err := h.Read(ctx, r, 0, 1, PublicPage(100)); waiter <- err }()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
 		h.mu.Lock()
@@ -114,9 +114,9 @@ func TestCancelledOriginalReaderLetsLiveWaiterReload(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	owner, waiter := make(chan error, 1), make(chan error, 1)
-	go func() { _, err := h.Read(ctx, r, 0, 1, 100); owner <- err }()
+	go func() { _, err := h.Read(ctx, r, 0, 1, PublicPage(100)); owner <- err }()
 	<-r.entered
-	go func() { _, err := h.Read(context.Background(), r, 0, 1, 100); waiter <- err }()
+	go func() { _, err := h.Read(context.Background(), r, 0, 1, PublicPage(100)); waiter <- err }()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
 		h.mu.Lock()

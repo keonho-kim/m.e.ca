@@ -44,6 +44,9 @@ func (m Message) ContextPrefix() string {
 			for _, path := range work.Paths {
 				size += len(path) + 2
 			}
+			for _, domain := range work.Domains {
+				size += len(domain.Domain) + 24
+			}
 		}
 	}
 	text.Grow(size)
@@ -70,6 +73,18 @@ func (m Message) ContextPrefix() string {
 					text.WriteString(", ")
 				}
 				text.WriteString(path)
+			}
+			if work.Domains != nil {
+				text.WriteString("\nWork domains: ")
+				if len(work.Domains) == 0 {
+					text.WriteString("released")
+				}
+				for i, domain := range work.Domains {
+					if i > 0 {
+						text.WriteString(", ")
+					}
+					text.WriteString(domain.String())
+				}
 			}
 			if work.Contract != "" {
 				text.WriteString("\nDeclared interface/behavior: ")

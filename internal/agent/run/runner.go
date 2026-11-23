@@ -34,7 +34,7 @@ type Runner struct {
 	BeforeDecision           func()
 	ContextObservations      func([]modelapi.Message) string
 	OnAnswer                 func(context.Context, string) (bool, error)
-	AdmitModel               func() bool
+	AdmitModel               func(context.Context) (bool, error)
 	Deadline                 time.Time
 	Inference                *inference.Settings
 	PreviousRun              *runrecord.Checkpoint

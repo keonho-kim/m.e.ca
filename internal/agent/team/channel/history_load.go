@@ -12,24 +12,25 @@ import (
 
 type historyLoad struct {
 	after, through int64
-	limit, waiters int
+	budget         PageBudget
+	waiters        int
 	done           chan struct{}
 	values         []Entry
 	err            error
 }
 
-func (h *History) Read(ctx context.Context, store Reader, after, through int64, limit int) ([]Entry, error) {
+func (h *History) Read(ctx context.Context, store Reader, after, through int64, budget PageBudget) ([]Entry, error) {
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		h.mu.Lock()
-		if values, ok := h.cached(after, through, limit); ok {
+		if values, ok := h.cached(after, through, budget); ok {
 			h.mu.Unlock()
 			return values, nil
 		}
 		if pending := h.loading; pending != nil {
-			same := pending.after == after && pending.through == through && pending.limit == limit
+			same := pending.after == after && pending.through == through && pending.budget == budget
 			if same {
 				pending.waiters++
 			}
@@ -51,11 +52,11 @@ func (h *History) Read(ctx context.Context, store Reader, after, through int64, 
 			}
 			continue
 		}
-		pending := &historyLoad{after: after, through: through, limit: limit, done: make(chan struct{})}
+		pending := &historyLoad{after: after, through: through, budget: budget, done: make(chan struct{})}
 		oldAfter, oldThrough := h.after, h.through
 		h.loading = pending
 		h.mu.Unlock()
-		messages, err := store.TeamMessages(ctx, after, through, limit)
+		messages, err := store.TeamMessages(ctx, after, through, budget)
 		var values []Entry
 		if err == nil {
 			values = make([]Entry, len(messages))

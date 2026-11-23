@@ -16,6 +16,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 	"github.com/keonho-kim/meca/internal/agent/team/identity"
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/work"
@@ -24,16 +25,20 @@ import (
 )
 
 type participant struct {
-	member          identity.Member
-	wake            chan struct{}
-	leaving, closed bool
-	spoke           bool
-	waiting         bool
-	reviewed        int64
-	attention       int64
-	discussion      discussionPreview
-	status          commandStatus
-	statuses        map[string]commandStatus
+	member            identity.Member
+	invited           source.WorkDomain
+	invitationID      uint64
+	inviteStarted     time.Time
+	firstCallReserved bool
+	wake              chan struct{}
+	leaving, closed   bool
+	spoke             bool
+	waiting           bool
+	reviewed          int64
+	attention         int64
+	discussion        discussionPreview
+	status            commandStatus
+	statuses          map[string]commandStatus
 }
 type Room struct {
 	mu                                  sync.Mutex
@@ -51,6 +56,9 @@ type Room struct {
 	workers                             sync.WaitGroup
 	changed                             chan struct{}
 	active                              map[string]*participant
+	pendingInvitations                  map[*invitationReservation]struct{}
+	nextInvitationID                    uint64
+	membershipRevision                  uint64
 	result                              Result
 	input                               string
 	firstMessage                        int64
@@ -65,6 +73,8 @@ type Room struct {
 	userChanged                         chan struct{}
 	deadline                            time.Time
 	modelCalls                          int
+	reservedModelCalls                  int
+	modelBudgetChanged                  chan struct{}
 	budgetExhausted                     bool
 	finished                            bool
 	progress, idleEpoch                 uint64
@@ -151,7 +161,7 @@ func (r *Room) initialize() error {
 	r.firstMessage = message.Sequence
 	initial := make([]*participant, 0, len(members))
 	for _, member := range members {
-		initial = append(initial, r.reserve(member))
+		initial = append(initial, r.reserve(member, nil))
 	}
 	for _, live := range initial {
 		if err := r.launch(live); err != nil {

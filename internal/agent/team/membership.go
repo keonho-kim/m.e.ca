@@ -1,104 +1,19 @@
-// Purpose: Serialize stable peer invitations and departure while keeping historical identities paged in storage.
+// Purpose: Finalize peer departure and page current and historical membership.
 // Pattern: Membership transitions with repository-owned registration.
-// Usage: Team tools invoke Peer methods; start occupies at most eight slots including closing peers.
+// Usage: Team tools close a peer or inspect the room roster.
 // Related: internal/agent/team/worker.go, internal/agent/team/types.go.
 package team
 
 import (
 	"context"
 	"errors"
-
-	"time"
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
-	"github.com/keonho-kim/meca/internal/agent/team/identity"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (p *Peer) AddMember(ctx context.Context, id, message string) (result map[string]any, resultErr error) {
-	r := p.room
-	if err := r.admitUser(); err != nil {
-		return nil, err
-	}
-	r.memberMu.Lock()
-	defer r.memberMu.Unlock()
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	r.mu.Lock()
-	count, finished := r.countLocked(), r.finished
-	live := r.active[id]
-	decisionErr := p.checkUserDecisionLocked()
-	r.mu.Unlock()
-	if decisionErr != nil {
-		return nil, decisionErr
-	}
-	if finished || r.ctx.Err() != nil {
-		return nil, faults.Errorf(diagcatalog.TeamTheCurrentTeamRequestHasEnded)
-	}
-	if live != nil {
-		status := "already_active"
-		if live.leaving {
-			status = "closing"
-		}
-		return map[string]any{"status": status, "member_name": id, "available": MaxActive - count}, nil
-	}
-	if count >= MaxActive {
-		return map[string]any{"status": "capacity_full", "active": count, "available": 0, "next": "Continue your contribution or coordinate with active peers; do not repeatedly retry the invitation."}, nil
-	}
-	var member identity.Member
-	var err error
-	status := "restored"
-	if id == "" {
-		member, err = r.options.Store.CreateTeamAgent(ctx)
-		status = "created"
-	} else {
-		member, err = r.options.Store.TeamMember(ctx, id)
-	}
-	if err != nil {
-		return nil, err
-	}
-	publicationStarted := false
-	defer func() {
-		if status == "created" && !publicationStarted {
-			flush, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			defer cancel()
-			resultErr = errors.Join(resultErr, r.options.Store.DiscardTeamAgent(flush, member))
-		}
-	}()
-	// Private DB creation may be slow. Public messages and steering remain
-	// available throughout preparation; admit them before committing membership.
-	if err := r.admitUser(); err != nil {
-		return nil, err
-	}
-	r.logMu.Lock()
-	defer func() { resultErr = errors.Join(resultErr, r.endPublication()) }()
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	r.mu.Lock()
-	count, finished = r.countLocked(), r.finished
-	decisionErr = p.checkUserDecisionLocked()
-	r.mu.Unlock()
-	if decisionErr != nil {
-		return nil, decisionErr
-	}
-	if finished || r.ctx.Err() != nil {
-		return nil, faults.Errorf(diagcatalog.TeamTheCurrentTeamRequestHasEnded)
-	}
-	// A publication attempt may have committed even if delivery then fails.
-	// Preserve that registration rather than deleting potentially referenced state.
-	publicationStarted = true
-	if _, err = r.appendPublic(channel.Message{From: p.ID, Text: member.ID + ": " + message}); err != nil {
-		return nil, err
-	}
-	if err = r.start(member); err != nil {
-		return nil, err
-	}
-	return map[string]any{"status": status, "member_name": member.ID, "active": count + 1, "available": MaxActive - count - 1}, nil
-}
 func (p *Peer) Leave(ctx context.Context, message string) (depart bool, resultErr error) {
 	r := p.room
 	if err := r.admitUser(); err != nil {
@@ -149,6 +64,7 @@ func (p *Peer) Leave(ctx context.Context, message string) (depart bool, resultEr
 		return false, nil
 	}
 	live.leaving = true
+	r.invalidateWorkLocked()
 	return true, nil
 }
 func (p *Peer) Members(ctx context.Context, after string) (MemberPage, error) {
@@ -167,6 +83,9 @@ func (p *Peer) Members(ctx context.Context, after string) (MemberPage, error) {
 	for _, member := range members {
 		live := r.active[member.ID]
 		value := MemberStatus{ID: member.ID, Summary: member.Summary, Active: live != nil && !live.closed && !live.leaving}
+		if value.Active {
+			value.Domain, value.WorkRef = live.invited.Domain, live.invited.WorkRef
+		}
 		if scope := r.work.Scope(member.ID); scope.Revision > 0 {
 			value.Work = &scope
 		}

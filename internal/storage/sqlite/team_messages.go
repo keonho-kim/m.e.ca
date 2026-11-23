@@ -52,27 +52,36 @@ func (s *Store) AppendTeamMessage(ctx context.Context, message teamchannel.Messa
 	return message, nil
 }
 
-func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit int) ([]teamchannel.Message, error) {
+func (s *Store) TeamMessages(ctx context.Context, after, through int64, budget teamchannel.PageBudget) ([]teamchannel.Message, error) {
 	if through == 0 {
 		through = 1 << 62
 	}
-	if after < 0 || through < after || limit < 1 || limit > 200 {
+	if after < 0 || through < after || budget.Entries < 1 || budget.Entries > 200 || budget.Bytes < 0 || budget.Bytes > teamchannel.PageBytes {
 		return nil, faults.Errorf(diagcatalog.SqliteInvalidRoomPage)
 	}
-	page, err := s.recordPage(ctx, "SELECT t.sequence,t.kind,COALESCE(m.body,e.body),COALESCE(m.refs,e.refs),COALESCE(m.raw_bytes,e.raw_bytes) FROM timeline t LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence WHERE t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN ('team_message','team_progress','team_work','team_discussion','team_observation','team_status')) ORDER BY t.sequence LIMIT ?", after, through, limit)
+	// Select by declared size before projecting record bodies or frozen prefixes.
+	const query = `WITH candidates AS (
+ SELECT t.sequence, t.kind, t.source_sequence, COALESCE(m.raw_bytes, e.raw_bytes) AS size
+ FROM timeline t
+ LEFT JOIN messages m ON t.kind='message' AND m.sequence=t.source_sequence
+ LEFT JOIN tool_events e ON t.kind='event' AND e.sequence=t.source_sequence
+ WHERE t.sequence>? AND t.sequence<=? AND (m.role='user' OR e.kind IN
+ ('team_message','team_progress','team_work','team_discussion','team_observation','team_status'))
+ ORDER BY t.sequence LIMIT ?
+), budgeted AS (
+ SELECT *, SUM(size) OVER (ORDER BY sequence) AS used, ROW_NUMBER() OVER (ORDER BY sequence) AS ordinal
+ FROM candidates
+)
+SELECT p.sequence, p.kind, COALESCE(m.body,e.body), COALESCE(m.refs,e.refs), p.size
+FROM budgeted p
+LEFT JOIN messages m ON p.kind='message' AND m.sequence=p.source_sequence
+LEFT JOIN tool_events e ON p.kind='event' AND e.sequence=p.source_sequence
+WHERE p.used<=? OR (? AND p.ordinal=1)
+ORDER BY p.sequence`
+	page, err := s.recordPage(ctx, query, after, through, budget.Entries, budget.Bytes, budget.AllowOversizedFirst)
 	if err != nil {
 		return nil, err
 	}
-	// Admit the page before reading frozen prefixes or any large original body.
-	bytes, count := 0, 0
-	for _, record := range page {
-		if count > 0 && record.size > teamchannel.PageBytes-bytes {
-			break
-		}
-		bytes += record.size
-		count++
-	}
-	page = page[:count]
 	prefixes, err := s.publicPrefixes(ctx, page)
 	if err != nil {
 		return nil, err
@@ -80,7 +89,7 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 	out := make([]teamchannel.Message, 0, len(page))
 	size := 0
 	for _, record := range page {
-		if size+record.size > teamchannel.PageBytes && len(out) > 0 {
+		if !budget.Fits(len(out), size, record.size) {
 			break
 		}
 		message, err := s.publicMessage(ctx, record, prefixes[record.sequence])
@@ -89,7 +98,7 @@ func (s *Store) TeamMessages(ctx context.Context, after, through int64, limit in
 		}
 
 		cost := max(record.size, message.ContextBytes())
-		if size+cost > teamchannel.PageBytes && len(out) > 0 {
+		if !budget.Fits(len(out), size, cost) {
 			break
 		}
 		size += cost

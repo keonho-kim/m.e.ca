@@ -4,7 +4,11 @@
 // Related: internal/agent/team/types.go, internal/storage/sqlite/team_members.go.
 package identity
 
-import "slices"
+import (
+	"slices"
+	"strconv"
+	"strings"
+)
 
 type Member struct {
 	ID      string `json:"id"`
@@ -12,4 +16,14 @@ type Member struct {
 	Summary string `json:"summary,omitempty"`
 }
 
-func ValidName(id string) bool { return slices.Contains(names[:], id) }
+func ValidName(id string) bool {
+	name, suffix, numbered := strings.Cut(id, "-")
+	if !slices.Contains(names[:], name) {
+		return false
+	}
+	if !numbered {
+		return true
+	}
+	round, err := strconv.Atoi(suffix)
+	return err == nil && round >= 2 && strconv.Itoa(round) == suffix
+}

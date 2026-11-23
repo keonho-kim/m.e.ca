@@ -12,6 +12,7 @@ import (
 
 func TestPresentationOrderSurvivesSnapshots(t *testing.T) {
 	s, r := projectionFixture()
+	t.Cleanup(func() { cleanupDraftFixture(t, r) })
 	s.emit(r, record.Event{Presentation: "request.00000000000000000001", Kind: "generation_started", Agent: "z"})
 	s.emit(r, record.Event{Kind: "stream", Agent: "z", Thinking: "first"})
 	first := s.State().Drafts[0].StartSequence

@@ -28,6 +28,12 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 독립 작업은 같은 요청의 예산 안에서 병렬 실행한다. 확인한 변경 범위가 겹치면 예약으로 조율하고 실제 실행 전에 다시 확인한다. 공유 명령 출력 예산은 팀 전체에서 동시에 복원하는 본문의 양을 제한한다. [팀 변경 범위](../internal/tools/team/workspace/) · [출력 복원 예산](../internal/tools/local/process/projection.go)
 
+팀 요청은 Provider 인코딩 캐시 예산을 공유한다. 가용 캐시가 있는 실행에만 할당하고 종료 시 반환한다. 다른 팀원은 캐시 보유 없이 같은 모델 요청 경로를 이용한다. [팀 실행과 인코딩 캐시](../internal/commands/teamrequest/peer.go)
+
+초대의 작업과 첫 모델 호출을 먼저 예약한 뒤 멤버십 잠금 밖에서 개인 세션을 준비한다. 합류는 공용 기록의 순서에 맞춰 확정한다. 팀 요약은 공유 현황과 이미 읽은 공용 기록을 재사용하며, UTF-8 256KiB 안에 팀원·업무 참조·명령 상태를 우선 담는다. [초대 예약과 합류](../internal/agent/team/invitation.go) · [요약 예산](../internal/agent/team/overview_budget.go)
+
+상태 스냅샷은 필요할 때 한 번 요약 문자열을 만들고, 팀원별 요약도 최종 문자열 하나를 보유한다. 유휴 진입 시 팀원별 스냅샷과 모델용 관찰을 회수한다. 공용 원문은 수신 예산으로 페이지 크기를 정한 뒤 복원한다. [요약 투영](../internal/agent/team/context_projection.go) · [공용 기록 수신](../internal/agent/team/inbox.go)
+
 ## 셸과 파일 작업
 
 명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출의 병렬 준비는 결과의 원래 순서와 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](tools.md#셸과-파일-작업) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)

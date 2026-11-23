@@ -35,7 +35,7 @@ func TestTeamObservationRestoresWithoutVisibleDuplicateOrOwnWakeup(t *testing.T)
 	if err != nil || len(messages) != 1 || messages[0].Content != message.Content {
 		t.Fatal("fact restoration changed", err)
 	}
-	public, err := root.TeamMessages(ctx, 0, value.Sequence, 10)
+	public, err := root.TeamMessages(ctx, 0, value.Sequence, channel.PublicPage(10))
 	if err != nil || len(public) != 1 || !public[0].Observation {
 		t.Fatal("observation provenance lost", err)
 	}
@@ -67,7 +67,7 @@ func TestPassiveStatusAndWorkDeclarationKeepTheirAdmissionSemanticsAfterRestore(
 	if !attentionAt(t, root, work.Sequence, "Ren") {
 		t.Fatal("declaration did not notify a teammate")
 	}
-	values, err := root.TeamMessages(ctx, 0, work.Sequence, 10)
+	values, err := root.TeamMessages(ctx, 0, work.Sequence, channel.PublicPage(10))
 	if err != nil || len(values) != 2 || !values[0].Passive || !values[0].Observation || !values[1].Declaration {
 		t.Fatal("stored admission semantics changed", values, err)
 	}
@@ -116,7 +116,7 @@ func TestExecutionReferenceAndPublicFactCommitAtomically(t *testing.T) {
 
 func attentionAt(t *testing.T, store *Store, sequence int64, member string) bool {
 	t.Helper()
-	values, err := store.TeamMessages(context.Background(), sequence-1, sequence, 1)
+	values, err := store.TeamMessages(context.Background(), sequence-1, sequence, channel.PublicPage(1))
 	if err != nil || len(values) != 1 {
 		t.Fatalf("missing public record: %+v %v", values, err)
 	}

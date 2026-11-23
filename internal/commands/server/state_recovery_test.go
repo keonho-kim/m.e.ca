@@ -45,6 +45,7 @@ func TestStatePagesTraverseEveryActiveTask(t *testing.T) {
 
 func TestMaskRevisionResetsDraftBeforeApplyingOffsets(t *testing.T) {
 	s, r := projectionFixture()
+	t.Cleanup(func() { cleanupDraftFixture(t, r) })
 	vault := &credentials.Vault{}
 	r.conversation = &Conversation{Runtime: agentrequest.Runtime{Vault: vault}}
 	s.emit(r, record.Event{Kind: "generation_started"})

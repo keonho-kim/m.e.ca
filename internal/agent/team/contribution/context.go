@@ -6,6 +6,7 @@ package contribution
 
 import (
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 )
@@ -23,14 +24,14 @@ func (s *State) Snapshot() []Scope {
 	return out
 }
 
-// WriteContext retains the current reference when its complete declaration is already visible.
-func WriteContext(out *strings.Builder, value Scope, covered bool) {
+// WriteContext renders the details of a work declaration.
+func WriteContext(out interface {
+	io.Writer
+	io.StringWriter
+	io.ByteWriter
+}, value Scope) {
 	out.WriteString(value.Member)
 	out.WriteString(": ")
-	if covered {
-		fmt.Fprintf(out, "current work #%d, revision %d (details in conversation)\n", value.Sequence, value.Revision)
-		return
-	}
 	out.WriteString(value.Summary)
 	out.WriteByte('\n')
 	if value.Sequence > 0 {
@@ -47,15 +48,30 @@ func WriteContext(out *strings.Builder, value Scope, covered bool) {
 	if len(value.Paths) == 0 {
 		out.WriteString("  No paths reserved; this does not establish completion.\n")
 	}
-	bytes := 0
-	for i, path := range value.Paths {
-		if bytes+len(path)+3 > pathContextBytes {
-			fmt.Fprintf(out, "  %d more paths; list_team_members has the full scope.\n", len(value.Paths)-i)
-			break
-		}
+	count, _ := visiblePaths(value.Paths)
+	for _, path := range value.Paths[:count] {
 		out.WriteString("  ")
 		out.WriteString(path)
 		out.WriteByte('\n')
+	}
+	if count < len(value.Paths) {
+		fmt.Fprintf(out, "  %d more paths; list_team_members has the full scope.\n", len(value.Paths)-count)
+	}
+}
+
+// ContextSize estimates the space needed to format this scope without building it.
+func ContextSize(value Scope) int {
+	_, bytes := visiblePaths(value.Paths)
+	return len(value.Summary) + len(value.Contract) + len(value.Member) + bytes + 192
+}
+
+func visiblePaths(paths []string) (count, bytes int) {
+	for _, path := range paths {
+		if bytes+len(path)+3 > pathContextBytes {
+			break
+		}
+		count++
 		bytes += len(path) + 3
 	}
+	return count, bytes
 }

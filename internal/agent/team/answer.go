@@ -16,6 +16,7 @@ import (
 // A buffered notification is only a hint: consumed messages never start another model call.
 func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 	r := p.room
+	p.releaseOverview()
 	p.idleDirective = ""
 	announced := false
 	for {
@@ -33,8 +34,9 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		if resume {
 			live.waiting = false
 			pending = true
-			p.idleDirective = "All active teammates have finished responding and no command is running. If responsibilities or the Spec are unresolved, use discuss to propose or accept the missing agreement before implementation. Otherwise act on a ready contribution within the agreed scope, or use leave_team if your contribution is complete. State a concrete blocker rather than repeating a general question about what to do."
+			p.idleDirective = teamIdleGuidance
 		}
+		r.pruneChangesLocked()
 		r.mu.Unlock()
 		if idleErr != nil {
 			idleErr = errors.Join(idleErr, r.endPublication())

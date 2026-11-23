@@ -42,7 +42,7 @@ func TestPublicContextSnapshotDetectsPrefixTampering(t *testing.T) {
 			if _, err := root.db.Exec(query); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := root.TeamMessages(t.Context(), 0, 0, 10); err == nil {
+			if _, err := root.TeamMessages(t.Context(), 0, 0, channel.PublicPage(10)); err == nil {
 				t.Fatal("corrupt or missing prefix accepted")
 			}
 		})
@@ -68,7 +68,7 @@ func TestPublicContextSnapshotCompressesLargeAttribution(t *testing.T) {
 	if err := root.db.QueryRow("SELECT length(prefix) FROM public_contexts").Scan(&bytes); err != nil || bytes > 4096 {
 		t.Fatal("large attribution retained an uncompressed duplicate", bytes, err)
 	}
-	page, err := root.TeamMessages(t.Context(), 0, value.Sequence, 1)
+	page, err := root.TeamMessages(t.Context(), 0, value.Sequence, channel.PublicPage(1))
 	if err != nil || len(page) != 1 || page[0].Context().Content != value.Context().Content {
 		t.Fatal("compressed attribution changed published bytes", err)
 	}

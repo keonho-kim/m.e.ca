@@ -73,8 +73,8 @@ func (s *execution) compactMemory(ctx context.Context, budget modelapi.InputBudg
 }
 
 func (s *execution) generateCompaction(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-	if !s.modelCall() {
-		return faults.Errorf(diagcatalog.RunCompaction, errModelBudget)
+	if err := s.modelCall(ctx); err != nil {
+		return faults.Errorf(diagcatalog.RunCompaction, err)
 	}
 	s.checkpoint.ModelCalls = s.usage.ModelCalls
 	request.Thinking = s.runner.Thinking

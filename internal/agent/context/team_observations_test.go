@@ -27,6 +27,9 @@ func TestCurrentTeamWorkReplacesOnlyTransientContext(t *testing.T) {
 	if !strings.Contains(first.Messages[len(first.Messages)-1].Content, "Hana") || !strings.Contains(second.Messages[len(second.Messages)-1].Content, "Ren") {
 		t.Fatal("work observations mutated or stayed stale")
 	}
+	if !second.Messages[len(second.Messages)-1].TransientObservation {
+		t.Fatal("old team observations can persist in provider caches")
+	}
 	if len(history) != 1 || history[0].Content != "Build the service" || len(projection.entries) != 1 {
 		t.Fatal("working state accumulated in history cache")
 	}

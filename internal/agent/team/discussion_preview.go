@@ -6,7 +6,6 @@ package team
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
@@ -30,10 +29,13 @@ func previewDiscussion(value channel.Message) discussionPreview {
 	return discussionPreview{sequence: value.Sequence, replyTo: value.Note.ReplyTo, from: value.From, text: text}
 }
 
-func writeDiscussions(out *strings.Builder, values []discussionPreview) {
+func writeDiscussions(out *overviewBuffer, values []discussionPreview, covered []bool) {
 	header := false
-	for _, value := range values {
-		if value.sequence == 0 {
+	for i, value := range values {
+		if out.shortened {
+			break
+		}
+		if len(covered) > i && covered[i] {
 			continue
 		}
 		if !header {

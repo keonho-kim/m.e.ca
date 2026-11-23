@@ -25,7 +25,7 @@ func TestReceivedInstructionStillNeedsANewModelDecision(t *testing.T) {
 	if _, err := p.SetWork("Overwrite authentication", []string{"/project/auth.py"}, "", 0); err == nil {
 		t.Fatal("stale coordination changed work")
 	}
-	if _, err := p.AddMember(r.ctx, "", "Overwrite authentication"); err == nil {
+	if _, err := p.AddMember(r.ctx, Invitation{Domain: "authentication", Message: "Overwrite authentication"}); err == nil {
 		t.Fatal("stale coordination created a peer")
 	}
 	if _, err := p.Discuss(r.ctx, "I will overwrite authentication.", 0, nil); err == nil {

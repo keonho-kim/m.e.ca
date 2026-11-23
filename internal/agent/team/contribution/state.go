@@ -5,10 +5,12 @@
 package contribution
 
 import (
+	"crypto/sha256"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/keonho-kim/meca/internal/agent/team/source"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
@@ -16,27 +18,46 @@ import (
 type Scope struct {
 	summaryHash, contractHash [32]byte
 	progressHash              [32]byte
-	Member                    string   `json:"member_name"`
-	Summary                   string   `json:"summary"`
-	Paths                     []string `json:"paths"`
-	Contract                  string   `json:"contract,omitempty"`
-	Sequence                  int64    `json:"sequence"`
-	Revision                  uint64   `json:"revision"`
-	ReplyTo                   int64    `json:"reply_to,omitempty"`
+	Member                    string              `json:"member_name"`
+	Summary                   string              `json:"summary"`
+	Paths                     []string            `json:"paths"`
+	Contract                  string              `json:"contract,omitempty"`
+	Sequence                  int64               `json:"sequence"`
+	Revision                  uint64              `json:"revision"`
+	ReplyTo                   int64               `json:"reply_to,omitempty"`
+	Domains                   []source.WorkDomain `json:"domains,omitzero"`
 }
 
 // ProgressKey identifies ownership and shared behavior, independently of explanatory wording.
-func (s Scope) ProgressKey() [32]byte { return s.progressHash }
+func (s Scope) ProgressKey() [32]byte {
+	if s.Domains == nil {
+		return s.progressHash
+	}
+	hash := sha256.Sum256(s.progressHash[:])
+	var pair [64]byte
+	for _, domain := range s.Domains {
+		key := sha256.Sum256([]byte(domain.String()))
+		copy(pair[:32], hash[:])
+		copy(pair[32:], key[:])
+		hash = sha256.Sum256(pair[:])
+	}
+	return hash
+}
 
 type Change struct {
 	Member   string
 	Sequence int64
 }
+
+const pathFactBytes = 1 << 20
+
 type State struct {
-	scopes         map[string]Scope
-	changes        map[string]Change
-	revision       uint64
-	latest, pruned int64
+	scopes           map[string]Scope
+	changes          map[string]Change
+	changeBytes      int
+	revision         uint64
+	latest, pruned   int64
+	discardedThrough int64
 }
 
 func contains(parent, path string) bool {
@@ -58,7 +79,11 @@ func (s *State) Prepare(value Scope) (Scope, error) {
 			}
 		}
 	}
-	value.Revision = s.scopes[value.Member].Revision + 1
+	current := s.scopes[value.Member]
+	if value.Domains == nil {
+		value.Domains = current.Domains
+	}
+	value.Revision = current.Revision + 1
 	value.Sequence = 0
 	return value, nil
 }
@@ -97,6 +122,9 @@ func (s *State) Check(member string, paths []string, seen int64) error {
 		if s.latest <= seen {
 			continue
 		}
+		if seen < s.discardedThrough {
+			return faults.Errorf(diagcatalog.ContributionPathFactsNeedNewDecision)
+		}
 		for changed, fact := range s.changes {
 			if fact.Member != member && fact.Sequence > seen && overlap(changed, path) {
 				return faults.Errorf(diagcatalog.ContributionChangedOrMayHaveAffectedAfterYour, fact.Member, changed)
@@ -114,6 +142,17 @@ func (s *State) Record(member string, paths []string, sequence int64) {
 		s.changes = make(map[string]Change)
 	}
 	for _, path := range paths {
+		if _, exists := s.changes[path]; !exists {
+			cost := len(path) + 64
+			if cost > pathFactBytes-s.changeBytes {
+				// A coarse revision fence preserves stale-write checks after dropping detail.
+				s.discardedThrough = max(s.discardedThrough, s.latest)
+				s.changes = nil
+				s.changeBytes = 0
+				return
+			}
+			s.changeBytes += cost
+		}
 		s.changes[path] = Change{member, sequence}
 	}
 }
@@ -121,18 +160,38 @@ func (s *State) Record(member string, paths []string, sequence int64) {
 func (s *State) Scope(member string) Scope {
 	value := s.scopes[member]
 	value.Paths = slices.Clone(value.Paths)
+	value.Domains = slices.Clone(value.Domains)
 	return value
+}
+
+// HoldsDomain uses the invitation until the peer explicitly declares its ongoing domains.
+func (s *State) HoldsDomain(member string, invitation, work source.WorkDomain) bool {
+	domains := s.scopes[member].Domains
+	if domains == nil {
+		return invitation.Matches(work)
+	}
+	for _, domain := range domains {
+		if domain.Matches(work) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *State) DomainsChanged(value Scope) bool {
+	domains := s.scopes[value.Member].Domains
+	return (domains == nil) != (value.Domains == nil) || !slices.Equal(domains, value.Domains)
 }
 
 func (s *State) Matches(value Scope) bool {
 	current, exists := s.scopes[value.Member]
-	return exists && current.summaryHash == value.summaryHash && current.contractHash == value.contractHash && current.ReplyTo == value.ReplyTo && slices.Equal(current.Paths, value.Paths)
+	return exists && current.summaryHash == value.summaryHash && current.contractHash == value.contractHash && current.ReplyTo == value.ReplyTo && slices.Equal(current.Paths, value.Paths) && !s.DomainsChanged(value)
 }
 
 // SameCoordination ignores wording and reply references while comparing actual ownership and behavior.
 func (s *State) SameCoordination(value Scope) bool {
 	current, exists := s.scopes[value.Member]
-	return exists && current.progressHash == value.progressHash
+	return exists && current.progressHash == value.progressHash && !s.DomainsChanged(value)
 }
 
 // ContractChanged includes removal and compares original text rather than context previews.
@@ -190,6 +249,8 @@ func (s *State) Prune(through int64) {
 	before := len(s.changes)
 	for path, fact := range s.changes {
 		if fact.Sequence <= through {
+			s.discardedThrough = max(s.discardedThrough, fact.Sequence)
+			s.changeBytes -= len(path) + 64
 			delete(s.changes, path)
 		}
 	}

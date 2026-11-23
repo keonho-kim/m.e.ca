@@ -72,7 +72,7 @@ func BoundSnapshot(value Snapshot) Snapshot {
 	budget := 512 << 10
 	for i := range value.Drafts {
 		d := &value.Drafts[i]
-		text, thinking := prefix(d.Text, min(4096, budget)), prefix(d.Thinking, min(4096, max(0, budget-min(4096, len(d.Text)))))
+		text, thinking := prefix(d.Text, min(draftPreviewBytes, budget)), prefix(d.Thinking, min(draftPreviewBytes, max(0, budget-min(draftPreviewBytes, len(d.Text)))))
 		d.Truncated = d.Truncated || len(text) < len(d.Text) || len(thinking) < len(d.Thinking)
 		d.Text, d.Thinking = text, thinking
 		budget -= len(text) + len(thinking)

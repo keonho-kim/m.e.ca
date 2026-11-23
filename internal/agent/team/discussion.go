@@ -24,18 +24,16 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if replyTo < 0 || len(mentions) > MaxActive {
+	if replyTo < 0 || len(mentions) > MaxMentions {
 		return nil, faults.Errorf(diagcatalog.TeamInvalidPublicDiscussionReferenceOrMentions)
 	}
 	r.mu.Lock()
 	through, based := r.latestPublic, p.DecisionCursor
 	live := r.active[p.ID]
 	valid := live != nil && !live.closed && !live.leaving
-	var known [MaxActive]string
-	count := 0
-	for name := range r.active {
-		known[count] = name
-		count++
+	var known [MaxMentions]bool
+	for i, name := range mentions {
+		known[i] = r.active[name] != nil
 	}
 	r.mu.Unlock()
 	if !valid {
@@ -48,7 +46,7 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 		if slices.Contains(mentions[:i], name) {
 			continue
 		}
-		if slices.Contains(known[:count], name) {
+		if known[i] {
 			continue
 		}
 		if _, err := r.options.Store.TeamMember(ctx, name); err != nil {
@@ -57,23 +55,48 @@ func (p *Peer) note(ctx context.Context, replyTo int64, mentions []string) (*run
 	}
 	note := &runrecord.TeamNote{ReplyTo: replyTo, Mentions: mentions, BasedOn: based}
 	if replyTo > 0 {
-		if replyTo > through {
-			return nil, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, replyTo)
-		}
-		value, known := r.public.Metadata(replyTo)
-		if !known {
-			var err error
-			value, err = r.options.Store.TeamMessageMetadata(ctx, replyTo)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if value.Sequence != replyTo {
-			return nil, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, replyTo)
+		value, err := r.publicMetadata(ctx, through, replyTo)
+		if err != nil {
+			return nil, err
 		}
 		note.ReplyAuthor = value.From
 	}
 	return note, nil
+}
+
+func (r *Room) publicMetadata(ctx context.Context, through, sequence int64) (channel.Metadata, error) {
+	if sequence > through {
+		return channel.Metadata{}, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, sequence)
+	}
+	value, known := r.public.Metadata(sequence)
+	if !known {
+		var err error
+		value, err = r.options.Store.TeamMessageMetadata(ctx, sequence)
+		if err != nil {
+			return channel.Metadata{}, err
+		}
+	}
+	if value.Sequence != sequence {
+		return channel.Metadata{}, faults.Errorf(diagcatalog.TeamPublicNoteDoesNotExistInThis, sequence)
+	}
+	return value, nil
+}
+
+func (r *Room) workReference(ctx context.Context, sequence int64) (channel.Metadata, error) {
+	if sequence == 0 {
+		return channel.Metadata{}, nil
+	}
+	r.mu.Lock()
+	through := r.latestPublic
+	r.mu.Unlock()
+	value, err := r.publicMetadata(ctx, through, sequence)
+	if err != nil {
+		return channel.Metadata{}, err
+	}
+	if value.Kind != "team_discussion" {
+		return channel.Metadata{}, faults.Errorf(diagcatalog.TeamWorkReferenceMustIdentifyPublicProposal)
+	}
+	return value, nil
 }
 
 func (p *Peer) Discuss(ctx context.Context, text string, replyTo int64, mentions []string) (sequence int64, resultErr error) {

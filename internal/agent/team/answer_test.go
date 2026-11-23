@@ -60,7 +60,7 @@ func TestConsumedWakeKeepsCurrentExecutionIdle(t *testing.T) {
 func TestActiveInvitationDoesNotPublishOrRestart(t *testing.T) {
 	r := testRoom(t)
 	peer := &Peer{ID: "Hana", room: r}
-	result, err := peer.AddMember(r.ctx, "Ren", "Replace the active peer's work")
+	result, err := peer.AddMember(r.ctx, Invitation{Member: "Ren", Domain: "active-peer-work", Message: "Replace the active peer's work"})
 	if err != nil || result["status"] != "already_active" {
 		t.Fatalf("%+v %v", result, err)
 	}

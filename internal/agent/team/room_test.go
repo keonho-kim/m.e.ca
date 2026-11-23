@@ -84,20 +84,30 @@ func (s *memoryRoom) AppendTeamMessage(_ context.Context, m channel.Message) (ch
 	s.messages = append(s.messages, m)
 	return m, nil
 }
-func (s *memoryRoom) TeamMessages(_ context.Context, after, through int64, limit int) ([]channel.Message, error) {
+func (s *memoryRoom) TeamMessages(_ context.Context, after, through int64, budget channel.PageBudget) ([]channel.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if through == 0 {
 		through = int64(len(s.messages))
 	}
-	end := min(int(after)+limit, len(s.messages), int(through))
+	end := min(int(after)+budget.Entries, len(s.messages), int(through))
 	if after >= int64(end) {
 		return nil, nil
 	}
-	return append([]channel.Message(nil), s.messages[after:end]...), nil
+	var page []channel.Message
+	used := 0
+	for _, message := range s.messages[after:end] {
+		cost := message.ContextBytes()
+		if !budget.Fits(len(page), used, cost) {
+			break
+		}
+		page = append(page, message)
+		used += cost
+	}
+	return page, nil
 }
 func (s *memoryRoom) TeamMessageMetadata(ctx context.Context, sequence int64) (channel.Metadata, error) {
-	values, err := s.TeamMessages(ctx, sequence-1, sequence, 1)
+	values, err := s.TeamMessages(ctx, sequence-1, sequence, channel.PublicPage(1))
 	if err != nil {
 		return channel.Metadata{}, err
 	}
@@ -126,7 +136,7 @@ func TestRoomRestoresInitialPairAndInvitedPeer(t *testing.T) {
 				if request > 0 {
 					id = "Arjun"
 				}
-				if _, err := peer.AddMember(ctx, id, "Check the implementation"); err != nil {
+				if _, err := peer.AddMember(ctx, Invitation{Member: id, Domain: "implementation-check", Message: "Check the implementation"}); err != nil {
 					return run.Result{}, err
 				}
 				close(invited)
@@ -181,7 +191,7 @@ func testRoom(t *testing.T) *Room {
 	t.Helper()
 	ctx, cancel := context.WithCancelCause(context.Background())
 	r := &Room{ctx: ctx, cancel: cancel, active: map[string]*participant{}, changed: make(chan struct{}, 1), deadline: time.Now().Add(time.Minute)}
-	r.options = Options{Store: &memoryRoom{}, Emit: quiet, Execute: func(ctx context.Context, _ identity.Member, _ string, _ *Peer) (run.Result, error) {
+	r.options = Options{Store: &memoryRoom{}, Emit: quiet, MaxModelCalls: 32, Execute: func(ctx context.Context, _ identity.Member, _ string, _ *Peer) (run.Result, error) {
 		<-ctx.Done()
 		return run.Result{}, ctx.Err()
 	}}
@@ -193,13 +203,15 @@ func testRoom(t *testing.T) *Room {
 	t.Cleanup(func() { cancel(nil); r.workers.Wait() })
 	return r
 }
-func TestConcurrentInvitationsReserveOnlyEightSlots(t *testing.T) {
+func TestConcurrentInvitationsGrowWithinModelBudget(t *testing.T) {
 	r := testRoom(t)
+	r.options.MaxModelCalls = 12
 	p := &Peer{ID: "Hana", room: r}
 	var workers sync.WaitGroup
-	for range 20 {
+	for i := range 20 {
 		workers.Go(func() {
-			if _, err := p.AddMember(r.ctx, "", "Help independently"); err != nil {
+			invitation := Invitation{Domain: fmt.Sprintf("component-%d", i), Message: "Review the component"}
+			if _, err := p.AddMember(r.ctx, invitation); err != nil {
 				t.Error(err)
 			}
 		})
@@ -207,8 +219,8 @@ func TestConcurrentInvitationsReserveOnlyEightSlots(t *testing.T) {
 	workers.Wait()
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.countLocked() != 8 || len(r.options.Store.(*memoryRoom).members) != 8 {
-		t.Fatalf("active=%d members=%d", r.countLocked(), len(r.options.Store.(*memoryRoom).members))
+	if r.countLocked() != 12 || len(r.options.Store.(*memoryRoom).members) != 12 || r.reservedModelCalls != 10 {
+		t.Fatalf("active=%d members=%d reservations=%d", r.countLocked(), len(r.options.Store.(*memoryRoom).members), r.reservedModelCalls)
 	}
 }
 func TestConcurrentGoodbyesLeaveExactlyOneReporter(t *testing.T) {

@@ -130,6 +130,9 @@ func (s *Service) execute(ctx context.Context, r *request, c *Conversation, opti
 		s.completionErr = saveErr
 	}
 	s.last = &task
+	for _, draft := range r.drafts {
+		draft.clearPreviews()
+	}
 	r.steering, r.approvals, r.drafts = nil, nil, nil
 	terminal := eventKind("request_finished")
 	stats := r.statistics()

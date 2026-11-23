@@ -6,7 +6,6 @@ package server
 
 import (
 	"github.com/keonho-kim/meca/internal/agent/record"
-	"strings"
 )
 
 type draftState struct {
@@ -14,14 +13,7 @@ type draftState struct {
 	runID       string
 	Draft
 	textBytes, thinkingBytes int
-	text, thinking           strings.Builder
-}
-
-func appendDraft(builder *strings.Builder, delta string) string {
-	if remaining := maxDraftBytes - builder.Len(); remaining > 0 {
-		builder.WriteString(prefix(delta, remaining))
-	}
-	return builder.String()
+	text, thinking           draftPreview
 }
 
 func (s *Service) emit(r *request, value record.Event) {
@@ -61,6 +53,7 @@ func (s *Service) emit(r *request, value record.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	r.observe(value)
+	r.reclaimStoredText(value)
 	if value.Usage != nil {
 		stats := r.statistics()
 		value.Statistics = &stats
@@ -68,17 +61,16 @@ func (s *Service) emit(r *request, value record.Event) {
 	if value.Kind != "stream" && value.Kind != "generation_started" {
 		s.publish(Event{Task: r.task.ID, Record: value})
 		if value.Kind == "team_notice" && value.Text == "left" {
+			if draft := r.drafts[value.Agent]; draft != nil {
+				draft.clearPreviews()
+			}
 			delete(r.drafts, value.Agent)
 		}
 		return
 	}
 	draft := r.drafts[value.Agent]
 	if draft == nil {
-		// Team runtime limits active participants to eight. Retired sources are
-		// discarded above; this separate cap also bounds unexpected producers.
-		if len(r.drafts) >= 16 {
-			return
-		}
+		// Each live source gets a byte-bounded preview until its departure or task completion.
 		draft = &draftState{Draft: Draft{Agent: value.Agent}}
 		r.drafts[value.Agent] = draft
 	}
@@ -91,8 +83,7 @@ func (s *Service) emit(r *request, value record.Event) {
 		draft.Text, draft.Thinking, draft.Truncated = "", "", false
 		draft.Committed = false
 		draft.HistorySequence = 0
-		draft.text.Reset()
-		draft.thinking.Reset()
+		draft.clearPreviews()
 		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Reset: true, Record: record.Event{Generation: value.Generation, Presentation: draft.Presentation, Kind: "draft_reset", Agent: value.Agent, RunID: value.RunID}})
 	}
 	draft.maskVersion, draft.runID = maskVersion, value.RunID
@@ -103,12 +94,22 @@ func (s *Service) emit(r *request, value record.Event) {
 	// events. Credential revision changes also reset the draft before applying offsets.
 	text, thinking := value.Text[draft.textBytes:], value.Thinking[draft.thinkingBytes:]
 	draft.textBytes, draft.thinkingBytes = len(value.Text), len(value.Thinking)
-	draft.Text, draft.Thinking = appendDraft(&draft.text, text), appendDraft(&draft.thinking, thinking)
-	draft.Truncated = len(value.Text) > maxDraftBytes || len(value.Thinking) > maxDraftBytes
+	if text != "" || thinking != "" {
+		draft.Committed = false
+		draft.HistorySequence = 0
+		draft.Text, draft.Thinking = draft.text.update(value.Text), draft.thinking.update(value.Thinking)
+	}
+	draft.Truncated = draft.textBytes > len(draft.Text) || draft.thinkingBytes > len(draft.Thinking)
 	for text != "" || thinking != "" {
 		// publish makes the one detached copy retained by the replay log.
 		t, h := prefix(text, maxTextBytes), prefix(thinking, maxTextBytes)
 		text, thinking = text[len(t):], thinking[len(h):]
 		s.publish(Event{Task: r.task.ID, Generation: draft.Generation, Record: record.Event{Presentation: draft.Presentation, Kind: "assistant_delta", Agent: value.Agent, RunID: value.RunID, Text: t, Thinking: h}})
 	}
+}
+
+func (d *draftState) clearPreviews() {
+	d.Text, d.Thinking = "", ""
+	d.text.clear()
+	d.thinking.clear()
 }

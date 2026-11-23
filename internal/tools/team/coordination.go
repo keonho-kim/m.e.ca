@@ -9,6 +9,7 @@ import (
 
 	"sync/atomic"
 
+	agentteam "github.com/keonho-kim/meca/internal/agent/team"
 	"github.com/keonho-kim/meca/internal/agent/team/source"
 	"github.com/keonho-kim/meca/internal/tools/team/catalog"
 
@@ -38,11 +39,11 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 	e := op.executor
 	switch op.call.Name {
 	case "add_team_member":
-		value, err := e.Peer.AddMember(ctx, op.input.Member, op.input.Message)
+		value, err := e.Peer.AddMember(ctx, agentteam.Invitation{Member: op.input.Member, Domain: op.input.Domain, Message: op.input.Message, WorkRef: op.input.WorkRef})
 		if err != nil {
 			return toolapi.Result{}, err
 		}
-		return resultfmt.Encode(value, "Team member added or restored")
+		return resultfmt.Encode(value, "Team invitation status")
 	case "list_team_members":
 		page, err := e.Peer.Members(ctx, op.input.AfterMember)
 		if err != nil {
@@ -73,16 +74,17 @@ func (op *coordinationOperation) Execute(ctx context.Context, _ bool) (toolapi.R
 				return toolapi.Result{}, faults.Errorf(diagcatalog.TeamSettleYourActiveCommandsBeforeChangingOr)
 			}
 		}
-		work, err := e.Peer.SetWork(op.input.Summary, paths, op.input.Contract, op.input.ReplyTo)
+		work, err := e.Peer.SetWork(op.input.Summary, paths, op.input.Contract, op.input.ReplyTo, op.input.Domains...)
 		if err != nil {
 			return toolapi.Result{}, err
 		}
 		result, err := resultfmt.Encode(struct {
-			Member   string   `json:"member_name"`
-			Paths    []string `json:"paths"`
-			Sequence int64    `json:"sequence"`
-			Revision uint64   `json:"work_revision"`
-		}{work.Member, work.Paths, work.Sequence, work.Revision}, "Team contribution updated")
+			Member   string              `json:"member_name"`
+			Paths    []string            `json:"paths"`
+			Sequence int64               `json:"sequence"`
+			Revision uint64              `json:"work_revision"`
+			Domains  []source.WorkDomain `json:"domains,omitzero"`
+		}{work.Member, work.Paths, work.Sequence, work.Revision, work.Domains}, "Team contribution updated")
 		result.Source = &source.Public{Sequence: work.Sequence, Author: e.Peer.ID, Kind: "team_work"}
 		return result, err
 	case "leave_team":

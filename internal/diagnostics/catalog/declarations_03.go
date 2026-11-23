@@ -26,7 +26,6 @@ const (
 	HttpclientTokenizerRequestExceedsContextSizeLimit      Message = "tokenizer request exceeds context size limit"
 	IdentityInvalidModelIdentityEvidence                   Message = "invalid model identity evidence"
 	IdentityInvalidModelIdentityFailureDetail              Message = "invalid model identity failure detail"
-	IdentityNoUnusedTeamMemberNameIsAvailable              Message = "no unused team member name is available"
 	IdentityTooManyModelIdentityFacts                      Message = "too many model identity facts"
 	ImagefileAnimatedWebPContainsNoFrame                   Message = "animated WebP contains no frame"
 	ImagefileConvertedImageExceedsBytes                    Message = "converted image exceeds %d bytes"

@@ -218,6 +218,8 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			if s.runner.OnAnswer == nil {
 				return nil
 			}
+			s.projection.ReleaseObservations()
+			decision = decisionRequest{}
 			again, err := s.runner.OnAnswer(ctx, s.result.Text)
 			if err != nil || !again {
 				return err

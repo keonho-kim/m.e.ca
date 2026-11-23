@@ -54,7 +54,7 @@ func allowed(key string) bool {
 		return true
 	case "role", "input_tokens", "input_source", "context_window", "output_budget", "before_compact_tokens", "before_compact_source", "first_output_ms", "rate_source", "timed_tokens", "timed_ns":
 		return true
-	case "listen", "persistence", "limit", "workspace_id":
+	case "listen", "persistence", "limit", "workspace_id", "invitation_id":
 		return true
 	}
 	return false

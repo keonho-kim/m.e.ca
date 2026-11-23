@@ -24,6 +24,8 @@ tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙
 
 기본 레벨은 info다. 프로세스 시작 때 환경변수 MECA_LOG_LEVEL=debug|info|warn|error로 선택한다. debug에서는 세부 도구·저장·제어·스트림 종료 기록을 볼 수 있다. 작업 시작·종료와 스킬 읽기, 승인 대기·결정, 느린 모델 호출·저장, 실패·재시도를 작은 메타데이터로 기록한다.
 
+팀 초대는 debug의 `team_invitation_phase`에서 `operation`과 `duration_ms`로 관측한다. 같은 초대의 단계는 `run_id`와 `invitation_id`로 연결한다. `invite_reserve`는 예약 판단까지, `invite_prepare`는 개인 세션 준비, `invite_activate`는 최종 합류, `invite_first_model`은 초대 시작부터 첫 모델 호출까지 걸린 시간이다.
+
 WebUI 자동 열기에서 실패하면 `browser_launch_failed` 경고를 기록한다. 서버는 stdout에 표시한 주소에서 계속 접속을 받는다. 브라우저의 첫 방문은 공개 접속 상태 조회를 사용하므로 로그인 전이라는 이유만으로 `access_rejected`를 기록하지 않는다. 실제 보호 API의 인증·Host·Origin 거절은 기록한다. 브라우저 도구의 관리형 Chrome 설치본 정리 실패는 `browser_runtime_cleanup_failed` 경고로 기록하며 이미 선택한 버전은 계속 사용한다.
 
 주요 필드는 time·level·msg·component·operation과 request_id·session_id·task_id·run_id·agent·call_id다. 모델 호출의 generation·attempt·duration_ms, 오류 분류인 error_code를 필요한 경우 포함한다. error_code는 안전한 분류이며 raw Provider·OS·SQL 오류 전문을 뜻하지 않는다. HTTP 내부 TLS·panic 진단도 원문 대신 분류를 기록한다.

@@ -44,7 +44,7 @@ func TestContributionRequiresOwnPublicSpeechInCurrentLifetime(t *testing.T) {
 	member := r.active[a.ID].member
 	delete(r.active, a.ID)
 	r.mu.Unlock()
-	r.reserve(member)
+	r.reserve(member, nil)
 	if a.HasSpoken() {
 		t.Fatal("historical speech enabled a resumed contribution before its current announcement")
 	}

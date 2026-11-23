@@ -31,11 +31,12 @@ import (
 )
 
 type teamModel struct {
-	mu      sync.Mutex
-	steps   map[string]int
-	names   []string
-	restore bool
-	sawPeer bool
+	mu          sync.Mutex
+	steps       map[string]int
+	names       []string
+	invitations int
+	restore     bool
+	sawPeer     bool
 }
 
 func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
@@ -73,6 +74,7 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 	g.mu.Unlock()
 	var name string
 	var arguments any
+	var calls []toolapi.Call
 	retryDeparture := false
 	for i := len(request.Messages) - 1; i >= 0; i-- {
 		m := request.Messages[i]
@@ -94,10 +96,13 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 		switch step {
 		case 0:
 			if id == names[0] {
-				name = "add_team_member"
-				arguments = map[string]string{"message": "Create your own name.txt as an independent contribution. Use set_work first. Preserve the other teammates files and report results publicly."}
-				if restore {
-					arguments.(map[string]string)["member_name"] = names[2]
+				for i := range max(1, g.invitations) {
+					invitation := map[string]string{"domain": fmt.Sprintf("independent-file-%d", i), "message": "Create your own name.txt as an independent contribution. Use set_work first. Preserve the other teammates files and report results publicly."}
+					if restore {
+						invitation["member_name"] = names[i+2]
+					}
+					body, _ := json.Marshal(invitation)
+					calls = append(calls, toolapi.Call{ID: fmt.Sprintf("%s-invite-%d", id, i), Name: "add_team_member", Arguments: body})
 				}
 			} else {
 				name = "list_team_members"
@@ -123,12 +128,14 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 			return emit(modelapi.Event{Done: true, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
 		}
 	}
-	body, _ := json.Marshal(arguments)
-	call := toolapi.Call{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}
+	if len(calls) == 0 {
+		body, _ := json.Marshal(arguments)
+		calls = []toolapi.Call{{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}}
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return emit(modelapi.Event{Done: true, Delta: "I will update " + id + ".txt with my independent contribution.", Calls: []toolapi.Call{call}, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
+	return emit(modelapi.Event{Done: true, Delta: "I will update " + id + ".txt with my independent contribution.", Calls: calls, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
 }
 
 func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
@@ -162,13 +169,14 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		t.Fatal(err)
 	}
 	var original []string
+	const expandedTeamSize = 9
 	for range 2 {
 		if _, err := store.CreateTeamAgent(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for round := range 2 {
-		seeded, err := store.TeamMembers(context.Background(), "", 8)
+		seeded, err := store.TeamMembers(context.Background(), "", expandedTeamSize)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -176,9 +184,9 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		for _, member := range seeded {
 			names = append(names, member.ID)
 		}
-		model := &teamModel{steps: map[string]int{}, names: names, restore: round > 0}
+		model := &teamModel{steps: map[string]int{}, names: names, invitations: expandedTeamSize - 2, restore: round > 0}
 		var events []runrecord.Event
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		result, err := service.Run(ctx, agentrequest.Options{Runtime: agentrequest.Runtime{Config: configuration, Session: store.Session(), Selection: connection.Selection{Model: "test-model"}, Vault: vault}, Text: "Create independent contributions inside the project.", Generator: model}, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error { events = append(events, event); return nil })
 		cancel()
 		if err != nil || result.Status != runrecord.Answered || result.Text == "" {
@@ -206,7 +214,7 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 			t.Fatal("known shell mutation targets were not shared as uncertain effects")
 		}
 		members, err := store.TeamMembers(context.Background(), "", 100)
-		if err != nil || len(members) != 3 {
+		if err != nil || len(members) != expandedTeamSize {
 			t.Fatalf("members=%+v err=%v", members, err)
 		}
 		if round == 0 {

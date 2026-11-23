@@ -50,6 +50,9 @@ func (p Parameter) jsonSchema() map[string]any {
 		value["type"], value["minimum"], value["maximum"] = "integer", 0, p.Max
 	case ObjectList:
 		value["type"], value["minItems"], value["maxItems"] = "array", 1, p.Max
+		if p.AllowEmpty {
+			value["minItems"] = 0
+		}
 		value["items"] = (Definition{Parameters: p.Fields}).JSONSchema()
 	case TextList:
 		value["type"], value["minItems"], value["maxItems"] = "array", 1, p.Max

@@ -24,10 +24,10 @@ MECA는 TUI·CLI·서버에서 같은 native 도구 계약을 사용한다. 이 
 | `browser_action` | 전용 브라우저에서 페이지를 열고 이동·클릭·입력 등을 수행한다. Chrome·Chromium과 `agent-browser`가 필요하다. |
 | `browser_inspect` | 열린 브라우저의 스냅샷·본문·오류·스크린샷을 얻거나 보관한 관찰을 이어 읽는다. `browser_action`과 같은 실행 환경을 사용한다. |
 | `web_fetch` | HTTP(S) URL의 HTML·Markdown·텍스트 문서 한 건을 읽는다. 설치된 Chrome·Chromium과 MECA의 문서 전송 어댑터를 사용한다. |
-| `add_team_member` | 팀에서 맡을 사람이 없는 독립 작업에 동료 한 명을 초대하거나 종료한 동료의 세션을 복구한다. |
-| `list_team_members` | 팀원의 참여 상태·담당 경로·기여 요약과 공용 규약을 조회한다. |
+| `add_team_member` | 독립 작업의 공용 `domain` 키와 `message`를 전달해 한 명을 초대한다. `work_ref`로 기존 공용 제안을 참조하고 `member_name`으로 종료한 세션을 복구할 수 있다. [초대 기준](team.md#시작과-참여) |
+| `list_team_members` | 참여 상태, 초대·담당 도메인과 공용 제안, 작업 경로·기여 요약을 조회한다. |
 | `read_team_messages` | 팀 공용 대화를 `after` 순번 이후부터 페이지로 읽는다. |
-| `set_work` | 팀에서 합의한 자신의 기여와 변경 범위를 기록한다. 빈 `paths`로 현재 범위를 회수한다. |
+| `set_work` | 합의한 기여, 파일 경로와 현재 맡은 `domains`를 기록한다. 빈 `paths`로 파일 범위를, 빈 `domains`로 업무 담당을 해제한다. |
 | `discuss` | 제안·질문·답변·검토 결과를 팀 공용 대화에 게시한다. `reply_to`와 `mentions`로 관련 발언과 동료를 지정한다. |
 | `leave_team` | 팀에 작업 결과를 남기고 현재 참여자 세션을 종료한다. 마지막 참가자는 사용자에게 직접 결과를 보고한다. |
 

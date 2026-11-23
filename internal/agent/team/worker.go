@@ -1,6 +1,6 @@
 // Purpose: Own each private participant lifetime and join its resources before releasing the room slot.
 // Pattern: Joined worker lifecycle.
-// Usage: Initial admission and invitations call start under memberMu.
+// Usage: Initial admission and invitations reserve and launch under memberMu.
 // Related: internal/agent/team/room.go, internal/agent/team/answer.go.
 package team
 
@@ -14,14 +14,17 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func (r *Room) start(member identity.Member) error {
-	live := r.reserve(member)
-	return r.launch(live)
-}
-func (r *Room) reserve(member identity.Member) *participant {
+func (r *Room) reserve(member identity.Member, ticket *invitationReservation) *participant {
 	live := &participant{member: member, wake: make(chan struct{}, 1)}
 	progress := progressKey("member", member.ID, member.Session)
 	r.mu.Lock()
+	if ticket != nil {
+		delete(r.pendingInvitations, ticket)
+		live.invited = ticket.work
+		live.invitationID = ticket.id
+		live.inviteStarted = ticket.started
+		live.firstCallReserved = true
+	}
 	r.active[member.ID] = live
 	r.invalidateWorkLocked()
 	r.recordProgress(progress)
@@ -33,6 +36,8 @@ func (r *Room) launch(live *participant) error {
 	if err := r.notice(member.ID, "joined"); err != nil {
 		r.mu.Lock()
 		delete(r.active, member.ID)
+		r.releaseFirstCallLocked(live)
+		r.invalidateWorkLocked()
 		r.mu.Unlock()
 		return err
 	}
@@ -47,11 +52,13 @@ func (r *Room) worker(live *participant) {
 		r.memberMu.Lock()
 		r.mu.Lock()
 		live.closed = true
+		r.releaseFirstCallLocked(live)
 		r.work.Release(peer.ID)
 		r.invalidateWorkLocked()
 		if r.active[peer.ID] == live {
 			delete(r.active, peer.ID)
 		}
+		r.pruneChangesLocked()
 		for _, other := range r.active {
 			if !other.closed && !other.leaving {
 				wake(other)

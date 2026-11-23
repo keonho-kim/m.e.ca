@@ -5,34 +5,67 @@
 package team
 
 import (
-	"strings"
+	"slices"
 
 	model "github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/team/channel"
+	"github.com/keonho-kim/meca/internal/agent/team/contribution"
 )
 
-func (v *workProjection) render(covered uint16) string {
-	base := ""
-	if v.base != nil {
-		base = v.base.text
-		if covered&((1<<MaxActive)-1) != 0 {
-			base = v.base.render(covered)
+func (v *workProjection) fullOverview() string {
+	v.renderOnce.Do(func() {
+		if v.base != nil {
+			v.text = v.render(nil)
 		}
-	}
-	return v.overlay(base, covered)
+	})
+	return v.text
 }
-func (v *workProjection) overlay(base string, covered uint16) string {
-	var out strings.Builder
-	out.WriteString(base)
-	writeCommandStatuses(&out, v.statuses)
-	values := v.discussions
-	for i := range values {
-		if covered&(1<<(MaxActive+i)) != 0 {
-			values[i] = discussionPreview{}
+
+func (v *workProjection) render(covered []bool) string {
+	var coveredScopes, coveredDiscussion []bool
+	if covered != nil {
+		coveredScopes, coveredDiscussion = covered[:len(v.scopes)], covered[len(v.scopes):]
+	}
+	// Size the output from stable scopes without formatting a second copy.
+	size := len(v.base.roster.text) + 128
+	for i, cost := range v.base.sizes {
+		if !coveredAt(coveredScopes, i) {
+			size += cost
 		}
 	}
-	writeDiscussions(&out, values[:v.key.count])
-	return out.String()
+	for _, status := range v.statuses {
+		size += len(status.from) + len(status.text) + 32
+	}
+	for i, item := range v.discussions {
+		if !coveredAt(coveredDiscussion, i) {
+			size += len(item.from) + len(item.text) + 64
+		}
+	}
+	var out overviewBuffer
+	out.body.Grow(min(size, teamOverviewBytes))
+	out.WriteString(teamOverviewTitle)
+	out.add(v.base.roster)
+	writeCommandStatuses(&out, v.statuses)
+	writeDiscussions(&out, v.discussions, coveredDiscussion)
+	out.WriteString("\nCurrent contributions:\n")
+	for i, scope := range v.scopes {
+		if out.shortened {
+			break
+		}
+		if !coveredAt(coveredScopes, i) {
+			contribution.WriteContext(&out, scope)
+		}
+	}
+	return out.finish()
+}
+
+func coveredAt(covered []bool, index int) bool {
+	return index < len(covered) && covered[index]
+}
+
+func (p *Peer) releaseOverview() {
+	p.receivedView, p.decisionView = decisionSnapshot{}, decisionSnapshot{}
+	p.contextView, p.contextText = nil, ""
 }
 
 func (p *Peer) ContextObservations(messages []model.Message) string {
@@ -41,42 +74,36 @@ func (p *Peer) ContextObservations(messages []model.Message) string {
 		snapshot = p.room.workSnapshot()
 	}
 	view := snapshot.view
-	var covered uint16
+	count := len(view.scopes) + len(view.discussions)
+	if cap(p.coverageScratch) < count {
+		p.coverageScratch = make([]bool, count)
+	}
+	covered := p.coverageScratch[:count]
+	clear(covered)
+	anyCovered := false
 	for _, m := range messages {
 		sequence, _ := channel.Sequence(m)
 
 		if sequence == 0 {
 			continue
 		}
-		for i, scope := range view.scopes {
-			if scope.Sequence == sequence {
-				covered |= 1 << i
-			}
-		}
-		for i, note := range view.discussions {
-			if note.sequence == sequence {
-				covered |= 1 << (MaxActive + i)
-			}
+		if i, ok := view.sources[sequence]; ok {
+			covered[i] = true
+			anyCovered = true
 		}
 	}
-	if covered == 0 {
+	if !anyCovered {
 		p.contextView, p.contextText = nil, ""
-		p.contextBase, p.contextBaseText = nil, ""
+		overview := view.fullOverview()
 		if p.idleDirective != "" {
-			return view.text + "\n" + p.idleDirective
+			return overview + "\n" + p.idleDirective
 		}
-		return view.text
+		return overview
 	}
-	if p.contextView != view || p.contextMask != covered {
-		scopeMask := covered & ((1 << MaxActive) - 1)
-		if view.base != nil && (p.contextBase != view.base || p.contextBaseMask != scopeMask) {
-			p.contextBase, p.contextBaseMask = view.base, scopeMask
-			p.contextBaseText = view.base.text
-			if scopeMask != 0 {
-				p.contextBaseText = view.base.render(scopeMask)
-			}
-		}
-		p.contextView, p.contextMask, p.contextText = view, covered, view.overlay(p.contextBaseText, covered)
+	if p.contextView != view || !slices.Equal(p.contextCovered, covered) {
+		p.contextView = view
+		p.contextCovered = append(p.contextCovered[:0], covered...)
+		p.contextText = view.render(covered)
 	}
 	if p.idleDirective != "" {
 		return p.contextText + "\n" + p.idleDirective

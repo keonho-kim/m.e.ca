@@ -22,7 +22,7 @@ func TestPublicPageCountsWorkMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	page, err := root.TeamMessages(ctx, 0, 0, 100)
+	page, err := root.TeamMessages(ctx, 0, 0, channel.PublicPage(100))
 	if err != nil || len(page) != 2 {
 		t.Fatalf("page=%d err=%v", len(page), err)
 	}
@@ -33,7 +33,7 @@ func TestPublicPageCountsWorkMetadata(t *testing.T) {
 	if size > 16<<20 {
 		t.Fatalf("metadata escaped page budget: %d", size)
 	}
-	rest, err := root.TeamMessages(ctx, page[len(page)-1].Sequence, 0, 100)
+	rest, err := root.TeamMessages(ctx, page[len(page)-1].Sequence, 0, channel.PublicPage(100))
 	if err != nil || len(rest) != 1 {
 		t.Fatal("page boundary lost remaining work", err)
 	}
@@ -53,7 +53,11 @@ func TestPublicMetadataDoesNotHydrateBodies(t *testing.T) {
 	if err != nil || meta.From != "Hana" || meta.Kind != "team_discussion" || meta.Bytes < 1<<20 {
 		t.Fatal(meta, err)
 	}
-	if _, err = root.TeamMessages(ctx, 0, value.Sequence, 1); err == nil {
+	budget := channel.PageBudget{Entries: 1, Bytes: 32}
+	if page, err := root.TeamMessages(ctx, 0, value.Sequence, budget); err != nil || len(page) != 0 {
+		t.Fatalf("out-of-budget read touched a missing body: %v %v", page, err)
+	}
+	if _, err = root.TeamMessages(ctx, 0, value.Sequence, channel.PublicPage(1)); err == nil {
 		t.Fatal("fixture must require body hydration")
 	}
 }

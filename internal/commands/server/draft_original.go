@@ -49,9 +49,6 @@ func (r *request) retainDraft(value record.Event, generation uint64) {
 	}
 	d := r.originals[value.Agent]
 	if d == nil {
-		if len(r.originals) >= 16 {
-			return
-		}
 		d = &draftOriginal{}
 		r.originals[value.Agent] = d
 	}
@@ -98,8 +95,8 @@ func (s *Service) ReadDraft(ctx context.Context, task, agent string, generation 
 		return DraftPage{}, faults.New(diagcatalog.NotFound, diagcatalog.ServerPageInvalid)
 	}
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	if generation != d.generation {
+		d.mu.Unlock()
 		return DraftPage{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerPageInvalid)
 	}
 	source := &d.text
@@ -107,10 +104,25 @@ func (s *Service) ReadDraft(ctx context.Context, task, agent string, generation 
 		source = &d.thinking
 	}
 	if offset > source.total || ctx.Err() != nil {
+		d.mu.Unlock()
 		return DraftPage{}, faults.New(diagcatalog.InvalidArgument, diagcatalog.ServerPageInvalid)
 	}
-	start, end := max(0, offset-redaction.MaxCredentialBytes), min(source.total, offset+int64(limit)+redaction.MaxCredentialBytes)
-	window, err := source.page(start, int(end-start))
+	total, sequence := source.total, source.historySequence
+	start, end := max(0, offset-redaction.MaxCredentialBytes), min(total, offset+int64(limit)+redaction.MaxCredentialBytes)
+	var window string
+	if sequence == 0 {
+		window, err = source.page(start, int(end-start))
+		d.mu.Unlock()
+	} else {
+		d.mu.Unlock()
+		window, err = s.storedDraftWindow(ctx, r.task.Session, sequence, total, start, end)
+		d.mu.Lock()
+		current := generation == d.generation && sequence == source.historySequence
+		d.mu.Unlock()
+		if !current {
+			return DraftPage{}, faults.New(diagcatalog.Conflict, diagcatalog.ServerReadRevision)
+		}
+	}
 	if err != nil {
 		return DraftPage{}, err
 	}
@@ -123,5 +135,5 @@ func (s *Service) ReadDraft(ctx context.Context, task, agent string, generation 
 	for len(text) > 0 && !utf8.ValidString(text) {
 		text = text[:len(text)-1]
 	}
-	return DraftPage{Window: window, Start: from, End: from + len(text), Text: text, Generation: generation, Offset: offset, Next: offset + int64(len(text)), Total: source.total}, nil
+	return DraftPage{Window: window, Start: from, End: from + len(text), Text: text, Generation: generation, Offset: offset, Next: offset + int64(len(text)), Total: total}, nil
 }

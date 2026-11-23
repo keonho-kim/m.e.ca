@@ -102,8 +102,12 @@ func validateValue(p Parameter, value json.RawMessage) error {
 	}
 	if p.Kind == ObjectList {
 		var entries []json.RawMessage
-		if err := json.Unmarshal(value, &entries); err != nil || len(entries) == 0 || len(entries) > p.Max {
-			return faults.Errorf(diagcatalog.ToolRequiresToObjects, p.Name, p.Max)
+		minimum := 1
+		if p.AllowEmpty {
+			minimum = 0
+		}
+		if err := json.Unmarshal(value, &entries); err != nil || len(entries) < minimum || len(entries) > p.Max {
+			return faults.Errorf(diagcatalog.ToolRequiresToObjects, p.Name, minimum, p.Max)
 		}
 		for i, entry := range entries {
 			if _, err := ValidateArguments(Definition{Name: p.Name, Parameters: p.Fields}, entry); err != nil {

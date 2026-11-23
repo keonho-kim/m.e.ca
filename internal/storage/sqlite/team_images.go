@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/keonho-kim/meca/internal/agent/media"
+	"github.com/keonho-kim/meca/internal/agent/team/channel"
 	"strconv"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -57,7 +58,7 @@ func (s *Store) verifiedRoomImages(ctx context.Context, id string, size int, bod
 	if json.Unmarshal(body, &ref) != nil || ref.Sequence < 1 {
 		return nil, faults.Errorf(diagcatalog.SqliteInvalidPublicConversationReference)
 	}
-	values, err := s.room.TeamMessages(ctx, ref.Sequence-1, ref.Sequence, 1)
+	values, err := s.room.TeamMessages(ctx, ref.Sequence-1, ref.Sequence, channel.PublicPage(1))
 	if err != nil {
 		return nil, err
 	}

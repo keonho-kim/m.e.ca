@@ -16,6 +16,7 @@ import (
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"github.com/keonho-kim/meca/internal/processmemory"
 	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/skills/instruction"
 	"github.com/keonho-kim/meca/internal/tools/local/process"
@@ -32,6 +33,7 @@ type request struct {
 	approval            sync.Mutex
 	refusals            approval.Ledger
 	images              chan struct{}
+	encodingCaches      chan struct{}
 	instructions        sync.Once
 	projectInstructions string
 	instructionsErr     error
@@ -60,7 +62,15 @@ func (s *Service) Run(ctx context.Context, options agentrequest.Options, approve
 			options.SkillReads = append(options.SkillReads, doc)
 		}
 	}
-	current := &request{service: s, options: options, templates: templates, access: workspace.New(), images: make(chan struct{}, 1), approver: approve}
+	current := &request{
+		service: s, options: options, templates: templates, access: workspace.New(), approver: approve,
+		images: make(chan struct{}, 1), encodingCaches: make(chan struct{}, teamEncodingCacheBytes/peerEncodingCacheBytes),
+	}
 	ctx = process.WithProjectionBudget(ctx)
-	return team.Run(ctx, team.Options{Images: options.Images, Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record, PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact, MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds, ProjectRoot: options.Session.ProjectRoot}, options.Text)
+	return team.Run(ctx, team.Options{
+		Images: options.Images, Store: s.Repository, Execute: current.execute, Emit: emit, Record: s.Record,
+		PollSteering: options.PollSteering, SteeringReady: options.SteeringReady, Redact: options.Vault.Redact,
+		MaxModelCalls: options.Config.Loop.MaxModelCalls, MaxSeconds: options.Config.Loop.MaxSeconds,
+		ProjectRoot: options.Session.ProjectRoot, MemoryPressure: processmemory.Pressure,
+	}, options.Text)
 }

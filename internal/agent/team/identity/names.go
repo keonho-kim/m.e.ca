@@ -1,4 +1,4 @@
-// Purpose: Assign unique readable team names from one immutable cross-cultural catalog.
+// Purpose: Assign unique readable team names from a catalog with numbered extensions.
 // Pattern: Pure catalog with creation-time random selection.
 // Usage: SQLite registration chooses an unused name; identities and prompts reuse it.
 // Related: internal/agent/team/identity/member.go, internal/storage/sqlite/team_registration.go.
@@ -8,12 +8,7 @@ import (
 	"crypto/rand"
 
 	"math/big"
-	"slices"
-
-	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
-
-	// Arrays cannot be const in Go; this private catalog is never mutated.
-	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
+	"strconv"
 )
 
 var names = [...]string{
@@ -120,23 +115,36 @@ var names = [...]string{
 }
 
 func Name(index int) string {
-	if index < 0 || index >= len(names) {
+	if index < 0 {
 		return ""
 	}
-	return names[index]
+	name := names[index%len(names)]
+	if round := index/len(names) + 1; round > 1 {
+		return name + "-" + strconv.Itoa(round)
+	}
+	return name
 }
 
 func Choose(used []string) (string, error) {
+	taken := make(map[string]struct{}, len(used))
+	for _, name := range used {
+		taken[name] = struct{}{}
+	}
 	var available [len(names)]uint8
 	count := 0
 	for i, name := range names {
-		if !slices.Contains(used, name) {
+		if _, exists := taken[name]; !exists {
 			available[count] = uint8(i)
 			count++
 		}
 	}
 	if count == 0 {
-		return "", faults.Errorf(diagcatalog.IdentityNoUnusedTeamMemberNameIsAvailable)
+		for i := len(names); ; i++ {
+			name := Name(i)
+			if _, exists := taken[name]; !exists {
+				return name, nil
+			}
+		}
 	}
 	index, err := rand.Int(rand.Reader, big.NewInt(int64(count)))
 	if err != nil {

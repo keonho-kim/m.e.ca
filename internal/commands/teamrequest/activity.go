@@ -4,10 +4,7 @@
 // Related: internal/commands/teamrequest/request.go, internal/tui/session/team_events.go.
 package teamrequest
 
-import (
-	"github.com/keonho-kim/meca/internal/agent/team"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
-)
+import toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 
 // CommandActivity exposes synchronized metadata and remains safe during or after Close.
 type commandSource interface{ CommandActivity() []toolapi.CommandRun }
@@ -29,18 +26,17 @@ func (s *Service) track(id string, executor commandSource) {
 }
 func (s *Service) CommandActivity() map[string][]toolapi.CommandRun {
 	s.mu.Lock()
-	var sources [team.MaxActive]struct {
+	type activeSource struct {
 		id     string
 		source commandSource
 	}
-	count := 0
+	sources := make([]activeSource, 0, len(s.active))
 	for id, source := range s.active {
-		sources[count].id, sources[count].source = id, source
-		count++
+		sources = append(sources, activeSource{id, source})
 	}
 	s.mu.Unlock()
 	var result map[string][]toolapi.CommandRun
-	for _, current := range sources[:count] {
+	for _, current := range sources {
 		if commands := current.source.CommandActivity(); len(commands) > 0 {
 			if result == nil {
 				result = map[string][]toolapi.CommandRun{}

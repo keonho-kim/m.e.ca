@@ -115,8 +115,8 @@ func (s *execution) generate(ctx context.Context, request modelapi.Request, role
 			if err := flush(); err != nil {
 				return err
 			}
-			if !s.modelCall() {
-				return faults.Errorf(diagcatalog.RunBeforeProviderRetry, errModelBudget, reason)
+			if err := s.modelCall(ctx); err != nil {
+				return faults.Errorf(diagcatalog.RunBeforeProviderRetry, err, reason)
 			}
 			s.checkpoint.ModelCalls = s.usage.ModelCalls
 			message := fmt.Sprintf("Provider retry %d/%d: %s", event.Retry.Attempt, event.Retry.MaxAttempts, reason)
