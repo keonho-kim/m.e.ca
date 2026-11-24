@@ -4,7 +4,7 @@
 // Related: webui/src/app/styles/motion.css, webui/src/pages/workspace/ui/chat/chat.tsx.
 
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { type BrowserFixture, browserFixture, connectBrowser, create, test } from '#e2e/fixture';
 
 let fixture: BrowserFixture;
 test.beforeAll(async () => {
@@ -12,11 +12,7 @@ test.beforeAll(async () => {
 });
 async function emptyConversation(page: Page) {
   await connectBrowser(page, fixture);
-  await page
-    .locator('.workspace-group')
-    .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
-    .getByRole('button', { name: '새 대화', exact: true })
-    .click();
+  await create(page);
   await expect(
     page.getByRole('heading', { name: '어떤 작업을 시작할까요?', exact: true })
   ).toBeVisible();

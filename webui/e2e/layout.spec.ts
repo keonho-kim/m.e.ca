@@ -156,7 +156,7 @@ test('a narrow skill dialog shows a readable document and can return to its list
     .first()
     .click();
   const document = dialog.locator('.skill-document');
-  await expect(document.getByRole('heading', { name: 'UI DESIGN', exact: true })).toBeVisible();
+  await expect(document.getByRole('heading', { name: 'UI design', exact: true })).toBeVisible();
   expect((await document.boundingBox().then(required)).width).toBeGreaterThan(280);
   await dialog.getByRole('button', { name: '스킬 목록으로', exact: true }).click();
   await expect(dialog.getByRole('textbox', { name: '스킬 검색', exact: true })).toBeVisible();

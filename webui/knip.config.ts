@@ -10,6 +10,7 @@ const config: KnipConfig = {
   ignore: ['src/shared/api/gen/**'],
   // protoc is a system tool; its --plugin flag loads this npm executable.
   ignoreBinaries: ['protoc'],
-  ignoreDependencies: ['@bufbuild/protoc-gen-es'],
+  // Astryx Doctor loads the TypeScript 6 API while application checks use TypeScript 7.
+  ignoreDependencies: ['@bufbuild/protoc-gen-es', '@typescript/typescript6'],
 };
 export default config;

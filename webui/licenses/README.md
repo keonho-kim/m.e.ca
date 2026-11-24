@@ -4,7 +4,7 @@ These files supply the version-specific fallbacks selected by
 [`scripts/notices.ts`](../scripts/notices.ts) when a locked npm package omits its
 root license. Only full embeds the browser bundle and distributes its notices.
 
-- Astryx Core `0.7.16`: [local MIT text](astryx-core-0.7.16.LICENSE), retrieved from https://github.com/meta/astryx/blob/v0.7.16/LICENSE. The package declares MIT; this fallback is pinned to its release tag.
+- Astryx Core and Neutral `0.7.17` use the [local MIT text](astryx-0.7.17.LICENSE) from https://github.com/meta/astryx/blob/v0.7.17/LICENSE. Both npm packages declare MIT and omit their root license text. The fallbacks match their exact versions.
 - StyleX `0.19.1`: [local license text](stylex-0.19.1.LICENSE), from https://github.com/facebook/stylex/blob/0.19.1/LICENSE.
 
 The fallback map matches only these exact package versions. A new omission fails

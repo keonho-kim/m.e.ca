@@ -35,7 +35,7 @@ macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·No
 
 ### 업데이트
 
-실행 중인 MECA를 종료한 뒤 아래 명령 중 하나를 실행합니다. [업데이트 안내](docs/releases.md#업데이트)
+실행 중인 MECA를 종료한 뒤 아래 명령 중 하나를 실행합니다. [업데이트 안내](docs/releases.md#업데이트) · [이번 릴리스의 변경 사항](docs/release-notes.md)
 
 ```sh
 meca upgrade  # 현재 배포 종류로 업데이트

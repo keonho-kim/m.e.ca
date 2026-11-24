@@ -1,5 +1,5 @@
 diff --git a/dist/Chat/ChatContext.d.ts b/dist/Chat/ChatContext.d.ts
-index 0551cc4..f80599e 100644
+index 0551cc48..f80599ec 100644
 --- a/dist/Chat/ChatContext.d.ts
 +++ b/dist/Chat/ChatContext.d.ts
 @@ -57,6 +57,7 @@ export interface ChatComposerContextValue {
@@ -11,7 +11,7 @@ index 0551cc4..f80599e 100644
      scrollContainerRef: React.RefObject<HTMLElement | null>;
      /** Callback ref for the message list content element — layout observes it for size changes. */
 diff --git a/dist/Chat/ChatLayout.js b/dist/Chat/ChatLayout.js
-index bc4c4c8..ea00160 100644
+index bc4c4c85..ea001601 100644
 --- a/dist/Chat/ChatLayout.js
 +++ b/dist/Chat/ChatLayout.js
 @@ -310,7 +310,7 @@ export function ChatLayout({
@@ -36,7 +36,7 @@ index bc4c4c8..ea00160 100644
    // --- Derived styles ---
    const showEmpty = !hasVisibleContent(children);
 diff --git a/dist/Chat/useChatStreamScroll.d.ts b/dist/Chat/useChatStreamScroll.d.ts
-index bb7b0ce..72018ce 100644
+index bb7b0cee..72018ce0 100644
 --- a/dist/Chat/useChatStreamScroll.d.ts
 +++ b/dist/Chat/useChatStreamScroll.d.ts
 @@ -49,6 +49,7 @@ export interface UseChatStreamScrollOptions {
@@ -48,7 +48,7 @@ index bb7b0ce..72018ce 100644
      isScrolledUp: boolean;
      /** Whether auto-scroll is locked (following content). */
 diff --git a/dist/Chat/useChatStreamScroll.js b/dist/Chat/useChatStreamScroll.js
-index e4e326a..2f110a4 100644
+index e4e326a0..2f110a42 100644
 --- a/dist/Chat/useChatStreamScroll.js
 +++ b/dist/Chat/useChatStreamScroll.js
 @@ -1,67 +1,21 @@
@@ -460,19 +460,19 @@ index e4e326a..2f110a4 100644
 +  useChatStreamScroll
 +};
 diff --git a/dist/Markdown/Markdown.d.ts b/dist/Markdown/Markdown.d.ts
-index edc22fb..7fa1f54 100644
+index 87920630..90657961 100644
 --- a/dist/Markdown/Markdown.d.ts
 +++ b/dist/Markdown/Markdown.d.ts
-@@ -120,6 +120,8 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+@@ -131,6 +131,8 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+      * @default false
       */
-     headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
      isStreaming?: boolean;
 +    /** Controls reveal independently of incremental parsing. */
 +    isRevealing?: boolean;
-     onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void | false;
      /**
-      * Citation sources keyed by ID. When provided, `[id]` and `【id】` markers
-@@ -199,7 +201,7 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
+      * Called when a default link is clicked. Return `false` to prevent the
+      * default navigation. A custom `link` renderer replaces the default link
+@@ -220,7 +222,7 @@ export interface MarkdownProps<Plugins extends ReadonlyArray<MarkdownPluginEntry
   * </Markdown>
   * ```
   */
@@ -482,10 +482,10 @@ index edc22fb..7fa1f54 100644
      var displayName: string;
  }
 diff --git a/dist/Markdown/Markdown.js b/dist/Markdown/Markdown.js
-index 77ab512..669a811 100644
+index 3f0e4a37..da55a3a9 100644
 --- a/dist/Markdown/Markdown.js
 +++ b/dist/Markdown/Markdown.js
-@@ -1408,6 +1408,7 @@ export function Markdown({
+@@ -1394,6 +1394,7 @@ export function Markdown({
    density = 'default',
    headingLevelStart = 1,
    isStreaming = false,
@@ -493,7 +493,7 @@ index 77ab512..669a811 100644
    onLinkClick,
    sources,
    citationStyle = 'label',
-@@ -1473,7 +1474,7 @@ export function Markdown({
+@@ -1462,7 +1463,7 @@ export function Markdown({
  
    // Smooth bursty streamed chunks into a steady character-by-character reveal.
    // When not streaming, the hook returns children unchanged (no-op).
@@ -502,7 +502,7 @@ index 77ab512..669a811 100644
  
    // A discarded render can change this cache, as it can change the option
    // flags below. The parser reuses settled blocks only while the input starts
-@@ -1503,7 +1504,7 @@ export function Markdown({
+@@ -1492,7 +1493,7 @@ export function Markdown({
        return (hasMathRenderer ? parseMarkdownAstIncremental(input, incrementalStateRef.current, mathParseOptions) : parseMarkdownAstIncremental(input, incrementalStateRef.current, legacyParseOptions)).children;
      }
      return (hasMathRenderer ? parseMarkdownAst(children, mathParseOptions) : parseMarkdownAst(children, legacyParseOptions)).children;
@@ -511,7 +511,7 @@ index 77ab512..669a811 100644
    const transformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
    const blocks = useMemo(() => applyMarkdownTransforms({
      type: 'root',
-@@ -1529,7 +1530,7 @@ export function Markdown({
+@@ -1518,7 +1519,7 @@ export function Markdown({
      const options = hasMathRenderer ? mathParseOptions : legacyParseOptions;
      const input = isStreaming ? trimStreamingArtifacts(smoothedText, options) : children;
      return hasMathRenderer ? parseInlineAst(input, mathParseOptions) : parseInlineAst(input, legacyParseOptions);
@@ -520,7 +520,7 @@ index 77ab512..669a811 100644
    const inlineTransformSource = isStreaming ? trimStreamingArtifacts(smoothedText, hasMathRenderer ? mathParseOptions : legacyParseOptions) : children;
    const inlineNodes = useMemo(() => {
      if (display !== 'inline') {
-@@ -1592,7 +1593,7 @@ export function Markdown({
+@@ -1581,7 +1582,7 @@ export function Markdown({
      const blockCursor = {
        offset: 0,
        boundaries,
@@ -529,7 +529,7 @@ index 77ab512..669a811 100644
      };
      // Numbers are assigned in encounter order during rendering.
      const blockCitationCtx = sources ? {
-@@ -1605,12 +1606,12 @@ export function Markdown({
+@@ -1594,12 +1595,12 @@ export function Markdown({
        provider: direction,
        around: direction
      }));
@@ -545,7 +545,7 @@ index 77ab512..669a811 100644
      // Numbers are assigned in encounter order during rendering.
      const citationCtx = sources ? {
 diff --git a/dist/hooks/useStreamingText.js b/dist/hooks/useStreamingText.js
-index 46c7eb2..9e59e8f 100644
+index 46c7eb2b..9e59e8fe 100644
 --- a/dist/hooks/useStreamingText.js
 +++ b/dist/hooks/useStreamingText.js
 @@ -1,37 +1,12 @@
@@ -790,7 +790,7 @@ index 46c7eb2..9e59e8f 100644
 +  useStreamingText
 +};
 diff --git a/src/Chat/ChatContext.tsx b/src/Chat/ChatContext.tsx
-index c457cc4..db9b040 100644
+index c457cc47..db9b040a 100644
 --- a/src/Chat/ChatContext.tsx
 +++ b/src/Chat/ChatContext.tsx
 @@ -108,6 +108,7 @@ export function useChatComposerContext(): ChatComposerContextValue | null {
@@ -802,7 +802,7 @@ index c457cc4..db9b040 100644
    scrollContainerRef: React.RefObject<HTMLElement | null>;
    /** Callback ref for the message list content element — layout observes it for size changes. */
 diff --git a/src/Chat/ChatLayout.tsx b/src/Chat/ChatLayout.tsx
-index b2c2b32..47b492c 100644
+index b2c2b325..47b492ce 100644
 --- a/src/Chat/ChatLayout.tsx
 +++ b/src/Chat/ChatLayout.tsx
 @@ -385,7 +385,7 @@ export function ChatLayout({
@@ -826,7 +826,7 @@ index b2c2b32..47b492c 100644
  
    // --- Derived styles ---
 diff --git a/src/Chat/useChatStreamScroll.ts b/src/Chat/useChatStreamScroll.ts
-index 342408d..145369e 100644
+index 342408df..145369e7 100644
 --- a/src/Chat/useChatStreamScroll.ts
 +++ b/src/Chat/useChatStreamScroll.ts
 @@ -109,6 +109,9 @@ export interface UseChatStreamScrollReturn {
@@ -987,19 +987,19 @@ index 342408d..145369e 100644
      isLocked,
      scrollToBottom,
 diff --git a/src/Markdown/Markdown.tsx b/src/Markdown/Markdown.tsx
-index 0e82ef2..4520423 100644
+index 358e6a68..f23ba16c 100644
 --- a/src/Markdown/Markdown.tsx
 +++ b/src/Markdown/Markdown.tsx
-@@ -277,6 +277,8 @@ export interface MarkdownProps<
+@@ -299,6 +299,8 @@ export interface MarkdownProps<
+    * @default false
     */
-   headingLevelStart?: 1 | 2 | 3 | 4 | 5 | 6;
    isStreaming?: boolean;
-+    /** Controls reveal independently of incremental parsing. */
-+    isRevealing?: boolean;
-   onLinkClick?: (
-     href: string,
-     event: React.MouseEvent<HTMLAnchorElement>,
-@@ -2242,6 +2244,7 @@ export function Markdown<
++  /** Controls reveal independently of incremental parsing. */
++  isRevealing?: boolean;
+   /**
+    * Called when a default link is clicked. Return `false` to prevent the
+    * default navigation. A custom `link` renderer replaces the default link
+@@ -2255,6 +2257,7 @@ export function Markdown<
    density = 'default',
    headingLevelStart = 1,
    isStreaming = false,
@@ -1007,7 +1007,7 @@ index 0e82ef2..4520423 100644
    onLinkClick,
    sources,
    citationStyle = 'label',
-@@ -2318,7 +2321,7 @@ export function Markdown<
+@@ -2338,7 +2341,7 @@ export function Markdown<
  
    // Smooth bursty streamed chunks into a steady character-by-character reveal.
    // When not streaming, the hook returns children unchanged (no-op).
@@ -1016,7 +1016,7 @@ index 0e82ef2..4520423 100644
  
    // A discarded render can change this cache, as it can change the option
    // flags below. The parser reuses settled blocks only while the input starts
-@@ -2375,6 +2378,7 @@ export function Markdown<
+@@ -2395,6 +2398,7 @@ export function Markdown<
      smoothedText,
      children,
      isStreaming,
@@ -1024,7 +1024,7 @@ index 0e82ef2..4520423 100644
      hasMathRenderer,
      mathParseOptions,
      legacyParseOptions,
-@@ -2427,6 +2431,7 @@ export function Markdown<
+@@ -2447,6 +2451,7 @@ export function Markdown<
      smoothedText,
      children,
      isStreaming,
@@ -1032,7 +1032,7 @@ index 0e82ef2..4520423 100644
      hasMathRenderer,
      mathParseOptions,
      legacyParseOptions,
-@@ -2462,6 +2467,7 @@ export function Markdown<
+@@ -2482,6 +2487,7 @@ export function Markdown<
      preparedPlugins,
      inlineTransformSource,
      isStreaming,
@@ -1040,7 +1040,7 @@ index 0e82ef2..4520423 100644
    ]);
  
    // Track recent boundaries for stacked fade-in animation.
-@@ -2516,7 +2522,7 @@ export function Markdown<
+@@ -2536,7 +2542,7 @@ export function Markdown<
      const blockCursor: StreamingCursor = {
        offset: 0,
        boundaries,
@@ -1049,7 +1049,7 @@ index 0e82ef2..4520423 100644
      };
      // Numbers are assigned in encounter order during rendering.
      const blockCitationCtx: CitationContext | null = sources
-@@ -2550,6 +2556,7 @@ export function Markdown<
+@@ -2570,6 +2576,7 @@ export function Markdown<
      blocks,
      boundaries,
      isStreaming,
@@ -1057,7 +1057,7 @@ index 0e82ef2..4520423 100644
      sources,
      citationStyle,
      density,
-@@ -2571,7 +2578,7 @@ export function Markdown<
+@@ -2591,7 +2598,7 @@ export function Markdown<
      const cursor: StreamingCursor = {
        offset: 0,
        boundaries,
@@ -1067,7 +1067,7 @@ index 0e82ef2..4520423 100644
      // Numbers are assigned in encounter order during rendering.
      const citationCtx: CitationContext | null = sources
 diff --git a/src/hooks/useStreamingText.ts b/src/hooks/useStreamingText.ts
-index acc340c..f47f3cc 100644
+index acc340c8..f47f3cc3 100644
 --- a/src/hooks/useStreamingText.ts
 +++ b/src/hooks/useStreamingText.ts
 @@ -145,6 +145,14 @@ export function useStreamingText(

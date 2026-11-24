@@ -166,7 +166,9 @@ test('thinking and tool cells hold the same width through persistence and comple
 }) => {
   try {
     await send(page, 'TOOL_CYCLE_FIXTURE');
-    await expect(page.locator('.thinking')).toContainText('Stable initial tool reasoning');
+    await expect(
+      page.locator('.thinking').filter({ hasText: 'Stable initial tool reasoning' })
+    ).toHaveCount(1);
     const width = (await page.locator('.thinking').first().boundingBox().then(required)).width;
     const contentWidth = (await page.locator('.chat-content').boundingBox().then(required)).width;
     const areaWidth = (await page.locator('#meca-work-area').boundingBox().then(required)).width;
@@ -201,6 +203,13 @@ test('thinking and tool cells hold the same width through persistence and comple
     ).toBeLessThan(2);
     await page.setViewportSize({ width: 480, height: 900 });
     expect(await noOverflow(page, '.chat-content')).toEqual([]);
+    const visible = await page.evaluate(() => {
+      const state = window as unknown as { cellFrames: boolean[]; stopCellFrames: () => void };
+      state.stopCellFrames();
+      return state.cellFrames;
+    });
+    expect(visible.length).toBeGreaterThan(1);
+    expect(visible.every(Boolean)).toBe(true);
     await page.request.get(`${fixture.provider}/test/finish-tool`);
     await expect(page.locator('.completion-summary')).toBeVisible();
     await expect(page.locator('.completion-row')).not.toContainText('Intermediate response');
@@ -213,13 +222,12 @@ test('thinking and tool cells hold the same width through persistence and comple
       );
     });
     expect(order).toBe(true);
-    const visible = await page.evaluate(() => {
-      const state = window as unknown as { cellFrames: boolean[]; stopCellFrames: () => void };
-      state.stopCellFrames();
-      return state.cellFrames;
-    });
-    expect(visible.length).toBeGreaterThan(1);
-    expect(visible.every(Boolean)).toBe(true);
+    // Completed history is virtualized. Reading its first row restores the earlier reasoning.
+    await page.locator('.workspace-body').hover();
+    await page.mouse.wheel(0, -100000);
+    await expect(
+      page.locator('.thinking').filter({ hasText: 'Stable initial tool reasoning' })
+    ).toBeVisible();
   } finally {
     await page.request.get(`${fixture.provider}/test/start-tool`);
     await page.request.get(`${fixture.provider}/test/finish-tool`);

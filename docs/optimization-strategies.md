@@ -80,6 +80,8 @@ WebUI는 작고 지원되는 첨부를 로컬에서 순차 축소하고 나머�
 
 뷰포트는 줄 위치를 간격을 두고 기록해 보이는 구간을 찾고 캐시 보유량에 맞춰 파생 배치를 회수한다. 원문과 행의 탐색 위치는 표시 캐시의 수명과 분리한다. [Markdown 줄 위치](../internal/tui/viewport/markdown_index.go) · [표시 캐시 예산](../internal/tui/viewport/cache_budget.go)
 
+팀원별 텍스트는 대기 중인 최신값으로 합치고, 사용량과 모델 상태는 함께 갱신해 관측 시각의 역전을 방지한다. 승인·퇴장·완료 사건에서 순서를 고정하고, 저장된 공용 응답은 요청 취소 뒤에도 세션 화면으로 전달한다. 사용량과 모델 상태 갱신은 헤더만 다시 그리며, 재시도 안내가 바뀌거나 본문 변경이 대기 중이면 본문도 반영한다. [이벤트 전달](../internal/tui/session/request_delivery.go) · [화면 갱신](../internal/tui/session/event_loop.go)
+
 ## WebUI 상태와 렌더링
 
 서버 데이터는 TanStack Query에 캐시하고 초안·선택·진행 중 표시 상태는 Zustand에 둔다. 이벤트를 대상과 커서에 맞춰 적용하며, 저장 이력이 완료 경계에 도달할 때 실시간 본문을 교체한다. 숨겨진 채팅은 본문 갱신을 멈추고 승인·완료·예약을 계속 처리한다. 비활성 조회는 개수와 보유 바이트 기준으로 정리한다. [WebUI 상태 복원](webui-api.md#상태와-스트림-복원) · [이력 인계](../webui/src/pages/workspace/model/history-handoff.ts) · [표시 수명](../webui/src/pages/workspace/model/presentation.ts) · [조회 캐시](../webui/src/pages/workspace/api/cache-policy.ts)
@@ -91,6 +93,8 @@ WebUI는 작고 지원되는 첨부를 로컬에서 순차 축소하고 나머�
 ## 빌드와 정적 자산
 
 Vite 빌드는 React Compiler를 사용하고 초기 화면에 필요한 의존성과 지연 로드 화면을 분리한다. 자산 생성기는 내용이 같은 gzip 결과를 검증해 재사용한다. full 실행 파일에서 사전 압축한 자산을 제공하며 해시 경로에는 장기 캐시, 진입 HTML·favicon·빌드 식별자에는 재검증을 적용한다. [빌드 설정](../webui/vite.config.ts) · [압축 자산 생성](../devtools/cmd/uiassets/compression.go) · [자산 전송](../internal/webui/assets.go)
+
+Astryx의 생성된 MECA 테마 CSS는 Neutral에서 상속한 스타일까지 포함한다. 앱은 생성된 테마 CSS만 로드해 사용하지 않는 Neutral 테마의 스타일을 중복 전송하지 않는다. 초기·전체 gzip 예산과 분석 명령은 [개발 가이드](development.md#내장-webui)를 따른다.
 
 tui 빌드는 서버와 내장 WebUI를 의존성에서 제외한다. [배포 종류](releases.md#배포-파일) · [빌드 경계](development.md#배포-종류와-빌드-경계)
 

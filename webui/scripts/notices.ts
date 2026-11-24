@@ -37,7 +37,8 @@ export function runtimeNotices(): Plugin {
         }
       }
       const fallback: Record<string, string> = {
-        '@astryxdesign/core@0.7.16': 'astryx-core-0.7.16.LICENSE',
+        '@astryxdesign/core@0.7.17': 'astryx-0.7.17.LICENSE',
+        '@astryxdesign/theme-neutral@0.7.17': 'astryx-0.7.17.LICENSE',
         '@stylexjs/stylex@0.19.1': 'stylex-0.19.1.LICENSE',
       };
       const missing: string[] = [];

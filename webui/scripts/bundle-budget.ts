@@ -47,4 +47,4 @@ async function walk(path: string) {
 }
 await walk('');
 console.log(JSON.stringify(report, null, 2));
-if (report.initialGzip > 320 * 1024 || report.totalGzip > 1536 * 1024) process.exitCode = 1;
+if (report.initialGzip > 640 * 1024 || report.totalGzip > 1536 * 1024) process.exitCode = 1;

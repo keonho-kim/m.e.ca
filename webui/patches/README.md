@@ -12,7 +12,7 @@ Contracts: `e2e/editor.spec.ts`, `e2e/editor-boundaries.spec.ts` and `e2e/browse
 
 ## Streaming Markdown
 
-`@astryxdesign%2Fcore@0.7.16.patch` separates Astryx incremental parsing (`isStreaming`) from character reveal (`isRevealing`). The animation frame stops when text catches up. Resuming reveal after an instant catch-up or a reduced-motion change preserves the displayed prefix. Source, published runtime and declarations carry the same contract.
+`@astryxdesign%2Fcore@0.7.17.patch` separates Astryx incremental parsing (`isStreaming`) from character reveal (`isRevealing`). The animation frame stops when text catches up. Resuming reveal after an instant catch-up or a reduced-motion change preserves the displayed prefix. Source, published runtime and declarations carry the same contract.
 
 The application uses Astryx's parser and AST transform plugin. Covered-content projection belongs to the workspace presentation model; a second parser or an unsupported AST-input prop is not part of this adapter.
 
@@ -25,6 +25,8 @@ The Astryx patch keeps the jump button hidden while automatic following is locke
 Contract: `e2e/chat-stream-order.spec.ts`, including normal motion and history handoff in Chromium, Firefox and WebKit.
 
 ## Maintenance boundaries
+
+Core, Neutral and CLI are pinned together at `0.7.17`. The `0.7.16` to `0.7.17` CLI upgrade completed with no application codemods or manual migrations. The streaming and scroll contracts above still need this patch. Its Markdown merge preserves the upstream list bounds, table layout, link handling and prop diagnostics. Release fixes for selector focus, narrow composers, input keyboard avoidance, clipboard fallback and theme contrast are supplied by the upgraded packages. [Upstream release](https://github.com/meta/astryx/releases/tag/v0.7.17)
 
 Review and rebase each patch when changing its pinned package, then run the corresponding browser contracts. Preserve upstream licenses and include package source, runtime and declaration changes required by the published entry points.
 

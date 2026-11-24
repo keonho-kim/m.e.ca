@@ -140,10 +140,27 @@ UI 표현은 Astryx를 사용하고 코드 편집기는 명시한 패치 계약�
 bun run --cwd webui verify
 bun run --cwd webui build
 bun run --cwd webui astryx doctor --built dist
+bun run --cwd webui astryx doctor --built .
 bun run --cwd webui bundle:budget
 ```
 
 `verify`는 TypeScript·Biome·Oxlint·Knip·Steiger와 단위 테스트를 수행한다. 의존성 변경은 lockfile·라이선스·패치를 함께 확인한다.
+
+`bundle:budget`은 진입 HTML에서 직접 로드·preload하는 자산의 gzip 합계를 **640KiB**, 전체 배포 자산의 gzip 합계를 **1536KiB**까지 허용한다. 실행 중 지연 로드한 화면의 전송량은 초기 합계와 구분한다. 예산 검사는 [스크립트](../webui/scripts/bundle-budget.ts)가 소유하며 `bun run --cwd webui analyze`로 초기·지연 청크의 구성을 확인한다.
+
+TypeScript 7 환경에서 Astryx Doctor의 컴포넌트 props 검사는 개발 의존성 `@typescript/typescript6`의 컴파일러 API를 사용한다. 애플리케이션 타입 검사는 `typescript`에 고정한 버전으로 실행한다.
+
+### Astryx 검사와 알려진 경고
+
+Core·Neutral·CLI는 같은 정식 버전으로 고정한다. 의존성을 바꿀 때 이전 버전부터 `astryx upgrade --from <version> --path .`를 실행하고 `--apply` 결과·수동 조치·생성물을 검토한다. 현재 `0.7.17`의 유지보수 범위는 [패치 계약](../webui/patches/README.md)을 따른다.
+
+`doctor --built dist`는 배포 자산의 Astryx 사용과 CSS 포함을 검사한다. 소스의 스타일·아이콘 사용까지 보려면 프로젝트 루트인 `--built .`도 검사한다. 0.7.17 기준으로 남아 있는 경고는 다음과 같이 구분한다.
+
+- **스타일 154건·아이콘 43건:** CSS import·`className`·SVG·아이콘 라이브러리 사용에 대한 정적 검사다. 생성 테마 연결과 브랜드·아이콘 등록 코드도 검토 대상에 포함된다. 전부 화면 오류이거나 정당한 예외라는 뜻은 아니며, 각 항목을 공개 컴포넌트·토큰으로 대체할 수 있는지 별도로 분류해야 한다.
+- **테마 선택자 2건:** `collapsible`의 `data-tone="tool"`·`"request"`와 `"thinking"`에 지정한 배경·여백이 동시에 적용된다고 예측한다. 같은 요소의 정확한 속성값은 상호 배타적이므로 현재 규칙에는 해당 교집합이 없다. 경고만 없애기 위해 불가능한 조합의 스타일을 추가하지 않는다. 선택자를 바꿀 때는 이 판단과 실제 브라우저 표시를 다시 확인한다.
+- **Vite의 500kB 청크 안내:** 압축 전 단일 JavaScript 청크 크기에 대한 안내다. 초기 gzip 640KiB 검사와 따로 확인하며, 크기가 큰 의존성은 분석 결과와 실제 초기 화면의 필요성을 기준으로 분리한다.
+
+경고를 일괄 억제하지 않는다. 빌드·타입·동작 실패와 디자인 사용 권고를 구분해 보고하고, 검사 버전이 바뀌면 이 기록도 재검토한다.
 
 ### 브라우저 성능·복구 책임
 
@@ -169,9 +186,11 @@ MECA_UI_DESCRIPTOR="$PWD/.local/ui-check/connection.json" \
 연결 파일이 준비된 뒤 다른 터미널에서 실행하고, 완료 후 fixture를 종료한다.
 
 ```sh
-MECA_UI_DESCRIPTOR="$PWD/.local/ui-check/connection.json" bun run --cwd webui test:e2e
+MECA_UI_DESCRIPTOR="$PWD/.local/ui-check/connection.json" bun run --cwd webui test:e2e --project=chromium
 touch .local/ui-check/connection.json.stop
 ```
+
+브라우저별로 새 fixture를 시작하고 `--project=firefox` 또는 `--project=webkit`으로 반복한다. Provider의 대기 신호와 승인 테스트 파일은 fixture 수명을 공유하므로 브라우저 간에 실행 상태를 재사용하지 않는다. 다음 실행에는 새 연결 파일 경로를 사용한다.
 
 Playwright CLI는 실제 화면·입력·네트워크 확인에 사용한다. Chromium·Firefox·WebKit, 좁은 화면·키보드·forced colors·축소 모션을 확인하며 실제 Safari IME·스크린리더 검증과 구분한다. HTTP/1·HTTPS/HTTP2와 bfcache 복원은 별도 계약으로 확인한다. 테스트 연결 파일·쿠키·trace·캡처·로그는 로컬 산출물이다.
 

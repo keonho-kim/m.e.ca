@@ -25,8 +25,8 @@
     "icons": "bun scripts/file-icons.ts"
   },
   "dependencies": {
-    "@astryxdesign/core": "0.7.16",
-    "@astryxdesign/theme-neutral": "0.7.16",
+    "@astryxdesign/core": "0.7.17",
+    "@astryxdesign/theme-neutral": "0.7.17",
     "@dnd-kit/dom": "0.5.3",
     "@dnd-kit/react": "0.5.3",
     "@hookform/resolvers": "7.0.5",
@@ -43,7 +43,7 @@
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "0.7.16",
+    "@astryxdesign/cli": "0.7.17",
     "@axe-core/playwright": "4.14.0",
     "@babel/core": "7.29.7",
     "@biomejs/biome": "2.6.6",
@@ -63,6 +63,7 @@
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@typescript/typescript6": "6.0.2",
     "@vitejs/plugin-react": "6.3.0",
     "babel-plugin-react-compiler": "1.0.0",
     "knip": "6.45.0",
@@ -83,6 +84,6 @@
   },
   "patchedDependencies": {
     "react-simple-code-editor@0.14.1": "patches/react-simple-code-editor@0.14.1.patch",
-    "@astryxdesign/core@0.7.16": "patches/@astryxdesign%2Fcore@0.7.16.patch"
+    "@astryxdesign/core@0.7.17": "patches/@astryxdesign%2Fcore@0.7.17.patch"
   }
 }
