@@ -37,8 +37,15 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
   approvals: [],
   bootstrap: (target, snapshot) => {
     if (snapshot.language) setServerLanguage(snapshot.language);
-    const revision = get().historyRevision + 1;
-    const tasks = { ...get().tasks };
+    const previous = get();
+    const revision = previous.historyRevision + 1;
+    const tasks = { ...previous.tasks };
+    const sameServer =
+      !!previous.replayCursor &&
+      previous.replayCursor.split(':')[0] === snapshot.cursor?.split(':')[0];
+    const sameConversation =
+      previous.selection.workspace === target.workspace &&
+      previous.selection.session === target.session;
     for (const [id, task] of Object.entries(tasks))
       if (target.session && task.workspace === target.workspace && task.session === target.session)
         delete tasks[id];
@@ -66,7 +73,13 @@ export const createStreamSlice: StateCreator<WorkspaceState, [], [], StreamSlice
         snapshot.task?.code === 'completion_not_saved'
           ? null
           : (snapshot.task?.historyThrough ?? '0'),
-      drafts: target.session ? snapshotDrafts(snapshot, revision) : {},
+      drafts: target.session
+        ? snapshotDrafts(
+            snapshot,
+            revision,
+            sameServer && sameConversation ? previous.drafts : undefined
+          )
+        : {},
       statistics: snapshot.execution?.statistics ?? null,
       tasks,
       events: snapshot.activity ?? [],

@@ -35,6 +35,7 @@ export function LiveOutput({
       ? Object.values(drafts)
       : [];
   const agents = [...new Set(sources.map((value) => value.agent).filter(Boolean))];
+  if (agent && !agents.includes(agent)) setAgent('');
   const savedRows = useMemo(() => historyRows(history), [history]);
   const timeline = useMemo(
     () =>

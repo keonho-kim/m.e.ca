@@ -29,7 +29,7 @@ func (d *requestDelivery) emit(ctx, presentation context.Context, queue chan<- n
 	case "tool_succeeded", "tool_failed", "tool_interrupted", "denied", "command_finished", "usage":
 		ctx = presentation
 	}
-	if event.Statistics != nil {
+	if event.HistorySequence > 0 || event.Statistics != nil {
 		ctx = presentation
 	}
 	return d.post(ctx, queue, notice{Event: &event})
@@ -81,7 +81,7 @@ func (d *requestDelivery) post(ctx context.Context, queue chan<- notice, n notic
 	}
 	if n.Approval != nil || n.Done {
 		for _, peer := range d.peers {
-			peer.current, peer.usage = nil, nil
+			peer.current, peer.measurement = nil, nil
 		}
 	}
 	err := d.peer(id).post(ctx, queue, n)

@@ -80,7 +80,6 @@ func TestAnswerBoundarySkipsSQLWhenNoNewConversationExists(t *testing.T) {
 		r := testRoom(t)
 		store := &readCountingRoom{memoryRoom: r.options.Store.(*memoryRoom)}
 		r.options.Store = store
-		r.active["Ren"].leaving = true
 		ctx, cancel := context.WithCancel(r.ctx)
 		done := make(chan error, 1)
 		go func() { _, err := (&Peer{ID: "Hana", room: r}).AfterAnswer(ctx, "Done"); done <- err }()

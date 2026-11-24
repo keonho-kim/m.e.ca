@@ -60,6 +60,27 @@ func (a *app) post(ctx context.Context, n notice) error {
 		return ctx.Err()
 	}
 }
+
+// receiveFrame applies the notice once and reports whether the body needs paint.
+// Measurement snapshots only change the header; ordered controls keep full paint.
+func (a *app) receiveFrame(n notice) bool {
+	if n.Stream != nil {
+		n.Event, n.Stream = n.Stream.take(), nil
+		if n.Event == nil {
+			return false
+		}
+	}
+	status := a.status
+	a.receive(n)
+	if n.Event != nil && n.Event.Statistics == nil && a.status == status {
+		switch n.Event.Kind {
+		case "model_activity", "usage_progress", "usage", "generation_finished":
+			return false
+		}
+	}
+	return true
+}
+
 func (a *app) receive(n notice) {
 	if n.Settings != nil {
 		a.receiveSettings(n.Settings)

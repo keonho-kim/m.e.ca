@@ -1,4 +1,4 @@
-// Purpose: Keep latest pending text and usage snapshots between ordered worker notifications.
+// Purpose: Keep latest pending text, usage and activity snapshots between ordered worker notifications.
 // Pattern: Bounded latest-value mailbox with explicit ordering barriers.
 // Usage: A task worker owns delivery; receive consumes mailbox values on the terminal event loop.
 // Related: internal/tui/session/events.go, internal/tui/session/app.go.
@@ -29,7 +29,7 @@ func (s *streamNotice) take() *runrecord.Event {
 	return &event
 }
 
-type runtimeDelivery struct{ current, usage *streamNotice }
+type runtimeDelivery struct{ current, measurement *streamNotice }
 
 func (d *runtimeDelivery) stream(ctx context.Context, queue chan<- notice, event runrecord.Event) error {
 	return latestNotice(ctx, queue, &d.current, event)
@@ -45,7 +45,14 @@ func latestNotice(ctx context.Context, queue chan<- notice, slot **streamNotice,
 	current := *slot
 	current.mu.Lock()
 	pending := current.pending
-	current.event, current.pending = event, true
+	// Timing and token counters describe the same attempt. Preserve pending
+	// usage while replacing its timing, so an older counter cannot rewind it.
+	if pending && event.Kind == "model_activity" && current.event.Kind == "usage_progress" {
+		current.event.Activity = event.Activity
+	} else {
+		current.event = event
+	}
+	current.pending = true
 	current.mu.Unlock()
 	if pending {
 		return nil
@@ -63,12 +70,12 @@ func (d *runtimeDelivery) post(ctx context.Context, queue chan<- notice, n notic
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if n.Event != nil && n.Event.Kind == "usage_progress" {
-		return latestNotice(ctx, queue, &d.usage, *n.Event)
+	if n.Event != nil && (n.Event.Kind == "usage_progress" || n.Event.Kind == "model_activity") {
+		return latestNotice(ctx, queue, &d.measurement, *n.Event)
 	}
 	// Freeze earlier snapshots before retry, completion, final usage or approval.
 	// The next stream gets a distinct mailbox and cannot cross this barrier.
-	d.current, d.usage = nil, nil
+	d.current, d.measurement = nil, nil
 	select {
 	case queue <- n:
 		return nil

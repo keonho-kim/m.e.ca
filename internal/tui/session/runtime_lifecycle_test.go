@@ -120,3 +120,22 @@ func TestCanceledTeamStillReceivesDurableTerminalResult(t *testing.T) {
 		t.Fatalf("canceled request kept stale tool state: %s", shown)
 	}
 }
+
+func TestCanceledTeamStillReceivesCommittedFinalAnswer(t *testing.T) {
+	a := screenFixture(t)
+	a.team.enabled = true
+	a.team.begin()
+	ctx, cancel := context.WithCancel(a.ctx)
+	cancel()
+	delivery := requestDelivery{team: true}
+	event := runrecord.Event{Kind: "team_progress", Agent: "Ren", Text: "Saved final answer", Final: true, HistorySequence: 9}
+	if err := delivery.emit(ctx, a.ctx, a.events, event); err != nil {
+		t.Fatal("committed final answer was dropped during cancellation", err)
+	}
+	a.receive(<-a.events)
+	a.finishWorker(notice{Done: true, Err: context.Canceled})
+	a.render()
+	if !strings.Contains(strings.Join(screenRows(a, 24), "\n"), event.Text) {
+		t.Fatal("committed final answer disappeared from the terminal")
+	}
+}

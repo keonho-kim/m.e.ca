@@ -24,6 +24,8 @@ TUI·CLI·서버·WebUI는 같은 모델 요청·도구·승인·저장 흐름�
 
 Provider의 SSE·NDJSON을 순서대로 해석하며 답변과 Thinking, 완료된 native 호출을 분리한다. heartbeat는 스트림 본문과 별도로 처리한다. Chat Completions는 종료 표식까지 읽으며, `stop`이나 `tool_calls` 프레임 뒤 연결이 정상 종료되면 그때까지 받은 사용량과 함께 확정한다. 도구는 인자와 식별자의 검증을 마친 호출에서 실행한다. [본문 한도](configuration.md#본문-한도) · [종료 판정](../internal/provider/protocol/chunk.go)
 
+본문 없이 native 도구 호출로 응답이 확정되면 이전 텍스트 초안을 정리하되, 해당 응답에서 확정한 Thinking은 표시 정책에 따라 유지한다. 도구 실행으로 넘어가는 순간 추론 표시를 빈 내용으로 덮어쓰지 않는다. [응답 확정](../internal/agent/run/generate.go)
+
 에이전트와 압축의 무수신 예산은 `[loop].max_model_seconds`로 설정한다. 메타데이터 조회와 연결 진단의 기본 무수신 한도는 3분이다. 수신 대기와 소비자 처리 시간은 따로 계산한다. DNS·연결·TLS 초기화 제한과 취소도 개별 경계를 가진다. [실행 예산](configuration.md#자동-승인과-실행-예산)
 
 복구 가능한 전송 오류는 응답 도중에도 최초 요청을 포함해 최대 4회 시도한다. 대기는 1초·3초·5초이며 더 긴 `Retry-After`는 최대 30초 범위에서 우선한다. 각 재시도의 사용량은 따로 기록하고 표시 중인 답변과 Thinking은 유지한다. 다시 받은 앞부분이 일치하면 새 내용만 이어 표시하고, 다르면 검증과 완료를 마친 응답으로 갱신한다. 이미 실행한 도구의 확정 결과를 문맥으로 사용한다. [전송 재시도](../internal/provider/transport/retry.go) · [초안과 재시도](../internal/agent/run/reply_draft.go)

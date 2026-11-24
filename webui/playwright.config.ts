@@ -15,13 +15,13 @@ export default defineConfig({
       name: 'firefox',
       use: { browserName: 'firefox' },
       testMatch:
-        /(browser-(contracts|quality|features|policy)|new-chat|chat-stream-order)\.spec\.ts/,
+        /(browser-(contracts|quality|features|policy)|new-chat|chat-stream-order|team-(filter|presentation))\.spec\.ts/,
     },
     {
       name: 'webkit',
       use: { browserName: 'webkit' },
       testMatch:
-        /(browser-(contracts|quality|features|policy)|new-chat|chat-stream-order)\.spec\.ts/,
+        /(browser-(contracts|quality|features|policy)|new-chat|chat-stream-order|team-(filter|presentation))\.spec\.ts/,
     },
   ],
   use: {

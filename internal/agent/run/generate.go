@@ -181,7 +181,7 @@ func (s *execution) askResponse(ctx context.Context, request modelapi.Request, s
 	clearDraft := len(calls) > 0 && output.text == "" && draft.output.visible(hideThinking) != (replyOutput{})
 	*draft = replyDraft{}
 	if clearDraft {
-		if err := s.emit(runrecord.Event{Kind: "stream"}); err != nil {
+		if err := s.emit(runrecord.Event{Kind: "stream", Thinking: output.visible(hideThinking).thinking}); err != nil {
 			return modelapi.Response{}, err
 		}
 	}

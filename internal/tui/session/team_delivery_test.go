@@ -72,3 +72,25 @@ func TestTeamDeliveryHiddenFactsDoNotSplitStreamMailboxes(t *testing.T) {
 		t.Fatal("hidden facts split the visible stream")
 	}
 }
+
+func TestTeamDeliveryCoalescesActivityAlongsideText(t *testing.T) {
+	d := requestDelivery{team: true}
+	queue := make(chan notice, 64)
+	ctx := t.Context()
+	for _, text := range []string{"a", "ab", "abc"} {
+		if err := d.stream(ctx, queue, runrecord.Event{Kind: "stream", Agent: "Ren", Text: text}); err != nil {
+			t.Fatal(err)
+		}
+		event := runrecord.Event{Kind: "model_activity", Agent: "Ren", Activity: &runrecord.ModelActivity{Finished: len(text) == 3}}
+		if err := d.post(ctx, queue, notice{Event: &event}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(queue) != 2 {
+		t.Fatalf("text and activity accumulated %d notices; want 2 latest snapshots", len(queue))
+	}
+	text, activity := (<-queue).Stream.take(), (<-queue).Stream.take()
+	if text.Text != "abc" || activity.Activity == nil || !activity.Activity.Finished {
+		t.Fatal("latest text or activity was lost")
+	}
+}

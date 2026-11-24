@@ -8,6 +8,7 @@ import {
   browserFixture,
   connectBrowser,
   create,
+  rpc,
   send,
   test,
 } from '#e2e/fixture';
@@ -61,7 +62,15 @@ test('long live Markdown follows the newest output after durable history has set
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await create(page);
   await send(page, 'LONG_STREAM_FIXTURE');
-  await expect(page.locator('.history-rows')).toContainText('LONG_STREAM_FIXTURE');
+  const path = new URL(page.url()).pathname.split('/');
+  await expect
+    .poll(async () =>
+      (
+        await rpc(page, { history: { sessionId: path[5], limit: 32 } }, path[3])
+      ).history?.items?.some((item) => item.message?.text === 'LONG_STREAM_FIXTURE')
+    )
+    .toBe(true);
+  await expect(page.getByRole('log')).toContainText('LONG_STREAM_FIXTURE');
   await expect(page.locator('.live-output')).toContainText('Fixture');
   const scroller = page.locator('.workspace-body');
   await scroller.evaluate((el) => {

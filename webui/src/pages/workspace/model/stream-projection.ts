@@ -15,22 +15,53 @@ import { textTail } from '@/shared/lib/utf8';
 const windowChars = 128 * 1024;
 const totalChars = 4 * 1024 * 1024;
 
-export function snapshotDrafts(snapshot: SnapshotJson, revision: number) {
+export function snapshotDrafts(
+  snapshot: SnapshotJson,
+  revision: number,
+  previous: Record<string, Draft> = {}
+) {
   const values: Record<string, Draft> = {};
   for (const d of snapshot.drafts ?? []) {
-    if (d.taskId)
-      values[`${d.taskId}/${d.agent ?? ''}`] = {
-        task: d.taskId,
-        agent: d.agent ?? '',
-        generation: d.generation ?? '0',
-        presentation: d.presentation,
-        startSequence: d.startSequence ?? '0',
-        text: d.text ?? '',
-        thinking: d.thinking ?? '',
-        truncated: !!d.truncated,
-        ...(d.committed ? { doneRevision: revision, doneThrough: d.historySequence } : {}),
-      };
+    if (!d.taskId) continue;
+    const saved =
+      d.committed && d.presentation && !d.text
+        ? snapshot.activity?.find(
+            (event) =>
+              event.taskId === d.taskId &&
+              (event.agent ?? '') === (d.agent ?? '') &&
+              event.presentation === d.presentation &&
+              event.historySequence === d.historySequence &&
+              ['progress', 'team_progress'].includes(event.kind ?? '')
+          )
+        : undefined;
+    values[`${d.taskId}/${d.agent ?? ''}`] = {
+      task: d.taskId,
+      agent: d.agent ?? '',
+      generation: d.generation ?? '0',
+      presentation: d.presentation,
+      startSequence: d.startSequence ?? '0',
+      text: d.text || saved?.message?.text || '',
+      thinking: d.thinking ?? '',
+      truncated: !!d.truncated,
+      ...(d.committed ? { doneRevision: revision, doneThrough: d.historySequence } : {}),
+    };
   }
+  const tasks = new Set(
+    [...(snapshot.tasks ?? []), ...(snapshot.task ? [snapshot.task] : [])].map((task) => task.id)
+  );
+  for (const draft of Object.values(previous)) {
+    const key = `${draft.task}/${draft.agent}`;
+    const current = values[key];
+    if (
+      !draft.presentation ||
+      !tasks.has(draft.task) ||
+      current?.presentation === draft.presentation
+    )
+      continue;
+    if (draft.doneRevision === undefined && !current?.presentation) continue;
+    values[`${key}/${draft.generation}`] = { ...draft, doneRevision: revision };
+  }
+  boundDrafts(values);
   return values;
 }
 
@@ -83,7 +114,25 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       historyRevision++;
       const key = `${e.taskId}/${e.agent ?? ''}`,
         draft = drafts[key];
-      if (draft && draft.doneRevision === undefined) {
+      if (e.message?.text && e.kind !== 'tool_started') {
+        // The committed body can complete or replace a partial streamed reply.
+        // Keep a longer live body only when it extends the saved preview.
+        const text =
+          e.truncated && draft?.text.startsWith(e.message.text) ? draft.text : e.message.text;
+        if (drafts === state.drafts) drafts = { ...drafts };
+        drafts[key] = {
+          task: e.taskId,
+          agent: e.agent ?? '',
+          generation: draft?.generation ?? e.generation ?? '0',
+          presentation: e.presentation ?? draft?.presentation,
+          startSequence: draft?.startSequence ?? e.sequence ?? '0',
+          text: textTail(text, windowChars),
+          thinking: draft?.thinking ?? '',
+          truncated: !!e.truncated || !!draft?.truncated || text.length > windowChars,
+          doneRevision: historyRevision,
+          doneThrough: e.historySequence,
+        };
+      } else if (draft && draft.doneRevision === undefined) {
         if (drafts === state.drafts) drafts = { ...drafts };
         drafts[key] = { ...draft, doneRevision: historyRevision, doneThrough: e.historySequence };
       }
@@ -154,21 +203,7 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
       events.push(e);
     }
   }
-  if (drafts !== state.drafts) {
-    for (const [key, draft] of Object.entries(drafts).slice(0, -128))
-      if (draft.doneRevision !== undefined) delete drafts[key];
-    const all = Object.entries(drafts);
-    if (all.reduce((n, [, d]) => n + d.text.length + d.thinking.length, 0) > totalChars) {
-      const limit = Math.floor(totalChars / Math.max(1, all.length * 2));
-      for (const [key, d] of all)
-        drafts[key] = {
-          ...d,
-          text: textTail(d.text, limit),
-          thinking: textTail(d.thinking, limit),
-          truncated: true,
-        };
-    }
-  }
+  if (drafts !== state.drafts) boundDrafts(drafts);
   if (tasks !== state.tasks) trimTasks(tasks);
   if (events.length > 128) events = events.slice(-128);
   if (
@@ -192,4 +227,20 @@ export function applyEvents(state: WorkspaceState, batch: EventJson[]): Partial<
     completionThrough,
     replayCursor: ordered.cursor,
   };
+}
+
+function boundDrafts(drafts: Record<string, Draft>) {
+  for (const [key, draft] of Object.entries(drafts).slice(0, -128))
+    if (draft.doneRevision !== undefined) delete drafts[key];
+  const all = Object.entries(drafts);
+  if (all.reduce((n, [, d]) => n + d.text.length + d.thinking.length, 0) > totalChars) {
+    const limit = Math.floor(totalChars / Math.max(1, all.length * 2));
+    for (const [key, d] of all)
+      drafts[key] = {
+        ...d,
+        text: textTail(d.text, limit),
+        thinking: textTail(d.thinking, limit),
+        truncated: true,
+      };
+  }
 }

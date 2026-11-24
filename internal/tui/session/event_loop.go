@@ -56,7 +56,7 @@ func (a *app) loop() error {
 				a.work.advanceIndicator()
 				fullUpdate = false
 			case n := <-a.events:
-				a.receive(n)
+				fullUpdate = a.receiveFrame(n)
 			case event, ok := <-a.files.reads.Watch.Events:
 				if ok {
 					a.observeFileChange(event)

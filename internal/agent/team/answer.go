@@ -26,7 +26,7 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 		r.memberMu.Lock()
 		r.logMu.Lock()
 		r.mu.Lock()
-		count, remaining := r.countLocked(), r.remainingLocked()
+		remaining := r.remainingLocked()
 		live := r.active[p.ID]
 		pending := live.attention > p.DecisionCursor
 		live.waiting = !pending
@@ -45,7 +45,9 @@ func (p *Peer) AfterAnswer(ctx context.Context, text string) (bool, error) {
 			return false, idleErr
 		}
 		var err error
-		if count == 1 && !pending {
+		// Departing peers have settled their commands. Publish now; Run still
+		// joins their cleanup before reporting request completion.
+		if remaining == 1 && !pending {
 			_, err = r.appendPublic(p.answerMessage(text, true))
 			if err == nil {
 				r.mu.Lock()

@@ -1,7 +1,7 @@
 // Purpose: Coordinate virtual history measurement and reader-position restoration with Astryx follow ownership.
 // Pattern: Conversation-owned viewport hook.
 // Usage: Chat supplies saved rows; the hook releases its position entry through bounded retention.
-// Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/patches/@astryxdesign%2Fcore@0.7.16.patch.
+// Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/patches/@astryxdesign%2Fcore@0.7.17.patch.
 import { useChatLayoutContext } from '@astryxdesign/core/Chat';
 import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useLayoutEffect, useState } from 'react';

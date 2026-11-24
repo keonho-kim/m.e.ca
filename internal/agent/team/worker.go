@@ -96,16 +96,21 @@ func (r *Room) worker(live *participant) {
 		}
 	}
 	if err != nil {
+		// Order failures against final publication. A later cleanup error must
+		// fail completion; an earlier one must reach the final peer's inbox.
+		r.logMu.Lock()
 		r.mu.Lock()
 		r.failures = errors.Join(r.failures, faults.Errorf(diagcatalog.TeamWrappedCause, peer.ID, err))
-		finalFailure := r.finished && r.result.Agent == peer.ID
+		finished := r.finished
 		r.mu.Unlock()
-		if finalFailure {
+		if finished {
+			r.logMu.Unlock()
 			r.fail(err)
 			return
 		}
 		if r.ctx.Err() == nil {
-			_, _ = r.publish(channel.Message{From: peer.ID, Text: "Session stopped: " + err.Error()})
+			_, _ = r.appendPublic(channel.Message{From: peer.ID, Text: "Session stopped: " + err.Error()})
 		}
+		_ = r.endPublication()
 	}
 }
