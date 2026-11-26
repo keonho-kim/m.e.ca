@@ -16,6 +16,8 @@ import (
 	"testing"
 )
 
+var errKeyBackend = errors.New("key backend unavailable")
+
 type testKeys struct {
 	mu               sync.Mutex
 	values           map[string]string
@@ -27,7 +29,7 @@ func (k *testKeys) Set(_ context.Context, ref, value string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.failSet {
-		return errors.New("locked")
+		return errKeyBackend
 	}
 	if k.values == nil {
 		k.values = map[string]string{}
@@ -40,7 +42,7 @@ func (k *testKeys) Get(_ context.Context, ref string) (string, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.failGet {
-		return "", errors.New("locked")
+		return "", errKeyBackend
 	}
 	v, ok := k.values[ref]
 	if !ok {
@@ -142,7 +144,7 @@ func TestAuthenticationBindsReferenceProviderAndCiphertext(t *testing.T) {
 	}
 }
 
-func TestMissingOSKeyNeverRecreatesOrOverwritesData(t *testing.T) {
+func TestMissingKeyNeverRecreatesOrOverwritesData(t *testing.T) {
 	s, keys, directory := credentialFixture(t)
 	if err := s.Put(t.Context(), "provider", "scope", "secret"); err != nil {
 		t.Fatal(err)
@@ -153,32 +155,32 @@ func TestMissingOSKeyNeverRecreatesOrOverwritesData(t *testing.T) {
 	}
 	writes := keys.writes
 	keys.failGet = true
-	if _, err := s.Get(t.Context(), "provider", "scope"); !errors.Is(err, ErrKeyUnavailable) {
+	if _, err := s.Get(t.Context(), "provider", "scope"); !errors.Is(err, errKeyBackend) {
 		t.Fatal(err)
 	}
 	after, err := os.ReadFile(filepath.Join(directory, Filename))
 	if err != nil || !bytes.Equal(before, after) || keys.writes != writes {
-		t.Fatal("missing OS key caused data replacement", err)
+		t.Fatal("missing encryption key caused data replacement", err)
 	}
 	keys.failGet = false
 	if value, err := s.Get(t.Context(), "provider", "scope"); err != nil || value != "secret" {
-		t.Fatal("restored OS key did not recover ciphertext", err)
+		t.Fatal("restored encryption key did not recover ciphertext", err)
 	}
 }
 
-func TestFailedOSWriteOrReadbackPreservesPreviousCredential(t *testing.T) {
+func TestFailedKeyWriteOrReadbackPreservesPreviousCredential(t *testing.T) {
 	s, keys, _ := credentialFixture(t)
 	if err := s.Put(t.Context(), "provider", "scope", "old-secret"); err != nil {
 		t.Fatal(err)
 	}
 	for _, verify := range []bool{false, true} {
 		keys.failSet, keys.failGet = !verify, verify
-		if err := s.Put(t.Context(), "provider", "scope", "new-secret"); !errors.Is(err, ErrKeyUnavailable) {
+		if err := s.Put(t.Context(), "provider", "scope", "new-secret"); !errors.Is(err, errKeyBackend) {
 			t.Fatal(err)
 		}
 		keys.failSet, keys.failGet = false, false
 		if value, err := s.Get(t.Context(), "provider", "scope"); err != nil || value != "old-secret" {
-			t.Fatal("failed OS operation replaced the active credential", err)
+			t.Fatal("failed key operation replaced the active credential", err)
 		}
 	}
 }

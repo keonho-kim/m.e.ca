@@ -1,7 +1,8 @@
-// Purpose: Install MECA's binary, refresh release prompts and register the user's shell PATH.
+// Purpose: Install MECA with private credential storage, release prompts and shell PATH registration.
 // Pattern: Installation use case.
 // Usage: cmd/meca invokes Install before terminal startup.
-// Related: internal/commands/install/binary.go, internal/commands/install/shell.go, internal/config/prompts/refresh.go, internal/config/bootstrap/bootstrap.go.
+// Related: internal/commands/install/binary.go, internal/commands/install/shell.go,
+// internal/config/credentials/prepare.go, internal/config/prompts/refresh.go, internal/config/bootstrap/bootstrap.go.
 package install
 
 import (
@@ -12,6 +13,7 @@ import (
 	"slices"
 
 	"github.com/keonho-kim/meca/internal/config/bootstrap"
+	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/config/statefs"
 )
@@ -88,6 +90,9 @@ func Install(ctx context.Context, options Options) (result Installed, err error)
 	}
 	profiles, err := planProfiles(root, names, previous.Profiles, false)
 	if err != nil {
+		return result, err
+	}
+	if err := credentials.Prepare(ctx, state.Name()); err != nil {
 		return result, err
 	}
 	if err := prompts.Refresh(state); err != nil {

@@ -1,7 +1,7 @@
 // Purpose: Verify provider keys persist only as ciphertext and survive restart and saved-key replacement.
 // Pattern: Credential security and lifecycle regression tests.
 // Usage: go test ./internal/config/credentials -run TestEncrypted.
-// Related: internal/config/credentials/keyring.go, internal/storage/credentialstore/store.go.
+// Related: internal/config/credentials/persistence.go, internal/storage/credentialstore/store.go.
 package credentials
 
 import (
@@ -22,7 +22,7 @@ func TestEncryptedCredentialRestartAndReplacement(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := keys.Get(t.Context(), "provider"); err == nil {
-		t.Fatal("raw API key stored in OS keyring")
+		t.Fatal("raw API key stored in encryption-key storage")
 	}
 	files, err := filepath.Glob(filepath.Join(state, "credentials.db*"))
 	if err != nil || len(files) == 0 {

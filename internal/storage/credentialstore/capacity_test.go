@@ -1,4 +1,4 @@
-// Purpose: Preserve current credentials when the durable OS-key allocation ceiling is exhausted.
+// Purpose: Preserve current credentials when the durable key-store allocation ceiling is exhausted.
 // Pattern: Capacity failure injection at the publication boundary.
 // Usage: go test ./internal/storage/credentialstore -run TestKeyCapacity.
 // Related: internal/storage/credentialstore/capacity.go, internal/storage/credentialstore/crypto.go.
@@ -27,7 +27,7 @@ func TestKeyCapacityPreservesCurrentValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	if keys.writes != before {
-		t.Fatal("exhausted budget published an OS key")
+		t.Fatal("exhausted budget published an encryption key")
 	}
 	if got, err := s.Get(t.Context(), "provider", "scope"); err != nil || got != "original" {
 		t.Fatal("current credential lost", err)

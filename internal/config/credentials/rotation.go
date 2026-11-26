@@ -81,7 +81,7 @@ func (v *Vault) rotateOnce(ctx context.Context, now time.Time) error {
 	if v.State == "" {
 		return faults.Errorf(diagcatalog.CredentialsCredentialStateDirectoryIsRequired)
 	}
-	// A process without saved credentials needs no database or OS key access.
+	// A process without saved credentials needs no database or encryption key access.
 	if _, err := os.Lstat(filepath.Join(v.State, credentialstore.Filename)); errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {

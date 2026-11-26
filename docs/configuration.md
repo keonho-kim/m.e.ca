@@ -10,6 +10,7 @@
 | `prompts/single/`, `prompts/team/` | 실행 프로필별 지침 |
 | `sessions/` | 프로젝트별 사용자 대화와 팀 개인 DB |
 | `credentials.db` | 암호화한 모델 API Key |
+| `credential-keys/keys.db` | API Key 버전별 암호화 키 레코드. 디렉터리 0700·DB 0600 |
 | `server.token` | 기본 서버 인증 토큰. 사용자 지정 경로는 `--token-file` |
 | `server-requests/<project-scope>/requests.db` | 프로젝트별 native 작업 접수 digest·세션·종료 상태 |
 | `logs/` | 로컬 진단 로그 |
@@ -31,15 +32,17 @@ WebUI의 설정 → 모델은 대화를 열기 전에도 전역 `[model]`을 조
 
 ### API Key 암호화와 복구
 
-저장한 API Key는 암호화해 보관하며 설정·대화 DB에 평문으로 기록하지 않는다. macOS Keychain 또는 Linux Secret Service가 필요하다. OS 저장소를 사용할 수 없으면 저장·조회 오류를 반환하고 기존 기록을 유지한다.
+저장한 API Key는 `credentials.db`에 AES-256-GCM으로 암호화한다. 버전별 암호화 키는 `credential-keys/keys.db`에 모아서 보관한다. 키 저장소는 4096바이트 페이지를 사용하며 최대 16MiB다. `meca install`은 키 디렉터리를 준비하고 실제 키 저장 어댑터로 원자적 생성·저장·조회 및 권한을 검증한다. macOS·Linux·WSL·SSH·컨테이너에서 같은 로컬 저장 방식을 사용한다.
 
-백업은 MECA를 종료한 뒤 `credentials.db`와 OS 자격 증명 저장소를 함께 보존한다. DB만 새 장치로 복사하면 사용할 수 없다. OS 저장소와 백업을 모두 잃으면 공급자에서 API Key를 다시 발급받아야 한다.
+OS 자격 증명 저장소를 사용하던 버전에서 업데이트하면 `!model` 또는 WebUI 설정 → 모델에서 API Key를 다시 입력해 로컬 저장소에 등록한다.
 
-`meca uninstall`은 저장된 인증정보도 삭제한다. 정리가 실패하면 오류 안내에 따라 `meca uninstall`을 다시 실행한다. 정리가 끝날 때까지 일반 시작·설치는 차단된다.
+`~/.meca`와 키 디렉터리는 0700, 키 DB는 0600 권한으로 소유자의 접근을 허용한다. 키 DB에는 복호화에 필요한 키 원문이 들어 있으므로 상태 디렉터리 전체에 접근할 수 있는 사용자나 프로세스는 API Key를 복호화할 수 있다. API Key 본문은 설정·대화 DB·키 DB에 평문으로 기록하지 않는다.
 
-### Linux 자격 증명 전송
+백업은 MECA를 종료한 뒤 `credentials.db`와 `credential-keys/keys.db`를 함께 보존한다. 정상 종료 후 `~/.meca` 전체를 복사해 다른 장치에서도 복원할 수 있다. 복원 시 디렉터리 0700·두 DB의 0600 권한 및 실행 계정의 소유권을 적용한다. 암호화 키의 교체 후에도 이전 키 레코드를 보관해 과거 DB 백업의 복호화를 지원한다. 필요한 키 레코드와 백업을 모두 잃으면 API Key를 다시 입력해야 한다.
 
-Linux에서 API Key를 저장하려면 실행 계정이 Unix DBus 세션과 Secret Service에 접근할 수 있어야 한다. 공식 릴리스와 `install.sh`는 `godbus_no_tcp` 태그로 DBus의 `tcp:`·`nonce-tcp:` 전송을 제외한다. 소스에서 직접 빌드하면 태그를 지정한다. [소스 빌드](development.md#소스-빌드)
+권한·소유권 오류는 해당 디렉터리나 DB의 권한을 확인하도록 안내한다. 키 누락은 백업 복구를, 저장 실패는 디스크 공간·권한·파일시스템 지원 확인을 안내하며 원인 오류를 유지한다. 키 DB 쓰기 도중 프로세스가 종료되면 다음 접근에서 SQLite 저널 복구를 수행한다.
+
+`meca uninstall`은 `~/.meca` 전체와 함께 저장된 API Key 및 암호화 키를 제거한다. 제거가 중단되면 `meca uninstall`을 다시 실행해 완료한다. 제거 중에는 일반 시작과 설치를 차단한다.
 
 ## 메인 에이전트와 보조 역할의 추론 설정
 

@@ -1,7 +1,7 @@
 // Purpose: Dispatch installation, upgrade and removal, and activate a newly installed terminal command.
 // Pattern: Composition Root.
 // Usage: start dispatches maintenance before conversation bootstrap or terminal setup.
-// Related: cmd/meca/main.go, cmd/meca/upgrade.go, internal/commands/install/install.go, internal/config/credentials/keyring.go.
+// Related: cmd/meca/main.go, cmd/meca/upgrade.go, internal/commands/install/install.go.
 package main
 
 import (
@@ -11,7 +11,6 @@ import (
 
 	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/commands/startup"
-	"github.com/keonho-kim/meca/internal/config/credentials"
 	diag "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	"github.com/keonho-kim/meca/internal/tools/browser"
 	"golang.org/x/term"
@@ -22,7 +21,7 @@ func maintenance(ctx context.Context, mode startup.Mode, home string) error {
 		return upgradeCurrent(ctx, home, mode.UpgradeKind)
 	}
 	if mode.Action == startup.Uninstall {
-		if err := install.Uninstall(ctx, home, (&credentials.Vault{}).Clear); err != nil {
+		if err := install.Uninstall(ctx, home); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stdout, "MECA 삭제 완료: 설치 실행 파일, PATH 등록, 저장 데이터와 인증정보를 정리했습니다.")

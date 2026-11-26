@@ -1,6 +1,6 @@
-// Purpose: Bound new OS encryption-key versions while preserving previous backup keys.
+// Purpose: Bound new encryption-key versions while preserving previous backup keys.
 // Pattern: Durable conservative key-allocation budget.
-// Usage: seal reserves before attempting OS publication, including uncertain failures.
+// Usage: seal reserves before attempting key publication, including uncertain failures.
 // Related: internal/storage/credentialstore/crypto.go, internal/storage/capacity/reserve.go.
 package credentialstore
 

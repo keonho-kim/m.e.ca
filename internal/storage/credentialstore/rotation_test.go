@@ -91,7 +91,7 @@ type rotationKeys struct {
 
 func (k *rotationKeys) Get(ctx context.Context, ref string) (string, error) {
 	if ref == k.fail {
-		return "", errors.New("locked")
+		return "", errKeyBackend
 	}
 	if ref == k.wait {
 		k.once.Do(func() { close(k.started) })
@@ -118,8 +118,8 @@ func TestPeriodicRotationFailureDoesNotBlockOtherRecords(t *testing.T) {
 	a, sealed := currentCipher(t, s, "a")
 	b, _ := currentCipher(t, s, "b")
 	s.keys = &rotationKeys{testKeys: keys, fail: a}
-	if err := s.RotateDue(t.Context(), now.Add(time.Hour), time.Hour); !errors.Is(err, ErrKeyUnavailable) {
-		t.Fatal("missing OS key was not reported", err)
+	if err := s.RotateDue(t.Context(), now.Add(time.Hour), time.Hour); !errors.Is(err, errKeyBackend) {
+		t.Fatal("missing encryption key was not reported", err)
 	}
 	if got, raw := currentCipher(t, s, "a"); got != a || !bytes.Equal(raw, sealed) {
 		t.Fatal("failed rotation changed the original ciphertext")

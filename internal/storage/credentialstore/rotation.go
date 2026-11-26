@@ -1,4 +1,4 @@
-// Purpose: Re-encrypt due credentials without overwriting concurrent saves or losing prior OS keys.
+// Purpose: Re-encrypt due credentials without overwriting concurrent saves or losing prior encryption keys.
 // Pattern: Serialized maintenance lease and optimistic per-record replacement.
 // Usage: The process-owned credential worker supplies the current time and internal cryptoperiod.
 // Related: internal/storage/credentialstore/rotation_schedule.go, internal/storage/credentialstore/crypto.go.
@@ -128,7 +128,7 @@ func (s *Store) rotateVersion(ctx context.Context, root *os.Root, directory stri
 	result, err := s.db.ExecContext(ctx, `UPDATE credentials SET key_ref=?,sealed=?
 WHERE ref=? AND scope=? AND key_ref=? AND sealed=?`, next, sealed, row.ref, row.scope, row.keyRef, row.sealed)
 	if err != nil {
-		return err // Uncertain commits retain both OS keys.
+		return err // Uncertain commits retain both encryption keys.
 	}
 	changed, err := result.RowsAffected()
 	if err != nil || changed == 0 {

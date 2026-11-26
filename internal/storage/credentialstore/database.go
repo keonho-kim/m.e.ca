@@ -1,6 +1,6 @@
 // Purpose: Open or atomically publish a private, versioned credential database without replacing unsupported data.
 // Pattern: SQLite resource lifecycle and filesystem trust boundary.
-// Usage: config/credentials supplies its private state directory and OS key adapter.
+// Usage: config/credentials supplies its private state directory and local key adapter.
 // Related: internal/config/statefs/root.go, internal/storage/credentialstore/store.go.
 package credentialstore
 
@@ -31,7 +31,7 @@ PRAGMA application_id=1296384833;`
 
 func Open(ctx context.Context, directory string, keys Keys, create bool) (store *Store, resultErr error) {
 	if keys == nil {
-		return nil, faults.Errorf(diagcatalog.CredentialstoreOSKeyStorageIsRequired)
+		return nil, faults.Errorf(diagcatalog.CredentialstoreKeyStorageIsRequired)
 	}
 	directory, err := filepath.Abs(directory)
 	if err != nil {

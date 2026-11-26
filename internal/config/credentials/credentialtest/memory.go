@@ -1,7 +1,7 @@
-// Purpose: Supply isolated cancellable OS-key fixtures without changing a process-wide keyring backend.
+// Purpose: Supply isolated cancellable key-store fixtures without using persistent key files.
 // Pattern: In-memory credential I/O test double.
 // Usage: Credential and TUI tests inject Memory into Vault.Keys.
-// Related: internal/config/credentials/keyring.go, internal/tui/session/fixture_test.go.
+// Related: internal/config/credentials/persistence.go, internal/tui/session/fixture_test.go.
 package credentialtest
 
 import (
@@ -38,13 +38,4 @@ func (m *Memory) Get(ctx context.Context, ref string) (string, error) {
 		return "", os.ErrNotExist
 	}
 	return v, nil
-}
-func (m *Memory) Clear(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	clear(m.values)
-	return nil
 }

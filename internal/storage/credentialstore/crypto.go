@@ -1,7 +1,7 @@
 // Purpose: Generate a fresh AES-256-GCM key per saved credential version and authenticate record identity.
 // Pattern: Authenticated encryption with an independent durable key store.
-// Usage: Store.Put verifies OS persistence before publishing ciphertext; Store.Get never recreates missing keys.
-// Related: internal/storage/credentialstore/store.go, internal/config/credentials/keyring.go.
+// Usage: Store.Put verifies key persistence before publishing ciphertext; Store.Get never recreates missing keys.
+// Related: internal/storage/credentialstore/store.go, internal/config/credentials/persistence.go.
 package credentialstore
 
 import (
@@ -41,14 +41,17 @@ func (s *Store) seal(ctx context.Context, ref, scope, secret string) (keyRef str
 		if ctx.Err() != nil {
 			return "", nil, ctx.Err()
 		}
-		return "", nil, ErrKeyUnavailable
+		return "", nil, err
 	}
 	verified, err := s.keys.Get(ctx, keyRef)
-	if err != nil || subtle.ConstantTimeCompare([]byte(encoded), []byte(verified)) != 1 {
+	if err != nil {
 		if ctx.Err() != nil {
 			return "", nil, ctx.Err()
 		}
-		return "", nil, ErrKeyUnavailable
+		return "", nil, err
+	}
+	if subtle.ConstantTimeCompare([]byte(encoded), []byte(verified)) != 1 {
+		return "", nil, faults.Errorf(diagcatalog.LocalKeysVerificationFailed)
 	}
 	block, err := aes.NewCipher(material[:])
 	if err != nil {
@@ -70,19 +73,19 @@ func (s *Store) open(ctx context.Context, ref, scope, keyRef string, sealed []by
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
-		return "", ErrKeyUnavailable
+		return "", err
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
 	if len(encoded) != base64.StdEncoding.EncodedLen(32) {
-		return "", ErrKeyUnavailable
+		return "", faults.Errorf(diagcatalog.LocalKeysInvalidKey)
 	}
 	material, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil || len(material) != 32 {
-		return "", ErrKeyUnavailable
-	}
 	defer clear(material)
+	if err != nil || len(material) != 32 {
+		return "", faults.Errorf(diagcatalog.LocalKeysInvalidKey)
+	}
 	block, err := aes.NewCipher(material)
 	if err != nil {
 		return "", faults.Errorf(diagcatalog.CredentialstoreInvalidEncryptionKey)

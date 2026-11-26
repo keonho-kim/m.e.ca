@@ -1,7 +1,7 @@
 // Purpose: Remove MECA-owned installation artifacts, credentials and private state.
 // Pattern: Uninstallation use case.
 // Usage: cmd/meca invokes Uninstall before bootstrap, SQLite or terminal setup.
-// Related: internal/commands/install/state.go, internal/commands/install/shell.go, internal/config/credentials/keyring.go.
+// Related: internal/commands/install/state.go, internal/commands/install/shell.go, internal/config/credentials/persistence.go.
 package install
 
 import (
@@ -16,7 +16,7 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 )
 
-func Uninstall(ctx context.Context, home string, clearCredentials func(context.Context) error) (err error) {
+func Uninstall(ctx context.Context, home string) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -30,14 +30,14 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 		return err
 	}
 	defer func() { err = errors.Join(err, homeLease.Close()) }()
-	pending, exists, err := pendingCleanup(root)
+	pending, exists, err := pendingRemoval(root)
 	if err != nil {
 		return err
 	}
 	info, err := root.Lstat(statefs.DirectoryName)
 	if errors.Is(err, os.ErrNotExist) {
 		if exists {
-			return finishCleanup(ctx, root, pending, clearCredentials)
+			return finishRemoval(ctx, root, pending)
 		}
 		if _, binaryErr := root.Lstat(binaryName); binaryErr == nil {
 			return faults.Errorf(diagcatalog.InstallInstallationStateIsMissingRunMecaInstall)
@@ -63,7 +63,7 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 	}
 	defer func() { err = errors.Join(err, lease.Close()) }()
 	if exists {
-		return finishCleanup(ctx, root, pending, clearCredentials)
+		return finishRemoval(ctx, root, pending)
 	}
 	r, err := loadReceipt(root)
 	if err != nil {
@@ -80,15 +80,6 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 	if err != nil {
 		return err
 	}
-	credentialsUsed := false
-	if _, err := state.Lstat("credentials.used"); err == nil {
-		credentialsUsed = true
-		if clearCredentials == nil {
-			return faults.Errorf(diagcatalog.InstallCredentialCleanupIsRequired)
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
 	for _, profile := range profiles {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -100,14 +91,8 @@ func Uninstall(ctx context.Context, home string, clearCredentials func(context.C
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if credentialsUsed {
-		if err := publishCleanup(root, r.Digest); err != nil {
-			return err
-		}
-		return finishCleanup(ctx, root, r.Digest, clearCredentials)
-	}
-	if err := root.Remove(binaryName); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := publishRemoval(root, r.Digest); err != nil {
 		return err
 	}
-	return root.RemoveAll(statefs.DirectoryName)
+	return finishRemoval(ctx, root, r.Digest)
 }

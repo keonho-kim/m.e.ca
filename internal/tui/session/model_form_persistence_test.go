@@ -1,5 +1,5 @@
 // Purpose: Verify confirmed model settings persist credentials and controls while partial failures remain explicit.
-// Pattern: Temporary-storage, mock-keyring and HTTP integration tests.
+// Pattern: Temporary-storage, controlled key-store and HTTP integration tests.
 // Usage: go test ./internal/tui/session -run TestModelForm.
 // Related: internal/tui/session/model_form_setup.go, internal/commands/modelchange/commit.go, internal/config/model.go.
 package session
@@ -22,6 +22,7 @@ import (
 	"github.com/keonho-kim/meca/internal/provider/connection"
 	"github.com/keonho-kim/meca/internal/provider/httpclient"
 	"github.com/keonho-kim/meca/internal/provider/setup"
+	"github.com/keonho-kim/meca/internal/storage/credentialstore"
 	modelsettings "github.com/keonho-kim/meca/internal/tui/settings/model"
 )
 
@@ -72,7 +73,7 @@ func TestModelFormConfirmedGlobalSettingsSurviveReconnect(t *testing.T) {
 	if a.connection.client != nil || a.connection.selection.Model != "" || a.opts.Config.Model != nil {
 		t.Fatal("metadata preparation committed the draft")
 	}
-	if _, err := os.Stat(filepath.Join(a.opts.State, "credentials.used")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(a.opts.State, credentialstore.Filename)); !os.IsNotExist(err) {
 		t.Fatalf("key saved before confirmation: %v", err)
 	}
 	a.keyEvent(tcell.NewEventKey(tcell.KeyRight, "", 0))

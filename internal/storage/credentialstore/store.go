@@ -1,4 +1,4 @@
-// Purpose: Persist provider credentials as authenticated ciphertext with independent OS-held keys.
+// Purpose: Persist provider credentials as authenticated ciphertext with independent private local keys.
 // Pattern: Encrypted credential repository over SQLite and a consumer-owned key boundary.
 // Usage: config/credentials opens one Store per credential operation or maintenance pass and closes it.
 // Related: internal/storage/credentialstore/database.go, internal/storage/credentialstore/crypto.go.
@@ -27,10 +27,7 @@ type Store struct {
 	directory string
 }
 
-var (
-	ErrKeyUnavailable = faults.Errorf(diagcatalog.CredentialstoreOSEncryptionKeyUnavailablePreserveTheCredential)
-	ErrIntegrity      = faults.Errorf(diagcatalog.CredentialstoreCredentialAuthenticationFailedExistingDataWasPreserved)
-)
+var ErrIntegrity = faults.Errorf(diagcatalog.CredentialstoreCredentialAuthenticationFailedExistingDataWasPreserved)
 
 func (s *Store) Close() error { return s.db.Close() }
 
@@ -65,7 +62,7 @@ func (s *Store) put(ctx context.Context, ref, scope, secret string) error {
 		return err
 	}
 	// Only ciphertext reaches SQLite, its journal and bound SQL parameters.
-	// Each update has a new OS key. Never delete either key on an uncertain
+	// Each update has a new encryption key. Never delete either key on an uncertain
 	// commit: the previous row and an older database backup must stay readable.
 	result, err := s.db.ExecContext(ctx, `INSERT INTO credentials(ref,scope,key_ref,sealed) SELECT ?,?,?,?
 WHERE EXISTS(SELECT 1 FROM credentials WHERE ref=?) OR (SELECT COUNT(*) FROM credentials)<?
@@ -110,7 +107,7 @@ func (s *Store) Delete(ctx context.Context, ref, scope string) error {
 	if err := checkIdentity(ref, scope); err != nil {
 		return err
 	}
-	// Retired OS keys also protect explicit old backups; only uninstall clears them.
+	// Retired encryption keys also protect explicit old backups; only uninstall clears them.
 	return s.write(ctx, func() error {
 		_, err := s.db.ExecContext(ctx, "DELETE FROM credentials WHERE ref=? AND scope=?", ref, scope)
 		return err

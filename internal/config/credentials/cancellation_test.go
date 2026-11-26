@@ -1,7 +1,7 @@
-// Purpose: Cancel OS-key operations without losing an existing encrypted credential or starting canceled I/O.
+// Purpose: Cancel key-store operations without losing an existing encrypted credential or starting canceled I/O.
 // Pattern: Channel-controlled credential boundary regression tests.
 // Usage: go test -race ./internal/config/credentials -run TestVault.
-// Related: internal/config/credentials/keyring.go, internal/storage/credentialstore/crypto.go.
+// Related: internal/config/credentials/persistence.go, internal/storage/credentialstore/crypto.go.
 package credentials
 
 import (
@@ -60,7 +60,7 @@ func TestVaultCancellationPreservesEncryptedCredential(t *testing.T) {
 		<-waiting.started
 		cancel()
 		if err := <-result; !errors.Is(err, context.Canceled) {
-			t.Fatal("OS cancellation lost", err)
+			t.Fatal("key operation cancellation lost", err)
 		}
 		v.Keys = keys
 		if value, err := v.Get(t.Context(), "provider", "scope"); err != nil || value != "old-secret" {

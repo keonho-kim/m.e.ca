@@ -25,7 +25,7 @@ func (f *Form) Display(w, contextLength int, language locale.Language, redact fu
 	key := strings.Repeat("*", utf8.RuneCountInString(f.Credential.String()))
 	c, _ := f.Connection()
 	if key == "" && c.CredentialRef != "" {
-		key = language.Text("Saved in OS credential store")
+		key = language.Text("Saved encrypted")
 	}
 	thinking := []string{}
 	selectedThinking := -1

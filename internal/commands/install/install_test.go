@@ -26,24 +26,6 @@ func options(t *testing.T, shell string) Options {
 	return Options{Home: home, Executable: executable, Shell: shell, Path: "/usr/bin:/bin"}
 }
 
-func TestCredentialFailureKeepsRetryCommandAndCleanupIntent(t *testing.T) {
-	o := options(t, "/bin/zsh")
-	if _, err := Install(context.Background(), o); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(o.Home, ".meca/credentials.used"), []byte("used"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := Uninstall(context.Background(), o.Home, func(context.Context) error { return errors.New("keyring locked") }); err == nil {
-		t.Fatal("ignored credential cleanup failure")
-	}
-	for _, name := range []string{binaryName, cleanupName} {
-		if _, err := os.Stat(filepath.Join(o.Home, name)); err != nil {
-			t.Fatalf("cleanup failure destroyed %s: %v", name, err)
-		}
-	}
-}
-
 func TestUserChangesAfterInstallArePreserved(t *testing.T) {
 	o := options(t, "/bin/zsh")
 	if _, err := Install(context.Background(), o); err != nil {
@@ -60,7 +42,7 @@ func TestUserChangesAfterInstallArePreserved(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), o.Home, nil); err != nil {
+	if err := Uninstall(context.Background(), o.Home); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(profile)
@@ -98,15 +80,8 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(o.Home, ".meca/credentials.used"), []byte("used"), 0600); err != nil {
+	if err := Uninstall(ctx, o.Home); err != nil {
 		t.Fatal(err)
-	}
-	calls := 0
-	if err := Uninstall(ctx, o.Home, func(context.Context) error { calls++; return nil }); err != nil {
-		t.Fatal(err)
-	}
-	if calls != 1 {
-		t.Fatal("credential cleanup omitted")
 	}
 	for _, path := range []string{".meca", binaryName} {
 		if _, err := os.Lstat(filepath.Join(o.Home, path)); !os.IsNotExist(err) {
@@ -117,7 +92,7 @@ func TestInstallAndCleanUninstall(t *testing.T) {
 	if err != nil || string(body) != string(original) {
 		t.Fatalf("shell changes lost: %q %v", body, err)
 	}
-	if err := Uninstall(ctx, o.Home, nil); err != nil {
+	if err := Uninstall(ctx, o.Home); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -134,7 +109,7 @@ func TestInstallPreparesExtensionAfterBaseWithStateLease(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if err := Uninstall(ctx, o.Home, nil); !errors.Is(err, syscall.EWOULDBLOCK) {
+		if err := Uninstall(ctx, o.Home); !errors.Is(err, syscall.EWOULDBLOCK) {
 			t.Fatalf("uninstall during extension preparation: %v", err)
 		}
 		prepared = true
@@ -190,13 +165,13 @@ func TestUninstallRefusesActiveState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), o.Home, nil); err == nil {
+	if err := Uninstall(context.Background(), o.Home); err == nil {
 		t.Fatal("deleted active state")
 	}
 	if err := lease.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), o.Home, nil); err != nil {
+	if err := Uninstall(context.Background(), o.Home); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{".bashrc", ".profile"} {
@@ -214,7 +189,7 @@ func TestUninstallProtectsReplacedBinaryAndSymlinkState(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(o.Home, binaryName), []byte("another program"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), o.Home, nil); err == nil {
+	if err := Uninstall(context.Background(), o.Home); err == nil {
 		t.Fatal("removed unrelated binary")
 	}
 	target := t.TempDir()
@@ -222,7 +197,7 @@ func TestUninstallProtectsReplacedBinaryAndSymlinkState(t *testing.T) {
 	if err := os.Symlink(target, filepath.Join(home, ".meca")); err != nil {
 		t.Fatal(err)
 	}
-	if err := Uninstall(context.Background(), home, nil); err == nil {
+	if err := Uninstall(context.Background(), home); err == nil {
 		t.Fatal("followed state symlink")
 	}
 }

@@ -1,7 +1,7 @@
-// Purpose: Verify the built CLI's private state, native tool execution, export and installation lifecycle.
+// Purpose: Verify the CLI restores encrypted credentials, executes tools, exports and installs privately.
 // Pattern: Executable integration test with a local provider fixture.
 // Usage: go test ./cmd/meca -run TestHeadlessExecutable.
-// Related: cmd/meca/headless.go, internal/commands/startup/parse.go.
+// Related: cmd/meca/headless.go, internal/config/credentials/persistence.go, internal/commands/startup/parse.go.
 package main
 
 import (
@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/keonho-kim/meca/internal/config"
+	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/provider/connection"
 )
 
@@ -30,8 +31,14 @@ func TestHeadlessExecutable(t *testing.T) {
 	if out, err := help.CombinedOutput(); err != nil || !strings.Contains(string(out), "Usage: meca [path]") {
 		t.Fatalf("MECA help: %s %v", out, err)
 	}
+	const secret = "fixture-cli-api-key"
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+secret {
+			t.Error("saved local credential was not restored by the CLI")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.NotFound(w, r)
 			return
@@ -60,8 +67,16 @@ func TestHeadlessExecutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := config.Defaults()
-	cfg.Model = &config.SavedModel{Provider: connection.OpenRouter, Endpoint: server.URL, Name: "unknown-serving-alias"}
-	if err := config.Save(filepath.Join(home, ".meca"), cfg); err != nil {
+	cfg.Model = &config.SavedModel{Provider: connection.OpenRouter, Endpoint: server.URL, Name: "unknown-serving-alias", CredentialRef: "credential_cli"}
+	state := filepath.Join(home, ".meca")
+	conn, err := connection.New(connection.OpenRouter, server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (&credentials.Vault{State: state}).Set(ctx, cfg.Model.CredentialRef, conn.CredentialScope(), secret); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.Save(state, cfg); err != nil {
 		t.Fatal(err)
 	}
 	run := exec.CommandContext(ctx, binary, project, "--mode", "json", "Create README.md")

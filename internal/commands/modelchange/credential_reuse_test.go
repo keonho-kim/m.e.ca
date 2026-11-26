@@ -1,6 +1,6 @@
 // Purpose: Measure repeated identical credential saves for a single logical connection.
-// Pattern: Isolated composition probe with a real encrypted store and in-memory OS keys.
-// Usage: go test with the review overlay; no system keychain is contacted.
+// Pattern: Isolated composition probe with a real encrypted store and in-memory encryption keys.
+// Usage: go test ./internal/commands/modelchange -run TestRepeatedCredentialRows.
 // Related: internal/commands/modelchange/commit.go, internal/storage/credentialstore/store.go.
 package modelchange
 

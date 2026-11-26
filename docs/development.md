@@ -58,7 +58,7 @@ sh scripts/build-ui.sh
 go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 ```
 
-설치는 `./bin/meca install`을 사용한다. `godbus_no_tcp`의 범위는 [Linux 자격 증명 전송](configuration.md#linux-자격-증명-전송)을 따른다. 빌드 산출물·생성 자산·로컬 상태는 Git에 넣지 않는다.
+설치는 `./bin/meca install`을 사용한다. `godbus_no_tcp`는 Linux 데스크톱 폴더 선택기에 쓰는 D-Bus의 `tcp:`·`nonce-tcp:` 전송을 제외한다. API Key 저장은 로컬 파일을 사용하며 설치 명령이 키 디렉터리와 권한을 준비한다. 빌드 산출물·생성 자산·로컬 상태는 Git에 넣지 않는다.
 
 ### 배포 종류와 빌드 경계
 
@@ -112,7 +112,7 @@ macOS·Linux와 WSL의 실제 동작, 교차 빌드와 모의 전송 검사는 �
 - 터미널: 키 입력·IME·마우스·크기 변경·종료 후 터미널 복원.
 - 클립보드: 이미지·파일 복사·빈 값·초과 크기·취소. 개인 클립보드 대신 격리된 fixture 사용.
 - WSL: Windows 상호운용, WSLg 유무와 Windows PATH를 가져오지 않는 환경.
-- 자격 증명: macOS Keychain·Linux Secret Service의 저장·조회·실패·복구.
+- 자격 증명: 로컬 키 DB의 0600 권한·소유권·심볼릭 링크 거부, 설치 시 실제 저장 검증, 오류 원인 전달, 재설치·동시 저장·키 교체·백업 복구·삭제.
 
 실행할 수 없는 환경은 미검증으로 보고한다. 지원 조건은 [이미지 입력](images.md)과 [실행 경계](execution-boundary.md)를 따른다.
 

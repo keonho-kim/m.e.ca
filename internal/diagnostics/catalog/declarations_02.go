@@ -25,7 +25,7 @@ const (
 	ConversationModelConnectionWasReleased                            Message = "model connection was released"
 	CredentialsCredentialRotationDeferred                             Message = "credential_rotation_deferred"
 	CredentialsCredentialStateDirectoryIsRequired                     Message = "credential state directory is required"
-	CredentialsEncryptedCredentialRecordWasNotFoundExisting           Message = "encrypted credential record was not found; existing OS entries are preserved; reconnect using !model"
+	CredentialsEncryptedCredentialRecordWasNotFoundExisting           Message = "encrypted credential record was not found; reconnect using !model"
 	CredentialsEncryptedCredentialUnavailablePreserveExistingStateAnd Message = "encrypted credential unavailable; preserve existing state and reconnect using !model: %w"
 
 	CredentialstoreCredentialAuthenticationFailedExistingDataWasPreserved     Message = "credential authentication failed; existing data was preserved"
@@ -36,8 +36,7 @@ const (
 	CredentialstoreInvalidCredentialRotationTimeExistingDataPreserved         Message = "invalid credential rotation time; existing data preserved"
 	CredentialstoreInvalidEncryptionKey                                       Message = "invalid encryption key"
 	CredentialstoreInvalidPrivateRotationCursorContentsPreserved              Message = "invalid private rotation cursor; contents preserved"
-	CredentialstoreOSEncryptionKeyUnavailablePreserveTheCredential            Message = "OS encryption key unavailable; preserve the credential database and restore the OS credential store"
-	CredentialstoreOSKeyStorageIsRequired                                     Message = "OS key storage is required"
+	CredentialstoreKeyStorageIsRequired                                       Message = "encryption key storage is required"
 	CredentialstoreRotationCursorChangedWhileOpening                          Message = "rotation cursor changed while opening"
 	CredentialstoreRotationScheduleChangedWhileOpening                        Message = "rotation schedule changed while opening"
 	CredentialstoreRotationScheduleMustBeASmallPrivate                        Message = "rotation schedule must be a small private regular file"

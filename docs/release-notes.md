@@ -1,12 +1,9 @@
-# M.E.CA v0.0.20261124
+# M.E.CA v0.0.20261126
 
-- **팀 최종 응답과 종료.** `leave_team`으로 동료의 퇴장이 확정된 뒤 남은 팀원의 최종 응답이 기다림에 묶이는 문제를 고쳤습니다. 응답을 먼저 게시하고 모든 팀원의 자원 정리를 기다려 요청을 종료합니다. 게시 뒤 정리가 실패하면 응답을 보존하고 실패 상태를 기록합니다. [팀 종료와 재개](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/team.md#종료와-재개)
-- **TUI 화면 갱신.** 팀원별 사용량과 모델 활동을 최신 상태로 합쳐 오래된 상태가 뒤늦게 표시되는 문제를 고쳤습니다. 상태만 바뀌는 경우 본문 전체를 다시 그리는 작업을 줄였으며, 취소와 저장이 겹쳐도 확정된 팀 응답을 표시합니다. [화면과 사용량](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/usage.md#화면과-사용량)
-- **WebUI 출력 복원.** 선택한 팀원이 사라지면 전체 보기로 돌아가 남은 응답을 표시합니다. 최종 응답과 서버가 확정한 본문을 이력 조회가 끝날 때까지 유지하고, 같은 서버·대화의 재연결에서도 확인 전의 완료 출력이 사라지지 않도록 보강했습니다. 복원 경로에도 초안 보유 한도를 적용합니다. [상태와 스트림 복원](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/webui-api.md#상태와-스트림-복원)
-- **도구 호출 전 추론 표시.** 응답이 native 도구 호출로 확정될 때 유효한 Thinking까지 빈 내용으로 덮어쓰던 문제를 고쳤습니다. [모델 스트림과 복구](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/runtime.md#모델-스트림과-복구)
-- **Astryx 0.7.17.** Core·Neutral·CLI를 함께 올리고 upstream의 입력·좁은 화면·클립보드·테마·Markdown 수정을 반영했습니다. MECA의 스트리밍·스크롤 패치를 새 버전에 맞춰 갱신하고 배포 라이선스 고지도 정리했습니다. [패치 계약](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/webui/patches/README.md)
-- **번들과 검증.** 초기 gzip 허용 예산을 640KiB로 확대했습니다. 상속된 테마와 함께 로드하던 Neutral CSS를 제거해 비압축 자산 약 29.5KiB, 초기 gzip 804바이트를 줄였습니다. 로컬 빌드의 초기 gzip은 약 318.46KiB입니다. [WebUI 빌드와 검사](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/development.md#내장-webui)
+- **API Key 로컬 암호화 저장.** API Key를 `~/.meca/credentials.db`에 AES-256-GCM으로 암호화하고, 버전별 암호화 키를 `credential-keys/keys.db`에 모아 보관합니다. macOS·Linux의 데스크톱 자격 증명 서비스에 접근할 수 없는 SSH·컨테이너 환경에서도 같은 저장 방식을 사용합니다. 디렉터리는 0700, 키 DB는 0600 권한을 적용합니다. [저장과 복구](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261126/docs/configuration.md#api-key-암호화와-복구)
+- **설치 시 저장 기능 검증.** `meca install`이 로컬 키 디렉터리를 준비하고 실제 키 저장 어댑터로 원자적 생성·저장·조회를 확인합니다. 파일시스템이 필요한 저장 동작을 지원하지 않으면 설치 단계에서 오류를 알립니다. [다운로드와 설치](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261126/docs/releases.md#다운로드와-설치)
+- **오류 안내와 중단 복구.** 파일 권한·소유권 문제, 암호화 키 누락, 저장 실패를 구분해 복구 방법을 안내합니다. 키 DB 쓰기 도중 프로세스가 종료되면 다음 접근에서 SQLite 저널을 복구합니다. 키 교체 후에도 이전 키 레코드를 보관해 과거 DB 백업을 복호화할 수 있습니다. [백업과 권한](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261126/docs/configuration.md#api-key-암호화와-복구)
 
-## 확인 범위와 남은 사항
+**업데이트 후 API Key를 다시 입력하세요.** OS 자격 증명 저장소를 사용하던 버전에서 업데이트하면 `!model` 또는 WebUI 설정 → 모델에서 API Key를 입력해 새 저장소에 등록해야 합니다. 백업할 때는 MECA를 종료하고 `credentials.db`와 `credential-keys/keys.db`를 함께 보존하세요. 상태 디렉터리 전체를 읽을 수 있는 사용자나 프로세스는 API Key를 복호화할 수 있습니다.
 
-macOS에서 Go 동작·race 검사와 Chromium·Firefox·WebKit의 관련 브라우저 검사를 수행했습니다. WSL 및 실기기 모바일에서의 직접 실행은 이번 검증에 포함하지 않았습니다. Astryx의 스타일·아이콘 권고와 상호 배타적인 테마 선택자 경고는 [개발 가이드](https://github.com/keonho-kim/m.e.ca/blob/v0.0.20261124/docs/development.md#astryx-검사와-알려진-경고)에 분류와 남은 검토 범위를 기록했습니다.
+macOS arm64에서 전체 Go 테스트·관련 race 검사·정적 검사·빌드를 수행했습니다. Linux arm64 컨테이너에서 일반 사용자 권한으로 설치·재설치·API Key 저장·복구를 확인했습니다. WSL과 Linux 데스크톱의 직접 실행은 이번 확인 범위에 포함하지 않았습니다.

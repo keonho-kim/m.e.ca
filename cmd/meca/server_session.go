@@ -20,8 +20,8 @@ import (
 	"github.com/keonho-kim/meca/internal/config/prompts"
 	"github.com/keonho-kim/meca/internal/skills"
 	"github.com/keonho-kim/meca/internal/storage/sqlite"
-	"github.com/keonho-kim/meca/internal/tools/local"
 	"github.com/keonho-kim/meca/internal/tools/browser/webfetch"
+	"github.com/keonho-kim/meca/internal/tools/local"
 )
 
 func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config, home, state string, sessions *sqlite.Sessions, vault *credentials.Vault, skillReader *skills.Reader, id string, create bool, web *webfetch.Client) (value *server.Conversation, resultErr error) {
@@ -78,6 +78,6 @@ func openServerSession(ctx context.Context, mode startup.Mode, cfg config.Config
 		Close: func() error { return errors.Join(executor.Close(), store.Close(), lease.Close()) },
 	}
 	// Opening history does not require a reachable provider or a working
-	// keyring. Start prepares the saved selection before durable admission.
+	// credential store. Start prepares the saved selection before durable admission.
 	return c, nil
 }

@@ -34,7 +34,7 @@ var menus = []translation{
 	{"", "Clear field", "전체 지우기"},
 	{"", "Finish editing", "편집 마침"},
 	{"", "Next setting", "다음 항목"},
-	{"", "Saved in OS credential store", "운영체제에 저장됨"},
+	{"", "Saved encrypted", "암호화하여 저장됨"},
 	{"", "Enter a model ID before saving", "저장할 모델 ID를 입력하세요"},
 	{"", "Save these settings before running diagnostics", "설정을 저장한 뒤 연결을 진단하세요"},
 	{"", "Settings changed; retry model lookup", "입력한 설정이 바뀌었습니다. 모델을 다시 조회하세요"},

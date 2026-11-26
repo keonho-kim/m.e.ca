@@ -1,4 +1,4 @@
-// Purpose: Avoid publishing OS keys for definitively rejected credential writes.
+// Purpose: Avoid publishing encryption keys for definitively rejected credential writes.
 // Pattern: Key-store boundary regression tests.
 // Usage: go test -race ./internal/storage/credentialstore -run TestRejectedWrite.
 // Related: internal/storage/credentialstore/store.go, internal/storage/credentialstore/capacity.go.
@@ -13,7 +13,7 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
-func TestRejectedWriteDoesNotPublishOSKey(t *testing.T) {
+func TestRejectedWriteDoesNotPublishKey(t *testing.T) {
 	for _, full := range []bool{false, true} {
 		t.Run(fmt.Sprint(full), func(t *testing.T) {
 			s, keys, _ := credentialFixture(t)
@@ -35,7 +35,7 @@ func TestRejectedWriteDoesNotPublishOSKey(t *testing.T) {
 				t.Fatal(err)
 			}
 			if keys.writes != before {
-				t.Fatal("rejected write published an unused OS key")
+				t.Fatal("rejected write published an unused encryption key")
 			}
 		})
 	}

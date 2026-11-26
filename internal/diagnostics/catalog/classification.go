@@ -19,7 +19,7 @@ func MessageCode(message Message) string {
 
 	case SkillsInvalidSkillRequest, SessionInvalidOrExpiredSessionPageCursorRefresh:
 		return InvalidArgument
-	case SkillsSkillNotFound, ServerHistoryRecordWasNotFound, SessionSessionWasNotFound, ServerRequestWasNotFound, OsstoreOSCredentialWasNotFound:
+	case SkillsSkillNotFound, ServerHistoryRecordWasNotFound, SessionSessionWasNotFound, ServerRequestWasNotFound:
 		return NotFound
 	case SkillsSkillReadLimitExceeded, HistoryStoredOriginalExceedsTheReadBudgetNarrow, AdmissionServerWorkExceedsItsAdmissionBudget, CapacityStorageCapacityLimitReachedExistingRecordsAnd, SessionSessionListSnapshotLimitReachedRefreshRetry:
 		return ResourceExhausted
@@ -29,8 +29,10 @@ func MessageCode(message Message) string {
 		return PersistenceFailed
 	case CredentialstoreCredentialAuthenticationFailedExistingDataWasPreserved, SessionSessionDoesNotBelongToThisDatabase:
 		return IntegrityFailed
-	case CredentialstoreOSEncryptionKeyUnavailablePreserveTheCredential:
-		return Unavailable
+	case LocalKeysPrivateDirectory, LocalKeysPrivateFile, LocalKeysUnsupportedStore:
+		return FailedPrecondition
+	case LocalKeysInvalidKey, LocalKeysConflict, LocalKeysVerificationFailed:
+		return IntegrityFailed
 	case RunModelCallBudgetExhausted:
 		return ResourceExhausted
 	case RunExecutionTimeBudgetExhaustedBeforeTheNext:

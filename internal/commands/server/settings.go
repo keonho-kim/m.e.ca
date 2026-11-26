@@ -1,6 +1,6 @@
 // Purpose: Commit idle model/permission changes and capture team defaults for the next request.
 // Pattern: Reserved state transition around existing configuration and model I/O use cases.
-// Usage: SetModel and Configure keep network, keyring and persistence work outside the state mutex.
+// Usage: SetModel and Configure keep network and credential persistence outside the state mutex.
 // Related: internal/commands/modelchange/commit.go, internal/commands/server/operations.go.
 package server
 

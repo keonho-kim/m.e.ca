@@ -1,5 +1,5 @@
 // Purpose: Verify automatic rotation timing, private failures and joined shutdown without real waits.
-// Pattern: Fake-clock worker and channel-controlled OS-key tests.
+// Pattern: Fake-clock worker and channel-controlled key-store tests.
 // Usage: go test -race ./internal/config/credentials -run TestRotationWorker.
 // Related: internal/config/credentials/rotation.go, internal/storage/credentialstore/rotation.go.
 package credentials
@@ -127,7 +127,7 @@ func TestRotationWorkerFailureIsPrivateAndRetries(t *testing.T) {
 	})
 }
 
-func TestRotationWorkerJoinsCanceledOSAccess(t *testing.T) {
+func TestRotationWorkerJoinsCanceledKeyAccess(t *testing.T) {
 	keys := &rotatingKeys{}
 	v := &Vault{State: t.TempDir(), Keys: keys}
 	if err := v.Set(t.Context(), "provider", "scope", "provider-secret"); err != nil {

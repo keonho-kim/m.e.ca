@@ -1,4 +1,4 @@
-// Purpose: Serialize foreground credential writes and reject impossible saves before OS publication.
+// Purpose: Serialize foreground credential writes and reject impossible saves before key publication.
 // Pattern: Cancellable filesystem lease around repository writes.
 // Usage: Put and Delete share this lease; maintenance retains its optimistic replacement boundary.
 // Related: internal/storage/credentialstore/store.go, internal/config/statefs/lock.go.
