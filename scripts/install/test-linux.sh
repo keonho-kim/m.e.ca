@@ -36,6 +36,8 @@ run_uninstall_cases() {
     fi
 }
 
+# Docker AppArmor profiles can deny tmpfs mounts even with SYS_ADMIN.
+# This exception applies only to the disposable mount-test container.
 run_uninstall_cases '^TestUninstall(MountedStateAllowsReinstall|NestedMountRecovery|ReadOnlyStateRecovery)$' \
-    --user 0:0 --cap-add SYS_ADMIN
+    --user 0:0 --cap-add SYS_ADMIN --security-opt apparmor=unconfined
 run_uninstall_cases '^TestUninstallPermissionRecovery$' --user 1000:1000
