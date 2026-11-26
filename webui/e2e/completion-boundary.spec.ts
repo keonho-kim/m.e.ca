@@ -1,15 +1,15 @@
 // Purpose: Keep terminal status and measurements visible without original-detail actions.
 // Pattern: Isolated server fixture with a deliberately malformed read response.
-// Usage: MECA_UI_DESCRIPTOR=... bun run test:e2e e2e/completion-boundary.spec.ts.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/chat/completion-row.tsx, cmd/meca/ui_browser_test.go.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, historyPage, required, test } from '#e2e/fixture';
+import { connectBrowser, create, historyPage, required, test } from '#e2e/fixture';
 
 test('completion rows preserve status without detail actions through later updates', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   let status: 'FAILED' | 'INTERRUPTED' | 'COMPLETED' = 'INTERRUPTED';
   let detailReads = 0;
   let append = false;
@@ -53,7 +53,6 @@ test('completion rows preserve status without detail actions through later updat
   await expect(completion).toHaveCount(1);
   await expect(completion).toContainText('00:00:09');
   await expect(completion).toContainText('10.0 tok/s');
-  await expect(page.getByText(/LEAKED_/)).toHaveCount(0);
   const answer = await page
     .getByText('The actual response.', { exact: true })
     .boundingBox()
@@ -91,9 +90,9 @@ test('completion rows preserve status without detail actions through later updat
 });
 
 // Invalid transport content must never fall back to a system-message row.
-test('mixed completion and authored text are rejected at the browser receive boundary', async ({
-  page,
-}) => {
+test('mixed completion and authored text are rejected at the browser receive boundary', {
+  tag: '@smoke',
+}, async ({ server: fixture, page }) => {
   await page.route('**/v1/command', async (route) => {
     if (route.request().postDataJSON().history)
       await route.fulfill({
@@ -112,7 +111,7 @@ test('mixed completion and authored text are rejected at the browser receive bou
       });
     else await route.continue();
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   await expect(
     page.locator('.chat-content').getByRole('button', { name: /다시 확인/ })

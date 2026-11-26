@@ -39,6 +39,27 @@ func TestMaintenanceDoesNotRequireProjectDirectory(t *testing.T) {
 	}
 }
 
+func TestDevelopCommandDoesNotRequireProject(t *testing.T) {
+	for _, args := range [][]string{
+		{"develop", "delayed task queue"},
+		{"develop", "delayed", "task", "queue"},
+	} {
+		mode, err := Parse(args, "/missing/project")
+		if err != nil || mode.Action != Develop || mode.DevelopQuery != "delayed task queue" || mode.Project != "" {
+			t.Fatalf("develop command was not selected: %+v %v", mode, err)
+		}
+	}
+	mode, err := Parse([]string{"develop", "--help"}, "/missing/project")
+	if err != nil || mode.Action != Help {
+		t.Fatalf("develop help: %+v %v", mode, err)
+	}
+	for _, args := range [][]string{{"develop"}, {"develop", " \t "}} {
+		if _, err := Parse(args, "/missing/project"); err == nil {
+			t.Fatalf("accepted an empty develop query: %v", args)
+		}
+	}
+}
+
 func TestInstallNoShell(t *testing.T) {
 	mode, err := Parse([]string{"install", "--no-shell"}, "/missing/project")
 	if err != nil || mode.Action != Install || !mode.NoShell || mode.BrowserExtension {

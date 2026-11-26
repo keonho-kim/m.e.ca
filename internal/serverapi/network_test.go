@@ -5,15 +5,21 @@
 package serverapi
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +39,74 @@ func TestNetworkRejectsRemoteCleartext(t *testing.T) {
 		if err := validateNetwork(Options{Listen: address}); err != nil {
 			t.Fatal(address, err)
 		}
+	}
+}
+
+func TestListenerShutdownClosesUnstartedConnectionAndDrainsResponse(t *testing.T) {
+	f := newFixture(t, generateFunc(idleGenerator), false)
+	ctx, stop := context.WithCancel(deadline(t))
+	ready, done := make(chan string, 1), make(chan error, 1)
+	started, finish := make(chan struct{}), make(chan struct{})
+	finishResponse := sync.OnceFunc(func() { close(finish) })
+	options := Options{Protocol: "sse", Listen: "127.0.0.1:0", UI: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(started)
+		<-finish
+		_, _ = io.WriteString(w, "finished")
+	})}
+	go func() {
+		done <- ListenAndServe(ctx, f.api, testToken, options, func(address string) { ready <- address })
+	}()
+	defer func() {
+		finishResponse()
+		stop()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
+	var address string
+	select {
+	case address = <-ready:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	dial := net.Dialer{}
+	host := strings.TrimPrefix(address, "http://")
+	unused, err := dial.DialContext(ctx, "tcp", host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unused.Close()
+	active, err := dial.DialContext(ctx, "tcp", host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer active.Close()
+	if err := active.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fmt.Fprintf(active, "GET /ui/ HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", host); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	stop()
+	if err := unused.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := unused.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+		t.Fatalf("unstarted HTTP connection did not close during shutdown: %v", err)
+	}
+	finishResponse()
+	response, err := http.ReadResponse(bufio.NewReader(active), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, readErr := io.ReadAll(response.Body)
+	if err := errors.Join(readErr, response.Body.Close()); err != nil || string(body) != "finished" {
+		t.Fatalf("active response was not drained: %q %v", body, err)
 	}
 }
 

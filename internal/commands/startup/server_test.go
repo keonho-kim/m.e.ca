@@ -26,7 +26,7 @@ func TestServerModes(t *testing.T) {
 
 func TestServerRejectsAmbiguousModes(t *testing.T) {
 	for _, args := range [][]string{
-		{"--openai"},
+		{"--server", "--unknown"},
 		{"--protocol", "sse"}, {"--listen", "127.0.0.1:0"},
 		{"--server", "--print", "hello"}, {"--server", "--mode", "json"},
 		{"--server", "--diagnose"}, {"--server", "--export"},

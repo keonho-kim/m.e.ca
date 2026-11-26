@@ -1,26 +1,15 @@
 // Purpose: Verify streamed reasoning, saved Markdown and long-output scroll following.
 // Pattern: Browser rendering contracts with controlled model output.
-// Usage: MECA_UI_DESCRIPTOR points to the opt-in Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/e2e/fixture.ts, cmd/meca/ui_provider_test.go.
 import { expect } from '@playwright/test';
-import {
-  type BrowserFixture,
-  browserFixture,
-  connectBrowser,
-  create,
-  rpc,
-  send,
-  test,
-} from '#e2e/fixture';
+import { connectBrowser, create, rpc, send, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
 });
 test('thinking streams as subdued Markdown and remains readable in saved history', async ({
+  server: fixture,
   page,
 }) => {
   await create(page);
@@ -57,6 +46,7 @@ test('thinking streams as subdued Markdown and remains readable in saved history
 });
 
 test('long live Markdown follows the newest output after durable history has settled', async ({
+  server: fixture,
   page,
 }, info) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

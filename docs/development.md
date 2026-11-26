@@ -2,7 +2,7 @@
 
 [문서 목록](README.md) · [제품 명세](../SYSTEM.md) · [기여 정책](../CONTRIBUTING.md)
 
-이 문서는 소스 빌드, 모듈 책임, 변경 기준과 검증 절차를 다룬다. 사용자 설정은 [설정 가이드](configuration.md), 공개 wire 계약은 [서버 API](server.md)가 소유한다.
+소스 빌드는 제품 Go 모듈·개발 도구·WebUI의 고정 의존성을 사용한다. 사용자 설정은 [설정 가이드](configuration.md), 공개 wire 계약은 [서버 API](server.md)를 따른다.
 
 ## 책임과 의존성
 
@@ -65,7 +65,8 @@ go build -tags=godbus_no_tcp -trimpath -o bin/meca ./cmd/meca
 `tui` 태그는 서버 조립부와 WebUI를 실행 파일에서 제외한다. 공통 Provider·도구·팀·스킬은 두 종류에 포함한다. 변경 시 tui의 의존성에 서버·WebUI가 포함되지 않는지도 확인한다.
 
 ```sh
-GOFLAGS='-tags=tui,godbus_no_tcp' go test ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade ./internal/commands/install
+GOFLAGS='-tags=tui,godbus_no_tcp' go test -short ./cmd/meca ./internal/commands/startup
+GOFLAGS='-tags=tui,godbus_no_tcp' go test ./cmd/meca -run '^TestTUIExecutable$'
 go list -tags=tui,godbus_no_tcp -deps ./cmd/meca
 ```
 
@@ -92,8 +93,8 @@ go list -tags=tui,godbus_no_tcp -deps ./cmd/meca
 
 ```sh
 export GOFLAGS='-tags=godbus_no_tcp'
-gofmt -l cmd internal
-go test ./...
+gofmt -l cmd internal scripts
+go test -short ./...
 go vet ./...
 go tool -modfile=devtools/go.mod staticcheck ./...
 go -C devtools run ./cmd/diagnosticscheck -C=.. ./...
@@ -102,6 +103,8 @@ go mod verify
 ```
 
 의존성 변경은 `govulncheck ./...`도 확인한다. 작은 결정적 fixture·`t.TempDir`·`httptest`를 사용하고 실제 자격 증명·사용자 프로젝트·유료 모델에 의존하지 않는다. 실패·취소·저장 불확실·중복 요청을 성공 경로와 함께 검증한다.
+
+`go test -short ./...`는 패키지 기능·API 계약과 오프라인 소스 설치 스크립트 검사를 실행한다. Provider 재시도 대기는 가상 시간으로 검증할 수 있고, 스트림의 실제 순서와 연결 수명은 로컬 HTTP 연결로 확인한다. 플랫폼 실행과 브라우저 필수 시나리오는 릴리스의 별도 단계에서 실행한다.
 
 서버 계약을 바꾸면 `api/meca/v1`의 원본과 Go·TypeScript 바인딩을 함께 갱신한다. 생성 명령은 [서버 계약](server.md#개발과-생성)을 따른다. 생성 코드를 직접 수정하지 않는다.
 
@@ -113,6 +116,9 @@ macOS·Linux와 WSL의 실제 동작, 교차 빌드와 모의 전송 검사는 �
 - 클립보드: 이미지·파일 복사·빈 값·초과 크기·취소. 개인 클립보드 대신 격리된 fixture 사용.
 - WSL: Windows 상호운용, WSLg 유무와 Windows PATH를 가져오지 않는 환경.
 - 자격 증명: 로컬 키 DB의 0600 권한·소유권·심볼릭 링크 거부, 설치 시 실제 저장 검증, 오류 원인 전달, 재설치·동시 저장·키 교체·백업 복구·삭제.
+- 설치·삭제: 일반 디렉터리·직접 마운트된 `~/.meca`·하위 마운트·읽기 전용·권한 복구 후 재시도. `sh scripts/install/test-linux.sh`는 Docker에서 마운트 검사와 비루트 검사에 필요한 권한을 각각 부여하고, 검사가 건너뛰어지면 실패한다.
+
+full의 PTY·CLI 설치·업그레이드는 내장 UI 빌드 후 `GOFLAGS=-tags=godbus_no_tcp go test ./cmd/meca ./internal/commands/upgrade`로 확인한다. 소스 설치 스크립트만 검사할 때는 `go test ./scripts/install`을 사용한다.
 
 실행할 수 없는 환경은 미검증으로 보고한다. 지원 조건은 [이미지 입력](images.md)과 [실행 경계](execution-boundary.md)를 따른다.
 
@@ -128,7 +134,7 @@ macOS·Linux와 WSL의 실제 동작, 교차 빌드와 모의 전송 검사는 �
 
 ### PGO 빌드 책임
 
-`scripts/performance/pgo.sh`는 격리된 엔진 부하의 프로파일을 만들고 임시 자료를 정리한다. 프로파일은 소스·도구 체인·플랫폼·부하에 종속된 빌드 입력이다. 대표성과 적용 효과를 확인한 경우에만 사용하며 생성물을 Git에 넣지 않는다.
+`scripts/performance/pgo.sh`는 `engineworkload` 태그로 격리된 엔진 부하의 프로파일을 만들고 임시 자료를 정리한다. 여러 공급자의 부하 시나리오는 `go test -tags=godbus_no_tcp,engineworkload ./cmd/meca -run '^TestEngineWorkload$'`로 실행한다. 프로파일은 소스·도구 체인·플랫폼·부하에 종속된 빌드 입력이다. 대표성과 적용 효과를 확인한 경우에만 사용하며 생성물을 Git에 넣지 않는다.
 
 ## 내장 WebUI
 
@@ -150,17 +156,13 @@ bun run --cwd webui bundle:budget
 
 TypeScript 7 환경에서 Astryx Doctor의 컴포넌트 props 검사는 개발 의존성 `@typescript/typescript6`의 컴파일러 API를 사용한다. 애플리케이션 타입 검사는 `typescript`에 고정한 버전으로 실행한다.
 
-### Astryx 검사와 알려진 경고
+### Astryx 검사
 
-Core·Neutral·CLI는 같은 정식 버전으로 고정한다. 의존성을 바꿀 때 이전 버전부터 `astryx upgrade --from <version> --path .`를 실행하고 `--apply` 결과·수동 조치·생성물을 검토한다. 현재 `0.7.17`의 유지보수 범위는 [패치 계약](../webui/patches/README.md)을 따른다.
+Core·Neutral·CLI는 같은 정식 버전으로 고정한다. 의존성을 바꿀 때 현재 설치 버전부터 `astryx upgrade --from <version> --path .`를 실행하고 `--apply` 결과·수동 조치·생성물을 검토한다. 적용 중인 수정과 갱신 절차는 [패치 계약](../webui/patches/README.md)을 따른다.
 
-`doctor --built dist`는 배포 자산의 Astryx 사용과 CSS 포함을 검사한다. 소스의 스타일·아이콘 사용까지 보려면 프로젝트 루트인 `--built .`도 검사한다. 0.7.17 기준으로 남아 있는 경고는 다음과 같이 구분한다.
+`doctor --built dist`는 배포 자산의 Astryx 사용과 CSS 포함을 검사한다. 소스의 스타일·아이콘 사용은 `doctor --built .`로 검사한다. 스타일·아이콘 경고는 공개 컴포넌트·토큰 사용과 브랜드·아이콘 등록의 실제 용도를 확인한다. 테마 경고는 선택자가 같은 요소에 함께 적용될 수 있는지와 실제 표시를 대조한다.
 
-- **스타일 154건·아이콘 43건:** CSS import·`className`·SVG·아이콘 라이브러리 사용에 대한 정적 검사다. 생성 테마 연결과 브랜드·아이콘 등록 코드도 검토 대상에 포함된다. 전부 화면 오류이거나 정당한 예외라는 뜻은 아니며, 각 항목을 공개 컴포넌트·토큰으로 대체할 수 있는지 별도로 분류해야 한다.
-- **테마 선택자 2건:** `collapsible`의 `data-tone="tool"`·`"request"`와 `"thinking"`에 지정한 배경·여백이 동시에 적용된다고 예측한다. 같은 요소의 정확한 속성값은 상호 배타적이므로 현재 규칙에는 해당 교집합이 없다. 경고만 없애기 위해 불가능한 조합의 스타일을 추가하지 않는다. 선택자를 바꿀 때는 이 판단과 실제 브라우저 표시를 다시 확인한다.
-- **Vite의 500kB 청크 안내:** 압축 전 단일 JavaScript 청크 크기에 대한 안내다. 초기 gzip 640KiB 검사와 따로 확인하며, 크기가 큰 의존성은 분석 결과와 실제 초기 화면의 필요성을 기준으로 분리한다.
-
-경고를 일괄 억제하지 않는다. 빌드·타입·동작 실패와 디자인 사용 권고를 구분해 보고하고, 검사 버전이 바뀌면 이 기록도 재검토한다.
+Vite의 청크 크기 안내는 압축 전 단일 JavaScript 청크를 대상으로 한다. 초기 gzip 예산과 함께 분석하고, 큰 의존성은 초기 화면에서의 필요성과 지연 로딩 경계를 기준으로 검토한다. 경고를 일괄 억제하지 않으며 빌드·타입·동작 실패를 해결한 뒤 전달한다.
 
 ### 브라우저 성능·복구 책임
 
@@ -175,32 +177,20 @@ Core·Neutral·CLI는 같은 정식 버전으로 고정한다. 의존성을 바�
 
 관찰 재연결·로딩 실패·인증 만료·페이지 복원에서는 작업 접수와 미저장 초안을 확인한다. 숨긴 화면의 승인·완료·예약 전달과 가상화한 행의 포커스·드래그 수명도 검증한다. [WebUI 구현 전략](optimization-strategies.md#webui-상태와-렌더링)
 
-브라우저 검사는 사용자 상태를 사용하지 않는 opt-in fixture를 사용한다. 아래 서버 명령은 별도 터미널에서 실행한다.
+`bun run --cwd webui test`는 응답 파싱과 상태 전이 같은 브라우저 독립 계약을 검사한다. Playwright는 내장 UI에 접속해 브라우저에서 확인할 수 있는 기능을 검사한다. 실행기는 Go fixture를 한 번 빌드하고, 테스트마다 새 임시 홈·모의 모델·서버를 시작한 뒤 종료한다.
 
 ```sh
-mkdir -p .local/ui-check
-MECA_UI_DESCRIPTOR="$PWD/.local/ui-check/connection.json" \
-  go test -timeout=50m ./cmd/meca -run '^TestUIBrowserFixture$' -count=1 -v > .local/ui-check/server.log 2>&1
+sh scripts/build-ui.sh
+bun run --cwd webui playwright install --no-shell chromium
+bun run --cwd webui test:e2e:smoke
+bun run --cwd webui test:e2e --project=chromium
 ```
 
-연결 파일이 준비된 뒤 다른 터미널에서 실행하고, 완료 후 fixture를 종료한다.
+릴리스는 `@smoke` 시나리오를 실행한다. 서버가 준비되지 않거나 필수 시나리오가 건너뛰어지면 실패한다. `bun run --cwd webui playwright install firefox webkit` 후 `test:e2e --project=firefox` 또는 `--project=webkit`으로 해당 브라우저 호환 검사를 실행한다. 브라우저가 실제로 보존한 페이지의 복원은 Chromium 시나리오에서 확인한다. HTTPS/HTTP2 실행은 `MECA_UI_TLS=1`과 `MECA_UI_CERTIFICATE`, `MECA_UI_KEY`의 테스트 인증서·키 절대 경로를 사용한다.
 
-```sh
-MECA_UI_DESCRIPTOR="$PWD/.local/ui-check/connection.json" bun run --cwd webui test:e2e --project=chromium
-touch .local/ui-check/connection.json.stop
-```
-
-브라우저별로 새 fixture를 시작하고 `--project=firefox` 또는 `--project=webkit`으로 반복한다. Provider의 대기 신호와 승인 테스트 파일은 fixture 수명을 공유하므로 브라우저 간에 실행 상태를 재사용하지 않는다. 다음 실행에는 새 연결 파일 경로를 사용한다.
+`bun run --cwd webui test:performance`는 실제 입력에서 INP·CLS·LCP를 측정하며 수집되지 않은 지표를 정상으로 간주하지 않는다. DOM·네트워크 읽기 상한은 기능 검사에서 확인한다. 실제 모델 연동은 `MECA_LMSTUDIO_URL`과 `MECA_LMSTUDIO_MODEL`을 설정한 뒤 `bun run --cwd webui test:live-provider`로 별도 실행한다.
 
 Playwright CLI는 실제 화면·입력·네트워크 확인에 사용한다. Chromium·Firefox·WebKit, 좁은 화면·키보드·forced colors·축소 모션을 확인하며 실제 Safari IME·스크린리더 검증과 구분한다. HTTP/1·HTTPS/HTTP2와 bfcache 복원은 별도 계약으로 확인한다. 테스트 연결 파일·쿠키·trace·캡처·로그는 로컬 산출물이다.
-
-## 문서 작성과 갱신
-
-README는 소개와 빠른 시작을, `SYSTEM.md`는 제품 요구와 모듈 경계를 담당한다. 에이전트의 판단·복구·기록은 런타임 문서에, 등록된 도구와 실행 어댑터는 도구 문서에, 승인 규칙은 실행 경계에 둔다. [에이전트 런타임](runtime.md) · [도구 목록과 연동](tools.md) · [호스트 실행과 승인](execution-boundary.md)
-
-사용자 스킬의 탐색·작성·호출은 스킬 문서에, 배포 카탈로그와 기본 자료는 기본 스킬 문서에 둔다. 공통 서버 계약은 서버 API에, 화면 구현과 API의 연결은 WebUI 연동에 둔다. 최적화 문서는 적용한 기법과 구현 소유자를 가리킨다. 관련 문서에서 설명이 필요한 경우 담당 절을 연결한다. [문서 목록](README.md)
-
-문서를 바꿀 때 소스·기본값·링크를 함께 확인한다. 릴리스 노트에는 직전 배포 이후 해당 버전의 변경을 기록한다.
 
 ## 저장소에 포함하는 파일
 

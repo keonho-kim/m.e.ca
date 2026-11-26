@@ -1,14 +1,13 @@
 // Purpose: Verify delayed filesystem replies cannot race submissions and reconnects restore missed usage.
 // Pattern: Browser-to-engine synchronization regression tests.
-// Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/model/file-references.ts, webui/src/pages/workspace/api/events.ts.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 type Reply = { task?: { id: string; status: string }; error?: { code: string } };
 const invoke = (page: Page, command: object) =>
   page.evaluate(async (value) => {
@@ -21,10 +20,7 @@ const invoke = (page: Page, command: object) =>
     if (reply.error) throw new Error(reply.error.code);
     return reply as Reply;
   }, command);
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
   const previous = page.url();
   await page
@@ -41,6 +37,7 @@ const target = (page: Page) => {
 };
 
 test('one batch rename reconciles 24 references before a queued send can start', async ({
+  server: fixture,
   page,
 }) => {
   const suffix = crypto.randomUUID().slice(0, 8);

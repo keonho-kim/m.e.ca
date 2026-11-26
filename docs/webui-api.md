@@ -2,7 +2,7 @@
 
 [서버 API](server.md) · [제품 명세](../SYSTEM.md)
 
-내장 WebUI는 동일 출처 HTTP JSON과 쿠키 인증 WebSocket을 사용한다. 이 문서는 브라우저 인증·작업 관찰·조회·복구를 설명한다. [기동과 외부 클라이언트 계약](server.md) · [화면 사용](webui-design.md)
+내장 WebUI는 동일 출처 HTTP JSON과 쿠키 인증 WebSocket으로 인증·작업 관찰·조회·복구를 수행한다. [기동과 외부 클라이언트 계약](server.md) · [화면 사용](webui-design.md)
 
 팀의 공개 응답·도구·승인은 스트리밍하고 팀원별 Thinking은 개인 이력에 보관한다. 명시적 스킬 호출은 `start.text`에 `#스킬명`으로 보낸다. [팀 실행](team.md) · [스킬 호출](skills.md#사용자-호출과-모델-도구)
 

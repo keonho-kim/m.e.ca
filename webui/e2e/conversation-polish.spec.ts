@@ -1,16 +1,14 @@
 // Purpose: Verify stable chat cells, reference tokens, settings confirmation and wrapped content.
 // Pattern: Browser-to-engine presentation regression contracts.
-// Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e conversation-polish.spec.ts.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_provider_test.go, webui/src/pages/workspace/ui/chat/chat.tsx.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ page, server: fixture }) => {
   await mkdir(join(fixture.projectA, 'polish-folder'), { recursive: true });
   await writeFile(
     join(fixture.projectA, 'polish-folder', 'wrap.md'),
@@ -20,8 +18,6 @@ test.beforeAll(async () => {
       'unbroken_code_'.repeat(250) +
       '\n```'
   );
-});
-test.beforeEach(async ({ page }) => {
   await connectBrowser(page, fixture);
   const previous = page.url();
   await page
@@ -72,7 +68,7 @@ test('references stay in their work area and sent messages show icon tokens', as
   await page.getByRole('tab', { name: '스킬', exact: true }).click();
   await page
     .locator('.skill-entry')
-    .filter({ hasText: 'ui-design' })
+    .filter({ hasText: 'development' })
     .getByRole('button', { name: /입력에 스킬 넣기/ })
     .click();
   await expect(page.getByRole('tab', { name: '스킬', exact: true })).toHaveAttribute(
@@ -135,6 +131,7 @@ test('file previews and directory breadcrumbs wrap within narrow containers', as
 });
 
 test('model save keeps the confirmation open on rejection and closes after a successful retry', async ({
+  server: fixture,
   page,
 }) => {
   await page.getByRole('button', { name: '설정', exact: true }).click();
@@ -162,6 +159,7 @@ test('model save keeps the confirmation open on rejection and closes after a suc
 });
 
 test('thinking and tool cells hold the same width through persistence and completion', async ({
+  server: fixture,
   page,
 }) => {
   try {

@@ -1,11 +1,14 @@
 // Purpose: Keep large tool requests lazy, bounded, copyable and inside their owning disclosure.
 // Pattern: Browser contract with revision-bound synthetic request pages.
-// Usage: MECA_UI_DESCRIPTOR points to TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/chat/tool-request.tsx, webui/src/pages/workspace/model/detail-pages.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, historyPage, test } from '#e2e/fixture';
+import { connectBrowser, create, historyPage, test } from '#e2e/fixture';
 
-test('request pages share the result width and release on collapse', async ({ page }) => {
+test('request pages share the result width and release on collapse', async ({
+  page,
+  server: fixture,
+}) => {
   const first = `{"content":"${'request content '.repeat(1900)}first-page-end`,
     second = 'last-request-page"}',
     revision = 'c'.repeat(64);
@@ -67,7 +70,7 @@ test('request pages share the result width and release on collapse', async ({ pa
     }
     return route.continue();
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   const tool = page.locator('.tool-entry');
   const outer = tool.locator('.tool-disclosure > button');

@@ -1,16 +1,12 @@
 // Purpose: Guard deferred reader loading and opaque, reduced-motion-aware pane and dialog transitions.
 // Pattern: Browser contracts over the real embedded build with controlled model output.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/app/styles/motion.css, webui/src/pages/workspace/ui/chat/chat.tsx.
 
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, create, test } from '#e2e/fixture';
+import { type BrowserFixture, connectBrowser, create, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-async function emptyConversation(page: Page) {
+async function emptyConversation(page: Page, fixture: BrowserFixture) {
   await connectBrowser(page, fixture);
   await create(page);
   await expect(
@@ -18,6 +14,7 @@ async function emptyConversation(page: Page) {
   ).toBeVisible();
 }
 test('empty conversations defer rich reader code until a response actually needs it', async ({
+  server: fixture,
   page,
 }) => {
   const readerCode: Promise<boolean>[] = [];
@@ -25,7 +22,7 @@ test('empty conversations defer rich reader code until a response actually needs
     if (!response.url().endsWith('.js')) return;
     readerCode.push(response.text().then((text) => text.includes('meca-render-pages')));
   });
-  await emptyConversation(page);
+  await emptyConversation(page, fixture);
   expect((await Promise.all(readerCode)).some(Boolean)).toBe(false);
   await page
     .getByRole('combobox', { name: '작업 입력', exact: true })
@@ -37,10 +34,11 @@ test('empty conversations defer rich reader code until a response actually needs
 });
 
 test('dialog arrival moves a solid surface and reduced motion cancels spatial transitions', async ({
+  server: fixture,
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await emptyConversation(page);
+  await emptyConversation(page, fixture);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Animation.enable');
   await cdp.send('Animation.setPlaybackRate', { playbackRate: 0.1 });

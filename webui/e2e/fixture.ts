@@ -1,26 +1,13 @@
-// Purpose: Share isolated server discovery and cookie authentication across browser behavior tests.
-// Pattern: Browser test I/O fixture without bearer credentials in CLI arguments or traces.
-// Usage: Feature specs read the descriptor once and authenticate their independent browser context.
-// Related: cmd/meca/ui_browser_test.go, webui/e2e/editor-scroll.spec.ts.
+// Purpose: Provide each browser test its own MECA server, authentication and common UI actions.
+// Pattern: Playwright fixtures and shared behavior actions.
+// Usage: Specs request the server fixture and authenticate with connectBrowser as needed.
+// Related: webui/e2e/browser-server.ts, webui/playwright.config.ts.
 import { readFile } from 'node:fs/promises';
 import { test as base, expect, type Page } from '@playwright/test';
 
-export type BrowserFixture = {
-  url: string;
-  tokenFile: string;
-  projectA: string;
-  projectB: string;
-  home: string;
-  provider: string;
-  archiveSession: string;
-  scrollSessions: string[];
-};
+import { type BrowserFixture, withBrowserServer } from '#e2e/server';
 
-export async function browserFixture(): Promise<BrowserFixture> {
-  const path = process.env.MECA_UI_DESCRIPTOR;
-  test.skip(!path, 'start the isolated Go fixture first');
-  return JSON.parse(await readFile(path!, 'utf8'));
-}
+export type { BrowserFixture } from '#e2e/server';
 
 export async function connectBrowser(page: Page, fixture: BrowserFixture) {
   // Non-desktop behavior specs must not open a system dialog on the developer machine.
@@ -33,11 +20,6 @@ export async function connectBrowser(page: Page, fixture: BrowserFixture) {
     },
   });
   expect(response.ok(), 'isolated browser authentication').toBe(true);
-  const language = await page.request.post(`${fixture.url}/v1/command`, {
-    headers: { 'X-Meca-UI': '1', Origin: fixture.url },
-    data: { setSettings: { language: 'ko' } },
-  });
-  expect(language.ok()).toBe(true);
   await page.goto(`${fixture.url}/ui/`);
   await expect(page.getByRole('tab', { name: '대화', exact: true })).toBeVisible();
 }
@@ -90,20 +72,13 @@ export function required<T>(value: T | null | undefined): T {
   return value;
 }
 
-// Each test owns its cookie lifetime, including assertion failures and early exits.
-export const test = base.extend<{ browserConnection: undefined }>({
-  browserConnection: [
-    async ({ page }, use) => {
-      await use(undefined);
-      const current = new URL(page.url());
-      if (!['http:', 'https:'].includes(current.protocol)) return;
-      const cookies = await page.context().cookies(`${current.origin}/v1/ui/session`);
-      if (!cookies.some((cookie) => cookie.name.startsWith('meca_ui_'))) return;
-      const closed = await page.request.post(`${current.origin}/v1/ui/logout`, {
-        headers: { Origin: current.origin, 'X-Meca-UI': '1' },
-      });
-      expect(closed.status(), 'browser fixture revokes its own cookie').toBe(204);
-    },
-    { auto: true },
-  ],
+export const test = base.extend<{ server: BrowserFixture }>({
+  server: async ({ context }, use) =>
+    withBrowserServer(async (server) => {
+      try {
+        await use(server);
+      } finally {
+        await context.close();
+      }
+    }),
 });

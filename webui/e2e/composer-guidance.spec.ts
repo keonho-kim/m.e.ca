@@ -1,25 +1,33 @@
 // Purpose: Keep send, steering and queue instructions readable as distinct platform-aware shortcut rows.
 // Pattern: Browser interaction and accessible keyboard-hint contract.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/composer/send-hint.tsx, webui/e2e/fixture.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, input, test } from '#e2e/fixture';
+import { connectBrowser, create, input, test } from '#e2e/fixture';
 
 test('the send tooltip separates send, steer and queue with native key badges', async ({
+  server: fixture,
   page,
 }) => {
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   await input(page).fill('Shortcut guidance');
-  await page.locator('.composer').getByRole('button', { name: '전송', exact: true }).hover();
-  const tooltip = page.getByRole('tooltip');
+  const send = page.locator('.composer').getByRole('button', { name: '전송', exact: true });
+  await expect(send).toBeEnabled();
+  await page.keyboard.press('Tab');
+  await send.focus();
+  const tooltip = page.getByRole('tooltip').filter({ hasText: '후속 예약' });
   await expect(tooltip).toBeVisible();
   const rows = tooltip.locator('.composer-shortcut-row');
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toContainText('전송');
   await expect(rows.nth(1)).toContainText('방향 수정');
   await expect(rows.nth(2)).toContainText('후속 예약');
-  await expect(tooltip.locator('.astryx-kbd')).toHaveCount(3);
+  await expect(rows.nth(0).getByRole('img', { name: 'Enter', exact: true })).toBeVisible();
+  await expect(rows.nth(1).getByRole('img', { name: 'Enter', exact: true })).toBeVisible();
+  await expect(
+    rows.nth(2).getByRole('img', { name: /^(Command|Control) \+ Enter$/ })
+  ).toBeVisible();
   const contrast = await tooltip
     .locator('kbd')
     .first()

@@ -1,38 +1,28 @@
 // Purpose: Verify native textarea editing, isolated highlighting, undo and captured saves.
 // Pattern: Browser-to-engine editor replacement contracts.
-// Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e editor.spec.ts.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/shared/ui/code-editor/index.tsx, webui/src/shared/ui/code-editor/syntax.ts.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, create, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 const source = 'const answer = 42;\nconst result = answer';
 const large = '// bounded source line\n'.repeat(44000);
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ page, server: fixture }) => {
   for (const [name, text] of Object.entries({
     'editor-word.js': source,
     'editor-save.js': source,
-    'editor-large.txt': large,
+    'editor-large.ts': large,
     'editor-literal.html': '<img src=x onerror="document.body.dataset.editorInjected=1">',
   }))
     await writeFile(join(fixture.projectA, name), text);
-});
-test.beforeEach(async ({ page }) => {
   await connectBrowser(page, fixture);
-  const previous = page.url();
-  await page
-    .locator('.workspace-group')
-    .filter({ has: page.locator('.workspace-name', { hasText: 'alpha' }) })
-    .getByRole('button', { name: '새 대화', exact: true })
-    .click();
-  await page.waitForURL((url) => url.href !== previous && url.pathname.includes('/c/session_'));
-  await page.getByRole('tab', { name: '파일', exact: true }).click();
+  await create(page);
 });
 async function open(page: Page, filename: string) {
+  await page.getByRole('tab', { name: '파일', exact: true }).click();
   await page.getByRole('button', { name: filename, exact: true }).click();
   const input = page.getByRole('textbox', {
     name: new RegExp(`${filename.replaceAll('.', '\\.')}$`),
@@ -94,7 +84,10 @@ test('HTML source is literal and IME Enter is left to the browser', async ({ pag
   });
   expect(result).toEqual({ allowed: true, unchanged: true });
 });
-test('edits made while a save reply is delayed remain dirty', async ({ page }) => {
+test('edits made while a save reply is delayed remain dirty', { tag: '@smoke' }, async ({
+  page,
+  server: fixture,
+}) => {
   const editor = await open(page, 'editor-save.js');
   await editor.fill('const saved = 1;');
   let applied!: () => void, release!: () => void;
@@ -130,9 +123,20 @@ test('edits made while a save reply is delayed remain dirty', async ({ page }) =
     await page.unroute('**/v1/command');
   }
 });
-test('many-line documents remain editable with bounded DOM and working undo', async ({ page }) => {
-  const editor = await open(page, 'editor-large.txt');
+test('a many-line file opens once and remains editable with bounded DOM and undo', async ({
+  page,
+}) => {
+  const reads = { directory: 0, editor: 0, preview: 0 };
+  page.on('request', (request) => {
+    if (!request.url().endsWith('/v1/command')) return;
+    const body = request.postDataJSON();
+    if (body?.directory) reads.directory++;
+    if (body?.editorRead) reads.editor++;
+    if (body?.previewFile) reads.preview++;
+  });
+  const editor = await open(page, 'editor-large.ts');
   await expect(editor).toHaveValue(large);
+  expect(await page.locator('.file-document').locator('*').count()).toBeLessThan(2000);
   expect(await page.locator('.text-editor').locator('*').count()).toBeLessThan(10);
   await atEnd(editor);
   await editor.pressSequentially('X');
@@ -140,4 +144,5 @@ test('many-line documents remain editable with bounded DOM and working undo', as
   const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
   await editor.press(`${modifier}+z`);
   await expect(editor).toHaveValue(large);
+  expect(reads).toEqual({ directory: 1, editor: 1, preview: 0 });
 });

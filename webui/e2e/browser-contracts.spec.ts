@@ -1,12 +1,15 @@
 // Purpose: Guard observer capacity, cached-module recovery and virtualized keyboard ownership.
 // Pattern: Browser regressions against the embedded isolated fixture.
-// Usage: Runs on Chromium, Firefox and WebKit with no user projects or model credentials.
+// Usage: Run through the Playwright browser suite.
 // Related: internal/serverapi/ui_observer.go, webui/src/shared/ui/recovery/index.tsx.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, historyPage, test } from '#e2e/fixture';
+import { connectBrowser, create, historyPage, test } from '#e2e/fixture';
 
-test('three file tabs leave HTTP requests available', async ({ page, context }) => {
-  const fixture = await browserFixture();
+test('three file tabs leave HTTP requests available', async ({
+  server: fixture,
+  page,
+  context,
+}) => {
   await connectBrowser(page, fixture);
   const peers = [page];
   try {
@@ -35,8 +38,10 @@ test('three file tabs leave HTTP requests available', async ({ page, context }) 
   }
 });
 
-test('a missing lazy module can recover with an independent reload action', async ({ page }) => {
-  const fixture = await browserFixture();
+test('a missing lazy module can recover with an independent reload action', async ({
+  page,
+  server: fixture,
+}) => {
   await page.route('**/ui/assets/workspace-*.js', (route) =>
     route.fulfill({ status: 404, body: 'missing module' })
   );
@@ -58,7 +63,10 @@ test('a missing lazy module can recover with an independent reload action', asyn
   await expect(page.getByRole('tab', { name: /대화|Chat/, exact: true })).toBeVisible();
 });
 
-test('focused tool rows stay mounted while distant history is visible', async ({ page }) => {
+test('focused tool rows stay mounted while distant history is visible', async ({
+  page,
+  server: fixture,
+}) => {
   await page.route('**/v1/command', (route) => {
     const cmd = route.request().postDataJSON();
     if (cmd.history)
@@ -81,7 +89,7 @@ test('focused tool rows stay mounted while distant history is visible', async ({
       });
     return route.continue();
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   await expect
     .poll(() =>

@@ -8,7 +8,7 @@ const (
 	DistributionFullRequired       Message = "server and WebUI require the full distribution; run meca upgrade --full or install the full release"
 	MecaHelpCommon                 Message = "M.E.CA (%s)\nUsage: meca [path] [--print|--mode json] [--session ID] [prompt]\n       meca --session ID --export\n       meca --diagnose"
 	MecaHelpServer                 Message = "       meca [path] --server [--ui] [--protocol sse|socket|grpc] [--listen IP:port]\n            [--session ID] [--concurrency N] [--token-file PATH] [--tls-cert PATH --tls-key PATH]\n            [--allow-host host:port] [--allow-origin http(s)://host:port]"
-	MecaHelpMaintenance            Message = "       meca install [--no-shell] [--ext browser]\n       meca upgrade [--tui|--full]\n       meca resume | uninstall"
+	MecaHelpMaintenance            Message = "       meca install [--no-shell] [--ext browser]\n       meca upgrade [--tui|--full]\n       meca resume | uninstall\n       meca develop \"keywords\" (search installed development guides)"
 	UpgradeUnsupportedDistribution Message = "unsupported release distribution: expected tui or full"
 	UpgradeCheckingDistribution    Message = "M.E.CA %s 최신 릴리스를 확인합니다…"
 	UpgradeDistributionCurrent     Message = "이미 최신 %s 릴리스입니다: %s"

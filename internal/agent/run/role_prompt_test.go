@@ -1,4 +1,4 @@
-// Purpose: Verify the main agent receives system, development and project instructions once.
+// Purpose: Verify the main agent receives the applicable system and project instructions.
 // Pattern: Runtime prompt contract tests.
 // Usage: go test ./internal/agent/run -run TestMainAgentPrompt.
 // Related: internal/agent/run/run.go, internal/agent/prompt/defaults.go.
@@ -22,7 +22,6 @@ func TestMainAgentPrompt(t *testing.T) {
 	r := fixture(g, &executor{}, &journal{})
 	templates := prompt.Defaults()
 	templates.System = "COMMON_RULE"
-	templates.Development = "DEVELOPMENT_RULE"
 	r.Prompts, r.ProjectInstructions = &templates, "PROJECT_RULE"
 	r.ProjectRoot = "/projects/selected directory"
 	if _, err := r.Run(context.Background(), "hello", approve, emit); err != nil {
@@ -32,7 +31,7 @@ func TestMainAgentPrompt(t *testing.T) {
 	if !strings.Contains(request.Messages[0].Content, "Project directory (project_root): "+strconv.Quote(r.ProjectRoot)) {
 		t.Fatal("model was not told its actual project directory")
 	}
-	for _, rule := range []string{"COMMON_RULE", "DEVELOPMENT_RULE", "PROJECT_RULE"} {
+	for _, rule := range []string{"COMMON_RULE", "PROJECT_RULE"} {
 		if strings.Count(request.Messages[0].Content, rule) != 1 {
 			t.Fatalf("missing or repeated %s", rule)
 		}
@@ -43,11 +42,6 @@ func TestMainAgentPrompt(t *testing.T) {
 	last := request.Messages[len(request.Messages)-1].Content
 	if last != "hello" {
 		t.Fatal("current work context was lost")
-	}
-	for _, term := range []string{"COMMON_RULE", "DEVELOPMENT_RULE"} {
-		if strings.Contains(last, term) {
-			t.Fatalf("decision repeated system instructions: %s", term)
-		}
 	}
 }
 

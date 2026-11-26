@@ -2,7 +2,7 @@
 
 <img src="webui/public/favicon.svg" alt="MECA" width="96" height="96">
 
-[설치](#설치) · [Provider](#지원-provider) · [사용법](#사용법) · [팀 모드](#팀-모드) · [스킬](#스킬) · [서버·WebUI](#서버) · [문서](#문서)
+[설치](#설치) · [Provider](#지원-provider) · [CLI](docs/cli.md) · [사용법](#사용법) · [팀 모드](#팀-모드) · [스킬](#스킬) · [서버·WebUI](#서버) · [문서](#문서)
 
 </div>
 
@@ -31,11 +31,17 @@ macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·No
 ./meca install --no-shell  # 로그인 셸 전환 없이 설치
 ```
 
-브라우저 기능의 제공 조건과 관리형 Chrome 갱신은 도구 문서에서 확인할 수 있습니다. [설치 옵션](docs/releases.md#다운로드와-설치) · [브라우저 설치와 갱신](docs/tools.md#설치와-갱신)
+설치하면 `meca develop` 명령으로 개발 스킬의 참고 자료를 검색할 수 있습니다. [개발 자료 검색](docs/cli.md#개발-자료-검색)
+
+```sh
+meca develop "delayed task queue"
+```
+
+브라우저 기능의 제공 조건과 관리형 Chrome 갱신은 도구 문서에서 확인할 수 있습니다. [설치 옵션](docs/cli.md#설치) · [브라우저 설치와 갱신](docs/tools.md#설치와-갱신)
 
 ### 업데이트
 
-실행 중인 MECA를 종료한 뒤 아래 명령 중 하나를 실행합니다. [업데이트 안내](docs/releases.md#업데이트) · [이번 릴리스의 변경 사항](docs/release-notes.md)
+실행 중인 MECA를 종료한 뒤 아래 명령 중 하나를 실행합니다. [업데이트 안내](docs/cli.md#업데이트) · [릴리스 노트](docs/release-notes.md)
 
 ```sh
 meca upgrade  # 현재 배포 종류로 업데이트
@@ -65,7 +71,7 @@ meca --print "이 변경 사항을 검토해줘"
 meca --mode json "요청한 파일을 만들어줘"
 ```
 
-`!model`로 모델을 연결하고 `!dir`에서 파일을 참조합니다. TUI에서 응답 중 `Enter`는 방향 수정, `Tab`은 후속 요청 예약, `Esc`는 작업 중지입니다. [명령과 키보드](docs/usage.md) · [이미지 첨부](docs/images.md) · [실행과 승인](docs/execution-boundary.md)
+`!model`로 모델을 연결하고 `!dir`에서 파일을 참조합니다. TUI에서 응답 중 `Enter`는 방향 수정, `Tab`은 후속 요청 예약, `Esc`는 작업 중지입니다. [CLI 실행 옵션](docs/cli.md) · [TUI 명령과 키보드](docs/usage.md) · [이미지 첨부](docs/images.md) · [실행과 승인](docs/execution-boundary.md)
 
 파일·셸·브라우저·웹 문서 조회 등 모델이 사용할 수 있는 도구는 한 곳에서 확인할 수 있습니다. [전체 도구 목록](docs/tools.md#도구-목록)
 

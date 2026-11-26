@@ -1,23 +1,12 @@
 // Purpose: Keep nested requests and async results inline, aligned and independently controlled.
 // Pattern: Isolated browser contracts with controlled native detail responses.
-// Usage: Run against TestUIBrowserFixture through MECA_UI_DESCRIPTOR.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/chat/tool-call.tsx, webui/src/pages/workspace/ui/chat/chat.tsx.
 
 import { expect, type Locator, type Page } from '@playwright/test';
-import {
-  type BrowserFixture,
-  browserFixture,
-  connectBrowser,
-  historyPage,
-  required,
-  test,
-} from '#e2e/fixture';
+import { type BrowserFixture, connectBrowser, historyPage, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-async function openConversation(page: Page) {
+async function openConversation(page: Page, fixture: BrowserFixture) {
   await connectBrowser(page, fixture);
   await page
     .locator('.workspace-group')
@@ -59,6 +48,7 @@ async function alignedContent(tool: Locator) {
 }
 
 test('async results stay inline, wrap and push later rows immediately in both themes', async ({
+  server: fixture,
   page,
 }) => {
   const stdout = 'unbroken_output_'.repeat(450);
@@ -122,7 +112,7 @@ test('async results stay inline, wrap and push later rows immediately in both th
     } else await route.continue();
   });
   try {
-    await openConversation(page);
+    await openConversation(page, fixture);
     const tool = page.locator('.tool-entry');
     const trigger = tool.locator('.tool-disclosure > button');
     await expect(trigger).toHaveCount(1);
@@ -220,6 +210,7 @@ test('async results stay inline, wrap and push later rows immediately in both th
 });
 
 test('long saved narratives page inline and virtual history keeps a bounded mounted window', async ({
+  server: fixture,
   page,
 }) => {
   const prefix = `Stored narrative page one.\n\n${'paragraph words '.repeat(1500)}`;
@@ -269,18 +260,15 @@ test('long saved narratives page inline and virtual history keeps a bounded moun
       });
     } else await route.continue();
   });
-  await openConversation(page);
+  await openConversation(page, fixture);
   const scroller = page.locator('.workspace-body');
-  await expect(page.locator('.history-row').first()).toBeVisible();
-  await scroller.evaluate((node) => {
-    node.scrollTop = 0;
-  });
+  const detail = page.locator('.detail-content');
+  await expect(detail).toContainText('Stored narrative page one.');
+  await scroller.hover();
+  await page.mouse.wheel(0, -100000);
   await expect(page.getByText(/^History 0\./)).toBeVisible();
   expect(await page.locator('.history-row').count()).toBeLessThan(24);
-  await scroller.evaluate((node) => {
-    node.scrollTop = node.scrollHeight;
-  });
-  const detail = page.locator('.detail-content');
+  await page.mouse.wheel(0, 100000);
   await expect(detail).toContainText('Stored narrative page one.');
   await detail.getByRole('button', { name: '다음 페이지', exact: true }).click();
   await detail.getByRole('button', { name: '다시 확인', exact: true }).click();

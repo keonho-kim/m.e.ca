@@ -1,10 +1,10 @@
 // Purpose: Keep settings, confirmations, workspace selection and image viewers opaque.
 // Pattern: Rendered material contracts across native Astryx modal primitives.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/app/styles/theme.ts, webui/src/pages/workspace/ui/inspection/conversation-inspector.tsx.
 
 import { expect, type Locator } from '@playwright/test';
-import { browserFixture, connectBrowser, historyPage, test } from '#e2e/fixture';
+import { connectBrowser, historyPage, test } from '#e2e/fixture';
 
 async function opaque(layer: Locator) {
   await expect(layer).toBeVisible();
@@ -21,9 +21,9 @@ async function opaque(layer: Locator) {
   expect(material.filter).toBe('none');
 }
 test('service modals keep solid surfaces rather than revealing the underlying page', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   const image = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMQMgn7DwAClAGcHVtGXwAAAABJRU5ErkJggg==',
     'base64'

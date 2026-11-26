@@ -10,8 +10,8 @@
 
 원본 저장소의 `main` 푸시 또는 수동 실행으로 시작한다. 후속 실행은 진행 중인 배포가 끝날 때까지 대기한다. [Release 워크플로](../.github/workflows/release.yml)
 
-1. WebUI 빌드 전에 tui의 실행·설치·업데이트와 서버 의존성 제외를 확인한다.
-2. full의 내장 UI를 빌드하고 프론트·Go 검사를 실행한다.
+1. WebUI 빌드 전에 tui의 실행과 서버 의존성 제외를 확인한다.
+2. full의 내장 UI를 빌드하고 프론트·Go 기능 검사, CLI 설치·업그레이드, Linux 볼륨 제거, 필수 Chromium 시나리오를 실행한다.
 3. 두 종류의 아카이브를 빌드하고 SHA-256·파일 구성·실행 파일의 빌드 메타데이터를 검사한다. [아카이브 검증](../scripts/release/artifacts.sh)
 4. 원격 `main`과 태그가 게시 조건을 만족하면 파일을 게시한다. 새 릴리스는 초안의 업로드가 완료되면 공개한다. 같은 날의 파일은 교체본 업로드를 확인한 후 정리한다. [게시 스크립트](../scripts/release/publish.sh)
 
@@ -39,9 +39,7 @@
 
 ## 다운로드와 설치
 
-운영체제와 CPU에 맞는 아카이브를 받아 압축을 푼 폴더에서 `./meca install`을 실행한다. `~/.local/bin/meca`와 PATH, 기본 설정 및 `~/.meca/credential-keys/`를 준비하고 실제 키 저장 어댑터로 저장·조회를 검증한다. API Key 저장에는 별도 OS 패키지 설치나 사용자 빌드 설정이 필요하지 않다. [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
-
-대화형 설치에서 PATH를 새로 반영해야 하면 로그인 셸을 연다. 자동화에서는 `./meca install --no-shell`로 현재 셸을 유지할 수 있다. 브라우저 도구를 함께 설치하는 옵션은 도구 문서에서 확인한다. `--no-shell`과 브라우저 설치 옵션은 함께 사용할 수 있다. [브라우저 설치와 갱신](tools.md#설치와-갱신)
+운영체제와 CPU에 맞는 아카이브를 받아 압축을 푼 폴더에서 `./meca install`을 실행한다. 설치는 실행 파일·PATH·기본 설정·프롬프트·스킬·로컬 키 저장소를 준비한다. [설치 명령과 옵션](cli.md#설치) · [최신 릴리스 다운로드](https://github.com/keonho-kim/m.e.ca/releases/latest)
 
 ### 체크섬 확인 (선택)
 
@@ -67,15 +65,11 @@ cd m.e.ca
 ./install.sh          # full
 ```
 
-`meca uninstall`은 실행 파일·MECA의 PATH 등록·암호화 키를 포함한 `~/.meca` 전체를 제거한다. 실행 중인 MECA를 종료하고 필요한 데이터를 먼저 백업한다. 제거가 중단되면 `meca uninstall`을 다시 실행해 완료한다. [대화 복원](configuration.md#세션-저장과-복원) · [자격 증명 복구](configuration.md#api-key-암호화와-복구)
+삭제는 `meca uninstall`을 사용한다. 실행 파일·PATH 등록과 로컬 데이터를 정리하며, 마운트·권한 오류가 발생하면 원인을 해결한 뒤 같은 명령으로 이어서 제거한다. [삭제 명령과 백업](cli.md#삭제)
 
 ## 업데이트
 
-실행 중인 MECA를 종료한 뒤 `meca upgrade`를 실행한다. 현재 tui/full 종류를 유지하며 `--tui` 또는 `--full`로 전환할 수 있다. 최신 정식 릴리스에서 맞는 아카이브를 받아 SHA-256을 검증한다. 같은 날짜의 배포라도 파일 변경을 적용한다. GitHub 인증은 선택 사항이며 필요할 경우 `GH_TOKEN`, `GITHUB_TOKEN`, 로그인된 `gh`의 인증을 순서대로 사용한다.
-
-업데이트를 실행할 수 없거나 배포 파일을 찾지 못하면 최신 아카이브를 받아 압축을 푼 폴더에서 `./meca install --no-shell`을 실행한다. 설치와 업데이트는 설정·모델 연결·인증정보·대화를 보존하고 사용자 편집을 포함한 기본 프롬프트 파일을 배포본으로 갱신한다. [프롬프트 설정](configuration.md#프롬프트와-compaction)
-
-OS 자격 증명 저장소를 사용하던 버전에서 로컬 암호화 저장 버전으로 업데이트할 때는 `!model` 또는 WebUI 설정 → 모델에서 API Key를 다시 입력한다. [API Key 저장과 복구](configuration.md#api-key-암호화와-복구)
+`meca upgrade`는 현재 배포 종류와 플랫폼에 맞는 최신 정식 릴리스를 받아 체크섬을 검증하고 설치한다. 종류 전환, 인증과 수동 설치는 [CLI 업데이트](cli.md#업데이트)를 따른다.
 
 ## 로컬 검증
 

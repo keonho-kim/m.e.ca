@@ -64,11 +64,11 @@ func ListenAndServe(ctx context.Context, api *API, token string, options Options
 			return faults.Errorf(diagcatalog.ServerapiLoadTLSCertificate, err)
 		}
 	}
-	listener, err := net.Listen("tcp", options.Listen)
+	tcp, err := net.Listen("tcp", options.Listen)
 	if err != nil {
 		return err
 	}
-	listener = &connectionListener{Listener: listener, slots: make(chan struct{}, maxConnections)}
+	listener := &connectionListener{Listener: tcp, slots: make(chan struct{}, maxConnections)}
 	defer listener.Close()
 	host, port, _ := net.SplitHostPort(listener.Addr().String())
 	hosts := append([]string(nil), options.Hosts...)
@@ -93,7 +93,7 @@ func ListenAndServe(ctx context.Context, api *API, token string, options Options
 	protocols.SetHTTP1(true)
 	protocols.SetHTTP2(true)
 	protocols.SetUnencryptedHTTP2(options.Protocol == "grpc" && options.Certificate == "")
-	srv := &http.Server{Handler: transport, ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, Protocols: protocols, ErrorLog: diagnostics.HTTPLogger(ctx), BaseContext: func(net.Listener) context.Context { return ctx }}
+	srv := &http.Server{Handler: transport, ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, Protocols: protocols, ErrorLog: diagnostics.HTTPLogger(ctx), BaseContext: func(net.Listener) context.Context { return ctx }, ConnState: listener.trackState}
 	// Leave protocol slots for reserved controls and one immediate rejection;
 	// ordinary work admission must not queue cancellation behind HTTP/2 limits.
 	srv.HTTP2 = &http.HTTP2Config{MaxConcurrentStreams: maxHTTP2Streams}
@@ -119,6 +119,8 @@ func ListenAndServe(ctx context.Context, api *API, token string, options Options
 	select {
 	case serveErr = <-done:
 	case <-ctx.Done():
+		// A peer that never sent its first headers has no response to drain.
+		listener.closeUnstarted()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		err = srv.Shutdown(shutdown)
 		cancel()

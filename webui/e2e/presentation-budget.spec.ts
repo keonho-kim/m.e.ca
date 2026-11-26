@@ -1,14 +1,14 @@
 // Purpose: Bound hidden chat DOM updates while retaining terminal delivery and readable telemetry.
 // Pattern: Browser-to-engine burst regression with explicit provider admission.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_burst_provider_test.go, webui/src/pages/workspace/model/presentation.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture';
+import { connectBrowser, create, send, test } from '#e2e/fixture';
 
 test('opaque settings coalesce live text but terminal measurements arrive immediately', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await create(page);
   await send(page, 'BURST_FIXTURE');

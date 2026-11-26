@@ -49,7 +49,7 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	if r.Prompts != nil {
 		templates = *r.Prompts
 	}
-	system, err := prompt.Work(templates.System, templates.Development, r.ProjectInstructions)
+	system, err := prompt.Compose(templates.System, r.ProjectInstructions)
 	if err != nil {
 		return nil, nil, err
 	}

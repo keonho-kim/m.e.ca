@@ -1,8 +1,8 @@
-//go:build !tui
+//go:build !tui && engineworkload
 
 // Purpose: Exercise real engine, native provider, tools, journal and SSE rendering as one PGO workload.
 // Pattern: Isolated end-to-end benchmark with deterministic loopback model responses.
-// Usage: BenchmarkEngineWorkload supplies synthetic CPU profiles; TestEngineWorkload validates every dialect.
+// Usage: go test -tags=godbus_no_tcp,engineworkload ./cmd/meca -run ^TestEngineWorkload$.
 // Related: cmd/meca/engine_provider_test.go, cmd/meca/engine_stream_test.go, scripts/performance/pgo.sh.
 package main
 

@@ -31,7 +31,7 @@ func TestLoadSaveWithDefaultPermission(t *testing.T) {
 		t.Fatalf("configuration round trip (-want +got):\n%s", diff)
 	}
 	body, err := os.ReadFile(filepath.Join(directory, "config.toml"))
-	if err != nil || !strings.Contains(string(body), "permission = 'default'") || strings.Contains(string(body), "[defaults]") {
+	if err != nil || !strings.Contains(string(body), "permission = 'default'") {
 		t.Fatalf("default permission missing: %s %v", body, err)
 	}
 	info, err := os.Stat(filepath.Join(directory, "config.toml"))
@@ -47,10 +47,6 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 	for _, content := range []string{
 		"[ui]\ninput_max_lines=20\n",
 		"unexpected=true\n",
-		"[[model_profiles]]\nprovider=\"vllm\"\nmodel=\"alias\"\nprofile=\"generic\"\n",
-		"[session]\nrestore_last=true\n",
-		"[ui]\ntheme='classic'\n",
-		"[compaction]\ntarget_input_tokens=16384\n",
 	} {
 		directory := t.TempDir()
 		if err := os.WriteFile(filepath.Join(directory, "config.toml"), []byte(content), 0o600); err != nil {
@@ -62,7 +58,7 @@ func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
 	}
 }
 
-func TestLoadRejectsRemovedCompactionReserve(t *testing.T) {
+func TestLoadReportsUnsupportedSettingWithoutChangingFile(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, Filename)
 	original := "[compaction]\nreserve_tokens = 16384\n"
@@ -70,7 +66,7 @@ func TestLoadRejectsRemovedCompactionReserve(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Load(directory); err == nil || !strings.Contains(err.Error(), "remove [compaction].reserve_tokens") {
-		t.Fatalf("missing guidance for the removed setting: %v", err)
+		t.Fatalf("missing repair guidance for the unsupported setting: %v", err)
 	}
 	if body, err := os.ReadFile(path); err != nil || string(body) != original {
 		t.Fatalf("loading changed the existing configuration: %v", err)

@@ -1,20 +1,19 @@
 // Purpose: Verify breadcrumb depth/overflow, folder chevron alignment and language-aware file icons.
 // Pattern: Rendered directory navigation contracts with real filesystem fixtures.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/files/directory-breadcrumbs.tsx, webui/src/shared/ui/file-icon/index.tsx.
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ server: fixture }) => {
   await mkdir(join(fixture.projectA, '00-breadcrumb/one/two/three/four/five'), { recursive: true });
   for (const name of ['a.component.ts', 'App.vue', 'App.tsx', 'Dockerfile', 'file.constructor'])
     await writeFile(join(fixture.projectA, '00-breadcrumb', name), '// file icon fixture');
 });
 test('directory trails collapse leading depth within their panel and keep arrows centered', async ({
+  server: fixture,
   page,
 }) => {
   await connectBrowser(page, fixture);

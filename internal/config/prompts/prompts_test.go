@@ -24,7 +24,7 @@ func TestPromptBootstrap(t *testing.T) {
 	}
 	defaults := prompt.Defaults()
 	files := defaults.Files()
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "compaction.md"} {
 		path := filepath.Join(directory, "prompts", "single", name)
 		body, err := os.ReadFile(path)
 		if err != nil || len(body) == 0 {
@@ -48,23 +48,6 @@ func TestPromptBootstrap(t *testing.T) {
 	templates, err := prompts.Load(directory)
 	if err != nil || !strings.Contains(templates.System, "My prompt") {
 		t.Fatalf("custom prompt lost: %+v %v", templates, err)
-	}
-}
-
-func TestDevelopmentPromptEditsSurviveLoad(t *testing.T) {
-	root := promptRoot(t)
-	directory := root.Name()
-	for _, name := range []string{"development.md"} {
-		if err := os.WriteFile(filepath.Join(directory, "prompts", "single", name), []byte("Custom "+name), 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := prompts.Bootstrap(root); err != nil {
-		t.Fatal(err)
-	}
-	templates, err := prompts.Load(directory)
-	if err != nil || templates.Development != "Custom development.md" {
-		t.Fatalf("role prompts lost: %+v %v", templates, err)
 	}
 }
 

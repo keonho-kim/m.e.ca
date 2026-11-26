@@ -16,7 +16,7 @@ Contracts: `e2e/editor.spec.ts`, `e2e/editor-boundaries.spec.ts` and `e2e/browse
 
 The application uses Astryx's parser and AST transform plugin. Covered-content projection belongs to the workspace presentation model; a second parser or an unsupported AST-input prop is not part of this adapter.
 
-Contracts: `e2e/performance.spec.ts` and `e2e/presentation-budget.spec.ts`.
+Contracts: `e2e/resource-budgets.spec.ts` and `e2e/presentation-budget.spec.ts`.
 
 ## Chat scroll ownership
 

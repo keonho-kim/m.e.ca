@@ -1,7 +1,7 @@
-// Purpose: Compose maintenance, headless, server and terminal startup with owned session transitions.
+// Purpose: Compose local commands, headless, server and terminal startup with owned session transitions.
 // Pattern: Composition Root.
 // Usage: meca --help lists maintenance, interactive, headless and server invocations.
-// Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go,
+// Related: cmd/meca/install.go, cmd/meca/headless.go, internal/commands/startup/parse.go, internal/commands/develop/search.go,
 // internal/tui/session/app.go, cmd/meca/conversation.go, internal/tui/clipboard/worker.go.
 package main
 
@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/keonho-kim/meca/internal/commands/develop"
 	"github.com/keonho-kim/meca/internal/commands/install"
 	"github.com/keonho-kim/meca/internal/commands/startup"
 	"github.com/keonho-kim/meca/internal/config"
@@ -90,6 +91,9 @@ func start(ctx context.Context) (err error) {
 	home, err = filepath.EvalSymlinks(home)
 	if err != nil {
 		return err
+	}
+	if mode.Action == startup.Develop {
+		return develop.Run(ctx, home, mode.DevelopQuery, os.Stdout, os.Stderr)
 	}
 	if mode.Action != "" {
 		return maintenance(ctx, mode, home)

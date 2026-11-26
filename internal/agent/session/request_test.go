@@ -66,7 +66,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		}
 	})
 	templates := prompt.Defaults()
-	templates.Development = "PROJECT_DEVELOPMENT_RULE"
+	templates.System += "\nCUSTOM_SYSTEM_RULE"
 	step, approvals := 0, 0
 	g := generation(func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 		catalog := map[string]bool{}
@@ -81,8 +81,8 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 				t.Fatalf("main agent lost tool %s", definition.Name)
 			}
 		}
-		if !strings.Contains(request.Messages[0].Content, "PROJECT_DEVELOPMENT_RULE") || !strings.Contains(request.Messages[0].Content, "PROJECT_INSTRUCTION") {
-			t.Fatal("main agent lost development or project instructions")
+		if !strings.Contains(request.Messages[0].Content, "CUSTOM_SYSTEM_RULE") || !strings.Contains(request.Messages[0].Content, "PROJECT_INSTRUCTION") {
+			t.Fatal("main agent lost custom system or project instructions")
 		}
 		if request.Temperature == nil || *request.Temperature != 0.73 {
 			t.Fatal("shared request factory lost configured temperature")

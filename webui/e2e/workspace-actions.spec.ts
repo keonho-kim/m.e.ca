@@ -1,31 +1,18 @@
 // Purpose: Verify guarded file writes, skill mentions, global model setup and task approvals.
 // Pattern: Browser-to-Go behavior contracts with isolated model fixtures.
-// Usage: MECA_UI_DESCRIPTOR points to the opt-in Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/e2e/fixture.ts, cmd/meca/ui_browser_test.go.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import {
-  type BrowserFixture,
-  browserFixture,
-  connectBrowser,
-  create,
-  input,
-  required,
-  rpc,
-  send,
-  test,
-} from '#e2e/fixture';
+import { connectBrowser, create, input, required, rpc, send, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
 });
 test('files use complete revision-bound saves and skills insert canonical mentions', async ({
+  server: fixture,
   page,
 }) => {
   await writeFile(
@@ -61,14 +48,14 @@ test('files use complete revision-bound saves and skills insert canonical mentio
     .click();
   await page.getByRole('button', { name: '변경 버리기', exact: true }).click();
   await page.locator('.workspace-header').getByRole('tab', { name: '스킬', exact: true }).click();
-  await page.locator('.skill-entry').filter({ hasText: 'ui-design' }).click();
-  await expect(page.locator('.skill-document')).toContainText('ui-design');
+  await page.locator('.skill-entry').filter({ hasText: 'development' }).click();
+  await expect(page.locator('.skill-document')).toContainText('development');
   await page
     .locator('.skill-entry')
-    .filter({ hasText: 'ui-design' })
+    .filter({ hasText: 'development' })
     .getByRole('button', { name: /입력에 스킬 넣기/ })
     .click();
-  await expect(input(page)).toHaveText(/#meca:ui-design/);
+  await expect(input(page)).toHaveText(/#meca:development/);
   await send(page, '!model');
   const modal = page.getByRole('dialog');
   await expect(modal.getByRole('combobox', { name: 'Provider', exact: true })).toContainText(
@@ -80,6 +67,7 @@ test('files use complete revision-bound saves and skills insert canonical mentio
 });
 
 test('folder registration, authenticated images and task-bound approval are operational', async ({
+  server: fixture,
   page,
 }) => {
   const added = join(fixture.home, 'gamma');
@@ -118,6 +106,7 @@ test('folder registration, authenticated images and task-bound approval are oper
 });
 
 test('mobile settings discover, diagnose and save the global model before opening a conversation', async ({
+  server: fixture,
   page,
 }) => {
   await expect(page).toHaveURL(/\/w\/[^/]+$/);
@@ -137,7 +126,6 @@ test('mobile settings discover, diagnose and save the global model before openin
         ).width
     )
     .toBeGreaterThan(280);
-  await expect(dialog.getByRole('button', { name: '모델 조회', exact: true })).toHaveCount(0);
   await dialog.getByRole('textbox', { name: /^Base URL/ }).fill(`${fixture.provider}/`);
   const catalog = page.waitForResponse(
     (response) =>

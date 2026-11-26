@@ -1,16 +1,16 @@
 // Purpose: Keep local native selection, cancellation and unavailable-desktop fallback distinct.
 // Pattern: Real workspace registration with a controlled desktop HTTP response.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/model/workspace-picker.ts, internal/serverapi/ui_folder_test.go.
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
 test('local native cancellation leaves the current workspace unchanged and selection registers its canonical identity', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await page.unroute('**/v1/ui/pick-folder');
   let path = '';
@@ -36,9 +36,9 @@ test('local native cancellation leaves the current workspace unchanged and selec
 });
 
 test('native failure, timeout and busy states keep a usable folder fallback and a safe diagnosis', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await page.unroute('**/v1/ui/pick-folder');
   let status = 500;

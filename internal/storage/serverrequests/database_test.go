@@ -1,6 +1,6 @@
 // Purpose: Preserve unsupported request records and isolate project-scoped admissions under one quota.
 // Pattern: Durable repository boundary tests.
-// Usage: go test ./internal/storage/serverrequests -run 'TestLegacy|TestProject'.
+// Usage: go test ./internal/storage/serverrequests -run 'TestUnsupported|TestProject'.
 // Related: internal/storage/serverrequests/database.go, internal/storage/serverrequests/capacity.go.
 package serverrequests
 
@@ -16,7 +16,7 @@ import (
 	"github.com/keonho-kim/meca/internal/storage/capacity"
 )
 
-func TestLegacyRequestRecordsRemainIntact(t *testing.T) {
+func TestUnsupportedRequestRecordsRemainIntact(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "resp_original.json")
 	const original = `{"version":1,"state":"unresolved"}`
@@ -28,11 +28,11 @@ func TestLegacyRequestRecordsRemainIntact(t *testing.T) {
 		if l != nil {
 			_ = l.Close()
 		}
-		t.Fatal("legacy records were silently bypassed", err)
+		t.Fatal("unsupported records were accepted", err)
 	}
 	body, err := os.ReadFile(path)
 	if err != nil || string(body) != original {
-		t.Fatal("legacy records were changed", err)
+		t.Fatal("unsupported records were changed", err)
 	}
 }
 

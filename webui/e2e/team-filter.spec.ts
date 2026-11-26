@@ -1,12 +1,15 @@
 // Purpose: Keep the surviving peer visible when a selected peer leaves live output.
 // Pattern: Browser regression with controlled reconnect snapshots.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/chat/live-output.tsx.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture';
+import { connectBrowser, create, send, test } from '#e2e/fixture';
 
-test('selected peer retirement restores visible remaining output', async ({ page }, info) => {
-  await connectBrowser(page, await browserFixture());
+test('selected peer retirement restores visible remaining output', async ({
+  server: fixture,
+  page,
+}, info) => {
+  await connectBrowser(page, fixture);
   await create(page);
   await send(page, 'HOLD_FIXTURE team filter');
   await expect(page.getByRole('button', { name: '작업 중지', exact: true })).toBeVisible();
@@ -47,9 +50,10 @@ test('selected peer retirement restores visible remaining output', async ({ page
 });
 
 test('reconnect displays the committed preview after draft memory is released', async ({
+  server: fixture,
   page,
 }) => {
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   await send(page, 'HOLD_FIXTURE committed reconnect');
   await expect(page.getByRole('button', { name: '작업 중지', exact: true })).toBeVisible();

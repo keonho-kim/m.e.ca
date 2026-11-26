@@ -1,32 +1,16 @@
 // Purpose: Verify independent workspace execution, queued follow-ups and durable conversation history.
 // Pattern: Browser-to-engine contracts with an isolated provider and owned hold cleanup.
-// Usage: MECA_UI_DESCRIPTOR points to the opt-in Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/e2e/fixture.ts, cmd/meca/ui_browser_test.go.
 import { expect } from '@playwright/test';
-import {
-  type BrowserFixture,
-  browserFixture,
-  connectBrowser,
-  create,
-  input,
-  rpc,
-  send,
-  test,
-} from '#e2e/fixture';
+import { connectBrowser, create, input, rpc, send, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
 });
-test.afterEach(async ({ page }) => {
-  await page.request.post(`${fixture.provider}/test/release`);
-});
-test('multiple projects continue independently and one completed predecessor runs a follow-up once', async ({
-  page,
-}) => {
+test('multiple projects continue independently and one completed predecessor runs a follow-up once', {
+  tag: '@smoke',
+}, async ({ server: fixture, page }) => {
   const first = await create(page);
   await send(page, 'HOLD_FIXTURE alpha first');
   await expect(page.getByRole('button', { name: '작업 중지', exact: true })).toBeVisible();
@@ -72,6 +56,7 @@ test('multiple projects continue independently and one completed predecessor run
 });
 
 test('long history keeps a bounded page window and can return to the latest saved response', async ({
+  server: fixture,
   page,
 }) => {
   const workspaces = (await rpc(page, { listWorkspaces: {} })).workspaces!;

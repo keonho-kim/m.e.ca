@@ -1,7 +1,7 @@
 // Purpose: Exercise installed UI diagnostics through an isolated Playwright CLI session.
 // Pattern: Opt-in browser contract test with a local HTTP fixture.
 // Usage: MECA_UI_BROWSER_TEST=1 go test ./internal/config/bootstrap -run TestUIDesignBrowserDiagnostics.
-// Related: internal/config/bootstrap/skills.go, internal/config/bootstrap/defaults/ui-design/scripts.
+// Related: internal/config/bootstrap/skills.go, internal/config/bootstrap/defaults/development/scripts.
 package bootstrap
 
 import (
@@ -94,7 +94,7 @@ func TestUIDesignBrowserDiagnostics(t *testing.T) {
 	}
 	runFile := func(name string) uiDiagnosticReport {
 		t.Helper()
-		file := filepath.Join(home, ".meca", "skills", "ui-design", "scripts", name)
+		file := filepath.Join(home, ".meca", "skills", "development", "scripts", name)
 		return decodeUIDiagnosticReport(t, invoke("--json", "run-code", "--filename="+file))
 	}
 

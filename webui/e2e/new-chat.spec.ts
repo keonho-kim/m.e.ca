@@ -1,11 +1,12 @@
 // Purpose: Verify one empty conversation surface and opaque settings selections.
 // Pattern: Browser behavior regression against the isolated server.
-// Usage: Run with the opt-in MECA_UI_DESCRIPTOR fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/workspace-page.tsx, webui/src/app/styles/theme.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, input, send, test } from '#e2e/fixture';
+import { connectBrowser, create, input, rpc, send, test } from '#e2e/fixture';
 
 test('workspace selection enables the same empty chat without a new-chat click', async ({
+  server: fixture,
   page,
 }) => {
   await page.route('**/v1/command', async (route) => {
@@ -15,7 +16,7 @@ test('workspace selection enables the same empty chat without a new-chat click',
     delete reply.workspaces.defaultId;
     await route.fulfill({ response, json: reply });
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await expect(input(page)).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('heading', { name: '어떤 작업을 시작할까요?' })).toBeVisible();
   await expect(page.getByRole('button', { name: '대화 검색', exact: true })).toHaveCount(0);
@@ -49,8 +50,8 @@ test('workspace selection enables the same empty chat without a new-chat click',
 });
 
 for (const theme of ['light', 'dark']) {
-  test(`settings selections are opaque in ${theme}`, async ({ page }) => {
-    await connectBrowser(page, await browserFixture());
+  test(`settings selections are opaque in ${theme}`, async ({ page, server: fixture }) => {
+    await connectBrowser(page, fixture);
     if (theme === 'dark')
       await page.getByRole('button', { name: '화면 테마', exact: true }).click();
     await page.getByRole('button', { name: '설정', exact: true }).click();
@@ -82,8 +83,11 @@ for (const theme of ['light', 'dark']) {
   });
 }
 
-test('a rejected creation keeps the draft and retry submits it once', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('a rejected creation keeps the draft and retry submits it once', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).click();
   let creations = 0;
   let starts = 0;
@@ -105,8 +109,15 @@ test('a rejected creation keeps the draft and retry submits it once', async ({ p
   expect(starts).toBe(1);
 });
 
-test('creation does not redirect or submit after switching workspaces', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('creation does not redirect or submit after switching workspaces', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
+  const { workspaces } = await rpc(page, { listWorkspaces: {} });
+  const beta = workspaces?.items?.find((workspace) => workspace.name === 'beta');
+  if (!beta?.id) throw new Error('The fixture did not register the beta workspace');
+  const destination = new URL(`/ui/w/${beta.id}`, fixture.url).href;
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).click();
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -135,7 +146,7 @@ test('creation does not redirect or submit after switching workspaces', async ({
     await send(page, 'Keep alpha draft after navigation');
     await ready;
     await page.locator('.workspace-name').filter({ hasText: 'beta' }).click();
-    const destination = page.url();
+    await expect(page).toHaveURL(destination);
     release();
     await settled;
     await expect(input(page)).toHaveAttribute('contenteditable', 'true');
@@ -149,9 +160,10 @@ test('creation does not redirect or submit after switching workspaces', async ({
 });
 
 test('team command and toggle prepare a conversation and preserve draft ownership', async ({
+  server: fixture,
   page,
 }) => {
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).click();
   await send(page, '!team');
   await expect(page).toHaveURL(/\/c\/session_/);
@@ -177,8 +189,11 @@ test('team command and toggle prepare a conversation and preserve draft ownershi
   await expect(page.getByRole('button', { name: '대화 검색', exact: true })).toHaveCount(0);
 });
 
-test('unsaved files prevent session creation without moving the draft', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('unsaved files prevent session creation without moving the draft', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
   await page.locator('.workspace-name').filter({ hasText: 'alpha' }).click();
   await input(page).fill('Draft beside an edited file');
   await page.getByRole('tab', { name: '파일', exact: true }).click();

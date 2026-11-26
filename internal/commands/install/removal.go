@@ -1,4 +1,4 @@
-// Purpose: Complete interrupted removal of private state and the installed executable.
+// Purpose: Complete private-state removal while allowing empty mounted state roots to remain.
 // Pattern: Irreversible uninstall state transition with a durable ownership marker.
 // Usage: Uninstall resumes pending removal; startup and Install reject an unfinished removal.
 // Related: internal/commands/install/uninstall.go, internal/commands/install/install.go, cmd/meca/main.go.
@@ -9,9 +9,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-
+	"io"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -84,7 +85,7 @@ func finishRemoval(ctx context.Context, root *os.Root, digest string) error {
 	}
 	// The home lease and durable marker prevent startup from recreating state
 	// after interrupted removal. All credential material belongs to this state.
-	if err := root.RemoveAll(statefs.DirectoryName); err != nil {
+	if err := removeStateDirectory(root); err != nil {
 		return err
 	}
 	if err := syncDirectory(root, "."); err != nil {
@@ -104,6 +105,30 @@ func finishRemoval(ctx context.Context, root *os.Root, digest string) error {
 		return err
 	}
 	return syncDirectory(root, ".")
+}
+
+func removeStateDirectory(root *os.Root) (resultErr error) {
+	removeErr := root.RemoveAll(statefs.DirectoryName)
+	if !errors.Is(removeErr, syscall.EBUSY) {
+		return removeErr
+	}
+	// A mounted state root cannot be removed. Accept it only after verifying
+	// that no entries remain; nested mounts and failed file deletions still fail.
+	directory, err := root.Open(statefs.DirectoryName)
+	if err != nil {
+		return errors.Join(removeErr, err)
+	}
+	defer func() { resultErr = errors.Join(resultErr, directory.Close()) }()
+	names, err := directory.Readdirnames(1)
+	if len(names) != 0 {
+		return removeErr
+	}
+	if !errors.Is(err, io.EOF) {
+		return errors.Join(removeErr, err)
+	}
+	// The mounted filesystem must persist its deletions before the home
+	// filesystem clears the pending-removal marker.
+	return directory.Sync()
 }
 
 func checkNoPending(root *os.Root) error {

@@ -38,6 +38,9 @@ func checkInstallation(t *testing.T, ctx context.Context, binary, home string) {
 	if output := run(installed, "--help"); !strings.Contains(output, "Usage: meca [path]") {
 		t.Fatal("installed command did not run:", output)
 	}
+	if output := run(installed, "develop", "delayed tasks"); !strings.Contains(output, "Delayed tasks and expiring entries") {
+		t.Fatal("installed meca develop command did not search its skill:", output)
+	}
 	body, err := os.ReadFile(profile)
 	if err != nil || strings.Count(string(body), "# >>> meca PATH >>>") != 1 {
 		t.Fatalf("MECA PATH registration: %s %v", body, err)

@@ -1,17 +1,17 @@
 // Purpose: Revalidate the open editor without confusing sibling writes or acknowledged saves with conflicts.
 // Pattern: Real browser and isolated filesystem observer regression.
-// Usage: MECA_UI_DESCRIPTOR=... bun run test:e2e e2e/editor-watch.spec.ts.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/model/file-events.ts, webui/src/pages/workspace/model/file-document.ts.
 
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
 test('one watcher follows documents without full reads or false conflict banners', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   let watchers = 0;
   page.on('websocket', (socket) => {
     if (!socket.url().endsWith('/v1/ui/events')) return;

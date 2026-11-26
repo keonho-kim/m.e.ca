@@ -42,6 +42,8 @@ meca --server --session session_XXXXXXXXXXXXXXXXXXXXXXXXXX
 
 같은 토큰 경로는 한 서버만 소유한다. 서로 다른 프로젝트에서 서버를 동시에 실행하려면 각각 다른 `--token-file` 경로를 지정한다. 실행 중인 서버의 인증 파일을 다른 서버가 덮어쓰지 않으며, 서버 종료 뒤 소유권은 해제된다. 토큰 옆의 `.lock` 파일은 종료 후에도 유지한다.
 
+종료가 시작되면 첫 HTTP 요청 헤더를 기다리는 연결을 닫는다. 이미 시작한 HTTP 응답은 서버의 종료 제한 시간 안에 마무리할 수 있다.
+
 서버를 기동할 때마다 리스너 준비 완료 후 현재 토큰을 `Server token: …` 형식으로 stdout에 한 번 출력한다. `--ui` 유무와 전송 방식에 관계없이 적용하며 리스너 준비 전에 실패하면 표시하지 않는다. 토큰은 stderr의 JSON 운영 로그·API 이벤트·URL에는 포함하지 않는다. stdout에 쓸 수 없으면 서버를 종료하고 출력 오류를 반환한다.
 
 외부 HTTP·SSE·RPC 클라이언트는 `Authorization: Bearer <token>` 헤더를 사용한다. URL 토큰은 받지 않는다. `--ui`에서는 POST /v1/ui/login에 같은 토큰을 제출해 만료하는 HttpOnly·SameSite=Strict 쿠키를 발급한다. 쿠키를 쓰는 변경 요청에는 동일 Origin과 X-Meca-UI: 1이 필요하다. 내장 UI 관찰 WebSocket·저장 이미지도 같은 쿠키를 사용한다. [브라우저 인증 상세](webui-api.md#내장-브라우저-인증)를 따른다.

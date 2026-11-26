@@ -27,7 +27,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
 cd -- "$profile_root"
-go test -trimpath -tags=godbus_no_tcp -pgo=off ./cmd/meca \
+go test -trimpath -tags=godbus_no_tcp,engineworkload -pgo=off ./cmd/meca \
   -run '^$' -bench '^BenchmarkEngineWorkload$' \
   -benchtime="${MECA_PGO_BENCHTIME:-3s}" -count=1 \
   -cpuprofile "$profile_temp/workload.pprof" -o "$profile_temp/meca.test"

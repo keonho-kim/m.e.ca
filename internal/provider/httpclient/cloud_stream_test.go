@@ -1,7 +1,7 @@
-// Purpose: Verify first-party native streaming, authentication and signed tool-result continuation.
-// Pattern: Channel-controlled HTTP integration tests without real providers or credentials.
+// Purpose: Verify first-party streaming, signed tool-result continuation and incomplete call rejection.
+// Pattern: Channel-controlled streaming and buffered truncation tests with mock providers.
 // Usage: go test -race ./internal/provider/httpclient -run TestCloudProvider.
-// Related: internal/provider/protocol/claude_request.go, internal/provider/protocol/gemini_request.go, internal/provider/protocol/openai_history.go.
+// Related: internal/provider/protocol/stream.go, internal/provider/httpclient/client_test.go.
 package httpclient
 
 import (
@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -68,7 +69,7 @@ func TestCloudProviderStreamingAndSignedToolContinuation(t *testing.T) {
 						t.Error("native tools omitted")
 					}
 					w.Header().Set("Content-Type", "text/event-stream")
-					first, rest := cloudToolStream(kind)
+					first, tool, finish := cloudToolStream(kind)
 					_, _ = io.WriteString(w, first)
 					w.(http.Flusher).Flush()
 					select {
@@ -76,7 +77,7 @@ func TestCloudProviderStreamingAndSignedToolContinuation(t *testing.T) {
 					case <-r.Context().Done():
 						return
 					}
-					_, _ = io.WriteString(w, rest)
+					_, _ = io.WriteString(w, tool+finish)
 					return
 				}
 				if !strings.Contains(string(body), marker) || !strings.Contains(string(body), "file output") {
@@ -121,40 +122,48 @@ func TestCloudProviderStreamingAndSignedToolContinuation(t *testing.T) {
 	}
 }
 
-func cloudToolStream(kind connection.ProviderKind) (string, string) {
+func cloudToolStream(kind connection.ProviderKind) (reasoning, tool, finish string) {
 	frame := func(value string) string { return "data: " + value + "\n\n" }
 	switch kind {
 	case connection.OpenAI:
 		return frame(`{"type":"response.reasoning_summary_text.delta","delta":"internal"}`),
 			frame(`{"type":"response.output_item.added","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":""}}`) +
-				frame(`{"type":"response.function_call_arguments.delta","item_id":"fc_1","delta":"{\"path\":\"source.txt\"}"}`) +
-				frame(`{"type":"response.output_item.done","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"source.txt\"}"}}`) +
+				frame(`{"type":"response.function_call_arguments.delta","item_id":"fc_1","delta":"{\"path\":\"source.txt\"}"}`),
+			frame(`{"type":"response.output_item.done","output_index":1,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"source.txt\"}"}}`) +
 				frame(`{"type":"response.completed","response":{"status":"completed","usage":{"input_tokens":4,"output_tokens":2},"output":[{"type":"reasoning","id":"rs_1","encrypted_content":"signed-openai","summary":[]},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"source.txt\"}"}]}}`)
 	case connection.Claude:
 		return frame(`{"type":"message_start","message":{"usage":{"input_tokens":4,"output_tokens":0}}}`) +
 				frame(`{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}`) + frame(`{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"internal"}}`),
 			frame(`{"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"signed-claude"}}`) + frame(`{"type":"content_block_stop","index":0}`) +
-				frame(`{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"call_1","name":"read_file","input":{}}}`) + frame(`{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"path\":\"source.txt\"}"}}`) + frame(`{"type":"content_block_stop","index":1}`) +
+				frame(`{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"call_1","name":"read_file","input":{}}}`) + frame(`{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"path\":\"source.txt\"}"}}`),
+			frame(`{"type":"content_block_stop","index":1}`) +
 				frame(`{"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":2}}`) + frame(`{"type":"message_stop"}`)
 	default:
 		return frame(`{"candidates":[{"content":{"role":"model","parts":[{"text":"internal","thought":true}]}}]}`),
-			frame(`{"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"read_file","args":{"path":"source.txt"}},"thoughtSignature":"signed-gemini"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":4,"candidatesTokenCount":1,"thoughtsTokenCount":1}}`)
+			frame(`{"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"read_file","args":{"path":"source.txt"}},"thoughtSignature":"signed-gemini"}]}}]}`),
+			frame(`{"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":4,"candidatesTokenCount":1,"thoughtsTokenCount":1}}`)
 	}
 }
 
 func TestCloudProviderTruncatedCallsDoNotComplete(t *testing.T) {
 	for _, kind := range []connection.ProviderKind{connection.OpenAI, connection.Claude, connection.Gemini} {
 		t.Run(string(kind), func(t *testing.T) {
-			client := mockClient(t, kind, func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/event-stream")
-				first, _ := cloudToolStream(kind)
-				fmt.Fprint(w, first)
+			synctest.Test(t, func(t *testing.T) {
+				first, tool, _ := cloudToolStream(kind)
+				client := bufferedClient(t, kind, func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "text/event-stream")
+					fmt.Fprint(w, first, tool)
+				})
+				var started, done bool
+				err := client.Generate(t.Context(), recoveryRequest(), func(event modelapi.Event) error {
+					started = started || event.Thinking == "internal"
+					done = done || event.Done || len(event.Calls) > 0
+					return nil
+				})
+				if !started || err == nil || done {
+					t.Fatalf("truncated stream: started=%t completed or released a call=%t error=%v", started, done, err)
+				}
 			})
-			done := false
-			err := client.Generate(t.Context(), recoveryRequest(), func(event modelapi.Event) error { done = done || event.Done || len(event.Calls) > 0; return nil })
-			if err == nil || done {
-				t.Fatal("truncated cloud stream released a call", done, err)
-			}
 		})
 	}
 }

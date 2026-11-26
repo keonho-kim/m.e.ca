@@ -2,56 +2,51 @@
 
 [문서 목록](README.md) · [스킬 사용과 형식](skills.md)
 
-tui와 full에 포함된 기본 스킬은 아래 네 가지다.
+tui와 full은 다음 기본 스킬을 함께 제공한다.
 
 | 호출 | 용도 | 배포 원본 |
 | --- | --- | --- |
+| `#development` | 개발 방향·설계 패턴·알고리즘·자료구조·최적화와 앱·UI·백엔드 구현 및 검증 | [SKILL.md](../internal/config/bootstrap/defaults/development/SKILL.md) |
 | `#create-skill` | 스킬 작성·수정과 참고 자료 구성 | [SKILL.md](../internal/config/bootstrap/defaults/create-skill/SKILL.md) |
-| `#ui-design` | WebApp/SaaS 컴포넌트 선택·상태·상호작용·모션 설계와 검증 | [SKILL.md](../internal/config/bootstrap/defaults/ui-design/SKILL.md) |
-| `#backend-design` | TDD와 자원·DB·API·진단·보안·검색 설계 | [SKILL.md](../internal/config/bootstrap/defaults/backend-design/SKILL.md) |
-| `#application-best-dev-practices` | 앱 유형과 기능을 조합한 구현 흐름·권한·상태·실패 복구 | [SKILL.md](../internal/config/bootstrap/defaults/application-best-dev-practices/SKILL.md) |
 
 ## 배포와 초기화
 
 일반 시작과 설치·업그레이드에서 Bootstrap이 `~/.meca/skills/`의 누락 파일을 생성한다. 기존 파일과 수정한 본문은 보존한다. 생성 디렉터리는 0700, 새 파일은 0600이다. Bootstrap이 관리하는 스킬 루트와 기본 스킬·참고 자료의 디렉터리는 실제 디렉터리여야 한다. [기본 스킬 설치 구현](../internal/config/bootstrap/skills.go)
 
+개발 자료의 배포 경로는 `~/.meca/skills/development/`다. 기본 시스템 지침은 `meca:development`로 자료를 선택한다.
+
+## 개발 방향과 참고 자료
+
+`#development`는 사용자의 결과와 요청 단계를 확인하고, 책임·상태·효과·완료 조건을 연결한다. 설계·구현·디버깅·최적화·코드 및 UI 리뷰에서 필요한 가이드를 골라 읽는다. 싱글과 팀이 같은 본문을 사용하고, 팀 구현은 역할·공유 규약·Spec 합의에 관한 참고 자료를 추가로 읽는다.
+
+| 설계할 내용 | 담당 자료 |
+| --- | --- |
+| 책임 분리, 생성·구조·행동 패턴, 상태와 자원 소유권 | [설계 패턴](../internal/config/bootstrap/defaults/development/references/patterns.md) |
+| DP·그래프·범위 질의·문자열 처리, 자료구조 선택, 측정과 최적화 | [알고리즘과 최적화](../internal/config/bootstrap/defaults/development/references/algorithms.md) |
+| 앱별 사용자 흐름·레코드·권한·수락 조건 | [애플리케이션 흐름](../internal/config/bootstrap/defaults/development/references/applications.md) |
+| 화면·컴포넌트·상호작용·접근성·모션과 브라우저 검증 | [UI 설계](../internal/config/bootstrap/defaults/development/references/ui.md) |
+| DB·트랜잭션·API·진단·보안·검색·성능·복구 | [백엔드 설계](../internal/config/bootstrap/defaults/development/references/backend.md) |
+| 팀의 도메인 경계·Spec 합의·통합 검증 | [팀 개발](../internal/config/bootstrap/defaults/development/references/team-workflow.md) |
+| 요구 환경·기능·운영·수명·전달 경로의 검증 | [검증과 운영 가능성](../internal/config/bootstrap/defaults/development/references/serviceability.md) |
+
+예약 기능이라면 앱 가이드에서 예약 식별과 정원 규칙을 정하고, UI 가이드에서 대기·확정·충돌 상태를, 백엔드 가이드에서 동시 요청·재시도·저장을 연결한다. 가용 시간 조회 비용이 크면 같은 정원·최신성 조건을 유지하면서 알고리즘과 자료구조를 선택한다. 마지막으로 사용자가 시작한 요청부터 표시되는 결과까지 검증한다.
+
+앱 자료는 메신저·게시판·오프라인 기록·AI 작업·예약 등 18개 유형의 가이드·Do & Don’t·구현 Q&A를 포함한다. UI 자료는 컴포넌트·레이아웃·시각 체계·모션과 로컬 예제를 제공한다. 백엔드 자료는 트랜잭션 명령·조회 모델·워크플로 등 실제 구성과 장애·동시성 검증을 다룬다. 공통 개발 절차와 TDD는 스킬 본문에서 관리한다.
+
+알고리즘 자료는 반복 ID 조회, 스냅샷 변경 반영, 만료 작업, 최근 구간 집계, 대용량 정렬, 의존 작업 실행, 자원 배정, 예산 내 선택, 가변 높이 목록, 증분 파싱 등 16개 실무 사례를 제공한다. 각 사례는 적용할 상황, 구성 방법, 상태 소유권·갱신 규칙, 비용과 검증할 동작을 연결한다. [실무 사례 선택](../internal/config/bootstrap/defaults/development/references/algorithms.md#start-from-the-observed-work)
+
+## 시스템 지침과 읽기
+
+기본 시스템 프롬프트에는 `development`와 `create-skill`을 읽을 작업 유형을 둔다. 개발 스킬 본문은 `load_skill`로 읽으며, `read_skill_file`에는 반환된 같은 ID와 스킬 루트 기준 참고 경로를 사용한다. 일반 질문은 직접 답하고, 개발 작업에서는 관련 자료를 읽도록 모델에 안내한다. 명시한 `#development`는 첫 모델 판단 전에 읽는다. 자동 선택과 지침 적용은 모델이 수행한다. [읽기와 문맥 계약](skills.md#사용자-호출과-모델-도구)
+
+개발 참고 자료는 `meca develop`으로 검색한다. 에이전트는 검색 결과의 경로를 같은 스킬 ID의 `read_skill_file`로 읽는다. [CLI 사용법과 실행 조건](cli.md#개발-자료-검색)
+
 ## 스킬 작성
 
 `#create-skill 프로젝트 코드 리뷰용 스킬을 만들어줘`처럼 스킬의 작성·수정 작업에 적용한다. 이 스킬은 Agent Skills 표준에 맞춘 지침·최소 예시·참고 자료의 구성과 검증을 안내한다. 사용자가 경로를 지정하지 않으면 프로젝트 `.agents/skills/`에 작성하도록 안내한다. [배포 지침](../internal/config/bootstrap/defaults/create-skill/SKILL.md) · [파일 형식](skills.md#파일-형식)
 
-## UI 설계
-
-`#ui-design`은 사용자가 하려는 일, 계속 보여야 할 정보, 값이 확정되는 시점에서 컴포넌트와 동작을 도출한다. 판단이 어려운 선택에는 적합한 조건과 실제 확인 방법을 제시한다.
-
-- **컴포넌트 선택**에서 브레드크럼·페이지네이션·햄버거 메뉴, 스플릿 버튼·미트볼 메뉴·컨텍스트 메뉴, 모달·드로어·스크림 등 비슷한 패턴의 쓰임과 구성 요소를 비교한다. 상세 지침에서 키보드 이동, 포커스 복귀, 확정·취소, 로딩·오류 상태를 확인한다. [컴포넌트 선택표](../internal/config/bootstrap/defaults/ui-design/references/components/index.md)
-- **모션 설계**에서 포커스·선택·열기·닫기·재정렬·화면 전환에 필요한 움직임을 고른다. 빠른 재조작과 중단을 다루고, 축소 모션에서도 입력·포커스·최종 상태를 확인한다. [모션 지도](../internal/config/bootstrap/defaults/ui-design/references/motion.md)
-- **직접 조작**에서 목록·칸반·파일·캔버스의 드래그 앤 드롭, 우클릭과 길게 누르기로 여는 메뉴·패널, 크기 조절과 스와이프를 다룬다. 버튼과 키보드 대체 경로, 취소, 포커스 복귀, 저장 실패 후 복구를 함께 정한다. [조작 패턴](../internal/config/bootstrap/defaults/ui-design/SKILL.md#read-what-changes-the-decision)
-- **상태 피드백**에서 토스트·인라인 알림·배너 알림과 스켈레톤·진행 표시·빈 상태를 구분한다. 모든 토스트에는 즉시 닫을 수 있는 `×` 버튼을 둔다. [알림 지침](../internal/config/bootstrap/defaults/ui-design/references/components/notifications.md) · [로딩과 진행](../internal/config/bootstrap/defaults/ui-design/references/loading-and-progress.md)
-
-화면 전체를 다룰 때는 레이아웃·시각 체계와 HTML/CSS/Vanilla JS 예제를 필요한 만큼 읽는다. 예제는 각 화면의 구성과 조작을 검토하는 자료다. 대상 프로젝트의 요구와 디자인 시스템을 적용한다. [참고 지도](../internal/config/bootstrap/defaults/ui-design/SKILL.md)
-
-이 스킬은 실제 화면·조작·콘솔·네트워크에 맞는 검증 경로를 안내한다. 브라우저의 설치와 제공 조건은 코어 도구가 소유한다. [스킬의 브라우저 검증 지침](../internal/config/bootstrap/defaults/ui-design/references/browser-tools.md) · [브라우저 연동](tools.md#브라우저-연동)
-
-## 백엔드 설계
-
-`#backend-design`은 설계 단계부터 CPU·메모리·저장공간·I/O·네트워크·응답 지연과 정확성·복구 비용을 함께 검토하도록 안내한다.
-
-- 테스트 가능한 구현은 **Red → Green → Refactor의 TDD**를 기본으로 한다. 요구·불변식에서 동작 테스트를 만들고 의도한 실패를 확인한 뒤 최소 구현과 리팩토링을 반복한다.
-- SQLite·PostgreSQL·Redis를 부하·일관성·운영 비용에 맞춰 선택하고 스키마·인덱스·트랜잭션·캐시 수명을 연결한다.
-- API 명령·조회·멱등성·스트림·작업·웹훅·테넌트 격리의 실행과 실패 경계를 정한다.
-- 중앙 로거·오류 코드·메시지·이벤트·필드 정책과 각 도메인의 실패 처리를 구분한다.
-- 암호화·키 수명·검색·벡터·메모리·I/O·과부하·복구 기법의 이점과 비용을 비교한다.
-
-[실전 구성 지도](../internal/config/bootstrap/defaults/backend-design/references/compositions.md)는 기능 모듈·트랜잭션 명령·조회 모델·워크플로·파이프라인·외부 연동·질의/규칙 처리의 책임과 자원 수명을 연결한다. [설계 비교 사례](../internal/config/bootstrap/defaults/backend-design/references/design-studies.md)의 수치는 명시한 가정이며 실측 성능이 아니다. 신규 설계는 부하 가정과 비용 모델로, 기존 구현은 프로파일·부하 시험으로 선택을 검증한다.
-
-## 애플리케이션 구현
-
-`#application-best-dev-practices`는 사용자가 시작한 일이 화면·API·저장을 거쳐 어떤 결과로 끝나는지 설계하고 검증하도록 안내한다. 메신저·게시판·오프라인 현장 기록·AI 작업·예약 등 18개 앱 유형마다 **앱 가이드**, **Do & Don’t**, **구현 Q&A**가 있다. [앱 유형과 활용 사례](../internal/config/bootstrap/defaults/application-best-dev-practices/SKILL.md)
-
-주된 사용자 과업에 맞는 가이드를 읽고, 다른 유형에서 필요한 기능을 함께 적용한다. 예를 들어 소모임 앱은 게시판의 대화, 캘린더의 일정, 예약의 정원 확정 규칙을 조합한다. 대표 서비스가 제공하는 기능을 참고하고, 결합한 기능의 정보 공개 범위, 변경 권한, 확정 시점과 복구 동작을 대상 앱에서 정한다.
-
 ## 배포 자료
 
-참고 자료는 **본문 → 지도 → 선택 자료**의 최대 세 층으로 구성하며 필요한 파일만 읽는다. 기본 스킬의 설명 Markdown은 파일별 8KiB, 코드·미디어는 1MiB 이하이며 512KiB 이하를 권장한다. 이 작성 기준과 엔진의 참고 파일 페이지 한도는 구분한다.
+개발 자료는 **본문 → 분야 가이드 → 관련 지도 → 선택 자료**의 최대 네 층으로 탐색한다. 각 링크는 구체적인 판단에 필요한 자료를 가리키며, 같은 요청에서는 읽은 내용을 재사용한다. 기본 스킬의 설명 Markdown은 파일별 8KiB, 코드·미디어는 1MiB 이하이며 512KiB 이하를 권장한다. 이 작성 기준과 엔진의 참고 파일 페이지 한도는 구분한다.
 
-각 묶음에는 해당 지침과 참고 예시를 포함한다. 외부 자료의 출처와 배포 조건은 스킬에 동봉한 고지·출처 문서에서 확인한다.
+로컬 화면 예제·진단 스크립트와 라이선스 고지는 통합 스킬에 함께 배포한다. 브라우저의 설치와 제공 조건은 코어 도구가 소유한다. [브라우저 검증 지침](../internal/config/bootstrap/defaults/development/references/ui/browser-tools.md) · [출처와 고지](../internal/config/bootstrap/defaults/development/NOTICE.md)

@@ -1,12 +1,11 @@
 // Purpose: Verify image islands, native hover removal and preview URL cleanup across drafts.
 // Pattern: Browser-to-engine composer resource contracts.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/composer/composer.tsx, cmd/meca/ui_browser_test.go.
 
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMQMgn7DwAClAGcHVtGXwAAAABJRU5ErkJggg==',
   'base64'
@@ -21,10 +20,7 @@ async function create(page: Page) {
   await page.waitForURL((url) => url.href !== previous && url.pathname.includes('/c/session_'));
   await expect(page.getByRole('combobox', { name: '작업 입력', exact: true })).toBeEnabled();
 }
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await page.addInitScript(() => {
     const create = URL.createObjectURL.bind(URL),
       revoke = URL.revokeObjectURL.bind(URL);

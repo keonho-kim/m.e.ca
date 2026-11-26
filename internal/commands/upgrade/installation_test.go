@@ -57,7 +57,7 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 		client := releaseFixture(t, kind, tarball(t, archiveEntry{name: "meca", content: string(body)}), nil, nil)
 		for pass := 0; pass < 2; pass++ {
 			for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
-				for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+				for _, name := range []string{"system.md", "compaction.md"} {
 					if err := os.WriteFile(filepath.Join(home, ".meca/prompts", string(profile), name), []byte("user edit"), 0600); err != nil {
 						t.Fatal(err)
 					}
@@ -87,6 +87,11 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 			command := exec.CommandContext(ctx, install.BinaryPath(home), "--help")
 			if output, err := command.CombinedOutput(); err != nil || !strings.Contains(string(output), "M.E.CA ("+string(kind)+")") {
 				t.Fatalf("installed release is not %s: %v\n%s", kind, err, output)
+			}
+			command = exec.CommandContext(ctx, install.BinaryPath(home), "develop", "delayed tasks")
+			command.Env = append(os.Environ(), "HOME="+home)
+			if output, err := command.CombinedOutput(); err != nil || !strings.Contains(string(output), "Delayed tasks and expiring entries") {
+				t.Fatalf("upgraded develop command is unusable: %v\n%s", err, output)
 			}
 			assertNoStaging(t, home)
 		}

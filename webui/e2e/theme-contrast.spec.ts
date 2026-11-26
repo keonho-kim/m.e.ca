@@ -1,12 +1,15 @@
 // Purpose: Preserve readable sidebar labels throughout light and dark theme changes.
 // Pattern: Browser contrast regression over sampled CSS transition progress.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated embedded UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/app/styles/motion.css, webui/e2e/appearance.spec.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, test } from '#e2e/fixture';
+import { connectBrowser, create, test } from '#e2e/fixture';
 
-test('project and file sidebars keep text contrast throughout theme changes', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('project and file sidebars keep text contrast throughout theme changes', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await create(page);
   await page.getByRole('tab', { name: '파일', exact: true }).click();

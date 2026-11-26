@@ -46,8 +46,9 @@ jobs:
         env:
           GOFLAGS: -tags=godbus_no_tcp,tui
         run: |
-          go test ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade ./internal/commands/install
-          go vet ./cmd/meca ./internal/commands/startup ./internal/commands/upgrade
+          go test -short ./cmd/meca ./internal/commands/startup
+          go test ./cmd/meca -run '^TestTUIExecutable$'
+          go vet ./cmd/meca ./internal/commands/startup
           go list -deps ./cmd/meca > "$RUNNER_TEMP/meca-tui-deps.txt"
           if grep -Eq 'meca/internal/(commands/server|serverapi|webui)(/|$)' "$RUNNER_TEMP/meca-tui-deps.txt"; then
             printf 'The tui executable must not import server or WebUI adapters.\n' >&2
@@ -70,9 +71,21 @@ jobs:
           GOFLAGS: -tags=godbus_no_tcp
         run: |
           go -C devtools run ./cmd/diagnosticscheck -C=.. ./...
-          go test ./...
+          go test -short ./...
           go vet ./...
           go mod verify
+
+      - name: Verify native executables and mounted state
+        env:
+          GOFLAGS: -tags=godbus_no_tcp
+        run: |
+          go test ./cmd/meca ./internal/commands/upgrade -run '^Test(.*Executable|InstallWithBrowserKeepsBaseOnExtensionFailure|ServerStartupOutputFailure|ServerBindFailureDoesNotPrintToken|BrowserLaunchFailureIsWarning|UpgradeInstallsReleaseAndRefreshesPrompts)$'
+          sh scripts/install/test-linux.sh
+
+      - name: Verify required browser scenarios
+        run: |
+          bun run --cwd webui playwright install --with-deps --no-shell chromium
+          bun run --cwd webui test:e2e:smoke
 
       - name: Build release archives
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0

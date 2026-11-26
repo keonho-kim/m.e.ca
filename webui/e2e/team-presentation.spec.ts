@@ -1,14 +1,14 @@
 // Purpose: Keep real team contributions and public speech out of measurement and notice surfaces.
 // Pattern: Browser-to-engine contract regression through native tools and persisted history.
-// Usage: MECA_UI_DESCRIPTOR points to TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_team_provider_test.go, webui/src/pages/workspace/ui/chat/team-work-row.tsx.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture';
+import { connectBrowser, create, send, test } from '#e2e/fixture';
 
-test('team work and final speech retain their own rows through persistence and reconnect', async ({
-  page,
-}) => {
-  await connectBrowser(page, await browserFixture());
+test('team work and final speech retain their own rows through persistence and reconnect', {
+  tag: '@smoke',
+}, async ({ server: fixture, page }) => {
+  await connectBrowser(page, fixture);
   await create(page);
   const team = page.getByRole('button', { name: '팀 모드', exact: true });
   await team.click();

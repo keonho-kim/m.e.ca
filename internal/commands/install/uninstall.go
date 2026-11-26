@@ -1,4 +1,4 @@
-// Purpose: Remove MECA-owned installation artifacts, credentials and private state.
+// Purpose: Remove MECA-owned installation state and report actionable filesystem failures.
 // Pattern: Uninstallation use case.
 // Usage: cmd/meca invokes Uninstall before bootstrap, SQLite or terminal setup.
 // Related: internal/commands/install/state.go, internal/commands/install/shell.go, internal/config/credentials/persistence.go.
@@ -10,6 +10,7 @@ import (
 
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/keonho-kim/meca/internal/config/statefs"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
@@ -17,6 +18,7 @@ import (
 )
 
 func Uninstall(ctx context.Context, home string) (err error) {
+	defer func() { err = uninstallError(err) }()
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -95,4 +97,25 @@ func Uninstall(ctx context.Context, home string) (err error) {
 		return err
 	}
 	return finishRemoval(ctx, root, r.Digest)
+}
+
+func uninstallError(err error) error {
+	var known *faults.Error
+	if errors.As(err, &known) {
+		return err
+	}
+	var pathErr *os.PathError
+	if !errors.As(err, &pathErr) {
+		return err
+	}
+	switch {
+	case errors.Is(err, os.ErrPermission):
+		return faults.New(diagcatalog.PermissionDenied, diagcatalog.InstallRemovalAccessDenied, pathErr.Path, err)
+	case errors.Is(err, syscall.EROFS):
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.InstallRemovalReadOnly, pathErr.Path, err)
+	case errors.Is(err, syscall.EBUSY):
+		return faults.New(diagcatalog.FailedPrecondition, diagcatalog.InstallRemovalBusy, pathErr.Path, err)
+	default:
+		return faults.New(faults.Code(err), diagcatalog.InstallRemovalPathFailed, pathErr.Path, err)
+	}
 }

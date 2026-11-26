@@ -1,16 +1,16 @@
 // Purpose: Verify the authenticated loading surface while preserving deferred workspace downloads.
 // Pattern: Controlled module-read gate over the real embedded application.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/app/routes/application.tsx, webui/src/pages/connect/ui/connection-loading.tsx.
 import { readFile } from 'node:fs/promises';
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
 for (const dark of [false, true])
   test(`workspace loading uses a readable glass surface in ${dark ? 'dark' : 'light'} mode`, async ({
+    server: fixture,
     page,
   }) => {
-    const fixture = await browserFixture();
     if (dark) {
       await connectBrowser(page, fixture);
       await page.getByRole('button', { name: '화면 테마', exact: true }).click();

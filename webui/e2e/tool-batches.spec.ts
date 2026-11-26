@@ -1,14 +1,14 @@
 // Purpose: Verify real parallel runtime calls render under one agent heading after persistence and reload.
 // Pattern: Browser-to-engine grouping and completion contracts.
-// Usage: MECA_UI_DESCRIPTOR points to the deterministic Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_parallel_provider_test.go, webui/src/pages/workspace/ui/chat/tool-call.tsx.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture';
+import { connectBrowser, create, send, test } from '#e2e/fixture';
 
 test('one parallel wave has one agent heading, independent tool disclosures and typed final metrics', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await create(page);
   await send(page, 'PARALLEL_FIXTURE');

@@ -1,7 +1,7 @@
 // Purpose: Embed profile-specific Markdown guidance and validate editable prompt files.
 // Pattern: Simple Module (prompt assets).
 // Usage: Startup publishes missing defaults, installation refreshes them and tasks load the selected ~/.meca/prompts profile.
-// Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/team.md, internal/agent/prompt/defaults/team-development.md, internal/config/prompts/prompts.go.
+// Related: internal/agent/prompt/defaults/system.md, internal/agent/prompt/defaults/team.md, internal/agent/prompt/defaults/compaction.md, internal/config/prompts/prompts.go.
 package prompt
 
 import (
@@ -19,12 +19,6 @@ const MaxTemplateBytes = 16 * 1024 * 1024
 
 //go:embed defaults/system.md
 var systemDefault string
-
-//go:embed defaults/development.md
-var developmentDefault string
-
-//go:embed defaults/team-development.md
-var teamDevelopmentDefault string
 
 //go:embed defaults/compaction.md
 var compactionDefault string
@@ -44,25 +38,23 @@ const (
 func (p Profile) Valid() bool { return p == Single || p == Team }
 
 type Templates struct {
-	System, Development, Compaction string
+	System, Compaction string
 }
 
 func Defaults() Templates { return DefaultsFor(Single) }
 
 func DefaultsFor(profile Profile) Templates {
-	system, development := systemDefault, developmentDefault
+	system := systemDefault
 	if profile == Team {
-		system, development = teamDefault, teamDevelopmentDefault
+		system = teamDefault
 	}
-	return Templates{
-		System: system, Development: development, Compaction: compactionDefault,
-	}
+	return Templates{System: system, Compaction: compactionDefault}
 }
 
 // Files exposes the fixed prompt fields for bootstrap publication and explicit loading.
 func (t *Templates) Files() map[string]*string {
 	return map[string]*string{
-		"system.md": &t.System, "development.md": &t.Development, "compaction.md": &t.Compaction,
+		"system.md": &t.System, "compaction.md": &t.Compaction,
 	}
 }
 

@@ -1,18 +1,14 @@
 // Purpose: Verify full names, scaled settings and accurate unsaved-model instructions.
 // Pattern: Rendered presentation regression contracts.
-// Usage: Run with MECA_UI_DESCRIPTOR against the isolated embedded UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/settings/settings.tsx, cmd/meca/ui_browser_test.go.
 
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, test } from '#e2e/fixture';
+import { connectBrowser, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
   const previous = page.url();
   const group = page
@@ -58,7 +54,10 @@ test('settings labels remain visible at double text size', async ({ page }) => {
     document.documentElement.style.fontSize = '';
   });
 });
-test('a long project name exposes its full path through the native tooltip', async ({ page }) => {
+test('a long project name exposes its full path through the native tooltip', async ({
+  page,
+  server: fixture,
+}) => {
   const name = '고객_데이터_분석_프로젝트_운영_워크스페이스_장기보관';
   const path = join(fixture.home, name);
   await mkdir(path, { recursive: true });

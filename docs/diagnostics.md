@@ -1,6 +1,6 @@
 # 이벤트와 운영 로그
 
-[← README](../README.md) · [서버 API](server.md) · [런타임](runtime.md)
+[← README](../README.md) · [CLI](cli.md) · [서버 API](server.md) · [런타임](runtime.md)
 
 이벤트는 프론트가 소비하는 작업 기록이고 운영 로그는 장애 원인을 추적하는 진단이다. 동일한 작업 식별자를 사용하지만 대화·도구 원문을 운영 로그에 다시 저장하지 않는다.
 

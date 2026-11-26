@@ -1,4 +1,4 @@
-// Purpose: Parse maintenance commands and conversation startup with a real project directory.
+// Purpose: Parse local commands and conversation startup with a real project directory.
 // Pattern: Simple Module (startup boundary).
 // Usage: Called by cmd/meca before bootstrap or terminal initialization.
 // Related: internal/commands/startup/parse_test.go, cmd/meca/main.go.
@@ -26,6 +26,7 @@ type Mode struct {
 	BrowserExtension        bool
 	Output, Prompt, Session string
 	Action                  Action
+	DevelopQuery            string
 	UpgradeKind             distribution.Kind
 	Resume                  bool
 	Project, Display        string
@@ -38,9 +39,20 @@ const (
 	Install   Action = "install"
 	Uninstall Action = "uninstall"
 	Upgrade   Action = "upgrade"
+	Develop   Action = "develop"
 )
 
 func Parse(args []string, cwd string) (Mode, error) {
+	if len(args) > 0 && args[0] == string(Develop) {
+		if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
+			return Mode{Action: Help}, nil
+		}
+		query := strings.Join(args[1:], " ")
+		if strings.TrimSpace(query) == "" {
+			return Mode{}, faults.Errorf(diagcatalog.DevelopUsage)
+		}
+		return Mode{Action: Develop, DevelopQuery: query}, nil
+	}
 	if len(args) > 0 && args[0] == string(Install) {
 		mode := Mode{Action: Install}
 		flags := flag.NewFlagSet("meca install", flag.ContinueOnError)

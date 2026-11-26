@@ -1,16 +1,16 @@
 // Purpose: Verify non-drag moves preserve directory revisions across destination pages.
 // Pattern: Native filesystem contract through the accessible move dialog.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/files/move-dialog.tsx, internal/fileview/entry_mutation.go.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, test } from '#e2e/fixture';
+import { connectBrowser, create, test } from '#e2e/fixture';
 
 test('the move menu reaches a second destination page and moves the original file once', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   const folder = `move-folders-${crypto.randomUUID().slice(0, 8)}`;
   const name = `move-source-${crypto.randomUUID().slice(0, 8)}.txt`;
   await mkdir(join(fixture.projectA, folder));

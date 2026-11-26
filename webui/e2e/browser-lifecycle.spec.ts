@@ -1,18 +1,17 @@
 // Purpose: Exercise real Chromium back/forward-cache restoration with the browser feature enabled.
 // Pattern: Native navigation regression test with observed persisted pageshow.
-// Usage: The Chromium project runs this against TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/api/observer.ts, webui/e2e/reconciliation.spec.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, rpc, test } from '#e2e/fixture';
+import { connectBrowser, create, rpc, test } from '#e2e/fixture';
 
 // Playwright disables this browser feature by default; synthetic events alone
 // cannot establish that the real retained page restores its connection.
 test.use({ launchOptions: { ignoreDefaultArgs: ['--disable-back-forward-cache'] } });
 
-test('a cached page reauthenticates and reads a fresh snapshot without resubmitting work', async ({
-  page,
-}) => {
-  const fixture = await browserFixture();
+test('a cached page reauthenticates and reads a fresh snapshot without resubmitting work', {
+  tag: '@smoke',
+}, async ({ server: fixture, page }) => {
   await page.addInitScript(() => {
     window.addEventListener('pageshow', (event) => {
       Object.assign(window, { restoredFromCache: event.persisted });

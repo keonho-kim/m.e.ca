@@ -1,15 +1,15 @@
 // Purpose: Check UI document policies and preserve local drafts across authentication expiry.
 // Pattern: Browser security and lifetime contracts without collecting report content.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: internal/webui/headers.go, webui/src/pages/workspace/model/file-document.ts.
 import { readFile } from 'node:fs/promises';
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, input, test } from '#e2e/fixture';
+import { connectBrowser, create, input, test } from '#e2e/fixture';
 
 test('document policies retain clipboard support and render without Trusted Types violations', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await page.addInitScript(() => {
     const reports: string[] = [];
     Object.assign(window, { policyDirectives: reports });
@@ -36,9 +36,9 @@ test('document policies retain clipboard support and render without Trusted Type
 });
 
 test('authentication expiry closes sensitive settings and preserves composer and editor drafts', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await create(page);
   await input(page).fill('Unsent local draft');

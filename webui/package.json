@@ -14,6 +14,9 @@
     "lint": "biome check src scripts e2e tests *.ts",
     "browser": "playwright-cli",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --project=chromium --grep @smoke --forbid-only",
+    "test:performance": "playwright test --config=playwright.probes.config.ts --project=performance",
+    "test:live-provider": "playwright test --config=playwright.probes.config.ts --project=live-provider",
     "astryx": "bun --bun node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
     "theme": "bun run astryx theme build src/app/styles/theme.ts --out src/app/styles/generated/meca.css",
     "architecture": "bun --bun node_modules/steiger/dist/cli.mjs ./src",
@@ -80,6 +83,8 @@
     "#test/event-stream": "./tests/event-stream.ts",
     "#build/build-id": "./scripts/build-id.ts",
     "#e2e/fixture": "./e2e/fixture.ts",
+    "#e2e/server": "./e2e/browser-server.ts",
+    "#e2e/config": "./playwright.config.ts",
     "#build/notices": "./scripts/notices.ts"
   },
   "patchedDependencies": {

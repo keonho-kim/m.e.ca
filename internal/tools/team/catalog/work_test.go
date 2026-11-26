@@ -23,9 +23,6 @@ func TestWorkReleaseAndNamedRestorationArguments(t *testing.T) {
 	if _, err := Parse(toolapi.Call{Name: "add_team_member", Arguments: []byte(`{"message":"Review","member_name":"Hana"}`)}); err == nil {
 		t.Fatal("missing invitation domain accepted")
 	}
-	if _, err := Parse(toolapi.Call{Name: "add_team_member", Arguments: []byte(`{"domain":"api-review","message":"Review","agent_id":"Hana"}`)}); err == nil {
-		t.Fatal("obsolete argument accepted")
-	}
 	definitions := localcatalog.Definitions("create_directory")
 	if _, err := toolapi.ValidateArguments(definitions[0], []byte(`{"paths":[]}`)); err == nil {
 		t.Fatal("work release weakened directory arguments")

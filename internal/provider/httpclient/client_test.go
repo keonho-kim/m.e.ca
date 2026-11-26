@@ -35,6 +35,28 @@ func mockClient(t *testing.T, kind modelconn.ProviderKind, handler http.HandlerF
 	return client
 }
 
+func bufferedClient(t *testing.T, kind modelconn.ProviderKind, handler http.HandlerFunc) *Client {
+	t.Helper()
+	connection, err := modelconn.New(kind, "http://127.0.0.1:1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewClient(connection, "test-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(client.Close)
+	client.transport.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Body != nil {
+			defer r.Body.Close()
+		}
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, r)
+		return recorder.Result(), nil
+	})
+	return client
+}
+
 func TestListModelsProviderContracts(t *testing.T) {
 	for _, test := range []struct {
 		kind     modelconn.ProviderKind

@@ -1,11 +1,12 @@
 // Purpose: Keep oversized structured tool output readable without exposing partial JSON fragments.
 // Pattern: Browser contract over independently revised native field pages.
-// Usage: MECA_UI_DESCRIPTOR points to TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/chat/structured-tool.tsx, internal/serverapi/detail/fields.go.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, historyPage, test } from '#e2e/fixture';
+import { connectBrowser, create, historyPage, test } from '#e2e/fixture';
 
 test('large tool fields page independently and release their disclosures on collapse', async ({
+  server: fixture,
   page,
 }) => {
   await page.route('**/v1/command', async (route) => {
@@ -57,7 +58,7 @@ test('large tool fields page independently and release their disclosures on coll
       });
     } else await route.continue();
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   const trigger = page.locator('.tool-disclosure > button').first();
   await trigger.click();

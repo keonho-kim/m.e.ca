@@ -75,7 +75,6 @@ func TestCompactionBoundaryAppliesSteeringBeforeNextGeneration(t *testing.T) {
 	r.Journal = store
 	templates := prompt.Defaults()
 	templates.System += "\nSYSTEM_RULE_MARKER"
-	templates.Development += "\nDEVELOPMENT_RULE_MARKER"
 	r.Prompts = &templates
 	r.Memory = &compact.Controller{Repository: store, Session: r.Session, Model: r.Model, Prompt: prompt.Defaults().Compaction, Settings: compact.Defaults(), Redact: r.Redact}
 	pending, calls := false, 0
@@ -102,7 +101,7 @@ func TestCompactionBoundaryAppliesSteeringBeforeNextGeneration(t *testing.T) {
 		if !found {
 			t.Error("first generation after compaction missed the new instruction")
 		}
-		for _, rule := range []string{r.ProjectInstructions, "SYSTEM_RULE_MARKER", "DEVELOPMENT_RULE_MARKER"} {
+		for _, rule := range []string{r.ProjectInstructions, "SYSTEM_RULE_MARKER"} {
 			if strings.Count(request.Messages[0].Content, rule) != 1 {
 				t.Errorf("compaction lost or duplicated instruction: %s", rule)
 			}

@@ -25,9 +25,5 @@ func TestAbsentProjectInstructionsAddNoPromptBlock(t *testing.T) {
 		if err != nil || text != "Task rules" {
 			t.Fatalf("empty instructions produced metadata: %q %v", text, err)
 		}
-		text, err = Work("Common rules", "Worker rules", instructions)
-		if err != nil || text != "Common rules\n\nWorker rules" {
-			t.Fatalf("empty instructions changed role composition: %q %v", text, err)
-		}
 	}
 }

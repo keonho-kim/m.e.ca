@@ -7,7 +7,6 @@ package bootstrap
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/config"
@@ -48,15 +47,14 @@ func TestConcurrentBootstrapPublishesCompleteConfiguration(t *testing.T) {
 		}
 	}
 	readDefaultSkill(t, home)
-	readUIDesignSkill(t, home)
-	readBackendSkill(t, home)
+	readDevelopmentSkill(t, home)
 	entries, err := os.ReadDir(filepath.Join(home, ".meca/skills/create-skill"))
 	if err != nil || len(entries) != 1 || entries[0].Name() != "SKILL.md" {
 		t.Fatalf("incomplete or temporary skill files: %v %v", entries, err)
 	}
 }
 
-func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
+func TestBootstrapCreatesPrivateSessionDirectory(t *testing.T) {
 	home := t.TempDir()
 	if _, err := Initialize(t.Context(), home); err != nil {
 		t.Fatal(err)
@@ -66,9 +64,6 @@ func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
 	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
 		t.Fatalf("session directory: %v %v", info, err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "meca.db")); !os.IsNotExist(err) {
-		t.Fatalf("created central registry: %v", err)
-	}
 	if err := os.Remove(filepath.Join(root, "sessions")); err != nil {
 		t.Fatal(err)
 	}
@@ -77,28 +72,5 @@ func TestBootstrapCreatesSessionDirectoryWithoutRegistry(t *testing.T) {
 	}
 	if _, err := Initialize(t.Context(), home); err == nil {
 		t.Fatal("accepted symlink session directory")
-	}
-}
-
-func TestBootstrapRecordsRoleDefaults(t *testing.T) {
-	home := t.TempDir()
-	if _, err := Initialize(t.Context(), home); err != nil {
-		t.Fatal(err)
-	}
-	content, err := os.ReadFile(filepath.Join(home, ".meca", config.Filename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(content), "language = 'auto'") {
-		t.Fatal("default interface language missing from bootstrap configuration")
-	}
-	if strings.Contains(string(content), "model_profiles") || strings.Contains(strings.Split(string(content), "[agent]")[0], "thinking =") {
-		t.Fatal("bootstrap did not preserve server reasoning defaults")
-	}
-
-	for _, role := range []string{"agent", "compaction", "diagnostics"} {
-		if !strings.Contains(string(content), "["+role+"]") {
-			t.Fatalf("missing role defaults: %s", role)
-		}
 	}
 }

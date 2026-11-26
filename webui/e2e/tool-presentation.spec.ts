@@ -1,24 +1,15 @@
 // Purpose: Verify one row per real command and distinct reasoning, response and completion surfaces.
 // Pattern: Browser-to-engine presentation regression.
-// Usage: Run with the isolated TestUIBrowserFixture descriptor.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_tool_provider_test.go, webui/src/pages/workspace/model/live-timeline.ts.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, test } from '#e2e/fixture';
-
-test.afterEach(async ({ page }) => {
-  const path = process.env.MECA_UI_DESCRIPTOR;
-  if (!path) return;
-  const fixture = await browserFixture();
-  // A failed assertion must not leave this suite's held task in other tests.
-  for (const step of [1, 2, 3])
-    await page.request.get(`${fixture.provider}/test/tool-sequence/${step}`);
-});
+import { connectBrowser, test } from '#e2e/fixture';
 
 test('repeated commands never duplicate messages or become completion metadata', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   const previous = page.url();
   await page

@@ -59,9 +59,7 @@ func LoadProfile(directory string, profile prompt.Profile) (templates prompt.Tem
 	if !profile.Valid() {
 		return templates, faults.Errorf(diagcatalog.PromptsInvalidPromptProfile)
 	}
-	err = load(directory, profile, map[string]*string{
-		"system.md": &templates.System, "development.md": &templates.Development, "compaction.md": &templates.Compaction,
-	})
+	err = load(directory, profile, templates.Files())
 	return templates, err
 }
 

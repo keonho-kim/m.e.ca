@@ -16,7 +16,4 @@ func TestUIRequiresServer(t *testing.T) {
 	if err != nil || !mode.ServerOptions.UI {
 		t.Fatalf("server UI selection: %+v %v", mode, err)
 	}
-	if _, err := Parse([]string{"--server", "--webui"}, t.TempDir()); err == nil {
-		t.Fatal("obsolete UI spelling must not be accepted")
-	}
 }

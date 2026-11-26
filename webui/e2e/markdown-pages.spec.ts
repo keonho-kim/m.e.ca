@@ -1,15 +1,15 @@
 // Purpose: Keep dense rich responses fully readable without an unbounded DOM or a full-text popover.
 // Pattern: Browser contract over Astryx's public Markdown extension renderer.
-// Usage: Run with MECA_UI_DESCRIPTOR pointing at TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/shared/ui/markdown/pagination.tsx, webui/src/shared/ui/markdown/render-budget.ts.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, historyPage, test } from '#e2e/fixture';
+import { connectBrowser, historyPage, test } from '#e2e/fixture';
 
 test('dense ordered responses expose their last entry inline with bounded rendered nodes', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   const source = Array.from({ length: 600 }, (_, index) => `${index + 7}. Entry **${index}**`).join(
     '\n'
   );

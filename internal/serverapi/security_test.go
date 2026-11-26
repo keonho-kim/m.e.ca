@@ -37,6 +37,7 @@ func TestSecurityBeforeControlDispatch(t *testing.T) {
 		{name: "untrusted origin", token: testToken, origin: "https://evil.example", status: 403},
 		{name: "null origin", token: testToken, origin: "null", status: 403},
 		{name: "allowed origin", token: testToken, origin: "https://frontend.example", status: 200},
+		{name: "unregistered path", token: testToken, path: "/v1/unknown", status: http.StatusNotFound},
 		{name: "token in URL", token: testToken, path: "/v1/command?token=secret", status: 400},
 		{name: "preflight", origin: "https://frontend.example", method: "OPTIONS", status: 204},
 		{name: "untrusted preflight", origin: "https://evil.example", method: "OPTIONS", status: 403},

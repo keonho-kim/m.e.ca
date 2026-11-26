@@ -1,49 +1,49 @@
 // Purpose: Exercise bounded image previews, worker serialization and server-backed conversation search.
 // Pattern: Native browser feature contracts over an isolated project and model fixture.
-// Usage: MECA_UI_DESCRIPTOR points to TestUIBrowserFixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/shared/lib/image-preview/index.ts, internal/serverapi/history_search.go.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, input, rpc, send, test } from '#e2e/fixture';
+import { connectBrowser, create, input, rpc, send, test } from '#e2e/fixture';
 
-test('search reaches saved messages outside the mounted transcript', async ({ page }) => {
-  const fixture = await browserFixture();
+test('search reaches saved messages outside the mounted transcript', async ({
+  page,
+  server: fixture,
+}) => {
   await connectBrowser(page, fixture);
-  const workspace = new URL(page.url()).pathname.split('/')[3] ?? '';
-  let cursor = '',
-    found = false;
-  for (let index = 0; index < 24; index++) {
-    const reply = await rpc(
-      page,
-      {
-        searchHistory: { sessionId: fixture.archiveSession, query: 'Archive message 012', cursor },
-      },
-      workspace
-    );
-    found ||= !!reply.historyMatches?.items?.some((item) =>
-      item.excerpt?.includes('Archive message 012')
-    );
-    cursor = reply.historyMatches?.cursor ?? '';
-    if (!cursor || found) break;
-  }
-  expect(found).toBe(true);
+  const { workspaces } = await rpc(page, { listWorkspaces: {} });
+  const workspace = workspaces?.defaultId;
+  expect(workspace).toBeTruthy();
   await page.goto(`${fixture.url}/ui/w/${workspace}/c/${fixture.archiveSession}`);
-  const scroller = page.locator('.workspace-body');
-  await scroller.hover();
-  await page.mouse.wheel(0, -100000);
-  await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBe(0);
-  await page.getByRole('button', { name: '대화 검색', exact: true }).click();
-  await page.getByRole('searchbox', { name: /^대화 검색/ }).fill('Archive message 299');
-  await page.getByRole('button', { name: '검색', exact: true }).click();
-  await page.getByRole('button', { name: 'Archive message 299', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('Archive message 299', { exact: true })).toBeVisible();
+  const target = 'Archive message 250';
+  await expect(page.getByText(target, { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '대화 검색', exact: true }).click();
+  const search = page.getByRole('dialog', { name: '대화 검색', exact: true });
+  await search.getByRole('searchbox', { name: /^대화 검색/ }).fill(target);
+  await search.getByRole('button', { name: '검색', exact: true }).click();
+  const match = search.getByRole('button', { name: target, exact: true });
+  const more = search.getByRole('button', { name: '다음 구간 검색', exact: true });
+  for (let pageIndex = 0; pageIndex < 4 && !(await match.isVisible()); pageIndex++) {
+    await expect(more).toBeEnabled();
+    const searched = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/v1/command') &&
+        !!response.request().postDataJSON()?.searchHistory?.cursor
+    );
+    await more.click();
+    await (await searched).finished();
+  }
+  await expect(match).toBeVisible();
+  await match.click();
+  await expect(search).toBeHidden();
+  await expect(page.getByText(target, { exact: true })).toBeVisible();
   await expect(
     page.getByRole('button', { name: '최근 대화로 돌아가기', exact: true })
   ).toBeVisible();
 });
 
-test('large command serialization uses a short-lived worker', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('large command serialization uses a short-lived worker', async ({ page, server: fixture }) => {
+  await connectBrowser(page, fixture);
   await create(page);
   const worker = page.waitForEvent('worker');
   await send(page, 'fixture '.repeat(35000));
@@ -54,9 +54,10 @@ test('large command serialization uses a short-lived worker', async ({ page }) =
 });
 
 test('plain-text typing uses native edit ranges and preserves a large middle edit', async ({
+  server: fixture,
   page,
 }) => {
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   await input(page).fill('x'.repeat(300000));
   await input(page).evaluate((node) => {
@@ -80,6 +81,7 @@ test('plain-text typing uses native edit ranges and preserves a large middle edi
 });
 
 test('preview images use bounded derived pixels and release their URL when removed', async ({
+  server: fixture,
   page,
 }) => {
   await page.addInitScript(() => {
@@ -91,7 +93,7 @@ test('preview images use bounded derived pixels and release their URL when remov
       original(url);
     };
   });
-  await connectBrowser(page, await browserFixture());
+  await connectBrowser(page, fixture);
   await create(page);
   const bytes = await page.evaluate(async () => {
     const canvas = document.createElement('canvas');

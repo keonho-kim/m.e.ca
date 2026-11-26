@@ -156,7 +156,7 @@ func TestBootstrapRejectsUnsafeSkillDirectories(t *testing.T) {
 	for _, name := range []string{
 		"skills",
 		"skills/create-skill",
-		"skills/ui-design/assets/examples/previews",
+		"skills/development/assets/examples/previews",
 	} {
 		for _, kind := range []string{"file", "symlink"} {
 			t.Run(name+"/"+kind, func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestBootstrapRejectsUnsafeSkillDirectories(t *testing.T) {
 					t.Fatal("accepted an unsafe skill directory")
 				}
 				if name != "skills" {
-					installed := filepath.Join(home, ".meca/skills/backend-design/SKILL.md")
+					installed := filepath.Join(home, ".meca/skills/development/SKILL.md")
 					if _, err := os.Lstat(installed); !os.IsNotExist(err) {
 						t.Fatalf("published a sibling bundle before rejecting the conflicting directory: %v", err)
 					}

@@ -111,7 +111,7 @@ func TestHeadlessExecutable(t *testing.T) {
 	if !strings.Contains(string(body), `"tool_call_id":"write"`) {
 		t.Fatal("export lost the native result")
 	}
-	for _, name := range []string{"system.md", "development.md", "compaction.md"} {
+	for _, name := range []string{"system.md", "compaction.md"} {
 		if _, err := os.Stat(filepath.Join(home, ".meca", "prompts", "single", name)); err != nil {
 			t.Fatal(err)
 		}

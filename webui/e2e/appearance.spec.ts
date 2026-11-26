@@ -1,13 +1,13 @@
 // Purpose: Verify the toolbar language menu, persisted themes and reduced-motion transitions.
 // Pattern: Real browser presentation and command contracts.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/ui/navigation/language-menu.tsx, webui/src/app/styles/motion.css.
 
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, send, test } from '#e2e/fixture';
+import { connectBrowser, create, send, test } from '#e2e/fixture';
 
-test.beforeEach(async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test.beforeEach(async ({ page, server: fixture }) => {
+  await connectBrowser(page, fixture);
 });
 test('light is the default and theme changes preserve opacity and the saved preference', async ({
   page,

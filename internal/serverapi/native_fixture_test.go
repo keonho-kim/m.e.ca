@@ -1,6 +1,6 @@
 // Purpose: Exercise native HTTP control, task completion and authenticated protocol fixtures.
 // Pattern: Test boundary helpers over the production native API.
-// Usage: Native concurrency, approval, image and route-removal integration tests share these helpers.
+// Usage: Native concurrency, approval and image integration tests share these helpers.
 // Related: internal/serverapi/fixture_test.go, internal/serverapi/http.go.
 package serverapi
 

@@ -115,6 +115,11 @@ func TestSkillToolDelivery(t *testing.T) {
 					t.Fatal(err)
 				}
 				instructions := skillWireInstructions(wire)
+				for _, guide := range []string{"meca:development", "meca:create-skill"} {
+					if !strings.Contains(instructions, guide) {
+						t.Fatalf("system instructions omitted selection guidance for %s", guide)
+					}
+				}
 				for _, name := range names {
 					if !strings.Contains(instructions, name) {
 						t.Fatalf("system instructions omitted %s", name)

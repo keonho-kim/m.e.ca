@@ -1,21 +1,19 @@
 // Purpose: Verify usable controls, document modes and layout boundaries with realistic content.
 // Pattern: Browser-to-engine regression contracts over the isolated UI fixture.
-// Usage: Run with MECA_UI_DESCRIPTOR after rebuilding the embedded UI.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/files/file-document.tsx.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Locator, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 const file = 'layout-review.md';
 const original =
   '# Layout review\n\n```sql\nSELECT ' +
   'customer_revenue_column, '.repeat(60) +
   'id FROM reports;\n```\n';
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ server: fixture }) => {
   await writeFile(join(fixture.projectA, file), original);
 });
 async function create(page: Page) {
@@ -27,7 +25,7 @@ async function create(page: Page) {
   await page.waitForURL((url) => url.href !== previous && url.pathname.includes('/c/session_'));
   await expect(page.getByRole('combobox', { name: '작업 입력', exact: true })).toBeEnabled();
 }
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   await create(page);
@@ -101,6 +99,7 @@ test('long code stays inside its document and leaves file controls reachable', a
   expect(await hitTarget(preview)).toBe(true);
 });
 test('Markdown preview reads unsaved edits and preserves editor undo and redo', async ({
+  server: fixture,
   page,
 }) => {
   await openFile(page);
@@ -151,12 +150,14 @@ test('a narrow skill dialog shows a readable document and can return to its list
     .toBeGreaterThan(8);
   await dialog
     .locator('.skill-entry')
-    .filter({ hasText: 'ui-design' })
+    .filter({ hasText: 'development' })
     .getByRole('button')
     .first()
     .click();
   const document = dialog.locator('.skill-document');
-  await expect(document.getByRole('heading', { name: 'UI design', exact: true })).toBeVisible();
+  await expect(
+    document.getByRole('heading', { name: 'Software development', exact: true })
+  ).toBeVisible();
   expect((await document.boundingBox().then(required)).width).toBeGreaterThan(280);
   await dialog.getByRole('button', { name: '스킬 목록으로', exact: true }).click();
   await expect(dialog.getByRole('textbox', { name: '스킬 검색', exact: true })).toBeVisible();

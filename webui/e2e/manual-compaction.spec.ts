@@ -1,12 +1,15 @@
 // Purpose: Verify a manual compaction command submits a summary-only task for the open conversation.
 // Pattern: Browser workflow test over the real native API.
-// Usage: MECA_UI_DESCRIPTOR points at the isolated Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/pages/workspace/model/commands.ts, webui/e2e/fixture.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, input, send, test } from '#e2e/fixture';
+import { connectBrowser, create, input, send, test } from '#e2e/fixture';
 
-test('manual compaction keeps the short conversation visible after reload', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('manual compaction keeps the short conversation visible after reload', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
   await create(page);
   const original = 'Remember that the selected folder is blue.';
   await send(page, original);

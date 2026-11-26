@@ -1,19 +1,17 @@
 // Purpose: Verify byte admission, IME transactions and bounded large-document browser editing.
 // Pattern: Native editor regression contracts against the isolated engine fixture.
-// Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json bun run test:e2e editor-boundaries.spec.ts.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/src/shared/ui/code-editor/index.tsx, webui/patches/react-simple-code-editor@0.14.1.patch.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 const limit = 2 * 1024 * 1024;
 const source = 'const answer = 42;\nconst result = answer';
 const large = '// bounded source line\n'.repeat(44000);
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ page, server: fixture }) => {
   for (const [name, text] of Object.entries({
     'boundary-limit.txt': 'x'.repeat(limit - 1),
     'boundary-ime.js': source,
@@ -21,8 +19,6 @@ test.beforeAll(async () => {
     'boundary-mode.js': `// ${'x'.repeat(96)}\n`.repeat(655),
   }))
     await writeFile(join(fixture.projectA, name), text);
-});
-test.beforeEach(async ({ page }) => {
   await connectBrowser(page, fixture);
   const previous = page.url();
   await page
@@ -51,6 +47,7 @@ async function end(input: ReturnType<Page['getByRole']>) {
 const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 test('two-MiB edits save successfully and excess paste leaves text and undo intact', async ({
+  server: fixture,
   page,
 }) => {
   const input = await open(page, 'boundary-limit.txt');

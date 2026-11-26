@@ -1,27 +1,14 @@
 // Purpose: Verify attachment menu behavior and image paste/drop routing.
 // Pattern: Browser-to-Go behavior contracts with isolated model fixtures.
-// Usage: MECA_UI_DESCRIPTOR points to the opt-in Go browser fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: webui/e2e/fixture.ts, cmd/meca/ui_browser_test.go.
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import {
-  type BrowserFixture,
-  browserFixture,
-  connectBrowser,
-  create,
-  input,
-  required,
-  send,
-  test,
-} from '#e2e/fixture';
+import { connectBrowser, create, input, required, send, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
-test.beforeAll(async () => {
-  fixture = await browserFixture();
-});
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, server: fixture }) => {
   await connectBrowser(page, fixture);
 });
 test('an empty conversation has one composer with an upward image and skill menu', async ({
@@ -59,6 +46,7 @@ test('an empty conversation has one composer with an upward image and skill menu
 });
 
 test('composer accepts image drops and native and explicit clipboard shortcuts without duplicate attachment', async ({
+  server: fixture,
   page,
 }) => {
   await create(page);

@@ -1,27 +1,26 @@
 //go:build !tui
 
 // Purpose: Serve real embedded UI and project runtimes against a credential-free local model fixture.
-// Pattern: Opt-in browser integration fixture.
-// Usage: MECA_UI_DESCRIPTOR=/tmp/task/connection.json go test ./cmd/meca -run TestUIBrowserFixture -v.
-// Related: cmd/meca/ui_provider_test.go, webui/e2e/workspace.spec.ts.
+// Pattern: Test-owned browser integration server.
+// Usage: Playwright starts one instance per test and stops it with SIGTERM.
+// Related: cmd/meca/ui_provider_test.go, webui/e2e/browser-server.ts.
 package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
-	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/keonho-kim/meca/internal/agent/model"
 	"github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/commands/startup"
@@ -84,6 +83,7 @@ func TestUIBrowserFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	provider := uiProvider(t, home)
+	cfg.Language = "ko"
 	cfg.Model = &config.SavedModel{Provider: connection.VLLM, Endpoint: provider.URL, Name: "fixture-model"}
 	cfg.Workspaces = []string{projectB}
 	if err := config.Save(state, cfg); err != nil {
@@ -108,26 +108,8 @@ func TestUIBrowserFixture(t *testing.T) {
 	if err := archived.Close(); err != nil {
 		t.Fatal(err)
 	}
-	// Each browser owns a mutable long conversation; search fixtures stay immutable.
-	scrollSessions := make([]string, 0, 3)
-	for range 3 {
-		store, err := sessions.Create(t.Context(), projectA, projectA)
-		if err != nil {
-			t.Fatal(err)
-		}
-		id := store.Session().ID
-		err = store.Commit(t.Context(), id, records)
-		closeErr := store.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if closeErr != nil {
-			t.Fatal(closeErr)
-		}
-		scrollSessions = append(scrollSessions, id)
-	}
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(t.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	log := &uiFixtureLog{ready: make(chan string, 1)}
 	sink, err := diagnostics.New(diagnostics.Options{Writer: log, Level: slog.LevelDebug, Redact: func(s string) string { return s }, Interrupt: func() error { return nil }})
 	if err != nil {
@@ -138,60 +120,44 @@ func TestUIBrowserFixture(t *testing.T) {
 	mode := startup.Mode{Project: projectA, Display: projectA, Server: true, ServerOptions: startup.ServerOptions{UI: true, Listen: "127.0.0.1:0", Protocol: "sse", Concurrency: 4}}
 	mode.ServerOptions.Certificate = os.Getenv("MECA_UI_CERTIFICATE")
 	mode.ServerOptions.Key = os.Getenv("MECA_UI_KEY")
-	done := make(chan error, 1)
-	go func() { done <- runServer(ctx, mode, cfg, home, state, sessions, nil) }()
+	done := make(chan struct{})
+	var serverErr error
+	go func() {
+		defer close(done)
+		serverErr = runServer(ctx, mode, cfg, home, state, sessions, nil)
+	}()
+	defer func() {
+		stop()
+		<-done
+		if serverErr != nil {
+			t.Error(serverErr)
+		}
+	}()
 	var address string
 	select {
 	case address = <-log.ready:
-	case err := <-done:
-		t.Fatal(err)
+	case <-done:
+		t.Fatal("UI server stopped before publishing its address")
+	case <-ctx.Done():
+		return
 	case <-time.After(15 * time.Second):
 		t.Fatal("UI listener did not become ready")
 	}
-	watcher, err := fsnotify.NewWatcher()
+	data, err := json.Marshal(map[string]string{"url": address, "tokenFile": filepath.Join(state, "server.token"), "projectA": projectA, "projectB": projectB, "home": home, "provider": provider.URL, "archiveSession": archiveID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer watcher.Close()
-	if err := watcher.Add(filepath.Dir(descriptor)); err != nil {
+	if err := os.WriteFile(descriptor+".tmp", data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	data, err := json.Marshal(map[string]any{"scrollSessions": scrollSessions, "url": address, "tokenFile": filepath.Join(state, "server.token"), "projectA": projectA, "projectB": projectB, "home": home, "provider": provider.URL, "archiveSession": archiveID})
-	if err != nil {
+	if err := os.Rename(descriptor+".tmp", descriptor); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(descriptor, data, 0600); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(descriptor)
-	stop := descriptor + ".stop"
-	deadline := time.NewTimer(45 * time.Minute)
-	defer deadline.Stop()
-	for {
-		select {
-		case <-watcher.Events:
-			if _, err := os.Stat(stop); err == nil {
-				cancel()
-				_ = os.Remove(stop)
-				if err := <-done; err != nil {
-					t.Fatal(err)
-				}
-				return
-			}
-		case err := <-watcher.Errors:
-			t.Fatal(err)
-		case err := <-done:
-			t.Fatal("UI stopped before the browser completed:", err)
-		case <-deadline.C:
-			cancel()
-			if err := <-done; err != nil {
-				t.Fatal(err)
-			}
-			return
-		case <-ctx.Done():
-			return
+	select {
+	case <-ctx.Done():
+	case <-done:
+		if ctx.Err() == nil {
+			t.Fatal("UI server stopped before browser teardown")
 		}
 	}
 }
-
-var _ io.Writer = (*uiFixtureLog)(nil)

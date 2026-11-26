@@ -1,29 +1,14 @@
 // Purpose: Verify stream-follow controls, chronological recovery and concise approvals in the browser.
 // Pattern: Controlled native fixture and explicit snapshot rendering contracts.
-// Usage: MECA_UI_DESCRIPTOR points to the isolated embedded server.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_burst_provider_test.go, webui/src/pages/workspace/model/live-timeline.ts.
 import { expect } from '@playwright/test';
-import { browserFixture, connectBrowser, create, required, rpc, send, test } from '#e2e/fixture';
-
-test.afterEach(async ({ page }) => {
-  const parts = new URL(page.url()).pathname.split('/');
-  if (!parts[3] || !parts[5]) return;
-  await page.unroute('**/v1/command');
-  const fixture = await browserFixture();
-  const tasks =
-    (await rpc(page, { listTasks: { sessionId: parts[5] } }, parts[3])).tasks?.items ?? [];
-  for (const task of tasks) {
-    if (!task.id || ['answered', 'stopped', 'interrupted'].includes(task.status ?? '')) continue;
-    await page.request.post(`${fixture.url}/v1/workspaces/${parts[3]}/tasks/${task.id}/cancel`, {
-      headers: { 'X-Meca-UI': '1', Origin: fixture.url },
-    });
-  }
-});
+import { connectBrowser, create, rpc, send, test } from '#e2e/fixture';
 
 test('automatic streaming never flashes the jump button, while reading history exposes it', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await create(page);
@@ -74,9 +59,9 @@ test('automatic streaming never flashes the jump button, while reading history e
 });
 
 test('snapshot tool and skill entries stay between their neighboring generations', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
   await connectBrowser(page, fixture);
   await create(page);
   await send(page, 'HOLD_FIXTURE ordered recovery');
@@ -172,8 +157,11 @@ test('snapshot tool and skill entries stay between their neighboring generations
   await page.getByRole('button', { name: '작업 중지', exact: true }).click();
 });
 
-test('approval shows reasons first and fetches the original only on request', async ({ page }) => {
-  await connectBrowser(page, await browserFixture());
+test('approval shows reasons first and fetches the original only on request', async ({
+  page,
+  server: fixture,
+}) => {
+  await connectBrowser(page, fixture);
   await create(page);
   let reads = 0;
   await page.route('**/v1/command', async (route) => {
@@ -197,12 +185,10 @@ test('approval shows reasons first and fetches the original only on request', as
 });
 
 test('virtual history and rejected tools never release following during reasoning handoff', async ({
+  server: fixture,
   page,
 }) => {
-  const fixture = await browserFixture();
-  const session = required(
-    fixture.scrollSessions[['chromium', 'firefox', 'webkit'].indexOf(test.info().project.name)]
-  );
+  const session = fixture.archiveSession;
   await connectBrowser(page, fixture);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const workspace = (await rpc(page, { listWorkspaces: {} })).workspaces!.defaultId!;

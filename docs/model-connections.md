@@ -24,7 +24,7 @@ OpenAI·Claude·Gemini는 공급자의 API Key를 사용한다. 인증이 설정
 
 설정 화면은 저장된 Thinking·강도 또는 서버가 공개한 기본값을 표시한다. 확인된 기본값은 구체적인 ON/OFF·강도로 표시하고, 공개되지 않은 값만 DEFAULT로 둔다. DEFAULT는 think·reasoning·reasoning_effort·chat_template_kwargs의 해당 제어 필드 생략을 뜻한다. 역할별 temperature·출력 예산·컨텍스트 예산은 [설정 문서](configuration.md)의 독립된 설정이다.
 
-연결 준비는 메타데이터를 조회하고 클라이언트를 구성한다. [이미지 입력](images.md)의 지원 정보가 없는 OpenRouter 외 모델에는 작은 PNG로 입력 수용을 검사한다. 일반 응답과 Thinking 진단은 !model → 연결 진단 또는 meca --diagnose에서 수행한다. 메타데이터 조회 실패는 원인을 남기고 일반 연결을 준비하며 사용자 취소는 즉시 전파한다.
+연결 준비는 메타데이터를 조회하고 클라이언트를 구성한다. [이미지 입력](images.md)의 지원 정보가 없는 OpenRouter 외 모델에는 작은 PNG로 입력 수용을 검사한다. 일반 응답과 Thinking 진단은 !model → 연결 진단 또는 [CLI 진단](cli.md#모델-연결-진단)으로 수행한다. 메타데이터 조회 실패는 원인을 남기고 일반 연결을 준비하며 사용자 취소는 즉시 전파한다.
 
 ## OpenAI, Claude, Gemini
 

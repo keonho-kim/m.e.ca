@@ -1,27 +1,23 @@
 // Purpose: Verify one right-side file list, direct editing and wrapped Markdown code blocks.
 // Pattern: Browser-to-engine file workflow contracts.
-// Usage: Run with MECA_UI_DESCRIPTOR against the isolated embedded UI fixture.
+// Usage: Run through the Playwright browser suite.
 // Related: cmd/meca/ui_browser_test.go, webui/src/pages/workspace/ui/files/files.tsx.
 
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect } from '@playwright/test';
-import { type BrowserFixture, browserFixture, connectBrowser, required, test } from '#e2e/fixture';
+import { connectBrowser, required, test } from '#e2e/fixture';
 
-let fixture: BrowserFixture;
 const filename = 'inline-edit.md';
 const source =
   '# Click to edit\n\nCurrent document.\n\n```text\n' +
   'unbrokenIdentifier_'.repeat(100) +
   '\n```\n';
-test.beforeAll(async () => {
-  fixture = await browserFixture();
+test.beforeEach(async ({ page, server: fixture }) => {
   await writeFile(join(fixture.projectA, filename), source);
   await mkdir(join(fixture.projectA, 'files-one', 'nested'), { recursive: true });
   await writeFile(join(fixture.projectA, 'files-one', 'nested', 'inside.txt'), 'Nested file');
   await writeFile(join(fixture.projectA, 'large-readonly.txt'), 'bounded text\n'.repeat(200000));
-});
-test.beforeEach(async ({ page }) => {
   await connectBrowser(page, fixture);
   await expect(page.getByRole('navigation', { name: '워크스페이스', exact: true })).toBeVisible();
   const previous = page.url();
@@ -65,6 +61,7 @@ test('folder navigation keeps one file list to the right of the document', async
   await expect(listing.getByRole('button', { name: 'nested', exact: true })).toBeVisible();
 });
 test('selecting a file edits directly and clicking Markdown preview restores focused Raw editing', async ({
+  server: fixture,
   page,
 }) => {
   await page.getByRole('button', { name: filename, exact: true }).click();
@@ -114,6 +111,7 @@ test('a long unbroken code token wraps inside the Markdown preview', async ({ pa
   expect(measure.right).toBeLessThanOrEqual(measure.width);
 });
 test('oversized files retain bounded read-only viewing without an edit action', async ({
+  server: fixture,
   page,
 }) => {
   await page.getByRole('button', { name: 'large-readonly.txt', exact: true }).click();
@@ -136,7 +134,10 @@ test('oversized files retain bounded read-only viewing without an edit action', 
   );
 });
 
-test('entry menus add references, rename, drag into a folder and delete', async ({ page }) => {
+test('entry menus add references, rename, drag into a folder and delete', async ({
+  page,
+  server: fixture,
+}) => {
   const directory = 'drag-destination';
   const source = 'drag-source.txt';
   const renamed = 'drag-renamed.txt';

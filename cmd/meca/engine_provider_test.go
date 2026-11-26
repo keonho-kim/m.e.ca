@@ -1,4 +1,4 @@
-//go:build !tui
+//go:build !tui && engineworkload
 
 // Purpose: Supply deterministic native streaming model/tool responses for the complete engine workload.
 // Pattern: Loopback-only provider fixture with bounded request consumption.

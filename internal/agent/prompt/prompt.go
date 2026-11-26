@@ -1,7 +1,7 @@
-// Purpose: Combine system principles, development guidance and project instructions.
+// Purpose: Combine the selected system prompt with project instructions.
 // Pattern: Pure Function.
 // Usage: The run owner supplies one project instruction snapshot.
-// Related: internal/agent/prompt/prompt_test.go, internal/agent/run/context.go.
+// Related: internal/agent/prompt/prompt_test.go, internal/agent/run/start.go, internal/tools/local/instructions.go.
 package prompt
 
 import (
@@ -32,16 +32,4 @@ func checkInstructions(instructions string) error {
 		return faults.Errorf(diagcatalog.PromptProjectAGENTSMdExceedsTheInstructionLimit)
 	}
 	return nil
-}
-
-// Work combines system and development guidance with project constraints.
-func Work(common, development, instructions string) (string, error) {
-	if err := CheckTemplate(development); err != nil {
-		return "", err
-	}
-	text, err := Compose(common, instructions)
-	if err != nil {
-		return "", err
-	}
-	return text + "\n\n" + development, nil
 }
