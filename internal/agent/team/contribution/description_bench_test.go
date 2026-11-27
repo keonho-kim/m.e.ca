@@ -5,7 +5,6 @@
 package contribution
 
 import (
-	"crypto/sha256"
 	"strings"
 	"testing"
 )
@@ -24,18 +23,5 @@ func BenchmarkDescribe(b *testing.B) {
 				Describe(source)
 			}
 		})
-	}
-}
-
-func TestDescriptionFingerprintsCoverAllAcceptedText(t *testing.T) {
-	for _, size := range []int{0, 4096, 4097, 16384, 20000, 1 << 20} {
-		text := strings.Repeat("a", size)
-		value := Describe(Scope{Summary: text, Contract: text + "tail"})
-		if value.summaryHash != sha256.Sum256([]byte(text)) || value.contractHash != sha256.Sum256([]byte(text+"tail")) {
-			t.Fatalf("incorrect fingerprint at %d bytes", size)
-		}
-		if len(value.Summary) > 4096 || len(value.Contract) > 4096 {
-			t.Fatal("retained input was not bounded")
-		}
 	}
 }

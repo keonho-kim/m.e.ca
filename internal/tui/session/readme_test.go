@@ -17,6 +17,8 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	requestinput "github.com/keonho-kim/meca/internal/commands/input"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -27,13 +29,9 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 	a := fixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	a.ctx, a.settings.Scope = ctx, policy.System
-	if _, err := os.Stat(filepath.Join(a.opts.Session.ProjectRoot, "AGENTS.md")); !os.IsNotExist(err) {
-		t.Fatalf("expected no project instructions: %v", err)
-	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Messages []modelapi.Message
-			Tools    []struct{ Function struct{ Name string } }
 		}
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			t.Error(err)
@@ -59,8 +57,7 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			code, _ := json.Marshal(map[string]string{"code": "return await tools." + toolName + "(" + string(encoded) + ");"})
-			message = map[string]any{"tool_calls": []any{map[string]any{"id": fmt.Sprintf("call_%d", len(request.Messages)), "type": "function", "function": map[string]any{"name": "codemode", "arguments": string(code)}}}}
+			message = map[string]any{"tool_calls": modeltest.ChatCalls([]toolapi.Call{{ID: fmt.Sprintf("call_%d", len(request.Messages)), Name: toolName, Arguments: encoded}})}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}}); err != nil {

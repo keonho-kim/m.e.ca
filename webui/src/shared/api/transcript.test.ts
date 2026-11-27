@@ -49,7 +49,7 @@ test('history rejects hybrid rows, wrong numbers and incompatible terminal bodie
   for (const bad of [
     { ...row, message: { role: 'assistant', text: 'mixed' } },
     { ...row, event: { kind: 'team_work', work: { summary: 'mixed' } } },
-    { ...row, text: 'legacy free text' },
+    { ...row, text: 'untyped free text' },
     { ...row, completion: { ...completion, reason: 'free reason' } },
     { ...row, completion: { status: 'AGENT_TEXT' } },
     {

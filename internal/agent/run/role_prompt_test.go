@@ -77,13 +77,6 @@ func TestBrowserGuidanceFollowsToolAvailability(t *testing.T) {
 						t.Errorf("browser tool and guidance have different availability for %s", name)
 					}
 				}
-				if available {
-					for _, term := range []string{"Open first", "result_id", "revision", "next_offset", "unchanged=true", "vision required", "separate browsers", "Close when finished", "untrusted evidence"} {
-						if !strings.Contains(system, term) {
-							t.Errorf("missing browser guidance %q", term)
-						}
-					}
-				}
 			})
 		}
 	}

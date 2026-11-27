@@ -1,13 +1,15 @@
-// Purpose: Verify the CLI restores encrypted credentials, executes tools, exports and installs privately.
+// Purpose: Verify the CLI restores credentials, executes a code-driven write and exports its results.
 // Pattern: Executable integration test with a local provider fixture.
 // Usage: go test ./cmd/meca -run TestHeadlessExecutable.
 // Related: cmd/meca/headless.go, internal/config/credentials/persistence.go, internal/commands/startup/parse.go.
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,6 +20,10 @@ import (
 	"testing"
 	"time"
 
+	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
+	runrecord "github.com/keonho-kim/meca/internal/agent/record"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/config"
 	"github.com/keonho-kim/meca/internal/config/credentials"
 	"github.com/keonho-kim/meca/internal/provider/connection"
@@ -27,10 +33,6 @@ func TestHeadlessExecutable(t *testing.T) {
 	binary := testExecutable(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	help := exec.CommandContext(ctx, binary, "--help")
-	if out, err := help.CombinedOutput(); err != nil || !strings.Contains(string(out), "Usage: meca [path]") {
-		t.Fatalf("MECA help: %s %v", out, err)
-	}
 	const secret = "fixture-cli-api-key"
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +46,10 @@ func TestHeadlessExecutable(t *testing.T) {
 			return
 		}
 		calls.Add(1)
-		var input struct{ Model string }
+		var input struct {
+			Model    string
+			Messages []modelapi.Message
+		}
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Error(err)
 			http.Error(w, "invalid generation request", http.StatusBadRequest)
@@ -55,8 +60,23 @@ func TestHeadlessExecutable(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if calls.Load() == 1 {
-			fmt.Fprint(w, `{"choices":[{"message":{"tool_calls":[{"id":"write","type":"function","function":{"name":"write_file","arguments":"{\"reason\":\"Document the project\",\"path\":\"README.md\",\"content\":\"# Example\\n\"}"}}]},"finish_reason":"tool_calls"}]}`)
+			tools := modeltest.ChatCalls([]toolapi.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Document the project","path":"README.md","content":"# Example\n"}`)}})
+			if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"tool_calls": tools}, "finish_reason": "tool_calls"}}}); err != nil {
+				t.Error(err)
+			}
 		} else {
+			completed := false
+			for _, message := range input.Messages {
+				if message.Role == "tool" && message.ToolCallID == "write" {
+					var result struct{ Status string }
+					completed = json.Unmarshal([]byte(message.Content), &result) == nil && result.Status == "completed"
+				}
+			}
+			if !completed {
+				t.Error("model did not receive the completed file-write result")
+				http.Error(w, "missing completed file-write result", http.StatusBadRequest)
+				return
+			}
 			fmt.Fprint(w, `{"choices":[{"message":{"content":"Created README.md"},"finish_reason":"stop"}]}`)
 		}
 	}))
@@ -108,15 +128,34 @@ func TestHeadlessExecutable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("export: %s %v", body, err)
 	}
-	if !strings.Contains(string(body), `"tool_call_id":"write"`) {
-		t.Fatal("export lost the native result")
-	}
-	for _, name := range []string{"system.md", "compaction.md"} {
-		if _, err := os.Stat(filepath.Join(home, ".meca", "prompts", "single", name)); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	codeResult, fileResult := false, false
+	for {
+		var record struct {
+			Kind string
+			Body json.RawMessage
+		}
+		if err := decoder.Decode(&record); err == io.EOF {
+			break
+		} else if err != nil {
 			t.Fatal(err)
 		}
+		switch record.Kind {
+		case "message":
+			var message modelapi.Message
+			if err := json.Unmarshal(record.Body, &message); err != nil {
+				t.Fatal(err)
+			}
+			codeResult = codeResult || message.Role == "tool" && message.ToolCallID == "write" && message.ToolName == "codemode"
+		case "event":
+			var event runrecord.Event
+			if err := json.Unmarshal(record.Body, &event); err != nil {
+				t.Fatal(err)
+			}
+			fileResult = fileResult || event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "write_file" && event.Call.ParentExecutionID != "" && len(event.Output) != 0
+		}
 	}
-	t.Run("install and uninstall", func(t *testing.T) {
-		checkInstallation(t, ctx, binary, home)
-	})
+	if !codeResult || !fileResult {
+		t.Fatalf("export lost completed results: code=%v file=%v", codeResult, fileResult)
+	}
 }

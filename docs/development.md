@@ -99,7 +99,7 @@ go list -tags=tui,godbus_no_tcp -deps ./cmd/meca
 ```sh
 export GOFLAGS='-tags=godbus_no_tcp'
 gofmt -l cmd internal scripts
-go test -short ./...
+go test ./...
 go vet ./...
 go tool -modfile=devtools/go.mod staticcheck ./...
 go -C devtools run ./cmd/diagnosticscheck -C=.. ./...
@@ -109,7 +109,11 @@ go mod verify
 
 의존성 변경은 `govulncheck ./...`도 확인한다. 작은 결정적 fixture·`t.TempDir`·`httptest`를 사용하고 실제 자격 증명·사용자 프로젝트·유료 모델에 의존하지 않는다. 실패·취소·저장 불확실·중복 요청을 성공 경로와 함께 검증한다.
 
-`go test -short ./...`는 패키지 기능·API 계약과 오프라인 소스 설치 스크립트 검사를 실행한다. Provider 재시도 대기는 가상 시간으로 검증할 수 있고, 스트림의 실제 순서와 연결 수명은 로컬 HTTP 연결로 확인한다. 플랫폼 실행과 브라우저 필수 시나리오는 릴리스의 별도 단계에서 실행한다.
+`go test ./...`는 패키지 기능·API 계약과 실제 CLI의 파일 작업·내보내기·설치·업그레이드를 검증한다. 빠른 반복 검사용 `go test -short ./...`는 실행파일과 일부 설치 검사를 생략한다. 모델 도구 계약·CLI·설치·배포를 바꿀 때는 생략 없는 기본 명령과 `GOFLAGS=-tags=godbus_no_tcp,tui go test ./cmd/meca ./internal/commands/startup`을 실행한다. Provider 재시도 대기는 가상 시간으로 검증하고, 스트림의 실제 순서와 연결 수명은 로컬 HTTP 연결로 확인한다. Linux 마운트와 브라우저 시나리오는 아래의 별도 실행 절차를 따른다.
+
+테스트는 현재 기능의 입력·출력·부작용·실패·보존 계약을 담당 패키지에서 검증한다. 삭제된 기능의 부재, 내부 계산식이나 고정된 항목 수만 확인하는 검사는 추가하지 않는다. 승인 거부 시 파일 보존, 제거 명령의 실제 정리, 취소 후 자원 해제는 기능 계약으로 검증한다.
+
+모델을 포함한 실행 테스트는 `internal/agent/modeltest`의 Code Mode 호출 fixture를 공유하고, Provider 전송 형식 자체를 검사하는 테스트는 각 프로토콜의 직접 fixture를 사용한다. 공통 실행 의존성은 `*_fixture_test.go`, 측정 코드는 `*_bench_test.go`에 두며 설치·삭제 검증은 모델 요청 테스트와 독립적으로 실행한다. 프론트 단위 테스트는 대응하는 상태·API·이력 변환 모듈 옆에 두고, 실제 브라우저 흐름은 `webui/e2e`에서 검증한다.
 
 서버 계약을 바꾸면 `api/meca/v1`의 원본과 Go·TypeScript 바인딩을 함께 갱신한다. 생성 명령은 [서버 계약](server.md#개발과-생성)을 따른다. 생성 코드를 직접 수정하지 않는다.
 

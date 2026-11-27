@@ -1,4 +1,4 @@
-// Purpose: Build one CLI fixture lazily and remove it after the executable integration tests finish.
+// Purpose: Build the selected CLI distribution once and remove it after executable tests finish.
 // Pattern: Package-owned test resource.
 // Usage: CLI integration tests call testExecutable before starting isolated subprocesses.
 // Related: cmd/meca/headless_test.go, cmd/meca/terminal_test.go, cmd/meca/install_shell_test.go.
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/keonho-kim/meca/internal/diagnostics"
+	"github.com/keonho-kim/meca/internal/distribution"
 )
 
 var cliBuild struct {
@@ -51,7 +52,11 @@ func testExecutable(t *testing.T) string {
 		cliBuild.path = filepath.Join(cliBuild.dir, "meca")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		if out, err := exec.CommandContext(ctx, "go", "build", "-o", cliBuild.path, ".").CombinedOutput(); err != nil {
+		tags := "godbus_no_tcp"
+		if distribution.Name == distribution.TUI {
+			tags += ",tui"
+		}
+		if out, err := exec.CommandContext(ctx, "go", "build", "-tags="+tags, "-o", cliBuild.path, ".").CombinedOutput(); err != nil {
 			cliBuild.err = fmt.Errorf("build CLI fixture: %w\n%s", err, out)
 		}
 	})

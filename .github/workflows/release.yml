@@ -46,8 +46,7 @@ jobs:
         env:
           GOFLAGS: -tags=godbus_no_tcp,tui
         run: |
-          go test -short ./cmd/meca ./internal/commands/startup
-          go test ./cmd/meca -run '^TestTUIExecutable$'
+          go test ./cmd/meca ./internal/commands/startup
           go vet ./cmd/meca ./internal/commands/startup
           go list -deps ./cmd/meca > "$RUNNER_TEMP/meca-tui-deps.txt"
           if grep -Eq 'meca/internal/(commands/server|serverapi|webui)(/|$)' "$RUNNER_TEMP/meca-tui-deps.txt"; then
@@ -79,7 +78,7 @@ jobs:
         env:
           GOFLAGS: -tags=godbus_no_tcp
         run: |
-          go test ./cmd/meca ./internal/commands/upgrade -run '^Test(.*Executable|InstallWithBrowserKeepsBaseOnExtensionFailure|ServerStartupOutputFailure|ServerBindFailureDoesNotPrintToken|BrowserLaunchFailureIsWarning|UpgradeInstallsReleaseAndRefreshesPrompts)$'
+          go test ./cmd/meca ./internal/commands/upgrade
           sh scripts/install/test-linux.sh
 
       - name: Verify required browser scenarios

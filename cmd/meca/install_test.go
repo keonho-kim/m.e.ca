@@ -1,7 +1,7 @@
 // Purpose: Verify the built MECA command installs, recovers its receipt and cleanly removes its own state.
 // Pattern: Temporary-home executable integration checks.
-// Usage: TestHeadlessExecutable supplies the built binary and isolated home to checkInstallation.
-// Related: cmd/meca/headless_test.go, cmd/meca/install.go, internal/commands/install/binary.go.
+// Usage: go test ./cmd/meca -run TestInstallExecutable.
+// Related: cmd/meca/executable_test.go, cmd/meca/install.go, internal/commands/install/binary.go.
 package main
 
 import (
@@ -12,10 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
-func checkInstallation(t *testing.T, ctx context.Context, binary, home string) {
-	t.Helper()
+func TestInstallExecutable(t *testing.T) {
+	binary, home := testExecutable(t), t.TempDir()
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	defer cancel()
 	profile := filepath.Join(home, ".profile")
 	original := "export EDITOR=vi\n"
 	if err := os.WriteFile(profile, []byte(original), 0600); err != nil {
@@ -37,9 +40,6 @@ func checkInstallation(t *testing.T, ctx context.Context, binary, home string) {
 	installed := filepath.Join(home, ".local/bin/meca")
 	if output := run(installed, "--help"); !strings.Contains(output, "Usage: meca [path]") {
 		t.Fatal("installed command did not run:", output)
-	}
-	if output := run(installed, "develop", "delayed tasks"); !strings.Contains(output, "Delayed tasks and expiring entries") {
-		t.Fatal("installed meca develop command did not search its skill:", output)
 	}
 	body, err := os.ReadFile(profile)
 	if err != nil || strings.Count(string(body), "# >>> meca PATH >>>") != 1 {

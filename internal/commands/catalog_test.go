@@ -18,13 +18,17 @@ func TestCompactionBrowserCommand(t *testing.T) {
 
 func TestCommandSuggestions(t *testing.T) {
 	all := Suggestions("!", describeCommand)
-	if len(all) != 9 {
-		t.Fatalf("commands = %v", all)
-	}
+	seen := make(map[string]bool)
 	for _, suggestion := range all {
 		command, err := Parse(suggestion.Name)
-		if err != nil || command.Kind == Message || suggestion.Description == "" {
+		if err != nil || command.Kind == Message || suggestion.Description == "" || seen[suggestion.Name] {
 			t.Fatalf("unusable suggestion: %+v, %v", suggestion, err)
+		}
+		seen[suggestion.Name] = true
+	}
+	for _, name := range []string{"!new", "!model", "!permission", "!team", "!language", "!dir", "!skills", "!compact", "!quit"} {
+		if !seen[name] {
+			t.Fatalf("supported command is not discoverable: %s", name)
 		}
 	}
 	filtered := Suggestions("!mo", describeCommand)

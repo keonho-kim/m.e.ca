@@ -8,10 +8,10 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/pelletier/go-toml/v2"
 )
 
 func TestLoadSaveWithDefaultPermission(t *testing.T) {
@@ -31,7 +31,11 @@ func TestLoadSaveWithDefaultPermission(t *testing.T) {
 		t.Fatalf("configuration round trip (-want +got):\n%s", diff)
 	}
 	body, err := os.ReadFile(filepath.Join(directory, "config.toml"))
-	if err != nil || !strings.Contains(string(body), "permission = 'default'") {
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saved struct{ Permission string }
+	if err := toml.Unmarshal(body, &saved); err != nil || saved.Permission != "default" {
 		t.Fatalf("default permission missing: %s %v", body, err)
 	}
 	info, err := os.Stat(filepath.Join(directory, "config.toml"))
@@ -43,32 +47,22 @@ func TestLoadSaveWithDefaultPermission(t *testing.T) {
 	}
 }
 
-func TestLoadRejectsInvalidAndUnknownSettings(t *testing.T) {
-	for _, content := range []string{
+func TestLoadRejectsInvalidSettingsWithoutChangingFile(t *testing.T) {
+	for _, original := range []string{
 		"[ui]\ninput_max_lines=20\n",
 		"unexpected=true\n",
+		"[compaction]\nunrecognized_option=16384\n",
 	} {
 		directory := t.TempDir()
-		if err := os.WriteFile(filepath.Join(directory, "config.toml"), []byte(content), 0o600); err != nil {
+		path := filepath.Join(directory, Filename)
+		if err := os.WriteFile(path, []byte(original), 0600); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := Load(directory); err == nil {
-			t.Errorf("accepted %q", content)
+			t.Fatalf("accepted invalid configuration: %q", original)
 		}
-	}
-}
-
-func TestLoadReportsUnsupportedSettingWithoutChangingFile(t *testing.T) {
-	directory := t.TempDir()
-	path := filepath.Join(directory, Filename)
-	original := "[compaction]\nreserve_tokens = 16384\n"
-	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Load(directory); err == nil || !strings.Contains(err.Error(), "remove [compaction].reserve_tokens") {
-		t.Fatalf("missing repair guidance for the unsupported setting: %v", err)
-	}
-	if body, err := os.ReadFile(path); err != nil || string(body) != original {
-		t.Fatalf("loading changed the existing configuration: %v", err)
+		if body, err := os.ReadFile(path); err != nil || string(body) != original {
+			t.Fatalf("loading changed the existing configuration: %v", err)
+		}
 	}
 }

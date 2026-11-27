@@ -81,3 +81,19 @@ test('stored steer removes its live echo without hiding an identical later instr
     )
   ).toEqual([second]);
 });
+
+test('a saved batch member owns its live siblings and preserves unrelated work', () => {
+  const first: EventJson = {
+    ...started,
+    tool: { ...started.tool, batchId: 'wave' },
+  };
+  const second: EventJson = {
+    ...first,
+    tool: { ...first.tool, executionId: 'second' },
+  };
+  const other: EventJson = {
+    ...started,
+    tool: { ...started.tool, executionId: 'other', batchId: 'next' },
+  };
+  expect(liveActivity([first, second, other], [{ event: first }])).toEqual([other]);
+});

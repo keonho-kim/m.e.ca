@@ -146,3 +146,32 @@ func TestConsumedFactsAndReleasedScopesDropReferences(t *testing.T) {
 		t.Fatal("consumed work retained its indexes or projection")
 	}
 }
+
+func TestLongDescriptionsDistinguishChangesBeyondTheirPreview(t *testing.T) {
+	var state State
+	prefix := strings.Repeat("shared declaration ", 3000)
+	source := Scope{Member: "Hana", Summary: prefix + "summary one", Contract: prefix + "contract one"}
+	first, err := state.Prepare(Describe(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.Commit(first, 1)
+	if !state.Matches(Describe(source)) {
+		t.Fatal("same original declaration changed identity")
+	}
+	summary := source
+	summary.Summary = prefix + "summary two"
+	summaryChange := Describe(summary)
+	if summaryChange.Summary != first.Summary || state.Matches(summaryChange) || !state.SameCoordination(summaryChange) {
+		t.Fatal("summary tail change was lost or changed the work contract")
+	}
+	contract := source
+	contract.Contract = prefix + "contract two"
+	contractChange := Describe(contract)
+	if contractChange.Contract != first.Contract || state.Matches(contractChange) || !state.ContractChanged(contractChange) || state.SameCoordination(contractChange) {
+		t.Fatal("contract tail change was lost behind its unchanged preview")
+	}
+	if len(first.Summary) > 4096 || len(first.Contract) > 4096 {
+		t.Fatal("visible descriptions retained the full originals")
+	}
+}

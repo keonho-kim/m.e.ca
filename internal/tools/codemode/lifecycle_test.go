@@ -8,28 +8,23 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync/atomic"
 	"testing"
+
+	"modernc.org/quickjs"
 )
 
-type startupCancellation struct {
-	context.Context
-	checks atomic.Int32
-	cancel context.CancelFunc
-}
-
-func (c *startupCancellation) Err() error {
-	if c.checks.Add(1) == 3 {
-		c.cancel()
-	}
-	return c.Context.Err()
-}
-
 func TestCancellationDuringRuntimeInstallation(t *testing.T) {
-	parent, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	ctx := &startupCancellation{Context: parent, cancel: cancel}
-	_, err := Run(ctx, `return true;`, nil, nil)
+	vm, err := quickjs.NewVM()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer vm.Close()
+	r := &runtime{ctx: ctx, vm: vm, remaining: MaxEvaluationTime}
+	defer r.close()
+	cancel()
+	err = r.install(nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected cancellation, got %v", err)
 	}
