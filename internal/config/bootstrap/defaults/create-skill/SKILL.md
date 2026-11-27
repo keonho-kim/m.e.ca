@@ -11,7 +11,7 @@ Produce a reusable instruction directory for the user's actual workflow. Preserv
 
 Identify what requests should select this skill, what outcome it should produce and which task-specific facts the agent needs. Use the conversation and existing files before asking for missing details.
 
-Inspect relevant installed skills with `list_skills` and `load_skill` before creating a duplicate. For an update, read the current SKILL.md and resources before editing them. Keep instructions that still serve the workflow.
+Inspect relevant installed skills through `tools.list_skills` and `tools.load_skill` inside `codemode` when needed to establish whether a suitable skill already exists. Reuse supplied reads. For an update, read the current SKILL.md and resources before editing them. Keep instructions that still serve the workflow.
 
 Use the user's requested location. Otherwise create a project skill at `<project_root>/.agents/skills/<name>/SKILL.md`. MECA also discovers personal skills at `~/.meca/skills/` and shared skills at `~/.agents/skills/`. Keep writes within the current tool access and approval policy.
 
@@ -42,7 +42,7 @@ Quote YAML values containing special syntax, such as `: ` or `#`. Reject duplica
 
 ## Make the instructions useful
 
-Keep the entrypoint concise. Explain the desired result, decision criteria, non-obvious constraints, relevant tools and how to verify the result. Give concrete input/output examples when they resolve ambiguity. Leave room for judgment when several approaches are valid.
+Keep the entrypoint concise. Explain the desired result, decision criteria, non-obvious constraints, relevant capabilities and how to verify the result. Ground its application in the user's intent and agreed scope. Give examples when they clarify a decision; a particular phrasing or topic should not become a universal trigger. Describe optional workflows as applicable to their purpose rather than an unconditional sequence.
 
 Put selection criteria in the description: the body is read only after selection. Avoid generic advice, repeated policies, hardcoded machine paths and constraints copied from an unrelated example. Include failure handling for the workflow's actual I/O or side effects. A skill must not imply permission to publish, install dependencies or modify unrelated state.
 
@@ -58,8 +58,8 @@ Do not create empty directories, duplicate README files or helper scripts withou
 
 ## Check it in MECA
 
-MECA reads instructions; it does not execute bundled scripts automatically. Use `read_skill_file` for referenced text or assets, and existing execution tools when a requested operation needs a script. `!skills` previews installed skills; `#<name>` explicitly includes one in a request. These are MECA conventions, separate from the portable file format.
+MECA reads instructions; it does not execute bundled scripts automatically. Call `tools.read_skill_file({id, path})` inside `codemode` for needed references, and `tools.execute_command` when the requested operation needs a script. Instruction reads return control with `needs_model`; read the supplied guidance before generating dependent work. `!skills` previews installed skills; `#<name>` explicitly includes one in a request. These MECA conventions are separate from the portable file format.
 
-Load the completed skill with `load_skill` using its directory or SKILL.md `path`. Check that metadata parses and that each referenced file exists and can be read with `read_skill_file`. After editing an installed skill, list it again to check its description and source. If the optional `skills-ref` validator is already available, `skills-ref validate <skill-directory>` provides another format check; it is not a MECA runtime dependency.
+Load the completed skill through `codemode` with `await tools.load_skill({path: "<skill-directory>"})`. Check that metadata parses and references can be read with `tools.read_skill_file` using the returned ID and skill-root-relative paths. After editing an installed skill, list it again to check its description and source. If the optional `skills-ref` validator is already available, `skills-ref validate <skill-directory>` provides another format check; it is not a MECA runtime dependency.
 
 Test the skill against a representative request and inspect whether its instructions lead to the intended result. Run any added scripts in a suitable test workspace. Report the final path, invocation, checks performed and remaining external requirements. Format validation alone does not prove agent behavior or task success.

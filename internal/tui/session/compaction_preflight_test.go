@@ -83,7 +83,11 @@ func TestCompactionUsesPreparedInput(t *testing.T) {
 					return
 				}
 				name, count, reply := "history", tc.input, "Answer"
-				if strings.HasPrefix(body.Messages[0].Content, "# Summarize work for continuation") {
+				var summaryInput struct {
+					NextSource json.RawMessage
+				}
+				isSummary := json.Unmarshal([]byte(body.Messages[1].Content), &summaryInput) == nil && summaryInput.NextSource != nil
+				if isSummary {
 					name, count, reply = "summary", 1500, summary
 					if !strings.Contains(body.Messages[1].Content, old) {
 						t.Error("summary lost its source")

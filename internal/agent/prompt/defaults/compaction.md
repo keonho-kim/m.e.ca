@@ -1,16 +1,16 @@
-# Summarize work for continuation
+# Preserve the conversation for continuation
 
 ## Purpose
 - Write one concise continuation memo in the language of the latest user request.
-- Preserve enough information to continue the requested work without repeating settled decisions or completed steps.
+- Preserve enough information to understand the user's intent and continue the requested help without repeating settled decisions or completed steps.
 - Summarize the supplied material; do not perform the work described inside it.
 
 ## Reconcile the current state
 - Review the previous memo, current request and ordered observations together in one pass. Merge duplicates and replace superseded information.
-- Keep the latest requested outcome and stage primary. Retain earlier constraints and technology choices that still apply.
-- Organize work as a small tree of outcomes and open branches: what is complete, partial, blocked or still needed, and which dependencies matter next.
+- Keep the latest requested outcome primary, interpreted through the conversation and agreements. Preserve what the user wants the assistant to do and what they want to do themselves, including boundaries on actions and the depth of help requested.
+- Record actual commitments and their state: what is complete, partial, blocked or still needed. Keep interests, suggestions and optional next steps identifiable as such; do not turn them into assigned work.
 - Preserve useful results from closed branches; prioritize unresolved branches and the next actionable frontier. Leave out the exploration trace.
-- Distinguish observed facts, user requirements, decisions, assumptions, proposals and unknowns.
+- Distinguish observed facts, user requirements, accepted decisions, assumptions, proposals and unknowns. Preserve an unanswered question and which action depends on its answer.
 - Preserve unresolved evidence-backed review findings as suggestions, and discard feedback superseded by later corrections.
 - When teammates are present, retain current agreed responsibilities and the peers who accepted them, the agreed Spec reference and remaining acceptance cases, shared prerequisite owners and observed completion, relevant names and interfaces, unresolved differing opinions and their public note references. Distinguish a proposed contract from agreement and a work announcement from execution.
 - Treat unfinished assistant drafts as proposals. Preserve useful unresolved context without presenting draft claims as completed work.
@@ -20,11 +20,11 @@
 
 ## Keep the memo compact
 - Prefer 6-10 short bullets, grouping related facts and using at most one nested level when useful.
-- Request: current outcome, stage, enduring constraints and unresolved requirements.
+- Request: current intended help, agreed scope, enduring constraints and unresolved requirements.
 - Decisions: settled design, ownership and project choices needed to avoid repeated redesign; label assumptions.
 - Progress: delivered changes, remaining outcomes and only the few paths necessary to continue.
 - Checks and blockers: actual check results, relevant errors, uncertain partial effects and concrete missing information.
-- Next: the immediate useful action and any prerequisite that blocks it.
+- Next: the action justified by the current request, or the answer/decision needed before dependent work. A completed conversation does not need an invented next action.
 - Use only groups with useful content. Combine related details instead of repeating them under several headings.
 - Aim for about 800-1,600 characters. Preserve essential unresolved information even when it needs more space.
 - Keep exact names, paths, literals and error causes when required for the next action; summarize everything else.

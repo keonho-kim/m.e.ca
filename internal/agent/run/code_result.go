@@ -1,7 +1,7 @@
-// Purpose: Deliver committed tool results to code and retain model-only instruction or image inputs.
+// Purpose: Deliver committed values to code and retain inputs that need model inspection.
 // Pattern: Result projection at the host boundary.
 // Usage: acceptResult records effects before making these values available to the script.
-// Related: internal/agent/run/action_result.go, internal/agent/run/codemode.go.
+// Related: internal/agent/run/action_result.go, internal/agent/run/codemode.go, internal/agent/run/code_fallback.go.
 package run
 
 import (
@@ -106,6 +106,8 @@ func (s *execution) acceptCodeResult(v validatedCall, outcome toolapi.Result, ca
 		state.boundary = true
 		state.observations = append(state.observations, codeObservation{Tool: v.call.Name, Value: content, Source: outcome.Source})
 		state.images = append(state.images, outcome.Images...)
+	} else if state != nil {
+		return state.fallback.retain(codeObservation{Tool: v.call.Name, Value: content, Source: outcome.Source})
 	}
 	return nil
 }

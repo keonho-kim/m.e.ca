@@ -51,7 +51,7 @@ func (e browserPromptTools) Definitions() []toolapi.Definition {
 	return append(e.executor.Definitions(), toolcatalog.Definitions(toolapi.BrowserAction, toolapi.BrowserInspect)...)
 }
 
-func TestBrowserGuidanceFollowsToolAvailability(t *testing.T) {
+func TestBrowserFunctionsFollowToolAvailability(t *testing.T) {
 	for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
 		for _, available := range []bool{false, true} {
 			t.Run(string(profile)+"/installed="+strconv.FormatBool(available), func(t *testing.T) {
@@ -67,14 +67,13 @@ func TestBrowserGuidanceFollowsToolAvailability(t *testing.T) {
 					t.Fatal(err)
 				}
 				request := g.requests[0]
-				system := request.Messages[0].Content
 				for _, name := range []string{toolapi.BrowserAction, toolapi.BrowserInspect} {
 					declared := false
 					for _, definition := range request.Tools {
 						declared = declared || definition.Name == "codemode" && strings.Contains(definition.Description, name+"(args:")
 					}
-					if declared != available || strings.Contains(system, name) != available {
-						t.Errorf("browser tool and guidance have different availability for %s", name)
+					if declared != available {
+						t.Errorf("code function availability differs from the host for %s", name)
 					}
 				}
 			})

@@ -146,7 +146,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			}
 			correctedReply = true
 			notice := diagcatalog.RunRetryInvalidToolCall
-			s.checkpoint.Observation = "Correct the native tool call using the declared schema and continue the task. Validation error: " + s.runner.Redact(askErr.Error())
+			s.checkpoint.Observation = "The previous response contained an invalid tool call. No operations from that response executed. Reconsider the next response from the user's requested outcome; a further tool call is appropriate only if it is still needed. Validation error: " + s.runner.Redact(askErr.Error())
 			if empty {
 				notice = diagcatalog.RunRetryEmptyReply
 				s.checkpoint.Observation = "The previous decision ended without an answer or tool call. Provide the final answer or the native tool call needed for the current task."

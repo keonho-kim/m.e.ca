@@ -18,6 +18,10 @@ tui·full의 단일·팀 실행과 스킬 읽기에 같은 진단·기록 규칙
 
 영속 사건은 저장 확정 뒤 전달한다. 토큰 델타와 heartbeat는 연결 수명의 메시지로 처리한다.
 
+`codemode`와 내부 호스트 호출은 각자의 실행 ID와 결과를 기록한다. 서버 이벤트의 `tool.parentExecutionId`는 내부 호출을 부모 코드 실행에 연결하고, 코드 실행 수와 실제 호스트 실행 수는 별도 통계다. [실행 식별자](server.md#요청-상태와-복원)
+
+Code Mode 원문 결과의 `return_status:undefined`는 반환 누락을 뜻하며 도구 실패를 뜻하지 않는다. 정상 종료 시 `fallback.outputs`의 성공 결과와 잘림 표시를 확인한다. 실행 오류는 `status:error`와 오류 정보로 확인하고, 중단 전에 수행한 효과와 남은 작업을 구분한다. [반환 결과 계약](codemode.md#반환과-실행-기록)
+
 ## 운영 로그
 
 서버·CLI는 stderr에 JSONL, TUI는 `~/.meca/logs/run-<id>/current.jsonl`에 JSONL을 기록한다. stdout의 최종 답변·JSON 이벤트·export 형식은 유지한다. 서버 준비 로그는 `msg=server_listening`의 listen·protocol로 주소를 알리고 토큰을 포함하지 않는다. 서버 인증 토큰은 준비 완료 시 stdout에 한 번만 표시하며 운영 로그·API 이벤트에는 넣지 않는다.

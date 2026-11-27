@@ -93,4 +93,4 @@ go tool -modfile=devtools/go.mod goreleaser release --snapshot --clean
 gh workflow run release.yml --ref main
 ```
 
-게시 설명은 [릴리스 노트](release-notes.md)에서 가져온다. 게시 후 대상 태그의 커밋과 tui/full 각 네 개의 아카이브, 공용 `checksums.txt`를 확인한다.
+게시 설명은 [릴리스 노트](release-notes.md)에서 가져오며 본문은 현재 배포 기능과 사용 계약을 설명한다. 버전 제목과 태그는 배포 워크플로가 결정한다. 게시 후 대상 태그의 커밋과 tui/full 각 네 개의 아카이브, 공용 `checksums.txt`를 확인한다.

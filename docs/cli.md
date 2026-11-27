@@ -75,7 +75,7 @@ references/algorithms/scheduling-and-streams.md:5: Delayed tasks and expiring en
 
 검색은 모델 연결 없이 동작한다. 검색 중에는 설치·제거를 막는 공유 잠금을 보유한다. 취소 시 검색 프로세스 그룹과 잠금을 정리한다. 스킬이 준비되지 않았으면 `meca install`로 설치한다.
 
-에이전트는 `load_skill`로 개발 지침을 읽고 기존 `execute_command`에서 이 명령을 호출한다. 결과의 경로를 골라 같은 스킬 ID의 `read_skill_file`로 본문을 읽는다. 명령 실행에는 현재 승인 정책이 적용된다. [개발 스킬 구성](builtin-skills.md#개발-방향과-참고-자료) · [도구 계약](tools.md#셸과-파일-작업)
+에이전트는 `codemode` 안의 `tools.load_skill`로 개발 지침을 읽는다. 지침을 확인한 다음 코드 호출에서 `tools.execute_command`로 검색하고 필요한 결과를 반환한다. 경로를 고른 뒤 같은 스킬 ID의 `tools.read_skill_file`로 본문을 읽는다. 명령 실행에는 현재 승인 정책이 적용된다. [개발 스킬 구성](builtin-skills.md#개발-방향과-참고-자료) · [도구 계약](tools.md#셸과-파일-작업)
 
 프로젝트·공유 스킬 복사본은 해당 스킬의 실제 경로에서 `sh <skill-root>/scripts/search.sh "keywords"`를 실행한다.
 
@@ -100,7 +100,7 @@ references/algorithms/scheduling-and-streams.md:5: Delayed tasks and expiring en
 
 대화형 설치에서 PATH 적용이 필요하면 로그인 셸을 연다. 자동화·비대화형 설치에서는 표시된 안내에 따라 새 터미널을 사용하거나 `exec "$SHELL" -l`로 반영한다. 브라우저 준비가 실패하면 오류와 완료된 기본 설치 상태를 확인한다. [브라우저 설치와 갱신](tools.md#설치와-갱신)
 
-설치와 업그레이드는 설정·모델 연결·자격 증명·대화를 보존한다. 기본 프롬프트는 배포본으로 갱신하고, 스킬은 누락 파일을 생성하며 사용자 파일을 보존한다. [프롬프트 설정](configuration.md#프롬프트와-compaction) · [기본 스킬 배포](builtin-skills.md#배포와-초기화)
+설치와 업그레이드는 설정·모델 연결·자격 증명·대화를 보존한다. 기본 프롬프트와 배포본에 포함된 스킬 파일은 현재 배포 내용으로 갱신한다. 배포 파일 목록 밖의 개인 스킬과 추가 자료는 유지한다. [프롬프트 설정](configuration.md#프롬프트와-compaction) · [기본 스킬 배포](builtin-skills.md#배포와-초기화)
 
 ### 업데이트
 

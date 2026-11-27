@@ -45,6 +45,8 @@ type codeExecution struct {
 	stable              bool
 	observedThrough     int
 	lastFailure         *codeObservation
+	returnStatus        string
+	fallback            codeFallback
 }
 
 func (s *execution) codeActions(ctx context.Context, reply modelapi.Response, calls []validatedCall, observedThrough int, approve Approver) error {
@@ -119,6 +121,12 @@ func (s *execution) executeCode(ctx context.Context, call toolapi.Call, observed
 	if s.result.Departed && err == nil {
 		status = "completed"
 	}
+	if status == "completed" && !state.boundary {
+		state.returnStatus = "undefined"
+		if result.Defined {
+			state.returnStatus = "value"
+		}
+	}
 	if saveErr := s.finishCode(ctx, state, result.Value, status, err); saveErr != nil {
 		return errors.Join(err, saveErr, state.terminal)
 	}
@@ -155,14 +163,20 @@ func (s *execution) finishCode(ctx context.Context, state *codeExecution, value 
 		failure = excerpt(s.runner.Redact(cause.Error()), codemode.MaxErrorBytes)
 		s.result.HadToolFailure = true
 	}
+	var fallback *codeFallback
+	if state.returnStatus == "undefined" && (len(state.fallback.Outputs) != 0 || state.fallback.Truncated) {
+		fallback = &state.fallback
+	}
 	body, err := json.Marshal(struct {
 		Status          string            `json:"status"`
+		ReturnStatus    string            `json:"return_status,omitempty"`
 		Result          json.RawMessage   `json:"result"`
 		Error           string            `json:"error,omitempty"`
 		Calls           int               `json:"tool_calls"`
 		Observations    []codeObservation `json:"observations,omitempty"`
 		LastToolFailure *codeObservation  `json:"last_tool_failure,omitempty"`
-	}{status, value, failure, state.calls, state.observations, state.lastFailure})
+		Fallback        *codeFallback     `json:"fallback,omitempty"`
+	}{status, state.returnStatus, value, failure, state.calls, state.observations, state.lastFailure, fallback})
 	if err != nil {
 		return errors.Join(errRuntimeRecord, err)
 	}

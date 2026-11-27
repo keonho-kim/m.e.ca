@@ -1,7 +1,7 @@
-// Purpose: Validate one request and assemble its owned runtime resources before conversation work.
+// Purpose: Assemble request instructions, declared capabilities and owned runtime resources.
 // Pattern: Execution composition boundary.
 // Usage: Runner.Run receives the prepared execution and releases its scoped generator last.
-// Related: internal/agent/run/run.go, internal/agent/run/emitter.go, internal/agent/run/conversation.go.
+// Related: internal/agent/prompt/prompt.go, internal/tools/codemode/catalog.go, internal/agent/run/emitter.go.
 package run
 
 import (
@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/keonho-kim/meca/internal/agent/media"
@@ -17,7 +16,6 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/presentation"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
-	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/processmemory"
@@ -69,21 +67,6 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	release := r.scopeGenerator()
 	definitions := imageDefinitions(r.Tools.Definitions(), r.ImageInput)
 	setSkillImageInput(r.Tools, r.ImageInput)
-	guidance := make([]string, 1, 4)
-	guidance[0] = system
-	for _, definition := range definitions {
-		switch definition.Name {
-		case "list_skills":
-			guidance = append(guidance, prompt.SkillTools)
-		case toolapi.BrowserAction:
-			guidance = append(guidance, prompt.BrowserAction)
-		case toolapi.BrowserInspect:
-			guidance = append(guidance, prompt.BrowserObservation)
-		case toolapi.WebFetch:
-			guidance = append(guidance, prompt.WebFetch)
-		}
-	}
-	system = strings.Join(guidance, "")
 	s := r.newExecution(ctx, limits, emit, started)
 	s.system, s.definitions = system, definitions
 	s.codeDefinition = codemode.Definition(definitions)

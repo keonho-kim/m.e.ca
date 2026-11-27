@@ -1,7 +1,7 @@
-// Purpose: Publish self-contained default skill bundles while preserving existing user files.
+// Purpose: Publish the bundled skill tree with startup or explicit refresh semantics.
 // Pattern: Embedded asset publication at the startup filesystem boundary.
-// Usage: Initialize publishes missing manifests, references and notices through the same private boundary.
-// Related: internal/config/bootstrap/bootstrap.go, internal/config/bootstrap/defaults, internal/config/statefs/files.go.
+// Usage: Initialize preserves existing files; RefreshSkills replaces owned release files under the same lock.
+// Related: internal/config/bootstrap/bootstrap.go, internal/config/bootstrap/refresh_skills.go, internal/config/statefs/files.go.
 package bootstrap
 
 import (
@@ -26,7 +26,7 @@ type skillDirectory struct {
 	children     []skillDirectory
 }
 
-func bootstrapSkills(ctx context.Context, root *os.Root) (err error) {
+func bootstrapSkills(ctx context.Context, root *os.Root, refresh bool) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -56,10 +56,10 @@ func bootstrapSkills(ctx context.Context, root *os.Root) (err error) {
 	if err != nil {
 		return err
 	}
-	if err := bundle.checkExisting(ctx, directory, ""); err != nil {
+	if err := bundle.checkExisting(ctx, directory, "", refresh); err != nil {
 		return err
 	}
-	if err := bundle.publish(ctx, directory); err != nil {
+	if err := bundle.publish(ctx, directory, refresh); err != nil {
 		return err
 	}
 	if created {
@@ -91,7 +91,7 @@ func readSkillDirectory(name, source string) (skillDirectory, error) {
 
 // checkExisting detects a pre-existing conflict before publishing sibling assets.
 // Descendants of missing directories cannot be present.
-func (d skillDirectory) checkExisting(ctx context.Context, target *os.Root, relative string) error {
+func (d skillDirectory) checkExisting(ctx context.Context, target *os.Root, relative string, refresh bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -107,14 +107,29 @@ func (d skillDirectory) checkExisting(ctx context.Context, target *os.Root, rela
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			return faults.Errorf(diagcatalog.BootstrapMustBeARealDirectory, path.Join("skills", name))
 		}
-		if err := child.checkExisting(ctx, target, name); err != nil {
+		if err := child.checkExisting(ctx, target, name, refresh); err != nil {
 			return err
+		}
+	}
+	if refresh {
+		for _, file := range d.files {
+			name := path.Join(relative, file)
+			info, err := target.Lstat(name)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if !info.Mode().IsRegular() {
+				return faults.New(diagcatalog.FailedPrecondition, diagcatalog.BootstrapSkillFileMustBeRegular, name)
+			}
 		}
 	}
 	return nil
 }
 
-func (d skillDirectory) publish(ctx context.Context, target *os.Root) error {
+func (d skillDirectory) publish(ctx context.Context, target *os.Root, refresh bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -125,15 +140,31 @@ func (d skillDirectory) publish(ctx context.Context, target *os.Root) error {
 			return err
 		}
 		createdChild = createdChild || created
-		writeErr := child.publish(ctx, directory)
+		writeErr := child.publish(ctx, directory, refresh)
 		if err := errors.Join(writeErr, directory.Close()); err != nil {
 			return err
 		}
 	}
-	return statefs.PublishMissingFiles(target, d.files, func(name string) ([]byte, error) {
+	read := func(name string) ([]byte, error) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		return defaultSkillFiles.ReadFile(path.Join(d.source, name))
-	}, createdChild)
+	}
+	if !refresh {
+		return statefs.PublishMissingFiles(target, d.files, read, createdChild)
+	}
+	for _, name := range d.files {
+		content, err := read(name)
+		if err != nil {
+			return err
+		}
+		if err := refreshSkillFile(target, name, content); err != nil {
+			return err
+		}
+	}
+	if createdChild {
+		return statefs.SyncDirectory(target)
+	}
+	return ctx.Err()
 }

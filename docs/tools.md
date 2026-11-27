@@ -2,50 +2,50 @@
 
 [문서 목록](README.md) · [에이전트 작동 방식](runtime.md) · [호스트 실행과 승인](execution-boundary.md)
 
-MECA는 TUI·CLI·서버에서 같은 native 도구 계약을 사용한다. 모델의 호출은 인자·승인·현재 대상을 검사한 뒤 실행하고 결과를 대화에 기록한다.
+MECA는 TUI·CLI·서버·WebUI에서 같은 도구 실행 계약을 사용한다. 모델은 `codemode`를 호출하고, 코드 본문에서 `tools.*` 호스트 함수를 사용한다. 실행기는 각 호스트 호출의 인자·승인·현재 대상을 검사한 뒤 실행하고 결과를 기록한다.
 
 ## 도구 목록
 
-공통 카탈로그는 14종이다. 요청을 시작할 때 모델과 실행 환경을 확인해 사용할 도구를 선택한다. 팀 모드는 공통 도구에 협업 도구 6종을 더한다. [공통 카탈로그](../internal/tools/local/catalog/) · [팀 카탈로그](../internal/tools/team/catalog/catalog.go)
+공통 카탈로그는 14종이다. 요청을 시작할 때 모델과 실행 환경을 확인해 사용할 함수를 선택한다. 팀 모드는 협업 함수 6종을 더한다. 이 함수들은 모두 모델의 최상위 도구인 `codemode` 안에서 호출한다. [공통 카탈로그](../internal/tools/local/catalog/) · [팀 카탈로그](../internal/tools/team/catalog/catalog.go)
 
-| 도구 | 역할과 사용 조건 |
+| 호스트 함수 | 역할과 사용 조건 |
 | --- | --- |
-| `execute_command` | `command`에 담긴 명령을 호스트 셸에서 실행한다. 파일 조회·검색·빌드·테스트·패키지 작업과 이동·삭제에 사용한다. |
-| `list_command_runs` | 현재 실행기가 소유한 명령의 상태·진행 시간·미수집 결과를 조회한다. |
-| `wait_command` | `command_id`로 완료를 기다리거나 현재 상태와 출력 발췌를 가져온다. |
-| `cancel_command` | `command_id`로 실행한 프로세스 그룹을 취소하고 관찰한 종료 상태와 부분 출력을 받는다. |
-| `create_directory` | `paths`에 지정한 디렉터리와 빠진 상위 폴더를 만든다. |
-| `write_file` | 전체 UTF-8 본문으로 파일을 만들거나 교체한다. 빈 본문도 허용한다. |
-| `edit_file` | 한 파일의 `edits`를 같은 원본에 대조해 부분 변경한다. 각 `old_text`는 정확히 한 번 일치해야 한다. |
-| `view_image` | 래스터 이미지의 현재 원본과 메타데이터를 읽는다. 이미지 입력이 확인된 연결에서 제공한다. [지원 형식과 한도](images.md#view_image) |
-| `list_skills` | 스킬 이름·설명·출처·환경 요구사항과 목록 커서를 가져온다. |
-| `load_skill` | ID 또는 경로로 `SKILL.md`를 읽어 지침과 읽기 버전을 가져온다. |
-| `read_skill_file` | 검증한 스킬 루트 안에서 참고 자료를 읽는다. [스킬 읽기 계약](skills.md#사용자-호출과-모델-도구) |
-| `browser_action` | 전용 브라우저에서 페이지를 열고 이동·클릭·입력 등을 수행한다. Chrome·Chromium과 `agent-browser`가 필요하다. |
-| `browser_inspect` | 열린 브라우저의 스냅샷·본문·오류·스크린샷을 얻거나 보관한 관찰을 이어 읽는다. `browser_action`과 같은 실행 환경을 사용한다. |
-| `web_fetch` | HTTP(S) URL의 HTML·Markdown·텍스트 문서 한 건을 읽는다. 설치된 Chrome·Chromium과 MECA의 문서 전송 어댑터를 사용한다. |
-| `add_team_member` | 독립 작업의 공용 `domain` 키와 `message`를 전달해 한 명을 초대한다. `work_ref`로 기존 공용 제안을 참조하고 `member_name`으로 종료한 세션을 복구할 수 있다. [초대 기준](team.md#시작과-참여) |
-| `list_team_members` | 참여 상태, 초대·담당 도메인과 공용 제안, 작업 경로·기여 요약을 조회한다. |
-| `read_team_messages` | 팀 공용 대화를 `after` 순번 이후부터 페이지로 읽는다. |
-| `set_work` | 합의한 기여, 파일 경로와 현재 맡은 `domains`를 기록한다. 빈 `paths`로 파일 범위를, 빈 `domains`로 업무 담당을 해제한다. |
-| `discuss` | 제안·질문·답변·검토 결과를 팀 공용 대화에 게시한다. `reply_to`와 `mentions`로 관련 발언과 동료를 지정한다. |
-| `leave_team` | 팀에 작업 결과를 남기고 현재 참여자 세션을 종료한다. 마지막 참가자는 사용자에게 직접 결과를 보고한다. |
+| `tools.execute_command` | `command`에 담긴 명령을 호스트 셸에서 실행한다. 파일 조회·검색·빌드·테스트·패키지 작업과 이동·삭제에 사용한다. |
+| `tools.list_command_runs` | 현재 실행기가 소유한 명령의 상태·진행 시간·미수집 결과를 조회한다. |
+| `tools.wait_command` | `command_id`로 완료를 기다리거나 현재 상태와 출력 발췌를 가져온다. |
+| `tools.cancel_command` | `command_id`로 실행한 프로세스 그룹을 취소하고 관찰한 종료 상태와 부분 출력을 받는다. |
+| `tools.create_directory` | `paths`에 지정한 디렉터리와 빠진 상위 폴더를 만든다. |
+| `tools.write_file` | 전체 UTF-8 본문으로 파일을 만들거나 교체한다. 빈 본문도 허용한다. |
+| `tools.edit_file` | 한 파일의 `edits`를 같은 원본에 대조해 부분 변경한다. 각 `old_text`는 정확히 한 번 일치해야 한다. |
+| `tools.view_image` | 래스터 이미지의 현재 원본과 메타데이터를 읽는다. 이미지 입력이 확인된 연결에서 제공한다. [지원 형식과 한도](images.md#view_image) |
+| `tools.list_skills` | 스킬 이름·설명·출처·환경 요구사항과 목록 커서를 가져온다. |
+| `tools.load_skill` | ID 또는 경로로 `SKILL.md`를 읽어 지침과 읽기 버전을 가져온다. |
+| `tools.read_skill_file` | 검증한 스킬 루트 안에서 참고 자료를 읽는다. [스킬 읽기 계약](skills.md#사용자-호출과-호스트-함수) |
+| `tools.browser_action` | 전용 브라우저에서 페이지를 열고 이동·클릭·입력 등을 수행한다. Chrome·Chromium과 `agent-browser`가 필요하다. |
+| `tools.browser_inspect` | 열린 브라우저의 스냅샷·본문·오류·스크린샷을 얻거나 보관한 관찰을 이어 읽는다. `browser_action`과 같은 실행 환경을 사용한다. |
+| `tools.web_fetch` | HTTP(S) URL의 HTML·Markdown·텍스트 문서 한 건을 읽는다. 설치된 Chrome·Chromium과 MECA의 문서 전송 어댑터를 사용한다. |
+| `tools.add_team_member` | 독립 작업의 공용 `domain` 키와 `message`를 전달해 한 명을 초대한다. `work_ref`로 기존 공용 제안을 참조하고 `member_name`으로 종료한 세션을 복구할 수 있다. [초대 기준](team.md#시작과-참여) |
+| `tools.list_team_members` | 참여 상태, 초대·담당 도메인과 공용 제안, 작업 경로·기여 요약을 조회한다. |
+| `tools.read_team_messages` | 팀 공용 대화를 `after` 순번 이후부터 페이지로 읽는다. |
+| `tools.set_work` | 합의한 기여, 파일 경로와 현재 맡은 `domains`를 기록한다. 빈 `paths`로 파일 범위를, 빈 `domains`로 업무 담당을 해제한다. |
+| `tools.discuss` | 제안·질문·답변·검토 결과를 팀 공용 대화에 게시한다. `reply_to`와 `mentions`로 관련 발언과 동료를 지정한다. |
+| `tools.leave_team` | 팀에 작업 결과를 남기고 현재 참여자 세션을 종료한다. 마지막 참가자는 사용자에게 직접 결과를 보고한다. |
 
 명령·파일 도구의 실행 범위는 승인 정책을 따르고, 팀의 파일 변경에는 공용 경로 조율도 적용한다. 사용자가 화면에서 입력하는 `!명령`과 서버 관리 명령은 각각의 사용자·API 계약에 정의한다. [승인 정책](execution-boundary.md) · [팀 모드](team.md) · [사용자 명령](usage.md#내부-명령과-키보드) · [서버 명령](server.md#공통-명령)
 
 ## 코어 등록과 실행
 
 1. 로컬·팀 카탈로그가 도구 이름·설명·인자·효과를 소유한다. 설치 상태와 모델 기능에 맞는 도구만 선택한다.
-2. `internal/tools/codemode`가 같은 카탈로그에서 `tools.<이름>(인자)`의 TypeScript 설명을 생성한다. 모델에는 native `codemode` 도구를 제공한다.
+2. `internal/tools/codemode`가 같은 카탈로그에서 `tools.<이름>(객체 인자)`의 TypeScript 설명을 생성한다. Provider에 등록하는 모델 도구는 `codemode` 하나다.
 3. Provider 어댑터는 완성된 코드 호출을 전달한다. JS·TS 함수 본문은 내장 변환기·실행기에서 처리하며 일반 답변 본문을 실행하지 않는다.
-4. `internal/agent/run`은 내부 호출을 검증하고 기존 `Prepare`·승인·실행 경계로 전달한다. 셸 명령은 실제 문자열에 AST 분석을 적용하고 독립 호출은 기존 배치 계획으로 실행한다.
-5. 내부 호출의 원본 결과와 상태를 먼저 확정하고, 코드에 값을 돌려준다. 모델에는 코드가 반환한 JSON과 필요한 지침·이미지를 전달한다. 부모·내부 실행 ID는 기록과 화면을 연결한다.
+4. `internal/agent/run`은 내부 호출을 검증하고 `Prepare`·승인·실행 경계로 전달한다. 셸 명령은 실제 문자열에 AST 분석을 적용하고 독립 호출은 충돌을 검사한 배치 계획으로 실행한다.
+5. 내부 호출의 원본 결과와 상태를 먼저 확정하고 코드에 값을 돌려준다. 정상적인 명시적 반환은 `result`로, `undefined` 종료의 제한된 성공 결과는 `fallback.outputs`로 모델에 전달한다. 지침·이미지는 `needs_model` 경계에서 전달한다. 부모·내부 실행 ID는 기록과 화면을 연결한다.
 
 스크립트 자체는 별도 승인하지 않는다. 인자 고정, 실패·취소, 모델 판단 경계와 자원 한도는 [Code Mode](codemode.md)를 따른다. [도구 계약](../internal/agent/tool/) · [후보 준비](../internal/tools/local/prepare.go) · [실행과 승인](../internal/agent/run/execute.go)
 
 ## 도구 추가와 검증
 
-기존 도구를 변경하거나 새 도구를 추가할 때는 설명·인자·효과를 해당 카탈로그에 정의하고, 같은 스키마를 모델 요청과 입력 파싱에 사용한다. 로컬 도구의 실행 책임은 `internal/tools/local` 또는 해당 어댑터에 두고 `Prepare`에서 후보를 연결한다. 협업 동작은 팀 카탈로그와 팀 실행기가 소유한다. Provider별 형식 변화는 Provider 어댑터에 둔다. [로컬 카탈로그](../internal/tools/local/catalog/catalog.go) · [로컬 인자 파싱](../internal/tools/local/catalog/arguments.go) · [팀 실행기](../internal/tools/team/executor.go)
+호스트 함수를 변경하거나 추가할 때는 설명·인자·효과를 해당 카탈로그에 정의한다. 같은 스키마에서 Code Mode의 함수 명세와 호스트 인자 검증을 구성하며 Provider에 개별 함수 도구를 등록하지 않는다. 로컬 실행 책임은 `internal/tools/local` 또는 해당 어댑터에 두고 `Prepare`에서 후보를 연결한다. 협업 동작은 팀 카탈로그와 팀 실행기가 소유한다. Provider별 형식 변화는 Provider 어댑터에 둔다. [로컬 카탈로그](../internal/tools/local/catalog/catalog.go) · [로컬 인자 파싱](../internal/tools/local/catalog/arguments.go) · [팀 실행기](../internal/tools/team/executor.go)
 
 검증은 실제 요청에서의 제공 여부, 잘못된 인자 거절, 승인 이후 대상 변경, 호출과 결과의 대응, 실패·취소 시 소유 자원 회수를 다룬다. 도구의 외부 효과와 데이터 전송은 실행 경계의 규칙을 적용하고 이 문서의 목록과 사용 조건을 함께 갱신한다. [변경 검증](development.md#변경-검증) · [실행과 승인](execution-boundary.md)
 
@@ -57,7 +57,9 @@ MECA는 TUI·CLI·서버에서 같은 native 도구 계약을 사용한다. 모�
 
 명령 결과는 시작 여부·stdout·stderr·종료 상태를 기록한다. 긴 출력은 발췌와 현재 실행기에서 사용할 재조회 로그 경로를 제공하고, 정제한 원본은 세션 기록에 보존한다. 취소하거나 실패하면 확인한 부분 출력과 효과를 남긴다. 로그 파일은 실행기가 닫힐 때 회수한다. [출력 처리](usage.md#긴-출력) · [실행 사실과 저장](runtime.md#출력과-저장)
 
-개발 스킬의 참고 자료를 찾을 때는 `execute_command`에서 `meca develop`을 호출하고 반환된 경로를 `read_skill_file`로 읽는다. [개발 자료 검색](cli.md#개발-자료-검색)
+Code Mode에서 읽는 명령 결과 필드는 대소문자를 구분한다. 식별자는 `command_id`이고, 주요 값은 `Status`, `Stdout`, `Stderr`, `ExitCode`, `Truncated`, `StdoutPath`, `StderrPath`다. 종료 상태를 확인한 뒤 종료 코드를 해석하고, 다음 모델 판단에 필요한 전체 결과나 정확한 필드 값을 반환한다.
+
+개발 스킬의 참고 자료를 찾을 때는 `tools.execute_command`에서 `meca develop`을 호출하고 반환된 경로를 `tools.read_skill_file`로 읽는다. [개발 자료 검색](cli.md#개발-자료-검색)
 
 상대 파일 경로는 세션의 `project_root`에서 해석한다. `write_file`은 전체 본문을 저장하고 `edit_file`은 겹치지 않는 모든 변경을 원본에 검증한 뒤 적용한다. 두 도구의 기본 `format_policy=preserve`는 기존 줄바꿈·EOF 형식을 보존하며, 의도적으로 형식을 바꾸려면 `literal`을 사용한다. 파일 이동·삭제의 정책과 셸의 환경은 [호스트 실행과 승인](execution-boundary.md)을 따른다.
 

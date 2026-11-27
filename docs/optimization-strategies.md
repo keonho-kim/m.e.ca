@@ -10,7 +10,7 @@
 
 문맥 투영은 같은 실행의 변화 없는 메시지를 재사용한다. 모델 선택·마스킹 기준·메시지와 도구 짝이 달라진 구간은 다시 구성한다. Provider 인코더는 변경되지 않은 앞부분의 직렬화 결과를 제한된 용량으로 보유한다. 아직 모델이 읽지 않은 브라우저 관찰 앞에서 재사용 범위를 끝내고 실행이 끝나면 캐시를 해제한다. [런타임의 모델 요청](runtime.md#모델-요청-준비) · [문맥 투영](../internal/agent/context/projection.go) · [인코딩 재사용](../internal/provider/protocol/source_history.go)
 
-도구 정의가 같으면 Provider 인코더가 직렬화한 스키마를 재사용한다. vLLM의 토큰화와 Claude의 서명된 문맥 식별에도 같은 스키마 바이트를 사용한다. 로컬 도구는 공용 스키마와 일치하고 캐시에 들어가는 인자의 파싱 결과를 검증·계획·준비에서 함께 사용한다. [스키마 재사용](../internal/provider/protocol/tool_snapshot.go) · [로컬 인자 재사용](../internal/tools/local/argument_cache.go)
+사용 가능한 호스트 함수가 같으면 그 명세를 포함한 `codemode` 정의와 Provider 인코더의 직렬화 스키마를 재사용한다. vLLM의 토큰화와 Claude의 서명된 문맥 식별에도 같은 스키마 바이트를 사용한다. 로컬 도구는 카탈로그와 일치하는 인자 파싱 결과를 검증·계획·준비에서 함께 사용한다. [모델 도구 명세](../internal/tools/codemode/catalog.go) · [스키마 재사용](../internal/provider/protocol/tool_snapshot.go) · [로컬 인자 재사용](../internal/tools/local/argument_cache.go)
 
 vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 입력 토큰 수와 컨텍스트 한도를 추출한다. 사용하지 않는 토큰 ID 배열은 건너뛴다. 압축은 마스킹·발췌한 레코드를 직렬화하기 전에 마지막 선택 항목과 비교하고, 선택한 항목의 순서와 사용자 지시는 보존한다. [토큰화 응답](../internal/provider/httpclient/context.go) · [압축 원본 선택](../internal/agent/compact/source.go)
 
@@ -36,15 +36,17 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 ## 셸과 파일 작업
 
+반환 누락에 대비한 결과는 저장 성공 뒤 코드 실행의 직렬 소유자가 구성한다. JSON 배열 기준 512KiB 안에서 완전한 결과를 보관하고 초과분만 발췌하며, `undefined` 정상 종료에만 모델 결과에 포함한다. 큰 결과는 전체 직렬화 버퍼를 만들기 전에 크기를 계산하고, 발췌도 실제 이스케이프 길이로 결정한다. 이 배열을 위해 DB를 다시 읽거나 한도를 넘는 결과 전체를 별도 보관하지 않으며 코드 호출 종료 시 회수한다. [자동 전달 계약](codemode.md#반환값-누락-시-자동-전달) · [크기 제한](../internal/agent/run/code_fallback.go) · [결과 확정 경계](../internal/agent/run/action_result.go)
+
 명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출은 완료 결과를 저장한 직후 코드에 전달한다. 후속 호출은 실행 중인 작업과 충돌을 검사하며, 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](tools.md#셸과-파일-작업) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)
 
 파일 시스템 감시는 같은 디렉터리의 활성 구독이 공유하고 마지막 구독에서 반환한다. 편집기의 변경 확인은 감시 리비전이 같으면 메타데이터에서 끝내고, 달라졌을 때 내용의 리비전을 비교한다. 저장 시에는 원본을 다시 검사한다. [편집 계약](webui-api.md#완료예약편집) · [공유 감시](../internal/fileview/watch_pool.go) · [변경 확인](../internal/fileview/editor_probe.go)
 
 ## 스킬 목록과 참고 파일
 
-기본 스킬을 배포할 때는 현재 스킬 디렉터리를 잠그고 내장 묶음의 디렉터리 충돌을 먼저 검사한다. 누락한 파일만 임시 파일에 쓰고 동기화한 뒤 기존 이름과 충돌하지 않을 때 공개한다. 디렉터리의 항목 변경은 묶음 단위로 동기화한다. [기본 스킬 배포](../internal/config/bootstrap/skills.go) · [원자적 파일 공개](../internal/config/statefs/files.go)
+기본 스킬을 배포할 때는 현재 스킬 디렉터리를 잠그고 내장 묶음의 경로 충돌을 먼저 검사한다. 일반 시작은 누락 파일만 공개하고 디렉터리 항목 변경을 묶음 단위로 동기화한다. 설치·업그레이드는 배포 파일이 정규 파일인지 확인한 뒤 내용과 권한이 다른 파일만 원자적으로 교체·동기화한다. 비교 읽기는 해당 배포 파일 크기로 제한하며, 배포 목록 밖의 파일은 변경하지 않는다. [기본 스킬 배포](../internal/config/bootstrap/skills.go) · [배포 파일 갱신](../internal/config/bootstrap/refresh_skills.go) · [원자적 파일 공개](../internal/config/statefs/files.go)
 
-이름 목록과 자동완성은 메타데이터를 1초 동안 재사용한다. 설치 루트의 항목 변경·교체가 확인되면 다시 탐색한다. 후속 페이지의 스냅샷은 마스킹 기준·수명·용량에 따라 회수한다. 참고 파일의 형식 확인과 부분 읽기는 검증한 같은 파일 핸들을 사용한다. 텍스트는 UTF-8 경계를 맞추고 이미지 디코딩 슬롯은 이미지 처리 시에만 사용한다. [스킬 조회](skills.md#사용자-호출과-모델-도구) · [목록 읽기](../internal/skills/catalog.go) · [목록 보유](../internal/skills/catalog_retention.go) · [부분 읽기](../internal/skills/resources.go)
+이름 목록과 자동완성은 메타데이터를 1초 동안 재사용한다. 설치 루트의 항목 변경·교체가 확인되면 다시 탐색한다. 후속 페이지의 스냅샷은 마스킹 기준·수명·용량에 따라 회수한다. 참고 파일의 형식 확인과 부분 읽기는 검증한 같은 파일 핸들을 사용한다. 텍스트는 UTF-8 경계를 맞추고 이미지 디코딩 슬롯은 이미지 처리 시에만 사용한다. [스킬 조회](skills.md#사용자-호출과-호스트-함수) · [목록 읽기](../internal/skills/catalog.go) · [목록 보유](../internal/skills/catalog_retention.go) · [부분 읽기](../internal/skills/resources.go)
 
 읽은 지침은 현재 실행이 보유한다. 원래 읽기 결과가 요청에 있으면 다시 넣지 않고, 압축으로 사라진 필요한 지침을 문맥에 연결한다. [문맥과 기록](skills.md#문맥과-기록) · [지침 문맥](../internal/agent/context/skill_reads.go)
 

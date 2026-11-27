@@ -10,6 +10,7 @@ const (
 	BootstrapChangedDuringInitialization                           Message = "%s changed during initialization"
 	BootstrapConfigurationMustBeARegularFile                       Message = "configuration must be a regular file"
 	BootstrapMustBeARealDirectory                                  Message = "%s must be a real directory"
+	BootstrapSkillFileMustBeRegular                                Message = "bundled skill file must be a regular file: %s"
 	CapacityAllocationCounterChangedWhileOpening                   Message = "allocation counter changed while opening"
 	CapacityFilesystemCapacityChecksRequireLinuxOrMacOS            Message = "filesystem capacity checks require Linux or macOS"
 	CapacityInvalidAllocationCountContentsPreserved                Message = "invalid allocation count; contents preserved"

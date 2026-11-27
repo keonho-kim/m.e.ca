@@ -142,7 +142,7 @@ SSE·socket·grpc 모두 `POST /v1/command`, `GET /v1/events`, `POST /v1/attachm
 
 ID·모델 설정 형식 오류는 invalid_argument, 없는 세션·원문은 not_found다. 취소된 제어·조회는 canceled이며 HTTP에서는 409로 반환한다. 세션 변경으로 조회가 취소되면 최신 상태를 확인한 뒤 필요한 원문만 다시 요청한다.
 
-스킬 조회는 세션 선택 전에도 가능하며 지정한 작업공간의 프로젝트와 실행 계정을 기준으로 한다. `listSkills`의 첫 페이지에서 목록 스냅샷을 만들고 후속 커서로 같은 목록을 읽는다. 파일 변경을 반영하거나 커서가 만료되면 첫 페이지부터 다시 조회한다. `getSkill`은 등록된 스킬 ID로, `readSkillFile`은 검증된 스킬 루트 기준 상대 경로로 읽는다. `start.text`의 `#스킬명`으로 스킬을 지정할 수 있다. [스킬 탐색과 페이지 계약](skills.md#사용자-호출과-모델-도구)
+스킬 조회는 세션 선택 전에도 가능하며 지정한 작업공간의 프로젝트와 실행 계정을 기준으로 한다. `listSkills`의 첫 페이지에서 목록 스냅샷을 만들고 후속 커서로 같은 목록을 읽는다. 파일 변경을 반영하거나 커서가 만료되면 첫 페이지부터 다시 조회한다. `getSkill`은 등록된 스킬 ID로, `readSkillFile`은 검증된 스킬 루트 기준 상대 경로로 읽는다. `start.text`의 `#스킬명`으로 스킬을 지정할 수 있다. [스킬 탐색과 페이지 계약](skills.md#사용자-호출과-호스트-함수)
 
 ## SSE
 
@@ -300,6 +300,8 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 ## 요청 상태와 복원
 
 Code Mode의 내부 도구 이벤트는 `tool.parentExecutionId`로 부모 코드 실행을 가리킨다. `tool.executionId`는 각 내부 실행의 고유 ID이며 병렬 묶음의 `batchId`와 구분한다. `statistics.codeExecutions`와 `statistics.toolExecutions`는 각각 코드 실행과 시작한 내부 도구 실행 횟수이며 Protobuf JSON의 정수 문자열이다.
+
+`codemode`의 원문 결과에는 `status`·`result`와 정상 종료 시 `return_status`, 필요한 경우 `fallback`·`observations`·오류 정보가 들어 있다. 이는 모델에 전달한 실행 결과 본문이며 서버 명령이나 이벤트 최상위 필드가 아니다. `detail`의 `TOOL_RESULT`로 부모 코드 결과와 개별 호스트 결과를 각각 조회한다. 모델용 자동 전달의 잘림은 저장된 내부 결과 원문이나 API 상세 조회 한도를 바꾸지 않는다. [반환 계약](codemode.md#반환과-실행-기록)
 
 최상위 `Command.workspaceId`로 작업공간을 지정하며 생략 시 시작 프로젝트를 사용한다. 이벤트와 스냅샷에는 실제 `workspaceId`가 포함된다. 화면의 API 호출과 복원 절차는 [WebUI 연동](webui-api.md#상태와-스트림-복원)을 따른다.
 

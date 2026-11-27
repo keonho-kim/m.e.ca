@@ -1,19 +1,19 @@
 ---
 name: development
-description: Plan, design, implement, debug, optimize or review software and interfaces. Connect application workflows, UI, backend architecture, algorithms and data structures through clear responsibilities, state and verification. Includes single-agent and team development.
+description: Engineering guidance for reasoning about software and interfaces, choosing designs, implementing changes, diagnosing behavior and reviewing tradeoffs. Connects application workflows, design patterns, algorithms, data structures, UI and backend references as needed by the user's request.
 license: Apache-2.0. Bundled materials retain their notices in LICENSE.txt and NOTICE.md.
 ---
 
 # Software development
 
-Start with the user's intended outcome and the requested stage. Inspect the affected code, interfaces, dependencies and tests. Trace the input and effects to their owners, including the visible result and recovery. Use this entrypoint to choose the design direction and the references the current decision needs.
+Use this reference library to resolve the engineering questions in the user's request. Establish what result would help them now and which decision needs guidance. Apply the relevant knowledge to that result; a workflow in a reference is not an instruction to carry out additional work.
 
-## Connect the workflow and its owners
+## Frame the engineering decision
 
-1. Identify the actors, relevant records, required behavior and observable acceptance criteria. Establish the workload and operating constraints that affect the design.
-2. Follow the action through presentation, application decisions and effects. Name who owns each state transition, how success becomes authoritative and what callers observe while it is pending or fails.
-3. Choose a fitting structure and representation. Connect the same identity, permissions, ordering and completion meaning across the affected boundaries. Apply the relevant guides below to resolve a concrete question.
-4. Implement and verify a complete acceptance slice. Revisit the other affected boundaries when a decision changes their contract.
+- Ground the answer in the evidence the question needs: the user's scenario, supplied code, the current project or a measured workload. Inspect files, interfaces, dependencies and tests when the conclusion depends on their actual state.
+- For a workflow or design decision, connect required behavior, actors, records, state ownership and operating constraints. Trace affected boundaries only as far as needed to understand the result and its tradeoffs.
+- For a change, establish observable acceptance criteria and the smallest complete scope that meets them. For findings or recommendations, connect the evidence to consequences and identify uncertainty.
+- Use the selected techniques to fulfill the requested outcome. The user may want to understand or compare an approach, apply it themselves, or have the agent implement it; follow that intent through the work and its completion.
 
 ## Choose the design
 
@@ -24,15 +24,18 @@ Start with the user's intended outcome and the requested stage. Inspect the affe
 
 ## Read the guidance the decision needs
 
-For a focused question, search the reference library with `meca develop`. This MECA subcommand runs the bundled [search script](scripts/search.sh) through the existing command execution path. Use two to five concrete English keywords describing the operation or symptom. For the installed `meca:development` skill, run
+When a decision needs a reference that is not already supplied, search with `meca develop` or use the topic map below. The command runs the bundled [search script](scripts/search.sh). Choose two to five concrete English keywords describing the operation or symptom. In MECA, pass this function body to `codemode`:
 
-```sh
-meca develop "delayed task queue"
+```javascript
+return await tools.execute_command({
+  reason: "Find scheduling guidance",
+  command: 'meca develop "delayed task queue"'
+});
 ```
 
 The command uses `sh`, `awk`, `find` and `sort`. It reads the current reference files and returns up to ten paths, line numbers and headings. Matching is case-insensitive and literal. Results favor sections matching more query terms, then terms in headings and paths. Each file contributes its best section, with matched-term counts shown for partial results. Refine weak queries with concrete synonyms or use the topic map below.
 
-Read selected results with `read_skill_file`, using the loaded skill ID and only the returned path. Line numbers help locate the section after reading. For a project or shared copy, read its script and run `sh <actual-skill-root>/scripts/search.sh "keywords"` to search that copy. The installed MECA executable is `~/.local/bin/meca`.
+Read selected results through `tools.read_skill_file({id, path})` inside `codemode`, using the loaded skill ID and returned path. Line numbers locate the section within that resource. For a project or shared copy, read its script and invoke `sh <actual-skill-root>/scripts/search.sh "keywords"` through `tools.execute_command`. The installed MECA executable is `~/.local/bin/meca`.
 
 | Decision | Read |
 | --- | --- |
@@ -44,13 +47,15 @@ Read selected results with `read_skill_file`, using the loaded skill ID and only
 | Coordinate a design and implementation among MECA teammates | [Team workflow](references/team-workflow.md) |
 | Define operational requirements and verify a change end to end | [Verification and serviceability](references/serviceability.md) |
 
-Use `read_skill_file` with the ID returned by `load_skill`. Paths are relative to this skill root. Topic guides link to focused maps and resources. Read the selected material for the current decision and reuse it within this request.
+Use the ID supplied by the engine or returned by `tools.load_skill`. Reference paths passed to `tools.read_skill_file` are skill-root-relative; resolve links against the containing document's directory. Read selected material at its `needs_model` boundary before generating dependent work, and reuse it for the current decision.
 
 For a booking feature, use the application guide to establish a reservation's identity and capacity rule. Carry those facts into the UI's pending, confirmed and conflict states, then into the backend's concurrency and retry contract. If availability lookup is expensive, use the algorithm guide with the same capacity and freshness requirements. Verify the whole action through its visible result.
 
 For a small local refactor, start with the affected responsibility and its relevant pattern or algorithm guide. For a UI-only review, start with the UI guide and inspect other boundaries when their behavior affects a finding. Team implementation also uses the team workflow. Match the reading and verification to the requested scope.
 
-## Implement the behavior
+## Carry out requested changes
+
+When implementation is part of the user's requested outcome, deliver a complete acceptance slice and revisit boundaries whose contracts it changes.
 
 - Reuse the project's native features, established conventions and relevant components. Keep dependencies explicit, control flow readable and errors actionable. Parse inputs at the boundary and edit source inputs for generated files.
 - Make mutation, I/O, ordering, cancellation and cleanup visible. Give each owned resource a release path. Use deterministic facts and controlled dependencies to verify decisions and effects.

@@ -15,11 +15,23 @@ import (
 
 func Definition(tools []toolapi.Definition) toolapi.Definition {
 	var description strings.Builder
-	description.WriteString(`Execute a JavaScript or TypeScript async function body. Use await tools.<name>({...}) for host operations and return a JSON value. Do not wrap the body in a function or Markdown fences. Declare types inline; import and export are unavailable. TypeScript syntax is transformed, not type-checked. Intermediate tool results remain in the code and execution history; return the facts needed for the next decision. Tool failures reject with an Error whose output contains the tool result. Approval denial, cancellation and persistence failures stop execution and cannot be caught. Code itself needs no approval; individual operations use the existing policy. No filesystem, network, process, module loader or timers are exposed directly. Await every tool call. Independent calls may overlap; each committed result resumes its Promise without waiting for unrelated tools. Promise.all preserves input order; conflicting effects are sequenced by the host. Loading skill instructions or images can end the code early so the model can inspect them before generating more code. Never replay completed effects after an error. Each code call has a fresh context, 64 MiB JS heap, 10 seconds of JS evaluation time, 256 host calls, 32 pending calls and 1 MiB returned JSON. Tool arguments are limited to 4 MiB and individual JSON tool results to 8 MiB.
+	fmt.Fprintf(&description, `Run a program when its execution contributes computation or host operations needed for the user's requested outcome. Deliberation and composing a conversational response happen outside this execution tool. Return computed or observed results, rather than routing an already-written response through code.
 
-Available tools (the input contracts below are also checked by the host; results are JSON):
+Supply a JavaScript or TypeScript async function body, without a function wrapper or Markdown fences. The tools object is already available; call its functions with the declared object arguments. These functions exist only inside codemode, not as separate model-facing tools. Declare TypeScript types inline; import and export are unavailable. TypeScript is transformed, not type-checked.
+
+The normal model-facing result is the program's explicit return value. For a single operation, use return await tools.<name>({...}); for composed work, capture the results and return the facts needed for your next decision, including evidence for claims of success. Other host outputs remain in execution history.
+
+A completed code call reports return_status=value for a defined JSON value, including explicit null. If it ends with undefined, return_status=undefined identifies the missing value and fallback.outputs supplies successful committed tool outputs in completion order, within a combined %d KiB JSON budget. Outputs that fit are preserved completely; oversized values become {excerpt,truncated:true} using the longest UTF-8 prefix that fits their encoded JSON budget. fallback.truncated means output was shortened or omitted. These are observed tool outputs, not the program's computed return value. Their operations already ran; do not rerun them just to recover a missing return. Return explicitly to select what enters model context.
+
+Await every tool call. Independent calls may overlap; each committed result resumes its Promise without waiting for unrelated tools. Promise.all preserves input order and the host sequences conflicting effects. A skill instruction or image can end this code with status needs_model. Read that supplied input before writing a new code call for dependent work. Operations already completed at that boundary are not replayed.
+
+Tool failures reject with an Error whose output contains the tool result. Approval denial, cancellation and persistence failures stop execution and cannot be caught. Inspect completed and partial results before deciding whether a further operation is needed. Code itself needs no approval; each host operation uses its existing policy.
+
+No filesystem, network, process, module loader or timers are exposed directly. Each code call has a fresh context, 64 MiB JS heap, 10 seconds of JS evaluation time, 256 host calls, 32 pending calls and 1 MiB returned JSON. Tool arguments are limited to 4 MiB and individual JSON tool results to 8 MiB.
+
+Available host functions (the input contracts below are checked by the host; results are JSON):
 declare const tools: {
-`)
+`, MaxFallbackBytes>>10)
 	for _, tool := range tools {
 		description.WriteString("/** " + strings.ReplaceAll(tool.Description, "*/", "* /") + " */\n")
 		description.WriteString(tool.Name + "(args: " + objectType(tool.Parameters) + "): Promise<any>;\n")

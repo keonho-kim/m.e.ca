@@ -23,5 +23,6 @@ func BenchmarkCodeResultAdmission(b *testing.B) {
 			b.Fatal(err)
 		}
 		clear(s.code.replies)
+		s.code.fallback = codeFallback{}
 	}
 }

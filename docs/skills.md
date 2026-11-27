@@ -2,7 +2,7 @@
 
 [문서 목록](README.md) · [기본 스킬](builtin-skills.md) · [서버 API](server.md)
 
-스킬은 tui·full에서 공통으로 제공하는, 에이전트가 읽고 적용하는 작업 지침이다. SKILL.md를 읽은 뒤 기존 도구와 승인 정책으로 작업한다. 별도 실행 단위나 켜기·끄기 상태는 없다.
+스킬은 tui·full에서 공통으로 제공하는, 에이전트가 읽고 적용하는 작업 지침이다. 모델은 Code Mode의 호스트 함수로 SKILL.md를 읽고 현재 요청과 승인 정책에 맞춰 적용한다. 별도 실행 단위나 켜기·끄기 상태는 없다.
 
 ## 빠른 사용
 
@@ -58,7 +58,7 @@ SKILL.md라는 이름과 YAML frontmatter의 name·description이 필요하다. 
 
 disable-model-invocation: true와 선택적인 agents/openai.yaml의 policy.allow_implicit_invocation: false는 자동 본문 로드를 제한한다. 사용자의 명시 지정과 사용자용 미리보기는 허용한다. hooks·context·allowed-tools 실행 확장은 해석하지 않으며 warnings로 알린다. 스킬 파일이 MECA의 승인·접근 정책을 확대하지 않는다. 다른 클라이언트의 모든 실행 확장을 지원한다는 의미는 아니다.
 
-## 사용자 호출과 모델 도구
+## 사용자 호출과 호스트 함수
 
 `!skills`는 목록·출처·진단을 표시한다. TUI의 Enter는 본문 미리보기를 열고 PgUp/PgDn은 본문을 이동한다. `#` 자동완성에서 Enter·Tab으로 현재 입력에 이름을 삽입한다. WebUI의 `+`에서도 스킬을 선택할 수 있다. 목록과 미리보기는 현재 설치 내용을 읽는다.
 
@@ -66,19 +66,37 @@ disable-model-invocation: true와 선택적인 agents/openai.yaml의 policy.allo
 
 #review는 우선순위에 따라 선택한 본문을 첫 모델 판단 전에 읽는다. 동명 출처를 지정하려면 #project:review, #meca:review, #shared:review를 사용한다. 코드·인용·URL·이스케이프·일반 이슈 번호 #123은 호출로 해석하지 않는다. 숫자로만 된 이름은 출처를 함께 지정한다. 명시한 스킬을 읽지 못하면 모델 작업을 진행하지 않고 오류를 알린다.
 
-심볼릭 링크의 설치 폴더와 실제 스킬 이름이 달라도 목록의 name으로 호출할 수 있다. 반환한 id는 설치 위치를 구분하며 load_skill·참고 파일 읽기에 그대로 사용한다. 동일 이름의 선택은 프로젝트·개인·공유 출처 순서를 따른다.
+심볼릭 링크의 설치 폴더와 실제 스킬 이름이 달라도 목록의 name으로 호출할 수 있다. 반환한 id는 설치 위치를 구분하며 `tools.load_skill`·참고 파일 읽기에 그대로 사용한다. 동일 이름의 선택은 프로젝트·개인·공유 출처 순서를 따른다.
 
-| 도구 | 역할 |
+아래 함수는 모두 `codemode`의 코드 본문 안에서 객체 인자로 호출한다.
+
+| 호스트 함수 | 역할 |
 | --- | --- |
-| list_skills | 이름·설명·환경 요구사항·출처·manual_only·warnings 조회. cursor·limit으로 다음 페이지 읽기 |
-| load_skill | id 또는 스킬 디렉터리/SKILL.md path 중 하나로 본문 읽기 |
-| read_skill_file | id와 스킬 루트 기준 상대 path로 참고 자료 읽기. 첫 페이지의 revision과 next_offset을 다음 offset·revision으로 전달 |
+| `tools.list_skills` | 이름·설명·환경 요구사항·출처·manual_only·warnings 조회. cursor·limit으로 다음 페이지 읽기 |
+| `tools.load_skill` | id 또는 스킬 디렉터리/SKILL.md path 중 하나로 본문 읽기 |
+| `tools.read_skill_file` | id와 스킬 루트 기준 상대 path로 참고 자료 읽기. 첫 페이지의 revision과 next_offset을 다음 offset·revision으로 전달 |
 
-엔진은 실질적인 작업 전에 설명을 확인하고 필요한 본문을 읽도록 모델에 안내한다. 목록은 메타데이터를 제공하며 지침 선택과 적용은 해당 요청의 에이전트가 담당한다. 경로로 `load_skill`한 경우 참고 파일 조회에는 반환된 ID를 사용한다. [도구 스키마 전달](tools.md#코어-등록과-실행)
+모델은 현재 요청에 추가 전문 지식이 필요할 때 목록과 본문을 선택한다. 이미 제공된 지침은 재사용하며, 스킬을 읽어도 요청한 결과나 행동 범위는 확대되지 않는다. 경로로 읽을 때는 `await tools.load_skill({path: "..."})`를 사용하고, 참고 파일 조회에는 반환된 ID를 사용한다. 지침 읽기는 `needs_model`로 모델에 제어를 돌려주므로 본문을 확인한 뒤 후속 코드를 작성한다. [Code Mode 계약](codemode.md) · [도구 스키마 전달](tools.md#코어-등록과-실행)
 
-경로는 project_root 기준이며 ~/는 실행 계정의 홈이다. 경로로 읽은 스킬의 불투명 ID는 reader의 최근 128개·경로 합계 512KiB 안에서 재조회할 수 있다. 사용 시 수명을 갱신하고 오래된 등록은 회수한다. 회수된 ID는 원래 경로로 다시 load_skill하여 등록한다. 참고 파일은 검증한 실제 스킬 루트 안에서 읽으며 manual-only 정책도 본문과 동일하게 적용한다. 명시적으로 지정한 스킬의 참고 파일 읽기 허용은 해당 요청에만 전달한다. 이미지 지원 요청에서는 기존 래스터 디코더로 이미지 자료를 전달하고, 다른 바이너리와 이미지 미지원 요청은 메타데이터만 반환한다. 스크립트를 읽어도 실행하지 않는다. Python·Node 등이 필요한 스킬은 그 환경을 별도로 준비해야 하며 MECA 설치 의존성으로 추가하지 않는다.
+예를 들어 목록 조회는 다음 코드 본문으로 결과를 반환한다.
 
-텍스트 페이지는 원문 offset과 revision에 묶인다. 처음에는 offset 0에서 revision 없이 읽는다. next_offset이 양수이면 같은 id·path에 offset=next_offset과 해당 read_skill_file 결과의 revision을 전달한다. next_offset이 0이거나 없으면 읽기를 마친다. load_skill의 문서 revision은 이 값과 다르다. 파일 정체성·크기·수정/변경 시각 또는 마스킹 revision이 바뀌면 offset 0부터 revision 없이 다시 읽는다. revision은 MECA가 생성하는 읽기 계약이며 SKILL.md나 참고 파일에 작성할 항목은 아니다.
+```javascript
+return await tools.list_skills({limit: 16});
+```
+
+목록에서 필요한 스킬을 선택한 뒤 별도의 코드 호출에서 지침을 읽는다.
+
+```javascript
+await tools.load_skill({id: "meca:development"});
+```
+
+지침·참고 텍스트·지원 이미지 읽기는 명시적 `return` 없이도 모델에 입력을 전달한다. 각 코드 호출의 변수는 공유되지 않으므로 다음 호출에는 결과에서 확인한 ID와 경로를 객체 인자로 넣는다. 스킬의 스크립트 실행은 `tools.execute_command`를 사용하며, Code Mode에 직접 OS·모듈 접근 권한을 제공하지 않는다.
+
+참고 자료 안의 상대 링크는 그 문서의 디렉터리를 기준으로 해석한 뒤 스킬 루트 기준 경로로 전달한다. 예를 들어 `references/ui.md`의 `ui/layout-map.md` 링크는 `tools.read_skill_file`에 `references/ui/layout-map.md`로 전달한다.
+
+경로는 project_root 기준이며 ~/는 실행 계정의 홈이다. 경로로 읽은 스킬의 불투명 ID는 reader의 최근 128개·경로 합계 512KiB 안에서 재조회할 수 있다. 사용 시 수명을 갱신하고 오래된 등록은 회수한다. 회수된 ID는 원래 경로로 `tools.load_skill`을 호출해 등록한다. 참고 파일은 검증한 실제 스킬 루트 안에서 읽으며 manual-only 정책도 본문과 동일하게 적용한다. 명시적으로 지정한 스킬의 참고 파일 읽기 허용은 해당 요청에만 전달한다. 이미지 지원 요청에서는 기존 래스터 디코더로 이미지 자료를 전달하고, 다른 바이너리와 이미지 미지원 요청은 메타데이터만 반환한다. 스크립트를 읽어도 실행하지 않는다. Python·Node 등이 필요한 스킬은 그 환경을 별도로 준비해야 하며 MECA 설치 의존성으로 추가하지 않는다.
+
+텍스트 페이지는 원문 offset과 revision에 묶인다. 처음에는 offset 0에서 revision 없이 읽는다. next_offset이 양수이면 같은 id·path에 offset=next_offset과 해당 `tools.read_skill_file` 결과의 revision을 전달한다. next_offset이 0이거나 없으면 읽기를 마친다. `tools.load_skill`의 문서 revision은 이 값과 다르다. 파일 정체성·크기·수정/변경 시각 또는 마스킹 revision이 바뀌면 offset 0부터 revision 없이 다시 읽는다. revision은 MECA가 생성하는 읽기 계약이며 SKILL.md나 참고 파일에 작성할 항목은 아니다.
 
 ## 문맥과 기록
 
@@ -88,7 +106,7 @@ disable-model-invocation: true와 선택적인 agents/openai.yaml의 policy.allo
 
 팀에 명시한 스킬은 같은 읽기 결과를 전달하고, 자동 선택은 각 에이전트가 수행한다. 파일 변경은 이미 읽은 내용을 바꾸지 않는다. 다시 읽은 결과는 그 시점의 파일을 반영한다. 원본 기록에 본문을 보존하지만 참고 디렉터리 전체를 백업하지는 않는다.
 
-공개 읽기 기록은 스킬 ID·이름·출처·버전을 알린다. 현재 지침 본문은 `getSkill` 또는 `load_skill`로 읽으며 읽은 지침의 적용은 에이전트가 담당한다.
+공개 읽기 기록은 스킬 ID·이름·출처·버전을 알린다. 화면·서버 클라이언트는 API의 `getSkill`로, 모델은 Code Mode의 `tools.load_skill`로 현재 본문을 읽는다. 지침의 적용은 에이전트가 담당한다.
 
 목록 스냅샷, 참고 파일 페이지, 지침 문맥의 담당 코드는 [스킬 구현 전략](optimization-strategies.md#스킬-목록과-참고-파일)에서 확인한다.
 

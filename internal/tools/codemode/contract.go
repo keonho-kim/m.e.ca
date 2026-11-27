@@ -15,6 +15,7 @@ const (
 	MaxCodeBytes       = 256 << 10
 	MaxArgumentBytes   = 4 << 20
 	MaxResultBytes     = 1 << 20
+	MaxFallbackBytes   = 512 << 10
 	MaxErrorBytes      = 16 << 10
 	MaxToolResultBytes = 8 << 20
 	MaxCalls           = 256
@@ -43,6 +44,7 @@ type Deliver func(int, Reply) ([]Call, error)
 type Dispatch func(context.Context, []Call, Deliver) error
 
 type Result struct {
-	Value json.RawMessage
-	Calls int
+	Value   json.RawMessage
+	Calls   int
+	Defined bool // The fulfilled value was not JavaScript undefined; null is defined.
 }

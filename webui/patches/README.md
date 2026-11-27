@@ -26,7 +26,7 @@ Contract: `e2e/chat-stream-order.spec.ts`, including normal motion and history h
 
 ## Maintenance boundaries
 
-Core, Neutral and CLI are pinned together at `0.7.17`. The `0.7.16` to `0.7.17` CLI upgrade completed with no application codemods or manual migrations. The streaming and scroll contracts above still need this patch. Its Markdown merge preserves the upstream list bounds, table layout, link handling and prop diagnostics. Release fixes for selector focus, narrow composers, input keyboard avoidance, clipboard fallback and theme contrast are supplied by the upgraded packages. [Upstream release](https://github.com/meta/astryx/releases/tag/v0.7.17)
+Core, Neutral and CLI use the matching versions pinned in `package.json`. The Core patch supplies the streaming and scroll contracts above and preserves the upstream list bounds, table layout, link handling and prop diagnostics. The installed packages supply the remaining component behavior.
 
 Review and rebase each patch when changing its pinned package, then run the corresponding browser contracts. Preserve upstream licenses and include package source, runtime and declaration changes required by the published entry points.
 

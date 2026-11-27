@@ -52,7 +52,7 @@ func TestBootstrapRejectsSkillDirectoryReplacedWhileWaiting(t *testing.T) {
 	finished := make(chan struct{})
 	var bootErr error
 	go func() {
-		bootErr = bootstrapSkills(wait, root)
+		bootErr = bootstrapSkills(wait, root, false)
 		close(finished)
 	}()
 	defer func() {

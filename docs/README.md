@@ -21,8 +21,8 @@
 | 문서 | 목적 |
 | --- | --- |
 | [에이전트 작동 방식](runtime.md) | 요청·모델 스트림·복구·문맥·저장 수명 |
-| [Code Mode](codemode.md) | JS·TS 실행·내부 도구 승인·결과 전달·자원 한도 |
-| [도구 목록과 연동](tools.md) | 전체 native 도구·등록과 호출·브라우저와 WebFetch |
+| [Code Mode](codemode.md) | 모델의 실행 도구·JS·TS 본문·승인·반환과 자동 전달·자원 한도 |
+| [도구 목록과 연동](tools.md) | `tools.*` 호스트 함수·등록과 호출·브라우저와 WebFetch |
 | [호스트 실행과 승인](execution-boundary.md) | 셸과 파일 접근·승인 모드·외부 전송 |
 | [제품 명세](../SYSTEM.md) | 제품 범위와 아키텍처 경계 |
 

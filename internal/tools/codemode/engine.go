@@ -73,7 +73,8 @@ func Run(ctx context.Context, code string, names []string, dispatch Dispatch) (r
 	var rejected error
 	observer, err := promise.Then(func(value quickjs.Value) {
 		settled = true
-		if value.IsUndefined() {
+		result.Defined = !value.IsUndefined()
+		if !result.Defined {
 			result.Value = json.RawMessage(`null`)
 			return
 		}

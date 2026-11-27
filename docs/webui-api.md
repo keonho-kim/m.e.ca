@@ -4,7 +4,7 @@
 
 내장 WebUI는 동일 출처 HTTP JSON과 쿠키 인증 WebSocket으로 인증·작업 관찰·조회·복구를 수행한다. [기동과 외부 클라이언트 계약](server.md) · [화면 사용](webui-design.md)
 
-팀의 공개 응답·도구·승인은 스트리밍하고 팀원별 Thinking은 개인 이력에 보관한다. 명시적 스킬 호출은 `start.text`에 `#스킬명`으로 보낸다. [팀 실행](team.md) · [스킬 호출](skills.md#사용자-호출과-모델-도구)
+팀의 공개 응답·도구·승인은 스트리밍하고 팀원별 Thinking은 개인 이력에 보관한다. 명시적 스킬 호출은 `start.text`에 `#스킬명`으로 보낸다. [팀 실행](team.md) · [스킬 호출](skills.md#사용자-호출과-호스트-함수)
 
 ## 화면과 API의 대응
 
@@ -164,9 +164,9 @@ capabilities의 requestRecords·requestCapacity는 프로세스 간 보수적인
 
 파일 감시 `FileChange`는 변경된 직접 자식 이름 `changedNames`와 전체 재확인이 필요한 `rescan`을 보낸다. 이것은 변경 힌트다. 편집 문서의 실제 충돌 여부는 `editorProbe {path,watchRevision}`로 확인한다. 읽기·저장 응답의 `watchRevision`을 전달하면 같은 파일 버전은 본문 없이 확인하며, 변경 시에만 내용 revision을 비교한다. 저장의 최종 충돌 방지는 실제 원본 바이트 검사로 수행한다.
 
-Code Mode 그룹은 runId·agent·부모 실행 ID로 구분한다. 내부 도구의 `tool.parentExecutionId`와 부모 `codemode`의 `tool.executionId`를 연결하며, 개별 도구 상태는 자신의 실행 ID로 갱신한다. 응답 검증은 부모 ID와 코드·도구 실행 통계 필드의 형식도 확인한다.
+Code Mode 그룹은 runId·agent·부모 실행 ID로 구분한다. 내부 도구의 `tool.parentExecutionId`와 부모 `codemode`의 `tool.executionId`를 연결하며, 개별 도구 상태는 자신의 실행 ID로 갱신한다. 응답 검증은 부모 ID와 코드·도구 실행 통계 필드의 형식도 확인한다. 모델용 `fallback.outputs`는 부모 결과의 일부이며 개별 도구 원문을 대체하지 않는다. [모델 결과와 원문 조회](server.md#요청-상태와-복원)
 
-도구 이벤트의 `tool.executionId`는 엔진이 실행마다 정한 식별자이며 Provider의 `tool.callId`와 구분한다. 시작·완료·백그라운드 명령은 같은 실행 식별자로 연결한다. Provider가 다음 응답에 같은 call ID를 사용해도 서로 다른 실행이다. HTTP 응답은 해당 명령의 단일 결과와 요청·작업공간 식별자를 확인한 뒤 상태에 반영한다.
+도구 이벤트의 `tool.executionId`는 엔진이 실행마다 정한 식별자이며 호출 관계를 나타내는 `tool.callId`와 구분한다. 부모 `codemode`의 call ID는 Provider에서, 내부 호출의 call ID는 실행기에서 부여한다. 시작·완료·백그라운드 명령은 같은 실행 식별자로 연결한다. Provider가 다음 응답에 같은 call ID를 사용해도 서로 다른 실행이다. HTTP 응답은 해당 명령의 단일 결과와 요청·작업공간 식별자를 확인한 뒤 상태에 반영한다.
 
 ## 첨부 미리보기와 정적 자산
 

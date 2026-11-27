@@ -127,6 +127,8 @@ Ollama에는 확인된 context를 num_ctx로 지정하지만 공개 Chat API만�
 
 ## Native tool calling
 
+Provider에 전달하는 실행 도구는 `codemode` 하나다. 모델은 `code` 인자에 JS·TS 함수 본문을 작성하고, 내장 실행기가 그 안의 `tools.*`를 처리한다. 모델과 서버에는 `codemode`의 함수 호출·객체 인자를 올바르게 생성하는 native tool calling 지원이 필요하다. [Code Mode](codemode.md)
+
 MECA는 Chat Completions의 `tools`·`tool_calls`, Ollama Chat의 객체형 인자, LM Studio·OpenAI Responses의 `function_call`·`function_call_output`, Claude의 `tool_use`·`tool_result`, Gemini의 `functionCall`·`functionResponse`를 사용한다. 사용할 수 있는 호출은 모델과 서버 parser의 native tool 지원에 따라 결정된다. [도구 등록과 실행](tools.md#코어-등록과-실행)
 
 vLLM은 자동 도구 선택에 --enable-auto-tool-choice와 모델에 맞는 --tool-call-parser가 필요하다. Reasoning parser는 별도 설정이며 서빙 모델의 공식 권장 구성을 따른다. 서빙 별칭만으로 parser를 추측하지 않는다. [vLLM Tool Calling](https://docs.vllm.ai/en/latest/features/tool_calling/), [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling).

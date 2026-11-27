@@ -56,6 +56,27 @@ func TestPromisesBatchIndependentCallsAndFreezeArguments(t *testing.T) {
 	}
 }
 
+func TestReturnValueDistinguishesUndefinedFromJSONValues(t *testing.T) {
+	for _, test := range []struct {
+		code, value string
+		defined     bool
+	}{
+		{`const value = 5;`, "null", false},
+		{`return undefined;`, "null", false},
+		{`return ({value: 5}).missing;`, "null", false},
+		{`return null;`, "null", true},
+		{`return false;`, "false", true},
+		{`return {};`, "{}", true},
+	} {
+		t.Run(test.code, func(t *testing.T) {
+			result, err := Run(t.Context(), test.code, nil, nil)
+			if err != nil || result.Defined != test.defined || string(result.Value) != test.value {
+				t.Fatalf("result=%+v err=%v", result, err)
+			}
+		})
+	}
+}
+
 func TestToolFailureCanBeHandledButHostTerminationCannot(t *testing.T) {
 	result, err := Run(t.Context(), `try { await tools.read({}); } catch (e) { return e.output; }`, []string{"read"}, replyScript(func(context.Context, []Call) ([]Reply, error) {
 		return []Reply{{Value: json.RawMessage(`{"partial":true}`), Error: "read failed"}}, nil

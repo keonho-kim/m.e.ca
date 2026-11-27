@@ -1,7 +1,7 @@
-// Purpose: Exercise both distribution switches and repeated upgrades while preserving configuration and sessions.
+// Purpose: Verify distribution switches refresh release guidance while preserving configuration and sessions.
 // Pattern: Executable integration test with a local HTTPS release.
-// Usage: go test ./internal/commands/upgrade -run TestUpgradeInstallsReleaseAndRefreshesPrompts.
-// Related: internal/commands/upgrade/upgrade.go, internal/commands/install/install.go, internal/config/prompts/refresh.go.
+// Usage: go test ./internal/commands/upgrade -run TestUpgradeInstallsReleaseAndRefreshesGuidance.
+// Related: internal/commands/upgrade/upgrade.go, internal/commands/install/install.go, internal/config/bootstrap/refresh_skills.go.
 package upgrade
 
 import (
@@ -18,7 +18,7 @@ import (
 	"github.com/keonho-kim/meca/internal/distribution"
 )
 
-func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
+func TestUpgradeInstallsReleaseAndRefreshesGuidance(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds and runs the release installer")
 	}
@@ -44,6 +44,11 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	skillPath := filepath.Join(home, ".meca/skills/development/SKILL.md")
+	defaultSkill, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	session := filepath.Join(home, ".meca/sessions/retained.db")
 	if err := os.WriteFile(session, []byte("retained session"), 0600); err != nil {
 		t.Fatal(err)
@@ -56,6 +61,9 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 		}
 		client := releaseFixture(t, kind, tarball(t, archiveEntry{name: "meca", content: string(body)}), nil, nil)
 		for pass := 0; pass < 2; pass++ {
+			if err := os.WriteFile(skillPath, []byte("previous installed skill"), 0600); err != nil {
+				t.Fatal(err)
+			}
 			for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
 				for _, name := range []string{"system.md", "compaction.md"} {
 					if err := os.WriteFile(filepath.Join(home, ".meca/prompts", string(profile), name), []byte("user edit"), 0600); err != nil {
@@ -66,6 +74,10 @@ func TestUpgradeInstallsReleaseAndRefreshesPrompts(t *testing.T) {
 			result, err := Run(ctx, home, client, kind)
 			if err != nil || result.Version != "v0.0.20261026" || result.AlreadyCurrent != (pass == 1) {
 				t.Fatalf("upgrade %d: %+v, %v", pass, result, err)
+			}
+			skill, err := os.ReadFile(skillPath)
+			if err != nil || string(skill) != string(defaultSkill) {
+				t.Fatalf("upgrade did not publish the release skill: %v", err)
 			}
 			for _, profile := range []prompt.Profile{prompt.Single, prompt.Team} {
 				defaults := prompt.DefaultsFor(profile)

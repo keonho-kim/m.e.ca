@@ -114,9 +114,8 @@ func TestWebFetchCompactionPreservesPendingPage(t *testing.T) {
 		case 1:
 			if !slices.ContainsFunc(request.Tools, func(d toolapi.Definition) bool {
 				return d.Name == "codemode" && strings.Contains(d.Description, toolapi.WebFetch+"(args:")
-			}) ||
-				!strings.Contains(request.Messages[0].Content, "Use web_fetch") {
-				t.Fatal("configured tool or guidance is missing")
+			}) {
+				t.Fatal("configured code function is missing")
 			}
 			return call(map[string]any{"url": httpServer.URL})
 		case 2:

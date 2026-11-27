@@ -56,7 +56,7 @@ func Initialize(ctx context.Context, home string) (configuration config.Config, 
 	if err = prompts.Bootstrap(root); err != nil {
 		return configuration, err
 	}
-	if err = bootstrapSkills(ctx, root); err != nil {
+	if err = bootstrapSkills(ctx, root, false); err != nil {
 		return configuration, err
 	}
 	return config.Load(directory)

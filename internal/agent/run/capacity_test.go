@@ -24,11 +24,13 @@ type capacityGenerator struct {
 }
 
 func (g *capacityGenerator) Generate(ctx context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
-	if strings.HasPrefix(r.Messages[0].Content, "# Summarize work for continuation") {
+	if len(r.Tools) == 0 {
 		g.summaries++
-		if strings.Contains(r.Messages[1].Content, `"ActiveRequest":"Read a"`) {
-			g.activeRequest = "Read a"
+		var input struct{ ActiveRequest string }
+		if err := json.Unmarshal([]byte(r.Messages[1].Content), &input); err != nil {
+			return err
 		}
+		g.activeRequest = input.ActiveRequest
 		return emit(modelapi.Event{Delta: "- Request: Read a.\n- Result: The file was observed.\n- Next: Report the observation.", Done: true})
 	}
 	if len(g.base.requests) == 1 && !g.failed {

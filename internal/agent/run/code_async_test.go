@@ -6,6 +6,7 @@ package run
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -57,7 +58,7 @@ func TestCodePipelinesFastResultBeforeEarlierSlowCall(t *testing.T) {
 		const fast=await tools.execute_command({reason:"Observe fast operation",command:"printf fast"});
 		if(fast.Stdout!=="fast") throw new Error("unexpected fast result");
 		await tools.execute_command({reason:"Continue after fast result",command:"printf continuation"});
-		return (await slow).Stdout;
+		await slow;
 	`), "Done"}}
 	r.Generator = g
 	r.Tools = &pipelineTools{Executor: native, release: make(chan struct{})}
@@ -70,5 +71,22 @@ func TestCodePipelinesFastResultBeforeEarlierSlowCall(t *testing.T) {
 	outcomes := innerOutcomes(journal)
 	if len(outcomes) != 3 || callText(*outcomes[0].Call, "command") != "printf fast" {
 		t.Fatalf("unexpected completed effects: %+v", outcomes)
+	}
+	var response struct {
+		Fallback struct {
+			Outputs []struct{ Value struct{ Stdout string } }
+		}
+	}
+	if err := json.Unmarshal([]byte(latestCodeOutput(g.requests[1])), &response); err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Fallback.Outputs) != 3 || response.Fallback.Outputs[0].Value.Stdout != "fast" {
+		t.Fatalf("fallback did not preserve completed outputs: %+v", response.Fallback.Outputs)
+	}
+	for i, output := range response.Fallback.Outputs {
+		var recorded struct{ Stdout string }
+		if err := json.Unmarshal(outcomes[i].Output, &recorded); err != nil || output.Value.Stdout != recorded.Stdout {
+			t.Fatalf("fallback changed completion order at %d: %+v %v", i, output, err)
+		}
 	}
 }

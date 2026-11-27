@@ -67,7 +67,7 @@ func Run(ctx context.Context, home string, client *Client, kind distribution.Kin
 		return result, err
 	}
 	result.AlreadyCurrent = previous == next
-	// Reinstall even identical bytes: the release owns the default prompt files.
+	// Reinstall even identical bytes: the release owns default prompts and bundled skill files.
 	command := exec.CommandContext(ctx, candidate, "install", "--no-shell")
 	command.Env = append(os.Environ(), "HOME="+home)
 	command.WaitDelay = 2 * time.Second

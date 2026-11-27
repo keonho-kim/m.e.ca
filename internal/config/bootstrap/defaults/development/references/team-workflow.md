@@ -1,6 +1,6 @@
 # Team development workflow
 
-Use Domain-Driven Development (DDD) to define responsibilities and a shared Spec to agree behavior for coordinated implementation. Use the development skill's test cycle for each agreed behavior. Keep the process proportional to the request and reuse the team's existing agreements.
+Use this guide when the requested engineering work needs coordinated contributions. Derive roles and shared decisions from the outcome the user wants. For coordinated implementation, use domain responsibilities and a shared Spec to agree behavior, then the development skill's test cycle for each agreed change. Keep discussion and investigation scoped to the evidence or decision requested, and reuse existing agreements.
 
 ## Agree on domain responsibilities
 

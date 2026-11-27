@@ -42,10 +42,10 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 		_, err = toolapi.ValidateArguments(*definition, call.Arguments)
 	}
 	if err != nil {
-		hint := "Correct the invalid argument and reuse the other arguments. The call did not execute."
+		hint := "This operation did not execute. If it remains needed for the user's request, a subsequent call must satisfy the declared argument schema."
 		var invalid *toolapi.ArgumentError
 		if call.Name == "edit_file" && errors.As(err, &invalid) && invalid.Name == "edits" {
-			hint = "Use edits:[{old_text,new_text}] from completed reads of the unchanged original. old_text must match once; a read in this batch cannot supply source for its dependent edit."
+			hint = "This operation did not execute. A subsequent edit uses edits:[{old_text,new_text}] from completed reads of the unchanged original. old_text must match once; a read in this batch cannot supply source for its dependent edit."
 		}
 		return validatedCall{}, faults.Errorf(diagcatalog.RunArgumentValidationFailed, err, hint)
 	}

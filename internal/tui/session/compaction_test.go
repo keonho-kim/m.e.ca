@@ -49,6 +49,7 @@ func TestCompactionContext(t *testing.T) {
 		var body struct {
 			Messages []modelapi.Message `json:"messages"`
 			Effort   string             `json:"reasoning_effort"`
+			Tools    []json.RawMessage  `json:"tools"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
@@ -58,7 +59,7 @@ func TestCompactionContext(t *testing.T) {
 			t.Errorf("effort lost in generation/compaction: %q", body.Effort)
 		}
 		reply := "Remembered the earlier goal"
-		if strings.Contains(body.Messages[0].Content, "# Summarize work for continuation") {
+		if len(body.Tools) == 0 {
 			if !strings.Contains(body.Messages[1].Content, `"ActiveRequest":"Continue the earlier goal"`) {
 				t.Error("active request missing from summary input")
 			}
@@ -146,6 +147,7 @@ func TestManualCompactionCommand(t *testing.T) {
 		var body struct {
 			Messages  []modelapi.Message
 			MaxTokens int `json:"max_tokens"`
+			Tools     []json.RawMessage
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
@@ -154,7 +156,7 @@ func TestManualCompactionCommand(t *testing.T) {
 		if body.MaxTokens != 2293 {
 			t.Errorf("summary requested %d output tokens, want 2293 for the serving context", body.MaxTokens)
 		}
-		if len(body.Messages) != 2 || !strings.Contains(body.Messages[0].Content, "# Summarize work for continuation") ||
+		if len(body.Messages) != 2 || len(body.Tools) != 0 ||
 			!strings.Contains(body.Messages[1].Content, "Keep the blue file.") {
 			t.Error("manual command did not send a summary-only request")
 		}

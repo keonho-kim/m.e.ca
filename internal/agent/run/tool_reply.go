@@ -1,6 +1,6 @@
 // Purpose: Return rejected native candidates as paired tool results without performing side effects.
 // Pattern: Native tool dialogue recovery.
-// Usage: The decision loop commits rejected calls and a bounded correction before the next model request.
+// Usage: The decision loop records non-execution before a bounded new decision on the user's request.
 // Related: internal/agent/run/codemode.go, internal/agent/run/journal.go, internal/agent/context/conversation.go.
 package run
 
@@ -67,7 +67,7 @@ func (s *execution) returnToolFeedback(ctx context.Context, reply modelapi.Respo
 					field = invalid.Name
 				}
 			} else {
-				feedback = "Skipped because another call in this batch had invalid arguments. Resubmit this call if it is still needed."
+				feedback = "Skipped because another call in this batch had invalid arguments. Nothing in this batch executed."
 			}
 		}
 		feedback = s.runner.Redact(feedback)

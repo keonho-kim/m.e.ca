@@ -15,6 +15,6 @@ const (
 	CodeUnresolved       Message = "code is waiting on a Promise with no pending tool calls; timers and external I/O are unavailable"
 	CodeInvalidResult    Message = "code must return a JSON-serializable value: %s"
 	CodeDispatchMismatch Message = "code tool dispatcher returned an unknown or missing result"
-	CodeModelBoundary    Message = "new model input is available; generate the next code using the returned instructions or attachments"
+	CodeModelBoundary    Message = "new model input is available; inspect it before generating the next code"
 	CodeOnlyTool         Message = "call codemode with JavaScript or TypeScript code; use tools.<name>(arguments) inside the code"
 )

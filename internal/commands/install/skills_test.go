@@ -1,13 +1,10 @@
-// Purpose: Verify the installed development skill can be read and customized.
+// Purpose: Verify the installed development skill and its engineering references are readable.
 // Pattern: Installation lifecycle contract test.
 // Usage: go test ./internal/commands/install -run TestInstallPublishesDevelopmentSkill.
 // Related: internal/commands/install/install.go, internal/config/bootstrap/skills.go.
 package install
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/skills"
@@ -31,17 +28,5 @@ func TestInstallPublishesDevelopmentSkill(t *testing.T) {
 		if err != nil || resource.Text == "" || resource.NextOffset != 0 {
 			t.Fatalf("cannot read the full installed reference %s: %v", path, err)
 		}
-	}
-	path := filepath.Join(options.Home, ".meca/skills/development/SKILL.md")
-	custom := []byte("---\nname: development\ndescription: Customized development workflow\n---\nKeep the user's instructions.\n")
-	if err := os.WriteFile(path, custom, 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Install(ctx, options); err != nil {
-		t.Fatal(err)
-	}
-	doc, err = reader.Load(ctx, selector, false)
-	if err != nil || !strings.Contains(doc.Body, "Keep the user's instructions.") {
-		t.Fatalf("installation replaced the user's skill: %v", err)
 	}
 }

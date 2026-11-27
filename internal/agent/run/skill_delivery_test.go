@@ -97,6 +97,9 @@ func TestSkillToolDelivery(t *testing.T) {
 			}
 		}
 	}
+	if !strings.Contains(codeDefinition.Description, `"offset"?: number`) {
+		t.Fatal("code description omitted reference pagination")
+	}
 	for _, provider := range connection.Providers() {
 		t.Run(string(provider.Kind), func(t *testing.T) {
 			var encoder protocol.Encoder
@@ -124,24 +127,16 @@ func TestSkillToolDelivery(t *testing.T) {
 						t.Fatalf("system instructions omitted selection guidance for %s", guide)
 					}
 				}
-				for _, name := range names {
-					if !strings.Contains(instructions, name) {
-						t.Fatalf("system instructions omitted %s", name)
-					}
-					declaration := skillWireDeclaration(wire["tools"], "codemode")
-					if declaration == nil || declaration["description"] != codeDefinition.Description {
-						t.Fatalf("wire omitted %s description", name)
-					}
-					schema := skillWireSchema(declaration)
-					properties, _ := schema["properties"].(map[string]any)
-					for _, p := range codeDefinition.Parameters {
-						property, _ := properties[p.Name].(map[string]any)
-						if property["description"] != p.Description {
-							t.Fatalf("wire lost %s.%s description", name, p.Name)
-						}
-					}
-					if name == "read_skill_file" && !strings.Contains(codeDefinition.Description, `"offset"?: number`) {
-						t.Fatal("code description omitted pagination")
+				declaration := skillWireDeclaration(wire["tools"], "codemode")
+				if declaration == nil || declaration["description"] != codeDefinition.Description {
+					t.Fatal("wire omitted the code function descriptions")
+				}
+				schema := skillWireSchema(declaration)
+				properties, _ := schema["properties"].(map[string]any)
+				for _, p := range codeDefinition.Parameters {
+					property, _ := properties[p.Name].(map[string]any)
+					if property["description"] != p.Description {
+						t.Fatalf("wire lost codemode.%s description", p.Name)
 					}
 				}
 			}
