@@ -22,6 +22,20 @@ test('a saved command result takes over from all live states of that call', () =
   expect(liveActivity([started, result], [{ event: result }])).toEqual([]);
   expect(liveActivity([started, result], [])).toEqual([result]);
 });
+
+test('a saved code group owns newly arriving child tools without duplicate live rows', () => {
+  const parent: EventJson = {
+    runId: 'r',
+    kind: 'tool_started',
+    tool: { executionId: 'code', name: 'codemode' },
+  };
+  const child: EventJson = {
+    runId: 'r',
+    kind: 'tool_started',
+    tool: { executionId: 'child', parentExecutionId: 'code', name: 'write_file' },
+  };
+  expect(liveActivity([parent, child], [{ event: parent }])).toEqual([]);
+});
 test('same-named tools from other runs, agents and calls remain independent', () => {
   const others = [
     { ...result, agent: 'b' },

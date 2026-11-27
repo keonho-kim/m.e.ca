@@ -16,6 +16,7 @@ import (
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
+	"github.com/keonho-kim/meca/internal/tools/codemode"
 )
 
 type roomPayload struct {
@@ -44,7 +45,7 @@ func (p *journalEncoder) packMessage(message modelapi.Message) ([]byte, map[stri
 		if message.TransientObservation {
 			sharedField = "content"
 		}
-		packed, refs, err := p.pack(body, sharedField)
+		packed, refs, err := p.pack(body, sharedField, message.Role == "tool" && message.ToolName == codemode.Name)
 		return packed, refs, len(body), err
 	}
 	if message.Source.Session != "" && message.Source.Session != s.room.session.ID {

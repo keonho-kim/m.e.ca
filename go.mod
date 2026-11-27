@@ -8,6 +8,7 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
 	github.com/ebitengine/purego v0.10.1
+	github.com/evanw/esbuild v0.28.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gdamore/tcell/v3 v3.6.0
 	github.com/goccy/go-json v0.12.0
@@ -25,6 +26,7 @@ require (
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
 	google.golang.org/protobuf v1.36.12
+	modernc.org/quickjs v0.27.0
 	modernc.org/sqlite v1.62.0
 	mvdan.cc/sh/v3 v3.14.1
 )
@@ -50,6 +52,7 @@ require (
 	golang.org/x/text v0.44.0 // indirect
 	// Match the libc ABI required by modernc.org/sqlite.
 	modernc.org/libc v1.80.1 // indirect
+	modernc.org/libquickjs v0.14.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )

@@ -1,4 +1,4 @@
-// Purpose: Verify two team peers overlap sixteen real commands each and keep native results ordered and durable.
+// Purpose: Verify two team peers overlap sixteen real commands each and retain every result durably.
 // Pattern: Temporary SQLite integration test with a deterministic execution barrier.
 // Usage: go test -race ./internal/tools/team -run TestTeamCommands.
 // Related: internal/tools/team/parallel.go, internal/tools/team/parallel_fixture_test.go, internal/agent/run/batch_wave.go.
@@ -6,9 +6,11 @@ package team
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,8 +81,12 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 			LoadPrompts: func() (prompt.Templates, error) { return prompt.DefaultsFor(prompt.Team), nil }}, Text: "Inspect sixteen independent commands", Generator: model})
 		var ordered []string
 		result, err := agentsession.Execute(ctx, action, func(context.Context, toolapi.Approval) (bool, error) { return true, nil }, func(event runrecord.Event) error {
-			if event.Kind == "tool_succeeded" {
-				ordered = append(ordered, event.CallID)
+			if event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "execute_command" {
+				var result struct{ Stdout string }
+				if err := json.Unmarshal(event.Output, &result); err != nil {
+					return err
+				}
+				ordered = append(ordered, strings.TrimSpace(strings.TrimPrefix(result.Stdout, "command-")))
 			}
 			return nil
 		})
@@ -89,15 +95,27 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 			err = readErr
 			var saved []string
 			for _, message := range messages {
-				if message.Role == "tool" {
-					saved = append(saved, message.ToolCallID)
+				if message.Role == "tool" && message.ToolName == "codemode" {
+					var result struct {
+						Result []struct{ Stdout string } `json:"result"`
+					}
+					if readErr := json.Unmarshal([]byte(message.Content), &result); readErr != nil {
+						err = readErr
+						break
+					}
+					for _, item := range result.Result {
+						saved = append(saved, strings.TrimSpace(strings.TrimPrefix(item.Stdout, "command-")))
+					}
 				}
 			}
 			if err == nil && !slices.Equal(saved, expected) {
 				err = fmt.Errorf("%s: private SQLite command results=%v", member.ID, saved)
 			}
 		}
-		if err == nil && (result.HadToolFailure || model.calls != 2 || !slices.Equal(ordered, expected)) {
+		slices.Sort(ordered)
+		expectedEvents := slices.Clone(expected)
+		slices.Sort(expectedEvents)
+		if err == nil && (result.HadToolFailure || model.calls != 2 || !slices.Equal(ordered, expectedEvents)) {
 			err = fmt.Errorf("%s: result=%+v model calls=%d ordered=%v", member.ID, result, model.calls, ordered)
 		}
 		results <- err
@@ -143,5 +161,5 @@ func TestTeamCommandsOverlapAcrossPeersAndNativeBatch(t *testing.T) {
 		}
 	}
 	close(reports)
-	t.Logf("two peers, %d concurrent command entries, %d ordered results per private SQLite session", 2*commandsPerPeer, commandsPerPeer)
+	t.Logf("two peers, %d concurrent command entries, %d paired results per private SQLite session", 2*commandsPerPeer, commandsPerPeer)
 }

@@ -82,13 +82,16 @@ func TestOutboundApprovalModes(t *testing.T) {
 				t.Fatalf("recorded approvals=%d, want %d", confirmed, len(calls))
 			}
 			paired := map[string]int{}
-			for _, message := range journal.messages {
-				if message.Role == "tool" {
-					paired[message.ToolCallID]++
-				}
+			for _, event := range innerOutcomes(journal) {
+				paired[event.CallID]++
 			}
-			if paired["first"] != 1 || paired["second"] != 1 {
+			if len(paired) != 2 {
 				t.Fatalf("unpaired native transfer outcomes: %+v", paired)
+			}
+			for _, count := range paired {
+				if count != 1 {
+					t.Fatalf("duplicate outcome: %+v", paired)
+				}
 			}
 		})
 	}

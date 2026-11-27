@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ type continuationGenerator struct {
 func (g *continuationGenerator) Generate(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
 	g.step++
 	if g.step == 1 {
-		return emit(modelapi.Event{Delta: "Inspecting", Thinking: "brief", Calls: g.calls, ReasoningState: []byte("tool-state"), Done: true})
+		return emit(modelapi.Event{Delta: "Inspecting", Thinking: "brief", Calls: modeltest.Calls(g.calls), ReasoningState: []byte("tool-state"), Done: true})
 	}
 	want := "tool-state"
 	if g.step == 3 {

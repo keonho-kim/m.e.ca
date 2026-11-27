@@ -1,4 +1,4 @@
-// Purpose: Require terminal tool facts and their native replies to cross one durability boundary.
+// Purpose: Require inner effects to commit before code results and code replies to commit atomically.
 // Pattern: Journal boundary regression tests.
 // Usage: go test ./internal/agent/run -run TestOutcomeCommit.
 // Related: internal/agent/run/execution_result.go, internal/agent/run/action_result.go.
@@ -30,7 +30,8 @@ func (j *outcomeJournal) Commit(ctx context.Context, session string, records []r
 			paired = paired || sibling.Message != nil && sibling.Message.ToolCallID == record.Event.CallID
 			checkpoint = checkpoint || sibling.Event != nil && sibling.Event.Checkpoint != nil
 		}
-		if !paired || !checkpoint {
+		outer := record.Event.Call != nil && record.Event.Call.ParentExecutionID == ""
+		if !checkpoint || outer && !paired || !outer && paired {
 			j.t.Error("terminal outcome committed without its reply and checkpoint")
 		}
 	}
@@ -55,7 +56,7 @@ func TestOutcomeCommitIsAtomic(t *testing.T) {
 			t.Fatalf("failure=%v: %v", fail, err)
 		}
 		for _, event := range j.events {
-			if fail && event.Kind == "tool_succeeded" {
+			if fail && event.Kind == "tool_succeeded" && event.Call != nil && event.Call.ParentExecutionID == "" {
 				t.Fatal("outcome survived a rolled-back reply")
 			}
 		}
@@ -79,6 +80,15 @@ func TestOutcomeCommitPrecedesDisplay(t *testing.T) {
 	r := fixture(g, &executor{}, j)
 	_, err := r.Run(context.Background(), "write a", approve, func(event runrecord.Event) error {
 		if event.Kind == "tool_succeeded" {
+			if event.Call != nil && event.Call.ParentExecutionID != "" {
+				for _, recorded := range innerOutcomes(j) {
+					if recorded.CallID == event.CallID {
+						return nil
+					}
+				}
+				t.Error("published an inner outcome before its effect was durable")
+				return nil
+			}
 			for _, m := range j.messages {
 				if m.Role == "tool" && m.ToolCallID == event.CallID {
 					return nil

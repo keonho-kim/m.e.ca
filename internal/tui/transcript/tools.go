@@ -47,7 +47,7 @@ func (f Formatter) toolBlock(event runrecord.Event) viewport.Block {
 func (f Formatter) toolBlockWithArguments(event runrecord.Event, arguments string) viewport.Block {
 	var text strings.Builder
 	var changes []viewport.ChangeRange
-	label := f.Language.Text(event.Call.Name)
+	label := f.toolLabel(event)
 	if event.Kind == "tool_started" || event.Kind == "tool_waiting" {
 		status := "Running"
 		if event.Kind == "tool_waiting" {
@@ -80,6 +80,14 @@ func (f Formatter) toolBlockWithArguments(event runrecord.Event, arguments strin
 		block.Changes = &viewport.Changes{Source: block.Text, Ranges: changes}
 	}
 	return block
+}
+
+func (f Formatter) toolLabel(event runrecord.Event) string {
+	label := f.Language.Text(event.Call.Name)
+	if event.Call.ParentExecutionID != "" {
+		return "  ↳ " + label
+	}
+	return label
 }
 
 func indentTool(text string) string {

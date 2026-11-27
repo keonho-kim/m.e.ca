@@ -28,10 +28,19 @@ export function boolean(value: unknown) {
 export function statistics(value: unknown) {
   if (value === undefined) return;
   object(value);
-  only(value, ['concurrent', 'elapsedMillis', 'generationMillis', 'usage']);
+  only(value, [
+    'concurrent',
+    'elapsedMillis',
+    'generationMillis',
+    'usage',
+    'codeExecutions',
+    'toolExecutions',
+  ]);
   boolean(value.concurrent);
   integer(value.elapsedMillis);
   integer(value.generationMillis);
+  integer(value.codeExecutions);
+  integer(value.toolExecutions);
   if (value.usage !== undefined) {
     object(value.usage);
     only(value.usage, ['input', 'output', 'cost']);

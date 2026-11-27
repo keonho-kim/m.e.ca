@@ -8,6 +8,7 @@ import (
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
+	"github.com/keonho-kim/meca/internal/tools/codemode"
 )
 
 const maxWebFetchDecisionBytes = 64 << 10
@@ -15,7 +16,7 @@ const maxWebFetchDecisionBytes = 64 << 10
 func (s *execution) pageAllowance(request modelapi.Request, reply modelapi.Response, budget modelapi.InputBudget, usage modelapi.TokenUsage, wireBytes int64) int {
 	count := 0
 	for _, call := range reply.Calls {
-		if call.Name == toolapi.WebFetch {
+		if call.Name == codemode.Name || call.Name == toolapi.WebFetch {
 			count++
 		}
 	}

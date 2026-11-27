@@ -21,7 +21,7 @@ func TestCommandCaptureCommitsBeforeAcknowledgement(t *testing.T) {
 	}
 	found := false
 	for _, event := range journal.events {
-		if event.Kind == "tool_succeeded" && event.CallID == "capture" {
+		if event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "execute_command" {
 			found = true
 			if len(event.Capture) < 4*1024*1024 {
 				t.Fatal("durable event lost the deferred command original")

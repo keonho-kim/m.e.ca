@@ -21,9 +21,9 @@ func TestBatchFailureHasOneEventPerCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	counts := map[string]int{}
-	for _, e := range j.events {
+	for _, e := range innerOutcomes(j) {
 		if e.Kind == "tool_failed" {
-			counts[e.CallID]++
+			counts[callText(*e.Call, "path")]++
 		}
 	}
 	for _, call := range calls {

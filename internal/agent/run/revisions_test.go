@@ -1,7 +1,7 @@
 // Purpose: Verify repeated edits need no check gate and file cycles survive interleaved reads.
 // Pattern: Scripted runtime behavior tests.
 // Usage: go test ./internal/agent/run -run 'TestRepeatedEdits|TestFileCycle'.
-// Related: internal/agent/run/observations.go, internal/agent/run/action.go.
+// Related: internal/agent/run/observations.go, internal/agent/run/codemode.go.
 package run
 
 import (

@@ -8,6 +8,8 @@
 
 **M.E.CA — Minimal Essentials Coding Agent**는 TUI·CLI·내장 WebUI에서 사용하는 코딩 에이전트입니다. 선택한 모델로 코드를 수정·검증하고 대화를 로컬에 저장합니다. 파일·이미지 참조, 실행 중 방향 수정과 후속 요청 예약, 팀 협업을 지원합니다.
 
+모델은 내장 [Code Mode](docs/codemode.md)에서 JavaScript·TypeScript로 도구 호출과 결과 처리를 조합합니다. 스크립트 자체에는 별도 승인 없이, 실제 작업마다 기존 승인 정책을 적용합니다.
+
 ## 설치
 
 macOS와 Linux·WSL의 amd64·arm64를 지원합니다. 배포본은 Go·Bun·Node 설치 없이 실행할 수 있습니다.

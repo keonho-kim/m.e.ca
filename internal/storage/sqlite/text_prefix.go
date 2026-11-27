@@ -21,7 +21,7 @@ func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudge
 	if err != nil {
 		return "", false, err
 	}
-	if value.codec == 3 {
+	if value.codec == 3 || value.codec == composedPayloadCodec {
 		value, err = s.admitPayload(ctx, id, budget)
 		if err != nil {
 			return "", false, err
@@ -29,6 +29,9 @@ func (s *Store) readTextPrefix(ctx context.Context, id string, budget *readBudge
 		raw, err := s.restorePayload(ctx, value.codec, value.size, value.digest, value.body)
 		if err != nil {
 			return "", false, err
+		}
+		if quoted {
+			return s.codec.RawTextPrefix(ctx, 0, value.size, hex.EncodeToString(value.digest), raw, limit)
 		}
 		return content.StringPrefix(raw, limit)
 	}

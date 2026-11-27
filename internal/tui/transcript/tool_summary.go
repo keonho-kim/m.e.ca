@@ -73,7 +73,7 @@ func (f Formatter) toolSummaryWithArguments(event runrecord.Event, args tool.Dis
 			}
 		}
 	}
-	text := "\n  " + f.Language.Text(event.Call.Name) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
+	text := "\n  " + f.toolLabel(event) + " · " + f.Language.Text(status) + " · " + f.Language.Text("Collapsed") + "\n"
 	if argsErr == nil {
 		target := args.Path
 		if args.CommandID != "" {

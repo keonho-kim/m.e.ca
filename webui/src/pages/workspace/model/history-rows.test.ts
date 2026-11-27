@@ -5,6 +5,25 @@
 import { expect, test } from 'bun:test';
 import { historyRows } from '@/pages/workspace/model/history-rows';
 
+test('code execution keeps inner calls under their parent while parent status changes', () => {
+  const parent = {
+    runId: 'run',
+    kind: 'tool_started',
+    tool: { executionId: 'code', name: 'codemode' },
+  };
+  const child = {
+    runId: 'run',
+    kind: 'tool_succeeded',
+    tool: { executionId: 'child', parentExecutionId: 'code', name: 'write_file' },
+  };
+  const finished = { ...parent, kind: 'tool_succeeded' };
+  const rows = historyRows([{ event: parent }, { event: child }, { event: finished }]);
+  expect(rows).toHaveLength(1);
+  const row = rows[0];
+  expect(row && 'item' in row && row.tools?.map((item) => item.event)).toEqual([finished, child]);
+  expect(historyRows([{ event: parent }, { event: { ...child, agent: 'peer' } }])).toHaveLength(2);
+});
+
 test('reasoning and adjacent assistant text form one bubble without swallowing tools or outcomes', () => {
   const thought = {
     sequence: '1',

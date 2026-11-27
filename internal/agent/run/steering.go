@@ -1,6 +1,6 @@
 // Purpose: Admit current user instructions at serial decision and execution boundaries.
 // Pattern: Request-owned input boundary.
-// Usage: The loop polls its UI-independent queue only after workers have joined.
+// Usage: The serial owner polls its UI-independent queue before admitting new effects.
 // Related: internal/agent/run/run.go, internal/tui/session/steering.go.
 package run
 
@@ -66,6 +66,7 @@ func (s *execution) applyInstructions(ctx context.Context, messages []string) er
 			return err
 		}
 		s.instructionRevision++
+		s.codeArgumentCorrections = 0
 		if err := s.readMentions(ctx, text); err != nil {
 			return err
 		}

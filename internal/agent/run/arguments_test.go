@@ -1,7 +1,7 @@
 // Purpose: Verify complete native arguments are corrected through paired results before any preparation.
 // Pattern: Runtime trust-boundary tests.
 // Usage: go test ./internal/agent/run -run TestNativeArgument.
-// Related: internal/agent/run/action.go, internal/agent/run/tool_reply.go, internal/agent/tool/arguments.go.
+// Related: internal/agent/run/codemode.go, internal/agent/run/tool_reply.go, internal/agent/tool/arguments.go.
 package run
 
 import (

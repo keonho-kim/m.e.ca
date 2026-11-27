@@ -52,7 +52,7 @@ func (s *execution) collectCommands(ctx context.Context) (bool, error) {
 		if err != nil {
 			return false, errors.Join(errRuntimeRecord, err)
 		}
-		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, BatchID: finished.BatchID, Name: "execute_command", Arguments: arguments}
+		call := toolapi.Call{ID: finished.CallID, ExecutionID: finished.ExecutionID, ParentExecutionID: finished.ParentExecutionID, BatchID: finished.BatchID, Name: "execute_command", Arguments: arguments}
 		op := toolapi.Operation{RunID: s.checkpoint.ID, CallID: finished.CallID, Name: "execute_command", Command: finished.Command, Started: result.Started, Status: status, Process: result.Process, Failure: result.Failure, Result: result.Summary, Revision: s.checkpoint.ChangeRevision}
 		s.checkpoint.Work.Observe(op)
 		s.checkpoint.Observation = result.Summary

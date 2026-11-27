@@ -81,7 +81,7 @@ func TestMissingEditReasonReturnsPairedFeedback(t *testing.T) {
 	}
 	for _, message := range g.requests[1].Messages {
 		if message.Role == "tool" && message.ToolCallID == "call_1" {
-			if !strings.Contains(message.Content, `"field":"reason"`) || !strings.Contains(message.Content, "missing reason argument") || strings.Contains(message.Content, "old_text must match") {
+			if !strings.Contains(message.Content, "missing reason argument") || strings.Contains(message.Content, "old_text must match") {
 				t.Fatalf("unexpected reason correction: %s", message.Content)
 			}
 			if got, err := os.ReadFile(path); err != nil || string(got) != "status: done\n" {

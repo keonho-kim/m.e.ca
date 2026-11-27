@@ -7,23 +7,24 @@ package process
 import "time"
 
 type State struct {
-	ExecutionID      string `json:"-"`
-	Reason           string `json:"-"`
-	BatchID          string `json:"-"`
-	ID               string "json:\"command_id\""
-	CallID           string "json:\"-\""
-	Command          string "json:\"command\""
-	Directory        string "json:\"directory\""
-	Status           string "json:\"status\""
-	ElapsedMillis    int64  "json:\"elapsed_millis\""
-	LastOutputMillis *int64 "json:\"last_output_millis\""
-	ExitCode         int    "json:\"-\""
-	Error            string "json:\"-\""
-	Failure          error  `json:"-"`
+	ExecutionID       string `json:"-"`
+	ParentExecutionID string `json:"-"`
+	Reason            string `json:"-"`
+	BatchID           string `json:"-"`
+	ID                string "json:\"command_id\""
+	CallID            string "json:\"-\""
+	Command           string "json:\"command\""
+	Directory         string "json:\"directory\""
+	Status            string "json:\"status\""
+	ElapsedMillis     int64  "json:\"elapsed_millis\""
+	LastOutputMillis  *int64 "json:\"last_output_millis\""
+	ExitCode          int    "json:\"-\""
+	Error             string "json:\"-\""
+	Failure           error  `json:"-"`
 }
 
 // CallIdentity keeps the runtime execution separate from a provider's reusable call ID.
-type CallIdentity struct{ CallID, ExecutionID, BatchID, Reason string }
+type CallIdentity struct{ CallID, ExecutionID, ParentExecutionID, BatchID, Reason string }
 
 func (j *job) snapshot() State {
 	j.mu.Lock()

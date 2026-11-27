@@ -33,16 +33,17 @@ func Display(sequence int64, kind string, body, envelope, arguments []byte) (Rec
 	}
 	var call struct {
 		Call *struct {
-			ID, Name    string
-			ExecutionID string `json:"execution_id"`
-			BatchID     string `json:"batch_id"`
+			ID, Name          string
+			ExecutionID       string `json:"execution_id"`
+			ParentExecutionID string `json:"parent_execution_id"`
+			BatchID           string `json:"batch_id"`
 		}
 	}
 	if err := json.Unmarshal(envelope, &call); err != nil {
 		return Record{}, err
 	}
 	if call.Call != nil {
-		record.Event.Call = &toolapi.Call{ExecutionID: call.Call.ExecutionID, BatchID: call.Call.BatchID, ID: call.Call.ID, Name: call.Call.Name, Arguments: arguments}
+		record.Event.Call = &toolapi.Call{ExecutionID: call.Call.ExecutionID, ParentExecutionID: call.Call.ParentExecutionID, BatchID: call.Call.BatchID, ID: call.Call.ID, Name: call.Call.Name, Arguments: arguments}
 	}
 	return record, nil
 }

@@ -31,6 +31,9 @@ func (s *Store) payload(ctx context.Context, id string) (json.RawMessage, error)
 }
 
 func (s *Store) restorePayload(ctx context.Context, codec, size int, digest, body []byte) (json.RawMessage, error) {
+	if codec == composedPayloadCodec {
+		return s.restoreComposition(ctx, size, digest, body)
+	}
 	if codec == 3 {
 		return s.roomPayload(ctx, hex.EncodeToString(digest), size, body)
 	}

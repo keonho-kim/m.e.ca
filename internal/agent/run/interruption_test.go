@@ -1,7 +1,7 @@
 // Purpose: Verify resuming an interrupted generation retains executed work without replaying thoughts or effects.
 // Pattern: Runtime lifecycle contract tests.
 // Usage: go test ./internal/agent/run -run TestInterruptedGeneration.
-// Related: internal/agent/run/generate.go, internal/agent/run/action.go, internal/agent/context/conversation.go.
+// Related: internal/agent/run/generate.go, internal/agent/run/codemode.go, internal/agent/context/conversation.go.
 package run
 
 import (
@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ type interruptedGenerator struct {
 func (g *interruptedGenerator) Generate(ctx context.Context, _ modelapi.Request, emit func(modelapi.Event) error) error {
 	g.calls++
 	if g.calls == 1 {
-		return emit(modelapi.Event{Done: true, Thinking: "completed tool reasoning", Calls: []toolapi.Call{{ID: "created", Name: "write_file", Arguments: json.RawMessage(`{"path":"README.md","content":"# Project"}`)}}})
+		return emit(modelapi.Event{Done: true, Thinking: "completed tool reasoning", Calls: modeltest.Calls([]toolapi.Call{{ID: "created", Name: "write_file", Arguments: json.RawMessage(`{"path":"README.md","content":"# Project"}`)}})})
 	}
 	if err := emit(modelapi.Event{Streaming: true, Thinking: "unfinished secret thought", Delta: "All work is finished"}); err != nil {
 		return err

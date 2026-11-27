@@ -1,6 +1,6 @@
 // Purpose: Prepare and approve an operation on the owning runtime worker.
 // Pattern: Approval use case.
-// Usage: Single and batch execution call prepareExecution before any concurrent execution.
+// Usage: Tool group admission freezes candidates and approves them before worker launch.
 // Related: internal/agent/run/call_validation.go, internal/agent/run/execute.go.
 package run
 
@@ -54,23 +54,10 @@ func (s *execution) freezeExecution(ctx context.Context, call toolapi.Call) (rea
 	return &readyExecution{call: call, operation: op, proposal: proposal}, outcome, nil
 }
 
-func (s *execution) prepareExecution(ctx context.Context, call toolapi.Call, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
-	ready, outcome, err := s.freezeExecution(ctx, call)
-	if err != nil {
-		return nil, outcome, err
-	}
-	return s.approveExecution(ctx, ready, approve, emit)
-}
-
-func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (result *readyExecution, outcome toolapi.Result, resultErr error) {
-	defer func() {
-		if resultErr != nil {
-			toolapi.Release(ready.operation)
-		}
-	}()
+func (s *execution) approveExecution(ctx context.Context, ready *readyExecution, approve Approver, emit func(runrecord.Event) error) (*readyExecution, toolapi.Result, error) {
 	call, proposal := ready.call, ready.proposal
 	instructionRevision := s.instructionRevision
-	outcome = toolapi.Result{Target: proposal.Target}
+	outcome := toolapi.Result{Target: proposal.Target}
 	var err error
 	if err := s.checkTimeBudget(ctx); err != nil {
 		return nil, outcome, err

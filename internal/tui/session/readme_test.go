@@ -59,7 +59,8 @@ func TestReadmeRequestWithoutProjectInstructions(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			message = map[string]any{"tool_calls": []any{map[string]any{"id": fmt.Sprintf("call_%d", len(request.Messages)), "type": "function", "function": map[string]any{"name": toolName, "arguments": string(encoded)}}}}
+			code, _ := json.Marshal(map[string]string{"code": "return await tools." + toolName + "(" + string(encoded) + ");"})
+			message = map[string]any{"tool_calls": []any{map[string]any{"id": fmt.Sprintf("call_%d", len(request.Messages)), "type": "function", "function": map[string]any{"name": "codemode", "arguments": string(code)}}}}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": message, "finish_reason": "stop"}}}); err != nil {

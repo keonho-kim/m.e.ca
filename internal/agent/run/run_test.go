@@ -1,7 +1,7 @@
 // Purpose: Verify native tool execution, model-call budgets and final reporting.
 // Pattern: Task behavior tests with scripted model replies.
 // Usage: go test ./internal/agent/run.
-// Related: internal/agent/run/run.go, internal/agent/run/action.go.
+// Related: internal/agent/run/run.go, internal/agent/run/codemode.go.
 package run
 
 import (

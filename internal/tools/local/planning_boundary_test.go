@@ -24,7 +24,7 @@ func TestPlanningBoundaryRechecksSymlinksBeforePreparation(t *testing.T) {
 	}
 	settings := policy.Settings{Scope: policy.System}
 	candidate := call("write_file", `{"path":"alias/file","content":"new"}`)
-	if plan, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{candidate}, 16); err != nil || plan.Count != 1 {
+	if plan, err := e.ParallelBatch(context.Background(), settings, nil, []toolapi.Call{candidate}, 16); err != nil || plan.Count != 1 {
 		t.Fatal(plan, err)
 	}
 	if err := os.Remove(alias); err != nil {
@@ -47,7 +47,7 @@ func TestPlanningBoundaryRechecksProjectBeforePreparation(t *testing.T) {
 	e, project := testExecutor(t)
 	settings := policy.Settings{Scope: policy.System}
 	candidate := call("create_directory", `{"paths":["new/a","new/b"]}`)
-	if _, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{candidate}, 16); err != nil {
+	if _, err := e.ParallelBatch(context.Background(), settings, nil, []toolapi.Call{candidate}, 16); err != nil {
 		t.Fatal(err)
 	}
 	old := project + ".old"
@@ -69,7 +69,7 @@ func TestPlanningBoundaryRechecksProjectBeforePreparation(t *testing.T) {
 		t.Fatal("a scheduling snapshot accepted a different project root")
 	}
 	control := call("list_command_runs", `{}`)
-	if plan, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{control}, 16); err != nil || plan.Count != 1 {
+	if plan, err := e.ParallelBatch(context.Background(), settings, nil, []toolapi.Call{control}, 16); err != nil || plan.Count != 1 {
 		t.Fatal("project replacement blocked owned process management", plan, err)
 	}
 }

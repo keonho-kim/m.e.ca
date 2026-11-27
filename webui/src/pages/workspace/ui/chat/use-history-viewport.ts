@@ -5,7 +5,7 @@
 import { useChatLayoutContext } from '@astryxdesign/core/Chat';
 import { type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useLayoutEffect, useState } from 'react';
-import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
+import { toolGroupIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
 import type { HistoryRowValue } from '@/pages/workspace/model/history-rows';
 import { type Target, targetKey } from '@/pages/workspace/model/store';
 import { focusedRange } from '@/pages/workspace/ui/focused-range';
@@ -25,7 +25,7 @@ export function useHistoryViewport(
         (row &&
           ('item' in row
             ? (row.item.event &&
-                (toolBatchIdentity(row.item.event) || toolIdentity(row.item.event))) ||
+                (toolGroupIdentity(row.item.event) || toolIdentity(row.item.event))) ||
               row.item.presentation ||
               row.item.sequence
             : row.sequence)) ??

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -50,7 +51,7 @@ func (g *pairedSequence) Generate(_ context.Context, _ modelapi.Request, emit fu
 			Arguments: json.RawMessage(fmt.Sprintf(`{"path":"file-%d-%d"}`, g.rounds, index)),
 		})
 	}
-	return emit(modelapi.Event{Calls: calls, Done: true})
+	return emit(modelapi.Event{Calls: modeltest.Calls(calls), Done: true})
 }
 
 func TestToolSequenceBatchCanCross128Calls(t *testing.T) {

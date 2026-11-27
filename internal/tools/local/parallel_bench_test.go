@@ -27,7 +27,7 @@ func BenchmarkParallelPlanning(b *testing.B) {
 	}
 	b.ReportAllocs()
 	for b.Loop() {
-		if plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16); err != nil || plan.Count != len(calls) {
+		if plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, nil, calls, 16); err != nil || plan.Count != len(calls) {
 			b.Fatalf("planned=%d: %v", plan.Count, err)
 		}
 	}

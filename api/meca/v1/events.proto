@@ -24,6 +24,7 @@ message Approval {
   repeated string reasons = 11;
 }
 message Tool {
+  string parent_execution_id = 10;
   SkillRead skill = 9;
   string summary = 8;
   ToolPhase phase = 7;
@@ -47,6 +48,8 @@ enum ToolPhase {
 }
 message Usage { int64 input = 1; int64 output = 2; optional double cost = 3; }
 message Statistics {
+  int64 code_executions = 5;
+  int64 tool_executions = 6;
   bool concurrent = 1;
   int64 elapsed_millis = 2;
   int64 generation_millis = 3;

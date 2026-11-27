@@ -90,7 +90,7 @@ func event(value server.Event) *v1.Event {
 	}
 	if e.Statistics != nil {
 		stats := e.Statistics
-		result.Statistics = &v1.Statistics{Concurrent: stats.Concurrent, ElapsedMillis: stats.ElapsedMillis, GenerationMillis: stats.GenerationMillis}
+		result.Statistics = &v1.Statistics{Concurrent: stats.Concurrent, ElapsedMillis: stats.ElapsedMillis, GenerationMillis: stats.GenerationMillis, CodeExecutions: stats.CodeExecutions, ToolExecutions: stats.ToolExecutions}
 		if stats.Usage != nil {
 			u := stats.Usage
 			result.Statistics.Usage = &v1.Usage{Input: u.Input, Output: u.Output, Cost: u.Cost}

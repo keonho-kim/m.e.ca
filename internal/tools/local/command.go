@@ -15,7 +15,7 @@ import (
 func (op *commandOperation) command(ctx context.Context) (toolapi.Result, error) {
 	var id string
 	var err error
-	identity := process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, BatchID: op.batchID, Reason: op.input.Reason}
+	identity := process.CallIdentity{CallID: op.callID, ExecutionID: op.executionID, ParentExecutionID: op.parentExecutionID, BatchID: op.batchID, Reason: op.input.Reason}
 	if op.admit == nil {
 		if _, err = op.admitCommand(ctx); err != nil {
 			return toolapi.Result{}, err

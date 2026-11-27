@@ -15,6 +15,7 @@ import (
 
 	"github.com/keonho-kim/meca/internal/agent/compact"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
@@ -36,7 +37,7 @@ func (g *outboundScript) Generate(_ context.Context, _ modelapi.Request, emit fu
 	if err != nil {
 		return err
 	}
-	return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "upload", Name: "execute_command", Arguments: body}}})
+	return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "upload", Name: "execute_command", Arguments: body}})})
 }
 
 func TestNoninteractiveOutboundApproval(t *testing.T) {

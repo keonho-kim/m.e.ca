@@ -15,7 +15,14 @@ test('one parallel wave has one agent heading, independent tool disclosures and 
   await expect(page.getByText('Parallel fixtures inspected.', { exact: true })).toBeVisible();
   const tools = page.locator('.tool-message');
   await expect(tools).toHaveCount(1);
-  await expect(tools.locator('.tool-entry')).toHaveCount(2);
+  await expect(tools.locator('.tool-entry')).toHaveCount(3);
+  await expect(tools.getByText('codemode', { exact: true })).toHaveCount(1);
+  await expect(tools.getByText('execute_command', { exact: true })).toHaveCount(2);
+  const code = tools.locator('.tool-entry').filter({ hasText: 'codemode' });
+  await code.getByRole('button', { name: '완료 codemode', exact: true }).click();
+  await expect(code.locator('.tool-content')).toContainText('completed');
+  await code.getByRole('button', { name: '요청 원문', exact: true }).click();
+  await expect(code.locator('.tool-request-content')).toContainText('Promise.all');
   await expect(tools.getByText('MECA', { exact: true })).toHaveCount(1);
   const summary = page.locator('.completion-summary');
   await expect(summary).toContainText('입력 64');
@@ -24,5 +31,5 @@ test('one parallel wave has one agent heading, independent tool disclosures and 
   await expect(summary).not.toContainText('Parallel fixtures inspected.');
   await page.reload();
   await expect(page.locator('.tool-message')).toHaveCount(1);
-  await expect(page.locator('.tool-message .tool-entry')).toHaveCount(2);
+  await expect(page.locator('.tool-message .tool-entry')).toHaveCount(3);
 });

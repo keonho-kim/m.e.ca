@@ -68,7 +68,7 @@ func (e *Executor) CollectCommands() ([]toolapi.CommandCompletion, error) {
 		}
 		command := e.commandLabel(state.ID, state.Command)
 		result.Process.Command = command
-		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, BatchID: state.BatchID, Command: command, Reason: state.Reason, Result: result})
+		completed = append(completed, toolapi.CommandCompletion{ID: state.ID, CallID: state.CallID, ExecutionID: state.ExecutionID, ParentExecutionID: state.ParentExecutionID, BatchID: state.BatchID, Command: command, Reason: state.Reason, Result: result})
 	}
 	return completed, nil
 }

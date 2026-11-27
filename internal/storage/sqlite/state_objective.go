@@ -54,7 +54,7 @@ func (p *journalEncoder) objectivePayload(run, text string) (string, error) {
 	if quote {
 		raw = []byte(text)
 	}
-	if _, err := p.payload(raw); err != nil {
+	if _, err := p.payload(raw, false); err != nil {
 		return "", err
 	}
 	id = p.referenced[len(p.referenced)-1].id

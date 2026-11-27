@@ -31,6 +31,9 @@ func (message Message) Check() error {
 	if message.PreserveObservations && message.Role != "assistant" {
 		return faults.Errorf(diagcatalog.ModelPreserveObservationsRequiresAssistant)
 	}
+	if message.AcknowledgesInput && message.Role != "tool" {
+		return faults.Errorf(diagcatalog.ModelInvalidMessageRole)
+	}
 	if len(message.ReasoningState) > 0 && (message.Role != "assistant" || message.Incomplete) {
 		return faults.Errorf(diagcatalog.ModelContinuationStateRequiresACompletedAssistantMessage)
 	}
@@ -58,7 +61,7 @@ func (message Message) Check() error {
 }
 
 func (message Message) AcknowledgesObservations() bool {
-	return message.Role == "assistant" && !message.Incomplete && !message.PreserveObservations
+	return message.Role == "tool" && message.AcknowledgesInput || message.Role == "assistant" && !message.Incomplete && !message.PreserveObservations
 }
 
 // ContextBytes measures retained model content without serializing native state

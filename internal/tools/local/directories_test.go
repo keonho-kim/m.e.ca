@@ -51,7 +51,7 @@ func TestDirectories(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "uncreated")); !os.IsNotExist(err) {
 		t.Fatal("preflight mutated filesystem")
 	}
-	plan, err := e.ParallelBatch(ctx, settings, []toolapi.Call{call("create_directory", `{"paths":["shared/a"]}`), call("create_directory", `{"paths":["shared/b"]}`)}, 16)
+	plan, err := e.ParallelBatch(ctx, settings, nil, []toolapi.Call{call("create_directory", `{"paths":["shared/a"]}`), call("create_directory", `{"paths":["shared/b"]}`)}, 16)
 	if err != nil || plan.Count != 1 {
 		t.Fatalf("shared missing parent: %v %v", plan.Count, err)
 	}

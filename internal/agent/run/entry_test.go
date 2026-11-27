@@ -1,7 +1,7 @@
 // Purpose: Verify only valid native calls reach tool preparation.
 // Pattern: Runtime trust-boundary test.
 // Usage: go test ./internal/agent/run -run TestNativeEntry.
-// Related: internal/agent/tool/arguments.go, internal/agent/run/action.go, internal/agent/run/context.go.
+// Related: internal/agent/tool/arguments.go, internal/agent/run/codemode.go, internal/agent/run/context.go.
 package run
 
 import (

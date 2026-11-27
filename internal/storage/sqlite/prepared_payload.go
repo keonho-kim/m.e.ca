@@ -19,9 +19,10 @@ import (
 )
 
 type storedValue struct {
-	id          string
-	codec, size int
-	body        []byte
+	id           string
+	codec, size  int
+	body         []byte
+	dependencies []payloadDependency
 }
 type preparedPayload struct {
 	storedValue
@@ -44,11 +45,11 @@ func (s *Store) encodeValue(id string, body []byte) (storedValue, error) {
 	return value, nil
 }
 
-func (p *journalEncoder) pack(body []byte, shared string) ([]byte, map[string]string, error) {
-	return content.Pack(body, shared, p.payload)
+func (p *journalEncoder) pack(body []byte, shared string, nested bool) ([]byte, map[string]string, error) {
+	return content.Pack(body, shared, func(raw []byte) (string, error) { return p.payload(raw, nested) })
 }
 
-func (p *journalEncoder) payload(raw []byte) (string, error) {
+func (p *journalEncoder) payload(raw []byte, nested bool) (string, error) {
 	id := content.ID(raw)
 	value := p.payloads[id]
 	if value == nil {
@@ -65,7 +66,15 @@ func (p *journalEncoder) payload(raw []byte) (string, error) {
 		value.known = err == nil
 
 		if !value.known {
-			encoded, err := p.store.encodeValue(id, raw)
+			err = nil
+			var encoded storedValue
+			var composed bool
+			if nested {
+				encoded, composed, err = p.composeValue(id, raw)
+			}
+			if err == nil && !composed {
+				encoded, err = p.store.encodeValue(id, raw)
+			}
 			if err != nil {
 				return "", err
 			}
@@ -76,7 +85,7 @@ func (p *journalEncoder) payload(raw []byte) (string, error) {
 		}
 		p.payloads[id] = value
 		// Include conservative allocation overhead for the value and its map slot.
-		p.retained += 256 + len(id) + len(value.body)
+		p.retained += 256 + len(id) + len(value.body) + 64*len(value.dependencies)
 	}
 	p.referenced = append(p.referenced, value)
 	return strconv.Itoa(len(p.referenced) - 1), nil
@@ -94,6 +103,9 @@ func (p *preparedPayload) write(ctx context.Context, tx *sql.Tx) error {
 		}
 	}
 	if !p.known {
+		if err := p.checkDependencies(ctx, tx); err != nil {
+			return err
+		}
 		result, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO payloads(digest,codec,raw_bytes,body) VALUES(?,?,?,?)", p.digest, p.codec, p.size, p.body)
 		if err != nil {
 			return err
@@ -115,6 +127,7 @@ func (p *preparedPayload) write(ctx context.Context, tx *sql.Tx) error {
 		}
 	}
 	p.written, p.body = true, nil
+	p.dependencies = nil
 	return nil
 }
 

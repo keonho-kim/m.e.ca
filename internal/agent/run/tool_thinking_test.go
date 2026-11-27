@@ -1,11 +1,12 @@
 // Purpose: Preserve finalized visible reasoning when a streamed reply becomes a native tool call.
 // Pattern: Scripted generation-to-tool regression test.
 // Usage: go test ./internal/agent/run -run TestToolTransitionKeepsThinking.
-// Related: internal/agent/run/generate.go, internal/agent/run/action.go.
+// Related: internal/agent/run/generate.go, internal/agent/run/codemode.go.
 package run
 
 import (
 	"context"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
@@ -24,7 +25,7 @@ func TestToolTransitionKeepsThinking(t *testing.T) {
 		if err := emit(modelapi.Event{Thinking: "Stable reasoning", Streaming: true}); err != nil {
 			return err
 		}
-		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "read", Name: "inspect_fixture", Arguments: []byte(`{"path":"a"}`)}}})
+		return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "read", Name: "inspect_fixture", Arguments: []byte(`{"path":"a"}`)}})})
 	})
 	visible := ""
 	generation := 0

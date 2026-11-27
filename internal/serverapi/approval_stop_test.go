@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 )
 
@@ -20,7 +21,7 @@ func TestPendingApprovalStopsWithoutEffect(t *testing.T) {
 		t.Run(action, func(t *testing.T) {
 			ctx := deadline(t)
 			f := newFixture(t, generateFunc(func(_ context.Context, _ model.Request, emit func(model.Event) error) error {
-				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Prepare file for approval","path":"unapproved.txt","content":"must not run"}`)}}, Done: true})
+				return emit(model.Event{Calls: modeltest.Calls([]tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Prepare file for approval","path":"unapproved.txt","content":"must not run"}`)}}), Done: true})
 			}), true)
 			state, err := f.app.Select(ctx, "", true)
 			if err != nil {

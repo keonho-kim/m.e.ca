@@ -150,7 +150,8 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 		}
 		if needsApproval {
 			arguments, _ := json.Marshal(map[string]string{"reason": "Save approved fixture", "path": filepath.Join(home, "approval-written.txt"), "content": "approved fixture\n"})
-			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": "fixture-write", "type": "function", "function": map[string]any{"name": "write_file", "arguments": string(arguments)}}}}, "finish_reason": "tool_calls"}}})
+			arguments, _ = json.Marshal(map[string]string{"code": "return await tools.write_file(" + string(arguments) + ");"})
+			body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": "fixture-write", "type": "function", "function": map[string]any{"name": "codemode", "arguments": string(arguments)}}}}, "finish_reason": "tool_calls"}}})
 			fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", body)
 			_ = http.NewResponseController(w).Flush()
 			return
@@ -175,7 +176,9 @@ func uiProvider(t *testing.T, home string) *httptest.Server {
 				case <-r.Context().Done():
 					return
 				}
-				fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"fixture-read\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"sample.go\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
+				arguments, _ := json.Marshal(map[string]string{"code": `return await tools.execute_command({reason:"Inspect fixture",command:"cat sample.go"});`})
+				body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": "fixture-read", "type": "function", "function": map[string]string{"name": "codemode", "arguments": string(arguments)}}}}, "finish_reason": "tool_calls"}}})
+				fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", body)
 				_ = http.NewResponseController(w).Flush()
 				return
 			}

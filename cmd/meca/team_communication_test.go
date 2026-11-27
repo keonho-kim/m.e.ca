@@ -18,6 +18,7 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -89,7 +90,7 @@ func (g *communicatingTeamModel) Generate(ctx context.Context, request modelapi.
 		return emit(modelapi.Event{Delta: "The contributions are complete.", Done: true})
 	}
 	body, _ := json.Marshal(args)
-	return emit(modelapi.Event{Delta: text, Calls: []toolapi.Call{{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}}, Done: true})
+	return emit(modelapi.Event{Delta: text, Calls: modeltest.Calls([]toolapi.Call{{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}}), Done: true})
 }
 
 func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
@@ -133,7 +134,7 @@ func TestTeamCommunicatesBeforeLocalWork(t *testing.T) {
 		if event.Kind == "team_discussion" && event.Agent == names[1] {
 			close(model.bDiscussed)
 		}
-		if event.Kind == "tool_started" && event.Call != nil && event.Call.Name != "leave_team" && !spoke[event.Agent] {
+		if event.Kind == "tool_started" && event.Call != nil && event.Call.ParentExecutionID != "" && event.Call.Name != "leave_team" && !spoke[event.Agent] {
 			t.Errorf("%s started %s without a public contribution", event.Agent, event.Call.Name)
 		}
 		if event.Kind == "tool_failed" {

@@ -15,6 +15,7 @@ import (
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	recordcontent "github.com/keonho-kim/meca/internal/storage/content"
 	"github.com/keonho-kim/meca/internal/storage/history"
+	"github.com/keonho-kim/meca/internal/tools/codemode"
 )
 
 func (s *Store) RecordEvent(ctx context.Context, session string, event runrecord.Event) error {
@@ -54,7 +55,7 @@ func (p *journalEncoder) event(value *preparedRecord) error {
 	if event.Kind == "tool_succeeded" && event.Call != nil && toolapi.IsPagedObservation(event.Call.Name) {
 		sharedField = "output"
 	}
-	packed, refs, err := p.pack(body, sharedField)
+	packed, refs, err := p.pack(body, sharedField, event.Call != nil && event.Call.Name == codemode.Name)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ func (f Formatter) arguments(call tool.Call) string {
 
 func (f Formatter) displayArguments(args tool.DisplayArguments) string {
 	var text strings.Builder
-	for _, field := range []struct{ value, label string }{{args.Path, "경로"}, {args.Command, "명령"}, {args.CommandID, "Command ID"}} {
+	for _, field := range []struct{ value, label string }{{args.Code, "Code"}, {args.Path, "경로"}, {args.Command, "명령"}, {args.CommandID, "Command ID"}} {
 		if field.value != "" {
 			text.WriteString(indentTool(f.Language.Text(field.label) + ": " + f.Redact(field.value)))
 		}

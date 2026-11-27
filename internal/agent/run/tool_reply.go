@@ -1,7 +1,7 @@
 // Purpose: Return rejected native candidates as paired tool results without performing side effects.
 // Pattern: Native tool dialogue recovery.
 // Usage: The decision loop commits rejected calls and a bounded correction before the next model request.
-// Related: internal/agent/run/action.go, internal/agent/run/journal.go, internal/agent/context/conversation.go.
+// Related: internal/agent/run/codemode.go, internal/agent/run/journal.go, internal/agent/context/conversation.go.
 package run
 
 import (

@@ -25,7 +25,45 @@ type parallelTarget struct {
 	info os.FileInfo
 }
 
-func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (result toolapi.BatchPlan, err error) {
+func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, active, calls []toolapi.Call, maximum int) (toolapi.BatchPlan, error) {
+	idle := toolapi.BatchPlan{PreparationConcurrency: 1}
+	if len(calls) == 0 || len(active) >= maximum {
+		return idle, nil
+	}
+	if len(active) == 0 {
+		return e.planBatch(ctx, settings, calls, maximum)
+	}
+	commands := true
+	for _, call := range active {
+		commands = commands && call.Name == "execute_command"
+		if toolapi.IsBrowserTool(call.Name) || commandControl(call.Name) || call.Name == "view_image" || call.Name == "load_skill" || call.Name == "read_skill_file" {
+			return idle, nil
+		}
+	}
+	if commands {
+		if calls[0].Name != "execute_command" {
+			return idle, nil
+		}
+		return e.planBatch(ctx, settings, calls, maximum-len(active))
+	}
+	for _, call := range active {
+		if call.Name == "execute_command" {
+			return idle, nil
+		}
+	}
+	combined := make([]toolapi.Call, 0, min(maximum, len(active)+len(calls)))
+	combined = append(combined, active...)
+	combined = append(combined, calls[:min(len(calls), maximum-len(active))]...)
+	plan, err := e.planBatch(ctx, settings, combined, maximum)
+	if err != nil {
+		return idle, err
+	}
+	plan.Count = max(0, plan.Count-len(active))
+	plan.PreparationConcurrency = max(1, min(plan.PreparationConcurrency, plan.Count))
+	return plan, nil
+}
+
+func (e *Executor) planBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (result toolapi.BatchPlan, err error) {
 	var largestTemporary int64
 	prepareFiles := true
 	plan := func(count int, err error) (toolapi.BatchPlan, error) {

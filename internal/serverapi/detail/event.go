@@ -34,9 +34,11 @@ type event struct {
 }
 
 type call struct {
-	ID        string          `json:"id"`
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
+	ExecutionID       string          `json:"executionId"`
+	ParentExecutionID string          `json:"parentExecutionId,omitempty"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name"`
+	Arguments         json.RawMessage `json:"arguments"`
 }
 type reference struct {
 	SessionID string `json:"sessionId"`
@@ -48,6 +50,8 @@ type usage struct {
 	Cost   *float64 `json:"cost,omitempty"`
 }
 type statistics struct {
+	CodeExecutions   int64  `json:"codeExecutions,string"`
+	ToolExecutions   int64  `json:"toolExecutions,string"`
 	Concurrent       bool   `json:"concurrent"`
 	ElapsedMillis    int64  `json:"elapsedMillis,string"`
 	GenerationMillis int64  `json:"generationMillis,string"`
@@ -74,7 +78,7 @@ func publicEvent(value record.Event) *event {
 	e := &event{Kind: value.Kind, Agent: value.Agent, Final: value.Final, RunID: value.RunID, Text: value.Text, Thinking: value.Thinking, CallID: value.CallID, ApprovalSource: value.ApprovalSource, ChangePreview: value.ChangePreview, Output: value.Output, Usage: publicUsage(value.Usage)}
 	e.Kind, e.OccurredAt, e.ErrorCode, e.Skill = value.PublicKind(), value.OccurredAt, value.ErrorCode, value.Skill
 	if value.Call != nil {
-		e.Call = &call{value.Call.ID, value.Call.Name, value.Call.Arguments}
+		e.Call = &call{ExecutionID: value.Call.ExecutionID, ParentExecutionID: value.Call.ParentExecutionID, ID: value.Call.ID, Name: value.Call.Name, Arguments: value.Call.Arguments}
 	}
 	if value.Reference != nil {
 		e.Reference = &reference{value.Reference.Session, value.Reference.Sequence}
@@ -83,7 +87,7 @@ func publicEvent(value record.Event) *event {
 		e.Operation = publicOperation(*value.Operation)
 	}
 	if s := value.Statistics; s != nil {
-		e.Statistics = &statistics{s.Concurrent, s.ElapsedMillis, s.GenerationMillis, publicUsage(s.Usage)}
+		e.Statistics = &statistics{CodeExecutions: s.CodeExecutions, ToolExecutions: s.ToolExecutions, Concurrent: s.Concurrent, ElapsedMillis: s.ElapsedMillis, GenerationMillis: s.GenerationMillis, Usage: publicUsage(s.Usage)}
 	}
 	if t := value.Team; t != nil {
 		e.Team = &team{ReplyTo: t.ReplyTo, ReplyAuthor: t.ReplyAuthor, Mentions: t.Mentions, BasedOn: t.BasedOn}

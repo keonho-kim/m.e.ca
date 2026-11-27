@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	"github.com/keonho-kim/meca/internal/agent/run"
 	sessionrun "github.com/keonho-kim/meca/internal/agent/session"
@@ -36,7 +37,7 @@ func (g *script) Generate(_ context.Context, _ modelapi.Request, emit func(model
 		if err != nil {
 			return err
 		}
-		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "write", Name: "write_file", Arguments: body}}})
+		return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "write", Name: "write_file", Arguments: body}})})
 	}
 	if err := emit(modelapi.Event{Streaming: true, Delta: "Created "}); err != nil {
 		return err

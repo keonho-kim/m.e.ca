@@ -31,7 +31,7 @@ func TestPeerObservationDuringPreparationPreservesNativePairing(t *testing.T) {
 	}
 	paired, note := false, false
 	for _, message := range g.requests[1].Messages {
-		paired = paired || message.Role == "tool" && message.ToolName == "inspect_fixture"
+		paired = paired || message.Role == "tool" && message.ToolName == "codemode"
 		note = note || strings.Contains(message.Content, "I am reviewing the existing interface")
 	}
 	if !paired || !note || tools.executed != 1 {
@@ -63,7 +63,7 @@ func TestPeerObservationBetweenWavesPreservesTheWholeNativeGroup(t *testing.T) {
 		}
 		note = note || strings.Contains(message.Content, "The interface review is complete")
 	}
-	if paired != 2 || !note || tools.executed != 2 {
+	if paired != 1 || !note || tools.executed != 2 || len(innerOutcomes(&j.journal)) != 2 {
 		t.Fatal("peer reception broke a valid batch or lost observations", paired, note, tools.executed)
 	}
 }

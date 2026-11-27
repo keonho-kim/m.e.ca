@@ -21,38 +21,41 @@ import (
 )
 
 type execution struct {
-	beforeCompaction       *modelapi.ContextMeasurement
-	order                  *presentation.Sequence
-	presentation           string
-	contextMemory          *processmemory.ContextLease
-	replyMemory            *processmemory.ReplyLease
-	projection             contextbuild.Projection
-	observationReadThrough int
-	webFetchAllowance      int
-	webFetchUserInput      string
-	historyLoaded          bool
-	runner                 Runner
-	limits                 Limits
-	system                 string
-	result                 Result
-	checkpoint             runrecord.Checkpoint
-	emit                   func(runrecord.Event) error
-	definitions            []toolapi.Definition
-	usage                  requestBudget
-	statistics             runStatistics
-	messages               []modelapi.Message
-	skillReads             []modelapi.Message
-	skillReadIndex         map[string]int
-	skillReadKeys          []string
-	skillReadRevisions     map[string]string
-	skillFileVersions      map[string]string
-	skillReadBytes         int
-	explicitSkills         []string
-	memoryContext          string
-	capacityRecovery       bool
-	commandRevision        uint64
-	userSequence           int64
-	instructionRevision    uint64
+	code                    *codeExecution
+	codeArgumentCorrections int
+	beforeCompaction        *modelapi.ContextMeasurement
+	order                   *presentation.Sequence
+	presentation            string
+	contextMemory           *processmemory.ContextLease
+	replyMemory             *processmemory.ReplyLease
+	projection              contextbuild.Projection
+	observationReadThrough  int
+	webFetchAllowance       int
+	webFetchUserInput       string
+	historyLoaded           bool
+	runner                  Runner
+	limits                  Limits
+	system                  string
+	result                  Result
+	checkpoint              runrecord.Checkpoint
+	emit                    func(runrecord.Event) error
+	definitions             []toolapi.Definition
+	codeDefinition          toolapi.Definition
+	usage                   requestBudget
+	statistics              runStatistics
+	messages                []modelapi.Message
+	skillReads              []modelapi.Message
+	skillReadIndex          map[string]int
+	skillReadKeys           []string
+	skillReadRevisions      map[string]string
+	skillFileVersions       map[string]string
+	skillReadBytes          int
+	explicitSkills          []string
+	memoryContext           string
+	capacityRecovery        bool
+	commandRevision         uint64
+	userSequence            int64
+	instructionRevision     uint64
 }
 
 func (r Runner) Run(ctx context.Context, input string, approve Approver, emit func(runrecord.Event) error) (result Result, err error) {

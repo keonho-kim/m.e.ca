@@ -29,7 +29,7 @@ func TestExecutionIdentityAcrossGenerations(t *testing.T) {
 	r.Generator = repeatedIDs{g}
 	var started, finished []string
 	_, err := r.Run(t.Context(), "Inspect both files.", approve, func(event record.Event) error {
-		if event.Call == nil {
+		if event.Call == nil || event.Call.ParentExecutionID == "" {
 			return nil
 		}
 		if event.Call.BatchID != "" {

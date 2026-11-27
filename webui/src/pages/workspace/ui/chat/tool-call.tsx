@@ -1,4 +1,4 @@
-// Purpose: Show native tool disclosures with nested requests and inline execution results.
+// Purpose: Show code executions and their host tools with nested requests and inline results.
 // Pattern: Astryx Collapsible trigger containing read-only ChatToolCalls metadata.
 // Usage: Saved and live rows share stable execution identities and lazy result reads.
 // Related: webui/src/pages/workspace/ui/chat/detail-content.tsx, webui/src/pages/workspace/ui/chat/tool-request.tsx.
@@ -9,7 +9,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { memo, useMemo, useState } from 'react';
 import {
   mergeToolEvents,
-  toolBatchIdentity,
+  toolGroupIdentity,
   toolIdentity,
 } from '@/pages/workspace/model/chat-events';
 import { type Target, useWorkspaceStore } from '@/pages/workspace/model/store';
@@ -25,7 +25,7 @@ export const ToolCalls = memo(function ToolCalls({
   saved = false,
   target,
 }: ToolProps & { events: EventJson[]; saved?: boolean }) {
-  const batch = toolBatchIdentity(events[0]),
+  const batch = toolGroupIdentity(events[0]),
     identity = toolIdentity(events[0]);
   // Draft-only updates keep the event-array identity, so no per-token filtering runs.
   const source = useWorkspaceStore((state) => (saved ? state.events : null));
@@ -38,7 +38,7 @@ export const ToolCalls = memo(function ToolCalls({
           !!toolIdentity(event) &&
           event.kind !== 'tool_proposed' &&
           event.kind !== 'approved' &&
-          (batch ? toolBatchIdentity(event) === batch : toolIdentity(event) === identity)
+          (batch ? toolGroupIdentity(event) === batch : toolIdentity(event) === identity)
       ) ?? [],
     [source, target.workspace, target.session, batch, identity]
   );
@@ -68,7 +68,11 @@ const ToolEntry = memo(function ToolEntry({ event, target }: ToolProps & { event
   const reference = event.tool?.reference,
     name = event.tool?.name ?? t('toolResult');
   return (
-    <VStack className="tool-entry min-w-0 w-full" gap={0}>
+    <VStack
+      className="tool-entry min-w-0 w-full"
+      gap={0}
+      paddingInlineStart={event.tool?.parentExecutionId ? 4 : 0}
+    >
       <Collapsible
         className="tool-disclosure min-w-0 grow"
         data-tone="tool"

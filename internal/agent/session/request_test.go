@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/session"
@@ -69,15 +70,11 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 	templates.System += "\nCUSTOM_SYSTEM_RULE"
 	step, approvals := 0, 0
 	g := generation(func(_ context.Context, request modelapi.Request, emit func(modelapi.Event) error) error {
-		catalog := map[string]bool{}
-		for _, definition := range request.Tools {
-			catalog[definition.Name] = true
-		}
-		if len(catalog) != len(tools.Definitions())-1 {
-			t.Fatalf("main agent must receive the full direct tool catalog: %v", catalog)
+		if len(request.Tools) != 1 || request.Tools[0].Name != "codemode" {
+			t.Fatalf("missing code tool: %+v", request.Tools)
 		}
 		for _, definition := range tools.Definitions() {
-			if definition.Name != "view_image" && !catalog[definition.Name] {
+			if definition.Name != "view_image" && !strings.Contains(request.Tools[0].Description, definition.Name+"(args:") {
 				t.Fatalf("main agent lost tool %s", definition.Name)
 			}
 		}
@@ -113,7 +110,7 @@ func TestMainAgentExecutesFollowUpDirectly(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		return emit(modelapi.Event{Calls: []toolapi.Call{{ID: name + "-call", Name: name, Arguments: body}}, Done: true})
+		return emit(modelapi.Event{Calls: modeltest.Calls([]toolapi.Call{{ID: name + "-call", Name: name, Arguments: body}}), Done: true})
 	})
 	for _, text := range []string{"Create note.txt", "Update note.txt from one to two"} {
 		thinking = false

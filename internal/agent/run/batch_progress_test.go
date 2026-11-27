@@ -27,7 +27,7 @@ type progressOperation struct {
 
 func (e *progressTools) Prepare(ctx context.Context, settings policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
 	op, err := e.Executor.Prepare(ctx, settings, call)
-	if err == nil && call.ID == "checks" {
+	if err == nil && callText(call, "command") == "printf checks-finished" {
 		return progressOperation{op, e.release}, nil
 	}
 	return op, err
@@ -56,7 +56,7 @@ func TestParallelPublishesReadyResults(t *testing.T) {
 	batch := ""
 	counts := map[string]int{}
 	result, err := r.Run(ctx, "read documents and run checks independently", approve, func(event runrecord.Event) error {
-		if event.Call != nil && (event.Kind == "tool_started" || event.Kind == "tool_succeeded") {
+		if event.Call != nil && event.Call.ParentExecutionID != "" && (event.Kind == "tool_started" || event.Kind == "tool_succeeded") {
 			if batch == "" {
 				batch = event.Call.BatchID
 			}
@@ -65,7 +65,7 @@ func TestParallelPublishesReadyResults(t *testing.T) {
 			}
 			counts[event.Kind]++
 		}
-		if event.Kind == "tool_succeeded" && event.CallID == "read" && !visible {
+		if event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "execute_command" && callText(*event.Call, "command") == "printf document-read" && !visible {
 			visible = true
 			close(held.release)
 		}
@@ -78,12 +78,10 @@ func TestParallelPublishesReadyResults(t *testing.T) {
 		t.Fatal(counts)
 	}
 	var paired []string
-	for _, message := range journal.messages {
-		if message.Role == "tool" {
-			paired = append(paired, message.ToolCallID)
-		}
+	for _, event := range innerOutcomes(journal) {
+		paired = append(paired, callText(*event.Call, "command"))
 	}
-	if len(paired) != 2 || paired[0] != "read" || paired[1] != "checks" {
+	if len(paired) != 2 || paired[0] != "printf document-read" || paired[1] != "printf checks-finished" {
 		t.Fatalf("native result order changed: %v", paired)
 	}
 }

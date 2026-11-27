@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/policy"
 	"github.com/keonho-kim/meca/internal/tools/local"
@@ -29,7 +30,7 @@ func (g *commandBatchModel) Generate(_ context.Context, _ modelapi.Request, emit
 		body, _ := json.Marshal(map[string]string{"reason": "Run independent teammate check", "command": fmt.Sprintf("printf 'command-%d\\n'", i)})
 		calls[i] = toolapi.Call{ID: fmt.Sprint(i), Name: "execute_command", Arguments: body}
 	}
-	return emit(modelapi.Event{Calls: calls, Done: true})
+	return emit(modelapi.Event{Calls: modeltest.Calls(calls), Done: true})
 }
 
 type barrierCommands struct {

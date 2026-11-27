@@ -44,7 +44,8 @@ func uiTeamPresentationReply(w http.ResponseWriter, messages []uiFixtureMessage)
 		delta["content"] = "TEAM_FINAL_RESPONSE_CANARY: All checks finished."
 		reason = "stop"
 	} else {
-		delta["tool_calls"] = []any{map[string]any{"index": 0, "id": "fixture-" + name, "type": "function", "function": map[string]string{"name": name, "arguments": arguments}}}
+		code, _ := json.Marshal(map[string]string{"code": "return await tools." + name + "(" + arguments + ");"})
+		delta["tool_calls"] = []any{map[string]any{"index": 0, "id": "fixture-" + name, "type": "function", "function": map[string]string{"name": "codemode", "arguments": string(code)}}}
 	}
 	data, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": delta, "finish_reason": reason}}})
 	fmt.Fprintf(w, "data: %s\n\n", data)

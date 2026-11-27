@@ -78,13 +78,17 @@ func TestSkillToolDelivery(t *testing.T) {
 	}
 	request := g.requests[0]
 	definitions := map[string]toolapi.Definition{}
-	for _, definition := range request.Tools {
+	for _, definition := range tools.Definitions() {
 		definitions[definition.Name] = definition
 	}
+	if len(request.Tools) != 1 || request.Tools[0].Name != "codemode" {
+		t.Fatal("missing code tool")
+	}
+	codeDefinition := request.Tools[0]
 	names := []string{"list_skills", "load_skill", "read_skill_file"}
 	for _, name := range names {
 		definition, ok := definitions[name]
-		if !ok || definition.Description == "" {
+		if !ok || definition.Description == "" || !strings.Contains(codeDefinition.Description, name+"(args:") {
 			t.Fatalf("model did not receive %s declaration", name)
 		}
 		for _, p := range definition.Parameters {
@@ -124,24 +128,20 @@ func TestSkillToolDelivery(t *testing.T) {
 					if !strings.Contains(instructions, name) {
 						t.Fatalf("system instructions omitted %s", name)
 					}
-					declaration := skillWireDeclaration(wire["tools"], name)
-					if declaration == nil || declaration["description"] != definitions[name].Description {
+					declaration := skillWireDeclaration(wire["tools"], "codemode")
+					if declaration == nil || declaration["description"] != codeDefinition.Description {
 						t.Fatalf("wire omitted %s description", name)
 					}
 					schema := skillWireSchema(declaration)
 					properties, _ := schema["properties"].(map[string]any)
-					for _, p := range definitions[name].Parameters {
+					for _, p := range codeDefinition.Parameters {
 						property, _ := properties[p.Name].(map[string]any)
 						if property["description"] != p.Description {
 							t.Fatalf("wire lost %s.%s description", name, p.Name)
 						}
 					}
-					if name == "read_skill_file" {
-						offset, _ := properties["offset"].(map[string]any)
-						maximum, _ := offset["maximum"].(float64)
-						if offset["type"] != "integer" || maximum < 65536 {
-							t.Fatalf("schema prevents pagination: %v", offset)
-						}
+					if name == "read_skill_file" && !strings.Contains(codeDefinition.Description, `"offset"?: number`) {
+						t.Fatal("code description omitted pagination")
 					}
 				}
 			}

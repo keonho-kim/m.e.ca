@@ -17,7 +17,7 @@ func wireTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339Nano)
 }
 func wireStatistics(s record.Statistics) *v1.Statistics {
-	value := &v1.Statistics{Concurrent: s.Concurrent, ElapsedMillis: s.ElapsedMillis, GenerationMillis: s.GenerationMillis}
+	value := &v1.Statistics{Concurrent: s.Concurrent, ElapsedMillis: s.ElapsedMillis, GenerationMillis: s.GenerationMillis, CodeExecutions: s.CodeExecutions, ToolExecutions: s.ToolExecutions}
 	if u := s.Usage; u != nil {
 		value.Usage = &v1.Usage{Input: u.Input, Output: u.Output, Cost: u.Cost}
 	}

@@ -36,12 +36,12 @@ type ownedTools struct {
 }
 
 func (e *ownedTools) Prepare(_ context.Context, _ policy.Settings, call toolapi.Call) (toolapi.Execution, error) {
-	if e.failure && call.ID == "b" {
+	if e.failure && callText(call, "path") == "b" {
 		return nil, errors.New("cannot freeze sibling")
 	}
 	return &ownedOperation{released: &e.released, approved: e.approval}, nil
 }
-func (e *ownedTools) ParallelBatch(_ context.Context, _ policy.Settings, calls []toolapi.Call, _ int) (toolapi.BatchPlan, error) {
+func (e *ownedTools) ParallelBatch(_ context.Context, _ policy.Settings, active, calls []toolapi.Call, _ int) (toolapi.BatchPlan, error) {
 	return toolapi.BatchPlan{Count: len(calls), PreparationConcurrency: 1}, nil
 }
 func TestPreparedResourcesReleaseOnEveryOutcome(t *testing.T) {

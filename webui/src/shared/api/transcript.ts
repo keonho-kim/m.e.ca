@@ -114,6 +114,7 @@ export function parseEvent(value: unknown): EventJson {
     only(value.tool, [
       'phase',
       'executionId',
+      'parentExecutionId',
       'batchId',
       'callId',
       'name',
@@ -122,7 +123,8 @@ export function parseEvent(value: unknown): EventJson {
       'summary',
       'skill',
     ]);
-    for (const key of ['executionId', 'batchId', 'callId', 'name']) text(value.tool[key], 128);
+    for (const key of ['executionId', 'parentExecutionId', 'batchId', 'callId', 'name'])
+      text(value.tool[key], 128);
     text(value.tool.summary);
     text(value.tool.argumentsJson);
     reference(value.tool.reference);
@@ -176,6 +178,17 @@ export function parseHistory(value: unknown) {
 export function parseSnapshot(value: unknown) {
   object(value);
   cursor(value.cursor);
+  if (value.execution !== undefined) {
+    object(value.execution);
+    statistics(value.execution.statistics);
+  }
+  if (value.executions !== undefined) {
+    if (!Array.isArray(value.executions)) throw failure('invalid_response');
+    for (const execution of value.executions) {
+      object(execution);
+      statistics(execution.statistics);
+    }
+  }
   if (value.drafts !== undefined) {
     if (!Array.isArray(value.drafts) || value.drafts.length > 128)
       throw failure('invalid_response');

@@ -45,6 +45,9 @@ func (s *execution) checkInstruction(key, discardPrefix string, message modelapi
 }
 
 func (s *execution) checkSkillResult(call toolapi.Call, result toolapi.Result) error {
+	if result.Skill == nil && result.SkillFile == nil {
+		return nil
+	}
 	message := modelapi.Message{Content: s.runner.Redact(string(result.Content)), ToolCallID: call.ID, ToolName: call.Name}
 	if result.Skill != nil {
 		return s.checkInstruction("skill:"+result.Skill.ID, "", message)

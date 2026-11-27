@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -38,8 +39,8 @@ func lastSkillToolOutput(t *testing.T, request modelapi.Request, name string, ou
 	t.Helper()
 	for i := len(request.Messages) - 1; i >= 0; i-- {
 		message := request.Messages[i]
-		if message.Role == "tool" && message.ToolName == name {
-			if err := json.Unmarshal([]byte(message.Content), output); err != nil {
+		if message.Role == "tool" && message.ToolName == "codemode" {
+			if err := json.Unmarshal(codeOutput(message.Content, name), output); err != nil {
 				t.Fatal(err)
 			}
 			return
@@ -105,7 +106,7 @@ func TestSkillToolsPageReferences(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "skill_step_" + strconv.Itoa(step), Name: name, Arguments: body}}})
+		return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "skill_step_" + strconv.Itoa(step), Name: name, Arguments: body}})})
 	})
 	if _, err := r.Run(t.Context(), "Review the available reference guidance", approve, emit); err != nil {
 		t.Fatal(err)

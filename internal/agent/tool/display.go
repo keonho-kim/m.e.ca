@@ -13,6 +13,7 @@ import (
 )
 
 type DisplayArguments struct {
+	Code        string   `json:"code,omitempty"`
 	Path        string   `json:"path,omitempty"`
 	Command     string   `json:"command,omitempty"`
 	CommandID   string   `json:"command_id,omitempty"`
@@ -31,7 +32,7 @@ func DisplayArgs(raw json.RawMessage) (DisplayArguments, error) {
 	for _, field := range []struct {
 		name   string
 		target any
-	}{{"path", &args.Path}, {"command", &args.Command}, {"command_id", &args.CommandID}, {"paths", &args.Paths}, {"wait_seconds", &args.WaitSeconds}} {
+	}{{"code", &args.Code}, {"path", &args.Path}, {"command", &args.Command}, {"command_id", &args.CommandID}, {"paths", &args.Paths}, {"wait_seconds", &args.WaitSeconds}} {
 		value := node.Get(field.name)
 		if err := value.Check(); errors.Is(err, ast.ErrNotExist) {
 			continue

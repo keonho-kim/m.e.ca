@@ -57,8 +57,8 @@ func TestReportRetainsFailedCommandFacts(t *testing.T) {
 
 func TestRepeatedCommandIsADeliberateNewExecution(t *testing.T) {
 	g := &generator{replies: []string{
-		`native:{"id":"first","name":"execute_command","arguments":{"command":"check-service"}}`,
-		`native:{"id":"second","name":"execute_command","arguments":{"command":"check-service"}}`,
+		nativeCall("execute_command", map[string]any{"command": "check-service"}),
+		nativeCall("execute_command", map[string]any{"command": "check-service"}),
 		"Service is ready.",
 	}}
 	e := &executor{}

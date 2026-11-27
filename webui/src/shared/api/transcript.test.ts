@@ -75,3 +75,28 @@ test('team work stays typed and parsing retains original bodies without a second
   expect(() => parseEvent({ ...work, notice: { code: 'RETRYING' } })).toThrow();
   expect(() => parseEvent({ ...work, kind: 'retry' })).toThrow();
 });
+
+test('code parents and execution counts survive stream and history validation', () => {
+  const event = {
+    kind: 'tool_succeeded',
+    runId: 'run',
+    tool: { executionId: 'inner', parentExecutionId: 'code', name: 'write_file' },
+  };
+  expect(parseEvent(event)).toBe(event);
+  const page = {
+    through: '2',
+    items: [
+      { sequence: '1', event },
+      {
+        sequence: '2',
+        completion: {
+          status: 'COMPLETED',
+          statistics: { codeExecutions: '1', toolExecutions: '2' },
+        },
+      },
+    ],
+  };
+  expect(() => parseHistory(page)).not.toThrow();
+  expect(() => parseEvent({ ...event, tool: { ...event.tool, parentExecutionId: 1 } })).toThrow();
+  expect(() => parseSnapshot({ execution: { statistics: { codeExecutions: '-1' } } })).toThrow();
+});

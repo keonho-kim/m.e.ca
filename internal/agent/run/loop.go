@@ -1,7 +1,7 @@
 // Purpose: Advance native model decisions, recovery and effects until a final response is ready.
 // Pattern: Serial decision loop over one prepared execution.
 // Usage: Runner.Run calls drive after conversation admission; owned cleanup remains outside the loop.
-// Related: internal/agent/run/run.go, internal/agent/run/action.go, internal/agent/run/finish.go.
+// Related: internal/agent/run/run.go, internal/agent/run/codemode.go, internal/agent/run/finish.go.
 package run
 
 import (
@@ -169,8 +169,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 				return err
 			}
 
-			s.usage.recordTools(len(reply.Calls))
-			calls, problems := s.validateCalls(reply.Calls)
+			calls, problems := s.validateCodeCalls(reply.Calls)
 			if problems != nil {
 				if err := s.rejectInvalidCalls(ctx, reply, problems, argumentCorrections); err != nil {
 					return err
@@ -183,11 +182,7 @@ func (s *execution) drive(ctx context.Context, approve Approver) (resultErr erro
 			if s.webFetchAllowance >= 0 {
 				callCtx = toolapi.WithWebFetchDecision(ctx, s.webFetchAllowance, s.webFetchUserInput)
 			}
-			if len(reply.Calls) > 1 {
-				err = s.batch(callCtx, reply, calls, decision.supplied, approve)
-			} else {
-				err = s.action(callCtx, reply, calls[0], decision.supplied, approve)
-			}
+			err = s.codeActions(callCtx, reply, calls, decision.supplied, approve)
 			if err != nil {
 				return err
 			}

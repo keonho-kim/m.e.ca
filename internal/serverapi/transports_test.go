@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/tool"
 	v1 "github.com/keonho-kim/meca/internal/serverapi/gen/mecav1"
 )
@@ -40,7 +41,7 @@ func TestTransportStreamingApprovalAndReconnect(t *testing.T) {
 					return ctx.Err()
 				case <-release:
 				}
-				return emit(model.Event{Calls: []tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save transport fixture","path":"transport.txt","content":"same result"}`)}}, Done: true})
+				return emit(model.Event{Calls: modeltest.Calls([]tool.Call{{ID: "write", Name: "write_file", Arguments: json.RawMessage(`{"reason":"Save transport fixture","path":"transport.txt","content":"same result"}`)}}), Done: true})
 			}), true)
 			w := tlsWire(t, kind, f.api)
 			state := call(t, ctx, w, &v1.Command{Operation: &v1.Command_SelectSession{SelectSession: &v1.SelectSession{Create: true}}}).GetState()

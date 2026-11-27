@@ -226,7 +226,7 @@ snapshot draft의 committed는 현재 generation의 출력이 이미 이력에 �
 | `event` | `sequence`, `event`: 완전한 표시 이벤트 |
 | `approval` | `approval:{preview,command}`. command는 directory와 findings의 command·reasons·targets |
 
-event는 kind·agent·final·runId·text·thinking·callId·approvalSource·changePreview와, 존재하는 call·output·operation·reference·usage·statistics·team을 포함한다. call은 id·name·arguments, reference는 sessionId·sequence다. arguments와 output은 원래 JSON 값이며 byte 필드의 base64 문자열로 다시 감싸지 않는다. operation에는 실행 식별·상태·명령·결과·실패·프로세스·파일 변경의 공개 관측만 담는다. checkpoint·provider/model continuation·캡처·실행 판정용 대상 목록은 내보내지 않는다. sequence·토큰·시간·팀 순서와 revision의 64비트 정수는 JSON 문자열이다. 사용자 도구 결과 안의 숫자는 원래 JSON 표현을 유지한다.
+event는 kind·agent·final·runId·text·thinking·callId·approvalSource·changePreview와, 존재하는 call·output·operation·reference·usage·statistics·team을 포함한다. call은 executionId·parentExecutionId·id·name·arguments, reference는 sessionId·sequence다. arguments와 output은 원래 JSON 값이며 byte 필드의 base64 문자열로 다시 감싸지 않는다. operation에는 실행 식별·상태·명령·결과·실패·프로세스·파일 변경의 공개 관측만 담는다. checkpoint·provider/model continuation·캡처·실행 판정용 대상 목록은 내보내지 않는다. sequence·토큰·시간·팀 순서와 revision의 64비트 정수는 JSON 문자열이다. 사용자 도구 결과 안의 숫자는 원래 JSON 표현을 유지한다.
 
 ```json
 {"kind":"tool","event":{"kind":"tool_succeeded","call":{"id":"write","name":"write_file","arguments":{"reason":"Save verified result","path":"result.txt","content":"written"}},"output":{"ok":true}}}
@@ -298,6 +298,8 @@ PATH="$PWD/bin/devtools:$PATH" protoc -I api \
 `internal/serverapi/gen`의 생성물은 descriptor·메시지·RPC 계약을 함께 재생성해야 한다. 수동 분할은 generator 출력과 descriptor 관계를 손상시키므로 생성 파일에 350줄 제한을 적용하지 않는다. 수정 원본은 `.proto`이며 생성물은 직접 고치지 않는다.
 
 ## 요청 상태와 복원
+
+Code Mode의 내부 도구 이벤트는 `tool.parentExecutionId`로 부모 코드 실행을 가리킨다. `tool.executionId`는 각 내부 실행의 고유 ID이며 병렬 묶음의 `batchId`와 구분한다. `statistics.codeExecutions`와 `statistics.toolExecutions`는 각각 코드 실행과 시작한 내부 도구 실행 횟수이며 Protobuf JSON의 정수 문자열이다.
 
 최상위 `Command.workspaceId`로 작업공간을 지정하며 생략 시 시작 프로젝트를 사용한다. 이벤트와 스냅샷에는 실제 `workspaceId`가 포함된다. 화면의 API 호출과 복원 절차는 [WebUI 연동](webui-api.md#상태와-스트림-복원)을 따른다.
 

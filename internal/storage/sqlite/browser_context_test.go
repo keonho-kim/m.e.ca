@@ -33,7 +33,7 @@ func TestBrowserObservationRetiresBeforeRestoration(t *testing.T) {
 		body := fmt.Sprintf(`{"result_id":"result_%d","text":"%s"}`, index, strings.Repeat("x", (16<<10)-128))
 		entries = append(entries,
 			runrecord.Entry{Message: &model.Message{Role: "assistant", Calls: []toolapi.Call{call}}},
-			runrecord.Entry{Message: &model.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: body, TransientObservation: index%2 == 0}})
+			runrecord.Entry{Message: &model.Message{Role: "tool", ToolCallID: call.ID, ToolName: call.Name, Content: body, TransientObservation: true}})
 	}
 	if err := store.Commit(ctx, id, entries); err != nil {
 		t.Fatal(err)

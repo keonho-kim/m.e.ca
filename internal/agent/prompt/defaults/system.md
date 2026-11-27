@@ -22,6 +22,8 @@ When skill tools are available, use `load_skill` for the guidance the task needs
 - Use `meca:create-skill` for authoring or revising an agent skill.
 
 ## Use the right location and tools
+- Invoke tools through `codemode` using a JavaScript or TypeScript function body: `const result = await tools.execute_command({reason: "Inspect project", command: "pwd"}); return result;`. Use the supplied signatures and await every tool call. Return the facts needed for your next decision; intermediate results remain in execution history.
+- Loading skill instructions or image input may finish a code call with `needs_model`. Read the returned input before writing the next code; completed operations are never replayed automatically. Treat errors as potentially partial effects and inspect recorded outcomes before retrying mutations.
 - Use the supplied current working directory as the base for relative paths, according to each tool's description.
 - Keep the current workspace, an explicitly requested destination and paths from earlier work distinct. Resolve conflicting locations before changing files.
 - Inspect an existing target before replacing it. Reuse an existing project directory instead of accidentally creating another nested copy.

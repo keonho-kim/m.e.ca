@@ -7,12 +7,21 @@ package record
 import modelapi "github.com/keonho-kim/meca/internal/agent/model"
 
 type UsageTotals struct {
+	CodeExecutions int64
+	ToolExecutions int64
 	Usage          modelapi.TokenUsage
 	MeasuredMillis int64
 	Received       bool
 }
 
 func (t *UsageTotals) Add(event Event) {
+	if event.Kind == "tool_started" && event.Call != nil {
+		if event.Call.ParentExecutionID == "" && event.Call.Name == "codemode" {
+			t.CodeExecutions++
+		} else {
+			t.ToolExecutions++
+		}
+	}
 	if event.Usage == nil {
 		return
 	}
@@ -23,7 +32,7 @@ func (t *UsageTotals) Add(event Event) {
 	}
 }
 func (t UsageTotals) Snapshot(elapsed int64, concurrent bool) Statistics {
-	result := Statistics{ElapsedMillis: elapsed, Concurrent: concurrent}
+	result := Statistics{ElapsedMillis: elapsed, Concurrent: concurrent, CodeExecutions: t.CodeExecutions, ToolExecutions: t.ToolExecutions}
 	if t.Received {
 		usage := t.Usage.Clone()
 		result.Usage = &usage

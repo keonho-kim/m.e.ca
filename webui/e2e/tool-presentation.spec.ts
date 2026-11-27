@@ -25,14 +25,15 @@ test('repeated commands never duplicate messages or become completion metadata',
   await expect(page.getByText('Before first command.', { exact: true })).toBeVisible();
   await page.request.get(`${fixture.provider}/test/tool-sequence/1`);
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
-  await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(2);
   await expect(page.getByText('Before first command.', { exact: true })).toHaveCount(1);
   await page.reload();
   await expect(page.getByText('Before second command.', { exact: true })).toBeVisible();
-  await expect(page.locator('.tool-disclosure > button')).toHaveCount(1);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(2);
   await page.request.get(`${fixture.provider}/test/tool-sequence/2`);
   await expect(page.getByText('Final response outside statistics.', { exact: true })).toBeVisible();
-  await expect(page.locator('.tool-disclosure > button')).toHaveCount(2);
+  await expect(page.locator('.tool-disclosure > button')).toHaveCount(4);
+  await expect(page.locator('.tool-message')).toHaveCount(2);
   await expect(page.getByText('Before second command.', { exact: true })).toHaveCount(1);
   await page.request.get(`${fixture.provider}/test/tool-sequence/3`);
   await expect(page.locator('.completion-summary')).toContainText('입력 32');

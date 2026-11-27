@@ -42,8 +42,9 @@ func (e *preparingTools) Prepare(ctx context.Context, settings policy.Settings, 
 		return nil, ctx.Err()
 	case <-e.release:
 	}
-	if e.fail && (call.ID == "1" || call.ID == "3") {
-		return nil, fmt.Errorf("invalid candidate %s", call.ID)
+	path := callText(call, "path")
+	if e.fail && (path == "file1" || path == "file3") {
+		return nil, fmt.Errorf("invalid candidate %s", path)
 	}
 	return e.Executor.Prepare(ctx, settings, call)
 }
@@ -97,11 +98,11 @@ func TestParallelPreparationBoundsFailureAndCancellation(t *testing.T) {
 			if mode == "failure" {
 				failed := ""
 				for _, event := range journal.events {
-					if event.Kind == "tool_failed" && event.CallID == "1" && strings.Contains(event.Text, "invalid candidate 1") {
-						failed = event.CallID
+					if event.Kind == "tool_failed" && event.Call != nil && event.Call.ParentExecutionID != "" && callText(*event.Call, "path") == "file1" && strings.Contains(event.Text, "invalid candidate file1") {
+						failed = "file1"
 					}
 				}
-				if failed != "1" {
+				if failed != "file1" {
 					t.Fatal("failure selection lost call order")
 				}
 			}

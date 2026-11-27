@@ -4,7 +4,7 @@
 // Related: webui/src/pages/workspace/model/chat-events.ts, webui/src/pages/workspace/model/stream-projection.ts.
 import {
   liveActivity,
-  toolBatchIdentity,
+  toolGroupIdentity,
   toolGroups,
   toolIdentity,
 } from '@/pages/workspace/model/chat-events';
@@ -28,7 +28,7 @@ export function liveTimeline(
 ): LiveEntry[] {
   const positions = new Map<string, bigint>();
   for (const event of events) {
-    const key = toolBatchIdentity(event) ?? toolIdentity(event);
+    const key = toolGroupIdentity(event) ?? toolIdentity(event);
     if (key && !positions.has(key)) positions.set(key, sequence(event.sequence));
   }
   const entries: LiveEntry[] = drafts
@@ -42,7 +42,7 @@ export function liveTimeline(
   for (const group of toolGroups(liveActivity(events, history)).slice(-24)) {
     const event = group[0];
     if (!event) continue;
-    const identity = toolBatchIdentity(event) ?? toolIdentity(event);
+    const identity = toolGroupIdentity(event) ?? toolIdentity(event);
     entries.push({
       kind: 'activity',
       events: group,
@@ -60,7 +60,7 @@ export function liveTimeline(
         kind: 'history',
         row,
         key:
-          (item?.event && (toolBatchIdentity(item.event) ?? toolIdentity(item.event))) ??
+          (item?.event && (toolGroupIdentity(item.event) ?? toolIdentity(item.event))) ??
           item?.presentation ??
           `history/${item?.sequence ?? ('sequence' in row ? row.sequence : '')}`,
         sequence: sequence(item?.sequence ?? ('sequence' in row ? row.sequence : undefined)),

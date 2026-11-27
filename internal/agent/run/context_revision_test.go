@@ -5,6 +5,7 @@
 package run
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 
@@ -68,7 +69,7 @@ func TestUserInstructionBetweenWavesPreservesOnlyCompletedEffects(t *testing.T) 
 			args, _ := json.Marshal(map[string]string{"path": path, "content": "content"})
 			calls = append(calls, tool.Call{ID: path, Name: "write_file", Arguments: args})
 		}
-		return emit(model.Event{Calls: calls, Done: true})
+		return emit(model.Event{Calls: modeltest.Calls(calls), Done: true})
 	})
 	r.PollContext = func(context.Context) (ContextBatch, error) {
 		if tools.executed == 1 && j.cursor == 0 {

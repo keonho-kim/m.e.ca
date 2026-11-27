@@ -1,7 +1,7 @@
 // Purpose: Validate native candidates without side effects before scheduling a batch.
 // Pattern: Pure input boundary.
 // Usage: Single and multi-call dispatch share this validation contract.
-// Related: internal/agent/run/action.go, internal/agent/run/batch.go.
+// Related: internal/agent/run/codemode.go, internal/agent/run/batch.go.
 package run
 
 import (
@@ -51,26 +51,4 @@ func (s *execution) validateCall(original toolapi.Call) (validatedCall, error) {
 	}
 
 	return validatedCall{call, *definition}, nil
-}
-
-func (s *execution) validateCalls(calls []toolapi.Call) ([]validatedCall, []error) {
-	validated := make([]validatedCall, len(calls))
-	var problems []error
-	for i, call := range calls {
-		value, err := s.validateCall(call)
-		if err != nil {
-			if problems == nil {
-				problems = make([]error, len(calls))
-			}
-			problems[i] = err
-		}
-		validated[i] = value
-	}
-	if problems != nil {
-		return nil, problems
-	}
-	for i := range validated {
-		validated[i].call = s.identifyCall(validated[i].call)
-	}
-	return validated, nil
 }

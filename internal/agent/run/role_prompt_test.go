@@ -71,7 +71,7 @@ func TestBrowserGuidanceFollowsToolAvailability(t *testing.T) {
 				for _, name := range []string{toolapi.BrowserAction, toolapi.BrowserInspect} {
 					declared := false
 					for _, definition := range request.Tools {
-						declared = declared || definition.Name == name
+						declared = declared || definition.Name == "codemode" && strings.Contains(definition.Description, name+"(args:")
 					}
 					if declared != available || strings.Contains(system, name) != available {
 						t.Errorf("browser tool and guidance have different availability for %s", name)

@@ -52,7 +52,7 @@ func ProjectEvent(value Event) Event {
 		p.Reference = &copy
 	}
 	if e.Call != nil {
-		p.Call = &tool.Call{ExecutionID: clipped(e.Call.ExecutionID, 128), BatchID: clipped(e.Call.BatchID, 128), ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
+		p.Call = &tool.Call{ExecutionID: clipped(e.Call.ExecutionID, 128), ParentExecutionID: clipped(e.Call.ParentExecutionID, 128), BatchID: clipped(e.Call.BatchID, 128), ID: clipped(e.Call.ID, 128), Name: clipped(e.Call.Name, 128), Arguments: bytes.Clone(prefix(e.Call.Arguments, maxTextBytes))}
 		value.Truncated = value.Truncated || len(e.Call.Arguments) > maxTextBytes
 	}
 	if e.Approval != nil {

@@ -1,7 +1,7 @@
 // Purpose: Verify real command outcomes reach model context and observation reports without losing failure facts.
 // Pattern: Runtime and process integration test.
 // Usage: go test ./internal/agent/run -run TestCommandFailureReachesModel.
-// Related: internal/agent/run/action.go, internal/tools/local/command.go, internal/diagnostics/fault/tool.go.
+// Related: internal/agent/run/codemode.go, internal/tools/local/command.go, internal/diagnostics/fault/tool.go.
 package run
 
 import (
@@ -54,7 +54,13 @@ func TestCommandFailureReachesModel(t *testing.T) {
 				ExitCode               int
 			}
 		}
-		if err := json.Unmarshal([]byte(message.Content), &body); err != nil {
+		var result struct {
+			LastToolFailure *codeObservation `json:"last_tool_failure"`
+		}
+		if err := json.Unmarshal([]byte(message.Content), &result); err != nil || result.LastToolFailure == nil {
+			t.Fatalf("missing tool failure: %s, %v", message.Content, err)
+		}
+		if err := json.Unmarshal(result.LastToolFailure.Value, &body); err != nil {
 			t.Fatal(err)
 		}
 		if body.Failure == nil || body.Failure.Code != diagcatalog.ProcessFailed || body.Failure.Next == "" || body.Output.ExitCode != 7 || body.Output.Stderr != "missing dependency" || body.Output.Stdout != "progress" {

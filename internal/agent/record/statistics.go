@@ -11,6 +11,8 @@ import (
 )
 
 type Statistics struct {
+	CodeExecutions   int64                `json:"code_executions"`
+	ToolExecutions   int64                `json:"tool_executions"`
 	Concurrent       bool                 `json:"concurrent,omitempty"`
 	ElapsedMillis    int64                `json:"elapsed_millis"`
 	GenerationMillis int64                `json:"generation_millis"`
@@ -18,7 +20,7 @@ type Statistics struct {
 }
 
 func (s Statistics) check() error {
-	if s.ElapsedMillis < 0 || s.GenerationMillis < 0 || !s.Concurrent && s.GenerationMillis > s.ElapsedMillis {
+	if s.CodeExecutions < 0 || s.ToolExecutions < 0 || s.ElapsedMillis < 0 || s.GenerationMillis < 0 || !s.Concurrent && s.GenerationMillis > s.ElapsedMillis {
 		return faults.Errorf(diagcatalog.RecordInvalidRequestMeasurementDuration)
 	}
 	if s.Usage == nil {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"slices"
 	"strings"
 	"testing"
@@ -203,7 +204,7 @@ func TestRecoveryCorrectsToolCallsAcrossDecisions(t *testing.T) {
 			t.Fatalf("correction context lost its validation error or contains a replay draft: %+v", last)
 		}
 		call := toolapi.Call{ID: fmt.Sprintf("call_%d", requests), Name: "inspect_fixture", Arguments: []byte(fmt.Sprintf("{\"path\":\"file%d\"}", requests))}
-		return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{call}})
+		return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{call})})
 	})
 	result, err := r.Run(t.Context(), "Inspect both files.", approve, func(event runrecord.Event) error {
 		if event.Kind == "retry" {

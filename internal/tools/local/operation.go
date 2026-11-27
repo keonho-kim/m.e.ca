@@ -17,15 +17,16 @@ import (
 )
 
 type operation struct {
-	callID      string
-	executionID string
-	batchID     string
-	executor    *Executor
-	settings    policy.Settings
-	spec        toolcatalog.Specification
-	input       toolcatalog.Arguments
-	approval    toolapi.Approval
-	executed    atomic.Bool
+	callID            string
+	executionID       string
+	parentExecutionID string
+	batchID           string
+	executor          *Executor
+	settings          policy.Settings
+	spec              toolcatalog.Specification
+	input             toolcatalog.Arguments
+	approval          toolapi.Approval
+	executed          atomic.Bool
 }
 
 func (op *operation) Approval() toolapi.Approval { return op.approval }

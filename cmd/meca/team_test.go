@@ -20,6 +20,7 @@ import (
 	teamcatalog "github.com/keonho-kim/meca/internal/tools/team/catalog"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -81,9 +82,16 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 		if m.Role != "tool" {
 			continue
 		}
-		if m.ToolName == "leave_team" {
-			var result struct{ Failure *faults.Failure }
-			if json.Unmarshal([]byte(m.Content), &result) == nil && result.Failure != nil && result.Failure.Code == "team_feedback_pending" {
+		if m.ToolName == "codemode" {
+			var result struct {
+				LastToolFailure *struct {
+					Tool  string `json:"tool"`
+					Value struct {
+						Failure *faults.Failure `json:"failure"`
+					} `json:"value"`
+				} `json:"last_tool_failure"`
+			}
+			if json.Unmarshal([]byte(m.Content), &result) == nil && result.LastToolFailure != nil && result.LastToolFailure.Tool == "leave_team" && result.LastToolFailure.Value.Failure != nil && result.LastToolFailure.Value.Failure.Code == "team_feedback_pending" {
 				retryDeparture = true
 			}
 		}
@@ -135,7 +143,7 @@ func (g *teamModel) Generate(ctx context.Context, request modelapi.Request, emit
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return emit(modelapi.Event{Done: true, Delta: "I will update " + id + ".txt with my independent contribution.", Calls: calls, Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
+	return emit(modelapi.Event{Done: true, Delta: "I will update " + id + ".txt with my independent contribution.", Calls: modeltest.Calls(calls), Usage: &modelapi.TokenUsage{Input: 11, Output: 7}})
 }
 
 func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
@@ -197,6 +205,19 @@ func TestTeamSessionsExecuteAndRestoreWithPrivateDatabases(t *testing.T) {
 		for _, event := range events {
 			sawShellTargets = sawShellTargets || event.Kind == "team_observation" && strings.Contains(event.Text, "May have affected:")
 			if event.Kind == "tool_failed" || event.Kind == "tool_interrupted" {
+				if event.Call != nil && event.Call.Name == "codemode" {
+					var result struct {
+						LastToolFailure *struct {
+							Tool  string `json:"tool"`
+							Value struct {
+								Failure *faults.Failure `json:"failure"`
+							} `json:"value"`
+						} `json:"last_tool_failure"`
+					}
+					if json.Unmarshal(event.Output, &result) == nil && result.LastToolFailure != nil && result.LastToolFailure.Tool == "leave_team" && result.LastToolFailure.Value.Failure != nil && result.LastToolFailure.Value.Failure.Code == "team_feedback_pending" {
+						continue
+					}
+				}
 				if op := event.Operation; event.Kind == "tool_failed" && event.Call != nil && event.Call.Name == "leave_team" && op != nil && op.Failure != nil && op.Failure.Code == "team_feedback_pending" {
 					deferredDepartures[event.Agent] = true
 					continue

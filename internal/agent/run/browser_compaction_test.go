@@ -120,7 +120,8 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 		}
 		call := func(name string, args map[string]any) {
 			b, _ := json.Marshal(args)
-			fmt.Fprintf(w, `{"choices":[{"message":{"tool_calls":[{"id":"call_%d","type":"function","function":{"name":%q,"arguments":%q}}]},"finish_reason":"tool_calls"}]}`, step, name, string(b))
+			body, _ := json.Marshal(map[string]string{"code": "return await tools." + name + "(" + string(b) + ");"})
+			fmt.Fprintf(w, `{"choices":[{"message":{"tool_calls":[{"id":"call_%d","type":"function","function":{"name":"codemode","arguments":%q}}]},"finish_reason":"tool_calls"}]}`, step, string(body))
 		}
 		next := func() {
 			call(toolapi.BrowserInspect, map[string]any{"result_id": pinned.ResultID, "revision": pinned.Revision, "offset": pinned.Next, "limit": 256})
@@ -136,7 +137,7 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 		case 1:
 			call(toolapi.BrowserInspect, map[string]any{"view": "text", "selector": "#proof", "limit": 256})
 		case 2:
-			if err := json.Unmarshal([]byte(toolResult), &pinned); err != nil || len(pinned.Text) != 256 || !strings.Contains(pinned.Text, "PAGE_ONE_BODY") || pinned.Next != 256 {
+			if err := json.Unmarshal(codeOutput(toolResult, toolapi.BrowserInspect), &pinned); err != nil || len(pinned.Text) != 256 || !strings.Contains(pinned.Text, "PAGE_ONE_BODY") || pinned.Next != 256 {
 				t.Errorf("invalid first page: %v", err)
 			}
 			next()
@@ -248,7 +249,9 @@ func testBrowserCompaction(t *testing.T, otherTool bool) {
 		case "compaction":
 			summaries++
 		case "tool_succeeded":
-			inspections++
+			if ev.Call != nil && ev.Call.ParentExecutionID != "" {
+				inspections++
+			}
 		}
 		return nil
 	})

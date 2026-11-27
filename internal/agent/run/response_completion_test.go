@@ -128,7 +128,7 @@ func TestThinkingOnlyCompletionCanRecoverWithATool(t *testing.T) {
 			if len(request.Tools) == 0 {
 				t.Fatal("empty-reply correction disabled tools")
 			}
-			call := `{"status":"completed","output":[{"type":"function_call","id":"fc","call_id":"unique","name":"inspect_fixture","arguments":"{\"path\":\"a\"}"}]}`
+			call := `{"status":"completed","output":[{"type":"function_call","id":"fc","call_id":"unique","name":"codemode","arguments":"{\"code\":\"return await tools.inspect_fixture({path:'a'});\"}"}]}`
 			wire := &http.Response{Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(call))}
 			return protocol.ReadResponse(ctx, wire, connection.OpenAI, emit)
 		default:

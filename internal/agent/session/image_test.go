@@ -13,9 +13,11 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"github.com/keonho-kim/meca/internal/agent/prompt"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	"github.com/keonho-kim/meca/internal/agent/session"
@@ -63,13 +65,13 @@ func runImageSession(t *testing.T, reject bool) {
 		step++
 		imageTool := false
 		for _, d := range request.Tools {
-			imageTool = imageTool || d.Name == "view_image"
+			imageTool = imageTool || d.Name == "codemode" && strings.Contains(d.Description, "view_image(args:")
 		}
 		if imageTool != (request.ModelID == "vision" && (!reject || step < 3)) {
 			t.Fatal("incorrect dynamic image tool selection")
 		}
 		if step == 1 {
-			return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}}})
+			return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "read", Name: "view_image", Arguments: json.RawMessage(`{"path":"shot.png"}`)}})})
 		}
 		found := false
 		for _, m := range request.Messages {

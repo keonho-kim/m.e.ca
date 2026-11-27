@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func uiParallelReply(w http.ResponseWriter, completed bool) {
@@ -18,12 +19,13 @@ func uiParallelReply(w http.ResponseWriter, completed bool) {
 		delta["content"] = "Parallel fixtures inspected."
 	} else {
 		finish = "tool_calls"
-		calls := []any{}
-		for index, command := range []string{"printf parallel-first", "printf parallel-second"} {
+		calls := []string{}
+		for _, command := range []string{"printf parallel-first", "printf parallel-second"} {
 			arguments, _ := json.Marshal(map[string]string{"reason": "Run fixture check", "command": command})
-			calls = append(calls, map[string]any{"index": index, "id": fmt.Sprintf("parallel-%d", index), "type": "function", "function": map[string]string{"name": "execute_command", "arguments": string(arguments)}})
+			calls = append(calls, "tools.execute_command("+string(arguments)+")")
 		}
-		delta["tool_calls"] = calls
+		code, _ := json.Marshal(map[string]string{"code": "return await Promise.all([" + strings.Join(calls, ",") + "]);"})
+		delta["tool_calls"] = []any{map[string]any{"index": 0, "id": "parallel-code", "type": "function", "function": map[string]string{"name": "codemode", "arguments": string(code)}}}
 	}
 	body, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": delta, "finish_reason": finish}}, "usage": map[string]int{"prompt_tokens": 32, "completion_tokens": 64}})
 	fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", body)

@@ -19,16 +19,21 @@ export function toolIdentity(event?: EventJson) {
     ? JSON.stringify([event.runId, event.agent ?? '', event.tool.executionId])
     : undefined;
 }
-export function toolBatchIdentity(event?: EventJson) {
+export function toolGroupIdentity(event?: EventJson) {
+  const parent =
+    event?.tool?.parentExecutionId ??
+    (event?.tool?.name === 'codemode' ? event.tool.executionId : undefined);
+  if (event?.runId && parent)
+    return JSON.stringify([event.runId, event.agent ?? '', 'code', parent]);
   return event?.runId && event.tool?.batchId
-    ? JSON.stringify([event.runId, event.agent ?? '', event.tool.batchId])
+    ? JSON.stringify([event.runId, event.agent ?? '', 'batch', event.tool.batchId])
     : undefined;
 }
 export function toolGroups(events: EventJson[]): EventJson[][] {
   const groups: EventJson[][] = [],
     batches = new Map<string, EventJson[]>();
   for (const event of events) {
-    const key = toolBatchIdentity(event),
+    const key = toolGroupIdentity(event),
       existing = key && batches.get(key);
     if (existing) existing.push(event);
     else {
@@ -69,7 +74,7 @@ function toolSequence(value: string | undefined) {
 export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {
   const batches = new Set(
     history.flatMap((item) => {
-      const key = item.event && toolBatchIdentity(item.event);
+      const key = item.event && toolGroupIdentity(item.event);
       return key ? [key] : [];
     })
   );
@@ -91,7 +96,7 @@ export function liveActivity(events: EventJson[], history: HistoryItemJson[]) {
     if (!event.tool && !event.work && !event.notice && !event.message) return false;
     if (eventIdentities(event).some((id) => represented.has(id))) return false;
     const key = toolIdentity(event),
-      batch = toolBatchIdentity(event);
+      batch = toolGroupIdentity(event);
     return (
       (!batch || !batches.has(batch)) && (!key || (!saved.has(key) && latest.get(key) === event))
     );

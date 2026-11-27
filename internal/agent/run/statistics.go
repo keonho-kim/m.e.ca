@@ -12,9 +12,11 @@ import (
 )
 
 type runStatistics struct {
-	started    time.Time
-	generation time.Duration
-	usage      *modelapi.TokenUsage
+	codeExecutions int64
+	toolExecutions int64
+	started        time.Time
+	generation     time.Duration
+	usage          *modelapi.TokenUsage
 }
 
 func (s *runStatistics) add(usage *modelapi.TokenUsage, elapsed time.Duration) {
@@ -29,7 +31,7 @@ func (s *runStatistics) add(usage *modelapi.TokenUsage, elapsed time.Duration) {
 }
 
 func (s runStatistics) snapshot(now time.Time) runrecord.Statistics {
-	result := runrecord.Statistics{ElapsedMillis: max(0, now.Sub(s.started).Milliseconds()), GenerationMillis: s.generation.Milliseconds()}
+	result := runrecord.Statistics{CodeExecutions: s.codeExecutions, ToolExecutions: s.toolExecutions, ElapsedMillis: max(0, now.Sub(s.started).Milliseconds()), GenerationMillis: s.generation.Milliseconds()}
 	if s.usage != nil {
 		usage := s.usage.Clone()
 		result.Usage = &usage

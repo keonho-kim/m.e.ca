@@ -3,7 +3,7 @@
 // Usage: Chat virtualizes these groups rather than switching presentation at tool boundaries.
 // Related: webui/src/pages/workspace/ui/chat/chat.tsx, webui/src/pages/workspace/ui/chat/history-row.tsx.
 
-import { toolBatchIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
+import { toolGroupIdentity, toolIdentity } from '@/pages/workspace/model/chat-events';
 import { orderPresentation } from '@/pages/workspace/model/presentation-order';
 import type {
   DetailRequestJson,
@@ -54,7 +54,7 @@ export function historyRows(items: HistoryItemJson[]): HistoryRowValue[] {
         } else result[position.row] = { item };
         continue;
       }
-      const batch = toolBatchIdentity(event);
+      const batch = toolGroupIdentity(event);
       const index = batch && batches.get(batch);
       if (typeof index === 'number') {
         const row = result[index];

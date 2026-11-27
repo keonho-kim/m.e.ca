@@ -16,6 +16,7 @@ import (
 	"time"
 
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	runrecord "github.com/keonho-kim/meca/internal/agent/record"
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 	"github.com/keonho-kim/meca/internal/commands/agentrequest"
@@ -94,7 +95,7 @@ func (g *workTeamModel) Generate(ctx context.Context, request modelapi.Request, 
 		return emit(modelapi.Event{Done: true, Delta: "Both contributions are complete; no additional checks were run."})
 	}
 	body, _ := json.Marshal(args)
-	return emit(modelapi.Event{Done: true, Delta: text, Calls: []toolapi.Call{{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}}})
+	return emit(modelapi.Event{Done: true, Delta: text, Calls: modeltest.Calls([]toolapi.Call{{ID: fmt.Sprintf("%s-%d", id, step), Name: name, Arguments: body}})})
 }
 
 func TestTeamRecoversFromDuplicateScopeAndSharesActualResult(t *testing.T) {
@@ -131,7 +132,7 @@ func TestTeamRecoversFromDuplicateScopeAndSharesActualResult(t *testing.T) {
 		if event.Agent == names[0] && event.Kind == "tool_succeeded" && event.Call != nil && event.Call.Name == "set_work" {
 			close(g.claimed)
 		}
-		if event.Agent == names[1] && event.Kind == "tool_failed" && strings.Contains(event.Text, "team_work_conflict") {
+		if event.Agent == names[1] && event.Kind == "tool_failed" && event.Call != nil && event.Call.ParentExecutionID != "" && strings.Contains(event.Text, "team_work_conflict") {
 			conflicts++
 			close(g.conflict)
 		}

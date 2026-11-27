@@ -1,7 +1,7 @@
 // Purpose: Verify shell inspection followed by exact-text editing preserves approval and line positions.
 // Pattern: Agent and filesystem integration test.
 // Usage: go test ./internal/agent/run -run TestExactEditDialogue.
-// Related: internal/tools/local/textedit/ranges.go, internal/agent/run/action.go.
+// Related: internal/tools/local/textedit/ranges.go, internal/agent/run/codemode.go.
 package run
 
 import (

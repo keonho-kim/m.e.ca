@@ -31,10 +31,14 @@ func TestParallelTargets(t *testing.T) {
 	} {
 		left := call("write_file", `{"path":"`+tc.a+`","content":"x"}`)
 		right := call("write_file", `{"path":"`+tc.b+`","content":"y"}`)
-		plan, err := e.ParallelBatch(context.Background(), settings, []toolapi.Call{left, right}, 16)
+		plan, err := e.ParallelBatch(context.Background(), settings, nil, []toolapi.Call{left, right}, 16)
 		got := plan.Count == 2
 		if err != nil || got != tc.want {
 			t.Fatalf("%s/%s=%t %v", tc.a, tc.b, got, err)
+		}
+		plan, err = e.ParallelBatch(t.Context(), settings, []toolapi.Call{left}, []toolapi.Call{right}, 16)
+		if err != nil || (plan.Count == 1) != tc.want {
+			t.Fatalf("active target %s admitted conflicting followup %s: %+v %v", tc.a, tc.b, plan, err)
 		}
 	}
 }
@@ -52,7 +56,7 @@ func TestParallelLargeCandidatesUseSmallerWaves(t *testing.T) {
 		}
 		calls = append(calls, call("write_file", `{"path":"`+name+`","content":"body"}`))
 	}
-	plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
+	plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, nil, calls, 16)
 	if err != nil || plan.Count != 1 {
 		t.Fatalf("large candidates shared a preparation wave: %d %v", plan.Count, err)
 	}
@@ -72,7 +76,7 @@ func TestParallelPreparationScalesWithSourceSize(t *testing.T) {
 			}
 			calls = append(calls, call("write_file", `{"path":"`+name+`","content":"replacement"}`))
 		}
-		plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
+		plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, nil, calls, 16)
 		if err != nil || plan.Count != 4 {
 			t.Fatalf("plan: %+v %v", plan, err)
 		}

@@ -28,7 +28,7 @@ func TestCommandWaveUsesRemainingCapacity(t *testing.T) {
 	for range process.MaxActive {
 		calls = append(calls, call("execute_command", `{"command":"printf next"}`))
 	}
-	plan, err := e.ParallelBatch(t.Context(), policy.Settings{Scope: policy.System}, calls, 16)
+	plan, err := e.ParallelBatch(t.Context(), policy.Settings{Scope: policy.System}, nil, calls, 16)
 	if err != nil || plan.Count != 1 {
 		t.Fatal("planned more commands than the remaining capacity", plan, err)
 	}

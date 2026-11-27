@@ -21,6 +21,7 @@ import (
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 	"github.com/keonho-kim/meca/internal/processmemory"
+	"github.com/keonho-kim/meca/internal/tools/codemode"
 )
 
 func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Event) error, started time.Time) (*execution, func(), error) {
@@ -85,6 +86,7 @@ func (r Runner) start(ctx context.Context, input string, emit func(runrecord.Eve
 	system = strings.Join(guidance, "")
 	s := r.newExecution(ctx, limits, emit, started)
 	s.system, s.definitions = system, definitions
+	s.codeDefinition = codemode.Definition(definitions)
 	digest := sha256.Sum256([]byte(r.ProjectInstructions))
 	s.checkpoint.Objective = r.Redact(input)
 	s.checkpoint.InstructionsDigest = fmt.Sprintf("%x", digest)

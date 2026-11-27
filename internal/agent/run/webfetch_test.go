@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -82,7 +83,7 @@ func TestWebFetchCompactionPreservesPendingPage(t *testing.T) {
 		var result string
 		var live []toolapi.ObservationCursor
 		for _, message := range request.Messages {
-			if message.Role == "tool" && message.ToolName == toolapi.WebFetch {
+			if message.Role == "tool" && message.ToolName == "codemode" {
 				result = message.Content
 			}
 			if strings.HasPrefix(message.Content, "Unread observations.") {
@@ -98,7 +99,7 @@ func TestWebFetchCompactionPreservesPendingPage(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{Name: toolapi.WebFetch, ID: fmt.Sprintf("call_page_%d", step), Arguments: body}}})
+			return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{Name: toolapi.WebFetch, ID: fmt.Sprintf("call_page_%d", step), Arguments: body}})})
 		}
 		next := func(offset int) error {
 			if len(live) != 1 || live[0].Tool != toolapi.WebFetch || live[0].NextOffset != offset {
@@ -111,7 +112,9 @@ func TestWebFetchCompactionPreservesPendingPage(t *testing.T) {
 		}
 		switch step {
 		case 1:
-			if !slices.ContainsFunc(request.Tools, func(d toolapi.Definition) bool { return d.Name == toolapi.WebFetch }) ||
+			if !slices.ContainsFunc(request.Tools, func(d toolapi.Definition) bool {
+				return d.Name == "codemode" && strings.Contains(d.Description, toolapi.WebFetch+"(args:")
+			}) ||
 				!strings.Contains(request.Messages[0].Content, "Use web_fetch") {
 				t.Fatal("configured tool or guidance is missing")
 			}

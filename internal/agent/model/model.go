@@ -32,13 +32,15 @@ type Message struct {
 	Content         string `json:"content"`
 	Incomplete      bool   `json:"incomplete,omitempty"`
 	// PreserveObservations marks assistant records that do not consume input observations.
-	PreserveObservations bool           `json:"preserve_observations,omitempty"`
-	Calls                []toolapi.Call `json:"calls,omitempty"`
-	ToolCallID           string         `json:"tool_call_id,omitempty"`
-	ToolName             string         `json:"tool_name,omitempty"`
-	ProviderID           string         `json:"provider_id,omitempty"`
-	ModelID              string         `json:"model_id,omitempty"`
-	Thinking             *bool          `json:"thinking,omitempty"`
+	PreserveObservations bool `json:"preserve_observations,omitempty"`
+	// AcknowledgesInput marks a completed code result that consumed its decision's observations.
+	AcknowledgesInput bool           `json:"acknowledges_input,omitempty"`
+	Calls             []toolapi.Call `json:"calls,omitempty"`
+	ToolCallID        string         `json:"tool_call_id,omitempty"`
+	ToolName          string         `json:"tool_name,omitempty"`
+	ProviderID        string         `json:"provider_id,omitempty"`
+	ModelID           string         `json:"model_id,omitempty"`
+	Thinking          *bool          `json:"thinking,omitempty"`
 
 	// TransientObservation supplies detailed evidence for the next completed model decision.
 	TransientObservation bool `json:"transient_observation,omitempty"`

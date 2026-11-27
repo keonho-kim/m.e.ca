@@ -24,7 +24,7 @@ type Local interface {
 	toolapi.CommandExecutor
 	toolapi.CommandNotifier
 	ActiveCommand() string
-	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, int) (toolapi.BatchPlan, error)
+	ParallelBatch(context.Context, policy.Settings, []toolapi.Call, []toolapi.Call, int) (toolapi.BatchPlan, error)
 	ProjectInstructions(context.Context) (string, error)
 	Skills() *skills.Reader
 	Close() error

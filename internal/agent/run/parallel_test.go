@@ -1,4 +1,4 @@
-// Purpose: Verify independent native calls overlap, remain bounded and preserve ordered results.
+// Purpose: Verify independent native calls overlap, remain bounded and preserve every result.
 // Pattern: Real filesystem execution with channel-controlled concurrency.
 // Usage: go test -race ./internal/agent/run -run TestParallel.
 // Related: internal/agent/run/batch.go, internal/agent/run/batch_wave.go, internal/tools/local/parallel.go.
@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,7 @@ type parallelModel struct {
 func (g *parallelModel) Generate(_ context.Context, r modelapi.Request, emit func(modelapi.Event) error) error {
 	g.requests = append(g.requests, r)
 	if len(g.requests) == 1 {
-		return emit(modelapi.Event{Calls: g.calls, Done: true})
+		return emit(modelapi.Event{Calls: modeltest.Calls(g.calls), Done: true})
 	}
 	return emit(modelapi.Event{Delta: "Completed requested operations", Done: true})
 }
@@ -95,7 +96,7 @@ func realBatchRunner(t *testing.T, calls []toolapi.Call) (Runner, *local.Executo
 	r.Settings = policy.Settings{Scope: policy.System}
 	return r, tools, root, j, g
 }
-func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
+func TestParallelBoundedExecutionAndPairedResults(t *testing.T) {
 	var calls []toolapi.Call
 	for i := 0; i < 18; i++ {
 		calls = append(calls, batchCall(fmt.Sprint(i), "create_directory", map[string]any{"paths": []string{fmt.Sprintf("dir%d", i)}}))
@@ -121,23 +122,27 @@ func TestParallelBoundedExecutionAndOrderedResults(t *testing.T) {
 	if runErr != nil || result.Status != runrecord.Answered || held.maximum.Load() != 16 {
 		t.Fatalf("%+v active max=%d err=%v", result, held.maximum.Load(), runErr)
 	}
-	index := 0
-	for _, m := range j.messages {
-		if m.Role == "tool" {
-			if m.ToolCallID != fmt.Sprint(index) {
-				t.Fatalf("result order=%s want=%d", m.ToolCallID, index)
-			}
-			index++
+	seen := make(map[string]bool)
+	for _, event := range innerOutcomes(j) {
+		var args struct {
+			Paths []string `json:"paths"`
 		}
+		if err := json.Unmarshal(event.Call.Arguments, &args); err != nil || len(args.Paths) != 1 || seen[args.Paths[0]] {
+			t.Fatalf("invalid or repeated result: %s", event.Call.Arguments)
+		}
+		seen[args.Paths[0]] = true
 	}
 	if len(model.requests) != 2 {
 		t.Fatalf("unexpected main model calls: %d", len(model.requests))
 	}
 	t.Logf("operations=18, peak concurrency=%d, main model calls=%d", held.maximum.Load(), len(model.requests))
-	if index != 18 {
-		t.Fatalf("paired results=%d", index)
+	if len(seen) != 18 {
+		t.Fatalf("paired results=%d", len(seen))
 	}
 	for i := 0; i < 18; i++ {
+		if !seen[fmt.Sprintf("dir%d", i)] {
+			t.Fatal("completed directory lost its result", i)
+		}
 		if _, err := os.Stat(filepath.Join(root, fmt.Sprintf("dir%d", i))); err != nil {
 			t.Fatal(err)
 		}
@@ -185,12 +190,7 @@ func TestParallelCancellationJoinsWorkersAndPairsResults(t *testing.T) {
 	if runErr == nil || result.Status != runrecord.Interrupted || held.active.Load() != 0 {
 		t.Fatalf("%+v active=%d %v", result, held.active.Load(), runErr)
 	}
-	count := 0
-	for _, m := range j.messages {
-		if m.Role == "tool" {
-			count++
-		}
-	}
+	count := len(innerOutcomes(j))
 	if count != 2 {
 		t.Fatalf("cancelled calls lost their results: %d", count)
 	}
@@ -211,12 +211,7 @@ func TestParallelApprovalDenialPreventsWaveEffects(t *testing.T) {
 			t.Fatal("wave executed before all approvals")
 		}
 	}
-	count := 0
-	for _, m := range j.messages {
-		if m.Role == "tool" {
-			count++
-		}
-	}
+	count := len(innerOutcomes(j))
 	if count != 2 {
 		t.Fatalf("denied batch lost paired results: %d", count)
 	}

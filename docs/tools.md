@@ -35,11 +35,13 @@ MECA는 TUI·CLI·서버에서 같은 native 도구 계약을 사용한다. 모�
 
 ## 코어 등록과 실행
 
-1. `cmd/meca`가 프로젝트·사용자 홈·자격 증명 마스킹·스킬 Reader와 WebFetch 클라이언트를 로컬 실행기에 연결한다. 팀 실행기는 참여자마다 로컬 실행기를 만들고 협업 도구와 공유 프로젝트 경계를 붙인다. [로컬 실행기](../internal/tools/local/executor.go) · [팀 실행기](../internal/tools/team/executor.go)
-2. `internal/commands/agentrequest`가 설정·선택한 모델·세션·실행기를 `internal/agent/session`에 넘긴다. 실행 시작 시 `Definitions()`로 도구 설명·인자 스키마·효과를 선택하고, 모델의 이미지 지원과 설치된 외부 런타임에 맞춰 도구와 지침을 구성한다. [요청 조립](../internal/commands/agentrequest/request.go) · [도구 선택](../internal/agent/run/start.go) · [요청 지침](../internal/agent/context/request.go)
-3. `internal/provider/protocol`이 정의를 Provider의 native 형식으로 인코딩하고, 응답 스트림에서 완료된 호출의 ID·이름·인자를 조립한다. 실행 입력은 native 호출이며 일반 답변의 JSON·셸 텍스트는 답변 본문으로 처리한다. 형식이 깨진 호출은 모델 판단에서 교정하고, 인자나 대상을 검증할 수 없는 호출은 실패 결과로 연결한다. [Provider별 형식](model-connections.md#native-tool-calling) · [복구와 교정](runtime.md#모델-스트림과-복구)
-4. `internal/agent/run`이 단일 호출 또는 호출 묶음을 처리한다. `Prepare`는 카탈로그 스키마로 인자를 해석하고 대상·현재 상태·승인 조건을 묶어 실행 후보를 만든다. 정책과 승인 결과를 실행 경계에서 적용하고 변경 대상과 승인한 원본을 다시 확인한다. 독립 호출에는 병렬 실행을 허용하고 결과는 원래 호출에 연결한다. [도구 계약](../internal/agent/tool/) · [후보 준비](../internal/tools/local/prepare.go) · [실행과 승인](../internal/agent/run/execute.go) · [호출 묶음](../internal/agent/run/batch.go)
-5. 실행 결과는 모델 호출 ID에 연결해 저장하고 다음 판단에 전달한다. 도구 실패는 `code`·`detail`·`next`와 수집한 출력을 전달한다. 실행기는 호출마다 별도 실행 ID를 부여해 승인과 표시 사건을 같은 실행에 연결한다. 작업을 마칠 때 소유한 명령과 관찰을 회수한다. [실행 ID](../internal/agent/run/execution_identity.go) · [결과 반영](../internal/agent/run/action_result.go) · [요청 종료](../internal/agent/run/conversation.go)
+1. 로컬·팀 카탈로그가 도구 이름·설명·인자·효과를 소유한다. 설치 상태와 모델 기능에 맞는 도구만 선택한다.
+2. `internal/tools/codemode`가 같은 카탈로그에서 `tools.<이름>(인자)`의 TypeScript 설명을 생성한다. 모델에는 native `codemode` 도구를 제공한다.
+3. Provider 어댑터는 완성된 코드 호출을 전달한다. JS·TS 함수 본문은 내장 변환기·실행기에서 처리하며 일반 답변 본문을 실행하지 않는다.
+4. `internal/agent/run`은 내부 호출을 검증하고 기존 `Prepare`·승인·실행 경계로 전달한다. 셸 명령은 실제 문자열에 AST 분석을 적용하고 독립 호출은 기존 배치 계획으로 실행한다.
+5. 내부 호출의 원본 결과와 상태를 먼저 확정하고, 코드에 값을 돌려준다. 모델에는 코드가 반환한 JSON과 필요한 지침·이미지를 전달한다. 부모·내부 실행 ID는 기록과 화면을 연결한다.
+
+스크립트 자체는 별도 승인하지 않는다. 인자 고정, 실패·취소, 모델 판단 경계와 자원 한도는 [Code Mode](codemode.md)를 따른다. [도구 계약](../internal/agent/tool/) · [후보 준비](../internal/tools/local/prepare.go) · [실행과 승인](../internal/agent/run/execute.go)
 
 ## 도구 추가와 검증
 

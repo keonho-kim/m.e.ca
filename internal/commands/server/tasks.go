@@ -32,6 +32,8 @@ type request struct {
 	completed        modelapi.TokenUsage
 	liveUsage        map[string]usageSample
 	generationMillis int64
+	codeExecutions   int64
+	toolExecutions   int64
 	outputMu         sync.Mutex
 	originals        map[string]*draftOriginal
 	sequence         uint64

@@ -64,9 +64,10 @@ func (s *uiToolSequence) reply(w http.ResponseWriter, r *http.Request, step int)
 	}
 	if step < 2 {
 		arguments, _ := json.Marshal(map[string]string{"reason": "Run fixture check", "command": fmt.Sprintf("printf 'tool-%d'", step+1)})
+		arguments, _ = json.Marshal(map[string]string{"code": "return await tools.execute_command(" + string(arguments) + ");"})
 		chunk(map[string]any{"tool_calls": []any{map[string]any{
 			"index": 0, "id": "fixture-reused-command", "type": "function",
-			"function": map[string]string{"name": "execute_command", "arguments": string(arguments)},
+			"function": map[string]string{"name": "codemode", "arguments": string(arguments)},
 		}}}, "tool_calls")
 	} else {
 		chunk(map[string]string{}, "stop")

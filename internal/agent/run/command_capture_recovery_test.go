@@ -75,7 +75,7 @@ func TestCommandCaptureFailureImmediateOutcomeRemainsDurable(t *testing.T) {
 	}
 	found := false
 	for _, event := range journal.events {
-		if event.Kind == "tool_failed" && event.CallID == "missing" && event.Operation != nil && event.Operation.Failure != nil {
+		if event.Kind == "tool_failed" && event.Call != nil && event.Call.Name == "execute_command" && event.Operation != nil && event.Operation.Failure != nil {
 			found = true
 		}
 	}

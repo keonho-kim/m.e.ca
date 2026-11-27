@@ -15,6 +15,7 @@
 | `internal/commands` | 사용자 명령, 설정·대화·서버 작업의 사용 사례 |
 | `internal/provider` | 모델 탐색·연결, Provider별 요청·스트림 변환 |
 | `internal/tools` | 도구 카탈로그, 후보 준비, 실행 어댑터와 결과 수집 |
+| `internal/tools/codemode` | 내장 TS 변환·JS 실행, Promise 호출 묶음과 JSON 경계 |
 | `internal/tools/browser` · `browser/runtime` | 설치 확인·준비, 브라우저 세션·관찰 페이지, 관리형 Chrome 갱신 |
 | `internal/policy` | 경로·명령·승인 판단 |
 | `internal/storage` | 대화·접수 기록·자격 증명의 영속 저장 |
@@ -44,6 +45,10 @@
 제품 Go 버전·의존성은 [go.mod](../go.mod), 개발 도구는 [devtools/go.mod](../devtools/go.mod), WebUI는 [webui/package.json](../webui/package.json)과 `bun.lock`이 소유한다. 제품과 개발 도구의 의존성을 분리하고 직접 의존성 버전을 고정한다. 브라우저 도우미의 고정 버전·SHA-256과 플랫폼 경로는 `internal/tools/browser/runtime/assets.go`, Chrome Stable 조회·관리 설치본 선택은 같은 패키지의 `stable.go`·`managed.go`가 소유한다.
 
 변경 시 유지보수 상태·라이선스·실행 비용·지원 플랫폼을 검토하고 관련 고지를 갱신한다. `third_party/clipboard`의 수정 범위와 배포 조건은 [의존성 안내](../third_party/clipboard/MECA.md)를 따른다. WebUI 패치는 [패치 계약](../webui/patches/README.md), 라이선스 입력은 [고지 안내](../webui/licenses/README.md)가 소유한다.
+
+Code Mode는 `modernc.org/quickjs`와 esbuild의 Go API를 제품에 내장한다. 변환은 파일·모듈 해석 없이 수행하고, 실행기에는 기본 모듈 로더나 OS 도우미를 등록하지 않는다. 요청의 직렬 소유자가 완료 결과를 저장하고 JS를 재개하며, 작업자는 준비된 도구 실행만 담당한다. 수정 시 [코드 실행 계약](codemode.md)의 초기화 중 취소·UTF-8 반환 한도·개별 완료 후속 작업·활성 대상 충돌·승인 거부와 저장 실패 이후의 효과 차단을 검증한다.
+
+SQLite의 payload codec 5는 Code Mode 결과에 포함된 기존 원문을 같은 DB의 codec 0·1·2 참조와 리터럴 조각으로 저장한다. 준비한 참조는 쓰기 트랜잭션에서 다시 확인하며 복원은 순환·중첩 참조와 다른 세션을 허용하지 않는다. 참조 탐색은 최대 8단계·128개 후보로 제한하고 한 복원에서 반복되는 원문은 마지막 사용까지 최대 2MiB를 재사용한다. 전체 JSON의 원래 크기와 해시를 확인한 뒤에만 반환한다.
 
 ### 소스 빌드
 

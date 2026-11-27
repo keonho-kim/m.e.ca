@@ -17,6 +17,13 @@ type usageSample struct {
 }
 
 func (r *request) observe(value record.Event) {
+	if value.Kind == "tool_started" && value.Call != nil {
+		if value.Call.Name == "codemode" && value.Call.ParentExecutionID == "" {
+			r.codeExecutions++
+		} else {
+			r.toolExecutions++
+		}
+	}
 	if value.Kind == "progress" || value.Kind == "team_progress" || value.Kind == "tool_started" {
 		if draft := r.drafts[value.Agent]; draft != nil {
 			draft.Committed = true
@@ -75,7 +82,11 @@ func (r *request) observe(value record.Event) {
 	value.Text, value.Thinking = clipped(value.Text, 1024), ""
 	projected := ProjectEvent(Event{Task: r.task.ID, Session: r.task.Session, Sequence: r.sequence + 1, Record: value})
 	if eventBytes(projected) > 8192 {
-		projected.Record.Call = nil
+		if projected.Record.Call != nil {
+			call := *projected.Record.Call
+			call.Arguments = nil
+			projected.Record.Call = &call
+		}
 		projected.Truncated = true
 	}
 	r.activity[key] = projected
@@ -92,5 +103,5 @@ func (r *request) statistics() record.Statistics {
 	if !r.started.IsZero() {
 		elapsed = time.Since(r.started).Milliseconds()
 	}
-	return record.Statistics{Usage: &usage, ElapsedMillis: elapsed, GenerationMillis: generationMillis, Concurrent: r.teamEnabled}
+	return record.Statistics{Usage: &usage, ElapsedMillis: elapsed, GenerationMillis: generationMillis, Concurrent: r.teamEnabled, CodeExecutions: r.codeExecutions, ToolExecutions: r.toolExecutions}
 }

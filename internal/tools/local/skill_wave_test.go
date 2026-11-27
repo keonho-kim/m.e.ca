@@ -25,7 +25,7 @@ func TestSkillImageReadWaveIsBounded(t *testing.T) {
 	for i := range calls {
 		calls[i] = toolapi.Call{ID: "call", Name: "read_skill_file", Arguments: json.RawMessage(`{"id":"project:review","path":"assets/image.png"}`)}
 	}
-	plan, err := executor.ParallelBatch(t.Context(), policy.Settings{Scope: policy.Directory}, calls, 16)
+	plan, err := executor.ParallelBatch(t.Context(), policy.Settings{Scope: policy.Directory}, nil, calls, 16)
 	if err != nil {
 		t.Fatal(err)
 	}

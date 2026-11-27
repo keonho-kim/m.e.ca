@@ -31,6 +31,7 @@ type CommandRun struct {
 }
 
 type CommandCompletion struct {
+	ParentExecutionID                                 string
 	ID, CallID, ExecutionID, BatchID, Command, Reason string
 	Result                                            Result
 }

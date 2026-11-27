@@ -36,7 +36,7 @@ func (p *Peer) Emit(event runrecord.Event) error {
 		return nil
 	}
 	event.Agent = p.ID
-	if event.Kind == "usage" {
+	if event.Kind == "usage" || event.Kind == "tool_started" {
 		r.mu.Lock()
 		r.statistics.Add(event)
 		r.mu.Unlock()

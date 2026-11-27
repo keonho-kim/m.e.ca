@@ -5,6 +5,7 @@
 package run
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 	faults "github.com/keonho-kim/meca/internal/diagnostics/fault"
 
@@ -22,25 +23,21 @@ func TestClosedSessionDoesNotSuggestRetryingSkippedSiblings(t *testing.T) {
 	j := &journal{}
 	r := fixture(&generator{}, tools, j)
 	r.Generator = boundaryModel(func(_ context.Context, _ model.Request, emit func(model.Event) error) error {
-		return emit(model.Event{Done: true, Calls: []tool.Call{
+		return emit(model.Event{Done: true, Calls: modeltest.Calls([]tool.Call{
 			batchCall("close", "inspect_fixture", map[string]any{"path": "contribution"}),
 			batchCall("after", "write_file", map[string]any{"path": "after", "content": "obsolete"}),
-		}})
+		})})
 	})
 	result, err := r.Run(context.Background(), "Finish the contribution", approve, emit)
 	if err != nil || !result.Departed || tools.executed != 1 || tools.prepared != 1 {
 		t.Fatal("closed session continued executing", result, err)
 	}
-	for _, message := range j.messages {
-		if message.Role != "tool" || message.ToolCallID != "after" {
+	for _, event := range innerOutcomes(j) {
+		if event.Call.Name != "write_file" {
 			continue
 		}
-		var body struct{ Failure *faults.Failure }
-		if err := json.Unmarshal([]byte(message.Content), &body); err != nil {
-			t.Fatal(err)
-		}
-		if body.Failure == nil || body.Failure.Code != "session_closed" || !strings.Contains(body.Failure.Next, "Do not retry") {
-			t.Fatal("closure was described as repairable tool failure", message.Content)
+		if event.ErrorCode != "" && event.ErrorCode != "session_closed" || !strings.Contains(event.Text, "Do not retry") {
+			t.Fatal("closure was described as repairable tool failure", event)
 		}
 		return
 	}

@@ -5,6 +5,7 @@
 package run
 
 import (
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	diagcatalog "github.com/keonho-kim/meca/internal/diagnostics/catalog"
 
 	"context"
@@ -51,10 +52,10 @@ func TestSingleSteeringBetweenWavesPreservesTheCompletedSibling(t *testing.T) {
 	r.Generator = boundaryModel(func(_ context.Context, request model.Request, emit func(model.Event) error) error {
 		requests++
 		if requests == 1 {
-			return emit(model.Event{Done: true, Calls: []tool.Call{
+			return emit(model.Event{Done: true, Calls: modeltest.Calls([]tool.Call{
 				batchCall("first", "write_file", map[string]any{"path": "first", "content": "needed"}),
 				batchCall("second", "write_file", map[string]any{"path": "second", "content": "obsolete"}),
-			}})
+			})})
 		}
 		found := false
 		for _, message := range request.Messages {

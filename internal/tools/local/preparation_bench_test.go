@@ -86,7 +86,7 @@ func BenchmarkCandidatePreparation(b *testing.B) {
 				b.Run(name, func(b *testing.B) {
 					count := 1
 					if name == "Bounded" {
-						plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, calls, 16)
+						plan, err := e.ParallelBatch(context.Background(), policy.Settings{Scope: policy.System}, nil, calls, 16)
 						if err != nil {
 							b.Fatal(err)
 						}

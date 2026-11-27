@@ -36,7 +36,7 @@ vLLM 토큰화 응답은 바이트 한도 안에서 스트리밍으로 읽고 �
 
 ## 셸과 파일 작업
 
-명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출의 병렬 준비는 결과의 원래 순서와 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](tools.md#셸과-파일-작업) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)
+명령 출력은 제한된 캡처에서 수집하고 큰 출력은 임시 디스크로 이동한다. 실행 중에는 바뀐 구간을 읽고, 완료 원문은 기존 캡처를 이용해 저널에 확정한다. 확정 후 소유한 임시 파일을 반환한다. 독립 호출은 완료 결과를 저장한 직후 코드에 전달한다. 후속 호출은 실행 중인 작업과 충돌을 검사하며, 실행 직전의 승인·대상 확인을 지킨다. [명령 수명](tools.md#셸과-파일-작업) · [출력 수집](../internal/tools/local/process/capture_file.go) · [완료 원문](../internal/tools/local/command_capture.go) · [병렬 준비](../internal/tools/local/parallel.go)
 
 파일 시스템 감시는 같은 디렉터리의 활성 구독이 공유하고 마지막 구독에서 반환한다. 편집기의 변경 확인은 감시 리비전이 같으면 메타데이터에서 끝내고, 달라졌을 때 내용의 리비전을 비교한다. 저장 시에는 원본을 다시 검사한다. [편집 계약](webui-api.md#완료예약편집) · [공유 감시](../internal/fileview/watch_pool.go) · [변경 확인](../internal/fileview/editor_probe.go)
 

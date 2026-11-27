@@ -12,23 +12,16 @@ import (
 	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
-// Older browser observations can identify themselves by an image or result ID.
-const transientObservationSQL = `CASE WHEN m.role='tool' THEN
- CASE WHEN json_extract(m.body,'$.transient_observation')=1 THEN 1
-      WHEN COALESCE(json_extract(m.body,'$.tool_name'),'')<>'` + toolapi.BrowserInspect + `' THEN 0
-      WHEN json_array_length(m.body,'$.images')>0 OR json_type(m.body,'$.images')='null' THEN 1
-      WHEN json_valid(json_extract(m.body,'$.content'))
-      THEN COALESCE(length(json_extract(json_extract(m.body,'$.content'),'$.result_id'))>0,0)
-      ELSE 0 END
- ELSE 0 END`
+const transientObservationSQL = `CASE WHEN m.role='tool' AND json_extract(m.body,'$.transient_observation')=1 THEN 1 ELSE 0 END`
 
 func (s *Store) lastCompletedDecision(ctx context.Context, through int64) (int64, error) {
 	var sequence int64
 	err := s.db.QueryRowContext(ctx, `
  SELECT t.sequence FROM timeline t JOIN messages m ON m.sequence=t.source_sequence
- WHERE t.kind='message' AND t.sequence<=? AND m.role='assistant'
- AND COALESCE(json_extract(m.body,'$.incomplete'),0)=0
-	 AND COALESCE(json_extract(m.body,'$.preserve_observations'),0)=0
+ WHERE t.kind='message' AND t.sequence<=? AND (
+ (m.role='assistant' AND COALESCE(json_extract(m.body,'$.incomplete'),0)=0
+ AND COALESCE(json_extract(m.body,'$.preserve_observations'),0)=0)
+ OR (m.role='tool' AND json_extract(m.body,'$.acknowledges_input')=1))
  ORDER BY t.sequence DESC LIMIT 1`, through).Scan(&sequence)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil

@@ -1,6 +1,6 @@
 // Purpose: Freeze independent file candidates with bounded workers and deterministic failure selection.
 // Pattern: Fork/join preparation with one journal owner.
-// Usage: batchWave calls this before any approvals, start intents or filesystem changes.
+// Usage: prepareWave calls this before any approvals, start intents or filesystem changes.
 // Related: internal/tools/local/parallel.go, internal/agent/run/prepare_execution.go.
 package run
 

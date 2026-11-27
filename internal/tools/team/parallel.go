@@ -11,16 +11,24 @@ import (
 	"github.com/keonho-kim/meca/internal/policy"
 )
 
-func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, calls []toolapi.Call, maximum int) (toolapi.BatchPlan, error) {
+func (e *Executor) ParallelBatch(ctx context.Context, settings policy.Settings, active, calls []toolapi.Call, maximum int) (toolapi.BatchPlan, error) {
 	if len(calls) == 0 {
 		return toolapi.BatchPlan{PreparationConcurrency: 1}, nil
 	}
 	if calls[0].Name != "execute_command" {
+		if len(active) != 0 {
+			return toolapi.BatchPlan{PreparationConcurrency: 1}, nil
+		}
 		return toolapi.BatchPlan{Count: 1, PreparationConcurrency: 1}, nil
 	}
 	end := 0
 	for end < len(calls) && calls[end].Name == "execute_command" {
 		end++
 	}
-	return e.Local.ParallelBatch(ctx, settings, calls[:end], maximum)
+	for _, call := range active {
+		if call.Name != "execute_command" {
+			return toolapi.BatchPlan{PreparationConcurrency: 1}, nil
+		}
+	}
+	return e.Local.ParallelBatch(ctx, settings, active, calls[:end], maximum)
 }

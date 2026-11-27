@@ -73,7 +73,7 @@ func TestUnreadBrowserPagePinsCallDuringCompaction(t *testing.T) {
 	for _, m := range []modelapi.Message{
 		{Role: "user", Content: "inspect"},
 		{Role: "assistant", Calls: []toolapi.Call{call}},
-		{Role: "tool", ToolName: call.Name, ToolCallID: call.ID, Content: `{"result_id":"result_A","revision":"r","next_offset":2048,"text":"first page"}`},
+		{Role: "tool", ToolName: call.Name, ToolCallID: call.ID, Content: `{"result_id":"result_A","revision":"r","next_offset":2048,"text":"first page"}`, TransientObservation: true},
 		{Role: "assistant", Incomplete: true, Content: "partial"},
 	} {
 		if err := s.AppendMessage(ctx, id, m); err != nil {

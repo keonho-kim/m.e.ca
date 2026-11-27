@@ -18,7 +18,7 @@ func TestToolEventsCarryCallAndOutput(t *testing.T) {
 	}
 	found := false
 	for _, event := range j.events {
-		if event.Kind != "tool_succeeded" {
+		if event.Kind != "tool_succeeded" || event.Call == nil || event.Call.ParentExecutionID == "" {
 			continue
 		}
 		body, err := json.Marshal(event)

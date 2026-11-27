@@ -11,6 +11,7 @@ import (
 	contextbuild "github.com/keonho-kim/meca/internal/agent/context"
 	"github.com/keonho-kim/meca/internal/agent/inference"
 	modelapi "github.com/keonho-kim/meca/internal/agent/model"
+	toolapi "github.com/keonho-kim/meca/internal/agent/tool"
 )
 
 func excerpt(text string, limit int) string {
@@ -32,7 +33,7 @@ func (s *execution) request(ctx context.Context) (modelapi.Request, error) {
 	if err != nil {
 		return modelapi.Request{}, err
 	}
-	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: s.definitions})
+	request := parameters.Apply(modelapi.Request{ModelID: s.runner.Model, Thinking: s.runner.Thinking, ReasoningEffort: s.runner.ReasoningEffort, Tools: []toolapi.Definition{s.codeDefinition}})
 	observations := ""
 	if s.runner.ContextObservations != nil {
 		observations = s.runner.ContextObservations(s.messages)

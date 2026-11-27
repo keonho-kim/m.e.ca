@@ -71,7 +71,7 @@ func TestDeltaRetryAndBorrowedToolBuffers(t *testing.T) {
 	s.emit(r, record.Event{Kind: "stream", Agent: "Hana", Text: "hello world", Thinking: "plan"})
 	s.emit(r, record.Event{Kind: "generation_started", Agent: "Hana"})
 	s.emit(r, record.Event{Kind: "stream", Agent: "Hana", Text: "replacement"})
-	call := tool.Call{BatchID: "parallel", ID: "c", Name: "write_file", Arguments: []byte(`{"path":"a"}`)}
+	call := tool.Call{ExecutionID: "inner", ParentExecutionID: "code", BatchID: "parallel", ID: "c", Name: "write_file", Arguments: []byte(`{"path":"a"}`)}
 	s.emit(r, record.Event{Kind: "tool_succeeded", Call: &call, Output: []byte(`{"large":"original"}`), Reference: &record.EventReference{Session: "session-test", Sequence: 7}})
 	call.Arguments[0] = '!'
 	batch, err := s.Next(t.Context(), cursor)
@@ -85,7 +85,7 @@ func TestDeltaRetryAndBorrowedToolBuffers(t *testing.T) {
 		t.Fatal(batch.Events)
 	}
 	last := batch.Events[5]
-	if last.Record.Call.BatchID != "parallel" || !last.Truncated || len(last.Record.Output) != 0 || last.Record.Reference.Sequence != 7 || last.Record.Call.Arguments[0] != '{' {
+	if last.Record.Call.ParentExecutionID != "code" || last.Record.Call.ExecutionID != "inner" || last.Record.Call.BatchID != "parallel" || !last.Truncated || len(last.Record.Output) != 0 || last.Record.Reference.Sequence != 7 || last.Record.Call.Arguments[0] != '{' {
 		t.Fatal(last)
 	}
 }

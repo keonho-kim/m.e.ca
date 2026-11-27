@@ -46,9 +46,9 @@ func engineProvider(w http.ResponseWriter, r *http.Request, kind connection.Prov
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	frames := engineFrames{writer: w}
-	const toolName = "execute_command"
+	const toolName = "codemode"
 	toolID := fmt.Sprintf("bench_call_%d", step)
-	arguments := map[string]string{"reason": "Read fixture observation", "command": "cat fixture.txt"}
+	arguments := map[string]string{"code": `return await tools.execute_command({reason:"Read fixture observation", command:"cat fixture.txt"});`}
 	text := "# Verified\n\n```go\n" + strings.Repeat("fmt.Println(\"observed\")\n", 1024) + "```\n\nCompleted."
 	var chunks []string
 	for offset := 0; offset < len(text); offset += 1024 {

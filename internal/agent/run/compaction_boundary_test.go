@@ -7,6 +7,7 @@ package run
 import (
 	"context"
 	"encoding/json"
+	"github.com/keonho-kim/meca/internal/agent/modeltest"
 	"strings"
 	"testing"
 
@@ -141,7 +142,7 @@ func TestCapacityRecoveryResetsAfterSuccessfulResponse(t *testing.T) {
 				return &modelapi.ContextLimitError{}
 			}
 			if calls == 2 {
-				return emit(modelapi.Event{Done: true, Calls: []toolapi.Call{{ID: "once", Name: "write_file", Arguments: json.RawMessage(`{"path":"a","content":"new"}`)}}})
+				return emit(modelapi.Event{Done: true, Calls: modeltest.Calls([]toolapi.Call{{ID: "once", Name: "write_file", Arguments: json.RawMessage(`{"path":"a","content":"new"}`)}})})
 			}
 			return emit(modelapi.Event{Delta: "done", Done: true})
 		})

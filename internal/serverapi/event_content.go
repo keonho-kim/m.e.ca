@@ -43,6 +43,7 @@ func eventContent(result *v1.Event, value server.Event) {
 			t := &v1.Tool{CallId: e.CallID, Phase: wireToolPhase(phase), Summary: e.Text}
 			t.Skill = wireSkillRead(e.Skill)
 			if e.Call != nil {
+				t.ParentExecutionId = e.Call.ParentExecutionID
 				t.ExecutionId, t.BatchId, t.CallId, t.Name, t.ArgumentsJson = e.Call.ExecutionID, e.Call.BatchID, e.Call.ID, e.Call.Name, e.Call.Arguments
 			}
 			if e.Reference != nil {
